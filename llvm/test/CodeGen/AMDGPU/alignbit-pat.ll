@@ -35,17 +35,17 @@ define amdgpu_kernel void @alignbit_shr_pat_v(ptr addrspace(1) nocapture readonl
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, 0
+; GCN-NEXT:    v_mov_b32_e32 v6, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 3, v0
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b64 s[4:5], s[0:1]
-; GCN-NEXT:    buffer_load_dwordx2 v[3:4], v[1:2], s[4:7], 0 addr64
+; GCN-NEXT:    buffer_load_dwordx2 v[3:4], v[5:6], s[4:7], 0 addr64
 ; GCN-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GCN-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
-; GCN-NEXT:    buffer_load_dword v0, v[1:2], s[4:7], 0 addr64
+; GCN-NEXT:    v_lshlrev_b32_e32 v5, 2, v0
+; GCN-NEXT:    buffer_load_dword v0, v[5:6], s[4:7], 0 addr64
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_alignbit_b32 v0, v4, v3, v0
-; GCN-NEXT:    buffer_store_dword v0, v[1:2], s[4:7], 0 addr64
+; GCN-NEXT:    buffer_store_dword v0, v[5:6], s[4:7], 0 addr64
 ; GCN-NEXT:    s_endpgm
 bb:
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x()

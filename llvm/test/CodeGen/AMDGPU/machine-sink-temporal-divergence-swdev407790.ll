@@ -95,22 +95,22 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    ds_write_b32 v46, v46 offset:15360
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v0, 1, v43
-; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 2, v43
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, _Z3minjj@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, _Z3minjj@rel32@hi+12
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
-; CHECK-NEXT:    v_and_b32_e32 v0, 0x7ffffffc, v0
-; CHECK-NEXT:    v_and_b32_e32 v1, 28, v1
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
+; CHECK-NEXT:    v_and_b32_e32 v1, 0x7ffffffc, v0
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[52:53]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[36:37]
-; CHECK-NEXT:    global_load_dword v0, v0, s[68:69]
 ; CHECK-NEXT:    s_mov_b32 s12, s51
 ; CHECK-NEXT:    s_mov_b32 s13, s50
+; CHECK-NEXT:    global_load_dword v0, v1, s[68:69]
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 2, v43
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    ; implicit-def: $sgpr15
+; CHECK-NEXT:    v_and_b32_e32 v1, 28, v1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_bfe_u32 v0, v0, v1, 4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 12
@@ -851,22 +851,22 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:    v_add_nc_u32_e32 v45, 0x3c04, v44
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v0, 1, v42
-; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 2, v42
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, _Z3minjj@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, _Z3minjj@rel32@hi+12
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
-; CHECK-NEXT:    v_and_b32_e32 v0, 0x7ffffffc, v0
-; CHECK-NEXT:    v_and_b32_e32 v1, 28, v1
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[36:37]
+; CHECK-NEXT:    v_and_b32_e32 v1, 0x7ffffffc, v0
 ; CHECK-NEXT:    s_mov_b64 s[8:9], s[52:53]
 ; CHECK-NEXT:    s_mov_b64 s[10:11], s[34:35]
-; CHECK-NEXT:    global_load_dword v0, v0, s[54:55]
 ; CHECK-NEXT:    s_mov_b32 s12, s51
 ; CHECK-NEXT:    s_mov_b32 s13, s50
+; CHECK-NEXT:    global_load_dword v0, v1, s[54:55]
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 2, v42
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    ; implicit-def: $sgpr15
+; CHECK-NEXT:    v_and_b32_e32 v1, 28, v1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_bfe_u32 v0, v0, v1, 4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 12

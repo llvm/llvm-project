@@ -141,10 +141,11 @@ define amdgpu_kernel void @ptr_s_buffer_load_i8_divergent_offset(ptr addrspace(1
 ; GFX1200-SDAG-LABEL: ptr_s_buffer_load_i8_divergent_offset:
 ; GFX1200-SDAG:       ; %bb.0:
 ; GFX1200-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x10
-; GFX1200-SDAG-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX1200-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX1200-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-SDAG-NEXT:    buffer_load_u8 v0, v0, s[0:3], null offen
+; GFX1200-SDAG-NEXT:    buffer_load_u8 v0, v1, s[0:3], null offen
 ; GFX1200-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1200-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1200-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1200-SDAG-NEXT:    global_store_b8 v1, v0, s[0:1]
@@ -153,10 +154,11 @@ define amdgpu_kernel void @ptr_s_buffer_load_i8_divergent_offset(ptr addrspace(1
 ; GFX1200-GISEL-LABEL: ptr_s_buffer_load_i8_divergent_offset:
 ; GFX1200-GISEL:       ; %bb.0:
 ; GFX1200-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x10
-; GFX1200-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX1200-GISEL-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX1200-GISEL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0
 ; GFX1200-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1200-GISEL-NEXT:    buffer_load_u8 v0, v0, s[0:3], null offen
+; GFX1200-GISEL-NEXT:    buffer_load_u8 v0, v1, s[0:3], null offen
+; GFX1200-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1200-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1200-GISEL-NEXT:    global_store_b8 v1, v0, s[4:5]
 ; GFX1200-GISEL-NEXT:    s_endpgm
@@ -167,11 +169,11 @@ define amdgpu_kernel void @ptr_s_buffer_load_i8_divergent_offset(ptr addrspace(1
 ; GFX1250-SDAG-NEXT:    v_nop
 ; GFX1250-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x10 nv
-; GFX1250-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    buffer_load_u8 v0, v0, s[0:3], null offen nv
+; GFX1250-SDAG-NEXT:    buffer_load_u8 v0, v1, s[0:3], null offen nv
 ; GFX1250-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_store_b8 v1, v0, s[0:1]
@@ -183,11 +185,11 @@ define amdgpu_kernel void @ptr_s_buffer_load_i8_divergent_offset(ptr addrspace(1
 ; GFX1250-GISEL-NEXT:    v_nop
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x10 nv
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1250-GISEL-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX1250-GISEL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0 nv
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    buffer_load_u8 v0, v0, s[0:3], null offen nv
+; GFX1250-GISEL-NEXT:    buffer_load_u8 v0, v1, s[0:3], null offen nv
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    global_store_b8 v1, v0, s[4:5]
 ; GFX1250-GISEL-NEXT:    s_endpgm

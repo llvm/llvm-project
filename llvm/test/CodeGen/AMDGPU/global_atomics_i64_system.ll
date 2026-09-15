@@ -130,9 +130,9 @@ define i64 @global_atomic_xchg_i64_ret_offset(ptr addrspace(1) %out, i64 %in) {
 ; VI-LABEL: global_atomic_xchg_i64_ret_offset:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_swap_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_atomic_swap_x2 v[0:1], v[4:5], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -422,9 +422,9 @@ define i64 @global_atomic_xchg_i64_ret_offset__amdgpu_no_remote_memory(ptr addrs
 ; VI-LABEL: global_atomic_xchg_i64_ret_offset__amdgpu_no_remote_memory:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_swap_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_atomic_swap_x2 v[0:1], v[4:5], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -568,9 +568,9 @@ define double @global_atomic_xchg_f64_ret_offset(ptr addrspace(1) %out, double %
 ; VI-LABEL: global_atomic_xchg_f64_ret_offset:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_swap_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_atomic_swap_x2 v[0:1], v[4:5], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -860,9 +860,9 @@ define double @global_atomic_xchg_f64_ret_offset__amdgpu_no_remote_memory(ptr ad
 ; VI-LABEL: global_atomic_xchg_f64_ret_offset__amdgpu_no_remote_memory:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 16, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_swap_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 16, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_atomic_swap_x2 v[0:1], v[4:5], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -1006,9 +1006,9 @@ define i64 @global_atomic_add_i64_ret_offset(ptr addrspace(1) %out, i64 %in) {
 ; VI-LABEL: global_atomic_add_i64_ret_offset:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_add_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_atomic_add_x2 v[0:1], v[4:5], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -1298,9 +1298,9 @@ define i64 @global_atomic_add_i64_ret_offset__amdgpu_no_remote_memory(ptr addrsp
 ; VI-LABEL: global_atomic_add_i64_ret_offset__amdgpu_no_remote_memory:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_add_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_atomic_add_x2 v[0:1], v[4:5], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -2136,9 +2136,9 @@ define i64 @global_atomic_sub_i64_ret_offset__amdgpu_no_remote_memory(ptr addrsp
 ; VI-LABEL: global_atomic_sub_i64_ret_offset__amdgpu_no_remote_memory:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_sub_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_atomic_sub_x2 v[0:1], v[4:5], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -2962,9 +2962,9 @@ define i64 @global_atomic_and_i64_ret_offset__amdgpu_no_remote_memory(ptr addrsp
 ; VI-LABEL: global_atomic_and_i64_ret_offset__amdgpu_no_remote_memory:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_and_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_atomic_and_x2 v[0:1], v[4:5], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -4775,9 +4775,9 @@ define i64 @global_atomic_or_i64_ret_offset__amdgpu_no_remote_memory(ptr addrspa
 ; VI-LABEL: global_atomic_or_i64_ret_offset__amdgpu_no_remote_memory:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_or_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_atomic_or_x2 v[0:1], v[4:5], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -5601,9 +5601,9 @@ define i64 @global_atomic_xor_i64_ret_offset__amdgpu_no_remote_memory(ptr addrsp
 ; VI-LABEL: global_atomic_xor_i64_ret_offset__amdgpu_no_remote_memory:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_xor_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_atomic_xor_x2 v[0:1], v[4:5], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -6953,9 +6953,9 @@ define i64 @global_atomic_max_i64_ret_offset__amdgpu_no_remote_memory(ptr addrsp
 ; VI-LABEL: global_atomic_max_i64_ret_offset__amdgpu_no_remote_memory:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_smax_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_atomic_smax_x2 v[0:1], v[4:5], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -8193,9 +8193,9 @@ define i64 @global_atomic_umax_i64_ret_offset__amdgpu_no_remote_memory(ptr addrs
 ; VI-LABEL: global_atomic_umax_i64_ret_offset__amdgpu_no_remote_memory:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_umax_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_atomic_umax_x2 v[0:1], v[4:5], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -9069,9 +9069,9 @@ define i64 @global_atomic_umin_i64_ret_offset__amdgpu_no_remote_memory(ptr addrs
 ; VI-LABEL: global_atomic_umin_i64_ret_offset__amdgpu_no_remote_memory:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_umin_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_atomic_umin_x2 v[0:1], v[4:5], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -10410,9 +10410,9 @@ define i64 @global_atomic_min_i64_ret_offset__amdgpu_no_remote_memory(ptr addrsp
 ; VI-LABEL: global_atomic_min_i64_ret_offset__amdgpu_no_remote_memory:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_smin_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_atomic_smin_x2 v[0:1], v[4:5], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -11306,9 +11306,9 @@ define i64 @global_atomic_uinc_wrap_i64_ret_offset__amdgpu_no_remote_memory(ptr 
 ; VI-LABEL: global_atomic_uinc_wrap_i64_ret_offset__amdgpu_no_remote_memory:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_inc_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_atomic_inc_x2 v[0:1], v[4:5], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -12254,9 +12254,9 @@ define i64 @global_atomic_udec_wrap_i64_ret_offset__amdgpu_no_remote_memory(ptr 
 ; VI-LABEL: global_atomic_udec_wrap_i64_ret_offset__amdgpu_no_remote_memory:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_atomic_dec_x2 v[0:1], v[0:1], v[2:3] glc
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; VI-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; VI-NEXT:    flat_atomic_dec_x2 v[0:1], v[4:5], v[2:3] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_wbinvl1_vol
 ; VI-NEXT:    s_setpc_b64 s[30:31]

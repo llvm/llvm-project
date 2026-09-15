@@ -11,29 +11,29 @@ define amdgpu_kernel void @fmuladd_v2f16(ptr addrspace(1) %out, ptr addrspace(1)
 ; GFX9-FLUSH-LABEL: fmuladd_v2f16:
 ; GFX9-FLUSH:       ; %bb.0:
 ; GFX9-FLUSH-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-FLUSH-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-FLUSH-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FLUSH-NEXT:    global_load_dword v1, v0, s[10:11]
-; GFX9-FLUSH-NEXT:    global_load_dword v2, v0, s[12:13]
-; GFX9-FLUSH-NEXT:    global_load_dword v3, v0, s[14:15]
+; GFX9-FLUSH-NEXT:    global_load_dword v1, v4, s[10:11]
+; GFX9-FLUSH-NEXT:    global_load_dword v2, v4, s[12:13]
+; GFX9-FLUSH-NEXT:    global_load_dword v3, v4, s[14:15]
 ; GFX9-FLUSH-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-FLUSH-NEXT:    v_pk_mul_f16 v1, v1, v2
 ; GFX9-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLUSH-NEXT:    v_pk_add_f16 v1, v1, v3
-; GFX9-FLUSH-NEXT:    global_store_dword v0, v1, s[8:9]
+; GFX9-FLUSH-NEXT:    global_store_dword v4, v1, s[8:9]
 ; GFX9-FLUSH-NEXT:    s_endpgm
 ;
 ; GFX9-DENORM-LABEL: fmuladd_v2f16:
 ; GFX9-DENORM:       ; %bb.0:
 ; GFX9-DENORM-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-DENORM-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-DENORM-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DENORM-NEXT:    global_load_dword v1, v0, s[10:11]
-; GFX9-DENORM-NEXT:    global_load_dword v2, v0, s[12:13]
-; GFX9-DENORM-NEXT:    global_load_dword v3, v0, s[14:15]
+; GFX9-DENORM-NEXT:    global_load_dword v1, v4, s[10:11]
+; GFX9-DENORM-NEXT:    global_load_dword v2, v4, s[12:13]
+; GFX9-DENORM-NEXT:    global_load_dword v3, v4, s[14:15]
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-DENORM-NEXT:    v_pk_fma_f16 v1, v1, v2, v3
-; GFX9-DENORM-NEXT:    global_store_dword v0, v1, s[8:9]
+; GFX9-DENORM-NEXT:    global_store_dword v4, v1, s[8:9]
 ; GFX9-DENORM-NEXT:    s_endpgm
                          ptr addrspace(1) %in2, ptr addrspace(1) %in3) #0 {
   %r0 = load <2 x half>, ptr addrspace(1) %in1
@@ -48,16 +48,16 @@ define amdgpu_kernel void @fmul_fadd_v2f16(ptr addrspace(1) %out, ptr addrspace(
 ; GCN-LABEL: fmul_fadd_v2f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dword v1, v0, s[10:11]
-; GCN-NEXT:    global_load_dword v2, v0, s[12:13]
-; GCN-NEXT:    global_load_dword v3, v0, s[14:15]
+; GCN-NEXT:    global_load_dword v1, v4, s[10:11]
+; GCN-NEXT:    global_load_dword v2, v4, s[12:13]
+; GCN-NEXT:    global_load_dword v3, v4, s[14:15]
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_pk_mul_f16 v1, v1, v2
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_pk_add_f16 v1, v1, v3
-; GCN-NEXT:    global_store_dword v0, v1, s[8:9]
+; GCN-NEXT:    global_store_dword v4, v1, s[8:9]
 ; GCN-NEXT:    s_endpgm
                          ptr addrspace(1) %in2, ptr addrspace(1) %in3) #0 {
   %r0 = load <2 x half>, ptr addrspace(1) %in1
@@ -73,29 +73,29 @@ define amdgpu_kernel void @fmul_fadd_contract_v2f16(ptr addrspace(1) %out, ptr a
 ; GFX9-FLUSH-LABEL: fmul_fadd_contract_v2f16:
 ; GFX9-FLUSH:       ; %bb.0:
 ; GFX9-FLUSH-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-FLUSH-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-FLUSH-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FLUSH-NEXT:    global_load_dword v1, v0, s[10:11]
-; GFX9-FLUSH-NEXT:    global_load_dword v2, v0, s[12:13]
-; GFX9-FLUSH-NEXT:    global_load_dword v3, v0, s[14:15]
+; GFX9-FLUSH-NEXT:    global_load_dword v1, v4, s[10:11]
+; GFX9-FLUSH-NEXT:    global_load_dword v2, v4, s[12:13]
+; GFX9-FLUSH-NEXT:    global_load_dword v3, v4, s[14:15]
 ; GFX9-FLUSH-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-FLUSH-NEXT:    v_pk_mul_f16 v1, v1, v2
 ; GFX9-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLUSH-NEXT:    v_pk_add_f16 v1, v1, v3
-; GFX9-FLUSH-NEXT:    global_store_dword v0, v1, s[8:9]
+; GFX9-FLUSH-NEXT:    global_store_dword v4, v1, s[8:9]
 ; GFX9-FLUSH-NEXT:    s_endpgm
 ;
 ; GFX9-DENORM-LABEL: fmul_fadd_contract_v2f16:
 ; GFX9-DENORM:       ; %bb.0:
 ; GFX9-DENORM-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-DENORM-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-DENORM-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DENORM-NEXT:    global_load_dword v1, v0, s[10:11]
-; GFX9-DENORM-NEXT:    global_load_dword v2, v0, s[12:13]
-; GFX9-DENORM-NEXT:    global_load_dword v3, v0, s[14:15]
+; GFX9-DENORM-NEXT:    global_load_dword v1, v4, s[10:11]
+; GFX9-DENORM-NEXT:    global_load_dword v2, v4, s[12:13]
+; GFX9-DENORM-NEXT:    global_load_dword v3, v4, s[14:15]
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-DENORM-NEXT:    v_pk_fma_f16 v1, v1, v2, v3
-; GFX9-DENORM-NEXT:    global_store_dword v0, v1, s[8:9]
+; GFX9-DENORM-NEXT:    global_store_dword v4, v1, s[8:9]
 ; GFX9-DENORM-NEXT:    s_endpgm
                          ptr addrspace(1) %in2, ptr addrspace(1) %in3) #0 {
   %r0 = load <2 x half>, ptr addrspace(1) %in1
@@ -112,28 +112,28 @@ define amdgpu_kernel void @fmuladd_2.0_a_b_v2f16(ptr addrspace(1) %out, ptr addr
 ; GFX9-FLUSH-LABEL: fmuladd_2.0_a_b_v2f16:
 ; GFX9-FLUSH:       ; %bb.0:
 ; GFX9-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-FLUSH-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-FLUSH-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
 ; GFX9-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FLUSH-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GFX9-FLUSH-NEXT:    global_load_dword v1, v3, s[0:1] glc
 ; GFX9-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FLUSH-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
+; GFX9-FLUSH-NEXT:    global_load_dword v2, v3, s[0:1] offset:4 glc
 ; GFX9-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLUSH-NEXT:    v_pk_add_f16 v1, v1, v1
 ; GFX9-FLUSH-NEXT:    v_pk_add_f16 v1, v1, v2
-; GFX9-FLUSH-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-FLUSH-NEXT:    global_store_dword v3, v1, s[0:1]
 ; GFX9-FLUSH-NEXT:    s_endpgm
 ;
 ; GFX9-DENORM-LABEL: fmuladd_2.0_a_b_v2f16:
 ; GFX9-DENORM:       ; %bb.0:
 ; GFX9-DENORM-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-DENORM-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-DENORM-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
 ; GFX9-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DENORM-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GFX9-DENORM-NEXT:    global_load_dword v1, v3, s[0:1] glc
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DENORM-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
+; GFX9-DENORM-NEXT:    global_load_dword v2, v3, s[0:1] offset:4 glc
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-DENORM-NEXT:    v_pk_fma_f16 v1, v1, 2.0, v2 op_sel_hi:[1,0,1]
-; GFX9-DENORM-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-DENORM-NEXT:    global_store_dword v3, v1, s[0:1]
 ; GFX9-DENORM-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
@@ -152,28 +152,28 @@ define amdgpu_kernel void @fmuladd_a_2.0_b_v2f16(ptr addrspace(1) %out, ptr addr
 ; GFX9-FLUSH-LABEL: fmuladd_a_2.0_b_v2f16:
 ; GFX9-FLUSH:       ; %bb.0:
 ; GFX9-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-FLUSH-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-FLUSH-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
 ; GFX9-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FLUSH-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GFX9-FLUSH-NEXT:    global_load_dword v1, v3, s[0:1] glc
 ; GFX9-FLUSH-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FLUSH-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
+; GFX9-FLUSH-NEXT:    global_load_dword v2, v3, s[0:1] offset:4 glc
 ; GFX9-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLUSH-NEXT:    v_pk_add_f16 v1, v1, v1
 ; GFX9-FLUSH-NEXT:    v_pk_add_f16 v1, v1, v2
-; GFX9-FLUSH-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-FLUSH-NEXT:    global_store_dword v3, v1, s[0:1]
 ; GFX9-FLUSH-NEXT:    s_endpgm
 ;
 ; GFX9-DENORM-LABEL: fmuladd_a_2.0_b_v2f16:
 ; GFX9-DENORM:       ; %bb.0:
 ; GFX9-DENORM-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-DENORM-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-DENORM-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
 ; GFX9-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DENORM-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GFX9-DENORM-NEXT:    global_load_dword v1, v3, s[0:1] glc
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DENORM-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
+; GFX9-DENORM-NEXT:    global_load_dword v2, v3, s[0:1] offset:4 glc
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-DENORM-NEXT:    v_pk_fma_f16 v1, v1, 2.0, v2 op_sel_hi:[1,0,1]
-; GFX9-DENORM-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-DENORM-NEXT:    global_store_dword v3, v1, s[0:1]
 ; GFX9-DENORM-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
@@ -192,15 +192,15 @@ define amdgpu_kernel void @fadd_a_a_b_v2f16(ptr addrspace(1) %out,
 ; GCN-LABEL: fadd_a_a_b_v2f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GCN-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GCN-NEXT:    global_load_dword v1, v3, s[0:1] glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
+; GCN-NEXT:    global_load_dword v2, v3, s[0:1] offset:4 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_pk_add_f16 v1, v1, v1
 ; GCN-NEXT:    v_pk_add_f16 v1, v1, v2
-; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
+; GCN-NEXT:    global_store_dword v3, v1, s[0:1]
 ; GCN-NEXT:    s_endpgm
                             ptr addrspace(1) %in1,
                             ptr addrspace(1) %in2) #0 {

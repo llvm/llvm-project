@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgpu7.00--amdhsa < %s | FileCheck -check-prefixes=CO-V4,HSA,ALL %s
-; RUN: llc -mtriple=amdgpu6.00-mesa-mesa3d < %s | FileCheck -check-prefixes=CO-V4,OS-MESA3D,ALL %s
-; RUN: llc -mtriple=amdgpu6.00-mesa-unknown < %s | FileCheck -check-prefixes=OS-UNKNOWN,ALL %s
+; RUN: llc -global-isel -mtriple=amdgpu7.00--amdhsa < %s | FileCheck -check-prefixes=CO-V4,HSA,ALL %s
+; RUN: llc -global-isel -mtriple=amdgpu7.01-mesa-mesa3d -mattr=+flat-for-global < %s | FileCheck -check-prefixes=CO-V4,OS-MESA3D,ALL %s
+; RUN: llc -global-isel -mtriple=amdgpu7.01-mesa-unknown -mattr=+flat-for-global < %s | FileCheck -check-prefixes=OS-UNKNOWN,ALL %s
 
 ; ALL-LABEL: {{^}}test:
 ; OS-MESA3D: enable_sgpr_kernarg_segment_ptr = 1
@@ -23,7 +23,9 @@ define amdgpu_kernel void @test(ptr addrspace(1) %out) #1 {
 ; OS-MESA3D: kernarg_segment_alignment = 4
 
 ; 10 + 9 (36 prepended implicit bytes) + 2(out pointer) = 21 = 0x15
-; OS-UNKNOWN: s_load_dword s{{[0-9]+}}, s[4:5], 0x15
+
+; OS-UNKNOWN: s_load_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, 0x15
+
 ; HSA:        .amdhsa_kernarg_size 8
 define amdgpu_kernel void @test_implicit(ptr addrspace(1) %out) #1 {
   %implicitarg.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -41,8 +43,7 @@ define amdgpu_kernel void @test_implicit(ptr addrspace(1) %out) #1 {
 ; HSA: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x4
 ; OS-MESA3D: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x3
 ; ALL: v_mov_b32_e32 [[V_VAL:v[0-9]+]], [[VAL]]
-; MESA: buffer_store_dword [[V_VAL]]
-; HSA: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[V_VAL]]
+; ALL: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[V_VAL]]
 
 ; HSA:        .amdhsa_kernarg_size 12
 define amdgpu_kernel void @test_implicit_alignment(ptr addrspace(1) %out, <2 x i8> %in) #1 {
@@ -60,8 +61,8 @@ define amdgpu_kernel void @test_implicit_alignment(ptr addrspace(1) %out, <2 x i
 ; HSA: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x4
 ; OS-MESA3D: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x3
 ; ALL: v_mov_b32_e32 [[V_VAL:v[0-9]+]], [[VAL]]
-; MESA: buffer_store_dword [[V_VAL]]
-; HSA: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[V_VAL]]
+; ALL: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[V_VAL]]
+
 ; HSA:        .amdhsa_kernarg_size 64
 define amdgpu_kernel void @opencl_test_implicit_alignment(ptr addrspace(1) %out, <2 x i8> %in) #2 {
   %implicitarg.ptr = call noalias ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -75,6 +76,8 @@ define amdgpu_kernel void @opencl_test_implicit_alignment(ptr addrspace(1) %out,
 ; OS-MESA3D: kernarg_segment_byte_size = 0
 ; OS-MESA3D: kernarg_segment_alignment = 4
 
+; HSA: s_mov_b64 [[OFFSET_NULL:s\[[0-9]+:[0-9]+\]]], 40{{$}}
+; HSA: s_load_dword s{{[0-9]+}}, [[OFFSET_NULL]]
 
 ; HSA: .amdhsa_kernarg_size 0
 ; HSA: .amdhsa_user_sgpr_kernarg_segment_ptr 0

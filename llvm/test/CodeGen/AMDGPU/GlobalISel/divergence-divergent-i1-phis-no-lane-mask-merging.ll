@@ -235,12 +235,12 @@ define amdgpu_cs void @single_lane_execution_attribute(i32 inreg %.userdata0, <3
 ; GFX10-NEXT:    s_load_dwordx8 s[4:11], s[2:3], 0x0
 ; GFX10-NEXT:    s_mov_b32 s3, 0
 ; GFX10-NEXT:    v_mbcnt_hi_u32_b32 v2, -1, v1
-; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 2, v2
+; GFX10-NEXT:    v_lshlrev_b32_e32 v3, 2, v2
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    buffer_load_dword v1, v3, s[4:7], 0 offen
 ; GFX10-NEXT:    v_and_b32_e32 v3, 1, v2
 ; GFX10-NEXT:    v_cmp_ne_u32_e64 s0, 0, v3
 ; GFX10-NEXT:    ; implicit-def: $vgpr3
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    buffer_load_dword v1, v1, s[4:7], 0 offen
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX10-NEXT:    s_and_saveexec_b32 s2, s0

@@ -433,15 +433,15 @@ define amdgpu_kernel void @repeat_successor(i32 %in, ptr addrspace(1) %src1, ptr
 ; GFX906-NEXT:    s_cmp_ge_i32 s6, 1
 ; GFX906-NEXT:    s_cbranch_scc0 .LBB7_6
 ; GFX906-NEXT:  ; %bb.2:
-; GFX906-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX906-NEXT:    global_load_dword v0, v0, s[0:1]
+; GFX906-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
+; GFX906-NEXT:    global_load_dword v0, v1, s[0:1]
 ; GFX906-NEXT:    s_branch .LBB7_5
 ; GFX906-NEXT:  .LBB7_3: ; %LeafBlock5
 ; GFX906-NEXT:    s_cmp_eq_u32 s6, 3
 ; GFX906-NEXT:    s_cbranch_scc0 .LBB7_6
 ; GFX906-NEXT:  ; %bb.4: ; %sw.bb5
-; GFX906-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX906-NEXT:    global_load_dword v0, v0, s[2:3]
+; GFX906-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
+; GFX906-NEXT:    global_load_dword v0, v1, s[2:3]
 ; GFX906-NEXT:  .LBB7_5: ; %return.sink.split
 ; GFX906-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x3c
 ; GFX906-NEXT:    v_mov_b32_e32 v1, 0
@@ -583,11 +583,11 @@ define amdgpu_kernel void @v32i8_loop_carried(ptr addrspace(1) %src1, ptr addrsp
 ; GFX906-LABEL: v32i8_loop_carried:
 ; GFX906:       ; %bb.0: ; %entry
 ; GFX906-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX906-NEXT:    v_lshlrev_b32_e32 v1, 5, v0
-; GFX906-NEXT:    v_mov_b32_e32 v2, 0xff
+; GFX906-NEXT:    v_lshlrev_b32_e32 v2, 5, v0
 ; GFX906-NEXT:    v_cmp_le_u32_e32 vcc, 15, v0
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    global_load_dword v1, v1, s[0:1]
+; GFX906-NEXT:    global_load_dword v1, v2, s[0:1]
+; GFX906-NEXT:    v_mov_b32_e32 v2, 0xff
 ; GFX906-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_and_b32_sdwa v0, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD

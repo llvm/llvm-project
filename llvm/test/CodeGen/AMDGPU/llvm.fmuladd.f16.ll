@@ -435,7 +435,7 @@ define amdgpu_kernel void @fmuladd_f16_imm_a(
 ; GFX11-FLUSH-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX11-FLUSH-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], 0 glc dlc
 ; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], 0 glc dlc
+; GFX11-FLUSH-TRUE16-NEXT:    buffer_load_d16_b16 v1, off, s[4:7], 0 glc dlc
 ; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FLUSH-TRUE16-NEXT:    s_mov_b32 s9, s1
 ; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.l, 0x4200, v0.l
@@ -670,7 +670,7 @@ define amdgpu_kernel void @fmuladd_f16_imm_b(
 ; GFX11-FLUSH-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX11-FLUSH-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], 0 glc dlc
 ; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FLUSH-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], 0 glc dlc
+; GFX11-FLUSH-TRUE16-NEXT:    buffer_load_d16_b16 v1, off, s[4:7], 0 glc dlc
 ; GFX11-FLUSH-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FLUSH-TRUE16-NEXT:    s_mov_b32 s9, s1
 ; GFX11-FLUSH-TRUE16-NEXT:    v_mul_f16_e32 v0.l, 0x4200, v0.l

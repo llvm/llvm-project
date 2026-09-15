@@ -429,6 +429,7 @@
 ; GCN-O1-NEXT:        Tail Duplication
 ; GCN-O1-NEXT:        Machine Copy Propagation Pass
 ; GCN-O1-NEXT:        Post-RA pseudo instruction expansion pass
+; GCN-O1-NEXT:        AMDGPU Break Load Cluster Dependencies
 ; GCN-O1-NEXT:        SI Shrink Instructions
 ; GCN-O1-NEXT:        SI post-RA bundler
 ; GCN-O1-NEXT:        MachineDominator Tree Construction
@@ -758,6 +759,7 @@
 ; GCN-O1-OPTS-NEXT:        Tail Duplication
 ; GCN-O1-OPTS-NEXT:        Machine Copy Propagation Pass
 ; GCN-O1-OPTS-NEXT:        Post-RA pseudo instruction expansion pass
+; GCN-O1-OPTS-NEXT:        AMDGPU Break Load Cluster Dependencies
 ; GCN-O1-OPTS-NEXT:        SI Shrink Instructions
 ; GCN-O1-OPTS-NEXT:        SI post-RA bundler
 ; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
@@ -1092,6 +1094,7 @@
 ; GCN-O2-NEXT:        Tail Duplication
 ; GCN-O2-NEXT:        Machine Copy Propagation Pass
 ; GCN-O2-NEXT:        Post-RA pseudo instruction expansion pass
+; GCN-O2-NEXT:        AMDGPU Break Load Cluster Dependencies
 ; GCN-O2-NEXT:        SI Shrink Instructions
 ; GCN-O2-NEXT:        SI post-RA bundler
 ; GCN-O2-NEXT:        MachineDominator Tree Construction
@@ -1441,6 +1444,7 @@
 ; GCN-O3-NEXT:        Tail Duplication
 ; GCN-O3-NEXT:        Machine Copy Propagation Pass
 ; GCN-O3-NEXT:        Post-RA pseudo instruction expansion pass
+; GCN-O3-NEXT:        AMDGPU Break Load Cluster Dependencies
 ; GCN-O3-NEXT:        SI Shrink Instructions
 ; GCN-O3-NEXT:        SI post-RA bundler
 ; GCN-O3-NEXT:        MachineDominator Tree Construction

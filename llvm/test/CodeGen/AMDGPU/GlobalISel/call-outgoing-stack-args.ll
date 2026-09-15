@@ -410,9 +410,9 @@ define void @func_caller_byval(ptr addrspace(5) %argptr) #2 {
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[1:2], v0, off offset:48
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[1:2], s32 offset:48
-; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], v0, off offset:56
+; FLATSCR-NEXT:    scratch_load_dwordx2 v[4:5], v0, off offset:56
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s32 offset:56
+; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[4:5], s32 offset:56
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 0
 ; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1

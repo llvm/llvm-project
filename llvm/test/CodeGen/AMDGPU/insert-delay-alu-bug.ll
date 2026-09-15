@@ -118,7 +118,7 @@ define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB2_9
 ; GFX11-NEXT:  ; %bb.6: ; %bb18.preheader
 ; GFX11-NEXT:    s_load_b128 s[28:31], s[18:19], 0x44
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_mul_hi_u32 s1, s29, s28
@@ -135,7 +135,7 @@ define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg
 ; GFX11-NEXT:    s_or_b32 s0, s26, s0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_lshl_b64 s[22:23], s[0:1], 1
-; GFX11-NEXT:    global_load_u16 v0, v0, s[22:23]
+; GFX11-NEXT:    global_load_u16 v0, v1, s[22:23]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    s_cmp_eq_u32 s0, 0

@@ -145,9 +145,9 @@ define amdgpu_kernel void @add_u64_ss(i64 %v, i64 %a) {
 
 define i32 @lshl_add_u64_gep(ptr %p, i64 %a) {
 ; GCN-LABEL: lshl_add_u64_gep:
-; GCN: v_lshl_add_u64 v[0:1], v[2:3], 2, v[0:1]
+; GCN: v_lshl_add_u64 v[2:3], v[2:3], 2, v[0:1]
 ; GISEL-LABEL: lshl_add_u64_gep:
-; GISEL: v_lshl_add_u64 v[0:1], v[2:3], 2, v[0:1]
+; GISEL: v_lshl_add_u64 v[2:3], v[2:3], 2, v[0:1]
   %gep = getelementptr inbounds i32, ptr %p, i64 %a
   %v = load i32, ptr %gep
   ret i32 %v

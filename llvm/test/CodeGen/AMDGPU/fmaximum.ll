@@ -1295,28 +1295,28 @@ define amdgpu_kernel void @fmaximumi_f32_move_to_valu(ptr addrspace(1) %out, ptr
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v3, 0x7fc00000
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-SDAG-NEXT:    global_load_dword v1, v0, s[2:3] glc
+; GFX9-SDAG-NEXT:    global_load_dword v1, v5, s[2:3] glc
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-SDAG-NEXT:    global_load_dword v2, v0, s[6:7] glc
+; GFX9-SDAG-NEXT:    global_load_dword v2, v5, s[6:7] glc
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-SDAG-NEXT:    v_max_f32_e32 v4, v1, v2
 ; GFX9-SDAG-NEXT:    v_cmp_o_f32_e32 vcc, v1, v2
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v1, v3, v4, vcc
-; GFX9-SDAG-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-SDAG-NEXT:    global_store_dword v5, v1, s[0:1]
 ; GFX9-SDAG-NEXT:    s_endpgm
 ;
 ; GFX9-GISEL-LABEL: fmaximumi_f32_move_to_valu:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-GISEL-NEXT:    global_load_dword v1, v0, s[2:3] glc
+; GFX9-GISEL-NEXT:    global_load_dword v1, v4, s[2:3] glc
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:    global_load_dword v2, v0, s[6:7] glc
+; GFX9-GISEL-NEXT:    global_load_dword v2, v4, s[6:7] glc
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    v_max_f32_e32 v3, v1, v2
 ; GFX9-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, v1, v2
@@ -1324,7 +1324,7 @@ define amdgpu_kernel void @fmaximumi_f32_move_to_valu(ptr addrspace(1) %out, ptr
 ; GFX9-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s2, s2, 0x7fc00000
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-GISEL-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-GISEL-NEXT:    global_store_dword v4, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1170-LABEL: fmaximumi_f32_move_to_valu:
@@ -1332,14 +1332,14 @@ define amdgpu_kernel void @fmaximumi_f32_move_to_valu(ptr addrspace(1) %out, ptr
 ; GFX1170-NEXT:    s_clause 0x1
 ; GFX1170-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1170-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX1170-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1170-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX1170-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1170-NEXT:    global_load_b32 v1, v0, s[2:3] glc dlc
+; GFX1170-NEXT:    global_load_b32 v1, v3, s[2:3] glc dlc
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0)
-; GFX1170-NEXT:    global_load_b32 v2, v0, s[4:5] glc dlc
+; GFX1170-NEXT:    global_load_b32 v2, v3, s[4:5] glc dlc
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1170-NEXT:    v_maximum_f32 v1, v1, v2
-; GFX1170-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX1170-NEXT:    global_store_b32 v3, v1, s[0:1]
 ; GFX1170-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-LABEL: fmaximumi_f32_move_to_valu:
@@ -1347,14 +1347,14 @@ define amdgpu_kernel void @fmaximumi_f32_move_to_valu(ptr addrspace(1) %out, ptr
 ; GFX12-SDAG-NEXT:    s_clause 0x1
 ; GFX12-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-SDAG-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    global_load_b32 v1, v0, s[2:3] scope:SCOPE_SYS
+; GFX12-SDAG-NEXT:    global_load_b32 v1, v3, s[2:3] scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-NEXT:    global_load_b32 v2, v0, s[4:5] scope:SCOPE_SYS
+; GFX12-SDAG-NEXT:    global_load_b32 v2, v3, s[4:5] scope:SCOPE_SYS
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    v_maximum_f32 v1, v1, v2
-; GFX12-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX12-SDAG-NEXT:    global_store_b32 v3, v1, s[0:1]
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: fmaximumi_f32_move_to_valu:
@@ -1362,18 +1362,18 @@ define amdgpu_kernel void @fmaximumi_f32_move_to_valu(ptr addrspace(1) %out, ptr
 ; GFX12-GISEL-NEXT:    s_clause 0x1
 ; GFX12-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-GISEL-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    global_load_b32 v1, v0, s[2:3] scope:SCOPE_SYS
+; GFX12-GISEL-NEXT:    global_load_b32 v1, v3, s[2:3] scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-NEXT:    global_load_b32 v2, v0, s[4:5] scope:SCOPE_SYS
+; GFX12-GISEL-NEXT:    global_load_b32 v2, v3, s[4:5] scope:SCOPE_SYS
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v2
 ; GFX12-GISEL-NEXT:    s_maximum_f32 s2, s2, s3
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX12-GISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX12-GISEL-NEXT:    global_store_b32 v3, v1, s[0:1]
 ; GFX12-GISEL-NEXT:    s_endpgm
   %a = load volatile float, ptr addrspace(1) %aptr, align 4
   %b = load volatile float, ptr addrspace(1) %bptr, align 4
@@ -1387,28 +1387,28 @@ define amdgpu_kernel void @fmaximum_f16_move_to_valu(ptr addrspace(1) %out, ptr 
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-SDAG-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v3, 0x7e00
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-SDAG-NEXT:    global_load_ushort v1, v0, s[2:3] glc
+; GFX9-SDAG-NEXT:    global_load_ushort v1, v5, s[2:3] glc
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-SDAG-NEXT:    global_load_ushort v2, v0, s[6:7] glc
+; GFX9-SDAG-NEXT:    global_load_ushort v2, v5, s[6:7] glc
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-SDAG-NEXT:    v_max_f16_e32 v4, v1, v2
 ; GFX9-SDAG-NEXT:    v_cmp_o_f16_e32 vcc, v1, v2
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v1, v3, v4, vcc
-; GFX9-SDAG-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX9-SDAG-NEXT:    global_store_short v5, v1, s[0:1]
 ; GFX9-SDAG-NEXT:    s_endpgm
 ;
 ; GFX9-GISEL-LABEL: fmaximum_f16_move_to_valu:
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-GISEL-NEXT:    global_load_ushort v1, v0, s[2:3] glc
+; GFX9-GISEL-NEXT:    global_load_ushort v1, v3, s[2:3] glc
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:    global_load_ushort v2, v0, s[6:7] glc
+; GFX9-GISEL-NEXT:    global_load_ushort v2, v3, s[6:7] glc
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s3, v2
@@ -1419,7 +1419,7 @@ define amdgpu_kernel void @fmaximum_f16_move_to_valu(ptr addrspace(1) %out, ptr 
 ; GFX9-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s2, s2, 0x7e00
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s2
-; GFX9-GISEL-NEXT:    global_store_short v0, v1, s[0:1]
+; GFX9-GISEL-NEXT:    global_store_short v3, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1170-SDAG-TRUE16-LABEL: fmaximum_f16_move_to_valu:
@@ -1442,14 +1442,14 @@ define amdgpu_kernel void @fmaximum_f16_move_to_valu(ptr addrspace(1) %out, ptr 
 ; GFX1170-SDAG-FAKE16-NEXT:    s_clause 0x1
 ; GFX1170-SDAG-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1170-SDAG-FAKE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX1170-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1170-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX1170-SDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1170-SDAG-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3] glc dlc
+; GFX1170-SDAG-FAKE16-NEXT:    global_load_u16 v1, v3, s[2:3] glc dlc
 ; GFX1170-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX1170-SDAG-FAKE16-NEXT:    global_load_u16 v2, v0, s[4:5] glc dlc
+; GFX1170-SDAG-FAKE16-NEXT:    global_load_u16 v2, v3, s[4:5] glc dlc
 ; GFX1170-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1170-SDAG-FAKE16-NEXT:    v_maximum_f16 v1, v1, v2
-; GFX1170-SDAG-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX1170-SDAG-FAKE16-NEXT:    global_store_b16 v3, v1, s[0:1]
 ; GFX1170-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX1170-GISEL-TRUE16-LABEL: fmaximum_f16_move_to_valu:
@@ -1472,17 +1472,17 @@ define amdgpu_kernel void @fmaximum_f16_move_to_valu(ptr addrspace(1) %out, ptr 
 ; GFX1170-GISEL-FAKE16-NEXT:    s_clause 0x1
 ; GFX1170-GISEL-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1170-GISEL-FAKE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX1170-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1170-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX1170-GISEL-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1170-GISEL-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3] glc dlc
+; GFX1170-GISEL-FAKE16-NEXT:    global_load_u16 v1, v3, s[2:3] glc dlc
 ; GFX1170-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX1170-GISEL-FAKE16-NEXT:    global_load_u16 v2, v0, s[4:5] glc dlc
+; GFX1170-GISEL-FAKE16-NEXT:    global_load_u16 v2, v3, s[4:5] glc dlc
 ; GFX1170-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1170-GISEL-FAKE16-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX1170-GISEL-FAKE16-NEXT:    v_readfirstlane_b32 s3, v2
 ; GFX1170-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1170-GISEL-FAKE16-NEXT:    v_maximum_f16 v1, s2, s3
-; GFX1170-GISEL-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX1170-GISEL-FAKE16-NEXT:    global_store_b16 v3, v1, s[0:1]
 ; GFX1170-GISEL-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX12-SDAG-TRUE16-LABEL: fmaximum_f16_move_to_valu:
@@ -1505,14 +1505,14 @@ define amdgpu_kernel void @fmaximum_f16_move_to_valu(ptr addrspace(1) %out, ptr 
 ; GFX12-SDAG-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-SDAG-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-SDAG-FAKE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3] scope:SCOPE_SYS
+; GFX12-SDAG-FAKE16-NEXT:    global_load_u16 v1, v3, s[2:3] scope:SCOPE_SYS
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    global_load_u16 v2, v0, s[4:5] scope:SCOPE_SYS
+; GFX12-SDAG-FAKE16-NEXT:    global_load_u16 v2, v3, s[4:5] scope:SCOPE_SYS
 ; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-FAKE16-NEXT:    v_maximum_f16 v1, v1, v2
-; GFX12-SDAG-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX12-SDAG-FAKE16-NEXT:    global_store_b16 v3, v1, s[0:1]
 ; GFX12-SDAG-FAKE16-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-TRUE16-LABEL: fmaximum_f16_move_to_valu:
@@ -1520,18 +1520,18 @@ define amdgpu_kernel void @fmaximum_f16_move_to_valu(ptr addrspace(1) %out, ptr 
 ; GFX12-GISEL-TRUE16-NEXT:    s_clause 0x1
 ; GFX12-GISEL-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-GISEL-TRUE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v2, s[2:3] scope:SCOPE_SYS
+; GFX12-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v3, s[2:3] scope:SCOPE_SYS
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-TRUE16-NEXT:    global_load_d16_b16 v1, v2, s[4:5] scope:SCOPE_SYS
+; GFX12-GISEL-TRUE16-NEXT:    global_load_d16_b16 v1, v3, s[4:5] scope:SCOPE_SYS
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-GISEL-TRUE16-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX12-GISEL-TRUE16-NEXT:    s_maximum_f16 s2, s2, s3
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX12-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
-; GFX12-GISEL-TRUE16-NEXT:    global_store_b16 v2, v0, s[0:1]
+; GFX12-GISEL-TRUE16-NEXT:    global_store_b16 v3, v0, s[0:1]
 ; GFX12-GISEL-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-FAKE16-LABEL: fmaximum_f16_move_to_valu:
@@ -1539,18 +1539,18 @@ define amdgpu_kernel void @fmaximum_f16_move_to_valu(ptr addrspace(1) %out, ptr 
 ; GFX12-GISEL-FAKE16-NEXT:    s_clause 0x1
 ; GFX12-GISEL-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-GISEL-FAKE16-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX12-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX12-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3] scope:SCOPE_SYS
+; GFX12-GISEL-FAKE16-NEXT:    global_load_u16 v1, v3, s[2:3] scope:SCOPE_SYS
 ; GFX12-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-FAKE16-NEXT:    global_load_u16 v2, v0, s[4:5] scope:SCOPE_SYS
+; GFX12-GISEL-FAKE16-NEXT:    global_load_u16 v2, v3, s[4:5] scope:SCOPE_SYS
 ; GFX12-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-FAKE16-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX12-GISEL-FAKE16-NEXT:    v_readfirstlane_b32 s3, v2
 ; GFX12-GISEL-FAKE16-NEXT:    s_maximum_f16 s2, s2, s3
 ; GFX12-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GFX12-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, s2
-; GFX12-GISEL-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX12-GISEL-FAKE16-NEXT:    global_store_b16 v3, v1, s[0:1]
 ; GFX12-GISEL-FAKE16-NEXT:    s_endpgm
   %a = load volatile half, ptr addrspace(1) %aptr, align 4
   %b = load volatile half, ptr addrspace(1) %bptr, align 4

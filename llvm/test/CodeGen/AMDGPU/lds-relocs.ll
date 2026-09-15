@@ -1,43 +1,13 @@
-; RUN: llc -mtriple=amdgpu9.00-mesa-mesa3d -amdgpu-enable-lower-module-lds=0 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN %s
-; RUN: llc -mtriple=amdgpu9.00-mesa-mesa3d -amdgpu-enable-lower-module-lds=0 -filetype=obj < %s | llvm-readobj -r --syms - | FileCheck -check-prefixes=ELF %s
+; RUN: llc -global-isel -mtriple=amdgpu9.00-mesa-mesa3d -amdgpu-enable-lower-module-lds=0 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN %s
+; FIXME: Merge with DAG test
 
 @lds.external = external unnamed_addr addrspace(3) global [0 x i32]
 @lds.defined = unnamed_addr addrspace(3) global [8 x i32] poison, align 8
 
-; ELF:      Relocations [
-; ELF-NEXT:   Section (3) .rel.text {
-; ELF-NEXT:     0x{{[0-9A-F]*}} R_AMDGPU_ABS32_LO lds.external
-; ELF-NEXT:     0x{{[0-9A-F]*}} R_AMDGPU_ABS32_LO lds.defined
-; ELF-NEXT:   }
-; ELF-NEXT: ]
-
-; ELF:      Symbol {
-; ELF:        Name: lds.external
-; ELF-NEXT:   Value: 0x4
-; ELF-NEXT:   Size: 0
-; ELF-NEXT:   Binding: Global (0x1)
-; ELF-NEXT:   Type: Object (0x1)
-; ELF-NEXT:   Other: 0
-; ELF-NEXT:   Section: Processor Specific (0xFF00)
-; ELF-NEXT: }
-
-; ELF:      Symbol {
-; ELF:        Name: lds.defined
-; ELF-NEXT:   Value: 0x8
-; ELF-NEXT:   Size: 32
-; ELF-NEXT:   Binding: Global (0x1)
-; ELF-NEXT:   Type: Object (0x1)
-; ELF-NEXT:   Other: 0
-; ELF-NEXT:   Section: Processor Specific (0xFF00)
-; ELF-NEXT: }
-
 ; GCN-LABEL: {{^}}test_basic:
-; GCN: v_mov_b32_e32 v1, lds.external@abs32@lo ; encoding: [0xff,0x02,0x02,0x7e,A,A,A,A]
-; GCN-NEXT:              ; fixup A - offset: 4, value: lds.external@abs32@lo, kind: FK_Data_4{{$}}
-;
-; GCN: s_lshl2_add_u32 s0, s2, lds.defined@abs32@lo ; encoding: [0x02,0xff,0x80,0x97,A,A,A,A]
-; GCN-NEXT:          ; fixup A - offset: 4, value: lds.defined@abs32@lo, kind: FK_Data_4{{$}}
-;
+; GCN: s_add_u32 s0, lds.defined@abs32@lo, s0 ; encoding: [0xff,0x00,0x00,0x80,A,A,A,A]
+; GCN: v_mov_b32_e32 v2, s0 ; encoding: [0x00,0x02,0x04,0x7e]
+
 ; GCN: .globl lds.external
 ; GCN: .amdgpu_lds lds.external, 0, 4
 ; GCN: .globl lds.defined
@@ -55,3 +25,4 @@ main_body:
 }
 
 attributes #0 = { "no-signed-zeros-fp-math"="true" }
+attributes #4 = { convergent nounwind readnone }

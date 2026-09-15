@@ -149,11 +149,11 @@ define i32 @global_load_2xi16_align1(ptr addrspace(1) %p) #0 {
 ; GFX7-ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-ALIGNED-NEXT:    v_add_i32_e32 v2, vcc, 2, v0
 ; GFX7-ALIGNED-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
-; GFX7-ALIGNED-NEXT:    v_add_i32_e32 v4, vcc, 1, v0
-; GFX7-ALIGNED-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-ALIGNED-NEXT:    v_add_i32_e32 v8, vcc, 1, v0
+; GFX7-ALIGNED-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
 ; GFX7-ALIGNED-NEXT:    v_add_i32_e32 v6, vcc, 3, v0
 ; GFX7-ALIGNED-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
-; GFX7-ALIGNED-NEXT:    flat_load_ubyte v4, v[4:5]
+; GFX7-ALIGNED-NEXT:    flat_load_ubyte v4, v[8:9]
 ; GFX7-ALIGNED-NEXT:    flat_load_ubyte v5, v[6:7]
 ; GFX7-ALIGNED-NEXT:    flat_load_ubyte v2, v[2:3]
 ; GFX7-ALIGNED-NEXT:    flat_load_ubyte v0, v[0:1]

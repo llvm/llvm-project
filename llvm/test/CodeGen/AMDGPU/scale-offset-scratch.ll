@@ -84,15 +84,15 @@ define amdgpu_ps float @scratch_load_b32_idxprom_wrong_stride(ptr addrspace(5) a
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; GFX1250-NEXT:    scratch_load_b32 v0, v0, s0
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v1, 3, v0
+; GFX1250-NEXT:    scratch_load_b32 v0, v1, s0
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-LABEL: scratch_load_b32_idxprom_wrong_stride:
 ; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; GFX13-NEXT:    scratch_load_b32 v0, v0, s0
+; GFX13-NEXT:    v_lshlrev_b32_e32 v1, 3, v0
+; GFX13-NEXT:    scratch_load_b32 v0, v1, s0
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
 entry:

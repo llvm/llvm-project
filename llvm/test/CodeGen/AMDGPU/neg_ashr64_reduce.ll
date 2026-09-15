@@ -45,14 +45,14 @@ define <3 x i64> @v3_ashr_metadata(ptr %arg0.ptr, ptr %arg1.ptr) {
 ; CHECK-LABEL: v3_ashr_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_add_co_u32_e32 v12, vcc, 20, v0
 ; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
-; CHECK-NEXT:    v_add_co_u32_e32 v0, vcc, 20, v0
-; CHECK-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; CHECK-NEXT:    v_addc_co_u32_e32 v13, vcc, 0, v1, vcc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_load_dword v4, v[2:3] offset:16
 ; CHECK-NEXT:    flat_load_dwordx4 v[8:11], v[2:3]
+; CHECK-NEXT:    flat_load_dword v1, v[12:13]
 ; CHECK-NEXT:    v_mov_b32_e32 v3, -1
-; CHECK-NEXT:    flat_load_dword v1, v[0:1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v8, v5
 ; CHECK-NEXT:    v_ashrrev_i32_e32 v2, v10, v7

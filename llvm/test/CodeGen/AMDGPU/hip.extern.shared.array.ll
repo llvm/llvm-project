@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgpu9.00--amdhsa -o - %s | FileCheck %s
+; RUN: llc -global-isel -mtriple=amdgpu9.00--amdhsa -o - %s | FileCheck %s
 
 @lds0 = addrspace(3) global [512 x float] poison
 @lds1 = addrspace(3) global [256 x float] poison
@@ -22,8 +22,8 @@ define amdgpu_kernel void @dynamic_shared_array_0(ptr addrspace(1) %out) {
 }
 
 ; CHECK-LABEL: {{^}}dynamic_shared_array_1:
-; CHECK: v_mov_b32_e32 [[DYNLDS:v[0-9]+]], 0xc00
-; CHECK: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 2, [[DYNLDS]]
+; CHECK: v_lshlrev_b32_e32 [[IDX:v[0-9]+]], 2, {{v[0-9]+}}
+; CHECK: v_add_u32_e32 {{v[0-9]+}}, 0xc00, [[IDX]]
 define amdgpu_kernel void @dynamic_shared_array_1(ptr addrspace(1) %out, i32 %cond) {
 entry:
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -49,8 +49,8 @@ endif:                                            ; preds = %else, %if
 }
 
 ; CHECK-LABEL: {{^}}dynamic_shared_array_2:
-; CHECK: v_mov_b32_e32 [[DYNLDS:v[0-9]+]], 0x4000
-; CHECK: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 2, [[DYNLDS]]
+; CHECK: v_lshlrev_b32_e32 [[IDX:v[0-9]+]], 2, {{v[0-9]+}}
+; CHECK: v_add_u32_e32 {{v[0-9]+}}, 0x4000, [[IDX]]
 define amdgpu_kernel void @dynamic_shared_array_2(i32 %idx) {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %vidx = add i32 %tid.x, %idx
@@ -64,8 +64,8 @@ define amdgpu_kernel void @dynamic_shared_array_2(i32 %idx) {
 ; The offset to the dynamic shared memory array should be aligned on the type
 ; specified.
 ; CHECK-LABEL: {{^}}dynamic_shared_array_3:
-; CHECK: v_mov_b32_e32 [[DYNLDS:v[0-9]+]], 0x44
-; CHECK: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 2, [[DYNLDS]]
+; CHECK: v_lshlrev_b32_e32 [[IDX:v[0-9]+]], 2, {{v[0-9]+}}
+; CHECK: v_add_u32_e32 {{v[0-9]+}}, 0x44, [[IDX]]
 define amdgpu_kernel void @dynamic_shared_array_3(i32 %idx) {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %vidx = add i32 %tid.x, %idx
@@ -80,9 +80,8 @@ define amdgpu_kernel void @dynamic_shared_array_3(i32 %idx) {
 ; The offset to the dynamic shared memory array should be aligned on the
 ; maximal one.
 ; CHECK-LABEL: {{^}}dynamic_shared_array_4:
-; CHECK: v_mov_b32_e32 [[DYNLDS:v[0-9]+]], 0x48
-; CHECK-DAG: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 2, [[DYNLDS]]
-; CHECK-DAG: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 3, [[DYNLDS]]
+; CHECK: v_lshlrev_b32_e32 [[IDX:v[0-9]+]], 2, {{v[0-9]+}}
+; CHECK: v_add_u32_e32 {{v[0-9]+}}, 0x48, [[IDX]]
 define amdgpu_kernel void @dynamic_shared_array_4(i32 %idx) {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %vidx = add i32 %tid.x, %idx
@@ -99,9 +98,8 @@ define amdgpu_kernel void @dynamic_shared_array_4(i32 %idx) {
 
 ; Honor the explicit alignment from the specified variable.
 ; CHECK-LABEL: {{^}}dynamic_shared_array_5:
-; CHECK: v_mov_b32_e32 [[DYNLDS:v[0-9]+]], 0x44
-; CHECK-DAG: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 2, [[DYNLDS]]
-; CHECK-DAG: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 3, [[DYNLDS]]
+; CHECK: v_lshlrev_b32_e32 [[IDX:v[0-9]+]], 2, {{v[0-9]+}}
+; CHECK: v_add_u32_e32 {{v[0-9]+}}, 0x44, [[IDX]]
 define amdgpu_kernel void @dynamic_shared_array_5(i32 %idx) {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %vidx = add i32 %tid.x, %idx
@@ -118,9 +116,8 @@ define amdgpu_kernel void @dynamic_shared_array_5(i32 %idx) {
 
 ; Honor the explicit alignment from the specified variable.
 ; CHECK-LABEL: {{^}}dynamic_shared_array_6:
-; CHECK: v_mov_b32_e32 [[DYNLDS:v[0-9]+]], 0x50
-; CHECK-DAG: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 2, [[DYNLDS]]
-; CHECK-DAG: v_lshl_add_u32 {{v[0-9]+}}, {{v[0-9]+}}, 3, [[DYNLDS]]
+; CHECK: v_lshlrev_b32_e32 [[IDX:v[0-9]+]], 2, {{v[0-9]+}}
+; CHECK: v_add_u32_e32 {{v[0-9]+}}, 0x50, [[IDX]]
 define amdgpu_kernel void @dynamic_shared_array_6(i32 %idx) {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x()
   %vidx = add i32 %tid.x, %idx

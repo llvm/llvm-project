@@ -14,11 +14,11 @@ define amdgpu_kernel void @v_fabs_f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, 0
 ; SI-NEXT:    s_mov_b32 s11, s7
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b64 s[8:9], s[2:3]
-; SI-NEXT:    v_mov_b32_e32 v1, 0
-; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[0:1], s[8:11], 0 addr64
+; SI-NEXT:    v_mov_b32_e32 v3, 0
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[2:3], s[8:11], 0 addr64
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
