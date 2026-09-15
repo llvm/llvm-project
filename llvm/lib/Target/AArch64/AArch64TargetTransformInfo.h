@@ -282,6 +282,9 @@ public:
   bool isLegalSpeculativeLoad(Type *DataType,
                               unsigned AddressSpace) const override;
 
+  unsigned getMaximumVFMultipleForMemoryOp(ElementCount VF,
+                                           unsigned UF) const override;
+
   unsigned getPreferredVFMultipleForMemoryOp(
       unsigned Opcode, Type *DataType, ElementCount VF, unsigned UF,
       bool IsMasked,
