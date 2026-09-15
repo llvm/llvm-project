@@ -653,3 +653,53 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
   LatchBr->setOperand(
       0, Builder.createICmp(CmpInst::ICMP_EQ, AVLNext, Plan.getZero(AVLTy)));
 }
+
+void VPlanTransforms::trimVFsCausingSplits(VPlan &Plan,
+                                           const TargetTransformInfo &TTI) {
+  if (!Plan.hasScalableVF())
+    return;
+
+  // Get the widest type in the vector region.
+  unsigned WidestType = 1;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry())))
+    for (VPRecipeBase &BaseR :
+         make_range(VPBB->getFirstNonPhi(), VPBB->end())) {
+      if (auto *Store = dyn_cast<VPWidenStoreEVLRecipe>(&BaseR)) {
+        Type *T = Store->getStoredValue()->getScalarType();
+        WidestType = std::max(WidestType,
+                              isa<PointerType>(T)
+                                  ? Plan.getIndexType()->getScalarSizeInBits()
+                                  : T->getScalarSizeInBits());
+        continue;
+      }
+      for (auto *V : BaseR.definedValues()) {
+        if (!vputils::onlyScalarValuesUsed(V)) {
+          // Skip the partial reduction since its VF is scaled down and can
+          // be calculated by its operands.
+          if (isa<VPExpressionRecipe>(V))
+            continue;
+          uint64_t Scale;
+          if (match(V, m_VPInstruction<VPInstruction::ReductionStartVector>(
+                           m_VPValue(), m_VPValue(), m_ConstantInt(Scale))) &&
+              Scale != 1)
+            continue;
+          Type *T = V->getScalarType();
+          WidestType = std::max(WidestType,
+                                isa<PointerType>(T)
+                                    ? Plan.getIndexType()->getScalarSizeInBits()
+                                    : T->getScalarSizeInBits());
+        }
+      }
+    }
+
+  // Trim the VF that will generate vectors need to split.
+  SmallVector<ElementCount, 4> VFs = to_vector(Plan.vectorFactors());
+  for (auto VF : reverse(VFs)) {
+    if (TTI.getRegUsageForType(VectorType::get(
+            Type::getIntNTy(Plan.getContext(), WidestType), VF)) <= 8)
+      break;
+    Plan.removeVF(VF);
+  }
+  return;
+}
