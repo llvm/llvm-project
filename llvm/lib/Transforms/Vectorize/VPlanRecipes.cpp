@@ -1036,9 +1036,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
   }
   case VPInstruction::AnyOf: {
-    Value *Res = Builder.CreateFreeze(State.get(getOperand(0)));
+    Value *Res = State.get(getOperand(0));
     for (VPValue *Op : drop_begin(operands()))
-      Res = Builder.CreateOr(Res, Builder.CreateFreeze(State.get(Op)));
+      Res = Builder.CreateOr(Res, State.get(Op));
     return State.VF.isScalar() ? Res : Builder.CreateOrReduce(Res);
   }
   case VPInstruction::ExtractLane: {
@@ -1741,9 +1741,15 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     return Op == getOperand(1) || Op == getOperand(2);
   case Instruction::PHI:
     return true;
+  case Instruction::Select:
+    if (Op == getOperand(0) && Op != getOperand(1) && Op != getOperand(2) &&
+        vputils::isSingleScalar(Op))
+      // TODO: Relax for other opcodes.
+      if (match(Op, m_Freeze(m_VPValue())))
+        return true;
+    [[fallthrough]];
   case Instruction::FCmp:
   case Instruction::ICmp:
-  case Instruction::Select:
   case Instruction::Or:
   case Instruction::Freeze:
   case VPInstruction::Not:

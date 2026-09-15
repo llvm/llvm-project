@@ -19,9 +19,12 @@ define i1 @find_nan(ptr dereferenceable(32) align(16) %a) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[A]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD1]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP6]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i1> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM:.*]]
 ; CHECK:       [[VECTOR_BODY_INTERIM]]:
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
