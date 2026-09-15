@@ -10,6 +10,49 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Instruction format, keep in sync with SIInstrFlags::InstFormat in SIDefines.h
+def AMDGPUInstrFormat {
+  int NONE = 0;
+
+  // SALU instruction formats.
+  int SOP1 = 1;
+  int SOP2 = 2;
+  int SOPC = 3;
+  int SOPK = 4;
+  int SOPP = 5;
+
+  // VALU instruction formats.
+  int VOP1 = 6;
+  int VOP2 = 7;
+  int VOPC = 8;
+  int VOP3 = 9;
+  int VINTRP = 10;
+  int VOPD3 = 11;
+  int LDSDIR = 12;
+
+  // Memory instruction formats.
+  int MUBUF = 13;
+  int MTBUF = 14;
+  int SMRD = 15;
+  int MIMG = 16;
+  int VIMAGE = 17;
+  int VSAMPLE = 18;
+  int EXP = 19;
+  int FLAT = 20;
+  int DS = 21;
+
+  // Combined SGPR/VGPR spill pseudo.
+  int Spill = 22;
+}
+
+// Operand-encoding modifier, keep in sync with SIInstrFlags::FormatModifier in
+// SIDefines.h.
+def AMDGPUFormatModifier {
+  int None = 0;
+  int DPP  = 1;
+  int SDWA = 2;
+}
+
 class InstSI <dag outs, dag ins, string asm = "",
               list<dag> pattern = []> :
   AMDGPUInst<outs, ins, asm, pattern>, PredicateControl {
@@ -156,45 +199,49 @@ class InstSI <dag outs, dag ins, string asm = "",
   // This bit indicates that this is one of SWMMAC instructions.
   field bit IsSWMMAC = 0;
 
-  // These need to be kept in sync with the enum in SIInstrFlags.
-  let TSFlags{0} = SALU;
-  let TSFlags{1} = VALU;
+  // Mutually-exclusive instruction format, derived from the format bits above.
+  // The base format bits are all exclusive, so they collapse into one enum
+  // field.
+  bits<5> Format = !cond(SOP1    : AMDGPUInstrFormat.SOP1,
+                         SOP2    : AMDGPUInstrFormat.SOP2,
+                         SOPC    : AMDGPUInstrFormat.SOPC,
+                         SOPK    : AMDGPUInstrFormat.SOPK,
+                         SOPP    : AMDGPUInstrFormat.SOPP,
+                         VOP1    : AMDGPUInstrFormat.VOP1,
+                         VOP2    : AMDGPUInstrFormat.VOP2,
+                         VOPC    : AMDGPUInstrFormat.VOPC,
+                         VOP3    : AMDGPUInstrFormat.VOP3,
+                         VINTRP  : AMDGPUInstrFormat.VINTRP,
+                         VOPD3   : AMDGPUInstrFormat.VOPD3,
+                         LDSDIR  : AMDGPUInstrFormat.LDSDIR,
+                         MUBUF   : AMDGPUInstrFormat.MUBUF,
+                         MTBUF   : AMDGPUInstrFormat.MTBUF,
+                         SMRD    : AMDGPUInstrFormat.SMRD,
+                         MIMG    : AMDGPUInstrFormat.MIMG,
+                         VIMAGE  : AMDGPUInstrFormat.VIMAGE,
+                         VSAMPLE : AMDGPUInstrFormat.VSAMPLE,
+                         EXP     : AMDGPUInstrFormat.EXP,
+                         FLAT    : AMDGPUInstrFormat.FLAT,
+                         DS      : AMDGPUInstrFormat.DS,
+                         Spill   : AMDGPUInstrFormat.Spill,
+                         true    : AMDGPUInstrFormat.NONE);
 
-  let TSFlags{2} = SOP1;
-  let TSFlags{3} = SOP2;
-  let TSFlags{4} = SOPC;
-  let TSFlags{5} = SOPK;
-  let TSFlags{6} = SOPP;
+  // Mutually-exclusive operand-encoding modifier (DPP and SDWA never co-occur).
+  bits<2> FormatModifier = !cond(DPP  : AMDGPUFormatModifier.DPP,
+                                 SDWA : AMDGPUFormatModifier.SDWA,
+                                 true : AMDGPUFormatModifier.None);
 
-  let TSFlags{7} = VOP1;
-  let TSFlags{8} = VOP2;
-  let TSFlags{9} = VOPC;
-  let TSFlags{10} = VOP3;
-  let TSFlags{12} = VOP3P;
+  let TSFlags{4-0} = Format;
+  let TSFlags{6-5} = FormatModifier;
 
-  let TSFlags{13} = VINTRP;
-  let TSFlags{14} = SDWA;
-  let TSFlags{15} = DPP;
-  let TSFlags{16} = TRANS;
+  let TSFlags{7} = SALU;
+  let TSFlags{8} = VALU;
 
-  let TSFlags{17} = MUBUF;
-  let TSFlags{18} = MTBUF;
-  let TSFlags{19} = SMRD;
-  let TSFlags{20} = MIMG;
-  let TSFlags{21} = VIMAGE;
-  let TSFlags{22} = VSAMPLE;
-  let TSFlags{23} = EXP;
-  let TSFlags{24} = FLAT;
-  let TSFlags{25} = DS;
+  let TSFlags{9} = TRANS;
+  let TSFlags{10} = VOP3P;
+  let TSFlags{11} = VINTERP;
 
-  let TSFlags{26} = Spill;
-
-  // Reserved, must be 0
-  let TSFlags{27} = 0;
-
-  let TSFlags{28} = LDSDIR;
-  let TSFlags{29} = VINTERP;
-  let TSFlags{30} = VOPD3;
+  // Bits 30-12 are free.
 
   let TSFlags{32} = VM_CNT;
   let TSFlags{33} = EXP_CNT;
