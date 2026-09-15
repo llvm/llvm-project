@@ -741,11 +741,11 @@ def TuningFastVectorFSQRT
     : SubtargetFeature<"fast-vector-fsqrt", "HasFastVectorFSQRT",
                        "true", "Vector SQRT is fast (disable Newton-Raphson)",
                        [], InlineIgnore>;
-// True if 256-bit VDIVPS/VDIVPD instructions are nearly as fast as their
-// 128-bit counterparts.
-def TuningFastVectorFDIV
-    : SubtargetFeature<"fast-vector-fdiv", "HasFastVectorFDIV",
-                       "true", "Vector FDIV is fast (enable fast costs)",
+// True if 256-bit vector FP instructions are nearly as fast as their
+// 128-bit vector FP instructions.
+def TuningFastVectorFP256
+    : SubtargetFeature<"fast-vector-fp256", "HasFastVectorFP256",
+                       "true", "256-bit vector FP is fast (enable fast costs)",
                        [], InlineIgnore>;
 
 // If lzcnt has equivalent latency/throughput to most simple integer ops, it can
@@ -1833,7 +1833,7 @@ def ProcessorFeatures {
                                           TuningFast15ByteNOP,
                                           TuningFastScalarFSQRT,
                                           TuningFastVectorFSQRT,
-                                          TuningFastVectorFDIV,
+                                          TuningFastVectorFP256,
                                           TuningFastScalarShiftMasks,
                                           TuningFastVariablePerLaneShuffle,
                                           TuningFastMOVBE,
