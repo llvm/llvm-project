@@ -1640,6 +1640,7 @@ public:
                                                        const CallExpr *expr);
   std::optional<mlir::Value> emitAArch64SVEBuiltinExpr(unsigned builtinID,
                                                        const CallExpr *expr);
+  cir::VectorType getSVEType(const SVETypeFlags &typeFlags);
 
   mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, QualType ty,
                                       SourceLocation loc,

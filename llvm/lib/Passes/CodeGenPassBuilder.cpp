@@ -472,6 +472,7 @@ void CodeGenPassBuilder::addPassesToHandleExceptions(PassManagerWrapper &PMW) {
     addFunctionPass(WinEHPreparePass(/*DemoteCatchSwitchPHIOnly=*/false), PMW);
     addFunctionPass(WasmEHPreparePass(), PMW);
     break;
+  case ExceptionHandling::Default:
   case ExceptionHandling::None:
   case ExceptionHandling::Emscripten:
     // Emscripten EH is lowered earlier by WebAssemblyLowerEmscriptenEHSjLj, so
