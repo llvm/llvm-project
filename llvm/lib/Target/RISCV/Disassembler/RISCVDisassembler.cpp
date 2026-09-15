@@ -127,7 +127,7 @@ static DecodeStatus DecodeGPRX1X5RegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeGPRX1RegisterClass(MCInst &Inst, uint64_t RegNo,
+static DecodeStatus DecodeGPRX1RegisterClass(MCInst &Inst, uint32_t RegNo,
                                              uint32_t Address,
                                              const MCDisassembler *Decoder) {
   assert(RegNo == 1);
@@ -149,7 +149,7 @@ static DecodeStatus DecodeSPRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeGPRX5RegisterClass(MCInst &Inst, uint64_t RegNo,
+static DecodeStatus DecodeGPRX5RegisterClass(MCInst &Inst, uint32_t RegNo,
                                              uint32_t Address,
                                              const MCDisassembler *Decoder) {
   assert(RegNo == 5);
