@@ -15,7 +15,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_memmove)
 #ifdef USE_THUMB_1
         push    {r7, lr}
         bl      memmove
-        POP_PC_WITH_REGS(r7)
+        POP_PC_WITH_REGS r7
 #else
 #if defined(__ARM_FEATURE_BTI_DEFAULT)
         bti

@@ -17,7 +17,7 @@
     push   {r4, r7, lr}    ;\
     add     r7,     sp, #4
 #define CLEAR_FRAME_AND_RETURN \
-    POP_PC_WITH_REGS(r4, r7)
+    POP_PC_WITH_REGS r4, r7
 
 	.syntax unified
 	.text

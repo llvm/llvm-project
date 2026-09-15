@@ -204,17 +204,27 @@
 #endif
 
 // clang-format off
+#ifdef __ASSEMBLER__
 // ARMv4T ARM returns need BX to interwork with Thumb callers.
 #if __ARM_ARCH >= 5
-#define POP_PC() pop {pc}
-#define POP_PC_WITH_REGS(...) pop {__VA_ARGS__, pc}
+.macro POP_PC
+  pop {pc}
+.endm
+
+.macro POP_PC_WITH_REGS regs:vararg
+  pop {\regs, pc}
+.endm
 #else
-#define POP_PC()                                                               \
-  pop {ip};                                                                    \
+.macro POP_PC
+  pop {ip}
   JMP(ip)
-#define POP_PC_WITH_REGS(...)                                                  \
-  pop {__VA_ARGS__, ip};                                                       \
+.endm
+
+.macro POP_PC_WITH_REGS regs:vararg
+  pop {\regs, ip}
   JMP(ip)
+.endm
+#endif
 #endif
 // clang-format on
 
