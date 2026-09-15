@@ -42,6 +42,14 @@ jobs:
           sparse-checkout: |
             .github/workflows/containers/github-action-ci/
             .github/actions/build-container
+      
+      # TODO(boomanaiden154): This is a temporary work-around for AArch64 that
+      # we should remove once the depot images no longer have the lock in them
+      # by default.
+      - name: Clear apt-get lock
+        if: runner.arch == 'ARM64'
+        run: |
+          sudo rm -rf /var/lib/dpkg/lock-frontend
 
       - name: Build Container
         uses: ./.github/actions/build-container
