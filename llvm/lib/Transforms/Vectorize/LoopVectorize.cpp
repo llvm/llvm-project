@@ -3019,7 +3019,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   // TODO: Make NoScalarEpilogueNeeded lambda a separate function to be used
   // only for main loop VF not also epilogueVF. Using it for epilogueVF against
   // full TC is inaccurate.
-  auto NoScalarEpilogueNeeded = [this, &UserIC](unsigned MaxRuntimeVF) {
+  auto NoScalarEpilogueNeeded = [this, &UserIC](uint64_t MaxRuntimeVF) {
     // Return false if the loop is neither a single-latch-exit loop nor an
     // early-exit loop as tail-folding is not supported in that case.
     if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch() &&
@@ -5425,13 +5425,13 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
   if (EnableInterleavedMemAccesses.getNumOccurrences() > 0)
     UseInterleaved = EnableInterleavedMemAccesses;
 
-  InterleavedAccessInfo EpilogueTfCMIAI(PSE, OrigLoop, DT, LI, Legal->getLAI(),
-                                        Config.OptForSize);
+  EpilogueTfIAI = std::make_unique<InterleavedAccessInfo>(
+      PSE, OrigLoop, DT, LI, Legal->getLAI(), Config.OptForSize);
   if (UseInterleaved)
-    EpilogueTfCMIAI.analyzeInterleaving(useMaskedInterleavedAccesses(TTI));
+    EpilogueTfIAI->analyzeInterleaving(useMaskedInterleavedAccesses(TTI));
   LoopVectorizationCostModel EpilogueTfCM(
       EpilogueTailLoweringStatus, OrigLoop, PSE, LI, Legal, TTI, TLI, CM->AC,
-      ORE, CM->GetBFI, CM->TheFunction, EpilogueTfCMIAI, Config);
+      ORE, CM->GetBFI, CM->TheFunction, *EpilogueTfIAI, Config);
 
   assert(EpilogueTfCM.preferTailFoldedLoop() &&
          "Epilogue tail-folding is expected to be enabled");
@@ -8304,7 +8304,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Destroy the cost model before executing any plan, so that code generation
   // cannot rely on cost-modeling decisions.
-  LVP.clearCostModel();
+  // LVP.clearCostModel();
 
   VPlan &BestPlan = *BestPlanPtr;
   // Consider vectorizing the epilogue too if it's profitable.
