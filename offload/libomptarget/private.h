@@ -87,6 +87,17 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+/// Report that the runtime is about to wait for the region's outstanding
+/// asynchronous operations (data transfers and kernels) to complete.
+static inline void printSyncInfo(const ident_t *Loc, const int64_t DeviceId) {
+  if (!(getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER))
+    return;
+  std::string LocStr = getSourceLocationSuffix(Loc, " at ");
+  INFO(OMP_INFOTYPE_DATA_TRANSFER, DeviceId,
+       "Waiting for asynchronous operations to complete%s\n", LocStr.c_str());
+}
+
+////////////////////////////////////////////////////////////////////////////////
 /// Checks if the passed device is the initial device (i.e., host device)
 /// While the device number is defined as the value of the total number of
 /// host devices (i.e. omp_get_initial_device()), the alias omp_initial_device

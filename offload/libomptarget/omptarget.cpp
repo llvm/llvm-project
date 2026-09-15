@@ -615,7 +615,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, HstPtrName,
         HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
         HasPresentModifier, HasHoldModifier, AsyncInfo, PointerTpr.getEntry(),
-        /*ReleaseHDTTMap=*/true, StateInfo);
+        /*ReleaseHDTTMap=*/true, StateInfo, Loc);
     void *TgtPtrBegin = TPR.TargetPointer;
     IsHostPtr = TPR.Flags.IsHostPointer;
     // If data_size==0, then the argument could be a zero-length pointer to
@@ -1186,7 +1186,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         }
       }
 
-      int Ret = Device.retrieveData(HstPtr, TgtPtr, Size, AsyncInfo, Entry);
+      int Ret = Device.retrieveData(HstPtr, TgtPtr, Size, AsyncInfo, Entry,
+                                    /*HDTTMapPtr=*/nullptr, Loc);
       if (Ret != OFFLOAD_SUCCESS) {
         REPORT() << "Copying data from device failed.";
         return OFFLOAD_FAIL;
@@ -1367,7 +1368,7 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     ODBG(ODT_Mapping) << "Moving " << ArgSize << " bytes (hst:" << HstPtrBegin
                       << ") -> (tgt:" << TgtPtrBegin << ")";
     int Ret = Device.submitData(TgtPtrBegin, HstPtrBegin, ArgSize, AsyncInfo,
-                                TPR.getEntry());
+                                TPR.getEntry(), /*HDTTMapPtr=*/nullptr, Loc);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT() << "Copying data to device failed.";
       return OFFLOAD_FAIL;
@@ -1408,7 +1409,7 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     ODBG(ODT_Mapping) << "Moving " << ArgSize << " bytes (tgt:" << TgtPtrBegin
                       << ") -> (hst:" << HstPtrBegin << ")";
     int Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, ArgSize, AsyncInfo,
-                                  TPR.getEntry());
+                                  TPR.getEntry(), /*HDTTMapPtr=*/nullptr, Loc);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT() << "Copying data from device failed.";
       return OFFLOAD_FAIL;
