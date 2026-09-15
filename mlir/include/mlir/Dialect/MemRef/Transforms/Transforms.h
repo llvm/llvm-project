@@ -104,6 +104,13 @@ void populateMemRefNarrowTypeEmulationPatterns(
 void populateMemRefNarrowTypeEmulationConversions(
     arith::NarrowTypeEmulationConverter &typeConverter);
 
+/// Appends patterns that rewrite a `memref.copy` whose operands are not
+/// contiguous into a loop nest around a copy of the contiguous suffix, so
+/// that the inner copy lowers to `memcpy`. Copies whose suffix has fewer
+/// than `minSuffixElements` elements are left unchanged.
+void populateCopyToContiguousPatterns(RewritePatternSet &patterns,
+                                      int64_t minSuffixElements = 1);
+
 /// Transformation to do multi-buffering/array expansion to remove dependencies
 /// on the temporary allocation between consecutive loop iterations.
 /// It returns the new allocation if the original allocation was multi-buffered
