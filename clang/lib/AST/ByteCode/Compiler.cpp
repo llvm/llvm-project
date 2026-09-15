@@ -776,7 +776,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
         return this->emitFnPtrCast(E);
       }
       if (FromT == PT_Ptr)
-        return this->emitPtrPtrCast(SubExprTy->isVoidPointerType(), E);
+        return this->emitPtrPtrCast(SubExprTy->isVoidPointerType(),
+                                    E->getType().getTypePtr(), E);
       return true;
     }
 
