@@ -2329,6 +2329,33 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL,
       CheckCandidateType(Ty);
   }
 
+  // No access used a vector type, so there is no candidate to widen.
+  // Try forming one from a floating point type that tiles the partition.
+  if (CandidateTys.empty()) {
+    constexpr uint64_t MaxTiledElements = 16;
+    uint64_t PartitionSize = P.size();
+    for (Type *Ty : LoadStoreTys) {
+      // Only consider well-behaved float types: tiling x86_fp80 or ppc_fp128
+      // is not beneficial. Tiling integers is not beneficial, scalar
+      // operations usually are cheaper.
+      if (!Ty->isIEEELikeFPTy())
+        continue;
+      // Applying this idea for f16 and bf16 is usually not beneficial.
+      if (DL.getTypeSizeInBits(Ty).getFixedValue() < 32)
+        continue;
+      // Require at least two elements that exactly tile the partition.
+      uint64_t EltBytes = DL.getTypeStoreSize(Ty).getFixedValue();
+      if (PartitionSize <= EltBytes || PartitionSize % EltBytes != 0)
+        continue;
+      uint64_t NumElements = PartitionSize / EltBytes;
+      // When the vector is very wide that is unlikely to result in better
+      // instruction selection.
+      if (NumElements > MaxTiledElements)
+        continue;
+      CheckCandidateType(FixedVectorType::get(Ty, NumElements));
+    }
+  }
+
   SmallVector<VectorType *, 4> CandidateTysCopy = CandidateTys;
   if (auto *VTy = createAndCheckVectorTypesForPromotion(
           LoadStoreTys, CandidateTysCopy, CheckCandidateType, P, DL,
