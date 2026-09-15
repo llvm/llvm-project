@@ -111,6 +111,10 @@ features cannot lower the translation-unit ABI level;
 
 - Templight support has been removed.
 
+- `-fstack-clash-protection` has been enabled implicitly by default for android
+  target triples (except 32b arm targets). Can be disabled via
+  `-fno-stack-clash-protection`.
+
 ### Clang Python Bindings Potentially Breaking Changes
 
 - `CompletionChunkKind` instance's `__str__` representation has been adapted to be consistent with other enums in the library.
@@ -496,6 +500,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed a false-positive `-Wshadow` warning when a variable in an
   inline-defined friend function shares the name of a non-static class
   member variable. (#GH221190)
+
+- Clang now diagnoses matrix logical operations are only supported for HLSL. (GH222381)
 
 ### Improvements to Clang's time-trace
 
