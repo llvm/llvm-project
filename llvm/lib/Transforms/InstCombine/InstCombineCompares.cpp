@@ -5328,36 +5328,6 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
 
   Value *X;
 
-  // Catch the mirrored operand order: icmp Pred (and (trunc Y), Mask), (zext
-  // X). Canonicalization (like ugt -> ult) often swaps operands, pushing the
-  // zext to Operand 1. We need to handle this to avoid missing optimizations.
-  {
-    Value *X, *Y;
-    const APInt *Mask;
-
-    // Ensure we have an unsigned compare with a zext on the right side.
-    // Then look for our one use AND with a mask on the left.
-    if (match(I.getOperand(1), m_ZExt(m_Value(X))) && !I.isSigned() &&
-        match(I.getOperand(0),
-              m_OneUse(m_And(m_Trunc(m_Value(Y)), m_APInt(Mask))))) {
-
-      Type *SmallType = X->getType();
-      unsigned SmallWidth = SmallType->getScalarSizeInBits();
-
-      // If the mask exactly covers the bits of the narrower type, the higher
-      // bits are already guaranteed to be zero. We can bypass the extension and
-      // compare the truncated values directly.
-      if (Mask->isMask(SmallWidth)) {
-        Value *NewTrunc = Builder.CreateTrunc(Y, SmallType);
-
-        // Preserve the original comparison logic by swapping the predicate back
-        // and comparing our newly truncated Y against X.
-
-        return new ICmpInst(I.getUnsignedPredicate(), NewTrunc, X);
-      }
-    }
-  }
-
   // Convert add-with-unsigned-overflow comparisons into a 'not' with compare.
   // (Op1 + X) u</u>= Op1 --> ~Op1 u</u>= X
   if (match(Op0, m_OneUse(m_c_Add(m_Specific(Op1), m_Value(X)))) &&
@@ -5855,6 +5825,23 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
 
   if (Value *V = foldShiftIntoShiftInAnotherHandOfAndInICmp(I, SQ, Builder))
     return replaceInstUsesWith(I, V);
+
+  // icmp (zext X), (and (trunc Y), Mask) -> icmp X, trunc Y IFF Mask exactly
+  // covers the bits of X
+  {
+    Value *Y;
+    const APInt *Mask;
+    if (!I.isSigned() && match(I.getOperand(1), m_ZExt(m_Value(X))) &&
+        match(I.getOperand(0),
+              m_OneUse(m_And(m_Trunc(m_Value(Y)), m_APInt(Mask))))) {
+      Type *SmallType = X->getType();
+      unsigned SmallWidth = SmallType->getScalarSizeInBits();
+      if (Mask->isMask(SmallWidth)) {
+        Value *NewTrunc = Builder.CreateTrunc(Y, SmallType);
+        return new ICmpInst(Pred, NewTrunc, X);
+      }
+    }
+  }
 
   return nullptr;
 }
