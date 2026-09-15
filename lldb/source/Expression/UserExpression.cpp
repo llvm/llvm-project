@@ -111,8 +111,8 @@ lldb::ValueObjectSP UserExpression::GetObjectPointerValueObject(
   }
 
   if (auto var_list_sp = frame_sp->GetInScopeVariableList(false))
-    if (auto var_sp =
-            var_list_sp->FindVariable(ConstString(object_name), false))
+    if (auto var_sp = var_list_sp->FindVariable(ConstString(object_name),
+                                                *frame_sp, false))
       return frame_sp->GetValueObjectForFrameVariable(var_sp,
                                                       lldb::eNoDynamicValues);
 
