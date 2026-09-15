@@ -11,9 +11,7 @@
 
 using namespace llvm;
 
-namespace llvm {
-namespace SPIRV {
-namespace NSDI200 {
+namespace llvm::SPIRV::NSDI200 {
 
 std::optional<DebugOp> mapDwarfOpToDebugOp200(uint64_t DwarfOp) {
   if (DwarfOp >= dwarf::DW_OP_lit0 && DwarfOp <= dwarf::DW_OP_lit31)
@@ -154,6 +152,4 @@ std::optional<DebugOp> mapDwarfOpToDebugOp200(uint64_t DwarfOp) {
   }
 }
 
-} // namespace NSDI200
-} // namespace SPIRV
-} // namespace llvm
+} // namespace llvm::SPIRV::NSDI200

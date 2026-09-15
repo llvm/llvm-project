@@ -870,9 +870,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(
 
 // NonSemantic.Shader.DebugInfo.100 debug operation encodings
 // (section 4.5, "Debug Operations").
-namespace llvm {
-namespace SPIRV {
-namespace NSDI100 {
+namespace llvm::SPIRV::NSDI100 {
 enum class DebugOp : uint32_t {
   Deref = 0,
   Plus = 1,
@@ -885,9 +883,7 @@ enum class DebugOp : uint32_t {
   Constu = 8,
   Fragment = 9
 };
-} // namespace NSDI100
-} // namespace SPIRV
-} // namespace llvm
+} // namespace llvm::SPIRV::NSDI100
 
 static std::optional<SPIRV::NSDI100::DebugOp>
 mapDwarfOpToDebugOp100(uint64_t DwarfOp) {

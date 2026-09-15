@@ -16,9 +16,7 @@
 #include <cstdint>
 #include <optional>
 
-namespace llvm {
-namespace SPIRV {
-namespace NSDI200 {
+namespace llvm::SPIRV::NSDI200 {
 
 // Additional DebugOperation encodings for NonSemantic.Shader.DebugInfo.200.
 enum class DebugOp : uint32_t {
@@ -187,8 +185,6 @@ enum class DebugOp : uint32_t {
 /// separately.
 std::optional<DebugOp> mapDwarfOpToDebugOp200(uint64_t DwarfOp);
 
-} // namespace NSDI200
-} // namespace SPIRV
-} // namespace llvm
+} // namespace llvm::SPIRV::NSDI200
 
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVNONSEMANTICDEBUGINFO200_H
