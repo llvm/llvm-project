@@ -423,8 +423,22 @@ ModuleMap::HeadersMap::iterator ModuleMap::findKnownHeader(FileEntryRef File) {
   if (HeaderInfo.getHeaderSearchOpts().ImplicitModuleMaps &&
       Known == Headers.end() && ModuleMap::isBuiltinHeader(File)) {
     HeaderInfo.loadTopLevelSystemModules();
-    return Headers.find(File);
+    Known = Headers.find(File);
   }
+
+  // A header under a directory excluded from its umbrella module has no
+  // explicit Headers entry. Record one lazily with the ExcludedHeader role so
+  // every Headers map consumer treats it the same way as an `exclude header`
+  // header.
+  if (Known == Headers.end() && !ExcludedDirs.empty()) {
+    SmallVector<DirectoryEntryRef, 2> IntermediateDirs;
+    KnownHeader H = findHeaderInUmbrellaDirs(File, IntermediateDirs);
+    if (H && H.getRole() == ExcludedHeader) {
+      Headers[File].push_back(H);
+      Known = Headers.find(File);
+    }
+  }
+
   return Known;
 }
 
@@ -441,12 +455,28 @@ ModuleMap::KnownHeader ModuleMap::findHeaderInUmbrellaDirs(
   // and we need to resolve lookups as if we had found the embedded location.
   StringRef DirName = SourceMgr.getFileManager().getCanonicalName(*Dir);
 
+  // Modules that excluded a directory on the walk from the header up to its
+  // umbrella directory. If the umbrella we land on belongs to one of them, the
+  // header is invisible to that module, as if the excluded directory were
+  // absent.
+  llvm::SmallPtrSet<const Module *, 2> ExcludedByModules;
+
   // Keep walking up the directory hierarchy, looking for a directory with
   // an umbrella header.
   do {
+    auto ExcludedDir = ExcludedDirs.find(*Dir);
+    if (ExcludedDir != ExcludedDirs.end())
+      ExcludedByModules.insert(ExcludedDir->second);
+
     auto KnownDir = UmbrellaDirs.find(*Dir);
-    if (KnownDir != UmbrellaDirs.end())
+    if (KnownDir != UmbrellaDirs.end()) {
+      // A header under a directory that this umbrella's module excluded is
+      // reported with the ExcludedHeader role, so callers treat it the same way
+      // as a header dropped by an `exclude header` directive.
+      if (ExcludedByModules.contains(KnownDir->second))
+        return KnownHeader(KnownDir->second, ExcludedHeader);
       return KnownHeader(KnownDir->second, NormalHeader);
+    }
 
     IntermediateDirs.push_back(*Dir);
 
@@ -754,6 +784,10 @@ ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(FileEntryRef File) {
 
   SmallVector<DirectoryEntryRef, 2> SkippedDirs;
   KnownHeader H = findHeaderInUmbrellaDirs(File, SkippedDirs);
+  // An excluded header is not part of the umbrella module, so don't infer a
+  // submodule for it. findKnownHeader records the exclusion in the Headers map.
+  if (H && H.getRole() == ExcludedHeader)
+    return {};
   if (H) {
     Module *Result = H.getModule();
 
@@ -881,12 +915,26 @@ bool ModuleMap::isHeaderUnavailableInModule(
                                  M->isSubModuleOf(RequestingModule));
   };
 
+  // Modules that excluded a directory on the walk up to the umbrella directory.
+  // This repeats the ExcludedDirs check that findKnownHeader materializes into
+  // the Headers map, because this method is const and runs during the umbrella
+  // build enumeration, before any lookup has recorded the excluded header.
+  llvm::SmallPtrSet<const Module *, 2> ExcludedByModules;
+
   // Keep walking up the directory hierarchy, looking for a directory with
   // an umbrella header.
   do {
+    if (auto ExcludedDir = ExcludedDirs.find(*Dir);
+        ExcludedDir != ExcludedDirs.end())
+      ExcludedByModules.insert(ExcludedDir->second);
+
     auto KnownDir = UmbrellaDirs.find(*Dir);
     if (KnownDir != UmbrellaDirs.end()) {
       Module *Found = KnownDir->second;
+      // A header under a directory that this umbrella's module excluded is not
+      // part of that module, as if the directory were absent.
+      if (ExcludedByModules.contains(Found))
+        return true;
       if (IsUnavailable(Found))
         return true;
 
@@ -1744,6 +1792,7 @@ class ModuleMapLoader {
   void handleRequiresDecl(const modulemap::RequiresDecl &RD);
   void handleHeaderDecl(const modulemap::HeaderDecl &HD);
   void handleUmbrellaDirDecl(const modulemap::UmbrellaDirDecl &UDD);
+  void handleExcludeDirDecl(const modulemap::ExcludeDirDecl &EDD);
   void handleExportDecl(const modulemap::ExportDecl &ED);
   void handleExportAsDecl(const modulemap::ExportAsDecl &EAD);
   void handleUseDecl(const modulemap::UseDecl &UD);
@@ -1994,6 +2043,9 @@ void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
             [&](const modulemap::UmbrellaDirDecl &UDD) {
               handleUmbrellaDirDecl(UDD);
             },
+            [&](const modulemap::ExcludeDirDecl &EDD) {
+              handleExcludeDirDecl(EDD);
+            },
             [&](const modulemap::ModuleDecl &MD) { handleModuleDecl(MD); },
             [&](const modulemap::ExportDecl &ED) { handleExportDecl(ED); },
             [&](const modulemap::ExportAsDecl &EAD) {
@@ -2243,6 +2295,40 @@ void ModuleMapLoader::handleUmbrellaDirDecl(
   // Record this umbrella directory.
   Map.setUmbrellaDirAsWritten(ActiveModule, *Dir, DirNameAsWritten, DirName,
                               UDD.Location);
+}
+
+void ModuleMapLoader::handleExcludeDirDecl(
+    const modulemap::ExcludeDirDecl &EDD) {
+  std::string DirName = std::string(EDD.Path);
+
+  if (ImplicitlyDiscovered) {
+    SmallString<128> NormalizedPath(EDD.Path);
+    llvm::sys::path::remove_dots(NormalizedPath, /*remove_dot_dot=*/true);
+    if (NormalizedPath.starts_with(".."))
+      Diags.Report(EDD.Location, diag::warn_mmap_path_outside_directory);
+  }
+
+  // Look for this directory.
+  OptionalDirectoryEntryRef Dir;
+  if (llvm::sys::path::is_absolute(DirName)) {
+    Dir = SourceMgr.getFileManager().getOptionalDirectoryRef(DirName);
+  } else {
+    SmallString<128> PathName;
+    PathName = Directory.getName();
+    llvm::sys::path::append(PathName, DirName);
+    Dir = SourceMgr.getFileManager().getOptionalDirectoryRef(PathName);
+  }
+
+  if (!Dir) {
+    Diags.Report(EDD.Location, diag::warn_mmap_exclude_dir_not_found)
+        << DirName;
+    return;
+  }
+
+  // Record this excluded directory, scoped to the active module. Its headers
+  // will not resolve to this module through its umbrella directory.
+  Map.ExcludedDirs[*Dir] = ActiveModule;
+  ActiveModule->ExcludedDirsAsWritten.push_back(std::move(DirName));
 }
 
 void ModuleMapLoader::handleExportDecl(const modulemap::ExportDecl &ED) {

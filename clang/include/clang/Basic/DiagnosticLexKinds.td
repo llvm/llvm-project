@@ -997,6 +997,9 @@ def warn_uncovered_module_header : Warning<
 def warn_mmap_umbrella_dir_not_found : Warning<
   "umbrella directory '%0' not found">,
   InGroup<IncompleteUmbrella>;
+def warn_mmap_exclude_dir_not_found : Warning<
+  "excluded directory '%0' not found">,
+  InGroup<IncompleteUmbrella>;
 def err_expected_id_building_module : Error<
   "expected a module name in '__building_module' expression">;
 def warn_use_of_private_header_outside_module : Warning<

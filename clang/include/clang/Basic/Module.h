@@ -412,6 +412,11 @@ public:
   // The path to the umbrella entry relative to the root module's \c Directory.
   std::string UmbrellaRelativeToRootModuleDirectory;
 
+  /// Directories excluded from this module's umbrella directory, as written in
+  /// the module map's `exclude umbrella` declarations. Kept for printing the
+  /// module map back out; resolution uses ModuleMap::ExcludedDirs.
+  std::vector<std::string> ExcludedDirsAsWritten;
+
   /// The module through which entities defined in this module will
   /// eventually be exposed, for use in "private" modules.
   std::string ExportAsModule;
