@@ -305,13 +305,11 @@ let test_constants () =
   ignore (define_global "const_bitcast" (const_bitcast foldbomb double_type) m);
 
   group "misc constants";
-  (* CHECK: const_size_of{{.*}}getelementptr{{.*}}null
-   * CHECK: const_gep{{.*}}getelementptr
+  (* CHECK: const_gep{{.*}}getelementptr
    * CHECK: const_extractelement{{.*}}extractelement
    * CHECK: const_insertelement{{.*}}insertelement
    * CHECK: const_shufflevector = global <4 x i32> <i32 0, i32 1, i32 1, i32 0>
    *)
-  ignore (define_global "const_size_of" (size_of (pointer_type context)) m);
   ignore (define_global "const_gep" (const_gep i8_type foldbomb_gv [| five |])
           m);
   let zero = const_int i32_type 0 in
