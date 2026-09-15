@@ -54,10 +54,17 @@ public:
 
   LLVM_ABI static void
   collectScopedDomains(const MDNode *NoAlias,
-                       SmallPtrSetImpl<const MDNode *> &Domains);
+                       SmallPtrSetImpl<const MDNode *> &Domains,
+                       bool DisjointOnly = false);
 
   LLVM_ABI static bool mayAliasInScopes(const MDNode *Scopes,
                                         const MDNode *NoAlias);
+
+  /// Return false if two accesses in the scope lists \p Scopes1 and \p Scopes2
+  /// are kept apart by the implicit noalias sets of a domain with disjoint
+  /// scopes.
+  LLVM_ABI static bool mayAliasInDisjointDomains(const MDNode *Scopes1,
+                                                 const MDNode *Scopes2);
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
