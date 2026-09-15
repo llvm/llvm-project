@@ -10652,12 +10652,12 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (FPDiff < 0 && FuncInfo->getTailCallReservedStack() < (unsigned)-FPDiff)
       FuncInfo->setTailCallReservedStack(-FPDiff);
 
-    // The stack pointer must be 16-byte aligned at all times it's used for a
-    // memory operation, which in practice means at *all* times and in
+    // The stack pointer must be at least 16-byte aligned at all times it's used
+    // for a memory operation, which in practice means at *all* times and in
     // particular across call boundaries. Therefore our own arguments started at
-    // a 16-byte aligned SP and the delta applied for the tail call should
-    // satisfy the same constraint.
-    assert(FPDiff % 16 == 0 && "unaligned stack on tail call");
+    // an aligned SP and the delta applied for the tail call should satisfy the
+    // same constraint.
+    assert(isAligned(StackAlign, FPDiff) && "unaligned stack on tail call");
   }
 
   auto DescribeCallsite =
