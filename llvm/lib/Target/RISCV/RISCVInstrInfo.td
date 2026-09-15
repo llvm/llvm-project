@@ -1048,9 +1048,12 @@ def SFENCE_INVAL_IR : Priv<"sfence.inval.ir", 0b0001100>, Sched<[]> {
   let rs2 = 0b00001;
 }
 def SINVAL_VMA  : Priv_rr<"sinval.vma", 0b0001011>, Sched<[]>;
+} // Predicates = [HasStdExtSvinval]
+
+let Predicates = [HasStdExtH, HasStdExtSvinval] in {
 def HINVAL_VVMA : Priv_rr<"hinval.vvma", 0b0010011>, Sched<[]>;
 def HINVAL_GVMA : Priv_rr<"hinval.gvma", 0b0110011>, Sched<[]>;
-} // Predicates = [HasStdExtSvinval]
+} // Predicates = [HasStdExtH, HasStdExtSvinval]
 
 def SFENCE_VMA  : Priv_rr<"sfence.vma", 0b0001001>, Sched<[]>;
 
