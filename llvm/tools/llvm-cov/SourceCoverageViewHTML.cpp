@@ -249,6 +249,12 @@ table {
   font-weight: bold;
   text-align: left;
 }
+.column-entry-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: Canvas;
+}
 .column-entry-yellow {
   text-align: left;
   background-color: #ff06;
@@ -551,18 +557,24 @@ void CoveragePrinterHTML::closeViewFile(OwnedStream OS) {
 static void emitColumnLabelsForIndex(raw_ostream &OS,
                                      const CoverageViewOptions &Opts) {
   SmallVector<std::string, 4> Columns;
-  Columns.emplace_back(tag("td", "Filename", "column-entry-bold"));
-  Columns.emplace_back(tag("td", "Function Coverage", "column-entry-bold"));
+  Columns.emplace_back(
+      tag("td", "Filename", "column-entry-bold column-entry-sticky"));
+  Columns.emplace_back(
+      tag("td", "Function Coverage", "column-entry-bold column-entry-sticky"));
   if (Opts.ShowInstantiationSummary)
-    Columns.emplace_back(
-        tag("td", "Instantiation Coverage", "column-entry-bold"));
-  Columns.emplace_back(tag("td", "Line Coverage", "column-entry-bold"));
+    Columns.emplace_back(tag("td", "Instantiation Coverage",
+                             "column-entry-bold column-entry-sticky"));
+  Columns.emplace_back(
+      tag("td", "Line Coverage", "column-entry-bold column-entry-sticky"));
   if (Opts.ShowRegionSummary)
-    Columns.emplace_back(tag("td", "Region Coverage", "column-entry-bold"));
+    Columns.emplace_back(
+        tag("td", "Region Coverage", "column-entry-bold column-entry-sticky"));
   if (Opts.ShowBranchSummary)
-    Columns.emplace_back(tag("td", "Branch Coverage", "column-entry-bold"));
+    Columns.emplace_back(
+        tag("td", "Branch Coverage", "column-entry-bold column-entry-sticky"));
   if (Opts.ShowMCDCSummary)
-    Columns.emplace_back(tag("td", "MC/DC", "column-entry-bold"));
+    Columns.emplace_back(
+        tag("td", "MC/DC", "column-entry-bold column-entry-sticky"));
   OS << tag("tr", join(Columns.begin(), Columns.end(), ""));
 }
 
