@@ -3064,10 +3064,9 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
 
   // Find the uncountable loop exit condition.
   VPValue *UncountableCondition = nullptr;
-  if (!match(
-          LatchVPBB->getTerminator(),
-          m_BranchOnTwoConds(m_AnyOf(m_Freeze(m_VPValue(UncountableCondition))),
-                             m_VPValue())))
+  if (!match(LatchVPBB->getTerminator(),
+             m_BranchOnTwoConds(m_AnyOf(m_VPValue(UncountableCondition)),
+                                m_VPValue())))
     return nullptr;
 
   SmallVector<VPValue *, 4> Worklist;
@@ -3102,8 +3101,9 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
         return nullptr;
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
       Recipes.push_back(cast<VPInstruction>(GepR));
-    } else if (match(V, m_VPInstruction<VPInstruction::MaskedCond>(
-                            m_VPValue(Op1)))) {
+    } else if (match(V, m_CombineOr(m_VPInstruction<VPInstruction::MaskedCond>(
+                                        m_VPValue(Op1)),
+                                    m_Freeze(m_VPValue(Op1))))) {
       Worklist.push_back(Op1);
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
     } else
