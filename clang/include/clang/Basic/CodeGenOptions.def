@@ -57,7 +57,6 @@ CODEGENOPT(UniqueBasicBlockSectionNames, 1, 1, Benign) ///< Set for -funique-bas
                                                ///< Produce unique section names with
                                                ///< basic block sections.
 CODEGENOPT(SeparateNamedSections, 1, 0, Benign) ///< Set for -fseparate-named-sections.
-CODEGENOPT(EnableAIXExtendedAltivecABI, 1, 0, Benign) ///< Set for -mabi=vec-extabi. Enables the extended Altivec ABI on AIX.
 CODEGENOPT(XCOFFReadOnlyPointers, 1, 0, Benign) ///< Set for -mxcoff-roptr.
 CODEGENOPT(AllTocData, 1, 0, Benign) ///< AIX -mtocdata
 ENUM_CODEGENOPT(FramePointer, FramePointerKind, 3, FramePointerKind::None, Benign) /// frame-pointer: all,non-leaf,non-leaf-no-reserve,reserved,none
@@ -468,6 +467,9 @@ CODEGENOPT(KeepStaticConsts, 1, 0, Benign)
 /// Whether to emit all variables that have a persistent storage duration,
 /// including global, static and thread local variables.
 CODEGENOPT(KeepPersistentStorageVariables, 1, 0, Benign)
+
+/// Whether to emit inline functions into the object file, even if inlined into all callers.
+CODEGENOPT(KeepInlineFunctions, 1, 0, Benign)
 
 /// Whether to follow the AAPCS enforcing at least one read before storing to a volatile bitfield
 CODEGENOPT(ForceAAPCSBitfieldLoad, 1, 0, Benign)

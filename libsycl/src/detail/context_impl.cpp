@@ -16,10 +16,9 @@ namespace detail {
 ContextImpl::ContextImpl(std::vector<DeviceImpl *> &&DeviceList,
                          const async_handler &AsyncHandler,
                          const property_list &PropList, Private)
-    : MAsyncHandler(AsyncHandler), MDevices(DeviceList) {
-  (void)PropList;
-
-  assert(!MDevices.empty() && "Device list must not be empty");
+    : MAsyncHandler(AsyncHandler), MDevices(std::move(DeviceList)) {
+  // TODO: Remove this when property_list is implemented
+  std::ignore = PropList;
 
   std::vector<ol_device_handle_t> DeviceIds;
   DeviceIds.reserve(MDevices.size());
@@ -28,8 +27,15 @@ ContextImpl::ContextImpl(std::vector<DeviceImpl *> &&DeviceList,
     DeviceIds.push_back(D->getOLHandle());
   }
 
-  callAndThrow(olCreateContext, DeviceIds.size(), DeviceIds.data(),
-               &MOffloadContext);
+  auto Result = callNoCheck(olCreateContext, DeviceIds.size(), DeviceIds.data(),
+                            &MOffloadContext);
+  if (isFailed(Result)) {
+    if (Result->Code == OL_ERRC_INVALID_SIZE)
+      throw sycl::exception(make_error_code(errc::invalid),
+                            "Device list must not be empty");
+
+    checkAndThrow(Result);
+  }
 }
 
 ContextImpl::~ContextImpl() {
