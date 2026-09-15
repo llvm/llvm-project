@@ -587,7 +587,8 @@ ProgramStateRef CallAndMessageChecker::checkArgInitializedness(
   // object the way it does for implicit `this`, so it stays a regular argument.
   // Indexing still lines up today only by coincidence, because parameters()
   // includes it too.
-  for (unsigned NativeIdx = 0, e = Call.getNumArgs(); NativeIdx != e; ++NativeIdx) {
+  for (unsigned NativeIdx = 0, e = Call.getNumArgs(); NativeIdx != e;
+       ++NativeIdx) {
     // For variadic functions a corresponding parameter decl might not exist.
     const ParmVarDecl *PVD =
         NativeIdx < Params.size() ? Params[NativeIdx] : nullptr;
