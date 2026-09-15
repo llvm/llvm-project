@@ -428,6 +428,16 @@ static_assert(0L == LIBC_NAMESPACE::shared::lrintf128(Float128(0.0)));
 static_assert(0L == LIBC_NAMESPACE::shared::lroundf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::nearbyintf128(Float128(0.0)));
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::nextafterf128(Float128(0.0),
+                                                    Float128(0.0)));
+static_assert(LIBC_NAMESPACE::fputil::FPBits<Float128>::min_subnormal(
+                  LIBC_NAMESPACE::Sign::NEG)
+                  .get_val() ==
+              LIBC_NAMESPACE::shared::nextdownf128(Float128(0.0)));
+static_assert(
+    LIBC_NAMESPACE::fputil::FPBits<Float128>::min_subnormal().get_val() ==
+    LIBC_NAMESPACE::shared::nextupf128(Float128(0.0)));
 static_assert(Float128(0.0) == LIBC_NAMESPACE::shared::rintf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::roundevenf128(Float128(0.0)));
@@ -503,9 +513,6 @@ static_assert(0.0f ==
               LIBC_NAMESPACE::shared::fmulf128(float128(0.0), float128(0.0)));
 static_assert(0.0f ==
               LIBC_NAMESPACE::shared::fsubf128(float128(0.0), float128(0.0)));
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::nextafterf128(float128(0.0),
-                                                    float128(0.0)));
 static_assert(1 == [] {
   const char arg{};
   return LIBC_NAMESPACE::fputil::FPBits<float128>(
