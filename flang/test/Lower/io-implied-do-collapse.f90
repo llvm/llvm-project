@@ -479,3 +479,26 @@ subroutine write_volatile_loopvar(a, n)
   write(10) (a(i), i=1,n)
 end subroutine
 
+! An OPTIONAL base array may be absent, giving a null descriptor that the
+! collapsed path would still box and read even for a legal zero-trip transfer.
+! CHECK-LABEL: func @_QPwrite_optional_base(
+subroutine write_optional_base(a, n)
+  integer :: n
+  real, optional :: a(n)
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.call @_FortranAioOutputDescriptor
+  write(10) (a(i), i=1,n)
+end subroutine
+
+! An OPTIONAL retained subscript may be absent; the collapsed section reads it
+! once when building the box, even for a legal zero-trip transfer.
+! CHECK-LABEL: func @_QPwrite_optional_subscript(
+subroutine write_optional_subscript(b, n, k)
+  integer :: n
+  integer, optional :: k
+  real :: b(10, n)
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.call @_FortranAioOutputDescriptor
+  write(10) (b(k, i), i=1,n)
+end subroutine
+

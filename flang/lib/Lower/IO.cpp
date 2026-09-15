@@ -795,8 +795,7 @@ struct CollapsedImpliedDo {
 /// otherwise
 template <typename ImpliedDo>
 static std::optional<CollapsedImpliedDo>
-matchContiguousImpliedDo(Fortran::lower::AbstractConverter &converter,
-                         const ImpliedDo &impliedDo, bool isInput) {
+matchContiguousImpliedDo(const ImpliedDo &impliedDo, bool isInput) {
 
   // Only collapse a single body item
   const auto &items = std::get<0>(impliedDo.t);
@@ -835,6 +834,9 @@ matchContiguousImpliedDo(Fortran::lower::AbstractConverter &converter,
 
   const auto *arrayRef = std::get_if<Fortran::evaluate::ArrayRef>(&dataRef->u);
   if (!arrayRef || !arrayRef->base().IsSymbol())
+    return std::nullopt;
+
+  if (Fortran::semantics::IsOptional(arrayRef->base().GetLastSymbol()))
     return std::nullopt;
 
   const Fortran::lower::SomeExpr *lowerExpr =
@@ -911,7 +913,8 @@ matchContiguousImpliedDo(Fortran::lower::AbstractConverter &converter,
       // section instead of once per iteration; it must be scalar and safe to
       // evaluate a single time.
       if (subExpr.Rank() != 0 ||
-          ioExprUnsafeForSingleEvaluation(subExpr, *loopSym))
+          ioExprUnsafeForSingleEvaluation(subExpr, *loopSym) ||
+          ioAnyReferencedSymbol(subExpr, Fortran::semantics::IsOptional))
         return std::nullopt;
 
       // For input, a retained subscript is re-evaluated each iteration and sees
@@ -1181,7 +1184,7 @@ tryCollapseContiguousImpliedDo(Fortran::lower::AbstractConverter &converter,
   if (isFormatted || checkResult)
     return false;
   std::optional<CollapsedImpliedDo> collapsed =
-      matchContiguousImpliedDo(converter, impliedDo, isInput);
+      matchContiguousImpliedDo(impliedDo, isInput);
   if (!collapsed)
     return false;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
