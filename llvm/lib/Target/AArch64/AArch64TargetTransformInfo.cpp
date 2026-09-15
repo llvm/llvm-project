@@ -2032,9 +2032,7 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
                      m_Value(NarrowOp1))) &&
       match(Op2, m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
                      m_Value(NarrowOp2))) &&
-      NarrowOp1->getType() == NarrowOp2->getType() &&
-      NarrowOp1->getType()->isScalableTy() &&
-      NarrowOp1->getType()->isIntOrIntVectorTy(1)) {
+      NarrowOp1->getType() == NarrowOp2->getType()) {
     Value *SimpleNarrow = simplifyBinOp(Opc, NarrowOp1, NarrowOp2, DL);
     if (SimpleNarrow && !isa<UndefValue>(SimpleNarrow)) {
       if (match(SimpleNarrow, m_ZeroInt()))
@@ -2044,9 +2042,9 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
       else if (SimpleNarrow == NarrowOp2)
         SimpleII = Op2;
       else
-        SimpleII = IC.Builder.CreateIntrinsic(
-            Intrinsic::aarch64_sve_convert_to_svbool, {SimpleNarrow->getType()},
-            {SimpleNarrow});
+        SimpleII =
+            IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool,
+                                       SimpleNarrow->getType(), SimpleNarrow);
     }
   }
 
@@ -4646,6 +4644,28 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     // needed. So it has non-zero cost.
     if (Index == 0 && !Ty->getScalarType()->isIntegerTy())
       return 0;
+
+    // SVE has no scalar move to an arbitrary lane above the low 128-bit portion
+    // of a Z register, e.g. there is no equivalent of "mov z0.d[9], d0".
+    // Fixed-length vectors wider than 128 bits therefore need
+    // [splice]/index/pred/splat/cmp/pred-mov when scalarizing inserts for those
+    // lanes, so model them as more expensive than ordinary NEON lane accesses.
+    if (ST->useSVEForFixedLengthVectors()) {
+      InstructionCost Cost = CostKind == TTI::TCK_CodeSize
+                                 ? 1
+                                 : ST->getVectorInsertExtractBaseCost();
+      if (Index * Ty->getScalarSizeInBits() < 128)
+        return Cost;
+      if (Index * Ty->getScalarSizeInBits() < 512 &&
+          Opcode == Instruction::ExtractElement)
+        // Integer extracts (>128b, <512b) require extra mov from FPR -> GPR.
+        return Ty->getScalarType()->isIntegerTy() ? Cost + 1 : Cost;
+      if (Opcode == Instruction::ExtractElement)
+        return Cost + 2; // cost of mov imm + whilels + lastb
+      if (Opcode == Instruction::InsertElement)
+        return Cost + 3; // cost of insert with cmp/splice
+      llvm_unreachable("unexpected opcode");
+    }
 
     // This is recognising a LD1 single-element structure to one lane of one
     // register instruction. I.e., if this is an `insertelement` instruction,
