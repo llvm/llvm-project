@@ -24379,35 +24379,14 @@ void SemaOpenMP::ActOnOpenMPDeclareReductionInitializerEnd(
     Decl *D, Expr *Initializer, VarDecl *OmpPrivParm) {
   auto *DRD = cast<OMPDeclareReductionDecl>(D);
 
-  // For non-trivial types with user initializers, build an AST that
-  // includes default construction first to initialize members before user
-  // initializer. This must be done before popping contexts.
+  // Ensure OmpPrivParm is default-constructed before the user initializer runs
+  // (required for class types with non-trivial default constructors).
   if (Initializer && !DRD->getDeclContext()->isDependentContext()) {
     QualType ReductionType = DRD->getType();
-    if (const auto *RD = ReductionType->getAsCXXRecordDecl()) {
-      CXXConstructorDecl *DefaultCtor =
-          SemaRef.LookupDefaultConstructor(const_cast<CXXRecordDecl *>(RD));
-      if (DefaultCtor && !DefaultCtor->isDeleted() &&
-          !DefaultCtor->isTrivial()) {
+    if (CXXRecordDecl *RD = ReductionType->getAsCXXRecordDecl()) {
+      CXXConstructorDecl *DefaultCtor = SemaRef.LookupDefaultConstructor(RD);
+      if (DefaultCtor && !DefaultCtor->isDeleted() && !DefaultCtor->isTrivial())
         SemaRef.ActOnUninitializedDecl(OmpPrivParm);
-        if (Expr *DefaultInit = OmpPrivParm->getInit()) {
-          OmpPrivParm->setInit(nullptr);
-
-          // Wrap default-init and user initializer in a StmtExpr. Create
-          // CompoundStmt directly since we don't have an active scope.
-          SmallVector<Stmt *, 2> Stmts;
-          Stmts.push_back(DefaultInit);
-          Stmts.push_back(Initializer);
-
-          CompoundStmt *CS =
-              CompoundStmt::Create(SemaRef.Context, Stmts, FPOptionsOverride(),
-                                   D->getLocation(), D->getLocation());
-
-          Initializer = new (SemaRef.Context) StmtExpr(
-              CS, SemaRef.Context.VoidTy, D->getLocation(), D->getLocation(),
-              /*TemplateDepth=*/0);
-        }
-      }
     }
   }
 
