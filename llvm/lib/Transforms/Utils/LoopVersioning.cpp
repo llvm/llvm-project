@@ -69,11 +69,11 @@ void LoopVersioning::versionLoop(
   BasicBlock *RuntimeCheckBB = VersionedLoop->getLoopPreheader();
   const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
 
-  SCEVExpander Exp2(*RtPtrChecking.getSE(), "induction");
+  SCEVExpander Exp2(*RtPtrChecking.getSE(), "induction", true, MSSAU);
   MemRuntimeCheck = addRuntimeChecks(RuntimeCheckBB->getTerminator(),
                                      VersionedLoop, AliasChecks, Exp2);
 
-  SCEVExpander Exp(*SE, "scev.check");
+  SCEVExpander Exp(*SE, "scev.check", true, MSSAU);
   SCEVRuntimeCheck =
       Exp.expandCodeForPredicate(&Preds, RuntimeCheckBB->getTerminator());
 
@@ -320,7 +320,7 @@ bool runImpl(LoopInfo *LI, LoopAccessInfoManager &LAIs, DominatorTree *DT,
          !LAI.getPSE().getPredicate().isAlwaysTrue())) {
       // Forming LCSSA is a precondition of versioning.
       if (!L->isRecursivelyLCSSAForm(*DT, *LI))
-        formLCSSARecursively(*L, *DT, LI, SE);
+        formLCSSARecursively(*L, *DT, LI, SE, MSSAU);
 
       LoopVersioning LVer(LAI, LAI.getRuntimePointerChecking()->getChecks(), L,
                           LI, DT, SE, MSSAU);
