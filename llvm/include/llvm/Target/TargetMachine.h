@@ -329,10 +329,6 @@ public:
 
   void setCFIFixup(bool Enable) { Options.EnableCFIFixup = Enable; }
 
-  bool getAIXExtendedAltivecABI() const {
-    return Options.EnableAIXExtendedAltivecABI;
-  }
-
   bool getUniqueSectionNames() const { return Options.UniqueSectionNames; }
 
   /// Return true if unique basic block section names must be generated.
