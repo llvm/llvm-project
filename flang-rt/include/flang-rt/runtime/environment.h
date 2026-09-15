@@ -9,6 +9,7 @@
 #ifndef FLANG_RT_RUNTIME_ENVIRONMENT_H_
 #define FLANG_RT_RUNTIME_ENVIRONMENT_H_
 
+#include "../lib/runtime/array.h"
 #include "flang/Common/optional.h"
 #include "flang/Decimal/decimal.h"
 #include "flang/Runtime/entry-names.h"
@@ -37,6 +38,14 @@ RT_API_ATTRS common::optional<Convert> GetConvertFromString(
 
 struct ExecutionEnvironment {
 
+  // List of unit(s) from environment variable FORT_CONVERT_UNIT with specific
+  // conversion rules.
+  struct ConvertUnit {
+    Convert conversion;
+    std::int32_t startUnit;
+    std::int32_t endUnit;
+  };
+
   typedef void (*ConfigEnvCallbackPtr)(
       int, const char *[], const char *[], const EnvironmentDefaultList *);
 
@@ -58,6 +67,9 @@ struct ExecutionEnvironment {
   std::int32_t UnsetEnv(
       const char *name, std::size_t name_length, const Terminator &terminator);
 
+  bool ParseFortConvertUnit(const char *);
+  Convert UnitRtConvert(int);
+
   int argc{0};
   const char **argv{nullptr};
   char **envp{nullptr};
@@ -66,6 +78,7 @@ struct ExecutionEnvironment {
   enum decimal::FortranRounding defaultOutputRoundingMode{
       decimal::FortranRounding::RoundNearest}; // RP(==PN)
   Convert conversion{Convert::Unknown}; // FORT_CONVERT
+  DynamicArray<ConvertUnit> convertUnits; // FORT_CONVERT_UNIT
   bool noStopMessage{false}; // NO_STOP_MESSAGE=1 inhibits "Fortran STOP"
   // FLANG_TIMEF_IN_MILLISECONDS=1 sets TIMEF resolution to milliseconds.
   // Default resolution is seconds.
