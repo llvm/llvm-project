@@ -22,6 +22,7 @@
 namespace lld {
 namespace elf {
 class Defined;
+class DynamicReloc;
 class InputFile;
 class Symbol;
 template <class RelTy> struct Relocs;
@@ -37,6 +38,7 @@ public:
   virtual RelExpr getRelExpr(RelType type, const Symbol &s,
                              const uint8_t *loc) const = 0;
   virtual RelType getDynRel(RelType type) const { return 0; }
+  virtual void finalizeDynamicReloc(DynamicReloc &rel) const {}
   virtual void writeGotPltHeader(uint8_t *buf) const {}
   virtual void writeGotHeader(uint8_t *buf) const {}
   virtual void writeGotPlt(uint8_t *buf, const Symbol &s) const {}
@@ -48,8 +50,13 @@ public:
   // they are called. This function writes that code.
   virtual void writePltHeader(uint8_t *buf) const {}
 
+  virtual uint64_t getPltEntryOffset(uint32_t pltIdx,
+                                     uint64_t headerSize) const {
+    return headerSize + uint64_t{pltIdx} * pltEntrySize;
+  }
   virtual void writePlt(uint8_t *buf, const Symbol &sym,
                         uint64_t pltEntryAddr) const {}
+  virtual void finalizePlt(uint8_t *buf) const {}
   virtual void writeIplt(uint8_t *buf, const Symbol &sym,
                          uint64_t pltEntryAddr) const {
     // All but PPC32 and PPC64 use the same format for .plt and .iplt entries.
