@@ -1,5 +1,4 @@
-add_custom_target(libc_include_tests)
-add_dependencies(check-libc libc_include_tests-build)
+add_libc_testsuite(libc_include_tests)
 
 add_libc_test(
   alloca_test

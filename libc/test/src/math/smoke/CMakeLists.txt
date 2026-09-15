@@ -1,5 +1,4 @@
-add_custom_target(libc-math-smoke-tests)
-add_dependencies(libc-math-unittests libc-math-smoke-tests)
+add_libc_testsuite(libc-math-smoke-tests)
 
 add_fp_unittest(
   cosf_test
