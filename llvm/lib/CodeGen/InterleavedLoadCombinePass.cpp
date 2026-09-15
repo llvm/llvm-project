@@ -639,11 +639,13 @@ static raw_ostream &operator<<(raw_ostream &OS, const Polynomial &S) {
 #endif
 
 /// Address key of a candidate's first vector element: the common base pointer,
-/// the vector type and the offset polynomial. Candidates are matched one basic
-/// block at a time, so the block is implicit in the index. Two candidates
-/// belong to the same interleaved group iff their keys agree on everything but
-/// the constant offset, so consecutive elements are located by building the
-/// neighbouring keys and looking them up.
+/// the vector type and the offset polynomial. Candidates are collected and
+/// matched one basic block at a time and only candidates whose loads live in
+/// that block take part (see run()), so the block is common to a whole index
+/// and need not be part of the key. Two candidates belong to the same
+/// interleaved group iff their keys agree on everything but the constant
+/// offset, so consecutive elements are located by building the neighbouring
+/// keys and looking them up.
 struct OffsetKey {
   Value *PV;
   FixedVectorType *VTy;
@@ -1246,8 +1248,9 @@ bool InterleavedLoadCombineImpl::run() {
 
   // Start with the highest factor to avoid combining and recombining.
   for (unsigned Factor = MaxFactor; Factor >= 2; Factor--) {
-    // Matching only ever pairs candidates from the same block, so process one
-    // block at a time and keep the candidate list and offset index small.
+    // Process one block at a time. A group can only be combined when all of its
+    // loads are in a single block, so keeping the candidate list and the offset
+    // index per block keeps both small.
     for (BasicBlock &BB : F) {
       std::list<VectorInfo> Candidates;
       for (Instruction &I : BB) {
@@ -1260,13 +1263,18 @@ bool InterleavedLoadCombineImpl::run() {
           continue;
 
         Candidates.emplace_back(cast<FixedVectorType>(SVI->getType()));
+        VectorInfo &C = Candidates.back();
 
-        if (!VectorInfo::computeFromSVI(SVI, Candidates.back(), DL)) {
+        if (!VectorInfo::computeFromSVI(SVI, C, DL) ||
+            !C.isInterleaved(Factor, DL)) {
           Candidates.pop_back();
           continue;
         }
 
-        if (!Candidates.back().isInterleaved(Factor, DL))
+        // Only combine loads that live in the block being processed. Widening
+        // over loads from another block could read memory that is only
+        // conditionally accessed.
+        if (C.BB != &BB)
           Candidates.pop_back();
       }
 
