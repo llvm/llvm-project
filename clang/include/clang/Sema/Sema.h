@@ -12531,6 +12531,7 @@ public:
 
   protected:
     Sema &S;
+    bool hadPreviousSFINAEContext() const { return Prev != nullptr; }
     ~SFINAEContextBase() { S.CurrentSFINAEContext = Prev; }
     SFINAEContextBase(const SFINAEContextBase &) = delete;
     SFINAEContextBase &operator=(const SFINAEContextBase &) = delete;
@@ -12539,8 +12540,30 @@ public:
     SFINAETrap *Prev;
   };
 
+  struct ClassInstantiationSFINAEContext {
+    const CXXRecordDecl *Record;
+    bool HadActiveSFINAEContext;
+  };
+
   struct NonSFINAEContext : SFINAEContextBase {
     NonSFINAEContext(Sema &S) : SFINAEContextBase(S, nullptr) {}
+
+    NonSFINAEContext(Sema &S, const CXXRecordDecl *Record)
+        : SFINAEContextBase(S, nullptr), Record(Record->getCanonicalDecl()) {
+      S.ClassInstantiationSFINAEContexts.push_back(
+          {this->Record, hadPreviousSFINAEContext()});
+    }
+
+    ~NonSFINAEContext() {
+      if (!Record)
+        return;
+      assert(!S.ClassInstantiationSFINAEContexts.empty());
+      assert(S.ClassInstantiationSFINAEContexts.back().Record == Record);
+      S.ClassInstantiationSFINAEContexts.pop_back();
+    }
+
+  private:
+    const CXXRecordDecl *Record = nullptr;
   };
 
   /// RAII class used to determine whether SFINAE has
@@ -13728,6 +13751,11 @@ public:
 
   SFINAETrap *CurrentSFINAEContext = nullptr;
 
+  /// Active class instantiations and whether entering each one suspended a
+  /// SFINAE context.
+  SmallVector<ClassInstantiationSFINAEContext, 4>
+      ClassInstantiationSFINAEContexts;
+
   /// The number of \p CodeSynthesisContexts that are not template
   /// instantiations and, therefore, should not be counted as part of the
   /// instantiation depth.
@@ -13797,6 +13825,22 @@ public:
   }
   [[nodiscard]] bool isSFINAEContext() const {
     return CurrentSFINAEContext != nullptr;
+  }
+
+  /// Whether \p Record is being instantiated and a strict descendant class
+  /// instantiation suspended a SFINAE context.
+  [[nodiscard]] bool hasSFINAEContextInDescendantClassInstantiation(
+      const CXXRecordDecl *Record) const {
+    Record = Record->getCanonicalDecl();
+    bool HasSFINAEContext = false;
+    for (auto I = ClassInstantiationSFINAEContexts.rbegin(),
+              E = ClassInstantiationSFINAEContexts.rend();
+         I != E; ++I) {
+      if (I->Record == Record)
+        return HasSFINAEContext;
+      HasSFINAEContext |= I->HadActiveSFINAEContext;
+    }
+    return false;
   }
 
   /// Perform substitution on the type T with a given set of template
