@@ -4989,9 +4989,9 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
     if (Op0VT == MVT::bf16 && IsStrict) {
       SDValue Ext1 =
           DAG.getNode(ISD::STRICT_FP_EXTEND, SDLoc(Op), {MVT::f32, MVT::Other},
-                      {Op0, Op.getOperand(0)});
+                      {Op.getOperand(0), Op0});
       return DAG.getNode(ISD::STRICT_FP_EXTEND, SDLoc(Op), {VT, MVT::Other},
-                         {Ext1, Ext1.getValue(1)});
+                         {Ext1.getValue(1), Ext1});
     }
     if (Op0VT == MVT::bf16)
       return DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), VT,
@@ -9176,8 +9176,12 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     }
 
     SDValue Pg = getPredicateForVector(DAG, DL, VT);
-    SDValue NewCttzElts =
-        DAG.getNode(AArch64ISD::CTTZ_ELTS, DL, MVT::i64, Pg, CttzOp);
+    // We preserve the poison semantics here to avoid the poison path from being
+    // affected by the checks emitted for the no-poison case.
+    unsigned Opcode = Op.getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON
+                          ? AArch64ISD::CTTZ_ELTS_ZERO_POISON
+                          : AArch64ISD::CTTZ_ELTS;
+    SDValue NewCttzElts = DAG.getNode(Opcode, DL, MVT::i64, Pg, CttzOp);
     return DAG.getZExtOrTrunc(NewCttzElts, DL, Op.getValueType());
   }
   }
@@ -10624,18 +10628,24 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // caller will deallocate the entire stack and the callee still expects its
   // arguments to begin at SP+0. Completely unused for non-tail calls.
   int FPDiff = 0;
+  const Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
 
   if (IsTailCall && !IsSibCall) {
     unsigned NumReusableBytes = FuncInfo->getBytesInStackArgArea();
-
-    // Since callee will pop argument stack as a tail call, we must keep the
-    // popped size 16-byte aligned.
-    NumBytes = alignTo(NumBytes, 16);
 
     // FPDiff will be negative if this tail call requires more space than we
     // would automatically have in our incoming argument space. Positive if we
     // can actually shrink the stack.
     FPDiff = NumReusableBytes - NumBytes;
+
+    // Since callee will pop the argument stack as a tail call, we must keep the
+    // popped size aligned to the stack alignment. Either or both of NumBytes
+    // and NumReusableBytes may not have been aligned, so we further increase by
+    // the amount needed to keep FPDiff aligned, and therefore preserve the
+    // required alignment going into the callee.
+    uint64_t Realign = offsetToAlignment(FPDiff, StackAlign);
+    FPDiff -= Realign;
+    NumBytes += Realign;
 
     // Update the required reserved area if this is the tail call requiring the
     // most argument stack space.
@@ -12767,7 +12777,8 @@ static SDValue performOrXorChainCombine(SDNode *N, SelectionDAG &DAG) {
   SmallVector<std::pair<SDValue, SDValue>, 16> WorkList;
 
   // Only handle integer compares.
-  if (N->getOpcode() != ISD::SETCC)
+  if (N->getOpcode() != ISD::SETCC || LHS.getValueType().isVector() ||
+      LHS.getValueType().getSizeInBits() > 64)
     return SDValue();
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
@@ -14027,8 +14038,8 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
       for (unsigned I = 0; I + 1 < Insn.size(); ++I) {
         const AArch64_IMM::ImmInsnModel &First = Insn[I];
         const AArch64_IMM::ImmInsnModel &Second = Insn[I + 1];
-        if (Subtarget->fusesMOVImmPair(First.Opcode, First.Op2, Second.Opcode,
-                                       Second.Op2)) {
+        if (Subtarget->fusesMOVImmPair(First.Opcode, First.Op2.value_or(0),
+                                       Second.Opcode, Second.Op2.value_or(0))) {
           ++Limit;
           // An instruction can only be fused once, so the 2nd one of the pair
           // cannot start another pair and is skipped.
@@ -20369,8 +20380,8 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
   case MVT::f64:
     return Subtarget->hasFPARMv8();
   case MVT::bf16:
-    return VT.isScalableVector() && Subtarget->hasBF16() &&
-           Subtarget->isNonStreamingSVEorSME2Available();
+    return VT.isScalableVector() &&
+           (Subtarget->hasBF16() || Subtarget->hasSVEB16B16());
   default:
     break;
   }
@@ -23552,6 +23563,55 @@ static SDValue performNegCSelCombine(SDNode *N, SelectionDAG &DAG) {
                      CSel.getOperand(3));
 }
 
+// Reassociate adds/subs of extended values when one of the operations can
+// become an add/sub long, matching [SU](ADD|SUB)L:
+//
+//   (ext(A) - X) + ext(B) -> (ext(A) + ext(B)) - X
+//   (ext(A) - X) - ext(B) -> (ext(A) - ext(B)) - X
+//   ext(B) - (X + ext(A)) -> (ext(B) - ext(A)) - X
+//
+// We don't need to reassociate expressions that can use widening add/sub
+// instead, such as (ext(A) + X) + ext(B) or (X - ext(A)) - ext(B).
+static SDValue reassociateAddSubLong(SDNode *N, SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::v8i16 && VT != MVT::v4i32 && VT != MVT::v2i64)
+    return SDValue();
+  EVT HalfEltVT = MVT::getIntegerVT(VT.getScalarSizeInBits() / 2);
+
+  for (unsigned ExtOpc : {ISD::ZERO_EXTEND, ISD::SIGN_EXTEND}) {
+    SDValue A, B, X;
+    auto ExtOp = m_Node(ExtOpc, m_SpecificVectorElementVT(HalfEltVT));
+    auto MatchA = m_Value(A, ExtOp), MatchB = m_Value(B, ExtOp);
+    auto MatchX = m_Value(X, m_Unless(ExtOp));
+
+    auto TryReassociate = [&](unsigned Opc0, SDValue L, SDValue R,
+                              unsigned Opc1, SDValue X) {
+      // Long instructions read operands from lower/upper halves.
+      if (isEssentiallyExtractHighSubvector(L.getOperand(0)) !=
+          isEssentiallyExtractHighSubvector(R.getOperand(0)))
+        return SDValue();
+      SDLoc DL(N);
+      return DAG.getNode(Opc1, DL, VT, DAG.getNode(Opc0, DL, VT, L, R), X);
+    };
+
+    // (ext(A) - X) + ext(B) -> (ext(A) + ext(B)) - X
+    if (sd_match(N, m_Add(m_OneUse(m_Sub(MatchA, MatchX)), MatchB)))
+      return TryReassociate(ISD::ADD, A, B, ISD::SUB, X);
+
+    // (ext(A) - X) - ext(B) -> (ext(A) - ext(B)) - X
+    if (sd_match(N, m_Sub(m_OneUse(m_Sub(MatchA, MatchX)), MatchB)))
+      return TryReassociate(ISD::SUB, A, B, ISD::SUB, X);
+
+    // ext(B) - (X + ext(A)) -> (ext(B) - ext(A)) - X
+    if (sd_match(N, m_Sub(MatchB, m_OneUse(m_Add(MatchX, MatchA)))))
+      return TryReassociate(ISD::SUB, B, A, ISD::SUB, X);
+  }
+
+  return SDValue();
+}
+
 // The basic add/sub long vector instructions have variants with "2" on the end
 // which act on the high-half of their inputs. They are normally matched by
 // patterns like:
@@ -23575,6 +23635,9 @@ static SDValue performAddSubLongCombine(SDNode *N,
       return performSetccAddFolding(N, DAG);
     return SDValue();
   }
+
+  if (SDValue R = reassociateAddSubLong(N, DAG))
+    return R;
 
   // Make sure both branches are extended in the same way.
   SDValue LHS = N->getOperand(0);
@@ -28290,14 +28353,52 @@ static SDValue performLegalizedInterleavedStoreCombine(
   return NewStore;
 }
 
+/// Expand a scalable compressing store to a VECTOR_COMPRESS + a masked store.
+static SDValue expandScalableCompressingStore(MaskedStoreSDNode *Store,
+                                              SelectionDAG &DAG) {
+  SDLoc DL(Store);
+  EVT VT = Store->getValue().getValueType();
+  assert(VT.isScalableVector() && Store->isCompressingStore() &&
+         "Expected a scalable compressing store");
+
+  EVT MaskVT = Store->getMask().getValueType();
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  SDValue CntActive = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
+      Store->getMask(), Store->getMask());
+
+  SDValue CompressedValue =
+      DAG.getNode(ISD::VECTOR_COMPRESS, DL, VT, Store->getValue(),
+                  Store->getMask(), DAG.getPOISON(VT));
+  SDValue CompressedMask =
+      DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, MaskVT, Zero, CntActive);
+
+  return DAG.getMaskedStore(Store->getChain(), DL, CompressedValue,
+                            Store->getBasePtr(), Store->getOffset(),
+                            CompressedMask, Store->getMemoryVT(),
+                            Store->getMemOperand(), Store->getAddressingMode(),
+                            Store->isTruncatingStore(),
+                            /*isCompressing=*/false);
+}
+
 static SDValue performMSTORECombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG,
-                                    const AArch64Subtarget *Subtarget) {
+                                    const AArch64Subtarget *Subtarget,
+                                    const AArch64TargetLowering &TLI) {
   MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
   SDValue Value = MST->getValue();
   SDValue Mask = MST->getMask();
   SDLoc DL(N);
+
+  // If MST is a compressing store and VECTOR_COMPRESS can be lowered for the VT
+  // expand the store early. This allows type promotion to apply to unpacked
+  // SVE float types.
+  EVT VT = MST->getValue().getValueType();
+  if (MST->isCompressingStore() && VT.isScalableVector() &&
+      TLI.isOperationLegalOrCustomOrPromote(ISD::VECTOR_COMPRESS, VT))
+    return expandScalableCompressingStore(MST, DAG);
 
   if (SDValue Res = performInterleavedStoreCombine(N, DCI, DAG))
     return Res;
@@ -31710,7 +31811,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::STORE:
     return performSTORECombine(N, DCI, DAG, Subtarget);
   case ISD::MSTORE:
-    return performMSTORECombine(N, DCI, DAG, Subtarget);
+    return performMSTORECombine(N, DCI, DAG, Subtarget, *this);
   case ISD::MGATHER:
   case ISD::MSCATTER:
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
@@ -32919,8 +33020,9 @@ SDValue AArch64TargetLowering::emitStackGuardMixFP(SelectionDAG &DAG,
 
 unsigned AArch64TargetLowering::combineRepeatedFPDivisors() const {
   // Combine multiple FDIVs with the same divisor into multiple FMULs by the
-  // reciprocal if there are three or more FDIVs.
-  return 3;
+  // reciprocal if there are enough FDIVs. The threshold is determined by the
+  // subtarget feature.
+  return Subtarget->useReciprocalFDivCombineThreshold2() ? 2 : 3;
 }
 
 TargetLoweringBase::LegalizeTypeAction
@@ -34152,25 +34254,7 @@ SDValue AArch64TargetLowering::LowerMSTORE(SDValue Op,
   if (!Store->isCompressingStore())
     return SDValue();
 
-  EVT MaskVT = Store->getMask().getValueType();
-  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-  SDValue CntActive = DAG.getNode(
-      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
-      DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
-      Store->getMask(), Store->getMask());
-
-  SDValue CompressedValue =
-      DAG.getNode(ISD::VECTOR_COMPRESS, DL, VT, Store->getValue(),
-                  Store->getMask(), DAG.getPOISON(VT));
-  SDValue CompressedMask =
-      DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, MaskVT, Zero, CntActive);
-
-  return DAG.getMaskedStore(Store->getChain(), DL, CompressedValue,
-                            Store->getBasePtr(), Store->getOffset(),
-                            CompressedMask, Store->getMemoryVT(),
-                            Store->getMemOperand(), Store->getAddressingMode(),
-                            Store->isTruncatingStore(),
-                            /*isCompressing=*/false);
+  return expandScalableCompressingStore(Store, DAG);
 }
 
 SDValue AArch64TargetLowering::LowerFixedLengthVectorMStoreToSVE(

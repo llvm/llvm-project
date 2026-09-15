@@ -1458,18 +1458,6 @@ static bool isLegacyNVPTXBF16IntSignature(Function *F, Intrinsic::ID IID) {
   return true;
 }
 
-static Intrinsic::ID shouldUpgradeNVPTXTcgen05MMAIntrinsic(Function *F,
-                                                           StringRef Name) {
-  if (!Name.consume_front("tcgen05.mma."))
-    return Intrinsic::not_intrinsic;
-
-  // tcgen05.mma.ws.* variants do not need collector-b appended.
-  if (Name.starts_with("ws"))
-    return Intrinsic::not_intrinsic;
-
-  return F->getIntrinsicID();
-}
-
 static std::optional<std::pair<Intrinsic::ID, RoundingMode>>
 getNVVMFAddUpgrade(StringRef Name) {
   auto [Modifiers, Type] = Name.rsplit('.');
@@ -1496,6 +1484,13 @@ getNVVMFAddUpgrade(StringRef Name) {
     return std::nullopt;
 
   return std::make_pair(IID, *RoundingMode);
+}
+
+static Intrinsic::ID shouldUpgradeNVPTXMBarrierInitIntrinsic(StringRef Name) {
+  if (Name != "mbarrier.init" && Name != "mbarrier.init.shared")
+    return Intrinsic::not_intrinsic;
+
+  return Intrinsic::nvvm_mbarrier_init;
 }
 
 static bool consumeNVVMPtrAddrSpace(StringRef &Name) {
@@ -2081,11 +2076,13 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return true;
       }
 
-      // Upgrade tcgen05.mma intrinsics missing collector_usage_b.
-      IID = shouldUpgradeNVPTXTcgen05MMAIntrinsic(F, Name);
+      // Upgrade mbarrier.init intrinsics missing the layout operand.
+      IID = shouldUpgradeNVPTXMBarrierInitIntrinsic(Name);
       if (IID != Intrinsic::not_intrinsic) {
-        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
-        return NewFn != F;
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                  F->getArg(0)->getType());
+        return true;
       }
 
       // The following nvvm intrinsics correspond exactly to an LLVM idiom, but
@@ -6124,75 +6121,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
-  case Intrinsic::nvvm_tcgen05_mma_shared:
-  case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
-  case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2:
-  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4_block_scale:
-  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4nvf4_block_scale_block16:
-  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4nvf4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale:
-  case Intrinsic::nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d:
-  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1:
-  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg2:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg1:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg2:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4_block_scale:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4nvf4_block_scale_block16:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4nvf4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg1:
-  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg2:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4nvf4_block_scale_block16:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4nvf4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1:
-  case Intrinsic::
-      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2:
-  case Intrinsic::
-      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_tensor:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg2:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg2_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4nvf4_block_scale_block16:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4nvf4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale_block32:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1:
-  case Intrinsic::
-      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1_ashift:
-  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2:
-  case Intrinsic::
-      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2_ashift: {
-    SmallVector<Value *, 12> Args(CI->args());
-    Args.push_back(Builder.getInt32(0)); // collector_usage_b = discard(0)
-    NewCall = Builder.CreateCall(NewFn, Args);
-    break;
-  }
   case Intrinsic::nvvm_tcgen05_alloc_cg1:
   case Intrinsic::nvvm_tcgen05_alloc_cg2:
   case Intrinsic::nvvm_tcgen05_dealloc_cg1:
@@ -6201,6 +6129,15 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
         Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
                                    Builder.getFalse()});
     break;
+  case Intrinsic::nvvm_mbarrier_init: {
+    SmallVector<Value *, 3> Args(CI->args());
+    // The .shared variant folded into the overloaded form without gaining an
+    // operand, so only the pre-layout two-argument form needs one appended.
+    if (Args.size() == 2)
+      Args.push_back(Builder.getInt32(0)); // layout = default(0)
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
   case Intrinsic::riscv_sha256sig0:
   case Intrinsic::riscv_sha256sig1:
   case Intrinsic::riscv_sha256sum0:

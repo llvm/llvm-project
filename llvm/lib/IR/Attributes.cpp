@@ -811,6 +811,7 @@ enum AttributeProperty {
   IntersectMin = (2 << 3),
   IntersectCustom = (3 << 3),
   IntersectPropertyMask = (3 << 3),
+  ABIAttr = (1 << 5),
 };
 
 #define GET_ATTR_PROP_TABLE
@@ -837,6 +838,10 @@ bool Attribute::canUseAsParamAttr(AttrKind Kind) {
 
 bool Attribute::canUseAsRetAttr(AttrKind Kind) {
   return hasAttributeProperty(Kind, AttributeProperty::RetAttr);
+}
+
+bool Attribute::isABIAttr(AttrKind Kind) {
+  return hasAttributeProperty(Kind, AttributeProperty::ABIAttr);
 }
 
 static bool hasIntersectProperty(Attribute::AttrKind Kind,
