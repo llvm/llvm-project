@@ -726,6 +726,7 @@ private:
     lower::pft::Evaluation *predecessor = &*std::prev(cycleStmtIt);
     while (predecessor->evaluationList && !predecessor->evaluationList->empty())
       predecessor = &predecessor->evaluationList->back();
+    assert(predecessor->lexicalSuccessor == &*cycleStmtIt);
     predecessor->lexicalSuccessor = cycleStmtIt->lexicalSuccessor;
     evaluationList.erase(cycleStmtIt);
   }
