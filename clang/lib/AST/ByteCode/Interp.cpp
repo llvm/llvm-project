@@ -3203,6 +3203,11 @@ static bool castBackMemberPointer(InterpState &S,
                                   const MemberPointer &MemberPtr,
                                   int32_t BaseOffset,
                                   const RecordDecl *BaseDecl) {
+  if (!MemberPtr.getDecl()) {
+    S.Stk.push<MemberPointer>(MemberPtr);
+    return true;
+  }
+
   const CXXRecordDecl *Expected;
   if (MemberPtr.getPathLength() >= 2)
     Expected = MemberPtr.getPathEntry(MemberPtr.getPathLength() - 2);
