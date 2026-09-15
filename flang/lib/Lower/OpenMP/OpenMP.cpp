@@ -1115,32 +1115,10 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
   // startLevel..endLevel-1 equal their respective bound values.
   // For "before" guards (useLowerBound=true), compare iv == lb (first iter).
   // For "after" guards (useLowerBound=false), compare iv == last_iv.
+  // These bounds may be host_eval block arguments of an enclosing omp.target.
   const auto lbs = loopNestOp.getLoopLowerBounds();
   const auto ubs = loopNestOp.getLoopUpperBounds();
   const auto steps = loopNestOp.getLoopSteps();
-
-  // The intervening-code guards and terminal-value restoration do arithmetic
-  // on the collapsed loop bounds. If those bounds are host_eval block arguments
-  // of an enclosing omp.target region, such uses are illegal, so diagnose
-  // instead of emitting IR the omp.target verifier rejects.
-  const bool hasInterveningCode = llvm::any_of(
-      levels, [](const LevelInfo &l) { return l.hasInterveningCode(); });
-  if (hasInterveningCode) {
-    auto isHostEvalValue = [](mlir::Value v) {
-      auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(v);
-      if (!blockArg)
-        return false;
-      auto iface = mlir::dyn_cast<mlir::omp::BlockArgOpenMPOpInterface>(
-          blockArg.getOwner()->getParentOp());
-      return iface &&
-             llvm::is_contained(iface.getHostEvalBlockArgs(), blockArg);
-    };
-    if (llvm::any_of(lbs, isHostEvalValue) ||
-        llvm::any_of(ubs, isHostEvalValue) ||
-        llvm::any_of(steps, isHostEvalValue))
-      TODO(loc, "collapsed loop nest with intervening code whose loop bounds "
-                "are evaluated on the host for an enclosing 'target' region");
-  }
 
   // Last value the induction variable at \p lvl actually takes:
   // lb + ((ub - lb) / step) * step. For unit steps this is exactly ub.

@@ -3719,6 +3719,29 @@ func.func @omp_target_host_eval(%x : i32) {
     } {omp.combined}
     omp.terminator
   } {omp.combined}
+
+  // A host_eval argument may also be consumed by ordinary operations inside
+  // the region, in addition to defining the loop's trip count.
+  // CHECK: omp.target kernel_type(spmd) host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
+  // CHECK: omp.loop_nest (%[[IV:.*]]) : i32 = (%[[HOST_ARG]]) to (%[[HOST_ARG]]) step (%[[HOST_ARG]]) {
+  // CHECK: arith.cmpi eq, %[[IV]], %[[HOST_ARG]] : i32
+  omp.target kernel_type(spmd) host_eval(%x -> %arg0 : i32) {
+    omp.teams {
+      omp.parallel {
+        omp.distribute {
+          omp.wsloop {
+            omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+              %0 = arith.cmpi eq, %iv, %arg0 : i32
+              omp.yield
+            }
+          } {omp.composite}
+        } {omp.composite}
+        omp.terminator
+      } {omp.composite}
+      omp.terminator
+    } {omp.combined}
+    omp.terminator
+  } {omp.combined}
   return
 }
 

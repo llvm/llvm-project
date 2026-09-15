@@ -698,13 +698,18 @@ class OpenMP_HostEvalClauseSkip<
   let description = [{
     The optional `host_eval_vars` holds values defined outside of the region of
     the `IsolatedFromAbove` operation for which a corresponding entry block
-    argument is defined. The only legal uses for these captured values are the
-    following:
+    argument is defined. Their purpose is to make values that must be evaluated
+    on the host available to:
       - `num_teams` or `thread_limit` clause of an immediately nested
       `omp.teams` operation.
       - If the operation is the top-level `omp.target` of a target SPMD kernel:
         - `num_threads` clause of the nested `omp.parallel` operation.
         - Bounds and steps of the nested `omp.loop_nest` operation.
+
+    These values are passed to the kernel as arguments, so an integer entry
+    block argument may also be consumed within the region by operations that do
+    not access memory. Any other use is rejected, which confines pointer-typed
+    arguments to the operations listed above.
   }];
 }
 
