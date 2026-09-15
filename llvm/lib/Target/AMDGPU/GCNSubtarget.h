@@ -364,6 +364,11 @@ public:
 
   bool isCuModeEnabled() const { return EnableCuMode; }
 
+  /// \returns Whether a work-group runs on all of the block's SIMDs.
+  bool isFullSIMDMode() const {
+    return (HasGFX1250Insts && getGeneration() < GFX13) || !EnableCuMode;
+  }
+
   bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
 
   bool hasFlatScrRegister() const { return hasFlatAddressSpace(); }
