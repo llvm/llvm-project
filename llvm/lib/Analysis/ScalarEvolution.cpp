@@ -14053,20 +14053,10 @@ bool ScalarEvolution::containsErasedValue(const SCEV *S) const {
 
 /// Return the size of an element read or written by Inst.
 const SCEV *ScalarEvolution::getElementSize(Instruction *Inst) {
-  Type *Ty;
-  Type *PtrTy;
-  if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
-    Ty = Store->getValueOperand()->getType();
-    PtrTy = Store->getPointerOperandType();
-  } else if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
-    Ty = Load->getType();
-    PtrTy = Load->getPointerOperandType();
-  } else {
+  if (!isa<LoadInst, StoreInst>(Inst))
     return nullptr;
-  }
-
-  Type *ETy = getEffectiveSCEVType(PtrTy);
-  return getSizeOfExpr(ETy, Ty);
+  Type *ETy = getEffectiveSCEVType(getLoadStorePointerOperand(Inst)->getType());
+  return getSizeOfExpr(ETy, getLoadStoreType(Inst));
 }
 
 //===----------------------------------------------------------------------===//
