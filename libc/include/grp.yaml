@@ -7,4 +7,19 @@ types:
   - type_name: size_t
 enums: []
 objects: []
-functions: []
+functions:
+  - name: endgrent
+    standards:
+      - posix
+    return_type: void
+    arguments: []
+  - name: getgrent
+    standards:
+      - posix
+    return_type: struct group *
+    arguments: []
+  - name: setgrent
+    standards:
+      - posix
+    return_type: void
+    arguments: []
