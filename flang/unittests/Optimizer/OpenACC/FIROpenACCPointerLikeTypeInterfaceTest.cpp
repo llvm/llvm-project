@@ -130,7 +130,7 @@ TEST_F(FIROpenACCPointerLikeTypeInterfaceTest,
   Type refTy = fir::ReferenceType::get(heapTy);
   auto ptrLike = cast<acc::PointerLikeType>(refTy);
 
-  // A ref-to-heap-array is a pointer slot, not the array data.
+  // A ref-to-heap-array holds a heap address, not the array data.
   // convertibleMemrefType must not peel the inner heap, or getAsMemRefType
   // would call convertMemrefType and assert.
   EXPECT_FALSE(ptrLike.getAsMemRefType(module));

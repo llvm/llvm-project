@@ -34,7 +34,7 @@ private:
 
   /// Peel one `!fir.ref` / `!fir.ptr` / `!fir.heap`. Returns a null type if
   /// \p ty is none of those. Nested wrappers are left on the result; a
-  /// remaining pointer is a pointer slot, not memref data.
+  /// remaining pointer is a heap/pointer address, not memref data.
   static mlir::Type peelPointerWrapper(mlir::Type ty) {
     if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty))
       return refTy.getElementType();
@@ -109,7 +109,7 @@ public:
   /// Return true if the given FIR type can be converted to a MemRef-typed
   /// descriptor. Uses the same `peelPointerWrapper` / `box` recursion as
   /// `convertMemrefType`. Nested pointers such as
-  /// `!fir.ref<!fir.heap<!fir.array<?xf32>>>` are a pointer slot, not the
+  /// `!fir.ref<!fir.heap<!fir.array<?xf32>>>` hold a heap address, not the
   /// array, and are not convertible.
   bool convertibleMemrefType(mlir::Type ty) {
     if (mlir::Type pointee = peelPointerWrapper(ty))
