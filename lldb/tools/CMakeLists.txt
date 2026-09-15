@@ -9,7 +9,9 @@ add_subdirectory(lldb-test EXCLUDE_FROM_ALL)
 add_subdirectory(lldb-fuzzer EXCLUDE_FROM_ALL)
 
 add_lldb_tool_subdirectory(lldb-instr)
-add_lldb_tool_subdirectory(lldb-dap)
+if(LLVM_ENABLE_THREADS)
+  add_lldb_tool_subdirectory(lldb-dap)
+endif()
 add_lldb_tool_subdirectory(lldb-mcp)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
