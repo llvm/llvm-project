@@ -611,7 +611,7 @@ foreach MemSize = [1, 2, 4, 8, 16] in {
 def UNWIND_RESUME : RuntimeLibcall;
 def UNWIND_REGISTER : RuntimeLibcall;
 def UNWIND_UNREGISTER : RuntimeLibcall;
-def UNWIND_CALL_PERSONALITY : RuntimeLibcall;
+def UNWIND_GET_WASM_LPAD_CONTEXT : RuntimeLibcall;
 def CXA_END_CLEANUP : RuntimeLibcall;
 
 // Note: there are two sets of atomics libcalls; see
@@ -1881,6 +1881,9 @@ defset list<RuntimeLibcallImpl> SjLjExceptionHandlingLibcalls = {
   def _Unwind_SjLj_Register : RuntimeLibcallImpl<UNWIND_REGISTER>;
   def _Unwind_SjLj_Unregister : RuntimeLibcallImpl<UNWIND_UNREGISTER>;
 }
+
+// Only used on wasm
+def _Unwind_GetWasmLPadContext : RuntimeLibcallImpl<UNWIND_GET_WASM_LPAD_CONTEXT>;
 
 // Used on OpenBSD
 def __stack_smash_handler : RuntimeLibcallImpl<STACK_SMASH_HANDLER>;
