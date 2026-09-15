@@ -1824,6 +1824,14 @@ llvm::Error ASTReader::ReadSourceManagerBlock(ModuleFile &F) {
 
 llvm::Expected<SourceLocation::UIntTy>
 ASTReader::readSLocOffset(ModuleFile *F, unsigned Index) {
+  Expected<SLocEntryInfo> MaybeInfo = readSLocFileEntry(F, Index);
+  if (!MaybeInfo)
+    return MaybeInfo.takeError();
+  return MaybeInfo->Offset;
+}
+
+llvm::Expected<ASTReader::SLocEntryInfo>
+ASTReader::readSLocFileEntry(ModuleFile *F, unsigned Index) {
   BitstreamCursor &Cursor = F->SLocEntryCursor;
   SavedStreamPosition SavedPosition(Cursor);
   if (llvm::Error Err = Cursor.JumpToBit(F->SLocEntryOffsetsBase +
@@ -1852,10 +1860,88 @@ ASTReader::readSLocOffset(ModuleFile *F, unsigned Index) {
         std::errc::illegal_byte_sequence,
         "incorrectly-formatted source location entry in AST file");
   case SM_SLOC_FILE_ENTRY:
+    return SLocEntryInfo{
+        static_cast<SourceLocation::UIntTy>(F->SLocEntryBaseOffset + Record[0]),
+        static_cast<unsigned>(Record[4])};
   case SM_SLOC_BUFFER_ENTRY:
   case SM_SLOC_EXPANSION_ENTRY:
-    return F->SLocEntryBaseOffset + Record[0];
+    return SLocEntryInfo{
+        static_cast<SourceLocation::UIntTy>(F->SLocEntryBaseOffset + Record[0]),
+        0};
   }
+}
+
+void ASTReader::buildLoadedInputFiles() {
+  LoadedInputFilesBuilt = true;
+  // ModuleManager iterates modules in index order, so the copy chosen for a
+  // file does not depend on module load order.
+  for (ModuleFile &F : ModuleMgr) {
+    for (unsigned I = 0, N = F.InputFilesLoaded.size(); I != N; ++I) {
+      InputFileInfo FI = getInputFileInfo(F, I + 1);
+      if (FI.UnresolvedImportedFilename.empty())
+        continue;
+      // An overridden input holds a buffer rather than the file named by its
+      // path, so its path and size cannot identify matching contents.
+      if (FI.Overridden)
+        continue;
+      auto Filename =
+          ResolveImportedPath(PathBuf, FI.UnresolvedImportedFilename, F);
+      // Make both paths absolute and remove dot segments before comparing them.
+      SmallString<128> Key(*Filename);
+      FileMgr.makeAbsolutePath(Key, /*Canonicalize=*/true);
+      LoadedInputFiles[Key].push_back({FI.StoredSize, &F, I + 1});
+    }
+  }
+}
+
+InputFileLoc ASTReader::getLoadedInputFileLoc(ModuleFile &F, unsigned InputID) {
+  if (!F.InputFileLocsLoadedBuilt) {
+    F.InputFileLocsLoadedBuilt = true;
+    F.InputFileLocsLoaded.resize(F.InputFilesLoaded.size());
+    for (unsigned I = 0; I != F.LocalNumSLocEntries; ++I) {
+      Expected<SLocEntryInfo> MaybeInfo = readSLocFileEntry(&F, I);
+      if (!MaybeInfo) {
+        // Failing to find an entry only prevents a redirect, so leave the file
+        // local rather than failing the write.
+        consumeError(MaybeInfo.takeError());
+        continue;
+      }
+      if (!MaybeInfo->InputID ||
+          MaybeInfo->InputID > F.InputFileLocsLoaded.size())
+        continue;
+      // A module writes its entries in order, so the first entry naming an
+      // input file is the one we want.
+      InputFileLoc &Loc = F.InputFileLocsLoaded[MaybeInfo->InputID - 1];
+      if (Loc.FID.isInvalid())
+        Loc = {FileID::get(F.SLocEntryBaseID + I), MaybeInfo->Offset};
+    }
+  }
+
+  if (InputID == 0 || InputID > F.InputFileLocsLoaded.size())
+    return InputFileLoc();
+  return F.InputFileLocsLoaded[InputID - 1];
+}
+
+InputFileLoc ASTReader::getLoadedFileLoc(StringRef Path, off_t Size) {
+  if (!LoadedInputFilesBuilt)
+    buildLoadedInputFiles();
+
+  SmallString<128> Key(Path);
+  FileMgr.makeAbsolutePath(Key, /*Canonicalize=*/true);
+  auto Known = LoadedInputFiles.find(Key);
+  if (Known == LoadedInputFiles.end())
+    return InputFileLoc();
+
+  for (const LoadedInputFile &In : Known->second) {
+    if (In.Size != Size)
+      continue;
+    // An input file may have no source location entries, leaving no copy to
+    // redirect to.
+    InputFileLoc Loc = getLoadedInputFileLoc(*In.F, In.InputID);
+    if (Loc.FID.isValid())
+      return Loc;
+  }
+  return InputFileLoc();
 }
 
 int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
