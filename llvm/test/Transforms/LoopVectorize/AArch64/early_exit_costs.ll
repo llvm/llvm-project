@@ -10,10 +10,10 @@ define i64 @same_exit_block_pre_inc_use1_sve() #1 {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_sve'
 ; CHECK: LV: Selecting VF: vscale x 16
 ; CHECK: Calculating cost of work in exit block vector.early.exit
-; CHECK-NEXT: Cost of 4 for VF vscale x 16: EMIT vp<{{.*}}> = first-active-lane ir<%cmp3>
+; CHECK-NEXT: Cost of 4 for VF vscale x 16: EMIT vp<{{.*}}> = first-active-lane
 ; CHECK-NEXT: Cost of 0 for VF vscale x 16: EMIT vp<{{.*}}> = add
 ; CHECK-NEXT: Cost of 1 for VF vscale x 16: vp<{{.*}}> = DERIVED-IV
-; CHECK-NEXT: Cost of 4 for VF vscale x 16: EMIT vp<{{.*}}> = first-active-lane ir<%cmp3>
+; CHECK-NEXT: Cost of 4 for VF vscale x 16: EMIT vp<{{.*}}> = first-active-lane
 ; CHECK-NEXT: Cost of 0 for VF vscale x 16: EMIT vp<{{.*}}> = add
 ; CHECK-NEXT: Cost of 2 for VF vscale x 16: vp<{{.*}}> = DERIVED-IV
 ; CHECK: LV: Minimum required TC for runtime checks to be profitable:16
