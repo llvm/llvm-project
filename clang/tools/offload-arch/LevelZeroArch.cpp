@@ -14,7 +14,9 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/IntelGPUTargetParser.h"
 #include <cstdio>
+#include <string>
 
 #define ZE_MAX_DEVICE_NAME 256
 #define ZE_MAX_DEVICE_UUID_SIZE 16
@@ -30,6 +32,7 @@ enum ze_result_t {
 enum ze_structure_type_t {
   ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC = 0x00020021,
   ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES = 0x3,
+  ZE_STRUCTURE_TYPE_DEVICE_IP_VERSION_EXT = 0x1000f,
   ZE_STRUCTURE_TYPE_FORCE_UINT32 = 0x7fffffff
 };
 
@@ -70,6 +73,13 @@ struct ze_device_properties_t {
   uint32_t kernelTimestampValidBits;
   ze_device_uuid_t uuid;
   char name[ZE_MAX_DEVICE_NAME];
+};
+
+// Chained onto ze_device_properties_t::pNext to request the device IP version.
+struct ze_device_ip_version_ext_t {
+  ze_structure_type_t stype;
+  const void *pNext;
+  uint32_t ipVersion;
 };
 
 ze_result_t zeInitDrivers(uint32_t *pCount, ze_driver_handle_t *phDrivers,
@@ -148,6 +158,17 @@ static bool loadLevelZero() {
     }                                                                          \
   } while (0)
 
+// Translate a GMDID into an architecture name that is a legal --offload-arch
+// parameter. A device this build knows no name for is named after its GMDID, so
+// that it is reported like any other one.
+std::string getIntelGPUArchName(uint32_t IPVersion) {
+  IntelGPU::GMDID ID = IntelGPU::decodeGMDID(IPVersion);
+  StringRef Name = IntelGPU::getArchName(IntelGPU::getKindForGMDID(ID));
+  if (!Name.empty())
+    return Name.str();
+  return IntelGPU::getNumericArchName(ID);
+}
+
 int printGPUsByLevelZero() {
   if (!loadLevelZero())
     return 1;
@@ -173,11 +194,28 @@ int printGPUsByLevelZero() {
     CALL_ZE_AND_CHECK(zeDeviceGet, Driver, &DeviceCount, Devices.data());
 
     for (auto Device : Devices) {
+      ze_device_ip_version_ext_t IPVersion = {};
+      IPVersion.stype = ZE_STRUCTURE_TYPE_DEVICE_IP_VERSION_EXT;
+      IPVersion.pNext = nullptr;
+
       ze_device_properties_t DeviceProperties = {};
       DeviceProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
-      DeviceProperties.pNext = nullptr;
+      DeviceProperties.pNext = &IPVersion;
       CALL_ZE_AND_CHECK(zeDeviceGetProperties, Device, &DeviceProperties);
-      llvm::outs() << DeviceProperties.name << '\n';
+
+      // A driver that does not support the extension leaves the chained
+      // structure untouched, in which case there is no architecture to name.
+      if (IPVersion.ipVersion == 0) {
+        if (Verbose)
+          llvm::errs() << "Unable to query the IP version of device '"
+                       << DeviceProperties.name << "'\n";
+        continue;
+      }
+
+      if (Verbose)
+        llvm::errs() << "Found device '" << DeviceProperties.name << "'\n";
+
+      llvm::outs() << getIntelGPUArchName(IPVersion.ipVersion) << '\n';
     }
   }
 

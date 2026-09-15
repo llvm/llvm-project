@@ -1,0 +1,94 @@
+//===--- IntelGPUTargetParser.def - Intel GPU target data ------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is the single source of truth for the Intel GPU list. Each row
+// describes one architecture name that --offload-arch accepts, along with the
+// IGCA (Intel Graphics Compute Architecture) level the compiler targets when
+// the user names it. Adding a device is a single row here.
+//
+//   INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_LEVEL, IGCA_SUFFIX)
+//     NAME         - Human-friendly device name, e.g. "xe-cri".
+//     KIND         - GPUKind enumerator suffix; the enumerator is GK_<KIND>.
+//     ARCHITECTURE - Architecture component of the GMDID the device reports.
+//     RELEASE      - Release component of the GMDID the device reports.
+//     IGCA_LEVEL   - Numeric IGCA level.
+//     IGCA_SUFFIX  - Token naming the feature sets that the level comprises:
+//                    Core (no suffix), Compute ("c"), Render ("r"),
+//                    ComputeExact ("ca") or RenderExact ("ra"). A consumer maps
+//                    the token onto an enumerator of its own.
+//
+//   INTEL_GPU_COMPAT(NAME, KIND, IGCA_LEVEL, IGCA_SUFFIX)
+//     A compatibility name that covers several releases, e.g. "xe-dg2", which
+//     covers every xe-dg2-* and xe-acm-* platform. These names have no GMDID
+//     of their own, so no device reports one and the offload-arch utility
+//     never prints one, but they are legal --offload-arch values. The columns
+//     mean the same as above.
+//
+// The revision (stepping) component of the GMDID is deliberately not part of
+// the key: every stepping of a release shares one name and one IGCA level.
+//
+// Several devices can share an architecture and a release. The rows are ordered
+// so that the name to print for such a group comes first.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef INTEL_GPU
+#define INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_LEVEL, IGCA_SUFFIX)
+#endif
+
+#ifndef INTEL_GPU_COMPAT
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_LEVEL, IGCA_SUFFIX)
+#endif
+
+INTEL_GPU("xe-cri",      XE_CRI,      35, 11,  60, Compute)
+INTEL_GPU("xe-nvl-p",    XE_NVL_P,    35, 10,  60, Render)
+INTEL_GPU("xe-nvl-u",    XE_NVL_U,    30, 5,   60, Render)
+INTEL_GPU("xe-nvl-h",    XE_NVL_H,    30, 5,   60, Render)
+INTEL_GPU("xe-nvl-s",    XE_NVL_S,    30, 4,   60, Render)
+INTEL_GPU("xe-nvl-hx",   XE_NVL_HX,   30, 4,   60, Render)
+INTEL_GPU("xe-nvl-ul",   XE_NVL_UL,   30, 4,   60, Render)
+INTEL_GPU("xe-wcl",      XE_WCL,      30, 3,   50, Render)
+INTEL_GPU("xe-ptl-u",    XE_PTL_U,    30, 1,   50, Render)
+INTEL_GPU("xe-ptl-h",    XE_PTL_H,    30, 0,   50, Render)
+INTEL_GPU("xe-lnl-m",    XE_LNL_M,    20, 4,   40, Render)
+INTEL_GPU("xe-bmg-g31",  XE_BMG_G31,  20, 2,   40, Render)
+INTEL_GPU("xe-bmg-g21",  XE_BMG_G21,  20, 1,   40, Render)
+INTEL_GPU("xe-arl-h",    XE_ARL_H,    12, 74,  35, Render)
+INTEL_GPU("xe-mtl-h",    XE_MTL_H,    12, 71,  30, Render)
+INTEL_GPU("xe-mtl-u",    XE_MTL_U,    12, 70,  30, Render)
+INTEL_GPU("xe-arl-u",    XE_ARL_U,    12, 70,  30, Render)
+INTEL_GPU("xe-arl-s",    XE_ARL_S,    12, 70,  30, Render)
+INTEL_GPU("xe-pvc-vg",   XE_PVC_VG,   12, 61,  20, ComputeExact)
+INTEL_GPU("xe-pvc",      XE_PVC,      12, 60,  20, ComputeExact)
+INTEL_GPU("xe-pvc-sdv",  XE_PVC_SDV,  12, 60,  20, ComputeExact)
+INTEL_GPU("xe-acm-g12",  XE_ACM_G12,  12, 57,  15, RenderExact)
+INTEL_GPU("xe-dg2-g12",  XE_DG2_G12,  12, 57,  15, RenderExact)
+INTEL_GPU("xe-acm-g11",  XE_ACM_G11,  12, 56,  15, RenderExact)
+INTEL_GPU("xe-dg2-g11",  XE_DG2_G11,  12, 56,  15, RenderExact)
+INTEL_GPU("xe-ats-m75",  XE_ATS_M75,  12, 56,  15, RenderExact)
+INTEL_GPU("xe-acm-g10",  XE_ACM_G10,  12, 55,  15, RenderExact)
+INTEL_GPU("xe-dg2-g10",  XE_DG2_G10,  12, 55,  15, RenderExact)
+INTEL_GPU("xe-ats-m150", XE_ATS_M150, 12, 55,  15, RenderExact)
+INTEL_GPU("xe-dg1",      XE_DG1,      12, 10,  10, Render)
+INTEL_GPU("xe-adl-n",    XE_ADL_N,    12, 4,   10, Render)
+INTEL_GPU("xe-adl-p",    XE_ADL_P,    12, 3,   10, Render)
+INTEL_GPU("xe-rpl-p",    XE_RPL_P,    12, 3,   10, Render)
+INTEL_GPU("xe-adl-s",    XE_ADL_S,    12, 2,   10, Render)
+INTEL_GPU("xe-rpl-s",    XE_RPL_S,    12, 2,   10, Render)
+INTEL_GPU("xe-rkl",      XE_RKL,      12, 1,   10, Render)
+INTEL_GPU("xe-tgllp",    XE_TGLLP,    12, 0,   10, Render)
+INTEL_GPU("xe-tgl",      XE_TGL,      12, 0,   10, Render)
+
+// Compatibility names, which cover a group of platforms
+INTEL_GPU_COMPAT("xe-ptl", XE_PTL, 50, Render)
+INTEL_GPU_COMPAT("xe-bmg", XE_BMG, 40, Render)
+INTEL_GPU_COMPAT("xe-mtl", XE_MTL, 30, Render)
+INTEL_GPU_COMPAT("xe-dg2", XE_DG2, 15, RenderExact)
+
+#undef INTEL_GPU
+#undef INTEL_GPU_COMPAT
