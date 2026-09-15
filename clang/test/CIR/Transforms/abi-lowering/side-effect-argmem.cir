@@ -55,48 +55,46 @@ module attributes {
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
 
+  // Dictionaries print sorted by name, so these pins are in key order.
   cir.func private @const_sret() -> !rec_Big side_effect(const)
       attributes { test_classify = #sret_ret }
 
-  // Dictionaries print sorted by name, so these pins are in key order.
-  // CHECK: cir.func{{.*}} @const_sret(!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) side_effect(const)
+  // CHECK: cir.func{{.*}} @const_sret(!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) side_effect(const_argmem)
   // LLVM: ; Function Attrs: nounwind willreturn memory(argmem: readwrite)
   // LLVM-NEXT: declare void @const_sret(ptr dead_on_unwind writable sret(%struct.Big) align 8)
 
   cir.func private @pure_sret() -> !rec_Big side_effect(pure)
       attributes { test_classify = #sret_ret }
 
-  // CHECK: cir.func{{.*}} @pure_sret(!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) side_effect(pure)
+  // CHECK: cir.func{{.*}} @pure_sret(!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) side_effect(pure_argmem)
   // LLVM: ; Function Attrs: nounwind willreturn memory(read, argmem: readwrite)
   // LLVM-NEXT: declare void @pure_sret(ptr dead_on_unwind writable sret(%struct.Big) align 8)
 
   cir.func private @const_byval(!s32i, !rec_Big) side_effect(const)
       attributes { test_classify = #byval_arg }
 
-  // CHECK: cir.func{{.*}} @const_byval(!s32i, !cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) side_effect(const)
+  // CHECK: cir.func{{.*}} @const_byval(!s32i, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) side_effect(const_argmem)
   // LLVM: ; Function Attrs: nounwind willreturn memory(argmem: readwrite)
   // LLVM-NEXT: declare void @const_byval(i32, ptr noundef byval(%struct.Big) align 8)
 
-  // No LLVM attribute on a non-byval slot names it as the ABI's own, so
-  // cir.abi_slot is what identifies it.
+  // An indirect argument without byval widens the same as byval.
   cir.func private @const_non_byval(!rec_Big) side_effect(const)
       attributes { test_classify = #non_byval_arg }
 
-  // CHECK: cir.func{{.*}} @const_non_byval(!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 24 : i64, llvm.nofreeobj, llvm.noundef}) side_effect(const)
+  // CHECK: cir.func{{.*}} @const_non_byval(!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 24 : i64, llvm.nofreeobj, llvm.noundef}) side_effect(const_argmem)
   // LLVM: ; Function Attrs: nounwind willreturn memory(argmem: readwrite)
   // LLVM-NEXT: declare void @const_non_byval(ptr nofreeobj noundef align 8 dereferenceable(24))
 
   cir.func private @const_variadic(!s8i, ...) -> !s32i side_effect(const)
       attributes { test_classify = #extend_arg }
 
-  // Widened for being variadic, which lowering decides from the signature,
-  // not from a slot mark.
-  // CHECK: cir.func{{.*}} @const_variadic(!s8i {llvm.signext}, ...) -> !s32i side_effect(const)
+  // Variadic with no indirect slot in the signature.
+  // CHECK: cir.func{{.*}} @const_variadic(!s8i {llvm.signext}, ...) -> !s32i side_effect(const_argmem)
   // LLVM: ; Function Attrs: nounwind willreturn memory(argmem: readwrite)
   // LLVM-NEXT: declare i32 @const_variadic(i8 signext, ...)
 
-  // Negative: an Extend argument carries a non-empty attribute dictionary but
-  // no ABI-introduced memory, so the effect stays memory(none).
+  // Negative: an Extend argument is rewritten but hands the callee no memory,
+  // so the effect stays memory(none).
   cir.func private @const_extend(!s8i) -> !s32i side_effect(const)
       attributes { test_classify = #extend_arg }
 
@@ -110,20 +108,34 @@ module attributes {
   cir.func private @const_expand(!rec_Big) -> !s32i side_effect(const)
       attributes { test_classify = #expand_arg }
 
+  // CHECK: cir.func{{.*}} @const_expand(!s64i, !s64i, !s64i) -> !s32i side_effect(const)
   // LLVM: ; Function Attrs: nounwind willreturn memory(none)
   // LLVM-NEXT: declare i32 @const_expand(i64, i64, i64)
+
+  // Already widened in the input, on a signature the pass still rewrites, so
+  // the value is parsed here rather than only printed, and widening it again
+  // changes nothing.
+  cir.func private @prewidened_sret() -> !rec_Big side_effect(const_argmem)
+      attributes { test_classify = #sret_ret }
+
+  // CHECK: cir.func{{.*}} @prewidened_sret(!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) side_effect(const_argmem)
+  // LLVM: ; Function Attrs: nounwind willreturn memory(argmem: readwrite)
+  // LLVM-NEXT: declare void @prewidened_sret(ptr dead_on_unwind writable sret(%struct.Big) align 8)
 
   // A callee with no side_effect must still come out with none, so that
   // forwarding the original is distinguishable from hard-coding a value.
   cir.func private @plain_sret() -> !rec_Big
       attributes { test_classify = #sret_ret }
 
+  // CHECK: cir.func{{.*}} @plain_sret(!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) attributes
+  // LLVM: declare void @plain_sret(ptr dead_on_unwind writable sret(%struct.Big) align 8){{$}}
+
   cir.func @call_plain_sret() attributes { test_classify = #passthrough } {
     %r = cir.call @plain_sret() : () -> !rec_Big
     cir.return
   }
 
-  // CHECK: cir.call @plain_sret(%{{[^)]+}}) : (!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<sret>{{.*}}}) -> ()
+  // CHECK: cir.call @plain_sret(%{{[^)]+}}) : (!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) -> ()
   // LLVM: call void @plain_sret(ptr dead_on_unwind writable sret(%struct.Big) align 8 %{{.+}}){{$}}
 
   // nothrow without const or pure still reaches nounwind, and still gets no
@@ -133,7 +145,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.call @plain_sret(%{{[^)]+}}) nothrow : (!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<sret>{{.*}}}) -> ()
+  // CHECK: cir.call @plain_sret(%{{[^)]+}}) nothrow : (!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) -> ()
   // LLVM: call void @plain_sret(ptr dead_on_unwind writable sret(%struct.Big) align 8 %{{.+}}) #[[NOTHROW_CALL:[0-9]+]]
 
   // The call site keeps its side_effect across the rewrite.
@@ -143,7 +155,7 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @call_const_sret()
-  // CHECK:   cir.call @const_sret(%{{.+}}) side_effect(const) : (!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<sret>{{.*}}}) -> ()
+  // CHECK:   cir.call @const_sret(%{{.+}}) side_effect(const_argmem) : (!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) -> ()
   // LLVM: define void @call_const_sret()
   // LLVM:   call void @const_sret(ptr dead_on_unwind writable sret(%struct.Big) align 8 %{{.+}}) #[[CALL_ATTRS:[0-9]+]]
   // LLVM-DAG: attributes #[[CALL_ATTRS]] = { nounwind willreturn memory(argmem: readwrite) }

@@ -8,7 +8,7 @@
 void take_wide(_BitInt(200) x) {}
 
 // CIR: cir.func{{.*}} @take_wide(
-// CIR-SAME:   %arg0: !cir.ptr<!cir.int<s, 200, bitint>> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64
+// CIR-SAME:   %arg0: !cir.ptr<!cir.int<s, 200, bitint>> {llvm.align = 8 : i64
 // CIR-SAME:   , llvm.byval = !cir.int<s, 200, bitint>, llvm.noundef} loc{{.*}})
 
 // The byval copy is sized from the padded storage type (i256), matching

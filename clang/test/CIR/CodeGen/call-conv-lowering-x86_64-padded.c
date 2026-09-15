@@ -93,8 +93,8 @@ TwoFloat ret_twof(float v) { TwoFloat t = {v, v}; return t; }
 int take_big(BigPad b) { return b.b; }
 BigPad ret_big(int v) { BigPad b = {0, v}; return b; }
 
-// CIR: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_BigPad> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 16 : i64, llvm.byval = !rec_BigPad, llvm.noundef} loc{{.*}}) -> !s32i
-// CIR: cir.func{{.*}} @ret_big(%arg0: !cir.ptr<!rec_BigPad> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 16 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_BigPad, llvm.writable} loc{{.*}}, %arg1: !s32i {llvm.noundef} loc{{.*}})
+// CIR: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_BigPad> {llvm.align = 16 : i64, llvm.byval = !rec_BigPad, llvm.noundef} loc{{.*}}) -> !s32i
+// CIR: cir.func{{.*}} @ret_big(%arg0: !cir.ptr<!rec_BigPad> {llvm.align = 16 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_BigPad, llvm.writable} loc{{.*}}, %arg1: !s32i {llvm.noundef} loc{{.*}})
 // LLVM: define dso_local i32 @take_big(ptr noundef byval(%struct.BigPad) align 16 %{{.+}})
 // LLVM: define dso_local void @ret_big(ptr dead_on_unwind noalias writable sret(%struct.BigPad) align 16 %{{.+}}, i32 noundef %{{.+}})
 
@@ -104,7 +104,7 @@ int take_nest(NestOv n) { return n.o.x; }
 int take_arr(ArrOv a) { return a.a[1].x; }
 
 // CIR: cir.func{{.*}} @take_nest(%arg0: !s32i loc{{.*}}) -> !s32i
-// CIR: cir.func{{.*}} @take_arr(%arg0: !cir.ptr<!rec_ArrOv> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 16 : i64, llvm.byval = !rec_ArrOv, llvm.noundef} loc{{.*}}) -> !s32i
+// CIR: cir.func{{.*}} @take_arr(%arg0: !cir.ptr<!rec_ArrOv> {llvm.align = 16 : i64, llvm.byval = !rec_ArrOv, llvm.noundef} loc{{.*}}) -> !s32i
 // LLVM: define dso_local i32 @take_nest(i32 %{{.+}})
 // LLVM: define dso_local i32 @take_arr(ptr noundef byval(%struct.ArrOv) align 16 %{{.+}})
 

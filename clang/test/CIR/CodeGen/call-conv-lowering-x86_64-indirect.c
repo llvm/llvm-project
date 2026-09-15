@@ -32,7 +32,7 @@ long call_byval(long (*fp)(Big), Big b) { return fp(b); }
 
 // CIR: cir.func {{.*}}@call_byval(%arg0: !cir.ptr<!cir.func<(!rec_Big) -> !s64i>> {{.*}}, %arg1: !cir.ptr<!rec_Big> {{.*}}llvm.byval = !rec_Big{{.*}}) -> !s64i
 // CIR:   %[[CAST:.*]] = cir.cast bitcast %{{.+}} : !cir.ptr<!cir.func<(!rec_Big) -> !s64i>> -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>
-// CIR:   %{{.+}} = cir.call %[[CAST]](%{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>, !cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s64i
+// CIR:   %{{.+}} = cir.call %[[CAST]](%{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s64i
 // LLVM: define dso_local i64 @call_byval(ptr noundef %{{.+}}, ptr noundef byval(%struct.Big) align 8 %{{.+}})
 // LLVM: call i64 %{{.+}}(ptr noundef byval(%struct.Big) align 8 %{{.+}})
 
@@ -42,6 +42,6 @@ Big call_sret(Big (*fp)(void)) { return fp(); }
 
 // CIR: cir.func {{.*}}@call_sret(%arg0: !cir.ptr<!rec_Big> {{.*}}llvm.sret = !rec_Big{{.*}}, %arg1: !cir.ptr<!cir.func<() -> !rec_Big>> {{.*}})
 // CIR:   %[[SCAST:.*]] = cir.cast bitcast %{{.+}} : !cir.ptr<!cir.func<() -> !rec_Big>> -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>)>>
-// CIR:   cir.call %[[SCAST]](%{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>)>>, !cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) -> ()
+// CIR:   cir.call %[[SCAST]](%{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>)>>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) -> ()
 // LLVM: define dso_local void @call_sret(ptr dead_on_unwind noalias writable sret(%struct.Big) align 8 %{{.+}}, ptr noundef %{{.+}})
 // LLVM:   call void %{{.+}}(ptr dead_on_unwind writable sret(%struct.Big) align 8 %{{.+}})

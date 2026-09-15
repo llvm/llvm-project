@@ -94,7 +94,7 @@ Wrap16 ret_wrap16(void) {
 // LLVM: define{{.*}} { i64, i64 } @ret_wrap16()
 
 void take_wrap40(Wrap40 s) {}
-// CIR: cir.func{{.*}} @take_wrap40(%arg0: !cir.ptr<!rec_Wrap40> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64, llvm.byval = !rec_Wrap40, llvm.noundef} loc
+// CIR: cir.func{{.*}} @take_wrap40(%arg0: !cir.ptr<!rec_Wrap40> {llvm.align = 8 : i64, llvm.byval = !rec_Wrap40, llvm.noundef} loc
 // LLVM: define{{.*}} void @take_wrap40(ptr noundef byval(%struct.Wrap40) align 8 %{{[^,)]+}})
 
 Wrap40 ret_wrap40(void) {
@@ -102,7 +102,7 @@ Wrap40 ret_wrap40(void) {
   s.u.x = 1;
   return s;
 }
-// CIR: cir.func{{.*}} @ret_wrap40(%arg0: !cir.ptr<!rec_Wrap40> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Wrap40, llvm.writable} loc
+// CIR: cir.func{{.*}} @ret_wrap40(%arg0: !cir.ptr<!rec_Wrap40> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Wrap40, llvm.writable} loc
 // LLVM: define{{.*}} void @ret_wrap40(ptr dead_on_unwind noalias writable sret(%struct.Wrap40) align 4 %{{[^,)]+}})
 
 // The declared extent has to be found through the array.

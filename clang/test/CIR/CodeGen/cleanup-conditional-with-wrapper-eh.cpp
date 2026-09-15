@@ -39,7 +39,7 @@ Wrapper makeWrapper() {
     : Wrapper::empty();
 }
 
-// CIR: cir.func {{.*}} @_Z11makeWrapperv(%[[RETVAL:.*]]: !cir.ptr<!rec_Wrapper> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 1 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Wrapper, llvm.writable}{{.*}})
+// CIR: cir.func {{.*}} @_Z11makeWrapperv(%[[RETVAL:.*]]: !cir.ptr<!rec_Wrapper> {llvm.align = 1 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Wrapper, llvm.writable}{{.*}})
 // CIR:   %[[CLEANUP_COND:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[AGG_TMP0:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_std3A3Aunique_ptr3CBase3E>
 // CIR:   cir.cleanup.scope {
@@ -51,7 +51,7 @@ Wrapper makeWrapper() {
 // CIR:       cir.call @_ZNSt10unique_ptrI4BaseEC1EPS0_(%[[AGG_TMP0]], %[[SOURCE]])
 // CIR:       %[[TRUE:.*]] = cir.const #true
 // CIR:       cir.store %[[TRUE]], %[[CLEANUP_COND]]
-// CIR:       cir.call @_ZN7WrapperC1ESt10unique_ptrI4BaseE(%[[RETVAL]], %[[AGG_TMP0]]) : ({{.*}}, !cir.ptr<!rec_std3A3Aunique_ptr3CBase3E> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+// CIR:       cir.call @_ZN7WrapperC1ESt10unique_ptrI4BaseE(%[[RETVAL]], %[[AGG_TMP0]]) : ({{.*}}, !cir.ptr<!rec_std3A3Aunique_ptr3CBase3E> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 // CIR:     } else {
 // CIR:       cir.call @_ZN7Wrapper5emptyEv(%[[RETVAL]])
 // CIR:     }
@@ -204,7 +204,7 @@ void APFixedPoint::add(int x) const {
 // CIR:             %[[TRUE:.*]] = cir.const #true
 // CIR:             cir.store %[[TRUE]], %[[CLEANUP_COND_TRUE]]
 // CIR:           } else {
-// CIR:             cir.call @_ZN5APInt8uadd_satEv(%[[AGG_TMP]], %[[THISVAL]]) : (!cir.ptr<!rec_APInt> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 1 : i64, llvm.dead_on_unwind, llvm.sret = !rec_APInt, llvm.writable}, {{.*}}) -> ()
+// CIR:             cir.call @_ZN5APInt8uadd_satEv(%[[AGG_TMP]], %[[THISVAL]]) : (!cir.ptr<!rec_APInt> {llvm.align = 1 : i64, llvm.dead_on_unwind, llvm.sret = !rec_APInt, llvm.writable}, {{.*}}) -> ()
 // CIR:             %[[TRUE:.*]] = cir.const #true
 // CIR:             cir.store %[[TRUE]], %[[CLEANUP_COND_FALSE]]
 // CIR:           }
@@ -361,7 +361,7 @@ void makeEntry() {
 // CIR:         %{{.*}} = cir.get_global @g_path
 // CIR:         %[[TRUE:.*]] = cir.const #true
 // CIR:         cir.store %[[TRUE]], %[[CLEANUP_COND]]
-// CIR:         cir.call @_ZN5EntryC1E4Path(%[[ENSURED_F]], %[[AGG_TMP0]]) : ({{.*}}, !cir.ptr<!rec_Path> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+// CIR:         cir.call @_ZN5EntryC1E4Path(%[[ENSURED_F]], %[[AGG_TMP0]]) : ({{.*}}, !cir.ptr<!rec_Path> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 // CIR:       }
 // CIR:       cir.yield
 // CIR:     } cleanup all {

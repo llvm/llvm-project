@@ -30,5 +30,5 @@ void take_bit_empty_span(BitEmptySpan u) {}
 // A union that cannot pass in registers is returned through an sret slot, so
 // the declared extent decides only whether it can be classified at all.
 NoRegs ret_no_regs() { return NoRegs(); }
-// CIR: cir.func{{.*}} @_Z11ret_no_regsv(%arg0: !cir.ptr<!rec_NoRegs> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_NoRegs, llvm.writable} loc
+// CIR: cir.func{{.*}} @_Z11ret_no_regsv(%arg0: !cir.ptr<!rec_NoRegs> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_NoRegs, llvm.writable} loc
 // LLVM: define{{.*}} void @_Z11ret_no_regsv(ptr dead_on_unwind noalias writable sret(%union.NoRegs) align 4 %{{[^,)]+}})

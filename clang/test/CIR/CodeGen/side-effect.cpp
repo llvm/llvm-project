@@ -39,15 +39,19 @@ __attribute__((const))
 int const_func() { return 1;}
 
 // Variadic definition: widened with no indirect slot in the signature.
-// CIR: cir.func{{.*}}@const_variadic(%arg0: !s32i {{.*}}, ...) -> !s32i side_effect(const)
+// CIR: cir.func{{.*}}@const_variadic(%arg0: !s32i {{.*}}, ...) -> !s32i side_effect(const_argmem)
 __attribute__((const))
 int const_variadic(int n, ...) { return n; }
 
 // A definition also gets llvm.noalias on the sret slot, so this is where
 // noalias, writable and the widened effect have to coexist.
-// CIR: cir.func{{.*}}@const_sret_def(%arg0: !cir.ptr<!rec_Big> {{{.*}}llvm.noalias{{.*}}llvm.sret = !rec_Big{{.*}}llvm.writable{{.*}}) side_effect(const)
+// CIR: cir.func{{.*}}@const_sret_def(%arg0: !cir.ptr<!rec_Big> {{{.*}}llvm.noalias{{.*}}llvm.sret = !rec_Big{{.*}}llvm.writable{{.*}}) side_effect(const_argmem)
 __attribute__((const))
 Big const_sret_def() { Big r{}; return r; }
+
+// CIR: cir.func{{.*}}@pure_sret_def(%arg0: !cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}) side_effect(pure_argmem)
+__attribute__((pure))
+Big pure_sret_def() { Big r{}; return r; }
 
 void use() {
   // Unwidened at a call site: neither takes an indirect slot.
@@ -57,16 +61,16 @@ void use() {
   const_func();
 
   // The pass has already given these calls their sret operand.
-  // CIR: cir.call @const_sret(%{{.+}}) side_effect(const)
+  // CIR: cir.call @const_sret(%{{.+}}) side_effect(const_argmem)
   const_sret();
-  // CIR: cir.call @pure_sret(%{{.+}}) side_effect(pure)
+  // CIR: cir.call @pure_sret(%{{.+}}) side_effect(pure_argmem)
   pure_sret();
 
   Big b{};
   int i = 0;
-  // CIR: cir.call @const_byval({{.*}}) side_effect(const)
+  // CIR: cir.call @const_byval({{.*}}) side_effect(const_argmem) : (!cir.ptr<!rec_Big> {{{.*}}llvm.byval = !rec_Big{{.*}}}) -> !s32i
   const_byval(b);
-  // CIR: cir.call @pure_byval({{.*}}) side_effect(pure)
+  // CIR: cir.call @pure_byval({{.*}}) side_effect(pure_argmem) : (!cir.ptr<!rec_Big> {{{.*}}llvm.byval = !rec_Big{{.*}}}) -> !s32i
   pure_byval(b);
 
   // CIR: cir.call @const_small() side_effect(const)
@@ -83,25 +87,24 @@ void use() {
   // CIR: cir.call @const_variadic_decl({{.*}}) side_effect(const)
   const_variadic_decl(1);
 
-  // CIR: cir.call @const_byval2({{.*}}) side_effect(const) : (!s32i{{.*}}, !cir.ptr<!rec_Big> {{{.*}}llvm.byval{{.*}}}) -> !s32i
+  // CIR: cir.call @const_byval2({{.*}}) side_effect(const_argmem) : (!s32i{{.*}}, !cir.ptr<!rec_Big> {{{.*}}llvm.byval{{.*}}}) -> !s32i
   const_byval2(1, b);
-  // CIR: cir.call @const_sret_def(%{{.+}}) side_effect(const)
+  // CIR: cir.call @const_sret_def(%{{.+}}) side_effect(const_argmem)
   const_sret_def();
 
-  // A reference is a direct pointer slot that still carries align, so neither
-  // align nor a record pointee can stand in for an indirect slot.
+  // A reference parameter is a pointer the source wrote, not a slot the ABI
+  // introduced, so it is not widened.
   // CIR: cir.call @const_bigref({{.*}}) side_effect(const) : (!cir.ptr<!rec_Big> {llvm.align{{.*}}) -> !s32i
   const_bigref(b);
 
-  // A non-trivially-destructible class passes indirectly without byval, and
-  // its slot carries no LLVM attribute that names it as the ABI's own.
+  // A non-trivially-destructible class passes indirectly without byval.
   WithDtor w{};
-  // CIR: cir.call @const_non_byval({{.*}}) side_effect(const) : (!cir.ptr<!rec_WithDtor> {cir.abi_slot = #cir.abi_slot<non_byval>{{.*}}}) -> !s32i
+  // CIR: cir.call @const_non_byval({{.*}}) side_effect(const_argmem) : (!cir.ptr<!rec_WithDtor> {{{.*}}llvm.nofreeobj{{.*}}}) -> !s32i
   const_non_byval(w);
 
   // An argument the ABI rewrites without handing over memory keeps
   // memory(none): the slot is dropped, coerced into a register, or flattened
-  // into registers.  No argument dictionary means no slot mark.
+  // into registers.
   // CIR: cir.call @const_ignore() side_effect(const) : () -> !s32i
   const_ignore(Empty{});
   // CIR: cir.call @const_coerced(%{{.+}}) side_effect(const) : (!u64i) -> !s32i
@@ -109,6 +112,9 @@ void use() {
   // CIR: cir.call @const_flattened(%{{.+}}, %{{.+}}) side_effect(const) : (!s64i, !s64i) -> !s32i
   const_flattened(TwoLong{});
 }
+
+// Declarations print after @use(), so this follows the call sites.
+// CIR: cir.func private @const_variadic_decl(!s32i {{.*}}, ...) -> !s32i side_effect(const_argmem)
 
 }
 

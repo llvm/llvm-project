@@ -199,7 +199,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_ntc_empty(%arg0: !cir.ptr<!rec_NTCE> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK: cir.func{{.*}} @take_ntc_empty(%arg0: !cir.ptr<!rec_NTCE> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef})
   // LLVM: define void @take_ntc_empty(ptr nofreeobj noundef align 1 dereferenceable(1) %{{.*}})
 
   // The same record returned goes through sret rather than being dropped.
@@ -209,7 +209,7 @@ module attributes {
     cir.return %1 : !rec_NTCE
   }
 
-  // CHECK: cir.func{{.*}} @ret_ntc_empty(%arg0: !cir.ptr<!rec_NTCE> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 1 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_NTCE, llvm.writable})
+  // CHECK: cir.func{{.*}} @ret_ntc_empty(%arg0: !cir.ptr<!rec_NTCE> {llvm.align = 1 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_NTCE, llvm.writable})
   // LLVM: define void @ret_ntc_empty(ptr dead_on_unwind noalias writable sret(%struct.NTCE) align 1 %{{.*}})
 
   // At exactly two eightbytes an empty class is still dropped.
@@ -237,7 +237,7 @@ module attributes {
     cir.return %arg1 : !s32i
   }
 
-  // CHECK: cir.func{{.*}} @take_empty_big(%arg0: !cir.ptr<!rec_EBig> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 32 : i64, llvm.byval = !rec_EBig, llvm.noundef}, %arg1: !s32i) -> !s32i
+  // CHECK: cir.func{{.*}} @take_empty_big(%arg0: !cir.ptr<!rec_EBig> {llvm.align = 32 : i64, llvm.byval = !rec_EBig, llvm.noundef}, %arg1: !s32i) -> !s32i
   // LLVM: define i32 @take_empty_big(ptr noundef byval(%struct.EBig) align 32 %{{.*}}, i32 %{{.*}})
 
   // The same record returned uses sret at that alignment.
@@ -247,7 +247,7 @@ module attributes {
     cir.return %1 : !rec_EBig
   }
 
-  // CHECK: cir.func{{.*}} @ret_empty_big(%arg0: !cir.ptr<!rec_EBig> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 32 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_EBig, llvm.writable})
+  // CHECK: cir.func{{.*}} @ret_empty_big(%arg0: !cir.ptr<!rec_EBig> {llvm.align = 32 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_EBig, llvm.writable})
   // LLVM: define void @ret_empty_big(ptr dead_on_unwind noalias writable sret(%struct.EBig) align 32 %{{.*}})
 
   // A call site drops the operand as well as the parameter.

@@ -30,11 +30,11 @@ module attributes {
   }
 
   // CHECK:      cir.func{{.*}} @forwards_non_byval_param(%[[PTR:.*]]: !cir.ptr<!rec_Big>
-  // CHECK-SAME:     {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
   // CHECK-NOT:    cir.alloca
   // CHECK-NOT:    cir.load
   // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
-  // CHECK-SAME:     (!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
       attributes { test_classify = #non_byval_arg }
@@ -72,11 +72,11 @@ module attributes {
   }
 
   // CHECK:      cir.func{{.*}} @forwards_non_byval_param_via_slot(%[[PTR:.*]]: !cir.ptr<!rec_Big>
-  // CHECK-SAME:     {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
   // CHECK-NOT:    cir.alloca
   // CHECK-NOT:    cir.load
   // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
-  // CHECK-SAME:     (!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 
 }
 
@@ -114,17 +114,17 @@ module attributes {
   }
 
   // CHECK:      cir.func{{.*}} @ping(%[[PING:.*]]: !cir.ptr<!rec_Big>
-  // CHECK-SAME:     {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
   // CHECK-NOT:    cir.alloca
   // CHECK-NOT:    cir.load
   // CHECK:        cir.call @pong(%[[PING]]) :
-  // CHECK-SAME:     (!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
   // CHECK:      cir.func{{.*}} @pong(%[[PONG:.*]]: !cir.ptr<!rec_Big>
-  // CHECK-SAME:     {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
   // CHECK-NOT:    cir.alloca
   // CHECK-NOT:    cir.load
   // CHECK:        cir.call @ping(%[[PONG]]) :
-  // CHECK-SAME:     (!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 
 }
 
@@ -163,10 +163,10 @@ module attributes {
   }
 
   // CHECK:      cir.func{{.*}} @expand_ahead_of_non_byval(%{{.*}}: !s64i, %{{.*}}: !s64i, %[[PTR:.*]]: !cir.ptr<!rec_Big>
-  // CHECK-SAME:     {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
   // CHECK-NOT:    cir.alloca
   // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
-  // CHECK-SAME:     (!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
       attributes { test_classify = #non_byval_arg }
@@ -217,7 +217,7 @@ module attributes {
   // CHECK:        %[[MID:.*]] = cir.cast bitcast %[[RAW]] : !cir.ptr<!cir.array<!s8i x 32>> -> !cir.ptr<!s8i>
   // CHECK:        %[[SLOT:.*]] = cir.cast bitcast %[[MID]] : !cir.ptr<!s8i> -> !cir.ptr<!rec_Big>
   // CHECK-NOT:    cir.load %[[SLOT]] : !cir.ptr<!rec_Big>
-  // CHECK:        cir.call @takes_big_non_byval(%[[SLOT]]) : (!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+  // CHECK:        cir.call @takes_big_non_byval(%[[SLOT]]) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 
 }
 
@@ -259,10 +259,10 @@ module attributes {
   // CHECK:      cir.func{{.*}} @sret_forwards_non_byval_param(
   // CHECK-SAME:     llvm.sret = !rec_Big
   // CHECK-SAME:     %[[PTR:[^:]*]]: !cir.ptr<!rec_Big>
-  // CHECK-SAME:     {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
   // CHECK-NOT:    cir.alloca "arg0"
   // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
-  // CHECK-SAME:     (!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
       attributes { test_classify = #non_byval_arg }
@@ -301,10 +301,10 @@ module attributes {
   }
 
   // CHECK:      cir.func{{.*}} @forwards_param_over_underaligned_slot(%[[PTR:.*]]: !cir.ptr<!rec_Big>
-  // CHECK-SAME:     {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef})
   // CHECK-NOT:    cir.alloca
   // CHECK:        cir.call @takes_big_non_byval(%[[PTR]]) :
-  // CHECK-SAME:     (!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 
 }
 
@@ -384,7 +384,7 @@ module attributes {
   }
 
   // CHECK:      cir.func{{.*}} @expands_non_byval_param(%[[PTR:.*]]: !cir.ptr<!rec_Two>
-  // CHECK-SAME:     {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64, llvm.dereferenceable = 16 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-SAME:     {llvm.align = 8 : i64, llvm.dereferenceable = 16 : i64, llvm.nofreeobj, llvm.noundef})
   // CHECK-NOT:    cir.alloca
   // CHECK:        %[[F0:.*]] = cir.get_member %[[PTR]][0]
   // CHECK:        %[[V0:.*]] = cir.load %[[F0]]

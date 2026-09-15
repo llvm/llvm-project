@@ -420,41 +420,35 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
   return value;
 }
 
-/// Whether any argument is a pointer slot the ABI introduced, which
-/// CallConvLowering marks with cir.abi_slot.  Such a callee reaches that
-/// memory whatever its source-level attributes say, so `const` and `pure`
-/// cannot lower to a memory effect that excludes argument memory.
-static bool hasABISlotArg(mlir::ArrayAttr argAttrs) {
-  if (!argAttrs)
-    return false;
-  return llvm::any_of(argAttrs, [](mlir::Attribute a) {
-    return mlir::cast<mlir::DictionaryAttr>(a).contains(
-        CIRDialect::getABISlotAttrName());
-  });
-}
-
-/// Lower a CIR `side_effect` to an LLVM memory effect, widening argument
-/// memory to ModRef when \p accessesArgMemory, since a widened slot may be
-/// either written or read.  A null result means unknown effects, which is
-/// how `All` is represented.
+/// Lower a CIR `side_effect` to an LLVM memory effect.  A null result means
+/// unknown effects, which is how `All` is represented.  The argmem values
+/// lower to ModRef because they do not say whether the slot is read or
+/// written.
 static mlir::LLVM::MemoryEffectsAttr
-buildMemoryEffects(mlir::MLIRContext *ctx, cir::SideEffect sideEffect,
-                   bool accessesArgMemory) {
+buildMemoryEffects(mlir::MLIRContext *ctx, cir::SideEffect sideEffect) {
   using mlir::LLVM::ModRefInfo;
 
   ModRefInfo other;
+  ModRefInfo argMem;
   switch (sideEffect) {
   case cir::SideEffect::All:
     return {};
   case cir::SideEffect::Pure:
-    other = ModRefInfo::Ref;
+    other = argMem = ModRefInfo::Ref;
     break;
   case cir::SideEffect::Const:
+    other = argMem = ModRefInfo::NoModRef;
+    break;
+  case cir::SideEffect::PureArgMem:
+    other = ModRefInfo::Ref;
+    argMem = ModRefInfo::ModRef;
+    break;
+  case cir::SideEffect::ConstArgMem:
     other = ModRefInfo::NoModRef;
+    argMem = ModRefInfo::ModRef;
     break;
   }
 
-  ModRefInfo argMem = accessesArgMemory ? ModRefInfo::ModRef : other;
   return mlir::LLVM::MemoryEffectsAttr::get(ctx, /*other=*/other,
                                             /*argMem=*/argMem,
                                             /*inaccessibleMem=*/other,
@@ -468,14 +462,11 @@ void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
                               mlir::LLVM::MemoryEffectsAttr &memoryEffect,
                               bool &noUnwind, bool &willReturn,
                               bool &noReturn) {
-  bool accessesArgMemory = hasABISlotArg(callOp->getAttrOfType<mlir::ArrayAttr>(
-      CIRDialect::getArgAttrsAttrName()));
-  memoryEffect =
-      buildMemoryEffects(callOp->getContext(), sideEffect, accessesArgMemory);
+  memoryEffect = buildMemoryEffects(callOp->getContext(), sideEffect);
 
-  bool isConstOrPure = sideEffect != cir::SideEffect::All;
-  noUnwind = isConstOrPure || isNothrow;
-  willReturn = isConstOrPure;
+  bool hasKnownEffects = sideEffect != cir::SideEffect::All;
+  noUnwind = hasKnownEffects || isNothrow;
+  willReturn = hasKnownEffects;
   noReturn = callOp->hasAttr(CIRDialect::getNoReturnAttrName());
 }
 
@@ -2124,9 +2115,6 @@ mlir::LogicalResult CIRToLLVMRotateOpLowering::matchAndRewrite(
 /// integer would otherwise understate both.  Returns std::nullopt when a
 /// pointee has no memory representation, leaving the caller to emit the NYI
 /// error.
-///
-/// cir.abi_slot has no LLVM counterpart and is dropped.  The memory-effect
-/// sites read it from the CIR op, which this leaves untouched.
 static std::optional<mlir::ArrayAttr>
 lowerArgAttrs(mlir::ArrayAttr argAttrs, const mlir::TypeConverter &converter,
               const mlir::DataLayout &dataLayout, mlir::MLIRContext *ctx) {
@@ -2141,10 +2129,6 @@ lowerArgAttrs(mlir::ArrayAttr argAttrs, const mlir::TypeConverter &converter,
     entries.reserve(dict.size());
     for (mlir::NamedAttribute entry : dict) {
       StringRef name = entry.getName().strref();
-      if (name == CIRDialect::getABISlotAttrName()) {
-        changed = true;
-        continue;
-      }
       if (name == mlir::LLVM::LLVMDialect::getByValAttrName() ||
           name == mlir::LLVM::LLVMDialect::getStructRetAttrName()) {
         if (auto typeAttr = dyn_cast<mlir::TypeAttr>(entry.getValue())) {
@@ -2831,12 +2815,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   if (std::optional<cir::SideEffect> sideEffectKind = op.getSideEffect();
       sideEffectKind && *sideEffectKind != cir::SideEffect::All) {
-    // A variadic callee's declared parameters do not cover every argument, so
-    // its argument memory widens too.
-    bool accessesArgMemory =
-        hasABISlotArg(op.getArgAttrsAttr()) || op.getFunctionType().isVarArg();
-    fn.setMemoryEffectsAttr(buildMemoryEffects(fn.getContext(), *sideEffectKind,
-                                               accessesArgMemory));
+    fn.setMemoryEffectsAttr(
+        buildMemoryEffects(fn.getContext(), *sideEffectKind));
     fn.setNoUnwind(true);
     fn.setWillReturn(true);
   }

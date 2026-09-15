@@ -66,12 +66,12 @@ int call_small(Pair2 p, Pair16 q) { return vf(p, q); }
 // Larger than two eightbytes is MEMORY regardless of register availability.
 int call_big(Pair2 p, Big b) { return vf(p, b); }
 
-// CIR-LABEL: cir.func {{.*}}@call_big(%arg0: !u64i loc({{.+}}), %arg1: !cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef} loc({{.+}})) -> !s32i
+// CIR-LABEL: cir.func {{.*}}@call_big(%arg0: !u64i loc({{.+}}), %arg1: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef} loc({{.+}})) -> !s32i
 // CIR:         %{{[0-9]+}} = cir.load %arg1 : !cir.ptr<!rec_Big>, !rec_Big
 // CIR:         %[[PV:[0-9]+]] = cir.load %{{[0-9]+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:    %[[COPY:[0-9]+]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
 // CIR-NEXT:    cir.store %{{[0-9]+}}, %[[COPY]] : !rec_Big, !cir.ptr<!rec_Big>
-// CIR-NEXT:    %{{[0-9]+}} = cir.call @vf(%[[PV]], %[[COPY]]) : (!u64i, !cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s32i
+// CIR-NEXT:    %{{[0-9]+}} = cir.call @vf(%[[PV]], %[[COPY]]) : (!u64i, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s32i
 
 // CIR copies the incoming byval slot before forwarding it.  OGCG does not.
 // LLVM-CIR-LABEL: define dso_local i32 @call_big(
@@ -94,7 +94,7 @@ int call_exhausted(Pair2 p, long a, long b, long c, long d, Pair16 q) {
   return vf(p, a, b, c, d, q);
 }
 
-// CIR-LABEL: cir.func {{.*}}@call_exhausted(%arg0: !u64i loc({{.+}}), %arg1: !s64i {llvm.noundef} loc({{.+}}), %arg2: !s64i {llvm.noundef} loc({{.+}}), %arg3: !s64i {llvm.noundef} loc({{.+}}), %arg4: !s64i {llvm.noundef} loc({{.+}}), %arg5: !cir.ptr<!rec_Pair16> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64, llvm.byval = !rec_Pair16, llvm.noundef} loc({{.+}})) -> !s32i
+// CIR-LABEL: cir.func {{.*}}@call_exhausted(%arg0: !u64i loc({{.+}}), %arg1: !s64i {llvm.noundef} loc({{.+}}), %arg2: !s64i {llvm.noundef} loc({{.+}}), %arg3: !s64i {llvm.noundef} loc({{.+}}), %arg4: !s64i {llvm.noundef} loc({{.+}}), %arg5: !cir.ptr<!rec_Pair16> {llvm.align = 8 : i64, llvm.byval = !rec_Pair16, llvm.noundef} loc({{.+}})) -> !s32i
 // CIR:         cir.store %arg1, %[[AS:[0-9]+]] : !s64i, !cir.ptr<!s64i>
 // CIR:         cir.store %arg2, %[[BS:[0-9]+]] : !s64i, !cir.ptr<!s64i>
 // CIR:         cir.store %arg3, %[[CS:[0-9]+]] : !s64i, !cir.ptr<!s64i>
@@ -106,7 +106,7 @@ int call_exhausted(Pair2 p, long a, long b, long c, long d, Pair16 q) {
 // CIR:         %[[PV:[0-9]+]] = cir.load %{{[0-9]+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:    %[[COPY:[0-9]+]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Pair16>
 // CIR-NEXT:    cir.store %{{[0-9]+}}, %[[COPY]] : !rec_Pair16, !cir.ptr<!rec_Pair16>
-// CIR-NEXT:    %{{[0-9]+}} = cir.call @vf(%[[PV]], %[[AV]], %[[BV]], %[[CV]], %[[DV]], %[[COPY]]) : (!u64i, !s64i {llvm.noundef}, !s64i {llvm.noundef}, !s64i {llvm.noundef}, !s64i {llvm.noundef}, !cir.ptr<!rec_Pair16> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64, llvm.byval = !rec_Pair16, llvm.noundef}) -> !s32i
+// CIR-NEXT:    %{{[0-9]+}} = cir.call @vf(%[[PV]], %[[AV]], %[[BV]], %[[CV]], %[[DV]], %[[COPY]]) : (!u64i, !s64i {llvm.noundef}, !s64i {llvm.noundef}, !s64i {llvm.noundef}, !s64i {llvm.noundef}, !cir.ptr<!rec_Pair16> {llvm.align = 8 : i64, llvm.byval = !rec_Pair16, llvm.noundef}) -> !s32i
 
 // LLVM-CIR-LABEL: define dso_local i32 @call_exhausted(
 // LLVM-CIR-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], i64 noundef %[[A:[0-9a-zA-Z._]+]], i64 noundef %[[B:[0-9a-zA-Z._]+]], i64 noundef %[[C:[0-9a-zA-Z._]+]], i64 noundef %[[D:[0-9a-zA-Z._]+]], ptr noundef byval(%struct.Pair16) align 8 %[[Q:[0-9a-zA-Z._]+]])
@@ -177,12 +177,12 @@ int call_wide(Pair2 p, Wide w) { return vf(p, w); }
 // memory, and the 128-bit member keeps the slot at 16-byte alignment.
 int call_wide_char(Pair2 p, WideChar w) { return vf(p, w); }
 
-// CIR-LABEL: cir.func {{.*}}@call_wide_char(%arg0: !u64i loc({{.+}}), %arg1: !cir.ptr<!rec_WideChar> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 16 : i64, llvm.byval = !rec_WideChar, llvm.noundef} loc({{.+}})) -> !s32i
+// CIR-LABEL: cir.func {{.*}}@call_wide_char(%arg0: !u64i loc({{.+}}), %arg1: !cir.ptr<!rec_WideChar> {llvm.align = 16 : i64, llvm.byval = !rec_WideChar, llvm.noundef} loc({{.+}})) -> !s32i
 // CIR:         %{{[0-9]+}} = cir.load %arg1 : !cir.ptr<!rec_WideChar>, !rec_WideChar
 // CIR:         %[[PV:[0-9]+]] = cir.load %{{[0-9]+}} : !cir.ptr<!u64i>, !u64i
 // CIR-NEXT:    %[[COPY:[0-9]+]] = cir.alloca "byval" align(16) : !cir.ptr<!rec_WideChar>
 // CIR-NEXT:    cir.store %{{[0-9]+}}, %[[COPY]] : !rec_WideChar, !cir.ptr<!rec_WideChar>
-// CIR-NEXT:    %{{[0-9]+}} = cir.call @vf(%[[PV]], %[[COPY]]) : (!u64i, !cir.ptr<!rec_WideChar> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 16 : i64, llvm.byval = !rec_WideChar, llvm.noundef}) -> !s32i
+// CIR-NEXT:    %{{[0-9]+}} = cir.call @vf(%[[PV]], %[[COPY]]) : (!u64i, !cir.ptr<!rec_WideChar> {llvm.align = 16 : i64, llvm.byval = !rec_WideChar, llvm.noundef}) -> !s32i
 
 // LLVM-CIR-LABEL: define dso_local i32 @call_wide_char(
 // LLVM-CIR-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], ptr noundef byval(%struct.WideChar) align 16 %[[W:[0-9a-zA-Z._]+]])

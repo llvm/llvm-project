@@ -54,7 +54,7 @@ void take_unsigned_bitint(unsigned _BitInt(64) x) {}
 
 void take_bitint_254(signed _BitInt(254) x) {}
 // CIR: cir.func {{.*}} @take_bitint_254(%arg0: !cir.ptr<!cir.int<s, 254, bitint>>
-// CIR-SAME: {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64, llvm.byval = !cir.int<s, 254, bitint>, llvm.noundef}
+// CIR-SAME: {llvm.align = 8 : i64, llvm.byval = !cir.int<s, 254, bitint>, llvm.noundef}
 // LLVM: define {{.*}} void @take_bitint_254(ptr noundef byval(i256) align 8 {{.*}})
 // OGCG: define {{.*}} void @take_bitint_254(ptr noundef byval(i256) align 8 {{.*}})
 

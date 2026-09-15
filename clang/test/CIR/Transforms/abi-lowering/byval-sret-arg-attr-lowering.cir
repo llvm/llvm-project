@@ -2,9 +2,6 @@
 // RUN:   | FileCheck %s
 // RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
 // RUN:     -cir-to-llvm -o - 2>/dev/null \
-// RUN:   | FileCheck %s --check-prefix=MLIR
-// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
-// RUN:     -cir-to-llvm -o - 2>/dev/null \
 // RUN:   | cir-translate -mlir-to-llvmir --allow-unregistered-dialect \
 // RUN:   | FileCheck %s --check-prefix=LLVM
 
@@ -85,18 +82,4 @@ module attributes {
 
   // LLVM: define void @caller_sret()
   // LLVM:   call void @ret_big(ptr {{.*}}sret(%struct.Big) align 8 %{{.+}})
-
-  // cir.abi_slot in the input, on a signature the pass leaves alone, so the
-  // attribute is parsed here rather than only printed.  It still reaches
-  // cir-to-llvm, which is what the MLIR checks below observe.
-  cir.func private @pre_marked(!cir.ptr<!rec_Big>
-      {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64})
-      attributes { test_classify = #passthrough }
-
-  // CHECK: cir.func{{.*}} @pre_marked(!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 8 : i64})
 }
-
-// cir.abi_slot is a CIR-level fact, so nothing carries it past cir-to-llvm.
-// The positive check first, so the prefix cannot pass on empty input.
-// MLIR: llvm.func @takes_big(%{{.+}}: !llvm.ptr {llvm.align = 8 : i64, llvm.byval = !llvm.struct<"struct.Big"
-// MLIR-NOT: cir.abi_slot

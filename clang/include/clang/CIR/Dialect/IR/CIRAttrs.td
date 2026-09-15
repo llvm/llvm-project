@@ -160,58 +160,6 @@ def CIR_OffloadKindAttr : CIR_EnumAttr<CIR_OffloadKind, "offload"> {
 }
 
 //===----------------------------------------------------------------------===//
-// ABISlotKindAttr
-//===----------------------------------------------------------------------===//
-
-def CIR_ABISlotKind : CIR_I32Enum<
-    "ABISlotKind", "kind of pointer slot the ABI introduced", [
-  I32EnumCase<"Byval", 0, "byval">,
-  I32EnumCase<"NonByval", 1, "non_byval">,
-  I32EnumCase<"Sret", 2, "sret">
-]> {
-  let description = [{
-    Which kind of pointer slot CallConvLowering introduced for a parameter
-    that the source declared by value, or for a return value the ABI returns
-    in memory.
-
-    - byval: the callee receives a pointer to its own copy.
-    - non_byval: the callee receives a pointer to the caller's object, used
-      when the type cannot be copied freely.
-    - sret: the return value is written through a pointer the ABI inserts as
-      argument 0.
-  }];
-}
-
-def CIR_ABISlotKindAttr : CIR_EnumAttr<CIR_ABISlotKind, "abi_slot"> {
-  let summary = "Marks an argument as a pointer slot the ABI introduced";
-  let description = [{
-    CallConvLowering rewrites a by-value parameter or an in-memory return
-    into a pointer argument, then records here which kind of slot it made.
-    The memory-effect lowering uses this to widen argument memory on a
-    `const` or `pure` callee.
-
-    A `non_byval` slot is the case the rewritten signature cannot otherwise
-    express: it is a plain `!cir.ptr<T>` carrying `llvm.align`,
-    `llvm.dereferenceable`, `llvm.nofreeobj` and `llvm.noundef`.  Each of
-    those states a property of the pointer or of the object, not who created
-    the slot, so none of them is reserved to an ABI slot.  A `byval` or
-    `sret` slot is for now also identifiable by the `llvm.byval` or
-    `llvm.sret` in the same dictionary, so this attribute overlaps those
-    two, and a producer that writes one without the other leaves the memory
-    effect disagreeing with the signature.
-
-    Example, on the argument dictionary of the slot it describes:
-
-    ```mlir
-    cir.func private @f(!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<byval>,
-                                            llvm.align = 8 : i64,
-                                            llvm.byval = !rec_Big,
-                                            llvm.noundef})
-    ```
-  }];
-}
-
-//===----------------------------------------------------------------------===//
 // ArgPassingKind + RecordLayoutAttr
 //===----------------------------------------------------------------------===//
 
@@ -2012,7 +1960,9 @@ def CIR_SideEffect : CIR_I32Enum<
     "SideEffect", "allowed side effects of a function", [
       I32EnumCase<"All", 0, "all">,
       I32EnumCase<"Pure", 1, "pure">,
-      I32EnumCase<"Const", 2, "const">
+      I32EnumCase<"Const", 2, "const">,
+      I32EnumCase<"ConstArgMem", 3, "const_argmem">,
+      I32EnumCase<"PureArgMem", 4, "pure_argmem">
 ]> {
   let description = [{
     The side effect attribute specifies the possible side effects of a function
@@ -2026,13 +1976,24 @@ def CIR_SideEffect : CIR_I32Enum<
       `__attribute__((pure))`.
     - const: The function or callee may not read or write data from memory. This
       has the same effect as the GNU C/C++ attribute `__attribute__((const))`.
+    - const_argmem: As const, except that the callee may read and write the
+      memory its pointer arguments address.
+    - pure_argmem: As pure, except that the callee may also write the memory
+      its pointer arguments address.
+
+    The two argmem values have no source-level spelling.  CallConvLowering
+    produces them: a `const` or `pure` function or call whose ABI-lowered
+    signature carries a pointer the ABI introduced reaches that argument
+    memory whatever the source declared, so `const` or `pure` alone would
+    describe it incorrectly.
 
     Examples:
 
     ```
     %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
+    %2 = cir.call @add(%0, %1) side_effect(pure) : (!s32i, !s32i) -> !s32i
+    %2 = cir.call @add(%0, %1) side_effect(const) : (!s32i, !s32i) -> !s32i
+    cir.call @big(%0) side_effect(const_argmem) : (!cir.ptr<!rec_Big>) -> ()
     ```
   }];
 }

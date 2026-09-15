@@ -78,7 +78,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 16 : i64, llvm.byval = !rec_Big, llvm.noundef})
+  // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_Big> {llvm.align = 16 : i64, llvm.byval = !rec_Big, llvm.noundef})
 
   // A record the caller must destroy is passed by reference rather than copied,
   // so it takes the non-byval form instead of byval even though the size rule
@@ -87,7 +87,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_no_regs(%arg0: !cir.ptr<!rec_NoRegs> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 16 : i64, llvm.dereferenceable = 16 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK: cir.func{{.*}} @take_no_regs(%arg0: !cir.ptr<!rec_NoRegs> {llvm.align = 16 : i64, llvm.dereferenceable = 16 : i64, llvm.nofreeobj, llvm.noundef})
 
   // An anonymous record has no entry in cir.record_layouts, so both the
   // register-passing decision and the alignment come from the fallbacks.

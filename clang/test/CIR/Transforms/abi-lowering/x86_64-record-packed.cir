@@ -79,7 +79,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK-LABEL: cir.func{{.*}} @take_p(%arg0: !cir.ptr<!rec_P> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 1 : i64, llvm.dereferenceable = 5 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK-LABEL: cir.func{{.*}} @take_p(%arg0: !cir.ptr<!rec_P> {llvm.align = 1 : i64, llvm.dereferenceable = 5 : i64, llvm.nofreeobj, llvm.noundef})
 
   // A union coerces through the same one-register path as FiveShort.
   cir.func @take_upacked(%arg0: !rec_UPacked) {

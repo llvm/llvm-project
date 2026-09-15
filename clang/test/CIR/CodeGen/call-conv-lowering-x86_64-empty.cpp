@@ -224,13 +224,13 @@ long callerHiWord(long hi) {
 // this size is passed indirectly at its declared alignment.
 int takeBig32(Big32 v, int k) { return k; }
 
-// CIR: cir.func {{.*}}@_Z9takeBig325Big32i(%arg0: !cir.ptr<!rec_Big32> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 32 : i64, llvm.byval = !rec_Big32, llvm.noundef}{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// CIR: cir.func {{.*}}@_Z9takeBig325Big32i(%arg0: !cir.ptr<!rec_Big32> {llvm.align = 32 : i64, llvm.byval = !rec_Big32, llvm.noundef}{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
 // LLVM: define dso_local noundef i32 @_Z9takeBig325Big32i(ptr noundef byval(%struct.Big32) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
 // The same class returned uses sret at that alignment.
 Big32 retBig32() { return Big32{}; }
 
-// CIR: cir.func {{.*}}@_Z8retBig32v(%arg0: !cir.ptr<!rec_Big32> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 32 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Big32, llvm.writable}
+// CIR: cir.func {{.*}}@_Z8retBig32v(%arg0: !cir.ptr<!rec_Big32> {llvm.align = 32 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Big32, llvm.writable}
 // LLVM: define dso_local void @_Z8retBig32v(ptr dead_on_unwind noalias writable sret(%struct.Big32) align 32 %{{[^,]+}})
 
 // A zero-width unnamed bit-field reserves no storage for the classifier to
@@ -305,13 +305,13 @@ int takeUEmptyBytes(UEmptyBytes v) { return v.c[0]; }
 // member changes nothing here.
 int takeUBigEmpty(UBigEmpty v, int k) { return k; }
 
-// CIR: cir.func {{.*}}@_Z13takeUBigEmpty9UBigEmptyi(%arg0: !cir.ptr<!rec_UBigEmpty> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 32 : i64, llvm.byval = !rec_UBigEmpty, llvm.noundef}{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// CIR: cir.func {{.*}}@_Z13takeUBigEmpty9UBigEmptyi(%arg0: !cir.ptr<!rec_UBigEmpty> {llvm.align = 32 : i64, llvm.byval = !rec_UBigEmpty, llvm.noundef}{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
 // LLVM: define dso_local noundef i32 @_Z13takeUBigEmpty9UBigEmptyi(ptr noundef byval(%union.UBigEmpty) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
 // The same union returned uses sret at that alignment.
 UBigEmpty retUBigEmpty() { return UBigEmpty{}; }
 
-// CIR: cir.func {{.*}}@_Z12retUBigEmptyv(%arg0: !cir.ptr<!rec_UBigEmpty> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 32 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_UBigEmpty, llvm.writable}
+// CIR: cir.func {{.*}}@_Z12retUBigEmptyv(%arg0: !cir.ptr<!rec_UBigEmpty> {llvm.align = 32 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_UBigEmpty, llvm.writable}
 // LLVM: define dso_local void @_Z12retUBigEmptyv(ptr dead_on_unwind noalias writable sret(%union.UBigEmpty) align 32 %{{[^,]+}})
 
 // Emptiness reaches the union member through a base class as well.
