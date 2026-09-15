@@ -2,46 +2,59 @@
 ; RUN: opt < %s -S -passes=slp-vectorizer -mtriple=aarch64-unknown-linux -mcpu=neoverse-v2 | FileCheck %s --check-prefix=NARROW
 ; RUN: opt < %s -S -passes=slp-vectorizer -mtriple=aarch64-unknown-linux -mcpu=neoverse-v1 | FileCheck %s --check-prefix=WIDE
 
-; A horizontal double reduction with gathered operands is not profitable on
-; targets whose vector register holds only 2 doubles: the operand gathering and
-; the reduction epilogue produce more instructions than the scalar reduction.
-; On wider targets (4+ doubles per register) it stays profitable.
+; A horizontal double reduction with gathered operands is not profitable. The
+; gathering and the reduction epilogue cost more than the scalar chain, whose
+; fadd links all fuse into fmadd.
 
 define double @f64_red_gather(ptr %a, ptr %w) {
 ; NARROW-LABEL: define double @f64_red_gather(
 ; NARROW-SAME: ptr [[A:%.*]], ptr [[W:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NARROW-NEXT:    [[A0:%.*]] = load double, ptr [[A]], align 8
+; NARROW-NEXT:    [[W0:%.*]] = load double, ptr [[W]], align 8
+; NARROW-NEXT:    [[P0:%.*]] = fmul reassoc contract double [[A0]], [[W0]]
 ; NARROW-NEXT:    [[A1P:%.*]] = getelementptr double, ptr [[A]], i64 3
 ; NARROW-NEXT:    [[A1:%.*]] = load double, ptr [[A1P]], align 8
+; NARROW-NEXT:    [[W1P:%.*]] = getelementptr double, ptr [[W]], i64 1
+; NARROW-NEXT:    [[W1:%.*]] = load double, ptr [[W1P]], align 8
+; NARROW-NEXT:    [[P1:%.*]] = fmul reassoc contract double [[A1]], [[W1]]
 ; NARROW-NEXT:    [[A2P:%.*]] = getelementptr double, ptr [[A]], i64 6
 ; NARROW-NEXT:    [[A2:%.*]] = load double, ptr [[A2P]], align 8
+; NARROW-NEXT:    [[W2P:%.*]] = getelementptr double, ptr [[W]], i64 2
+; NARROW-NEXT:    [[W2:%.*]] = load double, ptr [[W2P]], align 8
+; NARROW-NEXT:    [[P2:%.*]] = fmul reassoc contract double [[A2]], [[W2]]
 ; NARROW-NEXT:    [[A3P:%.*]] = getelementptr double, ptr [[A]], i64 9
 ; NARROW-NEXT:    [[A3:%.*]] = load double, ptr [[A3P]], align 8
-; NARROW-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[W]], align 8
-; NARROW-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> poison, double [[A0]], i64 0
-; NARROW-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[A1]], i64 1
-; NARROW-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[A2]], i64 2
-; NARROW-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> [[TMP4]], double [[A3]], i64 3
-; NARROW-NEXT:    [[TMP6:%.*]] = fmul reassoc contract <4 x double> [[TMP5]], [[TMP1]]
-; NARROW-NEXT:    [[TMP7:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP6]])
+; NARROW-NEXT:    [[W3P:%.*]] = getelementptr double, ptr [[W]], i64 3
+; NARROW-NEXT:    [[W3:%.*]] = load double, ptr [[W3P]], align 8
+; NARROW-NEXT:    [[P3:%.*]] = fmul reassoc contract double [[A3]], [[W3]]
+; NARROW-NEXT:    [[R0:%.*]] = fadd reassoc contract double [[P0]], [[P1]]
+; NARROW-NEXT:    [[R1:%.*]] = fadd reassoc contract double [[R0]], [[P2]]
+; NARROW-NEXT:    [[TMP7:%.*]] = fadd reassoc contract double [[R1]], [[P3]]
 ; NARROW-NEXT:    ret double [[TMP7]]
 ;
 ; WIDE-LABEL: define double @f64_red_gather(
 ; WIDE-SAME: ptr [[A:%.*]], ptr [[W:%.*]]) #[[ATTR0:[0-9]+]] {
 ; WIDE-NEXT:    [[A0:%.*]] = load double, ptr [[A]], align 8
+; WIDE-NEXT:    [[W0:%.*]] = load double, ptr [[W]], align 8
+; WIDE-NEXT:    [[P0:%.*]] = fmul reassoc contract double [[A0]], [[W0]]
 ; WIDE-NEXT:    [[A1P:%.*]] = getelementptr double, ptr [[A]], i64 3
 ; WIDE-NEXT:    [[A1:%.*]] = load double, ptr [[A1P]], align 8
+; WIDE-NEXT:    [[W1P:%.*]] = getelementptr double, ptr [[W]], i64 1
+; WIDE-NEXT:    [[W1:%.*]] = load double, ptr [[W1P]], align 8
+; WIDE-NEXT:    [[P1:%.*]] = fmul reassoc contract double [[A1]], [[W1]]
 ; WIDE-NEXT:    [[A2P:%.*]] = getelementptr double, ptr [[A]], i64 6
 ; WIDE-NEXT:    [[A2:%.*]] = load double, ptr [[A2P]], align 8
+; WIDE-NEXT:    [[W2P:%.*]] = getelementptr double, ptr [[W]], i64 2
+; WIDE-NEXT:    [[W2:%.*]] = load double, ptr [[W2P]], align 8
+; WIDE-NEXT:    [[P2:%.*]] = fmul reassoc contract double [[A2]], [[W2]]
 ; WIDE-NEXT:    [[A3P:%.*]] = getelementptr double, ptr [[A]], i64 9
 ; WIDE-NEXT:    [[A3:%.*]] = load double, ptr [[A3P]], align 8
-; WIDE-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[W]], align 8
-; WIDE-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> poison, double [[A0]], i64 0
-; WIDE-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[A1]], i64 1
-; WIDE-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[A2]], i64 2
-; WIDE-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> [[TMP4]], double [[A3]], i64 3
-; WIDE-NEXT:    [[TMP6:%.*]] = fmul reassoc contract <4 x double> [[TMP5]], [[TMP1]]
-; WIDE-NEXT:    [[TMP7:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP6]])
+; WIDE-NEXT:    [[W3P:%.*]] = getelementptr double, ptr [[W]], i64 3
+; WIDE-NEXT:    [[W3:%.*]] = load double, ptr [[W3P]], align 8
+; WIDE-NEXT:    [[P3:%.*]] = fmul reassoc contract double [[A3]], [[W3]]
+; WIDE-NEXT:    [[R0:%.*]] = fadd reassoc contract double [[P0]], [[P1]]
+; WIDE-NEXT:    [[R1:%.*]] = fadd reassoc contract double [[R0]], [[P2]]
+; WIDE-NEXT:    [[TMP7:%.*]] = fadd reassoc contract double [[R1]], [[P3]]
 ; WIDE-NEXT:    ret double [[TMP7]]
 ;
   %a0 = load double, ptr %a
