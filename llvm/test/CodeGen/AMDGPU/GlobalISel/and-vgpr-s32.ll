@@ -5,10 +5,8 @@ define amdgpu_kernel void @and_vgpr_s32(i32 %lane.bit) {
 ; CHECK-LABEL: and_vgpr_s32:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
-; CHECK-NEXT:    s_mov_b64 s[0:1], exec
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; CHECK-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
-; CHECK-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
+; CHECK-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; CHECK-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
