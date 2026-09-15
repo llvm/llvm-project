@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1150 -mattr=+trap-handler -global-isel=0 < %s | FileCheck %s --check-prefix=PAL
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1150 -mattr=+trap-handler -global-isel=1 -global-isel-abort=1 < %s | FileCheck %s --check-prefix=PAL
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1310 -mattr=+trap-handler -global-isel=0 < %s | FileCheck %s --check-prefix=PAL
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1310 -mattr=+trap-handler -global-isel=1 -global-isel-abort=1 < %s | FileCheck %s --check-prefix=PAL
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1150 -global-isel=0 < %s 2>&1 | FileCheck %s --check-prefix=NO-TRAP
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1150 -mattr=-trap-handler -global-isel=1 -global-isel-abort=1 < %s 2>&1 | FileCheck %s --check-prefix=NO-TRAP
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdpal -mcpu=gfx1150 -mattr=+trap-handler -global-isel=0 < %s | FileCheck %s --check-prefix=PAL
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdpal -mcpu=gfx1150 -mattr=+trap-handler -global-isel=1 -global-isel-abort=1 < %s | FileCheck %s --check-prefix=PAL
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdpal -mcpu=gfx1310 -mattr=+trap-handler -global-isel=0 < %s | FileCheck %s --check-prefix=PAL
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdpal -mcpu=gfx1310 -mattr=+trap-handler -global-isel=1 -global-isel-abort=1 < %s | FileCheck %s --check-prefix=PAL
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdpal -mcpu=gfx1150 -global-isel=0 < %s 2>&1 | FileCheck %s --check-prefix=NO-TRAP
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdpal -mcpu=gfx1150 -global-isel=1 -global-isel-abort=1 < %s 2>&1 | FileCheck %s --check-prefix=NO-TRAP
 
 declare void @llvm.debugtrap() #0
 declare void @llvm.trap() #1
@@ -38,7 +38,7 @@ exit:
 }
 
 ; PAL-LABEL: ordinary_trap:
-; PAL-NOT: s_trap 2
+; PAL-NOT: s_trap
 ; PAL: s_endpgm
 define amdgpu_kernel void @ordinary_trap() {
 entry:
