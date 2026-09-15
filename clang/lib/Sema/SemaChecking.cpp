@@ -6603,7 +6603,7 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
 
       if (RHSVecType->getNumElements() != NumElements)
         return ExprError(Diag(TheCall->getBeginLoc(),
-                              diag::err_vec_builtin_incompatible_vector)
+                              diag::err_shufflevector_incompatible_vector)
                          << TheCall->getDirectCallee()
                          << /*isMoreThanTwoArgs*/ false
                          << SourceRange(TheCall->getArg(1)->getBeginLoc(),
