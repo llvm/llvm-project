@@ -9,6 +9,7 @@
 #include "lldb/Host/windows/windows.h"
 #include <dbghelp.h>
 #include <excpt.h>
+#include <pathcch.h>
 #include <psapi.h>
 
 #include "NativeProcessWindows.h"
@@ -358,31 +359,91 @@ Status NativeProcessWindows::RemoveBreakpoint(lldb::addr_t addr,
   return RemoveSoftwareBreakpoint(addr);
 }
 
+// Resolve the fully qualified, normalized on disk path of a module loaded in
+// the target process.
+static bool GetLoadedModulePath(HANDLE process, HMODULE module,
+                                std::string &path) {
+  std::vector<wchar_t> name(MAX_PATH);
+  DWORD len = 0;
+  while (true) {
+    len = ::GetModuleFileNameExW(process, module, name.data(),
+                                 static_cast<DWORD>(name.size()));
+    if (len == 0)
+      return false;
+    if (len < name.size())
+      break;
+    if (name.size() >= PATHCCH_MAX_CCH)
+      return false;
+    name.resize(name.size() * 2);
+  }
+
+  std::wstring wpath(name.data(), len);
+
+  // Canonicalize through a handle to the image file so the reported path
+  // matches the on-disk name exactly.
+  AutoHandle file(::CreateFileW(
+      wpath.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+      nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
+
+  if (!file.IsValid())
+    return llvm::convertWideToUTF8(wpath, path);
+
+  std::vector<wchar_t> full(MAX_PATH);
+  while (true) {
+    DWORD needed = ::GetFinalPathNameByHandleW(
+        file.get(), full.data(), static_cast<DWORD>(full.size()),
+        FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+    if (needed == 0)
+      break;
+    if (needed < full.size()) {
+      std::wstring canonical(full.data(), needed);
+      // GetFinalPathNameByHandleW returns an extended-length ("\\?\") path.
+      static const wchar_t kUNCPrefix[] = L"\\\\?\\UNC\\";
+      static const wchar_t kDOSPrefix[] = L"\\\\?\\";
+      if (canonical.rfind(kUNCPrefix, 0) == 0)
+        canonical.replace(0, wcslen(kUNCPrefix), L"\\\\");
+      else if (canonical.rfind(kDOSPrefix, 0) == 0)
+        canonical.erase(0, wcslen(kDOSPrefix));
+      wpath = std::move(canonical);
+      break;
+    }
+    full.resize(needed);
+  }
+
+  return llvm::convertWideToUTF8(wpath, path);
+}
+
 Status NativeProcessWindows::CacheLoadedModules() {
   Status error;
   if (!m_loaded_modules.empty())
     return Status();
 
-  // Retrieve loaded modules by a Target/Module-free implementation.
-  AutoHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetID()));
-  if (snapshot.IsValid()) {
-    MODULEENTRY32W me;
-    me.dwSize = sizeof(MODULEENTRY32W);
-    if (Module32FirstW(snapshot.get(), &me)) {
-      do {
-        std::string path;
-        if (!llvm::convertWideToUTF8(me.szExePath, path))
-          continue;
+  AutoHandle snapshot(::CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetID()));
+  if (!snapshot.IsValid())
+    return Status(::GetLastError(), eErrorTypeWin32);
 
-        FileSpec file_spec(path);
-        FileSystem::Instance().Resolve(file_spec);
-        m_loaded_modules[file_spec] = (addr_t)me.modBaseAddr;
-      } while (Module32Next(snapshot.get(), &me));
-    }
+  AutoHandle process(::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+                                   FALSE, GetID()),
+                     nullptr);
+  if (!process.IsValid())
+    return Status(::GetLastError(), eErrorTypeWin32);
 
-    if (!m_loaded_modules.empty())
-      return Status();
+  MODULEENTRY32W me;
+  me.dwSize = sizeof(MODULEENTRY32W);
+  if (::Module32FirstW(snapshot.get(), &me)) {
+    do {
+      std::string path;
+      if (!GetLoadedModulePath(process.get(), me.hModule, path))
+        continue;
+
+      FileSpec file_spec(path);
+      FileSystem::Instance().Resolve(file_spec);
+      m_loaded_modules[file_spec] = reinterpret_cast<addr_t>(me.modBaseAddr);
+    } while (::Module32NextW(snapshot.get(), &me));
   }
+
+  if (!m_loaded_modules.empty())
+    return Status();
 
   error = Status(::GetLastError(), lldb::ErrorType::eErrorTypeWin32);
   return error;
