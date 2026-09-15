@@ -138,18 +138,27 @@ ValueObjectRegisterSet::LookupChildWithName(llvm::StringRef name) {
 
   // See if the register exists at all in any set.
   const RegisterInfo *reg_info = m_reg_ctx_sp->GetRegisterInfoByName(name);
-  if (!reg_info)
-    return {};
 
-  // See if this register is in this register set.
+  // See if this register is in this register set, falling back to the name as
+  // written. The generic name may alias a register in another set while this
+  // set has a register of that exact name.
+  std::optional<std::pair<size_t, const RegisterInfo *>> name_match;
+  std::optional<std::pair<size_t, const RegisterInfo *>> alt_name_match;
   for (size_t i = 0; i < m_reg_set->num_registers; ++i) {
     const RegisterInfo *contained_reg_info =
         m_reg_ctx_sp->GetRegisterInfoAtIndex(m_reg_set->registers[i]);
+    if (!contained_reg_info)
+      continue;
     if (IsSameRegister(contained_reg_info, reg_info))
       return std::make_pair(i, reg_info);
+    if (!name_match && name.equals_insensitive(contained_reg_info->name))
+      name_match = std::make_pair(i, contained_reg_info);
+    else if (!alt_name_match &&
+             name.equals_insensitive(contained_reg_info->alt_name))
+      alt_name_match = std::make_pair(i, contained_reg_info);
   }
 
-  return {};
+  return name_match ? name_match : alt_name_match;
 }
 
 lldb::ValueObjectSP
