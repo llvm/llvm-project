@@ -100,6 +100,8 @@
 #include "llvm/Transforms/Scalar/ExpandMemCmp.h"
 #include "llvm/Transforms/Scalar/Float2Int.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/GVNHoist.h"
+#include "llvm/Transforms/Scalar/GVNSink.h"
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
 #include "llvm/Transforms/Scalar/InferAlignment.h"
 #include "llvm/Transforms/Scalar/InstSimplifyPass.h"
