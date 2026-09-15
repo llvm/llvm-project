@@ -158,7 +158,7 @@ void mixin_accessor() {
   mixin_layout<T, checked_accessor<T>>();
 }
 
-int main(int, char**) {
+void test() {
   mixin_accessor<int>();
   mixin_accessor<const int>();
   mixin_accessor<double>();
@@ -176,5 +176,4 @@ int main(int, char**) {
                    true,
                    true,
                    true>();
-  return 0;
 }

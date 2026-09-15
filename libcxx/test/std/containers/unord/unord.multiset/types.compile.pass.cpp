@@ -6,20 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <unordered_map>
+// <unordered_set>
 
-// template <class Key, class T, class Hash = hash<Key>, class Pred = equal_to<Key>,
-//           class Alloc = allocator<pair<const Key, T>>>
-// class unordered_multimap
+// template <class Value, class Hash = hash<Value>, class Pred = equal_to<Value>,
+//           class Alloc = allocator<Value>>
+// class unordered_multiset
 // {
 // public:
 //     // types
-//     typedef Key                                                        key_type;
-//     typedef T                                                          mapped_type;
+//     typedef Value                                                      value_type;
+//     typedef value_type                                                 key_type;
 //     typedef Hash                                                       hasher;
 //     typedef Pred                                                       key_equal;
 //     typedef Alloc                                                      allocator_type;
-//     typedef pair<const key_type, mapped_type>                          value_type;
 //     typedef value_type&                                                reference;
 //     typedef const value_type&                                          const_reference;
 //     typedef typename allocator_traits<allocator_type>::pointer         pointer;
@@ -27,21 +26,21 @@
 //     typedef typename allocator_traits<allocator_type>::size_type       size_type;
 //     typedef typename allocator_traits<allocator_type>::difference_type difference_type;
 
-#include <unordered_map>
+#include <unordered_set>
 #include <type_traits>
 
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+void test() {
   {
-    typedef std::unordered_multimap<char, short> C;
-    static_assert((std::is_same<C::key_type, char>::value), "");
-    static_assert((std::is_same<C::mapped_type, short>::value), "");
+    typedef std::unordered_multiset<short> C;
+
+    static_assert((std::is_same<C::value_type, short>::value), "");
+    static_assert((std::is_same<C::key_type, short>::value), "");
     static_assert((std::is_same<C::hasher, std::hash<C::key_type> >::value), "");
     static_assert((std::is_same<C::key_equal, std::equal_to<C::key_type> >::value), "");
     static_assert((std::is_same<C::allocator_type, std::allocator<C::value_type> >::value), "");
-    static_assert((std::is_same<C::value_type, std::pair<const C::key_type, C::mapped_type> >::value), "");
     static_assert((std::is_same<C::reference, C::value_type&>::value), "");
     static_assert((std::is_same<C::const_reference, const C::value_type&>::value), "");
     static_assert((std::is_same<C::pointer, C::value_type*>::value), "");
@@ -51,18 +50,13 @@ int main(int, char**) {
   }
 #if TEST_STD_VER >= 11
   {
-    typedef std::unordered_multimap<char,
-                                    short,
-                                    std::hash<char>,
-                                    std::equal_to<char>,
-                                    min_allocator<std::pair<const char, short>>>
-        C;
-    static_assert((std::is_same<C::key_type, char>::value), "");
-    static_assert((std::is_same<C::mapped_type, short>::value), "");
+    typedef std::unordered_multiset<short, std::hash<short>, std::equal_to<short>, min_allocator<short>> C;
+
+    static_assert((std::is_same<C::value_type, short>::value), "");
+    static_assert((std::is_same<C::key_type, short>::value), "");
     static_assert((std::is_same<C::hasher, std::hash<C::key_type> >::value), "");
     static_assert((std::is_same<C::key_equal, std::equal_to<C::key_type> >::value), "");
     static_assert((std::is_same<C::allocator_type, min_allocator<C::value_type> >::value), "");
-    static_assert((std::is_same<C::value_type, std::pair<const C::key_type, C::mapped_type> >::value), "");
     static_assert((std::is_same<C::reference, C::value_type&>::value), "");
     static_assert((std::is_same<C::const_reference, const C::value_type&>::value), "");
     static_assert((std::is_same<C::pointer, min_pointer<C::value_type>>::value), "");
@@ -72,6 +66,4 @@ int main(int, char**) {
     static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
   }
 #endif
-
-  return 0;
 }

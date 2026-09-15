@@ -10,7 +10,7 @@
 
 // template <class Key, class T, class Compare = less<Key>,
 //           class Allocator = allocator<pair<const Key, T>>>
-// class multimap
+// class map
 // {
 // public:
 //     // types:
@@ -34,10 +34,10 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-TEST_CONSTEXPR_CXX26
-bool test() {
+void test() {
   {
-    typedef std::multimap<int, double> C;
+    typedef std::map<int, double> C;
+
     static_assert((std::is_same<C::key_type, int>::value), "");
     static_assert((std::is_same<C::mapped_type, double>::value), "");
     static_assert((std::is_same<C::value_type, std::pair<const int, double> >::value), "");
@@ -52,7 +52,8 @@ bool test() {
   }
 #if TEST_STD_VER >= 11
   {
-    typedef std::multimap<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> C;
+    typedef std::map<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> C;
+
     static_assert((std::is_same<C::key_type, int>::value), "");
     static_assert((std::is_same<C::mapped_type, double>::value), "");
     static_assert((std::is_same<C::value_type, std::pair<const int, double> >::value), "");
@@ -67,15 +68,4 @@ bool test() {
     static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
   }
 #endif
-
-  return true;
-}
-
-int main(int, char**) {
-  test();
-
-#if TEST_STD_VER >= 26
-  static_assert(test());
-#endif
-  return 0;
 }

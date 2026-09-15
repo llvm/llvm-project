@@ -52,9 +52,10 @@ struct A {
   std::forward_list<A> v;
 }; // incomplete type support
 
-int main(int, char**) {
+void test() {
   {
     typedef std::forward_list<char> C;
+
     static_assert((std::is_same<C::value_type, char>::value), "");
     static_assert((std::is_same<C::allocator_type, std::allocator<char> >::value), "");
     static_assert((std::is_same<C::reference, char&>::value), "");
@@ -76,6 +77,7 @@ int main(int, char**) {
 #if TEST_STD_VER >= 11
   {
     typedef std::forward_list<char, min_allocator<char>> C;
+
     static_assert((std::is_same<C::value_type, char>::value), "");
     static_assert((std::is_same<C::allocator_type, min_allocator<char> >::value), "");
     static_assert((std::is_same<C::reference, char&>::value), "");
@@ -96,6 +98,4 @@ int main(int, char**) {
                   "");
   }
 #endif
-
-  return 0;
 }

@@ -75,12 +75,10 @@ void test() {
 
 struct A {};
 
-int main(int, char**) {
+void test() {
   test<int>();
   test<long>();
   test<double>();
   test<std::string>();
   test<A>();
-
-  return 0;
 }
