@@ -164,14 +164,27 @@ mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
   return loadOp.getResult();
 }
 
-void cloneOrMapRegionOutsiders(
-    fir::FirOpBuilder &firOpBuilder, mlir::omp::TargetOp targetOp) {
+namespace {
+/// Helper function for resolving values used inside a target region but defined
+/// above it. It can resolve through cloning or generating new map info
+/// operations. It will opt for cloning when provably memory effect free,
+/// otherwise it will generate a map, however, only if requested.
+///
+/// \param mapNonClonable - When true, non-clonable outsiders are mapped into
+/// the region; when false they are left untouched.
+/// \param iterateToFixpoint - When true, the set of values-defined-above is
+/// re-queried and reprocessed until emptied. Otherwise a single pass is done.
+/// \param inScope - Predicate selecting which uses of an outsider should be
+/// rewired to the sunk/mapped replacement.
+void resolveRegionOutsiders(fir::FirOpBuilder &firOpBuilder,
+    mlir::omp::TargetOp targetOp, bool mapNonClonable, bool iterateToFixpoint,
+    llvm::function_ref<bool(mlir::OpOperand &)> inScope) {
   mlir::Region &region = targetOp.getRegion();
   mlir::Block *entryBlock = &region.getBlocks().front();
 
   llvm::SetVector<mlir::Value> valuesDefinedAbove;
   mlir::getUsedValuesDefinedAbove(region, valuesDefinedAbove);
-  while (!valuesDefinedAbove.empty()) {
+  do {
     for (mlir::Value val : valuesDefinedAbove) {
       mlir::Operation *valOp = val.getDefiningOp();
 
@@ -180,28 +193,58 @@ void cloneOrMapRegionOutsiders(
       // which comes with a fairly large overhead comparatively. We could be
       // more robust about this and check using a BackwardsSlice to see if we
       // run the risk of mapping a box.
-      if (valOp && mlir::isMemoryEffectFree(valOp) &&
-          !mlir::isa<fir::BoxDimsOp>(valOp)) {
+      bool clonable = valOp && mlir::isMemoryEffectFree(valOp) &&
+          !mlir::isa<fir::BoxDimsOp>(valOp);
+
+      if (clonable) {
         mlir::Operation *clonedOp = valOp->clone();
         entryBlock->push_front(clonedOp);
 
-        auto replace = [entryBlock](mlir::OpOperand &use) {
-          return use.getOwner()->getBlock() == entryBlock;
-        };
-
-        valOp->getResults().replaceUsesWithIf(clonedOp->getResults(), replace);
-        valOp->replaceUsesWithIf(clonedOp, replace);
-      } else {
+        valOp->getResults().replaceUsesWithIf(clonedOp->getResults(), inScope);
+        valOp->replaceUsesWithIf(clonedOp, inScope);
+      } else if (mapNonClonable) {
         mlir::Value mappedTemp = mapTemporaryValue(firOpBuilder, targetOp, val,
             /*name=*/{});
-        val.replaceUsesWithIf(mappedTemp, [entryBlock](mlir::OpOperand &use) {
-          return use.getOwner()->getBlock() == entryBlock;
-        });
+        val.replaceUsesWithIf(mappedTemp, inScope);
       }
     }
+
+    if (!iterateToFixpoint)
+      break;
+
     valuesDefinedAbove.clear();
     mlir::getUsedValuesDefinedAbove(region, valuesDefinedAbove);
-  }
+  } while (!valuesDefinedAbove.empty());
+}
+} // namespace
+
+void cloneOrMapRegionOutsiders(
+    fir::FirOpBuilder &firOpBuilder, mlir::omp::TargetOp targetOp) {
+  mlir::Block *entryBlock = &targetOp.getRegion().getBlocks().front();
+
+  // Iterate to a fixpoint, mapping any non-clonable outsiders. Uses are only
+  // rewired within the entry block itself.
+  resolveRegionOutsiders(firOpBuilder, targetOp, /*mapNonClonable=*/true,
+      /*iterateToFixpoint=*/true, [entryBlock](mlir::OpOperand &use) {
+        return use.getOwner()->getBlock() == entryBlock;
+      });
+}
+
+void cloneRegionOutsiders(
+    fir::FirOpBuilder &firOpBuilder, mlir::omp::TargetOp targetOp) {
+  mlir::Region &region = targetOp.getRegion();
+  // Single, non-iterating pass. We deliberately do NOT map non-clonable
+  // outsiders here, so re-querying and looping until the set drains could never
+  // terminate. Clonable ops we do sink do not themselves reference other
+  // defined-above values, so one pass is sufficient.
+  //
+  // The clone is pushed to the front of the entry block, which dominates every
+  // nested block of the region, so rewire any use contained anywhere within the
+  // target region.
+  resolveRegionOutsiders(firOpBuilder, targetOp, /*mapNonClonable=*/false,
+      /*iterateToFixpoint=*/false, [&region](mlir::OpOperand &use) {
+        return region.findAncestorOpInRegion(*use.getOwner()) != nullptr;
+      });
 }
 
 /// Gets or generates a default declare mapper for a given record type.
