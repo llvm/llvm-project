@@ -706,6 +706,17 @@ FloatABI::ABIType Module::getFloatABI() const {
   return getTargetTriple().getDefaultFloatABI();
 }
 
+ThreadModel Module::getThreadModel() const {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("thread-model")))
+    return *parseThreadModel(Val->getString());
+  return getTargetTriple().getDefaultThreadModel();
+}
+
+void Module::setThreadModel(ThreadModel Model) {
+  addModuleFlag(ModFlagBehavior::Error, "thread-model",
+                MDString::get(getContext(), getThreadModelName(Model)));
+}
+
 std::optional<uint64_t> Module::getLargeDataThreshold() const {
   auto *Val =
       cast_or_null<ConstantAsMetadata>(getModuleFlag("Large Data Threshold"));

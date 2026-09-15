@@ -2186,6 +2186,36 @@ class RVPBinaryIntrinsic
   def int_riscv_mulsu_00 : RVPScalarMulPartsIntrinsic;
   def int_riscv_mulsu_11 : RVPScalarMulPartsIntrinsic;
 
+  // Packed Multiply Parts Accumulate.
+  class RVPPackedMulPartsAccIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>,
+                               LLVMSubdivide2VectorType<0>,
+                               LLVMSubdivide2VectorType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmacc_00   : RVPPackedMulPartsAccIntrinsic;
+  def int_riscv_pmacc_01   : RVPPackedMulPartsAccIntrinsic;
+  def int_riscv_pmacc_11   : RVPPackedMulPartsAccIntrinsic;
+  def int_riscv_pmaccu_00  : RVPPackedMulPartsAccIntrinsic;
+  def int_riscv_pmaccu_01  : RVPPackedMulPartsAccIntrinsic;
+  def int_riscv_pmaccu_11  : RVPPackedMulPartsAccIntrinsic;
+  def int_riscv_pmaccsu_00 : RVPPackedMulPartsAccIntrinsic;
+  def int_riscv_pmaccsu_11 : RVPPackedMulPartsAccIntrinsic;
+
+  class RVPScalarMulPartsAccIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_anyvector_ty,
+                               LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_macc_00   : RVPScalarMulPartsAccIntrinsic;
+  def int_riscv_macc_01   : RVPScalarMulPartsAccIntrinsic;
+  def int_riscv_macc_11   : RVPScalarMulPartsAccIntrinsic;
+  def int_riscv_maccu_00  : RVPScalarMulPartsAccIntrinsic;
+  def int_riscv_maccu_01  : RVPScalarMulPartsAccIntrinsic;
+  def int_riscv_maccu_11  : RVPScalarMulPartsAccIntrinsic;
+  def int_riscv_maccsu_00 : RVPScalarMulPartsAccIntrinsic;
+  def int_riscv_maccsu_11 : RVPScalarMulPartsAccIntrinsic;
+
   // Packed Absolute Difference Sum.
   def int_riscv_pabdsumu
       : DefaultAttrsIntrinsic<[llvm_anyint_ty],

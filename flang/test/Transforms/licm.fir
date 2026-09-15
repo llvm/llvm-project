@@ -2015,13 +2015,20 @@ func.func @test_acc_loop_private2_hoisting() {
 }
 
 // -----
-// Test hoisting of fir.field_index and fir.coordinate_of.
+// Test hoisting of fir.coordinate_of.
+// fir.field_index is deliberately NOT hoisted: lowering a consumer of a field
+// value inspects its defining operation (for a record whose layout is known at
+// compile time the field becomes a constant LLVM GEP struct index). Hoisting it
+// out of the arms of a construct leaves otherwise-identical blocks differing
+// only in that operand, which lets block merging thread it through a block
+// argument and destroy the defining operation codegen needs. Its consumers are
+// unaffected and still hoist -- fir.coordinate_of below uses the attribute form
+// of the field, so it does not depend on the fir.field_index value.
 // CHECK-LABEL:   func.func @_QMmPtest(
 // CHECK-SAME:      %[[ARG0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 // CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMmEglob) : !fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
 // CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] {uniq_name = "_QMmEglob"} : (!fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
-// CHECK:           %[[FIELD_INDEX_0:.*]] = fir.field_index a, !fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>
 // CHECK:           %[[COORDINATE_OF_0:.*]] = fir.coordinate_of %[[DECLARE_0]], a : (!fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[COORDINATE_OF_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 // CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
@@ -2029,6 +2036,7 @@ func.func @test_acc_loop_private2_hoisting() {
 // CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_2]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
 // CHECK:           %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_0]]#0, %[[BOX_DIMS_0]]#1 : (index, index) -> !fir.shapeshift<1>
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop
+// CHECK:             %[[FIELD_INDEX_0:.*]] = fir.field_index a, !fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>
 func.func @_QMmPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
   %cst = arith.constant 1.000000e+00 : f32
   %c1 = arith.constant 1 : index

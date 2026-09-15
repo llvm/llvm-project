@@ -62,7 +62,7 @@ const uint64_t NOMORE_ICP_MAGICNUM = -1;
 ///
 /// This is a root class for typeless data in the IR.
 class Metadata {
-  friend class ReplaceableMetadataImpl;
+  friend class ReplaceableUses;
 
   /// RTTI.
   const unsigned char SubclassID;
@@ -182,7 +182,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Metadata &MD) {
 /// Notably, this is the only thing in either hierarchy that is allowed to
 /// reference \a LocalAsMetadata.
 class MetadataAsValue : public Value {
-  friend class ReplaceableMetadataImpl;
+  friend class ReplaceableUses;
   friend class LLVMContextImpl;
 
   Metadata *MD;
@@ -231,7 +231,7 @@ protected:
 public:
   LLVM_ABI DbgVariableRecord *getUser();
   LLVM_ABI const DbgVariableRecord *getUser() const;
-  /// To be called by ReplaceableMetadataImpl::replaceAllUsesWith, where `Old`
+  /// To be called by ReplaceableUses::replaceAllUsesWith, where `Old`
   /// is a pointer to one of the pointers in `DebugValues` (so should be type
   /// Metadata**), and `NewDebugValue` is the new Metadata* that is replacing
   /// *Old.
@@ -388,25 +388,23 @@ private:
 /// Most metadata cannot be RAUW'ed.  This is a shared implementation of
 /// use-lists and associated API for the three that support it (
 /// \a ValueAsMetadata, \a TempMDNode, and \a DIArgList).
-class ReplaceableMetadataImpl {
+class ReplaceableUses {
   friend class MetadataTracking;
 
 public:
   using OwnerTy = MetadataTracking::OwnerTy;
 
 private:
-  LLVMContext &Context;
   uint64_t NextIndex = 0;
   SmallDenseMap<void *, std::pair<OwnerTy, uint64_t>, 4> UseMap;
 
-public:
-  ReplaceableMetadataImpl(LLVMContext &Context) : Context(Context) {}
-
-  ~ReplaceableMetadataImpl() {
+protected:
+  ~ReplaceableUses() {
     assert(UseMap.empty() && "Cannot destroy in-use replaceable metadata");
   }
 
-  LLVMContext &getContext() const { return Context; }
+public:
+  ReplaceableUses &operator=(const ReplaceableUses &) = delete;
 
   /// Replace all uses of this with MD.
   ///
@@ -437,15 +435,27 @@ private:
   ///
   /// If this is an unresolved MDNode, RAUW support will be created on-demand.
   /// ValueAsMetadata always has RAUW support.
-  static ReplaceableMetadataImpl *getOrCreate(Metadata &MD);
+  static ReplaceableUses *getOrCreate(Metadata &MD);
 
   /// Get RAUW support on MD, if it exists.
-  static ReplaceableMetadataImpl *getIfExists(Metadata &MD);
+  static ReplaceableUses *getIfExists(Metadata &MD);
 
   /// Check whether this node will support RAUW.
   ///
   /// Returns \c true unless getOrCreate() would return null.
   static bool isReplaceable(const Metadata &MD);
+};
+
+/// Replaceable metadata that remembers its \a LLVMContext, for owners with no
+/// other route to it.
+class ReplaceableUsesWithContext : public ReplaceableUses {
+  LLVMContext &Context;
+
+public:
+  explicit ReplaceableUsesWithContext(LLVMContext &Context)
+      : Context(Context) {}
+
+  LLVMContext &getContext() const { return Context; }
 };
 
 /// Value wrapper in the Metadata hierarchy.
@@ -456,20 +466,19 @@ private:
 /// Because of full uniquing support, each value is only wrapped by a single \a
 /// ValueAsMetadata object, so the lookup maps are far more efficient than
 /// those using ValueHandleBase.
-class ValueAsMetadata : public Metadata, ReplaceableMetadataImpl {
-  friend class ReplaceableMetadataImpl;
+class ValueAsMetadata : public Metadata, ReplaceableUses {
+  friend class ReplaceableUses;
   friend class LLVMContextImpl;
 
   Value *V;
 
   /// Drop users without RAUW (during teardown).
   void dropUsers() {
-    ReplaceableMetadataImpl::resolveAllUses(/* ResolveUsers */ false);
+    ReplaceableUses::resolveAllUses(/* ResolveUsers */ false);
   }
 
 protected:
-  ValueAsMetadata(unsigned ID, Value *V)
-      : Metadata(ID, Uniqued), ReplaceableMetadataImpl(V->getContext()), V(V) {
+  ValueAsMetadata(unsigned ID, Value *V) : Metadata(ID, Uniqued), V(V) {
     assert(V && "Expected valid value");
   }
 
@@ -501,10 +510,10 @@ public:
   LLVMContext &getContext() const { return V->getContext(); }
 
   SmallVector<Metadata *> getAllArgListUsers() {
-    return ReplaceableMetadataImpl::getAllArgListUsers();
+    return ReplaceableUses::getAllArgListUsers();
   }
   SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers() {
-    return ReplaceableMetadataImpl::getAllDbgVariableRecordUsers();
+    return ReplaceableUses::getAllDbgVariableRecordUsers();
   }
 
   LLVM_ABI static void handleDeletion(Value *V);
@@ -517,7 +526,7 @@ protected:
   /// \a Value gets RAUW'ed and the target already exists, this is used to
   /// merge the two metadata nodes.
   void replaceAllUsesWith(Metadata *MD) {
-    ReplaceableMetadataImpl::replaceAllUsesWith(MD);
+    ReplaceableUses::replaceAllUsesWith(MD);
   }
 
 public:
@@ -964,14 +973,14 @@ template <> struct simplify_type<const MDOperand> {
 /// Pointer to the context, with optional RAUW support.
 ///
 /// Either a raw (non-null) pointer to the \a LLVMContext, or an owned pointer
-/// to \a ReplaceableMetadataImpl (which has a reference to \a LLVMContext).
+/// to \a ReplaceableUsesWithContext.
 class ContextAndReplaceableUses {
-  PointerUnion<LLVMContext *, ReplaceableMetadataImpl *> Ptr;
+  PointerUnion<LLVMContext *, ReplaceableUsesWithContext *> Ptr;
 
 public:
   ContextAndReplaceableUses(LLVMContext &Context) : Ptr(&Context) {}
   ContextAndReplaceableUses(
-      std::unique_ptr<ReplaceableMetadataImpl> ReplaceableUses)
+      std::unique_ptr<ReplaceableUsesWithContext> ReplaceableUses)
       : Ptr(ReplaceableUses.release()) {
     assert(getReplaceableUses() && "Expected non-null replaceable uses");
   }
@@ -987,7 +996,7 @@ public:
 
   /// Whether this contains RAUW support.
   bool hasReplaceableUses() const {
-    return isa<ReplaceableMetadataImpl *>(Ptr);
+    return isa<ReplaceableUsesWithContext *>(Ptr);
   }
 
   LLVMContext &getContext() const {
@@ -996,16 +1005,17 @@ public:
     return *cast<LLVMContext *>(Ptr);
   }
 
-  ReplaceableMetadataImpl *getReplaceableUses() const {
+  ReplaceableUsesWithContext *getReplaceableUses() const {
     if (hasReplaceableUses())
-      return cast<ReplaceableMetadataImpl *>(Ptr);
+      return cast<ReplaceableUsesWithContext *>(Ptr);
     return nullptr;
   }
 
   /// Ensure that this has RAUW support, and then return it.
-  ReplaceableMetadataImpl *getOrCreateReplaceableUses() {
+  ReplaceableUsesWithContext *getOrCreateReplaceableUses() {
     if (!hasReplaceableUses())
-      makeReplaceable(std::make_unique<ReplaceableMetadataImpl>(getContext()));
+      makeReplaceable(
+          std::make_unique<ReplaceableUsesWithContext>(getContext()));
     return getReplaceableUses();
   }
 
@@ -1014,7 +1024,7 @@ public:
   /// Make this replaceable, taking ownership of \c ReplaceableUses (which must
   /// not be null).
   void
-  makeReplaceable(std::unique_ptr<ReplaceableMetadataImpl> ReplaceableUses) {
+  makeReplaceable(std::unique_ptr<ReplaceableUsesWithContext> ReplaceableUses) {
     assert(ReplaceableUses && "Expected non-null replaceable uses");
     assert(&ReplaceableUses->getContext() == &getContext() &&
            "Expected same context");
@@ -1025,9 +1035,9 @@ public:
   /// Drop RAUW support.
   ///
   /// Cede ownership of RAUW support, returning it.
-  std::unique_ptr<ReplaceableMetadataImpl> takeReplaceableUses() {
+  std::unique_ptr<ReplaceableUsesWithContext> takeReplaceableUses() {
     assert(hasReplaceableUses() && "Expected to own replaceable uses");
-    std::unique_ptr<ReplaceableMetadataImpl> ReplaceableUses(
+    std::unique_ptr<ReplaceableUsesWithContext> ReplaceableUses(
         getReplaceableUses());
     Ptr = &ReplaceableUses->getContext();
     return ReplaceableUses;
@@ -1067,7 +1077,7 @@ struct TempMDNodeDeleter {
 ///
 /// Clients can add operands to resizable MDNodes using push_back().
 class MDNode : public Metadata {
-  friend class ReplaceableMetadataImpl;
+  friend class ReplaceableUses;
   friend class LLVMContextImpl;
   friend class DIAssignID;
 

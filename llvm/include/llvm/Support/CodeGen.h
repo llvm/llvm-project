@@ -52,13 +52,14 @@ namespace llvm {
   }
 
   enum class ExceptionHandling : int {
-    None,     ///< No exception support
-    DwarfCFI, ///< DWARF-like instruction based exceptions
-    SjLj,     ///< setjmp/longjmp based exceptions
-    ARM,      ///< ARM EHABI
-    WinEH,    ///< Windows Exception Handling
-    Wasm,     ///< WebAssembly Exception Handling
-    AIX,      ///< AIX Exception Handling
+    None,       ///< No exception support
+    DwarfCFI,   ///< DWARF-like instruction based exceptions
+    SjLj,       ///< setjmp/longjmp based exceptions
+    ARM,        ///< ARM EHABI
+    WinEH,      ///< Windows Exception Handling
+    Wasm,       ///< WebAssembly Exception Handling
+    Emscripten, ///< Emscripten JavaScript-based exception handling
+    AIX,        ///< AIX Exception Handling
     ZOS, ///< z/OS MVS Exception Handling. Very similar to DwarfCFI, but the
          ///< PPA1 is used instead of an .eh_frame section.
   };
@@ -136,6 +137,34 @@ namespace llvm {
     return "";
   }
   } // namespace FloatABI
+
+  /// The threading model to assume for lowering, e.g. of atomics.
+  enum class ThreadModel {
+    POSIX,  // POSIX Threads
+    Single, // Single Threaded Environment
+  };
+
+  /// Parse the string spelling used by the "thread-model" IR module flag into a
+  /// ThreadModel.
+  inline std::optional<ThreadModel> parseThreadModel(StringRef S) {
+    if (S == "posix")
+      return ThreadModel::POSIX;
+    if (S == "single")
+      return ThreadModel::Single;
+    return std::nullopt;
+  }
+
+  /// Returns the string spelling used by the "thread-model" IR module flag for
+  /// a ThreadModel.
+  inline StringRef getThreadModelName(ThreadModel TM) {
+    switch (TM) {
+    case ThreadModel::POSIX:
+      return "posix";
+    case ThreadModel::Single:
+      return "single";
+    }
+    return "";
+  }
 
   enum class EABI {
     Unknown,

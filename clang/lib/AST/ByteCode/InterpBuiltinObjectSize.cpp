@@ -445,7 +445,8 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
         return std::nullopt;
     }
 
-    *Offset += Ptr.getByteOffset();
+    *Offset += (Ptr.getByteOffset() *
+                ASTCtx.getTypeSizeInChars(OP.getFieldType()).getQuantity());
 
     if (*Offset > *FullSize)
       return 0u;
