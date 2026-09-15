@@ -2550,6 +2550,43 @@ let hasSideEffects = false in {
   }
 }
 
+def : Pat<(f16 (fpround (f32 (fpextend bf16:$a)))),
+          (CVT_f16_bf16 $a, CvtRN)>, Requires<[SM90]>;
+def : Pat<(bf16 (fpround (f32 (fpextend f16:$a)))),
+          (CVT_bf16_f16 $a, CvtRN)>, Requires<[SM90]>;
+
+multiclass CVT_FPTRUNC_ROUND<string RoundMode, PatLeaf Mode, PatLeaf ModeFTZ,
+                           bit RoundToInfinity> {
+  defvar Round = TImmLeaf<i32,
+      "return Imm == static_cast<int>(RoundingMode::" # RoundMode # ");">;
+
+  def : Pat<(f16 (fptrunc_round f32:$a, Round)),
+            (CVT_f16_f32 $a, Mode)>;
+  def : Pat<(bf16 (fptrunc_round f32:$a, Round)),
+            (CVT_bf16_f32 $a, Mode)>,
+        Requires<!if(RoundToInfinity, [SM90], [SM80])>;
+
+  def : Pat<(f16 (fptrunc_round f64:$a, Round)),
+            (CVT_f16_f64 $a, Mode)>;
+  def : Pat<(bf16 (fptrunc_round f64:$a, Round)),
+            (CVT_bf16_f64 $a, Mode)>, Requires<[SM90]>;
+  def : Pat<(f32 (fptrunc_round f64:$a, Round)),
+            (CVT_f32_f64 $a, ModeFTZ)>, Requires<[doF32FTZ]>;
+  def : Pat<(f32 (fptrunc_round f64:$a, Round)),
+            (CVT_f32_f64 $a, Mode)>;
+
+  // Flushing the intermediate f32 can change directed rounding to f16.
+  def : Pat<(f16 (fptrunc_round (f32 (fpextend bf16:$a)), Round)),
+            (CVT_f16_bf16 $a, Mode)>,
+        Requires<!if(RoundToInfinity, [SM90, doNoF32FTZ], [SM90])>;
+  def : Pat<(bf16 (fptrunc_round (f32 (fpextend f16:$a)), Round)),
+            (CVT_bf16_f16 $a, Mode)>, Requires<[SM90]>;
+}
+
+defm : CVT_FPTRUNC_ROUND<"TowardZero", CvtRZ, CvtRZ_FTZ, 0>;
+defm : CVT_FPTRUNC_ROUND<"TowardNegative", CvtRM, CvtRM_FTZ, 1>;
+defm : CVT_FPTRUNC_ROUND<"TowardPositive", CvtRP, CvtRP_FTZ, 1>;
+
 // fpround f32 -> f16
 def : Pat<(f16 (fpround f32:$a)), (CVT_f16_f32 $a, CvtRN)>;
 

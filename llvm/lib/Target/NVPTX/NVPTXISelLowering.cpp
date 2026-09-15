@@ -992,6 +992,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     }
   }
 
+  // Expand nearest-even rounding and diagnose unsupported conversions.
+  setOperationAction(ISD::FPTRUNC_ROUND, {MVT::f16, MVT::bf16, MVT::f32}, Custom);
+
   // Expand v2f32 = fp_extend
   setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Expand);
   // Expand v2[b]f16 = fp_round v2f32
@@ -2431,6 +2434,46 @@ SDValue NVPTXTargetLowering::LowerFP_ROUND(SDValue Op,
   return Op;
 }
 
+SDValue NVPTXTargetLowering::LowerFPTRUNC_ROUND(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  EVT SrcVT = Op.getOperand(0).getValueType();
+  EVT DstVT = Op.getValueType();
+  auto RM = static_cast<RoundingMode>(Op.getConstantOperandVal(1));
+  if (RM == RoundingMode::NearestTiesToEven) {
+    // Reuse the native selection and fallback expansion for ordinary fptrunc.
+    SDLoc DL(Op);
+    return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Op.getOperand(0),
+                       DAG.getIntPtrConstant(0, DL, /*isTarget=*/true),
+                       Op.getNode()->getFlags());
+  }
+
+  bool RoundToInfinity = RM == RoundingMode::TowardNegative ||
+                         RM == RoundingMode::TowardPositive;
+
+  StringRef Error;
+  if (RM != RoundingMode::TowardZero && !RoundToInfinity) {
+    Error = "is not supported on this target";
+  } else if (DstVT == MVT::bf16) {
+    if (SrcVT == MVT::f64 || RoundToInfinity) {
+      if (!STI.hasFeature(NVPTX::SM90))
+        Error = "requires sm_90 or higher";
+    } else if (!STI.hasFeature(NVPTX::SM80)) {
+      Error = "requires sm_80 or higher";
+    }
+  }
+
+  if (Error.empty())
+    return Op;
+
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      DAG.getMachineFunction().getFunction(),
+      Twine("llvm.fptrunc.round from ") + SrcVT.getEVTString() + " to " +
+          DstVT.getEVTString() + " with rounding mode " +
+          *convertRoundingModeToStr(RM) + " " + Error,
+      SDLoc(Op).getDebugLoc()));
+  return DAG.getPOISON(DstVT);
+}
+
 SDValue NVPTXTargetLowering::LowerFP_EXTEND(SDValue Op,
                                             SelectionDAG &DAG) const {
   SDValue Narrow = Op.getOperand(0);
@@ -3514,6 +3557,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerFP_TO_INT(Op, DAG);
   case ISD::FP_ROUND:
     return LowerFP_ROUND(Op, DAG);
+  case ISD::FPTRUNC_ROUND:
+    return LowerFPTRUNC_ROUND(Op, DAG);
   case ISD::FP_EXTEND:
     return LowerFP_EXTEND(Op, DAG);
   case ISD::VAARG:
