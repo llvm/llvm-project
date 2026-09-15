@@ -1665,6 +1665,38 @@ let OtherPredicates = [HasBitOp3Insts] in {
     (i32 (V_BITOP3_B32_e64 VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2, timm:$bitop3))
   >;
 
+  // (extractelt (I v2i32:$a, v2i32:$b), 0) OP (extractelt (I v2i32:$a, v2i32:$b), 1)
+  //   == (a.lo I b.lo) OP (a.hi I b.hi), for I, OP in {and, or, xor}
+  // 2 instructions (I + bitop3) instead of 3 (I + 2 extracts + OP).
+  multiclass BitOp3ExtractLanesPat<SDPatternOperator InnerOp,
+                                    Instruction InnerInst,
+                                    SDPatternOperator OuterOp,
+                                    bits<8> TTbl> {
+    def : GCNPat<
+      (OuterOp
+        (i32 (extractelt_oneuse (v2i32 (InnerOp v2i32:$a, v2i32:$b)), (i32 0))),
+        (i32 (extractelt_oneuse (v2i32 (InnerOp v2i32:$a, v2i32:$b)), (i32 1)))),
+      (V_BITOP3_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+                         (InnerInst (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                                    (i32 (EXTRACT_SUBREG VReg_64:$b, sub1))),
+                         (i32 (EXTRACT_SUBREG VReg_64:$b, sub0)),
+                         (i32 TTbl))
+    >;
+  }
+
+  // The bitop3 truth table is computed from these patterns (Src0=0xf0, Src1=0xcc, Src2=0xaa).
+  defm : BitOp3ExtractLanesPat<and, V_AND_B32_e64, DivergentBinFrag<and>, !and(!and(0xf0, 0xaa), 0xcc)>;
+  defm : BitOp3ExtractLanesPat<and, V_AND_B32_e64, DivergentBinFrag<or>,  !or (!and(0xf0, 0xaa), 0xcc)>;
+  defm : BitOp3ExtractLanesPat<and, V_AND_B32_e64, DivergentBinFrag<xor>, !xor(!and(0xf0, 0xaa), 0xcc)>;
+
+  defm : BitOp3ExtractLanesPat<or,  V_OR_B32_e64,  DivergentBinFrag<and>, !and(!or (0xf0, 0xaa), 0xcc)>;
+  defm : BitOp3ExtractLanesPat<or,  V_OR_B32_e64,  DivergentBinFrag<or>,  !or (!or (0xf0, 0xaa), 0xcc)>;
+  defm : BitOp3ExtractLanesPat<or,  V_OR_B32_e64,  DivergentBinFrag<xor>, !xor(!or (0xf0, 0xaa), 0xcc)>;
+
+  defm : BitOp3ExtractLanesPat<xor, V_XOR_B32_e64, DivergentBinFrag<and>, !and(!xor(0xf0, 0xaa), 0xcc)>;
+  defm : BitOp3ExtractLanesPat<xor, V_XOR_B32_e64, DivergentBinFrag<or>,  !or (!xor(0xf0, 0xaa), 0xcc)>;
+  defm : BitOp3ExtractLanesPat<xor, V_XOR_B32_e64, DivergentBinFrag<xor>, !xor(!xor(0xf0, 0xaa), 0xcc)>;
+
   let SubtargetPredicate = isGFX940Plus in {
     def : GCNPat<
       (i16 (int_amdgcn_bitop3 i16:$src0, i16:$src1, i16:$src2, i32:$bitop3)),
@@ -1703,6 +1735,28 @@ let OtherPredicates = [HasBitOp3Insts] in {
   } // End SubtargetPredicate = isGFX1250Plus
 
 } // End OtherPredicates = [HasBitOp3Insts]
+
+class BitOp3ExtractLanesFixedPat<SDPatternOperator InnerOp,
+                                  Instruction InnerInst,
+                                  SDPatternOperator OuterOp,
+                                  Instruction CombineInst> : GCNPat<
+  (OuterOp
+    (i32 (extractelt_oneuse (v2i32 (InnerOp v2i32:$a, v2i32:$b)), (i32 0))),
+    (i32 (extractelt_oneuse (v2i32 (InnerOp v2i32:$a, v2i32:$b)), (i32 1)))),
+  (CombineInst (i32 (EXTRACT_SUBREG VReg_64:$a, sub0)),
+               (i32 (EXTRACT_SUBREG VReg_64:$b, sub0)),
+               (InnerInst (i32 (EXTRACT_SUBREG VReg_64:$a, sub1)),
+                          (i32 (EXTRACT_SUBREG VReg_64:$b, sub1))))
+>;
+
+let SubtargetPredicate = isGFX9Plus, AddedComplexity = 1 in {
+  def : BitOp3ExtractLanesFixedPat<and, V_AND_B32_e64, DivergentBinFrag<or>, V_AND_OR_B32_e64>;
+  def : BitOp3ExtractLanesFixedPat<or,  V_OR_B32_e64,  DivergentBinFrag<or>, V_OR3_B32_e64>;
+}
+
+let SubtargetPredicate = isGFX10Plus, AddedComplexity = 1 in {
+  def : BitOp3ExtractLanesFixedPat<xor, V_XOR_B32_e64, DivergentBinFrag<xor>, V_XOR3_B32_e64>;
+}
 
 class DivFmasPat<ValueType vt, Instruction inst, Register CondReg> : GCNPat<
   (AMDGPUdiv_fmas (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),

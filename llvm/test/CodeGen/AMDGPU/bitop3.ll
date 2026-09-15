@@ -932,6 +932,244 @@ define amdgpu_ps float @test_and_or_xor_v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i
   %ret_cast = bitcast <2 x i16> %or2 to float
   ret float %ret_cast
 }
+
+; v2i32 - i32 folding
+; outer(extractelt(inner(a,b),0), extractelt(inner(a,b),1)) folds into an
+; inner op plus one v_bitop3_b32
+define amdgpu_ps float @and_lanes_and(<2 x i32> %a, <2 x i32> %b) {
+; GFX950-LABEL: and_lanes_and:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_and_b32_e32 v1, v1, v3
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x80
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: and_lanes_and:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_and_b32_e32 v1, v1, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x80
+; GFX1250-NEXT:    ; return to shader part epilog
+  %o = and <2 x i32> %a, %b
+  %lo = extractelement <2 x i32> %o, i32 0
+  %hi = extractelement <2 x i32> %o, i32 1
+  %r = and i32 %lo, %hi
+  %bc = bitcast i32 %r to float
+  ret float %bc
+}
+
+define amdgpu_ps float @and_lanes_xor(<2 x i32> %a, <2 x i32> %b) {
+; GFX950-LABEL: and_lanes_xor:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_and_b32_e32 v1, v1, v3
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x6c
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: and_lanes_xor:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_and_b32_e32 v1, v1, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x6c
+; GFX1250-NEXT:    ; return to shader part epilog
+  %o = and <2 x i32> %a, %b
+  %lo = extractelement <2 x i32> %o, i32 0
+  %hi = extractelement <2 x i32> %o, i32 1
+  %r = xor i32 %lo, %hi
+  %bc = bitcast i32 %r to float
+  ret float %bc
+}
+
+define amdgpu_ps float @or_lanes_and(<2 x i32> %a, <2 x i32> %b) {
+; GFX950-LABEL: or_lanes_and:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0xc8
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: or_lanes_and:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0xc8
+; GFX1250-NEXT:    ; return to shader part epilog
+  %o = or <2 x i32> %a, %b
+  %lo = extractelement <2 x i32> %o, i32 0
+  %hi = extractelement <2 x i32> %o, i32 1
+  %r = and i32 %lo, %hi
+  %bc = bitcast i32 %r to float
+  ret float %bc
+}
+
+define amdgpu_ps float @or_lanes_xor(<2 x i32> %a, <2 x i32> %b) {
+; GFX950-LABEL: or_lanes_xor:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x36
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: or_lanes_xor:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x36
+; GFX1250-NEXT:    ; return to shader part epilog
+  %o = or <2 x i32> %a, %b
+  %lo = extractelement <2 x i32> %o, i32 0
+  %hi = extractelement <2 x i32> %o, i32 1
+  %r = xor i32 %lo, %hi
+  %bc = bitcast i32 %r to float
+  ret float %bc
+}
+
+define amdgpu_ps float @xor_lanes_and(<2 x i32> %a, <2 x i32> %b) {
+; GFX950-LABEL: xor_lanes_and:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x48
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: xor_lanes_and:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x48
+; GFX1250-NEXT:    ; return to shader part epilog
+  %o = xor <2 x i32> %a, %b
+  %lo = extractelement <2 x i32> %o, i32 0
+  %hi = extractelement <2 x i32> %o, i32 1
+  %r = and i32 %lo, %hi
+  %bc = bitcast i32 %r to float
+  ret float %bc
+}
+
+define amdgpu_ps float @xor_lanes_or(<2 x i32> %a, <2 x i32> %b) {
+; GFX950-LABEL: xor_lanes_or:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0xde
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: xor_lanes_or:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0xde
+; GFX1250-NEXT:    ; return to shader part epilog
+  %o = xor <2 x i32> %a, %b
+  %lo = extractelement <2 x i32> %o, i32 0
+  %hi = extractelement <2 x i32> %o, i32 1
+  %r = or i32 %lo, %hi
+  %bc = bitcast i32 %r to float
+  ret float %bc
+}
+
+; v2i32 - i32 folding - test AddedComplexity still wins over the general bitop3
+define amdgpu_ps float @and_lanes_or(<2 x i32> %a, <2 x i32> %b) {
+; GFX950-LABEL: and_lanes_or:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_and_b32_e32 v1, v1, v3
+; GFX950-NEXT:    v_and_or_b32 v0, v0, v2, v1
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: and_lanes_or:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_and_b32_e32 v1, v1, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_and_or_b32 v0, v0, v2, v1
+; GFX1250-NEXT:    ; return to shader part epilog
+  %o = and <2 x i32> %a, %b
+  %lo = extractelement <2 x i32> %o, i32 0
+  %hi = extractelement <2 x i32> %o, i32 1
+  %r = or i32 %lo, %hi
+  %bc = bitcast i32 %r to float
+  ret float %bc
+}
+
+define amdgpu_ps float @or_lanes_or(<2 x i32> %a, <2 x i32> %b) {
+; GFX950-LABEL: or_lanes_or:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX950-NEXT:    v_or3_b32 v0, v0, v2, v1
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: or_lanes_or:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_or3_b32 v0, v0, v2, v1
+; GFX1250-NEXT:    ; return to shader part epilog
+  %o = or <2 x i32> %a, %b
+  %lo = extractelement <2 x i32> %o, i32 0
+  %hi = extractelement <2 x i32> %o, i32 1
+  %r = or i32 %lo, %hi
+  %bc = bitcast i32 %r to float
+  ret float %bc
+}
+
+; xor3 is only for GFX10+
+define amdgpu_ps float @xor_lanes_xor(<2 x i32> %a, <2 x i32> %b) {
+; GFX950-SDAG-LABEL: xor_lanes_xor:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GFX950-SDAG-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x96
+; GFX950-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX950-GISEL-LABEL: xor_lanes_xor:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GFX950-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GFX950-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: xor_lanes_xor:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_xor3_b32 v0, v0, v2, v1
+; GFX1250-NEXT:    ; return to shader part epilog
+  %o = xor <2 x i32> %a, %b
+  %lo = extractelement <2 x i32> %o, i32 0
+  %hi = extractelement <2 x i32> %o, i32 1
+  %r = xor i32 %lo, %hi
+  %bc = bitcast i32 %r to float
+  ret float %bc
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN: {{.*}}
 ; GFX1250-FAKE16: {{.*}}
