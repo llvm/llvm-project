@@ -210,18 +210,11 @@ struct ByteArrayBuilder {
                          uint64_t &AllocByteOffset, uint8_t &AllocMask);
 };
 
-/// The type of CFI jumptable needed for a function.
-enum CfiFunctionLinkage {
-  CFL_Definition = 0,
-  CFL_Declaration = 1,
-  CFL_WeakDeclaration = 2
-};
-
 LLVM_ABI bool isJumpTableCanonical(Function *F);
 
 /// Returns whether a global or its associated global has attached type
 /// metadata.
-LLVM_ABI bool hasTypeMetadata(const GlobalObject *GO);
+LLVM_ABI bool hasTypeMetadata(const GlobalObject &GO);
 
 /// Finds all functions and aliases in \p M that may need CFI jump table
 /// entries.

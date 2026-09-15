@@ -337,7 +337,7 @@ void splitAndWriteThinLTOBitcode(
   // comdat in MergedM to keep the comdat together.
   DenseSet<const Comdat *> MergedMComdats;
   for (GlobalVariable &GV : M.globals())
-    if (!GV.isDeclaration() && lowertypetests::hasTypeMetadata(&GV)) {
+    if (!GV.isDeclaration() && lowertypetests::hasTypeMetadata(GV)) {
       if (const auto *C = GV.getComdat())
         MergedMComdats.insert(C);
       forEachVirtualFunction(GV.getInitializer(), [&](Function *F) {
@@ -369,7 +369,7 @@ void splitAndWriteThinLTOBitcode(
           return EligibleVirtualFns.count(F);
         if (auto *GVar =
                 dyn_cast_or_null<GlobalVariable>(GV->getAliaseeObject()))
-          return lowertypetests::hasTypeMetadata(GVar);
+          return lowertypetests::hasTypeMetadata(*GVar);
         return false;
       }));
   StripDebugInfo(*MergedM);
@@ -395,7 +395,7 @@ void splitAndWriteThinLTOBitcode(
   // MergedM, and aliases pointing to such globals from the thin LTO module.
   filterModule(&M, [&](const GlobalValue *GV) {
     if (auto *GVar = dyn_cast_or_null<GlobalVariable>(GV->getAliaseeObject()))
-      if (lowertypetests::hasTypeMetadata(GVar))
+      if (lowertypetests::hasTypeMetadata(*GVar))
         return false;
     if (const auto *C = GV->getComdat())
       if (MergedMComdats.count(C))
