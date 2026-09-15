@@ -84,7 +84,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::LOAD:           R = ScalarizeVecRes_LOAD(cast<LoadSDNode>(N));break;
   case ISD::INTRINSIC_WO_CHAIN:
-    R = ScalarizeVecRes_INTRINSIC_WO_CHAIN(N); break;
+    R = ScalarizeVecRes_INTRINSIC_WO_CHAIN(N);
+    break;
   case ISD::SCALAR_TO_VECTOR:  R = ScalarizeVecRes_SCALAR_TO_VECTOR(N); break;
   case ISD::VECTOR_DEINTERLEAVE:
   case ISD::VECTOR_INTERLEAVE:
