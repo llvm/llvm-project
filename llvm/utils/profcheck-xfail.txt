@@ -6,7 +6,9 @@ CodeGen/WinEH/wineh-setjmp.ll
 CodeGen/WinEH/wineh-statenumbering-cleanups.ll
 CodeGen/WinEH/wineh-statenumbering.ll
 DebugInfo/Generic/block-asan.ll
+Transforms/AggressiveInstCombine/memset.ll
 Transforms/AtomicExpand/ARM/atomic-expansion-v7.ll
+Transforms/AtomicExpand/ARM/thread-model-single.ll
 Transforms/CrossDSOCFI/basic.ll
 Transforms/CrossDSOCFI/cfi_functions.ll
 Transforms/CrossDSOCFI/thumb.ll
@@ -98,6 +100,7 @@ Transforms/OpenMP/spmdization_remarks.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-exp.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-fp-math.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-log.ll
+Transforms/PreISelIntrinsicLowering/AArch64/expand-multi-result.ll
 Transforms/StackProtector/cross-dso-cfi-stack-chk-fail.ll
 Transforms/TailCallElim/2010-06-26-MultipleReturnValues.ll
 Transforms/TailCallElim/accum_recursion.ll
