@@ -4158,9 +4158,11 @@ CountAttributedType::CountAttributedType(
   CountAttributedTypeBits.NumCoupledDecls = CoupledDecls.size();
   CountAttributedTypeBits.CountInBytes = CountInBytes;
   CountAttributedTypeBits.OrNull = OrNull;
-  auto *DeclSlot = getTrailingObjects();
-  llvm::copy(CoupledDecls, DeclSlot);
-  Decls = llvm::ArrayRef(DeclSlot, CoupledDecls.size());
+  // `CoupledDecls` is allocated in the ASTContext by the caller, so it can be
+  // retained by reference. This lets a type created by a late-parsed attribute
+  // start out with no decls and gain them later via `setCountExpr`, which a
+  // trailing-object array could not accommodate.
+  Decls = CoupledDecls;
 }
 
 StringRef CountAttributedType::getAttributeName(bool WithMacroPrefix) const {
