@@ -1053,7 +1053,9 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.setAllConflict();
     if (DemandedVal) {
       computeKnownBitsImpl(InVal, Known2, APInt(1, 1), Depth + 1);
-      Known = Known.intersectWith(Known2.zextOrTrunc(BitWidth));
+      // A wider value is implicitly truncated. A narrower one is any-extended,
+      // so its upper bits are unknown.
+      Known = Known.intersectWith(Known2.anyextOrTrunc(BitWidth));
     }
     if (!!DemandedVecElts) {
       computeKnownBitsImpl(InVec, Known2, DemandedVecElts, Depth + 1);
@@ -2048,6 +2050,11 @@ void GISelValueTracking::computeKnownFPClass(Register R,
 
     LLT VecTy = MRI.getType(Vec);
 
+    // A result of a different width than the element does not carry the
+    // lane's class.
+    if (VecTy.getScalarSizeInBits() != DstTy.getScalarSizeInBits())
+      break;
+
     if (VecTy.isFixedVector()) {
       unsigned NumElts = VecTy.getNumElements();
       APInt DemandedVecElts = APInt::getAllOnes(NumElts);
@@ -2080,6 +2087,12 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       DemandedVecElts.clearBit(CIdx->getZExtValue());
       NeedsElt = DemandedElts[CIdx->getZExtValue()];
     }
+
+    // An inserted value of a different width than the element does not carry
+    // the lane's class.
+    if (NeedsElt &&
+        MRI.getType(Elt).getScalarSizeInBits() != DstTy.getScalarSizeInBits())
+      break;
 
     // Do we demand the inserted element?
     if (NeedsElt) {

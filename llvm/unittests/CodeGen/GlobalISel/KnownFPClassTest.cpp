@@ -1897,3 +1897,60 @@ TEST_F(AArch64GISelMITest, TestFPClassFMASelfSquare) {
   EXPECT_EQ(fcNan | fcPosInf | fcPosNormal, Known.getKnownFPClasses());
   EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
+
+TEST_F(AArch64GISelMITest, TestFPClassExtractVectorEltWiderResult) {
+  StringRef MIRString = R"(
+    %c0:_(s16) = G_FCONSTANT half 0xH0000
+    %c1:_(s16) = G_FCONSTANT half 0xH0000
+    %vector:_(<2 x s16>) = G_BUILD_VECTOR %c0, %c1
+    %idx:_(s64) = G_CONSTANT i64 0
+    %elt:_(s32) = G_EXTRACT_VECTOR_ELT %vector, %idx
+    %copy_elt:_(s32) = COPY %elt
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+
+  // The result is wider than the element, so it does not carry the lane's
+  // class.
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+
+  EXPECT_EQ(fcAllFlags, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
+}
+
+TEST_F(AArch64GISelMITest, TestFPClassInsertVectorEltNarrowerValue) {
+  StringRef MIRString = R"(
+    %c0:_(s32) = G_FCONSTANT float 0.0
+    %c1:_(s32) = G_FCONSTANT float 0.0
+    %vector:_(<2 x s32>) = G_BUILD_VECTOR %c0, %c1
+    %val:_(s16) = G_FCONSTANT half 0xH0000
+    %idx:_(s64) = G_CONSTANT i64 0
+    %ins:_(<2 x s32>) = G_INSERT_VECTOR_ELT %vector, %val, %idx
+    %copy_ins:_(<2 x s32>) = COPY %ins
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+
+  // The inserted value is narrower than the element, so the demanded lane
+  // does not carry its class.
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+
+  EXPECT_EQ(fcAllFlags, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
+}
