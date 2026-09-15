@@ -9,6 +9,14 @@
 // RUN: %clang --target=aarch64 -c %s -### -msign-return-address=all                              2>&1 | \
 // RUN: FileCheck %s --check-prefix=RA-ALL      --check-prefix=KEY-A --check-prefix=BTE-OFF --check-prefix=GCS-OFF --check-prefix=WARN
 
+// This spelling cannot express a key, so it has to pick the one the target
+// supports. AArch64 Windows only supports B-key.
+// RUN: %clang --target=aarch64-windows-msvc -c %s -### -msign-return-address=non-leaf            2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-B --check-prefix=BTE-OFF --check-prefix=GCS-OFF --check-prefix=WARN
+
+// RUN: %clang --target=aarch64-windows-msvc -c %s -### -msign-return-address=all                 2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-ALL      --check-prefix=KEY-B --check-prefix=BTE-OFF --check-prefix=GCS-OFF --check-prefix=WARN
+
 // -mbranch-protection with standard
 // RUN: %clang --target=aarch64 -c %s -### -mbranch-protection=standard                                2>&1 | \
 // RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-A --check-prefix=BTE-ON --check-prefix=GCS-ON --check-prefix=WARN

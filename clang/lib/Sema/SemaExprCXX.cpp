@@ -2319,7 +2319,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
       if (!ConvertedSize.isInvalid() && (*ArraySize)->getType()->isRecordType())
         // Diagnose the compatibility of this conversion.
-        Diag(StartLoc, diag::warn_cxx98_compat_array_size_conversion)
+        Diag(StartLoc, diag::compat_cxx11_array_size_conversion)
           << (*ArraySize)->getType() << 0 << "'size_t'";
     } else {
       class SizeConvertDiagnoser : public ICEConvertDiagnoser {
@@ -2368,11 +2368,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
         SemaDiagnosticBuilder diagnoseConversion(Sema &S, SourceLocation Loc,
                                                  QualType T,
                                                  QualType ConvTy) override {
-          return S.Diag(Loc,
-                        S.getLangOpts().CPlusPlus11
-                          ? diag::warn_cxx98_compat_array_size_conversion
-                          : diag::ext_array_size_conversion)
-                   << T << ConvTy->isEnumeralType() << ConvTy;
+          return S.DiagCompat(Loc, diag_compat::array_size_conversion)
+                 << T << ConvTy->isEnumeralType() << ConvTy;
         }
       } SizeDiagnoser(*ArraySize);
 
@@ -4289,10 +4286,16 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
         }
       }
 
-      CheckVirtualDtorCall(PointeeRD->getDestructor(), StartLoc,
-                           /*IsDelete=*/true, /*CallCanBeVirtual=*/true,
-                           /*WarnOnNonAbstractTypes=*/!ArrayForm,
-                           SourceLocation());
+      // C++20 [expr.delete]p3: deleting through a static type whose
+      // destructor is not virtual is only undefined behavior when the
+      // selected deallocation function is not a destroying operator delete.
+      // A destroying operator delete takes over destruction of the object,
+      // so the delete expression never calls the destructor itself.
+      if (!OperatorDelete || !OperatorDelete->isDestroyingOperatorDelete())
+        CheckVirtualDtorCall(PointeeRD->getDestructor(), StartLoc,
+                             /*IsDelete=*/true, /*CallCanBeVirtual=*/true,
+                             /*WarnOnNonAbstractTypes=*/!ArrayForm,
+                             SourceLocation());
     }
 
     if (!OperatorDelete) {

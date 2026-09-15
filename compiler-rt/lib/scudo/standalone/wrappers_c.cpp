@@ -346,6 +346,9 @@ INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, int value) {
     case M_TSDS_COUNT_MAX:
       option = scudo::Option::MaxTSDsCount;
       break;
+    case M_CACHE_RESIDENT_BYTES_MAX:
+      option = scudo::Option::MaxCacheResidentBytes;
+      break;
     default:
       return 0;
     }

@@ -15,9 +15,10 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-queue::queue(const device &syclDevice, const async_handler &asyncHandler,
-             const property_list &propList) {
-  impl = detail::QueueImpl::create(*detail::getSyclObjImpl(syclDevice),
+queue::queue(const context &syclContext, const device &syclDevice,
+             const async_handler &asyncHandler, const property_list &propList) {
+  impl = detail::QueueImpl::create(detail::getSyclObjImpl(syclContext),
+                                   *detail::getSyclObjImpl(syclDevice),
                                    asyncHandler, propList);
 }
 
@@ -59,14 +60,18 @@ event queue::getLastEvent() {
   return detail::createSyclObjFromImpl<event>(impl->getLastEvent());
 }
 
-void queue::setKernelParameters(const std::vector<event> &Events,
-                                const detail::UnifiedRangeView &Range) {
-  return impl->setKernelParameters(detail::getSyclObjImpls(Events), Range);
+void queue::setKernelLaunchParams(const std::vector<event> &Events,
+                                  const detail::UnifiedRangeView &Range) {
+  return impl->setKernelLaunchParams(detail::getSyclObjImpls(Events), Range);
 }
 
 void queue::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,
                              void *ArgData, size_t ArgSize) {
   impl->submitKernelImpl(KernelInfo, ArgData, ArgSize);
+}
+
+event queue::submitWithHandler(const TypelessCGF &CGF) {
+  return detail::createSyclObjFromImpl<event>(impl->submitWithHandler(CGF));
 }
 
 _LIBSYCL_END_NAMESPACE_SYCL

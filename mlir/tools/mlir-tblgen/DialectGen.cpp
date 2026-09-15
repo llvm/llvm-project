@@ -31,20 +31,12 @@
 
 using namespace mlir;
 using namespace mlir::tblgen;
-using llvm::Record;
 using llvm::RecordKeeper;
 
 static llvm::cl::OptionCategory dialectGenCat("Options for -gen-dialect-*");
 static llvm::cl::opt<std::string>
     selectedDialect("dialect", llvm::cl::desc("The dialect to gen for"),
                     llvm::cl::cat(dialectGenCat), llvm::cl::CommaSeparated);
-
-/// Utility iterator used for filtering records for a specific dialect.
-namespace {
-using DialectFilterIterator =
-    llvm::filter_iterator<ArrayRef<Record *>::iterator,
-                          std::function<bool(const Record *)>>;
-} // namespace
 
 static void populateDiscardableAttributes(
     Dialect &dialect, const llvm::DagInit *discardableAttrDag,
@@ -59,18 +51,6 @@ static void populateDiscardableAttributes(
     discardableAttributes.push_back(
         {givenName.str(), arg->getAsUnquotedString()});
   }
-}
-
-/// Given a set of records for a T, filter the ones that correspond to
-/// the given dialect.
-template <typename T>
-static iterator_range<DialectFilterIterator>
-filterForDialect(ArrayRef<Record *> records, Dialect &dialect) {
-  auto filterFn = [&](const Record *record) {
-    return T(record).getDialect() == dialect;
-  };
-  return {DialectFilterIterator(records.begin(), records.end(), filterFn),
-          DialectFilterIterator(records.end(), records.end(), filterFn)};
 }
 
 std::optional<Dialect>
