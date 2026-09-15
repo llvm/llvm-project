@@ -186,8 +186,10 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
     if (StateInfo && !StateInfo->AttachEntries.empty())
       Rc = processAttachEntries(*DeviceOrErr, *StateInfo, AsyncInfo);
 
-    if (Rc == OFFLOAD_SUCCESS)
+    if (Rc == OFFLOAD_SUCCESS) {
+      printSyncInfo(Loc, DeviceId);
       Rc = AsyncInfo.synchronize();
+    }
   }
 
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
@@ -439,8 +441,10 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   Rc = target(Loc, *DeviceOrErr, HostPtr, *KernelArgs, AsyncInfo);
   { // required to show synchronization
     TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: synchronize", "", Loc);
-    if (Rc == OFFLOAD_SUCCESS)
+    if (Rc == OFFLOAD_SUCCESS) {
+      printSyncInfo(Loc, DeviceId);
       Rc = AsyncInfo.synchronize();
+    }
 
     handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
     assert(Rc == OFFLOAD_SUCCESS && "__tgt_target_kernel unexpected failure!");
