@@ -1078,6 +1078,7 @@ set(files
   functional
   future
   initializer_list
+  inplace_vector
   iomanip
   ios
   iosfwd
