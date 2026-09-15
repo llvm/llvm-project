@@ -305,4 +305,33 @@ InstructionCost getBoolReduxBitcastCmpCost(const TargetTransformInfo &TTI,
                                 TTI.getOperandInfo(CmpRHS), CmpI);
 }
 
+InstructionCost getBoolBitmaskCost(const TargetTransformInfo &TTI,
+                                   bool NeedMask, Type *NarrowScalarTy,
+                                   Type *WideTy, unsigned VF, const Value *Root,
+                                   const TTI::TargetCostKind CostKind) {
+  Type *NarrowVecTy = getWidenedType(NarrowScalarTy, VF);
+  Type *CmpTy = CmpInst::makeCmpResultType(NarrowVecTy);
+  auto *MaskTy = IntegerType::get(WideTy->getContext(), VF);
+  // The result cast inherits the uses of the reduction root.
+  TTI::CastContextHint CCH = getBoolReduxResultCCH(Root);
+  const auto *CxtI = cast<Instruction>(Root);
+  InstructionCost Cost = 0;
+  if (NeedMask)
+    Cost += TTI.getArithmeticInstrCost(
+        Instruction::And, NarrowVecTy, CostKind,
+        {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CxtI);
+  if (!NarrowScalarTy->isIntegerTy(1))
+    Cost += TTI.getCmpSelInstrCost(
+        Instruction::ICmp, NarrowVecTy, CmpTy, CmpInst::ICMP_NE, CostKind,
+        {TTI::OK_AnyValue, TTI::OP_None},
+        {TTI::OK_UniformConstantValue, TTI::OP_None});
+  Cost +=
+      TTI.getCastInstrCost(Instruction::BitCast, MaskTy, CmpTy, CCH, CostKind);
+  if (MaskTy != WideTy)
+    Cost +=
+        TTI.getCastInstrCost(Instruction::ZExt, WideTy, MaskTy, CCH, CostKind);
+  return Cost;
+}
+
 } // namespace llvm::slpvectorizer

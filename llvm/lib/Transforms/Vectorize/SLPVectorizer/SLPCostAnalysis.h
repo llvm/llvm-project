@@ -91,6 +91,16 @@ getBoolReduxBitcastCmpCost(const TargetTransformInfo &TTI, RecurKind RdxKind,
                            ArrayRef<Instruction *> ChainInsts,
                            TargetTransformInfo::TargetCostKind CostKind);
 
+/// Returns the cost of the boolean bitmask reduction of a vector of boolean
+/// leaves of type \p NarrowScalarTy, emitted as [and] + zero test + bitcast
+/// [+ zext] to \p WideTy. \p Root is the reduction root, used as the context
+/// of the emitted instructions.
+InstructionCost
+getBoolBitmaskCost(const TargetTransformInfo &TTI, bool NeedMask,
+                   Type *NarrowScalarTy, Type *WideTy, unsigned VF,
+                   const Value *Root,
+                   TargetTransformInfo::TargetCostKind CostKind);
+
 /// This is similar to TargetTransformInfo::getScalarizationOverhead, but if
 /// ScalarTy is a FixedVectorType, a vector will be inserted or extracted
 /// instead of a scalar.
