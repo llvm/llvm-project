@@ -260,7 +260,7 @@ void Scheduler::notifySetUse(const Use &U, Value *NewSrc) {
   switch (Dir) {
   case SchedDirection::BottomUp: {
     // Check if OldSrc is now ready and add it to the ready list.
-    if (OldSrcN && OldSrcN->ready() && OldSrcN && !OldSrcN->scheduled() &&
+    if (OldSrcN && OldSrcN->ready() && !OldSrcN->scheduled() &&
         !ReadyList.contains(OldSrcN))
       ReadyList.insert(OldSrcN);
     // Check if NewSrcN needs to be removed from the ready list.
