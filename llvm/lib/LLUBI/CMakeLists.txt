@@ -5,7 +5,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_llvm_library(LLVMUBAwareInterpreter
+add_llvm_component_library(LLVMUBAwareInterpreter
   STATIC
   Context.cpp
   ExecutorBase.cpp
