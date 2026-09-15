@@ -105,7 +105,7 @@ struct ARMOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
            "Unsupported size");
 
     LLT p0 = LLT::pointer(0, 32);
-    LLT s32 = LLT::scalar(32);
+    LLT s32 = LLT::integer(32);
     auto SPReg = MIRBuilder.buildCopy(p0, Register(ARM::SP));
 
     auto OffsetReg = MIRBuilder.buildConstant(s32, Offset);
@@ -311,7 +311,7 @@ struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
       // We cannot create a truncating copy, nor a trunc of a physical register.
       // Therefore, we need to copy the content of the physical register into a
       // virtual one and then truncate that.
-      auto PhysRegToVReg = MIRBuilder.buildCopy(LLT::scalar(LocSize), PhysReg);
+      auto PhysRegToVReg = MIRBuilder.buildCopy(LLT::integer(LocSize), PhysReg);
       MIRBuilder.buildTrunc(ValVReg, PhysRegToVReg);
     }
   }

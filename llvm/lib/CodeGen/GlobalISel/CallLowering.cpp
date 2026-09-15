@@ -840,15 +840,17 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
 
     const MVT ValVT = VA.getValVT();
     const MVT LocVT = VA.getLocVT();
+    const EVT OrigVT = TLI->getValueType(DL, Args[i].Ty);
 
     const LLT LocTy = getLLTForMVT(LocVT);
     const LLT ValTy = getLLTForMVT(ValVT);
-    const LLT NewLLT = Handler.isIncomingArgumentHandler() ? LocTy : ValTy;
-    const EVT OrigVT = TLI->getValueType(DL, Args[i].Ty);
-    // Use the EVT here to strip pointerness.
-    const LLT OrigTy = getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
     const LLT PointerTy = LLT::pointer(
         AllocaAddressSpace, DL.getPointerSizeInBits(AllocaAddressSpace));
+
+    LLT ArgLLT = Handler.isIncomingArgumentHandler() ? LocTy : ValTy;
+    // Use the EVT here to strip pointerness.
+    LLT OrigLLT = getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
+    auto [NewLLT, OrigTy] = TLI->adjustArgumentType(MF, ArgLLT, OrigLLT);
 
     // Expected to be multiple regs for a single incoming arg.
     // There should be Regs.size() ArgLocs per argument.

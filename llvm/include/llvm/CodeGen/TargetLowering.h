@@ -5269,6 +5269,14 @@ public:
   /// Target-specific cleanup for formal ByVal parameters.
   virtual void HandleByVal(CCState *, unsigned &, Align) const {}
 
+  /// This hook provides a mean to change argument LLTs in specific cases.
+  /// It is used in some targets, where float arguments can be passed in integer
+  /// registers. Using scalar types can be more appropriate in such cases.
+  virtual std::pair<LLT, LLT>
+  adjustArgumentType(MachineFunction &MF, LLT ArgType, LLT OrigType) const {
+    return std::make_pair(ArgType, OrigType);
+  }
+
   /// This hook should be implemented to check whether the return values
   /// described by the Outs array can fit into the return registers.  If false
   /// is returned, an sret-demotion is performed.

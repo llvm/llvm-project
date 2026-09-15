@@ -566,9 +566,9 @@ body:             |
 
     %1(s32) = COPY $r1
 
-    %2(s32) = G_ADD %0, %1
+    %2(i32) = G_ADD %0, %1
 
-    $r0 = COPY %2(s32)
+    $r0 = COPY %2(i32)
 
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -593,9 +593,9 @@ body:             |
     %0(s32) = COPY $r0
 
     %1(s32) = G_CONSTANT i32 255
-    %2(s32) = G_ADD %0, %1
+    %2(i32) = G_ADD %0, %1
 
-    $r0 = COPY %2(s32)
+    $r0 = COPY %2(i32)
 
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -622,9 +622,9 @@ body:             |
 
     %1(s32) = G_CONSTANT i32 65535
 
-    %2(s32) = G_ADD %0, %1
+    %2(i32) = G_ADD %0, %1
 
-    $r0 = COPY %2(s32)
+    $r0 = COPY %2(i32)
 
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -651,9 +651,9 @@ body:             |
 
     %1(s32) = COPY $r1
 
-    %2(s32) = G_SUB %0, %1
+    %2(i32) = G_SUB %0, %1
 
-    $r0 = COPY %2(s32)
+    $r0 = COPY %2(i32)
 
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -678,9 +678,9 @@ body:             |
     %0(s32) = COPY $r0
 
     %1(s32) = G_CONSTANT i32 17
-    %2(s32) = G_SUB %0, %1
+    %2(i32) = G_SUB %0, %1
 
-    $r0 = COPY %2(s32)
+    $r0 = COPY %2(i32)
 
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -705,9 +705,9 @@ body:             |
     %0(s32) = COPY $r0
 
     %1(s32) = G_CONSTANT i32 17
-    %2(s32) = G_SUB %1, %0
+    %2(i32) = G_SUB %1, %0
 
-    $r0 = COPY %2(s32)
+    $r0 = COPY %2(i32)
 
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -734,9 +734,9 @@ body:             |
 
     %1(s32) = COPY $r1
 
-    %2(s32) = G_MUL %0, %1
+    %2(i32) = G_MUL %0, %1
 
-    $r0 = COPY %2(s32)
+    $r0 = COPY %2(i32)
 
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -763,9 +763,9 @@ body:             |
 
     %1(s32) = COPY $r1
 
-    %2(s32) = G_MUL %0, %1
+    %2(i32) = G_MUL %0, %1
 
-    $r0 = COPY %2(s32)
+    $r0 = COPY %2(i32)
 
     BX_RET 14, $noreg, implicit $r0
 ...

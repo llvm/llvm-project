@@ -45,11 +45,11 @@ body:             |
     %6(s32) = G_CONSTANT i32 4294901760 ; 0xFFFF0000
     %7(s32) = G_AND %5, %6
 
-    %8(s32) = G_OR %3, %7
+    %8(i32) = G_OR %3, %7
     ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 7, 14 /* CC::al */, $noreg
     ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHBT [[VREGX]], [[VREGY]], 7, 14 /* CC::al */, $noreg
 
-    $r0 = COPY %8(s32)
+    $r0 = COPY %8(i32)
     ; CHECK: $r0 = COPY [[VREGR]]
 
     BX_RET 14, $noreg, implicit $r0
@@ -91,11 +91,11 @@ body:             |
     %6(s32) = G_CONSTANT i32 4294901760 ; 0xFFFF0000
     %7(s32) = G_AND %5, %6
 
-    %8(s32) = G_OR %7, %3
+    %8(i32) = G_OR %7, %3
     ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 7, 14 /* CC::al */, $noreg
     ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHBT [[VREGX]], [[VREGY]], 7, 14 /* CC::al */, $noreg
 
-    $r0 = COPY %8(s32)
+    $r0 = COPY %8(i32)
     ; CHECK: $r0 = COPY [[VREGR]]
 
     BX_RET 14, $noreg, implicit $r0
@@ -133,11 +133,11 @@ body:             |
     %4(s32) = G_CONSTANT i32 17
     %5(s32) = G_SHL %1, %4
 
-    %6(s32) = G_OR %3, %5
+    %6(i32) = G_OR %3, %5
     ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 17, 14 /* CC::al */, $noreg
     ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHBT [[VREGX]], [[VREGY]], 17, 14 /* CC::al */, $noreg
 
-    $r0 = COPY %6(s32)
+    $r0 = COPY %6(i32)
     ; CHECK: $r0 = COPY [[VREGR]]
 
     BX_RET 14, $noreg, implicit $r0
@@ -175,11 +175,11 @@ body:             |
     %4(s32) = G_CONSTANT i32 4294901760 ; 0xFFFF0000
     %5(s32) = G_AND %1, %4
 
-    %6(s32) = G_OR %3, %5
+    %6(i32) = G_OR %3, %5
     ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHBT [[VREGX]], [[VREGY]], 0, 14 /* CC::al */, $noreg
     ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHBT [[VREGX]], [[VREGY]], 0, 14 /* CC::al */, $noreg
 
-    $r0 = COPY %6(s32)
+    $r0 = COPY %6(i32)
     ; CHECK: $r0 = COPY [[VREGR]]
 
     BX_RET 14, $noreg, implicit $r0
@@ -217,11 +217,11 @@ body:             |
     %4(s32) = G_CONSTANT i32 16
     %5(s32) = G_LSHR %1, %4
 
-    %6(s32) = G_OR %3, %5
+    %6(i32) = G_OR %3, %5
     ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHTB [[VREGX]], [[VREGY]], 16, 14 /* CC::al */, $noreg
     ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHTB [[VREGX]], [[VREGY]], 16, 14 /* CC::al */, $noreg
 
-    $r0 = COPY %6(s32)
+    $r0 = COPY %6(i32)
     ; CHECK: $r0 = COPY [[VREGR]]
 
     BX_RET 14, $noreg, implicit $r0
@@ -263,11 +263,11 @@ body:             |
     %6(s32) = G_CONSTANT i32 65535 ; 0xFFFF
     %7(s32) = G_AND %5, %6
 
-    %8(s32) = G_OR %3, %7
+    %8(i32) = G_OR %3, %7
     ; ARM: [[VREGR:%[0-9]+]]:gprnopc = PKHTB [[VREGX]], [[VREGY]], 7, 14 /* CC::al */, $noreg
     ; THUMB: [[VREGR:%[0-9]+]]:rgpr = t2PKHTB [[VREGX]], [[VREGY]], 7, 14 /* CC::al */, $noreg
 
-    $r0 = COPY %8(s32)
+    $r0 = COPY %8(i32)
     ; CHECK: $r0 = COPY [[VREGR]]
 
     BX_RET 14, $noreg, implicit $r0

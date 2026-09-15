@@ -699,7 +699,7 @@ body:             |
     ; CHECK-DAG: [[X:%[0-9]+]]:_(s32) = COPY $r0
     %0(s32) = COPY $r0
     ; HARD: [[R:%[0-9]+]]:_(s32) = G_FNEG [[X]]
-    ; SOFT: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
+    ; SOFT: [[ZERO:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
     ; SOFT: [[R:%[0-9]+]]:_(s32) = G_XOR [[X]], [[ZERO]]
     %1(s32) = G_FNEG %0
     ; CHECK: $r0 = COPY [[R]]
@@ -733,8 +733,8 @@ body:             |
     %2(s64) = G_MERGE_VALUES %0(s32), %1(s32)
     ; HARD: [[R:%[0-9]+]]:_(s64) = G_FNEG [[X]]
     ; HARD: G_UNMERGE_VALUES [[R]](s64)
-    ; SOFT: [[POSITIVE_ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; SOFT: [[NEGATIVE_ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
+    ; SOFT: [[POSITIVE_ZERO:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; SOFT: [[NEGATIVE_ZERO:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
     ; SOFT: [[LOWR:%[0-9]+]]:_(s32) = G_XOR [[X0]], [[POSITIVE_ZERO]]
     ; SOFT: [[HIGHR:%[0-9]+]]:_(s32) = G_XOR [[X1]], [[NEGATIVE_ZERO]]
     ; SOFT: $r0 = COPY [[LOWR]]

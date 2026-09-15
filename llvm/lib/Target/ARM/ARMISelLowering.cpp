@@ -2760,6 +2760,20 @@ void ARMTargetLowering::HandleByVal(CCState *State, unsigned &Size,
   Size = std::max<int>(Size - Excess, 0);
 }
 
+/// If floating-point values are passed as integers, use scalar types in
+/// this case.
+std::pair<LLT, LLT> ARMTargetLowering::adjustArgumentType(MachineFunction &MF,
+                                                          LLT ArgType,
+                                                          LLT OrigType) const {
+  if (OrigType.isFloat() || ArgType.isFloat()) {
+    if (OrigType.isInteger() || ArgType.isInteger()) {
+      return std::make_pair(LLT::scalar(ArgType.getSizeInBits()),
+                            LLT::scalar(OrigType.getSizeInBits()));
+    }
+  }
+  return std::make_pair(ArgType, OrigType);
+}
+
 /// IsEligibleForTailCallOptimization - Check whether the call is eligible
 /// for tail call optimization. Targets which want to do tail call
 /// optimization should implement this function. Note that this function also

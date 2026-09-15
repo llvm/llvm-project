@@ -679,6 +679,9 @@ class VectorType;
     /// HandleByVal - Target-specific cleanup for ByVal support.
     void HandleByVal(CCState *, unsigned &, Align) const override;
 
+    std::pair<LLT, LLT> adjustArgumentType(MachineFunction &MF, LLT ArgType,
+                                           LLT OrigType) const override;
+
     /// IsEligibleForTailCallOptimization - Check whether the call is eligible
     /// for tail call optimization. Targets which want to do tail call
     /// optimization should implement this function.

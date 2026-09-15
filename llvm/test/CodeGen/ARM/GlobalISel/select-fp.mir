@@ -68,9 +68,9 @@ body:             |
 
     %1(s32) = COPY $s1
 
-    %2(s32) = G_FADD %0, %1
+    %2(f32) = G_FADD %0, %1
 
-    $s0 = COPY %2(s32)
+    $s0 = COPY %2(f32)
 
     BX_RET 14, $noreg, implicit $s0
 ...
@@ -99,9 +99,9 @@ body:             |
 
     %1(s64) = COPY $d1
 
-    %2(s64) = G_FADD %0, %1
+    %2(f64) = G_FADD %0, %1
 
-    $d0 = COPY %2(s64)
+    $d0 = COPY %2(f64)
 
     BX_RET 14, $noreg, implicit $d0
 ...
@@ -130,9 +130,9 @@ body:             |
 
     %1(s32) = COPY $s1
 
-    %2(s32) = G_FSUB %0, %1
+    %2(f32) = G_FSUB %0, %1
 
-    $s0 = COPY %2(s32)
+    $s0 = COPY %2(f32)
 
     BX_RET 14, $noreg, implicit $s0
 ...
@@ -161,9 +161,9 @@ body:             |
 
     %1(s64) = COPY $d1
 
-    %2(s64) = G_FSUB %0, %1
+    %2(f64) = G_FSUB %0, %1
 
-    $d0 = COPY %2(s64)
+    $d0 = COPY %2(f64)
 
     BX_RET 14, $noreg, implicit $d0
 ...
@@ -192,9 +192,9 @@ body:             |
 
     %1(s32) = COPY $s1
 
-    %2(s32) = G_FMUL %0, %1
+    %2(f32) = G_FMUL %0, %1
 
-    $s0 = COPY %2(s32)
+    $s0 = COPY %2(f32)
 
     BX_RET 14, $noreg, implicit $s0
 ...
@@ -223,9 +223,9 @@ body:             |
 
     %1(s64) = COPY $d1
 
-    %2(s64) = G_FMUL %0, %1
+    %2(f64) = G_FMUL %0, %1
 
-    $d0 = COPY %2(s64)
+    $d0 = COPY %2(f64)
 
     BX_RET 14, $noreg, implicit $d0
 ...
@@ -254,9 +254,9 @@ body:             |
 
     %1(s32) = COPY $s1
 
-    %2(s32) = G_FDIV %0, %1
+    %2(f32) = G_FDIV %0, %1
 
-    $s0 = COPY %2(s32)
+    $s0 = COPY %2(f32)
 
     BX_RET 14, $noreg, implicit $s0
 ...
@@ -285,9 +285,9 @@ body:             |
 
     %1(s64) = COPY $d1
 
-    %2(s64) = G_FDIV %0, %1
+    %2(f64) = G_FDIV %0, %1
 
-    $d0 = COPY %2(s64)
+    $d0 = COPY %2(f64)
 
     BX_RET 14, $noreg, implicit $d0
 ...
@@ -312,9 +312,9 @@ body:             |
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
     %0(s32) = COPY $s0
 
-    %1(s32) = G_FNEG %0
+    %1(f32) = G_FNEG %0
 
-    $s0 = COPY %1(s32)
+    $s0 = COPY %1(f32)
 
     BX_RET 14, $noreg, implicit $s0
 ...
@@ -340,9 +340,9 @@ body:             |
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
     %0(s64) = COPY $d0
 
-    %1(s64) = G_FNEG %0
+    %1(f64) = G_FNEG %0
 
-    $d0 = COPY %1(s64)
+    $d0 = COPY %1(f64)
 
     BX_RET 14, $noreg, implicit $d0
 ...
@@ -375,9 +375,9 @@ body:             |
 
     %2(s32) = COPY $s2
 
-    %3(s32) = G_FMA %0, %1, %2
+    %3(f32) = G_FMA %0, %1, %2
 
-    $s0 = COPY %3(s32)
+    $s0 = COPY %3(f32)
 
     BX_RET 14, $noreg, implicit $s0
 ...
@@ -410,9 +410,9 @@ body:             |
 
     %2(s64) = COPY $d2
 
-    %3(s64) = G_FMA %0, %1, %2
+    %3(f64) = G_FMA %0, %1, %2
 
-    $d0 = COPY %3(s64)
+    $d0 = COPY %3(f64)
 
     BX_RET 14, $noreg, implicit $d0
 ...
@@ -435,11 +435,11 @@ body:             |
     ; CHECK-NEXT: [[VCVTDS:%[0-9]+]]:dpr = nofpexcept VCVTDS [[COPY]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $d0 = COPY [[VCVTDS]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
-    %0(s32) = COPY $s0
+    %0(f32) = COPY $s0
 
-    %1(s64) = G_FPEXT %0(s32)
+    %1(f64) = G_FPEXT %0(f32)
 
-    $d0 = COPY %1(s64)
+    $d0 = COPY %1(f64)
 
     BX_RET 14, $noreg, implicit $d0
 ...
@@ -462,11 +462,11 @@ body:             |
     ; CHECK-NEXT: [[VCVTSD:%[0-9]+]]:spr = nofpexcept VCVTSD [[COPY]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
     ; CHECK-NEXT: $s0 = COPY [[VCVTSD]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
-    %0(s64) = COPY $d0
+    %0(f64) = COPY $d0
 
-    %1(s32) = G_FPTRUNC %0(s64)
+    %1(f32) = G_FPTRUNC %0(f64)
 
-    $s0 = COPY %1(s32)
+    $s0 = COPY %1(f32)
 
     BX_RET 14, $noreg, implicit $s0
 ...
@@ -490,11 +490,11 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[VTOSIZS]]
     ; CHECK-NEXT: $r0 = COPY [[COPY1]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
+    %0(f32) = COPY $s0
 
-    %1(s32) = G_FPTOSI %0(s32)
+    %1(i32) = G_FPTOSI %0(f32)
 
-    $r0 = COPY %1(s32)
+    $r0 = COPY %1(i32)
 
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -518,11 +518,11 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[VTOSIZD]]
     ; CHECK-NEXT: $r0 = COPY [[COPY1]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
+    %0(f64) = COPY $d0
 
-    %1(s32) = G_FPTOSI %0(s64)
+    %1(i32) = G_FPTOSI %0(f64)
 
-    $r0 = COPY %1(s32)
+    $r0 = COPY %1(i32)
 
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -546,11 +546,11 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[VTOUIZS]]
     ; CHECK-NEXT: $r0 = COPY [[COPY1]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s32) = COPY $s0
+    %0(f32) = COPY $s0
 
-    %1(s32) = G_FPTOUI %0(s32)
+    %1(i32) = G_FPTOUI %0(f32)
 
-    $r0 = COPY %1(s32)
+    $r0 = COPY %1(i32)
 
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -574,11 +574,11 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY [[VTOUIZD]]
     ; CHECK-NEXT: $r0 = COPY [[COPY1]]
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
-    %0(s64) = COPY $d0
+    %0(f64) = COPY $d0
 
-    %1(s32) = G_FPTOUI %0(s64)
+    %1(i32) = G_FPTOUI %0(f64)
 
-    $r0 = COPY %1(s32)
+    $r0 = COPY %1(i32)
 
     BX_RET 14, $noreg, implicit $r0
 ...
@@ -604,9 +604,9 @@ body:             |
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
     %0(s32) = COPY $r0
 
-    %1(s32) = G_SITOFP %0(s32)
+    %1(f32) = G_SITOFP %0(s32)
 
-    $s0 = COPY %1(s32)
+    $s0 = COPY %1(f32)
 
     BX_RET 14, $noreg, implicit $s0
 ...
@@ -632,9 +632,9 @@ body:             |
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
     %0(s32) = COPY $r0
 
-    %1(s64) = G_SITOFP %0(s32)
+    %1(f64) = G_SITOFP %0(s32)
 
-    $d0 = COPY %1(s64)
+    $d0 = COPY %1(f64)
 
     BX_RET 14, $noreg, implicit $d0
 ...
@@ -660,9 +660,9 @@ body:             |
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $s0
     %0(s32) = COPY $r0
 
-    %1(s32) = G_UITOFP %0(s32)
+    %1(f32) = G_UITOFP %0(s32)
 
-    $s0 = COPY %1(s32)
+    $s0 = COPY %1(f32)
 
     BX_RET 14, $noreg, implicit $s0
 ...
@@ -688,9 +688,9 @@ body:             |
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
     %0(s32) = COPY $r0
 
-    %1(s64) = G_UITOFP %0(s32)
+    %1(f64) = G_UITOFP %0(s32)
 
-    $d0 = COPY %1(s64)
+    $d0 = COPY %1(f64)
 
     BX_RET 14, $noreg, implicit $d0
 ...
