@@ -27780,12 +27780,12 @@ static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
   SDValue Chain = ST->getChain();
   MachineMemOperand *MMO = ST->getMemOperand();
   unsigned IdxScale = WideVT.getScalarSizeInBits() / 8;
-  SDValue E2 = DAG.getExtractVectorElt(DL, MVT::i8, Cast, 2 * IdxScale);
+  SDValue E2 = DAG.getExtractVectorElt(DL, MVT::i8, Cast, IdxScale * 2);
   TypeSize Offset2 = TypeSize::getFixed(2);
   SDValue Ptr2 = DAG.getMemBasePlusOffset(ST->getBasePtr(), Offset2, DL);
   Chain = DAG.getStore(Chain, DL, E2, Ptr2, MF.getMachineMemOperand(MMO, 2, 1));
 
-  SDValue E1 = DAG.getExtractVectorElt(DL, MVT::i8, Cast, 1 * IdxScale);
+  SDValue E1 = DAG.getExtractVectorElt(DL, MVT::i8, Cast, IdxScale);
   TypeSize Offset1 = TypeSize::getFixed(1);
   SDValue Ptr1 = DAG.getMemBasePlusOffset(ST->getBasePtr(), Offset1, DL);
   Chain = DAG.getStore(Chain, DL, E1, Ptr1, MF.getMachineMemOperand(MMO, 1, 1));
