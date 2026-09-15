@@ -450,7 +450,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.EmitCallGraphSection = CodeGenOpts.CallGraphSection;
   Options.EmitCallSiteInfo = CodeGenOpts.EmitCallSiteInfo;
   Options.XRayFunctionIndex = CodeGenOpts.XRayFunctionIndex;
-  Options.LoopAlignment = CodeGenOpts.LoopAlignment;
   Options.DebugStrictDwarf = CodeGenOpts.DebugStrictDwarf;
   Options.ObjectFilenameForDebug =
       CodeGenOpts.remapDebugPathPrefix(CodeGenOpts.ObjectFilenameForDebug);
