@@ -556,9 +556,7 @@ public:
 ///    non-ignorable physical register use.
 /// 3  The register has no virtual register use whose live range would be
 ///    extended by the rematerialization.
-/// 4. The register has a single non-debug user in a different region from its
-///    defining region.
-/// 5. The register is not used by or using another register that is going to be
+/// 4. The register is not used by or using another register that is going to be
 ///    rematerialized.
 class PreRARematStage : public GCNSchedStage {
 private:
@@ -742,6 +740,13 @@ private:
   /// achieve that objective and mark those that don't achieve it in \ref
   /// TargetRegions. Returns whether there is any target region.
   bool setObjective();
+
+  /// Determines whether users of rematerialization candidate \p CandIdx are
+  /// compatible with the stage's rematerialization constraints/limitations.
+  /// Registers in \p MarkedRegs have already been deemed rematerializable by
+  /// the stage.s
+  bool candidateHasValidUsers(RegisterIdx CandIdx,
+                              const SmallSet<Register, 4> &MarkedRegs) const;
 
   /// In all regions set in \p Regions, saves pressure \p RPSave and clear it as
   /// a target if its RP target has been reached.
