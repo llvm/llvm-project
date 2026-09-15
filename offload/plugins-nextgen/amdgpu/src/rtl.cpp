@@ -3994,15 +3994,9 @@ struct AMDGPUPluginContextTy final : public PluginContextTy {
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
 
 private:
-  // HSA can classify pointers as host vs kernel-agent-owned via
-  // hsa_amd_pointer_info, but ROCm's host fine-grained pool backs both
-  // TARGET_ALLOC_HOST and TARGET_ALLOC_SHARED, so the user-requested Kind
-  // for shared allocations is not recoverable from HSA. Since the tracker
-  // has to exist for that reason, record device allocations here too and
-  // let getAllocInfo answer from the map alone.
-  // TODO: remove when TARGET_ALLOC_SHARED is served from its own pool
-  // distinct from the host pool; pool identity alone will then recover
-  // Kind, and agentOwner recovers Device.
+  // Track each allocation's Kind so we can tell HOST from SHARED — HSA
+  // backs both with the same host fine-grained pool.
+  // TODO: drop once TARGET_ALLOC_SHARED has its own backing pool.
   struct AllocInfo {
     TargetAllocTy Kind;
     GenericDeviceTy *Device;

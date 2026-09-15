@@ -174,7 +174,7 @@ def olGetMemInfo : Function {
   let details = [
     "`olGetMemInfoSize` can be used to query the storage size required for the given query.",
     "The provided pointer can point to any location inside the allocation.",
-    "The allocation must have been made in `Context`.",
+    "The allocation must belong to `Context`.",
   ];
   let params = [
     Param<"ol_context_handle_t", "Context", "handle of the context the allocation was made in", PARAM_IN>,
@@ -199,7 +199,7 @@ def olGetMemInfoSize : Function {
   let desc = "Returns the storage size of the given queue query.";
   let details = [
     "The provided pointer can point to any location inside the allocation.",
-    "The allocation must have been made in `Context`.",
+    "The allocation must belong to `Context`.",
   ];
   let params = [
     Param<"ol_context_handle_t", "Context", "handle of the context the allocation was made in", PARAM_IN>,
