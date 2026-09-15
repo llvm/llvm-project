@@ -1,0 +1,178 @@
+// RUN: cir-opt %s --split-input-file --cir-to-llvm -verify-diagnostics
+
+// Vector-of-_BitInt conversion is unsupported; propagate its failure to the
+// enclosing operation instead of constructing invalid LLVM operations.
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // expected-error @below {{failed to legalize operation 'cir.func'}}
+  cir.func private @function_result() -> !vec
+}
+
+// -----
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // The initializer requests FuncType conversion before the function lowers.
+  cir.global external @function_view = #cir.global_view<@callee> : !cir.ptr<!cir.void>
+
+  // expected-error @below {{failed to legalize operation 'cir.func'}}
+  cir.func private @callee() -> !vec
+}
+
+// -----
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @constant_result() {
+    // expected-error @below {{failed to legalize operation 'cir.const'}}
+    %0 = cir.const #cir.zero : !vec
+    cir.return
+  }
+}
+
+// -----
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @cast_result() {
+    %0 = cir.const #cir.zero : !cir.vector<4 x !cir.int<s, 7>>
+    // expected-error @below {{failed to legalize operation 'cir.cast'}}
+    %1 = cir.cast bitcast %0 : !cir.vector<4 x !cir.int<s, 7>> -> !vec
+    cir.return
+  }
+}
+
+// -----
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @asm_result() {
+    // expected-error @below {{failed to legalize operation 'cir.asm'}}
+    %0 = cir.asm(x86_att, out = [], in = [], in_out = [], {"" "=r"}) -> !vec
+    cir.return
+  }
+}
+
+// -----
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+!ptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Lower the constant before its target to exercise symbol-type failure.
+  cir.func @constant_global_view() {
+    // expected-error @below {{failed to legalize operation 'cir.const'}}
+    %0 = cir.const #cir.global_view<@target, [0 : i32]> : !ptr
+    cir.return
+  }
+
+  cir.global external @target = #cir.zero : !vec
+}
+
+// -----
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+!ptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Lower the constant before its target to exercise symbol-type failure.
+  cir.func @constant_array_view() {
+    // expected-error @below {{failed to legalize operation 'cir.const'}}
+    %0 = cir.const #cir.const_array<[#cir.global_view<@target, [0 : i32]> : !ptr]> : !cir.array<!ptr x 1>
+    cir.return
+  }
+
+  cir.global external @target = #cir.zero : !vec
+}
+
+// -----
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+!ptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Lower the constant before its target to exercise symbol-type failure.
+  cir.func @constant_record_view() {
+    // expected-error @below {{failed to legalize operation 'cir.const'}}
+    %0 = cir.const #cir.const_record<{#cir.global_view<@target, [0 : i32]> : !ptr}> : !cir.struct<{data !ptr}>
+    cir.return
+  }
+
+  cir.global external @target = #cir.zero : !vec
+}
+
+// -----
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+!ptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Propagate initializer failure before lowering the referenced global.
+  // expected-error @below {{failed to legalize operation 'cir.global'}}
+  cir.global external @global_view = #cir.global_view<@target, [0 : i32]> : !ptr
+
+  cir.global external @target = #cir.zero : !vec
+}
+
+// -----
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+!ptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Propagate initializer failure before lowering the referenced global.
+  // expected-error @below {{failed to legalize operation 'cir.global'}}
+  cir.global external @typeinfo_view = #cir.typeinfo<{#cir.global_view<@target, [0 : i32]> : !ptr}> : !cir.struct<{data !ptr}>
+
+  cir.global external @target = #cir.zero : !vec
+}
+
+// -----
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+!ptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Propagate initializer failure before lowering the referenced global.
+  // expected-error @below {{failed to legalize operation 'cir.global'}}
+  cir.global external @vtable_view = #cir.vtable<{#cir.const_array<[#cir.global_view<@target, [0 : i32]> : !ptr]> : !cir.array<!ptr x 1>}> : !cir.struct<{data !cir.array<!ptr x 1>}>
+
+  cir.global external @target = #cir.zero : !vec
+}
+
+// -----
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // The address point requests the symbol type before the global lowers.
+  cir.func @vtable_symbol() {
+    // expected-error @below {{failed to legalize operation 'cir.vtable.address_point'}}
+    %0 = cir.vtable.address_point(@target, address_point = <index = 0, offset = 0>) : !cir.vptr
+    cir.return
+  }
+
+  cir.global "private" external @target : !cir.struct<{data !cir.array<!vec x 1>}>
+}
+
+// -----
+
+!vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
+!ptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // The address point requests the symbol type before the global lowers.
+  cir.func @vtt_symbol() {
+    // expected-error @below {{failed to legalize operation 'cir.vtt.address_point'}}
+    %0 = cir.vtt.address_point @target, offset = 0 -> !cir.ptr<!ptr>
+    cir.return
+  }
+
+  cir.global "private" external @target : !cir.array<!vec x 1>
+}
