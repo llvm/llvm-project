@@ -5938,7 +5938,9 @@ TopLevelStmtDecl *TopLevelStmtDecl::Create(ASTContext &C, Stmt *Statement) {
   SourceLocation Loc = Statement ? Statement->getBeginLoc() : SourceLocation();
   DeclContext *DC = C.getTranslationUnitDecl();
 
-  return new (C, DC) TopLevelStmtDecl(DC, Loc, Statement);
+  auto *D = new (C, DC) TopLevelStmtDecl(DC, Loc, Statement);
+  D->Ordinal = C.NumTopLevelStmtDecls++;
+  return D;
 }
 
 TopLevelStmtDecl *TopLevelStmtDecl::CreateDeserialized(ASTContext &C,
