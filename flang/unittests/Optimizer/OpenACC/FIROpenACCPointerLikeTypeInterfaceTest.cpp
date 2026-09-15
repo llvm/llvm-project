@@ -123,7 +123,7 @@ TEST_F(FIROpenACCPointerLikeTypeInterfaceTest,
 }
 
 TEST_F(FIROpenACCPointerLikeTypeInterfaceTest,
-       NestedPointerTypesAreNotConvertible) {
+    NestedPointerTypesAreNotConvertible) {
   Type f32 = Float32Type::get(&context);
   Type dyn1 = fir::SequenceType::get({ShapedType::kDynamic}, f32);
   Type dyn2 =
@@ -146,10 +146,9 @@ TEST_F(FIROpenACCPointerLikeTypeInterfaceTest,
   EXPECT_TRUE(conv(fir::BoxType::get(dyn1)));
 
   // A remaining pointer after one peel holds an address, not the array.
+  // `!fir.ptr`/`!fir.heap` cannot wrap another pointer type.
   EXPECT_FALSE(conv(fir::ReferenceType::get(fir::HeapType::get(dyn1))));
   EXPECT_FALSE(conv(fir::ReferenceType::get(fir::PointerType::get(dyn1))));
-  EXPECT_FALSE(conv(fir::PointerType::get(fir::HeapType::get(dyn1))));
-  EXPECT_FALSE(conv(fir::HeapType::get(fir::PointerType::get(dyn1))));
   EXPECT_FALSE(conv(fir::ReferenceType::get(fir::ReferenceType::get(dyn1))));
   EXPECT_FALSE(conv(fir::ReferenceType::get(fir::HeapType::get(dyn2))));
   EXPECT_FALSE(conv(fir::ReferenceType::get(fir::HeapType::get(stat))));
@@ -164,8 +163,6 @@ TEST_F(FIROpenACCPointerLikeTypeInterfaceTest,
   };
   EXPECT_FALSE(asMemRef(fir::ReferenceType::get(fir::HeapType::get(dyn1))));
   EXPECT_FALSE(asMemRef(fir::ReferenceType::get(fir::PointerType::get(dyn1))));
-  EXPECT_FALSE(asMemRef(fir::PointerType::get(fir::HeapType::get(dyn1))));
-  EXPECT_FALSE(asMemRef(fir::HeapType::get(fir::PointerType::get(dyn1))));
   EXPECT_FALSE(asMemRef(fir::ReferenceType::get(fir::HeapType::get(f32))));
 }
 
