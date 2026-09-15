@@ -136,6 +136,11 @@ def relocatable : Flag<["--", "-"], "relocatable">,
     HelpText<"Link device code to create a relocatable offloading application">;
 def r : Flag<["-"], "r">, Alias<relocatable>;
 
+// ld64-style (Darwin) linker options.
+def syslibroot : Separate<["-"], "syslibroot">, Flags<[HelpHidden]>,
+  MetaVarName<"<dir>">,
+  HelpText<"Prepend <dir> to ld64's default library search paths">;
+
 // link.exe-style linker options.
 def out : Joined<["/", "-", "/?", "-?"], "out:">, Flags<[HelpHidden]>;
 def libpath : Joined<["/", "-", "/?", "-?"], "libpath:">, Flags<[HelpHidden]>;

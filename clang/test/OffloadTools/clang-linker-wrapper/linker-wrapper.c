@@ -190,6 +190,31 @@ __attribute__((visibility("protected"), used)) int x;
 
 // COFF-WHOLE-ARCHIVE: clang{{.*}} --target=nvptx64-nvidia-cuda -march=sm_70 {{[^ ]*}}.o{{$}}
 
+// A MachO host looks for `lib<name>.dylib` and for the text based stub that
+// stands in for one, not for `lib<name>.so`.
+// RUN: llvm-offload-binary -o %t.out \
+// RUN:   --image=file=%t.elf.o,kind=hip,triple=amdgpu9.0a-amd-amdhsa,arch=gfx90a
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
+// RUN: rm -rf %t.dir && mkdir -p %t.dir
+// RUN: cp %t.o %t.dir/libfoo.dylib
+// RUN: echo '--- !tapi-tbd' > %t.dir/libbar.tbd
+// RUN: clang-linker-wrapper --host-triple=x86_64-apple-macosx15.0.0 --dry-run \
+// RUN:   --linker-path=/usr/bin/ld -L%t.dir -lfoo -lbar -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MACHO-LIBRARY
+
+// MACHO-LIBRARY: clang{{.*}} --target=amdgpu9.0a-amd-amdhsa -mcpu=gfx90a {{.*}}.o
+
+// A library that lives in the SDK is reached through ld64's `-syslibroot`,
+// which is forwarded to the host linker like the other options it shares.
+// RUN: rm -rf %t.sdk && mkdir -p %t.sdk/usr/lib
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.sdk/usr/lib/libbaz.dylib
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o
+// RUN: clang-linker-wrapper --host-triple=x86_64-apple-macosx15.0.0 --dry-run \
+// RUN:   --linker-path=/usr/bin/ld -syslibroot %t.sdk -lbaz %t.o -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MACHO-SYSLIBROOT
+
+// MACHO-SYSLIBROOT: ld{{.*}} -syslibroot {{.*}}.sdk {{.*}}.o -o a.out
+
 // RUN: llvm-offload-binary -o %t-lib.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgpu9.0a-amd-amdhsa,arch=gfx90a
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t-lib.out
