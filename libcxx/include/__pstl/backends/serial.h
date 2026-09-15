@@ -24,6 +24,7 @@
 #include <__algorithm/stable_sort.h>
 #include <__algorithm/transform.h>
 #include <__config>
+#include <__numeric/transform_inclusive_scan.h>
 #include <__numeric/transform_reduce.h>
 #include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
@@ -236,6 +237,32 @@ struct __transform_binary<__serial_backend_tag, _ExecutionPolicy> {
         std::move(__first2),
         std::move(__outit),
         std::forward<_BinaryOperation>(__op));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __transform_inclusive_scan_init<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy,
+            class _ForwardIterator1,
+            class _ForwardIterator2,
+            class _BinaryOperation,
+            class _UnaryOperation,
+            class _Tp>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> operator()(
+      _Policy&&,
+      _ForwardIterator1 __first,
+      _ForwardIterator1 __last,
+      _ForwardIterator2 __result,
+      _BinaryOperation __reduce,
+      _UnaryOperation __transform,
+      _Tp __init) const noexcept {
+    return std::transform_inclusive_scan(
+        std::move(__first),
+        std::move(__last),
+        std::move(__result),
+        std::move(__reduce),
+        std::move(__transform),
+        std::move(__init));
   }
 };
 

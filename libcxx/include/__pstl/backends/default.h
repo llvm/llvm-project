@@ -906,6 +906,44 @@ struct __adjacent_difference<__default_backend_tag, _ExecutionPolicy> {
   }
 };
 
+//////////////////////////////////////////////////////////////
+// transform_inclusive_scan_init family
+//////////////////////////////////////////////////////////////
+
+template <class _ExecutionPolicy>
+struct __transform_inclusive_scan<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy,
+            class _ForwardIterator1,
+            class _ForwardIterator2,
+            class _BinaryOperation,
+            class _UnaryOperation>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2>
+  operator()(_Policy&& __policy,
+             _ForwardIterator1 __first,
+             _ForwardIterator1 __last,
+             _ForwardIterator2 __result,
+             _BinaryOperation __reduce,
+             _UnaryOperation __transform) const noexcept {
+    if (__first != __last) {
+      using _TransformInclusiveScanInit =
+          __dispatch<__transform_inclusive_scan_init, __current_configuration, _ExecutionPolicy>;
+      using _ValueType  = __iterator_value_type<_ForwardIterator1>;
+      _ValueType __init = __transform(*__first);
+      *__result++       = __init;
+      if (++__first != __last)
+        return _TransformInclusiveScanInit()(
+            __policy,
+            std::move(__first),
+            std::move(__last),
+            std::move(__result),
+            std::move(__reduce),
+            std::move(__transform),
+            std::move(__init));
+    }
+    return __result;
+  }
+};
+
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
