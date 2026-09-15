@@ -182,6 +182,10 @@ private:
   /// availability attribute.
   SourceLocation UnavailableLoc;
 
+  /// For an unknown attribute retained in the AST as an UnknownAttr, the source
+  /// range of its argument clause "(...)". Invalid when there was no clause.
+  SourceRange UnknownAttrArgsRange;
+
   const Expr *MessageExpr;
 
   const ParsedAttrInfo &Info;
@@ -366,6 +370,11 @@ public:
 
   bool isPackExpansion() const { return EllipsisLoc.isValid(); }
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
+
+  /// The source range of the argument clause "(...)" of an unknown attribute
+  /// retained as an UnknownAttr; invalid when there was no clause.
+  void setUnknownAttrArgsRange(SourceRange R) { UnknownAttrArgsRange = R; }
+  SourceRange getUnknownAttrArgsRange() const { return UnknownAttrArgsRange; }
 
   /// getNumArgs - Return the number of actual arguments to this attribute.
   unsigned getNumArgs() const { return NumArgs; }
