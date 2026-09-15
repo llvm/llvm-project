@@ -212,3 +212,6 @@ produces this following output: ::
     relied upon. Use SBDebugger::MemoryPressureDetected instead to reduce
     LLDB's memory consumption during execution.
 ") lldb::SBModule::GarbageCollectAllocatedModules;
+
+// Emit one Python wrapper for the default-argument overload.
+%feature("compactdefaultargs") lldb::SBModule::FindSymbolContexts;

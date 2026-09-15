@@ -541,3 +541,6 @@ produces: ::
     :rtype: bool
     "
 ) lldb::SBTarget::IsLoaded;
+
+// Emit one Python wrapper for the default-argument overload.
+%feature("compactdefaultargs") lldb::SBTarget::FindSymbolContexts;
