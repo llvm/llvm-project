@@ -7999,20 +7999,19 @@ bool AArch64TTIImpl::isLegalMaskedCompressStore(Type *DataType,
 
   // Where SVE2p2 or SME2p2 is not available, use the i32 or i64 compact
   // instructions for f16/bf16 unpacked types.
+  LLVMContext &Ctx = DataType->getContext();
   if (!(ST->hasSVE2p2() || ST->hasSME2p2()))
     switch (LT.second.SimpleTy) {
     case MVT::nxv2f16:
     case MVT::nxv2bf16:
-      return isElementTypeLegalForCompressStore(
-          EVT(MVT::i64).getTypeForEVT(DataType->getContext()));
+      return isElementTypeLegalForCompressStore(Type::getInt64Ty(Ctx));
     case MVT::nxv4f16:
     case MVT::nxv4bf16:
-      return isElementTypeLegalForCompressStore(
-          EVT(MVT::i32).getTypeForEVT(DataType->getContext()));
+      return isElementTypeLegalForCompressStore(Type::getInt32Ty(Ctx));
     default:
       break;
     }
 
   return isElementTypeLegalForCompressStore(
-      EVT(LT.second).getTypeForEVT(DataType->getContext())->getScalarType());
+      EVT(LT.second.getScalarType()).getTypeForEVT(Ctx));
 }
