@@ -146,20 +146,17 @@ func.func @vector_maskedstore_rank0(%arg0: memref<f32>, %arg3: vector<1xi1>, %ar
   return
 }
 
-// A scalable mask cannot be unrolled at compile time, so these must not be
-// converted.
-
-// CHECK-LABEL:  @vector_maskedload_scalable
+// CHECK-LABEL:  @negative_maskedload_scalable_mask
 //       CHECK:  vector.maskedload
-func.func @vector_maskedload_scalable(%arg0: memref<?xf32>, %mask: vector<[4]xi1>, %pass_thru: vector<[4]xf32>) -> vector<[4]xf32> {
+func.func @negative_maskedload_scalable_mask(%arg0: memref<?xf32>, %mask: vector<[4]xi1>, %pass_thru: vector<[4]xf32>) -> vector<[4]xf32> {
   %idx_0 = arith.constant 0 : index
   %0 = vector.maskedload %arg0[%idx_0], %mask, %pass_thru : memref<?xf32>, vector<[4]xi1>, vector<[4]xf32> into vector<[4]xf32>
   return %0 : vector<[4]xf32>
 }
 
-// CHECK-LABEL:  @vector_maskedstore_scalable
+// CHECK-LABEL:  @negative_maskedstore_scalable_mask
 //       CHECK:  vector.maskedstore
-func.func @vector_maskedstore_scalable(%arg0: memref<?xf32>, %mask: vector<[4]xi1>, %value: vector<[4]xf32>) {
+func.func @negative_maskedstore_scalable_mask(%arg0: memref<?xf32>, %mask: vector<[4]xi1>, %value: vector<[4]xf32>) {
   %idx_0 = arith.constant 0 : index
   vector.maskedstore %arg0[%idx_0], %mask, %value : memref<?xf32>, vector<[4]xi1>, vector<[4]xf32>
   return
