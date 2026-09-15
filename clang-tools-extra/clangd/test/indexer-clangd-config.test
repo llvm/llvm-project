@@ -1,16 +1,22 @@
 # Test that clangd-indexer respects CompileFlags
 
+# We specify a custom path in XDG_CONFIG_HOME, which only works on some
+# systems, so that the developer's own user config can't affect the result.
+# UNSUPPORTED: system-windows
+# UNSUPPORTED: system-darwin
+
 # RUN: rm -rf %t.dir && mkdir -p %t.dir
 # RUN: split-file %s %t.dir
 
 # By default config is disabled, so the .clangd file's CompileFlags.Add is not
 # applied and the #error below must fire.
-# RUN: clangd-indexer %t.dir/test.cpp 2>&1 | FileCheck --check-prefix=DISABLED %s
+# RUN: env XDG_CONFIG_HOME=%t clangd-indexer %t.dir/test.cpp 2>&1 \
+# RUN:     | FileCheck --check-prefix=DISABLED %s
 # DISABLED: error: "FROM_CLANGD_FILE not defined - .clangd file was not applied"
 
 # With config enabled, the .clangd file's CompileFlags.Add should define
 # FROM_CLANGD_FILE, so the #error below must not fire.
-# RUN: clangd-indexer --enable-config %t.dir/test.cpp 2>&1 \
+# RUN: env XDG_CONFIG_HOME=%t clangd-indexer --enable-config %t.dir/test.cpp 2>&1 \
 # RUN:     | FileCheck --check-prefix=ENABLED %s
 # ENABLED-NOT: error: "FROM_CLANGD_FILE not defined
 
