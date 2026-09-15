@@ -8,8 +8,10 @@
 
 #include <detail/program_manager.hpp>
 
+#include <sycl/__impl/detail/get_device_kernel_info.hpp>
 #include <sycl/__impl/exception.hpp>
 
+#include <detail/context_impl.hpp>
 #include <detail/device_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
 
@@ -31,8 +33,36 @@ ProgramAndKernelManager::getDeviceKernelInfo(std::string_view KernelName) {
 }
 
 void ProgramAndKernelManager::releaseResources() {
+  std::lock_guard<std::mutex> Guard(MDataCollectionMutex);
+  // Contexts can outlive this call: platform default contexts are kept in the
+  // platform cache, which is static. Programs must not be left for
+  // their destructors to release, because olShutDown() follows this call.
+  for (const std::weak_ptr<ContextImpl> &WeakContext : MContextsWithPrograms) {
+    if (std::shared_ptr<ContextImpl> Context = WeakContext.lock())
+      Context->releaseAllPrograms();
+  }
+  MContextsWithPrograms.clear();
   MDeviceKernelInfoMap.clear();
   MDeviceImageManagers.clear();
+}
+
+void ProgramAndKernelManager::trackContext(
+    const std::shared_ptr<ContextImpl> &Context) {
+  bool AlreadyTracked = false;
+  for (auto It = MContextsWithPrograms.begin();
+       It != MContextsWithPrograms.end();) {
+    std::shared_ptr<ContextImpl> TrackedContext = It->lock();
+    if (!TrackedContext) {
+      // Remove expired context from the tracking list.
+      It = MContextsWithPrograms.erase(It);
+      continue;
+    }
+    AlreadyTracked |= (TrackedContext == Context);
+    ++It;
+  }
+
+  if (!AlreadyTracked)
+    MContextsWithPrograms.push_back(Context);
 }
 
 static inline bool
@@ -50,9 +80,9 @@ void ProgramAndKernelManager::registerFatBin(const void *BinaryStart,
       /*Identifier=*/"");
   auto BinOrErr = llvm::object::OffloadBinary::create(MBR);
   if (!BinOrErr) {
-    llvm::consumeError(BinOrErr.takeError());
     throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
-                          "Failed to parse OffloadBinary");
+                          "Failed to parse OffloadBinary: " +
+                              llvm::toString(BinOrErr.takeError()));
   }
   assert(!BinOrErr->empty() && "OffloadBinary must contain at least one entry");
 
@@ -98,13 +128,21 @@ void ProgramAndKernelManager::unregisterFatBin(const void *BinaryStart,
     return;
 
   for (auto &Image : It->second) {
+    // Programs created from this image are owned by the contexts they were
+    // created in, so they have to be destroyed here: the image is about to go
+    // away, and the kernel names cached alongside those programs point into its
+    // memory, which may be unmapped right after this call.
+    for (const std::weak_ptr<ContextImpl> &WeakContext :
+         MContextsWithPrograms) {
+      if (std::shared_ptr<ContextImpl> Context = WeakContext.lock())
+        Context->releaseProgramsForImage(*Image);
+    }
+
     llvm::StringRef Symbols = Image->getOffloadBinary().getString("symbols");
     llvm::offloading::sycl::forEachSymbol(Symbols, [&](llvm::StringRef Name) {
       if (auto KernelIt = MDeviceKernelInfoMap.find(std::string_view(Name));
           KernelIt != MDeviceKernelInfoMap.end()) {
-        // Programs are attached to the image and will be released with image
-        // destruction. Clear only kernel specific data by destroying its kernel
-        // info object.
+        // Clear kernel specific data by destroying its kernel info object.
         MDeviceKernelInfoMap.erase(KernelIt);
       }
     });
@@ -126,30 +164,27 @@ static bool isImageCompatible(const DeviceImageManager &Image,
   return IsValid;
 }
 
-ol_symbol_handle_t
-ProgramAndKernelManager::getOrCreateKernel(DeviceKernelInfo &KernelInfo,
-                                           DeviceImpl &Device) {
+ol_symbol_handle_t ProgramAndKernelManager::getOrCreateKernel(
+    DeviceKernelInfo &KernelInfo, const std::shared_ptr<ContextImpl> &Context,
+    DeviceImpl &Device) {
+  assert(Context && "Context can't be nullptr");
 
   std::lock_guard<std::mutex> KernelGuard(MDataCollectionMutex);
 
-  if (auto Kernel = KernelInfo.getKernel(Device.getOLHandle()))
-    return Kernel;
-
-  auto &DeviceImage = KernelInfo.getDeviceImage();
+  DeviceImageManager &DeviceImage = KernelInfo.getDeviceImage();
 
   if (!isImageCompatible(DeviceImage, Device))
     throw exception(make_error_code(errc::runtime),
                     std::string("No compatible image for ") +
                         KernelInfo.getName().data() + " was found");
 
-  auto DeviceHandle = Device.getOLHandle();
-  auto Program = DeviceImage.getOrCreateProgram(DeviceHandle);
+  // Track the context before it caches anything, so that unregisterFatBin() can
+  // reach the programs it is about to create.
+  trackContext(Context);
 
-  ol_symbol_handle_t Kernel{};
-  callAndThrow(olGetSymbol, Program, KernelInfo.getName().data(),
-               OL_SYMBOL_KIND_KERNEL, &Kernel);
-  KernelInfo.addKernel(DeviceHandle, Kernel);
-  return Kernel;
+  // Lock order is MDataCollectionMutex -> ContextImpl::MProgramCacheMutex.
+  return Context->getOrCreateKernel(DeviceImage, Device.getOLHandle(),
+                                    KernelInfo.getName());
 }
 
 bool ProgramAndKernelManager::hasCompatibleImage(const DeviceImpl &Device) {

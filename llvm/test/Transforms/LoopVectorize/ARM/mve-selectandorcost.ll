@@ -21,7 +21,7 @@ define float @test(ptr nocapture readonly %pA, ptr nocapture readonly %pB, i32 %
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[BLOCKSIZE]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[BLOCKSIZE]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[BLOCKSIZE]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[BLOCKSIZE]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[N_VEC]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[PA]], i32 [[TMP0]]

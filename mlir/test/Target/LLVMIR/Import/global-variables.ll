@@ -1,4 +1,5 @@
 ; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -split-input-file %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=WARN
 
 %sub_struct = type {}
 %my_struct = type { %sub_struct, i64 }
@@ -91,6 +92,21 @@
 ; CHECK:  llvm.mlir.global external thread_local @thread_local_var
 ; CHECK-SAME:  {addr_space = 0 : i32} : !llvm.struct<"my_struct", (struct<"sub_struct", ()>, i64)>
 @thread_local_var = external thread_local global %my_struct
+
+; Note: Classic LLVM-IR doesn't parse 'generaldynamic' in 'thread_local' as the dialect does,
+; so there is no _gd test.
+
+; CHECK:  llvm.mlir.global external thread_local(localdynamic) @thread_local_var_ld
+; CHECK-SAME:  {addr_space = 0 : i32} : !llvm.struct<"my_struct", (struct<"sub_struct", ()>, i64)>
+@thread_local_var_ld = external thread_local(localdynamic) global %my_struct
+
+; CHECK:  llvm.mlir.global external thread_local(initialexec) @thread_local_var_ie
+; CHECK-SAME:  {addr_space = 0 : i32} : !llvm.struct<"my_struct", (struct<"sub_struct", ()>, i64)>
+@thread_local_var_ie = external thread_local(initialexec) global %my_struct
+
+; CHECK:  llvm.mlir.global external thread_local(localexec) @thread_local_var_le
+; CHECK-SAME:  {addr_space = 0 : i32} : !llvm.struct<"my_struct", (struct<"sub_struct", ()>, i64)>
+@thread_local_var_le = external thread_local(localexec) global %my_struct
 
 ; // -----
 
@@ -373,3 +389,64 @@ attributes #0 = { readnone "int-attr"="4" "no-enum-attr" "string-attr"="string" 
 ; CHECK-SAME: target_specific_attrs = ["norecurse", ["bss-section", "my_bss.1"]]}
 @target_specific_attrs_combined = global i32 2, align 4, section "mysection" #0
 attributes #0 = { norecurse "bss-section"="my_bss.1" }
+
+; // -----
+
+; CHECK: llvm.mlir.global external @a
+; CHECK-SAME: {addr_space = 0 : i32, associated = @b} : i32
+; CHECK: llvm.mlir.global external @b
+; CHECK-SAME: {addr_space = 0 : i32} : i32
+@a = global i32 0, !associated !0
+@b = global i32 0
+!0 = !{ptr @b}
+
+; // -----
+
+; CHECK: llvm.mlir.global external @a
+; CHECK-SAME: {addr_space = 0 : i32, associated = @f} : i32
+@a = global i32 0, !associated !0
+declare void @f()
+!0 = !{ptr @f}
+
+; // -----
+
+; CHECK: llvm.mlir.global external @associated_via_alias
+; CHECK-SAME: associated = @alias_of_target
+@alias_target = global i32 1
+@alias_of_target = alias i32, ptr @alias_target
+@associated_via_alias = global i32 2, !associated !0
+!0 = !{ptr @alias_of_target}
+
+; // -----
+
+; CHECK: llvm.mlir.global external @associated_ifunc_global
+; CHECK-SAME: associated = @associated_ifunc
+; CHECK: llvm.mlir.ifunc external @associated_ifunc
+@associated_ifunc = ifunc i32 (i32), ptr @associated_ifunc_resolver
+@associated_ifunc_global = global i32 0, !associated !0
+define ptr @associated_ifunc_resolver() {
+  ret ptr null
+}
+!0 = !{ptr @associated_ifunc}
+
+; // -----
+
+; WARN: warning: unhandled associated metadata: {{.*}}ptr null{{.*}} on @associated_null
+; CHECK: llvm.mlir.global external @associated_null() {addr_space = 0 : i32} : i8
+@associated_null = external global i8, !associated !0
+!0 = !{ptr null}
+
+; // -----
+
+; CHECK: llvm.mlir.global external @a()
+; CHECK-SAME: {absolute_symbol = [0, 42], addr_space = 0 : i32} : i8
+@a = external global i8, !absolute_symbol !0
+!0 = !{i64 0, i64 42}
+
+; // -----
+
+; CHECK: llvm.mlir.global external @a()
+; CHECK-SAME: {absolute_symbol = [-1, -1], addr_space = 0 : i32} : i8
+@a = external global i8, !absolute_symbol !0
+!0 = !{i64 -1, i64 -1}
+

@@ -274,7 +274,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                             options::OPT_s, options::OPT_t});
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs, C);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
@@ -493,27 +493,6 @@ void NetBSD::AddClangSystemIncludeArgs(
 
   addExternCSystemInclude(DriverArgs, CC1Args,
                           concat(D.SysRoot, "/usr/include"));
-}
-
-void NetBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                                   llvm::opt::ArgStringList &CC1Args) const {
-  const std::string Candidates[] = {
-    // directory relative to build tree
-    concat(getDriver().Dir, "/../include/c++/v1"),
-    // system install with full upstream path
-    concat(getDriver().SysRoot, "/usr/include/c++/v1"),
-    // system install from src
-    concat(getDriver().SysRoot, "/usr/include/c++"),
-  };
-
-  for (const auto &IncludePath : Candidates) {
-    if (!getVFS().exists(IncludePath + "/__config"))
-      continue;
-
-    // Use the first candidate that looks valid.
-    addSystemInclude(DriverArgs, CC1Args, IncludePath);
-    return;
-  }
 }
 
 void NetBSD::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,

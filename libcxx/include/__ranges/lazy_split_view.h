@@ -104,7 +104,7 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
     if constexpr (forward_range<_View>) {
-      return __outer_iterator < __simple_view<_View> && __simple_view < _Pattern >> {*this, ranges::begin(__base_)};
+      return __outer_iterator<__simple_view<_View> && __simple_view<_Pattern>>{*this, ranges::begin(__base_)};
     } else {
       __current_.__emplace(ranges::begin(__base_));
       return __outer_iterator<false>{*this};
@@ -112,7 +112,7 @@ public:
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
-    requires forward_range<_View> && forward_range<const _View>
+    requires forward_range<_View> && forward_range<const _View> && forward_range<const _Pattern>
   {
     return __outer_iterator<true>{*this, ranges::begin(__base_)};
   }
@@ -120,11 +120,12 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end()
     requires forward_range<_View> && common_range<_View>
   {
-    return __outer_iterator < __simple_view<_View> && __simple_view < _Pattern >> {*this, ranges::end(__base_)};
+    return __outer_iterator<__simple_view<_View> && __simple_view<_Pattern>>{*this, ranges::end(__base_)};
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const {
-    if constexpr (forward_range<_View> && forward_range<const _View> && common_range<const _View>) {
+    if constexpr (forward_range<_View> && forward_range<const _View> && common_range<const _View> &&
+                  forward_range<const _Pattern>) {
       return __outer_iterator<true>{*this, ranges::end(__base_)};
     } else {
       return default_sentinel;
@@ -143,6 +144,8 @@ private:
   template <bool _Const>
   struct __outer_iterator : __outer_iterator_category<__maybe_const<_Const, _View>> {
   private:
+    friend class lazy_split_view<_View, _Pattern>;
+
     template <bool>
     friend struct __inner_iterator;
     friend __outer_iterator<true>;
@@ -154,6 +157,14 @@ private:
     using _MaybeCurrent _LIBCPP_NODEBUG                = _If<forward_range<_View>, iterator_t<_Base>, __empty_cache>;
     _LIBCPP_NO_UNIQUE_ADDRESS _MaybeCurrent __current_ = _MaybeCurrent();
     bool __trailing_empty_                             = false;
+
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __outer_iterator(_Parent& __parent)
+      requires(!forward_range<_Base>)
+        : __parent_(std::addressof(__parent)) {}
+
+    _LIBCPP_HIDE_FROM_ABI constexpr __outer_iterator(_Parent& __parent, iterator_t<_Base> __current)
+      requires forward_range<_Base>
+        : __parent_(std::addressof(__parent)), __current_(std::move(__current)) {}
 
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto& __current() noexcept {
       if constexpr (forward_range<_View>) {
@@ -182,12 +193,12 @@ private:
 
     struct value_type : view_interface<value_type> {
     private:
+      friend struct __outer_iterator;
       __outer_iterator __i_ = __outer_iterator();
 
-    public:
-      _LIBCPP_HIDE_FROM_ABI value_type() = default;
       _LIBCPP_HIDE_FROM_ABI constexpr explicit value_type(__outer_iterator __i) : __i_(std::move(__i)) {}
 
+    public:
       [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __inner_iterator<_Const> begin() const {
         return __inner_iterator<_Const>{__i_};
       }
@@ -195,14 +206,6 @@ private:
     };
 
     _LIBCPP_HIDE_FROM_ABI __outer_iterator() = default;
-
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __outer_iterator(_Parent& __parent)
-      requires(!forward_range<_Base>)
-        : __parent_(std::addressof(__parent)) {}
-
-    _LIBCPP_HIDE_FROM_ABI constexpr __outer_iterator(_Parent& __parent, iterator_t<_Base> __current)
-      requires forward_range<_Base>
-        : __parent_(std::addressof(__parent)), __current_(std::move(__current)) {}
 
     _LIBCPP_HIDE_FROM_ABI constexpr __outer_iterator(__outer_iterator<!_Const> __i)
       requires _Const && convertible_to<iterator_t<_View>, iterator_t<_Base>>
@@ -278,19 +281,23 @@ private:
   template <forward_range _Tp>
   struct __inner_iterator_category<_Tp> {
     using iterator_category =
-        _If< derived_from<typename iterator_traits<iterator_t<_Tp>>::iterator_category, forward_iterator_tag>,
-             forward_iterator_tag,
-             typename iterator_traits<iterator_t<_Tp>>::iterator_category >;
+        _If<derived_from<typename iterator_traits<iterator_t<_Tp>>::iterator_category, forward_iterator_tag>,
+            forward_iterator_tag,
+            typename iterator_traits<iterator_t<_Tp>>::iterator_category>;
   };
 
   template <bool _Const>
   struct __inner_iterator : __inner_iterator_category<__maybe_const<_Const, _View>> {
   private:
+    friend class lazy_split_view<_View, _Pattern>;
+
     using _Base _LIBCPP_NODEBUG = __maybe_const<_Const, _View>;
     // Workaround for a GCC issue.
     static constexpr bool _OuterConst = _Const;
     __outer_iterator<_Const> __i_     = __outer_iterator<_OuterConst>();
     bool __incremented_               = false;
+
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __inner_iterator(__outer_iterator<_Const> __i) : __i_(std::move(__i)) {}
 
     // Note: these private functions are necessary because GCC doesn't allow calls to private members of `__i_` from
     // free functions that are friends of `inner-iterator`.
@@ -341,8 +348,6 @@ private:
     using difference_type  = range_difference_t<_Base>;
 
     _LIBCPP_HIDE_FROM_ABI __inner_iterator() = default;
-
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __inner_iterator(__outer_iterator<_Const> __i) : __i_(std::move(__i)) {}
 
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const iterator_t<_Base>& base() const& noexcept {
       return __i_.__current();
@@ -408,8 +413,8 @@ template <class _Range, class _Pattern>
 lazy_split_view(_Range&&, _Pattern&&) -> lazy_split_view<views::all_t<_Range>, views::all_t<_Pattern>>;
 
 template <input_range _Range>
-lazy_split_view(_Range&&,
-                range_value_t<_Range>) -> lazy_split_view<views::all_t<_Range>, single_view<range_value_t<_Range>>>;
+lazy_split_view(_Range&&, range_value_t<_Range>)
+    -> lazy_split_view<views::all_t<_Range>, single_view<range_value_t<_Range>>>;
 
 namespace views {
 namespace __lazy_split_view {

@@ -2568,6 +2568,13 @@ multiclass vqabsneg_pattern<MVEVectorVTInfo VTI, dag int_min, dag int_max,
                                 int_max,
                                 (sub (VTI.Vec zero_vec), (VTI.Vec MQPR:$reg)))))),
             (VTI.Vec (vqabs_instruction (VTI.Vec MQPR:$reg)))>;
+    // InstCombine canonicalizes the saturating negate in the expression above
+    // to ssub.sat(0, r).
+    def : Pat<(VTI.Vec (vselect
+                      (VTI.Pred (ARMvcmpz (VTI.Vec MQPR:$reg), ARMCCgt)),
+                      (VTI.Vec MQPR:$reg),
+                      (VTI.Vec (ssubsat (VTI.Vec zero_vec), (VTI.Vec MQPR:$reg))))),
+              (VTI.Vec (vqabs_instruction (VTI.Vec MQPR:$reg)))>;
     // Similarly, this tree represents vqneg, i.e. the following vectorized expression:
     // r == INT_MIN ? INT_MAX : -r
     def : Pat<(VTI.Vec (vselect
@@ -2575,6 +2582,8 @@ multiclass vqabsneg_pattern<MVEVectorVTInfo VTI, dag int_min, dag int_max,
                         int_max,
                         (sub (VTI.Vec zero_vec), (VTI.Vec MQPR:$reg)))),
                (VTI.Vec (vqneg_instruction (VTI.Vec MQPR:$reg)))>;
+    def : Pat<(VTI.Vec (ssubsat (VTI.Vec zero_vec), (VTI.Vec MQPR:$reg))),
+              (VTI.Vec (vqneg_instruction (VTI.Vec MQPR:$reg)))>;
   }
 }
 

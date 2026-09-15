@@ -93,7 +93,7 @@ matchAndReplaceDepthwiseConv(Operation *operation, Value input, Value kernel,
   if (!newConv)
     return failure();
   for (auto attr : preservedAttrs)
-    newConv->setAttr(attr.getName(), attr.getValue());
+    newConv->setDiscardableAttr(attr.getName(), attr.getValue());
 
   // Expand dimensions back out to
   rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(

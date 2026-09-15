@@ -6,8 +6,6 @@
 # GCN: {{^body}}
 
 --- |
-  target triple = "amdgcn--amdpal"
-
   define amdgpu_cs void @_amdgpu_cs_main(<3 x i32>) #0 {
     ret void
   }

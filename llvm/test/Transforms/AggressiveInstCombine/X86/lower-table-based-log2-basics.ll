@@ -237,10 +237,9 @@ define i32 @log2_128(i128 noundef %0) {
 define i32 @log2_64_isolate_msb(i64 noundef %v) {
 ; CHECK-LABEL: @log2_64_isolate_msb(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[V:%.*]], i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 63, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[V]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i64 63, i64 [[TMP1]], !prof [[PROF1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.ctlz.i64(i64 [[V:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[TMP0]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP1]], 63
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i8
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP4]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]

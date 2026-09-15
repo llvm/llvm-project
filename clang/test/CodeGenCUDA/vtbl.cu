@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -target-cpu gfx906 \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.06-amd-amdhsa \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
 
 #include "Inputs/cuda.h"

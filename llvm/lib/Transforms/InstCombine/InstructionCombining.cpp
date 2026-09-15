@@ -77,6 +77,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
@@ -148,10 +149,6 @@ static cl::opt<unsigned> MaxAllocSiteRemovableUsers(
     "instcombine-max-allocsite-removable-users", cl::Hidden, cl::init(2048),
     cl::desc("Maximum number of users to visit in alloc-site "
              "removability analysis"));
-
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // end namespace llvm
 
 // FIXME: Remove this flag when it is no longer necessary to convert
 // llvm.dbg.declare to avoid inaccurate debug info. Setting this to false
@@ -1131,9 +1128,7 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
   else
     return nullptr;
 
-  SelectInst *SI = ProfcheckDisableMetadataFixes
-                       ? nullptr
-                       : cast<SelectInst>(CastOp == LHS ? RHS : LHS);
+  SelectInst *SI = cast<SelectInst>(CastOp == LHS ? RHS : LHS);
 
   auto NewFoldedConst = [&](bool IsTrueArm, Value *V) {
     bool IsCastOpRHS = (CastOp == RHS);
@@ -1367,9 +1362,7 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
   if (!LHSIsSelect && !RHSIsSelect)
     return nullptr;
 
-  SelectInst *SI = ProfcheckDisableMetadataFixes
-                       ? nullptr
-                       : cast<SelectInst>(LHSIsSelect ? LHS : RHS);
+  SelectInst *SI = cast<SelectInst>(LHSIsSelect ? LHS : RHS);
 
   FastMathFlags FMF;
   BuilderTy::FastMathFlagGuard Guard(Builder);
@@ -1836,12 +1829,11 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
 
   SelectInst *NewSel = SelectInst::Create(SI->getCondition(), NewTV, NewFV);
 
-  // Preserve metadata that remains valid for the transformed select.
+  // Preserve metadata that remains valid for the transformed select including
+  // source location information.
   NewSel->copyMetadata(*SI,
-                       {LLVMContext::MD_prof, LLVMContext::MD_unpredictable});
-
-  // Preserve source location information.
-  NewSel->setDebugLoc(SI->getDebugLoc());
+                       {LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
+                        LLVMContext::MD_dbg});
 
   return NewSel;
 }
@@ -1926,9 +1918,7 @@ Instruction *InstCombinerImpl::foldBinOpSelectBinOp(BinaryOperator &Op) {
   if (!NewTV || !NewFV)
     return nullptr;
 
-  Value *NewSI =
-      Builder.CreateSelect(SI->getCondition(), NewTV, NewFV, "",
-                           ProfcheckDisableMetadataFixes ? nullptr : SI);
+  Value *NewSI = Builder.CreateSelect(SI->getCondition(), NewTV, NewFV, "", SI);
   return BinaryOperator::Create(Op.getOpcode(), NewSI, Input);
 }
 
@@ -2488,30 +2478,6 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
           /*MaybeSubVector=*/RHS, /*MaybeSplat=*/LHS, /*SplatLHS=*/true))
     return Folded;
 
-  // If both operands of the binop are vector concatenations, then perform the
-  // narrow binop on each pair of the source operands followed by concatenation
-  // of the results.
-  Value *L0, *L1, *R0, *R1;
-  ArrayRef<int> Mask;
-  if (match(LHS, m_Shuffle(m_Value(L0), m_Value(L1), m_Mask(Mask))) &&
-      match(RHS, m_Shuffle(m_Value(R0), m_Value(R1), m_SpecificMask(Mask))) &&
-      LHS->hasOneUse() && RHS->hasOneUse() &&
-      cast<ShuffleVectorInst>(LHS)->isConcat() &&
-      cast<ShuffleVectorInst>(RHS)->isConcat()) {
-    // This transform does not have the speculative execution constraint as
-    // below because the shuffle is a concatenation. The new binops are
-    // operating on exactly the same elements as the existing binop.
-    // TODO: We could ease the mask requirement to allow different undef lanes,
-    //       but that requires an analysis of the binop-with-undef output value.
-    Value *NewBO0 = Builder.CreateBinOp(Opcode, L0, R0);
-    if (auto *BO = dyn_cast<BinaryOperator>(NewBO0))
-      BO->copyIRFlags(&Inst);
-    Value *NewBO1 = Builder.CreateBinOp(Opcode, L1, R1);
-    if (auto *BO = dyn_cast<BinaryOperator>(NewBO1))
-      BO->copyIRFlags(&Inst);
-    return new ShuffleVectorInst(NewBO0, NewBO1, Mask);
-  }
-
   auto createBinOpReverse = [&](Value *X, Value *Y) {
     Value *V = Builder.CreateBinOp(Opcode, X, Y, Inst.getName());
     if (auto *BO = dyn_cast<BinaryOperator>(V))
@@ -2596,9 +2562,10 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
 
   // If both arguments of the binary operation are shuffles that use the same
   // mask and shuffle within a single vector, move the shuffle after the binop.
+  ArrayRef<int> Mask;
   if (match(LHS, m_Shuffle(m_Value(V1), m_Poison(), m_Mask(Mask))) &&
       match(RHS, m_Shuffle(m_Value(V2), m_Poison(), m_SpecificMask(Mask))) &&
-      V1->getType() == V2->getType() &&
+      Inst.getType() == V1->getType() && V1->getType() == V2->getType() &&
       (LHS->hasOneUse() || RHS->hasOneUse() || LHS == RHS)) {
     // Op(shuffle(V1, Mask), shuffle(V2, Mask)) -> shuffle(Op(V1, V2), Mask)
     return createBinOpShuffle(V1, V2, Mask);
@@ -2945,9 +2912,9 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
       APInt NewFalseVal = *ConstOffset + *FalseVal;
       Constant *NewTrue = ConstantInt::get(Select->getType(), NewTrueVal);
       Constant *NewFalse = ConstantInt::get(Select->getType(), NewFalseVal);
-      Value *NewSelect = Builder.CreateSelect(
-          Cond, NewTrue, NewFalse, /*Name=*/"",
-          /*MDFrom=*/(ProfcheckDisableMetadataFixes ? nullptr : Select));
+      Value *NewSelect =
+          Builder.CreateSelect(Cond, NewTrue, NewFalse, /*Name=*/"",
+                               /*MDFrom=*/Select);
       GEPNoWrapFlags Flags =
           getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));
       return replaceInstUsesWith(GEP,
@@ -3100,9 +3067,8 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
         if (auto *II = dyn_cast<IntrinsicInst>(V))
           return Builder->CreateBinaryIntrinsic(
               getInverseMinMaxIntrinsic(II->getIntrinsicID()), NotA, NotB);
-        return Builder->CreateSelect(
-            Cond, NotA, NotB, "",
-            ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(V));
+        return Builder->CreateSelect(Cond, NotA, NotB, "",
+                                     cast<Instruction>(V));
       }
       return NonNull;
     }
@@ -3805,10 +3771,9 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
                  Alignment->isPowerOf2() && Size->urem(*Alignment).isZero();
         };
         auto *CB = dyn_cast<CallBase>(AI);
-        LibFunc TheLibFunc;
-        if (CB && TLI.getLibFunc(*CB->getCalledFunction(), TheLibFunc) &&
-            TLI.has(TheLibFunc) && TheLibFunc == LibFunc_aligned_alloc &&
-            !AlignmentAndSizeKnownValid(CB))
+        if (CB &&
+            TLI.getLibFunc(*CB->getCalledFunction()) == LibFunc_aligned_alloc &&
+            TLI.has(LibFunc_aligned_alloc) && !AlignmentAndSizeKnownValid(CB))
           return std::nullopt;
         Users.emplace_back(I);
         continue;
@@ -4190,8 +4155,7 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
   // 'operator delete'; there is no 'operator delete' symbol for which we are
   // permitted to invent a call, even if we're passing in a null pointer.
   if (MinimizeSize) {
-    LibFunc Func;
-    if (TLI.getLibFunc(FI, Func) && TLI.has(Func) && Func == LibFunc_free)
+    if (TLI.getLibFunc(FI) == LibFunc_free && TLI.has(LibFunc_free))
       if (Instruction *I = tryToMoveFreeBeforeNullTest(FI, DL))
         return I;
   }
@@ -4386,16 +4350,13 @@ Instruction *InstCombinerImpl::visitCondBrInst(CondBrInst &BI) {
     Value *Or = Builder.CreateLogicalOr(NotX, Y);
 
     // Set weights for the new OR select instruction too.
-    if (!ProfcheckDisableMetadataFixes) {
-      if (auto *OrInst = dyn_cast<Instruction>(Or)) {
-        if (auto *CondInst = dyn_cast<Instruction>(Cond)) {
-          SmallVector<uint32_t> Weights;
-          if (extractBranchWeights(*CondInst, Weights)) {
-            assert(Weights.size() == 2 &&
-                   "Unexpected number of branch weights!");
-            std::swap(Weights[0], Weights[1]);
-            setBranchWeights(*OrInst, Weights, /*IsExpected=*/false);
-          }
+    if (auto *OrInst = dyn_cast<Instruction>(Or)) {
+      if (auto *CondInst = dyn_cast<Instruction>(Cond)) {
+        SmallVector<uint32_t> Weights;
+        if (extractBranchWeights(*CondInst, Weights)) {
+          assert(Weights.size() == 2 && "Unexpected number of branch weights!");
+          std::swap(Weights[0], Weights[1]);
+          setBranchWeights(*OrInst, Weights, /*IsExpected=*/false);
         }
       }
     }
@@ -6321,9 +6282,7 @@ void InstructionCombiningPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetTransformInfoWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-  AU.addPreserved<DominatorTreeWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
-  AU.addPreserved<BasicAAWrapperPass>();
   AU.addPreserved<GlobalsAAWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
   LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);

@@ -5,9 +5,7 @@
 define amdgpu_kernel void @row_filter_C1_D0() #0 {
 ; GCN-LABEL: row_filter_C1_D0:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_cbranch_scc1 .LBB0_2
-; GCN-NEXT:  ; %bb.1: ; %do.body.preheader
-; GCN-NEXT:  .LBB0_2: ; %for.inc.1
+; GCN-NEXT:  ; %bb.1: ; %for.inc.1
 entry:
   br i1 poison, label %for.inc.1, label %do.body.preheader
 

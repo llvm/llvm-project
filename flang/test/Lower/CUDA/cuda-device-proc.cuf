@@ -100,7 +100,7 @@ attributes(global) subroutine devsub()
   ad = __ll2double_rz(al)
 end
 
-! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>{{.*}}}
 ! CHECK: nvvm.barrier
 ! CHECK: nvvm.bar.warp.sync %c1{{.*}} : i32 
 ! CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<and> %c1{{.*}} -> i32
@@ -431,7 +431,7 @@ end subroutine
 ! CHECK: %[[LLVM_PTR:.*]] = fir.convert %[[DECL_SHARED]]#0 : (!fir.ref<i64>) -> !llvm.ptr
 ! CHECK: %[[SHARED_PTR:.*]] = llvm.addrspacecast %[[LLVM_PTR]] : !llvm.ptr to !llvm.ptr<3>
 ! CHECK: nvvm.mbarrier.init %[[SHARED_PTR]], %[[COUNT]] : !llvm.ptr<3>, i32
-! CHECK: nvvm.fence.proxy {kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cta>}
+! CHECK: nvvm.fence.proxy <async.shared>, space = <cta>
 
 ! CHECK: %[[LLVM_PTR:.*]] = fir.convert %[[DECL_SHARED]]#0 : (!fir.ref<i64>) -> !llvm.ptr
 ! CHECK: %[[SHARED_PTR:.*]] = llvm.addrspacecast %[[LLVM_PTR]] : !llvm.ptr to !llvm.ptr<3>
@@ -447,7 +447,7 @@ attributes(global) subroutine test_fence()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_fence()
-! CHECK: nvvm.fence.proxy {kind = #nvvm.proxy_kind<async.shared>, space = #nvvm.shared_space<cta>}
+! CHECK: nvvm.fence.proxy <async.shared>, space = <cta>
 
 attributes(global) subroutine test_tma()
   call tma_bulk_commit_group()
@@ -779,4 +779,4 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPcall_c_kernel()
 ! CHECK: cuf.kernel_launch @c_kernel<<<{{.*}}>>>()
-! CHECK: func.func private @c_kernel() attributes {cuf.proc_attr = #cuf.cuda_proc<global>, fir.bindc_name = "c_kernel", fir.proc_attrs = #fir.proc_attrs<bind_c>}
+! CHECK: func.func private @c_kernel() attributes {cuf.proc_attr = #cuf.cuda_proc<global>,{{.*}}fir.bindc_name = "c_kernel", fir.proc_attrs = #fir.proc_attrs<bind_c>}

@@ -89,6 +89,13 @@ public:
       support::endian::write<T>(OS, Val, E);
   }
 
+  template <typename T>
+  void updateDataAt(uint64_t Pos, T Val, llvm::endianness E) {
+    char Data[sizeof(T)];
+    support::endian::write<T>(Data, Val, E);
+    updateDataAt(Pos, Data, sizeof(Data));
+  }
+
   LLVM_ABI void updateDataAt(uint64_t Pos, const void *Data, size_t Size);
 };
 

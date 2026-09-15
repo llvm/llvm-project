@@ -40,11 +40,10 @@ static cl::opt<RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode> Mode(
             RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development,
             "development", "for training")));
 
-static cl::opt<bool> EnableLocalReassignment(
+static cl::opt<cl::boolOrDefault> EnableLocalReassignment(
     "enable-local-reassign", cl::Hidden,
     cl::desc("Local reassignment can yield better allocation decisions, but "
-             "may be compile time intensive"),
-    cl::init(false));
+             "may be compile time intensive"));
 
 namespace llvm {
 cl::opt<unsigned> EvictInterferenceCutoff(
@@ -184,9 +183,11 @@ RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(const MachineFunction &MF,
       LIS(RA.getLiveIntervals()), VRM(RA.getVirtRegMap()),
       MRI(&VRM->getRegInfo()), TRI(MF.getSubtarget().getRegisterInfo()),
       RegClassInfo(RA.getRegClassInfo()), RegCosts(TRI->getRegisterCosts(MF)),
-      EnableLocalReassign(EnableLocalReassignment ||
-                          MF.getSubtarget().enableRALocalReassignment(
-                              MF.getTarget().getOptLevel())) {}
+      EnableLocalReassign(
+          EnableLocalReassignment == cl::boolOrDefault::BOU_TRUE ||
+          (EnableLocalReassignment != cl::boolOrDefault::BOU_FALSE &&
+           MF.getSubtarget().enableRALocalReassignment(
+               MF.getTarget().getOptLevel()))) {}
 
 /// isUrgentEviction - Returns true if this is an urgent eviction. Once a live
 /// range becomes small enough, it is urgent that we find a register for it.

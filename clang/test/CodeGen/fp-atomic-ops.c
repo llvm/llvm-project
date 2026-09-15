@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -emit-llvm -DDOUBLE -O0 -o - -triple=amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 %s -emit-llvm -DDOUBLE -O0 -o - -triple=amdgpu-amd-amdhsa \
 // RUN:   | FileCheck -check-prefixes=FLOAT,DOUBLE %s
 
 // RUN: %clang_cc1 %s -emit-llvm -DDOUBLE -O0 -o - -triple=aarch64-linux-gnu \

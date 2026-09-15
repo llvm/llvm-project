@@ -168,12 +168,13 @@ to be performed by the compiler. The directives are always specified with the
 
 Some directives are associated with the following construct, for example loop
 directives. Directives on loops are used to specify additional transformation to
-be performed by the compiler like enabling vectorisation, unrolling, interchange
+be performed by the compiler like enabling vectorization, unrolling, interchange
 etc.
 
-Currently loop directives are not accepted in the presence of OpenMP or OpenACC
-constructs on the loop. This should be implemented as it is used in some
-applications.
+Loop directives in the presence of OpenACC loop are a work in progress and may be
+applied as a loop annotation attribute. OpenACC directives will take precedence 
+over general loop directives when "in conflict". Loop directives with OpenMP 
+constructs on the loop are not yet applied.
 
 ### Array Expressions
 It is to be decided whether loop directives should also be able to be associated

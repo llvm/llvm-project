@@ -28,16 +28,5 @@ entry:
   ret i32 %0
 }
 
-; FIXME(#44744): incorrect libcall
-define i32 @testmswq_builtin(fp128 %x) {
-; CHECK-LABEL: testmswq_builtin:
-; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    call lrint
-; CHECK-NEXT:    ret
-entry:
-  %0 = tail call i32 @llvm.lrint.i32.fp128(fp128 %x)
-  ret i32 %0
-}
-
 declare i32 @llvm.lrint.i32.f32(float) nounwind readnone
 declare i32 @llvm.lrint.i32.f64(double) nounwind readnone

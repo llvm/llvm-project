@@ -70,7 +70,7 @@ jobs:
     steps:
       - name: Validate Input
         if: inputs.release-version != ''
-        uses: ./.github/workflows/validate-release-version
+        uses: $/.github/workflows/validate-release-version
         with:
           release-version: ${{ inputs.release-version }}
       - shell: bash

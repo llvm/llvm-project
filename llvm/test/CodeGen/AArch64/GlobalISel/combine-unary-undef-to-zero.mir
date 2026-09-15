@@ -13,12 +13,12 @@ body:             |
     ; CHECK-LABEL: name: abs_scalar
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %abs:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: $w0 = COPY %abs(s32)
+    ; CHECK-NEXT: %abs:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: $w0 = COPY %abs(i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %undef:_(s32) = G_IMPLICIT_DEF
-    %abs:_(s32) = G_ABS %undef
-    $w0 = COPY %abs(s32)
+    %undef:_(i32) = G_IMPLICIT_DEF
+    %abs:_(i32) = G_ABS %undef
+    $w0 = COPY %abs(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -30,12 +30,12 @@ body:             |
     ; CHECK-LABEL: name: abs_vector
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: %abs:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: $d0 = COPY %abs(<2 x s32>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %abs:_(<2 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: $d0 = COPY %abs(<2 x i32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %undef:_(<2 x s32>) = G_IMPLICIT_DEF
-    %abs:_(<2 x s32>) = G_ABS %undef
-    $d0 = COPY %abs(<2 x s32>)
+    %undef:_(<2 x i32>) = G_IMPLICIT_DEF
+    %abs:_(<2 x i32>) = G_ABS %undef
+    $d0 = COPY %abs(<2 x i32>)
     RET_ReallyLR implicit $d0
 ...

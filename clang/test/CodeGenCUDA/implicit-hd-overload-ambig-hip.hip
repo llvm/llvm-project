@@ -4,7 +4,7 @@
 // Overload ambiguity inside an implicit-H+D explicit-inst member without an
 // organic device caller: error is silenced, function body is a trap stub.
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip \
 // RUN:   -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -x hip \
 // RUN:   -emit-llvm -o - %s | FileCheck %s

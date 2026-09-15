@@ -674,6 +674,64 @@ func.func @batch_reduce_matmul_as_contract(
 //       CHECKPARALLEL:         %[[res:.*]] = arith.addf %[[vc]], %[[inc]] : f32
 //       CHECKPARALLEL:         store %[[res]], %[[mC]][%[[m]], %[[n]]] : memref<?x?xf32>
 
+func.func @scaled_contract_as_loops(
+    %A: memref<?x?xf8E5M2>, %sA: memref<?xf8E8M0FNU>,
+    %B: memref<?x?xf8E5M2>, %sB: memref<?xf8E8M0FNU>, %C: memref<?x?xf32>) {
+  linalg.scaled_contract
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (m)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n)>,
+                       affine_map<(m, n, k) -> (m, n)>]
+      ins(%A, %sA, %B, %sB : memref<?x?xf8E5M2>, memref<?xf8E8M0FNU>, memref<?x?xf8E5M2>, memref<?xf8E8M0FNU>)
+      outs(%C : memref<?x?xf32>)
+  return
+}
+// CHECK-LABEL: @scaled_contract_as_loops
+//  CHECK-SAME: %[[mA:[a-zA-Z0-9]+]]: memref<?x?xf8E5M2>
+//  CHECK-SAME: %[[msA:[a-zA-Z0-9]+]]: memref<?xf8E8M0FNU>
+//  CHECK-SAME: %[[mB:[a-zA-Z0-9]+]]: memref<?x?xf8E5M2>
+//  CHECK-SAME: %[[msB:[a-zA-Z0-9]+]]: memref<?xf8E8M0FNU>
+//  CHECK-SAME: %[[mC:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//       CHECK: %[[M:.*]] = memref.dim %[[mA]], %c0 : memref<?x?xf8E5M2>
+//       CHECK: %[[K:.*]] = memref.dim %[[mA]], %c1 : memref<?x?xf8E5M2>
+//       CHECK: %[[N:.*]] = memref.dim %[[mB]], %c0 : memref<?x?xf8E5M2>
+//       CHECK: scf.for %[[m:.*]] = %{{.*}} to %[[M]]
+//       CHECK:   scf.for %[[n:.*]] = %{{.*}} to %[[N]]
+//       CHECK:     scf.for %[[k:.*]] = %{{.*}} to %[[K]]
+//       CHECK:       %[[va:.*]] = memref.load %[[mA]][%[[m]], %[[k]]] : memref<?x?xf8E5M2>
+//       CHECK:       %[[vsa:.*]] = memref.load %[[msA]][%[[m]]] : memref<?xf8E8M0FNU>
+//       CHECK:       %[[vb:.*]] = memref.load %[[mB]][%[[n]], %[[k]]] : memref<?x?xf8E5M2>
+//       CHECK:       %[[vsb:.*]] = memref.load %[[msB]][%[[n]]] : memref<?xf8E8M0FNU>
+//       CHECK:       %[[vc:.*]] = memref.load %[[mC]][%[[m]], %[[n]]] : memref<?x?xf32>
+//       CHECK:       %[[sa:.*]] = arith.scaling_extf %[[va]], %[[vsa]] : f8E5M2, f8E8M0FNU to f32
+//       CHECK:       %[[sb:.*]] = arith.scaling_extf %[[vb]], %[[vsb]] : f8E5M2, f8E8M0FNU to f32
+//       CHECK:       %[[prod:.*]] = arith.mulf %[[sa]], %[[sb]] : f32
+//       CHECK:       %[[res:.*]] = arith.addf %[[vc]], %[[prod]] : f32
+//       CHECK:       store %[[res]], %[[mC]][%[[m]], %[[n]]] : memref<?x?xf32>
+
+// CHECKPARALLEL-LABEL: @scaled_contract_as_loops
+//  CHECKPARALLEL-SAME: %[[mA:[a-zA-Z0-9]+]]: memref<?x?xf8E5M2>
+//  CHECKPARALLEL-SAME: %[[msA:[a-zA-Z0-9]+]]: memref<?xf8E8M0FNU>
+//  CHECKPARALLEL-SAME: %[[mB:[a-zA-Z0-9]+]]: memref<?x?xf8E5M2>
+//  CHECKPARALLEL-SAME: %[[msB:[a-zA-Z0-9]+]]: memref<?xf8E8M0FNU>
+//  CHECKPARALLEL-SAME: %[[mC:[a-zA-Z0-9]+]]: memref<?x?xf32>
+//       CHECKPARALLEL: %[[M:.*]] = memref.dim %[[mA]], %c0 : memref<?x?xf8E5M2>
+//       CHECKPARALLEL: %[[K:.*]] = memref.dim %[[mA]], %c1 : memref<?x?xf8E5M2>
+//       CHECKPARALLEL: %[[N:.*]] = memref.dim %[[mB]], %c0 : memref<?x?xf8E5M2>
+//       CHECKPARALLEL: scf.parallel (%[[m:.*]], %[[n:.*]]) = ({{.*}}) to (%[[M]], %[[N]]) step ({{.*}}) {
+//       CHECKPARALLEL:   scf.for %[[k:.*]] = %{{.*}} to %[[K]]
+//       CHECKPARALLEL:     %[[va:.*]] = memref.load %[[mA]][%[[m]], %[[k]]] : memref<?x?xf8E5M2>
+//       CHECKPARALLEL:     %[[vsa:.*]] = memref.load %[[msA]][%[[m]]] : memref<?xf8E8M0FNU>
+//       CHECKPARALLEL:     %[[vb:.*]] = memref.load %[[mB]][%[[n]], %[[k]]] : memref<?x?xf8E5M2>
+//       CHECKPARALLEL:     %[[vsb:.*]] = memref.load %[[msB]][%[[n]]] : memref<?xf8E8M0FNU>
+//       CHECKPARALLEL:     %[[vc:.*]] = memref.load %[[mC]][%[[m]], %[[n]]] : memref<?x?xf32>
+//       CHECKPARALLEL:     %[[sa:.*]] = arith.scaling_extf %[[va]], %[[vsa]] : f8E5M2, f8E8M0FNU to f32
+//       CHECKPARALLEL:     %[[sb:.*]] = arith.scaling_extf %[[vb]], %[[vsb]] : f8E5M2, f8E8M0FNU to f32
+//       CHECKPARALLEL:     %[[prod:.*]] = arith.mulf %[[sa]], %[[sb]] : f32
+//       CHECKPARALLEL:     %[[res:.*]] = arith.addf %[[vc]], %[[prod]] : f32
+//       CHECKPARALLEL:     store %[[res]], %[[mC]][%[[m]], %[[n]]] : memref<?x?xf32>
+
 func.func @named_batch_matmul(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?x?xf32>) {
   linalg.batch_matmul ins(%A, %B : memref<?x?x?xf32>, memref<?x?x?xf32>)
                      outs(%C : memref<?x?x?xf32>)

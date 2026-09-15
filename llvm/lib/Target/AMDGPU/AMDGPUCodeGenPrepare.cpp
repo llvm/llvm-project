@@ -16,7 +16,6 @@
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIModeRegisterDefaults.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -29,7 +28,6 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
@@ -101,6 +99,7 @@ public:
   Function &F;
   const GCNSubtarget &ST;
   const AMDGPUTargetMachine &TM;
+  const TargetTransformInfo &TTI;
   const TargetLibraryInfo *TLI;
   const UniformityInfo &UA;
   const DataLayout &DL;
@@ -114,10 +113,11 @@ public:
   DenseMap<const PHINode *, bool> BreakPhiNodesCache;
 
   AMDGPUCodeGenPrepareImpl(Function &F, const AMDGPUTargetMachine &TM,
+                           const TargetTransformInfo &TTI,
                            const TargetLibraryInfo *TLI, AssumptionCache *AC,
                            const DominatorTree *DT, const UniformityInfo &UA)
-      : F(F), ST(TM.getSubtarget<GCNSubtarget>(F)), TM(TM), TLI(TLI), UA(UA),
-        DL(F.getDataLayout()), SQ(DL, TLI, DT, AC),
+      : F(F), ST(TM.getSubtarget<GCNSubtarget>(F)), TM(TM), TTI(TTI), TLI(TLI),
+        UA(UA), DL(F.getDataLayout()), SQ(DL, TLI, DT, AC),
         HasFP32DenormalFlush(SIModeRegisterDefaults(F, ST).FP32Denormals ==
                              DenormalMode::getPreserveSign()) {}
 
@@ -279,6 +279,7 @@ public:
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
 
     // FIXME: Division expansion needs to preserve the dominator tree.
     if (!ExpandDiv64InIR)
@@ -739,9 +740,14 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
 
   // TODO: Handle other numerator values with arcp.
   if (CLHS->isOne() || (IsNegative = CLHS->isMinusOne())) {
-    // Add in the sqrt flags.
+    // Add sqrt flags, but require both ninf and nsz from the div and the
+    // sqrt: sqrt's ninf/nsz don't say anything about the quotient.
     IRBuilder<>::FastMathFlagGuard Guard(Builder);
-    Builder.setFastMathFlags(DivFMF | SqrtFMF);
+    FastMathFlags NewFMF = DivFMF | SqrtFMF;
+    FastMathFlags ValueFMF = FastMathFlags::intersectValue(DivFMF, SqrtFMF);
+    NewFMF.setNoInfs(ValueFMF.noInfs());
+    NewFMF.setNoSignedZeros(ValueFMF.noSignedZeros());
+    Builder.setFastMathFlags(NewFMF);
 
     if (Den->getType()->isFloatTy()) {
       if ((DivFMF.approxFunc() && SqrtFMF.approxFunc()) ||
@@ -1406,7 +1412,6 @@ bool AMDGPUCodeGenPrepareImpl::tryNarrowMathIfNoOverflow(Instruction *I) {
   NewType = I->getType()->getWithNewBitWidth(NewBit);
 
   // Old cost
-  const TargetTransformInfo &TTI = TM.getTargetTransformInfo(F);
   InstructionCost OldCost =
       TTI.getArithmeticInstrCost(Opc, OldType, TTI::TCK_RecipThroughput);
   // New cost of new op
@@ -1994,14 +1999,23 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
 }
 
 bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
-  // Intrinsic doesn't support vectors, also it seems that it's often difficult
-  // to prove that a vector cannot have any nulls in it so it's unclear if it's
-  // worth supporting.
+  // TODO: This is target-independent reasoning about the source pointer being
+  // non-null, and would fit better in a generic pass such as
+  // AggressiveInstCombine. It lives here for now because proving the source is
+  // not the null value requires knowing the numeric null pointer value of the
+  // source address space, which is not yet a first-class IR concept.
+
+  // If the flag is already set there is nothing to do.
+  if (I.hasNonNull())
+    return false;
+
+  // It is often difficult to prove that a vector of pointers cannot have any
+  // nulls in it, so it's unclear if it's worth supporting.
   if (I.getType()->isVectorTy())
     return false;
 
-  // Check if this can be lowered to a amdgcn.addrspacecast.nonnull.
-  // This is only worthwhile for casts from/to priv/local to flat.
+  // The nonnull flag only affects the lowering of casts from/to priv/local to
+  // flat, so only bother proving non-null for those.
   const unsigned SrcAS = I.getSrcAddressSpace();
   const unsigned DstAS = I.getDestAddressSpace();
 
@@ -2022,11 +2036,7 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
       }))
     return false;
 
-  IRBuilder<> B(&I);
-  auto *Intrin = B.CreateIntrinsic(
-      I.getType(), Intrinsic::amdgcn_addrspacecast_nonnull, {I.getOperand(0)});
-  I.replaceAllUsesWith(Intrin);
-  DeadVals.push_back(&I);
+  I.setNonNull();
   return true;
 }
 
@@ -2164,7 +2174,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
 // Expand llvm.sqrt.f32 calls with !fpmath metadata in a semi-fast way.
 bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
   Type *Ty = Sqrt.getType()->getScalarType();
-  if (!Ty->isFloatTy() && (!Ty->isHalfTy() || ST.has16BitInsts()))
+  if (!Ty->isFloatTy())
     return false;
 
   const FPMathOperator *FPOp = cast<const FPMathOperator>(&Sqrt);
@@ -2254,6 +2264,8 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
     return false;
 
   const AMDGPUTargetMachine &TM = TPC->getTM<AMDGPUTargetMachine>();
+  const TargetTransformInfo &TTI =
+      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   const TargetLibraryInfo *TLI =
       &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   AssumptionCache *AC =
@@ -2262,17 +2274,18 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
   const DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
   const UniformityInfo &UA =
       getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-  return AMDGPUCodeGenPrepareImpl(F, TM, TLI, AC, DT, UA).run();
+  return AMDGPUCodeGenPrepareImpl(F, TM, TTI, TLI, AC, DT, UA).run();
 }
 
 PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
                                                 FunctionAnalysisManager &FAM) {
   const AMDGPUTargetMachine &ATM = static_cast<const AMDGPUTargetMachine &>(TM);
+  const TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   const TargetLibraryInfo *TLI = &FAM.getResult<TargetLibraryAnalysis>(F);
   AssumptionCache *AC = &FAM.getResult<AssumptionAnalysis>(F);
   const DominatorTree *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   const UniformityInfo &UA = FAM.getResult<UniformityInfoAnalysis>(F);
-  AMDGPUCodeGenPrepareImpl Impl(F, ATM, TLI, AC, DT, UA);
+  AMDGPUCodeGenPrepareImpl Impl(F, ATM, TTI, TLI, AC, DT, UA);
   if (!Impl.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA = PreservedAnalyses::none();
@@ -2285,6 +2298,7 @@ INITIALIZE_PASS_BEGIN(AMDGPUCodeGenPrepare, DEBUG_TYPE,
                       "AMDGPU IR optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUCodeGenPrepare, DEBUG_TYPE, "AMDGPU IR optimizations",
                     false, false)

@@ -850,8 +850,8 @@ define <4 x half> @v_repeat_divisor_v2f16_x2(<2 x half> %x, <2 x half> %y, <2 x 
 ; GFX11-TRUE16-LABEL: v_repeat_divisor_v2f16_x2:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_rcp_f16_e32 v2.h, v2.h
 ; GFX11-TRUE16-NEXT:    v_rcp_f16_e32 v2.l, v2.l
+; GFX11-TRUE16-NEXT:    v_rcp_f16_e32 v2.h, v2.h
 ; GFX11-TRUE16-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-TRUE16-NEXT:    v_pk_mul_f16 v0, v0, v2
 ; GFX11-TRUE16-NEXT:    v_pk_mul_f16 v1, v1, v2
@@ -970,8 +970,8 @@ define <6 x half> @v_repeat_divisor_v3f16_x2(<3 x half> %x, <3 x half> %y, <3 x 
 ; GFX11-TRUE16-LABEL: v_repeat_divisor_v3f16_x2:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_rcp_f16_e32 v4.h, v4.h
 ; GFX11-TRUE16-NEXT:    v_rcp_f16_e32 v4.l, v4.l
+; GFX11-TRUE16-NEXT:    v_rcp_f16_e32 v4.h, v4.h
 ; GFX11-TRUE16-NEXT:    v_rcp_f16_e32 v5.l, v5.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.h, 0x7e00
 ; GFX11-TRUE16-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)

@@ -40,7 +40,22 @@ def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
     Option<"typeDescriptorsRenamedForAssembly",
            "type-descriptors-renamed-for-assembly", "bool", /*default=*/"false",
            "Global variables created to describe derived types "
-           "have been renamed to avoid special symbols in their names.">
+           "have been renamed to avoid special symbols in their names.">,
+    Option<"cudaDescriptorAllocFunction", "cuda-descriptor-alloc-function",
+           "std::string", /*default=*/"",
+           "Name of the function to call to allocate CUDA Fortran descriptors. "
+           "Must have the same signature as CUFAllocDescriptor. "
+           "Defaults to CUFAllocDescriptor.">,
+    Option<"unifiedHeapAllocSuffix", "unified-heap-alloc-suffix", "std::string",
+           /*default=*/"", "Suffix of the allocator entry points used for "
+           "allocations marked with the unified heap allocation mode.">,
+    Option<"managedHeapAllocSuffix", "managed-heap-alloc-suffix", "std::string",
+           /*default=*/"", "Suffix of the allocator entry points used for "
+           "allocations marked with the managed heap allocation mode.">,
+    Option<"unsafeFPConversion", "unsafe-fp-conversion", "bool",
+           /*default=*/"false",
+           "Use plain fptosi/fptoui instead of saturating intrinsics "
+           "for FP-to-integer conversions.">
   ];
 }
 

@@ -1,9 +1,14 @@
 // RUN: mlir-opt %s -test-lower-to-llvm  | \
-// RUN: mlir-runner -e entry -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_c_runner_utils | \
+// RUN: mlir-runner -e main -entry-point-result=void \
+// RUN:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
-func.func @maskedstore16(%base: memref<?xf32>,
+//===----------------------------------------------------------------------===//
+// @maskedstore_16
+//
+// Store 16 elements. Insertion index is hard-coded to 0
+//===----------------------------------------------------------------------===//
+func.func @maskedstore_16(%base: memref<?xf32>,
                     %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c0 = arith.constant 0: index
   vector.maskedstore %base[%c0], %mask, %value
@@ -11,7 +16,12 @@ func.func @maskedstore16(%base: memref<?xf32>,
   return
 }
 
-func.func @maskedstore16_at8(%base: memref<?xf32>,
+//===----------------------------------------------------------------------===//
+// @maskedstore_16_at_8
+//
+// Same as @maskedstore_16, but the insertion index is hard-coded to 8 instead of 0
+//===----------------------------------------------------------------------===//
+func.func @maskedstore_16_at_8(%base: memref<?xf32>,
                         %mask: vector<16xi1>, %value: vector<16xf32>) {
   %c8 = arith.constant 8: index
   vector.maskedstore %base[%c8], %mask, %value
@@ -19,23 +29,25 @@ func.func @maskedstore16_at8(%base: memref<?xf32>,
   return
 }
 
-func.func @printmem16(%A: memref<?xf32>) {
-  %c0 = arith.constant 0: index
-  %c1 = arith.constant 1: index
-  %c16 = arith.constant 16: index
-  %z = arith.constant 0.0: f32
-  %m = vector.broadcast %z : f32 to vector<16xf32>
-  %mem = scf.for %i = %c0 to %c16 step %c1
-    iter_args(%m_iter = %m) -> (vector<16xf32>) {
-    %c = memref.load %A[%i] : memref<?xf32>
-    %m_new = vector.insert %c, %m_iter[%i] : f32 into vector<16xf32>
-    scf.yield %m_new : vector<16xf32>
-  }
-  vector.print %mem : vector<16xf32>
+//===----------------------------------------------------------------------===//
+// @print1DMemRef
+//
+// TODO: Move to an utility file
+//===----------------------------------------------------------------------===//
+func.func @print1DMemRef(%ptr: memref<?xf32>) -> () {
+  %cast = memref.cast %ptr:  memref<?xf32> to memref<*xf32>
+
+  call @printMemrefF32(%cast): (memref<*xf32>) -> ()
+
   return
 }
 
-func.func @entry() {
+//===----------------------------------------------------------------------===//
+// @main
+//
+// The main entry point.
+//===----------------------------------------------------------------------===//
+func.func @main() {
   // Set up memory.
   %f0 = arith.constant 0.0: f32
   %c0 = arith.constant 0: index
@@ -70,34 +82,36 @@ func.func @entry() {
   vector.print %val : vector<16xf32>
   // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 )
 
-  call @printmem16(%A) : (memref<?xf32>) -> ()
-  // CHECK: ( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
+  call @print1DMemRef(%A): (memref<?xf32>) -> ()
+  // CHECK: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-  call @maskedstore16(%A, %none, %val)
-    : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> ()
-  call @printmem16(%A) : (memref<?xf32>) -> ()
-  // CHECK: ( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
+  call @maskedstore_16(%A, %none, %val)
+  : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> ()
+  call @print1DMemRef(%A) : (memref<?xf32>) -> ()
+  // CHECK: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-  call @maskedstore16(%A, %some, %val)
-    : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> ()
-  call @printmem16(%A) : (memref<?xf32>) -> ()
-  // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0 )
+  call @maskedstore_16(%A, %some, %val)
+  : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> ()
+  call @print1DMemRef(%A) : (memref<?xf32>) -> ()
+  // CHECK: [0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0]
 
-  call @maskedstore16(%A, %more, %val)
-    : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> ()
-  call @printmem16(%A) : (memref<?xf32>) -> ()
-  // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 13, 0, 0 )
+  call @maskedstore_16(%A, %more, %val)
+  : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> ()
+  call @print1DMemRef(%A) : (memref<?xf32>) -> ()
+  // CHECK: [0, 1, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 0, 13, 0, 0]
 
-  call @maskedstore16(%A, %all, %val)
-    : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> ()
-  call @printmem16(%A) : (memref<?xf32>) -> ()
-  // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 )
+  call @maskedstore_16(%A, %all, %val)
+  : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> ()
+  call @print1DMemRef(%A) : (memref<?xf32>) -> ()
+  // CHECK: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
-  call @maskedstore16_at8(%A, %some, %val)
-    : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> ()
-  call @printmem16(%A) : (memref<?xf32>) -> ()
-  // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7 )
+  call @maskedstore_16_at_8(%A, %some, %val)
+  : (memref<?xf32>, vector<16xi1>, vector<16xf32>) -> ()
+  call @print1DMemRef(%A) : (memref<?xf32>) -> ()
+  // CHECK: [0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7]
 
   memref.dealloc %A : memref<?xf32>
   return
 }
+
+func.func private @printMemrefF32(%ptr : memref<*xf32>)

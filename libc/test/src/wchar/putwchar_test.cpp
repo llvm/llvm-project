@@ -22,8 +22,7 @@
 using LlvmLibcPutwcharTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcPutwcharTest, WriteASCII) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("putwchar_ascii.test"));
+  auto FILENAME = libc_make_test_file_path("putwchar_ascii.test");
 
   // Redirect stdout
   ::FILE *original_stdout = LIBC_NAMESPACE::stdout;
@@ -58,8 +57,7 @@ TEST_F(LlvmLibcPutwcharTest, WriteASCII) {
 }
 
 TEST_F(LlvmLibcPutwcharTest, WriteUtf8) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("putwchar_utf8.test"));
+  auto FILENAME = libc_make_test_file_path("putwchar_utf8.test");
 
   // Redirect stdout
   ::FILE *original_stdout = LIBC_NAMESPACE::stdout;
@@ -116,8 +114,7 @@ TEST_F(LlvmLibcPutwcharTest, WriteUtf8) {
 }
 
 TEST_F(LlvmLibcPutwcharTest, InvalidStream) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("putwchar_invalid.test"));
+  auto FILENAME = libc_make_test_file_path("putwchar_invalid.test");
 
   // Create the file first
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w");
@@ -141,8 +138,7 @@ TEST_F(LlvmLibcPutwcharTest, InvalidStream) {
 }
 
 TEST_F(LlvmLibcPutwcharTest, ByteModeFailure) {
-  auto FILENAME =
-      libc_make_test_file_path(APPEND_LIBC_TEST("putwchar_bytemode.test"));
+  auto FILENAME = libc_make_test_file_path("putwchar_bytemode.test");
   ::FILE *file = LIBC_NAMESPACE::fopen(FILENAME, "w+");
   ASSERT_FALSE(file == nullptr);
 

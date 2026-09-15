@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -16,17 +18,32 @@
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/OnDiskHashTable.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
+#include <algorithm>
+#include <limits>
+#include <memory>
+#include <optional>
 #include <string>
+#include <system_error>
 #include <vector>
+
+#if defined(_WIN32)
+#include "llvm/Support/Windows/WindowsSupport.h"
+#include "llvm/Support/WindowsError.h"
+#elif defined(LLVM_ON_UNIX) && !defined(__MVS__)
+#include <sys/mman.h>
+#endif
 
 using namespace llvm;
 using namespace sampleprof;
@@ -41,6 +58,115 @@ static ::testing::AssertionResult NoError(std::error_code EC) {
 }
 
 namespace {
+
+/// Expose string decoding for focused buffer-boundary tests.
+class StringDataTestReader final : public SampleProfileReaderRawBinary {
+public:
+  /// Construct a reader over the supplied test buffer.
+  StringDataTestReader(std::unique_ptr<MemoryBuffer> Buffer,
+                       LLVMContext &Context)
+      : SampleProfileReaderRawBinary(std::move(Buffer), Context) {}
+
+  /// Decode one string using the production binary-reader path.
+  ErrorOr<StringRef> readCString() {
+    Data = reinterpret_cast<const uint8_t *>(Buffer->getBufferStart());
+    End = reinterpret_cast<const uint8_t *>(Buffer->getBufferEnd());
+    return readString();
+  }
+
+  /// Decode one string with the cursor at the logical buffer end.
+  ErrorOr<StringRef> readCStringAtEnd() {
+    Data = reinterpret_cast<const uint8_t *>(Buffer->getBufferEnd());
+    End = Data;
+    return readString();
+  }
+
+  /// Return whether the decoder consumed the complete test buffer.
+  bool atEnd() const { return Data == End; }
+};
+
+/// Expose ExtBinary header reading for fixed-width number boundary tests.
+class ExtBinaryDataTestReader final : public SampleProfileReaderExtBinary {
+public:
+  /// Construct a reader over the supplied test buffer.
+  ExtBinaryDataTestReader(std::unique_ptr<MemoryBuffer> Buffer,
+                          LLVMContext &Context)
+      : SampleProfileReaderExtBinary(std::move(Buffer), Context) {}
+
+  /// Read the ExtBinary header using the production reader path.
+  std::error_code readProfileHeader() { return readHeader(); }
+};
+
+/// Create a non-owning MemoryBuffer view over \p Bytes.
+static std::unique_ptr<MemoryBuffer>
+createTestMemoryBuffer(ArrayRef<uint8_t> Bytes) {
+  return MemoryBuffer::getMemBuffer(
+      StringRef(reinterpret_cast<const char *>(Bytes.data()), Bytes.size()),
+      "binary-data", /*RequiresNullTerminator=*/false);
+}
+
+/// Own a buffer ending immediately before an inaccessible guard page.
+struct GuardedMemoryBuffer {
+  sys::OwningMemoryBlock Storage;
+  std::unique_ptr<MemoryBuffer> Buffer;
+};
+
+/// Return whether this host exposes an API for no-access memory pages.
+static constexpr bool guardPagesSupported() {
+#if defined(_WIN32) || (defined(LLVM_ON_UNIX) && !defined(__MVS__))
+  return true;
+#else
+  return false;
+#endif
+}
+
+/// Make \p GuardPage inaccessible so an out-of-bounds read faults immediately.
+static std::error_code protectGuardPage(sys::MemoryBlock GuardPage) {
+#if defined(_WIN32)
+  DWORD OldProtection;
+  if (!VirtualProtect(GuardPage.base(), GuardPage.allocatedSize(),
+                      PAGE_NOACCESS, &OldProtection))
+    return mapLastWindowsError();
+  return std::error_code();
+#elif defined(LLVM_ON_UNIX) && !defined(__MVS__)
+  if (::mprotect(GuardPage.base(), GuardPage.allocatedSize(), PROT_NONE))
+    return errnoAsErrorCode();
+  return std::error_code();
+#else
+  return std::make_error_code(std::errc::not_supported);
+#endif
+}
+
+/// Copy \p Bytes to the end of a readable page followed by a no-access page.
+static Expected<GuardedMemoryBuffer>
+createGuardedMemoryBuffer(ArrayRef<uint8_t> Bytes) {
+  auto PageSizeOrErr = sys::Process::getPageSize();
+  if (!PageSizeOrErr)
+    return PageSizeOrErr.takeError();
+  const size_t PageSize = *PageSizeOrErr;
+  if (Bytes.empty() || Bytes.size() > PageSize)
+    return createStringError(std::errc::invalid_argument,
+                             "test buffer must fit in one memory page");
+
+  std::error_code EC;
+  sys::MemoryBlock Allocation = sys::Memory::allocateMappedMemory(
+      2 * PageSize, nullptr, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
+  if (EC)
+    return errorCodeToError(EC);
+
+  sys::OwningMemoryBlock Storage(Allocation);
+  auto *GuardStart = static_cast<uint8_t *>(Allocation.base()) + PageSize;
+  sys::MemoryBlock GuardPage(GuardStart, PageSize);
+  EC = protectGuardPage(GuardPage);
+  if (EC)
+    return errorCodeToError(EC);
+
+  auto *BufferStart = GuardStart - Bytes.size();
+  std::copy(Bytes.begin(), Bytes.end(), BufferStart);
+  auto Buffer =
+      createTestMemoryBuffer(ArrayRef<uint8_t>(BufferStart, Bytes.size()));
+  return GuardedMemoryBuffer{std::move(Storage), std::move(Buffer)};
+}
 
 struct SampleProfTest : ::testing::Test {
   LLVMContext Context;
@@ -139,9 +265,12 @@ struct SampleProfTest : ::testing::Test {
     delete PS;
   }
 
-  // Write a minimal profile with a specific format version to an in-memory
-  // buffer.
-  ErrorOr<SmallVector<char, 128>> writeProfileToBuffer(uint64_t Version) {
+  // Write the supplied profile map, optionally requesting a specific format
+  // version, to an in-memory buffer.
+  ErrorOr<SmallVector<char, 128>>
+  writeProfileToBuffer(const SampleProfileMap &Profiles,
+                       std::optional<uint64_t> Version = std::nullopt,
+                       bool UseComposite = false) {
     SmallVector<char, 128> Buffer;
     std::unique_ptr<raw_ostream> OS =
         std::make_unique<raw_svector_ostream>(Buffer);
@@ -150,8 +279,24 @@ struct SampleProfTest : ::testing::Test {
     if (std::error_code EC = WriterOrErr.getError())
       return EC;
     auto Writer = std::move(WriterOrErr.get());
-    Writer->setFormatVersion(Version);
+    if (Version)
+      Writer->setFormatVersion(*Version);
+    else if (UseComposite)
+      Writer->setFormatVersion(CompositeProfileVersion);
+    Writer->setUseCompositeProfile(UseComposite);
 
+    if (std::error_code EC = Writer->write(Profiles))
+      return EC;
+    Writer->getOutputStream().flush();
+    Writer.reset();
+    return Buffer;
+  }
+
+  // Write a minimal profile, optionally requesting a specific format version,
+  // to an in-memory buffer.
+  ErrorOr<SmallVector<char, 128>>
+  writeProfileToBuffer(std::optional<uint64_t> Version = std::nullopt,
+                       bool UseComposite = false) {
     StringRef FooName("_Z3fooi");
     FunctionSamples FooSamples;
     FooSamples.setFunction(FunctionId(FooName));
@@ -159,12 +304,7 @@ struct SampleProfTest : ::testing::Test {
 
     SampleProfileMap Profiles;
     Profiles[FooName] = std::move(FooSamples);
-
-    if (std::error_code EC = Writer->write(Profiles))
-      return EC;
-    Writer->getOutputStream().flush();
-    Writer.reset();
-    return Buffer;
+    return writeProfileToBuffer(Profiles, Version, UseComposite);
   }
 
   // Write a raw profile header (Magic + Version) directly to a buffer.
@@ -176,6 +316,46 @@ struct SampleProfTest : ::testing::Test {
     encodeULEB128(SPMagic(SPF_Ext_Binary), OS);
     encodeULEB128(Version, OS);
     return Buffer;
+  }
+
+  // Read a binary header through the production reader path.
+  std::error_code readBinaryHeaderFromBuffer(ArrayRef<uint8_t> Encoded) {
+    auto Buffer = createTestMemoryBuffer(Encoded);
+    SampleProfileReaderRawBinary TestReader(std::move(Buffer), Context);
+    return TestReader.readHeader();
+  }
+
+  // Decode one string through the production reader path.
+  std::error_code readStringErrorFromBuffer(ArrayRef<uint8_t> Encoded) {
+    auto Buffer = createTestMemoryBuffer(Encoded);
+    StringDataTestReader TestReader(std::move(Buffer), Context);
+    return TestReader.readCString().getError();
+  }
+
+  // Decode one string with the cursor at the supplied buffer's end.
+  std::error_code readStringAtEndError(ArrayRef<uint8_t> Encoded) {
+    auto Buffer = createTestMemoryBuffer(Encoded);
+    StringDataTestReader TestReader(std::move(Buffer), Context);
+    return TestReader.readCStringAtEnd().getError();
+  }
+
+  // Build an ExtBinary header whose section-count field is truncated mid-value.
+  SmallVector<uint8_t, 32> writeTruncatedExtBinarySecCount() {
+    SmallVector<char, 32> Header;
+    raw_svector_ostream OS(Header);
+    encodeULEB128(SPMagic(SPF_Ext_Binary), OS);
+    encodeULEB128(103, OS);
+    SmallVector<uint8_t, 32> Encoded(Header.begin(), Header.end());
+    // Four bytes are not enough for the fixed-width section-count uint64_t.
+    Encoded.append({1, 2, 3, 4});
+    return Encoded;
+  }
+
+  // Read an ExtBinary header through the production reader path.
+  std::error_code readExtBinaryHeaderFromBuffer(ArrayRef<uint8_t> Encoded) {
+    auto Buffer = createTestMemoryBuffer(Encoded);
+    ExtBinaryDataTestReader TestReader(std::move(Buffer), Context);
+    return TestReader.readProfileHeader();
   }
 
   // Read the profile from an in-memory buffer, verify its payload, and
@@ -199,11 +379,23 @@ struct SampleProfTest : ::testing::Test {
     return Reader->getFormatVersion();
   }
 
-  void testRoundTrip(SampleProfileFormat Format, bool Remap, bool UseMD5) {
+  void testRoundTrip(SampleProfileFormat Format, bool Remap, bool UseMD5,
+                     bool UseMD5ProfSymList = false,
+                     bool UseMD5IndexedTables = false,
+                     bool UseComposite = false) {
     TempFile ProfileFile("profile", "", "", /*Unique*/ true);
     createWriter(Format, ProfileFile.path());
-    if (Format == SampleProfileFormat::SPF_Ext_Binary && UseMD5)
-      static_cast<SampleProfileWriterExtBinary *>(Writer.get())->setUseMD5();
+    if (Format == SampleProfileFormat::SPF_Ext_Binary) {
+      if (UseMD5)
+        Writer->setUseMD5();
+      if (UseMD5ProfSymList)
+        Writer->setUseMD5ProfileSymbolList();
+      if (UseMD5IndexedTables)
+        Writer->setUseMD5IndexedTables();
+      if (UseComposite)
+        Writer->setFormatVersion(CompositeProfileVersion);
+      Writer->setUseCompositeProfile(UseComposite);
+    }
 
     StringRef FooName("_Z3fooi");
     FunctionSamples FooSamples;
@@ -298,6 +490,7 @@ struct SampleProfTest : ::testing::Test {
     ASSERT_TRUE(NoError(EC));
 
     if (Format == SampleProfileFormat::SPF_Ext_Binary) {
+      EXPECT_EQ(UseComposite, Reader->hasCompositeProfileSection());
       std::unique_ptr<ProfileSymbolList> ReaderList =
           Reader->getProfileSymbolList();
       ReaderList->contains("zoo");
@@ -456,7 +649,61 @@ struct SampleProfTest : ::testing::Test {
       if (Samples != nullptr)
         Esamples = Samples->getTotalSamples();
       ASSERT_EQ(I->getValue(), Esamples);
+
+      if (Format == SampleProfileFormat::SPF_Ext_Binary) {
+        ASSERT_TRUE(Reader->contains(I->getKey()));
+        ASSERT_TRUE(Reader->contains(FunctionId(I->getKey()).getHashCode()));
+      }
     }
+
+    if (Format == SampleProfileFormat::SPF_Ext_Binary) {
+      StringRef FakeSymbol = "non_existent_symbol_for_test";
+      ASSERT_FALSE(Reader->contains(FakeSymbol));
+      ASSERT_FALSE(Reader->contains(FunctionId(FakeSymbol).getHashCode()));
+    }
+  }
+};
+
+/// Run buffer-boundary tests only where the host supports inaccessible pages.
+struct GuardedSampleProfTest : SampleProfTest {
+  /// Skip guard-page tests on hosts without the required memory protection.
+  void SetUp() override {
+    SampleProfTest::SetUp();
+    if (!guardPagesSupported())
+      GTEST_SKIP() << "guard pages are not supported on this host";
+  }
+
+  /// Read a binary header ending at a guard page.
+  Expected<std::error_code>
+  readBinaryHeaderFromGuardedBuffer(ArrayRef<uint8_t> Encoded) {
+    auto GuardedOrErr = createGuardedMemoryBuffer(Encoded);
+    if (!GuardedOrErr)
+      return GuardedOrErr.takeError();
+    GuardedMemoryBuffer Guarded = std::move(*GuardedOrErr);
+    SampleProfileReaderRawBinary TestReader(std::move(Guarded.Buffer), Context);
+    return TestReader.readHeader();
+  }
+
+  /// Decode one string ending at a guard page.
+  Expected<std::error_code>
+  readStringErrorFromGuardedBuffer(ArrayRef<uint8_t> Encoded) {
+    auto GuardedOrErr = createGuardedMemoryBuffer(Encoded);
+    if (!GuardedOrErr)
+      return GuardedOrErr.takeError();
+    GuardedMemoryBuffer Guarded = std::move(*GuardedOrErr);
+    StringDataTestReader TestReader(std::move(Guarded.Buffer), Context);
+    return TestReader.readCString().getError();
+  }
+
+  /// Read an ExtBinary header ending at a guard page.
+  Expected<std::error_code>
+  readExtBinaryHeaderFromGuardedBuffer(ArrayRef<uint8_t> Encoded) {
+    auto GuardedOrErr = createGuardedMemoryBuffer(Encoded);
+    if (!GuardedOrErr)
+      return GuardedOrErr.takeError();
+    GuardedMemoryBuffer Guarded = std::move(*GuardedOrErr);
+    ExtBinaryDataTestReader TestReader(std::move(Guarded.Buffer), Context);
+    return TestReader.readProfileHeader();
   }
 };
 
@@ -472,8 +719,136 @@ TEST_F(SampleProfTest, roundtrip_ext_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false);
 }
 
+// Verify the full ExtBinary round trip through composite profile sections.
+TEST_F(SampleProfTest, roundtrip_composite_ext_binary_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false,
+                /*UseMD5ProfSymList=*/false,
+                /*UseMD5IndexedTables=*/false, /*UseComposite=*/true);
+}
+
+// Verify that the writer and reader handle a multi-byte ULEB128 payload size.
+TEST_F(SampleProfTest, roundtrip_large_composite_ext_binary_profile) {
+  constexpr uint32_t BodyRecordCount = 128;
+  StringRef FunctionName("_Z5largev");
+
+  // Build one function whose encoded LBR payload is necessarily larger than the
+  // single-byte ULEB128 range.
+  FunctionSamples LargeSamples;
+  LargeSamples.setFunction(FunctionId(FunctionName));
+  ASSERT_EQ(sampleprof_error::success,
+            LargeSamples.addTotalSamples(BodyRecordCount));
+  ASSERT_EQ(sampleprof_error::success, LargeSamples.addHeadSamples(1));
+  for (uint32_t LineOffset = 1; LineOffset <= BodyRecordCount; ++LineOffset)
+    ASSERT_EQ(sampleprof_error::success,
+              LargeSamples.addBodySamples(LineOffset, 0, 1));
+
+  SampleProfileMap Profiles;
+  Profiles[FunctionName] = std::move(LargeSamples);
+  auto BufferOrErr =
+      writeProfileToBuffer(Profiles, std::nullopt, /*UseComposite=*/true);
+  ASSERT_TRUE(NoError(BufferOrErr.getError()));
+
+  // Inspect the decoded block structure to verify that the writer emitted a
+  // payload size outside the single-byte ULEB128 range.
+  std::unique_ptr<MemoryBuffer> MemBuffer = MemoryBuffer::getMemBufferCopy(
+      StringRef(BufferOrErr->data(), BufferOrErr->size()), "profile");
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = SampleProfileReader::create(MemBuffer, Context, *FS);
+  ASSERT_TRUE(NoError(ReaderOrErr.getError()));
+  auto ProfileReader = std::move(ReaderOrErr.get());
+  std::string ProfileTypeInfo;
+  raw_string_ostream InfoOS(ProfileTypeInfo);
+  ASSERT_TRUE(NoError(ProfileReader->dumpProfileTypeInfo(InfoOS)));
+
+  StringRef PayloadSizeText =
+      StringRef(ProfileTypeInfo).split("Payload size: ").second;
+  ASSERT_FALSE(PayloadSizeText.empty());
+  PayloadSizeText = PayloadSizeText.split('\n').first;
+  uint64_t PayloadSize = 0;
+  ASSERT_FALSE(PayloadSizeText.getAsInteger(10, PayloadSize));
+  EXPECT_GE(PayloadSize, 128u);
+
+  // Confirm that the same read preserved every body record, including both
+  // ends of the generated range.
+  FunctionSamples *ReadSamples = ProfileReader->getSamplesFor(FunctionName);
+  ASSERT_NE(ReadSamples, nullptr);
+  EXPECT_EQ(ReadSamples->getBodySamples().size(), BodyRecordCount);
+  auto FirstSample = ReadSamples->findSamplesAt(1, 0);
+  ASSERT_TRUE(NoError(FirstSample.getError()));
+  EXPECT_EQ(FirstSample.get(), 1u);
+  auto LastSample = ReadSamples->findSamplesAt(BodyRecordCount, 0);
+  ASSERT_TRUE(NoError(LastSample.getError()));
+  EXPECT_EQ(LastSample.get(), 1u);
+}
+
+// Verify that reconfiguring one ExtBinary writer in both directions updates the
+// profile and offset section types. Version 105 supports both representations.
+TEST_F(SampleProfTest, ext_binary_writer_toggles_composite_layout) {
+  SmallVector<char, 128> Buffer;
+  std::unique_ptr<raw_ostream> OS =
+      std::make_unique<raw_svector_ostream>(Buffer);
+  auto WriterOrErr =
+      SampleProfileWriter::create(OS, SampleProfileFormat::SPF_Ext_Binary);
+  ASSERT_TRUE(NoError(WriterOrErr.getError()));
+  auto ProfileWriter = std::move(WriterOrErr.get());
+  ProfileWriter->setFormatVersion(CompositeProfileVersion);
+  ProfileWriter->setUseCompositeProfile(true);
+
+  StringRef FooName("_Z3fooi");
+  FunctionSamples FooSamples;
+  FooSamples.setFunction(FunctionId(FooName));
+  FooSamples.addTotalSamples(1);
+  SampleProfileMap Profiles;
+  Profiles[FooName] = std::move(FooSamples);
+
+  auto VerifyFormat = [&](bool IsComposite, uint64_t ExpectedVersion) {
+    std::unique_ptr<MemoryBuffer> MemBuffer = MemoryBuffer::getMemBufferCopy(
+        StringRef(Buffer.data(), Buffer.size()), "profile");
+    auto FS = vfs::getRealFileSystem();
+    auto ReaderOrErr = SampleProfileReader::create(MemBuffer, Context, *FS);
+    ASSERT_TRUE(NoError(ReaderOrErr.getError()));
+    auto ProfileReader = std::move(ReaderOrErr.get());
+    ASSERT_TRUE(NoError(ProfileReader->read()));
+    EXPECT_EQ(IsComposite, ProfileReader->hasCompositeProfileSection());
+    EXPECT_EQ(ExpectedVersion, ProfileReader->getFormatVersion());
+  };
+
+  ASSERT_TRUE(NoError(ProfileWriter->write(Profiles)));
+  ProfileWriter->getOutputStream().flush();
+  VerifyFormat(true, CompositeProfileVersion);
+
+  Buffer.clear();
+  ProfileWriter->setUseCompositeProfile(false);
+  ASSERT_TRUE(NoError(ProfileWriter->write(Profiles)));
+  ProfileWriter->getOutputStream().flush();
+  VerifyFormat(false, CompositeProfileVersion);
+
+  Buffer.clear();
+  ProfileWriter->setUseCompositeProfile(true);
+  ASSERT_TRUE(NoError(ProfileWriter->write(Profiles)));
+  ProfileWriter->getOutputStream().flush();
+  VerifyFormat(true, CompositeProfileVersion);
+}
+
 TEST_F(SampleProfTest, roundtrip_md5_ext_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true);
+}
+
+TEST_F(SampleProfTest, roundtrip_eytzinger_ext_binary_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false,
+                /*UseMD5ProfSymList=*/true);
+}
+
+TEST_F(SampleProfTest, roundtrip_eytzinger_name_table_ext_binary_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true,
+                /*UseMD5ProfSymList=*/false, /*UseMD5IndexedTables=*/true);
+}
+
+// Verify composite ExtBinary round trips when the name table uses MD5 hashes.
+TEST_F(SampleProfTest, roundtrip_composite_md5_ext_binary_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true,
+                /*UseMD5ProfSymList=*/false,
+                /*UseMD5IndexedTables=*/false, /*UseComposite=*/true);
 }
 
 TEST_F(SampleProfTest, remap_text_profile) {
@@ -552,49 +927,6 @@ TEST_F(SampleProfTest, none_suffix_elision_text) {
   testSuffixElisionPolicy(SampleProfileFormat::SPF_Text, "none", Expected);
 }
 
-TEST_F(SampleProfTest, FuncOffsetHashTable) {
-  std::vector<std::pair<uint64_t, uint64_t>> TestData = {
-      {0x1111111122222222ULL, 100},
-      {0x3333333344444444ULL, 250},
-      {0x5555555566666666ULL, 1000},
-  };
-
-  SmallVector<char, 128> Buffer;
-  raw_svector_ostream OS(Buffer);
-
-  FuncOffsetHashTableWriterInfo WriterInfo;
-  OnDiskChainedHashTableGenerator<FuncOffsetHashTableWriterInfo> Generator;
-
-  for (const auto &[Name, Offset] : TestData)
-    Generator.insert(Name, Offset);
-
-  // Add padding to avoid bucket offset 0.
-  OS.write("PAD ", 4);
-  uint32_t BucketTableOffset = Generator.Emit(OS, WriterInfo);
-
-  const unsigned char *Start =
-      reinterpret_cast<const unsigned char *>(Buffer.data());
-
-  const unsigned char *Buckets = Start + BucketTableOffset;
-  const unsigned char *Payload = Start + 4;
-
-  auto Table =
-      std::unique_ptr<OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>>(
-          OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>::Create(
-              Buckets, Payload, Start));
-
-  ASSERT_TRUE(Table);
-
-  for (const auto &[Name, Offset] : TestData) {
-    auto Iter = Table->find(Name);
-    ASSERT_TRUE(Iter != Table->end());
-    ASSERT_EQ(*Iter, Offset);
-  }
-
-  auto Iter = Table->find(0x9999999999999999ULL);
-  ASSERT_TRUE(Iter == Table->end());
-}
-
 TEST_F(SampleProfTest, SampleProfileFuncOffsetTableInMemory) {
   SampleProfileFuncOffsetTable Table(InMemoryMode, 2);
 
@@ -610,43 +942,133 @@ TEST_F(SampleProfTest, SampleProfileFuncOffsetTableInMemory) {
   EXPECT_EQ(Table.lookup(0x55556666ULL), std::nullopt);
 }
 
-TEST_F(SampleProfTest, SampleProfileFuncOffsetTableOnDisk) {
-  std::vector<std::pair<uint64_t, uint64_t>> TestData = {
-      {0x1111111122222222ULL, 100},
-      {0x3333333344444444ULL, 250},
-      {0x5555555566666666ULL, 1000},
-  };
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+// Verify that function-offset flags are rejected for unrelated section types.
+TEST(SampleProfSectionFlagTest, RejectsMismatchedSectionSpecificFlag) {
+  SecHdrTableEntry Entry{SecLBRProfile, 0, 0, 0, 0};
+  EXPECT_DEATH(
+      static_cast<void>(hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered)),
+      "Misuse of a flag in an incompatible section");
+}
+#endif
 
-  SmallVector<char, 128> Buffer;
-  raw_svector_ostream OS(Buffer);
+// Verify that a non-terminated ULEB is reported as truncated.
+TEST_F(SampleProfTest, TruncatedULEBIsTruncated) {
+  const uint8_t Encoded[] = {0x80};
+  EXPECT_EQ(readBinaryHeaderFromBuffer(Encoded), sampleprof_error::truncated);
+}
 
-  FuncOffsetHashTableWriterInfo WriterInfo;
-  OnDiskChainedHashTableGenerator<FuncOffsetHashTableWriterInfo> Generator;
+// Verify that a non-terminated ULEB at a guard-page boundary does not read past
+// the supplied MemoryBuffer.
+TEST_F(GuardedSampleProfTest, TruncatedULEBDoesNotReadPastBufferEnd) {
+  const uint8_t Encoded[] = {0x80};
+  auto ECOrErr = readBinaryHeaderFromGuardedBuffer(Encoded);
+  ASSERT_THAT_EXPECTED(ECOrErr, Succeeded());
+  EXPECT_EQ(*ECOrErr, sampleprof_error::truncated);
+}
 
-  for (const auto &[Name, Offset] : TestData)
-    Generator.insert(Name, Offset);
+// Verify that an in-bounds ULEB value exceeding uint64_t is malformed rather
+// than silently decoded as zero.
+TEST_F(SampleProfTest, OversizedULEBIsMalformed) {
+  SmallVector<uint8_t, 10> Encoded(10, 0xff);
+  EXPECT_EQ(readBinaryHeaderFromBuffer(Encoded), sampleprof_error::malformed);
+}
 
-  // Add padding to avoid bucket offset 0.
-  OS.write("PAD ", 4);
-  uint32_t BucketTableOffset = Generator.Emit(OS, WriterInfo);
+// Verify that format detection rejects a truncated magic value.
+TEST_F(SampleProfTest, TruncatedMagicIsRejected) {
+  const uint8_t Encoded[] = {0x80};
+  auto Buffer = createTestMemoryBuffer(Encoded);
+  EXPECT_FALSE(SampleProfileReaderRawBinary::hasFormat(*Buffer));
+  EXPECT_FALSE(SampleProfileReaderExtBinary::hasFormat(*Buffer));
+}
 
-  const unsigned char *Start =
-      reinterpret_cast<const unsigned char *>(Buffer.data());
+// Verify that format detection rejects a truncated magic without reading into
+// the guard page beyond the supplied MemoryBuffer.
+TEST_F(GuardedSampleProfTest, TruncatedMagicDoesNotReadPastBufferEnd) {
+  const uint8_t Encoded[] = {0x80};
+  auto GuardedOrErr = createGuardedMemoryBuffer(Encoded);
+  ASSERT_THAT_EXPECTED(GuardedOrErr, Succeeded());
+  GuardedMemoryBuffer Guarded = std::move(*GuardedOrErr);
+  EXPECT_FALSE(SampleProfileReaderRawBinary::hasFormat(*Guarded.Buffer));
+  EXPECT_FALSE(SampleProfileReaderExtBinary::hasFormat(*Guarded.Buffer));
+}
 
-  const unsigned char *Buckets = Start + BucketTableOffset;
-  const unsigned char *Payload = Start + 4;
+// Verify all accepted and rejected forms of the GCC format magic.
+TEST_F(SampleProfTest, GCCMagicDetection) {
+  const uint8_t Truncated[] = {'a'};
+  auto ShortBuffer = createTestMemoryBuffer(Truncated);
+  EXPECT_FALSE(SampleProfileReaderGCC::hasFormat(*ShortBuffer));
 
-  SampleProfileFuncOffsetTable Table(OnDiskMode, Buckets, Payload, Start);
+  const uint8_t MagicOnly[] = {'a', 'd', 'c', 'g', '*', '7', '0', '4'};
+  auto MagicOnlyBuffer = createTestMemoryBuffer(MagicOnly);
+  EXPECT_TRUE(SampleProfileReaderGCC::hasFormat(*MagicOnlyBuffer));
 
-  // Test lookup
-  for (const auto &[Name, Offset] : TestData) {
-    auto LookupResult = Table.lookup(Name);
-    ASSERT_TRUE(LookupResult.has_value());
-    EXPECT_EQ(*LookupResult, Offset);
-  }
+  const uint8_t Magic[] = {'a', 'd', 'c', 'g', '*', '7', '0', '4', 0};
+  auto MagicBuffer = createTestMemoryBuffer(Magic);
+  EXPECT_TRUE(SampleProfileReaderGCC::hasFormat(*MagicBuffer));
 
-  // Test non-existent key
-  EXPECT_EQ(Table.lookup(0x9999999999999999ULL), std::nullopt);
+  const uint8_t NonTerminated[] = {'a', 'd', 'c', 'g', '*', '7', '0', '4', 'x'};
+  auto NonTerminatedBuffer = createTestMemoryBuffer(NonTerminated);
+  EXPECT_FALSE(SampleProfileReaderGCC::hasFormat(*NonTerminatedBuffer));
+}
+
+// Verify that GCC magic detection does not read beyond a magic-only buffer.
+TEST_F(GuardedSampleProfTest, GCCMagicDoesNotReadPastBufferEnd) {
+  const uint8_t MagicOnly[] = {'a', 'd', 'c', 'g', '*', '7', '0', '4'};
+  auto GuardedOrErr = createGuardedMemoryBuffer(MagicOnly);
+  ASSERT_THAT_EXPECTED(GuardedOrErr, Succeeded());
+  GuardedMemoryBuffer Guarded = std::move(*GuardedOrErr);
+  EXPECT_TRUE(SampleProfileReaderGCC::hasFormat(*Guarded.Buffer));
+}
+
+// Verify that an unterminated string is reported as truncated.
+TEST_F(SampleProfTest, UnterminatedStringIsTruncated) {
+  const uint8_t Encoded[] = {'n', 'o'};
+  EXPECT_EQ(readStringErrorFromBuffer(Encoded), sampleprof_error::truncated);
+}
+
+// Verify that an unterminated string does not search into the guard page beyond
+// the supplied MemoryBuffer.
+TEST_F(GuardedSampleProfTest, UnterminatedStringDoesNotReadPastBufferEnd) {
+  const uint8_t Encoded[] = {'n', 'o'};
+  auto ECOrErr = readStringErrorFromGuardedBuffer(Encoded);
+  ASSERT_THAT_EXPECTED(ECOrErr, Succeeded());
+  EXPECT_EQ(*ECOrErr, sampleprof_error::truncated);
+}
+
+// Verify that readString accepts a terminator in the final buffer byte and
+// advances the input cursor exactly to End.
+TEST_F(SampleProfTest, ValidStringEndsAtBufferEnd) {
+  const uint8_t Encoded[] = {'o', 'k', 0};
+  auto Buffer = createTestMemoryBuffer(Encoded);
+  StringDataTestReader TestReader(std::move(Buffer), Context);
+
+  auto StringOrErr = TestReader.readCString();
+  ASSERT_TRUE(NoError(StringOrErr.getError()));
+  EXPECT_EQ(*StringOrErr, "ok");
+  EXPECT_TRUE(TestReader.atEnd());
+}
+
+// Verify that string decoding rejects a cursor already at the buffer end.
+TEST_F(SampleProfTest, StringReaderAtEndIsTruncated) {
+  const uint8_t Data[] = {0};
+  EXPECT_EQ(readStringAtEndError(Data), sampleprof_error::truncated);
+}
+
+// Verify that a short fixed-width ExtBinary section count is truncated.
+TEST_F(SampleProfTest, ShortUnencodedNumberIsTruncated) {
+  auto Encoded = writeTruncatedExtBinarySecCount();
+  EXPECT_EQ(readExtBinaryHeaderFromBuffer(Encoded),
+            sampleprof_error::truncated);
+}
+
+// Verify that a short fixed-width ExtBinary section count does not read into
+// the guard page.
+TEST_F(GuardedSampleProfTest, ShortUnencodedNumberDoesNotReadPastBufferEnd) {
+  auto Encoded = writeTruncatedExtBinarySecCount();
+  auto ECOrErr = readExtBinaryHeaderFromGuardedBuffer(Encoded);
+  ASSERT_THAT_EXPECTED(ECOrErr, Succeeded());
+  EXPECT_EQ(*ECOrErr, sampleprof_error::truncated);
 }
 
 // Verify that requesting format version 103 results in a version 103 profile.
@@ -679,12 +1101,286 @@ TEST_F(SampleProfTest, SampleProfileFormatVersion102) {
   EXPECT_EQ(ReadVersionOrErr.getError(), sampleprof_error::unsupported_version);
 }
 
-// Verify that requesting format version 105 (above latest supported) is
-// rejected by the reader.
+// Verify that requesting format version 105 results in a version 105 legacy
+// profile.
 TEST_F(SampleProfTest, SampleProfileFormatVersion105) {
-  auto Buffer = writeRawHeaderToBuffer(105);
+  auto BufferOrErr = writeProfileToBuffer(105);
+  ASSERT_TRUE(NoError(BufferOrErr.getError()));
+  auto Buffer = std::move(*BufferOrErr);
+
+  auto ReadVersionOrErr = readVersionFromBuffer(Buffer);
+  ASSERT_TRUE(NoError(ReadVersionOrErr.getError()));
+  EXPECT_EQ(*ReadVersionOrErr, CompositeProfileVersion);
+}
+
+// Verify that requesting format version 106 (above latest supported) is
+// rejected by the reader.
+TEST_F(SampleProfTest, SampleProfileFormatVersion106) {
+  auto Buffer = writeRawHeaderToBuffer(106);
   auto ReadVersionOrErr = readVersionFromBuffer(Buffer);
   EXPECT_EQ(ReadVersionOrErr.getError(), sampleprof_error::unsupported_version);
 }
+
+// Verify composite output with the first compatible ExtBinary version.
+TEST_F(SampleProfTest, CompositeProfileSupportsVersion105) {
+  auto BufferOrErr = writeProfileToBuffer(std::nullopt, /*UseComposite=*/true);
+  ASSERT_TRUE(NoError(BufferOrErr.getError()));
+
+  auto ReadVersionOrErr = readVersionFromBuffer(*BufferOrErr);
+  ASSERT_TRUE(NoError(ReadVersionOrErr.getError()));
+  EXPECT_EQ(*ReadVersionOrErr, CompositeProfileVersion);
+}
+
+// Verify that the writer rejects a programmatic legacy version instead of
+// silently overriding it when composite output is required.
+TEST_F(SampleProfTest, CompositeProfileRejectsProgrammaticLegacyVersions) {
+  for (uint64_t Version : {103u, 104u}) {
+    auto BufferOrErr = writeProfileToBuffer(Version, /*UseComposite=*/true);
+    EXPECT_EQ(BufferOrErr.getError(), sampleprof_error::unsupported_version);
+  }
+}
+
+TEST_F(SampleProfTest, ProfileSymbolListMD5) {
+  std::vector<uint64_t> Keys = {FunctionId("foo").getHashCode(),
+                                FunctionId("bar").getHashCode()};
+  auto Table =
+      llvm::EytzingerTable<support::ulittle64_t>::create(std::move(Keys));
+
+  ProfileSymbolList List;
+  List.setColdGUIDTable(
+      EytzingerTableSpan<support::ulittle64_t>(Table.data(), Table.size()));
+
+  EXPECT_TRUE(List.contains("foo"));
+  EXPECT_TRUE(List.contains("bar"));
+  EXPECT_FALSE(List.contains("baz"));
+  EXPECT_EQ(2u, List.size());
+}
+
+struct ScopedHasUniqSuffix {
+  bool OldVal;
+  ScopedHasUniqSuffix(bool NewVal) : OldVal(FunctionSamples::HasUniqSuffix) {
+    FunctionSamples::HasUniqSuffix = NewVal;
+  }
+  ~ScopedHasUniqSuffix() { FunctionSamples::HasUniqSuffix = OldVal; }
+};
+
+TEST(SampleProfCanonicalNameTest, SelectedPolicyDefault) {
+  // Plain names without dots.
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo"));
+  EXPECT_EQ("_Z3barv", FunctionSamples::getCanonicalFnName("_Z3barv"));
+  EXPECT_EQ("", FunctionSamples::getCanonicalFnName(""));
+
+  // Suffix elision policy "selected" is default.
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo", "selected"));
+
+  // Names with dot but no matching suffix.
+  EXPECT_EQ("foo.bar", FunctionSamples::getCanonicalFnName("foo.bar"));
+  EXPECT_EQ("foo.1", FunctionSamples::getCanonicalFnName("foo.1"));
+  EXPECT_EQ("foo.part", FunctionSamples::getCanonicalFnName("foo.part"));
+  EXPECT_EQ("foo.llvm", FunctionSamples::getCanonicalFnName("foo.llvm"));
+  EXPECT_EQ("foo.__uniq", FunctionSamples::getCanonicalFnName("foo.__uniq"));
+  EXPECT_EQ(".foo", FunctionSamples::getCanonicalFnName(".foo"));
+
+  // .llvm. suffix (ThinLTO promotion / renaming).
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.llvm.1234"));
+  EXPECT_EQ("_Z3foov",
+            FunctionSamples::getCanonicalFnName("_Z3foov.llvm.1234567890"));
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.llvm."));
+  EXPECT_EQ("foo.llvm.1234.bar",
+            FunctionSamples::getCanonicalFnName("foo.llvm.1234.bar"));
+  EXPECT_EQ("my_llvm_func",
+            FunctionSamples::getCanonicalFnName("my_llvm_func"));
+
+  // .part. suffix.
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part.1"));
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part.42"));
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part."));
+  EXPECT_EQ("foo.part.1.bar",
+            FunctionSamples::getCanonicalFnName("foo.part.1.bar"));
+
+  // Combined suffixes in canonical order.
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part.1.llvm.456"));
+
+  // Suffixes in non-canonical order: .llvm. cannot be stripped if .part.
+  // follows it, but .part. can be stripped leaving .llvm.
+  EXPECT_EQ("foo.llvm.1",
+            FunctionSamples::getCanonicalFnName("foo.llvm.1.part.2"));
+
+  // Repeated suffix: only the last one is stripped.
+  EXPECT_EQ("foo.llvm.1",
+            FunctionSamples::getCanonicalFnName("foo.llvm.1.llvm.2"));
+}
+
+TEST(SampleProfCanonicalNameTest, SelectedPolicyHasUniqSuffix) {
+  // When HasUniqSuffix is false, .__uniq. is stripped.
+  {
+    ScopedHasUniqSuffix Scope(false);
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.__uniq.123"));
+    EXPECT_EQ("foo",
+              FunctionSamples::getCanonicalFnName("foo.__uniq.123.llvm.456"));
+    EXPECT_EQ("foo",
+              FunctionSamples::getCanonicalFnName("foo.__uniq.123.part.1"));
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName(
+                         "foo.__uniq.123.part.1.llvm.456"));
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.llvm.456"));
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part.1"));
+  }
+
+  // When HasUniqSuffix is true, .__uniq. is preserved.
+  {
+    ScopedHasUniqSuffix Scope(true);
+    EXPECT_EQ("foo.__uniq.123",
+              FunctionSamples::getCanonicalFnName("foo.__uniq.123"));
+    EXPECT_EQ("foo.__uniq.123",
+              FunctionSamples::getCanonicalFnName("foo.__uniq.123.llvm.456"));
+    EXPECT_EQ("foo.__uniq.123",
+              FunctionSamples::getCanonicalFnName("foo.__uniq.123.part.1"));
+    EXPECT_EQ("foo.__uniq.123", FunctionSamples::getCanonicalFnName(
+                                    "foo.__uniq.123.part.1.llvm.456"));
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.llvm.456"));
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part.1"));
+  }
+}
+
+TEST(SampleProfCanonicalNameTest, AllPolicy) {
+  for (StringRef Attr : {"all", ""}) {
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo", Attr));
+    EXPECT_EQ("foo",
+              FunctionSamples::getCanonicalFnName("foo.llvm.1234", Attr));
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.part.1", Attr));
+    EXPECT_EQ("foo",
+              FunctionSamples::getCanonicalFnName("foo.__uniq.1234", Attr));
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.bar", Attr));
+    EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.1.2.3", Attr));
+    EXPECT_EQ("", FunctionSamples::getCanonicalFnName(".foo", Attr));
+    EXPECT_EQ("", FunctionSamples::getCanonicalFnName("", Attr));
+  }
+}
+
+TEST(SampleProfCanonicalNameTest, NonePolicy) {
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo", "none"));
+  EXPECT_EQ("foo.llvm.1234",
+            FunctionSamples::getCanonicalFnName("foo.llvm.1234", "none"));
+  EXPECT_EQ("foo.part.1",
+            FunctionSamples::getCanonicalFnName("foo.part.1", "none"));
+  EXPECT_EQ("foo.__uniq.1234",
+            FunctionSamples::getCanonicalFnName("foo.__uniq.1234", "none"));
+  EXPECT_EQ("foo.bar", FunctionSamples::getCanonicalFnName("foo.bar", "none"));
+  EXPECT_EQ("", FunctionSamples::getCanonicalFnName("", "none"));
+}
+
+TEST(SampleProfCanonicalNameTest, CoroFnName) {
+  // Default "selected" policy.
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalCoroFnName("foo.cleanup"));
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalCoroFnName("foo.destroy"));
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalCoroFnName("foo.resume"));
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalCoroFnName("foo.llvm.1234"));
+  EXPECT_EQ("_Zfoo",
+            FunctionSamples::getCanonicalCoroFnName("_Zfoo.llvm.1234.cleanup"));
+  EXPECT_EQ("_Zfoo",
+            FunctionSamples::getCanonicalCoroFnName("_Zfoo.llvm.1234.destroy"));
+  EXPECT_EQ("_Zfoo",
+            FunctionSamples::getCanonicalCoroFnName("_Zfoo.llvm.1234.resume"));
+  // Suffixes without trailing dot require an exact match.
+  EXPECT_EQ("foo.cleanupper",
+            FunctionSamples::getCanonicalCoroFnName("foo.cleanupper"));
+  EXPECT_EQ("foo.destroyer",
+            FunctionSamples::getCanonicalCoroFnName("foo.destroyer"));
+  EXPECT_EQ("foo.resumed",
+            FunctionSamples::getCanonicalCoroFnName("foo.resumed"));
+  EXPECT_EQ("foo.other", FunctionSamples::getCanonicalCoroFnName("foo.other"));
+
+  // Policy "none".
+  EXPECT_EQ("_Zfoo.llvm.1234.cleanup", FunctionSamples::getCanonicalCoroFnName(
+                                           "_Zfoo.llvm.1234.cleanup", "none"));
+
+  // Policy "all".
+  EXPECT_EQ("_Zfoo", FunctionSamples::getCanonicalCoroFnName(
+                         "_Zfoo.llvm.1234.cleanup", "all"));
+}
+
+TEST(SampleProfCanonicalNameTest, CustomSuffixes) {
+  const SmallVector<StringRef, 2> Suffixes{".custom.", ".cfi"};
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.cfi", Suffixes));
+  EXPECT_EQ("foo",
+            FunctionSamples::getCanonicalFnName("foo.custom.123", Suffixes));
+  // In Suffixes {".custom.", ".cfi"}, .custom. is evaluated before .cfi.
+  // Because .cfi was appended after .custom.123, .custom. cannot be stripped
+  // first, leaving "foo.custom.123".
+  EXPECT_EQ("foo.custom.123", FunctionSamples::getCanonicalFnName(
+                                  "foo.custom.123.cfi", Suffixes));
+  // Conversely, when ordered {".cfi", ".custom."}, both are stripped.
+  const SmallVector<StringRef, 2> OrderedSuffixes{".cfi", ".custom."};
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.custom.123.cfi",
+                                                       OrderedSuffixes));
+
+  // Suffix without trailing dot requires an exact match; it does not match
+  // as a prefix of a component.
+  EXPECT_EQ("foo.cfiUnrelated",
+            FunctionSamples::getCanonicalFnName("foo.cfiUnrelated", Suffixes));
+  EXPECT_EQ("foo.cfiSomething.123", FunctionSamples::getCanonicalFnName(
+                                        "foo.cfiSomething.123", Suffixes));
+  EXPECT_EQ("foo.cfi_jt",
+            FunctionSamples::getCanonicalFnName("foo.cfi_jt", Suffixes));
+  // Suffix not in the list is preserved.
+  EXPECT_EQ("foo.llvm.123",
+            FunctionSamples::getCanonicalFnName("foo.llvm.123", Suffixes));
+
+  // Empty suffixes list preserves the name under "selected".
+  EXPECT_EQ("foo.llvm.123", FunctionSamples::getCanonicalFnName(
+                                "foo.llvm.123", {}, "selected"));
+
+  // Policies "all" and "none" with custom suffixes.
+  EXPECT_EQ("foo", FunctionSamples::getCanonicalFnName("foo.custom.123",
+                                                       Suffixes, "all"));
+  EXPECT_EQ("foo.custom.123", FunctionSamples::getCanonicalFnName(
+                                  "foo.custom.123", Suffixes, "none"));
+}
+
+TEST(SampleProfCanonicalNameTest, FromLLVMFunction) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("test", Ctx);
+  auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), false);
+
+  // Without attribute, default policy is "" (same as "all").
+  auto *FDefault = Function::Create(FTy, GlobalValue::ExternalLinkage,
+                                    "f_default.llvm.1234", M.get());
+  EXPECT_EQ("f_default", FunctionSamples::getCanonicalFnName(*FDefault));
+
+  auto *FDefaultDot = Function::Create(FTy, GlobalValue::ExternalLinkage,
+                                       "f_default_dot.bar", M.get());
+  EXPECT_EQ("f_default_dot", FunctionSamples::getCanonicalFnName(*FDefaultDot));
+
+  // With attribute "selected".
+  auto *FSelectedLLVM = Function::Create(FTy, GlobalValue::ExternalLinkage,
+                                         "f_selected.llvm.1234", M.get());
+  FSelectedLLVM->addFnAttr("sample-profile-suffix-elision-policy", "selected");
+  EXPECT_EQ("f_selected", FunctionSamples::getCanonicalFnName(*FSelectedLLVM));
+
+  auto *FSelectedDot = Function::Create(FTy, GlobalValue::ExternalLinkage,
+                                        "f_selected_dot.bar", M.get());
+  FSelectedDot->addFnAttr("sample-profile-suffix-elision-policy", "selected");
+  EXPECT_EQ("f_selected_dot.bar",
+            FunctionSamples::getCanonicalFnName(*FSelectedDot));
+
+  // With attribute "none".
+  auto *FNone = Function::Create(FTy, GlobalValue::ExternalLinkage,
+                                 "f_none.llvm.1234", M.get());
+  FNone->addFnAttr("sample-profile-suffix-elision-policy", "none");
+  EXPECT_EQ("f_none.llvm.1234", FunctionSamples::getCanonicalFnName(*FNone));
+
+  // With attribute "all".
+  auto *FAll = Function::Create(FTy, GlobalValue::ExternalLinkage,
+                                "f_all.bar.1234", M.get());
+  FAll->addFnAttr("sample-profile-suffix-elision-policy", "all");
+  EXPECT_EQ("f_all", FunctionSamples::getCanonicalFnName(*FAll));
+}
+
+#if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
+TEST(SampleProfCanonicalNameTest, InvalidPolicyDeathTest) {
+  EXPECT_DEATH(FunctionSamples::getCanonicalFnName("foo", "invalid_policy"),
+               "unknown suffix elision policy");
+}
+#endif
 
 } // end anonymous namespace

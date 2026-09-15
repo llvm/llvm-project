@@ -42,6 +42,10 @@ public:
   uint8_t getStringOffsetSize() const override {
     return HeaderV2::getStringOffsetSize();
   }
+  StringRef getUUID() const override {
+    return getOptionalGlobalDataBytes(GlobalInfoType::UUID)
+        .value_or(StringRef());
+  }
 
   using GsymReader::dump;
   void dump(raw_ostream &OS) override;

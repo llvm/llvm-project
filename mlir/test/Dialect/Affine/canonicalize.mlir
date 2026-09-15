@@ -1879,6 +1879,27 @@ func.func @split_delinearize_empty_linearize_basis(%arg0: index) -> (index, inde
 
 // -----
 
+// A split that consumes an entire bounded delinearization basis would lose the
+// contribution of earlier linearization inputs to the first result.
+// CHECK-LABEL: func @dont_split_fully_consumed_bounded_basis
+// CHECK-SAME:    (%[[A:.+]]: index, %[[B:.+]]: index)
+// CHECK:         %[[LIN:.+]] = affine.linearize_index disjoint [%[[A]], %[[B]]] by (2, 4) : index
+// CHECK:         %[[DELIN:.+]]:2 = affine.delinearize_index %[[LIN]] into (2, 2) : index, index
+// CHECK:         return %[[DELIN]]#0, %[[DELIN]]#1
+// CHECK-BOTTOM-UP-LABEL: func @dont_split_fully_consumed_bounded_basis
+// CHECK-BOTTOM-UP-SAME:    (%[[A:.+]]: index, %[[B:.+]]: index)
+// CHECK-BOTTOM-UP:         %[[LIN:.+]] = affine.linearize_index disjoint [%[[A]], %[[B]]] by (2, 4) : index
+// CHECK-BOTTOM-UP:         %[[DELIN:.+]]:2 = affine.delinearize_index %[[LIN]] into (2, 2) : index, index
+// CHECK-BOTTOM-UP:         return %[[DELIN]]#0, %[[DELIN]]#1
+func.func @dont_split_fully_consumed_bounded_basis(%a: index, %b: index)
+    -> (index, index) {
+  %0 = affine.linearize_index disjoint [%a, %b] by (2, 4) : index
+  %1:2 = affine.delinearize_index %0 into (2, 2) : index, index
+  return %1#0, %1#1 : index, index
+}
+
+// -----
+
 // CHECK-LABEL: @linearize_unit_basis_disjoint
 // CHECK-SAME: (%[[arg0:.+]]: index, %[[arg1:.+]]: index, %[[arg2:.+]]: index, %[[arg3:.+]]: index)
 // CHECK: %[[ret:.+]] = affine.linearize_index disjoint [%[[arg0]], %[[arg2]]] by (3, %[[arg3]]) : index
@@ -2613,4 +2634,22 @@ func.func @split_delinearize_spanning_final_part_vector(
   %0 = affine.linearize_index disjoint [%v0, %v1, %v2] by (3, 2, 32) : vector<4xindex>
   %1:4 = affine.delinearize_index %0 into (2, 3, 8, 4) : vector<4xindex>, vector<4xindex>, vector<4xindex>, vector<4xindex>
   return %1#0, %1#1, %1#2, %1#3 : vector<4xindex>, vector<4xindex>, vector<4xindex>, vector<4xindex>
+}
+
+// -----
+
+// Composing an affine.apply into an access rebuilds the op; the alignment it
+// promised stays on it.
+
+// CHECK-LABEL: func @compose_into_access_keeps_alignment
+// CHECK-BOTTOM-UP-LABEL: func @compose_into_access_keeps_alignment
+func.func @compose_into_access_keeps_alignment(%memref: memref<100xi32>, %i: index) {
+  %idx = affine.apply affine_map<(d0) -> (d0 + 1)>(%i)
+  // CHECK: affine.load {{.*}} {alignment = 16 : i64}
+  // CHECK-BOTTOM-UP: affine.load {{.*}} {alignment = 16 : i64}
+  %val = affine.load %memref[%idx] { alignment = 16 } : memref<100xi32>
+  // CHECK: affine.store {{.*}} {alignment = 16 : i64}
+  // CHECK-BOTTOM-UP: affine.store {{.*}} {alignment = 16 : i64}
+  affine.store %val, %memref[%idx] { alignment = 16 } : memref<100xi32>
+  return
 }

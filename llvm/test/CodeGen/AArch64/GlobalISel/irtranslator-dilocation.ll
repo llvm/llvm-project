@@ -7,10 +7,10 @@
 ; CHECK: Checking DILocation from   %rv = alloca i32, align 4{{.*}} was copied to G_FRAME_INDEX
 ; CHECK: Checking DILocation from   store i32 0, ptr %retval, align 4{{.*}} was copied to G_CONSTANT
 ; CHECK: Checking DILocation from   store i32 0, ptr %retval, align 4{{.*}} was copied to G_STORE
-; CHECK: Checking DILocation from   store i32 0, ptr %rv, align 4, !dbg !12{{.*}} was copied to G_STORE debug-location !12; t.cpp:2:5
-; CHECK: Checking DILocation from   %0 = load i32, ptr %rv, align 4, !dbg !13{{.*}} was copied to G_LOAD debug-location !13; t.cpp:3:8
-; CHECK: Checking DILocation from   ret i32 %0, !dbg !14{{.*}} was copied to COPY debug-location !14; t.cpp:3:1
-; CHECK: Checking DILocation from   ret i32 %0, !dbg !14{{.*}} was copied to RET_ReallyLR implicit $w0, debug-location !14; t.cpp:3:1
+; CHECK: Checking DILocation from   store i32 0, ptr %rv, align 4, !dbg ![[STORE_LOC:[0-9]+]]{{.*}} was copied to G_STORE debug-location ![[STORE_LOC]]; t.cpp:2:5
+; CHECK: Checking DILocation from   %0 = load i32, ptr %rv, align 4, !dbg ![[LOAD_LOC:[0-9]+]]{{.*}} was copied to G_LOAD debug-location ![[LOAD_LOC]]; t.cpp:3:8
+; CHECK: Checking DILocation from   ret i32 %0, !dbg ![[RET_LOC:[0-9]+]]{{.*}} was copied to COPY debug-location ![[RET_LOC]]; t.cpp:3:1
+; CHECK: Checking DILocation from   ret i32 %0, !dbg ![[RET_LOC]]{{.*}} was copied to RET_ReallyLR implicit $w0, debug-location ![[RET_LOC]]; t.cpp:3:1
 
 source_filename = "t.cpp"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"

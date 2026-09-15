@@ -40,6 +40,7 @@ def main(builtin_params={}):
         order=opts.order,
         params=params,
         config_prefix=opts.configPrefix,
+        pass_env=opts.pass_env,
         per_test_coverage=opts.per_test_coverage,
         gtest_sharding=opts.gtest_sharding,
         maxRetriesPerTest=opts.maxRetriesPerTest,
@@ -123,7 +124,7 @@ def main(builtin_params={}):
         record_test_times(selected_tests, lit_config)
 
     selected_tests, discovered_tests = GoogleTest.post_process_shard_results(
-        selected_tests, discovered_tests
+        selected_tests, discovered_tests, opts
     )
 
     if opts.time_tests:
@@ -278,6 +279,8 @@ def run_tests(tests, lit_config, opts, discovered_tests):
         error = "warning: reached maximum number of test failures"
     except lit.run.TimeoutError:
         error = "warning: reached timeout"
+    except lit.run.WorkerCrashError as e:
+        lit_config.error(f"a worker process crashed: {e}")
 
     display.clear(interrupted)
     if error:

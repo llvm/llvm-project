@@ -678,6 +678,7 @@ public:
 protected:
   friend class lldb_private::CommandPluginInterfaceImplementation;
   friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::ScriptInterpreterBridge;
   friend class lldb_private::SystemInitializerFull;
 
   SBDebugger(const lldb::DebuggerSP &debugger_sp);

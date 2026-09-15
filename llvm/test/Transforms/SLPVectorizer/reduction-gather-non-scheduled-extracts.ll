@@ -26,16 +26,14 @@ define void @tes() {
 ; AARCH64-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> zeroinitializer, i64 0
 ; AARCH64-NEXT:    br label [[TMP5:%.*]]
 ; AARCH64:       5:
-; AARCH64-NEXT:    [[TMP6:%.*]] = select i1 false, i1 false, i1 false
-; AARCH64-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i1 [[TMP0]], i1 false
-; AARCH64-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i1 [[TMP1]], i1 false
-; AARCH64-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i1 false, i1 false
+; AARCH64-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP0]], i1 [[TMP1]], i1 false
+; AARCH64-NEXT:    [[TMP9:%.*]] = select i1 [[OP_RDX]], i1 [[TMP4]], i1 false
 ; AARCH64-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i1 [[TMP3]], i1 false
-; AARCH64-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i1 [[TMP4]], i1 false
+; AARCH64-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i1 false, i1 false
 ; AARCH64-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]]
-; AARCH64:       12:
+; AARCH64:       6:
 ; AARCH64-NEXT:    ret void
-; AARCH64:       13:
+; AARCH64:       7:
 ; AARCH64-NEXT:    ret void
 ;
 entry:

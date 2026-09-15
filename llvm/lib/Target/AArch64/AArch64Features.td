@@ -828,6 +828,11 @@ def FeatureFuseFCmpFCSel : SubtargetFeature<
     "CPU can fuse FCMP and FCSEL operations",
     [], InlineIgnore>;
 
+def FeatureFuseFMinFMax : SubtargetFeature<
+    "fuse-fmin-fmax", "HasFuseFMinFMax", "true",
+    "CPU can fuse FMIN and FMAX operations",
+    [], InlineIgnore>;
+
 def FeatureAlignCmpCSelPairs : SubtargetFeature<
     "align-cmp-csel-pairs", "HasAlignCmpCSelPairs", "true",
     "Align certain CMP/FCMP and CSEL/FCSEL instruction pairs",
@@ -851,6 +856,11 @@ def FeatureFuseLiterals : SubtargetFeature<
 def FeatureFuseAddSub2RegAndConstOne : SubtargetFeature<
    "fuse-addsub-2reg-const1", "HasFuseAddSub2RegAndConstOne", "true",
    "CPU fuses (a + b + 1) and (a - b - 1)",
+   [], InlineIgnore>;
+
+def FeatureFuseAppleSMECompute : SubtargetFeature<
+   "fuse-apple-sme-compute", "HasFuseAppleSMECompute", "true",
+   "CPU fuses SME compute operations",
    [], InlineIgnore>;
 
 def FeatureDisableLatencySchedHeuristic : SubtargetFeature<
@@ -1010,6 +1020,11 @@ def FeatureFixedLoadLatency4 : SubtargetFeature<
 def FeatureLimited64bitVectorMulBandwidth : SubtargetFeature<
     "has-limited-64bit-vector-mul-bandwidth", "HasLimited64bitVectorMulBandwidth", "true",
     "Has limited 64bit vector multiply bandwidth compared to scalar multiply",
+    [], InlineIgnore>;
+
+def FeatureUseReciprocalFDivCombineThreshold2 : SubtargetFeature<
+    "use-reciprocal-fdiv-combine-threshold-2", "UseReciprocalFDivCombineThreshold2", "true",
+    "Set the reciprocal FDiv combine threshold to 2 (from the default 3)",
     [], InlineIgnore>;
 
 //===----------------------------------------------------------------------===//

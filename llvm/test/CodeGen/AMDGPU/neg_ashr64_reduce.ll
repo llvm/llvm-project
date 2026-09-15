@@ -11,14 +11,11 @@ define i64 @scalar_ashr_metadata(ptr %arg0.ptr, ptr %arg1.ptr) {
 ; CHECK-LABEL: scalar_ashr_metadata:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dwordx2 v[4:5], v[0:1]
+; CHECK-NEXT:    flat_load_dword v4, v[0:1] offset:4
+; CHECK-NEXT:    flat_load_dword v5, v[2:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_load_dword v4, v[2:3]
-; CHECK-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
-; CHECK-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
-; CHECK-NEXT:    v_ashrrev_i32_e32 v1, 31, v5
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v4, v5
+; CHECK-NEXT:    v_ashrrev_i32_e32 v1, 31, v4
+; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v5, v4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %val = load i64, ptr %arg0.ptr, !range !0, !noundef !{}
   %shift.amt = load i64, ptr %arg1.ptr, !range !1, !noundef !{}

@@ -241,7 +241,7 @@ Retry:
 
     switch (Tok.getKind()) {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
       if (NextToken().is(tok::less)) {
         Tok.setKind(tok::identifier);
         Diag(Tok, diag::ext_keyword_as_ident)
@@ -713,10 +713,8 @@ static void DiagnoseLabelFollowedByDecl(Parser &P, const Stmt *SubStmt) {
   // label that is followed by a declaration rather than a statement.
   if (!P.getLangOpts().CPlusPlus && !P.getLangOpts().MicrosoftExt &&
       isa<DeclStmt>(SubStmt)) {
-    P.Diag(SubStmt->getBeginLoc(),
-           P.getLangOpts().C23
-               ? diag::warn_c23_compat_label_followed_by_declaration
-               : diag::ext_c_label_followed_by_declaration);
+    P.DiagCompat(SubStmt->getBeginLoc(),
+                 diag_compat::label_followed_by_declaration);
   }
 }
 
@@ -1086,15 +1084,9 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
 }
 
 void Parser::DiagnoseLabelAtEndOfCompoundStatement() {
-  if (getLangOpts().CPlusPlus) {
-    Diag(Tok, getLangOpts().CPlusPlus23
-                  ? diag::warn_cxx20_compat_label_end_of_compound_statement
-                  : diag::ext_cxx_label_end_of_compound_statement);
-  } else {
-    Diag(Tok, getLangOpts().C23
-                  ? diag::warn_c23_compat_label_end_of_compound_statement
-                  : diag::ext_c_label_end_of_compound_statement);
-  }
+  DiagCompat(Tok, getLangOpts().CPlusPlus
+                      ? diag_compat::cxx_label_at_end_of_compound_statement
+                      : diag_compat::c_label_at_end_of_compound_statement);
 }
 
 bool Parser::ConsumeNullStmt(StmtVector &Stmts) {
@@ -1340,9 +1332,7 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
             << Cond.get().first->getSourceRange();
     } else if (Cond.get().first != nullptr)
       // Handle: if (int decl = 0) {}.
-      Diag(Cond.get().first->getBeginLoc(),
-           getLangOpts().C2y ? diag::warn_c2y_compat_decl_statement
-                             : diag::ext_c2y_decl_statement)
+      DiagCompat(Cond.get().first->getBeginLoc(), diag_compat::decl_statement)
           << (CK == Sema::ConditionKind::Switch);
   }
 
@@ -1475,8 +1465,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   if (Tok.is(tok::kw_constexpr)) {
     // C23 supports constexpr keyword, but only for object definitions.
     if (getLangOpts().CPlusPlus) {
-      Diag(Tok, getLangOpts().CPlusPlus17 ? diag::warn_cxx14_compat_constexpr_if
-                                          : diag::ext_constexpr_if);
+      DiagCompat(Tok, diag_compat::constexpr_if);
       IsConstexpr = true;
       ConsumeToken();
     }
@@ -1486,8 +1475,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     }
 
     if (Tok.is(tok::kw_consteval)) {
-      Diag(Tok, getLangOpts().CPlusPlus23 ? diag::warn_cxx20_compat_consteval_if
-                                          : diag::ext_consteval_if);
+      DiagCompat(Tok, diag_compat::consteval_if);
       IsConsteval = true;
       ConstevalLoc = ConsumeToken();
     } else if (Tok.is(tok::code_completion)) {
@@ -2130,9 +2118,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
           MightBeForRangeStmt ? &ForRangeInfo : nullptr);
       FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
       if (ForRangeInfo.ParsedForRangeDecl()) {
-        Diag(ForRangeInfo.ColonLoc, getLangOpts().CPlusPlus11
-                                        ? diag::warn_cxx98_compat_for_range
-                                        : diag::ext_for_range);
+        DiagCompat(ForRangeInfo.ColonLoc, diag_compat::for_range);
         ForRangeInfo.LoopVar = FirstPart;
         FirstPart = StmtResult();
       } else if (Tok.is(tok::semi)) { // for (int x = 4;
@@ -2231,11 +2217,9 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
             /*MissingOK=*/true, MightBeForRangeStmt ? &ForRangeInfo : nullptr);
 
         if (ForRangeInfo.ParsedForRangeDecl()) {
-          Diag(FirstPart.get() ? FirstPart.get()->getBeginLoc()
-                               : ForRangeInfo.ColonLoc,
-               getLangOpts().CPlusPlus20
-                   ? diag::warn_cxx17_compat_for_range_init_stmt
-                   : diag::ext_for_range_init_stmt)
+          DiagCompat(FirstPart.get() ? FirstPart.get()->getBeginLoc()
+                                     : ForRangeInfo.ColonLoc,
+                     diag_compat::for_range_init_stmt)
               << (FirstPart.get() ? FirstPart.get()->getSourceRange()
                                   : SourceRange());
           if (EmptyInitStmtSemiLoc.isValid()) {
@@ -2347,6 +2331,9 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   // the other parts.
   getCurScope()->EnterLoopBody(PrecedingLabel);
 
+  bool BodyStartsWithAttr = Tok.isOneOf(tok::l_square, tok::kw___attribute);
+  SourceLocation BodyBeginLoc = Tok.getLocation();
+
   // C99 6.8.5p5 - In C99, the body of the for statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
   // if the body isn't a compound statement to avoid push/pop in common cases.
@@ -2396,6 +2383,14 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
       Diag(ForLoc, diag::err_expansion_stmt_requires_range);
       return StmtError();
     }
+
+    // attribute-specifier without attribute (`[[]]`) isn't in AST.
+    // `__declspec()` is only applied to declarations, so we can ignore it.
+    if (!isa<CompoundStmt>(Body.get()) || BodyStartsWithAttr)
+      Diag(BodyBeginLoc,
+           isa<CompoundStmt>(Body.get()->stripLabelLikeStatements())
+               ? diag::ext_expansion_stmt_body_attr
+               : diag::ext_expansion_stmt_body_not_compound_stmt);
 
     return Actions.FinishCXXExpansionStmt(ForRangeStmt.get(), Body.get());
   }
@@ -2488,11 +2483,8 @@ StmtResult Parser::ParseReturnStatement() {
     if (Tok.is(tok::l_brace) && getLangOpts().CPlusPlus) {
       R = ParseInitializer();
       if (R.isUsable())
-        Diag(R.get()->getBeginLoc(),
-             getLangOpts().CPlusPlus11
-                 ? diag::warn_cxx98_compat_generalized_initializer_lists
-                 : diag::ext_generalized_initializer_lists)
-            << R.get()->getSourceRange();
+        DiagCompat(R.get()->getBeginLoc(),
+                   diag_compat::generalized_initializer_lists);
     } else
       R = ParseExpression();
     if (R.isInvalid()) {

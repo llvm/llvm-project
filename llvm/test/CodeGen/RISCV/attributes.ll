@@ -128,7 +128,19 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+ssqosid %s -o - | FileCheck --check-prefix=RV32SSQOSID %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smcdeleg %s -o - | FileCheck --check-prefixes=CHECK,RV32SMCDELEG %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smcntrpmf %s -o - | FileCheck --check-prefixes=CHECK,RV32SMCNTRPMF %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-smcsps %s -o - | FileCheck --check-prefix=RV32SMCSPS %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-sscsps %s -o - | FileCheck --check-prefix=RV32SSCSPS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smepmp %s -o - | FileCheck --check-prefixes=CHECK,RV32SMEPMP %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-smidctrl %s -o - | FileCheck --check-prefix=RV32SMIDCTRL %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-ssidctrl %s -o - | FileCheck --check-prefix=RV32SSIDCTRL %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-smijt %s -o - | FileCheck --check-prefix=RV32SMIJT %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-ssijt %s -o - | FileCheck --check-prefix=RV32SSIJT %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-smehv %s -o - | FileCheck --check-prefix=RV32SMEHV %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-ssehv %s -o - | FileCheck --check-prefix=RV32SSEHV %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-smip %s -o - | FileCheck --check-prefix=RV32SMIP %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-ssip %s -o - | FileCheck --check-prefix=RV32SSIP %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-smnip %s -o - | FileCheck --check-prefix=RV32SMNIP %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-ssnip %s -o - | FileCheck --check-prefix=RV32SSNIP %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-smpmpmt %s -o - | FileCheck --check-prefixes=CHECK,RV32SMPMPMT %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smrnmi %s -o - | FileCheck --check-prefixes=CHECK,RV32SMRNMI %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV32ZFBFMIN %s
@@ -152,6 +164,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+ssctr  %s -o - | FileCheck --check-prefix=RV32SSCTR %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-p %s -o - | FileCheck --check-prefix=RV32P %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zibi %s -o - | FileCheck --check-prefix=RV32ZIBI %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zilx %s -o - | FileCheck --check-prefix=RV32ZILX %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zvqwbdota8i %s -o - | FileCheck --check-prefixes=CHECK,RV32ZVQWBDOTA8I %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zvqwbdota16i %s -o - | FileCheck --check-prefixes=CHECK,RV32ZVQWBDOTA16I %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zvfwbdota16bf %s -o - | FileCheck --check-prefixes=CHECK,RV32ZVFWBDOTA16BF %s
@@ -233,7 +246,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-svukte %s -o - | FileCheck --check-prefixes=CHECK,RV64SVUKTE %s
 ; RUN: llc -mtriple=riscv64 -mattr=+svvptc %s -o - | FileCheck --check-prefixes=CHECK,RV64SVVPTC %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-xqccmt %s -o - | FileCheck --check-prefixes=CHECK,RV64XQCCMT %s
-; RUN: llc -mtriple=riscv64 -mattr=+xventanacondops %s -o - | FileCheck --check-prefixes=CHECK,RV64XVENTANACONDOPS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+za64rs %s -o - | FileCheck --check-prefixes=CHECK,RV64ZA64RS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+za128rs %s -o - | FileCheck --check-prefixes=CHECK,RV64ZA128RS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zama16b %s -o - | FileCheck --check-prefixes=CHECK,RV64ZAMA16B %s
@@ -294,7 +306,19 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+ssqosid %s -o - | FileCheck --check-prefix=RV64SSQOSID %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smcdeleg %s -o - | FileCheck --check-prefixes=CHECK,RV64SMCDELEG %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smcntrpmf %s -o - | FileCheck --check-prefixes=CHECK,RV64SMCNTRPMF %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-smcsps %s -o - | FileCheck --check-prefix=RV64SMCSPS %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-sscsps %s -o - | FileCheck --check-prefix=RV64SSCSPS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smepmp %s -o - | FileCheck --check-prefixes=CHECK,RV64SMEPMP %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-smidctrl %s -o - | FileCheck --check-prefix=RV64SMIDCTRL %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssidctrl %s -o - | FileCheck --check-prefix=RV64SSIDCTRL %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-smijt %s -o - | FileCheck --check-prefix=RV64SMIJT %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssijt %s -o - | FileCheck --check-prefix=RV64SSIJT %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-smehv %s -o - | FileCheck --check-prefix=RV64SMEHV %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssehv %s -o - | FileCheck --check-prefix=RV64SSEHV %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-smip %s -o - | FileCheck --check-prefix=RV64SMIP %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssip %s -o - | FileCheck --check-prefix=RV64SSIP %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-smnip %s -o - | FileCheck --check-prefix=RV64SMNIP %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssnip %s -o - | FileCheck --check-prefix=RV64SSNIP %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-smpmpmt %s -o - | FileCheck --check-prefixes=CHECK,RV64SMPMPMT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smrnmi %s -o - | FileCheck --check-prefixes=CHECK,RV64SMRNMI %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV64ZFBFMIN %s
@@ -318,8 +342,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+sdext  %s -o - | FileCheck --check-prefix=RV64SDEXT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+sdtrig  %s -o - | FileCheck --check-prefix=RV64SDTRIG %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-p %s -o - | FileCheck --check-prefix=RV64P %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-y %s -o - | FileCheck --check-prefix=RV64Y %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-y -target-abi lp64 %s -o - | FileCheck --check-prefix=RV64Y %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zibi %s -o - | FileCheck --check-prefix=RV64ZIBI %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zilx %s -o - | FileCheck --check-prefix=RV64ZILX %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zvqwbdota8i %s -o - | FileCheck --check-prefixes=CHECK,RV64ZVQWBDOTA8I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zvqwbdota16i %s -o - | FileCheck --check-prefixes=CHECK,RV64ZVQWBDOTA16I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zvfwbdota16bf %s -o - | FileCheck --check-prefixes=CHECK,RV64ZVFWBDOTA16BF %s
@@ -408,7 +433,7 @@
 ; RV32SVBARE: .attribute 5, "rv32i2p1_svbare1p0"
 ; RV32SVNAPOT: .attribute 5, "rv32i2p1_svnapot1p0"
 ; RV32SVPBMT: .attribute 5, "rv32i2p1_svpbmt1p0"
-; RV32SVUKTE: .attribute 5, "rv32i2p1_svukte0p3"
+; RV32SVUKTE: .attribute 5, "rv32i2p1_svukte1p0"
 ; RV32SVVPTC: .attribute 5, "rv32i2p1_svvptc1p0"
 ; RV32SVRSW60T59B: .attribute 5, "rv32i2p1_svrsw60t59b1p0"
 ; RV32SVINVAL: .attribute 5, "rv32i2p1_svinval1p0"
@@ -454,9 +479,10 @@
 ; RV32ZVDOT4A8I: .attribute 5, "rv32i2p1_zicsr2p0_zvdot4a8i0p1_zve32x1p0_zvl32b1p0"
 ; RV32ZVZIP: .attribute 5, "rv32i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_zvzip0p1"
 ; RV32ZVFH: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfhmin1p0_zve32f1p0_zve32x1p0_zvfh1p0_zvfhmin1p0_zvl32b1p0"
-; RV32ZVABD: .attribute 5, "rv32i2p1_zicsr2p0_zvabd0p7_zve32x1p0_zvl32b1p0"
+; RV32ZVABD: .attribute 5, "rv32i2p1_zicsr2p0_zvabd0p9_zve32x1p0_zvl32b1p0"
 ; RV32ZICOND: .attribute 5, "rv32i2p1_zicond1p0"
 ; RV32ZILSD: .attribute 5, "rv32i2p1_zilsd1p0"
+; RV32ZILX: .attribute 5, "rv32i2p1_zilx0p1"
 ; RV32ZIMOP: .attribute 5, "rv32i2p1_zimop1p0"
 ; RV32ZCLSD: .attribute 5, "rv32i2p1_c2p0_zilsd1p0_zca1p0_zclsd1p0"
 ; RV32ZCMOP: .attribute 5, "rv32i2p1_c2p0_zca1p0_zcmop1p0"
@@ -469,7 +495,19 @@
 ; RV32SSQOSID: .attribute 5, "rv32i2p1_ssqosid1p0"
 ; RV32SMCDELEG: .attribute 5, "rv32i2p1_smcdeleg1p0"
 ; RV32SMCNTRPMF: .attribute 5, "rv32i2p1_smcntrpmf1p0"
+; RV32SMCSPS: .attribute 5, "rv32i2p1_smcsps0p20"
+; RV32SSCSPS: .attribute 5, "rv32i2p1_smcsps0p20_sscsps0p20"
 ; RV32SMEPMP: .attribute 5, "rv32i2p1_smepmp1p0"
+; RV32SMIDCTRL: .attribute 5, "rv32i2p1_smaia1p0_smcsrind1p0_smidctrl0p20"
+; RV32SSIDCTRL: .attribute 5, "rv32i2p1_ssaia1p0_sscsrind1p0_ssidctrl0p20"
+; RV32SMIJT: .attribute 5, "rv32i2p1_smijt0p20"
+; RV32SSIJT: .attribute 5, "rv32i2p1_ssijt0p20"
+; RV32SMEHV: .attribute 5, "rv32i2p1_smehv0p20_smijt0p20"
+; RV32SSEHV: .attribute 5, "rv32i2p1_ssehv0p20_ssijt0p20"
+; RV32SMIP: .attribute 5, "rv32i2p1_smip0p20"
+; RV32SSIP: .attribute 5, "rv32i2p1_ssip0p20"
+; RV32SMNIP: .attribute 5, "rv32i2p1_smaia1p0_smcsrind1p0_smidctrl0p20_smnip0p20"
+; RV32SSNIP: .attribute 5, "rv32i2p1_ssaia1p0_sscsrind1p0_ssidctrl0p20_ssnip0p20"
 ; RV32SMPMPMT: .attribute 5, "rv32i2p1_smpmpmt0p6"
 ; RV32SMRNMI: .attribute 5, "rv32i2p1_smrnmi1p0"
 ; RV32ZFBFMIN: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin1p0"
@@ -570,12 +608,11 @@
 ; RV64SVBARE: .attribute 5, "rv64i2p1_svbare1p0"
 ; RV64SVNAPOT: .attribute 5, "rv64i2p1_svnapot1p0"
 ; RV64SVPBMT: .attribute 5, "rv64i2p1_svpbmt1p0"
-; RV64SVUKTE: .attribute 5, "rv64i2p1_svukte0p3"
+; RV64SVUKTE: .attribute 5, "rv64i2p1_svukte1p0"
 ; RV64SVVPTC: .attribute 5, "rv64i2p1_svvptc1p0"
 ; RV64SVRSW60T59B: .attribute 5, "rv64i2p1_svrsw60t59b1p0"
 ; RV64SVINVAL: .attribute 5, "rv64i2p1_svinval1p0"
 ; RV64XQCCMT: .attribute 5, "rv64i2p1_c2p0_zicsr2p0_zca1p0_xqccmt0p1"
-; RV64XVENTANACONDOPS: .attribute 5, "rv64i2p1_xventanacondops1p0"
 ; RV64ZTSO: .attribute 5, "rv64i2p1_ztso1p0"
 ; RV64ZAAMO: .attribute 5, "rv64i2p1_zaamo1p0"
 ; RV64ZALRSC: .attribute 5, "rv64i2p1_zalrsc1p0"
@@ -619,8 +656,9 @@
 ; RV64ZVFQWDOTA8F: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfqwdota8f0p2_zvl32b1p0"
 ; RV64ZVZIP: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_zvzip0p1"
 ; RV64ZVFH: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfhmin1p0_zve32f1p0_zve32x1p0_zvfh1p0_zvfhmin1p0_zvl32b1p0"
-; RV64ZVABD: .attribute 5, "rv64i2p1_zicsr2p0_zvabd0p7_zve32x1p0_zvl32b1p0"
+; RV64ZVABD: .attribute 5, "rv64i2p1_zicsr2p0_zvabd0p9_zve32x1p0_zvl32b1p0"
 ; RV64ZICOND: .attribute 5, "rv64i2p1_zicond1p0"
+; RV64ZILX: .attribute 5, "rv64i2p1_zilx0p1"
 ; RV64ZIMOP: .attribute 5, "rv64i2p1_zimop1p0"
 ; RV64ZCMOP: .attribute 5, "rv64i2p1_c2p0_zca1p0_zcmop1p0"
 ; RV64SMAIA: .attribute 5, "rv64i2p1_smaia1p0"
@@ -632,7 +670,19 @@
 ; RV64SSQOSID: .attribute 5, "rv64i2p1_ssqosid1p0"
 ; RV64SMCDELEG: .attribute 5, "rv64i2p1_smcdeleg1p0"
 ; RV64SMCNTRPMF: .attribute 5, "rv64i2p1_smcntrpmf1p0"
+; RV64SMCSPS: .attribute 5, "rv64i2p1_smcsps0p20"
+; RV64SSCSPS: .attribute 5, "rv64i2p1_smcsps0p20_sscsps0p20"
 ; RV64SMEPMP: .attribute 5, "rv64i2p1_smepmp1p0"
+; RV64SMIDCTRL: .attribute 5, "rv64i2p1_smaia1p0_smcsrind1p0_smidctrl0p20"
+; RV64SSIDCTRL: .attribute 5, "rv64i2p1_ssaia1p0_sscsrind1p0_ssidctrl0p20"
+; RV64SMIJT: .attribute 5, "rv64i2p1_smijt0p20"
+; RV64SSIJT: .attribute 5, "rv64i2p1_ssijt0p20"
+; RV64SMEHV: .attribute 5, "rv64i2p1_smehv0p20_smijt0p20"
+; RV64SSEHV: .attribute 5, "rv64i2p1_ssehv0p20_ssijt0p20"
+; RV64SMIP: .attribute 5, "rv64i2p1_smip0p20"
+; RV64SSIP: .attribute 5, "rv64i2p1_ssip0p20"
+; RV64SMNIP: .attribute 5, "rv64i2p1_smaia1p0_smcsrind1p0_smidctrl0p20_smnip0p20"
+; RV64SSNIP: .attribute 5, "rv64i2p1_ssaia1p0_sscsrind1p0_ssidctrl0p20_ssnip0p20"
 ; RV64SMPMPMT: .attribute 5, "rv64i2p1_smpmpmt0p6"
 ; RV64SMRNMI: .attribute 5, "rv64i2p1_smrnmi1p0"
 ; RV64ZFBFMIN: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin1p0"

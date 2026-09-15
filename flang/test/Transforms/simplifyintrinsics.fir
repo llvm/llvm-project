@@ -849,6 +849,82 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 
 // -----
 
+// Call to MAXVAL with a 1D UNSIGNED array is not replaced: the runtime call
+// returns a signless integer that differs from the unsigned element type, so
+// the inline reduction (signed identity/comparison) would be incorrect. The
+// runtime call must be preserved.
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "native"} {
+  func.func @maxval_1d_array_unsigned(%arg0: !fir.ref<!fir.array<10xui32>> {fir.bindc_name = "a"}) -> ui32 {
+    %c10 = arith.constant 10 : index
+    %0 = fir.alloca ui32
+    %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+    %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xui32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xui32>>
+    %3 = fir.absent !fir.box<i1>
+    %c0 = arith.constant 0 : index
+    %4 = fir.address_of(@_QQclXumax) : !fir.ref<!fir.char<1,13>>
+    %c5_i32 = arith.constant 5 : i32
+    %5 = fir.convert %2 : (!fir.box<!fir.array<10xui32>>) -> !fir.box<none>
+    %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
+    %7 = fir.convert %c0 : (index) -> i32
+    %8 = fir.convert %3 : (!fir.box<i1>) -> !fir.box<none>
+    %9 = fir.call @_FortranAMaxvalUnsigned4(%5, %6, %c5_i32, %7, %8) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+    %10 = fir.convert %9 : (i32) -> ui32
+    fir.store %10 to %0 : !fir.ref<ui32>
+    %11 = fir.load %0 : !fir.ref<ui32>
+    return %11 : ui32
+  }
+  func.func private @_FortranAMaxvalUnsigned4(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32 attributes {fir.runtime}
+  fir.global linkonce @_QQclXumax constant : !fir.char<1,13> {
+    %0 = fir.string_lit "./umax_1.f90\00"(13) : !fir.char<1,13>
+    fir.has_value %0 : !fir.char<1,13>
+  }
+}
+
+// CHECK-LABEL:   func.func @maxval_1d_array_unsigned(
+// CHECK-NOT:       fir.call @_FortranAMaxvalUnsigned4x1_simplified({{.*}})
+// CHECK:           fir.call @_FortranAMaxvalUnsigned4({{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+// CHECK-NOT:       fir.call @_FortranAMaxvalUnsigned4x1_simplified({{.*}})
+
+// -----
+
+// Call to SUM with a 1D UNSIGNED array is not replaced: the runtime call
+// returns a signless integer that differs from the unsigned element type, so
+// the inline reduction (arith.addi on an unsigned value) would be invalid. The
+// runtime call must be preserved.
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "native"} {
+  func.func @sum_1d_array_unsigned(%arg0: !fir.ref<!fir.array<10xui32>> {fir.bindc_name = "a"}) -> ui32 {
+    %c10 = arith.constant 10 : index
+    %0 = fir.alloca ui32
+    %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+    %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xui32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xui32>>
+    %3 = fir.absent !fir.box<i1>
+    %c0 = arith.constant 0 : index
+    %4 = fir.address_of(@_QQclXusum) : !fir.ref<!fir.char<1,13>>
+    %c5_i32 = arith.constant 5 : i32
+    %5 = fir.convert %2 : (!fir.box<!fir.array<10xui32>>) -> !fir.box<none>
+    %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
+    %7 = fir.convert %c0 : (index) -> i32
+    %8 = fir.convert %3 : (!fir.box<i1>) -> !fir.box<none>
+    %9 = fir.call @_FortranASumUnsigned4(%5, %6, %c5_i32, %7, %8) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+    %10 = fir.convert %9 : (i32) -> ui32
+    fir.store %10 to %0 : !fir.ref<ui32>
+    %11 = fir.load %0 : !fir.ref<ui32>
+    return %11 : ui32
+  }
+  func.func private @_FortranASumUnsigned4(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32 attributes {fir.runtime}
+  fir.global linkonce @_QQclXusum constant : !fir.char<1,13> {
+    %0 = fir.string_lit "./usum_1.f90\00"(13) : !fir.char<1,13>
+    fir.has_value %0 : !fir.char<1,13>
+  }
+}
+
+// CHECK-LABEL:   func.func @sum_1d_array_unsigned(
+// CHECK-NOT:       fir.call @_FortranASumUnsigned4x1_simplified({{.*}})
+// CHECK:           fir.call @_FortranASumUnsigned4({{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+// CHECK-NOT:       fir.call @_FortranASumUnsigned4x1_simplified({{.*}})
+
+// -----
+
 // Call to MAXVAL with 1D F64 is replaced.
 module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "native"} {
   func.func @maxval_1d_real(%arg0: !fir.ref<!fir.array<10xf64>> {fir.bindc_name = "a"}) -> f64 {
@@ -1220,7 +1296,6 @@ func.func @_QMtestPcount_generate_mask(%arg0: !fir.ref<!fir.array<10x10x!fir.log
   %c10_1 = arith.constant 10 : index
   %1 = fir.alloca !fir.array<10xi32> {bindc_name = "res", uniq_name = "_QMtestFcount_generate_maskEres"}
   %2 = fir.shape %c10_1 : (index) -> !fir.shape<1>
-  %3 = fir.array_load %1(%2) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.array<10xi32>
   %c2_i32 = arith.constant 2 : i32
   %4 = fir.shape %c10, %c10_0 : (index, index) -> !fir.shape<2>
   %5 = fir.embox %arg0(%4) : (!fir.ref<!fir.array<10x10x!fir.logical<4>>>, !fir.shape<2>) -> !fir.box<!fir.array<10x10x!fir.logical<4>>>
@@ -1242,16 +1317,9 @@ func.func @_QMtestPcount_generate_mask(%arg0: !fir.ref<!fir.array<10x10x!fir.log
   %16:3 = fir.box_dims %15, %c0_2 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
   %17 = fir.box_addr %15 : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   %18 = fir.shape_shift %16#0, %16#1 : (index, index) -> !fir.shapeshift<1>
-  %19 = fir.array_load %17(%18) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.array<?xi32>
   %c1 = arith.constant 1 : index
   %c0_3 = arith.constant 0 : index
   %20 = arith.subi %c10_1, %c1 : index
-  %21 = fir.do_loop %arg1 = %c0_3 to %20 step %c1 unordered iter_args(%arg2 = %3) -> (!fir.array<10xi32>) {
-    %23 = fir.array_fetch %19, %arg1 : (!fir.array<?xi32>, index) -> i32
-    %24 = fir.array_update %arg2, %23, %arg1 : (!fir.array<10xi32>, i32, index) -> !fir.array<10xi32>
-    fir.result %24 : !fir.array<10xi32>
-  }
-  fir.array_merge_store %3, %21 to %1 : !fir.array<10xi32>, !fir.array<10xi32>, !fir.ref<!fir.array<10xi32>>
   fir.freemem %17 : !fir.heap<!fir.array<?xi32>>
   %22 = fir.load %1 : !fir.ref<!fir.array<10xi32>>
   return %22 : !fir.array<10xi32>
@@ -1405,7 +1473,6 @@ func.func @_QPtestAny_DimArg(%arg0: !fir.ref<!fir.array<10x10x!fir.logical<4>>> 
   %c10_1 = arith.constant 10 : index
   %1 = fir.alloca !fir.array<10x!fir.logical<4>> {bindc_name = "testAny_DimArg", uniq_name = "_QFtestAny_DimArgEtestAny_DimArg"}
   %2 = fir.shape %c10_1 : (index) -> !fir.shape<1>
-  %3 = fir.array_load %1(%2) : (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.shape<1>) -> !fir.array<10x!fir.logical<4>>
   %c2_i32 = arith.constant 2 : i32
   %4 = fir.shape %c10, %c10_0 : (index, index) -> !fir.shape<2>
   %5 = fir.embox %arg0(%4) : (!fir.ref<!fir.array<10x10x!fir.logical<4>>>, !fir.shape<2>) -> !fir.box<!fir.array<10x10x!fir.logical<4>>>
@@ -1425,16 +1492,9 @@ func.func @_QPtestAny_DimArg(%arg0: !fir.ref<!fir.array<10x10x!fir.logical<4>>> 
   %15:3 = fir.box_dims %14, %c0_2 : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>, index) -> (index, index, index)
   %16 = fir.box_addr %14 : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>) -> !fir.heap<!fir.array<?x!fir.logical<4>>>
   %17 = fir.shape_shift %15#0, %15#1 : (index, index) -> !fir.shapeshift<1>
-  %18 = fir.array_load %16(%17) : (!fir.heap<!fir.array<?x!fir.logical<4>>>, !fir.shapeshift<1>) -> !fir.array<?x!fir.logical<4>>
   %c1 = arith.constant 1 : index
   %c0_3 = arith.constant 0 : index
   %19 = arith.subi %c10_1, %c1 : index
-  %20 = fir.do_loop %arg1 = %c0_3 to %19 step %c1 unordered iter_args(%arg2 = %3) -> (!fir.array<10x!fir.logical<4>>) {
-    %22 = fir.array_fetch %18, %arg1 : (!fir.array<?x!fir.logical<4>>, index) -> !fir.logical<4>
-    %23 = fir.array_update %arg2, %22, %arg1 : (!fir.array<10x!fir.logical<4>>, !fir.logical<4>, index) -> !fir.array<10x!fir.logical<4>>
-    fir.result %23 : !fir.array<10x!fir.logical<4>>
-  }
-  fir.array_merge_store %3, %20 to %1 : !fir.array<10x!fir.logical<4>>, !fir.array<10x!fir.logical<4>>, !fir.ref<!fir.array<10x!fir.logical<4>>>
   fir.freemem %16 : !fir.heap<!fir.array<?x!fir.logical<4>>>
   %21 = fir.load %1 : !fir.ref<!fir.array<10x!fir.logical<4>>>
   return %21 : !fir.array<10x!fir.logical<4>>
@@ -1644,7 +1704,6 @@ func.func @_QPtestAll_DimArg(%arg0: !fir.ref<!fir.array<10x10x!fir.logical<4>>> 
   %c10_1 = arith.constant 10 : index
   %1 = fir.alloca !fir.array<10x!fir.logical<4>> {bindc_name = "testAll_DimArg", uniq_name = "_QFtestAll_DimArgEtestAll_DimArg"}
   %2 = fir.shape %c10_1 : (index) -> !fir.shape<1>
-  %3 = fir.array_load %1(%2) : (!fir.ref<!fir.array<10x!fir.logical<4>>>, !fir.shape<1>) -> !fir.array<10x!fir.logical<4>>
   %c1_i32 = arith.constant 1 : i32
   %4 = fir.shape %c10, %c10_0 : (index, index) -> !fir.shape<2>
   %5 = fir.embox %arg0(%4) : (!fir.ref<!fir.array<10x10x!fir.logical<4>>>, !fir.shape<2>) -> !fir.box<!fir.array<10x10x!fir.logical<4>>>
@@ -1664,16 +1723,9 @@ func.func @_QPtestAll_DimArg(%arg0: !fir.ref<!fir.array<10x10x!fir.logical<4>>> 
   %15:3 = fir.box_dims %14, %c0_2 : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>, index) -> (index, index, index)
   %16 = fir.box_addr %14 : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>) -> !fir.heap<!fir.array<?x!fir.logical<4>>>
   %17 = fir.shape_shift %15#0, %15#1 : (index, index) -> !fir.shapeshift<1>
-  %18 = fir.array_load %16(%17) : (!fir.heap<!fir.array<?x!fir.logical<4>>>, !fir.shapeshift<1>) -> !fir.array<?x!fir.logical<4>>
   %c1 = arith.constant 1 : index
   %c0_3 = arith.constant 0 : index
   %19 = arith.subi %c10_1, %c1 : index
-  %20 = fir.do_loop %arg1 = %c0_3 to %19 step %c1 unordered iter_args(%arg2 = %3) -> (!fir.array<10x!fir.logical<4>>) {
-    %22 = fir.array_fetch %18, %arg1 : (!fir.array<?x!fir.logical<4>>, index) -> !fir.logical<4>
-    %23 = fir.array_update %arg2, %22, %arg1 : (!fir.array<10x!fir.logical<4>>, !fir.logical<4>, index) -> !fir.array<10x!fir.logical<4>>
-    fir.result %23 : !fir.array<10x!fir.logical<4>>
-  }
-  fir.array_merge_store %3, %20 to %1 : !fir.array<10x!fir.logical<4>>, !fir.array<10x!fir.logical<4>>, !fir.ref<!fir.array<10x!fir.logical<4>>>
   fir.freemem %16 : !fir.heap<!fir.array<?x!fir.logical<4>>>
   %21 = fir.load %1 : !fir.ref<!fir.array<10x!fir.logical<4>>>
   return %21 : !fir.array<10x!fir.logical<4>>
@@ -1695,7 +1747,6 @@ func.func @_QPtestminloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_
   %c1 = arith.constant 1 : index
   %1 = fir.alloca !fir.array<1xi32> {bindc_name = "testminloc_works1d", uniq_name = "_QFtestminloc_works1dEtestminloc_works1d"}
   %2 = fir.shape %c1 : (index) -> !fir.shape<1>
-  %3 = fir.array_load %1(%2) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.array<1xi32>
   %4 = fir.shape %c10 : (index) -> !fir.shape<1>
   %5 = fir.embox %arg0(%4) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
   %6 = fir.shape %c10_0 : (index) -> !fir.shape<1>
@@ -1720,16 +1771,9 @@ func.func @_QPtestminloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_
   %19:3 = fir.box_dims %18, %c0_1 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
   %20 = fir.box_addr %18 : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   %21 = fir.shape_shift %19#0, %19#1 : (index, index) -> !fir.shapeshift<1>
-  %22 = fir.array_load %20(%21) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.array<?xi32>
   %c1_2 = arith.constant 1 : index
   %c0_3 = arith.constant 0 : index
   %23 = arith.subi %c1, %c1_2 : index
-  %24 = fir.do_loop %arg2 = %c0_3 to %23 step %c1_2 unordered iter_args(%arg3 = %3) -> (!fir.array<1xi32>) {
-    %26 = fir.array_fetch %22, %arg2 : (!fir.array<?xi32>, index) -> i32
-    %27 = fir.array_update %arg3, %26, %arg2 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
-    fir.result %27 : !fir.array<1xi32>
-  }
-  fir.array_merge_store %3, %24 to %1 : !fir.array<1xi32>, !fir.array<1xi32>, !fir.ref<!fir.array<1xi32>>
   fir.freemem %20 : !fir.heap<!fir.array<?xi32>>
   %25 = fir.load %1 : !fir.ref<!fir.array<1xi32>>
   return %25 : !fir.array<1xi32>
@@ -1820,7 +1864,6 @@ func.func @_QPtestminloc_works2d_nomask(%arg0: !fir.ref<!fir.array<10x10xi32>> {
   %c2 = arith.constant 2 : index
   %1 = fir.alloca !fir.array<2xi32> {bindc_name = "testminloc_works2d_nomask", uniq_name = "_QFtestminloc_works2d_nomaskEtestminloc_works2d_nomask"}
   %2 = fir.shape %c2 : (index) -> !fir.shape<1>
-  %3 = fir.array_load %1(%2) : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> !fir.array<2xi32>
   %4 = fir.shape %c10, %c10_0 : (index, index) -> !fir.shape<2>
   %5 = fir.embox %arg0(%4) : (!fir.ref<!fir.array<10x10xi32>>, !fir.shape<2>) -> !fir.box<!fir.array<10x10xi32>>
   %c8_i32 = arith.constant 8 : i32
@@ -1843,17 +1886,9 @@ func.func @_QPtestminloc_works2d_nomask(%arg0: !fir.ref<!fir.array<10x10xi32>> {
   %17:3 = fir.box_dims %16, %c0_1 : (!fir.box<!fir.heap<!fir.array<?xi64>>>, index) -> (index, index, index)
   %18 = fir.box_addr %16 : (!fir.box<!fir.heap<!fir.array<?xi64>>>) -> !fir.heap<!fir.array<?xi64>>
   %19 = fir.shape_shift %17#0, %17#1 : (index, index) -> !fir.shapeshift<1>
-  %20 = fir.array_load %18(%19) : (!fir.heap<!fir.array<?xi64>>, !fir.shapeshift<1>) -> !fir.array<?xi64>
   %c1 = arith.constant 1 : index
   %c0_2 = arith.constant 0 : index
   %21 = arith.subi %c2, %c1 : index
-  %22 = fir.do_loop %arg1 = %c0_2 to %21 step %c1 unordered iter_args(%arg2 = %3) -> (!fir.array<2xi32>) {
-    %24 = fir.array_fetch %20, %arg1 : (!fir.array<?xi64>, index) -> i64
-    %25 = fir.convert %24 : (i64) -> i32
-    %26 = fir.array_update %arg2, %25, %arg1 : (!fir.array<2xi32>, i32, index) -> !fir.array<2xi32>
-    fir.result %26 : !fir.array<2xi32>
-  }
-  fir.array_merge_store %3, %22 to %1 : !fir.array<2xi32>, !fir.array<2xi32>, !fir.ref<!fir.array<2xi32>>
   fir.freemem %18 : !fir.heap<!fir.array<?xi64>>
   %23 = fir.load %1 : !fir.ref<!fir.array<2xi32>>
   return %23 : !fir.array<2xi32>
@@ -1939,7 +1974,6 @@ func.func @_QPtestminloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
   %c1 = arith.constant 1 : index
   %1 = fir.alloca !fir.array<1xi32> {bindc_name = "testminloc_works1d_scalarmask_f64", uniq_name = "_QFtestminloc_works1d_scalarmask_f64Etestminloc_works1d_scalarmask_f64"}
   %2 = fir.shape %c1 : (index) -> !fir.shape<1>
-  %3 = fir.array_load %1(%2) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.array<1xi32>
   %4 = fir.shape %c10 : (index) -> !fir.shape<1>
   %5 = fir.embox %arg0(%4) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
   %6 = fir.embox %arg1 : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
@@ -1963,16 +1997,9 @@ func.func @_QPtestminloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
   %18:3 = fir.box_dims %17, %c0_0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
   %19 = fir.box_addr %17 : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   %20 = fir.shape_shift %18#0, %18#1 : (index, index) -> !fir.shapeshift<1>
-  %21 = fir.array_load %19(%20) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.array<?xi32>
   %c1_1 = arith.constant 1 : index
   %c0_2 = arith.constant 0 : index
   %22 = arith.subi %c1, %c1_1 : index
-  %23 = fir.do_loop %arg2 = %c0_2 to %22 step %c1_1 unordered iter_args(%arg3 = %3) -> (!fir.array<1xi32>) {
-    %25 = fir.array_fetch %21, %arg2 : (!fir.array<?xi32>, index) -> i32
-    %26 = fir.array_update %arg3, %25, %arg2 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
-    fir.result %26 : !fir.array<1xi32>
-  }
-  fir.array_merge_store %3, %23 to %1 : !fir.array<1xi32>, !fir.array<1xi32>, !fir.ref<!fir.array<1xi32>>
   fir.freemem %19 : !fir.heap<!fir.array<?xi32>>
   %24 = fir.load %1 : !fir.ref<!fir.array<1xi32>>
   return %24 : !fir.array<1xi32>
@@ -2051,7 +2078,6 @@ func.func @_QPtestminloc_doesntwork1d_back(%arg0: !fir.ref<!fir.array<10xi32>> {
   %c1 = arith.constant 1 : index
   %1 = fir.alloca !fir.array<1xi32> {bindc_name = "testminloc_doesntwork1d_back", uniq_name = "_QFtestminloc_doesntwork1d_backEtestminloc_doesntwork1d_back"}
   %2 = fir.shape %c1 : (index) -> !fir.shape<1>
-  %3 = fir.array_load %1(%2) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.array<1xi32>
   %4 = fir.shape %c10 : (index) -> !fir.shape<1>
   %5 = fir.embox %arg0(%4) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
   %true = arith.constant true
@@ -2075,16 +2101,9 @@ func.func @_QPtestminloc_doesntwork1d_back(%arg0: !fir.ref<!fir.array<10xi32>> {
   %18:3 = fir.box_dims %17, %c0_0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
   %19 = fir.box_addr %17 : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   %20 = fir.shape_shift %18#0, %18#1 : (index, index) -> !fir.shapeshift<1>
-  %21 = fir.array_load %19(%20) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.array<?xi32>
   %c1_1 = arith.constant 1 : index
   %c0_2 = arith.constant 0 : index
   %22 = arith.subi %c1, %c1_1 : index
-  %23 = fir.do_loop %arg1 = %c0_2 to %22 step %c1_1 unordered iter_args(%arg2 = %3) -> (!fir.array<1xi32>) {
-    %25 = fir.array_fetch %21, %arg1 : (!fir.array<?xi32>, index) -> i32
-    %26 = fir.array_update %arg2, %25, %arg1 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
-    fir.result %26 : !fir.array<1xi32>
-  }
-  fir.array_merge_store %3, %23 to %1 : !fir.array<1xi32>, !fir.array<1xi32>, !fir.ref<!fir.array<1xi32>>
   fir.freemem %19 : !fir.heap<!fir.array<?xi32>>
   %24 = fir.load %1 : !fir.ref<!fir.array<1xi32>>
   return %24 : !fir.array<1xi32>
@@ -2105,7 +2124,6 @@ func.func @_QPtestminloc_1d_dim(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_n
   %c1 = arith.constant 1 : index
   %1 = fir.alloca !fir.array<1xi32> {bindc_name = "testminloc_1d_dim", uniq_name = "_QFtestminloc_1d_dimEtestminloc_1d_dim"}
   %2 = fir.shape %c1 : (index) -> !fir.shape<1>
-  %3 = fir.array_load %1(%2) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.array<1xi32>
   %4 = fir.shape %c10 : (index) -> !fir.shape<1>
   %5 = fir.embox %arg0(%4) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
   %c1_i32 = arith.constant 1 : i32
@@ -2130,11 +2148,6 @@ func.func @_QPtestminloc_1d_dim(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_n
   %c1_0 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %19 = arith.subi %c1, %c1_0 : index
-  %20 = fir.do_loop %arg1 = %c0 to %19 step %c1_0 unordered iter_args(%arg2 = %3) -> (!fir.array<1xi32>) {
-    %22 = fir.array_update %arg2, %18, %arg1 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
-    fir.result %22 : !fir.array<1xi32>
-  }
-  fir.array_merge_store %3, %20 to %1 : !fir.array<1xi32>, !fir.array<1xi32>, !fir.ref<!fir.array<1xi32>>
   %21 = fir.load %1 : !fir.ref<!fir.array<1xi32>>
   return %21 : !fir.array<1xi32>
 }
@@ -2203,7 +2216,6 @@ func.func @_QPtestminloc_doesntwork1d_unknownsize(%arg0: !fir.box<!fir.array<?xi
   %c1 = arith.constant 1 : index
   %1 = fir.alloca !fir.array<1xi32> {bindc_name = "testminloc_doesntwork1d_unknownsize", uniq_name = "_QFtestminloc_doesntwork1d_unknownsizeEtestminloc_doesntwork1d_unknownsize"}
   %2 = fir.shape %c1 : (index) -> !fir.shape<1>
-  %3 = fir.array_load %1(%2) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.array<1xi32>
   %4 = fir.absent !fir.box<i1>
   %c4 = arith.constant 4 : index
   %false = arith.constant false
@@ -2225,16 +2237,9 @@ func.func @_QPtestminloc_doesntwork1d_unknownsize(%arg0: !fir.box<!fir.array<?xi
   %16:3 = fir.box_dims %15, %c0_0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
   %17 = fir.box_addr %15 : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   %18 = fir.shape_shift %16#0, %16#1 : (index, index) -> !fir.shapeshift<1>
-  %19 = fir.array_load %17(%18) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.array<?xi32>
   %c1_1 = arith.constant 1 : index
   %c0_2 = arith.constant 0 : index
   %20 = arith.subi %c1, %c1_1 : index
-  %21 = fir.do_loop %arg1 = %c0_2 to %20 step %c1_1 unordered iter_args(%arg2 = %3) -> (!fir.array<1xi32>) {
-    %23 = fir.array_fetch %19, %arg1 : (!fir.array<?xi32>, index) -> i32
-    %24 = fir.array_update %arg2, %23, %arg1 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
-    fir.result %24 : !fir.array<1xi32>
-  }
-  fir.array_merge_store %3, %21 to %1 : !fir.array<1xi32>, !fir.array<1xi32>, !fir.ref<!fir.array<1xi32>>
   fir.freemem %17 : !fir.heap<!fir.array<?xi32>>
   %22 = fir.load %1 : !fir.ref<!fir.array<1xi32>>
   return %22 : !fir.array<1xi32>
@@ -2256,7 +2261,6 @@ func.func @_QPtestminloc_doesntwork1d_chars(%arg0: !fir.boxchar<1> {fir.bindc_na
   %c1 = arith.constant 1 : index
   %3 = fir.alloca !fir.array<1xi32> {bindc_name = "testminloc_doesntwork1d_chars", uniq_name = "_QFtestminloc_doesntwork1d_charsEtestminloc_doesntwork1d_chars"}
   %4 = fir.shape %c1 : (index) -> !fir.shape<1>
-  %5 = fir.array_load %3(%4) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.array<1xi32>
   %6 = fir.shape %c10 : (index) -> !fir.shape<1>
   %7 = fir.embox %2(%6) : (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.shape<1>) -> !fir.box<!fir.array<10x!fir.char<1>>>
   %8 = fir.absent !fir.box<i1>
@@ -2280,16 +2284,9 @@ func.func @_QPtestminloc_doesntwork1d_chars(%arg0: !fir.boxchar<1> {fir.bindc_na
   %20:3 = fir.box_dims %19, %c0_0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
   %21 = fir.box_addr %19 : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   %22 = fir.shape_shift %20#0, %20#1 : (index, index) -> !fir.shapeshift<1>
-  %23 = fir.array_load %21(%22) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.array<?xi32>
   %c1_1 = arith.constant 1 : index
   %c0_2 = arith.constant 0 : index
   %24 = arith.subi %c1, %c1_1 : index
-  %25 = fir.do_loop %arg1 = %c0_2 to %24 step %c1_1 unordered iter_args(%arg2 = %5) -> (!fir.array<1xi32>) {
-    %27 = fir.array_fetch %23, %arg1 : (!fir.array<?xi32>, index) -> i32
-    %28 = fir.array_update %arg2, %27, %arg1 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
-    fir.result %28 : !fir.array<1xi32>
-  }
-  fir.array_merge_store %5, %25 to %3 : !fir.array<1xi32>, !fir.array<1xi32>, !fir.ref<!fir.array<1xi32>>
   fir.freemem %21 : !fir.heap<!fir.array<?xi32>>
   %26 = fir.load %3 : !fir.ref<!fir.array<1xi32>>
   return %26 : !fir.array<1xi32>
@@ -2327,7 +2324,6 @@ func.func @_QPtestminloc_doesntwork1d_unknownmask(%arg0: !fir.ref<!fir.array<10x
   %c1_0 = arith.constant 1 : index
   fir.store %c1_0 to %4 : !fir.ref<index>
   %13 = fir.shape %c1 : (index) -> !fir.shape<1>
-  %14 = fir.array_load %7(%13) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.array<1xi32>
   %15 = fir.shape %c10 : (index) -> !fir.shape<1>
   %16 = fir.embox %arg0(%15) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
   %17 = fir.load %3 : !fir.ref<!fir.heap<!fir.array<?x!fir.logical<4>>>>
@@ -2361,16 +2357,9 @@ func.func @_QPtestminloc_doesntwork1d_unknownmask(%arg0: !fir.ref<!fir.array<10x
   %38:3 = fir.box_dims %37, %c0_2 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
   %39 = fir.box_addr %37 : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   %40 = fir.shape_shift %38#0, %38#1 : (index, index) -> !fir.shapeshift<1>
-  %41 = fir.array_load %39(%40) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.array<?xi32>
   %c1_3 = arith.constant 1 : index
   %c0_4 = arith.constant 0 : index
   %42 = arith.subi %c1, %c1_3 : index
-  %43 = fir.do_loop %arg1 = %c0_4 to %42 step %c1_3 unordered iter_args(%arg2 = %14) -> (!fir.array<1xi32>) {
-    %45 = fir.array_fetch %41, %arg1 : (!fir.array<?xi32>, index) -> i32
-    %46 = fir.array_update %arg2, %45, %arg1 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
-    fir.result %46 : !fir.array<1xi32>
-  }
-  fir.array_merge_store %14, %43 to %7 : !fir.array<1xi32>, !fir.array<1xi32>, !fir.ref<!fir.array<1xi32>>
   fir.freemem %39 : !fir.heap<!fir.array<?xi32>>
   %44 = fir.load %7 : !fir.ref<!fir.array<1xi32>>
   return %44 : !fir.array<1xi32>
@@ -2391,7 +2380,6 @@ func.func @_QPtestmaxloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_
   %c1 = arith.constant 1 : index
   %1 = fir.alloca !fir.array<1xi32> {bindc_name = "testmaxloc_works1d", uniq_name = "_QFtestmaxloc_works1dEtestmaxloc_works1d"}
   %2 = fir.shape %c1 : (index) -> !fir.shape<1>
-  %3 = fir.array_load %1(%2) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.array<1xi32>
   %4 = fir.shape %c10 : (index) -> !fir.shape<1>
   %5 = fir.embox %arg0(%4) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
   %6 = fir.shape %c10_0 : (index) -> !fir.shape<1>
@@ -2416,16 +2404,9 @@ func.func @_QPtestmaxloc_works1d(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_
   %19:3 = fir.box_dims %18, %c0_1 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
   %20 = fir.box_addr %18 : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   %21 = fir.shape_shift %19#0, %19#1 : (index, index) -> !fir.shapeshift<1>
-  %22 = fir.array_load %20(%21) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.array<?xi32>
   %c1_2 = arith.constant 1 : index
   %c0_3 = arith.constant 0 : index
   %23 = arith.subi %c1, %c1_2 : index
-  %24 = fir.do_loop %arg2 = %c0_3 to %23 step %c1_2 unordered iter_args(%arg3 = %3) -> (!fir.array<1xi32>) {
-    %26 = fir.array_fetch %22, %arg2 : (!fir.array<?xi32>, index) -> i32
-    %27 = fir.array_update %arg3, %26, %arg2 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
-    fir.result %27 : !fir.array<1xi32>
-  }
-  fir.array_merge_store %3, %24 to %1 : !fir.array<1xi32>, !fir.array<1xi32>, !fir.ref<!fir.array<1xi32>>
   fir.freemem %20 : !fir.heap<!fir.array<?xi32>>
   %25 = fir.load %1 : !fir.ref<!fir.array<1xi32>>
   return %25 : !fir.array<1xi32>
@@ -2515,7 +2496,6 @@ func.func @_QPtestmaxloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
   %c1 = arith.constant 1 : index
   %1 = fir.alloca !fir.array<1xi32> {bindc_name = "testmaxloc_works1d_scalarmask_f64", uniq_name = "_QFtestmaxloc_works1d_scalarmask_f64Etestminloc_works1d_scalarmask_f64"}
   %2 = fir.shape %c1 : (index) -> !fir.shape<1>
-  %3 = fir.array_load %1(%2) : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> !fir.array<1xi32>
   %4 = fir.shape %c10 : (index) -> !fir.shape<1>
   %5 = fir.embox %arg0(%4) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
   %6 = fir.embox %arg1 : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
@@ -2539,16 +2519,9 @@ func.func @_QPtestmaxloc_works1d_scalarmask_f64(%arg0: !fir.ref<!fir.array<10xf6
   %18:3 = fir.box_dims %17, %c0_0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
   %19 = fir.box_addr %17 : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   %20 = fir.shape_shift %18#0, %18#1 : (index, index) -> !fir.shapeshift<1>
-  %21 = fir.array_load %19(%20) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.array<?xi32>
   %c1_1 = arith.constant 1 : index
   %c0_2 = arith.constant 0 : index
   %22 = arith.subi %c1, %c1_1 : index
-  %23 = fir.do_loop %arg2 = %c0_2 to %22 step %c1_1 unordered iter_args(%arg3 = %3) -> (!fir.array<1xi32>) {
-    %25 = fir.array_fetch %21, %arg2 : (!fir.array<?xi32>, index) -> i32
-    %26 = fir.array_update %arg3, %25, %arg2 : (!fir.array<1xi32>, i32, index) -> !fir.array<1xi32>
-    fir.result %26 : !fir.array<1xi32>
-  }
-  fir.array_merge_store %3, %23 to %1 : !fir.array<1xi32>, !fir.array<1xi32>, !fir.ref<!fir.array<1xi32>>
   fir.freemem %19 : !fir.heap<!fir.array<?xi32>>
   %24 = fir.load %1 : !fir.ref<!fir.array<1xi32>>
   return %24 : !fir.array<1xi32>
