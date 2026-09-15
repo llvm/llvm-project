@@ -70,16 +70,22 @@ static FailureOr<LinalgOp> generalizeToContractOp(RewriterBase &rewriter,
       castAttr && castAttr.getValue() == TypeFn::cast_unsigned)
     attributes.push_back(rewriter.getNamedAttr("cast", castAttr));
 
+  // Capture the operands and discardable attributes before `namedOp` is erased
+  // by the replacement below.
+  Value lhs = namedOp.getDpsInputs()[0];
+  Value rhs = namedOp.getDpsInputs()[1];
+  Value init = namedOp.getDpsInits()[0];
+  DictionaryAttr discardableAttrs = namedOp->getDiscardableAttrDictionary();
+
   LinalgOp contractOp = rewriter.replaceOpWithNewOp<ContractOp>(
-      namedOp, ValueRange{namedOp.getDpsInputs()[0], namedOp.getDpsInputs()[1]},
-      ValueRange{namedOp.getDpsInits()[0]}, attributes);
+      namedOp, ValueRange{lhs, rhs}, ValueRange{init}, attributes);
 
   // Discardable attributes carry user-defined metadata (e.g., annotations for
   // downstream passes). Generalization is a semantics-preserving
   // transformation, so dropping this metadata would be unexpected. This is safe
   // because discardable attributes are by definition independent of op
   // semantics.
-  contractOp->setDiscardableAttrs(namedOp->getDiscardableAttrDictionary());
+  contractOp->setDiscardableAttrs(discardableAttrs);
 
   return contractOp;
 }
