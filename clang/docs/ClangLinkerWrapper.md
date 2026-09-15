@@ -87,7 +87,7 @@ cause it be linked with any other device code with the same target triple.
 The linker wrapper performs a lot of steps internally, such as input matching,
 symbol resolution, and image registration. This makes it difficult to debug in
 some scenarios. The behavior of the linker-wrapper is controlled mostly through
-metadata, described in [clang documentation](https://clang.llvm.org/docs/OffloadingDesign.html).
+metadata, described in {doc}`clang documentation <OffloadingDesign>`.
 
 The individual tool invocations the wrapper performs can be printed with the
 `--wrapper-verbose` flag, and the intermediate files they operate on can be

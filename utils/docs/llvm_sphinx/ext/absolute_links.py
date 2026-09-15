@@ -244,6 +244,7 @@ def run_tests() -> None:
         "target.html#target-section",
         "project:target.md#target-document",
         "target.html#target-document",
+        "project:rest.rst",
     )
     for link in expected_nonportable_links:
         if link not in warnings:
