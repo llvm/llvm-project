@@ -900,8 +900,6 @@ def testElementwiseOpView():
         )
         func_op = module.body.operations[0]
         op = func_op.regions[0].blocks[0].operations[0]
-        # The op view reconstructed from the registry must be an instance of the
-        # publicly exported class.
         assert isinstance(op.opview, linalg.ElementwiseOp)
 
 
