@@ -8,7 +8,6 @@ CodeGen/WinEH/wineh-statenumbering.ll
 DebugInfo/Generic/block-asan.ll
 Transforms/AggressiveInstCombine/memset.ll
 Transforms/AtomicExpand/ARM/atomic-expansion-v7.ll
-Transforms/AtomicExpand/ARM/thread-model-single.ll
 Transforms/CrossDSOCFI/basic.ll
 Transforms/CrossDSOCFI/cfi_functions.ll
 Transforms/CrossDSOCFI/thumb.ll
