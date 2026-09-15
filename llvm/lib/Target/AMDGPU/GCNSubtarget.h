@@ -366,7 +366,7 @@ public:
 
   /// \returns Whether a work-group runs on all of the block's SIMDs.
   bool isFullSIMDMode() const {
-    return (HasGFX1250Insts && getGeneration() < GFX13) || !EnableCuMode;
+    return !hasSupportsWGP() || !EnableCuMode;
   }
 
   bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }

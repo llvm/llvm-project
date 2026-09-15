@@ -15,6 +15,11 @@
 ; RUN: not llc -mtriple=amdgpu7.00-amd-amdhsa -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
 ; RUN: not llc -mtriple=amdgpu6.00-amd-amdpal -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT32K %s
 
+; Pre-gfx10 has no WGP mode, so +cumode must not change the limit.
+; RUN: not llc -mtriple=amdgpu9.42-amd-amdhsa -mattr=+cumode -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
+; RUN: not llc -mtriple=amdgpu9.0a-amd-amdhsa -mattr=+cumode -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
+; RUN: not llc -mtriple=amdgpu9.50-amd-amdhsa -mattr=+cumode -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT160K %s
+
 ; gfx950 supports upto 160 KB LDS memory. The generic target does not.
 ; This is a negative test to check when the LDS size exceeds the max usable limit.
 
