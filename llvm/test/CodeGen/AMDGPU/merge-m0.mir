@@ -692,15 +692,11 @@ body:             |
 
 ---
 name: merge-m0-call-clobber
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: sreg_64_xexec }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:sreg_64_xexec = IMPLICIT_DEF
     SI_INIT_M0 -1, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
     dead $sgpr30_sgpr31 = SI_CALL %2, 0, csr_amdgpu
@@ -725,17 +721,13 @@ body:             |
 
 ---
 name: merge-m0-call-clobber-cross-block
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: sreg_64_xexec }
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
 
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:sreg_64_xexec = IMPLICIT_DEF
     dead $sgpr30_sgpr31 = SI_CALL %2, 0, csr_amdgpu
     S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
     S_BRANCH %bb.2
@@ -770,15 +762,11 @@ body:             |
 
 ---
 name: merge-m0-call-dominates-inits
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: sreg_64_xexec }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:sreg_64_xexec = IMPLICIT_DEF
     dead $sgpr30_sgpr31 = SI_CALL %2, 0, csr_amdgpu
     SI_INIT_M0 -1, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
@@ -797,15 +785,11 @@ body:             |
 
 ---
 name: move-m0-call-clobber
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: sreg_64_xexec }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = IMPLICIT_DEF
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:sreg_64_xexec = IMPLICIT_DEF
     dead $sgpr30_sgpr31 = SI_CALL %2, 0, csr_amdgpu
     SI_INIT_M0 -1, implicit-def $m0
     DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
