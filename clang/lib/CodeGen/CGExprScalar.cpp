@@ -600,6 +600,11 @@ public:
     return CGF.getOrCreateOpaqueRValueMapping(E).getScalarVal();
   }
 
+  Value *VisitCoroutineSuspendParameterBypassExpr(
+      CoroutineSuspendParameterBypassExpr *E) {
+    return Visit(E->getMoveExpr());
+  }
+
   Value *VisitOpenACCAsteriskSizeExpr(OpenACCAsteriskSizeExpr *E) {
     llvm_unreachable("Codegen for this isn't defined/implemented");
   }
