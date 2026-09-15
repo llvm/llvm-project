@@ -303,7 +303,7 @@ define i64 @two_early_exits_same_exit_with_constant_live_outs() {
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.early.exit.check:
-; CHECK-NEXT:    EMIT vp<%first.active.lane> = first-active-lane vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<%first.active.lane> = first-active-lane vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<%exit.cond.at.lane> = extract-lane vp<%first.active.lane>, ir<%cmp1>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%exit.cond.at.lane>
 ; CHECK-NEXT:  Successor(s): vector.early.exit.0, vector.early.exit.1
@@ -312,7 +312,7 @@ define i64 @two_early_exits_same_exit_with_constant_live_outs() {
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.early.exit.0:
-; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = first-active-lane vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = first-active-lane vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = add vp<[[VP3]]>, vp<[[VP14]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
