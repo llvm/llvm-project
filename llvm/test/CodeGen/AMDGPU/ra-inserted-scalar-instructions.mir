@@ -186,7 +186,7 @@ body:             |
   ; GCN-NEXT:   SI_SPILL_S32_SAVE [[S_LOAD_DWORD_IMM]], %stack.11, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.11, addrspace 5)
   ; GCN-NEXT:   [[S_LOAD_DWORDX8_IMM2:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM undef [[V_READFIRSTLANE_B32_2]], 652, 0 :: ("amdgpu-noclobber" load (s256), align 8, addrspace 1)
   ; GCN-NEXT:   SI_SPILL_S256_SAVE [[S_LOAD_DWORDX8_IMM2]], %stack.6, implicit $exec, implicit $sgpr32 :: (store (s256) into %stack.6, align 4, addrspace 5)
-  ; GCN-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
+  ; GCN-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = lr-split S_MOV_B64 0
   ; GCN-NEXT:   [[S_LOAD_DWORD_IMM1:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[S_MOV_B64_]], 0, 0 :: ("amdgpu-noclobber" load (s32), align 8, addrspace 1)
   ; GCN-NEXT:   SI_SPILL_S32_SAVE [[S_LOAD_DWORD_IMM1]], %stack.3, implicit $exec, implicit $sgpr32 :: (store (s32) into %stack.3, addrspace 5)
   ; GCN-NEXT:   SI_SPILL_S64_SAVE [[V_READFIRSTLANE_B32_2]], %stack.1, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.1, align 4, addrspace 5)
@@ -224,7 +224,7 @@ body:             |
   ; GCN-NEXT:   SI_SPILL_S64_SAVE [[V_READFIRSTLANE_B32_]], %stack.0, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sgpr_64 = lr-split COPY [[V_READFIRSTLANE_B32_]]
   ; GCN-NEXT:   dead [[S_LOAD_DWORD_IMM4:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY1]], 0, 0 :: ("amdgpu-noclobber" load (s32), addrspace 1)
-  ; GCN-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 0
+  ; GCN-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = lr-split S_MOV_B64 0
   ; GCN-NEXT:   [[S_LOAD_DWORD_IMM5:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[S_MOV_B64_1]], 0, 0 :: ("amdgpu-noclobber" load (s32), addrspace 1)
   ; GCN-NEXT:   [[SI_SPILL_S64_RESTORE1:%[0-9]+]]:sgpr_64 = SI_SPILL_S64_RESTORE %stack.2, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.2, align 4, addrspace 5)
   ; GCN-NEXT:   undef [[COPY2:%[0-9]+]].sub1:sgpr_64 = lr-split COPY [[SI_SPILL_S64_RESTORE1]].sub1
@@ -289,7 +289,7 @@ body:             |
   ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_10:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY4]].sub0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_11:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY4]].sub1, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_12:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[COPY4]].sub2, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[DEF6:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF6:%[0-9]+]]:sreg_32 = lr-split IMPLICIT_DEF
   ; GCN-NEXT:   dead [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 undef [[DEF5]], [[DEF6]], implicit-def dead $scc
   ; GCN-NEXT:   dead [[DEF7:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GCN-NEXT:   dead [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
@@ -397,7 +397,7 @@ body:             |
   ; GCN-NEXT:   S_CMP_EQ_U32 [[SI_SPILL_S256_RESTORE6]].sub7, 0, implicit-def $scc
   ; GCN-NEXT:   [[SI_SPILL_S32_RESTORE6:%[0-9]+]]:sgpr_32 = SI_SPILL_S32_RESTORE %stack.7, implicit $exec, implicit $sgpr32 :: (load (s32) from %stack.7, addrspace 5)
   ; GCN-NEXT:   dead [[V_CMP_GT_F32_e64_45:%[0-9]+]]:sreg_32 = V_CMP_GT_F32_e64 0, 0, 0, [[SI_SPILL_S32_RESTORE6]], 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[DEF19:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF19:%[0-9]+]]:sreg_32 = lr-split IMPLICIT_DEF
   ; GCN-NEXT:   dead [[S_AND_B32_10:%[0-9]+]]:sreg_32 = S_AND_B32 [[DEF19]], undef [[S_LOAD_DWORD_IMM6]], implicit-def dead $scc
   ; GCN-NEXT:   dead [[S_AND_B32_11:%[0-9]+]]:sreg_32 = S_AND_B32 undef [[S_AND_B32_10]], [[S_MOV_B32_2]], implicit-def dead $scc
   ; GCN-NEXT:   $vcc = COPY undef [[S_AND_B32_11]]

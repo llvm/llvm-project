@@ -1,0 +1,82 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -start-before=greedy,2 -stop-after=greedy,2 -stress-regalloc=3 -o - %s | FileCheck %s
+
+# The sgpr-regalloc pipeline placed a rematerialized SMEM load (flagged
+# lr-split) at the top of the Flow block, before the exec restore of the
+# if/else region. The vgpr-regalloc pipeline must treat it as part of the block
+# prolog: the spill it inserts in bb.3 has to be placed after the
+# S_OR_SAVEEXEC_B64, otherwise it is only executed for the lanes of the first
+# branch arm.
+
+# CHECK-LABEL: name: sgpr_remat_in_bb_prolog
+# CHECK:       bb.3:
+# CHECK:       lr-split S_LOAD_DWORDX8_IMM_ec
+# CHECK-NEXT:  S_OR_SAVEEXEC_B64
+# CHECK-NEXT:  SI_SPILL_AV64_SAVE
+# CHECK-NEXT:  V_LSHL_ADD_U64_e64
+
+--- |
+  define amdgpu_kernel void @sgpr_remat_in_bb_prolog() { ret void }
+...
+---
+name:            sgpr_remat_in_bb_prolog
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $sgpr4_sgpr5, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr64_sgpr65, $sgpr68_sgpr69, $vgpr0_vgpr1, $vgpr2_vgpr3
+
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vreg_64_align2 = COPY $vgpr2_vgpr3
+    $exec = S_MOV_B64_term killed renamable $sgpr30_sgpr31
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+    liveins: $sgpr4_sgpr5, $sgpr28_sgpr29, $sgpr34_sgpr35, $sgpr64_sgpr65, $sgpr68_sgpr69
+
+  bb.2:
+    successors: %bb.5(0x40000000), %bb.3(0x40000000)
+    liveins: $sgpr4_sgpr5, $sgpr28_sgpr29, $sgpr34_sgpr35, $sgpr64_sgpr65, $sgpr68_sgpr69
+
+    %2:vreg_64_align2 = COPY $sgpr68_sgpr69, implicit $exec
+    $exec = S_MOV_B64_term killed renamable $sgpr34_sgpr35
+    S_CBRANCH_EXECZ %bb.3, implicit $exec
+    S_BRANCH %bb.5
+
+  bb.3:
+    successors: %bb.4(0x40000000), %bb.6(0x40000000)
+    liveins: $sgpr4_sgpr5, $sgpr28_sgpr29, $sgpr64_sgpr65
+
+    early-clobber renamable $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = lr-split S_LOAD_DWORDX8_IMM_ec renamable $sgpr4_sgpr5, 32, 0 :: (dereferenceable invariant load (s256), align 16, addrspace 4)
+    renamable $sgpr28_sgpr29 = S_OR_SAVEEXEC_B64 killed renamable $sgpr28_sgpr29, implicit-def $exec, implicit-def $scc, implicit $exec
+    %3:vreg_64_align2 = V_LSHL_ADD_U64_e64 $sgpr64_sgpr65, 0, %1, implicit $exec
+    $exec = S_XOR_B64_term $exec, renamable $sgpr28_sgpr29, implicit-def $scc
+    S_CBRANCH_EXECZ %bb.6, implicit $exec
+    S_BRANCH %bb.4
+
+  bb.4:
+    successors: %bb.6(0x80000000)
+    liveins: $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+
+    S_BRANCH %bb.6
+
+  bb.5:
+    successors: %bb.3(0x80000000)
+    liveins: $sgpr4_sgpr5, $sgpr28_sgpr29, $sgpr64_sgpr65
+
+    %2:vreg_64_align2 = COPY $sgpr64_sgpr65, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.6:
+    liveins: $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+
+    %4:vreg_64_align2 = IMPLICIT_DEF
+    %5:vreg_64_align2 = IMPLICIT_DEF
+    %4:vreg_64_align2 = V_FMAC_F64_e32 %4, %5, %4, implicit $mode, implicit $exec
+    %6:vreg_64_align2 = V_FMA_F64_e64 1, %3, 0, %4, 0, 4607182418800017408, 0, 0, implicit $mode, implicit $exec
+    %7:vreg_64_align2 = V_LSHL_ADD_U64_e64 %2, 0, %0, implicit $exec
+    S_ENDPGM 0, implicit %6, implicit %7
+...

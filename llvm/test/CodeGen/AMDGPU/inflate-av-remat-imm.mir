@@ -24,9 +24,9 @@ body:             |
     ; CHECK-NEXT: renamable $agpr0 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
     ; CHECK-NEXT: renamable $agpr1 = V_ACCVGPR_WRITE_B32_e64 1, implicit $exec
     ; CHECK-NEXT: renamable $agpr2 = V_ACCVGPR_WRITE_B32_e64 2, implicit $exec
-    ; CHECK-NEXT: renamable $vgpr0 = V_MOV_B32_e32 3, implicit $exec
+    ; CHECK-NEXT: renamable $vgpr0 = lr-split V_MOV_B32_e32 3, implicit $exec
     ; CHECK-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; CHECK-NEXT: renamable $vgpr0 = V_MOV_B32_e32 4, implicit $exec
+    ; CHECK-NEXT: renamable $vgpr0 = lr-split V_MOV_B32_e32 4, implicit $exec
     ; CHECK-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; CHECK-NEXT: S_NOP 0, implicit killed renamable $agpr0
     ; CHECK-NEXT: S_NOP 0, implicit killed renamable $agpr1
@@ -78,9 +78,9 @@ body:             |
     ; CHECK-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit $exec
     ; CHECK-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr1, implicit $exec, implicit $exec
     ; CHECK-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr2, implicit $exec, implicit $exec
-    ; CHECK-NEXT: renamable $vgpr0 = V_MOV_B32_e32 3, implicit $exec
+    ; CHECK-NEXT: renamable $vgpr0 = lr-split V_MOV_B32_e32 3, implicit $exec
     ; CHECK-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
-    ; CHECK-NEXT: renamable $vgpr0 = V_MOV_B32_e32 4, implicit $exec
+    ; CHECK-NEXT: renamable $vgpr0 = lr-split V_MOV_B32_e32 4, implicit $exec
     ; CHECK-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; CHECK-NEXT: S_NOP 0, implicit killed renamable $agpr0
     ; CHECK-NEXT: S_NOP 0, implicit killed renamable $agpr1

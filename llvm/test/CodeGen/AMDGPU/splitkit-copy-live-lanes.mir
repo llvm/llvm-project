@@ -176,28 +176,28 @@ body:             |
     ; CHECK-NEXT: undef [[COPY41:%[0-9]+]].sub0:vreg_128 = lr-split COPY [[COPY40]].sub0 {
     ; CHECK-NEXT:   internal [[COPY41]].sub2:vreg_128 = lr-split COPY [[COPY40]].sub2
     ; CHECK-NEXT: }
-    ; CHECK-NEXT: undef [[V_LSHRREV_B32_e32_27:%[0-9]+]].sub2:vreg_128 = V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub1, implicit $exec
+    ; CHECK-NEXT: undef [[V_LSHRREV_B32_e32_27:%[0-9]+]].sub2:vreg_128 = lr-split V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub1, implicit $exec
     ; CHECK-NEXT: undef [[COPY42:%[0-9]+]].sub2:vreg_128 = lr-split COPY [[V_LSHRREV_B32_e32_27]].sub2
     ; CHECK-NEXT: [[COPY42:%[0-9]+]].sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_1]], [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub1, implicit $exec
     ; CHECK-NEXT: undef [[COPY43:%[0-9]+]].sub0:vreg_128 = lr-split COPY [[COPY42]].sub0 {
     ; CHECK-NEXT:   internal [[COPY43]].sub2:vreg_128 = lr-split COPY [[COPY42]].sub2
     ; CHECK-NEXT: }
-    ; CHECK-NEXT: undef [[V_LSHRREV_B32_e32_28:%[0-9]+]].sub2:vreg_128 = V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub0, implicit $exec
+    ; CHECK-NEXT: undef [[V_LSHRREV_B32_e32_28:%[0-9]+]].sub2:vreg_128 = lr-split V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub0, implicit $exec
     ; CHECK-NEXT: undef [[COPY44:%[0-9]+]].sub2:vreg_128 = lr-split COPY [[V_LSHRREV_B32_e32_28]].sub2
     ; CHECK-NEXT: [[COPY44:%[0-9]+]].sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_1]], [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub0, implicit $exec
     ; CHECK-NEXT: undef [[COPY45:%[0-9]+]].sub0:vreg_128 = lr-split COPY [[COPY44]].sub0 {
     ; CHECK-NEXT:   internal [[COPY45]].sub2:vreg_128 = lr-split COPY [[COPY44]].sub2
     ; CHECK-NEXT: }
-    ; CHECK-NEXT: undef [[V_LSHRREV_B32_e32_29:%[0-9]+]].sub2:vreg_128 = V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub3, implicit $exec
+    ; CHECK-NEXT: undef [[V_LSHRREV_B32_e32_29:%[0-9]+]].sub2:vreg_128 = lr-split V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub3, implicit $exec
     ; CHECK-NEXT: undef [[COPY46:%[0-9]+]].sub2:vreg_128 = lr-split COPY [[V_LSHRREV_B32_e32_29]].sub2
     ; CHECK-NEXT: [[COPY46:%[0-9]+]].sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_1]], [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub3, implicit $exec
     ; CHECK-NEXT: undef [[COPY47:%[0-9]+]].sub0:vreg_128 = lr-split COPY [[COPY46]].sub0 {
     ; CHECK-NEXT:   internal [[COPY47]].sub2:vreg_128 = lr-split COPY [[COPY46]].sub2
     ; CHECK-NEXT: }
-    ; CHECK-NEXT: undef [[V_LSHRREV_B32_e32_30:%[0-9]+]].sub2:vreg_128 = V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub2, implicit $exec
+    ; CHECK-NEXT: undef [[V_LSHRREV_B32_e32_30:%[0-9]+]].sub2:vreg_128 = lr-split V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub2, implicit $exec
     ; CHECK-NEXT: undef [[COPY48:%[0-9]+]].sub2:vreg_128 = lr-split COPY [[V_LSHRREV_B32_e32_30]].sub2
     ; CHECK-NEXT: [[COPY48:%[0-9]+]].sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_1]], [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub2, implicit $exec
-    ; CHECK-NEXT: undef [[V_LSHRREV_B32_e32_31:%[0-9]+]].sub2:vreg_128 = V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET6]].sub1, implicit $exec
+    ; CHECK-NEXT: undef [[V_LSHRREV_B32_e32_31:%[0-9]+]].sub2:vreg_128 = lr-split V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET6]].sub1, implicit $exec
     ; CHECK-NEXT: undef [[COPY49:%[0-9]+]].sub2:vreg_128 = lr-split COPY [[V_LSHRREV_B32_e32_31]].sub2
     ; CHECK-NEXT: [[COPY49:%[0-9]+]].sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_1]], [[BUFFER_LOAD_DWORDX4_OFFSET6]].sub1, implicit $exec
     ; CHECK-NEXT: [[V_LSHRREV_B32_e32_20:%[0-9]+]].sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_1]], [[BUFFER_LOAD_DWORDX4_OFFSET6]].sub0, implicit $exec

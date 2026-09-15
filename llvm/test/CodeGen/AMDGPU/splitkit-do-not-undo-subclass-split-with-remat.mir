@@ -193,8 +193,8 @@ body:             |
     ; CHECK-NEXT: [[AV_MOV_:%[0-9]+]]:av_32 = AV_MOV_B32_IMM_PSEUDO 1065353216, implicit $exec
     ; CHECK-NEXT: [[AV_MOV_1:%[0-9]+]]:av_32 = AV_MOV_B32_IMM_PSEUDO 1073741824, implicit $exec
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_SADDR:%[0-9]+]]:vreg_1024_align2 = V_MFMA_F32_32X32X1F32_mac_vgprcd_e64 [[AV_MOV_]], [[AV_MOV_1]], [[GLOBAL_LOAD_DWORDX4_SADDR]], 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[AV_MOV_2:%[0-9]+]]:av_32 = AV_MOV_B32_IMM_PSEUDO 1073741824, implicit $exec
-    ; CHECK-NEXT: [[AV_MOV_3:%[0-9]+]]:av_32 = AV_MOV_B32_IMM_PSEUDO 1065353216, implicit $exec
+    ; CHECK-NEXT: [[AV_MOV_2:%[0-9]+]]:av_32 = lr-split AV_MOV_B32_IMM_PSEUDO 1073741824, implicit $exec
+    ; CHECK-NEXT: [[AV_MOV_3:%[0-9]+]]:av_32 = lr-split AV_MOV_B32_IMM_PSEUDO 1065353216, implicit $exec
     ; CHECK-NEXT: early-clobber %5:vreg_1024_align2 = V_MFMA_F32_32X32X1F32_vgprcd_e64 [[AV_MOV_3]], [[AV_MOV_2]], [[GLOBAL_LOAD_DWORDX4_SADDR]], 0, 0, 0, implicit $mode, implicit $exec, implicit $mode, implicit $exec
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_SADDR:%[0-9]+]].sub2:vreg_1024_align2 = COPY %5.sub0
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_SADDR:%[0-9]+]].sub3:vreg_1024_align2 = COPY %5.sub1

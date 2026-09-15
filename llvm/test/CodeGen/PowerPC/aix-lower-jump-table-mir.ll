@@ -60,7 +60,7 @@ define i32 @jump_table(i32 %a) {
   ; 32SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32SMALL-MIR-NEXT: {{  $}}
   ; 32SMALL-MIR-NEXT: bb.6.sw.epilog:
-  ; 32SMALL-MIR-NEXT:   $r3 = LI 0
+  ; 32SMALL-MIR-NEXT:   $r3 = lr-split LI 0
   ; 32SMALL-MIR-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3
   ;
   ; 32LARGE-MIR-LABEL: name: jump_table
@@ -108,7 +108,7 @@ define i32 @jump_table(i32 %a) {
   ; 32LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 32LARGE-MIR-NEXT: {{  $}}
   ; 32LARGE-MIR-NEXT: bb.6.sw.epilog:
-  ; 32LARGE-MIR-NEXT:   $r3 = LI 0
+  ; 32LARGE-MIR-NEXT:   $r3 = lr-split LI 0
   ; 32LARGE-MIR-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3
   ;
   ; 64SMALL-MIR-LABEL: name: jump_table
@@ -155,7 +155,7 @@ define i32 @jump_table(i32 %a) {
   ; 64SMALL-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64SMALL-MIR-NEXT: {{  $}}
   ; 64SMALL-MIR-NEXT: bb.6.sw.epilog:
-  ; 64SMALL-MIR-NEXT:   $x3 = LI8 0
+  ; 64SMALL-MIR-NEXT:   $x3 = lr-split LI8 0
   ; 64SMALL-MIR-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
   ;
   ; 64LARGE-MIR-LABEL: name: jump_table
@@ -203,7 +203,7 @@ define i32 @jump_table(i32 %a) {
   ; 64LARGE-MIR-NEXT:   INLINEASM &"", sideeffect attdialect
   ; 64LARGE-MIR-NEXT: {{  $}}
   ; 64LARGE-MIR-NEXT: bb.6.sw.epilog:
-  ; 64LARGE-MIR-NEXT:   $x3 = LI8 0
+  ; 64LARGE-MIR-NEXT:   $x3 = lr-split LI8 0
   ; 64LARGE-MIR-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 entry:
   switch i32 %a, label %sw.epilog [

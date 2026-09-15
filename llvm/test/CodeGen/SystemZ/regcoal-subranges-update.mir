@@ -24,7 +24,7 @@ body:             |
   bb.0:
 
     ; CHECK-LABEL: name: main
-    ; CHECK: [[LGHI:%[0-9]+]]:gr64bit = LGHI 43
+    ; CHECK: [[LGHI:%[0-9]+]]:gr64bit = lr-split LGHI 43
     ; CHECK-NEXT: undef [[LGHI:%[0-9]+]].subreg_l32:gr64bit = MSR [[LGHI]].subreg_l32, [[LGHI]].subreg_l32
     ; CHECK-NEXT: [[LGHI1:%[0-9]+]]:gr64bit = LGHI 43
     ; CHECK-NEXT: [[LGHI:%[0-9]+]].subreg_l32:gr64bit = AHIMux [[LGHI]].subreg_l32, 9, implicit-def dead $cc
@@ -64,9 +64,9 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0
   ; CHECK-NEXT:   [[LGFR:%[0-9]+]]:gr64bit = LGFR [[LGHI]].subreg_l32
-  ; CHECK-NEXT:   $r2d = LGHI 123
-  ; CHECK-NEXT:   $r3d = LGHI 0
-  ; CHECK-NEXT:   $r4d = LGHI 0
+  ; CHECK-NEXT:   $r2d = lr-split LGHI 123
+  ; CHECK-NEXT:   $r3d = lr-split LGHI 0
+  ; CHECK-NEXT:   $r4d = lr-split LGHI 0
   ; CHECK-NEXT:   $r5d = COPY [[LGFR]]
   ; CHECK-NEXT:   KILL killed $r2d, killed $r3d, killed $r4d, $r5d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0
