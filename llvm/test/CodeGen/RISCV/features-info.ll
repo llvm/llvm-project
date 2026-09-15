@@ -26,13 +26,17 @@
 ; CHECK-NEXT:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
 ; CHECK-NEXT:   experimental-smcsps              - 'Smcsps' (Conditional Stack Pointer Swap at Machine Level).
 ; CHECK-NEXT:   experimental-smehv               - 'Smehv' (Synchronous Exception Hardware Vectoring at Machine Level).
+; CHECK-NEXT:   experimental-smidctrl            - 'Smidctrl' (Interrupt Domain Control Interface at Machine Level).
 ; CHECK-NEXT:   experimental-smijt               - 'Smijt' (Interrupt Jump Table at Machine Level).
 ; CHECK-NEXT:   experimental-smip                - 'Smip' (Support for Interrupt Handler Push/Pop at Machine Level).
+; CHECK-NEXT:   experimental-smnip               - 'Smnip' (Nested Interrupt Preemption Support at Machine Level).
 ; CHECK-NEXT:   experimental-smpmpmt             - 'Smpmpmt' (PMP-based Memory Types Extension).
 ; CHECK-NEXT:   experimental-sscsps              - 'Sscsps' (Conditional Stack Pointer Swap at Supervisor Level).
 ; CHECK-NEXT:   experimental-ssehv               - 'Ssehv' (Synchronous Exception Hardware Vectoring at Supervisor Level).
+; CHECK-NEXT:   experimental-ssidctrl            - 'Ssidctrl' (Interrupt Domain Control Interface at Supervisor Level).
 ; CHECK-NEXT:   experimental-ssijt               - 'Ssijt' (Interrupt Jump Table at Supervisor Level).
 ; CHECK-NEXT:   experimental-ssip                - 'Ssip' (Support for Interrupt Handler Push/Pop at Supervisor Level).
+; CHECK-NEXT:   experimental-ssnip               - 'Ssnip' (Nested Interrupt Preemption Support at Supervisor Level).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
 ; CHECK-NEXT:   experimental-xqccmt              - 'Xqccmt' (Qualcomm 16-bit Table Jump).
 ; CHECK-NEXT:   experimental-xsfmclic            - 'XSfmclic' (SiFive CLIC Machine-mode CSRs).

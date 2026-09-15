@@ -14,9 +14,11 @@
 #include "hdr/errno_macros.h"
 #include "hdr/pthread_macros.h"
 #include "hdr/sched_macros.h"
+#include "hdr/types/struct_sched_param.h"
 #include "src/pthread/pthread_attr_destroy.h"
 #include "src/pthread/pthread_attr_getdetachstate.h"
 #include "src/pthread/pthread_attr_getguardsize.h"
+#include "src/pthread/pthread_attr_getschedparam.h"
 #include "src/pthread/pthread_attr_getschedpolicy.h"
 #include "src/pthread/pthread_attr_getscope.h"
 #include "src/pthread/pthread_attr_getstack.h"
@@ -24,6 +26,7 @@
 #include "src/pthread/pthread_attr_init.h"
 #include "src/pthread/pthread_attr_setdetachstate.h"
 #include "src/pthread/pthread_attr_setguardsize.h"
+#include "src/pthread/pthread_attr_setschedparam.h"
 #include "src/pthread/pthread_attr_setschedpolicy.h"
 #include "src/pthread/pthread_attr_setscope.h"
 #include "src/pthread/pthread_attr_setstack.h"
@@ -125,6 +128,31 @@ TEST(LlvmLibcPThreadattrTest, SetAndGetStack) {
   ASSERT_EQ(
       LIBC_NAMESPACE::pthread_attr_setstack(&attr, 0, PTHREAD_STACK_MIN / 2),
       EINVAL);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(&attr), 0);
+}
+
+TEST(LlvmLibcPThreadattrTest, SetAndGetSchedParam) {
+  pthread_attr_t attr;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
+
+  struct sched_param param;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getschedparam(&attr, &param), 0);
+  ASSERT_EQ(param.sched_priority, 0);
+
+  param.sched_priority = 42;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedparam(&attr, &param), 0);
+  param.sched_priority = 0;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getschedparam(&attr, &param), 0);
+  ASSERT_EQ(param.sched_priority, 42);
+
+  // We do not attempt to validate scheduling parameters here. The OS will do
+  // that when starting a thread.
+  param.sched_priority = -1;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedparam(&attr, &param), 0);
+  param.sched_priority = 0;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getschedparam(&attr, &param), 0);
+  ASSERT_EQ(param.sched_priority, -1);
 
   ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(&attr), 0);
 }

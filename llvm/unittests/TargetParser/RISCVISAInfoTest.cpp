@@ -1259,6 +1259,19 @@ TEST(ComputeDefaultABI, SelectsExpectedABI) {
   EXPECT_EQ(GetABIFromFeatures(64, {"+f", "+d"}), "lp64d");
   EXPECT_EQ(GetABIFromFeatures(64, {"+e"}), "lp64e");
 
+  // RVY targets default to the capability ABI.
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y"}), "il32pc64");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+f"}), "il32pc64f");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+f", "+d"}),
+            "il32pc64d");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+e"}), "il32pc64e");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y"}), "l64pc128");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+f"}), "l64pc128f");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+f", "+d"}),
+            "l64pc128d");
+  // RV64E has no capability ABI (yet).
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+e"}), "lp64e");
+
   // CHERIoT always selects the cheriot ABI by default.
   EXPECT_EQ(GetABIFromFeatures(32, {"+xcheriot"}), "cheriot");
 }
@@ -1663,13 +1676,17 @@ Experimental extensions
     zvzip                0.1
     smcsps               0.20
     smehv                0.20
+    smidctrl             0.20
     smijt                0.20
     smip                 0.20
+    smnip                0.20
     smpmpmt              0.6
     sscsps               0.20
     ssehv                0.20
+    ssidctrl             0.20
     ssijt                0.20
     ssip                 0.20
+    ssnip                0.20
     svukte               1.0
     xqccmt               0.1
     xsfmclic             0.1

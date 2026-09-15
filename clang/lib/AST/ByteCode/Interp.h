@@ -83,6 +83,10 @@ bool diagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
                            const Block *B, Lifetime LT = Lifetime::Started,
                            AccessKinds AK = AK_Read);
 
+bool diagnoseArrayIndex(InterpState &S, CodePtr OpPC, const APSInt &Index,
+                        std::optional<uint64_t> NumElems = std::nullopt,
+                        bool IsArray = true);
+
 /// Checks a direct load of a primitive value from a global or local variable.
 bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B);
 bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B);
@@ -2271,7 +2275,7 @@ inline bool LoadPopL(InterpState &S, CodePtr OpPC) {
     if (Ptr.isOpaquePointer()) {
       const OpaquePointer &OP = Ptr.asOpaquePointer();
 
-      if (!Ptr.asOpaquePointer().Base->getType()->isPointerType())
+      if (!Ptr.asOpaquePointer().Base.getType()->isPointerType())
         return false;
 
       QualType T = Ptr.getType();
@@ -2608,20 +2612,18 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
       N = Ptr.getByteOffset() - O;
 
     if (N > 1)
-      S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
-          << N << /*non-array*/ true << 0;
+      diagnoseArrayIndex(S, OpPC, APSInt::getUnsigned(N), 0, /*IsArray=*/false);
     return Pointer(Ptr.asFunctionPointer().Func, N);
   } else if (Ptr.isStringPointer()) {
     int64_t NewOffset;
     if constexpr (Op == ArithOp::Add)
-      NewOffset = Ptr.getRawOffset() + static_cast<int64_t>(Offset);
+      NewOffset = Ptr.getByteOffset() + static_cast<int64_t>(Offset);
     else
-      NewOffset = Ptr.getRawOffset() - static_cast<int64_t>(Offset);
+      NewOffset = Ptr.getByteOffset() - static_cast<int64_t>(Offset);
     if (NewOffset < 0 ||
         NewOffset > (Ptr.asStringPointer().getLiteral()->getLength() + 1)) {
-      S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
-          << NewOffset << /*non-array*/ false
-          << (Ptr.asStringPointer().getLiteral()->getLength() + 1);
+      diagnoseArrayIndex(S, OpPC, APSInt::get(NewOffset),
+                         (Ptr.asStringPointer().getLiteral()->getLength() + 1));
       return std::nullopt;
     }
     return Pointer(Ptr.asStringPointer(), NewOffset);
@@ -2647,8 +2649,7 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
                    /*IsUnsigned=*/false);
     APSInt NewIndex =
         (Op == ArithOp::Add) ? (APIndex + APOffset) : (APIndex - APOffset);
-    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
-        << NewIndex << /*array*/ static_cast<int>(!Ptr.inArray()) << MaxIndex;
+    diagnoseArrayIndex(S, OpPC, NewIndex, MaxIndex, Ptr.inArray());
     Invalid = true;
   };
 
@@ -2744,9 +2745,9 @@ bool SubOffset(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
-inline bool GetOpaquePtr(InterpState &S, const ValueDecl *VD,
+inline bool GetOpaquePtr(InterpState &S, DeclOrExpr DOE,
                          bool ConstexprUnknown) {
-  S.Stk.push<Pointer>(VD, ConstexprUnknown);
+  S.Stk.push<Pointer>(DOE, ConstexprUnknown);
   return true;
 }
 
@@ -3070,8 +3071,8 @@ inline bool AddrOf(InterpState &S, CodePtr OpPC) {
   if (Ptr.isOpaquePointer()) {
     const OpaquePointer &OP = Ptr.asOpaquePointer();
     QualType T = QualType(OP.FieldType.getPointer(), 0);
-    T = S.getASTContext().getPointerType(T);
 
+    T = S.getASTContext().getPointerType(T);
     S.Stk.push<Pointer>(OP.withFieldType(T.getTypePtr(), OP.isOnePastEnd()));
   } else {
     S.Stk.push<Pointer>(Ptr);
@@ -3096,23 +3097,18 @@ bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
     S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
   } else if constexpr (isIntegralOrPointer<T>()) {
     if (Ptr.isBlockPointer()) {
-      IntegralKind Kind = IntegralKind::Address;
-      const void *PtrVal;
-      if (Ptr.isDummy()) {
-        if (const Expr *E = Ptr.getRootExpr()) {
-          PtrVal = E;
-          if (isa<AddrLabelExpr>(E))
-            Kind = IntegralKind::LabelAddress;
-        } else {
-          PtrVal = Ptr.getDeclDesc()->asDecl();
-        }
-      } else {
-        PtrVal = Ptr.block();
-        Kind = IntegralKind::BlockAddress;
-      }
-      S.Stk.push<T>(Kind, PtrVal, /*Offset=*/0);
+      S.Stk.push<T>(IntegralKind::BlockAddress, Ptr.block(), /*Offset=*/0);
     } else if (Ptr.isOpaquePointer()) {
-      S.Stk.push<T>(IntegralKind::Address, Ptr.asOpaquePointer().Base, 0);
+      if (const Expr *BaseExpr = Ptr.asOpaquePointer().getBaseExpr()) {
+        IntegralKind Kind = IntegralKind::ExprAddress;
+        if (isa<AddrLabelExpr>(BaseExpr))
+          Kind = IntegralKind::LabelAddress;
+        S.Stk.push<T>(Kind, BaseExpr, 0);
+      } else {
+        S.Stk.push<T>(IntegralKind::Address,
+                      Ptr.asOpaquePointer().Base.asVarDecl(), 0);
+      }
+
     } else if (Ptr.isFunctionPointer()) {
       const void *FuncDecl = Ptr.asFunctionPointer().Func->getDecl();
       S.Stk.push<T>(IntegralKind::FunctionAddress, FuncDecl, /*Offset=*/0);

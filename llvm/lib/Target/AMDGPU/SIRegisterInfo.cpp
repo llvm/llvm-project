@@ -3419,11 +3419,34 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       bool IsCopy = MI->getOpcode() == AMDGPU::V_MOV_B32_e32 ||
                     MI->getOpcode() == AMDGPU::V_MOV_B32_e64 ||
                     MI->getOpcode() == AMDGPU::S_MOV_B32;
-      Register ResultReg =
-          IsCopy ? MI->getOperand(0).getReg()
-                 : RS->scavengeRegisterBackwards(*RC, MI, false, 0);
 
       int64_t Offset = FrameInfo.getObjectOffset(Index);
+
+      // Scaling FrameReg in place is the last resort when there is nothing to
+      // scavenge. It has to be undone after MI, which is only possible while MI
+      // does not use FrameReg for anything besides the frame index.
+      bool CanUseFrameRegAsScratch = IsSALU && !LiveSCC && FrameReg &&
+                                     !MI->readsRegister(FrameReg, this) &&
+                                     !MI->modifiesRegister(FrameReg, this);
+
+      bool RestoreFrameReg = false;
+      Register ResultReg;
+      if (IsCopy) {
+        ResultReg = MI->getOperand(0).getReg();
+      } else {
+        ResultReg = RS->scavengeRegisterBackwards(*RC, MI, false, 0,
+                                                  /*AllowSpill=*/false);
+        if (!ResultReg) {
+          if (CanUseFrameRegAsScratch) {
+            // Spilling an SGPR here instead would flip EXEC with S_NOT, and
+            // that clobbers the SCC MI may be defining for a later use.
+            ResultReg = FrameReg;
+            RestoreFrameReg = true;
+          } else {
+            ResultReg = RS->scavengeRegisterBackwards(*RC, MI, false, 0);
+          }
+        }
+      }
 
       // The carry-out lane of Add is unused, so it is safe to write with
       // S_MOV_B32 even into a VGPR.
@@ -3512,7 +3535,11 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                       : RS->scavengeRegisterBackwards(
                                             AMDGPU::SReg_32_XM0RegClass, MI,
                                             false, 0, /*AllowSpill=*/false);
-          Register ScaledReg = TmpScaledReg.isValid() ? TmpScaledReg : FrameReg;
+          // A scalar result is already materialized in ResultReg, which holds
+          // the scavenged register, or FrameReg itself if nothing was free.
+          Register ScaledReg = TmpScaledReg;
+          if (!ScaledReg.isValid())
+            ScaledReg = IsSALU ? ResultReg : FrameReg;
           Register TmpResultReg = ScaledReg;
 
           if (!LiveSCC) {
@@ -3587,17 +3614,53 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 .addReg(TmpResultReg);
             ResultReg = NewDest;
           }
-          if (!IsSALU)
+          // A scalar result still reads FrameReg at MI, so FrameReg is
+          // restored after MI instead.
+          if (!IsSALU) {
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::COPY), ResultReg)
                 .addReg(TmpResultReg, RegState::Kill);
-          // If there were truly no free SGPRs, we need to undo everything.
-          if (!TmpScaledReg.isValid()) {
-            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), ScaledReg)
-                .addReg(ScaledReg, RegState::Kill)
-                .addImm(-Offset);
-            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_LSHL_B32), ScaledReg)
+            // If there were truly no free SGPRs, we need to undo everything.
+            if (!TmpScaledReg.isValid()) {
+              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), ScaledReg)
+                  .addReg(ScaledReg, RegState::Kill)
+                  .addImm(-Offset);
+              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_LSHL_B32), ScaledReg)
+                  .addReg(FrameReg)
+                  .addImm(ST.getWavefrontSizeLog2());
+            }
+          }
+        }
+      }
+
+      if (RestoreFrameReg) {
+        // Put FrameReg back now that MI has consumed the scaled address.
+        // S_MUL_I32 undoes the scaling without writing SCC, which S_LSHL_B32
+        // would. When MI leaves SCC live, fold the offset back with the carry
+        // sequence that smuggles SCC through bit 0, which the scaling has just
+        // cleared.
+        MachineBasicBlock::iterator InsPt = std::next(MI);
+        BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_MUL_I32), FrameReg)
+            .addReg(FrameReg)
+            .addImm(ST.getWavefrontSize());
+
+        if (Offset) {
+          int64_t ScaledOffset = -Offset * ST.getWavefrontSize();
+          bool SCCLiveAfterMI = MI->definesRegister(AMDGPU::SCC, this) &&
+                                !MI->registerDefIsDead(AMDGPU::SCC, this);
+          if (!SCCLiveAfterMI) {
+            BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_ADD_I32), FrameReg)
                 .addReg(FrameReg)
-                .addImm(ST.getWavefrontSizeLog2());
+                .addImm(ScaledOffset);
+          } else {
+            BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_ADDC_U32), FrameReg)
+                .addReg(FrameReg)
+                .addImm(ScaledOffset);
+            BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_BITCMP1_B32))
+                .addReg(FrameReg)
+                .addImm(0);
+            BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_BITSET0_B32), FrameReg)
+                .addImm(0)
+                .addReg(FrameReg);
           }
         }
       }
@@ -3607,7 +3670,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         MI->eraseFromParent();
         return true;
       }
-      FIOp->ChangeToRegister(ResultReg, false, false, true);
+      // FrameReg is restored after MI, so MI does not kill it.
+      FIOp->ChangeToRegister(ResultReg, false, false, !RestoreFrameReg);
       return false;
     }
 
