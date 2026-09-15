@@ -85,6 +85,14 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(
     Arguments.insert(Arguments.begin(), CI.arg_begin(), CI.arg_end());
   FunctionType *FTy = CI.getCalledFunction()->getFunctionType();
   ParamTys.insert(ParamTys.begin(), FTy->param_begin(), FTy->param_end());
+
+  // For variadic intrinsics the declared parameter list can be less than the
+  // actual argument list. Append the types of the variadic arguments, so
+  // ParamTys and Argument sizes match. consumers expect ParamTys and Arguments
+  // to be parallel.
+  if (FTy->isVarArg())
+    for (const Value *Arg : drop_begin(CI.args(), FTy->getNumParams()))
+      ParamTys.push_back(Arg->getType());
 }
 
 IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
