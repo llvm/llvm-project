@@ -524,6 +524,48 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   }
 }
 
+InstructionCost GCNTTIImpl::getCmpSelInstrCost(
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+    TTI::OperandValueInfo Op2Info, const Instruction *I) const {
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+
+  if (ISD == ISD::SELECT) {
+    std::pair<InstructionCost, MVT> CondLT = getTypeLegalizationCost(CondTy);
+    std::pair<InstructionCost, MVT> ValLT = getTypeLegalizationCost(ValTy);
+    unsigned NElts =
+        ValLT.second.isVector() ? ValLT.second.getVectorNumElements() : 1;
+    MVT::SimpleValueType SLT = ValLT.second.getScalarType().SimpleTy;
+
+    switch (SLT) {
+    case MVT::i64:
+    case MVT::f64:
+      // > 32b must be split
+      NElts *= 2;
+      break;
+    case MVT::i8:
+      // < 32b can be packed assuming shared condition
+      if (!CondLT.second.isVector())
+        NElts = (NElts + 3) / 4;
+      break;
+    case MVT::i16:
+    case MVT::f16:
+    case MVT::bf16:
+      // < 32b can be packed assuming shared condition
+      if (!CondLT.second.isVector())
+        NElts = (NElts + 1) / 2;
+      break;
+    default:
+      break;
+    }
+
+    return NElts * ValLT.first * getFullRateInstrCost();
+  }
+
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                   Op1Info, Op2Info, I);
+}
+
 /// \returns true if \p FMul and its single fadd/fsub user \p FAddSub are
 /// expected to fuse during instruction selection. \p Ty is the type the fused
 /// operation runs on.

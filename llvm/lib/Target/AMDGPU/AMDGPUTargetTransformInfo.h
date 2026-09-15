@@ -165,6 +165,13 @@ public:
   bool getTgtMemIntrinsic(IntrinsicInst *Inst,
                           MemIntrinsicInfo &Info) const override;
 
+  InstructionCost getCmpSelInstrCost(
+      unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+      TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) const override;
+
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
