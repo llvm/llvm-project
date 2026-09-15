@@ -1507,6 +1507,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     setTruncStoreAction(MVT::v4i16, MVT::v4i8, Custom);
+    setTruncStoreAction(MVT::v2i32, MVT::v2i16, Custom);
 
     setOperationAction(ISD::BITCAST, MVT::i2, Custom);
     setOperationAction(ISD::BITCAST, MVT::i4, Custom);
@@ -7778,7 +7779,8 @@ static SDValue LowerTruncateVectorStore(SDLoc DL, StoreSDNode *ST,
                                         EVT VT, EVT MemVT,
                                         SelectionDAG &DAG) {
   assert(VT.isVector() && "VT should be a vector type");
-  assert(MemVT == MVT::v4i8 && VT == MVT::v4i16);
+  assert((MemVT == MVT::v4i8 && VT == MVT::v4i16) ||
+         (MemVT == MVT::v2i16 && VT == MVT::v2i32));
 
   SDValue Value = ST->getValue();
 
@@ -7789,20 +7791,19 @@ static SDValue LowerTruncateVectorStore(SDLoc DL, StoreSDNode *ST,
   //   xtn  v0.8b, v0.8h
   //   str  s0, [x0]
 
-  SDValue Poison = DAG.getPOISON(MVT::i16);
-  SDValue PoisonVec =
-      DAG.getBuildVector(MVT::v4i16, DL, {Poison, Poison, Poison, Poison});
-
+  SDValue PoisonVec = DAG.getPOISON(VT);
+  EVT DblVT = VT.getDoubleNumVectorElementsVT(*DAG.getContext());
+  EVT DblMemVT = MemVT.getDoubleNumVectorElementsVT(*DAG.getContext());
   SDValue TruncExt =
-      DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i16, Value, PoisonVec);
-  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::v8i8, TruncExt);
+      DAG.getNode(ISD::CONCAT_VECTORS, DL, DblVT, Value, PoisonVec);
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, DblMemVT, TruncExt);
 
   Trunc = DAG.getNode(ISD::BITCAST, DL, MVT::v2i32, Trunc);
   SDValue ExtractTrunc = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
                                      Trunc, DAG.getConstant(0, DL, MVT::i64));
 
-  return DAG.getStore(ST->getChain(), DL, ExtractTrunc,
-                      ST->getBasePtr(), ST->getMemOperand());
+  return DAG.getStore(ST->getChain(), DL, ExtractTrunc, ST->getBasePtr(),
+                      ST->getMemOperand());
 }
 
 static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
@@ -8067,8 +8068,9 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
       return scalarizeVectorStore(StoreNode, DAG);
     }
 
-    if (StoreNode->isTruncatingStore() && VT == MVT::v4i16 &&
-        MemVT == MVT::v4i8) {
+    if (StoreNode->isTruncatingStore() &&
+        ((VT == MVT::v4i16 && MemVT == MVT::v4i8) ||
+         (VT == MVT::v2i32 && MemVT == MVT::v2i16))) {
       return LowerTruncateVectorStore(Dl, StoreNode, VT, MemVT, DAG);
     }
   } else if (MemVT == MVT::i128 && StoreNode->isVolatile()) {

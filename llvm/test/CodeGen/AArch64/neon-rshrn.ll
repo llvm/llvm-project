@@ -865,12 +865,9 @@ entry:
 define void @rshrn_v2i32_4(<2 x i32> %a, ptr %p) {
 ; CHECK-LABEL: rshrn_v2i32_4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2s, #8
-; CHECK-NEXT:    add v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    ushr v0.2s, v0.2s, #4
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    str h0, [x0]
-; CHECK-NEXT:    str h1, [x0, #2]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    rshrn v0.4h, v0.4s, #4
+; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %b = add <2 x i32> %a, <i32 8, i32 8>
