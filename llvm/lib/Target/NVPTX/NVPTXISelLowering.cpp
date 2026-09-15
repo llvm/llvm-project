@@ -993,7 +993,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   }
 
   // Expand nearest-even rounding and diagnose unsupported conversions.
-  setOperationAction(ISD::FPTRUNC_ROUND, {MVT::f16, MVT::bf16, MVT::f32}, Custom);
+  setOperationAction(ISD::FPTRUNC_ROUND, {MVT::f16, MVT::bf16, MVT::f32},
+                     Custom);
 
   // Expand v2f32 = fp_extend
   setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Expand);
@@ -2435,7 +2436,7 @@ SDValue NVPTXTargetLowering::LowerFP_ROUND(SDValue Op,
 }
 
 SDValue NVPTXTargetLowering::LowerFPTRUNC_ROUND(SDValue Op,
-                                             SelectionDAG &DAG) const {
+                                                SelectionDAG &DAG) const {
   EVT SrcVT = Op.getOperand(0).getValueType();
   EVT DstVT = Op.getValueType();
   auto RM = static_cast<RoundingMode>(Op.getConstantOperandVal(1));
@@ -2447,8 +2448,8 @@ SDValue NVPTXTargetLowering::LowerFPTRUNC_ROUND(SDValue Op,
                        Op.getNode()->getFlags());
   }
 
-  bool RoundToInfinity = RM == RoundingMode::TowardNegative ||
-                         RM == RoundingMode::TowardPositive;
+  bool RoundToInfinity =
+      RM == RoundingMode::TowardNegative || RM == RoundingMode::TowardPositive;
 
   StringRef Error;
   if (RM != RoundingMode::TowardZero && !RoundToInfinity) {
