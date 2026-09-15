@@ -36,6 +36,11 @@ function(libc_set_definition output_var)
 endfunction()
 
 function(_get_compile_options_from_flags output_var)
+  if(NOT ARGN)
+    set(${output_var} "" PARENT_SCOPE)
+    return()
+  endif()
+
   set(compile_options "")
 
   if(LIBC_CPU_FEATURES MATCHES "FMA")
@@ -101,6 +106,11 @@ function(_get_compile_options_from_flags output_var)
 endfunction()
 
 function(_get_compile_options_from_config output_var)
+  if(DEFINED _LIBC_CACHED_COMPILE_OPTIONS_FROM_CONFIG)
+    set(${output_var} ${_LIBC_CACHED_COMPILE_OPTIONS_FROM_CONFIG} PARENT_SCOPE)
+    return()
+  endif()
+
   set(config_options "")
 
   if(LIBC_CONF_STRTOFLOAT_DISABLE_EISEL_LEMIRE)
@@ -201,10 +211,16 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_COPT_SCANF_PROVIDE_ISOC99_ALIASES")
   endif()
 
+  set(_LIBC_CACHED_COMPILE_OPTIONS_FROM_CONFIG "${config_options}" CACHE INTERNAL "")
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction()
 
 function(_get_compile_options_from_arch output_var)
+  if(DEFINED _LIBC_CACHED_COMPILE_OPTIONS_FROM_ARCH)
+    set(${output_var} ${_LIBC_CACHED_COMPILE_OPTIONS_FROM_ARCH} PARENT_SCOPE)
+    return()
+  endif()
+
   # Set options that are not found in src/__support/macros/properties/architectures.h
   # and src/__support/macros/properties/os.h
   # TODO: we probably want to unify these at some point for consistency
@@ -220,15 +236,21 @@ function(_get_compile_options_from_arch output_var)
     libc_add_definition(config_options "LIBC_TARGET_OS_IS_UEFI")
   endif()
 
+  set(_LIBC_CACHED_COMPILE_OPTIONS_FROM_ARCH "${config_options}" CACHE INTERNAL "")
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction()
 
 function(_get_common_compile_options output_var flags)
   _get_compile_options_from_flags(compile_flags ${flags})
+  if(DEFINED _LIBC_CACHED_COMMON_COMPILE_OPTIONS)
+    set(${output_var} ${compile_flags} ${_LIBC_CACHED_COMMON_COMPILE_OPTIONS} PARENT_SCOPE)
+    return()
+  endif()
+
   _get_compile_options_from_config(config_flags)
   _get_compile_options_from_arch(arch_flags)
 
-  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags} ${config_flags} ${arch_flags})
+  set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${config_flags} ${arch_flags})
 
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     if(LLVM_LIBC_FULL_BUILD)
@@ -351,5 +373,6 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
     endif()
   endif()
-  set(${output_var} ${compile_options} PARENT_SCOPE)
+  set(_LIBC_CACHED_COMMON_COMPILE_OPTIONS "${compile_options}" CACHE INTERNAL "")
+  set(${output_var} ${compile_flags} ${compile_options} PARENT_SCOPE)
 endfunction()
