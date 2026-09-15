@@ -554,6 +554,146 @@ function(set_windows_version_resource_properties name resource_file)
                "RC_PRODUCT_VERSION=\"${ARG_VERSION_STRING}\"")
 endfunction(set_windows_version_resource_properties)
 
+# Resolve an alias to the target that carries its build metadata.
+function(_llvm_resolve_target_alias output target)
+  if(TARGET "${target}")
+    get_target_property(aliased_target "${target}" ALIASED_TARGET)
+    if(aliased_target)
+      set(target "${aliased_target}")
+    endif()
+  endif()
+  set(${output} "${target}" PARENT_SCOPE)
+endfunction()
+
+# Collect the targets named by a link item. Generator expressions cannot be
+# evaluated at configure time, so conservatively return every token that names
+# a target. This can add prerequisites from disabled expression arms, but those
+# prerequisites generate headers only and cannot introduce library cycles.
+function(_llvm_link_item_targets output item)
+  if(item MATCHES "\\$<")
+    string(REGEX MATCHALL "[A-Za-z0-9_.+-]+(::[A-Za-z0-9_.+-]+)*"
+      candidates "${item}")
+  else()
+    set(candidates "${item}")
+  endif()
+
+  set(result)
+  foreach(candidate ${candidates})
+    if(TARGET "${candidate}")
+      _llvm_resolve_target_alias(candidate "${candidate}")
+      list(APPEND result "${candidate}")
+    endif()
+  endforeach()
+  list(REMOVE_DUPLICATES result)
+  set(${output} ${result} PARENT_SCOPE)
+endfunction()
+
+# Represent a library's generated headers with a build-local interface target.
+# CMake follows the interface graph and its utility dependencies, including
+# cycles, without adding dependencies on the provider's objects or archive.
+function(_llvm_generated_header_target output provider)
+  set(${output} PARENT_SCOPE)
+  if(NOT TARGET "${provider}")
+    return()
+  endif()
+  _llvm_resolve_target_alias(provider "${provider}")
+  get_property(headers TARGET "${provider}" PROPERTY LLVM_GENERATED_HEADER_INTERFACE)
+  if(headers)
+    set(${output} "${headers}" PARENT_SCOPE)
+    return()
+  endif()
+
+  get_target_property(imported "${provider}" IMPORTED)
+  get_target_property(type "${provider}" TYPE)
+  if(imported OR NOT type MATCHES
+     "^(STATIC|SHARED|MODULE|OBJECT|INTERFACE|UNKNOWN)_LIBRARY$")
+    # Imported generated headers already exist. Non-library targets cannot
+    # publish a transitive link interface.
+    return()
+  endif()
+
+  set(headers "llvm.headers.${provider}")
+  add_library("${headers}" INTERFACE)
+  # Publish the target before following edges so cyclic references reuse it.
+  set_property(TARGET "${provider}" PROPERTY LLVM_GENERATED_HEADER_INTERFACE
+    "${headers}")
+  set(${output} "${headers}" PARENT_SCOPE)
+
+  get_property(dependencies TARGET "${provider}" PROPERTY LLVM_EXPLICIT_DEPENDS)
+  foreach(dependency ${dependencies})
+    if(TARGET "${dependency}")
+      get_target_property(is_generated_header "${dependency}"
+        LLVM_GENERATED_HEADER_TARGET)
+      if(is_generated_header)
+        add_dependencies("${headers}" "${dependency}")
+      endif()
+    endif()
+  endforeach()
+
+  # Only a provider's interface is transitive. PRIVATE implementation links
+  # have already contributed to the provider's own compilation ordering.
+  get_property(links TARGET "${provider}" PROPERTY INTERFACE_LINK_LIBRARIES)
+  foreach(item ${links})
+    _llvm_link_item_targets(link_targets "${item}")
+    foreach(link_target ${link_targets})
+      _llvm_generated_header_target(child_headers "${link_target}")
+      if(child_headers)
+        target_link_libraries("${headers}" INTERFACE "${child_headers}")
+      endif()
+    endforeach()
+  endforeach()
+endfunction()
+
+# Record direct link dependencies for deferred generated-header resolution.
+# The target is the compilation target (normally an object library), not a
+# logical link provider.
+function(_llvm_record_link_dependencies target)
+  if(NOT ARGN)
+    return()
+  endif()
+  set_property(TARGET "${target}" APPEND PROPERTY LLVM_RECORDED_LINK_LIBS
+    ${ARGN})
+  set_property(GLOBAL APPEND PROPERTY LLVM_RECORDED_LINK_CONSUMERS "${target}")
+  get_property(scheduled GLOBAL PROPERTY
+    LLVM_LINK_DEPENDENCIES_SCHEDULED)
+  if(NOT scheduled)
+    cmake_language(DEFER DIRECTORY "${CMAKE_SOURCE_DIR}"
+      CALL _llvm_resolve_link_dependencies)
+    set_property(GLOBAL PROPERTY LLVM_LINK_DEPENDENCIES_SCHEDULED TRUE)
+  endif()
+endfunction()
+
+# Order compilation after generated-header utility targets reachable through
+# direct PUBLIC, PRIVATE, or unqualified links and transitive interfaces. Do
+# not depend on the provider libraries themselves: that would create strong
+# cycles for mutually linked static libraries and serialize compilation behind
+# archive creation on generators with strong target ordering.
+function(_llvm_resolve_link_dependencies)
+  get_property(consumers GLOBAL PROPERTY LLVM_RECORDED_LINK_CONSUMERS)
+  list(REMOVE_DUPLICATES consumers)
+  foreach(consumer ${consumers})
+    if(NOT TARGET "${consumer}")
+      continue()
+    endif()
+    get_target_property(items "${consumer}" LLVM_RECORDED_LINK_LIBS)
+    set(generated_headers)
+    foreach(item ${items})
+      _llvm_link_item_targets(providers "${item}")
+      foreach(provider ${providers})
+        _llvm_generated_header_target(provider_headers "${provider}")
+        list(APPEND generated_headers ${provider_headers})
+      endforeach()
+    endforeach()
+    list(REMOVE_DUPLICATES generated_headers)
+    if(generated_headers)
+      # These interface targets carry only build ordering. Keep them out of
+      # INTERFACE_LINK_LIBRARIES, including exported static/object interfaces.
+      set_property(TARGET "${consumer}" APPEND PROPERTY LINK_LIBRARIES
+        ${generated_headers})
+    endif()
+  endforeach()
+endfunction()
+
 # llvm_add_library(name sources...
 #   SHARED;STATIC
 #     STATIC by default w/o BUILD_SHARED_LIBS.
@@ -674,25 +814,27 @@ function(llvm_add_library name)
     if(ARG_DEPENDS)
       add_dependencies(${obj_name} ${ARG_DEPENDS})
     endif()
-    # Treat link libraries like PUBLIC dependencies.  LINK_LIBS might
-    # result in generating header files.  Add a dependendency so that
-    # the generated header is created before this object library.
-    if(ARG_LINK_LIBS)
+    # Record direct compilation dependencies after all targets have been
+    # declared. INTERFACE entries are not used by this target's sources.
+    if(ARG_LINK_LIBS OR LLVM_LINK_COMPONENTS)
       cmake_parse_arguments(LINK_LIBS_ARG
         ""
         ""
-        "PUBLIC;PRIVATE"
+        "PUBLIC;PRIVATE;INTERFACE"
         ${ARG_LINK_LIBS})
-      foreach(link_lib ${LINK_LIBS_ARG_PUBLIC})
-        if(LLVM_PTHREAD_LIB)
-          # Can't specify a dependence on -lpthread
-          if(NOT ${link_lib} STREQUAL ${LLVM_PTHREAD_LIB})
-            add_dependencies(${obj_name} ${link_lib})
-          endif()
-        else()
-          add_dependencies(${obj_name} ${link_lib})
-        endif()
-      endforeach()
+      # Component libraries resolve their links in
+      # LLVMBuildResolveComponentsLink, after all components are registered.
+      # Record those canonical names there, including forward references.
+      set(link_component_libs)
+      if(NOT ARG_COMPONENT_LIB)
+        llvm_map_components_to_libnames(link_component_libs
+          ${LLVM_LINK_COMPONENTS})
+      endif()
+      _llvm_record_link_dependencies(${obj_name}
+        ${LINK_LIBS_ARG_PUBLIC}
+        ${LINK_LIBS_ARG_PRIVATE}
+        ${LINK_LIBS_ARG_UNPARSED_ARGUMENTS}
+        ${link_component_libs})
     endif()
 
     if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
@@ -731,6 +873,10 @@ function(llvm_add_library name)
   else()
     add_library(${name} STATIC ${ALL_FILES})
   endif()
+  # Preserve the exact DEPENDS list for generated-header propagation. Do not
+  # use MANUALLY_ADDED_DEPENDENCIES here: it also contains cumulative and
+  # post-hoc utility dependencies unrelated to the library's public headers.
+  set_property(TARGET ${name} PROPERTY LLVM_EXPLICIT_DEPENDS ${ARG_DEPENDS})
   set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Libraries")
 
   ## If were compiling with clang-cl use /Zc:dllexportInlines- to exclude inline
@@ -1753,32 +1899,6 @@ function(canonicalize_tool_name name output)
   string(TOUPPER ${nameUNDERSCORE} nameUPPER)
   set(${output} "${nameUPPER}" PARENT_SCOPE)
 endfunction(canonicalize_tool_name)
-
-# Collect the targets named by a link item. Generator expressions cannot be
-# evaluated at configure time, so conservatively collect tokens that name
-# targets. This handles the link expressions used by LLVM's CMake helpers,
-# including LINK_ONLY and BUILD_INTERFACE.
-function(_llvm_link_item_targets output item)
-  if(item MATCHES "\\$<")
-    string(REGEX MATCHALL "[A-Za-z_][A-Za-z0-9_.+-]*(::[A-Za-z0-9_.+-]+)*"
-      candidates "${item}")
-  else()
-    set(candidates "${item}")
-  endif()
-
-  set(result)
-  foreach(candidate ${candidates})
-    if(TARGET "${candidate}")
-      get_target_property(aliased_target "${candidate}" ALIASED_TARGET)
-      if(aliased_target)
-        set(candidate "${aliased_target}")
-      endif()
-      list(APPEND result "${candidate}")
-    endif()
-  endforeach()
-  list(REMOVE_DUPLICATES result)
-  set(${output} ${result} PARENT_SCOPE)
-endfunction()
 
 # Install only the dependency-project targets reachable from a project's
 # exported targets. Add them to the consuming project's exports and use its
