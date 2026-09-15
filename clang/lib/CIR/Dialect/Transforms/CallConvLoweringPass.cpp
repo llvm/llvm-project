@@ -756,6 +756,33 @@ static std::optional<FunctionClassification> classifyX86_64VariadicCall(
       modOp, [&]() { return op->emitOpError(); });
 }
 
+/// Whether \p fc gives the callee access to memory through a pointer the ABI
+/// introduced: an sret slot for an indirect return, or an indirect argument.
+static bool hasIndirectSlot(const FunctionClassification &fc) {
+  if (fc.returnInfo.kind == ArgKind::Indirect)
+    return true;
+  return llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
+    return ac.kind == ArgKind::Indirect;
+  });
+}
+
+/// The side effect that describes a callee once the ABI has given it access
+/// to the memory its pointer arguments address.  `all` already allows that,
+/// so the function is idempotent.
+static cir::SideEffect widenForArgMemory(cir::SideEffect current) {
+  switch (current) {
+  case cir::SideEffect::Const:
+    return cir::SideEffect::ConstArgMem;
+  case cir::SideEffect::Pure:
+    return cir::SideEffect::PureArgMem;
+  case cir::SideEffect::All:
+  case cir::SideEffect::ConstArgMem:
+  case cir::SideEffect::PureArgMem:
+    return current;
+  }
+  llvm_unreachable("unhandled cir::SideEffect");
+}
+
 #ifndef NDEBUG
 /// Whether \p callFc classifies a call's leading arguments and its return
 /// exactly as \p calleeFc classifies the callee's declared parameters and
@@ -1041,6 +1068,19 @@ void CallConvLoweringPass::runOnOperation() {
   for (auto &kv : classifications)
     rewriteCtx.normalizeParameterSlotAlignments(kv.first, kv.second);
 
+  // A const or pure callee that the ABI hands memory through a pointer
+  // argument reaches that memory whatever its source-level attribute said, so
+  // the attribute has to be widened to match.  A variadic callee counts as
+  // well, since its declared parameters do not cover every argument.
+  for (auto &kv : classifications) {
+    cir::FuncOp func = kv.first;
+    std::optional<cir::SideEffect> sideEffect = func.getSideEffect();
+    if (!sideEffect)
+      continue;
+    if (hasIndirectSlot(kv.second) || func.getFunctionType().isVarArg())
+      func.setSideEffect(widenForArgMemory(*sideEffect));
+  }
+
   // Rewrite each function together with every direct call to it and every op
   // holding its address.  By the time we move on to function F+1, F's
   // signature and every reference to F have already been brought into
@@ -1068,6 +1108,13 @@ void CallConvLoweringPass::runOnOperation() {
         assert(classifiesSamePrefix(fc, *callFc) &&
                "a call site's declared parameters must be classified the same "
                "way as the callee's");
+      }
+      // A call site sees the arguments it passes, so it widens only for a
+      // slot, never for being variadic.  Widening before the rewrite lets
+      // the rewritten call carry the attribute across with the others.
+      if (hasIndirectSlot(*callFc)) {
+        auto call = cast<cir::CIRCallOpInterface>(callOp);
+        call.setSideEffect(widenForArgMemory(call.getSideEffect()));
       }
       if (failed(rewriteCtx.rewriteCallSite(callOp, *callFc, builder))) {
         signalPassFailure();
@@ -1143,6 +1190,10 @@ void CallConvLoweringPass::runOnOperation() {
       signalPassFailure();
       return;
     }
+    // Widening before the rewrite lets the rewritten call carry the attribute
+    // across with the others.
+    if (hasIndirectSlot(*fc))
+      c.setSideEffect(widenForArgMemory(c.getSideEffect()));
     if (failed(rewriteCtx.rewriteCallSite(c.getOperation(), *fc, builder))) {
       signalPassFailure();
       return;
