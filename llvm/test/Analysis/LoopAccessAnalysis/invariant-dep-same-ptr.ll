@@ -20,26 +20,23 @@ define void @conditional_store_load_same_invariant_via_phi(ptr %p0, ptr %p1, ptr
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %p2
-; CHECK-NEXT:        ptr %p2
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
+; CHECK-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %p2
-; CHECK-NEXT:        ptr %p2
 ; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
+; CHECK-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %p2 High: (4 + %p2))
 ; CHECK-NEXT:            Member: %p2
-; CHECK-NEXT:            Member: %p2
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %p0 High: ((4 * %n) + %p0))
-; CHECK-NEXT:            Member: {%p0,+,4}<%loop>
-; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %phip High: ((4 * %n) + %phip))
 ; CHECK-NEXT:            Member: {%phip,+,4}<%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %p0 High: ((4 * %n) + %p0))
+; CHECK-NEXT:            Member: {%p0,+,4}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -92,27 +89,27 @@ define void @store_load_same_invariant_via_different_geps(ptr %p0, ptr %p1, ptr 
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.ld = getelementptr i32, ptr %base, i64 1
 ; CHECK-NEXT:          %gep.st = getelementptr i32, ptr %base, i64 1
+; CHECK-NEXT:          %gep.ld = getelementptr i32, ptr %base, i64 1
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
+; CHECK-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %gep.ld = getelementptr i32, ptr %base, i64 1
 ; CHECK-NEXT:          %gep.st = getelementptr i32, ptr %base, i64 1
+; CHECK-NEXT:          %gep.ld = getelementptr i32, ptr %base, i64 1
 ; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
+; CHECK-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (4 + %base) High: (8 + %base))
 ; CHECK-NEXT:            Member: (4 + %base)
 ; CHECK-NEXT:            Member: (4 + %base)
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %p0 High: ((4 * %n) + %p0))
-; CHECK-NEXT:            Member: {%p0,+,4}<%loop>
-; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %phip High: ((4 * %n) + %phip))
 ; CHECK-NEXT:            Member: {%phip,+,4}<%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %p0 High: ((4 * %n) + %p0))
+; CHECK-NEXT:            Member: {%p0,+,4}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -160,23 +157,20 @@ define void @phi_with_loads_from_same_addr(ptr %p0, ptr %p1, ptr %x, i64 %n, i1 
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %ld1 = load ptr, ptr %x, align 8
-; CHECK-NEXT:          %ld1 = load ptr, ptr %x, align 8
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
+; CHECK-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %ld1 = load ptr, ptr %x, align 8
-; CHECK-NEXT:          %ld1 = load ptr, ptr %x, align 8
 ; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
+; CHECK-NEXT:          %gep0 = getelementptr i32, ptr %p0, i64 %iv
 ; CHECK-NEXT:      Check 2:
 ; CHECK-NEXT:        Comparing group GRP0:
-; CHECK-NEXT:          %ld1 = load ptr, ptr %x, align 8
 ; CHECK-NEXT:          %ld1 = load ptr, ptr %x, align 8
 ; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %ld2 = load ptr, ptr %x, align 8
 ; CHECK-NEXT:      Check 3:
-; CHECK-NEXT:        Comparing group GRP2:
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %gep1 = getelementptr i32, ptr %phip, i64 %iv
 ; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %ld2 = load ptr, ptr %x, align 8
@@ -184,13 +178,12 @@ define void @phi_with_loads_from_same_addr(ptr %p0, ptr %p1, ptr %x, i64 %n, i1 
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %ld1 High: (4 + %ld1))
 ; CHECK-NEXT:            Member: %ld1
-; CHECK-NEXT:            Member: %ld1
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %p0 High: ((4 * %n) + %p0))
-; CHECK-NEXT:            Member: {%p0,+,4}<%loop>
-; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %phip High: ((4 * %n) + %phip))
 ; CHECK-NEXT:            Member: {%phip,+,4}<%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %p0 High: ((4 * %n) + %p0))
+; CHECK-NEXT:            Member: {%p0,+,4}<%loop>
 ; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: %ld2 High: (4 + %ld2))
 ; CHECK-NEXT:            Member: %ld2

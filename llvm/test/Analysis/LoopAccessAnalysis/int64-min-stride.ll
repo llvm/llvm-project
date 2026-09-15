@@ -10,8 +10,8 @@ define void @int64_min_stride(ptr %A, i64 %n) {
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (-9223372036854775808 + (-9223372036854775808 * %n) + %A) High: (5 + %A))
-; CHECK-NEXT:            Member: {(4 + %A),+,-9223372036854775808}<%loop>
 ; CHECK-NEXT:            Member: {%A,+,-9223372036854775808}<%loop>
+; CHECK-NEXT:            Member: {(4 + %A),+,-9223372036854775808}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

@@ -16,14 +16,14 @@ target triple = "x86_64-apple-macosx10.10.0"
 ; CHECK: Run-time memory checks:
 ; CHECK-NEXT: 0:
 ; CHECK-NEXT: Comparing group
-; CHECK-NEXT:   %arrayidxA = getelementptr inbounds i16, ptr %a, i64 %storemerge3
 ; CHECK-NEXT:   %arrayidxA_plus_2 = getelementptr inbounds i16, ptr %a, i64 %add
+; CHECK-NEXT:   %arrayidxA = getelementptr inbounds i16, ptr %a, i64 %storemerge3
 ; CHECK-NEXT: Against group
 ; CHECK-NEXT:   %arrayidxB = getelementptr inbounds i16, ptr %b, i64 %storemerge3
 ; CHECK-NEXT: 1:
 ; CHECK-NEXT: Comparing group
-; CHECK-NEXT:   %arrayidxA = getelementptr inbounds i16, ptr %a, i64 %storemerge3
 ; CHECK-NEXT:   %arrayidxA_plus_2 = getelementptr inbounds i16, ptr %a, i64 %add
+; CHECK-NEXT:   %arrayidxA = getelementptr inbounds i16, ptr %a, i64 %storemerge3
 ; CHECK-NEXT: Against group
 ; CHECK-NEXT:   %arrayidxC = getelementptr inbounds i16, ptr %c, i64 %storemerge3
 

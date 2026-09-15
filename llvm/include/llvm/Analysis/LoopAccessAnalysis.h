@@ -603,7 +603,7 @@ public:
 
   /// Generate the checks and store it.  This also performs the grouping
   /// of pointers to reduce the number of memchecks necessary.
-  LLVM_ABI void generateChecks(MemoryDepChecker::DepCandidates &DepCands);
+  LLVM_ABI void generateChecks();
 
   /// Returns the checks that generateChecks created. They can be used to ensure
   /// no read/write accesses overlap across all loop iterations.
@@ -671,10 +671,10 @@ private:
   /// Groups pointers such that a single memcheck is required
   /// between two different groups. This will clear the CheckingGroups vector
   /// and re-compute it.
-  void groupChecks(MemoryDepChecker::DepCandidates &DepCands);
+  void groupChecks();
 
   /// Generate the checks and return them.
-  SmallVector<RuntimePointerCheck, 4> generateChecks();
+  SmallVector<RuntimePointerCheck, 4> generateChecksForGroups();
 
   /// Try to create add a new (pointer-difference, access size) pair to
   /// DiffCheck for checking groups \p CGI and \p CGJ. If pointer-difference
