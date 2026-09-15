@@ -26,23 +26,25 @@ def AMDGPUInstrFormat {
   int VOP2 = 7;
   int VOPC = 8;
   int VOP3 = 9;
-  int VINTRP = 10;
-  int VOPD3 = 11;
-  int LDSDIR = 12;
+  int VOP3P = 10;
+  int VINTERP = 11;
+  int VINTRP = 12;
+  int VOPD3 = 13;
+  int LDSDIR = 14;
 
   // Memory instruction formats.
-  int MUBUF = 13;
-  int MTBUF = 14;
-  int SMRD = 15;
-  int MIMG = 16;
-  int VIMAGE = 17;
-  int VSAMPLE = 18;
-  int EXP = 19;
-  int FLAT = 20;
-  int DS = 21;
+  int MUBUF = 15;
+  int MTBUF = 16;
+  int SMRD = 17;
+  int MIMG = 18;
+  int VIMAGE = 19;
+  int VSAMPLE = 20;
+  int EXP = 21;
+  int FLAT = 22;
+  int DS = 23;
 
   // Combined SGPR/VGPR spill pseudo.
-  int Spill = 22;
+  int Spill = 24;
 }
 
 // Operand-encoding modifier, keep in sync with SIInstrFlags::FormatModifier in
@@ -201,7 +203,7 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   // Mutually-exclusive instruction format, derived from the format bits above.
   // The base format bits are all exclusive, so they collapse into one enum
-  // field.
+  // field. VOP3P/VINTERP also set the VOP3 bit, so match them before VOP3.
   bits<5> Format = !cond(SOP1    : AMDGPUInstrFormat.SOP1,
                          SOP2    : AMDGPUInstrFormat.SOP2,
                          SOPC    : AMDGPUInstrFormat.SOPC,
@@ -210,6 +212,8 @@ class InstSI <dag outs, dag ins, string asm = "",
                          VOP1    : AMDGPUInstrFormat.VOP1,
                          VOP2    : AMDGPUInstrFormat.VOP2,
                          VOPC    : AMDGPUInstrFormat.VOPC,
+                         VOP3P   : AMDGPUInstrFormat.VOP3P,
+                         VINTERP : AMDGPUInstrFormat.VINTERP,
                          VOP3    : AMDGPUInstrFormat.VOP3,
                          VINTRP  : AMDGPUInstrFormat.VINTRP,
                          VOPD3   : AMDGPUInstrFormat.VOPD3,
@@ -238,10 +242,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{8} = VALU;
 
   let TSFlags{9} = TRANS;
-  let TSFlags{10} = VOP3P;
-  let TSFlags{11} = VINTERP;
 
-  // Bits 30-12 are free.
+  // Bits 30-10 are free.
 
   let TSFlags{32} = VM_CNT;
   let TSFlags{33} = EXP_CNT;
