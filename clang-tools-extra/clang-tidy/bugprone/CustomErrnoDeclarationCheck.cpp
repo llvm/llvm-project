@@ -41,7 +41,7 @@ void CustomErrnoDeclarationCheck::check(
   const auto Location = MatchedDecl->getLocation();
   const auto FileID = SM.getFileID(Location);
 
-  unsigned Line = SM.getSpellingLineNumber(MatchedDecl->getBeginLoc());
+  const unsigned Line = SM.getSpellingLineNumber(MatchedDecl->getBeginLoc());
   StringRef Header =
       Result.Context->getLangOpts().CPlusPlus ? "<cerrno>" : "<errno.h>";
 
