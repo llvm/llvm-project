@@ -6,6 +6,7 @@ add_object_library(
   rpc_client
   SRCS
     rpc_client.cpp
+    emissary_device_utils.cpp
   HDRS
     rpc_client.h
   DEPENDS
