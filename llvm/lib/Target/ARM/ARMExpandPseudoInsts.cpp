@@ -1298,7 +1298,7 @@ ARMExpandPseudo::CMSEClearFPRegsV8(MachineBasicBlock &MBB,
       if (!Op.isReg())
         continue;
       Register Reg = Op.getReg();
-      if (Reg == ARM::NoRegister || Reg == ARM::LR)
+      if (!Reg.isValid() || Reg == ARM::LR)
         continue;
       assert(Reg.isPhysical() && "Unallocated register");
       ClearBB->addLiveIn(Reg);

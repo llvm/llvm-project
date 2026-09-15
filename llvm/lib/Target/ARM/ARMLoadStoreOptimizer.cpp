@@ -1804,7 +1804,7 @@ bool ARMLoadStoreOpt::FixInvalidRegPairOp(MachineBasicBlock &MBB,
   bool OddUndef = MI->getOperand(1).isUndef();
   bool BaseKill = BaseOp.isKill();
   bool BaseUndef = BaseOp.isUndef();
-  assert((isT2 || MI->getOperand(3).getReg() == ARM::NoRegister) &&
+  assert((isT2 || !MI->getOperand(3).getReg().isValid()) &&
          "register offset not handled below");
   int OffImm = getMemoryOpOffset(*MI);
   Register PredReg;
