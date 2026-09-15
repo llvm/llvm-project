@@ -170,23 +170,10 @@ getSearchPaths(unsigned optionCode, InputArgList &args,
                const SmallVector<StringRef, 2> &systemPaths) {
   std::vector<StringRef> paths;
   StringRef optionLetter{optionCode == OPT_F ? "F" : "L"};
-  for (StringRef path : args::getStrings(args, optionCode)) {
-    // NOTE: only absolute paths are re-rooted to syslibroot(s)
-    bool found = false;
-    if (path::is_absolute(path, path::Style::posix)) {
-      for (StringRef root : roots) {
-        SmallString<261> buffer(root);
-        path::append(buffer, path);
-        // Do not warn about paths that are computed via the syslib roots
-        if (fs::is_directory(buffer)) {
-          paths.push_back(saver().save(buffer.str()));
-          found = true;
-        }
-      }
-    }
-    if (!found && warnIfNotDirectory(optionLetter, path))
-      paths.push_back(path);
-  }
+  for (StringRef path : args::getStrings(args, optionCode))
+    for (StringRef searchPath : getRerootedSearchPaths(path, roots))
+      if (warnIfNotDirectory(optionLetter, searchPath))
+        paths.push_back(searchPath);
 
   // `-Z` suppresses the standard "system" search paths.
   if (args.hasArg(OPT_Z))
