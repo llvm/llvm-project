@@ -602,6 +602,9 @@ class IRTranslatorImpl {
   bool translateFence(const User &U, MachineIRBuilder &MIRBuilder);
   bool translateFreeze(const User &U, MachineIRBuilder &MIRBuilder);
 
+  bool translateBitExtract(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateBitInsert(const User &U, MachineIRBuilder &MIRBuilder);
+
   // Stubs to keep the compiler happy while we implement the rest of the
   // translation.
   bool translateResume(const User &U, MachineIRBuilder &MIRBuilder) {
@@ -4313,6 +4316,107 @@ bool IRTranslatorImpl::translateShuffleVector(const User &U,
                   {getOrCreateVReg(*U.getOperand(0)),
                    getOrCreateVReg(*U.getOperand(1))})
       .addShuffleMask(MaskAlloc);
+  return true;
+}
+
+bool IRTranslatorImpl::translateBitInsert(const User &U,
+                                          MachineIRBuilder &MIRBuilder) {
+  Register Res = getOrCreateVReg(U);
+  Register Base = getOrCreateVReg(*U.getOperand(0));
+  Register Val = getOrCreateVReg(*U.getOperand(1));
+  Register Offset = getOrCreateVReg(*U.getOperand(2));
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  LLT BaseTy = MRI.getType(Base);
+  LLT ValTy = MRI.getType(Val);
+
+  assert(BaseTy.getSizeInBits() >= ValTy.getSizeInBits() &&
+         "bitinsert val wider than base should be rejected by verifier");
+
+  // If Val is a floating-point type, bitcast it to an integer of the same
+  // size so buildZExtOrTrunc can safely extend or truncate it.
+  if (ValTy.isFloat()) {
+    ValTy = LLT::scalar(ValTy.getSizeInBits());
+    Val = MIRBuilder.buildBitcast(ValTy, Val).getReg(0);
+  } else if (ValTy.isPointer()) {
+    ValTy = LLT::scalar(ValTy.getSizeInBits());
+    Val = MIRBuilder.buildPtrToInt(ValTy, Val).getReg(0);
+  }
+
+  // Convert Offset to the target's preferred shift amount type.
+  LLT ShiftAmtTy = TLI->getPreferredShiftAmountTy(BaseTy);
+  Register LegalOffset =
+      MIRBuilder.buildZExtOrTrunc(ShiftAmtTy, Offset).getReg(0);
+
+  // Truncate or extend Val to BaseTy so only the inserted bit range remains.
+  Register ExtVal = MIRBuilder.buildZExtOrTrunc(BaseTy, Val).getReg(0);
+
+  unsigned BaseBitWidth = BaseTy.getSizeInBits();
+  unsigned ValBitWidth = ValTy.getSizeInBits();
+  APInt ClearMask =
+      APInt::getHighBitsSet(BaseBitWidth, BaseBitWidth - ValBitWidth);
+  Register MaskConst = MIRBuilder.buildConstant(BaseTy, ClearMask).getReg(0);
+  Register RotatedMask =
+      MIRBuilder.buildRotateLeft(BaseTy, MaskConst, LegalOffset).getReg(0);
+  Register ClearedBase =
+      MIRBuilder.buildAnd(BaseTy, Base, RotatedMask).getReg(0);
+  Register ShiftedVal =
+      MIRBuilder.buildShl(BaseTy, ExtVal, LegalOffset).getReg(0);
+  MIRBuilder.buildOr(Res, ClearedBase, ShiftedVal);
+  return true;
+}
+
+bool IRTranslatorImpl::translateBitExtract(const User &U,
+                                           MachineIRBuilder &MIRBuilder) {
+  Register Res = getOrCreateVReg(U);
+  Register Src = getOrCreateVReg(*U.getOperand(0));
+  Register Offset = getOrCreateVReg(*U.getOperand(1));
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  LLT SrcTy = MRI.getType(Src);
+  LLT ResTy = MRI.getType(Res);
+
+  assert(ResTy.getSizeInBits() <= SrcTy.getSizeInBits() &&
+         "bitextract result wider than source should be rejected by verifier");
+
+  // Convert Offset to the target's preferred shift amount type.
+  LLT ShiftAmtTy = TLI->getPreferredShiftAmountTy(SrcTy);
+  Register LegalOffset =
+      MIRBuilder.buildZExtOrTrunc(ShiftAmtTy, Offset).getReg(0);
+
+  // Shift right by Offset to bring the target field down to bit 0.
+  Register Shifted = MIRBuilder.buildLShr(SrcTy, Src, LegalOffset).getReg(0);
+
+  if (ResTy.isFloat()) {
+    // Drop into the integer domain to safely handle the size conversion
+    LLT IntResTy = LLT::scalar(ResTy.getSizeInBits());
+    Register IntRes = MRI.createGenericVirtualRegister(IntResTy);
+
+    if (SrcTy == IntResTy)
+      MIRBuilder.buildCopy(IntRes, Shifted);
+    else
+      MIRBuilder.buildTrunc(IntRes, Shifted);
+
+    // Bitcast the raw integer bits back into the requested floating-point
+    // register
+    MIRBuilder.buildBitcast(Res, IntRes);
+  } else if (ResTy.isPointer()) {
+    // Drop into the integer domain to safely handle the size conversion
+    LLT IntResTy = LLT::scalar(ResTy.getSizeInBits());
+    Register IntRes = MRI.createGenericVirtualRegister(IntResTy);
+
+    if (SrcTy == IntResTy)
+      MIRBuilder.buildCopy(IntRes, Shifted);
+    else
+      MIRBuilder.buildTrunc(IntRes, Shifted);
+
+    MIRBuilder.buildIntToPtr(Res, IntRes);
+  } else {
+    // Normal integer path
+    if (SrcTy == ResTy)
+      MIRBuilder.buildCopy(Res, Shifted);
+    else
+      MIRBuilder.buildTrunc(Res, Shifted);
+  }
+
   return true;
 }
 
