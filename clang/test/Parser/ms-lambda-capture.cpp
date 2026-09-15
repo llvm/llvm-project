@@ -19,6 +19,7 @@ void named_capture() {
   Wrapper a([x] mutable { return x; });
 }
 
-void microsoft_attribute_control() {
-  Wrapper declaration([propget] int);
+void microsoft_attribute_controls() {
+  Wrapper helpstring([helpstring("h")] int);
+  Wrapper adjacent_lists([library_block][idl_quote("x")] int);
 }

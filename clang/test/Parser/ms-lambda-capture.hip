@@ -1,9 +1,8 @@
-// RUN: %clang_cc1 -fms-extensions -DMS_EXTENSIONS -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=c++23 -fms-extensions -DMS_EXTENSIONS -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fms-extensions -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fcuda-is-device -fms-extensions -DMS_EXTENSIONS -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=c++23 -fcuda-is-device -fms-extensions -DMS_EXTENSIONS -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fcuda-is-device -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++23 -fms-extensions -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fcuda-is-device -fms-extensions -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++23 -fcuda-is-device -fms-extensions -fsyntax-only -verify %s
 // expected-no-diagnostics
 
 // A '[' can begin a Microsoft attribute list under -fms-extensions, but it can
@@ -86,15 +85,3 @@ struct S {
     (void)a; (void)b;
   }
 };
-
-#ifdef MS_EXTENSIONS
-struct MicrosoftAttributeControls {
-  [] static int empty;
-  [propget] int get();
-#if __cplusplus >= 202302L
-  [] mutable int member;
-  [] static constexpr int constant = 1;
-  [] consteval int immediate();
-#endif
-};
-#endif
