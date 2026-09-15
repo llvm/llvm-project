@@ -246,6 +246,55 @@ TEST_F(AArch64GISelMITest, TestKnownBitsAND) {
   EXPECT_EQ(0xC7u, Res.Zero.getZExtValue());
 }
 
+TEST_F(AArch64GISelMITest, TestKnownBitsFreeze) {
+  StringRef MIRString = R"(
+   %allones:_(s32) = G_CONSTANT i32 65535
+   %mask:_(s32) = G_CONSTANT i32 4080
+   %and:_(s32) = G_AND %allones, %mask
+   %fr_and:_(s32) = G_FREEZE %and
+   %copy_and:_(s32) = COPY %fr_and
+   %undef:_(s32) = G_IMPLICIT_DEF
+   %and_undef:_(s32) = G_AND %undef, %mask
+   %fr_undef:_(s32) = G_FREEZE %and_undef
+   %copy_undef:_(s32) = COPY %fr_undef
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyAnd = Copies[Copies.size() - 2];
+  Register CopyUndef = Copies[Copies.size() - 1];
+  GISelValueTracking Info(*MF);
+
+  MachineInstr *FinalCopyAnd = MRI->getVRegDef(CopyAnd);
+  KnownBits AndBits = Info.getKnownBits(FinalCopyAnd->getOperand(1).getReg());
+  EXPECT_EQ(0xFF0u, AndBits.One.getZExtValue());
+  EXPECT_EQ(0xFFFFF00Fu, AndBits.Zero.getZExtValue());
+
+  MachineInstr *FinalCopyUndef = MRI->getVRegDef(CopyUndef);
+  KnownBits UndefBits =
+      Info.getKnownBits(FinalCopyUndef->getOperand(1).getReg());
+  EXPECT_TRUE(UndefBits.One.isZero());
+  EXPECT_TRUE(UndefBits.Zero.isZero());
+}
+
+TEST_F(AArch64GISelMITest, TestNumSignBitsFreeze) {
+  StringRef MIRString = "  %3:_(s8) = G_CONSTANT i8 -1\n"
+                        "  %4:_(s8) = G_FREEZE %3\n"
+                        "  %5:_(s8) = COPY %4\n"
+                        "  %6:_(s8) = G_IMPLICIT_DEF\n"
+                        "  %7:_(s8) = G_FREEZE %6\n"
+                        "  %8:_(s8) = COPY %7\n";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+  Register CopyFr = Copies[Copies.size() - 2];
+  Register CopyUndef = Copies[Copies.size() - 1];
+  GISelValueTracking Info(*MF);
+  EXPECT_EQ(8u, Info.computeNumSignBits(CopyFr));
+  EXPECT_EQ(1u, Info.computeNumSignBits(CopyUndef));
+}
+
 TEST_F(AArch64GISelMITest, TestKnownBitsOR) {
   StringRef MIRString = R"(
    %ptr:_(p0) = G_IMPLICIT_DEF
