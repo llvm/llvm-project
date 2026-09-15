@@ -343,20 +343,44 @@ def IntRegs : RegisterClass<"SP", [i32, i64], 32,
                             (add (sequence "I%u", 0, 7),
                                  (sequence "G%u", 0, 7),
                                  (sequence "L%u", 0, 7),
-                                 (sequence "O%u", 0, 7))>;
+                                 (sequence "O%u", 0, 7))> {
+  let AltOrders = [(add (sequence "O%u", 0, 7),
+                        (sequence "G%u", 0, 7),
+                        (sequence "L%u", 0, 7),
+                        (sequence "I%u", 0, 7))];
+  let AltOrderSelect = [{
+    return MF.getInfo<SparcMachineFunctionInfo>()->isLeafProc();
+  }];
+}
 
 // Should be in the same order as IntRegs.
 def IntPair : RegisterClass<"SP", [v2i32], 64,
     (add I0_I1, I2_I3, I4_I5, I6_I7,
          G0_G1, G2_G3, G4_G5, G6_G7,
          L0_L1, L2_L3, L4_L5, L6_L7,
-         O0_O1, O2_O3, O4_O5, O6_O7)>;
+         O0_O1, O2_O3, O4_O5, O6_O7)> {
+  let AltOrders = [(add O0_O1, O2_O3, O4_O5, O6_O7,
+                        G0_G1, G2_G3, G4_G5, G6_G7,
+                        L0_L1, L2_L3, L4_L5, L6_L7,
+                        I0_I1, I2_I3, I4_I5, I6_I7)];
+  let AltOrderSelect = [{
+    return MF.getInfo<SparcMachineFunctionInfo>()->isLeafProc();
+  }];
+}
 
 // Register class for 64-bit mode, with a 64-bit spill slot size.
 // These are the same as the 32-bit registers, so TableGen will consider this
 // to be a sub-class of IntRegs. That works out because requiring a 64-bit
 // spill slot is a stricter constraint than only requiring a 32-bit spill slot.
-def I64Regs : RegisterClass<"SP", [i64], 64, (add IntRegs)>;
+def I64Regs : RegisterClass<"SP", [i64], 64, (add IntRegs)> {
+  let AltOrders = [(add (sequence "O%u", 0, 7),
+                        (sequence "G%u", 0, 7),
+                        (sequence "L%u", 0, 7),
+                        (sequence "I%u", 0, 7))];
+  let AltOrderSelect = [{
+    return MF.getInfo<SparcMachineFunctionInfo>()->isLeafProc();
+  }];
+}
 
 // Floating point register classes.
 def FPRegs : RegisterClass<"SP", [f32], 32, (sequence "F%u", 0, 31)>;
