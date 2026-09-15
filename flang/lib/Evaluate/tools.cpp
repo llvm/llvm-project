@@ -1531,7 +1531,7 @@ static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
   SignedNumericExpr<CAT, KIND> headExpr = buildRightAssociatedSignedFold(head);
   SignedNumericExpr<CAT, KIND> tailExpr = buildRightAssociatedSignedFold(tail);
   SignedNumericExpr<CAT, KIND> result =
-      buildSignedAdd(std::move(tailExpr), std::move(headExpr));
+      buildSignedAdd(std::move(headExpr), std::move(tailExpr));
   assert(result.isPositive &&
       "the first flattened term and therefore the split sum are positive");
   return std::move(result.expr);
