@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -5164,33 +5163,6 @@ calcNextStatus(std::pair<Register, SrcStatus> Curr,
   return std::nullopt;
 }
 
-/// Packed integer VOP3P opcodes ignore NEG/NEG_HI, so folding a G_FNEG into
-/// them would silently drop the negation.
-static bool usesFPSrcMods(const MachineInstr &MI) {
-  unsigned Opc = MI.getOpcode();
-  if (isPreISelGenericFloatingPointOpcode(Opc))
-    return true;
-
-  // To re-audit, collect the direct parent of each "(VOP3PMods" in
-  // AMDGPUGenGlobalISel.inc.
-  switch (Opc) {
-  case AMDGPU::G_AMDGPU_CLAMP:
-  case AMDGPU::G_AMDGPU_FMIN3:
-  case AMDGPU::G_AMDGPU_FMAX3:
-  case AMDGPU::G_AMDGPU_FMINIMUM3:
-  case AMDGPU::G_AMDGPU_FMAXIMUM3:
-    return true;
-  case TargetOpcode::G_INTRINSIC: {
-    // The only dot products selecting to a VOP3P with NEG bits.
-    Intrinsic::ID ID = cast<GIntrinsic>(MI).getIntrinsicID();
-    return ID == Intrinsic::amdgcn_fdot2 ||
-           ID == Intrinsic::amdgcn_fdot2_f32_bf16;
-  }
-  default:
-    return false;
-  }
-}
-
 /// Controls which SrcStatus values the user of the folded value supports.
 /// The class can be further extended to recognize support on SEL, NEG, ABS bit
 /// for different MI on different arch
@@ -5201,8 +5173,10 @@ private:
   bool HasOpsel = true;
 
 public:
-  explicit SearchOptions(const MachineInstr &UseMI)
-      : HasNeg(usesFPSrcMods(UseMI)) {}
+  // Packed integer VOP3P opcodes ignore NEG and NEG_HI, so a G_FNEG may only be
+  // folded when the consumer reads the operand as floating point.
+  SearchOptions(Register RootReg, const MachineRegisterInfo &MRI)
+      : HasNeg(MRI.getType(RootReg).isFloatOrFloatVector()) {}
   bool checkOptions(SrcStatus Stat) const {
     if (!HasNeg &&
         (Stat >= SrcStatus::NEG_START && Stat <= SrcStatus::NEG_END)) {
@@ -5298,8 +5272,7 @@ static bool isValidToPack(SrcStatus HiStat, SrcStatus LoStat, Register NewReg,
 }
 
 std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
-    Register RootReg, const MachineRegisterInfo &MRI, const MachineInstr &UseMI,
-    bool IsDOT) const {
+    Register RootReg, const MachineRegisterInfo &MRI, bool IsDOT) const {
   unsigned Mods = 0;
   // No modification if Root type is not form of <2 x Type>.
   if (isVectorOfTwoOrScalar(RootReg, MRI) != TypeClass::VECTOR_OF_TWO) {
@@ -5307,7 +5280,7 @@ std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
     return {RootReg, Mods};
   }
 
-  SearchOptions SO(UseMI);
+  SearchOptions SO(RootReg, MRI);
 
   std::pair<Register, SrcStatus> Stat = getLastSameOrNeg(RootReg, MRI, SO);
 
@@ -5410,8 +5383,7 @@ AMDGPUInstructionSelector::selectVOP3PRetHelper(MachineOperand &Root,
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
   Register Reg;
   unsigned Mods;
-  std::tie(Reg, Mods) =
-      selectVOP3PModsImpl(Root.getReg(), MRI, *Root.getParent(), IsDOT);
+  std::tie(Reg, Mods) = selectVOP3PModsImpl(Root.getReg(), MRI, IsDOT);
 
   Reg = getLegalRegBank(Reg, Root.getReg(), *Root.getParent(), RBI, MRI, TRI,
                         TII);
@@ -5438,8 +5410,7 @@ AMDGPUInstructionSelector::selectVOP3PNoModsDOT(MachineOperand &Root) const {
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
   Register Src;
   unsigned Mods;
-  std::tie(Src, Mods) = selectVOP3PModsImpl(Root.getReg(), MRI,
-                                            *Root.getParent(), true /*IsDOT*/);
+  std::tie(Src, Mods) = selectVOP3PModsImpl(Root.getReg(), MRI, true /*IsDOT*/);
   if (Mods != SISrcMods::OP_SEL_1)
     return {};
 

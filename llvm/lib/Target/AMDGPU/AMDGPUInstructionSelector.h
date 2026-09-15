@@ -191,7 +191,7 @@ private:
 
   std::pair<Register, unsigned>
   selectVOP3PModsImpl(Register RootReg, const MachineRegisterInfo &MRI,
-                      const MachineInstr &UseMI, bool IsDOT = false) const;
+                      bool IsDOT = false) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3PRetHelper(MachineOperand &Root, bool IsDOT = false) const;
 
