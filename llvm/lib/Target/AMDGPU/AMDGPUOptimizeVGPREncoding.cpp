@@ -59,6 +59,9 @@ using MSBGroup = unsigned;
 static constexpr unsigned NumMSBGroups = 4;
 static constexpr unsigned DefaultGroup = 0;
 
+/// Groups are 256 registers each.
+static constexpr unsigned GroupSizeLog2 = 8;
+
 /// Operand type where the MSB group is relevant, identified by an unsigned ID
 /// in [0, NumOprdTypes).
 using OprdType = unsigned;
@@ -662,7 +665,7 @@ private:
   RegisterClassInfo RCI;
   const VirtRegMap &VRM;
   const SIRegisterInfo &TRI;
-  const BitVector ReservedRegs;
+  const BitVector &ReservedRegs;
 };
 
 class AMDGPUOptimizeVGPREncoding {
@@ -697,7 +700,7 @@ static MSBGroup getVGPRGroup(Register Reg, const VirtRegMap &VRM) {
   const auto &TRI =
       *static_cast<const SIRegisterInfo *>(&VRM.getTargetRegInfo());
   MCRegister PhysReg = Reg.isVirtual() ? VRM.getPhys(Reg) : Reg.asMCReg();
-  return TRI.getHWRegIndex(PhysReg) >> 8;
+  return TRI.getHWRegIndex(PhysReg) >> GroupSizeLog2;
 }
 
 /// Returns true if \p RC is confined to the first 256 VGPRs i.e., every
@@ -806,7 +809,7 @@ MBBModeUsage::MBBModeUsage(const MachineBasicBlock &MBB, BitVector &OptVirtRegs,
     if (!VOPDTable)
       continue;
     for (OprdType Oprd : seq(NumOprdTypes)) {
-      const MachineOperand *MO = GetRelevantMO(Table[Oprd]);
+      const MachineOperand *MO = GetRelevantMO(VOPDTable[Oprd]);
       if (!MO)
         continue;
       Register Reg = MO->getReg();
@@ -1450,7 +1453,7 @@ VirtRegReMap::VirtRegReMap(LiveRegMatrix &LRM, LiveIntervals &LIS,
                            const MachineFunction &MF, const VirtRegMap &VRM)
     : LRM(LRM), LIS(LIS), VRM(VRM),
       TRI(*static_cast<const SIRegisterInfo *>(&VRM.getTargetRegInfo())),
-      ReservedRegs(TRI.getReservedRegs(MF)) {
+      ReservedRegs(MF.getRegInfo().getReservedRegs()) {
   RCI.runOnMachineFunction(MF);
 }
 
@@ -1458,7 +1461,7 @@ static bool overflowsLastGroup(unsigned HWRegIdx, unsigned NumLanes,
                                MSBGroup Group) {
   if (Group != NumMSBGroups - 1)
     return false;
-  return ((HWRegIdx + NumLanes - 1) >> 8) != NumMSBGroups - 1;
+  return ((HWRegIdx + NumLanes - 1) >> GroupSizeLog2) != NumMSBGroups - 1;
 }
 
 MCRegister VirtRegReMap::tryAssignInGroup(Register VirtReg, MSBGroup Group) {
@@ -1582,7 +1585,9 @@ bool AMDGPUOptimizeVGPREncoding::run(MachineFunction &MF) {
       // Attempts re-assignment to a better MSB group.
       if (VRRM.tryAssignToTargetGroups(Candidate->Reg, Candidate->Targets)) {
         LLVM_DEBUG(dbgs() << "  | SUCCESS: Assigned to free physical register "
-                          << VRM.getPhys(Candidate->Reg.getVirt()) << '\n');
+                          << printReg(VRM.getPhys(Candidate->Reg.getVirt()),
+                                      ST.getRegisterInfo(), 0, &MF.getRegInfo())
+                          << '\n');
         ++Epoch;
         Optimizer.regChangedGroup(Candidate->Reg, ScoreChanged);
       }
@@ -1607,9 +1612,6 @@ Printable MBBModeUsage::print(const VirtRegMap &VRM) const {
 
   return Printable([&](raw_ostream &OS) {
     const MachineRegisterInfo &MRI = VRM.getRegInfo();
-
-    std::array<std::optional<MSBGroup>, NumOprdTypes> GroupPerOprd;
-    GroupPerOprd.fill(0);
 
     // Display operand type names.
     OS << "    [  ";
@@ -1639,20 +1641,6 @@ Printable MBBModeUsage::print(const VirtRegMap &VRM) const {
         StringRef RegStr = RegStream.str();
         RegStr = RegStr.take_front(ColumnWidth);
         OS << RegStr << indent(ColumnWidth - RegStr.size());
-
-        MSBGroup OprdGroup = getVGPRGroup(Reg, VRM);
-        std::optional<MSBGroup> &CurrentOprdGroup = GroupPerOprd[Oprd];
-        if (CurrentOprdGroup.has_value()) {
-          if (*CurrentOprdGroup != OprdGroup) {
-            // Different group as previously used for that operand.
-            CurrentOprdGroup = OprdGroup;
-          }
-        } else {
-          // First operand in the sequence. This defines the initial desired
-          // group for that operand in the instruction sequence, so we do not
-          // account for the set MSB here.
-          CurrentOprdGroup = OprdGroup;
-        }
       }
       OS << "  ]\n";
     }

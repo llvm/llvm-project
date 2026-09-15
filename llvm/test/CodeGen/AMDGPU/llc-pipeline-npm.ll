@@ -248,6 +248,7 @@
 ; GCN-O2-NEXT:       greedy<vgpr>
 ; GCN-O2-NEXT:       amdgpu-nsa-reassign
 ; GCN-O2-NEXT:       amdgpu-rewrite-agpr-copy-mfma
+; GCN-O2-NEXT:       amdgpu-optimize-vgpr-encoding
 ; GCN-O2-NEXT:       virt-reg-rewriter
 ; GCN-O2-NEXT:       amdgpu-mark-last-scratch-load
 ; GCN-O2-NEXT:       stack-slot-coloring
@@ -433,9 +434,9 @@
 ; GCN-O3-NEXT:       virt-reg-rewriter<no-clear-vregs>
 ; GCN-O3-NEXT:       amdgpu-reserve-wwm-regs
 ; GCN-O3-NEXT:       greedy<vgpr>
-; GCN-O3-NEXT:       amdgpu-optimize-vgpr-encoding
 ; GCN-O3-NEXT:       amdgpu-nsa-reassign
 ; GCN-O3-NEXT:       amdgpu-rewrite-agpr-copy-mfma
+; GCN-O3-NEXT:       amdgpu-optimize-vgpr-encoding
 ; GCN-O3-NEXT:       virt-reg-rewriter
 ; GCN-O3-NEXT:       amdgpu-mark-last-scratch-load
 ; GCN-O3-NEXT:       stack-slot-coloring
