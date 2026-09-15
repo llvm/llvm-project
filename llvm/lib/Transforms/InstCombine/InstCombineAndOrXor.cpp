@@ -3439,6 +3439,86 @@ static Value *foldAndOrOfICmpEqConstantAndICmp(CmpPredicate PredL, Value *LHS0,
       Other);
 }
 
+// (icmp ugt (X + Offset), N) | (icmp eq (X + Offset), K)
+//   -> conjunction of != comparisons for the small set of values
+//      where the original expression is false.
+static Value *foldUnsignedRangeWithSmallComplement(CmpPredicate PredL,
+                                                   Value *LHS0, Value *LHS1,
+                                                   CmpPredicate PredR,
+                                                   Value *RHS0, Value *RHS1,
+                                                   IRBuilderBase &Builder) {
+  if (!((PredL == ICmpInst::ICMP_UGT && PredR == ICmpInst::ICMP_EQ) ||
+        (PredR == ICmpInst::ICMP_UGT && PredL == ICmpInst::ICMP_EQ)))
+    return nullptr;
+
+  Value *RangeValue; // Y = X + Offset
+  Value *EqValue;    // Y
+  Value *RangeLimit; // N
+  Value *EqConstant; // K
+
+  if (PredL == ICmpInst::ICMP_UGT) {
+    RangeValue = LHS0;
+    RangeLimit = LHS1;
+    EqValue = RHS0;
+    EqConstant = RHS1;
+  } else {
+    RangeValue = RHS0;
+    RangeLimit = RHS1;
+    EqValue = LHS0;
+    EqConstant = LHS1;
+  }
+
+  const APInt *N;
+  const APInt *K;
+  if (!match(RangeLimit, m_APInt(N)) || !match(EqConstant, m_APInt(K)) ||
+      RangeValue != EqValue)
+    return nullptr;
+  // N and K must be constants, and both comparisons must use the same value Y.
+
+  Value *X;
+  const APInt *Offset;
+
+  if (!match(RangeValue, m_Add(m_Value(X), m_APInt(Offset))) &&
+      !match(RangeValue, m_Add(m_APInt(Offset), m_Value(X))))
+    return nullptr;
+  // Y must be of the form (X + Offset) or (Offset + X).
+
+  // Y >u N is false for Y in [0, N].
+  // If K is in this range, Y == K makes the OR true, so remove K.
+  if (N->isMaxValue())
+    return nullptr;
+  // If N is UINT_MAX, Y >u N is always false.
+
+  APInt FalseRangeSize = *N + 1;
+  APInt NumExcluded = FalseRangeSize;
+  if (K->ule(*N))
+    --NumExcluded;
+
+  // Avoid increasing IR size when the complement is large.
+  constexpr unsigned MaxExcludedValues = 4;
+  if (NumExcluded.ugt(MaxExcludedValues))
+    return nullptr;
+
+  if (NumExcluded.isZero())
+    return ConstantInt::getTrue(Builder.getContext());
+
+  Value *Result = nullptr;
+  APInt Y = APInt::getZero(N->getBitWidth());
+
+  for (unsigned I = 0, E = FalseRangeSize.getZExtValue(); I != E; ++I, ++Y) {
+    if (Y == *K)
+      continue;
+
+    APInt XValue = Y - *Offset;
+    Value *Cmp = Builder.CreateICmp(ICmpInst::ICMP_NE, X,
+                                    ConstantInt::get(X->getType(), XValue));
+
+    Result = Result ? Builder.CreateAnd(Result, Cmp) : Cmp;
+  }
+
+  return Result;
+}
+
 /// Fold (icmp)&(icmp) or (icmp)|(icmp) if possible.
 /// If IsLogical is true, then the and/or is in select form and the transform
 /// must be poison-safe.
@@ -3524,6 +3604,12 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
     // E.g. (icmp slt x, n) & (icmp sge x, 0) --> icmp ult x, n
     if (Value *V = simplifyRangeCheck(PredR, RHS0, RHS1, PredL, LHS0, LHS1, &I,
                                       /*Inverted=*/!IsAnd))
+      return V;
+  }
+
+  if (!IsAnd && !IsLogical) {
+    if (Value *V = foldUnsignedRangeWithSmallComplement(
+            PredL, LHS0, LHS1, PredR, RHS0, RHS1, Builder))
       return V;
   }
 
