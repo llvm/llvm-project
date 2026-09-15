@@ -257,8 +257,7 @@ getNonSemanticDebugInfoVersion(SPIRV::InstructionSet::InstructionSet Set) {
   case SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_200:
     return 200;
   default:
-    report_fatal_error(
-        "unexpected NonSemantic.Shader.DebugInfo instruction set");
+    llvm_unreachable("unexpected NonSemantic.Shader.DebugInfo instruction set");
   }
 }
 
