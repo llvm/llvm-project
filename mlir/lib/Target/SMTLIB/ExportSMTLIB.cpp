@@ -636,11 +636,8 @@ static LogicalResult emit(SolverOp solver, const SMTEmissionOptions &options,
       return op->emitError()
              << "solver must not contain any non-SMT operations";
 
-    for (Type resTy : op->getResultTypes()) {
-      auto sortTy = dyn_cast<SortType>(resTy);
-      if (!sortTy)
-        continue;
-
+    for (SortType sortTy :
+         llvm::make_isa_range<SortType>(op->getResultTypes())) {
       unsigned arity = sortTy.getSortParams().size();
       if (declaredSorts.contains(sortTy.getIdentifier())) {
         if (declaredSorts[sortTy.getIdentifier()] != arity)

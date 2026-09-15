@@ -1395,13 +1395,12 @@ public:
     // Search for siblings which load the same memref block argument.
     Block *block = dstNode->op->getBlock();
     for (unsigned i = 0, e = block->getNumArguments(); i != e; ++i) {
-      for (Operation *user : block->getArgument(i).getUsers()) {
-        auto loadOp = dyn_cast<AffineReadOpInterface>(user);
-        if (!loadOp)
-          continue;
+      for (AffineReadOpInterface loadOp :
+           llvm::make_isa_range<AffineReadOpInterface>(
+               block->getArgument(i).getUsers())) {
         // Gather loops surrounding 'use'.
         SmallVector<AffineForOp, 4> loops;
-        getAffineForIVs(*user, &loops);
+        getAffineForIVs(*loadOp.getOperation(), &loops);
         // Skip 'use' if it is not within a loop nest.
         // Find the surrounding affine.for nested immediately within the
         // block.

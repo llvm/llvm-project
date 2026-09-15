@@ -842,10 +842,9 @@ static void forwardStoreToLoad(
   // to replace the load, if any.
   Operation *lastWriteStoreOp = nullptr;
 
-  for (auto *user : loadOp.getMemRef().getUsers()) {
-    auto storeOp = dyn_cast<AffineWriteOpInterface>(user);
-    if (!storeOp)
-      continue;
+  for (AffineWriteOpInterface storeOp :
+       llvm::make_isa_range<AffineWriteOpInterface>(
+           loadOp.getMemRef().getUsers())) {
     MemRefAccess srcAccess(storeOp);
     MemRefAccess destAccess(loadOp);
 
@@ -916,12 +915,10 @@ static void findUnusedStore(AffineWriteOpInterface writeA,
                             PostDominanceInfo &postDominanceInfo,
                             llvm::function_ref<bool(Value, Value)> mayAlias) {
 
-  for (Operation *user : writeA.getMemRef().getUsers()) {
-    // Only consider writing operations.
-    auto writeB = dyn_cast<AffineWriteOpInterface>(user);
-    if (!writeB)
-      continue;
-
+  // Only consider writing operations.
+  for (AffineWriteOpInterface writeB :
+       llvm::make_isa_range<AffineWriteOpInterface>(
+           writeA.getMemRef().getUsers())) {
     // The operations must be distinct.
     if (writeB == writeA)
       continue;
