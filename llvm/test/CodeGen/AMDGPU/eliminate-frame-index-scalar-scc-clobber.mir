@@ -200,3 +200,161 @@ body:             |
     renamable $sgpr4 = S_CSELECT_B32 %stack.0, $sgpr6, implicit $scc
     SI_RETURN implicit $sgpr4
 ...
+
+---
+# Negative case for the ADDC path: same S_AND_B64 SCC producer as
+# s_cselect_b32_fi_after_scc_producer, but the frame index user is S_AND_B32
+# which defines SCC instead of reading it, so lowering is free to clobber SCC
+name: s_and_b32_fi_after_scc_producer_scc_not_live_in
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 64, alignment: 4 }
+  - { id: 1, size: 4, alignment: 4 }
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    liveins: $sgpr4, $sgpr5, $sgpr6
+
+    ; FLATSCRW64-LABEL: name: s_and_b32_fi_after_scc_producer_scc_not_live_in
+    ; FLATSCRW64: liveins: $sgpr4, $sgpr5, $sgpr6
+    ; FLATSCRW64-NEXT: {{  $}}
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; FLATSCRW64-NEXT: renamable $sgpr4_sgpr5 = S_AND_B64 killed renamable $sgpr4_sgpr5, $exec, implicit-def $scc
+    ; FLATSCRW64-NEXT: $sgpr5 = S_ADD_I32 $sgpr32, 64, implicit-def $scc
+    ; FLATSCRW64-NEXT: renamable $sgpr4 = S_AND_B32 killed $sgpr5, $sgpr6, implicit-def $scc
+    ; FLATSCRW64-NEXT: SI_RETURN implicit $sgpr4
+    ;
+    ; FLATSCRW32-LABEL: name: s_and_b32_fi_after_scc_producer_scc_not_live_in
+    ; FLATSCRW32: liveins: $sgpr4, $sgpr5, $sgpr6
+    ; FLATSCRW32-NEXT: {{  $}}
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; FLATSCRW32-NEXT: renamable $sgpr4_sgpr5 = S_AND_B64 killed renamable $sgpr4_sgpr5, $exec, implicit-def $scc
+    ; FLATSCRW32-NEXT: $sgpr5 = S_ADD_I32 $sgpr32, 64, implicit-def $scc
+    ; FLATSCRW32-NEXT: renamable $sgpr4 = S_AND_B32 killed $sgpr5, $sgpr6, implicit-def $scc
+    ; FLATSCRW32-NEXT: SI_RETURN implicit $sgpr4
+    ;
+    ; MUBUF-LABEL: name: s_and_b32_fi_after_scc_producer_scc_not_live_in
+    ; MUBUF: liveins: $sgpr4, $sgpr5, $sgpr6
+    ; MUBUF-NEXT: {{  $}}
+    ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; MUBUF-NEXT: renamable $sgpr4_sgpr5 = S_AND_B64 killed renamable $sgpr4_sgpr5, $exec, implicit-def $scc
+    ; MUBUF-NEXT: $sgpr5 = S_LSHR_B32 $sgpr32, 6, implicit-def $scc
+    ; MUBUF-NEXT: $sgpr5 = S_ADD_I32 killed $sgpr5, 64, implicit-def $scc
+    ; MUBUF-NEXT: renamable $sgpr4 = S_AND_B32 killed $sgpr5, $sgpr6, implicit-def $scc
+    ; MUBUF-NEXT: SI_RETURN implicit $sgpr4
+    renamable $sgpr4_sgpr5 = S_AND_B64 killed renamable $sgpr4_sgpr5, $exec, implicit-def $scc
+    renamable $sgpr4 = S_AND_B32 %stack.1, $sgpr6, implicit-def $scc
+    SI_RETURN implicit $sgpr4
+...
+
+---
+# Negative case for the Offset == 0 scaling path: same shape as
+# s_cselect_b32_zero_offset_fi_after_scc_producer, but S_AND_B32 defines SCC
+# rather than reading it, so SCC is not live into the frame index user.
+name: s_and_b32_zero_offset_fi_after_scc_producer_scc_not_live_in
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 64, alignment: 4 }
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    liveins: $sgpr4, $sgpr5, $sgpr6
+
+    ; FLATSCRW64-LABEL: name: s_and_b32_zero_offset_fi_after_scc_producer_scc_not_live_in
+    ; FLATSCRW64: liveins: $sgpr4, $sgpr5, $sgpr6
+    ; FLATSCRW64-NEXT: {{  $}}
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; FLATSCRW64-NEXT: renamable $sgpr4_sgpr5 = S_AND_B64 killed renamable $sgpr4_sgpr5, $exec, implicit-def $scc
+    ; FLATSCRW64-NEXT: renamable $sgpr4 = S_AND_B32 $sgpr32, $sgpr6, implicit-def $scc
+    ; FLATSCRW64-NEXT: SI_RETURN implicit $sgpr4
+    ;
+    ; FLATSCRW32-LABEL: name: s_and_b32_zero_offset_fi_after_scc_producer_scc_not_live_in
+    ; FLATSCRW32: liveins: $sgpr4, $sgpr5, $sgpr6
+    ; FLATSCRW32-NEXT: {{  $}}
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; FLATSCRW32-NEXT: renamable $sgpr4_sgpr5 = S_AND_B64 killed renamable $sgpr4_sgpr5, $exec, implicit-def $scc
+    ; FLATSCRW32-NEXT: renamable $sgpr4 = S_AND_B32 $sgpr32, $sgpr6, implicit-def $scc
+    ; FLATSCRW32-NEXT: SI_RETURN implicit $sgpr4
+    ;
+    ; MUBUF-LABEL: name: s_and_b32_zero_offset_fi_after_scc_producer_scc_not_live_in
+    ; MUBUF: liveins: $sgpr4, $sgpr5, $sgpr6
+    ; MUBUF-NEXT: {{  $}}
+    ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; MUBUF-NEXT: renamable $sgpr4_sgpr5 = S_AND_B64 killed renamable $sgpr4_sgpr5, $exec, implicit-def $scc
+    ; MUBUF-NEXT: $sgpr5 = S_LSHR_B32 $sgpr32, 6, implicit-def dead $scc
+    ; MUBUF-NEXT: renamable $sgpr4 = S_AND_B32 killed $sgpr5, $sgpr6, implicit-def $scc
+    ; MUBUF-NEXT: SI_RETURN implicit $sgpr4
+    renamable $sgpr4_sgpr5 = S_AND_B64 killed renamable $sgpr4_sgpr5, $exec, implicit-def $scc
+    renamable $sgpr4 = S_AND_B32 %stack.0, $sgpr6, implicit-def $scc
+    SI_RETURN implicit $sgpr4
+...
+
+---
+# Negative case with no SCC producer at all: nothing defines SCC ahead of the
+# frame index user and the user does not read SCC, so there's no restrictions
+name: s_and_b32_zero_offset_fi_no_scc_producer
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 64, alignment: 4 }
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    liveins: $sgpr6
+
+    ; FLATSCRW64-LABEL: name: s_and_b32_zero_offset_fi_no_scc_producer
+    ; FLATSCRW64: liveins: $sgpr6
+    ; FLATSCRW64-NEXT: {{  $}}
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; FLATSCRW64-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; FLATSCRW64-NEXT: renamable $sgpr4 = S_AND_B32 $sgpr32, $sgpr6, implicit-def $scc
+    ; FLATSCRW64-NEXT: SI_RETURN implicit $sgpr4
+    ;
+    ; FLATSCRW32-LABEL: name: s_and_b32_zero_offset_fi_no_scc_producer
+    ; FLATSCRW32: liveins: $sgpr6
+    ; FLATSCRW32-NEXT: {{  $}}
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; FLATSCRW32-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; FLATSCRW32-NEXT: renamable $sgpr4 = S_AND_B32 $sgpr32, $sgpr6, implicit-def $scc
+    ; FLATSCRW32-NEXT: SI_RETURN implicit $sgpr4
+    ;
+    ; MUBUF-LABEL: name: s_and_b32_zero_offset_fi_no_scc_producer
+    ; MUBUF: liveins: $sgpr6
+    ; MUBUF-NEXT: {{  $}}
+    ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; MUBUF-NEXT: $sgpr5 = S_LSHR_B32 $sgpr32, 6, implicit-def dead $scc
+    ; MUBUF-NEXT: renamable $sgpr4 = S_AND_B32 killed $sgpr5, $sgpr6, implicit-def $scc
+    ; MUBUF-NEXT: SI_RETURN implicit $sgpr4
+    renamable $sgpr4 = S_AND_B32 %stack.0, $sgpr6, implicit-def $scc
+    SI_RETURN implicit $sgpr4
+...
