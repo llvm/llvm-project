@@ -81,8 +81,10 @@ InputFile *Symbol::getFile() {
 }
 
 bool Symbol::isLive() const {
-  if (auto *r = dyn_cast<DefinedRegular>(this))
-    return r->getChunk()->live;
+  if (auto *r = dyn_cast<DefinedRegular>(this)) {
+    SectionChunk *c = r->getChunk();
+    return c->live && !c->isDiscardedByCOMDAT();
+  }
   if (auto *imp = dyn_cast<DefinedImportData>(this))
     return imp->file->live;
   if (auto *imp = dyn_cast<DefinedImportThunk>(this))

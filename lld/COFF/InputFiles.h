@@ -14,6 +14,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Archive.h"
@@ -48,10 +50,11 @@ std::vector<MemoryBufferRef> getArchiveMembers(COFFLinkerContext &,
 using llvm::COFF::IMAGE_FILE_MACHINE_UNKNOWN;
 using llvm::COFF::MachineTypes;
 using llvm::object::Archive;
-using llvm::object::COFFObjectFile;
-using llvm::object::COFFSymbolRef;
+using llvm::object::coff_aux_section_definition;
 using llvm::object::coff_import_header;
 using llvm::object::coff_section;
+using llvm::object::COFFObjectFile;
+using llvm::object::COFFSymbolRef;
 
 class Chunk;
 class Defined;
@@ -137,13 +140,14 @@ private:
 class ObjFile : public InputFile {
 public:
   static ObjFile *create(COFFLinkerContext &ctx, COFFObjectFile *coffObj,
-                         bool lazy = false);
+                         bool lazy = false, bool isLTOOutput = false);
   static ObjFile *create(COFFLinkerContext &ctx, MemoryBufferRef mb,
-                         bool lazy = false) {
+                         bool lazy = false, bool isLTOOutput = false) {
     return ObjFile::create(ctx, ObjFile::createCOFFObject(ctx, mb).release(),
-                           lazy);
+                           lazy, isLTOOutput);
   }
-  explicit ObjFile(SymbolTable &symtab, COFFObjectFile *coffObj, bool lazy);
+  explicit ObjFile(SymbolTable &symtab, COFFObjectFile *coffObj, bool lazy,
+                   bool isLTOOutput);
 
   static std::unique_ptr<COFFObjectFile>
   createCOFFObject(COFFLinkerContext &ctx, MemoryBufferRef mb);
@@ -151,6 +155,7 @@ public:
   static bool classof(const InputFile *f) { return f->kind() == ObjectKind; }
   void parse() override;
   void parseLazy();
+  void finalizeCOMDATSideEffects();
   MachineTypes getMachineType() const override;
   ArrayRef<Chunk *> getChunks() { return chunks; }
   ArrayRef<SectionChunk *> getDebugChunks() { return debugChunks; }
@@ -165,9 +170,11 @@ public:
 
   ArrayRef<uint8_t> getDebugSection(StringRef secName);
 
-  // Returns a Symbol object for the symbolIndex'th symbol in the
-  // underlying object file.
+  // Returns a Symbol object for the symbolIndex'th symbol in the underlying
+  // object file, or nullptr if a malformed relocation uses an invalid index.
   Symbol *getSymbol(uint32_t symbolIndex) {
+    if (symbolIndex >= symbols.size())
+      return nullptr;
     return symbols[symbolIndex];
   }
 
@@ -234,7 +241,21 @@ public:
                                                 uint32_t sectionIndex);
 
 private:
-  const coff_section* getSection(uint32_t i);
+  friend class SymbolTable;
+
+  void discardCOMDATGroup(SectionChunk *leader);
+  void recordCOMDATDefinition(uint32_t sectionNumber, uint32_t symbolIndex);
+  const coff_aux_section_definition *findSectionDef(int32_t section);
+  bool handleDirectiveCOMDATSelection(SectionChunk *newChunk,
+                                      llvm::COFF::COMDATType selection,
+                                      DefinedRegular *leader);
+  SectionChunk *handleComdatSelection(SectionChunk *newChunk,
+                                      llvm::COFF::COMDATType &selection,
+                                      DefinedRegular *leader, uint32_t newValue,
+                                      const coff_aux_section_definition *def);
+  bool mergeComdatSelectionTypes(llvm::COFF::COMDATType &selection,
+                                 DefinedRegular *leader);
+  const coff_section *getSection(uint32_t i);
   const coff_section *getSection(COFFSymbolRef sym) {
     return getSection(sym.getSectionNumber());
   }
@@ -245,7 +266,7 @@ private:
   void initializeSymbols();
   void initializeFlags();
   void initializeDependencies();
-  void initializeECThunks();
+  void processECThunks();
 
   SectionChunk *
   readSection(uint32_t sectionNumber,
@@ -269,24 +290,24 @@ private:
       COFFSymbolRef sym, const llvm::object::coff_aux_section_definition *def,
       const llvm::DenseMap<StringRef, uint32_t> &prevailingSectionMap);
 
-  // Given a new symbol Sym with comdat selection Selection, if the new
-  // symbol is not (yet) Prevailing and the existing comdat leader set to
-  // Leader, emits a diagnostic if the new symbol and its selection doesn't
-  // match the existing symbol and its selection. If either old or new
-  // symbol have selection IMAGE_COMDAT_SELECT_LARGEST, Sym might replace
-  // the existing leader. In that case, Prevailing is set to true.
-  void
+  // Given a non-prevailing symbol Sym with COMDAT selection Selection,
+  // determine whether it replaces the current prevailing COMDAT leader. If a
+  // new IMAGE_COMDAT_SELECT_LARGEST candidate prevails, the previously
+  // prevailing chunk is returned. Otherwise, returns nullptr.
+  SectionChunk *
   handleComdatSelection(COFFSymbolRef sym, llvm::COFF::COMDATType &selection,
-                        bool &prevailing, DefinedRegular *leader,
+                        DefinedRegular *leader,
                         const llvm::object::coff_aux_section_definition *def);
 
   std::optional<Symbol *>
-  createDefined(COFFSymbolRef sym,
+  createDefined(COFFSymbolRef sym, uint32_t symbolIndex,
                 std::vector<const llvm::object::coff_aux_section_definition *>
                     &comdatDefs,
                 bool &prevailingComdat);
-  Symbol *createRegular(COFFSymbolRef sym);
-  Symbol *createUndefined(COFFSymbolRef sym, bool overrideLazy);
+  Symbol *createRegular(COFFSymbolRef sym, uint32_t symbolIndex,
+                        uint32_t sectionNumber);
+  Symbol *createUndefined(COFFSymbolRef sym, bool overrideLazy,
+                          bool markReference);
 
   std::unique_ptr<COFFObjectFile> coffObj;
 
@@ -313,6 +334,12 @@ private:
 
   std::vector<SectionChunk *> hybmpChunks;
 
+  // Ordinary sections are read before COMDAT selection. Record prevailing
+  // .drectve contents with their section numbers and concatenate them in
+  // object section order after symbol initialization.
+  SmallVector<std::pair<uint32_t, StringRef>, 2> directiveSections;
+  std::string directivesStorage;
+
   // This vector contains a list of all symbols defined or referenced by this
   // file. They are indexed such that you can get a Symbol by symbol
   // index. Nonexistent indices (which are occupied by auxiliary
@@ -321,10 +348,65 @@ private:
 
   // This vector contains the same chunks as Chunks, but they are
   // indexed such that you can get a SectionChunk by section index.
-  // Nonexistent section indices are filled with null pointers.
-  // (Because section number is 1-based, the first slot is always a
-  // null pointer.) This vector is only valid during initialization.
+  // Nonexistent section indices (including COMDATs that are still pending)
+  // are null. The state bit vectors below disambiguate those cases. This vector
+  // is only valid during initialization.
   std::vector<SectionChunk *> sparseChunks;
+
+  // Pending and rejected COMDAT sections are tracked separately from
+  // sparseChunks so no fabricated pointer value is needed as a sentinel. This
+  // array is allocated only for objects that contain COMDAT sections and is
+  // valid only during initialization.
+  enum COMDATSectionState : uint8_t {
+    PendingCOMDAT = 1,
+    DiscardedCOMDAT = 2,
+    UnassociatedCOMDAT = 4,
+  };
+  std::vector<uint8_t> comdatSectionStates;
+
+  bool hasCOMDATSectionState(uint32_t section, COMDATSectionState state) const {
+    return section < comdatSectionStates.size() &&
+           (comdatSectionStates[section] & state);
+  }
+  void setCOMDATSectionState(uint32_t section, COMDATSectionState state) {
+    comdatSectionStates[section] |= state;
+  }
+  void clearCOMDATSectionState(uint32_t section, COMDATSectionState state) {
+    comdatSectionStates[section] &= ~state;
+  }
+
+  bool isPendingCOMDATSection(uint32_t section) const {
+    return hasCOMDATSectionState(section, PendingCOMDAT);
+  }
+  bool isDiscardedCOMDATSection(uint32_t section) const {
+    return hasCOMDATSectionState(section, DiscardedCOMDAT);
+  }
+  bool isUnassociatedCOMDATSection(uint32_t section) const {
+    return hasCOMDATSectionState(section, UnassociatedCOMDAT);
+  }
+
+  struct COMDATDefinition {
+    uint32_t symbolIndex;
+    uint32_t next;
+  };
+  static constexpr uint32_t noCOMDATDefinition = ~uint32_t{0};
+
+  // External definitions are kept in one flat journal and indexed by COFF
+  // section number. The head array itself is allocated lazily when a
+  // replaceable group actually records a secondary definition.
+  llvm::SmallVector<uint32_t, 0> comdatDefinitionHeads;
+  llvm::SmallVector<COMDATDefinition, 0> comdatDefinitions;
+
+  // Set while sparseChunks is created so initializeSymbols does not need to
+  // rescan the section array merely to decide whether a COMDAT pre-scan is
+  // necessary.
+  bool hasCOMDATSections = false;
+
+  // True for a native object produced by the current link's LTO compilation.
+  // Undefined symbols emitted only during code generation are late references
+  // and must remain visible even when their compiler-generated unwind section
+  // is an unassociated COMDAT.
+  bool isLTOOutput = false;
 
   DWARFCache *dwarf = nullptr;
 };
