@@ -72,7 +72,7 @@ public:
     // WMMA XDL ops are treated the same as TRANS.
     if (ST->hasGFX1250Insts() && SII->isXDLWMMA(MI))
       return TRANS;
-    if (SIInstrInfo::isVALU(MI, AllowLDSDMA))
+    if (AllowLDSDMA ? SIInstrInfo::isVALU(MI) : SIInstrInfo::isComputeVALU(MI))
       return VALU;
     if (SIInstrInfo::isSALU(MI))
       return SALU;
