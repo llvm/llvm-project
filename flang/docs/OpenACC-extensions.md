@@ -108,3 +108,26 @@ emitted by default (`-Wopenacc-default-none-scalars-strict`; suppress with
 produce an error for scalar variables that are not listed in an explicit data
 clause. `-fno-openacc-default-none-scalars-strict` preserves the default
 pre-3.2 behavior explicitly.
+
+## Extensions disabled by default
+
+These extensions are off unless a driver enables them; they are not exposed as
+flang flags.
+
+### Legacy `BIND(C)` array argument passing (`LoweringOptions::NoCFIDescriptor`)
+
+Fortran 2018 (18.3.6) requires an assumed-shape, deferred-shape, or
+assumed-rank dummy argument of an interoperable procedure to be passed using a
+CFI descriptor (`CFI_cdesc_t`). When `LoweringOptions::NoCFIDescriptor` is set,
+such an argument is instead passed by address, matching the legacy convention
+used by nvfortran when compiling for OpenACC and CUDA Fortran targets.
+
+This exists for compatibility with existing code written against that legacy
+ABI, where the companion C function expects a bare pointer rather than a
+descriptor. It is disabled by default, so standard-conforming descriptor
+passing is unaffected unless a driver requests otherwise. `ALLOCATABLE` and
+`POINTER` dummy arguments always require a descriptor and are never affected.
+
+Because this silently changes the ABI of an interoperable procedure, a warning
+naming the affected dummy argument is emitted whenever the legacy convention is
+applied.
