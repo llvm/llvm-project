@@ -876,9 +876,10 @@ static bool needsStableSymbolForAlias(const Function *F) {
 /// merging this body agrees on it.
 static bool tryConvertToMergedFunction(Function *F) {
   Module *M = F->getParent();
-  std::string Name = ("__llvm_mergefunc$" +
-                      Twine::utohexstr(StructuralHash(*F, /*DetailedHash=*/true)))
-                         .str();
+  std::string Name =
+      ("__llvm_mergefunc$" +
+       Twine::utohexstr(StructuralHash(*F, /*DetailedHash=*/true)))
+          .str();
   // The ODR path aliases both halves of a merge to the same body.
   if (F->getName() == Name)
     return true;
