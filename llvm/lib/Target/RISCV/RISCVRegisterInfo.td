@@ -411,7 +411,7 @@ def GPRX1X5 :  GPRRegisterClass<(add X1, X5)> {
   // sspopchk/sspush (RISCVInstrInfoZicfiss.td) share their encoding with the
   // generic mop.r.28/mop.rr.7 Zimop instructions except for this operand, so
   // fall back to decoding those when the register isn't x1 or x5.
-  let hasCompleteDecoder = 0;
+  let hasCompleteDecoder = false;
 }
 
 def GPRNoX31 : GPRRegisterClass<(sub GPR, X31)> {

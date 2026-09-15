@@ -25,7 +25,7 @@ class RVC_SSInst<bits<5> rs1val, RegisterClass reg_class, string opcodestr> :
 // GPRNoX0 itself is used far too widely to set hasCompleteDecoder on directly,
 // so wrap it here instead.
 def GPRNoX0Zicfiss : RegisterOperand<GPRNoX0> {
-  let hasCompleteDecoder = 0;
+  let hasCompleteDecoder = false;
 }
 
 //===----------------------------------------------------------------------===//
