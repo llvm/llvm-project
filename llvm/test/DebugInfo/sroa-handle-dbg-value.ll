@@ -3,7 +3,7 @@
 
 ; RUN: opt %s -S -p=sroa -o - | FileCheck %s
 
-; CHECK: [[SROA_5_SROA_21:%.*]] = alloca [7 x i8], align 8
+; CHECK: [[SROA_5_SROA_21:%.*]] = alloca [7 x i8], align 1
 ; CHECK-NEXT: #dbg_value(ptr [[SROA_5_SROA_21]], !59, !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 72, 56), [[DBG72:![0-9]+]])
 
 ; CHECK: #dbg_value(ptr [[REG1:%[0-9]+]], [[META54:![0-9]+]], !DIExpression(DW_OP_deref), [[DBG78:![0-9]+]])

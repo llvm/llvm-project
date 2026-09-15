@@ -56,8 +56,8 @@ define void @test2() {
 ; it preserves the original debuglocation.
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i16, align 2
-; CHECK-NEXT:    store volatile i16 0, ptr [[A_SROA_0]], align 2
+; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i16, align 1
+; CHECK-NEXT:    store volatile i16 0, ptr [[A_SROA_0]], align 1
 ; CHECK-NEXT:    [[A_SROA_0_1_GEP2_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i64 1
 ; CHECK-NEXT:    [[A_SROA_0_1_A_SROA_0_2_RESULT:%.*]] = load i8, ptr [[A_SROA_0_1_GEP2_SROA_IDX]], align 1
 ; CHECK-NEXT:    [[A_SROA_0_1_GEP2_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i64 1
@@ -66,11 +66,11 @@ define void @test2() {
 ;
 ; CHECK-DEBUGLOC-LABEL: @test2(
 ; CHECK-DEBUGLOC-NEXT:  entry:
-; CHECK-DEBUGLOC-NEXT:    [[A_SROA_0:%.*]] = alloca i16, align 2, !dbg [[DBG28:![0-9]+]]
+; CHECK-DEBUGLOC-NEXT:    [[A_SROA_0:%.*]] = alloca i16, align 1, !dbg [[DBG28:![0-9]+]]
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr [[A_SROA_0]], [[META23:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 8, 16), [[DBG28]])
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META23]], !DIExpression(), [[DBG28]])
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META24:![0-9]+]], !DIExpression(), [[META29:![0-9]+]])
-; CHECK-DEBUGLOC-NEXT:    store volatile i16 0, ptr [[A_SROA_0]], align 2, !dbg [[DBG30:![0-9]+]]
+; CHECK-DEBUGLOC-NEXT:    store volatile i16 0, ptr [[A_SROA_0]], align 1, !dbg [[DBG30:![0-9]+]]
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META25:![0-9]+]], !DIExpression(), [[META31:![0-9]+]])
 ; CHECK-DEBUGLOC-NEXT:    [[A_SROA_0_1_GEP2_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i64 1, !dbg [[DBG32:![0-9]+]]
 ; CHECK-DEBUGLOC-NEXT:    [[A_SROA_0_1_A_SROA_0_2_RESULT:%.*]] = load i8, ptr [[A_SROA_0_1_GEP2_SROA_IDX]], align 1, !dbg [[DBG32]]
@@ -212,24 +212,24 @@ define void @test6() {
 ;
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca double, align 8
-; CHECK-NEXT:    [[A_SROA_2:%.*]] = alloca double, align 8
-; CHECK-NEXT:    store volatile double 0.000000e+00, ptr [[A_SROA_0]], align 8
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VAL:%.*]] = load double, ptr [[A_SROA_0]], align 8
-; CHECK-NEXT:    store volatile double [[A_SROA_0_0_A_SROA_0_0_VAL]], ptr [[A_SROA_2]], align 8
+; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca double, align 1
+; CHECK-NEXT:    [[A_SROA_2:%.*]] = alloca double, align 1
+; CHECK-NEXT:    store volatile double 0.000000e+00, ptr [[A_SROA_0]], align 1
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VAL:%.*]] = load double, ptr [[A_SROA_0]], align 1
+; CHECK-NEXT:    store volatile double [[A_SROA_0_0_A_SROA_0_0_VAL]], ptr [[A_SROA_2]], align 1
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DEBUGLOC-LABEL: @test6(
 ; CHECK-DEBUGLOC-NEXT:  entry:
-; CHECK-DEBUGLOC-NEXT:    [[A_SROA_0:%.*]] = alloca double, align 8, !dbg [[DBG78:![0-9]+]]
-; CHECK-DEBUGLOC-NEXT:    [[A_SROA_2:%.*]] = alloca double, align 8, !dbg [[DBG78]]
+; CHECK-DEBUGLOC-NEXT:    [[A_SROA_0:%.*]] = alloca double, align 1, !dbg [[DBG78:![0-9]+]]
+; CHECK-DEBUGLOC-NEXT:    [[A_SROA_2:%.*]] = alloca double, align 1, !dbg [[DBG78]]
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr [[A_SROA_0]], [[META75:![0-9]+]], !DIExpression(), [[DBG78]])
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META75]], !DIExpression(), [[DBG78]])
-; CHECK-DEBUGLOC-NEXT:    store volatile double 0.000000e+00, ptr [[A_SROA_0]], align 8, !dbg [[DBG79:![0-9]+]]
+; CHECK-DEBUGLOC-NEXT:    store volatile double 0.000000e+00, ptr [[A_SROA_0]], align 1, !dbg [[DBG79:![0-9]+]]
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META76:![0-9]+]], !DIExpression(), [[META80:![0-9]+]])
-; CHECK-DEBUGLOC-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VAL:%.*]] = load double, ptr [[A_SROA_0]], align 8, !dbg [[DBG81:![0-9]+]]
+; CHECK-DEBUGLOC-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VAL:%.*]] = load double, ptr [[A_SROA_0]], align 1, !dbg [[DBG81:![0-9]+]]
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(double [[A_SROA_0_0_A_SROA_0_0_VAL]], [[META77:![0-9]+]], !DIExpression(), [[DBG81]])
-; CHECK-DEBUGLOC-NEXT:    store volatile double [[A_SROA_0_0_A_SROA_0_0_VAL]], ptr [[A_SROA_2]], align 8, !dbg [[DBG82:![0-9]+]]
+; CHECK-DEBUGLOC-NEXT:    store volatile double [[A_SROA_0_0_A_SROA_0_0_VAL]], ptr [[A_SROA_2]], align 1, !dbg [[DBG82:![0-9]+]]
 ; CHECK-DEBUGLOC-NEXT:    ret void, !dbg [[DBG83:![0-9]+]]
 ;
 entry:

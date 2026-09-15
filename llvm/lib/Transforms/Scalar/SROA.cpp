@@ -5578,14 +5578,10 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   } else {
     // Make sure the alignment is compatible with P.beginOffset().
     const Align Alignment = commonAlignment(AI.getAlign(), P.beginOffset());
-    // If we will get at least this much alignment from the type alone, leave
-    // the alloca's alignment unconstrained.
-    const bool IsUnconstrained = Alignment <= DL.getABITypeAlign(PartitionTy);
-    NewAI = new AllocaInst(
-        PartitionTy, AI.getAddressSpace(), nullptr,
-        IsUnconstrained ? DL.getPrefTypeAlign(PartitionTy) : Alignment,
-        AI.getName() + ".sroa." + Twine(P.begin() - AS.begin()),
-        AI.getIterator());
+    NewAI =
+        new AllocaInst(PartitionTy, AI.getAddressSpace(), nullptr, Alignment,
+                       AI.getName() + ".sroa." + Twine(P.begin() - AS.begin()),
+                       AI.getIterator());
     // Copy the old AI debug location over to the new one.
     NewAI->setDebugLoc(AI.getDebugLoc());
     ++NumNewAllocas;

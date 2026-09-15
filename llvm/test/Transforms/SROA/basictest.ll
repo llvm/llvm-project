@@ -427,9 +427,9 @@ entry:
 define i32 @test6() {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store volatile i32 707406378, ptr [[A_SROA_0]], align 4
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VAL:%.*]] = load i32, ptr [[A_SROA_0]], align 4
+; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 1
+; CHECK-NEXT:    store volatile i32 707406378, ptr [[A_SROA_0]], align 1
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_VAL:%.*]] = load i32, ptr [[A_SROA_0]], align 1
 ; CHECK-NEXT:    ret i32 [[A_SROA_0_0_A_SROA_0_0_VAL]]
 ;
 entry:
@@ -442,10 +442,10 @@ entry:
 define void @test7(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 1
 ; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load volatile i32, ptr [[SRC:%.*]], align 1, !tbaa [[TBAA0]]
-; CHECK-NEXT:    store volatile i32 [[A_SROA_0_0_COPYLOAD]], ptr [[A_SROA_0]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_COPYLOAD1:%.*]] = load volatile i32, ptr [[A_SROA_0]], align 4, !tbaa [[TBAA3]]
+; CHECK-NEXT:    store volatile i32 [[A_SROA_0_0_COPYLOAD]], ptr [[A_SROA_0]], align 1, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_COPYLOAD1:%.*]] = load volatile i32, ptr [[A_SROA_0]], align 1, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    store volatile i32 [[A_SROA_0_0_A_SROA_0_0_COPYLOAD1]], ptr [[DST:%.*]], align 1, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    ret void
 ;
@@ -1328,7 +1328,7 @@ define void @PR15674(ptr %data, ptr %src, i32 %size) {
 ;
 ; CHECK-LABEL: @PR15674(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP_SROA_0:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[TMP_SROA_0:%.*]] = alloca i32, align 1
 ; CHECK-NEXT:    switch i32 [[SIZE:%.*]], label [[END:%.*]] [
 ; CHECK-NEXT:    i32 4, label [[BB4:%.*]]
 ; CHECK-NEXT:    i32 3, label [[BB3:%.*]]
@@ -1345,7 +1345,7 @@ define void @PR15674(ptr %data, ptr %src, i32 %size) {
 ; CHECK-NEXT:    [[SRC_GEP2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i32 2
 ; CHECK-NEXT:    [[SRC_2:%.*]] = load i8, ptr [[SRC_GEP2]], align 1
 ; CHECK-NEXT:    [[TMP_SROA_0_2_TMP_GEP2_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[TMP_SROA_0]], i64 2
-; CHECK-NEXT:    store i8 [[SRC_2]], ptr [[TMP_SROA_0_2_TMP_GEP2_SROA_IDX2]], align 2
+; CHECK-NEXT:    store i8 [[SRC_2]], ptr [[TMP_SROA_0_2_TMP_GEP2_SROA_IDX2]], align 1
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[SRC_GEP1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i32 1
@@ -1355,10 +1355,10 @@ define void @PR15674(ptr %data, ptr %src, i32 %size) {
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[SRC_0:%.*]] = load i8, ptr [[SRC]], align 1
-; CHECK-NEXT:    store i8 [[SRC_0]], ptr [[TMP_SROA_0]], align 4
+; CHECK-NEXT:    store i8 [[SRC_0]], ptr [[TMP_SROA_0]], align 1
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DATA:%.*]], ptr align 4 [[TMP_SROA_0]], i32 [[SIZE]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DATA:%.*]], ptr align 1 [[TMP_SROA_0]], i32 [[SIZE]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:

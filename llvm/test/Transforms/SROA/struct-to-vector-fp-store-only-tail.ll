@@ -18,16 +18,16 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias writeonly captures(none), ptr no
 ; to run, you'll get a 4-byte store of 0.
 define ptr @store_only_fp_tail() {
 ; NO-CANON-LABEL: define ptr @store_only_fp_tail() {
-; NO-CANON-NEXT:    [[DOTSROA_3:%.*]] = alloca { float, float, float }, align 8
-; NO-CANON-NEXT:    [[DOTSROA_4:%.*]] = alloca { float, float, float, float, float, float, float, float, float, float, float }, align 8
-; NO-CANON-NEXT:    [[DOTSROA_0_SROA_1:%.*]] = alloca { float, float, float }, align 8
-; NO-CANON-NEXT:    [[DOTSROA_2:%.*]] = alloca { float, float, float, float, float, float, float, float, float, float, float }, align 8
-; NO-CANON-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTSROA_3]], ptr align 8 [[DOTSROA_0_SROA_1]], i64 12, i1 false)
-; NO-CANON-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTSROA_4]], ptr align 8 [[DOTSROA_2]], i64 44, i1 false)
+; NO-CANON-NEXT:    [[DOTSROA_3:%.*]] = alloca { float, float, float }, align 4
+; NO-CANON-NEXT:    [[DOTSROA_4:%.*]] = alloca { float, float, float, float, float, float, float, float, float, float, float }, align 4
+; NO-CANON-NEXT:    [[DOTSROA_0_SROA_1:%.*]] = alloca { float, float, float }, align 4
+; NO-CANON-NEXT:    [[DOTSROA_2:%.*]] = alloca { float, float, float, float, float, float, float, float, float, float, float }, align 4
+; NO-CANON-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DOTSROA_3]], ptr align 4 [[DOTSROA_0_SROA_1]], i64 12, i1 false)
+; NO-CANON-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DOTSROA_4]], ptr align 4 [[DOTSROA_2]], i64 44, i1 false)
 ; NO-CANON-NEXT:    store float 0.000000e+00, ptr null, align 1
-; NO-CANON-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 getelementptr inbounds (i8, ptr null, i64 4), ptr align 8 [[DOTSROA_3]], i64 12, i1 false)
+; NO-CANON-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 getelementptr inbounds (i8, ptr null, i64 4), ptr align 4 [[DOTSROA_3]], i64 12, i1 false)
 ; NO-CANON-NEXT:    store float 0.000000e+00, ptr getelementptr inbounds (i8, ptr null, i64 16), align 1
-; NO-CANON-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 getelementptr inbounds (i8, ptr null, i64 20), ptr align 8 [[DOTSROA_4]], i64 44, i1 false)
+; NO-CANON-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 getelementptr inbounds (i8, ptr null, i64 20), ptr align 4 [[DOTSROA_4]], i64 44, i1 false)
 ; NO-CANON-NEXT:    ret ptr null
 ;
 ; CANON-LABEL: define ptr @store_only_fp_tail() {

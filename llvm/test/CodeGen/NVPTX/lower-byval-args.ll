@@ -4,8 +4,8 @@
 ; RUN: opt < %s -mtriple nvptx64 -mcpu=sm_60 -mattr=ptx77 -passes=nvptx-lower-args -S | FileCheck %s --check-prefixes=COMMON,LOWER-ARGS,SM_60
 ; RUN: opt < %s -mtriple nvptx64 -mcpu=sm_70 -mattr=ptx77 -passes=nvptx-lower-args -S | FileCheck %s --check-prefixes=COMMON,LOWER-ARGS,SM_70
 ; RUN: opt < %s -mtriple nvptx64 -mcpu=sm_70 -mattr=ptx77 -passes=nvptx-copy-byval-args -S | FileCheck %s --check-prefixes=COMMON,COPY
-; RUN: llc < %s -mcpu=sm_60 -mattr=ptx77 | FileCheck %s --check-prefixes=PTX,PTX_60
-; RUN: llc < %s -mcpu=sm_70 -mattr=ptx77 | FileCheck %s --check-prefixes=PTX,PTX_70
+; RUN: opt < %s -mtriple=nvptx64 -mcpu=sm_60 -mattr=ptx77 -passes='nvptx-lower-args,sroa<preserve-cfg;aggregate-to-vector>,infer-alignment' | llc -mcpu=sm_60 -mattr=ptx77 | FileCheck %s --check-prefixes=PTX,PTX_60
+; RUN: opt < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=ptx77 -passes='nvptx-lower-args,sroa<preserve-cfg;aggregate-to-vector>,infer-alignment' | llc -mcpu=sm_70 -mattr=ptx77 | FileCheck %s --check-prefixes=PTX,PTX_70
 source_filename = "<stdin>"
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"

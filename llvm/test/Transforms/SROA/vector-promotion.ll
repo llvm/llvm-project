@@ -1003,23 +1003,23 @@ entry:
 define <4 x ptr> @test15(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X_SROA_0:%.*]] = alloca <4 x ptr>, align 32
-; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[X_SROA_0]], align 32
+; CHECK-NEXT:    [[X_SROA_0:%.*]] = alloca <4 x ptr>, align 8
+; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[X_SROA_0]], align 8
 ; CHECK-NEXT:    [[X_SROA_0_4_X_TMP2_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 4
 ; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[X_SROA_0_4_X_TMP2_SROA_IDX1]], align 4
 ; CHECK-NEXT:    [[X_SROA_0_8_X_TMP3_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 8
 ; CHECK-NEXT:    store i32 [[C:%.*]], ptr [[X_SROA_0_8_X_TMP3_SROA_IDX2]], align 8
 ; CHECK-NEXT:    [[X_SROA_0_12_X_TMP4_SROA_IDX3:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 12
 ; CHECK-NEXT:    store i32 [[D:%.*]], ptr [[X_SROA_0_12_X_TMP4_SROA_IDX3]], align 4
-; CHECK-NEXT:    [[X_SROA_0_0_X_SROA_0_0_RESULT:%.*]] = load <4 x ptr>, ptr [[X_SROA_0]], align 32
+; CHECK-NEXT:    [[X_SROA_0_0_X_SROA_0_0_RESULT:%.*]] = load <4 x ptr>, ptr [[X_SROA_0]], align 8
 ; CHECK-NEXT:    ret <4 x ptr> [[X_SROA_0_0_X_SROA_0_0_RESULT]]
 ;
 ; DEBUG-LABEL: @test15(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:    [[X_SROA_0:%.*]] = alloca <4 x ptr>, align 32, !dbg [[DBG400:![0-9]+]]
+; DEBUG-NEXT:    [[X_SROA_0:%.*]] = alloca <4 x ptr>, align 8, !dbg [[DBG400:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr [[X_SROA_0]], [[META394:![0-9]+]], !DIExpression(), [[DBG400]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META394]], !DIExpression(), [[DBG400]])
-; DEBUG-NEXT:    store i32 [[A:%.*]], ptr [[X_SROA_0]], align 32, !dbg [[DBG401:![0-9]+]]
+; DEBUG-NEXT:    store i32 [[A:%.*]], ptr [[X_SROA_0]], align 8, !dbg [[DBG401:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META395:![0-9]+]], !DIExpression(), [[META402:![0-9]+]])
 ; DEBUG-NEXT:    [[X_SROA_0_4_X_TMP2_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 4, !dbg [[DBG403:![0-9]+]]
 ; DEBUG-NEXT:    store i32 [[B:%.*]], ptr [[X_SROA_0_4_X_TMP2_SROA_IDX1]], align 4, !dbg [[DBG403]]
@@ -1029,7 +1029,7 @@ define <4 x ptr> @test15(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META397:![0-9]+]], !DIExpression(), [[META406:![0-9]+]])
 ; DEBUG-NEXT:    [[X_SROA_0_12_X_TMP4_SROA_IDX3:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 12, !dbg [[DBG407:![0-9]+]]
 ; DEBUG-NEXT:    store i32 [[D:%.*]], ptr [[X_SROA_0_12_X_TMP4_SROA_IDX3]], align 4, !dbg [[DBG407]]
-; DEBUG-NEXT:    [[X_SROA_0_0_X_SROA_0_0_RESULT:%.*]] = load <4 x ptr>, ptr [[X_SROA_0]], align 32, !dbg [[DBG408:![0-9]+]]
+; DEBUG-NEXT:    [[X_SROA_0_0_X_SROA_0_0_RESULT:%.*]] = load <4 x ptr>, ptr [[X_SROA_0]], align 8, !dbg [[DBG408:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(<4 x ptr> [[X_SROA_0_0_X_SROA_0_0_RESULT]], [[META398:![0-9]+]], !DIExpression(), [[DBG408]])
 ; DEBUG-NEXT:    ret <4 x ptr> [[X_SROA_0_0_X_SROA_0_0_RESULT]], !dbg [[DBG409:![0-9]+]]
 ;
@@ -1093,33 +1093,33 @@ entry:
 define <4 x ptr> @test17(i32 %a, i32 %b, i64 %c, i64 %d) {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X_SROA_0:%.*]] = alloca <4 x ptr>, align 32
-; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[X_SROA_0]], align 32
+; CHECK-NEXT:    [[X_SROA_0:%.*]] = alloca <4 x ptr>, align 8
+; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[X_SROA_0]], align 8
 ; CHECK-NEXT:    [[X_SROA_0_4_X_TMP2_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 4
 ; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[X_SROA_0_4_X_TMP2_SROA_IDX1]], align 4
 ; CHECK-NEXT:    [[X_SROA_0_16_X_TMP3_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 16
-; CHECK-NEXT:    store i64 [[C:%.*]], ptr [[X_SROA_0_16_X_TMP3_SROA_IDX2]], align 16
+; CHECK-NEXT:    store i64 [[C:%.*]], ptr [[X_SROA_0_16_X_TMP3_SROA_IDX2]], align 8
 ; CHECK-NEXT:    [[X_SROA_0_24_X_TMP4_SROA_IDX3:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 24
 ; CHECK-NEXT:    store i64 [[D:%.*]], ptr [[X_SROA_0_24_X_TMP4_SROA_IDX3]], align 8
-; CHECK-NEXT:    [[X_SROA_0_0_X_SROA_0_0_RESULT:%.*]] = load <4 x ptr>, ptr [[X_SROA_0]], align 32
+; CHECK-NEXT:    [[X_SROA_0_0_X_SROA_0_0_RESULT:%.*]] = load <4 x ptr>, ptr [[X_SROA_0]], align 8
 ; CHECK-NEXT:    ret <4 x ptr> [[X_SROA_0_0_X_SROA_0_0_RESULT]]
 ;
 ; DEBUG-LABEL: @test17(
 ; DEBUG-NEXT:  entry:
-; DEBUG-NEXT:    [[X_SROA_0:%.*]] = alloca <4 x ptr>, align 32, !dbg [[DBG434:![0-9]+]]
+; DEBUG-NEXT:    [[X_SROA_0:%.*]] = alloca <4 x ptr>, align 8, !dbg [[DBG434:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr [[X_SROA_0]], [[META429:![0-9]+]], !DIExpression(), [[DBG434]])
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META429]], !DIExpression(), [[DBG434]])
-; DEBUG-NEXT:    store i32 [[A:%.*]], ptr [[X_SROA_0]], align 32, !dbg [[DBG435:![0-9]+]]
+; DEBUG-NEXT:    store i32 [[A:%.*]], ptr [[X_SROA_0]], align 8, !dbg [[DBG435:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META430:![0-9]+]], !DIExpression(), [[META436:![0-9]+]])
 ; DEBUG-NEXT:    [[X_SROA_0_4_X_TMP2_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 4, !dbg [[DBG437:![0-9]+]]
 ; DEBUG-NEXT:    store i32 [[B:%.*]], ptr [[X_SROA_0_4_X_TMP2_SROA_IDX1]], align 4, !dbg [[DBG437]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META431:![0-9]+]], !DIExpression(), [[META438:![0-9]+]])
 ; DEBUG-NEXT:    [[X_SROA_0_16_X_TMP3_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 16, !dbg [[DBG439:![0-9]+]]
-; DEBUG-NEXT:    store i64 [[C:%.*]], ptr [[X_SROA_0_16_X_TMP3_SROA_IDX2]], align 16, !dbg [[DBG439]]
+; DEBUG-NEXT:    store i64 [[C:%.*]], ptr [[X_SROA_0_16_X_TMP3_SROA_IDX2]], align 8, !dbg [[DBG439]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META432:![0-9]+]], !DIExpression(), [[META440:![0-9]+]])
 ; DEBUG-NEXT:    [[X_SROA_0_24_X_TMP4_SROA_IDX3:%.*]] = getelementptr inbounds i8, ptr [[X_SROA_0]], i64 24, !dbg [[DBG441:![0-9]+]]
 ; DEBUG-NEXT:    store i64 [[D:%.*]], ptr [[X_SROA_0_24_X_TMP4_SROA_IDX3]], align 8, !dbg [[DBG441]]
-; DEBUG-NEXT:    [[X_SROA_0_0_X_SROA_0_0_RESULT:%.*]] = load <4 x ptr>, ptr [[X_SROA_0]], align 32, !dbg [[DBG442:![0-9]+]]
+; DEBUG-NEXT:    [[X_SROA_0_0_X_SROA_0_0_RESULT:%.*]] = load <4 x ptr>, ptr [[X_SROA_0]], align 8, !dbg [[DBG442:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(<4 x ptr> [[X_SROA_0_0_X_SROA_0_0_RESULT]], [[META433:![0-9]+]], !DIExpression(), [[DBG442]])
 ; DEBUG-NEXT:    ret <4 x ptr> [[X_SROA_0_0_X_SROA_0_0_RESULT]], !dbg [[DBG443:![0-9]+]]
 ;
