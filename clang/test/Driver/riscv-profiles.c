@@ -297,12 +297,16 @@
 // RVB23S64: "-target-feature" "+svnapot"
 // RVB23S64: "-target-feature" "+svpbmt"
 
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 \
+// RUN: %clang --target=riscv64 -### -c %s \
 // RUN:   -march=rva23p1s64_ssccfg_ssctr_ssdbltrp_ssqosid_svrsw60t59b -menable-experimental-extensions \
-// RUN:   | FileCheck -check-prefix=PROFILE-P1-OPTIONS %s
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 \
+// RUN:   > %t-rva23p1s64-options 2>&1
+// RUN: FileCheck -check-prefix=RVA23S64 %s < %t-rva23p1s64-options
+// RUN: FileCheck -check-prefix=PROFILE-P1-OPTIONS %s < %t-rva23p1s64-options
+// RUN: %clang --target=riscv64 -### -c %s \
 // RUN:   -march=rvb23p1s64_ssccfg_ssctr_ssdbltrp_ssqosid_svrsw60t59b -menable-experimental-extensions \
-// RUN:   | FileCheck -check-prefix=PROFILE-P1-OPTIONS %s
+// RUN:   > %t-rvb23p1s64-options 2>&1
+// RUN: FileCheck -check-prefix=RVB23S64 %s < %t-rvb23p1s64-options
+// RUN: FileCheck -check-prefix=PROFILE-P1-OPTIONS %s < %t-rvb23p1s64-options
 // PROFILE-P1-OPTIONS: "-target-feature" "+ssccfg"
 // PROFILE-P1-OPTIONS: "-target-feature" "+sscsrind"
 // PROFILE-P1-OPTIONS: "-target-feature" "+ssctr"
