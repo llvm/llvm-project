@@ -74,17 +74,8 @@ namespace {
 // Maps CIR types to llvm::abi::Type, runs the LLVM ABI Lowering Library's SysV
 // x86_64 classifier, and converts the result back into the dialect-agnostic
 // mlir::abi::FunctionClassification that CIRABIRewriteContext consumes.
-// Integer (including `_BitInt` of any width and `__int128`) / pointer /
-// vtable pointer / bool / floating-point scalars are handled, as are struct /
-// union / array aggregates, `_Complex`, and a fixed-width vector whose width
-// is a power of two.  Other vectors, a record holding an empty-for-ABI member
-// that occupies bytes or a zero-sized one off its own alignment, a union no
-// member of which spans its declared size (a single-declaration bit-field
-// member counting as far as its declared type extends, and only for a union
-// of one eightbyte or less), and a union with a named bit-field access unit no
-// spanning member of which supplies data are reported NYI by
-// classifyX86_64Function so an unsupported signature fails the pass instead of
-// being misclassified.
+// isSupportedType says which CIR types the bridge handles, and a signature
+// naming any other fails the pass instead of being misclassified.
 //===----------------------------------------------------------------------===//
 
 /// Whether a struct's declared argument-passing kind (from the module's
@@ -96,6 +87,39 @@ static bool recordCanPassInRegs(ModuleOp modOp, cir::RecordType recTy) {
   if (!layout)
     return true;
   return layout.getArgPassingKind() == cir::ArgPassingKind::CanPassInRegs;
+}
+
+/// Whether the classifier could put this type, or one an array or record
+/// holds, in the SSEUP class.  Only a vector of 128 bits or wider and an
+/// IEEE-quad float reach it.  A complex quad does not, since the classifier
+/// gives it memory.
+static bool mayReachSseUp(mlir::Type ty, const DataLayout &dl) {
+  if (isa<cir::VectorType>(ty))
+    return dl.getTypeSizeInBits(ty).getFixedValue() >= 128;
+  if (auto fpTy = dyn_cast<cir::FPTypeInterface>(ty))
+    return &fpTy.getFloatSemantics() == &llvm::APFloat::IEEEquad();
+  if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
+    return mayReachSseUp(arrTy.getElementType(), dl);
+  auto recTy = dyn_cast<cir::RecordType>(ty);
+  if (!recTy || !recTy.isComplete())
+    return false;
+  return llvm::any_of(recTy.getMembers(),
+                      [&](mlir::Type m) { return mayReachSseUp(m, dl); });
+}
+
+/// Whether no SSEUP coerce could be named from the record's size.  That coerce
+/// is a vector as wide as the record, and only 128, 256 and 512 bits have one,
+/// a size past 512 classifying memory before a coerce is asked for.  A true
+/// answer is conservative, since reaching SSEUP also takes a target whose
+/// vectors are that wide.
+static bool sseUpCoerceSizeUnsupported(uint64_t recordBits,
+                                       llvm::ArrayRef<mlir::Type> members,
+                                       const DataLayout &dl) {
+  if (recordBits <= 128 || recordBits > 512 || recordBits == 256 ||
+      recordBits == 512)
+    return false;
+  return llvm::any_of(members,
+                      [&](mlir::Type m) { return mayReachSseUp(m, dl); });
 }
 
 /// Whether a member is an empty record, looking through arrays, since an array
@@ -226,13 +250,21 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
       // classic CodeGen coerces them to i32 and i8 respectively.
       llvm::ArrayRef<mlir::Type> members = recTy.getMembers();
       uint64_t recordBits = dl.getTypeSizeInBits(recTy).getFixedValue();
+      // A size no coerce can be named from is refused outright, since a
+      // spanning member would otherwise carry it past the checks below.
+      if (sseUpCoerceSizeUnsupported(recordBits, members, dl))
+        return false;
       if (members.empty()) {
         // A member-less union is all padding, which classifies Ignore up to two
         // eightbytes.  Past that SysV says MEMORY regardless of content, and
         // there is no member here to build the Indirect coercion from.
         if (recordBits > 128)
           return false;
-      } else {
+      } else if (recordBits <= 128) {
+        // Within two eightbytes the members have to account for the union's
+        // bytes.  Past them it classifies memory, or SSE then SSEUP with the
+        // coerce named from its size, so they do not.
+
         // A declared type may reach past its unit and overshoot the union,
         // which stored bytes never do, hence the inequality.  It counts only
         // within the first eightbyte: past that reduceUnionForX8664 picks the

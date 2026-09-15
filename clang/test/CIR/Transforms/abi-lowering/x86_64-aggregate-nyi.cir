@@ -43,6 +43,27 @@
     !cir.union<"UWideBitUnnamed" {bitfield !cir.bitfield<!cir.array<!u8i x 3>, [#cir.bitfield_decl<!s32i, 24>]>,
                                   empty !cir.bitfield<!u64i, [#cir.bitfield_decl<!s64i, 64, unnamed>]>}>
 !rec_UEmptyNarrow = !cir.union<"UEmptyNarrow" {data !rec_E, data !s16i}, padding = {!cir.array<!u8i x 2>}>
+!rec_SVec = !cir.struct<"SVec" {data !cir.vector<4 x !cir.float>}>
+!rec_UVec384 =
+    !cir.union<"UVec384" {data !cir.vector<4 x !cir.float>, data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 32>}>
+!rec_UVecInArr =
+    !cir.union<"UVecInArr" {data !cir.array<!cir.vector<4 x !cir.float> x 2>,
+                            data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 16>}>
+!rec_UVecInRec =
+    !cir.union<"UVecInRec" {data !rec_SVec, data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 32>}>
+!rec_UQuad384 =
+    !cir.union<"UQuad384" {data !cir.f128, data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 32>}>
+!rec_ULongDouble384 =
+    !cir.union<"ULongDouble384" {data !cir.long_double<!cir.f128>,
+                                 data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 32>}>
+!rec_UQuadPacked =
+    !cir.union<"UQuadPacked" packed {data !cir.f128, data !cir.array<!s8i x 17>},
+               padding = {!u8i}>
 !rec_S1 = !cir.struct<"S1" {data !s16i, data !s16i, data !s16i}>
 !rec_AtomicWrapper = !cir.struct<{data !rec_S1, pad !cir.array<!s8i x 2>}>
 !rec_HoldsAllPad = !cir.struct<"HoldsAllPad" {data !s32i, empty !rec_E}>
@@ -191,6 +212,49 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.union<"UEmptyNarrow"
+
+  // 48 bytes with a vector member, a size no SSEUP coerce can be named from.
+  cir.func @take_vec384_union(%arg0: !rec_UVec384) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UVec384"
+
+  // The same vector, an array away.
+  cir.func @take_vec_in_arr_union(%arg0: !rec_UVecInArr) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UVecInArr"
+
+  // The same vector, a record away.
+  cir.func @take_vec_in_rec_union(%arg0: !rec_UVecInRec) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UVecInRec"
+
+  // An IEEE-quad float reaches SSEUP as well.
+  cir.func @take_quad384_union(%arg0: !rec_UQuad384) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UQuad384"
+
+  // A long double carrying quad semantics is the same float.
+  cir.func @take_long_double384_union(%arg0: !rec_ULongDouble384) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"ULongDouble384"
+
+  // Packed, so 17 bytes, another size no coerce can be named from.  Its
+  // 17-byte member spans the union, so only refusing the size catches it.
+  cir.func @take_quad_packed_union(%arg0: !rec_UQuadPacked) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UQuadPacked"
 
   // A bit-field carries the type its declaration named, so a record whose
   // padding a coercion would have to read through is classified rather than
