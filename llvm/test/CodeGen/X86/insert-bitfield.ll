@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+slow-shld | FileCheck %s --check-prefixes=X64-SLOW
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2 | FileCheck %s --check-prefixes=X64-AVX2
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f,+avx512bw,+avx512vl | FileCheck %s --check-prefixes=X64-AVX512
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vbmi2,+avx512vl | FileCheck %s --check-prefixes=X64-AVX512-BMI2
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vbmi2,+avx512vl | FileCheck %s --check-prefixes=X64-VBMI2
 
 define i64 @insert_10_i64(i64 %a, i64 %b) nounwind {
 ; X64-LABEL: insert_10_i64:
@@ -35,12 +35,12 @@ define i64 @insert_10_i64(i64 %a, i64 %b) nounwind {
 ; X64-AVX512-NEXT:    shrdq $10, %rsi, %rax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_10_i64:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    movq %rdi, %rax
-; X64-AVX512-BMI2-NEXT:    shlq $10, %rax
-; X64-AVX512-BMI2-NEXT:    shrdq $10, %rsi, %rax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_10_i64:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    movq %rdi, %rax
+; X64-VBMI2-NEXT:    shlq $10, %rax
+; X64-VBMI2-NEXT:    shrdq $10, %rsi, %rax
+; X64-VBMI2-NEXT:    retq
   %and = and i64 %a, 18014398509481983
   %shl = shl i64 %b, 54
   %or = or i64 %shl, %and
@@ -77,12 +77,12 @@ define i64 @insert_10_i64_disjoint(i64 %a, i64 %b) nounwind {
 ; X64-AVX512-NEXT:    shrdq $10, %rsi, %rax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_10_i64_disjoint:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    movq %rdi, %rax
-; X64-AVX512-BMI2-NEXT:    shlq $10, %rax
-; X64-AVX512-BMI2-NEXT:    shrdq $10, %rsi, %rax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_10_i64_disjoint:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    movq %rdi, %rax
+; X64-VBMI2-NEXT:    shlq $10, %rax
+; X64-VBMI2-NEXT:    shrdq $10, %rsi, %rax
+; X64-VBMI2-NEXT:    retq
   %and = and i64 %a, 18014398509481983
   %shl = shl i64 %b, 54
   %or = or disjoint i64 %shl, %and
@@ -120,12 +120,12 @@ define i64 @insert_10_i64_commute(i64 %a, i64 %b) nounwind {
 ; X64-AVX512-NEXT:    shrdq $10, %rsi, %rax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_10_i64_commute:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    movq %rdi, %rax
-; X64-AVX512-BMI2-NEXT:    shlq $10, %rax
-; X64-AVX512-BMI2-NEXT:    shrdq $10, %rsi, %rax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_10_i64_commute:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    movq %rdi, %rax
+; X64-VBMI2-NEXT:    shlq $10, %rax
+; X64-VBMI2-NEXT:    shrdq $10, %rsi, %rax
+; X64-VBMI2-NEXT:    retq
   %and = and i64 %a, 18014398509481983
   %shl = shl i64 %b, 54
   %or = or i64 %and, %shl
@@ -161,12 +161,12 @@ define i64 @insert_33_i64(i64 %a, i64 %b) nounwind {
 ; X64-AVX512-NEXT:    shrdq $33, %rsi, %rax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_33_i64:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    movq %rdi, %rax
-; X64-AVX512-BMI2-NEXT:    shlq $33, %rax
-; X64-AVX512-BMI2-NEXT:    shrdq $33, %rsi, %rax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_33_i64:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    movq %rdi, %rax
+; X64-VBMI2-NEXT:    shlq $33, %rax
+; X64-VBMI2-NEXT:    shrdq $33, %rsi, %rax
+; X64-VBMI2-NEXT:    retq
   %and = and i64 %a, 2147483647
   %shl = shl i64 %b, 31
   %or = or i64 %shl, %and
@@ -200,11 +200,11 @@ define i64 @insert_1_i64(i64 %a, i64 %b) nounwind {
 ; X64-AVX512-NEXT:    shrdq $1, %rsi, %rax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_1_i64:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    leaq (%rdi,%rdi), %rax
-; X64-AVX512-BMI2-NEXT:    shrdq $1, %rsi, %rax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_1_i64:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    leaq (%rdi,%rdi), %rax
+; X64-VBMI2-NEXT:    shrdq $1, %rsi, %rax
+; X64-VBMI2-NEXT:    retq
   %and = and i64 %a, 9223372036854775807
   %shl = shl i64 %b, 63
   %or = or i64 %shl, %and
@@ -243,12 +243,12 @@ define i32 @insert_10_i32(i32 %a, i32 %b) nounwind {
 ; X64-AVX512-NEXT:    shrdl $10, %esi, %eax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_10_i32:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    movl %edi, %eax
-; X64-AVX512-BMI2-NEXT:    shll $10, %eax
-; X64-AVX512-BMI2-NEXT:    shrdl $10, %esi, %eax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_10_i32:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    movl %edi, %eax
+; X64-VBMI2-NEXT:    shll $10, %eax
+; X64-VBMI2-NEXT:    shrdl $10, %esi, %eax
+; X64-VBMI2-NEXT:    retq
   %and = and i32 %a, 4194303
   %shl = shl i32 %b, 22
   %or = or i32 %shl, %and
@@ -291,13 +291,13 @@ define i16 @insert_6_i16(i16 %a, i16 %b) nounwind {
 ; X64-AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_6_i16:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    movl %edi, %eax
-; X64-AVX512-BMI2-NEXT:    shll $6, %eax
-; X64-AVX512-BMI2-NEXT:    shrdw $6, %si, %ax
-; X64-AVX512-BMI2-NEXT:    # kill: def $ax killed $ax killed $eax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_6_i16:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    movl %edi, %eax
+; X64-VBMI2-NEXT:    shll $6, %eax
+; X64-VBMI2-NEXT:    shrdw $6, %si, %ax
+; X64-VBMI2-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-VBMI2-NEXT:    retq
   %and = and i16 %a, 1023
   %shl = shl i16 %b, 10
   %or = or i16 %shl, %and
@@ -346,15 +346,15 @@ define i8 @insert_3_i8(i8 %a, i8 %b) nounwind {
 ; X64-AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_3_i8:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-AVX512-BMI2-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-AVX512-BMI2-NEXT:    shlb $5, %sil
-; X64-AVX512-BMI2-NEXT:    andb $31, %dil
-; X64-AVX512-BMI2-NEXT:    leal (%rdi,%rsi), %eax
-; X64-AVX512-BMI2-NEXT:    # kill: def $al killed $al killed $eax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_3_i8:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-VBMI2-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-VBMI2-NEXT:    shlb $5, %sil
+; X64-VBMI2-NEXT:    andb $31, %dil
+; X64-VBMI2-NEXT:    leal (%rdi,%rsi), %eax
+; X64-VBMI2-NEXT:    # kill: def $al killed $al killed $eax
+; X64-VBMI2-NEXT:    retq
   %and = and i8 %a, 31
   %shl = shl i8 %b, 5
   %or = or i8 %shl, %and
@@ -396,13 +396,13 @@ define i64 @mask_shift_mismatch(i64 %a, i64 %b) nounwind {
 ; X64-AVX512-NEXT:    orq %rsi, %rax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: mask_shift_mismatch:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    movabsq $18014398509481983, %rax # imm = 0x3FFFFFFFFFFFFF
-; X64-AVX512-BMI2-NEXT:    andq %rdi, %rax
-; X64-AVX512-BMI2-NEXT:    shlq $55, %rsi
-; X64-AVX512-BMI2-NEXT:    orq %rsi, %rax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: mask_shift_mismatch:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    movabsq $18014398509481983, %rax # imm = 0x3FFFFFFFFFFFFF
+; X64-VBMI2-NEXT:    andq %rdi, %rax
+; X64-VBMI2-NEXT:    shlq $55, %rsi
+; X64-VBMI2-NEXT:    orq %rsi, %rax
+; X64-VBMI2-NEXT:    retq
   %and = and i64 %a, 18014398509481983
   %shl = shl i64 %b, 55
   %or = or i64 %shl, %and
@@ -444,13 +444,13 @@ define i64 @mask_too_wide(i64 %a, i64 %b) nounwind {
 ; X64-AVX512-NEXT:    orq %rsi, %rax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: mask_too_wide:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    movabsq $36028797018963967, %rax # imm = 0x7FFFFFFFFFFFFF
-; X64-AVX512-BMI2-NEXT:    andq %rdi, %rax
-; X64-AVX512-BMI2-NEXT:    shlq $54, %rsi
-; X64-AVX512-BMI2-NEXT:    orq %rsi, %rax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: mask_too_wide:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    movabsq $36028797018963967, %rax # imm = 0x7FFFFFFFFFFFFF
+; X64-VBMI2-NEXT:    andq %rdi, %rax
+; X64-VBMI2-NEXT:    shlq $54, %rsi
+; X64-VBMI2-NEXT:    orq %rsi, %rax
+; X64-VBMI2-NEXT:    retq
   %and = and i64 %a, 36028797018963967
   %shl = shl i64 %b, 54
   %or = or i64 %shl, %and
@@ -496,14 +496,14 @@ define i64 @multi_use_and(i64 %a, i64 %b, ptr %p) nounwind {
 ; X64-AVX512-NEXT:    orq %rsi, %rax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: multi_use_and:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    movabsq $18014398509481983, %rax # imm = 0x3FFFFFFFFFFFFF
-; X64-AVX512-BMI2-NEXT:    andq %rdi, %rax
-; X64-AVX512-BMI2-NEXT:    movq %rax, (%rdx)
-; X64-AVX512-BMI2-NEXT:    shlq $54, %rsi
-; X64-AVX512-BMI2-NEXT:    orq %rsi, %rax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: multi_use_and:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    movabsq $18014398509481983, %rax # imm = 0x3FFFFFFFFFFFFF
+; X64-VBMI2-NEXT:    andq %rdi, %rax
+; X64-VBMI2-NEXT:    movq %rax, (%rdx)
+; X64-VBMI2-NEXT:    shlq $54, %rsi
+; X64-VBMI2-NEXT:    orq %rsi, %rax
+; X64-VBMI2-NEXT:    retq
   %and = and i64 %a, 18014398509481983
   store i64 %and, ptr %p
   %shl = shl i64 %b, 54
@@ -549,14 +549,14 @@ define i64 @multi_use_shl(i64 %a, i64 %b, ptr %p) nounwind {
 ; X64-AVX512-NEXT:    orq %rsi, %rax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: multi_use_shl:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    movabsq $18014398509481983, %rax # imm = 0x3FFFFFFFFFFFFF
-; X64-AVX512-BMI2-NEXT:    andq %rdi, %rax
-; X64-AVX512-BMI2-NEXT:    shlq $54, %rsi
-; X64-AVX512-BMI2-NEXT:    movq %rsi, (%rdx)
-; X64-AVX512-BMI2-NEXT:    orq %rsi, %rax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: multi_use_shl:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    movabsq $18014398509481983, %rax # imm = 0x3FFFFFFFFFFFFF
+; X64-VBMI2-NEXT:    andq %rdi, %rax
+; X64-VBMI2-NEXT:    shlq $54, %rsi
+; X64-VBMI2-NEXT:    movq %rsi, (%rdx)
+; X64-VBMI2-NEXT:    orq %rsi, %rax
+; X64-VBMI2-NEXT:    retq
   %and = and i64 %a, 18014398509481983
   %shl = shl i64 %b, 54
   store i64 %shl, ptr %p
@@ -594,12 +594,12 @@ define i64 @insert_10_i64_optsize(i64 %a, i64 %b) nounwind optsize {
 ; X64-AVX512-NEXT:    shrdq $10, %rsi, %rax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_10_i64_optsize:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    movq %rdi, %rax
-; X64-AVX512-BMI2-NEXT:    shlq $10, %rax
-; X64-AVX512-BMI2-NEXT:    shrdq $10, %rsi, %rax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_10_i64_optsize:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    movq %rdi, %rax
+; X64-VBMI2-NEXT:    shlq $10, %rax
+; X64-VBMI2-NEXT:    shrdq $10, %rsi, %rax
+; X64-VBMI2-NEXT:    retq
   %and = and i64 %a, 18014398509481983
   %shl = shl i64 %b, 54
   %or = or i64 %shl, %and
@@ -635,12 +635,12 @@ define i64 @insert_10_i64_minsize(i64 %a, i64 %b) nounwind minsize {
 ; X64-AVX512-NEXT:    shrdq $10, %rsi, %rax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_10_i64_minsize:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    movq %rdi, %rax
-; X64-AVX512-BMI2-NEXT:    shlq $10, %rax
-; X64-AVX512-BMI2-NEXT:    shrdq $10, %rsi, %rax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_10_i64_minsize:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    movq %rdi, %rax
+; X64-VBMI2-NEXT:    shlq $10, %rax
+; X64-VBMI2-NEXT:    shrdq $10, %rsi, %rax
+; X64-VBMI2-NEXT:    retq
   %and = and i64 %a, 18014398509481983
   %shl = shl i64 %b, 54
   %or = or i64 %shl, %and
@@ -678,12 +678,12 @@ define i64 @insert_10_i64_load(ptr %p, i64 %b) nounwind {
 ; X64-AVX512-NEXT:    shrdq $10, %rsi, %rax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_10_i64_load:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    movq (%rdi), %rax
-; X64-AVX512-BMI2-NEXT:    shlq $10, %rax
-; X64-AVX512-BMI2-NEXT:    shrdq $10, %rsi, %rax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_10_i64_load:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    movq (%rdi), %rax
+; X64-VBMI2-NEXT:    shlq $10, %rax
+; X64-VBMI2-NEXT:    shrdq $10, %rsi, %rax
+; X64-VBMI2-NEXT:    retq
   %a = load i64, ptr %p
   %and = and i64 %a, 18014398509481983
   %shl = shl i64 %b, 54
@@ -722,12 +722,12 @@ define i64 @insert_10_i64_intrinsic(i64 %a, i64 %b) nounwind {
 ; X64-AVX512-NEXT:    shrdq $10, %rsi, %rax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_10_i64_intrinsic:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    movq %rdi, %rax
-; X64-AVX512-BMI2-NEXT:    shlq $10, %rax
-; X64-AVX512-BMI2-NEXT:    shrdq $10, %rsi, %rax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_10_i64_intrinsic:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    movq %rdi, %rax
+; X64-VBMI2-NEXT:    shlq $10, %rax
+; X64-VBMI2-NEXT:    shrdq $10, %rsi, %rax
+; X64-VBMI2-NEXT:    retq
   %ashift = shl i64 %a, 10
   %res = call i64 @llvm.fshr.i64(i64 %b, i64 %ashift, i64 10)
   ret i64 %res
@@ -764,12 +764,12 @@ define i32 @insert_5_i32_intrinsic(i32 %a, i32 %b) nounwind {
 ; X64-AVX512-NEXT:    shrdl $5, %esi, %eax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_5_i32_intrinsic:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    movl %edi, %eax
-; X64-AVX512-BMI2-NEXT:    shll $5, %eax
-; X64-AVX512-BMI2-NEXT:    shrdl $5, %esi, %eax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_5_i32_intrinsic:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    movl %edi, %eax
+; X64-VBMI2-NEXT:    shll $5, %eax
+; X64-VBMI2-NEXT:    shrdl $5, %esi, %eax
+; X64-VBMI2-NEXT:    retq
   %ashift = shl i32 %a, 5
   %res = call i32 @llvm.fshr.i32(i32 %b, i32 %ashift, i32 5)
   ret i32 %res
@@ -810,13 +810,13 @@ define i16 @insert_3_i16_intrinsic(i16 %a, i16 %b) nounwind {
 ; X64-AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_3_i16_intrinsic:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    movl %edi, %eax
-; X64-AVX512-BMI2-NEXT:    shll $3, %eax
-; X64-AVX512-BMI2-NEXT:    shrdw $3, %si, %ax
-; X64-AVX512-BMI2-NEXT:    # kill: def $ax killed $ax killed $eax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_3_i16_intrinsic:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    movl %edi, %eax
+; X64-VBMI2-NEXT:    shll $3, %eax
+; X64-VBMI2-NEXT:    shrdw $3, %si, %ax
+; X64-VBMI2-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-VBMI2-NEXT:    retq
   %ashift = shl i16 %a, 3
   %res = call i16 @llvm.fshr.i16(i16 %b, i16 %ashift, i16 3)
   ret i16 %res
@@ -863,15 +863,15 @@ define i8 @insert_2_i8_intrinsic(i8 %a, i8 %b) nounwind {
 ; X64-AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_2_i8_intrinsic:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-AVX512-BMI2-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-AVX512-BMI2-NEXT:    shlb $6, %sil
-; X64-AVX512-BMI2-NEXT:    andb $63, %dil
-; X64-AVX512-BMI2-NEXT:    leal (%rdi,%rsi), %eax
-; X64-AVX512-BMI2-NEXT:    # kill: def $al killed $al killed $eax
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_2_i8_intrinsic:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-VBMI2-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-VBMI2-NEXT:    shlb $6, %sil
+; X64-VBMI2-NEXT:    andb $63, %dil
+; X64-VBMI2-NEXT:    leal (%rdi,%rsi), %eax
+; X64-VBMI2-NEXT:    # kill: def $al killed $al killed $eax
+; X64-VBMI2-NEXT:    retq
   %ashift = shl i8 %a, 2
   %res = call i8 @llvm.fshr.i8(i8 %b, i8 %ashift, i8 2)
   ret i8 %res
@@ -913,11 +913,11 @@ define <2 x i64> @insert_10_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; X64-AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_10_v2i64:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    vpsllq $10, %xmm0, %xmm0
-; X64-AVX512-BMI2-NEXT:    vpshrdq $10, %xmm1, %xmm0, %xmm0
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_10_v2i64:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    vpsllq $10, %xmm0, %xmm0
+; X64-VBMI2-NEXT:    vpshrdq $10, %xmm1, %xmm0, %xmm0
+; X64-VBMI2-NEXT:    retq
   %and = and <2 x i64> %a, <i64 18014398509481983, i64 18014398509481983>
   %shl = shl <2 x i64> %b, <i64 54, i64 54>
   %or = or <2 x i64> %shl, %and
@@ -965,11 +965,11 @@ define <4 x i64> @insert_10_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; X64-AVX512-NEXT:    vpor %ymm0, %ymm1, %ymm0
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_10_v4i64:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    vpsllq $10, %ymm0, %ymm0
-; X64-AVX512-BMI2-NEXT:    vpshrdq $10, %ymm1, %ymm0, %ymm0
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_10_v4i64:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    vpsllq $10, %ymm0, %ymm0
+; X64-VBMI2-NEXT:    vpshrdq $10, %ymm1, %ymm0, %ymm0
+; X64-VBMI2-NEXT:    retq
   %and = and <4 x i64> %a, <i64 18014398509481983, i64 18014398509481983, i64 18014398509481983, i64 18014398509481983>
   %shl = shl <4 x i64> %b, <i64 54, i64 54, i64 54, i64 54>
   %or = or <4 x i64> %shl, %and
@@ -1037,11 +1037,11 @@ define <8 x i64> @insert_10_v8i64(<8 x i64> %a, <8 x i64> %b) nounwind {
 ; X64-AVX512-NEXT:    vporq %zmm0, %zmm1, %zmm0
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_10_v8i64:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    vpsllq $10, %zmm0, %zmm0
-; X64-AVX512-BMI2-NEXT:    vpshrdq $10, %zmm1, %zmm0, %zmm0
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_10_v8i64:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    vpsllq $10, %zmm0, %zmm0
+; X64-VBMI2-NEXT:    vpshrdq $10, %zmm1, %zmm0, %zmm0
+; X64-VBMI2-NEXT:    retq
   %and = and <8 x i64> %a, <i64 18014398509481983, i64 18014398509481983, i64 18014398509481983, i64 18014398509481983, i64 18014398509481983, i64 18014398509481983, i64 18014398509481983, i64 18014398509481983>
   %shl = shl <8 x i64> %b, <i64 54, i64 54, i64 54, i64 54, i64 54, i64 54, i64 54, i64 54>
   %or = or <8 x i64> %shl, %and
@@ -1083,11 +1083,11 @@ define <4 x i32> @insert_5_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; X64-AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_5_v4i32:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    vpslld $5, %xmm0, %xmm0
-; X64-AVX512-BMI2-NEXT:    vpshrdd $5, %xmm1, %xmm0, %xmm0
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_5_v4i32:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    vpslld $5, %xmm0, %xmm0
+; X64-VBMI2-NEXT:    vpshrdd $5, %xmm1, %xmm0, %xmm0
+; X64-VBMI2-NEXT:    retq
   %and = and <4 x i32> %a, <i32 134217727, i32 134217727, i32 134217727, i32 134217727>
   %shl = shl <4 x i32> %b, <i32 27, i32 27, i32 27, i32 27>
   %or = or <4 x i32> %shl, %and
@@ -1135,11 +1135,11 @@ define <8 x i32> @insert_5_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 ; X64-AVX512-NEXT:    vpor %ymm0, %ymm1, %ymm0
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_5_v8i32:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    vpslld $5, %ymm0, %ymm0
-; X64-AVX512-BMI2-NEXT:    vpshrdd $5, %ymm1, %ymm0, %ymm0
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_5_v8i32:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    vpslld $5, %ymm0, %ymm0
+; X64-VBMI2-NEXT:    vpshrdd $5, %ymm1, %ymm0, %ymm0
+; X64-VBMI2-NEXT:    retq
   %and = and <8 x i32> %a, <i32 134217727, i32 134217727, i32 134217727, i32 134217727, i32 134217727, i32 134217727, i32 134217727, i32 134217727>
   %shl = shl <8 x i32> %b, <i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27>
   %or = or <8 x i32> %shl, %and
@@ -1207,11 +1207,11 @@ define <16 x i32> @insert_5_v16i32(<16 x i32> %a, <16 x i32> %b) nounwind {
 ; X64-AVX512-NEXT:    vpord %zmm0, %zmm1, %zmm0
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_5_v16i32:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    vpslld $5, %zmm0, %zmm0
-; X64-AVX512-BMI2-NEXT:    vpshrdd $5, %zmm1, %zmm0, %zmm0
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_5_v16i32:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    vpslld $5, %zmm0, %zmm0
+; X64-VBMI2-NEXT:    vpshrdd $5, %zmm1, %zmm0, %zmm0
+; X64-VBMI2-NEXT:    retq
   %and = and <16 x i32> %a, <i32 134217727, i32 134217727, i32 134217727, i32 134217727, i32 134217727, i32 134217727, i32 134217727, i32 134217727, i32 134217727, i32 134217727, i32 134217727, i32 134217727, i32 134217727, i32 134217727, i32 134217727, i32 134217727>
   %shl = shl <16 x i32> %b, <i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27, i32 27>
   %or = or <16 x i32> %shl, %and
@@ -1253,11 +1253,11 @@ define <8 x i16> @insert_3_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; X64-AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_3_v8i16:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    vpsllw $3, %xmm0, %xmm0
-; X64-AVX512-BMI2-NEXT:    vpshrdw $3, %xmm1, %xmm0, %xmm0
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_3_v8i16:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    vpsllw $3, %xmm0, %xmm0
+; X64-VBMI2-NEXT:    vpshrdw $3, %xmm1, %xmm0, %xmm0
+; X64-VBMI2-NEXT:    retq
   %and = and <8 x i16> %a, <i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191>
   %shl = shl <8 x i16> %b, <i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13>
   %or = or <8 x i16> %shl, %and
@@ -1305,11 +1305,11 @@ define <16 x i16> @insert_3_v16i16(<16 x i16> %a, <16 x i16> %b) nounwind {
 ; X64-AVX512-NEXT:    vpor %ymm0, %ymm1, %ymm0
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_3_v16i16:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    vpsllw $3, %ymm0, %ymm0
-; X64-AVX512-BMI2-NEXT:    vpshrdw $3, %ymm1, %ymm0, %ymm0
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_3_v16i16:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    vpsllw $3, %ymm0, %ymm0
+; X64-VBMI2-NEXT:    vpshrdw $3, %ymm1, %ymm0, %ymm0
+; X64-VBMI2-NEXT:    retq
   %and = and <16 x i16> %a, <i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191>
   %shl = shl <16 x i16> %b, <i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13>
   %or = or <16 x i16> %shl, %and
@@ -1377,11 +1377,11 @@ define <32 x i16> @insert_3_v32i16(<32 x i16> %a, <32 x i16> %b) nounwind {
 ; X64-AVX512-NEXT:    vporq %zmm0, %zmm1, %zmm0
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_3_v32i16:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    vpsllw $3, %zmm0, %zmm0
-; X64-AVX512-BMI2-NEXT:    vpshrdw $3, %zmm1, %zmm0, %zmm0
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_3_v32i16:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    vpsllw $3, %zmm0, %zmm0
+; X64-VBMI2-NEXT:    vpshrdw $3, %zmm1, %zmm0, %zmm0
+; X64-VBMI2-NEXT:    retq
   %and = and <32 x i16> %a, <i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191, i16 8191>
   %shl = shl <32 x i16> %b, <i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13, i16 13>
   %or = or <32 x i16> %shl, %and
@@ -1430,14 +1430,14 @@ define <16 x i8> @insert_2_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; X64-AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 ^ (m32bcst & (xmm0 ^ xmm1))
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_2_v16i8:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    vpsllw $6, %xmm1, %xmm1
-; X64-AVX512-BMI2-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
-; X64-AVX512-BMI2-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
-; X64-AVX512-BMI2-NEXT:    vpsrlw $2, %xmm0, %xmm0
-; X64-AVX512-BMI2-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 ^ (m32bcst & (xmm0 ^ xmm1))
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_2_v16i8:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    vpsllw $6, %xmm1, %xmm1
+; X64-VBMI2-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
+; X64-VBMI2-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
+; X64-VBMI2-NEXT:    vpsrlw $2, %xmm0, %xmm0
+; X64-VBMI2-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 ^ (m32bcst & (xmm0 ^ xmm1))
+; X64-VBMI2-NEXT:    retq
   %and = and <16 x i8> %a, <i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63>
   %shl = shl <16 x i8> %b, <i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6>
   %or = or <16 x i8> %shl, %and
@@ -1498,14 +1498,14 @@ define <32 x i8> @insert_2_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; X64-AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_2_v32i8:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    vpsllw $6, %ymm1, %ymm1
-; X64-AVX512-BMI2-NEXT:    vpaddb %ymm0, %ymm0, %ymm0
-; X64-AVX512-BMI2-NEXT:    vpaddb %ymm0, %ymm0, %ymm0
-; X64-AVX512-BMI2-NEXT:    vpsrlw $2, %ymm0, %ymm0
-; X64-AVX512-BMI2-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_2_v32i8:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    vpsllw $6, %ymm1, %ymm1
+; X64-VBMI2-NEXT:    vpaddb %ymm0, %ymm0, %ymm0
+; X64-VBMI2-NEXT:    vpaddb %ymm0, %ymm0, %ymm0
+; X64-VBMI2-NEXT:    vpsrlw $2, %ymm0, %ymm0
+; X64-VBMI2-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
+; X64-VBMI2-NEXT:    retq
   %and = and <32 x i8> %a, <i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63>
   %shl = shl <32 x i8> %b, <i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6>
   %or = or <32 x i8> %shl, %and
@@ -1597,14 +1597,14 @@ define <64 x i8> @insert_2_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; X64-AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ (m32bcst & (zmm0 ^ zmm1))
 ; X64-AVX512-NEXT:    retq
 ;
-; X64-AVX512-BMI2-LABEL: insert_2_v64i8:
-; X64-AVX512-BMI2:       # %bb.0:
-; X64-AVX512-BMI2-NEXT:    vpsllw $6, %zmm1, %zmm1
-; X64-AVX512-BMI2-NEXT:    vpaddb %zmm0, %zmm0, %zmm0
-; X64-AVX512-BMI2-NEXT:    vpaddb %zmm0, %zmm0, %zmm0
-; X64-AVX512-BMI2-NEXT:    vpsrlw $2, %zmm0, %zmm0
-; X64-AVX512-BMI2-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ (m32bcst & (zmm0 ^ zmm1))
-; X64-AVX512-BMI2-NEXT:    retq
+; X64-VBMI2-LABEL: insert_2_v64i8:
+; X64-VBMI2:       # %bb.0:
+; X64-VBMI2-NEXT:    vpsllw $6, %zmm1, %zmm1
+; X64-VBMI2-NEXT:    vpaddb %zmm0, %zmm0, %zmm0
+; X64-VBMI2-NEXT:    vpaddb %zmm0, %zmm0, %zmm0
+; X64-VBMI2-NEXT:    vpsrlw $2, %zmm0, %zmm0
+; X64-VBMI2-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ (m32bcst & (zmm0 ^ zmm1))
+; X64-VBMI2-NEXT:    retq
   %and = and <64 x i8> %a, <i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63, i8 63>
   %shl = shl <64 x i8> %b, <i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6>
   %or = or <64 x i8> %shl, %and
