@@ -20,6 +20,7 @@
 #include "Utils/AArch64BaseInfo.h"
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Core/BinarySection.h"
 #include "bolt/Core/MCInstUtils.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -705,6 +706,9 @@ public:
 
   bool
   isSafeJumpTableBranchForPtrAuth(MCInstReference BranchInst) const override {
+    const BinaryFunction *BF = BranchInst.getFunction();
+    const BinaryContext &BC = BF->getBinaryContext();
+
     MCInstReference CurRef = BranchInst;
     auto StepBack = [&]() {
       do {
@@ -717,7 +721,9 @@ public:
       return true;
     };
 
-    // Match this contiguous sequence:
+    // Match this contiguous sequence, stepping from its last instruction
+    // to the first one:
+    //
     //    cmp   Xm, #count
     //    csel  Xm, Xm, xzr, ls
     //    adrp  Xn, .LJTIxyz
@@ -728,10 +734,10 @@ public:
     //    add   Xm, Xn, Xm
     //    br    Xm
 
-    // FIXME: Check label operands of ADR/ADRP+ADD and #count operand of CMP.
-
     using namespace LowLevelInstMatcherDSL;
+    Imm CountBase, CountExp;
     Reg Xm, Xn;
+    Symbol LJTI;
 
     if (!matchInst(CurRef, AArch64::BR, Xm) || !StepBack())
       return false;
@@ -739,6 +745,8 @@ public:
     if (!matchInst(CurRef, AArch64::ADDXrs, Xm, Xn, Xm, Imm(0)) || !StepBack())
       return false;
 
+    // The base address is not validated for now, neither are the offsets
+    // **contained** in the jump table.
     if (!matchInst(CurRef, AArch64::ADR, Xn /*, .Ltmp*/) || !StepBack())
       return false;
 
@@ -746,16 +754,19 @@ public:
         !StepBack())
       return false;
 
-    if (matchInst(CurRef, AArch64::ADR, Xn /*, .LJTIxyz*/)) {
+    if (matchInst(CurRef, AArch64::ADR, Xn, LJTI.withSpec(AArch64::S_ABS))) {
       if (!StepBack())
         return false;
       if (!matchInst(CurRef, AArch64::NOP) || !StepBack())
         return false;
-    } else if (matchInst(CurRef, AArch64::ADDXri, Xn,
-                         Xn /*, :lo12:.LJTIxyz*/)) {
+    } else if (matchInst(CurRef, AArch64::ADDXri, Xn, Xn,
+                         LJTI.withSpec(AArch64::S_LO12))) {
       if (!StepBack())
         return false;
-      if (!matchInst(CurRef, AArch64::ADRP, Xn /*, .LJTIxyz*/) || !StepBack())
+
+      if (!matchInst(CurRef, AArch64::ADRP, Xn,
+                     LJTI.withSpec(AArch64::S_ABS_PAGE)) ||
+          !StepBack())
         return false;
     } else {
       return false;
@@ -766,8 +777,21 @@ public:
         !StepBack())
       return false;
 
-    if (!matchInst(CurRef, AArch64::SUBSXri, Reg(AArch64::XZR),
-                   Xm /*, #count*/))
+    if (!matchInst(CurRef, AArch64::SUBSXri, Reg(AArch64::XZR), Xm, CountBase,
+                   CountExp))
+      return false;
+
+    // Make sure the jump table is located inside a read-only section.
+
+    uint64_t JumpTableSize = 4 * (CountBase.get() << CountExp.get());
+    ErrorOr<uint64_t> JumpTableAddress = BC.getSymbolValue(*LJTI.get());
+    // For now, conservatively reject symbols with non-zero offsets.
+    if (!JumpTableAddress || LJTI.get()->getOffset() != 0)
+      return false;
+    auto BinarySection = BC.getSectionForAddress(*JumpTableAddress);
+
+    if (!BinarySection || BinarySection->isWritable() ||
+        !BinarySection->containsAddress(*JumpTableAddress + JumpTableSize - 1))
       return false;
 
     // Some platforms treat X16 and X17 as more protected registers, others
