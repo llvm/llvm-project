@@ -4,9 +4,7 @@
 define i8 @test() {
 ; CHECK-LABEL: define i8 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i12 @llvm.ctpop.i12(i12 256)
-; CHECK-NEXT:    [[OP_RDX:%.*]] = trunc i12 [[TMP0]] to i8
-; CHECK-NEXT:    ret i8 [[OP_RDX]]
+; CHECK-NEXT:    ret i8 1
 ;
 entry:
   %inc.1.i.i = zext i1 false to i8

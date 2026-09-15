@@ -35,9 +35,7 @@ SlotIndexesPrinterPass::run(MachineFunction &MF,
 }
 char SlotIndexesWrapperPass::ID = 0;
 
-SlotIndexesWrapperPass::SlotIndexesWrapperPass() : MachineFunctionPass(ID) {
-  initializeSlotIndexesWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+SlotIndexesWrapperPass::SlotIndexesWrapperPass() : MachineFunctionPass(ID) {}
 
 SlotIndexes::~SlotIndexes() {
   // The indexList's nodes are all allocated in the BumpPtrAllocator.
@@ -87,7 +85,7 @@ void SlotIndexes::analyze(MachineFunction &fn) {
          "MachineInstr -> Index mapping non-empty at initial numbering?");
 
   unsigned index = 0;
-  MBBRanges.resize(mf->getNumBlockIDs());
+  MBBRanges.resize(mf->getMaxAnalysisBlockNumber());
   idx2MBBMap.reserve(mf->size());
 
   indexList.push_back(*createEntry(nullptr, index));
@@ -112,9 +110,9 @@ void SlotIndexes::analyze(MachineFunction &fn) {
     // We insert one blank instructions between basic blocks.
     indexList.push_back(*createEntry(nullptr, index += SlotIndex::InstrDist));
 
-    MBBRanges[MBB.getNumber()].first = blockStartIndex;
-    MBBRanges[MBB.getNumber()].second = SlotIndex(&indexList.back(),
-                                                   SlotIndex::Slot_Block);
+    MBBRanges[MBB.getAnalysisNumber()].first = blockStartIndex;
+    MBBRanges[MBB.getAnalysisNumber()].second =
+        SlotIndex(&indexList.back(), SlotIndex::Slot_Block);
     idx2MBBMap.push_back(IdxMBBPair(blockStartIndex, &MBB));
   }
 
@@ -176,6 +174,7 @@ void SlotIndexes::renumberIndexes(IndexList::iterator curItr) {
 
   IndexList::iterator startItr = std::prev(curItr);
   unsigned index = startItr->getIndex();
+  unsigned BeginIndex = index;
   do {
     curItr->setIndex(index += Space);
     ++curItr;
@@ -184,6 +183,14 @@ void SlotIndexes::renumberIndexes(IndexList::iterator curItr) {
 
   LLVM_DEBUG(dbgs() << "\n*** Renumbered SlotIndexes " << startItr->getIndex()
                     << '-' << index << " ***\n");
+
+  // If we repack more than 20% of a function, add spacing in between the
+  // instructions so that future renumberings are able to catch up
+  // without also renumbering so much.
+  if (index - BeginIndex >
+      (getLastIndex().getIndex() - getZeroIndex().getIndex()) / 5)
+    packIndexes();
+
   ++NumLocalRenum;
 }
 
@@ -273,9 +280,9 @@ void SlotIndexes::print(raw_ostream &OS) const {
       OS << '\n';
   }
 
-  for (unsigned i = 0, e = MBBRanges.size(); i != e; ++i)
-    OS << "%bb." << i << "\t[" << MBBRanges[i].first << ';'
-       << MBBRanges[i].second << ")\n";
+  for (const MachineBasicBlock &MBB : *mf)
+    OS << printMBBReference(MBB) << "\t[" << getMBBStartIdx(&MBB) << ';'
+       << getMBBEndIdx(&MBB) << ")\n";
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

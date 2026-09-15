@@ -1,6 +1,10 @@
-// RUN: %clang %cflags -o %t %s
+// RUN: %clang %cflags64 -o %t %s
 // RUN: llvm-bolt -o %t.bolt %t
 // RUN: llvm-readelf -x .data %t.bolt | FileCheck %s
+// RUN: llvm-mc -triple riscv32 -filetype=obj -o %t.rv32.o %s
+// RUN: ld.lld -q -o %t.rv32 %t.rv32.o
+// RUN: llvm-bolt -o %t.rv32.bolt %t.rv32
+// RUN: llvm-readelf -x .data %t.rv32.bolt | FileCheck %s
 
   .text
   .option norvc
@@ -12,7 +16,7 @@ _start:
   // BOLT removes this nop so the label difference is initially 8 but should be
   // 4 after BOLT processes it.
   nop
-  beq x0, x0, _test_end
+  li x0, _test_end-.
 _test_end:
   ret
   .size _start, .-_start

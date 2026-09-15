@@ -213,6 +213,9 @@ void UnwindInfoSectionImpl::prepare() {
         // to avoid overflowing the 3-personality limit.
         FDE &fde = cast<ObjFile>(d->getFile())->fdes[d->unwindEntry()];
         fde.personality = canonicalizePersonality(fde.personality);
+        // If ICF folded the LSDA, point at the surviving copy.
+        if (fde.lsda)
+          fde.lsda = fde.lsda->canonical();
       }
     }
 }
@@ -232,7 +235,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
   // that are referenced from many places, at least some of them likely
   // live, it wouldn't reduce number of got entries.
   for (size_t i = 0; i < isec->relocs.size(); ++i) {
-    Reloc &r = isec->relocs[i];
+    Relocation &r = isec->relocs[i];
     assert(target->hasAttr(r.type, RelocAttrBits::UNSIGNED));
     // Since compact unwind sections aren't part of the inputSections vector,
     // they don't get canonicalized by scanRelocations(), so we have to do the
@@ -386,7 +389,7 @@ void UnwindInfoSectionImpl::relocateCompactUnwind(
     cu.functionLength =
         support::endian::read32le(buf + cuLayout.functionLengthOffset);
     cu.encoding = support::endian::read32le(buf + cuLayout.encodingOffset);
-    for (const Reloc &r : d->unwindEntry()->relocs) {
+    for (const Relocation &r : d->unwindEntry()->relocs) {
       if (r.offset == cuLayout.personalityOffset)
         cu.personality = cast<Symbol *>(r.referent);
       else if (r.offset == cuLayout.lsdaOffset)

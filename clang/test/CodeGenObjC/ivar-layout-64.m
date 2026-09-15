@@ -34,8 +34,8 @@ __weak B *f2;
 @end
 
 // CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"C\00"
-// CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"\11p\00"
-// CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"!`\00"
+// CHECK: @OBJC_LAYOUT_BITMAP_{{.*}} = private unnamed_addr constant {{.*}} c"\11p\00"
+// CHECK: @OBJC_LAYOUT_BITMAP_{{.*}} = private unnamed_addr constant {{.*}} c"!`\00"
 
 
 @implementation C
@@ -49,8 +49,8 @@ __weak B *f2;
 @end
 
 // CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"A\00"
-// CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"\11q\10\00"
-// CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"!q\00"
+// CHECK: @OBJC_LAYOUT_BITMAP_{{.*}} = private unnamed_addr constant {{.*}} c"\11q\10\00"
+// CHECK: @OBJC_LAYOUT_BITMAP_{{.*}} = private unnamed_addr constant {{.*}} c"!q\00"
 
 @implementation A
 @synthesize p0 = _p0;
@@ -63,8 +63,8 @@ __weak B *f2;
 @end
 
 // CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"D\00"
-// CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"\11\A0\00"
-// CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"!\90\00"
+// CHECK: @OBJC_LAYOUT_BITMAP_{{.*}} = private unnamed_addr constant {{.*}} c"\11\A0\00"
+// CHECK: @OBJC_LAYOUT_BITMAP_{{.*}} = private unnamed_addr constant {{.*}} c"!\90\00"
 
 @implementation D
 @synthesize p3 = _p3;
@@ -90,7 +90,7 @@ typedef unsigned int FSCatalogInfoBitmap;
 @end
 
 // CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"NSFileLocationComponent\00"
-// CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"\01\14\00"
+// CHECK: @OBJC_LAYOUT_BITMAP_{{.*}} = private unnamed_addr constant {{.*}} c"\01\14\00"
 
 @implementation NSFileLocationComponent @end
 
@@ -109,7 +109,7 @@ typedef unsigned int FSCatalogInfoBitmap;
 @end
 
 // CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"Foo\00"
-// CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"\02\10\00"
+// CHECK: @OBJC_LAYOUT_BITMAP_{{.*}} = private unnamed_addr constant {{.*}} c"\02\10\00"
 
 @implementation Foo @end
 
@@ -125,7 +125,7 @@ struct __attribute__((packed)) PackedStruct {
 @end
 @implementation Packed @end
 // CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"Packed\00"
-// CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"\01 \00"
+// CHECK: @OBJC_LAYOUT_BITMAP_{{.*}} = private unnamed_addr constant {{.*}} c"\01 \00"
 //  ' ' == 0x20
 
 // Ensure that layout descends into anonymous unions and structs.
@@ -143,7 +143,7 @@ struct __attribute__((packed)) PackedStruct {
 @end
 @implementation AnonymousUnion @end
 // CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"AnonymousUnion\00"
-// CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"\02\00"
+// CHECK: @OBJC_LAYOUT_BITMAP_{{.*}} = private unnamed_addr constant {{.*}} c"\02\00"
 
 @interface AnonymousStruct : NSObject {
   struct {
@@ -156,6 +156,6 @@ struct __attribute__((packed)) PackedStruct {
 @end
 @implementation AnonymousStruct @end
 // CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"AnonymousStruct\00"
-// CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"\02\10\00"
-// CHECK: @OBJC_CLASS_NAME_{{.*}} = private unnamed_addr constant {{.*}} c"!\00"
+// CHECK: @OBJC_LAYOUT_BITMAP_{{.*}} = private unnamed_addr constant {{.*}} c"\02\10\00"
+// CHECK: @OBJC_LAYOUT_BITMAP_{{.*}} = private unnamed_addr constant {{.*}} c"!\00"
 //  '!' == 0x21

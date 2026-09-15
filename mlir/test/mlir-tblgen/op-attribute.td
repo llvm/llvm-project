@@ -163,7 +163,7 @@ def AOp : NS_Op<"a_op", []> {
 
 // DEF:      void AOp::build(
 // DEF:        ::llvm::ArrayRef<::mlir::NamedAttribute> attributes
-// DEF:      odsState.addAttributes(attributes);
+// DEF:      buildPropertiesAndDiscardableAttributes(odsState, attributes);
 
 // DEF:      void AOp::build(
 // DEF-SAME:   const Properties &properties,
@@ -283,7 +283,7 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 
 // DEF:      void AgetOp::build(
 // DEF:        ::llvm::ArrayRef<::mlir::NamedAttribute> attributes
-// DEF:      odsState.addAttributes(attributes);
+// DEF:      buildPropertiesAndDiscardableAttributes(odsState, attributes);
 
 // DEF:      void AgetOp::build(
 // DEF-SAME:   const Properties &properties
@@ -468,53 +468,6 @@ def EOp : NS_Op<"e_op", []> {
 
 // DECL-LABEL: EOp declarations
 // DECL: static void build({{.*}}, uint32_t i32_attr, uint32_t dv_i32_attr, ::llvm::APFloat f64_attr, ::llvm::APFloat dv_f64_attr, ::llvm::StringRef str_attr, ::llvm::StringRef dv_str_attr, bool bool_attr, bool dv_bool_attr, ::SomeI32Enum enum_attr, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
-
-// Test verifyInvariantsImpl for op in dialect with `usePropertiesForAttributes = 0` set.
-// ---
-
-def Test3_Dialect : Dialect {
-  let name = "test3";
-  let cppNamespace = "foobar3";
-  let usePropertiesForAttributes = 0;
-}
-def FOp : Op<Test3_Dialect, "f_op", []> {
-  let arguments = (ins
-      SomeAttr:$aAttr,
-      DefaultValuedOptionalAttr<SomeAttr, "4.2">:$bAttr,
-      OptionalAttr<SomeAttr>:$cAttr
-  );
-}
-
-// DEF-LABEL: FOp definitions
-// DEF: ::llvm::LogicalResult FOp::verifyInvariantsImpl() {
-// DEF:   auto namedAttrRange = (*this)->getAttrs();
-// DEF:   auto namedAttrIt = namedAttrRange.begin();
-// DEF:   ::mlir::Attribute tblgen_aAttr;
-
-// DEF:   while (true) {
-// DEF:     if (namedAttrIt == namedAttrRange.end())
-// DEF:       return emitOpError("requires attribute 'aAttr'");
-// DEF:     if (namedAttrIt->getName() == getAAttrAttrName()) {
-// DEF:       tblgen_aAttr = namedAttrIt->getValue();
-// DEF:       break;
-// DEF:     }
-// DEF:     ++namedAttrIt;
-// DEF:   }
-
-// DEF:   ::mlir::Attribute tblgen_bAttr;
-// DEF:   ::mlir::Attribute tblgen_cAttr;
-// DEF:   while (true) {
-// DEF:     if (namedAttrIt == namedAttrRange.end()) {
-// DEF:       break;
-// DEF:     }
-// DEF:     else if (namedAttrIt->getName() == getBAttrAttrName()) {
-// DEF:       tblgen_bAttr = namedAttrIt->getValue();
-// DEF:     }
-// DEF:     else if (namedAttrIt->getName() == getCAttrAttrName()) {
-// DEF:       tblgen_cAttr = namedAttrIt->getValue();
-// DEF:     }
-// DEF:     ++namedAttrIt;
-// DEF:   }
 
 // Test proper namespacing for AttrDef
 // ---

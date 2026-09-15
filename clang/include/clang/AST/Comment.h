@@ -346,15 +346,6 @@ protected:
 public:
   InlineCommandComment(SourceLocation LocBegin, SourceLocation LocEnd,
                        unsigned CommandID, InlineCommandRenderKind RK,
-                       ArrayRef<Argument> Args)
-      : InlineContentComment(CommentKind::InlineCommandComment, LocBegin,
-                             LocEnd),
-        Args(Args) {
-    InlineCommandCommentBits.RenderKind = llvm::to_underlying(RK);
-    InlineCommandCommentBits.CommandID = CommandID;
-  }
-  InlineCommandComment(SourceLocation LocBegin, SourceLocation LocEnd,
-                       unsigned CommandID, InlineCommandRenderKind RK,
                        CommandMarkerKind CommandMarker, ArrayRef<Argument> Args)
       : InlineContentComment(CommentKind::InlineCommandComment, LocBegin,
                              LocEnd),
@@ -1044,7 +1035,9 @@ struct DeclInfo {
     TypedefKind,
 
     /// An enumeration or scoped enumeration.
-    EnumKind
+    EnumKind,
+
+    ConceptKind
   };
 
   /// What kind of template specialization \c CommentDecl is.

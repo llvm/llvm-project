@@ -161,9 +161,8 @@ static Value *EmitX86ExpandLoad(CodeGenFunction &CGF,
   Value *MaskVec = getMaskVecValue(
       CGF, Ops[2], cast<FixedVectorType>(ResultTy)->getNumElements());
 
-  llvm::Function *F = CGF.CGM.getIntrinsic(Intrinsic::masked_expandload,
-                                           ResultTy);
-  return CGF.Builder.CreateCall(F, { Ptr, MaskVec, Ops[1] });
+  return CGF.Builder.CreateMaskedExpandLoad(ResultTy, Ptr, MaybeAlign(),
+                                            MaskVec, Ops[1]);
 }
 
 static Value *EmitX86CompressExpand(CodeGenFunction &CGF,
@@ -186,9 +185,8 @@ static Value *EmitX86CompressStore(CodeGenFunction &CGF,
 
   Value *MaskVec = getMaskVecValue(CGF, Ops[2], ResultTy->getNumElements());
 
-  llvm::Function *F = CGF.CGM.getIntrinsic(Intrinsic::masked_compressstore,
-                                           ResultTy);
-  return CGF.Builder.CreateCall(F, { Ops[1], Ptr, MaskVec });
+  return CGF.Builder.CreateMaskedCompressStore(Ops[1], Ptr, MaybeAlign(),
+                                               MaskVec);
 }
 
 static Value *EmitX86MaskLogic(CodeGenFunction &CGF, Instruction::BinaryOps Opc,
@@ -684,18 +682,11 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
   cast<llvm::GlobalValue>(CpuModel)->setDSOLocal(true);
 
   // Calculate the index needed to access the correct field based on the
-  // range. Also adjust the expected value.
+  // range. ABI_VALUE matches with compiler-rt/libgcc values.
   auto [Index, Value] = StringSwitch<std::pair<unsigned, unsigned>>(CPUStr)
-#define X86_VENDOR(ENUM, STRING)                                               \
-  .Case(STRING, {0u, static_cast<unsigned>(llvm::X86::ENUM)})
-#define X86_CPU_TYPE_ALIAS(ENUM, ALIAS)                                        \
-  .Case(ALIAS, {1u, static_cast<unsigned>(llvm::X86::ENUM)})
-#define X86_CPU_TYPE(ENUM, STR)                                                \
-  .Case(STR, {1u, static_cast<unsigned>(llvm::X86::ENUM)})
-#define X86_CPU_SUBTYPE_ALIAS(ENUM, ALIAS)                                     \
-  .Case(ALIAS, {2u, static_cast<unsigned>(llvm::X86::ENUM)})
-#define X86_CPU_SUBTYPE(ENUM, STR)                                             \
-  .Case(STR, {2u, static_cast<unsigned>(llvm::X86::ENUM)})
+#define X86_VENDOR(ENUM, STRING, ABI_VALUE) .Case(STRING, {0u, ABI_VALUE})
+#define X86_CPU_TYPE(ENUM, STR, ABI_VALUE) .Case(STR, {1u, ABI_VALUE})
+#define X86_CPU_SUBTYPE(ENUM, STR, ABI_VALUE) .Case(STR, {2u, ABI_VALUE})
 #include "llvm/TargetParser/X86TargetParser.def"
                                .Default({0, 0});
   assert(Value != 0 && "Invalid CPUStr passed to CpuIs");
@@ -1024,14 +1015,14 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   }
   case X86::BI_mm_setcsr:
   case X86::BI__builtin_ia32_ldmxcsr: {
-    RawAddress Tmp = CreateMemTemp(E->getArg(0)->getType());
+    RawAddress Tmp = CreateMemTempWithoutCast(E->getArg(0)->getType());
     Builder.CreateStore(Ops[0], Tmp);
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_sse_ldmxcsr),
                               Tmp.getPointer());
   }
   case X86::BI_mm_getcsr:
   case X86::BI__builtin_ia32_stmxcsr: {
-    RawAddress Tmp = CreateMemTemp(E->getType());
+    RawAddress Tmp = CreateMemTempWithoutCast(E->getType());
     Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_sse_stmxcsr),
                        Tmp.getPointer());
     return Builder.CreateLoad(Tmp, "stmxcsr");
@@ -3187,16 +3178,15 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Builder.SetInsertPoint(NoError);
     for (int i = 0; i != 8; ++i) {
       Value *Extract = Builder.CreateExtractValue(Call, i + 1);
-      Value *Ptr = Builder.CreateConstGEP1_32(Extract->getType(), Ops[0], i);
+      Value *Ptr = Builder.CreateConstGEP1_32(Ty, Ops[0], i);
       Builder.CreateAlignedStore(Extract, Ptr, Align(16));
     }
     Builder.CreateBr(End);
 
     Builder.SetInsertPoint(Error);
     for (int i = 0; i != 8; ++i) {
-      Value *Out = Builder.CreateExtractValue(Call, i + 1);
-      Constant *Zero = llvm::Constant::getNullValue(Out->getType());
-      Value *Ptr = Builder.CreateConstGEP1_32(Out->getType(), Ops[0], i);
+      Constant *Zero = llvm::Constant::getNullValue(Ty);
+      Value *Ptr = Builder.CreateConstGEP1_32(Ty, Ops[0], i);
       Builder.CreateAlignedStore(Zero, Ptr, Align(16));
     }
     Builder.CreateBr(End);

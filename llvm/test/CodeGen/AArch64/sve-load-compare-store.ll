@@ -6,12 +6,11 @@ define void @sve_load_compare_store(ptr noalias nocapture noundef readonly %a, p
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    cmphs p0.s, p0/z, z0.s, #0
-; CHECK-NEXT:    st1b { z0.s }, p0, [x1]
+; CHECK-NEXT:    cmphs p1.s, p0/z, z0.s, #0
+; CHECK-NEXT:    st1b { z0.s }, p1, [x1]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %0)
+  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> splat (i1 true))
   %2 = tail call <vscale x 4 x i16> @llvm.masked.load.nxv4i16.p0(ptr %a, i32 1, <vscale x 4 x i1> %1, <vscale x 4 x i16> zeroinitializer)
   %3 = zext <vscale x 4 x i16> %2 to <vscale x 4 x i32>
   %4 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmphs.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %3, <vscale x 4 x i32> zeroinitializer)

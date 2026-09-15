@@ -26,6 +26,16 @@
 #define LIBC_TARGET_CPU_HAS_SVE2
 #endif
 
+// __ARM_FEATURE_MVE is a bitfield
+#if defined(__ARM_FEATURE_MVE)
+#if (__ARM_FEATURE_MVE & 0x1)
+#define LIBC_TARGET_CPU_HAS_MVE
+#endif // LIBC_TARGET_CPU_HAS_MVE
+#if (__ARM_FEATURE_MVE & 0x2)
+#define LIBC_TARGET_CPU_HAS_MVE_FP
+#endif // LIBC_TARGET_CPU_HAS_MVE_FP
+#endif // __ARM_FEATURE_MVE
+
 #if defined(__ARM_FEATURE_MOPS)
 #define LIBC_TARGET_CPU_HAS_MOPS
 #endif
@@ -54,6 +64,10 @@
 
 #if defined(__AVX512BW__)
 #define LIBC_TARGET_CPU_HAS_AVX512BW
+#endif
+
+#if defined(__AVX512F__) || defined(__AVX2__)
+#define LIBC_TARGET_CPU_HAS_GATHER
 #endif
 
 #if defined(__ARM_FP)
@@ -91,13 +105,14 @@
 #endif // LIBC_TARGET_CPU_HAS_RISCV_FPU_DOUBLE
 #endif // __riscv_flen
 
-#if defined(__NVPTX__) || defined(__AMDGPU__)
+#if defined(__NVPTX__) || defined(__AMDGPU__) || defined(__SPIRV__)
 #define LIBC_TARGET_CPU_HAS_FPU_FLOAT
 #define LIBC_TARGET_CPU_HAS_FPU_DOUBLE
 #endif
 
 #if defined(__ARM_FEATURE_FMA) || (defined(__AVX2__) && defined(__FMA__)) ||   \
-    defined(__NVPTX__) || defined(__AMDGPU__) || defined(__riscv_flen)
+    defined(__NVPTX__) || defined(__AMDGPU__) || defined(__riscv_flen) ||      \
+    defined(__SPIRV__)
 #define LIBC_TARGET_CPU_HAS_FMA
 // Provide a more fine-grained control of FMA instruction for ARM targets.
 #if defined(LIBC_TARGET_CPU_HAS_FPU_HALF)

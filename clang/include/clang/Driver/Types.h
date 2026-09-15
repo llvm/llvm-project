@@ -115,9 +115,9 @@ namespace types {
   /// done for type 'Id' up until including LastPhase.
   llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
   getCompilationPhases(ID Id, phases::ID LastPhase = phases::IfsMerge);
-  llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
-  getCompilationPhases(const clang::driver::Driver &Driver,
-                       llvm::opt::DerivedArgList &DAL, ID Id);
+  llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> getCompilationPhases(
+      const clang::driver::Driver &Driver, llvm::opt::DerivedArgList &DAL,
+      llvm::ArrayRef<std::pair<ID, const llvm::opt::Arg *>> Inputs, ID Id);
 
   /// lookupCXXTypeForCType - Lookup CXX input type that corresponds to given
   /// C type (used for clang++ emulation of g++ behaviour)
@@ -128,6 +128,13 @@ namespace types {
   ID lookupHeaderTypeForSourceType(ID Id);
 
 } // end namespace types
+
+/// A list of inputs and their types for the given arguments.
+using InputTy = std::pair<types::ID, const llvm::opt::Arg *>;
+
+/// A list of inputs and their types for the given arguments.
+using InputList = llvm::SmallVector<InputTy, 16>;
+
 } // end namespace driver
 } // end namespace clang
 

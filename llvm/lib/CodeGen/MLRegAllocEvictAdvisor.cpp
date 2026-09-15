@@ -12,7 +12,6 @@
 
 #include "AllocationOrder.h"
 #include "RegAllocGreedy.h"
-#include "llvm/Analysis/InteractiveModelRunner.h"
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
@@ -23,6 +22,7 @@
 #endif
 #include "MLRegAllocEvictAdvisor.h"
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
+#include "llvm/Analysis/Utils/MLGOUtils.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -35,14 +35,12 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include <array>
 #include <bitset>
 #include <memory>
-#include <unordered_map>
 
 using namespace llvm;
 
@@ -54,6 +52,53 @@ using namespace llvm;
 using CompiledModelType = RegAllocEvictModel;
 #else
 using CompiledModelType = NoopSavedModelImpl;
+#endif
+
+#if defined(LLVM_HAVE_MLIR_LOWERING_REGALLOC)
+constexpr bool HaveMLIRLoweringRegAlloc = true;
+#include "llvm/Analysis/EmitCModelRunner.h"
+#include "llvm/CodeGen/RegAllocEvictModels.h"
+
+enum class MLGORegAllocModelChoice {
+  Default,
+#define MLGO_MODEL(CLASS_NAME, CLI_FLAG) CLASS_NAME,
+#include "llvm/CodeGen/RegAllocEvictModels.def"
+};
+
+static llvm::cl::opt<MLGORegAllocModelChoice> SelectedMLGORegAllocModel(
+    "regalloc-mlgo-model",
+    llvm::cl::desc("Select the MLGO model to execute for register allocation:"),
+    llvm::cl::init(MLGORegAllocModelChoice::Default),
+    llvm::cl::values(clEnumValN(MLGORegAllocModelChoice::Default, "default",
+                                "Use standard heuristic")
+#define MLGO_MODEL(CLASS_NAME, CLI_FLAG)                                       \
+  , clEnumValN(MLGORegAllocModelChoice::CLASS_NAME, CLI_FLAG,                  \
+               "Use the " CLI_FLAG " MLGO model")
+#include "llvm/CodeGen/RegAllocEvictModels.def"
+                         ));
+
+static std::unique_ptr<MLModelRunner>
+createMLGORegAllocModelRunner(LLVMContext &Ctx,
+                              const std::vector<TensorSpec> &InputFeatures) {
+  switch (SelectedMLGORegAllocModel) {
+  case MLGORegAllocModelChoice::Default:
+    return nullptr;
+#define MLGO_MODEL(CLASS_NAME, CLI_FLAG)                                       \
+  case MLGORegAllocModelChoice::CLASS_NAME:                                    \
+    return std::make_unique<EmitCModelRunner<CLASS_NAME>>(Ctx, InputFeatures);
+#include "llvm/CodeGen/RegAllocEvictModels.def"
+  }
+  llvm_unreachable("Unknown MLGO model type!");
+}
+#else
+constexpr bool HaveMLIRLoweringRegAlloc = false;
+enum class MLGORegAllocModelChoice { Default };
+static const MLGORegAllocModelChoice SelectedMLGORegAllocModel =
+    MLGORegAllocModelChoice::Default;
+static inline std::unique_ptr<MLModelRunner>
+createMLGORegAllocModelRunner(LLVMContext &, const std::vector<TensorSpec> &) {
+  return nullptr;
+}
 #endif
 
 static cl::opt<std::string> InteractiveChannelBaseName(
@@ -97,9 +142,7 @@ class RegAllocScoring : public MachineFunctionPass {
 public:
   static char ID;
 
-  RegAllocScoring() : MachineFunctionPass(ID) {
-    initializeRegAllocScoringPass(*PassRegistry::getPassRegistry());
-  }
+  RegAllocScoring() : MachineFunctionPass(ID) {}
 
   ~RegAllocScoring() override = default;
 
@@ -331,7 +374,7 @@ private:
   using RegID = unsigned;
   mutable DenseMap<RegID, LIFeatureComponents> CachedFeatures;
 
-  mutable std::unordered_map<unsigned, unsigned> VirtRegEvictionCounts;
+  mutable DenseMap<unsigned, unsigned> VirtRegEvictionCounts;
 
   void onEviction(Register RegBeingEvicted) const {
     // If we cannot find the virtual register in the map, we just assume it has
@@ -371,14 +414,11 @@ public:
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
              MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
     if (!Runner) {
-      if (InteractiveChannelBaseName.empty())
-        Runner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
-            MF.getFunction().getContext(), InputFeatures, DecisionName);
-      else
-        Runner = std::make_unique<InteractiveModelRunner>(
-            MF.getFunction().getContext(), InputFeatures, DecisionSpec,
-            InteractiveChannelBaseName + ".out",
-            InteractiveChannelBaseName + ".in");
+      Runner = createReleaseModeModelRunner<CompiledModelType,
+                                            HaveMLIRLoweringRegAlloc>(
+          MF.getFunction().getContext(), InputFeatures, DecisionName,
+          InteractiveChannelBaseName, DecisionSpec,
+          createMLGORegAllocModelRunner);
     }
     assert(MBFI && Loops &&
            "Invalid provider state: must have analysis available");
@@ -414,7 +454,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addRequired<MachineLoopInfoWrapperPass>();
     RegAllocEvictionAdvisorAnalysisLegacy::getAnalysisUsage(AU);
   }
 };
@@ -563,7 +602,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addRequired<MachineLoopInfoWrapperPass>();
     RegAllocEvictionAdvisorAnalysisLegacy::getAnalysisUsage(AU);
   }
 };
@@ -1023,7 +1061,10 @@ bool RegAllocScoring::runOnMachineFunction(MachineFunction &MF) {
 
 RegAllocEvictionAdvisorProvider *
 llvm::createReleaseModeAdvisorProvider(LLVMContext &Ctx) {
-  return new ReleaseModeEvictionAdvisorProvider(Ctx);
+  return isReleaseModelValid<CompiledModelType>(InteractiveChannelBaseName,
+                                                SelectedMLGORegAllocModel)
+             ? new ReleaseModeEvictionAdvisorProvider(Ctx)
+             : nullptr;
 }
 
 RegAllocEvictionAdvisorProvider *
@@ -1036,8 +1077,8 @@ llvm::createDevelopmentModeAdvisorProvider(LLVMContext &Ctx) {
 
 RegAllocEvictionAdvisorAnalysisLegacy *
 llvm::createReleaseModeAdvisorAnalysisLegacy() {
-  return llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() ||
-                 !InteractiveChannelBaseName.empty()
+  return isReleaseModelValid<CompiledModelType>(InteractiveChannelBaseName,
+                                                SelectedMLGORegAllocModel)
              ? new ReleaseModeEvictionAdvisorAnalysisLegacy()
              : nullptr;
 }

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu8.03-amd-amdhsa -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
 --- |
   define float @entry_callee_wait(float %arg) #0 {
     ret float %arg
@@ -9,7 +9,7 @@
 ---
 # CHECK-LABEL: name: entry_callee_wait{{$}}
 # CHECK: bb.0:
-# CHECK-NEXT: S_WAITCNT 0{{$}}
+# CHECK-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0{{$}}
 # CHECK-NEXT: V_ADD_F32
 # CHECK-NEXT: S_SETPC_B64
 liveins:

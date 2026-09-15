@@ -22,4 +22,5 @@ no:
 ; INJECT: br i1 %c, label %yes, label %no, !prof !1
 ; INJECT: !1 = !{!"branch_weights", i32 3, i32 5}
 
-; VERIFY: Profile verification failed: branch annotation missing
+; VERIFY: Profile verification failed for function 'foo': branch annotation missing
+

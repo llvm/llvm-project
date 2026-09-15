@@ -6,6 +6,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class GlobalVariablesTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().

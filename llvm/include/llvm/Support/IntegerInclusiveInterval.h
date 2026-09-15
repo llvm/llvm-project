@@ -87,10 +87,12 @@ using IntervalList = SmallVector<IntegerInclusiveInterval, 8>;
 /// \param Separator The separator character to use (',' or ':').
 /// \returns Expected<IntervalList> containing the parsed intervals on success,
 ///          or an Error on failure.
+LLVM_ABI
 Expected<IntervalList> parseIntervals(StringRef IntervalStr,
                                       char Separator = ',');
 
 /// Check if a value is contained in any of the intervals.
+LLVM_ABI
 bool contains(ArrayRef<IntegerInclusiveInterval> Intervals, int64_t Value);
 
 /// Print intervals to output stream.
@@ -99,12 +101,14 @@ bool contains(ArrayRef<IntegerInclusiveInterval> Intervals, int64_t Value);
 /// \param Separator The separator character to use between intervals (i.e. ','
 /// or
 /// ':').
+LLVM_ABI
 void printIntervals(raw_ostream &OS,
                     ArrayRef<IntegerInclusiveInterval> Intervals,
                     char Separator = ',');
 
 /// Merge adjacent/consecutive intervals into single intervals.
 /// Example: [1-3, 4-6, 8-10] -> [1-6, 8-10].
+LLVM_ABI
 IntervalList
 mergeAdjacentIntervals(ArrayRef<IntegerInclusiveInterval> Intervals);
 

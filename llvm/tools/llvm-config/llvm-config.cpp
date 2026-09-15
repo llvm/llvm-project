@@ -18,8 +18,10 @@
 
 #include "llvm/Config/llvm-config.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/FileSystem.h"
@@ -30,7 +32,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include <cstdlib>
 #include <set>
-#include <unordered_set>
 #include <vector>
 
 using namespace llvm;
@@ -520,13 +521,11 @@ int main(int argc, char **argv) {
 
   // Render include paths and associated flags
   auto RenderFlags = [&](StringRef Flags) {
-    bool First = true;
+    ListSeparator LS(" ");
     for (auto &Include : ActiveIncludeOptions) {
-      if (!First)
-        OS << ' ';
+      OS << LS;
       std::string FlagsStr = "-I" + Include;
       MaybePrintQuoted(FlagsStr);
-      First = false;
     }
     OS << ' ' << Flags << '\n';
   };
@@ -696,7 +695,7 @@ int main(int argc, char **argv) {
     }
 
     if (PrintSharedMode) {
-      std::unordered_set<std::string> FullDyLibComponents;
+      StringSet<> FullDyLibComponents;
       std::vector<std::string> DyLibComponents =
           getAllDyLibComponents(IsInDevelopmentTree, false, DirSep);
 

@@ -245,9 +245,9 @@ define <16 x float> @expand12(<8 x float> %a) {
 ; CHECK-LABEL: expand12:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; CHECK-NEXT:    vpmovsxbd {{.*#+}} zmm2 = [0,16,2,16,4,16,6,16,0,16,1,16,2,16,3,16]
-; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [0,16,2,16,4,16,6,16,0,16,1,16,2,16,3,16]
+; CHECK-NEXT:    vpermi2ps %zmm0, %zmm2, %zmm1
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
    %res = shufflevector <8 x float> zeroinitializer, <8 x float> %a, <16 x i32> <i32 0, i32 8, i32 1, i32 8, i32 2, i32 8, i32 3, i32 8,i32 0, i32 8, i32 1, i32 8, i32 2, i32 8, i32 3, i32 8>
@@ -553,10 +553,10 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X86-AVX512-SLOW-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX512-SLOW-NEXT:    vpbroadcastd 44(%ecx), %xmm0
 ; X86-AVX512-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; X86-AVX512-SLOW-NEXT:    vmovdqa %ymm0, 672(%eax)
+; X86-AVX512-SLOW-NEXT:    vmovdqa64 %ymm0, 672(%eax)
 ; X86-AVX512-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,0,2,3]
 ; X86-AVX512-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; X86-AVX512-SLOW-NEXT:    vmovdqa %ymm0, 832(%eax)
+; X86-AVX512-SLOW-NEXT:    vmovdqa64 %ymm0, 832(%eax)
 ; X86-AVX512-SLOW-NEXT:    vzeroupper
 ; X86-AVX512-SLOW-NEXT:    retl
 ;
@@ -564,10 +564,10 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X64-AVX512-SLOW:       # %bb.0:
 ; X64-AVX512-SLOW-NEXT:    vpbroadcastd 44(%rdi), %xmm0
 ; X64-AVX512-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; X64-AVX512-SLOW-NEXT:    vmovdqa %ymm0, 672(%rsi)
+; X64-AVX512-SLOW-NEXT:    vmovdqa64 %ymm0, 672(%rsi)
 ; X64-AVX512-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,0,2,3]
 ; X64-AVX512-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; X64-AVX512-SLOW-NEXT:    vmovdqa %ymm0, 832(%rsi)
+; X64-AVX512-SLOW-NEXT:    vmovdqa64 %ymm0, 832(%rsi)
 ; X64-AVX512-SLOW-NEXT:    vzeroupper
 ; X64-AVX512-SLOW-NEXT:    retq
 ;
@@ -577,10 +577,10 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X86-AVX512-FAST-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX512-FAST-NEXT:    vpbroadcastd 44(%ecx), %xmm0
 ; X86-AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; X86-AVX512-FAST-NEXT:    vmovdqa %ymm0, 672(%eax)
-; X86-AVX512-FAST-NEXT:    vmovdqa 208(%ecx), %xmm0
+; X86-AVX512-FAST-NEXT:    vmovdqa64 %ymm0, 672(%eax)
+; X86-AVX512-FAST-NEXT:    vmovdqa64 208(%ecx), %xmm0
 ; X86-AVX512-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
-; X86-AVX512-FAST-NEXT:    vmovdqa %ymm0, 832(%eax)
+; X86-AVX512-FAST-NEXT:    vmovdqa64 %ymm0, 832(%eax)
 ; X86-AVX512-FAST-NEXT:    vzeroupper
 ; X86-AVX512-FAST-NEXT:    retl
 ;
@@ -588,10 +588,10 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; X64-AVX512-FAST:       # %bb.0:
 ; X64-AVX512-FAST-NEXT:    vpbroadcastd 44(%rdi), %xmm0
 ; X64-AVX512-FAST-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; X64-AVX512-FAST-NEXT:    vmovdqa %ymm0, 672(%rsi)
-; X64-AVX512-FAST-NEXT:    vmovdqa 208(%rdi), %xmm0
+; X64-AVX512-FAST-NEXT:    vmovdqa64 %ymm0, 672(%rsi)
+; X64-AVX512-FAST-NEXT:    vmovdqa64 208(%rdi), %xmm0
 ; X64-AVX512-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
-; X64-AVX512-FAST-NEXT:    vmovdqa %ymm0, 832(%rsi)
+; X64-AVX512-FAST-NEXT:    vmovdqa64 %ymm0, 832(%rsi)
 ; X64-AVX512-FAST-NEXT:    vzeroupper
 ; X64-AVX512-FAST-NEXT:    retq
 ;

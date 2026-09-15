@@ -16,6 +16,7 @@
 
 #  include "sanitizer_dbghelp.h"
 #  include "sanitizer_symbolizer_internal.h"
+#  include "sanitizer_symbolizer_libbacktrace.h"
 
 namespace __sanitizer {
 
@@ -279,6 +280,12 @@ static void ChooseSymbolizerTools(IntrusiveList<SymbolizerTool> *list,
     return;
   }
 
+#  if defined(__GNUC__) && !defined(__clang__)
+  if (SymbolizerTool* tool = LibbacktraceSymbolizer::get(allocator)) {
+    VReport(2, "Using libbacktrace symbolizer.\n");
+    list->push_back(tool);
+  }
+#  else
   // Add llvm-symbolizer.
   const char *user_path = common_flags()->external_symbolizer_path;
 
@@ -301,6 +308,7 @@ static void ChooseSymbolizerTools(IntrusiveList<SymbolizerTool> *list,
   } else {
     VReport(2, "External symbolizer is not present.\n");
   }
+#  endif
 
   // Add the dbghelp based symbolizer.
   list->push_back(new(*allocator) WinSymbolizerTool());

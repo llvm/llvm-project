@@ -36,7 +36,7 @@ void llvm::makeGuardControlFlowExplicit(Function *DeoptIntrinsic,
   auto *DeoptBlockTerm =
       SplitBlockAndInsertIfThen(Guard->getArgOperand(0), Guard, true);
 
-  auto *CheckBI = cast<BranchInst>(CheckBB->getTerminator());
+  auto *CheckBI = cast<CondBrInst>(CheckBB->getTerminator());
 
   // SplitBlockAndInsertIfThen inserts control flow that branches to
   // DeoptBlockTerm if the condition is true.  We want the opposite.
@@ -78,8 +78,7 @@ void llvm::makeGuardControlFlowExplicit(Function *DeoptIntrinsic,
   }
 }
 
-
-void llvm::widenWidenableBranch(BranchInst *WidenableBR, Value *NewCond) {
+void llvm::widenWidenableBranch(CondBrInst *WidenableBR, Value *NewCond) {
   assert(isWidenableBranch(WidenableBR) && "precondition");
 
   // The tempting trivially option is to produce something like this:
@@ -105,7 +104,7 @@ void llvm::widenWidenableBranch(BranchInst *WidenableBR, Value *NewCond) {
   assert(isWidenableBranch(WidenableBR) && "preserve widenabiliy");
 }
 
-void llvm::setWidenableBranchCond(BranchInst *WidenableBR, Value *NewCond) {
+void llvm::setWidenableBranchCond(CondBrInst *WidenableBR, Value *NewCond) {
   assert(isWidenableBranch(WidenableBR) && "precondition");
 
   Use *C, *WC;

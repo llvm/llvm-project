@@ -28,11 +28,11 @@ define i32 @caller() {
 ; CHECK-NEXT:    lea %s0, .LCPI{{[0-9]+}}_0@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0,  .LCPI{{[0-9]+}}_0@hi(, %s0)
-; CHECK-NEXT:    ld %s2, 8(, %s0)
-; CHECK-NEXT:    lea.sl %s1, 1086324736
-; CHECK-NEXT:    st %s1, 224(, %s11)
+; CHECK-NEXT:    ld %s1, 8(, %s0)
+; CHECK-NEXT:    lea.sl %s2, 1086324736
+; CHECK-NEXT:    st %s2, 224(, %s11)
 ; CHECK-NEXT:    ld %s34, (, %s0)
-; CHECK-NEXT:    st %s2, 280(, %s11)
+; CHECK-NEXT:    st %s1, 280(, %s11)
 ; CHECK-NEXT:    lea %s0, func@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, func@hi(, %s0)

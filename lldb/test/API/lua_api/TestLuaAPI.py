@@ -95,18 +95,15 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
         close_fds=kUseCloseFDs,
     )
     timerObject = None
-    # FIXME: Because of the way nested function scopes work in Python 2.x we
-    # need to use a reference to a mutable object rather than a plain
-    # bool. In Python 3 we could use the "nonlocal" keyword but we need
-    # to support Python 2 as well.
-    hitTimeOut = [False]
+    hitTimeOut = False
     try:
         if timeout > 0:
 
             def killProcess():
                 # We may be invoking a shell so we need to kill the
                 # process and all its children.
-                hitTimeOut[0] = True
+                nonlocal hitTimeOut
+                hitTimeOut = True
                 killProcessAndChildren(p.pid)
 
             timerObject = threading.Timer(timeout, killProcess)
@@ -122,7 +119,7 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
     out = to_string(out)
     err = to_string(err)
 
-    if hitTimeOut[0]:
+    if hitTimeOut:
         raise ExecuteCommandTimeoutException(
             msg="Reached timeout of {} seconds".format(timeout),
             out=out,
@@ -157,6 +154,7 @@ class TestLuaAPI(TestBase):
                     tests.append(filename)
         return tests
 
+    @skipIfMTE  # Lua is not MTE-aware.
     def test_lua_api(self):
         if "LUA_EXECUTABLE" not in os.environ or not os.path.exists(
             os.environ["LUA_EXECUTABLE"]

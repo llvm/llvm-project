@@ -4,6 +4,7 @@ static_library("Analysis") {
     # Must be a public_dep because Analysis's headers include
     # TargetLibraryInfo.inc.
     "//llvm/include/llvm/Analysis:TargetLibraryInfo",
+
     # Must be a public_dep because Analysis's headers include llvm-config.h.
     "//llvm/include/llvm/Config:llvm-config",
   ]
@@ -63,7 +64,6 @@ static_library("Analysis") {
     "HashRecognize.cpp",
     "HeatUtils.cpp",
     "IR2Vec.cpp",
-    "IRSimilarityIdentifier.cpp",
     "IVDescriptors.cpp",
     "IVUsers.cpp",
     "ImportedFunctionsInliningStatistics.cpp",
@@ -81,6 +81,7 @@ static_library("Analysis") {
     "LazyBranchProbabilityInfo.cpp",
     "LazyCallGraph.cpp",
     "LazyValueInfo.cpp",
+    "LibcallLoweringInfo.cpp",
     "Lint.cpp",
     "Loads.cpp",
     "Local.cpp",

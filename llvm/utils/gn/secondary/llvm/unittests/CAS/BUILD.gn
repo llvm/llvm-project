@@ -9,19 +9,25 @@ unittest("CASTests") {
   ]
   sources = [
     "ActionCacheTest.cpp",
-    "BuiltinUnifiedCASDatabasesTest.cpp",
+    "BuiltinObjectHasherTest.cpp",
     "CASTestConfig.cpp",
+    "NamedValuesSchemaTest.cpp",
     "ObjectStoreTest.cpp",
-    "UnifiedOnDiskCacheTest.cpp",
+    "OnDiskCommonUtils.cpp",
   ]
 
   if (llvm_enable_ondisk_cas) {
     sources += [
+      "BuiltinUnifiedCASDatabasesTest.cpp",
+      "OnDiskCASLoggerTest.cpp",
       "OnDiskDataAllocatorTest.cpp",
       "OnDiskGraphDBTest.cpp",
       "OnDiskKeyValueDBTest.cpp",
       "OnDiskTrieRawHashMapTest.cpp",
+      "PluginCASTest.cpp",
       "ProgramTest.cpp",
+      "UnifiedOnDiskCacheTest.cpp",
     ]
+    data_deps = [ "//llvm/tools/libCASPluginTest:CASPluginTest" ]
   }
 }

@@ -88,7 +88,8 @@ define i32 @my_access_fp_foo() #0 {
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -8
-; CHECK-NEXT:    move.l (foo@GOTPCREL,%pc), (%sp)
+; CHECK-NEXT:    move.l (foo@GOTPCREL,%pc), %d0
+; CHECK-NEXT:    move.l %d0, (%sp)
 ; CHECK-NEXT:    jsr (access_fp@PLT,%pc)
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
@@ -117,7 +118,8 @@ define i32 @my_access_fp_bar() #0 {
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -8
-; CHECK-NEXT:    move.l (bar@GOTPCREL,%pc), (%sp)
+; CHECK-NEXT:    move.l (bar@GOTPCREL,%pc), %d0
+; CHECK-NEXT:    move.l %d0, (%sp)
 ; CHECK-NEXT:    jsr (access_fp@PLT,%pc)
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts

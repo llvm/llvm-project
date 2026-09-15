@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -mcpu=mvp -o %t.o %s
 #
 # If any table is defined or declared besides the __indirect_function_table,
 # the compilation unit should be compiled with -mattr=+call-indirect-overlong,

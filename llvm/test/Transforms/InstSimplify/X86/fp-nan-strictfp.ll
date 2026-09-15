@@ -7,67 +7,67 @@
 
 define float @fadd_nan_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @fadd_nan_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float 0x7FF8000000000000, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float +qnan, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @llvm.experimental.constrained.fadd.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %r = call float @llvm.experimental.constrained.fadd.f32(float +qnan, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
 }
 
 define float @fadd_nan_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fadd_nan_op0_maytrap(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fadd.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+  %r = call float @llvm.experimental.constrained.fadd.f32(float +qnan, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
 }
 
 define float @fadd_nan_op0_upward(float %x) #0 {
 ; CHECK-LABEL: @fadd_nan_op0_upward(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fadd.f32(float 0x7FF8000000000000, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fadd.f32(float +qnan, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fadd_nan_op0_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fadd_nan_op0_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fadd.f32(float 0x7FF8000000000000, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fadd.f32(float +qnan, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fadd_nan_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @fadd_nan_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[X:%.*]], float +qnan, metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float +qnan, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
 }
 
 define float @fadd_nan_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fadd_nan_op1_maytrap(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+  %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float +qnan, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
 }
 
 define float @fadd_nan_op1_upward(float %x) #0 {
 ; CHECK-LABEL: @fadd_nan_op1_upward(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float 0x7FF8000000000000, metadata !"round.upward", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float +qnan, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fadd_nan_op1_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fadd_nan_op1_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float 0x7FF8000000000000, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fadd.f32(float %x, float +qnan, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
 }
 
@@ -77,67 +77,67 @@ define float @fadd_nan_op1_defaultfp(float %x) #0 {
 
 define float @fsub_nan_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @fsub_nan_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float 0x7FF8000000000000, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float +qnan, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @llvm.experimental.constrained.fsub.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %r = call float @llvm.experimental.constrained.fsub.f32(float +qnan, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
 }
 
 define float @fsub_nan_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fsub_nan_op0_maytrap(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fsub.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+  %r = call float @llvm.experimental.constrained.fsub.f32(float +qnan, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
 }
 
 define float @fsub_nan_op0_upward(float %x) #0 {
 ; CHECK-LABEL: @fsub_nan_op0_upward(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fsub.f32(float 0x7FF8000000000000, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fsub.f32(float +qnan, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fsub_nan_op0_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fsub_nan_op0_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fsub.f32(float 0x7FF8000000000000, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fsub.f32(float +qnan, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fsub_nan_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @fsub_nan_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[X:%.*]], float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[X:%.*]], float +qnan, metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float +qnan, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret float %r
 }
 
 define float @fsub_nan_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fsub_nan_op1_maytrap(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+  %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float +qnan, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
 }
 
 define float @fsub_nan_op1_upward(float %x) #0 {
 ; CHECK-LABEL: @fsub_nan_op1_upward(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float 0x7FF8000000000000, metadata !"round.upward", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float +qnan, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fsub_nan_op1_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fsub_nan_op1_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float 0x7FF8000000000000, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fsub.f32(float %x, float +qnan, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
 }
 
@@ -147,67 +147,67 @@ define float @fsub_nan_op1_defaultfp(float %x) #0 {
 
 define float @fmul_nan_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @fmul_nan_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float 0x7FF8000000000000, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float +qnan, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @llvm.experimental.constrained.fmul.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %r = call float @llvm.experimental.constrained.fmul.f32(float +qnan, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
 }
 
 define float @fmul_nan_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fmul_nan_op0_maytrap(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fmul.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+  %r = call float @llvm.experimental.constrained.fmul.f32(float +qnan, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
 }
 
 define float @fmul_nan_op0_upward(float %x) #0 {
 ; CHECK-LABEL: @fmul_nan_op0_upward(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fmul.f32(float 0x7FF8000000000000, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fmul.f32(float +qnan, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fmul_nan_op0_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fmul_nan_op0_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fmul.f32(float 0x7FF8000000000000, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fmul.f32(float +qnan, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fmul_nan_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @fmul_nan_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[X:%.*]], float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fmul.f32(float [[X:%.*]], float +qnan, metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float +qnan, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
 }
 
 define float @fmul_nan_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fmul_nan_op1_maytrap(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+  %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float +qnan, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
 }
 
 define float @fmul_nan_op1_upward(float %x) #0 {
 ; CHECK-LABEL: @fmul_nan_op1_upward(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float 0x7FF8000000000000, metadata !"round.upward", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float +qnan, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fmul_nan_op1_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fmul_nan_op1_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float 0x7FF8000000000000, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fmul.f32(float %x, float +qnan, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
 }
 
@@ -217,67 +217,67 @@ define float @fmul_nan_op1_defaultfp(float %x) #0 {
 
 define float @fdiv_nan_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @fdiv_nan_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float 0x7FF8000000000000, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float +qnan, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @llvm.experimental.constrained.fdiv.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %r = call float @llvm.experimental.constrained.fdiv.f32(float +qnan, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
 }
 
 define float @fdiv_nan_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fdiv_nan_op0_maytrap(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fdiv.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+  %r = call float @llvm.experimental.constrained.fdiv.f32(float +qnan, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
 }
 
 define float @fdiv_nan_op0_upward(float %x) #0 {
 ; CHECK-LABEL: @fdiv_nan_op0_upward(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fdiv.f32(float 0x7FF8000000000000, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fdiv.f32(float +qnan, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fdiv_nan_op0_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fdiv_nan_op0_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fdiv.f32(float 0x7FF8000000000000, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fdiv.f32(float +qnan, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fdiv_nan_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @fdiv_nan_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float [[X:%.*]], float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float [[X:%.*]], float +qnan, metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float +qnan, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
 }
 
 define float @fdiv_nan_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @fdiv_nan_op1_maytrap(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+  %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float +qnan, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
 }
 
 define float @fdiv_nan_op1_upward(float %x) #0 {
 ; CHECK-LABEL: @fdiv_nan_op1_upward(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float 0x7FF8000000000000, metadata !"round.upward", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float +qnan, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fdiv_nan_op1_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @fdiv_nan_op1_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float 0x7FF8000000000000, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fdiv.f32(float %x, float +qnan, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
 }
 
@@ -287,67 +287,67 @@ define float @fdiv_nan_op1_defaultfp(float %x) #0 {
 
 define float @frem_nan_op0_strict(float %x) #0 {
 ; CHECK-LABEL: @frem_nan_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.frem.f32(float 0x7FF8000000000000, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.frem.f32(float +qnan, float [[X:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @llvm.experimental.constrained.frem.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %r = call float @llvm.experimental.constrained.frem.f32(float +qnan, float %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
 }
 
 define float @frem_nan_op0_maytrap(float %x) #0 {
 ; CHECK-LABEL: @frem_nan_op0_maytrap(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.frem.f32(float 0x7FF8000000000000, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+  %r = call float @llvm.experimental.constrained.frem.f32(float +qnan, float %x, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
 }
 
 define float @frem_nan_op0_upward(float %x) #0 {
 ; CHECK-LABEL: @frem_nan_op0_upward(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.frem.f32(float 0x7FF8000000000000, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.frem.f32(float +qnan, float %x, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @frem_nan_op0_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @frem_nan_op0_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.frem.f32(float 0x7FF8000000000000, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.frem.f32(float +qnan, float %x, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @frem_nan_op1_strict(float %x) #0 {
 ; CHECK-LABEL: @frem_nan_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.frem.f32(float [[X:%.*]], float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.frem.f32(float [[X:%.*]], float +qnan, metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @llvm.experimental.constrained.frem.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %r = call float @llvm.experimental.constrained.frem.f32(float %x, float +qnan, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
 }
 
 define float @frem_nan_op1_maytrap(float %x) #0 {
 ; CHECK-LABEL: @frem_nan_op1_maytrap(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.frem.f32(float %x, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+  %r = call float @llvm.experimental.constrained.frem.f32(float %x, float +qnan, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
 }
 
 define float @frem_nan_op1_upward(float %x) #0 {
 ; CHECK-LABEL: @frem_nan_op1_upward(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.frem.f32(float %x, float 0x7FF8000000000000, metadata !"round.upward", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.frem.f32(float %x, float +qnan, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @frem_nan_op1_defaultfp(float %x) #0 {
 ; CHECK-LABEL: @frem_nan_op1_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.frem.f32(float %x, float 0x7FF8000000000000, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.frem.f32(float %x, float +qnan, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
 }
 
@@ -357,100 +357,100 @@ define float @frem_nan_op1_defaultfp(float %x) #0 {
 
 define float @fma_nan_op0_strict(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op0_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float 0x7FF8000000000000, float [[X:%.*]], float [[Y:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float +qnan, float [[X:%.*]], float [[Y:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @llvm.experimental.constrained.fma.f32(float 0x7FF8000000000000, float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %r = call float @llvm.experimental.constrained.fma.f32(float +qnan, float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
 }
 
 define float @fma_nan_op0_maytrap(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op0_maytrap(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fma.f32(float 0x7FF8000000000000, float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+  %r = call float @llvm.experimental.constrained.fma.f32(float +qnan, float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
 }
 
 define float @fma_nan_op0_upward(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op0_upward(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fma.f32(float 0x7FF8000000000000, float %x, float %y, metadata !"round.upward", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fma.f32(float +qnan, float %x, float %y, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fma_nan_op0_defaultfp(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op0_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fma.f32(float 0x7FF8000000000000, float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fma.f32(float +qnan, float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fma_nan_op1_strict(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op1_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[X:%.*]], float 0x7FF8000000000000, float [[Y:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[X:%.*]], float +qnan, float [[Y:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @llvm.experimental.constrained.fma.f32(float %x, float 0x7FF8000000000000, float %y, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %r = call float @llvm.experimental.constrained.fma.f32(float %x, float +qnan, float %y, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
 }
 
 define float @fma_nan_op1_maytrap(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op1_maytrap(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fma.f32(float %x, float 0x7FF8000000000000, float %y, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+  %r = call float @llvm.experimental.constrained.fma.f32(float %x, float +qnan, float %y, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
 }
 
 define float @fma_nan_op1_upward(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op1_upward(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fma.f32(float %x, float 0x7FF8000000000000, float %y, metadata !"round.upward", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fma.f32(float %x, float +qnan, float %y, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fma_nan_op1_defaultfp(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op1_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fma.f32(float %x, float 0x7FF8000000000000, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fma.f32(float %x, float +qnan, float %y, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fma_nan_op2_strict(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op2_strict(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[X:%.*]], float [[Y:%.*]], float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.experimental.constrained.fma.f32(float [[X:%.*]], float [[Y:%.*]], float +qnan, metadata !"round.dynamic", metadata !"fpexcept.strict")
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float +qnan, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret float %r
 }
 
 define float @fma_nan_op2_maytrap(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op2_maytrap(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float 0x7FF8000000000000, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
+  %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float +qnan, metadata !"round.dynamic", metadata !"fpexcept.maytrap")
   ret float %r
 }
 
 define float @fma_nan_op2_upward(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op2_upward(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float 0x7FF8000000000000, metadata !"round.upward", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float +qnan, metadata !"round.upward", metadata !"fpexcept.ignore")
   ret float %r
 }
 
 define float @fma_nan_op2_defaultfp(float %x, float %y) #0 {
 ; CHECK-LABEL: @fma_nan_op2_defaultfp(
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
-  %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float 0x7FF8000000000000, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  %r = call float @llvm.experimental.constrained.fma.f32(float %x, float %y, float +qnan, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   ret float %r
 }
 

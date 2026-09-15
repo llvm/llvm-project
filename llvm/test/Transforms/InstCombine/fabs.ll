@@ -16,6 +16,8 @@ declare float @llvm.fmuladd.f32(float, float, float)
 
 declare void @use(float)
 declare void @usebool(i1)
+declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
+declare void @llvm.assume(i1 noundef)
 
 define float @replace_fabs_call_f32(float %x) {
 ; CHECK-LABEL: @replace_fabs_call_f32(
@@ -92,7 +94,7 @@ define fp128 @square_fabs_intrinsic_f128(fp128 %x) {
   ret fp128 %fabsl
 }
 
-define float @square_nnan_fabs_intrinsic_f32(float %x) {
+define float @square_nnan_fabs_intrinsic_f32(float noundef %x) {
 ; CHECK-LABEL: @square_nnan_fabs_intrinsic_f32(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan float [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret float [[MUL]]
@@ -191,7 +193,7 @@ define float @fabs_select_var_constant_negative(i32 %c, float %x) {
 
 ; The fabs cannot be eliminated because %x may be a NaN
 
-define float @square_fma_fabs_intrinsic_f32(float %x) {
+define float @square_fma_fabs_intrinsic_f32(float noundef %x) {
 ; CHECK-LABEL: @square_fma_fabs_intrinsic_f32(
 ; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[X:%.*]], float [[X]], float 1.000000e+00)
 ; CHECK-NEXT:    [[FABSF:%.*]] = call float @llvm.fabs.f32(float [[FMA]])
@@ -204,8 +206,30 @@ define float @square_fma_fabs_intrinsic_f32(float %x) {
 
 ; The fabs cannot be eliminated because %x may be a NaN
 
-define float @square_nnan_fma_fabs_intrinsic_f32(float %x) {
+define float @square_nnan_fma_fabs_intrinsic_f32(float noundef %x, float %y) {
 ; CHECK-LABEL: @square_nnan_fma_fabs_intrinsic_f32(
+; CHECK-NEXT:    [[FMA:%.*]] = call nnan float @llvm.fma.f32(float [[X:%.*]], float [[X]], float [[Y:%.*]])
+; CHECK-NEXT:    [[FABSF:%.*]] = call float @llvm.fabs.f32(float [[FMA]])
+; CHECK-NEXT:    ret float [[FABSF]]
+;
+  %fma = call nnan float @llvm.fma.f32(float %x, float %x, float %y)
+  %fabsf = call float @llvm.fabs.f32(float %fma)
+  ret float %fabsf
+}
+
+define float @square_nnan_fma_fabs_nsz_intrinsic_f32(float noundef %x, float %y) {
+; CHECK-LABEL: @square_nnan_fma_fabs_nsz_intrinsic_f32(
+; CHECK-NEXT:    [[FMA:%.*]] = call nnan float @llvm.fma.f32(float [[X:%.*]], float [[X]], float [[Y:%.*]])
+; CHECK-NEXT:    [[FABSF:%.*]] = call nsz float @llvm.fabs.f32(float [[FMA]])
+; CHECK-NEXT:    ret float [[FABSF]]
+;
+  %fma = call nnan float @llvm.fma.f32(float %x, float %x, float %y)
+  %fabsf = call nsz float @llvm.fabs.f32(float %fma)
+  ret float %fabsf
+}
+
+define float @square_nnan_fma_fabs_intrinsic_f32_add_const(float noundef %x) {
+; CHECK-LABEL: @square_nnan_fma_fabs_intrinsic_f32_add_const(
 ; CHECK-NEXT:    [[FMA:%.*]] = call nnan float @llvm.fma.f32(float [[X:%.*]], float [[X]], float 1.000000e+00)
 ; CHECK-NEXT:    ret float [[FMA]]
 ;
@@ -214,7 +238,7 @@ define float @square_nnan_fma_fabs_intrinsic_f32(float %x) {
   ret float %fabsf
 }
 
-define float @square_fmuladd_fabs_intrinsic_f32(float %x) {
+define float @square_fmuladd_fabs_intrinsic_f32(float noundef %x) {
 ; CHECK-LABEL: @square_fmuladd_fabs_intrinsic_f32(
 ; CHECK-NEXT:    [[FMULADD:%.*]] = call float @llvm.fmuladd.f32(float [[X:%.*]], float [[X]], float 1.000000e+00)
 ; CHECK-NEXT:    [[FABSF:%.*]] = call float @llvm.fabs.f32(float [[FMULADD]])
@@ -225,7 +249,29 @@ define float @square_fmuladd_fabs_intrinsic_f32(float %x) {
   ret float %fabsf
 }
 
-define float @square_nnan_fmuladd_fabs_intrinsic_f32(float %x) {
+define float @square_nnan_nsz_fma_fabs_intrinsic_f32(float noundef %x, float %y) {
+; CHECK-LABEL: @square_nnan_nsz_fma_fabs_intrinsic_f32(
+; CHECK-NEXT:    [[FMA1:%.*]] = call nnan float @llvm.fma.f32(float [[X:%.*]], float [[X]], float [[Y:%.*]])
+; CHECK-NEXT:    [[FMA:%.*]] = call nsz float @llvm.fabs.f32(float [[FMA1]])
+; CHECK-NEXT:    ret float [[FMA]]
+;
+  %fma = call nnan float @llvm.fma.f32(float %x, float %x, float %y)
+  %fabsf = call nsz float @llvm.fabs.f32(float %fma)
+  ret float %fabsf
+}
+
+define float @square_nnan_nsz_fmuladd_fabs_intrinsic_f32(float noundef %x, float %y) {
+; CHECK-LABEL: @square_nnan_nsz_fmuladd_fabs_intrinsic_f32(
+; CHECK-NEXT:    [[FMULADD1:%.*]] = call nnan float @llvm.fmuladd.f32(float [[X:%.*]], float [[X]], float [[Y:%.*]])
+; CHECK-NEXT:    [[FMULADD:%.*]] = call nsz float @llvm.fabs.f32(float [[FMULADD1]])
+; CHECK-NEXT:    ret float [[FMULADD]]
+;
+  %fmuladd = call nnan float @llvm.fmuladd.f32(float %x, float %x, float %y)
+  %fabsf = call nsz float @llvm.fabs.f32(float %fmuladd)
+  ret float %fabsf
+}
+
+define float @square_nnan_fmuladd_fabs_intrinsic_f32(float noundef %x) {
 ; CHECK-LABEL: @square_nnan_fmuladd_fabs_intrinsic_f32(
 ; CHECK-NEXT:    [[FMULADD:%.*]] = call nnan float @llvm.fmuladd.f32(float [[X:%.*]], float [[X]], float 1.000000e+00)
 ; CHECK-NEXT:    ret float [[FMULADD]]
@@ -475,8 +521,8 @@ define half @select_fcmp_nnan_ugt_negzero(half %x) {
 
 define half @select_fcmp_nnan_oge_negzero(half %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_oge_negzero(
-; CHECK-NEXT:    [[GTZERO:%.*]] = fcmp oge half [[X:%.*]], 0xH0000
-; CHECK-NEXT:    [[NEGX:%.*]] = fsub nnan half 0xH0000, [[X]]
+; CHECK-NEXT:    [[GTZERO:%.*]] = fcmp oge half [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[NEGX:%.*]] = fsub nnan half 0.000000e+00, [[X]]
 ; CHECK-NEXT:    [[FABS:%.*]] = select i1 [[GTZERO]], half [[X]], half [[NEGX]]
 ; CHECK-NEXT:    ret half [[FABS]]
 ;
@@ -878,7 +924,7 @@ define <2 x float> @select_fcmp_nnan_nsz_ugt_zero_unary_fneg(<2 x float> %x) {
 
 define half @select_fcmp_nnan_nsz_ogt_negzero(half %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_nsz_ogt_negzero(
-; CHECK-NEXT:    [[GTZERO:%.*]] = fcmp ogt half [[X:%.*]], 0xH0000
+; CHECK-NEXT:    [[GTZERO:%.*]] = fcmp ogt half [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[NEGX:%.*]] = fneg fast half [[X]]
 ; CHECK-NEXT:    [[FABS:%.*]] = select nnan i1 [[GTZERO]], half [[X]], half [[NEGX]]
 ; CHECK-NEXT:    ret half [[FABS]]
@@ -893,7 +939,7 @@ define half @select_fcmp_nnan_nsz_ogt_negzero(half %x) {
 
 define half @select_fcmp_nnan_nsz_ugt_negzero(half %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_nsz_ugt_negzero(
-; CHECK-NEXT:    [[GTZERO:%.*]] = fcmp ugt half [[X:%.*]], 0xH0000
+; CHECK-NEXT:    [[GTZERO:%.*]] = fcmp ugt half [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[NEGX:%.*]] = fneg fast half [[X]]
 ; CHECK-NEXT:    [[FABS:%.*]] = select i1 [[GTZERO]], half [[X]], half [[NEGX]]
 ; CHECK-NEXT:    ret half [[FABS]]
@@ -966,7 +1012,7 @@ define <2 x double> @select_fcmp_nnan_nsz_uge_zero_unary_fneg(<2 x double> %x) {
 
 define half @select_fcmp_nnan_nsz_oge_negzero(half %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_nsz_oge_negzero(
-; CHECK-NEXT:    [[GEZERO:%.*]] = fcmp oge half [[X:%.*]], 0xH0000
+; CHECK-NEXT:    [[GEZERO:%.*]] = fcmp oge half [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[NEGX:%.*]] = fneg nnan nsz half [[X]]
 ; CHECK-NEXT:    [[FABS:%.*]] = select nnan i1 [[GEZERO]], half [[X]], half [[NEGX]]
 ; CHECK-NEXT:    ret half [[FABS]]
@@ -981,7 +1027,7 @@ define half @select_fcmp_nnan_nsz_oge_negzero(half %x) {
 
 define half @select_fcmp_nnan_nsz_uge_negzero(half %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_nsz_uge_negzero(
-; CHECK-NEXT:    [[GEZERO:%.*]] = fcmp uge half [[X:%.*]], 0xH0000
+; CHECK-NEXT:    [[GEZERO:%.*]] = fcmp uge half [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[NEGX:%.*]] = fneg nnan nsz half [[X]]
 ; CHECK-NEXT:    [[FABS:%.*]] = select i1 [[GEZERO]], half [[X]], half [[NEGX]]
 ; CHECK-NEXT:    ret half [[FABS]]
@@ -994,7 +1040,7 @@ define half @select_fcmp_nnan_nsz_uge_negzero(half %x) {
 
 define half @select_fcmp_nnan_nsz_oge_negzero_unary_fneg(half %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_nsz_oge_negzero_unary_fneg(
-; CHECK-NEXT:    [[GEZERO:%.*]] = fcmp oge half [[X:%.*]], 0xH0000
+; CHECK-NEXT:    [[GEZERO:%.*]] = fcmp oge half [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[NEGX:%.*]] = fneg nnan nsz half [[X]]
 ; CHECK-NEXT:    [[FABS:%.*]] = select nnan i1 [[GEZERO]], half [[X]], half [[NEGX]]
 ; CHECK-NEXT:    ret half [[FABS]]
@@ -1009,7 +1055,7 @@ define half @select_fcmp_nnan_nsz_oge_negzero_unary_fneg(half %x) {
 
 define half @select_fcmp_nnan_nsz_uge_negzero_unary_fneg(half %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_nsz_uge_negzero_unary_fneg(
-; CHECK-NEXT:    [[GEZERO:%.*]] = fcmp uge half [[X:%.*]], 0xH0000
+; CHECK-NEXT:    [[GEZERO:%.*]] = fcmp uge half [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[NEGX:%.*]] = fneg nnan nsz half [[X]]
 ; CHECK-NEXT:    [[FABS:%.*]] = select i1 [[GEZERO]], half [[X]], half [[NEGX]]
 ; CHECK-NEXT:    ret half [[FABS]]
@@ -1432,7 +1478,7 @@ define float @test_fabs_nsz_used_by_maxnum(float %x, float %y) {
 
 define i1 @test_fabs_used_is_fpclass_pnorm_or_nan(float %x) {
 ; CHECK-LABEL: @test_fabs_used_is_fpclass_pnorm_or_nan(
-; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 267)
+; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], /* (nan norm) */ i32 267)
 ; CHECK-NEXT:    ret i1 [[IS_FPCLASS]]
 ;
   %cmp = fcmp oge float %x, 0.000000e+00
@@ -1444,7 +1490,7 @@ define i1 @test_fabs_used_is_fpclass_pnorm_or_nan(float %x) {
 
 define i1 @test_fabs_used_is_fpclass_zero_or_pinf(float %x) {
 ; CHECK-LABEL: @test_fabs_used_is_fpclass_zero_or_pinf(
-; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 612)
+; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], /* (inf zero) */ i32 612)
 ; CHECK-NEXT:    ret i1 [[IS_FPCLASS]]
 ;
   %cmp = fcmp oge float %x, 0.000000e+00
@@ -1638,8 +1684,7 @@ define i32 @test_fabs_nsz_used_by_fptoui_sat(float %x) {
 
 define <2 x i1> @test_fabs_used_vp_is_fpclass_zero_or_pinf(<2 x float> %x, <2 x i1> %mask, i32 %evl) {
 ; CHECK-LABEL: @test_fabs_used_vp_is_fpclass_zero_or_pinf(
-; CHECK-NEXT:    [[SEL:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call <2 x i1> @llvm.vp.is.fpclass.v2f32(<2 x float> [[SEL]], i32 608, <2 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
+; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[X:%.*]], /* (inf zero) */ i32 612)
 ; CHECK-NEXT:    ret <2 x i1> [[IS_FPCLASS]]
 ;
   %cmp = fcmp oge <2 x float> %x, zeroinitializer
@@ -1773,7 +1818,7 @@ define i1 @test_fabs_used_is_fpclass_pzero(float %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
-; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[SEL]], i32 64)
+; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[SEL]], /* (pzero) */ i32 64)
 ; CHECK-NEXT:    ret i1 [[IS_FPCLASS]]
 ;
   %cmp = fcmp oge float %x, 0.000000e+00
@@ -1781,4 +1826,67 @@ define i1 @test_fabs_used_is_fpclass_pzero(float %x) {
   %sel = select i1 %cmp, float %x, float %neg
   %is_fpclass = call i1 @llvm.is.fpclass.f32(float %sel, i32 64)
   ret i1 %is_fpclass
+}
+
+define i1 @fptosi_fabs_is_never_negative(float %x) {
+; CHECK-LABEL: @fptosi_fabs_is_never_negative(
+; CHECK-NEXT:    ret i1 false
+;
+  %fabs = call float @llvm.fabs.f32(float %x)
+  %fptosi = fptosi float %fabs to i32
+  %cmp = icmp slt i32 %fptosi, 0
+  ret i1 %cmp
+}
+
+define <2 x i1> @fptosi_fabs_is_never_negative_vec(<2 x float> %x) {
+; CHECK-LABEL: @fptosi_fabs_is_never_negative_vec(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %x)
+  %fptosi = fptosi <2 x float> %fabs to <2 x i32>
+  %cmp = icmp slt <2 x i32> %fptosi, zeroinitializer
+  ret <2 x i1> %cmp
+}
+
+define i1 @fptosi_no_fabs_unknown_sign(float %x) {
+; CHECK-LABEL: @fptosi_no_fabs_unknown_sign(
+; CHECK-NEXT:    [[FPTOSI:%.*]] = fptosi float [[X:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[FPTOSI]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %fptosi = fptosi float %x to i32
+  %cmp = icmp slt i32 %fptosi, 0
+  ret i1 %cmp
+}
+
+; fptosi of -inf is poison (it can never fit in the result type), so a
+; source known to be -inf does not disqualify the fold.
+define i1 @fptosi_known_neg_inf_is_never_negative(float %x) {
+; CHECK-LABEL: @fptosi_known_neg_inf_is_never_negative(
+; CHECK-NEXT:    [[ISNINF:%.*]] = fcmp oeq float [[X:%.*]], -inf
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ISNINF]])
+; CHECK-NEXT:    ret i1 false
+;
+  %isninf = call i1 @llvm.is.fpclass.f32(float %x, i32 4)
+  call void @llvm.assume(i1 %isninf)
+  %fptosi = fptosi float %x to i32
+  %cmp = icmp slt i32 %fptosi, 0
+  ret i1 %cmp
+}
+
+; A source that is known to be a genuine negative normal (e.g. -2.0) must
+; not be folded.
+define i1 @fptosi_known_neg_normal_no_fold(float %x) {
+; CHECK-LABEL: @fptosi_known_neg_normal_no_fold(
+; CHECK-NEXT:    [[ISNEGTWO:%.*]] = fcmp oeq float [[X:%.*]], -2.000000e+00
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ISNEGTWO]])
+; CHECK-NEXT:    [[FPTOSI:%.*]] = fptosi float [[X]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[FPTOSI]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %isnegtwo = fcmp oeq float %x, -2.0
+  call void @llvm.assume(i1 %isnegtwo)
+  %fptosi = fptosi float %x to i32
+  %cmp = icmp slt i32 %fptosi, 0
+  ret i1 %cmp
 }

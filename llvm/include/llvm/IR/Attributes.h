@@ -18,6 +18,7 @@
 #include "llvm-c/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
@@ -29,6 +30,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -40,13 +42,14 @@ class AttributeListImpl;
 class AttributeSetNode;
 class ConstantRange;
 class ConstantRangeList;
-class FoldingSetNodeID;
 class Function;
 class LLVMContext;
 class Instruction;
 class Type;
 class raw_ostream;
 enum FPClassTest : unsigned;
+struct DenormalFPEnv;
+struct DenormalMode;
 
 enum class AllocFnKind : uint64_t {
   Unknown = 0,
@@ -58,6 +61,40 @@ enum class AllocFnKind : uint64_t {
   Aligned = 1 << 5,       // Allocator function aligns allocations per the
                           // `allocalign` argument
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Aligned)
+};
+
+class DeadOnReturnInfo {
+public:
+  DeadOnReturnInfo() : DeadBytes(std::nullopt) {}
+  DeadOnReturnInfo(uint64_t DeadOnReturnBytes) : DeadBytes(DeadOnReturnBytes) {}
+
+  uint64_t getNumberOfDeadBytes() const {
+    assert(DeadBytes.has_value() &&
+           "This attribute does not specify a byte count. Did you forget to "
+           "check if the attribute covers all reachable memory?");
+    return DeadBytes.value();
+  }
+
+  bool coversAllReachableMemory() const { return !DeadBytes.has_value(); }
+
+  static DeadOnReturnInfo createFromIntValue(uint64_t Data) {
+    if (Data == std::numeric_limits<uint64_t>::max())
+      return DeadOnReturnInfo();
+    return DeadOnReturnInfo(Data);
+  }
+
+  uint64_t toIntValue() const {
+    if (DeadBytes.has_value())
+      return DeadBytes.value();
+    return std::numeric_limits<uint64_t>::max();
+  }
+
+  bool isZeroSized() const {
+    return DeadBytes.has_value() && DeadBytes.value() == 0;
+  }
+
+private:
+  std::optional<uint64_t> DeadBytes;
 };
 
 //===----------------------------------------------------------------------===//
@@ -95,6 +132,7 @@ public:
     TombstoneKey,          ///< Use as Tombstone key for DenseMap of AttrKind
   };
 
+  static const unsigned NumEnumAttrKinds = LastEnumAttr - FirstEnumAttr + 1;
   static const unsigned NumIntAttrKinds = LastIntAttr - FirstIntAttr + 1;
   static const unsigned NumTypeAttrKinds = LastTypeAttr - FirstTypeAttr + 1;
 
@@ -123,6 +161,9 @@ public:
   LLVM_ABI static bool intersectWithAnd(AttrKind Kind);
   LLVM_ABI static bool intersectWithMin(AttrKind Kind);
   LLVM_ABI static bool intersectWithCustom(AttrKind Kind);
+
+  /// Whether this is an ABI attribute (for returns or arguments).
+  LLVM_ABI static bool isABIAttr(AttrKind Kind);
 
 private:
   AttributeImpl *pImpl = nullptr;
@@ -178,6 +219,8 @@ public:
                                                  MemoryEffects ME);
   LLVM_ABI static Attribute getWithNoFPClass(LLVMContext &Context,
                                              FPClassTest Mask);
+  LLVM_ABI static Attribute getWithDeadOnReturnInfo(LLVMContext &Context,
+                                                    DeadOnReturnInfo DI);
   LLVM_ABI static Attribute getWithCaptureInfo(LLVMContext &Context,
                                                CaptureInfo CI);
 
@@ -276,6 +319,11 @@ public:
   /// dereferenceable attribute.
   LLVM_ABI uint64_t getDereferenceableBytes() const;
 
+  /// Returns the number of dead_on_return bytes from the dead_on_return
+  /// attribute, or std::nullopt if all memory reachable through the pointer is
+  /// marked dead on return.
+  LLVM_ABI DeadOnReturnInfo getDeadOnReturnInfo() const;
+
   /// Returns the number of dereferenceable_or_null bytes from the
   /// dereferenceable_or_null attribute.
   LLVM_ABI uint64_t getDereferenceableOrNullBytes() const;
@@ -299,6 +347,9 @@ public:
 
   /// Returns memory effects.
   LLVM_ABI MemoryEffects getMemoryEffects() const;
+
+  /// Returns denormal_fpenv.
+  LLVM_ABI struct DenormalFPEnv getDenormalFPEnv() const;
 
   /// Returns information from captures attribute.
   LLVM_ABI CaptureInfo getCaptureInfo() const;
@@ -328,8 +379,6 @@ public:
 
   /// Less-than operator. Useful for sorting the attributes list.
   LLVM_ABI bool operator<(Attribute A) const;
-
-  LLVM_ABI void Profile(FoldingSetNodeID &ID) const;
 
   /// Return a raw pointer that uniquely identifies this attribute.
   void *getRawPointer() const {
@@ -401,7 +450,8 @@ public:
 
   /// Add attributes to the attribute set. Returns a new set because attribute
   /// sets are immutable.
-  AttributeSet addAttributes(LLVMContext &C, const AttrBuilder &B) const;
+  LLVM_ABI AttributeSet addAttributes(LLVMContext &C,
+                                      const AttrBuilder &B) const;
 
   /// Remove the specified attribute from this set. Returns a new set because
   /// attribute sets are immutable.
@@ -445,6 +495,7 @@ public:
   LLVM_ABI MaybeAlign getAlignment() const;
   LLVM_ABI MaybeAlign getStackAlignment() const;
   LLVM_ABI uint64_t getDereferenceableBytes() const;
+  LLVM_ABI DeadOnReturnInfo getDeadOnReturnInfo() const;
   LLVM_ABI uint64_t getDereferenceableOrNullBytes() const;
   LLVM_ABI Type *getByValType() const;
   LLVM_ABI Type *getStructRetType() const;
@@ -479,25 +530,23 @@ public:
 /// \class
 /// Provide DenseMapInfo for AttributeSet.
 template <> struct DenseMapInfo<AttributeSet, void> {
-  static AttributeSet getEmptyKey() {
-    auto Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
-    return AttributeSet(reinterpret_cast<AttributeSetNode *>(Val));
-  }
-
-  static AttributeSet getTombstoneKey() {
-    auto Val = static_cast<uintptr_t>(-2);
-    Val <<= PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
-    return AttributeSet(reinterpret_cast<AttributeSetNode *>(Val));
-  }
-
   static unsigned getHashValue(AttributeSet AS) {
-    return (unsigned((uintptr_t)AS.SetNode) >> 4) ^
-           (unsigned((uintptr_t)AS.SetNode) >> 9);
+    return DenseMapInfo<const void *>::getHashValue(AS.SetNode);
   }
 
   static bool isEqual(AttributeSet LHS, AttributeSet RHS) { return LHS == RHS; }
 };
+
+namespace hashing::detail {
+// Attribute and AttributeSet are trivial wrappers whose operator== is pointer
+// equality, so hashing the bytes is equivalent to hashing the values. Define
+// is_hashable_data to pick the contiguous hash_combine_range path.
+template <> struct is_hashable_data<Attribute> : std::true_type {};
+template <> struct is_hashable_data<AttributeSet> : std::true_type {};
+static_assert(std::has_unique_object_representations_v<Attribute> &&
+                  std::has_unique_object_representations_v<AttributeSet>,
+              "hashing the bytes requires unique object representations");
+} // namespace hashing::detail
 
 //===----------------------------------------------------------------------===//
 /// \class
@@ -544,9 +593,6 @@ private:
 
   static AttributeList getImpl(LLVMContext &C, ArrayRef<AttributeSet> AttrSets);
 
-  AttributeList setAttributesAtIndex(LLVMContext &C, unsigned Index,
-                                     AttributeSet Attrs) const;
-
 public:
   AttributeList() = default;
 
@@ -568,6 +614,11 @@ public:
                                     AttributeSet Attrs);
   LLVM_ABI static AttributeList get(LLVMContext &C, unsigned Index,
                                     const AttrBuilder &B);
+
+  /// Set the attribute set at the given index.
+  /// Returns a new list because attribute lists are immutable.
+  [[nodiscard]] LLVM_ABI AttributeList setAttributesAtIndex(
+      LLVMContext &C, unsigned Index, AttributeSet Attrs) const;
 
   // TODO: remove non-AtIndex versions of these methods.
   /// Add an attribute to the attribute set at the given index.
@@ -964,6 +1015,9 @@ public:
   /// the return value.
   LLVM_ABI uint64_t getRetDereferenceableOrNullBytes() const;
 
+  /// Get the number of dead_on_return bytes (or zero if unknown) of an arg.
+  LLVM_ABI DeadOnReturnInfo getDeadOnReturnInfo(unsigned Index) const;
+
   /// Get the number of dereferenceable_or_null bytes (or zero if unknown) of an
   /// arg.
   LLVM_ABI uint64_t getParamDereferenceableOrNullBytes(unsigned ArgNo) const;
@@ -1051,21 +1105,8 @@ public:
 /// \class
 /// Provide DenseMapInfo for AttributeList.
 template <> struct DenseMapInfo<AttributeList, void> {
-  static AttributeList getEmptyKey() {
-    auto Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
-    return AttributeList(reinterpret_cast<AttributeListImpl *>(Val));
-  }
-
-  static AttributeList getTombstoneKey() {
-    auto Val = static_cast<uintptr_t>(-2);
-    Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
-    return AttributeList(reinterpret_cast<AttributeListImpl *>(Val));
-  }
-
   static unsigned getHashValue(AttributeList AS) {
-    return (unsigned((uintptr_t)AS.pImpl) >> 4) ^
-           (unsigned((uintptr_t)AS.pImpl) >> 9);
+    return DenseMapInfo<const void *>::getHashValue(AS.pImpl);
   }
 
   static bool isEqual(AttributeList LHS, AttributeList RHS) {
@@ -1242,6 +1283,10 @@ public:
   /// internally in Attribute.
   LLVM_ABI AttrBuilder &addDereferenceableAttr(uint64_t Bytes);
 
+  /// This turns the number of dead_on_return bytes into the form used
+  /// internally in Attribute.
+  LLVM_ABI AttrBuilder &addDeadOnReturnAttr(DeadOnReturnInfo Info);
+
   /// This turns the number of dereferenceable_or_null bytes into the
   /// form used internally in Attribute.
   LLVM_ABI AttrBuilder &addDereferenceableOrNullAttr(uint64_t Bytes);
@@ -1294,6 +1339,9 @@ public:
 
   /// Add captures attribute.
   LLVM_ABI AttrBuilder &addCapturesAttr(CaptureInfo CI);
+
+  /// Add denormal_fpenv attribute.
+  LLVM_ABI AttrBuilder &addDenormalFPEnvAttr(DenormalFPEnv Mode);
 
   // Add nofpclass attribute
   LLVM_ABI AttrBuilder &addNoFPClassAttr(FPClassTest NoFPClassMask);
@@ -1358,6 +1406,11 @@ LLVM_ABI AttributeMask getUBImplyingAttributes();
 /// attributes for inlining purposes.
 LLVM_ABI bool areInlineCompatible(const Function &Caller,
                                   const Function &Callee);
+
+/// \returns Return false if callee is strictfp and caller is not. Return true
+/// otherwise.
+LLVM_ABI bool isStrictFPInlineCompatible(const Function &Caller,
+                                         const Function &Callee);
 
 /// Checks  if there are any incompatible function attributes between
 /// \p A and \p B.

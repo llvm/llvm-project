@@ -29,8 +29,10 @@
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -52,46 +54,38 @@ struct DemandedVL {
     return !VL.isIdenticalTo(Other.VL);
   }
 
-  DemandedVL max(const DemandedVL &X) const {
-    if (RISCV::isVLKnownLE(VL, X.VL))
+  DemandedVL max(const MachineRegisterInfo &MRI, const DemandedVL &X) const {
+    if (RISCV::isVLKnownLE(MRI, VL, X.VL))
       return X;
-    if (RISCV::isVLKnownLE(X.VL, VL))
+    if (RISCV::isVLKnownLE(MRI, X.VL, VL))
       return *this;
     return DemandedVL::vlmax();
   }
 };
 
-class RISCVVLOptimizer : public MachineFunctionPass {
+class RISCVVLOptimizerImpl {
   MachineRegisterInfo *MRI;
   const MachineDominatorTree *MDT;
   const TargetInstrInfo *TII;
 
 public:
-  static char ID;
+  RISCVVLOptimizerImpl(const MachineDominatorTree *MDT) : MDT(MDT) {}
 
-  RISCVVLOptimizer() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  StringRef getPassName() const override { return PASS_NAME; }
+  bool run(MachineFunction &MF);
 
 private:
-  DemandedVL getMinimumVLForUser(const MachineOperand &UserOp) const;
+  DemandedVL getMinimumVLForUser(const MachineInstr &UserMI,
+                                 unsigned OpIdx) const;
   /// Returns true if the users of \p MI have compatible EEWs and SEWs.
   bool checkUsers(const MachineInstr &MI) const;
   bool tryReduceVL(MachineInstr &MI, MachineOperand VL) const;
+  bool isSupportedInstr(const MachineInstr &MI) const;
   bool isCandidate(const MachineInstr &MI) const;
   void transfer(const MachineInstr &MI);
 
   /// For a given instruction, records what elements of it are demanded by
   /// downstream users.
-  DenseMap<const MachineInstr *, DemandedVL> DemandedVLs;
+  MapVector<const MachineInstr *, DemandedVL> DemandedVLs;
   SetVector<const MachineInstr *> Worklist;
 
   /// \returns all vector virtual registers that \p MI uses.
@@ -101,6 +95,24 @@ private:
              RISCVRegisterInfo::isRVVRegClass(MRI->getRegClass(MO.getReg()));
     });
   }
+};
+
+class RISCVVLOptimizerLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  RISCVVLOptimizerLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  StringRef getPassName() const override { return PASS_NAME; }
 };
 
 /// Represents the EMUL and EEW of a MachineOperand.
@@ -147,13 +159,14 @@ struct OperandInfo {
 
 } // end anonymous namespace
 
-char RISCVVLOptimizer::ID = 0;
-INITIALIZE_PASS_BEGIN(RISCVVLOptimizer, DEBUG_TYPE, PASS_NAME, false, false)
+char RISCVVLOptimizerLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(RISCVVLOptimizerLegacy, DEBUG_TYPE, PASS_NAME, false,
+                      false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(RISCVVLOptimizer, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS_END(RISCVVLOptimizerLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
-FunctionPass *llvm::createRISCVVLOptimizerPass() {
-  return new RISCVVLOptimizer();
+FunctionPass *llvm::createRISCVVLOptimizerLegacyPass() {
+  return new RISCVVLOptimizerLegacy();
 }
 
 [[maybe_unused]]
@@ -199,15 +212,32 @@ getEMULEqualsEEWDivSEWTimesLMUL(unsigned Log2EEW, const MachineInstr &MI) {
   return std::make_pair(Num > Denom ? Num : Denom, Denom > Num);
 }
 
+static DemandedVL doubleVL(DemandedVL MinimumVL) {
+  if (!MinimumVL.VL.isImm())
+    return DemandedVL::vlmax();
+
+  int64_t VL = MinimumVL.VL.getImm();
+  if (!isUInt<4>(VL))
+    return DemandedVL::vlmax();
+  return MachineOperand::CreateImm(VL * 2);
+}
+
+static std::pair<unsigned, bool> doubleEMUL(std::pair<unsigned, bool> EMUL) {
+  auto [Num, IsFractional] = EMUL;
+  if (IsFractional)
+    return std::make_pair(Num / 2, Num > 2);
+  return std::make_pair(Num * 2, false);
+}
+
 /// Dest has EEW=SEW. Source EEW=SEW/Factor (i.e. F2 => EEW/2).
 /// SEW comes from TSFlags of MI.
 static unsigned getIntegerExtensionOperandEEW(unsigned Factor,
                                               const MachineInstr &MI,
-                                              const MachineOperand &MO) {
+                                              unsigned OpIdx) {
   unsigned MILog2SEW =
       MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
 
-  if (MO.getOperandNo() == 0)
+  if (OpIdx == 0)
     return MILog2SEW;
 
   unsigned MISEW = 1 << MILog2SEW;
@@ -230,8 +260,8 @@ static unsigned getIntegerExtensionOperandEEW(unsigned Factor,
 #define VSUXSEG_CASES(EEW)  VSEG_CASES(VSUX, I##EEW)
 #define VSOXSEG_CASES(EEW)  VSEG_CASES(VSOX, I##EEW)
 
-static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
-  const MachineInstr &MI = *MO.getParent();
+static std::optional<unsigned> getOperandLog2EEW(const MachineInstr &MI,
+                                                 unsigned OpIdx) {
   const MCInstrDesc &Desc = MI.getDesc();
   const RISCVVPseudosTable::PseudoInfo *RVV =
       RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
@@ -244,11 +274,11 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   const bool HasPassthru = RISCVII::isFirstDefTiedToFirstUse(Desc);
   const bool IsTied = RISCVII::isTiedPseudo(Desc.TSFlags);
 
-  bool IsMODef = MO.getOperandNo() == 0 ||
-                 (HasPassthru && MO.getOperandNo() == MI.getNumExplicitDefs());
+  bool IsMODef =
+      OpIdx == 0 || (HasPassthru && OpIdx == MI.getNumExplicitDefs());
 
   // All mask operands have EEW=1
-  const MCOperandInfo &Info = Desc.operands()[MO.getOperandNo()];
+  const MCOperandInfo &Info = Desc.operands()[OpIdx];
   if (Info.OperandType == MCOI::OPERAND_REGISTER &&
       Info.RegClass == RISCV::VMV0RegClassID)
     return 0;
@@ -310,7 +340,7 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VSOXEI8_V:
   case VSUXSEG_CASES(8):
   case VSOXSEG_CASES(8): {
-    if (MO.getOperandNo() == 0)
+    if (OpIdx == 0)
       return MILog2SEW;
     return 3;
   }
@@ -320,7 +350,7 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VSOXEI16_V:
   case VSUXSEG_CASES(16):
   case VSOXSEG_CASES(16): {
-    if (MO.getOperandNo() == 0)
+    if (OpIdx == 0)
       return MILog2SEW;
     return 4;
   }
@@ -330,7 +360,7 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VSOXEI32_V:
   case VSUXSEG_CASES(32):
   case VSOXSEG_CASES(32): {
-    if (MO.getOperandNo() == 0)
+    if (OpIdx == 0)
       return MILog2SEW;
     return 5;
   }
@@ -340,7 +370,7 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VSOXEI64_V:
   case VSUXSEG_CASES(64):
   case VSOXSEG_CASES(64): {
-    if (MO.getOperandNo() == 0)
+    if (OpIdx == 0)
       return MILog2SEW;
     return 6;
   }
@@ -585,6 +615,19 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   // Vector Carry-less Multiply Return High Half
   case RISCV::VCLMULH_VV:
   case RISCV::VCLMULH_VX:
+
+  // Zvabd
+  case RISCV::VABD_VV:
+  case RISCV::VABD_VX:
+  case RISCV::VABDU_VV:
+  case RISCV::VABDU_VX:
+
+  // Zvzip
+  case RISCV::VZIP_VV:
+  case RISCV::VUNZIPE_V:
+  case RISCV::VUNZIPO_V:
+  case RISCV::VPAIRE_VV:
+  case RISCV::VPAIRO_VV:
     return MILog2SEW;
 
   // Vector Widening Shift Left Logical (Zvbb)
@@ -650,6 +693,11 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VFWCVT_F_X_V:
   case RISCV::VFWCVT_F_F_V:
   case RISCV::VFWCVTBF16_F_F_V:
+  // Zvabd
+  case RISCV::VWABDA_VV:
+  case RISCV::VWABDA_VX:
+  case RISCV::VWABDAU_VV:
+  case RISCV::VWABDAU_VX:
     return IsMODef ? MILog2SEW + 1 : MILog2SEW;
 
   // Def and Op1 uses EEW=2*SEW. Op2 uses EEW=SEW.
@@ -666,8 +714,7 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VFWADD_WV:
   case RISCV::VFWSUB_WF:
   case RISCV::VFWSUB_WV: {
-    bool IsOp1 = (HasPassthru && !IsTied) ? MO.getOperandNo() == 2
-                                          : MO.getOperandNo() == 1;
+    bool IsOp1 = (HasPassthru && !IsTied) ? OpIdx == 2 : OpIdx == 1;
     bool TwoTimes = IsMODef || IsOp1;
     return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
   }
@@ -675,13 +722,13 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   // Vector Integer Extension
   case RISCV::VZEXT_VF2:
   case RISCV::VSEXT_VF2:
-    return getIntegerExtensionOperandEEW(2, MI, MO);
+    return getIntegerExtensionOperandEEW(2, MI, OpIdx);
   case RISCV::VZEXT_VF4:
   case RISCV::VSEXT_VF4:
-    return getIntegerExtensionOperandEEW(4, MI, MO);
+    return getIntegerExtensionOperandEEW(4, MI, OpIdx);
   case RISCV::VZEXT_VF8:
   case RISCV::VSEXT_VF8:
-    return getIntegerExtensionOperandEEW(8, MI, MO);
+    return getIntegerExtensionOperandEEW(8, MI, OpIdx);
 
   // Vector Narrowing Integer Right Shift Instructions
   // Destination EEW=SEW, Op 1 has EEW=2*SEW. Op2 has EEW=SEW
@@ -710,7 +757,7 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   case RISCV::VFNCVT_ROD_F_F_W:
   case RISCV::VFNCVTBF16_F_F_W: {
     assert(!IsTied);
-    bool IsOp1 = HasPassthru ? MO.getOperandNo() == 2 : MO.getOperandNo() == 1;
+    bool IsOp1 = HasPassthru ? OpIdx == 2 : OpIdx == 1;
     bool TwoTimes = IsOp1;
     return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
   }
@@ -742,13 +789,13 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   // EEW=SEW, except the mask operand has EEW=1. Mask operand is not handled
   // before this switch.
   case RISCV::VCOMPRESS_VM:
-    return MO.getOperandNo() == 3 ? 0 : MILog2SEW;
+    return OpIdx == 3 ? 0 : MILog2SEW;
 
   // Vector Iota Instruction
   // EEW=SEW, except the mask operand has EEW=1. Mask operand is not handled
   // before this switch.
   case RISCV::VIOTA_M: {
-    if (IsMODef || MO.getOperandNo() == 1)
+    if (IsMODef || OpIdx == 1)
       return MILog2SEW;
     return 0;
   }
@@ -831,14 +878,14 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   // Vector Widening Floating-Point Reduction Instructions
   case RISCV::VFWREDOSUM_VS:
   case RISCV::VFWREDUSUM_VS: {
-    bool TwoTimes = IsMODef || MO.getOperandNo() == 3;
+    bool TwoTimes = IsMODef || OpIdx == 3;
     return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
   }
 
   // Vector Register Gather with 16-bit Index Elements Instruction
   // Dest and source data EEW=SEW. Index vector EEW=16.
   case RISCV::VRGATHEREI16_VV: {
-    if (MO.getOperandNo() == 2)
+    if (OpIdx == 2)
       return 4;
     return MILog2SEW;
   }
@@ -848,13 +895,13 @@ static std::optional<unsigned> getOperandLog2EEW(const MachineOperand &MO) {
   }
 }
 
-static std::optional<OperandInfo> getOperandInfo(const MachineOperand &MO) {
-  const MachineInstr &MI = *MO.getParent();
+static std::optional<OperandInfo> getOperandInfo(const MachineInstr &MI,
+                                                 unsigned OpIdx) {
   const RISCVVPseudosTable::PseudoInfo *RVV =
       RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
   assert(RVV && "Could not find MI in PseudoTable");
 
-  std::optional<unsigned> Log2EEW = getOperandLog2EEW(MO);
+  std::optional<unsigned> Log2EEW = getOperandLog2EEW(MI, OpIdx);
   if (!Log2EEW)
     return std::nullopt;
 
@@ -877,9 +924,28 @@ static std::optional<OperandInfo> getOperandInfo(const MachineOperand &MO) {
   case RISCV::VWREDSUMU_VS:
   case RISCV::VFWREDOSUM_VS:
   case RISCV::VFWREDUSUM_VS:
-    if (MO.getOperandNo() != 2)
+    if (OpIdx != 2)
       return OperandInfo(*Log2EEW);
     break;
+
+  // Zvzip - vzip.vv interleaves two LMUL vectors into a 2*LMUL result with
+  // the same SEW. Dest, passthru, and mask therefore have 2 * EMUL.
+  case RISCV::VZIP_VV: {
+    auto EMUL = getEMULEqualsEEWDivSEWTimesLMUL(*Log2EEW, MI);
+    if (OpIdx == 0 || OpIdx == MI.getNumExplicitDefs() || OpIdx == 4)
+      EMUL = doubleEMUL(EMUL);
+    return OperandInfo(EMUL, *Log2EEW);
+  }
+  // Zvzip - vunzipe.v / vunzipo.v split a 2*LMUL vector into LMUL even/odd
+  // elements with the same SEW. The source (and passthru tied to dest which is
+  // also LMUL sized - so only the vs2 source) has 2 * EMUL.
+  case RISCV::VUNZIPE_V:
+  case RISCV::VUNZIPO_V: {
+    auto EMUL = getEMULEqualsEEWDivSEWTimesLMUL(*Log2EEW, MI);
+    if (OpIdx == 2)
+      EMUL = doubleEMUL(EMUL);
+    return OperandInfo(EMUL, *Log2EEW);
+  }
   };
 
   // All others have EMUL=EEW/SEW*LMUL
@@ -888,422 +954,38 @@ static std::optional<OperandInfo> getOperandInfo(const MachineOperand &MO) {
 
 static bool isTupleInsertInstr(const MachineInstr &MI);
 
-/// Return true if this optimization should consider MI for VL reduction. This
-/// white-list approach simplifies this optimization for instructions that may
-/// have more complex semantics with relation to how it uses VL.
-static bool isSupportedInstr(const MachineInstr &MI) {
+/// Return true if we can reason about demanded VLs elementwise for \p MI.
+bool RISCVVLOptimizerImpl::isSupportedInstr(const MachineInstr &MI) const {
   if (MI.isPHI() || MI.isFullCopy() || isTupleInsertInstr(MI))
     return true;
 
-  const RISCVVPseudosTable::PseudoInfo *RVV =
-      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
-
-  if (!RVV)
+  unsigned RVVOpc = RISCV::getRVVMCOpcode(MI.getOpcode());
+  if (!RVVOpc)
     return false;
 
-  switch (RVV->BaseInstr) {
-  // Vector Unit-Stride Instructions
-  // Vector Strided Instructions
-  case RISCV::VLM_V:
-  case RISCV::VLE8_V:
-  case RISCV::VLSE8_V:
-  case RISCV::VLE16_V:
-  case RISCV::VLSE16_V:
-  case RISCV::VLE32_V:
-  case RISCV::VLSE32_V:
-  case RISCV::VLE64_V:
-  case RISCV::VLSE64_V:
-  // Vector Indexed Instructions
-  case RISCV::VLUXEI8_V:
-  case RISCV::VLOXEI8_V:
-  case RISCV::VLUXEI16_V:
-  case RISCV::VLOXEI16_V:
-  case RISCV::VLUXEI32_V:
-  case RISCV::VLOXEI32_V:
-  case RISCV::VLUXEI64_V:
-  case RISCV::VLOXEI64_V:
-  // Vector Single-Width Integer Add and Subtract
-  case RISCV::VADD_VI:
-  case RISCV::VADD_VV:
-  case RISCV::VADD_VX:
-  case RISCV::VSUB_VV:
-  case RISCV::VSUB_VX:
-  case RISCV::VRSUB_VI:
-  case RISCV::VRSUB_VX:
-  // Vector Bitwise Logical Instructions
-  // Vector Single-Width Shift Instructions
-  case RISCV::VAND_VI:
-  case RISCV::VAND_VV:
-  case RISCV::VAND_VX:
-  case RISCV::VOR_VI:
-  case RISCV::VOR_VV:
-  case RISCV::VOR_VX:
-  case RISCV::VXOR_VI:
-  case RISCV::VXOR_VV:
-  case RISCV::VXOR_VX:
-  case RISCV::VSLL_VI:
-  case RISCV::VSLL_VV:
-  case RISCV::VSLL_VX:
-  case RISCV::VSRL_VI:
-  case RISCV::VSRL_VV:
-  case RISCV::VSRL_VX:
-  case RISCV::VSRA_VI:
-  case RISCV::VSRA_VV:
-  case RISCV::VSRA_VX:
-  // Vector Widening Integer Add/Subtract
-  case RISCV::VWADDU_VV:
-  case RISCV::VWADDU_VX:
-  case RISCV::VWSUBU_VV:
-  case RISCV::VWSUBU_VX:
-  case RISCV::VWADD_VV:
-  case RISCV::VWADD_VX:
-  case RISCV::VWSUB_VV:
-  case RISCV::VWSUB_VX:
-  case RISCV::VWADDU_WV:
-  case RISCV::VWADDU_WX:
-  case RISCV::VWSUBU_WV:
-  case RISCV::VWSUBU_WX:
-  case RISCV::VWADD_WV:
-  case RISCV::VWADD_WX:
-  case RISCV::VWSUB_WV:
-  case RISCV::VWSUB_WX:
-  // Vector Integer Extension
-  case RISCV::VZEXT_VF2:
-  case RISCV::VSEXT_VF2:
-  case RISCV::VZEXT_VF4:
-  case RISCV::VSEXT_VF4:
-  case RISCV::VZEXT_VF8:
-  case RISCV::VSEXT_VF8:
-  // Vector Narrowing Integer Right Shift Instructions
-  case RISCV::VNSRL_WX:
-  case RISCV::VNSRL_WI:
-  case RISCV::VNSRL_WV:
-  case RISCV::VNSRA_WI:
-  case RISCV::VNSRA_WV:
-  case RISCV::VNSRA_WX:
-  // Vector Integer Compare Instructions
-  case RISCV::VMSEQ_VI:
-  case RISCV::VMSEQ_VV:
-  case RISCV::VMSEQ_VX:
-  case RISCV::VMSNE_VI:
-  case RISCV::VMSNE_VV:
-  case RISCV::VMSNE_VX:
-  case RISCV::VMSLTU_VV:
-  case RISCV::VMSLTU_VX:
-  case RISCV::VMSLT_VV:
-  case RISCV::VMSLT_VX:
-  case RISCV::VMSLEU_VV:
-  case RISCV::VMSLEU_VI:
-  case RISCV::VMSLEU_VX:
-  case RISCV::VMSLE_VV:
-  case RISCV::VMSLE_VI:
-  case RISCV::VMSLE_VX:
-  case RISCV::VMSGTU_VI:
-  case RISCV::VMSGTU_VX:
-  case RISCV::VMSGT_VI:
-  case RISCV::VMSGT_VX:
-  // Vector Integer Min/Max Instructions
-  case RISCV::VMINU_VV:
-  case RISCV::VMINU_VX:
-  case RISCV::VMIN_VV:
-  case RISCV::VMIN_VX:
-  case RISCV::VMAXU_VV:
-  case RISCV::VMAXU_VX:
-  case RISCV::VMAX_VV:
-  case RISCV::VMAX_VX:
-  // Vector Single-Width Integer Multiply Instructions
-  case RISCV::VMUL_VV:
-  case RISCV::VMUL_VX:
-  case RISCV::VMULH_VV:
-  case RISCV::VMULH_VX:
-  case RISCV::VMULHU_VV:
-  case RISCV::VMULHU_VX:
-  case RISCV::VMULHSU_VV:
-  case RISCV::VMULHSU_VX:
-  // Vector Integer Divide Instructions
-  case RISCV::VDIVU_VV:
-  case RISCV::VDIVU_VX:
-  case RISCV::VDIV_VV:
-  case RISCV::VDIV_VX:
-  case RISCV::VREMU_VV:
-  case RISCV::VREMU_VX:
-  case RISCV::VREM_VV:
-  case RISCV::VREM_VX:
-  // Vector Widening Integer Multiply Instructions
-  case RISCV::VWMUL_VV:
-  case RISCV::VWMUL_VX:
-  case RISCV::VWMULSU_VV:
-  case RISCV::VWMULSU_VX:
-  case RISCV::VWMULU_VV:
-  case RISCV::VWMULU_VX:
-  // Vector Single-Width Integer Multiply-Add Instructions
-  case RISCV::VMACC_VV:
-  case RISCV::VMACC_VX:
-  case RISCV::VNMSAC_VV:
-  case RISCV::VNMSAC_VX:
-  case RISCV::VMADD_VV:
-  case RISCV::VMADD_VX:
-  case RISCV::VNMSUB_VV:
-  case RISCV::VNMSUB_VX:
-  // Vector Integer Merge Instructions
-  case RISCV::VMERGE_VIM:
-  case RISCV::VMERGE_VVM:
-  case RISCV::VMERGE_VXM:
-  // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
-  case RISCV::VADC_VIM:
-  case RISCV::VADC_VVM:
-  case RISCV::VADC_VXM:
-  case RISCV::VMADC_VIM:
-  case RISCV::VMADC_VVM:
-  case RISCV::VMADC_VXM:
-  case RISCV::VSBC_VVM:
-  case RISCV::VSBC_VXM:
-  case RISCV::VMSBC_VVM:
-  case RISCV::VMSBC_VXM:
-  case RISCV::VMADC_VV:
-  case RISCV::VMADC_VI:
-  case RISCV::VMADC_VX:
-  case RISCV::VMSBC_VV:
-  case RISCV::VMSBC_VX:
-  // Vector Widening Integer Multiply-Add Instructions
-  case RISCV::VWMACCU_VV:
-  case RISCV::VWMACCU_VX:
-  case RISCV::VWMACC_VV:
-  case RISCV::VWMACC_VX:
-  case RISCV::VWMACCSU_VV:
-  case RISCV::VWMACCSU_VX:
-  case RISCV::VWMACCUS_VX:
-  // Vector Integer Move Instructions
-  case RISCV::VMV_V_I:
-  case RISCV::VMV_V_X:
-  case RISCV::VMV_V_V:
-  // Vector Single-Width Saturating Add and Subtract
-  case RISCV::VSADDU_VV:
-  case RISCV::VSADDU_VX:
-  case RISCV::VSADDU_VI:
-  case RISCV::VSADD_VV:
-  case RISCV::VSADD_VX:
-  case RISCV::VSADD_VI:
-  case RISCV::VSSUBU_VV:
-  case RISCV::VSSUBU_VX:
-  case RISCV::VSSUB_VV:
-  case RISCV::VSSUB_VX:
-  // Vector Single-Width Averaging Add and Subtract
-  case RISCV::VAADDU_VV:
-  case RISCV::VAADDU_VX:
-  case RISCV::VAADD_VV:
-  case RISCV::VAADD_VX:
-  case RISCV::VASUBU_VV:
-  case RISCV::VASUBU_VX:
-  case RISCV::VASUB_VV:
-  case RISCV::VASUB_VX:
-  // Vector Single-Width Fractional Multiply with Rounding and Saturation
-  case RISCV::VSMUL_VV:
-  case RISCV::VSMUL_VX:
-  // Vector Single-Width Scaling Shift Instructions
-  case RISCV::VSSRL_VV:
-  case RISCV::VSSRL_VX:
-  case RISCV::VSSRL_VI:
-  case RISCV::VSSRA_VV:
-  case RISCV::VSSRA_VX:
-  case RISCV::VSSRA_VI:
-  // Vector Narrowing Fixed-Point Clip Instructions
-  case RISCV::VNCLIPU_WV:
-  case RISCV::VNCLIPU_WX:
-  case RISCV::VNCLIPU_WI:
-  case RISCV::VNCLIP_WV:
-  case RISCV::VNCLIP_WX:
-  case RISCV::VNCLIP_WI:
-  // Vector Bit-manipulation Instructions (Zvbb)
-  // Vector And-Not
-  case RISCV::VANDN_VV:
-  case RISCV::VANDN_VX:
-  // Vector Reverse Bits in Elements
-  case RISCV::VBREV_V:
-  // Vector Reverse Bits in Bytes
-  case RISCV::VBREV8_V:
-  // Vector Reverse Bytes
-  case RISCV::VREV8_V:
-  // Vector Count Leading Zeros
-  case RISCV::VCLZ_V:
-  // Vector Count Trailing Zeros
-  case RISCV::VCTZ_V:
-  // Vector Population Count
-  case RISCV::VCPOP_V:
-  // Vector Rotate Left
-  case RISCV::VROL_VV:
-  case RISCV::VROL_VX:
-  // Vector Rotate Right
-  case RISCV::VROR_VI:
-  case RISCV::VROR_VV:
-  case RISCV::VROR_VX:
-  // Vector Widening Shift Left Logical
-  case RISCV::VWSLL_VI:
-  case RISCV::VWSLL_VX:
-  case RISCV::VWSLL_VV:
-  // Vector Carry-less Multiplication Instructions (Zvbc)
-  // Vector Carry-less Multiply
-  case RISCV::VCLMUL_VV:
-  case RISCV::VCLMUL_VX:
-  // Vector Carry-less Multiply Return High Half
-  case RISCV::VCLMULH_VV:
-  case RISCV::VCLMULH_VX:
-  // Vector Mask Instructions
-  // Vector Mask-Register Logical Instructions
-  // vmsbf.m set-before-first mask bit
-  // vmsif.m set-including-first mask bit
-  // vmsof.m set-only-first mask bit
-  // Vector Iota Instruction
-  // Vector Element Index Instruction
-  case RISCV::VMAND_MM:
-  case RISCV::VMNAND_MM:
-  case RISCV::VMANDN_MM:
-  case RISCV::VMXOR_MM:
-  case RISCV::VMOR_MM:
-  case RISCV::VMNOR_MM:
-  case RISCV::VMORN_MM:
-  case RISCV::VMXNOR_MM:
-  case RISCV::VMSBF_M:
-  case RISCV::VMSIF_M:
-  case RISCV::VMSOF_M:
-  case RISCV::VIOTA_M:
-  case RISCV::VID_V:
-  // Vector Slide Instructions
-  case RISCV::VSLIDEUP_VX:
-  case RISCV::VSLIDEUP_VI:
-  case RISCV::VSLIDEDOWN_VX:
-  case RISCV::VSLIDEDOWN_VI:
-  case RISCV::VSLIDE1UP_VX:
-  case RISCV::VFSLIDE1UP_VF:
-  // Vector Register Gather Instructions
-  case RISCV::VRGATHER_VI:
-  case RISCV::VRGATHER_VV:
-  case RISCV::VRGATHER_VX:
-  case RISCV::VRGATHEREI16_VV:
-  // Vector Single-Width Floating-Point Add/Subtract Instructions
-  case RISCV::VFADD_VF:
-  case RISCV::VFADD_VV:
-  case RISCV::VFSUB_VF:
-  case RISCV::VFSUB_VV:
-  case RISCV::VFRSUB_VF:
-  // Vector Widening Floating-Point Add/Subtract Instructions
-  case RISCV::VFWADD_VV:
-  case RISCV::VFWADD_VF:
-  case RISCV::VFWSUB_VV:
-  case RISCV::VFWSUB_VF:
-  case RISCV::VFWADD_WF:
-  case RISCV::VFWADD_WV:
-  case RISCV::VFWSUB_WF:
-  case RISCV::VFWSUB_WV:
-  // Vector Single-Width Floating-Point Multiply/Divide Instructions
-  case RISCV::VFMUL_VF:
-  case RISCV::VFMUL_VV:
-  case RISCV::VFDIV_VF:
-  case RISCV::VFDIV_VV:
-  case RISCV::VFRDIV_VF:
-  // Vector Widening Floating-Point Multiply
-  case RISCV::VFWMUL_VF:
-  case RISCV::VFWMUL_VV:
-  // Vector Single-Width Floating-Point Fused Multiply-Add Instructions
-  case RISCV::VFMACC_VV:
-  case RISCV::VFMACC_VF:
-  case RISCV::VFNMACC_VV:
-  case RISCV::VFNMACC_VF:
-  case RISCV::VFMSAC_VV:
-  case RISCV::VFMSAC_VF:
-  case RISCV::VFNMSAC_VV:
-  case RISCV::VFNMSAC_VF:
-  case RISCV::VFMADD_VV:
-  case RISCV::VFMADD_VF:
-  case RISCV::VFNMADD_VV:
-  case RISCV::VFNMADD_VF:
-  case RISCV::VFMSUB_VV:
-  case RISCV::VFMSUB_VF:
-  case RISCV::VFNMSUB_VV:
-  case RISCV::VFNMSUB_VF:
-  // Vector Widening Floating-Point Fused Multiply-Add Instructions
-  case RISCV::VFWMACC_VV:
-  case RISCV::VFWMACC_VF:
-  case RISCV::VFWNMACC_VV:
-  case RISCV::VFWNMACC_VF:
-  case RISCV::VFWMSAC_VV:
-  case RISCV::VFWMSAC_VF:
-  case RISCV::VFWNMSAC_VV:
-  case RISCV::VFWNMSAC_VF:
-  case RISCV::VFWMACCBF16_VV:
-  case RISCV::VFWMACCBF16_VF:
-  // Vector Floating-Point Square-Root Instruction
-  case RISCV::VFSQRT_V:
-  // Vector Floating-Point Reciprocal Square-Root Estimate Instruction
-  case RISCV::VFRSQRT7_V:
-  // Vector Floating-Point Reciprocal Estimate Instruction
-  case RISCV::VFREC7_V:
-  // Vector Floating-Point MIN/MAX Instructions
-  case RISCV::VFMIN_VF:
-  case RISCV::VFMIN_VV:
-  case RISCV::VFMAX_VF:
-  case RISCV::VFMAX_VV:
-  // Vector Floating-Point Sign-Injection Instructions
-  case RISCV::VFSGNJ_VF:
-  case RISCV::VFSGNJ_VV:
-  case RISCV::VFSGNJN_VV:
-  case RISCV::VFSGNJN_VF:
-  case RISCV::VFSGNJX_VF:
-  case RISCV::VFSGNJX_VV:
-  // Vector Floating-Point Compare Instructions
-  case RISCV::VMFEQ_VF:
-  case RISCV::VMFEQ_VV:
-  case RISCV::VMFNE_VF:
-  case RISCV::VMFNE_VV:
-  case RISCV::VMFLT_VF:
-  case RISCV::VMFLT_VV:
-  case RISCV::VMFLE_VF:
-  case RISCV::VMFLE_VV:
-  case RISCV::VMFGT_VF:
-  case RISCV::VMFGE_VF:
-  // Vector Floating-Point Classify Instruction
-  case RISCV::VFCLASS_V:
-  // Vector Floating-Point Merge Instruction
-  case RISCV::VFMERGE_VFM:
-  // Vector Floating-Point Move Instruction
-  case RISCV::VFMV_V_F:
-  // Single-Width Floating-Point/Integer Type-Convert Instructions
-  case RISCV::VFCVT_XU_F_V:
-  case RISCV::VFCVT_X_F_V:
-  case RISCV::VFCVT_RTZ_XU_F_V:
-  case RISCV::VFCVT_RTZ_X_F_V:
-  case RISCV::VFCVT_F_XU_V:
-  case RISCV::VFCVT_F_X_V:
-  // Widening Floating-Point/Integer Type-Convert Instructions
-  case RISCV::VFWCVT_XU_F_V:
-  case RISCV::VFWCVT_X_F_V:
-  case RISCV::VFWCVT_RTZ_XU_F_V:
-  case RISCV::VFWCVT_RTZ_X_F_V:
-  case RISCV::VFWCVT_F_XU_V:
-  case RISCV::VFWCVT_F_X_V:
-  case RISCV::VFWCVT_F_F_V:
-  case RISCV::VFWCVTBF16_F_F_V:
-  // Narrowing Floating-Point/Integer Type-Convert Instructions
-  case RISCV::VFNCVT_XU_F_W:
-  case RISCV::VFNCVT_X_F_W:
-  case RISCV::VFNCVT_RTZ_XU_F_W:
-  case RISCV::VFNCVT_RTZ_X_F_W:
-  case RISCV::VFNCVT_F_XU_W:
-  case RISCV::VFNCVT_F_X_W:
-  case RISCV::VFNCVT_F_F_W:
-  case RISCV::VFNCVT_ROD_F_F_W:
-  case RISCV::VFNCVTBF16_F_F_W:
-    return true;
-  }
+  assert(!(MI.getNumExplicitDefs() == 0 && !MI.mayStore() &&
+           !RISCVII::elementsDependOnVL(TII->get(RVVOpc).TSFlags)) &&
+         "No defs but elements don't depend on VL?");
 
-  return false;
+  // TODO: Reduce vl for vmv.s.x and vfmv.s.f. Currently this introduces more vl
+  // toggles, we need to extend PRE in RISCVInsertVSETVLI first.
+  if (RVVOpc == RISCV::VMV_S_X || RVVOpc == RISCV::VFMV_S_F)
+    return false;
+
+  if (RISCVII::elementsDependOnVL(TII->get(RVVOpc).TSFlags))
+    return false;
+
+  if (MI.mayStore())
+    return false;
+
+  return true;
 }
 
-/// Return true if MO is a vector operand but is used as a scalar operand.
-static bool isVectorOpUsedAsScalarOp(const MachineOperand &MO) {
-  const MachineInstr *MI = MO.getParent();
+/// Return true if operand \p OpIdx of \p MI is a vector operand but is used as
+/// a scalar operand.
+static bool isVectorOpUsedAsScalarOp(const MachineInstr &MI, unsigned OpIdx) {
   const RISCVVPseudosTable::PseudoInfo *RVV =
-      RISCVVPseudosTable::getPseudoInfo(MI->getOpcode());
+      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
 
   if (!RVV)
     return false;
@@ -1326,16 +1008,16 @@ static bool isVectorOpUsedAsScalarOp(const MachineOperand &MO) {
   case RISCV::VFREDUSUM_VS:
   case RISCV::VFWREDOSUM_VS:
   case RISCV::VFWREDUSUM_VS:
-    return MO.getOperandNo() == 3;
+    return OpIdx == 3;
   case RISCV::VMV_X_S:
   case RISCV::VFMV_F_S:
-    return MO.getOperandNo() == 1;
+    return OpIdx == 1;
   default:
     return false;
   }
 }
 
-bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
+bool RISCVVLOptimizerImpl::isCandidate(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
   if (!RISCVII::hasVLOp(Desc.TSFlags) || !RISCVII::hasSEWOp(Desc.TSFlags))
     return false;
@@ -1362,18 +1044,6 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
     }
   }
 
-  // Some instructions that produce vectors have semantics that make it more
-  // difficult to determine whether the VL can be reduced. For example, some
-  // instructions, such as reductions, may write lanes past VL to a scalar
-  // register. Other instructions, such as some loads or stores, may write
-  // lower lanes using data from higher lanes. There may be other complex
-  // semantics not mentioned here that make it hard to determine whether
-  // the VL can be optimized. As a result, a white-list of supported
-  // instructions is used. Over time, more instructions can be supported
-  // upon careful examination of their semantics under the logic in this
-  // optimization.
-  // TODO: Use a better approach than a white-list, such as adding
-  // properties to instructions using something like TSFlags.
   if (!isSupportedInstr(MI)) {
     LLVM_DEBUG(dbgs() << "Not a candidate due to unsupported instruction: "
                       << MI);
@@ -1404,13 +1074,12 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
 /// completely slid down and none of its lanes will be read (since %slideamt is
 /// greater than the largest VLMAX of 65536) so we can demand any minimum VL.
 static std::optional<DemandedVL>
-getMinimumVLForVSLIDEDOWN_VX(const MachineOperand &UserOp,
+getMinimumVLForVSLIDEDOWN_VX(const MachineInstr &MI, unsigned OpIdx,
                              const MachineRegisterInfo *MRI) {
-  const MachineInstr &MI = *UserOp.getParent();
   if (RISCV::getRVVMCOpcode(MI.getOpcode()) != RISCV::VSLIDEDOWN_VX)
     return std::nullopt;
   // We're looking at what lanes are used from the src operand.
-  if (UserOp.getOperandNo() != 2)
+  if (OpIdx != 2)
     return std::nullopt;
   // For now, the AVL must be 1.
   const MachineOperand &AVL = MI.getOperand(4);
@@ -1420,17 +1089,17 @@ getMinimumVLForVSLIDEDOWN_VX(const MachineOperand &UserOp,
   const MachineOperand &SlideAmt = MI.getOperand(3);
   if (!SlideAmt.getReg().isVirtual())
     return std::nullopt;
-  MachineInstr *SlideAmtDef = MRI->getUniqueVRegDef(SlideAmt.getReg());
-  if (SlideAmtDef->getOpcode() != RISCV::ADDI ||
+  MachineInstr *SlideAmtDef = MRI->getVRegDef(SlideAmt.getReg());
+  if (!SlideAmtDef || SlideAmtDef->getOpcode() != RISCV::ADDI ||
       SlideAmtDef->getOperand(2).getImm() != -AVL.getImm() ||
       !SlideAmtDef->getOperand(1).getReg().isVirtual())
     return std::nullopt;
   return SlideAmtDef->getOperand(1);
 }
 
-DemandedVL
-RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
-  const MachineInstr &UserMI = *UserOp.getParent();
+DemandedVL RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineInstr &UserMI,
+                                                     unsigned OpIdx) const {
+  const MachineOperand &UserOp = UserMI.getOperand(OpIdx);
   const MCInstrDesc &Desc = UserMI.getDesc();
 
   if (UserMI.isPHI() || UserMI.isFullCopy() || isTupleInsertInstr(UserMI))
@@ -1442,11 +1111,13 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
     return DemandedVL::vlmax();
   }
 
-  if (auto VL = getMinimumVLForVSLIDEDOWN_VX(UserOp, MRI))
+  if (auto VL = getMinimumVLForVSLIDEDOWN_VX(UserMI, OpIdx, MRI))
     return *VL;
 
-  if (RISCVII::readsPastVL(
-          TII->get(RISCV::getRVVMCOpcode(UserMI.getOpcode())).TSFlags)) {
+  unsigned RVVOpc = RISCV::getRVVMCOpcode(UserMI.getOpcode());
+  bool IsVUNZIP = RVVOpc == RISCV::VUNZIPE_V || RVVOpc == RISCV::VUNZIPO_V;
+  bool IsVZIP = RVVOpc == RISCV::VZIP_VV;
+  if (!IsVUNZIP && !IsVZIP && RISCVII::readsPastVL(TII->get(RVVOpc).TSFlags)) {
     LLVM_DEBUG(dbgs() << "  Abort because used by unsafe instruction\n");
     return DemandedVL::vlmax();
   }
@@ -1460,9 +1131,9 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   // If the user is a passthru it will read the elements past VL, so
   // abort if any of the elements past VL are demanded.
   if (UserOp.isTied()) {
-    assert(UserOp.getOperandNo() == UserMI.getNumExplicitDefs() &&
+    assert(OpIdx == UserMI.getNumExplicitDefs() &&
            RISCVII::isFirstDefTiedToFirstUse(UserMI.getDesc()));
-    if (!RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp)) {
+    if (!RISCV::isVLKnownLE(*MRI, DemandedVLs.lookup(&UserMI).VL, VLOp)) {
       LLVM_DEBUG(dbgs() << "  Abort because user is passthru in "
                            "instruction with demanded tail\n");
       return DemandedVL::vlmax();
@@ -1471,17 +1142,22 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
 
   // Instructions like reductions may use a vector register as a scalar
   // register. In this case, we should treat it as only reading the first lane.
-  if (isVectorOpUsedAsScalarOp(UserOp)) {
+  if (isVectorOpUsedAsScalarOp(UserMI, OpIdx)) {
     LLVM_DEBUG(dbgs() << "    Used this operand as a scalar operand\n");
     return MachineOperand::CreateImm(1);
   }
 
   // If we know the demanded VL of UserMI, then we can reduce the VL it
   // requires.
-  if (RISCV::isVLKnownLE(DemandedVLs.lookup(&UserMI).VL, VLOp))
-    return DemandedVLs.lookup(&UserMI);
+  DemandedVL MinimumVL = VLOp;
+  if (RISCV::isVLKnownLE(*MRI, DemandedVLs.lookup(&UserMI).VL, VLOp))
+    MinimumVL = DemandedVLs.lookup(&UserMI);
 
-  return VLOp;
+  if ((IsVUNZIP && UserOp.getOperandNo() == 2) ||
+      (IsVZIP && UserOp.getOperandNo() == 4))
+    MinimumVL = doubleVL(MinimumVL);
+
+  return MinimumVL;
 }
 
 /// Return true if MI is an instruction used for assembling registers
@@ -1532,7 +1208,7 @@ static bool isSegmentedStoreInstr(const MachineInstr &MI) {
   }
 }
 
-bool RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
+bool RISCVVLOptimizerImpl::checkUsers(const MachineInstr &MI) const {
   if (MI.isPHI() || MI.isFullCopy() || isTupleInsertInstr(MI))
     return true;
 
@@ -1585,8 +1261,9 @@ bool RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
       return false;
     }
 
-    std::optional<OperandInfo> ConsumerInfo = getOperandInfo(UserOp);
-    std::optional<OperandInfo> ProducerInfo = getOperandInfo(MI.getOperand(0));
+    std::optional<OperandInfo> ConsumerInfo =
+        getOperandInfo(UserMI, UserMI.getOperandNo(&UserOp));
+    std::optional<OperandInfo> ProducerInfo = getOperandInfo(MI, 0);
     if (!ConsumerInfo || !ProducerInfo) {
       LLVM_DEBUG(dbgs() << "    Abort due to unknown operand information.\n");
       LLVM_DEBUG(dbgs() << "      ConsumerInfo is: " << ConsumerInfo << "\n");
@@ -1607,19 +1284,12 @@ bool RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
   return true;
 }
 
-bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
-                                   MachineOperand CommonVL) const {
+bool RISCVVLOptimizerImpl::tryReduceVL(MachineInstr &MI,
+                                       MachineOperand CommonVL) const {
   LLVM_DEBUG(dbgs() << "Trying to reduce VL for " << MI);
 
   unsigned VLOpNum = RISCVII::getVLOpNum(MI.getDesc());
   MachineOperand &VLOp = MI.getOperand(VLOpNum);
-
-  // If the VL is 1, then there is no need to reduce it. This is an
-  // optimization, not needed to preserve correctness.
-  if (VLOp.isImm() && VLOp.getImm() == 1) {
-    LLVM_DEBUG(dbgs() << "  Abort due to VL == 1, no point in reducing.\n");
-    return false;
-  }
 
   assert((CommonVL.isImm() || CommonVL.getReg().isVirtual()) &&
          "Expected VL to be an Imm or virtual Reg");
@@ -1628,12 +1298,12 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
   // vleff's AVL. It will be greater than or equal to the output VL.
   if (CommonVL.isReg()) {
     const MachineInstr *VLMI = MRI->getVRegDef(CommonVL.getReg());
-    if (RISCVInstrInfo::isFaultOnlyFirstLoad(*VLMI) &&
+    if (VLMI && RISCVInstrInfo::isFaultOnlyFirstLoad(*VLMI) &&
         !MDT->dominates(VLMI, &MI))
       CommonVL = VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
   }
 
-  if (!RISCV::isVLKnownLE(CommonVL, VLOp)) {
+  if (!RISCV::isVLKnownLE(*MRI, CommonVL, VLOp)) {
     LLVM_DEBUG(dbgs() << "  Abort due to CommonVL not <= VLOp.\n");
     return false;
   }
@@ -1650,10 +1320,28 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
     VLOp.ChangeToImmediate(CommonVL.getImm());
     return true;
   }
-  const MachineInstr *VLMI = MRI->getVRegDef(CommonVL.getReg());
-  if (!MDT->dominates(VLMI, &MI)) {
-    LLVM_DEBUG(dbgs() << "  Abort due to VL not dominating.\n");
+  MachineInstr *VLMI = MRI->getVRegDef(CommonVL.getReg());
+  if (!VLMI)
     return false;
+
+  auto VLDominates = [this, &VLMI](const MachineInstr &MI) {
+    return MDT->dominates(VLMI, &MI);
+  };
+  if (!VLDominates(MI)) {
+    assert(MI.getNumExplicitDefs() == 1);
+    auto Uses = MRI->use_instructions(MI.getOperand(0).getReg());
+    auto UsesSameBB = make_filter_range(Uses, [&MI](const MachineInstr &Use) {
+      return Use.getParent() == MI.getParent();
+    });
+    if (VLMI->getParent() == MI.getParent() &&
+        all_of(UsesSameBB, VLDominates) &&
+        RISCVInstrInfo::isSafeToMove(MI, std::next(VLMI->getIterator()))) {
+      VLMI->getParent()->splice(std::next(VLMI->getIterator()), MI.getParent(),
+                                MI.getIterator());
+    } else {
+      LLVM_DEBUG(dbgs() << "  Abort due to VL not dominating.\n");
+      return false;
+    }
   }
   LLVM_DEBUG(dbgs() << "  Reduce VL from " << VLOp << " to "
                     << printReg(CommonVL.getReg(), MRI->getTargetRegisterInfo())
@@ -1670,25 +1358,22 @@ static bool isPhysical(const MachineOperand &MO) {
 }
 
 /// Look through \p MI's operands and propagate what it demands to its uses.
-void RISCVVLOptimizer::transfer(const MachineInstr &MI) {
+void RISCVVLOptimizerImpl::transfer(const MachineInstr &MI) {
   if (!isSupportedInstr(MI) || !checkUsers(MI) || any_of(MI.defs(), isPhysical))
     DemandedVLs[&MI] = DemandedVL::vlmax();
 
   for (const MachineOperand &MO : virtual_vec_uses(MI)) {
     const MachineInstr *Def = MRI->getVRegDef(MO.getReg());
     DemandedVL Prev = DemandedVLs[Def];
-    DemandedVLs[Def] = DemandedVLs[Def].max(getMinimumVLForUser(MO));
+    DemandedVLs[Def] = DemandedVLs[Def].max(
+        *MRI, getMinimumVLForUser(MI, MI.getOperandNo(&MO)));
     if (DemandedVLs[Def] != Prev)
       Worklist.insert(Def);
   }
 }
 
-bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+bool RISCVVLOptimizerImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
-  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   if (!ST.hasVInstructions())
@@ -1727,4 +1412,26 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
 
   DemandedVLs.clear();
   return MadeChange;
+}
+
+bool RISCVVLOptimizerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  auto *MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  return RISCVVLOptimizerImpl(MDT).run(MF);
+}
+
+PreservedAnalyses
+RISCVVLOptimizerPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  auto *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  bool Changed = RISCVVLOptimizerImpl(MDT).run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<MachineRegisterClassAnalysis>();
+  return PA;
 }

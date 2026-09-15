@@ -1,45 +1,33 @@
 message(STATUS "Building offloading runtime library libomptarget.")
 
-if(LIBOMP_STANDALONE)
-  set(LIBOMP ${LIBOMP_STANDALONE})
-else()
-  set(LIBOMP omp)
+if(NOT TARGET "omp")
+  message(FATAL_ERROR "Error: omp target dependency of libomptarget not found. Please ensure 'openmp' is on LLVM_ENABLE_RUNTIMES list.")
 endif()
 
-add_llvm_library(omptarget
-  SHARED
-
-  device.cpp
+add_library(omptarget SHARED
   interface.cpp
   omptarget.cpp
   OffloadRTL.cpp
   LegacyAPI.cpp
-  PluginManager.cpp
-  DeviceImage.cpp
 
   OpenMP/API.cpp
-  OpenMP/Mapping.cpp
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
 
+  ../libompaccsupport/device.cpp
+  ../libompaccsupport/PluginManager.cpp
+  ../libompaccsupport/DeviceImage.cpp
+  ../libompaccsupport/Mapping.cpp
+
   KernelLanguage/API.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${LIBOMPTARGET_INCLUDE_DIR}
-  ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
-
-  LINK_COMPONENTS
-  FrontendOpenMP
-  Support
-  Object
-
-  LINK_LIBS
-  PUBLIC
-  ${LIBOMP}
-
-  NO_INSTALL_RPATH
-  BUILDTREE_ONLY
 )
+
+if(LLVM_LINK_LLVM_DYLIB)
+  set(llvm_libs LLVM)
+else()
+  llvm_map_components_to_libnames(llvm_libs FrontendOpenMP Support Object)
+endif()
+target_link_libraries(omptarget PRIVATE omp ${llvm_libs})
 target_include_directories(omptarget PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
 )
@@ -65,6 +53,11 @@ target_link_options(omptarget PRIVATE ${offload_link_flags})
 # are now separated in the build directory.
 set_target_properties(omptarget PROPERTIES
                       POSITION_INDEPENDENT_CODE ON
-                      INSTALL_RPATH "$ORIGIN"
+                      INSTALL_RPATH "${OFFLOAD_INSTALL_RPATH}"
                       BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
-install(TARGETS omptarget LIBRARY COMPONENT omptarget DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
+if(UNIX AND NOT APPLE)
+  set_target_properties(omptarget PROPERTIES
+                        SOVERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}"
+                        VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}")
+endif()
+install(TARGETS omptarget LIBRARY COMPONENT offload DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")

@@ -17,7 +17,6 @@
 #include <mlir/Bindings/Python/IRAttributes.h>
 
 namespace nb = nanobind;
-using namespace llvm;
 using namespace mlir::python::nanobind_adaptors;
 
 namespace mlir {
@@ -198,6 +197,7 @@ struct AnyQuantizedType : PyConcreteType<AnyQuantizedType, QuantizedType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirAnyQuantizedTypeGetTypeID;
   static constexpr const char *pyClassName = "AnyQuantizedType";
+  static inline const MlirStringRef name = mlirAnyQuantizedTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -229,6 +229,7 @@ struct UniformQuantizedType
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirUniformQuantizedTypeGetTypeID;
   static constexpr const char *pyClassName = "UniformQuantizedType";
+  static inline const MlirStringRef name = mlirUniformQuantizedTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -283,6 +284,8 @@ struct UniformQuantizedPerAxisType
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirUniformQuantizedPerAxisTypeGetTypeID;
   static constexpr const char *pyClassName = "UniformQuantizedPerAxisType";
+  static inline const MlirStringRef name =
+      mlirUniformQuantizedPerAxisTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
@@ -369,14 +372,16 @@ struct UniformQuantizedSubChannelType
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirUniformQuantizedSubChannelTypeGetTypeID;
   static constexpr const char *pyClassName = "UniformQuantizedSubChannelType";
+  static inline const MlirStringRef name =
+      mlirUniformQuantizedSubChannelTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
         [](unsigned flags, const PyType &storageType,
-           const PyType &expressedType, MlirAttribute scales,
-           MlirAttribute zeroPoints, std::vector<int32_t> quantizedDimensions,
+           const PyType &expressedType, PyAttribute scales,
+           PyAttribute zeroPoints, std::vector<int32_t> quantizedDimensions,
            std::vector<int64_t> blockSizes, int64_t storageTypeMin,
            int64_t storageTypeMax, DefaultingPyMlirContext context) {
           return UniformQuantizedSubChannelType(
@@ -462,6 +467,7 @@ struct CalibratedQuantizedType
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirCalibratedQuantizedTypeGetTypeID;
   static constexpr const char *pyClassName = "CalibratedQuantizedType";
+  static inline const MlirStringRef name = mlirCalibratedQuantizedTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {

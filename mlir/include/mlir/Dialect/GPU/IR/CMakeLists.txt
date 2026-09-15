@@ -1,5 +1,5 @@
 add_mlir_dialect(GPUOps gpu)
-add_mlir_doc(GPUOps GPUOps Dialects/ -gen-op-doc)
+add_mlir_doc(GPUOps GPUOps Dialects/ -gen-op-doc -dialect=gpu)
 
 set(LLVM_TARGET_DEFINITIONS GPUBase.td)
 mlir_tablegen(GPUOpInterfaces.h.inc -gen-op-interface-decls)

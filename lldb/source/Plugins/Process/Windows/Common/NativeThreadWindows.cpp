@@ -11,13 +11,13 @@
 
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
+#include "lldb/Host/windows/LazyImport.h"
 #include "lldb/Host/windows/windows.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
-#include "lldb/lldb-forward.h"
+#include <llvm/Support/ConvertUTF.h>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -25,7 +25,7 @@ using namespace lldb_private;
 NativeThreadWindows::NativeThreadWindows(NativeProcessWindows &process,
                                          const HostThread &thread)
     : NativeThreadProtocol(process, thread.GetNativeThread().GetThreadId()),
-      m_stop_info(), m_stop_description(), m_host_thread(thread) {
+      m_host_thread(thread) {
   m_reg_context_up =
       (NativeRegisterContextWindows::CreateHostNativeRegisterContextWindows(
           process.GetArchitecture(), *this));
@@ -35,8 +35,11 @@ Status NativeThreadWindows::DoStop() {
   if (m_state != eStateStopped) {
     DWORD previous_suspend_count =
         ::SuspendThread(m_host_thread.GetNativeThread().GetSystemHandle());
-    if (previous_suspend_count == (DWORD)-1)
+    if (previous_suspend_count == static_cast<DWORD>(-1))
       return Status(::GetLastError(), eErrorTypeWin32);
+
+    // Invalidate cached register values on every stop.
+    GetRegisterContext().InvalidateAllRegisters();
 
     m_state = eStateStopped;
   }
@@ -56,8 +59,7 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
             eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
     uint64_t flags_value =
         GetRegisterContext().ReadRegisterAsUnsigned(flags_index, 0);
-    NativeProcessProtocol &process = GetProcess();
-    const ArchSpec &arch = process.GetArchitecture();
+    const ArchSpec &arch = GetProcess().GetArchitecture();
     switch (arch.GetMachine()) {
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
@@ -76,6 +78,9 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
   }
 
   if (resume_state == eStateStepping || resume_state == eStateRunning) {
+    // Clear any stop info left over from a previous stop.
+    ClearStopInfo();
+
     DWORD previous_suspend_count = 0;
     HANDLE thread_handle = m_host_thread.GetNativeThread().GetSystemHandle();
     do {
@@ -85,7 +90,7 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
       // explicitly compare with -1.
       previous_suspend_count = ::ResumeThread(thread_handle);
 
-      if (previous_suspend_count == (DWORD)-1)
+      if (previous_suspend_count == static_cast<DWORD>(-1))
         return Status(::GetLastError(), eErrorTypeWin32);
 
     } while (previous_suspend_count > 1);
@@ -96,17 +101,25 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
 }
 
 std::string NativeThreadWindows::GetName() {
-  if (!m_name.empty())
+  Log *log = GetLog(LLDBLog::Thread);
+  static LazyImport<HRESULT(WINAPI *)(HANDLE, PWSTR *)>
+      s_get_thread_description{L"Kernel32.dll", "GetThreadDescription"};
+  if (!s_get_thread_description)
     return m_name;
+  auto GetThreadDescription = *s_get_thread_description;
 
-  // Name is not a property of the Windows thread. Create one with the
-  // process's.
-  NativeProcessProtocol &process = GetProcess();
-  ProcessInstanceInfo process_info;
-  if (Host::GetProcessInfo(process.GetID(), process_info)) {
-    std::string process_name(process_info.GetName());
-    m_name = process_name;
+  PWSTR pszThreadName;
+  if (SUCCEEDED(GetThreadDescription(
+          m_host_thread.GetNativeThread().GetSystemHandle(), &pszThreadName))) {
+    LLDB_LOGF(log, "GetThreadDescription: %ls", pszThreadName);
+    m_name.clear();
+    llvm::convertUTF16ToUTF8String(
+        llvm::ArrayRef(reinterpret_cast<char *>(pszThreadName),
+                       wcslen(pszThreadName) * sizeof(wchar_t)),
+        m_name);
+    ::LocalFree(pszThreadName);
   }
+
   return m_name;
 }
 
@@ -138,11 +151,8 @@ bool NativeThreadWindows::GetStopReason(ThreadStopInfo &stop_info,
   case eStateRunning:
   case eStateStepping:
   case eStateDetached:
-    if (log) {
-      log->Printf("NativeThreadWindows::%s tid %" PRIu64
-                  " in state %s cannot answer stop reason",
-                  __FUNCTION__, GetID(), StateAsCString(m_state));
-    }
+    LLDB_LOGF(log, "tid %" PRIu64 " in state %s cannot answer stop reason",
+              GetID(), StateAsCString(m_state));
     return false;
   }
   llvm_unreachable("unhandled StateType!");

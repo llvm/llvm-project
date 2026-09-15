@@ -74,6 +74,12 @@ class A {
     return static_field;
   }
 
+  int lifetime_bound() const [[clang::lifetimebound]] {
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: method 'lifetime_bound' can be made static
+    // CHECK-FIXES: static int lifetime_bound() {{\[\[}}clang::lifetimebound{{\]\]}} {
+    return static_field;
+  }
+
   static int out_of_line_already_static();
 
   void out_of_line_call_static();
@@ -235,3 +241,59 @@ struct NoFixitInMacro {
     return;
   }
 };
+
+
+struct OverloadedMethods {
+  void f() { this->i++; }
+  void f() const { ; };   // `;` is necessary to ensure non trivial body
+
+  void g(int) { this->i++; }
+  void g(int) const { ; };
+
+  void h(int) { this->i++; };
+  void h(float) const {
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: method 'h' can be made static
+    // CHECK-FIXES: static void h(float) {
+    ;
+  };
+
+  void j() { this->i++; }
+  int j() const { return 1; }
+
+  void l() { this->i++; }
+  void l() const volatile { ; }
+
+  void f_out_of_class();
+  void f_out_of_class() const;
+
+  void g_out_of_class(int);
+  void g_out_of_class(int) const;
+
+  void h_out_of_class(int);
+  void h_out_of_class(float) const;
+
+  void j_out_of_class();
+  int j_out_of_class() const;
+
+  void l_out_of_class();
+  void l_out_of_class() const volatile;
+
+  int i = 0;
+};
+
+void OverloadedMethods::f_out_of_class() { this->i++; }
+void OverloadedMethods::f_out_of_class() const { ; }
+
+void OverloadedMethods::g_out_of_class(int) { this->i++; }
+void OverloadedMethods::g_out_of_class(int) const { ; }
+
+void OverloadedMethods::h_out_of_class(int) { this->i++; }
+void OverloadedMethods::h_out_of_class(float) const { ; }
+// CHECK-MESSAGES: :[[@LINE-1]]:25: warning: method 'h_out_of_class' can be made static
+// CHECK-FIXES: static void h_out_of_class(float) ;
+
+void OverloadedMethods::j_out_of_class() { this->i++; }
+int OverloadedMethods::j_out_of_class() const { return 1; }
+
+void OverloadedMethods::l_out_of_class() { this->i++; }
+void OverloadedMethods::l_out_of_class() const volatile { return; }

@@ -106,7 +106,7 @@ if.end:                                           ; preds = %if.else, %if.then
 ; CHECK: define ptr @gep
 ; CHECK-LABEL: if.end:
 ; CHECK: %[[PHI:.*]] = phi i64 [ %call, %if.then ], [ %call1, %if.else ]
-; CHECK: getelementptr inbounds i32, ptr %b, i64 %[[PHI]], !dbg [[gepMergedLoc:![0-9]+]]
+; CHECK: getelementptr inbounds [4 x i8], ptr %b, i64 %[[PHI]], !dbg [[gepMergedLoc:![0-9]+]]
 ; CHECK: ret ptr
 
 define ptr @gep(i32 %a, ptr %b) !dbg !23 {

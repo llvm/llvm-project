@@ -5,9 +5,9 @@
 ## (a) code sequence can be converted from `pcalau12i+addi.[wd]` to `pcaddi`.
 ## (b) dynamic relocations can be omitted for LD->LE relaxation.
 
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 --position-independent %t/a.s -o %t/a.32.o
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 --position-independent -mattr=+relax %t/a.s -o %t/a.32.relax.o
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 %t/tga.s -o %t/tga.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 --position-independent -mattr=-32s %t/a.s -o %t/a.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 --position-independent -mattr=+32s,+relax %t/a.s -o %t/a.32.relax.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+32s %t/tga.s -o %t/tga.32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --position-independent %t/a.s -o %t/a.64.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --position-independent -mattr=+relax %t/a.s -o %t/a.64.relax.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %t/tga.s -o %t/tga.64.o
@@ -60,8 +60,8 @@
 # LD64-GOT-NEXT: 0x00020400 00000000 00000000 00000000 00000000
 
 ## LA32: &DTPMOD(a) - . = 0x20280 - 0x101cc: 0x10 pages, page offset 0x280
-# LD32:      101cc: pcalau12i $a0, 16
-# LD32-NEXT:        addi.w $a0, $a0, 640
+# LD32:      101cc: pcaddu12i $a0, 16
+# LD32-NEXT:        addi.w $a0, $a0, 180
 # LD32-NEXT:        bl 44
 
 ## LA64: &DTPMOD(a) - . = 0x20400 - 0x102e0: 0x10 pages, page offset 0x400
@@ -94,8 +94,8 @@
 # LE64-GOT-RELAX-NEXT: 0x000301d0 01000000 00000000 00000000 00000000
 
 ## LA32: DTPMOD(.LANCHOR0) - . = 0x30120 - 0x20114: 0x10 pages, page offset 0x120
-# LE32:      20114: pcalau12i $a0, 16
-# LE32-NEXT:        addi.w $a0, $a0, 288
+# LE32:      20114: pcaddu12i $a0, 16
+# LE32-NEXT:        addi.w $a0, $a0, 12
 # LE32-NEXT:        bl 4
 
 ## LA64: DTPMOD(.LANCHOR0) - . = 0x301d8 - 0x201c8: 0x10 pages, page offset 0x1d8

@@ -42,6 +42,7 @@
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include <cstdint>
+#include <memory>
 #include <numeric>
 #include <optional>
 
@@ -97,6 +98,7 @@ llvm::hash_code test::computeHash(const PropertiesWithCustomPrint &prop) {
 
 void test::customPrintProperties(OpAsmPrinter &p,
                                  const PropertiesWithCustomPrint &prop) {
+  p << " ";
   p.printKeywordOrString(*prop.label);
   p << " is " << prop.value;
 }
@@ -192,7 +194,7 @@ llvm::hash_code test::computeHash(const VersionedProperties &prop) {
 
 void test::customPrintProperties(OpAsmPrinter &p,
                                  const VersionedProperties &prop) {
-  p << prop.value1 << " | " << prop.value2;
+  p << " " << prop.value1 << " | " << prop.value2;
 }
 
 ParseResult test::customParseProperties(OpAsmParser &parser,
@@ -240,6 +242,24 @@ getDynamicGenericOp(TestDialect *dialect) {
   return DynamicOpDefinition::get(
       "dynamic_generic", dialect, [](Operation *op) { return success(); },
       [](Operation *op) { return success(); });
+}
+
+static std::unique_ptr<DynamicOpDefinition>
+getDynamicTerminatorOp(TestDialect *dialect) {
+  auto def = DynamicOpDefinition::get(
+      "dynamic_terminator", dialect, [](Operation *op) { return success(); },
+      [](Operation *op) { return success(); });
+  def->addTrait(std::make_unique<DynamicOpTraits::IsTerminator>());
+  return def;
+}
+
+static std::unique_ptr<DynamicOpDefinition>
+getDynamicNoTerminatorOp(TestDialect *dialect) {
+  auto def = DynamicOpDefinition::get(
+      "dynamic_noterminator", dialect, [](Operation *op) { return success(); },
+      [](Operation *op) { return success(); });
+  def->addTrait(std::make_unique<DynamicOpTraits::NoTerminator>());
+  return def;
 }
 
 static std::unique_ptr<DynamicOpDefinition>
@@ -296,7 +316,8 @@ void test::testSideEffectOpGetEffect(
     Operation *op,
     SmallVectorImpl<SideEffects::EffectInstance<TestEffects::Effect>>
         &effects) {
-  auto effectsAttr = op->getAttrOfType<AffineMapAttr>("effect_parameter");
+  auto effectsAttr =
+      op->getDiscardableAttrOfType<AffineMapAttr>("effect_parameter");
   if (!effectsAttr)
     return;
 
@@ -329,6 +350,8 @@ void TestDialect::initialize() {
   addOperations<ManualCppOpWithFold>();
   registerTestDialectOperations(this);
   registerDynamicOp(getDynamicGenericOp(this));
+  registerDynamicOp(getDynamicTerminatorOp(this));
+  registerDynamicOp(getDynamicNoTerminatorOp(this));
   registerDynamicOp(getDynamicOneOperandTwoResultsOp(this));
   registerDynamicOp(getDynamicCustomParserPrinterOp(this));
   registerInterfaces();
@@ -459,7 +482,8 @@ MutableOperandRange CallWithSegmentsOp::getArgOperandsMutable() {
   // Obtain the canonical segment size attribute name for this op.
   auto segName =
       CallWithSegmentsOp::getOperandSegmentSizesAttrName(op->getName());
-  auto sizesAttr = op->getAttrOfType<DenseI32ArrayAttr>(segName);
+  auto sizesAttr = dyn_cast_or_null<DenseI32ArrayAttr>(
+      op->getInherentAttr(segName).value_or(Attribute{}));
   assert(sizesAttr && "missing operandSegmentSizes attribute on op");
 
   // Compute the start and length of the args segment from the prefix size and

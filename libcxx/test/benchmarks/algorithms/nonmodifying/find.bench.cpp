@@ -18,48 +18,33 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_find    = [](auto first, auto last, auto const& value) { return std::find(first, last, value); };
   auto std_find_if = [](auto first, auto last, auto const& value) {
-    return std::find_if(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element == value;
-    });
+    return std::find_if(first, last, [&](auto element) { return element == value; });
   };
   auto std_find_if_not = [](auto first, auto last, auto const& value) {
-    return std::find_if_not(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element != value;
-    });
+    return std::find_if_not(first, last, [&](auto element) { return element != value; });
   };
 
   auto ranges_find    = [](auto first, auto last, auto const& value) { return std::ranges::find(first, last, value); };
   auto ranges_find_if = [](auto first, auto last, auto const& value) {
-    return std::ranges::find_if(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element == value;
-    });
+    return std::ranges::find_if(first, last, [&](auto element) { return element == value; });
   };
   auto ranges_find_if_not = [](auto first, auto last, auto const& value) {
-    return std::ranges::find_if_not(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element != value;
-    });
+    return std::ranges::find_if_not(first, last, [&](auto element) { return element != value; });
   };
 
   auto register_benchmarks = [&](auto bm, std::string comment) {
     // find
     bm.template operator()<std::vector<char>>("std::find(vector<char>) (" + comment + ")", std_find);
+    bm.template operator()<std::vector<short>>("std::find(vector<short>) (" + comment + ")", std_find);
     bm.template operator()<std::vector<int>>("std::find(vector<int>) (" + comment + ")", std_find);
     bm.template operator()<std::vector<long long>>("std::find(vector<long long>) (" + comment + ")", std_find);
     bm.template operator()<std::deque<int>>("std::find(deque<int>) (" + comment + ")", std_find);
     bm.template operator()<std::list<int>>("std::find(list<int>) (" + comment + ")", std_find);
-
-    bm.template operator()<std::vector<char>>("rng::find(vector<char>) (" + comment + ")", ranges_find);
-    bm.template operator()<std::vector<int>>("rng::find(vector<int>) (" + comment + ")", ranges_find);
-    bm.template operator()<std::deque<int>>("rng::find(deque<int>) (" + comment + ")", ranges_find);
-    bm.template operator()<std::list<int>>("rng::find(list<int>) (" + comment + ")", ranges_find);
 
     // find_if
     bm.template operator()<std::vector<char>>("std::find_if(vector<char>) (" + comment + ")", std_find_if);
@@ -67,21 +52,11 @@ int main(int argc, char** argv) {
     bm.template operator()<std::deque<int>>("std::find_if(deque<int>) (" + comment + ")", std_find_if);
     bm.template operator()<std::list<int>>("std::find_if(list<int>) (" + comment + ")", std_find_if);
 
-    bm.template operator()<std::vector<char>>("rng::find_if(vector<char>) (" + comment + ")", ranges_find_if);
-    bm.template operator()<std::vector<int>>("rng::find_if(vector<int>) (" + comment + ")", ranges_find_if);
-    bm.template operator()<std::deque<int>>("rng::find_if(deque<int>) (" + comment + ")", ranges_find_if);
-    bm.template operator()<std::list<int>>("rng::find_if(list<int>) (" + comment + ")", ranges_find_if);
-
     // find_if_not
     bm.template operator()<std::vector<char>>("std::find_if_not(vector<char>) (" + comment + ")", std_find_if_not);
     bm.template operator()<std::vector<int>>("std::find_if_not(vector<int>) (" + comment + ")", std_find_if_not);
     bm.template operator()<std::deque<int>>("std::find_if_not(deque<int>) (" + comment + ")", std_find_if_not);
     bm.template operator()<std::list<int>>("std::find_if_not(list<int>) (" + comment + ")", std_find_if_not);
-
-    bm.template operator()<std::vector<char>>("rng::find_if_not(vector<char>) (" + comment + ")", ranges_find_if_not);
-    bm.template operator()<std::vector<int>>("rng::find_if_not(vector<int>) (" + comment + ")", ranges_find_if_not);
-    bm.template operator()<std::deque<int>>("rng::find_if_not(deque<int>) (" + comment + ")", ranges_find_if_not);
-    bm.template operator()<std::list<int>>("rng::find_if_not(list<int>) (" + comment + ")", ranges_find_if_not);
   };
 
   auto register_nested_container_benchmarks = [&](auto bm, std::string comment) {
@@ -104,7 +79,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto find) {
       benchmark::RegisterBenchmark(
           name,
-          [find](auto& st) {
+          [find](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
@@ -134,7 +109,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto find) {
       benchmark::RegisterBenchmark(
           name,
-          [find](auto& st) {
+          [find](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
@@ -162,7 +137,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto find) {
       benchmark::RegisterBenchmark(
           name,
-          [find](auto& st) {
+          [find](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size     = st.range(0);
             std::size_t const seg_size = 256;
             std::size_t const segments = (size + seg_size - 1) / seg_size;
@@ -200,7 +175,7 @@ int main(int argc, char** argv) {
     auto bm = [](std::string name, auto find) {
       benchmark::RegisterBenchmark(
           name,
-          [find](auto& st) {
+          [find](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             std::vector<bool> c(size, true);
             bool y = false;

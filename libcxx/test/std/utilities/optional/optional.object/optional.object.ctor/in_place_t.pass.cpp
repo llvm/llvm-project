@@ -18,6 +18,7 @@
 #include <cassert>
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -75,6 +76,23 @@ constexpr bool test_ref_initializer_list() {
   auto il2 = opt.value();
   assert(il2.begin() == il.begin());
   assert(il2.size() == il.size());
+
+  return true;
+}
+
+constexpr bool test_ref() {
+  { // optional(in_place_t, _Arg&&)
+    Y y{1, 2};
+    optional<Y&> xo(in_place, y);
+
+    Y x2{1, 2};
+
+    assert(*xo == x2);
+    assert(&(*xo) == &y);
+  }
+
+  assert(test_ref_initializer_list());
+  static_assert(test_ref_initializer_list());
 
   return true;
 }
@@ -148,8 +166,8 @@ int main(int, char**) {
 #endif
 
 #if TEST_STD_VER >= 26
-  test_ref_initializer_list();
-  static_assert(test_ref_initializer_list());
+  test_ref();
+  static_assert(test_ref());
 #endif
 
   return 0;

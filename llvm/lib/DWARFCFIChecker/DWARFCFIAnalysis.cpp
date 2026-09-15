@@ -91,31 +91,21 @@ DWARFCFIAnalysis::DWARFCFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
       continue;
 
     DWARFRegNum Reg = MCRI->getDwarfRegNum(LLVMReg, IsEH);
-    // TODO: this should be `undefined` instead of `same_value`, but because
-    // initial frame state doesn't have any directives about callee saved
-    // registers, every register is tracked. After initial frame state is
-    // corrected, this should be changed.
-    State.update(MCCFIInstruction::createSameValue(nullptr, Reg));
+    // Based on dwarf documentation, the default rule for all columns before
+    // interpretation of the initial instructions is the undefined rule.
+
+    // For now, this tool depends on the user to write a prologue that
+    // establishes the rules required for proper validation of the rest of the
+    // function.
+    State.update(MCCFIInstruction::createUndefined(nullptr, Reg));
   }
 
-  // TODO: Ignoring PC should be in the initial frame state.
   State.update(MCCFIInstruction::createUndefined(
       nullptr, MCRI->getDwarfRegNum(MCRI->getProgramCounter(), IsEH)));
 
   for (auto &&InitialFrameStateCFIDirective :
-       Context->getAsmInfo()->getInitialFrameState())
+       Context->getAsmInfo().getInitialFrameState())
     State.update(InitialFrameStateCFIDirective);
-
-  auto MaybeCurrentRow = State.getCurrentUnwindRow();
-  assert(MaybeCurrentRow && "there should be at least one row");
-  auto MaybeCFA = getCFARegOffsetInfo(*MaybeCurrentRow);
-  assert(MaybeCFA &&
-         "the CFA information should be describable in [reg + offset] in here");
-  auto CFA = *MaybeCFA;
-
-  // TODO: CFA register callee value is CFA's value, this should be in initial
-  // frame state.
-  State.update(MCCFIInstruction::createOffset(nullptr, CFA.Reg, 0));
 
   // Applying the prologue after default assumptions to overwrite them.
   for (auto &&Directive : Prologue)
@@ -134,10 +124,7 @@ void DWARFCFIAnalysis::update(const MCInst &Inst,
   for (auto &&Directive : Directives)
     State.update(Directive);
 
-  SmallSet<DWARFRegNum, 4> Writes, Reads;
-  for (unsigned I = 0; I < MCInstInfo.NumImplicitUses; I++)
-    Reads.insert(MCRI->getDwarfRegNum(
-        getSuperReg(MCRI, MCInstInfo.implicit_uses()[I]), IsEH));
+  SmallSet<DWARFRegNum, 4> Writes;
   for (unsigned I = 0; I < MCInstInfo.NumImplicitDefs; I++)
     Writes.insert(MCRI->getDwarfRegNum(
         getSuperReg(MCRI, MCInstInfo.implicit_defs()[I]), IsEH));
@@ -148,9 +135,6 @@ void DWARFCFIAnalysis::update(const MCInst &Inst,
       if (I < MCInstInfo.getNumDefs())
         Writes.insert(
             MCRI->getDwarfRegNum(getSuperReg(MCRI, Op.getReg()), IsEH));
-      else if (Op.getReg())
-        Reads.insert(
-            MCRI->getDwarfRegNum(getSuperReg(MCRI, Op.getReg()), IsEH));
     }
   }
 
@@ -158,19 +142,18 @@ void DWARFCFIAnalysis::update(const MCInst &Inst,
   assert(MaybeNextRow && "previous row existed, so should the current row");
   auto NextRow = *MaybeNextRow;
 
-  checkCFADiff(Inst, PrevRow, NextRow, Reads, Writes);
+  checkCFADiff(Inst, PrevRow, NextRow, Writes);
 
   for (auto LLVMReg : getTrackingRegs(MCRI)) {
     DWARFRegNum Reg = MCRI->getDwarfRegNum(LLVMReg, IsEH);
 
-    checkRegDiff(Inst, Reg, PrevRow, NextRow, Reads, Writes);
+    checkRegDiff(Inst, Reg, PrevRow, NextRow, Writes);
   }
 }
 
 void DWARFCFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
                                     const dwarf::UnwindRow &PrevRow,
                                     const dwarf::UnwindRow &NextRow,
-                                    const SmallSet<DWARFRegNum, 4> &Reads,
                                     const SmallSet<DWARFRegNum, 4> &Writes) {
   auto MaybePrevLoc = PrevRow.getRegisterLocations().getRegisterLocation(Reg);
   auto MaybeNextLoc = NextRow.getRegisterLocations().getRegisterLocation(Reg);
@@ -260,7 +243,6 @@ void DWARFCFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
 void DWARFCFIAnalysis::checkCFADiff(const MCInst &Inst,
                                     const dwarf::UnwindRow &PrevRow,
                                     const dwarf::UnwindRow &NextRow,
-                                    const SmallSet<DWARFRegNum, 4> &Reads,
                                     const SmallSet<DWARFRegNum, 4> &Writes) {
 
   auto MaybePrevCFA = getCFARegOffsetInfo(PrevRow);

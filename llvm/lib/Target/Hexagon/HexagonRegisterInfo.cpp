@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonRegisterInfo.h"
+#include "HexagonFrameLowering.h"
 #include "HexagonMachineFunctionInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/BitVector.h"
@@ -52,6 +53,25 @@ HexagonRegisterInfo::HexagonRegisterInfo(unsigned HwMode)
     : HexagonGenRegisterInfo(Hexagon::R31, 0/*DwarfFlavor*/, 0/*EHFlavor*/,
                              0/*PC*/, HwMode) {}
 
+bool HexagonRegisterInfo::isGlobalReg(MCPhysReg Reg) const {
+  switch (Reg) {
+  case Hexagon::R29:
+  case Hexagon::R30:
+  case Hexagon::R31:
+    return true;
+  }
+  return false;
+}
+
+bool HexagonRegisterInfo::isFakeReg(MCPhysReg Reg) const {
+  // VF0-VF31 are fake registers used as sub-registers in HVX vector pairs
+  if (Reg >= Hexagon::VF0 && Reg <= Hexagon::VF31)
+    return true;
+  // VFR0-VFR31 are fake registers used for reversed vector pairs
+  if (Reg >= Hexagon::VFR0 && Reg <= Hexagon::VFR31)
+    return true;
+  return false;
+}
 
 bool HexagonRegisterInfo::isEHReturnCalleeSaveReg(Register R) const {
   return R == Hexagon::R0 || R == Hexagon::R1 || R == Hexagon::R2 ||
@@ -138,9 +158,41 @@ const uint32_t *HexagonRegisterInfo::getCallPreservedMask(
   return HexagonCSR_RegMask;
 }
 
+BitVector
+HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
+  BitVector Reserved = getBaseReservedRegs(MF);
+  if (Register AP = computeStackAlignBaseRegister(MF, Reserved)) {
+    Reserved.set(AP);
+    markSuperRegs(Reserved, AP);
+  }
+  return Reserved;
+}
 
-BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
-      const {
+Register HexagonRegisterInfo::computeStackAlignBaseRegister(
+    const MachineFunction &MF) const {
+  return computeStackAlignBaseRegister(MF, getBaseReservedRegs(MF));
+}
+
+Register HexagonRegisterInfo::computeStackAlignBaseRegister(
+    const MachineFunction &MF, const BitVector &BaseReservedRegs) const {
+  auto &HFI = *MF.getSubtarget<HexagonSubtarget>().getFrameLowering();
+  if (!HFI.needsAligna(MF))
+    return Register();
+
+  // Reserve the first non-volatile register.
+  Register AP;
+  for (const MCPhysReg *R = getCalleeSavedRegs(&MF); *R; ++R) {
+    if (BaseReservedRegs[*R])
+      continue;
+    AP = *R;
+    break;
+  }
+  assert(AP.isValid() && "Couldn't reserve stack align register");
+  return AP;
+}
+
+BitVector
+HexagonRegisterInfo::getBaseReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   Reserved.set(Hexagon::R29);
   Reserved.set(Hexagon::R30);
@@ -186,13 +238,15 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   for (auto Reg : Hexagon_MC::GetVectRegRev())
     Reserved.set(Reg);
 
-  if (MF.getSubtarget<HexagonSubtarget>().hasReservedR19())
-    Reserved.set(Hexagon::R19);
-
-  Register AP =
-      MF.getInfo<HexagonMachineFunctionInfo>()->getStackAlignBaseReg();
-  if (AP.isValid())
-    Reserved.set(AP);
+  static const MCPhysReg RRegs[] = {
+      Hexagon::R6,  Hexagon::R7,  Hexagon::R8,  Hexagon::R9,  Hexagon::R10,
+      Hexagon::R11, Hexagon::R12, Hexagon::R13, Hexagon::R14, Hexagon::R15,
+      Hexagon::R16, Hexagon::R17, Hexagon::R18, Hexagon::R19, Hexagon::R20,
+      Hexagon::R21, Hexagon::R22, Hexagon::R23, Hexagon::R24, Hexagon::R25,
+      Hexagon::R26, Hexagon::R27, Hexagon::R28};
+  for (MCPhysReg Reg : RRegs)
+    if (MF.getSubtarget().isRegisterReservedByUser(Reg))
+      Reserved.set(Reg);
 
   for (int x = Reserved.find_first(); x >= 0; x = Reserved.find_next(x))
     markSuperRegs(Reserved, x);

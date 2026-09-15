@@ -3,8 +3,8 @@
 ; The only way the subtarget knows that the si machine scheduler is being used
 ; is to specify -mattr=si-scheduler.  If we just pass --misched=si, the backend
 ; won't know what scheduler we are using.
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti --misched=si -mattr=si-scheduler < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 --misched=si -mattr=si-scheduler < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.00 --misched=si -mattr=si-scheduler < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu10.10 --misched=si -mattr=si-scheduler < %s | FileCheck %s
 
 ; The test checks the "si" machine scheduler pass works correctly.
 
@@ -69,8 +69,8 @@ define amdgpu_ps void @_amdgpu_ps_main(i32 %arg) local_unnamed_addr {
   %tmp = insertelement <2 x i32> zeroinitializer, i32 %arg, i32 0
   %tmp1 = bitcast <2 x i32> %tmp to i64
   %tmp2 = inttoptr i64 %tmp1 to ptr addrspace(4)
-  %tmp3 = load <4 x i32>, ptr addrspace(4) %tmp2, align 16
-  %tmp4 = tail call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %tmp3, i32 0, i32 0) #0
+  %tmp3 = load ptr addrspace(8), ptr addrspace(4) %tmp2, align 16
+  %tmp4 = tail call i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8) %tmp3, i32 0, i32 0) #0, !invariant.load !{}
   switch i32 %tmp4, label %bb [
     i32 0, label %bb5
     i32 1, label %bb6
@@ -87,4 +87,4 @@ bb6:                                              ; preds = %.entry
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg) #1
+declare i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8), i32, i32 immarg) #1

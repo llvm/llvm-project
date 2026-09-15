@@ -63,10 +63,18 @@ public:
   lldb::BreakpointResolverSP
   CopyForBreakpoint(lldb::BreakpointSP &breakpoint) override;
 
+  // OverridesResolver will get called before this resolver has been assigned a
+  // breakpoint.  You should only need to see the resolver to know whether you
+  // want to override it, but you may need to check something about the target,
+  // which you would normally get to from the breakpoint, so we pass it in here.
+  bool OverridesResolver(Target &target,
+                         lldb::BreakpointResolverSP original_sp) override;
+
 protected:
   void NotifyBreakpointSet() override;
 private:
   void CreateImplementationIfNeeded(lldb::BreakpointSP bkpt);
+  void CreateImplementationIfNeeded(Target &target, lldb::BreakpointSP bkpt);
   ScriptInterpreter *GetScriptInterpreter();
 
   std::string m_class_name;
@@ -74,6 +82,7 @@ private:
   StructuredDataImpl m_args;
   Status m_error;
   lldb::ScriptedBreakpointInterfaceSP m_interface_sp;
+  bool m_breakpoint_sent = false;
 
   BreakpointResolverScripted(const BreakpointResolverScripted &) = delete;
   const BreakpointResolverScripted &

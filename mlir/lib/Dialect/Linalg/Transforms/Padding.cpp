@@ -116,7 +116,7 @@ FailureOr<bool> PaddedShape::initialize(linalg::LinalgOp opToPad,
             presburger::BoundType::UB,
             {opOperand->get(),
              /*dim=*/i},
-            /*stopCondition=*/nullptr, /*closedUB=*/true);
+            /*stopCondition=*/nullptr, ValueBoundsOptions{/*closedUB=*/true});
     if (failed(upperBound)) {
       LLVM_DEBUG(
           DBGS() << "----could not compute a bounding box for padding\n");

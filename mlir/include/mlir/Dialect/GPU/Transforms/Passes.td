@@ -14,7 +14,6 @@ include "mlir/Pass/PassBase.td"
 def GpuLaunchSinkIndexComputationsPass
     : Pass<"gpu-launch-sink-index-computations"> {
   let summary = "Sink index computations into gpu.launch body";
-  let dependentDialects = ["mlir::gpu::GPUDialect"];
 }
 
 def GpuKernelOutliningPass : Pass<"gpu-kernel-outlining", "ModuleOp"> {
@@ -66,7 +65,6 @@ def GpuEliminateBarriers
     PPoPP 2023 and implementation in Polygeist.
   }];
   let dependentDialects = [
-    "mlir::gpu::GPUDialect",
     "mlir::memref::MemRefDialect",
     "mlir::scf::SCFDialect"
   ];
@@ -84,7 +82,7 @@ def GpuDecomposeMemrefsPass : Pass<"gpu-decompose-memrefs"> {
     `gpu.launch`.
   }];
   let dependentDialects = [
-    "mlir::gpu::GPUDialect", "mlir::memref::MemRefDialect",
+    "mlir::memref::MemRefDialect",
     "mlir::affine::AffineDialect"
   ];
 }
@@ -143,10 +141,10 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
            /*default=*/ "\"nvptx64-nvidia-cuda\"",
            "Target triple.">,
     Option<"chip", "chip", "std::string",
-           /*default=*/"\"sm_50\"",
+           /*default=*/"\"sm_75\"",
            "Target chip.">,
     Option<"features", "features", "std::string",
-           /*default=*/"\"+ptx60\"",
+           /*default=*/"\"\"",
            "Target features.">,
     Option<"optLevel", "O", "unsigned",
            /*default=*/"2",
@@ -157,11 +155,17 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
     Option<"ftzFlag", "ftz", "bool",
            /*default=*/"false",
            "Enable flush to zero for denormals.">,
+    Option<"compilerDiagnosticsFlag", "collect-compiler-diagnostics", "bool",
+           /*default=*/"false",
+           "Enable collection of compiler diagnostics.">,
     ListOption<"linkLibs", "l", "std::string",
            "Extra bitcode libraries paths to link to.">,
     Option<"cmdOptions", "ptxas-cmd-options", "std::string",
            /*default=*/ [{""}],
            "Command line options passed to downstream compiler">,
+    Option<"verifyTarget", "verify-target-arch", "bool",
+           /*default=*/"true",
+           "Enable verification of the target architecture">,
   ];
 }
 

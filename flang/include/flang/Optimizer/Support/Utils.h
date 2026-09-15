@@ -24,12 +24,22 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "llvm/ADT/DenseMap.h"
+#include "mlir/IR/Location.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/StringRef.h"
+#include <string>
 
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 
 namespace fir {
+/// Return the line of a location, or 1 if it does not carry one.
+inline uint32_t getLineFromLoc(mlir::Location loc) {
+  uint32_t line = 1;
+  if (auto fileLoc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
+    line = fileLoc.getLine();
+  return line;
+}
+
 /// Return the integer value of a arith::ConstantOp.
 inline std::int64_t toInt(mlir::arith::ConstantOp cop) {
   return mlir::cast<mlir::IntegerAttr>(cop.getValue())
@@ -85,7 +95,7 @@ inline std::string mlirTypeToIntrinsicFortran(fir::FirOpBuilder &builder,
       return "REAL(KIND="s + std::to_string(*kind) + ")";
   } else if (auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(type)) {
     if (std::optional<int> kind = mlirFloatTypeToKind(cplxTy.getElementType()))
-      return "COMPLEX(KIND+"s + std::to_string(*kind) + ")";
+      return "COMPLEX(KIND="s + std::to_string(*kind) + ")";
   } else if (type.isUnsignedInteger()) {
     if (type.isInteger(8))
       return "UNSIGNED(KIND=1)";
@@ -237,6 +247,17 @@ mlir::Value integerCast(const fir::LLVMTypeConverter &converter,
                         mlir::Location loc,
                         mlir::ConversionPatternRewriter &rewriter,
                         mlir::Type ty, mlir::Value val, bool fold = false);
+
+/// Check if the given operation result is a new allocation
+/// as specified by the MemoryEffects of the operation.
+/// The function returns true iff it is a new allocation,
+/// it return false iff it is not a new allocation,
+/// otherwise it returns std::nullopt.
+std::optional<bool> isNewAllocationResult(mlir::OpResult result);
+
+/// Used to obtain user-facing function name that can be used in
+/// diagnostics and remarks without mangling or underscores.
+std::string getPresentableFunctionName(mlir::FunctionOpInterface func);
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_UTILS_H

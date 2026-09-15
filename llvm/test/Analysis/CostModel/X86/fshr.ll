@@ -870,53 +870,46 @@ define void @splatvar_funnel_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <64 x 
 ;
 
 define void @constant_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 x i64> %a512, i64 %b64, <2 x i64> %b128, <4 x i64> %b256, <8 x i64> %b512) {
-; SSSE3-LABEL: 'constant_funnel_i64'
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:20 Lat:21 SizeLat:25 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:40 Lat:42 SizeLat:50 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:68 CodeSize:80 Lat:84 SizeLat:100 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
-;
-; SSE42-LABEL: 'constant_funnel_i64'
-; SSE42-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:14 Lat:19 SizeLat:21 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:28 Lat:38 SizeLat:42 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:56 Lat:76 SizeLat:84 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+; SSE-LABEL: 'constant_funnel_i64'
+; SSE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
+; SSE-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:11 Lat:13 SizeLat:15 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
+; SSE-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:26 SizeLat:30 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; SSE-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:44 Lat:52 SizeLat:60 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'constant_funnel_i64'
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:12 Lat:14 SizeLat:18 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:34 Lat:22 SizeLat:46 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:68 Lat:44 SizeLat:92 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:9 Lat:9 SizeLat:13 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:23 Lat:15 SizeLat:32 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:46 Lat:30 SizeLat:64 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'constant_funnel_i64'
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:6 Lat:12 SizeLat:8 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:6 Lat:13 SizeLat:12 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:12 Lat:26 SizeLat:24 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:3 Lat:7 SizeLat:3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:3 Lat:9 SizeLat:6 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:6 Lat:18 SizeLat:12 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512F-LABEL: 'constant_funnel_i64'
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; AVX512F-NEXT:  Cost Model: Found costs of 6 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:6 SizeLat:7 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; AVX512F-NEXT:  Cost Model: Found costs of 6 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; AVX512F-NEXT:  Cost Model: Found costs of 3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
+; AVX512F-NEXT:  Cost Model: Found costs of 3 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; AVX512F-NEXT:  Cost Model: Found costs of 3 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BW-LABEL: 'constant_funnel_i64'
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQ-LABEL: 'constant_funnel_i64'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; AVX512DQ-NEXT:  Cost Model: Found costs of 6 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:6 SizeLat:7 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; AVX512DQ-NEXT:  Cost Model: Found costs of 6 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of 3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of 3 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of 3 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMI2-LABEL: 'constant_funnel_i64'
@@ -928,23 +921,23 @@ define void @constant_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ;
 ; SLM-LABEL: 'constant_funnel_i64'
 ; SLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; SLM-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:14 Lat:24 SizeLat:22 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
-; SLM-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:28 Lat:48 SizeLat:44 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; SLM-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:56 Lat:96 SizeLat:88 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:11 Lat:13 SizeLat:15 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:26 SizeLat:30 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:44 Lat:52 SizeLat:60 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'constant_funnel_i64'
 ; GLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; GLM-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:14 Lat:19 SizeLat:21 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
-; GLM-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:28 Lat:38 SizeLat:42 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; GLM-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:56 Lat:76 SizeLat:84 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:11 Lat:13 SizeLat:15 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:26 SizeLat:30 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:44 Lat:52 SizeLat:60 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'constant_funnel_i64'
 ; XOP-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; XOP-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:11 SizeLat:7 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
-; XOP-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:22 Lat:22 SizeLat:28 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; XOP-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:44 Lat:44 SizeLat:56 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; XOP-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:7 SizeLat:3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
+; XOP-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:11 Lat:15 SizeLat:14 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; XOP-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:30 SizeLat:28 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512GFNI-LABEL: 'constant_funnel_i64'
@@ -964,51 +957,51 @@ define void @constant_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 define void @constant_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16 x i32> %a512, i32 %b32, <4 x i32> %b128, <8 x i32> %b256, <16 x i32> %b512) {
 ; SSSE3-LABEL: 'constant_funnel_i32'
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:28 Lat:25 SizeLat:32 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:46 CodeSize:55 Lat:49 SizeLat:63 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:92 CodeSize:109 Lat:97 SizeLat:125 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:23 Lat:21 SizeLat:27 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:46 Lat:42 SizeLat:54 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:92 Lat:84 SizeLat:108 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSE42-LABEL: 'constant_funnel_i32'
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:20 Lat:33 SizeLat:25 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:46 CodeSize:39 Lat:65 SizeLat:49 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:92 CodeSize:77 Lat:129 SizeLat:97 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:17 Lat:29 SizeLat:21 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:34 Lat:58 SizeLat:42 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:68 Lat:116 SizeLat:84 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'constant_funnel_i32'
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:17 Lat:17 SizeLat:24 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:31 CodeSize:43 Lat:30 SizeLat:60 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:62 CodeSize:86 Lat:60 SizeLat:120 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:14 Lat:13 SizeLat:20 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:32 Lat:23 SizeLat:46 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:64 Lat:46 SizeLat:92 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'constant_funnel_i32'
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:6 Lat:11 SizeLat:11 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:6 Lat:13 SizeLat:14 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:12 Lat:26 SizeLat:28 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:3 Lat:7 SizeLat:7 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:3 Lat:9 SizeLat:8 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:6 Lat:18 SizeLat:16 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512F-LABEL: 'constant_funnel_i32'
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
-; AVX512F-NEXT:  Cost Model: Found costs of 6 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:6 SizeLat:7 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; AVX512F-NEXT:  Cost Model: Found costs of 6 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX512F-NEXT:  Cost Model: Found costs of 3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; AVX512F-NEXT:  Cost Model: Found costs of 3 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX512F-NEXT:  Cost Model: Found costs of 3 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BW-LABEL: 'constant_funnel_i32'
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQ-LABEL: 'constant_funnel_i32'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
-; AVX512DQ-NEXT:  Cost Model: Found costs of 6 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:6 SizeLat:7 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; AVX512DQ-NEXT:  Cost Model: Found costs of 6 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of 3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of 3 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of 3 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMI2-LABEL: 'constant_funnel_i32'
@@ -1020,23 +1013,23 @@ define void @constant_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ;
 ; SLM-LABEL: 'constant_funnel_i32'
 ; SLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
-; SLM-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:20 Lat:33 SizeLat:31 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; SLM-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:39 Lat:65 SizeLat:61 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; SLM-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:77 Lat:129 SizeLat:121 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:17 Lat:29 SizeLat:27 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:34 Lat:58 SizeLat:54 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:68 Lat:116 SizeLat:108 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'constant_funnel_i32'
 ; GLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
-; GLM-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:20 Lat:33 SizeLat:25 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; GLM-NEXT:  Cost Model: Found costs of RThru:46 CodeSize:39 Lat:65 SizeLat:49 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; GLM-NEXT:  Cost Model: Found costs of RThru:92 CodeSize:77 Lat:129 SizeLat:97 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:17 Lat:29 SizeLat:21 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:34 Lat:58 SizeLat:42 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:68 Lat:116 SizeLat:84 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'constant_funnel_i32'
 ; XOP-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 7)
-; XOP-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:11 SizeLat:7 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; XOP-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:22 Lat:22 SizeLat:28 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; XOP-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:44 Lat:44 SizeLat:56 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; XOP-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:7 SizeLat:3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; XOP-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:11 Lat:15 SizeLat:14 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; XOP-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:30 SizeLat:28 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512GFNI-LABEL: 'constant_funnel_i32'
@@ -1056,51 +1049,51 @@ define void @constant_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 define void @constant_funnel_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <32 x i16> %a512, i16 %b16, <8 x i16> %b128, <16 x i16> %b256, <32 x i16> %b512) {
 ; SSSE3-LABEL: 'constant_funnel_i16'
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 7)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:38 Lat:29 SizeLat:38 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:75 Lat:57 SizeLat:75 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:88 CodeSize:149 Lat:113 SizeLat:149 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:33 Lat:25 SizeLat:33 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:66 Lat:50 SizeLat:66 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:132 Lat:100 SizeLat:132 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSE42-LABEL: 'constant_funnel_i16'
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 7)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:28 Lat:36 SizeLat:33 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:55 Lat:71 SizeLat:65 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:109 Lat:141 SizeLat:129 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:25 Lat:32 SizeLat:29 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:50 Lat:64 SizeLat:58 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:96 CodeSize:100 Lat:128 SizeLat:116 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'constant_funnel_i16'
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:19 Lat:26 SizeLat:28 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:50 Lat:46 SizeLat:71 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:88 CodeSize:100 Lat:92 SizeLat:142 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:16 Lat:22 SizeLat:24 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:33 CodeSize:37 Lat:39 SizeLat:56 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:66 CodeSize:74 Lat:78 SizeLat:112 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'constant_funnel_i16'
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:10 Lat:21 SizeLat:16 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:15 Lat:20 SizeLat:24 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:30 Lat:40 SizeLat:48 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:17 SizeLat:12 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:12 Lat:16 SizeLat:18 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:24 Lat:32 SizeLat:36 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512F-LABEL: 'constant_funnel_i16'
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 7)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:10 Lat:20 SizeLat:15 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:15 Lat:19 SizeLat:22 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:31 CodeSize:37 Lat:49 SizeLat:45 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:17 SizeLat:12 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:12 Lat:16 SizeLat:17 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:23 Lat:33 SizeLat:31 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BW-LABEL: 'constant_funnel_i16'
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQ-LABEL: 'constant_funnel_i16'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 7)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:10 Lat:20 SizeLat:15 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:15 Lat:19 SizeLat:22 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:31 CodeSize:37 Lat:49 SizeLat:45 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:17 SizeLat:12 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:12 Lat:16 SizeLat:17 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:23 Lat:33 SizeLat:31 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMI2-LABEL: 'constant_funnel_i16'
@@ -1112,23 +1105,23 @@ define void @constant_funnel_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <3
 ;
 ; SLM-LABEL: 'constant_funnel_i16'
 ; SLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 7)
-; SLM-NEXT:  Cost Model: Found costs of RThru:31 CodeSize:28 Lat:38 SizeLat:34 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; SLM-NEXT:  Cost Model: Found costs of RThru:62 CodeSize:55 Lat:75 SizeLat:67 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; SLM-NEXT:  Cost Model: Found costs of RThru:124 CodeSize:109 Lat:149 SizeLat:133 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:25 Lat:32 SizeLat:29 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:50 CodeSize:50 Lat:64 SizeLat:58 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:100 CodeSize:100 Lat:128 SizeLat:116 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'constant_funnel_i16'
 ; GLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 7)
-; GLM-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:28 Lat:36 SizeLat:33 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; GLM-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:55 Lat:71 SizeLat:65 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; GLM-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:109 Lat:141 SizeLat:129 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:25 Lat:32 SizeLat:29 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:50 Lat:64 SizeLat:58 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:96 CodeSize:100 Lat:128 SizeLat:116 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'constant_funnel_i16'
 ; XOP-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 7)
-; XOP-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:11 SizeLat:7 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; XOP-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:24 Lat:22 SizeLat:29 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; XOP-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:48 Lat:44 SizeLat:58 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; XOP-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:7 SizeLat:3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; XOP-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:11 Lat:15 SizeLat:14 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; XOP-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:30 SizeLat:28 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512GFNI-LABEL: 'constant_funnel_i16'
@@ -1148,86 +1141,86 @@ define void @constant_funnel_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <3
 define void @constant_funnel_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <64 x i8> %a512, i8 %b8, <16 x i8> %b128, <32 x i8> %b256, <64 x i8> %b512) {
 ; SSSE3-LABEL: 'constant_funnel_i8'
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 7)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:59 Lat:54 SizeLat:64 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:117 Lat:107 SizeLat:127 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:233 Lat:213 SizeLat:253 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:54 Lat:50 SizeLat:59 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:108 Lat:100 SizeLat:118 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:216 Lat:200 SizeLat:236 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSE42-LABEL: 'constant_funnel_i8'
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 7)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:39 Lat:56 SizeLat:51 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:77 Lat:111 SizeLat:101 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:144 CodeSize:153 Lat:221 SizeLat:201 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:36 Lat:52 SizeLat:47 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:72 Lat:104 SizeLat:94 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:144 Lat:208 SizeLat:188 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'constant_funnel_i8'
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:27 Lat:53 SizeLat:40 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:57 CodeSize:71 Lat:53 SizeLat:100 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:114 CodeSize:142 Lat:106 SizeLat:200 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:24 Lat:49 SizeLat:36 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:46 CodeSize:58 Lat:46 SizeLat:85 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:92 CodeSize:116 Lat:92 SizeLat:170 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'constant_funnel_i8'
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:27 Lat:53 SizeLat:39 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:27 Lat:58 SizeLat:54 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:54 Lat:116 SizeLat:108 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:24 Lat:49 SizeLat:35 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:24 Lat:54 SizeLat:48 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:48 Lat:108 SizeLat:96 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512F-LABEL: 'constant_funnel_i8'
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 7)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:27 Lat:52 SizeLat:38 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:27 Lat:57 SizeLat:52 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:39 CodeSize:72 Lat:55 SizeLat:84 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:24 Lat:49 SizeLat:35 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:24 Lat:54 SizeLat:47 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:31 CodeSize:58 Lat:39 SizeLat:70 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BW-LABEL: 'constant_funnel_i8'
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:12 Lat:20 SizeLat:14 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:27 Lat:57 SizeLat:38 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:32 Lat:50 SizeLat:37 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:17 SizeLat:11 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:24 Lat:54 SizeLat:35 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:29 Lat:47 SizeLat:34 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQ-LABEL: 'constant_funnel_i8'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 7)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:27 Lat:52 SizeLat:38 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:27 Lat:57 SizeLat:52 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:39 CodeSize:72 Lat:55 SizeLat:84 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:24 Lat:49 SizeLat:35 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:24 Lat:54 SizeLat:47 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:31 CodeSize:58 Lat:39 SizeLat:70 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMI2-LABEL: 'constant_funnel_i8'
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 7)
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:12 Lat:20 SizeLat:14 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:27 Lat:57 SizeLat:38 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:32 Lat:50 SizeLat:37 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:17 SizeLat:11 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:24 Lat:54 SizeLat:35 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:29 Lat:47 SizeLat:34 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SLM-LABEL: 'constant_funnel_i8'
 ; SLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 7)
-; SLM-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:39 Lat:58 SizeLat:52 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; SLM-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:77 Lat:115 SizeLat:103 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; SLM-NEXT:  Cost Model: Found costs of RThru:152 CodeSize:153 Lat:229 SizeLat:205 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:36 Lat:52 SizeLat:47 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:72 Lat:104 SizeLat:94 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:144 Lat:208 SizeLat:188 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'constant_funnel_i8'
 ; GLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 7)
-; GLM-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:39 Lat:56 SizeLat:51 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; GLM-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:77 Lat:111 SizeLat:101 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; GLM-NEXT:  Cost Model: Found costs of RThru:144 CodeSize:153 Lat:221 SizeLat:201 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:36 Lat:52 SizeLat:47 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:72 Lat:104 SizeLat:94 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:144 Lat:208 SizeLat:188 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'constant_funnel_i8'
 ; XOP-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 7)
-; XOP-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:11 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; XOP-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:24 Lat:22 SizeLat:29 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; XOP-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:48 Lat:44 SizeLat:58 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; XOP-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:7 SizeLat:3 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; XOP-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:11 Lat:15 SizeLat:14 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; XOP-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:30 SizeLat:28 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512GFNI-LABEL: 'constant_funnel_i8'
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 7)
-; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:12 Lat:20 SizeLat:14 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:27 Lat:57 SizeLat:38 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:32 Lat:50 SizeLat:37 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:17 SizeLat:11 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:24 Lat:54 SizeLat:35 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:29 Lat:47 SizeLat:34 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %I8    = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 7)
@@ -1242,53 +1235,46 @@ define void @constant_funnel_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <64 x 
 ;
 
 define void @splatconstant_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 x i64> %a512, i64 %b64, <2 x i64> %b128, <4 x i64> %b256, <8 x i64> %b512) {
-; SSSE3-LABEL: 'splatconstant_funnel_i64'
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:12 Lat:11 SizeLat:13 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:24 Lat:22 SizeLat:26 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:48 Lat:44 SizeLat:52 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
-;
-; SSE42-LABEL: 'splatconstant_funnel_i64'
-; SSE42-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:9 SizeLat:9 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
-; SSE42-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:12 Lat:18 SizeLat:18 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
-; SSE42-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:24 Lat:36 SizeLat:36 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
-; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+; SSE-LABEL: 'splatconstant_funnel_i64'
+; SSE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
+; SSE-NEXT:  Cost Model: Found costs of 3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
+; SSE-NEXT:  Cost Model: Found costs of 6 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
+; SSE-NEXT:  Cost Model: Found costs of 12 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
+; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'splatconstant_funnel_i64'
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:10 SizeLat:8 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
-; AVX1-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:20 Lat:20 SizeLat:26 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
-; AVX1-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:40 Lat:40 SizeLat:52 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:9 Lat:13 SizeLat:12 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:18 Lat:26 SizeLat:24 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'splatconstant_funnel_i64'
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:8 SizeLat:8 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
-; AVX2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:6 Lat:9 SizeLat:12 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
-; AVX2-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:12 Lat:18 SizeLat:24 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
+; AVX2-NEXT:  Cost Model: Found costs of 3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:3 Lat:5 SizeLat:6 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:12 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512F-LABEL: 'splatconstant_funnel_i64'
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; AVX512F-NEXT:  Cost Model: Found costs of 6 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:6 SizeLat:7 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
-; AVX512F-NEXT:  Cost Model: Found costs of 6 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
+; AVX512F-NEXT:  Cost Model: Found costs of 3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
+; AVX512F-NEXT:  Cost Model: Found costs of 3 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
+; AVX512F-NEXT:  Cost Model: Found costs of 3 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BW-LABEL: 'splatconstant_funnel_i64'
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQ-LABEL: 'splatconstant_funnel_i64'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; AVX512DQ-NEXT:  Cost Model: Found costs of 6 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:6 SizeLat:7 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
-; AVX512DQ-NEXT:  Cost Model: Found costs of 6 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
+; AVX512DQ-NEXT:  Cost Model: Found costs of 3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
+; AVX512DQ-NEXT:  Cost Model: Found costs of 3 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
+; AVX512DQ-NEXT:  Cost Model: Found costs of 3 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMI2-LABEL: 'splatconstant_funnel_i64'
@@ -1300,23 +1286,23 @@ define void @splatconstant_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256
 ;
 ; SLM-LABEL: 'splatconstant_funnel_i64'
 ; SLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; SLM-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:6 Lat:14 SizeLat:10 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
-; SLM-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:12 Lat:28 SizeLat:20 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
-; SLM-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:24 Lat:56 SizeLat:40 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
+; SLM-NEXT:  Cost Model: Found costs of 3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
+; SLM-NEXT:  Cost Model: Found costs of 6 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
+; SLM-NEXT:  Cost Model: Found costs of 12 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'splatconstant_funnel_i64'
 ; GLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; GLM-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:9 SizeLat:9 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
-; GLM-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:12 Lat:18 SizeLat:18 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
-; GLM-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:24 Lat:36 SizeLat:36 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
+; GLM-NEXT:  Cost Model: Found costs of 3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
+; GLM-NEXT:  Cost Model: Found costs of 6 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
+; GLM-NEXT:  Cost Model: Found costs of 12 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'splatconstant_funnel_i64'
 ; XOP-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; XOP-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:9 SizeLat:7 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
-; XOP-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:20 Lat:20 SizeLat:26 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
-; XOP-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:40 Lat:40 SizeLat:52 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
+; XOP-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> splat (i64 7))
+; XOP-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:9 Lat:13 SizeLat:12 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> splat (i64 7))
+; XOP-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:18 Lat:26 SizeLat:24 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> splat (i64 7))
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512GFNI-LABEL: 'splatconstant_funnel_i64'
@@ -1334,53 +1320,46 @@ define void @splatconstant_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256
 }
 
 define void @splatconstant_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16 x i32> %a512, i32 %b32, <4 x i32> %b128, <8 x i32> %b256, <16 x i32> %b512) {
-; SSSE3-LABEL: 'splatconstant_funnel_i32'
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:8 Lat:7 SizeLat:8 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:15 Lat:13 SizeLat:15 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:29 Lat:25 SizeLat:29 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
-;
-; SSE42-LABEL: 'splatconstant_funnel_i32'
-; SSE42-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:7 SizeLat:7 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
-; SSE42-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:11 Lat:13 SizeLat:13 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
-; SSE42-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:21 Lat:25 SizeLat:25 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
-; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+; SSE-LABEL: 'splatconstant_funnel_i32'
+; SSE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
+; SSE-NEXT:  Cost Model: Found costs of 3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
+; SSE-NEXT:  Cost Model: Found costs of 6 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
+; SSE-NEXT:  Cost Model: Found costs of 12 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
+; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'splatconstant_funnel_i32'
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:9 SizeLat:7 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
-; AVX1-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:20 Lat:20 SizeLat:26 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
-; AVX1-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:40 Lat:40 SizeLat:52 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:9 Lat:13 SizeLat:12 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:18 Lat:26 SizeLat:24 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'splatconstant_funnel_i32'
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:7 SizeLat:7 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
-; AVX2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:6 Lat:9 SizeLat:12 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
-; AVX2-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:12 Lat:18 SizeLat:24 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
+; AVX2-NEXT:  Cost Model: Found costs of 3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:3 Lat:5 SizeLat:6 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:12 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512F-LABEL: 'splatconstant_funnel_i32'
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
-; AVX512F-NEXT:  Cost Model: Found costs of 6 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:6 SizeLat:7 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
-; AVX512F-NEXT:  Cost Model: Found costs of 6 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
+; AVX512F-NEXT:  Cost Model: Found costs of 3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
+; AVX512F-NEXT:  Cost Model: Found costs of 3 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
+; AVX512F-NEXT:  Cost Model: Found costs of 3 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BW-LABEL: 'splatconstant_funnel_i32'
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQ-LABEL: 'splatconstant_funnel_i32'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
-; AVX512DQ-NEXT:  Cost Model: Found costs of 6 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:6 SizeLat:7 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
-; AVX512DQ-NEXT:  Cost Model: Found costs of 6 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
+; AVX512DQ-NEXT:  Cost Model: Found costs of 3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
+; AVX512DQ-NEXT:  Cost Model: Found costs of 3 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
+; AVX512DQ-NEXT:  Cost Model: Found costs of 3 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMI2-LABEL: 'splatconstant_funnel_i32'
@@ -1392,23 +1371,23 @@ define void @splatconstant_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256
 ;
 ; SLM-LABEL: 'splatconstant_funnel_i32'
 ; SLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
-; SLM-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:7 SizeLat:7 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
-; SLM-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:11 Lat:13 SizeLat:13 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
-; SLM-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:21 Lat:25 SizeLat:25 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
+; SLM-NEXT:  Cost Model: Found costs of 3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
+; SLM-NEXT:  Cost Model: Found costs of 6 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
+; SLM-NEXT:  Cost Model: Found costs of 12 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'splatconstant_funnel_i32'
 ; GLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
-; GLM-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:7 SizeLat:7 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
-; GLM-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:11 Lat:13 SizeLat:13 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
-; GLM-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:21 Lat:25 SizeLat:25 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
+; GLM-NEXT:  Cost Model: Found costs of 3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
+; GLM-NEXT:  Cost Model: Found costs of 6 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
+; GLM-NEXT:  Cost Model: Found costs of 12 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'splatconstant_funnel_i32'
 ; XOP-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:4 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %b32, i32 5)
-; XOP-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:9 SizeLat:7 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
-; XOP-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:20 Lat:20 SizeLat:26 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
-; XOP-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:40 Lat:40 SizeLat:52 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
+; XOP-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %b128, <4 x i32> splat (i32 5))
+; XOP-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:9 Lat:13 SizeLat:12 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %b256, <8 x i32> splat (i32 5))
+; XOP-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:18 Lat:26 SizeLat:24 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %b512, <16 x i32> splat (i32 5))
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512GFNI-LABEL: 'splatconstant_funnel_i32'
@@ -1426,53 +1405,46 @@ define void @splatconstant_funnel_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256
 }
 
 define void @splatconstant_funnel_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <32 x i16> %a512, i16 %b16, <8 x i16> %b128, <16 x i16> %b256, <32 x i16> %b512) {
-; SSSE3-LABEL: 'splatconstant_funnel_i16'
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 3)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:8 Lat:7 SizeLat:8 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:15 Lat:13 SizeLat:15 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:29 Lat:25 SizeLat:29 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
-;
-; SSE42-LABEL: 'splatconstant_funnel_i16'
-; SSE42-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 3)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:7 SizeLat:7 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
-; SSE42-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:11 Lat:13 SizeLat:13 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
-; SSE42-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:21 Lat:25 SizeLat:25 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
-; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+; SSE-LABEL: 'splatconstant_funnel_i16'
+; SSE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 3)
+; SSE-NEXT:  Cost Model: Found costs of 3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
+; SSE-NEXT:  Cost Model: Found costs of 6 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
+; SSE-NEXT:  Cost Model: Found costs of 12 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
+; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'splatconstant_funnel_i16'
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 3)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:9 SizeLat:7 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
-; AVX1-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:20 SizeLat:27 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
-; AVX1-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:44 Lat:40 SizeLat:54 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:9 Lat:13 SizeLat:12 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:18 Lat:26 SizeLat:24 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'splatconstant_funnel_i16'
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 3)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:7 SizeLat:7 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
-; AVX2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:6 Lat:9 SizeLat:12 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
-; AVX2-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:12 Lat:18 SizeLat:24 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
+; AVX2-NEXT:  Cost Model: Found costs of 3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:3 Lat:5 SizeLat:6 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:12 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512F-LABEL: 'splatconstant_funnel_i16'
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 3)
-; AVX512F-NEXT:  Cost Model: Found costs of 6 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:12 Lat:18 SizeLat:14 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:25 Lat:37 SizeLat:29 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
+; AVX512F-NEXT:  Cost Model: Found costs of 3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:9 Lat:15 SizeLat:9 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:11 Lat:21 SizeLat:15 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BW-LABEL: 'splatconstant_funnel_i16'
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 3)
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
-; AVX512BW-NEXT:  Cost Model: Found costs of 6 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
+; AVX512BW-NEXT:  Cost Model: Found costs of 3 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQ-LABEL: 'splatconstant_funnel_i16'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 3)
-; AVX512DQ-NEXT:  Cost Model: Found costs of 6 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:12 Lat:18 SizeLat:14 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:25 Lat:37 SizeLat:29 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
+; AVX512DQ-NEXT:  Cost Model: Found costs of 3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:9 Lat:15 SizeLat:9 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:11 Lat:21 SizeLat:15 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMI2-LABEL: 'splatconstant_funnel_i16'
@@ -1484,23 +1456,23 @@ define void @splatconstant_funnel_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a25
 ;
 ; SLM-LABEL: 'splatconstant_funnel_i16'
 ; SLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 3)
-; SLM-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:6 Lat:9 SizeLat:8 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
-; SLM-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:11 Lat:17 SizeLat:15 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
-; SLM-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:21 Lat:33 SizeLat:29 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
+; SLM-NEXT:  Cost Model: Found costs of 3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
+; SLM-NEXT:  Cost Model: Found costs of 6 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
+; SLM-NEXT:  Cost Model: Found costs of 12 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'splatconstant_funnel_i16'
 ; GLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 3)
-; GLM-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:7 SizeLat:7 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
-; GLM-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:11 Lat:13 SizeLat:13 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
-; GLM-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:21 Lat:25 SizeLat:25 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
+; GLM-NEXT:  Cost Model: Found costs of 3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
+; GLM-NEXT:  Cost Model: Found costs of 6 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
+; GLM-NEXT:  Cost Model: Found costs of 12 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'splatconstant_funnel_i16'
 ; XOP-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %b16, i16 3)
-; XOP-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:9 SizeLat:7 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
-; XOP-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:20 SizeLat:27 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
-; XOP-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:44 Lat:40 SizeLat:54 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
+; XOP-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %b128, <8 x i16> splat (i16 3))
+; XOP-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:9 Lat:13 SizeLat:12 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %b256, <16 x i16> splat (i16 3))
+; XOP-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:18 Lat:26 SizeLat:24 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %b512, <32 x i16> splat (i16 3))
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512GFNI-LABEL: 'splatconstant_funnel_i16'
@@ -1518,88 +1490,81 @@ define void @splatconstant_funnel_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a25
 }
 
 define void @splatconstant_funnel_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <64 x i8> %a512, i8 %b8, <16 x i8> %b128, <32 x i8> %b256, <64 x i8> %b512) {
-; SSSE3-LABEL: 'splatconstant_funnel_i8'
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 3)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:10 Lat:19 SizeLat:12 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:19 Lat:37 SizeLat:23 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:37 Lat:73 SizeLat:45 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
-;
-; SSE42-LABEL: 'splatconstant_funnel_i8'
-; SSE42-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 3)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:8 Lat:19 SizeLat:11 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
-; SSE42-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:15 Lat:37 SizeLat:21 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
-; SSE42-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:29 Lat:73 SizeLat:41 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
-; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+; SSE-LABEL: 'splatconstant_funnel_i8'
+; SSE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 3)
+; SSE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:15 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
+; SSE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:10 Lat:30 SizeLat:14 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
+; SSE-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:20 Lat:60 SizeLat:28 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
+; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'splatconstant_funnel_i8'
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 3)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:8 Lat:19 SizeLat:11 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
-; AVX1-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:28 Lat:22 SizeLat:33 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
-; AVX1-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:56 Lat:44 SizeLat:66 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:15 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:15 Lat:15 SizeLat:18 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:30 Lat:30 SizeLat:36 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'splatconstant_funnel_i8'
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 3)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:8 Lat:21 SizeLat:11 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
-; AVX2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:8 Lat:21 SizeLat:16 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
-; AVX2-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:16 Lat:42 SizeLat:32 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:17 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:17 SizeLat:10 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:10 Lat:34 SizeLat:20 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512F-LABEL: 'splatconstant_funnel_i8'
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 3)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:8 Lat:20 SizeLat:10 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:20 SizeLat:14 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:25 Lat:41 SizeLat:27 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:17 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:17 SizeLat:9 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:11 Lat:25 SizeLat:13 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BW-LABEL: 'splatconstant_funnel_i8'
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 3)
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:8 Lat:18 SizeLat:10 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:8 Lat:20 SizeLat:10 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
-; AVX512BW-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:8 Lat:20 SizeLat:10 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:15 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:17 SizeLat:7 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
+; AVX512BW-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:17 SizeLat:7 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512DQ-LABEL: 'splatconstant_funnel_i8'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 3)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:8 Lat:20 SizeLat:10 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:20 SizeLat:14 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:25 Lat:41 SizeLat:27 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:17 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:17 SizeLat:9 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:11 Lat:25 SizeLat:13 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMI2-LABEL: 'splatconstant_funnel_i8'
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 3)
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:8 Lat:18 SizeLat:10 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:8 Lat:20 SizeLat:10 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
-; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:8 Lat:20 SizeLat:10 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:15 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:17 SizeLat:7 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
+; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:17 SizeLat:7 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
 ; AVX512VBMI2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SLM-LABEL: 'splatconstant_funnel_i8'
 ; SLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 3)
-; SLM-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:8 Lat:21 SizeLat:12 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
-; SLM-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:15 Lat:41 SizeLat:23 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
-; SLM-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:29 Lat:81 SizeLat:45 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
+; SLM-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:15 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
+; SLM-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:10 Lat:30 SizeLat:14 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
+; SLM-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:20 Lat:60 SizeLat:28 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'splatconstant_funnel_i8'
 ; GLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 3)
-; GLM-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:8 Lat:19 SizeLat:11 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
-; GLM-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:15 Lat:37 SizeLat:21 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
-; GLM-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:29 Lat:73 SizeLat:41 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
+; GLM-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:15 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
+; GLM-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:10 Lat:30 SizeLat:14 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
+; GLM-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:20 Lat:60 SizeLat:28 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'splatconstant_funnel_i8'
 ; XOP-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 3)
-; XOP-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:6 Lat:11 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
-; XOP-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:24 Lat:22 SizeLat:29 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
-; XOP-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:48 Lat:44 SizeLat:58 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
+; XOP-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:7 SizeLat:3 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
+; XOP-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:11 Lat:15 SizeLat:14 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
+; XOP-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:30 SizeLat:28 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512GFNI-LABEL: 'splatconstant_funnel_i8'
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:5 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 3)
-; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:16 SizeLat:8 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
-; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:16 SizeLat:8 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
-; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:16 SizeLat:8 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:13 SizeLat:5 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %b128, <16 x i8> splat (i8 3))
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:13 SizeLat:5 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %b256, <32 x i8> splat (i8 3))
+; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:13 SizeLat:5 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %b512, <64 x i8> splat (i8 3))
 ; AVX512GFNI-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %I8    = call i8 @llvm.fshr.i8(i8 %a8, i8 %b8, i8 3)
@@ -2293,23 +2258,23 @@ define void @splatvar_rotate_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <64 x 
 define void @constant_rotate_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 x i64> %a512) {
 ; SSE-LABEL: 'constant_rotate_i64'
 ; SSE-NEXT:  Cost Model: Found costs of 1 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %a64, i64 7)
-; SSE-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:12 Lat:15 SizeLat:17 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> <i64 1, i64 7>)
-; SSE-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:24 Lat:30 SizeLat:34 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; SSE-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:48 Lat:60 SizeLat:68 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; SSE-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:11 Lat:13 SizeLat:15 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> <i64 1, i64 7>)
+; SSE-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:26 SizeLat:30 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; SSE-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:44 Lat:52 SizeLat:60 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'constant_rotate_i64'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %a64, i64 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:10 Lat:10 SizeLat:14 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> <i64 1, i64 7>)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:28 Lat:17 SizeLat:38 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:56 Lat:34 SizeLat:76 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:9 Lat:9 SizeLat:13 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> <i64 1, i64 7>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:23 Lat:15 SizeLat:32 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:46 Lat:30 SizeLat:64 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'constant_rotate_i64'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %a64, i64 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:8 SizeLat:4 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> <i64 1, i64 7>)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:10 SizeLat:8 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:8 Lat:20 SizeLat:16 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:3 Lat:7 SizeLat:3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> <i64 1, i64 7>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:3 Lat:9 SizeLat:6 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:6 Lat:18 SizeLat:12 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512-LABEL: 'constant_rotate_i64'
@@ -2321,16 +2286,16 @@ define void @constant_rotate_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ;
 ; SLM-LABEL: 'constant_rotate_i64'
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %a64, i64 7)
-; SLM-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:12 Lat:15 SizeLat:17 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> <i64 1, i64 7>)
-; SLM-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:24 Lat:30 SizeLat:34 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; SLM-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:48 Lat:60 SizeLat:68 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:11 Lat:13 SizeLat:15 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> <i64 1, i64 7>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:26 SizeLat:30 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:44 Lat:52 SizeLat:60 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'constant_rotate_i64'
 ; GLM-NEXT:  Cost Model: Found costs of 1 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %a64, i64 7)
-; GLM-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:12 Lat:15 SizeLat:17 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> <i64 1, i64 7>)
-; GLM-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:24 Lat:30 SizeLat:34 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; GLM-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:48 Lat:60 SizeLat:68 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:11 Lat:13 SizeLat:15 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> <i64 1, i64 7>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:22 Lat:26 SizeLat:30 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:44 Lat:52 SizeLat:60 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'constant_rotate_i64'
@@ -2350,30 +2315,30 @@ define void @constant_rotate_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 define void @constant_rotate_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16 x i32> %a512) {
 ; SSSE3-LABEL: 'constant_rotate_i32'
 ; SSSE3-NEXT:  Cost Model: Found costs of 1 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %a32, i32 7)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:24 Lat:22 SizeLat:28 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:47 Lat:43 SizeLat:55 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:93 Lat:85 SizeLat:109 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:23 Lat:21 SizeLat:27 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:46 Lat:42 SizeLat:54 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:92 Lat:84 SizeLat:108 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSE42-LABEL: 'constant_rotate_i32'
 ; SSE42-NEXT:  Cost Model: Found costs of 1 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %a32, i32 7)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:18 Lat:30 SizeLat:22 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:35 Lat:59 SizeLat:43 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:69 Lat:117 SizeLat:85 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:17 Lat:29 SizeLat:21 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:34 Lat:58 SizeLat:42 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:68 Lat:116 SizeLat:84 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'constant_rotate_i32'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %a32, i32 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:15 Lat:14 SizeLat:21 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:37 Lat:25 SizeLat:52 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:74 Lat:50 SizeLat:104 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:14 Lat:13 SizeLat:20 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:32 Lat:23 SizeLat:46 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:64 Lat:46 SizeLat:92 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'constant_rotate_i32'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %a32, i32 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:8 SizeLat:8 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:4 Lat:10 SizeLat:10 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:8 Lat:20 SizeLat:20 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:3 Lat:7 SizeLat:7 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:3 Lat:9 SizeLat:8 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:6 Lat:18 SizeLat:16 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512-LABEL: 'constant_rotate_i32'
@@ -2385,16 +2350,16 @@ define void @constant_rotate_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 ;
 ; SLM-LABEL: 'constant_rotate_i32'
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %a32, i32 7)
-; SLM-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:18 Lat:30 SizeLat:28 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; SLM-NEXT:  Cost Model: Found costs of RThru:58 CodeSize:35 Lat:59 SizeLat:55 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; SLM-NEXT:  Cost Model: Found costs of RThru:116 CodeSize:69 Lat:117 SizeLat:109 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:17 Lat:29 SizeLat:27 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:34 Lat:58 SizeLat:54 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:68 Lat:116 SizeLat:108 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'constant_rotate_i32'
 ; GLM-NEXT:  Cost Model: Found costs of 1 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %a32, i32 7)
-; GLM-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:18 Lat:30 SizeLat:22 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
-; GLM-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:35 Lat:59 SizeLat:43 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
-; GLM-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:69 Lat:117 SizeLat:85 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:17 Lat:29 SizeLat:21 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> <i32 4, i32 5, i32 6, i32 7>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:34 Lat:58 SizeLat:42 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:68 Lat:116 SizeLat:84 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'constant_rotate_i32'
@@ -2414,37 +2379,37 @@ define void @constant_rotate_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16
 define void @constant_rotate_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <32 x i16> %a512) {
 ; SSSE3-LABEL: 'constant_rotate_i16'
 ; SSSE3-NEXT:  Cost Model: Found costs of 1 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 7)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:34 Lat:26 SizeLat:34 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:67 Lat:51 SizeLat:67 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:76 CodeSize:133 Lat:101 SizeLat:133 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:33 Lat:25 SizeLat:33 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:66 Lat:50 SizeLat:66 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:72 CodeSize:132 Lat:100 SizeLat:132 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSE42-LABEL: 'constant_rotate_i16'
 ; SSE42-NEXT:  Cost Model: Found costs of 1 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 7)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:26 Lat:33 SizeLat:30 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:50 CodeSize:51 Lat:65 SizeLat:59 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:100 CodeSize:101 Lat:129 SizeLat:117 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:25 Lat:32 SizeLat:29 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:50 Lat:64 SizeLat:58 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:96 CodeSize:100 Lat:128 SizeLat:116 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'constant_rotate_i16'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:17 Lat:23 SizeLat:25 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:37 CodeSize:42 Lat:41 SizeLat:62 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:74 CodeSize:84 Lat:82 SizeLat:124 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:16 Lat:22 SizeLat:24 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:33 CodeSize:37 Lat:39 SizeLat:56 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:66 CodeSize:74 Lat:78 SizeLat:112 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'constant_rotate_i16'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:18 SizeLat:13 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:13 Lat:17 SizeLat:20 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:26 Lat:34 SizeLat:40 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:17 SizeLat:12 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:12 Lat:16 SizeLat:18 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:24 Lat:32 SizeLat:36 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512F-LABEL: 'constant_rotate_i16'
 ; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 7)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:18 SizeLat:13 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:13 Lat:17 SizeLat:19 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:28 Lat:40 SizeLat:36 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:17 SizeLat:12 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:12 Lat:16 SizeLat:17 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:23 Lat:33 SizeLat:31 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BW-LABEL: 'constant_rotate_i16'
@@ -2456,9 +2421,9 @@ define void @constant_rotate_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <3
 ;
 ; AVX512DQ-LABEL: 'constant_rotate_i16'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 7)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:18 SizeLat:13 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:13 Lat:17 SizeLat:19 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:28 Lat:40 SizeLat:36 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:17 SizeLat:12 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:12 Lat:16 SizeLat:17 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:23 Lat:33 SizeLat:31 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMI2-LABEL: 'constant_rotate_i16'
@@ -2470,16 +2435,16 @@ define void @constant_rotate_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <3
 ;
 ; SLM-LABEL: 'constant_rotate_i16'
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 7)
-; SLM-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:26 Lat:33 SizeLat:30 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; SLM-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:51 Lat:65 SizeLat:59 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; SLM-NEXT:  Cost Model: Found costs of RThru:104 CodeSize:101 Lat:129 SizeLat:117 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:25 Lat:32 SizeLat:29 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:50 CodeSize:50 Lat:64 SizeLat:58 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:100 CodeSize:100 Lat:128 SizeLat:116 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'constant_rotate_i16'
 ; GLM-NEXT:  Cost Model: Found costs of 1 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 7)
-; GLM-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:26 Lat:33 SizeLat:30 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; GLM-NEXT:  Cost Model: Found costs of RThru:50 CodeSize:51 Lat:65 SizeLat:59 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
-; GLM-NEXT:  Cost Model: Found costs of RThru:100 CodeSize:101 Lat:129 SizeLat:117 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:25 Lat:32 SizeLat:29 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:50 Lat:64 SizeLat:58 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:96 CodeSize:100 Lat:128 SizeLat:116 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'constant_rotate_i16'
@@ -2506,37 +2471,37 @@ define void @constant_rotate_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <3
 define void @constant_rotate_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <64 x i8> %a512) {
 ; SSSE3-LABEL: 'constant_rotate_i8'
 ; SSSE3-NEXT:  Cost Model: Found costs of 1 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %a8, i8 7)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:55 Lat:51 SizeLat:60 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:58 CodeSize:109 Lat:101 SizeLat:119 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; SSSE3-NEXT:  Cost Model: Found costs of RThru:116 CodeSize:217 Lat:201 SizeLat:237 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:54 Lat:50 SizeLat:59 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:108 Lat:100 SizeLat:118 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:216 Lat:200 SizeLat:236 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSE42-LABEL: 'constant_rotate_i8'
 ; SSE42-NEXT:  Cost Model: Found costs of 1 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %a8, i8 7)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:33 CodeSize:37 Lat:53 SizeLat:48 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:66 CodeSize:73 Lat:105 SizeLat:95 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; SSE42-NEXT:  Cost Model: Found costs of RThru:132 CodeSize:145 Lat:209 SizeLat:189 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:36 Lat:52 SizeLat:47 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:72 Lat:104 SizeLat:94 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:144 Lat:208 SizeLat:188 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'constant_rotate_i8'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %a8, i8 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:23 CodeSize:25 Lat:50 SizeLat:37 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:50 CodeSize:63 Lat:48 SizeLat:91 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:100 CodeSize:126 Lat:96 SizeLat:182 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:24 Lat:49 SizeLat:36 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:46 CodeSize:58 Lat:46 SizeLat:85 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:92 CodeSize:116 Lat:92 SizeLat:170 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'constant_rotate_i8'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %a8, i8 7)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:25 Lat:50 SizeLat:36 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:25 Lat:55 SizeLat:50 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:50 Lat:110 SizeLat:100 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:24 Lat:49 SizeLat:35 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:24 Lat:54 SizeLat:48 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:48 Lat:108 SizeLat:96 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512F-LABEL: 'constant_rotate_i8'
 ; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %a8, i8 7)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:25 Lat:50 SizeLat:36 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:25 Lat:55 SizeLat:49 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:63 Lat:46 SizeLat:75 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:24 Lat:49 SizeLat:35 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:24 Lat:54 SizeLat:47 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:31 CodeSize:58 Lat:39 SizeLat:70 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BW-LABEL: 'constant_rotate_i8'
@@ -2548,9 +2513,9 @@ define void @constant_rotate_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <64 x 
 ;
 ; AVX512DQ-LABEL: 'constant_rotate_i8'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %a8, i8 7)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:25 Lat:50 SizeLat:36 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:25 Lat:55 SizeLat:49 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:63 Lat:46 SizeLat:75 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:24 Lat:49 SizeLat:35 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:24 Lat:54 SizeLat:47 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:31 CodeSize:58 Lat:39 SizeLat:70 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMI2-LABEL: 'constant_rotate_i8'
@@ -2562,16 +2527,16 @@ define void @constant_rotate_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <64 x 
 ;
 ; SLM-LABEL: 'constant_rotate_i8'
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %a8, i8 7)
-; SLM-NEXT:  Cost Model: Found costs of RThru:33 CodeSize:37 Lat:53 SizeLat:48 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; SLM-NEXT:  Cost Model: Found costs of RThru:66 CodeSize:73 Lat:105 SizeLat:95 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; SLM-NEXT:  Cost Model: Found costs of RThru:132 CodeSize:145 Lat:209 SizeLat:189 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:36 Lat:52 SizeLat:47 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:72 Lat:104 SizeLat:94 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; SLM-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:144 Lat:208 SizeLat:188 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'constant_rotate_i8'
 ; GLM-NEXT:  Cost Model: Found costs of 1 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %a8, i8 7)
-; GLM-NEXT:  Cost Model: Found costs of RThru:33 CodeSize:37 Lat:53 SizeLat:48 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; GLM-NEXT:  Cost Model: Found costs of RThru:66 CodeSize:73 Lat:105 SizeLat:95 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
-; GLM-NEXT:  Cost Model: Found costs of RThru:132 CodeSize:145 Lat:209 SizeLat:189 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:36 Lat:52 SizeLat:47 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:72 Lat:104 SizeLat:94 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+; GLM-NEXT:  Cost Model: Found costs of RThru:128 CodeSize:144 Lat:208 SizeLat:188 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'constant_rotate_i8'
@@ -2602,23 +2567,23 @@ define void @constant_rotate_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <64 x 
 define void @splatconstant_rotate_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 x i64> %a512) {
 ; SSE-LABEL: 'splatconstant_rotate_i64'
 ; SSE-NEXT:  Cost Model: Found costs of 1 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %a64, i64 7)
-; SSE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:5 SizeLat:5 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> splat (i64 7))
-; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:10 SizeLat:10 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> splat (i64 7))
-; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:16 Lat:20 SizeLat:20 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> splat (i64 7))
+; SSE-NEXT:  Cost Model: Found costs of 3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> splat (i64 7))
+; SSE-NEXT:  Cost Model: Found costs of 6 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> splat (i64 7))
+; SSE-NEXT:  Cost Model: Found costs of 12 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> splat (i64 7))
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'splatconstant_rotate_i64'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %a64, i64 7)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:6 SizeLat:4 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> splat (i64 7))
-; AVX1-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:14 Lat:15 SizeLat:18 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> splat (i64 7))
-; AVX1-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:28 Lat:30 SizeLat:36 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> splat (i64 7))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> splat (i64 7))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:9 Lat:13 SizeLat:12 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> splat (i64 7))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:18 Lat:26 SizeLat:24 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> splat (i64 7))
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'splatconstant_rotate_i64'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %a64, i64 7)
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> splat (i64 7))
-; AVX2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:6 SizeLat:8 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> splat (i64 7))
-; AVX2-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:8 Lat:12 SizeLat:16 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> splat (i64 7))
+; AVX2-NEXT:  Cost Model: Found costs of 3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> splat (i64 7))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:3 Lat:5 SizeLat:6 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> splat (i64 7))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:12 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> splat (i64 7))
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512-LABEL: 'splatconstant_rotate_i64'
@@ -2630,16 +2595,16 @@ define void @splatconstant_rotate_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256
 ;
 ; SLM-LABEL: 'splatconstant_rotate_i64'
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %a64, i64 7)
-; SLM-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:4 Lat:5 SizeLat:5 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> splat (i64 7))
-; SLM-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:8 Lat:10 SizeLat:10 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> splat (i64 7))
-; SLM-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:16 Lat:20 SizeLat:20 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> splat (i64 7))
+; SLM-NEXT:  Cost Model: Found costs of 3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> splat (i64 7))
+; SLM-NEXT:  Cost Model: Found costs of 6 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> splat (i64 7))
+; SLM-NEXT:  Cost Model: Found costs of 12 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> splat (i64 7))
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'splatconstant_rotate_i64'
 ; GLM-NEXT:  Cost Model: Found costs of 1 for: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %a64, i64 7)
-; GLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:5 SizeLat:5 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> splat (i64 7))
-; GLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:10 SizeLat:10 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> splat (i64 7))
-; GLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:16 Lat:20 SizeLat:20 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> splat (i64 7))
+; GLM-NEXT:  Cost Model: Found costs of 3 for: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %a128, <2 x i64> splat (i64 7))
+; GLM-NEXT:  Cost Model: Found costs of 6 for: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %a256, <4 x i64> splat (i64 7))
+; GLM-NEXT:  Cost Model: Found costs of 12 for: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %a512, <8 x i64> splat (i64 7))
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'splatconstant_rotate_i64'
@@ -2659,23 +2624,23 @@ define void @splatconstant_rotate_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256
 define void @splatconstant_rotate_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256, <16 x i32> %a512) {
 ; SSE-LABEL: 'splatconstant_rotate_i32'
 ; SSE-NEXT:  Cost Model: Found costs of 1 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %a32, i32 5)
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> splat (i32 5))
-; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:7 SizeLat:7 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> splat (i32 5))
-; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:13 Lat:13 SizeLat:13 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> splat (i32 5))
+; SSE-NEXT:  Cost Model: Found costs of 3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> splat (i32 5))
+; SSE-NEXT:  Cost Model: Found costs of 6 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> splat (i32 5))
+; SSE-NEXT:  Cost Model: Found costs of 12 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> splat (i32 5))
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'splatconstant_rotate_i32'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %a32, i32 5)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:6 SizeLat:4 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> splat (i32 5))
-; AVX1-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:14 Lat:15 SizeLat:18 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> splat (i32 5))
-; AVX1-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:28 Lat:30 SizeLat:36 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> splat (i32 5))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> splat (i32 5))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:9 Lat:13 SizeLat:12 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> splat (i32 5))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:18 Lat:26 SizeLat:24 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> splat (i32 5))
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'splatconstant_rotate_i32'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %a32, i32 5)
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> splat (i32 5))
-; AVX2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:6 SizeLat:8 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> splat (i32 5))
-; AVX2-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:8 Lat:12 SizeLat:16 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> splat (i32 5))
+; AVX2-NEXT:  Cost Model: Found costs of 3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> splat (i32 5))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:3 Lat:5 SizeLat:6 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> splat (i32 5))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:12 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> splat (i32 5))
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512-LABEL: 'splatconstant_rotate_i32'
@@ -2687,16 +2652,16 @@ define void @splatconstant_rotate_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256
 ;
 ; SLM-LABEL: 'splatconstant_rotate_i32'
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %a32, i32 5)
-; SLM-NEXT:  Cost Model: Found costs of 4 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> splat (i32 5))
-; SLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:7 SizeLat:7 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> splat (i32 5))
-; SLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:13 Lat:13 SizeLat:13 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> splat (i32 5))
+; SLM-NEXT:  Cost Model: Found costs of 3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> splat (i32 5))
+; SLM-NEXT:  Cost Model: Found costs of 6 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> splat (i32 5))
+; SLM-NEXT:  Cost Model: Found costs of 12 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> splat (i32 5))
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'splatconstant_rotate_i32'
 ; GLM-NEXT:  Cost Model: Found costs of 1 for: %I32 = call i32 @llvm.fshr.i32(i32 %a32, i32 %a32, i32 5)
-; GLM-NEXT:  Cost Model: Found costs of 4 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> splat (i32 5))
-; GLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:7 SizeLat:7 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> splat (i32 5))
-; GLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:13 Lat:13 SizeLat:13 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> splat (i32 5))
+; GLM-NEXT:  Cost Model: Found costs of 3 for: %V2I32 = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %a128, <4 x i32> %a128, <4 x i32> splat (i32 5))
+; GLM-NEXT:  Cost Model: Found costs of 6 for: %V4I32 = call <8 x i32> @llvm.fshr.v8i32(<8 x i32> %a256, <8 x i32> %a256, <8 x i32> splat (i32 5))
+; GLM-NEXT:  Cost Model: Found costs of 12 for: %V8I32 = call <16 x i32> @llvm.fshr.v16i32(<16 x i32> %a512, <16 x i32> %a512, <16 x i32> splat (i32 5))
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'splatconstant_rotate_i32'
@@ -2716,30 +2681,30 @@ define void @splatconstant_rotate_i32(i32 %a32, <4 x i32> %a128, <8 x i32> %a256
 define void @splatconstant_rotate_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a256, <32 x i16> %a512) {
 ; SSE-LABEL: 'splatconstant_rotate_i16'
 ; SSE-NEXT:  Cost Model: Found costs of 1 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 3)
-; SSE-NEXT:  Cost Model: Found costs of 4 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> splat (i16 3))
-; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:7 SizeLat:7 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> splat (i16 3))
-; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:13 Lat:13 SizeLat:13 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> splat (i16 3))
+; SSE-NEXT:  Cost Model: Found costs of 3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> splat (i16 3))
+; SSE-NEXT:  Cost Model: Found costs of 6 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> splat (i16 3))
+; SSE-NEXT:  Cost Model: Found costs of 12 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> splat (i16 3))
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'splatconstant_rotate_i16'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 3)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:6 SizeLat:4 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> splat (i16 3))
-; AVX1-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:14 Lat:15 SizeLat:18 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> splat (i16 3))
-; AVX1-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:28 Lat:30 SizeLat:36 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> splat (i16 3))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:3 Lat:5 SizeLat:3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> splat (i16 3))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:9 Lat:13 SizeLat:12 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> splat (i16 3))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:18 Lat:26 SizeLat:24 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> splat (i16 3))
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'splatconstant_rotate_i16'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 3)
-; AVX2-NEXT:  Cost Model: Found costs of 4 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> splat (i16 3))
-; AVX2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:4 Lat:6 SizeLat:8 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> splat (i16 3))
-; AVX2-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:8 Lat:12 SizeLat:16 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> splat (i16 3))
+; AVX2-NEXT:  Cost Model: Found costs of 3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> splat (i16 3))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:3 Lat:5 SizeLat:6 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> splat (i16 3))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:6 Lat:10 SizeLat:12 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> splat (i16 3))
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512F-LABEL: 'splatconstant_rotate_i16'
 ; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 3)
-; AVX512F-NEXT:  Cost Model: Found costs of 4 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> splat (i16 3))
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:10 Lat:16 SizeLat:11 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> splat (i16 3))
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:16 Lat:28 SizeLat:20 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> splat (i16 3))
+; AVX512F-NEXT:  Cost Model: Found costs of 3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> splat (i16 3))
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:9 Lat:15 SizeLat:9 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> splat (i16 3))
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:11 Lat:21 SizeLat:15 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> splat (i16 3))
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BW-LABEL: 'splatconstant_rotate_i16'
@@ -2751,9 +2716,9 @@ define void @splatconstant_rotate_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a25
 ;
 ; AVX512DQ-LABEL: 'splatconstant_rotate_i16'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 3)
-; AVX512DQ-NEXT:  Cost Model: Found costs of 4 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> splat (i16 3))
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:10 Lat:16 SizeLat:11 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> splat (i16 3))
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:16 Lat:28 SizeLat:20 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> splat (i16 3))
+; AVX512DQ-NEXT:  Cost Model: Found costs of 3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> splat (i16 3))
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:9 Lat:15 SizeLat:9 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> splat (i16 3))
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:11 Lat:21 SizeLat:15 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> splat (i16 3))
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMI2-LABEL: 'splatconstant_rotate_i16'
@@ -2765,16 +2730,16 @@ define void @splatconstant_rotate_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a25
 ;
 ; SLM-LABEL: 'splatconstant_rotate_i16'
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 3)
-; SLM-NEXT:  Cost Model: Found costs of 4 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> splat (i16 3))
-; SLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:7 SizeLat:7 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> splat (i16 3))
-; SLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:13 Lat:13 SizeLat:13 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> splat (i16 3))
+; SLM-NEXT:  Cost Model: Found costs of 3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> splat (i16 3))
+; SLM-NEXT:  Cost Model: Found costs of 6 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> splat (i16 3))
+; SLM-NEXT:  Cost Model: Found costs of 12 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> splat (i16 3))
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'splatconstant_rotate_i16'
 ; GLM-NEXT:  Cost Model: Found costs of 1 for: %I16 = call i16 @llvm.fshr.i16(i16 %a16, i16 %a16, i16 3)
-; GLM-NEXT:  Cost Model: Found costs of 4 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> splat (i16 3))
-; GLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:7 Lat:7 SizeLat:7 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> splat (i16 3))
-; GLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:13 Lat:13 SizeLat:13 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> splat (i16 3))
+; GLM-NEXT:  Cost Model: Found costs of 3 for: %V8I16 = call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %a128, <8 x i16> %a128, <8 x i16> splat (i16 3))
+; GLM-NEXT:  Cost Model: Found costs of 6 for: %V16I16 = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %a256, <16 x i16> %a256, <16 x i16> splat (i16 3))
+; GLM-NEXT:  Cost Model: Found costs of 12 for: %V32I16 = call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %a512, <32 x i16> %a512, <32 x i16> splat (i16 3))
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'splatconstant_rotate_i16'
@@ -2801,30 +2766,30 @@ define void @splatconstant_rotate_i16(i16 %a16, <8 x i16> %a128, <16 x i16> %a25
 define void @splatconstant_rotate_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <64 x i8> %a512) {
 ; SSE-LABEL: 'splatconstant_rotate_i8'
 ; SSE-NEXT:  Cost Model: Found costs of 1 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %a8, i8 3)
-; SSE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:6 Lat:16 SizeLat:8 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> splat (i8 3))
-; SSE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:11 Lat:31 SizeLat:15 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> splat (i8 3))
-; SSE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:21 Lat:61 SizeLat:29 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> splat (i8 3))
+; SSE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:15 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> splat (i8 3))
+; SSE-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:10 Lat:30 SizeLat:14 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> splat (i8 3))
+; SSE-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:20 Lat:60 SizeLat:28 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> splat (i8 3))
 ; SSE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'splatconstant_rotate_i8'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %a8, i8 3)
-; AVX1-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:16 SizeLat:8 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> splat (i8 3))
-; AVX1-NEXT:  Cost Model: Found costs of RThru:13 CodeSize:20 Lat:17 SizeLat:24 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> splat (i8 3))
-; AVX1-NEXT:  Cost Model: Found costs of RThru:26 CodeSize:40 Lat:34 SizeLat:48 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> splat (i8 3))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:15 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> splat (i8 3))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:15 Lat:15 SizeLat:18 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> splat (i8 3))
+; AVX1-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:30 Lat:30 SizeLat:36 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> splat (i8 3))
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'splatconstant_rotate_i8'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %a8, i8 3)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:6 Lat:18 SizeLat:8 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> splat (i8 3))
-; AVX2-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:18 SizeLat:12 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> splat (i8 3))
-; AVX2-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:12 Lat:36 SizeLat:24 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> splat (i8 3))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:17 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> splat (i8 3))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:17 SizeLat:10 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> splat (i8 3))
+; AVX2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:10 Lat:34 SizeLat:20 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> splat (i8 3))
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512F-LABEL: 'splatconstant_rotate_i8'
 ; AVX512F-NEXT:  Cost Model: Found costs of 1 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %a8, i8 3)
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:6 Lat:18 SizeLat:8 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> splat (i8 3))
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:18 SizeLat:11 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> splat (i8 3))
-; AVX512F-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:16 Lat:32 SizeLat:18 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> splat (i8 3))
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:17 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> splat (i8 3))
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:17 SizeLat:9 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> splat (i8 3))
+; AVX512F-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:11 Lat:25 SizeLat:13 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> splat (i8 3))
 ; AVX512F-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512BW-LABEL: 'splatconstant_rotate_i8'
@@ -2836,9 +2801,9 @@ define void @splatconstant_rotate_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <
 ;
 ; AVX512DQ-LABEL: 'splatconstant_rotate_i8'
 ; AVX512DQ-NEXT:  Cost Model: Found costs of 1 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %a8, i8 3)
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:6 Lat:18 SizeLat:8 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> splat (i8 3))
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:18 SizeLat:11 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> splat (i8 3))
-; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:16 Lat:32 SizeLat:18 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> splat (i8 3))
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:17 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> splat (i8 3))
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:5 Lat:17 SizeLat:9 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> splat (i8 3))
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:11 Lat:25 SizeLat:13 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> splat (i8 3))
 ; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512VBMI2-LABEL: 'splatconstant_rotate_i8'
@@ -2850,16 +2815,16 @@ define void @splatconstant_rotate_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <
 ;
 ; SLM-LABEL: 'splatconstant_rotate_i8'
 ; SLM-NEXT:  Cost Model: Found costs of 1 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %a8, i8 3)
-; SLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:6 Lat:16 SizeLat:8 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> splat (i8 3))
-; SLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:11 Lat:31 SizeLat:15 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> splat (i8 3))
-; SLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:21 Lat:61 SizeLat:29 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> splat (i8 3))
+; SLM-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:15 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> splat (i8 3))
+; SLM-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:10 Lat:30 SizeLat:14 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> splat (i8 3))
+; SLM-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:20 Lat:60 SizeLat:28 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> splat (i8 3))
 ; SLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; GLM-LABEL: 'splatconstant_rotate_i8'
 ; GLM-NEXT:  Cost Model: Found costs of 1 for: %I8 = call i8 @llvm.fshr.i8(i8 %a8, i8 %a8, i8 3)
-; GLM-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:6 Lat:16 SizeLat:8 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> splat (i8 3))
-; GLM-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:11 Lat:31 SizeLat:15 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> splat (i8 3))
-; GLM-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:21 Lat:61 SizeLat:29 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> splat (i8 3))
+; GLM-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:5 Lat:15 SizeLat:7 for: %V16I8 = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a128, <16 x i8> %a128, <16 x i8> splat (i8 3))
+; GLM-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:10 Lat:30 SizeLat:14 for: %V32I8 = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a256, <32 x i8> %a256, <32 x i8> splat (i8 3))
+; GLM-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:20 Lat:60 SizeLat:28 for: %V64I8 = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a512, <64 x i8> %a512, <64 x i8> splat (i8 3))
 ; GLM-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'splatconstant_rotate_i8'

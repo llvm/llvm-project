@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -29,7 +30,7 @@ using namespace llvm;
 #define DEBUG_TYPE "mlx-expansion"
 
 static cl::opt<bool>
-ForceExapnd("expand-all-fp-mlx", cl::init(false), cl::Hidden);
+ForceExpand("expand-all-fp-mlx", cl::init(false), cl::Hidden);
 static cl::opt<unsigned>
 ExpandLimit("expand-limit", cl::init(~0U), cl::Hidden);
 
@@ -44,6 +45,11 @@ namespace {
 
     StringRef getPassName() const override {
       return "ARM MLA / MLS expansion pass";
+    }
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+      MachineFunctionPass::getAnalysisUsage(AU);
     }
 
   private:
@@ -211,7 +217,7 @@ bool MLxExpansion::FindMLxHazard(MachineInstr *MI) {
   if (NumExpand >= ExpandLimit)
     return false;
 
-  if (ForceExapnd)
+  if (ForceExpand)
     return true;
 
   MachineInstr *DefMI = getAccDefMI(MI);

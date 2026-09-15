@@ -53,9 +53,11 @@ class ModulePass;
   FunctionPass *createPPCPreEmitPeepholePass();
   FunctionPass *createPPCExpandAtomicPseudoPass();
   FunctionPass *createPPCCTRLoopsPass();
+  ModulePass *createPPCPrepareIFuncsOnAIXPass();
   void LowerPPCMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                     AsmPrinter &AP);
-  bool LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
+  bool LowerPPCMachineOperandToMCOperand(unsigned MIOpcode,
+                                         const MachineOperand &MO,
                                          MCOperand &OutMO, AsmPrinter &AP);
 
 #ifndef NDEBUG
@@ -78,6 +80,7 @@ class ModulePass;
   void initializePPCExpandAtomicPseudoPass(PassRegistry &);
   void initializePPCCTRLoopsPass(PassRegistry &);
   void initializePPCDAGToDAGISelLegacyPass(PassRegistry &);
+  void initializePPCPrepareIFuncsOnAIXPass(PassRegistry &);
   void initializePPCLinuxAsmPrinterPass(PassRegistry &);
   void initializePPCAIXAsmPrinterPass(PassRegistry &);
 

@@ -4,7 +4,7 @@
 ; CHECK:     Invariant Accesses: {
 ; CHECK:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
 ; CHECK:                 [y, p_1_loaded_from_j] -> { Stmt_for_body[i0] -> MemRef_j[0] };
-; CHECK:             Execution Context: [y, p_1_loaded_from_j] -> {  :  }
+; CHECK:             Execution Context: [y, p_1_loaded_from_j] -> { : y < 0 or y >= 0 }
 ; CHECK:     }
 
 ; CHECK:            MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]

@@ -123,8 +123,8 @@ void SystemZTDCPass::convertFCmp(CmpInst &I) {
   Value *Op0 = I.getOperand(0);
   auto *Const = dyn_cast<ConstantFP>(I.getOperand(1));
   auto Pred = I.getPredicate();
-  // Only comparisons with consts are interesting.
-  if (!Const)
+  // Only scalar comparisons with consts are interesting.
+  if (!Const || !Const->getType()->isFloatingPointTy())
     return;
   // Compute the smallest normal number (and its negation).
   auto &Sem = Op0->getType()->getFltSemantics();
@@ -364,7 +364,7 @@ bool SystemZTDCPass::runOnFunction(Function &F) {
       // Call the intrinsic, compare result with 0.
       IRBuilder<> IRB(I);
       Value *MaskVal = ConstantInt::get(Type::getInt64Ty(Ctx), Mask);
-      Instruction *TDC =
+      Value *TDC =
           IRB.CreateIntrinsic(Intrinsic::s390_tdc, V->getType(), {V, MaskVal});
       Value *ICmp = IRB.CreateICmp(CmpInst::ICMP_NE, TDC, Zero32);
       I->replaceAllUsesWith(ICmp);

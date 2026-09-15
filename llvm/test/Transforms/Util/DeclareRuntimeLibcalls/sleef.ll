@@ -34,5 +34,5 @@
 
 ; CHECK: declare void @_ZGVsNxvl8l8_sincospi(<vscale x 2 x double>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
 
-; CHECK: attributes [[ATTRS_PTR_ARG]] = { mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: write) }
-; CHECK: attributes [[ATTRS]] = { mustprogress nocallback nofree nosync nounwind willreturn }
+; CHECK: attributes [[ATTRS_PTR_ARG]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+; CHECK: attributes [[ATTRS]] = { nocallback nofree nosync nounwind willreturn }

@@ -25,6 +25,6 @@ func.func @record_array_member(%arg0 : !fir.ref<!fir.type<_QFTt2{y:!fir.array<1x
 // CHECK-SAME:                                   %[[ARG0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !llvm.ptr) {
 // CHECK:           %[[X_VAL:.*]] = llvm.alloca %{{.+}} x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
 // CHECK:           %[[Z_VAL:.*]] = llvm.alloca %{{.+}} x !llvm.struct<"_QFTt2", (array<1 x struct<"_QFTt", (struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>)>>)> {bindc_name = "z"} : (i64) -> !llvm.ptr
-// CHECK:           "llvm.intr.memcpy"(%[[Z_VAL]], %[[ARG0]], %{{.+}}) <{isVolatile = false, tbaa = [#[[$ATTR_2]]]}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+// CHECK:           "llvm.intr.memcpy"(%[[Z_VAL]], %[[ARG0]], %{{.+}}) <{{.*}}tbaa = [#[[$ATTR_2]]]{{.*}}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 
-// CHECK:           "llvm.intr.memcpy"(%[[X_VAL]], %{{.+}}, %{{.+}}) <{isVolatile = false, tbaa = [#[[$ATTR_4]]]}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:           "llvm.intr.memcpy"(%[[X_VAL]], %{{.+}}, %{{.+}}) <{{.*}}tbaa = [#[[$ATTR_4]]]{{.*}}> : (!llvm.ptr, !llvm.ptr, i32) -> ()

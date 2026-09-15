@@ -5,6 +5,10 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=core-avx2 -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX,AVX256,AVX256NODQ
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skylake-avx512 -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX,AVX512
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skylake-avx512 -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX,AVX256,AVX256DQ
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m7 -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX,AVX512
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m7 -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX,AVX256,AVX256DQ
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m8 -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX,AVX512
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m8 -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX,AVX256,AVX256DQ
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -1086,11 +1090,11 @@ define void @sitofp_16i8_16f32() #0 {
 
 define <4 x double> @sitofp_4xi32_4f64(i32 %a0, i32 %a1, i32 %a2, i32 %a3) #0 {
 ; SSE-LABEL: @sitofp_4xi32_4f64(
-; SSE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A0:%.*]], i32 0
-; SSE-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A1:%.*]], i32 1
+; SSE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A0:%.*]], i64 0
+; SSE-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A1:%.*]], i64 1
 ; SSE-NEXT:    [[TMP3:%.*]] = sitofp <2 x i32> [[TMP2]] to <2 x double>
-; SSE-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[A2:%.*]], i32 0
-; SSE-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[A3:%.*]], i32 1
+; SSE-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[A2:%.*]], i64 0
+; SSE-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[A3:%.*]], i64 1
 ; SSE-NEXT:    [[TMP6:%.*]] = sitofp <2 x i32> [[TMP5]] to <2 x double>
 ; SSE-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; SSE-NEXT:    [[RES11:%.*]] = shufflevector <4 x double> zeroinitializer, <4 x double> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
@@ -1099,10 +1103,10 @@ define <4 x double> @sitofp_4xi32_4f64(i32 %a0, i32 %a1, i32 %a2, i32 %a3) #0 {
 ; SSE-NEXT:    ret <4 x double> [[RES31]]
 ;
 ; AVX-LABEL: @sitofp_4xi32_4f64(
-; AVX-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[A0:%.*]], i32 0
-; AVX-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[A1:%.*]], i32 1
-; AVX-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[A2:%.*]], i32 2
-; AVX-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[A3:%.*]], i32 3
+; AVX-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[A0:%.*]], i64 0
+; AVX-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[A1:%.*]], i64 1
+; AVX-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[A2:%.*]], i64 2
+; AVX-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[A3:%.*]], i64 3
 ; AVX-NEXT:    [[TMP5:%.*]] = sitofp <4 x i32> [[TMP4]] to <4 x double>
 ; AVX-NEXT:    ret <4 x double> [[TMP5]]
 ;
@@ -1118,14 +1122,22 @@ define <4 x double> @sitofp_4xi32_4f64(i32 %a0, i32 %a1, i32 %a2, i32 %a3) #0 {
 }
 
 define <4 x double> @sitofp_with_const_4xi32_4f64(i32 %a2, i32 %a3) #0 {
-; CHECK-LABEL: @sitofp_with_const_4xi32_4f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A2:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A3:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = sitofp <2 x i32> [[TMP2]] to <2 x double>
-; CHECK-NEXT:    [[RES0:%.*]] = insertelement <4 x double> zeroinitializer, double 1.000000e+00, i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[RES31:%.*]] = shufflevector <4 x double> [[RES0]], <4 x double> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    ret <4 x double> [[RES31]]
+; SSE-LABEL: @sitofp_with_const_4xi32_4f64(
+; SSE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A2:%.*]], i64 0
+; SSE-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A3:%.*]], i64 1
+; SSE-NEXT:    [[TMP3:%.*]] = sitofp <2 x i32> [[TMP2]] to <2 x double>
+; SSE-NEXT:    [[RES0:%.*]] = insertelement <4 x double> zeroinitializer, double 1.000000e+00, i32 3
+; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; SSE-NEXT:    [[RES31:%.*]] = shufflevector <4 x double> [[RES0]], <4 x double> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; SSE-NEXT:    ret <4 x double> [[RES31]]
+;
+; AVX-LABEL: @sitofp_with_const_4xi32_4f64(
+; AVX-NEXT:    [[CVT2:%.*]] = sitofp i32 [[A2:%.*]] to double
+; AVX-NEXT:    [[CVT3:%.*]] = sitofp i32 [[A3:%.*]] to double
+; AVX-NEXT:    [[RES0:%.*]] = insertelement <4 x double> zeroinitializer, double 1.000000e+00, i32 3
+; AVX-NEXT:    [[RES2:%.*]] = insertelement <4 x double> [[RES0]], double [[CVT2]], i32 0
+; AVX-NEXT:    [[RES3:%.*]] = insertelement <4 x double> [[RES2]], double [[CVT3]], i32 1
+; AVX-NEXT:    ret <4 x double> [[RES3]]
 ;
   %cvt2 = sitofp i32 %a2 to double
   %cvt3 = sitofp i32 %a3 to double
@@ -1136,13 +1148,20 @@ define <4 x double> @sitofp_with_const_4xi32_4f64(i32 %a2, i32 %a3) #0 {
 }
 
 define <4 x double> @sitofp_with_zeroinitializer_4xi32_4f64(i32 %a2, i32 %a3) #0 {
-; CHECK-LABEL: @sitofp_with_zeroinitializer_4xi32_4f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A2:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A3:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = sitofp <2 x i32> [[TMP2]] to <2 x double>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> zeroinitializer, <4 x double> [[TMP5]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    ret <4 x double> [[TMP4]]
+; SSE-LABEL: @sitofp_with_zeroinitializer_4xi32_4f64(
+; SSE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A2:%.*]], i64 0
+; SSE-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A3:%.*]], i64 1
+; SSE-NEXT:    [[TMP3:%.*]] = sitofp <2 x i32> [[TMP2]] to <2 x double>
+; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; SSE-NEXT:    [[RES31:%.*]] = shufflevector <4 x double> zeroinitializer, <4 x double> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; SSE-NEXT:    ret <4 x double> [[RES31]]
+;
+; AVX-LABEL: @sitofp_with_zeroinitializer_4xi32_4f64(
+; AVX-NEXT:    [[CVT2:%.*]] = sitofp i32 [[A2:%.*]] to double
+; AVX-NEXT:    [[CVT3:%.*]] = sitofp i32 [[A3:%.*]] to double
+; AVX-NEXT:    [[RES2:%.*]] = insertelement <4 x double> zeroinitializer, double [[CVT2]], i32 0
+; AVX-NEXT:    [[RES3:%.*]] = insertelement <4 x double> [[RES2]], double [[CVT3]], i32 1
+; AVX-NEXT:    ret <4 x double> [[RES3]]
 ;
   %cvt2 = sitofp i32 %a2 to double
   %cvt3 = sitofp i32 %a3 to double
@@ -1153,10 +1172,10 @@ define <4 x double> @sitofp_with_zeroinitializer_4xi32_4f64(i32 %a2, i32 %a3) #0
 
 define <4 x float> @sitofp_4xi32_4f32(i32 %a0, i32 %a1, i32 %a2, i32 %a3) #0 {
 ; CHECK-LABEL: @sitofp_4xi32_4f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[A0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[A1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[A2:%.*]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[A3:%.*]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[A0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[A1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[A2:%.*]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[A3:%.*]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = sitofp <4 x i32> [[TMP4]] to <4 x float>
 ; CHECK-NEXT:    ret <4 x float> [[TMP5]]
 ;

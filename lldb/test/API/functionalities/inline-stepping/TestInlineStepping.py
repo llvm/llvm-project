@@ -19,6 +19,7 @@ class TestInlineStepping(TestBase):
         self.inline_stepping()
 
     @add_test_categories(["pyapi"])
+    @skipIf(oslist=["windows"], archs=["aarch64"])  # Flaky on buildbot
     def test_step_over_with_python_api(self):
         """Test stepping over and into inlined functions."""
         self.build()

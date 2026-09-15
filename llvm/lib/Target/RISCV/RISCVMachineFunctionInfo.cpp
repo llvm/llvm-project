@@ -29,6 +29,9 @@ MachineFunctionInfo *RISCVMachineFunctionInfo::clone(
 
 RISCVMachineFunctionInfo::RISCVMachineFunctionInfo(const Function &F,
                                                    const RISCVSubtarget *STI) {
+  if (const auto *CFB = mdconst::extract_or_null<ConstantInt>(
+          F.getParent()->getModuleFlag("cf-protection-branch")))
+    CFProtectionBranch = CFB->getZExtValue() != 0;
 
   // The default stack probe size is 4096 if the function has no
   // stack-probe-size attribute. This is a safe default because it is the
@@ -98,7 +101,7 @@ RISCVMachineFunctionInfo::getPushPopKind(const MachineFunction &MF) const {
 
   // Zcmp is not compatible with the frame pointer convention.
   if (MF.getSubtarget<RISCVSubtarget>().hasStdExtZcmp() &&
-      !MF.getTarget().Options.DisableFramePointerElim(MF))
+      !MF.disableFramePointerElim())
     return PushPopKind::StdExtZcmp;
 
   // Xqccmp is Zcmp but has a push order compatible with the frame-pointer

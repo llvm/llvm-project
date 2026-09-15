@@ -29,7 +29,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/PPCTargetParser.h"
-#include <cstdlib>
 
 using namespace llvm;
 
@@ -143,6 +142,10 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   if (HasAIXShLibTLSModelOpt && (!getTargetTriple().isOSAIX() || !IsPPC64))
     report_fatal_error("The aix-shared-lib-tls-model-opt attribute "
                        "is only supported on AIX in 64-bit mode.\n",
+                       false);
+
+  if (UsePointerGlueHelper && !getTargetTriple().isOSAIX())
+    report_fatal_error("use-ptrgl-helper feature is only supported on AIX\n",
                        false);
 }
 

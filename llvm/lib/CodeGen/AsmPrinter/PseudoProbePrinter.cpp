@@ -17,6 +17,7 @@
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/ProfileData/SampleProf.h"
 
 #ifndef NDEBUG
 #include "llvm/IR/Module.h"
@@ -25,26 +26,46 @@
 
 using namespace llvm;
 
+#ifndef NDEBUG
+// Deprecated with ThinLTO. For some modules compiled with ThinLTO, certain
+// pseudo probe descriptors may not be imported, resulting in false positive
+// warning.
+static cl::opt<bool> VerifyGuidExistence(
+    "pseudo-probe-verify-guid-existence-in-desc",
+    cl::desc("Verify whether GUID exists in the .pseudo_probe_desc."),
+    cl::Hidden, cl::init(false));
+#endif
+
 void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
                                          uint64_t Type, uint64_t Attr,
                                          const DILocation *DebugLoc) {
   // Gather all the inlined-at nodes.
   // When it's done ReversedInlineStack looks like ([66, B], [88, A])
-  // which means, Function A inlines function B at calliste with a probe id 88,
+  // which means, Function A inlines function B at callsite with a probe id 88,
   // and B inlines C at probe 66 where C is represented by Guid.
   SmallVector<InlineSite, 8> ReversedInlineStack;
   auto *InlinedAt = DebugLoc ? DebugLoc->getInlinedAt() : nullptr;
   while (InlinedAt) {
+    uint32_t Discriminator = InlinedAt->getDiscriminator();
     auto Name = InlinedAt->getSubprogramLinkageName();
+    // Strip Coroutine suffixes from CoroSplit Pass, since pseudo probes are
+    // generated in an earlier stage.
+    Name = FunctionSamples::getCanonicalCoroFnName(Name);
     // Use caching to avoid redundant md5 computation for build speed.
     uint64_t &CallerGuid = NameGuidMap[Name];
     if (!CallerGuid)
       CallerGuid = Function::getGUIDAssumingExternalLinkage(Name);
 #ifndef NDEBUG
-    verifyGuidExistenceInDesc(CallerGuid, Name);
+    if (VerifyGuidExistence)
+      verifyGuidExistenceInDesc(CallerGuid, Name);
 #endif
-    uint64_t CallerProbeId = PseudoProbeDwarfDiscriminator::extractProbeIndex(
-        InlinedAt->getDiscriminator());
+    // Keep an unrepresentable callsite as an explicit unknown edge. Probe zero
+    // tells llvm-profgen to reset the unavailable context while retaining the
+    // inlinee under the sampled top-level function's probe group.
+    uint64_t CallerProbeId =
+        DILocation::isPseudoProbeDiscriminator(Discriminator)
+            ? PseudoProbeDwarfDiscriminator::extractProbeIndex(Discriminator)
+            : static_cast<uint32_t>(PseudoProbeReservedId::Invalid);
     ReversedInlineStack.emplace_back(CallerGuid, CallerProbeId);
     InlinedAt = InlinedAt->getInlinedAt();
   }
@@ -60,8 +81,9 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   Asm->OutStreamer->emitPseudoProbe(Guid, Index, Type, Attr, Discriminator,
                                     InlineStack, Asm->CurrentFnSym);
 #ifndef NDEBUG
-  verifyGuidExistenceInDesc(
-      Guid, DebugLoc ? DebugLoc->getSubprogramLinkageName() : "");
+  if (VerifyGuidExistence)
+    verifyGuidExistenceInDesc(
+        Guid, DebugLoc ? DebugLoc->getSubprogramLinkageName() : "");
 #endif
 }
 

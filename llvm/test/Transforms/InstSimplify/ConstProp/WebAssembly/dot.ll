@@ -28,6 +28,23 @@ define <4 x i32> @dot_nonzero() {
   ret <4 x i32> %res
 }
 
+define <4 x i32> @dot_poison() {
+; CHECK-LABEL: define <4 x i32> @dot_poison() {
+; CHECK-NEXT:    [[RES:%.*]] = tail call <4 x i32> @llvm.wasm.dot(<8 x i16> <i16 1, i16 poison, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>, <8 x i16> <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>)
+; CHECK-NEXT:    ret <4 x i32> [[RES]]
+;
+  %res = tail call <4 x i32> @llvm.wasm.dot(<8 x i16> <i16 1, i16 poison, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>, <8 x i16> <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>)
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @dot_one_negative() {
+; CHECK-LABEL: define <4 x i32> @dot_one_negative() {
+; CHECK-NEXT:    ret <4 x i32> splat (i32 -2)
+;
+  %res = tail call <4 x i32> @llvm.wasm.dot(<8 x i16> splat (i16 1), <8 x i16> splat (i16 -1))
+  ret <4 x i32> %res
+}
+
 define <4 x i32> @dot_doubly_negative() {
 ; CHECK-LABEL: define <4 x i32> @dot_doubly_negative() {
 ; CHECK-NEXT:    ret <4 x i32> splat (i32 2)

@@ -435,12 +435,12 @@ isl_bool isl_mat_is_scaled_identity(__isl_keep isl_mat *mat)
 		return isl_bool_false;
 
 	for (i = 0; i < mat->n_row; ++i) {
-		if (isl_seq_first_non_zero(mat->row[i], i) != -1)
+		if (isl_seq_any_non_zero(mat->row[i], i))
 			return isl_bool_false;
 		if (isl_int_ne(mat->row[0][0], mat->row[i][i]))
 			return isl_bool_false;
-		if (isl_seq_first_non_zero(mat->row[i] + i + 1,
-					    mat->n_col - (i + 1)) != -1)
+		if (isl_seq_any_non_zero(mat->row[i] + i + 1,
+					    mat->n_col - (i + 1)))
 			return isl_bool_false;
 	}
 
@@ -546,10 +546,10 @@ __isl_give isl_mat *isl_mat_aff_direct_sum(__isl_take isl_mat *left,
 	isl_assert(left->ctx, left->n_col >= 1, goto error);
 	isl_assert(left->ctx, right->n_col >= 1, goto error);
 	isl_assert(left->ctx,
-	    isl_seq_first_non_zero(left->row[0]+1, left->n_col-1) == -1,
+	    !isl_seq_any_non_zero(left->row[0]+1, left->n_col-1),
 	    goto error);
 	isl_assert(left->ctx,
-	    isl_seq_first_non_zero(right->row[0]+1, right->n_col-1) == -1,
+	    !isl_seq_any_non_zero(right->row[0]+1, right->n_col-1),
 	    goto error);
 
 	sum = isl_mat_alloc(left->ctx, left->n_row, left->n_col + right->n_col - 1);
@@ -1401,6 +1401,7 @@ __isl_give isl_basic_set *isl_basic_set_preimage(
 	ISL_F_CLR(bset, ISL_BASIC_SET_SORTED);
 	ISL_F_CLR(bset, ISL_BASIC_SET_NORMALIZED_DIVS);
 	ISL_F_CLR(bset, ISL_BASIC_SET_ALL_EQUALITIES);
+	ISL_F_CLR(bset, ISL_BASIC_SET_REDUCED_COEFFICIENTS);
 
 	bset = isl_basic_set_simplify(bset);
 	bset = isl_basic_set_finalize(bset);
@@ -1725,7 +1726,7 @@ __isl_give isl_mat *isl_mat_row_neg(__isl_take isl_mat *mat, int row)
 {
 	if (check_row(mat, row) < 0)
 		return isl_mat_free(mat);
-	if (isl_seq_first_non_zero(mat->row[row], mat->n_col) == -1)
+	if (!isl_seq_any_non_zero(mat->row[row], mat->n_col))
 		return mat;
 	mat = isl_mat_cow(mat);
 	if (!mat)

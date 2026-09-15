@@ -31,7 +31,7 @@ subroutine omp_target_data(asa)
       b = a
    !$omp end target data
 
-   !ERROR: Whole assumed-size arrays are not allowed on USE_DEVICE_ADDR clause
+   !No diagnostic expected, assumed-size arrays are ok
    !$omp target data use_device_addr(asa)
    !$omp end target data
 end subroutine omp_target_data

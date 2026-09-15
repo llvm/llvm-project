@@ -40,9 +40,9 @@
 _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #  if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace chrono {
 
@@ -223,7 +223,8 @@ operator==(const zoned_time<_Duration1, _TimeZonePtr>& __lhs, const zoned_time<_
 template <class _Duration, class _TimeZonePtr>
   requires __has_enabled_hash<_Duration>::value && __has_enabled_hash<_TimeZonePtr>::value
 struct hash<chrono::zoned_time<_Duration, _TimeZonePtr>> {
-  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::zoned_time<_Duration, _TimeZonePtr>& __zt) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static size_t
+  operator()(const chrono::zoned_time<_Duration, _TimeZonePtr>& __zt) {
     return std::__hash_combine(
         hash<chrono::sys_time<_Duration>>{}(__zt.get_sys_time()), hash<_TimeZonePtr>{}(__zt.get_time_zone()));
   }
@@ -231,10 +232,10 @@ struct hash<chrono::zoned_time<_Duration, _TimeZonePtr>> {
 
 #    endif // _LIBCPP_STD_VER >= 26
 
+_LIBCPP_END_NAMESPACE_STD
+
 #  endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM &&
          // _LIBCPP_HAS_LOCALIZATION
-
-_LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 

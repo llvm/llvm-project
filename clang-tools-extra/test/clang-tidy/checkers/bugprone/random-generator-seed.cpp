@@ -209,3 +209,16 @@ void g() {
   a1.seed(1);
   a1.seed(n);
 }
+
+struct B {
+  std::default_random_engine eng1;
+  std::default_random_engine eng2{1};
+  // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: random number generator seeded with a constant value will generate a predictable sequence of values [bugprone-random-generator-seed]
+  std::default_random_engine eng3;
+  std::default_random_engine eng4;
+  B() : eng3(1), eng4() { }
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: random number generator seeded with a default argument will generate a predictable sequence of values [bugprone-random-generator-seed]
+  // CHECK-MESSAGES: :[[@LINE-7]]:30: note: field 'eng1' is implicitly initialized with a default seed argument
+  // CHECK-MESSAGES: :[[@LINE-3]]:9: warning: random number generator seeded with a constant value will generate a predictable sequence of values [bugprone-random-generator-seed]
+  // CHECK-MESSAGES: :[[@LINE-4]]:18: warning: random number generator seeded with a default argument will generate a predictable sequence of values [bugprone-random-generator-seed]
+};

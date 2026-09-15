@@ -4,8 +4,8 @@ define { half, i32 } @test_frexp_f16_i32(half %a) nounwind {
 ; CHECK-LABEL: test_frexp_f16_i32:
 ; CHECK: bl __extendhfsf2
 ; CHECK: bl frexpf
-; CHECK: ldw r{{[0-9]+}}, sp[1]
 ; CHECK: bl __truncsfhf2
+; CHECK: ldw r{{[0-9]+}}, sp[1]
 %result = call { half, i32 } @llvm.frexp.f16.i32(half %a)
   ret { half, i32 } %result
 }
@@ -53,21 +53,6 @@ define { <2 x double>, <2 x i32> } @test_frexp_v2f64_v2i32(<2 x double> %a) noun
 ; CHECK: bl frexp
   %result = call { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double> %a)
   ret { <2 x double>, <2 x i32> } %result
-}
-
-define { fp128, i32 } @test_frexp_fp128_i32(fp128 %a) nounwind {
-; CHECK-LABEL: test_frexp_fp128_i32:
-; CHECK: bl frexpl
-  %result = call { fp128, i32 } @llvm.frexp.fp128.i32(fp128 %a)
-  ret { fp128, i32 } %result
-}
-
-define { <2 x fp128>, <2 x i32> } @test_frexp_v2fp128_v2i32(<2 x fp128> %a) nounwind {
-; CHECK-LABEL: test_frexp_v2fp128_v2i32:
-; CHECK: bl frexpl
-; CHECK: bl frexpl
-  %result = call { <2 x fp128>, <2 x i32> } @llvm.frexp.v2fp128.v2i32(<2 x fp128> %a)
-  ret { <2 x fp128>, <2 x i32> } %result
 }
 
 declare { half, i32 } @llvm.frexp.f16.i32(half) #0

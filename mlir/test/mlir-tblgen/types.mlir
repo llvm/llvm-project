@@ -204,7 +204,7 @@ func.func @ranked_tensor_success(%arg0: tensor<i8>, %arg1: tensor<1xi32>, %arg2:
 // -----
 
 func.func @ranked_tensor_success(%arg0: tensor<*xf32>) {
-  // expected-error @+1 {{must be ranked tensor of any type values}}
+  // expected-error @+1 {{must be ranked tensor of any non-token type values}}
   "test.ranked_tensor_op"(%arg0) : (tensor<*xf32>) -> ()
   return
 }
@@ -212,7 +212,7 @@ func.func @ranked_tensor_success(%arg0: tensor<*xf32>) {
 // -----
 
 func.func @ranked_tensor_success(%arg0: vector<2xf32>) {
-  // expected-error @+1 {{must be ranked tensor of any type values}}
+  // expected-error @+1 {{must be ranked tensor of any non-token type values}}
   "test.ranked_tensor_op"(%arg0) : (vector<2xf32>) -> ()
   return
 }
@@ -432,6 +432,27 @@ func.func @same_element_count_success(%arg0: tensor<36xi32>, %arg1: tensor<1x2xf
 
 // -----
 
+// Regression test for https://github.com/llvm/llvm-project/issues/159740
+// AllElementCountsMatch should fail (not crash) when operands/results have dynamic shapes.
+func.func @same_element_count_dynamic(%arg0: tensor<2xi32>) {
+  // expected-error@+1 {{all of {x, res} have same element count}}
+  %0 = "test.operand0_and_result_have_same_element_count"(%arg0, %arg0) :
+    (tensor<2xi32>, tensor<2xi32>) -> tensor<?x?xf32>
+  return
+}
+
+// -----
+
+// AllElementCountsMatch should fail (not crash) when operands/results are not
+// ShapedType at all (e.g. a plain integer).
+func.func @same_element_count_non_shaped(%arg0: i32) -> i32 {
+  // expected-error@+1 {{all of {x, res} have same element count}}
+  %0 = "test.operand_and_result_have_same_element_count_any_type"(%arg0) : (i32) -> i32
+  return %0 : i32
+}
+
+// -----
+
 func.func @same_element_count_failure(%arg0: tensor<1xi32>, %arg1: tensor<1x2xf32>) {
   // expected-error@+1 {{all of {x, res} have same element count}}
   "test.operand0_and_result_have_same_element_count"(%arg0, %arg1) : (tensor<1xi32>, tensor<1x2xf32>) -> (tensor<2xi32>)
@@ -489,7 +510,7 @@ func.func @does_not_have_i32(%arg0: tensor<1x2xi32>, %arg1: none) {
 // -----
 
 func.func @does_not_have_static_memref(%arg0: memref<?xi32>) {
-  // expected-error@+1 {{'test.takes_static_memref' op operand #0 must be statically shaped memref of any type values}}
+  // expected-error@+1 {{'test.takes_static_memref' op operand #0 must be statically shaped memref of any non-token type values}}
   "test.takes_static_memref"(%arg0) : (memref<?xi32>) -> ()
 }
 

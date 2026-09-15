@@ -47,6 +47,7 @@ protected:
 
 const char archive[] = "!<arch>\x0A";
 const char big_archive[] = "<bigaf>\x0A";
+const char zos_archive[] = "\x5A\x4C\x81\x99\x83\x88\x6E\x15";
 const char bitcode[] = "\xde\xc0\x17\x0b";
 const char coff_object[] = "\x00\x00......";
 const char coff_bigobj[] =
@@ -78,6 +79,8 @@ const char macho_dsym_companion[] =
     "\xfe\xed\xfa\xce........\x00\x00\x00\x0a............";
 const char macho_kext_bundle[] =
     "\xfe\xed\xfa\xce........\x00\x00\x00\x0b............";
+const char macho_type_0x10001[] =
+    "\xce\xfa\xed\xfe........\x01\x00\x01\x00............";
 const char windows_resource[] =
     "\x00\x00\x00\x00\x020\x00\x00\x00\xff\xff\x00\x00\xff\xff\x00\x00";
 const char macho_dynamically_linked_shared_lib_stub[] =
@@ -100,6 +103,7 @@ TEST_F(MagicTest, Magic) {
 #define DEFINE(magic) {#magic, magic, sizeof(magic), file_magic::magic}
       DEFINE(archive),
       {"big_archive", big_archive, sizeof(big_archive), file_magic::archive},
+      {"zos_archive", zos_archive, sizeof(zos_archive), file_magic::archive},
       DEFINE(bitcode),
       DEFINE(coff_object),
       {"coff_bigobj", coff_bigobj, sizeof(coff_bigobj),
@@ -119,6 +123,8 @@ TEST_F(MagicTest, Magic) {
       DEFINE(macho_dynamically_linked_shared_lib_stub),
       DEFINE(macho_dsym_companion),
       DEFINE(macho_kext_bundle),
+      {"macho_type_0x10001", macho_type_0x10001, sizeof(macho_type_0x10001),
+       file_magic::macho_object},
       {"spirv_object_le", spirv_object_le, sizeof(spirv_object_le),
        file_magic ::spirv_object},
       {"spirv_object_be", spirv_object_be, sizeof(spirv_object_be),

@@ -6,10 +6,12 @@
 // RUN:     }}'
 
 enum EError {
-  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'EError' are not consistent
-  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:1: warning: initial values in enum 'EError' are not consistent
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'EError' are not consistent, consider explicit initialization of all, none or only the first enumerator
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:1: warning: initial values in enum 'EError' are not consistent, consider explicit initialization of all, none or only the first enumerator
   EError_a = 1,
   EError_b,
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'EError_b' defined here
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:3: note: uninitialized enumerator 'EError_b' defined here
   // CHECK-FIXES: EError_b = 2,
   EError_c = 3,
 };
@@ -32,12 +34,30 @@ enum EAll {
   EAll_c = 4,
 };
 
+enum ERef {
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'ERef' are not consistent
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:1: warning: initial values in enum 'ERef' are not consistent
+  ERef_a,
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'ERef_a' defined here
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:3: note: uninitialized enumerator 'ERef_a' defined here
+  // CHECK-FIXES: ERef_a = 0,
+  ERef_b,
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'ERef_b' defined here
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:3: note: uninitialized enumerator 'ERef_b' defined here
+  // CHECK-FIXES: ERef_b = 1,
+  ERef_last = ERef_b,
+};
+
 #define ENUMERATOR_1 EMacro1_b
 enum EMacro1 {
-  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'EMacro1' are not consistent
-  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:1: warning: initial values in enum 'EMacro1' are not consistent
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'EMacro1' are not consistent, consider explicit initialization of all, none or only the first enumerator
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:1: warning: initial values in enum 'EMacro1' are not consistent, consider explicit initialization of all, none or only the first enumerator
   EMacro1_a = 1,
   ENUMERATOR_1,
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'EMacro1_b' defined here
+  // CHECK-MESSAGES: note: expanded from macro 'ENUMERATOR_1'
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-3]]:3: note: uninitialized enumerator 'EMacro1_b' defined here
+  // CHECK-MESSAGES-ENABLE: note: expanded from macro 'ENUMERATOR_1'
   // CHECK-FIXES: ENUMERATOR_1 = 2,
   EMacro1_c = 3,
 };
@@ -45,20 +65,24 @@ enum EMacro1 {
 
 #define ENUMERATOR_2 EMacro2_b = 2
 enum EMacro2 {
-  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'EMacro2' are not consistent
-  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:1: warning: initial values in enum 'EMacro2' are not consistent
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'EMacro2' are not consistent, consider explicit initialization of all, none or only the first enumerator
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:1: warning: initial values in enum 'EMacro2' are not consistent, consider explicit initialization of all, none or only the first enumerator
   EMacro2_a = 1,
   ENUMERATOR_2,
   EMacro2_c,
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'EMacro2_c' defined here
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:3: note: uninitialized enumerator 'EMacro2_c' defined here
   // CHECK-FIXES: EMacro2_c = 3,
 };
 
 
 enum {
-  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum '<unnamed>' are not consistent
-  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:1: warning: initial values in enum '<unnamed>' are not consistent
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum '<unnamed>' are not consistent, consider explicit initialization of all, none or only the first enumerator
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:1: warning: initial values in enum '<unnamed>' are not consistent, consider explicit initialization of all, none or only the first enumerator
   EAnonymous_a = 1,
   EAnonymous_b,
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'EAnonymous_b' defined here
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:3: note: uninitialized enumerator 'EAnonymous_b' defined here
   // CHECK-FIXES: EAnonymous_b = 2,
   EAnonymous_c = 3,
 };
@@ -94,12 +118,16 @@ enum EnumSequentialInitialValue {
 enum WithFwdDeclInconsistent : int;
 
 enum WithFwdDeclInconsistent : int {
-  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'WithFwdDeclInconsistent' are not consistent
-  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:1: warning: initial values in enum 'WithFwdDeclInconsistent' are not consistent
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'WithFwdDeclInconsistent' are not consistent, consider explicit initialization of all, none or only the first enumerator
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:1: warning: initial values in enum 'WithFwdDeclInconsistent' are not consistent, consider explicit initialization of all, none or only the first enumerator
   EFI0,
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'EFI0' defined here
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:3: note: uninitialized enumerator 'EFI0' defined here
   // CHECK-FIXES: EFI0 = 0,
   EFI1 = 1,
   EFI2,
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'EFI2' defined here
+  // CHECK-MESSAGES-ENABLE: :[[@LINE-2]]:3: note: uninitialized enumerator 'EFI2' defined here
   // CHECK-FIXES: EFI2 = 2,
 };
 

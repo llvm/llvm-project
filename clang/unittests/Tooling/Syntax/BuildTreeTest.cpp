@@ -671,10 +671,6 @@ TEST_P(BuildSyntaxTreeTest, UnqualifiedId_DecltypeDestructor) {
       R"cpp(
 struct X { };
 void test(X x) {
-  // FIXME: Make `decltype(x)` a child of `MemberExpression`. It is currently
-  // not because `Expr::getSourceRange()` returns the range of `x.~` for the
-  // `MemberExpr` instead of the expected `x.~decltype(x)`, this is a bug in
-  // clang.
   [[x.~decltype(x)()]];
 }
 )cpp",
@@ -687,12 +683,14 @@ CallExpression Expression
 | |-'.' AccessToken
 | `-IdExpression Member
 |   `-UnqualifiedId UnqualifiedId
-|     `-'~'
-|-'decltype'
-|-'('
-|-'x'
-|-')'
-|-'('
+|     |-'~'
+|     |-'decltype'
+|     |-'('
+|     |-IdExpression
+|     | `-UnqualifiedId UnqualifiedId
+|     |   `-'x'
+|     `-')'
+|-'(' OpenParen
 `-')' CloseParen
 )txt"}));
 }

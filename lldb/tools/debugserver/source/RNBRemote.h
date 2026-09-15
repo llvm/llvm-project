@@ -101,6 +101,7 @@ public:
     query_process_info,                            // 'qProcessInfo'
     json_query_thread_extended_info,               // 'jThreadExtendedInfo'
     json_query_get_loaded_dynamic_libraries_infos, // 'jGetLoadedDynamicLibrariesInfos'
+    json_multi_breakpoint,                         // 'jMultiBreakpoint'
     json_query_threads_info,                       // 'jThreadsInfo'
     json_query_get_shared_cache_info,              // 'jGetSharedCacheInfo'
     pass_signals_to_inferior,                      // 'QPassSignals'
@@ -190,6 +191,7 @@ public:
   rnb_err_t HandlePacket_jThreadExtendedInfo(const char *p);
   rnb_err_t HandlePacket_jGetLoadedDynamicLibrariesInfos(const char *p);
   rnb_err_t HandlePacket_jThreadsInfo(const char *p);
+  rnb_err_t HandlePacket_jMultiBreakpoint(const char *p);
   rnb_err_t HandlePacket_jGetSharedCacheInfo(const char *p);
   rnb_err_t HandlePacket_qThreadExtraInfo(const char *p);
   rnb_err_t HandlePacket_qThreadStopInfo(const char *p);
@@ -265,6 +267,28 @@ public:
 
 private:
   RNBRemote(const RNBRemote &) = delete;
+
+  struct BreakpointResult {
+    enum class Kind { OK, Error, IllFormed, Unimplemented };
+
+    Kind kind;
+    uint8_t error_code = 0; // Only meaningful when kind == Error.
+    std::string message;    // Only meaningful when kind == IllFormed.
+
+    static BreakpointResult CreateOK() { return {Kind::OK, 0, {}}; }
+    static BreakpointResult CreateError(uint8_t code) {
+      return {Kind::Error, code, {}};
+    }
+    static BreakpointResult CreateIllFormed(std::string msg) {
+      return {Kind::IllFormed, 0, std::move(msg)};
+    }
+    static BreakpointResult CreateUnimplemented() {
+      return {Kind::Unimplemented, 0, {}};
+    }
+  };
+
+  /// Core logic for a Z/z breakpoint request.
+  BreakpointResult ExecuteBreakpointRequest(const char *p);
 
 protected:
   rnb_err_t GetCommData();
@@ -359,6 +383,8 @@ protected:
                       bool wait);
   rnb_err_t SendPacket(const std::string &);
   rnb_err_t SendErrorPacket(std::string errcode,
+                            const std::string &errmsg = "");
+  rnb_err_t SendErrorPacket(uint32_t error_code,
                             const std::string &errmsg = "");
   std::string CompressString(const std::string &);
 

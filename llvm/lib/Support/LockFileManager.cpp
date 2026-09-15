@@ -16,6 +16,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
@@ -182,13 +183,32 @@ Expected<bool> LockFileManager::tryLock() {
   }
 
   // Create a lock file that is unique to this instance.
-  UniqueLockFileName = LockFileName;
-  UniqueLockFileName += "-%%%%%%%%";
   int UniqueLockFileID;
-  if (std::error_code EC = sys::fs::createUniqueFile(
-          UniqueLockFileName, UniqueLockFileID, UniqueLockFileName))
-    return createStringError(EC, "failed to create unique file " +
-                                     UniqueLockFileName);
+  {
+    SmallString<128> UniqueLockFilePattern = LockFileName;
+    UniqueLockFilePattern += "-%%%%%%%%";
+    SmallString<128> UniquePath;
+    std::error_code EC = sys::fs::createUniqueFile(
+        UniqueLockFilePattern, UniqueLockFileID, UniquePath);
+    if (EC == errc::no_such_file_or_directory) {
+      SmallString<128> Dir = sys::path::parent_path(UniqueLockFilePattern);
+      if (!Dir.empty()) {
+        if (std::error_code DirEC = sys::fs::create_directories(Dir))
+          return createStringError(DirEC,
+                                   "failed to create lock directory " + Dir);
+      }
+
+      // Retry creating lock file
+      EC = sys::fs::createUniqueFile(UniqueLockFilePattern, UniqueLockFileID,
+                                     UniquePath);
+    }
+
+    if (EC)
+      return createStringError(EC,
+                               "failed to create unique file " + UniquePath);
+
+    UniqueLockFileName = UniquePath;
+  }
 
   // Clean up the unique file on signal or scope exit.
   RemoveUniqueLockFileOnSignal RemoveUniqueFile(UniqueLockFileName);
@@ -294,7 +314,7 @@ LockFileManager::waitForUnlockFor(std::chrono::seconds MaxSeconds) {
   return WaitForUnlockResult::Timeout;
 }
 
-std::error_code LockFileManager::unsafeMaybeUnlock() {
+std::error_code LockFileManager::unsafeUnlock() {
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
   return sys::fs::remove(LockFileName);

@@ -28,7 +28,7 @@ makeCharacterLiteral(const StringLiteral *Literal, const ASTContext &Context) {
          "Only single character string should be matched");
   assert(Literal->getCharByteWidth() == 1 &&
          "StrSplit doesn't support wide char");
-  std::string Result = clang::tooling::fixit::getText(*Literal, Context).str();
+  std::string Result = tooling::fixit::getText(*Literal, Context).str();
   const bool IsRawStringLiteral = StringRef(Result).starts_with(R"(R")");
   // Since raw string literal might contain unescaped non-printable characters,
   // we normalize them using `StringLiteral::outputString`.
@@ -62,7 +62,7 @@ void FasterStrsplitDelimiterCheck::registerMatchers(MatchFinder *Finder) {
 
   // Binds to a string_view (either absl or std) that was passed by value and
   // constructed from string literal.
-  auto StringViewArg = ignoringElidableConstructorCall(ignoringImpCasts(
+  const auto StringViewArg = ignoringElidableConstructorCall(ignoringImpCasts(
       cxxConstructExpr(hasType(recordDecl(hasName("::absl::string_view"))),
                        hasArgument(0, ignoringParenImpCasts(SingleChar)))));
 

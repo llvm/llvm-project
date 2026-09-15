@@ -14,6 +14,8 @@
 #ifndef LLVM_TRANSFORMS_IPO_LOWERTYPETESTS_H
 #define LLVM_TRANSFORMS_IPO_LOWERTYPETESTS_H
 
+#include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
@@ -119,9 +121,9 @@ struct BitSetBuilder {
 ///
 /// The bit set lowering pass assigns an object index to each object that needs
 /// to be laid out, and calls addFragment for each bit set passing the object
-/// indices of its referenced globals. It then assembles a layout from the
-/// computed layout in the Fragments field.
-struct GlobalLayoutBuilder {
+/// indices of its referenced globals. It then assembles a layout by calling
+/// build().
+class GlobalLayoutBuilder {
   /// The computed layout. Each element of this vector contains a fragment of
   /// layout (which may be empty) consisting of object indices.
   std::vector<std::vector<uint64_t>> Fragments;
@@ -129,13 +131,24 @@ struct GlobalLayoutBuilder {
   /// Mapping from object index to fragment index.
   std::vector<uint64_t> FragmentMap;
 
-  GlobalLayoutBuilder(uint64_t NumObjects)
-      : Fragments(1), FragmentMap(NumObjects) {}
+  /// Optional comparator for object hotness/ordering.
+  unique_function<bool(uint64_t, uint64_t)> Less;
+
+public:
+  /// Construct a layout builder for \p NumObjects objects.
+  /// If \p Less is provided, it is used to sort sub-fragments and root
+  /// fragments by maximum element.
+  GlobalLayoutBuilder(uint64_t NumObjects,
+                      unique_function<bool(uint64_t, uint64_t)> Less = nullptr)
+      : Fragments(1), FragmentMap(NumObjects), Less(std::move(Less)) {}
 
   /// Add F to the layout while trying to keep its indices contiguous.
   /// If a previously seen fragment uses any of F's indices, that
   /// fragment will be laid out inside F.
   LLVM_ABI void addFragment(const std::set<uint64_t> &F);
+
+  /// Flatten fragments into a single layout and return it.
+  LLVM_ABI const std::vector<uint64_t> &build();
 };
 
 /// This class is used to build a byte array containing overlapping bit sets. By
@@ -195,33 +208,42 @@ LLVM_ABI bool isJumpTableCanonical(Function *F);
 
 /// Specifies how to drop type tests.
 enum class DropTestKind {
-  None,   /// Do not drop type tests (default).
   Assume, /// Drop only llvm.assumes using type test value.
   All,    /// Drop the type test and all uses.
 };
 
 } // end namespace lowertypetests
 
-class LowerTypeTestsPass : public PassInfoMixin<LowerTypeTestsPass> {
+class LowerTypeTestsPass : public RequiredPassInfoMixin<LowerTypeTestsPass> {
   bool UseCommandLine = false;
 
   ModuleSummaryIndex *ExportSummary = nullptr;
   const ModuleSummaryIndex *ImportSummary = nullptr;
-  lowertypetests::DropTestKind DropTypeTests =
-      lowertypetests::DropTestKind::None;
 
 public:
   LowerTypeTestsPass() : UseCommandLine(true) {}
   LowerTypeTestsPass(ModuleSummaryIndex *ExportSummary,
-                     const ModuleSummaryIndex *ImportSummary,
-                     lowertypetests::DropTestKind DropTypeTests =
-                         lowertypetests::DropTestKind::None)
-      : ExportSummary(ExportSummary), ImportSummary(ImportSummary),
-        DropTypeTests(DropTypeTests) {}
+                     const ModuleSummaryIndex *ImportSummary)
+      : ExportSummary(ExportSummary), ImportSummary(ImportSummary) {}
+
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-class SimplifyTypeTestsPass : public PassInfoMixin<SimplifyTypeTestsPass> {
+class DropTypeTestsPass : public RequiredPassInfoMixin<DropTypeTestsPass> {
+  lowertypetests::DropTestKind Kind = lowertypetests::DropTestKind::Assume;
+
+public:
+  explicit DropTypeTestsPass(
+      lowertypetests::DropTestKind Kind = lowertypetests::DropTestKind::Assume)
+      : Kind(Kind) {}
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+class SimplifyTypeTestsPass
+    : public OptionalPassInfoMixin<SimplifyTypeTestsPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

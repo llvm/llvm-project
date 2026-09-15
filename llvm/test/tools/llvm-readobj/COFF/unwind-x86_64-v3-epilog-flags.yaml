@@ -1,0 +1,158 @@
+# RUN: yaml2obj %s -o %t.exe
+# RUN: llvm-readobj --unwind %t.exe | FileCheck %s
+
+## T13: V3 with EPILOG_PARENT_FRAGMENT_TRANSFER flag set in epilog.
+##
+## .xdata hex breakdown:
+## Byte 0: 0x03  (Version=3, Flags=0)
+## Byte 1: 0x0B  (SizeOfProlog=11)
+## Byte 2: 0x08  (PayloadWords=8 words -> 16 bytes payload)
+## Byte 3: 0x23  (NumberOfOps=3, NumberOfEpilogs=1: (1<<5)|3)
+## Payload (16 bytes):
+##   +0: 07    Prolog IP[0]: +7
+##   +1: 02    Prolog IP[1]: +2
+##   +2: 00    Prolog IP[2]: +0
+##   +3: 19    Epilog[0] FlagsAndNumOps: flags=1 (PARENT_FRAG_XFER), nops=3 -> (3<<3)|1
+##   +4,+5: 14 00  Epilog[0] EpilogOffset: +20
+##   +6,+7: 00 00  Epilog[0] FirstOp: 0
+##   +8: 06    Epilog[0] IpOfLast: 6
+##   +9: 00    Epilog[0] IP[0]
+##   +10: 04   Epilog[0] IP[1]
+##   +11: 05   Epilog[0] IP[2]
+##   +12: 38   WOD pool[0]: ALLOC_SMALL 32
+##   +13: 34   WOD pool[1]: PUSH RSI
+##   +14: 3C   WOD pool[2]: PUSH RDI
+##   +15: 00   Padding
+
+# CHECK-LABEL:  UnwindInformation [
+# CHECK-NEXT:     RuntimeFunction {
+# CHECK:            UnwindInfo {
+# CHECK-NEXT:         Version: 3
+# CHECK-NEXT:         Flags [ (0x0)
+# CHECK-NEXT:         ]
+# CHECK-NEXT:         SizeOfProlog: 0xB
+# CHECK-NEXT:         PayloadWords: 8
+# CHECK-NEXT:         NumberOfOps: 3
+# CHECK-NEXT:         NumberOfEpilogs: 1
+# CHECK-NEXT:         Prolog [3 ops]:
+# CHECK-NEXT:           [0] IP +0x0007: ALLOC_SMALL Size=0x20
+# CHECK-NEXT:           [1] IP +0x0002: PUSH Reg=RSI
+# CHECK-NEXT:           [2] IP +0x0000: PUSH Reg=RDI
+# CHECK-NEXT:         Epilog [0] {
+# CHECK-NEXT:           Flags [ (0x1)
+# CHECK-NEXT:             ParentFragmentTransfer (0x1)
+# CHECK-NEXT:           ]
+# CHECK-NEXT:           EpilogOffset: +0x14
+# CHECK-NEXT:           NumberOfOps: 3
+# CHECK-NEXT:           FirstOp: 0x0
+# CHECK-NEXT:           IpOffsetOfLastInstruction: 0x6
+# CHECK-NEXT:           [0] IP +0x0000: ALLOC_SMALL Size=0x20
+# CHECK-NEXT:           [1] IP +0x0004: PUSH Reg=RSI
+# CHECK-NEXT:           [2] IP +0x0005: PUSH Reg=RDI
+# CHECK-NEXT:         }
+# CHECK-NEXT:       }
+# CHECK-NEXT:     }
+# CHECK-NEXT:   ]
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       0
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA, IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE, IMAGE_DLL_CHARACTERISTICS_NX_COMPAT ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  ExportTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ImportTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ResourceTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ExceptionTable:
+    RelativeVirtualAddress: 12288
+    Size:            12
+  CertificateTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  BaseRelocationTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  Debug:
+    RelativeVirtualAddress: 0
+    Size:            0
+  Architecture:
+    RelativeVirtualAddress: 0
+    Size:            0
+  GlobalPtr:
+    RelativeVirtualAddress: 0
+    Size:            0
+  TlsTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  LoadConfigTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  BoundImport:
+    RelativeVirtualAddress: 0
+    Size:            0
+  IAT:
+    RelativeVirtualAddress: 0
+    Size:            0
+  DelayImportDescriptor:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ClrRuntimeHeader:
+    RelativeVirtualAddress: 0
+    Size:            0
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     32
+    SectionData:     '0000000000000000000000000000000000000000000000000000000000000000'
+  - Name:            .xdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     20
+    SectionData:     '030b082307020019140000000600040538343c00'
+  - Name:            .pdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  12288
+    VirtualSize:     12
+    SectionData:     '001000002010000000200000'
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .xdata
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .pdata
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+...

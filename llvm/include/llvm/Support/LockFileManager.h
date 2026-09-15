@@ -61,7 +61,7 @@ public:
 
   /// Remove the lock file.  This may delete a different lock file than
   /// the one previously read if there is a race.
-  std::error_code unsafeMaybeUnlock() override;
+  std::error_code unsafeUnlock() override;
 
   /// Unlocks the lock if previously acquired by \c tryLock().
   ~LockFileManager() override;

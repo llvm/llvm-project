@@ -124,7 +124,7 @@
 //   func.func @test() {
 //     %scalar = memref.alloca() {acc.var_name = "n"} : memref<i32>
 //     %copyin = acc.copyin varPtr(%scalar : memref<i32>) -> memref<i32>
-//                 {dataClause = #acc<data_clause acc_copy>,
+//                 {dataClause = #acc.data_clause<acc_copy>,
 //                  implicit = true, name = "n"}
 //     acc.kernels dataOperands(%copyin : memref<i32>) {
 //       %val = memref.load %copyin[] : memref<i32>
@@ -132,7 +132,7 @@
 //     }
 //     acc.copyout accPtr(%copyin : memref<i32>)
 //                 to varPtr(%scalar : memref<i32>)
-//                 {dataClause = #acc<data_clause acc_copy>,
+//                 {dataClause = #acc.data_clause<acc_copy>,
 //                  implicit = true, name = "n"}
 //   }
 //
@@ -153,7 +153,7 @@
 //     %array = memref.alloca() {acc.var_name = "arr"} : memref<100xf32>
 //     %copyin = acc.copyin varPtr(%array : memref<100xf32>)
 //                 -> memref<100xf32>
-//                 {dataClause = #acc<data_clause acc_copy>,
+//                 {dataClause = #acc.data_clause<acc_copy>,
 //                  implicit = true, name = "arr"}
 //     acc.parallel dataOperands(%copyin : memref<100xf32>) {
 //       %c0 = arith.constant 0 : index
@@ -162,7 +162,7 @@
 //     }
 //     acc.copyout accPtr(%copyin : memref<100xf32>)
 //                 to varPtr(%array : memref<100xf32>)
-//                 {dataClause = #acc<data_clause acc_copy>,
+//                 {dataClause = #acc.data_clause<acc_copy>,
 //                  implicit = true, name = "arr"}
 //   }
 //
@@ -175,7 +175,7 @@
 //       %c0 = arith.constant 0 : index
 //       %val = memref.load %array[%c0] : memref<100xf32>
 //       acc.yield
-//     } attributes {defaultAttr = #acc<defaultvalue present>}
+//     } attributes {defaultAttr = #acc.defaultvalue<present>}
 //   }
 //
 // After:
@@ -185,19 +185,20 @@
 //                  -> memref<100xf32>
 //                  {implicit = true, name = "arr"}
 //     acc.parallel dataOperands(%present : memref<100xf32>)
-//                  attributes {defaultAttr = #acc<defaultvalue present>} {
+//                  attributes {defaultAttr = #acc.defaultvalue<present>} {
 //       %c0 = arith.constant 0 : index
 //       %val = memref.load %present[%c0] : memref<100xf32>
 //       acc.yield
 //     }
 //     acc.delete accPtr(%present : memref<100xf32>)
-//                {dataClause = #acc<data_clause acc_present>,
+//                {dataClause = #acc.data_clause<acc_present>,
 //                 implicit = true, name = "arr"}
 //   }
 //
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
@@ -285,16 +286,17 @@ static bool isCandidateForImplicitData(Value val, Region &accRegion,
       !acc::isMappableType(val.getType()))
     return false;
 
-  if (accSupport.isValidValueUse(val, accRegion))
-    return false;
-
   // If this is already coming from a data clause, we do not need to generate
   // another.
   if (isa_and_nonnull<ACC_DATA_ENTRY_OPS>(val.getDefiningOp()))
     return false;
 
-  // If this is only used by private clauses, it is not a real live-in.
-  if (acc::isOnlyUsedByPrivateClauses(val, accRegion))
+  // Device data is a candidate - it will get a deviceptr clause.
+  if (acc::isDeviceValue(val))
+    return true;
+
+  // If it is otherwise valid, skip it.
+  if (accSupport.isValidValueUse(val, accRegion))
     return false;
 
   return true;
@@ -310,8 +312,13 @@ Operation *ACCImplicitData::getOriginalDataClauseOpForAlias(
       // Only accept clauses that guarantee that the alias is present.
       if (isa<acc::CopyinOp, acc::CreateOp, acc::PresentOp, acc::NoCreateOp,
               acc::DevicePtrOp>(dataClauseOp))
-        if (aliasAnalysis.alias(acc::getVar(dataClauseOp), var).isMust())
+        if (aliasAnalysis.alias(acc::getVar(dataClauseOp), var).isMust()) {
+          LLVM_DEBUG(llvm::dbgs()
+                         << "Using existing data clause:\n\t" << *dataClauseOp
+                         << "\n\tas reference when processing var:\n\t" << var
+                         << "\n";);
           return dataClauseOp;
+        }
     }
   }
   return nullptr;
@@ -363,7 +370,7 @@ ACCImplicitData::generatePrivateRecipe(ModuleOp &module, Value var,
   builder.setInsertionPointToStart(module.getBody());
 
   auto recipe =
-      acc::PrivateRecipeOp::createAndPopulate(builder, loc, recipeName, type);
+      acc::PrivateRecipeOp::createAndPopulate(builder, loc, recipeName, var);
   if (!recipe.has_value())
     return accSupport.emitNYI(loc, "implicit private"), nullptr;
   return recipe.value();
@@ -388,7 +395,7 @@ ACCImplicitData::generateFirstprivateRecipe(ModuleOp &module, Value var,
   builder.setInsertionPointToStart(module.getBody());
 
   auto recipe = acc::FirstprivateRecipeOp::createAndPopulate(builder, loc,
-                                                             recipeName, type);
+                                                             recipeName, var);
   if (!recipe.has_value())
     return accSupport.emitNYI(loc, "implicit firstprivate"), nullptr;
   return recipe.value();
@@ -450,6 +457,15 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       typeCategory, acc::VariableTypeCategory::aggregate);
   Location loc = computeConstructOp->getLoc();
 
+  if (acc::isDeviceValue(var)) {
+    // If the variable is device data, use deviceptr clause.
+    LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
+                               "device data\n");
+    return acc::DevicePtrOp::create(builder, loc, var,
+                                    /*structured=*/true, /*implicit=*/true,
+                                    accSupport.getVariableName(var));
+  }
+
   Operation *op = nullptr;
   op = getOriginalDataClauseOpForAlias(var, builder, computeConstructOp,
                                        dominatingDataClauses);
@@ -472,7 +488,9 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
                                   /*structured=*/true, /*implicit=*/true,
                                   accSupport.getVariableName(var),
                                   acc::getBounds(op));
-  } else if (isScalar) {
+  }
+
+  if (isScalar) {
     if (enableImplicitReductionCopy &&
         acc::isOnlyUsedByReductionClauses(var,
                                           computeConstructOp->getRegion(0))) {
@@ -483,14 +501,8 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       copyinOp.setDataClause(acc::DataClause::acc_reduction);
       return copyinOp.getOperation();
     }
-    if constexpr (std::is_same_v<OpT, acc::KernelsOp> ||
-                  std::is_same_v<OpT, acc::KernelEnvironmentOp>) {
+    if constexpr (std::is_same_v<OpT, acc::KernelsOp>) {
       // Scalars are implicit copyin in kernels construct.
-      // We also do the same for acc.kernel_environment because semantics
-      // of user variable mappings should be applied while ACC construct exists
-      // and at this point we should only be dealing with unmapped variables
-      // that were made live-in by the compiler.
-      // TODO: This may be revisited.
       auto copyinOp =
           acc::CopyinOp::create(builder, loc, var,
                                 /*structured=*/true, /*implicit=*/true,
@@ -512,8 +524,8 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       newDataOp = acc::PresentOp::create(builder, loc, var,
                                          /*structured=*/true, /*implicit=*/true,
                                          accSupport.getVariableName(var));
-      newDataOp->setAttr(acc::getFromDefaultClauseAttrName(),
-                         builder.getUnitAttr());
+      newDataOp->setDiscardableAttr(acc::getFromDefaultClauseAttrName(),
+                                    builder.getUnitAttr());
     } else {
       auto copyinOp =
           acc::CopyinOp::create(builder, loc, var,
@@ -690,12 +702,14 @@ void ACCImplicitData::generateImplicitDataOps(
     std::optional<acc::ClauseDefaultValue> &defaultClause,
     acc::OpenACCSupport &accSupport) {
   // Implicit data attributes are only applied if "[t]here is no default(none)
-  // clause visible at the compute construct."
-  if (defaultClause.has_value() &&
+  // clause visible at the compute construct", unless ignoreDefaultNone is set.
+  if (!ignoreDefaultNone && defaultClause.has_value() &&
       defaultClause.value() == acc::ClauseDefaultValue::None)
     return;
   assert(!defaultClause.has_value() ||
-         defaultClause.value() == acc::ClauseDefaultValue::Present);
+         defaultClause.value() == acc::ClauseDefaultValue::Present ||
+         (ignoreDefaultNone &&
+          defaultClause.value() == acc::ClauseDefaultValue::None));
 
   // 1) Collect live-in values.
   Region &accRegion = computeConstructOp->getRegion(0);
@@ -706,8 +720,7 @@ void ACCImplicitData::generateImplicitDataOps(
   auto isCandidate{[&](Value val) -> bool {
     return isCandidateForImplicitData(val, accRegion, accSupport);
   }};
-  auto candidateVars(
-      llvm::to_vector(llvm::make_filter_range(liveInValues, isCandidate)));
+  auto candidateVars(llvm::filter_to_vector(liveInValues, isCandidate));
   if (candidateVars.empty())
     return;
 
@@ -745,8 +758,7 @@ void ACCImplicitData::generateImplicitDataOps(
 
   // 5) Generate private recipes which are required for properly attaching
   // private operands.
-  if constexpr (!std::is_same_v<OpT, acc::KernelsOp> &&
-                !std::is_same_v<OpT, acc::KernelEnvironmentOp>)
+  if constexpr (!std::is_same_v<OpT, acc::KernelsOp>)
     generateRecipes(module, builder, computeConstructOp, newPrivateOperands);
 
   // 6) Figure out insertion order for the new data clause operands.
@@ -759,8 +771,7 @@ void ACCImplicitData::generateImplicitDataOps(
   generateDataExitOperations(builder, computeConstructOp, newDataClauseOperands,
                              sortedDataClauseOperands);
   // 8) Add all of the new operands to the compute construct op.
-  if constexpr (!std::is_same_v<OpT, acc::KernelsOp> &&
-                !std::is_same_v<OpT, acc::KernelEnvironmentOp>)
+  if constexpr (!std::is_same_v<OpT, acc::KernelsOp>)
     addNewPrivateOperands(computeConstructOp, newPrivateOperands);
   computeConstructOp.getDataClauseOperandsMutable().assign(
       sortedDataClauseOperands);
@@ -772,15 +783,14 @@ void ACCImplicitData::runOnOperation() {
   acc::OpenACCSupport &accSupport = getAnalysis<acc::OpenACCSupport>();
 
   module.walk([&](Operation *op) {
-    if (isa<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(op)) {
+    if (isa<ACC_COMPUTE_CONSTRUCT_OPS>(op)) {
       assert(op->getNumRegions() == 1 && "must have 1 region");
 
       auto defaultClause = acc::getDefaultAttr(op);
       llvm::TypeSwitch<Operation *, void>(op)
-          .Case<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(
-              [&](auto op) {
-                generateImplicitDataOps(module, op, defaultClause, accSupport);
-              })
+          .Case<ACC_COMPUTE_CONSTRUCT_OPS>([&](auto op) {
+            generateImplicitDataOps(module, op, defaultClause, accSupport);
+          })
           .Default([&](Operation *) {});
     }
   });

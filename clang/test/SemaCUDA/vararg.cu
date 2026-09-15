@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -fsyntax-only \
 // RUN:   -verify -DEXPECT_VA_ARG_ERR %s
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -fsyntax-only \
-// RUN:   -fcuda-allow-variadic-functions -verify -DEXPECT_VA_ARG_ERR %s
+// RUN:   -verify -DEXPECT_VA_ARG_ERR %s
 
 #include <stdarg.h>
 #include "Inputs/cuda.h"

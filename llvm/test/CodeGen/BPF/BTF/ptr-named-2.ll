@@ -12,7 +12,7 @@ source_filename = "ptr-named-2.ll"
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpfel-unknown-none"
 
-%struct.TypeExamples = type { i32*, i32, i32, i32* }
+%struct.TypeExamples = type { ptr, i32, i32, ptr }
 
 @type_examples = internal global %struct.TypeExamples zeroinitializer, align 8, !dbg !0
 

@@ -20,7 +20,7 @@ entry:
 }
 
 ; CHECK-LABEL: minnum
-; CHECK: jump fminf
+; CHECK: sfmin
 define float @minnum(float %x, float %y) #0 {
 entry:
   %call = tail call float @llvm.minnum.f32(float %x, float %y) #1
@@ -28,7 +28,7 @@ entry:
 }
 
 ; CHECK-LABEL: maxnum
-; CHECK: jump fmaxf
+; CHECK: sfmax
 define float @maxnum(float %x, float %y) #0 {
 entry:
   %call = tail call float @llvm.maxnum.f32(float %x, float %y) #1
@@ -55,6 +55,6 @@ entry:
 declare float @fminf(float, float) #0
 declare float @fmaxf(float, float) #0
 
-attributes #0 = { nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length64b" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length64b" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 

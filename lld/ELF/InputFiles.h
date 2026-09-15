@@ -130,7 +130,7 @@ public:
   // checking feature. All files within the same --{start,end}-group or
   // --{start,end}-lib get the same group ID. Otherwise, each file gets a new
   // group ID. For more info, see checkDependency() in SymbolTable.cpp.
-  uint32_t groupId;
+  uint32_t groupId = 0;
 
   // If this is an architecture-specific file, the following members
   // have ELF type (i.e. ELF{32,64}{LE,BE}) and target machine type.
@@ -157,10 +157,6 @@ public:
   // making the addressable range relative to the toc pointer
   // [.got, .got + 0xFFFC].
   bool ppc64SmallCodeModelTocRelocs = false;
-
-  // True if the file has TLSGD/TLSLD GOT relocations without R_PPC64_TLSGD or
-  // R_PPC64_TLSLD. Disable TLS relaxation to avoid bad code generation.
-  bool ppc64DisableTLSRelax = false;
 
 public:
   // If not empty, this stores the name of the archive containing this file.
@@ -272,6 +268,9 @@ public:
   // Pointer to this input file's .llvm_addrsig section, if it has one.
   const Elf_Shdr *addrsigSec = nullptr;
 
+  // Embedded unoptimized dynamic debug input section.
+  std::unique_ptr<InputSection> dynDbgSec;
+
   // SHT_LLVM_CALL_GRAPH_PROFILE section index.
   uint32_t cgProfileSectionIndex = 0;
 
@@ -298,6 +297,7 @@ private:
   void initializeSections(bool ignoreComdats,
                           const llvm::object::ELFFile<ELFT> &obj);
   void initializeSymbols(const llvm::object::ELFFile<ELFT> &obj);
+  void initDynDbgSymbols();
   void initializeJustSymbols();
 
   InputSectionBase *getRelocTarget(uint32_t idx, uint32_t info);
@@ -319,6 +319,10 @@ private:
   // The following variable contains the contents of .symtab_shndx.
   // If the section does not exist (which is common), the array is empty.
   ArrayRef<Elf_Word> shndxTable;
+
+  // Section indices of kept SHT_GROUP sections, recorded by parse() in
+  // ascending order, to be used by the parallel initializeSections().
+  SmallVector<uint32_t, 0> keptGroups;
 };
 
 class BitcodeFile : public InputFile {
@@ -341,10 +345,16 @@ public:
   // This is actually a vector of Elf_Verdef pointers.
   SmallVector<const void *, 0> verdefs;
 
-  // If the output file needs Elf_Verneed data structures for this file, this is
-  // a vector of Elf_Vernaux version identifiers that map onto the entries in
-  // Verdefs, otherwise it is empty.
-  SmallVector<uint32_t, 0> vernauxs;
+  // Parallel to verdefs. If a version definition is referenced by a relocatable
+  // file, the entry records the assigned Vernaux index in the output file and
+  // whether all references are weak.
+  struct VerneedInfo {
+    uint16_t id = 0;
+    // True if all references to this version are weak. Used to set
+    // VER_FLG_WEAK.
+    bool weak = true;
+  };
+  SmallVector<VerneedInfo, 0> verneedInfo;
 
   SmallVector<StringRef, 0> dtNeeded;
   StringRef soName;
@@ -354,7 +364,7 @@ public:
   template <typename ELFT> void parse();
 
   // Used for --as-needed
-  bool isNeeded;
+  std::atomic<bool> isNeeded;
 
   // Non-weak undefined symbols which are not yet resolved when the SO is
   // parsed. Only filled for `--no-allow-shlib-undefined`.
@@ -383,6 +393,8 @@ std::unique_ptr<ELFFileBase> createObjFile(Ctx &, MemoryBufferRef mb,
 
 std::string replaceThinLTOSuffix(Ctx &, StringRef path);
 
+// Name of embedded unoptimized dynamic debug input/output section.
+constexpr StringRef dynDbgSecName = ".debug_llvm_dyndbg";
 } // namespace elf
 } // namespace lld
 

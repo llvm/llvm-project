@@ -28,13 +28,13 @@
 #define RSIZE "8192 * 1024"
 #endif
 
-asm(".pushsection .text \n\
+__asm(".pushsection .text \n\
        .globl __bolt_reserved_start \n\
        .type __bolt_reserved_start, @object \n\
        __bolt_reserved_start: \n\
        .space " RSIZE " \n\
        .globl __bolt_reserved_end \n\
        __bolt_reserved_end: \n\
-     .popsection");
+       .popsection");
 
 int main() { return 0; }

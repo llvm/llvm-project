@@ -41,6 +41,11 @@ const Name &GetFirstName(const Call &);
 const Name &GetFirstName(const FunctionReference &);
 const Name &GetFirstName(const Variable &);
 const Name &GetFirstName(const EntityDecl &);
+const Name &GetFirstName(const AccObject &);
+
+// Checks whether a scalar-int-constant-expr is a direct BOZ literal constant,
+// rather than an expression that contains one.
+bool IsBOZLiteral(const ScalarIntConstantExpr &);
 
 // When a parse tree node is an instance of a specific type wrapped in
 // layers of packaging, return a pointer to that object.
@@ -269,6 +274,20 @@ template <typename A> std::optional<CharBlock> GetLastSource(A &x) {
 bool CheckForSingleVariableOnRHS(const AssignmentStmt &);
 
 const Name *GetDesignatorNameIfDataRef(const Designator &);
+
+// Is the template argument "Statement<T>" for some T?
+template <typename T> struct IsStatement {
+  static constexpr bool value{false};
+};
+template <typename T> struct IsStatement<Statement<T>> {
+  static constexpr bool value{true};
+};
+
+std::optional<Label> GetStatementLabel(const ExecutionPartConstruct &);
+
+std::optional<Label> GetFinalLabel(const Block &);
+std::optional<Label> GetFinalLabel(const OpenMPConstruct &);
+std::optional<Label> GetFinalLabel(const OpenACCConstruct &);
 
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_TOOLS_H_

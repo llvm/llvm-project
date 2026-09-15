@@ -9,16 +9,16 @@
 func.func private @declaration()
 
 // ENABLE-ZA-LABEL: @arm_new_za
-// ENABLE-ZA-SAME: attributes {arm_new_za, arm_streaming}
+// ENABLE-ZA-SAME: attributes {llvm.arm_new_za, llvm.arm_streaming}
 // IN-ZA-LABEL: @arm_new_za
-// IN-ZA-SAME: attributes {arm_in_za, arm_streaming}
+// IN-ZA-SAME: attributes {llvm.arm_in_za, llvm.arm_streaming}
 // OUT-ZA-LABEL: @arm_new_za
-// OUT-ZA-SAME: attributes {arm_out_za, arm_streaming}
+// OUT-ZA-SAME: attributes {llvm.arm_out_za, llvm.arm_streaming}
 // INOUT-ZA-LABEL: @arm_new_za
-// INOUT-ZA-SAME: attributes {arm_inout_za, arm_streaming}
+// INOUT-ZA-SAME: attributes {llvm.arm_inout_za, llvm.arm_streaming}
 // PRESERVES-ZA-LABEL: @arm_new_za
-// PRESERVES-ZA-SAME: attributes {arm_preserves_za, arm_streaming}
+// PRESERVES-ZA-SAME: attributes {llvm.arm_preserves_za, llvm.arm_streaming}
 // DISABLE-ZA-LABEL: @arm_new_za
 // DISABLE-ZA-NOT: arm_new_za
-// DISABLE-ZA-SAME: attributes {arm_streaming}
+// DISABLE-ZA-SAME: attributes {llvm.arm_streaming}
 func.func @arm_new_za() { return }

@@ -11,7 +11,9 @@
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/AddressSpace.h"
 #include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -77,6 +79,54 @@ protected:
   MockServer server;
 };
 
+TEST_F(GDBRemoteCommunicationClientTest, vCont_c) {
+  std::future<bool> write_result = std::async(
+      std::launch::async, [&] { return client.GetVContSupported("c"); });
+  HandlePacket(server, "vCont?", "$vCont;c#16");
+  ASSERT_TRUE(write_result.get());
+  ASSERT_FALSE(client.GetVContSupported("C"));
+  ASSERT_FALSE(client.GetVContSupported("s"));
+  ASSERT_FALSE(client.GetVContSupported("S"));
+  ASSERT_TRUE(client.GetVContSupported("a"));
+  ASSERT_FALSE(client.GetVContSupported("A"));
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, vCont_C) {
+  std::future<bool> write_result = std::async(
+      std::launch::async, [&] { return client.GetVContSupported("c"); });
+  HandlePacket(server, "vCont?", "$vCont;C#16");
+  ASSERT_FALSE(write_result.get());
+  ASSERT_TRUE(client.GetVContSupported("C"));
+  ASSERT_FALSE(client.GetVContSupported("s"));
+  ASSERT_FALSE(client.GetVContSupported("S"));
+  ASSERT_TRUE(client.GetVContSupported("a"));
+  ASSERT_FALSE(client.GetVContSupported("A"));
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, vCont_c_C) {
+  std::future<bool> write_result = std::async(
+      std::launch::async, [&] { return client.GetVContSupported("c"); });
+  HandlePacket(server, "vCont?", "$vCont;c;C#16");
+  ASSERT_TRUE(write_result.get());
+  ASSERT_TRUE(client.GetVContSupported("C"));
+  ASSERT_FALSE(client.GetVContSupported("s"));
+  ASSERT_FALSE(client.GetVContSupported("S"));
+  ASSERT_TRUE(client.GetVContSupported("a"));
+  ASSERT_FALSE(client.GetVContSupported("A"));
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, vCont_cC_notAFeature) {
+  std::future<bool> write_result = std::async(
+      std::launch::async, [&] { return client.GetVContSupported("c"); });
+  HandlePacket(server, "vCont?", "$vCont;cC;notAFeature#16");
+  ASSERT_FALSE(write_result.get());
+  ASSERT_FALSE(client.GetVContSupported("C"));
+  ASSERT_FALSE(client.GetVContSupported("s"));
+  ASSERT_FALSE(client.GetVContSupported("S"));
+  ASSERT_FALSE(client.GetVContSupported("a"));
+  ASSERT_FALSE(client.GetVContSupported("A"));
+}
+
 TEST_F(GDBRemoteCommunicationClientTest, WriteRegister) {
   const lldb::tid_t tid = 0x47;
   const uint32_t reg_num = 4;
@@ -141,6 +191,71 @@ TEST_F(GDBRemoteCommunicationClientTest, ReadRegister) {
   ASSERT_TRUE(bool(buffer_sp));
   ASSERT_EQ(0,
             memcmp(buffer_sp->GetBytes(), all_registers, sizeof all_registers));
+}
+
+// Advertise "address-spaces+" so the client enables address-space packets.
+static void EnableAddressSpaces(GDBRemoteCommunicationClient &client,
+                                MockServer &server) {
+  std::future<void> result =
+      std::async(std::launch::async, [&] { client.GetRemoteQSupported(); });
+  HandlePacket(server, testing::StartsWith("qSupported:"),
+               "PacketSize=3fff;address-spaces+");
+  result.get();
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, GetAddressSpaces) {
+  EnableAddressSpaces(client, server);
+  std::future<std::vector<AddressSpaceInfo>> result =
+      std::async(std::launch::async, [&] { return client.GetAddressSpaces(); });
+  StreamGDBRemote escaped;
+  llvm::StringRef json =
+      R"([{"name":"global","space_id":1,"is_thread_specific":false},)"
+      R"({"name":"local","space_id":2,"is_thread_specific":true}])";
+  escaped.PutEscapedBytes(json.data(), json.size());
+  HandlePacket(server, "jAddressSpacesInfo", escaped.GetString());
+
+  std::vector<AddressSpaceInfo> spaces = result.get();
+  ASSERT_EQ(spaces.size(), 2u);
+  EXPECT_EQ(spaces[0].name, "global");
+  EXPECT_EQ(spaces[0].space_id, 1u);
+  EXPECT_FALSE(spaces[0].is_thread_specific);
+  EXPECT_EQ(spaces[1].name, "local");
+  EXPECT_EQ(spaces[1].space_id, 2u);
+  EXPECT_TRUE(spaces[1].is_thread_specific);
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, GetAddressSpacesThreadSpecific) {
+  EnableAddressSpaces(client, server);
+  std::future<std::vector<AddressSpaceInfo>> result =
+      std::async(std::launch::async, [&] { return client.GetAddressSpaces(); });
+  StreamGDBRemote escaped;
+  llvm::StringRef json =
+      R"([{"name":"private","space_id":7,"is_thread_specific":true}])";
+  escaped.PutEscapedBytes(json.data(), json.size());
+  HandlePacket(server, "jAddressSpacesInfo", escaped.GetString());
+
+  std::vector<AddressSpaceInfo> spaces = result.get();
+  ASSERT_EQ(spaces.size(), 1u);
+  EXPECT_EQ(spaces[0].name, "private");
+  EXPECT_EQ(spaces[0].space_id, 7u);
+  EXPECT_TRUE(spaces[0].is_thread_specific);
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, GetAddressSpacesNotSupported) {
+  // Without "address-spaces+" in qSupported the client never sends the packet.
+  EXPECT_TRUE(client.GetAddressSpaces().empty());
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, GetAddressSpacesMalformed) {
+  EnableAddressSpaces(client, server);
+  std::future<std::vector<AddressSpaceInfo>> result =
+      std::async(std::launch::async, [&] { return client.GetAddressSpaces(); });
+  // Missing required fields, so parsing fails and the client returns empty.
+  StreamGDBRemote escaped;
+  llvm::StringRef malformed = R"([{"name":"global"}])";
+  escaped.PutEscapedBytes(malformed.data(), malformed.size());
+  HandlePacket(server, "jAddressSpacesInfo", escaped.GetString());
+  EXPECT_TRUE(result.get().empty());
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, SaveRestoreRegistersNoSuffix) {
@@ -343,16 +458,14 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   EXPECT_TRUE(result.get().Success());
   EXPECT_EQ(addr, region_info.GetRange().GetRangeBase());
   EXPECT_EQ(0x2000u, region_info.GetRange().GetByteSize());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes, region_info.GetReadable());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eNo, region_info.GetWritable());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes, region_info.GetExecutable());
+  EXPECT_EQ(lldb_private::eLazyBoolYes, region_info.GetReadable());
+  EXPECT_EQ(lldb_private::eLazyBoolNo, region_info.GetWritable());
+  EXPECT_EQ(lldb_private::eLazyBoolYes, region_info.GetExecutable());
   EXPECT_EQ("/foo/bar.so", region_info.GetName().GetStringRef());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eDontKnow,
-            region_info.GetMemoryTagged());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eDontKnow,
-            region_info.IsStackMemory());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eDontKnow,
-            region_info.IsShadowStack());
+  EXPECT_EQ(lldb_private::eLazyBoolDontKnow, region_info.GetMemoryTagged());
+  EXPECT_EQ(lldb_private::eLazyBoolDontKnow, region_info.IsStackMemory());
+  EXPECT_EQ(lldb_private::eLazyBoolDontKnow, region_info.IsShadowStack());
+  EXPECT_EQ(std::nullopt, region_info.GetProtectionKey());
 
   result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
@@ -361,9 +474,9 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   HandlePacket(server, "qMemoryRegionInfo:a000",
                "start:a000;size:2000;flags:;type:stack;");
   EXPECT_TRUE(result.get().Success());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eNo, region_info.GetMemoryTagged());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes, region_info.IsStackMemory());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eNo, region_info.IsShadowStack());
+  EXPECT_EQ(lldb_private::eLazyBoolNo, region_info.GetMemoryTagged());
+  EXPECT_EQ(lldb_private::eLazyBoolYes, region_info.IsStackMemory());
+  EXPECT_EQ(lldb_private::eLazyBoolNo, region_info.IsShadowStack());
 
   result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
@@ -372,10 +485,9 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   HandlePacket(server, "qMemoryRegionInfo:a000",
                "start:a000;size:2000;flags: mt  zz mt ss  ;type:ha,ha,stack;");
   EXPECT_TRUE(result.get().Success());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes,
-            region_info.GetMemoryTagged());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes, region_info.IsStackMemory());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eYes, region_info.IsShadowStack());
+  EXPECT_EQ(lldb_private::eLazyBoolYes, region_info.GetMemoryTagged());
+  EXPECT_EQ(lldb_private::eLazyBoolYes, region_info.IsStackMemory());
+  EXPECT_EQ(lldb_private::eLazyBoolYes, region_info.IsShadowStack());
 
   result = std::async(std::launch::async, [&] {
     return client.GetMemoryRegionInfo(addr, region_info);
@@ -384,7 +496,26 @@ TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfo) {
   HandlePacket(server, "qMemoryRegionInfo:a000",
                "start:a000;size:2000;type:heap;");
   EXPECT_TRUE(result.get().Success());
-  EXPECT_EQ(lldb_private::MemoryRegionInfo::eNo, region_info.IsStackMemory());
+  EXPECT_EQ(lldb_private::eLazyBoolNo, region_info.IsStackMemory());
+
+  result = std::async(std::launch::async, [&] {
+    return client.GetMemoryRegionInfo(addr, region_info);
+  });
+
+  HandlePacket(server, "qMemoryRegionInfo:a000",
+               "start:a000;size:2000;protection-key:42;");
+  EXPECT_TRUE(result.get().Success());
+  ASSERT_THAT(region_info.GetProtectionKey(),
+              ::testing::Optional(::testing::Eq(42)));
+
+  result = std::async(std::launch::async, [&] {
+    return client.GetMemoryRegionInfo(addr, region_info);
+  });
+
+  HandlePacket(server, "qMemoryRegionInfo:a000",
+               "start:a000;size:2000;protection-key:not_a_number;");
+  EXPECT_TRUE(result.get().Success());
+  ASSERT_THAT(region_info.GetProtectionKey(), std::nullopt);
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, GetMemoryRegionInfoInvalidResponse) {
@@ -663,5 +794,27 @@ TEST_F(GDBRemoteCommunicationClientTest, MultiMemReadNotSupported) {
     return true;
   });
   ASSERT_FALSE(client.GetMultiMemReadSupported());
+  async_result.wait();
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, MultiBreakpointdSupported) {
+  std::future<bool> async_result = std::async(std::launch::async, [&] {
+    StringExtractorGDBRemote qSupported_packet_request;
+    server.GetPacket(qSupported_packet_request);
+    server.SendPacket("jMultiBreakpoint+;");
+    return true;
+  });
+  ASSERT_TRUE(client.GetMultiBreakpointSupported());
+  async_result.wait();
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, MultiBreakpointdNotSupported) {
+  std::future<bool> async_result = std::async(std::launch::async, [&] {
+    StringExtractorGDBRemote qSupported_packet_request;
+    server.GetPacket(qSupported_packet_request);
+    server.SendPacket(";");
+    return true;
+  });
+  ASSERT_FALSE(client.GetMultiBreakpointSupported());
   async_result.wait();
 }

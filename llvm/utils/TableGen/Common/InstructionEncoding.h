@@ -49,12 +49,6 @@ struct OperandInfo {
   std::optional<uint64_t> InitValue;
 
   OperandInfo(std::string D, bool HCD) : Decoder(D), HasCompleteDecoder(HCD) {}
-
-  void addField(unsigned Base, unsigned Width, unsigned Offset) {
-    Fields.emplace_back(Base, Width, Offset);
-  }
-
-  ArrayRef<EncodingField> fields() const { return Fields; }
 };
 
 /// Represents a parsed InstructionEncoding record or a record derived from it.

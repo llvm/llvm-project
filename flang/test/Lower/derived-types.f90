@@ -1,5 +1,5 @@
 ! Test basic parts of derived type entities lowering
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 ! Note: only testing non parameterized derived type here.
 
@@ -22,27 +22,35 @@ contains
 !            Test simple derived type symbol lowering
 ! -----------------------------------------------------------------------------
 
-! CHECK-LABEL: func @_QMdPderived_dummy(
-! CHECK-SAME: %{{.*}}: !fir.ref<!fir.type<_QMdTr{x:f32}>>{{.*}}, %{{.*}}: !fir.ref<!fir.type<_QMdTc2{ch_array:!fir.array<20x30x!fir.char<1,10>>}>>{{.*}}) {
+! CHECK-LABEL: func.func @_QMdPderived_dummy(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.type<_QMdTr{x:f32}>>{{.*}}, %[[ARG1:.*]]: !fir.ref<!fir.type<_QMdTc2{ch_array:!fir.array<20x30x!fir.char<1,10>>}>>{{.*}}) {
 subroutine derived_dummy(some_r, some_c2)
   type(r) :: some_r
   type(c2) :: some_c2
+! CHECK: hlfir.declare %[[ARG1]]
+! CHECK: hlfir.declare %[[ARG0]]
 end subroutine
 
-! CHECK-LABEL: func @_QMdPlocal_derived(
+! CHECK-LABEL: func.func @_QMdPlocal_derived(
 subroutine local_derived()
-  ! CHECK-DAG: fir.alloca !fir.type<_QMdTc2{ch_array:!fir.array<20x30x!fir.char<1,10>>}>
-  ! CHECK-DAG: fir.alloca !fir.type<_QMdTr{x:f32}>
+  ! CHECK: %[[C2:.*]] = fir.alloca !fir.type<_QMdTc2{ch_array:!fir.array<20x30x!fir.char<1,10>>}>
+  ! CHECK: %[[C2_DECL:.*]]:2 = hlfir.declare %[[C2]]
+  ! CHECK: %[[R:.*]] = fir.alloca !fir.type<_QMdTr{x:f32}>
+  ! CHECK: %[[R_DECL:.*]]:2 = hlfir.declare %[[R]]
   type(r) :: some_r
   type(c2) :: some_c2
+  ! CHECK: hlfir.designate %[[C2_DECL]]#0{"ch_array"}
   print *, some_c2%ch_array(1,1)
+  ! CHECK: hlfir.designate %[[R_DECL]]#0{"x"}
   print *, some_r%x
 end subroutine
 
-! CHECK-LABEL: func @_QMdPsaved_derived(
+! CHECK-LABEL: func.func @_QMdPsaved_derived(
 subroutine saved_derived()
-  ! CHECK-DAG: fir.address_of(@_QMdFsaved_derivedEsome_c2) : !fir.ref<!fir.type<_QMdTc2{ch_array:!fir.array<20x30x!fir.char<1,10>>}>>
-  ! CHECK-DAG: fir.address_of(@_QMdFsaved_derivedEsome_r) : !fir.ref<!fir.type<_QMdTr{x:f32}>>
+  ! CHECK: %[[C2_ADDR:.*]] = fir.address_of(@_QMdFsaved_derivedEsome_c2)
+  ! CHECK: %[[C2_DECL:.*]]:2 = hlfir.declare %[[C2_ADDR]]
+  ! CHECK: %[[R_ADDR:.*]] = fir.address_of(@_QMdFsaved_derivedEsome_r)
+  ! CHECK: %[[R_DECL:.*]]:2 = hlfir.declare %[[R_ADDR]]
   type(r), save :: some_r
   type(c2), save :: some_c2
   call use_symbols(some_r, some_c2)
@@ -53,66 +61,66 @@ end subroutine
 !            Test simple derived type references
 ! -----------------------------------------------------------------------------
 
-! CHECK-LABEL: func @_QMdPscalar_numeric_ref(
+! CHECK-LABEL: func.func @_QMdPscalar_numeric_ref(
 subroutine scalar_numeric_ref()
-  ! CHECK: %[[alloc:.*]] = fir.alloca !fir.type<_QMdTr{x:f32}>
+  ! CHECK: %[[R:.*]] = fir.alloca !fir.type<_QMdTr{x:f32}>
+  ! CHECK: %[[R_DECL:.*]]:2 = hlfir.declare %[[R]]
   type(r) :: some_r
-  ! CHECK: fir.coordinate_of %[[alloc]], x : (!fir.ref<!fir.type<_QMdTr{x:f32}>>) -> !fir.ref<f32>
+  ! CHECK: %[[X:.*]] = hlfir.designate %[[R_DECL]]#0{"x"}
   call real_bar(some_r%x)
 end subroutine
 
-! CHECK-LABEL: func @_QMdPscalar_character_ref(
+! CHECK-LABEL: func.func @_QMdPscalar_character_ref(
 subroutine scalar_character_ref()
-  ! CHECK: %[[alloc:.*]] = fir.alloca !fir.type<_QMdTc{ch:!fir.char<1,10>}>
+  ! CHECK: %[[C:.*]] = fir.alloca !fir.type<_QMdTc{ch:!fir.char<1,10>}>
+  ! CHECK: %[[C_DECL:.*]]:2 = hlfir.declare %[[C]]
   type(c) :: some_c
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[alloc]], ch : (!fir.ref<!fir.type<_QMdTc{ch:!fir.char<1,10>}>>) -> !fir.ref<!fir.char<1,10>>
-  ! CHECK-DAG: %[[c10:.*]] = arith.constant 10 : index
-  ! CHECK: fir.emboxchar %[[coor]], %c10 : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
+  ! CHECK: %[[CH:.*]] = hlfir.designate %[[C_DECL]]#0{"ch"}
+  ! CHECK: fir.emboxchar %[[CH]]
   call char_bar(some_c%ch)
 end subroutine
 
 ! FIXME: coordinate of generated for derived%array_comp(i) are not zero based as they
 ! should be.
 
-! CHECK-LABEL: func @_QMdParray_comp_elt_ref(
+! CHECK-LABEL: func.func @_QMdParray_comp_elt_ref(
 subroutine array_comp_elt_ref()
   type(r2) :: some_r2
-  ! CHECK: %[[alloc:.*]] = fir.alloca !fir.type<_QMdTr2{x_array:!fir.array<10x20xf32>}>
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[alloc]], x_array : (!fir.ref<!fir.type<_QMdTr2{x_array:!fir.array<10x20xf32>}>>) -> !fir.ref<!fir.array<10x20xf32>>
-  ! CHECK-DAG: %[[index1:.*]] = arith.subi %c5{{.*}}, %c1{{.*}} : i64
-  ! CHECK-DAG: %[[index2:.*]] = arith.subi %c6{{.*}}, %c1{{.*}} : i64
-  ! CHECK: fir.coordinate_of %[[coor]], %[[index1]], %[[index2]] : (!fir.ref<!fir.array<10x20xf32>>, i64, i64) -> !fir.ref<f32>
+  ! CHECK: %[[R2:.*]] = fir.alloca !fir.type<_QMdTr2{x_array:!fir.array<10x20xf32>}>
+  ! CHECK: %[[R2_DECL:.*]]:2 = hlfir.declare %[[R2]]
+  ! CHECK: hlfir.designate %[[R2_DECL]]#0{"x_array"}
   call real_bar(some_r2%x_array(5, 6))
 end subroutine
 
 
-! CHECK-LABEL: func @_QMdPchar_array_comp_elt_ref(
+! CHECK-LABEL: func.func @_QMdPchar_array_comp_elt_ref(
 subroutine char_array_comp_elt_ref()
   type(c2) :: some_c2
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %{{.*}}, ch_array : (!fir.ref<!fir.type<_QMdTc2{ch_array:!fir.array<20x30x!fir.char<1,10>>}>>) -> !fir.ref<!fir.array<20x30x!fir.char<1,10>>>
-  ! CHECK-DAG: %[[index1:.*]] = arith.subi %c5{{.*}}, %c1{{.*}} : i64
-  ! CHECK-DAG: %[[index2:.*]] = arith.subi %c6{{.*}}, %c1{{.*}} : i64
-  ! CHECK: fir.coordinate_of %[[coor]], %[[index1]], %[[index2]] : (!fir.ref<!fir.array<20x30x!fir.char<1,10>>>, i64, i64) -> !fir.ref<!fir.char<1,10>>
-  ! CHECK: fir.emboxchar %{{.*}}, %c10 : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
+  ! CHECK: %[[C2:.*]] = fir.alloca !fir.type<_QMdTc2{ch_array:!fir.array<20x30x!fir.char<1,10>>}>
+  ! CHECK: %[[C2_DECL:.*]]:2 = hlfir.declare %[[C2]]
+  ! CHECK: %[[ELT:.*]] = hlfir.designate %[[C2_DECL]]#0{"ch_array"}
+  ! CHECK: fir.emboxchar %[[ELT]]
   call char_bar(some_c2%ch_array(5, 6))
 end subroutine
 
-! CHECK: @_QMdParray_elt_comp_ref
+! CHECK-LABEL: func.func @_QMdParray_elt_comp_ref(
 subroutine array_elt_comp_ref()
   type(r) :: some_r_array(100)
-  ! CHECK: %[[alloca:.*]] = fir.alloca !fir.array<100x!fir.type<_QMdTr{x:f32}>>
-  ! CHECK: %[[index:.*]] = arith.subi %c5{{.*}}, %c1{{.*}} : i64
-  ! CHECK: %[[elt:.*]] = fir.coordinate_of %[[alloca]], %[[index]] : (!fir.ref<!fir.array<100x!fir.type<_QMdTr{x:f32}>>>, i64) -> !fir.ref<!fir.type<_QMdTr{x:f32}>>
-  ! CHECK: fir.coordinate_of %[[elt]], x : (!fir.ref<!fir.type<_QMdTr{x:f32}>>) -> !fir.ref<f32>
+  ! CHECK: %[[ARR:.*]] = fir.alloca !fir.array<100x!fir.type<_QMdTr{x:f32}>>
+  ! CHECK: %[[ARR_DECL:.*]]:2 = hlfir.declare %[[ARR]]
+  ! CHECK: %[[ELT:.*]] = hlfir.designate %[[ARR_DECL]]#0 (%c5{{.*}})
+  ! CHECK: hlfir.designate %[[ELT]]{"x"}
   call real_bar(some_r_array(5)%x)
 end subroutine
 
-! CHECK: @_QMdPchar_array_elt_comp_ref
+! CHECK-LABEL: func.func @_QMdPchar_array_elt_comp_ref(
 subroutine char_array_elt_comp_ref()
   type(c) :: some_c_array(100)
-  ! CHECK: fir.coordinate_of %{{.*}}, %{{.*}} : (!fir.ref<!fir.array<100x!fir.type<_QMdTc{ch:!fir.char<1,10>}>>>, i64) -> !fir.ref<!fir.type<_QMdTc{ch:!fir.char<1,10>}>>
-  ! CHECK: fir.coordinate_of %{{.*}}, ch : (!fir.ref<!fir.type<_QMdTc{ch:!fir.char<1,10>}>>) -> !fir.ref<!fir.char<1,10>>
-  ! CHECK: fir.emboxchar %{{.*}}, %c10{{.*}} : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
+  ! CHECK: %[[ARR:.*]] = fir.alloca !fir.array<100x!fir.type<_QMdTc{ch:!fir.char<1,10>}>>
+  ! CHECK: %[[ARR_DECL:.*]]:2 = hlfir.declare %[[ARR]]
+  ! CHECK: %[[ELT:.*]] = hlfir.designate %[[ARR_DECL]]#0 (%c5{{.*}})
+  ! CHECK: %[[CH:.*]] = hlfir.designate %[[ELT]]{"ch"}
+  ! CHECK: fir.emboxchar %[[CH]]
   call char_bar(some_c_array(5)%ch)
 end subroutine
 
@@ -124,12 +132,13 @@ end subroutine
 ! components. This one requires loading a component which tests other code paths
 ! in lowering.
 
-! CHECK-LABEL: func @_QMdPscalar_numeric_load(
-! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.type<_QMdTr{x:f32}>>
+! CHECK-LABEL: func.func @_QMdPscalar_numeric_load(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.type<_QMdTr{x:f32}>>
 real function scalar_numeric_load(some_r)
   type(r) :: some_r
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[arg0]], x : (!fir.ref<!fir.type<_QMdTr{x:f32}>>) -> !fir.ref<f32>
-  ! CHECK: fir.load %[[coor]]
+  ! CHECK: %[[R_DECL:.*]]:2 = hlfir.declare %[[ARG0]]
+  ! CHECK: %[[X:.*]] = hlfir.designate %[[R_DECL]]#0{"x"}
+  ! CHECK: fir.load %[[X]]
   scalar_numeric_load = some_r%x
 end function
 
@@ -137,20 +146,23 @@ end function
 !            Test returned derived types (no length parameters)
 ! -----------------------------------------------------------------------------
 
-! CHECK-LABEL: func @_QMdPbar_return_derived() -> !fir.type<_QMdTr{x:f32}>
+! CHECK-LABEL: func.func @_QMdPbar_return_derived() -> !fir.type<_QMdTr{x:f32}>
 function bar_return_derived()
-  ! CHECK: %[[res:.*]] = fir.alloca !fir.type<_QMdTr{x:f32}>
+  ! CHECK: %[[RET:.*]] = fir.alloca !fir.type<_QMdTr{x:f32}>
+  ! CHECK: %[[RET_DECL:.*]]:2 = hlfir.declare %[[RET]]
   type(r) :: bar_return_derived
-  ! CHECK: %[[resLoad:.*]] = fir.load %[[res]] : !fir.ref<!fir.type<_QMdTr{x:f32}>>
-  ! CHECK: return %[[resLoad]] : !fir.type<_QMdTr{x:f32}>
+  ! CHECK: %[[LOAD:.*]] = fir.load %[[RET_DECL]]#0
+  ! CHECK: return %[[LOAD]]
 end function
 
-! CHECK-LABEL: func @_QMdPcall_bar_return_derived(
+! CHECK-LABEL: func.func @_QMdPcall_bar_return_derived(
 subroutine call_bar_return_derived()
-  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.type<_QMdTr{x:f32}>
-  ! CHECK: %[[call:.*]] = fir.call @_QMdPbar_return_derived() {{.*}}: () -> !fir.type<_QMdTr{x:f32}>
-  ! CHECK: fir.save_result %[[call]] to %[[tmp]] : !fir.type<_QMdTr{x:f32}>, !fir.ref<!fir.type<_QMdTr{x:f32}>>
-  ! CHECK: fir.call @_QPr_bar(%[[tmp]]) {{.*}}: (!fir.ref<!fir.type<_QMdTr{x:f32}>>) -> ()
+  ! CHECK: %[[TMP:.*]] = fir.alloca !fir.type<_QMdTr{x:f32}>
+  ! CHECK: %[[TMP_DECL:.*]]:2 = hlfir.declare %[[TMP]]
+  ! CHECK: %[[RES:.*]] = fir.call @_QMdPbar_return_derived()
+  ! CHECK: fir.save_result %[[RES]] to %[[TMP_DECL]]#0
+  ! CHECK: hlfir.associate
+  ! CHECK: fir.call @_QPr_bar
   call r_bar(bar_return_derived())
 end subroutine
 
@@ -166,8 +178,8 @@ module d2
     type(recursive_t), pointer :: ptr
   end type
 contains
-! CHECK-LABEL: func @_QMd2Ptest_recursive_type(
-! CHECK-SAME: %{{.*}}: !fir.ref<!fir.type<_QMd2Trecursive_t{x:f32,ptr:!fir.box<!fir.ptr<!fir.type<_QMd2Trecursive_t>>>}>>{{.*}}) {
+! CHECK-LABEL: func.func @_QMd2Ptest_recursive_type(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.type<_QMd2Trecursive_t{x:f32,ptr:!fir.box<!fir.ptr<!fir.type<_QMd2Trecursive_t>>>}>>{{.*}}) {
 subroutine test_recursive_type(some_recursive)
   type(recursive_t) :: some_recursive
 end subroutine

@@ -16,6 +16,8 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -63,8 +65,16 @@ void ProcessTrace::DidAttach(ArchSpec &process_arch) {
   HijackProcessEvents(listener_sp);
 
   SetCanJIT(false);
-  StartPrivateStateThread();
-  SetPrivateState(eStateStopped);
+  StartPrivateStateThread(lldb::eStateStopped, false);
+  if (!m_current_private_state_thread_sp) {
+    LLDB_LOG(GetLog(LLDBLog::Process), "ProcessTrace: failed to start private "
+                                       "state thread.");
+    return;
+  }
+
+  // Pretend we stopped so we can show all of the threads
+  // in the trace and explore the final state.
+  SetPrivateState(lldb::eStateStopped);
 
   EventSP event_sp;
   WaitForProcessToStop(std::nullopt, &event_sp, true, listener_sp);
@@ -83,8 +93,9 @@ void ProcessTrace::RefreshStateAfterStop() {}
 
 Status ProcessTrace::DoDestroy() { return Status(); }
 
-size_t ProcessTrace::ReadMemory(addr_t addr, void *buf, size_t size,
-                                Status &error) {
+size_t ProcessTrace::ReadMemory(const ProcessAddress &process_addr, void *buf,
+                                size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   if (const ABISP &abi = GetABI())
     addr = abi->FixAnyAddress(addr);
 
@@ -96,12 +107,8 @@ size_t ProcessTrace::ReadMemory(addr_t addr, void *buf, size_t size,
 void ProcessTrace::Clear() { m_thread_list.Clear(); }
 
 void ProcessTrace::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance);
 }
 
 ArchSpec ProcessTrace::GetArchitecture() {
@@ -121,8 +128,9 @@ bool ProcessTrace::GetProcessInfo(ProcessInstanceInfo &info) {
   return true;
 }
 
-size_t ProcessTrace::DoReadMemory(addr_t addr, void *buf, size_t size,
-                                  Status &error) {
+size_t ProcessTrace::DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                                  size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   Address resolved_address;
   GetTarget().ResolveLoadAddress(addr, resolved_address);
 

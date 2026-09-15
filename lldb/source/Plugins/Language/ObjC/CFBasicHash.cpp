@@ -6,7 +6,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 bool CFBasicHash::IsValid() const {
-  if (m_address != LLDB_INVALID_ADDRESS) {
+  if (m_address != Address()) {
     if (m_ptr_size == 4 && m_ht_32)
       return true;
     else if (m_ptr_size == 8 && m_ht_64)
@@ -21,7 +21,7 @@ bool CFBasicHash::Update(addr_t addr, ExecutionContextRef exe_ctx_rf) {
   if (addr == LLDB_INVALID_ADDRESS || !addr)
     return false;
 
-  m_address = addr;
+  m_address = Address(addr);
   m_exe_ctx_ref = exe_ctx_rf;
   m_ptr_size =
       m_exe_ctx_ref.GetTargetSP()->GetArchitecture().GetAddressByteSize();

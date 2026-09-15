@@ -184,14 +184,17 @@ bool CSKYAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
 std::optional<bool> CSKYAsmBackend::evaluateFixup(const MCFragment &F,
                                                   MCFixup &Fixup, MCValue &,
                                                   uint64_t &Value) {
-  // For a few PC-relative fixups, offsets need to be aligned down. We
-  // compensate here because the default handler's `Value` decrement doesn't
-  // account for this alignment.
+  // These forward-only constant pool load fixups compute displacement relative
+  // to AlignDown(PC, 4). Pre-seed Value with the low bits so the generic
+  // evaluateFixup effectively subtracts the aligned offset. Subtract Stretch
+  // to use the pre-Stretch (old) source offset, avoiding an epoch mismatch
+  // with the generic Stretch-adjusted displacement (see ARMAsmBackend).
   switch (Fixup.getKind()) {
   case CSKY::fixup_csky_pcrel_uimm16_scale4:
   case CSKY::fixup_csky_pcrel_uimm8_scale4:
   case CSKY::fixup_csky_pcrel_uimm7_scale4:
-    Value = (Asm->getFragmentOffset(F) + Fixup.getOffset()) % 4;
+    Value =
+        (Asm->getFragmentOffset(F) - Asm->getStretch() + Fixup.getOffset()) % 4;
   }
   return {};
 }
@@ -273,11 +276,6 @@ bool CSKYAsmBackend::shouldForceRelocation(const MCFixup &Fixup,
     return true;
   }
 
-  return false;
-}
-
-bool CSKYAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                          uint64_t Value) const {
   return false;
 }
 

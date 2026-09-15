@@ -43,6 +43,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSSAUpdater.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
@@ -67,8 +68,6 @@ STATISTIC(NumSetCCsInserted, "Number of setCC instructions inserted");
 STATISTIC(NumTestsInserted, "Number of test instructions inserted");
 STATISTIC(NumAddsInserted, "Number of adds instructions inserted");
 STATISTIC(NumNFsConvertedTo, "Number of NF instructions converted to");
-
-extern cl::opt<bool> X86EnableAPXForRelocation;
 
 namespace {
 
@@ -138,6 +137,7 @@ char X86FlagsCopyLoweringLegacy::ID = 0;
 
 void X86FlagsCopyLoweringLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addUsedIfAvailable<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -254,14 +254,7 @@ static EFLAGSClobber getClobberType(const MachineInstr &MI) {
   if (!FlagDef)
     return NoClobber;
 
-  // For the instructions are ADDrm/ADDmr with relocation, we'll skip the
-  // optimization for replacing non-NF with NF. This is to keep backward
-  // compatiblity with old version of linkers without APX relocation type
-  // support on Linux OS.
-  bool IsWithReloc =
-      X86EnableAPXForRelocation ? false : isAddMemInstrWithRelocation(MI);
-
-  if (FlagDef->isDead() && X86::getNFVariant(MI.getOpcode()) && !IsWithReloc)
+  if (X86::getNFVariantIfClobberRemovable(MI))
     return EvitableClobber;
 
   return InevitableClobber;
@@ -708,8 +701,9 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
   }
 
 #ifndef NDEBUG
-  for (MachineBasicBlock &MBB : MF)
-    for (MachineInstr &MI : MBB)
+  // Check reachable blocks for unlowered EFLAGS copies.
+  for (MachineBasicBlock *MBB : depth_first(&MF))
+    for (MachineInstr &MI : *MBB)
       if (MI.getOpcode() == TargetOpcode::COPY &&
           (MI.getOperand(0).getReg() == X86::EFLAGS ||
            MI.getOperand(1).getReg() == X86::EFLAGS)) {
@@ -751,8 +745,13 @@ Register X86FlagsCopyLoweringImpl::promoteCondToReg(
     MachineBasicBlock &TestMBB, MachineBasicBlock::iterator TestPos,
     const DebugLoc &TestLoc, X86::CondCode Cond) {
   Register Reg = MRI->createVirtualRegister(PromoteRC);
-  auto SetI = BuildMI(TestMBB, TestPos, TestLoc, TII->get(X86::SETCCr), Reg)
-                  .addImm(Cond);
+  auto SetI =
+      BuildMI(TestMBB, TestPos, TestLoc,
+              TII->get((!Subtarget->hasZU() || Subtarget->preferLegacySetCC())
+                           ? X86::SETCCr
+                           : X86::SETZUCCr),
+              Reg)
+          .addImm(Cond);
   (void)SetI;
   LLVM_DEBUG(dbgs() << "    save cond: "; SetI->dump());
   ++NumSetCCsInserted;
@@ -795,29 +794,6 @@ void X86FlagsCopyLoweringImpl::rewriteSetCC(MachineBasicBlock &MBB,
   Register &CondReg = CondRegs[Cond];
   if (!CondReg)
     CondReg = promoteCondToReg(MBB, Pos, Loc, Cond);
-
-  if (X86::isSETZUCC(MI.getOpcode())) {
-    // SETZUCC is generated for register only for now.
-    assert(!MI.mayStore() && "Cannot handle memory variants");
-    assert(MI.getOperand(0).isReg() &&
-           "Cannot have a non-register defined operand to SETZUcc!");
-    Register OldReg = MI.getOperand(0).getReg();
-    // Drop Kill flags on the old register before replacing. CondReg may have
-    // a longer live range.
-    MRI->clearKillFlags(OldReg);
-    for (auto &Use : MRI->use_instructions(OldReg)) {
-      assert(Use.getOpcode() == X86::INSERT_SUBREG &&
-             "SETZUCC should be only used by INSERT_SUBREG");
-      Use.getOperand(2).setReg(CondReg);
-      // Recover MOV32r0 before INSERT_SUBREG, which removed by SETZUCC.
-      Register ZeroReg = MRI->createVirtualRegister(&X86::GR32RegClass);
-      BuildMI(*Use.getParent(), &Use, Use.getDebugLoc(), TII->get(X86::MOV32r0),
-              ZeroReg);
-      Use.getOperand(1).setReg(ZeroReg);
-    }
-    MI.eraseFromParent();
-    return;
-  }
 
   // Rewriting a register def is trivial: we just replace the register and
   // remove the setcc.

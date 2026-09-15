@@ -54,9 +54,4 @@ struct __scudo_mallinfo2 {
 #define SCUDO_MALLINFO __scudo_mallinfo
 #endif
 
-#if !SCUDO_ANDROID || !_BIONIC
-extern "C" void malloc_postinit();
-extern HIDDEN scudo::Allocator<scudo::Config, malloc_postinit> Allocator;
-#endif
-
 #endif // SCUDO_WRAPPERS_C_H_

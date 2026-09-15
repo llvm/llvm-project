@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx908 -o - < %s | FileCheck --check-prefixes=GCN,GFX908 %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx90a -o - < %s | FileCheck --check-prefixes=GCN,GFX90A %s
-; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx908 -o - < %s | FileCheck --check-prefixes=GCN,GFX908 %s
-; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx90a -o - < %s | FileCheck --check-prefixes=GCN,GFX90A %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx908 -early-live-intervals -o - < %s | FileCheck --check-prefixes=GCN,GFX908 %s
+; RUN: llc -mtriple=amdgpu9.08-mesa-mesa3d -o - < %s | FileCheck --check-prefixes=GCN,GFX908 %s
+; RUN: llc -mtriple=amdgpu9.0a-mesa-mesa3d -o - < %s | FileCheck --check-prefixes=GCN,GFX90A %s
+; RUN: llc -global-isel -mtriple=amdgpu9.08-mesa-mesa3d -o - < %s | FileCheck --check-prefixes=GCN,GFX908 %s
+; RUN: llc -global-isel -mtriple=amdgpu9.0a-mesa-mesa3d -o - < %s | FileCheck --check-prefixes=GCN,GFX90A %s
+; RUN: llc -mtriple=amdgpu9.08-mesa-mesa3d -early-live-intervals -o - < %s | FileCheck --check-prefixes=GCN,GFX908 %s
 
 ; GCN-LABEL: {{^}}gws_init_odd_reg:
 ; GFX908-DAG: ds_gws_init v1 gds
@@ -50,6 +50,17 @@ bb:
   %agpr.1 = extractelement <4 x i32> %mai, i32 1
   call void @llvm.amdgcn.ds.gws.init(i32 %agpr.0, i32 0)
   call void @llvm.amdgcn.ds.gws.init(i32 %agpr.1, i32 0)
+  ret void
+}
+
+; GCN-LABEL: {{^}}gws_init_subreg_uses:
+; GCN-COUNT-2: ds_gws_init v{{[0-9]+}} gds
+define amdgpu_ps void @gws_init_subreg_uses(ptr addrspace(1) %p) {
+  %v = load <4 x i32>, ptr addrspace(1) %p
+  %a = extractelement <4 x i32> %v, i32 0
+  %b = extractelement <4 x i32> %v, i32 1
+  call void @llvm.amdgcn.ds.gws.init(i32 %a, i32 0)
+  call void @llvm.amdgcn.ds.gws.init(i32 %b, i32 0)
   ret void
 }
 

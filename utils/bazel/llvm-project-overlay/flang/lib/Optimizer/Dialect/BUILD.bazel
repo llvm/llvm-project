@@ -1,0 +1,66 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "FIRDialect",
+    srcs = glob(
+        [
+            "*.cpp",
+            "*.h",
+        ],
+        allow_empty = True,
+    ),
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:SupportHeaders",
+        "//flang:ToolsHeaders",
+        "//flang/include/flang/Optimizer/Builder:BuilderHeaders",
+        "//flang/include/flang/Optimizer/CodeGen:CodeGenHeaders",
+        "//flang/include/flang/Optimizer/Dialect:CUDAKernelOpInterfaceIncGen",
+        "//flang/include/flang/Optimizer/Dialect:CanonicalizationPatternsIncGen",
+        "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//flang/include/flang/Optimizer/Dialect:FIRAttrIncGen",
+        "//flang/include/flang/Optimizer/Dialect:FIRDialectIncGen",
+        "//flang/include/flang/Optimizer/Dialect:FIRDialectSupportHeaders",
+        "//flang/include/flang/Optimizer/Dialect:FIROperationMoveOpInterfaceIncGen",
+        "//flang/include/flang/Optimizer/Dialect:FIROpsIncGen",
+        "//flang/include/flang/Optimizer/Dialect:FIRSafeTempArrayCopyAttrInterfaceIncGen",
+        "//flang/include/flang/Optimizer/Dialect:FirAliasTagOpInterfaceIncGen",
+        "//flang/include/flang/Optimizer/Dialect:FortranVariableInterfaceIncGen",
+        "//flang/include/flang/Optimizer/Dialect/CUF/Attributes:CUFAttrsHeaders",
+        "//flang/include/flang/Optimizer/Support:FIRSupportHeaders",
+        "//flang/lib/Optimizer/Dialect/CUF/Attributes:CUFAttrs",
+        "//flang/lib/Optimizer/Dialect/Support:FIRDialectSupport",
+        "//llvm:AsmParser",
+        "//llvm:CodeGen",
+        "//llvm:Remarks",
+        "//llvm:Support",
+        "//mlir:ArithDialect",
+        "//mlir:BuiltinToLLVMIRTranslation",
+        "//mlir:CommonFolders",
+        "//mlir:DataLayoutInterfaces",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:InliningUtils",
+        "//mlir:LLVMDialect",
+        "//mlir:LLVMToLLVMIRTranslation",
+        "//mlir:OpenACCDialect",
+        "//mlir:OpenACCUtils",
+        "//mlir:OpenMPDialect",
+        "//mlir:OpenMPToLLVMIRTranslation",
+        "//mlir:Support",
+        "//mlir:ToLLVMIRTranslation",
+    ],
+)

@@ -53,6 +53,10 @@ def main():
         if key in values:
             print('duplicate key "%s" in args' % key, file=sys.stderr)
             return 1
+        if val.startswith("@file:"):
+            file_path = val[len("@file:"):]
+            with open(file_path) as f:
+                val = f.read()
         values[key] = val.replace("\\n", "\n")
     unused_values = set(values.keys())
 
@@ -109,7 +113,7 @@ def main():
         return 1
 
     def read(filename):
-        with open(args.output) as f:
+        with open(filename) as f:
             return f.read()
 
     if not os.path.exists(args.output) or read(args.output) != output:

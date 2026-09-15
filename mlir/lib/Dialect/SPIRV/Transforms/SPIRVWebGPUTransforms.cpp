@@ -167,10 +167,11 @@ using ExpandSMulExtendedPattern =
 using ExpandUMulExtendedPattern =
     ExpandMulExtendedPattern<UMulExtendedOp, false>;
 
-struct ExpandAddCarryPattern final : OpRewritePattern<IAddCarryOp> {
-  using Base::Base;
+template <typename Op, typename ArithOp>
+struct ExpandAddCarryOrSubBorrowPattern final : OpRewritePattern<Op> {
+  using OpRewritePattern<Op>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(IAddCarryOp op,
+  LogicalResult matchAndRewrite(Op op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
     Value lhs = op.getOperand1();
@@ -190,19 +191,29 @@ struct ExpandAddCarryPattern final : OpRewritePattern<IAddCarryOp> {
     Value zero = ConstantOp::create(rewriter, loc, argTy,
                                     getScalarOrSplatAttr(argTy, 0));
 
-    // Calculate the carry by checking if the addition resulted in an overflow.
-    Value out = IAddOp::create(rewriter, loc, lhs, rhs);
-    Value cmp = ULessThanOp::create(rewriter, loc, out, lhs);
-    Value carry = SelectOp::create(rewriter, loc, cmp, one, zero);
+    Value out = ArithOp::create(rewriter, loc, lhs, rhs);
+    // For add: carry iff out < lhs (unsigned overflow).
+    // For sub: borrow iff lhs < rhs (unsigned underflow).
+    Value cmp;
+    if constexpr (std::is_same_v<Op, IAddCarryOp>)
+      cmp = ULessThanOp::create(rewriter, loc, out, lhs);
+    else
+      cmp = ULessThanOp::create(rewriter, loc, lhs, rhs);
+    Value flag = SelectOp::create(rewriter, loc, cmp, one, zero);
 
-    Value add = CompositeConstructOp::create(rewriter, loc,
-                                             op->getResultTypes().front(),
-                                             llvm::ArrayRef({out, carry}));
+    Value result = CompositeConstructOp::create(rewriter, loc,
+                                                op->getResultTypes().front(),
+                                                llvm::ArrayRef({out, flag}));
 
-    rewriter.replaceOp(op, add);
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
+
+using ExpandAddCarryPattern =
+    ExpandAddCarryOrSubBorrowPattern<IAddCarryOp, IAddOp>;
+using ExpandSubBorrowPattern =
+    ExpandAddCarryOrSubBorrowPattern<ISubBorrowOp, ISubOp>;
 
 struct ExpandIsInfPattern final : OpRewritePattern<IsInfOp> {
   using Base::Base;
@@ -252,7 +263,8 @@ void populateSPIRVExpandExtendedMultiplicationPatterns(
   // WGSL currently does not support extended multiplication ops, see:
   // https://github.com/gpuweb/gpuweb/issues/1565.
   patterns.add<ExpandSMulExtendedPattern, ExpandUMulExtendedPattern,
-               ExpandAddCarryPattern>(patterns.getContext());
+               ExpandAddCarryPattern, ExpandSubBorrowPattern>(
+      patterns.getContext());
 }
 
 void populateSPIRVExpandNonFiniteArithmeticPatterns(

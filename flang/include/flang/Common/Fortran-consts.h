@@ -28,6 +28,10 @@ ENUM_CLASS(IoStmtKind, None, Backspace, Close, Endfile, Flush, Inquire, Open,
 ENUM_CLASS(
     DefinedIo, ReadFormatted, ReadUnformatted, WriteFormatted, WriteUnformatted)
 
+// Vector type categories for DerivedTypeSpec
+ENUM_CLASS(
+    VectorTypeCategory, DerivedType, IntrinsicVector, PairVector, QuadVector)
+
 RT_OFFLOAD_VAR_GROUP_BEGIN
 // Fortran arrays may have up to 15 dimensions (See Fortran 2018 section 5.4.6).
 static constexpr int maxRank{15};

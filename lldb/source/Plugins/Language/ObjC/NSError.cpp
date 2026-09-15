@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/DeclCXX.h"
-
 #include "Cocoa.h"
 
+#include "Plugins/Language/ObjC/NSString.h"
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
@@ -19,9 +19,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
-
-#include "Plugins/Language/ObjC/NSString.h"
-#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -39,10 +37,10 @@ static lldb::addr_t DerefToNSErrorPointer(ValueObject &valobj) {
       CompilerType pointee_type(valobj_type.GetPointeeType());
       Flags pointee_flags(pointee_type.GetTypeInfo());
       if (pointee_flags.AllSet(eTypeIsPointer)) {
-        if (ProcessSP process_sp = valobj.GetProcessSP()) {
-          Status error;
-          ptr_value = process_sp->ReadPointerFromMemory(ptr_value, error);
-        }
+        if (ProcessSP process_sp = valobj.GetProcessSP())
+          ptr_value = llvm::expectedToOptional(
+                          process_sp->ReadPointerFromMemory(ptr_value))
+                          .value_or(LLDB_INVALID_ADDRESS);
       }
     }
     return ptr_value;
@@ -71,17 +69,19 @@ bool lldb_private::formatters::NSError_SummaryProvider(
   if (error.Fail())
     return false;
 
-  lldb::addr_t domain_str_value =
-      process_sp->ReadPointerFromMemory(domain_location, error);
-  if (error.Fail() || domain_str_value == LLDB_INVALID_ADDRESS)
-    return false;
-
+  llvm::Expected<lldb::addr_t> domain_str_value =
+      process_sp->ReadPointerFromMemory(domain_location);
   if (!domain_str_value) {
+    llvm::consumeError(domain_str_value.takeError());
+    return false;
+  }
+
+  if (!*domain_str_value) {
     stream.Printf("domain: nil - code: %" PRIi64, code);
     return true;
   }
 
-  InferiorSizedWord isw(domain_str_value, *process_sp);
+  InferiorSizedWord isw(*domain_str_value, *process_sp);
   TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
 
@@ -148,17 +148,18 @@ public:
     size_t ptr_size = process_sp->GetAddressByteSize();
 
     userinfo_location += 4 * ptr_size;
-    Status error;
-    lldb::addr_t userinfo =
-        process_sp->ReadPointerFromMemory(userinfo_location, error);
-    if (userinfo == LLDB_INVALID_ADDRESS || error.Fail())
+    llvm::Expected<lldb::addr_t> userinfo =
+        process_sp->ReadPointerFromMemory(userinfo_location);
+    if (!userinfo) {
+      llvm::consumeError(userinfo.takeError());
       return lldb::ChildCacheState::eRefetch;
-    InferiorSizedWord isw(userinfo, *process_sp);
+    }
+    InferiorSizedWord isw(*userinfo, *process_sp);
     TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
     if (!scratch_ts_sp)
       return lldb::ChildCacheState::eRefetch;
-    m_child_sp = CreateValueObjectFromData(
+    m_child_sp = CreateChildValueObjectFromData(
         "_userInfo", isw.GetAsData(process_sp->GetByteOrder()),
         m_backend.GetExecutionContextRef(),
         scratch_ts_sp->GetBasicType(lldb::eBasicTypeObjCID));
@@ -166,11 +167,10 @@ public:
   }
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    static ConstString g_userInfo("_userInfo");
+    static constexpr llvm::StringLiteral g_userInfo("_userInfo");
     if (name == g_userInfo)
       return 0;
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
 private:

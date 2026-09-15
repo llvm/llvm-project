@@ -37,11 +37,15 @@ function at-exit {
     python "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py \
       $retcode "${BUILD_DIR}"/test-results.*.xml "${MONOREPO_ROOT}"/ninja*.log \
       >> $GITHUB_STEP_SUMMARY
-    (python "${MONOREPO_ROOT}"/.ci/premerge_advisor_explain.py \
-      $(git rev-parse HEAD~1) $retcode "${GITHUB_TOKEN}" \
-      $GITHUB_PR_NUMBER "${BUILD_DIR}"/test-results.*.xml \
-      "${MONOREPO_ROOT}"/ninja*.log)
-    advisor_retcode=$?
+    if [[ -n "$GITHUB_PR_NUMBER" ]]; then
+      (python "${MONOREPO_ROOT}"/.ci/premerge_advisor_explain.py \
+        $(git rev-parse HEAD~1) $retcode "${GITHUB_TOKEN}" \
+        $GITHUB_PR_NUMBER "${BUILD_DIR}"/test-results.*.xml \
+        "${MONOREPO_ROOT}"/ninja*.log)
+      advisor_retcode=$?
+    else
+      advisor_retcode=$retcode
+    fi
   fi
 
   if [[ "$retcode" != "0" ]]; then
@@ -75,7 +79,7 @@ function start-group {
 }
 
 export PIP_BREAK_SYSTEM_PACKAGES=1
-pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
+pip install --require-hashes -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
 # The ARM64 builders run on AWS and don't have access to the GCS cache.
 if [[ -n "$GITHUB_ACTIONS" ]] && [[ "$RUNNER_ARCH" != "ARM64" ]]; then

@@ -1,4 +1,4 @@
-; RUN: not --crash opt < %s -wasm-lower-em-ehsjlj -wasm-enable-eh -wasm-enable-sjlj -S 2>&1 | FileCheck %s
+; RUN: not --crash opt < %s -wasm-lower-em-ehsjlj -wasm-enable-eh -wasm-enable-sjlj -mattr=+exception-handling -S 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -49,7 +49,7 @@ ehcleanup:                                        ; preds = %catch
 }
 
 declare void @foo()
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 ; Function Attrs: nounwind
 declare ptr @llvm.wasm.get.exception(token) #0
 ; Function Attrs: nounwind

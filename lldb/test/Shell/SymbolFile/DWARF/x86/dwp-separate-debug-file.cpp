@@ -177,7 +177,7 @@
 // NODWP: Searching for DWP using:
 // NODWP: Searching for DWP using:
 // NODWP: Unable to locate for DWP file for:
-// NODWP: unable to locate separate debug file (dwo, dwp). Debugging will be degraded.
+// NODWP: unable to locate separate debug file (dwo, dwp). Debugging will be degraded
 
 struct A {
   int x = 47;

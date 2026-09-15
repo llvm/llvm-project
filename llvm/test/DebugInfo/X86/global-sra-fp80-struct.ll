@@ -24,7 +24,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @static_struct = internal global %struct.mystruct zeroinitializer, align 16, !dbg !0
 
-; CHECK: @static_struct.0 = internal unnamed_addr global x86_fp80 0xK00000000000000000000, align 16, !dbg ![[EL0:.*]]
+; CHECK: @static_struct.0 = internal unnamed_addr global x86_fp80 0.000000e+00, align 16, !dbg ![[EL0:.*]]
 ; CHECK: @static_struct.1 = internal unnamed_addr global i32 0, align 16, !dbg ![[EL1:.*]]
 
 ; CHECK: ![[EL0]] = !DIGlobalVariableExpression(var: ![[VAR:.*]], expr: !DIExpression(DW_OP_LLVM_fragment, 0, 128))

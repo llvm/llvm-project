@@ -181,13 +181,18 @@ define void @integer_extension_and_truncation(i32 %arg1) {
 ; CHECK-LABEL: @pointer_casts
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[ARG2:[a-zA-Z0-9]+]]
-define ptr @pointer_casts(ptr %arg1, i64 %arg2) {
+; CHECK-SAME:  %[[ARG3:[a-zA-Z0-9]+]]
+define ptr @pointer_casts(ptr %arg1, i64 %arg2, <3 x ptr> %arg3) {
   ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.zero : !llvm.ptr
   ; CHECK:  llvm.ptrtoint %[[ARG1]] : !llvm.ptr to i64
+  ; CHECK:  llvm.ptrtoaddr %[[ARG1]] : !llvm.ptr to i64
+  ; CHECK:  llvm.ptrtoaddr %[[ARG3]] : vector<3x!llvm.ptr> to vector<3xi64>
   ; CHECK:  llvm.inttoptr %[[ARG2]] : i64 to !llvm.ptr
   ; CHECK:  llvm.bitcast %[[ARG1]] : !llvm.ptr to !llvm.ptr
   ; CHECK:  llvm.return %[[NULL]] : !llvm.ptr
   %1 = ptrtoint ptr %arg1 to i64
+  %p = ptrtoaddr ptr %arg1 to i64
+  %vp = ptrtoaddr <3 x ptr> %arg3 to <3 x i64>
   %2 = inttoptr i64 %arg2 to ptr
   %3 = bitcast ptr %arg1 to ptr
   ret ptr null
@@ -354,13 +359,13 @@ define ptr @alloca(i64 %size) {
 ; CHECK-LABEL: @load_store
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define void @load_store(ptr %ptr) {
-  ; CHECK:  %[[V1:[0-9]+]] = llvm.load %[[PTR]] {alignment = 8 : i64} : !llvm.ptr -> f64
-  ; CHECK:  %[[V2:[0-9]+]] = llvm.load volatile %[[PTR]] {alignment = 16 : i64, nontemporal} : !llvm.ptr -> f64
+  ; CHECK:  %[[V1:[0-9]+]] = llvm.load %[[PTR]] <alignment = 8> : !llvm.ptr -> f64
+  ; CHECK:  %[[V2:[0-9]+]] = llvm.load volatile %[[PTR]] <alignment = 16, nontemporal> : !llvm.ptr -> f64
   %1 = load double, ptr %ptr
   %2 = load volatile double, ptr %ptr, align 16, !nontemporal !0
 
-  ; CHECK:  llvm.store %[[V1]], %[[PTR]] {alignment = 8 : i64} : f64, !llvm.ptr
-  ; CHECK:  llvm.store volatile %[[V2]], %[[PTR]] {alignment = 16 : i64, nontemporal} : f64, !llvm.ptr
+  ; CHECK:  llvm.store %[[V1]], %[[PTR]] <alignment = 8> : f64, !llvm.ptr
+  ; CHECK:  llvm.store volatile %[[V2]], %[[PTR]] <alignment = 16, nontemporal> : f64, !llvm.ptr
   store double %1, ptr %ptr
   store volatile double %2, ptr %ptr, align 16, !nontemporal !0
   ret void
@@ -373,7 +378,7 @@ define void @load_store(ptr %ptr) {
 ; CHECK-LABEL: @invariant_load
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define float @invariant_load(ptr %ptr) {
-  ; CHECK:  %[[V:[0-9]+]] = llvm.load %[[PTR]] invariant {alignment = 4 : i64} : !llvm.ptr -> f32
+  ; CHECK:  %[[V:[0-9]+]] = llvm.load %[[PTR]] invariant <alignment = 4> : !llvm.ptr -> f32
   %1 = load float, ptr %ptr, align 4, !invariant.load !0
   ; CHECK:  llvm.return %[[V]]
   ret float %1
@@ -386,7 +391,7 @@ define float @invariant_load(ptr %ptr) {
 ; CHECK-LABEL: @invariant_group_load
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define float @invariant_group_load(ptr %ptr) {
-  ; CHECK:  %[[VAL:.+]] = llvm.load %[[PTR]] invariant_group {alignment = 4 : i64} : !llvm.ptr -> f32
+  ; CHECK:  %[[VAL:.+]] = llvm.load %[[PTR]] invariant_group <alignment = 4> : !llvm.ptr -> f32
   %1 = load float, ptr %ptr, align 4, !invariant.group !0
   ; CHECK:  llvm.return %[[VAL]]
   ret float %1
@@ -400,7 +405,7 @@ define float @invariant_group_load(ptr %ptr) {
 ; CHECK-SAME:  %[[VAL:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define void @invariant_group_store(float %val, ptr %ptr) {
-  ; CHECK:  llvm.store %[[VAL]], %[[PTR]] invariant_group {alignment = 4 : i64} : f32, !llvm.ptr
+  ; CHECK:  llvm.store %[[VAL]], %[[PTR]] invariant_group <alignment = 4> : f32, !llvm.ptr
   store float %val, ptr %ptr, align 4, !invariant.group !0
   ; CHECK:  llvm.return
   ret void
@@ -413,13 +418,13 @@ define void @invariant_group_store(float %val, ptr %ptr) {
 ; CHECK-LABEL: @atomic_load_store
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define void @atomic_load_store(ptr %ptr) {
-  ; CHECK:  %[[V1:[0-9]+]] = llvm.load %[[PTR]] atomic acquire {alignment = 8 : i64} : !llvm.ptr -> f64
-  ; CHECK:  %[[V2:[0-9]+]] = llvm.load volatile %[[PTR]] atomic syncscope("singlethreaded") acquire {alignment = 16 : i64} : !llvm.ptr -> f64
+  ; CHECK:  %[[V1:[0-9]+]] = llvm.load %[[PTR]] atomic acquire <alignment = 8> : !llvm.ptr -> f64
+  ; CHECK:  %[[V2:[0-9]+]] = llvm.load volatile %[[PTR]] atomic syncscope("singlethreaded") acquire <alignment = 16> : !llvm.ptr -> f64
   %1 = load atomic double, ptr %ptr acquire, align 8
   %2 = load atomic volatile double, ptr %ptr syncscope("singlethreaded") acquire, align 16
 
-  ; CHECK:  llvm.store %[[V1]], %[[PTR]] atomic release {alignment = 8 : i64} : f64, !llvm.ptr
-  ; CHECK:  llvm.store volatile %[[V2]], %[[PTR]] atomic syncscope("singlethreaded") release {alignment = 16 : i64} : f64, !llvm.ptr
+  ; CHECK:  llvm.store %[[V1]], %[[PTR]] atomic release <alignment = 8> : f64, !llvm.ptr
+  ; CHECK:  llvm.store volatile %[[V2]], %[[PTR]] atomic syncscope("singlethreaded") release <alignment = 16> : f64, !llvm.ptr
   store atomic double %1, ptr %ptr release, align 8
   store atomic volatile double %2, ptr %ptr syncscope("singlethreaded") release, align 16
   ret void
@@ -478,7 +483,7 @@ define void @atomic_rmw(ptr %ptr1, i32 %val1, ptr %ptr2, float %val2) {
 
   ; CHECK:  llvm.atomicrmw volatile
   ; CHECK-SAME:  syncscope("singlethread")
-  ; CHECK-SAME:  {alignment = 8 : i64}
+  ; CHECK-SAME:  alignment = 8
   %22 = atomicrmw volatile udec_wrap ptr %ptr1, i32 %val1 syncscope("singlethread") acquire, align 8
   ret void
 }
@@ -497,7 +502,7 @@ define void @atomic_cmpxchg(ptr %ptr1, i32 %val1, i32 %val2) {
 
   ; CHECK:  llvm.cmpxchg weak volatile
   ; CHECK-SAME:  syncscope("singlethread")
-  ; CHECK-SAME:  {alignment = 8 : i64}
+  ; CHECK-SAME:  alignment = 8
   %3 = cmpxchg weak volatile ptr %ptr1, i32 %val1, i32 %val2 syncscope("singlethread") monotonic seq_cst, align 8
   ret void
 }
@@ -547,6 +552,19 @@ define i32 @inlineasm(i32 %arg1) {
   ; CHECK: return %[[RES]]
   ret i32 %1
 }
+
+; // -----
+
+; CHECK-LABEL: @inlineasm_convergent
+; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
+define i32 @inlineasm_convergent(i32 %arg1) {
+  ; CHECK:  %[[RES:.+]] = llvm.inline_asm convergent asm_dialect = att "bswap $0", "=r,r" %[[ARG1]] : (i32) -> i32
+  %1 = call i32 asm "bswap $0", "=r,r"(i32 %arg1) #0
+  ; CHECK: return %[[RES]]
+  ret i32 %1
+}
+
+attributes #0 = { convergent }
 
 ; // -----
 
@@ -693,6 +711,279 @@ declare void @f()
 define void @call_will_return() {
 ; CHECK: llvm.call @f() {will_return}
   call void @f() willreturn
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_noreturn
+define void @call_noreturn() {
+; CHECK: llvm.call @f() {noreturn}
+  call void @f() noreturn
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_returnstwice
+define void @call_returnstwice() {
+; CHECK: llvm.call @f() {returns_twice}
+  call void @f() returns_twice
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_hot
+define void @call_hot() {
+; CHECK: llvm.call @f() {hot}
+  call void @f() hot
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_cold
+define void @call_cold() {
+; CHECK: llvm.call @f() {cold}
+  call void @f() cold
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_noduplicate
+define void @call_noduplicate() {
+; CHECK: llvm.call @f() {noduplicate}
+  call void @f() noduplicate
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_no_caller_saved_registers
+define void @call_no_caller_saved_registers() {
+; CHECK: llvm.call @f() {no_caller_saved_registers}
+  call void @f() "no_caller_saved_registers"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_nocallback
+define void @call_nocallback() {
+; CHECK: llvm.call @f() {nocallback}
+  call void @f() nocallback
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f(i32)
+declare void @f(i32)
+
+; CHECK-LABEL: @call_modular_format
+define void @call_modular_format() {
+; CHECK: llvm.call @f({{.*}}) {modular_format = "ident,1,1,foo,bar"}
+  %arg = alloca i32
+  call void @f(i32 0) "modular-format" = "ident,1,1,foo,bar"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_nobuiltins_all
+define void @call_nobuiltins_all() {
+; CHECK: llvm.call @f() {nobuiltins = []}
+  call void @f() "no-builtins"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_nobuiltins_2
+define void @call_nobuiltins_2() {
+; CHECK: llvm.call @f() {nobuiltins = ["asdf", "ghij"]}
+  call void @f() "no-builtin-asdf" "no-builtin-ghij"
+  ret void
+}
+
+
+; // -----
+
+; CHECK: llvm.func @f(i32, i32)
+declare void @f(i32, i32)
+
+; CHECK-LABEL: @call_alloc_size_1
+define void @call_alloc_size_1() {
+; CHECK: llvm.call @f({{.*}}) {allocsize = array<i32: 0>}
+  call void @f(i32 0, i32 0) allocsize(0)
+  ret void
+}
+; // -----
+
+; CHECK: llvm.func @f(i32, i32)
+declare void @f(i32, i32)
+
+; CHECK-LABEL: @call_alloc_size_2
+define void @call_alloc_size_2() {
+; CHECK: llvm.call @f({{.*}}) {allocsize = array<i32: 1, 0>}
+  call void @f(i32 0, i32 0) allocsize(1, 0)
+  ret void
+}
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_minsize
+define void @call_minsize() {
+; CHECK: llvm.call @f() {minsize}
+  call void @f() minsize
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_optsize
+define void @call_optsize() {
+; CHECK: llvm.call @f() {optsize}
+  call void @f() optsize
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_save_reg_params
+define void @call_save_reg_params() {
+; CHECK: llvm.call @f() {save_reg_params}
+  call void @f() "save-reg-params"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_uniform_work_group_size
+define void @call_uniform_work_group_size() {
+; CHECK: llvm.call @f() {uniform_work_group_size}
+  call void @f() "uniform-work-group-size"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+declare i32 @__gxx_personality_v0(...)
+
+; CHECK-LABEL: @invoke_uniform_work_group_size
+define void @invoke_uniform_work_group_size() personality ptr @__gxx_personality_v0 {
+entry:
+; CHECK: llvm.invoke @f() to ^bb1 unwind ^bb2 {uniform_work_group_size}
+  invoke void @f() "uniform-work-group-size" to label %bb1 unwind label %bb2
+bb1:
+  ret void
+bb2:
+  %0 = landingpad i32 cleanup
+  unreachable
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_zero_call_used_regs
+define void @call_zero_call_used_regs() {
+; CHECK: llvm.call @f() {zero_call_used_regs = "used"}
+  call void @f() "zero-call-used-regs"="used"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_trap_func_name
+define void @call_trap_func_name() {
+; CHECK: llvm.call @f() {trap_func_name = "something"}
+  call void @f() "trap-func-name"="something"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; Note: the 'default-func-attrs' aren't recoverable due to the way they lower
+; to LLVM-IR, and 'call' operations don't have passthrough, so these would be
+; lost in translation.
+; CHECK-LABEL: @call_default_func_attrs
+define void @call_default_func_attrs() {
+; CHECK: llvm.call @f() : () -> ()
+  call void @f() "key"="value" "key"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_builtin
+define void @call_builtin() {
+; CHECK: llvm.call @f() {builtin}
+  call void @f() builtin
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_nobuiltin
+define void @call_nobuiltin() {
+; CHECK: llvm.call @f() {nobuiltin}
+  call void @f() nobuiltin
   ret void
 }
 

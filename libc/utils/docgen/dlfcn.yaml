@@ -1,0 +1,21 @@
+functions:
+  dladdr:
+    in-latest-posix: ""
+  dlclose:
+    in-latest-posix: ""
+  dlerror:
+    in-latest-posix: ""
+  dlopen:
+    in-latest-posix: ""
+  dlsym:
+    in-latest-posix: ""
+
+macros:
+  RTLD_GLOBAL:
+    in-latest-posix: ""
+  RTLD_LAZY:
+    in-latest-posix: ""
+  RTLD_LOCAL:
+    in-latest-posix: ""
+  RTLD_NOW:
+    in-latest-posix: ""

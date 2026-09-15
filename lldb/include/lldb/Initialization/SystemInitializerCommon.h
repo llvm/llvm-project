@@ -23,14 +23,11 @@ namespace lldb_private {
 /// the constructor.
 class SystemInitializerCommon : public SystemInitializer {
 public:
-  SystemInitializerCommon(HostInfo::SharedLibraryDirectoryHelper *helper);
+  SystemInitializerCommon();
   ~SystemInitializerCommon() override;
 
   llvm::Error Initialize() override;
   void Terminate() override;
-
-private:
-  HostInfo::SharedLibraryDirectoryHelper *m_shlib_dir_helper;
 };
 
 } // namespace lldb_private

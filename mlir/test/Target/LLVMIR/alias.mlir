@@ -90,3 +90,55 @@ llvm.mlir.global internal constant @g3() {dso_local} : !llvm.ptr {
 // CHECK: @g3 = internal constant ptr @a2
 // CHECK: @a1 = private alias i32, ptr @g1
 // CHECK: @a2 = private alias ptr, ptr @a1
+
+// -----
+
+// Test that llvm.call and llvm.invoke can use an alias as the callee, and that
+// the translation emits a call through the alias.
+
+llvm.func @aliased_func() {
+  llvm.return
+}
+
+llvm.mlir.alias external @func_alias {addr_space = 0 : i32} : !llvm.ptr {
+  %0 = llvm.mlir.addressof @aliased_func : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+llvm.func @caller() {
+  llvm.call @func_alias() : () -> ()
+  llvm.return
+}
+
+// CHECK: @func_alias = alias ptr, ptr @aliased_func
+// CHECK-LABEL: define void @caller()
+// CHECK:         call void @func_alias()
+
+// -----
+
+// Test that llvm.invoke can use an alias as the callee, and that the
+// translation emits an invoke through the alias.
+
+llvm.func @__gxx_personality_v0(...) -> i32
+
+llvm.func @aliased_func2() {
+  llvm.return
+}
+
+llvm.mlir.alias external @func_alias2 {addr_space = 0 : i32} : !llvm.ptr {
+  %0 = llvm.mlir.addressof @aliased_func2 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+llvm.func @invoke_caller() attributes {personality = @__gxx_personality_v0} {
+  llvm.invoke @func_alias2() to ^bb1 unwind ^bb2 : () -> ()
+^bb1:
+  llvm.return
+^bb2:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.resume %0 : !llvm.struct<(ptr, i32)>
+}
+
+// CHECK: @func_alias2 = alias ptr, ptr @aliased_func2
+// CHECK-LABEL: define void @invoke_caller()
+// CHECK:         invoke void @func_alias2()

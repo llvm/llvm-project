@@ -5,20 +5,34 @@
 ## Check for incompatible cases
 # RUN: not ld.lld %t --irpgo-profile=/dev/null --bp-startup-sort=function --call-graph-ordering-file=/dev/null 2>&1 | FileCheck %s --check-prefix=BP-STARTUP-CALLGRAPH-ERR
 # RUN: not ld.lld --bp-compression-sort=function --call-graph-ordering-file /dev/null 2>&1 | FileCheck %s --check-prefix=BP-COMPRESSION-CALLGRAPH-ERR
+# RUN: not ld.lld '--bp-compression-sort-section=.text*' --call-graph-ordering-file /dev/null 2>&1 | FileCheck %s --check-prefix=BP-SECTION-CALLGRAPH-ERR
 # RUN: not ld.lld --bp-startup-sort=function 2>&1 | FileCheck %s --check-prefix=BP-STARTUP-ERR
 # RUN: not ld.lld --bp-compression-sort-startup-functions 2>&1 | FileCheck %s --check-prefix=BP-STARTUP-COMPRESSION-ERR
+# RUN: not ld.lld '--bp-compression-sort-section=.text*=x' 2>&1 | FileCheck %s --check-prefix=BP-SECTION-LAYOUT-ERR
+# RUN: not ld.lld '--bp-compression-sort-section=.text*=0=x' 2>&1 | FileCheck %s --check-prefix=BP-SECTION-MATCH-ERR
+# RUN: not ld.lld '--bp-compression-sort-section=.text*=0=0=0' 2>&1 | FileCheck %s --check-prefix=BP-SECTION-EQ-ERR
+# RUN: not ld.lld '--bp-compression-sort-section=[' 2>&1 | FileCheck %s --check-prefix=BP-SECTION-GLOB-ERR
 # RUN: not ld.lld --bp-startup-sort=invalid --bp-compression-sort=invalid 2>&1 | FileCheck %s --check-prefix=BP-INVALID
 
 # BP-STARTUP-CALLGRAPH-ERR: error: --bp-startup-sort=function is incompatible with --call-graph-ordering-file
 # BP-COMPRESSION-CALLGRAPH-ERR: error: --bp-compression-sort is incompatible with --call-graph-ordering-file
+# BP-SECTION-CALLGRAPH-ERR: error: --bp-compression-sort-section is incompatible with --call-graph-ordering-file
 # BP-STARTUP-ERR: error: --bp-startup-sort=function must be used with --irpgo-profile
 # BP-STARTUP-COMPRESSION-ERR: error: --bp-compression-sort-startup-functions must be used with --irpgo-profile
+# BP-SECTION-LAYOUT-ERR: error: --bp-compression-sort-section: expected integer for layout_priority, got 'x'
+# BP-SECTION-MATCH-ERR: error: --bp-compression-sort-section: expected integer for match_priority, got 'x'
+# BP-SECTION-EQ-ERR: error: --bp-compression-sort-section: too many '=' in '.text*=0=0=0'
+# BP-SECTION-GLOB-ERR: error: --bp-compression-sort-section: invalid glob pattern, unmatched '['
 
 # BP-INVALID: error: --bp-compression-sort=: expected [none|function|data|both]
 # BP-INVALID: error: --bp-startup-sort=: expected [none|function]
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64 a.s -o a.o
 # RUN: llvm-profdata merge a.proftext -o a.profdata
+
+# RUN: not ld.lld a.o --irpgo-profile=missing.profdata --bp-startup-sort=function -o /dev/null 2>&1 | FileCheck %s --check-prefix=MISSING -DMSG=%errc_ENOENT
+# MISSING: error: [[MSG]]
+
 # RUN: ld.lld a.o --irpgo-profile=a.profdata --bp-startup-sort=function --verbose-bp-section-orderer --icf=all --gc-sections 2>&1 | FileCheck %s --check-prefix=STARTUP-FUNC-ORDER
 
 # STARTUP-FUNC-ORDER: Ordered 4 sections ([[#]] bytes) using balanced partitioning

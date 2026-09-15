@@ -28,10 +28,11 @@ define void @widen_3xv4i16(ptr %x, ptr %z) {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    addi a2, a0, 8
 ; CHECK-NEXT:    vle16.v v9, (a2)
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 4
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vle16.v v10, (a0)
 ; CHECK-NEXT:    vsetivli zero, 12, e16, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 8
 ; CHECK-NEXT:    vse16.v v8, (a1)
@@ -74,14 +75,14 @@ define void @widen_4xv4i16_unaligned(ptr %x, ptr %z) {
 ; CHECK-NO-MISALIGN:       # %bb.0:
 ; CHECK-NO-MISALIGN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NO-MISALIGN-NEXT:    vle8.v v8, (a0)
+; CHECK-NO-MISALIGN-NEXT:    addi a2, a0, 8
+; CHECK-NO-MISALIGN-NEXT:    vle8.v v9, (a2)
 ; CHECK-NO-MISALIGN-NEXT:    addi a2, a0, 16
 ; CHECK-NO-MISALIGN-NEXT:    vle8.v v10, (a2)
-; CHECK-NO-MISALIGN-NEXT:    addi a2, a0, 8
 ; CHECK-NO-MISALIGN-NEXT:    addi a0, a0, 24
+; CHECK-NO-MISALIGN-NEXT:    vslideup.vi v8, v9, 4
 ; CHECK-NO-MISALIGN-NEXT:    vle8.v v9, (a0)
-; CHECK-NO-MISALIGN-NEXT:    vle8.v v11, (a2)
 ; CHECK-NO-MISALIGN-NEXT:    vslideup.vi v10, v9, 4
-; CHECK-NO-MISALIGN-NEXT:    vslideup.vi v8, v11, 4
 ; CHECK-NO-MISALIGN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NO-MISALIGN-NEXT:    vslideup.vi v8, v10, 8
 ; CHECK-NO-MISALIGN-NEXT:    vse16.v v8, (a1)
@@ -185,15 +186,17 @@ define void @strided_constant_mismatch_4xv4i16(ptr %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    addi a2, a0, 2
+; CHECK-NEXT:    vle16.v v9, (a2)
 ; CHECK-NEXT:    addi a2, a0, 6
 ; CHECK-NEXT:    vle16.v v10, (a2)
-; CHECK-NEXT:    addi a2, a0, 2
 ; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 4
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vle16.v v11, (a2)
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v10, v9, 4
-; CHECK-NEXT:    vslideup.vi v8, v11, 4
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 8
 ; CHECK-NEXT:    vse16.v v8, (a1)
@@ -255,14 +258,16 @@ define void @strided_runtime_mismatch_4xv4i16(ptr %x, ptr %z, i64 %s, i64 %t) {
 ; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; RV32-NEXT:    vle16.v v8, (a0)
 ; RV32-NEXT:    add a0, a0, a2
-; RV32-NEXT:    add a4, a0, a4
-; RV32-NEXT:    vle16.v v10, (a4)
-; RV32-NEXT:    add a2, a4, a2
-; RV32-NEXT:    vle16.v v9, (a2)
-; RV32-NEXT:    vle16.v v11, (a0)
+; RV32-NEXT:    vle16.v v9, (a0)
+; RV32-NEXT:    add a0, a0, a4
+; RV32-NEXT:    vle16.v v10, (a0)
+; RV32-NEXT:    add a0, a0, a2
+; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; RV32-NEXT:    vslideup.vi v8, v9, 4
+; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; RV32-NEXT:    vle16.v v9, (a0)
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; RV32-NEXT:    vslideup.vi v10, v9, 4
-; RV32-NEXT:    vslideup.vi v8, v11, 4
 ; RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RV32-NEXT:    vslideup.vi v8, v10, 8
 ; RV32-NEXT:    vse16.v v8, (a1)
@@ -273,14 +278,16 @@ define void @strided_runtime_mismatch_4xv4i16(ptr %x, ptr %z, i64 %s, i64 %t) {
 ; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; RV64-NEXT:    vle16.v v8, (a0)
 ; RV64-NEXT:    add a0, a0, a2
-; RV64-NEXT:    add a3, a0, a3
-; RV64-NEXT:    vle16.v v10, (a3)
-; RV64-NEXT:    add a2, a3, a2
-; RV64-NEXT:    vle16.v v9, (a2)
-; RV64-NEXT:    vle16.v v11, (a0)
+; RV64-NEXT:    vle16.v v9, (a0)
+; RV64-NEXT:    add a0, a0, a3
+; RV64-NEXT:    vle16.v v10, (a0)
+; RV64-NEXT:    add a0, a0, a2
+; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; RV64-NEXT:    vslideup.vi v8, v9, 4
+; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; RV64-NEXT:    vle16.v v9, (a0)
 ; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; RV64-NEXT:    vslideup.vi v10, v9, 4
-; RV64-NEXT:    vslideup.vi v8, v11, 4
 ; RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RV64-NEXT:    vslideup.vi v8, v10, 8
 ; RV64-NEXT:    vse16.v v8, (a1)
@@ -291,14 +298,16 @@ define void @strided_runtime_mismatch_4xv4i16(ptr %x, ptr %z, i64 %s, i64 %t) {
 ; ZVE64F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVE64F-NEXT:    vle16.v v8, (a0)
 ; ZVE64F-NEXT:    add a0, a0, a2
-; ZVE64F-NEXT:    add a3, a0, a3
-; ZVE64F-NEXT:    vle16.v v10, (a3)
-; ZVE64F-NEXT:    add a2, a3, a2
-; ZVE64F-NEXT:    vle16.v v9, (a2)
-; ZVE64F-NEXT:    vle16.v v11, (a0)
+; ZVE64F-NEXT:    vle16.v v9, (a0)
+; ZVE64F-NEXT:    add a0, a0, a3
+; ZVE64F-NEXT:    vle16.v v10, (a0)
+; ZVE64F-NEXT:    add a0, a0, a2
+; ZVE64F-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v8, v9, 4
+; ZVE64F-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVE64F-NEXT:    vle16.v v9, (a0)
 ; ZVE64F-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVE64F-NEXT:    vslideup.vi v10, v9, 4
-; ZVE64F-NEXT:    vslideup.vi v8, v11, 4
 ; ZVE64F-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVE64F-NEXT:    vslideup.vi v8, v10, 8
 ; ZVE64F-NEXT:    vse16.v v8, (a1)
@@ -492,8 +501,8 @@ define void @strided_constant_neg_4xv2f32(ptr %x, ptr %z, i64 %s) {
 define void @reverse_strided_constant_pos_4xv2f32(ptr %x, ptr %z, i64 %s) {
 ; CHECK-LABEL: reverse_strided_constant_pos_4xv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, 192
 ; CHECK-NEXT:    li a2, -64
+; CHECK-NEXT:    addi a0, a0, 192
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vlse64.v v8, (a0), a2
 ; CHECK-NEXT:    vse64.v v8, (a1)
@@ -515,8 +524,8 @@ define void @reverse_strided_constant_pos_4xv2f32(ptr %x, ptr %z, i64 %s) {
 define void @reverse_strided_constant_neg_4xv2f32(ptr %x, ptr %z, i64 %s) {
 ; CHECK-LABEL: reverse_strided_constant_neg_4xv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, -192
 ; CHECK-NEXT:    li a2, 64
+; CHECK-NEXT:    addi a0, a0, -192
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vlse64.v v8, (a0), a2
 ; CHECK-NEXT:    vse64.v v8, (a1)
@@ -584,4 +593,354 @@ define <16 x i8> @widen_4xv4i8_immediate_expand(ptr %p, i64 %s) {
   %abcx = shufflevector <16 x i8> %ab, <16 x i8> %cx, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 poison, i32 poison, i32 poison, i32 poison>
   %abcd = shufflevector <16 x i8> %abcx, <16 x i8> %dx, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
   ret <16 x i8> %abcd
+}
+
+; An illegal, non-power-of-2 vector argument gets scalarized into a sequence
+; of loads from distinct fixed (incoming-argument) stack slots, which are
+; then reassembled with concat_vectors. The base pointers of these loads are
+; different FrameIndex nodes, so computing their pointer difference relies on
+; BaseIndexOffset::equalBaseIndex's fixed-object handling rather than the
+; loads sharing a common base. This used to compute a stride of 0 for every
+; pair (instead of the correct 4), which produced a load whose MachineMemOperand
+; was undersized for its memory VT and tripped an assertion in MemSDNode.
+define <33 x i32> @concat_loads_of_fixed_stack_args(<33 x i32> %a, <33 x i32> %b) {
+; RV32-LABEL: concat_loads_of_fixed_stack_args:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vslideup.vi v18, v19, 1
+; RV32-NEXT:    vslideup.vi v16, v17, 1
+; RV32-NEXT:    vslideup.vi v22, v23, 1
+; RV32-NEXT:    vslideup.vi v20, v21, 1
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vslideup.vi v16, v18, 2
+; RV32-NEXT:    vslideup.vi v20, v22, 2
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vslideup.vi v16, v20, 4
+; RV32-NEXT:    addi a2, a1, 60
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v22, (a2)
+; RV32-NEXT:    addi a2, a1, 56
+; RV32-NEXT:    vle32.v v21, (a2)
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vslideup.vi v10, v11, 1
+; RV32-NEXT:    vslideup.vi v8, v9, 1
+; RV32-NEXT:    addi a2, a1, 52
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v23, (a2)
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vslideup.vi v14, v15, 1
+; RV32-NEXT:    vslideup.vi v12, v13, 1
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vslideup.vi v8, v10, 2
+; RV32-NEXT:    addi a2, a1, 48
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v20, (a2)
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vslideup.vi v12, v14, 2
+; RV32-NEXT:    addi a2, a1, 44
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v14, (a2)
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vslideup.vi v8, v12, 4
+; RV32-NEXT:    addi a2, a1, 40
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v13, (a2)
+; RV32-NEXT:    addi a2, a1, 36
+; RV32-NEXT:    vle32.v v15, (a2)
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; RV32-NEXT:    vslideup.vi v8, v16, 8
+; RV32-NEXT:    addi a2, a1, 32
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v12, (a2)
+; RV32-NEXT:    addi a2, a1, 28
+; RV32-NEXT:    vle32.v v17, (a2)
+; RV32-NEXT:    addi a2, a1, 24
+; RV32-NEXT:    vle32.v v18, (a2)
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vslideup.vi v13, v14, 1
+; RV32-NEXT:    vslideup.vi v12, v15, 1
+; RV32-NEXT:    addi a2, a1, 20
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v15, (a2)
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vslideup.vi v21, v22, 1
+; RV32-NEXT:    vslideup.vi v20, v23, 1
+; RV32-NEXT:    addi a2, a1, 12
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vslideup.vi v12, v13, 2
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v14, (a2)
+; RV32-NEXT:    addi a2, a1, 8
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vslideup.vi v20, v21, 2
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v19, (a2)
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vslideup.vi v12, v20, 4
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v16, (a1)
+; RV32-NEXT:    addi a2, a1, 4
+; RV32-NEXT:    vle32.v v20, (a2)
+; RV32-NEXT:    addi a2, a1, 16
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vslideup.vi v19, v14, 1
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v14, (a2)
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vslideup.vi v16, v20, 1
+; RV32-NEXT:    vslideup.vi v18, v17, 1
+; RV32-NEXT:    vslideup.vi v14, v15, 1
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vslideup.vi v16, v19, 2
+; RV32-NEXT:    vslideup.vi v14, v18, 2
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vslideup.vi v16, v14, 4
+; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; RV32-NEXT:    vslideup.vi v16, v12, 8
+; RV32-NEXT:    li a2, 32
+; RV32-NEXT:    addi a3, sp, 40
+; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; RV32-NEXT:    vslideup.vi v8, v16, 16
+; RV32-NEXT:    vle32.v v16, (a3)
+; RV32-NEXT:    vadd.vv v8, v8, v16
+; RV32-NEXT:    addi a1, a1, 64
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v16, (a1)
+; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; RV32-NEXT:    vse32.v v8, (a0)
+; RV32-NEXT:    addi a1, sp, 168
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v8, (a1)
+; RV32-NEXT:    vadd.vv v8, v16, v8
+; RV32-NEXT:    addi a0, a0, 128
+; RV32-NEXT:    vse32.v v8, (a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: concat_loads_of_fixed_stack_args:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vslideup.vi v18, v19, 1
+; RV64-NEXT:    vslideup.vi v16, v17, 1
+; RV64-NEXT:    vslideup.vi v22, v23, 1
+; RV64-NEXT:    vslideup.vi v20, v21, 1
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vslideup.vi v16, v18, 2
+; RV64-NEXT:    vslideup.vi v20, v22, 2
+; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64-NEXT:    vslideup.vi v16, v20, 4
+; RV64-NEXT:    addi a2, a1, 60
+; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v22, (a2)
+; RV64-NEXT:    addi a2, a1, 56
+; RV64-NEXT:    vle32.v v21, (a2)
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vslideup.vi v10, v11, 1
+; RV64-NEXT:    vslideup.vi v8, v9, 1
+; RV64-NEXT:    addi a2, a1, 52
+; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v23, (a2)
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vslideup.vi v14, v15, 1
+; RV64-NEXT:    vslideup.vi v12, v13, 1
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vslideup.vi v8, v10, 2
+; RV64-NEXT:    addi a2, a1, 48
+; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v20, (a2)
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vslideup.vi v12, v14, 2
+; RV64-NEXT:    addi a2, a1, 44
+; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v14, (a2)
+; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64-NEXT:    vslideup.vi v8, v12, 4
+; RV64-NEXT:    addi a2, a1, 40
+; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v13, (a2)
+; RV64-NEXT:    addi a2, a1, 36
+; RV64-NEXT:    vle32.v v15, (a2)
+; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; RV64-NEXT:    vslideup.vi v8, v16, 8
+; RV64-NEXT:    addi a2, a1, 32
+; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v12, (a2)
+; RV64-NEXT:    addi a2, a1, 28
+; RV64-NEXT:    vle32.v v17, (a2)
+; RV64-NEXT:    addi a2, a1, 24
+; RV64-NEXT:    vle32.v v18, (a2)
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vslideup.vi v13, v14, 1
+; RV64-NEXT:    vslideup.vi v12, v15, 1
+; RV64-NEXT:    addi a2, a1, 20
+; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v15, (a2)
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vslideup.vi v21, v22, 1
+; RV64-NEXT:    vslideup.vi v20, v23, 1
+; RV64-NEXT:    addi a2, a1, 12
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vslideup.vi v12, v13, 2
+; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v14, (a2)
+; RV64-NEXT:    addi a2, a1, 8
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vslideup.vi v20, v21, 2
+; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v19, (a2)
+; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64-NEXT:    vslideup.vi v12, v20, 4
+; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v16, (a1)
+; RV64-NEXT:    addi a2, a1, 4
+; RV64-NEXT:    vle32.v v20, (a2)
+; RV64-NEXT:    addi a2, a1, 16
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vslideup.vi v19, v14, 1
+; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v14, (a2)
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vslideup.vi v16, v20, 1
+; RV64-NEXT:    vslideup.vi v18, v17, 1
+; RV64-NEXT:    vslideup.vi v14, v15, 1
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vslideup.vi v16, v19, 2
+; RV64-NEXT:    vslideup.vi v14, v18, 2
+; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64-NEXT:    vslideup.vi v16, v14, 4
+; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; RV64-NEXT:    vslideup.vi v16, v12, 8
+; RV64-NEXT:    li a2, 32
+; RV64-NEXT:    addi a3, sp, 40
+; RV64-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; RV64-NEXT:    vslideup.vi v8, v16, 16
+; RV64-NEXT:    vle32.v v16, (a3)
+; RV64-NEXT:    vadd.vv v8, v8, v16
+; RV64-NEXT:    addi a1, a1, 64
+; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v16, (a1)
+; RV64-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; RV64-NEXT:    vse32.v v8, (a0)
+; RV64-NEXT:    addi a1, sp, 168
+; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v8, (a1)
+; RV64-NEXT:    vadd.vv v8, v16, v8
+; RV64-NEXT:    addi a0, a0, 128
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV64-NEXT:    vse32.v v8, (a0)
+; RV64-NEXT:    ret
+;
+; ZVE64F-LABEL: concat_loads_of_fixed_stack_args:
+; ZVE64F:       # %bb.0:
+; ZVE64F-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v18, v19, 1
+; ZVE64F-NEXT:    vslideup.vi v16, v17, 1
+; ZVE64F-NEXT:    vslideup.vi v22, v23, 1
+; ZVE64F-NEXT:    vslideup.vi v20, v21, 1
+; ZVE64F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v16, v18, 2
+; ZVE64F-NEXT:    vslideup.vi v20, v22, 2
+; ZVE64F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v16, v20, 4
+; ZVE64F-NEXT:    addi a2, a1, 60
+; ZVE64F-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vle32.v v22, (a2)
+; ZVE64F-NEXT:    addi a2, a1, 56
+; ZVE64F-NEXT:    vle32.v v21, (a2)
+; ZVE64F-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v10, v11, 1
+; ZVE64F-NEXT:    vslideup.vi v8, v9, 1
+; ZVE64F-NEXT:    addi a2, a1, 52
+; ZVE64F-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vle32.v v23, (a2)
+; ZVE64F-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v14, v15, 1
+; ZVE64F-NEXT:    vslideup.vi v12, v13, 1
+; ZVE64F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v8, v10, 2
+; ZVE64F-NEXT:    addi a2, a1, 48
+; ZVE64F-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vle32.v v20, (a2)
+; ZVE64F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v12, v14, 2
+; ZVE64F-NEXT:    addi a2, a1, 44
+; ZVE64F-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vle32.v v14, (a2)
+; ZVE64F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v8, v12, 4
+; ZVE64F-NEXT:    addi a2, a1, 40
+; ZVE64F-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vle32.v v13, (a2)
+; ZVE64F-NEXT:    addi a2, a1, 36
+; ZVE64F-NEXT:    vle32.v v15, (a2)
+; ZVE64F-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v8, v16, 8
+; ZVE64F-NEXT:    addi a2, a1, 32
+; ZVE64F-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vle32.v v12, (a2)
+; ZVE64F-NEXT:    addi a2, a1, 28
+; ZVE64F-NEXT:    vle32.v v17, (a2)
+; ZVE64F-NEXT:    addi a2, a1, 24
+; ZVE64F-NEXT:    vle32.v v18, (a2)
+; ZVE64F-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v13, v14, 1
+; ZVE64F-NEXT:    vslideup.vi v12, v15, 1
+; ZVE64F-NEXT:    addi a2, a1, 20
+; ZVE64F-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vle32.v v15, (a2)
+; ZVE64F-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v21, v22, 1
+; ZVE64F-NEXT:    vslideup.vi v20, v23, 1
+; ZVE64F-NEXT:    addi a2, a1, 12
+; ZVE64F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v12, v13, 2
+; ZVE64F-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vle32.v v14, (a2)
+; ZVE64F-NEXT:    addi a2, a1, 8
+; ZVE64F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v20, v21, 2
+; ZVE64F-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vle32.v v19, (a2)
+; ZVE64F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v12, v20, 4
+; ZVE64F-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vle32.v v16, (a1)
+; ZVE64F-NEXT:    addi a2, a1, 4
+; ZVE64F-NEXT:    vle32.v v20, (a2)
+; ZVE64F-NEXT:    addi a2, a1, 16
+; ZVE64F-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v19, v14, 1
+; ZVE64F-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vle32.v v14, (a2)
+; ZVE64F-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v16, v20, 1
+; ZVE64F-NEXT:    vslideup.vi v18, v17, 1
+; ZVE64F-NEXT:    vslideup.vi v14, v15, 1
+; ZVE64F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v16, v19, 2
+; ZVE64F-NEXT:    vslideup.vi v14, v18, 2
+; ZVE64F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v16, v14, 4
+; ZVE64F-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v16, v12, 8
+; ZVE64F-NEXT:    li a2, 32
+; ZVE64F-NEXT:    addi a3, sp, 40
+; ZVE64F-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; ZVE64F-NEXT:    vslideup.vi v8, v16, 16
+; ZVE64F-NEXT:    vle32.v v16, (a3)
+; ZVE64F-NEXT:    vadd.vv v8, v8, v16
+; ZVE64F-NEXT:    addi a1, a1, 64
+; ZVE64F-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vle32.v v16, (a1)
+; ZVE64F-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; ZVE64F-NEXT:    vse32.v v8, (a0)
+; ZVE64F-NEXT:    addi a1, sp, 168
+; ZVE64F-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; ZVE64F-NEXT:    vle32.v v8, (a1)
+; ZVE64F-NEXT:    vadd.vv v8, v16, v8
+; ZVE64F-NEXT:    addi a0, a0, 128
+; ZVE64F-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; ZVE64F-NEXT:    vse32.v v8, (a0)
+; ZVE64F-NEXT:    ret
+  %r = add <33 x i32> %a, %b
+  ret <33 x i32> %r
 }

@@ -13,31 +13,21 @@
 import sys, os
 from datetime import date
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-# sys.path.insert(0, os.path.abspath('.'))
+from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
+
+globals().update(common_conf(tags, markdown=Markdown.EXCEPT_MAN))
 
 # -- General configuration -----------------------------------------------------
 
-# If your documentation needs a minimal Sphinx version, state it here.
-# needs_sphinx = '1.0'
-
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["sphinx.ext.intersphinx", "sphinx.ext.todo", "sphinx_reredirects"]
+extensions += [
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.todo",
+    "sphinx_reredirects",
+]
 
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
-
-# The suffix of source filenames.
-source_suffix = ".rst"
-
-# The encoding of source files.
-# source_encoding = 'utf-8-sig'
-
-# The master toctree document.
-master_doc = "index"
+myst_enable_extensions += ["deflist"]
 
 # General information about the project.
 project = "libc"
@@ -64,7 +54,18 @@ today_fmt = "%Y-%m-%d"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build", "Helpers"]
+exclude_patterns = ["_build"]
+
+rst_prolog = """
+.. role::  raw-html(raw)
+    :format: html
+
+.. |check| replace:: :raw-html:`&#x2705`
+"""
+
+myst_substitutions = {
+    "check": "\N{WHITE HEAVY CHECK MARK}",
+}
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 # default_role = None
@@ -89,26 +90,15 @@ pygments_style = "friendly"
 
 # -- Options for HTML output ---------------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-# html_theme = 'haiku'
-html_theme = "alabaster"
-
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-html_theme_options = {
-    "font_size": "11pt",
-    # Don't generate any links to GitHub.
-    "github_button": "false",
-}
+configure_furo(
+    globals(),
+    source_directory="libc/docs/",
+    html_title="The LLVM C Library",
+    local_static_path=["_static"],
+)
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
-
-# The name for this set of Sphinx documents.  If None, it defaults to
-# "<project> v<release> documentation".
-html_title = "The LLVM C Library"
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 # html_short_title = None
@@ -122,11 +112,6 @@ html_title = "The LLVM C Library"
 # pixels large.
 # html_favicon = None
 
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
-#
 # html_context = {
 #    'css_files': [
 #        '_static/libc.css'

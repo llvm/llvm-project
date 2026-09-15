@@ -5,7 +5,7 @@
 ; RUN: llc < %s -ppc-vsr-nums-as-vr -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:       -verify-machineinstrs -ppc-asm-full-reg-names -mcpu=pwr8 -relocation-model=pic \
 ; RUN:       | FileCheck %s -check-prefix=CHECK-LE
-; RUN: llc < %s -vec-extabi -mtriple=powerpc64-ibm-aix-xcoff \
+; RUN: llc < %s -vec-extabi -mtriple=powerpc64-ibm-aix-xcoff --code-model=small \
 ; RUN:       -verify-machineinstrs -mcpu=pwr8 \
 ; RUN:       | FileCheck %s -check-prefix=CHECK-AIX
 

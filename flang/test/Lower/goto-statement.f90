@@ -1,11 +1,11 @@
-! RUN: bbc %s -emit-fir -hlfir=false -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 ! Test trivial goto statement
 subroutine sub1()
 goto 1
 1 stop
 end subroutine
-! CHECK-LABEL: sub1
+! CHECK-LABEL: func.func @_QPsub1() {
 ! CHECK:   cf.br ^[[BB1:.*]]
 ! CHECK: ^[[BB1]]:
 ! CHECK:   {{.*}} fir.call @_FortranAStopStatement({{.*}}, {{.*}}, {{.*}}) {{.*}}: (i32, i1, i1) -> ()
@@ -18,7 +18,7 @@ goto 1
 2 goto 3
 3 stop
 end subroutine
-! CHECK-LABEL: sub2
+! CHECK-LABEL: func.func @_QPsub2() {
 ! CHECK:   cf.br ^[[BB1:.*]]
 ! CHECK: ^[[BB1]]:
 ! CHECK:   cf.br ^[[BB2:.*]]
@@ -35,7 +35,7 @@ pause
 2 stop
 3 goto 2
 end subroutine
-! CHECK: sub3
+! CHECK-LABEL: func.func @_QPsub3() {
 ! CHECK:   {{.*}} fir.call @_FortranAPauseStatement() {{.*}}: () -> ()
 ! CHECK:   cf.br ^[[BB2:.*]]
 ! CHECK: ^[[BB1:.*]]: //
@@ -54,7 +54,7 @@ pause
 3 goto 1
 pause
 end subroutine
-! CHECK-LABEL: sub4
+! CHECK-LABEL: func.func @_QPsub4() {
 ! CHECK:   {{.*}} fir.call @_FortranAPauseStatement() {{.*}}: () -> ()
 ! CHECK-NEXT:   cf.br ^[[BB1:.*]]
 ! CHECK-NEXT: ^[[BB1]]:

@@ -18,7 +18,7 @@ loop:
 ; CHECK: loop
 ; CHECK-NEXT: %x_loop = phi double [ %x, %entry ], [ %x_exp, %loop ]
 ; CHECK-NEXT: %x_exp = call double @ldexp(double %x_loop, i32 5)
-; CHECK-NEXT: %done = fcmp ogt double %x_exp, 1.5
+; CHECK-NEXT: %done = fcmp ogt double %x_exp, 1.500000e+00
 ; WITHLDEXPF-NEXT: call void @do_safepoint
 ; CHECK-NEXT: br
   %x_loop = phi double [ %x, %entry ], [ %x_exp, %loop ]

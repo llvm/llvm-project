@@ -404,7 +404,7 @@ struct ByteCodeWriter {
                 [](Type) { return PDLValue::Kind::Attribute; })
             .Case<pdl::OperationType>(
                 [](Type) { return PDLValue::Kind::Operation; })
-            .Case<pdl::RangeType>([](pdl::RangeType rangeTy) {
+            .Case([](pdl::RangeType rangeTy) {
               if (isa<pdl::TypeType>(rangeTy.getElementType()))
                 return PDLValue::Kind::TypeRange;
               return PDLValue::Kind::ValueRange;
@@ -1741,6 +1741,36 @@ void ByteCodeExecutor::executeForEach() {
     selectJump(size_t(0));
     return;
   }
+  case PDLValue::Kind::Value: {
+    unsigned &index = loopIndex[read()];
+    ValueRange range = valueRangeMemory[rangeIndex];
+    assert(index <= range.size() && "iterated past the end");
+    if (index < range.size()) {
+      LLVM_DEBUG(llvm::dbgs() << "  * Result: " << range[index] << "\n");
+      value = range[index].getAsOpaquePointer();
+      break;
+    }
+
+    LLVM_DEBUG(llvm::dbgs() << "  * Done\n");
+    index = 0;
+    selectJump(size_t(0));
+    return;
+  }
+  case PDLValue::Kind::Type: {
+    unsigned &index = loopIndex[read()];
+    TypeRange range = typeRangeMemory[rangeIndex];
+    assert(index <= range.size() && "iterated past the end");
+    if (index < range.size()) {
+      LLVM_DEBUG(llvm::dbgs() << "  * Result: " << range[index] << "\n");
+      value = range[index].getAsOpaquePointer();
+      break;
+    }
+
+    LLVM_DEBUG(llvm::dbgs() << "  * Done\n");
+    index = 0;
+    selectJump(size_t(0));
+    return;
+  }
   default:
     llvm_unreachable("unexpected `ForEach` value kind");
   }
@@ -1758,7 +1788,9 @@ void ByteCodeExecutor::executeGetAttribute() {
   unsigned memIndex = read();
   Operation *op = read<Operation *>();
   StringAttr attrName = read<StringAttr>();
-  Attribute attr = op->getAttr(attrName);
+  Attribute attr = op->getDiscardableAttr(attrName);
+  if (op->getPropertiesStorageSize())
+    attr = op->getInherentAttr(attrName).value_or(attr);
 
   LDBG() << "  * Operation: " << *op << "\n  * Attribute: " << attrName
          << "\n  * Result: " << attr;
@@ -1827,7 +1859,8 @@ executeGetOperandsResults(RangeT values, Operation *op, unsigned index,
   } else if (op->hasTrait<AttrSizedSegmentsT>()) {
     LDBG() << "  * Extracting values from `" << attrSizedSegments << "`";
 
-    auto segmentAttr = op->getAttrOfType<DenseI32ArrayAttr>(attrSizedSegments);
+    auto segmentAttr = dyn_cast_or_null<DenseI32ArrayAttr>(
+        op->getInherentAttr(attrSizedSegments).value_or(Attribute{}));
     if (!segmentAttr || segmentAttr.asArrayRef().size() <= index)
       return nullptr;
 
@@ -2045,7 +2078,7 @@ void ByteCodeExecutor::executeSwitchAttribute() {
 void ByteCodeExecutor::executeSwitchOperandCount() {
   LDBG() << "Executing SwitchOperandCount:";
   Operation *op = read<Operation *>();
-  auto cases = read<DenseIntOrFPElementsAttr>().getValues<uint32_t>();
+  auto cases = read<DenseTypedElementsAttr>().getValues<uint32_t>();
 
   LDBG() << "  * Operation: " << *op;
   handleSwitch(op->getNumOperands(), cases);
@@ -2082,7 +2115,7 @@ void ByteCodeExecutor::executeSwitchOperationName() {
 void ByteCodeExecutor::executeSwitchResultCount() {
   LDBG() << "Executing SwitchResultCount:";
   Operation *op = read<Operation *>();
-  auto cases = read<DenseIntOrFPElementsAttr>().getValues<uint32_t>();
+  auto cases = read<DenseTypedElementsAttr>().getValues<uint32_t>();
 
   LDBG() << "  * Operation: " << *op;
   handleSwitch(op->getNumResults(), cases);

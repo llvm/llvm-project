@@ -20,8 +20,7 @@ define i32 @test(i1 %c.1, ptr %src) {
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[P]], [[T]]
 ; CHECK-NEXT:    [[ZEXT_OR:%.*]] = zext i1 [[OR]] to i32
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw i32 [[LSR_IV]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LSR_IV_NEXT]], -1
-; CHECK-NEXT:    [[LOOP_HEADER_TERMCOND:%.*]] = icmp sgt i32 [[TMP0]], -1050
+; CHECK-NEXT:    [[LOOP_HEADER_TERMCOND:%.*]] = icmp sgt i32 [[LSR_IV]], -1050
 ; CHECK-NEXT:    br i1 [[LOOP_HEADER_TERMCOND]], label [[LOOP_HEADER]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[ZEXT_OR_LCSSA:%.*]] = phi i32 [ [[ZEXT_OR]], [[LOOP_LATCH]] ]

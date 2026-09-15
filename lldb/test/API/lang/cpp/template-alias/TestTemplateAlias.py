@@ -5,6 +5,8 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestTemplateAlias(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self, extra_flags):
         self.build(dictionary=extra_flags)
         self.main_source_file = lldb.SBFileSpec("main.cpp")
@@ -20,6 +22,8 @@ class TestTemplateAlias(TestBase):
         self.expect_expr("bf2", result_type="Bar<double>")
         self.expect_expr("cbf1", result_type="Container<int>")
 
+    @skipIf(compiler="clang", compiler_version=["<", "21"])
+    @skipIf(compiler=no_match("clang"))
     @expectedFailureAll(
         bugnumber="LLDB doesn't reconstruct template alias names from template parameters"
     )
@@ -28,6 +32,8 @@ class TestTemplateAlias(TestBase):
             dict(CXXFLAGS_EXTRAS="-gdwarf-5 -gtemplate-alias -gsimple-template-names")
         )
 
+    @skipIf(compiler="clang", compiler_version=["<", "21"])
+    @skipIf(compiler=no_match("clang"))
     def test_tag_alias_no_simple(self):
         self.do_test(
             dict(
@@ -35,6 +41,8 @@ class TestTemplateAlias(TestBase):
             )
         )
 
+    @skipIf(compiler="clang", compiler_version=["<", "21"])
+    @skipIf(compiler=no_match("clang"))
     def test_no_tag_alias_simple(self):
         self.do_test(
             dict(
@@ -42,6 +50,8 @@ class TestTemplateAlias(TestBase):
             )
         )
 
+    @skipIf(compiler="clang", compiler_version=["<", "21"])
+    @skipIf(compiler=no_match("clang"))
     def test_no_tag_alias_no_simple(self):
         self.do_test(
             dict(

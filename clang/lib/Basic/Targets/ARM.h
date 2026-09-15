@@ -173,13 +173,9 @@ public:
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override;
+  bool setCPU(StringRef Name) override;
 
   bool setFPMath(StringRef Name) override;
-
-  bool useFP16ConversionIntrinsics() const override {
-    return false;
-  }
 
   void getTargetDefinesARMV81A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;

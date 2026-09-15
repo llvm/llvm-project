@@ -218,7 +218,15 @@ constexpr bool test_ref() {
 
     assert(*o2 == 44);
   }
-  // Test & overload
+
+  {
+    int i   = 42;
+    float k = 4.0f;
+    std::optional<int&> opt{i};
+    std::same_as<std::optional<float>> decltype(auto) o2 = opt.transform([&](int&) { return k; });
+    assert(*o2 == 4.0f);
+  }
+
   {
     // Without & qualifier on F's operator()
     {
@@ -239,12 +247,11 @@ constexpr bool test_ref() {
       assert(*o3 == 1);
     }
   }
-  // const& overload
   {
     // Without & qualifier on F's operator()
     {
       int i = 42;
-      std::optional<const int&> opt{i};
+      const std::optional<const int&> opt{i};
       std::same_as<std::optional<int>> decltype(auto) o3 = std::as_const(opt).transform(CLVal{});
 
       assert(*o3 == 1);
@@ -266,8 +273,8 @@ constexpr bool test_ref() {
     // Without & qualifier on F's operator()
     {
       int i = 42;
-      std::optional<int> opt{i};
-      std::same_as<std::optional<int>> decltype(auto) o3 = std::move(opt).transform(RVal{});
+      std::optional<int&> opt{i};
+      std::same_as<std::optional<int>> decltype(auto) o3 = std::move(opt).transform(LVal{});
 
       assert(*o3 == 1);
     }
@@ -286,9 +293,9 @@ constexpr bool test_ref() {
     //With & qualifier on F's operator()
     {
       int i = 42;
-      std::optional<int&> opt{i};
+      const std::optional<int&> opt{i};
       const RVCRefQual rvc{};
-      std::same_as<std::optional<int>> decltype(auto) o3 = opt.transform(std::move(rvc));
+      std::same_as<std::optional<int>> decltype(auto) o3 = std::move(opt).transform(std::move(rvc));
       assert(*o3 == 1);
     }
   }
@@ -297,6 +304,56 @@ constexpr bool test_ref() {
     auto o6r               = o6.transform([](int) { return 42; });
     assert(!o6r);
   }
+
+  {
+    int i = 42;
+    int j{43};
+
+    auto func = [&j](int&) -> int& { return j; };
+
+    std::optional<int&> opt{i};
+    std::same_as<std::optional<int&>> decltype(auto) o = opt.transform(func);
+    assert(o == j);
+    assert(&(*o) == &j);
+
+    std::same_as<std::optional<int&>> decltype(auto) o2 = std::as_const(opt).transform(func);
+    assert(o2 == j);
+    assert(&(*o2) == &j);
+  }
+
+  // optional<T> -> optional<T&>, https://llvm.org/PR220332
+  { // &, &&
+    int i = 42;
+    int j = 43;
+    int k = 44;
+
+    std::optional<int> opt{i};
+
+    std::same_as<std::optional<int&>> decltype(auto) o = opt.transform([&](auto) -> int& { return j; });
+    assert(o == 43);
+    assert(&(*o) == &j);
+
+    std::same_as<std::optional<int&>> decltype(auto) o2 = std::move(opt).transform([&](auto) -> int& { return k; });
+    assert(o2 == 44);
+    assert(&(*o2) == &k);
+  }
+
+  { // const&, const&&
+    int i = 42;
+    int j = 43;
+    int k = 44;
+
+    const std::optional<int> opt{i};
+
+    std::same_as<std::optional<int&>> decltype(auto) o = opt.transform([&](auto) -> int& { return j; });
+    assert(o == 43);
+    assert(&(*o) == &j);
+
+    std::same_as<std::optional<int&>> decltype(auto) o2 = std::move(opt).transform([&](auto) -> int& { return k; });
+    assert(o2 == 44);
+    assert(&(*o2) == &k);
+  }
+
   return true;
 }
 #endif

@@ -131,6 +131,11 @@ public:
   /// retrieve them from the cache.
   const SetVector<Value> &findDefinitionsCached(OpOperand *opOperand);
 
+  /// Return whether `uRead` and `uConflictingWrite` are non-conflicting
+  /// subsets, with caching.
+  bool areNonConflictingSubsetsCached(OpOperand *uRead,
+                                      OpOperand *uConflictingWrite);
+
   /// Reset cached data structures.
   void resetCache() override;
 
@@ -232,6 +237,11 @@ private:
   /// Cache definitions of tensor values.
   DenseMap<Value, SetVector<Value>> cachedDefinitions;
 
+  /// Cache results of areNonConflictingSubsets checks. The bool value is `true`
+  /// if the operands are non-conflicting subsets, `false` if they are
+  /// conflicting. The absence of an entry means uncached.
+  DenseMap<std::pair<OpOperand *, OpOperand *>, bool> nonConflictingSubsetCache;
+
   /// Set of all OpResults that were decided to bufferize in-place.
   llvm::DenseSet<OpOperand *> inplaceBufferized;
 
@@ -261,6 +271,12 @@ private:
   /// Only one extension of any given type is allowed.
   DenseMap<TypeID, std::unique_ptr<Extension>> extensions;
 };
+
+/// Perform various checks on the input IR to see if it contains IR constructs
+/// that are unsupported by One-Shot Bufferize.
+LogicalResult checkPreBufferizationAssumptions(Operation *op,
+                                               const DominanceInfo &domInfo,
+                                               OneShotAnalysisState &state);
 
 /// Analyze `op` and its nested ops. Bufferization decisions are stored in
 /// `state`.

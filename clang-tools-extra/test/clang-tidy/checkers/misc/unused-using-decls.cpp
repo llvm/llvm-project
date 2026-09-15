@@ -168,9 +168,7 @@ using n::K;
 
 using n::N;
 
-// FIXME: Currently non-type template arguments are not supported.
 using n::Constant;
-// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: using decl 'Constant' is unused
 
 using n::Q;
 

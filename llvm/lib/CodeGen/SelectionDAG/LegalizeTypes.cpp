@@ -120,10 +120,8 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
           Mapped |= 64;
         if (WidenedVectors.count(ResId))
           Mapped |= 128;
-        if (PromotedFloats.count(ResId))
-          Mapped |= 256;
         if (SoftPromotedHalfs.count(ResId))
-          Mapped |= 512;
+          Mapped |= 256;
       }
 
       if (Node.getNodeId() != Processed) {
@@ -176,8 +174,6 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
         if (Mapped & 128)
           dbgs() << " WidenedVectors";
         if (Mapped & 256)
-          dbgs() << " PromotedFloats";
-        if (Mapped & 512)
           dbgs() << " SoftPromoteHalfs";
         dbgs() << "\n";
         llvm_unreachable(nullptr);
@@ -288,10 +284,6 @@ bool DAGTypeLegalizer::run() {
         WidenVectorResult(N, i);
         Changed = true;
         goto NodeDone;
-      case TargetLowering::TypePromoteFloat:
-        PromoteFloatResult(N, i);
-        Changed = true;
-        goto NodeDone;
       case TargetLowering::TypeSoftPromoteHalf:
         SoftPromoteHalfResult(N, i);
         Changed = true;
@@ -349,10 +341,6 @@ ScanOperands:
         break;
       case TargetLowering::TypeWidenVector:
         NeedsReanalyzing = WidenVectorOperand(N, i);
-        Changed = true;
-        break;
-      case TargetLowering::TypePromoteFloat:
-        NeedsReanalyzing = PromoteFloatOperand(N, i);
         Changed = true;
         break;
       case TargetLowering::TypeSoftPromoteHalf:
@@ -695,6 +683,12 @@ void DAGTypeLegalizer::ReplaceValueWith(SDValue From, SDValue To) {
           auto OldValId = getTableId(OldVal);
           auto NewValId = getTableId(NewVal);
           DAG.ReplaceAllUsesOfValueWith(OldVal, NewVal);
+          // Re-remap ids after RAUW, since the call above may have caused
+          // nodes to be deleted (via CSE), triggering NoteDeletion callbacks
+          // that added new entries to ReplacedValues. Without re-remapping,
+          // we could create a cycle like A -> B -> A.
+          RemapId(OldValId);
+          RemapId(NewValId);
           if (OldValId != NewValId)
             ReplacedValues[OldValId] = NewValId;
         }
@@ -732,17 +726,6 @@ void DAGTypeLegalizer::SetSoftenedFloat(SDValue Op, SDValue Result) {
 
   auto &OpIdEntry = SoftenedFloats[getTableId(Op)];
   assert((OpIdEntry == 0) && "Node is already converted to integer!");
-  OpIdEntry = getTableId(Result);
-}
-
-void DAGTypeLegalizer::SetPromotedFloat(SDValue Op, SDValue Result) {
-  assert(Result.getValueType() ==
-         TLI.getTypeToTransformTo(*DAG.getContext(), Op.getValueType()) &&
-         "Invalid type for promoted float");
-  AnalyzeNewValue(Result);
-
-  auto &OpIdEntry = PromotedFloats[getTableId(Op)];
-  assert((OpIdEntry == 0) && "Node is already promoted!");
   OpIdEntry = getTableId(Result);
 }
 

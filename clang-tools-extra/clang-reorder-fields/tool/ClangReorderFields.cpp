@@ -53,7 +53,7 @@ int main(int argc, const char **argv) {
   auto ExpectedParser = tooling::CommonOptionsParser::create(
       argc, argv, ClangReorderFieldsCategory, cl::OneOrMore, Usage);
   if (!ExpectedParser) {
-    llvm::errs() << ExpectedParser.takeError();
+    llvm::errs() << llvm::toString(ExpectedParser.takeError());
     return 1;
   }
 

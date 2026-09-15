@@ -44,7 +44,7 @@ bb1:
   Function *F = M->getFunction("foo");
   auto &Entry = F->getEntryBlock();
   auto &I = Entry.front();
-  auto *Branch = dyn_cast<BranchInst>(&I);
+  auto *Branch = dyn_cast<CondBrInst>(&I);
   EXPECT_NE(nullptr, Branch);
   auto *ProfileData = Branch->getMetadata(LLVMContext::MD_prof);
   EXPECT_NE(ProfileData, nullptr);
@@ -72,7 +72,7 @@ bb1:
   Function *F = M->getFunction("foo");
   auto &Entry = F->getEntryBlock();
   auto &I = Entry.front();
-  auto *Branch = dyn_cast<BranchInst>(&I);
+  auto *Branch = dyn_cast<CondBrInst>(&I);
   EXPECT_NE(nullptr, Branch);
   auto *ProfileData = Branch->getMetadata(LLVMContext::MD_prof);
   EXPECT_EQ(ProfileData, nullptr);

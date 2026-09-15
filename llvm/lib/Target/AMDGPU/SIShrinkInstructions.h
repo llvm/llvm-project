@@ -14,7 +14,7 @@
 namespace llvm {
 
 class SIShrinkInstructionsPass
-    : public PassInfoMixin<SIShrinkInstructionsPass> {
+    : public OptionalPassInfoMixin<SIShrinkInstructionsPass> {
 public:
   SIShrinkInstructionsPass() = default;
   PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &);

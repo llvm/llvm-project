@@ -1,6 +1,6 @@
 // RUN: rm -rf %t.dir/Headers
 // RUN: mkdir -p %t.dir/Headers
-// RUN: cp -r %S/Inputs/restrict-system-includes %t.dir/Headers/portability-restrict-system-includes
+// RUN: cp -R %S/Inputs/restrict-system-includes %t.dir/Headers/portability-restrict-system-includes
 // RUN: %check_clang_tidy -std=c++11 %s portability-restrict-system-includes %t \
 // RUN:   -- -config="{CheckOptions: {portability-restrict-system-includes.Includes: 'transitive.h,s.h'}}" \
 // RUN:   -system-headers -header-filter=.* \

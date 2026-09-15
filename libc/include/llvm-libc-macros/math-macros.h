@@ -27,6 +27,7 @@
 #define MATH_ERREXCEPT 2
 
 #define HUGE_VAL __builtin_huge_val()
+#define HUGE_VALL __builtin_huge_vall()
 #define HUGE_VALF __builtin_huge_valf()
 #define INFINITY __builtin_inff()
 #define NAN __builtin_nanf("")
@@ -44,8 +45,8 @@
 
 // Math error handling. Target support is assumed to be existent unless
 // explicitly disabled.
-#if defined(__NVPTX__) || defined(__AMDGPU__) || defined(__FAST_MATH__) ||     \
-    defined(__NO_MATH_ERRNO__)
+#if defined(__NVPTX__) || defined(__AMDGPU__) || defined(__SPIRV__) ||         \
+    defined(__FAST_MATH__) || defined(__NO_MATH_ERRNO__)
 #define __LIBC_SUPPORTS_MATH_ERRNO 0
 #else
 #define __LIBC_SUPPORTS_MATH_ERRNO 1

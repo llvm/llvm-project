@@ -26,7 +26,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
     -fno-omit-frame-pointer # This allows us to sniff out the thread args from
-                            # the new thread's stack reliably.
+  # the new thread's stack reliably.
 )
 
 add_entrypoint_object(
@@ -118,6 +118,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mtx_trylock
+  SRCS
+    mtx_trylock.cpp
+  HDRS
+    mtx_trylock.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.mutex
+)
+
+add_entrypoint_object(
   mtx_unlock
   SRCS
     mtx_unlock.cpp
@@ -191,6 +202,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.cnd_wait
+)
+
+add_entrypoint_object(
+  cnd_timedwait
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.cnd_timedwait
 )
 
 add_entrypoint_object(

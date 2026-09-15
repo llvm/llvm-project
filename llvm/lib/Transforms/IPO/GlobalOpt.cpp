@@ -567,7 +567,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   }
 
   // Some accesses go beyond the end of the global, don't bother.
-  if (Offset > DL.getTypeAllocSize(GV->getValueType()))
+  if (Offset > GV->getGlobalSize(DL))
     return nullptr;
 
   LLVM_DEBUG(dbgs() << "PERFORMING GLOBAL SRA ON: " << *GV << "\n");
@@ -769,10 +769,11 @@ static void allUsesOfLoadAndStores(GlobalVariable *GV,
   }
 }
 
-static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
+static bool OptimizeAwayTrappingUsesOfValue(Instruction *V, Constant *NewV) {
   bool Changed = false;
-  for (auto UI = V->user_begin(), E = V->user_end(); UI != E; ) {
-    Instruction *I = cast<Instruction>(*UI++);
+  SmallVector<User *, 8> Users(V->user_begin(), V->user_end());
+  for (User *U : Users) {
+    Instruction *I = cast<Instruction>(U);
     // Uses are non-trapping if null pointer is considered valid.
     // Non address-space 0 globals are already pruned by the caller.
     if (NullPointerIsDefined(I->getFunction()))
@@ -792,17 +793,9 @@ static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
         // that the pointer is not also being passed as an argument.
         CB->setCalledOperand(NewV);
         Changed = true;
-        bool PassedAsArg = false;
         for (unsigned i = 0, e = CB->arg_size(); i != e; ++i)
-          if (CB->getArgOperand(i) == V) {
-            PassedAsArg = true;
+          if (CB->getArgOperand(i) == V)
             CB->setArgOperand(i, NewV);
-          }
-
-        if (PassedAsArg) {
-          // Being passed as an argument also.  Be careful to not invalidate UI!
-          UI = V->user_begin();
-        }
       }
     } else if (AddrSpaceCastInst *CI = dyn_cast<AddrSpaceCastInst>(I)) {
       Changed |= OptimizeAwayTrappingUsesOfValue(
@@ -865,15 +858,6 @@ static bool OptimizeAwayTrappingUsesOfLoads(
              "Must be storing *to* the global");
     } else {
       AllNonStoreUsesGone = false;
-
-      // If we get here we could have other crazy uses that are transitively
-      // loaded.
-      assert((isa<PHINode>(GlobalUser) || isa<SelectInst>(GlobalUser) ||
-              isa<ConstantExpr>(GlobalUser) || isa<CmpInst>(GlobalUser) ||
-              isa<BitCastInst>(GlobalUser) ||
-              isa<GetElementPtrInst>(GlobalUser) ||
-              isa<AddrSpaceCastInst>(GlobalUser)) &&
-             "Only expect load and stores!");
     }
   }
 
@@ -1229,8 +1213,7 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
         DIGlobalVariable *DGV = GVe->getVariable();
         DIExpression *E = GVe->getExpression();
         const DataLayout &DL = GV->getDataLayout();
-        unsigned SizeInOctets =
-            DL.getTypeAllocSizeInBits(NewGV->getValueType()) / 8;
+        unsigned SizeInOctets = NewGV->getGlobalSize(DL);
 
         // It is expected that the address of global optimized variable is on
         // top of the stack. After optimization, value of that variable will
@@ -1356,7 +1339,7 @@ deleteIfDead(GlobalValue &GV,
     if (DeleteFnCallback)
       DeleteFnCallback(*F);
   }
-  ReplaceableMetadataImpl::SalvageDebugInfo(GV);
+  ReplaceableUses::SalvageDebugInfo(GV);
   GV.eraseFromParent();
   ++NumDeleted;
   return true;
@@ -1585,8 +1568,8 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     // shared memory (AS 3).
     auto *SOVConstant = dyn_cast<Constant>(StoredOnceValue);
     if (SOVConstant && isa<UndefValue>(GV->getInitializer()) &&
-        DL.getTypeAllocSize(SOVConstant->getType()) ==
-            DL.getTypeAllocSize(GV->getValueType()) &&
+        DL.getTypeAllocSize(SOVConstant->getType()).getFixedValue() ==
+            GV->getGlobalSize(DL) &&
         CanHaveNonUndefGlobalInitializer) {
       if (SOVConstant->getType() == GV->getValueType()) {
         // Change the initializer in place.
@@ -1718,6 +1701,9 @@ static bool hasChangeableCCImpl(Function *F) {
 
   // FIXME: Is it worth transforming x86_stdcallcc and x86_fastcallcc?
   if (CC != CallingConv::C && CC != CallingConv::X86_ThisCall)
+    return false;
+
+  if (!F->canChangeSignature())
     return false;
 
   if (F->isVarArg())
@@ -1984,6 +1970,10 @@ OptimizeFunctions(Module &M,
     if (!F.hasLocalLinkage())
       continue;
 
+    // Ensure function definition is available for interprocedural analysis.
+    if (!F.isDefinitionExact())
+      continue;
+
     // If we have an inalloca parameter that we can safely remove the
     // inalloca attribute from, do so. This unlocks optimizations that
     // wouldn't be safe in the presence of inalloca.
@@ -2062,16 +2052,16 @@ OptimizeGlobalVars(Module &M,
     if (!GV.hasName() && !GV.isDeclaration() && !GV.hasLocalLinkage())
       GV.setLinkage(GlobalValue::InternalLinkage);
     // Simplify the initializer.
-    if (GV.hasInitializer())
-      if (auto *C = dyn_cast<Constant>(GV.getInitializer())) {
-        auto &DL = M.getDataLayout();
-        // TLI is not used in the case of a Constant, so use default nullptr
-        // for that optional parameter, since we don't have a Function to
-        // provide GetTLI anyway.
-        Constant *New = ConstantFoldConstant(C, DL, /*TLI*/ nullptr);
-        if (New != C)
-          GV.setInitializer(New);
-      }
+    if (GV.hasInitializer()) {
+      const Constant *C = GV.getInitializer();
+      auto &DL = M.getDataLayout();
+      // TLI is not used in the case of a Constant, so use default nullptr
+      // for that optional parameter, since we don't have a Function to
+      // provide GetTLI anyway.
+      Constant *New = ConstantFoldConstant(C, DL, /*TLI*/ nullptr);
+      if (New != C)
+        GV.setInitializer(New);
+    }
 
     if (deleteIfDead(GV, NotDiscardableComdats)) {
       Changed = true;
@@ -2369,8 +2359,7 @@ FindAtExitLibFunc(Module &M,
   TLI = &GetTLI(*Fn);
 
   // Make sure that the function has the correct prototype.
-  LibFunc F;
-  if (!TLI->getLibFunc(*Fn, F) || F != Func)
+  if (TLI->getLibFunc(*Fn) != Func)
     return nullptr;
 
   return Fn;

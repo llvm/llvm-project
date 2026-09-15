@@ -13,15 +13,50 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0PLUGIN_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0PLUGIN_H
 
-#include "AsyncQueue.h"
-#include "L0Defs.h"
 #include "L0Device.h"
 #include "L0Memory.h"
 #include "L0Options.h"
 #include "L0Program.h"
-#include "TLS.h"
+#include "L0Queue.h"
 
 namespace llvm::omp::target::plugin {
+
+/// Plugin-side context for Level Zero. Owns a ze_context_handle_t that is
+/// scoped to the set of devices grouped by the user through olCreateContext.
+class LevelZeroPluginContextTy final : public PluginContextTy {
+public:
+  LevelZeroPluginContextTy(GenericPluginTy &Plugin,
+                           llvm::ArrayRef<GenericDeviceTy *> Devices,
+                           ze_driver_handle_t Driver,
+                           ze_context_handle_t ZeContext, bool OwnsZeContext)
+      : PluginContextTy(Plugin, Devices), Driver(Driver), ZeContext(ZeContext),
+        OwnsZeContext(OwnsZeContext), QueueCache(*this) {}
+
+  ~LevelZeroPluginContextTy() override = default;
+
+  Error deinit() override;
+
+  ze_driver_handle_t getZeDriver() const { return Driver; }
+  ze_context_handle_t getZeContext() const { return ZeContext; }
+
+  Error initAsyncInfoImpl(GenericDeviceTy &Device,
+                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+
+  /// Pop an idle queue for \p Device from the cache, or create a new one.
+  Expected<L0QueueTy *> takeCachedQueue(L0DeviceTy *Device) {
+    return QueueCache.getQueue(*Device);
+  }
+
+  /// Return an idle queue to the cache.
+  void returnCachedQueue(L0QueueTy *Queue) { QueueCache.releaseQueue(Queue); }
+
+private:
+  ze_driver_handle_t Driver;
+  ze_context_handle_t ZeContext;
+  bool OwnsZeContext;
+
+  L0QueueCacheTy QueueCache;
+};
 
 /// Class implementing the LevelZero specific functionalities of the plugin.
 class LevelZeroPluginTy final : public GenericPluginTy {
@@ -36,20 +71,11 @@ private:
   /// Context (and Driver) specific data.
   std::list<L0ContextTy> ContextList;
 
-  // Table containing per-thread information using TLS.
-  L0ThreadTblTy ThreadTLSTable;
-  // Table containing per-thread information for each device using TLS.
-  L0DeviceTLSTableTy DeviceTLSTable;
   // Table containing per-thread information for each Context using TLS.
   L0ContextTLSTableTy ContextTLSTable;
 
-  /// L0 plugin global options.
-  static L0OptionsTy Options;
-
-  /// Common pool of AsyncQueue.
-  AsyncQueuePoolTy AsyncQueuePool;
-
-  L0ThreadTLSTy &getTLS() { return ThreadTLSTable.get(); }
+  /// L0 plugin options.
+  L0OptionsTy Options;
 
   /// Find L0 devices and initialize device properties.
   /// Returns number of devices reported to omptarget.
@@ -59,14 +85,11 @@ public:
   LevelZeroPluginTy() : GenericPluginTy(getTripleArch()) {}
   virtual ~LevelZeroPluginTy() = default;
 
-  L0DeviceTLSTy &getDeviceTLS(int32_t DeviceId) {
-    return DeviceTLSTable.get(DeviceId);
-  }
   L0ContextTLSTy &getContextTLS(ze_context_handle_t Context) {
     return ContextTLSTable.get(Context);
   }
 
-  static const L0OptionsTy &getOptions() { return Options; }
+  const L0OptionsTy &getOptions() { return Options; }
 
   const L0DeviceTy &getDeviceFromId(int32_t DeviceId) const {
     return static_cast<const L0DeviceTy &>(getDevice(DeviceId));
@@ -75,27 +98,15 @@ public:
     return static_cast<L0DeviceTy &>(getDevice(DeviceId));
   }
 
-  AsyncQueueTy *getAsyncQueue() {
-    auto *Queue = getTLS().getAsyncQueue();
-    if (!Queue)
-      Queue = AsyncQueuePool.get();
-    return Queue;
-  }
-
-  void releaseAsyncQueue(AsyncQueueTy *Queue) {
-    if (!Queue)
-      return;
-    Queue->reset();
-    if (!getTLS().releaseAsyncQueue(Queue))
-      AsyncQueuePool.release(Queue);
-  }
-
   // Plugin interface.
   Expected<int32_t> initImpl() override;
   Error deinitImpl() override;
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override;
   GenericGlobalHandlerTy *createGlobalHandler() override;
+
+  Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) override;
 
   uint16_t getMagicElfBits() const override { return ELF::EM_INTELGT; }
   Triple::ArchType getTripleArch() const override { return Triple::spirv64; }
@@ -107,6 +118,8 @@ public:
   Error flushQueueImpl(omp_interop_val_t *Interop) override;
   Error syncBarrierImpl(omp_interop_val_t *Interop) override;
   Error asyncBarrierImpl(omp_interop_val_t *Interop) override;
+
+  Expected<bool> isImageCompatible(StringRef Image) const override;
 };
 
 } // namespace llvm::omp::target::plugin

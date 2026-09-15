@@ -7,9 +7,10 @@ RUN: %cpp_compiler %S/ShrinkControlFlowTest.cpp -o %t-ShrinkControlFlowTest
 RUN: %run %t-ShrinkControlFlowSimpleTest  -exit_on_item=0eb8e4ed029b774d80f2b66408203801cb982a60   -runs=10000000 %t/C 2>&1 | FileCheck %s
 CHECK: INFO: found item with checksum '0eb8e4ed029b774d80f2b66408203801cb982a60'
 
-# Test that reduce_inputs deletes redundant files in the corpus.
+# Test that reduce_inputs deletes redundant files in the corpus (note reduce_inputs=1 by default).
 RUN: %run %t-ShrinkControlFlowSimpleTest -runs=0 %t/C 2>&1 | FileCheck %s --check-prefix=COUNT
-COUNT: seed corpus: files: 4
+# Allow 3 or 4 - sometimes the fuzzer gets lucky and gets straight from "F." to "FUZ", skipping "FU"
+COUNT: seed corpus: files: {{3|4}}
 
 # a bit longer test
 RUN: %run %t-ShrinkControlFlowTest  -exit_on_item=0eb8e4ed029b774d80f2b66408203801cb982a60  -seed=42 -runs=10000000  2>&1 | FileCheck %s

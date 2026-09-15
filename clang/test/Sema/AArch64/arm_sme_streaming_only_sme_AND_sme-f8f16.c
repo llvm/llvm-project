@@ -52,7 +52,7 @@ void test(void) __arm_inout("za"){
   // streaming-guard-error@+1 {{builtin can only be called from a streaming function}}
   svmla_lane_za16_vg2x4_fpm(uint32_t_val, svmfloat8x4_t_val, svmfloat8_t_val, 2, fpm_t_val);
   // streaming-guard-error@+1 {{builtin can only be called from a streaming function}}
-  svmla_single_za16_mf8_vg2x1_fpm(uint32_t_val, svmfloat8_t_val, svmfloat8_t_val, fpm_t_val);
+  svmla_za16_mf8_vg2x1_fpm(uint32_t_val, svmfloat8_t_val, svmfloat8_t_val, fpm_t_val);
   // streaming-guard-error@+1 {{builtin can only be called from a streaming function}}
   svmla_single_za16_mf8_vg2x2_fpm(uint32_t_val, svmfloat8x2_t_val, svmfloat8_t_val, fpm_t_val);
   // streaming-guard-error@+1 {{builtin can only be called from a streaming function}}
@@ -107,7 +107,7 @@ void test_streaming(void) __arm_streaming __arm_inout("za"){
   svmla_lane_za16_vg2x1_fpm(uint32_t_val, svmfloat8_t_val, svmfloat8_t_val, 2, fpm_t_val);
   svmla_lane_za16_vg2x2_fpm(uint32_t_val, svmfloat8x2_t_val, svmfloat8_t_val, 2, fpm_t_val);
   svmla_lane_za16_vg2x4_fpm(uint32_t_val, svmfloat8x4_t_val, svmfloat8_t_val, 2, fpm_t_val);
-  svmla_single_za16_mf8_vg2x1_fpm(uint32_t_val, svmfloat8_t_val, svmfloat8_t_val, fpm_t_val);
+  svmla_za16_mf8_vg2x1_fpm(uint32_t_val, svmfloat8_t_val, svmfloat8_t_val, fpm_t_val);
   svmla_single_za16_mf8_vg2x2_fpm(uint32_t_val, svmfloat8x2_t_val, svmfloat8_t_val, fpm_t_val);
   svmla_single_za16_mf8_vg2x4_fpm(uint32_t_val, svmfloat8x4_t_val, svmfloat8_t_val, fpm_t_val);
   svmla_za16_mf8_vg2x2_fpm(uint32_t_val, svmfloat8x2_t_val, svmfloat8x2_t_val, fpm_t_val);
@@ -168,7 +168,7 @@ void test_streaming_compatible(void) __arm_streaming_compatible __arm_inout("za"
   // streaming-guard-error@+1 {{builtin can only be called from a streaming function}}
   svmla_lane_za16_vg2x4_fpm(uint32_t_val, svmfloat8x4_t_val, svmfloat8_t_val, 2, fpm_t_val);
   // streaming-guard-error@+1 {{builtin can only be called from a streaming function}}
-  svmla_single_za16_mf8_vg2x1_fpm(uint32_t_val, svmfloat8_t_val, svmfloat8_t_val, fpm_t_val);
+  svmla_za16_mf8_vg2x1_fpm(uint32_t_val, svmfloat8_t_val, svmfloat8_t_val, fpm_t_val);
   // streaming-guard-error@+1 {{builtin can only be called from a streaming function}}
   svmla_single_za16_mf8_vg2x2_fpm(uint32_t_val, svmfloat8x2_t_val, svmfloat8_t_val, fpm_t_val);
   // streaming-guard-error@+1 {{builtin can only be called from a streaming function}}

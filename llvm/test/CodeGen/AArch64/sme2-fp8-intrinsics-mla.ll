@@ -124,9 +124,9 @@ define void @test_fmlal_single_vg2x1(i32 %slice, <vscale x 16 x i8> %zn, <vscale
 ; CHECK:    fmlal za.h[w8, 0:1], z0.b, z1.b
 ; CHECK:    fmlal za.h[w8, 14:15], z0.b, z1.b
 ; CHECK:    ret
-    call void @llvm.aarch64.sme.fp8.fmlal.single.za16.vg2x1(i32 %slice, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
+    call void @llvm.aarch64.sme.fp8.fmlal.za16.vg2x1(i32 %slice, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
     %add = add i32 %slice, 14
-    call void @llvm.aarch64.sme.fp8.fmlal.single.za16.vg2x1(i32 %add, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
+    call void @llvm.aarch64.sme.fp8.fmlal.za16.vg2x1(i32 %add, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
     ret void
 }
 
@@ -173,9 +173,9 @@ define void @test_fmlall_single_vg4x1(i32 %slice, <vscale x 16 x i8> %zn, <vscal
 ; CHECK:    fmlall za.s[w8, 0:3], z0.b, z1.b
 ; CHECK:    fmlall za.s[w8, 12:15], z0.b, z1.b
 ; CHECK:    ret
-    call void @llvm.aarch64.sme.fp8.fmlall.single.za32.vg4x1(i32 %slice, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
+    call void @llvm.aarch64.sme.fp8.fmlall.za32.vg4x1(i32 %slice, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
     %add = add i32 %slice, 12
-    call void @llvm.aarch64.sme.fp8.fmlall.single.za32.vg4x1(i32 %add, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
+    call void @llvm.aarch64.sme.fp8.fmlall.za32.vg4x1(i32 %add, <vscale x 16 x i8> %zn, <vscale x 16 x i8> %zm)
     ret void
 }
 

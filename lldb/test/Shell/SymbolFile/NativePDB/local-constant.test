@@ -1,0 +1,24 @@
+# REQUIRES: msvc
+
+# Test that we can display local S_CONSTANT records.
+# MSVC emits S_CONSTANT for static const locals; clang-cl does not.
+# RUN: split-file %s %t
+# RUN: %build --compiler=msvc --nodefaultlib -o %t.exe -- %t/main.cpp
+# RUN: %lldb -f %t.exe -s %t/commands.input 2>&1 | FileCheck %s
+
+#--- main.cpp
+
+int main() {
+  static const int kConstant = 42;
+  return kConstant;
+}
+
+#--- commands.input
+
+settings set stop-line-count-after 0
+break set -n main
+run
+frame variable
+quit
+
+# CHECK: (const int) {{.*}}kConstant = 42

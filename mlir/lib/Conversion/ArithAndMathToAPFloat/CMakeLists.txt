@@ -4,6 +4,7 @@ add_mlir_library(MLIRArithAndMathToAPFloatUtils
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
+  MLIRVectorDialect
   )
 
 add_mlir_conversion_library(MLIRArithToAPFloat
@@ -47,4 +48,5 @@ add_mlir_conversion_library(MLIRMathToAPFloat
   MLIRMathDialect
   MLIRFuncDialect
   MLIRFuncUtils
+  MLIRVectorDialect
   )

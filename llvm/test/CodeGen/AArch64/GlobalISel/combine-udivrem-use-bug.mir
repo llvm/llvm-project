@@ -11,15 +11,15 @@ body:             |
     ; CHECK-LABEL: name: no_combine_divrem_different_src1
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[UREM:%[0-9]+]]:_(s32) = G_UREM [[COPY]], [[COPY]]
-    ; CHECK-NEXT: [[UDIV:%[0-9]+]]:_(s32) = G_UDIV [[UREM]], [[COPY]]
-    ; CHECK-NEXT: $w0 = COPY [[UDIV]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[UREM:%[0-9]+]]:_(i32) = G_UREM [[COPY]], [[COPY]]
+    ; CHECK-NEXT: [[UDIV:%[0-9]+]]:_(i32) = G_UDIV [[UREM]], [[COPY]]
+    ; CHECK-NEXT: $w0 = COPY [[UDIV]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
-    %0:_(s32) = COPY $w0
-    %1:_(s32) = G_UREM %0, %0
-    %2:_(s32) = G_UDIV %1, %0
-    $w0 = COPY %2(s32)
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = G_UREM %0, %0
+    %2:_(i32) = G_UDIV %1, %0
+    $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 
 ...

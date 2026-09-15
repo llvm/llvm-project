@@ -230,7 +230,7 @@ void ExpandPseudo::expandStoreACC(MachineBasicBlock &MBB, Iter I,
   Register VR0 = MRI.createVirtualRegister(RC);
   Register VR1 = MRI.createVirtualRegister(RC);
   Register Src = I->getOperand(0).getReg(), FI = I->getOperand(1).getIndex();
-  unsigned SrcKill = getKillRegState(I->getOperand(0).isKill());
+  RegState SrcKill = getKillRegState(I->getOperand(0).isKill());
   DebugLoc DL = I->getDebugLoc();
 
   BuildMI(MBB, I, DL, TII.get(MFLoOpc), VR0).addReg(Src);
@@ -262,7 +262,7 @@ bool ExpandPseudo::expandCopyACC(MachineBasicBlock &MBB, Iter I,
   const TargetRegisterClass *RC = RegInfo.intRegClass(VRegSize);
   Register VR0 = MRI.createVirtualRegister(RC);
   Register VR1 = MRI.createVirtualRegister(RC);
-  unsigned SrcKill = getKillRegState(I->getOperand(1).isKill());
+  RegState SrcKill = getKillRegState(I->getOperand(1).isKill());
   Register DstLo = RegInfo.getSubReg(Dst, Mips::sub_lo);
   Register DstHi = RegInfo.getSubReg(Dst, Mips::sub_hi);
   DebugLoc DL = I->getDebugLoc();

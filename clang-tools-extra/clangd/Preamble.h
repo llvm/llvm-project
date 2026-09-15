@@ -31,15 +31,16 @@
 
 #include "clang-include-cleaner/Record.h"
 #include "support/Path.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -59,7 +60,8 @@ namespace clangd {
 struct CapturedASTCtx {
 public:
   CapturedASTCtx(CompilerInstance &Clang)
-      : Invocation(Clang.getInvocationPtr()),
+      : ModCache(Clang.getModuleCachePtr()),
+        Invocation(Clang.getInvocationPtr()),
         Diagnostics(Clang.getDiagnosticsPtr()), Target(Clang.getTargetPtr()),
         AuxTarget(Clang.getAuxTarget()), FileMgr(Clang.getFileManagerPtr()),
         SourceMgr(Clang.getSourceManagerPtr()), PP(Clang.getPreprocessorPtr()),
@@ -79,6 +81,7 @@ public:
   }
 
 private:
+  std::shared_ptr<ModuleCache> ModCache;
   std::shared_ptr<CompilerInvocation> Invocation;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diagnostics;
   IntrusiveRefCntPtr<TargetInfo> Target;
@@ -238,6 +241,10 @@ private:
   std::vector<PragmaMark> PatchedMarks;
   MainFileMacros PatchedMacros;
 };
+
+PreambleBounds computePreambleBounds(const LangOptions &LangOpts,
+                                     const llvm::MemoryBufferRef &Buffer,
+                                     bool SkipPreambleBuild);
 
 } // namespace clangd
 } // namespace clang

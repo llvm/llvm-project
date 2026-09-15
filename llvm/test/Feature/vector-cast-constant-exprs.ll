@@ -5,7 +5,7 @@
 
 define <2 x float> @ga() {
 ; CHECK-LABEL: define <2 x float> @ga() {
-; CHECK-NEXT:    ret <2 x float> <float 0x4011333340000000, float 0x40099999A0000000>
+; CHECK-NEXT:    ret <2 x float> <float 4.300000e+00, float 3.200000e+00>
 ;
   %fptrunc = fptrunc <2 x double> <double 4.3, double 3.2> to <2 x float>
   ret <2 x float> %fptrunc

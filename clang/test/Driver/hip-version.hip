@@ -20,7 +20,7 @@
 
 // RUN: rm -rf %t/Inputs
 // RUN: mkdir -p %t/Inputs
-// RUN: cp -r %S/Inputs/rocm %t/Inputs
+// RUN: cp -R %S/Inputs/rocm %t/Inputs
 // RUN: mkdir -p %t/Inputs/rocm/share/hip
 // RUN: mkdir -p %t/Inputs/rocm/hip
 // RUN: mv %t/Inputs/rocm/bin/.hipVersion %t/Inputs/rocm/share/hip/version

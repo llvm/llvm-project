@@ -33,11 +33,15 @@ add_public_tablegen_target(RISCVCommonTableGen)
 add_llvm_target(RISCVCodeGen
   RISCVAsmPrinter.cpp
   RISCVCallingConv.cpp
+  RISCVCodeGenPassBuilder.cpp
   RISCVCodeGenPrepare.cpp
   RISCVConstantPoolValue.cpp
   RISCVDeadRegisterDefinitions.cpp
-  RISCVExpandAtomicPseudoInsts.cpp
-  RISCVExpandPseudoInsts.cpp
+  RISCVExpandPseudoAtomics.cpp
+  RISCVExpandPseudoBase.cpp
+  RISCVExpandPseudoPostRA.cpp
+  RISCVExpandPseudoPreEmit.cpp
+  RISCVExpandPseudoPreRA.cpp
   RISCVFoldMemOffset.cpp
   RISCVFrameLowering.cpp
   RISCVGatherScatterLowering.cpp
@@ -54,12 +58,13 @@ add_llvm_target(RISCVCodeGen
   RISCVLoadStoreOptimizer.cpp
   RISCVMachineFunctionInfo.cpp
   RISCVMakeCompressible.cpp
+  RISCVMachineScheduler.cpp
   RISCVMergeBaseOffset.cpp
   RISCVMoveMerger.cpp
   RISCVOptWInstrs.cpp
-  RISCVPostRAExpandPseudoInsts.cpp
   RISCVPromoteConstant.cpp
   RISCVPushPopOptimizer.cpp
+  RISCVQCRelaxMarking.cpp
   RISCVRedundantCopyElimination.cpp
   RISCVRegisterInfo.cpp
   RISCVSelectionDAGInfo.cpp
@@ -71,9 +76,11 @@ add_llvm_target(RISCVCodeGen
   RISCVVectorPeephole.cpp
   RISCVVLOptimizer.cpp
   RISCVVMV0Elimination.cpp
+  RISCVVSETVLIInfoAnalysis.cpp
   RISCVZacasABIFix.cpp
   RISCVZilsdOptimizer.cpp
   GISel/RISCVCallLowering.cpp
+  GISel/RISCVInlineAsmLowering.cpp
   GISel/RISCVInstructionSelector.cpp
   GISel/RISCVLegalizerInfo.cpp
   GISel/RISCVPostLegalizerCombiner.cpp

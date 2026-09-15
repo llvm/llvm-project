@@ -207,12 +207,11 @@ public:
     return this->Visited.contains(Node);
   }
 
-  /// getPathLength - Return the length of the path from the entry node to the
-  /// current node, counting both nodes.
+  /// Return the length of the path from the entry node to the current node,
+  /// counting both nodes.
   unsigned getPathLength() const { return VisitStack.size(); }
 
-  /// getPath - Return the n'th node in the path from the entry node to the
-  /// current node.
+  /// Return the n'th node in the path from the entry node to the current node.
   NodeRef getPath(unsigned n) const { return VisitStack[n].first; }
 };
 

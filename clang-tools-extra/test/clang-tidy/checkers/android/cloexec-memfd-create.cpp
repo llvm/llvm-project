@@ -1,5 +1,7 @@
 // RUN: %check_clang_tidy %s android-cloexec-memfd-create %t
 
+#include <cstddef>
+
 #define MFD_ALLOW_SEALING 1
 #define __O_CLOEXEC 3
 #define MFD_CLOEXEC __O_CLOEXEC
@@ -10,7 +12,6 @@
       _rc = (exp);              \
     } while (_rc == -1);        \
   })
-#define NULL 0
 
 extern "C" int memfd_create(const char *name, unsigned int flags);
 

@@ -1,0 +1,15 @@
+functions:
+  endpwent:
+    in-latest-posix: ''
+  getpwent:
+    in-latest-posix: ''
+  getpwnam:
+    in-latest-posix: ''
+  getpwnam_r:
+    in-latest-posix: ''
+  getpwuid:
+    in-latest-posix: ''
+  getpwuid_r:
+    in-latest-posix: ''
+  setpwent:
+    in-latest-posix: ''

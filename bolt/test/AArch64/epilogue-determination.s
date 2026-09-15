@@ -65,6 +65,11 @@ _goo:
   mov x0, 1
   ret
 
+  .balign 4
+_jmptbl2:
+  .long -16
+  .long -8
+
   .global _faz
   .type _faz, %function
 _faz:

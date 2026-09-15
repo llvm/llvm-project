@@ -181,6 +181,15 @@ export namespace std {
     } // namespace views
 #endif // _LIBCPP_STD_VER >= 23
 
+#if _LIBCPP_STD_VER >= 26
+    // [range.concat.view], concat_view
+    using std::ranges::concat_view;
+
+    namespace views {
+      using std::ranges::views::concat;
+    } // namespace views
+#endif // _LIBCPP_STD_VER >= 26
+
     // [range.filter], filter view
     using std::ranges::filter_view;
 
@@ -340,9 +349,7 @@ export namespace std {
     namespace views {
       using std::ranges::views::chunk_by;
     }
-#endif // _LIBCPP_STD_VER >= 23
 
-#if 0
     // [range.stride], stride view
     using std::ranges::stride_view;
 
@@ -350,12 +357,21 @@ export namespace std {
       using std::ranges::views::stride;
     }
 
+#  if 0
     using std::ranges::cartesian_product_view;
 
     namespace views {
       using std::ranges::views::cartesian_product;
     }
-#endif
+#  endif
+
+    // [range.enumerate]
+    using std::ranges::enumerate_view;
+
+    namespace views {
+      using std::ranges::views::enumerate;
+    }
+#endif // _LIBCPP_STD_VER >= 23
   } // namespace ranges
 
   namespace views = ranges::views;

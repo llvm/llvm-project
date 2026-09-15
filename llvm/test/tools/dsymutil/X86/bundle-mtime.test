@@ -1,0 +1,24 @@
+## Verify dsymutil bumps the .dSYM bundle directory's mtime when rewriting an
+## existing bundle in place. macOS Spotlight keys off this mtime to decide
+## whether to reimport the bundle's UUID; without the bump, Spotlight serves
+## the previous build's UUID and DebugSymbols falls through to slow
+## dsymForUUID lookups.
+
+RUN: rm -rf %t.dir
+RUN: mkdir -p %t.dir
+RUN: cat %p/../Inputs/basic.macho.x86_64 > %t.dir/basic
+RUN: dsymutil -oso-prepend-path=%p/.. %t.dir/basic
+
+## Backdate the bundle dir to a known epoch so any update is visible.
+RUN: env TZ=GMT touch -t 197001020000 %t.dir/basic.dSYM
+## Marker with a newer-than-backdated timestamp; the second dsymutil run
+## must move the bundle dir's mtime past this marker.
+RUN: env TZ=GMT touch -t 200001010000 %t.dir/marker
+
+RUN: dsymutil -oso-prepend-path=%p/.. %t.dir/basic
+
+## It prints the bundle path iff its mtime is newer than the marker.
+## Without the mtime bump, the directory keeps its 1970 stamp and
+## nothing is printed.
+RUN: %python -c "import sys ; from pathlib import Path ; sys.exit(0 if Path(r'%t.dir/basic.dSYM').stat().st_mtime > Path(r'%t.dir/marker').stat().st_mtime else 1)" && echo "basic.dSYM" | FileCheck %s
+CHECK: basic.dSYM

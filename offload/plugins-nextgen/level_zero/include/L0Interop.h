@@ -13,13 +13,12 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0INTEROP_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0INTEROP_H
 
+#include <level_zero/ze_api.h>
+
 namespace llvm::omp::target::plugin::L0Interop {
 
 /// Level Zero interop property.
 struct Property {
-  // Use this when command queue needs to be accessed as
-  // the targetsync field in interop will be changed if preferred type is sycl.
-  ze_command_queue_handle_t CommandQueue;
   ze_command_list_handle_t ImmCmdList;
 };
 

@@ -28,7 +28,7 @@ int main(int, char**)
         std::promise<T> p;
         std::future<T> f = p.get_future();
         p.set_value();
-        f.get();
+        (void)f.get();
         try
         {
             p.set_value();

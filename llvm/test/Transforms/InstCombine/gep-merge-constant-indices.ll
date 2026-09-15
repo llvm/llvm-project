@@ -118,7 +118,7 @@ define ptr @structStruct(ptr %p) {
 ; result = (ptr) &((struct.B*) p)[i].member1 + 2
 define ptr @appendIndex(ptr %p, i64 %i) {
 ; CHECK-LABEL: @appendIndex(
-; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [[STRUCT_B:%.*]], ptr [[P:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [140 x i8], ptr [[P:%.*]], i64 [[I:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 6
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
@@ -174,7 +174,7 @@ define ptr @partialConstant3(ptr %p) {
 ; result = &((struct.C*) p + a).member2
 define ptr @partialConstantMemberAliasing1(ptr %p, i64 %a) {
 ; CHECK-LABEL: @partialConstantMemberAliasing1(
-; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [[STRUCT_C:%.*]], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [12 x i8], ptr [[P:%.*]], i64 [[A:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 8
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
@@ -187,7 +187,7 @@ define ptr @partialConstantMemberAliasing1(ptr %p, i64 %a) {
 ; address of another member.
 define ptr @partialConstantMemberAliasing2(ptr %p, i64 %a) {
 ; CHECK-LABEL: @partialConstantMemberAliasing2(
-; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [[STRUCT_C:%.*]], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [12 x i8], ptr [[P:%.*]], i64 [[A:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 5
 ; CHECK-NEXT:    ret ptr [[TMP2]]
 ;
@@ -200,7 +200,7 @@ define ptr @partialConstantMemberAliasing2(ptr %p, i64 %a) {
 ; range of the object currently pointed by the non-constant GEP.
 define ptr @partialConstantMemberAliasing3(ptr %p, i64 %a) {
 ; CHECK-LABEL: @partialConstantMemberAliasing3(
-; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [[STRUCT_C:%.*]], ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [12 x i8], ptr [[P:%.*]], i64 [[A:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 12
 ; CHECK-NEXT:    ret ptr [[TMP2]]
 ;

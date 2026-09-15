@@ -91,7 +91,7 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
       || (TT.isX86() && TT.isOSDarwin());
 
   APInt Offset(IndexWidth, 0);
-  uint64_t GVSize = DL.getTypeAllocSize(GV.getValueType());
+  uint64_t GVSize = GV.getGlobalSize(DL);
   for (; Offset.ult(GVSize); Offset += Stride) {
     Constant *C =
         ConstantFoldLoadFromConst(GV.getInitializer(), ElemType, Offset, DL);
@@ -114,6 +114,15 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
     if (!GlovalVarOp->hasLocalLinkage() ||
         !GlovalVarOp->isDSOLocal() ||
         !GlovalVarOp->isImplicitDSOLocal())
+      return false;
+
+    // On AArch64 small code model, the text-to-data span can be up to 4GB,
+    // which exceeds 32-bit signed relative offsets. Avoid converting if the
+    // target operand requires dynamic relocations (placing it in .data.rel.ro
+    // in the data segment rather than .rodata in the text segment).
+    if (TT.isAArch64() &&
+        (!GlovalVarOp->hasInitializer() ||
+         GlovalVarOp->getInitializer()->needsDynamicRelocation()))
       return false;
 
     if (ShouldDropUnnamedAddr)

@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s --transform-interpreter --split-input-file -resolve-shaped-type-result-dims -canonicalize | FileCheck %s
 
+
 // Demonstrates what happens when peeling the 4th loop (that corresponds to the
 // "depth" dimension in depthwise convs) followed by vectorization in the
 // presence of _scalable_ vectors (these are introduced through scalable
@@ -24,7 +25,7 @@ func.func @conv(%arg0: tensor<1x1080x1962x48xi32>, %arg1: tensor<1x43x48xi32>) -
 // Loop over the Filter width dim
 // CHECK:                 scf.for %{{.*}} = %[[C0]] to %[[C_43]] step %[[C1]] {{.*}} -> (tensor<1x1x4x?xi32>) {
 // CHECK-NOT:               vector.mask
-// CHECK:                   vector.broadcast {{.*}} : vector<[4]xi32> to vector<1x4x[4]xi32>
+// CHECK:                   vector.broadcast {{.*}} : vector<1x[4]xi32> to vector<1x4x[4]xi32>
 // CHECK-NEXT:              arith.muli {{.*}} : vector<1x4x[4]xi32>
 // CHECK-NEXT:              arith.addi {{.*}} : vector<1x4x[4]xi32>
 // CHECK-NOT:               vector.mask

@@ -113,7 +113,7 @@ void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
 
 void UpgradeDurationConversionsCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const llvm::StringRef Message =
+  static constexpr StringRef Message =
       "implicit conversion to 'int64_t' is deprecated in this context; use an "
       "explicit cast instead";
 

@@ -17,11 +17,12 @@
 #define LLVM_CODEGEN_LAZYMACHINEBLOCKFREQUENCYINFO_H
 
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 
 namespace llvm {
+
+class MachineCycleInfo;
+
 /// This is an alternative analysis pass to MachineBlockFrequencyInfo.
 /// The difference is that with this pass, the block frequencies are not
 /// computed when the analysis pass is executed but rather when the BFI result
@@ -34,16 +35,13 @@ namespace llvm {
 /// Note that it is expected that we wouldn't need this functionality for the
 /// new PM since with the new PM, analyses are executed on demand.
 
-class LazyMachineBlockFrequencyInfoPass : public MachineFunctionPass {
+class LLVM_ABI LazyMachineBlockFrequencyInfoPass : public MachineFunctionPass {
 private:
   /// If generated on the fly this own the instance.
   mutable std::unique_ptr<MachineBlockFrequencyInfo> OwnedMBFI;
 
   /// If generated on the fly this own the instance.
-  mutable std::unique_ptr<MachineLoopInfo> OwnedMLI;
-
-  /// If generated on the fly this own the instance.
-  mutable std::unique_ptr<MachineDominatorTree> OwnedMDT;
+  mutable std::unique_ptr<MachineCycleInfo> OwnedMCI;
 
   /// The function.
   MachineFunction *MF = nullptr;

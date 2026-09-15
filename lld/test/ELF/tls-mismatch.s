@@ -31,6 +31,13 @@
 # RUN: ld.lld %t.o %t.bc -o /dev/null
 # RUN: ld.lld %t.bc %t.o -o /dev/null
 
+## -u creates an Undefined with STT_NOTYPE. The object file's STT_TLS undefined
+## should update the type so that the TLS IE GOT entry is correctly created.
+# RUN: ld.lld -shared -u tls1 %t1.o %t1.o -o %t1.so
+# RUN: llvm-readelf -rs %t1.so | FileCheck %s --check-prefix=UNDEF
+# UNDEF: R_X86_64_TPOFF64 {{.*}} tls1 + 0
+# UNDEF: 0000000000000000     0 TLS     GLOBAL DEFAULT  UND tls1
+
 # CHECK: error: TLS attribute mismatch: tls1
 # CHECK-NEXT: >>> in {{.*}}.tmp.o
 # CHECK-NEXT: >>> in {{.*}}

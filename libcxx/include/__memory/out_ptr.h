@@ -11,10 +11,9 @@
 #define _LIBCPP___OUT_PTR_H
 
 #include <__config>
+#include <__fwd/memory.h>
 #include <__memory/addressof.h>
 #include <__memory/pointer_traits.h>
-#include <__memory/shared_ptr.h>
-#include <__memory/unique_ptr.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_specialization.h>
 #include <__type_traits/is_void.h>
@@ -29,9 +28,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Smart, class _Pointer, class... _Args>
 class out_ptr_t {
@@ -93,9 +92,9 @@ template <class _Pointer = void, class _Smart, class... _Args>
   return std::out_ptr_t<_Smart, _Ptr, _Args&&...>(__s, std::forward<_Args>(__args)...);
 }
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_POP_MACROS
 

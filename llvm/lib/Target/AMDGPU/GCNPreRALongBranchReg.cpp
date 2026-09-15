@@ -19,7 +19,6 @@
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
@@ -57,9 +56,7 @@ public:
 class GCNPreRALongBranchRegLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  GCNPreRALongBranchRegLegacy() : MachineFunctionPass(ID) {
-    initializeGCNPreRALongBranchRegLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  GCNPreRALongBranchRegLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     return GCNPreRALongBranchReg().run(MF);

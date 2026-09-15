@@ -49,7 +49,15 @@ void llvm_thread_detach_impl(HANDLE hThread) {
     ReportLastErrorFatal("CloseHandle failed");
 }
 
-DWORD llvm_thread_get_id_impl(HANDLE hThread) { return ::GetThreadId(hThread); }
+DWORD llvm_thread_get_id_impl(HANDLE hThread) {
+  // AppVerifier (runtime verification tool from Windows SDK) reports an error
+  // when GetThreadId(NULL) is called. Suppress this by manually checking for
+  // NULL. Return 0 as this is what's returned (by documentation) if
+  // GetThreadId() fails.
+  if (!hThread)
+    return 0;
+  return ::GetThreadId(hThread);
+}
 
 DWORD llvm_thread_get_current_id_impl() { return ::GetCurrentThreadId(); }
 
@@ -105,36 +113,8 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
   Name.clear();
 }
 
-namespace llvm::sys::windows {
-HMODULE loadSystemModuleSecure(LPCWSTR lpModuleName) {
-  // Ensure we load indeed a module from system32 path.
-  // As per GetModuleHandle documentation:
-  // "If lpModuleName does not include a path and there is more than one loaded
-  // module with the same base name and extension, you cannot predict which
-  // module handle will be returned.". This mitigates
-  // https://learn.microsoft.com/en-us/security-updates/securityadvisories/2010/2269637
-  SmallVector<wchar_t, MAX_PATH> Buf;
-  size_t Size = MAX_PATH;
-  do {
-    Buf.resize_for_overwrite(Size);
-    SetLastError(NO_ERROR);
-    Size = ::GetSystemDirectoryW(Buf.data(), Buf.size());
-    if (Size == 0)
-      return NULL;
-
-    // Try again with larger buffer.
-  } while (Size > Buf.size());
-
-  Buf.truncate(Size);
-  Buf.push_back(L'\\');
-  Buf.append(lpModuleName, lpModuleName + std::wcslen(lpModuleName));
-  Buf.push_back(0);
-
-  return ::GetModuleHandleW(Buf.data());
-}
-} // namespace llvm::sys::windows
-
-SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
+llvm::SetThreadPriorityResult
+llvm::set_thread_priority(ThreadPriority Priority) {
 #ifdef THREAD_POWER_THROTTLING_CURRENT_VERSION
   HMODULE kernelM = llvm::sys::windows::loadSystemModuleSecure(L"kernel32.dll");
   if (kernelM) {
@@ -145,8 +125,8 @@ SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
         _In_reads_bytes_(ThreadInformationSize) PVOID ThreadInformation,
         ULONG ThreadInformationSize);
     static const auto pfnSetThreadInformation =
-        (SetThreadInformation_t)::GetProcAddress(kernelM,
-                                                 "SetThreadInformation");
+        (SetThreadInformation_t)(void *)::GetProcAddress(
+            kernelM, "SetThreadInformation");
     if (pfnSetThreadInformation) {
       auto setThreadInformation = [](ULONG ControlMaskAndStateMask) {
         THREAD_POWER_THROTTLING_STATE state{};
@@ -237,9 +217,9 @@ static std::optional<std::vector<USHORT>> getActiveGroups() {
   return Groups;
 }
 
-static ArrayRef<ProcessorGroup> getProcessorGroups() {
+static llvm::ArrayRef<ProcessorGroup> getProcessorGroups() {
   auto computeGroups = []() {
-    SmallVector<ProcessorGroup, 4> Groups;
+    llvm::SmallVector<ProcessorGroup, 4> Groups;
 
     auto HandleGroup = [&](SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *ProcInfo) {
       GROUP_RELATIONSHIP &El = ProcInfo->Group;
@@ -303,7 +283,7 @@ static ArrayRef<ProcessorGroup> getProcessorGroups() {
     return std::vector<ProcessorGroup>(Groups.begin(), Groups.end());
   };
   static auto Groups = computeGroups();
-  return ArrayRef<ProcessorGroup>(Groups);
+  return llvm::ArrayRef<ProcessorGroup>(Groups);
 }
 
 template <typename R, typename UnaryPredicate>

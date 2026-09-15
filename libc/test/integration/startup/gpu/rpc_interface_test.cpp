@@ -12,7 +12,7 @@
 
 using namespace LIBC_NAMESPACE;
 
-// Test to ensure that we can use aribtrary combinations of sends and recieves
+// Test to ensure that we can use arbitrary combinations of sends and receives
 // as long as they are mirrored.
 static void test_interface(bool end_with_send) {
   uint64_t cnt = 0;
@@ -53,12 +53,11 @@ static void test_interface(bool end_with_send) {
     port.recv([&](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
       cnt = buffer->data[0];
     });
-  port.close();
 
   ASSERT_TRUE(cnt == 9 && "Invalid number of increments");
 }
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN(int, char **, char **) {
   test_interface(true);
   test_interface(false);
 

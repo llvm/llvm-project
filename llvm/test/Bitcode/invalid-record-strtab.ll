@@ -2,4 +2,4 @@
 
 ; RUN: not llvm-dis %s.bc -o - 2>&1 | FileCheck %s
 
-; CHECK: error: Invalid record
+; CHECK: error: Invalid function record

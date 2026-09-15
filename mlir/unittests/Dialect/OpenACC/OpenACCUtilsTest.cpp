@@ -9,6 +9,7 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -22,6 +23,16 @@
 using namespace mlir;
 using namespace mlir::acc;
 
+template <typename OpTy>
+static OpTy createEmptyOp(OpBuilder &builder, Location loc) {
+  typename OpTy::Properties properties{};
+  OpTy::populateDefaultProperties(
+      OperationName(OpTy::getOperationName(), builder.getContext()),
+      properties);
+  return OpTy::create(builder, loc, TypeRange{}, ValueRange{}, properties,
+                      /*discardableAttributes=*/{});
+}
+
 //===----------------------------------------------------------------------===//
 // Test Fixture
 //===----------------------------------------------------------------------===//
@@ -29,8 +40,9 @@ using namespace mlir::acc;
 class OpenACCUtilsTest : public ::testing::Test {
 protected:
   OpenACCUtilsTest() : b(&context), loc(UnknownLoc::get(&context)) {
-    context.loadDialect<acc::OpenACCDialect, arith::ArithDialect,
-                        memref::MemRefDialect, func::FuncDialect>();
+    context
+        .loadDialect<acc::OpenACCDialect, arith::ArithDialect, gpu::GPUDialect,
+                     memref::MemRefDialect, func::FuncDialect>();
   }
 
   MLIRContext context;
@@ -44,8 +56,7 @@ protected:
 
 TEST_F(OpenACCUtilsTest, getEnclosingComputeOpParallel) {
   // Create a parallel op with a region
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
   Region &parallelRegion = parallelOp->getRegion();
   parallelRegion.emplaceBlock();
 
@@ -56,8 +67,7 @@ TEST_F(OpenACCUtilsTest, getEnclosingComputeOpParallel) {
 
 TEST_F(OpenACCUtilsTest, getEnclosingComputeOpKernels) {
   // Create a kernels op with a region
-  OwningOpRef<KernelsOp> kernelsOp =
-      KernelsOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<KernelsOp> kernelsOp = createEmptyOp<KernelsOp>(b, loc);
   Region &kernelsRegion = kernelsOp->getRegion();
   kernelsRegion.emplaceBlock();
 
@@ -68,8 +78,7 @@ TEST_F(OpenACCUtilsTest, getEnclosingComputeOpKernels) {
 
 TEST_F(OpenACCUtilsTest, getEnclosingComputeOpSerial) {
   // Create a serial op with a region
-  OwningOpRef<SerialOp> serialOp =
-      SerialOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<SerialOp> serialOp = createEmptyOp<SerialOp>(b, loc);
   Region &serialRegion = serialOp->getRegion();
   serialRegion.emplaceBlock();
 
@@ -80,8 +89,7 @@ TEST_F(OpenACCUtilsTest, getEnclosingComputeOpSerial) {
 
 TEST_F(OpenACCUtilsTest, getEnclosingComputeOpNested) {
   // Create nested ops: parallel containing a loop op
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
   Region &parallelRegion = parallelOp->getRegion();
   Block *parallelBlock = &parallelRegion.emplaceBlock();
 
@@ -89,8 +97,7 @@ TEST_F(OpenACCUtilsTest, getEnclosingComputeOpNested) {
   b.setInsertionPointToStart(parallelBlock);
 
   // Create a loop op inside the parallel region
-  OwningOpRef<LoopOp> loopOp =
-      LoopOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<LoopOp> loopOp = createEmptyOp<LoopOp>(b, loc);
   Region &loopRegion = loopOp->getRegion();
   loopRegion.emplaceBlock();
 
@@ -123,8 +130,7 @@ TEST_F(OpenACCUtilsTest, isOnlyUsedByPrivateClausesTrue) {
       cast<TypedValue<PointerLikeType>>(allocOp->getResult());
 
   // Create a parallel op with a region
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
   Region &parallelRegion = parallelOp->getRegion();
   Block *parallelBlock = &parallelRegion.emplaceBlock();
 
@@ -148,8 +154,7 @@ TEST_F(OpenACCUtilsTest, isOnlyUsedByPrivateClausesFalse) {
       cast<TypedValue<PointerLikeType>>(allocOp->getResult());
 
   // Create a parallel op with a region
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
   Region &parallelRegion = parallelOp->getRegion();
   Block *parallelBlock = &parallelRegion.emplaceBlock();
 
@@ -178,8 +183,7 @@ TEST_F(OpenACCUtilsTest, isOnlyUsedByPrivateClausesMultiple) {
       cast<TypedValue<PointerLikeType>>(allocOp->getResult());
 
   // Create a parallel op with a region
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
   Region &parallelRegion = parallelOp->getRegion();
   Block *parallelBlock = &parallelRegion.emplaceBlock();
 
@@ -209,8 +213,7 @@ TEST_F(OpenACCUtilsTest, isOnlyUsedByReductionClausesTrue) {
       cast<TypedValue<PointerLikeType>>(allocOp->getResult());
 
   // Create a parallel op with a region
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
   Region &parallelRegion = parallelOp->getRegion();
   Block *parallelBlock = &parallelRegion.emplaceBlock();
 
@@ -234,8 +237,7 @@ TEST_F(OpenACCUtilsTest, isOnlyUsedByReductionClausesFalse) {
       cast<TypedValue<PointerLikeType>>(allocOp->getResult());
 
   // Create a parallel op with a region
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
   Region &parallelRegion = parallelOp->getRegion();
   Block *parallelBlock = &parallelRegion.emplaceBlock();
 
@@ -264,8 +266,7 @@ TEST_F(OpenACCUtilsTest, isOnlyUsedByReductionClausesMultiple) {
       cast<TypedValue<PointerLikeType>>(allocOp->getResult());
 
   // Create a parallel op with a region
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
   Region &parallelRegion = parallelOp->getRegion();
   Block *parallelBlock = &parallelRegion.emplaceBlock();
 
@@ -289,8 +290,7 @@ TEST_F(OpenACCUtilsTest, isOnlyUsedByReductionClausesMultiple) {
 
 TEST_F(OpenACCUtilsTest, getDefaultAttrOnParallel) {
   // Create a parallel op with a default attribute
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
   parallelOp->setDefaultAttr(ClauseDefaultValue::None);
 
   // Test that we can retrieve the default attribute
@@ -302,8 +302,7 @@ TEST_F(OpenACCUtilsTest, getDefaultAttrOnParallel) {
 
 TEST_F(OpenACCUtilsTest, getDefaultAttrOnKernels) {
   // Create a kernels op with a default attribute
-  OwningOpRef<KernelsOp> kernelsOp =
-      KernelsOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<KernelsOp> kernelsOp = createEmptyOp<KernelsOp>(b, loc);
   kernelsOp->setDefaultAttr(ClauseDefaultValue::Present);
 
   // Test that we can retrieve the default attribute
@@ -315,8 +314,7 @@ TEST_F(OpenACCUtilsTest, getDefaultAttrOnKernels) {
 
 TEST_F(OpenACCUtilsTest, getDefaultAttrOnSerial) {
   // Create a serial op with a default attribute
-  OwningOpRef<SerialOp> serialOp =
-      SerialOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<SerialOp> serialOp = createEmptyOp<SerialOp>(b, loc);
   serialOp->setDefaultAttr(ClauseDefaultValue::None);
 
   // Test that we can retrieve the default attribute
@@ -328,8 +326,7 @@ TEST_F(OpenACCUtilsTest, getDefaultAttrOnSerial) {
 
 TEST_F(OpenACCUtilsTest, getDefaultAttrOnData) {
   // Create a data op with a default attribute
-  OwningOpRef<DataOp> dataOp =
-      DataOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<DataOp> dataOp = createEmptyOp<DataOp>(b, loc);
   dataOp->setDefaultAttr(ClauseDefaultValue::Present);
 
   // Test that we can retrieve the default attribute
@@ -340,8 +337,7 @@ TEST_F(OpenACCUtilsTest, getDefaultAttrOnData) {
 
 TEST_F(OpenACCUtilsTest, getDefaultAttrNone) {
   // Create a parallel op without setting a default attribute
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
   // Do not set default attribute
 
   // Test that we get std::nullopt when there's no default attribute
@@ -352,8 +348,7 @@ TEST_F(OpenACCUtilsTest, getDefaultAttrNone) {
 
 TEST_F(OpenACCUtilsTest, getDefaultAttrNearest) {
   // Create a data op with a default attribute
-  OwningOpRef<DataOp> dataOp =
-      DataOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<DataOp> dataOp = createEmptyOp<DataOp>(b, loc);
   dataOp->setDefaultAttr(ClauseDefaultValue::Present);
 
   Region &dataRegion = dataOp->getRegion();
@@ -363,8 +358,7 @@ TEST_F(OpenACCUtilsTest, getDefaultAttrNearest) {
   b.setInsertionPointToStart(dataBlock);
 
   // Create a parallel op inside the data region with NO default attribute
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
   // Do not set default attribute on parallel op
 
   Region &parallelRegion = parallelOp->getRegion();
@@ -373,8 +367,7 @@ TEST_F(OpenACCUtilsTest, getDefaultAttrNearest) {
   b.setInsertionPointToStart(parallelBlock);
 
   // Create a loop op inside the parallel region
-  OwningOpRef<LoopOp> loopOp =
-      LoopOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<LoopOp> loopOp = createEmptyOp<LoopOp>(b, loc);
 
   // Test that from the loop op, we find the nearest default attribute (from
   // data op)
@@ -423,7 +416,7 @@ TEST_F(OpenACCUtilsTest, getVariableNameDirect) {
 
   // Set the acc.var_name attribute
   auto varNameAttr = VarNameAttr::get(&context, "my_variable");
-  allocOp.get()->setAttr(getVarNameAttrName(), varNameAttr);
+  allocOp.get()->setDiscardableAttr(getVarNameAttrName(), varNameAttr);
 
   Value varPtr = allocOp->getResult();
 
@@ -440,7 +433,7 @@ TEST_F(OpenACCUtilsTest, getVariableNameThroughCast) {
 
   // Set the acc.var_name attribute on the alloca
   auto varNameAttr = VarNameAttr::get(&context, "casted_variable");
-  allocOp.get()->setAttr(getVarNameAttrName(), varNameAttr);
+  allocOp.get()->setDiscardableAttr(getVarNameAttrName(), varNameAttr);
 
   Value allocResult = allocOp->getResult();
 
@@ -484,6 +477,30 @@ TEST_F(OpenACCUtilsTest, getVariableNameFromCopyin) {
   // Test that getVariableName extracts the name from the copyin operation
   std::string varName = getVariableName(copyinOp->getAccVar());
   EXPECT_EQ(varName, name);
+}
+
+TEST_F(OpenACCUtilsTest, getVariableNameConstantInt) {
+  // Create a constant integer value
+  OwningOpRef<arith::ConstantOp> constOp =
+      arith::ConstantOp::create(b, loc, b.getI64IntegerAttr(42));
+
+  Value constVal = constOp->getResult();
+
+  // Test that getVariableName returns the constant value as a string
+  std::string varName = getVariableName(constVal);
+  EXPECT_EQ(varName, "42");
+}
+
+TEST_F(OpenACCUtilsTest, getVariableNameNegativeConstantInt) {
+  // Create a negative constant integer value
+  OwningOpRef<arith::ConstantOp> constOp =
+      arith::ConstantOp::create(b, loc, b.getI64IntegerAttr(-123));
+
+  Value constVal = constOp->getResult();
+
+  // Test that getVariableName returns the negative constant value as a string
+  std::string varName = getVariableName(constVal);
+  EXPECT_EQ(varName, "-123");
 }
 
 //===----------------------------------------------------------------------===//
@@ -708,7 +725,8 @@ TEST_F(OpenACCUtilsTest, isValidSymbolUseRecipe) {
   auto i32Type = b.getI32Type();
   llvm::StringRef recipeName = "test_recipe";
   OwningOpRef<PrivateRecipeOp> recipeOp =
-      PrivateRecipeOp::create(b, loc, recipeName, i32Type);
+      PrivateRecipeOp::create(b, loc, recipeName,
+                              /*sym_visibility=*/nullptr, i32Type);
 
   // Create a value to privatize
   auto memrefTy = MemRefType::get({10}, b.getI32Type());
@@ -748,8 +766,8 @@ TEST_F(OpenACCUtilsTest, isValidSymbolUseFunctionWithRoutineInfo) {
   // Add routine_info attribute with a reference to a routine
   SmallVector<SymbolRefAttr> routineRefs = {
       SymbolRefAttr::get(&context, "acc_routine")};
-  funcOp.get()->setAttr(getRoutineInfoAttrName(),
-                        RoutineInfoAttr::get(&context, routineRefs));
+  funcOp.get()->setDiscardableAttr(getRoutineInfoAttrName(),
+                                   RoutineInfoAttr::get(&context, routineRefs));
 
   // Create a call operation that uses the function symbol
   SymbolRefAttr funcSymbol = SymbolRefAttr::get(&context, funcName);
@@ -761,6 +779,27 @@ TEST_F(OpenACCUtilsTest, isValidSymbolUseFunctionWithRoutineInfo) {
 
   EXPECT_TRUE(result);
   EXPECT_NE(definingOp, nullptr);
+}
+
+TEST_F(OpenACCUtilsTest, isValidSymbolUseGPUModuleFunction) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(module->getBody());
+
+  auto gpuModule = gpu::GPUModuleOp::create(b, loc, "device_module");
+  b.setInsertionPointToStart(gpuModule.getBody());
+  auto funcType = b.getFunctionType({}, {});
+  auto gpuFunc = gpu::GPUFuncOp::create(b, loc, "device_callee", funcType,
+                                        TypeRange{}, TypeRange{});
+
+  b.setInsertionPointAfter(gpuModule);
+  auto call =
+      func::CallOp::create(b, loc, "device_callee", TypeRange{}, ValueRange{});
+  Operation *definingOp = nullptr;
+  EXPECT_TRUE(isValidSymbolUse(call.getOperation(),
+                               SymbolRefAttr::get(&context, "device_callee"),
+                               &definingOp));
+  EXPECT_EQ(definingOp, gpuFunc.getOperation());
 }
 
 TEST_F(OpenACCUtilsTest, isValidSymbolUseLLVMIntrinsic) {
@@ -836,7 +875,7 @@ TEST_F(OpenACCUtilsTest, isValidSymbolUseWithDeclareAttr) {
       func::FuncOp::create(b, loc, funcName, funcType);
 
   // Add declare attribute
-  funcOp.get()->setAttr(
+  funcOp.get()->setDiscardableAttr(
       getDeclareAttrName(),
       DeclareAttr::get(&context,
                        DataClauseAttr::get(&context, DataClause::acc_copy)));
@@ -892,7 +931,8 @@ TEST_F(OpenACCUtilsTest, isValidSymbolUseNullDefiningOpPtr) {
   auto i32Type = b.getI32Type();
   llvm::StringRef recipeName = "test_recipe";
   OwningOpRef<PrivateRecipeOp> recipeOp =
-      PrivateRecipeOp::create(b, loc, recipeName, i32Type);
+      PrivateRecipeOp::create(b, loc, recipeName,
+                              /*sym_visibility=*/nullptr, i32Type);
 
   // Create a value to privatize
   auto memrefTy = MemRefType::get({10}, b.getI32Type());
@@ -947,8 +987,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesFromComputeConstruct) {
                        /*name=*/"test_var");
 
   // Create a parallel op
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
 
   // Set the data clause operands
   parallelOp->getDataClauseOperandsMutable().append(copyinOp->getAccVar());
@@ -995,8 +1034,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesFromEnclosingDataOp) {
                        /*name=*/"test_var");
 
   // Create a data op
-  OwningOpRef<DataOp> dataOp =
-      DataOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<DataOp> dataOp = createEmptyOp<DataOp>(b, loc);
 
   // Set the data clause operands
   dataOp->getDataClauseOperandsMutable().append(copyinOp->getAccVar());
@@ -1007,8 +1045,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesFromEnclosingDataOp) {
   b.setInsertionPointToStart(dataBlock);
 
   // Create a parallel op inside the data region (no data clauses on parallel)
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
 
   // Create dominance info
   DominanceInfo domInfo(funcOp.get());
@@ -1060,8 +1097,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesFromComputeAndEnclosingData) {
                        /*name=*/"var2");
 
   // Create a data op
-  OwningOpRef<DataOp> dataOp =
-      DataOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<DataOp> dataOp = createEmptyOp<DataOp>(b, loc);
 
   // Set the data clause operands for data op
   dataOp->getDataClauseOperandsMutable().append(copyinOp1->getAccVar());
@@ -1072,8 +1108,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesFromComputeAndEnclosingData) {
   b.setInsertionPointToStart(dataBlock);
 
   // Create a parallel op inside the data region
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
 
   // Set the data clause operands for parallel op
   parallelOp->getDataClauseOperandsMutable().append(copyinOp2->getAccVar());
@@ -1127,8 +1162,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesWithDeclareDirectives) {
       ValueRange{copyinOp->getAccVar()});
 
   // Create a parallel op
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
 
   // Create a declare_exit op that post-dominates the parallel
   OwningOpRef<DeclareExitOp> declareExitOp = DeclareExitOp::create(
@@ -1195,8 +1229,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesMultipleDataConstructs) {
                        /*name=*/"var3");
 
   // Create outer data op
-  OwningOpRef<DataOp> outerDataOp =
-      DataOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<DataOp> outerDataOp = createEmptyOp<DataOp>(b, loc);
 
   // Set the data clause operands for outer data op
   outerDataOp->getDataClauseOperandsMutable().append(copyinOp1->getAccVar());
@@ -1207,8 +1240,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesMultipleDataConstructs) {
   b.setInsertionPointToStart(outerDataBlock);
 
   // Create inner data op
-  OwningOpRef<DataOp> innerDataOp =
-      DataOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<DataOp> innerDataOp = createEmptyOp<DataOp>(b, loc);
 
   // Set the data clause operands for inner data op
   innerDataOp->getDataClauseOperandsMutable().append(copyinOp2->getAccVar());
@@ -1219,8 +1251,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesMultipleDataConstructs) {
   b.setInsertionPointToStart(innerDataBlock);
 
   // Create a parallel op
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
 
   // Set the data clause operands for parallel op
   parallelOp->getDataClauseOperandsMutable().append(copyinOp3->getAccVar());
@@ -1269,8 +1300,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesKernelsOp) {
                        /*name=*/"test_var");
 
   // Create a kernels op
-  OwningOpRef<KernelsOp> kernelsOp =
-      KernelsOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<KernelsOp> kernelsOp = createEmptyOp<KernelsOp>(b, loc);
 
   // Set the data clause operands
   kernelsOp->getDataClauseOperandsMutable().append(copyinOp->getAccVar());
@@ -1317,8 +1347,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesSerialOp) {
                        /*name=*/"test_var");
 
   // Create a serial op
-  OwningOpRef<SerialOp> serialOp =
-      SerialOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<SerialOp> serialOp = createEmptyOp<SerialOp>(b, loc);
 
   // Set the data clause operands
   serialOp->getDataClauseOperandsMutable().append(copyinOp->getAccVar());
@@ -1353,8 +1382,7 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesEmpty) {
   b.setInsertionPointToStart(funcBlock);
 
   // Create a parallel op with no data clauses
-  OwningOpRef<ParallelOp> parallelOp =
-      ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  OwningOpRef<ParallelOp> parallelOp = createEmptyOp<ParallelOp>(b, loc);
 
   // Create dominance info
   DominanceInfo domInfo(funcOp.get());
@@ -1366,4 +1394,351 @@ TEST_F(OpenACCUtilsTest, getDominatingDataClausesEmpty) {
 
   // Should be empty
   EXPECT_EQ(dataClauses.size(), 0ul);
+}
+
+//===----------------------------------------------------------------------===//
+// isDeviceValue Tests
+//===----------------------------------------------------------------------===//
+
+namespace {
+static Value memrefViewFromBlockArgWithDeclare(OpBuilder &builder, Location loc,
+                                               MLIRContext *ctx,
+                                               DataClause clause,
+                                               ModuleOp module,
+                                               StringRef funcName) {
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(module.getBody());
+
+  auto i8BufTy = MemRefType::get({40}, builder.getI8Type());
+  auto viewTy = MemRefType::get({10}, builder.getI32Type());
+  auto funcType = builder.getFunctionType({i8BufTy}, {});
+  func::FuncOp funcOp = func::FuncOp::create(builder, loc, funcName, funcType);
+  Block *entry = funcOp.addEntryBlock();
+
+  builder.setInsertionPointToStart(entry);
+  Value buf = entry->getArgument(0);
+  Value c0 = arith::ConstantIndexOp::create(builder, loc, 0);
+  memref::ViewOp viewOp =
+      memref::ViewOp::create(builder, loc, viewTy, buf, c0, ValueRange{});
+  viewOp->setDiscardableAttr(
+      getDeclareAttrName(),
+      DeclareAttr::get(ctx, DataClauseAttr::get(ctx, clause)));
+  func::ReturnOp::create(builder, loc);
+  return viewOp.getResult();
+}
+} // namespace
+
+TEST_F(OpenACCUtilsTest, isDeviceValueMemrefGlobalAddressSpace) {
+  // Test that a memref with GPU global address space is considered device data
+  auto gpuAddressSpace =
+      gpu::AddressSpaceAttr::get(&context, gpu::AddressSpace::Global);
+  auto memrefTy =
+      MemRefType::get({10}, b.getI32Type(), AffineMap(), gpuAddressSpace);
+
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  Value val = allocOp->getResult();
+
+  // Should return true since memref has GPU global address space
+  EXPECT_TRUE(isDeviceValue(val));
+}
+
+TEST_F(OpenACCUtilsTest, isDeviceValueMemrefWorkgroupAddressSpace) {
+  // Test that a memref with GPU workgroup address space is considered device
+  // data
+  auto gpuAddressSpace =
+      gpu::AddressSpaceAttr::get(&context, gpu::AddressSpace::Workgroup);
+  auto memrefTy =
+      MemRefType::get({10}, b.getI32Type(), AffineMap(), gpuAddressSpace);
+
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  Value val = allocOp->getResult();
+
+  // Should return true since memref has GPU workgroup address space
+  EXPECT_TRUE(isDeviceValue(val));
+}
+
+TEST_F(OpenACCUtilsTest, isDeviceValueMemrefPrivateAddressSpace) {
+  // Test that a memref with GPU private address space is considered device
+  // data
+  auto gpuAddressSpace =
+      gpu::AddressSpaceAttr::get(&context, gpu::AddressSpace::Private);
+  auto memrefTy =
+      MemRefType::get({10}, b.getI32Type(), AffineMap(), gpuAddressSpace);
+
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  Value val = allocOp->getResult();
+
+  // Should return true since memref has GPU private address space
+  EXPECT_TRUE(isDeviceValue(val));
+}
+
+TEST_F(OpenACCUtilsTest, isDeviceValueMemrefNoAddressSpace) {
+  // Test that a regular memref without GPU address space is not device data
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  Value val = allocOp->getResult();
+
+  // Should return false since memref has no GPU address space
+  EXPECT_FALSE(isDeviceValue(val));
+}
+
+TEST_F(OpenACCUtilsTest, isDeviceValueNonMappableType) {
+  // Test with a non-mappable type (i32 value)
+  OwningOpRef<arith::ConstantOp> constOp =
+      arith::ConstantOp::create(b, loc, b.getI32IntegerAttr(42));
+  Value val = constOp->getResult();
+
+  // Should return false since i32 is not a MappableType or PointerLikeType
+  EXPECT_FALSE(isDeviceValue(val));
+}
+
+TEST_F(OpenACCUtilsTest, isDeviceValueGlobalWithGPUAddressSpace) {
+  // Test that memref.get_global referencing a global with GPU address space
+  // is considered device data
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a memref type with GPU global address space
+  auto gpuAddressSpace =
+      gpu::AddressSpaceAttr::get(&context, gpu::AddressSpace::Global);
+  auto memrefTy =
+      MemRefType::get({10}, b.getI32Type(), AffineMap(), gpuAddressSpace);
+
+  // Create a global op with the GPU address space memref type
+  llvm::StringRef globalName = "device_global";
+  OwningOpRef<memref::GlobalOp> globalOp = memref::GlobalOp::create(
+      b, loc, globalName, /*sym_visibility=*/b.getStringAttr("public"),
+      /*type=*/memrefTy, /*initial_value=*/Attribute(),
+      /*constant=*/false, /*alignment=*/IntegerAttr());
+
+  // Create a get_global that references the device global
+  OwningOpRef<memref::GetGlobalOp> getGlobalOp =
+      memref::GetGlobalOp::create(b, loc, memrefTy, globalName);
+  Value val = getGlobalOp->getResult();
+
+  // Should return true since the global has GPU address space
+  EXPECT_TRUE(isDeviceValue(val));
+}
+
+TEST_F(OpenACCUtilsTest, isDeviceValueGlobalWithoutGPUAddressSpace) {
+  // Test that memref.get_global referencing a regular global is not device data
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a regular memref type without GPU address space
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+
+  // Create a global op without GPU address space
+  llvm::StringRef globalName = "host_global";
+  OwningOpRef<memref::GlobalOp> globalOp = memref::GlobalOp::create(
+      b, loc, globalName, /*sym_visibility=*/b.getStringAttr("public"),
+      /*type=*/memrefTy, /*initial_value=*/Attribute(),
+      /*constant=*/false, /*alignment=*/IntegerAttr());
+
+  // Create a get_global that references the host global
+  OwningOpRef<memref::GetGlobalOp> getGlobalOp =
+      memref::GetGlobalOp::create(b, loc, memrefTy, globalName);
+  Value val = getGlobalOp->getResult();
+
+  // Should return false since the global has no GPU address space
+  EXPECT_FALSE(isDeviceValue(val));
+}
+
+TEST_F(OpenACCUtilsTest, isDeviceValueAccDeclareDeviceptr) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(module->getBody());
+  Value val = memrefViewFromBlockArgWithDeclare(
+      b, loc, &context, DataClause::acc_deviceptr, module.get(),
+      "test_memref_view_declare_devptr");
+  EXPECT_TRUE(isDeviceValue(val));
+}
+
+TEST_F(OpenACCUtilsTest, isDeviceValueAccDeclareNonDeviceptr) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(module->getBody());
+  Value val = memrefViewFromBlockArgWithDeclare(
+      b, loc, &context, DataClause::acc_copyin, module.get(),
+      "test_memref_view_declare_copyin");
+  EXPECT_FALSE(isDeviceValue(val));
+}
+
+//===----------------------------------------------------------------------===//
+// isValidValueUse Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsTest, isValidValueUseFromDataEntryOp) {
+  // Create a module to hold a function
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a function with a serial region
+  auto funcType = b.getFunctionType({}, {});
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, "test_func", funcType);
+  Block *entryBlock = funcOp->addEntryBlock();
+  b.setInsertionPointToStart(entryBlock);
+
+  // Create a memref and a copyin operation
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  TypedValue<PointerLikeType> varPtr =
+      cast<TypedValue<PointerLikeType>>(allocOp->getResult());
+
+  OwningOpRef<CopyinOp> copyinOp =
+      CopyinOp::create(b, loc, varPtr, /*structured=*/true, /*implicit=*/false,
+                       /*name=*/"test_var");
+  Value dataClauseResult = copyinOp->getAccVar();
+
+  // Create a serial region
+  OwningOpRef<SerialOp> serialOp = createEmptyOp<SerialOp>(b, loc);
+  Region &serialRegion = serialOp->getRegion();
+
+  // Value from data entry op should be valid
+  EXPECT_TRUE(isValidValueUse(dataClauseResult, serialRegion));
+}
+
+TEST_F(OpenACCUtilsTest, isValidValueUseDeviceData) {
+  // Create a module to hold a function
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a function
+  auto funcType = b.getFunctionType({}, {});
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, "test_func", funcType);
+  Block *entryBlock = funcOp->addEntryBlock();
+  b.setInsertionPointToStart(entryBlock);
+
+  // Create a memref with GPU address space (device data)
+  auto gpuAddressSpace =
+      gpu::AddressSpaceAttr::get(&context, gpu::AddressSpace::Global);
+  auto memrefTy =
+      MemRefType::get({10}, b.getI32Type(), AffineMap(), gpuAddressSpace);
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  Value deviceVal = allocOp->getResult();
+
+  // Create a serial region
+  OwningOpRef<SerialOp> serialOp = createEmptyOp<SerialOp>(b, loc);
+  Region &serialRegion = serialOp->getRegion();
+
+  // Device data should be valid
+  EXPECT_TRUE(isValidValueUse(deviceVal, serialRegion));
+}
+
+TEST_F(OpenACCUtilsTest, isValidValueUseOnlyUsedByPrivate) {
+  // Create a module to hold a function
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a function
+  auto funcType = b.getFunctionType({}, {});
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, "test_func", funcType);
+  Block *entryBlock = funcOp->addEntryBlock();
+  b.setInsertionPointToStart(entryBlock);
+
+  // Create a memref
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  TypedValue<PointerLikeType> varPtr =
+      cast<TypedValue<PointerLikeType>>(allocOp->getResult());
+
+  // Create a serial region with a private clause using the variable
+  OwningOpRef<SerialOp> serialOp = createEmptyOp<SerialOp>(b, loc);
+  Region &serialRegion = serialOp->getRegion();
+  Block *serialBlock = b.createBlock(&serialRegion);
+  b.setInsertionPointToStart(serialBlock);
+
+  OwningOpRef<PrivateOp> privateOp = PrivateOp::create(
+      b, loc, varPtr, /*structured=*/true, /*implicit=*/false);
+
+  // Value only used by private clause should be valid
+  EXPECT_TRUE(isValidValueUse(varPtr, serialRegion));
+}
+
+TEST_F(OpenACCUtilsTest, isValidValueUseRegularValue) {
+  // Create a module to hold a function
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  Block *moduleBlock = module->getBody();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(moduleBlock);
+
+  // Create a function
+  auto funcType = b.getFunctionType({}, {});
+  OwningOpRef<func::FuncOp> funcOp =
+      func::FuncOp::create(b, loc, "test_func", funcType);
+  Block *entryBlock = funcOp->addEntryBlock();
+  b.setInsertionPointToStart(entryBlock);
+
+  // Create a regular memref without GPU address space
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  Value regularVal = allocOp->getResult();
+
+  // Create a serial region with a non-private use of the value
+  OwningOpRef<SerialOp> serialOp = createEmptyOp<SerialOp>(b, loc);
+  Region &serialRegion = serialOp->getRegion();
+  Block *serialBlock = b.createBlock(&serialRegion);
+  b.setInsertionPointToStart(serialBlock);
+
+  // Add a function call to create a synthetic use of the value inside the
+  // region
+  func::CallOp::create(b, loc, "some_func", TypeRange{},
+                       ValueRange{regularVal});
+
+  // Regular value (not device data, not from data op, not private) should be
+  // invalid
+  EXPECT_FALSE(isValidValueUse(regularVal, serialRegion));
+}
+
+TEST_F(OpenACCUtilsTest, isValidValueUseRoutineArgument) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(module->getBody());
+
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  auto funcType = b.getFunctionType({memrefTy}, {});
+  auto funcOp = func::FuncOp::create(b, loc, "routine_func", funcType);
+  funcOp->setDiscardableAttr(
+      getRoutineInfoAttrName(),
+      RoutineInfoAttr::get(&context,
+                           {SymbolRefAttr::get(&context, "acc_routine")}));
+  Block *entryBlock = funcOp.addEntryBlock();
+  b.setInsertionPointToStart(entryBlock);
+
+  auto serialOp = createEmptyOp<SerialOp>(b, loc);
+  Block *serialBlock = b.createBlock(&serialOp.getRegion());
+  b.setInsertionPointToStart(serialBlock);
+  func::CallOp::create(b, loc, "use_arg", TypeRange{},
+                       ValueRange{entryBlock->getArgument(0)});
+
+  EXPECT_TRUE(
+      isValidValueUse(entryBlock->getArgument(0), serialOp.getRegion()));
 }

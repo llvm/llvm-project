@@ -96,7 +96,7 @@ def main():
     except (FileNotFoundError, csv.Error, Exception) as e:
         print(str(e))
     except:
-        print("An error occured")
+        print("An error occurred")
 
 
 if __name__ == "__main__":

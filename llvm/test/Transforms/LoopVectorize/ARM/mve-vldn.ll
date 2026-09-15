@@ -18,7 +18,7 @@ entry:
   %cmp26 = icmp eq i32 %shr, 0
   br i1 %cmp26, label %while.end, label %while.body
 
-while.body:                                       ; preds = %entry, %while.body
+while.body:
   %pIn.addr.029 = phi ptr [ %add.ptr, %while.body ], [ %pIn, %entry ]
   %pOut.addr.028 = phi ptr [ %add.ptr7, %while.body ], [ %pOut, %entry ]
   %blkCnt.027 = phi i32 [ %dec, %while.body ], [ %shr, %entry ]
@@ -36,7 +36,7 @@ while.body:                                       ; preds = %entry, %while.body
   %cmp = icmp eq i32 %dec, 0
   br i1 %cmp, label %while.end, label %while.body
 
-while.end:                                        ; preds = %while.body, %entry
+while.end:
   ret void
 }
 
@@ -52,7 +52,7 @@ entry:
   %cmp38 = icmp eq i32 %shr, 0
   br i1 %cmp38, label %while.end, label %while.body
 
-while.body:                                       ; preds = %entry, %while.body
+while.body:
   %pIn.addr.041 = phi ptr [ %add.ptr, %while.body ], [ %pIn, %entry ]
   %pOut.addr.040 = phi ptr [ %add.ptr13, %while.body ], [ %pOut, %entry ]
   %blkCnt.039 = phi i32 [ %dec, %while.body ], [ %shr, %entry ]
@@ -80,7 +80,7 @@ while.body:                                       ; preds = %entry, %while.body
   %cmp = icmp eq i32 %dec, 0
   br i1 %cmp, label %while.end, label %while.body
 
-while.end:                                        ; preds = %while.body, %entry
+while.end:
   ret void
 }
 

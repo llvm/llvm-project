@@ -14,6 +14,7 @@
 
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -64,20 +65,11 @@ emitLpad(MachineBasicBlock &MBB, const RISCVInstrInfo *TII, uint32_t Label,
       .addImm(Label);
 }
 
-static bool isCallReturnTwice(const MachineOperand &MOp) {
-  if (!MOp.isGlobal())
-    return false;
-  auto *CalleeFn = dyn_cast<Function>(MOp.getGlobal());
-  if (!CalleeFn)
-    return false;
-  AttributeList Attrs = CalleeFn->getAttributes();
-  return Attrs.hasFnAttr(Attribute::ReturnsTwice);
-}
-
 bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
   const auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
-  if (!Subtarget.hasStdExtZicfilp())
+
+  if (!MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch())
     return false;
 
   uint32_t FixedLabel = 0;
@@ -110,19 +102,6 @@ bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
       if (MBB.getAlignment() < LpadAlign)
         MBB.setAlignment(LpadAlign);
       Changed = true;
-    }
-  }
-
-  // Check for calls to functions with ReturnsTwice attribute and insert
-  // LPAD after such calls
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
-      if (I->isCall() && I->getNumOperands() > 0 &&
-          isCallReturnTwice(I->getOperand(0))) {
-        auto NextI = std::next(I);
-        emitLpad(MBB, TII, FixedLabel, NextI);
-        Changed = true;
-      }
     }
   }
 

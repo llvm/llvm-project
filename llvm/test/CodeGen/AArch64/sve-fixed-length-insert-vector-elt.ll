@@ -41,10 +41,10 @@ define void @insertelement_v16f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    ptrue p1.h, vl16
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    cmpeq p2.h, p0/z, z0.h, z1.h
 ; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
 ; CHECK-NEXT:    fmov h1, #5.00000000
-; CHECK-NEXT:    mov z0.h, p0/m, h1
+; CHECK-NEXT:    mov z0.h, p2/m, h1
 ; CHECK-NEXT:    st1h { z0.h }, p1, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
@@ -62,10 +62,10 @@ define void @insertelement_v32f16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    mov z1.h, w8
 ; VBITS_GE_256-NEXT:    ptrue p1.h, vl16
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
-; VBITS_GE_256-NEXT:    cmpeq p0.h, p0/z, z0.h, z1.h
+; VBITS_GE_256-NEXT:    cmpeq p2.h, p0/z, z0.h, z1.h
 ; VBITS_GE_256-NEXT:    fmov h0, #5.00000000
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p1/z, [x0, x8, lsl #1]
-; VBITS_GE_256-NEXT:    mov z1.h, p0/m, h0
+; VBITS_GE_256-NEXT:    mov z1.h, p2/m, h0
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p1/z, [x0]
 ; VBITS_GE_256-NEXT:    st1h { z1.h }, p1, [x1, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    st1h { z0.h }, p1, [x1]
@@ -78,10 +78,10 @@ define void @insertelement_v32f16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.h
 ; VBITS_GE_512-NEXT:    mov z1.h, w8
 ; VBITS_GE_512-NEXT:    ptrue p1.h, vl32
-; VBITS_GE_512-NEXT:    cmpeq p0.h, p0/z, z0.h, z1.h
+; VBITS_GE_512-NEXT:    cmpeq p2.h, p0/z, z0.h, z1.h
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p1/z, [x0]
 ; VBITS_GE_512-NEXT:    fmov h1, #5.00000000
-; VBITS_GE_512-NEXT:    mov z0.h, p0/m, h1
+; VBITS_GE_512-NEXT:    mov z0.h, p2/m, h1
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p1, [x1]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <32 x half>, ptr %a
@@ -98,10 +98,10 @@ define void @insertelement_v64f16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    ptrue p1.h, vl64
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    cmpeq p2.h, p0/z, z0.h, z1.h
 ; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
 ; CHECK-NEXT:    fmov h1, #5.00000000
-; CHECK-NEXT:    mov z0.h, p0/m, h1
+; CHECK-NEXT:    mov z0.h, p2/m, h1
 ; CHECK-NEXT:    st1h { z0.h }, p1, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <64 x half>, ptr %a
@@ -118,10 +118,10 @@ define void @insertelement_v128f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    ptrue p1.h, vl128
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    cmpeq p2.h, p0/z, z0.h, z1.h
 ; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
 ; CHECK-NEXT:    fmov h1, #5.00000000
-; CHECK-NEXT:    mov z0.h, p0/m, h1
+; CHECK-NEXT:    mov z0.h, p2/m, h1
 ; CHECK-NEXT:    st1h { z0.h }, p1, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <128 x half>, ptr %a
@@ -162,10 +162,10 @@ define void @insertelement_v8f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    ptrue p1.s, vl8
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    cmpeq p2.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x0]
 ; CHECK-NEXT:    fmov s1, #5.00000000
-; CHECK-NEXT:    mov z0.s, p0/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    st1w { z0.s }, p1, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x float>, ptr %a
@@ -183,10 +183,10 @@ define void @insertelement_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    mov z1.s, w8
 ; VBITS_GE_256-NEXT:    ptrue p1.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
-; VBITS_GE_256-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
+; VBITS_GE_256-NEXT:    cmpeq p2.s, p0/z, z0.s, z1.s
 ; VBITS_GE_256-NEXT:    fmov s0, #5.00000000
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p1/z, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    mov z1.s, p0/m, s0
+; VBITS_GE_256-NEXT:    mov z1.s, p2/m, s0
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p1/z, [x0]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p1, [x1, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p1, [x1]
@@ -199,10 +199,10 @@ define void @insertelement_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.s
 ; VBITS_GE_512-NEXT:    mov z1.s, w8
 ; VBITS_GE_512-NEXT:    ptrue p1.s, vl16
-; VBITS_GE_512-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
+; VBITS_GE_512-NEXT:    cmpeq p2.s, p0/z, z0.s, z1.s
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p1/z, [x0]
 ; VBITS_GE_512-NEXT:    fmov s1, #5.00000000
-; VBITS_GE_512-NEXT:    mov z0.s, p0/m, s1
+; VBITS_GE_512-NEXT:    mov z0.s, p2/m, s1
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p1, [x1]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <16 x float>, ptr %a
@@ -219,10 +219,10 @@ define void @insertelement_v32f32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    ptrue p1.s, vl32
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    cmpeq p2.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x0]
 ; CHECK-NEXT:    fmov s1, #5.00000000
-; CHECK-NEXT:    mov z0.s, p0/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    st1w { z0.s }, p1, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x float>, ptr %a
@@ -239,10 +239,10 @@ define void @insertelement_v64f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    ptrue p1.s, vl64
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    cmpeq p2.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x0]
 ; CHECK-NEXT:    fmov s1, #5.00000000
-; CHECK-NEXT:    mov z0.s, p0/m, s1
+; CHECK-NEXT:    mov z0.s, p2/m, s1
 ; CHECK-NEXT:    st1w { z0.s }, p1, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <64 x float>, ptr %a
@@ -281,10 +281,10 @@ define void @insertelement_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    ptrue p1.d, vl4
-; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
+; CHECK-NEXT:    cmpeq p2.d, p0/z, z0.d, z1.d
 ; CHECK-NEXT:    ld1d { z0.d }, p1/z, [x0]
 ; CHECK-NEXT:    fmov d1, #5.00000000
-; CHECK-NEXT:    mov z0.d, p0/m, d1
+; CHECK-NEXT:    mov z0.d, p2/m, d1
 ; CHECK-NEXT:    st1d { z0.d }, p1, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x double>, ptr %a
@@ -302,10 +302,10 @@ define void @insertelement_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    mov z1.d, x8
 ; VBITS_GE_256-NEXT:    ptrue p1.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
+; VBITS_GE_256-NEXT:    cmpeq p2.d, p0/z, z0.d, z1.d
 ; VBITS_GE_256-NEXT:    fmov d0, #5.00000000
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p1/z, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    mov z1.d, p0/m, d0
+; VBITS_GE_256-NEXT:    mov z1.d, p2/m, d0
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p1/z, [x0]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p1, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p1, [x1]
@@ -318,10 +318,10 @@ define void @insertelement_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.d
 ; VBITS_GE_512-NEXT:    mov z1.d, x8
 ; VBITS_GE_512-NEXT:    ptrue p1.d, vl8
-; VBITS_GE_512-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
+; VBITS_GE_512-NEXT:    cmpeq p2.d, p0/z, z0.d, z1.d
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p1/z, [x0]
 ; VBITS_GE_512-NEXT:    fmov d1, #5.00000000
-; VBITS_GE_512-NEXT:    mov z0.d, p0/m, d1
+; VBITS_GE_512-NEXT:    mov z0.d, p2/m, d1
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p1, [x1]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <8 x double>, ptr %a
@@ -338,10 +338,10 @@ define void @insertelement_v16f64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    ptrue p1.d, vl16
-; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
+; CHECK-NEXT:    cmpeq p2.d, p0/z, z0.d, z1.d
 ; CHECK-NEXT:    ld1d { z0.d }, p1/z, [x0]
 ; CHECK-NEXT:    fmov d1, #5.00000000
-; CHECK-NEXT:    mov z0.d, p0/m, d1
+; CHECK-NEXT:    mov z0.d, p2/m, d1
 ; CHECK-NEXT:    st1d { z0.d }, p1, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x double>, ptr %a
@@ -358,10 +358,10 @@ define void @insertelement_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    ptrue p1.d, vl32
-; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
+; CHECK-NEXT:    cmpeq p2.d, p0/z, z0.d, z1.d
 ; CHECK-NEXT:    ld1d { z0.d }, p1/z, [x0]
 ; CHECK-NEXT:    fmov d1, #5.00000000
-; CHECK-NEXT:    mov z0.d, p0/m, d1
+; CHECK-NEXT:    mov z0.d, p2/m, d1
 ; CHECK-NEXT:    st1d { z0.d }, p1, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x double>, ptr %a

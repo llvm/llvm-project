@@ -6,10 +6,10 @@
 // CHECK-LABEL: main
 
 // The ieee,ieee is the default, so omit the attribute
-// CHECK-IEEE-NOT:"denormal-fp-math"
-// CHECK-PS: attributes #0 = {{.*}}"denormal-fp-math"="preserve-sign,preserve-sign"{{.*}}
-// CHECK-PZ: attributes #0 = {{.*}}"denormal-fp-math"="positive-zero,positive-zero"{{.*}}
-// CHECK-DYNAMIC: attributes #0 = {{.*}}"denormal-fp-math"="dynamic,dynamic"{{.*}}
+// CHECK-IEEE-NOT:denormal_fpenv
+// CHECK-PS: attributes #0 = {{.*}}denormal_fpenv(preservesign){{.*}}
+// CHECK-PZ: attributes #0 = {{.*}}denormal_fpenv(positivezero){{.*}}
+// CHECK-DYNAMIC: attributes #0 = {{.*}}denormal_fpenv(dynamic){{.*}}
 
 int main(void) {
   return 0;

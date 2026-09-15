@@ -26,12 +26,8 @@ using namespace lldb_private;
 SymbolVendor *SymbolVendor::FindPlugin(const lldb::ModuleSP &module_sp,
                                        lldb_private::Stream *feedback_strm) {
   std::unique_ptr<SymbolVendor> instance_up;
-  SymbolVendorCreateInstance create_callback;
 
-  for (size_t idx = 0;
-       (create_callback = PluginManager::GetSymbolVendorCreateCallbackAtIndex(
-            idx)) != nullptr;
-       ++idx) {
+  for (auto create_callback : PluginManager::GetSymbolVendorCreateCallbacks()) {
     instance_up.reset(create_callback(module_sp, feedback_strm));
 
     if (instance_up) {

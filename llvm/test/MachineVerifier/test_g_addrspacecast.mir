@@ -1,14 +1,9 @@
-#RUN: not --crash llc -o - -mtriple=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 ---
-name:            test_addrspacecast
-legalized:       true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-liveins:
-body:             |
+name: test_addrspacecast
+body: |
   bb.0:
 
     %0:_(s64) = G_IMPLICIT_DEF
@@ -53,5 +48,4 @@ body:             |
 
     ; CHECK: Bad machine code: addrspacecast must convert different address spaces
     %15:_(<2 x p0>) = G_ADDRSPACE_CAST %3
-
 ...

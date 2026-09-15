@@ -19,6 +19,7 @@
 namespace llvm {
 class Triple;
 class TargetLibraryInfoImpl;
+enum class VectorLibrary;
 } // namespace llvm
 
 namespace llvm::driver {
@@ -48,6 +49,9 @@ enum class VectorLibrary {
   ArmPL,              // Arm Performance Libraries.
   AMDLIBM             // AMD vector math library.
 };
+
+LLVM_ABI llvm::VectorLibrary
+convertDriverVectorLibraryToVectorLibrary(llvm::driver::VectorLibrary VecLib);
 
 LLVM_ABI TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
                                            VectorLibrary Veclib);

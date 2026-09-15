@@ -9,7 +9,8 @@
 # RUN:     | llvm-objdump --mattr=+zcmop -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
-# CHECK-ASM-AND-OBJ: c.mop.1
+# c.mop.1 is an alias for c.sspush ra.
+# CHECK-ASM-AND-OBJ: c.sspush ra
 # CHECK-ASM: encoding: [0x81,0x60]
 c.mop.1
 
@@ -17,7 +18,8 @@ c.mop.1
 # CHECK-ASM: encoding: [0x81,0x61]
 c.mop.3
 
-# CHECK-ASM-AND-OBJ: c.mop.5
+# c.mop.5 is an alias for c.sspopchk t0.
+# CHECK-ASM-AND-OBJ: c.sspopchk t0
 # CHECK-ASM: encoding: [0x81,0x62]
 c.mop.5
 

@@ -10,9 +10,12 @@ int foo() {
   return e;
 }
 
-// CIR: %[[RET:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR: %[[INIT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
-// CIR: %[[COMPOUND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, [".compoundliteral", init]
+// CIR-DAG: cir.global "private" constant cir_private @[[FOO4_P:.*]] = #cir.const_record<{#cir.int<5> : !s32i, #cir.int<10> : !s32i}> : !rec_Point
+// LLVM-DAG: @[[FOO4_P:.*]] = private constant %struct.Point { i32 5, i32 10 }
+
+// CIR: %[[RET:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR: %[[INIT:.*]] = cir.alloca "e" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[COMPOUND:.*]] = cir.alloca ".compoundliteral" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[VALUE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[VALUE]], %[[COMPOUND]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[COMPOUND]] : !cir.ptr<!s32i>, !s32i
@@ -22,9 +25,9 @@ int foo() {
 // CIR: %[[TMP_3:.*]] = cir.load %[[RET]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return %[[TMP_3]] : !s32i
 
-// LLVM: %[[RET:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[INIT:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[COMPOUND:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[RET:.*]] = alloca i32, align 4
+// LLVM: %[[INIT:.*]] = alloca i32, align 4
+// LLVM: %[[COMPOUND:.*]] = alloca i32, align 4
 // LLVM: store i32 1, ptr %[[COMPOUND]], align 4
 // LLVM: %[[TMP:.*]] = load i32, ptr %[[COMPOUND]], align 4
 // LLVM: store i32 %[[TMP]], ptr %[[INIT]], align 4
@@ -45,15 +48,15 @@ void foo2() {
   int _Complex a = (int _Complex) { 1, 2};
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a", init]
-// CIR: %[[CL_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, [".compoundliteral"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[CL_ADDR:.*]] = cir.alloca ".compoundliteral" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[COMPLEX:.*]] = cir.const #cir.const_complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i> : !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[COMPLEX]], %[[CL_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[CL_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[TMP]], %[[A_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
-// LLVM:  %[[A_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
-// LLVM: %[[CL_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM:  %[[A_ADDR:.*]] = alloca { i32, i32 }, align 4
+// LLVM: %[[CL_ADDR:.*]] = alloca { i32, i32 }, align 4
 // LLVM: store { i32, i32 } { i32 1, i32 2 }, ptr %[[CL_ADDR]], align 4
 // LLVM: %[[TMP:.*]] = load { i32, i32 }, ptr %[[CL_ADDR]], align 4
 // LLVM: store { i32, i32 } %[[TMP]], ptr %[[A_ADDR]], align 4
@@ -78,11 +81,11 @@ void foo3() {
   auto a = (vi4){10, 20, 30, 40};
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[VEC:.*]] = cir.const #cir.const_vector<[#cir.int<10> : !s32i, #cir.int<20> : !s32i, #cir.int<30> : !s32i, #cir.int<40> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC]], %[[A_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
 // LLVM: store <4 x i32> <i32 10, i32 20, i32 30, i32 40>, ptr %[[A_ADDR]], align 16
 
 // FIXME: OGCG emits a temporary compound literal in this case because it omits
@@ -106,13 +109,13 @@ void foo4() {
 }
 
 // CIR-LABEL: @_Z4foo4v
-// CIR:   %[[P:.*]] = cir.alloca !rec_Point, !cir.ptr<!rec_Point>, ["p", init]
-// CIR:   %[[CONST:.*]] = cir.const #cir.const_record<{#cir.int<5> : !s32i, #cir.int<10> : !s32i}> : !rec_Point
-// CIR:   cir.store{{.*}} %[[CONST]], %[[P]] : !rec_Point, !cir.ptr<!rec_Point>
+// CIR:   %[[P:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!rec_Point>
+// CIR:   %[[CONST:.*]] = cir.get_global @[[FOO4_P]] : !cir.ptr<!rec_Point>
+// CIR:   cir.copy %[[CONST]] to %[[P]] : !cir.ptr<!rec_Point>
 
 // LLVM-LABEL: @_Z4foo4v
 // LLVM:   %[[P:.*]] = alloca %struct.Point
-// LLVM:   store %struct.Point { i32 5, i32 10 }, ptr %[[P]], align 4
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 4 %[[P]], ptr align 4 @[[FOO4_P]]
 
 // OGCG-LABEL: @_Z4foo4v
 // OGCG:   %[[P:.*]] = alloca %struct.Point

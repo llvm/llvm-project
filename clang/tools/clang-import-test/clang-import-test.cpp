@@ -235,10 +235,7 @@ BuildASTContext(CompilerInstance &CI, SelectorTable &ST, Builtin::Context &BC) {
 std::unique_ptr<CodeGenerator> BuildCodeGen(CompilerInstance &CI,
                                             llvm::LLVMContext &LLVMCtx) {
   StringRef ModuleName("$__module");
-  return std::unique_ptr<CodeGenerator>(CreateLLVMCodeGen(
-      CI.getDiagnostics(), ModuleName, CI.getVirtualFileSystemPtr(),
-      CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(), CI.getCodeGenOpts(),
-      LLVMCtx));
+  return CreateLLVMCodeGen(CI, ModuleName, LLVMCtx);
 }
 } // namespace init_convenience
 
@@ -341,8 +338,10 @@ llvm::Expected<CIAndOrigins> Parse(const std::string &Path,
   if (llvm::Error PE = ParseSource(Path, CI.getCompilerInstance(), Consumers))
     return std::move(PE);
   CI.getDiagnosticClient().EndSourceFile();
-  if (ShouldDumpIR)
+  if (ShouldDumpIR) {
+    CG.GetModule()->renumberMetadataForAssembly();
     CG.GetModule()->print(llvm::outs(), nullptr);
+  }
   if (CI.getDiagnosticClient().getNumErrors())
     return llvm::make_error<llvm::StringError>(
         "Errors occurred while parsing the expression.", std::error_code());

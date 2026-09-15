@@ -514,16 +514,27 @@ struct CompactUnwindTraits_MachO_x86_64
   constexpr static uint32_t EncodingModeMask = 0x0f000000;
   constexpr static uint32_t DWARFSectionOffsetMask = 0x00ffffff;
 
+  constexpr static uint32_t EBPFrameMode = 0x01000000;
+  constexpr static uint32_t StackImmediateMode = 0x02000000;
+  constexpr static uint32_t StackIndirectMode = 0x03000000;
+  constexpr static uint32_t DWARFMode = 0x04000000;
+
   using GOTManager = x86_64::GOTTableManager;
 
   static bool encodingSpecifiesDWARF(uint32_t Encoding) {
-    constexpr uint32_t DWARFMode = 0x04000000;
     return (Encoding & EncodingModeMask) == DWARFMode;
   }
 
-  static bool encodingCannotBeMerged(uint32_t Encoding) {
-    constexpr uint32_t StackIndirectMode = 0x03000000;
-    return (Encoding & EncodingModeMask) == StackIndirectMode;
+  static bool encodingCanBeMerged(uint32_t Encoding) {
+    switch (Encoding & EncodingModeMask) {
+    case EBPFrameMode:
+    case StackImmediateMode:
+      return true;
+    case StackIndirectMode:
+    case DWARFMode:
+    default:
+      return false;
+    }
   }
 };
 

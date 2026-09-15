@@ -24,7 +24,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -33,24 +36,27 @@ class LegalizerInfo;
 class MachineIRBuilder;
 class MachineInstr;
 class GISelChangeObserver;
+class LibcallLoweringInfo;
 class LostDebugLocObserver;
 
-class LLVM_ABI Legalizer : public MachineFunctionPass {
+struct LegalizerMFResult {
+  bool Changed;
+  const MachineInstr *FailedOn;
+};
+
+LegalizerMFResult legalizeMachineFunction(
+    MachineFunction &MF, const LegalizerInfo &LI,
+    ArrayRef<GISelChangeObserver *> AuxObservers,
+    LostDebugLocObserver &LocObserver, MachineIRBuilder &MIRBuilder,
+    const LibcallLoweringInfo *Libcalls, GISelValueTracking *VT);
+
+class LLVM_ABI LegalizerLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  struct MFResult {
-    bool Changed;
-    const MachineInstr *FailedOn;
-  };
-
-private:
-  /// Initialize the field members using \p MF.
-  void init(MachineFunction &MF);
-
 public:
   // Ctor, nothing fancy.
-  Legalizer();
+  LegalizerLegacy();
 
   StringRef getPassName() const override { return "Legalizer"; }
 
@@ -69,13 +75,26 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-
-  static MFResult
-  legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
-                          ArrayRef<GISelChangeObserver *> AuxObservers,
-                          LostDebugLocObserver &LocObserver,
-                          MachineIRBuilder &MIRBuilder, GISelValueTracking *VT);
 };
+
+class LegalizerPass : public RequiredPassInfoMixin<LegalizerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setIsSSA();
+  }
+
+  MachineFunctionProperties getSetProperties() const {
+    return MachineFunctionProperties().setLegalized();
+  }
+
+  MachineFunctionProperties getClearedProperties() const {
+    return MachineFunctionProperties().setNoPHIs().setNoVRegs();
+  }
+};
+
 } // End namespace llvm.
 
 #endif

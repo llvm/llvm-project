@@ -97,6 +97,7 @@ set(SANITIZER_SYMBOLIZER_SOURCES
   sanitizer_symbolizer_report_fuchsia.cpp
   sanitizer_symbolizer_win.cpp
   sanitizer_thread_history.cpp
+  sanitizer_unwind_aix.cpp
   sanitizer_unwind_linux_libcdep.cpp
   sanitizer_unwind_fuchsia.cpp
   sanitizer_unwind_win.cpp
@@ -169,6 +170,8 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_mac.h
   sanitizer_malloc_mac.inc
   sanitizer_mutex.h
+  sanitizer_new_handler.h
+  sanitizer_new_operators.inc
   sanitizer_placement_new.h
   sanitizer_platform.h
   sanitizer_platform_interceptors.h

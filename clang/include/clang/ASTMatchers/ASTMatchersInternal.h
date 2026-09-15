@@ -1986,6 +1986,46 @@ getTemplateArgsWritten(const TemplateSpecializationTypeLoc &T) {
   return Args;
 }
 
+inline ArrayRef<TemplateArgumentLoc>
+getTemplateArgsWritten(const OverloadExpr &OE) {
+  return OE.template_arguments();
+}
+
+inline unsigned
+getNumTemplateArgsWritten(const ClassTemplateSpecializationDecl &D) {
+  if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
+    return Args->getNumTemplateArgs();
+  return 0;
+}
+
+inline unsigned
+getNumTemplateArgsWritten(const VarTemplateSpecializationDecl &D) {
+  if (const ASTTemplateArgumentListInfo *Args = D.getTemplateArgsAsWritten())
+    return Args->getNumTemplateArgs();
+  return 0;
+}
+
+inline unsigned getNumTemplateArgsWritten(const FunctionDecl &FD) {
+  if (const auto *Args = FD.getTemplateSpecializationArgsAsWritten())
+    return Args->getNumTemplateArgs();
+  return 0;
+}
+
+inline unsigned getNumTemplateArgsWritten(const DeclRefExpr &DRE) {
+  return DRE.getNumTemplateArgs();
+}
+
+inline unsigned
+getNumTemplateArgsWritten(const TemplateSpecializationTypeLoc &T) {
+  if (!T.isNull())
+    return T.getNumArgs();
+  return 0;
+}
+
+inline unsigned getNumTemplateArgsWritten(const OverloadExpr &OE) {
+  return OE.getNumTemplateArgs();
+}
+
 struct NotEqualsBoundNodePredicate {
   bool operator()(const internal::BoundNodesMap &Nodes) const {
     return Nodes.getNode(ID) != Node;

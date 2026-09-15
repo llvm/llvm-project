@@ -70,20 +70,20 @@ std::optional<AddressMap> AddressMap::parse(BinaryContext &BC) {
 
   AddressMap Parsed;
 
-  const size_t EntrySize = 2 * BC.AsmInfo->getCodePointerSize();
+  unsigned CodePointerSize = BC.AsmInfo->getCodePointerSize();
+  const size_t EntrySize = 2 * CodePointerSize;
   auto parseSection =
       [&](BinarySection &Section,
           function_ref<void(uint64_t, uint64_t)> InsertCallback) {
         StringRef Buffer = Section.getOutputContents();
         assert(Buffer.size() % EntrySize == 0 && "Unexpected address map size");
 
-        DataExtractor DE(Buffer, BC.AsmInfo->isLittleEndian(),
-                         BC.AsmInfo->getCodePointerSize());
+        DataExtractor DE(Buffer, BC.AsmInfo->isLittleEndian());
         DataExtractor::Cursor Cursor(0);
 
         while (Cursor && !DE.eof(Cursor)) {
-          const uint64_t Input = DE.getAddress(Cursor);
-          const uint64_t Output = DE.getAddress(Cursor);
+          const uint64_t Input = DE.getUnsigned(Cursor, CodePointerSize);
+          const uint64_t Output = DE.getUnsigned(Cursor, CodePointerSize);
           InsertCallback(Input, Output);
         }
 
