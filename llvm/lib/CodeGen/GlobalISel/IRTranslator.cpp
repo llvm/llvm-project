@@ -963,7 +963,9 @@ ArrayRef<Register> IRTranslatorImpl::getOrCreateVRegs(const Value &Val) {
   // Create entry for this type.
   auto *VRegs = VMap.getVRegs(Val);
 
-  if (!Val.getType()->isTokenTy())
+  // Unsized token-like target extension types are represented by a zero-sized
+  // vreg like `token`; sized token-like types follow the normal path.
+  if (!Val.getType()->isTokenLikeTy())
     assert(Val.getType()->isSized() &&
            "Don't know how to create an empty vreg");
 
