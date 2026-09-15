@@ -48,7 +48,7 @@ class VarBypassDetector {
   // Set of variables which were bypassed by some jump.
   llvm::DenseSet<const VarDecl *> Bypasses;
   // Map from a bypassing jump (goto/switch case) to the variable declarations
-  // it bypasses. Used to reinitialize those variables at the jump (C++ only).
+  // it bypasses. Used to reinitialize those variables at the jump.
   llvm::DenseMap<const Stmt *, llvm::DenseSet<const VarDecl *>>
       BypassedVarsAtSource;
   // If true assume that all variables are being bypassed.
