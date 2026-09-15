@@ -12,6 +12,12 @@
 
 #include "PluginManager.h"
 #include "OffloadPolicy.h"
+#include "OpenMP/OMPT/Callback.h"
+#include "OpenMP/OMPT/OmptCommonDefs.h"
+#include "OpenMP/OMPT/OmptTracing.h"
+#ifdef OMPT_SUPPORT
+#include "OmptProfiler.h"
+#endif
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
 #include "device.h"
@@ -25,6 +31,12 @@ using namespace llvm::sys;
 using namespace llvm::omp::target::debug;
 
 PluginManager *PM = nullptr;
+
+OmptTracingBufferMgr *PluginManager::getTraceRecordManager() const {
+  // The trace buffer manager is owned by the profiler so that its lifetime is
+  // bound to the profiler data that refers into its records.
+  return getProfiler()->getTraceRecordManager();
+}
 
 // Every plugin exports this method to create an instance of the plugin type.
 #define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
@@ -47,6 +59,13 @@ void PluginManager::init() {
   } while (false);
 #include "Shared/Targets.def"
 
+  assert(!Profiler && "Expected profiler to be null");
+#ifdef OMPT_SUPPORT
+  Profiler = std::make_unique<llvm::omp::target::ompt::OmptProfilerTy>();
+#else
+  Profiler = std::make_unique<llvm::omp::target::plugin::GenericProfilerTy>();
+#endif
+
   ODBG(ODT_Init) << "RTLs loaded!";
 }
 
@@ -58,12 +77,16 @@ void PluginManager::deinit() {
     if (!Plugin->is_initialized())
       continue;
 
-    if (auto Err = Plugin->deinit()) {
+    if (auto Err = Plugin->deinit(getProfiler())) {
       std::string InfoMsg = toString(std::move(Err));
       ODBG(ODT_Deinit) << "Failed to deinit plugin: " << InfoMsg;
     }
     Plugin.release();
   }
+
+  // Released after the plugins so in-flight work can still complete records
+  // into the profiler-owned trace buffer manager.
+  Profiler.reset();
 
   ODBG(ODT_Deinit) << "RTLs unloaded!";
 }
@@ -322,6 +345,9 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
 void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   ODBG(ODT_Deinit) << "Unloading target library!";
+
+  OMPT_IF_TRACING_ENABLED(
+      PM->getTraceRecordManager()->flushAndShutdownHelperThreads(););
 
   Desc = upgradeLegacyEntries(Desc);
 
