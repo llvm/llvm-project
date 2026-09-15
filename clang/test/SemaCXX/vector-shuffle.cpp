@@ -19,5 +19,5 @@ void vector_of_float_mask() {
 void mask_vector_with_different_size() {
   v8b a;
   v6i b;
-  auto r = __builtin_shufflevector(a, b); // expected-error {{first two arguments to __builtin_shufflevector must have the same number of elements}}
+  auto r = __builtin_shufflevector(a, b); // expected-error {{vector operands do not have the same number of elements ('v8b' (vector of 8 'bool' values) and 'v6i' (vector of 6 'int' values))}}
 }

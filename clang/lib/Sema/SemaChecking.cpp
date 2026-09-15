@@ -6603,9 +6603,8 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
 
       if (RHSVecType->getNumElements() != NumElements)
         return ExprError(Diag(TheCall->getBeginLoc(),
-                              diag::err_shufflevector_incompatible_vector)
-                         << TheCall->getDirectCallee()
-                         << /*isMoreThanTwoArgs*/ false
+                              diag::err_typecheck_vector_lengths_not_equal)
+                         << LHSType << RHSType << /*isMoreThanTwoArgs*/ false
                          << SourceRange(TheCall->getArg(1)->getBeginLoc(),
                                         TheCall->getArg(1)->getEndLoc()));
     } else if (!Context.hasSameUnqualifiedType(LHSType, RHSType)) {
