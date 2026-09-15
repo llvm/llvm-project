@@ -10648,7 +10648,9 @@ static void AddMostOverridenMethods(const CXXMethodDecl *MD,
 
 void Sema::FindHiddenVirtualMethods(CXXMethodDecl *MD,
                           SmallVectorImpl<CXXMethodDecl*> &OverloadedMethods) {
-  if (!MD->getDeclName().isIdentifier())
+  CXXRecordDecl *DC = MD->getParent();
+  if (DC->getNumBases() == 0 || !DC->isPolymorphic() ||
+      !MD->getDeclName().isIdentifier())
     return;
 
   CXXBasePaths Paths(/*FindAmbiguities=*/true, // true to look in all bases.
@@ -10660,7 +10662,6 @@ void Sema::FindHiddenVirtualMethods(CXXMethodDecl *MD,
 
   // Keep the base methods that were overridden or introduced in the subclass
   // by 'using' in a set. A base method not in this set is hidden.
-  CXXRecordDecl *DC = MD->getParent();
   for (NamedDecl *ND : DC->lookup(MD->getDeclName())) {
     if (UsingShadowDecl *shad = dyn_cast<UsingShadowDecl>(ND))
       ND = shad->getTargetDecl();
