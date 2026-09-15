@@ -126,7 +126,7 @@ int32_t jcvt(double v) {
 __typeof__(__builtin_arm_rsr("1:2:3:4:5")) rsr(void);
 
 uint32_t rsr(void) {
-  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]]])
+  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]+]])
   // CHECK-NEXT: trunc i64 [[V0]] to i32
   return __builtin_arm_rsr("1:2:3:4:5");
 }
@@ -134,12 +134,12 @@ uint32_t rsr(void) {
 __typeof__(__builtin_arm_rsr64("1:2:3:4:5")) rsr64(void);
 
 uint64_t rsr64(void) {
-  // CHECK: call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]]])
+  // CHECK: call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]+]])
   return __builtin_arm_rsr64("1:2:3:4:5");
 }
 
 void *rsrp(void) {
-  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]]])
+  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_volatile_register.i64(metadata ![[M0:[0-9]+]])
   // CHECK-NEXT: inttoptr i64 [[V0]] to ptr
   return __builtin_arm_rsrp("1:2:3:4:5");
 }
@@ -148,20 +148,20 @@ __typeof__(__builtin_arm_wsr("1:2:3:4:5", 0)) wsr(unsigned);
 
 void wsr(unsigned v) {
   // CHECK: [[V0:[%A-Za-z0-9.]+]] = zext i32 %v to i64
-  // CHECK-NEXT: call void @llvm.write_register.i64(metadata ![[M0:[0-9]]], i64 [[V0]])
+  // CHECK-NEXT: call void @llvm.write_register.i64(metadata ![[M0:[0-9]+]], i64 [[V0]])
   __builtin_arm_wsr("1:2:3:4:5", v);
 }
 
 __typeof__(__builtin_arm_wsr64("1:2:3:4:5", 0)) wsr64(uint64_t);
 
 void wsr64(uint64_t v) {
-  // CHECK: call void @llvm.write_register.i64(metadata ![[M0:[0-9]]], i64 %v)
+  // CHECK: call void @llvm.write_register.i64(metadata ![[M0:[0-9]+]], i64 %v)
   __builtin_arm_wsr64("1:2:3:4:5", v);
 }
 
 void wsrp(void *v) {
   // CHECK: [[V0:[%A-Za-z0-9.]+]] = ptrtoint ptr %v to i64
-  // CHECK-NEXT: call void @llvm.write_register.i64(metadata ![[M0:[0-9]]], i64 [[V0]])
+  // CHECK-NEXT: call void @llvm.write_register.i64(metadata ![[M0:[0-9]+]], i64 [[V0]])
   __builtin_arm_wsrp("1:2:3:4:5", v);
 }
 
