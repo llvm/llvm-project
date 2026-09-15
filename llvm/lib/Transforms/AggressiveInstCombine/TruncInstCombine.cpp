@@ -75,8 +75,19 @@ static bool isRelevantOperand(const Instruction *I, unsigned OpNo) {
     return true;
   case Instruction::ShuffleVector:
     return true;
-  default:
+  default: {
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::umin:
+      case Intrinsic::umax: {
+        return OpNo < 2;
+      }
+      default:
+        break;
+      }
+    }
     llvm_unreachable("Unreachable!");
+  }
   }
 }
 
@@ -169,7 +180,21 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
       // TODO: Can handle more cases here:
       // 1. sdiv, srem
       // ...
-      return false;
+      if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::umin:
+        case Intrinsic::umax: {
+          SmallVector<Value *, 2> Operands;
+          getRelevantOperands(I, Operands);
+          append_range(Worklist, Operands);
+          break;
+        }
+        default:
+          return false;
+        }
+      } else {
+        return false;
+      }
     }
   }
   return true;
@@ -330,9 +355,8 @@ Type *TruncInstCombine::getBestTruncatedType() {
       if (MinBitWidth >= OrigBitWidth)
         return nullptr;
       Itr.second.MinBitWidth = MinBitWidth;
-    }
-    if (I->getOpcode() == Instruction::UDiv ||
-        I->getOpcode() == Instruction::URem) {
+    } else if (I->getOpcode() == Instruction::UDiv ||
+               I->getOpcode() == Instruction::URem) {
       unsigned MinBitWidth = 0;
       for (const auto &Op : I->operands()) {
         KnownBits Known = computeKnownBits(Op);
@@ -342,6 +366,24 @@ Type *TruncInstCombine::getBestTruncatedType() {
           return nullptr;
       }
       Itr.second.MinBitWidth = MinBitWidth;
+    } else if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::umin:
+      case Intrinsic::umax: {
+        unsigned MinBitWidth = 0;
+        for (const auto &Op : II->args()) {
+          KnownBits Known = computeKnownBits(Op);
+          MinBitWidth =
+              std::max(Known.getMaxValue().getActiveBits(), MinBitWidth);
+          if (MinBitWidth >= OrigBitWidth)
+            return nullptr;
+        }
+        Itr.second.MinBitWidth = MinBitWidth;
+        break;
+      }
+      default:
+        break;
+      }
     }
   }
 
@@ -480,8 +522,23 @@ void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
           std::make_pair(cast<PHINode>(I), cast<PHINode>(Res)));
       break;
     }
-    default:
-      llvm_unreachable("Unhandled instruction");
+    default: {
+      if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::umin:
+        case Intrinsic::umax: {
+          Value *LHS = getReducedOperand(I->getOperand(0), SclTy);
+          Value *RHS = getReducedOperand(I->getOperand(1), SclTy);
+          Res = Builder.CreateBinaryIntrinsic(II->getIntrinsicID(), LHS, RHS);
+          break;
+        }
+        default:
+          llvm_unreachable("Unhandled intrinsic");
+        }
+      } else {
+        llvm_unreachable("Unhandled instruction");
+      }
+    }
     }
 
     NodeInfo.NewValue = Res;
