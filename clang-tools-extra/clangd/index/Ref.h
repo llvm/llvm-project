@@ -69,12 +69,12 @@ enum class RefKind : uint8_t {
   All = Declaration | Definition | Reference | Spelled | Call,
 };
 
-inline RefKind operator|(RefKind L, RefKind R) {
+inline constexpr RefKind operator|(RefKind L, RefKind R) {
   return static_cast<RefKind>(static_cast<uint8_t>(L) |
                               static_cast<uint8_t>(R));
 }
 inline RefKind &operator|=(RefKind &L, RefKind R) { return L = L | R; }
-inline RefKind operator&(RefKind A, RefKind B) {
+inline constexpr RefKind operator&(RefKind A, RefKind B) {
   return static_cast<RefKind>(static_cast<uint8_t>(A) &
                               static_cast<uint8_t>(B));
 }
