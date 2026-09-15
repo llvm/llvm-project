@@ -6255,6 +6255,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_CoopMatrixCast:
   case CK_HLSLVectorTruncation:
   case CK_HLSLMatrixTruncation:
   case CK_HLSLArrayRValue:
@@ -7541,4 +7542,69 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
         AccessList.emplace_back(LVal);
     }
   }
+}
+
+llvm::Value *
+CodeGenFunction::EmitCoopMatBuiltinCall(llvm::StringRef BuiltinName,
+                                        llvm::ArrayRef<llvm::Value *> Args,
+                                        QualType ResultTy) {
+  assert(!Args.empty() &&
+         "Expected at least one argument for cooperative matrix builtin");
+
+  llvm::Module &Module = CGM.getModule();
+
+  llvm::Type *ResultLLVMType = ConvertType(ResultTy);
+
+  SmallVector<llvm::Type *, 8> ArgTypes;
+  ArgTypes.reserve(Args.size());
+
+  for (llvm::Value *Arg : Args) {
+    assert(Arg && "Cooperative matrix builtin argument must not be null");
+    ArgTypes.push_back(Arg->getType());
+  }
+
+  // Although the frontend builtin is declared as void(...), the LLVM-level
+  // builtin returns the cooperative matrix result directly.
+  llvm::FunctionType *BuiltinType =
+      llvm::FunctionType::get(ResultLLVMType, ArgTypes,
+                              /*IsVarArg=*/false);
+
+  llvm::FunctionCallee Builtin =
+      Module.getOrInsertFunction(BuiltinName, BuiltinType);
+
+  return Builder.CreateCall(Builtin, Args, "coopmat.result");
+}
+
+llvm::Value *CodeGenFunction::EmitCoopMatBinaryOp(BinaryOperatorKind Opcode,
+                                                  llvm::Value *LHS,
+                                                  llvm::Value *RHS,
+                                                  QualType ResultTy) {
+  switch (Opcode) {
+  case BO_Add:
+    return EmitCoopMatBuiltinCall("coop_mat_binary_add", {LHS, RHS}, ResultTy);
+
+  case BO_Sub:
+    return EmitCoopMatBuiltinCall("coop_mat_binary_sub", {LHS, RHS}, ResultTy);
+
+  case BO_Mul:
+    // Matrix * scalar.
+    if (!RHS->getType()->isVectorTy()) {
+      return EmitCoopMatBuiltinCall("coop_mat_scalar_mul", {LHS, RHS},
+                                    ResultTy);
+    }
+
+    // Matrix * matrix.
+    return EmitCoopMatBuiltinCall("coop_mat_binary_mul", {LHS, RHS}, ResultTy);
+
+  case BO_Div:
+    return EmitCoopMatBuiltinCall("coop_mat_binary_div", {LHS, RHS}, ResultTy);
+
+  default:
+    llvm_unreachable("Unsupported cooperative matrix binary operation");
+  }
+}
+
+llvm::Value *CodeGenFunction::EmitCoopMatNeg(llvm::Value *Operand,
+                                             QualType ResultTy) {
+  return EmitCoopMatBuiltinCall("coop_mat_scalar_neg", {Operand}, ResultTy);
 }

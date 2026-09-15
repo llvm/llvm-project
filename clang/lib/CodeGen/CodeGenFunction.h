@@ -5476,6 +5476,20 @@ public:
   void EmitDelegateCallArg(CallArgList &args, const VarDecl *param,
                            SourceLocation loc);
 
+  /// Helper function to emit coop matrix builtin call.
+  llvm::Value *EmitCoopMatBuiltinCall(llvm::StringRef BuiltinName,
+                                      llvm::ArrayRef<llvm::Value *> Args,
+                                      QualType ResultTy);
+
+  /// EmitCoopMatBinaryOp - Emit the computation of the specified binary op,
+  /// returning the result.
+  llvm::Value *EmitCoopMatBinaryOp(BinaryOperatorKind Opcode, llvm::Value *LHS,
+                                   llvm::Value *RHS, QualType ResultTy);
+
+  /// EmitCoopMatNeg - Emit the computation of the negate op,
+  /// returning the result.
+  llvm::Value *EmitCoopMatNeg(llvm::Value *Operand, QualType ResultTy);
+
   /// SetFPAccuracy - Set the minimum required accuracy of the given floating
   /// point operation, expressed as the maximum relative error in ulp.
   void SetFPAccuracy(llvm::Value *Val, float Accuracy);

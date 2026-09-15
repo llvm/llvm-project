@@ -2708,6 +2708,7 @@ public:
   bool isSubscriptableVectorType() const;
   bool isMatrixType() const;                    // Matrix type.
   bool isConstantMatrixType() const;            // Constant matrix type.
+  bool isCooperativeMatrixType() const;         // Cooperative matrix type.
   bool isOverflowBehaviorType() const;          // Overflow behavior type.
   bool isDependentAddressSpaceType() const;     // value-dependent address space qualifier
   bool isObjCObjectPointerType() const;         // pointer to ObjC object
@@ -4543,6 +4544,112 @@ public:
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == ConstantMatrix;
+  }
+};
+
+/// Represents an opaque OpenCL cooperative matrix type.
+///
+/// Unlike MatrixType, a cooperative matrix is not an ordinary matrix value.
+/// It is an opaque, distributed object whose shape and role are part of its
+/// type identity.
+class CooperativeMatrixType final : public Type, public llvm::FoldingSetNode {
+protected:
+  friend class ASTContext;
+
+  /// Element type of the cooperative matrix.
+  QualType ElementType;
+
+  /// Number of rows and columns.
+  unsigned NumRows;
+  unsigned NumColumns;
+
+  /// Cooperative matrix scope and use.
+  unsigned Scope;
+  unsigned Use;
+
+  static constexpr unsigned MaxElementsPerDimension = (1 << 20) - 1;
+
+  CooperativeMatrixType(QualType ElementType, unsigned Scope, unsigned NumRows,
+                        unsigned NumColumns, unsigned Use,
+                        QualType CanonicalType)
+      : Type(Type::CooperativeMatrix, CanonicalType,
+             ElementType->getDependence()),
+        ElementType(ElementType), NumRows(NumRows), NumColumns(NumColumns),
+        Scope(Scope), Use(Use) {}
+
+public:
+  /// Returns the element type.
+  QualType getElementType() const { return ElementType; }
+
+  /// Returns the number of rows.
+  unsigned getNumRows() const { return NumRows; }
+
+  /// Returns the number of columns.
+  unsigned getNumColumns() const { return NumColumns; }
+
+  /// Returns the cooperative matrix scope.
+  unsigned getScope() const { return Scope; }
+
+  /// Returns the cooperative matrix use.
+  unsigned getUse() const { return Use; }
+
+  /// Returns true if \p NumElements is a valid cooperative matrix dimension.
+  static constexpr bool isDimensionValid(size_t NumElements) {
+    return NumElements > 0 && NumElements <= MaxElementsPerDimension;
+  }
+
+  /// Returns true if \p Scope is a valid cooperative matrix scope.
+  static constexpr bool isScopeValid(size_t Scope) {
+    return Scope == 3; // CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP
+  }
+
+  /// Returns true if \p Use is a valid cooperative matrix use.
+  static constexpr bool isUseValid(size_t Use) {
+    return Use == 0 || // CLK_COOPERATIVE_MATRIX_A
+           Use == 1 || // CLK_COOPERATIVE_MATRIX_B
+           Use == 2;   // CLK_COOPERATIVE_MATRIX_ACCUMULATOR
+  }
+
+  /// Returns the maximum valid number of elements per dimension.
+  static constexpr unsigned getMaxElementsPerDimension() {
+    return MaxElementsPerDimension;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, getElementType(), getScope(), getNumRows(), getNumColumns(),
+            getUse(), getTypeClass());
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType ElementType,
+                      unsigned Scope, unsigned NumRows, unsigned NumColumns,
+                      unsigned Use, TypeClass TypeClass) {
+    ID.AddPointer(ElementType.getAsOpaquePtr());
+    ID.AddInteger(NumRows);
+    ID.AddInteger(NumColumns);
+    ID.AddInteger(Scope);
+    ID.AddInteger(Use);
+    ID.AddInteger(TypeClass);
+  }
+
+  static bool isValidElementType(QualType ElemTy) {
+    return ElemTy->isSpecificBuiltinType(BuiltinType::Char_S) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::UChar) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::Short) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::UShort) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::Int) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::UInt) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::Long) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::ULong) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::Half) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::Float) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::Double);
+  }
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == CooperativeMatrix;
   }
 };
 
@@ -8821,6 +8928,10 @@ inline bool Type::isMatrixType() const {
 
 inline bool Type::isConstantMatrixType() const {
   return isa<ConstantMatrixType>(CanonicalType);
+}
+
+inline bool Type::isCooperativeMatrixType() const {
+  return isa<CooperativeMatrixType>(CanonicalType);
 }
 
 inline bool Type::isOverflowBehaviorType() const {
