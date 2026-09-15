@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__assert>
-#include <__config>
-
 #if defined(__linux__)
 #  include "debugging/linux.ipp"
 #elif defined(__FREEBSD__) || defined(__APPLE__)

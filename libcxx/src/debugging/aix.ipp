@@ -10,6 +10,7 @@
 #include <__config>
 #include <charconv>
 #include <cstring>
+#include <debugging>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/proc.h>
