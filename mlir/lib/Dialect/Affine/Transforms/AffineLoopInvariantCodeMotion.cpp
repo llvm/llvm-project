@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Transforms/RegionUtils.h"
 
 namespace mlir {
 namespace affine {
@@ -109,25 +110,33 @@ static bool isOpLoopInvariant(Operation &op, AffineForOp loop,
 
   // Check operands.
   ValueRange iterArgs = loop.getRegionIterArgs();
-  for (unsigned int i = 0; i < op.getNumOperands(); ++i) {
-    auto *operandSrc = op.getOperand(i).getDefiningOp();
-
+  auto isLoopDependentValue = [&](Value value) {
     // If the loop IV is the operand, this op isn't loop invariant.
-    if (iv == op.getOperand(i))
-      return false;
+    if (iv == value)
+      return true;
 
     // If the one of the iter_args is the operand, this op isn't loop invariant.
-    if (llvm::is_contained(iterArgs, op.getOperand(i)))
-      return false;
+    if (llvm::is_contained(iterArgs, value))
+      return true;
 
-    if (operandSrc) {
-      // If the value was defined in the loop (outside of the if/else region),
-      // and that operation itself wasn't meant to be hoisted, then mark this
-      // operation loop dependent.
-      if (opsWithUsers.count(operandSrc) && opsToHoist.count(operandSrc) == 0)
-        return false;
-    }
-  }
+    // A value defined by a non-hoistable op remains inside the loop
+    // and therefore makes this operation loop-dependent.
+    Operation *operandSrc = value.getDefiningOp();
+    return operandSrc && opsWithUsers.count(operandSrc) &&
+           opsToHoist.count(operandSrc) == 0;
+  };
+
+  if (llvm::any_of(op.getOperands(), isLoopDependentValue))
+    return false;
+
+  // A region captured by the operation moves with it when hoisted. Therefore,
+  // capturing a loop-dependent value prevents the operation from being hoisted.
+  bool capturesLoopDependentValue = false;
+  visitUsedValuesDefinedAbove(op.getRegions(), [&](OpOperand *operand) {
+    capturesLoopDependentValue |= isLoopDependentValue(operand->get());
+  });
+  if (capturesLoopDependentValue)
+    return false;
 
   // If no operand was loop variant, mark this op for motion.
   opsToHoist.insert(&op);
