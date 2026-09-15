@@ -72,7 +72,7 @@ fenv_defines = [
 backtrace_defines = select({
     "@platforms//os:emscripten": [],
     "@platforms//os:windows": [],
-    "@llvm//platforms/config:musl": [],
+    "@rules_cc//cc/libc:musl": [],
     "//conditions:default": [
         "HAVE_BACKTRACE=1",
         "BACKTRACE_HEADER=<execinfo.h>",
@@ -80,7 +80,7 @@ backtrace_defines = select({
 })
 
 mallinfo_defines = select({
-    "@llvm//platforms/config:gnu": ["HAVE_MALLINFO=1"],
+    "@rules_cc//cc/libc:glibc": ["HAVE_MALLINFO=1"],
     "//conditions:default": [],
 })
 

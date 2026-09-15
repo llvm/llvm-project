@@ -61,6 +61,26 @@ define internal float @fn_fadd_ninf_reassoc(float %a) {
   ret float %add
 }
 
+define i32 @fn_vararg_add_nsw(i32 %a, ...) {
+; CHECK-LABEL: define i32 @fn_vararg_add_nsw(
+; CHECK-SAME: i32 [[A:%.*]], ...) {
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], 1
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %add = add nsw i32 %a, 1
+  ret i32 %add
+}
+
+define i32 @fn_vararg_add_wrap(i32 %a, ...) {
+; CHECK-LABEL: define i32 @fn_vararg_add_wrap(
+; CHECK-SAME: i32 [[A:%.*]], ...) {
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], 1
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %add = add i32 %a, 1
+  ret i32 %add
+}
+
 define void @calls(i32 %x, ptr %p, float %f) {
 ; CHECK-LABEL: define void @calls(
 ; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]], float [[F:%.*]]) {
@@ -72,6 +92,8 @@ define void @calls(i32 %x, ptr %p, float %f) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = call ptr @fn_gep_inbounds2(ptr [[P]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @fn_fadd_ninf_nnan(float [[F]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = call float @fn_fadd_ninf_nnan(float [[F]])
+; CHECK-NEXT:    [[TMP9:%.*]] = call i32 (i32, ...) @fn_vararg_add_nsw(i32 [[X]])
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 (i32, ...) @fn_vararg_add_nsw(i32 [[X]])
 ; CHECK-NEXT:    ret void
 ;
   call i32 @fn_add_nuw_nsw(i32 %x)
@@ -82,5 +104,7 @@ define void @calls(i32 %x, ptr %p, float %f) {
   call ptr @fn_gep_nuw(ptr %p)
   call float @fn_fadd_ninf_nnan(float %f)
   call float @fn_fadd_ninf_reassoc(float %f)
+  call i32 (i32, ...) @fn_vararg_add_nsw(i32 %x)
+  call i32 (i32, ...) @fn_vararg_add_wrap(i32 %x)
   ret void
 }
