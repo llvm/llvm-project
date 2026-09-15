@@ -1892,6 +1892,7 @@ bool GCNPassConfig::addPreRewrite() {
     addPass(&GCNNSAReassignID);
 
   addPass(&AMDGPURewriteAGPRCopyMFMALegacyID);
+  addPass(&SIAMDGPUOptimizeVGPREncodingLegacyID);
   return true;
 }
 
@@ -2007,9 +2008,6 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 
   // For allocating per-thread VGPRs.
   addPass(createVGPRAllocPass(true));
-
-  if (getOptLevel() >= CodeGenOptLevel::Aggressive)
-    addPass(&SIAMDGPUOptimizeVGPREncodingLegacyID);
 
   addPreRewrite();
   addPass(&VirtRegRewriterID);
@@ -2591,6 +2589,7 @@ void AMDGPUCodeGenPassBuilder::addPreRewrite(PassManagerWrapper &PMW) {
   }
 
   addMachineFunctionPass(AMDGPURewriteAGPRCopyMFMAPass(), PMW);
+  addMachineFunctionPass(AMDGPUOptimizeVGPREncodingPass(), PMW);
 }
 
 void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
@@ -2746,9 +2745,6 @@ Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
     addMachineFunctionPass(RegAllocFastPass({onlyAllocateVGPRs, "vgpr"}), PMW);
   else
     addMachineFunctionPass(RAGreedyPass({onlyAllocateVGPRs, "vgpr"}), PMW);
-
-  if (getOptLevel() >= CodeGenOptLevel::Aggressive)
-    addMachineFunctionPass(AMDGPUOptimizeVGPREncodingPass(), PMW);
 
   addPreRewrite(PMW);
   addMachineFunctionPass(VirtRegRewriterPass(true), PMW);
