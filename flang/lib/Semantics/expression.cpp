@@ -1080,11 +1080,11 @@ static void WarnForNumericStorageSize(
   }
   const auto &defaults{context.defaultKinds()};
   const auto &targetCharacteristics{context.targetCharacteristics()};
-  auto intKind{defaults.GetDefaultKind(TypeCategory::Integer)};
-  auto realKind{defaults.GetDefaultKind(TypeCategory::Real)};
-  auto intBytes{
+  const int intKind{defaults.GetDefaultKind(TypeCategory::Integer)};
+  const int realKind{defaults.GetDefaultKind(TypeCategory::Real)};
+  const std::size_t intBytes{
       targetCharacteristics.GetByteSize(TypeCategory::Integer, intKind)};
-  auto realBytes{
+  const std::size_t realBytes{
       targetCharacteristics.GetByteSize(TypeCategory::Real, realKind)};
   if (intBytes != realBytes) {
     if (auto *message{context.messages().Warn(
