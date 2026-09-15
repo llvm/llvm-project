@@ -316,6 +316,17 @@ public:
   MinGWARM64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
 };
 
+// ARM64 UEFI target (PE/COFF image, Microsoft ARM64 ABI)
+class LLVM_LIBRARY_VISIBILITY UEFIAArch64TargetInfo
+    : public UEFITargetInfo<AArch64leTargetInfo> {
+public:
+  UEFIAArch64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
+
+  void setDataLayout() override;
+
+  BuiltinVaListKind getBuiltinVaListKind() const override;
+};
+
 class LLVM_LIBRARY_VISIBILITY AArch64beTargetInfo : public AArch64TargetInfo {
 public:
   AArch64beTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
