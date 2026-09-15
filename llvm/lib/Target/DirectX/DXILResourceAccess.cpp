@@ -754,7 +754,7 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI,
   llvm_unreachable("Unhandled case in switch");
 }
 
-static Instruction *getStoreLoadPointerOperand(Instruction *AI) {
+static Instruction *getStoreLoadOperand(Instruction *AI) {
   if (auto *LI = dyn_cast<LoadInst>(AI))
     return dyn_cast<Instruction>(LI->getPointerOperand());
   if (auto *SI = dyn_cast<StoreInst>(AI))
@@ -985,8 +985,8 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
 
   for (BasicBlock &BB : make_early_inc_range(F)) {
     for (Instruction &I : BB) {
-      if (auto *PtrOp = getStoreLoadPointerOperand(&I)) {
-        SmallVector<IntrinsicInst *> Handles = collectUsedHandles(PtrOp);
+      if (auto *HandleOp = getStoreLoadOperand(&I)) {
+        SmallVector<IntrinsicInst *> Handles = collectUsedHandles(HandleOp);
         unsigned NumHandles = Handles.size();
         if (NumHandles <= 1)
           continue; // Legal, no-replacement required
@@ -1002,7 +1002,7 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
           continue;
         }
 
-        replaceHandleWithIndices(PtrOp, Handles[0], DeadInsts, VisitedPhis);
+        replaceHandleWithIndices(HandleOp, Handles[0], DeadInsts, VisitedPhis);
       }
     }
   }
