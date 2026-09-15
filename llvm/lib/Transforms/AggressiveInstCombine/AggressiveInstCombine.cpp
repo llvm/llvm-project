@@ -33,6 +33,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -2476,12 +2477,38 @@ static bool foldMemSetZeroOrOneLength(Instruction &I, const DataLayout &DL,
   if (!KnownLen.getMaxValue().isOne())
     return false;
 
+  uint64_t TotalCount;
+  SmallVector<InstrProfValueData> MemsetVPMetadata = getValueProfDataFromInst(
+      I, InstrProfValueKind::IPVK_MemOPSize, 2, TotalCount);
+  std::optional<uint64_t> ZeroCount = std::nullopt;
+  std::optional<uint64_t> OneCount = std::nullopt;
+  for (const auto [MemOpSize, SizeFrequency] : MemsetVPMetadata) {
+    if (MemOpSize == 0)
+      ZeroCount = SizeFrequency;
+    else if (MemOpSize == 1)
+      OneCount = SizeFrequency;
+  }
+  // If we only have one value in the profile, we assume that the other is zero.
+  if (MemsetVPMetadata.size() == 1) {
+    if (ZeroCount.has_value())
+      OneCount = 0;
+    else if (OneCount.has_value())
+      ZeroCount = 0;
+  }
+
+  BasicBlock *HeadBlock = MI->getIterator()->getParent();
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   IRBuilder<> B(MI);
   Value *IsNonZero = B.CreateIsNotNull(MI->getLength(), "memset.notzero");
   Instruction *ThenTerm = SplitBlockAndInsertIfThen(
       IsNonZero, MI->getIterator(), /*Unreachable=*/false,
       /*BranchWeights=*/nullptr, &DTU);
+
+  Instruction &IsNonZeroBranch = *HeadBlock->getTerminator();
+  if (OneCount.has_value() && ZeroCount.has_value())
+    setFittedBranchWeights(IsNonZeroBranch, {*OneCount, *ZeroCount}, false);
+  else
+    setExplicitlyUnknownBranchWeightsIfProfiled(IsNonZeroBranch, DEBUG_TYPE);
 
   IRBuilder<> StoreBuilder(ThenTerm);
   StoreInst *Store = StoreBuilder.CreateAlignedStore(
