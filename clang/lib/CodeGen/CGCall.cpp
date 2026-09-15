@@ -34,6 +34,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
+#include "clang/CodeGenUtils/CallUtils.h"
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/IRTypeMapper.h"
 #include "llvm/ABI/TargetInfo.h"
@@ -148,13 +149,6 @@ CanQualType CodeGenTypes::DeriveThisType(const CXXRecordDecl *RD,
     RecTy = CanQualType::CreateUnsafe(Context.getAddrSpaceQualType(
         RecTy, MD->getMethodQualifiers().getAddressSpace()));
   return Context.getPointerType(RecTy);
-}
-
-/// Returns the canonical formal type of the given C++ method.
-static CanQual<FunctionProtoType> GetFormalType(const CXXMethodDecl *MD) {
-  return MD->getType()
-      ->getCanonicalTypeUnqualified()
-      .getAs<FunctionProtoType>();
 }
 
 /// Returns the "extra-canonicalized" return type, which discards
@@ -394,7 +388,7 @@ CodeGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *MD) {
   assert(!isa<CXXConstructorDecl>(MD) && "wrong method for constructors!");
   assert(!isa<CXXDestructorDecl>(MD) && "wrong method for destructors!");
 
-  CanQualType FT = GetFormalType(MD).getAs<Type>();
+  CanQualType FT = CodeGenUtils::getFormalType(MD).getAs<Type>();
   setCUDAKernelCallingConvention(FT, CGM, MD);
   auto prototype = FT.getAs<FunctionProtoType>();
 
@@ -442,7 +436,7 @@ CodeGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
       PassParams = inheritingCtorHasParams(Inherited, GD.getCtorType());
   }
 
-  CanQual<FunctionProtoType> FTP = GetFormalType(MD);
+  CanQual<FunctionProtoType> FTP = CodeGenUtils::getFormalType(MD);
 
   // Add the formal parameters.
   if (PassParams)
@@ -518,7 +512,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeCXXConstructorCall(
   // +1 for implicit this, which should always be args[0].
   unsigned TotalPrefixArgs = 1 + ExtraPrefixArgs;
 
-  CanQual<FunctionProtoType> FPT = GetFormalType(D);
+  CanQual<FunctionProtoType> FPT = CodeGenUtils::getFormalType(D);
   RequiredArgs Required = PassProtoArgs
                               ? RequiredArgs::forPrototypePlus(
                                     FPT, TotalPrefixArgs + ExtraSuffixArgs)
@@ -661,7 +655,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeGlobalDeclaration(GlobalDecl GD) {
 const CGFunctionInfo &
 CodeGenTypes::arrangeUnprototypedMustTailThunk(const CXXMethodDecl *MD) {
   assert(MD->isVirtual() && "only methods have thunks");
-  CanQual<FunctionProtoType> FTP = GetFormalType(MD);
+  CanQual<FunctionProtoType> FTP = CodeGenUtils::getFormalType(MD);
   CanQualType ArgTys[] = {DeriveThisType(MD->getParent(), MD)};
   return arrangeLLVMFunctionInfo(Context.VoidTy, FnInfoOpts::None, ArgTys,
                                  FTP->getExtInfo(), {}, RequiredArgs(1), MD);
@@ -672,7 +666,7 @@ CodeGenTypes::arrangeMSCtorClosure(const CXXConstructorDecl *CD,
                                    CXXCtorType CT) {
   assert(CT == Ctor_CopyingClosure || CT == Ctor_DefaultClosure);
 
-  CanQual<FunctionProtoType> FTP = GetFormalType(CD);
+  CanQual<FunctionProtoType> FTP = CodeGenUtils::getFormalType(CD);
   SmallVector<CanQualType, 2> ArgTys;
   const CXXRecordDecl *RD = CD->getParent();
   ArgTys.push_back(DeriveThisType(RD, CD));
@@ -2691,15 +2685,6 @@ static bool canApplyNoFPClass(const ABIArgInfo &AI, QualType ParamType,
 }
 
 /// Return the nofpclass mask that can be applied to floating-point parameters.
-static llvm::FPClassTest getNoFPClassTestMask(const LangOptions &LangOpts) {
-  llvm::FPClassTest Mask = llvm::fcNone;
-  if (LangOpts.NoHonorInfs)
-    Mask |= llvm::fcInf;
-  if (LangOpts.NoHonorNaNs)
-    Mask |= llvm::fcNan;
-  return Mask;
-}
-
 void CodeGenModule::AdjustMemoryAttribute(StringRef Name,
                                           CGCalleeInfo CalleeInfo,
                                           llvm::AttributeList &Attrs) {
@@ -3031,7 +3016,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       RetAttrs.addAttribute(llvm::Attribute::InReg);
 
     if (canApplyNoFPClass(RetAI, RetTy, true))
-      RetAttrs.addNoFPClassAttr(getNoFPClassTestMask(getLangOpts()));
+      RetAttrs.addNoFPClassAttr(
+          CodeGenUtils::getNoFPClassTestMask(getLangOpts()));
 
     break;
   case ABIArgInfo::Ignore:
@@ -3193,7 +3179,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       Attrs.addStackAlignmentAttr(llvm::MaybeAlign(AI.getDirectAlign()));
 
       if (canApplyNoFPClass(AI, ParamType, false))
-        Attrs.addNoFPClassAttr(getNoFPClassTestMask(getLangOpts()));
+        Attrs.addNoFPClassAttr(
+            CodeGenUtils::getNoFPClassTestMask(getLangOpts()));
       break;
     case ABIArgInfo::Indirect: {
       assert(!ParamType->isIncompleteType() &&

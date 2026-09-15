@@ -40,6 +40,7 @@
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/ExprUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
@@ -4761,15 +4762,6 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   }
 }
 
-static QualType getFixedSizeElementType(const ASTContext &ctx,
-                                        const VariableArrayType *vla) {
-  QualType eltType;
-  do {
-    eltType = vla->getElementType();
-  } while ((vla = ctx.getAsVariableArrayType(eltType)));
-  return eltType;
-}
-
 static bool hasBPFPreserveStaticOffset(const RecordDecl *D) {
   return D && D->hasAttr<BPFPreserveStaticOffsetAttr>();
 }
@@ -4852,7 +4844,7 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   // Determine the element size of the statically-sized base.  This is
   // the thing that the indices are expressed in terms of.
   if (auto vla = CGF.getContext().getAsVariableArrayType(eltType)) {
-    eltType = getFixedSizeElementType(CGF.getContext(), vla);
+    eltType = CodeGenUtils::getFixedSizeElementType(CGF.getContext(), vla);
   }
 
   // We can use that to compute the best alignment of the element.
@@ -6556,16 +6548,6 @@ RValue CodeGenFunction::EmitSimpleCallExpr(const CallExpr *E,
                   /*Chain=*/nullptr, CallOrInvoke);
 }
 
-// Detect the unusual situation where an inline version is shadowed by a
-// non-inline version. In that case we should pick the external one
-// everywhere. That's GCC behavior too.
-static bool OnlyHasInlineBuiltinDeclaration(const FunctionDecl *FD) {
-  for (const FunctionDecl *PD = FD; PD; PD = PD->getPreviousDecl())
-    if (!PD->isInlineBuiltinDeclaration())
-      return false;
-  return true;
-}
-
 static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
 
@@ -6585,7 +6567,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
     // When directing calling an inline builtin, call it through it's mangled
     // name to make it clear it's not the actual builtin.
     if (CGF.CurFn->getName() != FDInlineName &&
-        OnlyHasInlineBuiltinDeclaration(FD)) {
+        CodeGenUtils::onlyHasInlineBuiltinDeclaration(FD)) {
       llvm::Constant *CalleePtr = CGF.CGM.getRawFunctionPointer(GD);
       llvm::Function *Fn = llvm::cast<llvm::Function>(CalleePtr);
       llvm::Module *M = Fn->getParent();

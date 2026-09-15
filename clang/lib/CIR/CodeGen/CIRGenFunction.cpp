@@ -22,30 +22,13 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/FunctionUtils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/FPEnv.h"
 
 #include <cassert>
 
 namespace clang::CIRGen {
-
-/// shouldEmitLifetimeMarkers - Decide whether we need emit the life-time
-/// markers. Mirror of CodeGenFunction::shouldEmitLifetimeMarkers.
-static bool shouldEmitLifetimeMarkers(const CodeGenOptions &cgOpts,
-                                      const LangOptions &langOpts) {
-
-  if (cgOpts.DisableLifetimeMarkers)
-    return false;
-
-  // Sanitizers may use markers.
-  if (cgOpts.SanitizeAddressUseAfterScope ||
-      langOpts.Sanitize.has(SanitizerKind::HWAddress) ||
-      langOpts.Sanitize.has(SanitizerKind::Memory) ||
-      langOpts.Sanitize.has(SanitizerKind::MemtagStack))
-    return true;
-
-  return cgOpts.OptimizationLevel != 0;
-}
 
 /// Does the statement tree rooted at \p s contain a label, switch, or indirect
 /// goto that could bypass a local's initialization? A coarse stand-in for
@@ -66,7 +49,7 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder),
       curFPFeatures(cgm.getLangOpts()) {
   ehStack.setCGF(this);
-  shouldEmitLifetimeMarkers = CIRGen::shouldEmitLifetimeMarkers(
+  shouldEmitLifetimeMarkers = CodeGenUtils::shouldEmitLifetimeMarkers(
       cgm.getCodeGenOpts(), getContext().getLangOpts());
 }
 
