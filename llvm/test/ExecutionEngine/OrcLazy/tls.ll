@@ -6,10 +6,13 @@
 ; RUN: not lli -no-process-syms -lljit-platform=Inactive -emulated-tls=false \
 ; RUN:   -jit-kind=orc-lazy %s 2>&1 | FileCheck %s --check-prefix=NATIVE
 ; RUN: %if system-linux %{ not lli -no-process-syms -lljit-platform=Inactive \
-; RUN:   -emulated-tls=false -jit-kind=orc-lazy -jit-linker=rtdyld %s 2>&1 \
+; RUN:   -emulated-tls=false -jit-kind=orc-lazy -jit-linker=rtdyld \
+; RUN:   -code-model=small %s 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=RTDYLD %}
 ;
 ; Test that emulated and native TLS lowering produce the expected errors.
+; Use the small code model for RuntimeDyld: AArch64's large code model does not
+; support general-dynamic TLS lowering.
 ;
 ; TODO: Replace this test with positive tests of successful TLS execution using
 ; the new ORC runtime once it supports them.
