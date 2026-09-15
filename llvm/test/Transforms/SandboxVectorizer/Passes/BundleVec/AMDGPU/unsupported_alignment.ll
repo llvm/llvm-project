@@ -6,7 +6,9 @@
 define void @unsupported_alignment(ptr %ptr0, i32 %offset) {
 ; CHECK-LABEL: define void @unsupported_alignment(
 ; CHECK-SAME: ptr [[PTR0:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    store <2 x i8> <i8 0, i8 1>, ptr [[PTR0]], align 1, !sandboxvec [[META0:![0-9]+]]
+; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr i8, ptr [[PTR0]], i32 1
+; CHECK-NEXT:    store i8 0, ptr [[PTR0]], align 1, !sandboxvec [[META0:![0-9]+]]
+; CHECK-NEXT:    store i8 1, ptr [[PTR1]], align 1, !sandboxvec [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr i8, ptr %ptr0, i32 1

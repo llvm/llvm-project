@@ -1893,6 +1893,8 @@ define void @bar() {
   EXPECT_EQ(FBar, Ctx.getValue(LLVMFBar));
   // Check getDataLayout().
   EXPECT_EQ(&M->getDataLayout(), &LLVMM->getDataLayout());
+  // Check getTargetTriple().
+  EXPECT_EQ(&M->getTargetTriple(), &LLVMM->getTargetTriple());
   // Check getSourceFileName().
   EXPECT_EQ(M->getSourceFileName(), LLVMM->getSourceFileName());
   // Check getGlobalVariable().
@@ -3233,6 +3235,8 @@ define void @foo(ptr %arg0, ptr %arg1) {
   EXPECT_EQ(getLoadStoreAddressSpace(NewLd), NewLd->getPointerAddressSpace());
   EXPECT_EQ(NewLd->getAlign(), 8);
   EXPECT_EQ(NewLd->getName(), "NewLd");
+  // Check helper function getLoadStoreAlignment()
+  EXPECT_EQ(getLoadStoreAlignment(NewLd), NewLd->getAlign());
   // Check create(InsertBefore, IsVolatile=true)
   sandboxir::LoadInst *NewVLd = sandboxir::LoadInst::create(
       VLd->getType(), Arg1, Align(8), Ret->getIterator(),
