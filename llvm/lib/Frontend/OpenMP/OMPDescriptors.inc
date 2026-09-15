@@ -2465,7 +2465,7 @@
         {Version(45), {{{Property::Exclusive, Property::Required}}, {Modifier::DependenceType, Modifier::TaskDependenceType}, {Clause::OMPC_depend}}},
         {Version(50), {{{Property::Exclusive, Property::Required}}, {Modifier::DependenceType, Modifier::TaskDependenceType}, {Clause::OMPC_depend}}},
         {Version(51), {{{Property::Exclusive, Property::Required}}, {Modifier::DependenceType, Modifier::TaskDependenceType}, {Clause::OMPC_depend}}},
-        {Version(61), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Modifier::DepobjModifier, Modifier::TaskDependenceType}, {Clause::OMPC_depend}}},
+        {Version(61), {{{Property::Exclusive}}, {Modifier::DepobjModifier, Modifier::TaskDependenceType}, {Clause::OMPC_depend}}},
       }
     ),
   },
@@ -2474,7 +2474,7 @@
     descriptor::ModifierSet(
       "num_teams_modifier_set_1",
       {
-        {Version(61), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Modifier::DimsModifier, Modifier::LowerBound}, {Clause::OMPC_num_teams}}},
+        {Version(61), {{{Property::Exclusive}}, {Modifier::DimsModifier, Modifier::LowerBound}, {Clause::OMPC_num_teams}}},
       }
     ),
   },
@@ -2483,7 +2483,7 @@
     descriptor::ModifierSet(
       "reduction_modifier_set_1",
       {
-        {Version(61), {{{Property::Exclusive, Property::Free, Property::Optional, Property::Unique}}, {Modifier::InscanModifier, Modifier::NoncommutativeModifier, Modifier::PerThreadModifier}, {Clause::OMPC_reduction}}},
+        {Version(61), {{{Property::Exclusive}}, {Modifier::InscanModifier, Modifier::NoncommutativeModifier, Modifier::PerThreadModifier}, {Clause::OMPC_reduction}}},
       }
     ),
   },
