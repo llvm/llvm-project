@@ -122,9 +122,11 @@ entry:
 declare spir_func <3 x i32> @_Z17convert_uint3_rtpDv3_f(<3 x float> noundef) local_unnamed_addr
 
 ; CHECK-SPIRV: OpFunction {{.*}} ; -- Begin function testSToUSameWidth
-; CHECK-SPIRV-NOT: OpSConvert
-; CHECK-SPIRV: %[[#Ld:]] = OpLoad
-; CHECK-SPIRV-NEXT: OpStore %[[#]] %[[#Ld]]
+; CHECK-SPIRV-NEXT: %[[#A:]] = OpFunctionParameter
+; CHECK-SPIRV-NEXT: %[[#Res:]] = OpFunctionParameter
+; CHECK-SPIRV-NEXT: OpLabel
+; CHECK-SPIRV-NEXT: %[[#Ld:]] = OpLoad %[[#]] %[[#A]]
+; CHECK-SPIRV-NEXT: OpStore %[[#Res]] %[[#Ld]]
 ; CHECK-SPIRV-NEXT: OpReturn
 ; CHECK-SPIRV-NEXT: OpFunctionEnd
 
@@ -143,9 +145,11 @@ entry:
 declare spir_func i32 @_Z12convert_uinti(i32 noundef) local_unnamed_addr
 
 ; CHECK-SPIRV: OpFunction {{.*}} ; -- Begin function testUToSSameWidth
-; CHECK-SPIRV-NOT: OpUConvert
-; CHECK-SPIRV: %[[#Ld:]] = OpLoad
-; CHECK-SPIRV-NEXT: OpStore %[[#]] %[[#Ld]]
+; CHECK-SPIRV-NEXT: %[[#A:]] = OpFunctionParameter
+; CHECK-SPIRV-NEXT: %[[#Res:]] = OpFunctionParameter
+; CHECK-SPIRV-NEXT: OpLabel
+; CHECK-SPIRV-NEXT: %[[#Ld:]] = OpLoad %[[#]] %[[#A]]
+; CHECK-SPIRV-NEXT: OpStore %[[#Res]] %[[#Ld]]
 ; CHECK-SPIRV-NEXT: OpReturn
 ; CHECK-SPIRV-NEXT: OpFunctionEnd
 
@@ -164,9 +168,11 @@ entry:
 declare spir_func i32 @_Z11convert_intj(i32 noundef) local_unnamed_addr
 
 ; CHECK-SPIRV: OpFunction {{.*}} ; -- Begin function testFToFSameWidth
-; CHECK-SPIRV-NOT: OpFConvert
-; CHECK-SPIRV: %[[#Ld:]] = OpLoad
-; CHECK-SPIRV-NEXT: OpStore %[[#]] %[[#Ld]]
+; CHECK-SPIRV-NEXT: %[[#A:]] = OpFunctionParameter
+; CHECK-SPIRV-NEXT: %[[#Res:]] = OpFunctionParameter
+; CHECK-SPIRV-NEXT: OpLabel
+; CHECK-SPIRV-NEXT: %[[#Ld:]] = OpLoad %[[#]] %[[#A]]
+; CHECK-SPIRV-NEXT: OpStore %[[#Res]] %[[#Ld]]
 ; CHECK-SPIRV-NEXT: OpReturn
 ; CHECK-SPIRV-NEXT: OpFunctionEnd
 
@@ -186,8 +192,14 @@ declare spir_func <4 x float> @_Z18convert_float4_rtzDv4_f(<4 x float> noundef) 
 
 ;; Saturating conversions are valid at equal width and must not be folded.
 ; CHECK-SPIRV: OpFunction {{.*}} ; -- Begin function testSToUSatSameWidth
-; CHECK-SPIRV: OpSatConvertSToU
-; CHECK-SPIRV: OpFunctionEnd
+; CHECK-SPIRV-NEXT: %[[#A:]] = OpFunctionParameter
+; CHECK-SPIRV-NEXT: %[[#Res:]] = OpFunctionParameter
+; CHECK-SPIRV-NEXT: OpLabel
+; CHECK-SPIRV-NEXT: %[[#Ld:]] = OpLoad %[[#]] %[[#A]]
+; CHECK-SPIRV-NEXT: %[[#Cvt:]] = OpSatConvertSToU %[[#]] %[[#Ld]]
+; CHECK-SPIRV-NEXT: OpStore %[[#Res]] %[[#Cvt]]
+; CHECK-SPIRV-NEXT: OpReturn
+; CHECK-SPIRV-NEXT: OpFunctionEnd
 
 ;; kernel void testSToUSatSameWidth(global char *a, global uchar *res) {
 ;;   res[0] = convert_uchar_sat(*a);

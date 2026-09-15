@@ -313,10 +313,16 @@ define dso_local spir_kernel void @test_wrappers(ptr addrspace(4) %arg, i64 %arg
 }
 
 ; CHECK: OpFunction {{.*}} ; -- Begin function test_wrappers_same_type
-; CHECK-NOT: OpUConvert
-; CHECK-NOT: OpSConvert
-; CHECK-NOT: OpFConvert
-; CHECK: OpFunctionEnd
+; CHECK-NEXT: %[[#ArgI32:]] = OpFunctionParameter
+; CHECK-NEXT: %[[#ArgF32:]] = OpFunctionParameter
+; CHECK-NEXT: %[[#OutI32:]] = OpFunctionParameter
+; CHECK-NEXT: %[[#OutF32:]] = OpFunctionParameter
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: OpStore %[[#OutI32]] %[[#ArgI32]]
+; CHECK-NEXT: OpStore %[[#OutI32]] %[[#ArgI32]]
+; CHECK-NEXT: OpStore %[[#OutF32]] %[[#ArgF32]]
+; CHECK-NEXT: OpReturn
+; CHECK-NEXT: OpFunctionEnd
 define dso_local spir_kernel void @test_wrappers_same_type(i32 %arg_i32, float %arg_f32, ptr addrspace(1) %out_i32, ptr addrspace(1) %out_float) {
   %r1 = call spir_func i32 @_Z21__spirv_UConvert_Rinti(i32 %arg_i32)
   store volatile i32 %r1, ptr addrspace(1) %out_i32
