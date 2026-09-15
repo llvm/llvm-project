@@ -7748,8 +7748,10 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   //   - atom.add.f32 on shared memory does not flush denormals
   //   - atom.add.f32.noftz is supported for SM90+, PTX 9.4+
   //   - atom.add.f16 and atomic.add.bf16 never flush denormals
-  //   - atom.add.f64 never flushes denormals, and add.f64 never flushes denormals
-  // We lower to atom.add only if the function's FTZ behavior is natively supported. otherwise, we lower to a CAS loop. But we always allow
+  //   - atom.add.f64 never flushes denormals, and add.f64 never flushes
+  //   denormals
+  // We lower to atom.add only if the function's FTZ behavior is natively
+  // supported. otherwise, we lower to a CAS loop. But we always allow
   // atomic.add.bf16; even though it never flushes denormals, we never flush
   // bf16 denormals when doing regular arithmetic, even when FTZ is enabled.
   if (AI->isFloatingPointOperation() &&
