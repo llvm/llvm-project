@@ -5586,8 +5586,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-emit-llvm-uselists");
 
     if (IsUsingLTO) {
-      const Arg *LTOArg = Args.getLastArg(options::OPT_foffload_lto,
-                                          options::OPT_foffload_lto_EQ);
+      const Arg *LTOArg = Args.getLastArg(options::OPT_flto_EQ);
       if (Triple.isNVPTX() && !IsRDCMode &&
           JA.isDeviceOffloading(Action::OFK_Cuda)) {
         D.Diag(diag::err_drv_unsupported_opt_for_language_mode)
@@ -8469,19 +8468,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // ThinLTO mode.
     bool IsPS4 = getToolChain().getTriple().isPS4();
 
-    // Check if we passed LTO options but they were suppressed because this is a
-    // device offloading action, or we passed device offload LTO options which
-    // were suppressed because this is not the device offload action.
-    // Check if we are using PS4 in regular LTO mode.
-    // Otherwise, issue an error.
-
-    auto OtherLTOMode = TC.getLTOMode(
-        Args, IsDeviceOffloadAction ? Action::OFK_None
-                                    : static_cast<Action::OffloadKind>(
-                                          C.getActiveOffloadKinds()));
-    auto OtherIsUsingLTO = OtherLTOMode != LTOK_None;
-
-    if ((!IsUsingLTO && !OtherIsUsingLTO) ||
+    // Offload compilations may use LTO only for another target.
+    if ((!IsUsingLTO && !IsDeviceOffloadAction && !IsHostOffloadingAction) ||
         (IsPS4 && !UnifiedLTO && (TC.getLTOMode(Args) != LTOK_Full)))
       D.Diag(diag::err_drv_argument_only_allowed_with)
           << "-fwhole-program-vtables"
@@ -9891,6 +9879,22 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         }
       }
 
+      auto DeviceLTOMode = TC->getLTOMode(ToolChainArgs, Kind);
+      if (!ToolChainArgs.hasArg(OPT_flto_EQ, OPT_fno_lto)) {
+        if (DeviceLTOMode == LTOK_Full)
+          CompilerArgs.emplace_back("-flto=full");
+        else if (DeviceLTOMode == LTOK_Thin)
+          CompilerArgs.emplace_back("-flto=thin");
+      }
+      if (DeviceLTOMode == LTOK_Thin && TC->getTriple().isAMDGPU()) {
+        LinkerArgs.emplace_back("-plugin-opt=-force-import-all");
+        LinkerArgs.emplace_back("-plugin-opt=-avail-extern-to-local");
+        LinkerArgs.emplace_back(
+            "-plugin-opt=-avail-extern-gv-in-addrspace-to-local=3");
+        if (Kind == Action::OFK_OpenMP)
+          LinkerArgs.emplace_back("-plugin-opt=-amdgpu-internalize-symbols");
+      }
+
       // Forward all of these to the appropriate toolchain.
       for (StringRef Arg : CompilerArgs)
         CmdArgs.push_back(Args.MakeArgString(
@@ -9898,32 +9902,6 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       for (StringRef Arg : LinkerArgs)
         CmdArgs.push_back(Args.MakeArgString(
             "--device-linker=" + TC->getTripleString() + "=" + Arg));
-
-      // Forward the LTO mode for this toolchain.
-      auto DeviceLTOMode = TC->getLTOMode(ToolChainArgs, Kind);
-      if (DeviceLTOMode == LTOK_Full)
-        CmdArgs.push_back(Args.MakeArgString(
-            "--device-compiler=" + TC->getTripleString() + "=-flto=full"));
-      else if (DeviceLTOMode == LTOK_Thin) {
-        CmdArgs.push_back(Args.MakeArgString(
-            "--device-compiler=" + TC->getTripleString() + "=-flto=thin"));
-        if (TC->getTriple().isAMDGPU()) {
-          CmdArgs.push_back(
-              Args.MakeArgString("--device-linker=" + TC->getTripleString() +
-                                 "=-plugin-opt=-force-import-all"));
-          CmdArgs.push_back(
-              Args.MakeArgString("--device-linker=" + TC->getTripleString() +
-                                 "=-plugin-opt=-avail-extern-to-local"));
-          CmdArgs.push_back(Args.MakeArgString(
-              "--device-linker=" + TC->getTripleString() +
-              "=-plugin-opt=-avail-extern-gv-in-addrspace-to-local=3"));
-          if (Kind == Action::OFK_OpenMP) {
-            CmdArgs.push_back(
-                Args.MakeArgString("--device-linker=" + TC->getTripleString() +
-                                   "=-plugin-opt=-amdgpu-internalize-symbols"));
-          }
-        }
-      }
     }
   }
 

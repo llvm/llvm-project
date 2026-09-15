@@ -111,6 +111,12 @@ Compilation::getArgsForToolChain(const ToolChain *TC, BoundArch BA,
   return *Entry;
 }
 
+LTOKind Compilation::getLTOMode(const ToolChain &TC, BoundArch BA,
+                                Action::OffloadKind DeviceOffloadKind) {
+  return TC.getLTOMode(getArgsForToolChain(&TC, BA, DeviceOffloadKind),
+                       DeviceOffloadKind);
+}
+
 bool Compilation::CleanupFile(const char *File, bool IssueErrors) const {
   // FIXME: Why are we trying to remove files that we have not created? For
   // example we should only try to remove a temporary assembly file if

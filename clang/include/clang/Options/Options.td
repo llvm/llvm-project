@@ -3564,12 +3564,15 @@ def fno_lto : Flag<["-"], "fno-lto">,
   HelpText<"Disable LTO mode (default)">;
 def foffload_lto_EQ : Joined<["-"], "foffload-lto=">,
   Visibility<[ClangOption, CLOption]>, Group<f_Group>,
-  HelpText<"Set LTO mode for offload compilation">, Values<"thin,full">;
+  Alias<flto_EQ>, HelpText<"Set LTO mode for offload compilation">,
+  Values<"thin,full">;
 def foffload_lto : Flag<["-"], "foffload-lto">,
   Visibility<[ClangOption, CLOption]>, Group<f_Group>,
-  Alias<foffload_lto_EQ>, AliasArgs<["full"]>, HelpText<"Enable LTO in 'full' mode for offload compilation">;
+  Alias<flto_EQ>, AliasArgs<["full"]>,
+  HelpText<"Enable LTO in 'full' mode for offload compilation">;
 def fno_offload_lto : Flag<["-"], "fno-offload-lto">,
   Visibility<[ClangOption, CLOption]>, Group<f_Group>,
+  Alias<fno_lto>,
   HelpText<"Disable LTO mode (default) for offload compilation">;
 def flto_jobs_EQ : Joined<["-"], "flto-jobs=">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,

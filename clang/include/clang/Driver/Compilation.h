@@ -40,6 +40,7 @@ namespace driver {
 
 class Driver;
 class ToolChain;
+enum LTOKind : int;
 
 /// Compilation - A set of tasks to perform for a single driver
 /// invocation.
@@ -255,6 +256,10 @@ public:
   const llvm::opt::DerivedArgList &
   getArgsForToolChain(const ToolChain *TC, BoundArch BA,
                       Action::OffloadKind DeviceOffloadKind);
+
+  /// Resolve the LTO mode for the given toolchain context.
+  LTOKind getLTOMode(const ToolChain &TC, BoundArch BA = {},
+                     Action::OffloadKind DeviceOffloadKind = Action::OFK_None);
 
   /// addTempFile - Add a file to remove on exit, and returns its
   /// argument.
