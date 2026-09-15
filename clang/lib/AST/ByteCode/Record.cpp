@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "Record.h"
-#include "clang/AST/ASTContext.h"
 
 using namespace clang;
 using namespace clang::interp;
+
+namespace clang {
+class ASTContext;
+} // namespace clang
 
 Record::Record(const RecordDecl *Decl, BaseList &&SrcBases,
                FieldList &&SrcFields, VirtualBaseList &&SrcVirtualBases,
