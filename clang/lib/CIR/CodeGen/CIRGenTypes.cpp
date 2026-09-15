@@ -398,7 +398,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
                                         /*is_scalable=*/true);
       break;
     case BuiltinType::SveBFloat16:
-      resultType = cir::VectorType::get(builder.getFp16Ty(), 8,
+      resultType = cir::VectorType::get(builder.getBfloat16Ty(), 8,
                                         /*is_scalable=*/true);
       break;
     case BuiltinType::SveInt32:
