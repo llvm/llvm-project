@@ -173,6 +173,17 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 
 // -----
 
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>
+>} {
+  module attributes { dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>
+  >} {
+  }
+}
+
+// -----
+
 module {
     // CHECK: @no_spec
     func.func @no_spec() {
