@@ -53,3 +53,53 @@ end subroutine
 ! CHECK: hlfir.assign
 ! CHECK: acc.yield
 ! CHECK: collapse([3])
+
+! A second directive between the inner loop levels (as opposed to between
+! the outer and first inner loop) exercises every iteration of the descent,
+! not just the first.
+subroutine collapse3_directive_between_inner_loops(n, a)
+  integer, intent(in) :: n
+  integer :: a(n,n,n)
+  integer :: i, j, k
+
+  !$acc parallel loop collapse(3) copy(a)
+  do i = 1, n
+    do j = 1, n
+!DIR$ UNROLL(2)
+      do k = 1, n
+        a(k,j,i) = 1
+      end do
+    end do
+  end do
+  !$acc end parallel loop
+end subroutine
+
+! CHECK-LABEL: func.func @_QPcollapse3_directive_between_inner_loops(
+! CHECK: acc.parallel
+! CHECK: acc.loop combined(parallel)
+! CHECK: hlfir.designate
+! CHECK: hlfir.assign
+! CHECK: acc.yield
+! CHECK: collapse([3])
+
+subroutine tile_directive_between_loops(n, a)
+  integer, intent(in) :: n
+  integer :: a(n,n)
+  integer :: i, j
+
+  !$acc parallel loop tile(2, 2) copy(a)
+  do i = 1, n
+!DIR$ IVDEP
+    do j = 1, n
+      a(j,i) = 1
+    end do
+  end do
+  !$acc end parallel loop
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtile_directive_between_loops(
+! CHECK: acc.parallel
+! CHECK: acc.loop combined(parallel) {{.*}} tile(
+! CHECK: hlfir.designate
+! CHECK: hlfir.assign
+! CHECK: acc.yield
