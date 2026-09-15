@@ -91,10 +91,6 @@ bool diagnoseArrayIndex(InterpState &S, CodePtr OpPC, const APSInt &Index,
 bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B);
 bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B);
 
-/// Checks if a value can be stored in a block.
-bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                bool WillBeActivated = false);
-
 /// Checks if a value can be initialized.
 bool CheckInit(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
@@ -439,7 +435,8 @@ inline bool Addf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
 
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
   Floating Result = S.allocFloat(LHS.getSemantics());
-  auto Status = Floating::add(LHS, RHS, getRoundingMode(FPO), &Result);
+  auto Status = Floating::add(
+      LHS, RHS, getRoundingMode(FPO, S.inConstantContext()), &Result);
   S.Stk.push<Floating>(Result);
   return CheckFloatResult(S, OpPC, Result, Status, FPO);
 }
@@ -493,7 +490,8 @@ inline bool Subf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
 
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
   Floating Result = S.allocFloat(LHS.getSemantics());
-  auto Status = Floating::sub(LHS, RHS, getRoundingMode(FPO), &Result);
+  auto Status = Floating::sub(
+      LHS, RHS, getRoundingMode(FPO, S.inConstantContext()), &Result);
   S.Stk.push<Floating>(Result);
   return CheckFloatResult(S, OpPC, Result, Status, FPO);
 }
@@ -519,7 +517,8 @@ inline bool Mulf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
   Floating Result = S.allocFloat(LHS.getSemantics());
 
-  auto Status = Floating::mul(LHS, RHS, getRoundingMode(FPO), &Result);
+  auto Status = Floating::mul(
+      LHS, RHS, getRoundingMode(FPO, S.inConstantContext()), &Result);
 
   S.Stk.push<Floating>(Result);
   return CheckFloatResult(S, OpPC, Result, Status, FPO);
@@ -826,7 +825,8 @@ inline bool Divf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
 
   Floating Result = S.allocFloat(LHS.getSemantics());
-  auto Status = Floating::div(LHS, RHS, getRoundingMode(FPO), &Result);
+  auto Status = Floating::div(
+      LHS, RHS, getRoundingMode(FPO, S.inConstantContext()), &Result);
 
   S.Stk.push<Floating>(Result);
   return CheckFloatResult(S, OpPC, Result, Status, FPO);
@@ -1148,9 +1148,11 @@ bool IncDecFloatHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
   llvm::APFloat::opStatus Status;
   if constexpr (Op == IncDecOp::Inc)
-    Status = Floating::increment(Value, getRoundingMode(FPO), &Result);
+    Status = Floating::increment(
+        Value, getRoundingMode(FPO, S.inConstantContext()), &Result);
   else
-    Status = Floating::decrement(Value, getRoundingMode(FPO), &Result);
+    Status = Floating::decrement(
+        Value, getRoundingMode(FPO, S.inConstantContext()), &Result);
 
   Ptr.deref<Floating>() = Result;
 
@@ -3027,8 +3029,8 @@ bool CastIntegralFloating(InterpState &S, CodePtr OpPC,
 
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
   Floating Result = S.allocFloat(*Sem);
-  auto Status =
-      Floating::fromIntegral(FromAP, *Sem, getRoundingMode(FPO), &Result);
+  auto Status = Floating::fromIntegral(
+      FromAP, *Sem, getRoundingMode(FPO, S.inConstantContext()), &Result);
   S.Stk.push<Floating>(Result);
 
   return CheckFloatResult(S, OpPC, Result, Status, FPO);
