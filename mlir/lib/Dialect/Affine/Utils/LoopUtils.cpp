@@ -1357,7 +1357,8 @@ bool mlir::affine::isValidLoopInterchangePermutation(
   // Gather dependence components for dependences between all ops in loop nest
   // rooted at 'loops[0]', at loop depths in range [1, maxLoopDepth].
   std::vector<SmallVector<DependenceComponent, 2>> depCompsVec;
-  getDependenceComponents(loops[0], maxLoopDepth, &depCompsVec);
+  if (failed(getDependenceComponents(loops[0], maxLoopDepth, &depCompsVec)))
+    return false;
   return checkLoopInterchangeDependences(depCompsVec, loops, loopPermMap);
 }
 
@@ -1466,7 +1467,8 @@ AffineForOp mlir::affine::sinkSequentialLoops(AffineForOp forOp) {
   // rooted at 'loops[0]', at loop depths in range [1, maxLoopDepth].
   unsigned maxLoopDepth = loops.size();
   std::vector<SmallVector<DependenceComponent, 2>> depCompsVec;
-  getDependenceComponents(loops[0], maxLoopDepth, &depCompsVec);
+  if (failed(getDependenceComponents(loops[0], maxLoopDepth, &depCompsVec)))
+    return forOp;
 
   // Mark loops as either parallel or sequential.
   SmallVector<bool, 8> isParallelLoop(maxLoopDepth, true);
