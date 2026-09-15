@@ -558,3 +558,66 @@ namespace bad18 {
   // expected-note@+1 {{in instantiation of function template specialization 'bad18::skep<BADKN<18>, BADKT<18>>' requested here}}
   template void skep<BADKN<18>>(BADKT<18>);
 }
+
+namespace bad19 {
+// Check that if sycl_kernel_launch doesn't return a callable
+// object, an error is emitted.
+template<int> struct KN;
+
+struct [[clang::sycl_special_kernel_parameter]] Special {
+  int data;
+};
+
+template<typename T>
+struct Wrapper {
+ T data;
+};
+
+template <typename KernelName, typename... Ts>
+auto sycl_kernel_launch(const char *, Ts...) {
+  return nullptr;
+}
+
+// expected-note@+3 {{this indicates a problem with the SYCL runtime header files; please consider reporting this to your SYCL runtime provider}}
+// expected-note@+2 {{in implicit call to callable object returned by 'sycl_kernel_launch' with arguments (lvalue of type 'bad19::Special') required here}}
+template <typename KN, typename KT>
+[[clang::sycl_kernel_entry_point(KN)]] void k(KT Kernel) { // expected-error {{called object type 'std::nullptr_t' is not a function or function pointer}}
+  Kernel();
+}
+void case1() {
+    Wrapper<Special> KernelArg;
+// expected-note@+1 {{in instantiation of function template specialization 'bad19::k<BADKN<19>, (lambda at}}
+    k<BADKN<19>>([KernelArg](){});
+}
+}
+
+namespace bad20 {
+// Check that the callable returned by sycl_kernel_launch returns void.
+template<int> struct KN;
+
+struct [[clang::sycl_special_kernel_parameter]] Special {
+  int data;
+};
+
+template<typename T>
+struct Wrapper {
+ T data;
+};
+
+template <typename KernelName, typename... Ts>
+auto sycl_kernel_launch(const char *, Ts...) {
+  return [](auto&&...) { return 0; };
+}
+
+// expected-note@+3 {{this indicates a problem with the SYCL runtime header files; please consider reporting this to your SYCL runtime provider}}
+// expected-note@+2 {{in implicit call to callable object returned by 'sycl_kernel_launch' with arguments (lvalue of type 'bad20::Special') required here}}
+template <typename KN, typename KT>
+[[clang::sycl_kernel_entry_point(KN)]] void k(KT Kernel) { // expected-error {{the callable returned by 'sycl_kernel_launch' must return 'void' when invoked with the special kernel parameter subobjects; 'int' was returned instead}}
+  Kernel();
+}
+void case1() {
+    Wrapper<Special> KernelArg;
+// expected-note@+1 {{in instantiation of function template specialization 'bad20::k<BADKN<20>, (lambda at}}
+    k<BADKN<20>>([KernelArg](){});
+}
+}
