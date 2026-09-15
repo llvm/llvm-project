@@ -9,7 +9,9 @@
 #ifndef FORTRAN_EVALUATE_CHARACTER_H_
 #define FORTRAN_EVALUATE_CHARACTER_H_
 
+#include "flang/Evaluate/character-value.h"
 #include "flang/Evaluate/type.h"
+#include <cstdint>
 #include <string>
 
 // Provides implementations of intrinsic functions operating on character
@@ -17,41 +19,53 @@
 
 namespace Fortran::evaluate {
 
-template <int KIND> class CharacterUtils {
-  using Character = Scalar<Type<TypeCategory::Character, KIND>>;
-  using CharT = typename Character::value_type;
+class CharacterUtils {
+  using Character = Scalar<Type<TypeCategory::Character>>;
+  using CharT = char32_t;
 
 public:
   // CHAR also implements ACHAR under assumption that character encodings
   // contain ASCII
-  static Character CHAR(std::uint64_t code) {
-    return Character{{static_cast<CharT>(code)}};
+  static Character CHAR(int kind, std::uint64_t code) {
+    return Character{kind, 1, static_cast<CharT>(code)};
   }
 
   // ICHAR also implements IACHAR under assumption that character encodings
   // contain ASCII
   static std::int64_t ICHAR(const Character &c) {
     CHECK(c.length() == 1);
-    // Convert first to an unsigned integer type to avoid sign extension
-    return static_cast<common::HostUnsignedIntType<(8 * KIND)>>(c[0]);
+    // Mask to the character kind width to avoid sign extension
+    auto ch{static_cast<std::uint64_t>(c[0])};
+    switch (c.kind()) {
+    case 1:
+      return static_cast<std::int64_t>(ch & 0xffu);
+    case 2:
+      return static_cast<std::int64_t>(ch & 0xffffu);
+    case 4:
+      return static_cast<std::int64_t>(ch & 0xffffffffu);
+    }
+    DIE("unsupported character kind");
   }
 
-  static Character NEW_LINE() { return Character{{NewLine()}}; }
+  static Character NEW_LINE(int kind) { return Character{kind, 1, NewLine()}; }
 
   static Character ADJUSTL(const Character &str) {
+    const int kind{str.kind()};
     auto pos{str.find_first_not_of(Space())};
     if (pos != Character::npos && pos != 0) {
-      return Character{str.substr(pos) + Character(pos, Space())};
+      return Character{str.substr(pos) + Character{kind, pos, Space()}};
     }
     // else empty or only spaces, or no leading spaces
     return str;
   }
 
   static Character ADJUSTR(const Character &str) {
+    const int kind{str.kind()};
     auto pos{str.find_last_not_of(Space())};
     if (pos != Character::npos && pos != str.length() - 1) {
       auto delta{str.length() - 1 - pos};
-      return Character{Character(delta, Space()) + str.substr(0, pos + 1)};
+      return Character{
+          Character{kind, delta, Space()} + str.substr(0, pos + 1)};
     }
     // else empty or only spaces, or no trailing spaces
     return str;
@@ -78,9 +92,10 @@ public:
   // Resize adds spaces on the right if the new size is bigger than the
   // original, or by trimming the rightmost characters otherwise.
   static Character Resize(const Character &str, std::size_t newLength) {
+    const int kind{str.kind()};
     auto oldLength{str.length()};
     if (newLength > oldLength) {
-      return str + Character(newLength - oldLength, Space());
+      return str + Character{kind, newLength - oldLength, Space()};
     } else {
       return str.substr(0, newLength);
     }
@@ -97,7 +112,8 @@ public:
   }
 
   static Character REPEAT(const Character &str, ConstantSubscript ncopies) {
-    Character result;
+    const int kind{str.kind()};
+    Character result{Character::Zero(kind)};
     if (!str.empty() && ncopies > 0) {
       result.reserve(ncopies * str.size());
       while (ncopies-- > 0) {
