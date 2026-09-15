@@ -69,29 +69,37 @@ define float @fminnum(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD2]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = fcmp uno <4 x float> [[WIDE_LOAD5]], [[WIDE_LOAD6]]
-; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP4]]
-; CHECK-NEXT:    [[TMP23:%.*]] = freeze <4 x i1> [[TMP22]]
-; CHECK-NEXT:    [[TMP24:%.*]] = or <4 x i1> [[TMP5]], [[TMP23]]
+; CHECK-NEXT:    [[TMP24:%.*]] = or <4 x i1> [[TMP4]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP24]])
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP27:%.*]] = freeze <4 x i1> [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP6]], [[TMP9]]
-; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP27]], i64 0
+; CHECK-NEXT:    [[TMP23:%.*]] = or i1 [[TMP14]], [[TMP9]]
+; CHECK-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP6]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP7]]
-; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP8]]
-; CHECK-NEXT:    [[TMP18:%.*]] = select i1 [[TMP6]], <4 x float> [[VEC_PHI2]], <4 x float> [[TMP13]]
-; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP6]], <4 x float> [[VEC_PHI3]], <4 x float> [[TMP15]]
-; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP6]], i64 [[IV]], i64 [[N_VEC]]
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i1> [[TMP27]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP29]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP7]]
+; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i1> [[TMP27]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP30]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP8]]
+; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i1> [[TMP27]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = select i1 [[TMP31]], <4 x float> [[VEC_PHI2]], <4 x float> [[TMP13]]
+; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i1> [[TMP27]], i64 0
+; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP32]], <4 x float> [[VEC_PHI3]], <4 x float> [[TMP15]]
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i1> [[TMP27]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = select i1 [[TMP25]], i64 [[IV]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP11]], <4 x float> [[TMP12]])
 ; CHECK-NEXT:    [[RDX_MINMAX7:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[RDX_MINMAX_SELECT]], <4 x float> [[TMP18]])
 ; CHECK-NEXT:    [[RDX_MINMAX8:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[RDX_MINMAX7]], <4 x float> [[TMP19]])
 ; CHECK-NEXT:    [[TMP21:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[RDX_MINMAX8]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP6]], true
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i1> [[TMP27]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP28]], true
 ; CHECK-NEXT:    [[TMP17:%.*]] = and i1 [[CMP_N]], [[TMP16]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP14]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP26]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ -1.000000e+07, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:

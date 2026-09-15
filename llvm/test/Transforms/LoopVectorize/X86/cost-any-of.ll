@@ -32,19 +32,26 @@ define void @fminnum_with_any_of_cost(ptr %p) #0 {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64
 ; CHECK-NEXT:    [[TMP8:%.*]] = fcmp uno <16 x float> [[WIDE_LOAD]], [[WIDE_LOAD4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fcmp uno <16 x float> [[WIDE_LOAD5]], [[WIDE_LOAD6]]
-; CHECK-NEXT:    [[TMP10:%.*]] = freeze <16 x i1> [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = freeze <16 x i1> [[TMP9]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or <16 x i1> [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = or <16 x i1> [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP12]])
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i1> poison, i1 [[TMP13]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT]], <16 x i1> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP23:%.*]] = freeze <16 x i1> [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <16 x i1> [[TMP23]], i64 0
+; CHECK-NEXT:    [[TMP20:%.*]] = or i1 [[TMP15]], [[TMP14]]
+; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP13]], <16 x float> [[VEC_PHI]], <16 x float> [[TMP4]]
-; CHECK-NEXT:    [[TMP17:%.*]] = select i1 [[TMP13]], <16 x float> [[VEC_PHI1]], <16 x float> [[TMP5]]
-; CHECK-NEXT:    [[TMP18:%.*]] = select i1 [[TMP13]], <16 x float> [[VEC_PHI2]], <16 x float> [[TMP6]]
-; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP13]], <16 x float> [[VEC_PHI3]], <16 x float> [[TMP7]]
-; CHECK-NEXT:    [[TMP20:%.*]] = select i1 [[TMP13]], i64 [[INDEX]], i64 128
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <16 x i1> [[TMP23]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP26]], <16 x float> [[VEC_PHI]], <16 x float> [[TMP4]]
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <16 x i1> [[TMP23]], i64 0
+; CHECK-NEXT:    [[TMP17:%.*]] = select i1 [[TMP27]], <16 x float> [[VEC_PHI1]], <16 x float> [[TMP5]]
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <16 x i1> [[TMP23]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = select i1 [[TMP28]], <16 x float> [[VEC_PHI2]], <16 x float> [[TMP6]]
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <16 x i1> [[TMP23]], i64 0
+; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP22]], <16 x float> [[VEC_PHI3]], <16 x float> [[TMP7]]
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <16 x i1> [[TMP23]], i64 0
+; CHECK-NEXT:    [[TMP25:%.*]] = select i1 [[TMP24]], i64 [[INDEX]], i64 128
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <16 x float> @llvm.minnum.v16f32(<16 x float> [[TMP16]], <16 x float> [[TMP17]])
 ; CHECK-NEXT:    [[RDX_MINMAX7:%.*]] = call <16 x float> @llvm.minnum.v16f32(<16 x float> [[RDX_MINMAX]], <16 x float> [[TMP18]])
 ; CHECK-NEXT:    [[RDX_MINMAX8:%.*]] = call <16 x float> @llvm.minnum.v16f32(<16 x float> [[RDX_MINMAX7]], <16 x float> [[TMP19]])
@@ -53,7 +60,7 @@ define void @fminnum_with_any_of_cost(ptr %p) #0 {
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[TMP20]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[TMP25]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[TMP21]], %[[SCALAR_PH]] ], [ [[MIN:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds float, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    [[LDV:%.*]] = load float, ptr [[GEP]], align 4
