@@ -363,7 +363,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
         OpSel |= (Mod0 ? (!!(Mod0->getImm() & SISrcMods::OP_SEL_0) << 0) : 0);
         OpSel |= (Mod1 ? (!!(Mod1->getImm() & SISrcMods::OP_SEL_0) << 1) : 0);
         OpSel |= (Mod2 ? (!!(Mod2->getImm() & SISrcMods::OP_SEL_0) << 2) : 0);
-        if (Mod0 && TII->isVOP3(OrigMI) && !TII->isVOP3P(OrigMI))
+        if (Mod0 && TII->isVOP3(OrigMI))
           OpSel |= !!(Mod0->getImm() & SISrcMods::DST_OP_SEL) << 3;
 
         if (OpSel != 0) {

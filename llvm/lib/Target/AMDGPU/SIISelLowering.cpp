@@ -19807,7 +19807,7 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   MachineFunction *MF = MI.getMF();
   MachineRegisterInfo &MRI = MF->getRegInfo();
 
-  if (TII->isVOP3(MI.getOpcode())) {
+  if (SIInstrFlags::isVOP3Like(MI)) {
     // Make sure constant bus requirements are respected.
     TII->legalizeOperandsVOP3(MRI, MI);
 

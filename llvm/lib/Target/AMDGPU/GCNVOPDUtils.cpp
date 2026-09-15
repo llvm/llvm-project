@@ -104,8 +104,8 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
 
   if (IsVOPD3 && !ST.hasVOPD3())
     return false;
-  if (!IsVOPD3 && ((TII.isVOP3(MIX) && !canMapVOP3PToVOPD(MIX)) ||
-                   (TII.isVOP3(MIY) && !canMapVOP3PToVOPD(MIY))))
+  if (!IsVOPD3 && ((SIInstrFlags::isVOP3Like(MIX) && !canMapVOP3PToVOPD(MIX)) ||
+                   (SIInstrFlags::isVOP3Like(MIY) && !canMapVOP3PToVOPD(MIY))))
     return false;
   if (TII.isDPP(MIX) || TII.isDPP(MIY))
     return false;
