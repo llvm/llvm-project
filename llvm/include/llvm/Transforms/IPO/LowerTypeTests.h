@@ -220,6 +220,9 @@ LLVM_ABI bool hasTypeMetadata(const GlobalObject &GO);
 /// entries.
 LLVM_ABI SetVector<GlobalValue *> findCfiFunctions(Module &M);
 
+/// Finds all 64-bit numeric type identifiers in \p M used for cross-DSO CFI.
+LLVM_ABI SetVector<uint64_t> findCfiTypeIds(const Module &M);
+
 /// Creates cfi.functions, aliases, and symvers named metadata in \p DestM
 /// for CFI functions in \p CfiFunctions from source module \p SrcM.
 LLVM_ABI void createCfiMetadata(Module &DestM, const Module &SrcM,
