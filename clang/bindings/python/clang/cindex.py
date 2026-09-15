@@ -2038,6 +2038,19 @@ class Cursor(Structure):
 
     @property
     @cursor_null_guard
+    def unary_operator(self) -> UnaryOperator:
+        """
+        Retrieves the opcode if this cursor points to a unary operator
+        :return:
+        """
+
+        if not hasattr(self, "_unopcode"):
+            self._unopcode = conf.lib.clang_getCursorUnaryOperatorKind(self)
+
+        return UnaryOperator.from_id(self._unopcode)
+
+    @property
+    @cursor_null_guard
     def access_specifier(self) -> AccessSpecifier:
         """
         Retrieves the access specifier (if any) of the entity pointed at by the
@@ -2473,6 +2486,38 @@ class BinaryOperator(BaseEnumeration):
     XorAssign = 31
     OrAssign = 32
     Comma = 33
+
+
+class UnaryOperator(BaseEnumeration):
+    """
+    Describes the UnaryOperator of a declaration
+    """
+
+    def __nonzero__(self):
+        """Allows checks of the kind ```if cursor.unary_operator:```"""
+        return self.value != 0
+
+    def is_postfix(self):
+        return self in {
+            UnaryOperator.PostDec,
+            UnaryOperator.PostInc,
+        }
+
+    Invalid = 0
+    PostInc = 1
+    PostDec = 2
+    PreInc = 3
+    PreDec = 4
+    AddrOf = 5
+    Deref = 6
+    Plus = 7
+    Minus = 8
+    Not = 9
+    LNot = 10
+    Real = 11
+    Imag = 12
+    Extension = 13
+    Coawait = 14
 
 
 class StorageClass(BaseEnumeration):
@@ -4346,6 +4391,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_Cursor_getTemplateArgumentValue", [Cursor, c_uint], c_longlong),
     ("clang_Cursor_getTemplateArgumentUnsignedValue", [Cursor, c_uint], c_ulonglong),
     ("clang_getCursorBinaryOperatorKind", [Cursor], c_int),
+    ("clang_getCursorUnaryOperatorKind", [Cursor], c_int),
     ("clang_Cursor_getBriefCommentText", [Cursor], _CXString),
     ("clang_Cursor_getRawCommentText", [Cursor], _CXString),
     ("clang_Cursor_getOffsetOfField", [Cursor], c_longlong),
@@ -4551,4 +4597,5 @@ __all__ = [
     "TranslationUnit",
     "TypeKind",
     "Type",
+    "UnaryOperator",
 ]
