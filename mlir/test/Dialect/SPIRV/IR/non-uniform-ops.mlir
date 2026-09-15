@@ -312,6 +312,19 @@ func.func @group_non_uniform_iadd_clustered_reduce(%val: vector<2xi32>) -> vecto
 
 // -----
 
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @cluster_size = 4 : i32
+  // CHECK-LABEL: @group_non_uniform_iadd_clustered_reduce_spec_const
+  spirv.func @group_non_uniform_iadd_clustered_reduce_spec_const(%val: vector<2xi32>) -> vector<2xi32> "None" {
+    %size = spirv.mlir.referenceof @cluster_size : i32
+    // CHECK: %{{.+}} = spirv.GroupNonUniformIAdd <Subgroup> <ClusteredReduce> %{{.+}} cluster_size(%{{.+}}) : vector<2xi32>, i32 -> vector<2xi32>
+    %0 = spirv.GroupNonUniformIAdd <Subgroup> <ClusteredReduce> %val cluster_size(%size) : vector<2xi32>, i32 -> vector<2xi32>
+    spirv.ReturnValue %0 : vector<2xi32>
+  }
+}
+
+// -----
+
 func.func @group_non_uniform_iadd_reduce(%val: i32) -> i32 {
   // expected-error @+1 {{execution_scope must be 'Subgroup'}}
   %0 = spirv.GroupNonUniformIAdd <Device> <Reduce> %val : i32 -> i32
@@ -771,6 +784,19 @@ func.func @group_non_uniform_rotate_khr(%val: f32, %delta: i32) -> f32 {
   %four = spirv.Constant 4 : i32
   %0 = spirv.GroupNonUniformRotateKHR <Workgroup> %val, %delta, cluster_size(%four) : f32, i32, i32 -> f32
   return %0: f32
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @cluster_size = 4 : i32
+  // CHECK-LABEL: @group_non_uniform_rotate_khr_spec_const
+  spirv.func @group_non_uniform_rotate_khr_spec_const(%val: f32, %delta: i32) -> f32 "None" {
+    %size = spirv.mlir.referenceof @cluster_size : i32
+    // CHECK: %{{.+}} = spirv.GroupNonUniformRotateKHR <Workgroup> %{{.+}} : f32, i32, i32 -> f32
+    %0 = spirv.GroupNonUniformRotateKHR <Workgroup> %val, %delta, cluster_size(%size) : f32, i32, i32 -> f32
+    spirv.ReturnValue %0 : f32
+  }
 }
 
 // -----
