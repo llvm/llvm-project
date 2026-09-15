@@ -6047,10 +6047,14 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
                             << '\n');
           Inst.replaceAllUsesWith(C);
           ++NumConstProp;
-          if (isInstructionTriviallyDead(&Inst, &TLI))
-            Inst.eraseFromParent();
           MadeIRChange = true;
-          continue;
+          if (isInstructionTriviallyDead(&Inst, &TLI)) {
+            Inst.eraseFromParent();
+            continue;
+          }
+          // Folding the result does not necessarily make a call trivially
+          // dead. Keep processing it so the worklist can simplify the call
+          // itself, including inferring attributes needed to remove it.
         }
 
       // See if we can constant fold its operands.
