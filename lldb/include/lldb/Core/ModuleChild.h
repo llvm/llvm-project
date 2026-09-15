@@ -44,13 +44,6 @@ public:
   ///     inherits from this class.
   lldb::ModuleSP GetModule() const;
 
-  /// Set accessor for the module pointer.
-  ///
-  /// \param[in] module_sp
-  ///     A new module that owns the object that inherits from this
-  ///     class.
-  void SetModule(const lldb::ModuleSP &module_sp);
-
 protected:
   /// The Module that owns the object that inherits from this class.
   lldb::ModuleWP m_module_wp;
