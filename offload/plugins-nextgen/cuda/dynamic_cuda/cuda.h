@@ -16,6 +16,10 @@
 #include <cstddef>
 #include <cstdint>
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #define cuDeviceTotalMem cuDeviceTotalMem_v2
 #define cuModuleGetGlobal cuModuleGetGlobal_v2
 #define cuMemGetInfo cuMemGetInfo_v2
@@ -59,7 +63,14 @@ typedef enum CUmemAccess_flags_enum {
 
 typedef enum CUmemLocationType_enum {
   CU_MEM_LOCATION_TYPE_INVALID = 0x0,
-  CU_MEM_LOCATION_TYPE_DEVICE = 0x1,
+  CU_MEM_LOCATION_TYPE_DEVICE =
+      0x1, /**< Location is a device location, thus id is a device ordinal */
+  CU_MEM_LOCATION_TYPE_HOST = 0x2, /**< Location is host, id is ignored */
+  CU_MEM_LOCATION_TYPE_HOST_NUMA =
+      0x3, /**< Location is a host NUMA node, thus id is a host NUMA node id */
+  CU_MEM_LOCATION_TYPE_HOST_NUMA_CURRENT =
+      0x4, /**< Location is a host NUMA node of the current thread, id is
+              ignored */
   CU_MEM_LOCATION_TYPE_MAX = 0x7FFFFFFF
 } CUmemLocationType;
 
@@ -480,6 +491,11 @@ CUresult cuMemFreeHost(void *);
 CUresult cuMemFreeAsync(CUdeviceptr, CUstream);
 
 CUresult cuMemPrefetchAsync(CUdeviceptr, size_t, CUdevice, CUstream);
+CUresult cuMemPrefetchBatchAsync(CUdeviceptr *dptrs, size_t *sizes,
+                                 size_t count, CUmemLocation *prefetchLocs,
+                                 size_t *prefetchLocIdxs,
+                                 size_t numPrefetchLocs,
+                                 unsigned long long flags, CUstream hStream);
 
 typedef enum CUpointer_attribute_enum {
   CU_POINTER_ATTRIBUTE_IS_MANAGED = 8
@@ -541,4 +557,8 @@ CUresult cuOccupancyMaxPotentialBlockSize(int *, int *, CUfunction,
 CUresult cuOccupancyMaxActiveBlocksPerMultiprocessor(int *, CUfunction, int,
                                                      size_t);
 
+#if defined(__cplusplus)
+} // extern "C"
 #endif
+
+#endif // DYNAMIC_CUDA_CUDA_H_INCLUDED

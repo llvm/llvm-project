@@ -21,6 +21,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace llvm::offload::debug;
 
@@ -69,6 +70,7 @@ DLWRAP(cuMemFreeHost, 1)
 DLWRAP(cuMemFreeAsync, 2)
 
 DLWRAP(cuMemPrefetchAsync, 4)
+DLWRAP(cuMemPrefetchBatchAsync, 8)
 DLWRAP(cuPointerGetAttribute, 3)
 
 DLWRAP(cuModuleGetFunction, 3)
@@ -146,6 +148,9 @@ static bool checkForCUDA() {
       {"cuDevicePrimaryCtxSetFlags", "cuDevicePrimaryCtxSetFlags_v2"},
   };
 
+  // Set of APIs that might not be supported in older versions of CUDA
+  std::unordered_set<std::string> OptionalAPIs = {"cuMemPrefetchBatchAsync"};
+
   const char *CudaLib = DYNAMIC_CUDA_PATH;
   std::string ErrMsg;
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
@@ -175,8 +180,17 @@ static bool checkForCUDA() {
     if (P == nullptr) {
       ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << CudaLib
                       << "'!";
-      return false;
+
+      // Check if the missing symbols is in optional list
+      if (OptionalAPIs.find(Sym) == OptionalAPIs.end())
+        return false;
+
+      // Leave the API as nullptr, should be guarded with
+      // api_helper::canCall<>()
+      *dlwrap::pointer(I) = nullptr;
+      continue;
     }
+
     ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
                     << ") -> " << P;
 
