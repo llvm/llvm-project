@@ -5559,8 +5559,8 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
         Builder.CreateAdd(ScanRedInfo->Span, Builder.getInt32(1));
     for (size_t i = 0; i < ScanVars.size(); i++) {
       Type *IntPtrTy = Builder.getInt32Ty();
-      Constant *Allocsize = ConstantExpr::getSizeOf(ScanVarsType[i]);
-      Allocsize = ConstantExpr::getTruncOrBitCast(Allocsize, IntPtrTy);
+      Value *Allocsize = Builder.CreateTypeSize(
+          IntPtrTy, M.getDataLayout().getTypeAllocSize(ScanVarsType[i]));
       Value *Buff =
           Builder.CreateMalloc(IntPtrTy, Allocsize, AllocSpan, nullptr, "arr");
       Builder.CreateStore(Buff, (*(ScanRedInfo->ScanBuffPtrs))[ScanVars[i]]);
