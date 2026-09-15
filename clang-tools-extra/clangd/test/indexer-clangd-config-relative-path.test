@@ -1,0 +1,47 @@
+# Test that clangd-indexer finds the .clangd file when the compilation database
+# names its source files relative to the compile command's "directory".
+#
+# We specify a custom path in XDG_CONFIG_HOME, which only works on some
+# systems, so that the developer's own user config can't affect the result.
+# UNSUPPORTED: system-windows
+# UNSUPPORTED: system-darwin
+
+# RUN: rm -rf %t.dir && mkdir -p %t.dir
+# RUN: split-file %s %t.dir
+# RUN: mkdir -p %t.dir/elsewhere %t.dir/xdg
+
+# Two databases for the same project: one naming test.cpp relative to
+# "directory", one naming it absolutely. They should behave the same.
+# RUN: mkdir -p %t.dir/rel %t.dir/abs
+# RUN: echo '[{"directory":"%/t.dir/proj","command":"clang++ -c test.cpp","file":"test.cpp"}]' > %t.dir/rel/compile_commands.json
+# RUN: echo '[{"directory":"%/t.dir/proj","command":"clang++ -c test.cpp","file":"%/t.dir/proj/test.cpp"}]' > %t.dir/abs/compile_commands.json
+
+# Run from a directory that is neither the project nor the build directory, so
+# that a process-CWD-relative lookup is guaranteed to look in the wrong place.
+
+# Relative "file" entry: the .clangd file's CompileFlags.Add should still be
+# applied, so the #error must not fire.
+# RUN: cd %t.dir/elsewhere && env XDG_CONFIG_HOME=%t.dir/xdg \
+# RUN:     clangd-indexer --enable-config --executor=all-TUs \
+# RUN:     %t.dir/rel/compile_commands.json > %t.dir/rel.idx 2> %t.dir/rel.log
+# RUN: FileCheck --check-prefix=REL --input-file=%t.dir/rel.log %s
+# REL: Processing file {{.*}}test.cpp
+# REL-NOT: error: "FROM_CLANGD_FILE not defined
+
+# Absolute "file" entry: same project, same config, and this one works today.
+# RUN: cd %t.dir/elsewhere && env XDG_CONFIG_HOME=%t.dir/xdg \
+# RUN:     clangd-indexer --enable-config --executor=all-TUs \
+# RUN:     %t.dir/abs/compile_commands.json > %t.dir/abs.idx 2> %t.dir/abs.log
+# RUN: FileCheck --check-prefix=ABS --input-file=%t.dir/abs.log %s
+# ABS: Processing file {{.*}}test.cpp
+# ABS-NOT: error: "FROM_CLANGD_FILE not defined
+
+#--- proj/.clangd
+CompileFlags:
+  Add: [-DFROM_CLANGD_FILE=1]
+
+#--- proj/test.cpp
+#ifndef FROM_CLANGD_FILE
+#error "FROM_CLANGD_FILE not defined - .clangd file was not applied"
+#endif
+int foo() { return 0; }
