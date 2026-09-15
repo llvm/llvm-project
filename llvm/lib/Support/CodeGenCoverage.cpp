@@ -13,6 +13,7 @@
 
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Process.h"
@@ -83,9 +84,8 @@ bool CodeGenCoverage::emit(StringRef CoveragePrefix,
     // We can handle locking within a process easily enough but we don't want to
     // manage it between multiple processes. Use the process ID to ensure no
     // more than one process is ever writing to the same file at the same time.
-    std::string Pid = llvm::to_string(sys::Process::getProcessId());
-
-    std::string CoverageFilename = (CoveragePrefix + Pid).str();
+    std::string CoverageFilename =
+        formatv("{0}{1}", CoveragePrefix, sys::Process::getProcessId()).str();
 
     std::error_code EC;
     sys::fs::OpenFlags OpenFlags = sys::fs::OF_Append;
