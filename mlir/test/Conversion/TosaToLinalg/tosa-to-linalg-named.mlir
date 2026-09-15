@@ -95,6 +95,85 @@ func.func @matmul_dyn_output(%arg0: tensor<1x1x8xf32>, %arg1: tensor<1x8x1xf32>)
 
 // -----
 
+// CHECK-LABEL: @matmul_t
+func.func @matmul_t(%arg0: tensor<2x5x3xf32>, %arg1: tensor<2x6x3xf32>) -> tensor<2x5x6xf32> {
+  // CHECK: %[[C0:.+]] = arith.constant 0
+  // CHECK: %[[INIT:.+]] = tensor.empty()
+  // CHECK: %[[FILLED:.+]] = linalg.fill ins(%[[C0]] : f32) outs(%[[INIT]] : tensor<2x5x6xf32>) -> tensor<2x5x6xf32>
+  // CHECK: linalg.batch_matmul indexing_maps =
+  // CHECK-SAME: ins(%arg0, %arg1 : tensor<2x5x3xf32>, tensor<2x6x3xf32>) outs(%[[FILLED]] : tensor<2x5x6xf32>) -> tensor<2x5x6xf32>
+  %a_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %b_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<2x5x3xf32>, tensor<2x6x3xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x5x6xf32>
+  return %0 : tensor<2x5x6xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @matmul_t_broadcast
+func.func @matmul_t_broadcast(%arg0: tensor<4x5x3xf32>, %arg1: tensor<1x6x3xf32>) -> tensor<4x5x6xf32> {
+  // CHECK: %[[SLICE:.+]] = tensor.extract_slice %arg1[0, 0, 0] [1, 6, 3] [1, 1, 1] : tensor<1x6x3xf32> to tensor<6x3xf32>
+  // CHECK: %[[BCAST_INIT:.+]] = tensor.empty() : tensor<4x6x3xf32>
+  // CHECK: %[[BCAST:.+]] = linalg.broadcast ins(%[[SLICE]] : tensor<6x3xf32>) outs(%[[BCAST_INIT]] : tensor<4x6x3xf32>) dimensions = [0]
+  // CHECK: %[[C0:.+]] = arith.constant 0
+  // CHECK: %[[INIT:.+]] = tensor.empty()
+  // CHECK: %[[FILLED:.+]] = linalg.fill ins(%[[C0]] : f32) outs(%[[INIT]] : tensor<4x5x6xf32>) -> tensor<4x5x6xf32>
+  // CHECK: linalg.batch_matmul indexing_maps =
+  // CHECK-SAME: ins(%arg0, %[[BCAST]] : tensor<4x5x3xf32>, tensor<4x6x3xf32>) outs(%[[FILLED]] : tensor<4x5x6xf32>) -> tensor<4x5x6xf32>
+  %a_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %b_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<4x5x3xf32>, tensor<1x6x3xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<4x5x6xf32>
+  return %0 : tensor<4x5x6xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @matmul_t_dynamic_batch
+func.func @matmul_t_dynamic_batch(%arg0: tensor<?x5x3xf32>, %arg1: tensor<?x6x3xf32>) -> tensor<?x5x6xf32> {
+  // CHECK: %[[BATCH:.+]] = tensor.dim %arg1, %{{.+}}
+  // CHECK: %[[ONE:.+]] = arith.constant 1 : index
+  // CHECK: %[[NEEDS_BCAST:.+]] = arith.cmpi eq, %[[BATCH]], %[[ONE]]
+  // CHECK: %[[B:.+]] = scf.if %[[NEEDS_BCAST]] -> (tensor<?x6x3xf32>) {
+  // CHECK:   %[[SLICE:.+]] = tensor.extract_slice %arg1[0, 0, 0] [1, 6, 3]
+  // CHECK:   %[[BCAST:.+]] = linalg.broadcast ins(%[[SLICE]] : tensor<6x3xf32>)
+  // CHECK:   scf.yield %[[BCAST]] : tensor<?x6x3xf32>
+  // CHECK: } else {
+  // CHECK:   scf.yield %arg1 : tensor<?x6x3xf32>
+  // CHECK: }
+  // CHECK: linalg.batch_matmul indexing_maps =
+  // CHECK-SAME: ins(%arg0, %[[B]] : tensor<?x5x3xf32>, tensor<?x6x3xf32>)
+  %a_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %b_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<?x5x3xf32>, tensor<?x6x3xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<?x5x6xf32>
+  return %0 : tensor<?x5x6xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @matmul_t_quantized_broadcast
+func.func @matmul_t_quantized_broadcast(%arg0: tensor<4x5x3xi8>, %arg1: tensor<1x6x3xi8>) -> tensor<4x5x6xi32> {
+  // CHECK: %[[SLICE:.+]] = tensor.extract_slice %arg1[0, 0, 0] [1, 6, 3] [1, 1, 1] : tensor<1x6x3xi8> to tensor<6x3xi8>
+  // CHECK: %[[BCAST:.+]] = linalg.broadcast ins(%[[SLICE]] : tensor<6x3xi8>)
+  // CHECK: %[[RESULT:.+]] = linalg.generic
+  // CHECK-SAME: ins(%arg0, %[[BCAST]] : tensor<4x5x3xi8>, tensor<4x6x3xi8>)
+  // CHECK: ^bb0(%[[A:.+]]: i8, %[[BVAL:.+]]: i8, %[[ACC:.+]]: i32):
+  // CHECK:   %[[EXT_A:.+]] = arith.extsi %[[A]] : i8 to i32
+  // CHECK:   %[[EXT_B:.+]] = arith.extsi %[[BVAL]] : i8 to i32
+  // CHECK:   %[[AZP:.+]] = arith.constant 1 : i32
+  // CHECK:   %[[BZP:.+]] = arith.constant 2 : i32
+  // CHECK:   %[[ADJUSTED_A:.+]] = arith.subi %[[EXT_A]], %[[AZP]] : i32
+  // CHECK:   %[[ADJUSTED_B:.+]] = arith.subi %[[EXT_B]], %[[BZP]] : i32
+  // CHECK:   %[[PRODUCT:.+]] = arith.muli %[[ADJUSTED_A]], %[[ADJUSTED_B]] : i32
+  // CHECK:   %[[SUM:.+]] = arith.addi %[[ACC]], %[[PRODUCT]] : i32
+  // CHECK:   linalg.yield %[[SUM]] : i32
+  %a_zp = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %b_zp = "tosa.const"() <{values = dense<2> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<4x5x3xi8>, tensor<1x6x3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<4x5x6xi32>
+  return %0 : tensor<4x5x6xi32>
+}
+
+// -----
+
 // CHECK-LABEL: @max_pool
 func.func @max_pool(%arg0: tensor<1x6x34x62xf32>) -> () {
   // CHECK-DAG: [[CONST:%.+]] = arith.constant -3.40282347E+38
