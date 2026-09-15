@@ -1,0 +1,2 @@
+# REQUIRES: Half
+# RUN: echo half

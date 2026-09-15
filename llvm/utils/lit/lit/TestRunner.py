@@ -2111,6 +2111,10 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     If 'require_script' is False an empty script
     may be returned. This can be used for test formats where the actual script
     is optional or ignored.
+
+    With --filter-requires, select REQUIRES combinations instead of
+    checking their availability. UNSUPPORTED and XFAIL still use the configured
+    available features.
     """
     # Parse the test sources and extract test properties
     try:
@@ -2130,14 +2134,31 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     if parsed["ALLOW_RETRIES:"]:
         test.allowed_retries = parsed["ALLOW_RETRIES:"][0]
 
-    # Enforce REQUIRES:
-    missing_required_features = test.getMissingRequiredFeatures()
-    if missing_required_features:
-        msg = ", ".join(missing_required_features)
-        return lit.Test.Result(
-            Test.UNSUPPORTED,
-            "Test requires the following unavailable " "features: %s" % msg,
-        )
+    if test.filter_requires is not None:
+        if test.config.limit_to_features:
+            return lit.Test.Result(
+                Test.UNRESOLVED,
+                "--filter-requires cannot be combined with limit_to_features",
+            )
+        try:
+            matches = test.filter_requires.matches(test.requires)
+        except ValueError as error:
+            return lit.Test.Result(Test.UNRESOLVED, str(error))
+        if not matches:
+            return lit.Test.Result(
+                Test.EXCLUDED,
+                "Test REQUIRES does not match --filter-requires %r"
+                % str(test.filter_requires),
+            )
+    else:
+        # Enforce REQUIRES feature availability only without explicit selection.
+        missing_required_features = test.getMissingRequiredFeatures()
+        if missing_required_features:
+            msg = ", ".join(missing_required_features)
+            return lit.Test.Result(
+                Test.UNSUPPORTED,
+                "Test requires the following unavailable " "features: %s" % msg,
+            )
 
     # Enforce UNSUPPORTED:
     unsupported_features = test.getUnsupportedFeatures()
