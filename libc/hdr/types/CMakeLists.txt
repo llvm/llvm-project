@@ -489,7 +489,6 @@ add_proxy_header_library(
     libc.hdr.fcntl_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.off64_t
-    libc.include.fcntl
 )
 
 add_proxy_header_library(
