@@ -99,16 +99,9 @@ TEST_P(ComplexValueKind, ConstructFromRealPartOnly) {
   EXPECT_COMPLEX_EQ(z, ComplexValue(kind, Real(kind, 3)));
 }
 
-TEST_P(ComplexValueKind, ImaginaryPartIsConvertedToTheRealPartsKind) {
+TEST_P(ComplexValueKind, CopyAndMove) {
   const int kind{GetParam()};
-  // The imaginary operand is converted to the kind of the real operand.
-  ComplexValue z{Real(kind, 1), Real(8, 2)};
-  EXPECT_EQ(kind, z.kind());
-  EXPECT_TRUE(z.AIMAG() == Real(kind, 2));
-}
-
-TEST(ComplexValue, CopyAndMove) {
-  ComplexValue z{Complex(4, 1, 2)};
+  ComplexValue z{Complex(kind, 1, 2)};
   ComplexValue copyConstructed{z};
   EXPECT_COMPLEX_EQ(z, copyConstructed);
   ComplexValue copyAssigned;

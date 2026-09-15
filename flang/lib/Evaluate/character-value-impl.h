@@ -88,7 +88,18 @@ public:
 
   bool IsNull() const { return storage_.index() == 0; }
   int kind() const {
-    return withCharProto([](auto ct) { return sizeof(ct); });
+    return common::visit(
+        common::visitors{
+            [](std::monostate) -> size_t {
+              DIE("operation on uninitialized CharacterValueImpl");
+            },
+            [](const auto &s) {
+              using StringT = std::decay_t<decltype(s)>;
+              using CharT = typename StringT::value_type;
+              return sizeof(CharT);
+            },
+        },
+        storage_);
   }
 
   /// Byte size of one character unit (1, 2, or 4).
@@ -196,19 +207,7 @@ public:
   template <typename F>
   auto withCharProto(F &&f) const
       -> decltype(std::declval<F>()(std::declval<char>())) {
-    return common::visit(
-        common::visitors{
-            [](std::monostate) -> decltype(f(
-                                   std::declval<const std::string &>())) {
-              DIE("operation on uninitialized CharacterValueImpl");
-            },
-            [&f](auto s) {
-              using StringT = std::decay_t<decltype(s)>;
-              using CharT = typename StringT::value_type;
-              return f(CharT{});
-            },
-        },
-        storage_);
+    return withCharProto(kind(), f);
   }
 
   template <typename F>
