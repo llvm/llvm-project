@@ -16,7 +16,7 @@ Sphinx <http://sphinx-doc.org/> and then do:
     make docs-openmp-html
     $BROWSER <build-dir>/docs/html/index.html
 
-The mapping between reStructuredText files and generated documentation is
+The mapping between Markdown files and generated documentation is
 `docs/Foo.md` <-> `<build-dir>/projects/openmp/docs//html/Foo.html` <->
 `https://openmp.llvm.org/docs/Foo.html`.
 
