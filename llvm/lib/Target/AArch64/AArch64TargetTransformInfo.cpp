@@ -3976,25 +3976,6 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             BF16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
       return Entry->Cost;
 
-  // We have to estimate a cost of fixed length operation upon
-  // SVE registers(operations) with the number of registers required
-  // for a fixed type to be represented upon SVE registers.
-  EVT WiderTy = SrcTy.bitsGT(DstTy) ? SrcTy : DstTy;
-  if (SrcTy.isFixedLengthVector() && DstTy.isFixedLengthVector() &&
-      SrcTy.getVectorNumElements() == DstTy.getVectorNumElements() &&
-      ST->useSVEForFixedLengthVectors(WiderTy)) {
-    std::pair<InstructionCost, MVT> LT =
-        getTypeLegalizationCost(WiderTy.getTypeForEVT(Dst->getContext()));
-    unsigned NumElements =
-        AArch64::SVEBitsPerBlock / LT.second.getScalarSizeInBits();
-    return LT.first *
-           getCastInstrCost(
-               Opcode,
-               ScalableVectorType::get(Dst->getScalarType(), NumElements),
-               ScalableVectorType::get(Src->getScalarType(), NumElements), CCH,
-               CostKind, I);
-  }
-
   // Symbolic constants for the SVE sitofp/uitofp entries in the table below
   // The cost of unpacking twice is artificially increased for now in order
   // to avoid regressions against NEON, which will use tbl instructions directly
@@ -4005,6 +3986,69 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   const unsigned int SVE_FCVT_COST = 1;
   const unsigned int SVE_UNPACK_ONCE = 4;
   const unsigned int SVE_UNPACK_TWICE = 16;
+
+  // We have to estimate a cost of fixed length operation upon
+  // SVE registers(operations) with the number of registers required
+  // for a fixed type to be represented upon SVE registers.
+  EVT WiderTy = SrcTy.bitsGT(DstTy) ? SrcTy : DstTy;
+  if (SrcTy.isFixedLengthVector() && DstTy.isFixedLengthVector() &&
+      SrcTy.getVectorNumElements() == DstTy.getVectorNumElements() &&
+      ST->useSVEForFixedLengthVectors(WiderTy)) {
+    // When going from a fixed vector to a scalable vector, types that get
+    // promoted will have associated unpacking costs that would not otherwise be
+    // present.
+    static const TypeConversionCostTblEntry FixedToScalablePackUnpackTbl[] = {
+        // f16 unpack
+        {ISD::UINT_TO_FP, MVT::nxv8f16, MVT::nxv8i8, SVE_UNPACK_ONCE},
+        {ISD::SINT_TO_FP, MVT::nxv8f16, MVT::nxv8i8, SVE_UNPACK_ONCE},
+        // f32 unpack
+        {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8, SVE_UNPACK_ONCE},
+        {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i16, SVE_UNPACK_ONCE},
+        {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8, SVE_UNPACK_ONCE},
+        {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i16, SVE_UNPACK_ONCE},
+        // f64 unpack
+        {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i8, SVE_UNPACK_TWICE},
+        {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i16, SVE_UNPACK_TWICE},
+        {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i32, SVE_UNPACK_ONCE},
+        {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i8, SVE_UNPACK_TWICE},
+        {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i16, SVE_UNPACK_TWICE},
+        {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i32, SVE_UNPACK_ONCE},
+        // f16 pack
+        {ISD::FP_TO_UINT, MVT::nxv8i8, MVT::nxv8f16, 1}, // uzp
+        {ISD::FP_TO_SINT, MVT::nxv8i8, MVT::nxv8f16, 1}, // uzp
+        // f32 pack
+        {ISD::FP_TO_UINT, MVT::nxv4i8, MVT::nxv4f32, 2},  // 2 uzp
+        {ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f32, 1}, // uzp
+        {ISD::FP_TO_SINT, MVT::nxv4i8, MVT::nxv4f32, 2},  // 2 uzp
+        {ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f32, 1}, // uzp
+        // f64 pack
+        {ISD::FP_TO_UINT, MVT::nxv2i8, MVT::nxv2f64, 2},  // 2 uzp
+        {ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f64, 2}, // 2 uzp
+        {ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f64, 1}, // uzp
+        {ISD::FP_TO_SINT, MVT::nxv2i8, MVT::nxv2f64, 2},  // 2 uzp
+        {ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f64, 2}, // 2 uzp
+        {ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f64, 1}, // uzp
+    };
+
+    std::pair<InstructionCost, MVT> LT =
+        getTypeLegalizationCost(WiderTy.getTypeForEVT(Dst->getContext()));
+    InstructionCost Cost = LT.first;
+    unsigned NumElements =
+        AArch64::SVEBitsPerBlock / LT.second.getScalarSizeInBits();
+    auto *SrcScalabeTy =
+        ScalableVectorType::get(Src->getScalarType(), NumElements);
+    auto *DstScalabeTy =
+        ScalableVectorType::get(Dst->getScalarType(), NumElements);
+    InstructionCost ConversionCost =
+        getCastInstrCost(Opcode, DstScalabeTy, SrcScalabeTy, CCH, CostKind, I);
+    if (const auto *Entry = ConvertCostTableLookup(
+            FixedToScalablePackUnpackTbl, ISD,
+            TLI->getValueType(DL, DstScalabeTy).getSimpleVT(),
+            TLI->getValueType(DL, SrcScalabeTy).getSimpleVT()))
+      return Cost * (ConversionCost + Entry->Cost);
+
+    return Cost * ConversionCost;
+  }
 
   static const TypeConversionCostTblEntry ConversionTbl[] = {
       {ISD::TRUNCATE, MVT::v2i8, MVT::v2i64, 1},    // xtn
