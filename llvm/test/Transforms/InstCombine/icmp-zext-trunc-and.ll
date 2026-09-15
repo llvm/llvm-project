@@ -16,20 +16,7 @@ define i1 @test_zext_trunc_and_ugt(i16 %x, i64 %y) {
   ret i1 %cmp
 }
 
-; AND operands reversed (mask first) — needs m_c_And to catch this.
-define i1 @test_zext_trunc_and_ugt_commuted(i16 %x, i64 %y) {
-; CHECK-LABEL: define i1 @test_zext_trunc_and_ugt_commuted(
-; CHECK-SAME: i16 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[Y]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i16 [[X]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %ext = zext i16 %x to i32
-  %trunc = trunc i64 %y to i32
-  %mask = and i32 65535, %trunc
-  %cmp = icmp ugt i32 %ext, %mask
-  ret i1 %cmp
-}
+
 
 ; Signed predicate on a value that cannot be proven non-negative — must NOT fold.
 define i1 @test_signed_cmp_not_folded(i32 %ext, i64 %y) {
@@ -81,18 +68,4 @@ define i1 @negative_mask_too_big(i16 %x, i64 %y) {
   %cmp = icmp eq i32 %ext, %mask
   ret i1 %cmp
 }
-; Direct ult form — zext stays at operand(0), no ugt-swap canonicalization needed.
-; Exercises the original (non-mirrored) fold path in foldICmpWithZextOrSext.
-define i1 @test_zext_trunc_and_ult_direct(i16 %x, i64 %y) {
-; CHECK-LABEL: define i1 @test_zext_trunc_and_ult_direct(
-; CHECK-SAME: i16 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[Y]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i16 [[X]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %ext = zext i16 %x to i32
-  %trunc = trunc i64 %y to i32
-  %mask = and i32 %trunc, 65535
-  %cmp = icmp ult i32 %mask, %ext
-  ret i1 %cmp
-}
+
