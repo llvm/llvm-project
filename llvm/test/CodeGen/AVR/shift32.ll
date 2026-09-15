@@ -465,6 +465,7 @@ define i32 @ashr_i32_7(i32 %a) {
 ; CHECK-NEXT:    rol r23
 ; CHECK-NEXT:    rol r24
 ; CHECK-NEXT:    rol r25
+; CHECK-NEXT:    ; implicit-def: $r19
 ; CHECK-NEXT:    sbc r19, r19
 ; CHECK-NEXT:    mov r22, r23
 ; CHECK-NEXT:    mov r23, r24
@@ -522,6 +523,7 @@ define i32 @ashr_i32_22(i32 %a) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    lsl r24
 ; CHECK-NEXT:    rol r25
+; CHECK-NEXT:    ; implicit-def: $r18
 ; CHECK-NEXT:    sbc r18, r18
 ; CHECK-NEXT:    lsl r24
 ; CHECK-NEXT:    rol r25
@@ -540,6 +542,7 @@ define i32 @ashr_i32_23(i32 %a) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    lsl r24
 ; CHECK-NEXT:    rol r25
+; CHECK-NEXT:    ; implicit-def: $r23
 ; CHECK-NEXT:    sbc r23, r23
 ; CHECK-NEXT:    mov r22, r25
 ; CHECK-NEXT:    mov r24, r23
@@ -553,6 +556,7 @@ define i32 @ashr_i32_30(i32 %a) {
 ; CHECK-LABEL: ashr_i32_30:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    lsl r25
+; CHECK-NEXT:    ; implicit-def: $r23
 ; CHECK-NEXT:    sbc r23, r23
 ; CHECK-NEXT:    lsl r25
 ; CHECK-NEXT:    mov r22, r23
@@ -568,6 +572,7 @@ define i32 @ashr_i32_31(i32 %a) {
 ; CHECK-LABEL: ashr_i32_31:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    lsl r25
+; CHECK-NEXT:    ; implicit-def: $r22
 ; CHECK-NEXT:    sbc r22, r22
 ; CHECK-NEXT:    mov r23, r22
 ; CHECK-NEXT:    movw r24, r22
