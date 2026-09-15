@@ -55,10 +55,9 @@ static void MaybeUpdateSmfContext(SmfContext context) {
   // Only entering a top level special member function changes the current
   // context. The context logically remains the same until control flow leaves
   // the top level function.
-  if (__copyprof_state.smf_context == SmfContext::NONE ||
-      (__copyprof_state.construct_nesting_level == 0 &&
-       __copyprof_state.copy_nesting_level == 0 &&
-       __copyprof_state.destruct_nesting_level == 0)) {
+  if (__copyprof_state.construct_nesting_level == 0 &&
+      __copyprof_state.copy_nesting_level == 0 &&
+      __copyprof_state.destruct_nesting_level == 0) {
     __copyprof_state.smf_context = context;
   }
 }
@@ -90,7 +89,7 @@ static void CopyMemberFunctionExit(const void* this_ptr, uptr obj_size) {
 
 }  // namespace __copyprof
 
-void __copyprof_init() { Initialize(); }
+void __copyprof_init_once() { Initialize(); }
 
 void __copyprof_ctor_enter_callback(const void* this_ptr, uptr obj_size) {
   MaybeUpdateSmfContext(SmfContext::CTOR);
