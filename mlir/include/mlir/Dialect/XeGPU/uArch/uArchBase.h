@@ -285,7 +285,6 @@ protected:
     static const int kWidth64[] = {64};
     static const int kWidth32[] = {32};
     static const int kWidth16[] = {16};
-    static const int kWidthAtLeast16[] = {16, 32};
     static const int kWidthAtLeast32[] = {32, 64};
     static const int kWidth8[] = {8};
 
@@ -302,7 +301,7 @@ protected:
     // expressed directly. 4-bit elements are packed two-per-byte, so their
     // widths (or heights, when transformed) are double the 8-bit rows.
     static const llvm::DenseMap<Key, Value> kMap = {
-        {{8, false, false, false}, {kWidthAtLeast16, kHeightAtLeast1, kCount2}},
+        {{8, false, false, false}, {kWidth32, kHeightAtLeast1, kCount2}},
         {{8, false, false, true}, {kWidth16, kHeightAtLeast8, kCount4Only}},
         {{16, false, false, false}, {kWidth16, kHeightAtLeast1, kCount2}},
         {{32, false, false, false}, {kWidth16, kHeightAtLeast1, kCount1}},
