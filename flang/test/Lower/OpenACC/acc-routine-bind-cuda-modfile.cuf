@@ -1,0 +1,45 @@
+! CUDA Fortran can consume `acc routine bind(...)` recovered from a module
+! file even when this translation unit is compiled without -fopenacc.
+
+! RUN: split-file %s %t
+! RUN: bbc -fopenacc -fcuda -emit-hlfir %t/mod.cuf -o %t/mod.mlir --module=%t
+! RUN: bbc -fcuda -emit-hlfir %t/use.cuf -o - -I %t | FileCheck %s
+
+//--- mod.cuf
+module m
+  interface
+    attributes(host,device) function my_device_func(x) bind(c) result(res)
+      integer(4), value :: x
+      integer(4) :: res
+    end function
+  end interface
+
+  interface
+    attributes(host,device) subroutine my_device_sub(x, res) bind(c)
+      integer(4), value :: x
+      integer(4) :: res
+    end subroutine
+  end interface
+
+  !$acc routine(my_device_func) seq bind('__wrapper_my_device_func')
+  !$acc routine(my_device_sub) seq bind('__wrapper_my_device_sub')
+end module
+
+//--- use.cuf
+attributes(device) subroutine test
+  use m
+  implicit none
+  integer(4) :: a, b
+
+  b = my_device_func(a)
+  call my_device_sub(a, b)
+end subroutine test
+
+! CHECK-DAG: acc.routine @[[ROUT_FUNC:.*]] func(@my_device_func) bind("__wrapper_my_device_func") seq
+! CHECK-DAG: acc.routine @[[ROUT_SUB:.*]] func(@my_device_sub) bind("__wrapper_my_device_sub") seq
+! CHECK-LABEL: func.func @_QPtest()
+! CHECK-SAME: attributes {cuf.proc_attr = #cuf.cuda_proc<device>}
+! CHECK: fir.call @my_device_func(
+! CHECK: fir.call @my_device_sub(
+! CHECK: func.func private @my_device_func{{.*}}acc.routine_info = #acc.routine_info<[@[[ROUT_FUNC]]]>
+! CHECK: func.func private @my_device_sub{{.*}}acc.routine_info = #acc.routine_info<[@[[ROUT_SUB]]]>
