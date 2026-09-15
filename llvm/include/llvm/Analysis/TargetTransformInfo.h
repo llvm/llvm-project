@@ -574,6 +574,11 @@ public:
 
   LLVM_ABI bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
 
+  /// Return the bit pattern of the null pointer in address space \p AS, or
+  /// std::nullopt if the target does not define one. The result has the pointer
+  /// size of \p AS and need not be zero.
+  LLVM_ABI std::optional<APInt> getNullPointerValue(unsigned AS) const;
+
   // Given an address space cast of the given pointer value, calculate the known
   // bits of the source pointer in the source addrspace and the destination
   // pointer in the destination addrspace.
