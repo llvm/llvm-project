@@ -4444,22 +4444,33 @@ void mlir::LLVM::printIndirectBrOpSucessors(
 }
 
 //===----------------------------------------------------------------------===//
-// SincosOp (intrinsic)
+// SincosOp and ModfOp (intrinsics)
 //===----------------------------------------------------------------------===//
 
-LogicalResult LLVM::SincosOp::verify() {
-  auto operandType = getOperand().getType();
-  auto resultType = getResult().getType();
+static LogicalResult verifyHomogeneousStructResult(Operation *op,
+                                                   Type operandType,
+                                                   Type resultType) {
   auto resultStructType =
       mlir::dyn_cast<mlir::LLVM::LLVMStructType>(resultType);
   if (!resultStructType || resultStructType.getBody().size() != 2 ||
       resultStructType.getBody()[0] != operandType ||
       resultStructType.getBody()[1] != operandType) {
-    return emitOpError("expected result type to be an homogeneous struct with "
-                       "two elements matching the operand type, but got ")
+    return op->emitOpError(
+               "expected result type to be a homogeneous struct with "
+               "two elements matching the operand type, but got ")
            << resultType;
   }
   return success();
+}
+
+LogicalResult LLVM::SincosOp::verify() {
+  return verifyHomogeneousStructResult(getOperation(), getVal().getType(),
+                                       getResult().getType());
+}
+
+LogicalResult LLVM::ModfOp::verify() {
+  return verifyHomogeneousStructResult(getOperation(), getVal().getType(),
+                                       getResult().getType());
 }
 
 //===----------------------------------------------------------------------===//

@@ -23,6 +23,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/TypeSwitch.h"
@@ -1767,6 +1768,18 @@ static bool isExtractingContiguousSlice(LLVM::ShuffleVectorOp op) {
   return true;
 }
 
+// Clones `op` with new operands and result types, preserving its attributes
+// and properties (e.g. an `icmp` predicate or fastmath flags). Same idiom used
+// by the Vector dialect's unroll patterns.
+static Operation *cloneOpWithOperandsAndTypes(RewriterBase &rewriter,
+                                              Location loc, Operation *op,
+                                              ArrayRef<Value> operands,
+                                              ArrayRef<Type> resultTypes) {
+  OperationState state(loc, op->getName().getStringRef(), operands, resultTypes,
+                       op->getAttrs());
+  return rewriter.create(state);
+}
+
 // Input vector of a shuffle vector op extracting a contiguous slice is an
 // illegal vector in SPIRV kernel if the vector size is > 16 elements.
 // To legalize this case, keep applying the following transformations until no
@@ -1775,6 +1788,9 @@ static bool isExtractingContiguousSlice(LLVM::ShuffleVectorOp op) {
 //       start with fpext, fptrunc and bitcast for now.
 //   2. merge with another shuffle vector op
 //   3. merge with load as a smaller load
+//   4. hoist past n-ary element-wise operations (e.g. fdiv, select, icmp) by
+//      slicing every same-length vector operand with the same mask and cloning
+//      the op at the narrow width.
 class HandleVectorExtractPattern
     : public OpRewritePattern<LLVM::ShuffleVectorOp> {
   using OpRewritePattern<LLVM::ShuffleVectorOp>::OpRewritePattern;
@@ -1895,6 +1911,31 @@ class HandleVectorExtractPattern
           auto newLoad = LLVM::LoadOp::create(rewriter, loc, newVecTy, loadPtr);
           rewriter.replaceOp(op, newLoad);
         }
+      } else if (isMemoryEffectFree(srcOp) && srcOp->getNumResults() == 1 &&
+                 srcOp->getNumOperands() >= 1 &&
+                 llvm::all_of(srcOp->getOperands(), [&](Value operand) {
+                   auto operandTy = dyn_cast<VectorType>(operand.getType());
+                   auto srcTy = cast<VectorType>(src.getType());
+                   return operandTy && operandTy.getRank() == 1 &&
+                          operandTy.getNumElements() == srcTy.getNumElements();
+                 })) {
+        // 4. Hoist past an n-ary element-wise op: slice each same-length vector
+        //    operand with the same contiguous mask and clone the op narrow.
+        //    The freshly created operand shuffles keep the greedy driver going,
+        //    hoisting them further up (or merging via case 2 / into loads via
+        //    case 3) until they reach operands that are already legal width.
+        SmallVector<Value> newOperands;
+        newOperands.reserve(srcOp->getNumOperands());
+        for (Value operand : srcOp->getOperands()) {
+          auto operandTy = cast<VectorType>(operand.getType());
+          auto sliceTy =
+              VectorType::get(mask.size(), operandTy.getElementType());
+          newOperands.push_back(LLVM::ShuffleVectorOp::create(
+              rewriter, loc, sliceTy, operand, operand, mask));
+        }
+        Operation *newOp =
+            cloneOpWithOperandsAndTypes(rewriter, loc, srcOp, newOperands, ty);
+        rewriter.replaceOp(op, newOp->getResult(0));
       } else {
         return failure();
       }

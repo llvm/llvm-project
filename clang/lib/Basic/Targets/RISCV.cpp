@@ -651,12 +651,7 @@ bool RISCVTargetInfo::checkCFBranchLabelSchemeSupported(
   // implements it
   switch (Scheme) {
   case CFBranchLabelSchemeKind::Default:
-    Diags.Report(diag::err_opt_not_valid_without_opt)
-        << "-fcf-protection=branch"
-        << (Twine("-mcf-branch-label-scheme=") +
-            getCFBranchLabelSchemeFlagVal(CFBranchLabelSchemeKind::Unlabeled))
-               .str();
-    return false;
+    return true;
   case CFBranchLabelSchemeKind::Unlabeled:
     return true;
   case CFBranchLabelSchemeKind::FuncSig:

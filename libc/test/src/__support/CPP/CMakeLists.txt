@@ -71,6 +71,7 @@ add_libc_test(
   SRCS
     stringview_test.cpp
   DEPENDS
+    libc.test.UnitTest.CharLiteralUtils
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
     libc.src.string.memory_utils.inline_memcpy
@@ -204,6 +205,18 @@ add_libc_test(
     type_traits_test.cpp
   DEPENDS
     libc.src.__support.CPP.type_traits
+)
+
+add_libc_test(
+  vector_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    vector_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.utility
+    libc.src.__support.CPP.vector
 )
 
 if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)

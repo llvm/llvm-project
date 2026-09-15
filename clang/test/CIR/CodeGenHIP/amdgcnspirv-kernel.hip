@@ -10,6 +10,8 @@
 // Test that HIP kernels on AMDGCN-flavored SPIR-V get the spir_kernel
 // calling convention.
 
+// CIR: cir.cl.version = #cir.cl.version<2, 0>
+
 #define __global__ __attribute__((global))
 #define __device__ __attribute__((device))
 
@@ -21,3 +23,6 @@ __global__ void kernel_scalar(int a) {}
 // CIR-NOT: cc(spir_kernel)
 // LLVM: define{{.*}} void @_Z9device_fni
 __device__ void device_fn(int a) {}
+
+// LLVM: !opencl.ocl.version = !{[[OCL:![0-9]+]]}
+// LLVM: [[OCL]] = !{i32 2, i32 0}

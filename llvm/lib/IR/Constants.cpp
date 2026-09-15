@@ -760,7 +760,7 @@ static bool constantIsDead(const Constant *C, bool RemoveDeadUsers) {
   if (RemoveDeadUsers) {
     // If C is only used by metadata, it should not be preserved but should
     // have its uses replaced.
-    ReplaceableMetadataImpl::SalvageDebugInfo(*C);
+    ReplaceableUses::SalvageDebugInfo(*C);
     const_cast<Constant *>(C)->destroyConstant();
   }
 

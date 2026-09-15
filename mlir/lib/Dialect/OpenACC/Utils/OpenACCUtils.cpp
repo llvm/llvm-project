@@ -128,9 +128,13 @@ std::string mlir::acc::getVariableName(mlir::Value v) {
       return varNameAttr.getName().str();
 
     // If it is a data entry operation, get name via getVarName
-    if (isa<ACC_DATA_ENTRY_OPS>(definingOp))
+    if (isa<ACC_DATA_ENTRY_OPS, MapInfoOp>(definingOp))
       if (auto name = acc::getVarName(definingOp))
         return name->str();
+
+    // A global goes by the symbol it is addressed through.
+    if (auto addressOf = dyn_cast<AddressOfGlobalOpInterface>(definingOp))
+      return addressOf.getSymbol().getLeafReference().str();
 
     // If it's a view operation, continue to the source
     if (auto viewOp = dyn_cast<ViewLikeOpInterface>(definingOp)) {

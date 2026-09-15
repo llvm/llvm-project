@@ -89,22 +89,6 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
 /// otherwise.
 static Value getStaticPadVal(Operation *op);
 
-/// Return the unique instance of OpType in `block` if it is indeed unique.
-/// Return null if none or more than 1 instances exist.
-template <typename OpType>
-static OpType getSingleOpOfType(Block &block) {
-  OpType res;
-  block.walk([&](OpType op) {
-    if (res) {
-      res = nullptr;
-      return WalkResult::interrupt();
-    }
-    res = op;
-    return WalkResult::advance();
-  });
-  return res;
-}
-
 /// Helper function to extract the input slices after filter is unrolled along
 /// kw.
 static SmallVector<Value>
@@ -3721,10 +3705,10 @@ public:
     else
       dstType = dstElementType;
 
-    return rewriter
-        .create(loc, castOp->getName().getIdentifier(), val, dstType,
-                castOp->getAttrs())
-        ->getResult(0);
+    OperationState state(loc, castOp->getName().getIdentifier(), val, dstType,
+                         castOp->getDiscardableAttrDictionary().getValue());
+    state.propertiesAttr = castOp->getPropertiesAsAttribute();
+    return rewriter.create(state)->getResult(0);
   }
 
   // Create a contraction: lhs{n, w, c} * rhs{c, f} -> res{n, w, f}

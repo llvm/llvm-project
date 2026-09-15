@@ -3776,7 +3776,7 @@ llvm::ExceptionHandling Darwin::GetExceptionModel(const ArgList &Args) const {
   // Darwin uses SjLj exceptions on ARM.
   if (getTriple().getArch() != llvm::Triple::arm &&
       getTriple().getArch() != llvm::Triple::thumb)
-    return llvm::ExceptionHandling::None;
+    return llvm::ExceptionHandling::Default;
 
   // Only watchOS uses the new DWARF/Compact unwinding method.
   llvm::Triple Triple(ComputeLLVMTriple(Args));

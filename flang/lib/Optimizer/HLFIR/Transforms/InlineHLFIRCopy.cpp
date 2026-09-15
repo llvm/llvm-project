@@ -19,8 +19,15 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
+#include "flang/Optimizer/Support/AllocationPolicy.h"
+#include "flang/Optimizer/Support/DataLayout.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -38,14 +45,73 @@ static llvm::cl::opt<bool> noInlineHLFIRCopy(
     llvm::cl::init(false));
 
 namespace {
+/// Everything needed to compute the constant byte size of a buffer, gathered
+/// once by the pass since it is module-level information.
+struct SizeContext {
+  std::optional<mlir::DataLayout> dataLayout;
+  std::optional<fir::KindMapping> kindMap;
+};
+
+/// Gather the module level information needed to compute buffer sizes. Without
+/// a data layout no size can be computed, and all the buffers are then left on
+/// the heap.
+static SizeContext getSizeContext(mlir::Operation *op) {
+  auto module = mlir::dyn_cast<mlir::ModuleOp>(op);
+  if (!module)
+    module = op->getParentOfType<mlir::ModuleOp>();
+  if (!module)
+    return SizeContext{std::nullopt, std::nullopt};
+  return SizeContext{fir::support::getOrSetMLIRDataLayout(
+                         module, /*allowDefaultLayout=*/false),
+                     fir::getKindMapping(module)};
+}
+
 class InlineCopyInConversion : public mlir::OpRewritePattern<hlfir::CopyInOp> {
 public:
-  using mlir::OpRewritePattern<hlfir::CopyInOp>::OpRewritePattern;
+  InlineCopyInConversion(mlir::MLIRContext *context,
+                         const fir::AllocationPolicy &policy,
+                         const SizeContext &sizeContext)
+      : mlir::OpRewritePattern<hlfir::CopyInOp>(context), policy(policy),
+        sizeContext(sizeContext) {}
 
   llvm::LogicalResult
   matchAndRewrite(hlfir::CopyInOp copyIn,
                   mlir::PatternRewriter &rewriter) const override;
+
+private:
+  /// Return true if the copy-in buffer of type \p sequenceType should be
+  /// allocated on the stack rather than on the heap.
+  bool shouldUseStack(mlir::Location loc, mlir::Type sequenceType) const;
+
+  fir::AllocationPolicy policy;
+  const SizeContext &sizeContext;
 };
+
+bool InlineCopyInConversion::shouldUseStack(mlir::Location loc,
+                                            mlir::Type sequenceType) const {
+  // Only buffers with a compile-time constant size are considered. A buffer
+  // with a runtime size would need stack save/restore to avoid growing the
+  // stack when the copy-in is inside a loop. There is also little to gain: for
+  // a big buffer the element-per-element copy costs much more than the
+  // allocation itself.
+  if (fir::hasDynamicSize(sequenceType))
+    return false;
+  if (!sizeContext.dataLayout || !sizeContext.kindMap)
+    return false;
+  auto sizeAndAlignment = fir::getTypeSizeAndAlignment(
+      loc, sequenceType, *sizeContext.dataLayout, *sizeContext.kindMap);
+  if (!sizeAndAlignment)
+    return false;
+
+  fir::PendingAllocationInfo info;
+  info.isTemporary = true;
+  info.isDynamic = false;
+  info.byteSize = static_cast<std::int64_t>(sizeAndAlignment->first);
+  // The per-function stack budget is not tracked here: the
+  // allocation-placement pass sees the fir.alloca generated below and can
+  // still move it back to the heap if the budget turns out to be exceeded.
+  return fir::shouldAllocateOnStack(info, policy, /*stackBytesUsed=*/0);
+}
 
 // Inline a copy_out operation (deallocation only — no copy-back).
 // Generates: if (wasCopied) { freemem(temp) }
@@ -53,8 +119,7 @@ static void inlineCopyOut(fir::FirOpBuilder &builder, mlir::Location loc,
                           mlir::Value tempBox, mlir::Value wasCopied,
                           mlir::Type sequenceType) {
   builder.genIfOp(loc, {}, wasCopied, /*withElseRegion=*/false).genThen([&]() {
-    mlir::Value box = fir::LoadOp::create(builder, loc, tempBox);
-    mlir::Value addr = fir::BoxAddrOp::create(builder, loc, box);
+    mlir::Value addr = fir::BoxAddrOp::create(builder, loc, tempBox);
     auto heapType = fir::HeapType::get(sequenceType);
     mlir::Value heapAddr = fir::ConvertOp::create(builder, loc, heapType, addr);
     fir::FreeMemOp::create(builder, loc, heapAddr);
@@ -112,6 +177,10 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
   llvm::SmallVector<mlir::Value> extents =
       hlfir::getIndexExtents(loc, builder, shape);
 
+  // Decide where the buffer will live before creating it, so that the matching
+  // kind of allocation and deallocation is generated.
+  const bool useStack = shouldUseStack(loc, sequenceType);
+
   mlir::Value isContiguous =
       fir::IsContiguousBoxOp::create(builder, loc, inputVariable);
   mlir::Operation::result_range results =
@@ -132,8 +201,11 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
           .genElse([&] {
             llvm::StringRef tmpName{".tmp.copy_in"};
             llvm::SmallVector<mlir::Value> lenParams;
-            mlir::Value alloc = builder.createHeapTemporary(
-                loc, sequenceType, tmpName, extents, lenParams);
+            mlir::Value alloc =
+                useStack ? builder.createTemporary(loc, sequenceType, tmpName,
+                                                   extents, lenParams)
+                         : builder.createHeapTemporary(
+                               loc, sequenceType, tmpName, extents, lenParams);
 
             auto declareOp = hlfir::DeclareOp::create(builder, loc, alloc,
                                                       tmpName, shape, lenParams,
@@ -174,17 +246,16 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
           .getResults();
 
   mlir::OpResult resultBox = results[0];
-  mlir::OpResult needsCleanup = results[1];
+  mlir::OpResult wasCopied = results[1];
 
-  // Inline the corresponding copyOut (deallocation only).
-  // Store the resultBox first since it's a box value.
-  auto alloca = fir::AllocaOp::create(builder, loc, resultBox.getType());
-  fir::StoreOp::create(builder, loc, resultBox, alloca);
-
-  rewriter.setInsertionPoint(copyOut);
-  fir::FirOpBuilder copyOutBuilder(rewriter, copyOut.getOperation());
-  inlineCopyOut(copyOutBuilder, copyOut.getLoc(), alloca, needsCleanup,
-                sequenceType);
+  // Inline the corresponding copyOut. A stack buffer needs no deallocation, so
+  // there is nothing to generate for it.
+  if (!useStack) {
+    rewriter.setInsertionPoint(copyOut);
+    fir::FirOpBuilder copyOutBuilder(rewriter, copyOut.getOperation());
+    inlineCopyOut(copyOutBuilder, copyOut.getLoc(), resultBox, wasCopied,
+                  sequenceType);
+  }
 
   // Erase the copyOut since we've inlined it
   rewriter.eraseOp(copyOut);
@@ -196,6 +267,8 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
 class InlineHLFIRCopyPass
     : public hlfir::impl::InlineHLFIRCopyBase<InlineHLFIRCopyPass> {
 public:
+  using InlineHLFIRCopyBase<InlineHLFIRCopyPass>::InlineHLFIRCopyBase;
+
   void runOnOperation() override {
     mlir::MLIRContext *context = &getContext();
 
@@ -204,9 +277,22 @@ public:
     config.setRegionSimplificationLevel(
         mlir::GreedySimplifyRegionLevel::Disabled);
 
+    // Gather allocation policy for created temporary buffers (heap vs stack).
+    // This is done here because StackArrays cannot promote the heap allocations
+    // created here to stack allocations because of the branches.
+    // StackArrays is not honored yet: copy-in buffers are often unused at
+    // runtime, so it is unclear whether putting large buffers on the stack is
+    // beneficial. Runtime-sized buffers additionally need stack save/restore
+    // to avoid growing the stack when the copy-in sits in a loop.
+    fir::AllocationPolicy policy = fir::getAllocationPolicy(getOperation());
+    policy.stackArrays = false;
+    fir::overrideIfExplicitlySet(policy.smallArrayThresholdBytes,
+                                 smallArrayThresholdBytes);
+    const SizeContext sizeContext = getSizeContext(getOperation());
+
     mlir::RewritePatternSet patterns(context);
     if (!noInlineHLFIRCopy) {
-      patterns.insert<InlineCopyInConversion>(context);
+      patterns.insert<InlineCopyInConversion>(context, policy, sizeContext);
     }
 
     if (mlir::failed(mlir::applyPatternsGreedily(

@@ -493,3 +493,41 @@ loop:
 exit:
   ret float %min.next
 }
+
+; The reduction chain contains an intermediate minnum.
+define float @fminnum_intermediate_minnum_op(ptr %src, i64 %n, float %k) {
+; CHECK-LABEL: define float @fminnum_intermediate_minnum_op(
+; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]], float [[K:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN:%.*]] = phi float [ 1.000000e+07, %[[ENTRY]] ], [ [[MIN_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[TMP:%.*]] = call float @llvm.minnum.f32(float [[K]], float [[MIN]])
+; CHECK-NEXT:    [[MIN_NEXT]] = call nnan nsz float @llvm.minnum.f32(float [[L]], float [[TMP]])
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[MIN_NEXT_LCSSA:%.*]] = phi float [ [[MIN_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret float [[MIN_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %min = phi float [ 1.000000e+07, %entry ], [ %min.next, %loop ]
+  %gep.src = getelementptr inbounds nuw float, ptr %src, i64 %iv
+  %l = load float, ptr %gep.src, align 4
+  %tmp = call float @llvm.minnum.f32(float %k, float %min)
+  %min.next = call nnan nsz float @llvm.minnum.f32(float %l, float %tmp)
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret float %min.next
+}

@@ -231,6 +231,16 @@ def LLVM_SincosOp : LLVM_TwoResultIntrOp<"sincos", [], [0],
       "functional-type(operands, results)";
   let hasVerifier = 1;
 }
+def LLVM_ModfOp : LLVM_TwoResultIntrOp<"modf", [], [0],
+  [Pure], /*requiresFastmath=*/1> {
+  let arguments =
+      (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+      DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+  let assemblyFormat = "`(` operands `)` (`fastmath` `` $fastmathFlags^)? "
+      "attr-dict `:` "
+      "functional-type(operands, results)";
+  let hasVerifier = 1;
+}
 
 def LLVM_ASinOp : LLVM_UnaryIntrOpF<"asin">;
 def LLVM_ACosOp : LLVM_UnaryIntrOpF<"acos">;
@@ -523,8 +533,17 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
         $_builder.getNamedAttr($_qualCppClassName::getRoundingModeAttrName(),
                                roundingModeAttr));
     }], true : "") # [{
+    $_qualCppClassName::Properties properties{};
+    $_qualCppClassName::populateDefaultProperties(
+        OperationName($_qualCppClassName::getOperationName(),
+                      $_builder.getContext()), properties);
+    if (failed($_qualCppClassName::setPropertiesFromAttr(
+          properties, $_builder.getDictionaryAttr(mlirAttrs),
+          [&]() { return emitError($_location); }))) {
+      return failure();
+    }
     auto op = $_qualCppClassName::create($_builder, $_location,
-      $_resultType, mlirOperands, mlirAttrs);
+      $_resultType, mlirOperands, properties, {});
     moduleImport.setFastmathFlagsAttr(inst, op);
     $res = op;
   }];
@@ -1735,10 +1754,17 @@ def LLVM_vector_insert
   let assemblyFormat = "$srcvec `,` $dstvec `[` $pos `]` attr-dict `:` "
     "type($srcvec) `into` type($res)";
   let extraClassDeclaration = [{
+    /// Returns the vector bit width. For scalable vectors, the dimension is the
+    /// known minimum element count. Returns the maximum uint64_t on overflow.
     uint64_t getVectorBitWidth(Type vector) {
-      return getVectorNumElements(vector).getKnownMinValue() *
-             ::llvm::cast<VectorType>(vector).getElementType()
-                .getIntOrFloatBitWidth();
+      auto vectorType = ::llvm::cast<VectorType>(vector);
+      uint64_t minNumElements = vectorType.getDimSize(0);
+      uint64_t elementBitWidth =
+          vectorType.getElementType().getIntOrFloatBitWidth();
+      if (minNumElements >
+          std::numeric_limits<uint64_t>::max() / elementBitWidth)
+        return std::numeric_limits<uint64_t>::max();
+      return minNumElements * elementBitWidth;
     }
     uint64_t getSrcVectorBitWidth() {
       return getVectorBitWidth(getSrcvec().getType());
@@ -1769,10 +1795,17 @@ def LLVM_vector_extract
   let assemblyFormat = "$srcvec `[` $pos `]` attr-dict `:` "
     "type($res) `from` type($srcvec)";
   let extraClassDeclaration = [{
+    /// Returns the vector bit width. For scalable vectors, the dimension is the
+    /// known minimum element count. Returns the maximum uint64_t on overflow.
     uint64_t getVectorBitWidth(Type vector) {
-      return getVectorNumElements(vector).getKnownMinValue() *
-             ::llvm::cast<VectorType>(vector).getElementType()
-                .getIntOrFloatBitWidth();
+      auto vectorType = ::llvm::cast<VectorType>(vector);
+      uint64_t minNumElements = vectorType.getDimSize(0);
+      uint64_t elementBitWidth =
+          vectorType.getElementType().getIntOrFloatBitWidth();
+      if (minNumElements >
+          std::numeric_limits<uint64_t>::max() / elementBitWidth)
+        return std::numeric_limits<uint64_t>::max();
+      return minNumElements * elementBitWidth;
     }
     uint64_t getSrcVectorBitWidth() {
       return getVectorBitWidth(getSrcvec().getType());
@@ -1850,6 +1883,8 @@ def LLVM_VPReduceFAddOp : LLVM_VPReductionF<"fadd">;
 def LLVM_VPReduceFMulOp : LLVM_VPReductionF<"fmul">;
 def LLVM_VPReduceFMaxOp : LLVM_VPReductionF<"fmax">;
 def LLVM_VPReduceFMinOp : LLVM_VPReductionF<"fmin">;
+def LLVM_VPReduceFMaximumOp : LLVM_VPReductionF<"fmaximum">;
+def LLVM_VPReduceFMinimumOp : LLVM_VPReductionF<"fminimum">;
 
 def LLVM_VPMergeMinOp  : LLVM_VPSelectBase<"merge">;
 

@@ -69,6 +69,15 @@ define void @frexp_test(float %0, <8 x float> %1) {
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @modf_test
+define void @modf_test(float %0, <8 x float> %1) {
+  ; CHECK:  llvm.intr.modf(%{{.*}}) : (f32) -> !llvm.struct<(f32, f32)>
+  %3 = call { float, float } @llvm.modf.f32(float %0)
+  ; CHECK:  llvm.intr.modf(%{{.*}}) : (vector<8xf32>) -> !llvm.struct<(vector<8xf32>, vector<8xf32>)>
+  %4 = call { <8 x float>, <8 x float> } @llvm.modf.v8f32(<8 x float> %1)
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @log_test
 define void @log_test(float %0, <8 x float> %1) {
   ; CHECK:  llvm.intr.log(%{{.*}}) : (f32) -> f32
@@ -1145,6 +1154,10 @@ define void @vector_predication_intrinsics(<8 x i32> %0, <8 x i32> %1, <8 x floa
   %45 = call float @llvm.vp.reduce.fmax.v8f32(float %8, <8 x float> %2, <8 x i1> %11, i32 %12)
   ; CHECK: "llvm.intr.vp.reduce.fmin"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f32, vector<8xf32>, vector<8xi1>, i32) -> f32
   %46 = call float @llvm.vp.reduce.fmin.v8f32(float %8, <8 x float> %2, <8 x i1> %11, i32 %12)
+  ; CHECK: "llvm.intr.vp.reduce.fmaximum"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f32, vector<8xf32>, vector<8xi1>, i32) -> f32
+  %fmaximum = call float @llvm.vp.reduce.fmaximum.v8f32(float %8, <8 x float> %2, <8 x i1> %11, i32 %12)
+  ; CHECK: "llvm.intr.vp.reduce.fminimum"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f32, vector<8xf32>, vector<8xi1>, i32) -> f32
+  %fminimum = call float @llvm.vp.reduce.fminimum.v8f32(float %8, <8 x float> %2, <8 x i1> %11, i32 %12)
   ; CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : vector<8xi1>, vector<8xi32>
   %47 = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %11, <8 x i32> %0, <8 x i32> %1, i32 %12)
   ; CHECK: "llvm.intr.vp.merge"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi1>, vector<8xi32>, vector<8xi32>, i32) -> vector<8xi32>
@@ -1753,6 +1766,8 @@ declare float @llvm.ldexp.f32.i32(float, i32)
 declare <8 x float> @llvm.ldexp.v8f32.i32(<8 x float>, i32)
 declare { float, i32 } @llvm.frexp.f32.i32(float)
 declare { <8 x float>, i32 } @llvm.frexp.v8f32.i32(<8 x float>)
+declare { float, float } @llvm.modf.f32(float)
+declare { <8 x float>, <8 x float> } @llvm.modf.v8f32(<8 x float>)
 declare float @llvm.log.f32(float)
 declare <8 x float> @llvm.log.v8f32(<8 x float>)
 declare float @llvm.log10.f32(float)
@@ -1969,6 +1984,8 @@ declare i32 @llvm.vp.reduce.umin.v8i32(i32, <8 x i32>, <8 x i1>, i32)
 declare float @llvm.vp.reduce.fadd.v8f32(float, <8 x float>, <8 x i1>, i32)
 declare float @llvm.vp.reduce.fmul.v8f32(float, <8 x float>, <8 x i1>, i32)
 declare float @llvm.vp.reduce.fmax.v8f32(float, <8 x float>, <8 x i1>, i32)
+declare float @llvm.vp.reduce.fmaximum.v8f32(float, <8 x float>, <8 x i1>, i32)
+declare float @llvm.vp.reduce.fminimum.v8f32(float, <8 x float>, <8 x i1>, i32)
 declare float @llvm.vp.reduce.fmin.v8f32(float, <8 x float>, <8 x i1>, i32)
 declare <8 x i32> @llvm.vp.select.v8i32(<8 x i1>, <8 x i32>, <8 x i32>, i32)
 declare <8 x i32> @llvm.vp.merge.v8i32(<8 x i1>, <8 x i32>, <8 x i32>, i32)

@@ -614,8 +614,6 @@ public:
 
   LLVM_ABI unsigned getAssumedAddrSpace(const Value *V) const;
 
-  LLVM_ABI bool isSingleThreaded() const;
-
   LLVM_ABI std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const;
 

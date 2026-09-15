@@ -652,6 +652,12 @@ m_LShr(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::AShr, Op0_t, Op1_t>
+m_AShr(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::AShr, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::FMul, Op0_t, Op1_t>
 m_FMul(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::FMul, Op0_t, Op1_t>(Op0, Op1);

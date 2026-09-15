@@ -654,12 +654,12 @@ void elf::reportUndefinedSymbols(Ctx &ctx) {
 
 // Report an undefined symbol if necessary.
 // Returns true if the undefined symbol will produce an error message.
-bool RelocScan::maybeReportUndefined(Undefined &sym, uint64_t offset) {
-  std::lock_guard<std::mutex> lock(ctx.relocMutex);
+bool elf::maybeReportUndefined(Ctx &ctx, Undefined &sym, InputSectionBase &sec,
+                               uint64_t offset) {
   // If versioned, issue an error (even if the symbol is weak) because we don't
   // know the defining filename which is required to construct a Verneed entry.
   if (sym.hasVersionSuffix) {
-    ctx.undefErrs.push_back({&sym, {{sec, offset}}, false});
+    ctx.undefErrs.push_back({&sym, {{&sec, offset}}, false});
     return true;
   }
   if (sym.isWeak())
@@ -678,14 +678,19 @@ bool RelocScan::maybeReportUndefined(Undefined &sym, uint64_t offset) {
   // PPC32 .got2 is similar but cannot be fixed. Multiple .got2 is infeasible
   // because .LC0-.LTOC is not representable if the two labels are in different
   // .got2
-  if (sym.discardedSecIdx != 0 && (sec->name == ".got2" || sec->name == ".toc"))
+  if (sym.discardedSecIdx != 0 && (sec.name == ".got2" || sec.name == ".toc"))
     return false;
 
   bool isWarning =
       (ctx.arg.unresolvedSymbols == UnresolvedPolicy::Warn && canBeExternal) ||
       ctx.arg.noinhibitExec;
-  ctx.undefErrs.push_back({&sym, {{sec, offset}}, isWarning});
+  ctx.undefErrs.push_back({&sym, {{&sec, offset}}, isWarning});
   return !isWarning;
+}
+
+bool RelocScan::maybeReportUndefined(Undefined &sym, uint64_t offset) {
+  std::lock_guard<std::mutex> lock(ctx.relocMutex);
+  return elf::maybeReportUndefined(ctx, sym, *sec, offset);
 }
 
 bool RelocScan::checkTlsLe(uint64_t offset, Symbol &sym, RelType type) {

@@ -322,12 +322,9 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
     for (auto aVec : adaptor.getLhs()) {
       for (auto bVec : adaptor.getRhs()) {
 
-        llvm::SmallVector<Value> operands({aVec, bVec});
         Value tmpC;
-        if (op.getAcc()) {
+        if (op.getAcc())
           tmpC = adaptor.getAcc()[i++];
-          operands.push_back(tmpC);
-        }
 
         ArrayRef<int64_t> aVecShape =
             cast<VectorType>(aVec.getType()).getShape();
@@ -339,7 +336,9 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
         resShape.push_back(aVecShape[aVecShape.size() - 2]);
         resShape.push_back(bVecShape[bVecShape.size() - 1]);
         VectorType resTy = VectorType::get(resShape, resultTy.getElementType());
-        auto newDpasOp = xegpu::DpasOp::create(rewriter, loc, resTy, operands);
+        auto newDpasOp = xegpu::DpasOp::create(
+            rewriter, loc, resTy, aVec, bVec, tmpC,
+            /*layout_a=*/nullptr, /*layout_b=*/nullptr, /*layout_cd=*/nullptr);
         newDpasOp.setLayoutCdAttr(layoutCd.dropSgLayoutAndData());
         newDpasOp.setLayoutAAttr(layoutA.dropSgLayoutAndData());
         newDpasOp.setLayoutBAttr(layoutB.dropSgLayoutAndData());

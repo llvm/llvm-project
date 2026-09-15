@@ -960,7 +960,11 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/true));
     addPass(createWasmEHPass());
     break;
+  case ExceptionHandling::Default:
   case ExceptionHandling::None:
+  case ExceptionHandling::Emscripten:
+    // Emscripten EH is lowered earlier by WebAssemblyLowerEmscriptenEHSjLj, so
+    // by this point it needs no generic EH preparation, like the None case.
     addPass(createLowerInvokePass());
 
     // The lower invoke pass may create unreachable code. Remove it.

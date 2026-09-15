@@ -42,6 +42,17 @@ jobs:
           sparse-checkout: |
             .github/workflows/containers/github-action-ci/
             .github/actions/build-container
+      
+      # TODO(boomanaiden154): This is a temporary work-around for AArch64 that
+      # we should remove once the depot images no longer have the lock in them
+      # by default.
+      - name: Wait for apt-get to finish
+        if: runner.arch == 'ARM64'
+        run: |
+          while pgrep "apt-get" > /dev/null; do
+            echo "Waiting for apt-get to finish"
+            sleep 1
+          done
 
       - name: Build Container
         uses: ./.github/actions/build-container

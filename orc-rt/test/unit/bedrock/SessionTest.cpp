@@ -880,15 +880,16 @@ TEST(ControllerAccessTest, BootstrapInfoPassedToConnect) {
 
   // Build a BootstrapInfo with custom symbols and values.
   BootstrapInfo BI(S);
-  std::pair<const char *, const void *> TestSyms[] = {
-      {SymName, static_cast<const void *>(&Sym)}};
+  std::pair<SymbolNameSpec, const void *> TestSyms[] = {
+      {SymbolNameSpec::linker(SymName), static_cast<const void *>(&Sym)}};
   cantFail(BI.symbols().addUnique(TestSyms));
   BI.values()[SecretKey] = SecretValue;
 
   bool OnConnectRan = false;
   S.attach<MockControllerAccess>(
       std::move(BI), MockControllerAccess::PostFn{}, [&](BootstrapInfo &BI) {
-        EXPECT_EQ(BI.symbols().at(SymName), static_cast<const void *>(&Sym));
+        EXPECT_EQ(BI.symbols().at(SymbolNameSpec::linker(SymName)),
+                  static_cast<const void *>(&Sym));
         EXPECT_EQ(BI.values().at(SecretKey), SecretValue);
         OnConnectRan = true;
         return Error::success();

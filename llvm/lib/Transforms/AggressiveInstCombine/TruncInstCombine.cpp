@@ -555,7 +555,7 @@ bool TruncInstCombine::run(Function &F) {
     if (Type *NewDstSclTy = getBestTruncatedType()) {
       LLVM_DEBUG(
           dbgs() << "ICE: TruncInstCombine reducing type of expression graph "
-                    "dominated by: "
+                    "post-dominated by: "
                  << CurrentTruncInst << '\n');
       ReduceExpressionGraph(NewDstSclTy);
       ++NumExprsReduced;

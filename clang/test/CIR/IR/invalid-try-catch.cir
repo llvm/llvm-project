@@ -22,7 +22,7 @@ module {
 
 cir.func dso_local @invalid_catch_rtti_type() {
   cir.scope {
-    // expected-error @below {{'cir.try' op attribute 'handler_types' failed to satisfy constraint: catch all or unwind or global view array attribute}}
+    // expected-error @below {{'cir.try' op attribute 'handler_types' failed to satisfy constraint: catch all, unwind, eh filter, eh unexpected or global view array attribute}}
     cir.try {
       cir.yield
     } catch [type #cir.undef] (%eh_token : !cir.eh_token) {
@@ -328,4 +328,186 @@ cir.func dso_local @invalid_unwind_with_catch_all() {
   cir.return
 }
 
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+
+cir.func private @_Z8externalv()
+
+// A filter handler must be paired with an unexpected handler.
+cir.func @filter_without_unexpected() {
+  // expected-error@+1 {{a filter handler must be followed by an unexpected handler, and the two must be the only handlers}}
+  cir.try {
+    cir.call @_Z8externalv() : () -> ()
+    cir.yield
+  } filter [#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+    cir.resume %eh_token : !cir.eh_token
+  }
+  cir.return
+}
+
+// -----
+
+cir.func private @_Z8externalv()
+
+// An unexpected handler must be preceded by a filter handler.
+cir.func @unexpected_without_filter() {
+  // expected-error@+1 {{a filter handler must be followed by an unexpected handler, and the two must be the only handlers}}
+  cir.try {
+    cir.call @_Z8externalv() : () -> ()
+    cir.yield
+  } unexpected (%eh_token : !cir.eh_token) {
+    cir.eh.unexpected %eh_token : !cir.eh_token
+  }
+  cir.return
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+cir.func private @_Z8externalv()
+
+// The filter try operation exists only to check the specification. A try
+// statement written in the source becomes a separate, nested cir.try.
+cir.func @filter_with_catch() {
+  // expected-error@+1 {{a filter handler must be followed by an unexpected handler, and the two must be the only handlers}}
+  cir.try {
+    cir.call @_Z8externalv() : () -> ()
+    cir.yield
+  } catch [type #cir.global_view<@_ZTIl> : !cir.ptr<!u8i>]
+      (%eh_token : !cir.eh_token) {
+    %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+    cir.end_catch %catch_token : !cir.catch_token
+    cir.yield
+  } filter [#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%eh_token.1 : !cir.eh_token) {
+    cir.resume %eh_token.1 : !cir.eh_token
+  } unexpected (%eh_token.2 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.2 : !cir.eh_token
+  }
+  cir.return
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+
+cir.func private @_Z8externalv()
+
+// The filter handler already provides the continue-unwinding path that an
+// unwind handler would supply.
+cir.func @filter_with_unwind() {
+  // expected-error@+1 {{a filter handler must be followed by an unexpected handler, and the two must be the only handlers}}
+  cir.try {
+    cir.call @_Z8externalv() : () -> ()
+    cir.yield
+  } filter [#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+    cir.resume %eh_token : !cir.eh_token
+  } unexpected (%eh_token.1 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.1 : !cir.eh_token
+  } unwind (%eh_token.2 : !cir.eh_token) {
+    cir.resume %eh_token.2 : !cir.eh_token
+  }
+  cir.return
+}
+
+// -----
+
+cir.func private @_Z8externalv()
+
+// The permitted type list holds type info symbols.
+cir.func @filter_bad_permitted_type() {
+  cir.try {
+    cir.call @_Z8externalv() : () -> ()
+    cir.yield
+  // expected-error@+1 {{expected a type info symbol naming a permitted exception type}}
+  } filter [42 : i32] (%eh_token : !cir.eh_token) {
+    cir.resume %eh_token : !cir.eh_token
+  } unexpected (%eh_token.1 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.1 : !cir.eh_token
+  }
+  cir.return
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!u32i = !cir.int<u, 32>
+
+cir.func private @_Z8externalv()
+
+// Type info symbols are GlobalViewAttrs typed as RTTI pointers.
+cir.func @filter_non_rtti_ptr() {
+  cir.try {
+    cir.call @_Z8externalv() : () -> ()
+    cir.yield
+  // expected-error@+1 {{permitted type list must contain only type info symbols}}
+  } filter [#cir.global_view<@_ZTIi> : !cir.ptr<!u32i>] (%eh_token : !cir.eh_token) {
+    cir.resume %eh_token : !cir.eh_token
+  } unexpected (%eh_token.1 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.1 : !cir.eh_token
+  }
+  cir.return
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+
+cir.func private @_Z8externalv()
+
+// A filter clause does not take the place of the default destination, so it
+// cannot be combined with a catch-all default.
+cir.func @dispatch_filter_with_catch_all() {
+  cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb5
+^bb2:
+  %0 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%0 : !cir.eh_token)
+^bb3(%eh_token: !cir.eh_token):
+  // expected-error@+1 {{'filter' handler requires an 'unwind' default destination}}
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    filter(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^bb4,
+    catch_all : ^bb6
+  ]
+^bb4(%eh_token.1: !cir.eh_token):
+  cir.eh.unexpected %eh_token.1 : !cir.eh_token
+^bb5:
+  cir.return
+^bb6(%eh_token.2: !cir.eh_token):
+  cir.br ^bb5
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+
+cir.func private @_Z8externalv()
+
+// A dispatch has at most one filter clause.
+cir.func @dispatch_two_filters() {
+  cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb5
+^bb2:
+  %0 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%0 : !cir.eh_token)
+^bb3(%eh_token: !cir.eh_token):
+  // expected-error@+1 {{can't have more than one 'filter' handler}}
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    filter(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^bb4,
+    filter(#cir.global_view<@_ZTIf> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb6
+  ]
+^bb4(%eh_token.1: !cir.eh_token):
+  cir.eh.unexpected %eh_token.1 : !cir.eh_token
+^bb5:
+  cir.return
+^bb6(%eh_token.2: !cir.eh_token):
+  cir.resume %eh_token.2 : !cir.eh_token
 }

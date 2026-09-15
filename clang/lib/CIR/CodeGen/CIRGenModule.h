@@ -140,6 +140,7 @@ private:
 
   void createCUDARuntime();
   void createOpenMPRuntime();
+  void setOpenCLVersionAttr(llvm::StringRef attrName, unsigned version);
 
   /// A helper for constructAttributeList that handles return attributes.
   void constructFunctionReturnAttributes(const CIRGenFunctionInfo &info,

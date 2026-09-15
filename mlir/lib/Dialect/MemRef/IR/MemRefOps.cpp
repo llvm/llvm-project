@@ -2895,9 +2895,11 @@ void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
   auto srcType = llvm::cast<MemRefType>(src.getType());
   MemRefType resultType =
       CollapseShapeOp::computeCollapsedType(srcType, reassociation);
-  result.addAttribute(::mlir::getReassociationAttrName(),
-                      getReassociationIndicesAttribute(b, reassociation));
-  build(b, result, resultType, src, attrs);
+  buildPropertiesAndDiscardableAttributes(result, attrs);
+  result.getOrAddProperties<Properties>().reassociation =
+      getReassociationIndicesAttribute(b, reassociation);
+  result.addOperands(src);
+  result.addTypes(resultType);
 }
 
 LogicalResult CollapseShapeOp::verify() {
@@ -3830,8 +3832,10 @@ void TransposeOp::build(OpBuilder &b, OperationState &result, Value in,
   // Compute result type.
   MemRefType resultType = inferTransposeResultType(memRefType, permutationMap);
 
-  result.addAttribute(TransposeOp::getPermutationAttrStrName(), permutation);
-  build(b, result, resultType, in, attrs);
+  buildPropertiesAndDiscardableAttributes(result, attrs);
+  result.getOrAddProperties<Properties>().permutation = permutation;
+  result.addOperands(in);
+  result.addTypes(resultType);
 }
 
 // transpose $in $permutation attr-dict : type($in) `to` type(results)

@@ -16,9 +16,11 @@
 #define _LIBSYCL___IMPL_QUEUE_HPP
 
 #include <sycl/__impl/async_handler.hpp>
+#include <sycl/__impl/context.hpp>
 #include <sycl/__impl/device.hpp>
 #include <sycl/__impl/event.hpp>
 #include <sycl/__impl/handler.hpp>
+#include <sycl/__impl/platform.hpp>
 #include <sycl/__impl/property_list.hpp>
 
 #include <sycl/__impl/detail/config.hpp>
@@ -169,6 +171,72 @@ public:
   /// \param asyncHandler is a SYCL asynchronous exception handler.
   /// \param propList is a list of properties for queue construction.
   explicit queue(const device &syclDevice, const async_handler &asyncHandler,
+                 const property_list &propList = {})
+      : queue(syclDevice.get_platform().khr_get_default_context(), syclDevice,
+              asyncHandler, propList) {}
+
+  /// Constructs a SYCL queue instance that is associated with syclContext,
+  /// using the device identified by the device selector provided.
+  ///
+  /// \param syclContext is the context to associate the queue with.
+  /// \param deviceSelector is a SYCL 2020 Device Selector, a simple callable
+  /// that takes a device and returns an int
+  /// \param propList is a list of properties for queue construction.
+  /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
+  /// contain the selected device.
+  template <
+      typename DeviceSelector,
+      typename = detail::EnableIfDeviceSelectorIsInvocable<DeviceSelector>>
+  explicit queue(const context &syclContext,
+                 const DeviceSelector &deviceSelector,
+                 const property_list &propList = {})
+      : queue(syclContext, detail::SelectDevice(deviceSelector),
+              detail::defaultAsyncHandler, propList) {}
+
+  /// Constructs a SYCL queue instance with an async_handler that is associated
+  /// with syclContext, using the device identified by the device selector
+  /// provided.
+  ///
+  /// \param syclContext is the context to associate the queue with.
+  /// \param deviceSelector is a SYCL 2020 Device Selector, a simple callable
+  /// that takes a device and returns an int
+  /// \param asyncHandler is a SYCL asynchronous exception handler.
+  /// \param propList is a list of properties for queue construction.
+  /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
+  /// contain the selected device.
+  template <
+      typename DeviceSelector,
+      typename = detail::EnableIfDeviceSelectorIsInvocable<DeviceSelector>>
+  explicit queue(const context &syclContext,
+                 const DeviceSelector &deviceSelector,
+                 const async_handler &asyncHandler,
+                 const property_list &propList = {})
+      : queue(syclContext, detail::SelectDevice(deviceSelector), asyncHandler,
+              propList) {}
+
+  /// Constructs a SYCL queue instance that is associated with syclContext,
+  /// using the device provided.
+  ///
+  /// \param syclContext is the context to associate the queue with.
+  /// \param syclDevice is an instance of SYCL device.
+  /// \param propList is a list of properties for queue construction.
+  /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
+  /// contain syclDevice.
+  explicit queue(const context &syclContext, const device &syclDevice,
+                 const property_list &propList = {})
+      : queue(syclContext, syclDevice, detail::defaultAsyncHandler, propList) {}
+
+  /// Constructs a SYCL queue instance with an async_handler that is associated
+  /// with syclContext, using the device provided.
+  ///
+  /// \param syclContext is the context to associate the queue with.
+  /// \param syclDevice is an instance of SYCL device.
+  /// \param asyncHandler is a SYCL asynchronous exception handler.
+  /// \param propList is a list of properties for queue construction.
+  /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
+  /// contain syclDevice.
+  explicit queue(const context &syclContext, const device &syclDevice,
+                 const async_handler &asyncHandler,
                  const property_list &propList = {});
 
   /// \return the SYCL backend associated with this queue.

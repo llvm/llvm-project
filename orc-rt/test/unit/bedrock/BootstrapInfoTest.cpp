@@ -32,7 +32,8 @@ TEST(BootstrapInfoTest, ExplicitConstructionWithSymbolsAndValues) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   int X = 0;
   SimpleSymbolTable Symbols;
-  std::pair<const char *, void *> Syms[] = {{"orc_rt_X", &X}};
+  std::pair<SymbolNameSpec, void *> Syms[] = {
+      {SymbolNameSpec::linker("orc_rt_X"), &X}};
   cantFail(Symbols.addUnique(Syms));
 
   BootstrapInfo::ValueMap Values;
@@ -40,8 +41,8 @@ TEST(BootstrapInfoTest, ExplicitConstructionWithSymbolsAndValues) {
 
   BootstrapInfo BI(S, std::move(Symbols), std::move(Values));
   EXPECT_EQ(BI.symbols().size(), 1U);
-  EXPECT_TRUE(BI.symbols().count("orc_rt_X"));
-  EXPECT_EQ(BI.symbols().at("orc_rt_X"), &X);
+  EXPECT_TRUE(BI.symbols().count(SymbolNameSpec::linker("orc_rt_X")));
+  EXPECT_EQ(BI.symbols().at(SymbolNameSpec::linker("orc_rt_X")), &X);
   EXPECT_EQ(BI.values().size(), 1U);
   EXPECT_EQ(BI.values().at("key"), "value");
 }
@@ -61,17 +62,17 @@ TEST(BootstrapInfoTest, CreateDefaultSucceeds) {
 TEST(BootstrapInfoTest, CreateDefaultContainsSessionSymbol) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   auto BI = cantFail(BootstrapInfo::CreateDefault(S));
-  ASSERT_TRUE(BI.symbols().count("orc_rt_Session_Instance"));
-  EXPECT_EQ(BI.symbols().at("orc_rt_Session_Instance"),
-            static_cast<const void *>(&S));
+  auto SessionName = SymbolNameSpec::c("orc_rt_Session_Instance");
+  ASSERT_TRUE(BI.symbols().count(SessionName));
+  EXPECT_EQ(BI.symbols().at(SessionName), static_cast<const void *>(&S));
 }
 
 TEST(BootstrapInfoTest, CreateDefaultContainsSPSCISymbols) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   auto BI = cantFail(BootstrapInfo::CreateDefault(S));
   // The default addAll should have registered SPS CI symbols.
-  EXPECT_TRUE(
-      BI.symbols().count("orc_rt_ci_sps_SimpleNativeMemoryMap_reserve"));
+  EXPECT_TRUE(BI.symbols().count(
+      SymbolNameSpec::c("orc_rt_ci_sps_SimpleNativeMemoryMap_reserve")));
 }
 
 TEST(BootstrapInfoTest, CreateDefaultWithNoSymbolsBuilder) {
@@ -79,10 +80,10 @@ TEST(BootstrapInfoTest, CreateDefaultWithNoSymbolsBuilder) {
   auto BI = cantFail(BootstrapInfo::CreateDefault(S, /*AddInitialSymbols=*/{},
                                                   /*AddInitialValues=*/{}));
   // Should still contain the session symbol (added unconditionally).
-  ASSERT_TRUE(BI.symbols().count("orc_rt_Session_Instance"));
+  ASSERT_TRUE(BI.symbols().count(SymbolNameSpec::c("orc_rt_Session_Instance")));
   // But no SPS CI symbols.
-  EXPECT_FALSE(
-      BI.symbols().count("orc_rt_ci_sps_SimpleNativeMemoryMap_reserve"));
+  EXPECT_FALSE(BI.symbols().count(
+      SymbolNameSpec::c("orc_rt_ci_sps_SimpleNativeMemoryMap_reserve")));
 }
 
 TEST(BootstrapInfoTest, CreateDefaultWithCustomValuesBuilder) {
@@ -121,7 +122,8 @@ TEST(BootstrapInfoTest, MutableSymbolsAndValues) {
   BootstrapInfo BI(S);
 
   int X = 0;
-  std::pair<const char *, void *> Syms[] = {{"orc_rt_X", &X}};
+  std::pair<SymbolNameSpec, void *> Syms[] = {
+      {SymbolNameSpec::linker("orc_rt_X"), &X}};
   cantFail(BI.symbols().addUnique(Syms));
   BI.values()["key"] = "value";
 

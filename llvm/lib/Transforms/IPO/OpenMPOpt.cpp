@@ -3966,8 +3966,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
     Attributor::VirtualUseCallbackTy CustomStateMachineUseCB =
         [&](Attributor &A, const AbstractAttribute *QueryingAA) {
           // Whenever we create a custom state machine we will insert calls to
-          // __kmpc_get_hardware_num_threads_in_block,
-          // __kmpc_get_warp_size,
+          // __kmpc_get_max_team_threads,
           // __kmpc_barrier_simple_generic,
           // __kmpc_kernel_parallel, and
           // __kmpc_kernel_end_parallel.
@@ -3982,9 +3981,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     // Not needed if we are pre-runtime merge.
     if (!KernelInitCB->getCalledFunction()->isDeclaration()) {
-      RegisterVirtualUse(OMPRTL___kmpc_get_hardware_num_threads_in_block,
+      RegisterVirtualUse(OMPRTL___kmpc_get_max_team_threads,
                          CustomStateMachineUseCB);
-      RegisterVirtualUse(OMPRTL___kmpc_get_warp_size, CustomStateMachineUseCB);
       RegisterVirtualUse(OMPRTL___kmpc_barrier_simple_generic,
                          CustomStateMachineUseCB);
       RegisterVirtualUse(OMPRTL___kmpc_kernel_parallel,
@@ -4444,10 +4442,10 @@ struct AAKernelInfoFunction : AAKernelInfo {
       return false;
 
     auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
-    if (!OMPInfoCache.runtimeFnsAvailable(
-            {OMPRTL___kmpc_get_hardware_num_threads_in_block,
-             OMPRTL___kmpc_get_warp_size, OMPRTL___kmpc_barrier_simple_generic,
-             OMPRTL___kmpc_kernel_parallel, OMPRTL___kmpc_kernel_end_parallel}))
+    if (!OMPInfoCache.runtimeFnsAvailable({OMPRTL___kmpc_get_max_team_threads,
+                                           OMPRTL___kmpc_barrier_simple_generic,
+                                           OMPRTL___kmpc_kernel_parallel,
+                                           OMPRTL___kmpc_kernel_end_parallel}))
       return false;
 
     ConstantStruct *ExistingKernelEnvC =
@@ -4526,13 +4524,11 @@ struct AAKernelInfoFunction : AAKernelInfo {
     // Create all the blocks:
     //
     //                       InitCB = __kmpc_target_init(...)
-    //                       BlockHwSize =
-    //                         __kmpc_get_hardware_num_threads_in_block();
-    //                       WarpSize = __kmpc_get_warp_size();
-    //                       BlockSize = BlockHwSize - WarpSize;
+    //                       MaxTeamThreads =
+    //                           __kmpc_get_max_team_threads(/*IsSPMD=*/false);
     // IsWorkerCheckBB:      bool IsWorker = InitCB != -1;
     //                       if (IsWorker) {
-    //                         if (InitCB >= BlockSize) return;
+    //                         if (InitCB >= MaxTeamThreads) return;
     // SMBeginBB:               __kmpc_barrier_simple_generic(...);
     //                         void *WorkFn;
     //                         bool Active = __kmpc_kernel_parallel(&WorkFn);
@@ -4597,26 +4593,21 @@ struct AAKernelInfoFunction : AAKernelInfo {
     IsWorker->setDebugLoc(DLoc);
     CondBrInst::Create(IsWorker, IsWorkerCheckBB, UserCodeEntryBB, InitBB);
 
+    // How much of the block the main thread takes is the runtime's to know, so
+    // ask it rather than subtracting a warp here. The mode is passed in because
+    // this runs before the barrier that would make the shared one visible; it
+    // is a constant, a custom state machine being built only for generic mode.
     Module &M = *Kernel->getParent();
-    FunctionCallee BlockHwSizeFn =
+    FunctionCallee MaxTeamThreadsFn =
         OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
-            M, OMPRTL___kmpc_get_hardware_num_threads_in_block);
-    FunctionCallee WarpSizeFn =
-        OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
-            M, OMPRTL___kmpc_get_warp_size);
-    CallInst *BlockHwSize =
-        CallInst::Create(BlockHwSizeFn, "block.hw_size", IsWorkerCheckBB);
-    OMPInfoCache.setCallingConvention(BlockHwSizeFn, BlockHwSize);
-    BlockHwSize->setDebugLoc(DLoc);
-    CallInst *WarpSize =
-        CallInst::Create(WarpSizeFn, "warp.size", IsWorkerCheckBB);
-    OMPInfoCache.setCallingConvention(WarpSizeFn, WarpSize);
-    WarpSize->setDebugLoc(DLoc);
-    Instruction *BlockSize = BinaryOperator::CreateSub(
-        BlockHwSize, WarpSize, "block.size", IsWorkerCheckBB);
-    BlockSize->setDebugLoc(DLoc);
+            M, OMPRTL___kmpc_get_max_team_threads);
+    Constant *IsSPMDArg = ConstantInt::get(OMPInfoCache.OMPBuilder.Int32, 0);
+    CallInst *MaxTeamThreads = CallInst::Create(
+        MaxTeamThreadsFn, {IsSPMDArg}, "max_team_threads", IsWorkerCheckBB);
+    OMPInfoCache.setCallingConvention(MaxTeamThreadsFn, MaxTeamThreads);
+    MaxTeamThreads->setDebugLoc(DLoc);
     Instruction *IsMainOrWorker = ICmpInst::Create(
-        ICmpInst::ICmp, llvm::CmpInst::ICMP_SLT, KernelInitCB, BlockSize,
+        ICmpInst::ICmp, llvm::CmpInst::ICMP_SLT, KernelInitCB, MaxTeamThreads,
         "thread.is_main_or_worker", IsWorkerCheckBB);
     IsMainOrWorker->setDebugLoc(DLoc);
     CondBrInst::Create(IsMainOrWorker, StateMachineBeginBB,

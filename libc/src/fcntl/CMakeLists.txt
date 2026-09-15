@@ -36,3 +36,10 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.posix_fadvise
 )
+
+add_entrypoint_object(
+  posix_fadvise64
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.posix_fadvise64
+)

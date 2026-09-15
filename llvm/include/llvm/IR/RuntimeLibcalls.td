@@ -56,8 +56,10 @@ class OSVersionAtLeast<int major, int minor>
                      # [{, }] # !cast<string>(minor) # [{)}]>;
 
 def IsAAPCS_ABI : LibcallPredicate<[{isAAPCS_ABI(TT, ABIName)}]>;
-def IsEABI4 : LibcallPredicate<[{EABIVersion == EABI::EABI4}]>;
-def IsEABI5 : LibcallPredicate<[{EABIVersion == EABI::EABI5}]>;
+
+// A numbered EABI (4/5) rather than GNU, i.e. not GNU/Musl AEABI.
+def IsEABIVersion
+  : LibcallPredicate<[{!TT.isTargetGNUAEABI() && !TT.isTargetMuslAEABI()}]>;
 
 def IsLongDoubleF128 : LibcallPredicate<[{LongDoubleFormat == LongDoubleFormat::IEEEquad}]>;
 def IsLongDoubleX87 : LibcallPredicate<[{LongDoubleFormat == LongDoubleFormat::X87DoubleExtended}]>;
@@ -2722,7 +2724,7 @@ def AEABI45MemCalls : LibcallImpls<
        __aeabi_memset, __aeabi_memset4, __aeabi_memset8,
        __aeabi_memclr, __aeabi_memclr4, __aeabi_memclr8),
   RuntimeLibcallAvailability<
-    (all_of (any_of IsEABI4, IsEABI5),
+    (all_of IsEABIVersion,
             (any_of IsTargetAEABI, IsTargetGNUAEABI, IsTargetMuslAEABI,
                     IsOSFuchsia, IsAndroid),
             IsAAPCS_ABI)>> {

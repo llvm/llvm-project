@@ -48,6 +48,7 @@ add_llvm_unittest(OrcJITTests
   SharedMemoryMapperTest.cpp
   SimpleExecutorMemoryManagerTest.cpp
   SimplePackedSerializationTest.cpp
+  SimpleRemoteEPCUtilsTest.cpp
   SPSProxySpecTest.cpp
   SymbolLookupSetTest.cpp
   SymbolStringPoolTest.cpp

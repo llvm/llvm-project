@@ -350,6 +350,20 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
       return false;
 
     lldb::addr_t stoppcbs = FindSymbol("stoppcbs");
+    // In later FreeBSD versions stoppcbs is a pointer to the array.
+    int32_t osreldate =
+        ReadSignedIntegerFromMemory(FindSymbol("osreldate"), 4, -1, error);
+    if (stoppcbs != LLDB_INVALID_ADDRESS && osreldate >= 1400089) {
+      llvm::Expected<lldb::addr_t> stoppcbs_or_err =
+          ReadPointerFromMemory(stoppcbs);
+      if (!stoppcbs_or_err || *stoppcbs_or_err == 0) {
+        LLDB_LOGF(GetLog(LLDBLog::Process),
+                  "FreeBSD-Kernel-Core: Could not find stoppcbs");
+        return false;
+      }
+
+      stoppcbs = *stoppcbs_or_err;
+    }
 
     // Read stopped_cpus bitmask and mp_maxid for CPU validation.
     lldb::addr_t stopped_cpus = FindSymbol("stopped_cpus");

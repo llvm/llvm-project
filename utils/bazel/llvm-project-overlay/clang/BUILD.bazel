@@ -2131,11 +2131,16 @@ cc_library(
 
 cc_library(
     name = "codegen",
-    srcs = glob([
-        "lib/CodeGen/**/*.cpp",
-        "lib/CodeGen/**/*.h",
-    ]),
-    hdrs = glob(["include/clang/CodeGen/*.h"]),
+    srcs = glob(
+        [
+            "lib/CodeGen/**/*.cpp",
+            "lib/CodeGen/**/*.h",
+        ],
+        exclude = ["lib/CodeGen/QualTypeMapper.h"],
+    ),
+    hdrs = glob(["include/clang/CodeGen/*.h"]) + [
+        "lib/CodeGen/QualTypeMapper.h",
+    ],
     copts = ["$(STACK_FRAME_UNLIMITED)"],
     includes = [
         "include",

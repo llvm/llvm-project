@@ -12,25 +12,15 @@
 using namespace clang;
 using namespace clang::interp;
 
-Record::Record(const RecordDecl *Decl, BaseList &&SrcBases,
-               FieldList &&SrcFields, VirtualBaseList &&SrcVirtualBases,
+Record::Record(const RecordDecl *Decl, ArrayRef<Base> Bases,
+               ArrayRef<Field> Fields, ArrayRef<Base> VirtualBases,
                unsigned VirtualSize, unsigned BaseSize, bool HasPtrField)
-    : Decl(Decl), Bases(std::move(SrcBases)), Fields(std::move(SrcFields)),
+    : Decl(Decl), Bases(Bases), Fields(Fields), VirtualBases(VirtualBases),
       BaseSize(BaseSize), VirtualSize(VirtualSize), IsUnion(Decl->isUnion()),
       IsAnonymousUnion(IsUnion && Decl->isAnonymousStructOrUnion()),
       HasPtrField(HasPtrField) {
-  for (Base &V : SrcVirtualBases)
-    VirtualBases.emplace_back(V.Decl, V.Desc, V.R, V.Offset + BaseSize);
-
-  for (Base &B : Bases) {
+  for (const Base &B : this->Bases)
     BaseMap[B.Decl] = &B;
-    if (!this->HasPtrField)
-      this->HasPtrField |= B.R->hasPtrField();
-  }
-  for (Base &V : VirtualBases) {
-    if (!this->HasPtrField)
-      this->HasPtrField |= V.R->hasPtrField();
-  }
 }
 
 std::string Record::getName() const {

@@ -234,6 +234,12 @@ TEST(MetadataTest, GlobalConstantMetadataUsedByDbgRecord) {
   EXPECT_EQ(DVRs[0]->getNumVariableLocationOps(), 1u);
   EXPECT_TRUE(DVRVs.size() == 1);
   EXPECT_FALSE(isa<UndefValue>(DVRs[0]->getValue(0)));
+
+  // Uses of the poison replacing @x are not tracked.
+  Value *Poison = PoisonValue::get(V->getType());
+  V->replaceAllUsesWith(Poison);
+  EXPECT_EQ(DVRVs[0]->getValue(0), Poison);
+  EXPECT_TRUE(findDVRValues(Poison).empty());
 }
 
 TEST(DbgVariableIntrinsic, EmptyMDIsKillLocation) {

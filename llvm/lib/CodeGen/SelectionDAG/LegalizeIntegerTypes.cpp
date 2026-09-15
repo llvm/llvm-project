@@ -347,6 +347,11 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     Res = PromoteIntRes_PDEP(N);
     break;
 
+  case ISD::MULHS:
+  case ISD::MULHU:
+    Res = PromoteIntRes_MULH(N);
+    break;
+
   case ISD::IS_FPCLASS:
     Res = PromoteIntRes_IS_FPCLASS(N);
     break;
@@ -1692,6 +1697,35 @@ SDValue DAGTypeLegalizer::PromoteIntRes_PDEP(SDNode *N) {
   SDValue X = GetPromotedInteger(N->getOperand(0));
   SDValue Y = GetPromotedInteger(N->getOperand(1));
   return DAG.getNode(ISD::PDEP, DL, VT, X, Y);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_MULH(SDNode *N) {
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  bool IsSigned = N->getOpcode() == ISD::MULHS;
+  unsigned BW = VT.getScalarSizeInBits();
+  unsigned NBW = NVT.getScalarSizeInBits();
+
+  SDValue LHS, RHS;
+  if (IsSigned) {
+    LHS = SExtPromotedInteger(N->getOperand(0));
+    RHS = SExtPromotedInteger(N->getOperand(1));
+  } else {
+    LHS = ZExtPromotedInteger(N->getOperand(0));
+    RHS = ZExtPromotedInteger(N->getOperand(1));
+  }
+
+  // If the promoted type is already wide enough, emit a MUL.
+  if (NBW >= 2 * BW)
+    return DAG.getNode(IsSigned ? ISD::SRA : ISD::SRL, dl, NVT,
+                       DAG.getNode(ISD::MUL, dl, NVT, LHS, RHS),
+                       DAG.getShiftAmountConstant(BW, NVT, dl));
+
+  // Otherwise, align an operand with a left-shift and emit a MULH.
+  LHS = DAG.getNode(ISD::SHL, dl, NVT, LHS,
+                    DAG.getShiftAmountConstant(NBW - BW, NVT, dl));
+  return DAG.getNode(N->getOpcode(), dl, NVT, LHS, RHS);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_TRUNCATE(SDNode *N) {
@@ -3204,6 +3238,11 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
 
   case ISD::PDEP:
     ExpandIntRes_PDEP(N, Lo, Hi);
+    break;
+
+  case ISD::MULHS:
+  case ISD::MULHU:
+    ExpandIntRes_MULH(N, Lo, Hi);
     break;
 
   case ISD::VSCALE:
@@ -5532,6 +5571,11 @@ void DAGTypeLegalizer::ExpandIntRes_PEXT(SDNode *N, SDValue &Lo, SDValue &Hi) {
 
 void DAGTypeLegalizer::ExpandIntRes_PDEP(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SDValue Res = TLI.expandPDEP(N, DAG);
+  SplitInteger(Res, Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_MULH(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue Res = TLI.expandMULH(N, DAG);
   SplitInteger(Res, Lo, Hi);
 }
 

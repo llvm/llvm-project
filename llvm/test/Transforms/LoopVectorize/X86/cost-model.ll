@@ -984,22 +984,27 @@ exit:
 define void @replicating_sdiv_operand_profitable_to_scalarize(i32 %x) #3 {
 ; CHECK-LABEL: define void @replicating_sdiv_operand_profitable_to_scalarize(
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[DIV1:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[ACCUM:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[DIV1]] = sdiv i32 2, [[X]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X]], [[DIV1]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[SUB]], [[IV]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[DIV1]], 3
-; CHECK-NEXT:    [[DIV2:%.*]] = sdiv i32 [[DIV1]], [[OR2]]
-; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[OR1]], [[DIV2]]
-; CHECK-NEXT:    [[NEXT]] = add i32 [[ACCUM]], 3
-; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[ACCUM]], 35
-; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[X]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ [[OR3]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i32> @llvm.masked.sdiv.v16i32(<16 x i32> splat (i32 2), <16 x i32> [[BROADCAST_SPLAT]], <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>)
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> zeroinitializer, <16 x i32> [[TMP0]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
+; CHECK-NEXT:    [[TMP2:%.*]] = sub <16 x i32> [[BROADCAST_SPLAT]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or <16 x i32> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or <16 x i32> [[TMP0]], splat (i32 3)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <16 x i32> @llvm.masked.sdiv.v16i32(<16 x i32> [[TMP0]], <16 x i32> [[TMP4]], <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>)
+; CHECK-NEXT:    [[TMP6:%.*]] = or <16 x i32> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v16i1(<16 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true>, i1 false)
+; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <16 x i32> [[TMP6]], i64 [[LAST_ACTIVE_LANE]]
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:

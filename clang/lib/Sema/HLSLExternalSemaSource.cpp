@@ -302,6 +302,20 @@ struct TextureTypeInfo {
 } // namespace
 
 static const TextureTypeInfo TextureTypes[] = {
+    {"Texture1D", ResourceClass::SRV, ResourceDimension::Dim1D,
+     /*IsArray=*/false, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::Load | TexCap::Subscript | TexCap::Mips | TexCap::Sample |
+         TexCap::SampleCmp | TexCap::CalcLOD},
+    {"RWTexture1D", ResourceClass::UAV, ResourceDimension::Dim1D,
+     /*IsArray=*/false, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::LoadRW | TexCap::Subscript},
+    {"Texture1DArray", ResourceClass::SRV, ResourceDimension::Dim1D,
+     /*IsArray=*/true, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::Load | TexCap::Subscript | TexCap::Mips | TexCap::Sample |
+         TexCap::SampleCmp | TexCap::CalcLOD},
+    {"RWTexture1DArray", ResourceClass::UAV, ResourceDimension::Dim1D,
+     /*IsArray=*/true, /*IsROV=*/false, TemplateShape::ElementType,
+     TexCap::LoadRW | TexCap::Subscript},
     {"Texture2D", ResourceClass::SRV, ResourceDimension::Dim2D,
      /*IsArray=*/false, /*IsROV=*/false, TemplateShape::ElementType,
      TexCap::Load | TexCap::Subscript | TexCap::Mips | TexCap::Sample |

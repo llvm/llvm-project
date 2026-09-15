@@ -1,0 +1,114 @@
+# REQUIRES: asserts
+
+# RUN: llc -mtriple=aarch64 -mcpu=apple-m5 -run-pass=postmisched \
+# RUN:   -enable-post-misched -verify-machineinstrs \
+# RUN:   -debug-only=machine-scheduler -misched-postra-direction=topdown \
+# RUN:   -o - %s 2>&1 | FileCheck --check-prefix=TOPDOWN %s
+# RUN: llc -mtriple=aarch64 -mcpu=apple-m5 -run-pass=postmisched \
+# RUN:   -enable-post-misched -verify-machineinstrs \
+# RUN:   -debug-only=machine-scheduler -misched-postra-direction=bottomup \
+# RUN:   -o - %s 2>&1 | FileCheck --check-prefix=BOTTOMUP %s
+# RUN: llc -mtriple=aarch64 -mcpu=apple-m5 -run-pass=postmisched \
+# RUN:   -enable-post-misched -verify-machineinstrs \
+# RUN:   -debug-only=machine-scheduler -misched-postra-direction=bidirectional \
+# RUN:   -o - %s 2>&1 | FileCheck --check-prefix=BIDIR %s
+
+---
+# A linear dependency chain leaves exactly one node available in either zone at
+# every step, so every pick comes from pickOnlyChoice(). Bidirectional picks
+# bottom-up throughout, because the bottom zone is queried first.
+
+# TOPDOWN:      chain:%bb.0
+# TOPDOWN:      Pick Top Cand SU(0) ONLY1      [post-RA]
+# TOPDOWN-NEXT: Scheduling SU(0)
+# TOPDOWN:      Pick Top Cand SU(1) ONLY1      [post-RA]
+# TOPDOWN-NEXT: Scheduling SU(1)
+# TOPDOWN:      Pick Top Cand SU(2) ONLY1      [post-RA]
+# TOPDOWN-NEXT: Scheduling SU(2)
+# TOPDOWN:      *** Final schedule for %bb.0 ***
+# TOPDOWN-NEXT: SU(0):   renamable $x1 = ADDXri renamable $x0, 1, 0
+# TOPDOWN-NEXT: SU(1):   renamable $x2 = ADDXri renamable $x1, 1, 0
+# TOPDOWN-NEXT: SU(2):   renamable $x3 = ADDXri renamable $x2, 1, 0
+
+# BOTTOMUP:      chain:%bb.0
+# BOTTOMUP:      Pick Bot Cand SU(2) ONLY1      [post-RA]
+# BOTTOMUP-NEXT: Scheduling SU(2)
+# BOTTOMUP:      Pick Bot Cand SU(1) ONLY1      [post-RA]
+# BOTTOMUP-NEXT: Scheduling SU(1)
+# BOTTOMUP:      Pick Bot Cand SU(0) ONLY1      [post-RA]
+# BOTTOMUP-NEXT: Scheduling SU(0)
+# BOTTOMUP:      *** Final schedule for %bb.0 ***
+# BOTTOMUP-NEXT: SU(0):   renamable $x1 = ADDXri renamable $x0, 1, 0
+# BOTTOMUP-NEXT: SU(1):   renamable $x2 = ADDXri renamable $x1, 1, 0
+# BOTTOMUP-NEXT: SU(2):   renamable $x3 = ADDXri renamable $x2, 1, 0
+
+# BIDIR:      chain:%bb.0
+# BIDIR:      Pick Bot Cand SU(2) ONLY1      [post-RA]
+# BIDIR-NEXT: Scheduling SU(2)
+# BIDIR:      Pick Bot Cand SU(1) ONLY1      [post-RA]
+# BIDIR-NEXT: Scheduling SU(1)
+# BIDIR:      Pick Bot Cand SU(0) ONLY1      [post-RA]
+# BIDIR-NEXT: Scheduling SU(0)
+# BIDIR:      *** Final schedule for %bb.0 ***
+# BIDIR-NEXT: SU(0):   renamable $x1 = ADDXri renamable $x0, 1, 0
+# BIDIR-NEXT: SU(1):   renamable $x2 = ADDXri renamable $x1, 1, 0
+# BIDIR-NEXT: SU(2):   renamable $x3 = ADDXri renamable $x2, 1, 0
+name:            chain
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+    renamable $x1 = ADDXri renamable $x0, 1, 0
+    renamable $x2 = ADDXri renamable $x1, 1, 0
+    renamable $x3 = ADDXri renamable $x2, 1, 0
+    RET_ReallyLR implicit $x3
+...
+---
+# A fan-out leaves two nodes available at the bottom but only one at the top,
+# so bidirectional scheduling falls through to Top.pickOnlyChoice().
+
+# TOPDOWN:      fanout:%bb.0
+# TOPDOWN:      Pick Top Cand SU(0) ONLY1      [post-RA]
+# TOPDOWN-NEXT: Scheduling SU(0)
+# TOPDOWN:      Pick Top Cand SU(1) ORDER      [post-RA]
+# TOPDOWN-NEXT: Scheduling SU(1)
+# TOPDOWN:      Pick Top Cand SU(2) ONLY1      [post-RA]
+# TOPDOWN-NEXT: Scheduling SU(2)
+# TOPDOWN:      *** Final schedule for %bb.0 ***
+# TOPDOWN-NEXT: SU(0):   renamable $x1 = ADDXri renamable $x0, 1, 0
+# TOPDOWN-NEXT: SU(1):   renamable $x2 = ADDXri renamable $x1, 1, 0
+# TOPDOWN-NEXT: SU(2):   renamable $x3 = ADDXri renamable $x1, 2, 0
+
+# BOTTOMUP:      fanout:%bb.0
+# BOTTOMUP:      Pick Bot Cand SU(1) ORDER      [post-RA]
+# BOTTOMUP-NEXT: Scheduling SU(1)
+# BOTTOMUP:      Pick Bot Cand SU(2) ONLY1      [post-RA]
+# BOTTOMUP-NEXT: Scheduling SU(2)
+# BOTTOMUP:      Pick Bot Cand SU(0) ONLY1      [post-RA]
+# BOTTOMUP-NEXT: Scheduling SU(0)
+# BOTTOMUP:      *** Final schedule for %bb.0 ***
+# BOTTOMUP-NEXT: SU(0):   renamable $x1 = ADDXri renamable $x0, 1, 0
+# BOTTOMUP-NEXT: SU(2):   renamable $x3 = ADDXri renamable $x1, 2, 0
+# BOTTOMUP-NEXT: SU(1):   renamable $x2 = ADDXri renamable $x1, 1, 0
+
+# BIDIR:      fanout:%bb.0
+# BIDIR:      Pick Top Cand SU(0) ONLY1      [post-RA]
+# BIDIR-NEXT: Scheduling SU(0)
+# BIDIR:      Pick Bot Cand SU(1) ORDER      [post-RA]
+# BIDIR-NEXT: Scheduling SU(1)
+# BIDIR:      Pick Bot Cand SU(2) ONLY1      [post-RA]
+# BIDIR-NEXT: Scheduling SU(2)
+# BIDIR:      *** Final schedule for %bb.0 ***
+# BIDIR-NEXT: SU(0):   renamable $x1 = ADDXri renamable $x0, 1, 0
+# BIDIR-NEXT: SU(2):   renamable $x3 = ADDXri renamable $x1, 2, 0
+# BIDIR-NEXT: SU(1):   renamable $x2 = ADDXri renamable $x1, 1, 0
+name:            fanout
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0
+    renamable $x1 = ADDXri renamable $x0, 1, 0
+    renamable $x2 = ADDXri renamable $x1, 1, 0
+    renamable $x3 = ADDXri renamable $x1, 2, 0
+    RET_ReallyLR implicit $x2, implicit $x3
+...

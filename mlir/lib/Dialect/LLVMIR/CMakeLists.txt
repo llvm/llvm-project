@@ -2,6 +2,7 @@ add_subdirectory(Transforms)
 
 set(LLVM_OPTIONAL_SOURCES
   IR/LLVMOps.cpp
+  IR/NVVMOps.cpp
   IR/ROCDLOps.cpp
   )
 
@@ -13,7 +14,6 @@ foreach(index RANGE 7)
     -op-shard-index=${index})
 endforeach()
 add_public_tablegen_target(MLIRLLVMOpsShardGen)
-
 add_mlir_dialect_library(MLIRLLVMDialect
   IR/FunctionCallUtils.cpp
   IR/LLVMAttrs.cpp
@@ -27,6 +27,9 @@ add_mlir_dialect_library(MLIRLLVMDialect
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
+
+  PRECOMPILE_HEADERS
+  [["mlir/Dialect/LLVMIR/pch.h"]]
 
   DEPENDS
   MLIRLLVMDialectBytecodeIncGen
@@ -60,10 +63,20 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRSupport
   )
 
+set(LLVM_TARGET_DEFINITIONS IR/NVVMOps.cpp)
+foreach(index RANGE 7)
+  set(NVVM_SHARDED_SRC NVVMOps.${index}.cpp)
+  list(APPEND NVVM_SHARDED_SRCS ${NVVM_SHARDED_SRC})
+  tablegen(MLIR_SRC_SHARDER ${NVVM_SHARDED_SRC}
+    -op-shard-index=${index})
+endforeach()
+add_public_tablegen_target(MLIRNVVMOpsShardGen)
+
 add_mlir_dialect_library(MLIRNVVMDialect
   IR/NVVMDialect.cpp
   IR/BasicPtxBuilderInterface.cpp
   IR/NVVMRequiresSMTraits.cpp
+  ${NVVM_SHARDED_SRCS}
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
@@ -71,6 +84,7 @@ add_mlir_dialect_library(MLIRNVVMDialect
   DEPENDS
   MLIRGPUCompilationAttrInterfacesIncGen
   MLIRNVVMOpsIncGen
+  MLIRNVVMOpsShardGen
   MLIRNVVMConversionsIncGen
   MLIRBasicPtxBuilderInterfaceIncGen
   MLIRNVVMRequiresSMTraitsIncGen

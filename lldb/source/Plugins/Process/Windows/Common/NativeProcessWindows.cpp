@@ -26,6 +26,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/State.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
@@ -360,7 +361,7 @@ Status NativeProcessWindows::RemoveBreakpoint(lldb::addr_t addr,
 
 Status NativeProcessWindows::CacheLoadedModules() {
   Status error;
-  if (!m_loaded_modules.empty())
+  if (!m_loaded_modules.IsEmpty())
     return Status();
 
   // Retrieve loaded modules by a Target/Module-free implementation.
@@ -376,11 +377,11 @@ Status NativeProcessWindows::CacheLoadedModules() {
 
         FileSpec file_spec(path);
         FileSystem::Instance().Resolve(file_spec);
-        m_loaded_modules[file_spec] = (addr_t)me.modBaseAddr;
+        m_loaded_modules.Add(file_spec, (addr_t)me.modBaseAddr);
       } while (Module32Next(snapshot.get(), &me));
     }
 
-    if (!m_loaded_modules.empty())
+    if (!m_loaded_modules.IsEmpty())
       return Status();
   }
 
@@ -396,11 +397,9 @@ Status NativeProcessWindows::GetLoadedModuleFileSpec(const char *module_path,
 
   FileSpec module_file_spec(module_path);
   FileSystem::Instance().Resolve(module_file_spec);
-  for (auto &it : m_loaded_modules) {
-    if (it.first == module_file_spec) {
-      file_spec = it.first;
-      return Status();
-    }
+  if (const FileSpec *found = m_loaded_modules.FindFile(module_file_spec)) {
+    file_spec = *found;
+    return Status();
   }
   return Status::FromErrorStringWithFormat(
       "Module (%s) not found in process %" PRIu64 "!",
@@ -417,11 +416,9 @@ NativeProcessWindows::GetFileLoadAddress(const llvm::StringRef &file_name,
   load_addr = LLDB_INVALID_ADDRESS;
   FileSpec file_spec(file_name);
   FileSystem::Instance().Resolve(file_spec);
-  for (auto &it : m_loaded_modules) {
-    if (it.first == file_spec) {
-      load_addr = it.second;
-      return Status();
-    }
+  if (std::optional<addr_t> base = m_loaded_modules.GetBaseAddress(file_spec)) {
+    load_addr = *base;
+    return Status();
   }
   return Status::FromErrorStringWithFormat(
       "Can't get loaded address of file (%s) in process %" PRIu64 "!",
@@ -434,11 +431,11 @@ NativeProcessWindows::GetLoadedLibraries() {
     return error.ToError();
 
   std::vector<LoadedLibraryInfo> libs;
-  libs.reserve(m_loaded_modules.size());
-  for (const auto &[file_spec, base] : m_loaded_modules) {
+  libs.reserve(m_loaded_modules.GetSize());
+  for (const auto &[file_spec, base_addrs] : m_loaded_modules) {
     LoadedLibraryInfo info;
     info.name = file_spec.GetPath();
-    info.base_addr = base;
+    info.base_addr = base_addrs.front();
     libs.push_back(std::move(info));
   }
   return libs;
@@ -492,7 +489,7 @@ void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
     FileSpec exe = info.GetExecutableFile();
     if (exe) {
       FileSystem::Instance().Resolve(exe);
-      m_loaded_modules[exe] = image_base;
+      m_loaded_modules.Add(exe, image_base);
     }
   }
 
@@ -742,7 +739,7 @@ DllEventAction NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
   FileSpec resolved = module_spec.GetFileSpec();
   if (resolved) {
     FileSystem::Instance().Resolve(resolved);
-    m_loaded_modules[resolved] = module_addr;
+    m_loaded_modules.Add(resolved, module_addr);
   }
   m_pending_library_events = true;
 
@@ -779,15 +776,7 @@ DllEventAction NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
   Log *log = GetLog(WindowsLog::Process);
   llvm::sys::ScopedLock lock(m_mutex);
 
-  FileSpec unloaded_spec;
-  for (auto it = m_loaded_modules.begin(); it != m_loaded_modules.end();) {
-    if (it->second == module_addr) {
-      unloaded_spec = it->first;
-      it = m_loaded_modules.erase(it);
-    } else {
-      ++it;
-    }
-  }
+  FileSpec unloaded_spec = m_loaded_modules.Remove(module_addr);
   m_pending_library_events = true;
 
   if (!m_initial_stop_seen || !m_client_supports_libraries_read)

@@ -1,0 +1,547 @@
+// RUN: not cir-opt %s -split-input-file \
+// RUN:     -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:     2>&1 | FileCheck %s
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  // A record value with no storage behind it: nothing to forward.
+  cir.func @caller_non_byval_value(%novalue: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    cir.call @takes_big_non_byval(%novalue) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval indirect argument that
+  // CHECK-SAME: does not name the caller's storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_non_byval(%novalue)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  // A volatile load is an observable access the look-through would delete.
+  cir.func @caller_non_byval_volatile(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %volatileload = cir.load volatile %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval(%volatileload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval indirect argument that
+  // CHECK-SAME: does not name the caller's storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_non_byval(%volatileload)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  // An atomic load carries ordering the look-through would drop.
+  cir.func @caller_non_byval_atomic(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %atomicload = cir.load align(8) atomic(seq_cst) %tmp
+        : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval(%atomicload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval indirect argument that
+  // CHECK-SAME: does not name the caller's storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_non_byval(%atomicload)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+!rec_Outer = !cir.struct<"Outer" {data !rec_Big}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  // A load of a member of an enclosing record is not the temporary the caller
+  // destroys, so it is reported rather than forwarded.
+  cir.func @caller_non_byval_member(%s: !rec_Outer)
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "outer" align(8) : !cir.ptr<!rec_Outer>
+    cir.store %s, %tmp : !rec_Outer, !cir.ptr<!rec_Outer>
+    %member = cir.get_member %tmp[0] {name = "inner"}
+        : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Big>
+    %memberload = cir.load %member : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval(%memberload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval indirect argument that
+  // CHECK-SAME: does not name the caller's storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_non_byval(%memberload)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg_align16 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 16, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_non_byval16(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg_align16 }
+
+  // A slot stating less alignment than the callee is told the argument has.
+  // Raising it would not survive a slot that stands in for a parameter, so it
+  // is reported rather than forwarded under an alignment the callee may rely
+  // on.
+  cir.func @caller_non_byval_underaligned(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(8) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %underaligned = cir.load %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval16(%underaligned) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval indirect argument that
+  // CHECK-SAME: does not name the caller's storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_non_byval16(%underaligned)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#sret_return = {
+  return = { kind = "indirect", indirect_align = 8 },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A return slot holds the object the caller reads after the call, not one it
+  // destroys, so it is not forwardable even though it becomes a pointer
+  // parameter carrying llvm.align.
+  cir.func @caller_non_byval_from_sret_slot() -> !rec_Big
+      attributes { test_classify = #sret_return } {
+    %ret = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %z = cir.const #cir.zero : !rec_Big
+    cir.store %z, %ret : !rec_Big, !cir.ptr<!rec_Big>
+    %retslot = cir.load %ret : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval(%retslot) : (!rec_Big) -> ()
+    %r = cir.load %ret : !cir.ptr<!rec_Big>, !rec_Big
+    cir.return %r : !rec_Big
+  }
+
+  // CHECK: error: 'cir.call' op non-byval indirect argument that
+  // CHECK-SAME: does not name the caller's storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_non_byval(%retslot)
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8 } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A byval parameter is the callee's own copy, which nothing else destroys,
+  // so handing it on would give the inner callee an object with the wrong
+  // owner.  Only a non-byval parameter is recorded as forwardable, so this
+  // one is rejected.
+  cir.func @caller_non_byval_from_byval_param(%byvalparam: !rec_Big)
+      attributes { test_classify = #byval_arg } {
+    cir.call @takes_big_non_byval(%byvalparam) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval indirect argument that
+  // CHECK-SAME: does not name the caller's storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_non_byval(%byvalparam)
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg_align8 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#non_byval_arg_align16 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 16, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A non-byval parameter states less alignment than the callee it is handed to
+  // is told about, so it cannot stand in for that argument.
+  cir.func @caller_non_byval_param_underaligned(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg_align8 } {
+    %spill = cir.alloca "arg0" align(16) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %paramload = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval16(%paramload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval indirect argument that
+  // CHECK-SAME: does not name the caller's storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_non_byval16(%paramload)
+
+  cir.func private @takes_big_non_byval16(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg_align16 }
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg_align8 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#non_byval_arg_align16 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 16, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The same rejection with the callee declared first, so the call is reached
+  // before the caller's own definition is rewritten.  The slot's own alignment
+  // would satisfy the callee here, and only the parameter's promise rules the
+  // forward out.
+  cir.func private @takes_big_non_byval16(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg_align16 }
+
+  cir.func @callee_first_non_byval_param_underaligned(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg_align8 } {
+    %spill = cir.alloca "arg0" align(16) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %paramload = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval16(%paramload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval indirect argument that
+  // CHECK-SAME: does not name the caller's storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_non_byval16(%paramload)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  // A decay names one element of an array, not the whole allocation, so
+  // getUnderlyingAlloca does not look through it.
+  cir.func @caller_non_byval_through_decay(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %arr = cir.alloca "arr" align(8) : !cir.ptr<!cir.array<!rec_Big x 2>>
+    %decayed = cir.cast array_to_ptrdecay %arr
+        : !cir.ptr<!cir.array<!rec_Big x 2>> -> !cir.ptr<!rec_Big>
+    cir.store %s, %decayed : !rec_Big, !cir.ptr<!rec_Big>
+    %decayload = cir.load %decayed : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval(%decayload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval indirect argument that
+  // CHECK-SAME: does not name the caller's storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_non_byval(%decayload)
+
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg_align16 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 16, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_non_byval16(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg_align16 }
+
+  // The alignment comes from the slot underneath the cast, not from the cast,
+  // so an under-aligned slot is still reported once a cast is in between.
+  cir.func @caller_non_byval_underaligned_through_cast(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %raw = cir.alloca "raw" align(8) : !cir.ptr<!cir.array<!s8i x 32>>
+    %slot = cir.cast bitcast %raw
+        : !cir.ptr<!cir.array<!s8i x 32>> -> !cir.ptr<!rec_Big>
+    cir.store %s, %slot : !rec_Big, !cir.ptr<!rec_Big>
+    %castunderaligned = cir.load %slot : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval16(%castunderaligned) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval indirect argument that
+  // CHECK-SAME: does not name the caller's storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_non_byval16(%castunderaligned)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  // The slot underneath the cast is forwardable, but the rewritten parameter
+  // is a pointer in the default address space, so the operand cannot be
+  // handed on as it stands.
+  cir.func @caller_non_byval_through_addrspace(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %raw = cir.alloca "raw" align(8) : !cir.ptr<!rec_Big>
+    %slot = cir.cast address_space %raw
+        : !cir.ptr<!rec_Big> -> !cir.ptr<!rec_Big, target_address_space(5)>
+    cir.store %s, %slot : !rec_Big, !cir.ptr<!rec_Big, target_address_space(5)>
+    %asload = cir.load %slot
+        : !cir.ptr<!rec_Big, target_address_space(5)>, !rec_Big
+    cir.call @takes_big_non_byval(%asload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval indirect argument that
+  // CHECK-SAME: does not name the caller's storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_non_byval(%asload)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#direct_ptr = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct" } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      attributes { test_classify = #non_byval_arg }
+
+  // A Direct pointer parameter that carries the same attributes the pass puts
+  // on a non-byval one.  It is not one, so it must not be forwarded.
+  cir.func @caller_lookalike_attrs(%lookalike: !cir.ptr<!rec_Big> {
+        llvm.align = 8 : i64, llvm.dereferenceable = 32 : i64,
+        llvm.nofreeobj, llvm.noundef})
+      attributes { test_classify = #direct_ptr } {
+    %v = cir.load %lookalike : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_non_byval(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op non-byval indirect argument that
+  // CHECK-SAME: does not name the caller's storage is not yet
+  // CHECK-SAME: implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_non_byval(%v)
+
+}

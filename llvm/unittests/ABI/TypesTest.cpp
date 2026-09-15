@@ -1,4 +1,4 @@
-//===- TypesTest.cpp - ABI type emptiness unit tests ----------------------===//
+//===- TypesTest.cpp - ABI type unit tests --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,12 +14,17 @@
 #include "gtest/gtest.h"
 
 using llvm::Align;
+using llvm::ElementCount;
 using llvm::TypeSize;
+using llvm::abi::AtomicType;
 using llvm::abi::FieldInfo;
 using llvm::abi::RecordFlags;
 using llvm::abi::RecordType;
 using llvm::abi::StructPacking;
+using llvm::abi::TupleType;
 using llvm::abi::TypeBuilder;
+using llvm::abi::VectorKind;
+using llvm::abi::VectorType;
 
 namespace {
 
@@ -39,6 +44,19 @@ protected:
                             StructPacking::Default, Bases, VBases, Flags);
   }
 };
+
+TEST_F(ABITypesTest, AtomicTypeProperties) {
+  const llvm::abi::Type *Value =
+      TB.getIntegerType(24, Align(1), /*Signed=*/false);
+  const AtomicType *Atomic = TB.getAtomicType(Value, 32, Align(4));
+
+  EXPECT_TRUE(Atomic->isAtomic());
+  EXPECT_EQ(Atomic->getKind(), llvm::abi::TypeKind::Atomic);
+  EXPECT_EQ(Atomic->getValueType(), Value);
+  EXPECT_EQ(Atomic->getSizeInBits(), TypeSize::getFixed(32));
+  EXPECT_EQ(Atomic->getAlignment(), Align(4));
+  EXPECT_TRUE(llvm::isa<AtomicType>(Atomic));
+}
 
 TEST_F(ABITypesTest, EmptyCRecord) {
   const RecordType *Empty = makeRecord({}, 0, RecordFlags::CanPassInRegisters);
@@ -123,6 +141,83 @@ TEST_F(ABITypesTest, DirectVirtualBasesAndVTablePointer) {
                           /*Bases=*/{FieldInfo(Empty, 0)}, /*VBases=*/{},
                           Align(8))
                    ->isEmpty());
+}
+
+TEST_F(ABITypesTest, GenericVector) {
+  const llvm::abi::Type *I32 = TB.getIntegerType(32, Align(4), /*Signed=*/true);
+  const VectorType *V4I32 =
+      TB.getVectorType(I32, ElementCount::getFixed(4), Align(16));
+
+  EXPECT_EQ(V4I32->getVectorKind(), VectorKind::Generic);
+  EXPECT_FALSE(V4I32->isSVEType());
+  EXPECT_TRUE(V4I32->isFixedLength());
+  EXPECT_FALSE(V4I32->isTuple());
+  EXPECT_EQ(V4I32->getSizeInBits(), TypeSize::getFixed(128));
+}
+
+// svint32_t is <vscale x 4 x i32>.
+TEST_F(ABITypesTest, SVEDataVector) {
+  const llvm::abi::Type *I32 = TB.getIntegerType(32, Align(4), /*Signed=*/true);
+  const VectorType *SVInt32 = TB.getVectorType(
+      I32, ElementCount::getScalable(4), Align(16), VectorKind::SVEData);
+
+  EXPECT_TRUE(SVInt32->isSVEData());
+  EXPECT_TRUE(SVInt32->isSVEType());
+  EXPECT_TRUE(SVInt32->isScalable());
+  EXPECT_FALSE(SVInt32->isTuple());
+  EXPECT_EQ(SVInt32->getSizeInBits(), TypeSize::getScalable(128));
+  EXPECT_EQ(SVInt32->getAlignment(), Align(16));
+}
+
+// svint32x3_t is three <vscale x 4 x i32> vectors.
+TEST_F(ABITypesTest, SVEDataVectorTuple) {
+  const llvm::abi::Type *I32 = TB.getIntegerType(32, Align(4), /*Signed=*/true);
+  const VectorType *SVInt32 = TB.getVectorType(
+      I32, ElementCount::getScalable(4), Align(16), VectorKind::SVEData);
+  const TupleType *SVInt32x3 = TB.getTupleType(SVInt32, /*NumVectors=*/3);
+
+  EXPECT_TRUE(SVInt32x3->isTuple());
+  EXPECT_EQ(SVInt32x3->getNumVectors(), 3u);
+  EXPECT_EQ(SVInt32x3->getVectorType(), SVInt32);
+  EXPECT_EQ(SVInt32x3->getAlignment(), Align(16));
+  // The contained vector keeps a per-vector element count; the tuple size
+  // covers all of the vectors.
+  EXPECT_EQ(SVInt32->getNumElements(), ElementCount::getScalable(4));
+  EXPECT_EQ(SVInt32->getSizeInBits(), TypeSize::getScalable(128));
+  EXPECT_EQ(SVInt32x3->getSizeInBits(), TypeSize::getScalable(384));
+}
+
+// svbool_t is <vscale x 16 x i1>.
+TEST_F(ABITypesTest, SVEPredicateVector) {
+  const llvm::abi::Type *I1 = TB.getIntegerType(1, Align(1), /*Signed=*/false);
+  const VectorType *SVBool = TB.getVectorType(
+      I1, ElementCount::getScalable(16), Align(2), VectorKind::SVEPredicate);
+
+  EXPECT_TRUE(SVBool->isSVEPredicate());
+  EXPECT_FALSE(SVBool->isSVEData());
+  EXPECT_TRUE(SVBool->isScalable());
+  EXPECT_EQ(SVBool->getSizeInBits(), TypeSize::getScalable(16));
+  EXPECT_EQ(SVBool->getAlignment(), Align(2));
+}
+
+TEST_F(ABITypesTest, SVECount) {
+  const VectorType *SVCount = TB.getSVECountType(Align(2));
+
+  EXPECT_TRUE(SVCount->isSVECount());
+  EXPECT_TRUE(SVCount->isSVEType());
+  EXPECT_FALSE(SVCount->isSVEPredicate());
+  EXPECT_TRUE(SVCount->isScalable());
+  EXPECT_FALSE(SVCount->isTuple());
+  EXPECT_EQ(SVCount->getSizeInBits(), TypeSize::getScalable(16));
+}
+
+// Scalable vectors have no fixed size, so isZeroSize() must not query one.
+TEST_F(ABITypesTest, ScalableVectorIsNotZeroSized) {
+  const llvm::abi::Type *I32 = TB.getIntegerType(32, Align(4), /*Signed=*/true);
+  const VectorType *SVInt32 = TB.getVectorType(
+      I32, ElementCount::getScalable(4), Align(16), VectorKind::SVEData);
+
+  EXPECT_FALSE(SVInt32->isZeroSize());
 }
 
 } // namespace

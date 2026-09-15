@@ -2486,6 +2486,23 @@ func.func @omp_task(%bool_var: i1, %i64_var: i64, %i32_var: i32, %data_var: memr
     omp.terminator
   }
 
+  // Checking `threadset` clause
+  // CHECK: omp.task threadset(omp_pool) {
+  omp.task threadset(omp_pool) {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.task threadset(omp_team) {
+  omp.task threadset(omp_team) {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
   // Checking `in_reduction` clause
   %c1 = arith.constant 1 : i32
   // CHECK: %[[redn_var1:.*]] = llvm.alloca %{{.*}} x f32 : (i32) -> !llvm.ptr
@@ -3005,6 +3022,30 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
 
   // CHECK: omp.taskloop.context mergeable {
   omp.taskloop.context mergeable {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  } {omp.combined}
+
+  // CHECK: omp.taskloop.context threadset(omp_pool) {
+  omp.taskloop.context threadset(omp_pool) {
+    // CHECK: omp.taskloop.wrapper {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+        // CHECK: omp.yield
+        omp.yield
+      }
+    }
+    omp.terminator
+  } {omp.combined}
+
+  // CHECK: omp.taskloop.context threadset(omp_team) {
+  omp.taskloop.context threadset(omp_team) {
     // CHECK: omp.taskloop.wrapper {
     omp.taskloop.wrapper {
       omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {

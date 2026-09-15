@@ -98,9 +98,6 @@ if(LLVM_USING_GLIBC AND CMAKE_SIZEOF_VOID_P EQUAL 4)
 endif()
 
 # include checks
-check_include_file(valgrind/valgrind.h HAVE_VALGRIND_VALGRIND_H)
-check_symbol_exists(FE_ALL_EXCEPT "fenv.h" HAVE_DECL_FE_ALL_EXCEPT)
-check_symbol_exists(FE_INEXACT "fenv.h" HAVE_DECL_FE_INEXACT)
 check_c_source_compiles("
         #if __has_attribute(used)
         #define LLVM_ATTRIBUTE_USED __attribute__((__used__))
@@ -113,7 +110,6 @@ check_c_source_compiles("
         int main(void) { return 0; }"
         HAVE_BUILTIN_THREAD_POINTER)
 
-check_include_file(CrashReporterClient.h HAVE_CRASHREPORTERCLIENT_H)
 if(APPLE)
   check_c_source_compiles("
      static const char *__crashreporter_info__ = 0;
@@ -122,27 +118,16 @@ if(APPLE)
     HAVE_CRASHREPORTER_INFO)
 endif()
 
-if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
-  check_include_file(linux/magic.h HAVE_LINUX_MAGIC_H)
-  if(NOT HAVE_LINUX_MAGIC_H)
-    # older kernels use split files
-    check_include_file(linux/nfs_fs.h HAVE_LINUX_NFS_FS_H)
-    check_include_file(linux/smb.h HAVE_LINUX_SMB_H)
-  endif()
-endif()
-
 # library checks
 if(NOT WIN32)
   check_library_exists(pthread pthread_create "" HAVE_LIBPTHREAD)
   if (HAVE_LIBPTHREAD)
     check_library_exists(pthread pthread_rwlock_init "" HAVE_PTHREAD_RWLOCK_INIT)
-    check_library_exists(pthread pthread_mutex_lock "" HAVE_PTHREAD_MUTEX_LOCK)
   else()
     # this could be Android
     check_library_exists(c pthread_create "" PTHREAD_IN_LIBC)
     if (PTHREAD_IN_LIBC)
       check_library_exists(c pthread_rwlock_init "" HAVE_PTHREAD_RWLOCK_INIT)
-      check_library_exists(c pthread_mutex_lock "" HAVE_PTHREAD_MUTEX_LOCK)
     endif()
   endif()
 endif()

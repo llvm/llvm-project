@@ -309,6 +309,8 @@ public:
 
   cir::VoidType getVoidTy() { return typeCache.voidTy; }
 
+  cir::IntType getBoolMemoryTy() { return getUInt8Ty(); }
+
   cir::IntType getSInt8Ty() { return typeCache.sInt8Ty; }
   cir::IntType getSInt16Ty() { return typeCache.sInt16Ty; }
   cir::IntType getSInt32Ty() { return typeCache.sInt32Ty; }

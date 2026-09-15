@@ -48,9 +48,12 @@ subroutine use_decl()
 end subroutine
 
 ! Defining TU has an initialized definition; using TU is a declaration.
+! No host ctor/dtor: a PARAMETER is a device constant, not a registered mapping.
 ! DECL-DEF: fir.global @_QMmod_declECp {acc.declare = #acc.declare<dataClause = acc_create>} constant : f32 {
 ! DECL-DEF: fir.has_value
 ! DECL-DEF-NOT: fir.global linkonce_odr @_QMmod_declECp
+! DECL-DEF-NOT: acc.global_ctor @_QMmod_declECp_acc_ctor
+! DECL-DEF-NOT: acc.global_dtor @_QMmod_declECp_acc_dtor
 
 ! DECL-USE: fir.global @_QMmod_declECp {acc.declare = #acc.declare<dataClause = acc_create>
 ! DECL-USE-NOT: fir.global @_QMmod_declECp(

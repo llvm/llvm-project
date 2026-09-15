@@ -95,6 +95,15 @@ enum FunctionDeclKind {
   OutOfLineDefinition
 };
 
+// Whether N, despite being Unselected, may still be a single RootStmt: a
+// DeclStmt can be unselected since VarDecls claim the entire selection range
+// in the selection tree. Similarly, a CXXOperatorCallExpr of a binary
+// operation can be unselected because its children (the operands) claim the
+// entire selection range in the selection tree (e.g. <<).
+bool isUnselectedRootStmtCandidate(const Node *N) {
+  return N->ASTNode.get<DeclStmt>() || N->ASTNode.get<CXXOperatorCallExpr>();
+}
+
 // A RootStmt is a statement that's fully selected including all its children
 // and its parent is unselected.
 // Check if a node is a root statement.
@@ -104,14 +113,33 @@ bool isRootStmt(const Node *N) {
   // Root statement cannot be partially selected.
   if (N->Selected == SelectionTree::Partial)
     return false;
-  // A DeclStmt can be an unselected RootStmt since VarDecls claim the entire
-  // selection range in selectionTree. Additionally, a CXXOperatorCallExpr of a
-  // binary operation can be unselected because its children claim the entire
-  // selection range in the selection tree (e.g. <<).
-  if (N->Selected == SelectionTree::Unselected && !N->ASTNode.get<DeclStmt>() &&
-      !N->ASTNode.get<CXXOperatorCallExpr>())
+  if (N->Selected == SelectionTree::Unselected &&
+      !isUnselectedRootStmtCandidate(N))
     return false;
   return true;
+}
+
+// Given a Child that is itself a single RootStmt (either because it's
+// completely selected, or because it's an isUnselectedRootStmtCandidate),
+// returns Child's enclosing statement, which is where we'll look for
+// Child's RootStmt siblings.
+//
+// If parent is a DeclStmt, even though it's unselected, we consider it a
+// root statement and return its parent instead. This is done because the
+// VarDecls claim the entire selection range of the Declaration and DeclStmt
+// is always unselected.
+//
+// Returns null if the (possibly DeclStmt-adjusted) parent is an Expr: this
+// means Child is merely a subexpression of a larger expression rather than
+// a genuine standalone statement, e.g. selecting just the "3" in
+// `stream << 3;`, and extracting it would produce broken code.
+const Node *getEnclosingStmt(const Node *Child) {
+  const Node *Parent = Child->Parent;
+  if (Parent->ASTNode.get<DeclStmt>())
+    Parent = Parent->Parent;
+  if (Parent->ASTNode.get<Expr>())
+    return nullptr;
+  return Parent;
 }
 
 // Returns the (unselected) parent of all RootStmts given the commonAncestor.
@@ -130,7 +158,16 @@ const Node *getParentOfRootStmts(const Node *CommonAnc) {
   const Node *Parent = nullptr;
   switch (CommonAnc->Selected) {
   case SelectionTree::Selection::Unselected:
-    // Typically a block, with the { and } unselected, could also be ForStmt etc
+    // Typically a block, with the { and } unselected, could also be ForStmt
+    // etc. However, CommonAnc may instead be a single statement that is
+    // itself Unselected only because all of its own tokens are claimed by
+    // its children (see isUnselectedRootStmtCandidate); in that case it's a
+    // root statement in its own right, and we need its actual parent, same
+    // as in the Complete case below.
+    if (isUnselectedRootStmtCandidate(CommonAnc)) {
+      Parent = getEnclosingStmt(CommonAnc);
+      break;
+    }
     // Ensure all Children are RootStmts.
     Parent = CommonAnc;
     break;
@@ -138,17 +175,11 @@ const Node *getParentOfRootStmts(const Node *CommonAnc) {
     // Only a fully-selected single statement can be selected.
     return nullptr;
   case SelectionTree::Selection::Complete:
-    // If the Common Ancestor is completely selected, then it's a root statement
-    // and its parent will be unselected.
-    Parent = CommonAnc->Parent;
-    // If parent is a DeclStmt, even though it's unselected, we consider it a
-    // root statement and return its parent. This is done because the VarDecls
-    // claim the entire selection range of the Declaration and DeclStmt is
-    // always unselected.
-    if (Parent->ASTNode.get<DeclStmt>())
-      Parent = Parent->Parent;
+    Parent = getEnclosingStmt(CommonAnc);
     break;
   }
+  if (!Parent)
+    return nullptr;
   // Ensure all Children are RootStmts.
   return llvm::all_of(Parent->Children, isRootStmt) ? Parent : nullptr;
 }
@@ -298,11 +329,6 @@ computeEnclosingFuncRange(const FunctionDecl *EnclosingFunction,
 // returns true if Child can be a single RootStmt being extracted from
 // EnclosingFunc.
 bool validSingleChild(const Node *Child, const FunctionDecl *EnclosingFunc) {
-  // Don't extract expressions.
-  // FIXME: We should extract expressions that are "statements" i.e. not
-  // subexpressions
-  if (Child->ASTNode.get<Expr>())
-    return false;
   // Extracting the body of EnclosingFunc would remove it's definition.
   assert(EnclosingFunc->hasBody() &&
          "We should always be extracting from a function body.");

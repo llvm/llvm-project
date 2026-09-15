@@ -22,6 +22,7 @@
 #include <__pstl/cpu_algos/is_heap_until.h>
 #include <__pstl/cpu_algos/merge.h>
 #include <__pstl/cpu_algos/min_element.h>
+#include <__pstl/cpu_algos/minmax_element.h>
 #include <__pstl/cpu_algos/mismatch.h>
 #include <__pstl/cpu_algos/reverse.h>
 #include <__pstl/cpu_algos/search.h>
@@ -119,6 +120,10 @@ struct __merge<__std_thread_backend_tag, _ExecutionPolicy>
 template <class _ExecutionPolicy>
 struct __min_element<__std_thread_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_min_element<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __minmax_element<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_minmax_element<__std_thread_backend_tag, _ExecutionPolicy> {};
 
 template <class _ExecutionPolicy>
 struct __mismatch<__std_thread_backend_tag, _ExecutionPolicy>

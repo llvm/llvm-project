@@ -537,6 +537,22 @@ static Operation *findCorrespondingDataExit(Value entryResult) {
   return exitOps.empty() ? nullptr : exitOps.front();
 }
 
+static std::optional<Location> getMappingExitLoc(Value entryResult) {
+  if (auto mapInfo = entryResult.getDefiningOp<MapInfoOp>())
+    if (std::optional<Location> exitLoc = mapInfo.getExitLoc())
+      return exitLoc;
+  if (Operation *exitOp = findCorrespondingDataExit(entryResult))
+    return exitOp->getLoc();
+  return std::nullopt;
+}
+
+std::optional<Location> getMappingExitLoc(ValueRange dataClauseOperands) {
+  for (Value operand : dataClauseOperands)
+    if (std::optional<Location> exitLoc = getMappingExitLoc(operand))
+      return exitLoc;
+  return std::nullopt;
+}
+
 static std::optional<DataClause> getExitDataClause(Operation *exitOp) {
   return llvm::TypeSwitch<Operation *, std::optional<DataClause>>(exitOp)
       .Case<ACC_DATA_EXIT_OPS>([&](auto exit) { return exit.getDataClause(); })
@@ -718,6 +734,16 @@ MapFlags computeDataClauseMapFlags(Operation *entryOp, bool ptrAndObj) {
   return flags;
 }
 
+/// Returns the module \p var lives in.
+static ModuleOp getEnclosingModule(Value var) {
+  if (Operation *def = var.getDefiningOp())
+    return def->getParentOfType<ModuleOp>();
+  if (Region *region = var.getParentRegion())
+    if (Operation *parent = region->getParentOp())
+      return parent->getParentOfType<ModuleOp>();
+  return {};
+}
+
 int64_t computeMapInfoSizeBytes(Value var, Type varType, DataDescKind descKind,
                                 ValueRange bounds, const DataLayout &dataLayout,
                                 OpenACCSupport *support) {
@@ -726,12 +752,7 @@ int64_t computeMapInfoSizeBytes(Value var, Type varType, DataDescKind descKind,
   if (!bounds.empty() || descKind != DataDescKind::none)
     return 0;
 
-  ModuleOp module;
-  if (Operation *def = var.getDefiningOp())
-    module = def->getParentOfType<ModuleOp>();
-  else if (Region *region = var.getParentRegion())
-    if (Operation *parent = region->getParentOp())
-      module = parent->getParentOfType<ModuleOp>();
+  ModuleOp module = getEnclosingModule(var);
   if (!module)
     return -1;
 
@@ -748,6 +769,18 @@ int64_t computeMapInfoSizeBytes(Value var, Type varType, DataDescKind descKind,
     return *size;
 
   return -1;
+}
+
+int64_t computeMapInfoSizeBytes(Value var, Type varType, DataDescKind descKind,
+                                ValueRange bounds, OpenACCSupport *support) {
+  ModuleOp module = getEnclosingModule(var);
+  if (!module)
+    return -1;
+  std::optional<DataLayout> dataLayout = getDataLayout(module);
+  if (!dataLayout)
+    return -1;
+  return computeMapInfoSizeBytes(var, varType, descKind, bounds, *dataLayout,
+                                 support);
 }
 
 void populateSourceExtents(ValueRange bounds, ArrayRef<int64_t> shape,

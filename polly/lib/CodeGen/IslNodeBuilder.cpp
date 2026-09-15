@@ -1423,8 +1423,7 @@ void IslNodeBuilder::allocateNewArrays(BBPair StartExitBlocks) {
       Builder.SetInsertPoint(StartBlock,
                              StartBlock->getTerminator()->getIterator());
       auto *CreatedArray = Builder.CreateMalloc(
-          IntPtrTy, SAI->getElementType(),
-          ConstantInt::get(Type::getInt64Ty(Ctx), Size),
+          IntPtrTy, ConstantInt::get(Type::getInt64Ty(Ctx), Size),
           ConstantInt::get(Type::getInt64Ty(Ctx), ArraySizeInt), nullptr,
           SAI->getName());
 

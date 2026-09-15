@@ -893,29 +893,45 @@ std::string DynamicCastInfoAttr::getAlias() const {
   return alias;
 }
 
+// TODO: Give type_info a distinct CIR type so we can verify that a
+// FlatSymbolRefAttr actually names a type_info global.
+static bool isRttiPtr(mlir::Type ty) {
+  auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty);
+  if (!ptrTy)
+    return false;
+
+  auto pointeeIntTy = mlir::dyn_cast<cir::IntType>(ptrTy.getPointee());
+  if (!pointeeIntTy)
+    return false;
+
+  return pointeeIntTy.isUnsigned() && pointeeIntTy.getWidth() == 8;
+}
+
 LogicalResult DynamicCastInfoAttr::verify(
     function_ref<InFlightDiagnostic()> emitError, cir::GlobalViewAttr srcRtti,
     cir::GlobalViewAttr destRtti, mlir::FlatSymbolRefAttr runtimeFunc,
     mlir::FlatSymbolRefAttr badCastFunc, cir::IntAttr offsetHint) {
-  auto isRttiPtr = [](mlir::Type ty) {
-    // RTTI pointers are !cir.ptr<!u8i>.
-
-    auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty);
-    if (!ptrTy)
-      return false;
-
-    auto pointeeIntTy = mlir::dyn_cast<cir::IntType>(ptrTy.getPointee());
-    if (!pointeeIntTy)
-      return false;
-
-    return pointeeIntTy.isUnsigned() && pointeeIntTy.getWidth() == 8;
-  };
-
   if (!isRttiPtr(srcRtti.getType()))
     return emitError() << "srcRtti must be an RTTI pointer";
 
   if (!isRttiPtr(destRtti.getType()))
     return emitError() << "destRtti must be an RTTI pointer";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// EhFilterAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult EhFilterAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                   mlir::ArrayAttr permittedTypes) {
+  for (mlir::Attribute typeAttr : permittedTypes) {
+    auto rtti = mlir::dyn_cast<cir::GlobalViewAttr>(typeAttr);
+    if (!rtti || !isRttiPtr(rtti.getType()))
+      return emitError() << "permitted type list must contain only type info "
+                            "symbols";
+  }
 
   return success();
 }
