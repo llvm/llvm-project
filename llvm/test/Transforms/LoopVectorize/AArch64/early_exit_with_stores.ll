@@ -66,13 +66,13 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[IV1]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i16>, ptr [[TMP5]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 8 x i16> [[WIDE_LOAD]], splat (i16 500)
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP6]], i1 false)
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze <vscale x 8 x i1> [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP9]], i1 false)
 ; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[TMP7]])
 ; CHECK-NEXT:    [[ST_ADDR1:%.*]] = getelementptr i16, ptr [[ARRAY]], i64 [[IV1]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr align 2 [[ST_ADDR1]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]], <vscale x 8 x i16> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <vscale x 8 x i16> [[WIDE_MASKED_LOAD]], splat (i16 1)
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[TMP8]], ptr align 2 [[ST_ADDR1]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]])
-; CHECK-NEXT:    [[TMP9:%.*]] = freeze <vscale x 8 x i1> [[TMP6]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv8i1(<vscale x 8 x i1> [[TMP9]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -344,14 +344,14 @@ define void @loop_contains_store_to_pointer_with_no_deref_info(ptr align 2 deref
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[IV]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i16>, ptr [[TMP5]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 8 x i16> [[WIDE_LOAD]], splat (i16 500)
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP6]], i1 false)
+; CHECK-NEXT:    [[TMP10:%.*]] = freeze <vscale x 8 x i1> [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP10]], i1 false)
 ; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[TMP7]])
 ; CHECK-NEXT:    [[LD_ADDR:%.*]] = getelementptr i16, ptr [[LOAD_ARRAY]], i64 [[IV]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr align 2 [[LD_ADDR]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]], <vscale x 8 x i16> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <vscale x 8 x i16> [[WIDE_MASKED_LOAD]], splat (i16 1)
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[ARRAY]], i64 [[IV]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[TMP8]], ptr align 2 [[TMP9]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]])
-; CHECK-NEXT:    [[TMP10:%.*]] = freeze <vscale x 8 x i1> [[TMP6]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.or.nxv8i1(<vscale x 8 x i1> [[TMP10]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -468,13 +468,13 @@ define void @loop_contains_store_in_latch_block(ptr dereferenceable(40) noalias 
 ; CHECK-NEXT:    [[EE_ADDR1:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[IV1]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i16>, ptr [[EE_ADDR1]], align 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <vscale x 8 x i16> [[WIDE_LOAD]], splat (i16 500)
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP5]], i1 false)
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze <vscale x 8 x i1> [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP9]], i1 false)
 ; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[TMP6]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i16, ptr [[ARRAY]], i64 [[IV1]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr align 2 [[TMP7]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]], <vscale x 8 x i16> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <vscale x 8 x i16> [[WIDE_MASKED_LOAD]], splat (i16 1)
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[TMP8]], ptr align 2 [[TMP7]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]])
-; CHECK-NEXT:    [[TMP9:%.*]] = freeze <vscale x 8 x i1> [[TMP5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv8i1(<vscale x 8 x i1> [[TMP9]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1140,13 +1140,13 @@ define i32 @uncountable_exit_with_separate_exit_block(ptr dereferenceable(40) no
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[IV1]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i16>, ptr [[TMP5]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 8 x i16> [[WIDE_LOAD]], splat (i16 500)
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP6]], i1 false)
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze <vscale x 8 x i1> [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[TMP9]], i1 false)
 ; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[TMP7]])
 ; CHECK-NEXT:    [[ST_ADDR1:%.*]] = getelementptr i16, ptr [[ARRAY]], i64 [[IV1]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr align 2 [[ST_ADDR1]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]], <vscale x 8 x i16> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <vscale x 8 x i16> [[WIDE_MASKED_LOAD]], splat (i16 1)
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[TMP8]], ptr align 2 [[ST_ADDR1]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]])
-; CHECK-NEXT:    [[TMP9:%.*]] = freeze <vscale x 8 x i1> [[TMP6]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv8i1(<vscale x 8 x i1> [[TMP9]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
