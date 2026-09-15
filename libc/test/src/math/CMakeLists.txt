@@ -3018,6 +3018,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  erfc_test
+  SUITE
+    libc-math-unittests
+  SRCS
+    erfc_test.cpp
+  DEPENDS
+    libc.src.math.erfc
+)
+
+add_fp_unittest(
   erff_test
   NEED_MPFR
   SUITE
