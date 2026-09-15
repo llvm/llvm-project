@@ -330,6 +330,33 @@ static void diagnosePossiblyInvalidConstraint(LLVMContext &Ctx, const Value *V,
   return Ctx.emitError(I, ErrMsg);
 }
 
+static bool getNonABIVectorTypeBreakdown(const TargetLowering &TLI,
+                                         SelectionDAG &DAG, EVT ValueVT,
+                                         EVT ABIIntermediateVT,
+                                         unsigned ABINumIntermediates,
+                                         unsigned ABINumRegs, MVT ABIRegisterVT,
+                                         EVT &LegalIntermediateVT,
+                                         unsigned &LegalNumIntermediates) {
+  if (ValueVT.isScalableVector())
+    return false;
+
+  MVT LegalRegisterVT;
+  unsigned LegalNumRegs = TLI.getVectorTypeBreakdown(
+      *DAG.getContext(), ValueVT, LegalIntermediateVT, LegalNumIntermediates,
+      LegalRegisterVT);
+
+  if (LegalNumIntermediates == 0 || ABINumRegs % LegalNumIntermediates != 0 ||
+      LegalNumRegs * LegalRegisterVT.getSizeInBits() !=
+          ABINumRegs * ABIRegisterVT.getSizeInBits())
+    return false;
+
+  unsigned LegalVectorBits =
+      LegalIntermediateVT.getSizeInBits() * LegalNumIntermediates;
+  unsigned ABIVectorBits =
+      ABIIntermediateVT.getSizeInBits() * ABINumIntermediates;
+  return LegalVectorBits == ABIVectorBits;
+}
+
 /// getCopyFromPartsVector - Create a value that contains the specified legal
 /// parts combined into the value they represent.  If the parts combine to a
 /// type larger than ValueVT then AssertOp can be used to specify whether the
@@ -776,15 +803,28 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
   assert(IntermediateVT.isScalableVector() == ValueVT.isScalableVector() &&
          "Mixing scalable and fixed vectors when copying in parts");
 
+  EVT BuildIntermediateVT = IntermediateVT;
+  unsigned BuildNumIntermediates = NumIntermediates;
+  EVT LegalIntermediateVT;
+  unsigned LegalNumIntermediates;
+  if (IsABIRegCopy &&
+      getNonABIVectorTypeBreakdown(
+          TLI, DAG, ValueVT, IntermediateVT, NumIntermediates, NumRegs,
+          RegisterVT, LegalIntermediateVT, LegalNumIntermediates)) {
+    BuildIntermediateVT = LegalIntermediateVT;
+    BuildNumIntermediates = LegalNumIntermediates;
+  }
+
   std::optional<ElementCount> DestEltCnt;
 
-  if (IntermediateVT.isVector())
-    DestEltCnt = IntermediateVT.getVectorElementCount() * NumIntermediates;
+  if (BuildIntermediateVT.isVector())
+    DestEltCnt =
+        BuildIntermediateVT.getVectorElementCount() * BuildNumIntermediates;
   else
-    DestEltCnt = ElementCount::getFixed(NumIntermediates);
+    DestEltCnt = ElementCount::getFixed(BuildNumIntermediates);
 
   EVT BuiltVectorTy = EVT::getVectorVT(
-      *DAG.getContext(), IntermediateVT.getScalarType(), *DestEltCnt);
+      *DAG.getContext(), BuildIntermediateVT.getScalarType(), *DestEltCnt);
 
   if (ValueVT == BuiltVectorTy) {
     // Nothing to do.
@@ -807,6 +847,17 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
   }
 
   assert(Val.getValueType() == BuiltVectorTy && "Unexpected vector value type");
+
+  if (IsABIRegCopy) {
+    ElementCount ABIDestEltCnt =
+        IntermediateVT.isVector()
+            ? IntermediateVT.getVectorElementCount() * NumIntermediates
+            : ElementCount::getFixed(NumIntermediates);
+    EVT ABIBuiltVectorTy = EVT::getVectorVT(
+        *DAG.getContext(), IntermediateVT.getScalarType(), ABIDestEltCnt);
+    if (BuiltVectorTy != ABIBuiltVectorTy)
+      Val = DAG.getNode(ISD::BITCAST, DL, ABIBuiltVectorTy, Val);
+  }
 
   // Split the vector into intermediate operands.
   SmallVector<SDValue, 8> Ops(NumIntermediates);
