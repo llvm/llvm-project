@@ -19,6 +19,7 @@
 
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/IR/FunctionInstructionPrinter.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -255,8 +256,10 @@ std::string DOTGraphTraits<DOTFuncInfo *>::getCompleteNodeLabel(
             Node.printAsOperand(OS, false, *MST);
             OS << ":\n";
 
+            FunctionInstructionPrinter InstructionPrinter(OS, *MST,
+                                                          *Node.getParent());
             for (const Instruction &Inst : Node) {
-              Inst.print(OS, *MST, /* IsForDebug */ false);
+              InstructionPrinter.printInstruction(Inst);
               OS << '\n';
             }
           }),
