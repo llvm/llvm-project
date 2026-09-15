@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "unit-map.h"
+#include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/io-error.h"
 #include "flang-rt/runtime/lock.h"
 #include "flang-rt/runtime/tools.h"
@@ -112,9 +113,26 @@ bool ExternalFileUnit::OpenUnit(common::optional<OpenStatus> status,
     common::optional<Action> action, Position position,
     OwningPtr<char> &&newPath, std::size_t newPathLength, Convert convert,
     IoErrorHandler &handler) {
+  Convert explicitRtConvert{Convert::Unknown};
+
+  // Increasing order of conversion specifiers (endianness)
+  // 1. CONVERT=<mode> specifier on OPEN statement.
+  // 2. Environment variable FORT_CONVERT iff CONVERT specifier is not present.
+  // 3. Even if CONVERT specifier is present, check to environment variable
+  //    FORT_CONVERT_UNIT to see if unit number has an explicit setting.
+
   if (convert == Convert::Unknown) {
     convert = executionEnvironment.conversion;
   }
+
+  explicitRtConvert = executionEnvironment.UnitRtConvert(unitNumber());
+  if (Convert::Unknown != explicitRtConvert) {
+    // Runtime has overridden previous defaults using environment variable
+    // FORT_CONVERT_UNIT.
+    convert = explicitRtConvert;
+  }
+
+  executionEnvironment.UnitRtConvert(unitNumber());
   swapEndianness_ = convert == Convert::Swap ||
       (convert == Convert::LittleEndian && !isHostLittleEndian) ||
       (convert == Convert::BigEndian && isHostLittleEndian);

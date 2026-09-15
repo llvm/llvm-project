@@ -1,3 +1,4 @@
+#include <string_view>
 //===-- lib/runtime/environment.cpp -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -6,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang-rt/runtime/environment.h"
 #include "environment-default-list.h"
+#include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/tools.h"
 #include <cstdio>
@@ -97,6 +98,157 @@ common::optional<Convert> GetConvertFromString(const char *x, std::size_t n) {
 }
 RT_OFFLOAD_API_GROUP_END
 
+bool ExecutionEnvironment::ParseFortConvertUnit(const char *cenvStr) {
+  bool success{true};
+  char *envStr{strdup(cenvStr)};
+
+  if (nullptr == envStr) {
+    Terminator{__FILE__, __LINE__}.Crash(
+        "FORT_CONVERT_UNIT: could not allocate memory");
+  }
+
+  char *exceptionSvptr{nullptr};
+  char *exceptionStr;
+  char *unitListStr;
+  bool firstException{true};
+  Convert gblConversion{conversion};
+
+  // Flang's FORT_CONVERT_UNIT syntax follows NVIDIA's FORT_CONVERT_UNIT and
+  // GNU's gfortran GFORTRAN_CONVERT_UNIT.
+  //
+  // FORT_CONVERT_UNIT: mode | mode ';' exception | exception ;
+  // mode: 'native' | 'swap' | 'big_endian' | 'little_endian' ;
+  // exception: mode ':' unit_list | unit_list ;
+  // unit_list: unit_spec | unit_list ',' unit_spec ;
+  // unit_spec: INTEGER | INTEGER '-' INTEGER ;
+
+  while (success) {
+#if _WIN32
+    exceptionStr =
+        strtok_s(exceptionSvptr ? nullptr : envStr, ";", &exceptionSvptr);
+#else
+    exceptionStr =
+        strtok_r(exceptionSvptr ? nullptr : envStr, ";", &exceptionSvptr);
+#endif
+    if (nullptr == exceptionStr) {
+      break;
+    }
+
+    // unitList is not yet correct, might be nullptr or pointing to ':'.
+    unitListStr = strchr(exceptionStr, ':');
+
+    if (firstException && (nullptr == unitListStr) &&
+        !isdigit(exceptionStr[0])) {
+      // if first pass extracting an exception, and exceptionStr does not
+      // contain a ':' this becomes the global setting.
+      // Akin to specifying FORT_CONVERT=<mode>.
+      if (auto convert{
+              GetConvertFromString(exceptionStr, std::strlen(exceptionStr))}) {
+        gblConversion = *convert;
+      } else {
+        success = false;
+        break;
+      }
+      firstException = false;
+      continue;
+    }
+
+    // mode ';' exception | exception
+    char *unitListSvptr{nullptr};
+    // For the case where <mode> is unspecified
+    Convert conversion{Convert::BigEndian};
+
+    // If unitListStr != nullptr extract mode from modeStr[:unitListStr-1].
+    if (nullptr != unitListStr) {
+      *unitListStr++ = '\0'; // Advance unitListStr
+      if (auto convert{
+              GetConvertFromString(exceptionStr, std::strlen(exceptionStr))}) {
+        conversion = *convert;
+      } else {
+        success = false;
+        break;
+      }
+    } else {
+      unitListStr = exceptionStr;
+    }
+
+    unitListSvptr = nullptr;
+
+    // Loop over unit list extracting individual or ranges of units, separated
+    // by commas.
+
+    while (success) {
+      char *units;
+      int lb, ub;
+      char remStr[2];
+      int nread;
+      int nexpected;
+
+      lb = ub = -1;
+#if _WIN32
+      units =
+          strtok_s(unitListSvptr ? nullptr : unitListStr, ";", &unitListSvptr);
+#else
+      units =
+          strtok_r(unitListSvptr ? nullptr : unitListStr, ",", &unitListSvptr);
+#endif
+      if (nullptr == units) {
+        break;
+      }
+
+      // single unit or range of units.
+      // If hyphen is detected in units, assume range
+      if (strchr(units, '-')) {
+        nexpected = 2;
+        nread = sscanf(units, "%u-%u%1s", &lb, &ub, remStr);
+      } else {
+        nexpected = 1;
+        nread = sscanf(units, "%u%1s", &lb, remStr);
+        ub = lb;
+      }
+      if (nread != nexpected || (lb < 0) || (ub < 0) || (lb > ub)) {
+        success = false;
+        break;
+      }
+
+      ConvertUnit cu;
+      cu.conversion = conversion;
+      cu.startUnit = lb;
+      cu.endUnit = ub;
+      convertUnits.emplace_back(std::move(cu));
+    }
+  }
+
+  free(envStr); // from strdup()
+
+  if (success) {
+    conversion = gblConversion;
+  } else {
+    // Failure(s)
+    convertUnits.clear();
+  }
+  return success;
+}
+
+// ExecutionEnvironment::UnitRtConvert
+// Scan linear array ExecutionEnvironment::convertUnits for unitNumber, and if
+// found, return user specified (runtime) I/O conversion for unformatted
+// files.
+
+Convert ExecutionEnvironment::UnitRtConvert(int unitNumber) {
+  Convert convertReturn{Convert::Unknown};
+  // convertUnits is a small array, but still iterate backwards.
+  // rbegin() and rend() are not available.
+  for (auto it = convertUnits.end(); it != convertUnits.begin();) {
+    --it;
+    if (unitNumber >= it->startUnit && unitNumber <= it->endUnit) {
+      convertReturn = it->conversion;
+      break;
+    }
+  }
+  return convertReturn;
+}
+
 void ExecutionEnvironment::Configure(int ac, const char *av[],
     const char *env[], const EnvironmentDefaultList *envDefaults) {
   argc = ac;
@@ -143,6 +295,13 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     } else {
       std::fprintf(
           stderr, "Fortran runtime: FORT_CONVERT=%s is invalid; ignored\n", x);
+    }
+  }
+
+  if (auto *x{std::getenv("FORT_CONVERT_UNIT")}) {
+    if (!ParseFortConvertUnit(x)) {
+      std::fprintf(stderr,
+          "Fortran runtime: FORT_CONVERT_UNIT=%s is invalid; ignored\n", x);
     }
   }
 
