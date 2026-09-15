@@ -1549,12 +1549,11 @@ define i256 @f32_to_u256_sat(float %val) {
 ; CHECK-SD-LABEL: f32_to_u256_sat:
 ; CHECK-SD:       // %bb.0: // %fp-to-i-entry
 ; CHECK-SD-NEXT:    fmov w10, s0
-; CHECK-SD-NEXT:    mov w9, #127 // =0x7f
-; CHECK-SD-NEXT:    cmp w10, #0
 ; CHECK-SD-NEXT:    ubfx w8, w10, #23, #8
-; CHECK-SD-NEXT:    fccmp s0, s0, #1, pl
-; CHECK-SD-NEXT:    ccmp w8, w9, #0, vc
-; CHECK-SD-NEXT:    b.hs .LBB9_2
+; CHECK-SD-NEXT:    cmp w8, #127
+; CHECK-SD-NEXT:    fccmp s0, s0, #1, hs
+; CHECK-SD-NEXT:    ccmp w10, #0, #8, vc
+; CHECK-SD-NEXT:    b.pl .LBB9_2
 ; CHECK-SD-NEXT:  // %bb.1:
 ; CHECK-SD-NEXT:    mov x0, xzr
 ; CHECK-SD-NEXT:    mov x1, xzr
@@ -1976,12 +1975,11 @@ define i256 @f64_to_u256_sat(double %val) {
 ; CHECK-SD-LABEL: f64_to_u256_sat:
 ; CHECK-SD:       // %bb.0: // %fp-to-i-entry
 ; CHECK-SD-NEXT:    fmov x10, d0
-; CHECK-SD-NEXT:    mov w9, #1023 // =0x3ff
-; CHECK-SD-NEXT:    cmp x10, #0
 ; CHECK-SD-NEXT:    ubfx x8, x10, #52, #11
-; CHECK-SD-NEXT:    fccmp d0, d0, #1, pl
-; CHECK-SD-NEXT:    ccmp x8, x9, #0, vc
-; CHECK-SD-NEXT:    b.hs .LBB11_2
+; CHECK-SD-NEXT:    cmp x8, #1023
+; CHECK-SD-NEXT:    fccmp d0, d0, #1, hs
+; CHECK-SD-NEXT:    ccmp x10, #0, #8, vc
+; CHECK-SD-NEXT:    b.pl .LBB11_2
 ; CHECK-SD-NEXT:  // %bb.1:
 ; CHECK-SD-NEXT:    mov x0, xzr
 ; CHECK-SD-NEXT:    mov x1, xzr
