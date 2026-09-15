@@ -12,6 +12,7 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -5824,6 +5825,23 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
 
   if (Value *V = foldShiftIntoShiftInAnotherHandOfAndInICmp(I, SQ, Builder))
     return replaceInstUsesWith(I, V);
+
+  // icmp (zext X), (and (trunc Y), Mask) -> icmp X, trunc Y IFF Mask exactly
+  // covers the bits of X
+  {
+    Value *Y;
+    const APInt *Mask;
+    if (!I.isSigned() && match(I.getOperand(1), m_ZExt(m_Value(X))) &&
+        match(I.getOperand(0),
+              m_OneUse(m_And(m_Trunc(m_Value(Y)), m_APInt(Mask))))) {
+      Type *SmallType = X->getType();
+      unsigned SmallWidth = SmallType->getScalarSizeInBits();
+      if (Mask->isMask(SmallWidth)) {
+        Value *NewTrunc = Builder.CreateTrunc(Y, SmallType);
+        return new ICmpInst(Pred, NewTrunc, X);
+      }
+    }
+  }
 
   return nullptr;
 }
