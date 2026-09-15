@@ -1,6 +1,6 @@
 # RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
 # RUN: llvm-pdbutil dump --symbols %t.pdb | FileCheck --check-prefix=CHECK-YAML2PDB %s
-# RUN: llvm-pdbutil dump --symbols --sym-data %t.pdb | FileCheck --check-prefix=CHECK-YAML2PDB,CHECK-YAML2PDB-SYMDATA %s
+# RUN: llvm-pdbutil dump --symbols --sym-data %t.pdb | FileCheck --check-prefixes=CHECK-YAML2PDB,CHECK-YAML2PDB-SYMDATA %s
 
 # RUN: llvm-pdbutil pdb2yaml --module-syms %t.pdb > %t.yaml
 # RUN: FileCheck --input-file=%t.yaml --check-prefix=CHECK-PDB2YAML %s

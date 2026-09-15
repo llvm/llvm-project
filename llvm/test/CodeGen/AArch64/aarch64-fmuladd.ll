@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=aarch64                      -global-isel=0 %s -o - | FileCheck %s --check-prefix=CHECK,FP
-; RUN: llc -mtriple=aarch64                  -O0 -global-isel=1 %s -o - | FileCheck %s --check-prefix=CHECK,FP
-; RUN: llc -mtriple=aarch64 -mattr=-fp-armv8     -global-isel=0 %s -o - | FileCheck %s --check-prefix=CHECK,NOFP
-; RUN: llc -mtriple=aarch64 -mattr=-fp-armv8 -O0 -global-isel=1 %s -o - | FileCheck %s --check-prefix=CHECK,NOFP
+; RUN: llc -mtriple=aarch64                      -global-isel=0 %s -o - | FileCheck %s --check-prefixes=CHECK,FP
+; RUN: llc -mtriple=aarch64                  -O0 -global-isel=1 %s -o - | FileCheck %s --check-prefixes=CHECK,FP
+; RUN: llc -mtriple=aarch64 -mattr=-fp-armv8     -global-isel=0 %s -o - | FileCheck %s --check-prefixes=CHECK,NOFP
+; RUN: llc -mtriple=aarch64 -mattr=-fp-armv8 -O0 -global-isel=1 %s -o - | FileCheck %s --check-prefixes=CHECK,NOFP
 
 ; Test that @llvm.fmuladd, with the semantics "multiply and add can be
 ; fused or separate at the compiler's option", fuses them in the
