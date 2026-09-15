@@ -606,6 +606,9 @@ private:
 
   DenseMap<int, VGPRSpillToAGPR> VGPRToAGPRSpills;
 
+  // Desired VGPR MSB group per virtual register (see setVGPRMSBAffinity).
+  DenseMap<Register, uint8_t> VGPRMSBAffinity;
+
   // AGPRs used for VGPR spills.
   SmallVector<MCPhysReg, 32> SpillAGPR;
 
@@ -658,6 +661,19 @@ public:
   bool hasMaskForVGPRBlockOps(Register RegisterBlock) const {
     return MaskForVGPRBlockOps.inBounds(RegisterBlock);
   }
+
+  // Sets desired VGPR MSB group (HW index >> 8) for \p Reg.
+  void setVGPRMSBAffinity(Register Reg, unsigned MSB) {
+    VGPRMSBAffinity[Reg] = static_cast<uint8_t>(MSB);
+  }
+
+  // Returns the desired MSB group for \p Reg, or -1 if none was recorded.
+  int getVGPRMSBAffinity(Register Reg) const {
+    auto It = VGPRMSBAffinity.find(Reg);
+    return It == VGPRMSBAffinity.end() ? -1 : It->second;
+  }
+
+  bool hasVGPRMSBAffinities() const { return !VGPRMSBAffinity.empty(); }
 
 public:
   SIMachineFunctionInfo(const SIMachineFunctionInfo &MFI) = default;

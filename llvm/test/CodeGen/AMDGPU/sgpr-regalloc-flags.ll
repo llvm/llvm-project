@@ -59,7 +59,6 @@
 ; BASIC-DEFAULT-NEXT: Live Stack Slot Analysis
 ; BASIC-DEFAULT-NEXT: Machine Cycle Info Analysis
 ; BASIC-DEFAULT-NEXT: Machine Block Frequency Analysis
-; BASIC-DEFAULT-NEXT: Machine Natural Loop Construction
 ; BASIC-DEFAULT-NEXT: Virtual Register Map
 ; BASIC-DEFAULT-NEXT: Live Register Matrix
 ; BASIC-DEFAULT-NEXT: Basic Register Allocator
@@ -118,7 +117,6 @@
 ; BASIC-BASIC-NEXT: Live Stack Slot Analysis
 ; BASIC-BASIC-NEXT: Machine Cycle Info Analysis
 ; BASIC-BASIC-NEXT: Machine Block Frequency Analysis
-; BASIC-BASIC-NEXT: Machine Natural Loop Construction
 ; BASIC-BASIC-NEXT: Virtual Register Map
 ; BASIC-BASIC-NEXT: Live Register Matrix
 ; BASIC-BASIC-NEXT: Basic Register Allocator
