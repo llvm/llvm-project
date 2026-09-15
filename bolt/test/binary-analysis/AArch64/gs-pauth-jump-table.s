@@ -1,31 +1,26 @@
 // -Wl,--no-relax prevents converting ADRP+ADD pairs into NOP+ADR.
-// Without -Wl,--emit-relocs BOLT refuses to create CFG information for the below functions.
+//
+// Note: for simplicity, matching well-known jump table sequences is not
+// supported without relocations (i.e. without passing `-Wl,--emit-relocs`
+// option to clang).
 
 // RUN: %clang %cflags -march=armv8.3-a -Wl,--no-relax -Wl,--emit-relocs %s -o %t.exe
-// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-all                         %t.exe 2>&1 | FileCheck --check-prefixes=CHECK,CFG %s
-// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-all --auth-traps-on-failure %t.exe 2>&1 | FileCheck --check-prefixes=CHECK,CFG %s
-// RUN: %clang %cflags -march=armv8.3-a -Wl,--no-relax %s -o %t.exe
-// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-all                         %t.exe 2>&1 | FileCheck --check-prefixes=CHECK,NOCFG %s
-// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-all --auth-traps-on-failure %t.exe 2>&1 | FileCheck --check-prefixes=CHECK,NOCFG %s
-
-// FIXME: Labels could be further validated. Specifically, it could be checked
-//        that the jump table itself is located in a read-only data section.
+// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-all                         %t.exe 2>&1 | FileCheck --implicit-check-not=GS-PAUTH %s
+// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-all --auth-traps-on-failure %t.exe 2>&1 | FileCheck --implicit-check-not=GS-PAUTH %s
 
 // FIXME: BOLT does not reconstruct CFG correctly for jump tables yet, thus
 //        register state is pessimistically reset to unsafe at the beginning of
-//        each basic block without any predecessors.
+//        each basic block without any predecessors known to BOLT.
 //        Until CFG reconstruction is fixed, add paciasp+autiasp instructions to
-//        silence "non-protected ret" false-positives and explicitly ignore
-//        "Warning: the function has unreachable basic blocks..." lines.
+//        silence "non-protected ret" false-positives and explicitly check that
+//        "imprecise CFG" warning is produced.
 
         .text
         .p2align 2
-        .globl  good_jump_table
-        .type   good_jump_table,@function
-good_jump_table:
-// CHECK-NOT: good_jump_table
-// CFG:       GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function good_jump_table
-// CHECK-NOT: good_jump_table
+        .globl  good_anonymous_jump_table
+        .type   good_anonymous_jump_table,@function
+good_anonymous_jump_table:
+// CHECK:     GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function good_anonymous_jump_table
         paciasp
         cmp     x16, #0x2
         csel    x16, x16, xzr, ls
@@ -42,12 +37,160 @@ good_jump_table:
 3:
         autiasp
         ret
-        .size good_jump_table, .-good_jump_table
+        .size good_anonymous_jump_table, .-good_anonymous_jump_table
         .section .rodata,"a",@progbits
         .p2align 2, 0x0
 4:
         .word   2b-1b
         .word   3b-1b
+
+        .text
+        .p2align 2
+        .globl  good_local_jump_table
+        .type   good_local_jump_table,@function
+good_local_jump_table:
+// CHECK:     GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function good_local_jump_table
+        paciasp
+        cmp     x16, #0x2
+        csel    x16, x16, xzr, ls
+        adrp    x17, .LJTIlocal
+        add     x17, x17, :lo12:.LJTIlocal
+        ldrsw   x16, [x17, x16, lsl #2]
+1:
+        adr     x17, 1b
+        add     x16, x17, x16
+        br      x16
+2:
+        autiasp
+        ret
+3:
+        autiasp
+        ret
+        .size good_local_jump_table, .-good_local_jump_table
+        .section .rodata,"a",@progbits
+        .p2align 2, 0x0
+        .local .LJTIlocal
+        .type  .LJTIlocal,@object
+.LJTIlocal:
+        .word   2b-1b
+        .word   3b-1b
+        .size .LJTIlocal, .-.LJTIlocal
+
+        .text
+        .p2align 2
+        .globl  good_global_jump_table
+        .type   good_global_jump_table,@function
+good_global_jump_table:
+// CHECK:     GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function good_global_jump_table
+        paciasp
+        cmp     x16, #0x2
+        csel    x16, x16, xzr, ls
+        adrp    x17, LJTIglobal
+        add     x17, x17, :lo12:LJTIglobal
+        ldrsw   x16, [x17, x16, lsl #2]
+1:
+        adr     x17, 1b
+        add     x16, x17, x16
+        br      x16
+2:
+        autiasp
+        ret
+3:
+        autiasp
+        ret
+        .size good_global_jump_table, .-good_global_jump_table
+        .section .rodata,"a",@progbits
+        .p2align 2, 0x0
+        .globl LJTIglobal
+        .type  LJTIglobal,@object
+LJTIglobal:
+        .word   2b-1b
+        .word   3b-1b
+        .size LJTIglobal, .-LJTIglobal
+
+        .text
+        .p2align 2
+        .globl  mismatched_adrp_add_syms
+        .type   mismatched_adrp_add_syms,@function
+mismatched_adrp_add_syms:
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function mismatched_adrp_add_syms
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function mismatched_adrp_add_syms, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function mismatched_adrp_add_syms, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x16
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_mismatched_adrp_add_syms@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
+        paciasp
+        cmp     x16, #0x2
+        csel    x16, x16, xzr, ls
+        adrp    x17, 4f
+        add     x17, x17, :lo12:5f
+        ldrsw   x16, [x17, x16, lsl #2]
+1:
+        adr     x17, 1b
+        add     x16, x17, x16
+        br      x16
+2:
+        autiasp
+        ret
+3:
+        autiasp
+        ret
+        .size mismatched_adrp_add_syms, .-mismatched_adrp_add_syms
+        .section .rodata,"a",@progbits
+        .p2align 2, 0x0
+4:
+        .word   2b-1b
+5:
+        .word   3b-1b
+
+        .text
+        .p2align 2
+        .globl  writable_jump_table
+        .type   writable_jump_table,@function
+writable_jump_table:
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function writable_jump_table
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function writable_jump_table, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function writable_jump_table, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x16
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_writable_jump_table@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
+        paciasp
+        cmp     x16, #0x2
+        csel    x16, x16, xzr, ls
+        adrp    x17, 4f
+        add     x17, x17, :lo12:4f
+        ldrsw   x16, [x17, x16, lsl #2]
+1:
+        adr     x17, 1b
+        add     x16, x17, x16
+        br      x16
+2:
+        autiasp
+        ret
+3:
+        autiasp
+        ret
+        .size writable_jump_table, .-writable_jump_table
+        .section .data,"a",@progbits
+        .p2align 2, 0x0
+4:
+        .word   2b-1b
+        .word   3b-1b
+
 
 // NOP (HINT #0) before ADR is correct (it can be produced by linker due to
 // relaxing ADRP+ADD sequence), but other HINT instructions are not.
@@ -57,9 +200,7 @@ good_jump_table:
         .globl  jump_table_relaxed_adrp_add
         .type   jump_table_relaxed_adrp_add,@function
 jump_table_relaxed_adrp_add:
-// CHECK-NOT: jump_table_relaxed_adrp_add
-// CFG:       GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_relaxed_adrp_add
-// CHECK-NOT: jump_table_relaxed_adrp_add
+// CHECK:     GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_relaxed_adrp_add
         paciasp
         cmp     x16, #0x2
         csel    x16, x16, xzr, ls
@@ -88,15 +229,19 @@ jump_table_relaxed_adrp_add:
         .globl  jump_table_wrong_hint
         .type   jump_table_wrong_hint,@function
 jump_table_wrong_hint:
-// CFG-LABEL:   GS-PAUTH: non-protected call found in function jump_table_wrong_hint, basic block {{[^,]+}}, at address
-// NOCFG-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_hint, at address
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_wrong_hint
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function jump_table_wrong_hint, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_hint, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x16
-// CFG-NEXT:    This happens in the following basic block:
-// CFG-NEXT:    {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_wrong_hint@0x{{[0-9a-f]+}}
-// CFG-NEXT:    {{[0-9a-f]+}}:   add     x16, x17, x16
-// CFG-NEXT:    {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_wrong_hint@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
         paciasp
         cmp     x16, #0x2
         csel    x16, x16, xzr, ls
@@ -127,9 +272,7 @@ jump_table_wrong_hint:
         .globl  jump_table_unsafe_reg_1
         .type   jump_table_unsafe_reg_1,@function
 jump_table_unsafe_reg_1:
-// CHECK-NOT: jump_table_unsafe_reg_1
-// CFG:       GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_unsafe_reg_1
-// CHECK-NOT: jump_table_unsafe_reg_1
+// CHECK:     GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_unsafe_reg_1
         paciasp
         cmp     x1, #0x2
         csel    x1, x1, xzr, ls
@@ -158,9 +301,7 @@ jump_table_unsafe_reg_1:
         .globl  jump_table_unsafe_reg_2
         .type   jump_table_unsafe_reg_2,@function
 jump_table_unsafe_reg_2:
-// CHECK-NOT: jump_table_unsafe_reg_2
-// CFG:       GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_unsafe_reg_2
-// CHECK-NOT: jump_table_unsafe_reg_2
+// CHECK:     GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_unsafe_reg_2
         paciasp
         cmp     x16, #0x2
         csel    x16, x16, xzr, ls
@@ -184,15 +325,69 @@ jump_table_unsafe_reg_2:
         .word   2b-1b
         .word   3b-1b
 
-// FIXME: Detect possibility of jump table overflow.
+// Basic checks are performed by gadget scanner to make sure the entire jump table
+// fits in a read-only section. As the limit is technically specified via two
+// immediate operands of CMP instruction (aliased to SUBS), test both.
+
         .text
         .p2align 2
-        .globl  jump_table_wrong_limit
-        .type   jump_table_wrong_limit,@function
-jump_table_wrong_limit:
-// CHECK-NOT: jump_table_wrong_limit
-// CFG:       GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_wrong_limit
-// CHECK-NOT: jump_table_wrong_limit
+        .globl  jump_table_overflow_unscaled
+        .type   jump_table_overflow_unscaled,@function
+jump_table_overflow_unscaled:
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_overflow_unscaled
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function jump_table_overflow_unscaled, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function jump_table_overflow_unscaled, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x16
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_overflow_unscaled@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
+        paciasp
+        cmp     x16, #0x100
+        csel    x16, x16, xzr, ls
+        adrp    x17, 4f
+        add     x17, x17, :lo12:4f
+        ldrsw   x16, [x17, x16, lsl #2]
+1:
+        adr     x17, 1b
+        add     x16, x17, x16
+        br      x16
+2:
+        autiasp
+        ret
+3:
+        autiasp
+        ret
+        .size jump_table_overflow_unscaled, .-jump_table_overflow_unscaled
+        .section .rodata,"a",@progbits
+        .p2align 2, 0x0
+4:
+        .word   2b-1b
+        .word   3b-1b
+
+        .text
+        .p2align 2
+        .globl  jump_table_overflow_scaled
+        .type   jump_table_overflow_scaled,@function
+jump_table_overflow_scaled:
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_overflow_scaled
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function jump_table_overflow_scaled, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function jump_table_overflow_scaled, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x16
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_overflow_scaled@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
         paciasp
         cmp     x16, #0x1000
         csel    x16, x16, xzr, ls
@@ -209,7 +404,7 @@ jump_table_wrong_limit:
 3:
         autiasp
         ret
-        .size jump_table_wrong_limit, .-jump_table_wrong_limit
+        .size jump_table_overflow_scaled, .-jump_table_overflow_scaled
         .section .rodata,"a",@progbits
         .p2align 2, 0x0
 4:
@@ -221,16 +416,20 @@ jump_table_wrong_limit:
         .globl  jump_table_unrelated_inst_1
         .type   jump_table_unrelated_inst_1,@function
 jump_table_unrelated_inst_1:
-// CFG-LABEL:   GS-PAUTH: non-protected call found in function jump_table_unrelated_inst_1, basic block {{[^,]+}}, at address
-// NOCFG-LABEL: GS-PAUTH: non-protected call found in function jump_table_unrelated_inst_1, at address
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_unrelated_inst_1
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function jump_table_unrelated_inst_1, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function jump_table_unrelated_inst_1, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x16
-// CFG-NEXT:    This happens in the following basic block:
-// CFG-NEXT:    {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_unrelated_inst_1@0x{{[0-9a-f]+}}
-// CFG-NEXT:    {{[0-9a-f]+}}:   nop
-// CFG-NEXT:    {{[0-9a-f]+}}:   add     x16, x17, x16
-// CFG-NEXT:    {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_unrelated_inst_1@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   nop
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
         paciasp
         cmp     x16, #0x2
         csel    x16, x16, xzr, ls
@@ -260,15 +459,19 @@ jump_table_unrelated_inst_1:
         .globl  jump_table_unrelated_inst_2
         .type   jump_table_unrelated_inst_2,@function
 jump_table_unrelated_inst_2:
-// CFG-LABEL:   GS-PAUTH: non-protected call found in function jump_table_unrelated_inst_2, basic block {{[^,]+}}, at address
-// NOCFG-LABEL: GS-PAUTH: non-protected call found in function jump_table_unrelated_inst_2, at address
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_unrelated_inst_2
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function jump_table_unrelated_inst_2, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function jump_table_unrelated_inst_2, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x16
-// CFG-NEXT:    This happens in the following basic block:
-// CFG-NEXT:    {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_unrelated_inst_2@0x{{[0-9a-f]+}}
-// CFG-NEXT:    {{[0-9a-f]+}}:   add     x16, x17, x16
-// CFG-NEXT:    {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_unrelated_inst_2@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
         paciasp
         cmp     x16, #0x2
         csel    x16, x16, xzr, ls
@@ -298,15 +501,19 @@ jump_table_unrelated_inst_2:
         .globl  jump_table_multiple_predecessors_1
         .type   jump_table_multiple_predecessors_1,@function
 jump_table_multiple_predecessors_1:
-// NOCFG-NOT:   jump_table_multiple_predecessors_1
-// CFG-LABEL:   GS-PAUTH: non-protected call found in function jump_table_multiple_predecessors_1, basic block {{[^,]+}}, at address
-// CFG-NEXT:    The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
-// CFG-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
-// CFG-NEXT:    1.     {{[0-9a-f]+}}:      add     x16, x17, x16
-// CFG-NEXT:    This happens in the following basic block:
-// CFG-NEXT:    {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_multiple_predecessors_1@0x{{[0-9a-f]+}}
-// CFG-NEXT:    {{[0-9a-f]+}}:   add     x16, x17, x16
-// CFG-NEXT:    {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_multiple_predecessors_1
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function jump_table_multiple_predecessors_1, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function jump_table_multiple_predecessors_1, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x16
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_multiple_predecessors_1@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
         paciasp
         cbz     x1, 1f          // this instruction can jump to the middle of the sequence
         cmp     x16, #0x2
@@ -336,15 +543,19 @@ jump_table_multiple_predecessors_1:
         .globl  jump_table_multiple_predecessors_2
         .type   jump_table_multiple_predecessors_2,@function
 jump_table_multiple_predecessors_2:
-// NOCFG-NOT:   jump_table_multiple_predecessors_2
-// CFG-LABEL:   GS-PAUTH: non-protected call found in function jump_table_multiple_predecessors_2, basic block {{[^,]+}}, at address
-// CFG-NEXT:    The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
-// CFG-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
-// CFG-NEXT:    1.     {{[0-9a-f]+}}:      add     x16, x17, x16
-// CFG-NEXT:    This happens in the following basic block:
-// CFG-NEXT:    {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_multiple_predecessors_2@0x{{[0-9a-f]+}}
-// CFG-NEXT:    {{[0-9a-f]+}}:   add     x16, x17, x16
-// CFG-NEXT:    {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_multiple_predecessors_2
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function jump_table_multiple_predecessors_2, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function jump_table_multiple_predecessors_2, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x16
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_multiple_predecessors_2@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
         paciasp
         cbz     x1, 5f              // this instruction can jump to the middle of the sequence
         cmp     x16, #0x2
@@ -377,8 +588,12 @@ jump_table_multiple_predecessors_2:
         .globl  jump_table_wrong_reg_1
         .type   jump_table_wrong_reg_1,@function
 jump_table_wrong_reg_1:
-// CFG-LABEL:   GS-PAUTH: non-protected call found in function jump_table_wrong_reg_1, basic block {{[^,]+}}, at address
-// NOCFG-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_reg_1, at address
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_wrong_reg_1
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function jump_table_wrong_reg_1, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x1 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_reg_1, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x1 # UNKNOWN CONTROL FLOW
 // CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
         paciasp
@@ -409,15 +624,19 @@ jump_table_wrong_reg_1:
         .globl  jump_table_wrong_reg_2
         .type   jump_table_wrong_reg_2,@function
 jump_table_wrong_reg_2:
-// CFG-LABEL:   GS-PAUTH: non-protected call found in function jump_table_wrong_reg_2, basic block {{[^,]+}}, at address
-// NOCFG-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_reg_2, at address
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_wrong_reg_2
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function jump_table_wrong_reg_2, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_reg_2, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x1
-// CFG-NEXT:    This happens in the following basic block:
-// CFG-NEXT:    {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_wrong_reg_2@0x{{[0-9a-f]+}}
-// CFG-NEXT:    {{[0-9a-f]+}}:   add     x16, x17, x1
-// CFG-NEXT:    {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_wrong_reg_2@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x1
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
         paciasp
         cmp     x16, #0x2
         csel    x16, x16, xzr, ls
@@ -446,15 +665,19 @@ jump_table_wrong_reg_2:
         .globl  jump_table_wrong_reg_3
         .type   jump_table_wrong_reg_3,@function
 jump_table_wrong_reg_3:
-// CFG-LABEL:   GS-PAUTH: non-protected call found in function jump_table_wrong_reg_3, basic block {{[^,]+}}, at address
-// NOCFG-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_reg_3, at address
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_wrong_reg_3
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function jump_table_wrong_reg_3, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_reg_3, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x16
-// CFG-NEXT:    This happens in the following basic block:
-// CFG-NEXT:    {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_wrong_reg_3@0x{{[0-9a-f]+}}
-// CFG-NEXT:    {{[0-9a-f]+}}:   add     x16, x17, x16
-// CFG-NEXT:    {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_wrong_reg_3@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
         paciasp
         cmp     x16, #0x2
         csel    x16, x16, xzr, ls
@@ -483,15 +706,19 @@ jump_table_wrong_reg_3:
         .globl  jump_table_wrong_reg_4
         .type   jump_table_wrong_reg_4,@function
 jump_table_wrong_reg_4:
-// CFG-LABEL:   GS-PAUTH: non-protected call found in function jump_table_wrong_reg_4, basic block {{[^,]+}}, at address
-// NOCFG-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_reg_4, at address
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_wrong_reg_4
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function jump_table_wrong_reg_4, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_reg_4, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x16
-// CFG-NEXT:    This happens in the following basic block:
-// CFG-NEXT:    {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_wrong_reg_4@0x{{[0-9a-f]+}}
-// CFG-NEXT:    {{[0-9a-f]+}}:   add     x16, x17, x16
-// CFG-NEXT:    {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_wrong_reg_4@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
         paciasp
         cmp     x16, #0x2
         csel    x16, x16, x1, ls  // wrong reg
@@ -520,15 +747,19 @@ jump_table_wrong_reg_4:
         .globl  jump_table_wrong_imm_1
         .type   jump_table_wrong_imm_1,@function
 jump_table_wrong_imm_1:
-// CFG-LABEL:   GS-PAUTH: non-protected call found in function jump_table_wrong_imm_1, basic block {{[^,]+}}, at address
-// NOCFG-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_imm_1, at address
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_wrong_imm_1
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function jump_table_wrong_imm_1, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_imm_1, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x16
-// CFG-NEXT:    This happens in the following basic block:
-// CFG-NEXT:    {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_wrong_imm_1@0x{{[0-9a-f]+}}
-// CFG-NEXT:    {{[0-9a-f]+}}:   add     x16, x17, x16
-// CFG-NEXT:    {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_wrong_imm_1@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
         paciasp
         cmp     x16, #0x2
         csel    x16, x16, xzr, ls
@@ -557,21 +788,25 @@ jump_table_wrong_imm_1:
         .globl  jump_table_wrong_imm_2
         .type   jump_table_wrong_imm_2,@function
 jump_table_wrong_imm_2:
-// CFG-LABEL:   GS-PAUTH: non-protected call found in function jump_table_wrong_imm_2, basic block {{[^,]+}}, at address
-// NOCFG-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_imm_2, at address
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_wrong_imm_2
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function jump_table_wrong_imm_2, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_imm_2, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x16
-// CFG-NEXT:    This happens in the following basic block:
-// CFG-NEXT:    {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_wrong_imm_2@0x{{[0-9a-f]+}}
-// CFG-NEXT:    {{[0-9a-f]+}}:   add     x16, x17, x16
-// CFG-NEXT:    {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_wrong_imm_2@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
         paciasp
         cmp     x16, #0x2
-        csel    x16, x16, xzr, lt  // wrong: lt instead of ls
+        csel    x16, x16, xzr, ls
         adrp    x17, 4f
         add     x17, x17, :lo12:4f
-        ldrsw   x16, [x17, x16, lsl #2]
+        ldrsw   x16, [x17, x16, lsl #0]  // wrong shift amount
 1:
         adr     x17, 1b
         add     x16, x17, x16
@@ -594,15 +829,60 @@ jump_table_wrong_imm_2:
         .globl  jump_table_wrong_imm_3
         .type   jump_table_wrong_imm_3,@function
 jump_table_wrong_imm_3:
-// CFG-LABEL:   GS-PAUTH: non-protected call found in function jump_table_wrong_imm_3, basic block {{[^,]+}}, at address
-// NOCFG-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_imm_3, at address
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_wrong_imm_3
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function jump_table_wrong_imm_3, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_imm_3, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x16
-// CFG-NEXT:    This happens in the following basic block:
-// CFG-NEXT:    {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_wrong_imm_3@0x{{[0-9a-f]+}}
-// CFG-NEXT:    {{[0-9a-f]+}}:   add     x16, x17, x16
-// CFG-NEXT:    {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_wrong_imm_3@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
+        paciasp
+        cmp     x16, #0x2
+        csel    x16, x16, xzr, lt  // wrong: lt instead of ls
+        adrp    x17, 4f
+        add     x17, x17, :lo12:4f
+        ldrsw   x16, [x17, x16, lsl #2]
+1:
+        adr     x17, 1b
+        add     x16, x17, x16
+        br      x16
+2:
+        autiasp
+        ret
+3:
+        autiasp
+        ret
+        .size jump_table_wrong_imm_3, .-jump_table_wrong_imm_3
+        .section .rodata,"a",@progbits
+        .p2align 2, 0x0
+4:
+        .word   2b-1b
+        .word   3b-1b
+
+        .text
+        .p2align 2
+        .globl  jump_table_wrong_imm_4
+        .type   jump_table_wrong_imm_4,@function
+jump_table_wrong_imm_4:
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function jump_table_wrong_imm_4
+// CHECK-LABEL: GS-PAUTH: untrusted link register found before tail call in function jump_table_wrong_imm_4, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      paciasp
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function jump_table_wrong_imm_4, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x16
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_jump_table_wrong_imm_4@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
         paciasp
         cmp     x16, #0x2
         csel    x16, x16, xzr, ls
@@ -619,7 +899,7 @@ jump_table_wrong_imm_3:
 3:
         autiasp
         ret
-        .size jump_table_wrong_imm_3, .-jump_table_wrong_imm_3
+        .size jump_table_wrong_imm_4, .-jump_table_wrong_imm_4
         .section .rodata,"a",@progbits
         .p2align 2, 0x0
 4:
@@ -635,9 +915,7 @@ jump_table_wrong_imm_3:
         .type   skip_cfi_instructions,@function
 skip_cfi_instructions:
         .cfi_startproc
-// CHECK-NOT: skip_cfi_instructions
-// CFG:       GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function skip_cfi_instructions
-// CHECK-NOT: skip_cfi_instructions
+// CHECK:     GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function skip_cfi_instructions
         paciasp
         cmp     x16, #0x2
         csel    x16, x16, xzr, ls
@@ -668,15 +946,15 @@ skip_cfi_instructions:
         .globl  incomplete_jump_table
         .type   incomplete_jump_table,@function
 incomplete_jump_table:
-// CFG-LABEL:   GS-PAUTH: non-protected call found in function incomplete_jump_table, basic block {{[^,]+}}, at address
-// NOCFG-LABEL: GS-PAUTH: non-protected call found in function incomplete_jump_table, at address
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function incomplete_jump_table
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function incomplete_jump_table, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      br      x16 # UNKNOWN CONTROL FLOW
 // CHECK-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      add     x16, x17, x16
-// CFG-NEXT:    This happens in the following basic block:
-// CFG-NEXT:    {{[0-9a-f]+}}:   adr     x17, __ENTRY_incomplete_jump_table@0x{{[0-9a-f]+}}
-// CFG-NEXT:    {{[0-9a-f]+}}:   add     x16, x17, x16
-// CFG-NEXT:    {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
+// CHECK-NEXT:  This happens in the following basic block:
+// CHECK-NEXT:  {{[0-9a-f]+}}:   adr     x17, __ENTRY_incomplete_jump_table@0x{{[0-9a-f]+}}
+// CHECK-NEXT:  {{[0-9a-f]+}}:   add     x16, x17, x16
+// CHECK-NEXT:  {{[0-9a-f]+}}:   br      x16 # UNKNOWN CONTROL FLOW
         // Do not try to step past the start of the function.
         ldrsw   x16, [x17, x16, lsl #2]
 1:
