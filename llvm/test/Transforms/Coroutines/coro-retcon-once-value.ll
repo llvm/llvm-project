@@ -93,6 +93,14 @@ entry:
 ;   Unfortunately, we don't seem to fully optimize this right now due
 ;   to some sort of phase-ordering thing.
 
+define ptr @nosuspend(ptr %buffer) {
+entry:
+  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
+  ret ptr %hdl
+}
+
 declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
@@ -220,4 +228,9 @@ declare void @print(i32)
 ; CHECK-NEXT:    [[VALUE2:%.*]] = extractvalue { ptr, i32, ptr } [[NORMAL_RESULT]], 1
 ; CHECK-NEXT:    call void @print(i32 [[VALUE2]])
 ; CHECK-NEXT:    ret void
+;
+;
+; CHECK-LABEL: @nosuspend(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret ptr null
 ;
