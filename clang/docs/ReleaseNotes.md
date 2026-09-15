@@ -554,6 +554,8 @@ features cannot lower the translation-unit ABI level;
 
 #### Bug Fixes to C++ Support
 
+- Fixed a bug where constant evaluation lost track of most-derived array information
+  when reconstructing an lvalue referring to a base subobject of an array element. (#GH223064)
 - Fixed false-positive module ODR diagnostics when a type is found through a
   using-declaration in one definition and directly in another. ODR hashing also
   now distinguishes differently qualified uses of types found through

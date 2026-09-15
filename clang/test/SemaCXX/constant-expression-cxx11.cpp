@@ -2747,3 +2747,25 @@ namespace GH154567 {
   constexpr S s{};
   static_assert(s.val.i == 0, "");
 }
+
+namespace GH223064 {
+  struct A { int n; };
+  struct B : A {} b[2];
+
+  constexpr int *f() {
+    A *p = b;
+    return &static_cast<B*>(p)[1].n;
+  }
+  static_assert(f() == &b[1].n, "");
+
+  struct Base1 { int x; };
+  struct Base2 : Base1 { int y; };
+  struct Derived : Base2 { int z; } arr[3];
+
+  constexpr int *g() {
+    Base1 *p = arr;
+    return &static_cast<Derived*>(p)[2].z;
+  }
+  static_assert(g() == &arr[2].z, "");
+}
+
