@@ -28,13 +28,6 @@
 #include "src/__support/macros/config.h"
 #include <linux/limits.h>
 
-// In overlay mode, system headers (like glibc's <bits/local_lim.h>) may
-// explicitly undefine ARG_MAX to indicate it is dynamic. We define a fallback
-// here using the standard Linux kernel minimum floor of 128KB.
-#ifndef ARG_MAX
-#define ARG_MAX 131072
-#endif
-
 namespace LIBC_NAMESPACE_DECL {
 
 namespace { // Anonymous namespace for internal helpers
@@ -45,17 +38,9 @@ namespace { // Anonymous namespace for internal helpers
 constexpr long DEFAULT_STACK_LIMIT = 8 * 1024 * 1024;          // 8MB
 constexpr long ARG_MAX_FALLBACK = DEFAULT_STACK_LIMIT / 4 * 3; // 6MB
 
-// We define a local structure for prlimit64 to avoid type mismatches
-// and stack corruption on 32-bit systems when in overlay mode.
-struct rlimit64 {
-  uint64_t rlim_cur;
-  uint64_t rlim_max;
-};
-
 long get_arg_max() {
-  struct rlimit64 limits;
-  ErrorOr<int> ret = linux_syscalls::prlimit(
-      0, RLIMIT_STACK, nullptr, reinterpret_cast<struct rlimit *>(&limits));
+  struct rlimit limits;
+  ErrorOr<int> ret = linux_syscalls::prlimit(0, RLIMIT_STACK, nullptr, &limits);
   if (!ret) {
     libc_errno = -ret.error();
     return -1;
@@ -68,9 +53,9 @@ long get_arg_max() {
 }
 
 long get_open_max() {
-  struct rlimit64 limits;
-  ErrorOr<int> ret = linux_syscalls::prlimit(
-      0, RLIMIT_NOFILE, nullptr, reinterpret_cast<struct rlimit *>(&limits));
+  struct rlimit limits;
+  ErrorOr<int> ret =
+      linux_syscalls::prlimit(0, RLIMIT_NOFILE, nullptr, &limits);
   if (!ret) {
     libc_errno = -ret.error();
     return -1;
@@ -127,6 +112,11 @@ LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
   switch (name) {
   case _SC_ARG_MAX:
     return get_arg_max();
+  case _SC_CLK_TCK:
+    // On Linux, this is a counterpart of kernel constant USER_HZ, which is
+    // set to 100 on most platforms for user-space compatibility:
+    // https://github.com/torvalds/linux/blob/master/include/uapi/asm-generic/param.h#L6
+    return 100;
   case _SC_PAGESIZE:
     return get_page_size();
   case _SC_NPROCESSORS_CONF:
@@ -135,6 +125,14 @@ LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
     return get_nprocessors_onln();
   case _SC_THREADS:
     return _POSIX_THREADS;
+  case _SC_GETGR_R_SIZE_MAX:
+    // No recommended buffer size for getgrgid_r/getgrnam_r, as they work
+    // with any user-supplied buffer.
+    return -1;
+  case _SC_GETPW_R_SIZE_MAX:
+    // No recommended buffer size for getpwuid_r/getpwnam_r, as they work
+    // with any user-supplied buffer.
+    return -1;
   case _SC_OPEN_MAX:
     return get_open_max();
   case _SC_PHYS_PAGES:

@@ -151,7 +151,7 @@ def err_fe_invalid_multiple_actions : Error<
 def err_fe_invalid_alignment : Error<
     "invalid value '%1' in '%0'; alignment must be a power of 2">;
 def err_fe_invalid_exception_model
-   : Error<"invalid exception model '%select{none|sjlj|seh|dwarf|wasm}0' for target '%1'">;
+   : Error<"invalid exception model '%select{default|none|sjlj|seh|dwarf|wasm|emscripten}0' for target '%1'">;
 def err_fe_invalid_source_date_epoch : Error<
     "environment variable 'SOURCE_DATE_EPOCH' ('%0') must be a non-negative decimal integer <= %1">;
 
@@ -446,7 +446,8 @@ def warn_ssaf_source_transformation_unknown_name :
 def warn_ssaf_source_transformation_requires :
   Warning<"option '--ssaf-source-transformation=' requires "
           "'%select{--ssaf-global-scope-analysis-result=|--ssaf-src-edit-file=|"
-          "--ssaf-transformation-report-file=|--ssaf-compilation-unit-id=}0' "
+          "--ssaf-transformation-report-file=|--ssaf-compilation-unit-id=|"
+          "--ssaf-link-unit-id=}0' "
           "to be set">,
   InGroup<ScalableStaticAnalysis>, DefaultError;
 

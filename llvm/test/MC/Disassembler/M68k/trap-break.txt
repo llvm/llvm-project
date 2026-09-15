@@ -1,6 +1,6 @@
 # RUN: llvm-mc -disassemble -triple m68k %s | FileCheck %s
 
-; CHECK: trap #13
+# CHECK: trap #13
 0x4e 0x4d
 # CHECK: bkpt #7
 0x48 0x4f

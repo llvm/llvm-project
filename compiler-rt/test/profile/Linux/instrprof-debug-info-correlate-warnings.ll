@@ -1,5 +1,7 @@
+; REQUIRES: x86-64-registered-target
+
 ; RUN: split-file %s %t
-; RUN: %clang %t/a.ll -o %t/a.out
+; RUN: %clang --target=x86_64-unknown-linux-gnu%t/a.ll -o %t/a.out
 ; RUN: llvm-profdata merge --debug-info=%t/a.out %t/a.proftext --max-debug-info-correlation-warnings=2 -o %t/a.profdata 2>&1 | FileCheck %s --implicit-check-not=warning --check-prefixes=CHECK,LIMIT
 ; RUN: llvm-profdata merge --debug-info=%t/a.out %t/a.proftext --max-debug-info-correlation-warnings=0 -o %t/a.profdata 2>&1 | FileCheck %s --implicit-check-not=warning --check-prefixes=CHECK,NOLIMIT
 

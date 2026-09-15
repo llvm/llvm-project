@@ -90,7 +90,7 @@ define i1 @cmpxchg_i8_monotonic_monotonic(i8 %cmp, i8 %new, ptr %mem) nounwind {
 ; NO-ATOMIC-NEXT:    move.l (32,%sp), %d0
 ; NO-ATOMIC-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-NEXT:    jsr __sync_val_compare_and_swap_1
-; NO-ATOMIC-NEXT:    sub.b %d2, %d0
+; NO-ATOMIC-NEXT:    cmp.b %d2, %d0
 ; NO-ATOMIC-NEXT:    seq %d0
 ; NO-ATOMIC-NEXT:    movem.l (16,%sp), %d2 ; 8-byte Folded Reload
 ; NO-ATOMIC-NEXT:    adda.l #20, %sp
@@ -110,7 +110,7 @@ define i1 @cmpxchg_i8_monotonic_monotonic(i8 %cmp, i8 %new, ptr %mem) nounwind {
 ; NO-ATOMIC-PIC-NEXT:    move.l (32,%sp), %d0
 ; NO-ATOMIC-PIC-NEXT:    move.l %d0, (%sp)
 ; NO-ATOMIC-PIC-NEXT:    jsr (__sync_val_compare_and_swap_1@PLT,%pc)
-; NO-ATOMIC-PIC-NEXT:    sub.b %d2, %d0
+; NO-ATOMIC-PIC-NEXT:    cmp.b %d2, %d0
 ; NO-ATOMIC-PIC-NEXT:    seq %d0
 ; NO-ATOMIC-PIC-NEXT:    movem.l (16,%sp), %d2 ; 8-byte Folded Reload
 ; NO-ATOMIC-PIC-NEXT:    adda.l #20, %sp
@@ -125,7 +125,7 @@ define i1 @cmpxchg_i8_monotonic_monotonic(i8 %cmp, i8 %new, ptr %mem) nounwind {
 ; ATOMIC-NEXT:    move.b (11,%sp), %d1
 ; ATOMIC-NEXT:    move.b %d1, %d2
 ; ATOMIC-NEXT:    cas.b %d2, %d0, (%a0)
-; ATOMIC-NEXT:    sub.b %d1, %d2
+; ATOMIC-NEXT:    cmp.b %d1, %d2
 ; ATOMIC-NEXT:    seq %d0
 ; ATOMIC-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
 ; ATOMIC-NEXT:    adda.l #4, %sp
@@ -140,7 +140,7 @@ define i1 @cmpxchg_i8_monotonic_monotonic(i8 %cmp, i8 %new, ptr %mem) nounwind {
 ; ATOMIC-PIC-NEXT:    move.b (11,%sp), %d1
 ; ATOMIC-PIC-NEXT:    move.b %d1, %d2
 ; ATOMIC-PIC-NEXT:    cas.b %d2, %d0, (%a0)
-; ATOMIC-PIC-NEXT:    sub.b %d1, %d2
+; ATOMIC-PIC-NEXT:    cmp.b %d1, %d2
 ; ATOMIC-PIC-NEXT:    seq %d0
 ; ATOMIC-PIC-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
 ; ATOMIC-PIC-NEXT:    adda.l #4, %sp

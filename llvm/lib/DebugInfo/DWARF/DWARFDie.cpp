@@ -23,12 +23,10 @@
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cinttypes>
 #include <cstdint>
 #include <string>
 
@@ -250,6 +248,11 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
     if (const char *Name =
             Die.getAttributeValueAsReferencedDie(FormValue).getName(
                 DINameKind::LinkageName))
+      OS << Space << "\"" << Name << '\"';
+  } else if (Attr == DW_AT_property_forward) {
+    if (const char *Name =
+            Die.getAttributeValueAsReferencedDie(FormValue).getName(
+                DINameKind::ShortName))
       OS << Space << "\"" << Name << '\"';
   } else if (Attr == DW_AT_APPLE_property) {
     auto PropDIE = Die.getAttributeValueAsReferencedDie(FormValue);

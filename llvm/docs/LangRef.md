@@ -2273,6 +2273,15 @@ define void @f() "no-sse" { ... }
     around the cases where the training input does not have good coverage
     on all the hot functions.
 
+`hybrid_patchable`
+:   This attribute applies to code compiled for ARM64EC (target triple
+    'arm64ec-*') targets and indicates that the function may be patched at
+    runtime. In addition to the function's actual implementation, an x86-64
+    function thunk is generated. Code referencing the function will use this
+    thunk as its address, and calls to the function perform an additional
+    runtime check to execute the call through the emulator if the thunk has
+    been patched.
+
 `inlinehint`
 :   This attribute indicates that the source code contained a hint that
     inlining this function is desirable (such as the "inline" keyword in
@@ -7287,6 +7296,19 @@ be used for the structure type.
                      getter: "getFoo", attributes: 7, type: !2)
 ```
 
+##### DIProperty
+
+`DIProperty` nodes represent an entity that is syntactically accessed like a
+data member but whose access is implemented by an accessor. The node models
+the property's backing variable (for example, an Objective-C `@property`'s
+backing ivar).
+
+```text
+!3 = !DIDerivedType(tag: DW_TAG_member, name: "_x", scope: !1, file: !2,
+                    line: 8, baseType: !4, size: 32)
+!5 = !DIProperty(name: "x", file: !2, line: 8, type: !4, backing_storage: !3)
+```
+
 ##### DIImportedEntity
 
 `DIImportedEntity` nodes represent entities (such as modules) imported into a
@@ -8609,6 +8631,21 @@ via a volatile memory access, I/O, or other synchronization. If such a loop is
 not found to interact with the environment in an observable way, the loop may
 be removed. This corresponds to the `mustprogress` function attribute.
 
+#### '`llvm.loop.align`' Metadata
+
+This metadata suggests an alignment (in bytes) for the loop to the backend. The
+first operand is the string `llvm.loop.align` and the second operand is a
+positive power-of-two integer constant of type `i32` specifying the alignment.
+For example:
+
+```llvm
+!0 = !{!"llvm.loop.align", i32 64}
+```
+
+The backend aligns the loop to the maximum of this value and the target's
+preferred loop alignment. This corresponds to the Clang `[[clang::code_align(N)]]`
+statement attribute.
+
 #### '`irr_loop`' Metadata
 
 `irr_loop` metadata may be attached to the terminator instruction of a basic
@@ -9467,6 +9504,35 @@ conflicting floating-point ABIs is rejected. For example:
 !0 = !{i32 1, !"float-abi", !"hard"}
 ```
 
+### Thread Model Module Flags Metadata
+
+This module flag describes the threading model that the module was
+compiled for, which may influence how atomic operations are
+lowered. The value is a string and must be one of:
+
+```{list-table}
+:header-rows: 1
+:widths: 30 70
+* - Value
+  - Meaning
+
+* - `"posix"`
+  - The POSIX threading model: the module may run in a multi-threaded
+    environment.
+
+* - `"single"`
+  - The single-threaded model: the module runs in a known single-threaded
+    environment, so atomic operations may be lowered to their non-atomic
+    equivalents.
+```
+
+When the flag is absent, the target's default thread model is used. The flag
+must use the `error` merge behavior. For example:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"thread-model", !"single"}
+```
+
 ### Target ABI Module Flags Metadata
 
 This module flag names the target ABI that the module was compiled
@@ -9483,6 +9549,50 @@ while ARM uses names such as `"aapcs"` and `"apcs-gnu"`:
 ```
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"target-abi", !"aapcs"}
+...
+
+### Exception Model Module Flags Metadata
+
+This module flag describes the exception-handling model that the module was
+compiled for. The value is an `MDString` and must be one of:
+
+```{list-table}
+:header-rows: 1
+:widths: 30 70
+* - Value
+  - Meaning
+
+* - `"none"`
+  - Exceptions are explicitly disabled.
+
+* - `"dwarf"`
+  - DWARF-like table-based (CFI) exception handling.
+
+* - `"sjlj"`
+  - setjmp/longjmp based exception handling.
+
+* - `"arm"`
+  - ARM EHABI exception handling.
+
+* - `"wineh"`
+  - Windows exception handling.
+
+* - `"wasm"`
+  - WebAssembly exception handling.
+
+* - `"emscripten"`
+  - Emscripten JavaScript-based exception handling.
+
+```
+
+When the flag is absent, the exception model is unspecified and the target's
+default is used. This is distinct from an explicit `"none"`, which disables
+exceptions even on targets that support them by default. The flag must use the
+`error` merge behavior, so that linking modules with conflicting exception
+models is rejected. For example:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"sjlj"}
 ```
 
 ### Long Double Type Module Flags Metadata
@@ -9566,14 +9676,6 @@ flags metadata, using the following key-value pairs:
 ```
 
 ### Other Module Flags
-
-`executable-stack`
-:   A non-zero value indicates the module contains code requiring an executable
-    stack, such as a trampoline built in stack memory and jumped to. On ELF
-    targets a non-zero value emits `.note.GNU-stack` with `SHF_EXECINSTR` set,
-    telling the linker to mark the binary's stack executable. The flag must use
-    the `max` merge behavior, so that a module requiring an executable stack
-    still gets one after linking with modules that do not.
 
 `require-logical-pointer`
 :   This flag indicates this module must only use logical pointer intrinsics
@@ -13268,7 +13370,8 @@ If `value` is of the {ref}`byte type <t_byte>`:
 ##### Syntax:
 
 ```
-<result> = addrspacecast <pty> <ptrval> to <pty2>       ; yields pty2
+<result> = addrspacecast <pty> <ptrval> to <pty2>          ; yields pty2
+<result> = addrspacecast nonnull <pty> <ptrval> to <pty2>  ; yields pty2
 ```
 
 ##### Overview:
@@ -13304,6 +13407,10 @@ should yield the original bit pattern).
 
 Which address space casts are supported depends on the target. Unsupported
 address space casts return {ref}`poison <poisonvalues>`.
+
+The optional `nonnull` flag asserts that `ptrval` is not the null value of
+its source address space; if it is, the result is
+{ref}`poison <poisonvalues>`.
 
 ##### Example:
 
@@ -19793,6 +19900,84 @@ This never sets errno, just as '`llvm.fma.*`'.
 %r2 = call float @llvm.fmuladd.f32(float %a, float %b, float %c) ; yields float:r2 = (a * b) + c
 ```
 
+(int_smulh)=
+
+#### '`llvm.smulh.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic. You can use `llvm.smulh` on any integer
+or vector of integers.
+
+```
+declare i16 @llvm.smulh.i16(i16 %a, i16 %b)
+declare i32 @llvm.smulh.i32(i32 %a, i32 %b)
+declare i64 @llvm.smulh.i64(i64 %a, i64 %b)
+declare <4 x i32> @llvm.smulh.v4i32(<4 x i32> %a, <4 x i32> %b)
+```
+
+##### Overview:
+
+The '`llvm.smulh`' family of intrinsic functions performs a signed
+multiplication of the two arguments, and returns the high half of the result.
+
+##### Arguments:
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+##### Semantics:
+
+The '`llvm.smulh`' intrinsic computes signed multiply-high of its arguments,
+which is the upper N-bit half of the 2N-bit product for signed iN types.
+
+##### Example:
+
+```llvm
+%r = call i4 @llvm.smulh.i4(i4 1, i4 2)   ; %r = 0
+%r = call i4 @llvm.smulh.i4(i4 5, i4 6)   ; %r = 1
+%r = call i4 @llvm.smulh.i4(i4 -4, i4 6)  ; %r = -2
+```
+
+(int_umulh)=
+
+#### '`llvm.umulh.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic. You can use `llvm.umulh` on any integer
+or vector of integers.
+
+```
+declare i16 @llvm.umulh.i16(i16 %a, i16 %b)
+declare i32 @llvm.umulh.i32(i32 %a, i32 %b)
+declare i64 @llvm.umulh.i64(i64 %a, i64 %b)
+declare <4 x i32> @llvm.umulh.v4i32(<4 x i32> %a, <4 x i32> %b)
+```
+
+##### Overview:
+
+The '`llvm.umulh`' family of intrinsic functions performs an unsigned
+multiplication of the two arguments, and returns the high half of the result.
+
+##### Arguments:
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+##### Semantics:
+
+The '`llvm.umulh`' intrinsic computes unsigned multiply-high of its arguments,
+which is the upper N-bit half of the 2N-bit product for unsigned iN types.
+
+##### Example:
+
+```llvm
+%r = call i4 @llvm.umulh.i4(i4 1, i4 2)   ; %r = 0
+%r = call i4 @llvm.umulh.i4(i4 5, i4 6)   ; %r = 1
+%r = call i4 @llvm.umulh.i4(i4 4, i4 10)  ; %r = 2
+```
+
 ### Hardware-Loop Intrinsics
 
 LLVM support several intrinsics to mark a loop as a hardware-loop. They are
@@ -20386,6 +20571,54 @@ matches the element-type of the vector input.
 This instruction has the same comparison semantics as the '`llvm.minimum.*`'
 intrinsic. That is, this intrinsic propagates NaNs and -0.0 is considered less
 than +0.0. If any element of the vector is a NaN, the result is NaN.
+
+##### Arguments:
+The argument to this intrinsic must be a vector of floating-point values.
+
+(int_vector_reduce_fmaximumnum)=
+
+#### '`llvm.vector.reduce.fmaximumnum.*`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare float @llvm.vector.reduce.fmaximumnum.v4f32(<4 x float> %a)
+declare double @llvm.vector.reduce.fmaximumnum.v2f64(<2 x double> %a)
+```
+
+##### Overview:
+
+The '`llvm.vector.reduce.fmaximumnum.*`' intrinsics do a floating-point
+`MAX` reduction of a vector, returning the result as a scalar. The return type
+matches the element-type of the vector input.
+
+This instruction has the same comparison and `nsz` semantics as the
+'`llvm.maximumnum.*`' intrinsic.
+
+##### Arguments:
+The argument to this intrinsic must be a vector of floating-point values.
+
+(int_vector_reduce_fminimumnum)=
+
+#### '`llvm.vector.reduce.fminimumnum.*`' Intrinsic
+
+##### Syntax:
+This is an overloaded intrinsic.
+
+```
+declare float @llvm.vector.reduce.fminimumnum.v4f32(<4 x float> %a)
+declare double @llvm.vector.reduce.fminimumnum.v2f64(<2 x double> %a)
+```
+
+##### Overview:
+
+The '`llvm.vector.reduce.fminimumnum.*`' intrinsics do a floating-point
+`MIN` reduction of a vector, returning the result as a scalar. The return type
+matches the element-type of the vector input.
+
+This instruction has the same comparison and `nsz` semantics as the
+'`llvm.minimumnum.*`' intrinsic.
 
 ##### Arguments:
 The argument to this intrinsic must be a vector of floating-point values.
@@ -21733,9 +21966,10 @@ These intrinsics make it possible to excise one parameter, marked with
 the {ref}`nest <nest>` attribute, from a function. The result is a
 callable function pointer lacking the nest parameter - the caller does
 not need to provide a value for it. Instead, the value to use is stored
-in advance in a "trampoline", a block of memory which also contains code
-to splice the nest value into the argument list. This is used to
-implement the GCC nested function address extension.
+in advance in a "trampoline", a block of memory usually allocated on the
+stack, which also contains code to splice the nest value into the
+argument list. This is used to implement the GCC nested function address
+extension.
 
 For example, if the function is `i32 f(ptr nest %c, i32 %x, i32 %y)`
 then the resulting function pointer has signature `i32 (i32, i32)`.
@@ -21774,13 +22008,6 @@ intrinsic. Note that the size and the alignment are target-specific -
 LLVM currently provides no portable way of determining them, so a
 front-end that generates this intrinsic needs to have some
 target-specific knowledge.
-
-The block may be allocated anywhere - the stack, the heap, a global, or a
-runtime-managed pool - as long as it is writable when
-`llvm.init.trampoline` executes and the address returned by
-{ref}`llvm.adjust.trampoline <int_at>` is executable when called. Those two
-addresses need not be equal, so a W^X implementation may map the block
-twice, once writable and once executable.
 
 The `func` argument must be a constant (potentially bitcasted) pointer to a
 function declaration or definition, since the calling convention may affect the
@@ -27009,6 +27236,74 @@ None.
 
 This intrinsic actually does nothing, but optimizers must assume that it
 has externally observable side effects.
+
+(llvm_pseudoprobe)=
+
+#### '`llvm.pseudoprobe`' Intrinsic
+
+##### Syntax:
+
+```
+declare void @llvm.pseudoprobe(i64 <guid>, i64 <index>, i32 <attributes>, i64 <factor>) nounwind willreturn memory(inaccessiblemem: readwrite)
+```
+
+##### Overview:
+
+The `llvm.pseudoprobe` intrinsic identifies a basic block in a function before
+the module was optimized, so that samples collected from an optimized binary
+can be attributed back to it. It is emitted for sample-based profile-guided
+optimization.
+
+Probes are inserted in the first pass of the pipeline and indexed by walking a
+function, so a probe keeps naming the same original block however that block is
+later inlined, cloned or rearranged. It is a pseudo intrinsic: it performs no
+operation and lowers to no machine instruction, only to a label recorded in the
+`.pseudo_probe` section.
+
+##### Arguments:
+
+The first argument is the GUID of the function the probe was created for, which
+after inlining need not be the function that contains it. It names an entry in
+the module-level `!llvm.pseudo_probe_desc` metadata pairing the GUID with that
+function's name and a hash of its pre-optimized CFG. The second argument is the
+index of the probe, unique within that function.
+
+The third argument is a bit mask of probe attributes, at most three bits wide,
+shared with the encoding of probe records in the object file:
+
+| Value | Name | Meaning |
+| --- | --- | --- |
+| `0x1` | reserved | Not currently used. |
+| `0x2` | sentinel | Not a block probe; anchors the records of a function placed in a separate section, carrying its GUID and an absolute address. |
+| `0x4` | discriminator | The record carries a DWARF discriminator, used by flow-sensitive sample profiling. |
+
+Neither is set on the intrinsic; both are attached when the records are written
+to the object file, so LLVM emits zero here.
+
+The fourth argument is a distribution factor, expressed as a fraction of
+`UINT64_MAX`, recording the share of the original block's executions that this
+copy of the probe accounts for. All four arguments must be constant integers.
+
+##### Semantics:
+
+This intrinsic does nothing, but optimizers must assume that it has memory
+side effects. Without them nothing would stop a pass from deleting the probe or
+sinking it out of its block, and a probe that disappears silently loses the
+correspondence to the original block.
+
+These memory side effects are a default, not a hard rule. A pass should not
+give up a useful optimization just to keep a probe: passes that know about
+probes may update or remove them instead, and the sample profile loader can
+infer a count for a probe that is gone. A pass duplicating a probed block
+should scale the distribution factor of each copy so that the copies sum to
+the original, and may drop a probe when keeping it would misattribute samples.
+Merging blocks with different probes is where the two goals conflict;
+machine-level tail merging currently declines such merges. Otherwise a probe
+should not affect generated code, so cost models and legality checks should
+see through probes rather than account for them.
+
+Only block probes are represented by this intrinsic. A probe for a call site
+is encoded in the DWARF discriminator of the call instruction instead.
 
 #### '`llvm.is.constant.*`' Intrinsic
 

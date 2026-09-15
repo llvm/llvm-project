@@ -56,10 +56,10 @@ public:
   /// Constructs PlatformImpl from a platform handle.
   ///
   /// \param Platform is a raw offload library handle representing platform.
-  /// \param PlatformIndex is a platform index in a backend (needed for a proper
-  /// indexing in device selector).
+  /// \param Devices are the devices in one platform context group.
   /// All platform impls are created during first getPlatforms() call.
-  PlatformImpl(ol_platform_handle_t Platform, size_t PlatformIndex, PrivateTag);
+  PlatformImpl(ol_platform_handle_t Platform,
+               const std::vector<ol_device_handle_t> &Devices, PrivateTag);
 
   ~PlatformImpl() = default;
 
@@ -82,15 +82,6 @@ public:
   const ol_platform_handle_t &getOLHandleRef() const {
     return MOffloadPlatform;
   }
-
-  /// Queries the cache to get the implementation for specified offloading RT
-  /// platform. All platform implementation objects are created at first
-  /// get_platforms call.
-  ///
-  /// \param Platform is the offloading RT Platform handle representing the
-  /// platform.
-  /// \return the PlatformImpl representing the offloading RT platform.
-  static PlatformImpl &getPlatformImpl(ol_platform_handle_t Platform);
 
   /// Indicates if all of the SYCL devices on this platform have the
   /// given aspect.
@@ -132,10 +123,7 @@ public:
   void iterateDevices(info::device_type DeviceType,
                       std::function<void(DeviceImpl *)> callback) const;
 
-  // TODO: liboffload doesn't support context now, l0 plugin creates default
-  // context for all devices on its level. This method should be removed or
-  // reimplemented once native context support is added to liboffload.
-  /// \return the default context that represents all devices in platform.
+  /// \return the default context containing all devices in this platform.
   ContextImpl &getDefaultContext();
 
 private:
@@ -143,9 +131,7 @@ private:
   const std::vector<DeviceImplUPtr> &getRootDevices() const;
 
   const ol_platform_handle_t MOffloadPlatform{};
-  const size_t MOffloadPlatformIndex{};
 
-  ol_platform_backend_t MOffloadBackend{OL_PLATFORM_BACKEND_UNKNOWN};
   backend MBackend{};
 
   std::vector<DeviceImplUPtr> MRootDevices;

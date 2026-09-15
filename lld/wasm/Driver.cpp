@@ -1493,7 +1493,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   createOptionalSymbols();
 
   // Resolve any variant symbols that were created due to signature
-  // mismatchs.
+  // mismatches.
   symtab->handleSymbolVariants();
   if (errorCount())
     return;

@@ -815,7 +815,6 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
     return getClang();
 
   case Action::OffloadBundlingJobClass:
-  case Action::OffloadUnbundlingJobClass:
     return getOffloadBundler();
 
   case Action::OffloadPackagerJobClass:
@@ -1050,10 +1049,8 @@ void ToolChain::addFlangRTLibPath(const ArgList &Args,
                    options::OPT_shared_libflangrt, getTriple().isOSAIX()))
     CmdArgs.push_back(
         getCompilerRTArgString(Args, "runtime", ToolChain::FT_Static, true));
-  else {
+  else
     CmdArgs.push_back("-lflang_rt.runtime");
-    addArchSpecificRPath(*this, Args, CmdArgs);
-  }
 }
 
 // Android target triples contain a target version. If we don't have libraries
@@ -1287,6 +1284,14 @@ std::string ToolChain::GetFilePath(const char *Name) const {
   return D.GetFilePath(Name, *this);
 }
 
+std::optional<std::string>
+ToolChain::GetFilePathIfExists(const char *Name) const {
+  std::string Path = D.GetFilePath(Name, *this);
+  if (Path == Name)
+    return std::nullopt;
+  return Path;
+}
+
 std::string ToolChain::GetProgramPath(const char *Name) const {
   return D.GetProgramPath(Name, *this);
 }
@@ -1463,7 +1468,7 @@ ObjCRuntime ToolChain::getDefaultObjCRuntime(bool isNonFragile) const {
 
 llvm::ExceptionHandling
 ToolChain::GetExceptionModel(const llvm::opt::ArgList &Args) const {
-  return llvm::ExceptionHandling::None;
+  return llvm::ExceptionHandling::Default;
 }
 
 bool ToolChain::isThreadModelSupported(const StringRef Model) const {

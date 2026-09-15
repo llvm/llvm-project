@@ -14,10 +14,23 @@
 
 namespace llvm::orc {
 
-void lookupAndApply(unique_function<void(Error)> OnApplied,
-                    ExecutionSession &ES, LookupKind K,
+void lookupAndApply(unique_function<void(Error)> OnApplied, LookupKind K,
                     const JITDylibSearchOrder &SearchOrder,
                     ArrayRef<LookupPrepareFn> PrepareFns) {
+
+  /// Empty PrepareFns list trivially succeeds.
+  if (PrepareFns.empty())
+    return OnApplied(Error::success());
+
+  /// Otherwise an empty SearchOrder trivially fails: Without it we don't have
+  /// the ExecutionSession that we need to pass into the prepare functions.
+  if (SearchOrder.empty())
+    return OnApplied(
+        make_error<StringError>("lookupAndApply failed: search order is empty",
+                                inconvertibleErrorCode()));
+
+  auto &ES = SearchOrder.front().first->getExecutionSession();
+
   // Collect the symbols to look up. Each prepare function hands back the
   // applicator that will act on the result; the prepare functions themselves
   // are not needed beyond this point.
@@ -46,25 +59,24 @@ void lookupAndApply(unique_function<void(Error)> OnApplied,
       NoDependenciesToRegister);
 }
 
-Error lookupAndApply(ExecutionSession &ES, LookupKind K,
-                     const JITDylibSearchOrder &SearchOrder,
+Error lookupAndApply(LookupKind K, const JITDylibSearchOrder &SearchOrder,
                      ArrayRef<LookupPrepareFn> PrepareFns) {
   std::promise<MSVCPError> ResultP;
   auto ResultF = ResultP.get_future();
-  lookupAndApply([&](Error Err) { ResultP.set_value(std::move(Err)); }, ES, K,
+  lookupAndApply([&](Error Err) { ResultP.set_value(std::move(Err)); }, K,
                  SearchOrder, PrepareFns);
   return ResultF.get();
 }
 
 void lookupAndApply(unique_function<void(Error)> OnApplied, JITDylib &JD,
                     ArrayRef<LookupPrepareFn> PrepareFns) {
-  lookupAndApply(std::move(OnApplied), JD.getExecutionSession(),
-                 LookupKind::Static, makeJITDylibSearchOrder(&JD), PrepareFns);
+  lookupAndApply(std::move(OnApplied), LookupKind::Static,
+                 makeJITDylibSearchOrder(&JD), PrepareFns);
 }
 
 Error lookupAndApply(JITDylib &JD, ArrayRef<LookupPrepareFn> PrepareFns) {
-  return lookupAndApply(JD.getExecutionSession(), LookupKind::Static,
-                        makeJITDylibSearchOrder(&JD), PrepareFns);
+  return lookupAndApply(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+                        PrepareFns);
 }
 
 } // namespace llvm::orc

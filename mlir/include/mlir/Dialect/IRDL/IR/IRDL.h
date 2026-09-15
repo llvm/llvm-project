@@ -22,14 +22,6 @@
 
 #include <memory>
 
-// Forward declaration.
-namespace mlir {
-namespace irdl {
-class OpDef;
-class OpDefAttr;
-} // namespace irdl
-} // namespace mlir
-
 //===----------------------------------------------------------------------===//
 // IRDL Dialect
 //===----------------------------------------------------------------------===//

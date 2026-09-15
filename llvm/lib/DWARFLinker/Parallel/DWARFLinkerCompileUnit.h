@@ -114,6 +114,16 @@ public:
   /// Returns DWARFFile containing this compile unit.
   const DWARFFile &getContainingFile() const { return File; }
 
+  /// Appends the names of the DW_TAG_module enclosing \p DieEntry, outermost
+  /// first. Returns false when one of them has no name making the module
+  /// unidentifiable across units.
+  bool getModulePath(const DWARFDebugInfoEntry *DieEntry,
+                     SmallVectorImpl<char> &Path);
+
+  /// Must run while the output offsets are still available, and once they are
+  /// final.
+  void noteModuleAnchors();
+
   /// Set deterministic priority for type DIE allocation ordering. Units compare
   /// by \p ObjFileIdx first and by \p LocalIdx second.
   /// Lower priority values win when multiple CUs race to define the same type.
