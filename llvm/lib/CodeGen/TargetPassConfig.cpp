@@ -960,6 +960,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/true));
     addPass(createWasmEHPass());
     break;
+  case ExceptionHandling::Default:
   case ExceptionHandling::None:
   case ExceptionHandling::Emscripten:
     // Emscripten EH is lowered earlier by WebAssemblyLowerEmscriptenEHSjLj, so
