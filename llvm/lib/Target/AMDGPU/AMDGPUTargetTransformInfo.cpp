@@ -1881,7 +1881,46 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       return divideCeil(DL.getTypeSizeInBits(VecTy) - 1,
                         getLoadStoreVecRegBitWidth(AddressSpace));
     }
+
+    InstructionCost BaseCost = BaseT::getMemoryOpCost(
+        Opcode, Src, Alignment, AddressSpace, CostKind, OpInfo, I);
+    if (Opcode != Instruction::Load || CostKind != TTI::TCK_RecipThroughput)
+      return BaseCost;
+
+    switch (AddressSpace) {
+    case AMDGPUAS::GLOBAL_ADDRESS:
+    case AMDGPUAS::CONSTANT_ADDRESS:
+    case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
+    case AMDGPUAS::FLAT_ADDRESS:
+    case AMDGPUAS::LOCAL_ADDRESS:
+    case AMDGPUAS::PRIVATE_ADDRESS:
+      break;
+    default:
+      return BaseCost;
+    }
+
+    TypeSize StoreSize = DL.getTypeStoreSizeInBits(VecTy);
+    if (StoreSize.isScalable())
+      return BaseCost;
+
+    uint64_t RemainingBits = StoreSize.getFixedValue();
+    InstructionCost WidthCost = 0;
+    const bool CanUseSMEM =
+        OpInfo.isUniform() && AMDGPU::isExtendedGlobalAddrSpace(AddressSpace);
+    if (CanUseSMEM) {
+      // SMEM supports 256- and 512-bit loads.
+      for (uint64_t Width : {512, 256, 128}) {
+        WidthCost += RemainingBits / Width;
+        RemainingBits %= Width;
+      }
+      WidthCost += RemainingBits != 0;
+    } else {
+      // VMEM loads access at most 128 bits.
+      WidthCost = divideCeil(RemainingBits, uint64_t(128));
+    }
+    return std::max(BaseCost, WidthCost);
   }
+
   return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind,
                                 OpInfo, I);
 }
