@@ -48,7 +48,7 @@ define amdgpu_kernel void @sgpr_isnan_f32(ptr addrspace(1) %out, float %x) {
 ; GFX8SELDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8SELDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8SELDAG-NEXT:    v_cmp_class_f32_e64 s[2:3], s2, 3
-; GFX8SELDAG-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX8SELDAG-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX8SELDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX8SELDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8SELDAG-NEXT:    v_mov_b32_e32 v1, s1
@@ -77,7 +77,7 @@ define amdgpu_kernel void @sgpr_isnan_f32(ptr addrspace(1) %out, float %x) {
 ; GFX9SELDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9SELDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9SELDAG-NEXT:    v_cmp_class_f32_e64 s[2:3], s2, 3
-; GFX9SELDAG-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX9SELDAG-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX9SELDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX9SELDAG-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9SELDAG-NEXT:    global_store_dword v0, v1, s[0:1]
@@ -104,7 +104,7 @@ define amdgpu_kernel void @sgpr_isnan_f32(ptr addrspace(1) %out, float %x) {
 ; GFX10SELDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10SELDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10SELDAG-NEXT:    v_cmp_class_f32_e64 s2, s2, 3
-; GFX10SELDAG-NEXT:    s_and_b32 s2, s2, exec_lo
+; GFX10SELDAG-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX10SELDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX10SELDAG-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10SELDAG-NEXT:    global_store_dword v0, v1, s[0:1]
@@ -131,7 +131,7 @@ define amdgpu_kernel void @sgpr_isnan_f32(ptr addrspace(1) %out, float %x) {
 ; GFX11SELDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11SELDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11SELDAG-NEXT:    v_cmp_class_f32_e64 s2, s2, 3
-; GFX11SELDAG-NEXT:    s_and_b32 s2, s2, exec_lo
+; GFX11SELDAG-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX11SELDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11SELDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11SELDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
@@ -192,7 +192,7 @@ define amdgpu_kernel void @sgpr_isnan_f64(ptr addrspace(1) %out, double %x) {
 ; GFX8SELDAG-NEXT:    v_cmp_class_f64_e64 s[2:3], s[2:3], 3
 ; GFX8SELDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8SELDAG-NEXT:    v_mov_b32_e32 v1, s1
-; GFX8SELDAG-NEXT:    s_and_b64 s[0:1], s[2:3], exec
+; GFX8SELDAG-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX8SELDAG-NEXT:    s_cselect_b32 s0, -1, 0
 ; GFX8SELDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX8SELDAG-NEXT:    flat_store_dword v[0:1], v2
@@ -217,7 +217,7 @@ define amdgpu_kernel void @sgpr_isnan_f64(ptr addrspace(1) %out, double %x) {
 ; GFX9SELDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9SELDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9SELDAG-NEXT:    v_cmp_class_f64_e64 s[2:3], s[2:3], 3
-; GFX9SELDAG-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX9SELDAG-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX9SELDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX9SELDAG-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9SELDAG-NEXT:    global_store_dword v0, v1, s[0:1]
@@ -241,7 +241,7 @@ define amdgpu_kernel void @sgpr_isnan_f64(ptr addrspace(1) %out, double %x) {
 ; GFX10SELDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10SELDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10SELDAG-NEXT:    v_cmp_class_f64_e64 s2, s[2:3], 3
-; GFX10SELDAG-NEXT:    s_and_b32 s2, s2, exec_lo
+; GFX10SELDAG-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX10SELDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX10SELDAG-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10SELDAG-NEXT:    global_store_dword v0, v1, s[0:1]
@@ -264,7 +264,7 @@ define amdgpu_kernel void @sgpr_isnan_f64(ptr addrspace(1) %out, double %x) {
 ; GFX11SELDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11SELDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11SELDAG-NEXT:    v_cmp_class_f64_e64 s2, s[2:3], 3
-; GFX11SELDAG-NEXT:    s_and_b32 s2, s2, exec_lo
+; GFX11SELDAG-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX11SELDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11SELDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11SELDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2

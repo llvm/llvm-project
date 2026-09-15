@@ -50,7 +50,7 @@ define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ; GFX8SELDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX8SELDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8SELDAG-NEXT:    v_cmp_class_f16_e64 s[2:3], s2, 3
-; GFX8SELDAG-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX8SELDAG-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX8SELDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX8SELDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8SELDAG-NEXT:    v_mov_b32_e32 v1, s1
@@ -79,7 +79,7 @@ define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ; GFX9SELDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9SELDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9SELDAG-NEXT:    v_cmp_class_f16_e64 s[2:3], s2, 3
-; GFX9SELDAG-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX9SELDAG-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; GFX9SELDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX9SELDAG-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9SELDAG-NEXT:    global_store_dword v0, v1, s[0:1]
@@ -106,7 +106,7 @@ define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ; GFX10SELDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10SELDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10SELDAG-NEXT:    v_cmp_class_f16_e64 s2, s2, 3
-; GFX10SELDAG-NEXT:    s_and_b32 s2, s2, exec_lo
+; GFX10SELDAG-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX10SELDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX10SELDAG-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10SELDAG-NEXT:    global_store_dword v0, v1, s[0:1]
@@ -135,7 +135,7 @@ define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11SELDAG-TRUE16-NEXT:    v_cmp_class_f16_e32 vcc_lo, s2, v0.l
 ; GFX11SELDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11SELDAG-TRUE16-NEXT:    s_and_b32 s2, vcc_lo, exec_lo
+; GFX11SELDAG-TRUE16-NEXT:    s_cmp_lg_u32 vcc_lo, 0
 ; GFX11SELDAG-TRUE16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11SELDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX11SELDAG-TRUE16-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -148,7 +148,7 @@ define amdgpu_kernel void @sgpr_isnan_f16(ptr addrspace(1) %out, half %x) {
 ; GFX11SELDAG-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11SELDAG-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11SELDAG-FAKE16-NEXT:    v_cmp_class_f16_e64 s2, s2, 3
-; GFX11SELDAG-FAKE16-NEXT:    s_and_b32 s2, s2, exec_lo
+; GFX11SELDAG-FAKE16-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX11SELDAG-FAKE16-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX11SELDAG-FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11SELDAG-FAKE16-NEXT:    global_store_b32 v0, v1, s[0:1]
