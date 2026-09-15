@@ -17,6 +17,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctype.h>
+#include <langinfo.h>
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
@@ -211,7 +212,15 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
   return std::mbsrtowcs(__dest, __src, __len, __ps);
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
-#endif   // _LIBCPP_BUILDING_LIBRARY
+
+inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding([[maybe_unused]] __locale_t __loc) {
+#  if defined(__ANDROID__)
+  return "UTF-8";
+#  else
+  return ::nl_langinfo_l(CODESET, __loc);
+#  endif
+}
+#endif // _LIBCPP_BUILDING_LIBRARY
 
 #ifndef _LIBCPP_COMPILER_GCC // GCC complains that this can't be always_inline due to C-style varargs
 _LIBCPP_HIDE_FROM_ABI
@@ -240,5 +249,11 @@ inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(
 }
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
+
+#if defined(__BIONIC__) || _LIBCPP_HAS_MUSL_LIBC
+#  define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 1
+#else
+#  define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 0
+#endif
 
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_LINUX_H

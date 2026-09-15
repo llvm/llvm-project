@@ -148,30 +148,22 @@ define i32 @all_true_big_v32i16(<32 x i16> %v) {
 ; CHECK-LABEL: all_true_big_v32i16:
 ; CHECK:         .functype all_true_big_v32i16 (v128, v128, v128, v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const $push22=, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    local.tee $push21=, $4=, $pop22
-; CHECK-NEXT:    i16x8.eq $push8=, $0, $pop21
-; CHECK-NEXT:    i16x8.eq $push7=, $1, $4
-; CHECK-NEXT:    i8x16.shuffle $push9=, $pop8, $pop7, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
-; CHECK-NEXT:    i32.const $push3=, 7
-; CHECK-NEXT:    i8x16.shl $push10=, $pop9, $pop3
-; CHECK-NEXT:    i32.const $push20=, 7
-; CHECK-NEXT:    i8x16.shr_s $push11=, $pop10, $pop20
-; CHECK-NEXT:    i8x16.all_true $push12=, $pop11
+; CHECK-NEXT:    v128.const $push14=, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push13=, $4=, $pop14
+; CHECK-NEXT:    i16x8.eq $push5=, $0, $pop13
+; CHECK-NEXT:    i16x8.eq $push4=, $1, $4
+; CHECK-NEXT:    i8x16.shuffle $push6=, $pop5, $pop4, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    i8x16.all_true $push7=, $pop6
 ; CHECK-NEXT:    i16x8.eq $push1=, $2, $4
 ; CHECK-NEXT:    i16x8.eq $push0=, $3, $4
 ; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
-; CHECK-NEXT:    i32.const $push19=, 7
-; CHECK-NEXT:    i8x16.shl $push4=, $pop2, $pop19
-; CHECK-NEXT:    i32.const $push18=, 7
-; CHECK-NEXT:    i8x16.shr_s $push5=, $pop4, $pop18
-; CHECK-NEXT:    i8x16.all_true $push6=, $pop5
-; CHECK-NEXT:    i32.and $push13=, $pop12, $pop6
-; CHECK-NEXT:    i32.const $push14=, -1
-; CHECK-NEXT:    i32.xor $push15=, $pop13, $pop14
-; CHECK-NEXT:    i32.const $push16=, 1
-; CHECK-NEXT:    i32.and $push17=, $pop15, $pop16
-; CHECK-NEXT:    return $pop17
+; CHECK-NEXT:    i8x16.all_true $push3=, $pop2
+; CHECK-NEXT:    i32.and $push8=, $pop7, $pop3
+; CHECK-NEXT:    i32.const $push9=, -1
+; CHECK-NEXT:    i32.xor $push10=, $pop8, $pop9
+; CHECK-NEXT:    i32.const $push11=, 1
+; CHECK-NEXT:    i32.and $push12=, $pop10, $pop11
+; CHECK-NEXT:    return $pop12
   %1 = icmp eq <32 x i16> %v, zeroinitializer
   %2 = bitcast <32 x i1> %1 to i32
   %3 = icmp ne i32 %2, -1
@@ -183,49 +175,33 @@ define i64 @all_true_big_v64i16(<64 x i16> %v) {
 ; CHECK-LABEL: all_true_big_v64i16:
 ; CHECK:         .functype all_true_big_v64i16 (v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const $push41=, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    local.tee $push40=, $8=, $pop41
-; CHECK-NEXT:    i16x8.eq $push8=, $0, $pop40
-; CHECK-NEXT:    i16x8.eq $push7=, $1, $8
-; CHECK-NEXT:    i8x16.shuffle $push9=, $pop8, $pop7, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
-; CHECK-NEXT:    i32.const $push3=, 7
-; CHECK-NEXT:    i8x16.shl $push10=, $pop9, $pop3
-; CHECK-NEXT:    i32.const $push39=, 7
-; CHECK-NEXT:    i8x16.shr_s $push11=, $pop10, $pop39
-; CHECK-NEXT:    i8x16.all_true $push12=, $pop11
+; CHECK-NEXT:    v128.const $push25=, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push24=, $8=, $pop25
+; CHECK-NEXT:    i16x8.eq $push5=, $0, $pop24
+; CHECK-NEXT:    i16x8.eq $push4=, $1, $8
+; CHECK-NEXT:    i8x16.shuffle $push6=, $pop5, $pop4, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    i8x16.all_true $push7=, $pop6
 ; CHECK-NEXT:    i16x8.eq $push1=, $2, $8
 ; CHECK-NEXT:    i16x8.eq $push0=, $3, $8
 ; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
-; CHECK-NEXT:    i32.const $push38=, 7
-; CHECK-NEXT:    i8x16.shl $push4=, $pop2, $pop38
-; CHECK-NEXT:    i32.const $push37=, 7
-; CHECK-NEXT:    i8x16.shr_s $push5=, $pop4, $pop37
-; CHECK-NEXT:    i8x16.all_true $push6=, $pop5
-; CHECK-NEXT:    i32.and $push13=, $pop12, $pop6
-; CHECK-NEXT:    i16x8.eq $push15=, $4, $8
-; CHECK-NEXT:    i16x8.eq $push14=, $5, $8
+; CHECK-NEXT:    i8x16.all_true $push3=, $pop2
+; CHECK-NEXT:    i32.and $push8=, $pop7, $pop3
+; CHECK-NEXT:    i16x8.eq $push10=, $4, $8
+; CHECK-NEXT:    i16x8.eq $push9=, $5, $8
+; CHECK-NEXT:    i8x16.shuffle $push11=, $pop10, $pop9, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    i8x16.all_true $push12=, $pop11
+; CHECK-NEXT:    i32.and $push13=, $pop8, $pop12
+; CHECK-NEXT:    i16x8.eq $push15=, $6, $8
+; CHECK-NEXT:    i16x8.eq $push14=, $7, $8
 ; CHECK-NEXT:    i8x16.shuffle $push16=, $pop15, $pop14, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
-; CHECK-NEXT:    i32.const $push36=, 7
-; CHECK-NEXT:    i8x16.shl $push17=, $pop16, $pop36
-; CHECK-NEXT:    i32.const $push35=, 7
-; CHECK-NEXT:    i8x16.shr_s $push18=, $pop17, $pop35
-; CHECK-NEXT:    i8x16.all_true $push19=, $pop18
-; CHECK-NEXT:    i32.and $push20=, $pop13, $pop19
-; CHECK-NEXT:    i16x8.eq $push22=, $6, $8
-; CHECK-NEXT:    i16x8.eq $push21=, $7, $8
-; CHECK-NEXT:    i8x16.shuffle $push23=, $pop22, $pop21, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
-; CHECK-NEXT:    i32.const $push34=, 7
-; CHECK-NEXT:    i8x16.shl $push24=, $pop23, $pop34
-; CHECK-NEXT:    i32.const $push33=, 7
-; CHECK-NEXT:    i8x16.shr_s $push25=, $pop24, $pop33
-; CHECK-NEXT:    i8x16.all_true $push26=, $pop25
-; CHECK-NEXT:    i32.and $push27=, $pop20, $pop26
-; CHECK-NEXT:    i32.const $push28=, -1
-; CHECK-NEXT:    i32.xor $push29=, $pop27, $pop28
-; CHECK-NEXT:    i64.extend_i32_u $push30=, $pop29
-; CHECK-NEXT:    i64.const $push31=, 1
-; CHECK-NEXT:    i64.and $push32=, $pop30, $pop31
-; CHECK-NEXT:    return $pop32
+; CHECK-NEXT:    i8x16.all_true $push17=, $pop16
+; CHECK-NEXT:    i32.and $push18=, $pop13, $pop17
+; CHECK-NEXT:    i32.const $push19=, -1
+; CHECK-NEXT:    i32.xor $push20=, $pop18, $pop19
+; CHECK-NEXT:    i64.extend_i32_u $push21=, $pop20
+; CHECK-NEXT:    i64.const $push22=, 1
+; CHECK-NEXT:    i64.and $push23=, $pop21, $pop22
+; CHECK-NEXT:    return $pop23
   %1 = icmp eq <64 x i16> %v, zeroinitializer
   %2 = bitcast <64 x i1> %1 to i64
   %3 = icmp ne i64 %2, -1
@@ -703,28 +679,20 @@ define i32 @any_true_big_v32i16(<32 x i16> %v) {
 ; CHECK-LABEL: any_true_big_v32i16:
 ; CHECK:         .functype any_true_big_v32i16 (v128, v128, v128, v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const $push20=, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    local.tee $push19=, $4=, $pop20
-; CHECK-NEXT:    i16x8.eq $push8=, $0, $pop19
-; CHECK-NEXT:    i16x8.eq $push7=, $1, $4
-; CHECK-NEXT:    i8x16.shuffle $push9=, $pop8, $pop7, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
-; CHECK-NEXT:    i32.const $push3=, 7
-; CHECK-NEXT:    i8x16.shl $push10=, $pop9, $pop3
-; CHECK-NEXT:    i32.const $push18=, 7
-; CHECK-NEXT:    i8x16.shr_s $push11=, $pop10, $pop18
-; CHECK-NEXT:    v128.any_true $push12=, $pop11
+; CHECK-NEXT:    v128.const $push12=, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push11=, $4=, $pop12
+; CHECK-NEXT:    i16x8.eq $push5=, $0, $pop11
+; CHECK-NEXT:    i16x8.eq $push4=, $1, $4
+; CHECK-NEXT:    i8x16.shuffle $push6=, $pop5, $pop4, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    v128.any_true $push7=, $pop6
 ; CHECK-NEXT:    i16x8.eq $push1=, $2, $4
 ; CHECK-NEXT:    i16x8.eq $push0=, $3, $4
 ; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
-; CHECK-NEXT:    i32.const $push17=, 7
-; CHECK-NEXT:    i8x16.shl $push4=, $pop2, $pop17
-; CHECK-NEXT:    i32.const $push16=, 7
-; CHECK-NEXT:    i8x16.shr_s $push5=, $pop4, $pop16
-; CHECK-NEXT:    v128.any_true $push6=, $pop5
-; CHECK-NEXT:    i32.or $push13=, $pop12, $pop6
-; CHECK-NEXT:    i32.const $push14=, 1
-; CHECK-NEXT:    i32.and $push15=, $pop13, $pop14
-; CHECK-NEXT:    return $pop15
+; CHECK-NEXT:    v128.any_true $push3=, $pop2
+; CHECK-NEXT:    i32.or $push8=, $pop7, $pop3
+; CHECK-NEXT:    i32.const $push9=, 1
+; CHECK-NEXT:    i32.and $push10=, $pop8, $pop9
+; CHECK-NEXT:    return $pop10
   %1 = icmp eq <32 x i16> %v, zeroinitializer
   %2 = bitcast <32 x i1> %1 to i32
   %3 = icmp ne i32 %2, 0
@@ -736,47 +704,31 @@ define i64 @any_true_big_v64i16(<64 x i16> %v) {
 ; CHECK-LABEL: any_true_big_v64i16:
 ; CHECK:         .functype any_true_big_v64i16 (v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const $push39=, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    local.tee $push38=, $8=, $pop39
-; CHECK-NEXT:    i16x8.eq $push8=, $0, $pop38
-; CHECK-NEXT:    i16x8.eq $push7=, $1, $8
-; CHECK-NEXT:    i8x16.shuffle $push9=, $pop8, $pop7, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
-; CHECK-NEXT:    i32.const $push3=, 7
-; CHECK-NEXT:    i8x16.shl $push10=, $pop9, $pop3
-; CHECK-NEXT:    i32.const $push37=, 7
-; CHECK-NEXT:    i8x16.shr_s $push11=, $pop10, $pop37
-; CHECK-NEXT:    v128.any_true $push12=, $pop11
+; CHECK-NEXT:    v128.const $push23=, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push22=, $8=, $pop23
+; CHECK-NEXT:    i16x8.eq $push5=, $0, $pop22
+; CHECK-NEXT:    i16x8.eq $push4=, $1, $8
+; CHECK-NEXT:    i8x16.shuffle $push6=, $pop5, $pop4, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    v128.any_true $push7=, $pop6
 ; CHECK-NEXT:    i16x8.eq $push1=, $2, $8
 ; CHECK-NEXT:    i16x8.eq $push0=, $3, $8
 ; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
-; CHECK-NEXT:    i32.const $push36=, 7
-; CHECK-NEXT:    i8x16.shl $push4=, $pop2, $pop36
-; CHECK-NEXT:    i32.const $push35=, 7
-; CHECK-NEXT:    i8x16.shr_s $push5=, $pop4, $pop35
-; CHECK-NEXT:    v128.any_true $push6=, $pop5
-; CHECK-NEXT:    i32.or $push13=, $pop12, $pop6
-; CHECK-NEXT:    i16x8.eq $push15=, $4, $8
-; CHECK-NEXT:    i16x8.eq $push14=, $5, $8
+; CHECK-NEXT:    v128.any_true $push3=, $pop2
+; CHECK-NEXT:    i32.or $push8=, $pop7, $pop3
+; CHECK-NEXT:    i16x8.eq $push10=, $4, $8
+; CHECK-NEXT:    i16x8.eq $push9=, $5, $8
+; CHECK-NEXT:    i8x16.shuffle $push11=, $pop10, $pop9, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    v128.any_true $push12=, $pop11
+; CHECK-NEXT:    i32.or $push13=, $pop8, $pop12
+; CHECK-NEXT:    i16x8.eq $push15=, $6, $8
+; CHECK-NEXT:    i16x8.eq $push14=, $7, $8
 ; CHECK-NEXT:    i8x16.shuffle $push16=, $pop15, $pop14, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
-; CHECK-NEXT:    i32.const $push34=, 7
-; CHECK-NEXT:    i8x16.shl $push17=, $pop16, $pop34
-; CHECK-NEXT:    i32.const $push33=, 7
-; CHECK-NEXT:    i8x16.shr_s $push18=, $pop17, $pop33
-; CHECK-NEXT:    v128.any_true $push19=, $pop18
-; CHECK-NEXT:    i32.or $push20=, $pop13, $pop19
-; CHECK-NEXT:    i16x8.eq $push22=, $6, $8
-; CHECK-NEXT:    i16x8.eq $push21=, $7, $8
-; CHECK-NEXT:    i8x16.shuffle $push23=, $pop22, $pop21, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
-; CHECK-NEXT:    i32.const $push32=, 7
-; CHECK-NEXT:    i8x16.shl $push24=, $pop23, $pop32
-; CHECK-NEXT:    i32.const $push31=, 7
-; CHECK-NEXT:    i8x16.shr_s $push25=, $pop24, $pop31
-; CHECK-NEXT:    v128.any_true $push26=, $pop25
-; CHECK-NEXT:    i32.or $push27=, $pop20, $pop26
-; CHECK-NEXT:    i64.extend_i32_u $push28=, $pop27
-; CHECK-NEXT:    i64.const $push29=, 1
-; CHECK-NEXT:    i64.and $push30=, $pop28, $pop29
-; CHECK-NEXT:    return $pop30
+; CHECK-NEXT:    v128.any_true $push17=, $pop16
+; CHECK-NEXT:    i32.or $push18=, $pop13, $pop17
+; CHECK-NEXT:    i64.extend_i32_u $push19=, $pop18
+; CHECK-NEXT:    i64.const $push20=, 1
+; CHECK-NEXT:    i64.and $push21=, $pop19, $pop20
+; CHECK-NEXT:    return $pop21
   %1 = icmp eq <64 x i16> %v, zeroinitializer
   %2 = bitcast <64 x i1> %1 to i64
   %3 = icmp ne i64 %2, 0

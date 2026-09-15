@@ -75,9 +75,6 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, LegalizeAction Action) {
   case NotFound:
     OS << "NotFound";
     break;
-  case UseLegacyRules:
-    OS << "UseLegacyRules";
-    break;
   }
   return OS;
 }
@@ -90,6 +87,10 @@ raw_ostream &LegalityQuery::print(raw_ostream &OS) const {
   OS << "}, MMOs={";
   for (const auto &MMODescr : MMODescrs) {
     OS << MMODescr.MemoryTy << ", ";
+  }
+  OS << "}, Imms={";
+  for (const auto Imm : Immediates) {
+    OS << Imm << ", ";
   }
   OS << "}";
 
@@ -193,10 +194,6 @@ static bool mutationIsSane(const LegalizeRule &Rule,
 LegalizeActionStep LegalizeRuleSet::apply(const LegalityQuery &Query) const {
   LLVM_DEBUG(dbgs() << "Applying legalizer ruleset to: "; Query.print(dbgs());
              dbgs() << "\n");
-  if (Rules.empty()) {
-    LLVM_DEBUG(dbgs() << ".. fallback to legacy rules (no rules defined)\n");
-    return {LegalizeAction::UseLegacyRules, 0, LLT{}};
-  }
   for (const LegalizeRule &Rule : Rules) {
     if (Rule.match(Query)) {
       LLVM_DEBUG(dbgs() << ".. match\n");
@@ -343,42 +340,39 @@ void LegalizerInfo::aliasActionDefinitions(unsigned OpcodeTo,
 
 LegalizeActionStep
 LegalizerInfo::getAction(const LegalityQuery &Query) const {
-  LegalizeActionStep Step = getActionDefinitions(Query.Opcode).apply(Query);
-  if (Step.Action != LegalizeAction::UseLegacyRules) {
-    return Step;
-  }
-
-  return getLegacyLegalizerInfo().getAction(Query);
+  return getActionDefinitions(Query.Opcode).apply(Query);
 }
 
 LegalizeActionStep
 LegalizerInfo::getAction(const MachineInstr &MI,
                          const MachineRegisterInfo &MRI) const {
   SmallVector<LLT, 8> Types;
+  SmallVector<int64_t, 8> Immediates;
   SmallBitVector SeenTypes(8);
   ArrayRef<MCOperandInfo> OpInfo = MI.getDesc().operands();
   // FIXME: probably we'll need to cache the results here somehow?
   for (unsigned i = 0; i < MI.getDesc().getNumOperands(); ++i) {
-    if (!OpInfo[i].isGenericType())
-      continue;
+    if (OpInfo[i].isGenericType()) {
+      // We must only record actions once for each TypeIdx; otherwise we'd
+      // try to legalize operands multiple times down the line.
+      unsigned TypeIdx = OpInfo[i].getGenericTypeIndex();
+      if (SeenTypes[TypeIdx])
+        continue;
 
-    // We must only record actions once for each TypeIdx; otherwise we'd
-    // try to legalize operands multiple times down the line.
-    unsigned TypeIdx = OpInfo[i].getGenericTypeIndex();
-    if (SeenTypes[TypeIdx])
-      continue;
+      SeenTypes.set(TypeIdx);
 
-    SeenTypes.set(TypeIdx);
-
-    LLT Ty = getTypeFromTypeIdx(MI, MRI, i, TypeIdx);
-    Types.push_back(Ty);
+      LLT Ty = getTypeFromTypeIdx(MI, MRI, i, TypeIdx);
+      Types.push_back(Ty);
+    } else if (OpInfo[i].isGenericImm()) {
+      Immediates.push_back(MI.getOperand(i).getImm());
+    }
   }
 
   SmallVector<LegalityQuery::MemDesc, 2> MemDescrs;
   for (const auto &MMO : MI.memoperands())
     MemDescrs.push_back({*MMO});
 
-  return getAction({MI.getOpcode(), Types, MemDescrs});
+  return getAction({MI.getOpcode(), Types, MemDescrs, Immediates});
 }
 
 bool LegalizerInfo::isLegal(const MachineInstr &MI,

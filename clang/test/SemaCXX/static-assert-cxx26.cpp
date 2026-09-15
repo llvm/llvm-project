@@ -309,7 +309,7 @@ namespace EscapeInDiagnostic {
 static_assert('\u{9}' == (char)1, ""); // expected-error {{failed}} \
                                        // expected-note {{evaluates to ''\t' (0x09, 9) == '<U+0001>' (0x01, 1)'}}
 static_assert((char8_t)-128 == (char8_t)-123, ""); // expected-error {{failed}} \
-                                                   // expected-note {{evaluates to 'u8'<80>' (0x80, 128) == u8'<85>' (0x85, 133)'}}
+                                                   // expected-note {{evaluates to 'u8'<0x80>' (0x80, 128) == u8'<0x85>' (0x85, 133)'}}
 static_assert((char16_t)0xFEFF == (char16_t)0xDB93, ""); // expected-error {{failed}} \
                                                          // expected-note {{evaluates to 'u'﻿' (0xFEFF, 65279) == u'\xDB93' (0xDB93, 56211)'}}
 }
@@ -415,4 +415,14 @@ static_assert(
   E{} // expected-error {{the message in a static assertion must be produced by a constant expression}}
       // expected-note@-1 {{read of dereferenced one-past-the-end pointer is not allowed in a constant expression}}
 );
+}
+
+namespace DataPtrIsNull {
+  struct S {
+    constexpr int size() { return sizeof("foo"); }
+    constexpr char *data() { return 0; }
+  };
+  static_assert(false, S{}); // expected-error {{the message in a static assertion must be produced by a constant expression}} \
+                             // expected-note {{read of dereferenced null pointer is not allowed in a constant expression}} \
+                             // expected-error {{static assertion failed}}
 }

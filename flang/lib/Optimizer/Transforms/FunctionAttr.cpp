@@ -54,31 +54,46 @@ void FunctionAttrPass::runOnOperation() {
   auto deconstructed = fir::NameUniquer::deconstruct(name);
   bool isFromModule = !deconstructed.second.modules.empty();
 
-  if ((isFromModule || !func.isDeclaration()) &&
-      !fir::hasBindcAttr(func.getOperation())) {
+  if (isFromModule || !func.isDeclaration()) {
+    const bool isBindC = fir::hasBindcAttr(func.getOperation());
+    const bool isDefinition = !func.isDeclaration();
     llvm::StringRef nocapture = mlir::LLVM::LLVMDialect::getNoCaptureAttrName();
     llvm::StringRef noalias = mlir::LLVM::LLVMDialect::getNoAliasAttrName();
+    llvm::StringRef readonly = mlir::LLVM::LLVMDialect::getReadonlyAttrName();
     mlir::UnitAttr unitAttr = mlir::UnitAttr::get(func.getContext());
 
     for (auto [index, argType] : llvm::enumerate(func.getArgumentTypes())) {
       bool isNoCapture = false;
       bool isNoAlias = false;
-      if (mlir::isa<fir::ReferenceType>(argType) &&
-          !func.getArgAttr(index, fir::getTargetAttrName()) &&
-          !func.getArgAttr(index, fir::getAsynchronousAttrName()) &&
-          !func.getArgAttr(index, fir::getVolatileAttrName())) {
-        isNoCapture = true;
-        isNoAlias = !fir::isPointerType(argType);
+      bool isReadOnly = false;
+      if (mlir::isa<fir::ReferenceType>(argType)) {
+        // The read-only marker is attached to by-reference dummies the callee
+        // is guaranteed not to write through (see CallInterface). Unlike
+        // noalias/nocapture, it is valid even for TARGET arguments, so it is
+        // computed independently of the target/asynchronous/volatile gating.
+        isReadOnly = static_cast<bool>(
+            func.getArgAttr(index, fir::getReadOnlyAttrName()));
+        if (!func.getArgAttr(index, fir::getTargetAttrName()) &&
+            !func.getArgAttr(index, fir::getAsynchronousAttrName()) &&
+            !func.getArgAttr(index, fir::getVolatileAttrName())) {
+          isNoCapture = true;
+          isNoAlias = !fir::isPointerType(argType);
+        }
       } else if (mlir::isa<fir::BaseBoxType>(argType)) {
         // !fir.box arguments will be passed as descriptor pointers
         // at LLVM IR dialect level - they cannot be captured,
         // and cannot alias with anything within the function.
         isNoCapture = isNoAlias = true;
       }
-      if (isNoCapture && setNoCapture)
+      // nocapture/noalias are not applied to BIND(C) interfaces (C ABI).
+      if (isNoCapture && setNoCapture && !isBindC)
         func.setArgAttr(index, nocapture, unitAttr);
-      if (isNoAlias && setNoAlias)
+      if (isNoAlias && setNoAlias && !isBindC)
         func.setArgAttr(index, noalias, unitAttr);
+      // readonly is also valid for BIND(C) definitions (the Fortran body must
+      // honor INTENT(IN)), but not for declarations of external C functions.
+      if (isReadOnly && setReadOnly && (!isBindC || isDefinition))
+        func.setArgAttr(index, readonly, unitAttr);
     }
   }
 

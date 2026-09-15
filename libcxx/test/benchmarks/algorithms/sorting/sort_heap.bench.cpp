@@ -16,6 +16,7 @@
 
 #include "benchmark/benchmark.h"
 #include "common.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   // Benchmark {std,ranges}::sort on various types of data
@@ -26,7 +27,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto pred, auto generate_data) {
       benchmark::RegisterBenchmark(
           name,
-          [pred, generate_data](auto& st) {
+          [pred, generate_data](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size          = st.range(0);
             constexpr std::size_t BatchSize = 32;
             using ValueType                 = typename Container::value_type;

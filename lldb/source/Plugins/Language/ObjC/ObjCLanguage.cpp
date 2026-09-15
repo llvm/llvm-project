@@ -177,14 +177,14 @@ std::string ObjCLanguage::ObjCMethodName::GetFullNameWithoutCategory() const {
 }
 
 std::vector<Language::MethodNameVariant>
-ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
+ObjCLanguage::GetMethodNameVariants(llvm::StringRef method_name) const {
   std::vector<Language::MethodNameVariant> variant_names;
   std::optional<const ObjCLanguage::ObjCMethodName> objc_method =
-      ObjCLanguage::ObjCMethodName::Create(method_name.GetStringRef(), false);
+      ObjCLanguage::ObjCMethodName::Create(method_name, false);
   if (!objc_method)
     return variant_names;
 
-  variant_names.emplace_back(ConstString(objc_method->GetSelector()),
+  variant_names.emplace_back(objc_method->GetSelector().str(),
                              lldb::eFunctionNameTypeSelector);
 
   const std::string name_sans_category =
@@ -192,29 +192,29 @@ ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
 
   if (objc_method->IsClassMethod() || objc_method->IsInstanceMethod()) {
     if (!name_sans_category.empty())
-      variant_names.emplace_back(ConstString(name_sans_category),
+      variant_names.emplace_back(name_sans_category,
                                  lldb::eFunctionNameTypeFull);
   } else {
     StreamString strm;
 
     strm.Printf("+%s", objc_method->GetFullName().c_str());
-    variant_names.emplace_back(ConstString(strm.GetString()),
+    variant_names.emplace_back(strm.GetString().str(),
                                lldb::eFunctionNameTypeFull);
     strm.Clear();
 
     strm.Printf("-%s", objc_method->GetFullName().c_str());
-    variant_names.emplace_back(ConstString(strm.GetString()),
+    variant_names.emplace_back(strm.GetString().str(),
                                lldb::eFunctionNameTypeFull);
     strm.Clear();
 
     if (!name_sans_category.empty()) {
       strm.Printf("+%s", name_sans_category.c_str());
-      variant_names.emplace_back(ConstString(strm.GetString()),
+      variant_names.emplace_back(strm.GetString().str(),
                                  lldb::eFunctionNameTypeFull);
       strm.Clear();
 
       strm.Printf("-%s", name_sans_category.c_str());
-      variant_names.emplace_back(ConstString(strm.GetString()),
+      variant_names.emplace_back(strm.GetString().str(),
                                  lldb::eFunctionNameTypeFull);
     }
   }
@@ -879,6 +879,45 @@ lldb::TypeCategoryImplSP ObjCLanguage::GetFormatters() {
     }
   });
   return g_category;
+}
+
+HardcodedFormatters::HardcodedSyntheticFinder
+ObjCLanguage::GetHardcodedSynthetics() {
+  static llvm::once_flag g_initialize;
+  static HardcodedFormatters::HardcodedSyntheticFinder g_formatters;
+
+  llvm::call_once(g_initialize, []() -> void {
+    // An Objective-C tagged pointer (e.g. a single-index NSIndexSet
+    // or a small NSNumber) packs its whole state into the pointer
+    // bits and has no object in memory. Since its declared base
+    // classes and ivars cannot be read, this synthtic child provider
+    // hides them. Other synthetic child providers take precedence of
+    // this.
+    g_formatters.push_back(
+        [](lldb_private::ValueObject &valobj, lldb::DynamicValueType,
+           FormatManager &) -> SyntheticChildren::SharedPointer {
+          static CXXSyntheticChildren::SharedPointer formatter_sp(
+              new CXXSyntheticChildren(
+                  SyntheticChildren::Flags()
+                      .SetCascades(true)
+                      .SetSkipPointers(false)
+                      .SetSkipReferences(false)
+                      .SetNonCacheable(true),
+                  "tagged pointer synthetic children",
+                  lldb_private::formatters::ObjCClassSyntheticFrontEndCreator));
+
+          ProcessSP process_sp = valobj.GetProcessSP();
+          if (!process_sp)
+            return nullptr;
+          if (ObjCLanguageRuntime *runtime =
+                  ObjCLanguageRuntime::Get(*process_sp))
+            if (runtime->IsTaggedPointerValue(valobj))
+              return formatter_sp;
+          return nullptr;
+        });
+  });
+
+  return g_formatters;
 }
 
 std::vector<FormattersMatchCandidate>

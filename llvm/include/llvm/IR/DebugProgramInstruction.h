@@ -189,9 +189,11 @@ public:
   LLVM_ABI LLVMContext &getContext();
   LLVM_ABI const LLVMContext &getContext() const;
 
+  LLVM_ABI Instruction *getInstruction();
   LLVM_ABI const Instruction *getInstruction() const;
-  LLVM_ABI const BasicBlock *getParent() const;
+
   LLVM_ABI BasicBlock *getParent();
+  LLVM_ABI const BasicBlock *getParent() const;
 
   LLVM_ABI void removeFromParent();
   LLVM_ABI void eraseFromParent();
@@ -552,10 +554,6 @@ public:
   /// \returns A new dbg.value intrinsic representing this DbgVariableRecord.
   LLVM_ABI DbgVariableIntrinsic *
   createDebugIntrinsic(Module *M, Instruction *InsertBefore) const;
-
-  /// Handle changes to the location of the Value(s) that we refer to happening
-  /// "under our feet".
-  LLVM_ABI void handleChangedLocation(Metadata *NewLocation);
 
   LLVM_ABI void print(raw_ostream &O, bool IsForDebug = false) const;
   LLVM_ABI void print(raw_ostream &ROS, ModuleSlotTracker &MST,

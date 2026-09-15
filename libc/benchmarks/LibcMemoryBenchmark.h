@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <optional>
 #include <random>
+#include <vector>
 
 namespace llvm {
 namespace libc_benchmarks {
@@ -33,57 +34,57 @@ struct StudyConfiguration {
   // One of 'memcpy', 'memset', 'memcmp'.
   // The underlying implementation is always the llvm libc one.
   // e.g. 'memcpy' will test 'LIBC_NAMESPACE::memcpy'
-  std::string Function;
+  std::string function;
 
   // The number of trials to run for this benchmark.
   // If in SweepMode, each individual sizes are measured 'NumTrials' time.
   // i.e 'NumTrials' measurements for 0, 'NumTrials' measurements for 1 ...
-  uint32_t NumTrials = 1;
+  uint32_t num_trials = 1;
 
   // Toggles between Sweep Mode and Distribution Mode (default).
   // See 'SweepModeMaxSize' and 'SizeDistributionName' below.
-  bool IsSweepMode = false;
+  bool is_sweep_mode = false;
 
   // Maximum size to use when measuring a ramp of size values (SweepMode).
   // The benchmark measures all sizes from 0 to SweepModeMaxSize.
   // Note: in sweep mode the same size is sampled several times in a row this
   // will allow the processor to learn it and optimize the branching pattern.
   // The resulting measurement is likely to be idealized.
-  uint32_t SweepModeMaxSize = 0; // inclusive
+  uint32_t sweep_mode_max_size = 0; // inclusive
 
   // The name of the distribution to be used to randomize the size parameter.
   // This is used when SweepMode is false (default).
-  std::string SizeDistributionName;
+  std::string size_distribution_name;
 
   // This parameter allows to control how the buffers are accessed during
   // benchmark:
   // None : Use a fixed address that is at least cache line aligned,
   //    1 : Use random address,
   //   >1 : Use random address aligned to value.
-  MaybeAlign AccessAlignment = std::nullopt;
+  MaybeAlign access_alignment = std::nullopt;
 
   // When Function == 'memcmp', this is the buffers mismatch position.
   //  0 : Buffers always compare equal,
   // >0 : Buffers compare different at byte N-1.
-  uint32_t MemcmpMismatchAt = 0;
+  uint32_t memcmp_mismatch_at = 0;
 };
 
 struct Runtime {
   // Details about the Host (cpu name, cpu frequency, cache hierarchy).
-  HostState Host;
+  HostState host;
 
   // The framework will populate this value so all data accessed during the
   // benchmark will stay in L1 data cache. This includes bookkeeping data.
-  uint32_t BufferSize = 0;
+  uint32_t buffer_size = 0;
 
   // This is the number of distinct parameters used in a single batch.
   // The framework always tests a batch of randomized parameter to prevent the
   // cpu from learning branching patterns.
-  uint32_t BatchParameterCount = 0;
+  uint32_t batch_parameter_count = 0;
 
   // The benchmark options that were used to perform the measurement.
   // This is decided by the framework.
-  BenchmarkOptions BenchmarkOptions;
+  llvm::libc_benchmarks::BenchmarkOptions benchmark_options;
 };
 
 //--------
@@ -92,10 +93,10 @@ struct Runtime {
 
 // The root object containing all the data (configuration and measurements).
 struct Study {
-  std::string StudyName;
-  Runtime Runtime;
-  StudyConfiguration Configuration;
-  std::vector<Duration> Measurements;
+  std::string study_name;
+  llvm::libc_benchmarks::Runtime runtime;
+  StudyConfiguration configuration;
+  std::vector<Duration> measurements;
 };
 
 //------
@@ -139,12 +140,20 @@ public:
   }
 };
 
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
+using MismatchIndicesType = llvm::SmallVector<uint32_t, 16>;
+using MismatchIndicesImplType = llvm::SmallVectorImpl<uint32_t>;
+#else
+using MismatchIndicesType = std::vector<uint32_t>;
+using MismatchIndicesImplType = std::vector<uint32_t>;
+#endif
+
 // Helper to generate random buffer offsets that satisfy the configuration
 // constraints. It is specifically designed to benchmark `memcmp` functions
 // where we may want the Nth byte to differ.
 class MismatchOffsetDistribution {
   std::uniform_int_distribution<size_t> MismatchIndexSelector;
-  llvm::SmallVector<uint32_t, 16> MismatchIndices;
+  MismatchIndicesType MismatchIndices;
   const uint32_t MismatchAt;
 
 public:
@@ -153,7 +162,7 @@ public:
 
   explicit operator bool() const { return !MismatchIndices.empty(); }
 
-  const llvm::SmallVectorImpl<uint32_t> &getMismatchIndices() const {
+  const MismatchIndicesImplType &getMismatchIndices() const {
     return MismatchIndices;
   }
 
@@ -172,21 +181,21 @@ public:
 /// ParameterType can all fit in the L1 cache.
 struct ParameterBatch {
   struct ParameterType {
-    unsigned OffsetBytes : 16; // max : 16 KiB - 1
-    unsigned SizeBytes : 16;   // max : 16 KiB - 1
+    unsigned offset_bytes : 16; // max : 16 KiB - 1
+    unsigned size_bytes : 16;   // max : 16 KiB - 1
   };
 
   ParameterBatch(size_t BufferCount);
 
   /// Verifies that memory accessed through this parameter is valid.
-  void checkValid(const ParameterType &) const;
+  void check_valid(const ParameterType &) const;
 
   /// Computes the number of bytes processed during within this batch.
-  size_t getBatchBytes() const;
+  size_t get_batch_bytes() const;
 
-  const size_t BufferSize;
-  const size_t BatchSize;
-  std::vector<ParameterType> Parameters;
+  const size_t buffer_size;
+  const size_t batch_size;
+  std::vector<ParameterType> parameters;
 };
 
 /// Provides source and destination buffers for the Copy operation as well as
@@ -194,18 +203,19 @@ struct ParameterBatch {
 struct CopySetup : public ParameterBatch {
   CopySetup();
 
-  inline static const ArrayRef<MemorySizeDistribution> getDistributions() {
+  inline static const ArrayRef<MemorySizeDistribution> get_distributions() {
     return getMemcpySizeDistributions();
   }
 
-  inline void *Call(ParameterType Parameter, MemcpyFunction Memcpy) {
-    return Memcpy(DstBuffer + Parameter.OffsetBytes,
-                  SrcBuffer + Parameter.OffsetBytes, Parameter.SizeBytes);
+  inline void *call(ParameterType parameter, MemcpyFunction memcpy_func) {
+    return memcpy_func(dst_buffer + parameter.offset_bytes,
+                       src_buffer + parameter.offset_bytes,
+                       parameter.size_bytes);
   }
 
 private:
-  AlignedBuffer SrcBuffer;
-  AlignedBuffer DstBuffer;
+  AlignedBuffer src_buffer;
+  AlignedBuffer dst_buffer;
 };
 
 /// Provides source and destination buffers for the Move operation as well as
@@ -213,17 +223,17 @@ private:
 struct MoveSetup : public ParameterBatch {
   MoveSetup();
 
-  inline static const ArrayRef<MemorySizeDistribution> getDistributions() {
+  inline static const ArrayRef<MemorySizeDistribution> get_distributions() {
     return getMemmoveSizeDistributions();
   }
 
-  inline void *Call(ParameterType Parameter, MemmoveFunction Memmove) {
-    return Memmove(Buffer + ParameterBatch::BufferSize / 3,
-                   Buffer + Parameter.OffsetBytes, Parameter.SizeBytes);
+  inline void *call(ParameterType parameter, MemmoveFunction memmove_func) {
+    return memmove_func(buffer + ParameterBatch::buffer_size / 3,
+                        buffer + parameter.offset_bytes, parameter.size_bytes);
   }
 
 private:
-  AlignedBuffer Buffer;
+  AlignedBuffer buffer;
 };
 
 /// Provides destination buffer for the Set operation as well as the associated
@@ -231,22 +241,22 @@ private:
 struct SetSetup : public ParameterBatch {
   SetSetup();
 
-  inline static const ArrayRef<MemorySizeDistribution> getDistributions() {
+  inline static const ArrayRef<MemorySizeDistribution> get_distributions() {
     return getMemsetSizeDistributions();
   }
 
-  inline void *Call(ParameterType Parameter, MemsetFunction Memset) {
-    return Memset(DstBuffer + Parameter.OffsetBytes,
-                  Parameter.OffsetBytes % 0xFF, Parameter.SizeBytes);
+  inline void *call(ParameterType parameter, MemsetFunction memset_func) {
+    return memset_func(dst_buffer + parameter.offset_bytes,
+                       parameter.offset_bytes % 0xFF, parameter.size_bytes);
   }
 
-  inline void *Call(ParameterType Parameter, BzeroFunction Bzero) {
-    Bzero(DstBuffer + Parameter.OffsetBytes, Parameter.SizeBytes);
-    return DstBuffer.begin();
+  inline void *call(ParameterType parameter, BzeroFunction bzero_func) {
+    bzero_func(dst_buffer + parameter.offset_bytes, parameter.size_bytes);
+    return dst_buffer.begin();
   }
 
 private:
-  AlignedBuffer DstBuffer;
+  AlignedBuffer dst_buffer;
 };
 
 /// Provides left and right buffers for the Comparison operation as well as the
@@ -254,18 +264,20 @@ private:
 struct ComparisonSetup : public ParameterBatch {
   ComparisonSetup();
 
-  inline static const ArrayRef<MemorySizeDistribution> getDistributions() {
+  inline static const ArrayRef<MemorySizeDistribution> get_distributions() {
     return getMemcmpSizeDistributions();
   }
 
-  inline int Call(ParameterType Parameter, MemcmpOrBcmpFunction MemcmpOrBcmp) {
-    return MemcmpOrBcmp(LhsBuffer + Parameter.OffsetBytes,
-                        RhsBuffer + Parameter.OffsetBytes, Parameter.SizeBytes);
+  inline int call(ParameterType parameter,
+                  MemcmpOrBcmpFunction memcmp_or_bcmp_func) {
+    return memcmp_or_bcmp_func(lhs_buffer + parameter.offset_bytes,
+                               rhs_buffer + parameter.offset_bytes,
+                               parameter.size_bytes);
   }
 
 private:
-  AlignedBuffer LhsBuffer;
-  AlignedBuffer RhsBuffer;
+  AlignedBuffer lhs_buffer;
+  AlignedBuffer rhs_buffer;
 };
 
 } // namespace libc_benchmarks

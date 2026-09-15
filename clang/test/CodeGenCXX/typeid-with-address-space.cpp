@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -I%S %s -triple amdgcn-amd-amdhsa -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s
+// RUN: %clang_cc1 -I%S %s -triple amdgpu-amd-amdhsa -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s
 // RUN: %clang_cc1 -I%S %s -triple spirv64-amd-amdhsa -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s --check-prefix=WITH-NONZERO-DEFAULT-AS
 #include <typeinfo>
 

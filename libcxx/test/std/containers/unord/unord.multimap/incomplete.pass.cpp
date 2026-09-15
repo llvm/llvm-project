@@ -44,6 +44,7 @@ int main(int, char**) {
                           std::equal_to<int>,
                           complete_type_allocator<std::pair<const int, int> > >
       m;
+  (void)m;
 
   return 0;
 }

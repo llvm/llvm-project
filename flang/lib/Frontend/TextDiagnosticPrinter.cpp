@@ -21,7 +21,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace Fortran::frontend;
@@ -55,10 +54,11 @@ static void printRemarkOption(llvm::raw_ostream &os,
 
 // For remarks only, if we are receiving a message of this format
 // [file location with line and column];;[path to file];;[the remark message]
-// then print the absolute file path, line and column number.
+// then print the file path (as given on the command line), line and column
+// number.
 void TextDiagnosticPrinter::printLocForRemarks(
     llvm::raw_svector_ostream &diagMessageStream, llvm::StringRef &diagMsg) {
-  // split incoming string to get the absolute path and filename in the
+  // split incoming string to get the location and filename in the
   // case we are receiving optimization remarks from BackendRemarkConsumer
   diagMsg = diagMessageStream.str();
   llvm::StringRef delimiter = ";;";
@@ -73,19 +73,20 @@ void TextDiagnosticPrinter::printLocForRemarks(
   // tokens will always be of size 2 in the case of optimization
   // remark message received
   if (tokens.size() == 2) {
-    // Extract absolute path
-    llvm::SmallString<128> absPath = llvm::sys::path::relative_path(tokens[1]);
-    llvm::sys::path::remove_filename(absPath);
-    // Add the last separator before the file name
-    llvm::sys::path::append(absPath, llvm::sys::path::get_separator());
-    llvm::sys::path::make_preferred(absPath);
+    // tokens[0] has the form [base file name]:[line]:[column] and tokens[1] is
+    // the full path to the file. Display the full path (as presented on the
+    // command line) with the line and column, matching Clang: relative paths
+    // (e.g. ../vec.f90, dir/vec.f90) stay relative, and absolute paths are
+    // shown in full. The ":[line]:[column]" suffix is taken from tokens[0].
+    llvm::StringRef path = tokens[1];
+    llvm::StringRef lineAndColumn = tokens[0].substr(tokens[0].find(':'));
 
     // Used for changing only the bold attribute
-    if (diagOpts.ShowColors)
+    if (diagOpts.showColors(os.has_colors()))
       os.changeColor(llvm::raw_ostream::SAVEDCOLOR, true);
 
-    // Print path, file name, line and column
-    os << absPath << tokens[0] << ": ";
+    // Print file path, line and column
+    os << path << lineAndColumn << ": ";
   }
 }
 
@@ -112,12 +113,12 @@ void TextDiagnosticPrinter::HandleDiagnostic(
   llvm::StringRef diagMsg;
   printLocForRemarks(diagMessageStream, diagMsg);
 
-  Fortran::frontend::TextDiagnostic::printDiagnosticLevel(os, level,
-                                                          diagOpts.ShowColors);
+  Fortran::frontend::TextDiagnostic::printDiagnosticLevel(
+      os, level, diagOpts.showColors(os.has_colors()));
   Fortran::frontend::TextDiagnostic::printDiagnosticMessage(
       os,
       /*IsSupplemental=*/level == clang::DiagnosticsEngine::Note, diagMsg,
-      diagOpts.ShowColors);
+      diagOpts.showColors(os.has_colors()));
 
   os.flush();
 }

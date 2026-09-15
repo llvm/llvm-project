@@ -81,6 +81,11 @@ endif()
 function(compiler_rt_test_runtime runtime)
   cmake_parse_arguments(ARG "NO_COMPILER_RT_HAS_GUARD" "" "" ${ARGN})
 
+  # GPU UBSan tests run as part of the host test suite.
+  if(COMPILER_RT_GPU_BUILD AND runtime STREQUAL "ubsan")
+    return()
+  endif()
+
   # Validate that the test suite name is known.
   if(NOT "${runtime}" IN_LIST COMPILER_RT_KNOWN_TEST_SUITES)
     message(FATAL_ERROR "'${runtime}' is not a known test suite. Known test suites are: ${COMPILER_RT_KNOWN_TEST_SUITES}")
@@ -176,7 +181,7 @@ endif()
 # introduce a rule to run to run all of them.
 get_property(LLVM_COMPILER_RT_LIT_DEPENDS GLOBAL PROPERTY LLVM_COMPILER_RT_LIT_DEPENDS)
 add_custom_target(compiler-rt-test-depends)
-set_target_properties(compiler-rt-test-depends PROPERTIES FOLDER "Compiler-RT/Tests")
+set_target_properties(compiler-rt-test-depends PROPERTIES FOLDER "compiler-rt/Tests")
 if(LLVM_COMPILER_RT_LIT_DEPENDS)
   add_dependencies(compiler-rt-test-depends ${LLVM_COMPILER_RT_LIT_DEPENDS})
 endif()

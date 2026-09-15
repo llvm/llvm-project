@@ -17,21 +17,16 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local i32 @main() nounwind uwtable {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl i(%rip), %esi
-; CHECK-NEXT:    movl j(%rip), %eax
-; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    shrl $8, %edx
-; CHECK-NEXT:    movsbl %al, %ecx
-; CHECK-NEXT:    shrl $8, %eax
-; CHECK-NEXT:    cbtw
-; CHECK-NEXT:    idivb %dl
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    idivb %sil
-; CHECK-NEXT:    movzbl %dl, %ecx
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    pinsrb $1, %ecx, %xmm0
+; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    pmovsxbd %xmm0, %xmm0
+; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
+; CHECK-NEXT:    pmovsxbd %xmm1, %xmm1
+; CHECK-NEXT:    cvtdq2ps %xmm1, %xmm1
+; CHECK-NEXT:    divps %xmm0, %xmm1
+; CHECK-NEXT:    cvttps2dq %xmm1, %xmm0
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; CHECK-NEXT:    packsswb %xmm0, %xmm0
 ; CHECK-NEXT:    pextrw $0, %xmm0, res(%rip)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq

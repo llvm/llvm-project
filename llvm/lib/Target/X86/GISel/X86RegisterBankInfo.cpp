@@ -385,6 +385,13 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     MachineInstr *DefMI = MRI.getVRegDef(VReg);
     bool IsFP = onlyDefinesFP(*DefMI, MRI, TRI);
+    // A load goes to the FP bank as soon as one of its users only uses FP, see
+    // the G_LOAD case above.
+    if (!IsFP && DefMI->getOpcode() == TargetOpcode::G_LOAD)
+      IsFP = any_of(MRI.use_nodbg_instructions(VReg),
+                    [&](const MachineInstr &UseMI) {
+                      return onlyUsesFP(UseMI, MRI, TRI);
+                    });
     getInstrPartialMappingIdxs(MI, MRI, IsFP, OpRegBankIdx);
     break;
   }

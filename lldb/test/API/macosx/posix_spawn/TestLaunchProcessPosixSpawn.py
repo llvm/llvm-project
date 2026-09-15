@@ -49,7 +49,7 @@ class TestLaunchProcessPosixSpawn(TestBase):
         self.assertState(process.GetState(), lldb.eStateExited)
         self.assertIn("slice: {}".format(arch), process.GetSTDOUT(1000))
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIfDarwinEmbedded
     @skipIfLLVMTargetMissing("AArch64")
     @skipIfLLVMTargetMissing("X86")
@@ -60,7 +60,7 @@ class TestLaunchProcessPosixSpawn(TestBase):
         self.run_arch(exe, "x86_64")
         self.run_arch(exe, "x86_64h")
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIf(bugnumber="rdar://170040996")
     @skipIfDarwinEmbedded
     @skipIfLLVMTargetMissing("AArch64")

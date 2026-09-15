@@ -46,7 +46,7 @@ public:
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
-  Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
+  Status GetSharedModule(const ModuleSpec &module_spec, Target &target,
                          lldb::ModuleSP &module_sp,
                          llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                          bool *did_create_ptr) override;

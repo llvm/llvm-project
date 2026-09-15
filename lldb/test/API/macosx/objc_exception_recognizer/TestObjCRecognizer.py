@@ -11,14 +11,14 @@ from lldbsuite.test.lldbtest import *
 class TestObjCRecognizer(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_exception_recognizer_sub_class(self):
         """There can be many tests in a test case - describe this test here."""
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.m")
         self.objc_recognizer_test(True)
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_exception_recognizer_plain(self):
         """There can be many tests in a test case - describe this test here."""
         self.build()

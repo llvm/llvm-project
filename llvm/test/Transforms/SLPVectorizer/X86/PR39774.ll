@@ -14,8 +14,8 @@ define void @Test(i32) {
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP0:%.*]], [[TMP4]]
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = and i32 [[OP_RDX]], [[LOCAL_8_43_US1]]
 ; CHECK-NEXT:    [[VAL_44]] = add i32 [[LOCAL_8_43_US1]], 14910
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> poison, i32 [[OP_RDX1]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[VAL_44]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> poison, i32 [[OP_RDX1]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[VAL_44]], i64 1
 ; CHECK-NEXT:    [[TMP6]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -30,8 +30,8 @@ define void @Test(i32) {
 ; FORCE_REDUCTION-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP0:%.*]], [[TMP4]]
 ; FORCE_REDUCTION-NEXT:    [[VAL_43:%.*]] = and i32 [[OP_RDX]], [[LOCAL_8_43_US1]]
 ; FORCE_REDUCTION-NEXT:    [[VAL_44]] = add i32 [[LOCAL_8_43_US1]], 14910
-; FORCE_REDUCTION-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> poison, i32 [[VAL_43]], i32 0
-; FORCE_REDUCTION-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[VAL_44]], i32 1
+; FORCE_REDUCTION-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> poison, i32 [[VAL_43]], i64 0
+; FORCE_REDUCTION-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[VAL_44]], i64 1
 ; FORCE_REDUCTION-NEXT:    [[TMP6]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> poison, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; FORCE_REDUCTION-NEXT:    br label [[LOOP]]
 ;

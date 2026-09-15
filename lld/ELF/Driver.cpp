@@ -40,7 +40,6 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Filesystem.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/Version.h"
@@ -113,6 +112,18 @@ llvm::raw_fd_ostream Ctx::openAuxiliaryFile(llvm::StringRef filename,
   return {filename, ec, flags};
 }
 
+// Set up the parts of Ctx that both the top-level link and the nested dynamic
+// debugging link need. The caller initializes ctx.e beforehand.
+static void initContext(Ctx &ctx, LinkerScript &script, StringRef arg0) {
+  ctx.e.logName = args::getFilenameWithoutExe(arg0);
+  ctx.e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
+                                "--error-limit=0 to see all errors)";
+  ctx.script = &script;
+  ctx.symAux.emplace_back();
+  ctx.symtab = std::make_unique<SymbolTable>(ctx);
+  ctx.arg.progName = arg0;
+}
+
 namespace lld {
 namespace elf {
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
@@ -120,19 +131,9 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   // This driver-specific context will be freed later by unsafeLldMain().
   auto *context = new Ctx;
   Ctx &ctx = *context;
-
-  context->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
-  context->e.logName = args::getFilenameWithoutExe(args[0]);
-  context->e.errorLimitExceededMsg =
-      "too many errors emitted, stopping now (use "
-      "--error-limit=0 to see all errors)";
-
   LinkerScript script(ctx);
-  ctx.script = &script;
-  ctx.symAux.emplace_back();
-  ctx.symtab = std::make_unique<SymbolTable>(ctx);
-
-  ctx.arg.progName = args[0];
+  ctx.e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  initContext(ctx, script, args[0]);
 
   ctx.driver.linkerMain(args);
 
@@ -290,6 +291,11 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     ++nextGroupId;
   if (!deferLoad)
     loadFiles();
+}
+
+// Add an ELF input file directly.
+void LinkerDriver::addFile(std::unique_ptr<ELFFileBase> ef) {
+  files.push_back(std::move(ef));
 }
 
 // Add a given library by searching it from input search paths.
@@ -521,8 +527,8 @@ static uint8_t getZStartStopVisibility(Ctx &ctx, opt::InputArgList &args) {
       else if (kv.second == "protected")
         ret = STV_PROTECTED;
       else
-        ErrAlways(ctx) << "unknown -z start-stop-visibility= value: "
-                       << StringRef(kv.second);
+        Err(ctx) << "unknown -z start-stop-visibility= value '"
+                 << StringRef(kv.second) << "'";
     }
   }
   return ret;
@@ -541,7 +547,7 @@ static GcsPolicy getZGcs(Ctx &ctx, opt::InputArgList &args) {
       else if (kv.second == "always")
         ret = GcsPolicy::Always;
       else
-        ErrAlways(ctx) << "unknown -z gcs= value: " << kv.second;
+        Err(ctx) << "unknown -z gcs= value '" << kv.second << "'";
     }
   }
   return ret;
@@ -562,7 +568,7 @@ static ZicfilpPolicy getZZicfilp(Ctx &ctx, opt::InputArgList &args) {
       else if (kv.second == "implicit")
         ret = ZicfilpPolicy::Implicit;
       else
-        ErrAlways(ctx) << "unknown -z zicfilp= value: " << kv.second;
+        Err(ctx) << "unknown -z zicfilp= value '" << kv.second << "'";
     }
   }
   return ret;
@@ -581,7 +587,7 @@ static ZicfissPolicy getZZicfiss(Ctx &ctx, opt::InputArgList &args) {
       else if (kv.second == "implicit")
         ret = ZicfissPolicy::Implicit;
       else
-        ErrAlways(ctx) << "unknown -z zicfiss= value: " << kv.second;
+        Err(ctx) << "unknown -z zicfiss= value '" << kv.second << "'";
     }
   }
   return ret;
@@ -600,7 +606,7 @@ static int getZMemtagMode(Ctx &ctx, opt::InputArgList &args) {
       else if (kv.second == "async")
         ret = ELF::NT_MEMTAG_LEVEL_ASYNC;
       else
-        ErrAlways(ctx) << "unknown -z memtag-mode= value: " << kv.second;
+        Err(ctx) << "unknown -z memtag-mode= value '" << kv.second << "'";
     }
   }
   return ret;
@@ -616,7 +622,7 @@ static void checkZOptions(Ctx &ctx, opt::InputArgList &args) {
   getZFlag(args, "dynamic-undefined-weak", "nodynamic-undefined-weak", false);
   for (auto *arg : args.filtered(OPT_z))
     if (!arg->isClaimed())
-      Warn(ctx) << "unknown -z value: " << StringRef(arg->getValue());
+      Warn(ctx) << "unknown -z value '" << StringRef(arg->getValue()) << "'";
 }
 
 constexpr const char *saveTempsValues[] = {
@@ -624,6 +630,11 @@ constexpr const char *saveTempsValues[] = {
     "opt",        "precodegen", "prelink", "combinedindex"};
 
 LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
+
+void LinkerDriver::waitForLTOCleanup() {
+  if (lto)
+    lto->waitForLTOCleanup();
+}
 
 void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ELFOptTable parser;
@@ -635,6 +646,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false) &&
       !args.hasArg(OPT_no_warnings);
   ctx.e.suppressWarnings = args.hasArg(OPT_no_warnings);
+  ctx.arg.noinhibitExec = args.hasArg(OPT_noinhibit_exec);
 
   // Handle -help
   if (args.hasArg(OPT_help)) {
@@ -659,7 +671,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
     Msg(ctx) << getLLDVersion() << " (compatible with GNU linkers)";
 
-  if (const char *path = getReproduceOption(args)) {
+  if (const char *path = getReproduceOption(args); !ctx.inDynDbgLink && path) {
     // Note that --reproduce is a debug option so you can ignore it
     // if you are trying to understand the whole picture of the code.
     Expected<std::unique_ptr<TarWriter>> errOrWriter =
@@ -706,6 +718,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
     invokeELFT(link, args);
   }
+
+  // LTO cleanup may create time trace events. Wait for it to complete before
+  // writing the time trace data.
+  waitForLTOCleanup();
 
   if (ctx.arg.timeTraceEnabled) {
     checkError(ctx.e, timeTraceProfilerWrite(
@@ -1318,9 +1334,10 @@ static SmallVector<StringRef, 0> getSymbolOrderingFile(Ctx &ctx,
 
 static bool getIsRela(Ctx &ctx, opt::InputArgList &args) {
   // The psABI specifies the default relocation entry format.
-  bool rela = is_contained({EM_AARCH64, EM_AMDGPU, EM_HEXAGON, EM_LOONGARCH,
-                            EM_PPC, EM_PPC64, EM_RISCV, EM_S390, EM_X86_64},
-                           ctx.arg.emachine);
+  bool rela =
+      is_contained({EM_AARCH64, EM_AMDGPU, EM_HEXAGON, EM_LOONGARCH, EM_PPC,
+                    EM_PPC64, EM_RISCV, EM_S390, EM_SPARCV9, EM_X86_64},
+                   ctx.arg.emachine);
   // If -z rel or -z rela is specified, use the last option.
   for (auto *arg : args.filtered(OPT_z)) {
     StringRef s(arg->getValue());
@@ -1501,7 +1518,6 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.mmapOutputFile =
       args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, false);
   ctx.arg.nmagic = args.hasFlag(OPT_nmagic, OPT_no_nmagic, false);
-  ctx.arg.noinhibitExec = args.hasArg(OPT_noinhibit_exec);
   ctx.arg.nostdlib = args.hasArg(OPT_nostdlib);
   ctx.arg.oFormatBinary = isOutputFormatBinary(ctx, args);
   ctx.arg.omagic = args.hasFlag(OPT_omagic, OPT_no_omagic, false);
@@ -1756,8 +1772,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       else if (option.second == "error")
         *reportArg.second = ReportPolicy::Error;
       else {
-        ErrAlways(ctx) << "unknown -z " << reportArg.first
-                       << "= value: " << option.second;
+        Err(ctx) << "unknown -z " << reportArg.first << "= value '"
+                 << option.second << "'";
         continue;
       }
       hasGcsReportDynamic |= option.first == "gcs-report-dynamic";
@@ -1961,15 +1977,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.versionDefinitions.push_back(
       {"global", (uint16_t)VER_NDX_GLOBAL, {}, {}});
 
-  // If --retain-symbol-file is used, we'll keep only the symbols listed in
-  // the file and discard all others.
+  // Keep only these symbols in .symtab (not .dynsym), matching GNU ld.
   if (auto *arg = args.getLastArg(OPT_retain_symbols_file)) {
-    ctx.arg.versionDefinitions[VER_NDX_LOCAL].nonLocalPatterns.push_back(
-        {"*", /*isExternCpp=*/false, /*hasWildcard=*/true});
+    ctx.arg.retainSymbols.emplace();
     if (std::optional<MemoryBufferRef> buffer = readFile(ctx, arg->getValue()))
       for (StringRef s : args::getLines(*buffer))
-        ctx.arg.versionDefinitions[VER_NDX_GLOBAL].nonLocalPatterns.push_back(
-            {s, /*isExternCpp=*/false, /*hasWildcard=*/false});
+        ctx.arg.retainSymbols->insert(s);
   }
 
   for (opt::Arg *arg : args.filtered(OPT_warn_backrefs_exclude)) {
@@ -2083,21 +2096,6 @@ static void setConfigs(Ctx &ctx, opt::InputArgList &args) {
   if (ctx.arg.outputFile.empty())
     ctx.arg.outputFile = "a.out";
 
-  // Fail early if the output file or map file is not writable. If a user has a
-  // long link, e.g. due to a large LTO link, they do not wish to run it and
-  // find that it failed because there was a mistake in their command-line.
-  {
-    llvm::TimeTraceScope timeScope("Create output files");
-    if (auto e = tryCreateFile(ctx.arg.outputFile))
-      ErrAlways(ctx) << "cannot open output file " << ctx.arg.outputFile << ": "
-                     << e.message();
-    if (auto e = tryCreateFile(ctx.arg.mapFile))
-      ErrAlways(ctx) << "cannot open map file " << ctx.arg.mapFile << ": "
-                     << e.message();
-    if (auto e = tryCreateFile(ctx.arg.whyExtract))
-      ErrAlways(ctx) << "cannot open --why-extract= file " << ctx.arg.whyExtract
-                     << ": " << e.message();
-  }
 }
 
 static bool isFormatBinary(Ctx &ctx, StringRef s) {
@@ -3233,6 +3231,46 @@ static void postParseObjectFile(ELFFileBase *file) {
   }
 }
 
+// Objects that support Dynamic Debugging contain an ELF Dynamic Debugging
+// section that embeds an unoptimized ELF file with debug information. We
+// extract these embedded ELF files to make a consolidated unoptimized
+// relocatable ELF file to embed in an ELF Dynamic Debugging section in the
+// output. See llvm/docs/DynamicDebugging.md for more details.
+template <class ELFT> static void linkDynamicDebug(Ctx &ctx) {
+  Ctx dctx;
+  LinkerScript script(dctx);
+  dctx.e.initialize(ctx.e.outs(), ctx.e.errs(), ctx.e.exitEarly,
+                    ctx.e.disableOutput);
+  initContext(dctx, script, ctx.arg.progName);
+  dctx.inDynDbgLink = true;
+  dctx.dynDbgRelocatable = !ctx.arg.relocatable;
+
+  for (auto *file : ctx.objectFiles) {
+    auto *obj = cast<ObjFile<ELFT>>(file);
+    if (obj->dynDbgSec) {
+      MemoryBufferRef mb(toStringRef(obj->dynDbgSec->contentMaybeDecompress()),
+                         obj->mb.getBufferIdentifier());
+      dctx.driver.addFile(createObjFile(dctx, mb));
+    }
+  }
+
+  if (errCount(ctx))
+    return;
+
+  std::vector<const char *> args{
+      dctx.arg.progName.data(), "-r", "-o", "-",
+      dctx.saver.save(Twine("-O") + Twine(ctx.arg.optimize)).data()};
+  if (ctx.arg.resolveGroups)
+    args.push_back("--force-group-allocation");
+  dctx.driver.linkerMain(args);
+  if (errCount(dctx) > 0 || !dctx.dynDbgOutput) {
+    Err(ctx) << "failed to create relocatable dynamic debug object";
+    return;
+  }
+
+  ctx.dynDbgOutput = std::move(dctx.dynDbgOutput);
+}
+
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
@@ -3251,6 +3289,14 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     ctx.symtab->addUnusedUndefined(name)->referenced = true;
 
   parseFiles(ctx, files);
+
+  // ICF is incompatible with dynamic debugging: the inner ELF references outer
+  // symbols that folding would merge away.
+  if (ctx.hasDynDbg && ctx.arg.icf != ICFLevel::None) {
+    Warn(ctx) << "ICF disabled because it is incompatible with dynamic "
+                 "debugging";
+    ctx.arg.icf = ICFLevel::None;
+  }
 
   // Create dynamic sections for dynamic linking and static PIE.
   ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.isPic;
@@ -3524,6 +3570,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   if (canHaveMemtagGlobals(ctx)) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");
     createTaggedSymbols(ctx);
+  }
+
+  if (ctx.hasDynDbg) {
+    llvm::TimeTraceScope timeScope("Link dynamic debugging");
+    linkDynamicDebug<ELFT>(ctx);
+    if (errCount(ctx))
+      return;
   }
 
   // Create synthesized sections such as .got and .plt. This is called before

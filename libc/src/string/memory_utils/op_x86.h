@@ -26,7 +26,10 @@
 
 #if defined(__AVX512BW__) || defined(__AVX512F__) || defined(__AVX2__) ||      \
     defined(__SSE2__)
+#define LIBC_TARGET_HAS_X86_INTRIN 1
 #include <immintrin.h>
+#else
+#define LIBC_TARGET_HAS_X86_INTRIN 0
 #endif
 
 // Define fake functions to prevent the compiler from failing on undefined
@@ -82,7 +85,14 @@ template <typename T> LIBC_INLINE void stream(Ptr dst, T value) {
   store<T>(dst, value);
 #endif
 }
-template <typename T> LIBC_INLINE void fence() { _mm_sfence(); }
+
+template <typename T> LIBC_INLINE void fence() {
+  // This won't be reached when nothing fancy is enabled, but it can be
+  // referenced in if constexpr context, so it's still defined, as a no-op.
+#if LIBC_TARGET_HAS_X86_INTRIN
+  _mm_sfence();
+#endif
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for uint16_t

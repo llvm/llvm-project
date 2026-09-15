@@ -155,6 +155,10 @@ bool XcodeSDK::Info::operator==(const Info &other) const {
 }
 
 void XcodeSDK::Merge(const XcodeSDK &other) {
+  auto add_internal_sdk_suffix = [](llvm::StringRef sdk) {
+    return (sdk.substr(0, sdk.size() - 3) + "Internal.sdk").str();
+  };
+
   // The "bigger" SDK always wins.
   auto l = Parse();
   auto r = other.Parse();
@@ -163,15 +167,19 @@ void XcodeSDK::Merge(const XcodeSDK &other) {
   else {
     // The Internal flag always wins.
     if (!l.internal && r.internal) {
-      if (llvm::StringRef(m_name).ends_with(".sdk"))
-        m_name =
-            m_name.substr(0, m_name.size() - 3) + std::string("Internal.sdk");
+      if (llvm::StringRef(m_name).ends_with(".sdk")) {
+        m_name = add_internal_sdk_suffix(m_name);
+
+        // The internal SDK is a sibling of the public one, so the sysroot can
+        // be renamed along with the SDK. Leave a sysroot that doesn't name an
+        // SDK directory alone: the compiler may have remapped it, in which
+        // case it is only meaningful verbatim.
+        if (m_sysroot.GetFileNameExtension() == ".sdk")
+          m_sysroot.SetFilename(
+              add_internal_sdk_suffix(m_sysroot.GetFilename()));
+      }
     }
   }
-
-  // We changed the SDK name. Adjust the sysroot accordingly.
-  if (m_sysroot && m_sysroot.GetFilename().GetStringRef() != m_name)
-    m_sysroot.SetFilename(m_name);
 }
 
 std::string XcodeSDK::GetCanonicalName(XcodeSDK::Info info) {
@@ -245,12 +253,12 @@ bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type sdk_type,
 
 bool XcodeSDK::SDKSupportsModules(XcodeSDK::Type desired_type,
                                   const FileSpec &sdk_path) {
-  ConstString last_path_component = sdk_path.GetFilename();
+  llvm::StringRef last_path_component = sdk_path.GetFilename();
 
-  if (!last_path_component)
+  if (last_path_component.empty())
     return false;
 
-  XcodeSDK sdk(last_path_component.GetStringRef().str());
+  XcodeSDK sdk(last_path_component.str());
   if (sdk.GetType() != desired_type)
     return false;
   return SDKSupportsModules(sdk.GetType(), sdk.GetVersion());

@@ -5,7 +5,7 @@ define i16 @test(i16 %conv11) {
 ; CHECK-LABEL: define i16 @test(
 ; CHECK-SAME: i16 [[CONV11:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> <i16 0, i16 0, i16 0, i16 poison>, i16 [[CONV11]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> <i16 0, i16 0, i16 0, i16 poison>, i16 [[CONV11]], i64 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i16> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64> [[TMP2]] to <4 x double>

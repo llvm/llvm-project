@@ -39,7 +39,7 @@ CODEGENOPT(ImplicitMapSyms, 1, 0, Benign) ///< -Wa,-mmapsyms=implicit
 CODEGENOPT(AsmVerbose        , 1, 0, Benign) ///< -dA, -fverbose-asm.
 CODEGENOPT(PreserveAsmComments, 1, 1, Benign) ///< -dA, -fno-preserve-as-comments.
 CODEGENOPT(AssumeSaneOperatorNew , 1, 1, Benign) ///< implicit __attribute__((malloc)) operator new
-CODEGENOPT(AssumeUniqueVTables , 1, 1, Benign) ///< Assume a class has only one vtable.
+CODEGENOPT(DisableExactDynamicCast , 1, 0, Benign) ///< -fno-assume-unique-vtables: disable the exact dynamic_cast optimization.
 CODEGENOPT(Autolink          , 1, 1, Benign) ///< -fno-autolink
 CODEGENOPT(AutoImport        , 1, 1, Benign) ///< -fno-auto-import
 CODEGENOPT(ObjCAutoRefCountExceptions , 1, 0, Benign) ///< Whether ARC should be EH-safe.
@@ -57,7 +57,6 @@ CODEGENOPT(UniqueBasicBlockSectionNames, 1, 1, Benign) ///< Set for -funique-bas
                                                ///< Produce unique section names with
                                                ///< basic block sections.
 CODEGENOPT(SeparateNamedSections, 1, 0, Benign) ///< Set for -fseparate-named-sections.
-CODEGENOPT(EnableAIXExtendedAltivecABI, 1, 0, Benign) ///< Set for -mabi=vec-extabi. Enables the extended Altivec ABI on AIX.
 CODEGENOPT(XCOFFReadOnlyPointers, 1, 0, Benign) ///< Set for -mxcoff-roptr.
 CODEGENOPT(AllTocData, 1, 0, Benign) ///< AIX -mtocdata
 ENUM_CODEGENOPT(FramePointer, FramePointerKind, 3, FramePointerKind::None, Benign) /// frame-pointer: all,non-leaf,non-leaf-no-reserve,reserved,none
@@ -469,6 +468,9 @@ CODEGENOPT(KeepStaticConsts, 1, 0, Benign)
 /// including global, static and thread local variables.
 CODEGENOPT(KeepPersistentStorageVariables, 1, 0, Benign)
 
+/// Whether to emit inline functions into the object file, even if inlined into all callers.
+CODEGENOPT(KeepInlineFunctions, 1, 0, Benign)
+
 /// Whether to follow the AAPCS enforcing at least one read before storing to a volatile bitfield
 CODEGENOPT(ForceAAPCSBitfieldLoad, 1, 0, Benign)
 
@@ -534,6 +536,9 @@ ENUM_CODEGENOPT(WinControlFlowGuardMechanism, ControlFlowGuardMechanism,
 
 /// Adds attributes that prevent outlining (`-mno-outline`)
 CODEGENOPT(DisableOutlining, 1, 0, Benign)
+
+/// Controlls the emission of function name in PPA1 on z/OS.
+CODEGENOPT(ZOSPPA1Name, 1, 1, Benign)
 
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"

@@ -1274,7 +1274,7 @@ def Divu8: SDNodeXForm<imm, [{
 def FShl32i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
   (HiReg (S2_asl_i_p (Combinew $Rs, $Rt), $S))>;
 def FShl32r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
-  (HiReg (S2_asl_r_p (Combinew $Rs, $Rt), $Ru))>;
+  (HiReg (S2_asl_r_p (Combinew $Rs, $Rt), (A2_andir $Ru, 31)))>;
 
 def FShl64i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
   (S2_lsr_i_p_or (S2_asl_i_p $Rs, $S),  $Rt, (Subi<64> $S))>;
@@ -1316,7 +1316,7 @@ def: Pat<(fshl I64:$Rs, I64:$Rt, I32:$Ru),  (FShl64r $Rs, $Rt, $Ru)>;
 def FShr32i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
   (LoReg (S2_lsr_i_p (Combinew $Rs, $Rt), $S))>;
 def FShr32r: OutPatFrag<(ops node:$Rs, node:$Rt, node:$Ru),
-  (LoReg (S2_lsr_r_p (Combinew $Rs, $Rt), $Ru))>;
+  (LoReg (S2_lsr_r_p (Combinew $Rs, $Rt), (A2_andir $Ru, 31)))>;
 
 def FShr64i: OutPatFrag<(ops node:$Rs, node:$Rt, node:$S),
   (S2_asl_i_p_or (S2_lsr_i_p $Rt, $S),  $Rs, (Subi<64> $S))>;
@@ -1634,6 +1634,8 @@ def: OpR_RR_pat<F2_sfsub,     pf2<fsub>,    f32, F32>;
 def: OpR_RR_pat<F2_sfmpy,     pf2<fmul>,    f32, F32>;
 def: OpR_RR_pat<F2_sfmin,     pf2<fminimumnum>, f32, F32>;
 def: OpR_RR_pat<F2_sfmax,     pf2<fmaximumnum>, f32, F32>;
+def: OpR_RR_pat<F2_sfmin,     pf2<fminnum>, f32, F32>;
+def: OpR_RR_pat<F2_sfmax,     pf2<fmaxnum>, f32, F32>;
 
 let Predicates = [HasV66] in {
   def: OpR_RR_pat<F2_dfadd,     pf2<fadd>,    f64, F64>;
@@ -1658,6 +1660,8 @@ let Predicates = [HasV67], AddedComplexity = 50 in {
 let Predicates = [HasV67] in {
   def: OpR_RR_pat<F2_dfmin,     pf2<fminimumnum>, f64, F64>;
   def: OpR_RR_pat<F2_dfmax,     pf2<fmaximumnum>, f64, F64>;
+  def: OpR_RR_pat<F2_dfmin,     pf2<fminnum>, f64, F64>;
+  def: OpR_RR_pat<F2_dfmax,     pf2<fmaxnum>, f64, F64>;
 
   def: Pat<(fmul F64:$Rs, F64:$Rt), (DfMpy (F2_dfmpyfix $Rs, $Rt),
                                            (F2_dfmpyfix $Rt, $Rs))>;
@@ -1763,6 +1767,28 @@ def: Pat<(mul I32:$Rs, n8_0ImmPred:$n8),
 
 def: Pat<(v2i32 (mulnsw (sext V2I16:$Rs), (sext V2I16:$Rt))),
          (M2_vmpy2s_s0 V2I16:$Rs, V2I16:$Rt)>;
+
+// PatFrag matching assertsext of a v2i32 from i16, produced when a scalar
+// sext i16 is splatted into a v2i32 vector and the splat is hoisted out of
+// the loop into an earlier block, arriving as a live-in v2i32 register.
+def assertsext_v2i32_i16 : PatFrag<(ops node:$Rs),
+                                    (assertsext node:$Rs), [{
+  auto *T = cast<VTSDNode>(N->getOperand(1));
+  return N->getValueType(0) == MVT::v2i32 && T->getVT() == MVT::i16;
+}]>;
+
+// Handle sext v2i16 multiplied by a splatted scalar sext i16, where the
+// splat was hoisted and arrives as assertsext v2i32. Recover the v2i16
+// by combining the low halfwords of both elements.
+def: Pat<(v2i32 (mulnsw (sext V2I16:$Rs),
+                         (assertsext_v2i32_i16 V2I32:$Rt))),
+         (M2_vmpy2s_s0 V2I16:$Rs,
+                       (A2_combine_ll (HiReg $Rt), (LoReg $Rt)))>;
+
+def: Pat<(v2i32 (mulnsw (assertsext_v2i32_i16 V2I32:$Rs),
+                         (sext V2I16:$Rt))),
+         (M2_vmpy2s_s0 (A2_combine_ll (HiReg $Rs), (LoReg $Rs)),
+                       V2I16:$Rt)>;
 
 def: Pat<(add Sext64:$Rs, I64:$Rt),
          (A2_addsp (LoReg Sext64:$Rs), I64:$Rt)>;

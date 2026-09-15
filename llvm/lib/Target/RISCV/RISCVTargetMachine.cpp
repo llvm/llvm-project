@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVTargetMachine.h"
-#include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCV.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVMachineScheduler.h"
@@ -34,12 +33,10 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <optional>
 using namespace llvm;
 
@@ -128,16 +125,18 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVDeadRegisterDefinitionsPass(*PR);
   initializeRISCVLateBranchOptPass(*PR);
   initializeRISCVMakeCompressibleOptPass(*PR);
-  initializeRISCVGatherScatterLoweringPass(*PR);
-  initializeRISCVCodeGenPrepareLegacyPassPass(*PR);
-  initializeRISCVPostRAExpandPseudoPass(*PR);
+  initializeRISCVQCRelaxMarkingPass(*PR);
+  initializeRISCVGatherScatterLoweringLegacyPass(*PR);
+  initializeRISCVCodeGenPrepareLegacyPass(*PR);
+  initializeRISCVZacasABIFixLegacyPass(*PR);
+  initializeRISCVExpandPseudoPostRALegacyPass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
-  initializeRISCVOptWInstrsPass(*PR);
-  initializeRISCVFoldMemOffsetPass(*PR);
-  initializeRISCVPreRAExpandPseudoPass(*PR);
-  initializeRISCVExpandPseudoPass(*PR);
-  initializeRISCVVectorPeepholePass(*PR);
-  initializeRISCVVLOptimizerPass(*PR);
+  initializeRISCVOptWInstrsLegacyPass(*PR);
+  initializeRISCVFoldMemOffsetLegacyPass(*PR);
+  initializeRISCVExpandPseudoPreRALegacyPass(*PR);
+  initializeRISCVExpandPseudoPreEmitLegacyPass(*PR);
+  initializeRISCVVectorPeepholeLegacyPass(*PR);
+  initializeRISCVVLOptimizerLegacyPass(*PR);
   initializeRISCVVMV0EliminationPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
@@ -148,7 +147,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVIndirectBranchTrackingPass(*PR);
   initializeRISCVLoadStoreOptPass(*PR);
   initializeRISCVPreAllocZilsdOptPass(*PR);
-  initializeRISCVExpandAtomicPseudoPass(*PR);
+  initializeRISCVExpandPseudoAtomicsLegacyPass(*PR);
   initializeRISCVRedundantCopyEliminationPass(*PR);
   initializeRISCVAsmPrinterPass(*PR);
   initializeRISCVPromoteConstantPass(*PR);
@@ -251,16 +250,7 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
                            << CPU << TuneCPU << FS;
   auto &I = SubtargetMap[Key];
   if (!I) {
-    auto ABIName = Options.MCOptions.getABIName();
-    if (const MDString *ModuleTargetABI = dyn_cast_or_null<MDString>(
-            F.getParent()->getModuleFlag("target-abi"))) {
-      auto TargetABI = RISCVABI::getTargetABI(ABIName);
-      if (TargetABI != RISCVABI::ABI_Unknown &&
-          ModuleTargetABI->getString() != ABIName) {
-        report_fatal_error("-target-abi option != target-abi module flag");
-      }
-      ABIName = ModuleTargetABI->getString();
-    }
+    StringRef ABIName = getTargetABIName(*F.getParent());
     I = std::make_unique<RISCVSubtarget>(
         TargetTriple, CPU, TuneCPU, FS, ABIName, RVVBitsMin, RVVBitsMax, *this);
   }
@@ -476,13 +466,13 @@ bool RISCVPassConfig::addRegAssignAndRewriteOptimized() {
 
 void RISCVPassConfig::addIRPasses() {
   addPass(createAtomicExpandLegacyPass());
-  addPass(createRISCVZacasABIFixPass());
+  addPass(createRISCVZacasABIFixLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableLoopDataPrefetch)
       addPass(createLoopDataPrefetchPass());
 
-    addPass(createRISCVGatherScatterLoweringPass());
+    addPass(createRISCVGatherScatterLoweringLegacyPass());
     addPass(createInterleavedAccessPass());
     addPass(createRISCVCodeGenPrepareLegacyPass());
   }
@@ -525,13 +515,13 @@ void RISCVPassConfig::addCodeGenPrepare() {
 }
 
 bool RISCVPassConfig::addInstSelector() {
-  addPass(createRISCVISelDag(getRISCVTargetMachine(), getOptLevel()));
+  addPass(createRISCVISelDagLegacyPass(getRISCVTargetMachine(), getOptLevel()));
 
   return false;
 }
 
 bool RISCVPassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 
@@ -544,7 +534,7 @@ void RISCVPassConfig::addPreLegalizeMachineIR() {
 }
 
 bool RISCVPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
@@ -554,17 +544,17 @@ void RISCVPassConfig::addPreRegBankSelect() {
 }
 
 bool RISCVPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool RISCVPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }
 
 void RISCVPassConfig::addPreSched2() {
-  addPass(createRISCVPostRAExpandPseudoPass());
+  addPass(createRISCVExpandPseudoPostRALegacyPass());
 
   // Emit KCFI checks for indirect calls.
   addPass(createKCFIPass());
@@ -598,12 +588,17 @@ void RISCVPassConfig::addPreEmitPass2() {
     // ensuring return instruction is detected correctly.
     addPass(createRISCVPushPopOptimizationPass());
   }
-  addPass(createRISCVExpandPseudoPass());
+  addPass(createRISCVExpandPseudoPreEmitLegacyPass());
+
+  // Add QC Relaxation Markers as late as possible, and only for RV32
+  if (TM->getOptLevel() != CodeGenOptLevel::None &&
+      TM->getTargetTriple().isRISCV32())
+    addPass(createRISCVQCRelaxMarkingPass());
 
   // Schedule the expansion of AMOs at the last possible moment, avoiding the
   // possibility for other passes to break the requirements for forward
   // progress in the LR/SC block.
-  addPass(createRISCVExpandAtomicPseudoPass());
+  addPass(createRISCVExpandPseudoAtomicsLegacyPass());
 
   // KCFI indirect call checks are lowered to a bundle.
   addPass(createUnpackMachineBundlesLegacy([&](const MachineFunction &MF) {
@@ -611,27 +606,35 @@ void RISCVPassConfig::addPreEmitPass2() {
   }));
 
   if (EnableCFIInstrInserter)
-    addPass(createCFIInstrInserter());
+    addPass(createCFIInstrInserterLegacy());
 }
 
 void RISCVPassConfig::addMachineSSAOptimization() {
   // It's beneficial to reduce the VL to enable more
   // Machine SSA optimizations.
-  if (TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createRISCVVLOptimizerPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None) {
+    // RISCVVLOptimizer can make loop invariant instructions like vmv.v.i
+    // loop variant by propagating a VL defined inside the loop. Run LICM and
+    // hoist them early. Don't do this at -O0 to avoid the compile-time
+    // overhead. Not reducing the VL of loop invariant pseudos results in more
+    // vsetvli toggles, and still requires the MachineLoopInfo analysis to be
+    // run.
+    addPass(&EarlyMachineLICMID);
+    addPass(createRISCVVLOptimizerLegacyPass());
+  }
 
-  addPass(createRISCVVectorPeepholePass());
-  addPass(createRISCVFoldMemOffsetPass());
+  addPass(createRISCVVectorPeepholeLegacyPass());
+  addPass(createRISCVFoldMemOffsetLegacyPass());
 
   TargetPassConfig::addMachineSSAOptimization();
 
   if (TM->getTargetTriple().isRISCV64()) {
-    addPass(createRISCVOptWInstrsPass());
+    addPass(createRISCVOptWInstrsLegacyPass());
   }
 }
 
 void RISCVPassConfig::addPreRegAlloc() {
-  addPass(createRISCVPreRAExpandPseudoPass());
+  addPass(createRISCVExpandPseudoPreRALegacyPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMergeBaseOffsetOptPass());
     // Add Zilsd pre-allocation load/store optimization
@@ -665,17 +668,6 @@ bool RISCVPassConfig::addILPOpts() {
     addPass(&MachineCombinerID);
 
   return true;
-}
-
-void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
-#define GET_PASS_REGISTRY "RISCVPassRegistry.def"
-#include "llvm/Passes/TargetPassRegistry.inc"
-
-  PB.registerLateLoopOptimizationsEPCallback([=](LoopPassManager &LPM,
-                                                 OptimizationLevel Level) {
-    if (Level != OptimizationLevel::O0)
-      LPM.addPass(LoopIdiomVectorizePass(LoopIdiomVectorizeStyle::Predicated));
-  });
 }
 
 yaml::MachineFunctionInfo *

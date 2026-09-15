@@ -1,0 +1,103 @@
+! RUN: bbc -emit-hlfir -fcuda -gpu=unified %s -o - | FileCheck %s
+
+! Under -gpu=unified, plain (unattributed) allocatables and pointers are backed
+! by CUDA managed memory: the unified allocator index (idx 4) is baked into the
+! descriptor at creation (declaration / module global) and at the ALLOCATE site,
+! so runtime-driven allocations (allocate-on-assignment, SOURCE=, ...) also use
+! managed memory.
+
+module m
+  real, allocatable :: mod_arr(:)
+contains
+  subroutine alloc_local()
+    real, allocatable :: loc_arr(:)
+    allocate(loc_arr(100))
+    deallocate(loc_arr)
+  end subroutine
+  subroutine alloc_module()
+    allocate(mod_arr(100))
+    deallocate(mod_arr)
+  end subroutine
+  subroutine alloc_pointer()
+    real, pointer :: loc_ptr(:)
+    allocate(loc_ptr(100))
+    deallocate(loc_ptr)
+  end subroutine
+  subroutine alloc_explicit_device()
+    real, allocatable, device :: dev_arr(:)
+    allocate(dev_arr(100))
+    deallocate(dev_arr)
+  end subroutine
+  ! A pointer in a COMMON block must still receive managed backing at ALLOCATE.
+  subroutine common_sub()
+    real, pointer :: com_ptr(:)
+    common /blk/ com_ptr
+    allocate(com_ptr(100))
+    deallocate(com_ptr)
+  end subroutine
+  ! Allocate-on-assignment: assign_arr is never explicitly ALLOCATEd, so the
+  ! unified allocator index must be baked into its descriptor at declaration for
+  ! the runtime realloc to use managed memory.
+  subroutine alloc_on_assign(src)
+    real :: src(:)
+    real, allocatable :: assign_arr(:)
+    assign_arr = src
+  end subroutine
+end module
+
+program p
+  real, allocatable :: prog_arr(:)
+  allocate(prog_arr(100))
+  deallocate(prog_arr)
+end program
+
+! The unified allocator index is chosen at the ALLOCATE site, and the matching
+! deallocation goes through the runtime (which honors the allocator index and
+! calls the managed deallocator) rather than an inlined plain free.
+! CHECK-LABEL: func.func @_QMmPalloc_local()
+! CHECK-NOT:   cuf.alloc
+! CHECK:       hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMmFalloc_localEloc_arr"}
+! CHECK:       fir.embox {{.*}} {allocator_idx = 4 : i32}
+! CHECK:       fir.call @_FortranAAllocatableAllocate
+! CHECK-NOT:   fir.freemem
+! CHECK:       fir.call @_FortranAAllocatableDeallocate
+! CHECK-NOT:   cuf.allocate
+
+! Module allocatable: redirected to the unified allocator at ALLOCATE.
+! CHECK-LABEL: func.func @_QMmPalloc_module()
+! CHECK:       fir.embox {{.*}} {allocator_idx = 4 : i32}
+
+! Plain pointer: redirected to the unified allocator at ALLOCATE.
+! CHECK-LABEL: func.func @_QMmPalloc_pointer()
+! CHECK-NOT:   cuf.alloc
+! CHECK:       hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFalloc_pointerEloc_ptr"}
+! CHECK:       fir.embox {{.*}} {allocator_idx = 4 : i32}
+! CHECK-NOT:   cuf.allocate
+
+! Explicit device allocatable keeps the device allocator (idx 2); the implicit
+! unified redirect does not apply because the allocator index is already set.
+! CHECK-LABEL: func.func @_QMmPalloc_explicit_device()
+! CHECK:       fir.embox {{.*}} {allocator_idx = 2 : i32}
+
+! COMMON-block pointer: its ALLOCATE is still redirected to the unified allocator.
+! CHECK-LABEL: func.func @_QMmPcommon_sub()
+! CHECK:       hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMmFcommon_subEcom_ptr"}
+! CHECK:       fir.embox {{.*}} {allocator_idx = 4 : i32}
+
+! Allocate-on-assignment: the descriptor is created with the unified allocator
+! index at declaration, so the runtime realloc for the assignment gets managed
+! memory even though there is no explicit ALLOCATE.
+! CHECK-LABEL: func.func @_QMmPalloc_on_assign(
+! CHECK:       fir.embox {{.*}} {allocator_idx = 4 : i32}
+! CHECK:       hlfir.declare {{.*}} uniq_name = "_QMmFalloc_on_assignEassign_arr"
+! CHECK:       hlfir.assign {{.*}} realloc
+
+! Main-program local allocatable.
+! CHECK-LABEL: func.func @_QQmain()
+! CHECK:       fir.embox {{.*}} {allocator_idx = 4 : i32}
+
+! The module global carries no CUDA data attribute, but its descriptor is created
+! with the unified allocator index so runtime allocations use managed memory.
+! CHECK:     fir.global @_QMmEmod_arr : !fir.box<!fir.heap<!fir.array<?xf32>>>
+! CHECK-NOT: fir.global @_QMmEmod_arr {data_attr
+! CHECK:     fir.embox {{.*}} {allocator_idx = 4 : i32}

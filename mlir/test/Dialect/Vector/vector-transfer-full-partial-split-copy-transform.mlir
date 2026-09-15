@@ -17,7 +17,7 @@ func.func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: ind
   //  CHECK-DAG: %[[c4:.*]] = arith.constant 4 : index
   //  CHECK-DAG: %[[c8:.*]] = arith.constant 8 : index
   // alloca for boundary full tile
-  //      CHECK: %[[alloc:.*]] = memref.alloca() {alignment = 32 : i64} : memref<4x8xf32>
+  //      CHECK: %[[alloc:.*]] = memref.alloca() alignment = 32 : memref<4x8xf32>
   // %i + 4 <= dim(%A, 0)
   //      CHECK: %[[idx0:.*]] = affine.apply #[[$map_p4]]()[%[[i]]]
   //      CHECK: %[[d0:.*]] = memref.dim %[[A]], %[[c0]] : memref<?x8xf32>
@@ -69,7 +69,7 @@ func.func @split_vector_transfer_read_strided_2d(
   //  CHECK-DAG: %[[c7:.*]] = arith.constant 7 : index
   //  CHECK-DAG: %[[c8:.*]] = arith.constant 8 : index
   // alloca for boundary full tile
-  //      CHECK: %[[alloc:.*]] = memref.alloca() {alignment = 32 : i64} : memref<4x8xf32>
+  //      CHECK: %[[alloc:.*]] = memref.alloca() alignment = 32 : memref<4x8xf32>
   // %i + 4 <= dim(%A, 0)
   //      CHECK: %[[idx0:.*]] = affine.apply #[[$map_p4]]()[%[[i]]]
   //      CHECK: %[[cmp0:.*]] = arith.cmpi sle, %[[idx0]], %[[c7]] : index
@@ -138,7 +138,7 @@ func.func @split_vector_transfer_write_2d(%V: vector<4x8xf32>, %A: memref<?x8xf3
 // CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[C4:.*]] = arith.constant 4 : index
 // CHECK-DAG:       %[[C8:.*]] = arith.constant 8 : index
-// CHECK:           %[[TEMP:.*]] = memref.alloca() {alignment = 32 : i64} : memref<4x8xf32>
+// CHECK:           %[[TEMP:.*]] = memref.alloca() alignment = 32 : memref<4x8xf32>
 // CHECK:           %[[IDX0:.*]] = affine.apply #[[$MAP0]]()[%[[I]]]
 // CHECK:           %[[DIM0:.*]] = memref.dim %[[DEST]], %[[C0]] : memref<?x8xf32>
 // CHECK:           %[[DIM0_IN:.*]] = arith.cmpi sle, %[[IDX0]], %[[DIM0]] : index
@@ -204,7 +204,7 @@ func.func @split_vector_transfer_write_strided_2d(
 // CHECK-DAG:       %[[C7:.*]] = arith.constant 7 : index
 // CHECK-DAG:       %[[C4:.*]] = arith.constant 4 : index
 // CHECK-DAG:       %[[C8:.*]] = arith.constant 8 : index
-// CHECK:           %[[TEMP:.*]] = memref.alloca() {alignment = 32 : i64} : memref<4x8xf32>
+// CHECK:           %[[TEMP:.*]] = memref.alloca() alignment = 32 : memref<4x8xf32>
 // CHECK:           %[[DIM0:.*]] = affine.apply #[[$MAP1]]()[%[[I]]]
 // CHECK:           %[[DIM0_IN:.*]] = arith.cmpi sle, %[[DIM0]], %[[C7]] : index
 // CHECK:           %[[DIM1:.*]] = affine.apply #[[$MAP2]]()[%[[J]]]

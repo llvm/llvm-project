@@ -20,8 +20,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <cctype>
-#include <cstring>
 #include <map>
 #include <set>
 #include <string>
@@ -193,11 +191,14 @@ OptTable::suggestValueCompletions(StringRef Option, StringRef Arg) const {
   // Search all options and return possible values.
   for (size_t I = FirstSearchableIndex, E = OptionInfos.size(); I < E; I++) {
     const Info &In = OptionInfos[I];
-    if (!In.Values || !optionMatches(*StrTable, PrefixesTable, In, Option))
+    if (!optionMatches(*StrTable, PrefixesTable, In, Option))
+      continue;
+    StringRef Values = getOptionValues(In);
+    if (Values.empty())
       continue;
 
     SmallVector<StringRef, 8> Candidates;
-    StringRef(In.Values).split(Candidates, ",", -1, false);
+    Values.split(Candidates, ",", -1, false);
 
     std::vector<std::string> Result;
     for (StringRef Val : Candidates)
@@ -214,7 +215,7 @@ OptTable::findByPrefix(StringRef Cur, Visibility VisibilityMask,
   std::vector<std::string> Ret;
   for (size_t I = FirstSearchableIndex, E = OptionInfos.size(); I < E; I++) {
     const Info &In = OptionInfos[I];
-    if (In.hasNoPrefix() || (!In.HelpText && !In.GroupID))
+    if (In.hasNoPrefix() || (!In.hasHelpText() && !In.GroupID))
       continue;
     if (!(In.Visibility & VisibilityMask))
       continue;
@@ -225,8 +226,7 @@ OptTable::findByPrefix(StringRef Cur, Visibility VisibilityMask,
     for (auto PrefixOffset : In.getPrefixOffsets(PrefixesTable)) {
       StringRef Prefix = (*StrTable)[PrefixOffset];
       std::string S = (Twine(Prefix) + Name + "\t").str();
-      if (In.HelpText)
-        S += In.HelpText;
+      S += (*StrTable)[In.HelpTextOffset];
       if (StringRef(S).starts_with(Cur) && S != std::string(Cur) + "\t")
         Ret.push_back(S);
     }
@@ -616,12 +616,12 @@ static std::string getOptionHelpName(const OptTable &Opts, OptSpecifier Id) {
     llvm_unreachable("Invalid option with help text.");
 
   case Option::MultiArgClass:
-    if (const char *MetaVarName = Opts.getOptionMetaVar(Id)) {
+    if (StringRef MetaVarName = Opts.getOptionMetaVar(Id);
+        !MetaVarName.empty()) {
       // For MultiArgs, metavar is full list of all argument names.
       Name += ' ';
       Name += MetaVarName;
-    }
-    else {
+    } else {
       // For MultiArgs<N>, if metavar not supplied, print <value> N times.
       for (unsigned i=0, e=O.getNumArgs(); i< e; ++i) {
         Name += " <value>";
@@ -641,7 +641,7 @@ static std::string getOptionHelpName(const OptTable &Opts, OptSpecifier Id) {
     [[fallthrough]];
   case Option::JoinedClass: case Option::CommaJoinedClass:
   case Option::JoinedAndSeparateClass:
-    if (const char *MetaVarName = Opts.getOptionMetaVar(Id))
+    if (StringRef MetaVarName = Opts.getOptionMetaVar(Id); !MetaVarName.empty())
       Name += MetaVarName;
     else
       Name += "<value>";
@@ -695,7 +695,7 @@ static void PrintHelpOptionList(raw_ostream &OS, StringRef Title,
   }
 }
 
-static const char *getOptionHelpGroup(const OptTable &Opts, OptSpecifier Id) {
+static StringRef getOptionHelpGroup(const OptTable &Opts, OptSpecifier Id) {
   unsigned GroupID = Opts.getOptionGroupID(Id);
 
   // If not in a group, return the default help group.
@@ -706,7 +706,7 @@ static const char *getOptionHelpGroup(const OptTable &Opts, OptSpecifier Id) {
   // name.
   //
   // FIXME: Split out option groups.
-  if (const char *GroupHelp = Opts.getOptionHelpText(GroupID))
+  if (StringRef GroupHelp = Opts.getOptionHelpText(GroupID); !GroupHelp.empty())
     return GroupHelp;
 
   // Otherwise keep looking.
@@ -751,7 +751,7 @@ void OptTable::internalPrintHelp(
 
   // Render help text into a map of group-name to a list of (option, help)
   // pairs.
-  std::map<std::string, std::vector<OptionInfo>> GroupedOptionHelp;
+  std::map<StringRef, std::vector<OptionInfo>> GroupedOptionHelp;
 
   auto ActiveSubCommand = llvm::find_if(
       SubCommands, [&](const auto &C) { return SubCommand == C.Name; });
@@ -814,15 +814,17 @@ void OptTable::internalPrintHelp(
 
     // If an alias doesn't have a help text, show a help text for the aliased
     // option instead.
-    const char *HelpText = getOptionHelpText(Id, VisibilityMask);
-    if (!HelpText && ShowAllAliases) {
+    StringTable::Offset HelpTextOffset =
+        getHelpTextOffset(CandidateInfo, VisibilityMask);
+    if (!HelpTextOffset.value() && ShowAllAliases) {
       const Option Alias = getOption(Id).getAlias();
       if (Alias.isValid())
-        HelpText = getOptionHelpText(Alias.getID(), VisibilityMask);
+        HelpTextOffset =
+            getHelpTextOffset(getInfo(Alias.getID()), VisibilityMask);
     }
 
-    if (HelpText && (strlen(HelpText) != 0)) {
-      const char *HelpGroup = getOptionHelpGroup(*this, Id);
+    if (StringRef HelpText = (*StrTable)[HelpTextOffset]; !HelpText.empty()) {
+      StringRef HelpGroup = getOptionHelpGroup(*this, Id);
       const std::string &OptName = getOptionHelpName(*this, Id);
       GroupedOptionHelp[HelpGroup].push_back({OptName, HelpText});
     }

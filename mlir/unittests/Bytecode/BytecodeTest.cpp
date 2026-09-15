@@ -222,7 +222,7 @@ TEST(Bytecode, OpWithoutProperties) {
   ASSERT_TRUE(succeeded(readBytecodeFile(
       llvm::MemoryBufferRef(bytecode, "string-buffer"), block.get(), config)));
   Operation *roundtripped = &block->front();
-  EXPECT_EQ(roundtripped->getAttrs().size(), 2u);
+  EXPECT_EQ(roundtripped->getRawDictionaryAttrs().size(), 2u);
   EXPECT_EQ(roundtripped->getInherentAttr("inherent_attr"), std::nullopt);
   EXPECT_NE(roundtripped->getDiscardableAttr("inherent_attr"), Attribute());
   EXPECT_NE(roundtripped->getDiscardableAttr("other_attr"), Attribute());
@@ -389,7 +389,7 @@ TEST(Bytecode, LocationElisionPreservesAttributes) {
   EXPECT_TRUE(isa<UnknownLoc>(innerOp->getLoc()));
 
   // 2. Verify that the semantic location attribute WAS PRESERVED.
-  Attribute semanticLocAttr = innerOp->getAttr("some_loc_attr");
+  Attribute semanticLocAttr = innerOp->getDiscardableAttr("some_loc_attr");
   ASSERT_TRUE(semanticLocAttr);
   auto locAttr = dyn_cast<LocationAttr>(semanticLocAttr);
   ASSERT_TRUE(locAttr);

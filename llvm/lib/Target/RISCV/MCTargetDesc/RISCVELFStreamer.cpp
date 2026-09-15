@@ -29,10 +29,24 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
                                                const MCSubtargetInfo &STI)
     : RISCVTargetStreamer(S), CurrentVendor("riscv") {
   MCAssembler &MCA = getStreamer().getAssembler();
-  const FeatureBitset &Features = STI.getFeatureBits();
   auto &MAB = static_cast<RISCVAsmBackend &>(MCA.getBackend());
-  setTargetABI(RISCVABI::computeTargetABI(STI.getTargetTriple(), Features,
-                                          MAB.getTargetOptions().getABIName()));
+  StringRef ABIName = MAB.getTargetOptions().getABIName();
+  // We have to recompute the ABI rather than casting STI to RISCVSubtarget
+  // since MC tools like llvm-mc call this when STI is MCSubtargetInfo instead.
+  // Using RISCVSubtarget requires a TargetMachine, which the MC-only tools
+  // deliberately don't link.
+  // TODO: Might be cleaner to have callers set the ABI instead of computing
+  // it twice which introduces a chance of it being out of sync.
+  if (auto ABIOrErr = RISCVABI::computeTargetABI(STI, ABIName)) {
+    setTargetABI(*ABIOrErr);
+  } else {
+    // Do not warn here and instead silently fall back to the default ABI:
+    // either RISCVSubtarget::initializeSubtargetDependencies() or
+    // RISCVAsmParser::onBeginOfFile() will print the message with proper
+    // contexts. Reporting here would just duplicate that diagnostic.
+    consumeError(ABIOrErr.takeError());
+    setTargetABI(cantFail(RISCVABI::computeTargetABI(STI, "")));
+  }
   setFlagsFromFeatures(STI);
 
   // Compute the initial ISA string.  This serves two purposes:
@@ -41,8 +55,7 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
   //   2. Initial symbol: seed the streamer's active ISA so a "$x<ArchString>"
   //      mapping symbol is emitted before the first instruction, recording
   //      the full ISA in the object even when no .option directive is present.
-  if (auto ParseResult = RISCVFeatures::parseFeatureBits(
-          STI.hasFeature(RISCV::Feature64Bit), Features)) {
+  if (auto ParseResult = RISCVFeatures::parseFeatureBits(STI)) {
     InitialArchString = (*ParseResult)->toString();
     ArchString = InitialArchString;
     getStreamer().setMappingSymbolArch(ArchString);

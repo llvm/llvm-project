@@ -1,4 +1,4 @@
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgpu7.00--amdhsa < %s | FileCheck -check-prefix=GCN %s
 
 ; FIXME: Error on non-hsa target
 

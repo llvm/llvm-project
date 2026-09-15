@@ -103,7 +103,7 @@ body:             |
 # CHECK-EMPTY:
 # CHECK-NEXT: # End machine code for function umull_and_v8i32.
 # CHECK-EMPTY:
-# CHECK-NEXT: ********** MI Scheduling **********
+# CHECK-NEXT: Current Schedule Region
 # CHECK-NEXT: umull_and_v8i32:%bb.0 entry
 # CHECK-NEXT:   From: %2:fpr128 = COPY $q2
 # CHECK-NEXT:     To: RET_ReallyLR implicit $q0, implicit $q1
@@ -398,7 +398,7 @@ body:             |
 # CHECK-NEXT: Queue BotQ.P:
 # CHECK-NEXT: Queue BotQ.A: 12 11
 # CHECK-NEXT:   Cand SU(12) FIRST
-# CHECK-NEXT: Pick Bot FIRST
+# CHECK-NEXT: Pick Bot Cand SU(12) FIRST
 # CHECK-NEXT: Scheduling SU(12) $q1 = COPY %12:fpr128
 # CHECK-NEXT:   Ready @3c
 # CHECK-NEXT:   CortexA55UnitALU +1x1u
@@ -582,7 +582,7 @@ body:             |
 # CHECK-NEXT: Queue BotQ.P:
 # CHECK-NEXT: Queue BotQ.A: 10 8
 # CHECK-NEXT:   Cand SU(10) FIRST
-# CHECK-NEXT: Pick Bot FIRST
+# CHECK-NEXT: Pick Bot Cand SU(10) FIRST
 # CHECK-NEXT: Scheduling SU(10) %12:fpr128 = UMULLv4i16_v4i32 %3.dsub:fpr128, %11:fpr64
 # CHECK-NEXT:   Ready @7c
 # CHECK-NEXT:   CortexA55UnitFPALU +2x1u
@@ -871,7 +871,7 @@ body:             |
 # CHECK-NEXT: Queue BotQ.P: 3
 # CHECK-NEXT: Queue BotQ.A: 7 5
 # CHECK-NEXT:   Cand SU(7) FIRST
-# CHECK-NEXT: Pick Bot FIRST
+# CHECK-NEXT: Pick Bot Cand SU(7) FIRST
 # CHECK-NEXT: Scheduling SU(7) %9:fpr64 = XTNv4i16 %8:fpr128
 # CHECK-NEXT:   Ready @10c
 # CHECK-NEXT:   CortexA55UnitFPALU +1x1u
@@ -1094,7 +1094,7 @@ body:             |
 # CHECK-NEXT: Queue BotQ.A: 3 6
 # CHECK-NEXT:   Cand SU(3) FIRST
 # CHECK-NEXT:   Cand SU(6) ORDER
-# CHECK-NEXT: Pick Bot ORDER
+# CHECK-NEXT: Pick Bot Cand SU(6) ORDER
 # CHECK-NEXT: Scheduling SU(6) %8:fpr128 = ANDv16i8 %1:fpr128, %6:fpr128
 # CHECK-NEXT:   Ready @12c
 # CHECK-NEXT:   CortexA55UnitFPALU +2x1u
@@ -1216,7 +1216,7 @@ body:             |
 # CHECK-NEXT: Queue BotQ.P: 1 4
 # CHECK-NEXT: Queue BotQ.A: 3 0
 # CHECK-NEXT:   Cand SU(3) FIRST
-# CHECK-NEXT: Pick Bot PHYS-REG
+# CHECK-NEXT: Pick Bot Cand SU(3) PHYS-REG
 # CHECK-NEXT: Scheduling SU(3) %3:fpr128 = EXTv16i8 %0:fpr128, %0:fpr128, 8
 # CHECK-NEXT:   Ready @13c
 # CHECK-NEXT:   CortexA55UnitFPALU +2x1u
@@ -1484,7 +1484,7 @@ body:             |
 # CHECK-NEXT: Queue BotQ.A: 2 4
 # CHECK-NEXT:   Cand SU(2) FIRST
 # CHECK-NEXT:   Cand SU(4) PHYS-REG
-# CHECK-NEXT: Pick Bot PHYS-REG
+# CHECK-NEXT: Pick Bot Cand SU(4) PHYS-REG
 # CHECK-NEXT: Scheduling SU(4) %6:fpr128 = MOVIv2d_ns 17
 # CHECK-NEXT:   Ready @16c
 # CHECK-NEXT:   CortexA55UnitFPALU +2x1u

@@ -1,0 +1,15 @@
+import("//third-party/unittest/unittest.gni")
+
+unittest("ABITests") {
+  deps = [
+    "//llvm/lib/ABI",
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "AArch64TargetInfoTest.cpp",
+    "IRTypeMapperTest.cpp",
+    "X86TargetInfoTest.cpp",
+    "TypesTest.cpp",
+  ]
+}

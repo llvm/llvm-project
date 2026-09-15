@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-unknown < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-unknown-unknown < %s | FileCheck %s
 
 define amdgpu_ps float @atomic_swap_1d(<8 x i32> inreg %rsrc, i32 %data, i32 %s) {
 main_body:

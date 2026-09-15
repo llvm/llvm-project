@@ -140,7 +140,9 @@ Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
   };
 
   // See if we need inttoptr for this type pair. May require additional bitcast.
-  if (OldTy->isIntOrIntVectorTy() && NewTy->isPtrOrPtrVectorTy()) {
+  bool OldIsIntLike =
+      OldTy->isIntOrIntVectorTy() || OldTy->isByteOrByteVectorTy();
+  if (OldIsIntLike && NewTy->isPtrOrPtrVectorTy()) {
     // Expand <2 x i32> to i8* --> <2 x i32> to i64 to i8*
     // Expand i128 to <2 x i8*> --> i128 to <2 x i64> to <2 x i8*>
     // Expand <4 x i32> to <2 x i8*> --> <4 x i32> to <2 x i64> to <2 x i8*>
@@ -149,7 +151,9 @@ Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
   }
 
   // See if we need ptrtoint for this type pair. May require additional bitcast.
-  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isIntOrIntVectorTy()) {
+  bool NewIsIntLike =
+      NewTy->isIntOrIntVectorTy() || NewTy->isByteOrByteVectorTy();
+  if (OldTy->isPtrOrPtrVectorTy() && NewIsIntLike) {
     // Expand <2 x i8*> to i128 --> <2 x i8*> to <2 x i64> to i128
     // Expand i8* to <2 x i32> --> i8* to i64 to <2 x i32>
     // Expand <2 x i8*> to <4 x i32> --> <2 x i8*> to <2 x i64> to <4 x i32>
@@ -211,7 +215,7 @@ Value *IRBuilderBase::CreateTypeSize(Type *Ty, TypeSize Size) {
 
 Value *IRBuilderBase::CreateAllocationSize(Type *DestTy, AllocaInst *AI) {
   const DataLayout &DL = BB->getDataLayout();
-  TypeSize ElemSize = DL.getTypeAllocSize(AI->getAllocatedType());
+  TypeSize ElemSize = AI->getAllocationBaseSize(DL);
   Value *Size = CreateTypeSize(DestTy, ElemSize);
   if (AI->isArrayAllocation())
     Size = CreateMul(CreateZExtOrTrunc(AI->getArraySize(), DestTy), Size);
@@ -342,8 +346,8 @@ static bool isConstantOne(const Value *Val) {
   return CVal && CVal->isOne();
 }
 
-CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
-                                      Value *AllocSize, Value *ArraySize,
+CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Value *AllocSize,
+                                      Value *ArraySize,
                                       ArrayRef<OperandBundleDef> OpB,
                                       Function *MallocF, const Twine &Name) {
   // malloc(type) becomes:
@@ -385,12 +389,11 @@ CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
   return MCall;
 }
 
-CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Type *AllocTy,
-                                      Value *AllocSize, Value *ArraySize,
-                                      Function *MallocF, const Twine &Name) {
+CallInst *IRBuilderBase::CreateMalloc(Type *IntPtrTy, Value *AllocSize,
+                                      Value *ArraySize, Function *MallocF,
+                                      const Twine &Name) {
 
-  return CreateMalloc(IntPtrTy, AllocTy, AllocSize, ArraySize, {}, MallocF,
-                      Name);
+  return CreateMalloc(IntPtrTy, AllocSize, ArraySize, {}, MallocF, Name);
 }
 
 /// CreateFree - Generate the IR for a call to the builtin free function.
@@ -495,6 +498,14 @@ Value *IRBuilderBase::CreateFPMaximumReduce(Value *Src) {
 
 Value *IRBuilderBase::CreateFPMinimumReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_fminimum, Src);
+}
+
+Value *IRBuilderBase::CreateFPMaximumNumReduce(Value *Src) {
+  return getReductionIntrinsic(Intrinsic::vector_reduce_fmaximumnum, Src);
+}
+
+Value *IRBuilderBase::CreateFPMinimumNumReduce(Value *Src) {
+  return getReductionIntrinsic(Intrinsic::vector_reduce_fminimumnum, Src);
 }
 
 CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr) {
@@ -906,8 +917,7 @@ CallInst *IRBuilderBase::CreateGCGetPointerBase(Value *DerivedPtr,
                                                 const Twine &Name) {
   Type *PtrTy = DerivedPtr->getType();
   return CreateIntrinsicWithoutFolding(
-      Intrinsic::experimental_gc_get_pointer_base, {PtrTy, PtrTy}, {DerivedPtr},
-      {}, Name);
+      Intrinsic::experimental_gc_get_pointer_base, PtrTy, DerivedPtr, {}, Name);
 }
 
 CallInst *IRBuilderBase::CreateGCGetPointerOffset(Value *DerivedPtr,
@@ -923,8 +933,9 @@ Value *IRBuilderBase::CreateUnaryIntrinsic(Intrinsic::ID ID, Value *Op,
                                            const Twine &Name) {
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, Op->getType());
-  if (Value *V = Folder.FoldUnaryIntrinsic(ID, Op, Fn->getReturnType(),
-                                           FMFSource.get(FMF)))
+  if (Value *V =
+          Folder.FoldIntrinsic(ID, Op, Fn->getReturnType(), FMFSource.get(FMF),
+                               GetInsertBlock()->getParent()))
     return V;
   return createCallHelper(Fn, Op, Name, FMFSource);
 }
@@ -934,8 +945,9 @@ Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
                                             const Twine &Name) {
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, {LHS->getType()});
-  if (Value *V = Folder.FoldBinaryIntrinsic(ID, LHS, RHS, Fn->getReturnType(),
-                                            FMFSource.get(FMF)))
+  if (Value *V = Folder.FoldIntrinsic(ID, {LHS, RHS}, Fn->getReturnType(),
+                                      FMFSource.get(FMF),
+                                      GetInsertBlock()->getParent()))
     return V;
   return createCallHelper(Fn, {LHS, RHS}, Name, FMFSource);
 }
@@ -966,7 +978,10 @@ Value *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
                                       FMFSource FMFSource, const Twine &Name,
                                       ArrayRef<OperandBundleDef> OpBundles,
                                       function_ref<void(CallInst *)> SetFn) {
-  // TODO: Try to constant-fold.
+  Type *RetTy = Intrinsic::getType(Context, ID, OverloadTypes)->getReturnType();
+  if (Value *V = Folder.FoldIntrinsic(ID, Args, RetTy, FMFSource.get(FMF),
+                                      GetInsertBlock()->getParent()))
+    return V;
   CallInst *CI = CreateIntrinsicWithoutFolding(ID, OverloadTypes, Args,
                                                FMFSource, Name, OpBundles);
   SetFn(CI);
@@ -977,7 +992,9 @@ Value *IRBuilderBase::CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
                                       ArrayRef<Value *> Args,
                                       FMFSource FMFSource, const Twine &Name,
                                       function_ref<void(CallInst *)> SetFn) {
-  // TODO: Try to constant-fold.
+  if (Value *V = Folder.FoldIntrinsic(ID, Args, RetTy, FMFSource.get(FMF),
+                                      GetInsertBlock()->getParent()))
+    return V;
   CallInst *CI =
       CreateIntrinsicWithoutFolding(RetTy, ID, Args, FMFSource, Name);
   SetFn(CI);

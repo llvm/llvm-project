@@ -94,8 +94,15 @@ void detail::AttrTypeReplacerBase<Concrete>::replaceElementsIn(
 
   // Update the attribute dictionary.
   if (replaceAttrs) {
-    if (auto newAttrs = replaceIfDifferent(op->getAttrDictionary()))
-      op->setAttrs(cast<DictionaryAttr>(newAttrs));
+    if (auto newAttrs = replaceIfDifferent(op->getRawDictionaryAttrs()))
+      op->setDiscardableAttrs(cast<DictionaryAttr>(newAttrs));
+
+    if (op->getPropertiesStorageSize()) {
+      op->getName().walkInherentAttrs(op, [&](StringRef, Attribute &attr) {
+        if (Attribute replacement = replaceIfDifferent(attr))
+          attr = replacement;
+      });
+    }
   }
 
   // If we aren't updating locations or types, we're done.

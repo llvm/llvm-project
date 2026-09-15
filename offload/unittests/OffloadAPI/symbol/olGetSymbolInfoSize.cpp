@@ -8,38 +8,25 @@
 
 #include <OffloadAPI.h>
 
-#include "../common/Fixtures.hpp"
+#include "../common/Properties.hpp"
 
 using olGetSymbolInfoSizeKernelTest = OffloadKernelTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetSymbolInfoSizeKernelTest);
 
-using olGetSymbolInfoSizeGlobalTest = OffloadGlobalTest;
-OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetSymbolInfoSizeGlobalTest);
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE_WITH_PARAM(
+    olGetSymbolInfoSizeGlobalTest, SymbolGlobalProperties,
+    defaultPropertyTestPrinter<ol_symbol_info_t>);
 
-TEST_P(olGetSymbolInfoSizeKernelTest, SuccessKind) {
+TEST_P(olGetSymbolInfoSizeKernelTest, SuccessPropertySize) {
   size_t Size = 0;
   ASSERT_SUCCESS(olGetSymbolInfoSize(Kernel, OL_SYMBOL_INFO_KIND, &Size));
   ASSERT_EQ(Size, sizeof(ol_symbol_kind_t));
 }
 
-TEST_P(olGetSymbolInfoSizeGlobalTest, SuccessKind) {
+TEST_P(olGetSymbolInfoSizeGlobalTest, SuccessPropertySize) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetSymbolInfoSize(Global, OL_SYMBOL_INFO_KIND, &Size));
-  ASSERT_EQ(Size, sizeof(ol_symbol_kind_t));
-}
-
-TEST_P(olGetSymbolInfoSizeGlobalTest, SuccessAddress) {
-  size_t Size = 0;
-  ASSERT_SUCCESS(olGetSymbolInfoSize(
-      Global, OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS, &Size));
-  ASSERT_EQ(Size, sizeof(void *));
-}
-
-TEST_P(olGetSymbolInfoSizeGlobalTest, SuccessSize) {
-  size_t Size = 0;
-  ASSERT_SUCCESS(
-      olGetSymbolInfoSize(Global, OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE, &Size));
-  ASSERT_EQ(Size, sizeof(size_t));
+  ASSERT_SUCCESS(olGetSymbolInfoSize(Global, Property, &Size));
+  ASSERT_EQ(Size, PropertySize);
 }
 
 TEST_P(olGetSymbolInfoSizeKernelTest, InvalidNullHandle) {

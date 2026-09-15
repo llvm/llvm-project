@@ -1,0 +1,113 @@
+# RUN: llc %s -run-pass=machine-cp -o - -mtriple=aarch64 | FileCheck %s --implicit-check-not=DBG_VALUE
+# CHECK: DBG_VALUE $x0
+# CHECK: DBG_VALUE $q16
+# CHECK: DBG_VALUE $q17
+# CHECK: DBG_VALUE $q18
+# CHECK: DBG_VALUE $q19
+
+--- |
+  define void @f(ptr %p) !dbg !24 {
+  entry:
+      #dbg_value(ptr %p, !30, !DIExpression(), !43)
+    %vld4 = tail call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld4.v16i8.p0(ptr %p), !dbg !44
+    %vld4.fca.0.extract = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %vld4, 0, !dbg !44
+    %vld4.fca.1.extract = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %vld4, 1, !dbg !44
+    %vld4.fca.2.extract = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %vld4, 2, !dbg !44
+    %vld4.fca.3.extract = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } %vld4, 3, !dbg !44
+      #dbg_value(<16 x i8> %vld4.fca.0.extract, !39, !DIExpression(DW_OP_LLVM_fragment, 0, 128), !45)
+      #dbg_value(<16 x i8> %vld4.fca.1.extract, !39, !DIExpression(DW_OP_LLVM_fragment, 128, 128), !45)
+      #dbg_value(<16 x i8> %vld4.fca.2.extract, !39, !DIExpression(DW_OP_LLVM_fragment, 256, 128), !45)
+      #dbg_value(<16 x i8> %vld4.fca.3.extract, !39, !DIExpression(DW_OP_LLVM_fragment, 384, 128), !45)
+      #dbg_value(<16 x i8> %vld4.fca.0.extract, !31, !DIExpression(DW_OP_LLVM_fragment, 0, 128), !43)
+      #dbg_value(<16 x i8> %vld4.fca.1.extract, !31, !DIExpression(DW_OP_LLVM_fragment, 128, 128), !43)
+      #dbg_value(<16 x i8> %vld4.fca.2.extract, !31, !DIExpression(DW_OP_LLVM_fragment, 256, 128), !43)
+      #dbg_value(<16 x i8> %vld4.fca.3.extract, !31, !DIExpression(DW_OP_LLVM_fragment, 384, 128), !43)
+      #dbg_value(<16 x i8> %vld4.fca.0.extract, !41, !DIExpression(DW_OP_LLVM_fragment, 0, 128), !46)
+      #dbg_value(<16 x i8> %vld4.fca.1.extract, !41, !DIExpression(DW_OP_LLVM_fragment, 128, 128), !46)
+      #dbg_value(<16 x i8> %vld4.fca.2.extract, !41, !DIExpression(DW_OP_LLVM_fragment, 256, 128), !46)
+      #dbg_value(<16 x i8> %vld4.fca.3.extract, !41, !DIExpression(DW_OP_LLVM_fragment, 384, 128), !46)
+    tail call void @llvm.aarch64.neon.st1x4.v16i8.p0(<16 x i8> %vld4.fca.0.extract, <16 x i8> %vld4.fca.1.extract, <16 x i8> %vld4.fca.2.extract, <16 x i8> %vld4.fca.3.extract, ptr %p), !dbg !47
+    ret void, !dbg !48
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!13, !14, !15, !16, !17}
+  !llvm.ident = !{!18}
+  !llvm.errno.tbaa = !{!19}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: !2, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "-", directory: "/")
+  !2 = !{!3}
+  !3 = !DIDerivedType(tag: DW_TAG_typedef, name: "int8x16_t", file: !4, line: 77, baseType: !5)
+  !4 = !DIFile(filename: "/arm_vector_types.h", directory: "")
+  !5 = !DICompositeType(tag: DW_TAG_array_type, baseType: !6, size: 128, flags: DIFlagVector, elements: !11)
+  !6 = !DIDerivedType(tag: DW_TAG_typedef, name: "int8_t", file: !7, line: 24, baseType: !8)
+  !7 = !DIFile(filename: "/stdint-intn.h", directory: "")
+  !8 = !DIDerivedType(tag: DW_TAG_typedef, name: "__int8_t", file: !9, line: 37, baseType: !10)
+  !9 = !DIFile(filename: "/types.h", directory: "")
+  !10 = !DIBasicType(name: "signed char", size: 8, encoding: DW_ATE_signed_char)
+  !11 = !{!12}
+  !12 = !DISubrange(count: 16)
+  !13 = !{i32 7, !"Dwarf Version", i32 5}
+  !14 = !{i32 2, !"Debug Info Version", i32 3}
+  !15 = !{i32 7, !"uwtable", i32 2}
+  !16 = !{i32 7, !"frame-pointer", i32 4}
+  !17 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
+  !18 = !{!"clang"}
+  !19 = !{!20, !21, i64 0}
+  !20 = !{!"__libc_errno", !21, i64 0}
+  !21 = !{!"int", !22, i64 0}
+  !22 = !{!"omnipotent char", !23, i64 0}
+  !23 = !{!"Simple C/C++ TBAA"}
+  !24 = distinct !DISubprogram(name: "f", scope: !25, file: !25, line: 2, type: !26, scopeLine: 2, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !29, keyInstructions: true)
+  !25 = !DIFile(filename: "<stdin>", directory: "/")
+  !26 = !DISubroutineType(types: !27)
+  !27 = !{null, !28}
+  !28 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
+  !29 = !{!30, !31, !39, !41}
+  !30 = !DILocalVariable(name: "p", arg: 1, scope: !24, file: !25, line: 2, type: !28)
+  !31 = !DILocalVariable(name: "v", scope: !24, file: !25, line: 2, type: !32)
+  !32 = !DIDerivedType(tag: DW_TAG_typedef, name: "int8x16x4_t", file: !4, line: 311, baseType: !33)
+  !33 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "int8x16x4_t", file: !4, line: 309, size: 512, elements: !34)
+  !34 = !{!35}
+  !35 = !DIDerivedType(tag: DW_TAG_member, name: "val", scope: !33, file: !4, line: 310, baseType: !36, size: 512)
+  !36 = !DICompositeType(tag: DW_TAG_array_type, baseType: !3, size: 512, elements: !37)
+  !37 = !{!38}
+  !38 = !DISubrange(count: 4)
+  !39 = !DILocalVariable(name: "__ret", scope: !40, file: !25, line: 2, type: !32)
+  !40 = distinct !DILexicalBlock(scope: !24, file: !25, line: 2, column: 28)
+  !41 = !DILocalVariable(name: "__s1", scope: !42, file: !25, line: 2, type: !32)
+  !42 = distinct !DILexicalBlock(scope: !24, file: !25, line: 2, column: 41)
+  !43 = !DILocation(line: 0, scope: !24)
+  !44 = !DILocation(line: 2, column: 28, scope: !40)
+  !45 = !DILocation(line: 0, scope: !40)
+  !46 = !DILocation(line: 0, scope: !42)
+  !47 = !DILocation(line: 2, column: 41, scope: !42)
+  !48 = !DILocation(line: 2, column: 60, scope: !24, atomGroup: 2, atomRank: 1)
+...
+---
+name:            f
+alignment:       4
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$x0' }
+body:             |
+  bb.0.entry:
+    liveins: $x0
+
+    DBG_VALUE $x0, $noreg, !30, !DIExpression(), debug-location !43
+    renamable $q3_q4_q5_q6 = LD4Fourv16b renamable $x0, debug-location !44 :: (load (s512) from %ir.p)
+    DBG_VALUE $q3, $noreg, !31, !DIExpression(DW_OP_LLVM_fragment, 384, 128), debug-location !43
+    DBG_VALUE $q4, $noreg, !31, !DIExpression(DW_OP_LLVM_fragment, 256, 128), debug-location !43
+    DBG_VALUE $q5, $noreg, !31, !DIExpression(DW_OP_LLVM_fragment, 128, 128), debug-location !43
+    DBG_VALUE $q6, $noreg, !31, !DIExpression(DW_OP_LLVM_fragment, 0, 128), debug-location !43
+    renamable $q16_q17_q18_q19 = COPY killed renamable $q3_q4_q5_q6
+    ST1Fourv16b killed renamable $q16_q17_q18_q19, killed renamable $x0, debug-location !47 :: (store (s512) into %ir.p)
+    RET_ReallyLR debug-location !48
+...
+

@@ -26,6 +26,7 @@
 #include <os/security_config.h>
 #endif
 #include <pwd.h>
+#include <set>
 #include <string>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
@@ -2687,14 +2688,48 @@ void RNBRemote::DispatchQueueOffsets::GetThreadQueueInfo(
   }
 }
 
-struct StackMemory {
-  uint8_t bytes[2 * sizeof(nub_addr_t)];
-  nub_size_t length;
+// A single contiguous chunk of expedited memory.
+struct ExpeditedMemory {
+  nub_addr_t addr;
+  std::vector<uint8_t> bytes;
 };
-typedef std::map<nub_addr_t, StackMemory> StackMemoryMap;
+
+// Read one range and append it as an expedited chunk.
+static void AppendExpeditedMemory(nub_process_t pid, nub_addr_t addr,
+                                  nub_size_t size,
+                                  std::vector<ExpeditedMemory> &chunks) {
+  if (size == 0)
+    return;
+  std::vector<uint8_t> buf(size);
+  if (DNBProcessMemoryRead(pid, addr, size, buf.data()) != size)
+    return;
+  chunks.push_back({addr, std::move(buf)});
+}
+
+static void
+AppendExpeditedMemoryToJSON(const std::vector<ExpeditedMemory> &chunks,
+                            JSONGenerator::ArraySP &memory_array_sp) {
+  for (const ExpeditedMemory &chunk : chunks) {
+    JSONGenerator::DictionarySP chunk_sp(new JSONGenerator::Dictionary());
+    chunk_sp->AddIntegerItem("address", chunk.addr);
+    chunk_sp->AddBytesAsHexASCIIString("bytes", chunk.bytes.data(),
+                                       chunk.bytes.size());
+    memory_array_sp->AddItem(chunk_sp);
+  }
+}
+
+static void
+AppendExpeditedMemoryToStopReply(const std::vector<ExpeditedMemory> &chunks,
+                                 std::ostringstream &ostrm) {
+  for (const ExpeditedMemory &chunk : chunks) {
+    ostrm << "memory:" << HEXBASE << chunk.addr << '=';
+    append_hex_value(ostrm, chunk.bytes.data(), chunk.bytes.size(), false);
+    ostrm << ';';
+  }
+}
 
 static void ReadStackMemory(nub_process_t pid, nub_thread_t tid,
-                            StackMemoryMap &stack_mmap,
+                            std::vector<ExpeditedMemory> &chunks,
                             uint32_t backtrace_limit = 256) {
   std::unique_ptr<DNBRegisterValue> reg_value =
       std::make_unique<DNBRegisterValue>();
@@ -2706,6 +2741,7 @@ static void ReadStackMemory(nub_process_t pid, nub_thread_t tid,
       fp = reg_value->value.uint32;
     else
       fp = reg_value->value.uint64;
+    std::set<uint64_t> visited;
     while (fp != 0) {
       // Make sure we never recurse more than 256 times so we don't recurse too
       // far or
@@ -2714,23 +2750,91 @@ static void ReadStackMemory(nub_process_t pid, nub_thread_t tid,
         break;
 
       const nub_size_t read_size = reg_value->info.size * 2;
-      StackMemory stack_memory;
-      stack_memory.length = read_size;
-      if (DNBProcessMemoryRead(pid, fp, read_size, stack_memory.bytes) !=
-          read_size)
+      std::vector<uint8_t> buf(read_size);
+      if (DNBProcessMemoryRead(pid, fp, read_size, buf.data()) != read_size)
         break;
       // Make sure we don't try to put the same stack memory in more than once
-      if (stack_mmap.find(fp) != stack_mmap.end())
+      if (!visited.insert(fp).second)
         break;
-      // Put the entry into the cache
-      stack_mmap[fp] = stack_memory;
+      const nub_addr_t frame_addr = fp;
       // Dereference the frame pointer to get to the previous frame pointer
       if (reg_value->info.size == 4)
-        fp = ((uint32_t *)stack_memory.bytes)[0];
+        fp = ((uint32_t *)buf.data())[0];
       else
-        fp = ((uint64_t *)stack_memory.bytes)[0];
+        fp = ((uint64_t *)buf.data())[0];
+      chunks.push_back({frame_addr, std::move(buf)});
     }
   }
+}
+
+// The total stack-memory budget we expedite for frame 0, in bytes.  Sized to
+// cover the common case (locals, spilled register arguments, and stack-passed
+// parameters) while bounding the per-frame cost.
+static const nub_size_t k_expedite_stack_window = 1024;
+
+// Bytes reserved for the above-fp "stack-passed parameters" window,
+// [fp + 2*ptr_size, fp + 2*ptr_size + k_expedite_stack_arg_size).
+static const nub_size_t k_expedite_stack_arg_size = 160;
+
+static_assert(k_expedite_stack_arg_size <= k_expedite_stack_window,
+              "above-fp arg window must fit within the total stack budget");
+
+// Heuristic to decide whether frame 0's $fp looks like a valid frame pointer.
+static bool FrameZeroFPLooksValid(nub_process_t pid, nub_thread_t tid,
+                                  uint64_t sp, uint64_t fp,
+                                  nub_size_t ptr_size) {
+  static const uint64_t k_expedite_max_frame_size = 8 * 1024 * 1024; // 8 MB
+
+  if (sp == 0 || fp == 0 || fp <= sp)
+    return false;
+  if (fp - sp > k_expedite_max_frame_size)
+    return false;
+
+  const nub_size_t rec = 2 * ptr_size;
+  uint8_t bytes[2 * sizeof(uint64_t)];
+  if (DNBProcessMemoryRead(pid, fp, rec, bytes) != rec)
+    return false;
+
+  uint64_t prev_fp =
+      (ptr_size == 4) ? ((uint32_t *)bytes)[0] : ((uint64_t *)bytes)[0];
+  // The saved previous fp must chain upward (stack grows down).
+  return prev_fp > fp;
+}
+
+// Read the innermost frame's stack memory.
+static std::vector<ExpeditedMemory> ReadFrameZeroStackMemory(nub_process_t pid,
+                                                             nub_thread_t tid) {
+  std::vector<ExpeditedMemory> chunks;
+  DNBRegisterValue sp_value;
+  DNBRegisterValue fp_value;
+  if (!DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
+                                     GENERIC_REGNUM_SP, &sp_value) ||
+      !DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
+                                     GENERIC_REGNUM_FP, &fp_value))
+    return chunks;
+
+  const nub_size_t ptr_size = sp_value.info.size;
+  uint64_t sp = (ptr_size == 4) ? sp_value.value.uint32 : sp_value.value.uint64;
+  uint64_t fp = (ptr_size == 4) ? fp_value.value.uint32 : fp_value.value.uint64;
+
+  if (FrameZeroFPLooksValid(pid, tid, sp, fp, ptr_size)) {
+    // above-fp: stack-passed params, skipping the already-expedited frame
+    // record.
+    AppendExpeditedMemory(pid, fp + 2 * ptr_size, k_expedite_stack_arg_size,
+                          chunks);
+
+    // below-fp: locals + spilled register args, clamped at $sp so a small frame
+    // reads only [sp, fp).
+    uint64_t below = std::min<uint64_t>(fp - sp, k_expedite_stack_window -
+                                                     k_expedite_stack_arg_size);
+    AppendExpeditedMemory(pid, fp - below, below, chunks);
+    return chunks;
+  }
+
+  // Frameless / cannot validate $fp: expedite a single window anchored at $sp.
+  if (sp != 0)
+    AppendExpeditedMemory(pid, sp, k_expedite_stack_window, chunks);
+  return chunks;
 }
 
 rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
@@ -2979,18 +3083,10 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
     }
 
     // Add expedited stack memory so stack backtracing doesn't need to read
-    // anything from the
-    // frame pointer chain.
-    StackMemoryMap stack_mmap;
-    ReadStackMemory(pid, tid, stack_mmap, 2);
-    if (!stack_mmap.empty()) {
-      for (const auto &stack_memory : stack_mmap) {
-        ostrm << "memory:" << HEXBASE << stack_memory.first << '=';
-        append_hex_value(ostrm, stack_memory.second.bytes,
-                         stack_memory.second.length, false);
-        ostrm << ';';
-      }
-    }
+    // anything from the frame pointer chain.
+    std::vector<ExpeditedMemory> stack_chunks;
+    ReadStackMemory(pid, tid, stack_chunks, 2);
+    AppendExpeditedMemoryToStopReply(stack_chunks, ostrm);
 
     std::vector<uint64_t> added_binaries;
     JSONGenerator::ObjectSP detailed_binary_infos;
@@ -3732,6 +3828,8 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
 
   reply << "MultiMemRead+;";
   reply << "jMultiBreakpoint+;";
+  // The stopped thread's frame 0 stack memory is expedited in jThreadsInfo.
+  reply << "ExpediteStack+;";
   return SendPacket(reply.str().c_str());
 }
 
@@ -4116,38 +4214,45 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
                             process_username + "'";
           return SendErrorPacket("E96", msg);
         }
+        // The remaining checks can only guess at the cause from the session
+        // environment. When debugserver does have an error of its own, fold in
+        // the actual message so it's never lost.
+        auto with_err_str = [&err_str](std::string explanation) -> std::string {
+          if (err_str[0] != '\0')
+            return explanation + " (" + std::string(err_str) + ")";
+          return explanation;
+        };
         if (!login_session_has_gui_access() && !developer_mode_enabled()) {
           DNBLogError("Developer mode is not enabled and this is a "
                       "non-interactive session");
-          return SendErrorPacket("E96", "developer mode is "
-                                        "not enabled on this machine "
-                                        "and this is a non-interactive "
-                                        "debug session.");
+          return SendErrorPacket(
+              "E96", with_err_str("developer mode is not enabled on this "
+                                  "machine and this is a non-interactive "
+                                  "debug session."));
         }
         if (!login_session_has_gui_access()) {
           DNBLogError("This is a non-interactive session");
-          return SendErrorPacket("E96", "this is a "
-                                        "non-interactive debug session, "
-                                        "cannot get permission to debug "
-                                        "processes.");
+          return SendErrorPacket(
+              "E96", with_err_str("this is a non-interactive debug session, "
+                                  "cannot get permission to debug processes."));
         }
       }
 
       std::string error_explainer = "attach failed";
       if (err_str[0] != '\0') {
-        // This is not a super helpful message for end users
-        if (strcmp (err_str, "unable to start the exception thread") == 0) {
-          snprintf (err_str, sizeof (err_str) - 1,
-                    "Not allowed to attach to process.  Look in the console "
-                    "messages (Console.app), near the debugserver entries, "
-                    "when the attach failed.  The subsystem that denied "
-                    "the attach permission will likely have logged an "
-                    "informative message about why it was denied.");
-          err_str[sizeof (err_str) - 1] = '\0';
-        }
         error_explainer += " (";
         error_explainer += err_str;
         error_explainer += ")";
+        // This is not a super helpful message for end users
+        if (strcmp(err_str, "unable to start the exception thread") == 0) {
+          error_explainer += ".  ";
+          error_explainer += "Not allowed to attach to process.  Look in the "
+                             "console messages (Console.app), near the "
+                             "debugserver entries, when the attach failed.  "
+                             "The subsystem that denied the attach permission "
+                             "will likely have logged an informative message "
+                             "about why it was denied.";
+        }
       }
       DNBLogError("Attach failed: \"%s\".", err_str);
       return SendErrorPacket("E96", error_explainer);
@@ -5855,23 +5960,23 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
         }
 
         // Add expedited stack memory so stack backtracing doesn't need to read
-        // anything from the
-        // frame pointer chain.
-        StackMemoryMap stack_mmap;
-        ReadStackMemory(pid, tid, stack_mmap);
-        if (!stack_mmap.empty()) {
-          JSONGenerator::ArraySP memory_array_sp(new JSONGenerator::Array());
+        // anything from the frame pointer chain.
+        std::vector<ExpeditedMemory> stack_chunks;
+        ReadStackMemory(pid, tid, stack_chunks);
 
-          for (const auto &stack_memory : stack_mmap) {
-            JSONGenerator::DictionarySP stack_memory_sp(
-                new JSONGenerator::Dictionary());
-            stack_memory_sp->AddIntegerItem("address", stack_memory.first);
-            stack_memory_sp->AddBytesAsHexASCIIString(
-                "bytes", stack_memory.second.bytes, stack_memory.second.length);
-            memory_array_sp->AddItem(stack_memory_sp);
-          }
-          thread_dict_sp->AddItem("memory", memory_array_sp);
+        JSONGenerator::ArraySP memory_array_sp(new JSONGenerator::Array());
+        AppendExpeditedMemoryToJSON(stack_chunks, memory_array_sp);
+
+        // Also expedite the innermost frame's stack memory of the thread that
+        // stopped.
+        if (tid == DNBProcessGetCurrentThread(pid)) {
+          std::vector<ExpeditedMemory> frame_zero_chunks =
+              ReadFrameZeroStackMemory(pid, tid);
+          AppendExpeditedMemoryToJSON(frame_zero_chunks, memory_array_sp);
         }
+
+        if (!memory_array_sp->empty())
+          thread_dict_sp->AddItem("memory", memory_array_sp);
 
         std::vector<uint64_t> added_binaries;
         JSONGenerator::ObjectSP detailed_binary_infos;
