@@ -184,10 +184,9 @@ volatile int JSONAnchorSource = 0;
 } // namespace tooling
 } // namespace clang
 
-std::unique_ptr<JSONCompilationDatabase>
-JSONCompilationDatabase::loadFromFile(StringRef FilePath,
-                                      std::string &ErrorMessage,
-                                      JSONCommandLineSyntax Syntax) {
+std::unique_ptr<JSONCompilationDatabase> JSONCompilationDatabase::loadFromFile(
+    StringRef FilePath, std::string &ErrorMessage, JSONCommandLineSyntax Syntax,
+    bool ResolveRealPaths) {
   // Don't mmap: if we're a long-lived process, the build system may overwrite.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> DatabaseBuffer =
       llvm::MemoryBuffer::getFile(FilePath, /*IsText=*/false,
@@ -197,8 +196,8 @@ JSONCompilationDatabase::loadFromFile(StringRef FilePath,
     ErrorMessage = "Error while opening JSON database: " + Result.message();
     return nullptr;
   }
-  std::unique_ptr<JSONCompilationDatabase> Database(
-      new JSONCompilationDatabase(std::move(*DatabaseBuffer), Syntax));
+  std::unique_ptr<JSONCompilationDatabase> Database(new JSONCompilationDatabase(
+      std::move(*DatabaseBuffer), Syntax, ResolveRealPaths));
   if (!Database->parse(ErrorMessage))
     return nullptr;
   return Database;
@@ -207,11 +206,12 @@ JSONCompilationDatabase::loadFromFile(StringRef FilePath,
 std::unique_ptr<JSONCompilationDatabase>
 JSONCompilationDatabase::loadFromBuffer(StringRef DatabaseString,
                                         std::string &ErrorMessage,
-                                        JSONCommandLineSyntax Syntax) {
+                                        JSONCommandLineSyntax Syntax,
+                                        bool ResolveRealPaths) {
   std::unique_ptr<llvm::MemoryBuffer> DatabaseBuffer(
       llvm::MemoryBuffer::getMemBufferCopy(DatabaseString));
-  std::unique_ptr<JSONCompilationDatabase> Database(
-      new JSONCompilationDatabase(std::move(DatabaseBuffer), Syntax));
+  std::unique_ptr<JSONCompilationDatabase> Database(new JSONCompilationDatabase(
+      std::move(DatabaseBuffer), Syntax, ResolveRealPaths));
   if (!Database->parse(ErrorMessage))
     return nullptr;
   return Database;
@@ -412,15 +412,20 @@ bool JSONCompilationDatabase::parse(std::string &ErrorMessage) {
     SmallString<8> FileStorage;
     StringRef FileName = File->getValue(FileStorage);
     SmallString<128> NativeFilePath;
+    auto MaybeResolveReal = [this](const auto& Src, auto& Dest) {
+      if (!ResolveRealPaths || llvm::sys::fs::real_path(Src, Dest, true)) {
+        llvm::sys::path::native(Src, Dest);
+        llvm::sys::path::remove_dots(Dest, true);
+      }
+    };
     if (llvm::sys::path::is_relative(FileName)) {
       SmallString<8> DirectoryStorage;
       SmallString<128> AbsolutePath(Directory->getValue(DirectoryStorage));
       llvm::sys::path::append(AbsolutePath, FileName);
-      llvm::sys::path::native(AbsolutePath, NativeFilePath);
+      MaybeResolveReal(AbsolutePath, NativeFilePath);
     } else {
-      llvm::sys::path::native(FileName, NativeFilePath);
+      MaybeResolveReal(FileName, NativeFilePath);
     }
-    llvm::sys::path::remove_dots(NativeFilePath, /*remove_dot_dot=*/true);
     auto Cmd = CompileCommandRef(Directory, File, *Command, Output);
     IndexByFile[NativeFilePath].push_back(Cmd);
     AllCommands.push_back(Cmd);
