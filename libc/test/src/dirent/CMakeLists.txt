@@ -37,3 +37,26 @@ add_libc_test(
     libc.hdr.types.DIR
     libc.hdr.types.struct_dirent
 )
+
+add_libc_test(
+  scandir_test
+  SUITE
+    libc_dirent_unittests
+  SRCS
+    scandir_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_dirent
+    libc.src.__support.OSUtil.path
+    libc.src.dirent.scandir
+    libc.src.stdio.asprintf
+    libc.src.stdio.fopen
+    libc.src.stdio.fclose
+    libc.src.stdio.remove
+    libc.src.stdlib.mkdtemp
+    libc.src.string.strcoll
+    libc.src.string.strdup
+    libc.src.string.strncmp
+    libc.src.unistd.rmdir
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
