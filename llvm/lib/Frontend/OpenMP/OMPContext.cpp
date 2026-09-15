@@ -18,6 +18,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <algorithm>
 
 #define DEBUG_TYPE "openmp-ir-builder"
 
@@ -197,23 +198,22 @@ isVariantApplicableInContextHelper(const VariantMatchInfo &VMI,
           unsigned(TraitProperty::implementation_extension_match_none)))
     MK = MK_NONE;
 
-  // Helper to deal with a single property that was (not) found in the OpenMP
-  // context based on the match kind selected by the user via
-  // `implementation={extensions(match_[all,any,none])}'
-  auto HandleTrait = [MK](TraitProperty Property,
-                          bool WasFound) -> std::optional<bool> /* Result */ {
-    // For kind "any" a single match is enough but we ignore non-matched
-    // properties.
+  bool AnyTraitMatched = false;
+
+  // Apply the match kind selected by implementation={extension(...)} to
+  // each property. Continue after match_any succeeds to record all construct
+  // match positions needed for scoring.
+  auto HandleTrait = [MK, &AnyTraitMatched](TraitProperty Property,
+                                            bool WasFound) -> bool {
+    AnyTraitMatched |= WasFound;
     if (MK == MK_ANY) {
-      if (WasFound)
-        return true;
-      return std::nullopt;
+      return true;
     }
 
     // In "all" or "none" mode we accept a matching or non-matching property
     // respectively and move on. We are not done yet!
     if ((WasFound && MK == MK_ALL) || (!WasFound && MK == MK_NONE))
-      return std::nullopt;
+      return true;
 
     // We missed a property, provide some debug output and indicate failure.
     LLVM_DEBUG({
@@ -256,8 +256,8 @@ isVariantApplicableInContextHelper(const VariantMatchInfo &VMI,
         return Ctx.matchesISATrait(RawString);
       });
 
-    if (std::optional<bool> Result = HandleTrait(Property, IsActiveTrait))
-      return *Result;
+    if (!HandleTrait(Property, IsActiveTrait))
+      return false;
   }
 
   if (!DeviceOrImplementationSetOnly) {
@@ -269,17 +269,19 @@ isVariantApplicableInContextHelper(const VariantMatchInfo &VMI,
                  TraitSet::construct &&
              "Variant context is ill-formed!");
 
-      // Verify the nesting.
+      // Verify the nesting. A failed match in match_any or match_none must not
+      // consume the remaining context, since a later selector property can
+      // still match.
+      unsigned SearchStart = ConstructIdx;
       bool FoundInOrder = false;
       while (!FoundInOrder && ConstructIdx != NoConstructTraits)
         FoundInOrder = (Ctx.ConstructTraits[ConstructIdx++] == Property);
-      if (ConstructMatches)
+      if (!FoundInOrder && MK != MK_ALL)
+        ConstructIdx = SearchStart;
+      if (ConstructMatches && FoundInOrder)
         ConstructMatches->push_back(ConstructIdx - 1);
 
-      if (std::optional<bool> Result = HandleTrait(Property, FoundInOrder))
-        return *Result;
-
-      if (!FoundInOrder) {
+      if (!HandleTrait(Property, FoundInOrder)) {
         LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE << "] Construct property "
                           << getOpenMPContextTraitPropertyName(Property, "")
                           << " was not nested properly.\n");
@@ -289,11 +291,29 @@ isVariantApplicableInContextHelper(const VariantMatchInfo &VMI,
       // TODO: Verify SIMD
     }
 
-    assert(isSubset<TraitProperty>(VMI.ConstructTraits, Ctx.ConstructTraits) &&
-           "Broken invariant!");
+    // A complete ordered match can have several embeddings in the context.
+    // Match backwards to choose the highest-valued one for scoring. Keep the
+    // forward scan's partial matches for the match_any extension.
+    if (ConstructMatches &&
+        ConstructMatches->size() == VMI.ConstructTraits.size()) {
+      ConstructIdx = NoConstructTraits;
+      for (unsigned I = VMI.ConstructTraits.size(); I > 0; --I) {
+        TraitProperty Property = VMI.ConstructTraits[I - 1];
+        while (ConstructIdx > 0 &&
+               Ctx.ConstructTraits[ConstructIdx - 1] != Property)
+          --ConstructIdx;
+        assert(ConstructIdx > 0 && "Previously matched construct not found!");
+        (*ConstructMatches)[I - 1] = --ConstructIdx;
+      }
+    }
+
+    if (MK == MK_ALL)
+      assert(
+          isSubset<TraitProperty>(VMI.ConstructTraits, Ctx.ConstructTraits) &&
+          "Broken invariant!");
   }
 
-  if (MK == MK_ANY) {
+  if (MK == MK_ANY && !AnyTraitMatched) {
     LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE
                       << "] None of the properties was in the OpenMP context "
                          "but match kind is any.\n");
@@ -313,16 +333,27 @@ bool llvm::omp::isVariantApplicableInContext(
 static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
                                   const OMPContext &Ctx,
                                   SmallVectorImpl<unsigned> &ConstructMatches) {
-  APInt Score(64, 1);
+  APInt Score(1, 1);
 
-  unsigned NoConstructTraits = VMI.ConstructTraits.size();
+  // A sum of valid scores can exceed the width of any individual score.
+  // Retain all active bits and allow one more bit for each addition's carry.
+  auto AddScore = [&](const APInt &Value) {
+    unsigned Width = std::max(Score.getActiveBits(), Value.getActiveBits()) + 1;
+    Score = Score.zextOrTrunc(Width);
+    Score += Value.zextOrTrunc(Width);
+  };
+  auto AddPowerOfTwo = [&](unsigned Exponent) {
+    AddScore(APInt::getOneBitSet(Exponent + 1, Exponent));
+  };
+
+  unsigned NoConstructTraits = Ctx.ConstructTraits.size();
   for (unsigned Bit : VMI.RequiredTraits.set_bits()) {
     TraitProperty Property = TraitProperty(Bit);
     // If there is a user score attached, use it.
     if (VMI.ScoreMap.count(Property)) {
       const APInt &UserScore = VMI.ScoreMap.lookup(Property);
       assert(UserScore.uge(0) && "Expect non-negative user scores!");
-      Score += UserScore.getZExtValue();
+      AddScore(UserScore);
       continue;
     }
 
@@ -344,7 +375,9 @@ static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
       // TODO: Handling separately.
       break;
     case TraitSet::invalid:
-      llvm_unreachable("Unknown trait set is not to be used!");
+      // Unknown properties can be applicable under match_any or match_none.
+      // They contribute no score unless an explicit score was handled above.
+      continue;
     }
 
     // device={kind(any)} is "as if" no kind selector was specified.
@@ -355,38 +388,27 @@ static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
 
     switch (getOpenMPContextTraitSelectorForProperty(Property)) {
     case TraitSelector::device_kind:
-      Score += (1ULL << (NoConstructTraits + 0));
+    case TraitSelector::target_device_kind:
+      AddPowerOfTwo(NoConstructTraits);
       continue;
     case TraitSelector::device_arch:
-      Score += (1ULL << (NoConstructTraits + 1));
+    case TraitSelector::target_device_arch:
+      AddPowerOfTwo(NoConstructTraits + 1);
       continue;
     case TraitSelector::device_isa:
-      Score += (1ULL << (NoConstructTraits + 2));
-      continue;
-    case TraitSelector::target_device_kind:
-      Score += (1ULL << (NoConstructTraits + 0));
-      continue;
-    case TraitSelector::target_device_arch:
-      Score += (1ULL << (NoConstructTraits + 1));
-      continue;
     case TraitSelector::target_device_isa:
-      Score += (1ULL << (NoConstructTraits + 2));
+      AddPowerOfTwo(NoConstructTraits + 2);
       continue;
     default:
       continue;
     }
   }
 
-  unsigned ConstructIdx = 0;
-  assert(NoConstructTraits == ConstructMatches.size() &&
+  assert(VMI.ConstructTraits.size() >= ConstructMatches.size() &&
          "Mismatch in the construct traits!");
-  for (TraitProperty Property : VMI.ConstructTraits) {
-    assert(getOpenMPContextTraitSetForProperty(Property) ==
-               TraitSet::construct &&
-           "Ill-formed variant match info!");
-    (void)Property;
+  for (unsigned Match : ConstructMatches) {
     // ConstructMatches is the position p - 1 and we need 2^(p-1).
-    Score += (1ULL << ConstructMatches[ConstructIdx++]);
+    AddPowerOfTwo(Match);
   }
 
   LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE << "] Variant has a score of " << Score
@@ -397,7 +419,7 @@ static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
 int llvm::omp::getBestVariantMatchForContext(
     const SmallVectorImpl<VariantMatchInfo> &VMIs, const OMPContext &Ctx) {
 
-  APInt BestScore(64, 0);
+  APInt BestScore(1, 0);
   int BestVMIIdx = -1;
   const VariantMatchInfo *BestVMI = nullptr;
 
@@ -412,6 +434,10 @@ int llvm::omp::getBestVariantMatchForContext(
       continue;
     // Check if its clearly not the best.
     APInt Score = getVariantMatchScore(VMI, Ctx, ConstructMatches);
+    // Candidates can accumulate scores of different widths.
+    unsigned Width = std::max(Score.getBitWidth(), BestScore.getBitWidth());
+    Score = Score.zext(Width);
+    BestScore = BestScore.zext(Width);
     if (Score.ult(BestScore))
       continue;
     // Equal score need subset checks.
