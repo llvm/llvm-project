@@ -989,3 +989,39 @@ define <2 x i32> @abs_unary_shuffle_ops(<2 x i32> %x) {
   %r = call <2 x i32> @llvm.abs(<2 x i32> %a, i1 false)
   ret <2 x i32> %r
 }
+
+define i32 @test_abs_shifty(i32 %0) {
+; CHECK-LABEL: @test_abs_shifty(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP0:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %2 = ashr i32 %0, 31
+  %3 = xor i32 %0, %2
+  %4 = lshr i32 %0, 31
+  %5 = add nsw i32 %3, %4
+  ret i32 %5
+}
+
+define <4 x i32> @test_abs_shifty_vec(<4 x i32> %0) {
+; CHECK-LABEL: @test_abs_shifty_vec(
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[TMP0:%.*]], i1 true)
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+;
+  %2 = ashr <4 x i32> %0, <i32 31, i32 31, i32 31, i32 31>
+  %3 = xor <4 x i32> %0, %2
+  %4 = lshr <4 x i32> %0, <i32 31, i32 31, i32 31, i32 31>
+  %5 = add nsw <4 x i32> %3, %4
+  ret <4 x i32> %5
+}
+
+define i32 @test_abs_shifty_non_nsw(i32 %0) {
+; CHECK-LABEL: @test_abs_shifty_non_nsw(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP0:%.*]], i1 false)
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %2 = ashr i32 %0, 31
+  %3 = xor i32 %0, %2
+  %4 = lshr i32 %0, 31
+  %5 = add i32 %3, %4
+  ret i32 %5
+}
