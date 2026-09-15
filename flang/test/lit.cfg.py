@@ -280,6 +280,10 @@ if config.flang_runtime_f128_math_lib:
 else:
     config.substitutions.append(("%f128-lib", "NONE"))
 
+# The compiler itself folds REAL(16) intrinsic calls through libquadmath.
+if config.flang_fold_real16_quadmath:
+    config.available_features.add("flang-fold-real16-quadmath")
+
 # Set OBJECT_MODE=64 as tools on AIX default to 32-bit.
 if "system-aix" in config.available_features:
     config.environment["OBJECT_MODE"] = "64"
