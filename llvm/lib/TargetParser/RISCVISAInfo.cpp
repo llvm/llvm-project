@@ -1104,8 +1104,7 @@ StringRef RISCVISAInfo::computeDefaultABI() const {
       return HasY ? "il32pc64f" : "ilp32f";
     return HasY ? "il32pc64" : "ilp32";
   } else if (XLen == 64) {
-    // There is no l64pc128e ABI, so RV64E still uses the integer ABI even
-    // when the Y extension is enabled.
+    // RV64E has no capability ABI (yet).
     if (Exts.count("e"))
       return "lp64e";
     if (Exts.count("d"))

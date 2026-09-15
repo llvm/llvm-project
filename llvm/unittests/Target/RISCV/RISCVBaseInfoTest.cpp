@@ -56,8 +56,7 @@ TEST(ComputeTargetABI, SelectsExpectedABI) {
   EXPECT_EQ(computeTargetABI("riscv64", "+f"), RISCVABI::ABI_LP64F);
   EXPECT_EQ(computeTargetABI("riscv64", "+f,+d"), RISCVABI::ABI_LP64D);
 
-  // With the Y extension enabled and no explicit -target-abi, the capability
-  // ABI is selected by default.
+  // RVY targets default to the capability ABI.
   EXPECT_EQ(computeTargetABI("riscv32", "+experimental-y"),
             RISCVABI::ABI_IL32PC64);
   EXPECT_EQ(computeTargetABI("riscv32", "+experimental-y,+f"),
@@ -71,9 +70,7 @@ TEST(ComputeTargetABI, SelectsExpectedABI) {
   EXPECT_EQ(computeTargetABI("riscv64", "+experimental-y,+f,+d"),
             RISCVABI::ABI_L64PC128D);
 
-  // An explicitly requested ABI is unaffected by the Y-based default: even
-  // with Y (and F/D) enabled, asking for the plain integer ABI still gives
-  // the integer ABI rather than the capability one.
+  // An explicit ABI overrides the default.
   EXPECT_EQ(computeTargetABI("riscv32", "+experimental-y", /*ABIName=*/"ilp32"),
             RISCVABI::ABI_ILP32);
   EXPECT_EQ(computeTargetABI("riscv64", "+experimental-y,+f,+d",
