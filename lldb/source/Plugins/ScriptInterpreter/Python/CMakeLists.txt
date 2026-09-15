@@ -51,13 +51,13 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
   # resolved via liblldb's re-exports, so lldb_private libs aren't linked here.
   # Python is dlopen'd at runtime by ScriptInterpreterRuntimeLoader, so the
   # plugin is built with allow-undefined-symbol semantics on POSIX.
-  add_lldb_library(lldbPluginScriptInterpreterPython SHARED
+  lldb_add_scriptinterpreter_dynamic_library(
+    lldbPluginScriptInterpreterPython add_python_wrapper
     ${python_plugin_sources}
     LINK_LIBS
       liblldb
       ${LLDB_LIBEDIT_LIBS}
   )
-  add_python_wrapper(lldbPluginScriptInterpreterPython)
   if (APPLE)
     target_link_options(lldbPluginScriptInterpreterPython PRIVATE
       "LINKER:-undefined,dynamic_lookup")
@@ -74,13 +74,6 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     target_link_directories(lldbPluginScriptInterpreterPython PRIVATE
       ${PYTHON_SABI_LIBRARY_DIRS})
   endif()
-
-  if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
-    lldb_record_dynamic_script_interpreter_exports(
-      lldbPluginScriptInterpreterPython)
-  endif()
-
-  lldb_add_scriptinterpreter_plugin_to_framework(lldbPluginScriptInterpreterPython)
 
   # Static variant linked directly by unit tests. Separate compilation is
   # required so llvm::Error RTTI (ErrorInfoBase::ID) has a single address
