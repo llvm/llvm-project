@@ -137,7 +137,7 @@ void takeTailPadNoRegs(TailPadNoRegs u) {}
 // CIR-LABEL: cir.func {{.*}}@_Z17takeTailPadNoRegs13TailPadNoRegs
 // CIR-SAME:      %{{[^:]*}}: !cir.ptr<!rec_TailPadNoRegs> {llvm.align = 8 : i64, llvm.dereferenceable = 24 : i64, llvm.nofreeobj, llvm.noundef}
 
-// LLVM: define dso_local void @_Z17takeTailPadNoRegs13TailPadNoRegs(ptr nofreeobj noundef align 8 dereferenceable(24) %{{.+}})
+// LLVM: define dso_local void @_Z17takeTailPadNoRegs13TailPadNoRegs(ptr nofreeobj noundef align 8 dereferenceable(24) %{{[^,]+}})
 
 struct Base { Base(WithDtor t); };
 struct Derived : Base { using Base::Base; };
