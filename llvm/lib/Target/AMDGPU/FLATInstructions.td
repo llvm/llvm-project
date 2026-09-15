@@ -39,7 +39,7 @@ class FLAT_Pseudo<string opName, dag outs, dag ins,
   let isPseudo = 1;
   let isCodeGenOnly = 1;
 
-  let FLAT = 1;
+  let Format = AMDGPUInstrFormat.FLAT;
 
   let UseNamedOperandTable = 1;
   let hasSideEffects = 0;
@@ -99,12 +99,13 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
-  let FLAT = 1;
 
   // copy relevant pseudo op flags
   let SubtargetPredicate   = ps.SubtargetPredicate;
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let OtherPredicates      = ps.OtherPredicates;
+  let Format               = ps.Format;
+  let FormatModifier       = ps.FormatModifier;
   let TSFlags              = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SchedRW              = ps.SchedRW;
@@ -175,13 +176,14 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   InstSI <ps.OutOperandList, ps.InOperandList, opName # ps.AsmOperands, []>,
   Enc96 {
 
-  let FLAT = 1;
 
   // copy relevant pseudo op flags
   let SubtargetPredicate   = ps.SubtargetPredicate;
   let WaveSizePredicate    = ps.WaveSizePredicate;
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let OtherPredicates      = ps.OtherPredicates;
+  let Format               = ps.Format;
+  let FormatModifier       = ps.FormatModifier;
   let TSFlags              = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SchedRW              = ps.SchedRW;

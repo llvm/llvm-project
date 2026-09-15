@@ -87,7 +87,7 @@ class VOP2_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], string suf
 
   let mayRaiseFPException = ReadsModeReg;
 
-  let VOP2 = 1;
+  let Format = AMDGPUInstrFormat.VOP2;
   let VALU = 1;
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
 
@@ -100,7 +100,6 @@ class VOP2_Real <VOP2_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
   let VALU = 1;
-  let VOP2 = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
@@ -113,6 +112,8 @@ class VOP2_Real <VOP2_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let AsmVariantName     = ps.AsmVariantName;
   let Constraints        = ps.Constraints;
+  let Format             = ps.Format;
+  let FormatModifier     = ps.FormatModifier;
   let TSFlags            = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;

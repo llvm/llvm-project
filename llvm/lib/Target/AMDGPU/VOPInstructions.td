@@ -87,7 +87,7 @@ class VOP3Common <dag outs, dag ins, string asm = "",
   // zero (or less than zero).
   let AddedComplexity = -1000;
 
-  let VOP3 = 1;
+  let Format = AMDGPUInstrFormat.VOP3;
 
   let AsmVariantName = AMDGPUAsmVariants.VOP3;
   let AsmMatchConverter = !if(HasMods, "cvtVOP3", "");
@@ -137,7 +137,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   // zero (or less than zero).
   let AddedComplexity = -1000;
 
-  let VOP3 = 1;
+  let Format = AMDGPUInstrFormat.VOP3;
   let VALU = 1;
   let FPClamp = P.HasFPClamp;
   let IntClamp = P.HasIntClamp;
@@ -160,7 +160,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
 
 class VOP3P_Pseudo <string opName, VOPProfile P, list<dag> pattern = []> :
   VOP3_Pseudo<opName, P, pattern, 1> {
-  let VOP3P = 1;
+  let Format = AMDGPUInstrFormat.VOP3P;
   let IsDOT = P.IsDOT;
 }
 
@@ -176,7 +176,6 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
   let VALU = 1;
-  let VOP3 = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
   let UseNamedOperandTable = 1;
@@ -189,6 +188,8 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let AsmVariantName     = ps.AsmVariantName;
   let Constraints        = ps.Constraints;
+  let Format             = ps.Format;
+  let FormatModifier     = ps.FormatModifier;
   let TSFlags            = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
@@ -780,7 +781,7 @@ class VOP_SDWA_Pseudo <string opName, VOPProfile P, list<dag> pattern=[]> :
   let hasSideEffects = 0;
 
   let VALU = 1;
-  let SDWA = 1;
+  let FormatModifier = AMDGPUFormatModifier.SDWA;
 
   let ReadsModeReg = !or(P.DstVT.isFP, P.Src0VT.isFP);
 
@@ -798,7 +799,6 @@ class VOP_SDWA8_Real <VOP_SDWA_Pseudo ps> :
   SIMCInstr <ps.PseudoInstr, SIEncodingFamily.SDWA> {
 
   let VALU = 1;
-  let SDWA = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
@@ -816,6 +816,8 @@ class VOP_SDWA8_Real <VOP_SDWA_Pseudo ps> :
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let DecoderNamespace     = ps.DecoderNamespace;
   let Constraints          = ps.Constraints;
+  let Format               = ps.Format;
+  let FormatModifier       = ps.FormatModifier;
   let TSFlags              = ps.TSFlags;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
@@ -830,7 +832,6 @@ class Base_VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
   InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands9, []> {
 
   let VALU = 1;
-  let SDWA = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
@@ -851,6 +852,8 @@ class Base_VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Constraints          = ps.Constraints;
+  let Format               = ps.Format;
+  let FormatModifier       = ps.FormatModifier;
   let TSFlags              = ps.TSFlags;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
@@ -1016,7 +1019,7 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   let hasSideEffects = 0;
 
   let VALU = 1;
-  let DPP = 1;
+  let FormatModifier = AMDGPUFormatModifier.DPP;
   let Size = 8;
   let IsPacked = P.IsPacked;
 
@@ -1041,7 +1044,7 @@ class VOP3_DPP_Pseudo <string OpName, VOPProfile P> :
   let PseudoInstr = OpName#"_e64"#"_dpp";
   let OutOperandList = P.OutsVOP3DPP;
   let Size = 12;
-  let VOP3 = 1;
+  let Format = AMDGPUInstrFormat.VOP3;
   let AsmMatchConverter = "cvtVOP3DPP";
   let AsmVariantName = !if(!or(P.HasExtVOP3DPP, P.HasExt64BitDPP),
                            AMDGPUAsmVariants.VOP3_DPP,
@@ -1053,7 +1056,6 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
   let VALU = 1;
-  let DPP = 1;
   let isConvergent = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
@@ -1074,6 +1076,8 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let DecoderNamespace     = ps.DecoderNamespace;
   let Constraints          = ps.Constraints;
+  let Format               = ps.Format;
+  let FormatModifier       = ps.FormatModifier;
   let TSFlags              = ps.TSFlags;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
@@ -1094,7 +1098,7 @@ class VOP_DPP_Base <string OpName, VOPProfile P,
   let UseNamedOperandTable = 1;
 
   let VALU = 1;
-  let DPP = 1;
+  let FormatModifier = AMDGPUFormatModifier.DPP;
   let isConvergent = 1;
   let Size = 8;
 
@@ -1117,7 +1121,7 @@ class VOP3_DPP_Base <string OpName, VOPProfile P, bit IsDPP16,
   VOP_DPP_Base<OpName, P, InsDPP, AsmDPP> {
   let OutOperandList = P.OutsVOP3DPP;
   let AsmMatchConverter = "cvtVOP3DPP";
-  let VOP3 = 1;
+  let Format = AMDGPUInstrFormat.VOP3;
   let AsmVariantName = !if(!or(P.HasExtVOP3DPP, P.HasExt64BitDPP),
                            AMDGPUAsmVariants.VOP3_DPP,
                            AMDGPUAsmVariants.Disable);
@@ -1172,7 +1176,7 @@ class VOP3P_DPP <bits<8> op, string OpName, VOPProfile P, bit IsDPP16,
   VOP3_DPP_Base<OpName, P, IsDPP16, InsDPP, AsmDPP>, VOP3P_DPPe_Common<op, P>,
   VOP3_DPPe_Fields {
 
-  let VOP3P = 1;
+  let Format = AMDGPUInstrFormat.VOP3P;
 
   let Inst{40-32} = 0xfa;
   let Inst{71-64} = !if(P.HasSrc0, src0{7-0}, ?);
@@ -1215,7 +1219,7 @@ class VOP_DPP8_Base<string OpName, VOPProfile P, dag InsDPP8 = P.InsDPP8, string
   let UseNamedOperandTable = 1;
 
   let VALU = 1;
-  let DPP = 1;
+  let FormatModifier = AMDGPUFormatModifier.DPP;
   let isConvergent = 1;
   let Size = 8;
 
@@ -1236,7 +1240,7 @@ class VOP_DPP8_Pseudo<string OpName, VOPProfile P, list<dag> pattern=[]> :
   let hasSideEffects = 0;
 
   let VALU = 1;
-  let DPP = 1;
+  let FormatModifier = AMDGPUFormatModifier.DPP;
   let Size = 8;
   let IsPacked = P.IsPacked;
 
@@ -1259,7 +1263,7 @@ class VOP3_DPP8_Base<string OpName, VOPProfile P> :
   let AsmMatchConverter = "cvtVOP3DPP8";
   let AsmVariantName = !if(P.HasExtVOP3DPP, AMDGPUAsmVariants.VOP3_DPP,
                                             AMDGPUAsmVariants.Disable);
-  let VOP3 = 1;
+  let Format = AMDGPUInstrFormat.VOP3;
   let Size = 12;
 }
 
@@ -1289,7 +1293,7 @@ class VOP3P_DPP8<bits<8> op, string OpName, VOPProfile P> :
   VOP3_DPP8_Base<OpName, P>, VOP3P_DPPe_Common<op, P>,
   VOP3_DPP8e_Fields {
 
-  let VOP3P = 1;
+  let Format = AMDGPUInstrFormat.VOP3P;
   let Inst{40-32} = fi;
   let Inst{71-64} = !if(P.HasSrc0, src0{7-0}, ?);
   let Inst{95-72} = dpp8{23-0};

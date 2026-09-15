@@ -35,7 +35,7 @@ class SOP1_Pseudo <string opName, dag outs, dag ins,
   let mayStore = 0;
   let hasSideEffects = 0;
   let SALU = 1;
-  let SOP1 = 1;
+  let Format = AMDGPUInstrFormat.SOP1;
   let SchedRW = [WriteSALU];
   let UseNamedOperandTable = 1;
 
@@ -49,12 +49,13 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   Enc32 {
 
   let SALU = 1;
-  let SOP1 = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
   let Size = 4;
 
   // copy relevant pseudo op flags
+  let Format               = ps.Format;
+  let FormatModifier       = ps.FormatModifier;
   let SubtargetPredicate   = ps.SubtargetPredicate;
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let SchedRW              = ps.SchedRW;
@@ -585,7 +586,7 @@ class SOP2_Pseudo<string opName, dag outs, dag ins,
   let mayStore = 0;
   let hasSideEffects = 0;
   let SALU = 1;
-  let SOP2 = 1;
+  let Format = AMDGPUInstrFormat.SOP2;
   let SchedRW = [WriteSALU];
   let UseNamedOperandTable = 1;
 
@@ -602,7 +603,6 @@ class SOP2_Real<SOP_Pseudo ps, string name = ps.Mnemonic> :
   InstSI <ps.OutOperandList, ps.InOperandList,
           name # ps.AsmOperands> {
   let SALU = 1;
-  let SOP2 = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
@@ -610,6 +610,8 @@ class SOP2_Real<SOP_Pseudo ps, string name = ps.Mnemonic> :
   let SubtargetPredicate   = ps.SubtargetPredicate;
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
+  let Format               = ps.Format;
+  let FormatModifier       = ps.FormatModifier;
   let TSFlags              = ps.TSFlags;
   let SchedRW              = ps.SchedRW;
   let mayLoad              = ps.mayLoad;
@@ -1018,7 +1020,7 @@ class SOPK_Pseudo <string opName, dag outs, dag ins,
   let mayStore = 0;
   let hasSideEffects = 0;
   let SALU = 1;
-  let SOPK = 1;
+  let Format = AMDGPUInstrFormat.SOPK;
   let FixedSize = 1;
   let SchedRW = [WriteSALU];
   let UseNamedOperandTable = 1;
@@ -1030,12 +1032,13 @@ class SOPK_Real<SOPK_Pseudo ps, string name = ps.Mnemonic> :
   InstSI <ps.OutOperandList, ps.InOperandList,
           name # ps.AsmOperands> {
   let SALU = 1;
-  let SOPK = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
   let UseNamedOperandTable = 1;
 
   // copy relevant pseudo op flags
+  let Format             = ps.Format;
+  let FormatModifier     = ps.FormatModifier;
   let SubtargetPredicate = ps.SubtargetPredicate;
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let Constraints        = ps.Constraints;
@@ -1296,7 +1299,7 @@ class SOPC_Pseudo<string opName, dag outs, dag ins,
   let mayStore = 0;
   let hasSideEffects = 0;
   let SALU = 1;
-  let SOPC = 1;
+  let Format = AMDGPUInstrFormat.SOPC;
   let Defs = [SCC];
   let SchedRW = [WriteSALU];
   let UseNamedOperandTable = 1;
@@ -1307,7 +1310,6 @@ class SOPC_Real<bits<7> op, SOPC_Pseudo ps> :
           ps.Mnemonic # ps.AsmOperands>,
   Enc32 {
   let SALU = 1;
-  let SOPC = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
@@ -1316,6 +1318,8 @@ class SOPC_Real<bits<7> op, SOPC_Pseudo ps> :
   let OtherPredicates      = ps.OtherPredicates;
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
+  let Format               = ps.Format;
+  let FormatModifier       = ps.FormatModifier;
   let TSFlags              = ps.TSFlags;
   let SchedRW              = ps.SchedRW;
   let mayLoad              = ps.mayLoad;
@@ -1482,7 +1486,7 @@ class SOPP_Pseudo<string opName, dag ins,
   let mayStore = 0;
   let hasSideEffects = 0;
   let SALU = 1;
-  let SOPP = 1;
+  let Format = AMDGPUInstrFormat.SOPP;
   let FixedSize = 1;
   let SchedRW = [WriteSALU];
   let UseNamedOperandTable = 1;
@@ -1500,7 +1504,6 @@ class SOPP_Real<SOPP_Pseudo ps, string name = ps.Mnemonic> :
   InstSI <ps.OutOperandList, ps.InOperandList,
           name # ps.AsmOperands> {
   let SALU = 1;
-  let SOPP = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
@@ -1509,6 +1512,8 @@ class SOPP_Real<SOPP_Pseudo ps, string name = ps.Mnemonic> :
   let OtherPredicates      = ps.OtherPredicates;
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
+  let Format               = ps.Format;
+  let FormatModifier       = ps.FormatModifier;
   let TSFlags              = ps.TSFlags;
   let SchedRW              = ps.SchedRW;
   let mayLoad              = ps.mayLoad;

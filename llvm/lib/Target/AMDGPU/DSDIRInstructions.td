@@ -67,7 +67,7 @@ class VDSDIR_getIns<bit direct> {
 
 class DSDIR_Common<string opName, string asm = "", dag ins, bit direct> :
   InstSI<(outs VGPR_32:$vdst), ins, asm> {
-  let LDSDIR = 1;
+  let Format = AMDGPUInstrFormat.LDSDIR;
   let EXP_CNT = 1;
 
   let hasSideEffects = 0;

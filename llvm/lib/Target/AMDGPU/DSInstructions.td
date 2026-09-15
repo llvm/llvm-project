@@ -11,7 +11,7 @@ class DS_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   SIMCInstr <NAME, SIEncodingFamily.NONE> {
 
   let LGKM_CNT = 1;
-  let DS = 1;
+  let Format = AMDGPUInstrFormat.DS;
   let GWS = 0;
   let Size = 8;
   let UseNamedOperandTable = 1;
@@ -58,7 +58,6 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   let isPseudo = 0;
   let isCodeGenOnly = 0;
   let LGKM_CNT = 1;
-  let DS = 1;
   let UseNamedOperandTable = 1;
 
   // copy relevant pseudo op flags
@@ -66,6 +65,8 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   let SubtargetPredicate = ps.SubtargetPredicate;
   let WaveSizePredicate  = ps.WaveSizePredicate;
   let OtherPredicates    = ps.OtherPredicates;
+  let Format             = ps.Format;
+  let FormatModifier     = ps.FormatModifier;
   let TSFlags            = ps.TSFlags;
   let SchedRW            = ps.SchedRW;
   let mayLoad            = ps.mayLoad;

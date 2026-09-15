@@ -234,7 +234,7 @@ class VOPC_Pseudo <string opName, VOPC_Profile P, list<dag> pattern=[],
   let ReadsModeReg = P.Src0VT.isFP;
 
   let VALU = 1;
-  let VOPC = 1;
+  let Format = AMDGPUInstrFormat.VOPC;
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
   let Defs = !if(DefVcc, [VCC], []);
 
@@ -246,7 +246,6 @@ class VOPC_Real <VOPC_Pseudo ps, int EncodingFamily, string asm_name = ps.Pseudo
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
   let VALU = 1;
-  let VOPC = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
@@ -258,6 +257,8 @@ class VOPC_Real <VOPC_Pseudo ps, int EncodingFamily, string asm_name = ps.Pseudo
   let OtherPredicates    = ps.OtherPredicates;
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let Constraints        = ps.Constraints;
+  let Format             = ps.Format;
+  let FormatModifier     = ps.FormatModifier;
   let TSFlags            = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
@@ -408,7 +409,7 @@ multiclass VOPC_Pseudos <string opName,
         let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
         let SchedRW = P.Schedule;
         let isCompare = 1;
-        let VOPC = 1;
+        let Format = AMDGPUInstrFormat.VOPC;
         let Constraints = "";
       }
   if P.HasExtVOP3DPP then
@@ -472,7 +473,7 @@ multiclass VOPCX_Pseudos <string opName,
         let Defs = [EXEC];
         let SchedRW = P_NoSDst.Schedule;
         let isCompare = 1;
-        let VOPC = 1;
+        let Format = AMDGPUInstrFormat.VOPC;
         let Constraints = "";
       }
   if P.HasExtVOP3DPP then
@@ -1105,7 +1106,7 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
         let Defs = !if(DefExec, !if(DefVcc, [VCC, EXEC], [EXEC]),
                                 !if(DefVcc, [VCC], []));
         let SchedRW = p.Schedule;
-        let VOPC = 1;
+        let Format = AMDGPUInstrFormat.VOPC;
         let Constraints = "";
       }
   if p.HasExtVOP3DPP then
@@ -1154,7 +1155,7 @@ multiclass VOPCX_Class_Pseudos <string opName,
       def _nosdst_e32_dpp : VOP_DPP_Pseudo<opName#"_nosdst", P_NoSDst> {
         let Defs = [EXEC];
         let SchedRW = P_NoSDst.Schedule;
-        let VOPC = 1;
+        let Format = AMDGPUInstrFormat.VOPC;
         let Constraints = "";
       }
   if P.HasExtVOP3DPP then
@@ -1467,7 +1468,7 @@ class VOPC_DPP_Base<bits<8> op, string OpName, VOPProfile P>
   let Inst{63-60} = row_mask;
 
   let AsmMatchConverter = "cvtDPP";
-  let VOPC = 1;
+  let Format = AMDGPUInstrFormat.VOPC;
 }
 
 class VOPC_DPP8_Base<bits<8> op, string OpName, VOPProfile P>
@@ -1485,7 +1486,7 @@ class VOPC_DPP8_Base<bits<8> op, string OpName, VOPProfile P>
   let Inst{63-40} = dpp8{23-0};
 
   let AsmMatchConverter = "cvtDPP8";
-  let VOPC = 1;
+  let Format = AMDGPUInstrFormat.VOPC;
 }
 
 class VOPC_DPP16<bits<8> op, VOP_DPP_Pseudo ps, string opName = ps.OpName>

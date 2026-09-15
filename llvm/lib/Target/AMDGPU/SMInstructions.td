@@ -33,7 +33,7 @@ class SM_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   let isCodeGenOnly = 1;
 
   let LGKM_CNT = 1;
-  let SMRD = 1;
+  let Format = AMDGPUInstrFormat.SMRD;
   let mayStore = 0;
   let mayLoad = 1;
   let hasSideEffects = 0;
@@ -63,7 +63,6 @@ class SM_Real <SM_Pseudo ps, string opName = ps.Mnemonic>
 
   // copy relevant pseudo op flags
   let LGKM_CNT             = ps.LGKM_CNT;
-  let SMRD                 = ps.SMRD;
   let mayStore             = ps.mayStore;
   let mayLoad              = ps.mayLoad;
   let hasSideEffects       = ps.hasSideEffects;
@@ -77,7 +76,8 @@ class SM_Real <SM_Pseudo ps, string opName = ps.Mnemonic>
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
   let isConvergent         = ps.isConvergent;
-
+  let Format               = ps.Format;
+  let FormatModifier       = ps.FormatModifier;
   let TSFlags = ps.TSFlags;
 
   bit is_buffer = ps.is_buffer;

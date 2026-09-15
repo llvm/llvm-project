@@ -203,7 +203,7 @@ class MIMG_Base <dag outs, string dns = "">
 
   let VM_CNT = 1;
   let EXP_CNT = 1;
-  let MIMG = 1;
+  let Format = AMDGPUInstrFormat.MIMG;
   let Uses = [EXEC];
   let mayLoad = 1;
   let mayStore = 0;
@@ -379,8 +379,7 @@ class MIMG_nsa_gfx11<int op, dag outs, int num_addrs, string dns="",
 class VIMAGE<int op, dag outs, int num_addrs, Predicate pred,
              MIMGEncoding encoding, string dns="", list<RegisterOperand> addr_types=[]>
   : MIMG<outs, dns>, VIMAGEe<op> {
-  let MIMG = 0;
-  let VIMAGE = 1;
+  let Format = AMDGPUInstrFormat.VIMAGE;
   let SubtargetPredicate = pred;
   let AssemblerPredicate = pred;
 
@@ -403,8 +402,7 @@ class VIMAGE<int op, dag outs, int num_addrs, Predicate pred,
 class VSAMPLE<int op, dag outs, int num_addrs, Predicate pred,
               MIMGEncoding encoding, string dns="", RegisterOperand Addr3RC>
   : MIMG<outs, dns>, VSAMPLEe<op> {
-  let MIMG = 0;
-  let VSAMPLE = 1;
+  let Format = AMDGPUInstrFormat.VSAMPLE;
   let SubtargetPredicate = pred;
   let AssemblerPredicate = pred;
 
@@ -2224,6 +2222,8 @@ class VIMAGE_TENSOR_Real <bits<8> op, VIMAGE_TENSOR_Pseudo ps, string opName = p
 
   // copy relevant pseudo op flags
   let SubtargetPredicate   = ps.SubtargetPredicate;
+  let Format               = ps.Format;
+  let FormatModifier       = ps.FormatModifier;
   let TSFlags              = ps.TSFlags;
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;

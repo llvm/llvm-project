@@ -62,45 +62,22 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bit SALU = 0;
   field bit VALU = 0;
 
-  // SALU instruction formats.
-  field bit SOP1 = 0;
-  field bit SOP2 = 0;
-  field bit SOPC = 0;
-  field bit SOPK = 0;
-  field bit SOPP = 0;
+  // Mutually-exclusive instruction format, set directly by instruction classes.
+  field bits<5> Format = AMDGPUInstrFormat.NONE;
 
-  // VALU instruction formats.
-  field bit VOP1 = 0;
-  field bit VOP2 = 0;
-  field bit VOPC = 0;
-  field bit VOP3 = 0;
-  field bit VOP3P = 0;
-  field bit VINTRP = 0;
-  field bit SDWA = 0;
-  field bit DPP = 0;
+  // Mutually-exclusive operand-encoding modifier (DPP/SDWA).
+  field bits<2> FormatModifier = AMDGPUFormatModifier.None;
+
+  // Derived from Format (not part of TSFlags); only used as an instruction-
+  // relation-map key to tell the VOP3/e64 encoding apart from e32/sdwa/dpp.
+  bit IsVOP3Encoding = !eq(Format, AMDGPUInstrFormat.VOP3);
+
+  // Derived from Format (not part of TSFlags); only used as a searchable-table
+  // key (VOPDPairs) to tell VOPD3 apart from the plain VOPD encoding.
+  bit VOPD3 = !eq(Format, AMDGPUInstrFormat.VOPD3);
+
+  // Transcendental property flag (orthogonal to the format).
   field bit TRANS = 0;
-
-  // Memory instruction formats.
-  field bit MUBUF = 0;
-  field bit MTBUF = 0;
-  field bit SMRD = 0;
-  field bit MIMG = 0;
-  field bit VIMAGE = 0;
-  field bit VSAMPLE = 0;
-  field bit EXP = 0;
-  field bit FLAT = 0;
-  field bit DS = 0;
-
-  // Combined SGPR/VGPR spill bit
-  field bit Spill = 0;
-
-  // LDSDIR instruction format.
-  field bit LDSDIR = 0;
-
-  // VINTERP instruction format.
-  field bit VINTERP = 0;
-
-  field bit VOPD3 = 0;
 
   // High bits - other information.
   field bit VM_CNT = 0;
@@ -201,40 +178,6 @@ class InstSI <dag outs, dag ins, string asm = "",
   // This bit indicates that this is one of SWMMAC instructions.
   field bit IsSWMMAC = 0;
 
-  // Mutually-exclusive instruction format, derived from the format bits above.
-  // The base format bits are all exclusive, so they collapse into one enum
-  // field. VOP3P/VINTERP also set the VOP3 bit, so match them before VOP3.
-  bits<5> Format = !cond(SOP1    : AMDGPUInstrFormat.SOP1,
-                         SOP2    : AMDGPUInstrFormat.SOP2,
-                         SOPC    : AMDGPUInstrFormat.SOPC,
-                         SOPK    : AMDGPUInstrFormat.SOPK,
-                         SOPP    : AMDGPUInstrFormat.SOPP,
-                         VOP1    : AMDGPUInstrFormat.VOP1,
-                         VOP2    : AMDGPUInstrFormat.VOP2,
-                         VOPC    : AMDGPUInstrFormat.VOPC,
-                         VOP3P   : AMDGPUInstrFormat.VOP3P,
-                         VINTERP : AMDGPUInstrFormat.VINTERP,
-                         VOP3    : AMDGPUInstrFormat.VOP3,
-                         VINTRP  : AMDGPUInstrFormat.VINTRP,
-                         VOPD3   : AMDGPUInstrFormat.VOPD3,
-                         LDSDIR  : AMDGPUInstrFormat.LDSDIR,
-                         MUBUF   : AMDGPUInstrFormat.MUBUF,
-                         MTBUF   : AMDGPUInstrFormat.MTBUF,
-                         SMRD    : AMDGPUInstrFormat.SMRD,
-                         MIMG    : AMDGPUInstrFormat.MIMG,
-                         VIMAGE  : AMDGPUInstrFormat.VIMAGE,
-                         VSAMPLE : AMDGPUInstrFormat.VSAMPLE,
-                         EXP     : AMDGPUInstrFormat.EXP,
-                         FLAT    : AMDGPUInstrFormat.FLAT,
-                         DS      : AMDGPUInstrFormat.DS,
-                         Spill   : AMDGPUInstrFormat.Spill,
-                         true    : AMDGPUInstrFormat.NONE);
-
-  // Mutually-exclusive operand-encoding modifier (DPP and SDWA never co-occur).
-  bits<2> FormatModifier = !cond(DPP  : AMDGPUFormatModifier.DPP,
-                                 SDWA : AMDGPUFormatModifier.SDWA,
-                                 true : AMDGPUFormatModifier.None);
-
   let TSFlags{4-0} = Format;
   let TSFlags{6-5} = FormatModifier;
 
@@ -302,7 +245,12 @@ class InstSI <dag outs, dag ins, string asm = "",
   let AsmVariantName = AMDGPUAsmVariants.Default;
 
   // Avoid changing source registers in a way that violates constant bus read limitations.
-  let hasExtraSrcRegAllocReq = !or(VOP1, VOP2, VOP3, VOPC, SDWA, VALU);
+  let hasExtraSrcRegAllocReq = !or(!eq(Format, AMDGPUInstrFormat.VOP1),
+                                   !eq(Format, AMDGPUInstrFormat.VOP2),
+                                   !eq(Format, AMDGPUInstrFormat.VOPC),
+                                   !eq(Format, AMDGPUInstrFormat.VOP3),
+                                   !eq(FormatModifier, AMDGPUFormatModifier.SDWA),
+                                   VALU);
 }
 
 class PseudoInstSI<dag outs, dag ins, list<dag> pattern = [], string asm = "">
@@ -586,7 +534,7 @@ let Uses = [EXEC] in {
 
 class VINTRPCommon <dag outs, dag ins, string asm, list<dag> pattern> :
     InstSI <outs, ins, asm, pattern> {
-  let VINTRP = 1;
+  let Format = AMDGPUInstrFormat.VINTRP;
   // VINTRP instructions read parameter values from LDS, but these parameter
   // values are stored outside of the LDS memory that is allocated to the
   // shader for general purpose use.

@@ -3377,7 +3377,7 @@ multiclass VINTRP_m <bits <2> op, dag outs, dag ins, string asm,
 def getVOPe64 : InstrMapping {
   let FilterClass = "VOP";
   let RowFields = ["OpName"];
-  let ColFields = ["Size", "VOP3"];
+  let ColFields = ["Size", "IsVOP3Encoding"];
   let KeyCol = ["4", "0"];
   let ValueCols = [["8", "1"]];
 }
@@ -3386,7 +3386,7 @@ def getVOPe64 : InstrMapping {
 def getVOPe32 : InstrMapping {
   let FilterClass = "VOP";
   let RowFields = ["OpName"];
-  let ColFields = ["Size", "VOP3"];
+  let ColFields = ["Size", "IsVOP3Encoding"];
   let KeyCol = ["8", "1"];
   let ValueCols = [["4", "0"]];
 }
