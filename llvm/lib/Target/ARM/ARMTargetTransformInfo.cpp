@@ -1306,6 +1306,17 @@ InstructionCost ARMTTIImpl::getShuffleCost(
                                               ISD::VECTOR_SHUFFLE, LT.second))
         return LT.first * Entry->Cost;
     }
+
+    // Check for other shuffles that are not SK_ kinds but we have native
+    // instructions for, for example REV.
+    if (!Mask.empty()) {
+      std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
+      if (LT.second.isVector() &&
+          Mask.size() <= LT.second.getVectorNumElements() &&
+          (isVREVMask(Mask, LT.second, 16) || isVREVMask(Mask, LT.second, 32) ||
+           isVREVMask(Mask, LT.second, 64)))
+        return LT.first;
+    }
   }
   if (ST->hasMVEIntegerOps()) {
     if (Kind == TTI::SK_Broadcast) {
