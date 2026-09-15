@@ -1723,21 +1723,53 @@ public:
     mlir::Block *defaultDest = nullptr;
     bool defaultIsCatchAll = false;
 
-    for (auto [typeAttr, handlerBlock] :
-         llvm::zip(handlerTypes, catchHandlerBlocks)) {
-      if (mlir::isa<cir::CatchAllAttr>(typeAttr)) {
-        assert(!defaultDest && "multiple catch_all or unwind handlers");
-        defaultDest = handlerBlock;
-        defaultIsCatchAll = true;
-      } else if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
-        assert(!defaultDest && "multiple catch_all or unwind handlers");
-        defaultDest = handlerBlock;
-        defaultIsCatchAll = false;
-      } else {
-        // This is a typed catch handler (GlobalViewAttr with type info).
-        catchTypeAttrs.push_back(typeAttr);
-        catchDests.push_back(handlerBlock);
-      }
+    // A filter try operation has exactly two handlers. The unexpected region
+    // is the destination of the filter clause (taken when the exception is
+    // *not* permitted). The filter region is the unwind destination (taken
+    // when it is).
+    cir::EhFilterAttr filterAttr;
+    mlir::Block *filterUnwindDest = nullptr;
+    mlir::Block *filterClauseDest = nullptr;
+
+    for (auto zipped : llvm::zip(handlerTypes, catchHandlerBlocks)) {
+      mlir::Attribute typeAttr = std::get<0>(zipped);
+      mlir::Block *handlerBlock = std::get<1>(zipped);
+      llvm::TypeSwitch<mlir::Attribute>(typeAttr)
+          .Case<cir::CatchAllAttr>([&](auto) {
+            assert(!defaultDest && "multiple catch_all or unwind handlers");
+            defaultDest = handlerBlock;
+            defaultIsCatchAll = true;
+          })
+          .Case<cir::UnwindAttr>([&](auto) {
+            assert(!defaultDest && "multiple catch_all or unwind handlers");
+            defaultDest = handlerBlock;
+            defaultIsCatchAll = false;
+          })
+          .Case<cir::EhFilterAttr>([&](cir::EhFilterAttr ehFilter) {
+            assert(!filterAttr && "multiple filter handlers");
+            filterAttr = ehFilter;
+            filterUnwindDest = handlerBlock;
+          })
+          .Case<cir::EhUnexpectedAttr>([&](auto) {
+            assert(!filterClauseDest && "multiple unexpected handlers");
+            filterClauseDest = handlerBlock;
+          })
+          .Default([&](mlir::Attribute attr) {
+            // Typed catch handler (GlobalViewAttr with type info).
+            catchTypeAttrs.push_back(attr);
+            catchDests.push_back(handlerBlock);
+          });
+    }
+
+    if (filterAttr) {
+      assert(filterUnwindDest && filterClauseDest &&
+             "filter handler requires an unexpected handler");
+      assert(!defaultDest &&
+             "filter handler cannot share a dispatch with catch_all or unwind");
+      catchTypeAttrs.push_back(filterAttr);
+      catchDests.push_back(filterClauseDest);
+      defaultDest = filterUnwindDest;
+      defaultIsCatchAll = false;
     }
 
     assert(defaultDest && "dispatch must have a catch_all or unwind handler");
@@ -1823,12 +1855,12 @@ public:
     return handlerEntry;
   }
 
-  // Flatten an unwind handler region. The unwind region just contains a
-  // cir.resume that continues unwinding. We inline it and leave the resume
-  // in place. If this try op is nested inside an EH cleanup or another try op,
-  // the enclosing op will rewrite the resume as a branch to its cleanup or
-  // dispatch block when it is flattened. Otherwise, the resume will unwind to
-  // the caller.
+  // Flatten an unwind, filter, or unexpected handler region. These regions
+  // do not catch the exception. They resume, are unreachable, or call
+  // cir.eh.unexpected. We inline them and leave the terminator in place. If
+  // this try op is nested inside an EH cleanup or another try op, the
+  // enclosing op will rewrite a resume as a branch to its cleanup or dispatch
+  // block when it is flattened. Otherwise, a resume will unwind to the caller.
   mlir::Block *flattenUnwindHandler(mlir::Region &unwindRegion,
                                     mlir::Location loc,
                                     mlir::Block *insertBefore,
@@ -1918,7 +1950,8 @@ public:
     for (const auto &[idx, typeAttr] : llvm::enumerate(handlerTypes)) {
       mlir::Region &handlerRegion = handlerRegions[idx];
 
-      if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
+      if (mlir::isa<cir::UnwindAttr, cir::EhFilterAttr, cir::EhUnexpectedAttr>(
+              typeAttr)) {
         mlir::Block *unwindEntry =
             flattenUnwindHandler(handlerRegion, loc, continueBlock, rewriter);
         catchHandlerBlocks.push_back(unwindEntry);
@@ -2036,24 +2069,6 @@ public:
 } // namespace
 
 void CIRFlattenCFGPass::runOnOperation() {
-  // Flattening of dynamic exception specifications is not implemented yet.
-  // Diagnose it up front rather than from the rewrite pattern, which the
-  // driver below may run more than once for the same operation.
-  if (getOperation()
-          ->walk([&](cir::TryOp tryOp) {
-            mlir::ArrayAttr handlerTypes = tryOp.getHandlerTypesAttr();
-            if (!handlerTypes ||
-                llvm::none_of(handlerTypes, [](mlir::Attribute typeAttr) {
-                  return mlir::isa<cir::EhFilterAttr>(typeAttr);
-                }))
-              return mlir::WalkResult::advance();
-            tryOp.emitError(
-                "NYI: flattening of a dynamic exception specification handler");
-            return mlir::WalkResult::interrupt();
-          })
-          .wasInterrupted())
-    return signalPassFailure();
-
   RewritePatternSet patternList(&getContext());
   populateFlattenCFGPatterns(patternList);
   FrozenRewritePatternSet patterns(std::move(patternList));
