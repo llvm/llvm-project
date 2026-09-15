@@ -1215,9 +1215,9 @@ define i8 @uminv_v4i8(<4 x i8> %a) {
 ; CHECK-GI-NEXT:    umov w11, v0.h[3]
 ; CHECK-GI-NEXT:    and w12, w8, #0xff
 ; CHECK-GI-NEXT:    cmp w12, w9, uxtb
-; CHECK-GI-NEXT:    and w12, w10, #0xff
 ; CHECK-GI-NEXT:    csel w8, w8, w9, lo
-; CHECK-GI-NEXT:    cmp w12, w11, uxtb
+; CHECK-GI-NEXT:    and w9, w10, #0xff
+; CHECK-GI-NEXT:    cmp w9, w11, uxtb
 ; CHECK-GI-NEXT:    csel w9, w10, w11, lo
 ; CHECK-GI-NEXT:    and w10, w8, #0xff
 ; CHECK-GI-NEXT:    cmp w10, w9, uxtb
@@ -1621,9 +1621,9 @@ define i8 @umaxv_v4i8(<4 x i8> %a) {
 ; CHECK-GI-NEXT:    umov w11, v0.h[3]
 ; CHECK-GI-NEXT:    and w12, w8, #0xff
 ; CHECK-GI-NEXT:    cmp w12, w9, uxtb
-; CHECK-GI-NEXT:    and w12, w10, #0xff
 ; CHECK-GI-NEXT:    csel w8, w8, w9, hi
-; CHECK-GI-NEXT:    cmp w12, w11, uxtb
+; CHECK-GI-NEXT:    and w9, w10, #0xff
+; CHECK-GI-NEXT:    cmp w9, w11, uxtb
 ; CHECK-GI-NEXT:    csel w9, w10, w11, hi
 ; CHECK-GI-NEXT:    and w10, w8, #0xff
 ; CHECK-GI-NEXT:    cmp w10, w9, uxtb

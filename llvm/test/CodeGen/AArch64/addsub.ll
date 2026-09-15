@@ -511,20 +511,20 @@ define i1 @reject_non_eqne_csinc(i32 %0) {
 define i32 @accept_csel(i32 %0) {
 ; CHECK-SD-LABEL: accept_csel:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sub w9, w0, #273, lsl #12 // =1118208
 ; CHECK-SD-NEXT:    mov w8, #17 // =0x11
+; CHECK-SD-NEXT:    sub w9, w0, #273, lsl #12 // =1118208
+; CHECK-SD-NEXT:    mov w10, #11 // =0xb
 ; CHECK-SD-NEXT:    cmp w9, #273
-; CHECK-SD-NEXT:    mov w9, #11 // =0xb
-; CHECK-SD-NEXT:    csel w0, w9, w8, eq
+; CHECK-SD-NEXT:    csel w0, w10, w8, eq
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: accept_csel:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sub w8, w0, #273, lsl #12 // =1118208
-; CHECK-GI-NEXT:    mov w9, #17 // =0x11
-; CHECK-GI-NEXT:    mov w10, #11 // =0xb
-; CHECK-GI-NEXT:    cmp w8, #273
-; CHECK-GI-NEXT:    csel w0, w10, w9, eq
+; CHECK-GI-NEXT:    mov w8, #17 // =0x11
+; CHECK-GI-NEXT:    mov w9, #11 // =0xb
+; CHECK-GI-NEXT:    sub w10, w0, #273, lsl #12 // =1118208
+; CHECK-GI-NEXT:    cmp w10, #273
+; CHECK-GI-NEXT:    csel w0, w9, w8, eq
 ; CHECK-GI-NEXT:    ret
   %2 = icmp eq i32 %0, 1118481
   %3 = select i1 %2, i32 11, i32 17
@@ -532,25 +532,15 @@ define i32 @accept_csel(i32 %0) {
 }
 
 define i32 @reject_non_eqne_csel(i32 %0) {
-; CHECK-SD-LABEL: reject_non_eqne_csel:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #4369 // =0x1111
-; CHECK-SD-NEXT:    mov w9, #11 // =0xb
-; CHECK-SD-NEXT:    movk w8, #17, lsl #16
-; CHECK-SD-NEXT:    cmp w0, w8
-; CHECK-SD-NEXT:    mov w8, #17 // =0x11
-; CHECK-SD-NEXT:    csel w0, w9, w8, lo
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: reject_non_eqne_csel:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #4369 // =0x1111
-; CHECK-GI-NEXT:    mov w9, #17 // =0x11
-; CHECK-GI-NEXT:    mov w10, #11 // =0xb
-; CHECK-GI-NEXT:    movk w8, #17, lsl #16
-; CHECK-GI-NEXT:    cmp w0, w8
-; CHECK-GI-NEXT:    csel w0, w10, w9, lo
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: reject_non_eqne_csel:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #4369 // =0x1111
+; CHECK-NEXT:    mov w9, #17 // =0x11
+; CHECK-NEXT:    mov w10, #11 // =0xb
+; CHECK-NEXT:    movk w8, #17, lsl #16
+; CHECK-NEXT:    cmp w0, w8
+; CHECK-NEXT:    csel w0, w10, w9, lo
+; CHECK-NEXT:    ret
   %2 = icmp ult i32 %0, 1118481
   %3 = select i1 %2, i32 11, i32 17
   ret i32 %3
@@ -598,45 +588,25 @@ define void @reject_non_eqne_branch(i32 %0) {
 }
 
 define i32 @reject_multiple_usages(i32 %0) {
-; CHECK-SD-LABEL: reject_multiple_usages:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #4369 // =0x1111
-; CHECK-SD-NEXT:    mov w9, #3 // =0x3
-; CHECK-SD-NEXT:    mov w10, #17 // =0x11
-; CHECK-SD-NEXT:    movk w8, #17, lsl #16
-; CHECK-SD-NEXT:    mov w11, #12 // =0xc
-; CHECK-SD-NEXT:    cmp w0, w8
-; CHECK-SD-NEXT:    mov w8, #9 // =0x9
-; CHECK-SD-NEXT:    csel w8, w8, w9, eq
-; CHECK-SD-NEXT:    csel w9, w11, w10, hi
-; CHECK-SD-NEXT:    mov w10, #53312 // =0xd040
-; CHECK-SD-NEXT:    movk w10, #2, lsl #16
-; CHECK-SD-NEXT:    add w8, w8, w9
-; CHECK-SD-NEXT:    mov w9, #26304 // =0x66c0
-; CHECK-SD-NEXT:    cmp w0, w10
-; CHECK-SD-NEXT:    movk w9, #1433, lsl #16
-; CHECK-SD-NEXT:    csel w0, w8, w9, hi
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: reject_multiple_usages:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #4369 // =0x1111
-; CHECK-GI-NEXT:    mov w9, #3 // =0x3
-; CHECK-GI-NEXT:    mov w10, #9 // =0x9
-; CHECK-GI-NEXT:    movk w8, #17, lsl #16
-; CHECK-GI-NEXT:    mov w11, #12 // =0xc
-; CHECK-GI-NEXT:    cmp w0, w8
-; CHECK-GI-NEXT:    mov w8, #17 // =0x11
-; CHECK-GI-NEXT:    csel w9, w10, w9, eq
-; CHECK-GI-NEXT:    csel w8, w11, w8, hi
-; CHECK-GI-NEXT:    mov w10, #53312 // =0xd040
-; CHECK-GI-NEXT:    movk w10, #2, lsl #16
-; CHECK-GI-NEXT:    add w8, w9, w8
-; CHECK-GI-NEXT:    mov w9, #26304 // =0x66c0
-; CHECK-GI-NEXT:    movk w9, #1433, lsl #16
-; CHECK-GI-NEXT:    cmp w0, w10
-; CHECK-GI-NEXT:    csel w0, w8, w9, hi
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: reject_multiple_usages:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #4369 // =0x1111
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    mov w10, #9 // =0x9
+; CHECK-NEXT:    movk w8, #17, lsl #16
+; CHECK-NEXT:    mov w11, #17 // =0x11
+; CHECK-NEXT:    mov w12, #12 // =0xc
+; CHECK-NEXT:    cmp w0, w8
+; CHECK-NEXT:    csel w8, w10, w9, eq
+; CHECK-NEXT:    mov w10, #26304 // =0x66c0
+; CHECK-NEXT:    csel w9, w12, w11, hi
+; CHECK-NEXT:    movk w10, #1433, lsl #16
+; CHECK-NEXT:    add w8, w8, w9
+; CHECK-NEXT:    mov w9, #53312 // =0xd040
+; CHECK-NEXT:    movk w9, #2, lsl #16
+; CHECK-NEXT:    cmp w0, w9
+; CHECK-NEXT:    csel w0, w8, w10, hi
+; CHECK-NEXT:    ret
   %2 = icmp eq i32 %0, 1118481
   %3 = icmp ugt i32 %0, 1118481
   %4 = select i1 %2, i32 9, i32 3

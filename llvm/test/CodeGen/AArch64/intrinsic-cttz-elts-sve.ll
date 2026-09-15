@@ -9,13 +9,13 @@ define i32 @ctz_nxv32i1(<vscale x 32 x i1> %a) #0 {
 ; NONSTREAMING:       // %bb.0:
 ; NONSTREAMING-NEXT:    ptrue p2.b
 ; NONSTREAMING-NEXT:    rdvl x8, #1
-; NONSTREAMING-NEXT:    mov w10, w8
-; NONSTREAMING-NEXT:    brkb p0.b, p2/z, p0.b
+; NONSTREAMING-NEXT:    mov w9, w8
 ; NONSTREAMING-NEXT:    brkb p1.b, p2/z, p1.b
-; NONSTREAMING-NEXT:    cntp x9, p0, p0.b
+; NONSTREAMING-NEXT:    brkb p0.b, p2/z, p0.b
 ; NONSTREAMING-NEXT:    incp x8, p1.b
-; NONSTREAMING-NEXT:    cmp w9, w10
-; NONSTREAMING-NEXT:    csel w0, w9, w8, ne
+; NONSTREAMING-NEXT:    cntp x10, p0, p0.b
+; NONSTREAMING-NEXT:    cmp w10, w9
+; NONSTREAMING-NEXT:    csel w0, w10, w8, ne
 ; NONSTREAMING-NEXT:    ret
 ;
 ; STREAMING-LABEL: ctz_nxv32i1:

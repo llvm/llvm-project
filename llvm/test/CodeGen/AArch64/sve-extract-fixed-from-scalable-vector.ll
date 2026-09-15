@@ -102,11 +102,11 @@ define <2 x i64> @extract_v2i64_nxv8i64_8(<vscale x 8 x i64> %arg) {
 ; CHECK-NEXT:    sub x8, x8, #2
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
 ; CHECK-NEXT:    cmp x8, #8
-; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    str z1, [sp, #1, mul vl]
+; CHECK-NEXT:    lsl x8, x8, #3
 ; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    lsl x8, x8, #3
 ; CHECK-NEXT:    ldr q0, [x9, x8]
 ; CHECK-NEXT:    addvl sp, sp, #4
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload

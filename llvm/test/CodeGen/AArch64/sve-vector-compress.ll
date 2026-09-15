@@ -190,9 +190,9 @@ define <vscale x 8 x i32> @test_compress_large(<vscale x 8 x i32> %vec, <vscale 
 ; CHECK-SVE-NEXT:    compact z1.s, p0, z1.s
 ; CHECK-SVE-NEXT:    ptrue p0.s
 ; CHECK-SVE-NEXT:    cmp x9, x8
-; CHECK-SVE-NEXT:    str z0, [sp]
 ; CHECK-SVE-NEXT:    csel x8, x9, x8, lo
 ; CHECK-SVE-NEXT:    mov x9, sp
+; CHECK-SVE-NEXT:    str z0, [sp]
 ; CHECK-SVE-NEXT:    st1w { z1.s }, p0, [x9, x8, lsl #2]
 ; CHECK-SVE-NEXT:    ldr z0, [sp]
 ; CHECK-SVE-NEXT:    ldr z1, [sp, #1, mul vl]
@@ -218,9 +218,9 @@ define <vscale x 8 x i32> @test_compress_large(<vscale x 8 x i32> %vec, <vscale 
 ; CHECK-SME2p2-NEXT:    compact z1.s, p0, z1.s
 ; CHECK-SME2p2-NEXT:    ptrue p0.s
 ; CHECK-SME2p2-NEXT:    cmp x9, x8
-; CHECK-SME2p2-NEXT:    str z0, [sp]
 ; CHECK-SME2p2-NEXT:    csel x8, x9, x8, lo
 ; CHECK-SME2p2-NEXT:    mov x9, sp
+; CHECK-SME2p2-NEXT:    str z0, [sp]
 ; CHECK-SME2p2-NEXT:    st1w { z1.s }, p0, [x9, x8, lsl #2]
 ; CHECK-SME2p2-NEXT:    ld1w { z0.s, z1.s }, pn8/z, [sp]
 ; CHECK-SME2p2-NEXT:    addvl sp, sp, #2

@@ -277,8 +277,8 @@ define i1 @ptest_or_v16i1(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    cmp w9, w8
 ; NONEON-NOSVE-NEXT:    csel w8, w9, w8, hi
 ; NONEON-NOSVE-NEXT:    and w9, w13, #0xff
-; NONEON-NOSVE-NEXT:    and w10, w10, #0xff
 ; NONEON-NOSVE-NEXT:    and w8, w8, #0xff
+; NONEON-NOSVE-NEXT:    and w10, w10, #0xff
 ; NONEON-NOSVE-NEXT:    cmp w8, w9
 ; NONEON-NOSVE-NEXT:    csel w8, w8, w9, hi
 ; NONEON-NOSVE-NEXT:    and w9, w16, #0xff
@@ -486,8 +486,8 @@ define i1 @ptest_and_v16i1(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    cmp w9, w8
 ; NONEON-NOSVE-NEXT:    csel w8, w9, w8, lo
 ; NONEON-NOSVE-NEXT:    and w9, w13, #0xff
-; NONEON-NOSVE-NEXT:    and w10, w10, #0xff
 ; NONEON-NOSVE-NEXT:    and w8, w8, #0xff
+; NONEON-NOSVE-NEXT:    and w10, w10, #0xff
 ; NONEON-NOSVE-NEXT:    cmp w8, w9
 ; NONEON-NOSVE-NEXT:    csel w8, w8, w9, lo
 ; NONEON-NOSVE-NEXT:    and w9, w16, #0xff
