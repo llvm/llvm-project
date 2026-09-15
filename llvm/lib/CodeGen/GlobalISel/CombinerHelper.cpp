@@ -2868,8 +2868,10 @@ bool CombinerHelper::matchConstantOp(const MachineOperand &MOP,
   if (!MOP.isReg())
     return false;
   auto MaybeCst = isConstantOrConstantSplatVector(MOP.getReg(), MRI);
-  return MaybeCst && MaybeCst->getBitWidth() <= 64 &&
-         MaybeCst->getSExtValue() == C;
+  // Compare as APInt so constants wider than 64 bits (e.g. i128 2) still match.
+  return MaybeCst &&
+         APInt::isSameValue(*MaybeCst, APInt(64, C, /*isSigned=*/true),
+                            /*SignedCompare=*/true);
 }
 
 bool CombinerHelper::matchConstantFPOp(const MachineOperand &MOP,
