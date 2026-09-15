@@ -168,6 +168,47 @@ svfloat64_t test_svdup_n_f64(float64_t op) MODE_ATTR
   return SVE_ACLE_FUNC(svdup,_n,_f64,)(op);
 }
 
+// ALL-LABEL: @test_svdup_n_b8(
+svbool_t test_svdup_n_b8(bool op) MODE_ATTR
+{
+// LLVM-SAME: i1{{.*}} [[OP:%.*]])
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i1> poison, i1 [[OP:%.*]], i64 0
+// LLVM:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i1> [[DOTSPLATINSERT]], <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
+// LLVM:    ret <vscale x 16 x i1> [[DOTSPLAT]]
+  return SVE_ACLE_FUNC(svdup,_n,_b8,)(op);
+}
+
+// ALL-LABEL: @test_svdup_n_b16(
+svbool_t test_svdup_n_b16(bool op) MODE_ATTR
+{
+// LLVM-SAME: i1{{.*}} [[OP:%.*]])
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i1> poison, i1 [[OP:%.*]], i64 0
+// LLVM:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i1> [[DOTSPLATINSERT]], <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM:    [[TMP0:%.*]] = {{.*}} call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[DOTSPLAT]])
+// LLVM:    ret <vscale x 16 x i1> [[TMP0]]
+  return SVE_ACLE_FUNC(svdup,_n,_b16,)(op);
+}
+
+// ALL-LABEL: @test_svdup_n_b32(
+svbool_t test_svdup_n_b32(bool op) MODE_ATTR
+{
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[OP:%.*]], i64 0
+// LLVM:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i1> [[DOTSPLATINSERT]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM:    [[TMP0:%.*]] = {{.*}} call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[DOTSPLAT]])
+// LLVM:    ret <vscale x 16 x i1> [[TMP0]]
+  return SVE_ACLE_FUNC(svdup,_n,_b32,)(op);
+}
+
+// ALL-LABEL: @test_svdup_n_b64(
+svbool_t test_svdup_n_b64(bool op) MODE_ATTR
+{
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i1> poison, i1 [[OP:%.*]], i64 0
+// LLVM:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i1> [[DOTSPLATINSERT]], <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM:    [[TMP0:%.*]] = {{.*}} call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[DOTSPLAT]])
+// LLVM:    ret <vscale x 16 x i1> [[TMP0]]
+  return SVE_ACLE_FUNC(svdup,_n,_b64,)(op);
+}
+
 //===------------------------------------------------------===//
 // 2. PREDICATED ZERO-ING SVDUP
 //===------------------------------------------------------===//

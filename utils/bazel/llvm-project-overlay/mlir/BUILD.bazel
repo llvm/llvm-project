@@ -9037,6 +9037,7 @@ cc_library(
     ],
     deps = [
         ":ConversionPassIncGen",
+        ":ConvertToEmitCInterface",
         ":EmitCCommon",
         ":EmitCDialect",
         ":MathDialect",
@@ -10044,6 +10045,7 @@ cc_library(
         ":LLVMToLLVMIRTranslation",
         ":LinalgTransformOps",
         ":MPIToLLVM",
+        ":MathToEmitC",
         ":MathToLLVM",
         ":MemRefToEmitC",
         ":MemRefToLLVM",
@@ -13547,6 +13549,7 @@ cc_library(
         ":ArithDialect",
         ":BytecodeOpInterface",
         ":CommonFolders",
+        ":ConvertToEmitCInterface",
         ":ConvertToLLVMInterface",
         ":IR",
         ":InferTypeOpInterface",
