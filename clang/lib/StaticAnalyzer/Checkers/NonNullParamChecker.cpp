@@ -93,14 +93,14 @@ void setBitsAccordingToFunctionAttributes(const CallType &Call,
 template <class CallType>
 void setBitsAccordingToParameterAttributes(const CallType &Call,
                                            llvm::SmallBitVector &AttrNonNull) {
-  unsigned ArgIdx = 0;
+  unsigned NativeIdx = 0;
   for (const ParmVarDecl *Parameter : Call.parameters()) {
-    if (ArgIdx == AttrNonNull.size())
+    if (NativeIdx == AttrNonNull.size())
       break;
 
     if (Parameter->hasAttr<NonNullAttr>())
-      AttrNonNull.set(ArgIdx);
-    ++ArgIdx;
+      AttrNonNull.set(NativeIdx);
+    ++NativeIdx;
   }
 }
 
