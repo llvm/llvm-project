@@ -138,9 +138,8 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
 }
 
 static GlobalVariable *createRelLookupTable(LookupTableInfo &Info,
-                                            Function &Func,
                                             GlobalVariable &LookupTable) {
-  Module &M = *Func.getParent();
+  Module &M = *LookupTable.getParent();
   ArrayType *IntArrayTy =
       ArrayType::get(Type::getInt32Ty(M.getContext()), Info.Ptrs.size());
 
@@ -181,11 +180,10 @@ static void convertToRelLookupTable(LookupTableInfo &Info,
   Module &M = *LookupTable.getParent();
   BasicBlock *BB = GEP->getParent();
   IRBuilder<> Builder(BB);
-  Function &Func = *BB->getParent();
 
   // Generate an array that consists of relative offsets.
   GlobalVariable *RelLookupTable =
-      createRelLookupTable(Info, Func, LookupTable);
+      createRelLookupTable(Info, LookupTable);
 
   // Place new instruction sequence before GEP.
   Builder.SetInsertPoint(GEP);
