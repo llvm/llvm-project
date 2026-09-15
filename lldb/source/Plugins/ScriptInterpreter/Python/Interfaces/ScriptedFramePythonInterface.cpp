@@ -211,7 +211,6 @@ llvm::Expected<ScriptedMetadata>
 ScriptedFramePythonInterface::GetThreadPlanMetadataForStepType(
     lldb::StepType step_type) {
   Status error;
-  Log *log = GetLog(LLDBLog::Script);
 
   ScriptedMetadata no_plan_return("", StructuredData::DictionarySP());
   StructuredData::DictionarySP dict_sp = Dispatch<StructuredData::DictionarySP>(
