@@ -121,3 +121,59 @@ module @test_poison_second_operand {
     llvm.return
   }
 }
+
+// -----
+
+// A wide *binary* element-wise op (fdiv) feeding a contiguous slice is
+// narrowed: the slice hoists through the binary op onto both operands, which
+// then terminate as legal-width slices of the (wide) arguments.
+module @test_binary_elementwise {
+  // CHECK-LABEL: llvm.func @test_binary_elementwise
+  // CHECK-NOT:     llvm.fdiv {{.*}} : vector<32xf32>
+  // CHECK:         %[[LO_A:.*]] = llvm.shufflevector %[[A:.*]], %[[A]] [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+  // CHECK:         %[[LO_B:.*]] = llvm.shufflevector %[[B:.*]], %[[B]] [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+  // CHECK:         llvm.fdiv %[[LO_A]], %[[LO_B]] : vector<16xf32>
+  llvm.func @test_binary_elementwise(%a: vector<32xf32>, %b: vector<32xf32>) -> vector<16xf32> {
+    %0 = llvm.fdiv %a, %b : vector<32xf32>
+    %1 = llvm.shufflevector %0, %0 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<32xf32>
+    llvm.return %1 : vector<16xf32>
+  }
+}
+
+// -----
+
+// A ternary `select` fed by a binary `icmp`, both wide, narrowed through the
+// contiguous slice. The `icmp` predicate must be preserved by the clone.
+module @test_select_icmp {
+  // CHECK-LABEL: llvm.func @test_select_icmp
+  // CHECK-NOT:     llvm.icmp {{.*}} : vector<32xi32>
+  // CHECK-NOT:     llvm.select {{.*}} : vector<32xi1>, vector<32xi32>
+  // CHECK:         llvm.icmp "eq" {{.*}} : vector<16xi32>
+  // CHECK:         llvm.select {{.*}} : vector<16xi1>, vector<16xi32>
+  llvm.func @test_select_icmp(%a: vector<32xi32>, %b: vector<32xi32>,
+                              %t: vector<32xi32>, %f: vector<32xi32>) -> vector<16xi32> {
+    %c = llvm.icmp "eq" %a, %b : vector<32xi32>
+    %s = llvm.select %c, %t, %f : vector<32xi1>, vector<32xi32>
+    %r = llvm.shufflevector %s, %s [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<32xi32>
+    llvm.return %r : vector<16xi32>
+  }
+}
+
+// -----
+
+// Negative: the hoist only fires when every operand has the same length as the
+// result. A length-changing bitcast (which is how packed sub-byte payloads are
+// formed) is handled by the dedicated bitcast case, not the n-ary path; here a
+// non-elementwise, side-effecting producer (a call) must be left untouched so
+// the slice is not pushed through it.
+module @test_nary_no_hoist_through_call {
+  llvm.func @producer(vector<32xf32>) -> vector<32xf32>
+  // CHECK-LABEL: llvm.func @test_nary_no_hoist_through_call
+  // CHECK:         %[[C:.*]] = llvm.call @producer
+  // CHECK:         llvm.shufflevector %[[C]], %[[C]] [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<32xf32>
+  llvm.func @test_nary_no_hoist_through_call(%a: vector<32xf32>) -> vector<16xf32> {
+    %0 = llvm.call @producer(%a) : (vector<32xf32>) -> vector<32xf32>
+    %1 = llvm.shufflevector %0, %0 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<32xf32>
+    llvm.return %1 : vector<16xf32>
+  }
+}

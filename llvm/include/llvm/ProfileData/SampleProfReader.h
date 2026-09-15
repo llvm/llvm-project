@@ -220,6 +220,37 @@
 //          in the text format documentation above).
 //        FUNCTION BODY
 //          A FUNCTION BODY entry describing the inlined function.
+//
+// An ExtBinary file may contain both legacy and composite profile sections.
+// Each section's type independently selects its function-body encoding.
+//
+// COMPOSITE FUNCTION BODY (used by SecCompositeProfile)
+//    NAME_IDX (uint64_t)
+//        Index into the name table indicating the function name.
+//    NUM_PROFILE_TYPES (uint64_t)
+//        Number of typed profile blocks attached to this function. Zero is
+//        valid when the function has no payload for any profile type.
+//    PROFILE TYPE BLOCKS
+//        A list of NUM_PROFILE_TYPES entries. Each entry contains:
+//          TYPE (uint64_t)
+//              Profile type ID. A type may occur at most once per function;
+//              duplicate IDs make the profile malformed.
+//          PAYLOAD_SIZE (uint64_t)
+//              Size of PAYLOAD in bytes.
+//          PAYLOAD
+//              Type-specific data occupying exactly PAYLOAD_SIZE bytes.
+//              Readers skip unknown types using PAYLOAD_SIZE.
+//              A known type must consume exactly PAYLOAD_SIZE bytes; extend an
+//              existing payload by assigning a new profile type ID.
+//
+//        The ProfTypeLBR payload contains HEAD_SAMPLES for top-level functions,
+//        followed by SAMPLES, NRECS, and BODY RECORDS as described above.
+//        Nested functions omit HEAD_SAMPLES.
+//    NUM_INLINED_FUNCTIONS (uint32_t)
+//        Number of callees inlined into this function.
+//    INLINED FUNCTION RECORDS
+//        Encoded as described above, except each nested FUNCTION BODY uses the
+//        composite representation.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_PROFILEDATA_SAMPLEPROFREADER_H
@@ -696,6 +727,20 @@ public:
   virtual bool contains(StringRef Key) const { return false; }
   virtual bool contains(uint64_t GUID) const { return false; }
 
+  /// Read the profile and print the structure of composite profile blocks.
+  std::error_code dumpProfileTypeInfo(raw_ostream &OS) {
+    ProfileTypeInfoOS = &OS;
+    std::error_code EC = read();
+    ProfileTypeInfoOS = nullptr;
+    return EC;
+  }
+
+  /// Return whether the input contains a composite profile section.
+  virtual bool hasCompositeProfileSection() const { return false; }
+
+  /// Return whether any unknown composite profile blocks were skipped.
+  bool hasUnknownProfileTypes() const { return HasUnknownProfileTypes; }
+
   /// Return whether names in the profile are all MD5 numbers.
   bool useMD5() const { return ProfileIsMD5; }
 
@@ -765,7 +810,21 @@ protected:
   DenseMap<uint64_t, std::pair<const uint8_t *, const uint8_t *>>
       FuncMetadataIndex;
 
-  std::pair<const uint8_t *, const uint8_t *> ProfileSecRange;
+  /// A profile section retained for loading additional functions on demand.
+  struct ProfileSectionRange {
+    /// First byte of the retained section.
+    const uint8_t *Start = nullptr;
+    /// One-past-the-end byte of the retained section.
+    const uint8_t *End = nullptr;
+    /// Whether the retained section uses composite payload encoding.
+    bool IsComposite = false;
+  };
+  /// Profile section most recently selected for on-demand loading.
+  ProfileSectionRange ProfileSecRange;
+  /// Optional stream for composite block structure; null disables the output.
+  raw_ostream *ProfileTypeInfoOS = nullptr;
+  /// Whether reading skipped at least one unknown composite profile block.
+  bool HasUnknownProfileTypes = false;
 
   /// Whether the profile has attribute metadata.
   bool ProfileHasAttribute = false;
@@ -898,7 +957,12 @@ protected:
                                   SampleProfileMap &Profiles);
 
   /// Read the contents of the given profile instance.
-  std::error_code readProfile(FunctionSamples &FProfile);
+  std::error_code readProfile(FunctionSamples &FProfile, bool IsNested);
+
+  /// Read specific profile types.
+  std::error_code readLBRProfile(FunctionSamples &FProfile, bool IsNested);
+  std::error_code readCompositeProfile(FunctionSamples &FProfile,
+                                       bool IsNested);
 
   /// Read the contents of Magic number and Version number.
   std::error_code readMagicIdent();
@@ -1154,6 +1218,13 @@ public:
   /// Get the total size of header and all sections.
   uint64_t getFileSize();
   bool dumpSectionInfo(raw_ostream &OS = dbgs()) override;
+  /// Return whether the section table contains a composite profile section.
+  bool hasCompositeProfileSection() const override {
+    for (const auto &Entry : SecHdrTable)
+      if (Entry.Type == SecCompositeProfile)
+        return true;
+    return false;
+  }
 
   /// Collect functions with definitions in Module M. Return true if
   /// the reader has been given a module.

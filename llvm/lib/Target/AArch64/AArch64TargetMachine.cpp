@@ -296,7 +296,10 @@ bool AArch64TargetMachine::isGlobalISelOptNone() const {
           !GlobalISelFlag);
 }
 
-void AArch64TargetMachine::reset() { SubtargetMap.clear(); }
+void AArch64TargetMachine::reset() {
+  SubtargetMap.clear();
+  LastSubtarget = nullptr;
+}
 
 //===----------------------------------------------------------------------===//
 // AArch64 Lowering public interface.
@@ -436,6 +439,12 @@ AArch64TargetMachine::~AArch64TargetMachine() = default;
 
 const AArch64Subtarget *
 AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
+  // Constructing the subtarget key is not cheap, avoid rebuilding it for
+  // repeated queries with the same function attributes.
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  if (LastSubtarget && LastSubtargetAttrs == FnAttrs)
+    return LastSubtarget;
+
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
   Attribute TuneAttr = F.getFnAttribute("tune-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
@@ -503,7 +512,9 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   if (IsStreaming && !I->hasSME())
     reportFatalUsageError("streaming SVE functions require SME");
 
-  return I.get();
+  LastSubtargetAttrs = FnAttrs;
+  LastSubtarget = I.get();
+  return LastSubtarget;
 }
 
 // Encourage placing FORM_TRANSPOSED_REG immediately before the instruction that
@@ -759,13 +770,6 @@ void AArch64PassConfig::addCodeGenPrepare() {
 
 bool AArch64PassConfig::addInstSelector() {
   addPass(createAArch64ISelDag(getAArch64TargetMachine(), getOptLevel()));
-
-  // For ELF, cleanup any local-dynamic TLS accesses (i.e. combine as many
-  // references to _TLS_MODULE_BASE_ as possible.
-  if (TM->getTargetTriple().isOSBinFormatELF() &&
-      getOptLevel() != CodeGenOptLevel::None)
-    addPass(createAArch64CleanupLocalDynamicTLSPass());
-
   return false;
 }
 
@@ -811,10 +815,17 @@ bool AArch64PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelectLegacy(getOptLevel()));
   if (!getAArch64TargetMachine().isGlobalISelOptNone())
     addPass(createAArch64PostSelectOptimize());
+
   return false;
 }
 
 void AArch64PassConfig::addMachineSSAOptimization() {
+  // For ELF, cleanup any local-dynamic TLS accesses
+  // (i.e. combine as many references to _TLS_MODULE_BASE_ as possible.
+  if (TM->getTargetTriple().isOSBinFormatELF() &&
+      getOptLevel() != CodeGenOptLevel::None)
+    addPass(createAArch64CleanupLocalDynamicTLSPass());
+
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createMachineSMEABIPass(TM->getOptLevel()));
 

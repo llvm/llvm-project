@@ -323,7 +323,7 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getInvocation().getCodeGenOpts().getDoConcurrentMapping();
 
   if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None &&
-      !isOpenMPEnabled) {
+      (!isOpenMPEnabled || opts.isSimdOnly)) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Warning,
         "OpenMP is required for lowering `do concurrent` loops to OpenMP."
@@ -343,7 +343,7 @@ bool CodeGenAction::beginSourceFileAction() {
   // WARNING: This pipeline must be run immediately after the lowering to
   // ensure that the FIR is correct with respect to OpenMP operations/
   // attributes.
-  if (isOpenMPEnabled || opts.isSimdOnly)
+  if (isOpenMPEnabled)
     fir::createOpenMPFIRPassPipeline(pm, opts);
 
   pm.enableVerifier(/*verifyPasses=*/true);
@@ -638,6 +638,11 @@ void CodeGenAction::lowerHLFIRToFIR() {
       ci.getInvocation().getLoweringOpts().getFPMaxminBehavior();
   if (ci.getInvocation().getLangOpts().OpenMPIsTargetDevice)
     config.EnableOpenMPIsTargetDevice = true;
+  // Parser options, not frontend options: they are seeded from the frontend
+  // ones and additionally get CUDA enabled for a .cuf/.CUF input.
+  if (ci.getInvocation().getFortranOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::CUDA))
+    config.EnableCUDA = true;
   // Create the pass pipeline
   fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
   (void)mlir::applyPassManagerCLOptions(pm);
@@ -830,6 +835,9 @@ void CodeGenAction::generateLLVMIR() {
           static_cast<llvm::PIELevel::Level>(opts.PICLevel));
   }
 
+  if (opts.getFramePointer() != llvm::FramePointerKind::None)
+    llvmModule->setFramePointer(opts.getFramePointer());
+
   const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
   const llvm::Triple triple(targetOpts.triple);
 
@@ -843,7 +851,7 @@ void CodeGenAction::generateLLVMIR() {
     }
   }
 
-  if (triple.isRISCV() && !targetOpts.abi.empty())
+  if (!targetOpts.abi.empty())
     llvmModule->addModuleFlag(
         llvm::Module::Error, "target-abi",
         llvm::MDString::get(llvmModule->getContext(), targetOpts.abi));
@@ -1024,7 +1032,6 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   mam.registerPass([&] {
     return llvm::RuntimeLibraryAnalysis(
         targetMachine->Options.ExceptionModel,
-        targetMachine->Options.EABIVersion,
         targetMachine->Options.MCOptions.ABIName,
         targetMachine->Options.VecLib);
   });

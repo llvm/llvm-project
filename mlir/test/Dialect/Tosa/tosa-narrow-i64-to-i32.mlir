@@ -31,8 +31,8 @@ func.func @test_i64_const() -> tensor<2xi64> {
 func.func @test_i64_argmax_cast(%arg0: tensor<1x513x513x19xi8>) -> tensor<1x513x513xf32> {
   // COMMON: %[[ARGMAX:.*]] = tosa.argmax %arg0 {axis = 3 : i32} : (tensor<1x513x513x19xi8>) -> tensor<1x513x513xi32>
   %0 = tosa.argmax %arg0 {axis = 3 : i32} : (tensor<1x513x513x19xi8>) -> tensor<1x513x513xi64>
-  // COMMON: tosa.cast %[[ARGMAX]] : (tensor<1x513x513xi32>) -> tensor<1x513x513xf32>
-  %1 = tosa.cast %0 {input_unsigned = false} : (tensor<1x513x513xi64>) -> tensor<1x513x513xf32>
+  // COMMON: tosa.cast %[[ARGMAX]] {test.marker = "keep"} : (tensor<1x513x513xi32>) -> tensor<1x513x513xf32>
+  %1 = tosa.cast %0 {input_unsigned = false, test.marker = "keep"} : (tensor<1x513x513xi64>) -> tensor<1x513x513xf32>
   return %1 : tensor<1x513x513xf32>
 }
 

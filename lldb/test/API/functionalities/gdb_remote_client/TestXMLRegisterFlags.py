@@ -98,6 +98,21 @@ class TestXMLRegisterTypeFlags(GDBRemoteTestBase):
 
     @skipIfXmlSupportMissing
     @skipIfRemote
+    def test_unsupported_flags_size_stays_raw(self):
+        self.setup_register_test(
+            """\
+          <flags id="flags24" size="3">
+            <field name="field" start="0" end="0"/>
+          </flags>
+          <reg name="flags24" regnum="0" bitsize="24" type="flags24"/>
+          <reg name="pc" bitsize="64"/>"""
+        )
+
+        self.expect("register read flags24", substrs=["flags24 = 0x777777"])
+        self.expect("register read flags24", matching=False, substrs=["field ="])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
     def test_single_field_pad_msb(self):
         self.setup_flags_test("""<field name="SP" start="0" end="0"/>""")
         # Pads from 31 to 1.

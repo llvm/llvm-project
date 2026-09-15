@@ -195,6 +195,10 @@ public:
           MlirModule->print(out);
       }
 
+      // If errors occurred during codegen, stop before running the backend.
+      if (CI.getDiagnostics().hasErrorOccurred())
+        return;
+
       std::unique_ptr<llvm::Module> LLVMModule = lowerFromCIRToLLVMIR(
           MlirModule, LLVMCtx, C.getLangOpts().OpenMP, mlirSaveTempsOutFile,
           &CI.getVirtualFileSystem());

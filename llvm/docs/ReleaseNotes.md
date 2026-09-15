@@ -52,9 +52,31 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* LLVM now assigns persistent print IDs to metadata nodes. Reusing these IDs
+  avoids repeated module-wide scans to rebuild metadata numbering, which can
+  significantly speed up debug and pass printing on large modules. Keeping
+  the IDs stable also makes repeated output easier to compare: unchanged
+  metadata keeps the same number as passes modify the module. The numbering
+  and definition order can differ from earlier releases, so tests of
+  intermediate output may need updated expectations.
+
+  LLVM's standard final-output paths renumber metadata in canonical order.
+  This gives consecutive IDs with no gaps and makes the final IR easier to
+  read. C++ clients that call `Module::print()` directly do not renumber
+  automatically. For final IR output, these clients should call
+  `Module::renumberMetadataForAssembly()` immediately before printing. Keep
+  persistent IDs for intermediate dumps so their numbering remains stable.
+
+  Standalone metadata printing now uses numbered definitions such as
+  `!1 = !DIFile(...)` instead of pointer-based forms such as
+  `<0x...> = !DIFile(...)`. Tools and tests that compare such output may need
+  updating.
+
 * Added `llvm.vector.reduce.fmaximumnum` and `llvm.vector.reduce.fminimumnum`
   intrinsics, the reduction variants of `llvm.maximumnum` and
   `llvm.minimumnum`. 
+* Added `llvm.smulh` and `llvm.umulh` intrinsics for signed and unsigned
+  multiply returning the high-order half of the 2N-bit product of iN operands.
 * Added `nofreeobj` attribute for attributes and returns, which forbids
   freeing the underlying object (as opposed to only frees through that specific
   pointer). Renamed `!nofree` metadata to `!nofreeobj`, as it has the same
@@ -139,16 +161,30 @@ Makes programs 10x faster by doing Special New Thing.
   The `llvm.vp.merge` will be folded away but the `%evl` will be propagated to
   the add instruction.
 
+* Introduced the generic `!atomic.ignore.denormal.mode` metadata for
+  floating-point `atomicrmw` instructions, generalizing the previously
+  AMDGPU-specific `!amdgpu.ignore.denormal.mode`.
+
 ### Changes to LLVM infrastructure
 
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.
+
+* Removed `TargetOptions::EABIVersion` and the `llc`/`opt` `-meabi` flag. The
+  GNU-vs-EABI distinction is now derived entirely from the target triple's
+  environment (e.g. `arm-none-gnueabi` vs `arm-none-eabi`).
 
 ### Changes to building LLVM
 
 * The DirectX backend is now an official target and has moved from
   `LLVM_ALL_EXPERIMENTAL_TARGETS` to `LLVM_ALL_TARGETS`. It is now built by
   default and no longer requires `LLVM_EXPERIMENTAL_TARGETS_TO_BUILD`.
+
+* Clang and MLIR projects enabled implicitly as Flang dependencies now omit
+  unrelated build and test targets. Installation retains the dependency
+  libraries, headers, resources, and CMake targets needed by Flang. Explicitly
+  enabling Clang or MLIR retains the project's complete build, test, and
+  install behavior.
 
 ### Changes to TableGen
 
@@ -206,18 +242,18 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the RISC-V Backend
 
-* Added experimental MC support for the `Smcsps` and `Sscsps`
-  conditional stack pointer swap extensions.
+* Added experimental MC support for the ACLIC v0.20 extensions: `Smidctrl`,
+  `Ssidctrl`, `Smnip`, `Ssnip`, `Smijt`, `Ssijt`, `Smehv`, `Ssehv`, `Smcsps`,
+  `Sscsps`, `Smip`, and `Ssip`.
 * Adds experimental assembler/CodeGen support for the `Zilx` (Indexed Integer
   Load) extension.
-* Added experimental MC support for the `Smijt` and `Ssijt` interrupt jump
-  table extensions and the `Smehv` and `Ssehv` synchronous exception hardware
-  vectoring extensions.
-* Added experimental MC support for the `Smip` and `Ssip` interrupt handler
-  push/pop extensions.
 * Bump Svukte extension to 1.0.
 * Remove experimental from Zicfiss.
 * Added support for `Sspmp`, `Sspmpen` and `Smpmpdeleg` extensions.
+* Removed veyron-v1 processor definition and tuning model.
+* Removed support for the `Ventana Conditional Operations` extension.
+* Added support for `tail symbol, rt` form that takes an address (materialisation)
+  register, that is used when software guarded branch is needed.
 
 ### Changes to the WebAssembly Backend
 
@@ -251,6 +287,9 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the LLVM tools
 
 * llvm-mca no longer defaults -mcpu to "native"
+
+* llvm-rc now supports `/showIncludes` to report header and resource-file
+  dependencies in a format compatible with Ninja's `deps = msvc` mode.
 
 ### Changes to LLDB
 
