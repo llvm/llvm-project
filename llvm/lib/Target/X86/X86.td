@@ -360,6 +360,12 @@ def FeatureAVX10_2 : SubtargetFeature<"avx10.2", "HasAVX10_2", "true",
 def FeatureAVX10_2_512 : SubtargetFeature<"avx10.2-512", "HasAVX10_2_512", "true",
                                           "Support AVX10.2 instruction",
                                           [FeatureAVX10_2]>;
+// AMX-TILE is not implied. ACE configures tile palette 2, which supports only
+// LDTILECFG, STTILECFG, TILEZERO and TILERELEASE; those are predicated on
+// HasAMXTILE_Or_ACEV1. A target with both palettes needs -mamx-tile as well.
+def FeatureACEV1 : SubtargetFeature<"acev1", "HasACEV1", "true",
+                                    "Support ACEV1 (AI Compute Extensions v1) instructions",
+                                    [FeatureAVX10_1]>;
 def FeatureEGPR : SubtargetFeature<"egpr", "HasEGPR", "true",
                                    "Support extended general purpose register">;
 def FeaturePush2Pop2 : SubtargetFeature<"push2pop2", "HasPush2Pop2", "true",

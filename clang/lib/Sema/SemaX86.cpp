@@ -438,6 +438,10 @@ bool SemaX86::CheckBuiltinGatherScatterScale(unsigned BuiltinID,
 
 enum { TileRegLow = 0, TileRegHigh = 7 };
 
+// The ACE scale group selector encodes the A group in bits [1:0] and the B
+// group in bits [4:3]; every other bit is reserved and must be zero.
+enum { ScaleGroupReservedMask = 0xE4 };
+
 bool SemaX86::CheckBuiltinTileArgumentsRange(CallExpr *TheCall,
                                              ArrayRef<int> ArgNums) {
   for (int ArgNum : ArgNums) {
@@ -445,6 +449,21 @@ bool SemaX86::CheckBuiltinTileArgumentsRange(CallExpr *TheCall,
                                         TileRegHigh))
       return true;
   }
+  return false;
+}
+
+bool SemaX86::CheckBuiltinScaleGroup(CallExpr *TheCall, int ArgNum) {
+  Expr *Arg = TheCall->getArg(ArgNum);
+  if (Arg->isTypeDependent() || Arg->isValueDependent())
+    return false;
+
+  llvm::APSInt Result;
+  if (SemaRef.BuiltinConstantArg(TheCall, ArgNum, Result))
+    return true;
+  if (Result.getExtValue() & ScaleGroupReservedMask)
+    return Diag(TheCall->getBeginLoc(),
+                diag::err_x86_builtin_invalid_scale_group)
+           << Arg->getSourceRange();
   return false;
 }
 
@@ -495,7 +514,26 @@ bool SemaX86::CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_tcvtrowps2phl:
   case X86::BI__builtin_ia32_tcvtrowd2ps:
   case X86::BI__builtin_ia32_tilemovrow:
+  // The ACE tile inserts and outer products name only the destination tile;
+  // their remaining sources are ZMM values or a row/column index, so neither
+  // the range nor the duplicate rule applies there.
+  case X86::BI__builtin_ia32_tilemovcolinsert:
+  case X86::BI__builtin_ia32_tilemovrowinsert:
+  case X86::BI__builtin_ia32_top2bf16ps:
+  case X86::BI__builtin_ia32_top4buud:
+  case X86::BI__builtin_ia32_top4busd:
+  case X86::BI__builtin_ia32_top4bssd:
+  case X86::BI__builtin_ia32_top4bsud:
     return CheckBuiltinTileArgumentsRange(TheCall, 0);
+  // The mixed-precision forms take an additional scale group selector, which
+  // only encodes two 2-bit groups; the remaining bits are reserved.
+  case X86::BI__builtin_ia32_top4mxhf8ps:
+  case X86::BI__builtin_ia32_top4mxbhf8ps:
+  case X86::BI__builtin_ia32_top4mxhbf8ps:
+  case X86::BI__builtin_ia32_top4mxbf8ps:
+  case X86::BI__builtin_ia32_top4mxbssps:
+    return CheckBuiltinTileArgumentsRange(TheCall, 0) ||
+           CheckBuiltinScaleGroup(TheCall, 3);
   case X86::BI__builtin_ia32_tdpbssd:
   case X86::BI__builtin_ia32_tdpbsud:
   case X86::BI__builtin_ia32_tdpbusd:

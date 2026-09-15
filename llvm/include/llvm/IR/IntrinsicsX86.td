@@ -5679,6 +5679,135 @@ let TargetPrefix = "x86" in {
 }
 
 //===----------------------------------------------------------------------===//
+// ACE - AMD AI Compute Extensions
+
+let TargetPrefix = "x86" in {
+  // ACE - block scale register
+  def int_x86_acev1_bsr0init : ClangBuiltin<"__builtin_ia32_bsr0init">,
+              Intrinsic<[], [], []>;
+  def int_x86_acev1_bsr0movf : ClangBuiltin<"__builtin_ia32_bsr0movf">,
+              Intrinsic<[], [llvm_v64i8_ty, llvm_v64i8_ty], []>;
+  def int_x86_acev1_bsr0movhinsert : ClangBuiltin<"__builtin_ia32_bsr0movhinsert">,
+              Intrinsic<[], [llvm_v64i8_ty], []>;
+  def int_x86_acev1_bsr0movhextract : ClangBuiltin<"__builtin_ia32_bsr0movhextract">,
+              Intrinsic<[llvm_v64i8_ty], [], []>;
+  def int_x86_acev1_bsr0movlinsert : ClangBuiltin<"__builtin_ia32_bsr0movlinsert">,
+              Intrinsic<[], [llvm_v64i8_ty], []>;
+  def int_x86_acev1_bsr0movlextract : ClangBuiltin<"__builtin_ia32_bsr0movlextract">,
+              Intrinsic<[llvm_v64i8_ty], [], []>;
+
+  // ACE - tile movement. The index operand may be constant or dynamic;
+  // lowering selects the immediate or register form accordingly.
+  def int_x86_acev1_tilemovcolinsert : ClangBuiltin<"__builtin_ia32_tilemovcolinsert">,
+              Intrinsic<[], [llvm_i8_ty, llvm_v16i32_ty, llvm_i32_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+  def int_x86_acev1_tilemovrowinsert : ClangBuiltin<"__builtin_ia32_tilemovrowinsert">,
+              Intrinsic<[], [llvm_i8_ty, llvm_v16i32_ty, llvm_i32_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+
+  // ACE - outer products
+  def int_x86_acev1_top2bf16ps : ClangBuiltin<"__builtin_ia32_top2bf16ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_v32bf16_ty, llvm_v32bf16_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+  def int_x86_acev1_top4buud : ClangBuiltin<"__builtin_ia32_top4buud">,
+              Intrinsic<[], [llvm_i8_ty, llvm_v64i8_ty, llvm_v64i8_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+  def int_x86_acev1_top4busd : ClangBuiltin<"__builtin_ia32_top4busd">,
+              Intrinsic<[], [llvm_i8_ty, llvm_v64i8_ty, llvm_v64i8_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+  def int_x86_acev1_top4bssd : ClangBuiltin<"__builtin_ia32_top4bssd">,
+              Intrinsic<[], [llvm_i8_ty, llvm_v64i8_ty, llvm_v64i8_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+  def int_x86_acev1_top4bsud : ClangBuiltin<"__builtin_ia32_top4bsud">,
+              Intrinsic<[], [llvm_i8_ty, llvm_v64i8_ty, llvm_v64i8_ty],
+                        [ImmArg<ArgIndex<0>>]>;
+
+  // ACE - MX outer products. Operand 3 selects the BSR scale group.
+  def int_x86_acev1_top4mxhf8ps : ClangBuiltin<"__builtin_ia32_top4mxhf8ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_v64i8_ty, llvm_v64i8_ty,
+                             llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<3>>]>;
+  def int_x86_acev1_top4mxbhf8ps : ClangBuiltin<"__builtin_ia32_top4mxbhf8ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_v64i8_ty, llvm_v64i8_ty,
+                             llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<3>>]>;
+  def int_x86_acev1_top4mxhbf8ps : ClangBuiltin<"__builtin_ia32_top4mxhbf8ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_v64i8_ty, llvm_v64i8_ty,
+                             llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<3>>]>;
+  def int_x86_acev1_top4mxbf8ps : ClangBuiltin<"__builtin_ia32_top4mxbf8ps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_v64i8_ty, llvm_v64i8_ty,
+                             llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<3>>]>;
+  def int_x86_acev1_top4mxbssps : ClangBuiltin<"__builtin_ia32_top4mxbssps">,
+              Intrinsic<[], [llvm_i8_ty, llvm_v64i8_ty, llvm_v64i8_ty,
+                             llvm_i8_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<3>>]>;
+
+  // ACE - internal intrinsics
+  def int_x86_acev1_tilemovcolinsert_internal :
+              ClangBuiltin<"__builtin_ia32_tilemovcolinsert_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_v16i32_ty, llvm_i32_ty],
+                        []>;
+  def int_x86_acev1_tilemovrowinsert_internal :
+              ClangBuiltin<"__builtin_ia32_tilemovrowinsert_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_v16i32_ty, llvm_i32_ty],
+                        []>;
+  def int_x86_acev1_top2bf16ps_internal :
+              ClangBuiltin<"__builtin_ia32_top2bf16ps_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                         llvm_x86amx_ty, llvm_v32bf16_ty, llvm_v32bf16_ty], []>;
+  def int_x86_acev1_top4buud_internal :
+              ClangBuiltin<"__builtin_ia32_top4buud_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                         llvm_x86amx_ty, llvm_v64i8_ty, llvm_v64i8_ty], []>;
+  def int_x86_acev1_top4busd_internal :
+              ClangBuiltin<"__builtin_ia32_top4busd_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                         llvm_x86amx_ty, llvm_v64i8_ty, llvm_v64i8_ty], []>;
+  def int_x86_acev1_top4bssd_internal :
+              ClangBuiltin<"__builtin_ia32_top4bssd_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                         llvm_x86amx_ty, llvm_v64i8_ty, llvm_v64i8_ty], []>;
+  def int_x86_acev1_top4bsud_internal :
+              ClangBuiltin<"__builtin_ia32_top4bsud_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty,
+                         llvm_x86amx_ty, llvm_v64i8_ty, llvm_v64i8_ty], []>;
+  def int_x86_acev1_top4mxhf8ps_internal :
+              ClangBuiltin<"__builtin_ia32_top4mxhf8ps_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
+                         llvm_x86amx_ty, llvm_v64i8_ty, llvm_v64i8_ty], [ImmArg<ArgIndex<3>>]>;
+  def int_x86_acev1_top4mxbhf8ps_internal :
+              ClangBuiltin<"__builtin_ia32_top4mxbhf8ps_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
+                         llvm_x86amx_ty, llvm_v64i8_ty, llvm_v64i8_ty], [ImmArg<ArgIndex<3>>]>;
+  def int_x86_acev1_top4mxhbf8ps_internal :
+              ClangBuiltin<"__builtin_ia32_top4mxhbf8ps_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
+                         llvm_x86amx_ty, llvm_v64i8_ty, llvm_v64i8_ty], [ImmArg<ArgIndex<3>>]>;
+  def int_x86_acev1_top4mxbf8ps_internal :
+              ClangBuiltin<"__builtin_ia32_top4mxbf8ps_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
+                         llvm_x86amx_ty, llvm_v64i8_ty, llvm_v64i8_ty], [ImmArg<ArgIndex<3>>]>;
+  def int_x86_acev1_top4mxbssps_internal :
+              ClangBuiltin<"__builtin_ia32_top4mxbssps_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty, llvm_i8_ty,
+                         llvm_x86amx_ty, llvm_v64i8_ty, llvm_v64i8_ty], [ImmArg<ArgIndex<3>>]>;
+}
+
+//===----------------------------------------------------------------------===//
 let TargetPrefix = "x86" in {
 // CMPCCXADD
 def int_x86_cmpccxadd32

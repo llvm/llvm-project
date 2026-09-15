@@ -2861,8 +2861,9 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
     }
   }
 
-  // Emit tilerelease for AMX kernel.
-  if (X86FI->getAMXProgModel() == AMXProgModelEnum::ManagedRA)
+  // Emit tilerelease for AMX/ACE kernel.
+  if (X86FI->getAMXProgModel() == AMXProgModelEnum::ManagedRA ||
+      X86FI->getACEProgModel() == ACEProgModelEnum::ACE_ManagedRA)
     BuildMI(MBB, Terminator, DL, TII.get(X86::TILERELEASE));
 
   if (NeedsWin64CFI && MF.hasWinCFI())
