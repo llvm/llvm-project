@@ -1995,27 +1995,8 @@ bool TemplateInstantiator::instantiateMissingDeclsToScopeForConcepts(Decl *D) {
     return false;
 
   auto *Current = SemaRef.CurrentInstantiationScope;
-  if (!Current)
+  if (!Current || Current->getInstantiationOfIfExists(D))
     return false;
-  if (Current->getInstantiationOfIfExists(D))
-    return false;
-
-  for (auto *Outer = Current->getOuterScope(); Outer;
-       Outer = Outer->getOuterScope()) {
-    auto *Pair = Outer->getInstantiationOfIfExists(D);
-    if (!Pair)
-      continue;
-
-    if (auto *InstD = dyn_cast<Decl *>(*Pair)) {
-      Current->InstantiatedLocal(D, InstD);
-    } else {
-      Current->MakeInstantiatedLocalArgPack(D);
-      auto *Pack = cast<LocalInstantiationScope::DeclArgumentPack *>(*Pair);
-      for (auto *VD : *Pack)
-        Current->InstantiatedLocal(D, VD);
-    }
-    return false;
-  }
 
   // CWG2770: Function parameters should be instantiated when they are
   // needed by a satisfaction check of an atomic constraint or

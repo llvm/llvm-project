@@ -1575,7 +1575,12 @@ bool PreRARematStage::initGCNSchedStage() {
   // Collect candidates. We have more restrictions on what we can track here
   // compared to the rematerializer.
   SmallVector<ScoredRemat, 8> Candidates;
-  SmallVector<unsigned> CandidateOrder;
+  // Map registers to candidate indices. Use ~0u as null value
+  // since 0 is a valid index.
+  IndexedMap<unsigned, VirtReg2IndexFunctor> DefRegToCandIdx(~0u);
+  DefRegToCandIdx.resize(DAG.MRI.getNumVirtRegs());
+  const unsigned NumRegions = DAG.Regions.size();
+
   for (unsigned RegIdx = 0, E = Remater.getNumRegs(); RegIdx < E; ++RegIdx) {
     const Rematerializer::Reg &CandReg = Remater.getReg(RegIdx);
 
@@ -1629,12 +1634,41 @@ bool PreRARematStage::initGCNSchedStage() {
                      }))
       continue;
 
-    MarkedRegs.insert(CandReg.getDefReg());
-    ScoredRemat &Cand = Candidates.emplace_back();
-    Cand.init(RegIdx, FreqInfo, Remater, DAG);
+    Register DefReg = CandReg.getDefReg();
+    MarkedRegs.insert(DefReg);
+    DefRegToCandIdx[DefReg] = Candidates.size();
+    Candidates.emplace_back(RegIdx, NumRegions);
+  }
+
+  // Initialize the LiveIn and LiveOut sets of all candidates.
+  // Iterating all regions and their live regs once is considerably
+  // more efficient than querying those structures for each candidate
+  // separately in ScoredRemat::init.
+  for (unsigned I = 0; I < NumRegions; ++I) {
+    for (const auto &[Reg, Mask] : DAG.LiveIns[I]) {
+      if (!Register::isVirtualRegister(Reg))
+        continue;
+      unsigned CandIdx = DefRegToCandIdx[Reg];
+      if (CandIdx != ~0u)
+        Candidates[CandIdx].LiveIn.set(I);
+    }
+    for (const auto &[Reg, Mask] :
+         DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I)) {
+      if (!Register::isVirtualRegister(Reg))
+        continue;
+      unsigned CandIdx = DefRegToCandIdx[Reg];
+      if (CandIdx != ~0u)
+        Candidates[CandIdx].LiveOut.set(I);
+    }
+  }
+
+  // Finish initializing candidates.
+  SmallVector<unsigned> CandidateOrder;
+  for (auto [CandIdx, Cand] : enumerate(Candidates)) {
+    Cand.init(FreqInfo, Remater, DAG);
     Cand.update(TargetRegions, RPTargets, FreqInfo, !TargetOcc);
     if (!Cand.hasNullScore())
-      CandidateOrder.push_back(Candidates.size() - 1);
+      CandidateOrder.push_back(CandIdx);
   }
 
   if (TargetOcc) {
@@ -3089,36 +3123,23 @@ PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
   }
 }
 
-void PreRARematStage::ScoredRemat::init(RegisterIdx RegIdx,
-                                        const FreqInfo &Freq,
+void PreRARematStage::ScoredRemat::init(const FreqInfo &Freq,
                                         const Rematerializer &Remater,
                                         GCNScheduleDAGMILive &DAG) {
-  this->RegIdx = RegIdx;
-  const unsigned NumRegions = DAG.Regions.size();
-  LiveIn.resize(NumRegions);
-  LiveOut.resize(NumRegions);
-  Live.resize(NumRegions);
-  UnpredictableRPSave.resize(NumRegions);
-
   const Rematerializer::Reg &Reg = Remater.getReg(RegIdx);
   Register DefReg = Reg.getDefReg();
   assert(Reg.Uses.size() == 1 && "expected users in single region");
   const unsigned UseRegion = Reg.Uses.begin()->first;
 
-  // Mark regions in which the rematerializable register is live.
-  for (unsigned I = 0, E = NumRegions; I != E; ++I) {
-    if (DAG.LiveIns[I].contains(DefReg))
-      LiveIn.set(I);
-    if (DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I).contains(DefReg))
-      LiveOut.set(I);
+  Live |= LiveIn;
+  Live |= LiveOut;
 
+  for (unsigned I : Live.set_bits()) {
     // If the register is both unused and live-through in the region, the
     // latter's RP is guaranteed to decrease.
     if (!LiveIn[I] || !LiveOut[I] || I == UseRegion)
       UnpredictableRPSave.set(I);
   }
-  Live |= LiveIn;
-  Live |= LiveOut;
   RPSave.inc(DefReg, LaneBitmask::getNone(), Reg.Mask, DAG.MRI);
 
   // Get frequencies of defining and using regions. A rematerialization from the

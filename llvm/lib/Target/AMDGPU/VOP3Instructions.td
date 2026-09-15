@@ -2093,6 +2093,16 @@ let SubtargetPredicate = HasF32ToFP6BF6ConversionScaleInsts in {
   defm V_CVT_SCALEF32_PK32_FP6_F32   : VOP3Inst<"v_cvt_scalef32_pk32_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F32_F32>,  int_amdgcn_cvt_scalef32_pk32_fp6_f32>;
 }
 
+def VOP_WAVE_MATCH_B32 : VOP3_Profile<VOP_I32_I32_I32> {
+  let HasSrc0IntMods = 0;
+  let HasExtVOP3DPP = 0;
+  let HasExtDPP = 0;
+}
+
+let isConvergent = 1, SubtargetPredicate = HasWaveMatchInsts in {
+  defm V_WAVE_MATCH_B32 : VOP3Inst<"v_wave_match_b32", VOP_WAVE_MATCH_B32>;
+}
+
 //===----------------------------------------------------------------------===//
 // Integer Clamp Patterns
 //===----------------------------------------------------------------------===//
@@ -2164,6 +2174,7 @@ defm V_MIN3_NUM_F16       : VOP3_Realtriple_t16_and_fake16_gfx12_gfx13<0x22b, 0x
 defm V_MAX3_NUM_F16       : VOP3_Realtriple_t16_and_fake16_gfx12_gfx13<0x22c, 0x354, "v_max3_num_f16", "V_MAX3_F16", "v_max3_f16">;
 defm V_MED3_NUM_F32       : VOP3_Realtriple_with_name_gfx12_gfx13<0x231, 0x231, "V_MED3_F32", "v_med3_num_f32">;
 defm V_MED3_NUM_F16       : VOP3_Realtriple_t16_and_fake16_gfx12_gfx13<0x232, 0x357, "v_med3_num_f16", "V_MED3_F16", "v_med3_f16">;
+defm V_WAVE_MATCH_B32     : VOP3Only_Real_Base_gfx13<0x241>;
 defm V_MINMAX_NUM_F32     : VOP3_Realtriple_with_name_gfx12_gfx13<0x268,0x268, "V_MINMAX_F32", "v_minmax_num_f32">;
 defm V_MAXMIN_NUM_F32     : VOP3_Realtriple_with_name_gfx12_gfx13<0x269, 0x269, "V_MAXMIN_F32", "v_maxmin_num_f32">;
 defm V_MINMAX_NUM_F16     : VOP3_Realtriple_t16_and_fake16_gfx12_gfx13<0x26a, 0x26a, "v_minmax_num_f16", "V_MINMAX_F16", "v_minmax_f16">;

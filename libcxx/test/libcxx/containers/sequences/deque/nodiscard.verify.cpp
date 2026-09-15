@@ -14,6 +14,8 @@ void test() {
   std::deque<int> d;
   const std::deque<int> cd;
 
+  d.get_allocator(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+
   d.begin();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cd.begin();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   d.end();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}

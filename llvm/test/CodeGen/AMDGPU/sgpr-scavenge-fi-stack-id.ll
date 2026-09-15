@@ -155,34 +155,14 @@ define void @sgpr_scavenge_fi_stack_id(double %input, i1 %enter_fma_path, i1 %re
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=5
 ; CHECK-NEXT:    s_and_b64 s[30:31], exec, s[6:7]
 ; CHECK-NEXT:    s_or_b64 s[94:95], s[30:31], s[94:95]
-; CHECK-NEXT:    s_not_b64 exec, exec
-; CHECK-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:8
-; CHECK-NEXT:    v_writelane_b32 v7, s4, 0
-; CHECK-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:8
-; CHECK-NEXT:    s_not_b64 exec, exec
-; CHECK-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:8
-; CHECK-NEXT:    s_not_b64 exec, exec
-; CHECK-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    s_not_b64 exec, exec
-; CHECK-NEXT:    s_lshr_b32 s4, s32, 6
-; CHECK-NEXT:    s_lshl3_add_u32 vcc_hi, vcc_lo, s4
-; CHECK-NEXT:    s_not_b64 exec, exec
-; CHECK-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:8
-; CHECK-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:8
-; CHECK-NEXT:    s_not_b64 exec, exec
-; CHECK-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:8
-; CHECK-NEXT:    s_not_b64 exec, exec
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_readlane_b32 s4, v8, 0
-; CHECK-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:8
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    s_not_b64 exec, exec
+; CHECK-NEXT:    s_lshr_b32 s32, s32, 6
+; CHECK-NEXT:    s_lshl3_add_u32 vcc_hi, vcc_lo, s32
 ; CHECK-NEXT:    v_mov_b32_e32 v7, vcc_hi
 ; CHECK-NEXT:    buffer_load_dword v8, v7, s[0:3], 0 offen
 ; CHECK-NEXT:    buffer_load_dword v9, v7, s[0:3], 0 offen offset:4
 ; CHECK-NEXT:    v_mov_b32_e32 v7, vcc_lo
 ; CHECK-NEXT:    s_mov_b32 vcc_lo, 1
+; CHECK-NEXT:    s_mul_i32 s32, s32, 64
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mul_f64 v[8:9], v[4:5], v[8:9]
 ; CHECK-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:4
