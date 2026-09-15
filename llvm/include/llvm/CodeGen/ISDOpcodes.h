@@ -1085,47 +1085,53 @@ enum NodeType {
   LRINT,
   LLRINT,
 
-  /// FMINNUM/FMAXNUM - Perform floating-point minimum maximum on two values,
-  /// following IEEE-754 definitions except for signed zero behavior.
+  /// FMINNUM/FMAXNUM - NaN-discarding minimum/maximum: if one operand is a
+  /// quiet NaN and the other is a number, returns the number.
   ///
-  /// If one input is a signaling NaN, returns a quiet NaN. This matches
-  /// IEEE-754 2008's minNum/maxNum behavior for signaling NaNs (which differs
-  /// from 2019).
+  /// If an operand is a signaling NaN, this will non-deterministically either:
+  /// - Return a NaN.
+  /// - Or treat the signaling NaN as a quiet NaN.
   ///
   /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
-  /// 2019's minimumNumber/maximumNumber.
-  ///
-  /// Note that that arithmetic on an sNaN doesn't consistently produce a qNaN,
-  /// so arithmetic feeding into a minnum/maxnum can produce inconsistent
-  /// results. FMAXIMUN/FMINIMUM or FMAXIMUMNUM/FMINIMUMNUM may be better choice
-  /// for non-distinction of sNaN/qNaN handling.
+  /// 2019's minimumNumber/maximumNumber. With the nsz flag, one +0.0 and one
+  /// -0.0 operand may non-deterministically return either operand; contrary to
+  /// normal nsz semantics, if both operands have the same sign, so must the
+  /// result. Note that not all backends respect this ordering yet.
   FMINNUM,
   FMAXNUM,
 
-  /// FMINNUM_IEEE/FMAXNUM_IEEE - Perform floating-point minimumNumber or
-  /// maximumNumber on two values, following IEEE-754 definitions. This differs
-  /// from FMINNUM/FMAXNUM in the handling of signaling NaNs, and signed zero.
+  /// FMINNUM_IEEE/FMAXNUM_IEEE - Same as FMINNUM/FMAXNUM, except that a
+  /// signaling NaN operand deterministically returns a quiet NaN, matching/for
+  /// IEEE-754 2008's minNum/maxNum. Signed zeros are ordered identically to
+  /// FMINNUM/FMAXNUM: -0 is less than +0, relaxed by the nsz flag.
   ///
-  /// If one input is a signaling NaN, returns a quiet NaN. This matches
-  /// IEEE-754 2008's minnum/maxnum behavior for signaling NaNs (which differs
-  /// from 2019).
-  ///
-  /// These treat -0 as ordered less than +0, matching the behavior of IEEE-754
-  /// 2019's minimumNumber/maximumNumber.
-  ///
-  /// Deprecated, and will be removed soon, as FMINNUM/FMAXNUM have the same
-  /// semantics now.
+  /// Deprecated, and will be removed soon: this is a legal implementation of
+  /// FMINNUM/FMAXNUM, so targets should select those instead.
   FMINNUM_IEEE,
   FMAXNUM_IEEE,
 
-  /// FMINIMUM/FMAXIMUM - NaN-propagating minimum/maximum that also treat -0.0
-  /// as less than 0.0. While FMINNUM_IEEE/FMAXNUM_IEEE follow IEEE 754-2008
-  /// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2019 semantics.
+  /// FMINIMUM/FMAXIMUM - NaN-propagating minimum/maximum: if either operand is
+  /// a NaN, returns a NaN. Follows C23's fminimum/fmaximum and IEEE-754 2019's
+  /// minimum/maximum, except that a signaling NaN operand is not guaranteed to
+  /// be quieted.
+  ///
+  /// These treat -0 as ordered less than +0. With the nsz flag, one +0.0 and
+  /// one -0.0 operand may non-deterministically return either operand;
+  /// contrary to normal nsz semantics, if both operands have the same sign, so
+  /// must the result.
   FMINIMUM,
   FMAXIMUM,
 
-  /// FMINIMUMNUM/FMAXIMUMNUM - minimumnum/maximumnum that is same with
-  /// FMINNUM_IEEE and FMAXNUM_IEEE besides if either operand is sNaN.
+  /// FMINIMUMNUM/FMAXIMUMNUM - NaN-discarding minimum/maximum: if one operand
+  /// is a NaN and the other is a number, returns the number. Follows C23's
+  /// fminimum_num/fmaximum_num and IEEE-754 2019's minimumNumber/maximumNumber,
+  /// except that a signaling NaN operand is not guaranteed to be quieted.
+  /// Same as FMINNUM/FMAXNUM, but treats signaling NaNs as quiet NaNs.
+  ///
+  /// These treat -0 as ordered less than +0. With the nsz flag, one +0.0 and
+  /// one -0.0 operand may non-deterministically return either operand;
+  /// contrary to normal nsz semantics, if both operands have the same sign, so
+  /// must the result.
   FMINIMUMNUM,
   FMAXIMUMNUM,
 

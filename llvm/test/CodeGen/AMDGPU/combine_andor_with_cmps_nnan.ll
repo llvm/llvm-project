@@ -954,15 +954,16 @@ define i1 @test117(float %arg1, float %arg2, float %arg3, float %arg4, float %ar
 ; GCN-LABEL: test117:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_min3_f32 v4, v4, v5, v6
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
-; GCN-NEXT:    v_min3_f32 v1, v8, v9, v10
-; GCN-NEXT:    v_min_f32_e32 v2, v2, v3
-; GCN-NEXT:    v_min_f32_e32 v3, v4, v7
+; GCN-NEXT:    v_min3_f32 v1, v4, v5, v6
+; GCN-NEXT:    v_max_f32_e32 v4, v7, v7
+; GCN-NEXT:    v_min3_f32 v5, v8, v9, v10
+; GCN-NEXT:    v_max_f32_e32 v6, v11, v11
+; GCN-NEXT:    v_dual_min_f32 v2, v2, v3 :: v_dual_min_f32 v1, v1, v4
 ; GCN-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v12
-; GCN-NEXT:    v_min_f32_e32 v0, v1, v11
+; GCN-NEXT:    v_min_f32_e32 v0, v5, v6
 ; GCN-NEXT:    v_cmp_lt_f32_e64 s0, v2, v13
-; GCN-NEXT:    v_cmp_lt_f32_e64 s1, v3, v13
+; GCN-NEXT:    v_cmp_lt_f32_e64 s1, v1, v13
 ; GCN-NEXT:    v_cmp_lt_f32_e64 s2, v0, v12
 ; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GCN-NEXT:    s_or_b32 s0, s0, s1
