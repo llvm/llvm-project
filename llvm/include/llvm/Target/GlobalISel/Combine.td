@@ -355,18 +355,11 @@ def shift_const_op : GICombinePatFrag<
   !foreach(op,
            [G_SHL, G_ASHR, G_LSHR],
            (pattern (op $dst, $shifted, $amt)))>;
-def shift_result_matchdata : GIDefMatchData<"std::optional<int64_t>">;
 def shifts_too_big : GICombineRule<
-  (defs root:$root, shift_result_matchdata:$matchinfo),
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (shift_const_op $root):$mi,
          [{ return Helper.matchShiftsTooBig(*${mi}, ${matchinfo}); }]),
-  (apply [{
-    if (${matchinfo}) {
-      Helper.replaceInstWithConstant(*${mi}, *${matchinfo});
-    } else {
-      Helper.replaceInstWithUndef(*${mi});
-    }
-  }])>;
+  (apply [{ Helper.applyBuildFn(*${mi}, ${matchinfo}); }])>;
 
 // Fold shift (shift base x), y -> shift base, (x+y), if shifts are same
 def shift_immed_matchdata : GIDefMatchData<"RegisterImmPair">;
@@ -864,9 +857,10 @@ def simplify_add_to_sub : GICombineRule <
 
 // Fold fp_op(cst) to the constant result of the floating point operation.
 class constant_fold_unary_fp_op_rule<Instruction opcode> : GICombineRule <
-  (defs root:$dst),
-  (match (opcode $dst, $src0):$root, (G_FCONSTANT $src0, $cst)),
-  (apply [{ Helper.applyCombineConstantFoldFpUnary(*${root}, ${cst}.getFPImm()); }])
+  (defs root:$dst, build_fn_matchinfo:$matchinfo),
+  (match (opcode $dst, $src0):$root,
+   [{ return Helper.matchConstantFoldFPUnary(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])
 >;
 
 def constant_fold_fneg : constant_fold_unary_fp_op_rule<G_FNEG>;
@@ -1421,10 +1415,10 @@ def rotate_out_of_range : GICombineRule<
 >;
 
 def icmp_to_true_false_known_bits : GICombineRule<
-  (defs root:$d, int64_matchinfo:$matchinfo),
+  (defs root:$d, build_fn_matchinfo:$matchinfo),
   (match (G_ICMP $dst, $pred, $src1, $src2):$d,
          [{ return Helper.matchICmpToTrueFalseKnownBits(*${d}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
+  (apply [{ Helper.applyBuildFn(*${d}, ${matchinfo}); }])>;
 
 def icmp_to_lhs_known_bits : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
@@ -1638,12 +1632,12 @@ def reassocs : GICombineGroup<[reassoc_ptradd, reassoc_comm_binops]>;
 
 // Constant fold operations.
 def constant_fold_binop : GICombineRule<
-  (defs root:$d, apint_matchinfo:$matchinfo),
+  (defs root:$d, build_fn_matchinfo:$matchinfo),
   (match (wip_match_opcode G_ADD, G_PTR_ADD, G_AND, G_ASHR, G_LSHR, G_MUL, G_OR,
                            G_SHL, G_SUB, G_XOR, G_UDIV, G_SDIV, G_UREM, G_SREM,
                            G_SMIN, G_SMAX, G_UMIN, G_UMAX):$d,
    [{ return Helper.matchConstantFoldBinOp(*${d}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
+  (apply [{ Helper.applyBuildFn(*${d}, ${matchinfo}); }])>;
 
 def constant_fold_fp_binop_frags : GICombinePatFrag<
   (outs root:$dst), (ins),
@@ -1654,10 +1648,10 @@ def constant_fold_fp_binop_frags : GICombinePatFrag<
            (pattern (op $dst, $src0, $src1)))>;
 
 def constant_fold_fp_binop : GICombineRule<
-  (defs root:$d, constantfp_matchinfo:$matchinfo),
+  (defs root:$d, build_fn_matchinfo:$matchinfo),
   (match (constant_fold_fp_binop_frags $d):$mi,
    [{ return Helper.matchConstantFoldFPBinOp(*${mi}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceInstWithFConstant(*${mi}, ${matchinfo}); }])>;
+  (apply [{ Helper.applyBuildFn(*${mi}, ${matchinfo}); }])>;
 
 
 def constant_fold_fma_frags : GICombinePatFrag<
@@ -1665,20 +1659,20 @@ def constant_fold_fma_frags : GICombinePatFrag<
   !foreach(op, [G_FMAD, G_FMA], (pattern (op $dst, $src0, $src1, $src2)))>;
 
 def constant_fold_fma : GICombineRule<
-  (defs root:$dst, constantfp_matchinfo:$matchinfo),
+  (defs root:$dst, build_fn_matchinfo:$matchinfo),
   (match (constant_fold_fma_frags $dst):$d,
    [{ return Helper.matchConstantFoldFMA(*${d}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceInstWithFConstant(*${d}, ${matchinfo}); }])>;
+  (apply [{ Helper.applyBuildFn(*${d}, ${matchinfo}); }])>;
 
 def constant_fold_cast_op_frags : GICombinePatFrag<
   (outs root:$dst), (ins),
   !foreach(op, [G_ZEXT, G_SEXT, G_ANYEXT], (pattern (op $dst, $src)))>;
 
 def constant_fold_cast_op : GICombineRule<
-  (defs root:$dst, apint_matchinfo:$matchinfo),
+  (defs root:$dst, build_fn_matchinfo:$matchinfo),
   (match (constant_fold_cast_op_frags $dst):$d,
    [{ return Helper.matchConstantFoldCastOp(*${d}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
+  (apply [{ Helper.applyBuildFn(*${d}, ${matchinfo}); }])>;
 
 def unary_int_op_frags : GICombinePatFrag<
   (outs root:$dst), (ins),
@@ -2630,11 +2624,11 @@ def narrow_binop_xor : narrow_binop_opcode<G_XOR>;
 
 // Cast of integer.
 class integer_of_opcode<Instruction castOpcode> : GICombineRule <
-  (defs root:$root, apint_matchinfo:$matchinfo),
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (G_CONSTANT $int, $imm),
          (castOpcode $root, $int):$Cast,
          [{ return Helper.matchCastOfInteger(*${Cast}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceInstWithConstant(*${Cast}, ${matchinfo}); }])>;
+  (apply [{ Helper.applyBuildFn(*${Cast}, ${matchinfo}); }])>;
 
 def integer_of_truncate : integer_of_opcode<G_TRUNC>;
 

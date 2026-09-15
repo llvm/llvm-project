@@ -321,6 +321,12 @@ LLVM_ABI SmallVector<APInt>
 ConstantFoldVectorBinop(unsigned Opcode, const Register Op1, const Register Op2,
                         const MachineRegisterInfo &MRI);
 
+/// Tries to constant fold a vector floating-point binop with sources \p Op1 and
+/// \p Op2. Returns an empty vector on failure.
+LLVM_ABI SmallVector<APFloat>
+ConstantFoldVectorFPBinop(unsigned Opcode, const Register Op1,
+                          const Register Op2, const MachineRegisterInfo &MRI);
+
 LLVM_ABI std::optional<APInt>
 ConstantFoldCastOp(unsigned Opcode, LLT DstTy, const Register Op0,
                    const MachineRegisterInfo &MRI);
@@ -340,6 +346,14 @@ ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy, Register Src,
 LLVM_ABI SmallVector<APInt>
 ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,
                        const MachineRegisterInfo &MRI);
+
+/// Tries to constant fold a unary floating-point operation (G_FNEG, G_FABS,
+/// G_FSQRT, G_FLOG2, G_FPEXT, G_FPTRUNC, G_FCEIL, G_FFLOOR, G_INTRINSIC_TRUNC,
+/// G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN, G_FRINT, G_FNEARBYINT) on \p Src.
+/// If \p Src is a vector then it tries to do an element-wise constant fold.
+LLVM_ABI SmallVector<APFloat>
+ConstantFoldUnaryFPOp(unsigned Opcode, LLT DstTy, Register Src,
+                      const MachineRegisterInfo &MRI);
 
 LLVM_ABI std::optional<SmallVector<APInt>>
 ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
