@@ -31,7 +31,7 @@ define i32 @two_shifts_by_sext(i32 %val, i8 signext %len) {
 ; CHECK-LABEL: @two_shifts_by_sext(
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[LEN:%.*]] to i32
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[VAL:%.*]], [[CONV]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i32 [[SHL]], [[CONV]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[SHL]], [[CONV]]
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %val.addr = alloca i32, align 4
@@ -52,7 +52,7 @@ define i32 @two_shifts_by_same_sext(i32 %val, i8 signext %len) {
 ; CHECK-LABEL: @two_shifts_by_same_sext(
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[LEN:%.*]] to i32
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[VAL:%.*]], [[CONV]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i32 [[SHL]], [[CONV]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[SHL]], [[CONV]]
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %val.addr = alloca i32, align 4
@@ -76,7 +76,7 @@ define i32 @two_shifts_by_sext_with_extra_use(i32 %val, i8 signext %len) {
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[LEN:%.*]] to i32
 ; CHECK-NEXT:    tail call void @use_int32(i32 [[CONV]])
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[VAL:%.*]], [[CONV]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i32 [[SHL]], [[CONV]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[SHL]], [[CONV]]
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %val.addr = alloca i32, align 4
@@ -103,7 +103,7 @@ define i32 @two_shifts_by_same_sext_with_extra_use(i32 %val, i8 signext %len) {
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[LEN:%.*]] to i32
 ; CHECK-NEXT:    tail call void @use_int32(i32 [[CONV]])
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[VAL:%.*]], [[CONV]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i32 [[SHL]], [[CONV]]
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[SHL]], [[CONV]]
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %val.addr = alloca i32, align 4
