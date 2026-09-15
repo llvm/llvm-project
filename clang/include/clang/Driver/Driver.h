@@ -654,8 +654,7 @@ public:
   Action *ConstructPhaseAction(
       Compilation &C, const llvm::opt::ArgList &Args, phases::ID Phase,
       Action *Input,
-      Action::OffloadKind TargetDeviceOffloadKind = Action::OFK_None,
-      LTOKind TargetLTOMode = LTOK_None) const;
+      Action::OffloadKind TargetDeviceOffloadKind = Action::OFK_None) const;
 
   /// BuildJobsForAction - Construct the jobs to perform for the action \p A and
   /// return an InputInfo for the result of running \p A.  Will only construct
