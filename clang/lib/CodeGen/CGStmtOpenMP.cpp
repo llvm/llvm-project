@@ -2766,72 +2766,15 @@ void CodeGenFunction::EmitOMPLinearClauseFinal(
           EmitBlock(ThenBB);
         }
       }
-      const auto *OrigDecl = cast<DeclRefExpr>(*IC)->getDecl();
-
-      // For BindingDecls, temporarily remove from OMPPrivatizedBindings BEFORE
-      // getting the original address, otherwise EmitOMPBindingOriginalAddr will
-      // return the privatized address instead of the true original.
-      Address SavedPrivBinding = Address::invalid();
-      const BindingDecl *BD = dyn_cast<BindingDecl>(OrigDecl);
-      if (BD) {
-        const BindingDecl *CanonBD = cast<BindingDecl>(BD->getCanonicalDecl());
-        auto PrivIt = OMPPrivatizedBindings.find(CanonBD);
-        if (PrivIt != OMPPrivatizedBindings.end()) {
-          SavedPrivBinding = PrivIt->second;
-          OMPPrivatizedBindings.erase(PrivIt);
-        }
-      }
-
-      Address OrigAddr = [&]() -> Address {
-        if (const auto *BD = dyn_cast<BindingDecl>(OrigDecl)) {
-          // BindingDecl: use EmitOMPBindingOriginalAddr to get the true
-          // original address.
-          return EmitOMPBindingOriginalAddr(BD, (*IC)->getExprLoc());
-        }
-        const auto *OrigVD = cast<VarDecl>(OrigDecl);
-        DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD),
-                        CapturedStmtInfo->lookup(OrigVD) != nullptr,
-                        (*IC)->getType(), VK_LValue, (*IC)->getExprLoc());
-        return EmitLValue(&DRE).getAddress();
-      }();
-
-      if (BD) {
-        // For BindingDecls, directly manipulate LocalDeclMap without using
-        // VarScope, because VarScope.addPrivate would also update
-        // OMPPrivatizedBindings which interferes with the lookup in
-        // EmitDeclRefLValue.
-        const BindingDecl *CanonBD = cast<BindingDecl>(BD->getCanonicalDecl());
-
-        // Save and update LocalDeclMap using canonical decl.
-        Address SavedLocalAddr = Address::invalid();
-        auto LocalIt = LocalDeclMap.find(CanonBD);
-        bool WasInLocal = LocalIt != LocalDeclMap.end();
-        if (WasInLocal) {
-          SavedLocalAddr = LocalIt->second;
-          LocalIt->second = OrigAddr;
-        } else {
-          LocalDeclMap.insert({CanonBD, OrigAddr});
-        }
-
-        EmitIgnoredExpr(F);
-
-        // Restore LocalDeclMap using canonical decl.
-        if (WasInLocal) {
-          LocalDeclMap.find(CanonBD)->second = SavedLocalAddr;
-        } else {
-          LocalDeclMap.erase(CanonBD);
-        }
-
-        // Restore OMPPrivatizedBindings using canonical decl.
-        if (SavedPrivBinding.isValid())
-          OMPPrivatizedBindings.insert_or_assign(CanonBD, SavedPrivBinding);
-      } else {
-        // For VarDecls, use the normal VarScope mechanism.
-        CodeGenFunction::OMPPrivateScope VarScope(*this);
-        VarScope.addPrivate(OrigDecl, OrigAddr);
-        (void)VarScope.Privatize();
-        EmitIgnoredExpr(F);
-      }
+      const auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IC)->getDecl());
+      DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD),
+                      CapturedStmtInfo->lookup(OrigVD) != nullptr,
+                      (*IC)->getType(), VK_LValue, (*IC)->getExprLoc());
+      Address OrigAddr = EmitLValue(&DRE).getAddress();
+      CodeGenFunction::OMPPrivateScope VarScope(*this);
+      VarScope.addPrivate(OrigVD, OrigAddr);
+      (void)VarScope.Privatize();
+      EmitIgnoredExpr(F);
       ++IC;
     }
     if (const Expr *PostUpdate = C->getPostUpdateExpr())
