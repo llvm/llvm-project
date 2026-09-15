@@ -1074,30 +1074,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Unlock a previously locked host buffer starting at \p HstPtr.
   virtual Error dataUnlockImpl(void *HstPtr) = 0;
 
-  /// Mark the host buffer with address \p HstPtr and \p Size bytes as a mapped
-  /// buffer. This means that libomptarget created a new mapping of that host
-  /// buffer (e.g., because a user OpenMP target map) and the buffer may be used
-  /// as source/destination of memory transfers. We can use this information to
-  /// lock the host buffer and optimize its memory transfers.
-  Error notifyDataMapped(void *HstPtr, int64_t Size) {
-    auto Err = PinnedAllocs.registerMemory(HstPtr, Size, LockMappedBuffers);
-    if (!Err && !IgnoreLockMappedFailures)
-      return Err.takeError();
-    return Plugin::success();
-  }
-
-  /// Mark the host buffer with address \p HstPtr as unmapped. This means that
-  /// libomptarget removed an existing mapping. If the plugin locked the buffer
-  /// in notifyDataMapped, this function should unlock it.
-  Error notifyDataUnmapped(void *HstPtr) {
-    auto Err = PinnedAllocs.unregisterMemory(HstPtr, LockMappedBuffers);
-    if (IgnoreLockMappedFailures) {
-      consumeError(std::move(Err));
-      return Plugin::success();
-    }
-    return Err;
-  }
-
   /// Check whether the host buffer with address \p HstPtr is pinned by the
   /// underlying vendor-specific runtime (if any). Retrieve the host pointer,
   /// the device accessible pointer and the size of the original pinned buffer.
@@ -1439,12 +1415,6 @@ private:
   BoolEnvar OMPX_ReuseBlocksForHighTripCount =
       BoolEnvar("LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
 
-  /// Indicate whether mapped host buffers should be locked automatically.
-  bool LockMappedBuffers;
-
-  /// Indicate whether failures when locking mapped buffers should be ignored.
-  bool IgnoreLockMappedFailures;
-
   /// Record and replay manager.
   RecordReplayTy *RecordReplay = nullptr;
 
@@ -1711,19 +1681,6 @@ public:
 
   /// Deallocates memory on the given device.
   int32_t data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind);
-
-  /// Locks / pins host memory using the plugin runtime.
-  int32_t data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
-                    void **LockedPtr);
-
-  /// Unlocks / unpins host memory using the plugin runtime.
-  int32_t data_unlock(int32_t DeviceId, void *Ptr);
-
-  /// Notify the runtime about a new mapping that has been created outside.
-  int32_t data_notify_mapped(int32_t DeviceId, void *HstPtr, int64_t Size);
-
-  /// Notify t he runtime about a mapping that has been deleted.
-  int32_t data_notify_unmapped(int32_t DeviceId, void *HstPtr);
 
   /// Begin executing a kernel on the given device.
   int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
