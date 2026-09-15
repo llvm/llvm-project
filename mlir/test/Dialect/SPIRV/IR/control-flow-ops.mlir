@@ -763,6 +763,14 @@ spirv.module Logical GLSL450 {
 
 // -----
 
+// The function verifier visits the return before its operand count is verified.
+spirv.func @missing_return_value() -> i32 "None" {
+  // expected-error @+1 {{'spirv.ReturnValue' op return value is missing}}
+  "spirv.ReturnValue"() : () -> ()
+}
+
+// -----
+
 spirv.module Logical GLSL450 {
   spirv.func @value_type_mismatch() -> (f32) "None" {
     %0 = spirv.Constant 42 : i32
