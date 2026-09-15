@@ -24,6 +24,7 @@
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/OpenMPClause.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
@@ -24558,6 +24559,18 @@ VarDecl *SemaOpenMP::ActOnOpenMPDeclareReductionInitializerStart(Scope *S,
 void SemaOpenMP::ActOnOpenMPDeclareReductionInitializerEnd(
     Decl *D, Expr *Initializer, VarDecl *OmpPrivParm) {
   auto *DRD = cast<OMPDeclareReductionDecl>(D);
+
+  // Ensure OmpPrivParm is default-constructed before the user initializer runs
+  // (required for class types with non-trivial default constructors).
+  if (Initializer && !DRD->getDeclContext()->isDependentContext()) {
+    QualType ReductionType = DRD->getType();
+    if (CXXRecordDecl *RD = ReductionType->getAsCXXRecordDecl()) {
+      CXXConstructorDecl *DefaultCtor = SemaRef.LookupDefaultConstructor(RD);
+      if (DefaultCtor && !DefaultCtor->isDeleted() && !DefaultCtor->isTrivial())
+        SemaRef.ActOnUninitializedDecl(OmpPrivParm);
+    }
+  }
+
   SemaRef.DiscardCleanupsInEvaluationContext();
   SemaRef.PopExpressionEvaluationContext();
 
