@@ -262,3 +262,9 @@ cfltz #1, w0
 lda64b x0, [x13]
 // CHECK: [[@LINE-1]]:1: error: instruction requires: ls64 lsc64b
 // CHECK-NEXT: lda64b x0, [x13]
+
+.arch_extension fpv2
+.arch_extension nofpv2
+fcmtl s31, s0
+// CHECK: [[@LINE-1]]:1: error: instruction requires: fpv2
+// CHECK-NEXT: fcmtl s31, s0

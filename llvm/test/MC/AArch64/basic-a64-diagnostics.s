@@ -1576,6 +1576,43 @@ cbz w1, lsl
 // CHECK-ERROR-NEXT:                    ^
 
 //------------------------------------------------------------------------------
+// Floating-point total-order compare
+//------------------------------------------------------------------------------
+
+        fcmtl h0, s1
+        fcmtl s0, d1
+        fcmtl d0, h1
+        fcmtl b0, b1
+        fcmtlmg h0, s1
+        fcmtlmg s0, d1
+        fcmtlmg d0, h1
+        fcmtlmg b0, b1
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR-NEXT:         fcmtl h0, s1
+// CHECK-ERROR-NEXT:                   ^
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
+// CHECK-ERROR-NEXT:         fcmtl s0, d1
+// CHECK-ERROR-NEXT:                   ^
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
+// CHECK-ERROR-NEXT:         fcmtl d0, h1
+// CHECK-ERROR-NEXT:                   ^
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
+// CHECK-ERROR-NEXT:         fcmtl b0, b1
+// CHECK-ERROR-NEXT:               ^
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
+// CHECK-ERROR-NEXT:         fcmtlmg h0, s1
+// CHECK-ERROR-NEXT:                     ^
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
+// CHECK-ERROR-NEXT:         fcmtlmg s0, d1
+// CHECK-ERROR-NEXT:                     ^
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
+// CHECK-ERROR-NEXT:         fcmtlmg d0, h1
+// CHECK-ERROR-NEXT:                     ^
+// CHECK-ERROR-NEXT: error: invalid operand for instruction
+// CHECK-ERROR-NEXT:         fcmtlmg b0, b1
+// CHECK-ERROR-NEXT:                 ^
+
+//------------------------------------------------------------------------------
 // Floating-point conditional compare
 //------------------------------------------------------------------------------
 
