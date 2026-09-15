@@ -165,6 +165,35 @@ void UpdateVCEPass::runOnOperation() {
     valueTypes.append(op->operand_type_begin(), op->operand_type_end());
     valueTypes.append(op->result_type_begin(), op->result_type_end());
 
+    // BuiltIn decorations can carry version, extension, and capability
+    // requirements that are not represented by the global variable's type.
+    auto requireBuiltIn = [&](spirv::BuiltIn builtIn) -> LogicalResult {
+      if (std::optional<spirv::Version> minVersion =
+              spirv::getMinVersion(builtIn)) {
+        deducedVersion = std::max(deducedVersion, *minVersion);
+        if (deducedVersion > allowedVersion) {
+          return op->emitError("'")
+                 << op->getName() << "' requires min version "
+                 << spirv::stringifyVersion(deducedVersion)
+                 << " but target environment allows up to "
+                 << spirv::stringifyVersion(allowedVersion);
+        }
+      }
+      if (auto exts = spirv::getExtensions(builtIn)) {
+        SmallVector<ArrayRef<spirv::Extension>, 1> extCandidates = {*exts};
+        if (failed(checkAndUpdateExtensionRequirements(
+                op, targetEnv, extCandidates, deducedExtensions)))
+          return failure();
+      }
+      if (auto caps = spirv::getCapabilities(builtIn)) {
+        SmallVector<ArrayRef<spirv::Capability>, 1> capCandidates = {*caps};
+        if (failed(checkAndUpdateCapabilityRequirements(
+                op, targetEnv, capCandidates, deducedCapabilities)))
+          return failure();
+      }
+      return success();
+    };
+
     // Per the SPIR-V spec Decoration table, the `LinkageAttributes` decoration
     // requires the `Linkage` capability, and specific linkage types pull in
     // additional extensions (e.g., `LinkOnceODR` -> `SPV_KHR_linkonce_odr`).
@@ -188,6 +217,12 @@ void UpdateVCEPass::runOnOperation() {
     // conveyed by type attributes.
     if (auto globalVar = dyn_cast<spirv::GlobalVariableOp>(op)) {
       valueTypes.push_back(globalVar.getType());
+
+      if (std::optional<StringRef> builtInName = globalVar.getBuiltIn())
+        if (std::optional<spirv::BuiltIn> builtIn =
+                spirv::symbolizeBuiltIn(*builtInName))
+          if (failed(requireBuiltIn(*builtIn)))
+            return WalkResult::interrupt();
 
       // The `DescriptorSet` and `Binding` decorations (represented by the
       // `binding` and `descriptor_set` attributes) require the `Shader`
