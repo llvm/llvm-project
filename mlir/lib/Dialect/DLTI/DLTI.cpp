@@ -525,7 +525,7 @@ getClosestQueryable(Operation *op) {
 
   // Search op and its ancestors for the first attached DLTIQueryInterface attr.
   do {
-    for (NamedAttribute attr : op->getAttrs())
+    for (NamedAttribute attr : op->getDiscardableAttrDictionary().getValue())
       if ((queryable = dyn_cast<DLTIQueryInterface>(attr.getValue())))
         break;
   } while (!queryable && (op = op->getParentOp()));
