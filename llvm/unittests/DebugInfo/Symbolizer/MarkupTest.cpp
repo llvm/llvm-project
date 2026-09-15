@@ -8,9 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/Symbolize/Markup.h"
+#include "llvm/DebugInfo/Symbolize/MarkupFilter.h"
+#include "llvm/DebugInfo/Symbolize/Symbolize.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -216,6 +219,87 @@ TEST(SymbolizerMarkup, MultilineElements) {
               testing::Optional(isNode("{{{first:\033[0m}}}", "first",
                                        ElementsAre("\033[0m"))));
   EXPECT_THAT(Parser.nextNode(), std::nullopt);
+}
+
+
+// Non-markup fragments are eagerly flushed before any newline arrives.
+TEST(MarkupFilter, EagerFragmentFlush) {
+  std::string Out;
+  raw_string_ostream OS(Out);
+  LLVMSymbolizer Symbolizer;
+  MarkupFilter Filter(OS, Symbolizer, /*ColorsEnabled=*/false);
+
+  Filter.filter("hello ");
+  EXPECT_EQ(Out, "hello ");
+
+  Filter.filter("world");
+  EXPECT_EQ(Out, "hello world");
+
+  // Newline triggers complete-line processing.
+  Filter.filter("\n");
+  EXPECT_EQ(Out, "hello world\n");
+}
+
+// A fragment ending with '{', '{{', or containing '{{{' may be the start of a
+// markup element and is held for more input.
+TEST(MarkupFilter, HoldMarkupFragment) {
+  std::string Out;
+  raw_string_ostream OS(Out);
+  LLVMSymbolizer Symbolizer;
+  MarkupFilter Filter(OS, Symbolizer, /*ColorsEnabled=*/false);
+
+  // Trailing '{' held (could be start of '{{{').
+  Filter.filter("text {");
+  EXPECT_EQ(Out, "");
+
+  // Trailing "{{"" still held.
+  Filter.filter("{");
+  EXPECT_EQ(Out, "");
+
+  // "{{{" present but still no newline. Should still be held.
+  Filter.filter("{unknown:");
+  EXPECT_EQ(Out, "");
+
+  // Completing to a non-special element on a full line flushes everything.
+  Filter.filter("foo}}}\n");
+  EXPECT_EQ(Out, "text {{{unknown:foo}}}\n");
+}
+
+// Multiple complete lines in a single filter() call are all processed.
+TEST(MarkupFilter, MultipleCompleteLines) {
+  std::string Out;
+  raw_string_ostream OS(Out);
+  LLVMSymbolizer Symbolizer;
+  MarkupFilter Filter(OS, Symbolizer, /*ColorsEnabled=*/false);
+
+  Filter.filter("line1\nline2\nline3\n");
+  EXPECT_EQ(Out, "line1\nline2\nline3\n");
+}
+
+// A complete line followed by a non-markup fragment: the line is processed and
+// the fragment is eagerly flushed in the same call.
+TEST(MarkupFilter, CompleteLineThenFragment) {
+  std::string Out;
+  raw_string_ostream OS(Out);
+  LLVMSymbolizer Symbolizer;
+  MarkupFilter Filter(OS, Symbolizer, /*ColorsEnabled=*/false);
+
+  Filter.filter("line1\nfragment");
+  EXPECT_EQ(Out, "line1\nfragment");
+}
+
+// finish() processes a held markup fragment by appending a synthetic newline.
+TEST(MarkupFilter, FinishProcessesHeldFragment) {
+  std::string Out;
+  raw_string_ostream OS(Out);
+  LLVMSymbolizer Symbolizer;
+  MarkupFilter Filter(OS, Symbolizer, /*ColorsEnabled=*/false);
+
+  Filter.filter("pre {{{unknown:foo}}}");
+  EXPECT_EQ(Out, "");
+
+  Filter.finish();
+  EXPECT_EQ(Out, "pre {{{unknown:foo}}}\n");
 }
 
 } // namespace
