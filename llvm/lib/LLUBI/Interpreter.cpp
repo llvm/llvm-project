@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Context.h"
-#include "ExecutorBase.h"
-#include "Library.h"
-#include "Value.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -22,6 +18,10 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/LLUBI/Context.h"
+#include "llvm/LLUBI/ExecutorBase.h"
+#include "llvm/LLUBI/Library.h"
+#include "llvm/LLUBI/Value.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/TargetParser/Triple.h"
 
