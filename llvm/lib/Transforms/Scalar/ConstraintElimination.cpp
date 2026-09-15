@@ -75,6 +75,25 @@ static Instruction *getContextInstForUse(Use &U) {
   return UserI;
 }
 
+/// Returns the closest program point dominating all uses of \p I.
+static Instruction *findCommonDominatorOfUses(Instruction &I,
+                                              DominatorTree &DT) {
+  Instruction *CommonDom = nullptr;
+  unsigned NumUses = 0;
+  for (Use &U : I.uses()) {
+    // Conservatively use original instruction, if there are too many uses.
+    if (++NumUses == 16)
+      return &I;
+    Instruction *UserI = getContextInstForUse(U);
+    CommonDom =
+        CommonDom ? DT.findNearestCommonDominator(CommonDom, UserI) : UserI;
+  }
+  if (!CommonDom)
+    return &I;
+  // Uses in unreachable blocks are not in the dominator tree.
+  return DT.getNode(CommonDom->getParent()) ? CommonDom : &I;
+}
+
 namespace {
 using Entry = ConstraintSystem::Entry;
 using RowTy = ConstraintSystem::RowTy;
@@ -111,21 +130,28 @@ struct FactOrCheck {
     ConditionTy Cond;
   };
 
-  /// A pre-condition that must hold for the current fact to be added to the
-  /// system.
-  ConditionTy DoesHold;
+  union {
+    /// A pre-condition that must hold for the current fact to be added to the
+    /// system. Only used by condition facts.
+    ConditionTy DoesHold;
+
+    /// Context instruction for the point where conditions are checked for
+    /// InstCheck simplifications.
+    Instruction *ContextInst;
+  };
 
   unsigned NumIn;
   unsigned NumOut;
   EntryTy Ty;
 
-  FactOrCheck(EntryTy Ty, DomTreeNode *DTN, Instruction *Inst)
-      : Inst(Inst), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
-        Ty(Ty) {}
+  FactOrCheck(EntryTy Ty, DomTreeNode *DTN, Instruction *Inst,
+              Instruction *ContextInst = nullptr)
+      : Inst(Inst), ContextInst(ContextInst ? ContextInst : Inst),
+        NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()), Ty(Ty) {}
 
   FactOrCheck(DomTreeNode *DTN, Use *U)
-      : U(U), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
-        Ty(EntryTy::UseCheck) {}
+      : U(U), ContextInst(nullptr), NumIn(DTN->getDFSNumIn()),
+        NumOut(DTN->getDFSNumOut()), Ty(EntryTy::UseCheck) {}
 
   FactOrCheck(DomTreeNode *DTN, CmpPredicate Pred, Value *Op0, Value *Op1,
               ConditionTy Precond = {})
@@ -146,8 +172,11 @@ struct FactOrCheck {
     return FactOrCheck(DTN, U);
   }
 
-  static FactOrCheck getCheck(DomTreeNode *DTN, Instruction *I) {
-    return FactOrCheck(EntryTy::InstCheck, DTN, I);
+  static FactOrCheck getCheck(DomTreeNode *DTN, Instruction *I,
+                              Instruction *ContextInst = nullptr) {
+    assert((ContextInst ? ContextInst : I)->getParent() == DTN->getBlock() &&
+           "anchoring instruction must be in DTN's block");
+    return FactOrCheck(EntryTy::InstCheck, DTN, I, ContextInst);
   }
 
   bool isCheck() const {
@@ -158,7 +187,7 @@ struct FactOrCheck {
     assert(!isConditionFact());
     if (Ty == EntryTy::UseCheck)
       return getContextInstForUse(*U);
-    return Inst;
+    return ContextInst;
   }
 
   Instruction *getInstructionToSimplify() const {
@@ -249,10 +278,6 @@ struct ConstraintTy {
         IsSigned(IsSigned), IsEq(IsEq), IsNe(IsNe) {}
 
   bool empty() const { return Coefficients.empty(); }
-
-  /// Returns true if the constraint does not reference any variable, i.e. it is
-  /// of the form 'c >= 0'.
-  bool isConstantOnly() const { return Coefficients.size() < 2; }
 
   bool isEq() const { return IsEq; }
 
@@ -474,11 +499,87 @@ static bool canUseSExt(ConstantInt *CI) {
   return Val.sgt(MinSignedConstraintValue) && Val.slt(MaxConstraintValue);
 }
 
-/// Returns true if the pre-condition \p Op \p Pred \p RHS, required to look
-/// through an expression while decomposing it, is known to hold given \p Info.
-static bool preconditionHolds(const ConstraintInfo &Info,
-                              CmpInst::Predicate Pred, Value *Op, int64_t RHS) {
-  return Info.doesHold(Pred, Op, ConstantInt::get(Op->getType(), RHS));
+/// Returns true if \p Info implies that \p Op is in \p R, interpreting \p R as
+/// a signed range if \p Signed is set and as an unsigned range otherwise.
+static bool doesHoldInRange(const ConstraintInfo &Info, Value *Op,
+                            const ConstantRange &R, bool Signed) {
+  if (R.isEmptySet() || (Signed ? R.isSignWrappedSet() : R.isWrappedSet()))
+    return false;
+
+  if (R.isFullSet())
+    return true;
+
+  unsigned BitWidth = R.getBitWidth();
+  APInt Min = Signed ? R.getSignedMin() : R.getUnsignedMin();
+  APInt Max = Signed ? R.getSignedMax() : R.getUnsignedMax();
+  APInt MinVal = Signed ? APInt::getSignedMinValue(BitWidth)
+                        : APInt::getMinValue(BitWidth);
+  APInt MaxVal = Signed ? APInt::getSignedMaxValue(BitWidth)
+                        : APInt::getMaxValue(BitWidth);
+  // Replace bound too large to be decomposed by the largest usable one.
+  if (!Signed && Max.uge(MaxConstraintValue))
+    Max = APInt(BitWidth, MaxConstraintValue - 1);
+
+  Type *Ty = Op->getType();
+  if (Min != MinVal &&
+      !Info.doesHold(Signed ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE, Op,
+                     ConstantInt::get(Ty, Min)))
+    return false;
+  if (Max != MaxVal &&
+      !Info.doesHold(Signed ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE, Op,
+                     ConstantInt::get(Ty, Max)))
+    return false;
+  return true;
+}
+
+/// Returns true if \p V is known to not wrap in signed or unsigned, depending
+/// on \p Signed.
+static bool isKnownNoWrap(Value *V, const ConstraintInfo &Info, bool Signed) {
+  if (match(V, m_DisjointOr(m_Value(), m_Value())))
+    return true;
+
+  if (auto *Trunc = dyn_cast<TruncInst>(V)) {
+    if (Signed)
+      return Trunc->hasNoSignedWrap();
+    // A trunc nsw only truncates without unsigned wrap if its operand is
+    // non-negative.
+    return Trunc->hasNoUnsignedWrap() ||
+           (Trunc->hasNoSignedWrap() &&
+            Info.isKnownNonNegative(Trunc->getOperand(0)));
+  }
+
+  auto *BO = dyn_cast<OverflowingBinaryOperator>(V);
+  if (!BO)
+    return false;
+
+  if (Signed ? BO->hasNoSignedWrap() : BO->hasNoUnsignedWrap())
+    return true;
+
+  Value *Op0 = BO->getOperand(0);
+  Value *Op1 = BO->getOperand(1);
+  auto Opcode = static_cast<Instruction::BinaryOps>(BO->getOpcode());
+
+  // Op0 - Op1 does not wrap unsigned if Op0 >=u Op1.
+  if (Opcode == Instruction::Sub)
+    return !Signed && Info.doesHold(CmpInst::ICMP_UGE, Op0, Op1);
+
+  if (!Signed && BO->hasNoSignedWrap() &&
+      (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1)) &&
+      Info.isKnownNonNegative(Op0))
+    return true;
+
+  // For a constant Op1, the ranges of Op0 for which the operation does not
+  // wrap are known exactly; check if the systems imply one of them.
+  auto *C = dyn_cast<ConstantInt>(Op1);
+  if (!C)
+    return false;
+
+  using OBO = OverflowingBinaryOperator;
+  return doesHoldInRange(Info, Op0,
+                         ConstantRange::makeExactNoWrapRegion(
+                             Opcode, C->getValue(),
+                             Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap),
+                         Signed);
 }
 
 static Decomposition decomposeGEP(GEPOperator &GEP, const ConstraintInfo &Info,
@@ -508,8 +609,7 @@ static Decomposition decomposeGEP(GEPOperator &GEP, const ConstraintInfo &Info,
       // Try to prove nuw from nusw and nneg. If the index cannot be proven
       // non-negative, keep the GEP as-is instead of decomposing it.
       assert(NW.hasNoUnsignedSignedWrap() && "Must have nusw flag");
-      if (!isKnownNonNegative(Index, DL) &&
-          !preconditionHolds(Info, CmpInst::ICMP_SGE, Index, 0))
+      if (!Info.isKnownNonNegative(Index))
         return &GEP;
     }
 
@@ -569,14 +669,16 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
       V = Op0;
     else if (match(V, m_NNegZExt(m_Value(Op0)))) {
       V = Op0;
-    } else if (match(V, m_NSWTrunc(m_Value(Op0)))) {
-      if (Op0->getType()->getScalarSizeInBits() <= 64)
-        V = Op0;
+    } else if (auto *Trunc = dyn_cast<TruncInst>(V)) {
+      if (Trunc->getSrcTy()->getScalarSizeInBits() <= 64 &&
+          isKnownNoWrap(Trunc, Info, IsSigned))
+        V = Trunc->getOperand(0);
     }
 
-    if (match(V, m_NSWAddLike(m_Value(Op0), m_Value(Op1)))) {
-      if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
-        return *Decomp;
+    if (match(V, m_AddLike(m_Value(Op0), m_Value(Op1)))) {
+      if (isKnownNoWrap(V, Info, IsSigned))
+        if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
+          return *Decomp;
       return V;
     }
 
@@ -588,27 +690,32 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
       return V;
     }
 
-    if (match(V, m_NSWSub(m_Value(Op0), m_Value(Op1)))) {
-      auto ResA = decompose(Op0, Info, IsSigned, DL);
-      auto ResB = decompose(Op1, Info, IsSigned, DL);
-      if (!ResA.sub(ResB))
-        return ResA;
+    if (match(V, m_Sub(m_Value(Op0), m_Value(Op1)))) {
+      if (isKnownNoWrap(V, Info, IsSigned)) {
+        auto ResA = decompose(Op0, Info, IsSigned, DL);
+        auto ResB = decompose(Op1, Info, IsSigned, DL);
+        if (!ResA.sub(ResB))
+          return ResA;
+      }
       return V;
     }
 
     ConstantInt *CI;
-    if (match(V, m_NSWMul(m_Value(Op0), m_ConstantInt(CI))) && canUseSExt(CI)) {
-      auto Result = decompose(Op0, Info, IsSigned, DL);
-      if (!Result.mul(CI->getSExtValue()))
-        return Result;
+    if (match(V, m_Mul(m_Value(Op0), m_ConstantInt(CI))) && canUseSExt(CI)) {
+      if (isKnownNoWrap(V, Info, IsSigned)) {
+        auto Result = decompose(Op0, Info, IsSigned, DL);
+        if (!Result.mul(CI->getSExtValue()))
+          return Result;
+      }
       return V;
     }
 
     // (shl nsw x, shift) is (mul nsw x, (1<<shift)), with the exception of
     // shift == bw-1.
-    if (match(V, m_NSWShl(m_Value(Op0), m_ConstantInt(CI)))) {
+    if (match(V, m_Shl(m_Value(Op0), m_ConstantInt(CI)))) {
       uint64_t Shift = CI->getValue().getLimitedValue();
-      if (Shift < Ty->getIntegerBitWidth() - 1) {
+      if (Shift < Ty->getIntegerBitWidth() - 1 &&
+          isKnownNoWrap(V, Info, IsSigned)) {
         assert(Shift < 64 && "Would overflow");
         auto Result = decompose(Op0, Info, IsSigned, DL);
         if (!Result.mul(int64_t(1) << Shift))
@@ -631,79 +738,58 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
     V = Op0;
   } else if (match(V, m_SExt(m_Value(Op0)))) {
     // Looking through the sext is only valid if the operand is non-negative.
-    if (!preconditionHolds(Info, CmpInst::ICMP_SGE, Op0, 0))
+    if (!Info.isKnownNonNegative(Op0))
       return V;
     V = Op0;
   } else if (auto *Trunc = dyn_cast<TruncInst>(V)) {
     if (Trunc->getSrcTy()->getScalarSizeInBits() <= 64 &&
-        (Trunc->hasNoUnsignedWrap() || Trunc->hasNoSignedWrap())) {
-      Value *Src = Trunc->getOperand(0);
-      // A trunc nsw only truncates without unsigned wrap if its operand is
-      // non-negative.
-      if (!Trunc->hasNoUnsignedWrap() &&
-          !preconditionHolds(Info, CmpInst::ICMP_SGE, Src, 0))
-        return V;
-      V = Src;
-    }
+        isKnownNoWrap(Trunc, Info, /*Signed=*/false))
+      V = Trunc->getOperand(0);
   }
 
   Value *Op1;
   ConstantInt *CI;
-  if (match(V, m_NUWAddLike(m_Value(Op0), m_Value(Op1)))) {
-    if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
-      return *Decomp;
-    return V;
-  }
-
-  if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative() &&
-      canUseSExt(CI)) {
+  if (match(V, m_AddLike(m_Value(Op0), m_Value(Op1)))) {
+    if (isKnownNoWrap(V, Info, /*Signed=*/false)) {
+      if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
+        return *Decomp;
+      return V;
+    }
     // Adding a negative constant only wraps if Op0 is smaller than it.
-    if (!preconditionHolds(Info, CmpInst::ICMP_UGE, Op0,
-                           CI->getSExtValue() * -1))
-      return V;
-    if (auto Decomp = MergeResults(Op0, CI, true))
-      return *Decomp;
+    if (match(Op1, m_ConstantInt(CI)) && CI->isNegative() && canUseSExt(CI) &&
+        Info.doesHold(CmpInst::ICMP_UGE, Op0,
+                      ConstantInt::get(Op0->getType(), -CI->getSExtValue())))
+      if (auto Decomp = MergeResults(Op0, CI, /*IsSignedB=*/true))
+        return *Decomp;
     return V;
   }
 
-  if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1)))) {
-    // An add nsw only adds without unsigned wrap if both operands are
-    // non-negative.
-    if ((!isKnownNonNegative(Op0, DL) &&
-         !preconditionHolds(Info, CmpInst::ICMP_SGE, Op0, 0)) ||
-        (!isKnownNonNegative(Op1, DL) &&
-         !preconditionHolds(Info, CmpInst::ICMP_SGE, Op1, 0)))
-      return V;
-
-    if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
-      return *Decomp;
-    return V;
-  }
-
-  if (match(V, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI)) {
+  if (match(V, m_Shl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI)) {
     // The scale 1 << shift must fit in the signed coefficient, so reject a
     // shift of 63, for which int64_t{1} << 63 is INT64_MIN.
     if (CI->getSExtValue() < 0 || CI->getSExtValue() >= 63)
       return V;
-    auto Result = decompose(Op1, Info, IsSigned, DL);
-    if (!Result.mul(int64_t{1} << CI->getSExtValue()))
-      return Result;
+    if (isKnownNoWrap(V, Info, /*Signed=*/false)) {
+      auto Result = decompose(Op1, Info, IsSigned, DL);
+      if (!Result.mul(int64_t{1} << CI->getSExtValue()))
+        return Result;
+    }
     return V;
   }
 
-  if (match(V, m_NUWMul(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI) &&
-      (!CI->isNegative())) {
-    auto Result = decompose(Op1, Info, IsSigned, DL);
-    if (!Result.mul(CI->getSExtValue()))
-      return Result;
+  if (match(V, m_Mul(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI) &&
+      !CI->isNegative()) {
+    if (isKnownNoWrap(V, Info, /*Signed=*/false)) {
+      auto Result = decompose(Op1, Info, IsSigned, DL);
+      if (!Result.mul(CI->getSExtValue()))
+        return Result;
+    }
     return V;
   }
 
   if (match(V, m_Sub(m_Value(Op0), m_Value(Op1)))) {
-    // a - b can be decomposed when there is no unsigned wrap (either known via
-    // flag or proven as precondition).
-    if (!cast<OverflowingBinaryOperator>(V)->hasNoUnsignedWrap() &&
-        !Info.doesHold(CmpInst::ICMP_ULE, Op1, Op0))
+    // a - b can be decomposed when there is no unsigned wrap.
+    if (!isKnownNoWrap(V, Info, /*Signed=*/false))
       return V;
     auto ResA = decompose(Op0, Info, IsSigned, DL);
     auto ResB = decompose(Op1, Info, IsSigned, DL);
@@ -909,8 +995,10 @@ bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A,
 }
 
 bool ConstraintInfo::isKnownNonNegative(Value *V) const {
-  return doesHold(CmpInst::ICMP_SGE, V, ConstantInt::get(V->getType(), 0)) ||
-         ::isKnownNonNegative(V, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1);
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return !CI->isNegative();
+  return ::isKnownNonNegative(V, DL) ||
+         doesHold(CmpInst::ICMP_SGE, V, ConstantInt::get(V->getType(), 0));
 }
 
 void ConstraintInfo::transferToOtherSystem(
@@ -1159,6 +1247,21 @@ void State::addInfoForInductions(BasicBlock &BB) {
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, ContinuePred, PN, B, ConditionTy(ContinuePred, StartValue, B)));
 
+    // A signed bound can be translated to the unsigned system if PN is signed
+    // non-decreasing (StartValue s<= PN s< B) and StartValue u< B holds.
+    // Then StartValue, PN and B must all have the same sign.
+    if (ICmpInst::isSigned(ContinuePred)) {
+      assert((ContinuePred == CmpInst::ICMP_SLT ||
+              ContinuePred == CmpInst::ICMP_SLE) &&
+             "Expected a signed less-than continuation predicate");
+      MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
+      if (Info.Signed && !Info.Decreasing) {
+        CmpInst::Predicate UPred = ICmpInst::getUnsignedPredicate(ContinuePred);
+        WorkList.push_back(FactOrCheck::getConditionFact(
+            DTN, UPred, PN, B, ConditionTy(UPred, StartValue, B)));
+      }
+    }
+
     // A relational latch steps past B rather than landing on it, so none of the
     // reasoning below applies.
     return;
@@ -1318,6 +1421,10 @@ static bool getConstraintFromMemoryAccess(GetElementPtrInst &GEP,
 /// Returns true if \p I is a candidate whose poison-generating flags may be
 /// strengthened using the constraint systems.
 static bool canStrengthenFlags(Instruction *I) {
+  if (auto *Trunc = dyn_cast<TruncInst>(I))
+    return Trunc->getType()->isIntegerTy() && Trunc->hasNoSignedWrap() &&
+           !Trunc->hasNoUnsignedWrap();
+
   auto *BO = dyn_cast<BinaryOperator>(I);
   if (!BO || !BO->getType()->isIntegerTy())
     return false;
@@ -1328,9 +1435,6 @@ static bool canStrengthenFlags(Instruction *I) {
     // canonicalized to Add.
     return !BO->hasNoUnsignedWrap() && !isa<Constant>(BO->getOperand(1));
   case Instruction::Add:
-    // NSW/NUW can be refined using constant ranges.
-    return (!BO->hasNoUnsignedWrap() || !BO->hasNoSignedWrap()) &&
-           isa<Constant>(BO->getOperand(1));
   case Instruction::Mul:
   case Instruction::Shl:
     if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
@@ -1344,106 +1448,23 @@ static bool canStrengthenFlags(Instruction *I) {
   }
 }
 
-/// Returns true if \p Info implies that \p Op is in \p R, interpreting \p R as
-/// a signed range if \p Signed is set and as an unsigned range otherwise.
-static bool doesHoldInRange(const ConstraintInfo &Info, Value *Op,
-                            const ConstantRange &R, bool Signed) {
-  if (R.isEmptySet() || (Signed ? R.isSignWrappedSet() : R.isWrappedSet()))
-    return false;
+/// Try to strengthen \p I's poison generating flags using \p Info. Returns
+/// true if \p I was modified.
+static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info) {
+  assert(canStrengthenFlags(I) && "not a candidate for flag strengthening");
 
-  if (R.isFullSet())
-    return true;
-
-  unsigned BitWidth = R.getBitWidth();
-  APInt Min = Signed ? R.getSignedMin() : R.getUnsignedMin();
-  APInt Max = Signed ? R.getSignedMax() : R.getUnsignedMax();
-  APInt MinVal = Signed ? APInt::getSignedMinValue(BitWidth)
-                        : APInt::getMinValue(BitWidth);
-  APInt MaxVal = Signed ? APInt::getSignedMaxValue(BitWidth)
-                        : APInt::getMaxValue(BitWidth);
-  // Replace bound too large to be decomposed by the largest usable one.
-  if (!Signed && Max.uge(MaxConstraintValue))
-    Max = APInt(BitWidth, MaxConstraintValue - 1);
-
-  Type *Ty = Op->getType();
-  if (Min != MinVal &&
-      !Info.doesHold(Signed ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE, Op,
-                     ConstantInt::get(Ty, Min)))
-    return false;
-  if (Max != MaxVal &&
-      !Info.doesHold(Signed ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE, Op,
-                     ConstantInt::get(Ty, Max)))
-    return false;
-  return true;
-}
-
-static bool tryToStrengthenBinOpFlags(Instruction *I, Value *Op0, Value *Op1,
-                                      ConstraintInfo &Info) {
-  auto *C = dyn_cast<ConstantInt>(Op1);
-  if (!C)
-    return false;
-
-  // For a constant Op1, the ranges of Op0 for which the operation does not
-  // wrap are known exactly; check if the systems imply one of them.
   bool Changed = false;
-  auto Opcode = static_cast<Instruction::BinaryOps>(I->getOpcode());
-  using OBO = OverflowingBinaryOperator;
-  ConstantRange Other(C->getValue());
-  if (!I->hasNoUnsignedWrap() &&
-      doesHoldInRange(Info, Op0,
-                      ConstantRange::makeGuaranteedNoWrapRegion(
-                          Opcode, Other, OBO::NoUnsignedWrap),
-                      /*Signed=*/false)) {
-    LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
-    I->setHasNoUnsignedWrap();
-    Changed = true;
-  }
-  if (!I->hasNoSignedWrap() &&
-      doesHoldInRange(Info, Op0,
-                      ConstantRange::makeGuaranteedNoWrapRegion(
-                          Opcode, Other, OBO::NoSignedWrap),
-                      /*Signed=*/true)) {
+  if (!I->hasNoSignedWrap() && isKnownNoWrap(I, Info, /*Signed=*/true)) {
     LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
     I->setHasNoSignedWrap();
     Changed = true;
   }
-  return Changed;
-}
-
-/// Try to strengthen \p I's poison generating flags using \p Info. Returns
-/// true if \p I was modified.
-static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info,
-                                 SmallVectorImpl<Instruction *> &ToRemove) {
-  assert(canStrengthenFlags(I) && "not a candidate for flag strengthening");
-
-  Value *Op0 = I->getOperand(0), *Op1 = I->getOperand(1);
-  switch (I->getOpcode()) {
-  case Instruction::Sub: {
-    // Op0 - Op1 does not wrap unsigned, if Op0 >=u Op1.
-    if (!Info.doesHold(CmpInst::ICMP_UGE, Op0, Op1))
-      return false;
+  if (!I->hasNoUnsignedWrap() && isKnownNoWrap(I, Info, /*Signed=*/false)) {
     LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
     I->setHasNoUnsignedWrap();
-    return true;
+    Changed = true;
   }
-  case Instruction::Add:
-    return tryToStrengthenBinOpFlags(I, Op0, Op1, Info);
-  case Instruction::Mul:
-  case Instruction::Shl: {
-    auto Opcode = static_cast<Instruction::BinaryOps>(I->getOpcode());
-    bool Changed = tryToStrengthenBinOpFlags(I, Op0, Op1, Info);
-    if (!I->hasNoUnsignedWrap() && I->hasNoSignedWrap() &&
-        Info.isKnownNonNegative(Op0) &&
-        (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1))) {
-      LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
-      I->setHasNoUnsignedWrap();
-      Changed = true;
-    }
-    return Changed;
-  }
-  default:
-    return false;
-  }
+  return Changed;
 }
 
 void State::addInfoFor(BasicBlock &BB) {
@@ -1515,7 +1536,8 @@ void State::addInfoFor(BasicBlock &BB) {
       }
       break;
     }
-    // Enqueue ssub_with_overflow for simplification.
+    // Enqueue intrinsics for simplification.
+    case Intrinsic::sadd_with_overflow:
     case Intrinsic::ssub_with_overflow:
     case Intrinsic::ucmp:
     case Intrinsic::scmp:
@@ -1559,10 +1581,13 @@ void State::addInfoFor(BasicBlock &BB) {
         WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), BO));
     }
 
-    // Queue instructions whose flags may be strengthened based on the facts
-    // that hold on entry to BB.
-    if (canStrengthenFlags(&I))
-      WorkList.push_back(FactOrCheck::getCheck(DT.getNode(&BB), &I));
+    // Queue instructions whose flags may be strengthened, checked at the
+    // closest point dominating all uses.
+    if (canStrengthenFlags(&I)) {
+      Instruction *CommonDom = findCommonDominatorOfUses(I, DT);
+      WorkList.push_back(FactOrCheck::getCheck(
+          DT.getNode(CommonDom->getParent()), &I, CommonDom));
+    }
 
     GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
   }
@@ -2185,16 +2210,21 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
   }
 }
 
-static bool replaceSubOverflowUses(IntrinsicInst *II, Value *A, Value *B,
-                                   SmallVectorImpl<Instruction *> &ToRemove) {
+/// Replace the uses of the overflow intrinsic \p II, which has been proven not
+/// to signed-overflow, by (Opcode A, B).
+static bool replaceOverflowUses(IntrinsicInst *II,
+                                Instruction::BinaryOps Opcode, Value *A,
+                                Value *B,
+                                SmallVectorImpl<Instruction *> &ToRemove) {
   bool Changed = false;
   IRBuilder<> Builder(II->getParent(), II->getIterator());
-  Value *Sub = nullptr;
+  Value *Res = nullptr;
   for (User *U : make_early_inc_range(II->users())) {
     if (match(U, m_ExtractValue<0>(m_Value()))) {
-      if (!Sub)
-        Sub = Builder.CreateNSWSub(A, B);
-      U->replaceAllUsesWith(Sub);
+      if (!Res)
+        Res = Builder.CreateNoWrapBinOp(Opcode, A, B, /*IsNUW=*/false,
+                                        /*IsNSW=*/true);
+      U->replaceAllUsesWith(Res);
       Changed = true;
     } else if (match(U, m_ExtractValue<1>(m_Value()))) {
       U->replaceAllUsesWith(Builder.getFalse());
@@ -2223,31 +2253,33 @@ static bool replaceSubOverflowUses(IntrinsicInst *II, Value *A, Value *B,
 static bool
 tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
                           SmallVectorImpl<Instruction *> &ToRemove) {
-  auto DoesConditionHold = [](CmpInst::Predicate Pred, Value *A, Value *B,
-                              ConstraintInfo &Info) {
-    auto R = Info.getConstraintForSolving(Pred, A, B);
-    // Nothing can be proven if the constraint has no variables. This also
-    // covers rows that could not be decomposed, which are empty.
-    if (R.isConstantOnly())
-      return false;
-
-    auto &CSToUse = Info.getCS(R.IsSigned);
-    return CSToUse.isConditionImpliedInSubSystem(R.Coefficients);
-  };
-
-  bool Changed = false;
-  if (II->getIntrinsicID() == Intrinsic::ssub_with_overflow) {
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::ssub_with_overflow: {
     // If A s>= B && B s>= 0, ssub.with.overflow(a, b) should not overflow and
     // can be simplified to a regular sub.
     Value *A = II->getArgOperand(0);
     Value *B = II->getArgOperand(1);
-    if (!DoesConditionHold(CmpInst::ICMP_SGE, A, B, Info) ||
-        !DoesConditionHold(CmpInst::ICMP_SGE, B,
-                           ConstantInt::get(A->getType(), 0), Info))
+    if (!Info.doesHold(CmpInst::ICMP_SGE, A, B) ||
+        !Info.doesHold(CmpInst::ICMP_SGE, B, ConstantInt::get(A->getType(), 0)))
       return false;
-    Changed = replaceSubOverflowUses(II, A, B, ToRemove);
+    return replaceOverflowUses(II, Instruction::Sub, A, B, ToRemove);
   }
-  return Changed;
+  case Intrinsic::sadd_with_overflow: {
+    Value *A = II->getArgOperand(0);
+    Value *B = II->getArgOperand(1);
+    auto *C = dyn_cast<ConstantInt>(B);
+    if (!C ||
+        !doesHoldInRange(Info, A,
+                         ConstantRange::makeGuaranteedNoWrapRegion(
+                             Instruction::Add, ConstantRange(C->getValue()),
+                             OverflowingBinaryOperator::NoSignedWrap),
+                         /*Signed=*/true))
+      return false;
+    return replaceOverflowUses(II, Instruction::Add, A, B, ToRemove);
+  }
+  default:
+    return false;
+  }
 }
 
 static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
@@ -2338,7 +2370,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       if (!Inst)
         continue;
       if (canStrengthenFlags(Inst)) {
-        Changed |= tryToStrengthenFlags(Inst, Info, ToRemove);
+        Changed |= tryToStrengthenFlags(Inst, Info);
         continue;
       }
       LLVM_DEBUG(dbgs() << "Processing condition to simplify: " << *Inst

@@ -74,6 +74,11 @@ Status codes for GETCWD.
 #define FORTRAN_RUNTIME_STAT_MISSING_CWD 111
 
 #if 0
+Status code for NEXT/PREVIOUS at enumeration type boundary.
+#endif
+#define FORTRAN_RUNTIME_STAT_ENUM_BOUNDARY 112
+
+#if 0
 ieee_class_type values
 The sequence is that of F18 Clause 17.2p3, but nothing depends on that.
 #endif

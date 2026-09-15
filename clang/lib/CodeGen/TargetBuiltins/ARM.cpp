@@ -2170,15 +2170,10 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   }
 
   if (BuiltinID == clang::ARM::BI__clear_cache) {
-    assert(E->getNumArgs() == 2 && "__clear_cache takes 2 arguments");
-    const FunctionDecl *FD = E->getDirectCallee();
-    Value *Ops[2];
-    for (unsigned i = 0; i < 2; i++)
-      Ops[i] = EmitScalarExpr(E->getArg(i));
-    llvm::Type *Ty = CGM.getTypes().ConvertType(FD->getType());
-    llvm::FunctionType *FTy = cast<llvm::FunctionType>(Ty);
-    StringRef Name = FD->getName();
-    return EmitNounwindRuntimeCall(CGM.CreateRuntimeFunction(FTy, Name), Ops);
+    Value *Begin = EmitScalarExpr(E->getArg(0));
+    Value *End = EmitScalarExpr(E->getArg(1));
+    Function *F = CGM.getIntrinsic(Intrinsic::clear_cache, {CGM.DefaultPtrTy});
+    return Builder.CreateCall(F, {Begin, End});
   }
 
   if (BuiltinID == clang::ARM::BI__builtin_arm_mcrr ||
@@ -4140,10 +4135,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svdup_n_b16:
   case SVE::BI__builtin_sve_svdup_n_b32:
   case SVE::BI__builtin_sve_svdup_n_b64: {
-    Value *CmpNE =
-        Builder.CreateICmpNE(Ops[0], Constant::getNullValue(Ops[0]->getType()));
     llvm::ScalableVectorType *OverloadedTy = getSVEType(TypeFlags);
-    Value *Dup = EmitSVEDupX(CmpNE, OverloadedTy);
+    Value *Dup = EmitSVEDupX(Ops[0], OverloadedTy);
     return EmitSVEPredicateCast(Dup, cast<llvm::ScalableVectorType>(Ty));
   }
 
@@ -4620,15 +4613,10 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 
   if (BuiltinID == clang::AArch64::BI__clear_cache) {
-    assert(E->getNumArgs() == 2 && "__clear_cache takes 2 arguments");
-    const FunctionDecl *FD = E->getDirectCallee();
-    Value *Ops[2];
-    for (unsigned i = 0; i < 2; i++)
-      Ops[i] = EmitScalarExpr(E->getArg(i));
-    llvm::Type *Ty = CGM.getTypes().ConvertType(FD->getType());
-    llvm::FunctionType *FTy = cast<llvm::FunctionType>(Ty);
-    StringRef Name = FD->getName();
-    return EmitNounwindRuntimeCall(CGM.CreateRuntimeFunction(FTy, Name), Ops);
+    Value *Begin = EmitScalarExpr(E->getArg(0));
+    Value *End = EmitScalarExpr(E->getArg(1));
+    Function *F = CGM.getIntrinsic(Intrinsic::clear_cache, {CGM.DefaultPtrTy});
+    return Builder.CreateCall(F, {Begin, End});
   }
 
   if ((BuiltinID == clang::AArch64::BI__builtin_arm_ldrex ||

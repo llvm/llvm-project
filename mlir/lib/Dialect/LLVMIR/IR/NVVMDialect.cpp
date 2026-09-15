@@ -16,6 +16,8 @@
 
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 
+#include "IR/NVVMOps.h"
+
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -93,8 +95,8 @@ getNVVMCtaGroupKind(NVVM::CTAGroupKind ctaGroup) {
   llvm_unreachable("unsupported cta_group value");
 }
 
-static ParseResult parseCTAGroup(OpAsmParser &parser,
-                                 NVVM::CTAGroupKindAttr &groupAttr) {
+ParseResult mlir::NVVM::parseCTAGroup(OpAsmParser &parser,
+                                      NVVM::CTAGroupKindAttr &groupAttr) {
   StringRef keyword;
   if (parser.parseKeyword(&keyword))
     return failure();
@@ -106,8 +108,8 @@ static ParseResult parseCTAGroup(OpAsmParser &parser,
   return success();
 }
 
-static void printCTAGroup(OpAsmPrinter &printer, Operation *,
-                          NVVM::CTAGroupKindAttr groupAttr) {
+void mlir::NVVM::printCTAGroup(OpAsmPrinter &printer, Operation *,
+                               NVVM::CTAGroupKindAttr groupAttr) {
   printer << NVVM::stringifyCTAGroupKind(groupAttr.getValue());
 }
 
@@ -3928,6 +3930,18 @@ Ex2Op::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   return {id, {mt.lookupValue(thisOp.getSrc())}};
 }
 
+LogicalResult NVVM::Ex2Op::verify() {
+  auto vectorType = dyn_cast<VectorType>(getSrc().getType());
+  if (!vectorType)
+    return success();
+
+  if (vectorType.getElementType().isF16() && getFtz())
+    return emitOpError("FTZ is not supported for vector<2xf16>");
+  if (vectorType.getElementType().isBF16() && !getFtz())
+    return emitOpError("FTZ is required for vector<2xbf16>");
+  return success();
+}
+
 mlir::NVVM::IDArgPair
 RsqrtOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
                                llvm::IRBuilderBase &builder) {
@@ -5836,10 +5850,10 @@ LogicalResult Tcgen05StOp::verify() {
 
 /// Infer the result ranges for the NVVM SpecialRangeableRegisterOp that might
 /// have ConstantRangeAttr.
-static void nvvmInferResultRanges(std::optional<LLVM::ConstantRangeAttr> range,
-                                  Value result,
-                                  ArrayRef<::mlir::ConstantIntRanges> argRanges,
-                                  SetIntRangeFn setResultRanges) {
+void mlir::NVVM::nvvmInferResultRanges(
+    std::optional<LLVM::ConstantRangeAttr> range, Value result,
+    ArrayRef<::mlir::ConstantIntRanges> argRanges,
+    SetIntRangeFn setResultRanges) {
   if (range) {
     setResultRanges(result, {range->getLower(), range->getUpper(),
                              range->getLower(), range->getUpper()});
@@ -5850,9 +5864,8 @@ static void nvvmInferResultRanges(std::optional<LLVM::ConstantRangeAttr> range,
 
 /// Verify the range attribute satisfies LLVM ConstantRange constructor
 /// requirements for NVVM SpecialRangeableRegisterOp.
-static LogicalResult
-verifyConstantRangeAttr(Operation *op,
-                        std::optional<LLVM::ConstantRangeAttr> rangeAttr) {
+LogicalResult mlir::NVVM::verifyConstantRangeAttr(
+    Operation *op, std::optional<LLVM::ConstantRangeAttr> rangeAttr) {
   if (!rangeAttr)
     return success();
 
@@ -6975,10 +6988,7 @@ struct NVVMInlinerInterface final : DialectInlinerInterface {
 
 // TODO: This should be the llvm.nvvm dialect once this is supported.
 void NVVMDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/LLVMIR/NVVMOps.cpp.inc"
-      >();
+  registerNVVMDialectOperations(this);
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc"
@@ -7195,9 +7205,6 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
 
   return success();
 }
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/LLVMIR/NVVMOps.cpp.inc"
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc"

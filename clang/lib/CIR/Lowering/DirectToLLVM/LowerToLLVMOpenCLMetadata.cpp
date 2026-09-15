@@ -171,5 +171,48 @@ void OpenCLFunctionMetadataLowering::lower(
   convertOpenCLKernelArgMetadata(clArgMetadata, functionMetadata);
 }
 
+static void createOpenCLVersionNamedMetadata(mlir::ModuleOp module,
+                                             llvm::StringRef name,
+                                             mlir::LLVM::MDNodeAttr node) {
+  mlir::MLIRContext *ctx = module.getContext();
+  mlir::OpBuilder builder(ctx);
+  builder.setInsertionPointToEnd(module.getBody());
+  mlir::LLVM::NamedMetadataOp::create(builder, module.getLoc(), name,
+                                      mlir::ArrayAttr::get(ctx, node));
+}
+
+static void emitOpenCLVersionMetadata(mlir::ModuleOp module,
+                                      llvm::StringRef metadataName,
+                                      mlir::Attribute versionAttr) {
+  auto version = mlir::cast<cir::OpenCLVersionAttr>(versionAttr);
+  mlir::MLIRContext *ctx = module.getContext();
+  LLVMMetadataNodeBuilder metadataBuilder(ctx);
+
+  unsigned versionMetadata[] = {static_cast<unsigned>(version.getMajor()),
+                                static_cast<unsigned>(version.getMinor())};
+  createOpenCLVersionNamedMetadata(module, metadataName,
+                                   metadataBuilder.getI32Node(versionMetadata));
+}
+
+void lowerOpenCLModuleMetadataAttrs(mlir::ModuleOp module) {
+  struct OpenCLModuleMetadataMapping {
+    llvm::StringRef cirAttrName;
+    llvm::StringRef llvmMetadataName;
+  };
+
+  const OpenCLModuleMetadataMapping moduleMetadataMappings[] = {
+      {cir::CIRDialect::getOpenCLVersionAttrName(), "opencl.ocl.version"},
+      {cir::CIRDialect::getOpenCLCXXVersionAttrName(), "opencl.cxx.version"},
+  };
+
+  for (const OpenCLModuleMetadataMapping &mapping : moduleMetadataMappings) {
+    mlir::Attribute version = module->getAttr(mapping.cirAttrName);
+    if (!version)
+      continue;
+    emitOpenCLVersionMetadata(module, mapping.llvmMetadataName, version);
+    module->removeAttr(mapping.cirAttrName);
+  }
+}
+
 } // namespace direct
 } // namespace cir
