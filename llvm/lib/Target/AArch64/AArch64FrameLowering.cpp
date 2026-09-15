@@ -1395,11 +1395,10 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
   // large enough to displace it; account for that displacement here so CSR
   // objects aren't misclassified as locals and addressed via the base
   // pointer.
+  bool IsWin64 = Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv(),
+                                              MF.getFunction().isVarArg());
   const int64_t FixedObjectSize = getFixedObjectSize(
-      MF, AFI,
-      Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv(),
-                                   MF.getFunction().isVarArg()),
-      false);
+      MF, AFI, IsWin64, /*IsFunclet*/ false);
   bool isCSR =
       !isFixed && ObjectOffset >= -((int64_t)AFI->getCalleeSavedStackSize(MFI) +
                                     FixedObjectSize);
