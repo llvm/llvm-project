@@ -45,6 +45,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LoopFuse.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -54,6 +55,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Verifier.h"
@@ -65,6 +67,7 @@
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include <list>
+#include <tuple>
 
 using namespace llvm;
 
@@ -894,8 +897,7 @@ private:
         unsigned ReusedValueCount = ReusedValues.size();
         bool BeneficialToFuse = isBeneficialFusion(ReusedValueCount);
         LLVM_DEBUG(dbgs() << "\tFusion appears to be "
-                          << (BeneficialToFuse ? "" : "un")
-                          << "profitable!\n");
+                          << (BeneficialToFuse ? "" : "un") << "profitable!\n");
         if (!BeneficialToFuse) {
           ++InsufficientReuse;
           reportFusionInsufficientReuse(FC0, FC1, ReusedValueCount);
@@ -1117,6 +1119,59 @@ private:
     return true;
   }
 
+  using AffineLoadKey = std::tuple<Type *, const SCEV *, const SCEV *>;
+
+  std::optional<AffineLoadKey> getAffineLoadKey(const FusionCandidate &FC,
+                                                Instruction &I) {
+    auto *Load = dyn_cast<LoadInst>(&I);
+    if (!Load)
+      return std::nullopt;
+
+    const auto *AR =
+        dyn_cast<SCEVAddRecExpr>(SE.getSCEV(Load->getPointerOperand()));
+    if (!AR || AR->getLoop() != FC.L || !AR->isAffine())
+      return std::nullopt;
+
+    return AffineLoadKey{Load->getType(), AR->getStart(),
+                         AR->getStepRecurrence(SE)};
+  }
+
+  /// Collect distinct read-read addresses reused at corresponding iterations.
+  ///
+  /// This uses exact affine SCEV equality rather than adding a potentially
+  /// expensive read-read DependenceAnalysis query for every load pair.
+  void collectReadReadReuse(const FusionCandidate &FC0,
+                            const FusionCandidate &FC1,
+                            ReusedValueSet &ReusedValues) {
+    if (ReusedValues.size() >= FusionMinReusedValues)
+      return;
+
+    SmallDenseMap<AffineLoadKey, Instruction *, 8> LoadAccesses0;
+    for (Instruction *ReadL0 : FC0.MemReads) {
+      std::optional<AffineLoadKey> Key = getAffineLoadKey(FC0, *ReadL0);
+      if (!Key)
+        continue;
+
+      LoadAccesses0.try_emplace(*Key, ReadL0);
+    }
+
+    for (Instruction *ReadL1 : FC1.MemReads) {
+      std::optional<AffineLoadKey> Key = getAffineLoadKey(FC1, *ReadL1);
+      if (!Key)
+        continue;
+
+      Instruction *MatchingLoad = LoadAccesses0.lookup(*Key);
+      if (!MatchingLoad)
+        continue;
+
+      ReusedValues.insert(MatchingLoad);
+      LLVM_DEBUG(dbgs() << "Same-iteration read-read reuse via " << *MatchingLoad
+                        << "\n");
+      if (ReusedValues.size() >= FusionMinReusedValues)
+        return;
+    }
+  }
+
   /// Return true if the dependences between @p I0 (in @p L0) and @p I1 (in
   /// @p L1) allow loop fusion of @p L0 and @p L1.
   bool dependencesAllowFusion(const FusionCandidate &FC0,
@@ -1267,6 +1322,9 @@ private:
         if (!dependencesAllowFusion(FC0, FC1, *ReadL0, *WriteL1)) {
           return false;
         }
+
+    if (ReusedValues)
+      collectReadReadReuse(FC0, FC1, *ReusedValues);
 
     return true;
   }
