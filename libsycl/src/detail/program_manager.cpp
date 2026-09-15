@@ -154,7 +154,7 @@ static bool isImageCompatible(const DeviceImageManager &Image,
                               const DeviceImpl &Device) {
   const llvm::object::OffloadBinary &OB = Image.getOffloadBinary();
   if (!(OB.getTriple() == DeviceBinaryTripleSPIRV64 &&
-        Device.getBackend() == sycl::backend::level_zero))
+        Device.getBackend() == sycl::backend::ext_llvm_level_zero))
     return false;
 
   bool IsValid{};
