@@ -2388,6 +2388,8 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
       // However, we may have assumptions about the formal argument's type and
       // may have a need to insert a ptr cast for the actual parameter of this
       // call.
+      if (OpIdx >= CalledF->arg_size())
+        continue;
       Argument *CalledArg = CalledF->getArg(OpIdx);
       if (!GR->findDeducedElementType(CalledArg))
         continue;
