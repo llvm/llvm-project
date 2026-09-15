@@ -8,11 +8,6 @@
 
 # Aliasing in Fortran
 
-```{contents}
----
-local:
----
-```
 
 ## Introduction
 
