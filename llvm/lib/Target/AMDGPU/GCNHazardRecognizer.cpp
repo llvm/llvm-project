@@ -3171,7 +3171,10 @@ int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) const {
   return WaitStatesNeeded;
 }
 
-/// \returns the non-mac, AGPR form of MFMA \p Opc.
+/// One MFMA can be written with up to four opcodes that differ only in how vdst
+/// and src2 are encoded: both are either AGPRs or VGPRs, and the mac form ties
+/// vdst to src2 instead of taking them as separate operands. \returns the AGPR,
+/// non-mac opcode, so that every form of the same MFMA maps to one value.
 static unsigned getMFMANonMacAGPRFormOp(unsigned Opc) {
   if (int NonMacOp = AMDGPU::getMFMAEarlyClobberOp(Opc); NonMacOp != -1)
     Opc = NonMacOp;
@@ -3248,20 +3251,21 @@ int GCNHazardRecognizer::getMFMAOverlappedSrcCWaitStates(
   constexpr int GFX950_DMFMA16x16WritesVGPROverlappedSrcCWaitStates = 17;
   constexpr int DMFMA4x4WritesVGPROverlappedSrcCWaitStates = 4;
 
+  // An XDL read of a non-XDL result needs no wait states. DGEMM is never XDL,
+  // so this also covers the f64 writers handled below.
+  if (TII.isXDL(*Reader) && !TII.isXDL(*Writer))
+    return 0;
+
   switch (Writer->getOpcode()) {
   case AMDGPU::V_MFMA_F64_16X16X4F64_e64:
   case AMDGPU::V_MFMA_F64_16X16X4F64_vgprcd_e64:
   case AMDGPU::V_MFMA_F64_16X16X4F64_mac_e64:
   case AMDGPU::V_MFMA_F64_16X16X4F64_mac_vgprcd_e64:
-    if (TII.isXDL(*Reader))
-      return 0;
     return ST.hasGFX950Insts()
                ? GFX950_DMFMA16x16WritesVGPROverlappedSrcCWaitStates
                : DMFMA16x16WritesVGPROverlappedSrcCWaitStates;
   case AMDGPU::V_MFMA_F64_4X4X4F64_e64:
   case AMDGPU::V_MFMA_F64_4X4X4F64_vgprcd_e64:
-    if (TII.isXDL(*Reader))
-      return 0;
     return DMFMA4x4WritesVGPROverlappedSrcCWaitStates;
   default:
     break;
@@ -3269,9 +3273,6 @@ int GCNHazardRecognizer::getMFMAOverlappedSrcCWaitStates(
 
   int NumPasses = TSchedModel.computeInstrLatency(Writer);
   if (ST.hasGFX940Insts()) {
-    if (TII.isXDL(*Reader) && !TII.isXDL(*Writer))
-      return 0;
-
     if (!TII.isXDL(*Writer))
       return GFX940_SMFMA_N_PassWritesVGPROverlappedSMFMASrcCWaitStates(
           NumPasses);
@@ -3383,9 +3384,10 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) const {
         // The accumulator forwarding path that allows zero wait states is only
         // available while the chain stays on a single MFMA. Two different MFMAs
         // sharing an accumulator need the wait states of a partial overlap.
-        if (ST.hasGFX940Insts() && !isSameMFMA(Opc, Opc1))
+        if (ST.hasGFX940Insts() && !isSameMFMA(Opc, Opc1)) {
           NeedWaitStates = std::max(NeedWaitStates,
                                     getMFMAOverlappedSrcCWaitStates(MI, MI1));
+        }
       } else {
         NeedWaitStates = getMFMAOverlappedSrcCWaitStates(MI, MI1);
       }
