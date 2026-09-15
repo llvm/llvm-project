@@ -151,3 +151,24 @@ subroutine trans_test(store, word)
     real, allocatable :: src
     store = transfer(src, store)
   end subroutine
+
+  ! TRANSFER into a SEQUENCE derived type with tail padding: the assignment back
+  ! to the derived-type variable must use fir.copy (full storage size including
+  ! tail padding) rather than a field-by-field copy that silently drops padding.
+  subroutine trans_test_seq_tail_pad(raw, x)
+    ! CHECK-LABEL: func @_QPtrans_test_seq_tail_pad(
+    ! CHECK:         fir.call @_FortranATransfer(
+    ! CHECK:         hlfir.assign {{.*}} to %[[xDecl:.*]]#0
+    ! CHECK-NOT:     hlfir.assign
+    ! CHECK:         return
+    ! CHECK:       }
+    use iso_c_binding, only: c_int, c_int8_t
+    type :: t
+      sequence
+      integer(c_int)    :: a
+      integer(c_int8_t) :: b
+    end type
+    character(len=8), intent(inout) :: raw
+    type(t), intent(out)            :: x
+    x = transfer(raw, x)
+  end subroutine
