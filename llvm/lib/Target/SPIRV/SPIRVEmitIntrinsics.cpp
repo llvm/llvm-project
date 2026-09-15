@@ -395,6 +395,7 @@ public:
   Instruction *visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
   Instruction *visitUnreachableInst(UnreachableInst &I);
   Instruction *visitCallInst(CallInst &I);
+  void preprocessBoolVectorLoads(Function &F);
 
   bool runOnModule(Module &M);
 };
@@ -3754,6 +3755,7 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
     I.mutateType(I32Ty);
   }
 
+  preprocessBoolVectorLoads(Func);
   preprocessBoolVectorBitcasts(Func);
   SmallVector<Instruction *> Worklist(
       llvm::make_pointer_range(instructions(Func)));
@@ -3985,6 +3987,70 @@ bool SPIRVEmitIntrinsicsImpl::processMaskedMemIntrinsic(IntrinsicInst &I) {
   }
 
   return false;
+}
+
+void SPIRVEmitIntrinsicsImpl::preprocessBoolVectorLoads(Function &F) {
+  SmallVector<LoadInst *, 4> ToReplace;
+
+  for (auto &I : instructions(F)) {
+    auto *LI = dyn_cast<LoadInst>(&I);
+    if (!LI || LI->isVolatile() || LI->isAtomic())
+      continue;
+
+    auto *VecTy = dyn_cast<FixedVectorType>(LI->getType());
+    if (!VecTy || !VecTy->getElementType()->isIntegerTy(1))
+      continue;
+
+    if ((VecTy->getNumElements() % 8) != 0)
+      continue;
+
+    bool IsByteStrideExtractPattern = true;
+    for (User *U : LI->users()) {
+      auto *EEI = dyn_cast<ExtractElementInst>(U);
+      if (!EEI || !isa<ConstantInt>(EEI->getIndexOperand())) {
+        IsByteStrideExtractPattern = false;
+        break;
+      }
+
+      unsigned Index =
+          cast<ConstantInt>(EEI->getIndexOperand())->getZExtValue();
+      if ((Index % 8) != 0 || Index >= VecTy->getNumElements()) {
+        IsByteStrideExtractPattern = false;
+        break;
+      }
+    }
+
+    if (IsByteStrideExtractPattern)
+      ToReplace.push_back(LI);
+  }
+
+  for (LoadInst *LI : ToReplace) {
+    auto *VecTy = cast<FixedVectorType>(LI->getType());
+    unsigned NumElems = VecTy->getNumElements();
+    unsigned NumBytes = NumElems / 8;
+    IRBuilder<> B(LI);
+    Type *ByteVecTy = FixedVectorType::get(B.getInt8Ty(), NumBytes);
+    auto *ByteLoad = B.CreateLoad(ByteVecTy, LI->getPointerOperand());
+    ByteLoad->setAlignment(LI->getAlign());
+    ByteLoad->copyMetadata(*LI);
+
+    SmallVector<ExtractElementInst *, 8> Extracts;
+    for (User *U : LI->users())
+      Extracts.push_back(cast<ExtractElementInst>(U));
+
+    for (ExtractElementInst *EEI : Extracts) {
+      unsigned Index =
+          cast<ConstantInt>(EEI->getIndexOperand())->getZExtValue();
+      Value *Byte = B.CreateExtractElement(
+          ByteLoad,
+          ConstantInt::get(EEI->getIndexOperand()->getType(), Index / 8));
+      Value *Bit = B.CreateTrunc(Byte, B.getInt1Ty());
+      EEI->replaceAllUsesWith(Bit);
+      EEI->eraseFromParent();
+    }
+
+    LI->eraseFromParent();
+  }
 }
 
 // SPIR-V doesn't support bitcasts involving vector boolean type. Decompose such
