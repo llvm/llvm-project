@@ -203,18 +203,19 @@ define <vscale x 2 x double> @streaming_compatible_with_scalable_vectors(<vscale
 ; CHECK-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    str z0, [sp, #1, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    mrs x19, SVCR
-; CHECK-NEXT:    tbz w19, #0, .LBB5_2
+; CHECK-NEXT:    mrs x8, SVCR
+; CHECK-NEXT:    tbz w8, #0, .LBB5_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB5_2:
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    addsvl x8, x8, #-1
-; CHECK-NEXT:    cbz x8, .LBB5_4
+; CHECK-NEXT:    rdvl x9, #1
+; CHECK-NEXT:    addsvl x9, x9, #-1
+; CHECK-NEXT:    cbz x9, .LBB5_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB5_4:
 ; CHECK-NEXT:    ldr z0, [sp, #1, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    mov x19, x8
 ; CHECK-NEXT:    bl normal_callee_scalable_vec_arg
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    tbz w19, #0, .LBB5_6
@@ -300,18 +301,19 @@ define <vscale x 2 x i1> @streaming_compatible_with_predicate_vectors(<vscale x 
 ; CHECK-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    str p0, [sp, #7, mul vl] // 2-byte Spill
-; CHECK-NEXT:    mrs x19, SVCR
-; CHECK-NEXT:    tbz w19, #0, .LBB6_2
+; CHECK-NEXT:    mrs x8, SVCR
+; CHECK-NEXT:    tbz w8, #0, .LBB6_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB6_2:
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    addsvl x8, x8, #-1
-; CHECK-NEXT:    cbz x8, .LBB6_4
+; CHECK-NEXT:    rdvl x9, #1
+; CHECK-NEXT:    addsvl x9, x9, #-1
+; CHECK-NEXT:    cbz x9, .LBB6_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:  .LBB6_4:
 ; CHECK-NEXT:    ldr p0, [sp, #7, mul vl] // 2-byte Reload
+; CHECK-NEXT:    mov x19, x8
 ; CHECK-NEXT:    bl normal_callee_predicate_vec_arg
 ; CHECK-NEXT:    str p0, [sp, #6, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    tbz w19, #0, .LBB6_6
@@ -382,28 +384,30 @@ define i32 @conditional_smstart_unreachable_block() "aarch64_pstate_sm_compatibl
 define void @conditional_smstart_no_successor_block(i1 %p) "aarch64_pstate_sm_compatible" nounwind {
 ; CHECK-LABEL: conditional_smstart_no_successor_block:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mrs x8, SVCR
+; CHECK-NEXT:    tbz w0, #0, .LBB8_6
+; CHECK-NEXT:  // %bb.1: // %if.then
 ; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    mrs x19, SVCR
-; CHECK-NEXT:    tbz w0, #0, .LBB8_5
-; CHECK-NEXT:  // %bb.1: // %if.then
-; CHECK-NEXT:    tbnz w19, #0, .LBB8_3
+; CHECK-NEXT:    tbnz w8, #0, .LBB8_3
 ; CHECK-NEXT:  // %bb.2: // %if.then
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB8_3: // %if.then
+; CHECK-NEXT:    mov x19, x8
 ; CHECK-NEXT:    bl streaming_callee
 ; CHECK-NEXT:    tbnz w19, #0, .LBB8_5
 ; CHECK-NEXT:  // %bb.4: // %if.then
 ; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:  .LBB8_5: // %exit
+; CHECK-NEXT:  .LBB8_5: // %if.then
 ; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:  .LBB8_6: // %exit
 ; CHECK-NEXT:    ret
   br i1 %p, label %if.then, label %exit
 
