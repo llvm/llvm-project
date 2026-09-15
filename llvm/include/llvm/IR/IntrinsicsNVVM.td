@@ -162,18 +162,36 @@ defvar MAX_BLOCK_SIZE_X = 1024;
 defvar MAX_BLOCK_SIZE_Y = 1024;
 defvar MAX_BLOCK_SIZE_Z = 64;
 
+// Helper class that pre-computes the ImmArg property list 
+// with optional trailing defaults.
+class BuildImmArgProps<list<LLVMType> flags, list<LLVMType> param_types,
+                       list<DefaultValue> trailing_defaults = []> {
+  defvar NumFlags = !size(flags);
+  defvar NumDefaults = !size(trailing_defaults);
+  defvar FirstDefault = !sub(NumFlags, NumDefaults);
+  list<IntrinsicProperty> Props =
+      !foreach(i, !range(flags),
+          ImmArg<ArgIndex<!add(i, !size(param_types))>,
+                 !if(!lt(i, FirstDefault),
+                     NoDefault,
+                     trailing_defaults[!sub(i, FirstDefault)])>);
+}
+
 class DefaultAttrsIntrinsicFlags<list<LLVMType> ret_types,
                 list<LLVMType> param_types,
                 list<LLVMType> flags,
                 list<IntrinsicProperty> intr_properties,
-                string name = "">
+                string name = "",
+                list<DefaultValue> trailing_flag_defaults = []>
   : DefaultAttrsIntrinsic<
         ret_types,
         !listconcat(param_types, flags),
         !listconcat(intr_properties,
-                    !foreach(i, !range(flags),
-                        ImmArg<ArgIndex<!add(i, !size(param_types))>>)),
-        name>;
+                    BuildImmArgProps<flags, param_types, trailing_flag_defaults>.Props),
+        name> {
+  assert !le(!size(trailing_flag_defaults), !size(flags)),
+         "number of trailing flag defaults exceeds number of flags";
+}
 
 // Helper class that concatenates list elements with
 // a given separator 'sep' and returns the result.
@@ -3855,7 +3873,7 @@ foreach sparse = [0, 1] in {
 
         def mma.record_name:
               DefaultAttrsIntrinsicFlags<[], args, flags, intrinsic_properties,
-                mma.intr_name>;
+                mma.intr_name, [DefaultValue<0>]>;
       } // ashift
     } // scale_d
   } // space
@@ -3899,7 +3917,8 @@ foreach sparse = [0, 1] in {
                   );
 
           def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
-                                  intrinsic_properties, mma.intr_name>;
+                                  intrinsic_properties, mma.intr_name,
+                                  [DefaultValue<0>]>;
         } // ashift
       } // scale_d
     } // cta_group
@@ -3934,7 +3953,7 @@ foreach sparse = [0, 1] in {
                          ArgInfo<cta_group, [ArgName<"cta_group">]>,
                          NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_a, "a">.Prop,
                          NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b, "b">.Prop]),
-            mma.intr_name>;
+            mma.intr_name, [DefaultValue<0>]>;
         }
       } // scale_vec_size
     } // kind

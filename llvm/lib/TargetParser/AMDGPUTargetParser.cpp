@@ -479,7 +479,7 @@ AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch) {
 }
 
 unsigned AMDGPU::getLocalMemorySize(GPUKind AK, bool FullSIMDMode) {
-  // gfx10/11/12 address half of the physical block, e.g. 64 KiB of 128 KiB.
+  // gfx6 and gfx10/11/12 address half of the physical block.
   unsigned Size = getMaxHWAddressableLocalMemorySize(AK);
   if (getFeatureBitset(AK).test(FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY))
     Size *= 2;
