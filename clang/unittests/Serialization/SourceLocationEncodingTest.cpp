@@ -54,7 +54,7 @@ uint64_t encodeLocal(SourceLocation::UIntTy Loc) {
 void roundTripChain(SourceLocation::UIntTy RecordOffset,
                     ArrayRef<SourceLocation::UIntTy> Locs) {
   SmallVector<uint64_t> Encoded;
-  Chain Enc(Chain::getSeedFrom(RecordOffset));
+  Chain Enc(RecordOffset + 2);
   for (SourceLocation::UIntTy Loc : Locs) {
     uint64_t E = Enc.deltaEncode(encodeLocal(Loc));
     // Nothing may spill into the module file index.
@@ -62,7 +62,7 @@ void roundTripChain(SourceLocation::UIntTy RecordOffset,
     Encoded.push_back(E);
   }
 
-  Chain Dec(Chain::getSeedFrom(RecordOffset));
+  Chain Dec(RecordOffset + 2);
   for (auto [E, Loc] : llvm::zip(Encoded, Locs)) {
     auto [Decoded, ModuleFileIndex] =
         SourceLocationEncoding::decode(Dec.deltaDecode(E));
@@ -105,11 +105,11 @@ TEST(SourceLocationEncoding, NoSpillIntoModuleFileIndex) {
   for (SourceLocation::UIntTy Off : {0u, 1u, 1u << 30, (1u << 31) - 3}) {
     for (SourceLocation::UIntTy Loc : {1u, 2u, MacroBit, MacroBit | 1u, Big,
                                        Big + 1, Biggest, Biggest - 1}) {
-      Chain Enc(Chain::getSeedFrom(Off));
+      Chain Enc(Off + 2);
       uint64_t Raw = encodeLocal(Loc);
       uint64_t E = Enc.deltaEncode(Raw);
       ASSERT_LE(E, 0xFFFFFFFFull);
-      Chain Dec(Chain::getSeedFrom(Off));
+      Chain Dec(Off + 2);
       ASSERT_EQ(Dec.deltaDecode(E), Raw);
     }
   }
@@ -122,7 +122,12 @@ TEST(SourceLocationEncoding, NoSpillIntoModuleFileIndex) {
 // lands just below.
 TEST(SourceLocationEncoding, HoleBoundary) {
   for (SourceLocation::UIntTy Off : {0u, 1u, 100u, 4096u, 1u << 20}) {
-    SourceLocation::UIntTy Seed = Chain::getSeedFrom(Off);
+    // What the chain seeds to: the rotation of a file location at the
+    // anchor, i.e. encodeRaw(Off + 2) == 2 * (Off + 2). Spelled out because
+    // Chain keeps encodeRaw private. Since hole == 2 * Seed - 1, the location
+    // landing just above the hole is the one whose raw value equals Seed,
+    // and the one just below is MacroBit | (Seed - 1).
+    SourceLocation::UIntTy Seed = 2 * (Off + 2);
     roundTripChain(Off, {Seed});                  // code == hole + 1
     roundTripChain(Off, {MacroBit | (Seed - 1)}); // code == hole
     roundTripChain(Off, {MacroBit | (Seed - 1), Seed});
@@ -132,12 +137,13 @@ TEST(SourceLocationEncoding, HoleBoundary) {
 // Locations owned by an imported module file keep their module file index and
 // are stored verbatim, and they must not disturb the chain around them.
 TEST(SourceLocationEncoding, ImportedLocationsBypassChain) {
+  constexpr SourceLocation::UIntTy RecordOffset = 64;
   uint64_t Imported = SourceLocationEncoding::encode(
       SourceLocation::getFromRawEncoding(4242), /*BaseOffset=*/100,
       /*BaseModuleFileIndex=*/3);
   ASSERT_NE(Imported >> 32, 0u);
 
-  Chain WithImport(Chain::getSeedFrom(64));
+  Chain WithImport(RecordOffset + 2);
   uint64_t A1 = WithImport.deltaEncode(encodeLocal(70));
   uint64_t I = WithImport.deltaEncode(Imported);
   uint64_t B1 = WithImport.deltaEncode(encodeLocal(90));
@@ -145,11 +151,11 @@ TEST(SourceLocationEncoding, ImportedLocationsBypassChain) {
   EXPECT_EQ(I, Imported) << "Imported location must pass through unchanged";
 
   // Dropping the imported location leaves the other two encodings untouched.
-  Chain WithoutImport(Chain::getSeedFrom(64));
+  Chain WithoutImport(RecordOffset + 2);
   EXPECT_EQ(WithoutImport.deltaEncode(encodeLocal(70)), A1);
   EXPECT_EQ(WithoutImport.deltaEncode(encodeLocal(90)), B1);
 
-  Chain Dec(Chain::getSeedFrom(64));
+  Chain Dec(RecordOffset + 2);
   EXPECT_EQ(SourceLocationEncoding::decode(Dec.deltaDecode(A1))
                 .first.getRawEncoding(),
             70u);

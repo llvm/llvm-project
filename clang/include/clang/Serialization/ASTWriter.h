@@ -85,6 +85,7 @@ enum class DeclUpdateKind;
 
 namespace SrcMgr {
 class FileInfo;
+class SLocEntry;
 } // namespace SrcMgr
 
 /// Writes an AST file containing the contents of a translation unit.
@@ -745,8 +746,21 @@ public:
   /// Emit a FileID.
   void AddFileID(FileID FID, RecordDataImpl &Record);
 
+  /// The starting offset of \p SLoc's entry within this module, with the dummy
+  /// entry skipped. This is what an SLocEntry record stores as its first field.
+  SourceLocation::UIntTy getEntryOffset(const SrcMgr::SLocEntry &SLoc) const;
+
+  /// Emit \p SLoc's entry offset as the record's first field and return a chain
+  /// anchored at that entry, for delta encoding the locations that follow.
+  SourceLocationEncoding::Chain EmitEntryOffset(const SrcMgr::SLocEntry &SLoc,
+                                                RecordDataImpl &Record);
+
   /// Emit a source location.
   void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record);
+
+  /// Emit a source location, delta encoded against \p Chain.
+  void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
+                         SourceLocationEncoding::Chain &Chain);
 
   /// Return the raw encodings for source locations.
   SourceLocationEncoding::RawLocEncoding

@@ -62,23 +62,33 @@ public:
   /// A delta encoder for a run of source locations.
   /// The high level strategy of the chain to encode the run is the following.
   /// Locations:           SL0          SL1          SL2
-  /// map to   :   (SL0 - seed)  (SL1 - SL0)  (SL2 - SL1)
+  /// map to   : (SL0 - anchor)  (SL1 - SL0)  (SL2 - SL1)
   ///
   /// Two wrinkles complicate this strategy's implementation.
   /// First, since the delta-encoded values are meant for VBR compression, they
   /// are mapped from int to unsigned int with the zigZag method.
   ///
-  /// Second, we are encoding an input value of 0 by 0, instead of using a
-  /// delta, and we are encoding a delta of zero by 1. This is because both
-  /// value 0 and a delta of zero show up frequently in source location delta
-  /// encoding. It would be wasteful to represent an absolute 0 using a delta
-  /// from a previous value in the run (the delta's absolute value may be big).
-  /// A consequence is that for a given Prev, zigZag(0 - Prev) should not be
-  /// used for any input, because 0 is encoded directly. This naturally allows
-  /// us to represent possible delta values in the following way:
+  /// Second, two cases are given their own codes instead of being stored as
+  /// distances.
   ///
-  /// delta = V - prev
-  /// hole = zigZag(0 - prev)
+  /// An invalid SourceLocation encodes to 0 -- encodeRaw is a bijection and
+  /// encodeRaw(0) == 0 -- and 0 is kept for it here. This case is common
+  /// because a macro argument expansion has no end location, so the writer
+  /// stores an invalid one in that field. Expressing it as a distance would be
+  /// wasteful: the distance from Prev back to the origin is a number as large
+  /// as Prev itself, while a dedicated code costs a single VBR chunk.
+  ///
+  /// A distance of zero -- the location repeats the Previous one in the run --
+  /// is stored as 1. That is also common, since an expansion's start and end
+  /// coincide whenever the invocation spans a single token.
+  ///
+  /// Reserving 0 has a consequence. For a given Prev, zigZag(0 - Prev) is the
+  /// distance that would arrive back at 0, and it can never occur, because an
+  /// invalid location took the branch above. So that code is dead, and
+  /// compacting it out is what makes everything fit:
+  ///
+  /// delta = V - Prev
+  /// hole = zigZag(0 - Prev)
   /// encoded = zigZag(delta) + 1 if zigZag(delta) < hole
   ///         = zigZag(delta)     if zigZag(delta) > hole
   ///
@@ -86,12 +96,11 @@ public:
   /// zigZag(delta): 0, 1, ... hole - 1, hole + 1, hole + 2, ...
   ///       encoded: 1, 2, ...     hole, hole + 1, hole + 2, ...
   ///
-  /// Note it is impossible for zigZag(delta) to be equal to the hole as that
-  /// would imply V == 0. In other words, if zigZag(delta) < hole, we increment
+  //  In other words, if zigZag(delta) < hole, we increment
   /// the encoded value by 1 to leave 0 to represent V == 0. If zigZag(delta)
   /// is larger than hole, we do not need to add 1. Therefore, we will
   /// not accidentally add 1 to values that may overflow beyond 2^32 - 1,
-  /// which may lead to accidental change of the ModuleIndex bits.
+  /// which may lead to accidental change of the ModuleFileIndex bits.
   /// This mapping avoids the issue llvm/llvm-project#145529 attempted to fix by
   /// design.
   class Chain {
@@ -111,25 +120,16 @@ public:
     /// Reverse mapping of zigZag.
     static UIntTy zagZig(UIntTy V) { return (V >> 1) ^ (UIntTy(0) - (V & 1)); }
 
-    /// Computes the hole left by 0 - prev.
+    /// Computes the hole left by 0 - Prev.
     UIntTy hole() const { return zigZag(UIntTy(0) - Prev); }
 
   public:
-    /// Get the seed for a chain from an SM_SLOC_EXPANSION_ENTRY record's first
-    /// field, Offset. That field holds the entry's adjusted module-local offset
-    /// with the dummy entry subtracted out, so adding 2 recovers the entry's
-    /// own position in the source location space. encodeRaw then puts it in the
-    /// same rotated space as the locations the chain encodes, so the deltas
-    /// line up. Reader and writer both derive the seed from this one field, so
-    /// they cannot drift apart.
-    static UIntTy getSeedFrom(SourceLocation::UIntTy RecordOffset) {
-      return encodeRaw(RecordOffset + 2);
-    }
-
-    explicit Chain(UIntTy Seed) : Prev(Seed) {
-      // Using zero as seed could make the chain very expensive since
+    explicit Chain(UIntTy AnchorOffset) : Prev(encodeRaw(AnchorOffset)) {
+      // Using zero as anchor could make the chain very expensive since
       // the deltas may be big.
-      assert(Seed != 0 && "Chain seed should anchor the run");
+      // Choose an offset that is closer to the source location being
+      // encoded.
+      assert(AnchorOffset != 0 && "Chain anchor should be non-zero");
     }
 
     RawLocEncoding deltaEncode(RawLocEncoding V) {

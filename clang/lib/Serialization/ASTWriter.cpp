@@ -2409,8 +2409,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
       if (!IsSLocAffecting[I])
         continue;
       SLocEntryOffsets.push_back(Offset);
-      // Starting offset of this entry within this module, so skip the dummy.
-      Record.push_back(getAdjustedOffset(SLoc->getOffset()) - 2);
+      Record.push_back(getEntryOffset(*SLoc));
       AddSourceLocation(getAffectingIncludeLoc(SourceMgr, File), Record);
       Record.push_back(File.getFileCharacteristic()); // FIXME: stable encoding
       Record.push_back(File.hasLineDirectives());
@@ -2469,21 +2468,17 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
       // The source location entry is a macro expansion.
       const SrcMgr::ExpansionInfo &Expansion = SLoc->getExpansion();
       SLocEntryOffsets.push_back(Offset);
-      // Starting offset of this entry within this module, so skip the dummy.
-      SourceLocation::UIntTy EntryOffset =
-          getAdjustedOffset(SLoc->getOffset()) - 2;
-      Record.push_back(EntryOffset);
+      auto Chain = EmitEntryOffset(*SLoc, Record);
 
-      SourceLocationEncoding::Chain Chain(
-          SourceLocationEncoding::Chain::getSeedFrom(EntryOffset));
-      auto EmitLoc = [&](SourceLocation Loc) {
-        Record.push_back(Chain.deltaEncode(
-            getRawSourceLocationEncoding(getAdjustedLocation(Loc))));
-      };
-      EmitLoc(Expansion.isMacroArgExpansion() ? SourceLocation()
-                                              : Expansion.getExpansionLocEnd());
-      EmitLoc(Expansion.getExpansionLocStart());
-      EmitLoc(Expansion.getSpellingLoc());
+      // The chain is stateful. Encode happens in the order specified in
+      // CreateSLocExpansionAbbrev.
+      AddSourceLocation(Expansion.isMacroArgExpansion()
+                            ? SourceLocation()
+                            : Expansion.getExpansionLocEnd(),
+                        Record, Chain);
+      AddSourceLocation(Expansion.getExpansionLocStart(), Record, Chain);
+      AddSourceLocation(Expansion.getSpellingLoc(), Record, Chain);
+
       Record.push_back(Expansion.isExpansionTokenRange());
 
       // Compute the token length for this macro expansion.
@@ -6884,9 +6879,33 @@ ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc) {
   return SourceLocationEncoding::encode(Loc, BaseOffset, ModuleFileIndex);
 }
 
+SourceLocation::UIntTy
+ASTWriter::getEntryOffset(const SrcMgr::SLocEntry &SLoc) const {
+  // Skip the dummy entry.
+  return getAdjustedOffset(SLoc.getOffset()) - 2;
+}
+
+SourceLocationEncoding::Chain
+ASTWriter::EmitEntryOffset(const SrcMgr::SLocEntry &SLoc,
+                           RecordDataImpl &Record) {
+  SourceLocation::UIntTy EntryOffset = getEntryOffset(SLoc);
+  Record.push_back(EntryOffset);
+  // The field has the dummy skipped, so the entry itself sits two further
+  // along. Anchoring the chain there is what keeps the deltas small.
+  return SourceLocationEncoding::Chain(EntryOffset + 2);
+}
+
 void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record) {
   Loc = getAdjustedLocation(Loc);
   Record.push_back(getRawSourceLocationEncoding(Loc));
+}
+
+void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
+                                  SourceLocationEncoding::Chain &Chain) {
+  // The two-argument form appends exactly one value, so rewriting Record.back()
+  // delta encodes what it just wrote without duplicating how it is encoded.
+  AddSourceLocation(Loc, Record);
+  Record.back() = Chain.deltaEncode(Record.back());
 }
 
 void ASTWriter::AddSourceRange(SourceRange Range, RecordDataImpl &Record) {
