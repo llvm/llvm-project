@@ -39,8 +39,8 @@ ProgramHeaders:
 ## Check the detection and reporting of warnings for malformed program header (in this case the program header does not exist).
 
 # RUN: yaml2obj --docnum=2 %s -o %t2
-# RUN: llvm-readobj --file-headers --program-headers %t2 2>&1 | FileCheck %s --implicit-check-not=warning: -DFILE=%t2 --check-prefix=INVALID-LLVM,INVALID-LLVM-DUPLICATE
-# RUN: llvm-readelf --file-headers --program-headers %t2 2>&1 | FileCheck %s --implicit-check-not=warning: -DFILE=%t2 --check-prefix=INVALID-GNU,INVALID-GNU-DUPLICATE
+# RUN: llvm-readobj --file-headers --program-headers %t2 2>&1 | FileCheck %s --implicit-check-not=warning: -DFILE=%t2 --check-prefixes=INVALID-LLVM,INVALID-LLVM-DUPLICATE
+# RUN: llvm-readelf --file-headers --program-headers %t2 2>&1 | FileCheck %s --implicit-check-not=warning: -DFILE=%t2 --check-prefixes=INVALID-GNU,INVALID-GNU-DUPLICATE
 
 ## TODO: the dynamic table isn't relevant to printing the program headers, so this warning should not be printed here.
 # INVALID-LLVM: warning: '[[FILE]]': unable to read program headers to locate the PT_DYNAMIC segment: program headers are longer than binary of size 336: e_phoff = 0x40, e_phnum = 65536, e_phentsize = 56

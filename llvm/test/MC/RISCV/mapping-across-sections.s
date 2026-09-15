@@ -1,5 +1,5 @@
-# RUN: llvm-mc -triple=riscv32 -filetype=obj %s | llvm-readelf -Ss - | FileCheck %s --check-prefix=CHECK,CHECK-RV32
-# RUN: llvm-mc -triple=riscv64 -filetype=obj %s | llvm-readelf -Ss - | FileCheck %s --check-prefix=CHECK,CHECK-RV64
+# RUN: llvm-mc -triple=riscv32 -filetype=obj %s | llvm-readelf -Ss - | FileCheck %s --check-prefixes=CHECK,CHECK-RV32
+# RUN: llvm-mc -triple=riscv64 -filetype=obj %s | llvm-readelf -Ss - | FileCheck %s --check-prefixes=CHECK,CHECK-RV64
 
         .text
         nop

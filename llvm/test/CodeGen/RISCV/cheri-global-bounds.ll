@@ -1,6 +1,6 @@
-; RUN: llc -mtriple riscv32 -mattr=+experimental-y -target-abi il32pc64 %s -o - | FileCheck -check-prefix=RVY32,COMMON %s
-; RUN: llc -mtriple riscv64 -mattr=+experimental-y -target-abi l64pc128 %s -o - | FileCheck -check-prefix=RVY64,COMMON %s
-; RUN: llc -mtriple riscv64 -mattr=+xcheriot -target-abi cheriot %s -o - | FileCheck -check-prefix=CHERIOT,COMMON %s
+; RUN: llc -mtriple riscv32 -mattr=+experimental-y -target-abi il32pc64 %s -o - | FileCheck -check-prefixes=RVY32,COMMON %s
+; RUN: llc -mtriple riscv64 -mattr=+experimental-y -target-abi l64pc128 %s -o - | FileCheck -check-prefixes=RVY64,COMMON %s
+; RUN: llc -mtriple riscv64 -mattr=+xcheriot -target-abi cheriot %s -o - | FileCheck -check-prefixes=CHERIOT,COMMON %s
 
 @global1 = global [6995 x i8] zeroinitializer, align 1
 

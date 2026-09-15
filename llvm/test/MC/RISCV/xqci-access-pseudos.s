@@ -5,7 +5,7 @@
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zca,+zcb,+relax < %s \
 # RUN:     | llvm-objdump --mattr=+zca,+zcb -M no-aliases --no-print-imm-hex -dr - \
-# RUN:     | FileCheck -check-prefix=CHECK-INST,CHECK-RELOC %s
+# RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-RELOC %s
 
 # RUN: not llvm-mc %s -triple=riscv64 -mattr=+zca,+zcb 2>&1 \
 # RUN:     | FileCheck -check-prefix=CHECK-RV64 %s
