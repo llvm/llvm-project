@@ -5,7 +5,6 @@
 # Find Lua and SWIG as a whole.
 
 if(LUA_LIBRARIES AND LUA_INCLUDE_DIR AND LLDB_ENABLE_SWIG)
-  set(LUAANDSWIG_FOUND TRUE)
   set(LuaAndSwig_FOUND TRUE)
 else()
   if (LLDB_ENABLE_SWIG)
@@ -33,7 +32,7 @@ else()
   include(FindPackageHandleStandardArgs)
   find_package_handle_standard_args(LuaAndSwig
                                     FOUND_VAR
-                                      LUAANDSWIG_FOUND
+                                      LuaAndSwig_FOUND
                                     REQUIRED_VARS
                                       LUA_EXECUTABLE
                                       LUA_LIBRARIES
