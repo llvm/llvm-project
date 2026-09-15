@@ -32,5 +32,4 @@ or just happens to have an error, then the error is forwarded as a `scalable-sta
 These errors can be downgraded into warnings using `-Wno-error=scalable-static-analysis-framework`.
 These errors can be completely suppressed using `-Wno-scalable-static-analysis-framework`.
 
-See the [diagnostic flags](https://clang.llvm.org/docs/DiagnosticsReference.html#wscalable-static-analysis-framework) for the full list of diagnostics controlled by `-Wscalable-static-analysis-framework`.
-
+See the [diagnostic flags](project:../../DiagnosticsReference.md#wscalable-static-analysis-framework) for the full list of diagnostics controlled by `-Wscalable-static-analysis-framework`.

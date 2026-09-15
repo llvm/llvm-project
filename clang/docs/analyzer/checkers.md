@@ -197,7 +197,7 @@ void test() {
 Null pointer dereferences of pointers with address spaces are not always defined
 as error. Specifically on x86/x86-64 target if the pointer address space is
 256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS Segment), a null
-dereference is not defined as error. See [X86/X86-64 Language Extensions](https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments)
+dereference is not defined as error. See [X86/X86-64 Language Extensions](project:../LanguageExtensions.md#memory-references-to-specified-segments)
 for reference.
 
 If the analyzer option `suppress-dereferences-from-any-address-space` is set
@@ -808,7 +808,7 @@ This checker does not accept the coding pattern where an enum type is used to
 store combinations of flag values.
 Such enums should be annotated with the `__attribute__((flag_enum))` or by the
 `[[clang::flag_enum]]` attribute to signal this intent. Refer to the
-[documentation](https://clang.llvm.org/docs/AttributeReference.html#flag-enum)
+[documentation](project:../AttributeReference.md#flag-enum)
 of this Clang attribute.
 
 ```cpp
@@ -901,7 +901,7 @@ arguments -- even if there is no such call in the codebase.
 This design rule is dictated by the SEI CERT rule [EXP47-C](https://wiki.sei.cmu.edu/confluence/display/c/EXP47-C.+Do+not+call+va_arg+with+an+argument+of+the+incorrect+type),
 which describes several issues related to the use of `va_arg()`. (The problem
 reported by this checker is shown in the second code example; the first,
-unrelated code example is covered by the clang diagnostic [-Wvarargs](https://clang.llvm.org/docs/DiagnosticsReference.html#wvarargs).)
+unrelated code example is covered by the clang diagnostic [-Wvarargs](project:../DiagnosticsReference.md#wvarargs).)
 
 ```cpp
 // This function expects a list of variadic arguments terminated by a NULL pointer.
@@ -3357,7 +3357,7 @@ int *direct_return() {
 
 The attribute states that the returned value is dangling after the lifetime
 of the annotated parameter, or of the implicit object argument, has ended.
-Refer to the [documentation](https://clang.llvm.org/docs/AttributeReference.html#lifetimebound)
+Refer to the [documentation](project:../AttributeReference.md#lifetimebound)
 of this Clang attribute.
 
 ```cpp

@@ -1735,7 +1735,7 @@ mode.
 Use `__has_feature(modules)` to determine if Modules have been enabled.
 For example, compiling code with `-fmodules` enables the use of Modules.
 
-More information can be found [here](https://clang.llvm.org/docs/Modules.html).
+More information can be found {doc}`here <Modules>`.
 
 ## Language Extensions Back-ported to Previous Standards
 
@@ -2582,7 +2582,7 @@ and `-respondsToSelector:` or `+instancesRespondToSelector:` for
 Objective-C methods. If such a check was missed, the program would compile
 fine, run fine on newer systems, but crash on older systems.
 
-As of LLVM 5.0, `-Wunguarded-availability` uses the [availability attributes](https://clang.llvm.org/docs/AttributeReference.html#availability) together
+As of LLVM 5.0, `-Wunguarded-availability` uses the [availability attributes](project:AttributeReference.md#availability) together
 with the new `@available()` keyword to assist with this issue.
 When a method that's introduced in the OS newer than the target OS is called, a
 -Wunguarded-availability warning is emitted if that call is not guarded:
@@ -2624,7 +2624,7 @@ void my_fun(NSSomeClass* var) {
 ```
 
 If the caller of `my_fun()` already checks that `my_fun()` is only called
-on 10.12, then add an [availability attribute](https://clang.llvm.org/docs/AttributeReference.html#availability) to it,
+on 10.12, then add an [availability attribute](project:AttributeReference.md#availability) to it,
 which will also suppress the warning and require that calls to my_fun() are
 checked:
 
@@ -4715,7 +4715,7 @@ The effect of passing some other value to `__builtin_flt_rounds` is
 implementation-defined. `__builtin_set_flt_rounds` is currently only supported
 to work on x86, x86_64, powerpc, powerpc64, Arm and AArch64 targets. These builtins
 read and modify the floating-point environment, which is not always allowed and may
-have unexpected behavior. Please see the section on [Accessing the floating point environment](https://clang.llvm.org/docs/UsersManual.html#accessing-the-floating-point-environment) for more information.
+have unexpected behavior. Please see the section on [Accessing the floating point environment](project:UsersManual.md#accessing-the-floating-point-environment) for more information.
 
 ### String builtins
 
@@ -6623,7 +6623,7 @@ more information about subobjects to be determined, so the `type & 1 == 1`
 case will often give imprecise results when used across a function call boundary
 even when optimization is enabled.
 
-[The pass_object_size and pass_dynamic_object_size attributes](https://clang.llvm.org/docs/AttributeReference.html#pass-object-size-pass-dynamic-object-size)
+[The pass_object_size and pass_dynamic_object_size attributes](project:AttributeReference.md#pass-object-size-pass-dynamic-object-size)
 can be used to invisibly pass the object size for a pointer parameter alongside
 the pointer in a function call. This allows more precise object sizes to be
 determined both when building without optimizations and in the `type & 1 == 1`
