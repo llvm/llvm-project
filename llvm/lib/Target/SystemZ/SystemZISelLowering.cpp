@@ -11526,10 +11526,8 @@ verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
     llvm_unreachable("");
   }
   LLVM_DEBUG(dbgs() << "Outgoing call arguments verified as ABI compliant: ";
-             if (CalleeFn != nullptr)
-               printFunctionArgExts(CalleeFn, dbgs());
-             else
-               dbgs() << "-\n";);
+             if (CalleeFn != nullptr) printFunctionArgExts(CalleeFn, dbgs());
+             else dbgs() << "-\n";);
 }
 
 void SystemZTargetLowering::
