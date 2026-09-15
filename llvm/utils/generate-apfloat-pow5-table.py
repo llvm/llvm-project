@@ -16,6 +16,7 @@ Run from the llvm source directory:
 MAX_EXPONENT = 16383
 WORD_BITS = 64
 
+
 def words(value):
     """Return VALUE as little-endian 64-bit words."""
     result = []
@@ -23,6 +24,7 @@ def words(value):
         result.append(value & ((1 << WORD_BITS) - 1))
         value >>= WORD_BITS
     return result
+
 
 def main():
     table = []
@@ -37,14 +39,17 @@ def main():
         value *= value
 
     print("// clang-format off")
-    print("// This file is auto-generated via "
-          "llvm/utils/generate-apfloat-pow5-table.py.")
+    print(
+        "// This file is auto-generated via "
+        "llvm/utils/generate-apfloat-pow5-table.py."
+    )
     print("// Do not edit manually.")
     for exponent, value_words in table:
         print(f"// 5^{exponent}")
         for word in value_words:
             print(f"UINT64_C(0x{word:016X}),")
-    print("    // clang-format on")
+    print("// clang-format on")
+
 
 if __name__ == "__main__":
     main()
