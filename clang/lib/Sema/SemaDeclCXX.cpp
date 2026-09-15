@@ -4774,7 +4774,10 @@ Sema::BuildDelegatingInitializer(TypeSourceInfo *TInfo, Expr *Init,
   ExprResult DelegationInit = InitSeq.Perform(*this, DelegationEntity, Kind,
                                               Args, nullptr);
   if (!DelegationInit.isInvalid()) {
+    // If all user-provided constructors are invalid the class is still an
+    // aggregate, and the delegation is an aggregate initialization instead.
     assert((DelegationInit.get()->containsErrors() ||
+            ClassDecl->isAggregate() ||
             cast<CXXConstructExpr>(DelegationInit.get())->getConstructor()) &&
            "Delegating constructor with no target?");
 
