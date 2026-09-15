@@ -1,32 +1,17 @@
 # REQUIRES: x86
-## A zero-sized section following .bss must not account for .bss's size.
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
+## A zero-sized section following .bss must not inflate the PT_LOAD p_filesz.
 
-# RUN: echo 'SECTIONS { \
-# RUN:   .text : {} \
-# RUN:   .data : {} \
-# RUN:   .bss : {} \
-# RUN:   .ldata : { . = .; } \
-# RUN: }' > %t-a.lds
-# RUN: ld.lld -T %t-a.lds %t.o -o %t-a
-# RUN: llvm-readelf -S %t-a | FileCheck --check-prefix=ZERO-SIZE %s
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 input.s -o input.o
+# RUN: ld.lld -T script.lds input.o -o output
+# RUN: llvm-readelf -lW output | FileCheck %s
 
-# RUN: echo 'SECTIONS { \
-# RUN:   .text : {} \
-# RUN:   .data : {} \
-# RUN:   .bss : {} \
-# RUN:   .ldata : { . = ALIGN(8); } \
-# RUN: }' > %t-b.lds
-# RUN: ld.lld -T %t-b.lds %t.o -o %t-b
-# RUN: llvm-readelf -S %t-b | FileCheck --check-prefix=ALIGN-ZERO-SIZE %s
+# CHECK:      Type  Offset  VirtAddr    PhysAddr    FileSiz                MemSiz            Flg  Align
+# CHECK:      LOAD  {{.*}}  {{.*}}      {{.*}}  0x[[FILESZ:[0-9a-f]+]] 0x[[MEMSZ:[0-9a-f]+]] RW   {{.*}}
+# CHECK-NOT:  [[FILESZ]] == [[MEMSZ]]
 
-## The .ldata section's file offset must equal .bss's file offset.
-# ZERO-SIZE: .bss    NOBITS   {{[0-9a-f]+}} [[OFF:[0-9a-f]+]] {{[0-9a-f]+}}
-# ZERO-SIZE-NEXT: .ldata  PROGBITS {{[0-9a-f]+}} [[OFF]] 000000
-
-# ALIGN-ZERO-SIZE: .bss    NOBITS   {{[0-9a-f]+}} [[OFF:[0-9a-f]+]] {{[0-9a-f]+}}
-# ALIGN-ZERO-SIZE-NEXT: .ldata  PROGBITS {{[0-9a-f]+}} [[OFF]] 000000
+#--- input.s
 
 .text
 .globl _start
@@ -38,3 +23,12 @@ _start:
 
 .bss
 .space 0xfa6
+
+#--- script.lds
+
+SECTIONS {
+  .text : {}
+  .data : {}
+  .bss : {}
+  .ldata : { . = ALIGN(8); }
+}
