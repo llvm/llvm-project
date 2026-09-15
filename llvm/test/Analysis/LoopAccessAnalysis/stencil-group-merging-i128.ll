@@ -14,7 +14,7 @@ define void @stencil_wide_index_huge_coeff(ptr %a, ptr %out, i64 %n, i128 %cdj) 
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %op = getelementptr inbounds i8, ptr %out, i128 %ivx
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %p2 = getelementptr inbounds i8, ptr %a, i128 %t2
+; CHECK-NEXT:          %p0 = getelementptr inbounds i8, ptr %a, i128 %t0
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %op = getelementptr inbounds i8, ptr %out, i128 %ivx
@@ -24,20 +24,20 @@ define void @stencil_wide_index_huge_coeff(ptr %a, ptr %out, i64 %n, i128 %cdj) 
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %op = getelementptr inbounds i8, ptr %out, i128 %ivx
 ; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %p0 = getelementptr inbounds i8, ptr %a, i128 %t0
+; CHECK-NEXT:          %p2 = getelementptr inbounds i8, ptr %a, i128 %t2
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %out High: ((zext i64 (1 smax %n) to i128) + %out))
 ; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: ((36893488147419103232 * %cdj) + %a) High: ((zext i64 (1 smax %n) to i128) + (36893488147419103232 * %cdj) + %a))
-; CHECK-NEXT:            Member: {((36893488147419103232 * %cdj) + %a),+,1}<nw><%loop>
+; CHECK-NEXT:          (Low: (%cdj + %a) High: ((zext i64 (1 smax %n) to i128) + %cdj + %a))
+; CHECK-NEXT:            Member: {(%cdj + %a),+,1}<nw><%loop>
 ; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: ((2 * %cdj) + %a) High: ((zext i64 (1 smax %n) to i128) + (2 * %cdj) + %a))
 ; CHECK-NEXT:            Member: {((2 * %cdj) + %a),+,1}<nw><%loop>
 ; CHECK-NEXT:        Group GRP3:
-; CHECK-NEXT:          (Low: (%cdj + %a) High: ((zext i64 (1 smax %n) to i128) + %cdj + %a))
-; CHECK-NEXT:            Member: {(%cdj + %a),+,1}<nw><%loop>
+; CHECK-NEXT:          (Low: ((36893488147419103232 * %cdj) + %a) High: ((zext i64 (1 smax %n) to i128) + (36893488147419103232 * %cdj) + %a))
+; CHECK-NEXT:            Member: {((36893488147419103232 * %cdj) + %a),+,1}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -91,7 +91,7 @@ define void @stencil_wide_index_small_coeff(ptr %a, ptr %out, i64 %n, i128 %cdj)
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %op = getelementptr inbounds i8, ptr %out, i128 %ivx
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %p2 = getelementptr inbounds i8, ptr %a, i128 %t2
+; CHECK-NEXT:          %p0 = getelementptr inbounds i8, ptr %a, i128 %t0
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %op = getelementptr inbounds i8, ptr %out, i128 %ivx
@@ -101,20 +101,20 @@ define void @stencil_wide_index_small_coeff(ptr %a, ptr %out, i64 %n, i128 %cdj)
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %op = getelementptr inbounds i8, ptr %out, i128 %ivx
 ; CHECK-NEXT:        Against group GRP3:
-; CHECK-NEXT:          %p0 = getelementptr inbounds i8, ptr %a, i128 %t0
+; CHECK-NEXT:          %p2 = getelementptr inbounds i8, ptr %a, i128 %t2
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %out High: ((zext i64 (1 smax %n) to i128) + %out))
 ; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: ((3 * %cdj) + %a) High: ((zext i64 (1 smax %n) to i128) + (3 * %cdj) + %a))
-; CHECK-NEXT:            Member: {((3 * %cdj) + %a),+,1}<nw><%loop>
+; CHECK-NEXT:          (Low: (%cdj + %a) High: ((zext i64 (1 smax %n) to i128) + %cdj + %a))
+; CHECK-NEXT:            Member: {(%cdj + %a),+,1}<nw><%loop>
 ; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: ((2 * %cdj) + %a) High: ((zext i64 (1 smax %n) to i128) + (2 * %cdj) + %a))
 ; CHECK-NEXT:            Member: {((2 * %cdj) + %a),+,1}<nw><%loop>
 ; CHECK-NEXT:        Group GRP3:
-; CHECK-NEXT:          (Low: (%cdj + %a) High: ((zext i64 (1 smax %n) to i128) + %cdj + %a))
-; CHECK-NEXT:            Member: {(%cdj + %a),+,1}<nw><%loop>
+; CHECK-NEXT:          (Low: ((3 * %cdj) + %a) High: ((zext i64 (1 smax %n) to i128) + (3 * %cdj) + %a))
+; CHECK-NEXT:            Member: {((3 * %cdj) + %a),+,1}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

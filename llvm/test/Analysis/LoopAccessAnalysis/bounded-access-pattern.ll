@@ -252,8 +252,8 @@ define void @bounded_offset_load(ptr %a) {
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %a High: (4100 + %a))
-; CHECK-NEXT:            Member: {(4 + %a),+,4}<nw><%loop>
 ; CHECK-NEXT:            Member: {%a,+,4}<nw><%loop>
+; CHECK-NEXT:            Member: {(4 + %a),+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -885,8 +885,8 @@ define void @bounded_load_bounded_store_same(ptr %a) {
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %a High: (4100 + %a))
-; CHECK-NEXT:            Member: {%a,+,4}<nw><%loop>
 ; CHECK-NEXT:            Member: {(4 + %a),+,4}<nw><%loop>
+; CHECK-NEXT:            Member: {%a,+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
