@@ -14,6 +14,7 @@
 #ifndef LLVM_IR_OPTBISECT_H
 #define LLVM_IR_OPTBISECT_H
 
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Compiler.h"
@@ -31,6 +32,11 @@ public:
   /// over.
   virtual bool shouldRunPass(StringRef PassName,
                              StringRef IRDescription) const {
+    return shouldRunPass(PassName, IRDescription, "");
+  }
+
+  virtual bool shouldRunPass(StringRef PassName, StringRef IRDescription,
+                             StringRef FuncName) const {
     return true;
   }
 
@@ -68,17 +74,20 @@ public:
   /// Most passes should not call this routine directly. Instead, it is called
   /// through helper routines provided by the base classes of the pass. For
   /// instance, function passes should call FunctionPass::skipFunction().
-  bool shouldRunPass(StringRef PassName,
-                     StringRef IRDescription) const override;
+  bool shouldRunPass(StringRef PassName, StringRef IRDescription,
+                     StringRef FuncName) const override;
 
   /// isEnabled() should return true before calling shouldRunPass().
   bool isEnabled() const override {
-    return !BisectIntervals.empty() || !DisabledPasses.empty();
+    return !BisectIntervals.empty() || !DisabledPasses.empty() ||
+           !DisabledIntervals.empty();
   }
 
   void reset() override {
     clearIntervals();
     DisabledPasses.clear();
+    clearDisabledIntervals();
+    clearEnabledFuncs();
   }
 
   /// Set intervals directly from an IntervalList.
@@ -96,11 +105,36 @@ public:
   /// to be disabled. Multiple pass names can be provided with comma separation.
   void setDisabled(StringRef Pass) { DisabledPasses.insert(Pass); }
 
+  /// Set intervals directly from an IntervalList.
+  void
+  setDisabledIntervals(IntegerInclusiveIntervalUtils::IntervalList Intervals) {
+    DisabledIntervals.append(Intervals);
+  }
+
+  /// Clear all disabled intervals.
+  void clearDisabledIntervals() {
+    DisabledIntervals.clear();
+    LastDisableNum = 0;
+  }
+
+  /// Add a function name to the set of functions enabled for opt bisect.
+  void setEnabledFunc(StringRef FuncName) {
+    OptBisectFuncNames.insert(FuncName);
+  }
+
+  /// Clear the set of functions enabled for opt bisect, this reenables all
+  /// functions.
+  void clearEnabledFuncs() { OptBisectFuncNames.clear(); }
+
 private:
   mutable int LastBisectNum = 0;
   IntegerInclusiveIntervalUtils::IntervalList BisectIntervals;
 
   StringSet<> DisabledPasses = {};
+  IntegerInclusiveIntervalUtils::IntervalList DisabledIntervals;
+  mutable int LastDisableNum = 0;
+
+  StringSet<> OptBisectFuncNames = {};
 };
 
 /// Singleton instance of the OptPassGate class, so multiple pass managers don't
