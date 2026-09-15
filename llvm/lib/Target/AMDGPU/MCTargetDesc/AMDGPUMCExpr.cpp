@@ -252,6 +252,7 @@ bool AMDGPUMCExpr::evaluateInstPrefSize(MCValue &Res,
 
 bool AMDGPUMCExpr::isSymbolUsedInExpression(const MCSymbol *Sym,
                                             const MCExpr *E) {
+  // Resource expressions share callee subgraphs. Visit each node only once.
   SmallVector<const MCExpr *, 16> WorkList{E};
   SmallPtrSet<const MCExpr *, 16> Seen;
   while (!WorkList.empty()) {
@@ -292,9 +293,19 @@ bool AMDGPUMCExpr::isSymbolUsedInExpression(const MCSymbol *Sym,
 // Resource expressions form a DAG of maxima, boolean unions, and frame-size
 // additions. Evaluate shared subexpressions once per query, including additions
 // between maxima, instead of recursively expanding every path through the DAG.
+// Use a stack to visit operands before completing their parent. Values caches
+// completed results, while Active tracks nodes awaiting their operands so a
+// back edge is detected as a cycle rather than mistaken for a shared result.
 static bool evaluateResourceExpr(const AMDGPUMCExpr *Root, MCValue &Res,
                                  const MCAssembler *Asm) {
-  enum class Phase { Visit, Complete, CheckAbsolute };
+  enum class Phase {
+    // Reuse a cached value, evaluate a leaf, or schedule operands.
+    Visit,
+    // Combine operand values and release any symbol-resolution guard.
+    Complete,
+    // Reject a non-absolute max/OR operand before visiting the next.
+    CheckAbsolute
+  };
   struct WorkItem {
     const MCExpr *Expr;
     Phase Step = Phase::Visit;
