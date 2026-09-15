@@ -75,78 +75,6 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
   return initImpl(GenericDevice, Image);
 }
 
-Expected<KernelLaunchEnvironmentTy *>
-GenericKernelTy::getKernelLaunchEnvironment(
-    GenericDeviceTy &GenericDevice, const KernelLaunchArgsTy &LaunchArgs,
-    const DynBlockMemConfTy &DynBlockMemConf,
-    AsyncInfoWrapperTy &AsyncInfoWrapper, uint32_t NumBlocks0) const {
-  // Ctor/Dtor have no arguments, replaying uses the original kernel launch
-  // environment, and launches with no reserved dyn_ptr slot (e.g. older
-  // compiler versions, or non-OpenMP launches) have nowhere to store one.
-  if ((GenericDevice.getRecordReplay() &&
-       GenericDevice.getRecordReplay()->isReplaying()) ||
-      !LaunchArgs.DynPtrSlot)
-    return nullptr;
-
-  const bool NeedsReductionBuffer =
-      LaunchArgs.KernelEnvironment.ReductionDataSize != 0;
-  if (NeedsReductionBuffer && LaunchArgs.OmpABIVersion < OMP_KERNEL_ARG_VERSION)
-    return Plugin::error(ErrorCode::INVALID_BINARY,
-                         "kernel was built against an older OpenMP "
-                         "kernel-launch-environment ABI (v%u); current "
-                         "runtime requires v%u for cross-team reductions",
-                         LaunchArgs.OmpABIVersion, OMP_KERNEL_ARG_VERSION);
-  if (!NeedsReductionBuffer && !LaunchArgs.DynCGroupMem)
-    return reinterpret_cast<KernelLaunchEnvironmentTy *>(~0);
-
-  auto AllocOrErr = GenericDevice.dataAlloc(
-      sizeof(KernelLaunchEnvironmentTy),
-      /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE, /*Alignment=*/0);
-  if (!AllocOrErr)
-    return AllocOrErr.takeError();
-
-  // Remember to free the memory later.
-  AsyncInfoWrapper.freeAllocationAfterSynchronization(
-      *AllocOrErr, TargetAllocTy::TARGET_ALLOC_DEVICE);
-
-  /// Use the KLE in the __tgt_async_info to ensure a stable address for the
-  /// async data transfer.
-  auto &LocalKLE = (*AsyncInfoWrapper).KernelLaunchEnvironment;
-  LocalKLE = KernelLaunchEnvironment;
-
-  LocalKLE.DynCGroupMemSize = DynBlockMemConf.Size;
-  LocalKLE.DynCGroupMemFbPtr = DynBlockMemConf.FallbackPtr;
-  LocalKLE.DynCGroupMemFb = DynBlockMemConf.Fallback;
-  LocalKLE.ReductionBuffer = nullptr;
-
-  if (NeedsReductionBuffer) {
-    // Use number of teams many buffer elements.
-    auto AllocOrErr = GenericDevice.dataAlloc(
-        uint64_t(LaunchArgs.KernelEnvironment.ReductionDataSize) * NumBlocks0,
-        /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE,
-        /*Alignment=*/0);
-    if (!AllocOrErr)
-      return AllocOrErr.takeError();
-    LocalKLE.ReductionBuffer = *AllocOrErr;
-    // Remember to free the memory later.
-    AsyncInfoWrapper.freeAllocationAfterSynchronization(
-        *AllocOrErr, TargetAllocTy::TARGET_ALLOC_DEVICE);
-  }
-
-  INFO(OMP_INFOTYPE_DATA_TRANSFER, GenericDevice.getDeviceId(),
-       "Copying data from host to device, HstPtr=" DPxMOD ", TgtPtr=" DPxMOD
-       ", Size=%" PRId64 ", Name=KernelLaunchEnv\n",
-       DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
-       sizeof(KernelLaunchEnvironmentTy));
-
-  auto Err = GenericDevice.dataSubmit(*AllocOrErr, &LocalKLE,
-                                      sizeof(KernelLaunchEnvironmentTy),
-                                      AsyncInfoWrapper);
-  if (Err)
-    return Err;
-  return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
-}
-
 Error GenericKernelTy::printLaunchInfo(GenericDeviceTy &GenericDevice,
                                        const KernelLaunchArgsTy &LaunchArgs,
                                        uint32_t NumThreads[3],
@@ -161,53 +89,6 @@ Error GenericKernelTy::printLaunchInfoDetails(
   return Plugin::success();
 }
 
-Expected<DynBlockMemConfTy>
-GenericKernelTy::prepareBlockMemory(GenericDeviceTy &GenericDevice,
-                                    const KernelLaunchArgsTy &LaunchArgs,
-                                    uint32_t NumBlocks) const {
-  uint32_t MaxBlockMemSize = GenericDevice.getMaxBlockSharedMemSize();
-  uint32_t DynBlockMemSize = LaunchArgs.DynCGroupMem;
-  uint32_t TotalBlockMemSize = StaticBlockMemSize + DynBlockMemSize;
-  uint32_t DynNativeBlockMemSize = DynBlockMemSize;
-  void *DynFallbackPtr = nullptr;
-
-  // No enough block memory to cover the static one. Cannot run the kernel.
-  if (StaticBlockMemSize > MaxBlockMemSize)
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "Static block memory size exceeds maximum");
-  // No enough block memory to cover dynamic one, and the fallback is aborting.
-  if (static_cast<DynCGroupMemFallbackType>(
-          LaunchArgs.Flags.DynCGroupMemFallback) ==
-          DynCGroupMemFallbackType::Abort &&
-      TotalBlockMemSize > MaxBlockMemSize)
-    return Plugin::error(
-        ErrorCode::INVALID_ARGUMENT,
-        "Requested block memory size (static + dynamic) exceeds maximum");
-
-  DynCGroupMemFallbackType DynFallback = DynCGroupMemFallbackType::None;
-  if (DynBlockMemSize && TotalBlockMemSize > MaxBlockMemSize) {
-    // Launch without native dynamic block memory.
-    DynNativeBlockMemSize = 0;
-    DynFallback = static_cast<DynCGroupMemFallbackType>(
-        LaunchArgs.Flags.DynCGroupMemFallback);
-    if (DynFallback != DynCGroupMemFallbackType::DefaultMem) {
-      // Do not provide any memory as fallback.
-      DynBlockMemSize = 0;
-    } else {
-      // Get global memory as fallback.
-      auto AllocOrErr = GenericDevice.dataAlloc(
-          NumBlocks * DynBlockMemSize,
-          /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE,
-          /*Alignment=*/0);
-      if (!AllocOrErr)
-        return AllocOrErr.takeError();
-      DynFallbackPtr = *AllocOrErr;
-    }
-  }
-  return DynBlockMemConfTy{DynBlockMemSize, DynNativeBlockMemSize, DynFallback,
-                           DynFallbackPtr};
-}
-
 Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
                               KernelLaunchArgsTy &LaunchArgs,
                               AsyncInfoWrapperTy &AsyncInfoWrapper) const {
@@ -217,29 +98,6 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
   uint32_t EffectiveNumBlocks[3] = {LaunchArgs.UserNumBlocks[0],
                                     LaunchArgs.UserNumBlocks[1],
                                     LaunchArgs.UserNumBlocks[2]};
-
-  auto DynBlockMemConfOrErr = prepareBlockMemory(
-      GenericDevice, LaunchArgs,
-      EffectiveNumBlocks[0] * EffectiveNumBlocks[1] * EffectiveNumBlocks[2]);
-  if (!DynBlockMemConfOrErr)
-    return DynBlockMemConfOrErr.takeError();
-
-  DynBlockMemConfTy &DynBlockMemConf = *DynBlockMemConfOrErr;
-  if (DynBlockMemConf.FallbackPtr)
-    AsyncInfoWrapper.freeAllocationAfterSynchronization(
-        DynBlockMemConf.FallbackPtr, TargetAllocTy::TARGET_ALLOC_DEVICE);
-
-  auto KernelLaunchEnvOrErr =
-      getKernelLaunchEnvironment(GenericDevice, LaunchArgs, DynBlockMemConf,
-                                 AsyncInfoWrapper, EffectiveNumBlocks[0]);
-  if (!KernelLaunchEnvOrErr)
-    return KernelLaunchEnvOrErr.takeError();
-
-  // Fill in the kernel launch environment (dyn_ptr) if this launch has a
-  // reserved slot for it. When replaying, getKernelLaunchEnvironment()
-  // returns null so the recorded value already in the slot is preserved.
-  if (LaunchArgs.DynPtrSlot && *KernelLaunchEnvOrErr)
-    *LaunchArgs.DynPtrSlot = *KernelLaunchEnvOrErr;
 
   if (auto Err = printLaunchInfo(GenericDevice, LaunchArgs, EffectiveNumThreads,
                                  EffectiveNumBlocks))
@@ -255,7 +113,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
     // Record the kernel prologue data before kernel launch.
     auto RRHandleOrErr = RecordReplay->recordPrologue(
         *this, LaunchArgs, EffectiveNumBlocks, EffectiveNumThreads,
-        DynBlockMemConf.NativeSize);
+        LaunchArgs.DynCGroupMem);
     if (!RRHandleOrErr)
       return RRHandleOrErr.takeError();
     RRHandle = *RRHandleOrErr;
@@ -263,7 +121,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
 
   if (auto Err =
           launchImpl(GenericDevice, EffectiveNumThreads, EffectiveNumBlocks,
-                     DynBlockMemConf.NativeSize, LaunchArgs, AsyncInfoWrapper))
+                     LaunchArgs.DynCGroupMem, LaunchArgs, AsyncInfoWrapper))
     return Err;
 
   if (RecordReplay) {
