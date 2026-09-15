@@ -100,7 +100,7 @@ RUN powershell -Command \
     New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" \
     -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
 
-ARG RUNNER_VERSION=2.335.1
+ARG RUNNER_VERSION=2.337.0
 ENV RUNNER_VERSION=$RUNNER_VERSION
 
 RUN powershell -Command \
@@ -110,7 +110,7 @@ RUN powershell -Command \
     rm actions-runner-win.zip
 
 # Set the LLVM_VERSION environment variable
-ENV LLVM_VERSION=22.1.4
+ENV LLVM_VERSION=23.1.0
 
 # Download and extract Clang compiler.
 # Create directories, download, extract, and clean up all in one layer

@@ -19,6 +19,7 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkDylib.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
@@ -194,8 +195,9 @@ ELFDebugObjectPlugin::ELFDebugObjectPlugin(ExecutionSession &ES,
     : ES(ES), RequireDebugSections(RequireDebugSections) {
   // Pass bootstrap symbol for registration function to enable debugging
   ErrorAsOutParameter _(&Err);
-  Err = ES.getExecutorProcessControl().getBootstrapSymbols(
-      {{RegistrationAction, rt::RegisterJITLoaderGDBAllocActionName}});
+  Err = lookupAndApply(ES.getBootstrapJITDylib(),
+                       {recordAddr(rt::RegisterJITLoaderGDBAllocActionName,
+                                   &RegistrationAction)});
 }
 
 ELFDebugObjectPlugin::~ELFDebugObjectPlugin() = default;

@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_RECORD_H
 #define LLVM_CLANG_AST_INTERP_RECORD_H
 
+#include "PrimType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 
@@ -29,16 +30,23 @@ public:
     const FieldDecl *Decl;
     const Descriptor *Desc;
     unsigned Offset;
+    OptPrimType T;
+    bool IsBitField;
+    bool IsUnnamedBitField;
 
-    bool isBitField() const { return Decl->isBitField(); }
-    bool isUnnamedBitField() const { return Decl->isUnnamedBitField(); }
+    bool isBitField() const { return IsBitField; }
+    bool isUnnamedBitField() const { return IsUnnamedBitField; }
     unsigned bitWidth() const {
       assert(isBitField());
       return Decl->getBitWidthValue();
     }
 
-    Field(const FieldDecl *D, const Descriptor *Desc, unsigned Offset)
-        : Decl(D), Desc(Desc), Offset(Offset) {}
+    Field(const FieldDecl *D, const Descriptor *Desc, unsigned Offset,
+          OptPrimType T)
+        : Decl(D), Desc(Desc), Offset(Offset), T(T) {
+      IsBitField = Decl->isBitField();
+      IsUnnamedBitField = IsBitField && Decl->isUnnamedBitField();
+    }
   };
 
   /// Describes a base class.

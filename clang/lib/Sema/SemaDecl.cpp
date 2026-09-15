@@ -3144,6 +3144,17 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       continue; // regular attr merging will take care of validating this.
     }
 
+    if (NewAttribute->getLocation().isInvalid()) {
+      // An attribute with no source location was not written by the user. API
+      // notes, in particular, are matched against whichever declaration the
+      // compiler reaches, which can be a redeclaration that follows the
+      // definition, possibly in a different module. There is nothing for the
+      // user to correct, and erasing the attribute would silently change what
+      // the annotated API means.
+      ++I;
+      continue;
+    }
+
     if (isa<C11NoReturnAttr>(NewAttribute)) {
       // C's _Noreturn is allowed to be added to a function after it is defined.
       ++I;
@@ -7760,6 +7771,8 @@ void Sema::CheckAsmLabel(Scope *S, Expr *E, StorageClass SC,
   StringLiteral *SE = cast<StringLiteral>(E);
   StringRef Label = SE->getString();
   QualType R = TInfo->getType();
+  if (R->isIncompleteType())
+    return;
   if (S->getFnParent() != nullptr) {
     switch (SC) {
     case SC_None:
@@ -21103,7 +21116,17 @@ bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
   assert(ED->isClosedFlag() && "looking for value in non-flag or open enum");
   assert(ED->isCompleteDefinition() && "expected enum definition");
 
-  llvm::APInt FlagBits = FlagBitsCache.at(ED);
+  auto R = FlagBitsCache.try_emplace(ED);
+  llvm::APInt &FlagBits = R.first->second;
+
+  if (R.second) {
+    for (auto *E : ED->enumerators()) {
+      const auto &EVal = E->getInitVal();
+      // Only single-bit enumerators introduce new flag values.
+      if (EVal.isPowerOf2())
+        FlagBits = FlagBits.zext(EVal.getBitWidth()) | EVal;
+    }
+  }
 
   // A value is in a flag enum if either its bits are a subset of the enum's
   // flag bits (the first condition) or we are allowing masks and the same is
@@ -21313,20 +21336,6 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
 
   CheckForDuplicateEnumValues(*this, Elements, Enum, EnumType);
   CheckForComparisonInEnumInitializer(*this, Enum);
-
-  if (Enum->hasAttr<FlagEnumAttr>()) {
-    auto R = FlagBitsCache.try_emplace(Enum);
-    llvm::APInt &FlagBits = R.first->second;
-
-    if (R.second) {
-      for (auto *E : Enum->enumerators()) {
-        const auto &EVal = E->getInitVal();
-        // Only single-bit enumerators introduce new flag values.
-        if (EVal.isPowerOf2())
-          FlagBits = FlagBits.zext(EVal.getBitWidth()) | EVal;
-      }
-    }
-  }
 
   if (Enum->isClosedFlag()) {
     for (Decl *D : Elements) {

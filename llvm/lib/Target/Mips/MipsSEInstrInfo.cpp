@@ -526,6 +526,9 @@ bool MipsSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case Mips::BuildPairF64:
     expandBuildPairF64(MBB, MI, isMicroMips, false);
     break;
+  case Mips::BuildPairF64_FPR:
+    MI.eraseFromParent();
+    return true;
   case Mips::BuildPairF64_64:
     expandBuildPairF64(MBB, MI, isMicroMips, true);
     break;

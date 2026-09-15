@@ -1,8 +1,5 @@
 # LeakSanitizer
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 

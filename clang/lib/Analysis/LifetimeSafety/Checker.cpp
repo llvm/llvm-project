@@ -105,10 +105,14 @@ public:
           checkAnnotations(OEF);
     issuePendingWarnings();
     suggestAnnotations();
-    reportNoescapeViolations();
-    reportLifetimeboundViolations();
-    reportMisplacedLifetimebound();
-    reportInapplicableLifetimebound();
+    if (LSOpts.CheckNoescapeViolations)
+      reportNoescapeViolations();
+    if (LSOpts.CheckLifetimeboundViolations)
+      reportLifetimeboundViolations();
+    if (LSOpts.CheckMisplacedLifetimebound)
+      reportMisplacedLifetimebound();
+    if (LSOpts.CheckInapplicableLifetimebound)
+      reportInapplicableLifetimebound();
     //  Annotation inference is currently guarded by a frontend flag. In the
     //  future, this might be replaced by a design that differentiates between
     //  explicit and inferred findings with separate warning groups.
@@ -254,6 +258,7 @@ public:
   }
 
   void issuePendingWarnings() {
+    llvm::TimeTraceScope TimeTrace("IssuePendingWarnings");
     if (!SemaHelper)
       return;
     for (const auto &[LID, Warning] : FinalWarningsMap) {
@@ -436,6 +441,7 @@ public:
   }
 
   void reportNoescapeViolations() {
+    llvm::TimeTraceScope TimeTrace("ReportNoescapeViolations");
     for (auto [PVD, EscapeTarget] : NoescapeWarningsMap) {
       if (const auto *E = EscapeTarget.dyn_cast<const Expr *>())
         SemaHelper->reportNoescapeViolation(PVD, E);
@@ -449,6 +455,7 @@ public:
   }
 
   void reportLifetimeboundViolations() {
+    llvm::TimeTraceScope TimeTrace("ReportLifetimeboundViolations");
     if (!isa<FunctionDecl>(FD))
       return;
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
@@ -471,6 +478,7 @@ public:
   // Reports lifetimebound attributes that are placed on a function definition
   // but not on the corresponding declaration.
   void reportMisplacedLifetimebound() {
+    llvm::TimeTraceScope TimeTrace("ReportMisplacedLifetimebound");
     const FunctionDecl *FDef = dyn_cast<FunctionDecl>(FD);
     if (!FDef)
       return;
@@ -501,6 +509,7 @@ public:
   }
 
   void reportInapplicableLifetimebound() {
+    llvm::TimeTraceScope TimeTrace("ReportInapplicableLifetimebound");
     const auto *FDef = dyn_cast<FunctionDecl>(FD);
     if (!FDef)
       return;

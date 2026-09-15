@@ -2548,6 +2548,39 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
   return E;
 }
 
+// Diagnose when a macro cannot be expanded because it's a function-like macro
+// being used as a function-like macro. Returns true if a diagnostic is emitted.
+static bool diagnoseFunctionLikeMacro(Sema &SemaRef, DeclarationName Name,
+                                      SourceLocation TypoLoc) {
+
+  if (IdentifierInfo *II = Name.getAsIdentifierInfo()) {
+    if (II->hasMacroDefinition()) {
+      MacroInfo *MI = SemaRef.PP.getMacroInfo(II);
+      if (MI && MI->isFunctionLike()) {
+        // If the identifier is immediately followed by '(', the user did
+        // attempt to invoke it as a function-like macro; the failure is
+        // for some other reason (e.g. wrong argument count), which the
+        // preprocessor already diagnosed separately. Don't suggest adding
+        // parens in that case, since they're already there.
+        SourceManager &SM = SemaRef.getSourceManager();
+        const LangOptions &LangOpts = SemaRef.getLangOpts();
+        std::optional<Token> NextTok =
+            Lexer::findNextToken(TypoLoc, SM, LangOpts);
+        if (NextTok && NextTok->is(tok::l_paren))
+          return false;
+        SemaRef.Diag(TypoLoc,
+                     diag::err_undeclared_var_use_suggest_func_like_macro)
+            << II->getName();
+        SemaRef.Diag(MI->getDefinitionLoc(),
+                     diag::note_function_like_macro_requires_parens)
+            << II->getName();
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 void
 Sema::DecomposeUnqualifiedId(const UnqualifiedId &Id,
                              TemplateArgumentListInfo &Buffer,
@@ -2783,6 +2816,9 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
     }
   }
   R.clear();
+
+  if (diagnoseFunctionLikeMacro(SemaRef, Name, R.getNameLoc()))
+    return true;
 
   // Emit a special diagnostic for failed member lookups.
   // FIXME: computing the declaration context might fail here (?)
@@ -4742,6 +4778,17 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
   if (ExprType->isDependentType())
     return false;
 
+  // These builtins evaluate with the operand type as written; a reference is
+  // not looked through.
+  if (ExprKind == UETT_VectorElements)
+    return CheckVectorElementsTraitOperandType(*this, ExprType, OpLoc,
+                                               ExprRange);
+  if (ExprKind == UETT_VecStep)
+    return CheckVecStepTraitOperandType(*this, ExprType, OpLoc, ExprRange);
+  if (ExprKind == UETT_PtrAuthTypeDiscriminator)
+    return checkPtrAuthTypeDiscriminatorOperandType(*this, ExprType, OpLoc,
+                                                    ExprRange);
+
   // C++ [expr.sizeof]p2:
   //     When applied to a reference or a reference type, the result
   //     is the size of the referenced type.
@@ -4763,17 +4810,6 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
       DiagCompat(OpLoc, diag_compat::alignof_incomplete_array);
     ExprType = Context.getBaseElementType(ExprType);
   }
-
-  if (ExprKind == UETT_VecStep)
-    return CheckVecStepTraitOperandType(*this, ExprType, OpLoc, ExprRange);
-
-  if (ExprKind == UETT_VectorElements)
-    return CheckVectorElementsTraitOperandType(*this, ExprType, OpLoc,
-                                               ExprRange);
-
-  if (ExprKind == UETT_PtrAuthTypeDiscriminator)
-    return checkPtrAuthTypeDiscriminatorOperandType(*this, ExprType, OpLoc,
-                                                    ExprRange);
 
   // Explicitly list some types as extensions.
   if (!CheckExtensionTraitOperandType(*this, ExprType, OpLoc, ExprRange,
@@ -7584,9 +7620,9 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
                             NTCUK_Destruct);
 
     // Diagnose jumps that enter or exit the lifetime of the compound literal.
+    Cleanup.setExprNeedsCleanups(true);
+    ExprCleanupObjects.push_back(E);
     if (literalType.isDestructedType()) {
-      Cleanup.setExprNeedsCleanups(true);
-      ExprCleanupObjects.push_back(E);
       getCurFunction()->setHasBranchProtectedScope();
     }
   }
@@ -11931,6 +11967,35 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
       if (!checkArithmeticBinOpPointerOperands(*this, Loc,
                                                LHS.get(), RHS.get()))
         return QualType();
+
+      // For pointer subtraction, if the address spaces differ but overlap,
+      // convert both pointers to the composite (superset) address space.
+      // This is needed because address spaces may use different
+      // representations, such as a private offset vs a flat address.
+      LangAS LAddrSpace = lpointee.getAddressSpace();
+      LangAS RAddrSpace = rpointee.getAddressSpace();
+      if (LAddrSpace != RAddrSpace) {
+        Qualifiers LQual = lpointee.getQualifiers();
+        Qualifiers RQual = rpointee.getQualifiers();
+        LangAS ResultAddrSpace = LQual.isAddressSpaceSupersetOf(RQual, Context)
+                                     ? LAddrSpace
+                                     : RAddrSpace;
+
+        if (LAddrSpace != ResultAddrSpace) {
+          QualType NewPteTy = Context.getAddrSpaceQualType(
+              lpointee.getUnqualifiedType(), ResultAddrSpace);
+          QualType NewPtrTy = Context.getPointerType(NewPteTy);
+          LHS =
+              ImpCastExprToType(LHS.get(), NewPtrTy, CK_AddressSpaceConversion);
+        }
+        if (RAddrSpace != ResultAddrSpace) {
+          QualType NewPteTy = Context.getAddrSpaceQualType(
+              rpointee.getUnqualifiedType(), ResultAddrSpace);
+          QualType NewPtrTy = Context.getPointerType(NewPteTy);
+          RHS =
+              ImpCastExprToType(RHS.get(), NewPtrTy, CK_AddressSpaceConversion);
+        }
+      }
 
       bool LHSIsNullPtr = LHS.get()->IgnoreParenCasts()->isNullPointerConstant(
           Context, Expr::NPC_ValueDependentIsNotNull);
