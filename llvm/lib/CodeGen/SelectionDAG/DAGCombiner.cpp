@@ -8839,11 +8839,10 @@ static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
 
 // Fold an OR with a masked destination and a left-shifted
 // source into a shift + double-precision shift (SHRD):
-static SDValue combineOrOnSHLToSHRD(SDNode *N, SDLoc &DL, SelectionDAG &DAG) {
+static SDValue combineOrOnSHLToFSHR(SDNode *N, SDLoc &DL, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
 
-  APInt Mask;
-  uint64_t ShiftAmount;
+  APInt Mask, ShiftAmount;
   SDValue X, Y;
 
   // Check for the following pattern:
@@ -8861,13 +8860,15 @@ static SDValue combineOrOnSHLToSHRD(SDNode *N, SDLoc &DL, SelectionDAG &DAG) {
   //
   // (shl Y, ShiftAmount) fills the top (MaxMaskBitWidth - ShiftAmount) bits,
   // so X must keep exactly the low ShiftAmount.
-  APInt ExpectedMask = APInt::getLowBitsSet(MaxMaskBitWidth, ShiftAmount);
+  APInt ExpectedMask =
+      APInt::getLowBitsSet(MaxMaskBitWidth, ShiftAmount.getZExtValue());
 
-  if (!((ShiftAmount > 0) && (ShiftAmount < MaxMaskBitWidth) &&
+  if (!((ShiftAmount.getZExtValue() > 0) &&
+        (ShiftAmount.getZExtValue() < MaxMaskBitWidth) &&
         (Mask == ExpectedMask)))
     return SDValue();
 
-  uint64_t InvShAmt = MaxMaskBitWidth - ShiftAmount;
+  uint64_t InvShAmt = MaxMaskBitWidth - ShiftAmount.getZExtValue();
   SDValue ShAConst = DAG.getShiftAmountConstant(InvShAmt, VT, DL);
   SDValue SHLVal = DAG.getNode(ISD::SHL, DL, VT, X, ShAConst);
 
@@ -9074,7 +9075,7 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
     return Load;
 
   if (Level == CombineLevel::BeforeLegalizeTypes)
-    if (SDValue Res = combineOrOnSHLToSHRD(N, DL, DAG))
+    if (SDValue Res = combineOrOnSHLToFSHR(N, DL, DAG))
       return Res;
 
   // Simplify the operands using demanded-bits information.

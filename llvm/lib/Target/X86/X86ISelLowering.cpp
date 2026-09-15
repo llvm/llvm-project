@@ -32291,21 +32291,20 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
     // MVT::i8
     if (Op1.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Amt.getNode())) {
 
-      ConstantSDNode *C = dyn_cast<ConstantSDNode>(Amt.getNode());
+      auto *C = dyn_cast<ConstantSDNode>(Amt.getNode());
       SDValue SHLOperandShiftAmount = Op1->getOperand(1);
-      APInt InvMaskWidth = C->getAPIntValue();
+      uint64_t InvMaskWidth = C->getAPIntValue().urem(EltSizeInBits);
 
       if (ConstantSDNode *EC =
               dyn_cast<ConstantSDNode>(SHLOperandShiftAmount.getNode())) {
-        APInt ExpectedShiftAmount = EC->getAPIntValue();
+        const APInt &ExpectedShiftAmount = EC->getAPIntValue();
 
         // Check if the shift amounts match.
         if (ExpectedShiftAmount != InvMaskWidth)
           return SDValue();
       }
 
-      APInt MaskWidth = EltSizeInBits - InvMaskWidth;
-      uint64_t ShiftAmount = MaskWidth.getZExtValue();
+      uint64_t ShiftAmount = EltSizeInBits - InvMaskWidth;
       SDValue SHLOperand = Op1.getOperand(0);
 
       APInt Mask = APInt::getLowBitsSet(EltSizeInBits, ShiftAmount);
@@ -32313,13 +32312,9 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
       SDValue MaskBitNum = DAG.getShiftAmountConstant(
           ShiftAmount, SHLOperand.getValueType(), DL);
       SDValue MaskNode = DAG.getConstant(Mask, DL, VT);
-      SDValue AndMask = DAG.getNode(ISD::AND, DL, SHLOperand.getValueType(),
-                                    SHLOperand, MaskNode);
-      SDValue SHL =
-          DAG.getNode(ISD::SHL, DL, Op0.getValueType(), Op0, MaskBitNum);
-      SDValue ORVal = DAG.getNode(ISD::OR, DL, VT, AndMask, SHL);
-
-      return ORVal;
+      SDValue AndMask = DAG.getNode(ISD::AND, DL, VT, SHLOperand, MaskNode);
+      SDValue SHL = DAG.getNode(ISD::SHL, DL, VT, Op0, MaskBitNum);
+      return DAG.getNode(ISD::OR, DL, VT, AndMask, SHL);
     }
     return SDValue();
   }
