@@ -795,7 +795,7 @@ class SPIRVLegalizePointerCastImpl {
     AtomicRMWInst *NewRMW = B.CreateAtomicRMW(
         RMW->getOperation(), AtomicPtr, RMW->getValOperand(), RMW->getAlign(),
         RMW->getOrdering(), RMW->getSyncScopeID());
-    NewRMW->setVolatile(RMW->isVolatile());
+
     NewRMW->copyMetadata(*RMW);
     GR->replaceAllUsesWith(RMW, NewRMW, /* DeleteOld= */ true);
     DeadInstructions.push_back(RMW);
