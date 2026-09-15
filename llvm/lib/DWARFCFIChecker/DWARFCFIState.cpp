@@ -166,6 +166,12 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
     CFIP.addInstruction(dwarf::DW_CFA_val_offset, Directive.getRegister(),
                         Directive.getOffset());
     break;
+  case MCCFIInstruction::OpLLVMDefCfaConstantAddress:
+  case MCCFIInstruction::OpLLVMDefCfaRegisterAddressTransform:
+    // TODO: DWARF CFA expressions are not supported yet.
+    Context->reportWarning(Directive.getLoc(),
+                           "this directive is not supported, ignoring it");
+    break;
   case MCCFIInstruction::OpLLVMRegisterPair:
   case MCCFIInstruction::OpLLVMVectorRegisters:
   case MCCFIInstruction::OpLLVMVectorOffset:

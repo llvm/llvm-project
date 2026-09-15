@@ -531,6 +531,8 @@ public:
     OpGnuArgsSize,
     OpLabel,
     OpValOffset,
+    OpLLVMDefCfaConstantAddress,
+    OpLLVMDefCfaRegisterAddressTransform,
     OpLLVMRegisterPair,
     OpLLVMVectorRegisters,
     OpLLVMVectorOffset,
@@ -562,6 +564,18 @@ public:
   // Held in ExtraFields when OpLabel.
   struct LabelFields {
     MCSymbol *CfiLabel = nullptr;
+  };
+  /// Held in ExtraFields when OpLLVMDefCfaConstantAddress.
+  struct CfaConstantAddressFields {
+    uint64_t Value;
+    unsigned AddressSpace;
+  };
+  /// Held in ExtraFields when OpLLVMDefCfaRegisterAddressTransform.
+  struct CfaRegisterAddressTransformFields {
+    unsigned Register;
+    unsigned DerefSize;
+    unsigned Scale;
+    unsigned AddressSpace;
   };
   /// Held in ExtraFields when OpLLVMRegisterPair.
   struct RegisterPairFields {
@@ -610,8 +624,9 @@ public:
 
 private:
   MCSymbol *Label;
-  std::variant<CommonFields, EscapeFields, LabelFields, RegisterPairFields,
-               VectorRegistersFields, VectorOffsetFields,
+  std::variant<CommonFields, EscapeFields, LabelFields,
+               CfaConstantAddressFields, CfaRegisterAddressTransformFields,
+               RegisterPairFields, VectorRegistersFields, VectorOffsetFields,
                VectorRegisterMaskFields, LLVMSetRAStateFields>
       ExtraFields;
   OpType Operation;
@@ -770,6 +785,29 @@ public:
   static MCCFIInstruction createLabel(MCSymbol *L, MCSymbol *CfiLabel,
                                       SMLoc Loc) {
     return {OpLabel, L, LabelFields{CfiLabel}, Loc};
+  }
+
+  /// .cfi_llvm_def_cfa_constant_address defines the CFA as a constant address
+  /// in AddressSpace.
+  static MCCFIInstruction createLLVMDefCfaConstantAddress(MCSymbol *L,
+                                                          uint64_t Value,
+                                                          unsigned AddressSpace,
+                                                          SMLoc Loc = {}) {
+    return {OpLLVMDefCfaConstantAddress, L,
+            CfaConstantAddressFields{Value, AddressSpace}, Loc};
+  }
+
+  /// .cfi_llvm_def_cfa_register_address_transform defines the CFA by
+  /// dereferencing Register, shifting the result left by Scale, and
+  /// interpreting it in AddressSpace.
+  static MCCFIInstruction createLLVMDefCfaRegisterAddressTransform(
+      MCSymbol *L, unsigned Register, unsigned DerefSize, unsigned Scale,
+      unsigned AddressSpace, SMLoc Loc = {}) {
+    assert(DerefSize <= UINT8_MAX && "DW_OP_deref_size operand is too large");
+    return {OpLLVMDefCfaRegisterAddressTransform, L,
+            CfaRegisterAddressTransformFields{Register, DerefSize, Scale,
+                                              AddressSpace},
+            Loc};
   }
 
   /// .cfi_llvm_register_pair Previous value of Register is saved in R1:R2.

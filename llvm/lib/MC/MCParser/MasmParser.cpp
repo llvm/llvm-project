@@ -5287,6 +5287,10 @@ void MasmParser::initializeDirectiveKindMap() {
   // DirectiveKindMap[".cfi_offset"] = DK_CFI_OFFSET;
   // DirectiveKindMap[".cfi_rel_offset"] = DK_CFI_REL_OFFSET;
   // DirectiveKindMap[".cfi_llvm_register_pair"] = DK_CFI_LLVM_REGISTER_PAIR;
+  // DirectiveKindMap[".cfi_llvm_def_cfa_constant_address"] =
+  //     DK_CFI_LLVM_DEF_ASPACE_CFA_LITERAL;
+  // DirectiveKindMap[".cfi_llvm_def_cfa_register_address_transform"] =
+  //     DK_CFI_LLVM_DEF_ASPACE_CFA_SCALED;
   // DirectiveKindMap[".cfi_llvm_vector_registers"] =
   //   DK_CFI_LLVM_VECTOR_REGISTERS;
   // DirectiveKindMap[".cfi_llvm_vector_offset"] = DK_CFI_LLVM_VECTOR_OFFSET;

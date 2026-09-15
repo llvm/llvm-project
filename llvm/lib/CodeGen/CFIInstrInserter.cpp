@@ -302,11 +302,13 @@ void CFIInstrInserterImpl::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
         CSRRestored.set(CFI.getRegister());
         break;
       case MCCFIInstruction::OpLLVMDefAspaceCfa:
+      case MCCFIInstruction::OpLLVMDefCfaConstantAddress:
+      case MCCFIInstruction::OpLLVMDefCfaRegisterAddressTransform:
         // TODO: Add support for handling cfi_def_aspace_cfa.
 #ifndef NDEBUG
         report_fatal_error(
-            "Support for cfi_llvm_def_aspace_cfa not implemented! Value of CFA "
-            "may be incorrect!\n");
+            "Support for LLVM address-space CFA directives not implemented! "
+            "Value of CFA may be incorrect!\n");
 #endif
         break;
       case MCCFIInstruction::OpRememberState:
