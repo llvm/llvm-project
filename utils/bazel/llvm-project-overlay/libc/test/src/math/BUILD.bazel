@@ -533,6 +533,7 @@ math_mpfr_test(
     hdrs = ["NearbyIntTest.h"],
     deps = [
         "//libc:__support_fputil_bfloat16",
+    deps = [
         "//libc:__support_cpp_array",
         "//libc:__support_fputil_bfloat16",
     ],
