@@ -386,8 +386,24 @@ QualType HeuristicResolverImpl::resolveTypeOfCallExpr(const CallExpr *CE) {
   // resolveExprToType(CE->getCallee()) would bail in the case of multiple
   // overloads, as it can't produce a single type for them. We can be more
   // permissive here, and allow multiple overloads with a common return type.
-  std::vector<const NamedDecl *> CalleeDecls =
-      resolveExprToDecls(CE->getCallee());
+  std::vector<const NamedDecl *> CalleeDecls;
+  for (const NamedDecl *D : resolveExprToDecls(CE->getCallee())) {
+    // The callee may be re-exported from a dependent base class by a using
+    // declaration, e.g. libstdc++'s `vector` has `using _Base::get_allocator;`.
+    // Such a declaration has no function type of its own, so replace it with
+    // what it names. That may be an overload set, but a conflicting return type
+    // within it is handled below just as it is between two distinct callee
+    // declarations, so simply flatten it in. Only one level is looked through;
+    // a using declaration naming another one is not resolved.
+    if (const auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(D)) {
+      auto Underlying = resolveUsingValueDecl(UUVD);
+      CalleeDecls.insert(CalleeDecls.end(), Underlying.begin(),
+                         Underlying.end());
+      continue;
+    }
+    CalleeDecls.push_back(D);
+  }
+
   QualType CommonReturnType;
   for (const NamedDecl *CalleeDecl : CalleeDecls) {
     QualType CalleeType = resolveDeclToType(CalleeDecl, Ctx);

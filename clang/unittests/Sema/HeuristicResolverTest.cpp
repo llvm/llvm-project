@@ -627,6 +627,33 @@ TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgument_ReturnType) {
       cxxMethodDecl(hasName("foo")).bind("output"));
 }
 
+TEST(HeuristicResolver, MemberExpr_CallOfUsingDeclFromDependentBase) {
+  std::string Code = R"cpp(
+    struct Result {
+      void foo();
+    };
+    template <typename T>
+    struct Base {
+      Result get();
+    };
+    template <typename T>
+    struct Derived : Base<T> {
+      typedef Base<T> _Base;
+      using _Base::get;
+    };
+    template <typename T>
+    void bar(Derived<T> d) {
+      d.get().foo();
+    }
+  )cpp";
+  // Test resolution of "foo" in "d.get().foo()", where "get" is found as a
+  // using declaration naming a member of a dependent base class.
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
+      cxxMethodDecl(hasName("foo")).bind("output"));
+}
+
 TEST(HeuristicResolver, MemberExpr_DefaultTemplateTemplateArgument) {
   std::string Code = R"cpp(
     template <typename T>
