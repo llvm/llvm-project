@@ -1390,8 +1390,18 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
 
   int64_t FPOffset = getFPOffset(MF, ObjectOffset).getFixed();
   int64_t Offset = getStackOffset(MF, ObjectOffset).getFixed();
+
+  // The fixed object area sits above the callee-saved area and can grow
+  // large enough to displace it; account for that displacement here so CSR
+  // objects aren't misclassified as locals and addressed via the base
+  // pointer.
+  bool IsWin64 = Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv(),
+                                              MF.getFunction().isVarArg());
+  const int64_t FixedObjectSize = getFixedObjectSize(
+      MF, AFI, IsWin64, /*IsFunclet*/ false);
   bool isCSR =
-      !isFixed && ObjectOffset >= -((int)AFI->getCalleeSavedStackSize(MFI));
+      !isFixed && ObjectOffset >= -((int64_t)AFI->getCalleeSavedStackSize(MFI) +
+                                    FixedObjectSize);
   bool isSVE = MFI.isScalableStackID(StackID);
 
   StackOffset ZPRStackSize = getZPRStackSize(MF);
