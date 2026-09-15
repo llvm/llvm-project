@@ -112,7 +112,6 @@
 ; CHECK-O23-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O23-NEXT: Running pass: LICMPass on loop
 ; CHECK-O23-NEXT: Running pass: GVNPass on foo
-; CHECK-O23-NEXT: Running analysis: MemoryDependenceAnalysis on foo
 ; CHECK-O23-NEXT: Running pass: MemCpyOptPass on foo
 ; CHECK-O23-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O23-NEXT: Running pass: DSEPass on foo
