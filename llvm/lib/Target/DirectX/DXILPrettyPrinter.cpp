@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILPrettyPrinter.h"
+#include "DXILWriter/DXILDebugInfoMap.h"
 #include "DirectX.h"
-#include "DirectXIRPasses/DXILDebugInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -390,11 +390,12 @@ collectAdditionalMetadata(Module &M, const DXILDebugInfoMap &DI) {
 }
 
 static void prettyPrint(raw_ostream &OS, Module &M, const DXILResourceMap &DRM,
-                        DXILResourceTypeMap &DRTM, const DXILDebugInfoMap &DI) {
+                        DXILResourceTypeMap &DRTM) {
   formatted_raw_ostream FOS(OS);
 
   prettyPrintResources(FOS, DRM, DRTM);
 
+  const DXILDebugInfoMap DI = collectDXILDebugInfo(M);
   SmallVector<const MDNode *> AdditionalMetadata =
       collectAdditionalMetadata(M, DI);
   DXILModuleSlotTracker MST(&M);
@@ -431,9 +432,8 @@ PreservedAnalyses DXILPrettyPrinterPass::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
   const DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
-  const DXILDebugInfoMap DI = DXILDebugInfoPass::run(M);
-  prettyPrint(OS, M, DRM, DRTM, DI);
-  return PreservedAnalyses::none();
+  prettyPrint(OS, M, DRM, DRTM);
+  return PreservedAnalyses::all();
 }
 
 namespace {
@@ -468,9 +468,8 @@ bool DXILPrettyPrinterLegacy::runOnModule(Module &M) {
       getAnalysis<DXILResourceWrapperPass>().getResourceMap();
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-  const DXILDebugInfoMap DI = DXILDebugInfoPass::run(M);
-  prettyPrint(OS, M, DRM, DRTM, DI);
-  return true;
+  prettyPrint(OS, M, DRM, DRTM);
+  return false;
 }
 
 ModulePass *llvm::createDXILPrettyPrinterLegacyPass(raw_ostream &OS) {

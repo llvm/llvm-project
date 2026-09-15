@@ -16,7 +16,7 @@ define amdgpu_ps void @global_fadd_saddr_f32_nortn(ptr addrspace(1) inreg %sbase
 ; GCN-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %ret = atomicrmw fadd ptr addrspace(1) %gep0, float %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %ret = atomicrmw fadd ptr addrspace(1) %gep0, float %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret void
 }
 
@@ -30,7 +30,7 @@ define amdgpu_ps void @global_fadd_saddr_f32_nortn_neg128(ptr addrspace(1) inreg
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %ret = atomicrmw fadd ptr addrspace(1) %gep1, float %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %ret = atomicrmw fadd ptr addrspace(1) %gep1, float %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret void
 }
 

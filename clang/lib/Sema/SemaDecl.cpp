@@ -1658,6 +1658,17 @@ bool Sema::isDeclInScope(NamedDecl *D, DeclContext *Ctx, Scope *S,
   return IdResolver.isDeclInScope(D, Ctx, S, AllowInlineNamespace);
 }
 
+bool Sema::isTagRedeclarationInScope(NamedDecl *D, DeclContext *Ctx, Scope *S,
+                                     bool AllowInlineNamespace) const {
+  if (isDeclInScope(D, Ctx, S, AllowInlineNamespace))
+    return true;
+
+  if (auto *Shadow = dyn_cast<UsingShadowDecl>(D))
+    return isDeclInScope(Shadow->getTargetDecl(), Ctx, S, AllowInlineNamespace);
+
+  return false;
+}
+
 Scope *Sema::getScopeForDeclContext(Scope *S, DeclContext *DC) {
   DeclContext *TargetDC = DC->getPrimaryContext();
   do {
@@ -3011,6 +3022,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.Wasm().mergeImportModuleAttr(D, *IMA);
   else if (const auto *INA = dyn_cast<WebAssemblyImportNameAttr>(Attr))
     NewAttr = S.Wasm().mergeImportNameAttr(D, *INA);
+  else if (const auto *ENA = dyn_cast<WebAssemblyExportNameAttr>(Attr))
+    NewAttr = S.Wasm().mergeExportNameAttr(D, *ENA);
   else if (const auto *TCBA = dyn_cast<EnforceTCBAttr>(Attr))
     NewAttr = S.mergeEnforceTCBAttr(D, *TCBA);
   else if (const auto *TCBLA = dyn_cast<EnforceTCBLeafAttr>(Attr))
@@ -3129,6 +3142,17 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
     if (hasAttribute(Def, NewAttribute->getKind())) {
       ++I;
       continue; // regular attr merging will take care of validating this.
+    }
+
+    if (NewAttribute->getLocation().isInvalid()) {
+      // An attribute with no source location was not written by the user. API
+      // notes, in particular, are matched against whichever declaration the
+      // compiler reaches, which can be a redeclaration that follows the
+      // definition, possibly in a different module. There is nothing for the
+      // user to correct, and erasing the attribute would silently change what
+      // the annotated API means.
+      ++I;
+      continue;
     }
 
     if (isa<C11NoReturnAttr>(NewAttribute)) {
@@ -7747,6 +7771,8 @@ void Sema::CheckAsmLabel(Scope *S, Expr *E, StorageClass SC,
   StringLiteral *SE = cast<StringLiteral>(E);
   StringRef Label = SE->getString();
   QualType R = TInfo->getType();
+  if (R->isIncompleteType())
+    return;
   if (S->getFnParent() != nullptr) {
     switch (SC) {
     case SC_None:
@@ -8612,12 +8638,18 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   DeclContext *NewDC = D->getDeclContext();
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(ShadowedDecl)) {
-    if (const auto *MD =
-            dyn_cast<CXXMethodDecl>(getFunctionLevelDeclContext())) {
+    DeclContext *FnDC = getFunctionLevelDeclContext();
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FnDC)) {
       // Fields aren't shadowed in C++ static members or in member functions
       // with an explicit object parameter.
       if (MD->isStatic() || MD->isExplicitObjectMemberFunction())
         return;
+    } else if (isa<FunctionDecl>(FnDC)) {
+      // A FunctionDecl here (not a CXXMethodDecl) can only be an
+      // inline-defined friend function, since that's the only way to
+      // introduce a non-member function inside a class body. Friends have
+      // no implicit `this`, so nothing here can shadow a field.
+      return;
     }
     // Fields shadowed by constructor parameters are a special case. Usually
     // the constructor initializes the field with the parameter.
@@ -15545,14 +15577,16 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   }
 
   if (UsedAttr *Attr = VD->getAttr<UsedAttr>()) {
-    if (!Attr->isInherited() && !VD->isThisDeclarationADefinition()) {
+    if (!Attr->isInherited() && !Attr->isImplicit() &&
+        !VD->isThisDeclarationADefinition()) {
       Diag(Attr->getLocation(), diag::warn_attribute_ignored_on_non_definition)
           << Attr;
       VD->dropAttr<UsedAttr>();
     }
   }
   if (RetainAttr *Attr = VD->getAttr<RetainAttr>()) {
-    if (!Attr->isInherited() && !VD->isThisDeclarationADefinition()) {
+    if (!Attr->isInherited() && !Attr->isImplicit() &&
+        !VD->isThisDeclarationADefinition()) {
       Diag(Attr->getLocation(), diag::warn_attribute_ignored_on_non_definition)
           << Attr;
       VD->dropAttr<RetainAttr>();
@@ -18647,8 +18681,9 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       // in the same scope (so that the definition/declaration completes or
       // rementions the tag), reuse the decl.
       if (TUK == TagUseKind::Reference || TUK == TagUseKind::Friend ||
-          isDeclInScope(DirectPrevDecl, SearchDC, S,
-                        SS.isNotEmpty() || isMemberSpecialization)) {
+          isTagRedeclarationInScope(DirectPrevDecl, SearchDC, S,
+                                    SS.isNotEmpty() ||
+                                        isMemberSpecialization)) {
 
         if (auto *RD = dyn_cast<CXXRecordDecl>(PrevDecl);
             RD && RD->isInjectedClassName()) {
@@ -21087,7 +21122,17 @@ bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
   assert(ED->isClosedFlag() && "looking for value in non-flag or open enum");
   assert(ED->isCompleteDefinition() && "expected enum definition");
 
-  llvm::APInt FlagBits = FlagBitsCache.at(ED);
+  auto R = FlagBitsCache.try_emplace(ED);
+  llvm::APInt &FlagBits = R.first->second;
+
+  if (R.second) {
+    for (auto *E : ED->enumerators()) {
+      const auto &EVal = E->getInitVal();
+      // Only single-bit enumerators introduce new flag values.
+      if (EVal.isPowerOf2())
+        FlagBits = FlagBits.zext(EVal.getBitWidth()) | EVal;
+    }
+  }
 
   // A value is in a flag enum if either its bits are a subset of the enum's
   // flag bits (the first condition) or we are allowing masks and the same is
@@ -21297,20 +21342,6 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
 
   CheckForDuplicateEnumValues(*this, Elements, Enum, EnumType);
   CheckForComparisonInEnumInitializer(*this, Enum);
-
-  if (Enum->hasAttr<FlagEnumAttr>()) {
-    auto R = FlagBitsCache.try_emplace(Enum);
-    llvm::APInt &FlagBits = R.first->second;
-
-    if (R.second) {
-      for (auto *E : Enum->enumerators()) {
-        const auto &EVal = E->getInitVal();
-        // Only single-bit enumerators introduce new flag values.
-        if (EVal.isPowerOf2())
-          FlagBits = FlagBits.zext(EVal.getBitWidth()) | EVal;
-      }
-    }
-  }
 
   if (Enum->isClosedFlag()) {
     for (Decl *D : Elements) {

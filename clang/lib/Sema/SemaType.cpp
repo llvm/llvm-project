@@ -343,7 +343,11 @@ namespace {
         }
       }
 
-      llvm_unreachable("no Attr* for AttributedType*");
+      // The AttributedType can be inherited from another declarator, for
+      // example when __typeof__ reuses a type built for a different
+      // declaration, in which case there is no entry for it in this
+      // TypeProcessingState. Return null in that case.
+      return nullptr;
     }
 
     SourceLocation
@@ -1577,7 +1581,13 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   // Check for __ob_wrap and __ob_trap
   if (DS.isOverflowBehaviorSpecified() &&
       S.getLangOpts().OverflowBehaviorTypes) {
-    if (!Result->isIntegerType()) {
+    if (Result->isAtomicType()) {
+      SourceLocation Loc = DS.getOverflowBehaviorLoc();
+      StringRef SpecifierName =
+          DeclSpec::getSpecifierName(DS.getOverflowBehaviorState());
+      S.Diag(Loc, diag::err_overflow_behavior_atomic_type)
+          << SpecifierName << Result.getAsString() << 1;
+    } else if (!Result->isIntegerType()) {
       SourceLocation Loc = DS.getOverflowBehaviorLoc();
       StringRef SpecifierName =
           DeclSpec::getSpecifierName(DS.getOverflowBehaviorState());
@@ -6731,6 +6741,14 @@ static void HandleOverflowBehaviorAttr(QualType &Type, const ParsedAttr &Attr,
     return;
   }
 
+  // Verify we aren't dealing with an atomic type
+  if (Type->isAtomicType()) {
+    S.Diag(Attr.getLoc(), diag::err_overflow_behavior_atomic_type)
+        << Attr << Type.getAsString() << 0; // 0 for attribute
+    Attr.setInvalid();
+    return;
+  }
+
   // Check that the underlying type is an integer type
   if (!Type->isIntegerType()) {
     S.Diag(Attr.getLoc(), diag::err_overflow_behavior_non_integer_type)
@@ -10415,6 +10433,9 @@ QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
     else if (getLangOpts().C23 && T->isUndeducedAutoType())
       // _Atomic auto is prohibited in C23
       DisallowedKind = 9;
+    else if (T->isOverflowBehaviorType())
+      // Overflow behavior types do not compose with _Atomic
+      DisallowedKind = 10;
 
     if (DisallowedKind != -1) {
       Diag(Loc, diag::err_atomic_specifier_bad_type) << DisallowedKind << T;

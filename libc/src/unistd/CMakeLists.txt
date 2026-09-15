@@ -48,6 +48,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  chroot
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.chroot
+)
+
+add_entrypoint_object(
   confstr
   SRCS
     confstr.cpp
@@ -124,6 +131,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.fpathconf
+)
+
+add_entrypoint_object(
+  execl
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.execl
 )
 
 add_entrypoint_object(
@@ -271,6 +285,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.lseek
+)
+
+add_entrypoint_object(
+  nice
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.nice
 )
 
 add_entrypoint_object(

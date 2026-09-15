@@ -719,7 +719,6 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
     : TM(tm),
       RuntimeLibcallInfo(TM.getTargetTriple(), TM.Options.ExceptionModel,
                          TM.getTargetTriple().getDefaultFloatABI(),
-                         TM.Options.EABIVersion,
                          TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
       Libcalls(RuntimeLibcallInfo, [&STI](LibcallLoweringInfo &Info) {
         STI.initLibcallLoweringInfo(Info);
@@ -2051,8 +2050,14 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
     return ISD::FLOG2;
   case Intrinsic::log10:
     return ISD::FLOG10;
+  case Intrinsic::modf:
+    return ISD::FMODF;
   case Intrinsic::sin:
     return ISD::FSIN;
+  case Intrinsic::sincos:
+    return ISD::FSINCOS;
+  case Intrinsic::sincospi:
+    return ISD::FSINCOSPI;
   case Intrinsic::sinh:
     return ISD::FSINH;
   case Intrinsic::tan:
@@ -2523,11 +2528,8 @@ MachineMemOperand::Flags TargetLoweringBase::getLoadMemOperandFlags(
   if (OptLevel != CodeGenOptLevel::None &&
       isDereferenceableAndAlignedPointer(
           LI.getPointerOperand(), LI.getType(), LI.getAlign(),
-          SimplifyQuery(DL, LibInfo, /*DT=*/nullptr, AC, &LI))) {
+          SimplifyQuery(DL, LibInfo, /*DT=*/nullptr, AC, &LI)))
     Flags |= MachineMemOperand::MODereferenceable;
-  } else if (LI.hasMetadata(LLVMContext::MD_dereferenceable)) {
-    Flags |= MachineMemOperand::MODereferenceable;
-  }
 
   Flags |= getTargetMMOFlags(LI);
   return Flags;
