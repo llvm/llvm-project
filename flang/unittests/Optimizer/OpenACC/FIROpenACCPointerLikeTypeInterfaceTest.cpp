@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/OpenACC/Support/RegisterOpenACCExtensions.h"
 #include "flang/Optimizer/Support/InitFIR.h"
+#include "flang/Optimizer/Transforms/FIRToMemRefTypeConverter.h"
 
 using namespace mlir;
 
@@ -119,6 +120,26 @@ TEST_F(FIROpenACCPointerLikeTypeInterfaceTest,
   auto elTy = dyn_cast<IntegerType>(memrefTy.getElementType());
   ASSERT_TRUE(elTy);
   EXPECT_EQ(elTy.getWidth(), kindMap->getLogicalBitsize(logicalKind));
+}
+
+TEST_F(FIROpenACCPointerLikeTypeInterfaceTest,
+    GetAsMemRefTypeFromFirRefToHeapArrayIsNotConvertible) {
+  Type f32 = Float32Type::get(&context);
+  Type seq = fir::SequenceType::get({ShapedType::kDynamic}, f32);
+  Type heapTy = fir::HeapType::get(seq);
+  Type refTy = fir::ReferenceType::get(heapTy);
+  auto ptrLike = cast<acc::PointerLikeType>(refTy);
+
+  // A ref-to-heap-array is a pointer slot, not the array data.
+  // convertibleMemrefType must not peel the inner heap, or getAsMemRefType
+  // would call convertMemrefType and assert.
+  EXPECT_FALSE(ptrLike.getAsMemRefType(module));
+
+  fir::FIRToMemRefTypeConverter converter(module);
+  converter.setConvertComplexTypes(true);
+  EXPECT_TRUE(converter.convertibleMemrefType(heapTy));
+  EXPECT_FALSE(converter.convertibleMemrefType(refTy));
+  EXPECT_TRUE(converter.convertibleMemrefType(fir::BoxType::get(heapTy)));
 }
 
 } // namespace
