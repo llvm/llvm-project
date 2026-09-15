@@ -1500,7 +1500,11 @@ Error IRLinker::run() {
     EnableDLWarning = !(SrcHasLibDeviceTriple && SrcHasLibDeviceDL);
   }
 
-  if (EnableDLWarning && (SrcM->getDataLayout() != DstM.getDataLayout())) {
+  // A source module without a data layout has made no ABI commitments, so
+  // there is nothing to conflict with; the destination's layout simply
+  // applies, matching how an empty source target triple is treated below.
+  if (EnableDLWarning && !SrcM->getDataLayoutStr().empty() &&
+      (SrcM->getDataLayout() != DstM.getDataLayout())) {
     emitWarning("Linking two modules of different data layouts: '" +
                 SrcM->getModuleIdentifier() + "' is '" +
                 SrcM->getDataLayoutStr() + "' whereas '" +
