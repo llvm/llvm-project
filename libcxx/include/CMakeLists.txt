@@ -1047,6 +1047,7 @@ set(files
   cuchar
   cwchar
   cwctype
+  debugging
   deque
   errno.h
   exception
