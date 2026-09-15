@@ -16,7 +16,6 @@
 #define LLVM_CODEGEN_GLOBALISEL_GIMATCHTABLEEXECUTORIMPL_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -36,7 +35,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <type_traits>
 
 namespace llvm {
 
@@ -61,10 +59,7 @@ bool GIMatchTableExecutor::executeMatchTable(
   bool NoFPException = !State.MIs[0]->getDesc().mayRaiseFPException();
 
   const uint32_t RootFlags = State.MIs[0]->getFlags();
-  const uint32_t PoisonGeneratingFlags =
-      std::is_base_of_v<Combiner, TgtExecutor>
-          ? MachineInstr::getPoisonGeneratingFlags()
-          : 0;
+  const uint32_t RootFlagsToDrop = getRootFlagsToDrop();
   // Flags to drop from the final (root flags | output flags).
   SmallVector<uint32_t, 4> OutMIFlagsToDrop;
   bool BuilderInitialized = false;
@@ -78,7 +73,7 @@ bool GIMatchTableExecutor::executeMatchTable(
   };
   const auto initializeOutMIFlagState = [&](unsigned NumOutMIs) {
     if (NumOutMIs > OutMIFlagsToDrop.size())
-      OutMIFlagsToDrop.resize(NumOutMIs, PoisonGeneratingFlags);
+      OutMIFlagsToDrop.resize(NumOutMIs, RootFlagsToDrop);
   };
 
   enum RejectAction { RejectAndGiveUp, RejectAndResume };

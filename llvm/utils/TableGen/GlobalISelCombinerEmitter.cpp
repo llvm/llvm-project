@@ -2605,6 +2605,9 @@ void GICombinerEmitter::emitAdditionalImpl(raw_ostream &OS) {
   std::string CanMatchOpcodeFnName =
       (getClassName() + "::canMatchOpcode").str();
   emitCanMatchOpcodeFn(OS, CanMatchOpcodeFnName);
+  OS << "uint32_t " << getClassName() << "::getRootFlagsToDrop() const {\n"
+     << "  return MachineInstr::getPoisonGeneratingFlags();\n"
+     << "}\n\n";
   OS << "bool " << getClassName() << "::" << getCombineAllMethodName()
      << "(MachineInstr &I) const {\n"
      << "  const PredicateBitset AvailableFeatures = "
@@ -2825,7 +2828,8 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   // GET_GICOMBINER_CLASS_MEMBERS, which need to be included inside the class.
   {
     IfDefGuardEmitter If(OS, "GET_GICOMBINER_CLASS_MEMBERS");
-    OS << "  bool canMatchOpcode(unsigned Opc) const override;\n";
+    OS << "  bool canMatchOpcode(unsigned Opc) const override;\n"
+       << "  uint32_t getRootFlagsToDrop() const override;\n";
   }
   emitPredicatesDecl(OS, "GET_GICOMBINER_CLASS_MEMBERS");
   emitTemporariesDecl(OS, "GET_GICOMBINER_CLASS_MEMBERS");

@@ -741,6 +741,8 @@ protected:
     llvm_unreachable("Subclass does not implement runCustomAction!");
   }
 
+  virtual uint32_t getRootFlagsToDrop() const { return 0; }
+
   LLVM_ABI bool isOperandImmEqual(const MachineOperand &MO, int64_t Value,
                                   const MachineRegisterInfo &MRI,
                                   bool Splat = false) const;

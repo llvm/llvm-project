@@ -29,6 +29,9 @@ public:
 
   void setupGeneratedPerFunctionState(MachineFunction &MF) override {}
   bool tryCombineAll(MachineInstr &I) const override { return false; }
+  uint32_t getRootFlagsToDrop() const override {
+    return MachineInstr::getPoisonGeneratingFlags();
+  }
 
   bool runCustomAction(unsigned FnID, const MatcherState &State,
                        NewMIVector &OutMIs) const override {
