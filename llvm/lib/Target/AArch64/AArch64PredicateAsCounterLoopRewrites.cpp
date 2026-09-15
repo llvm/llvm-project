@@ -306,9 +306,8 @@ AArch64PredicateAsCounterLoopRewrites::matchMaskPhi(Loop &L,
     return std::nullopt;
 
   if (Phi.getNumIncomingValues() != 2) {
-    logMatchFailure(Phi, Twine("phi has ")
-                             .concat(Twine(Phi.getNumIncomingValues()))
-                             .concat(" incoming values; expected 2"));
+    logMatchFailure(Phi, Twine("phi has ") + Twine(Phi.getNumIncomingValues()) +
+                             " incoming values; expected 2");
     return std::nullopt;
   }
 
@@ -328,8 +327,9 @@ AArch64PredicateAsCounterLoopRewrites::matchMaskPhi(Loop &L,
 
   unsigned WideMaskElements = PhiTy->getMinNumElements();
   if (!isPowerOf2_32(WideMaskElements)) {
-    logMatchFailure(Phi, Twine("wide mask element count is not a power of 2: ")
-                             .concat(Twine(WideMaskElements)));
+    logMatchFailure(Phi,
+                    Twine("wide mask element count is not a power of 2: ") +
+                        Twine(WideMaskElements));
     return std::nullopt;
   }
 
@@ -346,25 +346,25 @@ AArch64PredicateAsCounterLoopRewrites::matchMaskPhi(Loop &L,
       getLargestMaskedMemAccessSizeInBits(L, Phi);
 
   if (!is_contained({8u, 16u, 32u, 64u}, PreferredMaskElementSizeInBits)) {
-    logMatchFailure(Phi, Twine("unsupported element size in bits: ")
-                             .concat(Twine(PreferredMaskElementSizeInBits)));
+    logMatchFailure(Phi, Twine("unsupported element size in bits: ") +
+                             Twine(PreferredMaskElementSizeInBits));
     return std::nullopt;
   }
 
   unsigned SVEMaskElements =
       AArch64::SVEBitsPerBlock / PreferredMaskElementSizeInBits;
   if (WideMaskElements <= SVEMaskElements) {
-    logMatchFailure(Phi, Twine("wide mask element count ")
-                             .concat(Twine(WideMaskElements))
-                             .concat(" is not wider than the legal mask width ")
-                             .concat(Twine(SVEMaskElements)));
+    logMatchFailure(Phi, Twine("wide mask element count ") +
+                             Twine(WideMaskElements) +
+                             " is not wider than the legal mask width " +
+                             Twine(SVEMaskElements));
     return std::nullopt;
   }
 
   unsigned VectorScale = WideMaskElements / SVEMaskElements;
   if (VectorScale != 2 && VectorScale != 4) {
-    logMatchFailure(Phi, Twine("unsupported predicate-as-counter scale: ")
-                             .concat(Twine(VectorScale)));
+    logMatchFailure(Phi, Twine("unsupported predicate-as-counter scale: ") +
+                             Twine(VectorScale));
     return std::nullopt;
   }
 
