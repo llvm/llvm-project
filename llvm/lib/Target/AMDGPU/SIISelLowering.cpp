@@ -299,6 +299,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v16i64, MVT::v16i32, Expand);
 
   setOperationAction(ISD::GlobalAddress, {MVT::i32, MVT::i64}, Custom);
+
+  // Only for an alloca in the VGPR ("as memory") address space.
+  setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
   setOperationAction(ISD::BlockAddress, {MVT::i32, MVT::i64}, Custom);
   setOperationAction(ISD::ExternalSymbol, {MVT::i32, MVT::i64}, Custom);
 
@@ -1674,6 +1677,20 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.ptrVal = nullptr;
     Info.fallbackAddressSpace = AMDGPUAS::STREAMOUT_REGISTER;
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Infos.push_back(Info);
+    return;
+  }
+  case Intrinsic::amdgcn_vgpr_lifetime_start:
+  case Intrinsic::amdgcn_vgpr_lifetime_end: {
+    // The MMO names the whole object, which is how AMDGPUPrivateObjectVGPRs
+    // finds the registers it occupies.
+    const auto *Alloca = cast<AllocaInst>(CI.getArgOperand(0));
+    const auto &MD = AMDGPU::AllocatedVGPRsMetadata::get(*Alloca);
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), MD.getSize() * 8);
+    Info.ptrVal = Alloca;
+    Info.flags = Flags | MachineMemOperand::MODereferenceable |
+                 MachineMemOperand::MOStore;
     Infos.push_back(Info);
     return;
   }
@@ -7741,6 +7758,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerBRCOND(Op, DAG);
   case ISD::RETURNADDR:
     return LowerRETURNADDR(Op, DAG);
+  case ISD::FrameIndex:
+    return lowerFrameIndex(Op, DAG);
   case ISD::SPONENTRY:
     return LowerSPONENTRY(Op, DAG);
   case ISD::LOAD: {
@@ -10239,6 +10258,19 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
                          MachineMemOperand::MOInvariant);
 }
 
+// The address is where AMDGPUPromoteAlloca placed the object, recorded on the
+// alloca. Every other frame index keeps its default lowering.
+SDValue SITargetLowering::lowerFrameIndex(SDValue Op, SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  int FI = cast<FrameIndexSDNode>(Op)->getIndex();
+  const AllocaInst *Alloca = MF.getFrameInfo().getObjectAllocation(FI);
+  if (!Alloca || Alloca->getAddressSpace() != AMDGPUAS::VGPR)
+    return SDValue();
+
+  const auto &MD = AMDGPU::AllocatedVGPRsMetadata::get(*Alloca);
+  return DAG.getConstant(MD.getAddress(), SDLoc(Op), MVT::i32);
+}
+
 SDValue SITargetLowering::LowerExternalSymbol(SDValue Op,
                                               SelectionDAG &DAG) const {
   // TODO: Handle this. It should be mostly the same as LowerGlobalAddress.
@@ -12690,6 +12722,15 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     if (Subtarget->hasGFX1250_STRICT())
       initializeM0ToZeroForClusterLoad(Op, DAG, DL);
     return SDValue();
+  }
+  case Intrinsic::amdgcn_vgpr_lifetime_start:
+  case Intrinsic::amdgcn_vgpr_lifetime_end: {
+    unsigned Opcode = IntrinsicID == Intrinsic::amdgcn_vgpr_lifetime_start
+                          ? AMDGPU::VGPR_LIFETIME_START
+                          : AMDGPU::VGPR_LIFETIME_END;
+    MachineSDNode *Marker = DAG.getMachineNode(Opcode, DL, MVT::Other, Chain);
+    DAG.setNodeMemRefs(Marker, {cast<MemSDNode>(Op)->getMemOperand()});
+    return SDValue(Marker, 0);
   }
   case Intrinsic::amdgcn_exp_compr: {
     SDValue Src0 = Op.getOperand(4);
@@ -20562,6 +20603,16 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
     MRI.replaceRegWith(AMDGPU::FP_REG, Info->getFrameOffsetReg());
 
   Info->limitOccupancy(MF);
+
+  // The object lives in registers and every reference to its frame index is
+  // now its address, so it must not take up stack space as well.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  for (int FI = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd(); FI != E;
+       ++FI) {
+    const AllocaInst *Alloca = MFI.getObjectAllocation(FI);
+    if (Alloca && Alloca->getAddressSpace() == AMDGPUAS::VGPR)
+      MFI.RemoveStackObject(FI);
+  }
 
   if (ST.isWave32() && !MF.empty()) {
     for (auto &MBB : MF) {

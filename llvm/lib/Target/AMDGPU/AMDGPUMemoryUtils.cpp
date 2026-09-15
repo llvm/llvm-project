@@ -42,6 +42,32 @@ unsigned getSyntheticApertureNumber(unsigned AS) {
   }
 }
 
+AllocatedVGPRsMetadata &AllocatedVGPRsMetadata::get(const AllocaInst &Alloca) {
+  return *cast<AllocatedVGPRsMetadata>(
+      Alloca.getMetadata("amdgpu.allocated.vgprs"));
+}
+
+unsigned AllocatedVGPRsMetadata::getAddress() const {
+  return cast<ConstantInt>(cast<ConstantAsMetadata>(getOperand(0))->getValue())
+      ->getZExtValue();
+}
+
+unsigned AllocatedVGPRsMetadata::getSize() const {
+  return cast<ConstantInt>(cast<ConstantAsMetadata>(getOperand(1))->getValue())
+      ->getZExtValue();
+}
+
+bool AllocatedVGPRsMetadata::classof(const MDNode *N) {
+  if (N->getNumOperands() != 2)
+    return false;
+  for (int I = 0; I != 2; ++I) {
+    auto *C = dyn_cast<ConstantAsMetadata>(N->getOperand(I));
+    if (!C || !isa<ConstantInt>(C->getValue()))
+      return false;
+  }
+  return true;
+}
+
 void copyMetadataForWidenedLoad(LoadInst &Dest, const LoadInst &Source) {
   SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
   Source.getAllMetadata(MD);

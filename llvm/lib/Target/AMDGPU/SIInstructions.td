@@ -1146,6 +1146,21 @@ foreach vt = !listconcat(
     Reg512Types.types, Reg1024Types.types) in
 defm : VRegIdxLoadStorePat<vt>;
 
+/// Bound the lifetime of an object in the VGPR ("as memory") address space.
+/// AMDGPUPrivateObjectVGPRs turns these into an implicit def on the start and
+/// a killed use on the end, keeping register allocation off those registers
+/// while the object is live. They conceptually overwrite it with "undef".
+def VGPR_LIFETIME_START : SPseudoInstSI<(outs), (ins)> {
+  let hasSideEffects = false;
+  let mayStore = true;
+  let isMeta = true;
+}
+def VGPR_LIFETIME_END : SPseudoInstSI<(outs), (ins)> {
+  let hasSideEffects = false;
+  let mayStore = true;
+  let isMeta = true;
+}
+
 // Used for byte or short loads.
 // It lowers into V_BFE_U32 + V_LOAD_IDX, or V_BFE_I32 + V_LOAD_IDX for
 // sign-extended loads.

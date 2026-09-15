@@ -4319,13 +4319,16 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.isBundle() || MIb.isBundle())
     return false;
 
-  // These only alias each other, and only on overlapping dword ranges.
+  // These only alias each other, and only on overlapping dword ranges. A
+  // lifetime marker is the exception: it overwrites the whole object it covers,
+  // so it may alias any access to that object.
   const bool IsLdStIdxA = isa<AMDGPUMI::VLoadStoreIdxInst>(MIa);
   const bool IsLdStIdxB = isa<AMDGPUMI::VLoadStoreIdxInst>(MIb);
   if (IsLdStIdxA || IsLdStIdxB) {
     if (IsLdStIdxA && IsLdStIdxB)
       return checkInstOffsetsDoNotOverlap(MIa, MIb);
-    return true;
+    return !isa<AMDGPUMI::VGPRLifetimeInst>(MIa) &&
+           !isa<AMDGPUMI::VGPRLifetimeInst>(MIb);
   }
 
   if (isLDSDMA(MIa) || isLDSDMA(MIb))
