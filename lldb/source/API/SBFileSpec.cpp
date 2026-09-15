@@ -102,8 +102,7 @@ int SBFileSpec::ResolvePath(const char *src_path, char *dst_path,
 
   llvm::SmallString<64> result(src_path);
   FileSystem::Instance().Resolve(result);
-  ::snprintf(dst_path, dst_len, "%s", result.c_str());
-  return std::min(dst_len - 1, result.size());
+  return FileSpec::CopyToBuffer(result, dst_path, dst_len);
 }
 
 const char *SBFileSpec::GetFilename() const {
@@ -141,11 +140,7 @@ void SBFileSpec::SetDirectory(const char *directory) {
 uint32_t SBFileSpec::GetPath(char *dst_path, size_t dst_len) const {
   LLDB_INSTRUMENT_VA(this, dst_path, dst_len);
 
-  uint32_t result = m_opaque_up->GetPath(dst_path, dst_len);
-
-  if (result == 0 && dst_path && dst_len > 0)
-    *dst_path = '\0';
-  return result;
+  return m_opaque_up->GetPath(dst_path, dst_len);
 }
 
 const lldb_private::FileSpec *SBFileSpec::operator->() const {
