@@ -9886,7 +9886,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         }
       }
 
-      if (isAMDGPU && !C.getDriver().IsFlangMode()) {
+      if (TC->getTriple().isAMDGPU() && !C.getDriver().IsFlangMode()) {
         StringRef OOpt;
         if (const Arg *A = Args.getLastArg(options::OPT_O_Group)) {
           if (A->getOption().matches(options::OPT_O4) ||
