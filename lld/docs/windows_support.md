@@ -26,8 +26,8 @@ real-world binaries such as Firefox and Chromium.
 ## Development status
 
 Driver
-: {good}`Mostly done`. Some exotic command line options that are not usually
-  used for application development, such as `/DRIVER`, are not supported.
+: {good}`Mostly done`. LLD supports `/DRIVER`, `/DRIVER:WDM`, and
+  `/DRIVER:UPONLY` for linking Windows NT kernel-mode drivers.
 
 Linking against DLL
 : {good}`Done`. LLD can read import libraries needed to link against DLL. Both
