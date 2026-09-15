@@ -1045,14 +1045,15 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   PB.registerPipelineEarlySimplificationEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level,
              ThinOrFullLTOPhase Phase) {
+        if (EnableHipStdPar && getTargetTriple().isAMDGCN())
+          PM.addPass(HipStdParMathFixupPass());
+
         if (!isLTOPreLink(Phase) && getTargetTriple().isAMDGCN()) {
           // When we are not using -fgpu-rdc, we can run accelerator code
           // selection relatively early, but still after linking to prevent
           // eager removal of potentially reachable symbols.
-          if (EnableHipStdPar) {
-            PM.addPass(HipStdParMathFixupPass());
+          if (EnableHipStdPar)
             PM.addPass(HipStdParAcceleratorCodeSelectionPass());
-          }
 
           PM.addPass(AMDGPUPrintfRuntimeBindingPass());
         }
