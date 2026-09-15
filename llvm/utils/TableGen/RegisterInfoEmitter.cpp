@@ -1129,8 +1129,9 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
   //
   //   RC->getSuperRegIndices() = SuperRegIdxSeqs + ...
   //
-  // The corresponding bitmasks follow the sub-class mask in memory. Each
-  // mask has RCMaskWords uint32_t entries.
+  // The corresponding bitmasks are reached through RC->getSuperRegClassMask(),
+  // which indexes a per-class array of offsets. Identical masks are emitted
+  // once and shared, so they do not follow the sub-class mask in memory.
   //
   // Every bit mask present in the list has at least one bit set.
 
@@ -1144,6 +1145,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     unsigned RegIdx;
     unsigned BitSetIdx;
     unsigned SubClassMaskIdx;
+    unsigned SuperRegMaskOffsetIdx;
     unsigned SuperClassIdx;
     // Not strictly an index, but to avoid recomputation: cache reg set range.
     unsigned MinRegVal;
@@ -1151,7 +1153,26 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
   };
   SmallVector<StartIndex> StartIndices;
   StartIndices.reserve(RegisterClasses.size() + 1);
-  StartIndices.push_back(StartIndex{0, 0, 0, 0, 0, 0});
+  StartIndices.push_back(StartIndex{0, 0, 0, 0, 0, 0, 0});
+
+  // Super-register class masks are emitted into one pool, with identical masks
+  // stored once. The masks of a class are therefore not contiguous, and each
+  // class carries an array of indices into the pool instead.
+  using RegClassMask = SmallVector<uint32_t, 4>;
+  std::vector<RegClassMask> MaskPool;
+  std::map<RegClassMask, unsigned> MaskPoolIndices;
+  SmallVector<SmallVector<unsigned, 8>, 8> SuperRegMaskIndices(
+      RegisterClasses.size());
+
+  auto GetMaskPoolIndex = [&](const BitVector &BV) {
+    RegClassMask Mask((BV.size() + 31) / 32, 0);
+    for (unsigned I : BV.set_bits())
+      Mask[I / 32] |= 1u << (I % 32);
+    auto [It, Inserted] = MaskPoolIndices.try_emplace(Mask, MaskPool.size());
+    if (Inserted)
+      MaskPool.push_back(std::move(Mask));
+    return It->second;
+  };
 
   // For compressing the sub-reg index lists.
   using IdxList = std::vector<const CodeGenSubRegIndex *>;
@@ -1168,15 +1189,15 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
       MaxRegVal = std::max(MaxRegVal, RegBank.getReg(Reg)->EnumValue);
     }
 
-    unsigned SubClassMaskSize = (RC.getSubClasses().size() + 31) / 32;
     IdxList &SRIList = SuperRegIdxLists[RC.EnumValue];
+    SmallVector<unsigned, 8> &MaskIndices = SuperRegMaskIndices[RC.EnumValue];
     for (auto &Idx : SubRegIndices) {
       MaskBV.reset();
       RC.getSuperRegClasses(&Idx, MaskBV);
       if (MaskBV.none())
         continue;
       SRIList.push_back(&Idx);
-      SubClassMaskSize += (MaskBV.size() + 31) / 32;
+      MaskIndices.push_back(GetMaskPoolIndex(MaskBV));
     }
     SuperRegIdxSeqs.add(SRIList);
 
@@ -1188,12 +1209,25 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
         // Round to next byte size.
         Last.BitSetIdx +
             (Order.empty() ? 0 : ((MaxRegVal - MinRegVal) / 8) + 1),
-        Last.SubClassMaskIdx + SubClassMaskSize,
+        Last.SubClassMaskIdx + unsigned((RC.getSubClasses().size() + 31) / 32),
+        Last.SuperRegMaskOffsetIdx + unsigned(MaskIndices.size()),
         Last.SuperClassIdx + unsigned(RC.getSuperClasses().size()),
         0, // MinRegVal for next RegClass.
         0, // RegSetSize for next RegClass.
     });
   }
+
+  // The pool follows the per-class sub-class masks in the SubClassMasks array.
+  unsigned MaskPoolStart = StartIndices.back().SubClassMaskIdx;
+  SmallVector<unsigned> MaskPoolStarts;
+  MaskPoolStarts.reserve(MaskPool.size());
+  for (unsigned Idx = 0, Start = MaskPoolStart; Idx != MaskPool.size(); ++Idx) {
+    MaskPoolStarts.push_back(Start);
+    Start += MaskPool[Idx].size();
+  }
+  unsigned TotalSubClassMaskSize =
+      MaskPoolStarts.empty() ? MaskPoolStart
+                             : MaskPoolStarts.back() + MaskPool.back().size();
 
   RegClassStrings.layout();
   RegClassStrings.emitStringLiteralDef(
@@ -1205,8 +1239,8 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
   raw_string_ostream(MCRegisterClassStorageType)
       << "MCRegisterClassStorage<" << RegisterClasses.size() << ", "
       << Totals.RegIdx << ", " << Totals.BitSetIdx << ", "
-      << Totals.SubClassMaskIdx << ", " << SuperRegIdxSeqs.size() << ", "
-      << Totals.SuperClassIdx << ">";
+      << TotalSubClassMaskSize << ", " << Totals.SuperRegMaskOffsetIdx << ", "
+      << SuperRegIdxSeqs.size() << ", " << Totals.SuperClassIdx << ">";
   OS << "using " << TargetName
      << "RegisterClassStorage = " << MCRegisterClassStorageType << ";\n";
   OS << "extern const " << MCRegisterClassStorageType << " " << TargetName
@@ -1240,6 +1274,8 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
        << (RC.Allocatable ? "true" : "false") << ", /* Allocatable */\n      "
        << (RC.getBaseClassOrder() ? "true" : "false") << ",\n      "
        << GetOff("SubClassMasks", RCIndices.SubClassMaskIdx) << ",\n      "
+       << GetOff("SuperRegMaskOffsets", RCIndices.SuperRegMaskOffsetIdx)
+       << ",\n      "
        << GetOff("SuperRegIdxSeqs",
                  SuperRegIdxSeqs.get(SuperRegIdxLists[RC.EnumValue]))
        << ",\n      ";
@@ -1291,18 +1327,31 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     OS << "    // " << StartIndices[Idx].SubClassMaskIdx << " " << RC.getName()
        << "\n    ";
     printBitVectorAsHex(OS, RC.getSubClasses(), 32);
+    OS << "\n";
+  }
 
-    // Emit super-reg class masks for any relevant SubRegIndices that can
-    // project into RC.
-    for (auto &Idx : SubRegIndices) {
-      MaskBV.reset();
-      RC.getSuperRegClasses(&Idx, MaskBV);
-      if (MaskBV.none())
-        continue;
-      OS << "\n    ";
-      printBitVectorAsHex(OS, MaskBV, 32);
-      OS << "// " << Idx.getName();
-    }
+  // Emit the pool of super-reg class masks, shared by all the classes that
+  // project into the same set of classes under some sub-register index.
+  for (const auto &[Idx, Mask] : enumerate(MaskPool)) {
+    OS << "    /* " << MaskPoolStarts[Idx] << " */ ";
+    for (uint32_t Word : Mask)
+      OS << format("0x%08x, ", Word);
+    OS << "\n";
+  }
+  OS << "  },\n  {\n";
+
+  // Emit, for each class, the offset of each of its super-reg class masks.
+  // Offsets are relative to the class itself, as MCRegisterClass reads them.
+  for (const auto &[Idx, RC] : enumerate(RegisterClasses)) {
+    ArrayRef<unsigned> MaskIndices = SuperRegMaskIndices[RC.EnumValue];
+    if (MaskIndices.empty())
+      continue;
+    OS << "    /* " << StartIndices[Idx].SuperRegMaskOffsetIdx << " "
+       << RC.getName() << " */ ";
+    for (unsigned MaskIdx : MaskIndices)
+      OS << "offsetof(" << TargetName << "RegisterClassStorage, SubClassMasks["
+         << MaskPoolStarts[MaskIdx] << "]) - " << Idx
+         << " * sizeof(MCRegisterClass), ";
     OS << "\n";
   }
   OS << "  },\n  {\n";
