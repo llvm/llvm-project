@@ -1,4 +1,5 @@
-// RUN: mlir-opt --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg))" %s -verify-diagnostics -o -| FileCheck %s
+// RUN: mlir-opt --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg))" %s -verify-diagnostics -o -| FileCheck %s --check-prefixes=CHECK,FINITE
+// RUN: mlir-opt --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg{allow-non-finites=true}))" %s -verify-diagnostics -o -| FileCheck %s --check-prefixes=CHECK,NONFINITE
 
 // CHECK: #[[$MAP0:.*]] = affine_map<() -> ()>
 
@@ -1014,13 +1015,15 @@ func.func @reduce_float(%arg0: tensor<5x4xf32>) -> () {
   // CHECK: arith.mulf
   %2 = tosa.reduce_product %arg0 {axis = 0 : i32} : (tensor<5x4xf32>) -> tensor<1x4xf32>
 
-  // CHECK: arith.constant 3.40282347E+38 : f32
+  // FINITE: arith.constant 3.40282347E+38 : f32
+  // NONFINITE: arith.constant 0x7F800000 : f32
   // CHECK: linalg.fill
   // CHECK: linalg.reduce
   // CHECK: arith.minimumf
   %3 = tosa.reduce_min %arg0 {axis = 0 : i32} : (tensor<5x4xf32>) -> tensor<1x4xf32>
 
-  // CHECK: arith.constant -3.40282347E+38 : f32
+  // FINITE: arith.constant -3.40282347E+38 : f32
+  // NONFINITE: arith.constant 0xFF800000 : f32
   // CHECK: linalg.fill
   // CHECK: linalg.reduce
   // CHECK: arith.maximumf
@@ -1100,7 +1103,8 @@ func.func @reduce_float_dyn_multiple(%arg0: tensor<?x?xf32>) -> () {
   // CHECK: %[[C0:.+]] = arith.constant 0
   // CHECK: %[[DYN:.+]] = tensor.dim %[[ARG0]], %[[C0]]
   // CHECK: %[[INIT:.+]] = tensor.empty(%[[DYN]])
-  // CHECK: %[[CMIN:.+]] = arith.constant -3.40282347E+38
+  // FINITE: %[[CMIN:.+]] = arith.constant -3.40282347E+38
+  // NONFINITE: %[[CMIN:.+]] = arith.constant 0xFF800000
   // CHECK: %[[FILL:.+]] = linalg.fill ins(%[[CMIN]]{{.*}}outs(%[[INIT]]
   // CHECK: %[[REDUCE:.+]] = linalg.reduce ins(%[[ARG0]] : tensor<?x?xf32>) outs(%[[FILL]] : tensor<?xf32>) dimensions = [1]
   // CHECK:  (%[[ARG1:.*]]: f32, %[[ARG2:.*]]: f32) {
@@ -1814,7 +1818,8 @@ func.func @argmax(%arg0 : tensor<3x2xi32>, %arg1 : tensor<6xf32>) -> () {
   // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]]
   %1 = tosa.argmax %arg0 { axis = 1 : i32} : (tensor<3x2xi32>)  -> tensor<3xi32>
 
-  // CHECK: arith.constant -3.40282347E+38 : f32
+  // FINITE: arith.constant -3.40282347E+38 : f32
+  // NONFINITE: arith.constant 0xFF800000 : f32
   // CHECK: linalg.index
   // CHECK: arith.index_cast
   // CHECK: arith.cmpf ugt
@@ -2678,4 +2683,166 @@ func.func @mul_no_const_shift(%arg0: tensor<2x3xi32>, %arg1: tensor<2x3xi32>, %a
 func.func @negate_i64_no_noop_cast(%arg0: tensor<4xi64>, %in_zp: tensor<1xi64>, %out_zp: tensor<1xi64>) -> tensor<4xi64> {
   %neg = tosa.negate %arg0, %in_zp, %out_zp : (tensor<4xi64>, tensor<1xi64>, tensor<1xi64>) -> tensor<4xi64>
   return %neg : tensor<4xi64>
+}
+
+// -----
+
+// The TOSA identity for a float REDUCE_MIN is maximum_s<in_out_t>(), which
+// Table 5 of the specification gives as +infinity for fp16_t/bf16_t/fp32_t.
+// CHECK-LABEL: @reduce_min_f16
+func.func @reduce_min_f16(%arg0: tensor<5x4xf16>) -> () {
+  // FINITE: arith.constant 6.550400e+04 : f16
+  // NONFINITE: arith.constant 0x7C00 : f16
+  // CHECK: linalg.fill
+  // CHECK: linalg.reduce
+  // CHECK: arith.minimumf
+  %0 = tosa.reduce_min %arg0 {axis = 0 : i32} : (tensor<5x4xf16>) -> tensor<1x4xf16>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @reduce_max_f16
+func.func @reduce_max_f16(%arg0: tensor<5x4xf16>) -> () {
+  // FINITE: arith.constant -6.550400e+04 : f16
+  // NONFINITE: arith.constant 0xFC00 : f16
+  // CHECK: linalg.fill
+  // CHECK: linalg.reduce
+  // CHECK: arith.maximumf
+  %0 = tosa.reduce_max %arg0 {axis = 0 : i32} : (tensor<5x4xf16>) -> tensor<1x4xf16>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @reduce_min_bf16
+func.func @reduce_min_bf16(%arg0: tensor<5x4xbf16>) -> () {
+  // FINITE: arith.constant 3.389530e+38 : bf16
+  // NONFINITE: arith.constant 0x7F80 : bf16
+  // CHECK: linalg.fill
+  // CHECK: linalg.reduce
+  // CHECK: arith.minimumf
+  %0 = tosa.reduce_min %arg0 {axis = 0 : i32} : (tensor<5x4xbf16>) -> tensor<1x4xbf16>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @reduce_max_bf16
+func.func @reduce_max_bf16(%arg0: tensor<5x4xbf16>) -> () {
+  // FINITE: arith.constant -3.389530e+38 : bf16
+  // NONFINITE: arith.constant 0xFF80 : bf16
+  // CHECK: linalg.fill
+  // CHECK: linalg.reduce
+  // CHECK: arith.maximumf
+  %0 = tosa.reduce_max %arg0 {axis = 0 : i32} : (tensor<5x4xbf16>) -> tensor<1x4xbf16>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @reduce_min_f64
+func.func @reduce_min_f64(%arg0: tensor<5x4xf64>) -> () {
+  // FINITE: arith.constant 1.7976931348623157E+308 : f64
+  // NONFINITE: arith.constant 0x7FF0000000000000 : f64
+  // CHECK: linalg.fill
+  // CHECK: linalg.reduce
+  // CHECK: arith.minimumf
+  %0 = tosa.reduce_min %arg0 {axis = 0 : i32} : (tensor<5x4xf64>) -> tensor<1x4xf64>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @reduce_max_f64
+func.func @reduce_max_f64(%arg0: tensor<5x4xf64>) -> () {
+  // FINITE: arith.constant -1.7976931348623157E+308 : f64
+  // NONFINITE: arith.constant 0xFFF0000000000000 : f64
+  // CHECK: linalg.fill
+  // CHECK: linalg.reduce
+  // CHECK: arith.maximumf
+  %0 = tosa.reduce_max %arg0 {axis = 0 : i32} : (tensor<5x4xf64>) -> tensor<1x4xf64>
+  return
+}
+
+// -----
+
+// f8E4M3FN has NanOnly semantics: it has no encoding for an infinity, and
+// APFloat::getInf() would silently hand back a NaN that arith.minimumf then
+// propagates through the whole reduction. Both configurations must therefore
+// keep the finite identity, so this is deliberately checked with a shared
+// prefix rather than a FINITE/NONFINITE pair.
+// CHECK-LABEL: @reduce_min_f8E4M3FN_stays_finite
+func.func @reduce_min_f8E4M3FN_stays_finite(%arg0: tensor<5x4xf8E4M3FN>) -> () {
+  // CHECK: arith.constant 4.480000e+02 : f8E4M3FN
+  // CHECK-NOT: arith.constant 0x
+  // CHECK: linalg.fill
+  // CHECK: linalg.reduce
+  // CHECK: arith.minimumf
+  %0 = tosa.reduce_min %arg0 {axis = 0 : i32} : (tensor<5x4xf8E4M3FN>) -> tensor<1x4xf8E4M3FN>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @reduce_max_f8E4M3FN_stays_finite
+func.func @reduce_max_f8E4M3FN_stays_finite(%arg0: tensor<5x4xf8E4M3FN>) -> () {
+  // CHECK: arith.constant -4.480000e+02 : f8E4M3FN
+  // CHECK-NOT: arith.constant 0x
+  // CHECK: linalg.fill
+  // CHECK: linalg.reduce
+  // CHECK: arith.maximumf
+  %0 = tosa.reduce_max %arg0 {axis = 0 : i32} : (tensor<5x4xf8E4M3FN>) -> tensor<1x4xf8E4M3FN>
+  return
+}
+
+// -----
+
+// The seed feeds the nan_mode = IGNORE path too, where it must remain a min/max
+// identity rather than a NaN: the accumulator only reaches the final select
+// unchanged when every lane was NaN, and that select overwrites it with a NaN.
+// CHECK-LABEL: @reduce_min_nan_ignore_seed
+func.func @reduce_min_nan_ignore_seed(%arg0: tensor<5x4xf32>) -> () {
+  // FINITE: arith.constant 3.40282347E+38 : f32
+  // NONFINITE: arith.constant 0x7F800000 : f32
+  // CHECK: linalg.fill
+  // CHECK: linalg.reduce
+  // CHECK: arith.minimumf
+  // CHECK: arith.cmpf uno
+  // CHECK: arith.select
+  // CHECK: arith.andi
+  // CHECK: arith.constant 0x7FC00000 : f32
+  // CHECK: linalg.select
+  %0 = tosa.reduce_min %arg0 {axis = 0 : i32, nan_mode = IGNORE} : (tensor<5x4xf32>) -> tensor<1x4xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @reduce_max_nan_ignore_seed
+func.func @reduce_max_nan_ignore_seed(%arg0: tensor<5x4xf32>) -> () {
+  // FINITE: arith.constant -3.40282347E+38 : f32
+  // NONFINITE: arith.constant 0xFF800000 : f32
+  // CHECK: linalg.fill
+  // CHECK: linalg.reduce
+  // CHECK: arith.maximumf
+  // CHECK: arith.cmpf uno
+  // CHECK: arith.select
+  // CHECK: arith.andi
+  // CHECK: arith.constant 0x7FC00000 : f32
+  // CHECK: linalg.select
+  %0 = tosa.reduce_max %arg0 {axis = 0 : i32, nan_mode = IGNORE} : (tensor<5x4xf32>) -> tensor<1x4xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @argmax_f16
+func.func @argmax_f16(%arg0: tensor<6xf16>) -> () {
+  // FINITE: arith.constant -6.550400e+04 : f16
+  // NONFINITE: arith.constant 0xFC00 : f16
+  // CHECK: linalg.generic
+  // CHECK: arith.cmpf ugt
+  %0 = tosa.argmax %arg0 {axis = 0 : i32} : (tensor<6xf16>) -> tensor<i32>
+  return
 }

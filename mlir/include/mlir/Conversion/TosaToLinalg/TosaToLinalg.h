@@ -24,7 +24,8 @@ namespace mlir {
 
 namespace tosa {
 
-std::unique_ptr<Pass> createTosaToLinalg();
+std::unique_ptr<Pass>
+createTosaToLinalg(const TosaToLinalgOptions &options = TosaToLinalgOptions());
 std::unique_ptr<Pass> createTosaToLinalgNamed(
     const TosaToLinalgNamedOptions &options = TosaToLinalgNamedOptions());
 
@@ -46,8 +47,9 @@ void addTosaToLinalgPasses(
 void registerTosaToLinalgPipelines();
 
 /// Populates conversion passes from TOSA dialect to Linalg dialect.
-void populateTosaToLinalgConversionPatterns(const TypeConverter &converter,
-                                            RewritePatternSet *patterns);
+void populateTosaToLinalgConversionPatterns(
+    const TypeConverter &converter, RewritePatternSet *patterns,
+    const TosaToLinalgOptions &options = TosaToLinalgOptions());
 
 /// Populates conversion passes from TOSA dialect to Linalg named operations.
 void populateTosaToLinalgNamedConversionPatterns(
