@@ -365,9 +365,7 @@ public:
   bool isCuModeEnabled() const { return EnableCuMode; }
 
   /// \returns Whether a work-group runs on all of the block's SIMDs.
-  bool isFullSIMDMode() const {
-    return !hasSupportsWGP() || !EnableCuMode;
-  }
+  bool isFullSIMDMode() const { return !hasSupportsWGP() || !EnableCuMode; }
 
   bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
 
