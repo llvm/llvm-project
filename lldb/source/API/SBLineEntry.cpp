@@ -13,13 +13,27 @@
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-defines.h"
 
 #include <climits>
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
 
 SBLineEntry::SBLineEntry() { LLDB_INSTRUMENT_VA(this); }
+
+SBLineEntry::SBLineEntry(const SBFileSpec &filespec, uint32_t line,
+                         uint32_t column)
+    : m_opaque_up(std::make_unique<LineEntry>()) {
+  LLDB_INSTRUMENT_VA(this, filespec, line, column);
+
+  SetFileSpec(filespec);
+  if (line != LLDB_INVALID_LINE_NUMBER)
+    SetLine(line);
+  if (column != LLDB_INVALID_COLUMN_NUMBER)
+    SetColumn(column);
+}
 
 SBLineEntry::SBLineEntry(const SBLineEntry &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
@@ -105,7 +119,7 @@ SBFileSpec SBLineEntry::GetFileSpec() const {
 uint32_t SBLineEntry::GetLine() const {
   LLDB_INSTRUMENT_VA(this);
 
-  uint32_t line = 0;
+  uint32_t line = LLDB_INVALID_LINE_NUMBER;
   if (m_opaque_up)
     line = m_opaque_up->line;
 
@@ -117,7 +131,7 @@ uint32_t SBLineEntry::GetColumn() const {
 
   if (m_opaque_up)
     return m_opaque_up->column;
-  return 0;
+  return LLDB_INVALID_COLUMN_NUMBER;
 }
 
 void SBLineEntry::SetFileSpec(lldb::SBFileSpec filespec) {

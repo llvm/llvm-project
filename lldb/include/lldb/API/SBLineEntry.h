@@ -12,12 +12,17 @@
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBFileSpec.h"
+#include "lldb/lldb-defines.h"
 
 namespace lldb {
 
 class LLDB_API SBLineEntry {
 public:
   SBLineEntry();
+
+  SBLineEntry(const lldb::SBFileSpec &filespec,
+              uint32_t line = LLDB_INVALID_LINE_NUMBER,
+              uint32_t column = LLDB_INVALID_COLUMN_NUMBER);
 
   SBLineEntry(const lldb::SBLineEntry &rhs);
 

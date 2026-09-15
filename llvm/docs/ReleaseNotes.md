@@ -298,6 +298,13 @@ Makes programs 10x faster by doing Special New Thing.
   return values that were actually in a different set. Both methods are now fixed
   so that they are limited to the registers within the register set. Scripts
   using these methods may have to be updated as a result.
+* New `SBTarget::FindSymbolContexts` and `SBModule::FindSymbolContexts`
+  return an `SBSymbolContextList` for every match of a given source location.
+* A new `SBLineEntry(SBFileSpec, line, column)` constructor lets
+  scripts build the location argument directly.
+* `SBLineEntry::GetLine()` and `SBLineEntry::GetColumn()` now return
+  `LLDB_INVALID_LINE_NUMBER` / `LLDB_INVALID_COLUMN_NUMBER` when unset;
+  scripts checking `entry.GetLine() == 0` should use `entry.IsValid()`.
 
 #### Windows
 

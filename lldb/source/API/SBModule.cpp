@@ -290,6 +290,27 @@ SBSymbolContextList SBModule::FindCompileUnits(const SBFileSpec &sb_file_spec) {
   return sb_sc_list;
 }
 
+SBSymbolContextList
+SBModule::FindSymbolContexts(const SBLineEntry &line_entry,
+                             lldb::SymbolContextItem resolve_scope,
+                             bool check_inlines) {
+  LLDB_INSTRUMENT_VA(this, line_entry, resolve_scope, check_inlines);
+
+  SBSymbolContextList sc_list;
+  const ModuleSP module_sp(GetSP());
+  if (!module_sp || !line_entry.IsValid())
+    return sc_list;
+
+  SBFileSpec file_spec = line_entry.GetFileSpec();
+  if (!file_spec.IsValid())
+    return sc_list;
+
+  // TODO: Pass the column when ResolveSymbolContextsForFileSpec supports it.
+  module_sp->ResolveSymbolContextsForFileSpec(
+      *file_spec, line_entry.GetLine(), check_inlines, resolve_scope, *sc_list);
+  return sc_list;
+}
+
 static Symtab *GetUnifiedSymbolTable(const lldb::ModuleSP &module_sp) {
   if (module_sp)
     return module_sp->GetSymtab();
