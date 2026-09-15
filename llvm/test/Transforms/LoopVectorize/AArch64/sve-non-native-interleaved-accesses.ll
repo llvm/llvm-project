@@ -47,9 +47,8 @@ define float @test_factor_5_deinterleaving(ptr %data, i64 %n) vscale_range(2, 0)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = fcmp uno float [[TMP17]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = fcmp uno float [[TMP19]], [[TMP20]]
-; CHECK-NEXT:    [[TMP27:%.*]] = freeze i1 [[TMP25]]
-; CHECK-NEXT:    [[TMP28:%.*]] = freeze i1 [[TMP26]]
-; CHECK-NEXT:    [[TMP76:%.*]] = or i1 [[TMP27]], [[TMP28]]
+; CHECK-NEXT:    [[TMP27:%.*]] = or i1 [[TMP25]], [[TMP26]]
+; CHECK-NEXT:    [[TMP76:%.*]] = freeze i1 [[TMP27]]
 ; CHECK-NEXT:    [[TMP77:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP78:%.*]] = or i1 [[TMP76]], [[TMP77]]
 ; CHECK-NEXT:    br i1 [[TMP78]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

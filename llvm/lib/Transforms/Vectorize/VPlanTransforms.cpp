@@ -3086,9 +3086,10 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
 
   // Find the uncountable loop exit condition.
   VPValue *UncountableCondition = nullptr;
-  if (!match(LatchVPBB->getTerminator(),
-             m_BranchOnTwoConds(m_AnyOf(m_VPValue(UncountableCondition)),
-                                m_VPValue())))
+  if (!match(
+          LatchVPBB->getTerminator(),
+          m_BranchOnTwoConds(m_AnyOf(m_Freeze(m_VPValue(UncountableCondition))),
+                             m_VPValue())))
     return nullptr;
 
   SmallVector<VPValue *, 4> Worklist;
@@ -3407,8 +3408,15 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   for (const EarlyExitInfo &Info : drop_begin(Exits))
     Combined = LatchBuilder.createLogicalOr(Combined, Info.CondToExit);
 
-  VPValue *IsAnyExitTaken =
-      LatchBuilder.createNaryOp(VPInstruction::AnyOf, {Combined});
+  // Even though the logical or prevents per-lane posion propagation, we need to
+  // freeze Combined to prevent poisoning the entire AnyOf result:
+  //
+  // Exits[0].CondToExit = [0,1,0,0]
+  // Exits[1].CondToExit = [0,0,p,p]
+  //            Combined = [0,1,p,p]
+  //               AnyOf = 1
+  VPValue *IsAnyExitTaken = LatchBuilder.createNaryOp(
+      VPInstruction::AnyOf, LatchBuilder.createFreeze(Combined));
 
   // Create a comparison for the latch exit condition and replace the
   // BranchOnCond with a BranchOnTwoConds. The original BranchOnCond's condition
