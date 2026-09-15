@@ -310,7 +310,7 @@ bool APFloatBase::isLosslesslyConvertibleTo(const fltSemantics &From,
    being zero (consider the trivial case of 1 * 1, tcFullMultiply
    requires two parts to hold the single-part result).  So we add an
    extra one to guarantee enough space whilst multiplying.  */
-const unsigned int maxExponent = 16383;
+[[maybe_unused]] constexpr unsigned maxExponent = 16383;
 
 // Decimal exponents in the f16 and f32 ranges need at most 2 and 6 parts.
 // Keep 16 parts (128 bytes) inline: enough for 5^413, but not a large stack
