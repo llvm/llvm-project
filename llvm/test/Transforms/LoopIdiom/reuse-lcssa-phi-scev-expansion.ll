@@ -178,14 +178,13 @@ define void @phi_ptr_addressspace_ptrtoint_fail(ptr addrspace(1) %arg) {
 ; CHECK-NEXT:    br i1 false, label %[[LOOP_1]], label %[[LOOP_2_PH:.*]]
 ; CHECK:       [[LOOP_2_PH]]:
 ; CHECK-NEXT:    [[IV_1_LCSSA1:%.*]] = phi i64 [ [[IV_1]], %[[LOOP_1]] ]
-; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi i64 [ [[IV_1]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[PHI:%.*]] = phi ptr addrspace(1) [ [[GETELEMENTPTR]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[IV_1_LCSSA1]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[ARG]], i64 [[TMP0]]
 ; CHECK-NEXT:    call void @llvm.memset.p1.i64(ptr addrspace(1) align 4 [[SCEVGEP]], i8 0, i64 8, i1 false)
 ; CHECK-NEXT:    br label %[[LOOP_2_HEADER:.*]]
 ; CHECK:       [[LOOP_2_HEADER]]:
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ [[IV_1_LCSSA]], %[[LOOP_2_PH]] ], [ [[IV_2_NEXT:%.*]], %[[LOOP_2_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ [[IV_1_LCSSA1]], %[[LOOP_2_PH]] ], [ [[IV_2_NEXT:%.*]], %[[LOOP_2_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GREP_ARG:%.*]] = getelementptr i32, ptr addrspace(1) [[ARG]], i64 [[IV_2]]
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ult i64 [[IV_2]], 1
 ; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP_2_LATCH]], label %[[EXIT:.*]]
