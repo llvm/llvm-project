@@ -7993,30 +7993,26 @@ bool AArch64TTIImpl::isLegalMaskedCompressStore(Type *DataType,
   if (!isa<VectorType>(DataType))
     return isElementTypeLegalForScalableVector(DataType);
 
-  // For types where Promotion is possible to i32/i64 types and SME2p2/SVE2p2
-  // is not available, ensure the promoted scalar type is legal.
-  if (is_contained({8u, 16u}, DataType->getScalarSizeInBits()) &&
-      !(ST->hasSVE2p2() && ST->hasSME2p2()) &&
-      DataType->getPrimitiveSizeInBits().getKnownMinValue() < 128) {
-    EVT DataTypeEVT = EVT::getEVT(DataType);
-    // Scalable f16/bf16 vectors with widths of 2 and 4 can use
-    // the nxv2i64/nxv4i32 compact instructions.
-    switch (DataTypeEVT.getSimpleVT().SimpleTy) {
+  auto LT = getTypeLegalizationCost(DataType);
+  if (!LT.first.isValid())
+    return false;
+
+  // Where SVE2p2 or SME2p2 is not available, use the i32 or i64 compact
+  // instructions for f16/bf16 unpacked types.
+  if (!(ST->hasSVE2p2() || ST->hasSME2p2()))
+    switch (LT.second.SimpleTy) {
     case MVT::nxv2f16:
     case MVT::nxv2bf16:
-      DataType = EVT(MVT::nxv2i64).getTypeForEVT(DataType->getContext());
-      break;
+      return isElementTypeLegalForCompressStore(
+          EVT(MVT::i64).getTypeForEVT(DataType->getContext()));
     case MVT::nxv4f16:
     case MVT::nxv4bf16:
-      DataType = EVT(MVT::nxv4i32).getTypeForEVT(DataType->getContext());
-      break;
+      return isElementTypeLegalForCompressStore(
+          EVT(MVT::i32).getTypeForEVT(DataType->getContext()));
     default:
-      auto LT = getTypeLegalizationCost(DataType);
-      if (LT.first.isValid())
-        DataType = EVT(LT.second).getTypeForEVT(DataType->getContext());
       break;
-    };
-  }
+    }
 
-  return isElementTypeLegalForCompressStore(DataType->getScalarType());
+  return isElementTypeLegalForCompressStore(
+      EVT(LT.second).getTypeForEVT(DataType->getContext())->getScalarType());
 }
