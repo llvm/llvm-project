@@ -3458,6 +3458,13 @@ def StdCall : DeclOrTypeAttr {
   let Documentation = [StdCallDocs];
 }
 
+def WinCall : DeclOrTypeAttr {
+  let Spellings = [GCC<"wincall">, CustomKeyword<"__wincall">,
+                   CustomKeyword<"_wincall">];
+//  let Subjects = [Function, ObjCMethod];
+  let Documentation = [WinCallDocs];
+}
+
 def SwiftCall : DeclOrTypeAttr {
   let Spellings = [Clang<"swiftcall">];
 //  let Subjects = SubjectList<[Function]>;

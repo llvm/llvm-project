@@ -988,6 +988,7 @@ void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {
     case tok::kw___regcall:
     case tok::kw___cdecl:
     case tok::kw___vectorcall:
+    case tok::kw___wincall:
     case tok::kw___ptr64:
     case tok::kw___w64:
     case tok::kw___ptr32:
@@ -1042,6 +1043,7 @@ SourceLocation Parser::SkipExtendedMicrosoftTypeAttributes() {
     case tok::kw___thiscall:
     case tok::kw___cdecl:
     case tok::kw___vectorcall:
+    case tok::kw___wincall:
     case tok::kw___ptr32:
     case tok::kw___ptr64:
     case tok::kw___w64:
@@ -4054,6 +4056,7 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw___thiscall:
     case tok::kw___regcall:
     case tok::kw___vectorcall:
+    case tok::kw___wincall:
       ParseMicrosoftTypeAttributes(DS.getAttributes());
       continue;
 
@@ -5736,6 +5739,7 @@ bool Parser::isTypeSpecifierQualifier(const Token &Tok) {
   case tok::kw___thiscall:
   case tok::kw___regcall:
   case tok::kw___vectorcall:
+  case tok::kw___wincall:
   case tok::kw___w64:
   case tok::kw___ptr64:
   case tok::kw___ptr32:
@@ -6019,6 +6023,7 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw___thiscall:
   case tok::kw___regcall:
   case tok::kw___vectorcall:
+  case tok::kw___wincall:
   case tok::kw___w64:
   case tok::kw___sptr:
   case tok::kw___uptr:
@@ -6334,6 +6339,7 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw___thiscall:
     case tok::kw___regcall:
     case tok::kw___vectorcall:
+    case tok::kw___wincall:
       if (AttrReqs & AR_DeclspecAttributesParsed) {
         ParseMicrosoftTypeAttributes(DS.getAttributes());
         continue;

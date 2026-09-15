@@ -362,6 +362,9 @@ static void printCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::GRAAL:         Out << "graalcc"; break;
   case CallingConv::CFGuard_Check: Out << "cfguard_checkcc"; break;
   case CallingConv::X86_StdCall:   Out << "x86_stdcallcc"; break;
+  case CallingConv::X86_WinCall:
+    Out << "x86_wincallcc";
+    break;
   case CallingConv::X86_FastCall:  Out << "x86_fastcallcc"; break;
   case CallingConv::X86_ThisCall:  Out << "x86_thiscallcc"; break;
   case CallingConv::X86_RegCall:   Out << "x86_regcallcc"; break;
