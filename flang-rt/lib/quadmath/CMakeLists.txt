@@ -31,6 +31,7 @@ set(sources
   cosh.cpp
   erf.cpp
   erfc.cpp
+  erfc-scaled.cpp
   exp.cpp
   exponent.cpp
   floor.cpp
