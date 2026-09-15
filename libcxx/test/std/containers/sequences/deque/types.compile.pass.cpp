@@ -77,7 +77,7 @@ void test() {
                 "");
 }
 
-int main(int, char**) {
+void test() {
   test<int, test_allocator<int> >();
   test<int*, std::allocator<int*> >();
   test<Copyable, test_allocator<Copyable> >();
@@ -106,6 +106,4 @@ int main(int, char**) {
                   "");
   }
 #endif
-
-  return 0;
 }
