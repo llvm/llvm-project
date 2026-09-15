@@ -2252,6 +2252,12 @@ bool VectorLegalizer::tryExpandVecMathCall(
 void VectorLegalizer::UnrollStrictFPOp(SDNode *Node,
                                        SmallVectorImpl<SDValue> &Results) {
   EVT VT = Node->getValueType(0);
+
+  // Cannot unroll a scalable vector. Delay error reporting until the final
+  // operation legalisation phase to maximise the chances of removing the node.
+  if (VT.isScalableVector())
+    return;
+
   EVT EltVT = VT.getVectorElementType();
   unsigned NumElems = VT.getVectorNumElements();
   unsigned NumOpers = Node->getNumOperands();

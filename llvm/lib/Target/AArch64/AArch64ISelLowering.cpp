@@ -1972,8 +1972,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FABS, VT, Custom);
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
       setOperationAction(ISD::FNEG, VT, Custom);
-      setOperationAction(ISD::FP_EXTEND, VT, Custom);
-      setOperationAction(ISD::FP_ROUND, VT, Custom);
+      setOperationAction({ISD::FP_EXTEND, ISD::STRICT_FP_EXTEND}, VT, Custom);
+      setOperationAction({ISD::FP_ROUND, ISD::STRICT_FP_ROUND}, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::SELECT, VT, Custom);
@@ -4962,18 +4962,23 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
   bool IsStrict = Op->isStrictFPOpcode();
 
   if (VT.isScalableVector()) {
-    SDValue SrcVal = Op.getOperand(0);
+    SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
 
     if (VT == MVT::nxv2f64 && SrcVal.getValueType() == MVT::nxv2bf16) {
-      // TODO: Missing support for bfloat strict-fp operations.
-      if (IsStrict)
-        return SDValue();
-
-      // Break conversion in two with the first part converting to f32 and the
-      // second using native f32->VT instructions.
       SDLoc DL(Op);
-      return DAG.getNode(ISD::FP_EXTEND, DL, VT,
-                         DAG.getNode(ISD::FP_EXTEND, DL, MVT::nxv2f32, SrcVal));
+
+      // Split cast into two phases, using float as the intermediary.
+      SDVTList CvtF32VTs = IsStrict ? DAG.getVTList(MVT::nxv2f32, MVT::Other)
+                                    : DAG.getVTList(MVT::nxv2f32);
+      SmallVector<SDValue> CvtF32Ops(Op->ops());
+      SDValue CvtF32 = DAG.getNode(Op.getOpcode(), DL, CvtF32VTs, CvtF32Ops);
+
+      // Extend from float to double.
+      SmallVector<SDValue, 2> CvtF64Ops;
+      if (IsStrict)
+        CvtF64Ops.push_back(CvtF32.getValue(1)); // Chain
+      CvtF64Ops.push_back(CvtF32);
+      return DAG.getNode(Op.getOpcode(), DL, Op->getVTList(), CvtF64Ops);
     }
 
     return LowerToPredicatedOp(Op, DAG,
@@ -5023,15 +5028,11 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
     if (SrcVT == MVT::nxv8f32)
       return Op;
 
+    unsigned MergePasthruOpc = IsStrict
+                                   ? AArch64ISD::STRICT_FP_ROUND_MERGE_PASSTHRU
+                                   : AArch64ISD::FP_ROUND_MERGE_PASSTHRU;
     if (VT.getScalarType() != MVT::bf16)
-      return LowerToPredicatedOp(
-          Op, DAG,
-          IsStrict ? AArch64ISD::STRICT_FP_ROUND_MERGE_PASSTHRU
-                   : AArch64ISD::FP_ROUND_MERGE_PASSTHRU);
-
-    // TODO: Missing support for bfloat strict-fp operations.
-    if (IsStrict)
-      return SDValue();
+      return LowerToPredicatedOp(Op, DAG, MergePasthruOpc);
 
     SDLoc DL(Op);
     constexpr EVT I32 = MVT::nxv4i32;
@@ -5042,8 +5043,7 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
 
     if (SrcVT == MVT::nxv2f32 || SrcVT == MVT::nxv4f32) {
       if (Subtarget->hasBF16())
-        return LowerToPredicatedOp(Op, DAG,
-                                   AArch64ISD::FP_ROUND_MERGE_PASSTHRU);
+        return LowerToPredicatedOp(Op, DAG, MergePasthruOpc);
 
       Narrow = getSVESafeBitCast(I32, SrcVal, DAG);
 
@@ -5052,18 +5052,34 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
         NaN = DAG.getNode(ISD::OR, DL, I32, Narrow, ImmV(0x400000));
     } else if (SrcVT == MVT::nxv2f64 &&
                (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable())) {
-      // Round to float without introducing rounding errors and try again.
-      SDValue Pg = getPredicateForVector(DAG, DL, MVT::nxv2f32);
-      Narrow = DAG.getNode(AArch64ISD::FCVTX_MERGE_PASSTHRU, DL, MVT::nxv2f32,
-                           Pg, SrcVal, DAG.getPOISON(MVT::nxv2f32));
+      // Split cast into two phases, using float as the intermediary.
+      SDVTList CvtF32VTs = IsStrict ? DAG.getVTList(MVT::nxv2f32, MVT::Other)
+                                    : DAG.getVTList(MVT::nxv2f32);
 
-      SmallVector<SDValue, 3> NewOps;
+      // Round to float without introducing rounding errors.
+      unsigned CvtF32Opc = IsStrict ? AArch64ISD::STRICT_FCVTX_MERGE_PASSTHRU
+                                    : AArch64ISD::FCVTX_MERGE_PASSTHRU;
+      SmallVector<SDValue, 3> CvtF32Ops;
       if (IsStrict)
-        NewOps.push_back(Op.getOperand(0));
-      NewOps.push_back(Narrow);
-      NewOps.push_back(Op.getOperand(IsStrict ? 2 : 1));
-      return DAG.getNode(Op.getOpcode(), DL, VT, NewOps, Op->getFlags());
+        CvtF32Ops.push_back(Op.getOperand(0)); // Chain
+      CvtF32Ops.push_back(getPredicateForVector(DAG, DL, MVT::nxv2f32));
+      CvtF32Ops.push_back(SrcVal);
+      CvtF32Ops.push_back(DAG.getPOISON(MVT::nxv2f32));
+      SDValue CvtF32 = DAG.getNode(CvtF32Opc, DL, CvtF32VTs, CvtF32Ops);
+
+      // Round from float to bfloat.
+      SmallVector<SDValue, 3> CvtBfOps;
+      if (IsStrict)
+        CvtBfOps.push_back(CvtF32.getValue(1)); // Chain
+      CvtBfOps.push_back(CvtF32);
+      CvtBfOps.push_back(Op.getOperand(IsStrict ? 2 : 1)); // Trunc
+      return DAG.getNode(Op.getOpcode(), DL, Op->getVTList(), CvtBfOps,
+                         Op->getFlags());
     } else
+      return SDValue();
+
+    // TODO: Missing support for bfloat strict-fp operations.
+    if (IsStrict)
       return SDValue();
 
     if (!Trunc) {
