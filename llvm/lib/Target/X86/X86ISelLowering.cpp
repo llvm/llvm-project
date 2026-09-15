@@ -308,21 +308,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  if (Subtarget.hasSSE2()) {
-    // Custom lowering for saturating float to int conversions.
-    // We handle promotion to larger result types manually.
-    for (MVT VT : { MVT::i8, MVT::i16, MVT::i32 }) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
-      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
-    }
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
-      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
-    }
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v4i32, Custom);
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v4i32, Custom);
-  }
-
   // Handle address space casts between mixed sized pointers.
   setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
   setOperationAction(ISD::ADDRSPACECAST, MVT::i64, Custom);
@@ -1269,6 +1254,18 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Custom);
       setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Custom);
     }
+
+    // Custom lowering for saturating float to int conversions.
+    // We handle promotion to larger result types manually.
+    for (MVT VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
+      if (VT == MVT::i64 && !Subtarget.is64Bit())
+        continue;
+      setOperationAction(ISD::FP_TO_UINT_SAT,    VT, Custom);
+      setOperationAction(ISD::FP_TO_SINT_SAT,    VT, Custom);
+    }
+
+    setOperationAction(ISD::FP_TO_UINT_SAT,     MVT::v4i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT,     MVT::v4i32, Custom);
 
     setOperationAction(ISD::SINT_TO_FP,         MVT::v4i32, Custom);
     setOperationAction(ISD::STRICT_SINT_TO_FP,  MVT::v4i32, Custom);
@@ -2578,10 +2575,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(ISD::VSELECT, VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+      setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
     }
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV}) {
+    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
+                         ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
+                         ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND}) {
       setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
       setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
     }
@@ -2595,7 +2595,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       Subtarget.useAVX512Regs()) {
     addRegisterClass(MVT::v32bf16, &X86::VR512RegClass);
     setF16Action(MVT::v32bf16, Expand);
-    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
+    for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
+                         ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
+                         ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND})
       setOperationPromotedToType(Opc, MVT::v32bf16, MVT::v32f32);
     setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
@@ -2614,14 +2616,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v2i32, Custom);
     setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i64, Legal);
     setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i64, Legal);
-    for (MVT VT : {MVT::i32, MVT::v4i32, MVT::v8i32, MVT::v16i32, MVT::v2i64,
-                   MVT::v4i64}) {
+    for (MVT VT : {MVT::i32, MVT::i64, MVT::v4i32, MVT::v8i32, MVT::v16i32,
+                   MVT::v2i64, MVT::v4i64}) {
+      if (VT == MVT::i64 && !Subtarget.is64Bit())
+        continue;
       setOperationAction(ISD::FP_TO_UINT_SAT, VT, Legal);
       setOperationAction(ISD::FP_TO_SINT_SAT, VT, Legal);
-    }
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Legal);
-      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Legal);
     }
 
     // Lower scalar bf16 arithmetic by widening to a vector op and extracting
@@ -2633,14 +2633,21 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSQRT, MVT::bf16, Custom);
     setOperationAction(ISD::FMA, MVT::bf16, Custom);
 
-    setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FSUB, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FMUL, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FDIV, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FSQRT, MVT::v32bf16, Legal);
-    setOperationAction(ISD::FMA, MVT::v32bf16, Legal);
-    setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
-    SetFPMinMaxAction(MVT::v32bf16);
+    setOperationAction(ISD::FROUNDEVEN, MVT::bf16, Custom);
+
+    if (Subtarget.useAVX512Regs()) {
+      setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FSUB, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FMUL, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FDIV, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FSQRT, MVT::v32bf16, Legal);
+      setOperationAction(ISD::FMA, MVT::v32bf16, Legal);
+      setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
+      SetFPMinMaxAction(MVT::v32bf16);
+
+      setOperationAction(ISD::FROUNDEVEN, MVT::v32bf16, Legal);
+    }
+
     for (auto VT : {MVT::v8bf16, MVT::v16bf16}) {
       setOperationAction(ISD::FADD, VT, Legal);
       setOperationAction(ISD::FSUB, VT, Legal);
@@ -2649,6 +2656,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSQRT, VT, Legal);
       setOperationAction(ISD::FMA, VT, Legal);
       setOperationAction(ISD::SETCC, VT, Custom);
+      setOperationAction(ISD::FROUNDEVEN, VT, Legal);
       SetFPMinMaxAction(VT);
     }
     for (auto VT : {MVT::f16, MVT::f32, MVT::f64}) {
@@ -24420,11 +24428,12 @@ SDValue X86TargetLowering::getSqrtEstimate(SDValue Op,
   // along with FMA, this could be a throughput win.
   // TODO: SQRT requires SSE2 to prevent the introduction of an illegal v4i32
   // after legalize types.
-  if ((VT == MVT::f32 && Subtarget.hasSSE1()) ||
-      (VT == MVT::v4f32 && Subtarget.hasSSE1() && Reciprocal) ||
-      (VT == MVT::v4f32 && Subtarget.hasSSE2() && !Reciprocal) ||
-      (VT == MVT::v8f32 && Subtarget.hasAVX()) ||
-      (VT == MVT::v16f32 && Subtarget.useAVX512Regs())) {
+  if (isTypeLegal(VT) &&
+      ((VT == MVT::f32 && Subtarget.hasSSE1()) ||
+       (VT == MVT::v4f32 && Subtarget.hasSSE1() && Reciprocal) ||
+       (VT == MVT::v4f32 && Subtarget.hasSSE2() && !Reciprocal) ||
+       (VT == MVT::v8f32 && Subtarget.hasAVX()) ||
+       (VT == MVT::v16f32 && Subtarget.useAVX512Regs()))) {
     if (RefinementSteps == ReciprocalEstimate::Unspecified)
       RefinementSteps = 1;
 
@@ -24471,10 +24480,10 @@ SDValue X86TargetLowering::getRecipEstimate(SDValue Op, SelectionDAG &DAG,
   // (3 steps = 12 insts). If an 'rcpsd' variant was added to the ISA
   // along with FMA, this could be a throughput win.
 
-  if ((VT == MVT::f32 && Subtarget.hasSSE1()) ||
-      (VT == MVT::v4f32 && Subtarget.hasSSE1()) ||
-      (VT == MVT::v8f32 && Subtarget.hasAVX()) ||
-      (VT == MVT::v16f32 && Subtarget.useAVX512Regs())) {
+  if (isTypeLegal(VT) && ((VT == MVT::f32 && Subtarget.hasSSE1()) ||
+                          (VT == MVT::v4f32 && Subtarget.hasSSE1()) ||
+                          (VT == MVT::v8f32 && Subtarget.hasAVX()) ||
+                          (VT == MVT::v16f32 && Subtarget.useAVX512Regs()))) {
     // Enable estimate codegen with 1 refinement step for vector division.
     // Scalar division estimates are disabled because they break too much
     // real-world code. These defaults are intended to match GCC behavior.
@@ -35145,12 +35154,13 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::FMUL:
   case ISD::FSQRT:
   case ISD::FDIV:
-  case ISD::FMA: {
+  case ISD::FMA:
+  case ISD::FROUNDEVEN: {
     assert(N->getValueType(0) == MVT::bf16 && "Expected scalar bf16 result");
-    // AVX10.2 has no scalar bf16 arithmetic instructions, and bf16 is a
-    // soft-promoted-half type, so scalar ops would otherwise be promoted to
-    // f32. Instead widen each operand to a v8bf16 vector, perform the legal
-    // packed operation, and extract the low element afterwards.
+    // AVX10.2 has no scalar bf16 arithmetic or round-to-integer instructions,
+    // and bf16 is a soft-promoted-half type, so scalar ops would otherwise be
+    // promoted to f32. Instead widen each operand to a v8bf16 vector, perform
+    // the legal packed operation, and extract the low element afterwards.
     SmallVector<SDValue, 3> VecOps;
     for (const SDValue &Op : N->ops()) {
       SDValue AsF16 = DAG.getBitcast(MVT::f16, Op);
@@ -56384,6 +56394,50 @@ static SDValue combineFMulcFCMulc(SDNode *N, SelectionDAG &DAG,
   return Res;
 }
 
+// We try to match the following pattern from FMSUBADD(X, A, M) to lower it
+// into complex conjugate fmadd for fp16 (#216290).
+// for vector of the complex form v <v0r, v0i, v1r, v1i, ...>
+// and 2 complex vectors a, b,
+// X = duplicate real (b) : <b0r, b0r, b1r, b1r, ...>
+// A = a
+// M = FMUL (P, Q)
+//   P = adjacent pair swapped (a) : <a0i, a0r, a1i, a1r, ...>
+//   Q = duplicate imaginary (b) : <b0i, b0i, b1i, b1i, ...>
+static bool isCFMulFromFMSUBADD(SDValue N, SelectionDAG &DAG, SDValue &A,
+                                SDValue &B) {
+  SDValue Op0 = N.getOperand(0);
+  SDValue Op1 = N.getOperand(1);
+  SDValue Op2 = N.getOperand(2);
+
+  auto matchShufflePattern = [&DAG](SDValue V, ArrayRef<int> Pat) {
+    SmallVector<SDValue, 2> Inputs;
+    SmallVector<int, 32> Mask;
+    SmallVector<int, 8> RepeatedMask;
+    MVT VT = V.getSimpleValueType();
+    if (getTargetShuffleInputs(V, Inputs, Mask, DAG) &&
+        is128BitLaneRepeatedShuffleMask(VT, Mask, RepeatedMask) &&
+        isShuffleEquivalent(RepeatedMask, Pat, Inputs[0]))
+      return Inputs[0];
+    return SDValue();
+  };
+  auto matchFMSUBADDPattern = [&](SDValue X, SDValue OpA) {
+    B = matchShufflePattern(X, {0, 0, 2, 2, 4, 4, 6, 6});
+    if (!B)
+      return false;
+    A = OpA;
+    SDValue P = Op2.getOperand(0);
+    SDValue Q = Op2.getOperand(1);
+    auto matchFMulPattern = [&](SDValue P, SDValue Q) {
+      return matchShufflePattern(P, {1, 0, 3, 2, 5, 4, 7, 6}) == A &&
+             matchShufflePattern(Q, {1, 1, 3, 3, 5, 5, 7, 7}) == B;
+    };
+    return matchFMulPattern(P, Q) || matchFMulPattern(Q, P);
+  };
+  // First 2 operands of FMSUBADD are commutable.
+  return Op2.getOpcode() == ISD::FMUL &&
+         (matchFMSUBADDPattern(Op0, Op1) || matchFMSUBADDPattern(Op1, Op0));
+}
+
 //  Try to combine the following nodes:
 //  FADD(A, FMA(B, C, 0)) and FADD(A, FMUL(B, C)) to FMA(B, C, A)
 static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
@@ -56407,8 +56461,18 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
   SDValue RHS = N->getOperand(1);
   bool IsConj;
   SDValue FAddOp1, MulOp0, MulOp1;
-  auto GetCFmulFrom = [&MulOp0, &MulOp1, &IsConj,
-                       &IsVectorAllNegativeZero](SDValue N) -> bool {
+  MVT CVT = MVT::getVectorVT(MVT::f32, VT.getVectorNumElements() / 2);
+  auto GetCFmulFrom = [&MulOp0, &MulOp1, &IsConj, &DAG,
+                       &IsVectorAllNegativeZero, &CVT](SDValue N) -> bool {
+    if (N.getOpcode() == X86ISD::FMSUBADD && N.hasOneUse()) {
+      SDValue A, B;
+      if (!isCFMulFromFMSUBADD(N, DAG, A, B))
+        return false;
+      IsConj = true;
+      MulOp0 = DAG.getBitcast(CVT, A);
+      MulOp1 = DAG.getBitcast(CVT, B);
+      return true;
+    }
     if (!N.hasOneUse() || N.getOpcode() != ISD::BITCAST)
       return false;
     SDValue Op0 = N.getOperand(0);
@@ -56440,7 +56504,6 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
   else
     return SDValue();
 
-  MVT CVT = MVT::getVectorVT(MVT::f32, VT.getVectorNumElements() / 2);
   FAddOp1 = DAG.getBitcast(CVT, FAddOp1);
   unsigned NewOp = IsConj ? X86ISD::VFCMADDC : X86ISD::VFMADDC;
   // FIXME: How do we handle when fast math flags of FADD are different from

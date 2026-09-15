@@ -776,7 +776,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
         return this->emitFnPtrCast(E);
       }
       if (FromT == PT_Ptr)
-        return this->emitPtrPtrCast(SubExprTy->isVoidPointerType(), E);
+        return this->emitPtrPtrCast(SubExprTy->isVoidPointerType(),
+                                    E->getType().getTypePtr(), E);
       return true;
     }
 
@@ -8734,24 +8735,7 @@ bool Compiler<Emitter>::emitDestructionPop(const Descriptor *Desc,
 template <class Emitter>
 bool Compiler<Emitter>::emitDummyPtr(DeclOrExpr D, const Expr *E, bool CU) {
   assert(!DiscardResult && "Should've been checked before");
-
-  if (const auto *VD = D.asValueDecl())
-    return this->emitGetOpaquePtr(VD, CU, E);
-
-  assert(D.asExpr());
-  unsigned DummyID = P.getOrCreateDummy(D, CU);
-  if (!this->emitGetPtrGlobal(DummyID, E))
-    return false;
-  if (E->getType()->isVoidType())
-    return true;
-
-  // Convert the dummy pointer to another pointer type if we have to.
-  if (PrimType PT = classifyPrim(E); PT != PT_Ptr) {
-    if (isPtrType(PT))
-      return this->emitDecayPtr(PT_Ptr, PT, E);
-    return false;
-  }
-  return true;
+  return this->emitGetOpaquePtr(D, CU, E);
 }
 
 template <class Emitter>
