@@ -91,6 +91,7 @@ class NVPTXDAGToDAGISel : public SelectionDAGISel {
   NVPTX::DivPrecisionLevel getDivF32Level(const SDNode *N) const;
   bool usePrecSqrtF32(const SDNode *N) const;
   bool useF32FTZ() const;
+  bool useLegacyF32AtomAdd() const;
   bool allowFMA() const;
   bool doRsqrtOpt() const;
   bool doMADWideOpt() const;
@@ -221,6 +222,10 @@ bool NVPTXDAGToDAGISel::usePrecSqrtF32(const SDNode *N) const {
 
 bool NVPTXDAGToDAGISel::useF32FTZ() const {
   return Subtarget->getTargetLowering()->useF32FTZ(*MF);
+}
+
+bool NVPTXDAGToDAGISel::useLegacyF32AtomAdd() const {
+  return Subtarget->getTargetLowering()->useLegacyF32AtomAdd();
 }
 
 bool NVPTXDAGToDAGISel::allowFMA() const {

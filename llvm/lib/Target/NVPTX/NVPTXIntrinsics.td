@@ -3242,14 +3242,16 @@ multiclass F_ATOMIC_2<RegTyInfo t, SDPatternOperator op, string op_str,
   (!cast<Instruction>(NAME # _r) ADDR:$addr, t.Ty:$b, (XForm.GetSem $this),
     (XForm.GetScope $this), (XForm.GetAddSp $this),
     (XForm.GetEvictionAndPrefetchHint $this),
-    (XForm.GetCachePolicy $this))>;
+    (XForm.GetCachePolicy $this))>,
+  Requires<preds>;
 
   if t.SupportsImm then
     def : Pat<(op:$this addr:$addr, (t.Ty t.ImmNode:$b)),
       (!cast<Instruction>(NAME # _i) ADDR:$addr, (t.Ty t.ImmNode:$b),
         (XForm.GetSem $this), (XForm.GetScope $this), (XForm.GetAddSp $this),
         (XForm.GetEvictionAndPrefetchHint $this),
-        (XForm.GetCachePolicy $this))>;
+        (XForm.GetCachePolicy $this))>,
+      Requires<preds>;
 }
 
 multiclass F_ATOMIC_3<RegTyInfo t, string op_str, SDPatternOperator op, SDNode atomic> {
@@ -3299,7 +3301,13 @@ defm INT_PTX_ATOM_ADD_32 : F_ATOMIC_2<I32RT, atomic_load_add_i32, "add", "u32", 
 defm INT_PTX_ATOM_ADD_64 : F_ATOMIC_2<I64RT, atomic_load_add_i64, "add", "u64", atomic_load_add>;
 
 defm INT_PTX_ATOM_ADD_F16  : F_ATOMIC_2<F16RT, atomic_load_fadd, "add.noftz", "f16", atomic_load_fadd, [SM70, PTX63]>;
-defm INT_PTX_ATOM_ADD_BF16 : F_ATOMIC_2<BF16RT, atomic_load_fadd, "add.noftz", "bf16", atomic_load_fadd, [SM90]>;
+defm INT_PTX_ATOM_ADD_BF16 : F_ATOMIC_2<BF16RT, atomic_load_fadd, "add.noftz", "bf16", atomic_load_fadd, [SM90, PTX78]>;
+
+// If the function denormal mode is IEEE, and noftz is supported, lower to NoFTZ
+defm INT_PTX_ATOM_ADD_NOFTZ_F32  : F_ATOMIC_2<F32RT, atomic_load_fadd, "add.noftz", "f32", atomic_load_fadd, [hasAtomAddNoFTZ, doNoF32FTZ, noLegacyF32AtomAdd]>;
+// Otherwise, lower to the default native instruction. Passes prior to ISel
+// must handle the case where there is a mismatch between default semantics and
+// the denormal mode
 defm INT_PTX_ATOM_ADD_F32  : F_ATOMIC_2<F32RT, atomic_load_fadd, "add", "f32", atomic_load_fadd>;
 defm INT_PTX_ATOM_ADD_F64  : F_ATOMIC_2<F64RT, atomic_load_fadd, "add", "f64", atomic_load_fadd, [hasAtomAddF64]>;
 
