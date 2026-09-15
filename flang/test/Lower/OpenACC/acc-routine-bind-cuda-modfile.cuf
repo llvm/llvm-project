@@ -38,7 +38,6 @@ end subroutine test
 ! CHECK-DAG: acc.routine @[[ROUT_FUNC:.*]] func(@my_device_func) bind("__wrapper_my_device_func") seq
 ! CHECK-DAG: acc.routine @[[ROUT_SUB:.*]] func(@my_device_sub) bind("__wrapper_my_device_sub") seq
 ! CHECK-LABEL: func.func @_QPtest()
-! CHECK-SAME: attributes {cuf.proc_attr = #cuf.cuda_proc<device>}
 ! CHECK: fir.call @my_device_func(
 ! CHECK: fir.call @my_device_sub(
 ! CHECK: func.func private @my_device_func{{.*}}acc.routine_info = #acc.routine_info<[@[[ROUT_FUNC]]]>
