@@ -29,3 +29,7 @@
 // RUN: %clang -target aarch64 -march=armv9.8a+sve-rcpc -### -c %s 2>&1 | FileCheck -check-prefix=V98A-SVE-RCPC %s
 // RUN: %clang -target aarch64 -march=armv9.8-a+sve-rcpc -### -c %s 2>&1 | FileCheck -check-prefix=V98A-SVE-RCPC %s
 // V98A-SVE-RCPC: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.8a"{{.*}} "-target-feature" "+sve-rcpc"
+//
+// RUN: %clang -target aarch64 -march=armv9.8a+sve-perm256 -### -c %s 2>&1 | FileCheck -check-prefix=V98A-SVE-PERM256 %s
+// RUN: %clang -target aarch64 -march=armv9.8-a+sve-perm256 -### -c %s 2>&1 | FileCheck -check-prefix=V98A-SVE-PERM256 %s
+// V98A-SVE-PERM256: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.8a"{{.*}} "-target-feature" "+sve-perm256"
