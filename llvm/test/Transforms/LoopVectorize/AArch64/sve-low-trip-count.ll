@@ -9,25 +9,25 @@ define void @trip7_i64(ptr noalias nocapture noundef %dst, ptr noalias nocapture
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 7)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP5]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw <vscale x 2 x i64> [[WIDE_MASKED_LOAD]], splat (i64 1)
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
-; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <vscale x 2 x i64> [[WIDE_MASKED_LOAD1]], [[TMP6]]
-; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP8]], ptr align 8 [[TMP7]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP2]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw <vscale x 2 x i64> [[WIDE_MASKED_LOAD]], splat (i64 1)
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <vscale x 2 x i64> @llvm.masked.load.nxv2i64.p0(ptr align 8 [[TMP4]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i64> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <vscale x 2 x i64> [[WIDE_MASKED_LOAD1]], [[TMP3]]
+; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP5]], ptr align 8 [[TMP4]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 7)
-; CHECK-NEXT:    [[EXTRACT_FIRST_LANE_MASK:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
-; CHECK-NEXT:    [[COND:%.*]] = xor i1 [[EXTRACT_FIRST_LANE_MASK]], true
-; CHECK-NEXT:    br i1 [[COND]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = xor i1 [[TMP6]], true
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -53,25 +53,28 @@ exit:
   ret void
 }
 
+; ===== Trip Count below TailFoldingThreshold =====
+; Test that a loop with trip count == VF + 1 is allowed to vectorize
+; on AArch64 where under getMinTripCountTailFoldingThreshold(). This
+; produces the required number of vector iteration and one scalar iteration.
+
 define void @trip5_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture noundef readonly %src) #0 {
 ; CHECK-LABEL: define void @trip5_i8(
 ; CHECK-SAME: ptr noalias noundef captures(none) [[DST:%.*]], ptr noalias noundef readonly captures(none) [[SRC:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[GEP_SRC]], align 1
-; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[TMP0]], 1
-; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[GEP_DST]], align 1
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[MUL]], [[TMP1]]
-; CHECK-NEXT:    store i8 [[ADD]], ptr [[GEP_DST]], align 1
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 5
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[SRC]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = shl <4 x i8> [[WIDE_LOAD]], splat (i8 1)
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[DST]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i8> [[TMP0]], [[WIDE_LOAD1]]
+; CHECK-NEXT:    store <4 x i8> [[TMP1]], ptr [[DST]], align 1
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
   br label %loop
@@ -93,4 +96,527 @@ exit:
   ret void
 }
 
+; TC=5, VF=4: TC == MaxFixedVF + 1 (5 == 4 + 1).
+define void @tc5_vf4_vectorize_i32(ptr noalias %a, ptr noalias %b) #0 {
+; CHECK-LABEL: define void @tc5_vf4_vectorize_i32(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], splat (i32 1)
+; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[B]], align 4
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %val = load i32, ptr %gep.a, align 4
+  %add = add nsw i32 %val, 1
+  store i32 %add, ptr %gep.b, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 5
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; TC=5, VF=4: TC == VF + 1 (5 == 4 + 1).
+; Check that a VF=4 is accepted for a low tripcount loop of 5 iterations, where the natural
+; VF for i16 types is VF=8.
+define void @tc5_vf4_vectorize_i16(ptr noalias %a, ptr noalias %b) #0 {
+; CHECK-LABEL: define void @tc5_vf4_vectorize_i16(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[A]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = add <4 x i16> [[WIDE_LOAD]], splat (i16 1)
+; CHECK-NEXT:    store <4 x i16> [[TMP0]], ptr [[B]], align 2
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.a = getelementptr inbounds i16, ptr %a, i64 %iv
+  %gep.b = getelementptr inbounds i16, ptr %b, i64 %iv
+  %val = load i16, ptr %gep.a, align 2
+  %add = add i16 %val, 1
+  store i16 %add, ptr %gep.b, align 2
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 5
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Check that a VF=4 is accepted for a low tripcount loop of 5 iterations, where the natural
+; VF for i8 types is VF=16.
+define void @tc5_vf4_vectorize_i8(ptr noalias %a, ptr noalias %b) #0 {
+; CHECK-LABEL: define void @tc5_vf4_vectorize_i8(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add <4 x i8> [[WIDE_LOAD]], splat (i8 1)
+; CHECK-NEXT:    store <4 x i8> [[TMP0]], ptr [[B]], align 1
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.a = getelementptr inbounds i8, ptr %a, i64 %iv
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  %val = load i8, ptr %gep.a, align 1
+  %add = add i8 %val, 1
+  store i8 %add, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 5
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; TC=5, VF=2, IC=2: TC == VF * IC + 1 (5 == 2 * 2 + 1).
+; The forced interleave count should be considered when chosing the VF
+define void @tc5_forced_ic2_vectorize_i64(ptr noalias %a, ptr noalias %b) #0 {
+; CHECK-LABEL: define void @tc5_forced_ic2_vectorize_i64(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 2
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[A]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i64>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i64> [[WIDE_LOAD]], splat (i64 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i64> [[WIDE_LOAD1]], splat (i64 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 2
+; CHECK-NEXT:    store <2 x i64> [[TMP1]], ptr [[B]], align 4
+; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[TMP3]], align 4
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.a = getelementptr inbounds i64, ptr %a, i64 %iv
+  %gep.b = getelementptr inbounds i64, ptr %b, i64 %iv
+  %val = load i64, ptr %gep.a, align 4
+  %add = add nsw i64 %val, 1
+  store i64 %add, ptr %gep.b, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 5
+  br i1 %exitcond, label %exit, label %loop, !llvm.loop !0
+
+exit:
+  ret void
+}
+
+; Check that VF=4 is not accepted, where the natural VF for i64 is
+; VF=2
+define void @tc5_reject_i64(ptr noalias %a, ptr noalias %b) #0 {
+; CHECK-LABEL: define void @tc5_reject_i64(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[GEP_A]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[VAL]], 1
+; CHECK-NEXT:    store i64 [[ADD]], ptr [[GEP_B]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 5
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.a = getelementptr inbounds i64, ptr %a, i64 %iv
+  %gep.b = getelementptr inbounds i64, ptr %b, i64 %iv
+  %val = load i64, ptr %gep.a, align 4
+  %add = add nsw i64 %val, 1
+  store i64 %add, ptr %gep.b, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 5
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; In this case the vectoriser shouldn't optimise for a single vector iteration
+; + single scalar iteration, because there is no guarantee we will enter the vector
+; loop.
+define void @unknown_exact_tc_max5(ptr noalias %a, ptr noalias %b, i64 %n) #0 {
+; CHECK-LABEL: define void @unknown_exact_tc_max5(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i64 [[N]], 0
+; CHECK-NEXT:    br i1 [[IS_ZERO]], label %[[EXIT:.*]], label %[[GUARD:.*]]
+; CHECK:       [[GUARD]]:
+; CHECK-NEXT:    [[TOO_LARGE:%.*]] = icmp ugt i64 [[N]], 5
+; CHECK-NEXT:    br i1 [[TOO_LARGE]], label %[[EXIT]], label %[[LOOP_PREHEADER:.*]]
+; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP_A]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[VAL]], 1
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_B]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %is.zero = icmp eq i64 %n, 0
+  br i1 %is.zero, label %exit, label %guard
+
+guard:
+  %too.large = icmp ugt i64 %n, 5
+  br i1 %too.large, label %exit, label %loop
+
+loop:
+  %iv = phi i64 [ 0, %guard ], [ %iv.next, %loop ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %val = load i32, ptr %gep.a, align 4
+  %add = add nsw i32 %val, 1
+  store i32 %add, ptr %gep.b, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; TC=5, VF=4, UserIC=4
+; The user interleave count should be ignored because the dependence distance
+; makes the loop unsafe for interleaving > 1. Vectorization should still pick
+; VF=4 and produce 1 vector iteration plus 1 scalar iteration.
+define void @tc5_vf4_unsafe_useric_distance4_i32(ptr noalias %a, ptr noalias %b) #0 {
+; CHECK-LABEL: define void @tc5_vf4_unsafe_useric_distance4_i32(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[LOOP:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY1:.*]]
+; CHECK:       [[VECTOR_BODY1]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 -4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 4
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_LOAD1]], [[WIDE_LOAD]]
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 4, %entry ], [ %iv.next, %loop ]
+  %b.dst = getelementptr inbounds i32, ptr %b, i64 %iv
+  %b.src = getelementptr inbounds i32, ptr %b.dst, i64 -4
+  %dep = load i32, ptr %b.src, align 4
+  %a.src = getelementptr inbounds i32, ptr %a, i64 %iv
+  %val = load i32, ptr %a.src, align 4
+  %add = add nsw i32 %val, %dep
+  store i32 %add, ptr %b.dst, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 9
+  br i1 %exitcond, label %exit, label %loop, !llvm.loop !2
+
+exit:
+  ret void
+}
+
+; For this example, vectorization should not take place as the
+; scalar cost is better than the vectorized cost.
+define void @tc3_udiv_i8_reject(ptr noalias %a, ptr noalias %b, ptr noalias %c) #0 {
+; CHECK-LABEL: define void @tc3_udiv_i8_reject(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PA:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[PB:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[PC:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 [[IV]]
+; CHECK-NEXT:    [[VA:%.*]] = load i8, ptr [[PA]], align 1
+; CHECK-NEXT:    [[VB:%.*]] = load i8, ptr [[PB]], align 1
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[VA]], [[VB]]
+; CHECK-NEXT:    store i8 [[DIV]], ptr [[PC]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 3
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %pa = getelementptr inbounds i8, ptr %a, i64 %iv
+  %pb = getelementptr inbounds i8, ptr %b, i64 %iv
+  %pc = getelementptr inbounds i8, ptr %c, i64 %iv
+  %va = load i8, ptr %pa, align 1
+  %vb = load i8, ptr %pb, align 1
+  %div = udiv i8 %va, %vb
+  store i8 %div, ptr %pc, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 3
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Accept a Vf=2 for this low trip count loop
+define void @tc3_smin_i8_accept(ptr noalias %a, ptr noalias %b) #0 {
+; CHECK-LABEL: define void @tc3_smin_i8_accept(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[B]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i8>, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i8> @llvm.smin.v2i8(<2 x i8> [[WIDE_LOAD]], <2 x i8> [[WIDE_LOAD1]])
+; CHECK-NEXT:    store <2 x i8> [[TMP0]], ptr [[B]], align 1
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx = getelementptr inbounds i8, ptr %b, i64 %iv
+  %0 = load i8, ptr %arrayidx, align 1
+  %arrayidx2 = getelementptr inbounds i8, ptr %a, i64 %iv
+  %1 = load i8, ptr %arrayidx2, align 1
+  %min = tail call i8 @llvm.smin.i8(i8 %0, i8 %1)
+  store i8 %min, ptr %arrayidx, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 3
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Ensure that the LoopVectorizer will select a VF that will
+; ensure TC == (VF * IC) + 1.
+define void @tc5_sin_f32_dont_select_smaller_vf(ptr noalias %a, ptr noalias %c) #0 {
+; CHECK-LABEL: define void @tc5_sin_f32_dont_select_smaller_vf(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x float> @llvm.sin.v4f32(<4 x float> [[WIDE_LOAD]])
+; CHECK-NEXT:    store <4 x float> [[TMP0]], ptr [[C]], align 4
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %pa = getelementptr inbounds float, ptr %a, i64 %iv
+  %pc = getelementptr inbounds float, ptr %c, i64 %iv
+  %va = load float, ptr %pa, align 4
+  %sin = tail call float @llvm.sin.f32(float %va)
+  store float %sin, ptr %pc, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 5
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Ensure that when Vectorization is forced, a VF is chosen
+; regardless of cost.
+define void @tc3_udiv_i8_forced(ptr noalias %a, ptr noalias %b, ptr noalias %c) #0 {
+; CHECK-LABEL: define void @tc3_udiv_i8_forced(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[A]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x i8>, ptr [[B]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv <2 x i8> [[WIDE_LOAD]], [[WIDE_LOAD1]]
+; CHECK-NEXT:    store <2 x i8> [[TMP0]], ptr [[C]], align 1
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %pa = getelementptr inbounds i8, ptr %a, i64 %iv
+  %pb = getelementptr inbounds i8, ptr %b, i64 %iv
+  %pc = getelementptr inbounds i8, ptr %c, i64 %iv
+  %va = load i8, ptr %pa, align 1
+  %vb = load i8, ptr %pb, align 1
+  %div = udiv i8 %va, %vb
+  store i8 %div, ptr %pc, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 3
+  br i1 %exitcond, label %exit, label %loop, !llvm.loop !5
+
+exit:
+  ret void
+}
+
+; Reject vectorization because the function is marked as minsize, and
+; this is a case where vectorization is avoided for small trip counts.
+define void @tc5_v4i32_reject_minsize(ptr noalias %a, ptr noalias %b) #1 {
+; CHECK-LABEL: define void @tc5_v4i32_reject_minsize(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[SCALAR_PH1:.*]]:
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH1]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP_A]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[VAL]], 1
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_B]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 5
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP1]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %val = load i32, ptr %gep.a, align 4
+  %add = add nsw i32 %val, 1
+  store i32 %add, ptr %gep.b, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 5
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Reject vectorization because the function is marked as optsize, and
+; this is a case where vectorization is avoided for small trip counts.
+define void @tc5_v4i32_reject_optsize(ptr noalias %a, ptr noalias %b) #2 {
+; CHECK-LABEL: define void @tc5_v4i32_reject_optsize(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:  [[SCALAR_PH1:.*]]:
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH1]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP_A]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[VAL]], 1
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_B]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 5
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP1]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %val = load i32, ptr %gep.a, align 4
+  %add = add nsw i32 %val, 1
+  store i32 %add, ptr %gep.b, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 5
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
+attributes #1 = { vscale_range(1,16) "target-features"="+sve" minsize }
+attributes #2 = { vscale_range(1,16) "target-features"="+sve" optsize }
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.interleave.count", i32 2}
+!2 = distinct !{!2, !3, !4}
+!3 = !{!"llvm.loop.interleave.count", i32 4}
+!4 = !{!"llvm.loop.vectorize.width", i32 4}
+!5 = distinct !{!5, !6}
+!6 = !{!"llvm.loop.vectorize.enable"}

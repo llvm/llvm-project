@@ -5,15 +5,15 @@ define void @small_trip_count_min_vlen_128(ptr nocapture %a) vscale_range(4,1024
 ; CHECK-LABEL: @small_trip_count_min_vlen_128(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP1]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[TMP1:%.*]], i32 [[IV]]
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[V]], 1
-; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV]], 3
-; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[LOOP1]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], splat (i32 1)
+; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[A]], align 4
+; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -38,15 +38,15 @@ define void @small_trip_count_min_vlen_32(ptr nocapture %a) vscale_range(1,1024)
 ; CHECK-LABEL: @small_trip_count_min_vlen_32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP1]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[TMP1:%.*]], i32 [[IV]]
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[V]], 1
-; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV]], 3
-; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[LOOP1]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], splat (i32 1)
+; CHECK-NEXT:    store <4 x i32> [[TMP0]], ptr [[A]], align 4
+; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
