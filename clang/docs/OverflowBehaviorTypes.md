@@ -58,6 +58,39 @@ Arithmetic operations containing one or more overflow behavior types follow
 standard C integer promotion and conversion rules while preserving overflow
 behavior information.
 
+## Not a Type Qualifier
+
+An overflow behavior type is a *type specifier*, like `_BitInt(N)`, and not a
+type qualifier like `const`, `volatile`, or `_Atomic`. `__ob_trap int` is a
+distinct type from `int`, not a restricted way of accessing one.
+
+This distinction is observable:
+
+- `__typeof_unqual__` strips `const` and `volatile` from an overflow behavior
+  type, but keeps the overflow behavior itself.
+
+  ```c
+  __typeof_unqual__(const __ob_trap int) x; // x has type '__ob_trap int'
+  ```
+
+  Stripping the overflow behavior here would silently discard a hardening
+  contract, and because the user asked for the unqualified type there would be
+  no opportunity to diagnose it. To deliberately discard overflow behavior,
+  cast to the underlying type.
+
+- An overflow behavior type does not match its underlying type in a `_Generic`
+  association or a C++ template specialization, as described in the
+  "C \_Generic Expressions" and "C++ Template Specializations" sections below.
+
+Qualifiers may still be applied to an overflow behavior type, and they behave
+as they do on any other type:
+
+```c
+const __ob_trap int a = 0;
+a = 1; // error: cannot assign to variable 'a' with const-qualified type
+       // '__ob_trap const int'
+```
+
 ## Examples
 
 Here are examples using both syntax options:
@@ -107,15 +140,14 @@ undefined behavior might).
 ## Promotion Rules
 
 Overflow behavior types (OBTs) follow the traditional C integer promotion and
-conversion rules while propagating overflow behavior qualifiers through
-implicit casts. This ensures compatibility with existing C semantics while
+conversion rules while propagating overflow behavior through implicit casts. This ensures compatibility with existing C semantics while
 maintaining overflow behavior information throughout arithmetic expressions.
 
 The resulting type characteristics for overflow behavior types (OBTs) across a
 variety of scenarios is detailed below.
 
 - **OBT and Standard Integer Type**: The result follows standard C conversion
-  rules, with the OBT qualifier applied to the standard result type.
+  rules, with the overflow behavior applied to the standard result type.
 
   ```c++
   typedef char __ob_trap trap_char;
@@ -150,7 +182,7 @@ variety of scenarios is detailed below.
 
 | Operation Type                              | Result Type                                                     |
 | ------------------------------------------- | --------------------------------------------------------------- |
-| OBT + Standard Integer                      | Standard C conversion result with OBT qualifier applied         |
+| OBT + Standard Integer                      | Standard C conversion result with overflow behavior applied     |
 | Same Kind OBTs (both `wrap` or both `trap`) | Standard C conversion result with common overflow behavior      |
 | Different Kind OBTs (`wrap` + `trap`)       | Standard C conversion result with `trap` behavior (dominance)   |
 

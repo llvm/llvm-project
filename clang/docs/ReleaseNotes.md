@@ -111,6 +111,10 @@ features cannot lower the translation-unit ABI level;
 
 - Templight support has been removed.
 
+- `-fstack-clash-protection` has been enabled implicitly by default for android
+  target triples (except 32b arm targets). Can be disabled via
+  `-fno-stack-clash-protection`.
+
 ### Clang Python Bindings Potentially Breaking Changes
 
 - `CompletionChunkKind` instance's `__str__` representation has been adapted to be consistent with other enums in the library.
@@ -129,6 +133,8 @@ features cannot lower the translation-unit ABI level;
 - `CompletionString.availability` now returns instances of `AvailabilityKind`.
   As a result, the `__str__` representation of its return values changed.
   Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
+
+- `Cursor` instance's `enum_value` method now returns 1 instead of -1 for `true` bool enumeration values
 
 ### OpenCL Potentially Breaking Changes
 
@@ -483,7 +489,19 @@ features cannot lower the translation-unit ABI level;
   `int vla[n][0]`. (#GH28328)
 
 - Fixed a missing `-Wconstant-conversion` diagnostic for signed `char` arrays.
-  (#GH181730)
+
+- Clang now diagnoses passing wrong vector type as a mask to `__builtin_shufflevector`. (#GH218132)
+
+- `-Wdelete-abstract-non-virtual-dtor` and `-Wdelete-non-abstract-non-virtual-dtor`
+  no longer warn when the selected deallocation function is a destroying
+  `operator delete`, since such a delete expression never invokes the
+  destructor. (#GH65524)
+
+- Fixed a false-positive `-Wshadow` warning when a variable in an
+  inline-defined friend function shares the name of a non-static class
+  member variable. (#GH221190)
+
+- Clang now diagnoses matrix logical operations are only supported for HLSL. (GH222381)
 
 ### Improvements to Clang's time-trace
 
@@ -571,6 +589,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
+- Fixed a CTAD bug when combining with concepts. (#GH124715)
+
 - Fixed a regression where an internal-linkage function (e.g. a `static` or
   anonymous-namespace helper) declared in the global module fragment of the
   current translation unit was removed from the overload set when the calling
@@ -580,6 +600,9 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed a crash when module directive export module foo not following a
   semicolon and there are no rest pp-tokens in current module file. (#GH187771)
+
+- Fixed concept evaluation bugs where some declarations were not added to
+  the current instantiation scope. (#GH198052)
 
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.
@@ -677,6 +700,9 @@ features cannot lower the translation-unit ABI level;
 - `FunctionDecl::getReturnTypeSourceRange()` now returns correct source
   location of a trailing return type. (#GH162649)
 
+- Added missed information to the AST node representing the member function
+  when calling a explicit object member function. (#GH218829)
+
 #### Miscellaneous Bug Fixes
 
 #### Miscellaneous Clang Crashes Fixed
@@ -745,6 +771,11 @@ features cannot lower the translation-unit ABI level;
 
 #### Windows Support
 
+- Fixed ``setjmp`` on 32-bit Arm passing the frame pointer, rather than the
+  stack pointer as it was on entry to the function, as the frame value the CRT
+  stores in the ``jmp_buf``. Clang now uses ``llvm.sponentry`` there, as it
+  already did on AArch64.
+
 - Fixed a bug where Clang did not match the MSVC ABI on Arm64 when an
   over-aligned base class is followed by another base class. MSVC on Arm64 (but
   not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
@@ -781,6 +812,11 @@ features cannot lower the translation-unit ABI level;
 
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
   (`__cudaRegisterLinkedBinary`).
+
+- Clang now provides device-side definitions of `__cxa_pure_virtual()` and
+  `__cxa_deleted_virtual()`; previously, any (potential) call to a pure/deleted
+  virtual function that could not be optimised out would cause the program to
+  fail to assemble. This is now fixed. (#GH49183) (#GH67533)
 
 #### AIX Support
 
