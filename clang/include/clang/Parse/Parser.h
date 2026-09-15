@@ -4740,6 +4740,9 @@ private:
   /// expression.
   ExprResult ParseLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro);
 
+  /// Whether the current token can begin a lambda specifier sequence.
+  bool isLambdaSpecifier();
+
   //===--------------------------------------------------------------------===//
   // C++ 5.2p1: C++ Casts
 
@@ -9053,6 +9056,10 @@ private:
   /// Try to skip a possibly empty sequence of 'attribute-specifier's without
   /// full validation of the syntactic structure of attributes.
   bool TrySkipAttributes();
+
+  /// Whether tentative lookahead from the current '[' finds a lambda-like
+  /// continuation. This does not parse or validate a lambda.
+  bool hasLambdaLikeContinuation();
 
   //===--------------------------------------------------------------------===//
   // C++ 7: Declarations [dcl.dcl]
