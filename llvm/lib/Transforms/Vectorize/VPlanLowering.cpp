@@ -1002,8 +1002,8 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
 
     // TODO: Only freeze the required pointer (not both src and sink).
     if (Check.NeedsFreeze) {
-      Src = Builder.createFreeze(Src, DebugLoc::getUnknown());
-      Sink = Builder.createFreeze(Sink, DebugLoc::getUnknown());
+      Src = Builder.createFreeze(Src);
+      Sink = Builder.createFreeze(Sink);
     }
 
     // TODO: Generate loop_dependence_raw_mask when there's a read-after-write
