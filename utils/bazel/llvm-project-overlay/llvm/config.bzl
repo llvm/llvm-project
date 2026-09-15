@@ -80,7 +80,7 @@ backtrace_defines = select({
 })
 
 mallinfo_defines = select({
-    "@llvm//platforms/config:gnu": ["HAVE_MALLINFO=1"],
+    "@rules_cc//cc/libc:glibc": ["HAVE_MALLINFO=1"],
     "//conditions:default": [],
 })
 
