@@ -244,7 +244,8 @@ BranchProbability getExecutionProbability(BlockFrequency Freq);
 /// the frequency with which it executes relative to the first (header) block,
 /// and whether that frequency was composed using any estimated branch weights.
 /// The frequency of a block is the sum over its incoming edges, or std::nullopt
-/// if any edge on a path reaching it lacks branch weights.
+/// if any edge on a path reaching it lacks branch weights. Edges to blocks
+/// outside \p Blocks are ignored.
 DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
 computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks);
 
