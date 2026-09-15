@@ -676,6 +676,11 @@ features cannot lower the translation-unit ABI level;
   class with an invalid non-static data member, such as one qualified with an
   address space. (#GH194605)
 
+- Fixed an assertion when a call to a class object was resolved through a
+  conversion function to a function pointer that was introduced into the class
+  by a using-declaration (e.g. `using Base::operator auto;`). Such a conversion
+  function is now also diagnosed if it is deleted. (#GH189146)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
