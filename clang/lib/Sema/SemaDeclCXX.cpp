@@ -4206,7 +4206,8 @@ void Sema::ActOnStartCXXInClassMemberInitializer() {
   PushFunctionScope();
 }
 
-void Sema::ActOnStartTrailingRequiresClause(Scope *S, Declarator &D) {
+void Sema::ActOnStartTrailingRequiresClauseOrContractSpecifier(Scope *S,
+                                                               Declarator &D) {
   if (!D.isFunctionDeclarator())
     return;
   auto &FTI = D.getFunctionTypeInfo();
@@ -4218,6 +4219,21 @@ void Sema::ActOnStartTrailingRequiresClause(Scope *S, Declarator &D) {
     if (ParamDecl->getDeclName())
       PushOnScopeChains(ParamDecl, S, /*AddToContext=*/false);
   }
+}
+
+VarDecl *Sema::ActOnPostConditionResultName(Scope *S,
+                                            IdentifierInfo *ResultName,
+                                            SourceLocation ResultNameLoc) {
+  // FIXME: We use a dependent type here to allow parsing the result name
+  // binding in post contracts. We should use the real result type when the
+  // support gets better Keeping this declaration out of the DeclContext makes
+  // it a predicate-local lookup aid rather than a program declaration.
+  VarDecl *ResultVar = VarDecl::Create(
+      Context, Context.getTranslationUnitDecl(), ResultNameLoc, ResultNameLoc,
+      ResultName, Context.DependentTy, /*TInfo=*/nullptr, SC_None);
+  ResultVar->setImplicit();
+  PushOnScopeChains(ResultVar, S, /*AddToContext=*/false);
+  return ResultVar;
 }
 
 ExprResult Sema::ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr) {
