@@ -8638,12 +8638,18 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   DeclContext *NewDC = D->getDeclContext();
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(ShadowedDecl)) {
-    if (const auto *MD =
-            dyn_cast<CXXMethodDecl>(getFunctionLevelDeclContext())) {
+    DeclContext *FnDC = getFunctionLevelDeclContext();
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FnDC)) {
       // Fields aren't shadowed in C++ static members or in member functions
       // with an explicit object parameter.
       if (MD->isStatic() || MD->isExplicitObjectMemberFunction())
         return;
+    } else if (isa<FunctionDecl>(FnDC)) {
+      // A FunctionDecl here (not a CXXMethodDecl) can only be an
+      // inline-defined friend function, since that's the only way to
+      // introduce a non-member function inside a class body. Friends have
+      // no implicit `this`, so nothing here can shadow a field.
+      return;
     }
     // Fields shadowed by constructor parameters are a special case. Usually
     // the constructor initializes the field with the parameter.
@@ -21116,7 +21122,17 @@ bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
   assert(ED->isClosedFlag() && "looking for value in non-flag or open enum");
   assert(ED->isCompleteDefinition() && "expected enum definition");
 
-  llvm::APInt FlagBits = FlagBitsCache.at(ED);
+  auto R = FlagBitsCache.try_emplace(ED);
+  llvm::APInt &FlagBits = R.first->second;
+
+  if (R.second) {
+    for (auto *E : ED->enumerators()) {
+      const auto &EVal = E->getInitVal();
+      // Only single-bit enumerators introduce new flag values.
+      if (EVal.isPowerOf2())
+        FlagBits = FlagBits.zext(EVal.getBitWidth()) | EVal;
+    }
+  }
 
   // A value is in a flag enum if either its bits are a subset of the enum's
   // flag bits (the first condition) or we are allowing masks and the same is
@@ -21326,20 +21342,6 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
 
   CheckForDuplicateEnumValues(*this, Elements, Enum, EnumType);
   CheckForComparisonInEnumInitializer(*this, Enum);
-
-  if (Enum->hasAttr<FlagEnumAttr>()) {
-    auto R = FlagBitsCache.try_emplace(Enum);
-    llvm::APInt &FlagBits = R.first->second;
-
-    if (R.second) {
-      for (auto *E : Enum->enumerators()) {
-        const auto &EVal = E->getInitVal();
-        // Only single-bit enumerators introduce new flag values.
-        if (EVal.isPowerOf2())
-          FlagBits = FlagBits.zext(EVal.getBitWidth()) | EVal;
-      }
-    }
-  }
 
   if (Enum->isClosedFlag()) {
     for (Decl *D : Elements) {

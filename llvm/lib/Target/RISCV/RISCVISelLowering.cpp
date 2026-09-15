@@ -2709,6 +2709,10 @@ bool RISCVTargetLowering::hasAndNot(SDValue Y) const {
   if (!VT.isVector())
     return hasAndNotCompare(Y);
 
+  // vmandn.mm
+  if (VT.getVectorElementType() == MVT::i1)
+    return Subtarget.hasVInstructions();
+
   return Subtarget.hasStdExtZvkb();
 }
 
@@ -13798,11 +13802,11 @@ SDValue RISCVTargetLowering::lowerVectorMaskVecReduction(SDValue Op,
   case ISD::VECREDUCE_AND:
   case ISD::VP_REDUCE_AND: {
     // vcpop ~x == 0
-    SDValue TrueMask = DAG.getNode(RISCVISD::VMSET_VL, DL, ContainerVT, VL);
-    if (IsVP || VecVT.isFixedLengthVector())
-      Vec = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Vec, TrueMask, VL);
+    if (VecVT.isFixedLengthVector())
+      Vec = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Vec,
+                        DAG.getAllOnesConstant(DL, ContainerVT), VL);
     else
-      Vec = DAG.getNode(ISD::XOR, DL, ContainerVT, Vec, TrueMask);
+      Vec = DAG.getNOT(DL, Vec, ContainerVT);
     Vec = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, Vec, Mask, VL);
     CC = ISD::SETEQ;
     break;
