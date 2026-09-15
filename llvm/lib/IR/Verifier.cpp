@@ -583,6 +583,15 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
         "Global is external, but doesn't have external or weak linkage!", &GV);
 
   if (const auto *GO = dyn_cast<GlobalObject>(&GV)) {
+    Check(!GO->hasMetadata(LLVMContext::MD_branch_uniformity_profile),
+          "branch.uniformity.profile is only valid on conditional branches",
+          GO);
+    Check(!GO->hasMetadata(LLVMContext::MD_block_uniformity_profile),
+          "block.uniformity.profile is only valid on terminators", GO);
+    if (GO->hasMetadata(LLVMContext::MD_uniformity_profile))
+      Check(isa<Function>(GO) && !GO->isDeclaration(),
+            "uniformity.profile is only valid on function definitions", GO);
+
     if (const MDNode *Associated =
             GO->getMetadata(LLVMContext::MD_associated)) {
       Check(Associated->getNumOperands() == 1,
@@ -2798,6 +2807,9 @@ void Verifier::verifyUnknownProfileMetadata(MDNode *MD) {
 void Verifier::verifyFunctionMetadata(
     ArrayRef<std::pair<unsigned, MDNode *>> MDs) {
   for (const auto &Pair : MDs) {
+    if (Pair.first == LLVMContext::MD_uniformity_profile)
+      Check(Pair.second->getNumOperands() == 0,
+            "uniformity.profile must be an empty node", Pair.second);
     if (Pair.first == LLVMContext::MD_prof) {
       MDNode *MD = Pair.second;
       Check(MD->getNumOperands() >= 2,
@@ -6083,6 +6095,24 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_prof))
     visitProfMetadata(I, MD);
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_block_uniformity_profile)) {
+    Check(I.isTerminator(),
+          "block.uniformity.profile is only valid on terminators", &I);
+    Check(MD->getNumOperands() == 0,
+          "block.uniformity.profile must be an empty node", &I, MD);
+  }
+
+  Check(!I.getMetadata(LLVMContext::MD_uniformity_profile),
+        "uniformity.profile is only valid on function definitions", &I);
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_branch_uniformity_profile)) {
+    Check(isa<CondBrInst>(I),
+          "branch.uniformity.profile is only valid on conditional branches",
+          &I);
+    Check(MD->getNumOperands() == 0,
+          "branch.uniformity.profile must be an empty node", &I, MD);
+  }
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_memprof))
     visitMemProfMetadata(I, MD);
