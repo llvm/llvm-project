@@ -1,18 +1,14 @@
-================
-MemTagSanitizer
-================
+# MemTagSanitizer
 
-
-Introduction
-============
+## Introduction
 
 **Note:** this page describes a tool under development. Part of this
-functionality is planned but not implemented.  Hardware capable of
+functionality is planned but not implemented. Hardware capable of
 running MemTagSanitizer does not exist as of Oct 2019.
 
 MemTagSanitizer is a fast memory error detector and **a code hardening
-tool** based on the Armv8.5-A `Memory Tagging Extension`_. It
-detects a similar class of errors as `AddressSanitizer`_ or `HardwareAssistedAddressSanitizer`_, but with
+tool** based on the Armv8.5-A [Memory Tagging Extension][memory tagging extension]. It
+detects a similar class of errors as [AddressSanitizer][addresssanitizer] or [HardwareAssistedAddressSanitizer][hardwareassistedaddresssanitizer], but with
 **much** lower overhead.
 
 MemTagSanitizer overhead is expected to be in low single digits, both
@@ -22,37 +18,33 @@ MemTagSanitizer is code hardening in production binaries, where it is
 expected to be a strong mitigation for both stack and heap-based
 memory bugs.
 
+## Usage
 
-Usage
-=====
-
-Compile and link your program with the ``-fsanitize=memtag`` flag. This
+Compile and link your program with the `-fsanitize=memtag` flag. This
 will only work when targeting AArch64 Android with the memory tagging extension.
-One possible way to achieve that is to add ``--target=aarch64-linux-android -march=armv8+memtag``
+One possible way to achieve that is to add `--target=aarch64-linux-android -march=armv8+memtag`
 to your compilation flags.
 
 Note that doing this will override existing flags of the same type. Assuming that
 you are already targeting AArch64 Android, an alternative is to add
-``-Xclang -target-feature -Xclang +mte`` to your compilation flags. This
+`-Xclang -target-feature -Xclang +mte` to your compilation flags. This
 adds the memory tagging feature, without changing anything else.
 
-Implementation
-==============
+## Implementation
 
-See `HardwareAssistedAddressSanitizer`_ for a general overview of a
-tag-based approach to memory safety.  MemTagSanitizer follows a
+See [HardwareAssistedAddressSanitizer][hardwareassistedaddresssanitizer] for a general overview of a
+tag-based approach to memory safety. MemTagSanitizer follows a
 similar implementation strategy, but with the tag storage (shadow)
 provided by the hardware.
 
 A quick overview of MTE hardware capabilities:
 
-* Every 16 aligned bytes of memory can be assigned a 4-bit Allocation Tag.
-* Every pointer can have a 4-bit Address Tag that is in its most significant byte.
-* Most memory access instructions generate an exception if Address Tag != Allocation Tag.
-* Special instructions are provided for fast tag manipulation.
+- Every 16 aligned bytes of memory can be assigned a 4-bit Allocation Tag.
+- Every pointer can have a 4-bit Address Tag that is in its most significant byte.
+- Most memory access instructions generate an exception if Address Tag != Allocation Tag.
+- Special instructions are provided for fast tag manipulation.
 
-Stack instrumentation
-=====================
+## Stack instrumentation
 
 Stack-based memory errors are detected by updating Allocation Tag for
 each local variable to a random value at the start of its lifetime,
@@ -71,31 +63,29 @@ For this reason MemTagSanitizer generates at most one random tag per
 function, called a "base tag". Other stack variables, if there are
 any, are assigned tags at a fixed offset from the base.
 
-Please refer to `this document
-<https://github.com/google/sanitizers/wiki/Stack-instrumentation-with-ARM-Memory-Tagging-Extension-(MTE)>`_
+Please refer to [this document](<https://github.com/google/sanitizers/wiki/Stack-instrumentation-with-ARM-Memory-Tagging-Extension-(MTE)>)
 for more details about stack instrumentation.
 
-Heap tagging
-============
+## Heap tagging
 
 **Note:** this part is not implemented as of Oct 2019.
 
-MemTagSanitizer will use :doc:`ScudoHardenedAllocator`
+MemTagSanitizer will use {doc}`ScudoHardenedAllocator`
 with additional code to update memory tags when
 
-* New memory is obtained from the system.
-* An allocation is freed.
+- New memory is obtained from the system.
+- An allocation is freed.
 
 There is no need to change Allocation Tags for the bulk of the
 allocated memory in malloc(), as long as a pointer with the matching
 Address Tag is returned.
 
-More information
-================
+## More information
 
-* `LLVM Developer Meeting 2018 talk on Memory Tagging <https://llvm.org/devmtg/2018-10/slides/Serebryany-Stepanov-Tsyrklevich-Memory-Tagging-Slides-LLVM-2018.pdf>`_
-* `Memory Tagging Whitepaper <https://arxiv.org/pdf/1802.09517.pdf>`_
+- [LLVM Developer Meeting 2018 talk on Memory Tagging](https://llvm.org/devmtg/2018-10/slides/Serebryany-Stepanov-Tsyrklevich-Memory-Tagging-Slides-LLVM-2018.pdf)
+- [Memory Tagging Whitepaper](https://arxiv.org/pdf/1802.09517.pdf)
 
-.. _Memory Tagging Extension: https://community.arm.com/developer/ip-products/processors/b/processors-ip-blog/posts/arm-a-profile-architecture-2018-developments-armv85a
-.. _AddressSanitizer: https://clang.llvm.org/docs/AddressSanitizer.html
-.. _HardwareAssistedAddressSanitizer: https://clang.llvm.org/docs/HardwareAssistedAddressSanitizerDesign.html
+[addresssanitizer]: https://clang.llvm.org/docs/AddressSanitizer.html
+[hardwareassistedaddresssanitizer]: https://clang.llvm.org/docs/HardwareAssistedAddressSanitizerDesign.html
+[memory tagging extension]: https://community.arm.com/developer/ip-products/processors/b/processors-ip-blog/posts/arm-a-profile-architecture-2018-developments-armv85a
+
