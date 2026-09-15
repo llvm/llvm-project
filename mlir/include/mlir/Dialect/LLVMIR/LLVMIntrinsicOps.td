@@ -236,7 +236,8 @@ def LLVM_ModfOp : LLVM_TwoResultIntrOp<"modf", [], [0],
   let arguments =
       (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
       DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
-  let assemblyFormat = "`(` operands `)` attr-dict `:` "
+  let assemblyFormat = "`(` operands `)` (`fastmath` `` $fastmathFlags^)? "
+      "attr-dict `:` "
       "functional-type(operands, results)";
   let hasVerifier = 1;
 }

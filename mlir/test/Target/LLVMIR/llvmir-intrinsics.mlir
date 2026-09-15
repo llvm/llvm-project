@@ -73,6 +73,8 @@ llvm.func @modf_test(%arg0: f32, %arg1: vector<8xf32>) {
   llvm.intr.modf(%arg0) : (f32) -> !llvm.struct<(f32, f32)>
   // CHECK: call { <8 x float>, <8 x float> } @llvm.modf.v8f32(<8 x float> %{{.*}})
   llvm.intr.modf(%arg1) : (vector<8xf32>) -> !llvm.struct<(vector<8xf32>, vector<8xf32>)>
+  // CHECK: call ninf { float, float } @llvm.modf.f32(float %{{.*}})
+  llvm.intr.modf(%arg0) fastmath<ninf> : (f32) -> !llvm.struct<(f32, f32)>
   llvm.return
 }
 
