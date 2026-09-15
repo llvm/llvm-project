@@ -6049,6 +6049,20 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
       }
     }
 
+    // If the existing global is already a definition, keep it: a request for
+    // a definition must not erase an existing definition with the same
+    // mangled name, even if its type differs from Ty. The type can
+    // legitimately differ when the initializer folded to a different (e.g.
+    // anonymous) type; callers emitting a definition cope with the mismatch
+    // themselves. This also keeps the deferred-decls "already emitted" check
+    // sound: it queries with IsForDefinition, which must be non-destructive.
+    if (IsForDefinition && !Entry->isDeclaration()) {
+      if (Entry->getType()->getAddressSpace() != TargetAS)
+        return llvm::ConstantExpr::getAddrSpaceCast(
+            Entry, llvm::PointerType::get(Ty->getContext(), TargetAS));
+      return Entry;
+    }
+
     // Make sure the result is of the correct type.
     if (Entry->getType()->getAddressSpace() != TargetAS)
       return llvm::ConstantExpr::getAddrSpaceCast(
@@ -6274,7 +6288,9 @@ llvm::GlobalVariable *CodeGenModule::CreateOrReplaceCXXRuntimeVariable(
 /// then it will be created with the specified type instead of whatever the
 /// normal requested type would be. If IsForDefinition is true, it is guaranteed
 /// that an actual global with type Ty will be returned, not conversion of a
-/// variable with the same mangled name but some other type.
+/// variable with the same mangled name but some other type, unless a
+/// definition with that mangled name already exists: an existing definition is
+/// always returned as is and never replaced.
 llvm::Constant *CodeGenModule::GetAddrOfGlobalVar(const VarDecl *D,
                                                   llvm::Type *Ty,
                                            ForDefinition_t IsForDefinition) {
