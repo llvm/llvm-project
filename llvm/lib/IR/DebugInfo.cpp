@@ -2021,7 +2021,6 @@ LLVMMetadataKind LLVMGetMetadataKind(LLVMMetadataRef Metadata) {
   }
 }
 
-
 void at::deleteAssignmentMarkers(const Instruction *Inst) {
   for (auto *DVR : getDVRAssignmentMarkers(Inst))
     DVR->eraseFromParent();

@@ -530,8 +530,10 @@ void CodeGenFunction::EmitStartEHSpec(const Decl *D) {
     // throw with types.
     // TODO Correctly handle exception specification in Emscripten EH
     if (getTarget().getCXXABI() == TargetCXXABI::WebAssembly &&
-        CGM.getCodeGenOpts().getExceptionHandling() ==
-            CodeGenOptions::ExceptionHandlingKind::None &&
+        (CGM.getCodeGenOpts().getExceptionHandling() ==
+             CodeGenOptions::ExceptionHandlingKind::None ||
+         CGM.getCodeGenOpts().getExceptionHandling() ==
+             CodeGenOptions::ExceptionHandlingKind::Default) &&
         EST == EST_Dynamic)
       CGM.getDiags().Report(D->getLocation(),
                             diag::warn_wasm_dynamic_exception_spec_ignored)

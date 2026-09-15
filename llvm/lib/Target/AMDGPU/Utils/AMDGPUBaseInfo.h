@@ -1546,6 +1546,12 @@ inline bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   return isSISrcOperand(Desc.operands()[OpNo]);
 }
 
+/// Is this a scalar (i.e. not packed) bf16 source operand?
+constexpr bool isBF16SrcOperand(const MCOperandInfo &OpInfo) {
+  return OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_BF16 ||
+         OpInfo.OperandType == AMDGPU::OPERAND_REG_INLINE_C_BF16;
+}
+
 /// Is this a KImm operand?
 bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo);
 

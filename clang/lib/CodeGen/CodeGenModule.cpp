@@ -1462,6 +1462,19 @@ void CodeGenModule::Release() {
       getModule().setLongDoubleFormat(*Format);
   }
 
+  // Record the exception model as a module flag whenever it was specified, so
+  // that the flag's absence unambiguously means unspecified regardless of the
+  // target default. In the absence of a custom module flag merging behavior, an
+  // explicit non-default model could silently merge with a defaulted module.
+  llvm::ExceptionHandling ExceptionModel =
+      CodeGenOptions::toExceptionHandling(CodeGenOpts.getExceptionHandling());
+  if (ExceptionModel != llvm::ExceptionHandling::Default) {
+    getModule().addModuleFlag(
+        llvm::Module::Error, "exception-model",
+        llvm::MDString::get(getLLVMContext(),
+                            llvm::getExceptionModelName(ExceptionModel)));
+  }
+
   if (getTriple().isOSzOS()) {
     getModule().addModuleFlag(llvm::Module::Warning,
                               "zos_product_major_version",
@@ -1499,7 +1512,8 @@ void CodeGenModule::Release() {
   // Other targets have no apparent need for the ABI name, but set a non-empty
   // value.
   if (StringRef ABIStr = Target.getABI();
-      !ABIStr.empty() && (T.isARM() || T.isThumb() || T.isRISCV())) {
+      !ABIStr.empty() &&
+      (T.isARM() || T.isThumb() || T.isRISCV() || T.isPPC())) {
     getModule().addModuleFlag(llvm::Module::Error, "target-abi",
                               llvm::MDString::get(VMContext, ABIStr));
   }
