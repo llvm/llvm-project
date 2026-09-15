@@ -111,6 +111,10 @@ features cannot lower the translation-unit ABI level;
 
 - Templight support has been removed.
 
+- `-fstack-clash-protection` has been enabled implicitly by default for android
+  target triples (except 32b arm targets). Can be disabled via
+  `-fno-stack-clash-protection`.
+
 ### Clang Python Bindings Potentially Breaking Changes
 
 - `CompletionChunkKind` instance's `__str__` representation has been adapted to be consistent with other enums in the library.
@@ -493,6 +497,12 @@ features cannot lower the translation-unit ABI level;
   `operator delete`, since such a delete expression never invokes the
   destructor. (#GH65524)
 
+- Fixed a false-positive `-Wshadow` warning when a variable in an
+  inline-defined friend function shares the name of a non-static class
+  member variable. (#GH221190)
+
+- Clang now diagnoses matrix logical operations are only supported for HLSL. (GH222381)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -579,6 +589,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
+- Fixed a CTAD bug when combining with concepts. (#GH124715)
+
 - Fixed a regression where an internal-linkage function (e.g. a `static` or
   anonymous-namespace helper) declared in the global module fragment of the
   current translation unit was removed from the overload set when the calling
@@ -588,6 +600,9 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed a crash when module directive export module foo not following a
   semicolon and there are no rest pp-tokens in current module file. (#GH187771)
+
+- Fixed concept evaluation bugs where some declarations were not added to
+  the current instantiation scope. (#GH198052)
 
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.

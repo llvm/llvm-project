@@ -3970,6 +3970,13 @@ static SDValue combineOrOfSetCCToUSUBOCarry(SDNode *N, SelectionDAG &DAG,
                                                     *DAG.getContext(), IntVT)))
     return SDValue();
 
+  // USUBO_CARRY's carry-in must be 0 or 1, which the matched pattern does not
+  // guarantee.
+  if (!DAG.MaskedValueIsZero(
+          CarryIn,
+          APInt::getBitsSetFrom(CarryIn.getScalarValueSizeInBits(), 1)))
+    return SDValue();
+
   SDLoc DL(N);
   SDVTList VTs = DAG.getVTList(IntVT, N->getValueType(0));
   return DAG.getNode(ISD::USUBO_CARRY, DL, VTs, A, B, CarryIn).getValue(1);
@@ -5565,6 +5572,7 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   EVT CCVT = getSetCCResultType(VT);
 
   bool isSigned = (Opcode == ISD::SREM);
+  unsigned DivOpcode = isSigned ? ISD::SDIV : ISD::UDIV;
   SDLoc DL(N);
 
   // fold (rem c1, c2) -> c1%c2
@@ -5621,7 +5629,6 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
         isSigned ? visitSDIVLike(N0, N1, N) : visitUDIVLike(N0, N1, N);
     if (OptimizedDiv.getNode() && OptimizedDiv.getNode() != N) {
       // If the equivalent Div node also exists, update its users.
-      unsigned DivOpcode = isSigned ? ISD::SDIV : ISD::UDIV;
       if (SDNode *DivNode = DAG.getNodeIfExists(DivOpcode, N->getVTList(),
                                                 { N0, N1 }))
         CombineTo(DivNode, OptimizedDiv);
@@ -5630,6 +5637,22 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
       AddToWorklist(OptimizedDiv.getNode());
       AddToWorklist(Mul.getNode());
       return Sub;
+    }
+  }
+
+  // Fold Num % Den -> Num - (Num / Den) * Den, if (Num / Den) is already
+  // computed. Defer for types that will be promoted and do not fold if DIVREM
+  // is available
+  unsigned DivRemOpc = isSigned ? ISD::SDIVREM : ISD::UDIVREM;
+  if (!ForCodeSize &&
+      !TLI.isOperationLegalOrCustom(DivRemOpc, VT.getScalarType()) &&
+      !isDivRemLibcallAvailable(N, isSigned, DAG) &&
+      TLI.getTypeAction(*DAG.getContext(), VT) !=
+          TargetLowering::TypePromoteInteger) {
+    if (SDNode *Div =
+            DAG.getNodeIfExists(DivOpcode, N->getVTList(), {N0, N1})) {
+      SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, SDValue(Div, 0), N1);
+      return DAG.getNode(ISD::SUB, DL, VT, N0, Mul);
     }
   }
 
