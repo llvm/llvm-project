@@ -65,7 +65,7 @@ emitPrologueEpilogueSPUpdate(MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator &MBBI,
                              const TargetInstrInfo &TII, const DebugLoc &dl,
                              const ThumbRegisterInfo &MRI, int NumBytes,
-                             unsigned ScratchReg, unsigned MIFlags) {
+                             Register ScratchReg, unsigned MIFlags) {
   // If it would take more than three instructions to adjust the stack pointer
   // using tADDspi/tSUBspi, load an immediate instead.
   if (std::abs(NumBytes) > 508 * 3) {
@@ -73,7 +73,7 @@ emitPrologueEpilogueSPUpdate(MachineBasicBlock &MBB,
     // emitThumbRegPlusImmediate so we don't have to deal with register
     // scavenging. (Scavenging could try to use the emergency spill slot
     // before we've actually finished setting up the stack.)
-    if (ScratchReg == ARM::NoRegister)
+    if (!ScratchReg.isValid())
       report_fatal_error("Failed to emit Thumb1 stack adjustment");
     MachineFunction &MF = *MBB.getParent();
     const ARMSubtarget &ST = MF.getSubtarget<ARMSubtarget>();
@@ -96,7 +96,6 @@ emitPrologueEpilogueSPUpdate(MachineBasicBlock &MBB,
   // won't change.
   emitThumbRegPlusImmediate(MBB, MBBI, dl, ARM::SP, ARM::SP, NumBytes, TII,
                             MRI, MIFlags);
-
 }
 
 static void emitCallSPUpdate(MachineBasicBlock &MBB,
@@ -180,7 +179,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
 
   if (ArgRegsSaveSize) {
     emitPrologueEpilogueSPUpdate(MBB, MBBI, TII, dl, *RegInfo, -ArgRegsSaveSize,
-                                 ARM::NoRegister, MachineInstr::FrameSetup);
+                                 Register(), MachineInstr::FrameSetup);
     CFAOffset += ArgRegsSaveSize;
     CFIBuilder.buildDefCFAOffset(CFAOffset);
   }
@@ -188,8 +187,8 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   if (!AFI->hasStackFrame()) {
     if (NumBytes - ArgRegsSaveSize != 0) {
       emitPrologueEpilogueSPUpdate(MBB, MBBI, TII, dl, *RegInfo,
-                                   -(NumBytes - ArgRegsSaveSize),
-                                   ARM::NoRegister, MachineInstr::FrameSetup);
+                                   -(NumBytes - ArgRegsSaveSize), Register(),
+                                   MachineInstr::FrameSetup);
       CFAOffset += NumBytes - ArgRegsSaveSize;
       CFIBuilder.buildDefCFAOffset(CFAOffset);
     }
@@ -394,7 +393,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     // For a large stack frame, we might need a scratch register to store
     // the size of the frame.  We know all callee-save registers are free
     // at this point in the prologue, so pick one.
-    unsigned ScratchRegister = ARM::NoRegister;
+    Register ScratchRegister;
     for (auto &I : CSI) {
       MCRegister Reg = I.getReg();
       if (isARMLowRegister(Reg) && !(HasFP && Reg == FramePtr.asMCReg())) {
@@ -489,7 +488,7 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
   if (!AFI->hasStackFrame()) {
     if (NumBytes - ArgRegsSaveSize != 0)
       emitPrologueEpilogueSPUpdate(MBB, MBBI, TII, dl, *RegInfo,
-                                   NumBytes - ArgRegsSaveSize, ARM::NoRegister,
+                                   NumBytes - ArgRegsSaveSize, Register(),
                                    MachineInstr::FrameDestroy);
   } else {
     // Unwind MBBI to point to first LDR / VLDRD.
@@ -509,7 +508,7 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
 
     // We are likely to need a scratch register and we know all callee-save
     // registers are free at this point in the epilogue, so pick one.
-    unsigned ScratchRegister = ARM::NoRegister;
+    Register ScratchRegister;
     bool HasFP = hasFP(MF);
     for (auto &I : MFI.getCalleeSavedInfo()) {
       MCRegister Reg = I.getReg();
@@ -525,7 +524,7 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
       // frame pointer stack slot, the target is ELF and the function has FP, or
       // the target uses var sized objects.
       if (NumBytes) {
-        assert(ScratchRegister != ARM::NoRegister &&
+        assert(ScratchRegister.isValid() &&
                "No scratch register to restore SP from FP!");
         emitThumbRegPlusImmediate(MBB, MBBI, dl, ScratchRegister, FramePtr, -NumBytes,
                                   TII, *RegInfo, MachineInstr::FrameDestroy);
@@ -735,7 +734,7 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
     MBBI++;
     // Increment the SP.
     emitPrologueEpilogueSPUpdate(MBB, MBBI, TII, dl, *RegInfo,
-                                 ArgRegsSaveSize + 4, ARM::NoRegister,
+                                 ArgRegsSaveSize + 4, Register(),
                                  MachineInstr::FrameDestroy);
     return true;
   }
@@ -782,7 +781,7 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
       .setMIFlag(MachineInstr::FrameDestroy);
 
   emitPrologueEpilogueSPUpdate(MBB, MBBI, TII, dl, *RegInfo, ArgRegsSaveSize,
-                               ARM::NoRegister, MachineInstr::FrameDestroy);
+                               Register(), MachineInstr::FrameDestroy);
 
   BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr))
       .addReg(ARM::LR, RegState::Define)

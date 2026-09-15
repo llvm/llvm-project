@@ -1636,7 +1636,7 @@ void ARMAsmPrinter::EmitKCFI_CHECK_ARM32(Register AddrReg, int64_t Type,
                        .addImm(SOImmVal)
                        .addImm(ARMCC::AL)
                        .addReg(0)
-                       .addReg(isLast ? ARM::CPSR : ARM::NoRegister));
+                       .addReg(isLast ? ARM::CPSR : Register()));
   }
 
   // If we spilled r3, restore it immediately after the comparison.
@@ -1734,7 +1734,7 @@ void ARMAsmPrinter::EmitKCFI_CHECK_Thumb2(Register AddrReg, int64_t Type,
                        .addImm(imm)
                        .addImm(ARMCC::AL)
                        .addReg(0)
-                       .addReg(isLast ? ARM::CPSR : ARM::NoRegister));
+                       .addReg(isLast ? ARM::CPSR : Register()));
   }
 
   // If we spilled r3, restore it immediately after the comparison.
