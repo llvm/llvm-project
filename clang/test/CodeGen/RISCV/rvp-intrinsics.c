@@ -11005,3 +11005,186 @@ int32_t test_pget_i32x2_i32(int32x2_t v) {
 uint32_t test_pget_u32x2_u32(uint32x2_t v) {
   return __riscv_pget_u32x2_u32(v, 1);
 }
+
+/* Packed Store (32-bit) */
+
+// RV32-LABEL: define dso_local void @test_pst_i8x4(
+// RV32-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_i8x4(
+// RV64-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_i8x4(int8_t *p, int8x4_t v) { __riscv_pst_i8x4(p, v); }
+
+// RV32-LABEL: define dso_local void @test_pst_u8x4(
+// RV32-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_u8x4(
+// RV64-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_u8x4(uint8_t *p, uint8x4_t v) { __riscv_pst_u8x4(p, v); }
+
+// RV32-LABEL: define dso_local void @test_pst_i16x2(
+// RV32-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_i16x2(
+// RV64-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_i16x2(int16_t *p, int16x2_t v) { __riscv_pst_i16x2(p, v); }
+
+// RV32-LABEL: define dso_local void @test_pst_u16x2(
+// RV32-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_u16x2(
+// RV64-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_u16x2(uint16_t *p, uint16x2_t v) { __riscv_pst_u16x2(p, v); }
+
+/* Packed Store (64-bit) */
+
+// RV32-LABEL: define dso_local void @test_pst_i8x8(
+// RV32-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_i8x8(
+// RV64-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_i8x8(int8_t *p, int8x8_t v) { __riscv_pst_i8x8(p, v); }
+
+// RV32-LABEL: define dso_local void @test_pst_u8x8(
+// RV32-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_u8x8(
+// RV64-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_u8x8(uint8_t *p, uint8x8_t v) { __riscv_pst_u8x8(p, v); }
+
+// RV32-LABEL: define dso_local void @test_pst_i16x4(
+// RV32-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_i16x4(
+// RV64-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_i16x4(int16_t *p, int16x4_t v) { __riscv_pst_i16x4(p, v); }
+
+// RV32-LABEL: define dso_local void @test_pst_u16x4(
+// RV32-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_u16x4(
+// RV64-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_u16x4(uint16_t *p, uint16x4_t v) { __riscv_pst_u16x4(p, v); }
+
+// RV32-LABEL: define dso_local void @test_pst_i32x2(
+// RV32-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_i32x2(
+// RV64-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_i32x2(int32_t *p, int32x2_t v) { __riscv_pst_i32x2(p, v); }
+
+// RV32-LABEL: define dso_local void @test_pst_u32x2(
+// RV32-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_u32x2(
+// RV64-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_u32x2(uint32_t *p, uint32x2_t v) { __riscv_pst_u32x2(p, v); }
+
+/* Packed Store with provable alignment (cf. the P-ext spec's note on
+ * __builtin_assume_aligned) */
+
+// RV32-LABEL: define dso_local void @test_pst_i8x4_aligned(
+// RV32-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i32 4) ]
+// RV32-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_i8x4_aligned(
+// RV64-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 4) ]
+// RV64-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_i8x4_aligned(int8_t *p, int8x4_t v) {
+  __riscv_pst_i8x4(__builtin_assume_aligned(p, 4), v);
+}
+
+// RV32-LABEL: define dso_local void @test_pst_i32x2_aligned(
+// RV32-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i32 8) ]
+// RV32-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_i32x2_aligned(
+// RV64-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
+// RV64-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_i32x2_aligned(int32_t *p, int32x2_t v) {
+  __riscv_pst_i32x2(__builtin_assume_aligned(p, 8), v);
+}

@@ -4459,3 +4459,69 @@ int64_t test_maccsu_w00_i64(int64_t rd, int32x2_t a, uint32x2_t b) {
 int64_t test_maccsu_w11_i64(int64_t rd, int32x2_t a, uint32x2_t b) {
   return __riscv_maccsu_w11_i64(rd, a, b);
 }
+
+// CHECK-LABEL: test_pst_i8x4:
+// CHECK-COUNT-4: sb{{[[:space:]]}}
+void test_pst_i8x4(int8_t *p, int8x4_t v) { __riscv_pst_i8x4(p, v); }
+
+// CHECK-LABEL: test_pst_u8x4:
+// CHECK-COUNT-4: sb{{[[:space:]]}}
+void test_pst_u8x4(uint8_t *p, uint8x4_t v) { __riscv_pst_u8x4(p, v); }
+
+// CHECK-LABEL: test_pst_i16x2:
+// CHECK-COUNT-4: sb{{[[:space:]]}}
+void test_pst_i16x2(int16_t *p, int16x2_t v) { __riscv_pst_i16x2(p, v); }
+
+// CHECK-LABEL: test_pst_u16x2:
+// CHECK-COUNT-4: sb{{[[:space:]]}}
+void test_pst_u16x2(uint16_t *p, uint16x2_t v) { __riscv_pst_u16x2(p, v); }
+
+// CHECK-LABEL: test_pst_i8x8:
+// CHECK-COUNT-8: sb{{[[:space:]]}}
+void test_pst_i8x8(int8_t *p, int8x8_t v) { __riscv_pst_i8x8(p, v); }
+
+// CHECK-LABEL: test_pst_u8x8:
+// CHECK-COUNT-8: sb{{[[:space:]]}}
+void test_pst_u8x8(uint8_t *p, uint8x8_t v) { __riscv_pst_u8x8(p, v); }
+
+// CHECK-LABEL: test_pst_i16x4:
+// CHECK-COUNT-8: sb{{[[:space:]]}}
+void test_pst_i16x4(int16_t *p, int16x4_t v) { __riscv_pst_i16x4(p, v); }
+
+// CHECK-LABEL: test_pst_u16x4:
+// CHECK-COUNT-8: sb{{[[:space:]]}}
+void test_pst_u16x4(uint16_t *p, uint16x4_t v) { __riscv_pst_u16x4(p, v); }
+
+// CHECK-LABEL: test_pst_i32x2:
+// CHECK-COUNT-8: sb{{[[:space:]]}}
+void test_pst_i32x2(int32_t *p, int32x2_t v) { __riscv_pst_i32x2(p, v); }
+
+// CHECK-LABEL: test_pst_u32x2:
+// CHECK-COUNT-8: sb{{[[:space:]]}}
+void test_pst_u32x2(uint32_t *p, uint32x2_t v) { __riscv_pst_u32x2(p, v); }
+
+// CHECK-LABEL: test_pst_i8x4_aligned:
+// CHECK:         sw
+void test_pst_i8x4_aligned(int8_t *p, int8x4_t v) {
+  __riscv_pst_i8x4(__builtin_assume_aligned(p, 4), v);
+}
+
+// CHECK-LABEL: test_pst_u16x2_aligned:
+// CHECK:         sw
+void test_pst_u16x2_aligned(uint16_t *p, uint16x2_t v) {
+  __riscv_pst_u16x2(__builtin_assume_aligned(p, 4), v);
+}
+
+// CHECK-LABEL: test_pst_i8x8_aligned:
+// RV32-COUNT-2: sw
+// RV64:         sd
+void test_pst_i8x8_aligned(int8_t *p, int8x8_t v) {
+  __riscv_pst_i8x8(__builtin_assume_aligned(p, 8), v);
+}
+
+// CHECK-LABEL: test_pst_u32x2_aligned:
+// RV32-COUNT-2: sw
+// RV64:         sd
+void test_pst_u32x2_aligned(uint32_t *p, uint32x2_t v) {
+  __riscv_pst_u32x2(__builtin_assume_aligned(p, 8), v);
+}
