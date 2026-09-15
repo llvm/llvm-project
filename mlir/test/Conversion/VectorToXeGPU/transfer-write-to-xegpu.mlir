@@ -224,6 +224,32 @@ gpu.func @store_high_dim_vector(%vec: vector<8x16x32xf32>,
 }
 
 // -----
+// The unit innermost dimension leaves a 16x1 f16 tile to transfer, and a 2D
+// block store needs a block width that is a multiple of 16 f16 elements. The
+// write must use the scattered path rather than a block store whose shape no
+// hardware instruction can provide.
+gpu.module @xevm_module {
+gpu.func @store_high_dim_unsupported_block_width(%vec: vector<1x8x16x1xf16>,
+    %source: memref<1x24x1024x1xf16>, %offset: index) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %vec, %source[%c0, %offset, %offset, %c0]
+    {in_bounds = [true, true, true, true]}
+    : vector<1x8x16x1xf16>, memref<1x24x1024x1xf16>
+  gpu.return
+}
+
+// CHECK-LABEL:  @store_high_dim_unsupported_block_width(
+// CHECK-SAME:   %[[VEC:.+]]: vector<1x8x16x1xf16>,
+// CHECK-SAME:   %[[SRC:.+]]: memref<1x24x1024x1xf16>
+// CHECK-NOT:    xegpu.create_nd_tdesc
+// CHECK-NOT:    xegpu.store_nd
+// CHECK:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<1x24x1024x1xf16> -> index
+// CHECK:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// CHECK:        xegpu.store %[[VEC]], %[[COLLAPSE_I]][%{{.+}}], %{{.+}} : vector<1x8x16x1xf16>, i64, vector<1x8x16x1xindex>, vector<1x8x16x1xi1>
+
+}
+
+// -----
 gpu.module @xevm_module {
 gpu.func @store_8D_vector(%vec: vector<2x2x2x2x2x2x2x2xf32>,
     %source: memref<2x2x2x2x2x2x2x2xf32>, %offset: index) {
@@ -233,27 +259,23 @@ gpu.func @store_8D_vector(%vec: vector<2x2x2x2x2x2x2x2xf32>,
   gpu.return
 }
 
-// STORE-ND-LABEL:  @store_8D_vector(
-// STORE-ND-SAME:   %[[VEC:.+]]: vector<2x2x2x2x2x2x2x2xf32>,
-// STORE-ND-SAME:   %[[SRC:.+]]: memref<2x2x2x2x2x2x2x2xf32>
-// STORE-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]] : memref<2x2x2x2x2x2x2x2xf32>
-// STORE-ND-SAME:     -> !xegpu.tensor_desc<2x2x2x2x2x2x2x2xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
-// STORE-ND:        xegpu.store_nd %[[VEC]], %[[DESC]]
-// STORE-ND-SAME:     : vector<2x2x2x2x2x2x2x2xf32>, !xegpu.tensor_desc<2x2x2x2x2x2x2x2xf32
-
-// STORE-SCATTER-LABEL:  @store_8D_vector(
-// STORE-SCATTER-SAME:   %[[VEC:.+]]: vector<2x2x2x2x2x2x2x2xf32>,
-// STORE-SCATTER-SAME:   %[[SRC:.+]]: memref<2x2x2x2x2x2x2x2xf32>
-// STORE-SCATTER:        %[[CST:.+]] = arith.constant dense<true> : vector<2x2x2x2x2x2x2x2xi1>
-// STORE-SCATTER-COUNT8: vector.step
-// STORE-SCATTER-COUNT7: vector.shape_cast
-// STORE-SCATTER-COUNT8: vector.broadcast {{.*}} : vector<2x2x2x2x2x2x2x2xindex>
-// STORE-SCATTER-COUNT7: arith.addi {{.*}} : vector<2x2x2x2x2x2x2x2xindex>
-// STORE-SCATTER:        %[[SPLAT:.+]] = vector.broadcast {{.*}} : index to vector<2x2x2x2x2x2x2x2xindex>
-// STORE-SCATTER:        %[[IDX:.+]] = arith.addi %[[SPLAT]], {{.*}} : vector<2x2x2x2x2x2x2x2xindex>
-// STORE-SCATTER:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<2x2x2x2x2x2x2x2xf32> -> index
-// STORE-SCATTER:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
-// STORE-SCATTER:        xegpu.store %[[VEC]], %[[COLLAPSE_I]][%[[IDX]]], %[[CST]] : vector<2x2x2x2x2x2x2x2xf32>, i64, vector<2x2x2x2x2x2x2x2xindex>, vector<2x2x2x2x2x2x2x2xi1>
+// The innermost extent of 2 f32 elements is not a multiple of any block width
+// the 2D block store supports (16 f32 elements), so the write uses the
+// scattered path on every target.
+// CHECK-LABEL:  @store_8D_vector(
+// CHECK-SAME:   %[[VEC:.+]]: vector<2x2x2x2x2x2x2x2xf32>,
+// CHECK-SAME:   %[[SRC:.+]]: memref<2x2x2x2x2x2x2x2xf32>
+// CHECK-NOT:    xegpu.store_nd
+// CHECK:        %[[CST:.+]] = arith.constant dense<true> : vector<2x2x2x2x2x2x2x2xi1>
+// CHECK-COUNT-8: vector.step
+// CHECK-COUNT-7: vector.shape_cast
+// CHECK-COUNT-8: vector.broadcast {{.*}} to vector<2x2x2x2x2x2x2x2xindex>
+// CHECK-COUNT-7: arith.addi {{.*}} : vector<2x2x2x2x2x2x2x2xindex>
+// CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}} : index to vector<2x2x2x2x2x2x2x2xindex>
+// CHECK:        %[[IDX:.+]] = arith.addi %[[SPLAT]], {{.*}} : vector<2x2x2x2x2x2x2x2xindex>
+// CHECK:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<2x2x2x2x2x2x2x2xf32> -> index
+// CHECK:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
+// CHECK:        xegpu.store %[[VEC]], %[[COLLAPSE_I]][%[[IDX]]], %[[CST]] : vector<2x2x2x2x2x2x2x2xf32>, i64, vector<2x2x2x2x2x2x2x2xindex>, vector<2x2x2x2x2x2x2x2xi1>
 }
 
 // -----
