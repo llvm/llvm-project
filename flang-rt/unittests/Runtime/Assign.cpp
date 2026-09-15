@@ -532,7 +532,6 @@ TEST(Assign, RTNAME(CopyOutAssignReadOnlyUnmodified)) {
 #endif
 
 #if defined(__unix__) || defined(__APPLE__)
-#if defined(__unix__) || defined(__APPLE__)
 TEST(Assign, RTNAME(CopyOutAssignEnvVarParsing)) {
   // Exercise the FLANG_RT_COPYOUT_MODIFIED_ONLY parsing path in
   // ExecutionEnvironment::Configure(), rather than setting the field
@@ -560,7 +559,6 @@ TEST(Assign, RTNAME(CopyOutAssignEnvVarParsing)) {
 
   executionEnvironment.copyOutModifiedOnly = saved;
 }
-#endif
 
 TEST(Assign, RTNAME(CopyOutAssignUnconditionalEnvVar)) {
   // With FLANG_RT_COPYOUT_MODIFIED_ONLY=0 semantics (unconditional copy-out),
@@ -643,10 +641,10 @@ TEST(Assign, RTNAME(CopyOutAssignSkipsUnmodifiedPrefix)) {
 }
 
 TEST(Assign, RTNAME(CopyOutAssignReadOnlyModifiedDies)) {
-  // When the callee DID modify the temporary, copy-out falls back to the
-  // whole-object copy; storing into a read-only original then faults, which
-  // is the intended behavior for a program that modifies a non-definable
-  // actual argument.
+  // When the callee DID modify the temporary, copy-out stores the modified
+  // suffix -- from the first differing element through the end; storing into
+  // a read-only original then faults, which is the intended behavior for a
+  // program that modifies a non-definable actual argument.
   std::size_t pageSize{static_cast<std::size_t>(sysconf(_SC_PAGESIZE))};
   void *page{mmap(nullptr, pageSize, PROT_READ | PROT_WRITE,
       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)};

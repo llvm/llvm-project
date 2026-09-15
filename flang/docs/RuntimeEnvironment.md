@@ -40,14 +40,16 @@ The system environment variable `FLANG_RT_COPYOUT_MODIFIED_ONLY` selects how
 the runtime performs copy-out.
 
 When the compiler passes a copy of an actual argument to a procedure
-(copy-in/copy-out), the runtime skips the copy-out entirely when the
-temporary copy is still bitwise-identical to the original, and performs
-the normal whole-object copy-out otherwise. This avoids stores to the
-original argument when the callee never modified the data -- in
-particular, stores into read-only storage backing a non-definable actual
-argument.
+(copy-in/copy-out), the runtime scans the temporary for the first element
+whose bit pattern differs from the original and copies back only from that
+element through the end; when the callee never modified the copy, nothing
+is stored at all. This avoids stores to the original argument when the
+callee never modified the data -- in particular, stores into read-only
+storage backing a non-definable actual argument.
 Set the system environment variable `FLANG_RT_COPYOUT_MODIFIED_ONLY=0` to
-restore the unconditional copy-out.
+restore the unconditional whole-object copy-out. Note that this restores
+stores of unmodified data as well (including into read-only storage), so it
+is an escape hatch and A/B-comparison aid, not a safer mode.
 
 ## `FORT_CHECK_POINTER_DEALLOCATION`
 

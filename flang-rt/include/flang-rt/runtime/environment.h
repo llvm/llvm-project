@@ -75,9 +75,9 @@ struct ExecutionEnvironment {
   bool truncateStream{true}; // FORT_TRUNCATE_STREAM
   bool noEmptyAllocation{false}; // FORT_NO_EMPTY_ALLOCATION
   // The system environment variable FLANG_RT_COPYOUT_MODIFIED_ONLY=0
-  // restores the unconditional copy-out
-  // of argument temporaries (CopyOutAssign copies every element back
-  // instead of only the elements the callee modified).
+  // restores the unconditional copy-out of argument temporaries
+  // (CopyOutAssign then copies every element back instead of only the
+  // suffix from the first modified element through the end).
   bool copyOutModifiedOnly{true}; // FLANG_RT_COPYOUT_MODIFIED_ONLY
 
   enum InternalDebugging { WorkQueue = 1 };
