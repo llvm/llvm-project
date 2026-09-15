@@ -22265,6 +22265,60 @@ static SDValue performVECTOR_INTERLEAVECombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getMergeValues(Operands, DL);
 }
 
+static SDValue performVSlideUpDownCombine(SDNode *N, SelectionDAG &DAG,
+                                          const RISCVSubtarget &Subtarget) {
+  unsigned Opcode = N->getOpcode();
+  assert(Opcode == RISCVISD::VSLIDEUP_VL || Opcode == RISCVISD::VSLIDEDOWN_VL);
+  SDValue Passthru = N->getOperand(0);
+  SDValue Val = N->getOperand(1);
+  SDValue ShiftAmt = N->getOperand(2);
+  SDValue Mask = N->getOperand(3);
+  SDValue VL = N->getOperand(4);
+
+  // Trivial case.
+  if (N->getOperand(1)->isUndef())
+    return N->getOperand(0);
+
+  // Given this pattern
+  // ```
+  //   %down = RISCVISD::VSLIDEDOWN_VL undef, %val, %shift, %mask, %vl0
+  // %up = RISCVISD::VSLIDEUP_VL %val, %down, %shift, %mask, %vl1
+  // ```
+  // We can simplify it with `%val`, as it's doing redundant shifting.
+  // Note that we actually don't need to check their VLs: First, VSLIDEUP_VL
+  // is literally just putting %down back to their original position in %val.
+  // The only situation we need to worry about is actually the zeros shifted
+  // into VSLIDEDOWN_VL. In this scenario, the worst case would be %vl0 = VLMAX,
+  // as %down is gaurantee to have those zeros. Our goal here is to ensure
+  // elements from %down that are actually inserted into %up are not those
+  // zeros. The number of %down that are actually inserted would be `%vl1 -
+  // %shift`, and the number of non-zero elements from %down would be `VLMAX -
+  // %shift`. Therefore, the invariant would be
+  // `%vl1 - %shift <= VLMAX - %shift` ---> `%vl1 <= VLMAX`
+  // Thus, we will never read those zeros that are shifted in by VSLIDEDOWN_VL.
+  if (Opcode != RISCVISD::VSLIDEUP_VL || !Val ||
+      Val->getOpcode() != RISCVISD::VSLIDEDOWN_VL)
+    return SDValue();
+
+  SDValue SlideDown = Val;
+  SDValue SlideDownPassthru = SlideDown->getOperand(0);
+  SDValue SlideDownVal = SlideDown->getOperand(1);
+  SDValue SlideDownShiftAmt = SlideDown->getOperand(2);
+  SDValue SlideDownMask = SlideDown->getOperand(3);
+  SDValue SlideDownVL = SlideDown->getOperand(4);
+  if (!SlideDownPassthru.isUndef() || SlideDownVal != Passthru ||
+      SlideDownShiftAmt != ShiftAmt)
+    return SDValue();
+  // We can loosen the mask requirement in the future.
+  if (SlideDownMask != Mask &&
+      (SlideDownMask.getOpcode() != RISCVISD::VMSET_VL ||
+       Mask.getOpcode() != RISCVISD::VMSET_VL ||
+       SlideDownMask.getOperand(0) != SlideDownVL || Mask.getOperand(0) != VL))
+    return SDValue();
+
+  return SlideDownVal;
+}
+
 // Convert from one FMA opcode to another based on whether we are negating the
 // multiply result and/or the accumulator.
 // NOTE: Only supports RVV operations with VL.
@@ -25562,9 +25616,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case RISCVISD::VSLIDEDOWN_VL:
   case RISCVISD::VSLIDEUP_VL:
-    if (N->getOperand(1)->isUndef())
-      return N->getOperand(0);
-    break;
+    return performVSlideUpDownCombine(N, DAG, Subtarget);
   case RISCVISD::VSLIDE1UP_VL:
   case RISCVISD::VFSLIDE1UP_VL: {
     using namespace SDPatternMatch;
