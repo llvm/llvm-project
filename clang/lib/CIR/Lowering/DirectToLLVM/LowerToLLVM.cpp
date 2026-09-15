@@ -4651,7 +4651,8 @@ mlir::LogicalResult CIRToLLVMEhInflightOpLowering::matchAndRewrite(
   assert(entryBlock->isEntryBlock());
 
   mlir::ArrayAttr catchListAttr = op.getCatchTypeListAttr();
-  mlir::SmallVector<mlir::Value> catchSymAddrs;
+  mlir::ArrayAttr filterListAttr = op.getFilterTypeListAttr();
+  mlir::SmallVector<mlir::Value> landingPadClauses;
 
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
   mlir::Location loc = op.getLoc();
@@ -4670,18 +4671,44 @@ mlir::LogicalResult CIRToLLVMEhInflightOpLowering::matchAndRewrite(
       rewriter.setInsertionPointToStart(entryBlock);
       mlir::Value addrOp = mlir::LLVM::AddressOfOp::create(
           rewriter, loc, llvmPtrTy, symAttr.getValue());
-      catchSymAddrs.push_back(addrOp);
+      landingPadClauses.push_back(addrOp);
     }
   }
 
   // Emit a catch-all clause (catch ptr null) when:
   //   - The catch_all attribute is set (typed catches + catch-all), or
-  //   - No typed catches and no cleanup (legacy pure catch-all form)
-  if (op.getCatchAll() || (!catchListAttr && !op.getCleanup())) {
+  //   - No typed catches, no cleanup, and no filter (legacy pure catch-all)
+  if (op.getCatchAll() ||
+      (!catchListAttr && !op.getCleanup() && !filterListAttr)) {
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(entryBlock);
     mlir::Value nullOp = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmPtrTy);
-    catchSymAddrs.push_back(nullOp);
+    landingPadClauses.push_back(nullOp);
+  }
+
+  if (filterListAttr) {
+    // Filter clauses are array-typed landingpad operands:
+    //   filter [N x ptr] [ptr @_ZTIi, ...]
+    // An empty list is throw() and lowers to [0 x ptr] zeroinitializer.
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToStart(entryBlock);
+    auto filterArrayTy = mlir::LLVM::LLVMArrayType::get(
+        llvmPtrTy, filterListAttr.size());
+    mlir::Value filterVal;
+    if (filterListAttr.empty()) {
+      filterVal = mlir::LLVM::ZeroOp::create(rewriter, loc, filterArrayTy);
+    } else {
+      filterVal = mlir::LLVM::UndefOp::create(rewriter, loc, filterArrayTy);
+      for (auto [i, filterAttr] : llvm::enumerate(filterListAttr)) {
+        auto symAttr = mlir::cast<mlir::FlatSymbolRefAttr>(filterAttr);
+        mlir::Value addrOp = mlir::LLVM::AddressOfOp::create(
+            rewriter, loc, llvmPtrTy, symAttr.getValue());
+        filterVal = mlir::LLVM::InsertValueOp::create(
+            rewriter, loc, filterVal, addrOp,
+            llvm::ArrayRef<int64_t>{static_cast<int64_t>(i)});
+      }
+    }
+    landingPadClauses.push_back(filterVal);
   }
 
   // %slot = extractvalue { ptr, i32 } %x, 0
@@ -4689,7 +4716,7 @@ mlir::LogicalResult CIRToLLVMEhInflightOpLowering::matchAndRewrite(
   mlir::LLVM::LLVMStructType llvmLandingPadStructTy =
       getLLVMLandingPadStructTy(rewriter);
   auto landingPadOp = mlir::LLVM::LandingpadOp::create(
-      rewriter, loc, llvmLandingPadStructTy, catchSymAddrs);
+      rewriter, loc, llvmLandingPadStructTy, landingPadClauses);
 
   // The LLVM cleanup flag is only needed when there is no catch-all handler,
   // since catch-all (catch ptr null) already ensures the personality function
