@@ -159,6 +159,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
+    libc.src.math.canonicalizef128
     libc.src.math.cbrt
     libc.src.math.cbrtf
     libc.src.math.cbrtbf16
@@ -166,7 +167,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.copysignf
     libc.src.math.copysignf128
     libc.src.math.copysignl
-    libc.src.math.canonicalizef128
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceilf128
