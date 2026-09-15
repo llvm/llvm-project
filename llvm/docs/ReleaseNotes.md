@@ -120,6 +120,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Bump Svukte extension to 1.0.
 
+* Added the experimental `RVA23P1S64` and `RVB23P1S64` profiles.
+
 ### Changes to the WebAssembly Backend
 
 ### Changes to the Windows Target
