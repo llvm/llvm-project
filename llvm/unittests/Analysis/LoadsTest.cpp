@@ -17,6 +17,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
@@ -242,4 +243,47 @@ loop.end:
   ASSERT_TRUE(IsReadOnlyLoop(F2, NonDerefLoads));
   ASSERT_TRUE((NonDerefLoads.size() == 1) &&
               (NonDerefLoads[0]->getName() == "ld1"));
+}
+
+TEST(LoadsTest, DecomposeLinearExpressionScaling) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+target datalayout = "e-p:64:64"
+
+define void @f(ptr %base, i64 %index) {
+  %mul = mul i64 %index, 3
+  %shl = shl i64 %index, 2
+  %scaled = shl i64 %mul, 2
+  %gep.mul = getelementptr i32, ptr %base, i64 %mul
+  %gep.shl = getelementptr i32, ptr %base, i64 %shl
+  %gep.scaled = getelementptr i32, ptr %base, i64 %scaled
+  ret void
+}
+)IR");
+  ASSERT_TRUE(M);
+
+  Function *F = M->getFunction("f");
+  ASSERT_TRUE(F);
+  Value *Base = F->getArg(0);
+  Value *Index = F->getArg(1);
+  Value *GEPMul = F->getValueSymbolTable()->lookup("gep.mul");
+  Value *GEPShl = F->getValueSymbolTable()->lookup("gep.shl");
+  Value *GEPScaled = F->getValueSymbolTable()->lookup("gep.scaled");
+  ASSERT_TRUE(GEPMul && GEPShl && GEPScaled);
+
+  const DataLayout &DL = M->getDataLayout();
+  LinearExpression Expr = decomposeLinearExpression(DL, GEPMul);
+  EXPECT_EQ(Base, Expr.BasePtr);
+  EXPECT_EQ(Index, Expr.Index);
+  EXPECT_EQ(APInt(64, 12), Expr.Scale);
+
+  Expr = decomposeLinearExpression(DL, GEPShl);
+  EXPECT_EQ(Base, Expr.BasePtr);
+  EXPECT_EQ(Index, Expr.Index);
+  EXPECT_EQ(APInt(64, 16), Expr.Scale);
+
+  Expr = decomposeLinearExpression(DL, GEPScaled);
+  EXPECT_EQ(Base, Expr.BasePtr);
+  EXPECT_EQ(Index, Expr.Index);
+  EXPECT_EQ(APInt(64, 48), Expr.Scale);
 }
