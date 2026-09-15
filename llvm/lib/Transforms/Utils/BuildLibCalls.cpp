@@ -534,6 +534,14 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
+  case LibFunc_posix_memalign:
+    Changed |= setRetAndArgsNoUndef(F);
+    Changed |= setDoesNotThrow(F);
+    Changed |= setWillReturn(F);
+    Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
+    Changed |= setDoesNotCapture(F, 0);
+    Changed |= setOnlyWritesMemory(F, 0);
+    break;
   case LibFunc_aligned_alloc:
     Changed |= setAlignedAllocParam(F, 0);
     Changed |= setAllocSize(F, 1, std::nullopt);
