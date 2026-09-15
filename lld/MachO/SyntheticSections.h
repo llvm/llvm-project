@@ -106,13 +106,11 @@ public:
   void writeTo(uint8_t *buf) const override {}
 };
 
-// This is the base class for the GOT and TLVPointer sections, which are nearly
-// functionally identical -- they will both be populated by dyld with addresses
-// to non-lazily-loaded dylib symbols. The main difference is that the
-// TLVPointerSection stores references to thread-local variables.
-class NonLazyPointerSectionBase : public SyntheticSection {
+// The __DATA_CONST,__got section, populated by dyld with addresses to
+// non-lazily-loaded dylib symbols, including TLV descriptors.
+class GotSection final : public SyntheticSection {
 public:
-  NonLazyPointerSectionBase(const char *segname, const char *name);
+  GotSection();
   const llvm::SetVector<const Symbol *> &getEntries() const { return entries; }
   bool isNeeded() const override { return !entries.empty(); }
   uint64_t getSize() const override {
@@ -126,16 +124,6 @@ public:
 
 private:
   llvm::SetVector<const Symbol *> entries;
-};
-
-class GotSection final : public NonLazyPointerSectionBase {
-public:
-  GotSection();
-};
-
-class TlvPointerSection final : public NonLazyPointerSectionBase {
-public:
-  TlvPointerSection();
 };
 
 struct Location {
@@ -845,7 +833,6 @@ struct InStruct {
   LazyBindingSection *lazyBinding = nullptr;
   ExportSection *exports = nullptr;
   GotSection *got = nullptr;
-  TlvPointerSection *tlvPointers = nullptr;
   LazyPointerSection *lazyPointers = nullptr;
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;

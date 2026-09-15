@@ -24,8 +24,10 @@
 # CHECK-NEXT: address            index name
 # CHECK-NEXT: _bar_fn
 # CHECK-NEXT: _foo_fn
-# CHECK-NEXT: Indirect symbols for (__DATA_CONST,__got) 4 entries
+# CHECK-NEXT: Indirect symbols for (__DATA_CONST,__got) 6 entries
 # CHECK-NEXT: address            index name
+# CHECK-NEXT: _bar_tlv
+# CHECK-NEXT: _foo_tlv
 # CHECK-NEXT: LOCAL
 # CHECK-NEXT: _bar
 # CHECK-NEXT: _foo
@@ -34,11 +36,6 @@
 # CHECK-NEXT: address            index name
 # CHECK-NEXT: _bar_fn
 # CHECK-NEXT: _foo_fn
-# CHECK-NEXT: Indirect symbols for (__DATA,__thread_ptrs) 2 entries
-# CHECK-NEXT: address            index name
-# CHECK-NEXT: _bar_tlv
-# CHECK-NEXT: _foo_tlv
-
 # DYSYMTAB: nindirectsyms 10
 
 #--- libfoo.s
