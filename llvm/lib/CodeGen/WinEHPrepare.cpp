@@ -321,16 +321,17 @@ void llvm::calculateSEHStateForAsynchEH(const BasicBlock *BB, int State,
     const llvm::Instruction *TI = BB->getTerminator();
     if (It->isEHPad())
       State = EHInfo.EHPadStateMap[&*It];
-    EHInfo.BlockToStateMap[BB] = State; // Record state
 
-    if (isa<CatchPadInst>(It) && isa<CatchReturnInst>(TI)) {
+    if (isa<CatchPadInst>(It)) {
       const Constant *FilterOrNull = cast<Constant>(
           cast<CatchPadInst>(It)->getArgOperand(0)->stripPointerCasts());
       const Function *Filter = dyn_cast<Function>(FilterOrNull);
       if (!Filter || !Filter->getName().starts_with("__IsLocalUnwind"))
         State = EHInfo.SEHUnwindMap[State].ToState; // Retrive next State
-    } else if ((isa<CleanupReturnInst>(TI) || isa<CatchReturnInst>(TI)) &&
-               State > 0) {
+    }
+    EHInfo.BlockToStateMap[BB] = State; // Record state
+
+    if (isa<CleanupReturnInst>(TI) && State > 0) {
       // Retrive the new State.
       State = EHInfo.SEHUnwindMap[State].ToState; // Retrive next State
     } else if (isa<InvokeInst>(TI)) {
