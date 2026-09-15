@@ -3192,7 +3192,8 @@ LogicalResult tosa::ReshapeBlockScaledOp::inferReturnTypeComponents(
   llvm::SmallVector<int64_t> newScaleShapeValue;
   if (numInputs == 2) {
     newScaleShapeValue.assign(newShapeValue.begin(), newShapeValue.end());
-    if (ShapedType::isStatic(newScaleShapeValue.back()))
+    if (!newScaleShapeValue.empty() &&
+        ShapedType::isStatic(newScaleShapeValue.back()))
       newScaleShapeValue.back() /= blockSize;
   }
 
@@ -3203,7 +3204,7 @@ LogicalResult tosa::ReshapeBlockScaledOp::inferReturnTypeComponents(
     for (size_t idx = 0; idx < newShapeValue.size(); idx++) {
       if (ShapedType::isDynamic(newScaleShapeValue[idx])) {
         newScaleShapeValue[idx] = newShapeValue[idx];
-        if (idx == (newShapeValue.size() - 1))
+        if (idx + 1 == newShapeValue.size())
           newScaleShapeValue[idx] /= blockSize;
       }
     }
@@ -3233,6 +3234,10 @@ llvm::LogicalResult tosa::ReshapeBlockScaledOp::verify() {
           .failed()) {
     return failure();
   }
+
+  if (inputList.size() == 2 &&
+      cast<tosa::shapeType>(getNewValueShape().getType()).getRank() == 0)
+    return emitOpError("requires new shape to have a rank greater than 0");
 
   const auto inputType = llvm::cast<ShapedType>(inputList[0].getType());
   if (!inputType.hasRank())
@@ -3302,7 +3307,7 @@ llvm::LogicalResult tosa::ReshapeBlockScaledOp::verify() {
       return emitOpError("expect block size to be 1, got ") << blockSize;
   }
 
-  // Get the new value shape dimension values
+  // Get the new value shape dimension values.
   SmallVector<int64_t> shapeValues;
   if (!tosa::getConstShapeValues(getNewValueShape().getDefiningOp(),
                                  shapeValues)) {
@@ -3311,9 +3316,6 @@ llvm::LogicalResult tosa::ReshapeBlockScaledOp::verify() {
   }
 
   if (inputList.size() == 2) {
-    if (static_cast<int64_t>(shapeValues.size()) == 0)
-      return emitOpError("requires new shape to have a rank greater than 0");
-
     const int64_t lastShapeDim = shapeValues.back();
     if (ShapedType::isStatic(lastShapeDim) && lastShapeDim % blockSize != 0)
       return emitOpError("expect last dimension of new shape (")
@@ -3586,6 +3588,12 @@ LogicalResult tosa::TransposeOp::verify() {
       !isPermutationVector(llvm::map_to_vector(
           constantPerms, [](int32_t v) -> int64_t { return v; })))
     return emitOpError() << "expected valid permutation indices";
+
+  if (isa<BlockScaledType>(getInput1().getType().getElementType()) &&
+      constantPerms.back() != static_cast<int32_t>(constantPerms.size()) - 1) {
+    return emitOpError() << "expected no-op permutation on innermost dimension "
+                            "for block scaled input";
+  }
 
   // ERROR_IF(tensor_size(shape1) != tensor_size(shape))
   if (inputShape.hasStaticShape() && outputShape.hasStaticShape() &&

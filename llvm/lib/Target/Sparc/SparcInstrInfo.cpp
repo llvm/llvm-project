@@ -656,6 +656,40 @@ Register SparcInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
   return GlobalBaseReg;
 }
 
+bool SparcInstrInfo::needsUnimp(const MachineInstr &MI,
+                                unsigned &StructSize) const {
+  if (!MI.isCall())
+    return false;
+
+  unsigned StructSizeOpNum = 0;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unknown call opcode.");
+  case SP::CALL:
+    StructSizeOpNum = 1;
+    break;
+  case SP::CALLrr:
+  case SP::CALLri:
+    StructSizeOpNum = 2;
+    break;
+  case SP::TLS_CALL:
+    return false;
+  case SP::TAIL_CALLri:
+  case SP::TAIL_CALL:
+    return false;
+  }
+
+  const MachineOperand &MO = MI.getOperand(StructSizeOpNum);
+  if (!MO.isImm())
+    return false;
+
+  // A zero-sized return value has nothing for the callee to copy, so GCC emits
+  // no unimp for it and returns to the instruction right after the delay slot.
+  // We replicate this behavior here.
+  StructSize = MO.getImm();
+  return StructSize != 0;
+}
+
 unsigned SparcInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
 
@@ -687,8 +721,10 @@ unsigned SparcInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   // If the instruction has a delay slot, be conservative and also include
   // it for sizing purposes. This is done so that the BranchRelaxation pass
   // will not mistakenly mark out-of-range branches as in-range.
-  if (MI.hasDelaySlot())
-    return get(Opcode).getSize() * 2;
+  if (MI.hasDelaySlot()) {
+    unsigned StructSize = 0;
+    return get(Opcode).getSize() * (2 + needsUnimp(MI, StructSize));
+  }
   return get(Opcode).getSize();
 }
 

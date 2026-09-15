@@ -43,8 +43,9 @@ fptr main(void) {
   return (fptr) 0;
 }
 
-// expected-error@+2 {{conflicting types for 'main}}
-// expected-warning@+1 {{return type of 'main' is not 'int'}}
+// expected-error@+3 {{conflicting types for 'main}}
+// expected-warning@+2 {{return type of 'main' is not 'int'}}
+// expected-note@+1 {{change return type to 'int'}}
 void *(*main(void))(int a) {
   return (fptr) 0;
 }

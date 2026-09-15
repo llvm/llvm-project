@@ -1,4 +1,4 @@
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -x hip %s -save-temps \
 // RUN:         -use-spirv-backend -ccc-print-phases \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-SPIRV-BINARY
@@ -20,7 +20,7 @@
 // CHECK-SPIRV-BINARY: [[P12:[0-9]+]]: assembler, {[[P11]]}, object, (host-hip)
 // CHECK-SPIRV-BINARY: [[P13:[0-9]+]]: clang-linker-wrapper, {[[P12]]}, image, (host-hip)
 
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -x hip %s -save-temps \
 // RUN:         -use-spirv-backend -fgpu-rdc -ccc-print-phases \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-SPIRV-BINARY-RDC
@@ -41,7 +41,7 @@
 // CHECK-SPIRV-BINARY-RDC: [[P11:[0-9]+]]: assembler, {[[P10]]}, object, (host-hip)
 // CHECK-SPIRV-BINARY-RDC: [[P12:[0-9]+]]: clang-linker-wrapper, {[[P11]]}, image, (host-hip)
 
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -x hip %s -save-temps \
 // RUN:         -use-spirv-backend --offload-device-only -ccc-print-phases \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-SPIRV-BINARY-OFFLOAD-DEVICE-ONLY
@@ -55,7 +55,7 @@
 // CHECK-SPIRV-BINARY-OFFLOAD-DEVICE-ONLY: [[P6:[0-9]+]]: linker, {[[P5]]}, hip-fatbin, (device-hip)
 // CHECK-SPIRV-BINARY-OFFLOAD-DEVICE-ONLY: [[P7:[0-9]+]]: offload, "device-hip (spirv64-amd-amdhsa)" {[[P6]]}, none
 
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -x hip %s -save-temps \ 
 // RUN:         -use-spirv-backend --offload-device-only -fgpu-rdc -ccc-print-phases \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC
@@ -66,12 +66,12 @@
 // CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC: [[P3:[0-9]+]]: backend, {[[P2]]}, lto-{{(bc|ir)}}, (device-hip, amdgcnspirv)
 // CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC: [[P4:[0-9]+]]: offload, "device-hip (spirv64-amd-amdhsa:amdgcnspirv)" {[[P3]]}, none
 
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -x hip %s -save-temps \
 // RUN:         -use-spirv-backend --offload-device-only -S -fgpu-rdc -ccc-print-phases \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC
 
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -x hip %s -save-temps \
 // RUN:         -use-spirv-backend --offload-device-only -S -ccc-print-phases \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-SPIRV-TEXTUAL-OFFLOAD-DEVICE-ONLY

@@ -56,3 +56,23 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
+add_libc_test(
+  posix_fadvise_test
+  SUITE
+    libc_fcntl_unittests
+  SRCS
+    posix_fadvise_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.src.errno.errno
+    libc.src.fcntl.creat
+    libc.src.fcntl.posix_fadvise
+    libc.src.unistd.close
+    libc.src.unistd.pipe
+    libc.src.unistd.unlink
+    libc.src.__support.CPP.scope
+    libc.test.UnitTest.ErrnoCheckingTest
+)

@@ -17,6 +17,7 @@
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/TypeUtilities.h"
 #include <type_traits>
 
@@ -113,9 +114,10 @@ using DivSIOpLowering =
     VectorConvertToLLVMPattern<arith::DivSIOp, LLVM::SDivOp>;
 using DivUIOpLowering =
     VectorConvertToLLVMPattern<arith::DivUIOp, LLVM::UDivOp>;
-using ExtFOpLowering = VectorConvertToLLVMPattern<arith::ExtFOp, LLVM::FPExtOp,
-                                                  AttrConvertPassThrough,
-                                                  /*FailOnUnsupportedFP=*/true>;
+using ExtFOpLowering =
+    VectorConvertToLLVMPattern<arith::ExtFOp, LLVM::FPExtOp,
+                               arith::AttrConvertFastMathToLLVM,
+                               /*FailOnUnsupportedFP=*/true>;
 using ExtSIOpLowering =
     VectorConvertToLLVMPattern<arith::ExtSIOp, LLVM::SExtOp>;
 using ExtUIOpLowering =
@@ -202,7 +204,7 @@ using SubIOpLowering =
 using TruncFOpLowering =
     ConstrainedVectorConvertToLLVMPattern<arith::TruncFOp, LLVM::FPTruncOp,
                                           /*HasRoundingMode=*/false,
-                                          AttrConvertPassThrough,
+                                          arith::AttrConvertFastMathToLLVM,
                                           /*FailOnUnsupportedFP=*/true>;
 using ConstrainedTruncFOpLowering = ConstrainedVectorConvertToLLVMPattern<
     arith::TruncFOp, LLVM::ConstrainedFPTruncIntr, /*HasRoundingMode=*/true,
@@ -430,10 +432,16 @@ static TypedAttr convertConstantValue(TypedAttr attr, Type resultType) {
         retypeValues(cast<DenseIntElementsAttr>(sparseAttr.getValues())));
 
   // A resource-backed elements attribute refers to a blob laid out for its own
-  // element type, so it cannot be retyped here. Keep it rather than fail the
-  // lowering.
-  if (isa<ElementsAttr>(attr))
-    return attr;
+  // element type. The blob cannot be rewritten here, only reinterpreted, which
+  // is correct exactly when the target type has the same width as the storage
+  // `index` uses in a blob.
+  if (auto resourceAttr = dyn_cast<DenseResourceElementsAttr>(attr)) {
+    if (width != IndexType::kInternalStorageBitWidth)
+      return {};
+    return DenseResourceElementsAttr::get(
+        cast<ShapedType>(attr.getType()).clone(targetIntType),
+        resourceAttr.getRawHandle());
+  }
 
   return {};
 }

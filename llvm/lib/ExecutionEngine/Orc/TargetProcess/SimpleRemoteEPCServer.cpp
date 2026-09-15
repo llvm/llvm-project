@@ -8,14 +8,11 @@
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleRemoteEPCServer.h"
 
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/OrcRTBootstrap.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Process.h"
 #include "llvm/TargetParser/Host.h"
-
-#include "OrcRTBootstrap.h"
 
 #define DEBUG_TYPE "orc"
 
@@ -79,7 +76,6 @@ SimpleRemoteEPCServer::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
       break;
     case SimpleRemoteEPCOpcode::Result:
       dbgs() << "Result";
-      assert(!TagAddr && "Non-zero TagAddr for Result?");
       break;
     case SimpleRemoteEPCOpcode::CallWrapper:
       dbgs() << "CallWrapper";
@@ -194,7 +190,6 @@ Error SimpleRemoteEPCServer::sendMessage(SimpleRemoteEPCOpcode OpC,
       break;
     case SimpleRemoteEPCOpcode::Result:
       dbgs() << "Result";
-      assert(!TagAddr && "Non-zero TagAddr for Result?");
       break;
     case SimpleRemoteEPCOpcode::CallWrapper:
       dbgs() << "CallWrapper";
@@ -252,6 +247,11 @@ Error SimpleRemoteEPCServer::handleResult(
     uint64_t SeqNo, ExecutorAddr TagAddr,
     shared::WrapperFunctionBuffer ArgBytes) {
   std::promise<shared::WrapperFunctionBuffer> *P = nullptr;
+
+  auto R = decodeResultMessage(TagAddr, std::move(ArgBytes));
+  if (!R)
+    return R.takeError();
+
   {
     std::lock_guard<std::mutex> Lock(ServerStateMutex);
     auto I = PendingJITDispatchResults.find(SeqNo);
@@ -263,9 +263,7 @@ Error SimpleRemoteEPCServer::handleResult(
     PendingJITDispatchResults.erase(I);
     releaseSeqNo(SeqNo);
   }
-  auto R = shared::WrapperFunctionBuffer::allocate(ArgBytes.size());
-  memcpy(R.data(), ArgBytes.data(), ArgBytes.size());
-  P->set_value(std::move(R));
+  P->set_value(std::move(*R));
   return Error::success();
 }
 
@@ -278,9 +276,9 @@ void SimpleRemoteEPCServer::handleCallWrapper(
     auto *Fn = TagAddr.toPtr<WrapperFnTy>();
     shared::WrapperFunctionBuffer ResultBytes(
         Fn(ArgBytes.data(), ArgBytes.size()));
+    auto [ResultTag, Payload] = encodeResultMessage(std::move(ResultBytes));
     if (auto Err = sendMessage(SimpleRemoteEPCOpcode::Result, RemoteSeqNo,
-                               ExecutorAddr(),
-                               {ResultBytes.data(), ResultBytes.size()}))
+                               ResultTag, {Payload.data(), Payload.size()}))
       ReportError(std::move(Err));
   });
 }

@@ -8,13 +8,10 @@
 
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/ADT/FloatingPointMode.h"
-#include "llvm/ADT/StringTable.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/SystemLibraries.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/xxhash.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 
 #define DEBUG_TYPE "runtime-libcalls-info"
@@ -34,11 +31,9 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
                                          FloatABI::ABIType FloatABI,
                                          EABI EABIVersion, StringRef ABIName,
                                          VectorLibrary VecLib) {
-  // FIXME: The ExceptionModel parameter is to handle the field in
-  // TargetOptions. This interface fails to distinguish the forced disable
-  // case for targets which support exceptions by default. This should
-  // probably be a module flag and removed from TargetOptions.
-  if (ExceptionModel == ExceptionHandling::None)
+  // Only an unspecified model resolves to the triple default; None is left as
+  // an explicit disable.
+  if (ExceptionModel == ExceptionHandling::Default)
     ExceptionModel = TT.getDefaultExceptionHandling();
 
   initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName,
@@ -112,6 +107,12 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M,
                                          VectorLibrary VecLib)
     : RuntimeLibcallsInfo(M.getTargetTriple(), ExceptionModel, M.getFloatABI(),
                           EABIVersion, ABIName, VecLib) {}
+
+bool RuntimeLibcallsInfo::isLibraryAvailable(StringRef LibraryName) const {
+  // TODO: Drive this from module-level state (e.g. the linked runtime). For now
+  // every named library is reported as available.
+  return true;
+}
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.

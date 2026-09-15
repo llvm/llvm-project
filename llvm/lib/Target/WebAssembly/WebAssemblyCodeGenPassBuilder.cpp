@@ -127,7 +127,10 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // TargetPassConfig::addPassesToHandleExceptions, but that runs after these IR
   // passes and Emscripten SjLj handling expects all invokes to be lowered
   // before.
-  if (!WasmEnableEmEH && !WasmEnableEH) {
+  bool EnableEmEH =
+      TM.Options.ExceptionModel == ExceptionHandling::Emscripten ||
+      WasmEnableEmEH;
+  if (!EnableEmEH && !WasmEnableEH) {
     addFunctionPass(LowerInvokePass(), PMW);
     // The lower invoke pass may create unreachable code. Remove it in order not
     // to process dead blocks in setjmp/longjmp handling.
@@ -138,9 +141,9 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // done in WasmEHPrepare pass, Wasm SjLj preparation shares libraries and
   // transformation algorithms with Emscripten SjLj, so we run
   // LowerEmscriptenEHSjLj pass also when Wasm SjLj is enabled.
-  if (WasmEnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj) {
+  if (EnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj) {
     flushFPMsToMPM(PMW);
-    addModulePass(WebAssemblyLowerEmscriptenEHSjLjPass(), PMW);
+    addModulePass(WebAssemblyLowerEmscriptenEHSjLjPass(EnableEmEH), PMW);
   }
 
   // Expand indirectbr instructions to switches.
@@ -197,10 +200,8 @@ Error WebAssemblyCodeGenPassBuilder::addIRTranslator(PassManagerWrapper &PMW) {
 
 void WebAssemblyCodeGenPassBuilder::addPreLegalizeMachineIR(
     PassManagerWrapper &PMW) {
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add WebAssemblyPreLegalizerCombiner when it has
-    // been ported.
-  }
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(WebAssemblyPreLegalizerCombinerPass(), PMW);
 }
 
 Error WebAssemblyCodeGenPassBuilder::addLegalizeMachineIR(
@@ -211,10 +212,8 @@ Error WebAssemblyCodeGenPassBuilder::addLegalizeMachineIR(
 
 void WebAssemblyCodeGenPassBuilder::addPreRegBankSelect(
     PassManagerWrapper &PMW) {
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add WebAssemblyPostLegalizerCombiner when it has
-    // been ported.
-  }
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(WebAssemblyPostLegalizerCombinerPass(), PMW);
 }
 
 Error WebAssemblyCodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {

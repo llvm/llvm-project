@@ -91,6 +91,12 @@ TEST_P(olGetHostDeviceInfoTest, SuccessPlatform) {
   ASSERT_NE(Platform, nullptr);
 }
 
+TEST_P(olGetHostDeviceInfoTest, SuccessDriverId) {
+  uint32_t DriverId = 0;
+  ASSERT_SUCCESS(olGetDeviceInfo(Device, OL_DEVICE_INFO_DRIVER_ID,
+                                 sizeof(DriverId), &DriverId));
+}
+
 TEST_P(olGetHostDeviceInfoTest, InvalidNullHandleDevice) {
   ol_device_type_t DeviceType;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,

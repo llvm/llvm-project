@@ -152,3 +152,54 @@ func.func @test_derived() {
   %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
   return
 }
+
+// -----
+
+// Recipe generation from an acc.firstprivate result must use the host
+// variable's Fortran properties, not the clause result. The host is not
+// OPTIONAL, so the copy region is a direct load/assign.
+// CHECK: acc.firstprivate.recipe @firstprivate_from_clause : !fir.ref<i32> init {
+// CHECK: ^bb0(%{{.*}}: !fir.ref<i32>):
+// CHECK:   %[[ALLOC:.*]] = fir.alloca i32
+// CHECK:   acc.yield %[[ALLOC]] : !fir.ref<i32>
+// CHECK: } copy {
+// CHECK: ^bb0(%[[SRC:.*]]: !fir.ref<i32>, %[[DST:.*]]: !fir.ref<i32>):
+// CHECK-NOT: fir.is_present
+// CHECK:   %[[LOAD:.*]] = fir.load %[[SRC]] : !fir.ref<i32>
+// CHECK:   hlfir.assign %[[LOAD]] to %[[DST]] temporary_lhs : i32, !fir.ref<i32>
+// CHECK:   acc.terminator
+// CHECK: }
+
+func.func @test_from_clause() {
+  %host = fir.alloca i32
+  %fp = acc.firstprivate varPtr(%host : !fir.ref<i32>) name("x") -> !fir.ref<i32> {test.var = "from_clause"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Bare !fir.ptr values (e.g. a null POINTER address firstprivatized into a
+// region) allocate !fir.ref storage. Convert it back to the recipe type so
+// fir.result in the optional-present branch matches fir.if.
+// CHECK: acc.firstprivate.recipe @firstprivate_optional_ptr_f64 : !fir.ptr<f64> init {
+// CHECK: ^bb0(%[[ARG:.*]]: !fir.ptr<f64>):
+// CHECK:   %[[ALLOC:.*]] = fir.alloca f64
+// CHECK:   %[[PRESENT:.*]] = fir.is_present %[[ARG]] : (!fir.ptr<f64>) -> i1
+// CHECK:   %[[RES:.*]] = fir.if %[[PRESENT]] -> (!fir.ptr<f64>) {
+// CHECK:     %[[CVT:.*]] = fir.convert %[[ALLOC]] : (!fir.ref<f64>) -> !fir.ptr<f64>
+// CHECK:     fir.result %[[CVT]] : !fir.ptr<f64>
+// CHECK:   } else {
+// CHECK:     %[[ABSENT:.*]] = fir.absent !fir.ptr<f64>
+// CHECK:     fir.result %[[ABSENT]] : !fir.ptr<f64>
+// CHECK:   }
+// CHECK:   acc.yield %[[RES]] : !fir.ptr<f64>
+// CHECK: }
+
+func.func @test_optional_ptr_f64() {
+  %0 = fir.zero_bits !fir.ptr<f64> {test.var = "optional_ptr_f64"}
+  %var = fir.alloca f32
+  %1:2 = hlfir.declare %var {uniq_name = "load_hlfir"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}

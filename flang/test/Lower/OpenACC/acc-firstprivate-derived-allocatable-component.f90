@@ -51,12 +51,14 @@ module m_firstprivate_derived_alloc_comp
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_10:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_11:.*]] = arith.constant 1 : i32
+! CHECK:             %[[FP_A_LOOP:.*]] = acc.firstprivate varPtr({{.*}}) recipe(@firstprivatization_ref_rec__QMm_firstprivate_derived_alloc_compTpoint) implicit(true) name("a")
 ! CHECK:             %[[VAL_12:.*]] = acc.private varPtr(%[[VAL_3]]#0 : !fir.ref<i32>) recipe(@privatization_ref_i32) implicit(true) name("i") -> !fir.ref<i32>
-! CHECK:             acc.loop combined(parallel) private(%[[VAL_12]] : !fir.ref<i32>) control(%[[VAL_14:.*]] : i32) = (%[[VAL_9]] : i32) to (%[[VAL_10]] : i32)  step (%[[VAL_11]] : i32) {
+! CHECK:             acc.loop combined(parallel) firstprivate(%[[FP_A_LOOP]] : {{.*}}) private(%[[VAL_12]] : !fir.ref<i32>) control(%[[VAL_14:.*]] : i32) = (%[[VAL_9]] : i32) to (%[[VAL_10]] : i32)  step (%[[VAL_11]] : i32) {
+! CHECK:               %[[VAL_8B:.*]]:2 = hlfir.declare %[[FP_A_LOOP]]
 ! CHECK:               %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QMm_firstprivate_derived_alloc_compFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:               fir.store %[[VAL_14]] to %[[VAL_13]]#0 : !fir.ref<i32>
 ! CHECK:               %[[VAL_15:.*]] = arith.constant 1.000000e+00 : f32
-! CHECK:               %[[VAL_16:.*]] = hlfir.designate %[[VAL_8]]#0{"x"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK:               %[[VAL_16:.*]] = hlfir.designate %[[VAL_8B]]#0{"x"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMm_firstprivate_derived_alloc_compTpoint{x:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK:               %[[VAL_17:.*]] = fir.load %[[VAL_16]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK:               %[[VAL_18:.*]] = arith.constant 10 : index
 ! CHECK:               %[[VAL_19:.*]] = hlfir.designate %[[VAL_17]] (%[[VAL_18]])  : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> !fir.ref<f32>
