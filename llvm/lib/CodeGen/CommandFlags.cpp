@@ -70,7 +70,6 @@ CGOPT(std::string, MCPU)
 CGOPT(std::string, MTune)
 CGLIST(std::string, MAttrs)
 CGOPT_EXP(Reloc::Model, RelocModel)
-CGOPT(ThreadModel, ThreadModel)
 CGOPT_EXP(CodeModel::Model, CodeModel)
 CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
@@ -156,15 +155,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                      "Combination of ropi and rwpi")));
   CGBINDOPT(RelocModel);
 
-  static cl::opt<ThreadModel> ThreadModel(
-      "thread-model", cl::desc("Choose threading model"),
-      cl::init(llvm::ThreadModel::POSIX),
-      cl::values(
-          clEnumValN(llvm::ThreadModel::POSIX, "posix", "POSIX thread model"),
-          clEnumValN(llvm::ThreadModel::Single, "single",
-                     "Single thread model")));
-  CGBINDOPT(ThreadModel);
-
   static cl::opt<CodeModel::Model> CodeModel(
       "code-model", cl::desc("Choose code model"),
       cl::values(clEnumValN(CodeModel::Tiny, "tiny", "Tiny code model"),
@@ -182,10 +172,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
 
   static cl::opt<ExceptionHandling> ExceptionModel(
       "exception-model", cl::desc("exception model"),
-      cl::init(ExceptionHandling::None),
+      cl::init(ExceptionHandling::Default),
       cl::values(
-          clEnumValN(ExceptionHandling::None, "default",
+          clEnumValN(ExceptionHandling::Default, "default",
                      "default exception handling model"),
+          clEnumValN(ExceptionHandling::None, "none", "no exception handling"),
           clEnumValN(ExceptionHandling::DwarfCFI, "dwarf",
                      "DWARF-like CFI based exception handling"),
           clEnumValN(ExceptionHandling::SjLj, "sjlj",
@@ -585,7 +576,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
 
   Options.MCOptions = mc::InitMCTargetOptionsFromFlags();
 
-  Options.ThreadModel = getThreadModel();
   Options.EABIVersion = getEABIVersion();
   Options.DebuggerTuning = getDebuggerTuningOpt();
   Options.SwiftAsyncFramePointer = getSwiftAsyncFramePointer();

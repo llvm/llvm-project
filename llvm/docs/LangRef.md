@@ -9553,6 +9553,50 @@ while ARM uses names such as `"aapcs"` and `"apcs-gnu"`:
 ```
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"target-abi", !"aapcs"}
+...
+
+### Exception Model Module Flags Metadata
+
+This module flag describes the exception-handling model that the module was
+compiled for. The value is an `MDString` and must be one of:
+
+```{list-table}
+:header-rows: 1
+:widths: 30 70
+* - Value
+  - Meaning
+
+* - `"none"`
+  - Exceptions are explicitly disabled.
+
+* - `"dwarf"`
+  - DWARF-like table-based (CFI) exception handling.
+
+* - `"sjlj"`
+  - setjmp/longjmp based exception handling.
+
+* - `"arm"`
+  - ARM EHABI exception handling.
+
+* - `"wineh"`
+  - Windows exception handling.
+
+* - `"wasm"`
+  - WebAssembly exception handling.
+
+* - `"emscripten"`
+  - Emscripten JavaScript-based exception handling.
+
+```
+
+When the flag is absent, the exception model is unspecified and the target's
+default is used. This is distinct from an explicit `"none"`, which disables
+exceptions even on targets that support them by default. The flag must use the
+`error` merge behavior, so that linking modules with conflicting exception
+models is rejected. For example:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"sjlj"}
 ```
 
 ### Long Double Type Module Flags Metadata
@@ -19858,6 +19902,84 @@ This never sets errno, just as '`llvm.fma.*`'.
 
 ```llvm
 %r2 = call float @llvm.fmuladd.f32(float %a, float %b, float %c) ; yields float:r2 = (a * b) + c
+```
+
+(int_smulh)=
+
+#### '`llvm.smulh.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic. You can use `llvm.smulh` on any integer
+or vector of integers.
+
+```
+declare i16 @llvm.smulh.i16(i16 %a, i16 %b)
+declare i32 @llvm.smulh.i32(i32 %a, i32 %b)
+declare i64 @llvm.smulh.i64(i64 %a, i64 %b)
+declare <4 x i32> @llvm.smulh.v4i32(<4 x i32> %a, <4 x i32> %b)
+```
+
+##### Overview:
+
+The '`llvm.smulh`' family of intrinsic functions performs a signed
+multiplication of the two arguments, and returns the high half of the result.
+
+##### Arguments:
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+##### Semantics:
+
+The '`llvm.smulh`' intrinsic computes signed multiply-high of its arguments,
+which is the upper N-bit half of the 2N-bit product for signed iN types.
+
+##### Example:
+
+```llvm
+%r = call i4 @llvm.smulh.i4(i4 1, i4 2)   ; %r = 0
+%r = call i4 @llvm.smulh.i4(i4 5, i4 6)   ; %r = 1
+%r = call i4 @llvm.smulh.i4(i4 -4, i4 6)  ; %r = -2
+```
+
+(int_umulh)=
+
+#### '`llvm.umulh.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic. You can use `llvm.umulh` on any integer
+or vector of integers.
+
+```
+declare i16 @llvm.umulh.i16(i16 %a, i16 %b)
+declare i32 @llvm.umulh.i32(i32 %a, i32 %b)
+declare i64 @llvm.umulh.i64(i64 %a, i64 %b)
+declare <4 x i32> @llvm.umulh.v4i32(<4 x i32> %a, <4 x i32> %b)
+```
+
+##### Overview:
+
+The '`llvm.umulh`' family of intrinsic functions performs an unsigned
+multiplication of the two arguments, and returns the high half of the result.
+
+##### Arguments:
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+##### Semantics:
+
+The '`llvm.umulh`' intrinsic computes unsigned multiply-high of its arguments,
+which is the upper N-bit half of the 2N-bit product for unsigned iN types.
+
+##### Example:
+
+```llvm
+%r = call i4 @llvm.umulh.i4(i4 1, i4 2)   ; %r = 0
+%r = call i4 @llvm.umulh.i4(i4 5, i4 6)   ; %r = 1
+%r = call i4 @llvm.umulh.i4(i4 4, i4 10)  ; %r = 2
 ```
 
 ### Hardware-Loop Intrinsics

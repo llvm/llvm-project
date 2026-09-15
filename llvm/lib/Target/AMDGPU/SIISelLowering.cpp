@@ -21469,16 +21469,18 @@ void SITargetLowering::emitExpandAtomicAddrSpacePredicate(
   Value *LoadedPrivate;
   if (RMW) {
     LoadedPrivate = Builder.CreateAlignedLoad(
-        RMW->getType(), CastToPrivate, RMW->getAlign(), "loaded.private");
+        RMW->getType(), CastToPrivate, RMW->getAlign(), RMW->isVolatile(),
+        "loaded.private");
 
     Value *NewVal = buildAtomicRMWValue(RMW->getOperation(), Builder,
                                         LoadedPrivate, RMW->getValOperand());
 
-    Builder.CreateAlignedStore(NewVal, CastToPrivate, RMW->getAlign());
+    Builder.CreateAlignedStore(NewVal, CastToPrivate, RMW->getAlign(),
+                               RMW->isVolatile());
   } else {
-    auto [ResultLoad, Equal] =
-        buildCmpXchgValue(Builder, CastToPrivate, CX->getCompareOperand(),
-                          CX->getNewValOperand(), CX->getAlign());
+    auto [ResultLoad, Equal] = buildCmpXchgValue(
+        Builder, CastToPrivate, CX->getCompareOperand(), CX->getNewValOperand(),
+        CX->getAlign(), CX->isVolatile());
 
     Value *Insert = Builder.CreateInsertValue(PoisonValue::get(CX->getType()),
                                               ResultLoad, 0);

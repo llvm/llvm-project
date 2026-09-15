@@ -308,38 +308,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  if (Subtarget.hasSSE2()) {
-    // Custom lowering for saturating float to int conversions.
-    // We handle promotion to larger result types manually.
-    for (MVT VT : { MVT::i8, MVT::i16, MVT::i32 }) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
-      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
-    }
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
-      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
-    }
-  }
-  if (Subtarget.hasAVX10_2()) {
-    for (MVT VT : {MVT::v8i8, MVT::v16i8, MVT::v32i8}) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
-      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
-    }
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v2i32, Custom);
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v2i32, Custom);
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i64, Legal);
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i64, Legal);
-    for (MVT VT : {MVT::i32, MVT::v4i32, MVT::v8i32, MVT::v16i32, MVT::v2i64,
-                   MVT::v4i64}) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Legal);
-      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Legal);
-    }
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Legal);
-      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Legal);
-    }
-  }
-
   // Handle address space casts between mixed sized pointers.
   setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
   setOperationAction(ISD::ADDRSPACECAST, MVT::i64, Custom);
@@ -1285,6 +1253,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_TO_UINT,        VT, Custom);
       setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Custom);
       setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Custom);
+    }
+
+    // Custom lowering for saturating float to int conversions.
+    // We handle promotion to larger result types manually.
+    for (MVT VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
+      if (VT == MVT::i64 && !Subtarget.is64Bit())
+        continue;
+      setOperationAction(ISD::FP_TO_UINT_SAT,    VT, Custom);
+      setOperationAction(ISD::FP_TO_SINT_SAT,    VT, Custom);
     }
 
     setOperationAction(ISD::SINT_TO_FP,         MVT::v4i32, Custom);
@@ -2590,6 +2567,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(ISD::VSELECT, VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+      setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
     }
@@ -2618,6 +2596,22 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX10_2()) {
+    for (MVT VT : {MVT::v8i8, MVT::v16i8, MVT::v32i8}) {
+      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
+      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
+    }
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v2i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v2i32, Custom);
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i64, Legal);
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i64, Legal);
+    for (MVT VT : {MVT::i32, MVT::i64, MVT::v4i32, MVT::v8i32, MVT::v16i32,
+                   MVT::v2i64, MVT::v4i64}) {
+      if (VT == MVT::i64 && !Subtarget.is64Bit())
+        continue;
+      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Legal);
+      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Legal);
+    }
+
     // Lower scalar bf16 arithmetic by widening to a vector op and extracting
     // the low element.
     setOperationAction(ISD::FADD, MVT::bf16, Custom);
@@ -22595,24 +22589,23 @@ SDValue
 X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
   // This is based on the TargetLowering::expandFP_TO_INT_SAT implementation,
   // but making use of X86 specifics to produce better instruction sequences.
-  SDNode *Node = Op.getNode();
-  bool IsSigned = Node->getOpcode() == ISD::FP_TO_SINT_SAT;
+  bool IsSigned = Op.getOpcode() == ISD::FP_TO_SINT_SAT;
   unsigned FpToIntOpcode = IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
-  SDLoc dl(SDValue(Node, 0));
-  SDValue Src = Node->getOperand(0);
+  SDLoc dl(Op);
+  SDValue Src = Op.getOperand(0);
 
   // There are three types involved here: SrcVT is the source floating point
   // type, DstVT is the type of the result, and TmpVT is the result of the
   // intermediate FP_TO_*INT operation we'll use (which may be a promotion of
   // DstVT).
-  EVT SrcVT = Src.getValueType();
-  EVT DstVT = Node->getValueType(0);
-  EVT TmpVT = DstVT;
-  EVT SatVT = cast<VTSDNode>(Node->getOperand(1))->getVT();
+  MVT SrcVT = Src.getSimpleValueType();
+  MVT DstVT = Op.getSimpleValueType();
+  MVT TmpVT = DstVT;
+  EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
 
   if (Subtarget.hasAVX10_2() && SrcVT.isVector() &&
       SrcVT.getVectorElementType() == MVT::bf16 && SatVT == MVT::i8) {
-    MVT VecI16VT = SrcVT.getSimpleVT().changeVectorElementType(MVT::i16);
+    MVT VecI16VT = SrcVT.changeVectorElementType(MVT::i16);
     SDValue Res = DAG.getNode(IsSigned ? X86ISD::CVTTP2IBS : X86ISD::CVTTP2IUBS,
                               dl, VecI16VT, Src);
     return DAG.getNode(ISD::TRUNCATE, dl, DstVT, Res);
