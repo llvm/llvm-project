@@ -4190,8 +4190,9 @@ happens-before must be perfectly overlapping to act atomically.
         then R must not read from writes that are earlier than W in the
         address's modification order.
 
-    This disallows reordering of perfectly
-    overlapping `monotonic` (or stronger) operations. If an address is
+    This disallows reordering of perfectly overlapping `monotonic` (or
+    stronger) operations. Note: These coherence rules do not hold for
+    `unordered` atomics. If an address is
     written `monotonic`-ally by one thread, and other threads
     `monotonic`-ally read that address repeatedly with perfectly
     overlapping accesses, the other threads must eventually see
