@@ -23,6 +23,9 @@ namespace lldb_private {
 /// once, and an UNLOAD_DLL_DEBUG_EVENT only carries a base address, so every
 /// mapping has to be resolvable back to its file.
 class LoadedModuleList {
+  // Entries are removed as soon as their address list becomes empty (see
+  // Remove()), so every address list in the map is guaranteed non-empty and
+  // it is safe to call front() on it.
   using Container = std::map<FileSpec, llvm::SmallVector<lldb::addr_t, 1>>;
 
 public:
