@@ -66,7 +66,7 @@ void fallsthrough() {
 // LLVM: call void @_ZN21VirtualDelegatingCtorC1Ei(ptr {{.*}}, i32 {{.*}}1)
 //
 //
-// CIR-LABEL: cir.func no_inline comdat linkonce_odr @_ZN21VirtualDelegatingCtorC1Ei(%{{.*}}: !cir.ptr<!rec_VirtualDelegatingCtor> {{.*}}, %{{.*}}: !s32i {{.*}}) func_info<#cir.cxx_ctor<!rec_VirtualDelegatingCtor, custom>>
+// CIR-LABEL: cir.func no_inline comdat alignment(2) linkonce_odr @_ZN21VirtualDelegatingCtorC1Ei(%{{.*}}: !cir.ptr<!rec_VirtualDelegatingCtor> {{.*}}, %{{.*}}: !s32i {{.*}}) func_info<#cir.cxx_ctor<!rec_VirtualDelegatingCtor, custom>>
 // CIR: %[[THIS_ALLOCA:.*]] = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_VirtualDelegatingCtor>>
 // CIR: %[[X_ALLOCA:.*]] = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
 // CIR: %[[THIS_LOAD:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_VirtualDelegatingCtor>>, !cir.ptr<!rec_VirtualDelegatingCtor>
@@ -97,7 +97,7 @@ void fallsthrough() {
 // LLVM: store ptr getelementptr inbounds nuw (i8, ptr @_ZTV21VirtualDelegatingCtor, i64 24), ptr %[[THIS_LOAD]]
 //
 
-// CIR-LABEL: cir.func no_inline comdat linkonce_odr @_ZN7DerivedCI24BaseEi(%{{.*}}: !cir.ptr<!rec_Derived>{{.*}}, %{{.*}}: !s32i{{.*}}) func_info<#cir.cxx_ctor<!rec_Derived, custom>>
+// CIR-LABEL: cir.func no_inline comdat alignment(2) linkonce_odr @_ZN7DerivedCI24BaseEi(%{{.*}}: !cir.ptr<!rec_Derived>{{.*}}, %{{.*}}: !s32i{{.*}}) func_info<#cir.cxx_ctor<!rec_Derived, custom>>
 // CIR: %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Derived>>
 // CIR: %[[INT_ALLOCA:.*]] = cir.alloca "" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[THIS_LOAD:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_Derived>>, !cir.ptr<!rec_Derived>
@@ -117,7 +117,7 @@ void fallsthrough() {
 // LLVM-LABEL: declare void @_ZN4BaseC2Ei(ptr {{.*}}, i32 {{.*}})
 //
 //
-// CIR-LABEL: cir.func no_inline comdat linkonce_odr @_ZN11VirtDerivedCI24BaseEi(%{{.*}}: !cir.ptr<!rec_VirtDerived> {{.*}}, %{{.*}}: !cir.ptr<!cir.ptr<!void>>{{.*}}) func_info<#cir.cxx_ctor<!rec_VirtDerived, custom>>
+// CIR-LABEL: cir.func no_inline comdat alignment(2) linkonce_odr @_ZN11VirtDerivedCI24BaseEi(%{{.*}}: !cir.ptr<!rec_VirtDerived> {{.*}}, %{{.*}}: !cir.ptr<!cir.ptr<!void>>{{.*}}) func_info<#cir.cxx_ctor<!rec_VirtDerived, custom>>
 // CIR: %[[THIS_ALLOCA:.*]] = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_VirtDerived>>
 // CIR: %[[VTT_ALLOCA:.]] = cir.alloca "vtt" align(8) init : !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
 // CIR: %[[THIS:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_VirtDerived>>, !cir.ptr<!rec_VirtDerived>

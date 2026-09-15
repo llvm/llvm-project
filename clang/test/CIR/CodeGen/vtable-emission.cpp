@@ -32,4 +32,4 @@ void S::key() {}
 // CHECK: cir.func {{.*}} @_ZN1S3keyEv
 
 // The reference from the vtable should result in nonKey being emitted.
-// CHECK: cir.func no_inline comdat linkonce_odr @_ZN1S6nonKeyEv
+// CHECK: cir.func no_inline comdat alignment(2) linkonce_odr @_ZN1S6nonKeyEv

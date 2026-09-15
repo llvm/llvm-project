@@ -15,7 +15,7 @@ void g() {
 }
 int main() { g(); }
 
-// CIR-LABEL: cir.func no_inline lambda internal private dso_local @_ZZ1gvENK3$_0clB5cxx11Ev
+// CIR-LABEL: cir.func no_inline lambda alignment(2) internal private dso_local @_ZZ1gvENK3$_0clB5cxx11Ev
 // CIR-NOT: define
 // CIR: %[[ONE:.*]] = cir.const #cir.int<1> 
 // CIR: cir.call @_Z1fIZZ1gvENK3$_0clEvEUlT_E_EDaiS1_(%[[ONE]], %{{.*}})
@@ -33,7 +33,7 @@ int main() { g(); }
 // LLVM-NOT: define
 // LLVM: call noundef i32 @"_ZZZ1gvENK3$_0clEvENKUlT_E_clIiEEDaS0_"
 
-// CIR-LABEL: cir.func no_inline lambda internal private dso_local @_ZZZ1gvENK3$_0clEvENKUlT_E_clIiEEDaS0_
+// CIR-LABEL: cir.func no_inline lambda alignment(2) internal private dso_local @_ZZZ1gvENK3$_0clEvENKUlT_E_clIiEEDaS0_
 // LLVM-LABEL: define internal noundef i32 @"_ZZZ1gvENK3$_0clEvENKUlT_E_clIiEEDaS0_"
 
 // OGCG-LABEL: define internal i32 @"_ZZ1gvENK3$_0clB5cxx11Ev"(

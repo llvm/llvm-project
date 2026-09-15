@@ -205,3 +205,17 @@ cir.func @has_attrs() attributes {foo, baz = 5, floof = "flop"} {
 // CHECK: cir.func @has_attrs() attributes {baz = 5 : i64{{.*}}, floof = "flop", foo} {
 // CHECK:   cir.return
 // CHECK: }
+
+cir.func alignment(3) @has_alignment() {
+  cir.return
+}
+// CHECK: cir.func alignment(3) @has_alignment() {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func comdat alignment(3) @has_alignment2() {
+  cir.return
+}
+// CHECK: cir.func comdat alignment(3) @has_alignment2() {
+// CHECK:   cir.return
+// CHECK: }
