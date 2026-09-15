@@ -1509,7 +1509,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_POPS,         AArch64::AEK_SVESM4,
       AArch64::AEK_MTETC,        AArch64::AEK_HINTE,
       AArch64::AEK_CFLT,         AArch64::AEK_LSC64B,
-      AArch64::AEK_SVE_LRCPC,
+      AArch64::AEK_SVE_LRCPC,    AArch64::AEK_SVE_PERM256,
   };
 
   std::vector<StringRef> Features;
@@ -1637,6 +1637,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+cflt"));
   EXPECT_TRUE(llvm::is_contained(Features, "+lsc64b"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sve-lrcpc"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-perm256"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1821,6 +1822,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"cflt", "nocflt", "+cflt", "-cflt"},
       {"lsc64b", "nolsc64b", "+lsc64b", "-lsc64b"},
       {"sve-lrcpc", "nosve-lrcpc", "+sve-lrcpc", "-sve-lrcpc"},
+      {"sve-perm256", "nosve-perm256", "+sve-perm256", "-sve-perm256"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
@@ -1967,6 +1969,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {}},
         {AArch64::ARMV9_5A, {}, {"v9.5a", "mops", "cpa"}, {}},
         {AArch64::ARMV9_7A, {}, {"v9.7a", "f16f32dot"}, {}},
+        {AArch64::ARMV9_8A, {}, {"v9.8a", "sve-perm256"}, {}},
 
         // Positive modifiers
         {AArch64::ARMV8A, {"fp16"}, {"fullfp16"}, {}},

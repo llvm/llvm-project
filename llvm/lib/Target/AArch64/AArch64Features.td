@@ -631,6 +631,9 @@ def FeatureSVE_LRCPC: ExtensionWithMArch<"sve-lrcpc", "SVE_LRCPC", "FEAT_SVE_LRC
   "Enable Armv9.8-A SVE weaker Release Consistency processor consistent (RCpc) model",
    [FeatureSVE2, FeatureRCPC3]>;
 
+def FeatureSVE_PERM256: ExtensionWithMArch<"sve-perm256", "SVE_PERM256", "FEAT_SVE_PERM256",
+  "Enable Armv9.8-A SVE 128-bit element permute instructions">;
+
 //===----------------------------------------------------------------------===//
 //  Future Architecture Technologies
 //===----------------------------------------------------------------------===//
@@ -1136,8 +1139,8 @@ def HasV9_7aOps : Architecture64<9, 7, "a", "v9.7a",
   !listconcat(HasV9_6aOps.DefaultExts, [FeatureSVE2p3, FeatureFPRCVT,
     FeatureF16F32DOT])>;
 def HasV9_8aOps : Architecture64<9, 8, "a", "v9.8a",
-  [HasV9_7aOps],
-  HasV9_7aOps.DefaultExts>;
+  [HasV9_7aOps, FeatureSVE_PERM256],
+  !listconcat(HasV9_7aOps.DefaultExts, [FeatureSVE_PERM256])>;
 def HasV8_0rOps : Architecture64<8, 0, "r", "v8r",
   [ //v8.1
     FeatureCRC, FeaturePAN, FeatureLSE, FeatureCONTEXTIDREL2,
