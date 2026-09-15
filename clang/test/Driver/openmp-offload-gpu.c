@@ -400,6 +400,10 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:     --offload-arch=sm_52 -foffload-lto=thin -nogpulib -nogpuinc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=THINLTO-SM52 %s
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     --offload-arch=sm_52 -Xarch_device -flto=thin \
+// RUN:     -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=THINLTO-SM52 %s
 // THINLTO-SM52: --device-compiler=nvptx64-nvidia-cuda=-flto=thin
 
 //

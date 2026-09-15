@@ -1356,7 +1356,7 @@ LTOKind AMDGPUToolChain::getLTOMode(const ArgList &Args,
                                     Action::OffloadKind Kind) const {
   if (getTriple().isAMDGCN() && getDriver().offloadDeviceOnly() &&
       !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false) &&
-      !Args.hasArg(options::OPT_foffload_lto, options::OPT_foffload_lto_EQ))
+      !Args.hasArg(options::OPT_flto_EQ, options::OPT_fno_lto))
     return LTOK_None;
   return ToolChain::getLTOMode(Args, Kind);
 }

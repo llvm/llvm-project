@@ -3476,12 +3476,6 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
         !Args.hasArg(options::OPT_hip_link) &&
         !C.getDefaultToolChain().getTriple().isSPIRV())
       Diag(clang::diag::err_drv_emit_llvm_link);
-    if (C.getDefaultToolChain().getTriple().isWindowsMSVCEnvironment() &&
-        C.getDefaultToolChain().isUsingLTO(Args) &&
-        !Args.getLastArgValue(options::OPT_fuse_ld_EQ)
-             .starts_with_insensitive("lld"))
-      Diag(clang::diag::err_drv_lto_without_lld);
-
     // If -dumpdir is not specified, give a default prefix derived from the link
     // output filename. For example, `clang -g -gsplit-dwarf a.c -o x` passes
     // `-dumpdir x-` to cc1. If -o is unspecified, use
@@ -3516,6 +3510,13 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     // used.
     Args.eraseArg(options::OPT_include_pch);
   }
+
+  if (FinalPhase == phases::Link &&
+      C.getDefaultToolChain().getTriple().isWindowsMSVCEnvironment() &&
+      C.getLTOMode(C.getDefaultToolChain()) != LTOK_None &&
+      !Args.getLastArgValue(options::OPT_fuse_ld_EQ)
+           .starts_with_insensitive("lld"))
+    Diag(clang::diag::err_drv_lto_without_lld);
 
   bool LinkOnly = phases::Link == FinalPhase && Inputs.size() > 0;
   for (auto &I : Inputs) {
@@ -3570,10 +3571,8 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
         const types::ID HeaderType = lookupHeaderTypeForSourceType(InputType);
         // Build the pipeline for the pch file.
         Action *ClangClPch = C.MakeAction<InputAction>(*InputArg, HeaderType);
-        auto HostLTO = C.getDefaultToolChain().getLTOMode(Args);
         for (phases::ID Phase : types::getCompilationPhases(HeaderType))
-          ClangClPch = ConstructPhaseAction(C, Args, Phase, ClangClPch,
-                                            Action::OFK_None, HostLTO);
+          ClangClPch = ConstructPhaseAction(C, Args, Phase, ClangClPch);
         assert(ClangClPch);
         Actions.push_back(ClangClPch);
         // The driver currently exits after the first failed command.  This
@@ -3716,9 +3715,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       // later actions in the same command line?
 
       // Otherwise construct the appropriate action.
-      Action *NewCurrent =
-          ConstructPhaseAction(C, Args, Phase, Current, Action::OFK_None,
-                               C.getDefaultToolChain().getLTOMode(Args));
+      Action *NewCurrent = ConstructPhaseAction(C, Args, Phase, Current);
 
       // We didn't create a new action, so we will just move to the next phase.
       if (NewCurrent == Current)
@@ -4239,8 +4236,7 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
         // Propagate the ToolChain so we can use it in ConstructPhaseAction.
         A->propagateDeviceOffloadInfo(Kind, TCAndArch->second,
                                       TCAndArch->first);
-        A = ConstructPhaseAction(C, Args, Phase, A, Kind,
-                                 TCAndArch->first->getLTOMode(Args, Kind));
+        A = ConstructPhaseAction(C, Args, Phase, A, Kind);
 
         if (isa<CompileJobAction>(A) && isa<CompileJobAction>(HostAction) &&
             Kind == Action::OFK_OpenMP &&
@@ -4390,7 +4386,7 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
 
 Action *Driver::ConstructPhaseAction(
     Compilation &C, const ArgList &Args, phases::ID Phase, Action *Input,
-    Action::OffloadKind TargetDeviceOffloadKind, LTOKind TargetLTOMode) const {
+    Action::OffloadKind TargetDeviceOffloadKind) const {
   llvm::PrettyStackTraceString CrashInfo("Constructing phase actions");
 
   // Some types skip the assembler phase (e.g., llvm-bc), but we can't
@@ -4503,8 +4499,14 @@ Action *Driver::ConstructPhaseAction(
     return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {
+    bool IsDeviceOffload = TargetDeviceOffloadKind != Action::OFK_None;
+    assert((!IsDeviceOffload || Input->getOffloadingToolChain()) &&
+           "missing offloading toolchain");
+    const ToolChain &TC = IsDeviceOffload ? *Input->getOffloadingToolChain()
+                                          : C.getDefaultToolChain();
+    BoundArch Arch = IsDeviceOffload ? Input->getOffloadingArch() : BoundArch();
+    LTOKind TargetLTOMode = C.getLTOMode(TC, Arch, TargetDeviceOffloadKind);
     if (TargetLTOMode != LTOK_None) {
-      bool IsDeviceOffload = TargetDeviceOffloadKind != Action::OFK_None;
       if (!IsDeviceOffload) {
         types::ID Output;
         if (Args.hasArg(options::OPT_ffat_lto_objects) &&
@@ -5375,9 +5377,11 @@ InputInfoList Driver::BuildJobsForActionNoCache(
 
   const JobAction *JA = cast<JobAction>(A);
   ActionList CollapsedOffloadActions;
+  const ArgList &Args =
+      C.getArgsForToolChain(TC, BA, A->getOffloadingDeviceKind());
 
   ToolSelector TS(JA, *TC, C, isSaveTempsEnabled(),
-                  embedBitcodeInObject() && !TC->isUsingLTO(C.getArgs()));
+                  embedBitcodeInObject() && !TC->isUsingLTO(Args));
   const Tool *T = TS.getTool(Inputs, CollapsedOffloadActions);
 
   if (!T)
@@ -5430,8 +5434,6 @@ InputInfoList Driver::BuildJobsForActionNoCache(
   // Set the effective triple of the toolchain for the duration of this job.
   llvm::Triple EffectiveTriple;
   const ToolChain &ToolTC = T->getToolChain();
-  const ArgList &Args =
-      C.getArgsForToolChain(TC, BA, A->getOffloadingDeviceKind());
   if (InputInfos.size() != 1) {
     EffectiveTriple =
         llvm::Triple(ToolTC.ComputeEffectiveClangTriple(Args, BA));
