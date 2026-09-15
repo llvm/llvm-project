@@ -61,7 +61,7 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   entry.source_line();
 
-#if _LIBCPP_HAS_LOCALIZATION
+#if !defined(TEST_HAS_NO_LOCALIZATION)
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::to_string(entry);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
