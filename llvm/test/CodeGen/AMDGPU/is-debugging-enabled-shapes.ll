@@ -1,71 +1,71 @@
 ; RUN: split-file %s %t
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/unused.ll -o - | FileCheck --check-prefixes=UNUSED %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/store.ll -o - | FileCheck --check-prefixes=STORE %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/return.ll -o - | FileCheck --check-prefixes=RETURN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/select.ll -o - | FileCheck --check-prefixes=SELECT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/arithmetic.ll -o - | FileCheck --check-prefixes=ARITH %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/multiple-branches.ll -o - | FileCheck --check-prefixes=MULTIBR %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/branch-and-store.ll -o - | FileCheck --check-prefixes=BRSTORE %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/ordered-placement.ll -o - | FileCheck --check-prefixes=ORDERED %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/expect-ordered-placement.ll -o - | FileCheck --check-prefixes=EXPECTORDERED %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/expect-multiple-uses.ll -o - | FileCheck --check-prefixes=EXPECTMULTI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/store-between.ll -o - | FileCheck --check-prefixes=STOREBETWEEN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/call-between.ll -o - | FileCheck --check-prefixes=CALLBETWEEN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/two-observations.ll -o - | FileCheck --check-prefixes=TWOOBS %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/negated-store-between.ll -o - | FileCheck --check-prefixes=NEGSTORE %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/load-between.ll -o - | FileCheck --check-prefix=LOADBETWEEN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/volatile-load-between.ll -o - | FileCheck --check-prefix=VOLLOADBETWEEN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/barrier-between.ll -o - | FileCheck --check-prefix=BARRIERBETWEEN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/fence-between.ll -o - | FileCheck --check-prefix=FENCEBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/unused.ll -o - | FileCheck --check-prefixes=UNUSED %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/store.ll -o - | FileCheck --check-prefixes=STORE %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/return.ll -o - | FileCheck --check-prefixes=RETURN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/select.ll -o - | FileCheck --check-prefixes=SELECT %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/arithmetic.ll -o - | FileCheck --check-prefixes=ARITH %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/multiple-branches.ll -o - | FileCheck --check-prefixes=MULTIBR %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/branch-and-store.ll -o - | FileCheck --check-prefixes=BRSTORE %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/ordered-placement.ll -o - | FileCheck --check-prefixes=ORDERED %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/expect-ordered-placement.ll -o - | FileCheck --check-prefixes=EXPECTORDERED %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/expect-multiple-uses.ll -o - | FileCheck --check-prefixes=EXPECTMULTI %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/store-between.ll -o - | FileCheck --check-prefixes=STOREBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/call-between.ll -o - | FileCheck --check-prefixes=CALLBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/two-observations.ll -o - | FileCheck --check-prefixes=TWOOBS %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/negated-store-between.ll -o - | FileCheck --check-prefixes=NEGSTORE %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/load-between.ll -o - | FileCheck --check-prefix=LOADBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/volatile-load-between.ll -o - | FileCheck --check-prefix=VOLLOADBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/barrier-between.ll -o - | FileCheck --check-prefix=BARRIERBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 %t/fence-between.ll -o - | FileCheck --check-prefix=FENCEBETWEEN %s
 
 ; The same shapes through GlobalISel.
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/unused.ll -o - | FileCheck --check-prefixes=UNUSED %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/store.ll -o - | FileCheck --check-prefixes=STORE %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/return.ll -o - | FileCheck --check-prefixes=RETURN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/select.ll -o - | FileCheck --check-prefixes=SELECT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/arithmetic.ll -o - | FileCheck --check-prefixes=ARITH %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/multiple-branches.ll -o - | FileCheck --check-prefixes=MULTIBR %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/branch-and-store.ll -o - | FileCheck --check-prefixes=BRSTORE %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/ordered-placement.ll -o - | FileCheck --check-prefixes=ORDERED %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/expect-ordered-placement.ll -o - | FileCheck --check-prefixes=EXPECTORDERED %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/expect-multiple-uses.ll -o - | FileCheck --check-prefixes=EXPECTMULTI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/store-between.ll -o - | FileCheck --check-prefixes=STOREBETWEEN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/call-between.ll -o - | FileCheck --check-prefixes=CALLBETWEEN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/two-observations.ll -o - | FileCheck --check-prefixes=TWOOBS %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/negated-store-between.ll -o - | FileCheck --check-prefixes=NEGSTORE %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/load-between.ll -o - | FileCheck --check-prefix=LOADBETWEEN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/volatile-load-between.ll -o - | FileCheck --check-prefix=VOLLOADBETWEEN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/barrier-between.ll -o - | FileCheck --check-prefix=BARRIERBETWEEN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/fence-between.ll -o - | FileCheck --check-prefix=FENCEBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/unused.ll -o - | FileCheck --check-prefixes=UNUSED %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/store.ll -o - | FileCheck --check-prefixes=STORE %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/return.ll -o - | FileCheck --check-prefixes=RETURN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/select.ll -o - | FileCheck --check-prefixes=SELECT %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/arithmetic.ll -o - | FileCheck --check-prefixes=ARITH %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/multiple-branches.ll -o - | FileCheck --check-prefixes=MULTIBR %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/branch-and-store.ll -o - | FileCheck --check-prefixes=BRSTORE %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/ordered-placement.ll -o - | FileCheck --check-prefixes=ORDERED %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/expect-ordered-placement.ll -o - | FileCheck --check-prefixes=EXPECTORDERED %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/expect-multiple-uses.ll -o - | FileCheck --check-prefixes=EXPECTMULTI %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/store-between.ll -o - | FileCheck --check-prefixes=STOREBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/call-between.ll -o - | FileCheck --check-prefixes=CALLBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/two-observations.ll -o - | FileCheck --check-prefixes=TWOOBS %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/negated-store-between.ll -o - | FileCheck --check-prefixes=NEGSTORE %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/load-between.ll -o - | FileCheck --check-prefix=LOADBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/volatile-load-between.ll -o - | FileCheck --check-prefix=VOLLOADBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/barrier-between.ll -o - | FileCheck --check-prefix=BARRIERBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 %t/fence-between.ll -o - | FileCheck --check-prefix=FENCEBETWEEN %s
 
 ; On gfx11.5, where the register prints under its pre-GFX12 name.
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/unused.ll -o - | FileCheck --check-prefixes=UNUSED %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/store.ll -o - | FileCheck --check-prefixes=STORE %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/return.ll -o - | FileCheck --check-prefixes=RETURN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/select.ll -o - | FileCheck --check-prefixes=SELECT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/arithmetic.ll -o - | FileCheck --check-prefixes=ARITH %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/multiple-branches.ll -o - | FileCheck --check-prefixes=MULTIBR %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/branch-and-store.ll -o - | FileCheck --check-prefixes=BRSTORE %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/ordered-placement.ll -o - | FileCheck --check-prefixes=ORDERED %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/expect-ordered-placement.ll -o - | FileCheck --check-prefixes=EXPECTORDERED %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/expect-multiple-uses.ll -o - | FileCheck --check-prefixes=EXPECTMULTI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/store-between.ll -o - | FileCheck --check-prefixes=STOREBETWEEN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/call-between.ll -o - | FileCheck --check-prefixes=CALLBETWEEN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/two-observations.ll -o - | FileCheck --check-prefixes=TWOOBS %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/negated-store-between.ll -o - | FileCheck --check-prefixes=NEGSTORE %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/unused.ll -o - | FileCheck --check-prefixes=UNUSED %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/store.ll -o - | FileCheck --check-prefixes=STORE %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/return.ll -o - | FileCheck --check-prefixes=RETURN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/select.ll -o - | FileCheck --check-prefixes=SELECT %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/arithmetic.ll -o - | FileCheck --check-prefixes=ARITH %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/multiple-branches.ll -o - | FileCheck --check-prefixes=MULTIBR %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/branch-and-store.ll -o - | FileCheck --check-prefixes=BRSTORE %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/ordered-placement.ll -o - | FileCheck --check-prefixes=ORDERED %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/expect-ordered-placement.ll -o - | FileCheck --check-prefixes=EXPECTORDERED %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/expect-multiple-uses.ll -o - | FileCheck --check-prefixes=EXPECTMULTI %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/store-between.ll -o - | FileCheck --check-prefixes=STOREBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/call-between.ll -o - | FileCheck --check-prefixes=CALLBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/two-observations.ll -o - | FileCheck --check-prefixes=TWOOBS %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 %t/negated-store-between.ll -o - | FileCheck --check-prefixes=NEGSTORE %s
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 %t/store.ll -o - | FileCheck --check-prefixes=STORE %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 %t/store.ll -o - | FileCheck --check-prefixes=STORE %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 %t/branch-and-store.ll -o - | FileCheck --check-prefixes=BRSTORE %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 %t/branch-and-store.ll -o - | FileCheck --check-prefixes=BRSTORE %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 %t/store-between.ll -o - | FileCheck --check-prefixes=STOREBETWEEN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 %t/store-between.ll -o - | FileCheck --check-prefixes=STOREBETWEEN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 %t/call-between.ll -o - | FileCheck --check-prefixes=CALLBETWEEN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 %t/call-between.ll -o - | FileCheck --check-prefixes=CALLBETWEEN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 %t/two-observations.ll -o - | FileCheck --check-prefixes=TWOOBS %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 %t/two-observations.ll -o - | FileCheck --check-prefixes=TWOOBS %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 %t/negated-store-between.ll -o - | FileCheck --check-prefixes=NEGSTORE %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 %t/negated-store-between.ll -o - | FileCheck --check-prefixes=NEGSTORE %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 %t/store.ll -o - | FileCheck --check-prefixes=STORE %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 %t/store.ll -o - | FileCheck --check-prefixes=STORE %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 %t/branch-and-store.ll -o - | FileCheck --check-prefixes=BRSTORE %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 %t/branch-and-store.ll -o - | FileCheck --check-prefixes=BRSTORE %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 %t/store-between.ll -o - | FileCheck --check-prefixes=STOREBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 %t/store-between.ll -o - | FileCheck --check-prefixes=STOREBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 %t/call-between.ll -o - | FileCheck --check-prefixes=CALLBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 %t/call-between.ll -o - | FileCheck --check-prefixes=CALLBETWEEN %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 %t/two-observations.ll -o - | FileCheck --check-prefixes=TWOOBS %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 %t/two-observations.ll -o - | FileCheck --check-prefixes=TWOOBS %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 %t/negated-store-between.ll -o - | FileCheck --check-prefixes=NEGSTORE %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 %t/negated-store-between.ll -o - | FileCheck --check-prefixes=NEGSTORE %s
 
 ; UNUSED-LABEL: unused:
 ; STORE-LABEL: store_result:

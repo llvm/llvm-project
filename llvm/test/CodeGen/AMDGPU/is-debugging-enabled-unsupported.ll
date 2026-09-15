@@ -1,32 +1,17 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 -passes=amdgpu-lower-intrinsics -S %s | FileCheck %s --check-prefix=IR
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 -O2 %s -o - | FileCheck %s --check-prefix=GCN
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -O2 %s -o - | FileCheck %s --check-prefix=GCN
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx11-generic -O2 %s -o - | FileCheck %s --check-prefix=GCN
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1170 -O2 %s -o - | FileCheck %s --check-prefix=GCN
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -mattr=-cdbg-sys-or-user-branch -O2 %s -o - | FileCheck %s --check-prefix=GCN
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -O2 -global-isel -global-isel-abort=1 %s -o - | FileCheck %s --check-prefix=GCN
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx11-generic -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1170 -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -mattr=-debugging-enabled-query -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -global-isel=1 -global-isel-abort=1 -verify-machineinstrs %s -o - | FileCheck %s
 
 declare noundef i1 @llvm.is.debugging.enabled()
 
-define amdgpu_kernel void @unsupported_subtarget() {
-entry:
+define i1 @unsupported_subtarget() {
+; CHECK-LABEL: unsupported_subtarget:
+; CHECK-NOT: s_getreg
+; CHECK-NOT: s_cbranch_cdbg
+; CHECK: v_mov_b32_e32 v0, 0
   %enabled = call i1 @llvm.is.debugging.enabled()
-  br i1 %enabled, label %debug, label %normal
-
-debug:
-  br label %normal
-
-normal:
-  ret void
+  ret i1 %enabled
 }
-
-; IR-LABEL: define amdgpu_kernel void @unsupported_subtarget()
-; IR: entry:
-; IR-NEXT: br i1 false, label %debug, label %normal
-; IR-NOT: call i1 @llvm.is.debugging.enabled()
-; IR: ret void
-
-; GCN-LABEL: unsupported_subtarget:
-; GCN-NOT: s_cbranch_cdbg
-; GCN-NOT: s_getreg
-; GCN: s_endpgm
