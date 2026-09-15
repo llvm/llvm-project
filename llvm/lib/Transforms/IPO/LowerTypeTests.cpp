@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -64,6 +65,7 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -291,6 +293,151 @@ bool lowertypetests::isJumpTableCanonical(Function *F) {
   if (!CI || !CI->isZero())
     return true;
   return F->hasFnAttribute("cfi-canonical-jump-table");
+}
+
+bool lowertypetests::hasTypeMetadata(const GlobalObject *GO) {
+  if (MDNode *MD = GO->getMetadata(LLVMContext::MD_associated))
+    if (auto *AssocVM = dyn_cast_or_null<ValueAsMetadata>(MD->getOperand(0)))
+      if (auto *AssocGO = dyn_cast<GlobalObject>(AssocVM->getValue()))
+        if (AssocGO->hasMetadata(LLVMContext::MD_type))
+          return true;
+  return GO->hasMetadata(LLVMContext::MD_type);
+}
+
+SetVector<GlobalValue *> lowertypetests::findCfiFunctions(Module &M) {
+  SetVector<GlobalValue *> CfiFunctions;
+  for (auto &F : M)
+    if ((!F.hasLocalLinkage() || F.hasAddressTaken()) && hasTypeMetadata(&F))
+      CfiFunctions.insert(&F);
+  for (auto &A : M.aliases())
+    if (auto *F = dyn_cast<Function>(A.getAliasee()))
+      if (hasTypeMetadata(F))
+        CfiFunctions.insert(&A);
+  return CfiFunctions;
+}
+
+/// Extracts a numeric type identifier from an MDNode containing type metadata.
+static ConstantInt *extractNumericTypeId(MDNode *MD) {
+  // This check excludes vtables for classes inside anonymous namespaces.
+  auto TM = dyn_cast<ValueAsMetadata>(MD->getOperand(1));
+  if (!TM)
+    return nullptr;
+  auto C = dyn_cast_or_null<ConstantInt>(TM->getValue());
+  if (!C)
+    return nullptr;
+  // We are looking for i64 constants.
+  if (C->getBitWidth() != 64)
+    return nullptr;
+
+  return C;
+}
+
+SetVector<uint64_t> lowertypetests::findCfiTypeIds(const Module &M) {
+  SetVector<uint64_t> TypeIds;
+  SmallVector<MDNode *, 2> Types;
+  for (const GlobalObject &GO : M.global_objects()) {
+    Types.clear();
+    GO.getMetadata(LLVMContext::MD_type, Types);
+    for (MDNode *Type : Types)
+      if (ConstantInt *TypeId = extractNumericTypeId(Type))
+        TypeIds.insert(TypeId->getZExtValue());
+  }
+
+  if (NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions")) {
+    for (auto *Func : CfiFunctionsMD->operands()) {
+      assert(Func->getNumOperands() >= 3);
+      assert(isa<ConstantAsMetadata>(Func->getOperand(2)));
+      for (unsigned I = 3; I < Func->getNumOperands(); ++I)
+        if (ConstantInt *TypeId =
+                extractNumericTypeId(cast<MDNode>(Func->getOperand(I).get())))
+          TypeIds.insert(TypeId->getZExtValue());
+    }
+  }
+  return TypeIds;
+}
+
+static void createCfiFunctionsMetadata(Module &DestM,
+                                       ArrayRef<GlobalValue *> CfiFunctions) {
+  auto &Ctx = DestM.getContext();
+  SmallVector<MDNode *, 8> CfiFunctionMDs;
+  for (auto *V : CfiFunctions) {
+    Function &F = *cast<Function>(V->getAliaseeObject());
+    SmallVector<MDNode *, 2> Types;
+    F.getMetadata(LLVMContext::MD_type, Types);
+
+    SmallVector<Metadata *, 4> Elts;
+    Elts.push_back(MDString::get(Ctx, V->getName()));
+    CfiFunctionLinkage Linkage;
+    if (lowertypetests::isJumpTableCanonical(&F))
+      Linkage = CFL_Definition;
+    else if (F.hasExternalWeakLinkage())
+      Linkage = CFL_WeakDeclaration;
+    else
+      Linkage = CFL_Declaration;
+    Elts.push_back(ConstantAsMetadata::get(
+        llvm::ConstantInt::get(Type::getInt8Ty(Ctx), Linkage)));
+    GlobalValue::GUID GUID = V->getGUID();
+    Elts.push_back(ConstantAsMetadata::get(
+        llvm::ConstantInt::get(Type::getInt64Ty(Ctx), GUID)));
+    append_range(Elts, Types);
+    CfiFunctionMDs.push_back(MDTuple::get(Ctx, Elts));
+  }
+
+  if (!CfiFunctionMDs.empty()) {
+    NamedMDNode *NMD = DestM.getOrInsertNamedMetadata("cfi.functions");
+    for (auto *MD : CfiFunctionMDs)
+      NMD->addOperand(MD);
+  }
+}
+
+static void createCfiAliasesMetadata(Module &DestM, const Module &SrcM) {
+  auto &Ctx = DestM.getContext();
+  MapVector<const Function *, std::vector<const GlobalAlias *>> FunctionAliases;
+  for (const auto &A : SrcM.aliases()) {
+    if (!isa<Function>(A.getAliasee()))
+      continue;
+
+    const auto *F = cast<Function>(A.getAliasee());
+    FunctionAliases[F].push_back(&A);
+  }
+
+  if (!FunctionAliases.empty()) {
+    NamedMDNode *NMD = DestM.getOrInsertNamedMetadata("aliases");
+    for (auto &Alias : FunctionAliases) {
+      SmallVector<Metadata *> Elts;
+      Elts.push_back(MDString::get(Ctx, Alias.first->getName()));
+      for (auto *A : Alias.second)
+        Elts.push_back(MDString::get(Ctx, A->getName()));
+      NMD->addOperand(MDTuple::get(Ctx, Elts));
+    }
+  }
+}
+
+static void createCfiSymversMetadata(Module &DestM, const Module &SrcM) {
+  auto &Ctx = DestM.getContext();
+  SmallVector<MDNode *, 8> Symvers;
+  ModuleSymbolTable::CollectAsmSymvers(
+      SrcM, [&](StringRef Name, StringRef Alias) {
+        const Function *F = SrcM.getFunction(Name);
+        if (!F || F->use_empty())
+          return;
+
+        Symvers.push_back(MDTuple::get(
+            Ctx, {MDString::get(Ctx, Name), MDString::get(Ctx, Alias)}));
+      });
+
+  if (!Symvers.empty()) {
+    NamedMDNode *NMD = DestM.getOrInsertNamedMetadata("symvers");
+    for (auto *MD : Symvers)
+      NMD->addOperand(MD);
+  }
+}
+
+void lowertypetests::createCfiMetadata(Module &DestM, const Module &SrcM,
+                                       ArrayRef<GlobalValue *> CfiFunctions) {
+  createCfiFunctionsMetadata(DestM, CfiFunctions);
+  createCfiAliasesMetadata(DestM, SrcM);
+  createCfiSymversMetadata(DestM, SrcM);
 }
 
 namespace {
