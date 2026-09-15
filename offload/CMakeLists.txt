@@ -171,11 +171,11 @@ endif()
 list(APPEND LIBOMPTARGET_PLUGINS_TO_BUILD "host")
 list(REMOVE_DUPLICATES LIBOMPTARGET_PLUGINS_TO_BUILD)
 
-if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)|(riscv64)$"
+if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)|(riscv64)|(loongarch64)$"
         AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
   if("amdgpu" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
     message(STATUS "Not building AMDGPU plugin: only support AMDGPU in "
-                   "Linux x86_64, ppc64le, aarch64, or riscv64 hosts")
+                   "Linux x86_64, ppc64le, aarch64, riscv64 or loongarch64 hosts")
     list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "amdgpu")
   endif()
 endif()
