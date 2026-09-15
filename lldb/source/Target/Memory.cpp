@@ -184,7 +184,7 @@ void MemoryCache::InsertData(addr_t addr, llvm::ArrayRef<uint8_t> src) {
 
 void MemoryCache::AddCacheData(lldb::addr_t addr,
                                const DataBufferSP &data_buffer_sp) {
-  InsertData(addr, {data_buffer_sp->GetBytes(), data_buffer_sp->GetByteSize()});
+  InsertData(addr, data_buffer_sp->GetData());
 }
 
 void MemoryCache::Flush(addr_t addr, size_t size) {

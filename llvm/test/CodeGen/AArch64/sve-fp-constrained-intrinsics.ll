@@ -394,20 +394,200 @@ define <vscale x 2 x double> @fmuladd_nxv2f64(<vscale x 2 x double> %a, <vscale 
 }
 
 ;
-;constrained.fpext (TODO)
+; constrained.fpext
 ;
 
-;
-;constrained.fptosi (TODO)
-;
+define <vscale x 2 x float> @fpext_nxv2f16_to_nxv2f32(<vscale x 2 x half> %a) {
+; CHECK-LABEL: fpext_nxv2f16_to_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x float> @llvm.experimental.constrained.fpext(<vscale x 2 x half> %a, metadata !"fpexcept.strict")
+  ret <vscale x 2 x float> %r
+}
+
+define <vscale x 2 x double> @fpext_nxv2f16_to_nxv2f64(<vscale x 2 x half> %a) {
+; CHECK-LABEL: fpext_nxv2f16_to_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.d, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x double> @llvm.experimental.constrained.fpext(<vscale x 2 x half> %a, metadata !"fpexcept.strict")
+  ret <vscale x 2 x double> %r
+}
+
+define <vscale x 2 x double> @fpext_nxv2f32_nxv2f64(<vscale x 2 x float> %a) {
+; CHECK-LABEL: fpext_nxv2f32_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.d, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x double> @llvm.experimental.constrained.fpext(<vscale x 2 x float> %a, metadata !"fpexcept.strict")
+  ret <vscale x 2 x double> %r
+}
 
 ;
-;constrained.fptoui (TODO)
+; constrained.fptosi
 ;
 
+define <vscale x 2 x i64> @fptosi_nxv2f16_to_nxv2i64(<vscale x 2 x half> %a) {
+; CHECK-LABEL: fptosi_nxv2f16_to_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x i64> @llvm.experimental.constrained.fptosi(<vscale x 2 x half> %a, metadata !"fpexcept.strict")
+  ret <vscale x 2 x i64> %r
+}
+
+define <vscale x 4 x i32> @fptosi_nxv4f16_to_nxv4i32(<vscale x 4 x half> %a) {
+; CHECK-LABEL: fptosi_nxv4f16_to_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x i32> @llvm.experimental.constrained.fptosi(<vscale x 4 x half> %a, metadata !"fpexcept.strict")
+  ret <vscale x 4 x i32> %r
+}
+
+define <vscale x 8 x i16> @fptosi_nxv8f16_to_nxv8i16(<vscale x 8 x half> %a) {
+; CHECK-LABEL: fptosi_nxv8f16_to_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fcvtzs z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 8 x i16> @llvm.experimental.constrained.fptosi(<vscale x 8 x half> %a, metadata !"fpexcept.strict")
+  ret <vscale x 8 x i16> %r
+}
+
+define <vscale x 2 x i64> @fptosi_nxv2f32_to_nxv2i64(<vscale x 2 x float> %a) {
+; CHECK-LABEL: fptosi_nxv2f32_to_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x i64> @llvm.experimental.constrained.fptosi(<vscale x 2 x float> %a, metadata !"fpexcept.strict")
+  ret <vscale x 2 x i64> %r
+}
+
+define <vscale x 4 x i32> @fptosi_nxv4f32_to_nxv4i32(<vscale x 4 x float> %a) {
+; CHECK-LABEL: fptosi_nxv4f32_to_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x i32> @llvm.experimental.constrained.fptosi(<vscale x 4 x float> %a, metadata !"fpexcept.strict")
+  ret <vscale x 4 x i32> %r
+}
+
+define <vscale x 2 x i64> @fptosi_nxv2f64_to_nxv2i64(<vscale x 2 x double> %a) {
+; CHECK-LABEL: fptosi_nxv2f64_to_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x i64> @llvm.experimental.constrained.fptosi(<vscale x 2 x double> %a, metadata !"fpexcept.strict")
+  ret <vscale x 2 x i64> %r
+}
+
 ;
-;constrained.fptrunc (TODO)
+; constrained.fptoui
 ;
+
+define <vscale x 2 x i64> @fptoui_nxv2f16_to_nxv2i64(<vscale x 2 x half> %a) {
+; CHECK-LABEL: fptoui_nxv2f16_to_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x i64> @llvm.experimental.constrained.fptoui(<vscale x 2 x half> %a, metadata !"fpexcept.strict")
+  ret <vscale x 2 x i64> %r
+}
+
+define <vscale x 4 x i32> @fptoui_nxv4f16_to_nxv4i32(<vscale x 4 x half> %a) {
+; CHECK-LABEL: fptoui_nxv4f16_to_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcvtzu z0.s, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x i32> @llvm.experimental.constrained.fptoui(<vscale x 4 x half> %a, metadata !"fpexcept.strict")
+  ret <vscale x 4 x i32> %r
+}
+
+define <vscale x 8 x i16> @fptoui_nxv8f16_to_nxv8i16(<vscale x 8 x half> %a) {
+; CHECK-LABEL: fptoui_nxv8f16_to_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fcvtzu z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 8 x i16> @llvm.experimental.constrained.fptoui(<vscale x 8 x half> %a, metadata !"fpexcept.strict")
+  ret <vscale x 8 x i16> %r
+}
+
+define <vscale x 2 x i64> @fptoui_nxv2f32_to_nxv2i64(<vscale x 2 x float> %a) {
+; CHECK-LABEL: fptoui_nxv2f32_to_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x i64> @llvm.experimental.constrained.fptoui(<vscale x 2 x float> %a, metadata !"fpexcept.strict")
+  ret <vscale x 2 x i64> %r
+}
+
+define <vscale x 4 x i32> @fptoui_nxv4f32_to_nxv4i32(<vscale x 4 x float> %a) {
+; CHECK-LABEL: fptoui_nxv4f32_to_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcvtzu z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x i32> @llvm.experimental.constrained.fptoui(<vscale x 4 x float> %a, metadata !"fpexcept.strict")
+  ret <vscale x 4 x i32> %r
+}
+
+define <vscale x 2 x i64> @fptoui_nxv2f64_to_nxv2i64(<vscale x 2 x double> %a) {
+; CHECK-LABEL: fptoui_nxv2f64_to_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x i64> @llvm.experimental.constrained.fptoui(<vscale x 2 x double> %a, metadata !"fpexcept.strict")
+  ret <vscale x 2 x i64> %r
+}
+
+;
+; constrained.fptrunc
+;
+
+define <vscale x 2 x half> @fptrunc_nv2f32_to_nxv2f16(<vscale x 2 x float> %a) {
+; CHECK-LABEL: fptrunc_nv2f32_to_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x half> @llvm.experimental.constrained.fptrunc(<vscale x 2 x float> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x half> %r
+}
+
+define <vscale x 2 x half> @fptrunc_nv2f64_to_nxv2f16(<vscale x 2 x double> %a) {
+; CHECK-LABEL: fptrunc_nv2f64_to_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x half> @llvm.experimental.constrained.fptrunc(<vscale x 2 x double> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x half> %r
+}
+
+define <vscale x 2 x float> @fptrunc_nv2f64_to_nxv2f32(<vscale x 2 x double> %a) {
+; CHECK-LABEL: fptrunc_nv2f64_to_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x float> @llvm.experimental.constrained.fptrunc(<vscale x 2 x double> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x float> %r
+}
 
 ;
 ; constrained.frem (TODO)
@@ -815,8 +995,68 @@ define <vscale x 2 x double> @nearbyint_nxv2f64(<vscale x 2 x double> %a) {
 }
 
 ;
-; constrained.rint (TODO)
+; constrained.rint
 ;
+
+define <vscale x 2 x half> @rint_nxv2f16(<vscale x 2 x half> %a) {
+; CHECK-LABEL: rint_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    frintx z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x half> @llvm.experimental.constrained.rint(<vscale x 2 x half> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x half> %r
+}
+
+define <vscale x 4 x half> @rint_nxv4f16(<vscale x 4 x half> %a) {
+; CHECK-LABEL: rint_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    frintx z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x half> @llvm.experimental.constrained.rint(<vscale x 4 x half> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x half> %r
+}
+
+define <vscale x 8 x half> @rint_nxv8f16(<vscale x 8 x half> %a) {
+; CHECK-LABEL: rint_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    frintx z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 8 x half> @llvm.experimental.constrained.rint(<vscale x 8 x half> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 8 x half> %r
+}
+
+define <vscale x 2 x float> @rint_nxv2f32(<vscale x 2 x float> %a) {
+; CHECK-LABEL: rint_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    frintx z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x float> @llvm.experimental.constrained.rint(<vscale x 2 x float> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x float> %r
+}
+
+define <vscale x 4 x float> @rint_nxv4f32(<vscale x 4 x float> %a) {
+; CHECK-LABEL: rint_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    frintx z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x float> @llvm.experimental.constrained.rint(<vscale x 4 x float> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x float> %r
+}
+
+define <vscale x 2 x double> @rint_nxv2f64(<vscale x 2 x double> %a) {
+; CHECK-LABEL: rint_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    frintx z0.d, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x double> @llvm.experimental.constrained.rint(<vscale x 2 x double> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x double> %r
+}
 
 ;
 ; constrained.round
@@ -1011,8 +1251,68 @@ define <vscale x 2 x double> @sqrt_nxv2f64(<vscale x 2 x double> %a) {
 }
 
 ;
-; constrained_sitofp (TODO)
+; constrained_sitofp
 ;
+
+define <vscale x 8 x half> @sitofp_nxv8i16_to_nxv8f16(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: sitofp_nxv8i16_to_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    scvtf z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 8 x half> @llvm.experimental.constrained.sitofp(<vscale x 8 x i16> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 8 x half> %r
+}
+
+define <vscale x 4 x half> @sitofp_nxv4i32_to_nxv4f16(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: sitofp_nxv4i32_to_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    scvtf z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x half> @llvm.experimental.constrained.sitofp(<vscale x 4 x i32> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x half> %r
+}
+
+define <vscale x 4 x float> @sitofp_nxv4i32_to_nxv4f32(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: sitofp_nxv4i32_to_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x float> @llvm.experimental.constrained.sitofp(<vscale x 4 x i32> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x float> %r
+}
+
+define <vscale x 2 x half> @sitofp_nxv2i64_to_nxv2f16(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: sitofp_nxv2i64_to_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    scvtf z0.h, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x half> @llvm.experimental.constrained.sitofp(<vscale x 2 x i64> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x half> %r
+}
+
+define <vscale x 2 x float> @sitofp_nxv2i64_to_nxv2f32(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: sitofp_nxv2i64_to_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    scvtf z0.s, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x float> @llvm.experimental.constrained.sitofp(<vscale x 2 x i64> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x float> %r
+}
+
+define <vscale x 2 x double> @sitofp_nxv2i64_to_nxv2f64(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: sitofp_nxv2i64_to_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    scvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x double> @llvm.experimental.constrained.sitofp(<vscale x 2 x i64> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x double> %r
+}
 
 ;
 ; constrained.trunc
@@ -1079,6 +1379,65 @@ define <vscale x 2 x double> @trunc_nxv2f64(<vscale x 2 x double> %a) {
 }
 
 ;
-; constrained_uitofp (TODO)
+; constrained_uitofp
 ;
 
+define <vscale x 8 x half> @uitofp_nxv8i16_to_nxv8f16(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: uitofp_nxv8i16_to_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %r = call <vscale x 8 x half> @llvm.experimental.constrained.uitofp(<vscale x 8 x i16> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 8 x half> %r
+}
+
+define <vscale x 4 x half> @uitofp_nxv4i32_to_nxv4f16(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: uitofp_nxv4i32_to_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x half> @llvm.experimental.constrained.uitofp(<vscale x 4 x i32> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x half> %r
+}
+
+define <vscale x 4 x float> @uitofp_nxv4i32_to_nxv4f32(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: uitofp_nxv4i32_to_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %r = call <vscale x 4 x float> @llvm.experimental.constrained.uitofp(<vscale x 4 x i32> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 4 x float> %r
+}
+
+define <vscale x 2 x half> @uitofp_nxv2i64_to_nxv2f16(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: uitofp_nxv2i64_to_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x half> @llvm.experimental.constrained.uitofp(<vscale x 2 x i64> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x half> %r
+}
+
+define <vscale x 2 x float> @uitofp_nxv2i64_to_nxv2f32(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: uitofp_nxv2i64_to_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x float> @llvm.experimental.constrained.uitofp(<vscale x 2 x i64> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x float> %r
+}
+
+define <vscale x 2 x double> @uitofp_nxv2i64_to_nxv2f64(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: uitofp_nxv2i64_to_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %r = call <vscale x 2 x double> @llvm.experimental.constrained.uitofp(<vscale x 2 x i64> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret <vscale x 2 x double> %r
+}
