@@ -1029,7 +1029,7 @@ int d_noninline;
             "postfix": {
                 "++": UnaryOperator.PostInc,
                 "--": UnaryOperator.PostDec,
-            }
+            },
         }
 
         for operator_type, ops in operators.items():
