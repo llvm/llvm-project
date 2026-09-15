@@ -117,6 +117,12 @@ static inline llvm::RoundingMode getRoundingMode(FPOptions FPO) {
   return RM;
 }
 
+/// Check if the given floating-point evaluation status is allowed for
+/// compile-time constant folding during translation (as opposed to mandatory
+/// constant expression evaluation).
+bool CheckFloatStatus(InterpState &S, CodePtr OpPC, APFloat::opStatus Status,
+                      FPOptions FPO);
+
 inline bool Invalid(InterpState &S, CodePtr OpPC) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
   S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr)

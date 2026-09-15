@@ -24,7 +24,7 @@ constexpr __m128 src = { 9.0f, 9.0f, 9.0f, 9.0f };
 constexpr __m128d a_inexact = { -1.0, 1.0000000000000002 };
 constexpr __m128 r = _mm_mask_cvtpd_ps(src, 0x2, a_inexact);
 // expected-error@-1 {{must be initialized by a constant expression}}
-// expected-note@avx512vlintrin.h:* {{compile time floating point arithmetic suppressed in strict evaluation modes}}
+// expected-note@avx512vlintrin.h:* {{compile-time floating-point evaluation suppressed in strict evaluation modes}}
 // expected-note@-3 {{in call to '_mm_mask_cvtpd_ps({9.000000e+00, 9.000000e+00, 9.000000e+00, 9.000000e+00}, 2, {-1.000000e+00, 1.000000e+00})'}}
 }
 namespace MaskOnInf {
