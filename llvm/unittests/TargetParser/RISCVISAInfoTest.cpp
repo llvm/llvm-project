@@ -942,11 +942,10 @@ TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
   EXPECT_THAT((*MaybeISAInfo1)->toFeatures(),
               ElementsAre("+i", "+m", "+zmmul", "+zalasr"));
 
-  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString(
-      "rv32e_zalasr_xventanacondops", true, false);
+  auto MaybeISAInfo2 =
+      RISCVISAInfo::parseArchString("rv32e_zalasr", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
-  EXPECT_THAT((*MaybeISAInfo2)->toFeatures(),
-              ElementsAre("+e", "+zalasr", "+xventanacondops"));
+  EXPECT_THAT((*MaybeISAInfo2)->toFeatures(), ElementsAre("+e", "+zalasr"));
 }
 
 TEST(ToFeatures, UnsupportedExtensionsAreDropped) {
@@ -1266,6 +1265,19 @@ TEST(ComputeDefaultABI, SelectsExpectedABI) {
   EXPECT_EQ(GetABIFromFeatures(64, {"+f", "+d"}), "lp64d");
   EXPECT_EQ(GetABIFromFeatures(64, {"+e"}), "lp64e");
 
+  // RVY targets default to the capability ABI.
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y"}), "il32pc64");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+f"}), "il32pc64f");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+f", "+d"}),
+            "il32pc64d");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+e"}), "il32pc64e");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y"}), "l64pc128");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+f"}), "l64pc128f");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+f", "+d"}),
+            "l64pc128d");
+  // RV64E has no capability ABI (yet).
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+e"}), "lp64e");
+
   // CHERIoT always selects the cheriot ABI by default.
   EXPECT_EQ(GetABIFromFeatures(32, {"+xcheriot"}), "cheriot");
 }
@@ -1421,6 +1433,7 @@ R"(All available -march extensions for RISC-V
     ziccif               1.0
     zicclsm              1.0
     ziccrse              1.0
+    zicfiss              1.0
     zicntr               2.0
     zicond               1.0
     zicsr                2.0
@@ -1531,6 +1544,7 @@ R"(All available -march extensions for RISC-V
     smepmp               1.0
     smmpm                1.0
     smnpm                1.0
+    smpmpdeleg           1.0
     smrnmi               1.0
     smstateen            1.0
     ssaia                1.0
@@ -1543,6 +1557,8 @@ R"(All available -march extensions for RISC-V
     ssdbltrp             1.0
     ssnpm                1.0
     sspm                 1.0
+    sspmp                1.0
+    sspmpen              1.0
     ssqosid              1.0
     ssstateen            1.0
     ssstrict             1.0
@@ -1636,7 +1652,6 @@ R"(All available -march extensions for RISC-V
     xtheadmempair        1.0
     xtheadsync           1.0
     xtheadvdot           1.0
-    xventanacondops      1.0
     xwchc                2.2
 
 Experimental extensions
@@ -1644,9 +1659,8 @@ Experimental extensions
     y                    0.98
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
-    zicfiss              1.0
     zilx                 0.1
-    zvabd                0.7
+    zvabd                0.9
     zvbc32e              0.7
     zvdot4a8i            0.1
     zvfbdota32f          0.2
@@ -1666,13 +1680,19 @@ Experimental extensions
     zvvmtls              0.1
     zvvmttls             0.1
     zvzip                0.1
-    smcsps               0.19
-    smehv                0.19
-    smijt                0.19
+    smcsps               0.20
+    smehv                0.20
+    smidctrl             0.20
+    smijt                0.20
+    smip                 0.20
+    smnip                0.20
     smpmpmt              0.6
-    sscsps               0.19
-    ssehv                0.19
-    ssijt                0.19
+    sscsps               0.20
+    ssehv                0.20
+    ssidctrl             0.20
+    ssijt                0.20
+    ssip                 0.20
+    ssnip                0.20
     svukte               1.0
     xqccmt               0.1
     xsfmclic             0.1

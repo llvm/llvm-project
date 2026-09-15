@@ -33,7 +33,7 @@ const char *OffloadArchToString(OffloadArch A) {
     return llvm::NVPTX::getArchName(A.nvptxKind()).data();
   case OffloadArch::TargetArch::AMDGPU:
     return llvm::AMDGPU::getArchNameAMDGCN(A.amdgpuKind()).data();
-  case OffloadArch::TargetArch::SPIRV:
+  case OffloadArch::TargetArch::AMDGCNSPIRV:
     return "amdgcnspirv";
   case OffloadArch::TargetArch::IntelCPU:
     return "graniterapids";
@@ -50,7 +50,7 @@ const char *OffloadArchToVirtualArchString(OffloadArch A) {
   case OffloadArch::TargetArch::NVPTX:
     return llvm::NVPTX::getVirtualArch(A.nvptxKind()).data();
   case OffloadArch::TargetArch::AMDGPU:
-  case OffloadArch::TargetArch::SPIRV:
+  case OffloadArch::TargetArch::AMDGCNSPIRV:
     return "compute_amdgcn";
   case OffloadArch::TargetArch::Unknown:
     return "unknown";
@@ -70,7 +70,7 @@ OffloadArch StringToOffloadArch(llvm::StringRef S) {
 
   // Non-GPU-table pseudo/sentinel architectures.
   if (S == "amdgcnspirv")
-    return OffloadArch::getSPIRV();
+    return OffloadArch::getAMDGCNSPIRV();
   if (S == "generic")
     return OffloadArch::getGeneric();
   if (S == "graniterapids")
@@ -95,9 +95,22 @@ void fillValidOffloadArchList(llvm::SmallVectorImpl<llvm::StringRef> &Values) {
   llvm::AMDGPU::fillValidArchListAMDGCN(Values, llvm::Triple::NoSubArch);
 }
 
+OffloadArch getSubArchOffloadArch(llvm::Triple::SubArchType SubArch) {
+  llvm::AMDGPU::GPUKind AK = llvm::AMDGPU::getGPUKindFromSubArch(SubArch);
+  if (AK == llvm::AMDGPU::GK_NONE)
+    return OffloadArch::getUnknown();
+  return OffloadArch::getAMDGPU(AK);
+}
+
+llvm::Triple::SubArchType getOffloadArchSubArch(OffloadArch ID) {
+  if (!ID.isAMDGPU())
+    return llvm::Triple::NoSubArch;
+  return llvm::AMDGPU::getSubArch(ID.amdgpuKind());
+}
+
 llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
                                  OffloadArch ID) {
-  if (ID.isSPIRV())
+  if (ID.isAMDGCNSPIRV())
     return llvm::Triple(llvm::Triple::spirv64, llvm::Triple::NoSubArch,
                         llvm::Triple::AMD, llvm::Triple::AMDHSA);
 
@@ -110,7 +123,8 @@ llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
   }
 
   if (ID.isAMDGPU())
-    return llvm::Triple("amdgcn-amd-amdhsa");
+    return llvm::Triple(llvm::Triple::amdgpu, llvm::Triple::NoSubArch,
+                        llvm::Triple::AMD, llvm::Triple::AMDHSA);
 
   return {};
 }

@@ -34,7 +34,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/LowerAtomicPass.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
 using namespace llvm;
@@ -67,7 +66,7 @@ cl::opt<bool> WebAssembly::WasmEnableEmSjLj(
 cl::opt<bool>
     WebAssembly::WasmEnableEH("wasm-enable-eh",
                               cl::desc("WebAssembly exception handling"));
-// setjmp/longjmp handling using wasm EH instrutions
+// setjmp/longjmp handling using wasm EH instructions
 cl::opt<bool> WebAssembly::WasmEnableSjLj(
     "wasm-enable-sjlj", cl::desc("WebAssembly setjmp/longjmp handling"));
 // If true, use the legacy Wasm EH proposal:
@@ -91,8 +90,8 @@ LLVMInitializeWebAssemblyTarget() {
   // Register backend passes
   auto &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
-  initializeWebAssemblyPreLegalizerCombinerPass(PR);
-  initializeWebAssemblyPostLegalizerCombinerPass(PR);
+  initializeWebAssemblyPreLegalizerCombinerLegacyPass(PR);
+  initializeWebAssemblyPostLegalizerCombinerLegacyPass(PR);
   initializeWebAssemblyAddMissingPrototypesLegacyPass(PR);
   initializeWebAssemblyLowerEmscriptenEHSjLjLegacyPass(PR);
   initializeLowerGlobalDtorsLegacyPassPass(PR);
@@ -128,7 +127,7 @@ LLVMInitializeWebAssemblyTarget() {
 //===----------------------------------------------------------------------===//
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
-  // Default to static relocation model.  This should always be more optimial
+  // Default to static relocation model.  This should always be more optimal
   // than PIC since the static linker can determine all global addresses and
   // assume direct function calls.
   return RM.value_or(Reloc::Static);
@@ -142,18 +141,24 @@ using WebAssembly::WasmEnableSjLj;
 
 static void basicCheckForEHAndSjLj(TargetMachine *TM) {
 
+  // Emscripten EH is selected by the exception model. WasmEnableEmEH is a
+  // deprecated cl::opt alias, OR-ed in here until it is removed.
+  bool EnableEmEH =
+      TM->Options.ExceptionModel == ExceptionHandling::Emscripten ||
+      WasmEnableEmEH;
+
   // You can't enable two modes of EH at the same time
-  if (WasmEnableEmEH && WasmEnableEH)
+  if (EnableEmEH && WasmEnableEH)
     report_fatal_error(
-        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-eh");
+        "-exception-model=emscripten not allowed with -wasm-enable-eh");
   // You can't enable two modes of SjLj at the same time
   if (WasmEnableEmSjLj && WasmEnableSjLj)
     report_fatal_error(
         "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
   // You can't mix Emscripten EH with Wasm SjLj.
-  if (WasmEnableEmEH && WasmEnableSjLj)
+  if (EnableEmEH && WasmEnableSjLj)
     report_fatal_error(
-        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-sjlj");
+        "-exception-model=emscripten not allowed with -wasm-enable-sjlj");
 
   if (TM->Options.ExceptionModel == ExceptionHandling::None) {
     // FIXME: These flags should be removed in favor of directly using the
@@ -164,11 +169,10 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
 
   // Basic Correctness checking related to -exception-model
   if (TM->Options.ExceptionModel != ExceptionHandling::None &&
-      TM->Options.ExceptionModel != ExceptionHandling::Wasm)
-    report_fatal_error("-exception-model should be either 'none' or 'wasm'");
-  if (WasmEnableEmEH && TM->Options.ExceptionModel == ExceptionHandling::Wasm)
-    report_fatal_error("-exception-model=wasm not allowed with "
-                       "-enable-emscripten-cxx-exceptions");
+      TM->Options.ExceptionModel != ExceptionHandling::Wasm &&
+      TM->Options.ExceptionModel != ExceptionHandling::Emscripten)
+    report_fatal_error(
+        "-exception-model should be either 'none', 'wasm', or 'emscripten'");
   if (WasmEnableEH && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
     report_fatal_error(
         "-wasm-enable-eh only allowed with -exception-model=wasm");
@@ -338,7 +342,10 @@ void WebAssemblyPassConfig::addIRPasses() {
   // TargetPassConfig::addPassesToHandleExceptions, but that runs after these IR
   // passes and Emscripten SjLj handling expects all invokes to be lowered
   // before.
-  if (!WasmEnableEmEH && !WasmEnableEH) {
+  bool EnableEmEH =
+      TM->Options.ExceptionModel == ExceptionHandling::Emscripten ||
+      WasmEnableEmEH;
+  if (!EnableEmEH && !WasmEnableEH) {
     addPass(createLowerInvokePass());
     // The lower invoke pass may create unreachable code. Remove it in order not
     // to process dead blocks in setjmp/longjmp handling.
@@ -349,8 +356,8 @@ void WebAssemblyPassConfig::addIRPasses() {
   // done in WasmEHPrepare pass, Wasm SjLj preparation shares libraries and
   // transformation algorithms with Emscripten SjLj, so we run
   // LowerEmscriptenEHSjLj pass also when Wasm SjLj is enabled.
-  if (WasmEnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj)
-    addPass(createWebAssemblyLowerEmscriptenEHSjLjLegacyPass());
+  if (EnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj)
+    addPass(createWebAssemblyLowerEmscriptenEHSjLjLegacyPass(EnableEmEH));
 
   // Expand indirectbr instructions to switches.
   addPass(createIndirectBrExpandPass());
@@ -522,7 +529,7 @@ bool WebAssemblyPassConfig::addIRTranslator() {
 
 void WebAssemblyPassConfig::addPreLegalizeMachineIR() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createWebAssemblyPreLegalizerCombiner());
+    addPass(createWebAssemblyPreLegalizerCombinerLegacyPass());
   }
 }
 bool WebAssemblyPassConfig::addLegalizeMachineIR() {
@@ -532,17 +539,17 @@ bool WebAssemblyPassConfig::addLegalizeMachineIR() {
 
 void WebAssemblyPassConfig::addPreRegBankSelect() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addPass(createWebAssemblyPostLegalizerCombiner());
+    addPass(createWebAssemblyPostLegalizerCombinerLegacyPass());
   }
 }
 
 bool WebAssemblyPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool WebAssemblyPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
 
   // We insert only if ISelDAG won't insert these at a later point.
   if (isGlobalISelAbortEnabled()) {

@@ -209,17 +209,6 @@ protected:
             mlir::Type stmtResultType) override;
 };
 
-class HlfirPackLowering : public HlfirTransformationalIntrinsic {
-public:
-  using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
-
-protected:
-  mlir::Value
-  lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
-            const fir::IntrinsicArgumentLoweringRules *argLowering,
-            mlir::Type stmtResultType) override;
-};
-
 class HlfirIndexLowering : public HlfirTransformationalIntrinsic {
 public:
   using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
@@ -577,17 +566,6 @@ mlir::Value HlfirReshapeLowering::lowerImpl(
                                     operands[2], operands[3]);
 }
 
-mlir::Value HlfirPackLowering::lowerImpl(
-    const Fortran::lower::PreparedActualArguments &loweredActuals,
-    const fir::IntrinsicArgumentLoweringRules *argLowering,
-    mlir::Type stmtResultType) {
-  auto operands = getOperandVector(loweredActuals, argLowering);
-  assert(operands.size() >= 2);
-  mlir::Type resultType = computeResultType(operands[0], stmtResultType);
-  mlir::Value vector = operands.size() >= 3 ? operands[2] : mlir::Value{};
-  return createOp<hlfir::PackOp>(resultType, operands[0], operands[1], vector);
-}
-
 mlir::Value HlfirIndexLowering::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
@@ -671,9 +649,6 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
   if (name == "reshape")
     return HlfirReshapeLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                     stmtResultType);
-  if (name == "pack")
-    return HlfirPackLowering{builder, loc}.lower(loweredActuals, argLowering,
-                                                 stmtResultType);
   if (name == "index")
     return HlfirIndexLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                   stmtResultType);

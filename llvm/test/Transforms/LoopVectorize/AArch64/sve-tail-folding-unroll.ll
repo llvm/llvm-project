@@ -12,7 +12,7 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP61:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP61]], 2
-; CHECK-NEXT:    [[TMP62:%.*]] = shl nuw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP62:%.*]] = shl nuw i64 [[TMP61]], 4
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[UMAX]])
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> [[ACTIVE_LANE_MASK_ENTRY1]], i64 0)
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY3:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> [[ACTIVE_LANE_MASK_ENTRY1]], i64 4)
@@ -74,7 +74,7 @@ define void @cond_memset(i32 %val, ptr noalias readonly %cond_ptr, ptr noalias %
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP5]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 4
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[UMAX]])
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> [[ACTIVE_LANE_MASK_ENTRY1]], i64 0)
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY3:%.*]] = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> [[ACTIVE_LANE_MASK_ENTRY1]], i64 4)

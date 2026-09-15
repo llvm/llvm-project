@@ -149,17 +149,17 @@ bool M68kPassConfig::addIRTranslator() {
 }
 
 bool M68kPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
 bool M68kPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool M68kPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect());
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }
 

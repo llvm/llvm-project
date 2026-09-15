@@ -239,8 +239,8 @@ Status NativeProcessWindows::ReadMemory(const ProcessAddress &process_addr,
   return ProcessDebugger::ReadMemory(addr, buf, size, bytes_read);
 }
 
-Status NativeProcessWindows::WriteMemory(lldb::addr_t addr, const void *buf,
-                                         size_t size, size_t &bytes_written) {
+Status NativeProcessWindows::DoWriteMemory(lldb::addr_t addr, const void *buf,
+                                           size_t size, size_t &bytes_written) {
   return ProcessDebugger::WriteMemory(addr, buf, size, bytes_written);
 }
 
@@ -504,9 +504,9 @@ void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
 
 ExceptionResult
 NativeProcessWindows::HandleSingleStepException(const ExceptionRecord &record) {
-  Log *log = GetLog(WindowsLog::Exception);
   uint32_t wp_id = LLDB_INVALID_INDEX32;
 #ifndef __aarch64__
+  Log *log = GetLog(WindowsLog::Exception);
   if (NativeThreadWindows *thread = GetThreadByID(record.GetThreadID())) {
     NativeRegisterContextWindows &reg_ctx = thread->GetRegisterContext();
     Status error =

@@ -5,6 +5,25 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+namespace std {
+struct strong_ordering {
+  signed char value;
+
+  constexpr explicit strong_ordering(signed char value) : value(value) {}
+
+  static const strong_ordering less;
+  static const strong_ordering equal;
+  static const strong_ordering greater;
+};
+
+inline constexpr strong_ordering strong_ordering::less(-1);
+inline constexpr strong_ordering strong_ordering::equal(0);
+inline constexpr strong_ordering strong_ordering::greater(1);
+} // namespace std
+
+struct A {};
+struct B {};
+
 void expression_trait_expr() {
   bool a = __is_lvalue_expr(0);
 }
@@ -79,3 +98,45 @@ void array_type_trait_expr() {
 // OGCG: %[[B_ADDR:.*]] = alloca i64, align 8
 // OGCG: store i64 2, ptr %[[A_ADDR]], align 8
 // OGCG: store i64 20, ptr %[[B_ADDR]], align 8
+
+std::strong_ordering strong_ordering_type_trait_equal() {
+  return __builtin_type_order(int, int);
+}
+
+std::strong_ordering strong_ordering_type_trait_less() {
+  return __builtin_type_order(A, B);
+}
+
+std::strong_ordering strong_ordering_type_trait_greater() {
+  return __builtin_type_order(B, A);
+}
+
+// CIR-LABEL: cir.func {{.*}}@_Z32strong_ordering_type_trait_equalv
+// CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
+// CIR: cir.store {{.*}} %[[ZERO]], {{.*}} : !s8i, !cir.ptr<!s8i>
+
+// CIR-LABEL: cir.func {{.*}}@_Z31strong_ordering_type_trait_lessv
+// CIR: %[[MINUS_ONE:.*]] = cir.const #cir.int<-1> : !s8i
+// CIR: cir.store {{.*}} %[[MINUS_ONE]], {{.*}} : !s8i, !cir.ptr<!s8i>
+
+// CIR-LABEL: cir.func {{.*}}@_Z34strong_ordering_type_trait_greaterv
+// CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s8i
+// CIR: cir.store {{.*}} %[[ONE]], {{.*}} : !s8i, !cir.ptr<!s8i>
+
+// LLVM-LABEL: define{{.*}} i8 @_Z32strong_ordering_type_trait_equalv()
+// LLVM: store i8 0
+
+// LLVM-LABEL: define{{.*}} i8 @_Z31strong_ordering_type_trait_lessv()
+// LLVM: store i8 -1
+
+// LLVM-LABEL: define{{.*}} i8 @_Z34strong_ordering_type_trait_greaterv()
+// LLVM: store i8 1
+
+// OGCG-LABEL: define{{.*}} i8 @_Z32strong_ordering_type_trait_equalv()
+// OGCG: store i8 0
+
+// OGCG-LABEL: define{{.*}} i8 @_Z31strong_ordering_type_trait_lessv()
+// OGCG: store i8 -1
+
+// OGCG-LABEL: define{{.*}} i8 @_Z34strong_ordering_type_trait_greaterv()
+// OGCG: store i8 1

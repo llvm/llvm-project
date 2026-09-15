@@ -69,13 +69,13 @@ void TestSpirvEntryPointABIPass::runOnOperation() {
     SmallVector<int32_t, 3> workgroupSizeVec(workgroupSize.begin(),
                                              workgroupSize.end());
     workgroupSizeVec.resize(3, 1);
-    gpuFunc->setAttr(attrName,
-                     spirv::getEntryPointABIAttr(
-                         context, workgroupSizeVec,
-                         (subgroupSize == 0) ? std::nullopt
-                                             : std::optional<int>(subgroupSize),
-                         (targetWidth == 0) ? std::nullopt
-                                            : std::optional<int>(targetWidth)));
+    gpuFunc->setDiscardableAttr(
+        attrName, spirv::getEntryPointABIAttr(
+                      context, workgroupSizeVec,
+                      (subgroupSize == 0) ? std::nullopt
+                                          : std::optional<int>(subgroupSize),
+                      (targetWidth == 0) ? std::nullopt
+                                         : std::optional<int>(targetWidth)));
   }
 }
 

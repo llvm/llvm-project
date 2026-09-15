@@ -17,14 +17,14 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
     %16 = fircg.ext_embox %15(%6, %10) : (!fir.ref<!fir.array<?x?xi32>>, index, index) -> !fir.box<!fir.array<?x?xi32>>
     %17:3 = fir.box_dims %16, %c0 : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
     %18 = arith.subi %17#1, %c1 : index
-    %19 = omp.map.bounds lower_bound(%c0 : index) upper_bound(%18 : index) extent(%17#1 : index) stride(%17#2 : index) start_idx(%c1 : index) {stride_in_bytes = true}
+    %19 = omp.map.bounds lower_bound(%c0 : index) upper_bound(%18 : index) extent(%17#1 : index) stride(%17#2 : index) start_idx(%c1 : index) stride_in_bytes(true)
     %20 = arith.muli %17#2, %17#1 : index
     %21:3 = fir.box_dims %16, %c1 : (!fir.box<!fir.array<?x?xi32>>, index) -> (index, index, index)
     %22 = arith.subi %21#1, %c1 : index
-    %23 = omp.map.bounds lower_bound(%c0 : index) upper_bound(%22 : index) extent(%21#1 : index) stride(%20 : index) start_idx(%c1 : index) {stride_in_bytes = true}
-    %24 = omp.map.info var_ptr(%15 : !fir.ref<!fir.array<?x?xi32>>, i32) map_clauses(tofrom) capture(ByRef) bounds(%19, %23) -> !fir.ref<!fir.array<?x?xi32>> {name = "b"}
-    %25 = omp.map.info var_ptr(%1 : !fir.ref<i32>, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = ""}
-    %26 = omp.map.info var_ptr(%0 : !fir.ref<i32>, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = ""}
+    %23 = omp.map.bounds lower_bound(%c0 : index) upper_bound(%22 : index) extent(%21#1 : index) stride(%20 : index) start_idx(%c1 : index) stride_in_bytes(true)
+    %24 = omp.map.info var_ptr(%15 : !fir.ref<!fir.array<?x?xi32>>, i32) map_clauses(tofrom) capture(ByRef) bounds(%19, %23) name("b") -> !fir.ref<!fir.array<?x?xi32>>
+    %25 = omp.map.info var_ptr(%1 : !fir.ref<i32>, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("") -> !fir.ref<i32>
+    %26 = omp.map.info var_ptr(%0 : !fir.ref<i32>, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("") -> !fir.ref<i32>
     omp.target kernel_type(generic) map_entries(%24 -> %arg3, %25 -> %arg4, %26 -> %arg5 : !fir.ref<!fir.array<?x?xi32>>, !fir.ref<i32>, !fir.ref<i32>) {
       %27 = fir.load %arg5 : !fir.ref<i32>
       %28 = fir.load %arg4 : !fir.ref<i32>

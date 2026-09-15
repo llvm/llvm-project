@@ -278,7 +278,7 @@ PrepareSearch(Target &target, DynamicLoader::BinarySpec &bin_spec) {
 
 /// The module is not registered with the Target until LoadBinaryInTarget.
 static void FinishSearch(DynamicLoader::BinarySpec &bin_spec,
-                         llvm::Expected<SymbolLocator::Result> located) {
+                         llvm::Expected<SymbolLocator::Result> &&located) {
   if (!located) {
     // Loading a binary that was never found already reports that, so a bare
     // not-found error would only say it a second time. Any other error says
@@ -452,12 +452,12 @@ int64_t DynamicLoader::ReadUnsignedIntWithSizeInBytes(addr_t addr,
 }
 
 addr_t DynamicLoader::ReadPointer(addr_t addr) {
-  Status error;
-  addr_t value = m_process->ReadPointerFromMemory(addr, error);
-  if (error.Fail())
+  llvm::Expected<lldb::addr_t> value = m_process->ReadPointerFromMemory(addr);
+  if (!value) {
+    llvm::consumeError(value.takeError());
     return LLDB_INVALID_ADDRESS;
-  else
-    return value;
+  }
+  return *value;
 }
 
 void DynamicLoader::LoadOperatingSystemPlugin(bool flush)

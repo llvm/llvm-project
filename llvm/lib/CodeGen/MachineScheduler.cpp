@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -815,9 +816,6 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
   // loop tree. Then we can optionally compute global RegPressure.
   for (MachineFunction::iterator MBB = MF->begin(), MBBEnd = MF->end();
        MBB != MBBEnd; ++MBB) {
-
-    Scheduler.startBlock(&*MBB);
-
 #ifndef NDEBUG
     if (SchedOnlyFunc.getNumOccurrences() && SchedOnlyFunc != MF->getName())
       continue;
@@ -825,6 +823,8 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
         && (int)SchedOnlyBlock != MBB->getNumber())
       continue;
 #endif
+
+    Scheduler.startBlock(&*MBB);
 
     // Break the block into scheduling regions [I, RegionEnd). RegionEnd
     // points to the scheduling boundary at the bottom of the region. The DAG
@@ -1899,11 +1899,10 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
                        /*IgnoreDead=*/false);
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
-        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
-        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
+        RegOpers.adjustLaneLiveness(*LIS, MRI, *MI);
       } else {
         // Adjust for missing dead-def flags.
-        RegOpers.detectDeadDefs(*MI, *LIS);
+        RegOpers.detectDeadDefs(*MI, *LIS, MRI);
       }
 
       TopRPTracker.advance(RegOpers);
@@ -1934,11 +1933,10 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
                        /*IgnoreDead=*/false);
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
-        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
-        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
+        RegOpers.adjustLaneLiveness(*LIS, MRI, *MI);
       } else {
         // Adjust for missing dead-def flags.
-        RegOpers.detectDeadDefs(*MI, *LIS);
+        RegOpers.detectDeadDefs(*MI, *LIS, MRI);
       }
 
       if (BotRPTracker.getPos() != CurrentBottom)
@@ -1984,9 +1982,27 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
         return A->getReg() < B->getReg();
       if (A->isFI()) {
         const MachineFunction &MF = *A->getParent()->getParent()->getParent();
+        const MachineFrameInfo &MFI = MF.getFrameInfo();
         const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
         bool StackGrowsDown = TFI.getStackGrowthDirection() ==
                               TargetFrameLowering::StackGrowsDown;
+        bool AIsFixed = MFI.isFixedObjectIndex(A->getIndex());
+        bool BIsFixed = MFI.isFixedObjectIndex(B->getIndex());
+        // Sort fixed and non-fixed bases as separate groups, preserving the
+        // existing frame-index ordering between the groups. Do not rely on
+        // non-fixed object offsets before frame layout.
+        if (AIsFixed != BIsFixed)
+          return StackGrowsDown ? !AIsFixed : AIsFixed;
+        if (AIsFixed) {
+          // Fixed objects have explicit offsets, and targets may create their
+          // frame indices in an order unrelated to those offsets. Sort by the
+          // actual object offsets so target clustering hooks see fixed object
+          // bases in address order.
+          int64_t AOffset = MFI.getObjectOffset(A->getIndex());
+          int64_t BOffset = MFI.getObjectOffset(B->getIndex());
+          if (AOffset != BOffset)
+            return AOffset < BOffset;
+        }
         return StackGrowsDown ? A->getIndex() > B->getIndex()
                               : A->getIndex() < B->getIndex();
       }
@@ -3502,9 +3518,12 @@ bool llvm::tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
   return false;
 }
 
-static void tracePick(GenericSchedulerBase::CandReason Reason, bool IsTop,
-                      bool IsPostRA = false) {
-  LLVM_DEBUG(dbgs() << "Pick " << (IsTop ? "Top " : "Bot ")
+static void tracePick(const SUnit *SU,
+                      const GenericSchedulerBase::CandReason Reason,
+                      const bool IsTop, const bool IsPostRA = false) {
+  assert(SU && "SU must not be null for tracing");
+  LLVM_DEBUG(dbgs() << "Pick " << (IsTop ? "Top " : "Bot ") << "Cand SU("
+                    << SU->NodeNum << ") "
                     << GenericSchedulerBase::getReasonStr(Reason) << " ["
                     << (IsPostRA ? "post-RA" : "pre-RA") << "]\n");
 
@@ -3631,8 +3650,8 @@ static void tracePick(GenericSchedulerBase::CandReason Reason, bool IsTop,
 }
 
 static void tracePick(const GenericSchedulerBase::SchedCandidate &Cand,
-                      bool IsPostRA = false) {
-  tracePick(Cand.Reason, Cand.AtTop, IsPostRA);
+                      const bool IsPostRA = false) {
+  tracePick(Cand.SU, Cand.Reason, Cand.AtTop, IsPostRA);
 }
 
 void GenericScheduler::initialize(ScheduleDAGMI *dag) {
@@ -4085,12 +4104,12 @@ SUnit *GenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
   // efficient, but also provides the best heuristics for CriticalPSets.
   if (SUnit *SU = Bot.pickOnlyChoice()) {
     IsTopNode = false;
-    tracePick(Only1, /*IsTopNode=*/false);
+    tracePick(SU, Only1, /*IsTopNode=*/false);
     return SU;
   }
   if (SUnit *SU = Top.pickOnlyChoice()) {
     IsTopNode = true;
-    tracePick(Only1, /*IsTopNode=*/true);
+    tracePick(SU, Only1, /*IsTopNode=*/true);
     return SU;
   }
   // Set the bottom-up policy based on the state of the current bottom zone and
@@ -4449,12 +4468,12 @@ SUnit *PostGenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
   // efficient, but also provides the best heuristics for CriticalPSets.
   if (SUnit *SU = Bot.pickOnlyChoice()) {
     IsTopNode = false;
-    tracePick(Only1, /*IsTopNode=*/false, /*IsPostRA=*/true);
+    tracePick(SU, Only1, /*IsTopNode=*/false, /*IsPostRA=*/true);
     return SU;
   }
   if (SUnit *SU = Top.pickOnlyChoice()) {
     IsTopNode = true;
-    tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
+    tracePick(SU, Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
     return SU;
   }
   // Set the bottom-up policy based on the state of the current bottom zone and
@@ -4532,7 +4551,7 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
   if (RegionPolicy.OnlyBottomUp) {
     SU = Bot.pickOnlyChoice();
     if (SU) {
-      tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
+      tracePick(SU, Only1, /*IsTopNode=*/false, /*IsPostRA=*/true);
     } else {
       CandPolicy NoPolicy;
       BotCand.reset(NoPolicy);
@@ -4548,7 +4567,7 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
   } else if (RegionPolicy.OnlyTopDown) {
     SU = Top.pickOnlyChoice();
     if (SU) {
-      tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
+      tracePick(SU, Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
     } else {
       CandPolicy NoPolicy;
       TopCand.reset(NoPolicy);

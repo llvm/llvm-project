@@ -138,6 +138,16 @@ public:
   StringRef getTargetFeatureString() const { return TargetFS; }
   void setTargetFeatureString(StringRef FS) { TargetFS = std::string(FS); }
 
+  /// Returns the effective target ABI name: the "target-abi" module flag if
+  /// present, otherwise the -target-abi option. This is a pure query; call
+  /// verifyOptionsConsistency once per module to diagnose a conflict.
+  StringRef getTargetABIName(const Module &M) const;
+
+  /// Diagnoses command-line codegen options that conflict with the
+  /// corresponding module flags (e.g. -target-abi vs the "target-abi" module
+  /// flag). Intended to be called once per module.
+  void verifyOptionsConsistency(const Module &M) const;
+
   /// Virtual method implemented by subclasses that returns a reference to that
   /// target's TargetSubtargetInfo-derived member variable.
   virtual const TargetSubtargetInfo *getSubtargetImpl(const Function &) const {
@@ -319,10 +329,6 @@ public:
 
   void setCFIFixup(bool Enable) { Options.EnableCFIFixup = Enable; }
 
-  bool getAIXExtendedAltivecABI() const {
-    return Options.EnableAIXExtendedAltivecABI;
-  }
-
   bool getUniqueSectionNames() const { return Options.UniqueSectionNames; }
 
   /// Return true if unique basic block section names must be generated.
@@ -464,8 +470,6 @@ public:
   /// The integer bit size to use for SjLj based exception handling.
   static constexpr unsigned DefaultSjLjDataSize = 32;
   virtual unsigned getSjLjDataSize() const { return DefaultSjLjDataSize; }
-
-  static std::pair<int, int> parseBinutilsVersion(StringRef Version);
 
   /// getAddressSpaceForPseudoSourceKind - Given the kind of memory
   /// (e.g. stack) the target returns the corresponding address space.

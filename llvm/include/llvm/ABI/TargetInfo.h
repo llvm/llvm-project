@@ -46,11 +46,12 @@ struct ABICompatInfo {
   bool ClassifyIntegerMMXAsSSE : 1;
   bool HonorsRevision98 : 1;
   bool Clang11Compat : 1;
+  bool ClassifyUnnamedBitFields : 1;
 
   ABICompatInfo()
       : PassInt128VectorsInMem(true), ReturnCXXRecordGreaterThan128InMem(true),
         ClassifyIntegerMMXAsSSE(true), HonorsRevision98(true),
-        Clang11Compat(true) {}
+        Clang11Compat(true), ClassifyUnnamedBitFields(true) {}
 
   /// Return flags matching the ABI emitted by the given Clang major version.
   // TODO: fill in per-version flag overrides.
@@ -82,6 +83,10 @@ protected:
   LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty,
                                            bool ByVal = true) const;
   LLVM_ABI bool isAggregateTypeForABI(const Type *Ty) const;
+
+  /// If Ty is a transparent union, return its first field type; otherwise
+  /// return Ty unchanged.
+  LLVM_ABI const Type *useFirstFieldIfTransparentUnion(const Type *Ty) const;
 
   /// Apply rules for classifying return types that are common to all targets.
   LLVM_ABI bool maybeCommonClassifyReturnType(FunctionInfo &FI) const;

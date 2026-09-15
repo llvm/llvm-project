@@ -136,7 +136,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
-#include <memory>
 #include <optional>
 #include <set>
 #include <utility>
@@ -272,7 +271,11 @@ private:
   /// again.
   void mergeTwoFunctions(Function *F, Function *G);
 
-  void mergeInstrProfMetadataInto(Function *Dst, Function *Src);
+  /// Merge \p Src's instruction-level annotations into the corresponding
+  /// instructions of \p Dst. \p Dst is the surviving function; \p Src will be
+  /// erased or rewritten after this call.
+  /// Both functions must be structurally identical.
+  void mergeInstrAnnotations(Function *Dst, Function *Src);
 
   /// Fill PDIUnrelatedWL with instructions from the entry block that are
   /// unrelated to parameter related debug info.
@@ -304,9 +307,7 @@ private:
   // If needed, replace G with an alias to F if possible, or a thunk to F if
   // profitable. Returns false if neither is the case. If \p G is not needed
   // (i.e. it is discardable and not used), \p G is removed directly.
-  // \p MergeProfile must be true when G's profile should be preserved, it is
-  // merged into F before G is erased or rewritten.
-  bool writeThunkOrAliasIfNeeded(Function *F, Function *G, bool MergeProfile);
+  bool writeThunkOrAliasIfNeeded(Function *F, Function *G);
 
   /// Replace function F with function G in the function tree.
   void replaceFunctionInTree(const FunctionNode &FN, Function *G);
@@ -909,12 +910,7 @@ static void mergeEntryCountsAndImportsInto(Function &F, Function &G) {
   F.setEntryCount(Sum, AllImports.empty() ? nullptr : &AllImports);
 }
 
-// If needed, replace G with an alias to F if possible, or a thunk to F if
-// profitable. Returns false if neither is the case. If \p G is not needed (i.e.
-// it is discardable and unused), \p G is removed directly. If \p MergeProfile
-// is set, G's profile metadata is merged into F.
-bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G,
-                                               bool MergeProfile) {
+bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G) {
   bool ShouldErase =
       G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI;
   bool ShouldAlias = canCreateAliasFor(G);
@@ -922,11 +918,6 @@ bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G,
 
   if (!ShouldErase && !ShouldAlias && !ShouldThunk)
     return false;
-
-  if (MergeProfile) {
-    mergeInstrProfMetadataInto(F, G);
-    mergeEntryCountsAndImportsInto(*F, *G);
-  }
 
   if (ShouldErase) {
     G->eraseFromParent();
@@ -1079,11 +1070,7 @@ static void mergeValueProfileOnInstructions(Instruction *DstI,
                     VDs.size());
 }
 
-/// Merge \p Src's instruction-level branch weights and value profile
-/// metadata into the corresponding instructions of \p Dst. \p Dst is the
-/// surviving function; \p Src will be erased or rewritten after this call.
-/// Both functions must be structurally identical.
-void MergeFunctions::mergeInstrProfMetadataInto(Function *Dst, Function *Src) {
+void MergeFunctions::mergeInstrAnnotations(Function *Dst, Function *Src) {
   const BlockFrequencyInfo &DstBFI =
       FAM.getResult<BlockFrequencyAnalysis>(*Dst);
   const BlockFrequencyInfo &SrcBFI =
@@ -1096,6 +1083,9 @@ void MergeFunctions::mergeInstrProfMetadataInto(Function *Dst, Function *Src) {
   ReversePostOrderTraversal<Function *> SrcRPOT(Src);
   for (auto [DstBB, SrcBB] : llvm::zip_equal(DstRPOT, SrcRPOT)) {
     for (auto [DstI, SrcI] : llvm::zip_equal(*DstBB, *SrcBB)) {
+      // Merge poison-generating flags.
+      DstI.andIRFlags(&SrcI);
+
       MDNode *DstProf = DstI.getMetadata(LLVMContext::MD_prof);
       MDNode *SrcProf = SrcI.getMetadata(LLVMContext::MD_prof);
       if ((DstProf && isValueProfileMD(DstProf)) ||
@@ -1164,13 +1154,16 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     const MaybeAlign NewFAlign = NewF->getAlign();
     const MaybeAlign GAlign = G->getAlign();
 
-    // Merge !prof, while G still has its body.
-    writeThunkOrAliasIfNeeded(F, G, /*MergeProfile*/ true);
+    // Merge annotations, while G still has its body.
+    mergeInstrAnnotations(F, G);
+    mergeEntryCountsAndImportsInto(*F, *G);
+
+    writeThunkOrAliasIfNeeded(F, G);
     if (FEntryCount)
       NewF->setEntryCount(*FEntryCount);
-    // NewF becomes thunk/alias to the shared body F, it has no profile to be
-    // merged.
-    writeThunkOrAliasIfNeeded(F, NewF, /*MergeProfile*/ false);
+    // NewF becomes thunk/alias to the shared body F, it has no annotations to
+    // be merged.
+    writeThunkOrAliasIfNeeded(F, NewF);
 
     if (NewFAlign || GAlign)
       F->setAlignment(std::max(NewFAlign.valueOrOne(), GAlign.valueOrOne()));
@@ -1200,18 +1193,19 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
       }
     }
 
+    mergeInstrAnnotations(F, G);
+    mergeEntryCountsAndImportsInto(*F, *G);
+
     // If G was internal then we may have replaced all uses of G with F. If so,
     // stop here and delete G. There's no need for a thunk. (See note on
     // MergeFunctionsPDI above).
     if (G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI) {
-      mergeInstrProfMetadataInto(F, G);
-      mergeEntryCountsAndImportsInto(*F, *G);
       G->eraseFromParent();
       ++NumFunctionsMerged;
       return;
     }
 
-    if (writeThunkOrAliasIfNeeded(F, G, /*MergeProfile*/ true))
+    if (writeThunkOrAliasIfNeeded(F, G))
       ++NumFunctionsMerged;
   }
 }

@@ -20,7 +20,7 @@ subroutine test_udr_orig_init()
   end do
 end subroutine
 
-! CHECK-LABEL: omp.declare_reduction @{{.*}}myinit_byref_box_heap_i32 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK-LABEL: omp.declare_reduction @{{.*}}myinit_byref_box_heap_i32 byref_element_type({{.*}}) : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:       init {
 ! CHECK:       ^bb0(%[[MOLD:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>, %[[ALLOC:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>):
 ! The loaded original element must reach the private element store, not be

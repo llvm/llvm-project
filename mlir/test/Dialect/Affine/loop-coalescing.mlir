@@ -462,3 +462,30 @@ func.func @no_coalesce_zero_step(%lb: index, %ub: index) {
   }
   return
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/216903:
+// coalescing must not crash when the inner loop yields its own induction
+// variable. The yielded induction variable has to be rewritten to its
+// linearized replacement before the inner loop's induction variable block
+// argument is destroyed by inlining.
+
+// CHECK-LABEL: @inner_loop_yields_induction_var
+func.func @inner_loop_yields_induction_var() -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  // CHECK: scf.for %[[IV:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (index) {
+  // CHECK-NOT: scf.for
+  // CHECK: %[[DELIN:.+]]:2 = affine.delinearize_index %[[IV]]
+  // CHECK: scf.yield %[[DELIN]]#1 : index
+  // CHECK: }
+  %r = scf.for %i = %c0 to %c4 step %c1 iter_args(%a = %c0) -> (index) {
+    %s = scf.for %j = %c0 to %c4 step %c1 iter_args(%b = %a) -> (index) {
+      scf.yield %j : index
+    }
+    scf.yield %s : index
+  }
+  return %r : index
+}

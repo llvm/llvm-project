@@ -93,26 +93,13 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
     InterfaceMethod<[{
         This method is called to compare types along control-flow edges. By
         default, the types are checked as equal.
+
+        Note: Operations that do not support a certain type for successor
+        operands at all should return "false" if `lhs` / `rhs` is that type.
       }],
       "bool", "areTypesCompatible",
       (ins "::mlir::Type":$lhs, "::mlir::Type":$rhs), [{}],
        [{ return lhs == rhs; }]
-    >,
-    InterfaceMethod<[{
-        Returns true if a value of the given type may be appended to the
-        forwarded operands of the successor at the given index, i.e. whether
-        the operation could pass such a value along the corresponding
-        control-flow edge. Transformations that thread new values across a
-        branch, such as block merging, must check this before appending to
-        `getSuccessorOperands`: an operation whose successor operands are
-        constrained to a subset of types (the LLVM dialect terminators, for
-        example, only forward LLVM-compatible values) would otherwise be
-        rewritten into an operation that no longer verifies. The default
-        implementation accepts any type.
-      }],
-      "bool", "mayForwardTypeToSuccessor",
-      (ins "unsigned":$index, "::mlir::Type":$type), [{}],
-      /*defaultImplementation=*/[{ return true; }]
     >,
   ];
 

@@ -164,14 +164,16 @@ void removeParDim(SmallVector<GPUParallelDimAttr> &parDims,
 }
 
 #define ACC_OP_WITH_PAR_DIMS_LIST                                              \
-  PrivatizeOp, ReductionAccumulateOp, ReductionAccumulateArrayOp
+  PrivatizeOp, ReductionAccumulateOp, ReductionAccumulateArrayOp,              \
+      ReductionCombineOp
 
 GPUParallelDimsAttr getParDimsAttr(Operation *op) {
   return llvm::TypeSwitch<Operation *, GPUParallelDimsAttr>(op)
       .Case<ACC_OP_WITH_PAR_DIMS_LIST>(
           [](auto parOp) { return parOp.getParDimsAttr(); })
       .Default([](Operation *op) -> GPUParallelDimsAttr {
-        if (Attribute attr = op->getAttr(GPUParallelDimsAttr::name)) {
+        if (Attribute attr =
+                op->getDiscardableAttr(GPUParallelDimsAttr::name)) {
           GPUParallelDimsAttr parDimsAttr = dyn_cast<GPUParallelDimsAttr>(attr);
           assert(parDimsAttr && "acc.par_dims must be a GPUParallelDimsAttr");
           return parDimsAttr;
@@ -193,8 +195,9 @@ void setParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
   llvm::TypeSwitch<Operation *>(op)
       .Case<ACC_OP_WITH_PAR_DIMS_LIST>(
           [&](auto parOp) { parOp.setParDimsAttr(attr); })
-      .Default(
-          [&](Operation *op) { op->setAttr(GPUParallelDimsAttr::name, attr); });
+      .Default([&](Operation *op) {
+        op->setDiscardableAttr(GPUParallelDimsAttr::name, attr);
+      });
 }
 
 void updateParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
@@ -203,19 +206,21 @@ void updateParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
   llvm::TypeSwitch<Operation *>(op)
       .Case<ACC_OP_WITH_PAR_DIMS_LIST>(
           [&](auto parOp) { parOp.setParDimsAttr(attr); })
-      .Default(
-          [&](Operation *op) { op->setAttr(GPUParallelDimsAttr::name, attr); });
+      .Default([&](Operation *op) {
+        op->setDiscardableAttr(GPUParallelDimsAttr::name, attr);
+      });
 }
 
 #undef ACC_OP_WITH_PAR_DIMS_LIST
 
 bool hasGPUBlockRedundantAttr(Operation *op) {
-  return op->hasAttrOfType<GPUBlockRedundantAttr>(GPUBlockRedundantAttr::name);
+  return op->hasDiscardableAttrOfType<GPUBlockRedundantAttr>(
+      GPUBlockRedundantAttr::name);
 }
 
 void setGPUBlockRedundantAttr(Operation *op) {
-  op->setAttr(GPUBlockRedundantAttr::name,
-              GPUBlockRedundantAttr::get(op->getContext()));
+  op->setDiscardableAttr(GPUBlockRedundantAttr::name,
+                         GPUBlockRedundantAttr::get(op->getContext()));
 }
 
 void copyParDimsAttr(Operation *from, Operation *to) {
@@ -225,7 +230,8 @@ void copyParDimsAttr(Operation *from, Operation *to) {
 }
 
 ActiveParDimsAttr getActiveParDimsAttr(Operation *op) {
-  return op->getAttrOfType<ActiveParDimsAttr>(ActiveParDimsAttr::name);
+  return op->getDiscardableAttrOfType<ActiveParDimsAttr>(
+      ActiveParDimsAttr::name);
 }
 
 bool hasActiveParDimsAttr(Operation *op) {
@@ -233,7 +239,7 @@ bool hasActiveParDimsAttr(Operation *op) {
 }
 
 void setActiveParDimsAttr(Operation *op, ActiveParDimsAttr attr) {
-  op->setAttr(ActiveParDimsAttr::name, attr);
+  op->setDiscardableAttr(ActiveParDimsAttr::name, attr);
 }
 
 void setActiveParDimsAttr(Operation *op, ArrayRef<GPUParallelDimAttr> dims) {
@@ -456,6 +462,308 @@ std::optional<int64_t> getPrivateLocalSharedMemoryUpperBoundBytes(
     numElements *= dim;
   return elementSizeAndAlignment->first.getFixedValue() * numElements *
          numCopies->value();
+}
+
+bool hasAttachPoint(Operation *mapEntryOp) {
+  if (!mapEntryOp)
+    return false;
+  if (auto mapInfo = dyn_cast<MapInfoOp>(mapEntryOp))
+    return mapInfo.getVarPtrPtr() != nullptr;
+  if (isa<AttachOp>(mapEntryOp))
+    return true;
+  if (std::optional<DataClause> clause = getDataClause(mapEntryOp)) {
+    if (*clause == DataClause::acc_attach || *clause == DataClause::acc_detach)
+      return true;
+  }
+  return getVarPtrPtr(mapEntryOp) != nullptr;
+}
+
+DataDescKind getDataDescKind(Operation *mapEntryOp) {
+  if (auto mapInfo = dyn_cast<MapInfoOp>(mapEntryOp))
+    return mapInfo.getDescKind();
+  return DataDescKind::none;
+}
+
+Value getDesc(Operation *mapEntryOp) {
+  auto mapInfo = dyn_cast<MapInfoOp>(mapEntryOp);
+  if (!mapInfo)
+    return {};
+  if (Value desc = mapInfo.getDesc())
+    return desc;
+  // When the mapped var is itself the descriptor, map_info omits a redundant
+  // `desc` operand; recover it from `var` whenever a descriptor kind is set.
+  if (mapInfo.getDescKind() != DataDescKind::none)
+    return mapInfo.getVar();
+  return {};
+}
+
+std::optional<int64_t> getMapElementSize(Operation *mapEntryOp) {
+  if (auto mapInfo = dyn_cast<MapInfoOp>(mapEntryOp))
+    if (auto attr = mapInfo.getElementSizeAttr())
+      return attr.getInt();
+  return std::nullopt;
+}
+
+Value getMapSize(Operation *mapEntryOp) {
+  if (auto mapInfo = dyn_cast<MapInfoOp>(mapEntryOp))
+    return mapInfo.getSize();
+  return {};
+}
+
+std::optional<MapFlags> getMapFlags(Operation *mapEntryOp) {
+  if (auto mapInfo = dyn_cast<MapInfoOp>(mapEntryOp))
+    return mapInfo.getMapFlags();
+  return std::nullopt;
+}
+
+SmallVector<Operation *> getPairedDataExitOps(Value entryResult) {
+  SmallVector<Operation *> exitOps;
+  for (OpOperand &use : entryResult.getUses()) {
+    Operation *op = use.getOwner();
+    if (!isa<ACC_DATA_EXIT_OPS>(op))
+      continue;
+    Value accVar;
+    llvm::TypeSwitch<Operation *>(op).Case<ACC_DATA_EXIT_OPS>(
+        [&](auto exit) { accVar = exit.getAccVar(); });
+    // The entry result can also be used as another operand, such as async.
+    if (accVar == entryResult)
+      exitOps.push_back(op);
+  }
+  return exitOps;
+}
+
+static Operation *findCorrespondingDataExit(Value entryResult) {
+  SmallVector<Operation *> exitOps = getPairedDataExitOps(entryResult);
+  return exitOps.empty() ? nullptr : exitOps.front();
+}
+
+static std::optional<DataClause> getExitDataClause(Operation *exitOp) {
+  return llvm::TypeSwitch<Operation *, std::optional<DataClause>>(exitOp)
+      .Case<ACC_DATA_EXIT_OPS>([&](auto exit) { return exit.getDataClause(); })
+      .Default([&](Operation *) { return std::nullopt; });
+}
+
+bool hasCopyOutSibling(Operation *entryOp) {
+  auto getMappedVar = [](Operation *op) {
+    Value var = getVar(op);
+    return var ? var : getVarPtr(op);
+  };
+  Value var = getMappedVar(entryOp);
+  if (!var)
+    return false;
+
+  auto copiesOutOnly = [&](Value sibling) {
+    Operation *siblingOp = sibling.getDefiningOp();
+    if (!siblingOp || getMappedVar(siblingOp) != var)
+      return false;
+    if (std::optional<MapFlags> siblingFlags = getMapFlags(siblingOp))
+      return bitEnumContainsAny(*siblingFlags, MapFlags::from) &&
+             !bitEnumContainsAny(*siblingFlags, MapFlags::to);
+    std::optional<DataClause> siblingClause = getDataClause(siblingOp);
+    return siblingClause && (*siblingClause == DataClause::acc_copyout ||
+                             *siblingClause == DataClause::acc_copyout_zero);
+  };
+
+  Value entryResult = entryOp->getResult(0);
+  auto mapsSameVarOnConstruct = [&](auto construct) {
+    return llvm::any_of(construct.getDataClauseOperands(), [&](Value sibling) {
+      return sibling != entryResult && copiesOutOnly(sibling);
+    });
+  };
+  return llvm::any_of(entryResult.getUsers(), [&](Operation *user) {
+    return llvm::TypeSwitch<Operation *, bool>(user)
+        .Case<KernelEnvironmentOp, KernelsOp, ParallelOp, SerialOp, DataOp>(
+            mapsSameVarOnConstruct)
+        .Default(false);
+  });
+}
+
+static DataClauseModifier getEntryModifiers(Operation *entryOp) {
+  return llvm::TypeSwitch<Operation *, DataClauseModifier>(entryOp)
+      .Case<ACC_DATA_ENTRY_OPS>(
+          [&](auto entry) { return entry.getModifiers(); })
+      .Default([&](Operation *) { return DataClauseModifier::none; });
+}
+
+MapFlags computePrivatizeMapFlags(PrivatizeOp privatizeOp,
+                                  const ACCToGPUMappingPolicy &policy) {
+  MapFlags flags = MapFlags::private_;
+
+  // Storage is private without being replicated per parallel level when the
+  // privatization does not name any parallel dimension.
+  GPUParallelDimsAttr parDims = privatizeOp.getParDimsAttr();
+  if (!parDims)
+    return flags;
+
+  for (GPUParallelDimAttr parDim : parDims.getArray()) {
+    if (policy.isGang(parDim))
+      flags = flags | MapFlags::gang_private;
+    else if (policy.isWorker(parDim))
+      flags = flags | MapFlags::worker_private;
+    else if (policy.isVector(parDim))
+      flags = flags | MapFlags::vector_private;
+  }
+  return flags;
+}
+
+MapFlags computeDataClauseMapFlags(Operation *entryOp, bool ptrAndObj) {
+  MapFlags flags = MapFlags::none;
+  std::optional<DataClause> enterClause = getDataClause(entryOp);
+  if (!enterClause)
+    return flags;
+
+  switch (*enterClause) {
+  case DataClause::acc_create:
+  case DataClause::acc_copyout:
+  case DataClause::acc_present:
+  case DataClause::acc_private:
+  case DataClause::acc_firstprivate:
+  case DataClause::acc_delete:
+  case DataClause::acc_update_host:
+  case DataClause::acc_update_self:
+  case DataClause::acc_declare_device_resident:
+    if (*enterClause == DataClause::acc_declare_device_resident)
+      flags = flags | MapFlags::device_resident;
+    if (*enterClause == DataClause::acc_present)
+      flags = flags | MapFlags::present;
+    if (*enterClause == DataClause::acc_private ||
+        *enterClause == DataClause::acc_firstprivate)
+      flags = flags | MapFlags::private_;
+    if (*enterClause == DataClause::acc_firstprivate)
+      flags = flags | MapFlags::to;
+    break;
+  case DataClause::acc_deviceptr:
+    flags = flags | MapFlags::devptr;
+    break;
+  case DataClause::acc_create_zero:
+  case DataClause::acc_copyout_zero:
+    flags = flags | MapFlags::init_zero;
+    break;
+  case DataClause::acc_copy:
+  case DataClause::acc_copyin:
+  case DataClause::acc_copyin_readonly:
+  case DataClause::acc_reduction:
+  case DataClause::acc_update_device:
+    flags = flags | MapFlags::to;
+    break;
+  case DataClause::acc_no_create:
+    flags = flags | MapFlags::no_create;
+    break;
+  case DataClause::acc_attach:
+    break;
+  default:
+    break;
+  }
+  if (*enterClause == DataClause::acc_reduction)
+    flags = flags | MapFlags::reduction;
+
+  std::optional<DataClause> exitClause;
+  if (Operation *exitOp = findCorrespondingDataExit(entryOp->getResult(0)))
+    exitClause = getExitDataClause(exitOp);
+  if (exitClause) {
+    switch (*exitClause) {
+    case DataClause::acc_copy:
+    case DataClause::acc_reduction:
+    case DataClause::acc_copyout:
+    case DataClause::acc_copyout_zero:
+    case DataClause::acc_update_host:
+    case DataClause::acc_update_self:
+      flags = flags | MapFlags::from;
+      break;
+    case DataClause::acc_declare_device_resident:
+      flags = flags | MapFlags::device_resident;
+      break;
+    case DataClause::acc_present:
+      flags = flags | MapFlags::present;
+      break;
+    // `delete` only decrements the dynamic reference counter, so it must not
+    // request a forced unmap: the device copy has to survive while an
+    // enclosing region still references it. Only `finalize` zeroes the counter,
+    // and that is handled from the exit_data op below.
+    case DataClause::acc_delete:
+      break;
+    // An exit that repeats its entry clause only releases the device copy.
+    case DataClause::acc_create:
+    case DataClause::acc_create_zero:
+    case DataClause::acc_copyin:
+    case DataClause::acc_copyin_readonly:
+      if (hasCopyOutSibling(entryOp))
+        flags = flags | MapFlags::from;
+      break;
+    default:
+      break;
+    }
+    if (*exitClause == DataClause::acc_reduction)
+      flags = flags | MapFlags::reduction;
+  }
+
+  if (ptrAndObj)
+    flags = flags | MapFlags::ptr_and_obj;
+  if (getImplicitFlag(entryOp))
+    flags = flags | MapFlags::implicit;
+  if (bitEnumContainsAny(getEntryModifiers(entryOp), DataClauseModifier::zero))
+    flags = flags | MapFlags::init_zero;
+
+  for (OpOperand &use : entryOp->getResult(0).getUses()) {
+    if (auto exitDataOp = dyn_cast<ExitDataOp>(use.getOwner())) {
+      if (exitDataOp.getFinalize())
+        flags = flags | MapFlags::delete_;
+    }
+    if (auto updateOp = dyn_cast<UpdateOp>(use.getOwner())) {
+      if (updateOp.getIfPresent())
+        flags = flags | MapFlags::if_present;
+    }
+  }
+
+  return flags;
+}
+
+int64_t computeMapInfoSizeBytes(Value var, Type varType, DataDescKind descKind,
+                                ValueRange bounds, const DataLayout &dataLayout,
+                                OpenACCSupport *support) {
+  // Bounds-driven and descriptor-driven maps report size 0: the extents and
+  // element size already state the size, and restating it here could disagree.
+  if (!bounds.empty() || descKind != DataDescKind::none)
+    return 0;
+
+  ModuleOp module;
+  if (Operation *def = var.getDefiningOp())
+    module = def->getParentOfType<ModuleOp>();
+  else if (Region *region = var.getParentRegion())
+    if (Operation *parent = region->getParentOp())
+      module = parent->getParentOfType<ModuleOp>();
+  if (!module)
+    return -1;
+
+  auto tryUtilsSize = [&](Type ty) -> std::optional<int64_t> {
+    std::optional<TypeSizeAndAlignment> sizeAndAlign =
+        getTypeSizeAndAlignment(ty, module, dataLayout, support, var);
+    if (!sizeAndAlign || sizeAndAlign->first.isScalable())
+      return std::nullopt;
+    return static_cast<int64_t>(sizeAndAlign->first.getFixedValue());
+  };
+  if (std::optional<int64_t> size = tryUtilsSize(varType))
+    return *size;
+  if (std::optional<int64_t> size = tryUtilsSize(var.getType()))
+    return *size;
+
+  return -1;
+}
+
+void populateSourceExtents(ValueRange bounds, ArrayRef<int64_t> shape,
+                           OpBuilder &builder) {
+  if (shape.size() != bounds.size())
+    return;
+  for (auto [boundValue, extent] : llvm::zip_equal(bounds, shape)) {
+    auto bound = boundValue.getDefiningOp<DataBoundsOp>();
+    if (!bound || bound.getSourceExtent() || extent < 0)
+      continue;
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPoint(bound);
+    Value sourceExtent =
+        arith::ConstantIndexOp::create(builder, bound.getLoc(), extent);
+    bound.getSourceExtentMutable().assign(sourceExtent);
+  }
 }
 
 } // namespace acc

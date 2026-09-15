@@ -614,6 +614,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::SubstNonTypeTemplateParmPackExprClass:
   case Stmt::FunctionParmPackExprClass:
   case Stmt::UnresolvedLookupExprClass:
+  case Stmt::DependentTemplateIdExprClass:
     K = CXCursor_DeclRefExpr;
     break;
 

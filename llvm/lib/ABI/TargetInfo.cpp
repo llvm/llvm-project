@@ -11,6 +11,10 @@
 using namespace llvm::abi;
 
 bool TargetInfo::isAggregateTypeForABI(const Type *Ty) const {
+  // Atomic values use the evaluation kind of their underlying value type.
+  if (const auto *AT = dyn_cast<AtomicType>(Ty))
+    return isAggregateTypeForABI(AT->getValueType());
+
   // Check for fundamental scalar types.
   if (Ty->isInteger() || Ty->isFloat() || Ty->isPointer() || Ty->isVector())
     return false;
@@ -50,6 +54,17 @@ RecordArgABI TargetInfo::getRecordArgABI(const Type *Ty) const {
   if (!RT)
     return RAA_Default;
   return getRecordArgABI(RT);
+}
+
+const Type *TargetInfo::useFirstFieldIfTransparentUnion(const Type *Ty) const {
+  if (const auto *RT = dyn_cast<RecordType>(Ty)) {
+    if (RT->isUnion() && RT->isTransparentUnion()) {
+      auto Fields = RT->getFields();
+      assert(!Fields.empty() && "transparent union cannot be empty");
+      return Fields.front().FieldType;
+    }
+  }
+  return Ty;
 }
 
 bool TargetInfo::maybeCommonClassifyReturnType(FunctionInfo &FI) const {

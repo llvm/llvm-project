@@ -12,11 +12,11 @@ define amdgpu_kernel void @triangular_loop_scc_liveness(i64 %n) {
 ; GFX942-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x0
 ; GFX942-NEXT:    s_mov_b64 s[4:5], 1
 ; GFX942-NEXT:    s_and_b64 s[0:1], exec, 0
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX942-NEXT:  .LBB0_1: ; %outer
 ; GFX942-NEXT:    ; =>This Loop Header: Depth=1
 ; GFX942-NEXT:    ; Child Loop BB0_3 Depth 2
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX942-NEXT:    v_cmp_gt_i64_e32 vcc, s[4:5], v[0:1]
 ; GFX942-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX942-NEXT:    s_and_b64 vcc, exec, vcc

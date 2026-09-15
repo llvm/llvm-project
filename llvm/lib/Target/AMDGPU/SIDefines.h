@@ -128,7 +128,6 @@ enum : uint64_t {
 
   VOP3_OPSEL = UINT64_C(1) << 42,
   maybeAtomic = UINT64_C(1) << 43,
-  renamedInGFX9 = UINT64_C(1) << 44,
 
   // Is a clamp on FP type.
   FPClamp = UINT64_C(1) << 45,
@@ -145,9 +144,6 @@ enum : uint64_t {
 
   // Is a packed VOP3P instruction.
   IsPacked = UINT64_C(1) << 49,
-
-  // Is a D16 buffer instruction.
-  D16Buf = UINT64_C(1) << 50,
 
   // FLAT instruction accesses FLAT_GLBL segment.
   FlatGlobal = UINT64_C(1) << 51,
@@ -341,9 +337,6 @@ template <typename... T> constexpr bool hasClampHi(const T &...O) {
 template <typename... T> constexpr bool isPacked(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::IsPacked;
 }
-template <typename... T> constexpr bool isD16Buf(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::D16Buf;
-}
 template <typename... T> constexpr bool isFlatGlobal(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::FlatGlobal;
 }
@@ -436,6 +429,7 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_FP64,
   OPERAND_REG_IMM_BF16,
   OPERAND_REG_IMM_FP16,
+  OPERAND_REG_IMM_NOINLINE_FP16,
   OPERAND_REG_IMM_V2BF16,
   OPERAND_REG_IMM_V2FP16,
   OPERAND_REG_IMM_V2FP16_SPLAT,
@@ -1363,11 +1357,20 @@ enum Type {
   NAMED_BARRIER_LAST = 16,
 };
 
-enum {
-  BARRIER_SCOPE_WORKGROUP = 0,
-};
-
 } // namespace Barrier
+
+namespace SyntheticAperture {
+/// Synthetic aperture numbers. This is OR'd with the high
+/// bits of the LDS aperture pointer.
+///
+/// NOTE: This is also documented in AMDGPUUsage.
+enum SyntheticAperture {
+  None = 0x00000000,
+
+  BARRIER = 0x00000001,
+};
+} // namespace SyntheticAperture
+
 } // namespace AMDGPU
 
 // clang-format off

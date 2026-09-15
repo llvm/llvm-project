@@ -435,6 +435,7 @@ public:
   // Helper methods
 
   std::string GetFilePath(const char *Name) const;
+  std::optional<std::string> GetFilePathIfExists(const char *Name) const;
   std::string GetProgramPath(const char *Name) const;
 
   /// Returns the linker path, respecting the -fuse-ld= argument to determine
@@ -915,7 +916,9 @@ public:
       return;
     }
 
-    if (TT.isAMDGPU()) {
+    if (TT.isAMDGCN()) {
+      // Fixup legacy "amdgcn" triples to "amdgpu"
+      TT.setArch(llvm::Triple::amdgpu, TT.getSubArch());
       if (TT.getVendor() == llvm::Triple::UnknownVendor)
         TT.setVendor(llvm::Triple::AMD);
       if (TT.getOS() == llvm::Triple::UnknownOS)

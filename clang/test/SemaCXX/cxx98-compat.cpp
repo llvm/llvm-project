@@ -35,7 +35,6 @@ template<int ...I>  // expected-warning {{variadic templates are incompatible wi
 class Variadic3 {};
 
 alignas(8) int with_alignas; // expected-warning {{'alignas' is incompatible with C++98}}
-int with_attribute [[ ]]; // expected-warning {{[[]] attributes are incompatible with C++ standards before C++11}}
 
 void Literals() {
   (void)u8"str"; // expected-warning {{unicode literals are incompatible with C++98}}
@@ -97,9 +96,6 @@ struct DelayedDefaultArgumentParseInitList {
 
 int operator""_hello(const char *); // expected-warning {{literal operators are incompatible with C++98}}
 
-enum EnumFixed : int { // expected-warning {{enumeration types with a fixed underlying type are incompatible with C++98}}
-};
-
 enum class EnumScoped { // expected-warning {{scoped enumerations are incompatible with C++98}}
 };
 
@@ -133,7 +129,7 @@ void RangeFor() {
 }
 
 struct InClassInit {
-  int n = 0; // expected-warning {{default member initializer for non-static data members is incompatible with C++98}}
+  int n = 0; // expected-warning {{default member initializer for non-static data member is incompatible with C++98}}
 };
 
 struct OverrideControlBase {
@@ -227,8 +223,7 @@ void TrivialButNonPODThroughEllipsis() {
 }
 
 struct HasExplicitConversion {
-  // FIXME I think we should generate this diagnostic in C++20
-  explicit operator bool(); // not-cpp20-warning {{explicit conversion functions are incompatible with C++98}}
+  explicit operator bool(); // expected-warning {{explicit conversion functions are incompatible with C++98}}
 };
 
 struct Struct {};

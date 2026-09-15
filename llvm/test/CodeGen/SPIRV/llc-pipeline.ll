@@ -17,7 +17,6 @@
 ; SPIRV-O0-NEXT:Library Function Lowering Analysis
 ; SPIRV-O0-NEXT:Create Garbage Collector Module Metadata
 ; SPIRV-O0-NEXT:Assumption Cache Tracker
-; SPIRV-O0-NEXT:Profile summary info
 ; SPIRV-O0-NEXT:Machine Branch Probability Analysis
 ; SPIRV-O0-NEXT:  ModulePass Manager
 ; SPIRV-O0-NEXT:    Pre-ISel Intrinsic Lowering
@@ -63,10 +62,6 @@
 ; SPIRV-O0-NEXT:      Legalizer
 ; SPIRV-O0-NEXT:      SPIRV post legalizer
 ; SPIRV-O0-NEXT:      Analysis for ComputingKnownBits
-; SPIRV-O0-NEXT:      Dominator Tree Construction
-; SPIRV-O0-NEXT:      Cycle Info Analysis
-; SPIRV-O0-NEXT:      Lazy Branch Probability Analysis
-; SPIRV-O0-NEXT:      Lazy Block Frequency Analysis
 ; SPIRV-O0-NEXT:      InstructionSelect
 ; SPIRV-O0-NEXT:      ResetMachineFunction
 ; SPIRV-O0-NEXT:      Finalize ISel and expand pseudo-instructions

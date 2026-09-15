@@ -15,6 +15,10 @@
 #include "token-parsers.h"
 #include "type-parser-implementation.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
+#include "flang/Parser/user-state.h"
+
+#include <set>
 
 // OpenACC Directives and Clauses
 namespace Fortran::parser {
@@ -163,6 +167,72 @@ TYPE_PARSER(sourced(construct<AccStandaloneDirective>(
         "SET" >> pure(llvm::acc::Directive::ACCD_set),
         "UPDATE" >> pure(llvm::acc::Directive::ACCD_update)))))
 
+// A non-block DO construct, e.g.
+//   do 10 i = 1, n
+//   10 continue
+// is parsed as a flat sequence of statements and is only turned into a
+// DoConstruct later, when the DO loops are canonicalized.  The DO loop
+// associated with an OpenACC loop or combined construct has to be recognized
+// while parsing the construct, otherwise the end directive that follows the
+// loop cannot be attached to the construct.  Build the DoConstruct here, the
+// same way the canonicalization of the DO loops would have built it.
+struct AccNonBlockDoConstruct {
+  using resultType = DoConstruct;
+
+  std::optional<DoConstruct> Parse(ParseState &state) const {
+    auto doStmt{CapturedLabelDoStmt::Parse(state)};
+    if (!doStmt) {
+      return std::nullopt;
+    }
+
+    // Parse execution part constructs until every label DO statement that has
+    // been seen is terminated by a statement carrying its label.  Loops that
+    // share the same label are all terminated by the same statement.
+    std::set<Label> labels{std::get<Label>(doStmt->statement.value().t)};
+    Block body;
+    while (!labels.empty()) {
+      auto epc{executionPartConstruct.Parse(state)};
+      if (!epc) {
+        return std::nullopt;
+      }
+      if (std::optional<Label> label{GetStatementLabel(*epc)}) {
+        labels.erase(*label);
+      } else if (auto *acc{Unwrap<OpenACCConstruct>(*epc)}) {
+        if (std::optional<Label> label{GetFinalLabel(*acc)}) {
+          labels.erase(*label);
+        }
+      }
+      if (auto *labelDo{Unwrap<LabelDoStmt>(*epc)}) {
+        labels.insert(std::get<Label>(labelDo->t));
+      }
+      body.emplace_back(std::move(*epc));
+    }
+
+    // The terminating statement of the outermost loop may be an END DO
+    // statement; the DO construct built below has its own synthetic one, so
+    // turn it into a CONTINUE statement to keep its label.
+    if (Unwrap<EndDoStmt>(body.back())) {
+      std::get<ExecutableConstruct>(body.back().u).u =
+          Statement<ActionStmt>{GetStatementLabel(body.back()), ContinueStmt{}};
+    }
+
+    Statement<NonLabelDoStmt> nonLabelDoStmt{std::move(doStmt->label),
+        NonLabelDoStmt{
+            std::make_tuple(std::optional<Name>{}, std::optional<Label>{},
+                std::move(std::get<std::optional<LoopControl>>(
+                    doStmt->statement.value().t)))}};
+    nonLabelDoStmt.source = doStmt->source;
+    return DoConstruct{
+        std::make_tuple(std::move(nonLabelDoStmt), std::move(body),
+            Statement<EndDoStmt>{
+                std::optional<Label>{}, EndDoStmt{std::optional<Name>{}}})};
+  }
+};
+
+// The DO loop associated with a loop or combined construct.
+constexpr auto accAssociatedDoConstruct{
+    Parser<DoConstruct>{} || AccNonBlockDoConstruct{}};
+
 // Loop directives
 TYPE_PARSER(sourced(construct<AccLoopDirective>(
     first("LOOP" >> pure(llvm::acc::Directive::ACCD_loop)))))
@@ -173,7 +243,8 @@ TYPE_PARSER(sourced(construct<AccBeginLoopDirective>(
 TYPE_PARSER(construct<AccEndLoop>("END LOOP"_tok))
 
 TYPE_PARSER(construct<OpenACCLoopConstruct>(
-    Parser<AccBeginLoopDirective>{} / endAccLine, maybe(Parser<DoConstruct>{}),
+    Parser<AccBeginLoopDirective>{} / endAccLine,
+    maybe(accAssociatedDoConstruct),
     maybe(startAccLine >> Parser<AccEndLoop>{} / endAccLine)))
 
 // 2.15.1 Routine directive
@@ -301,7 +372,7 @@ TYPE_PARSER(startAccLine >>
 
 TYPE_PARSER(sourced(construct<OpenACCCombinedConstruct>(
     Parser<AccBeginCombinedDirective>{} / endAccLine,
-    maybe(Parser<DoConstruct>{}),
+    maybe(accAssociatedDoConstruct),
     maybe(Parser<AccEndCombinedDirective>{} / endAccLine))))
 
 } // namespace Fortran::parser

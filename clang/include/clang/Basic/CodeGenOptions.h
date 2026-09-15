@@ -199,7 +199,14 @@ public:
   }
 
   /// Possible exception handling behavior.
-  enum class ExceptionHandlingKind { None, SjLj, WinEH, DwarfCFI, Wasm };
+  enum class ExceptionHandlingKind {
+    None,
+    SjLj,
+    WinEH,
+    DwarfCFI,
+    Wasm,
+    Emscripten
+  };
 
   enum class SwiftAsyncFramePointerKind {
     Auto, // Choose Swift async extended frame info based on deployment target.
@@ -634,6 +641,10 @@ public:
     return getExceptionHandling() == ExceptionHandlingKind::Wasm;
   }
 
+  bool hasEmscriptenExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::Emscripten;
+  }
+
   /// Check if Clang profile instrumenation is on.
   bool hasProfileClangInstr() const {
     return getProfileInstr() ==
@@ -723,6 +734,10 @@ public:
     }
     llvm_unreachable("Unknown BoolFromMem enum");
   }
+
+  /// Remap specified path prefix using provided DebugPrefixMap map.
+  /// Returns updated path or unchanged if no substitution was found.
+  std::string remapDebugPathPrefix(StringRef Path) const;
 };
 
 }  // end namespace clang

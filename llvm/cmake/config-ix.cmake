@@ -654,7 +654,8 @@ else( LLVM_ENABLE_THREADS )
   message(STATUS "Threads disabled.")
 endif()
 
-find_program(GOLD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.gold ld.gold ${LLVM_DEFAULT_TARGET_TRIPLE}-ld ld DOC "The gold linker")
+find_program(GOLD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.gold ld.gold DOC "The gold linker")
+find_program(LD_BFD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.bfd ld.bfd ${LLVM_DEFAULT_TARGET_TRIPLE}-ld ld DOC "The bfd linker")
 set(LLVM_BINUTILS_INCDIR "" CACHE PATH
     "PATH to binutils/include containing plugin-api.h for gold plugin.")
 

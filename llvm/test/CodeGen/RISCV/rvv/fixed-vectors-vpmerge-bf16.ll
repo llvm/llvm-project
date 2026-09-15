@@ -23,10 +23,8 @@ define <2 x bfloat> @vpmerge_vf_v2bf16(bfloat %a, <2 x bfloat> %vb, <2 x i1> %m,
 ; CHECK-LABEL: vpmerge_vf_v2bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fmv.x.h a1, fa0
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x bfloat> poison, bfloat %a, i32 0
   %va = shufflevector <2 x bfloat> %elt.head, <2 x bfloat> poison, <2 x i32> zeroinitializer
@@ -49,10 +47,8 @@ define <4 x bfloat> @vpmerge_vf_v4bf16(bfloat %a, <4 x bfloat> %vb, <4 x i1> %m,
 ; CHECK-LABEL: vpmerge_vf_v4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fmv.x.h a1, fa0
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x bfloat> poison, bfloat %a, i32 0
   %va = shufflevector <4 x bfloat> %elt.head, <4 x bfloat> poison, <4 x i32> zeroinitializer
@@ -75,10 +71,8 @@ define <8 x bfloat> @vpmerge_vf_v8bf16(bfloat %a, <8 x bfloat> %vb, <8 x i1> %m,
 ; CHECK-LABEL: vpmerge_vf_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fmv.x.h a1, fa0
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x bfloat> poison, bfloat %a, i32 0
   %va = shufflevector <8 x bfloat> %elt.head, <8 x bfloat> poison, <8 x i32> zeroinitializer
@@ -101,10 +95,8 @@ define <16 x bfloat> @vpmerge_vf_v16bf16(bfloat %a, <16 x bfloat> %vb, <16 x i1>
 ; CHECK-LABEL: vpmerge_vf_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fmv.x.h a1, fa0
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.v.x v10, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
+; CHECK-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x bfloat> poison, bfloat %a, i32 0
   %va = shufflevector <16 x bfloat> %elt.head, <16 x bfloat> poison, <16 x i32> zeroinitializer

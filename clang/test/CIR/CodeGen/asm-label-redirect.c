@@ -21,14 +21,6 @@ int test(const char *p) {
   return r1 + r2;
 }
 
-// Both declarations are mangled to the same symbol "real_impl". CIR
-// materializes a single FuncOp whose signature is whichever declaration
-// it sees first - here, the my_stat declaration.
-//
-// CIR-LABEL: cir.func private @real_impl(
-// CIR-SAME:    !cir.ptr<!s8i> {{[^,]*}},
-// CIR-SAME:    !cir.ptr<!rec_my_stat> {{[^,]*}}) -> !s32i
-
 // CIR-LABEL: cir.func {{.*}} @test(
 //
 // The first call site uses `struct my_stat *`, which matches the FuncOp's
@@ -48,10 +40,18 @@ int test(const char *p) {
 // CIR-SAME:      (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, !cir.ptr<!rec_my_stat64>) -> !s32i>>,
 // CIR-SAME:       !cir.ptr<!s8i> {{.*}}, !cir.ptr<!rec_my_stat64> {{.*}}) -> !s32i
 
-// LLVM:        declare i32 @real_impl(ptr {{[^,]*}}, ptr {{.*}})
+// Both declarations are mangled to the same symbol "real_impl". CIR
+// materializes a single FuncOp whose signature is whichever declaration
+// it sees first - here, the my_stat declaration.
+//
+// CIR-LABEL: cir.func private @real_impl(
+// CIR-SAME:    !cir.ptr<!s8i> {{[^,]*}},
+// CIR-SAME:    !cir.ptr<!rec_my_stat> {{[^,]*}}) -> !s32i
+
 // LLVM-LABEL:  define dso_local i32 @test(
 // LLVM:          %{{.+}} = call i32 @real_impl(ptr {{.*}}%{{.+}}, ptr {{.*}}%{{.+}})
 // LLVM:          %{{.+}} = call i32 @real_impl(ptr {{.*}}%{{.+}}, ptr {{.*}}%{{.+}})
+// LLVM:        declare i32 @real_impl(ptr {{[^,]*}}, ptr {{.*}})
 
 // OGCG-LABEL:  define dso_local i32 @test(
 // OGCG:          %{{.+}} = call i32 @real_impl(ptr {{.*}}%{{.+}}, ptr {{.*}}%{{.+}})

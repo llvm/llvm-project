@@ -30,6 +30,11 @@ function(_get_common_test_compile_options output_var c_test flags)
   libc_add_definition(compile_options
     "LIBC_TEST_SUBPROCESS_TESTS=${LIBC_TEST_SUBPROCESS_TESTS}")
 
+  if(LIBC_TEST_MAX_CONCURRENCY)
+    libc_add_definition(compile_options
+      "LIBC_TEST_MAX_CONCURRENCY=${LIBC_TEST_MAX_CONCURRENCY}")
+  endif()
+
   if(LIBC_TEST_SUBPROCESS_TESTS)
     # EXPECT_DEATH and ASSERT_DEATH might be quite slow.  LIBC_TEST_SKIP_DEATH_TESTS
     # will make those tests no-op to reduce the overall test time.
@@ -273,9 +278,15 @@ function(create_libc_unittest fq_target_name)
   endif()
 
   get_fq_deps_list(fq_deps_list ${LIBC_UNITTEST_DEPENDS})
-  if(NOT LIBC_UNITTEST_C_TEST)
-    list(APPEND fq_deps_list libc.src.__support.StringUtil.error_to_string
-      libc.test.UnitTest.ErrnoSetterMatcher)
+  list(APPEND fq_deps_list libc.test.UnitTest.LibcTest)
+  if(LIBC_UNITTEST_C_TEST)
+    list(APPEND fq_deps_list libc.test.UnitTest.LibcCTest)
+  else()
+    list(APPEND fq_deps_list
+      libc.src.__support.StringUtil.error_to_string
+      libc.test.UnitTest.ErrnoSetterMatcher
+      libc.test.UnitTest.LibcDeathTestExecutors
+    )
   endif()
   list(REMOVE_DUPLICATES fq_deps_list)
 
@@ -364,12 +375,6 @@ function(create_libc_unittest fq_target_name)
     ${fq_build_target_name}
     ${fq_deps_list}
   )
-
-  # LibcTest should not depend on anything in LINK_LIBRARIES.
-  list(APPEND link_libraries LibcTest)
-  if(NOT LIBC_UNITTEST_C_TEST)
-    list(APPEND link_libraries LibcDeathTestExecutors)
-  endif()
 
   target_link_libraries(${fq_build_target_name} PRIVATE ${link_libraries})
 
@@ -784,7 +789,13 @@ function(add_libc_hermetic test_name)
     libc.src.string.memset
     libc.src.strings.bcmp
     libc.src.strings.bzero
+    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.test.UnitTest.LibcTest
+    libc.test.UnitTest.HermeticTestUtils
   )
+  if(HERMETIC_TEST_C_TEST)
+    list(APPEND fq_deps_list libc.test.UnitTest.LibcCTest)
+  endif()
   if(LIBC_TARGET_ARCHITECTURE_IS_AARCH64 AND NOT(LIBC_TARGET_OS_IS_BAREMETAL))
     list(APPEND fq_deps_list libc.src.sys.auxv.getauxval)
   endif()
@@ -792,6 +803,7 @@ function(add_libc_hermetic test_name)
   # Syscalls used by death tests.
   if(LIBC_TEST_SUBPROCESS_TESTS AND NOT HERMETIC_TEST_C_TEST)
     list(APPEND fq_deps_list
+      libc.test.UnitTest.LibcDeathTestExecutors
       libc.src.poll.poll
       libc.src.signal.kill
       libc.src.stdio.fflush
@@ -817,6 +829,49 @@ function(add_libc_hermetic test_name)
     list(APPEND fq_deps_list libc.src.time.clock)
   endif()
 
+  if(LIBC_ENABLE_COVERAGE)
+     set(coverage_deps
+      libc.src.stdio.fclose
+      libc.src.stdio.fdopen
+      libc.src.stdio.feof
+      libc.src.stdio.fflush
+      libc.src.stdio.fileno
+      libc.src.stdio.fopen
+      libc.src.stdio.fprintf
+      libc.src.stdio.fread
+      libc.src.stdio.fseek
+      libc.src.stdio.ftell
+      libc.src.stdio.fwrite
+      libc.src.stdio.snprintf
+      libc.src.stdio.stderr
+      libc.src.stdio.vfprintf
+      libc.src.stdio.vsnprintf
+      libc.src.fcntl.fcntl
+      libc.src.fcntl.open
+      libc.src.stdlib.getenv
+      libc.src.stdlib.setenv
+      libc.src.stdlib.strtol
+      libc.src.string.strchr
+      libc.src.string.strcmp
+      libc.src.string.strdup
+      libc.src.string.strerror
+      libc.src.string.strlen
+      libc.src.string.strncpy
+      libc.src.string.strrchr
+      libc.src.sys.mman.madvise
+      libc.src.sys.mman.mmap
+      libc.src.sys.mman.munmap
+      libc.src.sys.prctl.prctl
+      libc.src.sys.stat.mkdir
+      libc.src.sys.utsname.uname
+      libc.src.unistd.fork
+      libc.src.unistd.ftruncate
+      libc.src.unistd.getpagesize
+      libc.src.unistd.getpid
+    )
+    list(APPEND fq_deps_list ${coverage_deps})
+  endif()
+
   list(REMOVE_DUPLICATES fq_deps_list)
 
   # TODO: Instead of gathering internal object files from entrypoints,
@@ -832,6 +887,18 @@ function(add_libc_hermetic test_name)
     return()
   endif()
   list(REMOVE_DUPLICATES link_object_files)
+
+  if(LIBC_ENABLE_COVERAGE)
+    foreach(cov_dep IN LISTS coverage_deps)
+      get_target_property(is_alias ${cov_dep} "IS_ALIAS")
+      if(is_alias)
+        get_target_property(real_target ${cov_dep} "DEPS")
+      else()
+        set(real_target ${cov_dep})
+      endif()
+      string(REPLACE "${real_target}.__internal__" "${real_target}" link_object_files "${link_object_files}")
+    endforeach()
+  endif()
 
   # Make a library of all deps
   add_library(
@@ -898,6 +965,12 @@ function(add_libc_hermetic test_name)
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
     )
+    if(LIBC_ENABLE_COVERAGE)
+      list(APPEND link_options
+        -noprofilelib
+        -u__llvm_profile_runtime
+      )
+    endif()
     target_link_options(${fq_build_target_name} PRIVATE ${link_options})
   else()
     # Older version of gcc does not support `nostdlib++` flag.  We use
@@ -909,28 +982,34 @@ function(add_libc_hermetic test_name)
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
     )
+    if(LIBC_ENABLE_COVERAGE)
+      list(APPEND link_options
+        -noprofilelib
+        -u__llvm_profile_runtime
+      )
+    endif()
     target_link_options(${fq_build_target_name} PRIVATE ${link_options})
     list(APPEND compiler_runtime ${LIBGCC_S_LOCATION})
   endif()
+
+  set(coverage_link_libs "")
+  if(LIBC_ENABLE_COVERAGE)
+    set(coverage_link_libs
+      "${LIBC_CLANG_PROFILE_LIB}"
+       ${fq_target_name}.__libc__
+    )
+  endif()
+
   target_link_libraries(
     ${fq_build_target_name}
     PRIVATE
       libc.startup.${LIBC_TARGET_OS}.crt1
       ${HERMETIC_TEST_LINK_LIBRARIES}
       ${fq_target_name}.__libc__
-      LibcHermeticTestSupport
-      # Working around dependency issues caused by compiler introduced libcalls.
-      # We need to repeat the libc target so that we can resolve libcalls which
-      # pull in functions from LibcHermeticTestSupport (which then foward to
-      # internal implementations).
-      # TODO: clean this up
-      ${fq_target_name}.__libc__
+      ${coverage_link_libs}
       ${compiler_runtime}
   )
-  add_dependencies(${fq_build_target_name}
-    LibcTest
-    libc.test.UnitTest.ErrnoSetterMatcher
-    ${fq_deps_list})
+  add_dependencies(${fq_build_target_name} ${fq_deps_list})
 
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
     if(LIBC_TEST_CMD)
@@ -1017,13 +1096,7 @@ function(add_libc_test test_name)
   )
   if(LLVM_LIBC_FULL_BUILD)
     if(NOT LIBC_TEST_OVERLAY_BUILD_ONLY)
-      add_libc_hermetic(
-        ${test_name}
-        LINK_LIBRARIES
-          LibcTest
-          LibcDeathTestExecutors
-          ${LIBC_TEST_UNPARSED_ARGUMENTS}
-      )
+      add_libc_hermetic(${test_name} ${LIBC_TEST_UNPARSED_ARGUMENTS})
     endif()
   else()
     # Overlay mode
@@ -1049,12 +1122,11 @@ function(add_libc_multi_impl_test name suite)
           ${suite}
         COMPILE_OPTIONS
           ${LIBC_COMPILE_OPTIONS_NATIVE}
-        LINK_LIBRARIES
-          LibcMemoryHelpers
         ${ARGN}
         DEPENDS
           ${fq_config_name}
           libc.src.__support.macros.sanitizer
+          libc.test.UnitTest.MemoryMatcher
       )
       get_fq_target_name(${fq_config_name}_test fq_target_name)
     else()

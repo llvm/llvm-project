@@ -13,9 +13,6 @@
 // updated.
 // UNSUPPORTED: LIBCXX-ANDROID-FIXME && target={{.+}}-android{{(eabi)?(21|22|23|24|25)}}
 
-// Use of undeclared identifier 'system'.
-// XFAIL: LLVM-LIBC-FIXME
-
 #include <cstdlib>
 #include <cassert>
 #include <type_traits>

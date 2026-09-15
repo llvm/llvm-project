@@ -2427,7 +2427,6 @@ void Attributor::identifyDeadInternalFunctions() {
       isModulePass()
           ? nullptr
           : getInfoCache().getTargetLibraryInfoForFunction(*Functions.back());
-  LibFunc LF;
 
   // Identify dead internal functions and delete them. This happens outside
   // the other fixpoint analysis as we might treat potentially dead functions
@@ -2436,7 +2435,8 @@ void Attributor::identifyDeadInternalFunctions() {
 
   SmallVector<Function *, 8> InternalFns;
   for (Function *F : Functions)
-    if (F->hasLocalLinkage() && (isModulePass() || !TLI->getLibFunc(*F, LF)))
+    if (F->hasLocalLinkage() &&
+        (isModulePass() || TLI->getLibFunc(*F) == NotLibFunc))
       InternalFns.push_back(F);
 
   SmallPtrSet<Function *, 8> LiveInternalFns;

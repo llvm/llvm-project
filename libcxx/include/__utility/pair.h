@@ -31,8 +31,8 @@
 #include <__type_traits/is_implicitly_default_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_relocatable.h>
 #include <__type_traits/is_swappable.h>
-#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/nat.h>
 #include <__type_traits/unwrap_ref.h>
 #include <__utility/declval.h>

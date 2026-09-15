@@ -5,7 +5,7 @@ RUN: mkdir -p %t/debuginfod-cache
 
 # We hit the timeout because the Python script delays the response by 2 seconds
 RUN: env DEBUGINFOD_TIMEOUT=1 \
-RUN: env DEBUGINFOD_CACHE=%t/debuginfod-cache \
+RUN: env DEBUGINFOD_CACHE_PATH=%t/debuginfod-cache \
 RUN: env DEBUGINFOD_HEADERS_FILE=%S/Inputs/headers \
 RUN:   %python %S/Inputs/delay_req.py llvm-debuginfod-find --debuginfo 0 | FileCheck %s
 

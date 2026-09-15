@@ -68,6 +68,12 @@ public:
   BuiltinTypeDeclBuilder &
   addSimpleTemplateParams(ArrayRef<StringRef> Names,
                           ArrayRef<QualType> DefaultTypes, ConceptDecl *CD);
+  // Adds `<typename element_type, int sample_count = 0>` for multisampled
+  // textures, with \p CD constraining the element type. Unlike the other
+  // textures the element type has no default argument.
+  BuiltinTypeDeclBuilder &addMSTextureTemplateParams(StringRef ElementName,
+                                                     StringRef SampleCountName,
+                                                     ConceptDecl *CD);
   CXXRecordDecl *finalizeForwardDeclaration() { return Record; }
   BuiltinTypeDeclBuilder &completeDefinition();
 
@@ -81,7 +87,7 @@ public:
                    AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &
   addTextureHandle(ResourceClass RC, bool IsROV, bool IsArray,
-                   ResourceDimension RD,
+                   ResourceDimension RD, Expr *SampleCountExpr = nullptr,
                    AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addSamplerHandle();
   BuiltinTypeDeclBuilder &addConstantBufferConversionToType();
@@ -104,6 +110,10 @@ public:
   BuiltinTypeDeclBuilder &addLoadMethods();
   BuiltinTypeDeclBuilder &addTextureLoadMethods(ResourceDimension Dim,
                                                 bool IsArray = false);
+  BuiltinTypeDeclBuilder &addTextureLoadMSMethods(ResourceDimension Dim,
+                                                  bool IsArray = false);
+  BuiltinTypeDeclBuilder &addRWTextureLoadMethods(ResourceDimension Dim,
+                                                  bool IsArray = false);
   BuiltinTypeDeclBuilder &addByteAddressBufferLoadMethods();
   BuiltinTypeDeclBuilder &addByteAddressBufferStoreMethods();
   BuiltinTypeDeclBuilder &addByteAddressBufferInterlockedMethods();
@@ -129,12 +139,14 @@ public:
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
                                                   bool IsConstReturn,
                                                   bool IsRef, QualType IndexTy,
-                                                  QualType ElemTy = QualType());
+                                                  QualType ElemTy = QualType(),
+                                                  bool TransposeResult = false);
   BuiltinTypeDeclBuilder &
   addLoadWithStatusFunction(DeclarationName &Name,
                             QualType ReturnTy = QualType());
   BuiltinTypeDeclBuilder &addStoreFunction(DeclarationName &Name, bool IsConst,
-                                           QualType ValueType);
+                                           QualType ValueType,
+                                           bool TransposeArg = false);
   BuiltinTypeDeclBuilder &
   addByteAddressBufferInterlockedMethod(StringRef MethodName, QualType ValueTy,
                                         StringRef BuiltinName);
@@ -154,6 +166,7 @@ private:
   addResourceMember(StringRef MemberName, ResourceClass RC,
                     ResourceDimension RD, bool IsROV, bool RawBuffer,
                     bool IsCounter, bool IsArray, QualType ElementTy,
+                    Expr *SampleCountExpr = nullptr,
                     AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addFriend(CXXRecordDecl *Friend);
   CXXRecordDecl *addPrivateNestedRecord(StringRef Name);

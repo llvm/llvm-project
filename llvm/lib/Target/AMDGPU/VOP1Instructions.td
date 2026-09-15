@@ -816,6 +816,8 @@ let SubtargetPredicate = HasCvtFP8ByteSelE5M3 in {
                (V_CVT_F32_FP8_gfx1250_e64 $src0, DSTCLAMP.NONE, (as_i32timm $byte_sel))>;
   def : GCNPat<(int_amdgcn_cvt_f32_fp8_e5m3 i32:$src0, timm:$byte_sel),
                (V_CVT_F32_FP8_gfx1250_e64 $src0, DSTCLAMP.ENABLE, (as_i32timm $byte_sel))>;
+  def : GCNPat<(AMDGPUcvt_f32_fp8_e5m3 i32:$src0, timm:$byte_sel),
+               (V_CVT_F32_FP8_gfx1250_e64 $src0, DSTCLAMP.ENABLE, (as_i32timm $byte_sel))>;
 }
 
 let SubtargetPredicate = HasCvtFP8ByteSel in
@@ -1826,6 +1828,12 @@ def : GCNPat<
 def : GCNPat<
   (i16 (DivergentUnaryFrag<trunc> i32:$src)),
   (EXTRACT_SUBREG $src, lo16)
+>;
+
+def : GCNPat <
+  (i16 (DivergentUnaryFrag<trunc>
+    (i32 (srl_oneuse i32:$src, (i32 16))))),
+  (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src, VGPR_32)), hi16)
 >;
 
 def : GCNPat <
