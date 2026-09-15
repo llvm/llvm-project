@@ -6355,6 +6355,10 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
   return getTargetCodeGenInfo().getGlobalVarAddressSpace(*this, D);
 }
 
+bool CodeGenModule::isGlobalVarInvariant(const VarDecl *D) {
+  return isInvariantAddressSpace(GetGlobalVarAddressSpace(D));
+}
+
 LangAS CodeGenModule::GetGlobalConstantAddressSpace() const {
   // OpenCL v1.2 s6.5.3: a string literal is in the constant address space.
   if (LangOpts.OpenCL)

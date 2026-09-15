@@ -32,6 +32,9 @@ class CodeGenModule;
 // Indicates whether a pointer is known not to be null.
 enum KnownNonNull_t { NotKnownNonNull, KnownNonNull };
 
+// Indicates whether loads from an address are invariant.
+enum KnownInvariant_t { NotKnownInvariant, KnownInvariant };
+
 /// An abstract representation of an aligned address. This is designed to be an
 /// IR-level abstraction, carrying just the information necessary to perform IR
 /// operations on an address like loads and stores.  In particular, it doesn't
@@ -145,16 +148,19 @@ class Address {
   /// pointer is signed.
   llvm::Value *Offset = nullptr;
 
+  KnownInvariant_t IsInvariant : 1;
+
   llvm::Value *emitRawPointerSlow(CodeGenFunction &CGF) const;
 
 protected:
-  Address(std::nullptr_t) : ElementType(nullptr) {}
+  Address(std::nullptr_t)
+      : ElementType(nullptr), IsInvariant(NotKnownInvariant) {}
 
 public:
   Address(llvm::Value *pointer, llvm::Type *elementType, CharUnits alignment,
           KnownNonNull_t IsKnownNonNull = NotKnownNonNull)
       : Pointer(pointer, IsKnownNonNull), ElementType(elementType),
-        Alignment(alignment) {
+        Alignment(alignment), IsInvariant(NotKnownInvariant) {
     assert(pointer != nullptr && "Pointer cannot be null");
     assert(elementType != nullptr && "Element type cannot be null");
     assert(!alignment.isZero() && "Alignment cannot be zero");
@@ -164,14 +170,16 @@ public:
           CGPointerAuthInfo PtrAuthInfo, llvm::Value *Offset,
           KnownNonNull_t IsKnownNonNull = NotKnownNonNull)
       : Pointer(BasePtr, IsKnownNonNull), ElementType(ElementType),
-        Alignment(Alignment), PtrAuthInfo(PtrAuthInfo), Offset(Offset) {}
+        Alignment(Alignment), PtrAuthInfo(PtrAuthInfo), Offset(Offset),
+        IsInvariant(NotKnownInvariant) {}
 
   Address(RawAddress RawAddr)
       : Pointer(RawAddr.isValid() ? RawAddr.getPointer() : nullptr,
                 RawAddr.isValid() ? RawAddr.isKnownNonNull() : NotKnownNonNull),
         ElementType(RawAddr.isValid() ? RawAddr.getElementType() : nullptr),
         Alignment(RawAddr.isValid() ? RawAddr.getAlignment()
-                                    : CharUnits::Zero()) {}
+                                    : CharUnits::Zero()),
+        IsInvariant(NotKnownInvariant) {}
 
   static Address invalid() { return Address(nullptr); }
   bool isValid() const { return Pointer.getPointer() != nullptr; }
@@ -238,6 +246,17 @@ public:
   Address setKnownNonNull() {
     assert(isValid());
     Pointer.setInt(KnownNonNull);
+    return *this;
+  }
+
+  KnownInvariant_t isInvariant() const {
+    assert(isValid());
+    return IsInvariant;
+  }
+
+  Address setInvariant(KnownInvariant_t Value) {
+    assert(isValid());
+    IsInvariant = Value;
     return *this;
   }
 

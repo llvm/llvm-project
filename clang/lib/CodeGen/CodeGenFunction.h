@@ -2769,6 +2769,8 @@ public:
 
   LValue MakeAddrLValue(Address Addr, QualType T, LValueBaseInfo BaseInfo,
                         TBAAAccessInfo TBAAInfo) {
+    if (CGM.isInvariantAddressSpace(T.getAddressSpace()))
+      Addr.setInvariant(KnownInvariant);
     return LValue::MakeAddr(Addr, T, getContext(), BaseInfo, TBAAInfo);
   }
 
