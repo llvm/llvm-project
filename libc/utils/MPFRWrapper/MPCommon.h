@@ -24,7 +24,7 @@ extern "C" {
 int mpfr_set_float128(mpfr_ptr, float128, mpfr_rnd_t);
 float128 mpfr_get_float128(mpfr_srcptr, mpfr_rnd_t);
 }
-#endif
+#endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
@@ -41,7 +41,7 @@ template <typename T> struct ExtraPrecision;
 template <> struct ExtraPrecision<float16> {
   static constexpr unsigned int VALUE = 128;
 };
-#endif
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 template <> struct ExtraPrecision<float> {
   static constexpr unsigned int VALUE = 128;
@@ -148,7 +148,7 @@ public:
             cpp::enable_if_t<cpp::is_same_v<long double, XType>
 #ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
                                  || cpp::is_same_v<float80, XType>
-#endif
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
                              ,
                              int> = 0>
   explicit MPFRNumber(XType x,
