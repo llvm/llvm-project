@@ -26,16 +26,16 @@ public:
 
     kernel<<<1,1>>>([](){ hd(0); });
 
-    kernel<<<1,1>>>([=](){ hd(b); });
+    kernel<<<1,1>>>([=](){ hd(b); }); // warn-note {{in HD-promoted function 'operator()'}}
     // warn-warning@-1 {{capture host side class data member by this pointer in device or host device lambda function may result in invalid memory access if this pointer is not accessible on device side}}
 
-    kernel<<<1,1>>>([&](){ hd(b); });
+    kernel<<<1,1>>>([&](){ hd(b); }); // warn-note {{in HD-promoted function 'operator()'}}
     // warn-warning@-1 {{capture host side class data member by this pointer in device or host device lambda function may result in invalid memory access if this pointer is not accessible on device side}}
 
     kernel<<<1,1>>>([&] __device__ (){ hd(b); });
     // warn-warning@-1 {{capture host side class data member by this pointer in device or host device lambda function may result in invalid memory access if this pointer is not accessible on device side}}
 
-    kernel<<<1,1>>>([&](){
+    kernel<<<1,1>>>([&](){ // warn-note {{in HD-promoted function 'operator()'}}
       auto f = [&]{ hd(b); };
       // warn-warning@-1 {{capture host side class data member by this pointer in device or host device lambda function may result in invalid memory access if this pointer is not accessible on device side}}
       f();
@@ -64,15 +64,15 @@ int main(void) {
 
   kernel<<<1,1>>>([b](){ hd(b); });
 
-  kernel<<<1,1>>>([&](){ hd(b); });
+  kernel<<<1,1>>>([&](){ hd(b); }); // dev-note {{in HD-promoted function 'operator()'}}
   // dev-error@-1 {{capture host variable 'b' by reference in device or host device lambda function}}
 
-  kernel<<<1,1>>>([=, &b](){ hd(b); });
+  kernel<<<1,1>>>([=, &b](){ hd(b); }); // dev-note {{in HD-promoted function 'operator()'}}
   // dev-error@-1 {{capture host variable 'b' by reference in device or host device lambda function}}
 
   kernel<<<1,1>>>([&, b](){ hd(b); });
 
-  kernel<<<1,1>>>([&](){
+  kernel<<<1,1>>>([&](){ // dev-note {{in HD-promoted function 'operator()'}}
       auto f = [&]{ hd(b); };
       // dev-error@-1 {{capture host variable 'b' by reference in device or host device lambda function}}
       f();
