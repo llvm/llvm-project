@@ -348,6 +348,7 @@ enum GlobalValueSummarySymtabCodes {
   //  nummib x alloc type,
   //  numver x version]
   FS_COMBINED_ALLOC_INFO_NO_CONTEXT = 33,
+  FS_SECTION_INFO = 34,
 };
 
 enum MetadataCodes {
