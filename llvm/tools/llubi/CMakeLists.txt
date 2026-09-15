@@ -13,5 +13,4 @@ add_llvm_tool(llubi
   intrinsics_gen
   )
 
-add_subdirectory(lib)
 target_link_libraries(llubi PRIVATE LLVMUBAwareInterpreter)
