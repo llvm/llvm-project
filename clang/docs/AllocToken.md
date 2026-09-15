@@ -166,8 +166,8 @@ the allocation call the wrapper returns, which is then instrumented normally.
 Wrappers that are not inlined still require
 `-fsanitize-alloc-token-extended`.
 
-[malloc-attribute]: project:AttributeReference.md#malloc
-[alloc-size-attribute]: project:AttributeReference.md#alloc-size
+[malloc-attribute]: AttributeReference.md#malloc
+[alloc-size-attribute]: AttributeReference.md#alloc-size
 
 ### Disabling Instrumentation
 

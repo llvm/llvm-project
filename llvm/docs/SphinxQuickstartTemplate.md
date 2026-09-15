@@ -109,8 +109,7 @@ GitHub. Likewise, do not link to generated paths such as `CMake.html`.
 
 Use a Sphinx `{ref}` role when the target is an explicit label rather than a
 generated heading. Explicit labels are useful when
-an anchor must remain stable after its heading or source file is renamed, or
-when a target must be exported to another Sphinx project through an inventory.
+an anchor must remain stable after its heading or source file is renamed.
 Avoid adding explicit labels to ordinary headings when a checked Markdown link
 is sufficient.
 

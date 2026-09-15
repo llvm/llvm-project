@@ -321,7 +321,7 @@ int get_last_element(int *pointer, size_t size) {
 }
 ```
 
-This behavior is analogous to `#pragma clang diagnostic` ([documentation](project:UsersManual.md#controlling-diagnostics-via-pragmas))
+This behavior is analogous to `#pragma clang diagnostic` ([documentation](UsersManual.md#controlling-diagnostics-via-pragmas))
 However, `#pragma clang unsafe_buffer_usage` is specialized and recommended
 over `#pragma clang diagnostic` for a number of technical and non-technical
 reasons. Most importantly, `#pragma clang unsafe_buffer_usage` is more
@@ -391,7 +391,7 @@ passed into the wrapper is correct.**
 ### Flag bounds information discontinuities with `[[clang::unsafe_buffer_usage]]`
 
 The clang attribute `[[clang::unsafe_buffer_usage]]`
-([attribute documentation](project:AttributeReference.md#unsafe-buffer-usage))
+([attribute documentation](AttributeReference.md#unsafe-buffer-usage))
 allows the user to annotate various objects, such as functions or member
 variables, as incompatible with the Safe Buffers programming model.
 You are encouraged to do that for arbitrary reasons, but typically the main

@@ -212,7 +212,7 @@ conventions can cause the analyzer to miss bugs or flag false positives.
 One can educate the analyzer (and others who read your code) about methods or
 functions that deviate from the Cocoa and Core Foundation conventions using the
 attributes described here. However, you should consider using proper naming
-conventions or the [objc_method_family](project:../../AttributeReference.md#objc-method-family)
+conventions or the [objc_method_family](../../AttributeReference.md#objc-method-family)
 attribute, if applicable.
 
 (ns_returns_retained)=

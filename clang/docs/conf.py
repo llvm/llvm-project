@@ -29,8 +29,11 @@ extensions += [
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "sphinx.ext.graphviz",
+    "llvm_sphinx.ext.absolute_links",
     "llvm_sphinx.ext.ghlinks",
 ]
+
+llvm_sphinx_doc_url_prefixes = ("https://clang.llvm.org/docs/",)
 
 import sphinx
 

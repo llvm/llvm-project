@@ -108,8 +108,7 @@ and then recursively traverses everything that can be reached from that
 node - this information has to be encoded for each specific node type.
 This algorithm is encoded in the
 [RecursiveASTVisitor](https://clang.llvm.org/doxygen/classclang_1_1RecursiveASTVisitor.html).
-See the [RecursiveASTVisitor
-tutorial](project:RAVFrontendAction.rst).
+See the [RecursiveASTVisitor tutorial](RAVFrontendAction.md).
 
 The two most basic nodes in the Clang AST are statements
 ([Stmt](https://clang.llvm.org/doxygen/classclang_1_1Stmt.html)) and
