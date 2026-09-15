@@ -9324,9 +9324,14 @@ static Expected<Function *> createOutlinedFunction(
   BasicBlock *EntryBB = BasicBlock::Create(Builder.getContext(), "entry", Func);
   Builder.SetInsertPoint(EntryBB);
 
-  // Insert target init call in the device compilation pass.
+  // Insert target init call in the device compilation pass. On the host
+  // (e.g. a non-GPU offload target), there is no runtime init/deinit
+  // sequence, but the runtime still needs a '<kernel>_kernel_environment'
+  // global to know how the kernel was configured, so emit it directly.
   if (OMPBuilder.Config.isTargetDevice())
     Builder.restoreIP(OMPBuilder.createTargetInit(Builder, DefaultAttrs));
+  else
+    OMPBuilder.emitKernelEnvironment(Builder, DefaultAttrs);
 
   BasicBlock *UserCodeEntryBB = Builder.GetInsertBlock();
 
