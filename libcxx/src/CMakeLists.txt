@@ -29,6 +29,7 @@ set(LIBCXX_SOURCES
   include/ryu/ryu.h
   include/to_chars_floating_point.h
   include/from_chars_floating_point.h
+  mathematical_special_functions.cpp
   memory.cpp
   memory_resource.cpp
   new_handler.cpp
@@ -171,6 +172,7 @@ split_list(LIBCXX_COMPILE_FLAGS)
 split_list(LIBCXX_LINK_FLAGS)
 
 include(FindLibcCommonUtils)
+include(FindBoostMath)
 
 # Build the shared library.
 if (LIBCXX_SUPPORTS_SHARED_LIBRARY)
@@ -178,6 +180,7 @@ if (LIBCXX_SUPPORTS_SHARED_LIBRARY)
   target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(cxx_shared PUBLIC cxx-headers runtimes-libc-shared
                                    PRIVATE ${LIBCXX_LIBRARIES}
+                                   PRIVATE boost_math
                                    PRIVATE llvm-libc-common-utilities)
   set_target_properties(cxx_shared
     PROPERTIES
@@ -266,6 +269,7 @@ add_library(cxx_static STATIC ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
 target_include_directories(cxx_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(cxx_static PUBLIC cxx-headers runtimes-libc-static
                                   PRIVATE ${LIBCXX_LIBRARIES}
+                                  PRIVATE boost_math
                                   PRIVATE libcxx-abi-static
                                   PRIVATE llvm-libc-common-utilities)
 set_target_properties(cxx_static

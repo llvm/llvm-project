@@ -52,6 +52,7 @@ Implemented Papers
 - P2830R10: Standardized Constexpr Type Ordering (`Github <https://llvm.org/PR216616>`__)
 - P3778R0: Fix for ``type_order`` template definition (`Github <https://llvm.org/PR216616>`__)
 - P4140R0: Proposed resolution for US70-126: allow incomplete types in type_order (`Github <https://llvm.org/PR216616>`__)
+- P0226R1: Mathematical Special Functions for C++17 (`Github <https://github.com/llvm/llvm-project/issues/99939>`__) (only ``assoc_laguerre`` and ``hermite`` are implemented)
 
 Improvements and New Features
 -----------------------------
@@ -96,3 +97,7 @@ ABI Affecting Changes
 
 Build System Changes
 --------------------
+
+- On platforms where ``feraiseexcept`` lives in libm, libc++ now links against it, since the mathematical special
+  functions use it to report the floating-point exception half of a domain or range error. ``libc++.so`` gains a
+  dependency on libm there. Windows and Apple are unaffected: the symbol is in the CRT and in libSystem respectively.

@@ -62,6 +62,26 @@ E.g.,
 - ``std::hermite(unsigned n, T x)`` for ``n >= 128``
 
 
+`[sf.cmath] <https://wg21.link/sf.cmath>`_ Mathematical Special Functions: Error reporting
+------------------------------------------------------------------------------------------
+
+`[sf.cmath.general]/1 <https://eel.is/c++draft/sf.cmath.general#1>`_ imports the error reporting of C 7.12.1,
+which leaves the value returned on a domain error implementation-defined and ties the reporting channels to
+``math_errhandling``. Libc++ defines these functions in the built library, where the caller's
+``math_errhandling`` is not visible, so it always reports on both channels:
+
+- a domain error sets ``errno`` to ``EDOM``, raises ``FE_INVALID`` and returns a quiet NaN,
+- a range error from overflow sets ``errno`` to ``ERANGE``, raises ``FE_OVERFLOW`` and returns
+  ``+-HUGE_VAL`` with the sign of the true value.
+
+A caller compiled with ``-fno-math-errno`` or ``-ffast-math`` therefore still observes both. Note that
+``-ffinite-math-only``, implied by ``-ffast-math``, makes it undefined behavior to *use* the NaN or the
+infinity returned on an error, which can be reported for a finite argument.
+
+``FE_INVALID`` and ``FE_OVERFLOW`` are optional in C; where a platform does not define them, only ``errno``
+reports. Underflow is reported on neither channel: C 7.12.1/5 leaves that implementation-defined too.
+
+
 `[filebuf.virtuals] <https://eel.is/c++draft/filebuf.virtual>`_ Effect of calling ``basic_filebuf::setbuf`` with nonzero arguments
 ----------------------------------------------------------------------------------------------------------------------------------
 

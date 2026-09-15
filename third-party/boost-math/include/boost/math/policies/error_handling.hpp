@@ -26,9 +26,9 @@
 #include <complex>
 #include <cstdint>
 #include <cstring>
+#ifndef BOOST_MATH_NO_EXCEPTIONS
 #include <iomanip>
 #include <sstream>
-#ifndef BOOST_MATH_NO_EXCEPTIONS
 #include <stdexcept>
 #endif
 #include <string>
@@ -95,6 +95,10 @@ T user_indeterminate_result_error(const char* function, const char* message, con
 namespace detail
 {
 
+// prec_format is only used to build exception what() messages, so it is gated on
+// exceptions being enabled. It relies on <sstream>, which is unavailable in some
+// standard-library configurations (e.g. libc++ built without localization).
+#ifndef BOOST_MATH_NO_EXCEPTIONS
 template <class T>
 inline std::string prec_format(const T& val)
 {
@@ -125,6 +129,7 @@ inline std::string prec_format<std::float128_t>(const std::float128_t& val)
 }
 
 #endif
+#endif // BOOST_MATH_NO_EXCEPTIONS
 
 inline void replace_all_in_string(std::string& result, const char* what, const char* with)
 {
