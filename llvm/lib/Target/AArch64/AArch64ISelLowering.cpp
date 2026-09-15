@@ -24752,6 +24752,39 @@ static SDValue performConditionalSubCombine(SDNode *N, SelectionDAG &DAG) {
                      ZeroOnTrue ? Diff : X, Sel.getOperand(2), Flags);
 }
 
+static SDValue performSubMaxFromMinCombine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::SUB)
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // Assuming: sub{r,cc} = subs a, b
+  // sub (csel a, b, lt|lo, sub.cc), (csel a, b, gt|hi, sub.cc)
+  // --> csneg sub.r, sub.r, lt|lo, sub.cc
+  if (LHS.getOpcode() == AArch64ISD::CSEL &&
+      RHS.getOpcode() == AArch64ISD::CSEL &&
+      LHS.getOperand(0) == RHS.getOperand(0) &&
+      LHS.getOperand(1) == RHS.getOperand(1) &&
+      LHS.getOperand(3) == RHS.getOperand(3) &&
+      LHS.getOperand(3).getOpcode() == AArch64ISD::SUBS &&
+      LHS.getOperand(3).getOperand(0) == LHS.getOperand(0) &&
+      LHS.getOperand(3).getOperand(1) == LHS.getOperand(1)) {
+    auto LHSCC = static_cast<AArch64CC::CondCode>(LHS.getConstantOperandVal(2));
+    auto RHSCC = static_cast<AArch64CC::CondCode>(RHS.getConstantOperandVal(2));
+    if (!(LHSCC == AArch64CC::LT && RHSCC == AArch64CC::GT) && // smin-smax
+        !(LHSCC == AArch64CC::LO && RHSCC == AArch64CC::HI))   // umin-umax
+      return SDValue();
+
+    SDValue SUBS = LHS->getOperand(3);
+    return DAG.getNode(AArch64ISD::CSNEG, SDLoc(N), N->getValueType(0),
+                       SUBS.getValue(0), SUBS.getValue(0), LHS.getOperand(2),
+                       SUBS.getValue(1));
+  }
+
+  return SDValue();
+}
+
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   // Try to change sum of two reductions.
@@ -24790,6 +24823,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performExtBinopLoadFold(N, DCI.DAG))
     return Val;
   if (SDValue Val = performAddMulZextCombine(N, DCI))
+    return Val;
+  if (SDValue Val = performSubMaxFromMinCombine(N, DCI.DAG))
     return Val;
 
   return performAddSubLongCombine(N, DCI);
