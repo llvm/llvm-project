@@ -1,0 +1,151 @@
+; REQUIRES: aarch64-registered-target
+; UNSUPPORTED: system-windows
+
+; RUN: rm -rf %t && split-file %s %t
+; RUN: yaml2obj %S/Inputs/basic-events.yaml -o %t/binary
+; RUN: llvm-dwarfdump --verify %t/binary
+
+; Kernel mappings use PID -1, while samples retain the task PID. Both samples
+; must resolve through the shared kernel mapping.
+; RUN: llvm-profgen --format=text --basic-events --kernel \
+; RUN:   --perfscript=%t/kernel.perfscript \
+; RUN:   --binary=%t/binary \
+; RUN:   --output=%t/kernel.raw --skip-symbolization
+; RUN: FileCheck %s --match-full-lines --check-prefix=KERNEL \
+; RUN:   --input-file=%t/kernel.raw
+
+; The PID filter applies to samples, not to the PID -1 kernel mapping.
+; RUN: llvm-profgen --format=text --basic-events --kernel --pid=100 \
+; RUN:   --perfscript=%t/kernel.perfscript \
+; RUN:   --binary=%t/binary \
+; RUN:   --output=%t/filtered.raw --skip-symbolization
+; RUN: FileCheck %s --match-full-lines --check-prefix=FILTERED \
+; RUN:   --input-file=%t/filtered.raw
+
+; Perf synthesises kernel MMAP2 records with zero protection flags.
+; RUN: llvm-profgen --basic-events --kernel \
+; RUN:   --perfscript=%t/kernel-mmap2.perfscript \
+; RUN:   --binary=%t/binary \
+; RUN:   --output=%t/mmap2.raw --skip-symbolization
+; RUN: FileCheck %s --match-full-lines --check-prefix=KERNEL \
+; RUN:   --input-file=%t/mmap2.raw
+; RUN: llvm-profgen --basic-events --kernel --pid=100 \
+; RUN:   --perfscript=%t/kernel-mmap2.perfscript \
+; RUN:   --binary=%t/binary \
+; RUN:   --output=%t/mmap2-filtered.raw --skip-symbolization
+; RUN: FileCheck %s --match-full-lines --check-prefix=FILTERED \
+; RUN:   --input-file=%t/mmap2-filtered.raw
+
+; User-space mappings require executable permissions.
+; RUN: not llvm-profgen --basic-events \
+; RUN:   --perfscript=%t/user-nonexec.perfscript \
+; RUN:   --binary=%t/binary \
+; RUN:   --output=%t/user-nonexec.raw --skip-symbolization 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=NONEXEC
+
+; Kernel perf.data skips user-process discovery. The fake perf command accepts
+; only the expected mmap and PID/IP sample pass.
+; RUN: chmod +x %t/perfdir/perf
+; RUN: env PATH=%t/perfdir llvm-profgen --format=text --basic-events --kernel \
+; RUN:   --perfdata=%s --binary=%t/binary \
+; RUN:   --output=%t/perfdata.raw --skip-symbolization
+; RUN: FileCheck %s --match-full-lines --check-prefix=FILTERED \
+; RUN:   --input-file=%t/perfdata.raw
+
+; A kernel image can have a nonzero file offset for its first executable
+; segment. The kernel mmap start must map to the segment address, not the ELF
+; image base.
+; RUN: yaml2obj %t/kernel-offset.yaml -o %t/kernel-offset.exe
+; RUN: llvm-profgen --format=text --basic-events --kernel --use-offset=0 \
+; RUN:   --perfscript=%t/kernel-offset.perfscript \
+; RUN:   --binary=%t/kernel-offset.exe \
+; RUN:   --output=%t/kernel-offset.raw --skip-symbolization
+; RUN: FileCheck %s --match-full-lines --check-prefix=KERNEL-OFFSET \
+; RUN:   --input-file=%t/kernel-offset.raw
+
+; KERNEL:      # llvm-profgen-content: basic-event
+; KERNEL-NEXT: 1
+; KERNEL-NEXT: 5b0:2
+; KERNEL-NOT:  {{.}}
+
+; FILTERED:      # llvm-profgen-content: basic-event
+; FILTERED-NEXT: 1
+; FILTERED-NEXT: 5b0:1
+; FILTERED-NOT:  {{.}}
+
+; KERNEL-OFFSET:      # llvm-profgen-content: basic-event
+; KERNEL-OFFSET-NEXT: 1
+; KERNEL-OFFSET-NEXT: 401000:1
+; KERNEL-OFFSET-NOT:  {{.}}
+
+; NONEXEC: error: Invalid basic event perf script input: no usable mmap
+
+;--- kernel.perfscript
+PERF_RECORD_MMAP -1/0: [0xfffffffffffff000(0x1000) @ 0xfffffffffffff000]: x [kernel.kallsyms]_text
+100 fffffffffffff5b0
+200 fffffffffffff5b0
+
+;--- perfdir/perf
+#!/bin/sh
+if [ "$#" -ne 7 ] || [ "$1" != "script" ] || \
+   [ "$2" != "--show-mmap-events" ] || [ "$3" != "-F" ] || \
+   [ "$4" != "pid,ip" ] || [ "$5" != "-G" ] || \
+   [ "$6" != "-i" ] || [ ! -f "$7" ]; then
+  exit 1
+fi
+echo "PERF_RECORD_MMAP2 -1/0: [0xfffffffffffff000(0x1000) @ 0xfffffffffffff000 <0123456789abcdef0123456789abcdef01234567>]: ---p [kernel.kallsyms]_text"
+echo "100 fffffffffffff5b0"
+
+;--- kernel-mmap2.perfscript
+PERF_RECORD_MMAP2 -1/0: [0xfffffffffffff000(0x1000) @ 0xfffffffffffff000 <0123456789abcdef0123456789abcdef01234567>]: ---p [kernel.kallsyms]_text
+100 fffffffffffff5b0
+200 fffffffffffff5b0
+
+;--- user-nonexec.perfscript
+PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: ---p /tmp/binary
+100 5005b0
+
+;--- kernel-offset.perfscript
+PERF_RECORD_MMAP -1/0: [0xffffffff81000000(0x1000) @ 0xffffffff81000000]: x [kernel.kallsyms]_text
+100 ffffffff81000000
+
+;--- kernel-offset.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   0x401000
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x401000
+    Offset:       0x1000
+    AddressAlign: 0x4
+    Content:      C0035FD6
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   0x0
+    VAddr:    0x400000
+    FileSize: 0x1000
+    MemSize:  0x1000
+    Align:    0x1000
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0x1000
+    VAddr:    0x401000
+    FileSize: 0x4
+    MemSize:  0x4
+    Align:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+Symbols:
+  - Name:    kernel_entry
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x401000
+    Size:    0x4

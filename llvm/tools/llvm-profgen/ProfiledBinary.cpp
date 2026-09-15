@@ -381,6 +381,7 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
       if (Phdr.p_flags & ELF::PF_X) {
         PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr);
         TextSegmentOffsets.push_back(Phdr.p_offset);
+        TextSegmentFileSizes.push_back(Phdr.p_filesz);
       } else {
         PhdrInfo Info;
         Info.FileOffset = Phdr.p_offset;
