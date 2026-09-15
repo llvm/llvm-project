@@ -36,6 +36,32 @@ void nvvm::printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal) {
       static_cast<TMAReductionOp>(CI->getZExtValue()));
 }
 
+void nvvm::printTMAValidateDataPattern(raw_ostream &OS,
+                                       const Constant *ImmArgVal) {
+  const auto *CI = dyn_cast<ConstantInt>(ImmArgVal);
+  if (!CI || CI->getZExtValue() > static_cast<uint64_t>(
+                                      TMAValidateDataPattern::PER_ELEMENT_FF)) {
+    OS << "Unknown validate data pattern";
+    return;
+  }
+
+  OS << getTMAValidateDataPatternName(
+      static_cast<TMAValidateDataPattern>(CI->getZExtValue()));
+}
+
+void nvvm::printMBarrierLayout(raw_ostream &OS, const Constant *ImmArgVal) {
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+    switch (static_cast<MBarrierLayout>(CI->getZExtValue())) {
+    case MBarrierLayout::V0:
+      OS << "v0";
+      return;
+    case MBarrierLayout::V1:
+      OS << "v1";
+      return;
+    }
+  }
+}
+
 void nvvm::printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal) {
   if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
     uint64_t Val = CI->getZExtValue();
