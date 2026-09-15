@@ -95,6 +95,23 @@ static void expectDirectInteger(const ArgInfo &Info, unsigned Bits) {
   EXPECT_EQ(IT->getSizeInBits().getFixedValue(), Bits);
 }
 
+static void expectInteger(const ABIType *Ty, unsigned Bits) {
+  const auto *IT = llvm::dyn_cast<llvm::abi::IntegerType>(Ty);
+  ASSERT_NE(IT, nullptr);
+  EXPECT_EQ(IT->getSizeInBits().getFixedValue(), Bits);
+}
+
+/// The {low, high} halves of a two-eightbyte coercion.
+static llvm::ArrayRef<FieldInfo> directPair(const ArgInfo &Info) {
+  EXPECT_TRUE(Info.isDirect());
+  const auto *RT =
+      llvm::dyn_cast_or_null<llvm::abi::RecordType>(Info.getCoerceToType());
+  EXPECT_NE(RT, nullptr);
+  if (!RT)
+    return {};
+  return RT->getFields();
+}
+
 static void expectDirectFloat(const ArgInfo &Info,
                               const llvm::fltSemantics &Sem) {
   ASSERT_TRUE(Info.isDirect());
@@ -293,6 +310,71 @@ TEST_F(X86TargetInfoTest, UnionOfZeroWidthBitFieldIsIgnore) {
                       /*IsUnnamedBitField=*/true);
   const ABIType *U = unionOf({ZeroWidth}, 8, llvm::Align(1));
   EXPECT_TRUE(classifyArg(U, FI, TI).isIgnore());
+}
+
+// No member reaches the union's second eightbyte: the array covers 12 of the
+// 16 bytes and the pointer supplies the alignment that rounds the size up.
+// The high half is sized from the bytes the union has there, so the four bytes
+// of array plus the four of padding make it an i64.
+TEST_F(X86TargetInfoTest, UnionTailPaddingSizesHighHalfFromUnion) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *U32 = TB.getIntegerType(32, llvm::Align(4), /*Signed=*/false);
+  const ABIType *Words = TB.getArrayType(U32, /*NumElements=*/3,
+                                         /*SizeInBits=*/96);
+  const ABIType *Ptr = TB.getPointerType(64, llvm::Align(8));
+  const ABIType *U =
+      unionOf({FieldInfo(Words), FieldInfo(Ptr)}, 128, llvm::Align(8));
+  llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(U, FI, TI));
+  ASSERT_EQ(Pair.size(), 2u);
+  EXPECT_TRUE(Pair[0].FieldType->isPointer());
+  expectInteger(Pair[1].FieldType, 64);
+}
+
+// One byte of the second eightbyte holds data and the rest is padding, so the
+// high half narrows to that byte instead of spanning the union's tail.
+TEST_F(X86TargetInfoTest, UnionTailPaddingNarrowsHighHalfToByte) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *Bytes = TB.getArrayType(I8, /*NumElements=*/9,
+                                         /*SizeInBits=*/72);
+  const ABIType *Ptr = TB.getPointerType(64, llvm::Align(8));
+  const ABIType *U =
+      unionOf({FieldInfo(Bytes), FieldInfo(Ptr)}, 128, llvm::Align(8));
+  llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(U, FI, TI));
+  ASSERT_EQ(Pair.size(), 2u);
+  EXPECT_TRUE(Pair[0].FieldType->isPointer());
+  expectInteger(Pair[1].FieldType, 8);
+}
+
+// A union that stops short of two full eightbytes sizes the high half from
+// what it has left rather than from a whole eightbyte.
+TEST_F(X86TargetInfoTest, UnionTailPaddingClampsHighHalfToUnionSize) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *Bytes = TB.getArrayType(I8, /*NumElements=*/12,
+                                         /*SizeInBits=*/96);
+  const ABIType *U =
+      unionOf({FieldInfo(Bytes), FieldInfo(I32)}, 96, llvm::Align(4));
+  llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(U, FI, TI));
+  ASSERT_EQ(Pair.size(), 2u);
+  expectInteger(Pair[0].FieldType, 64);
+  expectInteger(Pair[1].FieldType, 32);
+}
+
+// Narrowing still applies inside such a union, where only one byte past the
+// first eightbyte holds data.
+TEST_F(X86TargetInfoTest, UnionTailPaddingNarrowsInsideShortUnion) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *Bytes = TB.getArrayType(I8, /*NumElements=*/9,
+                                         /*SizeInBits=*/72);
+  const ABIType *U =
+      unionOf({FieldInfo(Bytes), FieldInfo(I32)}, 96, llvm::Align(4));
+  llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(U, FI, TI));
+  ASSERT_EQ(Pair.size(), 2u);
+  expectInteger(Pair[0].FieldType, 64);
+  expectInteger(Pair[1].FieldType, 8);
 }
 
 } // namespace
