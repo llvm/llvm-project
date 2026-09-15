@@ -89,3 +89,23 @@ module {
   cir.func comdat alignment 0 @f() { // expected-error {{expected '('}}
     cir.return
 }
+
+// -----
+
+module {
+  cir.func comdat preferred_alignment(-1) @f() { // expected-error {{custom op 'cir.func' function alignment must be a positive integer}}
+    cir.return
+}
+
+// -----
+
+module {
+  cir.func comdat preferred_alignment(0) @f() { // expected-error {{custom op 'cir.func' function alignment must be a positive integer}}
+    cir.return
+}
+// -----
+
+module {
+  cir.func comdat preferred_alignment 0 @f() { // expected-error {{expected '('}}
+    cir.return
+}

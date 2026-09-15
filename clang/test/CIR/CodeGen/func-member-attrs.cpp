@@ -33,7 +33,7 @@ void use(S &s) {
 // CIR: cir.func no_inline comdat alignment(2) linkonce_odr @_ZN1S13inline_methodEv(
 // LLVM: define linkonce_odr void @_ZN1S13inline_methodEv({{.*}}) #{{[0-9]+}} comdat align 2
 
-// CIR: cir.func no_inline comdat alignment(8) linkonce_odr @_ZN1S14aligned_methodEv(
+// CIR: cir.func no_inline comdat alignment(8) preferred_alignment(8) linkonce_odr @_ZN1S14aligned_methodEv(
 // LLVM: define linkonce_odr void @_ZN1S14aligned_methodEv({{.*}}) #{{[0-9]+}} comdat align 8
 
 // CIR: cir.func no_inline comdat alignment(2) linkonce_odr @_ZN1S13static_methodEv(
