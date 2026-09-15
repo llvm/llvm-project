@@ -1903,9 +1903,21 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     if (StoreSize.isScalable())
       return BaseCost;
 
-    constexpr uint64_t MaxSingleMemoryOpBits = 128;
-    InstructionCost WidthCost =
-        divideCeil(StoreSize.getFixedValue(), MaxSingleMemoryOpBits);
+    uint64_t RemainingBits = StoreSize.getFixedValue();
+    InstructionCost WidthCost = 0;
+    const bool CanUseSMEM =
+        OpInfo.isUniform() && AMDGPU::isExtendedGlobalAddrSpace(AddressSpace);
+    if (CanUseSMEM) {
+      // SMEM supports 256- and 512-bit loads.
+      for (uint64_t Width : {512, 256, 128}) {
+        WidthCost += RemainingBits / Width;
+        RemainingBits %= Width;
+      }
+      WidthCost += RemainingBits != 0;
+    } else {
+      // VMEM loads access at most 128 bits.
+      WidthCost = divideCeil(RemainingBits, uint64_t(128));
+    }
     return std::max(BaseCost, WidthCost);
   }
 

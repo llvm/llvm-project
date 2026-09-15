@@ -26,6 +26,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Dominators.h"
@@ -78,10 +79,10 @@ class VectorCombine {
 public:
   VectorCombine(Function &F, const TargetTransformInfo &TTI,
                 const DominatorTree &DT, AAResults &AA, AssumptionCache &AC,
-                const DataLayout *DL, TTI::TargetCostKind CostKind,
-                bool TryEarlyFoldsOnly)
+                const UniformityInfo *UI, const DataLayout *DL,
+                TTI::TargetCostKind CostKind, bool TryEarlyFoldsOnly)
       : F(F), Builder(F.getContext(), InstSimplifyFolder(*DL)), TTI(TTI),
-        DT(DT), AA(AA), DL(DL), CostKind(CostKind),
+        DT(DT), AA(AA), UI(UI), DL(DL), CostKind(CostKind),
         SQ(*DL, /*TLI=*/nullptr, &DT, &AC),
         TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
@@ -93,6 +94,7 @@ private:
   const TargetTransformInfo &TTI;
   const DominatorTree &DT;
   AAResults &AA;
+  const UniformityInfo *UI;
   const DataLayout *DL;
   TTI::TargetCostKind CostKind;
   const SimplifyQuery SQ;
@@ -135,6 +137,8 @@ private:
   bool foldInsertElementsToStores(Instruction &I);
   bool scalarizeLoad(Instruction &I);
   bool shrinkLoadForExtracts(Instruction &I);
+  LoadInst *createNarrowLoad(LoadInst &OldLoad, Type *NewLoadTy,
+                             uint64_t NewLoadOffset);
   bool scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy, Value *Ptr);
   bool scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy, Value *Ptr);
   bool scalarizeExtExtract(Instruction &I);
@@ -2294,8 +2298,32 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
   return true;
 }
 
-/// Try to shrink vector loads feeding extractelement instructions when some
-/// of the loaded lanes are not demanded.
+/// Create a narrower load at \p NewLoadOffset and update its metadata.
+LoadInst *VectorCombine::createNarrowLoad(LoadInst &OldLoad, Type *NewLoadTy,
+                                          uint64_t NewLoadOffset) {
+  Value *NewPtr = OldLoad.getPointerOperand();
+  if (NewLoadOffset != 0) {
+    Type *OffsetTy = DL->getIndexType(OldLoad.getPointerOperandType());
+    NewPtr = Builder.CreateGEP(Builder.getInt8Ty(), NewPtr,
+                               ConstantInt::get(OffsetTy, NewLoadOffset));
+  }
+
+  auto *NewLoad = cast<LoadInst>(Builder.CreateAlignedLoad(
+      NewLoadTy, NewPtr, commonAlignment(OldLoad.getAlign(), NewLoadOffset)));
+  copyMetadataForLoad(*NewLoad, OldLoad);
+
+  // Restore !range dropped for the type change; the element type is unchanged.
+  if (auto *RangeMD = OldLoad.getMetadata(LLVMContext::MD_range))
+    NewLoad->setMetadata(LLVMContext::MD_range, RangeMD);
+
+  // Adjust AA metadata copied with the old offset and size.
+  AAMDNodes OldAAMD = OldLoad.getAAMetadata();
+  NewLoad->setAAMetadata(
+      OldAAMD.adjustForAccess(NewLoadOffset, NewLoadTy, *DL));
+  return NewLoad;
+}
+
+/// Shrink loads with undemanded vector elements.
 bool VectorCombine::shrinkLoadForExtracts(Instruction &I) {
   auto *OldLoad = dyn_cast<LoadInst>(&I);
   if (!OldLoad || !OldLoad->isSimple())
@@ -2306,23 +2334,17 @@ bool VectorCombine::shrinkLoadForExtracts(Instruction &I) {
     return false;
 
   Type *EltTy = OldLoadTy->getElementType();
-  if (!EltTy->isSized())
+  if (!DL->typeSizeEqualsStoreSize(EltTy))
     return false;
+  uint64_t EltBytes = DL->getTypeStoreSize(EltTy).getFixedValue();
 
-  TypeSize EltSizeInBits = DL->getTypeSizeInBits(EltTy);
-  if (EltSizeInBits.isScalable())
-    return false;
-  uint64_t EltBits = EltSizeInBits.getFixedValue();
-  if (EltBits < 8 || EltBits % 8 != 0)
-    return false;
-  uint64_t EltBytes = EltBits / 8;
+  TTI::OperandValueInfo LoadOpInfo;
+  if (UI && UI->isUniformAtDef(OldLoad->getPointerOperand()))
+    LoadOpInfo.Kind = TTI::OK_UniformValue;
 
-  TypeSize OldLoadSize = DL->getTypeStoreSize(OldLoadTy);
-  if (OldLoadSize.isScalable())
-    return false;
-  InstructionCost OldLoadCost =
-      TTI.getMemoryOpCost(Instruction::Load, OldLoadTy, OldLoad->getAlign(),
-                          OldLoad->getPointerAddressSpace(), CostKind);
+  InstructionCost OldLoadCost = TTI.getMemoryOpCost(
+      Instruction::Load, OldLoadTy, OldLoad->getAlign(),
+      OldLoad->getPointerAddressSpace(), CostKind, LoadOpInfo, OldLoad);
   if (!OldLoadCost.isValid())
     return false;
 
@@ -2332,8 +2354,11 @@ bool VectorCombine::shrinkLoadForExtracts(Instruction &I) {
   };
 
   unsigned NumElts = OldLoadTy->getNumElements();
+  if (OldLoad->hasNUsesOrMore(NumElts + 4))
+    return false;
+
   SmallVector<ExtractElementInst *, 8> Extracts;
-  APInt DemandedElts = APInt::getZero(NumElts);
+  APInt DemandedElts(NumElts, 0);
 
   for (User *U : OldLoad->users()) {
     auto *Ext = dyn_cast<ExtractElementInst>(U);
@@ -2358,42 +2383,35 @@ bool VectorCombine::shrinkLoadForExtracts(Instruction &I) {
   SmallVector<uint64_t, 4> NewLoadOffsets;
 
   for (unsigned I = 0; I != NumElts;) {
-    if (!DemandedElts[I]) {
-      ++I;
-      continue;
-    }
+    APInt RemainingElts = DemandedElts.lshr(I);
+    if (RemainingElts.isZero())
+      break;
+    I += RemainingElts.countTrailingZeros();
 
     unsigned Start = I;
-    do {
-      ++I;
-    } while (I != NumElts && DemandedElts[I]);
-    unsigned Length = I - Start;
+    unsigned Length = DemandedElts.lshr(I).countTrailingOnes();
+    I += Length;
 
-    // Single element runs are better handled by existing scalarization. Keep
-    // this fold focused on forming narrower vector loads.
+    // Leave single-element runs to scalarization.
     if (Length == 1)
       return false;
 
     ElementRuns.push_back({Start, Length});
   }
 
-  TypeSize NewLoadSize = TypeSize::getFixed(0);
   InstructionCost NewLoadCost = 0;
   for (const ChunkRun &Run : ElementRuns) {
     auto *NewLoadTy = FixedVectorType::get(EltTy, Run.Length);
     uint64_t NewLoadOffset = Run.Start * EltBytes;
     NewLoadTys.push_back(NewLoadTy);
     NewLoadOffsets.push_back(NewLoadOffset);
-    NewLoadSize += DL->getTypeStoreSize(NewLoadTy);
-    NewLoadCost +=
-        TTI.getMemoryOpCost(Instruction::Load, NewLoadTy,
-                            commonAlignment(OldLoad->getAlign(), NewLoadOffset),
-                            OldLoad->getPointerAddressSpace(), CostKind);
+    NewLoadCost += TTI.getMemoryOpCost(
+        Instruction::Load, NewLoadTy,
+        commonAlignment(OldLoad->getAlign(), NewLoadOffset),
+        OldLoad->getPointerAddressSpace(), CostKind, LoadOpInfo, OldLoad);
   }
 
-  if (NewLoadSize >= OldLoadSize)
-    return false;
-
+  // Disjoint runs can cost more despite loading fewer bytes.
   if (!NewLoadCost.isValid() || NewLoadCost > OldLoadCost)
     return false;
 
@@ -2405,29 +2423,9 @@ bool VectorCombine::shrinkLoadForExtracts(Instruction &I) {
 
   SmallVector<LoadInst *, 4> NewLoads;
   SmallVector<unsigned, 4> RunStarts;
-  Type *OffsetTy = DL->getIndexType(OldLoad->getPointerOperandType());
-  auto CreateNarrowLoad = [&](Type *NewLoadTy,
-                              uint64_t NewLoadOffset) -> LoadInst * {
-    Value *NewPtr = OldLoad->getPointerOperand();
-    if (NewLoadOffset != 0)
-      NewPtr = Builder.CreateGEP(Builder.getInt8Ty(), NewPtr,
-                                 ConstantInt::get(OffsetTy, NewLoadOffset));
-
-    auto *NewLoad = cast<LoadInst>(Builder.CreateAlignedLoad(
-        NewLoadTy, NewPtr,
-        commonAlignment(OldLoad->getAlign(), NewLoadOffset)));
-    copyMetadataForLoad(*NewLoad, *OldLoad);
-    if (auto *RangeMD = OldLoad->getMetadata(LLVMContext::MD_range))
-      NewLoad->setMetadata(LLVMContext::MD_range, RangeMD);
-
-    AAMDNodes OldAAMD = OldLoad->getAAMetadata();
-    NewLoad->setAAMetadata(
-        OldAAMD.adjustForAccess(NewLoadOffset, NewLoadTy, *DL));
-    return NewLoad;
-  };
-
   for (auto [Idx, Run] : enumerate(ElementRuns)) {
-    NewLoads.push_back(CreateNarrowLoad(NewLoadTys[Idx], NewLoadOffsets[Idx]));
+    NewLoads.push_back(
+        createNarrowLoad(*OldLoad, NewLoadTys[Idx], NewLoadOffsets[Idx]));
     RunStarts.push_back(Run.Start);
   }
 
@@ -7259,10 +7257,14 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   AAResults &AA = FAM.getResult<AAManager>(F);
+  const UniformityInfo *UI = TTI.hasBranchDivergence(&F)
+                                 ? &FAM.getResult<UniformityInfoAnalysis>(F)
+                                 : nullptr;
   const DataLayout *DL = &F.getDataLayout();
   TTI::TargetCostKind CostKind =
       F.hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
-  VectorCombine Combiner(F, TTI, DT, AA, AC, DL, CostKind, TryEarlyFoldsOnly);
+  VectorCombine Combiner(F, TTI, DT, AA, AC, UI, DL, CostKind,
+                         TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
