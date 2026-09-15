@@ -295,6 +295,8 @@ std::vector<std::string> RISCVISAInfo::toFeatures(bool AddAllExtensions,
       Features.push_back((llvm::Twine("+") + ExtName).str());
     }
   }
+  if (IsRVYIntMode)
+    Features.push_back("+rvy-int-mode");
   if (AddAllExtensions) {
     for (const RISCVSupportedExtension &Ext : SupportedExtensions) {
       if (Exts.count(Ext.Name))
@@ -447,6 +449,10 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
     assert(ExtName.size() > 1 && (ExtName[0] == '+' || ExtName[0] == '-'));
     bool Add = ExtName[0] == '+';
     ExtName = ExtName.drop_front(1); // Drop '+' or '-'
+    if (ExtName == "rvy-int-mode") {
+      ISAInfo->IsRVYIntMode = Add;
+      continue;
+    }
     bool Experimental = stripExperimentalPrefix(ExtName);
     auto ExtensionInfos = Experimental
                               ? ArrayRef(SupportedExperimentalExtensions)
@@ -815,7 +821,9 @@ Error RISCVISAInfo::checkDependency() {
   if (Exts.count("zclsd") != 0 && Exts.count("zcf") != 0)
     return getIncompatibleError("zclsd", "zcf");
 
-  if (Exts.count("y") != 0) {
+  // In the RVY base Zcf/Zcd encodings are repurposed for capability load/store.
+  // However, in compatibility mode, they use RVE/RVI instructions.
+  if (hasStdExtYCapMode()) {
     if (XLen == 32) {
       // On RV32Y systems the zclsd/zcf encodings are used for y load/stores.
       if (Exts.count("zclsd") != 0)
@@ -887,21 +895,21 @@ void RISCVISAInfo::updateImplication() {
 
   // Add Zcd if C and D are enabled and we aren't targeting 64-bit RVY.
   if (Exts.count("c") && Exts.count("d") && !Exts.count("zcd") &&
-      (XLen == 32 || !Exts.count("y"))) {
+      (XLen == 32 || !hasStdExtYCapMode())) {
     auto Version = findDefaultVersion("zcd");
     Exts["zcd"] = *Version;
   }
 
   // Add Zcf if C and F are enabled on RV32 and Y is not enabled.
   if (XLen == 32 && Exts.count("c") && Exts.count("f") && !Exts.count("zcf") &&
-      !Exts.count("y")) {
+      !hasStdExtYCapMode()) {
     auto Version = findDefaultVersion("zcf");
     Exts["zcf"] = *Version;
   }
 
   // Add Zcf if Zce and F are enabled on RV32 and Y is not enabled.
   if (XLen == 32 && Exts.count("zce") && Exts.count("f") &&
-      !Exts.count("zcf") && !Exts.count("y")) {
+      !Exts.count("zcf") && !hasStdExtYCapMode()) {
     auto Version = findDefaultVersion("zcf");
     Exts["zcf"] = *Version;
   }
@@ -926,14 +934,14 @@ void RISCVISAInfo::updateImplication() {
     if (XLen == 32) {
       if (Exts.count("d"))
         ShouldAddC =
-            Exts.count("zcd") && (Exts.count("y") || Exts.count("zcf"));
+            Exts.count("zcd") && (hasStdExtYCapMode() || Exts.count("zcf"));
       else if (Exts.count("f"))
-        ShouldAddC = Exts.count("y") || Exts.count("zcf");
+        ShouldAddC = hasStdExtYCapMode() || Exts.count("zcf");
       else
         ShouldAddC = true;
     } else if (XLen == 64) {
       if (Exts.count("d"))
-        ShouldAddC = Exts.count("y") || Exts.count("zcd");
+        ShouldAddC = hasStdExtYCapMode() || Exts.count("zcd");
       else
         ShouldAddC = true;
     }
@@ -943,14 +951,16 @@ void RISCVISAInfo::updateImplication() {
     }
   }
 
-  if (!Exts.count("zce") && Exts.count("zca") && Exts.count("zcb") &&
-      Exts.count("zcmp") && Exts.count("zcmt")) {
+  if (!Exts.count("zce") && Exts.count("zca") && Exts.count("zcb")) {
     bool ShouldAddZce = false;
-    if (XLen == 32) {
-      ShouldAddZce = !Exts.count("f") || Exts.count("zcf") || Exts.count("y");
-    } else if (XLen == 64) {
-      // Zce is incompatible with RV64Y, only add it if Y is not enabled.
-      ShouldAddZce = !Exts.count("y");
+    if (Exts.count("zcmp") && Exts.count("zcmt")) {
+      if (XLen == 32) {
+        ShouldAddZce =
+            !Exts.count("f") || Exts.count("zcf") || hasStdExtYCapMode();
+      } else if (XLen == 64) {
+        // Zcmp/Zcmt are incompatible with RV64Y, so Y can't be set here.
+        ShouldAddZce = true;
+      }
     }
     if (ShouldAddZce)
       Exts["zce"] = *findDefaultVersion("zce");
@@ -1082,7 +1092,7 @@ RISCVISAInfo::postProcessAndChecking(std::unique_ptr<RISCVISAInfo> &&ISAInfo) {
 }
 
 StringRef RISCVISAInfo::computeDefaultABI() const {
-  bool HasY = Exts.count("y") != 0;
+  bool HasY = hasStdExtYCapMode();
   if (XLen == 32) {
     if (Exts.count("xcheriot"))
       return "cheriot";

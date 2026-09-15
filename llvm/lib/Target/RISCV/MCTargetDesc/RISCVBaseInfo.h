@@ -59,8 +59,10 @@ enum OperandType : unsigned {
   OPERAND_UIMM8_GE32,
   OPERAND_UIMM9,
   OPERAND_UIMM9_LSB000,
+  OPERAND_UIMM9_LSB0000,
   OPERAND_UIMM9_YBNDSWI,
   OPERAND_UIMM10,
+  OPERAND_UIMM10_LSB0000,
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM11,
   OPERAND_UIMM12,
@@ -756,6 +758,8 @@ void validate(const Triple &TT, const FeatureBitset &FeatureBits);
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 parseFeatureBits(const MCSubtargetInfo &STI);
+
+bool hasStdExtYCapMode(const FeatureBitset &FeatureBits);
 
 } // namespace RISCVFeatures
 
