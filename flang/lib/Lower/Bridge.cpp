@@ -531,6 +531,7 @@ public:
     // - Module variables are lowered once all the function declarations are
     // available.
     bool hasMainProgram = false;
+    Fortran::parser::CharBlock mainProgramPosition{};
     llvm::SmallVector<const Fortran::semantics::Symbol *>
         globalOmpRequiresSymbols;
     createBuilderOutsideOfFuncOpAndDo([&]() {
@@ -538,8 +539,10 @@ public:
         Fortran::common::visit(
             Fortran::common::visitors{
                 [&](Fortran::lower::pft::FunctionLikeUnit &f) {
-                  if (f.isMainProgram())
+                  if (f.isMainProgram()) {
                     hasMainProgram = true;
+                    mainProgramPosition = f.getStartingSourceLoc();
+                  }
                   declareFunction(f);
                   globalOmpRequiresSymbols.push_back(f.getScope().symbol());
                 },
@@ -617,6 +620,9 @@ public:
     // Generate the `main` entry point if necessary
     if (hasMainProgram)
       createBuilderOutsideOfFuncOpAndDo([&]() {
+        // Lowering has walked every unit, so the current position is the END
+        // statement of the last one. Reset it to the main program's start.
+        setCurrentPosition(mainProgramPosition);
         fir::runtime::genMain(
             *builder, toLocation(), bridge.getEnvironmentDefaults(),
             (getFoldingContext().languageFeatures().IsEnabled(
