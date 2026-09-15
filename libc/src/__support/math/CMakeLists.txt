@@ -5301,6 +5301,7 @@ add_header_library(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
     libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.FPUtil.triple_double
     libc.src.__support.macros.optimization
