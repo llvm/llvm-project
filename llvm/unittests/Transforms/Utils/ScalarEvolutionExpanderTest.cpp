@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -23,6 +24,8 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Transforms/Utils/Local.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
@@ -1033,6 +1036,347 @@ TEST_F(ScalarEvolutionExpanderTest, InsertBinopReuseShlWithMatchingFlags) {
   EXPECT_TRUE(match(ShlInst, m_Shl(m_Specific(Arg), m_SpecificInt(2))));
   EXPECT_TRUE(ShlInst->hasNoUnsignedWrap());
   EXPECT_TRUE(ShlInst->hasNoSignedWrap());
+}
+
+// Reuse can replace a disjoint or during nested expansion, including through
+// a phi's incoming values. Check that insertion points remain valid and values
+// held across expansion follow RAUW.
+class SCEVExpanderDisjointOrReplacementTest
+    : public ScalarEvolutionExpanderTest {
+protected:
+  /// Run \p Body on \p Assembly with disjoint-or replacement enabled.
+  ///
+  /// Look up original instructions before expansion: replacements take their
+  /// names. Check that replaced ors remain in the IR until the expander is
+  /// released, then delete them and verify the function again.
+  void
+  runWithExpander(StringRef Assembly,
+                  function_ref<void(Function &F, LoopInfo &LI,
+                                    ScalarEvolution &SE, SCEVExpander &Exp,
+                                    SmallVectorImpl<WeakTrackingVH> &DeadInsts)>
+                      Body) {
+    LLVMContext C;
+    SMDiagnostic Err;
+    std::unique_ptr<Module> M = parseAssemblyString(Assembly, Err, C);
+    ASSERT_TRUE(M) << "Bad assembly: " << Err.getMessage();
+    ASSERT_FALSE(verifyModule(*M, &errs()));
+
+    runWithSE(*M, "test", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+      SmallVector<WeakTrackingVH, 2> DeadInsts;
+      {
+        SCEVExpander Exp(SE, "test");
+        Exp.setDisjointOrReplacementSink(&DeadInsts);
+        Body(F, LI, SE, Exp, DeadInsts);
+        EXPECT_FALSE(verifyFunction(F, &errs()));
+
+        // Replaced ors must remain in the IR until expansion has finished.
+        for (const WeakTrackingVH &VH : DeadInsts) {
+          auto *Queued = dyn_cast_or_null<Instruction>(VH);
+          ASSERT_TRUE(Queued) << "queued entry was deleted";
+          EXPECT_EQ(Queued->getOpcode(), Instruction::Or)
+              << "queued after the RAUW, so the or and not its replacement";
+          EXPECT_NE(Queued->getParent(), nullptr) << "the or was erased";
+          EXPECT_TRUE(Queued->use_empty()) << "the RAUW left a use behind";
+        }
+
+        // Release the expander's references before deleting replaced ors.
+        Exp.clear();
+      }
+
+      for (WeakTrackingVH &VH : DeadInsts)
+        if (auto *I = dyn_cast_or_null<Instruction>(VH))
+          RecursivelyDeleteTriviallyDeadInstructions(I);
+      EXPECT_FALSE(verifyFunction(F, &errs()));
+    });
+  }
+
+  /// Reusing %index for {1,+,1} visits its disjoint-or increment, %next.
+  ///
+  /// Start at 1 so the first increment is poison (or disjoint 1, 1), while the
+  /// replacement add is 2. This makes stale references observable.
+  ///
+  /// Keep the exit condition independent of the recurrence. Otherwise poison
+  /// would imply UB and canReuseInstruction() would accept %index without
+  /// checking the or.
+  static constexpr const char *RecurrenceAssembly = R"(
+    define void @test(i1 %c) {
+    entry:
+      br label %loop
+    loop:
+      %index = phi i64 [ 1, %entry ], [ %next, %loop ]
+      %next = or disjoint i64 %index, 1
+      br i1 %c, label %loop, label %exit
+    exit:
+      ret void
+    }
+  )";
+};
+
+// Without a sink, reuse is rejected and the disjoint or is unchanged.
+TEST_F(SCEVExpanderDisjointOrReplacementTest, RefusedWithoutSink) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(RecurrenceAssembly, Err, C);
+  ASSERT_TRUE(M) << "Bad assembly: " << Err.getMessage();
+
+  runWithSE(*M, "test", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto &Index = GetInstByName(F, "index");
+    auto &Or = GetInstByName(F, "next");
+    SCEVExpander Exp(SE, "test");
+    Exp.expandCodeFor(
+        SE.getUDivExpr(SE.getSCEV(&Index), SE.getConstant(Index.getType(), 3)),
+        nullptr, &Or);
+    EXPECT_FALSE(verifyFunction(F, &errs()));
+    EXPECT_EQ(Or.getOpcode(), Instruction::Or);
+    EXPECT_TRUE(cast<PossiblyDisjointInst>(&Or)->isDisjoint());
+  });
+}
+
+// Expanding the denominator reuses %index and replaces the or used as the
+// enclosing expansion's insertion point. Its cache entry must remain usable.
+TEST_F(SCEVExpanderDisjointOrReplacementTest, ReplacedCacheLocation) {
+  runWithExpander(
+      RecurrenceAssembly,
+      [](Function &F, LoopInfo &LI, ScalarEvolution &SE, SCEVExpander &Exp,
+         SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+        auto *Index = &GetInstByName(F, "index");
+        auto *Or = &GetInstByName(F, "next");
+        const SCEV *S = SE.getUDivExpr(SE.getSCEV(Index),
+                                       SE.getConstant(Index->getType(), 3));
+
+        // Use the or as the insertion point and cache key.
+        Value *V = Exp.expandCodeFor(S, nullptr, Or);
+        ASSERT_EQ(DeadInsts.size(), 1u);
+        EXPECT_EQ(DeadInsts[0], Or);
+
+        // Reuse %index and keep the cache entry keyed on the or.
+        EXPECT_TRUE(match(V, m_UDiv(m_Specific(Index), m_SpecificInt(3))));
+        EXPECT_EQ(Exp.expandCodeFor(S, nullptr, Or), V);
+        EXPECT_EQ(DeadInsts.size(), 1u) << "replaced twice";
+      });
+}
+
+// visitUDivExpr() expands the numerator before the denominator. Expanding the
+// denominator replaces the or used by the numerator's SCEVUnknown. The saved
+// numerator must follow RAUW or it will be poison where its SCEV is 2.
+TEST_F(SCEVExpanderDisjointOrReplacementTest, RetainedOperandFollowsRAUW) {
+  runWithExpander(
+      RecurrenceAssembly,
+      [](Function &F, LoopInfo &LI, ScalarEvolution &SE, SCEVExpander &Exp,
+         SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+        auto *Index = cast<PHINode>(&GetInstByName(F, "index"));
+        auto *Or = &GetInstByName(F, "next");
+
+        // Check that the numerator's SCEVUnknown follows RAUW.
+        const auto *Numerator = cast<SCEVUnknown>(SE.getUnknown(Or));
+        ASSERT_EQ(Numerator->getValue(), Or);
+
+        Value *V =
+            Exp.expandCodeFor(SE.getUDivExpr(Numerator, SE.getSCEV(Index)),
+                              nullptr, Or->getParent()->getTerminator());
+        ASSERT_EQ(DeadInsts.size(), 1u);
+        EXPECT_EQ(DeadInsts[0], Or);
+
+        // Both the increment and its SCEVUnknown must refer to the add.
+        auto *Add = cast<Instruction>(
+            Index->getIncomingValueForBlock(Index->getParent()));
+        ASSERT_EQ(Add->getOpcode(), Instruction::Add);
+        EXPECT_EQ(Numerator->getValue(), Add)
+            << "the expression did not follow the RAUW";
+
+        // The numerator must also refer to the add.
+        auto *UDiv = dyn_cast<Instruction>(V);
+        ASSERT_TRUE(UDiv);
+        ASSERT_EQ(UDiv->getOpcode(), Instruction::UDiv);
+        EXPECT_EQ(UDiv->getOperand(0), Add)
+            << "numerator still names the replaced or";
+      });
+}
+
+// Literal add-recurrence expansion saves the start before expanding the step
+// and building the phi. Expanding the step replaces the or used as the start;
+// the phi must use the replacement add, not the now-stale or.
+TEST_F(SCEVExpanderDisjointOrReplacementTest,
+       LiteralRecurrenceStartFollowsRAUW) {
+  // Omit the phi to force its expansion, and keep the exit condition
+  // independent.
+  const char *Assembly = R"(
+    define void @test(i64 %left, i64 %right, i1 %c) {
+    entry:
+      %start = or disjoint i64 %left, %right
+      %step = shl i64 %start, 2
+      br label %loop
+    loop:
+      br i1 %c, label %loop, label %exit
+    exit:
+      ret void
+    }
+  )";
+  runWithExpander(Assembly, [](Function &F, LoopInfo &LI, ScalarEvolution &SE,
+                               SCEVExpander &Exp,
+                               SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+    auto *Or = &GetInstByName(F, "start");
+    auto *Step = &GetInstByName(F, "step");
+    BasicBlock *Preheader = Or->getParent();
+    BasicBlock *Header = Preheader->getSingleSuccessor();
+
+    const auto *Start = cast<SCEVUnknown>(SE.getUnknown(Or));
+    const SCEV *AR = SE.getAddRecExpr(Start, SE.getSCEV(Step),
+                                      LI.getLoopFor(Header), SCEV::FlagAnyWrap);
+
+    // The literal path is only taken outside canonical mode.
+    Exp.disableCanonicalMode();
+    const SCEV *S = AR;
+    Value *V = Exp.expandCodeFor(S, nullptr, Header->getTerminator());
+
+    ASSERT_EQ(DeadInsts.size(), 1u) << "the step's reuse replaced no or";
+    EXPECT_EQ(DeadInsts[0], Or);
+
+    auto *Add = dyn_cast<Instruction>(Start->getValue());
+    ASSERT_TRUE(Add);
+    EXPECT_EQ(Add->getOpcode(), Instruction::Add)
+        << "the start expression did not follow the RAUW";
+
+    // The phi must start from the add, not the or the start expanded to.
+    auto *PN = dyn_cast<PHINode>(V);
+    ASSERT_TRUE(PN) << "expected a new recurrence phi";
+    EXPECT_EQ(PN->getIncomingValueForBlock(Preheader), Add)
+        << "recurrence initialised from the replaced or";
+
+    // Expanding again reuses the phi rather than building a second one.
+    EXPECT_EQ(Exp.expandCodeFor(S, nullptr, Header->getTerminator()), V);
+    EXPECT_EQ(DeadInsts.size(), 1u) << "replaced twice";
+  });
+}
+
+// Reusing the or itself must return the replacement add.
+TEST_F(SCEVExpanderDisjointOrReplacementTest, ReusedRootIsReplaced) {
+  const char *Assembly = R"(
+    define i64 @test(i64 %a, i64 %b) {
+    entry:
+      %or = or disjoint i64 %a, %b
+      %anchor = mul i64 %a, %b
+      ret i64 %anchor
+    }
+  )";
+  runWithExpander(Assembly, [](Function &F, LoopInfo &LI, ScalarEvolution &SE,
+                               SCEVExpander &Exp,
+                               SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+    auto *Or = &GetInstByName(F, "or");
+    Value *V =
+        Exp.expandCodeFor(SE.getSCEV(Or), nullptr, &GetInstByName(F, "anchor"));
+    ASSERT_EQ(DeadInsts.size(), 1u);
+    EXPECT_EQ(DeadInsts[0], Or);
+    EXPECT_NE(V, Or) << "reuse handed back the replaced or";
+    EXPECT_TRUE(
+        match(V, m_Add(m_Specific(F.getArg(0)), m_Specific(F.getArg(1)))));
+  });
+}
+
+// The outer add is created before the inner or is replaced. RAUW must update
+// its operand to the inner add.
+TEST_F(SCEVExpanderDisjointOrReplacementTest, DependentOrsReplaced) {
+  const char *Assembly = R"(
+    define i64 @test(i64 %a, i64 %b, i64 %c) {
+    entry:
+      %or1 = or disjoint i64 %a, %b
+      %or2 = or disjoint i64 %or1, %c
+      %anchor = mul i64 %a, %c
+      ret i64 %anchor
+    }
+  )";
+  runWithExpander(Assembly, [](Function &F, LoopInfo &LI, ScalarEvolution &SE,
+                               SCEVExpander &Exp,
+                               SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+    auto *Or1 = &GetInstByName(F, "or1");
+    auto *Or2 = &GetInstByName(F, "or2");
+    Value *V = Exp.expandCodeFor(SE.getSCEV(Or2), nullptr,
+                                 &GetInstByName(F, "anchor"));
+
+    EXPECT_THAT(DeadInsts, testing::UnorderedElementsAre(WeakTrackingVH(Or1),
+                                                         WeakTrackingVH(Or2)));
+
+    auto *Outer = dyn_cast<Instruction>(V);
+    ASSERT_TRUE(Outer);
+    ASSERT_EQ(Outer->getOpcode(), Instruction::Add);
+    EXPECT_EQ(Outer->getOperand(1), F.getArg(2));
+    EXPECT_TRUE(match(Outer->getOperand(0),
+                      m_Add(m_Specific(F.getArg(0)), m_Specific(F.getArg(1)))));
+  });
+}
+
+// Apply annotation drops and replacements together, including dropping nneg
+// from the zext.
+TEST_F(SCEVExpanderDisjointOrReplacementTest, DropsAnnotationsAndReplaces) {
+  const char *Assembly = R"(
+    define i64 @test(i32 %x, i64 %b) {
+    entry:
+      %z = zext nneg i32 %x to i64
+      %or = or disjoint i64 %z, %b
+      %anchor = mul i64 %b, %b
+      ret i64 %anchor
+    }
+  )";
+  runWithExpander(Assembly, [](Function &F, LoopInfo &LI, ScalarEvolution &SE,
+                               SCEVExpander &Exp,
+                               SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+    auto *Zext = cast<PossiblyNonNegInst>(&GetInstByName(F, "z"));
+    auto *Or = &GetInstByName(F, "or");
+    ASSERT_TRUE(Zext->hasNonNeg());
+
+    Value *V =
+        Exp.expandCodeFor(SE.getSCEV(Or), nullptr, &GetInstByName(F, "anchor"));
+    ASSERT_EQ(DeadInsts.size(), 1u);
+    EXPECT_EQ(DeadInsts[0], Or);
+    EXPECT_FALSE(Zext->hasNonNeg()) << "nneg was not dropped";
+    EXPECT_TRUE(match(V, m_Add(m_Specific(Zext), m_Specific(F.getArg(1)))));
+  });
+}
+
+// Discard both fixup lists for a rejected candidate before trying the next one.
+//
+// Candidates are insertion-ordered. Prime %bad before %good and ensure none of
+// %bad's operands has the same SCEV (b + c), so %bad is examined first.
+//
+// %bad collects an annotation drop for %z and an or replacement before %x
+// causes rejection: SCEV folds out %x, but it can still make the or poison.
+// %good only uses %b and %c and needs neither fixup.
+TEST_F(SCEVExpanderDisjointOrReplacementTest, RefusedCandidateAppliesNothing) {
+  const char *Assembly = R"(
+    define i64 @test(i32 %x, i64 %b, i64 %c) {
+    entry:
+      %z = zext nneg i32 %x to i64
+      %zero = mul i64 %z, 0
+      %b.plus = add i64 %b, %zero
+      %bad = or disjoint i64 %b.plus, %c
+      %good = add i64 %b, %c
+      %anchor = mul i64 %b, %c
+      ret i64 %anchor
+    }
+  )";
+  runWithExpander(Assembly, [](Function &F, LoopInfo &LI, ScalarEvolution &SE,
+                               SCEVExpander &Exp,
+                               SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+    auto *Bad = &GetInstByName(F, "bad");
+    auto *Good = &GetInstByName(F, "good");
+    auto *Zext = cast<PossiblyNonNegInst>(&GetInstByName(F, "z"));
+    ASSERT_TRUE(Zext->hasNonNeg());
+
+    // Prime candidates in lookup order.
+    // Both have to be candidates for the same expression.
+    const SCEV *S = SE.getSCEV(Bad);
+    ASSERT_EQ(S, SE.getSCEV(Good));
+
+    Value *V = Exp.expandCodeFor(S, nullptr, &GetInstByName(F, "anchor"));
+
+    EXPECT_EQ(V, Good) << "expected the second candidate to be reused";
+    EXPECT_TRUE(DeadInsts.empty()) << "a refused candidate was applied";
+    EXPECT_EQ(Bad->getOpcode(), Instruction::Or);
+    EXPECT_TRUE(cast<PossiblyDisjointInst>(Bad)->isDisjoint())
+        << "the refused candidate's or was replaced";
+    EXPECT_TRUE(Zext->hasNonNeg())
+        << "the refused candidate's annotation was dropped";
+  });
 }
 
 } // end namespace llvm
