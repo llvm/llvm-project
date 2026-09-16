@@ -1,0 +1,126 @@
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection -verify %s
+
+void clang_analyzer_dump(unsigned);
+void clang_analyzer_eval(bool);
+void clang_analyzer_warnIfReached();
+
+struct Msg {
+  virtual unsigned cmd() const = 0;
+};
+
+namespace gh222960 {
+// Ctrl::cmd() is final, the analyzer should not split off a "maybe dynamic
+// dispatch invokes a different overriding method" execution path, and only
+// follow the path where the method body is inlined.
+struct Ctrl : Msg {
+  unsigned c;
+  unsigned cmd() const final { return c; }
+};
+
+void test(Ctrl* p) {
+  clang_analyzer_dump(p->cmd());
+  // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Element{SymRegion{reg_${{[0-9]+}}<Ctrl * p>},0 S64b,struct {{[0-9A-Za-z_]+}}::Ctrl}.c>}}
+  clang_analyzer_eval(p->cmd() == p->cmd()); // expected-warning {{TRUE}}
+}
+} // namespace gh222960
+
+namespace final_struct {
+// The analyzer should also confidently inline the method of a final class.
+struct Ctrl final : Msg {
+  unsigned c;
+  unsigned cmd() const override { return c; }
+};
+
+void test(Ctrl* p)
+{
+  clang_analyzer_dump(p->cmd());
+  // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Element{SymRegion{reg_${{[0-9]+}}<Ctrl * p>},0 S64b,struct {{[0-9A-Za-z_]+}}::Ctrl}.c>}}
+  clang_analyzer_eval(p->cmd() == p->cmd()); // expected-warning {{TRUE}}
+}
+} // namespace final_class
+
+namespace final_method_on_child_ptr {
+// A final method should also be inlined when it is called through a pointer
+// whose (static) type is a child of the class where it was defined.
+struct Ctrl : Msg {
+  unsigned c;
+  unsigned cmd() const final { return c; }
+};
+
+struct Child : Ctrl {};
+
+void test(Child* p) {
+  clang_analyzer_dump(p->cmd());
+  // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Base{SymRegion{reg_${{[0-9]+}}<Child * p>},Ctrl}.c>}}
+  clang_analyzer_eval(p->cmd() == p->cmd()); // expected-warning {{TRUE}}
+}
+} // namespace final_method_on_child_ptr
+
+namespace final_method_on_ptr_with_dyn_type_child {
+// A final method should also be inlined when it is called through a pointer
+// whose dynamic type is a child of the class where it was defined.
+struct Ctrl : Msg {
+  unsigned c;
+  unsigned cmd() const final { return c; }
+};
+
+struct Child : Ctrl {};
+
+void test(Ctrl* p) {
+  clang_analyzer_dump(p->cmd());
+  // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Base{SymRegion{reg_${{[0-9]+}}<Child * p>},Ctrl}.c>}}
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+  clang_analyzer_eval(p->cmd() == p->cmd());
+  // FIXME: For unclear reasons, this clang_analyzer_eval call is not reached.
+}
+
+void entrypoint(Child *p) {
+  test(p);
+}
+} // namespace final_method_on_ptr_with_dyn_type_child
+
+namespace final_method_on_base_ptr_with_known_dyn_type {
+// A final method should also be inlined when it is called through a pointer
+// whose dynamic type is a child of the class where it was defined.
+// FIXME: This is not yet implemented, 'final' is only checked on the method
+// and class declaration corresponding to the static type of the pointee.
+struct Base : Msg {};
+
+struct Ctrl : Base {
+  unsigned c;
+  unsigned cmd() const final { return c; }
+};
+
+void test(Base* p) {
+  clang_analyzer_dump(p->cmd());
+  // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Element{SymRegion{reg_${{[0-9]+}}<Ctrl * p>},0 S64b,struct {{[0-9A-Za-z_]+}}::Ctrl}.c>}}
+  // expected-warning@-2 {{conj_$}}
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+  clang_analyzer_eval(p->cmd() == p->cmd());
+  // FIXME: For unclear reasons, this clang_analyzer_eval call is not reached.
+}
+
+void entrypoint(Ctrl *p) {
+  test(p);
+}
+} // namespace final_method_on_base_ptr_with_known_dyn_type
+
+namespace nonfinal_bifurcates {
+// When the method is non-final and the dynamic type is unclear, the analysis
+// should bifurcate, with one branch inlining the method and the other branch
+// doing a conservative evaluation (which represents that another overriding
+// method is called).
+struct Ctrl : Msg {
+  unsigned c;
+  unsigned cmd() const override { return c; }
+};
+
+void test(Ctrl* p) {
+  clang_analyzer_dump(p->cmd());
+  // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Element{SymRegion{reg_${{[0-9]+}}<Ctrl * p>},0 S64b,struct {{[0-9A-Za-z_]+}}::Ctrl}.c>}}
+  // expected-warning@-2 {{conj_$}}
+  clang_analyzer_eval(p->cmd() == p->cmd());
+  // expected-warning@-1 {{TRUE}}
+  // expected-warning@-2 {{FALSE}}
+}
+} // namespace nonfinal_bifurcate
