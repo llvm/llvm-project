@@ -13,9 +13,6 @@ define amdgpu_kernel void @lds_wg_fence_release_single32(ptr addrspace(3) %lds) 
   ; GFX1250-NEXT:   renamable $sgpr0 = S_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5, 36, 32 :: (dereferenceable invariant load (s32) from %ir.lds.kernarg.offset, addrspace 4)
   ; GFX1250-NEXT:   renamable $vgpr0, $vgpr1 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1250 1, killed $sgpr0, implicit $exec, implicit $exec, implicit $exec, implicit $exec
   ; GFX1250-NEXT:   DS_WRITE_B32_gfx9 renamable $vgpr1, renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
-  ; GFX1250-NEXT:   S_WAIT_LOADCNT_soft 0
-  ; GFX1250-NEXT:   S_WAIT_STORECNT_soft 0
-  ; GFX1250-NEXT:   S_WAIT_DSCNT_soft 0
   ; GFX1250-NEXT:   DS_WRITE_B32_gfx9 killed renamable $vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
   ; GFX1250-NEXT:   S_ENDPGM 0
   store i32 1, ptr addrspace(3) %lds, align 4
@@ -35,9 +32,6 @@ define amdgpu_kernel void @lds_async_dma_wg_fence_release_single32(ptr addrspace
   ; GFX1250-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2 = S_LOAD_DWORDX3_IMM_ec killed renamable $sgpr4_sgpr5, 36, 32 :: (dereferenceable invariant load (s96) from %ir.g.kernarg.offset, align 4, addrspace 4)
   ; GFX1250-NEXT:   renamable $vgpr0, $vgpr1 = V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1250 0, killed $sgpr2, implicit $exec, implicit $exec, implicit $exec, implicit $exec
   ; GFX1250-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B32_SADDR killed $vgpr1, killed $sgpr0_sgpr1, killed $vgpr0, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32) from %ir.g.load, align 1, addrspace 1), (store (s32) into %ir.lds.load, align 1, addrspace 3)
-  ; GFX1250-NEXT:   S_WAIT_LOADCNT_soft 0
-  ; GFX1250-NEXT:   S_WAIT_STORECNT_soft 0
-  ; GFX1250-NEXT:   S_WAIT_DSCNT_soft 0
   ; GFX1250-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.global.load.async.to.lds.b32(ptr addrspace(1) %g, ptr addrspace(3) %lds, i32 0, i32 0)
   fence syncscope("workgroup") release

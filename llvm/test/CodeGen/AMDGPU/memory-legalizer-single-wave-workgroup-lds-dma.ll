@@ -17,8 +17,6 @@ define amdgpu_kernel void @lds_wg_fence_release_single32(ptr addrspace(3) %lds) 
   ; GFX9-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 1, implicit $exec
   ; GFX9-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
   ; GFX9-NEXT:   DS_WRITE_B32_gfx9 renamable $vgpr1, renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
-  ; GFX9-NEXT:   S_WAITCNT_soft .Lgkmcnt_0
-  ; GFX9-NEXT:   S_WAITCNT_lds_direct
   ; GFX9-NEXT:   DS_WRITE_B32_gfx9 killed renamable $vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
   ; GFX9-NEXT:   S_ENDPGM 0
   ;
@@ -32,8 +30,6 @@ define amdgpu_kernel void @lds_wg_fence_release_single32(ptr addrspace(3) %lds) 
   ; GFX942-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 1, implicit $exec
   ; GFX942-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
   ; GFX942-NEXT:   DS_WRITE_B32_gfx9 renamable $vgpr1, renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
-  ; GFX942-NEXT:   S_WAITCNT_soft .Lgkmcnt_0
-  ; GFX942-NEXT:   S_WAITCNT_lds_direct
   ; GFX942-NEXT:   DS_WRITE_B32_gfx9 killed renamable $vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
   ; GFX942-NEXT:   S_ENDPGM 0
   ;
@@ -47,9 +43,6 @@ define amdgpu_kernel void @lds_wg_fence_release_single32(ptr addrspace(3) %lds) 
   ; GFX10-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 1, implicit $exec
   ; GFX10-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
   ; GFX10-NEXT:   DS_WRITE_B32_gfx9 renamable $vgpr1, renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
-  ; GFX10-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
-  ; GFX10-NEXT:   S_WAITCNT_lds_direct
-  ; GFX10-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10-NEXT:   DS_WRITE_B32_gfx9 killed renamable $vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
   ; GFX10-NEXT:   S_ENDPGM 0
   store i32 1, ptr addrspace(3) %lds, align 4
@@ -70,8 +63,6 @@ define amdgpu_kernel void @lds_wg_fence_release_single64(ptr addrspace(3) %lds) 
   ; GFX9-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 1, implicit $exec
   ; GFX9-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
   ; GFX9-NEXT:   DS_WRITE_B32_gfx9 renamable $vgpr1, renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
-  ; GFX9-NEXT:   S_WAITCNT_soft .Lgkmcnt_0
-  ; GFX9-NEXT:   S_WAITCNT_lds_direct
   ; GFX9-NEXT:   DS_WRITE_B32_gfx9 killed renamable $vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
   ; GFX9-NEXT:   S_ENDPGM 0
   ;
@@ -85,26 +76,37 @@ define amdgpu_kernel void @lds_wg_fence_release_single64(ptr addrspace(3) %lds) 
   ; GFX942-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 1, implicit $exec
   ; GFX942-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
   ; GFX942-NEXT:   DS_WRITE_B32_gfx9 renamable $vgpr1, renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
-  ; GFX942-NEXT:   S_WAITCNT_soft .Lgkmcnt_0
-  ; GFX942-NEXT:   S_WAITCNT_lds_direct
   ; GFX942-NEXT:   DS_WRITE_B32_gfx9 killed renamable $vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
   ; GFX942-NEXT:   S_ENDPGM 0
   ;
-  ; GFX10-LABEL: name: lds_wg_fence_release_single64
-  ; GFX10: bb.0 (%ir-block.0):
-  ; GFX10-NEXT:   liveins: $sgpr4_sgpr5
-  ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
-  ; GFX10-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
-  ; GFX10-NEXT:   renamable $sgpr0 = S_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s32) from %ir.lds.kernarg.offset, addrspace 4)
-  ; GFX10-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 1, implicit $exec
-  ; GFX10-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
-  ; GFX10-NEXT:   DS_WRITE_B32_gfx9 renamable $vgpr1, renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
-  ; GFX10-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
-  ; GFX10-NEXT:   S_WAITCNT_lds_direct
-  ; GFX10-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
-  ; GFX10-NEXT:   DS_WRITE_B32_gfx9 killed renamable $vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
-  ; GFX10-NEXT:   S_ENDPGM 0
+  ; GFX10-W32-LABEL: name: lds_wg_fence_release_single64
+  ; GFX10-W32: bb.0 (%ir-block.0):
+  ; GFX10-W32-NEXT:   liveins: $sgpr4_sgpr5
+  ; GFX10-W32-NEXT: {{  $}}
+  ; GFX10-W32-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; GFX10-W32-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
+  ; GFX10-W32-NEXT:   renamable $sgpr0 = S_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s32) from %ir.lds.kernarg.offset, addrspace 4)
+  ; GFX10-W32-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+  ; GFX10-W32-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
+  ; GFX10-W32-NEXT:   DS_WRITE_B32_gfx9 renamable $vgpr1, renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
+  ; GFX10-W32-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10-W32-NEXT:   S_WAITCNT_lds_direct
+  ; GFX10-W32-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
+  ; GFX10-W32-NEXT:   DS_WRITE_B32_gfx9 killed renamable $vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
+  ; GFX10-W32-NEXT:   S_ENDPGM 0
+  ;
+  ; GFX10-W64-LABEL: name: lds_wg_fence_release_single64
+  ; GFX10-W64: bb.0 (%ir-block.0):
+  ; GFX10-W64-NEXT:   liveins: $sgpr4_sgpr5
+  ; GFX10-W64-NEXT: {{  $}}
+  ; GFX10-W64-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; GFX10-W64-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
+  ; GFX10-W64-NEXT:   renamable $sgpr0 = S_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s32) from %ir.lds.kernarg.offset, addrspace 4)
+  ; GFX10-W64-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+  ; GFX10-W64-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
+  ; GFX10-W64-NEXT:   DS_WRITE_B32_gfx9 renamable $vgpr1, renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
+  ; GFX10-W64-NEXT:   DS_WRITE_B32_gfx9 killed renamable $vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (store (s32) into %ir.lds.load, addrspace 3)
+  ; GFX10-W64-NEXT:   S_ENDPGM 0
   store i32 1, ptr addrspace(3) %lds, align 4
   fence syncscope("workgroup") release
   %v = load i32, ptr addrspace(3) %lds, align 4
@@ -123,8 +125,6 @@ define amdgpu_kernel void @lds_dma_wg_fence_release_single32(ptr addrspace(8) %r
   ; GFX9-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.rsrc.kernarg.offset, align 4, addrspace 4)
   ; GFX9-NEXT:   $m0 = S_MOV_B32 killed $sgpr6
   ; GFX9-NEXT:   BUFFER_LOAD_DWORD_LDS_OFFSET killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec, implicit $m0 :: (dereferenceable load (s32) from %ir.rsrc.load, align 1, addrspace 8), (dereferenceable store (s2048) into %ir.lds.load, align 1, addrspace 3)
-  ; GFX9-NEXT:   S_WAITCNT_soft .Lgkmcnt_0
-  ; GFX9-NEXT:   S_WAITCNT_lds_direct
   ; GFX9-NEXT:   S_ENDPGM 0
   ;
   ; GFX942-LABEL: name: lds_dma_wg_fence_release_single32
@@ -137,8 +137,6 @@ define amdgpu_kernel void @lds_dma_wg_fence_release_single32(ptr addrspace(8) %r
   ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.rsrc.kernarg.offset, align 4, addrspace 4)
   ; GFX942-NEXT:   $m0 = S_MOV_B32 killed $sgpr6
   ; GFX942-NEXT:   BUFFER_LOAD_DWORD_LDS_OFFSET killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec, implicit $m0 :: (dereferenceable load (s32) from %ir.rsrc.load, align 1, addrspace 8), (dereferenceable store (s2048) into %ir.lds.load, align 1, addrspace 3)
-  ; GFX942-NEXT:   S_WAITCNT_soft .Lgkmcnt_0
-  ; GFX942-NEXT:   S_WAITCNT_lds_direct
   ; GFX942-NEXT:   S_ENDPGM 0
   ;
   ; GFX10-W32-LABEL: name: lds_dma_wg_fence_release_single32
@@ -151,9 +149,6 @@ define amdgpu_kernel void @lds_dma_wg_fence_release_single32(ptr addrspace(8) %r
   ; GFX10-W32-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.rsrc.kernarg.offset, align 4, addrspace 4)
   ; GFX10-W32-NEXT:   $m0 = S_MOV_B32 killed $sgpr6
   ; GFX10-W32-NEXT:   BUFFER_LOAD_DWORD_LDS_OFFSET killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec, implicit $m0 :: (dereferenceable load (s32) from %ir.rsrc.load, align 1, addrspace 8), (dereferenceable store (s1024) into %ir.lds.load, align 1, addrspace 3)
-  ; GFX10-W32-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
-  ; GFX10-W32-NEXT:   S_WAITCNT_lds_direct
-  ; GFX10-W32-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10-W32-NEXT:   S_ENDPGM 0
   ;
   ; GFX10-W64-LABEL: name: lds_dma_wg_fence_release_single32
@@ -166,9 +161,6 @@ define amdgpu_kernel void @lds_dma_wg_fence_release_single32(ptr addrspace(8) %r
   ; GFX10-W64-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.rsrc.kernarg.offset, align 4, addrspace 4)
   ; GFX10-W64-NEXT:   $m0 = S_MOV_B32 killed $sgpr6
   ; GFX10-W64-NEXT:   BUFFER_LOAD_DWORD_LDS_OFFSET killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec, implicit $m0 :: (dereferenceable load (s32) from %ir.rsrc.load, align 1, addrspace 8), (dereferenceable store (s2048) into %ir.lds.load, align 1, addrspace 3)
-  ; GFX10-W64-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
-  ; GFX10-W64-NEXT:   S_WAITCNT_lds_direct
-  ; GFX10-W64-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10-W64-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
   fence syncscope("workgroup") release
