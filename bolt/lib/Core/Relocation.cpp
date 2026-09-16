@@ -268,6 +268,7 @@ static bool skipRelocationTypeRISCV(uint32_t Type) {
     return false;
   case ELF::R_RISCV_NONE:
   case ELF::R_RISCV_RELAX:
+  case ELF::R_RISCV_ALIGN:
     return true;
   }
 }
