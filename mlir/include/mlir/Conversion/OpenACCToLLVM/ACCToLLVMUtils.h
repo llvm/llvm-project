@@ -95,12 +95,46 @@ LogicalResult emitWaitCall(Location loc, ValueRange waitOperands,
                            Region &globalSymbolRegion, SymbolTable &symbolTable,
                            const ACCRuntimeCallConfig &config);
 
+/// Emits the runtime call that asks for the device address the object of the
+/// data clause \p clauseOp is mapped to, which is what a `use_device` clause
+/// exposes in the body of its construct. \p hostPtr is the address of that
+/// object, already converted to the LLVM dialect. With \p ifPresent, an object
+/// that is not mapped keeps its host address instead of being reported.
+///
+/// Bounds on the clause say which part of the object it names, which the
+/// address asked about does not have to state: the result stands for the
+/// object, so whatever reads it addresses the part it wants as it would on the
+/// host.
+FailureOr<Value> emitGetDevicePtrCall(Operation *clauseOp, Value hostPtr,
+                                      bool ifPresent, OpBuilder &builder,
+                                      Region &globalSymbolRegion,
+                                      SymbolTable &symbolTable,
+                                      const ACCRuntimeCallConfig &config);
+
 /// Runs \p emitFn guarded by a branch on \p ifCond, or unguarded when there is
 /// no condition. Leaves the insertion point after the guarded code, so that a
 /// caller can keep emitting into the same block either way.
 LogicalResult emitGuardedByIfCond(Location loc, Value ifCond,
                                   RewriterBase &rewriter,
                                   function_ref<LogicalResult()> emitFn);
+
+/// Emits \p thenFn on the path a branch on \p ifCond takes and \p elseFn on
+/// the other one, and returns the value that reaches the code following the
+/// branch. Both have to produce a value, and of the same type. With no
+/// condition only \p thenFn is emitted and its value returned. As with
+/// emitGuardedByIfCond, the insertion point is left after the branch.
+FailureOr<Value>
+emitValueSelectedByIfCond(Location loc, Value ifCond, RewriterBase &rewriter,
+                          function_ref<FailureOr<Value>()> thenFn,
+                          function_ref<FailureOr<Value>()> elseFn);
+
+/// Splices \p region, the body of a structured construct, into the block
+/// holding \p op, so that the construct itself can be erased. The code that
+/// follows \p op is branched to where the region ends, whether it ends in an
+/// `acc.terminator` or, as a region holding no terminator does, at the end of
+/// its blocks.
+void spliceConstructRegion(Operation *op, Region &region,
+                           RewriterBase &rewriter);
 
 /// The clauses of a construct can be given once per device type. Of the values
 /// that reach a given device type, the ones naming it are the most specific,

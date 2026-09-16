@@ -113,6 +113,7 @@ declare double @llvm.nvvm.atomic.add.gen.f.sys.f64.p0(ptr, double)
 declare ptr addrspace(3) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3), i32)
 
 declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(3), ptr addrspace(3), ptr addrspace(1), i32, i16, i64, i1, i1)
+declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cta(ptr addrspace(3), ptr addrspace(3), ptr addrspace(1), i32, i64, i1)
 declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(3), ptr addrspace(3), ptr addrspace(3), i32)
 
 declare void @llvm.nvvm.tcgen05.commit.cg1(ptr)
@@ -489,10 +490,14 @@ define void @nvvm_shared_cluster_intrinsics(ptr addrspace(3) %p0, i32 %offset) {
 }
 
 ; CHECK-LABEL: @nvvm_cp_async_bulk_intrinsics
-define void @nvvm_cp_async_bulk_intrinsics(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, ptr addrspace(3) %src_shared, i32 %size) {
-; CHECK: call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(7) %1, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 0, i64 0, i1 false, i1 false)
+define void @nvvm_cp_async_bulk_intrinsics(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, ptr addrspace(3) %src_shared, ptr addrspace(7) %dst_cluster, i32 %size, i16 %mc, i64 %ch) {
+; CHECK: call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster.i16(ptr addrspace(7) %1, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 0, i64 0, i1 false, i1 false, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster.i16(ptr addrspace(7) %dst_cluster, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 true, i1 true, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.global.to.shared.cta(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i32 0, i32 0, i64 %ch, i1 true, i1 false, /* flag_valid_pattern=disabled */ i32 0)
 ; CHECK: call void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(7) %2, ptr addrspace(3) %bar, ptr addrspace(3) %src_shared, i32 %size)
   call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 0, i64 0, i1 false, i1 false)
+  call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(7) %dst_cluster, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 true, i1 true)
+  call void @llvm.nvvm.cp.async.bulk.global.to.shared.cta(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i64 %ch, i1 true)
   call void @llvm.nvvm.cp.async.bulk.shared.cta.to.cluster(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(3) %src_shared, i32 %size)
   ret void
 }
@@ -547,9 +552,9 @@ define void @nvvm_tcgen05_commit_mc_16b_intrinsics(ptr %bar, ptr addrspace(3) %b
 
 ; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_g2s_im2col
 define void @nvvm_cp_async_bulk_tensor_g2s_im2col(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 %mc, i64 %ch) {
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d.i16(ptr addrspace(7) %1, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 0, i64 0, i1 false, i1 false, i32 0, /* validate_pattern=disabled */ i32 0)
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d.i16(ptr addrspace(7) %2, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i16 0, i64 0, i1 false, i1 false, i32 0, /* validate_pattern=disabled */ i32 0)
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d.i16(ptr addrspace(7) %3, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 0, i64 0, i1 false, i1 false, i32 0, /* validate_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d.i16(ptr addrspace(7) %1, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 0, i64 0, i1 false, i1 false, i32 0, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d.i16(ptr addrspace(7) %2, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i16 0, i64 0, i1 false, i1 false, i32 0, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d.i16(ptr addrspace(7) %3, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 0, i64 0, i1 false, i1 false, i32 0, /* flag_valid_pattern=disabled */ i32 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 0, i64 0, i1 0, i1 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i16 0, i64 0, i1 0, i1 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 0, i64 0, i1 0, i1 0)
@@ -558,11 +563,11 @@ define void @nvvm_cp_async_bulk_tensor_g2s_im2col(ptr addrspace(3) %d, ptr addrs
 
 ; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_g2s_tile
 define void @nvvm_cp_async_bulk_tensor_g2s_tile(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %mc, i64 %ch) {
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d.i16(ptr addrspace(7) %1, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 0, i64 0, i1 false, i1 false, i32 0, /* validate_pattern=disabled */ i32 0)
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d.i16(ptr addrspace(7) %2, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i16 0, i64 0, i1 false, i1 false, i32 0, /* validate_pattern=disabled */ i32 0)
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d.i16(ptr addrspace(7) %3, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 0, i64 0, i1 false, i1 false, i32 0, /* validate_pattern=disabled */ i32 0)
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d.i16(ptr addrspace(7) %4, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 0, i64 0, i1 false, i1 false, i32 0, /* validate_pattern=disabled */ i32 0)
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d.i16(ptr addrspace(7) %5, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 0, i64 0, i1 false, i1 false, i32 0, /* validate_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d.i16(ptr addrspace(7) %1, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 0, i64 0, i1 false, i1 false, i32 0, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d.i16(ptr addrspace(7) %2, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i16 0, i64 0, i1 false, i1 false, i32 0, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d.i16(ptr addrspace(7) %3, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 0, i64 0, i1 false, i1 false, i32 0, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d.i16(ptr addrspace(7) %4, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 0, i64 0, i1 false, i1 false, i32 0, /* flag_valid_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d.i16(ptr addrspace(7) %5, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 0, i64 0, i1 false, i1 false, i32 0, /* flag_valid_pattern=disabled */ i32 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 0, i64 0, i1 0, i1 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i16 0, i64 0, i1 0, i1 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 0, i64 0, i1 0, i1 0)
@@ -573,14 +578,14 @@ define void @nvvm_cp_async_bulk_tensor_g2s_tile(ptr addrspace(3) %d, ptr addrspa
 
 ; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_g2s_tile_with_cta_group
 define void @nvvm_cp_async_bulk_tensor_g2s_tile_with_cta_group(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 %mc, i64 %ch) {
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d.i16(ptr addrspace(7) %1, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 0, i64 0, i1 false, i1 true, i32 2, /* validate_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d.i16(ptr addrspace(7) %1, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 0, i64 0, i1 false, i1 true, i32 2, /* flag_valid_pattern=disabled */ i32 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 0, i64 0, i1 0, i1 1, i32 2)
   ret void
 }
 
 ; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_g2s_cta_tile
 define void @nvvm_cp_async_bulk_tensor_g2s_cta_tile(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i64 %ch) {
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.1d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i64 0, i1 true, /* validate_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.1d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i64 0, i1 true, /* flag_valid_pattern=disabled */ i32 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.1d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i64 0, i1 1)
   ret void
 }
@@ -591,11 +596,11 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.2d(ptr addrspace(7
 
 ; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_g2s_im2col_with_cta_group
 define void @nvvm_cp_async_bulk_tensor_g2s_im2col_with_cta_group(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch) {
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.3d.i16(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 true, i1 true, i32 2, /* validate_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.3d.i16(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 true, i1 true, i32 2, /* flag_valid_pattern=disabled */ i32 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.3d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 1, i1 1, i32 2)
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.3d.i16(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 true, i1 false, i32 2, /* validate_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.3d.i16(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 true, i1 false, i32 2, /* flag_valid_pattern=disabled */ i32 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.3d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 1, i1 0, i32 2)
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.2d.i16(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %mc, i64 %ch, i1 true, i1 true, i32 2, /* validate_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.2d.i16(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %mc, i64 %ch, i1 true, i1 true, i32 2, /* flag_valid_pattern=disabled */ i32 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.2d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %mc, i64 %ch, i1 1, i1 1, i32 2)
   ret void
 }
@@ -605,9 +610,9 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.gather4.2d(ptr addrspa
 
 ; CHECK-LABEL: @nvvm_cp_async_bulk_tensor_g2s_cta
 define void @nvvm_cp_async_bulk_tensor_g2s_cta(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %wHalo, i16 %wOffset, i64 %ch) {
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 true, /* validate_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 true, /* flag_valid_pattern=disabled */ i32 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 1)
-; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.gather4.2d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, i1 true, /* validate_pattern=disabled */ i32 0)
+; CHECK: call void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.gather4.2d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, i1 true, /* flag_valid_pattern=disabled */ i32 0)
   call void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.gather4.2d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, i1 1)
   ret void
 }

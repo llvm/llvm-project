@@ -346,8 +346,12 @@ class ValueAPITestCase(TestBase):
                     sp_with_name_index = reg_set.GetIndexOfChildWithName(reg_name)
                     self.assertTrue(sp_with_name_index < num_registers)
                     rsp_with_name_index = reg_set.GetIndexOfChildWithName("rsp")
-                    self.assertTrue(rsp_with_name_index < num_registers)
-                    self.assertEqual(sp_with_name_index, rsp_with_name_index)
+                    if rsp_with_name_index < num_registers:
+                        self.assertEqual(sp_with_name_index, rsp_with_name_index)
+                    else:
+                        # "rsp" is not in this set, so we get the architectural
+                        # "sp" instead.
+                        self.assertEqual(sp_with_name_index, child_idx)
 
                     continue
 
