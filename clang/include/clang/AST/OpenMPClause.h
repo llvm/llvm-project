@@ -10057,7 +10057,7 @@ struct OMPTraitProperty {
   llvm::omp::TraitProperty Kind = llvm::omp::TraitProperty::invalid;
 
   /// The raw string as we parsed it. This is needed for the `isa` trait set
-  /// (which accepts anything) and (later) extensions.
+  /// (which accepts anything), user-condition identity, and extensions.
   StringRef RawString;
 };
 

@@ -242,6 +242,15 @@ private:
   std::string features_;
 };
 
+/// Append the construct context contributed by \p directive.
+///
+/// Combined and composite directives contribute their leaf constructs in
+/// source order. Informational directives do not contribute. Entering a TARGET
+/// construct discards the outer context, as required by the OpenMP
+/// construct-set definition.
+void AppendDirectiveContextTraits(llvm::omp::Directive directive,
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
+
 struct MetadirectiveCandidate {
   MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
       llvm::omp::VariantMatchInfo vmi, bool isExplicit,

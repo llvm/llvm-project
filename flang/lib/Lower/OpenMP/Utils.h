@@ -15,6 +15,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Support/StateStack.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Support/CommandLine.h"
 #include <cstdint>
@@ -50,6 +51,19 @@ struct Evaluation;
 class AbstractConverter;
 
 namespace omp {
+
+class OpenMPContextFrame
+    : public mlir::StateStackFrameBase<OpenMPContextFrame> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPContextFrame)
+
+  OpenMPContextFrame(const pft::Evaluation &evaluation,
+                     llvm::omp::Directive directive)
+      : evaluation{evaluation}, directive{directive} {}
+
+  const pft::Evaluation &evaluation;
+  llvm::omp::Directive directive;
+};
 
 struct DeclareTargetCaptureInfo {
   mlir::omp::DeclareTargetCaptureClause clause;
@@ -262,12 +276,11 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
     Fortran::lower::AbstractConverter &converter, const omp::Object &object,
     Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
 
-/// Walk the already-emitted MLIR parent operations starting from \p op and
-/// collect the implied OpenMP construct traits in outermost-to-innermost
-/// order. Used by metadirective lowering and declare-variant call resolution
-/// to build the `ConstructTraits` of an `OMPContext`.
+/// Collect the source OpenMP constructs enclosing \p evaluation in
+/// outermost-to-innermost order. Active metadirective replacements substitute
+/// for their METADIRECTIVE source constructs.
 void collectEnclosingConstructTraits(
-    mlir::Operation *op,
+    AbstractConverter &converter, const pft::Evaluation &evaluation,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
 
 /// Return true when \p module is being compiled for an AMDGPU device or all of

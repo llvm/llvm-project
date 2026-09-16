@@ -1122,6 +1122,8 @@ public:
 
   void genEval(Fortran::lower::pft::Evaluation &eval,
                bool unstructuredContext) override final {
+    Fortran::lower::pft::Evaluation *previousEval{evalPtr};
+    llvm::scope_exit restoreEval([&]() { evalPtr = previousEval; });
     genFIR(eval, unstructuredContext);
   }
 
@@ -1225,6 +1227,10 @@ public:
 
   const Fortran::semantics::Scope &getCurrentScope() override final {
     return bridge.getSemanticsContext().FindScope(currentPosition);
+  }
+
+  Fortran::lower::pft::Evaluation &getCurrentEvaluation() override final {
+    return getEval();
   }
 
   fir::FirOpBuilder &getFirOpBuilder() override final {

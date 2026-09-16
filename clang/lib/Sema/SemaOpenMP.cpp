@@ -4448,16 +4448,46 @@ static void handleDeclareVariantConstructTrait(DSAStackTy *Stack,
                                                OpenMPDirectiveKind DKind,
                                                bool ScopeEntry) {
   SmallVector<llvm::omp::TraitProperty, 8> Traits;
-  if (isOpenMPTargetExecutionDirective(DKind))
-    Traits.emplace_back(llvm::omp::TraitProperty::construct_target_target);
-  if (isOpenMPTeamsDirective(DKind))
-    Traits.emplace_back(llvm::omp::TraitProperty::construct_teams_teams);
-  if (isOpenMPParallelDirective(DKind))
-    Traits.emplace_back(llvm::omp::TraitProperty::construct_parallel_parallel);
-  if (isOpenMPWorksharingDirective(DKind))
-    Traits.emplace_back(llvm::omp::TraitProperty::construct_for_for);
-  if (isOpenMPSimdDirective(DKind))
-    Traits.emplace_back(llvm::omp::TraitProperty::construct_simd_simd);
+  // Update the enclosing construct stack for declare variant matching and
+  // scoring on region entry or exit. Record each directive's constructs in
+  // nesting order, using placeholders for constructs without selector
+  // properties so they still contribute to scoring positions and depth.
+  for (OpenMPDirectiveKind Leaf : getLeafConstructsOrSelf(DKind)) {
+    if (llvm::omp::getDirectiveCategory(Leaf) ==
+        llvm::omp::Category::Informational)
+      continue;
+    switch (Leaf) {
+    case OMPD_target:
+      Traits.push_back(llvm::omp::TraitProperty::construct_target_target);
+      break;
+    case OMPD_teams:
+      Traits.push_back(llvm::omp::TraitProperty::construct_teams_teams);
+      break;
+    case OMPD_parallel:
+      Traits.push_back(llvm::omp::TraitProperty::construct_parallel_parallel);
+      break;
+    case OMPD_for:
+      Traits.push_back(llvm::omp::TraitProperty::construct_for_for);
+      break;
+    case OMPD_simd:
+      Traits.push_back(llvm::omp::TraitProperty::construct_simd_simd);
+      break;
+    case OMPD_section:
+      // SECTION separates blocks within SECTIONS and adds no construct level.
+      // Do not add a placeholder: spelling the optional first SECTION must
+      // not change variant scores.
+      break;
+    case OMPD_dispatch:
+      // OpenMP allows omitting DISPATCH from the construct context. Keep it
+      // omitted here: adding it for the whole region would also affect calls
+      // in arguments, but the trait may apply only to the target call.
+      break;
+    default:
+      // Constructs without a selector property still affect scoring depth.
+      Traits.push_back(llvm::omp::TraitProperty::invalid);
+      break;
+    }
+  }
   Stack->handleConstructTrait(Traits, ScopeEntry);
 }
 

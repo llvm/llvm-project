@@ -13135,8 +13135,10 @@ OMPTraitInfo *ASTRecordReader::readOMPTraitInfo() {
       if (readBool())
         Selector.ScoreOrCondition = readExprRef();
       Selector.Properties.resize(readUInt32());
-      for (auto &Property : Selector.Properties)
+      for (auto &Property : Selector.Properties) {
         Property.Kind = readEnum<llvm::omp::TraitProperty>();
+        Property.RawString = getContext().backupStr(readString());
+      }
     }
   }
   return &TI;
