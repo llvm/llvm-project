@@ -25,15 +25,42 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 
 #include <iterator>
 #include <utility>
-#include <variant>
 
 using namespace clang;
 using namespace ento;
+
+static const MemRegion *getFirstArgRegion(const CallEvent &Call) {
+  return Call.getArgSVal(0).getAsRegion();
+}
+
+static const MemRegion *getCXXThisRegion(const CallEvent &Call) {
+  return cast<CXXMemberCall>(Call).getCXXThisVal().getAsRegion();
+}
+
+static const MemRegion *getObjectUnderConstruction(const CallEvent &Call) {
+  if (std::optional<SVal> Object = Call.getReturnValueUnderConstruction())
+    return Object->getAsRegion();
+  return nullptr;
+}
+
+static const MemRegion *getCXXDestructorThisRegion(const CallEvent &Call) {
+  return cast<CXXDestructorCall>(Call).getCXXThisVal().getAsRegion();
+}
+
+static bool isNotDeferLockUniqueLock(const CallEvent &Call) {
+  if (Call.getNumArgs() < 2)
+    return true;
+  const Expr *SecondArg = Call.getArgExpr(1);
+  QualType ArgType = SecondArg->getType().getNonReferenceType();
+  if (const auto *RD = ArgType->getAsRecordDecl();
+      RD && RD->getName() == "defer_lock_t" && RD->isInStdNamespace())
+    return false;
+  return true;
+}
 
 namespace {
 
@@ -56,110 +83,19 @@ struct CritSectionMarker {
   }
 };
 
-class CallDescriptionBasedMatcher {
-  CallDescription LockFn;
-  CallDescription UnlockFn;
-
-public:
-  CallDescriptionBasedMatcher(CallDescription &&LockFn,
-                              CallDescription &&UnlockFn)
-      : LockFn(std::move(LockFn)), UnlockFn(std::move(UnlockFn)) {}
-  [[nodiscard]] bool matches(const CallEvent &Call, bool IsLock) const {
-    if (IsLock) {
-      return LockFn.matches(Call);
-    }
-    return UnlockFn.matches(Call);
-  }
+enum class Role {
+  Lock,
+  Unlock,
 };
 
-class FirstArgMutexDescriptor : public CallDescriptionBasedMatcher {
-public:
-  FirstArgMutexDescriptor(CallDescription &&LockFn, CallDescription &&UnlockFn)
-      : CallDescriptionBasedMatcher(std::move(LockFn), std::move(UnlockFn)) {}
+using GetRegionFn = const MemRegion *(*)(const CallEvent &);
+using FilterFn = bool (*)(const CallEvent &);
 
-  [[nodiscard]] const MemRegion *getRegion(const CallEvent &Call, bool) const {
-    return Call.getArgSVal(0).getAsRegion();
-  }
+struct ThreadingCallDescription {
+  Role Role;
+  GetRegionFn GetRegion = getFirstArgRegion;
+  FilterFn Filter = nullptr;
 };
-
-class MemberMutexDescriptor : public CallDescriptionBasedMatcher {
-public:
-  MemberMutexDescriptor(CallDescription &&LockFn, CallDescription &&UnlockFn)
-      : CallDescriptionBasedMatcher(std::move(LockFn), std::move(UnlockFn)) {}
-
-  [[nodiscard]] const MemRegion *getRegion(const CallEvent &Call, bool) const {
-    return cast<CXXMemberCall>(Call).getCXXThisVal().getAsRegion();
-  }
-};
-
-class RAIIMutexDescriptor {
-  mutable const IdentifierInfo *Guard{};
-  mutable bool IdentifierInfoInitialized{};
-  mutable llvm::SmallString<32> GuardName{};
-
-  void initIdentifierInfo(const CallEvent &Call) const {
-    if (!IdentifierInfoInitialized) {
-      // In case of checking C code, or when the corresponding headers are not
-      // included, we might end up query the identifier table every time when
-      // this function is called instead of early returning it. To avoid this, a
-      // bool variable (IdentifierInfoInitialized) is used and the function will
-      // be run only once.
-      const auto &ASTCtx = Call.getASTContext();
-      Guard = &ASTCtx.Idents.get(GuardName);
-    }
-  }
-
-  template <typename T> bool matchesImpl(const CallEvent &Call) const {
-    const T *C = dyn_cast<T>(&Call);
-    if (!C)
-      return false;
-    const IdentifierInfo *II =
-        cast<CXXRecordDecl>(C->getDecl()->getParent())->getIdentifier();
-    if (II != Guard)
-      return false;
-
-    // For unique_lock, check if it's constructed with a ctor that takes the tag
-    // type defer_lock_t. In this case, the lock is not acquired.
-    if constexpr (std::is_same_v<T, CXXConstructorCall>) {
-      if (GuardName == "unique_lock" && C->getNumArgs() >= 2) {
-        const Expr *SecondArg = C->getArgExpr(1);
-        QualType ArgType = SecondArg->getType().getNonReferenceType();
-        if (const auto *RD = ArgType->getAsRecordDecl();
-            RD && RD->getName() == "defer_lock_t" && RD->isInStdNamespace()) {
-          return false;
-        }
-      }
-    }
-
-    return true;
-  }
-
-public:
-  RAIIMutexDescriptor(StringRef GuardName) : GuardName(GuardName) {}
-  [[nodiscard]] bool matches(const CallEvent &Call, bool IsLock) const {
-    initIdentifierInfo(Call);
-    if (IsLock) {
-      return matchesImpl<CXXConstructorCall>(Call);
-    }
-    return matchesImpl<CXXDestructorCall>(Call);
-  }
-  [[nodiscard]] const MemRegion *getRegion(const CallEvent &Call,
-                                           bool IsLock) const {
-    const MemRegion *LockRegion = nullptr;
-    if (IsLock) {
-      if (std::optional<SVal> Object = Call.getReturnValueUnderConstruction()) {
-        LockRegion = Object->getAsRegion();
-      }
-    } else {
-      LockRegion = cast<CXXDestructorCall>(Call).getCXXThisVal().getAsRegion();
-    }
-    return LockRegion;
-  }
-};
-
-using MutexDescriptor =
-    std::variant<FirstArgMutexDescriptor, MemberMutexDescriptor,
-                 RAIIMutexDescriptor>;
 
 class SuppressNonBlockingStreams : public BugReporterVisitor {
 private:
@@ -215,7 +151,7 @@ public:
 class BlockInCriticalSectionChecker
     : public Checker<check::PostCall, eval::Call> {
 private:
-  const std::array<MutexDescriptor, 9> MutexDescriptors{
+  const CallDescriptionMap<ThreadingCallDescription> ThreadingCalls{
       // NOTE: There are standard library implementations where some methods
       // of `std::mutex` are inherited from an implementation detail base
       // class, and those aren't matched by the name specification {"std",
@@ -223,24 +159,30 @@ private:
       // As a workaround here we omit the class name and only require the
       // presence of the name parts "std" and "lock"/"unlock".
       // TODO: Ensure that CallDescription understands inherited methods.
-      MemberMutexDescriptor(
-          {/*MatchAs=*/CDM::CXXMethod,
-           /*QualifiedName=*/{"std", /*"mutex",*/ "lock"},
-           /*RequiredArgs=*/0},
-          {CDM::CXXMethod, {"std", /*"mutex",*/ "unlock"}, 0}),
-      FirstArgMutexDescriptor({CDM::CLibrary, {"pthread_mutex_lock"}, 1},
-                              {CDM::CLibrary, {"pthread_mutex_unlock"}, 1}),
-      FirstArgMutexDescriptor({CDM::CLibrary, {"mtx_lock"}, 1},
-                              {CDM::CLibrary, {"mtx_unlock"}, 1}),
-      FirstArgMutexDescriptor({CDM::CLibrary, {"pthread_mutex_trylock"}, 1},
-                              {CDM::CLibrary, {"pthread_mutex_unlock"}, 1}),
-      FirstArgMutexDescriptor({CDM::CLibrary, {"mtx_trylock"}, 1},
-                              {CDM::CLibrary, {"mtx_unlock"}, 1}),
-      FirstArgMutexDescriptor({CDM::CLibrary, {"mtx_timedlock"}, 1},
-                              {CDM::CLibrary, {"mtx_unlock"}, 1}),
-      RAIIMutexDescriptor("lock_guard"),
-      RAIIMutexDescriptor("unique_lock"),
-      RAIIMutexDescriptor("scoped_lock")};
+      {{CDM::CXXMethod, {"std", /*"mutex",*/ "lock"}, 0},
+       {Role::Lock, getCXXThisRegion}},
+      {{CDM::CXXMethod, {"std", /*"mutex",*/ "unlock"}, 0},
+       {Role::Unlock, getCXXThisRegion}},
+      {{CDM::CLibrary, {"pthread_mutex_lock"}, 1}, {Role::Lock}},
+      {{CDM::CLibrary, {"pthread_mutex_unlock"}, 1}, {Role::Unlock}},
+      {{CDM::CLibrary, {"mtx_lock"}, 1}, {Role::Lock}},
+      {{CDM::CLibrary, {"mtx_unlock"}, 1}, {Role::Unlock}},
+      {{CDM::CLibrary, {"pthread_mutex_trylock"}, 1}, {Role::Lock}},
+      {{CDM::CLibrary, {"mtx_trylock"}, 1}, {Role::Lock}},
+      {{CDM::CLibrary, {"mtx_timedlock"}, 1}, {Role::Lock}},
+      {{CDM::CXXMethod, {"lock_guard", "lock_guard"}},
+       {Role::Lock, getObjectUnderConstruction}},
+      {{CDM::CXXMethod, {"lock_guard", "~lock_guard"}},
+       {Role::Unlock, getCXXDestructorThisRegion}},
+      {{CDM::CXXMethod, {"unique_lock", "unique_lock"}},
+       {Role::Lock, getObjectUnderConstruction, isNotDeferLockUniqueLock}},
+      {{CDM::CXXMethod, {"unique_lock", "~unique_lock"}},
+       {Role::Unlock, getCXXDestructorThisRegion}},
+      {{CDM::CXXMethod, {"scoped_lock", "scoped_lock"}},
+       {Role::Lock, getObjectUnderConstruction}},
+      {{CDM::CXXMethod, {"scoped_lock", "~scoped_lock"}},
+       {Role::Unlock, getCXXDestructorThisRegion}},
+  };
 
   const CallDescriptionSet BlockingFunctions{{CDM::CLibrary, {"sleep"}},
                                              {CDM::CLibrary, {"getc"}},
@@ -259,14 +201,13 @@ private:
   [[nodiscard]] const NoteTag *createCritSectionNote(CritSectionMarker M,
                                                      CheckerContext &C) const;
 
-  [[nodiscard]] std::optional<MutexDescriptor>
-  checkDescriptorMatch(const CallEvent &Call, CheckerContext &C,
-                       bool IsLock) const;
+  [[nodiscard]] const ThreadingCallDescription *
+  lookupThreadingCall(const CallEvent &Call) const;
 
-  void handleLock(const MutexDescriptor &Mutex, const CallEvent &Call,
+  void handleLock(const ThreadingCallDescription &Desc, const CallEvent &Call,
                   CheckerContext &C, ProgramStateRef State) const;
 
-  void handleUnlock(const MutexDescriptor &Mutex, const CallEvent &Call,
+  void handleUnlock(const ThreadingCallDescription &Desc, const CallEvent &Call,
                     CheckerContext &C) const;
 
   [[nodiscard]] bool isBlockingInCritSection(const CallEvent &Call,
@@ -278,7 +219,8 @@ public:
   /// Process blocking functions (sleep, getc, fgets, read, recv)
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
 
-  // Process RAII lock guard object ctors/dtors.
+  // Process RAII lock guard constructors (to avoid double-counting by
+  // inlining).
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
 };
 
@@ -286,21 +228,15 @@ public:
 
 REGISTER_LIST_WITH_PROGRAMSTATE(ActiveCritSections, CritSectionMarker)
 
-std::optional<MutexDescriptor>
-BlockInCriticalSectionChecker::checkDescriptorMatch(const CallEvent &Call,
-                                                    CheckerContext &C,
-                                                    bool IsLock) const {
-  const auto Descriptor =
-      llvm::find_if(MutexDescriptors, [&Call, IsLock](auto &&Descriptor) {
-        return std::visit(
-            [&Call, IsLock](auto &&DescriptorImpl) {
-              return DescriptorImpl.matches(Call, IsLock);
-            },
-            Descriptor);
-      });
-  if (Descriptor != MutexDescriptors.end())
-    return *Descriptor;
-  return std::nullopt;
+const ThreadingCallDescription *
+BlockInCriticalSectionChecker::lookupThreadingCall(
+    const CallEvent &Call) const {
+  const ThreadingCallDescription *Desc = ThreadingCalls.lookup(Call);
+  if (!Desc)
+    return nullptr;
+  if (Desc->Filter && !Desc->Filter(Call))
+    return nullptr;
+  return Desc;
 }
 
 static const MemRegion *skipStdBaseClassRegion(const MemRegion *Reg) {
@@ -313,21 +249,15 @@ static const MemRegion *skipStdBaseClassRegion(const MemRegion *Reg) {
   return Reg;
 }
 
-static const MemRegion *getRegion(const CallEvent &Call,
-                                  const MutexDescriptor &Descriptor,
-                                  bool IsLock) {
-  return std::visit(
-      [&Call, IsLock](auto &Descr) -> const MemRegion * {
-        return skipStdBaseClassRegion(Descr.getRegion(Call, IsLock));
-      },
-      Descriptor);
+static const MemRegion *getMutexRegion(const CallEvent &Call,
+                                       const ThreadingCallDescription &Desc) {
+  return skipStdBaseClassRegion(Desc.GetRegion(Call));
 }
 
 void BlockInCriticalSectionChecker::handleLock(
-    const MutexDescriptor &LockDescriptor, const CallEvent &Call,
+    const ThreadingCallDescription &Desc, const CallEvent &Call,
     CheckerContext &C, ProgramStateRef State) const {
-  const MemRegion *MutexRegion =
-      getRegion(Call, LockDescriptor, /*IsLock=*/true);
+  const MemRegion *MutexRegion = getMutexRegion(Call, Desc);
   if (!MutexRegion)
     return;
 
@@ -338,10 +268,9 @@ void BlockInCriticalSectionChecker::handleLock(
 }
 
 void BlockInCriticalSectionChecker::handleUnlock(
-    const MutexDescriptor &UnlockDescriptor, const CallEvent &Call,
+    const ThreadingCallDescription &Desc, const CallEvent &Call,
     CheckerContext &C) const {
-  const MemRegion *MutexRegion =
-      getRegion(Call, UnlockDescriptor, /*IsLock=*/false);
+  const MemRegion *MutexRegion = getMutexRegion(Call, Desc);
   if (!MutexRegion)
     return;
 
@@ -380,37 +309,41 @@ void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,
     return;
   }
 
-  if (std::optional<MutexDescriptor> LockDesc =
-          checkDescriptorMatch(Call, C, /*IsLock=*/true)) {
-    if (!std::holds_alternative<RAIIMutexDescriptor>(*LockDesc))
-      handleLock(*LockDesc, Call, C, C.getState());
+  const ThreadingCallDescription *Desc = lookupThreadingCall(Call);
+  if (!Desc)
     return;
-  }
-  if (std::optional<MutexDescriptor> UnlockDesc =
-          checkDescriptorMatch(Call, C, /*IsLock=*/false)) {
-    handleUnlock(*UnlockDesc, Call, C);
+
+  // RAII constructors are modeled in evalCall so they are not inlined.
+  if (isa<CXXConstructorCall>(Call))
+    return;
+
+  switch (Desc->Role) {
+  case Role::Lock:
+    handleLock(*Desc, Call, C, C.getState());
+    break;
+  case Role::Unlock:
+    handleUnlock(*Desc, Call, C);
+    break;
   }
 }
 
 bool BlockInCriticalSectionChecker::evalCall(const CallEvent &Call,
                                              CheckerContext &C) const {
-  if (std::optional<MutexDescriptor> LockDesc =
-          checkDescriptorMatch(Call, C, /*IsLock=*/true)) {
-    if (std::holds_alternative<RAIIMutexDescriptor>(*LockDesc)) {
-      ProgramStateRef State = C.getState();
-      // Escape the object under construction to model the side-effects of the
-      // constructor.
-      if (const auto *Ctor = dyn_cast<AnyCXXConstructorCall>(&Call)) {
-        const MemRegion *ObjRegion = Ctor->getCXXThisVal().getAsRegion();
-        State = State->invalidateRegions(ObjRegion, C.getCFGElementRef(),
-                                         C.blockCount(), C.getStackFrame(),
-                                         /*CausesPointerEscape=*/false);
-      }
-      handleLock(*LockDesc, Call, C, State);
-      return true;
-    }
+  const ThreadingCallDescription *Desc = lookupThreadingCall(Call);
+  if (!Desc || !isa<CXXConstructorCall>(Call))
+    return false;
+
+  ProgramStateRef State = C.getState();
+  // Escape the object under construction to model the side-effects of the
+  // constructor.
+  if (const auto *Ctor = dyn_cast<AnyCXXConstructorCall>(&Call)) {
+    const MemRegion *ObjRegion = Ctor->getCXXThisVal().getAsRegion();
+    State = State->invalidateRegions(ObjRegion, C.getCFGElementRef(),
+                                     C.blockCount(), C.getStackFrame(),
+                                     /*CausesPointerEscape=*/false);
   }
-  return false;
+  handleLock(*Desc, Call, C, State);
+  return true;
 }
 
 void BlockInCriticalSectionChecker::reportBlockInCritSection(
