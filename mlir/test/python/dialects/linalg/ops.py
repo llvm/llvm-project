@@ -891,7 +891,7 @@ def testElementwiseOpView():
         module = Module.parse(
             """
             func.func @f(%c: tensor<4x4xf32>) {
-              %0 = linalg.elementwise kind=#linalg.elementwise_kind<add>
+              %0 = linalg.elementwise <add>
                    ins(%c, %c : tensor<4x4xf32>, tensor<4x4xf32>)
                    outs(%c : tensor<4x4xf32>) -> tensor<4x4xf32>
               return
