@@ -19,12 +19,12 @@
 ; Half fits in i32. Bfloat must extend to f32 and use the full i64 expansion.
 define void @bf16_to_i64(bfloat %a, <2 x bfloat> %b, half %h) {
 ; ALL-LABEL: 'bf16_to_i64'
-; ALL:  Cost Model: Found an estimated cost of 1 for instruction: %s = fptosi bfloat %a to i64
-; ALL:  Cost Model: Found an estimated cost of 1 for instruction: %u = fptoui bfloat %a to i64
-; ALL:  Cost Model: Found an estimated cost of 2 for instruction: %vs = fptosi <2 x bfloat> %b to <2 x i64>
-; ALL:  Cost Model: Found an estimated cost of 2 for instruction: %vu = fptoui <2 x bfloat> %b to <2 x i64>
-; ALL:  Cost Model: Found an estimated cost of 1 for instruction: %hs = fptosi half %h to i64
-; ALL:  Cost Model: Found an estimated cost of 1 for instruction: %hu = fptoui half %h to i64
+; ALL:  Cost Model: Found an estimated cost of 14 for instruction: %s = fptosi bfloat %a to i64
+; ALL:  Cost Model: Found an estimated cost of 7 for instruction: %u = fptoui bfloat %a to i64
+; ALL:  Cost Model: Found an estimated cost of 28 for instruction: %vs = fptosi <2 x bfloat> %b to <2 x i64>
+; ALL:  Cost Model: Found an estimated cost of 14 for instruction: %vu = fptoui <2 x bfloat> %b to <2 x i64>
+; ALL:  Cost Model: Found an estimated cost of 3 for instruction: %hs = fptosi half %h to i64
+; ALL:  Cost Model: Found an estimated cost of 3 for instruction: %hu = fptoui half %h to i64
 ;
   %s = fptosi bfloat %a to i64
   %u = fptoui bfloat %a to i64
@@ -40,44 +40,64 @@ define void @bf16_to_i64(bfloat %a, <2 x bfloat> %b, half %h) {
 ; unpaired element of an odd-sized vector.
 define void @i64_to_bf16(i64 %a, <2 x i64> %b, <3 x i64> %c, i48 %d) {
 ; GFX6-LABEL: 'i64_to_bf16'
-; GFX6:  Cost Model: Found an estimated cost of 1 for instruction: %s = sitofp i64 %a to bfloat
-; GFX6:  Cost Model: Found an estimated cost of 1 for instruction: %u = uitofp i64 %a to bfloat
-; GFX6:  Cost Model: Found an estimated cost of 2 for instruction: %vs = sitofp <2 x i64> %b to <2 x bfloat>
-; GFX6:  Cost Model: Found an estimated cost of 2 for instruction: %vu = uitofp <2 x i64> %b to <2 x bfloat>
-; GFX6:  Cost Model: Found an estimated cost of 9 for instruction: %v3s = sitofp <3 x i64> %c to <3 x bfloat>
-; GFX6:  Cost Model: Found an estimated cost of 9 for instruction: %v3u = uitofp <3 x i64> %c to <3 x bfloat>
-; GFX6:  Cost Model: Found an estimated cost of 1 for instruction: %s48 = sitofp i48 %d to bfloat
-; GFX6:  Cost Model: Found an estimated cost of 1 for instruction: %u48 = uitofp i48 %d to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 13 for instruction: %s = sitofp i64 %a to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 9 for instruction: %u = uitofp i64 %a to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 26 for instruction: %vs = sitofp <2 x i64> %b to <2 x bfloat>
+; GFX6:  Cost Model: Found an estimated cost of 18 for instruction: %vu = uitofp <2 x i64> %b to <2 x bfloat>
+; GFX6:  Cost Model: Found an estimated cost of 39 for instruction: %v3s = sitofp <3 x i64> %c to <3 x bfloat>
+; GFX6:  Cost Model: Found an estimated cost of 27 for instruction: %v3u = uitofp <3 x i64> %c to <3 x bfloat>
+; GFX6:  Cost Model: Found an estimated cost of 15 for instruction: %s48 = sitofp i48 %d to bfloat
+; GFX6:  Cost Model: Found an estimated cost of 10 for instruction: %u48 = uitofp i48 %d to bfloat
 ;
-; GFX9-THROUGHPUT-LABEL: 'i64_to_bf16'
-; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 1 for instruction: %s = sitofp i64 %a to bfloat
-; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 1 for instruction: %u = uitofp i64 %a to bfloat
-; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 4 for instruction: %vs = sitofp <2 x i64> %b to <2 x bfloat>
-; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 4 for instruction: %vu = uitofp <2 x i64> %b to <2 x bfloat>
-; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 7 for instruction: %v3s = sitofp <3 x i64> %c to <3 x bfloat>
-; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 7 for instruction: %v3u = uitofp <3 x i64> %c to <3 x bfloat>
-; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 1 for instruction: %s48 = sitofp i48 %d to bfloat
-; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 1 for instruction: %u48 = uitofp i48 %d to bfloat
+; GFX8-LABEL: 'i64_to_bf16'
+; GFX8:  Cost Model: Found an estimated cost of 19 for instruction: %s = sitofp i64 %a to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 15 for instruction: %u = uitofp i64 %a to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 38 for instruction: %vs = sitofp <2 x i64> %b to <2 x bfloat>
+; GFX8:  Cost Model: Found an estimated cost of 30 for instruction: %vu = uitofp <2 x i64> %b to <2 x bfloat>
+; GFX8:  Cost Model: Found an estimated cost of 57 for instruction: %v3s = sitofp <3 x i64> %c to <3 x bfloat>
+; GFX8:  Cost Model: Found an estimated cost of 45 for instruction: %v3u = uitofp <3 x i64> %c to <3 x bfloat>
+; GFX8:  Cost Model: Found an estimated cost of 21 for instruction: %s48 = sitofp i48 %d to bfloat
+; GFX8:  Cost Model: Found an estimated cost of 16 for instruction: %u48 = uitofp i48 %d to bfloat
 ;
-; HALF-LABEL: 'i64_to_bf16'
-; HALF:  Cost Model: Found an estimated cost of 1 for instruction: %s = sitofp i64 %a to bfloat
-; HALF:  Cost Model: Found an estimated cost of 1 for instruction: %u = uitofp i64 %a to bfloat
-; HALF:  Cost Model: Found an estimated cost of 4 for instruction: %vs = sitofp <2 x i64> %b to <2 x bfloat>
-; HALF:  Cost Model: Found an estimated cost of 4 for instruction: %vu = uitofp <2 x i64> %b to <2 x bfloat>
-; HALF:  Cost Model: Found an estimated cost of 7 for instruction: %v3s = sitofp <3 x i64> %c to <3 x bfloat>
-; HALF:  Cost Model: Found an estimated cost of 7 for instruction: %v3u = uitofp <3 x i64> %c to <3 x bfloat>
-; HALF:  Cost Model: Found an estimated cost of 1 for instruction: %s48 = sitofp i48 %d to bfloat
-; HALF:  Cost Model: Found an estimated cost of 1 for instruction: %u48 = uitofp i48 %d to bfloat
+; GFX9-LABEL: 'i64_to_bf16'
+; GFX9:  Cost Model: Found an estimated cost of 18 for instruction: %s = sitofp i64 %a to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 14 for instruction: %u = uitofp i64 %a to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 36 for instruction: %vs = sitofp <2 x i64> %b to <2 x bfloat>
+; GFX9:  Cost Model: Found an estimated cost of 28 for instruction: %vu = uitofp <2 x i64> %b to <2 x bfloat>
+; GFX9:  Cost Model: Found an estimated cost of 54 for instruction: %v3s = sitofp <3 x i64> %c to <3 x bfloat>
+; GFX9:  Cost Model: Found an estimated cost of 42 for instruction: %v3u = uitofp <3 x i64> %c to <3 x bfloat>
+; GFX9:  Cost Model: Found an estimated cost of 20 for instruction: %s48 = sitofp i48 %d to bfloat
+; GFX9:  Cost Model: Found an estimated cost of 15 for instruction: %u48 = uitofp i48 %d to bfloat
 ;
-; FULL-LABEL: 'i64_to_bf16'
-; FULL:  Cost Model: Found an estimated cost of 1 for instruction: %s = sitofp i64 %a to bfloat
-; FULL:  Cost Model: Found an estimated cost of 1 for instruction: %u = uitofp i64 %a to bfloat
-; FULL:  Cost Model: Found an estimated cost of 4 for instruction: %vs = sitofp <2 x i64> %b to <2 x bfloat>
-; FULL:  Cost Model: Found an estimated cost of 4 for instruction: %vu = uitofp <2 x i64> %b to <2 x bfloat>
-; FULL:  Cost Model: Found an estimated cost of 7 for instruction: %v3s = sitofp <3 x i64> %c to <3 x bfloat>
-; FULL:  Cost Model: Found an estimated cost of 7 for instruction: %v3u = uitofp <3 x i64> %c to <3 x bfloat>
-; FULL:  Cost Model: Found an estimated cost of 1 for instruction: %s48 = sitofp i48 %d to bfloat
-; FULL:  Cost Model: Found an estimated cost of 1 for instruction: %u48 = uitofp i48 %d to bfloat
+; GFX950-LABEL: 'i64_to_bf16'
+; GFX950:  Cost Model: Found an estimated cost of 13 for instruction: %s = sitofp i64 %a to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 9 for instruction: %u = uitofp i64 %a to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 25 for instruction: %vs = sitofp <2 x i64> %b to <2 x bfloat>
+; GFX950:  Cost Model: Found an estimated cost of 17 for instruction: %vu = uitofp <2 x i64> %b to <2 x bfloat>
+; GFX950:  Cost Model: Found an estimated cost of 38 for instruction: %v3s = sitofp <3 x i64> %c to <3 x bfloat>
+; GFX950:  Cost Model: Found an estimated cost of 26 for instruction: %v3u = uitofp <3 x i64> %c to <3 x bfloat>
+; GFX950:  Cost Model: Found an estimated cost of 15 for instruction: %s48 = sitofp i48 %d to bfloat
+; GFX950:  Cost Model: Found an estimated cost of 10 for instruction: %u48 = uitofp i48 %d to bfloat
+;
+; GFX11-LABEL: 'i64_to_bf16'
+; GFX11:  Cost Model: Found an estimated cost of 18 for instruction: %s = sitofp i64 %a to bfloat
+; GFX11:  Cost Model: Found an estimated cost of 14 for instruction: %u = uitofp i64 %a to bfloat
+; GFX11:  Cost Model: Found an estimated cost of 36 for instruction: %vs = sitofp <2 x i64> %b to <2 x bfloat>
+; GFX11:  Cost Model: Found an estimated cost of 28 for instruction: %vu = uitofp <2 x i64> %b to <2 x bfloat>
+; GFX11:  Cost Model: Found an estimated cost of 54 for instruction: %v3s = sitofp <3 x i64> %c to <3 x bfloat>
+; GFX11:  Cost Model: Found an estimated cost of 42 for instruction: %v3u = uitofp <3 x i64> %c to <3 x bfloat>
+; GFX11:  Cost Model: Found an estimated cost of 20 for instruction: %s48 = sitofp i48 %d to bfloat
+; GFX11:  Cost Model: Found an estimated cost of 15 for instruction: %u48 = uitofp i48 %d to bfloat
+;
+; GFX1250-LABEL: 'i64_to_bf16'
+; GFX1250:  Cost Model: Found an estimated cost of 13 for instruction: %s = sitofp i64 %a to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 9 for instruction: %u = uitofp i64 %a to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 25 for instruction: %vs = sitofp <2 x i64> %b to <2 x bfloat>
+; GFX1250:  Cost Model: Found an estimated cost of 17 for instruction: %vu = uitofp <2 x i64> %b to <2 x bfloat>
+; GFX1250:  Cost Model: Found an estimated cost of 38 for instruction: %v3s = sitofp <3 x i64> %c to <3 x bfloat>
+; GFX1250:  Cost Model: Found an estimated cost of 26 for instruction: %v3u = uitofp <3 x i64> %c to <3 x bfloat>
+; GFX1250:  Cost Model: Found an estimated cost of 15 for instruction: %s48 = sitofp i48 %d to bfloat
+; GFX1250:  Cost Model: Found an estimated cost of 10 for instruction: %u48 = uitofp i48 %d to bfloat
 ;
   %s = sitofp i64 %a to bfloat
   %u = uitofp i64 %a to bfloat
@@ -92,18 +112,83 @@ define void @i64_to_bf16(i64 %a, <2 x i64> %b, <3 x i64> %c, i48 %d) {
 
 ; FP64 rates vary independently of native trunc/floor support and code size.
 define void @i64_double(i64 %a, <2 x i64> %b, double %c, <2 x double> %d, i48 %e) {
-; ALL-LABEL: 'i64_double'
-; ALL:  Cost Model: Found an estimated cost of 1 for instruction: %s = sitofp i64 %a to double
-; ALL:  Cost Model: Found an estimated cost of 1 for instruction: %u = uitofp i64 %a to double
-; ALL:  Cost Model: Found an estimated cost of 2 for instruction: %vs = sitofp <2 x i64> %b to <2 x double>
-; ALL:  Cost Model: Found an estimated cost of 2 for instruction: %vu = uitofp <2 x i64> %b to <2 x double>
-; ALL:  Cost Model: Found an estimated cost of 1 for instruction: %rs = fptosi double %c to i64
-; ALL:  Cost Model: Found an estimated cost of 1 for instruction: %ru = fptoui double %c to i64
-; ALL:  Cost Model: Found an estimated cost of 2 for instruction: %rvs = fptosi <2 x double> %d to <2 x i64>
-; ALL:  Cost Model: Found an estimated cost of 2 for instruction: %rvu = fptoui <2 x double> %d to <2 x i64>
-; ALL:  Cost Model: Found an estimated cost of 1 for instruction: %s48 = sitofp i48 %e to double
-; ALL:  Cost Model: Found an estimated cost of 1 for instruction: %u48 = uitofp i48 %e to double
-; ALL:  Cost Model: Found an estimated cost of 1 for instruction: %ru48 = fptoui double %c to i48
+; GFX6-THROUGHPUT-LABEL: 'i64_double'
+; GFX6-THROUGHPUT:  Cost Model: Found an estimated cost of 16 for instruction: %s = sitofp i64 %a to double
+; GFX6-THROUGHPUT:  Cost Model: Found an estimated cost of 16 for instruction: %u = uitofp i64 %a to double
+; GFX6-THROUGHPUT:  Cost Model: Found an estimated cost of 32 for instruction: %vs = sitofp <2 x i64> %b to <2 x double>
+; GFX6-THROUGHPUT:  Cost Model: Found an estimated cost of 32 for instruction: %vu = uitofp <2 x i64> %b to <2 x double>
+; GFX6-THROUGHPUT:  Cost Model: Found an estimated cost of 50 for instruction: %rs = fptosi double %c to i64
+; GFX6-THROUGHPUT:  Cost Model: Found an estimated cost of 50 for instruction: %ru = fptoui double %c to i64
+; GFX6-THROUGHPUT:  Cost Model: Found an estimated cost of 100 for instruction: %rvs = fptosi <2 x double> %d to <2 x i64>
+; GFX6-THROUGHPUT:  Cost Model: Found an estimated cost of 100 for instruction: %rvu = fptoui <2 x double> %d to <2 x i64>
+; GFX6-THROUGHPUT:  Cost Model: Found an estimated cost of 18 for instruction: %s48 = sitofp i48 %e to double
+; GFX6-THROUGHPUT:  Cost Model: Found an estimated cost of 17 for instruction: %u48 = uitofp i48 %e to double
+; GFX6-THROUGHPUT:  Cost Model: Found an estimated cost of 50 for instruction: %ru48 = fptoui double %c to i48
+;
+; GFX7-LABEL: 'i64_double'
+; GFX7:  Cost Model: Found an estimated cost of 16 for instruction: %s = sitofp i64 %a to double
+; GFX7:  Cost Model: Found an estimated cost of 16 for instruction: %u = uitofp i64 %a to double
+; GFX7:  Cost Model: Found an estimated cost of 32 for instruction: %vs = sitofp <2 x i64> %b to <2 x double>
+; GFX7:  Cost Model: Found an estimated cost of 32 for instruction: %vu = uitofp <2 x i64> %b to <2 x double>
+; GFX7:  Cost Model: Found an estimated cost of 25 for instruction: %rs = fptosi double %c to i64
+; GFX7:  Cost Model: Found an estimated cost of 25 for instruction: %ru = fptoui double %c to i64
+; GFX7:  Cost Model: Found an estimated cost of 50 for instruction: %rvs = fptosi <2 x double> %d to <2 x i64>
+; GFX7:  Cost Model: Found an estimated cost of 50 for instruction: %rvu = fptoui <2 x double> %d to <2 x i64>
+; GFX7:  Cost Model: Found an estimated cost of 18 for instruction: %s48 = sitofp i48 %e to double
+; GFX7:  Cost Model: Found an estimated cost of 17 for instruction: %u48 = uitofp i48 %e to double
+; GFX7:  Cost Model: Found an estimated cost of 25 for instruction: %ru48 = fptoui double %c to i48
+;
+; GFX9-THROUGHPUT-LABEL: 'i64_double'
+; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 16 for instruction: %s = sitofp i64 %a to double
+; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 16 for instruction: %u = uitofp i64 %a to double
+; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 32 for instruction: %vs = sitofp <2 x i64> %b to <2 x double>
+; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 32 for instruction: %vu = uitofp <2 x i64> %b to <2 x double>
+; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 25 for instruction: %rs = fptosi double %c to i64
+; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 25 for instruction: %ru = fptoui double %c to i64
+; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 50 for instruction: %rvs = fptosi <2 x double> %d to <2 x i64>
+; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 50 for instruction: %rvu = fptoui <2 x double> %d to <2 x i64>
+; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 18 for instruction: %s48 = sitofp i48 %e to double
+; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 17 for instruction: %u48 = uitofp i48 %e to double
+; GFX9-THROUGHPUT:  Cost Model: Found an estimated cost of 25 for instruction: %ru48 = fptoui double %c to i48
+;
+; HALF-LABEL: 'i64_double'
+; HALF:  Cost Model: Found an estimated cost of 8 for instruction: %s = sitofp i64 %a to double
+; HALF:  Cost Model: Found an estimated cost of 8 for instruction: %u = uitofp i64 %a to double
+; HALF:  Cost Model: Found an estimated cost of 16 for instruction: %vs = sitofp <2 x i64> %b to <2 x double>
+; HALF:  Cost Model: Found an estimated cost of 16 for instruction: %vu = uitofp <2 x i64> %b to <2 x double>
+; HALF:  Cost Model: Found an estimated cost of 13 for instruction: %rs = fptosi double %c to i64
+; HALF:  Cost Model: Found an estimated cost of 13 for instruction: %ru = fptoui double %c to i64
+; HALF:  Cost Model: Found an estimated cost of 26 for instruction: %rvs = fptosi <2 x double> %d to <2 x i64>
+; HALF:  Cost Model: Found an estimated cost of 26 for instruction: %rvu = fptoui <2 x double> %d to <2 x i64>
+; HALF:  Cost Model: Found an estimated cost of 10 for instruction: %s48 = sitofp i48 %e to double
+; HALF:  Cost Model: Found an estimated cost of 9 for instruction: %u48 = uitofp i48 %e to double
+; HALF:  Cost Model: Found an estimated cost of 13 for instruction: %ru48 = fptoui double %c to i48
+;
+; FULL-LABEL: 'i64_double'
+; FULL:  Cost Model: Found an estimated cost of 4 for instruction: %s = sitofp i64 %a to double
+; FULL:  Cost Model: Found an estimated cost of 4 for instruction: %u = uitofp i64 %a to double
+; FULL:  Cost Model: Found an estimated cost of 8 for instruction: %vs = sitofp <2 x i64> %b to <2 x double>
+; FULL:  Cost Model: Found an estimated cost of 8 for instruction: %vu = uitofp <2 x i64> %b to <2 x double>
+; FULL:  Cost Model: Found an estimated cost of 7 for instruction: %rs = fptosi double %c to i64
+; FULL:  Cost Model: Found an estimated cost of 7 for instruction: %ru = fptoui double %c to i64
+; FULL:  Cost Model: Found an estimated cost of 14 for instruction: %rvs = fptosi <2 x double> %d to <2 x i64>
+; FULL:  Cost Model: Found an estimated cost of 14 for instruction: %rvu = fptoui <2 x double> %d to <2 x i64>
+; FULL:  Cost Model: Found an estimated cost of 6 for instruction: %s48 = sitofp i48 %e to double
+; FULL:  Cost Model: Found an estimated cost of 5 for instruction: %u48 = uitofp i48 %e to double
+; FULL:  Cost Model: Found an estimated cost of 7 for instruction: %ru48 = fptoui double %c to i48
+;
+; GFX6-SIZE-LABEL: 'i64_double'
+; GFX6-SIZE:  Cost Model: Found an estimated cost of 8 for instruction: %s = sitofp i64 %a to double
+; GFX6-SIZE:  Cost Model: Found an estimated cost of 8 for instruction: %u = uitofp i64 %a to double
+; GFX6-SIZE:  Cost Model: Found an estimated cost of 16 for instruction: %vs = sitofp <2 x i64> %b to <2 x double>
+; GFX6-SIZE:  Cost Model: Found an estimated cost of 16 for instruction: %vu = uitofp <2 x i64> %b to <2 x double>
+; GFX6-SIZE:  Cost Model: Found an estimated cost of 36 for instruction: %rs = fptosi double %c to i64
+; GFX6-SIZE:  Cost Model: Found an estimated cost of 36 for instruction: %ru = fptoui double %c to i64
+; GFX6-SIZE:  Cost Model: Found an estimated cost of 72 for instruction: %rvs = fptosi <2 x double> %d to <2 x i64>
+; GFX6-SIZE:  Cost Model: Found an estimated cost of 72 for instruction: %rvu = fptoui <2 x double> %d to <2 x i64>
+; GFX6-SIZE:  Cost Model: Found an estimated cost of 10 for instruction: %s48 = sitofp i48 %e to double
+; GFX6-SIZE:  Cost Model: Found an estimated cost of 9 for instruction: %u48 = uitofp i48 %e to double
+; GFX6-SIZE:  Cost Model: Found an estimated cost of 36 for instruction: %ru48 = fptoui double %c to i48
 ;
   %s = sitofp i64 %a to double
   %u = uitofp i64 %a to double
@@ -122,14 +207,14 @@ define void @i64_double(i64 %a, <2 x i64> %b, double %c, <2 x double> %d, i48 %e
 ; Integers of 33 to 63 bits are converted through i64.
 define void @i48(i48 %a, float %b, bfloat %c, <2 x float> %d, <2 x bfloat> %e) {
 ; ALL-LABEL: 'i48'
-; ALL:  Cost Model: Found an estimated cost of 1 for instruction: %s = sitofp i48 %a to float
-; ALL:  Cost Model: Found an estimated cost of 1 for instruction: %u = uitofp i48 %a to float
-; ALL:  Cost Model: Found an estimated cost of 1 for instruction: %rs = fptosi float %b to i48
-; ALL:  Cost Model: Found an estimated cost of 1 for instruction: %ru = fptoui float %b to i48
-; ALL:  Cost Model: Found an estimated cost of 1 for instruction: %bu = fptoui bfloat %c to i48
-; ALL:  Cost Model: Found an estimated cost of 2 for instruction: %vrs = fptosi <2 x float> %d to <2 x i48>
-; ALL:  Cost Model: Found an estimated cost of 2 for instruction: %vru = fptoui <2 x float> %d to <2 x i48>
-; ALL:  Cost Model: Found an estimated cost of 2 for instruction: %vbu = fptoui <2 x bfloat> %e to <2 x i48>
+; ALL:  Cost Model: Found an estimated cost of 14 for instruction: %s = sitofp i48 %a to float
+; ALL:  Cost Model: Found an estimated cost of 9 for instruction: %u = uitofp i48 %a to float
+; ALL:  Cost Model: Found an estimated cost of 13 for instruction: %rs = fptosi float %b to i48
+; ALL:  Cost Model: Found an estimated cost of 13 for instruction: %ru = fptoui float %b to i48
+; ALL:  Cost Model: Found an estimated cost of 14 for instruction: %bu = fptoui bfloat %c to i48
+; ALL:  Cost Model: Found an estimated cost of 26 for instruction: %vrs = fptosi <2 x float> %d to <2 x i48>
+; ALL:  Cost Model: Found an estimated cost of 12 for instruction: %vru = fptoui <2 x float> %d to <2 x i48>
+; ALL:  Cost Model: Found an estimated cost of 14 for instruction: %vbu = fptoui <2 x bfloat> %e to <2 x i48>
 ;
   %s = sitofp i48 %a to float
   %u = uitofp i48 %a to float
@@ -214,12 +299,3 @@ define void @other_widths(i128 %a, double %b, <2 x i128> %c, <2 x double> %d, fp
   %rqu = uitofp i64 %f to fp128
   ret void
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX11: {{.*}}
-; GFX1250: {{.*}}
-; GFX6-SIZE: {{.*}}
-; GFX6-THROUGHPUT: {{.*}}
-; GFX7: {{.*}}
-; GFX8: {{.*}}
-; GFX9: {{.*}}
-; GFX950: {{.*}}

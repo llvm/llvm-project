@@ -11,19 +11,47 @@
 ; END.
 
 define i32 @fptoui_double_i64(i32 %arg) {
-; ALL-LABEL: 'fptoui_double_i64'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = fptoui double poison to i64
-; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = fptoui <2 x double> poison to <2 x i64>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = fptoui <4 x double> poison to <4 x i64>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = fptoui <8 x double> poison to <8 x i64>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 poison
+; QUARTER64-LABEL: 'fptoui_double_i64'
+; QUARTER64-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: %I64 = fptoui double poison to i64
+; QUARTER64-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %V2I64 = fptoui <2 x double> poison to <2 x i64>
+; QUARTER64-NEXT:  Cost Model: Found an estimated cost of 100 for instruction: %V4I64 = fptoui <4 x double> poison to <4 x i64>
+; QUARTER64-NEXT:  Cost Model: Found an estimated cost of 200 for instruction: %V8I64 = fptoui <8 x double> poison to <8 x i64>
+; QUARTER64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 poison
 ;
-; ALL-SIZE-LABEL: 'fptoui_double_i64'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = fptoui double poison to i64
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = fptoui <2 x double> poison to <2 x i64>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = fptoui <4 x double> poison to <4 x i64>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = fptoui <8 x double> poison to <8 x i64>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 poison
+; FULL64-LABEL: 'fptoui_double_i64'
+; FULL64-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = fptoui double poison to i64
+; FULL64-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V2I64 = fptoui <2 x double> poison to <2 x i64>
+; FULL64-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V4I64 = fptoui <4 x double> poison to <4 x i64>
+; FULL64-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V8I64 = fptoui <8 x double> poison to <8 x i64>
+; FULL64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 poison
+;
+; SLOW-LABEL: 'fptoui_double_i64'
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %I64 = fptoui double poison to i64
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 100 for instruction: %V2I64 = fptoui <2 x double> poison to <2 x i64>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 200 for instruction: %V4I64 = fptoui <4 x double> poison to <4 x i64>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 400 for instruction: %V8I64 = fptoui <8 x double> poison to <8 x i64>
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 poison
+;
+; QUARTER64-SIZE-LABEL: 'fptoui_double_i64'
+; QUARTER64-SIZE-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %I64 = fptoui double poison to i64
+; QUARTER64-SIZE-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V2I64 = fptoui <2 x double> poison to <2 x i64>
+; QUARTER64-SIZE-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V4I64 = fptoui <4 x double> poison to <4 x i64>
+; QUARTER64-SIZE-NEXT:  Cost Model: Found an estimated cost of 104 for instruction: %V8I64 = fptoui <8 x double> poison to <8 x i64>
+; QUARTER64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 poison
+;
+; FULL64-SIZE-LABEL: 'fptoui_double_i64'
+; FULL64-SIZE-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %I64 = fptoui double poison to i64
+; FULL64-SIZE-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V2I64 = fptoui <2 x double> poison to <2 x i64>
+; FULL64-SIZE-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V4I64 = fptoui <4 x double> poison to <4 x i64>
+; FULL64-SIZE-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V8I64 = fptoui <8 x double> poison to <8 x i64>
+; FULL64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 poison
+;
+; SLOW-SIZE-LABEL: 'fptoui_double_i64'
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %I64 = fptoui double poison to i64
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V2I64 = fptoui <2 x double> poison to <2 x i64>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 144 for instruction: %V4I64 = fptoui <4 x double> poison to <4 x i64>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 288 for instruction: %V8I64 = fptoui <8 x double> poison to <8 x i64>
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 poison
 ;
   %I64 = fptoui double poison to i64
   %V2I64 = fptoui <2 x double> poison to <2 x i64>
@@ -128,19 +156,19 @@ define i32 @fptoui_double_i8(i32 %arg) {
 
 define i32 @fptoui_float_i64(i32 %arg) {
 ; ALL-LABEL: 'fptoui_float_i64'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = fptoui float poison to i64
-; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = fptoui <2 x float> poison to <2 x i64>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = fptoui <4 x float> poison to <4 x i64>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = fptoui <8 x float> poison to <8 x i64>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = fptoui <16 x float> poison to <16 x i64>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I64 = fptoui float poison to i64
+; ALL-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V2I64 = fptoui <2 x float> poison to <2 x i64>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V4I64 = fptoui <4 x float> poison to <4 x i64>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V8I64 = fptoui <8 x float> poison to <8 x i64>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V16I64 = fptoui <16 x float> poison to <16 x i64>
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 poison
 ;
 ; ALL-SIZE-LABEL: 'fptoui_float_i64'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = fptoui float poison to i64
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = fptoui <2 x float> poison to <2 x i64>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = fptoui <4 x float> poison to <4 x i64>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = fptoui <8 x float> poison to <8 x i64>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = fptoui <16 x float> poison to <16 x i64>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %I64 = fptoui float poison to i64
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V2I64 = fptoui <2 x float> poison to <2 x i64>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V4I64 = fptoui <4 x float> poison to <4 x i64>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V8I64 = fptoui <8 x float> poison to <8 x i64>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %V16I64 = fptoui <16 x float> poison to <16 x i64>
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 poison
 ;
   %I64 = fptoui float poison to i64
@@ -260,19 +288,19 @@ define i32 @fptoui_float_i8(i32 %arg) {
 
 define i32 @fptoui_half_i64(i32 %arg) {
 ; ALL-LABEL: 'fptoui_half_i64'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = fptoui half poison to i64
-; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = fptoui <2 x half> poison to <2 x i64>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = fptoui <4 x half> poison to <4 x i64>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = fptoui <8 x half> poison to <8 x i64>
-; ALL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = fptoui <16 x half> poison to <16 x i64>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I64 = fptoui half poison to i64
+; ALL-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = fptoui <2 x half> poison to <2 x i64>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = fptoui <4 x half> poison to <4 x i64>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = fptoui <8 x half> poison to <8 x i64>
+; ALL-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = fptoui <16 x half> poison to <16 x i64>
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 poison
 ;
 ; ALL-SIZE-LABEL: 'fptoui_half_i64'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = fptoui half poison to i64
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2I64 = fptoui <2 x half> poison to <2 x i64>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4I64 = fptoui <4 x half> poison to <4 x i64>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V8I64 = fptoui <8 x half> poison to <8 x i64>
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I64 = fptoui <16 x half> poison to <16 x i64>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %I64 = fptoui half poison to i64
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = fptoui <2 x half> poison to <2 x i64>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = fptoui <4 x half> poison to <4 x i64>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = fptoui <8 x half> poison to <8 x i64>
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = fptoui <16 x half> poison to <16 x i64>
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 poison
 ;
   %I64 = fptoui half poison to i64
@@ -282,8 +310,3 @@ define i32 @fptoui_half_i64(i32 %arg) {
   %V16I64 = fptoui <16 x half> poison to <16 x i64>
   ret i32 poison
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; FULL64: {{.*}}
-; FULL64-SIZE: {{.*}}
-; QUARTER64: {{.*}}
-; QUARTER64-SIZE: {{.*}}
