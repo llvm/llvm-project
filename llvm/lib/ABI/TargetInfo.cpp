@@ -102,8 +102,8 @@ bool isEmptyRecordForHA(const Type *Ty) {
 
 bool TargetInfo::isHomogeneousAggregate(const Type *Ty, const Type *&Base,
                                         uint64_t &Members) const {
-  // TODO: Keep this in sync with Clang's handling of matrix types.
-  if (const auto *AT = dyn_cast<ArrayType>(Ty); AT && !AT->isMatrixType()) {
+  // TODO: Add handling for Clang 23 compatibility with matrix types.
+  if (const auto *AT = dyn_cast<ArrayType>(Ty)) {
     uint64_t NElements = AT->getNumElements();
     if (NElements == 0)
       return false;

@@ -164,9 +164,12 @@ bool AArch64TargetInfo::isHomogeneousAggregateBaseType(const Type *Ty) const {
     return true;
 
   if (const auto *VT = dyn_cast<VectorType>(Ty)) {
-    if (VT->isScalable())
+    if (VT->isScalable() || VT->isSVEData() || VT->isSVEPredicate())
       return false;
 
+    // Clang's getTypeSize for non-power-of-2 vectors rounds the width up to
+    // the next power-of-2 alignment (e.g. 3 x float is 96 bits of payload but
+    // 128 bits of ABI size), so those vectors are short-vector HVA bases.
     uint64_t VecSize =
         bit_ceil(std::max<uint64_t>(8, VT->getSizeInBits().getFixedValue()));
     if (VecSize == 64 || VecSize == 128)

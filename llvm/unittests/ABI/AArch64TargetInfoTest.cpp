@@ -510,6 +510,24 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnHFADirect) {
   const ABIType *HVA2x128 = makeRecord(
       {FieldInfo(V4F32, 0), FieldInfo(V4F32, 128)}, 256, llvm::Align(16));
 
+  // 3 x float has 96 bits of payload; Clang's type size is 128, so it is an
+  // HVA base like a 128-bit short vector.
+  const ABIType *V3F32 =
+      TB.getVectorType(F32, llvm::ElementCount::getFixed(3), llvm::Align(16));
+  const ABIType *HVA3x32 =
+      makeRecord({FieldInfo(V3F32, 0)}, 128, llvm::Align(16));
+  const ABIType *HVA2xV3F32 = makeRecord(
+      {FieldInfo(V3F32, 0), FieldInfo(V3F32, 128)}, 256, llvm::Align(16));
+
+  // A 2x2 float matrix is four homogeneous float members.
+  const ABIType *HFAMatrix =
+      makeRecord({FieldInfo(Matrix, 0)}, 128, llvm::Align(4));
+  const ABIType *M2x1 = TB.getArrayType(F32, /*NumElements=*/2,
+                                        /*SizeInBits=*/64,
+                                        /*IsMatrixType=*/true);
+  const ABIType *HFAMatrix2 =
+      makeRecord({FieldInfo(M2x1, 0)}, 64, llvm::Align(4));
+
   // C++ records: empty bases are skipped and non-empty bases contribute
   // members.
   const ABIType *EmptyRecord = makeRecord({}, 0, llvm::Align(1), CXXFlags);
@@ -528,7 +546,8 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnHFADirect) {
         createAArch64TargetInfo(TB, AArch64ABIOptions(Kind));
     for (const ABIType *RetTy :
          {ComplexFloat, HFA2f, HFA4d, HFA3arr, HFA2h, HFANested, HFAZeroBF,
-          HFAUnion, HVA2x64, HVA2x128, HFAEmptyBase, HFADerived}) {
+          HFAUnion, HVA2x64, HVA2x128, HVA3x32, HVA2xV3F32, HFAMatrix,
+          HFAMatrix2, HFAEmptyBase, HFADerived}) {
       std::unique_ptr<FunctionInfo> FI =
           FunctionInfo::create(llvm::CallingConv::C, RetTy, {});
       FI->getReturnInfo() = ArgInfo::getIgnore();

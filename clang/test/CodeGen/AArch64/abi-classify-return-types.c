@@ -114,3 +114,54 @@ typedef struct {
 } HFA2h;
 HFA2h ret_hfa2h() { return (HFA2h){1.0f, 2.0f}; }
 // CHECK: define{{.*}} %struct.HFA2h @ret_hfa2h
+
+// Short-vector aggregates (HVAs) follow the same rules.
+typedef float v2f32_t __attribute__((vector_size(8)));
+typedef struct {
+  v2f32_t a, b;
+} HVA2x64;
+HVA2x64 ret_hva2x64() {
+  HVA2x64 r;
+  return r;
+}
+// CHECK: define{{.*}} %struct.HVA2x64 @ret_hva2x64
+
+typedef float v4f32_t __attribute__((vector_size(16)));
+typedef struct {
+  v4f32_t a, b;
+} HVA2x128;
+HVA2x128 ret_hva2x128() {
+  HVA2x128 r;
+  return r;
+}
+// CHECK: define{{.*}} %struct.HVA2x128 @ret_hva2x128
+
+typedef float v3f32_t __attribute__((vector_size(12)));
+typedef struct {
+  v3f32_t a;
+} HVA3x32;
+HVA3x32 ret_hva3x32() {
+  HVA3x32 r;
+  return r;
+}
+// CHECK: define{{.*}} %struct.HVA3x32 @ret_hva3x32
+
+// A 2x2 float matrix is four homogeneous float members.
+typedef struct {
+  fx2x2_t m;
+} HFAMatrix;
+HFAMatrix ret_hfa_matrix() {
+  HFAMatrix r;
+  return r;
+}
+// CHECK: define{{.*}} %struct.HFAMatrix @ret_hfa_matrix
+
+typedef float fx2x1_t __attribute__((matrix_type(2, 1)));
+typedef struct {
+  fx2x1_t m;
+} HFAMatrix2;
+HFAMatrix2 ret_hfa_matrix2() {
+  HFAMatrix2 r;
+  return r;
+}
+// CHECK: define{{.*}} %struct.HFAMatrix2 @ret_hfa_matrix2
