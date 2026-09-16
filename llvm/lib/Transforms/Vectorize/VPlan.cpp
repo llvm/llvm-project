@@ -1601,7 +1601,7 @@ ModuleSlotTracker &VPSlotTracker::getOrCreateMST() {
 std::string VPSlotTracker::getName(const Value *V) {
   std::string Name;
   raw_string_ostream S(Name);
-  // If V isn't and instruction in a basic block or named, it can be printed
+  // If V isn't an instruction in a basic block or named, it can be printed
   // directly without ModuleSlotTracker.
   auto *I = dyn_cast<Instruction>(V);
   if (!I || I->hasName() || !I->getParent()) {
