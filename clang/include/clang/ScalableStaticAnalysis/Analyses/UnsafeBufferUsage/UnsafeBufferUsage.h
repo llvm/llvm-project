@@ -45,6 +45,13 @@ public:
 
   static SummaryName summaryName() { return SummaryName{Name.str()}; }
 };
+
+UnsafeBufferUsageEntitySummary
+    buildUnsafeBufferUsageEntitySummary(EntityPointerLevelSet);
+
+llvm::iterator_range<EntityPointerLevelSet::const_iterator>
+getUnsafeBuffers(const UnsafeBufferUsageEntitySummary &);
+
 } // namespace clang::ssaf
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSIS_ANALYSES_UNSAFEBUFFERUSAGE_UNSAFEBUFFERUSAGE_H
