@@ -364,6 +364,7 @@ TEST_F(RegisterTypeBuilderClangTest, BuildsPackedUnion) {
   EXPECT_EQ(type.GetTypeClass(), eTypeClassUnion);
   EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 8u);
   EXPECT_EQ(type.GetNumFields(), 2u);
+  EXPECT_EQ(type, builder.GetRegisterType(MakeRegisterInfo(union_type, 8)));
   for (size_t index = 0; index < 2; ++index) {
     std::string name;
     uint64_t bit_offset = UINT64_MAX;
@@ -444,7 +445,7 @@ TEST_F(RegisterTypeBuilderClangTest, BuildsVectorOfUnions) {
 
   ASSERT_TRUE(type);
   EXPECT_EQ(llvm::expectedToOptional(type.GetByteSize(nullptr)), 16u);
-  EXPECT_NE(type.GetTypeInfo() & eTypeIsArray, 0u);
+  EXPECT_TRUE(type.IsArrayType());
   EXPECT_EQ(llvm::expectedToOptional(type.GetNumChildren(true, nullptr)), 4u);
 }
 

@@ -496,27 +496,35 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             "0000c03fffffffff" + "0000c03f000020400000604000009040" * 2 + "00" * 8,
         )
 
+        union = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("u0")
+        self.assertEqual(
+            union.GetSummary(),
+            "(f32 = 1.5, f64 = NaN, u64 = 18446744070484131840)",
+        )
+
         self.expect(
             "register read u0",
-            patterns=[
-                r"u0 = 0xffffffff3fc00000\r?\n"
-                r"     = \(f32 = 1\.5, f64 = NaN, "
-                r"u64 = 18446744070484131840\)"
+            substrs=[
+                "u0 = 0xffffffff3fc00000",
+                "     = (f32 = 1.5, f64 = NaN, u64 = 18446744070484131840)",
             ],
         )
         self.expect("register read u0.f32", substrs=["u0.f32 = 1.5"])
+        self.expect(
+            "register read u0.u64 --format X",
+            substrs=["u0.u64 = 0xFFFFFFFF3FC00000"],
+        )
+        self.expect(
+            "register read u0 --format X",
+            substrs=["u0 = 0xFFFFFFFF3FC00000"],
+        )
+        self.expect("register read u0 --format X", matching=False, substrs=["f32 ="])
         self.expect("register read -A alt_u0.f32", substrs=["alt_u0.f32 = 1.5"])
         self.expect("register read $u0.f64", substrs=["u0.f64 = NaN"])
         self.expect("register read u1.floats[2]", substrs=["u1.floats[2] = 3.5"])
         self.expect(
             "register read n0.view.floats[3]",
             substrs=["n0.view.floats[3] = 4.5"],
-        )
-
-        union = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("u0")
-        self.assertEqual(
-            union.GetSummary(),
-            "(f32 = 1.5, f64 = NaN, u64 = 18446744070484131840)",
         )
 
     @skipIfXmlSupportMissing
@@ -557,6 +565,12 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         self.expect("register read u0.missing", error=True, substrs=["No field path"])
         self.expect("register read u0.", error=True, substrs=["No field path"])
         self.expect("register read u0..f32", error=True, substrs=["No field path"])
+        for path in ["u0[0]", "v0[", "v0[0", "v0[]", "v0[x]", "v0[0]junk"]:
+            self.expect(
+                "register read " + path,
+                error=True,
+                substrs=["No field path"],
+            )
         self.expect(
             "register read v0[9].f32",
             error=True,
@@ -596,8 +610,8 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
 
         self.expect(
             "register read u0",
-            patterns=[
-                r"u0 = 0x3fc0000040200000\r?\n"
-                r"     = \(scalar = 1\.5, lanes = \(1\.5, 2\.5\)\)"
+            substrs=[
+                "u0 = 0x3fc0000040200000",
+                "     = (scalar = 1.5, lanes = (1.5, 2.5))",
             ],
         )

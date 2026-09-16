@@ -763,6 +763,14 @@ void FormatManager::LoadSystemFormatters() {
   sys_category_sp->AddTypeSummary("OSType", eFormatterMatchExact,
                                   ostype_summary);
 
+  TypeSummaryImpl::Flags register_union_flags;
+  register_union_flags.SetShowMembersOneLiner(true);
+  // One rule covers all generated register union types without accumulating a
+  // formatter entry for every target description LLDB reads.
+  AddStringSummary(sys_category_sp, "",
+                   R"(^__lldb_register_union_[0-9]+_[0-9]+$)",
+                   register_union_flags, true);
+
   TypeFormatImpl::Flags fourchar_flags;
   fourchar_flags.SetCascades(true).SetSkipPointers(true).SetSkipReferences(
       true);
