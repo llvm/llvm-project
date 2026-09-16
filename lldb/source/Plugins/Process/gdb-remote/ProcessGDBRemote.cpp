@@ -315,9 +315,8 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
       m_async_listener_sp(
           Listener::MakeListener("lldb.process.gdb-remote.async-listener")),
       m_async_thread_state_mutex(), m_thread_ids(), m_thread_pcs(),
-      m_jstopinfo_sp(), m_jthreadsinfo_sp(), m_shared_cache_info_sp(),
-      m_shared_cache_info_mutex(), m_continue_c_tids(), m_continue_C_tids(),
-      m_continue_s_tids(), m_continue_S_tids(), m_max_memory_size(0),
+      m_continue_c_tids(), m_continue_C_tids(), m_continue_s_tids(),
+      m_continue_S_tids(), m_max_memory_size(0),
       m_remote_stub_max_memory_size(0), m_addr_to_mmap_size(),
       m_thread_create_bp_sp(), m_waiting_for_attach(false), m_command_sp(),
       m_breakpoint_pc_offset(0), m_initial_tid(LLDB_INVALID_THREAD_ID),
@@ -1358,9 +1357,9 @@ Status ProcessGDBRemote::WillResume() {
   m_continue_C_tids.clear();
   m_continue_s_tids.clear();
   m_continue_S_tids.clear();
-  m_jstopinfo_sp.reset();
-  m_jthreadsinfo_sp.reset();
-  m_shared_cache_info_sp.reset();
+  m_jstopinfo.Lock()->reset();
+  m_jthreadsinfo.Lock()->reset();
+  m_shared_cache_info.Lock()->reset();
   return Status();
 }
 
@@ -1685,9 +1684,10 @@ size_t ProcessGDBRemote::UpdateThreadPCsFromStopReplyThreadsValue(
 bool ProcessGDBRemote::UpdateThreadIDList() {
   std::lock_guard<std::recursive_mutex> guard(m_thread_list_real.GetMutex());
 
-  if (m_jthreadsinfo_sp) {
+  StructuredData::ObjectSP threads_info_sp = *m_jthreadsinfo.Lock();
+  if (threads_info_sp) {
     // If we have the JSON threads info, we can get the thread list from that
-    StructuredData::Array *thread_infos = m_jthreadsinfo_sp->GetAsArray();
+    StructuredData::Array *thread_infos = threads_info_sp->GetAsArray();
     if (thread_infos && thread_infos->GetSize() > 0) {
       m_thread_ids.clear();
       m_thread_pcs.clear();
@@ -1839,17 +1839,19 @@ bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
 bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
   // See if we got thread stop infos for all threads via the "jThreadsInfo"
   // packet (we're at a public stop).
-  if (GetThreadStopInfoFromJSON(thread, m_jthreadsinfo_sp))
+  StructuredData::ObjectSP threads_info_sp = *m_jthreadsinfo.Lock();
+  if (GetThreadStopInfoFromJSON(thread, threads_info_sp))
     return true;
 
   // See if the stop-reply packet (T05 etc) included a `jstopinfo` key
   // with a mach exception description for any thread that has a stop reason.
-  if (m_jstopinfo_sp) {
+  StructuredData::ObjectSP stop_info_sp = *m_jstopinfo.Lock();
+  if (stop_info_sp) {
     // Any thread not described in `jstopinfo` has no stop reason.
     // If a no-stop-reason thread is stopped at a breakpoint site (but
     // hasn't yet hit the breakpoint instruction), note that in the
     // Thread state so we will hit the breakpoint when we resume execution.
-    if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp)) {
+    if (!GetThreadStopInfoFromJSON(thread, stop_info_sp)) {
       addr_t pc = thread->GetRegisterContext()->GetPC();
       BreakpointSiteSP bp_site_sp =
           thread->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
@@ -2373,8 +2375,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
                   const size_t bytes_copied =
                       bytes.GetHexBytes(data_buffer_sp->GetData(), 0);
                   if (bytes_copied == byte_size)
-                    m_memory_cache.AddL1CacheData(mem_cache_addr,
-                                                  data_buffer_sp);
+                    m_memory_cache.AddCacheData(mem_cache_addr, data_buffer_sp);
                 }
               }
             }
@@ -2506,7 +2507,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
 
         // This JSON contains thread IDs and thread stop info for all threads.
         // It doesn't contain expedited registers, memory or queue info.
-        m_jstopinfo_sp = StructuredData::ParseJSON(json);
+        *m_jstopinfo.Lock() = StructuredData::ParseJSON(json);
       } else if (key.compare("hexname") == 0) {
         StringExtractor name_extractor(value);
         // Now convert the HEX bytes into a string value
@@ -2564,7 +2565,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
             const size_t bytes_copied =
                 bytes.GetHexBytes(data_buffer_sp->GetData(), 0);
             if (bytes_copied == byte_size)
-              m_memory_cache.AddL1CacheData(mem_cache_addr, data_buffer_sp);
+              m_memory_cache.AddCacheData(mem_cache_addr, data_buffer_sp);
           }
         }
       } else if (key.compare("watch") == 0 || key.compare("rwatch") == 0 ||
@@ -2898,12 +2899,13 @@ void ProcessGDBRemote::WillPublicStop() {
   // runtime queue information (iOS and MacOSX only), and more. Expediting
   // memory will help stack backtracing be much faster. Expediting registers
   // will make sure we don't have to read the thread registers for GPRs.
-  m_jthreadsinfo_sp = m_gdb_comm.GetThreadsInfo();
+  StructuredData::ObjectSP threads_info_sp = m_gdb_comm.GetThreadsInfo();
+  *m_jthreadsinfo.Lock() = threads_info_sp;
 
-  if (m_jthreadsinfo_sp) {
+  if (threads_info_sp) {
     // Now set the stop info for each thread and also expedite any registers
     // and memory that was in the jThreadsInfo response.
-    StructuredData::Array *thread_infos = m_jthreadsinfo_sp->GetAsArray();
+    StructuredData::Array *thread_infos = threads_info_sp->GetAsArray();
     if (thread_infos) {
       const size_t n = thread_infos->GetSize();
       for (size_t i = 0; i < n; ++i) {
@@ -4788,11 +4790,13 @@ StructuredData::ObjectSP ProcessGDBRemote::GetDynamicLoaderProcessState() {
 }
 
 StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
-  std::lock_guard<std::mutex> guard(m_shared_cache_info_mutex);
+  // Held across the query so a second caller waits for the answer instead of
+  // sending the packet again.
+  auto shared_cache_info = m_shared_cache_info.Lock();
   StructuredData::ObjectSP args_dict(new StructuredData::Dictionary());
 
-  if (m_shared_cache_info_sp || !m_gdb_comm.GetSharedCacheInfoSupported())
-    return m_shared_cache_info_sp;
+  if (*shared_cache_info || !m_gdb_comm.GetSharedCacheInfoSupported())
+    return *shared_cache_info;
 
   StreamString packet;
   packet << "jGetSharedCacheInfo:";
@@ -4837,10 +4841,10 @@ StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
           HostInfo::SharedCacheIndexFiles(sc_path, uuid, sc_mode);
         }
       }
-      m_shared_cache_info_sp = response_sp;
+      *shared_cache_info = response_sp;
     }
   }
-  return m_shared_cache_info_sp;
+  return *shared_cache_info;
 }
 
 Status ProcessGDBRemote::ConfigureStructuredData(
@@ -5487,10 +5491,12 @@ ParseVector(const XMLNode &vector_node, RegisterTypeMap &feature_register_types,
     return;
   }
 
-  if (!llvm::isa<RegisterTypeBuiltin, RegisterTypeVector>(element_type)) {
+  if (!llvm::isa<RegisterTypeBuiltin, RegisterTypeVector, RegisterTypeUnion>(
+          element_type)) {
     LLDB_LOG(log,
              "ProcessGDBRemote::ParseVector Found element type \"{0}\" for "
-             "vector \"{1}\", but it is not a builtin or vector type",
+             "vector \"{1}\", but it is not a builtin, vector, or union "
+             "type",
              *element_type_name, *id);
     return;
   }
@@ -5511,13 +5517,137 @@ ParseVector(const XMLNode &vector_node, RegisterTypeMap &feature_register_types,
   owned_register_types.push_back(std::move(vector_type));
 }
 
+static std::vector<RegisterTypeUnion::Field>
+ParseUnionFields(const XMLNode &union_node, llvm::StringRef union_id,
+                 const RegisterTypeMap &feature_register_types) {
+  Log *log(GetLog(GDBRLog::Process));
+  std::vector<RegisterTypeUnion::Field> fields;
+  bool invalid_field = false;
+
+  union_node.ForEachChildElementWithName(
+      "field", [&fields, &invalid_field, log, &feature_register_types,
+                union_id](const XMLNode &field_node) {
+        std::optional<llvm::StringRef> name;
+        std::optional<llvm::StringRef> type_name;
+
+        field_node.ForEachAttribute(
+            [&name, &type_name, log, union_id](llvm::StringRef attribute,
+                                               llvm::StringRef value) {
+              if (attribute == "name")
+                name = value;
+              else if (attribute == "type")
+                type_name = value;
+              else
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseUnionFields Ignoring unknown "
+                         "attribute \"{0}\" in a field of union \"{1}\"",
+                         attribute, union_id);
+              return true;
+            });
+
+        if (!name || name->empty() || !type_name || type_name->empty()) {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnionFields Union \"{0}\" has a "
+                   "field missing a non-empty name or type",
+                   union_id);
+          invalid_field = true;
+          return true;
+        }
+
+        const RegisterType *field_type =
+            ResolveGDBType(*type_name, feature_register_types);
+        if (!field_type) {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnionFields Could not resolve type "
+                   "\"{0}\" for field \"{1}\" of union \"{2}\"",
+                   *type_name, *name, union_id);
+          invalid_field = true;
+          return true;
+        }
+
+        if (!llvm::isa<RegisterTypeBuiltin, RegisterTypeVector,
+                       RegisterTypeUnion>(field_type)) {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnionFields Found type \"{0}\" "
+                   "for field \"{1}\", but it is not a builtin, vector, or "
+                   "union type. Union \"{2}\" will be ignored.",
+                   *type_name, *name, union_id);
+          invalid_field = true;
+          return true;
+        }
+
+        fields.emplace_back(name->str(), field_type);
+        return true;
+      });
+
+  // Reject the whole union if any field is invalid. Retaining only valid fields
+  // would misrepresent the target's type definition.
+  if (invalid_field) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseUnionFields Ignoring union \"{0}\" "
+             "because it contains an invalid field",
+             union_id);
+    fields.clear();
+  } else if (fields.empty()) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseUnionFields Ignoring union \"{0}\" "
+             "because it has no fields",
+             union_id);
+  }
+  return fields;
+}
+
 static void
-ParseVectors(XMLNode feature_node, RegisterTypeMap &feature_register_types,
-             std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
-  feature_node.ForEachChildElementWithName(
-      "vector", [&feature_register_types,
-                 &owned_register_types](const XMLNode &vector_node) {
-        ParseVector(vector_node, feature_register_types, owned_register_types);
+ParseUnion(const XMLNode &union_node, RegisterTypeMap &feature_register_types,
+           std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+  Log *log(GetLog(GDBRLog::Process));
+  std::optional<llvm::StringRef> id;
+
+  union_node.ForEachAttribute(
+      [&id, log](llvm::StringRef name, llvm::StringRef value) {
+        if (name == "id")
+          id = value;
+        else
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnion Ignoring unknown attribute "
+                   "\"{0}\"",
+                   name);
+        return true;
+      });
+
+  if (!id || id->empty()) {
+    LLDB_LOG(log, "ProcessGDBRemote::ParseUnion Ignoring union without an id");
+    return;
+  }
+
+  if (feature_register_types.contains(*id)) {
+    LLDB_LOG(log,
+             "ProcessGDBRemote::ParseUnion Ignoring duplicate type \"{0}\"",
+             *id);
+    return;
+  }
+
+  std::vector<RegisterTypeUnion::Field> fields =
+      ParseUnionFields(union_node, *id, feature_register_types);
+  if (fields.empty())
+    return;
+
+  auto union_type =
+      std::make_unique<RegisterTypeUnion>(id->str(), std::move(fields));
+  feature_register_types.try_emplace(*id, union_type.get());
+  owned_register_types.push_back(std::move(union_type));
+}
+
+static void ParseCompositeTypes(
+    XMLNode feature_node, RegisterTypeMap &feature_register_types,
+    std::vector<std::unique_ptr<RegisterType>> &owned_register_types) {
+  feature_node.ForEachChildElement(
+      [&feature_register_types,
+       &owned_register_types](const XMLNode &type_node) {
+        if (type_node.NameIs("vector"))
+          ParseVector(type_node, feature_register_types, owned_register_types);
+        else if (type_node.NameIs("union"))
+          ParseUnion(type_node, feature_register_types, owned_register_types);
         return true;
       });
 }
@@ -5545,11 +5675,19 @@ bool ParseRegisters(
             llvm::dyn_cast<RegisterTypeFlags>(register_type.second))
       flags_type->DumpToLog(log);
 
-  ParseVectors(feature_node, feature_register_types, owned_register_types);
+  // Enums and flags retain their dedicated passes above. Vectors and unions
+  // can reference one another, so parse them together in document order. A
+  // referenced composite type must precede its user.
+  ParseCompositeTypes(feature_node, feature_register_types,
+                      owned_register_types);
   for (const auto &register_type : feature_register_types)
     if (const auto *vector_type =
             llvm::dyn_cast<RegisterTypeVector>(register_type.second))
       vector_type->DumpToLog(log);
+  for (const auto &register_type : feature_register_types)
+    if (const auto *union_type =
+            llvm::dyn_cast<RegisterTypeUnion>(register_type.second))
+      union_type->DumpToLog(log);
 
   feature_node.ForEachChildElementWithName(
       "reg",
@@ -5666,6 +5804,30 @@ bool ParseRegisters(
                 }
                 if (!format_set) {
                   reg_info.format = eFormatVectorOfUInt8;
+                  format_set = true;
+                }
+              }
+            } else if (const auto *union_type =
+                           llvm::dyn_cast<RegisterTypeUnion>(it->second)) {
+              if (reg_info.byte_size > RegisterValue::kMaxRegisterByteSize) {
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseRegisters Register {0} is "
+                         "too large for union type {1}",
+                         reg_info.name, union_type->GetID());
+              } else if (!union_type->IsByteSizeCompatible(
+                             reg_info.byte_size)) {
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseRegisters Size of register "
+                         "{0} is incompatible with union type {1}",
+                         reg_info.name, union_type->GetID());
+              } else {
+                reg_info.register_type = union_type;
+                if (!encoding_set) {
+                  reg_info.encoding = eEncodingUint;
+                  encoding_set = true;
+                }
+                if (!format_set) {
+                  reg_info.format = eFormatHex;
                   format_set = true;
                 }
               }

@@ -197,7 +197,15 @@ static bool coalesceFeaturesAndStripAtomics(Module &M,
   else if (StrippedTLS && !StrippedAtomics)
     stripAtomics(M);
 
-  recordFeatures(M, ST, Features, StrippedAtomics || StrippedTLS);
+  bool Stripped = StrippedAtomics || StrippedTLS;
+  if (!Stripped &&
+      (Features[WebAssembly::FeatureAtomics] ||
+       (CooperativeThreading && Features[WebAssembly::FeatureBulkMemory])) &&
+      !M.getModuleFlag("thread-model")) {
+    M.setThreadModel(ThreadModel::POSIX);
+  }
+
+  recordFeatures(M, ST, Features, Stripped);
 
   // Conservatively assume we have made some change
   return true;

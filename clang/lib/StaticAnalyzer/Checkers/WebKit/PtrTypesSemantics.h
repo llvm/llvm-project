@@ -149,11 +149,18 @@ bool isRetainPtrOrOSPtr(const std::string &Name);
 /// and unique_ptr.
 bool isOwnerPtr(const std::string &Name);
 
+/// \returns true if \p Name is unique_ptr, UniqueRef, or LazyUniqueRef.
+bool isUniquePtr(const std::string &Name);
+
 /// \returns true if \p Name is a smart pointer type name, false if not.
 bool isSmartPtrClass(const std::string &Name);
 
 /// \returns true if \p M is getter of a ref-counted class, false if not.
 std::optional<bool> isGetterOfSafePtr(const clang::CXXMethodDecl *Method);
+
+/// \returns true if \p M is a getter of unique_ptr, UniqueRef, or
+/// LazyUniqueRef, false if not.
+bool isGetterOfUniquePtr(const clang::CXXMethodDecl *Method);
 
 /// \returns true if \p F is a conversion between ref-countable or ref-counted
 /// pointer types.

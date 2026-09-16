@@ -245,3 +245,15 @@ namespace gh67356 {
   // CHECK: define {{.*}} @_ZN7gh673561gIiTkNS_1CIFDTcl1ffL0p_fp_EET_EEEiEEvS3_T0_(
   template void g(int, int);
 }
+
+namespace gh204178 {
+  // Like gh67356::f, but the return type carries an ABI tag.
+  inline namespace [[gnu::abi_tag("n")]] n {
+    class s {};
+  }
+  template<typename, typename> concept c = true;
+  template<typename T> auto f(T t, c<decltype(t)> auto) -> s;
+  // CHECK: call {{.*}} @_ZN8gh2041781fIiTkNS_1cIDtfL0p_EEEiEENS_1n1sET_T0_(
+  // CLANG17: call {{.*}} @_ZN8gh2041781fIiiEENS_1n1sET_T0_(
+  void g() { f(0, 0); }
+}

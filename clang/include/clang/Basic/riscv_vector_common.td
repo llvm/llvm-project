@@ -186,6 +186,11 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // This builtin has a masked form.
   bit HasMasked = true;
 
+  // The masked form's predicate operand normally has the same LMUL as the
+  // unmasked base type. Some mixed-LMUL instructions instead predicate the
+  // result elements.
+  bit MaskedPrototypeHasResultMask = false;
+
   // This is used by intrinsics that need vtype.altfmt
   bit AltFmt = false;
 

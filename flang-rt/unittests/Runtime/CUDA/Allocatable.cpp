@@ -13,6 +13,7 @@
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
+#include "flang/Runtime/CUDA/allocatable.h"
 #include "flang/Runtime/CUDA/allocator.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
@@ -243,4 +244,12 @@ TEST(AllocatableAsyncTest, DestroyStreamTest) {
   EXPECT_FALSE(a->IsAllocated());
   cudaDeviceSynchronize();
   EXPECT_EQ(cudaSuccess, cudaGetLastError());
+}
+
+TEST(AllocatableCUFTest, DeviceIsActiveKeepsLastErrorClean) {
+  // CUFDeviceIsActive() probes primary-context state (including a version-
+  // skew fallback). It must not leave a sticky cudaGetLastError behind.
+  (void)cudaGetLastError(); // start from a clean error state
+  (void)RTNAME(CUFDeviceIsActive)();
+  EXPECT_EQ(cudaGetLastError(), cudaSuccess);
 }
