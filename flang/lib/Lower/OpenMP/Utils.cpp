@@ -1481,17 +1481,36 @@ void collectEnclosingConstructTraits(
   // be able to match construct={target, parallel}. The final reverse yields
   // outermost-to-innermost order as required by OMPContext.
   for (; op; op = op->getParentOp()) {
-    if (mlir::isa<mlir::omp::WsloopOp>(op))
+    if (mlir::isa<mlir::omp::SimdOp>(op))
+      constructTraits.push_back(llvm::omp::TraitProperty::construct_simd_simd);
+    else if (mlir::isa<mlir::omp::WsloopOp>(op))
       constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
-    if (mlir::isa<mlir::omp::ParallelOp>(op))
+    else if (mlir::isa<mlir::omp::ParallelOp>(op))
       constructTraits.push_back(
           llvm::omp::TraitProperty::construct_parallel_parallel);
-    if (mlir::isa<mlir::omp::TeamsOp>(op))
+    else if (mlir::isa<mlir::omp::TeamsOp>(op))
       constructTraits.push_back(
           llvm::omp::TraitProperty::construct_teams_teams);
-    if (mlir::isa<mlir::omp::TargetOp>(op))
+    else if (mlir::isa<mlir::omp::TargetOp>(op)) {
       constructTraits.push_back(
           llvm::omp::TraitProperty::construct_target_target);
+      // The construct context starts at the innermost TARGET, as in
+      // semantic analysis.
+      break;
+    } else if (mlir::isa<mlir::omp::CriticalOp, mlir::omp::DistributeOp,
+                         mlir::omp::FuseOp, mlir::omp::LoopOp,
+                         mlir::omp::MaskedOp, mlir::omp::MasterOp,
+                         mlir::omp::OrderedRegionOp, mlir::omp::ScopeOp,
+                         mlir::omp::SectionsOp, mlir::omp::SingleOp,
+                         mlir::omp::TargetDataOp, mlir::omp::TaskgroupOp,
+                         mlir::omp::TaskloopContextOp, mlir::omp::TaskOp,
+                         mlir::omp::TileOp, mlir::omp::UnrollFullOp,
+                         mlir::omp::UnrollPartialOp,
+                         mlir::omp::WorkdistributeOp, mlir::omp::WorkshareOp>(
+                   op))
+      // These source constructs have no construct-selector property, but
+      // still occupy a position and contribute to device-selector weights.
+      constructTraits.push_back(llvm::omp::TraitProperty::invalid);
   }
   std::reverse(constructTraits.begin(), constructTraits.end());
 }

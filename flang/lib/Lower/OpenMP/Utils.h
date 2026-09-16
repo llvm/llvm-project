@@ -265,7 +265,9 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
 /// Walk the already-emitted MLIR parent operations starting from \p op and
 /// collect the implied OpenMP construct traits in outermost-to-innermost
 /// order. Used by metadirective lowering and declare-variant call resolution
-/// to build the `ConstructTraits` of an `OMPContext`.
+/// to build the `ConstructTraits` of an `OMPContext`. Constructs without a
+/// corresponding trait property are represented by `TraitProperty::invalid`
+/// so they still contribute to scoring positions and depth.
 void collectEnclosingConstructTraits(
     mlir::Operation *op,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);

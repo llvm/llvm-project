@@ -21,6 +21,7 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace llvm {
 class Triple;
@@ -118,10 +119,36 @@ LLVM_ABI bool isValidTraitPropertyForTraitSetAndSelector(TraitProperty Property,
                                                          TraitSelector Selector,
                                                          TraitSet Set);
 
-/// Variant match information describes the required traits and how they are
-/// scored (via the ScoresMap). In addition, the required consturct nesting is
-/// decribed as well.
+/// Variant match information describes the required property traits, how they
+/// are scored, and the required construct nesting.
 struct VariantMatchInfo {
+  struct ISATrait {
+    TraitProperty Property;
+    StringRef Name;
+
+    bool operator==(const ISATrait &Other) const {
+      return Property == Other.Property && Name == Other.Name;
+    }
+  };
+
+  struct UnknownTrait {
+    TraitSelector Selector;
+    StringRef Name;
+    std::optional<APInt> Score;
+
+    // Subset checks compare property identity, not its score.
+    bool operator==(const UnknownTrait &Other) const {
+      return Selector == Other.Selector && Name == Other.Name;
+    }
+  };
+
+  /// Keep unknown properties inactive without losing their selector or score.
+  void addUnknownTrait(TraitSelector Selector, StringRef Name,
+                       APInt *Score = nullptr) {
+    UnknownTraits.push_back(
+        {Selector, Name, Score ? std::optional<APInt>(*Score) : std::nullopt});
+  }
+
   /// Add the trait \p Property to the required trait set. \p RawString is the
   /// string we parsed and derived \p Property from. If \p Score is not null, it
   /// recorded as well. If \p Property is in the `construct` set it is recorded
@@ -142,20 +169,27 @@ struct VariantMatchInfo {
 
     // Special handling for `device={isa(...)}` as we do not match the enum but
     // the raw string.
-    if (Property == TraitProperty::device_isa___ANY)
-      ISATraits.push_back(RawString);
-    if (Property == TraitProperty::target_device_isa___ANY)
-      ISATraits.push_back(RawString);
+    if (Property == TraitProperty::device_isa___ANY ||
+        Property == TraitProperty::target_device_isa___ANY)
+      ISATraits.push_back({Property, RawString});
 
     RequiredTraits.set(unsigned(Property));
     if (Set == TraitSet::construct)
       ConstructTraits.push_back(Property);
+    if (getOpenMPContextTraitSelectorForProperty(Property) ==
+        TraitSelector::user_condition)
+      UserCondition = RawString;
   }
 
   BitVector RequiredTraits = BitVector(unsigned(TraitProperty::Last) + 1);
-  SmallVector<StringRef, 8> ISATraits;
+  SmallVector<ISATrait, 8> ISATraits;
   SmallVector<TraitProperty, 8> ConstructTraits;
   SmallDenseMap<TraitProperty, APInt> ScoreMap;
+  SmallVector<UnknownTrait, 2> UnknownTraits;
+  /// Identity of a user condition expression, when the producer can retain
+  /// it. Applicability uses the folded property above; subset checks use this
+  /// identity to avoid conflating distinct dynamic expressions.
+  StringRef UserCondition;
 };
 
 /// The context for a source location is made up of active property traits,
@@ -175,12 +209,22 @@ struct OMPContext {
       ConstructTraits.push_back(Property);
   }
 
+  /// Record an enclosing construct that has no corresponding construct
+  /// selector property. Such constructs still contribute to the positions
+  /// and device-selector weights used during variant scoring.
+  void addUnknownConstruct() {
+    ConstructTraits.push_back(TraitProperty::invalid);
+  }
+
   /// Hook for users to check if an ISA trait matches. The trait is described as
   /// the string that got parsed and it depends on the target and context if
   /// this matches or not.
   virtual bool matchesISATrait(StringRef) const { return false; }
 
   BitVector ActiveTraits = BitVector(unsigned(TraitProperty::Last) + 1);
+  /// Enclosing constructs in outermost-to-innermost order. An `invalid`
+  /// entry represents a construct that cannot itself appear in a construct
+  /// selector, but which still contributes to scoring depth.
   SmallVector<TraitProperty, 8> ConstructTraits;
 };
 
