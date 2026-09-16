@@ -10,7 +10,14 @@
 #else
 #include <io.h>
 #include <direct.h>
+// winsock2.h must be included before windows.h to avoid clashing with the
+// older winsock.h that windows.h would otherwise pull in.
+#include <winsock2.h> // for AF_UNIX sockets
+#include <afunix.h>
 #include <windows.h> // for CreateSymbolicLink, CreateHardLink
+#if defined(_MSC_VER)
+#pragma comment(lib, "ws2_32")
+#endif
 #endif
 
 #include <cassert>
@@ -34,6 +41,8 @@
 # include <sys/socket.h>
 # include <sys/un.h>
 #endif
+// On Windows the AF_UNIX socket headers (winsock2.h/afunix.h) are included
+// above, before windows.h.
 namespace fs = std::filesystem;
 
 namespace utils {
@@ -341,6 +350,36 @@ struct scoped_test_env
     assert(::bind(fd, reinterpret_cast<::sockaddr*>(&address), sizeof(address)) == 0);
     return file;
   }
+#elif defined(_WIN32)
+    // Windows supports AF_UNIX (Unix domain) sockets, which materialize as a
+    // reparse-point file on disk. Winsock must be initialized before use; this
+    // is done once per process by WinsockInit below.
+    std::string create_socket(std::string file) {
+      static const int wsaInit = WinsockInit();
+      (void)wsaInit;
+
+      file = sanitize_path(std::move(file));
+
+      ::sockaddr_un address;
+      address.sun_family = AF_UNIX;
+      assert(file.size() < sizeof(address.sun_path));
+      std::memcpy(address.sun_path, file.c_str(), file.size() + 1);
+
+      SOCKET fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
+      assert(fd != INVALID_SOCKET);
+      assert(::bind(fd, reinterpret_cast<::sockaddr*>(&address), sizeof(address)) == 0);
+      // Intentionally leave the socket open: the file exists on disk as long as
+      // the socket lives, which is sufficient for the duration of the test.
+      return file;
+    }
+
+private:
+    static int WinsockInit() {
+      WSADATA wsaData;
+      return ::WSAStartup(MAKEWORD(2, 2), &wsaData);
+    }
+
+public:
 #endif
 
     fs::path test_root;
