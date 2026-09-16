@@ -39,6 +39,16 @@ define double @frem_f64(double %a, double %b) {
   ret double %r
 }
 
+; CHECK-DAG: error: {{.*}}in function frem_bf16 {{.*}}frem without the 'afn' fast-math flag is not supported; use the libdevice __nv_fmodf function instead
+; FALLBACK-LABEL: frem_bf16(
+; FALLBACK: div.rn.f32
+; FALLBACK: cvt.rzi.f32.f32
+; FALLBACK: fma.rn.f32
+define bfloat @frem_bf16(bfloat %a, bfloat %b) {
+  %r = frem bfloat %a, %b
+  ret bfloat %r
+}
+
 ; CHECK-DAG: error: {{.*}}in function frem_v2f16 {{.*}}frem without the 'afn' fast-math flag is not supported; use the libdevice __nv_fmodf function instead
 define <2 x half> @frem_v2f16(<2 x half> %a, <2 x half> %b) {
   %r = frem <2 x half> %a, %b
@@ -49,6 +59,12 @@ define <2 x half> @frem_v2f16(<2 x half> %a, <2 x half> %b) {
 define <2 x float> @frem_v2f32(<2 x float> %a, <2 x float> %b) {
   %r = frem <2 x float> %a, %b
   ret <2 x float> %r
+}
+
+; CHECK-DAG: error: {{.*}}in function frem_v2bf16 {{.*}}frem without the 'afn' fast-math flag is not supported; use the libdevice __nv_fmodf function instead
+define <2 x bfloat> @frem_v2bf16(<2 x bfloat> %a, <2 x bfloat> %b) {
+  %r = frem <2 x bfloat> %a, %b
+  ret <2 x bfloat> %r
 }
 
 ; CHECK-DAG: error: {{.*}}in function frem_other_flags {{.*}}frem without the 'afn' fast-math flag is not supported; use the libdevice __nv_fmodf function instead

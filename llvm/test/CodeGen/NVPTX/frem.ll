@@ -333,3 +333,33 @@ define float @frem_f32_fast_all(float %a, float %b) {
   %r = frem fast float %a, %b
   ret float %r
 }
+
+define bfloat @frem_bf16(bfloat %a, bfloat %b) {
+; CHECK-LABEL: frem_bf16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b32 %r<16>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b16 %r1, [frem_bf16_param_1];
+; CHECK-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-NEXT:    ld.param.b16 %r3, [frem_bf16_param_0];
+; CHECK-NEXT:    shl.b32 %r4, %r3, 16;
+; CHECK-NEXT:    div.approx.f32 %r5, %r4, %r2;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r6, %r5;
+; CHECK-NEXT:    neg.f32 %r7, %r6;
+; CHECK-NEXT:    fma.rn.f32 %r8, %r7, %r2, %r4;
+; CHECK-NEXT:    testp.infinite.f32 %p1, %r2;
+; CHECK-NEXT:    selp.f32 %r9, %r4, %r8, %p1;
+; CHECK-NEXT:    bfe.u32 %r10, %r9, 16, 1;
+; CHECK-NEXT:    add.s32 %r11, %r10, %r9;
+; CHECK-NEXT:    add.s32 %r12, %r11, 32767;
+; CHECK-NEXT:    setp.nan.f32 %p2, %r9, %r9;
+; CHECK-NEXT:    or.b32 %r13, %r9, 4194304;
+; CHECK-NEXT:    selp.b32 %r14, %r13, %r12, %p2;
+; CHECK-NEXT:    shr.u32 %r15, %r14, 16;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %r15;
+; CHECK-NEXT:    ret;
+  %r = frem afn bfloat %a, %b
+  ret bfloat %r
+}
