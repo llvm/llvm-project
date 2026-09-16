@@ -411,7 +411,7 @@ func.func @loop_with_unordered_attr(%arg0: !fir.ref<!fir.array<100xi32>>) {
 // CHECK:             %[[VAL_15:.*]] = fir.load %[[VAL_3]] : !fir.ref<i32>
 // CHECK:             %[[VAL_16:.*]] = arith.addi %[[VAL_15]], %[[VAL_14]] : i32
 // CHECK:             fir.store %[[VAL_16]] to %[[VAL_3]] : !fir.ref<i32>
-// CHECK:           } {loop_annotation = #[[$ATTR_1]]}
+// CHECK:           } {llvm.loop_annotation = #[[$ATTR_1]]}
 // CHECK:           return
 // CHECK:         }
 
