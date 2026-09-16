@@ -125,6 +125,8 @@ define amdgpu_kernel void @lds_dma_wg_fence_release_single32(ptr addrspace(8) %r
   ; GFX9-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.rsrc.kernarg.offset, align 4, addrspace 4)
   ; GFX9-NEXT:   $m0 = S_MOV_B32 killed $sgpr6
   ; GFX9-NEXT:   BUFFER_LOAD_DWORD_LDS_OFFSET killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec, implicit $m0 :: (dereferenceable load (s32) from %ir.rsrc.load, align 1, addrspace 8), (dereferenceable store (s2048) into %ir.lds.load, align 1, addrspace 3)
+  ; GFX9-NEXT:   S_WAITCNT_soft .Lgkmcnt_0
+  ; GFX9-NEXT:   S_WAITCNT_lds_direct
   ; GFX9-NEXT:   S_ENDPGM 0
   ;
   ; GFX942-LABEL: name: lds_dma_wg_fence_release_single32
@@ -137,6 +139,8 @@ define amdgpu_kernel void @lds_dma_wg_fence_release_single32(ptr addrspace(8) %r
   ; GFX942-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.rsrc.kernarg.offset, align 4, addrspace 4)
   ; GFX942-NEXT:   $m0 = S_MOV_B32 killed $sgpr6
   ; GFX942-NEXT:   BUFFER_LOAD_DWORD_LDS_OFFSET killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec, implicit $m0 :: (dereferenceable load (s32) from %ir.rsrc.load, align 1, addrspace 8), (dereferenceable store (s2048) into %ir.lds.load, align 1, addrspace 3)
+  ; GFX942-NEXT:   S_WAITCNT_soft .Lgkmcnt_0
+  ; GFX942-NEXT:   S_WAITCNT_lds_direct
   ; GFX942-NEXT:   S_ENDPGM 0
   ;
   ; GFX10-W32-LABEL: name: lds_dma_wg_fence_release_single32
@@ -149,6 +153,9 @@ define amdgpu_kernel void @lds_dma_wg_fence_release_single32(ptr addrspace(8) %r
   ; GFX10-W32-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.rsrc.kernarg.offset, align 4, addrspace 4)
   ; GFX10-W32-NEXT:   $m0 = S_MOV_B32 killed $sgpr6
   ; GFX10-W32-NEXT:   BUFFER_LOAD_DWORD_LDS_OFFSET killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec, implicit $m0 :: (dereferenceable load (s32) from %ir.rsrc.load, align 1, addrspace 8), (dereferenceable store (s1024) into %ir.lds.load, align 1, addrspace 3)
+  ; GFX10-W32-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10-W32-NEXT:   S_WAITCNT_lds_direct
+  ; GFX10-W32-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10-W32-NEXT:   S_ENDPGM 0
   ;
   ; GFX10-W64-LABEL: name: lds_dma_wg_fence_release_single32
@@ -161,6 +168,9 @@ define amdgpu_kernel void @lds_dma_wg_fence_release_single32(ptr addrspace(8) %r
   ; GFX10-W64-NEXT:   early-clobber renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s128) from %ir.rsrc.kernarg.offset, align 4, addrspace 4)
   ; GFX10-W64-NEXT:   $m0 = S_MOV_B32 killed $sgpr6
   ; GFX10-W64-NEXT:   BUFFER_LOAD_DWORD_LDS_OFFSET killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec, implicit $m0 :: (dereferenceable load (s32) from %ir.rsrc.load, align 1, addrspace 8), (dereferenceable store (s2048) into %ir.lds.load, align 1, addrspace 3)
+  ; GFX10-W64-NEXT:   S_WAITCNT_soft .Vmcnt_0_Lgkmcnt_0
+  ; GFX10-W64-NEXT:   S_WAITCNT_lds_direct
+  ; GFX10-W64-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10-W64-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds, i32 4, i32 0, i32 0, i32 0, i32 0)
   fence syncscope("workgroup") release
