@@ -740,6 +740,8 @@ else()
   filter_available_targets(GWP_ASAN_SUPPORTED_ARCH ${ALL_GWP_ASAN_SUPPORTED_ARCH})
   filter_available_targets(NSAN_SUPPORTED_ARCH ${ALL_NSAN_SUPPORTED_ARCH})
   filter_available_targets(ORC_SUPPORTED_ARCH ${ALL_ORC_SUPPORTED_ARCH})
+  filter_available_targets(COPYPROF_SUPPORTED_ARCH ${ALL_COPYPROF_SUPPORTED_ARCH})
+
 endif()
 
 if (MSVC)
@@ -914,6 +916,13 @@ if (COMPILER_RT_HAS_SANITIZER_COMMON AND CFI_SUPPORTED_ARCH)
   set(COMPILER_RT_HAS_CFI TRUE)
 else()
   set(COMPILER_RT_HAS_CFI FALSE)
+endif()
+
+if (COMPILER_RT_HAS_SANITIZER_COMMON AND COPYPROF_SUPPORTED_ARCH AND
+    OS_NAME MATCHES "Linux")
+  set(COMPILER_RT_HAS_COPYPROF TRUE)
+else()
+  set(COMPILER_RT_HAS_COPYPROF FALSE)
 endif()
 
 #TODO(kostyak): add back Android & Fuchsia when the code settles a bit.

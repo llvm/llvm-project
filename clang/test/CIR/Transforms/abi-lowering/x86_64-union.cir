@@ -6,6 +6,7 @@
 !s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
+!s128i = !cir.int<s, 128>
 !u8i = !cir.int<u, 8>
 !rec_UIntFloat = !cir.union<"UIntFloat" {data !s32i, data !cir.float}>
 !rec_UFloatInt = !cir.union<"UFloatInt" {data !cir.float, data !s32i}>
@@ -15,6 +16,9 @@
 !rec_UThree = !cir.union<"UThree" {data !cir.array<!s8i x 3>}>
 !rec_UNarrowStorage = !cir.union<"UNarrowStorage" {data !s32i, data !cir.array<!s8i x 8>}, padding = {!cir.array<!u8i x 4>}>
 !rec_UTwoEightbytes = !cir.union<"UTwoEightbytes" {data !s64i, data !cir.array<!s8i x 16>}, padding = {!cir.array<!u8i x 8>}>
+!rec_UTailPad = !cir.union<"UTailPad" {data !cir.array<!s8i x 17>, data !s64i}, padding = {!cir.array<!u8i x 16>}>
+!rec_UTailPadNoRegs = !cir.union<"UTailPadNoRegs" {data !cir.array<!s8i x 17>, data !s64i}, padding = {!cir.array<!u8i x 16>}>
+!rec_UInt384 = !cir.union<"UInt384" {data !s128i, data !cir.array<!s8i x 33>}, padding = {!cir.array<!u8i x 32>}>
 !rec_UBig = !cir.union<"UBig" {data !cir.array<!s8i x 32>}>
 !rec_UBigOverAligned = !cir.union<"UBigOverAligned" {data !cir.array<!s8i x 32>}>
 !rec_SOverAligned = !cir.struct<"SOverAligned" {data !cir.array<!s8i x 32>}>
@@ -80,6 +84,12 @@ module attributes {
     UBitNoRegs = #cir.record_layout<
       arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
       record_align = 4>,
+    UTailPadNoRegs = #cir.record_layout<
+      arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
+      record_align = 8>,
+    UInt384 = #cir.record_layout<
+      arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
+      record_align = 16>,
     UBigOverAligned = #cir.record_layout<
       arg_passing_kind = can_pass_in_regs, has_trivial_dtor = true,
       record_align = 32>,
@@ -229,6 +239,33 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_UBig> {llvm.align = 8 : i64, llvm.byval = !rec_UBig, llvm.noundef})
   // CHECK:   %{{.*}} = cir.load %arg0 : !cir.ptr<!rec_UBig>, !rec_UBig
+
+  // Nothing spans this union's 24 declared bytes, the widest covering 17.  No
+  // member can reach SSEUP, so its size alone sends it to memory.
+  cir.func @take_tail_pad(%arg0: !rec_UTailPad) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_tail_pad(%arg0: !cir.ptr<!rec_UTailPad> {llvm.align = 8 : i64, llvm.byval = !rec_UTailPad, llvm.noundef})
+
+  cir.func private @return_tail_pad() -> !rec_UTailPad
+
+  // CHECK: cir.func private @return_tail_pad(!cir.ptr<!rec_UTailPad> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_UTailPad, llvm.writable})
+
+  // Same shape, with a layout that forbids registers.
+  cir.func @take_tail_pad_no_regs(%arg0: !rec_UTailPadNoRegs) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_tail_pad_no_regs(%arg0: !cir.ptr<!rec_UTailPadNoRegs> {llvm.align = 8 : i64, llvm.dereferenceable = 24 : i64, llvm.nofreeobj, llvm.noundef})
+
+  // 48 bytes with nothing spanning, accepted because an `__int128` member
+  // cannot reach SSEUP.
+  cir.func @take_int384(%arg0: !rec_UInt384) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_int384(%arg0: !cir.ptr<!rec_UInt384> {llvm.align = 16 : i64, llvm.byval = !rec_UInt384, llvm.noundef})
 
   // The byval alignment comes from the record's declared alignment, which the
   // layout metadata carries because the members alone cannot express an
@@ -800,6 +837,10 @@ module attributes {
 // LLVM: define void @take_narrow_storage(i64 %{{.+}})
 // LLVM: define void @take_two_eightbytes(i64 %{{.+}}, i64 %{{.+}})
 // LLVM: define void @take_big(ptr noundef byval(%union.UBig) align 8 %{{.+}})
+// LLVM: define void @take_tail_pad(ptr noundef byval(%union.UTailPad) align 8 %{{.+}})
+// LLVM: declare void @return_tail_pad(ptr dead_on_unwind writable sret(%union.UTailPad) align 8)
+// LLVM: define void @take_tail_pad_no_regs(ptr nofreeobj noundef align 8 dereferenceable(24) %{{.+}})
+// LLVM: define void @take_int384(ptr noundef byval(%union.UInt384) align 16 %{{.+}})
 // LLVM: define void @take_big_over_aligned(ptr noundef byval(%union.UBigOverAligned) align 32 %{{.+}})
 // LLVM: define void @take_struct_over_aligned(ptr noundef byval(%struct.SOverAligned) align 32 %{{.+}})
 // LLVM: define void @take_empty()
