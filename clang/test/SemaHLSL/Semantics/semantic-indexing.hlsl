@@ -34,3 +34,15 @@ float4 position_vs(float4 P : SV_Position1) : SV_Position { return P; }
 
 [shader("pixel")]
 float4 user_index(float4 P : USER7) : SV_Target { return P; }
+
+// Clip/cull indices are allowed even with a system-value interpretation.
+[shader("pixel")]
+float4 clip_cull_index(float Clip : SV_ClipDistance1,
+                      float Cull : sv_culldistance1) : SV_Target {
+  return Clip + Cull;
+}
+
+// Recognizing the name does not bypass shader-stage validation.
+[shader("compute")][numthreads(1,1,1)]
+void clip_compute(float Clip : SV_ClipDistance1) {}
+// expected-error@-1 {{semantic 'SV_ClipDistance' is not supported in compute shader inputs}}

@@ -1990,26 +1990,6 @@ void SemaHLSL::handleVkLocationAttr(Decl *D, const ParsedAttr &AL) {
                  HLSLVkLocationAttr(getASTContext(), AL, Location));
 }
 
-void SemaHLSL::diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
-                                          SemanticKind Kind,
-                                          std::optional<unsigned> Index) {
-  switch (Kind) {
-  case SemanticKind::DispatchThreadID:
-  case SemanticKind::GroupThreadID:
-  case SemanticKind::GroupID:
-  case SemanticKind::GroupIndex:
-  case SemanticKind::Position:
-  case SemanticKind::Target:
-  case SemanticKind::VertexID:
-    break;
-  default:
-    Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
-    return;
-  }
-
-  D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
-}
-
 void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   uint32_t IndexValue(0), ExplicitIndex(0);
   if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), IndexValue) ||
@@ -2021,10 +2001,12 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
       ExplicitIndex ? std::optional<unsigned>(IndexValue) : std::nullopt;
 
   SemanticKind Kind = llvm::hlsl::getSemanticKind(AL.getAttrName()->getName());
-  if (Kind == SemanticKind::Arbitrary)
-    D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
-  else
-    diagnoseSystemSemanticAttr(D, AL, Kind, Index);
+  if (Kind == SemanticKind::Invalid) {
+    Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
+    return;
+  }
+
+  D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
 }
 
 void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {

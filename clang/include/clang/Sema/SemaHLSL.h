@@ -207,9 +207,6 @@ public:
           Location.value_or(0));
   }
 
-  void diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
-                                  llvm::dxbc::PSV::SemanticKind SemanticKind,
-                                  std::optional<unsigned> Index);
   void handleSemanticAttr(Decl *D, const ParsedAttr &AL);
 
   void handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL);
