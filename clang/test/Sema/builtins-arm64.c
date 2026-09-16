@@ -75,5 +75,7 @@ void test_atomic_store_hint(char *c_ptr, __int128 *inv_ptr, float *f_ptr,
 
   __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0, 3); // expected-warning {{unrecognised hint type argument to atomic hint operation (3)}}
   __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0, inv_int); // expected-error {{invalid hint type argument to atomic hint operation ('int')}}
-  __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0, "h"); // expected-error {{invalid hint type argument to atomic hint operation ('char *')}}
+
+  __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0, "h"); // expected-error {{incompatible pointer to integer conversion passing 'char *' to parameter of type 'int'}}
+  // expected-error@-1 {{invalid hint type argument to atomic hint operation ('int')}}
 }

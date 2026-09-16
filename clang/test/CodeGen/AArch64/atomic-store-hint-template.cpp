@@ -12,23 +12,48 @@ void test_atomic_store_hint_template_order(int *ptr, int val) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    store atomic i32 [[VAL]], ptr [[PTR]] release, align 4, !mem.cache_hint [[META4:![0-9]+]]
 // CHECK-NEXT:    ret void
-//
   __builtin_arm_atomic_store_with_hint(ptr, val, Order, 0);
 }
 
 template void test_atomic_store_hint_template_order<__ATOMIC_RELEASE>(int *, int);
 
 template <unsigned Hint>
+void test_atomic_store_hint_template_hint(int *ptr, int val) {
 // CHECK-LABEL: define weak_odr void @_Z36test_atomic_store_hint_template_hintILj1EEvPii(
 // CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[VAL:%.*]]) #[[ATTR0]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    store atomic i32 [[VAL]], ptr [[PTR]] seq_cst, align 4, !mem.cache_hint [[META6:![0-9]+]]
 // CHECK-NEXT:    ret void
-void test_atomic_store_hint_template_hint(int *ptr, int val) {
   __builtin_arm_atomic_store_with_hint(ptr, val, __ATOMIC_SEQ_CST, Hint);
 }
 
 template void test_atomic_store_hint_template_hint<HINT_STSHH_STRM>(int *, int);
+
+struct MemVal {
+  constexpr operator int() const { return __ATOMIC_RELAXED; }
+};
+
+void test_atomic_store_hint_array_consexpr_order(int *ptr, int value) {
+// CHECK-LABEL: define dso_local void @_Z43test_atomic_store_hint_array_consexpr_orderPii(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[VALUE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    store atomic i32 [[VALUE]], ptr [[PTR]] monotonic, align 4, !mem.cache_hint [[META4]]
+// CHECK-NEXT:    ret void
+  __builtin_arm_atomic_store_with_hint(ptr, value, MemVal{}, 0);
+}
+
+struct HintVal {
+  constexpr operator int() const { return 1; }
+};
+
+void test_atomic_store_hint_array_consexpr_hint(int *ptr, int value) {
+// CHECK-LABEL: define dso_local void @_Z42test_atomic_store_hint_array_consexpr_hintPii(
+// CHECK-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[VALUE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    store atomic i32 [[VALUE]], ptr [[PTR]] monotonic, align 4, !mem.cache_hint [[META6]]
+// CHECK-NEXT:    ret void
+  __builtin_arm_atomic_store_with_hint(ptr, value, __ATOMIC_RELAXED, HintVal{});
+}
 
 //.
 // CHECK: [[META4]] = !{i32 1, [[META5:![0-9]+]]}
