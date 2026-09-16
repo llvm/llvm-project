@@ -4745,6 +4745,8 @@ add_header_library(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits

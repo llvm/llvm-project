@@ -51,18 +51,16 @@ public:
 
     EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::lgammabf16(bfloat16(2.0f)));
     EXPECT_MATH_ERRNO(0);
+  }
 
-    // Negative integers -> +Inf, pole error
+  void test_negative_integers() {
+    // Negative integers are poles -> +Inf, pole error.
     EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(
         inf, LIBC_NAMESPACE::lgammabf16(bfloat16(-1.0f)), FE_DIVBYZERO);
     EXPECT_MATH_ERRNO(ERANGE);
-
     EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(
         inf, LIBC_NAMESPACE::lgammabf16(bfloat16(-2.0f)), FE_DIVBYZERO);
     EXPECT_MATH_ERRNO(ERANGE);
-  }
-  void test_negative_integers() {
-    // More negative integer poles -> +Inf, pole error
     EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(
         inf, LIBC_NAMESPACE::lgammabf16(bfloat16(-3.0f)), FE_DIVBYZERO);
     EXPECT_MATH_ERRNO(ERANGE);

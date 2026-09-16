@@ -32,25 +32,11 @@ static constexpr uint16_t SUBNORM_NEG_STOP = 0x807FU;
 static constexpr uint16_t NORMAL_NEG_START = 0x8080U;
 static constexpr uint16_t NORMAL_NEG_STOP = 0xFF7FU;
 
-TEST_F(LlvmLibcLgammabf16Test, SpecialNumbers) {
-  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::lgammabf16(aNaN));
-  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::lgammabf16(zero));
-  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::lgammabf16(neg_zero));
-  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::lgammabf16(inf));
-  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::lgammabf16(neg_inf));
-  // lgamma(1) = lgamma(2) = 0
-  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::lgammabf16(bfloat16(1.0f)));
-  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::lgammabf16(bfloat16(2.0f)));
-  // Negative integers are poles -> +inf
-  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::lgammabf16(bfloat16(-1.0f)));
-  EXPECT_FP_EQ(inf, LIBC_NAMESPACE::lgammabf16(bfloat16(-2.0f)));
-}
-
 TEST_F(LlvmLibcLgammabf16Test, SubnormalPositiveRange) {
   for (uint16_t v = SUBNORM_POS_START; v <= SUBNORM_POS_STOP; ++v) {
     bfloat16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Lgamma, x,
-                                   LIBC_NAMESPACE::lgammabf16(x), 0.5);
+                                    LIBC_NAMESPACE::lgammabf16(x), 0.5);
   }
 }
 
@@ -58,7 +44,7 @@ TEST_F(LlvmLibcLgammabf16Test, NormalPositiveRange) {
   for (uint16_t v = NORMAL_POS_START; v <= NORMAL_POS_STOP; ++v) {
     bfloat16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Lgamma, x,
-                                   LIBC_NAMESPACE::lgammabf16(x), 0.5);
+                                    LIBC_NAMESPACE::lgammabf16(x), 0.5);
   }
 }
 
@@ -66,7 +52,7 @@ TEST_F(LlvmLibcLgammabf16Test, SubnormalNegativeRange) {
   for (uint16_t v = SUBNORM_NEG_START; v <= SUBNORM_NEG_STOP; ++v) {
     bfloat16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Lgamma, x,
-                                   LIBC_NAMESPACE::lgammabf16(x), 0.5);
+                                    LIBC_NAMESPACE::lgammabf16(x), 0.5);
   }
 }
 
@@ -74,6 +60,6 @@ TEST_F(LlvmLibcLgammabf16Test, NormalNegativeRange) {
   for (uint16_t v = NORMAL_NEG_START; v <= NORMAL_NEG_STOP; ++v) {
     bfloat16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Lgamma, x,
-                                   LIBC_NAMESPACE::lgammabf16(x), 0.5);
+                                    LIBC_NAMESPACE::lgammabf16(x), 0.5);
   }
 }
