@@ -40,10 +40,7 @@ point (e.g. maybe you would like to give an example of the
 functionality, or simply have a lot to talk about), see the comment below
 for adding a new subsection. -->
 
-* The NVPTX backend now requires the `afn` fast-math flag to lower `frem`
-  using its approximate expansion. Without `afn`, it emits an unsupported
-  diagnostic directing callers to the libdevice `__nv_fmodf` (float) or
-  `__nv_fmod` (double) function.
+* ...
 
 <!-- If you would like to document a larger change, then you can add a
 subsection about it right here. You can copy the following boilerplate:
