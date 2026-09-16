@@ -702,7 +702,8 @@ def FeatureStdExtV
       RISCVExtensionBitmask<0, 21>;
 
 def FeatureStdExtZvabd
-    : RISCVExperimentalExtension<0, 9, "Vector Absolute Difference">;
+    : RISCVExperimentalExtension<0, 9, "Vector Absolute Difference",
+                                 [FeatureStdExtZve32x]>;
 def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvabd),
                                         "'Zvabd' (Vector Absolute Difference)">;
@@ -1099,6 +1100,15 @@ def FeatureStdExtSsdbltrp
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
 
+def FeatureStdExtSmidctrl
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Domain Control Interface at Machine Level",
+                                 [FeatureStdExtSmcsrind, FeatureStdExtSmaia]>;
+def FeatureStdExtSsidctrl
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Domain Control Interface at Supervisor Level",
+                                 [FeatureStdExtSscsrind, FeatureStdExtSsaia]>;
+
 def FeatureStdExtSmijt
     : RISCVExperimentalExtension<0, 20,
                                  "Interrupt Jump Table at Machine Level">;
@@ -1129,6 +1139,15 @@ def HasStdExtSsip : Predicate<"Subtarget->hasStdExtSsip()">,
                     AssemblerPredicate<(all_of FeatureStdExtSsip),
                         "'Ssip' (Support for Interrupt Handler Push/Pop at "
                         "Supervisor Level)">;
+
+def FeatureStdExtSmnip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Nested Interrupt Preemption Support at Machine Level",
+                                 [FeatureStdExtSmidctrl]>;
+def FeatureStdExtSsnip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Nested Interrupt Preemption Support at Supervisor Level",
+                                 [FeatureStdExtSsidctrl]>;
 
 def FeatureStdExtSmpmpmt
     : RISCVExperimentalExtension<0, 6, "PMP-based Memory Types Extension">;
@@ -1315,14 +1334,6 @@ def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//
-
-// Ventana Extensions
-
-def FeatureVendorXVentanaCondOps
-    : RISCVExtension<1, 0, "Ventana Conditional Ops">;
-def HasVendorXVentanaCondOps : Predicate<"Subtarget->hasVendorXVentanaCondOps()">,
-                               AssemblerPredicate<(all_of FeatureVendorXVentanaCondOps),
-                                   "'XVentanaCondOps' (Ventana Conditional Ops)">;
 
 // T-Head Extensions
 
