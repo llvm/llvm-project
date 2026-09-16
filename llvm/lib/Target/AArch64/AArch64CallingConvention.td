@@ -162,6 +162,35 @@ def RetCC_AArch64_AAPCS : CallingConv<[
 ]>;
 
 let Entry = 1 in
+def RetCC_AArch64_Preserve_None : CallingConv<[
+  // Return values are assigned the same registers, in the same order, that
+  // CC_AArch64_Preserve_None assigns arguments to, so that a preserve_none
+  // caller and callee agree on the return registers without any
+  // rematerialization.
+  CCIfType<[iPTR], CCBitConvertToType<i64>>,
+  CCIfType<[i32], CCAssignToReg<[W20, W21, W22, W23,
+                                 W24, W25, W26, W27, W28,
+                                 W0, W1, W2, W3, W4, W5,
+                                 W6, W7, W10, W11,
+                                 W12, W13, W14, W9]>>,
+  CCIfType<[i64], CCAssignToReg<[X20, X21, X22, X23,
+                                 X24, X25, X26, X27, X28,
+                                 X0, X1, X2, X3, X4, X5,
+                                 X6, X7, X10, X11,
+                                 X12, X13, X14, X9]>>,
+
+  // Windows uses X15 for stack allocation
+  CCIf<"!State.getMachineFunction().getSubtarget<AArch64Subtarget>().isTargetWindows()",
+    CCIfType<[i32], CCAssignToReg<[W15]>>>,
+  CCIf<"!State.getMachineFunction().getSubtarget<AArch64Subtarget>().isTargetWindows()",
+    CCIfType<[i64], CCAssignToReg<[X15]>>>,
+
+  // All other types (including floating point and vector types) use the
+  // standard AAPCS return convention.
+  CCDelegateTo<RetCC_AArch64_AAPCS>
+]>;
+
+let Entry = 1 in
 def CC_AArch64_Win64PCS : CallingConv<!listconcat(
   [
     // 'CFGuardTarget' is used for Arm64EC; it passes its parameter in X9.

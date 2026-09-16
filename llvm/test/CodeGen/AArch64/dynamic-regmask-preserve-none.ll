@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=aarch64-apple-darwin -stop-after finalize-isel <%s | FileCheck %s
 
-; Check that the callee doesn't have calleeSavedRegisters.
+; Check that the callee doesn't have calleeSavedRegisters, and that return
+; values use the argument registers (x20 onwards), as in LoongArch.
 define preserve_nonecc i64 @callee1(i64 %a0, i64 %b0, i64 %c0, i64 %d0, i64 %e0) nounwind {
   %a1 = mul i64 %a0, %b0
   %a2 = mul i64 %a1, %c0
@@ -10,7 +11,7 @@ define preserve_nonecc i64 @callee1(i64 %a0, i64 %b0, i64 %c0, i64 %d0, i64 %e0)
 }
 ; CHECK:     name: callee1
 ; CHECK-NOT: calleeSavedRegisters:
-; CHECK:     RET_ReallyLR implicit $x0
+; CHECK:     RET_ReallyLR implicit $x20
 
 ; Check that RegMask is csr_aarch64_noneregs.
 define i64 @caller1(i64 %a0) nounwind {
@@ -35,7 +36,7 @@ define preserve_nonecc {i64, i64} @callee2(i64 %a0, i64 %b0, i64 %c0, i64 %d0, i
 }
 ; CHECK:     name: callee2
 ; CHECK-NOT: calleeSavedRegisters:
-; CHECK:     RET_ReallyLR implicit $x0
+; CHECK:     RET_ReallyLR implicit $x20, implicit $x21
 
 
 ; Check that RegMask is csr_aarch64_noneregs.
@@ -76,7 +77,7 @@ define preserve_nonecc {i64, double} @callee4(i64 %a0, i64 %b0, i64 %c0, i64 %d0
 }
 ; CHECK:     name: callee4
 ; CHECK-NOT: calleeSavedRegisters:
-; CHECK:     RET_ReallyLR implicit $x0, implicit $d0
+; CHECK:     RET_ReallyLR implicit $x20, implicit $d0
 
 ; Check that RegMask is csr_aarch64_noneregs.
 define {i64, double} @caller4(i64 %a0) nounwind {

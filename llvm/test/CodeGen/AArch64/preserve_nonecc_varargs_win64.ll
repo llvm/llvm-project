@@ -5,11 +5,10 @@ define preserve_nonecc i32 @callee(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, 
 ; CHECK-LABEL: callee:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    mov x0, x5
 ; CHECK-NEXT:    add x8, sp, #24
 ; CHECK-NEXT:    stp x6, x7, [sp, #32]
+; CHECK-NEXT:    mov w20, w5
 ; CHECK-NEXT:    str x5, [sp, #24]
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    str x8, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
@@ -51,9 +50,10 @@ define i32 @caller() nounwind ssp {
 ; CHECK-NEXT:    str w8, [sp, #8]
 ; CHECK-NEXT:    str w9, [sp]
 ; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    ldp d14, d15, [sp, #152] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #96] // 8-byte Reload
 ; CHECK-NEXT:    ldp d12, d13, [sp, #136] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #96] // 8-byte Reload
 ; CHECK-NEXT:    ldp d10, d11, [sp, #120] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d8, d9, [sp, #104] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x27, x28, [sp, #80] // 16-byte Folded Reload

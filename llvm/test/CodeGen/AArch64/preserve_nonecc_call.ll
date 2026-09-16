@@ -357,9 +357,10 @@ define i64 @caller3() {
 ; CHECK-NEXT:    mov w9, #23 // =0x17
 ; CHECK-NEXT:    mov w15, #24 // =0x18
 ; CHECK-NEXT:    bl callee_with_many_param
+; CHECK-NEXT:    mov x0, x20
 ; CHECK-NEXT:    ldp x20, x19, [sp, #144] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-NEXT:    ldp x22, x21, [sp, #128] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-NEXT:    ldp x24, x23, [sp, #112] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x26, x25, [sp, #96] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x28, x27, [sp, #80] // 16-byte Folded Reload
@@ -427,6 +428,7 @@ define i64 @caller3() {
 ; DARWIN-NEXT:    mov w9, #23 ; =0x17
 ; DARWIN-NEXT:    mov w15, #24 ; =0x18
 ; DARWIN-NEXT:    bl _callee_with_many_param
+; DARWIN-NEXT:    mov x0, x20
 ; DARWIN-NEXT:    ldp x29, x30, [sp, #144] ; 16-byte Folded Reload
 ; DARWIN-NEXT:    ldp x20, x19, [sp, #128] ; 16-byte Folded Reload
 ; DARWIN-NEXT:    ldp x22, x21, [sp, #112] ; 16-byte Folded Reload
@@ -491,6 +493,7 @@ define i64 @caller3() {
 ; WIN-NEXT:    mov w9, #23 // =0x17
 ; WIN-NEXT:    str x8, [sp]
 ; WIN-NEXT:    bl callee_with_many_param
+; WIN-NEXT:    mov x0, x20
 ; WIN-NEXT:    .seh_startepilogue
 ; WIN-NEXT:    ldp d14, d15, [sp, #152] // 16-byte Folded Reload
 ; WIN-NEXT:    .seh_save_fregp d14, 152

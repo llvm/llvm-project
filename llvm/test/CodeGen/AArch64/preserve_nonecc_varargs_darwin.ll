@@ -6,7 +6,7 @@ define preserve_nonecc i32 @callee(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, 
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    add x8, sp, #16
-; CHECK-NEXT:    ldr w0, [sp, #16]
+; CHECK-NEXT:    ldr w20, [sp, #16]
 ; CHECK-NEXT:    orr x8, x8, #0x8
 ; CHECK-NEXT:    str x8, [sp, #8]
 ; CHECK-NEXT:    add sp, sp, #16
@@ -49,6 +49,7 @@ define i32 @caller() nounwind ssp {
 ; CHECK-NEXT:    stp x8, x10, [sp, #8]
 ; CHECK-NEXT:    str x9, [sp]
 ; CHECK-NEXT:    bl _callee
+; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    ldp x29, x30, [sp, #192] ; 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x20, x19, [sp, #176] ; 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x22, x21, [sp, #160] ; 16-byte Folded Reload
