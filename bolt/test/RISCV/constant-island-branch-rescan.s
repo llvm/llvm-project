@@ -16,6 +16,7 @@
 # ADDR-DAG: 0000000000010000 T _start
 # ADDR-DAG: 0000000000010008 T target
 
+  .text
   .globl _start
   .type _start, @function
 _start:

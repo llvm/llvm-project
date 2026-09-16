@@ -18,6 +18,7 @@
 # ADDR-DAG: 000000000001000c T instruction_target
 # ADDR-DAG: 0000000000010014 T _start
 
+  .text
 ## Targets precede the source so their instruction boundaries are available
 ## when the explicit --skip-funcs run scans the source's external references.
   .globl data_target
