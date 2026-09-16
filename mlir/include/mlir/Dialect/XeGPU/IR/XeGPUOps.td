@@ -731,8 +731,10 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
 
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
 
-    - `contiguity`: [optional] the number of neighbouring elements each lane may
-      access in one instruction, as established by the contiguity analysis. It
+    - `contiguity`: [optional] the number of neighbouring elements in the
+      innermost dimension that are contiguous in memory. It is an upper bound,
+      not the final access width: `xegpu-propagate-layout` turns it into
+      `lane_data`, capped by what one lane can access in one instruction. It
       must be at least 2 and must divide the innermost offsets dimension.
 
     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the result
@@ -766,8 +768,8 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
   ```
 
   Example 3 (subgroup level, contiguous runs):
-  `contiguity` says each lane may take 4 neighbouring elements in one access.
-  The shapes stay the same.
+  `contiguity = 4` says 4 neighbouring elements in the innermost dimension are
+  contiguous. The shapes stay the same.
   ```mlir
     %val = xegpu.load %src[%offsets], %mask <{contiguity = 4 : i64}>
           : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
@@ -865,8 +867,10 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
 
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] cache hints for each level of cache.
 
-    - `contiguity`: [optional] the number of neighbouring elements each lane may
-      access in one instruction, as established by the contiguity analysis. It
+    - `contiguity`: [optional] the number of neighbouring elements in the
+      innermost dimension that are contiguous in memory. It is an upper bound,
+      not the final access width: `xegpu-propagate-layout` turns it into
+      `lane_data`, capped by what one lane can access in one instruction. It
       must be at least 2 and must divide the innermost offsets dimension.
 
     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand or the value
@@ -899,8 +903,8 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
   ```
 
   Example 3 (Subgroup level, contiguous runs):
-  `contiguity` says each lane may take 4 neighbouring elements in one access.
-  The shapes stay the same.
+  `contiguity = 4` says 4 neighbouring elements in the innermost dimension are
+  contiguous. The shapes stay the same.
   ```mlir
     xegpu.store %val, %dest[%offsets], %mask <{contiguity = 4 : i64}>
           : vector<16xf32>, i64, vector<16xindex>, vector<16xi1>

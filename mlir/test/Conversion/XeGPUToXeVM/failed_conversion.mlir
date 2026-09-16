@@ -47,6 +47,21 @@ gpu.module @test_kernel {
 
 // -----
 
+// A partial vector.constant_mask is not uniform either: bit 0 cannot gate the
+// elements the mask turns off.
+
+gpu.module @test_kernel {
+  gpu.func @load_gather_partial_constant_mask(%src: i64, %base: index) -> vector<4xf32> {
+    %offsets = vector.broadcast %base : index to vector<4xindex>
+    %mask = vector.constant_mask [2] : vector<4xi1>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.load' that was explicitly marked illegal}}
+    %0 = xegpu.load %src[%offsets], %mask : i64, vector<4xindex>, vector<4xi1> -> vector<4xf32>
+    gpu.return %0 : vector<4xf32>
+  }
+}
+
+// -----
+
 // Verify that xegpu.lane_shuffle of a sub-byte element type is rejected: the
 // shuffle redistributes whole bytes between the lanes, so fp4 fragments cannot
 // be shuffled.

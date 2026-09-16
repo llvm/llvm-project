@@ -84,15 +84,18 @@ gpu.func @load_gather_step_offsets(%src: i64, %pred: i1) -> vector<4xf32> {
 
 // -----
 
-// A mask built from one repeated value is uniform too.
+// An all-ones `vector.constant_mask` is uniform. It is not an `arith.constant`,
+// so it needs its own case.
 
 gpu.module @test {
-// CHECK-LABEL: @load_gather_from_elements_mask
-gpu.func @load_gather_from_elements_mask(%src: i64, %base: index, %pred: i1) -> vector<2xf32> {
+// CHECK-LABEL: @load_gather_constant_mask
+gpu.func @load_gather_constant_mask(%src: i64, %base: index) -> vector<2xf32> {
   %c1 = arith.constant 1 : index
   %o1 = arith.addi %base, %c1 : index
   %offsets = vector.from_elements %base, %o1 : vector<2xindex>
-  %mask = vector.from_elements %pred, %pred : vector<2xi1>
+  %mask = vector.constant_mask [2] : vector<2xi1>
+  // An all-ones mask leaves no scf.if at all.
+  // CHECK-NOT: scf.if
   // CHECK: %[[BASE:.*]] = vector.extract %{{.*}}[0] : i64 from vector<2xi64>
   // CHECK: llvm.load %{{.*}} : !llvm.ptr<1> -> vector<2xf32>
   %0 = xegpu.load %src[%offsets], %mask <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>

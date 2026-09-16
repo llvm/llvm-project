@@ -1241,8 +1241,8 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   if (!uArch)
     return;
   VectorType resVecTy = load.getValueType();
-  // The contiguity analysis reports how many neighbouring elements one lane may
-  // take in a single access. Absent, only one element per lane is safe.
+  // `contiguity` says how many neighbouring elements one lane may take in a
+  // single access. Absent, only one element per lane is safe.
   int contigChunkSize = load.getContiguity().value_or(1);
 
   LayoutInfo resLayoutInfo = results[0]->getValue();
@@ -1306,8 +1306,8 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   if (!uArch)
     return;
   VectorType srcVecTy = storeScatter.getValueType();
-  // The contiguity analysis reports how many neighbouring elements one lane may
-  // write in a single access. Absent, only one element per lane is safe.
+  // `contiguity` says how many neighbouring elements one lane may write in a
+  // single access. Absent, only one element per lane is safe.
   int contigChunkSize = storeScatter.getContiguity().value_or(1);
 
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
