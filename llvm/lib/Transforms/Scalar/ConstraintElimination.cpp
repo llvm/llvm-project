@@ -676,7 +676,7 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
       return V;
     V = Op0;
   } else if (match(V, m_SExt(m_Value(Op0)))) {
-    // In the signed system, the SExt must be non-negative.
+    // In the unsigned system, the SExt operand must be non-negative.
     if (!IsSigned && !Info.isKnownNonNegative(Op0))
       return V;
     V = Op0;
