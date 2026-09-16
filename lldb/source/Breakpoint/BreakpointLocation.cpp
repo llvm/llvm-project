@@ -26,6 +26,9 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/DILEval.h"
+#include "lldb/ValueObject/DILLexer.h"
+#include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObject.h"
 
 using namespace lldb;
@@ -226,9 +229,67 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
   StopCondition condition = GetCondition();
 
   if (!condition) {
+    m_dil_expr_tree.reset();
     m_user_expression_sp.reset();
     return false;
   }
+
+  // Attempt to parse the condition using Data Inspection Language (DIL).
+  if (condition.GetHash() != m_condition_hash && exe_ctx.HasFrameScope() &&
+      exe_ctx.GetTargetSP()->GetUseDILForBreakpointConditions()) {
+    // Lex the expression.
+    auto lex_or_err = dil::DILLexer::Create(condition.GetText(), eDILModeFull);
+    if (lex_or_err) {
+      // Parse the expression.
+      auto tree_or_error = dil::DILParser::Parse(
+          condition.GetText(), std::move(*lex_or_err), exe_ctx.GetFrameRef(),
+          lldb::eNoDynamicValues, eDILModeFull);
+      if (tree_or_error) {
+        m_dil_expr_tree = std::move(*tree_or_error);
+        m_condition_hash = condition.GetHash();
+        LLDB_LOG(log, "DIL successfully parsed the condition: {0}.",
+                 condition.GetText());
+      } else {
+        m_dil_expr_tree.reset();
+        error = Status::FromError(tree_or_error.takeError());
+        LLDB_LOG(log, "Parsing condition with DIL failed:\n{0}.", error);
+      }
+    } else {
+      m_dil_expr_tree.reset();
+      error = Status::FromError(lex_or_err.takeError());
+      LLDB_LOG(log, "Lexing condition with DIL failed:\n{0}.", error);
+    }
+  }
+  // If the expression was parsed successfully, it can be evaluated separately
+  // at every breakpoint without having to parse it again.
+  if (m_dil_expr_tree) {
+    dil::Interpreter interpreter(exe_ctx.GetTargetSP(), condition.GetText(),
+                                 exe_ctx.GetFrameRef(), lldb::eNoDynamicValues,
+                                 0);
+    // Evaluate the expression by DIL.
+    auto valobj_or_error = interpreter.EvaluateTree(m_dil_expr_tree);
+    if (valobj_or_error) {
+      ValueObjectSP value_sp = *valobj_or_error;
+      if (value_sp && value_sp->GetError().Success()) {
+        llvm::Expected<bool> bool_result = value_sp->GetValueAsBool();
+        if (bool_result) {
+          LLDB_LOG(log,
+                   "Condition successfully evaluated by DIL, result is {0}.\n",
+                   *bool_result ? "true" : "false");
+          return *bool_result;
+        }
+        error = Status::FromError(bool_result.takeError());
+      }
+    } else {
+      error = Status::FromError(valobj_or_error.takeError());
+    }
+    // Evaluation failed.
+    LLDB_LOG(log, "Evaluating condition with DIL failed:\n{0}.", error);
+    m_dil_expr_tree.reset();
+    m_condition_hash = 0;
+  }
+  // If DIL failed at any point, the condition evaluation falls back to
+  // UserExpression.
 
   error.Clear();
 
@@ -306,7 +367,9 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
       ret = result_value_sp->IsLogicalTrue(error);
       if (log) {
         if (error.Success()) {
-          LLDB_LOGF(log, "Condition successfully evaluated, result is %s.\n",
+          LLDB_LOGF(log,
+                    "Condition successfully evaluated by UserExpression, "
+                    "result is %s.\n",
                     ret ? "true" : "false");
         } else {
           error = Status::FromErrorString(
@@ -804,7 +867,9 @@ void BreakpointLocation::SwapLocation(BreakpointLocationSP swap_from) {
       swap_from->m_should_resolve_indirect_functions;
   m_is_reexported = swap_from->m_is_reexported;
   m_is_indirect = swap_from->m_is_indirect;
+  m_dil_expr_tree.reset();
   m_user_expression_sp.reset();
+  m_condition_hash = 0;
 }
 
 void BreakpointLocation::SetThreadIDInternal(lldb::tid_t thread_id) {
