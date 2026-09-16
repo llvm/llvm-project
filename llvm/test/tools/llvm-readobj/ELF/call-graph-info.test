@@ -891,6 +891,16 @@ Symbols:
 ...
 
 ## Check relocatable object file handling with section symbol relocations and addends.
+## Generated from compiling the following C code with:
+##   clang -O0 -fexperimental-call-graph-section -fno-asynchronous-unwind-tables -c test.c -o test.o
+##   llvm-objcopy --strip-symbol=stripped_local_func test.o
+##
+##   static void local_func(void) {}
+##   static void stripped_local_func(void) {}
+##   void caller(void) {
+##     local_func();
+##     stripped_local_func();
+##   }
 # RUN: yaml2obj --docnum=7 %s -o %t7
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t7 2>&1 | \
 # RUN:   FileCheck %s --match-full-lines --check-prefix=LLVM-RELOC-ADDEND -DFILE=%t7
@@ -901,28 +911,26 @@ Symbols:
 # LLVM-RELOC-ADDEND-NEXT:   Function {
 # LLVM-RELOC-ADDEND-NEXT:     Names: [caller]
 # LLVM-RELOC-ADDEND-NEXT:     Reloc {
-# LLVM-RELOC-ADDEND-NEXT:       SymbolIndex: 1
+# LLVM-RELOC-ADDEND-NEXT:       SymbolIndex: 3
 # LLVM-RELOC-ADDEND-NEXT:       SymbolName: caller
 # LLVM-RELOC-ADDEND-NEXT:     }
 # LLVM-RELOC-ADDEND-NEXT:     Version: 0
 # LLVM-RELOC-ADDEND-NEXT:     IsIndirectTarget: Yes
-# LLVM-RELOC-ADDEND-NEXT:     TypeID: 0x1234
+# LLVM-RELOC-ADDEND-NEXT:     TypeID: 0x7E04A0FB7AD8BCD5
 # LLVM-RELOC-ADDEND-NEXT:     NumDirectCallees: 2
 # LLVM-RELOC-ADDEND-NEXT:     DirectCallees [
 # LLVM-RELOC-ADDEND-NEXT:       {
 # LLVM-RELOC-ADDEND-NEXT:         Names: [local_func]
 # LLVM-RELOC-ADDEND-NEXT:         Reloc {
-# LLVM-RELOC-ADDEND-NEXT:           SymbolIndex: 3
-# LLVM-RELOC-ADDEND-NEXT:           SymbolName: .text
+# LLVM-RELOC-ADDEND-NEXT:           SymbolIndex: 1
 # LLVM-RELOC-ADDEND-NEXT:           Addend: 16
 # LLVM-RELOC-ADDEND-NEXT:         }
 # LLVM-RELOC-ADDEND-NEXT:       }
 # LLVM-RELOC-ADDEND-NEXT:       {
-# LLVM-RELOC-ADDEND-NEXT:         Names: [(.text)+0x4]
+# LLVM-RELOC-ADDEND-NEXT:         Names: [(.text)+0x18]
 # LLVM-RELOC-ADDEND-NEXT:         Reloc {
-# LLVM-RELOC-ADDEND-NEXT:           SymbolIndex: 3
-# LLVM-RELOC-ADDEND-NEXT:           SymbolName: .text
-# LLVM-RELOC-ADDEND-NEXT:           Addend: 4
+# LLVM-RELOC-ADDEND-NEXT:           SymbolIndex: 1
+# LLVM-RELOC-ADDEND-NEXT:           Addend: 24
 # LLVM-RELOC-ADDEND-NEXT:         }
 # LLVM-RELOC-ADDEND-NEXT:       }
 # LLVM-RELOC-ADDEND-NEXT:     ]
@@ -932,9 +940,23 @@ Symbols:
 # LLVM-RELOC-ADDEND-NEXT:   Function {
 # LLVM-RELOC-ADDEND-NEXT:     Names: [local_func]
 # LLVM-RELOC-ADDEND-NEXT:     Reloc {
-# LLVM-RELOC-ADDEND-NEXT:       SymbolIndex: 3
-# LLVM-RELOC-ADDEND-NEXT:       SymbolName: .text
+# LLVM-RELOC-ADDEND-NEXT:       SymbolIndex: 1
 # LLVM-RELOC-ADDEND-NEXT:       Addend: 16
+# LLVM-RELOC-ADDEND-NEXT:     }
+# LLVM-RELOC-ADDEND-NEXT:     Version: 0
+# LLVM-RELOC-ADDEND-NEXT:     IsIndirectTarget: No
+# LLVM-RELOC-ADDEND-NEXT:     TypeID: 0x0
+# LLVM-RELOC-ADDEND-NEXT:     NumDirectCallees: 0
+# LLVM-RELOC-ADDEND-NEXT:     DirectCallees [
+# LLVM-RELOC-ADDEND-NEXT:     ]
+# LLVM-RELOC-ADDEND-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-RELOC-ADDEND-NEXT:     IndirectTypeIDs: []
+# LLVM-RELOC-ADDEND-NEXT:   }
+# LLVM-RELOC-ADDEND-NEXT:   Function {
+# LLVM-RELOC-ADDEND-NEXT:     Names: [(.text)+0x18]
+# LLVM-RELOC-ADDEND-NEXT:     Reloc {
+# LLVM-RELOC-ADDEND-NEXT:       SymbolIndex: 1
+# LLVM-RELOC-ADDEND-NEXT:       Addend: 24
 # LLVM-RELOC-ADDEND-NEXT:     }
 # LLVM-RELOC-ADDEND-NEXT:     Version: 0
 # LLVM-RELOC-ADDEND-NEXT:     IsIndirectTarget: No
@@ -954,12 +976,12 @@ Symbols:
 # JSON-RELOC-ADDEND-NEXT:             "caller"
 # JSON-RELOC-ADDEND-NEXT:           ],
 # JSON-RELOC-ADDEND-NEXT:           "Reloc": {
-# JSON-RELOC-ADDEND-NEXT:             "SymbolIndex": 1,
+# JSON-RELOC-ADDEND-NEXT:             "SymbolIndex": 3,
 # JSON-RELOC-ADDEND-NEXT:             "SymbolName": "caller"
 # JSON-RELOC-ADDEND-NEXT:           },
 # JSON-RELOC-ADDEND-NEXT:           "Version": 0,
 # JSON-RELOC-ADDEND-NEXT:           "IsIndirectTarget": true,
-# JSON-RELOC-ADDEND-NEXT:           "TypeID": 4660,
+# JSON-RELOC-ADDEND-NEXT:           "TypeID": 9080559750644022485,
 # JSON-RELOC-ADDEND-NEXT:           "NumDirectCallees": 2,
 # JSON-RELOC-ADDEND-NEXT:           "DirectCallees": [
 # JSON-RELOC-ADDEND-NEXT:             {
@@ -967,19 +989,17 @@ Symbols:
 # JSON-RELOC-ADDEND-NEXT:                 "local_func"
 # JSON-RELOC-ADDEND-NEXT:               ],
 # JSON-RELOC-ADDEND-NEXT:               "Reloc": {
-# JSON-RELOC-ADDEND-NEXT:                 "SymbolIndex": 3,
-# JSON-RELOC-ADDEND-NEXT:                 "SymbolName": ".text",
+# JSON-RELOC-ADDEND-NEXT:                 "SymbolIndex": 1,
 # JSON-RELOC-ADDEND-NEXT:                 "Addend": 16
 # JSON-RELOC-ADDEND-NEXT:               }
 # JSON-RELOC-ADDEND-NEXT:             },
 # JSON-RELOC-ADDEND-NEXT:             {
 # JSON-RELOC-ADDEND-NEXT:               "Names": [
-# JSON-RELOC-ADDEND-NEXT:                 "(.text)+0x4"
+# JSON-RELOC-ADDEND-NEXT:                 "(.text)+0x18"
 # JSON-RELOC-ADDEND-NEXT:               ],
 # JSON-RELOC-ADDEND-NEXT:               "Reloc": {
-# JSON-RELOC-ADDEND-NEXT:                 "SymbolIndex": 3,
-# JSON-RELOC-ADDEND-NEXT:                 "SymbolName": ".text",
-# JSON-RELOC-ADDEND-NEXT:                 "Addend": 4
+# JSON-RELOC-ADDEND-NEXT:                 "SymbolIndex": 1,
+# JSON-RELOC-ADDEND-NEXT:                 "Addend": 24
 # JSON-RELOC-ADDEND-NEXT:               }
 # JSON-RELOC-ADDEND-NEXT:             }
 # JSON-RELOC-ADDEND-NEXT:           ],
@@ -993,9 +1013,26 @@ Symbols:
 # JSON-RELOC-ADDEND-NEXT:             "local_func"
 # JSON-RELOC-ADDEND-NEXT:           ],
 # JSON-RELOC-ADDEND-NEXT:           "Reloc": {
-# JSON-RELOC-ADDEND-NEXT:             "SymbolIndex": 3,
-# JSON-RELOC-ADDEND-NEXT:             "SymbolName": ".text",
+# JSON-RELOC-ADDEND-NEXT:             "SymbolIndex": 1,
 # JSON-RELOC-ADDEND-NEXT:             "Addend": 16
+# JSON-RELOC-ADDEND-NEXT:           },
+# JSON-RELOC-ADDEND-NEXT:           "Version": 0,
+# JSON-RELOC-ADDEND-NEXT:           "IsIndirectTarget": false,
+# JSON-RELOC-ADDEND-NEXT:           "TypeID": 0,
+# JSON-RELOC-ADDEND-NEXT:           "NumDirectCallees": 0,
+# JSON-RELOC-ADDEND-NEXT:           "DirectCallees": [],
+# JSON-RELOC-ADDEND-NEXT:           "NumIndirectTargetTypeIDs": 0,
+# JSON-RELOC-ADDEND-NEXT:           "IndirectTypeIDs": []
+# JSON-RELOC-ADDEND-NEXT:         }
+# JSON-RELOC-ADDEND-NEXT:       },
+# JSON-RELOC-ADDEND-NEXT:       {
+# JSON-RELOC-ADDEND-NEXT:         "Function": {
+# JSON-RELOC-ADDEND-NEXT:           "Names": [
+# JSON-RELOC-ADDEND-NEXT:             "(.text)+0x18"
+# JSON-RELOC-ADDEND-NEXT:           ],
+# JSON-RELOC-ADDEND-NEXT:           "Reloc": {
+# JSON-RELOC-ADDEND-NEXT:             "SymbolIndex": 1,
+# JSON-RELOC-ADDEND-NEXT:             "Addend": 24
 # JSON-RELOC-ADDEND-NEXT:           },
 # JSON-RELOC-ADDEND-NEXT:           "Version": 0,
 # JSON-RELOC-ADDEND-NEXT:           "IsIndirectTarget": false,
@@ -1020,44 +1057,51 @@ Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    AddressAlign:    16
-    Content:         "9090909090909090909090909090909090"
+    AddressAlign:    0x10
+    Content:         554889E5E807000000E80A0000005DC3554889E55DC36690554889E55DC3
   - Name:            .llvm.callgraph
     Type:            SHT_LLVM_CALL_GRAPH
-    Content:         "0003000000000000000034120000000000000200000000000000000000000000000000000000000000000000000000000000000000"
+    Flags:           [ SHF_LINK_ORDER ]
+    Link:            .text
+    AddressAlign:    0x1
+    Content:         00030000000000000000D5BCD87AFBA0047E0200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
   - Name:            .rela.llvm.callgraph
     Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
     Link:            .symtab
+    AddressAlign:    0x8
     Info:            .llvm.callgraph
     Relocations:
       - Offset:          0x2
         Symbol:          caller
         Type:            R_X86_64_64
-        Addend:          0
       - Offset:          0x13
-        Symbol:          .text
+        Symbol:          1
         Type:            R_X86_64_64
         Addend:          16
-      - Offset:          0x1b
-        Symbol:          .text
+      - Offset:          0x1B
+        Symbol:          1
         Type:            R_X86_64_64
-        Addend:          4
+        Addend:          24
       - Offset:          0x25
-        Symbol:          .text
+        Symbol:          1
         Type:            R_X86_64_64
         Addend:          16
+      - Offset:          0x37
+        Symbol:          1
+        Type:            R_X86_64_64
+        Addend:          24
 Symbols:
-  - Name:            caller
-    Type:            STT_FUNC
+  - Type:            STT_SECTION
     Section:         .text
-    Value:           0x0
-    Size:            1
   - Name:            local_func
     Type:            STT_FUNC
     Section:         .text
     Value:           0x10
-    Size:            1
-  - Name:            .text
-    Type:            STT_SECTION
+    Size:            0x6
+  - Name:            caller
+    Type:            STT_FUNC
     Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0x10
 ...
