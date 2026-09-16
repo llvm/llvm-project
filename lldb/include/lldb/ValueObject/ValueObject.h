@@ -496,6 +496,11 @@ public:
   virtual lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                                      bool can_create = true);
 
+  /// Return the index of the child named \c name.
+  ///
+  /// The error is for LLDB developers, not for the user: a missing child is the
+  /// ordinary negative answer to a lookup. Callers that cannot propagate it
+  /// should log it rather than call \c llvm::consumeError.
   virtual llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name);
 
   llvm::Expected<uint32_t> GetNumChildren(uint32_t max = UINT32_MAX);

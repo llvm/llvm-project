@@ -646,7 +646,7 @@ uint32_t SBValue::GetIndexOfChildWithName(const char *name) {
     if (auto idx_or_err = value_sp->GetIndexOfChildWithName(name))
       return *idx_or_err;
     else
-      llvm::consumeError(idx_or_err.takeError());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::API), idx_or_err.takeError(), "{0}");
   }
   return UINT32_MAX;
 }
