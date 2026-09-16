@@ -52,3 +52,27 @@ subroutine intrinsic_dim_check()
   !ERROR: The value of DIM= (5) may not be greater than 2
   print *, sum(a, dim=d1(1))
 end subroutine
+
+module mc
+  character(len=4), parameter :: cp(2) = ['abcd', 'efgh']
+contains
+  subroutine takes_c2x2(c)
+    character(len=2), intent(in) :: c(2)
+  end subroutine
+  subroutine takes_c2x3(c)
+    character(len=2), intent(in) :: c(3)
+  end subroutine
+end module
+
+subroutine char_accepted()
+  use mc
+  ! Character storage sequence association (F'2023 15.5.2.12 p4): the 4
+  ! characters remaining from cp(2) exactly fill the 2x2-character dummy.
+  call takes_c2x2(cp(2))
+end subroutine
+
+subroutine char_short_sequence()
+  use mc
+  !ERROR: Actual argument has fewer characters remaining in storage sequence (4) than dummy argument 'c=' (6)
+  call takes_c2x3(cp(2))
+end subroutine
