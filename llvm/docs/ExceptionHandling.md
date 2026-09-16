@@ -508,13 +508,6 @@ The handler selected for a fault depends on the instruction address in the
 emitted scope table, not just on the unwind destination of the nearest call.
 Consequently, describing only the calls is insufficient for this mode.
 
-`SEHTryRegionInfo` associates IR blocks with their protecting EH pad. Its
-region comparison is conservative for unreachable blocks or ambiguous
-nesting. The result is a snapshot: consumers must recompute it after changing
-the CFG or region markers. InstCombine and CodeGenPrepare use it when deciding
-whether to sink instructions between blocks. The query does not enable new
-behavior for other personalities or for modules without `eh-asynch`.
-
 Instruction selection represents machine region boundaries with EH labels
 and `SEH_REGION_BARRIER`. The barrier participates in memory dependencies and
 cannot be duplicated, but emits no code. Machine instruction motion must
