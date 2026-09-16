@@ -12,6 +12,7 @@
 #include "MCTargetDesc/MipsMCAsmInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "MCTargetDesc/MipsTargetStreamer.h"
+#include "MipsRegisterInfo.h"
 #include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallVector.h"
@@ -598,6 +599,7 @@ public:
   bool isABI_N32() const { return ABI.IsN32(); }
   bool isABI_N64() const { return ABI.IsN64(); }
   bool isABI_O32() const { return ABI.IsO32(); }
+  bool isABI_O64() const { return ABI.IsO64(); }
   bool isABI_FPXX() const {
     return getSTI().hasFeature(Mips::FeatureFPXX);
   }

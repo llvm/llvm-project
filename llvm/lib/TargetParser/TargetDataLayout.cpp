@@ -192,7 +192,7 @@ static std::string computeMipsDataLayout(const Triple &TT, StringRef ABIName) {
     Ret += "-m:e";
 
   // Pointers are 32 bit on some ABIs.
-  if (ABI != MipsABI::N64)
+  if (ABI != MipsABI::N64 && ABI != MipsABI::O64)
     Ret += "-p:32:32";
 
   // 8 and 16 bit integers only need to have natural alignment, but try to

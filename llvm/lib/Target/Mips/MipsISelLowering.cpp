@@ -3138,6 +3138,158 @@ static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
                                         ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
                                         CCState &State);
 
+//===----------------------------------------------------------------------===//
+// TODO: Implement a generic logic using tblgen that can support this.
+// Mips O64 ABI rules:
+// ---
+// i64 - Passed in A0, A1, A2, A3 and stack
+// f32 - Only passed in f32 registers if no int reg has been used yet to hold
+//       an argument. Otherwise, passed in A1, A2, A3 and stack.
+// f64 - Only passed in two aliased f32 registers if no int reg has been used
+//       yet to hold an argument. Otherwise, use A2, A3 and stack. If A1 is
+//       not used, it must be shadowed. If only A3 is available, shadow it and
+//       go to stack.
+// vXiX - Received as scalarized i32s, passed in A0 - A3 and the stack.
+// vXf32 - Passed in either a pair of registers {A0, A1}, {A2, A3} or {A0 - A3}
+//         with the remainder spilled to the stack.
+// vXf64 - Passed in either {A0, A1, A2, A3} or {A2, A3} and in both cases
+//         spilling the remainder to the stack.
+//
+//  For vararg functions, all arguments are passed in A0, A1, A2, A3 and stack.
+//===----------------------------------------------------------------------===//
+
+static bool CC_MipsO64(unsigned ValNo, MVT ValVT, MVT LocVT,
+                       CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                       Type *OrigTy, CCState &State,
+                       ArrayRef<MCPhysReg> F64Regs) {
+  const MipsSubtarget &Subtarget = static_cast<const MipsSubtarget &>(
+      State.getMachineFunction().getSubtarget());
+
+  static const MCPhysReg IntRegs[] = { Mips::A0_64, Mips::A1_64, Mips::A2_64, Mips::A3_64 };
+  static const MCPhysReg Int32Regs[] = { Mips::A0, Mips::A1, Mips::A2, Mips::A3 };
+  static const MCPhysReg FloatVectorIntRegs[] = { Mips::A0_64, Mips::A2_64 };
+
+  // Do not process byval args here.
+  if (ArgFlags.isByVal())
+    return true;
+
+  // Promote i8 and i16
+  if (ArgFlags.isInReg() && !Subtarget.isLittle()) {
+    if (LocVT == MVT::i8 || LocVT == MVT::i16 || LocVT == MVT::i32) {
+      LocVT = MVT::i32;
+      if (ArgFlags.isSExt())
+        LocInfo = CCValAssign::SExtUpper;
+      else if (ArgFlags.isZExt())
+        LocInfo = CCValAssign::ZExtUpper;
+      else
+        LocInfo = CCValAssign::AExtUpper;
+    }
+  }
+
+  // Promote i8, i16
+  if (LocVT == MVT::i8 || LocVT == MVT::i16) {
+    LocVT = MVT::i32;
+    if (ArgFlags.isSExt())
+      LocInfo = CCValAssign::SExt;
+    else if (ArgFlags.isZExt())
+      LocInfo = CCValAssign::ZExt;
+    else
+      LocInfo = CCValAssign::AExt;
+  }
+
+  unsigned Reg;
+
+  // f32 and f64 are allocated in A0, A1, A2, A3 when either of the following
+  // is true: function is vararg, argument is 3rd or higher, there is previous
+  // argument which is not f32 or f64.
+  bool AllocateFloatsInIntReg = State.isVarArg() || ValNo > 1 ||
+                                State.getFirstUnallocated(F64Regs) != ValNo;
+  Align OrigAlign = ArgFlags.getNonZeroOrigAlign();
+  bool isVectorFloat = OrigTy->isVectorTy() && OrigTy->isFPOrFPVectorTy();
+
+  // The MIPS vector ABI for floats passes them in a pair of registers
+  if (ValVT == MVT::i32 && isVectorFloat) {
+    // This is the start of an vector that was scalarized into an unknown number
+    // of components. It doesn't matter how many there are. Allocate one of the
+    // notional 8 byte aligned registers which map onto the argument stack, and
+    // shadow the register lost to alignment requirements.
+    if (ArgFlags.isSplit()) {
+      Reg = State.AllocateReg(FloatVectorIntRegs);
+      if (Reg == Mips::A2_64)
+        State.AllocateReg(Mips::A1_64);
+      else if (Reg == 0)
+        State.AllocateReg(Mips::A3_64);
+    } else {
+      // If we're an intermediate component of the split, we can just attempt to
+      // allocate a register directly.
+      Reg = State.AllocateReg(IntRegs);
+    }
+  } else if (ValVT == MVT::i32 ||
+             (ValVT == MVT::f32 && AllocateFloatsInIntReg)) {
+    Reg = State.AllocateReg(Int32Regs);
+    LocVT = MVT::i32;
+  } else if (ValVT == MVT::i64 ||
+             (ValVT == MVT::f64 && AllocateFloatsInIntReg)) {
+    Reg = State.AllocateReg(IntRegs);
+    LocVT = MVT::i64;
+  } else if (ValVT == MVT::f64 && AllocateFloatsInIntReg) {
+    // Allocate int register and shadow next int register. If first
+    // available register is Mips::A1 or Mips::A3, shadow it too.
+    Reg = State.AllocateReg(IntRegs);
+    if (Reg) {
+      LocVT = MVT::i64;
+      State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  } else if (ValVT.isFloatingPoint() && !AllocateFloatsInIntReg) {
+    // we are guaranteed to find an available float register
+    if (ValVT == MVT::f32) {
+      Reg = State.AllocateReg(F64Regs);
+      // Shadow int register
+      State.AllocateReg(IntRegs);
+    } else {
+      Reg = State.AllocateReg(F64Regs);
+      // Shadow int registers
+      State.AllocateReg(IntRegs);
+    }
+  } else
+    llvm_unreachable("Cannot handle this ValVT.");
+
+  if (!Reg) {
+    unsigned Offset = State.AllocateStack(ValVT.getStoreSize(), OrigAlign);
+    State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
+  } else
+    State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+
+  return false;
+}
+
+static bool CC_MipsO64_FP32(unsigned ValNo, MVT ValVT, MVT LocVT,
+                            CCValAssign::LocInfo LocInfo,
+                            ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                            CCState &State) {
+  static const MCPhysReg F64Regs[] = { Mips::D12_64, Mips::D13_64 };
+
+  return CC_MipsO64(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy, State,
+                    F64Regs);
+}
+
+static bool CC_MipsO64_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
+                            CCValAssign::LocInfo LocInfo,
+                            ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                            CCState &State) {
+  static const MCPhysReg F64Regs[] = { Mips::D12_64, Mips::D13_64 };
+
+  return CC_MipsO64(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy, State,
+                    F64Regs);
+}
+
+[[maybe_unused]] static bool CC_MipsO64(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                        CCValAssign::LocInfo LocInfo,
+                                        ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                                        CCState &State);
+
+
 #include "MipsGenCallingConv.inc"
 
  CCAssignFn *MipsTargetLowering::CCAssignFnForCall() const{
@@ -3147,6 +3299,7 @@ static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
  CCAssignFn *MipsTargetLowering::CCAssignFnForReturn() const{
    return RetCC_Mips;
  }
+
 //===----------------------------------------------------------------------===//
 //                  Call Calling Convention Implementation
 //===----------------------------------------------------------------------===//

@@ -72,9 +72,9 @@ unsigned MipsABIInfo::GetCalleeAllocdArgSizeInBytes(CallingConv::ID CC) const {
 
 MipsABIInfo MipsABIInfo::computeTargetABI(const Triple &TT, StringRef ABIName) {
   if (ABIName.starts_with("o32"))
-    return MipsABIInfo::O64();
-  if (ABIName.starts_with("o64"))
     return MipsABIInfo::O32();
+  if (ABIName.starts_with("o64"))
+    return MipsABIInfo::O64();
   if (ABIName.starts_with("n32"))
     return MipsABIInfo::N32();
   if (ABIName.starts_with("n64"))

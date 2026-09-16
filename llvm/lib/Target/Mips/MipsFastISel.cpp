@@ -285,9 +285,26 @@ static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
   llvm_unreachable("should not be called");
 }
 
+
+static bool CC_MipsO64_FP32(unsigned ValNo, MVT ValVT, MVT LocVT,
+                            CCValAssign::LocInfo LocInfo,
+                            ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                            CCState &State) {
+  llvm_unreachable("should not be called");
+}
+
+static bool CC_MipsO64_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
+                            CCValAssign::LocInfo LocInfo,
+                            ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                            CCState &State) {
+  llvm_unreachable("should not be called");
+}
+
 #include "MipsGenCallingConv.inc"
 
 CCAssignFn *MipsFastISel::CCAssignFnForCall(CallingConv::ID CC) const {
+  if (getABI().IsO64())
+    return CC_MipsO64;
   return CC_MipsO32;
 }
 

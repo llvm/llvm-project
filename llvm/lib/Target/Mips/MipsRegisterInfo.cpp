@@ -123,12 +123,6 @@ MipsRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (Subtarget.isSingleFloat())
     return CSR_O64_SingleFloat_SaveList;
 
-  if (Subtarget.isFP64bit())
-    return CSR_O64_FP64_SaveList;
-
-  if (Subtarget.isFPXX())
-    return CSR_O64_FPXX_SaveList;
-
   return CSR_O64_SaveList;
 }
 
@@ -153,16 +147,23 @@ MipsRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   }
 
   // O32 ABI
+  if (Subtarget.isABI_O32()) {
+    if (Subtarget.isSingleFloat())
+      return CSR_O32_SingleFloat_RegMask;
+
+    if (Subtarget.isFP64bit())
+      return CSR_O32_FP64_RegMask;
+
+    if (Subtarget.isFPXX())
+      return CSR_O32_FPXX_RegMask;
+
+    return CSR_O32_RegMask;
+  }
+
+  // O64 ABI
   if (Subtarget.isSingleFloat())
-    return CSR_O32_SingleFloat_RegMask;
-
-  if (Subtarget.isFP64bit())
-    return CSR_O32_FP64_RegMask;
-
-  if (Subtarget.isFPXX())
-    return CSR_O32_FPXX_RegMask;
-
-  return CSR_O32_RegMask;
+    return CSR_O64_SingleFloat_RegMask;
+  return CSR_O64_RegMask;
 }
 
 const uint32_t *MipsRegisterInfo::getMips16RetHelperMask() {

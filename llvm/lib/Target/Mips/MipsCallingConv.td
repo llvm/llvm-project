@@ -108,6 +108,49 @@ def CC_MipsO32_FP : CallingConv<[
 ]>;
 
 //===----------------------------------------------------------------------===//
+// Mips O64 Calling Convention
+//===----------------------------------------------------------------------===//
+
+def CC_MipsO64 : CallingConv<[
+  // Promote i8/i16 arguments to i32.
+  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+
+  // Integer values get stored in stack slots that are 4 bytes in
+  // size and 8-byte aligned.
+  CCIfType<[i32, f32], CCAssignToStack<4, 8>>,
+
+  // Integer values get stored in stack slots that are 8 bytes in
+  // size and 8-byte aligned.
+  CCIfType<[i64, f64], CCAssignToStack<8, 8>>
+]>;
+
+// Only the return rules are defined here for O64. The rules for argument
+// passing are defined in MipsISelLowering.cpp.
+def RetCC_MipsO64 : CallingConv<[
+  // Promote i1/i8/i16 return values to i32.
+  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+
+  // i64 are returned in registers V0, V1, A0, A1, unless the original return
+  // type was a vector of floats.
+  CCIfOrigArgWasNotVectorFloat<CCIfType<[i64],
+                                        CCAssignToReg<[V0_64, V1_64, A0_64, A1_64]>>>,
+
+  // f32 are returned in registers F12, F13
+  CCIfType<[f32], CCAssignToReg<[F12, F13]>>,
+
+  // f64 are returned in registers D12, D13
+  CCIfType<[f64], CCAssignToReg<[D12_64, D13_64]>>,
+]>;
+
+def CC_MipsO64_FP32 : CustomCallingConv;
+def CC_MipsO64_FP64 : CustomCallingConv;
+
+def CC_MipsO64_FP : CallingConv<[
+  CCIfSubtargetNot<"isFP64bit()", CCDelegateTo<CC_MipsO64_FP32>>,
+  CCIfSubtarget<"isFP64bit()", CCDelegateTo<CC_MipsO64_FP64>>
+]>;
+
+//===----------------------------------------------------------------------===//
 // Mips N32/64 Calling Convention
 //===----------------------------------------------------------------------===//
 
@@ -284,11 +327,13 @@ def CC_Mips_FastCC : CallingConv<[
 def RetCC_Mips : CallingConv<[
   CCIfSubtarget<"isABI_N32()", CCDelegateTo<RetCC_MipsN>>,
   CCIfSubtarget<"isABI_N64()", CCDelegateTo<RetCC_MipsN>>,
+  CCIfSubtarget<"isABI_O64()", CCDelegateTo<RetCC_MipsO64>>,
   CCDelegateTo<RetCC_MipsO32>
 ]>;
 
 def CC_Mips_ByVal : CallingConv<[
   CCIfSubtarget<"isABI_O32()", CCIfByVal<CCPassByVal<4, 4>>>,
+  CCIfSubtarget<"isABI_O64()", CCIfByVal<CCPassByVal<4, 8>>>,
   CCIfByVal<CCPassByVal<8, 8>>
 ]>;
 
@@ -325,6 +370,7 @@ def CC_Mips_FixedArg : CallingConv<[
   CCIfCC<"CallingConv::Fast", CCDelegateTo<CC_Mips_FastCC>>,
 
   CCIfSubtarget<"isABI_O32()", CCIfSubtargetNot<"isGP64bit()", CCDelegateTo<CC_MipsO32_FP>>>,
+  CCIfSubtarget<"isABI_O64()", CCDelegateTo<CC_MipsO64_FP>>,
   CCDelegateTo<CC_MipsN>
 ]>;
 
@@ -332,6 +378,7 @@ def CC_Mips_VarArg : CallingConv<[
   CCIfByVal<CCDelegateTo<CC_Mips_ByVal>>,
 
   CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FP>>,
+  CCIfSubtarget<"isABI_O64()", CCDelegateTo<CC_MipsO64_FP>>,
   CCDelegateTo<CC_MipsN_VarArg>
 ]>;
 
@@ -358,6 +405,12 @@ def CSR_O32 : CalleeSavedRegs<(add (sequence "D%u", 15, 10), RA, FP,
 def CSR_O32_FP64 :
   CalleeSavedRegs<(add (decimate (sequence "D%u_64", 30, 20), 2), RA, FP,
                        (sequence "S%u", 7, 0))>;
+
+def CSR_O64 : CalleeSavedRegs<(add (sequence "D%u_64", 15, 10), RA_64, FP_64,
+                                   (sequence "S%u_64", 7, 0))>;
+
+def CSR_O64_SingleFloat : CalleeSavedRegs<(add(sequence "F%u", 31, 20), RA_64, FP_64,
+                              (sequence "S%u_64", 7, 0))>;
 
 def CSR_N32 : CalleeSavedRegs<(add(decimate(sequence "D%u_64", 30, 20), 2),
                   RA_64, FP_64, GP_64, (sequence "S%u_64", 7, 0))>;
