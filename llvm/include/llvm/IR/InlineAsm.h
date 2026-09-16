@@ -29,11 +29,16 @@ namespace llvm {
 
 class Error;
 class FunctionType;
+class MDNode;
 class PointerType;
 template <class ConstantClass> class ConstantUniqueMap;
 
 class InlineAsm final : public Value {
 public:
+  /// Return a well-formed inlineasm.dbg.offset node appended to !srcloc.
+  /// Each entry is an i32 template byte offset, source line and source column.
+  LLVM_ABI static const MDNode *getSourceLocMetadata(const MDNode *LocMD);
+
   enum AsmDialect {
     AD_ATT,
     AD_Intel
