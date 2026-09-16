@@ -69,7 +69,7 @@ template <> struct ExtraPrecision<float128> {
 template <> struct ExtraPrecision<float80> {
   static constexpr unsigned int VALUE = 256;
 };
-#endif
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 template <> struct ExtraPrecision<bfloat16> {
   static constexpr unsigned int VALUE = 64;

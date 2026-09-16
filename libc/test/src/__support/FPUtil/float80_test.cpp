@@ -11,7 +11,6 @@
 #include "src/__support/FPUtil/float80.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "utils/MPFRWrapper/MPCommon.h"
 
 using LIBC_NAMESPACE::Sign;
 using LIBC_NAMESPACE::fputil::Float80;
@@ -102,6 +101,9 @@ TEST(LlvmLibcFloat80Test, IntegerConversion) {
 }
 
 #ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+
+#include "utils/MPFRWrapper/MPCommon.h"
+
 TEST(LlvmLibcFloat80Test, randomTest) {
   using FPBitsL = LIBC_NAMESPACE::fputil::FPBits<long double>;
 
@@ -139,9 +141,9 @@ TEST(LlvmLibcFloat80Test, MPFRConversion) {
   using LIBC_NAMESPACE::testing::mpfr::MPFRNumber;
 
   Float80 values[] = {
-      Float80(0.0f),  Float80(-0.0f),      Float80(1.0f),
-      Float80(-1.0f), Float80(2.0f),       Float80(0.5f),
-      Float80(100.0), Float80(12345.6789), Float80(1e10f),
+      Float80(0.0f),  Float80(-0.0f), Float80(1.0f),  Float80(-1.0f),
+      Float80(2.0f),  Float80(0.5f),  Float80(100.0), Float80(12345.6789),
+      Float80(1e10f),
   };
 
   for (Float80 val : values) {
