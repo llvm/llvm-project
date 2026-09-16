@@ -34,11 +34,8 @@ AST_MATCHER(ParenExpr, isInMacro) {
          E->getBeginLoc().isMacroID() || E->getEndLoc().isMacroID();
 }
 
-AST_MATCHER(ParenExpr, isTypeOfArgument) {
-  return llvm::any_of(Finder->getASTContext().getParents(Node),
-                      [](const DynTypedNode &Parent) {
-                        return Parent.get<TypeOfExprTypeLoc>() != nullptr;
-                      });
+AST_MATCHER(TypeLoc, isTypeOfExprTypeLoc) {
+  return !Node.getAs<TypeOfExprTypeLoc>().isNull();
 }
 
 } // namespace
@@ -89,7 +86,7 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
                              // sizeof(...) is common used.
                              hasParent(unaryExprOrTypeTraitExpr()),
                              // typeof(...) parentheses are required syntax.
-                             isTypeOfArgument())))
+                             hasParent(typeLoc(isTypeOfExprTypeLoc())))))
           .bind("dup"),
       this);
 }
