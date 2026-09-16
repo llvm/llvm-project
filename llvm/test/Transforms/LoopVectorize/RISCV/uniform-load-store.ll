@@ -899,8 +899,6 @@ define void @uniform_load_store(ptr noalias %p, ptr noalias %q, ptr noalias %l, 
 ; SCALABLE-NEXT:  [[ENTRY:.*:]]
 ; SCALABLE-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; SCALABLE:       [[VECTOR_SCEVCHECK]]:
-; SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[Q]], i64 0
-; SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
 ; SCALABLE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; SCALABLE:       [[VECTOR_BODY]]:
 ; SCALABLE-NEXT:    [[EVL_BASED_IV:%.*]] = phi i32 [ 0, %[[VECTOR_SCEVCHECK]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -911,12 +909,15 @@ define void @uniform_load_store(ptr noalias %p, ptr noalias %q, ptr noalias %l, 
 ; SCALABLE-NEXT:    [[TMP8:%.*]] = add <vscale x 4 x i32> [[VP_OP_LOAD]], splat (i32 1)
 ; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[P]], i32 [[EVL_BASED_IV]]
 ; SCALABLE-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP8]], ptr align 4 [[TMP5]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP6]]), !alias.scope [[META10]], !noalias [[META13]]
-; SCALABLE-NEXT:    call void @llvm.vp.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[TMP8]], <vscale x 4 x ptr> align 4 [[BROADCAST_SPLAT]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP6]]), !alias.scope [[META13]], !noalias [[META10]]
 ; SCALABLE-NEXT:    [[INDEX_EVL_NEXT]] = add i32 [[TMP6]], [[EVL_BASED_IV]]
 ; SCALABLE-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP6]]
 ; SCALABLE-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; SCALABLE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; SCALABLE:       [[MIDDLE_BLOCK]]:
+; SCALABLE-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP6]] to i64
+; SCALABLE-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP9]], 1
+; SCALABLE-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 4 x i32> [[TMP8]], i64 [[TMP10]]
+; SCALABLE-NEXT:    store i32 [[TMP7]], ptr [[Q]], align 4, !alias.scope [[META13]], !noalias [[META10]]
 ; SCALABLE-NEXT:    br label %[[LOOP:.*]]
 ; SCALABLE:       [[LOOP]]:
 ; SCALABLE-NEXT:    ret void
@@ -967,8 +968,6 @@ define void @uniform_load_store(ptr noalias %p, ptr noalias %q, ptr noalias %l, 
 ; TF-SCALABLE-NEXT:  [[ENTRY:.*:]]
 ; TF-SCALABLE-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; TF-SCALABLE:       [[VECTOR_SCEVCHECK]]:
-; TF-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[Q]], i64 0
-; TF-SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
 ; TF-SCALABLE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TF-SCALABLE:       [[VECTOR_BODY]]:
 ; TF-SCALABLE-NEXT:    [[EVL_BASED_IV:%.*]] = phi i32 [ 0, %[[VECTOR_SCEVCHECK]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -979,12 +978,15 @@ define void @uniform_load_store(ptr noalias %p, ptr noalias %q, ptr noalias %l, 
 ; TF-SCALABLE-NEXT:    [[TMP8:%.*]] = add <vscale x 4 x i32> [[VP_OP_LOAD]], splat (i32 1)
 ; TF-SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[P]], i32 [[EVL_BASED_IV]]
 ; TF-SCALABLE-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP8]], ptr align 4 [[TMP5]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP6]]), !alias.scope [[META10]], !noalias [[META13]]
-; TF-SCALABLE-NEXT:    call void @llvm.vp.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[TMP8]], <vscale x 4 x ptr> align 4 [[BROADCAST_SPLAT]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP6]]), !alias.scope [[META13]], !noalias [[META10]]
 ; TF-SCALABLE-NEXT:    [[INDEX_EVL_NEXT]] = add i32 [[TMP6]], [[EVL_BASED_IV]]
 ; TF-SCALABLE-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP6]]
 ; TF-SCALABLE-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; TF-SCALABLE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; TF-SCALABLE:       [[MIDDLE_BLOCK]]:
+; TF-SCALABLE-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP6]] to i64
+; TF-SCALABLE-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP9]], 1
+; TF-SCALABLE-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 4 x i32> [[TMP8]], i64 [[TMP10]]
+; TF-SCALABLE-NEXT:    store i32 [[TMP7]], ptr [[Q]], align 4, !alias.scope [[META13]], !noalias [[META10]]
 ; TF-SCALABLE-NEXT:    br label %[[LOOP:.*]]
 ; TF-SCALABLE:       [[LOOP]]:
 ; TF-SCALABLE-NEXT:    ret void

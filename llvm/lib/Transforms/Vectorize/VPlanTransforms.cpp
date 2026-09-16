@@ -190,7 +190,8 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
 /// Helper for extra no-alias checks via known-safe recipe and SCEV.
 class SinkStoreInfo {
   SmallPtrSet<VPReplicateRecipe *, 4> ExcludeRecipes;
-  VPReplicateRecipe &GroupLeader;
+  VPReplicateRecipe *GroupLeader;
+  Instruction *GroupLeaderI = nullptr;
   PredicatedScalarEvolution *PSE = nullptr;
   const Loop *L = nullptr;
 
@@ -239,17 +240,27 @@ public:
                 VPReplicateRecipe &GroupLeader, PredicatedScalarEvolution &PSE,
                 const Loop &L)
       : ExcludeRecipes(ExcludeRecipes.begin(), ExcludeRecipes.end()),
-        GroupLeader(GroupLeader), PSE(&PSE), L(&L) {}
+        GroupLeader(&GroupLeader),
+        GroupLeaderI(GroupLeader.getUnderlyingInstr()), PSE(&PSE), L(&L) {}
 
-  SinkStoreInfo(VPReplicateRecipe &GroupLeader) : GroupLeader(GroupLeader) {}
+  SinkStoreInfo(VPReplicateRecipe &GroupLeader)
+      : GroupLeader(&GroupLeader),
+        GroupLeaderI(GroupLeader.getUnderlyingInstr()) {}
+
+  SinkStoreInfo(Instruction &GroupLeader)
+      : GroupLeader(nullptr), GroupLeaderI(&GroupLeader) {}
 
   /// Return true if \p R should be skipped during alias checking, either
   /// because it's in the exclude set or because no-alias can be proven via
   /// SCEV.
   bool shouldSkip(VPRecipeBase &R) const {
     auto *Store = dyn_cast<VPReplicateRecipe>(&R);
-    return ExcludeRecipes.contains(Store) ||
-           (Store && isNoAliasViaDistance(Store, &GroupLeader));
+    if (ExcludeRecipes.contains(Store))
+      return true;
+    if (Store && GroupLeader && isNoAliasViaDistance(Store, GroupLeader))
+      return true;
+    auto *WidenStore = dyn_cast<VPWidenStoreRecipe>(&R);
+    return WidenStore && GroupLeaderI == &WidenStore->getIngredient();
   }
 };
 
@@ -1813,29 +1824,6 @@ getUnmaskedDivRemOpcode(Intrinsic::ID ID) {
   }
 }
 
-/// Return true if we do not know how to (mechanically) hoist or sink a
-/// non-memory or memory recipe \p R out of a loop region. When sinking, passing
-/// \p Sinking = true ensures that assumes aren't sunk.
-static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
-                                    VPBasicBlock *LastBB,
-                                    bool Sinking = false) {
-  if (!isa<VPReplicateRecipe>(R) || !R.mayReadOrWriteMemory() ||
-      match(&R, m_Intrinsic<Intrinsic::assume>()))
-    return vputils::cannotHoistOrSinkRecipe(R, Sinking);
-
-  // Check that the memory operation doesn't alias between FirstBB and LastBB.
-  auto MemLoc = vputils::getMemoryLocation(R);
-
-  // TODO: Could make use of SinkStoreInfo::isNoAliasViaDistance by collecting
-  // stores upfront, and constructing a full SinkStoreInfo.
-  auto SinkInfo =
-      Sinking ? std::make_optional(SinkStoreInfo(cast<VPReplicateRecipe>(R)))
-              : std::nullopt;
-
-  return !MemLoc ||
-         !canHoistOrSinkWithNoAliasCheck(*MemLoc, FirstBB, LastBB, SinkInfo);
-}
-
 static void narrowToSingleScalarRecipes(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
@@ -1857,12 +1845,13 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         if (!Mask || !match(Mask, m_HeaderMask()))
           continue;
 
+        // Only narrow scatters that can be sunk to the middle block.
         VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-        // If the narrowed store cannot sink to middle block, this
-        // transformation probably not profitable.
-        if (cannotHoistOrSinkRecipe(*WidenStoreR,
-                                    LoopRegion->getEntryBasicBlock(),
-                                    LoopRegion->getExitingBasicBlock(), true))
+        auto MemLoc = vputils::getMemoryLocation(*WidenStoreR);
+        SinkStoreInfo SinkInfo(WidenStoreR->getIngredient());
+        if (!MemLoc || !canHoistOrSinkWithNoAliasCheck(
+                           *MemLoc, LoopRegion->getEntryBasicBlock(),
+                           LoopRegion->getExitingBasicBlock(), SinkInfo))
           continue;
 
         VPBuilder Builder(WidenStoreR);
@@ -2463,6 +2452,29 @@ void VPlanTransforms::cse(VPlan &Plan) {
     }
     LoadCSEMap.clear();
   }
+}
+
+/// Return true if we do not know how to (mechanically) hoist or sink a
+/// non-memory or memory recipe \p R out of a loop region. When sinking, passing
+/// \p Sinking = true ensures that assumes aren't sunk.
+static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
+                                    VPBasicBlock *LastBB,
+                                    bool Sinking = false) {
+  if (!isa<VPReplicateRecipe>(R) || !R.mayReadOrWriteMemory() ||
+      match(&R, m_Intrinsic<Intrinsic::assume>()))
+    return vputils::cannotHoistOrSinkRecipe(R, Sinking);
+
+  // Check that the memory operation doesn't alias between FirstBB and LastBB.
+  auto MemLoc = vputils::getMemoryLocation(R);
+
+  // TODO: Could make use of SinkStoreInfo::isNoAliasViaDistance by collecting
+  // stores upfront, and constructing a full SinkStoreInfo.
+  auto SinkInfo =
+      Sinking ? std::make_optional(SinkStoreInfo(cast<VPReplicateRecipe>(R)))
+              : std::nullopt;
+
+  return !MemLoc ||
+         !canHoistOrSinkWithNoAliasCheck(*MemLoc, FirstBB, LastBB, SinkInfo);
 }
 
 /// Move loop-invariant recipes out of the vector loop region in \p Plan.
