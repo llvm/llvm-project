@@ -4120,10 +4120,7 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw_auto:
       if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
         // FIXME: In C++, `auto` as a storage-class specifier is a
-        // deprecated extension. This lookahead runs for C only; teaching it
-        // to also recognize typedef-names in C++ would require broader
-        // design discussion around `ext_auto_storage_class`. See
-        // https://github.com/llvm/llvm-project/issues/164930.
+        // deprecated extension. This lookahead runs for C only.
         auto IsTypedefName = [&](const Token &T) {
           if (!T.is(tok::identifier))
             return false;
@@ -4134,7 +4131,8 @@ void Parser::ParseDeclarationSpecifiers(
           // avoid emitting deprecation/availability diagnostics on the
           // typedef during this speculative peek — the real parse will look
           // the name up again and emit them at the right time.
-          LookupResult R(Actions, II, T.getLocation(), Sema::LookupOrdinaryName);
+          LookupResult R(Actions, II, T.getLocation(),
+                         Sema::LookupOrdinaryName);
           Actions.LookupName(R, getCurScope(),
                              /*AllowBuiltinCreation=*/false);
           R.suppressDiagnostics();
@@ -4159,8 +4157,7 @@ void Parser::ParseDeclarationSpecifiers(
             // parsed with `auto` as the storage-class specifier — not as
             // type inference. Without this check the parser would consume
             // `auto` as type-inference and then error on the missing
-            // initializer for what it thinks is `typedefName` (issue
-            // #164930).
+            // initializer for what it thinks is `typedefName`.
             if (getLangOpts().C23 && IsTypedefName(T))
               return true;
 

@@ -3,6 +3,7 @@
 /* WG14 N3007: Yes
  * Type Inference for object definitions
  */
+
 void test_auto_int(void) {
   auto int auto_int = 12;
 }
@@ -210,10 +211,9 @@ void test_macros(int in_int) {
   _Static_assert(_Generic(result, int : 1));
 }
 
-// Regression test for #164930: `auto <typedef-name> <var>;` should parse as a
-// declaration of <var> with type <typedef-name> (auto used as storage-class in
-// C23 with an explicit type-name), not as inferred type deduction on the
-// typedef.
+// `auto <typedef-name> <var>;` should parse as a declaration of <var> with
+// type <typedef-name> (auto used as storage-class in C23 with an explicit
+// type-name), not as inferred type deduction on the typedef.
 void test_auto_typedef(void) {
   typedef int T;
   {
