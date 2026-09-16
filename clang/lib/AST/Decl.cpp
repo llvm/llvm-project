@@ -1591,6 +1591,12 @@ LinkageInfo LinkageComputer::getLVForDecl(const NamedDecl *D,
     return *LI;
 
   LinkageInfo LV = computeLVForDecl(D, computation);
+
+  // A variable's linkage may depend on its deduced type.
+  if (const auto *VD = dyn_cast<VarDecl>(D);
+      VD && VD->getType()->isUndeducedType())
+    return LV;
+
   if (D->hasCachedLinkage())
     assert(D->getCachedLinkage() == LV.getLinkage());
 
