@@ -542,5 +542,21 @@ produces: ::
     "
 ) lldb::SBTarget::IsLoaded;
 
-// Emit one Python wrapper for the default-argument overload.
-%feature("compactdefaultargs") lldb::SBTarget::FindSymbolContexts;
+%feature("autodoc",
+"FindSymbolContexts(self, line_spec: SBLineSpec) -> SBSymbolContextList"
+) lldb::SBTarget::FindSymbolContexts;
+%feature("docstring", "
+    Find every symbol context in this target's modules that maps to the
+    source location in `line_spec`. Each returned :py:class:`SBSymbolContext`
+    carries the module, compile unit, function, block, line entry, and
+    symbol for one match.
+
+    :param line_spec:
+        The source location to resolve, plus any search flags such as
+        :py:meth:`SBLineSpec.SetCheckInlines`.
+    :type line_spec: :py:class:`SBLineSpec`
+    :return:
+        A list of matching symbol contexts, or an empty list if no module
+        in this target has debug info for the requested location.
+    :rtype: :py:class:`SBSymbolContextList`"
+) lldb::SBTarget::FindSymbolContexts;

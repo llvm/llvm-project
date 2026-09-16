@@ -69,6 +69,7 @@ private:
   friend class SBHostOS;
   friend class SBLaunchInfo;
   friend class SBLineEntry;
+  friend class SBLineSpec;
   friend class SBModule;
   friend class SBModuleSpec;
   friend class SBPlatform;

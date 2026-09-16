@@ -23,8 +23,8 @@ class FindSymbolContextsAPITestCase(TestBase):
         header_spec = lldb.SBFileSpec("inlined.h")
         inlined_line = line_number("inlined.h", "// inlined body")
 
-        line_entry = lldb.SBLineEntry(header_spec, inlined_line)
-        sc_list: lldb.SBSymbolContextList = target.FindSymbolContexts(line_entry)
+        line_spec = lldb.SBLineSpec(header_spec, inlined_line)
+        sc_list: lldb.SBSymbolContextList = target.FindSymbolContexts(line_spec)
         self.assertGreater(sc_list.GetSize(), 0)
 
         for sc in sc_list:
@@ -45,9 +45,9 @@ class FindSymbolContextsAPITestCase(TestBase):
         header_spec = lldb.SBFileSpec("inlined.h")
         inlined_line = line_number("inlined.h", "// inlined body")
 
-        sc_list = target.FindSymbolContexts(
-            lldb.SBLineEntry(header_spec, inlined_line), False
-        )
+        line_spec = lldb.SBLineSpec(header_spec, inlined_line)
+        line_spec.SetCheckInlines(False)
+        sc_list = target.FindSymbolContexts(line_spec)
         self.assertEqual(sc_list.GetSize(), 0)
 
     def test_primary_source(self):
@@ -60,9 +60,9 @@ class FindSymbolContextsAPITestCase(TestBase):
         break_line = line_number("main.cpp", "// break here")
 
         for check_inlines in (True, False):
-            sc_list = target.FindSymbolContexts(
-                lldb.SBLineEntry(main_spec, break_line), check_inlines
-            )
+            line_spec = lldb.SBLineSpec(main_spec, break_line)
+            line_spec.SetCheckInlines(check_inlines)
+            sc_list = target.FindSymbolContexts(line_spec)
             self.assertGreater(sc_list.GetSize(), 0, f"check_inlines={check_inlines}")
 
     def test_matches_between_target_and_module(self):
@@ -74,7 +74,7 @@ class FindSymbolContextsAPITestCase(TestBase):
 
         main_spec = lldb.SBFileSpec("main.cpp")
         break_line = line_number("main.cpp", "// break here")
-        source_location = lldb.SBLineEntry(main_spec, break_line)
+        source_location = lldb.SBLineSpec(main_spec, break_line)
 
         target_list = target.FindSymbolContexts(source_location)
         self.assertGreater(target_list.GetSize(), 0)
@@ -90,16 +90,16 @@ class FindSymbolContextsAPITestCase(TestBase):
         target, *_ = lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp")
         )
-        # Default SBLineEntry.
-        empty_entry = lldb.SBLineEntry()
-        self.assertFalse(empty_entry.IsValid())
-        self.assertEqual(target.FindSymbolContexts(empty_entry).GetSize(), 0)
+        # Default SBLineSpec.
+        empty_spec = lldb.SBLineSpec()
+        self.assertFalse(empty_spec.IsValid())
+        self.assertEqual(target.FindSymbolContexts(empty_spec).GetSize(), 0)
 
         empty_result = target.FindSymbolContexts(
-            lldb.SBLineEntry(lldb.SBFileSpec(), 1)
+            lldb.SBLineSpec(lldb.SBFileSpec(), 1)
         )
         self.assertEqual(empty_result.GetSize(), 0)
 
-        missing_line = lldb.SBLineEntry(lldb.SBFileSpec("main.cpp"))
+        missing_line = lldb.SBLineSpec(lldb.SBFileSpec("main.cpp"))
         missing_result = target.FindSymbolContexts(missing_line)
         self.assertEqual(missing_result.GetSize(), 0)

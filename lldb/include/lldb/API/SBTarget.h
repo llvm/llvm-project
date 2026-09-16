@@ -354,23 +354,18 @@ public:
   FindCompileUnits(const lldb::SBFileSpec &sb_file_spec);
 
   /// Find every symbol context in this target's modules that maps to the
-  /// source location in `line_entry`. Each returned `SBSymbolContext`
+  /// source location in `line_spec`. Each returned `SBSymbolContext`
   /// carries the module, compile unit, function, block, line entry, and
   /// symbol for one match.
   ///
-  /// \param[in] line_entry
-  ///     The source location to resolve.
-  ///
-  /// \param[in] check_inlines
-  ///     If true, also return inlined instances of the source file that live
-  ///     in other compile units.
+  /// \param[in] line_spec
+  ///      The line spec to use to resolve a location.
   ///
   /// \return
   ///     A list of matching symbol contexts, or an empty list if no module
   ///     in this target has debug info for the requested location.
   lldb::SBSymbolContextList
-  FindSymbolContexts(const lldb::SBLineEntry &line_entry,
-                     bool check_inlines = true);
+  FindSymbolContexts(const lldb::SBLineSpec &line_spec);
 
   lldb::ByteOrder GetByteOrder();
 

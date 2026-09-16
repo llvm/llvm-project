@@ -14,6 +14,7 @@
 #include "lldb/API/SBExpressionOptions.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBLineSpec.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBModuleSpec.h"
@@ -1689,22 +1690,21 @@ SBSymbolContextList SBTarget::FindCompileUnits(const SBFileSpec &sb_file_spec) {
 }
 
 SBSymbolContextList
-SBTarget::FindSymbolContexts(const SBLineEntry &line_entry,
-                             bool check_inlines) {
-  LLDB_INSTRUMENT_VA(this, line_entry, check_inlines);
+SBTarget::FindSymbolContexts(const SBLineSpec &line_spec) {
+  LLDB_INSTRUMENT_VA(this, line_spec);
 
   SBSymbolContextList sc_list;
   TargetSP target_sp = GetSP();
-  if (!target_sp || !line_entry.IsValid())
+  if (!target_sp || !line_spec.IsValid())
     return sc_list;
 
-  SBFileSpec file_spec = line_entry.GetFileSpec();
+  SBFileSpec file_spec = line_spec.GetFileSpec();
   if (!file_spec.IsValid())
     return sc_list;
 
   // TODO: Pass column when ResolveSymbolContextsForFileSpec supports it.
   target_sp->GetImages().ResolveSymbolContextsForFileSpec(
-      *file_spec, line_entry.GetLine(), check_inlines,
+      *file_spec, line_spec.GetLine(), line_spec.GetCheckInlines(),
       lldb::eSymbolContextEverything, *sc_list);
   return sc_list;
 }
