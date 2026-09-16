@@ -38,69 +38,69 @@ define void @test_bitint_200_add(ptr %a, ptr %b, ptr %out) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lw a4, 0(a0)
 ; RV32-NEXT:    lw a3, 0(a1)
-; RV32-NEXT:    lw a7, 4(a1)
-; RV32-NEXT:    lw t2, 4(a0)
-; RV32-NEXT:    lw t1, 8(a0)
-; RV32-NEXT:    lw t0, 12(a0)
+; RV32-NEXT:    lw t0, 4(a1)
+; RV32-NEXT:    lw a7, 4(a0)
+; RV32-NEXT:    lw t2, 8(a0)
+; RV32-NEXT:    lw t1, 12(a0)
 ; RV32-NEXT:    lw a5, 8(a1)
 ; RV32-NEXT:    lw a6, 12(a1)
 ; RV32-NEXT:    add a3, a4, a3
-; RV32-NEXT:    add t3, t2, a7
-; RV32-NEXT:    sltu a7, a3, a4
-; RV32-NEXT:    add a4, t3, a7
-; RV32-NEXT:    beq a4, t2, .LBB0_2
+; RV32-NEXT:    add t3, a7, t0
+; RV32-NEXT:    sltu t0, a3, a4
+; RV32-NEXT:    add a4, t3, t0
+; RV32-NEXT:    beq a4, a7, .LBB0_2
 ; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    sltu a7, a4, t2
+; RV32-NEXT:    sltu t0, a4, a7
 ; RV32-NEXT:  .LBB0_2:
-; RV32-NEXT:    add t2, t1, a5
-; RV32-NEXT:    add a5, t2, a7
-; RV32-NEXT:    add a6, t0, a6
-; RV32-NEXT:    sltu t3, t2, t1
-; RV32-NEXT:    sltu t2, a5, t2
+; RV32-NEXT:    add t3, t2, a5
+; RV32-NEXT:    lw a7, 20(a0)
+; RV32-NEXT:    add a5, t3, t0
+; RV32-NEXT:    add a6, t1, a6
+; RV32-NEXT:    sltu t4, t3, t2
+; RV32-NEXT:    sltu t3, a5, t3
+; RV32-NEXT:    add a6, a6, t4
 ; RV32-NEXT:    add a6, a6, t3
-; RV32-NEXT:    add a6, a6, t2
-; RV32-NEXT:    beq a6, t0, .LBB0_4
+; RV32-NEXT:    beq a6, t1, .LBB0_4
 ; RV32-NEXT:  # %bb.3:
-; RV32-NEXT:    sltu t4, a6, t0
+; RV32-NEXT:    sltu t4, a6, t1
 ; RV32-NEXT:    j .LBB0_5
 ; RV32-NEXT:  .LBB0_4:
-; RV32-NEXT:    sltu t4, a5, t1
+; RV32-NEXT:    sltu t4, a5, t2
 ; RV32-NEXT:  .LBB0_5:
 ; RV32-NEXT:    lw t3, 16(a0)
-; RV32-NEXT:    lw t2, 20(a0)
 ; RV32-NEXT:    lw t6, 16(a1)
 ; RV32-NEXT:    lw t5, 20(a1)
-; RV32-NEXT:    xor t1, a5, t1
-; RV32-NEXT:    xor t0, a6, t0
-; RV32-NEXT:    or t0, t1, t0
-; RV32-NEXT:    beqz t0, .LBB0_7
+; RV32-NEXT:    xor t2, a5, t2
+; RV32-NEXT:    xor t1, a6, t1
+; RV32-NEXT:    or t1, t2, t1
+; RV32-NEXT:    beqz t1, .LBB0_7
 ; RV32-NEXT:  # %bb.6:
-; RV32-NEXT:    mv a7, t4
+; RV32-NEXT:    mv t0, t4
 ; RV32-NEXT:  .LBB0_7:
 ; RV32-NEXT:    lbu a0, 24(a0)
 ; RV32-NEXT:    add t6, t3, t6
-; RV32-NEXT:    lbu a1, 24(a1)
-; RV32-NEXT:    add a7, t6, a7
-; RV32-NEXT:    add t4, t2, t5
-; RV32-NEXT:    sltu t1, t6, t3
-; RV32-NEXT:    sltu t3, a7, t6
-; RV32-NEXT:    add t4, t4, t1
-; RV32-NEXT:    add t0, t4, t3
-; RV32-NEXT:    sltu t5, t0, t4
+; RV32-NEXT:    lbu t1, 24(a1)
+; RV32-NEXT:    add t0, t6, t0
+; RV32-NEXT:    add t4, a7, t5
+; RV32-NEXT:    sltu t2, t6, t3
+; RV32-NEXT:    sltu t3, t0, t6
+; RV32-NEXT:    add t4, t4, t2
+; RV32-NEXT:    add a1, t4, t3
+; RV32-NEXT:    sltu t5, a1, t4
 ; RV32-NEXT:    and t3, t3, t5
-; RV32-NEXT:    beq t4, t2, .LBB0_9
+; RV32-NEXT:    beq t4, a7, .LBB0_9
 ; RV32-NEXT:  # %bb.8:
-; RV32-NEXT:    sltu t1, t4, t2
+; RV32-NEXT:    sltu t2, t4, a7
 ; RV32-NEXT:  .LBB0_9:
-; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    add t1, t1, t3
 ; RV32-NEXT:    add a0, a0, t1
+; RV32-NEXT:    add t2, t2, t3
+; RV32-NEXT:    add a0, a0, t2
 ; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    sw a4, 4(a2)
 ; RV32-NEXT:    sw a5, 8(a2)
 ; RV32-NEXT:    sw a6, 12(a2)
-; RV32-NEXT:    sw a7, 16(a2)
-; RV32-NEXT:    sw t0, 20(a2)
+; RV32-NEXT:    sw t0, 16(a2)
+; RV32-NEXT:    sw a1, 20(a2)
 ; RV32-NEXT:    sb a0, 24(a2)
 ; RV32-NEXT:    ret
   %1 = load i200, ptr %a, align 8
