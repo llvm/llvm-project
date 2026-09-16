@@ -918,7 +918,6 @@ cc_test(
 cc_test(
     name = "llvm_exegesis_tests",
     size = "small",
-    features = ["-layering_check"],
     srcs = glob(
         [
             "tools/llvm-exegesis/*.cpp",
@@ -929,6 +928,7 @@ cc_test(
     ) + [
         "tools/llvm-exegesis/Common/AssemblerUtils.h",
     ],
+    features = ["-layering_check"],
     includes = ["tools/llvm-exegesis"],
     deps = [
         "//llvm:AllTargetsCodeGens",
