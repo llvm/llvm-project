@@ -11,17 +11,6 @@
 // template <class T, class Container = vector<T>,
 //           class Compare = less<typename Container::value_type>>
 // class priority_queue
-// {
-// public:
-//     typedef Container                                container_type;
-//     typedef typename container_type::value_type      value_type;
-//     typedef typename container_type::reference       reference;
-//     typedef typename container_type::const_reference const_reference;
-//     typedef typename container_type::size_type       size_type;
-//
-// protected:
-//     container_type c;
-//     Compare comp;
 
 #include <queue>
 #include <cassert>
