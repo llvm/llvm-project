@@ -15,7 +15,7 @@
 
   .text
   .globl _start
-  .type _start,@function
+  .type _start, @function
   .p2align 2
 _start:
   call foo
@@ -23,7 +23,7 @@ _start:
   ret
   .size _start, .-_start
 
-  .type foo,@function
+  .type foo, @function
 foo:
   ret
   .size foo, .-foo
