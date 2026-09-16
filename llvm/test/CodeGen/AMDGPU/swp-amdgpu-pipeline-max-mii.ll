@@ -1,12 +1,12 @@
 ; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -amdgpu-enable-pipeliner -pass-remarks-analysis=pipeliner %s -filetype=null 2>&1 | FileCheck %s --check-prefix=DEFAULT
-; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -amdgpu-enable-pipeliner -pipeliner-max-mii=64 -pass-remarks-analysis=pipeliner %s -filetype=null 2>&1 | FileCheck %s --check-prefix=RAISED
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -amdgpu-enable-pipeliner -pipeliner-max-mii=27 -pass-remarks-analysis=pipeliner %s -filetype=null 2>&1 | FileCheck %s --check-prefix=LOWERED
 
 ; This loop's MII is 32: two independent accumulators each issue one MFMA per
 ; iteration, and each MFMA holds the XDL pipe for 16 cycles (res=32). That
-; exceeds the generic default cap of 27. At default, pipeliner aborts and
-; only a raised cap lets it schedule.
-; DEFAULT: Minimal Initiation Interval too large: 32 > 27
-; RAISED: Schedule found with Initiation Interval
+; exceeds the old default cap of 27. Check that the new default lets it schedule
+; and that lowering the cap to 27 still rejects it.
+; DEFAULT: Schedule found with Initiation Interval
+; LOWERED: Minimal Initiation Interval too large: 32 > 27
 
 define amdgpu_kernel void @swp_amdgpu_pipeline_max_mii(i32 %arg, ptr addrspace(3) %p) {
 bb:
