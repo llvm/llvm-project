@@ -1064,33 +1064,33 @@ define void @optimal_jump_table2(i32 %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $9, %edi
 ; CHECK-NEXT:    ja .LBB11_1
-; CHECK-NEXT:  # %bb.10: # %entry
+; CHECK-NEXT:  # %bb.4: # %entry
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    jmpq *.LJTI11_0(,%rax,8)
-; CHECK-NEXT:  .LBB11_4: # %bb0
+; CHECK-NEXT:  .LBB11_5: # %bb0
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ; CHECK-NEXT:  .LBB11_1: # %entry
 ; CHECK-NEXT:    cmpl $14, %edi
-; CHECK-NEXT:    je .LBB11_8
+; CHECK-NEXT:    je .LBB11_9
 ; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    cmpl $15, %edi
-; CHECK-NEXT:    jne .LBB11_9
+; CHECK-NEXT:    jne .LBB11_10
 ; CHECK-NEXT:  # %bb.3: # %bb5
 ; CHECK-NEXT:    movl $5, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB11_9: # %return
+; CHECK-NEXT:  .LBB11_10: # %return
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB11_7: # %bb3
+; CHECK-NEXT:  .LBB11_8: # %bb3
 ; CHECK-NEXT:    movl $3, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB11_5: # %bb1
+; CHECK-NEXT:  .LBB11_6: # %bb1
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB11_6: # %bb2
+; CHECK-NEXT:  .LBB11_7: # %bb2
 ; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB11_8: # %bb4
+; CHECK-NEXT:  .LBB11_9: # %bb4
 ; CHECK-NEXT:    movl $4, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ;
@@ -2652,32 +2652,32 @@ define void @switch_i8(i32 %a) {
 ; CHECK-NEXT:    leal -1(%rdi), %eax
 ; CHECK-NEXT:    cmpl $8, %eax
 ; CHECK-NEXT:    ja .LBB26_1
-; CHECK-NEXT:  # %bb.10:
+; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    jmpq *.LJTI26_0(,%rax,8)
-; CHECK-NEXT:  .LBB26_4: # %bb0
+; CHECK-NEXT:  .LBB26_5: # %bb0
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ; CHECK-NEXT:  .LBB26_1:
 ; CHECK-NEXT:    cmpl $13, %edi
-; CHECK-NEXT:    je .LBB26_8
+; CHECK-NEXT:    je .LBB26_9
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    cmpl $42, %edi
-; CHECK-NEXT:    jne .LBB26_9
+; CHECK-NEXT:    jne .LBB26_10
 ; CHECK-NEXT:  # %bb.3: # %bb5
 ; CHECK-NEXT:    movl $5, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB26_9: # %return
+; CHECK-NEXT:  .LBB26_10: # %return
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB26_7: # %bb3
+; CHECK-NEXT:  .LBB26_8: # %bb3
 ; CHECK-NEXT:    movl $3, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB26_5: # %bb1
+; CHECK-NEXT:  .LBB26_6: # %bb1
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB26_6: # %bb2
+; CHECK-NEXT:  .LBB26_7: # %bb2
 ; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB26_8: # %bb4
+; CHECK-NEXT:  .LBB26_9: # %bb4
 ; CHECK-NEXT:    movl $4, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ;
