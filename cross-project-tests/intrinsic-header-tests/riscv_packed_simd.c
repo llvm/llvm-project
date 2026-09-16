@@ -4591,3 +4591,66 @@ int32x2_t test_pset_i32_i32x2(int32x2_t v, int32_t e) {
 uint32x2_t test_pset_u32_u32x2(uint32x2_t v, uint32_t e) {
   return __riscv_pset_u32_u32x2(v, e, 0);
 }
+
+// CHECK-LABEL: test_pjoin4_i8x4:
+// RV32:         ppaire.db
+// RV32:         pack
+// RV64:         ppaire.b
+// RV64:         ppaire.h
+int8x4_t test_pjoin4_i8x4(int8_t e0, int8_t e1, int8_t e2, int8_t e3) {
+  return __riscv_pjoin4_i8x4(e0, e1, e2, e3);
+}
+
+// CHECK-LABEL: test_pjoin4_u8x4:
+// RV32:         ppaire.db
+// RV32:         pack
+// RV64:         ppaire.b
+// RV64:         ppaire.h
+uint8x4_t test_pjoin4_u8x4(uint8_t e0, uint8_t e1, uint8_t e2, uint8_t e3) {
+  return __riscv_pjoin4_u8x4(e0, e1, e2, e3);
+}
+
+// CHECK-LABEL: test_pjoin2_i16x2:
+// RV32:         pack
+// RV64:         ppaire.h
+int16x2_t test_pjoin2_i16x2(int16_t e0, int16_t e1) {
+  return __riscv_pjoin2_i16x2(e0, e1);
+}
+
+// CHECK-LABEL: test_pjoin2_u16x2:
+// RV32:         pack
+// RV64:         ppaire.h
+uint16x2_t test_pjoin2_u16x2(uint16_t e0, uint16_t e1) {
+  return __riscv_pjoin2_u16x2(e0, e1);
+}
+
+// CHECK-LABEL: test_pjoin4_i16x4:
+// RV32-COUNT-2: pack
+// RV64-COUNT-2: ppaire.h
+// RV64:         pack
+int16x4_t test_pjoin4_i16x4(int16_t e0, int16_t e1, int16_t e2, int16_t e3) {
+  return __riscv_pjoin4_i16x4(e0, e1, e2, e3);
+}
+
+// CHECK-LABEL: test_pjoin4_u16x4:
+// RV32-COUNT-2: pack
+// RV64-COUNT-2: ppaire.h
+// RV64:         pack
+uint16x4_t test_pjoin4_u16x4(uint16_t e0, uint16_t e1, uint16_t e2,
+                             uint16_t e3) {
+  return __riscv_pjoin4_u16x4(e0, e1, e2, e3);
+}
+
+// CHECK-LABEL: test_pjoin2_i32x2:
+// RV32:         ret
+// RV64:         pack
+int32x2_t test_pjoin2_i32x2(int32_t e0, int32_t e1) {
+  return __riscv_pjoin2_i32x2(e0, e1);
+}
+
+// CHECK-LABEL: test_pjoin2_u32x2:
+// RV32:         ret
+// RV64:         pack
+uint32x2_t test_pjoin2_u32x2(uint32_t e0, uint32_t e1) {
+  return __riscv_pjoin2_u32x2(e0, e1);
+}

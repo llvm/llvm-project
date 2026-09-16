@@ -339,23 +339,18 @@ define <8 x i32> @v8i32_371115(<16 x i8> %a, <16 x i8> %b) {
 define <8 x i64> @zext_add(<32 x i16> %l) {
 ; CHECK-LABEL: zext_add:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v4.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    uzp1 v5.4s, v0.4s, v1.4s
+; CHECK-NEXT:    uzp1 v4.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    uzp1 v1.4s, v2.4s, v3.4s
 ; CHECK-NEXT:    uzp2 v2.4s, v2.4s, v3.4s
-; CHECK-NEXT:    and v3.16b, v5.16b, v4.16b
-; CHECK-NEXT:    and v6.16b, v0.16b, v4.16b
-; CHECK-NEXT:    and v7.16b, v1.16b, v4.16b
-; CHECK-NEXT:    and v4.16b, v2.16b, v4.16b
-; CHECK-NEXT:    usra v3.4s, v5.4s, #16
-; CHECK-NEXT:    usra v6.4s, v0.4s, #16
-; CHECK-NEXT:    usra v7.4s, v1.4s, #16
-; CHECK-NEXT:    usra v4.4s, v2.4s, #16
-; CHECK-NEXT:    uaddl v0.2d, v3.2s, v6.2s
-; CHECK-NEXT:    uaddl2 v1.2d, v3.4s, v6.4s
-; CHECK-NEXT:    uaddl2 v3.2d, v7.4s, v4.4s
-; CHECK-NEXT:    uaddl v2.2d, v7.2s, v4.2s
+; CHECK-NEXT:    uaddlp v3.4s, v4.8h
+; CHECK-NEXT:    uaddlp v4.4s, v0.8h
+; CHECK-NEXT:    uaddlp v5.4s, v1.8h
+; CHECK-NEXT:    uaddlp v2.4s, v2.8h
+; CHECK-NEXT:    uaddl v0.2d, v3.2s, v4.2s
+; CHECK-NEXT:    uaddl2 v1.2d, v3.4s, v4.4s
+; CHECK-NEXT:    uaddl2 v3.2d, v5.4s, v2.4s
+; CHECK-NEXT:    uaddl v2.2d, v5.2s, v2.2s
 ; CHECK-NEXT:    ret
     %s1 = shufflevector <32 x i16> %l, <32 x i16> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
     %z1 = zext <8 x i16> %s1 to <8 x i64>
@@ -387,25 +382,20 @@ define <8 x i64> @zext_load_add(ptr %p) {
 ;
 ; CHECK-IADISABLED-LABEL: zext_load_add:
 ; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldp q2, q1, [x0]
-; CHECK-IADISABLED-NEXT:    movi v0.2d, #0x00ffff0000ffff
-; CHECK-IADISABLED-NEXT:    ldp q4, q3, [x0, #32]
-; CHECK-IADISABLED-NEXT:    uzp1 v5.4s, v2.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v1.4s, v2.4s, v1.4s
-; CHECK-IADISABLED-NEXT:    uzp1 v2.4s, v4.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    uzp2 v3.4s, v4.4s, v3.4s
-; CHECK-IADISABLED-NEXT:    and v4.16b, v5.16b, v0.16b
-; CHECK-IADISABLED-NEXT:    and v6.16b, v1.16b, v0.16b
-; CHECK-IADISABLED-NEXT:    and v7.16b, v2.16b, v0.16b
-; CHECK-IADISABLED-NEXT:    and v16.16b, v3.16b, v0.16b
-; CHECK-IADISABLED-NEXT:    usra v4.4s, v5.4s, #16
-; CHECK-IADISABLED-NEXT:    usra v6.4s, v1.4s, #16
-; CHECK-IADISABLED-NEXT:    usra v7.4s, v2.4s, #16
-; CHECK-IADISABLED-NEXT:    usra v16.4s, v3.4s, #16
-; CHECK-IADISABLED-NEXT:    uaddl v0.2d, v4.2s, v6.2s
-; CHECK-IADISABLED-NEXT:    uaddl2 v1.2d, v4.4s, v6.4s
-; CHECK-IADISABLED-NEXT:    uaddl2 v3.2d, v7.4s, v16.4s
-; CHECK-IADISABLED-NEXT:    uaddl v2.2d, v7.2s, v16.2s
+; CHECK-IADISABLED-NEXT:    ldp q1, q0, [x0]
+; CHECK-IADISABLED-NEXT:    ldp q3, q2, [x0, #32]
+; CHECK-IADISABLED-NEXT:    uzp1 v4.4s, v1.4s, v0.4s
+; CHECK-IADISABLED-NEXT:    uzp2 v0.4s, v1.4s, v0.4s
+; CHECK-IADISABLED-NEXT:    uzp1 v1.4s, v3.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    uzp2 v2.4s, v3.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    uaddlp v3.4s, v4.8h
+; CHECK-IADISABLED-NEXT:    uaddlp v4.4s, v0.8h
+; CHECK-IADISABLED-NEXT:    uaddlp v5.4s, v1.8h
+; CHECK-IADISABLED-NEXT:    uaddlp v2.4s, v2.8h
+; CHECK-IADISABLED-NEXT:    uaddl v0.2d, v3.2s, v4.2s
+; CHECK-IADISABLED-NEXT:    uaddl2 v1.2d, v3.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    uaddl2 v3.2d, v5.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    uaddl v2.2d, v5.2s, v2.2s
 ; CHECK-IADISABLED-NEXT:    ret
     %l = load <32 x i16>, ptr %p
     %s1 = shufflevector <32 x i16> %l, <32 x i16> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>

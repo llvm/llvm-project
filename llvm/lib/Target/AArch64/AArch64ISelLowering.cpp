@@ -470,7 +470,7 @@ extractPtrauthBlendDiscriminators(SDValue Disc, SelectionDAG *DAG) {
   // If there's no address discriminator, use NoRegister, which we'll later
   // replace with XZR, or directly use a Z variant of the inst. when available.
   if (!AddrDisc)
-    AddrDisc = DAG->getRegister(AArch64::NoRegister, MVT::i64);
+    AddrDisc = DAG->getRegister(Register(), MVT::i64);
 
   return std::make_tuple(
       DAG->getTargetConstant(ConstDiscN->getZExtValue(), DL, MVT::i64),
@@ -3635,7 +3635,7 @@ void AArch64TargetLowering::fixupPtrauthDiscriminator(
       // Small immediate integer constant passed via VReg.
       if (DiscMI->getOperand(1).isImm() &&
           isUInt<16>(DiscMI->getOperand(1).getImm())) {
-        AddrDisc = AArch64::NoRegister;
+        AddrDisc = Register();
         IntDisc = DiscMI->getOperand(1).getImm();
       }
       break;
@@ -3645,7 +3645,7 @@ void AArch64TargetLowering::fixupPtrauthDiscriminator(
   // For uniformity, always use NoRegister, as XZR is not necessarily contained
   // in the requested register class.
   if (AddrDisc == AArch64::XZR)
-    AddrDisc = AArch64::NoRegister;
+    AddrDisc = Register();
 
   // Make sure AddrDisc operand respects the register class imposed by MI.
   if (AddrDisc && MRI.getRegClass(AddrDisc) != AddrDiscRC) {
@@ -11634,7 +11634,7 @@ AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
     Opcode = AArch64ISD::AUTH_CALL;
     Ops.push_back(DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32));
     Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i64)); // Integer Disc.
-    Ops.push_back(DAG.getRegister(AArch64::NoRegister, MVT::i64)); // Addr Disc.
+    Ops.push_back(DAG.getRegister(Register(), MVT::i64));  // Addr Disc.
   }
 
   Ops.push_back(DAG.getRegister(AArch64::X0, MVT::i64));
@@ -26766,8 +26766,10 @@ static SDValue trySimplifySrlAddToRshrnb(SDValue Srl, SelectionDAG &DAG,
   return DAG.getNode(AArch64ISD::NVCAST, DL, VT, Rshrnb);
 }
 
-static SDValue isNVCastToHalfWidthElements(SDValue V) {
-  if (V.getOpcode() != AArch64ISD::NVCAST)
+static SDValue isNVCastToHalfWidthElements(SDValue V,
+                                           const AArch64Subtarget *Subtarget) {
+  if (V.getOpcode() != AArch64ISD::NVCAST &&
+      (V.getOpcode() != ISD::BITCAST || !Subtarget->isLittleEndian()))
     return SDValue();
 
   SDValue Op = V.getOperand(0);
@@ -26816,14 +26818,14 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue Urshr = tryCombineExtendRShTrunc(N, DAG))
     return Urshr;
 
-  if (SDValue PreCast = isNVCastToHalfWidthElements(Op0)) {
+  if (SDValue PreCast = isNVCastToHalfWidthElements(Op0, Subtarget)) {
     if (SDValue Rshrnb = trySimplifySrlAddToRshrnb(PreCast, DAG, Subtarget)) {
       Rshrnb = DAG.getNode(AArch64ISD::NVCAST, DL, ResVT, Rshrnb);
       return DAG.getNode(AArch64ISD::UZP1, DL, ResVT, Rshrnb, Op1);
     }
   }
 
-  if (SDValue PreCast = isNVCastToHalfWidthElements(Op1)) {
+  if (SDValue PreCast = isNVCastToHalfWidthElements(Op1, Subtarget)) {
     if (SDValue Rshrnb = trySimplifySrlAddToRshrnb(PreCast, DAG, Subtarget)) {
       Rshrnb = DAG.getNode(AArch64ISD::NVCAST, DL, ResVT, Rshrnb);
       return DAG.getNode(AArch64ISD::UZP1, DL, ResVT, Op0, Rshrnb);
@@ -26831,7 +26833,7 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   }
 
   // uzp1<ty>(nvcast(unpklo(uzp1<ty>(x, y))), z) => uzp1<ty>(x, z)
-  if (SDValue PreCast = isNVCastToHalfWidthElements(Op0)) {
+  if (SDValue PreCast = isNVCastToHalfWidthElements(Op0, Subtarget)) {
     if (PreCast.getOpcode() == AArch64ISD::UUNPKLO) {
       if (PreCast.getOperand(0).getOpcode() == AArch64ISD::UZP1) {
         SDValue X = PreCast.getOperand(0).getOperand(0);
@@ -26841,7 +26843,7 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   }
 
   // uzp1<ty>(x, nvcast(unpkhi(uzp1<ty>(y, z)))) => uzp1<ty>(x, z)
-  if (SDValue PreCast = isNVCastToHalfWidthElements(Op1)) {
+  if (SDValue PreCast = isNVCastToHalfWidthElements(Op1, Subtarget)) {
     if (PreCast.getOpcode() == AArch64ISD::UUNPKHI) {
       if (PreCast.getOperand(0).getOpcode() == AArch64ISD::UZP1) {
         SDValue Z = PreCast.getOperand(0).getOperand(1);
@@ -26852,8 +26854,8 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
 
   // uzp1(nvcast(x >> k), nvcast(y >> k)) -> uzp2(nvcast(x), nvcast(y))
   // where 'k' is 'sizeof(eltty(x))/2'.
-  if (SDValue PreCastOp0 = isNVCastToHalfWidthElements(Op0)) {
-    if (SDValue PreCastOp1 = isNVCastToHalfWidthElements(Op1)) {
+  if (SDValue PreCastOp0 = isNVCastToHalfWidthElements(Op0, Subtarget)) {
+    if (SDValue PreCastOp1 = isNVCastToHalfWidthElements(Op1, Subtarget)) {
       if (PreCastOp0.getOpcode() == ISD::SRL &&
           PreCastOp1.getOpcode() == ISD::SRL &&
           PreCastOp0.getOperand(1) == PreCastOp1.getOperand(1)) {
@@ -30372,8 +30374,10 @@ static SDValue performDUPCombine(SDNode *N,
   return SDValue();
 }
 
-/// Get rid of unnecessary NVCASTs (that don't change the type).
-static SDValue performNVCASTCombine(SDNode *N, SelectionDAG &DAG) {
+/// Get rid of unnecessary NVCASTs (that don't change the type). Under LE a
+/// NVCAST is converted to a bitcast.
+static SDValue performNVCASTCombine(SDNode *N, SelectionDAG &DAG,
+                                    const AArch64Subtarget *Subtarget) {
   EVT VT = N->getValueType(0);
   SDValue Op = N->getOperand(0);
 
@@ -30382,6 +30386,9 @@ static SDValue performNVCASTCombine(SDNode *N, SelectionDAG &DAG) {
 
   if (Op.isUndef())
     return DAG.getUNDEF(VT);
+
+  if (Subtarget->isLittleEndian())
+    return DAG.getBitcast(VT, Op);
 
   if (Op.getOpcode() == AArch64ISD::NVCAST)
     return DAG.getNode(AArch64ISD::NVCAST, SDLoc(N), VT, Op.getOperand(0));
@@ -31807,7 +31814,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::DUPLANE128:
     return performDupLane128Combine(N, DAG);
   case AArch64ISD::NVCAST:
-    return performNVCASTCombine(N, DAG);
+    return performNVCASTCombine(N, DAG, Subtarget);
   case AArch64ISD::SPLICE:
     return performSpliceCombine(N, DAG);
   case AArch64ISD::UUNPKLO:
@@ -36043,6 +36050,14 @@ bool AArch64TargetLowering::canCreateUndefOrPoisonForTargetNode(
 }
 
 bool AArch64TargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
+  // Peek through bitcasts/extracts/inserts to see if we have a vector
+  // load/broadcast from memory.
+  while (
+      Op.getOpcode() == ISD::BITCAST || Op.getOpcode() == AArch64ISD::NVCAST ||
+      Op.getOpcode() == ISD::EXTRACT_SUBVECTOR ||
+      (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op.getOperand(0).isUndef()))
+    Op = Op.getOperand(Op.getOpcode() == ISD::INSERT_SUBVECTOR ? 1 : 0);
+
   return Op.getOpcode() == AArch64ISD::DUP ||
          Op.getOpcode() == AArch64ISD::MOVI ||
          Op.getOpcode() == AArch64ISD::MOVIshift ||
@@ -36054,8 +36069,7 @@ bool AArch64TargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
          // ISel will select fmov(mov i64 0x8000000000000000), resulting in a
          // fmov from fpr to gpr, which is more expensive than fneg(movi(0))
          (Op.getOpcode() == ISD::FNEG &&
-          Op.getOperand(0).getOpcode() == AArch64ISD::MOVIedit &&
-          Op.getOperand(0).getConstantOperandVal(0) == 0) ||
+          isTargetCanonicalConstantNode(Op.getOperand(0))) ||
          (Op.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
           Op.getOperand(0).getOpcode() == AArch64ISD::DUP) ||
          TargetLowering::isTargetCanonicalConstantNode(Op);

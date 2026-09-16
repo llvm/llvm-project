@@ -284,6 +284,30 @@ LogicalResult acc::emitWaitCall(Location loc, ValueRange waitOperands,
       {ident, flags, deviceType, deviceNum, waitNum, waitList, asyncQueue});
 }
 
+FailureOr<Value> acc::emitGetDevicePtrCall(Operation *clauseOp, Value hostPtr,
+                                           bool ifPresent, OpBuilder &builder,
+                                           Region &globalSymbolRegion,
+                                           SymbolTable &symbolTable,
+                                           const ACCRuntimeCallConfig &config) {
+  Location loc = clauseOp->getLoc();
+  Value ident = createIdent(loc, getParentFunctionName(clauseOp), builder,
+                            globalSymbolRegion, config, &symbolTable);
+  Value flags = LLVM::ConstantOp::create(
+      builder, loc, builder.getI64Type(),
+      config.getMapFlagsRuntimeValue(ifPresent ? MapFlags::if_present
+                                               : MapFlags::none));
+  // Both slots hold the address of the object, a clause naming a section of
+  // one included: the entry point looks up the mapping that address belongs
+  // to rather than being told which one to ask about.
+  FailureOr<LLVM::CallOp> call = createRuntimeCall(
+      loc, builder, globalSymbolRegion, symbolTable,
+      RuntimeFunction::ACCRTL_tgt_acc_get_deviceptr, config,
+      {ident, /*basePtr=*/hostPtr, flags, /*hostPtr=*/hostPtr});
+  if (failed(call))
+    return failure();
+  return call->getResult();
+}
+
 SmallVector<DeviceType, 3>
 acc::getDeviceTypesByPrecedence(DeviceType deviceType) {
   SmallVector<DeviceType, 3> deviceTypes;
@@ -316,4 +340,70 @@ LogicalResult acc::emitGuardedByIfCond(Location loc, Value ifCond,
   LLVM::BrOp::create(rewriter, loc, ValueRange{}, continueBlock);
   rewriter.setInsertionPointToStart(continueBlock);
   return result;
+}
+
+FailureOr<Value>
+acc::emitValueSelectedByIfCond(Location loc, Value ifCond,
+                               RewriterBase &rewriter,
+                               function_ref<FailureOr<Value>()> thenFn,
+                               function_ref<FailureOr<Value>()> elseFn) {
+  if (!ifCond)
+    return thenFn();
+
+  Block *parentBlock = rewriter.getInsertionBlock();
+  Block *continueBlock =
+      rewriter.splitBlock(parentBlock, rewriter.getInsertionPoint());
+  Block *thenBlock = rewriter.createBlock(
+      parentBlock->getParent(), std::next(Region::iterator(parentBlock)));
+  Block *elseBlock = rewriter.createBlock(
+      parentBlock->getParent(), std::next(Region::iterator(thenBlock)));
+
+  rewriter.setInsertionPointToEnd(parentBlock);
+  LLVM::CondBrOp::create(rewriter, loc, ifCond, thenBlock, ValueRange{},
+                         elseBlock, ValueRange{});
+
+  rewriter.setInsertionPointToStart(thenBlock);
+  FailureOr<Value> thenValue = thenFn();
+  if (failed(thenValue))
+    return failure();
+  rewriter.setInsertionPointToEnd(thenBlock);
+  LLVM::BrOp::create(rewriter, loc, ValueRange{*thenValue}, continueBlock);
+
+  rewriter.setInsertionPointToStart(elseBlock);
+  FailureOr<Value> elseValue = elseFn();
+  if (failed(elseValue))
+    return failure();
+  rewriter.setInsertionPointToEnd(elseBlock);
+  LLVM::BrOp::create(rewriter, loc, ValueRange{*elseValue}, continueBlock);
+
+  assert(thenValue->getType() == elseValue->getType() &&
+         "both paths of an if clause have to produce the same type");
+  BlockArgument selected =
+      continueBlock->addArgument(thenValue->getType(), loc);
+  rewriter.setInsertionPointToStart(continueBlock);
+  return Value(selected);
+}
+
+void acc::spliceConstructRegion(Operation *op, Region &region,
+                                RewriterBase &rewriter) {
+  Block *prev = op->getBlock();
+  Block *succ = rewriter.splitBlock(prev, Block::iterator(op));
+  rewriter.setInsertionPointToEnd(prev);
+  LLVM::BrOp::create(rewriter, op->getLoc(), &region.getBlocks().front());
+  for (Block &block : region.getBlocks()) {
+    // A region that ends without a terminator, as an `acc.kernel_environment`
+    // body does, continues after the construct from the end of its block.
+    if (block.empty() || !block.back().hasTrait<OpTrait::IsTerminator>()) {
+      rewriter.setInsertionPointToEnd(&block);
+      LLVM::BrOp::create(rewriter, op->getLoc(), succ);
+      continue;
+    }
+    Operation *terminator = block.getTerminator();
+    if (isa<acc::TerminatorOp>(terminator)) {
+      rewriter.setInsertionPoint(terminator);
+      LLVM::BrOp::create(rewriter, op->getLoc(), succ);
+      rewriter.eraseOp(terminator);
+    }
+  }
+  rewriter.inlineRegionBefore(region, succ);
 }

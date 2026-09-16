@@ -27,6 +27,7 @@
 #include "omptarget.h"
 
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/Error.h"
 
 using namespace llvm::offload::debug;
@@ -260,7 +261,16 @@ public:
     if (Size == 0)
       return nullptr;
 
-    size_t AllocationSize = Alignment > 0 ? (Size + Alignment - 1) : Size;
+    size_t AllocationSize = Size;
+    if (Alignment > 0) {
+      auto PaddedSize = checkedAddUnsigned(Size, Alignment - 1);
+      if (!PaddedSize) {
+        ODBG(OLDT_Alloc) << "MemoryManagerTy::allocate: warning: "
+                            "size+alignment overflow, bailing out.";
+        return nullptr;
+      }
+      AllocationSize = *PaddedSize;
+    }
 
     ODBG(OLDT_Alloc) << "MemoryManagerTy::allocate: requested memory " << Size
                      << ", allocated:  " << AllocationSize
