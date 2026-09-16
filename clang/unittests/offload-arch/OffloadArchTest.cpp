@@ -214,42 +214,42 @@ TEST(KFDTopology, MultipleGPUsArePrintedInNodeOrder) {
 // --- getIntelGPUArchName ---
 
 namespace {
-// Build a GMDID the way the Level Zero driver reports it.
-constexpr uint32_t gmdid(uint32_t Architecture, uint32_t Release,
-                         uint32_t Revision) {
+// Build a GPU IP version the way the Level Zero driver reports it.
+constexpr uint32_t gpuIPVersion(uint32_t Architecture, uint32_t Release,
+                                uint32_t Revision) {
   return (Architecture << 22) | (Release << 14) | Revision;
 }
 } // namespace
 
 TEST(IntelGPUArchName, KnownArchitecturesGetAFriendlyName) {
-  EXPECT_EQ(getIntelGPUArchName(gmdid(12, 60, 7)), "xe-pvc");
-  EXPECT_EQ(getIntelGPUArchName(gmdid(20, 1, 4)), "xe-bmg-g21");
-  EXPECT_EQ(getIntelGPUArchName(gmdid(35, 10, 0)), "xe-nvl-p");
-  EXPECT_EQ(getIntelGPUArchName(gmdid(12, 0, 0)), "xe-tgllp");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 60, 7)), "xe-pvc");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(20, 1, 4)), "xe-bmg-g21");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(35, 10, 0)), "xe-nvl-p");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 0, 0)), "xe-tgllp");
 }
 
 // When several devices share an architecture and a release, the first one
 // listed in IntelGPUTargetParser.def names the whole group.
 TEST(IntelGPUArchName, FirstNameOfAGroupWins) {
-  EXPECT_EQ(getIntelGPUArchName(gmdid(30, 5, 0)), "xe-nvl-u");
-  EXPECT_EQ(getIntelGPUArchName(gmdid(12, 55, 0)), "xe-acm-g10");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(30, 5, 0)), "xe-nvl-u");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 55, 0)), "xe-acm-g10");
 }
 
 // The revision is not part of the lookup: every stepping of an architecture
 // shares one name.
 TEST(IntelGPUArchName, RevisionDoesNotAffectTheName) {
-  EXPECT_EQ(getIntelGPUArchName(gmdid(12, 60, 0)), "xe-pvc");
-  EXPECT_EQ(getIntelGPUArchName(gmdid(12, 60, 63)), "xe-pvc");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 60, 0)), "xe-pvc");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 60, 63)), "xe-pvc");
 }
 
 // An architecture that is not in the table still has to be named, so that a
 // newer device is usable with a compiler that predates it.
 TEST(IntelGPUArchName, UnknownArchitecturesGetANumericName) {
-  EXPECT_EQ(getIntelGPUArchName(gmdid(40, 11, 0)), "xe_40.11.0");
-  EXPECT_EQ(getIntelGPUArchName(gmdid(12, 99, 3)), "xe_12.99.3");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(40, 11, 0)), "xe_40.11.0");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 99, 3)), "xe_12.99.3");
 }
 
-// Pre-Xe devices report a GMDID too, and none of them are in the table.
+// Pre-Xe devices report a version too, and none of them are in the table.
 TEST(IntelGPUArchName, LegacyArchitecture) {
-  EXPECT_EQ(getIntelGPUArchName(gmdid(9, 0, 9)), "xe_9.0.9");
+  EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(9, 0, 9)), "xe_9.0.9");
 }

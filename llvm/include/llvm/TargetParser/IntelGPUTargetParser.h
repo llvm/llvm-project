@@ -34,10 +34,10 @@ enum GPUKind : uint8_t {
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
 };
 
-/// Return the name of the device that \p GPUIPVersion, the "GMDID" reported by
-/// the driver, identifies, e.g. "xe-pvc", or "" if the table lists no such
-/// device. The revision is ignored: every stepping of a release is one device.
-/// If several rows match, the first one in IntelGPUTargetParser.def wins.
+/// Return the name of the device that \p GPUIPVersion, as reported by the
+/// driver, identifies, e.g. "xe-pvc", or "" if the table lists no such device.
+/// The revision is ignored: every stepping of a release is one device. If
+/// several rows match, the first one in IntelGPUTargetParser.def wins.
 LLVM_ABI StringRef getArchName(uint32_t GPUIPVersion);
 
 /// Return the numeric name of \p GPUIPVersion, e.g. "xe_35.11.0", which every
