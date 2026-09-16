@@ -132,8 +132,7 @@ public:
     return false;
   }
 
-  virtual bool
-  isMemmoveProfitable(const std::optional<APInt> &PtrDiff) const {
+  virtual bool isMemmoveProfitable(const std::optional<APInt> &PtrDiff) const {
     return true;
   }
 

@@ -523,8 +523,7 @@ public:
   /// \return true if promoting loop access to memmove is profitable for
   /// the architecture, given the constant byte difference between the
   /// destination and source pointers, if known.
-  LLVM_ABI bool
-  isMemmoveProfitable(const std::optional<APInt> &PtrDiff) const;
+  LLVM_ABI bool isMemmoveProfitable(const std::optional<APInt> &PtrDiff) const;
 
   /// Return true if branch divergence exists.
   ///
