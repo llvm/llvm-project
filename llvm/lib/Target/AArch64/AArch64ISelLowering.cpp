@@ -10632,8 +10632,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     // In general, neither NumBytes nor NumReusableBytes is guaranteed to be
     // aligned, so we round NumBytes up to the same residue mod StackAlign as
     // NumReusableBytes, which keeps their difference (FPDiff) a multiple of
-    // StackAlign, and therefore preserve the required stack alignment going into
-    // the callee.  When the callee's convention can guarantee TCO,
+    // StackAlign, and therefore preserve the required stack alignment going
+    // into the callee.  When the callee's convention can guarantee TCO,
     // LowerFormalArguments will have force-aligned the stack arg area for us
     // already, so we can count on our own alignment of NumBytes below to result
     // in an aligned FPDiff.
