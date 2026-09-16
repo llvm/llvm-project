@@ -74,8 +74,8 @@
 #include "SIOptimizeVGPRLiveRange.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -93,15 +93,25 @@ class SIOptimizeVGPRLiveRange {
 private:
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
+  LiveIntervals *LIS = nullptr;
   LiveVariables *LV = nullptr;
   MachineDominatorTree *MDT = nullptr;
   const MachineLoopInfo *Loops = nullptr;
   MachineRegisterInfo *MRI = nullptr;
 
+  // Is \p Reg alive completely through \p MBB (live-in and live-out with no
+  // intervening def/kill)?
+  bool isLiveThrough(Register Reg, const MachineBasicBlock *MBB) const;
+
+  // Is \p Reg live into \p MBB? This is true when it is live through MBB or
+  // killed in MBB. A register only used by PHIs in MBB is not considered live
+  // in.
+  bool isLiveIntoMBB(Register Reg, const MachineBasicBlock *MBB) const;
+
 public:
-  SIOptimizeVGPRLiveRange(LiveVariables *LV, MachineDominatorTree *MDT,
-                          MachineLoopInfo *Loops)
-      : LV(LV), MDT(MDT), Loops(Loops) {}
+  SIOptimizeVGPRLiveRange(LiveIntervals *LIS, LiveVariables *LV,
+                          MachineDominatorTree *MDT, MachineLoopInfo *Loops)
+      : LIS(LIS), LV(LV), MDT(MDT), Loops(Loops) {}
   bool run(MachineFunction &MF);
 
   MachineBasicBlock *getElseTarget(MachineBasicBlock *MBB) const;
@@ -158,12 +168,12 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addRequired<LiveVariablesWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addPreserved<LiveVariablesWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -187,6 +197,24 @@ SIOptimizeVGPRLiveRange::getElseTarget(MachineBasicBlock *MBB) const {
       return BR.getOperand(2).getMBB();
   }
   return nullptr;
+}
+
+bool SIOptimizeVGPRLiveRange::isLiveThrough(
+    Register Reg, const MachineBasicBlock *MBB) const {
+  if (!LIS)
+    return LV->getVarInfo(Reg).AliveBlocks.test(MBB->getNumber());
+
+  const LiveInterval &LI = LIS->getInterval(Reg);
+  return LIS->isLiveInToMBB(LI, MBB) && LIS->isLiveOutOfMBB(LI, MBB);
+}
+
+bool SIOptimizeVGPRLiveRange::isLiveIntoMBB(
+    Register Reg, const MachineBasicBlock *MBB) const {
+  if (!LIS)
+    return LV->getVarInfo(Reg).isLiveIn(*MBB, Reg, *MRI);
+
+  const LiveInterval &LI = LIS->getInterval(Reg);
+  return LIS->isLiveInToMBB(LI, MBB);
 }
 
 void SIOptimizeVGPRLiveRange::collectElseRegionBlocks(
@@ -221,7 +249,8 @@ void SIOptimizeVGPRLiveRange::findNonPHIUsesInBlock(
     Register Reg, MachineBasicBlock *MBB,
     SmallVectorImpl<MachineInstr *> &Uses) const {
   for (auto &UseMI : MRI->use_nodbg_instructions(Reg)) {
-    if (UseMI.getParent() == MBB && !UseMI.isPHI())
+    if (UseMI.getParent() == MBB && !UseMI.isPHI() &&
+        UseMI.readsVirtualRegister(Reg))
       Uses.push_back(&UseMI);
   }
 }
@@ -250,17 +279,15 @@ void SIOptimizeVGPRLiveRange::collectCandidateRegisters(
           continue;
 
         if (MO.readsReg()) {
-          LiveVariables::VarInfo &VI = LV->getVarInfo(MOReg);
-          const MachineBasicBlock *DefMBB = MRI->getVRegDef(MOReg)->getParent();
+          const MachineBasicBlock *DefMBB = MRI->getDefBlock(MOReg);
           // Make sure two conditions are met:
           // a.) the value is defined before/in the IF block
           // b.) should be defined in the same loop-level.
-          if ((VI.AliveBlocks.test(If->getNumber()) || DefMBB == If) &&
+          if ((isLiveThrough(MOReg, If) || DefMBB == If) &&
               Loops->getLoopFor(DefMBB) == Loops->getLoopFor(If)) {
             // Check if the register is live into the endif block. If not,
             // consider it killed in the else region.
-            LiveVariables::VarInfo &VI = LV->getVarInfo(MOReg);
-            if (!VI.isLiveIn(*Endif, MOReg, *MRI)) {
+            if (!isLiveIntoMBB(MOReg, Endif)) {
               KillsInElse.insert(MOReg);
             } else {
               LLVM_DEBUG(dbgs() << "Excluding " << printReg(MOReg, TRI)
@@ -289,9 +316,7 @@ void SIOptimizeVGPRLiveRange::collectCandidateRegisters(
       if (Reg.isPhysical() || !TRI->isVectorRegister(*MRI, Reg))
         continue;
 
-      LiveVariables::VarInfo &VI = LV->getVarInfo(Reg);
-
-      if (VI.isLiveIn(*Endif, Reg, *MRI)) {
+      if (isLiveIntoMBB(Reg, Endif)) {
         LLVM_DEBUG(dbgs() << "Excluding " << printReg(Reg, TRI)
                           << " as Live in Endif\n");
         continue;
@@ -299,8 +324,8 @@ void SIOptimizeVGPRLiveRange::collectCandidateRegisters(
       // Make sure two conditions are met:
       // a.) the value is defined before/in the IF block
       // b.) should be defined in the same loop-level.
-      const MachineBasicBlock *DefMBB = MRI->getVRegDef(Reg)->getParent();
-      if ((VI.AliveBlocks.test(If->getNumber()) || DefMBB == If) &&
+      const MachineBasicBlock *DefMBB = MRI->getDefBlock(Reg);
+      if ((isLiveThrough(Reg, If) || DefMBB == If) &&
           Loops->getLoopFor(DefMBB) == Loops->getLoopFor(If))
         KillsInElse.insert(Reg);
     }
@@ -376,17 +401,15 @@ void SIOptimizeVGPRLiveRange::collectWaterfallCandidateRegisters(
         continue;
 
       if (MO.readsReg()) {
-        MachineBasicBlock *DefMBB = MRI->getVRegDef(MOReg)->getParent();
+        MachineBasicBlock *DefMBB = MRI->getDefBlock(MOReg);
         // Make sure the value is defined before the LOOP block
         if (!Blocks.contains(DefMBB) && !CandidateRegs.contains(MOReg)) {
           // If the variable is used after the loop, the register coalescer will
           // merge the newly created register and remove the phi node again.
           // Just do nothing in that case.
-          LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(MOReg);
           bool IsUsed = false;
           for (auto *Succ : LoopEnd->successors()) {
-            if (!Blocks.contains(Succ) &&
-                OldVarInfo.isLiveIn(*Succ, MOReg, *MRI)) {
+            if (!Blocks.contains(Succ) && isLiveIntoMBB(MOReg, Succ)) {
               IsUsed = true;
               break;
             }
@@ -462,8 +485,7 @@ void SIOptimizeVGPRLiveRange::updateLiveRangeInThenRegion(
 
     // Mark Reg alive through the block if this is a PHI incoming block
     if (PHIIncoming.contains(MBB))
-      LV->MarkVirtRegAliveInBlock(OldVarInfo, MRI->getVRegDef(Reg)->getParent(),
-                                  MBB);
+      LV->MarkVirtRegAliveInBlock(OldVarInfo, MRI->getDefBlock(Reg), MBB);
   }
 
   // Set the isKilled flag if we get new Kills in the THEN region.
@@ -492,15 +514,12 @@ void SIOptimizeVGPRLiveRange::updateLiveRangeInElseRegion(
   }
 
   // Transfer the possible Kills in ElseBlocks from Reg to NewReg
-  auto I = OldVarInfo.Kills.begin();
-  while (I != OldVarInfo.Kills.end()) {
-    if (ElseBlocks.contains((*I)->getParent())) {
-      NewVarInfo.Kills.push_back(*I);
-      I = OldVarInfo.Kills.erase(I);
-    } else {
-      ++I;
-    }
-  }
+  llvm::erase_if(OldVarInfo.Kills, [&](MachineInstr *MI) {
+    if (!ElseBlocks.contains(MI->getParent()))
+      return false;
+    NewVarInfo.Kills.push_back(MI);
+    return true;
+  });
 }
 
 void SIOptimizeVGPRLiveRange::optimizeLiveRange(
@@ -548,12 +567,28 @@ void SIOptimizeVGPRLiveRange::optimizeLiveRange(
       O.setReg(NewReg);
   }
 
-  // The optimized Reg is not alive through Flow blocks anymore.
-  LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(Reg);
-  OldVarInfo.AliveBlocks.reset(Flow->getNumber());
+  if (LIS) {
+    // The new PHI is a def of NewReg and a use of Reg and UndefReg; the uses of
+    // Reg in the Else/Endif region were rewritten to NewReg. Kill flags moved
+    // with the rewritten operands may no longer mark the last use, so drop them
+    // and let the recomputed intervals be the source of truth.
+    MRI->clearKillFlags(Reg);
+    MRI->clearKillFlags(NewReg);
+    LIS->InsertMachineInstrInMaps(*PHI);
+    LIS->removeInterval(Reg);
+    LIS->createAndComputeVirtRegInterval(Reg);
+    LIS->createAndComputeVirtRegInterval(NewReg);
+    LIS->createAndComputeVirtRegInterval(UndefReg);
+  }
 
-  updateLiveRangeInElseRegion(Reg, NewReg, Flow, Endif, ElseBlocks);
-  updateLiveRangeInThenRegion(Reg, If, Flow);
+  if (LV) {
+    // The optimized Reg is not alive through Flow blocks anymore.
+    LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(Reg);
+    OldVarInfo.AliveBlocks.reset(Flow->getNumber());
+
+    updateLiveRangeInElseRegion(Reg, NewReg, Flow, Endif, ElseBlocks);
+    updateLiveRangeInThenRegion(Reg, If, Flow);
+  }
 }
 
 void SIOptimizeVGPRLiveRange::optimizeWaterfallLiveRange(
@@ -586,37 +621,47 @@ void SIOptimizeVGPRLiveRange::optimizeWaterfallLiveRange(
       PHI.addReg(Reg).addMBB(Pred);
   }
 
-  LiveVariables::VarInfo &NewVarInfo = LV->getVarInfo(NewReg);
-  LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(Reg);
-
-  // Find last use and mark as kill
-  MachineInstr *Kill = nullptr;
-  for (auto *MI : reverse(Instructions)) {
-    if (MI->readsRegister(NewReg, TRI)) {
-      MI->addRegisterKilled(NewReg, TRI);
-      NewVarInfo.Kills.push_back(MI);
-      Kill = MI;
-      break;
-    }
+  if (LIS) {
+    LIS->InsertMachineInstrInMaps(*PHI);
+    LIS->removeInterval(Reg);
+    LIS->createAndComputeVirtRegInterval(Reg);
+    LIS->createAndComputeVirtRegInterval(NewReg);
+    LIS->createAndComputeVirtRegInterval(UndefReg);
   }
-  assert(Kill && "Failed to find last usage of register in loop");
 
-  MachineBasicBlock *KillBlock = Kill->getParent();
-  bool PostKillBlock = false;
-  for (auto *Block : Blocks) {
-    auto BBNum = Block->getNumber();
+  if (LV) {
+    LiveVariables::VarInfo &NewVarInfo = LV->getVarInfo(NewReg);
+    LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(Reg);
 
-    // collectWaterfallCandidateRegisters only collects registers that are dead
-    // after the loop. So we know that the old reg is no longer live throughout
-    // the waterfall loop.
-    OldVarInfo.AliveBlocks.reset(BBNum);
+    // Find last use and mark as kill
+    MachineInstr *Kill = nullptr;
+    for (auto *MI : reverse(Instructions)) {
+      if (MI->readsRegister(NewReg, TRI)) {
+        MI->addRegisterKilled(NewReg, TRI);
+        NewVarInfo.Kills.push_back(MI);
+        Kill = MI;
+        break;
+      }
+    }
+    assert(Kill && "Failed to find last usage of register in loop");
 
-    // The new register is live up to (and including) the block that kills it.
-    PostKillBlock |= (Block == KillBlock);
-    if (PostKillBlock) {
-      NewVarInfo.AliveBlocks.reset(BBNum);
-    } else if (Block != LoopHeader) {
-      NewVarInfo.AliveBlocks.set(BBNum);
+    MachineBasicBlock *KillBlock = Kill->getParent();
+    bool PostKillBlock = false;
+    for (auto *Block : Blocks) {
+      auto BBNum = Block->getNumber();
+
+      // collectWaterfallCandidateRegisters only collects registers that are
+      // dead after the loop. So we know that the old reg is no longer live
+      // throughout the waterfall loop.
+      OldVarInfo.AliveBlocks.reset(BBNum);
+
+      // The new register is live up to (and including) the block that kills it.
+      PostKillBlock |= (Block == KillBlock);
+      if (PostKillBlock) {
+        NewVarInfo.AliveBlocks.reset(BBNum);
+      } else if (Block != LoopHeader) {
+        NewVarInfo.AliveBlocks.set(BBNum);
+      }
     }
   }
 }
@@ -641,29 +686,33 @@ bool SIOptimizeVGPRLiveRangeLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LiveIntervals *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
   LiveVariables *LV = &getAnalysis<LiveVariablesWrapperPass>().getLV();
   MachineDominatorTree *MDT =
       &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MachineLoopInfo *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  return SIOptimizeVGPRLiveRange(LV, MDT, Loops).run(MF);
+  return SIOptimizeVGPRLiveRange(LIS, LV, MDT, Loops).run(MF);
 }
 
 PreservedAnalyses
 SIOptimizeVGPRLiveRangePass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
-  LiveVariables *LV = &MFAM.getResult<LiveVariablesAnalysis>(MF);
+  LiveIntervals *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
+  LiveVariables *LV = MFAM.getCachedResult<LiveVariablesAnalysis>(MF);
+  if (!LIS && !LV)
+    LV = &MFAM.getResult<LiveVariablesAnalysis>(MF);
   MachineDominatorTree *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MachineLoopInfo *Loops = &MFAM.getResult<MachineLoopAnalysis>(MF);
 
-  bool Changed = SIOptimizeVGPRLiveRange(LV, MDT, Loops).run(MF);
+  bool Changed = SIOptimizeVGPRLiveRange(LIS, LV, MDT, Loops).run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserve<LiveIntervalsAnalysis>();
   PA.preserve<LiveVariablesAnalysis>();
-  PA.preserve<DominatorTreeAnalysis>();
-  PA.preserve<MachineLoopAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

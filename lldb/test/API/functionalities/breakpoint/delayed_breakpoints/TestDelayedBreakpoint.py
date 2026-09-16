@@ -5,7 +5,8 @@ from lldbsuite.test import lldbutil
 import os
 
 
-@skipIfWindows
+@skipIfWindowsAndNoLLDBServer
+@requireNotWasm("iwasm gdb stub lacks the needed packets")
 class TestDelayedBreakpoint(TestBase):
     def test(self):
         self.build()

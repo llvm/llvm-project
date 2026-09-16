@@ -28,7 +28,6 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <vector>
 
@@ -68,10 +67,6 @@ struct llvm::pdb::GSIHashStreamBuilder {
 
 // DenseMapInfo implementation for deduplicating symbol records.
 struct llvm::pdb::SymbolDenseMapInfo {
-  static inline CVSymbol getEmptyKey() {
-    static CVSymbol Empty;
-    return Empty;
-  }
   static unsigned getHashValue(const CVSymbol &Val) {
     return xxh3_64bits(Val.RecordData);
   }

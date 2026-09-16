@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/XtensaTargetParser.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <vector>
@@ -19,28 +20,21 @@ namespace llvm {
 
 namespace Xtensa {
 struct CPUInfo {
-  StringLiteral Name;
   CPUKind Kind;
   uint64_t Features;
 };
 
-struct FeatureName {
-  uint64_t ID;
-  const char *NameCStr;
-  size_t NameLength;
-
-  StringRef getName() const { return StringRef(NameCStr, NameLength); }
-};
-
-const FeatureName XtensaFeatureNames[] = {
-#define XTENSA_FEATURE(ID, NAME) {ID, "+" NAME, sizeof(NAME)},
+constexpr EnumStringDef<uint64_t> FeatureNameDefs[] = {
+#define XTENSA_FEATURE(ID, NAME) {{NAME}, ID},
 #include "llvm/TargetParser/XtensaTargetParser.def"
 };
+constexpr auto FeatureNames = BUILD_ENUM_STRINGS(FeatureNameDefs);
 
-constexpr CPUInfo XtensaCPUInfo[] = {
-#define XTENSA_CPU(ENUM, NAME, FEATURES) {NAME, CK_##ENUM, FEATURES},
+constexpr EnumStringDef<CPUInfo> CPUInfoDefs[] = {
+#define XTENSA_CPU(ENUM, NAME, FEATURES) {{NAME}, {CK_##ENUM, FEATURES}},
 #include "llvm/TargetParser/XtensaTargetParser.def"
 };
+constexpr auto CPUInfos = BUILD_ENUM_STRINGS(CPUInfoDefs);
 
 StringRef getBaseName(StringRef CPU) {
   return llvm::StringSwitch<StringRef>(CPU)
@@ -58,33 +52,33 @@ StringRef getAliasName(StringRef CPU) {
 
 CPUKind parseCPUKind(StringRef CPU) {
   CPU = getBaseName(CPU);
-  return llvm::StringSwitch<CPUKind>(CPU)
-#define XTENSA_CPU(ENUM, NAME, FEATURES) .Case(NAME, CK_##ENUM)
-#include "llvm/TargetParser/XtensaTargetParser.def"
-      .Default(CK_INVALID);
+  for (const auto &C : CPUInfos)
+    if (C.name() == CPU)
+      return C.value().Kind;
+  return CK_INVALID;
 }
 
 // Get all features for the CPU
 void getCPUFeatures(StringRef CPU, std::vector<StringRef> &Features) {
   CPU = getBaseName(CPU);
-  auto I = llvm::find_if(XtensaCPUInfo,
-                         [&](const CPUInfo &CI) { return CI.Name == CPU; });
-  assert(I != std::end(XtensaCPUInfo) && "CPU not found!");
-  uint64_t Bits = I->Features;
+  auto I =
+      llvm::find_if(CPUInfos, [&](const auto &CI) { return CI.name() == CPU; });
+  assert(I != std::end(CPUInfos) && "CPU not found!");
+  uint64_t Bits = I->value().Features;
 
-  for (const auto &F : XtensaFeatureNames) {
-    if ((Bits & F.ID) == F.ID)
-      Features.push_back(F.getName());
+  for (const auto &F : FeatureNames) {
+    if ((Bits & F.value()) == F.value())
+      Features.push_back(F.name());
   }
 }
 
 // Find all valid CPUs
 void fillValidCPUList(std::vector<StringRef> &Values) {
-  for (const auto &C : XtensaCPUInfo) {
-    if (C.Kind != CK_INVALID) {
-      Values.emplace_back(C.Name);
-      StringRef Name = getAliasName(C.Name);
-      if (Name != C.Name)
+  for (const auto &C : CPUInfos) {
+    if (C.value().Kind != CK_INVALID) {
+      Values.emplace_back(C.name());
+      StringRef Name = getAliasName(C.name());
+      if (Name != C.name())
         Values.emplace_back(Name);
     }
   }

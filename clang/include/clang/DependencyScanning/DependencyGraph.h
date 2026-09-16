@@ -206,7 +206,6 @@ inline hash_code hash_value(const clang::dependencies::ModuleID &ID) {
 
 template <> struct DenseMapInfo<clang::dependencies::ModuleID> {
   using ModuleID = clang::dependencies::ModuleID;
-  static inline ModuleID getEmptyKey() { return ModuleID{"", ""}; }
   static unsigned getHashValue(const ModuleID &ID) { return hash_value(ID); }
   static bool isEqual(const ModuleID &LHS, const ModuleID &RHS) {
     return LHS == RHS;

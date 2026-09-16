@@ -22,7 +22,7 @@
 
 namespace llvm::orc {
 
-class ExecutorResolutionGenerator : public DefinitionGenerator {
+class LLVM_ABI ExecutorResolutionGenerator : public DefinitionGenerator {
 public:
   using SymbolPredicate = unique_function<bool(const SymbolStringPtr &)>;
   using AbsoluteSymbolsFn =

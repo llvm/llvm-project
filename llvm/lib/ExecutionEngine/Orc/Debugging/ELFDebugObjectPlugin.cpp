@@ -14,22 +14,20 @@
 #include "llvm/ExecutionEngine/Orc/Debugging/ELFDebugObjectPlugin.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkDylib.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/Error.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -193,13 +191,13 @@ Error DebugObject::visitSections(GetLoadAddressFn Callback) {
 
 ELFDebugObjectPlugin::ELFDebugObjectPlugin(ExecutionSession &ES,
                                            bool RequireDebugSections,
-                                           bool AutoRegisterCode, Error &Err)
-    : ES(ES), RequireDebugSections(RequireDebugSections),
-      AutoRegisterCode(AutoRegisterCode) {
+                                           Error &Err)
+    : ES(ES), RequireDebugSections(RequireDebugSections) {
   // Pass bootstrap symbol for registration function to enable debugging
   ErrorAsOutParameter _(&Err);
-  Err = ES.getExecutorProcessControl().getBootstrapSymbols(
-      {{RegistrationAction, rt::RegisterJITLoaderGDBAllocActionName}});
+  Err = lookupAndApply(ES.getBootstrapJITDylib(),
+                       {recordAddr(rt::RegisterJITLoaderGDBAllocActionName,
+                                   &RegistrationAction)});
 }
 
 ELFDebugObjectPlugin::~ELFDebugObjectPlugin() = default;
@@ -377,9 +375,8 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
 
     using namespace shared;
     G.allocActions().push_back(
-        {cantFail(WrapperFunctionCall::Create<
-                  SPSArgList<SPSExecutorAddrRange, bool>>(
-             RegistrationAction, *R, AutoRegisterCode)),
+        {cantFail(WrapperFunctionCall::Create<SPSArgList<SPSExecutorAddrRange>>(
+             RegistrationAction, *R)),
          {/* no deregistration */}});
     return Error::success();
   });

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -disable-llvm-verifier -o - %s | FileCheck %s --check-prefix=CHECK-AMDGCNSPIRV
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -disable-llvm-verifier -o - %s | FileCheck %s --check-prefix=CHECK-AMDGCN
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -disable-llvm-verifier -o - %s | FileCheck %s --check-prefix=CHECK-AMDGCN
 
 // NOTE: The verifier is currently disabled as it complains about the 'byref'
 //       arguments being too large. This is currently a problem for all targets

@@ -88,6 +88,15 @@ public:
   NewSubprocess(NativeProcessProtocol *parent_process,
                 std::unique_ptr<NativeProcessProtocol> child_process) override;
 
+  /// Forward a chunk of inferior stdout/stderr produced by the platform's
+  /// own reader. This is used on Windows.
+  void NewProcessOutput(NativeProcessProtocol *process,
+                        llvm::StringRef data) override;
+
+  /// Drain m_pending_output_buffer and emit a `$O` packet if the debuggee
+  /// is currently in a running state. No-op otherwise.
+  void FlushPendingProcessOutput();
+
   Status InitializeConnection(std::unique_ptr<Connection> connection);
 
   GDBRemoteCommunication::PacketResult
@@ -120,11 +129,15 @@ protected:
   Communication m_stdio_communication;
   MainLoop::ReadHandleUP m_stdio_handle_up;
 
+  std::string m_pending_output_buffer;
+  std::mutex m_pending_output_mutex;
+
   llvm::StringMap<std::unique_ptr<llvm::MemoryBuffer>> m_xfer_buffer_map;
   std::mutex m_saved_registers_mutex;
   std::unordered_map<uint32_t, lldb::DataBufferSP> m_saved_registers_map;
   uint32_t m_next_saved_registers_id = 1;
   bool m_thread_suffix_supported = false;
+  bool m_address_space_suffix_supported = false;
   bool m_list_threads_in_stop_reply = false;
   bool m_non_stop = false;
   bool m_disabling_non_stop = false;
@@ -256,6 +269,8 @@ protected:
 
   PacketResult Handle_jThreadsInfo(StringExtractorGDBRemote &packet);
 
+  PacketResult Handle_jAddressSpacesInfo(StringExtractorGDBRemote &packet);
+
   PacketResult Handle_qWatchpointSupportInfo(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qFileLoadAddress(StringExtractorGDBRemote &packet);
@@ -289,6 +304,9 @@ protected:
 
   PacketResult
   Handle_jAcceleratorPluginBreakpointHit(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_jAcceleratorPluginGetDynamicLoaderLibraryInfo(
+      StringExtractorGDBRemote &packet);
 
   void SetCurrentThreadID(lldb::tid_t tid);
 

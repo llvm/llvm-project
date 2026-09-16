@@ -14,7 +14,6 @@ namespace llvm {
 
 class Module;
 class ModulePass;
-class OptimizationLevel;
 
 enum class ExpandVariadicsMode {
   Unspecified, // Use the implementation defaults
@@ -23,7 +22,7 @@ enum class ExpandVariadicsMode {
   Lowering,    // Change variadic calling convention
 };
 
-class ExpandVariadicsPass : public OptionalPassInfoMixin<ExpandVariadicsPass> {
+class ExpandVariadicsPass : public RequiredPassInfoMixin<ExpandVariadicsPass> {
   const ExpandVariadicsMode Mode;
 
 public:

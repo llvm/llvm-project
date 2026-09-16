@@ -85,7 +85,6 @@ public:
 std::set<CtorTester *> CtorTester::Constructed;
 
 struct CtorTesterMapInfo {
-  static inline CtorTester getEmptyKey() { return CtorTester(-1); }
   static unsigned getHashValue(const CtorTester &Val) {
     return Val.getValue() * 37u;
   }
@@ -475,6 +474,15 @@ TEST(DenseMapCustomTest, EqualityComparison) {
   EXPECT_NE(M1, M3);
 }
 
+using IntBucket = detail::DenseMapPair<int, int>;
+
+static_assert(std::is_trivially_copyable_v<IntBucket>);
+static_assert(!std::is_trivially_default_constructible_v<IntBucket>);
+
+// A bucket converts to a std::pair, so code naming the pair type keeps working.
+static_assert(std::is_convertible_v<IntBucket, std::pair<int, int>>);
+static_assert(std::is_convertible_v<IntBucket, std::pair<const int, int>>);
+
 TEST(DenseMapCustomTest, InsertRange) {
   DenseMap<int, int> M;
 
@@ -484,6 +492,44 @@ TEST(DenseMapCustomTest, InsertRange) {
   EXPECT_EQ(M.size(), 2u);
   EXPECT_THAT(M, testing::UnorderedElementsAre(testing::Pair(0, 0),
                                                testing::Pair(1, 2)));
+
+  // A move iterator yields an rvalue from operator*, which the range insert
+  // must forward to the members for a move-only value to survive.
+  std::vector<std::pair<int, std::unique_ptr<int>>> MoveOnly;
+  MoveOnly.emplace_back(3, std::make_unique<int>(42));
+  DenseMap<int, std::unique_ptr<int>> MoveMap;
+  MoveMap.insert(std::make_move_iterator(MoveOnly.begin()),
+                 std::make_move_iterator(MoveOnly.end()));
+  auto It = MoveMap.find(3);
+  ASSERT_NE(It, MoveMap.end());
+  EXPECT_EQ(*It->second, 42);
+  EXPECT_EQ(MoveOnly[0].second, nullptr);
+
+  // A move iterator over a map yields bucket rvalues instead, which must reach
+  // insert(BucketT &&) rather than be copied.
+  DenseMap<int, std::unique_ptr<int>> MoveSrc;
+  MoveSrc.try_emplace(4, std::make_unique<int>(7));
+  MoveMap.insert(std::make_move_iterator(MoveSrc.begin()),
+                 std::make_move_iterator(MoveSrc.end()));
+  EXPECT_EQ(*MoveMap.find(4)->second, 7);
+  EXPECT_EQ(MoveSrc.find(4)->second, nullptr);
+
+  // The conversion reaches a vector's element type, and a std::map's, whose key
+  // is const.
+  DenseMap<int, int> Src({{1, 10}, {2, 20}});
+  SmallVector<std::pair<int, int>> Vec(Src.begin(), Src.end());
+  EXPECT_THAT(Vec, testing::UnorderedElementsAre(testing::Pair(1, 10),
+                                                 testing::Pair(2, 20)));
+  std::map<int, int> Sorted(Src.begin(), Src.end());
+  EXPECT_THAT(Sorted,
+              testing::ElementsAre(testing::Pair(1, 10), testing::Pair(2, 20)));
+
+  // As polly inserts a DenseMap<BasicBlock *, BasicBlock *> into a
+  // DenseMap<AssertingVH<Value>, AssertingVH<Value>>, insert from a map whose
+  // key and value types only convert to this one's.
+  DenseMap<CtorTester, CtorTester, CtorTesterMapInfo> Convertible;
+  Convertible.insert_range(DenseMap<uint32_t, uint32_t>({{1, 10}}));
+  EXPECT_EQ(CtorTester(10), Convertible.lookup(CtorTester(1)));
 }
 
 TEST(SmallDenseMapCustomTest, InsertRange) {
@@ -731,7 +777,6 @@ TEST(DenseMapCustomTest, LookupOrConstness) {
 // Key traits that allows lookup with either an unsigned or char* key;
 // In the latter case, "a" == 0, "b" == 1 and so on.
 struct TestDenseMapInfo {
-  static inline unsigned getEmptyKey() { return ~0; }
   static unsigned getHashValue(const unsigned& Val) { return Val * 37U; }
   static unsigned getHashValue(const char* Val) {
     return (unsigned)(Val[0] - 'a') * 37U;
@@ -787,7 +832,6 @@ TEST(DenseMapCustomTest, SmallDenseMapInitializerList) {
 }
 
 struct ContiguousDenseMapInfo {
-  static inline unsigned getEmptyKey() { return ~0; }
   static unsigned getHashValue(const unsigned& Val) { return Val; }
   static bool isEqual(const unsigned& LHS, const unsigned& RHS) {
     return LHS == RHS;
@@ -912,7 +956,6 @@ struct AlwaysEqType {
 namespace llvm {
 template <typename T>
 struct DenseMapInfo<T, std::enable_if_t<std::is_base_of_v<A, T>>> {
-  static inline T getEmptyKey() { return {static_cast<int>(~0)}; }
   static unsigned getHashValue(const T &Val) { return Val.value; }
   static bool isEqual(const T &LHS, const T &RHS) {
     return LHS.value == RHS.value;
@@ -921,7 +964,6 @@ struct DenseMapInfo<T, std::enable_if_t<std::is_base_of_v<A, T>>> {
 
 template <> struct DenseMapInfo<AlwaysEqType> {
   using T = AlwaysEqType;
-  static inline T getEmptyKey() { return {}; }
   static unsigned getHashValue(const T &Val) { return 0; }
   static bool isEqual(const T &LHS, const T &RHS) {
     return false;
@@ -1154,6 +1196,12 @@ TEST(DenseMapCustomTest, RemoveIfValueDtor) {
   EXPECT_EQ(0u, CtorTester::getNumConstructed());
 }
 
+TEST(DenseMapCustomTest, BucketComparison) {
+  IntBucket A(1, 2), B(1, 2), C(1, 3);
+  EXPECT_EQ(A, B);
+  EXPECT_NE(A, C);
+}
+
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
 TEST(DenseMapCustomTest, EraseInvalidatesIterators) {
   DenseMap<int, int> M;
@@ -1161,6 +1209,41 @@ TEST(DenseMapCustomTest, EraseInvalidatesIterators) {
   M.try_emplace(2, 20);
   auto It = M.find(1);
   M.erase(M.find(2));
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+
+TEST(DenseMapCustomTest, IteratorComparability) {
+  DenseMap<int, int>::iterator I1, I2;
+  EXPECT_EQ(I1, I2);
+
+  DenseMap<int, int> Map1, Map2;
+  Map1.try_emplace(1, 10);
+  Map2.try_emplace(2, 20);
+  EXPECT_DEATH((void)(Map1.begin() == Map2.begin()), "incomparable iterators");
+}
+
+TEST(DenseMapCustomTest, InsertInvalidatesIteratorComparison) {
+  DenseMap<int, int> Map;
+  Map.try_emplace(1, 10);
+  auto It = Map.begin();
+  Map.try_emplace(2, 20);
+  EXPECT_DEATH((void)(It == Map.end()), "incomparable iterators");
+}
+
+TEST(DenseMapCustomTest, MoveConstructInvalidatesIterators) {
+  DenseMap<int, int> M;
+  M.try_emplace(1, 10);
+  auto It = M.find(1);
+  DenseMap<int, int> Other = std::move(M);
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+
+TEST(DenseMapCustomTest, MoveAssignInvalidatesIterators) {
+  DenseMap<int, int> M;
+  M.try_emplace(1, 10);
+  auto It = M.find(1);
+  DenseMap<int, int> Other;
+  Other = std::move(M);
   EXPECT_DEATH((void)It->second, "invalid iterator access");
 }
 #endif

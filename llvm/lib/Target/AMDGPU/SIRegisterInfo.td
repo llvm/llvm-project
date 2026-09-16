@@ -116,6 +116,7 @@ class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
   let TSFlags{2} = HasVGPR;
   let TSFlags{3} = HasAGPR;
   let TSFlags{4} = HasSGPR;
+  let SpillStackID = !if(HasSGPR, 1, 0); // TargetStackID::SGPRSpill
 
   // RA will use RegisterClass AllocationPriority amongst other info (e.g. ordering in the basic block)
   // to decide which registers to try to assign first. Usually, this RegisterClass priority is given
@@ -159,7 +160,8 @@ multiclass SIRegLoHi16 <string n, bits<10> regIdx, bit ArtificialHigh = 1,
 }
 
 // Special Registers
-defm VCC_LO : SIRegLoHi16<"vcc_lo", 106>;
+defm VCC_LO : SIRegLoHi16<"vcc_lo", 106, /*ArtificialHigh=*/1, /*isVGPR=*/0,
+                          /*isAGPR=*/0, /*DwarfEncodings=*/[512, 512]>;
 defm VCC_HI : SIRegLoHi16<"vcc_hi", 107>;
 
 // Pseudo-registers: Used as placeholders during isel and immediately
@@ -177,7 +179,7 @@ def PC_REG : SIReg<"pc", 0>, DwarfRegNum<[16, 16]> {
 }
 
 // VCC for 64-bit instructions
-def VCC : RegisterWithSubRegs<"vcc", [VCC_LO, VCC_HI]> {
+def VCC : RegisterWithSubRegs<"vcc", [VCC_LO, VCC_HI]>, DwarfRegNum<[768, 512]> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
   let HWEncoding = VCC_LO.HWEncoding;
@@ -595,7 +597,7 @@ class RegisterTypes<list<ValueType> reg_types> {
 
 def Reg16Types : RegisterTypes<[i16, f16, bf16]>;
 def Reg32DataTypes: RegisterTypes<[i32, f32, v2i16, v2f16, v2bf16]>;
-def Reg32PtrTypes: RegisterTypes<[p2, p3, p5, p6]>;
+def Reg32PtrTypes: RegisterTypes<[p2, p3, p5, p6, p15]>;
 def Reg32Types : RegisterTypes<!listconcat(Reg32DataTypes.types, Reg32PtrTypes.types)>;
 def Reg64DataTypes: RegisterTypes<[i64, f64, v2i32, v2f32, v4i16, v4f16, v4bf16]>;
 def Reg64PtrTypes: RegisterTypes<[p0, p1, p4]>;
@@ -1175,6 +1177,32 @@ def VS_128_Align2 : SIRegisterClass<"AMDGPU", VReg_128.RegTypes, 32,
 }
 } // End GeneratePressureSet = 0
 
+// Indexed resources (GFX13) encode the buffer/image descriptor as a single
+// 32-bit index register (a Lo256 VGPR for the per-lane/non-uniform form, or an
+// SGPR for the uniform-indexed form) instead of the full SReg_128/SReg_256
+// descriptor.
+def RsrcReg32 : SIRegisterClass<"AMDGPU", Reg32Types.types, 32, (add VGPR_32_Lo256, SGPR_32)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+}
+
+// Parses rsrcidx(<reg>).
+def RsrcRegClass : AsmOperandClass {
+  let Name = "RsrcReg";
+  let ParserMethod = "parseRsrcReg";
+  let PredicateMethod = "isRsrcReg32";
+  let RenderMethod = "addRegOperands";
+}
+
+// Class does not contain any 128 bit values but for disassembler purposes allows
+// decoding to SReg_128.
+def RsrcReg128Op : RegisterOperand<RsrcReg32> {
+  let ParserMatchClass = RsrcRegClass;
+  let DecoderMethod = "decodeRsrcReg128";
+  let EncoderMethod = "getMachineOpValueRsrcRegOp";
+  let PrintMethod = "printRsrcReg";
+}
+
 // Define a register tuple class, along with one requiring an even
 // aligned base register.
 multiclass AVRegClass<int numRegs, list<ValueType> regTypes,
@@ -1393,6 +1421,7 @@ class SrcRegOrImm9_t16<string operandType, RegisterClass regClass = VS_16>
 def SSrc_b16  : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_INT16">;
 def SSrc_bf16 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_BF16">;
 def SSrc_f16  : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_FP16">;
+def SSrc_NoInline_f16 : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_NOINLINE_FP16">;
 def SSrc_b32  : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_INT32">;
 def SSrc_f32  : SrcRegOrImm9 <SReg_32, "OPERAND_REG_IMM_FP32">;
 def SSrc_b64  : SrcRegOrImm9 <SReg_64_Encodable, "OPERAND_REG_IMM_INT64">;
@@ -1444,6 +1473,8 @@ def VSrc_f64    : SrcRegOrImm9 <VS_64_AlignTarget, "OPERAND_REG_IMM_FP64"> {
 }
 def VSrc_v2b32 : SrcRegOrImm9 <VS_64_AlignTarget, "OPERAND_REG_IMM_V2INT32">;
 def VSrc_v2f32 : SrcRegOrImm9 <VS_64_AlignTarget, "OPERAND_REG_IMM_V2FP32">;
+def VSrc_v2b64 : SrcRegOrImm9 <VS_128, "OPERAND_REG_IMM_V2INT64">;
+def VSrc_v2f64 : SrcRegOrImm9 <VS_128, "OPERAND_REG_IMM_V2FP64">;
 
 def VSrc_NoInline_v2f16  : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_NOINLINE_V2FP16">;
 

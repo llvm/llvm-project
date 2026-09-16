@@ -50,6 +50,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -897,12 +898,12 @@ private:
 /// to the original source).
 LLVM_ABI llvm::Expected<Value> parse(llvm::StringRef JSON);
 
-class ParseError : public llvm::ErrorInfo<ParseError> {
+class LLVM_ABI ParseError : public llvm::ErrorInfo<ParseError> {
   const char *Msg;
   unsigned Line, Column, Offset;
 
 public:
-  LLVM_ABI static char ID;
+  static char ID;
   ParseError(const char *Msg, unsigned Line, unsigned Column, unsigned Offset)
       : Msg(Msg), Line(Line), Column(Column), Offset(Offset) {}
   void log(llvm::raw_ostream &OS) const override;

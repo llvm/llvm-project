@@ -12,10 +12,10 @@
 !CHECK:  %[[V0:[0-9]+]]:2 = hlfir.declare {{.*}} (!fir.ref<complex<f64>>) -> (!fir.ref<complex<f64>>, !fir.ref<complex<f64>>)
 !CHECK-FPRIV:  %[[V2:[0-9]+]] = omp.map.info var_ptr(%[[V1]]#0 : !fir.ref<complex<f32>>, complex<f32>) {{.*}} capture(ByCopy)
 !CHECK-FPRIV:  %[[V3:[0-9]+]] = omp.map.info var_ptr(%[[V0]]#0 : !fir.ref<complex<f64>>, complex<f64>) {{.*}} capture(ByRef)
-!CHECK-FPRIV:  omp.target map_entries(%[[V2]] -> {{.*}}, %[[V3]] -> {{.*}} : !fir.ref<complex<f32>>, !fir.ref<complex<f64>>) private(@[[PRIV_32]] %[[V1]]#0 -> %{{.*}} [map_idx=0], @[[PRIV_64]] %[[V0]]#0 -> %{{.*}} [map_idx=1] : !fir.ref<complex<f32>>, !fir.ref<complex<f64>>) {
+!CHECK-FPRIV:  omp.target kernel_type(generic) map_entries(%[[V2]] -> {{.*}}, %[[V3]] -> {{.*}} : !fir.ref<complex<f32>>, !fir.ref<complex<f64>>) private(@[[PRIV_32]] %[[V1]]#0 -> %{{.*}} [map_idx=0], @[[PRIV_64]] %[[V0]]#0 -> %{{.*}} [map_idx=1] : !fir.ref<complex<f32>>, !fir.ref<complex<f64>>) {
 !CHECK-NO-FPRIV:  %[[V2:[0-9]+]] = omp.map.info var_ptr(%[[V1]]#1 : !fir.ref<complex<f32>>, complex<f32>) {{.*}} capture(ByCopy)
 !CHECK-NO-FPRIV:  %[[V3:[0-9]+]] = omp.map.info var_ptr(%[[V0]]#1 : !fir.ref<complex<f64>>, complex<f64>) {{.*}} capture(ByRef)
-!CHECK-NO-PRIV:  omp.target map_entries(%[[V2]] -> {{.*}}, %[[V3]] -> {{.*}} : !fir.ref<complex<f32>>, !fir.ref<complex<f64>>)
+!CHECK-NO-FPRIV:  omp.target kernel_type(generic) map_entries(%[[V2]] -> {{.*}}, %[[V3]] -> {{.*}} : !fir.ref<complex<f32>>, !fir.ref<complex<f64>>)
 
 module m
   implicit none

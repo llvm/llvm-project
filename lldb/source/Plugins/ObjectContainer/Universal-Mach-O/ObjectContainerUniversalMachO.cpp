@@ -16,6 +16,8 @@
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Stream.h"
 
+#include <algorithm>
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::MachO;
@@ -122,6 +124,11 @@ bool ObjectContainerUniversalMachO::ParseHeader(
           arch.align = extractor.GetU32(&offset);
           fat_archs.emplace_back(arch);
         }
+      } else {
+        // nfat_arch is read from the file and is untrusted (up to 0xFFFFFFFF).
+        // Once the data is exhausted the offset can no longer advance, so the
+        // remaining iterations would spin uselessly; stop here.
+        break;
       }
     }
     return true;
@@ -137,7 +144,7 @@ size_t ObjectContainerUniversalMachO::GetNumArchitectures() const {
 
 bool ObjectContainerUniversalMachO::GetArchitectureAtIndex(
     uint32_t idx, ArchSpec &arch) const {
-  if (idx < m_header.nfat_arch) {
+  if (idx < m_fat_archs.size()) {
     arch.SetArchitecture(eArchTypeMachO, m_fat_archs[idx].GetCPUType(),
                          m_fat_archs[idx].GetCPUSubType());
     return true;
@@ -178,11 +185,19 @@ ObjectContainerUniversalMachO::GetObjectFile(const FileSpec *file) {
     }
 
     if (arch_idx < m_header.nfat_arch) {
-      DataExtractorSP extractor_sp;
-      lldb::offset_t data_offset = 0;
-      return ObjectFile::FindPlugin(
-          module_sp, file, m_offset + m_fat_archs[arch_idx].GetOffset(),
-          m_fat_archs[arch_idx].GetSize(), extractor_sp, data_offset);
+      const FatArch &fat_arch = m_fat_archs[arch_idx];
+      const uint64_t byte_size = GetByteSize();
+      // The slice must start strictly past this container's own bytes and
+      // fit within them.
+      if (fat_arch.GetOffset() > 0 && fat_arch.GetOffset() < byte_size) {
+        DataExtractorSP extractor_sp;
+        lldb::offset_t data_offset = 0;
+        const uint64_t slice_size =
+            std::min(fat_arch.GetSize(), byte_size - fat_arch.GetOffset());
+        return ObjectFile::FindPlugin(module_sp, file,
+                                      m_offset + fat_arch.GetOffset(),
+                                      slice_size, extractor_sp, data_offset);
+      }
     }
   }
   return ObjectFileSP();
@@ -202,7 +217,12 @@ ModuleSpecList ObjectContainerUniversalMachO::GetModuleSpecifications(
       for (const FatArch &fat_arch : fat_archs) {
         const lldb::offset_t slice_file_offset =
             fat_arch.GetOffset() + file_offset;
-        if (fat_arch.GetOffset() < file_size && file_size > slice_file_offset) {
+        // The slice must start strictly past the current offset.  A slice whose
+        // offset is 0 (or otherwise does not advance) is self-referential: the
+        // recursive call below would re-parse the same range and recurse
+        // without bound.  Skip such slices instead of overflowing the stack.
+        if (slice_file_offset > file_offset &&
+            fat_arch.GetOffset() < file_size && file_size > slice_file_offset) {
           ModuleSpecList arch_specs = ObjectFile::GetModuleSpecifications(
               file, slice_file_offset, file_size - slice_file_offset);
           specs.Append(arch_specs);

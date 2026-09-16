@@ -65,17 +65,37 @@ static MCDisassembler *createRISCVDisassembler(const Target &T,
   return new RISCVDisassembler(STI, Ctx, T.createMCInstrInfo());
 }
 
+static MCSymbolizer *
+createRISCVMCSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
+                        LLVMSymbolLookupCallback /*SymbolLookUp*/,
+                        void *DisInfo, MCContext *Ctx,
+                        std::unique_ptr<MCRelocationInfo> &&RelInfo) {
+  // RISC-V only asks MCSymbolizer to decode HI20/LO12 address fragments. They
+  // require relocation information and cannot be looked up as absolute
+  // addresses when GetOpInfo fails.
+  return llvm::createMCSymbolizer(TT, GetOpInfo, /*SymbolLookUp=*/nullptr,
+                                  DisInfo, Ctx, std::move(RelInfo));
+}
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeRISCVDisassembler() {
   // Register the disassembler for each target.
   TargetRegistry::RegisterMCDisassembler(getTheRISCV32Target(),
                                          createRISCVDisassembler);
+  TargetRegistry::RegisterMCSymbolizer(getTheRISCV32Target(),
+                                       createRISCVMCSymbolizer);
   TargetRegistry::RegisterMCDisassembler(getTheRISCV64Target(),
                                          createRISCVDisassembler);
+  TargetRegistry::RegisterMCSymbolizer(getTheRISCV64Target(),
+                                       createRISCVMCSymbolizer);
   TargetRegistry::RegisterMCDisassembler(getTheRISCV32beTarget(),
                                          createRISCVDisassembler);
+  TargetRegistry::RegisterMCSymbolizer(getTheRISCV32beTarget(),
+                                       createRISCVMCSymbolizer);
   TargetRegistry::RegisterMCDisassembler(getTheRISCV64beTarget(),
                                          createRISCVDisassembler);
+  TargetRegistry::RegisterMCSymbolizer(getTheRISCV64beTarget(),
+                                       createRISCVMCSymbolizer);
 }
 
 template <unsigned FirstReg, unsigned NumRegsInClass, unsigned RVELimit = 0>
@@ -93,45 +113,24 @@ static DecodeStatus DecodeSimpleRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+template <unsigned PhysReg, unsigned Encoding>
+static DecodeStatus DecodeSingleRegister(MCInst &Inst, uint32_t RegNo,
+                                         uint64_t Address,
+                                         const MCDisassembler *Decoder) {
+  assert(RegNo == Encoding);
+  Inst.addOperand(MCOperand::createReg(PhysReg));
+  return MCDisassembler::Success;
+}
+
+template <unsigned PhysReg, unsigned Encoding>
+static DecodeStatus DecodeSingleRegister(MCInst &Inst,
+                                         const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(PhysReg));
+  return MCDisassembler::Success;
+}
+
 constexpr auto DecodeGPRRegisterClass =
     DecodeSimpleRegisterClass<RISCV::X0, 32, /*RVELimit=*/16>;
-
-static DecodeStatus DecodeGPRX1X5RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder) {
-  MCRegister Reg = RISCV::X0 + RegNo;
-  if (Reg != RISCV::X1 && Reg != RISCV::X5)
-    return MCDisassembler::Fail;
-
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeGPRX1RegisterClass(MCInst &Inst,
-                                             const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createReg(RISCV::X1));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeSPRegisterClass(MCInst &Inst,
-                                          const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createReg(RISCV::X2));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeSPRegisterClass(MCInst &Inst, uint64_t RegNo,
-                                          uint32_t Address,
-                                          const MCDisassembler *Decoder) {
-  assert(RegNo == 2);
-  Inst.addOperand(MCOperand::createReg(RISCV::X2));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeGPRX5RegisterClass(MCInst &Inst,
-                                             const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createReg(RISCV::X5));
-  return MCDisassembler::Success;
-}
 
 template <auto DecodeFn, auto PredicateFn>
 static DecodeStatus DecodeFilteredRegisterClass(MCInst &Inst, uint32_t RegNo,
@@ -145,6 +144,7 @@ static DecodeStatus DecodeFilteredRegisterClass(MCInst &Inst, uint32_t RegNo,
 constexpr bool PredNoX0(uint32_t RegNo) { return RegNo != 0; }
 constexpr bool PredNoX2(uint32_t RegNo) { return RegNo != 2; }
 constexpr bool PredNoX31(uint32_t RegNo) { return RegNo != 31; }
+constexpr bool PredX1OrX5(uint32_t RegNo) { return RegNo == 1 || RegNo == 5; }
 
 constexpr auto DecodeGPRNoX0RegisterClass =
     DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredNoX0>;
@@ -152,6 +152,8 @@ constexpr auto DecodeGPRNoX2RegisterClass =
     DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredNoX2>;
 constexpr auto DecodeGPRNoX31RegisterClass =
     DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredNoX31>;
+constexpr auto DecodeGPRX1X5RegisterClass =
+    DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredX1OrX5>;
 
 static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
                                                uint64_t Address,
@@ -164,7 +166,7 @@ static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
   const MCRegisterInfo *RI = Dis->getContext().getRegisterInfo();
   MCRegister Reg = RI->getMatchingSuperReg(
       RISCV::X0 + RegNo, RISCV::sub_gpr_even,
-      &RISCVMCRegisterClasses[RISCV::GPRPairRegClassID]);
+      &getRISCVMCRegisterClass(RISCV::GPRPairRegClassID));
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
@@ -178,19 +180,12 @@ static DecodeStatus DecodeGPRPairCRegisterClass(MCInst &Inst, uint32_t RegNo,
   if (RegNo >= 8 || RegNo % 2)
     return MCDisassembler::Fail;
 
-  const RISCVDisassembler *Dis =
-      static_cast<const RISCVDisassembler *>(Decoder);
-  const MCRegisterInfo *RI = Dis->getContext().getRegisterInfo();
-  MCRegister Reg = RI->getMatchingSuperReg(
-      RISCV::X8 + RegNo, RISCV::sub_gpr_even,
-      &RISCVMCRegisterClasses[RISCV::GPRPairCRegClassID]);
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
+  return DecodeGPRPairRegisterClass(Inst, RegNo + 8, Address, Decoder);
 }
 
-static DecodeStatus DecodeSR07RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                            uint64_t Address,
-                                            const void *Decoder) {
+static DecodeStatus DecodeGPRS07RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                              uint64_t Address,
+                                              const void *Decoder) {
   if (RegNo >= 8)
     return MCDisassembler::Fail;
 
@@ -211,7 +206,7 @@ static DecodeStatus DecodeVectorRegisterClass(MCInst &Inst, uint32_t RegNo,
   const MCRegisterInfo *RI = Dis->getContext().getRegisterInfo();
   MCRegister Reg =
       RI->getMatchingSuperReg(RISCV::V0 + RegNo, RISCV::sub_vrm1_0,
-                              &RISCVMCRegisterClasses[RegisterClass]);
+                              &getRISCVMCRegisterClass(RegisterClass));
 
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
@@ -276,15 +271,10 @@ static DecodeStatus decodeVMaskReg(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeImmThreeOperand(MCInst &Inst,
+template <int64_t Imm>
+static DecodeStatus decodeFixedImmOperand(MCInst &Inst,
                                           const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createImm(3));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeImmFourOperand(MCInst &Inst,
-                                         const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createImm(4));
+  Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
 
@@ -400,6 +390,32 @@ static DecodeStatus decodeSImmOperand(MCInst &Inst, uint32_t Imm,
   assert(isUInt<N>(Imm) && "Invalid immediate");
   // Sign-extend the number in the bottom N bits of Imm
   Inst.addOperand(MCOperand::createImm(SignExtend64<N>(Imm)));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeSImm12LoOperand(MCInst &Inst, uint32_t Imm,
+                                          int64_t Address,
+                                          const MCDisassembler *Decoder) {
+  assert(isUInt<12>(Imm) && "Invalid immediate");
+  const int64_t Value = SignExtend64<12>(Imm);
+  if (!Decoder->tryAddingSymbolicOperand(Inst, Value, Address,
+                                         /*IsBranch=*/false,
+                                         /*Offset=*/0, /*OpSize=*/4,
+                                         /*InstSize=*/4))
+    Inst.addOperand(MCOperand::createImm(Value));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeUImm20Operand(MCInst &Inst, uint32_t Imm,
+                                        int64_t Address,
+                                        const MCDisassembler *Decoder) {
+  assert(isUInt<20>(Imm) && "Invalid immediate");
+  const int64_t Value = SignExtend64<32>(Imm << 12);
+  if (!Decoder->tryAddingSymbolicOperand(Inst, Value, Address,
+                                         /*IsBranch=*/false,
+                                         /*Offset=*/0, /*OpSize=*/4,
+                                         /*InstSize=*/4))
+    Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
 
@@ -531,7 +547,8 @@ static constexpr FeatureBitset XAndesGroup = {
     RISCV::FeatureVendorXAndesVSIntLoad, RISCV::FeatureVendorXAndesVPackFPH,
     RISCV::FeatureVendorXAndesVDot};
 
-static constexpr FeatureBitset XSMTGroup = {RISCV::FeatureVendorXSMTVDot};
+static constexpr FeatureBitset XSMTGroup = {RISCV::FeatureVendorXSMTVDot,
+                                            RISCV::FeatureVendorXSMTVDotII};
 
 static constexpr FeatureBitset XAIFGroup = {RISCV::FeatureVendorXAIFET};
 
@@ -539,9 +556,6 @@ static constexpr DecoderListEntry DecoderList32[]{
     // Vendor Extensions
     {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},
     {DecoderTableXqci32, XqciFeatureGroup, "Qualcomm uC Extensions"},
-    {DecoderTableXVentana32,
-     {RISCV::FeatureVendorXVentanaCondOps},
-     "XVentanaCondOps"},
     {DecoderTableXTHead32, XTHeadGroup, "T-Head extensions"},
     {DecoderTableXSfvector32, XSfVectorGroup, "SiFive vector extensions"},
     {DecoderTableXSfsystem32, XSfSystemGroup, "SiFive system extensions"},
@@ -604,8 +618,6 @@ static constexpr DecoderListEntry DecoderList16[]{
      "Xqccmt (Qualcomm 16-bit Table Jump Instructions)"},
     {DecoderTableXwchc16, {RISCV::FeatureVendorXwchc}, "WCH QingKe XW"},
     // Standard Extensions
-    // DecoderTableZicfiss16 must be checked before DecoderTable16.
-    {DecoderTableZicfiss16, {}, "Zicfiss (Shadow Stack 16-bit)"},
     {DecoderTable16, {}, "standard 16-bit instructions"},
     {DecoderTableRV32Only16, {}, "RV32-only 16-bit instructions"},
     // Zc* instructions incompatible with Zcf or Zcd

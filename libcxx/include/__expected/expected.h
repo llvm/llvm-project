@@ -31,13 +31,12 @@
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_relocatable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>
-#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/is_void.h>
-#include <__type_traits/lazy.h>
 #include <__type_traits/negation.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
@@ -447,6 +446,10 @@ private:
   _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<__allow_reusing_expected_tail_padding, __repr> __repr_;
 };
 
+// Helper to handle comparisons that produce a value whose type is not bool,
+// but allows only implicit (and not explicit) conversions to bool.
+constexpr bool __into_bool(bool __b) noexcept { return __b; }
+
 template <class _Tp, class _Err>
 class expected : private __expected_base<_Tp, _Err> {
   static_assert(!is_reference_v<_Tp> && !is_function_v<_Tp> && !is_same_v<remove_cv_t<_Tp>, in_place_t> &&
@@ -469,9 +472,7 @@ public:
   using unexpected_type = unexpected<_Err>;
 
   using __trivially_relocatable _LIBCPP_NODEBUG =
-      __conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value && __libcpp_is_trivially_relocatable<_Err>::value,
-                      expected,
-                      void>;
+      __conditional_t<__is_trivially_relocatable_v<_Tp> && __is_trivially_relocatable_v<_Err>, expected, void>;
 
   template <class _Up>
   using rebind = expected<_Up, error_type>;
@@ -685,12 +686,11 @@ public:
 private:
   template <class _OtherErrQual>
   static constexpr bool __can_assign_from_unexpected =
-      _And< is_constructible<_Err, _OtherErrQual>,
-            is_assignable<_Err&, _OtherErrQual>,
-            _Lazy<_Or,
-                  is_nothrow_constructible<_Err, _OtherErrQual>,
-                  is_nothrow_move_constructible<_Tp>,
-                  is_nothrow_move_constructible<_Err>> >::value;
+      _And<is_constructible<_Err, _OtherErrQual>,
+           is_assignable<_Err&, _OtherErrQual>,
+           _Or<is_nothrow_constructible<_Err, _OtherErrQual>,
+               is_nothrow_move_constructible<_Tp>,
+               is_nothrow_move_constructible<_Err>>>::value;
 
 public:
   template <class _OtherErr>
@@ -826,6 +826,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return this->__has_val(); }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return this->__has_val(); }
+
+#  if _LIBCPP_STD_VER >= 29
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_error() const noexcept { return !this->has_value(); }
+#  endif
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& value() const& {
     static_assert(is_copy_constructible_v<_Err>, "error_type has to be copy constructible");
@@ -1173,7 +1177,7 @@ public:
     }
 #  endif
   {
-    return __x.__has_val() && static_cast<bool>(__x.__val() == __v);
+    return __x.__has_val() && std::__into_bool(__x.__val() == __v);
   }
 
   template <class _E2>
@@ -1184,7 +1188,7 @@ public:
     }
 #  endif
   {
-    return !__x.__has_val() && static_cast<bool>(__x.__unex() == __e.error());
+    return !__x.__has_val() && std::__into_bool(__x.__unex() == __e.error());
   }
 };
 
@@ -1601,6 +1605,10 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return this->__has_val(); }
 
+#  if _LIBCPP_STD_VER >= 29
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_error() const noexcept { return !this->has_value(); }
+#  endif
+
   _LIBCPP_HIDE_FROM_ABI constexpr void operator*() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         this->__has_val(), "expected::operator* requires the expected to contain a value");
@@ -1886,7 +1894,7 @@ public:
     if (__x.__has_val() != __y.__has_val()) {
       return false;
     } else {
-      return __x.__has_val() || static_cast<bool>(__x.__unex() == __y.__unex());
+      return __x.__has_val() || std::__into_bool(__x.__unex() == __y.__unex());
     }
   }
 
@@ -1898,7 +1906,7 @@ public:
     }
 #  endif
   {
-    return !__x.__has_val() && static_cast<bool>(__x.__unex() == __y.error());
+    return !__x.__has_val() && std::__into_bool(__x.__unex() == __y.error());
   }
 };
 

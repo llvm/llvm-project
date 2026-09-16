@@ -463,10 +463,11 @@ class Sema;
     }
 
     ImplicitConversionRank getRank() const;
-    NarrowingKind
-    getNarrowingKind(ASTContext &Context, const Expr *Converted,
-                     APValue &ConstantValue, QualType &ConstantType,
-                     bool IgnoreFloatToIntegralConversion = false) const;
+    NarrowingKind getNarrowingKind(ASTContext &Context, const Expr *Converted,
+                                   APValue &ConstantValue,
+                                   QualType &ConstantType,
+                                   bool IgnoreFloatToIntegralConversion = false,
+                                   bool AllowRelaxedEval = false) const;
     bool isPointerConversionToBool() const;
     bool isPointerConversionToVoidPointer(ASTContext& Context) const;
     void dump() const;
@@ -1353,7 +1354,7 @@ class Sema;
     bool shouldDeferDiags(Sema &S, ArrayRef<Expr *> Args, SourceLocation OpLoc);
 
     // Whether the resolution of template candidates should be deferred
-    bool shouldDeferTemplateArgumentDeduction(const LangOptions &Opts) const;
+    bool shouldDeferTemplateArgumentDeduction(const Sema &S) const;
 
     /// Determine when this overload candidate will be new to the
     /// overload set.
@@ -1374,9 +1375,13 @@ class Sema;
     void clear(CandidateSetKind CSK);
 
     using iterator = SmallVectorImpl<OverloadCandidate>::iterator;
+    using const_iterator = SmallVectorImpl<OverloadCandidate>::const_iterator;
 
     iterator begin() { return Candidates.begin(); }
     iterator end() { return Candidates.end(); }
+
+    const_iterator begin() const { return Candidates.begin(); }
+    const_iterator end() const { return Candidates.end(); }
 
     size_t size() const { return Candidates.size() + DeferredCandidatesCount; }
 
@@ -1545,22 +1550,6 @@ class Sema;
   // good candidate as we can get, despite the fact that it takes one less
   // parameter.
   bool shouldEnforceArgLimit(bool PartialOverloading, FunctionDecl *Function);
-
-  inline bool OverloadCandidateSet::shouldDeferTemplateArgumentDeduction(
-      const LangOptions &Opts) const {
-    return
-        // For user defined conversion we need to check against different
-        // combination of CV qualifiers and look at any explicit specifier, so
-        // always deduce template candidates.
-        Kind != CSK_InitByUserDefinedConversion
-        // When doing code completion, we want to see all the
-        // viable candidates.
-        && Kind != CSK_CodeCompletion
-        // CUDA may prefer template candidates even when a non-candidate
-        // is a perfect match
-        && !Opts.CUDA;
-  }
-
 } // namespace clang
 
 #endif // LLVM_CLANG_SEMA_OVERLOAD_H

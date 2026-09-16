@@ -73,12 +73,15 @@ struct GOFFRelocationEntry {
         Action(Action), FetchStore(FetchStore) {}
 };
 
-class GOFFObjectWriter : public MCObjectWriter {
+class LLVM_ABI GOFFObjectWriter : public MCObjectWriter {
   // The target specific GOFF writer instance.
   std::unique_ptr<MCGOFFObjectTargetWriter> TargetObjectWriter;
 
   // The stream used to write the GOFF records.
   raw_pwrite_stream &OS;
+
+  // The stream used to write the split DWARF file.
+  raw_pwrite_stream *DwoOS = nullptr;
 
   // The RootSD section.
   MCSectionGOFF *RootSD = nullptr;
@@ -89,6 +92,8 @@ class GOFFObjectWriter : public MCObjectWriter {
 public:
   GOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
                    raw_pwrite_stream &OS);
+  GOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
+                   raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS);
   ~GOFFObjectWriter() override;
 
   void reset() override;
@@ -107,9 +112,13 @@ public:
 /// \param MOTW - The target-specific GOFF writer subclass.
 /// \param OS - The stream to write to.
 /// \returns The constructed object writer.
-std::unique_ptr<MCObjectWriter>
+LLVM_ABI std::unique_ptr<MCObjectWriter>
 createGOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
                        raw_pwrite_stream &OS);
+
+std::unique_ptr<MCObjectWriter>
+createGOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
+                       raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS);
 } // namespace llvm
 
 #endif

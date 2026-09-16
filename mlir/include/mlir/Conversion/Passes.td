@@ -26,6 +26,8 @@ def ConvertToEmitC : Pass<"convert-to-emitc"> {
   let options = [
     ListOption<"filterDialects", "filter-dialects", "std::string",
                "Test conversion patterns of only the specified dialects">,
+    Option<"lowerToCpp", "lower-to-cpp", "bool", "",
+           "Target C++ (true) instead of C (false)">,
   ];
 }
 
@@ -412,19 +414,13 @@ def LiftControlFlowToSCFPass : Pass<"lift-cf-to-scf"> {
     Otherwise a single ControlFlow switch branching to one block per return-like
     operation kind remains.
 
-    This pass may need to create unreachable terminators in case of infinite
-    loops, which is only supported for 'func.func' for now. If you potentially
-    have infinite loops inside CFG regions not belonging to 'func.func',
-    consider using `transformCFGToSCF` function directly with corresponding
-    `CFGToSCFInterface::createUnreachableTerminator` implementation.
+    This pass may need to create `ub.unreachable` terminators in case of
+    statically known infinite loops.
   }];
 
   let dependentDialects = ["scf::SCFDialect",
                            "arith::ArithDialect",
-                           "ub::UBDialect",
-                           // TODO: This is only necessary until we have a
-                           //       ub.unreachable op.
-                           "func::FuncDialect"];
+                           "ub::UBDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -453,6 +449,10 @@ def ConvertControlFlowToSPIRVPass : Pass<"convert-cf-to-spirv"> {
 def ConvertFuncToEmitC : Pass<"convert-func-to-emitc", "ModuleOp"> {
   let summary = "Convert Func dialect to EmitC dialect";
   let dependentDialects = ["emitc::EmitCDialect"];
+  let options = [Option<
+      "lowerToCpp", "lower-to-cpp", "bool",
+      /*default=*/"true",
+      /*description=*/"Target C++ (true) instead of C (false)">];
 }
 
 //===----------------------------------------------------------------------===//
@@ -822,7 +822,11 @@ def MathToAPFloatConversionPass
     calls (APFloatWrappers.cpp). APFloat is a software implementation of
     floating-point mathmetic operations.
   }];
-  let dependentDialects = ["math::MathDialect", "func::FuncDialect"];
+  let dependentDialects = [
+    "math::MathDialect",
+    "func::FuncDialect",
+    "vector::VectorDialect"
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -891,20 +895,30 @@ def ConvertMathToSPIRVPass : Pass<"convert-math-to-spirv"> {
 
 def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
   let summary =
-      "Convert (fast) math operations to native XeVM/SPIRV equivalents";
+      "Convert math operations to their XeVM/SPIRV OpenCL equivalents";
   let description = [{
-    This pass converts supported math ops marked with the `afn` fastmath flag
-    to function calls for OpenCL `native_` math intrinsics: These intrinsics
-    are typically mapped directly to native device instructions, often resulting
-    in better performance. However, the precision/error of these intrinsics
-    are implementation-defined, and thus math ops are only converted when they
-    have the `afn` fastmath flag enabled.
+    This pass lowers supported math ops to OpenCL math intrinsic calls. The
+    fastmath flag on each op picks which intrinsic is used:
+
+    *   Ops marked `afn` or `fast` become calls to OpenCL `native_` intrinsics.
+        Both work because `fast` is a group flag that expands to every fastmath
+        bit, `afn` included. These intrinsics are typically mapped directly to
+        native device instructions, often resulting in better performance. Their
+        precision/error is implementation-defined, so `afn` is what opts in.
+        Other flags on their own (`nnan`, `ninf`, ...) do not.
+    *   Every other op becomes a call to the precise OpenCL intrinsic from the
+        `__spirv_ocl_` extended instruction set. Set the `convertToOCL` flag to
+        `false` to leave these ops alone instead.
   }];
-  let options = [Option<
-      "convertArith", "convert-arith", "bool", /*default=*/"true",
-      "Convert supported Arith ops (e.g. arith.divf) as well.">];
+  let options = [
+    Option<"convertArith", "convert-arith", "bool", /*default=*/"true",
+      "Convert supported Arith ops (e.g. arith.divf) as well.">,
+    Option<"convertToOCL", "convert-to-ocl", "bool", /*default=*/"true",
+      "Convert Math ops without `afn` fastmath to precise OCL intrinsics.">
+  ];
   let dependentDialects = [
     "arith::ArithDialect",
+    "vector::VectorDialect",
     "xevm::XeVMDialect",
     "LLVM::LLVMDialect",
   ];
@@ -1092,7 +1106,8 @@ def ConvertNVGPUToNVVMPass : Pass<"convert-nvgpu-to-nvvm"> {
     "arith::ArithDialect",
     "LLVM::LLVMDialect",
     "memref::MemRefDialect",
-    "NVVM::NVVMDialect"
+    "NVVM::NVVMDialect",
+    "vector::VectorDialect"
   ];
 }
 
@@ -1104,6 +1119,15 @@ def ConvertNVGPUToNVVMPass : Pass<"convert-nvgpu-to-nvvm"> {
 def ConvertOpenACCToSCFPass : Pass<"convert-openacc-to-scf", "ModuleOp"> {
   let summary = "Convert the OpenACC ops to OpenACC with SCF dialect";
   let dependentDialects = ["scf::SCFDialect", "acc::OpenACCDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// OpenACCToLLVM
+//===----------------------------------------------------------------------===//
+
+def ConvertACCToLLVMPass : Pass<"acc-to-llvm", "ModuleOp"> {
+  let summary = "Lower OpenACC operations to LLVM dialect.";
+  let dependentDialects = ["LLVM::LLVMDialect", "acc::OpenACCDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1147,6 +1171,43 @@ def ReconcileUnrealizedCastsPass : Pass<"reconcile-unrealized-casts"> {
     and the producer operation is converted by another pass, each of which
     produces an unrealized cast. This pass can be used to clean up the IR.
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// SCFToAffine
+//===----------------------------------------------------------------------===//
+
+// TODO: extend to scf.if, scf.parallel, possibly more.
+def RaiseSCFToAffinePass : Pass<"raise-scf-to-affine"> {
+  let summary = "Raise SCF operations to affine operations (best effort)";
+  let description = [{
+    Raising to the affine dialect enables affine analyses and transforms such
+    as loop tiling, unrolling, vectorization, and dependence analysis.
+    Currently only `scf.for` is handled; loops that cannot be raised are left
+    unchanged.
+
+    A `scf.for` is raised when its lower and upper bounds are valid affine
+    dimensions (or an `affine.max` / `affine.min` respectively) and its step
+    is a valid affine symbol. Two cases are handled:
+
+      - Constant step: raised directly, preserving the step and any
+        `affine.min` / `affine.max` bounds as the loop's bounds.
+      - Dynamic (symbolic) step: the loop is normalized to unit step and the
+        original induction variable is reconstructed in the body. An
+        `affine.min` upper bound is supported here; an `affine.max` lower bound
+        is not, as it cannot be raised soundly without a constant step.
+
+    Bounds and step of non-`index` type are cast to `index` first if the source
+    type allows lossless conversion (otherwise we do not touch the loop). In any
+    case we preserve semantics.
+
+    This pass does not modify memory accesses; use `--affine-raise-from-memref`
+    to convert `memref.load` / `memref.store`.
+  }];
+  let dependentDialects = [
+    "affine::AffineDialect",
+    "arith::ArithDialect",
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1437,6 +1498,14 @@ def TosaToSPIRVTosa : Pass<"tosa-to-spirv-tosa"> {
     lowering supported TOSA ops to `spirv.Tosa.*`, and rewriting TOSA tensor
     and shape types to the corresponding SPIR-V ARM tensor types.
   }];
+  let options = [
+    ListOption<"customOpDomainToOpcode", "custom-op-domain-to-opcode",
+               "std::pair<std::string, int32_t>",
+               "Map TOSA custom op domains to spirv.ExperimentalML.Call "
+               "opcodes. Entries use <domain>:<opcode>. The option can be "
+               "specified multiple times; if a domain appears more than once, "
+               "the last mapping wins.">
+  ];
 
   let constructor = "tosa::createTosaToSPIRVTosa()";
 }
@@ -1614,6 +1683,12 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "vector access are naturally aligned. If operations have an "
            "alignment attribute set, the alignment attribute takes priority "
            "over this option ">,
+    Option<"enableGEPInboundsNuw", "enable-gep-inbounds-nuw",
+           "bool", /*default=*/"false",
+           "Emit inbounds|nuw flags on GEPs generated by vector.load/store "
+           "lowering. Assumes 0 <= idx < dim_size and non-negative strides for "
+           "all dimensions. Setting this when those conditions do not hold is "
+           "undefined behavior under the LLVM lowering.">,
     Option<"armNeon", "enable-arm-neon",
            "bool", /*default=*/"false",
            "Enables the use of ArmNeon dialect while lowering the vector "
@@ -1697,6 +1772,19 @@ def ConvertVectorToAMX : Pass<"convert-vector-to-amx"> {
   let dependentDialects = [
     "affine::AffineDialect", "x86::X86Dialect", "arith::ArithDialect",
     "memref::MemRefDialect", "scf::SCFDialect", "vector::VectorDialect"
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// RaiseWasmMLIR
+//===----------------------------------------------------------------------===//
+
+def RaiseWasmMLIR : Pass<"raise-wasm-mlir"> {
+  let summary = "Convert Wasm dialect to a group of dialect as a bridge to LLVM MLIR conversion";
+  let dependentDialects = [
+    "func::FuncDialect", "arith::ArithDialect", "cf::ControlFlowDialect",
+    "memref::MemRefDialect", "vector::VectorDialect", "wasmssa::WasmSSADialect",
+    "math::MathDialect"
   ];
 }
 

@@ -1027,7 +1027,7 @@ OutputDesc *ScriptParser::readOverlaySectionDescription() {
   osd->osec.inOverlay = true;
   expect("{");
   while (auto tok = till("}"))
-    osd->osec.commands.push_back(readInputSectionDescription(tok));
+    readOutputSectionStmt(osd->osec, tok);
   osd->osec.phdrs = readOutputSectionPhdrs();
   return osd;
 }

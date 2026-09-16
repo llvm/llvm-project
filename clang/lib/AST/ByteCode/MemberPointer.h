@@ -44,7 +44,7 @@ public:
   MemberPointer() = default;
   MemberPointer(Pointer Base, const ValueDecl *Dcl)
       : Base(Base), DeclAndIsDerivedMember(Dcl) {}
-  MemberPointer(uint32_t Address, const Descriptor *D) {
+  MemberPointer(uint32_t Address, const Type *) {
     // We only reach this for Address == 0, when creating a null member pointer.
     assert(Address == 0);
   }
@@ -101,6 +101,8 @@ public:
   std::optional<Pointer> toPointer(const Context &Ctx) const;
 
   bool isBaseCastPossible() const {
+    if (!Base.isBlockPointer())
+      return false;
     if (PtrOffset < 0)
       return true;
     return static_cast<uint64_t>(PtrOffset) <= Base.getByteOffset();

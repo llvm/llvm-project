@@ -29,6 +29,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/PointerAuthOptions.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
@@ -202,9 +203,10 @@ public:
   bool hasUniqueVTablePointer(QualType RecordTy) {
     const CXXRecordDecl *RD = RecordTy->getAsCXXRecordDecl();
 
-    // Under -fapple-kext, multiple definitions of the same vtable may be
-    // emitted.
-    if (!CGM.getCodeGenOpts().AssumeUniqueVTables ||
+    // The exact dynamic_cast optimization relies on the vtable having a unique
+    // address. -fno-assume-unique-vtables disables it, and under -fapple-kext
+    // multiple definitions of the same vtable may be emitted.
+    if (CGM.getCodeGenOpts().DisableExactDynamicCast ||
         getContext().getLangOpts().AppleKext)
       return false;
 
@@ -227,7 +229,10 @@ public:
         llvm::GlobalValue::DefaultVisibility)
       return false;
 
-    return true;
+    // A vague-linkage (weak) vtable on a target whose ABI may duplicate it can
+    // be emitted with a distinct address in more than one image, so its address
+    // cannot be assumed unique.
+    return !CGM.mayVTableBeDuplicated(CGM.getVTableLinkage(RD));
   }
 
   bool shouldEmitExactDynamicCast(QualType DestRecordTy) override {
@@ -1781,12 +1786,12 @@ llvm::Value *ItaniumCXXABI::emitExactDynamicCast(
     PerformPostCastAuthentication = CGF.getLangOpts().PointerAuthCalls;
     CGPointerAuthInfo StrippingAuthInfo(0, PointerAuthenticationMode::Strip,
                                         false, false, nullptr);
-    Address VTablePtrPtr = ThisAddr.withElementType(CGF.VoidPtrPtrTy);
+    Address VTablePtrPtr = ThisAddr.withElementType(CGM.GlobalsInt8PtrTy);
     VTable = CGF.Builder.CreateLoad(VTablePtrPtr, "vtable");
     if (PerformPostCastAuthentication)
       VTable = CGF.EmitPointerAuthAuth(StrippingAuthInfo, VTable);
   } else
-    VTable = CGF.GetVTablePtr(ThisAddr, CGF.DefaultPtrTy, SrcDecl);
+    VTable = CGF.GetVTablePtr(ThisAddr, CGM.GlobalsInt8PtrTy, SrcDecl);
 
   // Compare the vptr against the expected vptr for the destination type at
   // this offset.
@@ -2099,6 +2104,12 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
   // Set the correct linkage.
   VTable->setLinkage(Linkage);
 
+  // On a target that may duplicate vtables, a weak vtable does not have a
+  // unique address, so its address is insignificant and it can be marked
+  // unnamed_addr.
+  if (CGM.mayVTableBeDuplicated(VTable->getLinkage()))
+    VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+
   if (CGM.supportsCOMDAT() && VTable->isWeakForLinker())
     VTable->setComdat(CGM.getModule().getOrInsertComdat(VTable->getName()));
 
@@ -2221,12 +2232,9 @@ llvm::Value *ItaniumCXXABI::getVTableAddressPointInStructorWithVTT(
       CGF.Builder.CreateAlignedLoad(CGF.GlobalsVoidPtrTy, VTT,
                                     CGF.getPointerAlign());
 
-  if (auto &Schema = CGF.CGM.getCodeGenOpts().PointerAuth.CXXVTTVTablePointers) {
-    CGPointerAuthInfo PointerAuth = CGF.EmitPointerAuthInfo(Schema, VTT,
-                                                            GlobalDecl(),
-                                                            QualType());
-    AP = CGF.EmitPointerAuthAuth(PointerAuth, AP);
-  }
+  if (auto PointerAuth = CGM.getVTablePointerAuthInfo(&CGF, VTableClass, VTT,
+                                                      /*IsVTTEntry=*/true))
+    AP = CGF.EmitPointerAuthAuth(*PointerAuth, AP);
 
   return AP;
 }
@@ -2258,6 +2266,8 @@ llvm::GlobalVariable *ItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   VTable = CGM.CreateOrReplaceCXXRuntimeVariable(
       Name, VTableType, llvm::GlobalValue::ExternalLinkage,
       getContext().toCharUnitsFromBits(PAlign).getAsAlign());
+  if (!CGM.shouldEmitRTTI())
+    VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   if (CGM.getTarget().hasPS4DLLImportExport())
     setVTableSelectiveDLLImportExport(CGM, VTable, RD);
@@ -3429,7 +3439,8 @@ LValue ItaniumCXXABI::EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF,
   llvm::Value *Val = CGF.CGM.GetAddrOfGlobalVar(VD);
   llvm::Function *Wrapper = getOrCreateThreadLocalWrapper(VD, Val);
 
-  llvm::CallInst *CallVal = CGF.Builder.CreateCall(Wrapper);
+  llvm::CallInst *CallVal =
+      CGF.Builder.CreateCall(Wrapper, {}, CGF.getBundlesForFunclet(Wrapper));
   CallVal->setCallingConv(Wrapper->getCallingConv());
 
   LValue LV;
@@ -3518,7 +3529,7 @@ ItaniumCXXABI::getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD) {
   const FunctionProtoType *FPT = MD->getType()->getAs<FunctionProtoType>();
   RequiredArgs Required = RequiredArgs::forPrototypePlus(FPT, /*this*/ 1);
   const CGFunctionInfo &CallInfo =
-      CGM.getTypes().arrangeCXXMethodCall(CallArgs, FPT, Required, 0);
+      CGM.getTypes().arrangeCXXMethodCall(CallArgs, FPT, Required, 0, MD);
   CGCallee Callee = CGCallee::forVirtual(nullptr, GlobalDecl(MD),
                                          getThisAddress(CGF), ThunkTy);
   llvm::CallBase *CallOrInvoke;
@@ -3776,6 +3787,8 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
     case BuiltinType::ShortAccum:
     case BuiltinType::Accum:
     case BuiltinType::LongAccum:

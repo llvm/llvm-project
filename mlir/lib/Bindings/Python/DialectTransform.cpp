@@ -493,39 +493,55 @@ struct ParamType : PyConcreteType<ParamType> {
 //===----------------------------------------------------------------------===//
 
 namespace {
-void onlyReadsHandle(nb::iterable &operands,
-                     PyMemoryEffectsInstanceList effects) {
+void collectMemoryEffectInstances(intptr_t numEffects,
+                                  MlirMemoryEffectInstance *effects,
+                                  void *userData) {
+  auto *result = static_cast<std::vector<PyMemoryEffectInstance> *>(userData);
+  result->reserve(result->size() + numEffects);
+  for (intptr_t i = 0; i < numEffects; ++i)
+    result->emplace_back(mlirMemoryEffectInstanceClone(effects[i]));
+}
+
+std::vector<PyMemoryEffectInstance> onlyReadsHandle(nb::iterable &operands) {
   std::vector<MlirOpOperand> operandsVec;
   for (auto operand : operands)
     operandsVec.push_back(nb::cast<PyOpOperand>(operand));
+  std::vector<PyMemoryEffectInstance> effects;
   mlirTransformOnlyReadsHandle(operandsVec.data(), operandsVec.size(),
-                               effects.effects);
+                               collectMemoryEffectInstances, &effects);
+  return effects;
 };
 
-void consumesHandle(nb::iterable &operands,
-                    PyMemoryEffectsInstanceList effects) {
+std::vector<PyMemoryEffectInstance> consumesHandle(nb::iterable &operands) {
   std::vector<MlirOpOperand> operandsVec;
   for (auto operand : operands)
     operandsVec.push_back(nb::cast<PyOpOperand>(operand));
+  std::vector<PyMemoryEffectInstance> effects;
   mlirTransformConsumesHandle(operandsVec.data(), operandsVec.size(),
-                              effects.effects);
+                              collectMemoryEffectInstances, &effects);
+  return effects;
 };
 
-void producesHandle(nb::iterable &results,
-                    PyMemoryEffectsInstanceList effects) {
+std::vector<PyMemoryEffectInstance> producesHandle(nb::iterable &results) {
   std::vector<MlirValue> resultsVec;
   for (auto result : results)
     resultsVec.push_back(nb::cast<PyOpResult>(result).get());
+  std::vector<PyMemoryEffectInstance> effects;
   mlirTransformProducesHandle(resultsVec.data(), resultsVec.size(),
-                              effects.effects);
+                              collectMemoryEffectInstances, &effects);
+  return effects;
 };
 
-void modifiesPayload(PyMemoryEffectsInstanceList effects) {
-  mlirTransformModifiesPayload(effects.effects);
+std::vector<PyMemoryEffectInstance> modifiesPayload() {
+  std::vector<PyMemoryEffectInstance> effects;
+  mlirTransformModifiesPayload(collectMemoryEffectInstances, &effects);
+  return effects;
 }
 
-void onlyReadsPayload(PyMemoryEffectsInstanceList effects) {
-  mlirTransformOnlyReadsPayload(effects.effects);
+std::vector<PyMemoryEffectInstance> onlyReadsPayload() {
+  std::vector<PyMemoryEffectInstance> effects;
+  mlirTransformOnlyReadsPayload(collectMemoryEffectInstances, &effects);
+  return effects;
 }
 } // namespace
 
@@ -549,21 +565,25 @@ static void populateDialectTransformSubmodule(nb::module_ &m) {
   PyPatternDescriptorOpInterface::bind(m);
 
   m.def("only_reads_handle", onlyReadsHandle,
-        "Mark operands as only reading handles.", nb::arg("operands"),
-        nb::arg("effects"));
+        "Returns `OnlyReadsHandle` effects corresponding to operands which "
+        "have been marked as having those effects.",
+        nb::arg("operands"));
 
   m.def("consumes_handle", consumesHandle,
-        "Mark operands as consuming handles.", nb::arg("operands"),
-        nb::arg("effects"));
+        "Returns `ConsumesHandle` effects corresponding to operands which "
+        "have been marked as having those effects.",
+        nb::arg("operands"));
 
-  m.def("produces_handle", producesHandle, "Mark results as producing handles.",
-        nb::arg("results"), nb::arg("effects"));
+  m.def("produces_handle", producesHandle,
+        "Returns `ProducesHandle` effects corresponding to results which have "
+        "been marked as having those effects.",
+        nb::arg("results"));
 
   m.def("modifies_payload", modifiesPayload,
-        "Mark the transform as modifying the payload.", nb::arg("effects"));
+        "Returns `ModifiesPayload` effects.");
 
   m.def("only_reads_payload", onlyReadsPayload,
-        "Mark the transform as only reading the payload.", nb::arg("effects"));
+        "Returns `OnlyReadsPayload` effects.");
 }
 } // namespace transform
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN

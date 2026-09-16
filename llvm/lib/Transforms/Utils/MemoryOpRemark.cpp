@@ -51,8 +51,8 @@ bool MemoryOpRemark::canHandle(const Instruction *I, const TargetLibraryInfo &TL
     if (!CF->hasName())
       return false;
 
-    LibFunc LF;
-    bool KnownLibCall = TLI.getLibFunc(*CF, LF) && TLI.has(LF);
+    LibFunc LF = TLI.getLibFunc(*CF);
+    bool KnownLibCall = TLI.has(LF);
     if (!KnownLibCall)
       return false;
 
@@ -248,8 +248,8 @@ void MemoryOpRemark::visitCall(const CallInst &CI) {
   if (!F)
     return visitUnknown(CI);
 
-  LibFunc LF;
-  bool KnownLibCall = TLI.getLibFunc(*F, LF) && TLI.has(LF);
+  LibFunc LF = TLI.getLibFunc(*F);
+  bool KnownLibCall = TLI.has(LF);
   auto R = makeRemark(RemarkPass.data(), remarkName(RK_Call), &CI);
   visitCallee(F, KnownLibCall, *R);
   visitKnownLibCall(CI, LF, *R);
@@ -361,8 +361,8 @@ void MemoryOpRemark::visitPtr(Value *Ptr, bool IsRead, DiagnosticInfoIROptimizat
 
   if (VIs.empty()) {
     bool CanBeNull;
-    bool CanBeFreed;
-    uint64_t Size = Ptr->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
+    uint64_t Size = Ptr->getPointerDereferenceableBytes(DL, CanBeNull,
+                                                        /*CanBeFreed=*/nullptr);
     if (!Size)
       return;
     VIs.push_back({std::nullopt, Size});

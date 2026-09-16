@@ -77,6 +77,7 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
 
   switch (Ctx->emitDwarfUnwindInfo()) {
   case EmitDwarfUnwindType::Always:
+  case EmitDwarfUnwindType::DwarfOnly:
     OmitDwarfIfHaveCompactUnwind = false;
     break;
   case EmitDwarfUnwindType::NoCompactUnwind:
@@ -321,12 +322,14 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
   RemarksSection = Ctx->getMachOSection(
       "__LLVM", "__remarks", MachO::S_ATTR_DEBUG, SectionKind::getMetadata());
 
-  PseudoProbeSection =
-      Ctx->getMachOSection("__PSEUDO_PROBE", "__probes",
-                           MachO::S_ATTR_DEBUG | MachO::S_ATTR_NO_DEAD_STRIP,
-                           SectionKind::getMetadata());
+  // Emit the pseudoprobe sections in the __LLVM segment. Current ld ignores the
+  // __LLVM and __DWARF segment, so the probe metadata is dropped from the final
+  // linked image on every toolchain.
+  PseudoProbeSection = Ctx->getMachOSection(
+      "__LLVM", "__probes", MachO::S_ATTR_DEBUG | MachO::S_ATTR_NO_DEAD_STRIP,
+      SectionKind::getMetadata());
   PseudoProbeDescSection =
-      Ctx->getMachOSection("__PSEUDO_PROBE", "__probe_descs",
+      Ctx->getMachOSection("__LLVM", "__probe_descs",
                            MachO::S_ATTR_DEBUG | MachO::S_ATTR_NO_DEAD_STRIP,
                            SectionKind::getMetadata());
 
@@ -368,7 +371,9 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   case Triple::aarch64_be:
   case Triple::x86_64:
     FDECFIEncoding = dwarf::DW_EH_PE_pcrel |
-                     (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
+                     ((Large || Ctx->getTargetOptions().LargeEHEncoding)
+                          ? dwarf::DW_EH_PE_sdata8
+                          : dwarf::DW_EH_PE_sdata4);
     break;
   case Triple::bpfel:
   case Triple::bpfeb:
@@ -432,21 +437,17 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   DataRelROSection = Ctx->getELFSection(".data.rel.ro", ELF::SHT_PROGBITS,
                                         ELF::SHF_ALLOC | ELF::SHF_WRITE);
 
-  MergeableConst4Section =
-      Ctx->getELFSection(".rodata.cst4", ELF::SHT_PROGBITS,
-                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 4);
+  MergeableConst4Section = Ctx->getELFSection(
+      ".rodata.cst4", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_MERGE, 4);
 
-  MergeableConst8Section =
-      Ctx->getELFSection(".rodata.cst8", ELF::SHT_PROGBITS,
-                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 8);
+  MergeableConst8Section = Ctx->getELFSection(
+      ".rodata.cst8", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_MERGE, 8);
 
-  MergeableConst16Section =
-      Ctx->getELFSection(".rodata.cst16", ELF::SHT_PROGBITS,
-                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 16);
+  MergeableConst16Section = Ctx->getELFSection(
+      ".rodata.cst16", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_MERGE, 16);
 
-  MergeableConst32Section =
-      Ctx->getELFSection(".rodata.cst32", ELF::SHT_PROGBITS,
-                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 32);
+  MergeableConst32Section = Ctx->getELFSection(
+      ".rodata.cst32", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_MERGE, 32);
 
   // Exception Handling Sections.
 
@@ -583,9 +584,9 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       SectionKind::getMetadata(), GOFF::CLASS_WSA,
       GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-                   GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_1,
-                   GOFF::ESD_ALIGN_Quadword, 0},
+                   GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_1, 0},
       RootSDSection);
+  ADAEDSection->setAlignment(Align(16)); // Quadword
   ADASection = Ctx->getGOFFSection(SectionKind::getData(), "#S",
                                    GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
                                                 GOFF::ESD_LT_XPLink,
@@ -596,17 +597,17 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       SectionKind::getText(), GOFF::CLASS_CODE,
       GOFF::EDAttr{true, GOFF::ESD_RMODE_64, GOFF::ESD_NS_NormalName,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Concatenate,
-                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
-                   GOFF::ESD_ALIGN_Doubleword, 0},
+                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0, 0},
       RootSDSection);
+  TextSection->setAlignment(Align(8)); // Doubleword
 
   MCSectionGOFF *PPA2ListEDSection = Ctx->getGOFFSection(
       SectionKind::getMetadata(), GOFF::CLASS_PPA2,
       GOFF::EDAttr{true, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
-                   GOFF::ESD_ALIGN_Doubleword, 0},
+                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0, 0},
       RootSDSection);
+  PPA2ListEDSection->setAlignment(Align(8)); // Doubleword
   PPA2ListSection = Ctx->getGOFFSection(SectionKind::getData(), ".&ppa2",
                                         GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
                                                      GOFF::ESD_LT_OS,
@@ -617,9 +618,9 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       SectionKind::getData(), "B_IDRL",
       GOFF::EDAttr{true, GOFF::ESD_RMODE_64, GOFF::ESD_NS_NormalName,
                    GOFF::ESD_TS_Structured, GOFF::ESD_BA_Concatenate,
-                   GOFF::ESD_LB_NoLoad, GOFF::ESD_RQ_0,
-                   GOFF::ESD_ALIGN_Doubleword, 0},
+                   GOFF::ESD_LB_NoLoad, GOFF::ESD_RQ_0, 0},
       RootSDSection);
+  IDRLSection->setAlignment(Align(8)); // Doubleword
 
   // Debug Info Sections. The ED name is the same used by the XL compiler.
   auto InitDebugSection = [this,
@@ -629,9 +630,9 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
         SectionKind::getMetadata(), EDName,
         GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                      GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Concatenate,
-                     GOFF::ESD_LB_NoLoad, GOFF::ESD_RQ_0,
-                     GOFF::ESD_ALIGN_Doubleword, 0},
+                     GOFF::ESD_LB_NoLoad, GOFF::ESD_RQ_0, 0},
         RootSDSection);
+    ED->setAlignment(Align(8)); // Doubleword
     // At least for llc, this function is called twice! (See function
     // compileModule() in llc.cpp). Since the context is not cleared, the
     // already allocated section is returned above. We only add the begin symbol
@@ -679,6 +680,23 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       InitDebugSection("D_APPLNMSP", ".apple_namespaces");
   DwarfAccelTypesSection = InitDebugSection("D_APPLTYPS", ".apple_types");
   DwarfAccelObjCSection = InitDebugSection("D_APPLOBJC", ".apple_objc");
+
+  // Fission Sections
+  DwarfInfoDWOSection = InitDebugSection("D_INFO_DWO", ".debug_info.dwo");
+  DwarfTypesDWOSection = InitDebugSection("D_TYPES_DWO", ".debug_types.dwo");
+  DwarfAbbrevDWOSection = InitDebugSection("D_ABREV_DWO", ".debug_abbrev.dwo");
+  DwarfStrDWOSection = InitDebugSection("D_STR_DWO", ".debug_str.dwo");
+  DwarfLineDWOSection = InitDebugSection("D_LINE_DWO", ".debug_line.dwo");
+  DwarfLocDWOSection = InitDebugSection("D_LOC_DWO", ".debug_loc.dwo");
+  DwarfStrOffDWOSection =
+      InitDebugSection("D_STROFFS_DWO", ".debug_str_offsets.dwo");
+  DwarfRnglistsDWOSection =
+      InitDebugSection("D_RNGLISTS_DWO", ".debug_rnglists.dwo");
+  DwarfMacinfoDWOSection =
+      InitDebugSection("D_MACINFO_DWO", ".debug_macinfo.dwo");
+  DwarfMacroDWOSection = InitDebugSection("D_MACRO_DWO", ".debug_macro.dwo");
+  DwarfLoclistsDWOSection =
+      InitDebugSection("D_LOCLISTS_DWO", ".debug_loclists.dwo");
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {

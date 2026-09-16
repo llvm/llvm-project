@@ -12,6 +12,7 @@
 
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/BinaryBasicBlock.h"
+#include "bolt/Core/BranchLivenessInfo.h"
 #include "bolt/Core/DynoStats.h"
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/MCPlusBuilder.h"
@@ -20,6 +21,7 @@
 #include "bolt/Utils/NameShortener.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -111,11 +113,6 @@ static cl::opt<bool> NoScan(
         "slower binary)"),
     cl::Hidden, cl::cat(BoltOptCategory));
 
-cl::opt<bool>
-    PreserveBlocksAlignment("preserve-blocks-alignment",
-                            cl::desc("try to preserve basic block alignment"),
-                            cl::cat(BoltOptCategory));
-
 static cl::opt<bool> PrintOutputAddressRange(
     "print-output-address-range",
     cl::desc(
@@ -172,10 +169,6 @@ bool shouldPrint(const BinaryFunction &Function) {
 
 namespace llvm {
 namespace bolt {
-
-template <typename R> static bool emptyRange(const R &Range) {
-  return Range.begin() == Range.end();
-}
 
 /// Gets debug line information for the instruction located at the given
 /// address in the original binary. Returns an optional DebugLineTableRowRef
@@ -1284,6 +1277,38 @@ BinaryFunction::disassembleInstructionAtOffset(uint64_t Offset) const {
   return std::nullopt;
 }
 
+uint64_t
+BinaryFunction::getInstructionSequenceLength(uint64_t Offset,
+                                             uint64_t MinLength) const {
+  assert(Offset + MinLength <= MaxSize && "Invalid offset / min length");
+  ErrorOr<ArrayRef<unsigned char>> FunctionData = getData();
+  assert(FunctionData && "Cannot get function as data");
+  uint64_t Current = Offset;
+  const uint64_t Target = Offset + MinLength;
+  while (Current < Target) {
+    MCInst Instr;
+    uint64_t InstrSize = 0;
+    const uint64_t InstrAddress = getAddress() + Current;
+    [[maybe_unused]] MCDisassembler::DecodeStatus Res =
+        BC.DisAsm->getInstruction(Instr, InstrSize,
+                                  FunctionData->slice(Current), InstrAddress,
+                                  nulls());
+    assert(Res != MCDisassembler::DecodeStatus::Fail &&
+           "Function has been disassembled previously");
+    Current += InstrSize;
+  }
+  return Current - Offset;
+}
+
+bool BinaryFunction::keepOffsetForInstruction(const MCInst &Inst,
+                                              uint32_t Offset) {
+  MCPlusBuilder &MIB = *BC.MIB;
+  if (MIB.isCall(Inst) || MIB.isBranch(Inst) || MIB.isReturn(Inst) ||
+      MIB.isPrefix(Inst) || MIB.isIndirectBranch(Inst))
+    return true;
+  return isDebugScopeBoundaryOffset(Offset);
+}
+
 Error BinaryFunction::disassemble() {
   NamedRegionTimer T("disassemble", "Disassemble function", "buildfuncs",
                      "Build Binary Functions", opts::TimeBuild);
@@ -1301,13 +1326,6 @@ Error BinaryFunction::disassemble() {
   // Insert a label at the beginning of the function. This will be our first
   // basic block.
   Labels[0] = Ctx->createNamedTempSymbol("BB0");
-
-  // Map offsets in the function to a label that should always point to the
-  // corresponding instruction. This is used for labels that shouldn't point to
-  // the start of a basic block but always to a specific instruction. This is
-  // used, for example, on RISC-V where %pcrel_lo relocations point to the
-  // corresponding %pcrel_hi.
-  LabelsMapType InstructionLabels;
 
   uint64_t Size = 0; // instruction size
   for (uint64_t Offset = 0; Offset < getSize(); Offset += Size) {
@@ -1395,7 +1413,8 @@ Error BinaryFunction::disassemble() {
 
     if (MIB->isBranch(Instruction) || MIB->isCall(Instruction)) {
       uint64_t TargetAddress = 0;
-      if (MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
+      if (!MIB->isIndirectBranch(Instruction) &&
+          MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
                               TargetAddress)) {
         // Check if the target is within the same function. Otherwise it's
         // a call, possibly a tail call.
@@ -1473,42 +1492,6 @@ Error BinaryFunction::disassemble() {
         if (BC.isAArch64())
           handleAArch64IndirectCall(Instruction, Offset);
       }
-    } else if (BC.isRISCV()) {
-      // Check if there's a relocation associated with this instruction.
-      for (auto Itr = Relocations.lower_bound(Offset),
-                ItrE = Relocations.lower_bound(Offset + Size);
-           Itr != ItrE; ++Itr) {
-        const Relocation &Relocation = Itr->second;
-        MCSymbol *Symbol = Relocation.Symbol;
-
-        if (Relocation::isInstructionReference(Relocation.Type)) {
-          uint64_t RefOffset = Relocation.Value - getAddress();
-          LabelsMapType::iterator LI = InstructionLabels.find(RefOffset);
-
-          if (LI == InstructionLabels.end()) {
-            Symbol = BC.Ctx->createNamedTempSymbol();
-            InstructionLabels.emplace(RefOffset, Symbol);
-          } else {
-            Symbol = LI->second;
-          }
-        }
-
-        uint64_t Addend = Relocation.Addend;
-
-        // For GOT relocations, create a reference against GOT entry ignoring
-        // the relocation symbol.
-        if (Relocation::isGOT(Relocation.Type)) {
-          assert(Relocation::isPCRelative(Relocation.Type) &&
-                 "GOT relocation must be PC-relative on RISC-V");
-          Symbol = BC.registerNameAtAddress("__BOLT_got_zero", 0, 0, 0);
-          Addend = Relocation.Value + Relocation.Offset + getAddress();
-        }
-        int64_t Value = Relocation.Value;
-        const bool Result = BC.MIB->replaceImmWithSymbolRef(
-            Instruction, Symbol, Addend, Ctx.get(), Value, Relocation.Type);
-        (void)Result;
-        assert(Result && "cannot replace immediate with relocation");
-      }
     }
 
 add_instruction:
@@ -1532,8 +1515,9 @@ add_instruction:
       }
     }
 
-    // Record offset of the instruction for profile matching.
-    if (BC.keepOffsetForInstruction(Instruction))
+    // Record offset of the instruction for profile matching, for control-flow
+    // instructions, and for instructions on a DWARF lexical-scope boundary.
+    if (keepOffsetForInstruction(Instruction, static_cast<uint32_t>(Offset)))
       MIB->setOffset(Instruction, static_cast<uint32_t>(Offset));
 
     if (BC.isX86() && BC.MIB->isNoop(Instruction)) {
@@ -1546,12 +1530,8 @@ add_instruction:
     addInstruction(Offset, std::move(Instruction));
   }
 
-  for (auto [Offset, Label] : InstructionLabels) {
-    InstrMapType::iterator II = Instructions.find(Offset);
-    assert(II != Instructions.end() && "reference to non-existing instruction");
-
-    BC.MIB->setInstLabel(II->second, Label);
-  }
+  // Scope-boundary markers are only consulted while assigning offsets above.
+  DebugScopeBoundaryOffsets.clear();
 
   // Reset symbolizer for the disassembler.
   BC.SymbolicDisAsm->setSymbolizer(nullptr);
@@ -1592,6 +1572,7 @@ void BinaryFunction::analyzeInstructionForFuncReference(const MCInst &Inst) {
 bool BinaryFunction::scanExternalRefs() {
   bool Success = true;
   bool DisassemblyFailed = false;
+  SmallPtrSet<BinaryFunction *, 4> InvalidTargets;
 
   // Ignore pseudo functions.
   if (isPseudo())
@@ -1700,8 +1681,10 @@ bool BinaryFunction::scanExternalRefs() {
       // reference.
       BranchTargetSymbol =
           BC.handleExternalBranchTarget(TargetAddress, *this, *TargetFunction);
-      if (!BranchTargetSymbol)
+      if (!BranchTargetSymbol) {
+        InvalidTargets.insert(TargetFunction);
         continue;
+      }
     }
 
     // Can't find more references. Not creating relocations since we are not
@@ -1903,6 +1886,12 @@ bool BinaryFunction::scanExternalRefs() {
 
   if (opts::Verbosity >= 1 && !Success)
     BC.outs() << "BOLT-INFO: failed to scan refs for  " << *this << '\n';
+
+  // Apply target state only after the complete source has been scanned. The
+  // source is either already ignored or is marked ignored by the caller.
+  for (BinaryFunction *Target : InvalidTargets)
+    if (!Target->isIgnored())
+      Target->setIgnored();
 
   return Success;
 }
@@ -2351,7 +2340,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
       // Always create new BB at branch destination.
       PrevBB = InsertBB ? InsertBB : PrevBB;
       InsertBB = addBasicBlockAt(LI->first, LI->second);
-      if (opts::PreserveBlocksAlignment && IsLastInstrNop)
+      if (BC.PreserveBlocksAlignment && IsLastInstrNop)
         InsertBB->setDerivedAlignment();
 
       if (PrevBB)
@@ -2388,7 +2377,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
           Label = BC.Ctx->createNamedTempSymbol("FT");
         }
         InsertBB = addBasicBlockAt(Offset, Label);
-        if (opts::PreserveBlocksAlignment && IsLastInstrNop)
+        if (BC.PreserveBlocksAlignment && IsLastInstrNop)
           InsertBB->setDerivedAlignment();
         updateOffset(LastInstrOffset);
       }
@@ -2551,7 +2540,10 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
     setSimple(false);
   }
 
-  clearList(ExternallyReferencedOffsets);
+  // Clear externally referenced offsets only if there are no relocations
+  // targeting internal references (from indirect goto).
+  if (InternalRefDataRelocations.empty())
+    clearList(ExternallyReferencedOffsets);
   clearList(UnknownIndirectBranchOffsets);
 
   return Error::success();
@@ -2572,10 +2564,16 @@ void BinaryFunction::postProcessCFG() {
   // The final cleanup of intermediate structures.
   clearList(IgnoredBranches);
 
-  // Remove "Offset" annotations, unless we need an address-translation table
-  // later. This has no cost, since annotations are allocated by a bumpptr
-  // allocator and won't be released anyway until late in the pipeline.
-  if (!requiresAddressTranslation() && !opts::Instrument) {
+  // Remove "Offset" annotations, unless we need to build an instruction
+  // accurate IO address map later (used for BAT, SDT/pseudo-probe address
+  // translation, or --update-debug-sections, which relies on per-instruction
+  // offsets to translate DWARF scope ranges).
+  // This has no cost in memory for the BF object, since annotations are
+  // allocated by a bumpptr allocator and won't be released anyway until late
+  // in the pipeline, but the IO address map that is derived from these offsets
+  // does add non-trivial overhead and can get expensive -- that's why we don't
+  // add offsets to every single instruction.
+  if (!requiresPreciseAddressMap() && !opts::Instrument) {
     for (BinaryBasicBlock &BB : blocks())
       for (MCInst &Inst : BB)
         BC.MIB->clearOffset(Inst);
@@ -2834,6 +2832,7 @@ private:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpLLVMSetRAState:
       reportFatalUsageError("unsupported CFI opcode");
     case MCCFIInstruction::OpLLVMRegisterPair:
     case MCCFIInstruction::OpLLVMVectorRegisters:
@@ -2979,6 +2978,7 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpLLVMSetRAState:
       reportFatalUsageError("unsupported CFI opcode");
     case MCCFIInstruction::OpLLVMRegisterPair:
     case MCCFIInstruction::OpLLVMVectorRegisters:
@@ -3134,6 +3134,7 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
+    case MCCFIInstruction::OpLLVMSetRAState:
       reportFatalUsageError("unsupported CFI opcode");
     case MCCFIInstruction::OpLLVMRegisterPair:
     case MCCFIInstruction::OpLLVMVectorRegisters:
@@ -3243,16 +3244,17 @@ bool BinaryFunction::finalizeCFIState() {
   return true;
 }
 
-bool BinaryFunction::requiresAddressTranslation() const {
-  return opts::EnableBAT || hasSDTMarker() || hasPseudoProbe();
+bool BinaryFunction::requiresPreciseAddressMap() const {
+  return opts::UpdateDebugSections || opts::EnableBAT || hasSDTMarker() ||
+         hasPseudoProbe();
 }
 
 bool BinaryFunction::requiresAddressMap() const {
   if (isInjected())
     return false;
 
-  return opts::UpdateDebugSections || isMultiEntry() ||
-         requiresAddressTranslation();
+  return isMultiEntry() || !getInternalRefDataRelocations().empty() ||
+         requiresPreciseAddressMap();
 }
 
 uint64_t BinaryFunction::getInstructionCount() const {
@@ -3632,7 +3634,7 @@ bool BinaryFunction::validateCFG() const {
   return true;
 }
 
-void BinaryFunction::fixBranches(DataflowInfoManager *DIM) {
+void BinaryFunction::fixBranches(const BranchLivenessInfo *BLI) {
   assert(isSimple() && "Expected function with valid CFG.");
 
   auto &MIB = BC.MIB;
@@ -3691,7 +3693,8 @@ void BinaryFunction::fixBranches(DataflowInfoManager *DIM) {
 
       // Reverse branch condition and swap successors.
       auto swapSuccessors = [&]() {
-        if (!MIB->isReversibleBranch(*CondBranch, DIM)) {
+        bool PreserveFlags = BLI ? BLI->mustPreserveFlags(*CondBranch) : true;
+        if (!MIB->isReversibleBranch(*CondBranch, PreserveFlags)) {
           if (opts::Verbosity) {
             BC.outs() << "BOLT-INFO: unable to swap successors in " << *this
                       << '\n';
@@ -3701,8 +3704,11 @@ void BinaryFunction::fixBranches(DataflowInfoManager *DIM) {
         std::swap(TSuccessor, FSuccessor);
         BB->swapConditionalSuccessors();
         auto L = BC.scopeLock();
-        MIB->reverseBranchCondition(BB, *CondBranch, TSuccessor->getLabel(),
-                                    Ctx, DIM);
+        if (BLI)
+          BLI->removeAnnotation(*CondBranch);
+        InstructionListType Code = MIB->reverseBranchCondition(
+            *CondBranch, TSuccessor->getLabel(), Ctx, PreserveFlags);
+        BB->replaceInstruction(BB->findInstruction(CondBranch), Code);
         return true;
       };
 
@@ -4103,6 +4109,7 @@ BinaryFunction::iterator BinaryFunction::insertBasicBlocks(
 void BinaryFunction::updateBBIndices(const unsigned StartIndex) {
   for (unsigned I = StartIndex; I < BasicBlocks.size(); ++I)
     BasicBlocks[I]->Index = I;
+  ++BlockNumberEpoch;
 }
 
 void BinaryFunction::updateCFIState(BinaryBasicBlock *Start,
@@ -4459,9 +4466,9 @@ void BinaryFunction::calculateLoopInfo() {
     L->EntryCount = L->getHeader()->getExecutionCount() - L->TotalBackEdgeCount;
 
     // Compute exit count.
-    SmallVector<BinaryLoop::Edge, 1> ExitEdges;
-    L->getExitEdges(ExitEdges);
-    for (BinaryLoop::Edge &Exit : ExitEdges) {
+    SmallVector<BinaryLoopInfo::Edge, 1> ExitEdges;
+    BLI->getExitEdges(*L, ExitEdges);
+    for (BinaryLoopInfo::Edge &Exit : ExitEdges) {
       const BinaryBasicBlock *Exiting = Exit.first;
       const BinaryBasicBlock *ExitTarget = Exit.second;
       auto BI = Exiting->branch_info_begin();
@@ -4649,8 +4656,6 @@ uint64_t BinaryFunction::translateInputToOutputAddress(uint64_t Address) const {
       return *OutputAddress;
   }
 
-  // FIXME: #18950828 - we rely on relative offsets inside basic blocks to stay
-  //        intact. Instead we can use pseudo instructions and/or annotations.
   const uint64_t Offset = Address - getAddress();
   const BinaryBasicBlock *BB = getBasicBlockContainingOffset(Offset);
   if (!BB) {
@@ -4718,6 +4723,15 @@ BinaryFunction::translateInputToOutputRange(DebugAddressRange InRange) const {
     // to /p Offset. The output address should fall within the same basic
     // block boundaries.
     auto translateBlockOffset = [&](const uint64_t Offset) {
+      // Prefer the precise per-instruction input-to-output address map when
+      // available. The block-relative fallback below assumes intra-block byte
+      // offsets are preserved from input to output, which is not true after a
+      // size-changing pass (e.g. PLT optimization growing call@PLT -> call
+      // *@GOT) runs ahead of the boundary, and silently shifts the range.
+      if (BC.hasIOAddressMap())
+        if (std::optional<uint64_t> OutAddr = BC.getIOAddressMap().lookup(
+                getAddress() + BB.getOffset() + Offset))
+          return *OutAddr;
       const uint64_t OutAddress = BB.getOutputAddressRange().first + Offset;
       return std::min(OutAddress, BB.getOutputAddressRange().second);
     };

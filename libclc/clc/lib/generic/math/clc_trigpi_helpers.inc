@@ -15,5 +15,6 @@ __clc_piArgReductionS(private __CLC_GENTYPE *reduced, __CLC_GENTYPE x) {
   t = __clc_rint(__CLC_FP_LIT(2.0) * x);
 
   *reduced = __clc_mad(t, __CLC_FP_LIT(-0.5), x);
-  return __CLC_CONVERT_INTN(t) & 0x3;
+  return __clc_select(__CLC_CONVERT_INTN(t) & 0x3, (__CLC_INTN)0,
+                      __CLC_CONVERT_UINTN(__clc_isnan(t)));
 }

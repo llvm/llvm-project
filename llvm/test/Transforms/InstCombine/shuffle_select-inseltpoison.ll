@@ -372,10 +372,46 @@ define <4 x double> @fsub(<4 x double> %v) {
 
 define <4 x float> @fmul(<4 x float> nofpclass(nan) %v) {
 ; CHECK-LABEL: @fmul(
+; CHECK-NEXT:    [[S:%.*]] = fmul nnan <4 x float> [[V:%.*]], <float 4.100000e+01, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %b = fmul nnan <4 x float> %v, <float 41.0, float 42.0, float 43.0, float 44.0>
+  %s = shufflevector <4 x float> %b, <4 x float> %v, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  ret <4 x float> %s
+}
+
+; Negative test: FMF more restrictive than input FP class
+
+define <4 x float> @fmul_fmf_more_restrictive(<4 x float> nofpclass(nan) %v) {
+; CHECK-LABEL: @fmul_fmf_more_restrictive(
+; CHECK-NEXT:    [[S:%.*]] = fmul nnan <4 x float> [[V:%.*]], <float 4.100000e+01, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %b = fmul nnan ninf <4 x float> %v, <float 41.0, float 42.0, float 43.0, float 44.0>
+  %s = shufflevector <4 x float> %b, <4 x float> %v, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  ret <4 x float> %s
+}
+
+; Try FMF (nnan ninf) as restrictive input FP class
+
+define <4 x float> @fmul_fmf_as_restrictive(<4 x float> nofpclass(nan inf) %v) {
+; CHECK-LABEL: @fmul_fmf_as_restrictive(
 ; CHECK-NEXT:    [[S:%.*]] = fmul nnan ninf <4 x float> [[V:%.*]], <float 4.100000e+01, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
 ; CHECK-NEXT:    ret <4 x float> [[S]]
 ;
   %b = fmul nnan ninf <4 x float> %v, <float 41.0, float 42.0, float 43.0, float 44.0>
+  %s = shufflevector <4 x float> %b, <4 x float> %v, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  ret <4 x float> %s
+}
+
+; Try FMF less restrictive than input FP class
+
+define <4 x float> @fmul_fmf_less_restrictive(<4 x float> nofpclass(nan) %v) {
+; CHECK-LABEL: @fmul_fmf_less_restrictive(
+; CHECK-NEXT:    [[S:%.*]] = fmul nnan <4 x float> [[V:%.*]], <float 4.100000e+01, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %b = fmul <4 x float> %v, <float 41.0, float 42.0, float 43.0, float 44.0>
   %s = shufflevector <4 x float> %b, <4 x float> %v, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x float> %s
 }

@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
+#include "hdr/fcntl_macros.h"
+#include "hdr/sys_stat_macros.h"
+#include "hdr/types/struct_stat.h"
 #include "src/fcntl/open.h"
 #include "src/sys/stat/fchmodat.h"
 #include "src/unistd/close.h"
@@ -13,9 +17,6 @@
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include "hdr/fcntl_macros.h"
-#include <sys/stat.h>
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcFchmodatTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
@@ -64,4 +65,13 @@ TEST_F(LlvmLibcFchmodatTest, NonExistentFile) {
   ASSERT_THAT(
       LIBC_NAMESPACE::fchmodat(AT_FDCWD, "non-existent-file", S_IRUSR, 0),
       Fails(ENOENT));
+}
+
+TEST_F(LlvmLibcFchmodatTest, UnsupportedFlags) {
+  ASSERT_THAT(LIBC_NAMESPACE::fchmodat(AT_FDCWD, "non-existent-file", S_IRUSR,
+                                       AT_SYMLINK_NOFOLLOW),
+              Fails(ENOTSUP));
+  ASSERT_THAT(
+      LIBC_NAMESPACE::fchmodat(AT_FDCWD, "non-existent-file", S_IRUSR, -1),
+      Fails(ENOTSUP));
 }

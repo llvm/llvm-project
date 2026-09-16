@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_INSTRUMENTATIONRUNTIME_ASAN_INSTRUMENTATIONRUNTIMEASAN_H
 
 #include "lldb/Target/InstrumentationRuntime.h"
+#include "lldb/Utility/StructuredData.h"
 
 namespace lldb_private {
 
@@ -48,6 +49,8 @@ private:
                                   StoppointCallbackContext *context,
                                   lldb::user_id_t break_id,
                                   lldb::user_id_t break_loc_id);
+
+  StructuredData::ObjectSP RetrieveReportData();
 };
 
 } // namespace lldb_private

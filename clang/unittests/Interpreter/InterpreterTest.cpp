@@ -27,6 +27,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include <set>
+
 using namespace clang;
 
 int Global = 42;
@@ -146,6 +148,52 @@ TEST_F(InterpreterTest, DeclsAndStatements) {
   EXPECT_TRUE(!!R2);
 }
 
+TEST_F(InterpreterTest, TranslationUnitRedeclChainAcrossManyPTUs) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  // One partial translation unit per input, as an interop layer doing a
+  // type-probe per lookup would produce.
+  for (unsigned I = 0; I != 200; ++I)
+    cantFail(Interp->Parse("using probe_" + std::to_string(I) + " = int;"));
+
+  TranslationUnitDecl *TU = Interp->getASTContext().getTranslationUnitDecl();
+
+  unsigned Nodes = 0, Decls = 0;
+  for (auto *R : TU->redecls()) {
+    ++Nodes;
+    for (auto *D : cast<DeclContext>(R)->decls()) {
+      ++Decls;
+      // Walking up from the decl is what faults in a long-lived session.
+      EXPECT_EQ(&D->getASTContext(), &Interp->getASTContext());
+      if (auto *ND = dyn_cast<NamedDecl>(D))
+        (void)ND->getQualifiedNameAsString();
+    }
+  }
+  EXPECT_GT(Nodes, 1u);
+  EXPECT_GT(Decls, 200u);
+}
+
+TEST_F(InterpreterTest, UndoLeavesDeclsInTranslationUnitChain) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  cantFail(Interp->Parse("struct Kept {};"));
+  cantFail(Interp->Parse("struct Withdrawn {};"));
+  cantFail(Interp->Undo());
+
+  // A partial translation unit gets its own TranslationUnitDecl, so collect
+  // names across the whole redeclaration chain.
+  std::set<std::string> Names;
+  TranslationUnitDecl *TU = Interp->getASTContext().getTranslationUnitDecl();
+  for (auto *R : TU->redecls())
+    for (auto *D : cast<DeclContext>(R)->decls())
+      if (auto *ND = dyn_cast<NamedDecl>(D))
+        Names.insert(ND->getNameAsString());
+
+  EXPECT_TRUE(Names.count("Kept"));
+  // Undo withdrew this input, so its declaration should not still be reachable.
+  EXPECT_FALSE(Names.count("Withdrawn"));
+}
+
 TEST_F(InterpreterTest, UndoCommand) {
 // FIXME : This test doesn't current work for Emscripten builds.
 // It should be possible to make it work.For details on how it fails and
@@ -237,7 +285,7 @@ TEST_F(InterpreterTest, FindMangledNameSymbol) {
 
   // FIXME: Re-enable when we investigate the way we handle dllimports on Win.
 #ifndef _WIN32
-  EXPECT_EQ((uintptr_t)&printf, Addr->getValue());
+  EXPECT_EQ(llvm::orc::ExecutorAddr::fromPtr(&printf), *Addr);
 #endif // _WIN32
 }
 
@@ -450,6 +498,57 @@ TEST_F(InterpreterTest, ValueSetRawBitsCopiesByteCount) {
   std::memcpy(Buf, &Src, sizeof(Src));
   V2.setRawBits(Buf);
   EXPECT_EQ(V2.getLongLong(), Src);
+}
+
+// Regression: Value's move ctor and move-assign must transfer ownership of
+// the manually-allocated storage without changing the storage refcount.
+// Earlier the move ctor called Release() on the just-moved-into storage,
+// double-releasing on the next read.
+TEST_F(InterpreterTest, ValueMoveSemantics) {
+  std::vector<const char *> Args = {"-fno-sized-deallocation"};
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
+
+  llvm::cantFail(
+      Interp->ParseAndExecute("struct MoveT { int v = 7; ~MoveT() {} };"));
+
+  // Move-construct: source becomes empty, destination owns the storage.
+  Value Src;
+  llvm::cantFail(Interp->ParseAndExecute("MoveT{}", &Src));
+  ASSERT_EQ(Src.getKind(), Value::K_PtrOrObj);
+  ASSERT_TRUE(Src.isManuallyAlloc());
+  void *Payload = Src.getPtr();
+
+  Value Moved(std::move(Src));
+  EXPECT_EQ(Moved.getKind(), Value::K_PtrOrObj);
+  EXPECT_TRUE(Moved.isManuallyAlloc());
+  EXPECT_EQ(Moved.getPtr(), Payload);
+  EXPECT_EQ(Src.getKind(), Value::K_Unspecified);
+  EXPECT_FALSE(Src.isManuallyAlloc());
+
+  // Move-assign over a populated Value: previous storage released, new
+  // storage adopted with refcount unchanged.
+  Value Other;
+  llvm::cantFail(Interp->ParseAndExecute("MoveT{}", &Other));
+  Other = std::move(Moved);
+  EXPECT_EQ(Other.getKind(), Value::K_PtrOrObj);
+  EXPECT_EQ(Other.getPtr(), Payload);
+  EXPECT_EQ(Moved.getKind(), Value::K_Unspecified);
+
+  // Copy-construct still works (Retain bumps refcount; both share storage).
+  Value Copy(Other);
+  EXPECT_EQ(Copy.getKind(), Value::K_PtrOrObj);
+  EXPECT_EQ(Copy.getPtr(), Payload);
+  EXPECT_EQ(Other.getPtr(), Payload);
+
+  // Force destruction order Copy -> Other -> Interp inside the test body so
+  // any latent corruption from a buggy move surfaces here. Pre-fix the move
+  // ctor leaves Other holding a dangling pointer; the subsequent Release in
+  // ~Copy / ~Other reads or asserts on freed memory. Without explicit
+  // teardown the abort happened during global cleanup, after gtest already
+  // recorded the test as OK.
+  Copy.clear();
+  Other.clear();
+  Interp.reset();
 }
 
 TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {

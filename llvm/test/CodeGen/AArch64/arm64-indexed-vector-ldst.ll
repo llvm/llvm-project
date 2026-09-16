@@ -14192,3 +14192,65 @@ entry:
   store <4 x i16> %shuffle.i.1, ptr %add.ptr8, align 2
   ret void
 }
+
+define ptr @ld1r_huge_inc(ptr %p, ptr %sink) {
+; CHECK-LABEL: ld1r_huge_inc:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    ld1r.16b { v0 }, [x0]
+; CHECK-NEXT:    mov x8, #4294967297 ; =0x100000001
+; CHECK-NEXT:    add x0, x0, x8
+; CHECK-NEXT:    str q0, [x1]
+; CHECK-NEXT:    ret
+entry:
+  %b = load i8, ptr %p, align 1
+  %v0 = insertelement <16 x i8> poison, i8 %b, i32 0
+  %v = shufflevector <16 x i8> %v0, <16 x i8> poison, <16 x i32> zeroinitializer
+  store <16 x i8> %v, ptr %sink, align 16
+  %p2 = getelementptr i8, ptr %p, i64 4294967297
+  ret ptr %p2
+}
+
+define ptr @ld2_huge_inc(ptr %p, ptr %sink) {
+; CHECK-LABEL: ld2_huge_inc:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    ld2.16b { v0, v1 }, [x0]
+; CHECK-NEXT:    mov x8, #32 ; =0x20
+; CHECK-NEXT:    movk x8, #1, lsl #32
+; CHECK-NEXT:    add x0, x0, x8
+; CHECK-NEXT:    str q0, [x1]
+; CHECK-NEXT:    ret
+entry:
+  %ld = call { <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld2.v16i8.p0(ptr %p)
+  %v0 = extractvalue { <16 x i8>, <16 x i8> } %ld, 0
+  store <16 x i8> %v0, ptr %sink, align 16
+  %p2 = getelementptr i8, ptr %p, i64 4294967328
+  ret ptr %p2
+}
+
+define ptr @st2_huge_inc(ptr %p, <16 x i8> %a, <16 x i8> %b) {
+; CHECK-SD-LABEL: st2_huge_inc:
+; CHECK-SD:       ; %bb.0: ; %entry
+; CHECK-SD-NEXT:    mov x9, #32 ; =0x20
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    mov x8, x0
+; CHECK-SD-NEXT:    movk x9, #1, lsl #32
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    st2.16b { v0, v1 }, [x8]
+; CHECK-SD-NEXT:    add x0, x0, x9
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: st2_huge_inc:
+; CHECK-GI:       ; %bb.0: ; %entry
+; CHECK-GI-NEXT:    mov x9, #32 ; =0x20
+; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    movk x9, #1, lsl #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    st2.16b { v0, v1 }, [x8]
+; CHECK-GI-NEXT:    add x0, x0, x9
+; CHECK-GI-NEXT:    ret
+entry:
+  call void @llvm.aarch64.neon.st2.v16i8.p0(<16 x i8> %a, <16 x i8> %b, ptr %p)
+  %p2 = getelementptr i8, ptr %p, i64 4294967328
+  ret ptr %p2
+}

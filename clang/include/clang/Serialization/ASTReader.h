@@ -246,7 +246,7 @@ public:
     return true;
   }
 
-  /// Similiar to member function of \c visitInputFile but should
+  /// Similar to member function of \c visitInputFile but should
   /// be defined when there is a distinction between the file name
   /// and the name-as-requested. For example, when deserializing input
   /// files from precompiled AST files.
@@ -645,10 +645,6 @@ private:
   /// within them, and those anonymous declarations.
   llvm::DenseMap<Decl*, llvm::SmallVector<NamedDecl*, 2>>
     AnonymousDeclarationsForMerging;
-
-  /// Map from numbering information for lambdas to the corresponding lambdas.
-  llvm::DenseMap<std::pair<const Decl *, unsigned>, NamedDecl *>
-      LambdaDeclarationsForMerging;
 
   /// Key used to identify LifetimeExtendedTemporaryDecl for merging,
   /// containing the lifetime-extending declaration and the mangling number.
@@ -2317,7 +2313,7 @@ public:
   void ReadExtVectorDecls(SmallVectorImpl<TypedefNameDecl *> &Decls) override;
 
   void ReadUnusedLocalTypedefNameCandidates(
-      llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) override;
+      llvm::SmallPtrSetImpl<const TypedefNameDecl *> &Decls) override;
 
   void ReadDeclsToCheckForDeferredDiags(
       llvm::SmallSetVector<Decl *, 4> &Decls) override;
@@ -2341,8 +2337,6 @@ public:
   void ReadLateParsedTemplates(
       llvm::MapVector<const FunctionDecl *, std::unique_ptr<LateParsedTemplate>>
           &LPTMap) override;
-
-  void AssignedLambdaNumbering(CXXRecordDecl *Lambda) override;
 
   /// Load a selector from disk, registering its ID if it exists.
   void LoadSelector(Selector Sel);

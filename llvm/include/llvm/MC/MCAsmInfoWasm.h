@@ -12,7 +12,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 
 namespace llvm {
-class MCAsmInfoWasm : public MCAsmInfo {
+class LLVM_ABI MCAsmInfoWasm : public MCAsmInfo {
   void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
                             raw_ostream &) const final;
 

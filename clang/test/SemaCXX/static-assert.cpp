@@ -278,13 +278,13 @@ namespace Diagnostics {
   // The note above is intended to match "evaluates to '\n' (0x0A, 10) == '<U+0000>' (0x00, 0)'", but if we write it as it is,
   // the "\n" cannot be consumed by the diagnostic consumer.
   static_assert((signed char)10 == (char)-123, ""); // expected-error {{failed}} \
-                                                    // expected-note {{evaluates to '10 == '<85>' (0x85, -123)'}}
+                                                    // expected-note {{evaluates to '10 == '<0x85>' (0x85, -123)'}}
   static_assert((char)-4 == (unsigned char)-8, ""); // expected-error {{failed}} \
-                                                    // expected-note {{evaluates to ''<FC>' (0xFC, -4) == 248'}}
+                                                    // expected-note {{evaluates to ''<0xFC>' (0xFC, -4) == 248'}}
   static_assert((char)-128 == (char)-123, ""); // expected-error {{failed}} \
-                                               // expected-note {{evaluates to ''<80>' (0x80, -128) == '<85>' (0x85, -123)'}}
+                                               // expected-note {{evaluates to ''<0x80>' (0x80, -128) == '<0x85>' (0x85, -123)'}}
   static_assert('\xA0' == (char)'\x20', ""); // expected-error {{failed}} \
-                                             // expected-note {{evaluates to ''<A0>' (0xA0, -96) == ' ' (0x20, 32)'}}
+                                             // expected-note {{evaluates to ''<0xA0>' (0xA0, -96) == ' ' (0x20, 32)'}}
   static_assert((char16_t)L'ゆ' == L"C̵̭̯̠̎͌ͅť̺"[1], ""); // expected-error {{failed}} \
                                                   // expected-note {{evaluates to 'u'ゆ' (0x3086, 12422) == L'̵' (0x335, 821)'}}
   static_assert(L"＼／"[1] == u'\xFFFD', ""); // expected-error {{failed}} \
@@ -363,4 +363,68 @@ namespace Diagnostics {
                                  // expected-note {{evaluates to '1 == 2'}}
   static_assert(1 << 3 != 8, ""); // expected-error {{failed}} \
                                  // expected-note {{evaluates to '8 != 8'}}
+  enum class TestEnum {
+    A = 0,
+    B = 1
+  };
+
+  enum class WithUnderlying : unsigned{
+    A = 0,
+    B = 1
+  };
+
+  enum TestEnumUnscoped {
+    TEST_A = 0,
+    TEST_B = 1,
+    TEST_C = 3
+  };
+
+  enum WithUnderlyingUnscoped : unsigned {
+    TEST2_A = 0,
+    TEST2_B = 1
+  };
+
+  template<typename T, T E> struct EnumTemplate {
+    static_assert(E == (T)0, ""); // #enum-assert
+  };
+
+  EnumTemplate<TestEnum, TestEnum::B> test1;
+  // expected-error@#enum-assert {{static assertion failed due to requirement 'Diagnostics::TestEnum::B == Diagnostics::TestEnum::A': }} \
+  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::TestEnum, Diagnostics::TestEnum::B>' requested here}} \
+  // expected-note@#enum-assert {{evaluates to '1 == 0'}}
+
+  EnumTemplate<TestEnum, TestEnum(42)> test2;
+  // expected-error@#enum-assert {{static assertion failed due to requirement '(Diagnostics::TestEnum)42 == Diagnostics::TestEnum::A': }} \
+  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::TestEnum, 42>' requested here}} \
+  // expected-note@#enum-assert {{evaluates to '42 == 0'}}
+
+  EnumTemplate<WithUnderlying, WithUnderlying::B> test3;
+  // expected-error@#enum-assert {{static assertion failed due to requirement 'Diagnostics::WithUnderlying::B == Diagnostics::WithUnderlying::A': }} \
+  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::WithUnderlying, Diagnostics::WithUnderlying::B>' requested here}} \
+  // expected-note@#enum-assert {{evaluates to '1 == 0'}}
+
+  EnumTemplate<WithUnderlying, WithUnderlying(42)> test6;
+  // expected-error@#enum-assert {{static assertion failed due to requirement '(Diagnostics::WithUnderlying)42U == Diagnostics::WithUnderlying::A': }} \
+  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::WithUnderlying, 42>' requested here}} \
+  // expected-note@#enum-assert {{evaluates to '42 == 0'}}
+
+  EnumTemplate<TestEnumUnscoped, TestEnumUnscoped::TEST_B> test4;
+  // expected-error@#enum-assert {{static assertion failed due to requirement 'Diagnostics::TEST_B == Diagnostics::TEST_A': }} \
+  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::TestEnumUnscoped, Diagnostics::TEST_B>' requested here}} \
+  // expected-note@#enum-assert {{evaluates to '1 == 0'}}
+
+  EnumTemplate<TestEnumUnscoped, TestEnumUnscoped(2)> test7;
+  // expected-error@#enum-assert {{static assertion failed due to requirement '(Diagnostics::TestEnumUnscoped)2U == Diagnostics::TEST_A': }} \
+  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::TestEnumUnscoped, 2>' requested here}} \
+  // expected-note@#enum-assert {{evaluates to '2 == 0'}}
+
+  EnumTemplate<WithUnderlyingUnscoped, WithUnderlyingUnscoped::TEST2_B> test5;
+  // expected-error@#enum-assert {{static assertion failed due to requirement 'Diagnostics::TEST2_B == Diagnostics::TEST2_A': }} \
+  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::WithUnderlyingUnscoped, Diagnostics::TEST2_B>' requested here}} \
+  // expected-note@#enum-assert {{evaluates to '1 == 0'}}
+
+  EnumTemplate<WithUnderlyingUnscoped, WithUnderlyingUnscoped(42)> test8;
+  // expected-error@#enum-assert {{static assertion failed due to requirement '(Diagnostics::WithUnderlyingUnscoped)42U == Diagnostics::TEST2_A': }} \
+  // expected-note@-1 {{in instantiation of template class 'Diagnostics::EnumTemplate<Diagnostics::WithUnderlyingUnscoped, 42>' requested here}} \
+  // expected-note@#enum-assert {{evaluates to '42 == 0'}}
 }

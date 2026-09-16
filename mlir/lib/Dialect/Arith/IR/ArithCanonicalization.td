@@ -15,6 +15,15 @@ include "mlir/Dialect/Arith/IR/ArithOps.td"
 // Create zero attribute of type matching the argument's type.
 def GetZeroAttr : NativeCodeCall<"$_builder.getZeroAttr($0.getType())">;
 
+// A value whose type is a scalar or has a static shape, i.e. one for which a
+// splat constant can be built. Guards patterns that materialize a constant via
+// GetZeroAttr, which asserts on a dynamically-shaped type.
+def IsScalarOrHasStaticShape :
+    Constraint<CPred<"!::llvm::isa<::mlir::ShapedType>($0.getType()) || "
+                     "::llvm::cast<::mlir::ShapedType>($0.getType())"
+                     ".hasStaticShape()">,
+               "type is a scalar or has a static shape">;
+
 // Add two integer attributes and create a new one with the result.
 def AddIntAttrs : NativeCodeCall<"addIntegerAttrs($_builder, $0, $1, $2)">;
 
@@ -193,7 +202,8 @@ def SubILHSSubConstantLHS :
 def SubISubILHSRHSLHS :
     Pat<(Arith_SubIOp:$res (Arith_SubIOp $x, $y, $ovf1), $x, $ovf2),
         (Arith_SubIOp (Arith_ConstantOp (GetZeroAttr $y)), $y,
-            (MergeOverflow $ovf1, $ovf2))>;
+            (MergeOverflow $ovf1, $ovf2)),
+        [(IsScalarOrHasStaticShape $y)]>;
 
 //===----------------------------------------------------------------------===//
 // MulSIExtendedOp
@@ -318,6 +328,42 @@ def SelectI1ToNot :
                   (ConstantLikeMatcher ConstantAttr<I1Attr, "0">),
                   (ConstantLikeMatcher ConstantAttr<I1Attr, "1">)),
         (Arith_XOrIOp $pred, (Arith_ConstantOp ConstantAttr<I1Attr, "1">))>;
+
+class SelectCmpIToMinMaxBase<string pred, Op minMaxOp> :
+    Pat<(SelectOp
+          (Arith_CmpIOp
+            ConstantEnumCase<Arith_CmpIPredicateAttr, pred>,
+            $a, $b),
+          $a, $b),
+        (minMaxOp $a, $b)>;
+
+class SelectCmpIInverseToMinMaxBase<string pred, Op minMaxOp> :
+    Pat<(SelectOp
+          (Arith_CmpIOp
+            ConstantEnumCase<Arith_CmpIPredicateAttr, pred>,
+            $a, $b),
+          $b, $a),
+        (minMaxOp $a, $b)>;
+
+// select(cmpi pred, a, b), a, b => min/max(a, b)
+def SelectCmpISltToMinSI : SelectCmpIToMinMaxBase<"slt", Arith_MinSIOp>;
+def SelectCmpISleToMinSI : SelectCmpIToMinMaxBase<"sle", Arith_MinSIOp>;
+def SelectCmpISgtToMaxSI : SelectCmpIToMinMaxBase<"sgt", Arith_MaxSIOp>;
+def SelectCmpISgeToMaxSI : SelectCmpIToMinMaxBase<"sge", Arith_MaxSIOp>;
+def SelectCmpIUltToMinUI : SelectCmpIToMinMaxBase<"ult", Arith_MinUIOp>;
+def SelectCmpIUleToMinUI : SelectCmpIToMinMaxBase<"ule", Arith_MinUIOp>;
+def SelectCmpIUgtToMaxUI : SelectCmpIToMinMaxBase<"ugt", Arith_MaxUIOp>;
+def SelectCmpIUgeToMaxUI : SelectCmpIToMinMaxBase<"uge", Arith_MaxUIOp>;
+
+// select(cmpi pred, a, b), b, a => inverse min/max(a, b)
+def SelectCmpISltToMaxSI : SelectCmpIInverseToMinMaxBase<"slt", Arith_MaxSIOp>;
+def SelectCmpISleToMaxSI : SelectCmpIInverseToMinMaxBase<"sle", Arith_MaxSIOp>;
+def SelectCmpISgtToMinSI : SelectCmpIInverseToMinMaxBase<"sgt", Arith_MinSIOp>;
+def SelectCmpISgeToMinSI : SelectCmpIInverseToMinMaxBase<"sge", Arith_MinSIOp>;
+def SelectCmpIUltToMaxUI : SelectCmpIInverseToMinMaxBase<"ult", Arith_MaxUIOp>;
+def SelectCmpIUleToMaxUI : SelectCmpIInverseToMinMaxBase<"ule", Arith_MaxUIOp>;
+def SelectCmpIUgtToMinUI : SelectCmpIInverseToMinMaxBase<"ugt", Arith_MinUIOp>;
+def SelectCmpIUgeToMinUI : SelectCmpIInverseToMinMaxBase<"uge", Arith_MinUIOp>;
 
 //===----------------------------------------------------------------------===//
 // IndexCastOp
@@ -484,6 +530,24 @@ def SIToFPOfExtUI :
 def UIToFPOfExtUI :
     Pat<(Arith_UIToFPOp (Arith_ExtUIOp $x, $nneg1), $nneg2),
         (Arith_UIToFPOp $x, $nneg1)>;
+
+//===----------------------------------------------------------------------===//
+// AddFOp
+//===----------------------------------------------------------------------===//
+
+// addf(negf(x), y) -> subf(y, x)
+// addf(x, negf(y)) -> subf(x, y)
+//
+// Valid for any rounding mode, which is propagated to the subf: negf is an
+// exact sign flip, IEEE addition is commutative, and y - x is the correctly
+// rounded y + (-x), so subf(y, x) and addf(negf(x), y) are bit-identical.
+def AddFOfNegFLhs :
+    Pat<(Arith_AddFOp (Arith_NegFOp $x, $_), $y, $fmf, $rm),
+        (Arith_SubFOp $y, $x, $fmf, $rm)>;
+
+def AddFOfNegFRhs :
+    Pat<(Arith_AddFOp $x, (Arith_NegFOp $y, $_), $fmf, $rm),
+        (Arith_SubFOp $x, $y, $fmf, $rm)>;
 
 //===----------------------------------------------------------------------===//
 // SubFOp

@@ -139,6 +139,11 @@ TEST(LEB128Test, DecodeULEB128) {
   EXPECT_DECODE_ULEB128_EQ(0x80000000'00000000ul,
                            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x01");
 
+  // Decode overlong ULEB128 whose trailing zero-extension bytes push the shift
+  // amount to 64 or beyond.
+  EXPECT_DECODE_ULEB128_EQ(0u, "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x00");
+  EXPECT_DECODE_ULEB128_EQ(1u, "\x81\x80\x80\x80\x80\x80\x80\x80\x80\x80\x00");
+
 #undef EXPECT_DECODE_ULEB128_EQ
 }
 
@@ -172,6 +177,29 @@ TEST(LEB128Test, DecodeInvalidULEB128) {
   EXPECT_INVALID_ULEB128("\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x02", 10u);
 
 #undef EXPECT_INVALID_ULEB128
+}
+
+TEST(LEB128Test, DecodeULEB128ErrorCode) {
+  // Report an encoding that reaches the buffer end before its terminating byte.
+  const uint8_t Truncated[] = {0x80};
+  ULEB128DecodeError ErrorCode = ULEB128DecodeError::None;
+  EXPECT_EQ(0u, decodeULEB128(Truncated, nullptr, Truncated + 1, nullptr,
+                              &ErrorCode));
+  EXPECT_EQ(ULEB128DecodeError::UnexpectedEnd, ErrorCode);
+
+  // Report an in-buffer encoding whose value does not fit in uint64_t.
+  const uint8_t TooBig[] = {0x80, 0x80, 0x80, 0x80, 0x80,
+                            0x80, 0x80, 0x80, 0x80, 0x02};
+  ErrorCode = ULEB128DecodeError::None;
+  EXPECT_EQ(0u,
+            decodeULEB128(TooBig, nullptr, TooBig + 10, nullptr, &ErrorCode));
+  EXPECT_EQ(ULEB128DecodeError::TooBig, ErrorCode);
+
+  // Clear a previous error when decoding succeeds.
+  const uint8_t Valid[] = {0x01};
+  ErrorCode = ULEB128DecodeError::TooBig;
+  EXPECT_EQ(1u, decodeULEB128(Valid, nullptr, Valid + 1, nullptr, &ErrorCode));
+  EXPECT_EQ(ULEB128DecodeError::None, ErrorCode);
 }
 
 TEST(LEB128Test, DecodeSLEB128) {
@@ -215,6 +243,12 @@ TEST(LEB128Test, DecodeSLEB128) {
                            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x7F");
   EXPECT_DECODE_SLEB128_EQ(INT64_MAX,
                            "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x00");
+
+  // Decode overlong SLEB128 whose trailing sign-extension bytes push the shift
+  // amount to 64 or beyond.
+  EXPECT_DECODE_SLEB128_EQ(0L, "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x00");
+  EXPECT_DECODE_SLEB128_EQ(-1L, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x7F");
+  EXPECT_DECODE_SLEB128_EQ(-2L, "\xFE\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x7F");
 
 #undef EXPECT_DECODE_SLEB128_EQ
 }

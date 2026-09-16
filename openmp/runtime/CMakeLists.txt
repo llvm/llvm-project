@@ -60,8 +60,10 @@ elseif(LIBOMP_NATIVE_ARCH MATCHES "sparcv9")
   set(LIBOMP_ARCH sparcv9)
 elseif(LIBOMP_NATIVE_ARCH MATCHES "sparc")
   set(LIBOMP_ARCH sparc)
-elseif(LIBOMP_NATIVE_ARCH MATCHES "wasm")
+elseif(LIBOMP_NATIVE_ARCH MATCHES "wasm32")
   set(LIBOMP_ARCH wasm32)
+elseif(LIBOMP_NATIVE_ARCH MATCHES "wasm64")
+  set(LIBOMP_ARCH wasm64)
 else()
   # last ditch effort
   libomp_get_architecture(LIBOMP_ARCH)
@@ -86,7 +88,7 @@ if(LIBOMP_ENABLE_ARM64X)
   include(arm64x)
 endif()
 
-libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc ppc64 ppc64le aarch64 aarch64_32 aarch64_a64fx arm64ec mic mips mips64 riscv64 loongarch64 ve s390x sparc sparcv9 wasm32)
+libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc ppc64 ppc64le aarch64 aarch64_32 aarch64_a64fx arm64ec mic mips mips64 riscv64 loongarch64 ve s390x sparc sparcv9 wasm32 wasm64)
 
 set(LIBOMP_LIB_TYPE normal CACHE STRING
   "Performance,Profiling,Stubs library (normal/profile/stubs)")
@@ -139,8 +141,8 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(LIBOMP_LIBFLAGS "-lperfstat" CACHE STRING
     "Appended user specified linked libs flags. (e.g., -lm)")
   if("${LIBOMP_ARCH}" STREQUAL "ppc")
-    # PPC (32-bit) on AIX needs libatomic for __atomic_load_8, etc.
-    set(LIBOMP_LIBFLAGS "${LIBOMP_LIBFLAGS} -latomic")
+    # PPC (32-bit) on AIX needs libcompiler_rt for __atomic_load_8, etc.
+    set(LIBOMP_LIBFLAGS "${LIBOMP_LIBFLAGS} -lcompiler_rt")
   endif()
 else()
   set(LIBOMP_LIBFLAGS "" CACHE STRING
@@ -181,7 +183,8 @@ set(RISCV64 FALSE)
 set(LOONGARCH64 FALSE)
 set(VE FALSE)
 set(S390X FALSE)
-set(WASM FALSE)
+set(WASM32 FALSE)
+set(WASM64 FALSE)
 set(PPC FALSE)
 set(SPARC FALSE)
 set(SPARCV9 FALSE)
@@ -221,8 +224,10 @@ elseif("${LIBOMP_ARCH}" STREQUAL "ve") # VE architecture
     set(VE TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "s390x") # S390x (Z) architecture
     set(S390X TRUE)
-elseif("${LIBOMP_ARCH}" STREQUAL "wasm32") # WebAssembly architecture
-    set(WASM TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "wasm32") # WebAssembly 32 bit architecture
+    set(WASM32 TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "wasm64") # WebAssembly 64 bit architecture
+    set(WASM64 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "sparc") # SPARC architecture
     set(SPARC TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "sparcv9") # SPARC V9 architecture
@@ -327,11 +332,16 @@ if(LIBOMP_STATS)
   set(LIBOMP_USE_STDCPPLIB TRUE)
 endif()
 
+# Thread cancellation via pthread_cancel.  Defaults to whether the symbol is
+# available, but can be overridden via -DLIBOMP_USE_CANCEL_THREADS=OFF.
+set(LIBOMP_USE_CANCEL_THREADS "${LIBOMP_HAVE_PTHREAD_CANCEL}" CACHE BOOL
+  "Enable thread cancellation via pthread_cancel?")
+
 # Shared library can be switched to a static library
 set(LIBOMP_ENABLE_SHARED TRUE CACHE BOOL
   "Shared library instead of static library?")
 
-if(WASM)
+if(WASM32 OR WASM64)
   libomp_warning_say("The WebAssembly build currently only supports static libraries; forcing LIBOMP_ENABLE_SHARED to false")
   set(LIBOMP_ENABLE_SHARED FALSE)
 endif()

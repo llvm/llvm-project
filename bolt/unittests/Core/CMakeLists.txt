@@ -1,7 +1,9 @@
 set(LLVM_LINK_COMPONENTS
+  BinaryFormat
   DebugInfoDWARF
   Object
   MC
+  TargetParser
   ${BOLT_TARGETS_TO_BUILD}
   )
 
@@ -24,7 +26,6 @@ target_link_libraries(CoreTests
   PRIVATE
   LLVMBOLTCore
   LLVMBOLTRewrite
-  LLVMBOLTPasses
   LLVMBOLTProfile
   LLVMBOLTUtils
   )

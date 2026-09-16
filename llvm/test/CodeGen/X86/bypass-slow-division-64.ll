@@ -25,6 +25,11 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver4          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver5          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver6          | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; Hygon
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=c86-4g-m4       | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=c86-4g-m6       | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=c86-4g-m7       | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=c86-4g-m8       | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
 
 ; Additional tests for 64-bit divide bypass
 

@@ -38,10 +38,10 @@
 #include "Symbols.h"
 
 #include "lld/Common/ErrorHandler.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/LEB128.h"
 #include <optional>
-#include <unordered_set>
 
 using namespace llvm;
 using namespace lld;
@@ -302,10 +302,10 @@ public:
       : fileName(fileName), start(buf), end(start + size), callback(callback) {}
 
   void parse(const uint8_t *buf, const Twine &cumulativeString,
-             std::unordered_set<size_t> &visited);
+             DenseSet<size_t> &visited);
 
   void parse() {
-    std::unordered_set<size_t> visited;
+    DenseSet<size_t> visited;
     parse(start, "", visited);
   }
 
@@ -318,7 +318,7 @@ public:
 } // namespace
 
 void TrieParser::parse(const uint8_t *buf, const Twine &cumulativeString,
-                       std::unordered_set<size_t> &visited) {
+                       DenseSet<size_t> &visited) {
   if (buf >= end)
     fatal(fileName + ": export trie node offset points outside export section");
 

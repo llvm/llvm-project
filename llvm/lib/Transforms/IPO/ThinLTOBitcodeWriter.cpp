@@ -10,7 +10,6 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
@@ -18,7 +17,6 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
@@ -33,8 +31,7 @@ namespace {
 // Determine if a promotion alias should be created for a symbol name.
 static bool allowPromotionAlias(const std::string &Name) {
   // Promotion aliases are used only in inline assembly. It's safe to
-  // simply skip unusual names. Subset of MCAsmInfo::isAcceptableChar()
-  // and MCAsmInfoXCOFF::isAcceptableChar().
+  // simply skip unusual names. Subset of MCAsmInfo::isAcceptableChar().
   for (const char &C : Name) {
     if (isAlnum(C) || C == '_' || C == '.')
       continue;
@@ -75,10 +72,12 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
     ExportGV.setName(NewName);
     ExportGV.setLinkage(GlobalValue::ExternalLinkage);
     ExportGV.setVisibility(GlobalValue::HiddenVisibility);
-
+    // TODO: remove this reassign and instead create an alias.
+    ExportGV.reassignGUID();
     if (ImportGV) {
       ImportGV->setName(NewName);
       ImportGV->setVisibility(GlobalValue::HiddenVisibility);
+      ImportGV->reassignGUID();
     }
 
     if (isa<Function>(&ExportGV) && allowPromotionAlias(OldName)) {
@@ -169,6 +168,22 @@ void promoteTypeIds(Module &M, StringRef ModuleId) {
           LLVMContext::MD_type,
           *MDNode::get(M.getContext(), {MD->getOperand(0), I->second}));
     }
+
+    SmallVector<MDNode *, 1> CGMDs;
+    GO.getMetadata(LLVMContext::MD_callgraph, CGMDs);
+
+    GO.eraseMetadata(LLVMContext::MD_callgraph);
+    for (auto *MD : CGMDs) {
+      if (MD->getNumOperands() == 1) {
+        auto I = LocalToGlobal.find(MD->getOperand(0));
+        if (I == LocalToGlobal.end()) {
+          GO.addMetadata(LLVMContext::MD_callgraph, *MD);
+          continue;
+        }
+        GO.addMetadata(LLVMContext::MD_callgraph,
+                       *MDNode::get(M.getContext(), {I->second}));
+      }
+    }
   }
 }
 
@@ -189,15 +204,16 @@ void simplifyExternals(Module &M) {
         F.getName().starts_with("llvm."))
       continue;
 
-    Function *NewF =
-        Function::Create(EmptyFT, GlobalValue::ExternalLinkage,
-                         F.getAddressSpace(), "", &M);
+    Function *NewF = Function::Create(EmptyFT, GlobalValue::ExternalLinkage,
+                                      F.getAddressSpace(), "", &M);
     NewF->copyAttributesFrom(&F);
     // Only copy function attribtues.
     NewF->setAttributes(AttributeList::get(M.getContext(),
                                            AttributeList::FunctionIndex,
                                            F.getAttributes().getFnAttrs()));
     NewF->takeName(&F);
+    NewF->setMetadata(LLVMContext::MD_guid,
+                      F.getMetadata(LLVMContext::MD_guid));
     F.replaceAllUsesWith(NewF);
     F.eraseFromParent();
   }
@@ -304,21 +320,6 @@ void splitAndWriteThinLTOBitcode(
 
   promoteTypeIds(M, ModuleId);
 
-  // Returns whether a global or its associated global has attached type
-  // metadata. The former may participate in CFI or whole-program
-  // devirtualization, so they need to appear in the merged module instead of
-  // the thin LTO module. Similarly, globals that are associated with globals
-  // with type metadata need to appear in the merged module because they will
-  // reference the global's section directly.
-  auto HasTypeMetadata = [](const GlobalObject *GO) {
-    if (MDNode *MD = GO->getMetadata(LLVMContext::MD_associated))
-      if (auto *AssocVM = dyn_cast_or_null<ValueAsMetadata>(MD->getOperand(0)))
-        if (auto *AssocGO = dyn_cast<GlobalObject>(AssocVM->getValue()))
-          if (AssocGO->hasMetadata(LLVMContext::MD_type))
-            return true;
-    return GO->hasMetadata(LLVMContext::MD_type);
-  };
-
   // Collect the set of virtual functions that are eligible for virtual constant
   // propagation. Each eligible function must not access memory, must return
   // an integer of width <=64 bits, must take at least one argument, must not
@@ -336,7 +337,7 @@ void splitAndWriteThinLTOBitcode(
   // comdat in MergedM to keep the comdat together.
   DenseSet<const Comdat *> MergedMComdats;
   for (GlobalVariable &GV : M.globals())
-    if (!GV.isDeclaration() && HasTypeMetadata(&GV)) {
+    if (!GV.isDeclaration() && lowertypetests::hasTypeMetadata(GV)) {
       if (const auto *C = GV.getComdat())
         MergedMComdats.insert(C);
       forEachVirtualFunction(GV.getInitializer(), [&](Function *F) {
@@ -368,11 +369,11 @@ void splitAndWriteThinLTOBitcode(
           return EligibleVirtualFns.count(F);
         if (auto *GVar =
                 dyn_cast_or_null<GlobalVariable>(GV->getAliaseeObject()))
-          return HasTypeMetadata(GVar);
+          return lowertypetests::hasTypeMetadata(*GVar);
         return false;
       }));
   StripDebugInfo(*MergedM);
-  MergedM->setModuleInlineAsm("");
+  MergedM->removeModuleInlineAsm();
 
   // Clone any llvm.*used globals to ensure the included values are
   // not deleted.
@@ -388,20 +389,13 @@ void splitAndWriteThinLTOBitcode(
       F.setComdat(nullptr);
     }
 
-  SetVector<GlobalValue *> CfiFunctions;
-  for (auto &F : M)
-    if ((!F.hasLocalLinkage() || F.hasAddressTaken()) && HasTypeMetadata(&F))
-      CfiFunctions.insert(&F);
-  for (auto &A : M.aliases())
-    if (auto *F = dyn_cast<Function>(A.getAliasee()))
-      if (HasTypeMetadata(F))
-        CfiFunctions.insert(&A);
+  SetVector<GlobalValue *> CfiFunctions = lowertypetests::findCfiFunctions(M);
 
   // Remove all globals with type metadata, globals with comdats that live in
   // MergedM, and aliases pointing to such globals from the thin LTO module.
   filterModule(&M, [&](const GlobalValue *GV) {
     if (auto *GVar = dyn_cast_or_null<GlobalVariable>(GV->getAliaseeObject()))
-      if (HasTypeMetadata(GVar))
+      if (lowertypetests::hasTypeMetadata(*GVar))
         return false;
     if (const auto *C = GV->getComdat())
       if (MergedMComdats.count(C))
@@ -418,69 +412,7 @@ void splitAndWriteThinLTOBitcode(
   promoteInternals(*MergedM, M, ModuleId, {});
   promoteInternals(M, *MergedM, ModuleId, CfiFunctions);
 
-  auto &Ctx = MergedM->getContext();
-  SmallVector<MDNode *, 8> CfiFunctionMDs;
-  for (auto *V : CfiFunctions) {
-    Function &F = *cast<Function>(V->getAliaseeObject());
-    SmallVector<MDNode *, 2> Types;
-    F.getMetadata(LLVMContext::MD_type, Types);
-
-    SmallVector<Metadata *, 4> Elts;
-    Elts.push_back(MDString::get(Ctx, V->getName()));
-    CfiFunctionLinkage Linkage;
-    if (lowertypetests::isJumpTableCanonical(&F))
-      Linkage = CFL_Definition;
-    else if (F.hasExternalWeakLinkage())
-      Linkage = CFL_WeakDeclaration;
-    else
-      Linkage = CFL_Declaration;
-    Elts.push_back(ConstantAsMetadata::get(
-        llvm::ConstantInt::get(Type::getInt8Ty(Ctx), Linkage)));
-    append_range(Elts, Types);
-    CfiFunctionMDs.push_back(MDTuple::get(Ctx, Elts));
-  }
-
-  if(!CfiFunctionMDs.empty()) {
-    NamedMDNode *NMD = MergedM->getOrInsertNamedMetadata("cfi.functions");
-    for (auto *MD : CfiFunctionMDs)
-      NMD->addOperand(MD);
-  }
-
-  MapVector<Function *, std::vector<GlobalAlias *>> FunctionAliases;
-  for (auto &A : M.aliases()) {
-    if (!isa<Function>(A.getAliasee()))
-      continue;
-
-    auto *F = cast<Function>(A.getAliasee());
-    FunctionAliases[F].push_back(&A);
-  }
-
-  if (!FunctionAliases.empty()) {
-    NamedMDNode *NMD = MergedM->getOrInsertNamedMetadata("aliases");
-    for (auto &Alias : FunctionAliases) {
-      SmallVector<Metadata *> Elts;
-      Elts.push_back(MDString::get(Ctx, Alias.first->getName()));
-      for (auto *A : Alias.second)
-        Elts.push_back(MDString::get(Ctx, A->getName()));
-      NMD->addOperand(MDTuple::get(Ctx, Elts));
-    }
-  }
-
-  SmallVector<MDNode *, 8> Symvers;
-  ModuleSymbolTable::CollectAsmSymvers(M, [&](StringRef Name, StringRef Alias) {
-    Function *F = M.getFunction(Name);
-    if (!F || F->use_empty())
-      return;
-
-    Symvers.push_back(MDTuple::get(
-        Ctx, {MDString::get(Ctx, Name), MDString::get(Ctx, Alias)}));
-  });
-
-  if (!Symvers.empty()) {
-    NamedMDNode *NMD = MergedM->getOrInsertNamedMetadata("symvers");
-    for (auto *MD : Symvers)
-      NMD->addOperand(MD);
-  }
+  lowertypetests::createCfiMetadata(*MergedM, M, CfiFunctions.getArrayRef());
 
   simplifyExternals(*MergedM);
 

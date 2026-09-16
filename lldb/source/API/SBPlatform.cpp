@@ -362,8 +362,8 @@ const char *SBPlatform::GetWorkingDirectory() {
 
   PlatformSP platform_sp(GetSP());
   if (platform_sp)
-    return platform_sp->GetWorkingDirectory().GetPathAsConstString().AsCString(
-        nullptr);
+    return ConstString(platform_sp->GetWorkingDirectory().GetPath())
+        .AsCString(nullptr);
   return nullptr;
 }
 

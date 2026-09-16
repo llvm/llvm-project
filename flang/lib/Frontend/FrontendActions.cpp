@@ -17,6 +17,7 @@
 #include "flang/Frontend/ParserActions.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/Support/Verifier.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Passes/Pipelines.h"
@@ -56,10 +57,10 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/RunCodeGen.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
-#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -72,7 +73,6 @@
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
-#include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
 #include <system_error>
@@ -277,8 +277,12 @@ bool CodeGenAction::beginSourceFileAction() {
     mlir::omp::setOffloadModuleInterfaceAttributes(
         lb.getModule(),
         makeOffloadModuleOpts(ci.getInvocation().getLangOpts()));
-    mlir::omp::setOpenMPVersionAttribute(
-        lb.getModule(), ci.getInvocation().getLangOpts().OpenMPVersion);
+    llvm::omp::Version version =
+        ci.getInvocation().getLangOpts().getOpenMPVersion();
+    mlir::omp::setOpenMPVersionAttribute(lb.getModule(),
+                                         static_cast<unsigned>(version));
+    if (!ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
+      mlir::omp::setOpenMPIntegerWrapAround(lb.getModule(), false);
   }
 
   if (ci.getInvocation().getLangOpts().FastRealMod) {
@@ -286,6 +290,14 @@ bool CodeGenAction::beginSourceFileAction() {
     mod.getOperation()->setAttr(
         mlir::StringAttr::get(mod.getContext(),
                               llvm::Twine{"fir.fast_real_mod"}),
+        mlir::BoolAttr::get(mod.getContext(), true));
+  }
+
+  if (ci.getInvocation().getLangOpts().CheckIntegerModZeroDivisor) {
+    mlir::ModuleOp mod = lb.getModule();
+    mod.getOperation()->setAttr(
+        mlir::StringAttr::get(mod.getContext(),
+                              fir::getCheckIntegerModZeroDivisorAttrName()),
         mlir::BoolAttr::get(mod.getContext(), true));
   }
 
@@ -310,9 +322,9 @@ bool CodeGenAction::beginSourceFileAction() {
   bool isOpenMPEnabled =
       ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP);
-  bool isOpenMPSimd = ci.getInvocation().getLangOpts().OpenMPSimd;
 
   fir::OpenMPFIRPassPipelineOpts opts;
+  opts.isSimdOnly = ci.getInvocation().getLangOpts().OpenMPSimd;
 
   using DoConcurrentMappingKind =
       Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
@@ -320,7 +332,7 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getInvocation().getCodeGenOpts().getDoConcurrentMapping();
 
   if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None &&
-      !isOpenMPEnabled) {
+      (!isOpenMPEnabled || opts.isSimdOnly)) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Warning,
         "OpenMP is required for lowering `do concurrent` loops to OpenMP."
@@ -340,7 +352,7 @@ bool CodeGenAction::beginSourceFileAction() {
   // WARNING: This pipeline must be run immediately after the lowering to
   // ensure that the FIR is correct with respect to OpenMP operations/
   // attributes.
-  if (isOpenMPEnabled || isOpenMPSimd)
+  if (isOpenMPEnabled)
     fir::createOpenMPFIRPassPipeline(pm, opts);
 
   pm.enableVerifier(/*verifyPasses=*/true);
@@ -633,6 +645,13 @@ void CodeGenAction::lowerHLFIRToFIR() {
   MLIRToLLVMPassPipelineConfig config(level);
   config.fpMaxminBehavior =
       ci.getInvocation().getLoweringOpts().getFPMaxminBehavior();
+  if (ci.getInvocation().getLangOpts().OpenMPIsTargetDevice)
+    config.EnableOpenMPIsTargetDevice = true;
+  // Parser options, not frontend options: they are seeded from the frontend
+  // ones and additionally get CUDA enabled for a .cuf/.CUF input.
+  if (ci.getInvocation().getFortranOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::CUDA))
+    config.EnableCUDA = true;
   // Create the pass pipeline
   fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
   (void)mlir::applyPassManagerCLOptions(pm);
@@ -760,8 +779,15 @@ void CodeGenAction::generateLLVMIR() {
   config.PreferVectorWidth = opts.PreferVectorWidth;
 
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::OpenACC))
+    config.EnableOpenACC = true;
+
+  if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP))
     config.EnableOpenMP = true;
+
+  if (ci.getInvocation().getLangOpts().OpenMPIsTargetDevice)
+    config.EnableOpenMPIsTargetDevice = true;
 
   if (ci.getInvocation().getLangOpts().OpenMPSimd)
     config.EnableOpenMPSimd = true;
@@ -818,6 +844,9 @@ void CodeGenAction::generateLLVMIR() {
           static_cast<llvm::PIELevel::Level>(opts.PICLevel));
   }
 
+  if (opts.getFramePointer() != llvm::FramePointerKind::None)
+    llvmModule->setFramePointer(opts.getFramePointer());
+
   const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
   const llvm::Triple triple(targetOpts.triple);
 
@@ -831,7 +860,7 @@ void CodeGenAction::generateLLVMIR() {
     }
   }
 
-  if (triple.isRISCV() && !targetOpts.abi.empty())
+  if (!targetOpts.abi.empty())
     llvmModule->addModuleFlag(
         llvm::Module::Error, "target-abi",
         llvm::MDString::get(llvmModule->getContext(), targetOpts.abi));
@@ -899,21 +928,6 @@ static void generateMachineCodeOrAssemblyImpl(
     if (plugin->invokePreCodeGenCallback(llvmModule, tm, cgft, os))
       return;
 
-  // Set-up the pass manager, i.e create an LLVM code-gen pass pipeline.
-  // Currently only the legacy pass manager is supported.
-  // TODO: Switch to the new PM once it's available in the backend.
-  llvm::legacy::PassManager codeGenPasses;
-  codeGenPasses.add(
-      createTargetTransformInfoWrapperPass(tm.getTargetIRAnalysis()));
-
-  llvm::Triple triple(llvmModule.getTargetTriple());
-  llvm::TargetLibraryInfoImpl *tlii =
-      llvm::driver::createTLII(triple, codeGenOpts.getVecLib());
-  codeGenPasses.add(new llvm::TargetLibraryInfoWrapperPass(*tlii));
-  codeGenPasses.add(new llvm::RuntimeLibraryInfoWrapper(
-      triple, tm.Options.ExceptionModel, tm.Options.FloatABIType,
-      tm.Options.EABIVersion, tm.Options.MCOptions.ABIName, tm.Options.VecLib));
-
   std::unique_ptr<llvm::ToolOutputFile> dwoOS;
   if (!codeGenOpts.SplitDwarfOutput.empty()) {
     std::error_code ec;
@@ -925,8 +939,9 @@ static void generateMachineCodeOrAssemblyImpl(
       return;
     }
   }
-  if (tm.addPassesToEmitFile(codeGenPasses, os, dwoOS ? &dwoOS->os() : nullptr,
-                             cgft)) {
+  llvm::Error codeGenError =
+      runCodeGenPipeline(tm, llvmModule, os, dwoOS, cgft);
+  if (codeGenError) {
     unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
                               "emission of this file type is not supported");
@@ -934,14 +949,8 @@ static void generateMachineCodeOrAssemblyImpl(
     return;
   }
 
-  // Run the passes
-  codeGenPasses.run(llvmModule);
-
   if (dwoOS)
     dwoOS->keep();
-
-  // Cleanup
-  delete tlii;
 }
 
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
@@ -979,18 +988,26 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
         opts.ProfileInstrumentUsePath, "", opts.ProfileRemappingFile,
         opts.MemoryProfileUsePath, llvm::PGOOptions::IRUse, CSAction,
         llvm::PGOOptions::ColdFuncOpt::Default, opts.DebugInfoForProfiling);
-  } else if (opts.DebugInfoForProfiling) {
-    // -fdebug-info-for-profiling
-    pgoOpt = llvm::PGOOptions("", "", "", /*MemoryProfile=*/"",
-                              llvm::PGOOptions::NoAction,
-                              llvm::PGOOptions::NoCSAction,
-                              llvm::PGOOptions::ColdFuncOpt::Default, true);
   } else if (!opts.SampleProfileFile.empty()) {
     pgoOpt = llvm::PGOOptions(
         opts.SampleProfileFile, "", opts.ProfileRemappingFile,
         opts.MemoryProfileUsePath, llvm::PGOOptions::SampleUse,
         llvm::PGOOptions::NoCSAction, llvm::PGOOptions::ColdFuncOpt::Default,
-        opts.DebugInfoForProfiling, /*PseudoProbeForProfiling=*/false);
+        opts.DebugInfoForProfiling, opts.PseudoProbeForProfiling);
+  } else if (opts.PseudoProbeForProfiling) {
+    pgoOpt = llvm::PGOOptions(
+        /*ProfileFile=*/"", /*CSProfileGenFile=*/"",
+        /*ProfileRemappingFile=*/"",
+        /*MemoryProfile=*/"", llvm::PGOOptions::NoAction,
+        llvm::PGOOptions::NoCSAction, llvm::PGOOptions::ColdFuncOpt::Default,
+        opts.DebugInfoForProfiling, /*PseudoProbeForProfiling=*/true);
+  } else if (opts.DebugInfoForProfiling) {
+    pgoOpt = llvm::PGOOptions(/*ProfileFile=*/"", /*CSProfileGenFile=*/"",
+                              /*ProfileRemappingFile=*/"", /*MemoryProfile=*/"",
+                              llvm::PGOOptions::NoAction,
+                              llvm::PGOOptions::NoCSAction,
+                              llvm::PGOOptions::ColdFuncOpt::Default,
+                              /*DebugInfoForProfiling=*/true);
   }
 
   llvm::StandardInstrumentations si(llvmModule->getContext(),
@@ -1023,8 +1040,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   fam.registerPass([&] { return llvm::TargetLibraryAnalysis(*tlii); });
   mam.registerPass([&] {
     return llvm::RuntimeLibraryAnalysis(
-        triple, targetMachine->Options.ExceptionModel,
-        targetMachine->Options.FloatABIType, targetMachine->Options.EABIVersion,
+        targetMachine->Options.ExceptionModel,
         targetMachine->Options.MCOptions.ABIName,
         targetMachine->Options.VecLib);
   });
@@ -1054,10 +1070,17 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   if (action == BackendActionTy::Backend_EmitBC ||
       action == BackendActionTy::Backend_EmitLL || opts.PrepareForFatLTO) {
-    // If it is not ThinLTO, emits the module flag and sets it to be off.
-    if (!opts.PrepareForThinLTO && emitSummary &&
-        !llvmModule->getModuleFlag("ThinLTO")) {
-      llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
+    if (opts.PrepareForThinLTO) {
+      if (!llvmModule->getModuleFlag("EnableSplitLTOUnit"))
+        llvmModule->addModuleFlag(llvm::Module::Error, "EnableSplitLTOUnit",
+                                  opts.EnableSplitLTOUnit);
+    } else if (emitSummary && opts.PrepareForFullLTO) {
+      // If it is not ThinLTO, emits the module flag and sets it to be off.
+      if (!llvmModule->getModuleFlag("ThinLTO"))
+        llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
+      if (!llvmModule->getModuleFlag("EnableSplitLTOUnit"))
+        llvmModule->addModuleFlag(llvm::Module::Error, "EnableSplitLTOUnit",
+                                  uint32_t(1));
     }
 
     if (action == BackendActionTy::Backend_EmitBC) {
@@ -1068,9 +1091,9 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
             os, /*ShouldPreserveUseListOrder=*/false, emitSummary));
       }
     } else if (action == BackendActionTy::Backend_EmitLL) {
-      mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
-                                        /*ShouldPreserveUseListOrder=*/false,
-                                        emitSummary));
+      mpm.addPass(llvm::PrintModulePass(
+          os, /*Banner=*/"", /*ShouldPreserveUseListOrder=*/false, emitSummary,
+          /*ShouldRenumberMetadata=*/true));
     }
   }
 
@@ -1400,6 +1423,8 @@ void CodeGenAction::executeAction() {
 
   targetMachine.Options.MCOptions.AsmVerbose = targetOpts.asmVerbose;
   targetMachine.Options.MCOptions.SplitDwarfFile = codeGenOpts.SplitDwarfFile;
+  targetMachine.Options.MCOptions.CompressDebugSections =
+      codeGenOpts.getCompressDebugSections();
 
   const llvm::Triple &theTriple = targetMachine.getTargetTriple();
 

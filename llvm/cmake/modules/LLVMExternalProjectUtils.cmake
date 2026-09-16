@@ -101,7 +101,7 @@ function(llvm_ExternalProject_Add name source_dir)
   if(NOT ARG_TOOLCHAIN_TOOLS)
     set(ARG_TOOLCHAIN_TOOLS clang)
     if (ARG_ENABLE_FORTRAN)
-      list(APPEND ARG_TOOLCHAIN_TOOLS flang)
+      list(APPEND ARG_TOOLCHAIN_TOOLS flang-lazy)
     endif ()
     # AIX 64-bit XCOFF and big AR format is not yet supported in some of these tools.
     if(NOT _cmake_system_name STREQUAL "AIX")
@@ -153,7 +153,7 @@ function(llvm_ExternalProject_Add name source_dir)
     set(CLANG_IN_TOOLCHAIN On)
   endif()
 
-  if(flang IN_LIST TOOLCHAIN_TOOLS)
+  if(flang-lazy IN_LIST TOOLCHAIN_TOOLS)
     set(FLANG_IN_TOOLCHAIN On)
   endif()
 
@@ -229,6 +229,7 @@ function(llvm_ExternalProject_Add name source_dir)
     endif()
   endforeach()
 
+  set(maybe_configure_environment_modification "")
   if(ARG_USE_TOOLCHAIN AND NOT CMAKE_CROSSCOMPILING)
     if(CLANG_IN_TOOLCHAIN)
       if(is_msvc_target)
@@ -242,7 +243,11 @@ function(llvm_ExternalProject_Add name source_dir)
       endif()
     endif()
     if(FLANG_IN_TOOLCHAIN)
-      list(APPEND compiler_args -DCMAKE_Fortran_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/flang${CMAKE_EXECUTABLE_SUFFIX})
+      # Use fakeflang to not require having all of flang built for the configure step.
+      list(APPEND compiler_args -DCMAKE_Fortran_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/fakeflang${CMAKE_EXECUTABLE_SUFFIX})
+      if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.2)
+        set(maybe_configure_environment_modification CONFIGURE_ENVIRONMENT_MODIFICATION "FLANG_BOOTSTRAP_PROBE=set:1")
+      endif()
     endif()
     if(lld IN_LIST TOOLCHAIN_TOOLS)
       if(is_msvc_target)
@@ -424,6 +429,7 @@ function(llvm_ExternalProject_Add name source_dir)
                ${PASSTHROUGH_VARIABLES}
     CMAKE_CACHE_DEFAULT_ARGS ${CMAKE_CACHE_DEFAULT_ARGS}
     ${build_command_arg}
+    ${maybe_configure_environment_modification}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
     BUILD_ALWAYS 1

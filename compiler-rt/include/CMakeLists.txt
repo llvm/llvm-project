@@ -11,6 +11,7 @@ if (COMPILER_RT_BUILD_SANITIZERS)
     sanitizer/msan_interface.h
     sanitizer/netbsd_syscall_hooks.h
     sanitizer/rtsan_interface.h
+    sanitizer/safestack_interface.h
     sanitizer/scudo_interface.h
     sanitizer/tsan_interface.h
     sanitizer/tsan_interface_atomic.h
@@ -81,7 +82,7 @@ endforeach( f )
 
 add_custom_target(compiler-rt-headers ALL DEPENDS ${out_files})
 add_dependencies(compiler-rt compiler-rt-headers)
-set_target_properties(compiler-rt-headers PROPERTIES FOLDER "Compiler-RT/Resources")
+set_target_properties(compiler-rt-headers PROPERTIES FOLDER "compiler-rt/Resources")
 
 # Install sanitizer headers.
 install(FILES ${SANITIZER_HEADERS}

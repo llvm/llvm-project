@@ -33,12 +33,136 @@ contains
 end subroutine
 
 subroutine invalid_clause
-!ERROR: PRIVATE clause is not allowed on the DECLARE VARIANT directive
+!ERROR: PRIVATE clause is not allowed on DECLARE VARIANT directive
   !$omp declare variant (sub:vsub) match (construct={parallel}) private(x)
 contains
   subroutine vsub
   end subroutine
   subroutine sub
     integer :: x
+  end subroutine
+end subroutine
+
+subroutine incompatible_argcount
+!ERROR: The variant procedure 'vsub' is not compatible with the base procedure 'sub': distinct numbers of dummy arguments
+  !$omp declare variant (sub:vsub) match (construct={parallel})
+contains
+  subroutine sub(x)
+    integer :: x
+  end subroutine
+  subroutine vsub(x, y)
+    integer :: x, y
+  end subroutine
+end subroutine
+
+subroutine incompatible_argtype
+!ERROR: The variant procedure 'vsub' is not compatible with the base procedure 'sub': incompatible dummy argument #1: incompatible dummy data object types: REAL(4) vs INTEGER(4)
+  !$omp declare variant (sub:vsub) match (construct={parallel})
+contains
+  subroutine sub(x)
+    integer :: x
+  end subroutine
+  subroutine vsub(x)
+    real :: x
+  end subroutine
+end subroutine
+
+subroutine incompatible_function_vs_subroutine
+!ERROR: The variant procedure 'vfun' is not compatible with the base procedure 'sub': incompatible procedures: one is a function, the other a subroutine
+  !$omp declare variant (sub:vfun) match (construct={parallel})
+contains
+  subroutine sub(x)
+    integer :: x
+  end subroutine
+  integer function vfun(x)
+    integer :: x
+    vfun = x
+  end function
+end subroutine
+
+subroutine incompatible_result
+!ERROR: The variant procedure 'fvar' is not compatible with the base procedure 'fbase': function results have distinct types: INTEGER(4) vs REAL(4)
+  !$omp declare variant (fbase:fvar) match (construct={parallel})
+contains
+  integer function fbase(x)
+    integer :: x
+    fbase = x
+  end function
+  real function fvar(x)
+    real :: x
+    fvar = x
+  end function
+end subroutine
+
+! When the base name is omitted, the enclosing procedure is the base
+
+module omitted_base
+contains
+  subroutine incompatible_omitted_base(x)
+    integer :: x
+!ERROR: The variant procedure 'vsub' is not compatible with the base procedure 'incompatible_omitted_base': distinct numbers of dummy arguments
+    !$omp declare variant (vsub) match (construct={parallel})
+  end subroutine
+  subroutine vsub(x, y)
+    integer :: x, y
+  end subroutine
+end module
+
+! A variant is substituted at every reference to the base, so it must be
+! accessible there. An internal procedure is only accessible within its host, so
+! it cannot be a variant of a base that is visible more widely. Here the base is
+! an external procedure but the variant is internal to it.
+
+subroutine external_base_internal_variant
+!ERROR: The variant procedure 'vsub' is an internal procedure and is not accessible at every reference to the base procedure 'external_base_internal_variant'
+  !$omp declare variant (vsub) match (construct={parallel})
+contains
+  subroutine vsub
+  end subroutine
+end subroutine
+
+! A module procedure may be the variant of an external base: it is accessible
+! anywhere the module is used.
+
+module module_variant_of_external
+contains
+  subroutine mvar(x)
+    integer :: x
+  end subroutine
+end module
+
+subroutine external_base_module_variant(x)
+  use module_variant_of_external
+  integer :: x
+  !$omp declare variant (external_base_module_variant:mvar) match (construct={parallel})
+end subroutine
+
+! Differing dummy argument names are fine; only characteristics matter.
+
+subroutine compatible_interface
+  !$omp declare variant (sub:vsub) match (construct={parallel})
+contains
+  subroutine sub(x)
+    integer :: x
+  end subroutine
+  subroutine vsub(y)
+    integer :: y
+  end subroutine
+end subroutine
+
+! append_args is rejected as not-yet-implemented. The interface check is also
+! skipped (the appended interop argument intentionally changes the variant
+! interface), so the mismatched argument count does not produce a spurious
+! incompatibility error in addition to the not-yet-implemented one.
+
+subroutine append_args_skips_interface_check
+!ERROR: APPEND_ARGS clause on the DECLARE VARIANT directive is not yet implemented
+  !$omp declare variant (sub:vsub) match (construct={dispatch}) append_args(interop(target))
+contains
+  subroutine sub(x)
+    integer :: x
+  end subroutine
+  subroutine vsub(x, obj)
+    integer :: x, obj
   end subroutine
 end subroutine

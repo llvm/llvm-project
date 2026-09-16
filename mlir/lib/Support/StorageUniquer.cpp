@@ -48,10 +48,6 @@ private:
 
   /// Storage info for derived TypeStorage objects.
   struct StorageKeyInfo {
-    static inline HashedStorage getEmptyKey() {
-      return HashedStorage(0, DenseMapInfo<BaseStorage *>::getEmptyKey());
-    }
-
     static inline unsigned getHashValue(const HashedStorage &key) {
       return key.hashValue;
     }
@@ -64,8 +60,6 @@ private:
       return lhs.storage == rhs.storage;
     }
     static inline bool isEqual(const LookupKey &lhs, const HashedStorage &rhs) {
-      if (isEqual(rhs, getEmptyKey()))
-        return false;
       // Invoke the equality function on the lookup key.
       return lhs.isEqual(rhs.storage);
     }
@@ -76,8 +70,12 @@ private:
   /// set of shards to allow for multiple threads to create instances with less
   /// lock contention.
   struct Shard {
-    /// The set containing the allocated storage instances.
+    /// The set containing the allocated storage instances in the base layer.
     StorageTypeSet instances;
+
+    /// The set containing the allocated storage instances in the transient
+    /// layer, lazily instantiated on the first transient allocation.
+    std::unique_ptr<StorageTypeSet> transientInstances;
 
 #if LLVM_ENABLE_THREADS != 0
     /// A mutex to keep uniquing thread-safe.
@@ -89,6 +87,31 @@ private:
   /// fashion.
   BaseStorage *getOrCreateUnsafe(Shard &shard, LookupKey &key,
                                  function_ref<BaseStorage *()> ctorFn) {
+    if (isInTransientScope()) {
+      // If we are in a transient scope, then it means we had a base context
+      // which was frozen at some point and are busy mutating in a transient
+      // overlay state. Check to see if the instance is in either of these
+      // first before creating. The expectation is that the base state is
+      // rather minimal and most of the entries are in the transient, so
+      // search in transient instances first before base, and if neither
+      // create a transient instance.
+      if (shard.transientInstances) {
+        auto transientIt = shard.transientInstances->find_as(key);
+        if (transientIt != shard.transientInstances->end())
+          return transientIt->storage;
+      }
+      auto baseIt = shard.instances.find_as(key);
+      if (baseIt != shard.instances.end())
+        return baseIt->storage;
+      if (!shard.transientInstances)
+        shard.transientInstances = std::make_unique<StorageTypeSet>();
+      auto existing = shard.transientInstances->insert_as({key.hashValue}, key);
+      BaseStorage *&storage = existing.first->storage;
+      if (existing.second)
+        storage = ctorFn();
+      return storage;
+    }
+
     auto existing = shard.instances.insert_as({key.hashValue}, key);
     BaseStorage *&storage = existing.first->storage;
     if (existing.second)
@@ -102,6 +125,10 @@ private:
       return;
     for (HashedStorage &instance : shard.instances)
       destructorFn(instance.storage);
+    if (shard.transientInstances) {
+      for (HashedStorage &instance : *shard.transientInstances)
+        destructorFn(instance.storage);
+    }
   }
 
 public:
@@ -111,10 +138,12 @@ public:
   /// destructor function is used to destroy any allocated storage instances.
   ParametricStorageUniquer(function_ref<void(BaseStorage *)> destructorFn,
                            size_t numShards = 8)
-      : shards(new std::atomic<Shard *>[numShards]), numShards(numShards),
+      : shards(new std::atomic<Shard *>[numShards]),
         destructorFn(destructorFn) {
     assert(llvm::isPowerOf2_64(numShards) &&
            "the number of shards is required to be a power of 2");
+    this->numShards = numShards;
+    this->inTransientScope = false;
     for (size_t i = 0; i < numShards; i++)
       shards[i].store(nullptr, std::memory_order_relaxed);
   }
@@ -145,6 +174,11 @@ public:
     // Check for an existing instance in read-only mode.
     {
       llvm::sys::SmartScopedReader<true> typeLock(shard.mutex);
+      if (isInTransientScope() && shard.transientInstances) {
+        auto it = shard.transientInstances->find_as(lookupKey);
+        if (it != shard.transientInstances->end())
+          return localInst = it->storage;
+      }
       auto it = shard.instances.find_as(lookupKey);
       if (it != shard.instances.end())
         return localInst = it->storage;
@@ -170,6 +204,38 @@ public:
     llvm::sys::SmartScopedWriter<true> lock(shard.mutex);
     return mutationFn();
   }
+
+  void beginTransientScope() {
+    assert(!isInTransientScope() &&
+           "parametric storage uniquer is already in a transient scope");
+    inTransientScope = true;
+  }
+
+  void endTransientScope() {
+    assert(isInTransientScope() &&
+           "parametric storage uniquer is not in a transient scope");
+    if (!isInTransientScope())
+      return;
+
+    for (size_t i = 0; i != numShards; ++i) {
+      if (Shard *shard = shards[i].load()) {
+        llvm::sys::SmartScopedWriter<true> typeLock(shard->mutex);
+        if (shard->transientInstances) {
+          if (destructorFn) {
+            for (HashedStorage &instance : *shard->transientInstances)
+              destructorFn(instance.storage);
+          }
+          shard->transientInstances.reset();
+        }
+      }
+    }
+    localCache.clear();
+    inTransientScope = false;
+  }
+
+  bool isInTransientScope() const { return inTransientScope; }
+
+  size_t getNumShards() const { return numShards; }
 
 private:
   /// Return the shard used for the given hash value.
@@ -202,7 +268,10 @@ private:
   std::unique_ptr<std::atomic<Shard *>[]> shards;
 
   /// The number of available shards.
-  size_t numShards;
+  unsigned numShards : 31;
+
+  /// Whether the uniquer is currently in a transient scope.
+  unsigned inTransientScope : 1;
 
   /// Function to used to destruct any allocated storage instances.
   function_ref<void(BaseStorage *)> destructorFn;
@@ -232,12 +301,38 @@ private:
     return mutationFn();
   }
 
+  void beginTransientScope() {
+    assert(!inTransientScope &&
+           "parametric storage uniquer is already in a transient scope");
+    inTransientScope = true;
+  }
+
+  void endTransientScope() {
+    assert(inTransientScope &&
+           "parametric storage uniquer is not in a transient scope");
+    if (!inTransientScope)
+      return;
+    if (shard.transientInstances) {
+      if (destructorFn) {
+        for (HashedStorage &instance : *shard.transientInstances)
+          destructorFn(instance.storage);
+      }
+      shard.transientInstances.reset();
+    }
+    inTransientScope = false;
+  }
+
+  bool isInTransientScope() const { return inTransientScope; }
+
 private:
   /// The main uniquer shard that is used for allocating storage instances.
   Shard shard;
 
   /// Function to used to destruct any allocated storage instances.
   function_ref<void(BaseStorage *)> destructorFn;
+
+  /// Flag indicating if the uniquer is currently in a transient scope.
+  bool inTransientScope = false;
 #endif
 };
 } // namespace
@@ -248,6 +343,26 @@ namespace detail {
 struct StorageUniquerImpl {
   using BaseStorage = StorageUniquer::BaseStorage;
   using StorageAllocator = StorageUniquer::StorageAllocator;
+
+  /// Bundled state dynamically allocated when entering a transient scope.
+  struct TransientState {
+#if LLVM_ENABLE_THREADS != 0
+    /// Transient thread local set of allocators used when in a transient scope.
+    ThreadLocalCache<StorageAllocator *> threadSafeAllocator;
+
+    /// Transient allocators created during transient scope.
+    std::vector<std::unique_ptr<StorageAllocator>> threadAllocators;
+
+    /// A mutex used for safely adding a new transient thread allocator.
+    llvm::sys::SmartMutex<true> threadAllocatorMutex;
+#endif
+
+    /// Single-threaded allocator used during transient scope.
+    std::unique_ptr<StorageAllocator> allocator;
+
+    /// Transient singleton instances registered during transient scope.
+    DenseMap<TypeID, BaseStorage *> singletonInstances;
+  };
 
   //===--------------------------------------------------------------------===//
   // Parametric Storage
@@ -286,8 +401,27 @@ struct StorageUniquerImpl {
   /// current thread.
   StorageAllocator &getThreadSafeAllocator() {
 #if LLVM_ENABLE_THREADS != 0
-    if (!threadingIsEnabled)
+    if (!threadingIsEnabled) {
+      if (transientState) {
+        if (!transientState->allocator)
+          transientState->allocator = std::make_unique<StorageAllocator>();
+        return *transientState->allocator;
+      }
       return allocator;
+    }
+
+    if (transientState) {
+      StorageAllocator *&threadAllocator =
+          transientState->threadSafeAllocator.get();
+      if (!threadAllocator) {
+        threadAllocator = new StorageAllocator();
+        llvm::sys::SmartScopedLock<true> lock(
+            transientState->threadAllocatorMutex);
+        transientState->threadAllocators.push_back(
+            std::unique_ptr<StorageAllocator>(threadAllocator));
+      }
+      return *threadAllocator;
+    }
 
     // If the allocator has not been initialized, create a new one.
     StorageAllocator *&threadAllocator = threadSafeAllocator.get();
@@ -303,9 +437,33 @@ struct StorageUniquerImpl {
 
     return *threadAllocator;
 #else
+    if (transientState) {
+      if (!transientState->allocator)
+        transientState->allocator = std::make_unique<StorageAllocator>();
+      return *transientState->allocator;
+    }
     return allocator;
 #endif
   }
+
+  void beginTransientScope() {
+    assert(!transientState &&
+           "storage uniquer is already in a transient scope");
+    transientState = std::make_unique<TransientState>();
+    for (auto &entry : parametricUniquers)
+      entry.second->beginTransientScope();
+  }
+
+  void endTransientScope() {
+    assert(transientState && "storage uniquer is not in a transient scope");
+    if (!transientState)
+      return;
+    for (auto &entry : parametricUniquers)
+      entry.second->endTransientScope();
+    transientState.reset();
+  }
+
+  bool isInTransientScope() const { return transientState != nullptr; }
 
   //===--------------------------------------------------------------------===//
   // Singleton Storage
@@ -313,13 +471,22 @@ struct StorageUniquerImpl {
 
   /// Get or create an instance of a singleton storage class.
   BaseStorage *getSingleton(TypeID id) {
+    if (transientState) {
+      auto it = transientState->singletonInstances.find(id);
+      if (it != transientState->singletonInstances.end())
+        return it->second;
+    }
     BaseStorage *singletonInstance = singletonInstances[id];
     assert(singletonInstance && "expected singleton instance to exist");
     return singletonInstance;
   }
 
   /// Check if an instance of a singleton storage class exists.
-  bool hasSingleton(TypeID id) const { return singletonInstances.count(id); }
+  bool hasSingleton(TypeID id) const {
+    if (transientState && transientState->singletonInstances.count(id))
+      return true;
+    return singletonInstances.count(id);
+  }
 
   //===--------------------------------------------------------------------===//
   // Instance Storage
@@ -340,6 +507,9 @@ struct StorageUniquerImpl {
   /// Main allocator used for uniquing singleton instances, and other state when
   /// thread safety is guaranteed.
   StorageAllocator allocator;
+
+  /// Transient state bundled into a unique pointer (nullptr when inactive).
+  std::unique_ptr<TransientState> transientState;
 
   /// Map of type ids to the storage uniquer to use for registered objects.
   DenseMap<TypeID, std::unique_ptr<ParametricStorageUniquer>>
@@ -363,6 +533,14 @@ void StorageUniquer::disableMultithreading(bool disable) {
   impl->threadingIsEnabled = !disable;
 }
 
+void StorageUniquer::beginTransientScope() { impl->beginTransientScope(); }
+
+void StorageUniquer::endTransientScope() { impl->endTransientScope(); }
+
+bool StorageUniquer::isInTransientScope() const {
+  return impl->isInTransientScope();
+}
+
 /// Implementation for getting/creating an instance of a derived type with
 /// parametric storage.
 auto StorageUniquer::getParametricStorageTypeImpl(
@@ -376,8 +554,10 @@ auto StorageUniquer::getParametricStorageTypeImpl(
 /// parametric storage.
 void StorageUniquer::registerParametricStorageTypeImpl(
     TypeID id, function_ref<void(BaseStorage *)> destructorFn) {
-  impl->parametricUniquers.try_emplace(
-      id, std::make_unique<ParametricStorageUniquer>(destructorFn));
+  auto uniquer = std::make_unique<ParametricStorageUniquer>(destructorFn);
+  if (impl->isInTransientScope())
+    uniquer->beginTransientScope();
+  impl->parametricUniquers.try_emplace(id, std::move(uniquer));
 }
 
 /// Implementation for getting an instance of a derived type with default
@@ -400,6 +580,14 @@ bool StorageUniquer::isParametricStorageInitialized(TypeID id) {
 /// storage.
 void StorageUniquer::registerSingletonImpl(
     TypeID id, function_ref<BaseStorage *(StorageAllocator &)> ctorFn) {
+  if (impl->transientState) {
+    assert(!impl->transientState->singletonInstances.count(id) &&
+           !impl->singletonInstances.count(id) &&
+           "storage class already registered");
+    impl->transientState->singletonInstances.try_emplace(
+        id, ctorFn(impl->getThreadSafeAllocator()));
+    return;
+  }
   assert(!impl->singletonInstances.count(id) &&
          "storage class already registered");
   impl->singletonInstances.try_emplace(id, ctorFn(impl->allocator));

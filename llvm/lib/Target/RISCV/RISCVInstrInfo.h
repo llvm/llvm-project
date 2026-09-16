@@ -257,6 +257,10 @@ public:
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      outliner::Candidate &C) const override;
 
+  void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator Iter, DebugLoc &DL,
+                          bool AllowSideEffects = true) const override;
+
   std::optional<RegImmPair> isAddImmediate(const MachineInstr &MI,
                                            Register Reg) const override;
 
@@ -328,6 +332,43 @@ public:
   analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
 
   bool isHighLatencyDef(int Opc) const override;
+
+  InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const override {
+    // FIXME: These Xqci instructions can compress from a 6 byte to a 4 byte
+    // instruction but getInstSizeInBytes unilaterally returns 2 for any
+    // compressible instruction.
+    switch (MI.getOpcode()) {
+    case RISCV::QC_E_LW:
+    case RISCV::QC_E_LB:
+    case RISCV::QC_E_LH:
+    case RISCV::QC_E_LBU:
+    case RISCV::QC_E_LHU:
+    case RISCV::QC_E_SW:
+    case RISCV::QC_E_SB:
+    case RISCV::QC_E_SH:
+    case RISCV::QC_E_JAL:
+    case RISCV::QC_E_J:
+    case RISCV::QC_E_LI:
+    case RISCV::QC_E_ADDI:
+    case RISCV::QC_E_ANDI:
+    case RISCV::QC_E_ORI:
+    case RISCV::QC_E_XORI:
+    case RISCV::QC_E_ADDAI:
+    case RISCV::QC_E_ANDAI:
+    case RISCV::QC_E_ORAI:
+    case RISCV::QC_E_XORAI:
+    case RISCV::QC_E_BEQI:
+    case RISCV::QC_E_BNEI:
+    case RISCV::QC_E_BLTI:
+    case RISCV::QC_E_BGEUI:
+    case RISCV::QC_E_BLTUI:
+    case RISCV::QC_E_BGEI:
+      return InstSizeVerifyMode::NoVerify;
+    default:
+      return InstSizeVerifyMode::AllowOverEstimate;
+    }
+  }
 
   /// Return true if \p MI is a COPY to a vector register of a specific \p LMul,
   /// or any kind of vector registers when \p LMul is zero.
@@ -406,7 +447,8 @@ unsigned getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW);
 static constexpr int64_t VLMaxSentinel = -1LL;
 
 /// Given two VL operands, do we know that LHS <= RHS?
-bool isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS);
+bool isVLKnownLE(const MachineRegisterInfo &MRI, const MachineOperand &LHS,
+                 const MachineOperand &RHS);
 
 // Mask assignments for floating-point
 static constexpr unsigned FPMASK_Negative_Infinity = 0x001;

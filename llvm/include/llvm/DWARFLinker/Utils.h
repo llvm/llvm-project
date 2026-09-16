@@ -31,7 +31,7 @@ namespace dwarf_linker {
 /// have registered and keeps the classic and parallel DWARFLinkers in
 /// lockstep. Caller passes \p SortedStmtSeqOffsets sorted ascending
 /// and deduplicated.
-void buildStmtSeqOffsetToFirstRowIndex(
+LLVM_ABI void buildStmtSeqOffsetToFirstRowIndex(
     const DWARFDebugLine::LineTable &LT,
     ArrayRef<uint64_t> SortedStmtSeqOffsets,
     DenseMap<uint64_t, uint64_t> &SeqOffToFirstRow);

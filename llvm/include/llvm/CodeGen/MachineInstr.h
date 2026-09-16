@@ -58,7 +58,8 @@ template <typename T> class SmallVectorImpl;
 class SmallBitVector;
 class StringRef;
 class TargetInstrInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 //===----------------------------------------------------------------------===//
@@ -127,7 +128,9 @@ public:
     SameSign = 1 << 21,      // Both operands have the same sign.
     InBounds = 1 << 22,      // Pointer arithmetic remains inbounds.
                              // Implies NoUSWrap.
-    LRSplit = 1 << 23        // Instruction for live range split.
+    LRSplit = 1 << 23,       // Instruction for live range split.
+    NonNull = 1 << 24        // Address space cast source is not the null
+                             // value of the source address space.
   };
 
 private:
@@ -1367,6 +1370,7 @@ public:
   }
 
   // True if the instruction represents a position in the function.
+  // FIXME: Why are LIFETIME markers not considered in MachineInstr::isPosition?
   bool isPosition() const { return isLabel() || isCFIInstruction(); }
 
   bool isNonListDebugValue() const {
@@ -2125,17 +2129,11 @@ private:
 /// instruction rather than by pointer value.
 /// The hashing and equality testing functions ignore definitions so this is
 /// useful for CSE, etc.
-struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr*> {
-  static inline MachineInstr *getEmptyKey() {
-    return nullptr;
-  }
-
+struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr *> {
   LLVM_ABI static unsigned getHashValue(const MachineInstr *const &MI);
 
-  static bool isEqual(const MachineInstr* const &LHS,
-                      const MachineInstr* const &RHS) {
-    if (RHS == getEmptyKey() || LHS == getEmptyKey())
-      return LHS == RHS;
+  static bool isEqual(const MachineInstr *const &LHS,
+                      const MachineInstr *const &RHS) {
     return LHS->isIdenticalTo(*RHS, MachineInstr::IgnoreVRegDefs);
   }
 };

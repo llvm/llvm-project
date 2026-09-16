@@ -16,9 +16,11 @@ using namespace mlir::transform;
 
 void mlir::transform::printPackedOrDynamicIndexList(
     OpAsmPrinter &printer, Operation *op, Value packed, Type packedType,
-    OperandRange values, TypeRange valueTypes, DenseI64ArrayAttr integers) {
+    OperandRange values, TypeRange valueTypes, DenseBoolArrayAttr scalableFlags,
+    DenseI64ArrayAttr integers) {
   if (packed) {
     assert(values.empty() && (!integers || integers.empty()) &&
+           (!scalableFlags || scalableFlags.empty()) &&
            "expected no values/integers");
     printer << "*(" << packed;
     if (packedType) {
@@ -27,13 +29,17 @@ void mlir::transform::printPackedOrDynamicIndexList(
     printer << ")";
     return;
   }
-  printDynamicIndexList(printer, op, values, integers, valueTypes);
+  printDynamicIndexList(printer, op, values, integers,
+                        scalableFlags ? scalableFlags.asArrayRef()
+                                      : ArrayRef<bool>{},
+                        valueTypes);
 }
 
 ParseResult mlir::transform::parsePackedOrDynamicIndexList(
     OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &packed,
     Type &packedType, SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    SmallVectorImpl<Type> *valueTypes, DenseI64ArrayAttr &integers) {
+    DenseBoolArrayAttr &scalableFlags, SmallVectorImpl<Type> *valueTypes,
+    DenseI64ArrayAttr &integers) {
   OpAsmParser::UnresolvedOperand packedOperand;
   if (parser.parseOptionalStar().succeeded()) {
     if (parser.parseLParen().failed() ||
@@ -45,8 +51,10 @@ ParseResult mlir::transform::parsePackedOrDynamicIndexList(
       return failure();
     packed.emplace(packedOperand);
     integers = parser.getBuilder().getDenseI64ArrayAttr({});
+    scalableFlags = parser.getBuilder().getDenseBoolArrayAttr({});
     return success();
   }
 
-  return parseDynamicIndexList(parser, values, integers, valueTypes);
+  return parseDynamicIndexList(parser, values, integers, scalableFlags,
+                               valueTypes);
 }

@@ -15,6 +15,10 @@ define i128 @multivalue_sdiv(i128 %a, i128 %b) {
 ; MULTIVALUE-NEXT:    local.get 2
 ; MULTIVALUE-NEXT:    local.get 3
 ; MULTIVALUE-NEXT:    call __divti3
+; MULTIVALUE-NEXT:    local.set 2
+; MULTIVALUE-NEXT:    local.set 3
+; MULTIVALUE-NEXT:    local.get 3
+; MULTIVALUE-NEXT:    local.get 2
 ; MULTIVALUE-NEXT:    # fallthrough-return
 ;
 ; NO_MULTIVALUE-LABEL: multivalue_sdiv:
@@ -59,6 +63,10 @@ define fp128 @multivalue_fsub(fp128 %a, fp128 %b) {
 ; MULTIVALUE-NEXT:    local.get 2
 ; MULTIVALUE-NEXT:    local.get 3
 ; MULTIVALUE-NEXT:    call __subtf3
+; MULTIVALUE-NEXT:    local.set 2
+; MULTIVALUE-NEXT:    local.set 3
+; MULTIVALUE-NEXT:    local.get 3
+; MULTIVALUE-NEXT:    local.get 2
 ; MULTIVALUE-NEXT:    # fallthrough-return
 ;
 ; NO_MULTIVALUE-LABEL: multivalue_fsub:
@@ -102,6 +110,10 @@ define i128 @multivalue_lshr(i128 %a, i128 %b) {
 ; MULTIVALUE-NEXT:    local.get 0
 ; MULTIVALUE-NEXT:    i32.wrap_i64
 ; MULTIVALUE-NEXT:    call __ashlti3
+; MULTIVALUE-NEXT:    local.set 3
+; MULTIVALUE-NEXT:    local.set 0
+; MULTIVALUE-NEXT:    local.get 0
+; MULTIVALUE-NEXT:    local.get 3
 ; MULTIVALUE-NEXT:    # fallthrough-return
 ;
 ; NO_MULTIVALUE-LABEL: multivalue_lshr:

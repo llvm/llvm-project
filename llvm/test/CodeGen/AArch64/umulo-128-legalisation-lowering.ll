@@ -75,18 +75,18 @@ define i128 @__muloti4(i128 %0, i128 %1, ptr nocapture nonnull writeonly align 4
 ; AARCH-NEXT:    cmp x9, x11
 ; AARCH-NEXT:    ccmp x10, x11, #0, eq
 ; AARCH-NEXT:    cset w9, ne
-; AARCH-NEXT:    tbnz x1, #63, .LBB1_3
-; AARCH-NEXT:    b .LBB1_4
+; AARCH-NEXT:    b .LBB1_3
 ; AARCH-NEXT:  .LBB1_2: // %overflow.no
 ; AARCH-NEXT:    smulh x8, x0, x2
 ; AARCH-NEXT:    mov w9, wzr
 ; AARCH-NEXT:    mul x0, x0, x2
-; AARCH-NEXT:    tbz x1, #63, .LBB1_4
 ; AARCH-NEXT:  .LBB1_3: // %overflow.res
-; AARCH-NEXT:    eor x10, x3, #0x8000000000000000
-; AARCH-NEXT:    orr x10, x2, x10
-; AARCH-NEXT:    cbz x10, .LBB1_5
-; AARCH-NEXT:  .LBB1_4: // %Else2
+; AARCH-NEXT:    mov  x10, #-9223372036854775808      // =0x8000000000000000
+; AARCH-NEXT:    cmp  x3, x10
+; AARCH-NEXT:    ccmp	x2, #0, #0, eq
+; AARCH-NEXT:    ccmp x1, #0, #0, eq
+; AARCH-NEXT:    b.mi .LBB1_5
+; AARCH-NEXT:  // %bb.4: // %Else2
 ; AARCH-NEXT:    cbz w9, .LBB1_6
 ; AARCH-NEXT:  .LBB1_5: // %Then7
 ; AARCH-NEXT:    mov w9, #1 // =0x1

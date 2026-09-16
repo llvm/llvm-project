@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -118,17 +119,7 @@ namespace llvm {
 template <> struct DenseMapInfo<MemOpKey> {
   using PtrInfo = DenseMapInfo<const MachineOperand *>;
 
-  static inline MemOpKey getEmptyKey() {
-    return MemOpKey(PtrInfo::getEmptyKey(), PtrInfo::getEmptyKey(),
-                    PtrInfo::getEmptyKey(), PtrInfo::getEmptyKey(),
-                    PtrInfo::getEmptyKey());
-  }
-
   static unsigned getHashValue(const MemOpKey &Val) {
-    // Checking any field of MemOpKey is enough to determine if the key is
-    // empty.
-    assert(Val.Disp != PtrInfo::getEmptyKey() && "Cannot hash the empty key");
-
     hash_code Hash = hash_combine(*Val.Operands[0], *Val.Operands[1],
                                   *Val.Operands[2], *Val.Operands[3]);
 
@@ -166,10 +157,6 @@ template <> struct DenseMapInfo<MemOpKey> {
   }
 
   static bool isEqual(const MemOpKey &LHS, const MemOpKey &RHS) {
-    // Checking any field of MemOpKey is enough to determine if the key is
-    // empty.
-    if (RHS.Disp == PtrInfo::getEmptyKey())
-      return LHS.Disp == PtrInfo::getEmptyKey();
     return LHS == RHS;
   }
 };
@@ -299,6 +286,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -338,8 +326,8 @@ bool X86OptimizeLEAsImpl::chooseBestLEA(
     const SmallVectorImpl<MachineInstr *> &List, const MachineInstr &MI,
     MachineInstr *&BestLEA, int64_t &AddrDispShift, int &Dist) {
   const MCInstrDesc &Desc = MI.getDesc();
-  int MemOpNo = X86II::getMemoryOperandNo(Desc.TSFlags) +
-                X86II::getOperandBias(Desc);
+  int MemOpNo = X86II::getMemoryOperandIdx(Desc);
+  assert(MemOpNo >= 0 && "Expected a memory operand");
 
   BestLEA = nullptr;
 
@@ -440,15 +428,12 @@ bool X86OptimizeLEAsImpl::isReplaceable(const MachineInstr &First,
     MachineInstr &MI = *MO.getParent();
 
     // Get the number of the first memory operand.
-    const MCInstrDesc &Desc = MI.getDesc();
-    int MemOpNo = X86II::getMemoryOperandNo(Desc.TSFlags);
+    int MemOpNo = X86II::getMemoryOperandIdx(MI.getDesc());
 
     // If the use instruction has no memory operand - the LEA is not
     // replaceable.
     if (MemOpNo < 0)
       return false;
-
-    MemOpNo += X86II::getOperandBias(Desc);
 
     // If the address base of the use instruction is not the LEA def register -
     // the LEA is not replaceable.
@@ -504,14 +489,11 @@ bool X86OptimizeLEAsImpl::removeRedundantAddrCalc(MemOpMap &LEAs) {
       continue;
 
     // Get the number of the first memory operand.
-    const MCInstrDesc &Desc = MI.getDesc();
-    int MemOpNo = X86II::getMemoryOperandNo(Desc.TSFlags);
+    int MemOpNo = X86II::getMemoryOperandIdx(MI.getDesc());
 
     // If instruction has no memory operand - skip it.
     if (MemOpNo < 0)
       continue;
-
-    MemOpNo += X86II::getOperandBias(Desc);
 
     // Do not call chooseBestLEA if there was no matching LEA
     auto Insns = LEAs.find(getMemOpKey(MI, MemOpNo));
@@ -665,10 +647,8 @@ bool X86OptimizeLEAsImpl::removeRedundantLEAs(MemOpMap &LEAs) {
           }
 
           // Get the number of the first memory operand.
-          const MCInstrDesc &Desc = MI.getDesc();
-          int MemOpNo =
-              X86II::getMemoryOperandNo(Desc.TSFlags) +
-              X86II::getOperandBias(Desc);
+          int MemOpNo = X86II::getMemoryOperandIdx(MI.getDesc());
+          assert(MemOpNo >= 0 && "Expected a memory operand");
 
           // Update address base.
           MO.setReg(FirstVReg);

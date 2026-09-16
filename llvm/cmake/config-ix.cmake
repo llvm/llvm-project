@@ -98,9 +98,6 @@ if(LLVM_USING_GLIBC AND CMAKE_SIZEOF_VOID_P EQUAL 4)
 endif()
 
 # include checks
-check_include_file(valgrind/valgrind.h HAVE_VALGRIND_VALGRIND_H)
-check_symbol_exists(FE_ALL_EXCEPT "fenv.h" HAVE_DECL_FE_ALL_EXCEPT)
-check_symbol_exists(FE_INEXACT "fenv.h" HAVE_DECL_FE_INEXACT)
 check_c_source_compiles("
         #if __has_attribute(used)
         #define LLVM_ATTRIBUTE_USED __attribute__((__used__))
@@ -113,7 +110,6 @@ check_c_source_compiles("
         int main(void) { return 0; }"
         HAVE_BUILTIN_THREAD_POINTER)
 
-check_include_file(CrashReporterClient.h HAVE_CRASHREPORTERCLIENT_H)
 if(APPLE)
   check_c_source_compiles("
      static const char *__crashreporter_info__ = 0;
@@ -122,35 +118,19 @@ if(APPLE)
     HAVE_CRASHREPORTER_INFO)
 endif()
 
-if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
-  check_include_file(linux/magic.h HAVE_LINUX_MAGIC_H)
-  if(NOT HAVE_LINUX_MAGIC_H)
-    # older kernels use split files
-    check_include_file(linux/nfs_fs.h HAVE_LINUX_NFS_FS_H)
-    check_include_file(linux/smb.h HAVE_LINUX_SMB_H)
-  endif()
-endif()
-
 # library checks
 if(NOT WIN32)
   check_library_exists(pthread pthread_create "" HAVE_LIBPTHREAD)
   if (HAVE_LIBPTHREAD)
     check_library_exists(pthread pthread_rwlock_init "" HAVE_PTHREAD_RWLOCK_INIT)
-    check_library_exists(pthread pthread_mutex_lock "" HAVE_PTHREAD_MUTEX_LOCK)
   else()
     # this could be Android
     check_library_exists(c pthread_create "" PTHREAD_IN_LIBC)
     if (PTHREAD_IN_LIBC)
       check_library_exists(c pthread_rwlock_init "" HAVE_PTHREAD_RWLOCK_INIT)
-      check_library_exists(c pthread_mutex_lock "" HAVE_PTHREAD_MUTEX_LOCK)
     endif()
   endif()
-  check_library_exists(dl dlopen "" HAVE_LIBDL)
-  check_library_exists(rt shm_open "" HAVE_LIBRT)
 endif()
-
-# Check for libpfm.
-include(FindLibpfm)
 
 if(HAVE_LIBPTHREAD)
   # We want to find pthreads library and at the moment we do want to
@@ -160,7 +140,21 @@ if(HAVE_LIBPTHREAD)
   set(THREADS_HAVE_PTHREAD_ARG Off)
   find_package(Threads REQUIRED)
   set(LLVM_PTHREAD_LIB ${CMAKE_THREAD_LIBS_INIT})
+  if(LLVM_PTHREAD_LIB)
+    list(APPEND CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
+  endif()
 endif()
+
+# Keep the dlopen and rt library checks after FindThreads so that
+# CMAKE_REQUIRED_LIBRARIES includes pthread. glibc versions before 2.34 may
+# need pthread to satisfy librt dependencies.
+if(NOT WIN32)
+  check_library_exists(dl dlopen "" HAVE_LIBDL)
+  check_library_exists(rt shm_open "" HAVE_LIBRT)
+endif()
+
+# Check for libpfm.
+include(FindLibpfm)
 
 if(LLVM_ENABLE_ZLIB)
   if(LLVM_ENABLE_ZLIB STREQUAL FORCE_ON)
@@ -442,16 +436,10 @@ else()
 endif()
 
 if (NOT WIN32)
-  if (LLVM_PTHREAD_LIB)
-    list(APPEND CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
-  endif()
   check_symbol_exists(pthread_getname_np pthread.h HAVE_PTHREAD_GETNAME_NP)
   check_symbol_exists(pthread_setname_np pthread.h HAVE_PTHREAD_SETNAME_NP)
   check_symbol_exists(pthread_get_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_GET_NAME_NP)
   check_symbol_exists(pthread_set_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SET_NAME_NP)
-  if (LLVM_PTHREAD_LIB)
-    list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
-  endif()
 
   if( HAVE_LIBDL )
     list(APPEND CMAKE_REQUIRED_LIBRARIES dl)
@@ -651,7 +639,8 @@ else( LLVM_ENABLE_THREADS )
   message(STATUS "Threads disabled.")
 endif()
 
-find_program(GOLD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.gold ld.gold ${LLVM_DEFAULT_TARGET_TRIPLE}-ld ld DOC "The gold linker")
+find_program(GOLD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.gold ld.gold DOC "The gold linker")
+find_program(LD_BFD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.bfd ld.bfd ${LLVM_DEFAULT_TARGET_TRIPLE}-ld ld DOC "The bfd linker")
 set(LLVM_BINUTILS_INCDIR "" CACHE PATH
     "PATH to binutils/include containing plugin-api.h for gold plugin.")
 
@@ -679,6 +668,7 @@ if(CMAKE_HOST_APPLE AND APPLE)
     if(CMAKE_XCRUN)
       execute_process(COMMAND ${CMAKE_XCRUN} -find ld-classic
         OUTPUT_VARIABLE LD64_EXECUTABLE
+        ERROR_QUIET
         OUTPUT_STRIP_TRAILING_WHITESPACE)
     else()
       find_program(LD64_EXECUTABLE NAMES ld-classic DOC "The ld64 linker")

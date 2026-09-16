@@ -323,3 +323,52 @@ exit:
     ret void
 }
 
+define i1 @cmp_i128_ult_small_const(i128 %a) {
+; CHECK-LABEL: cmp_i128_ult_small_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    ccmp x0, #7, #2, eq
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
+    %cmp = icmp ult i128 %a, 7
+    ret i1 %cmp
+}
+
+define i1 @cmp_i128_small_const_ult(i128 %a) {
+; CHECK-LABEL: cmp_i128_small_const_ult:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    ccmp x0, #7, #2, eq
+; CHECK-NEXT:    cset w0, hi
+; CHECK-NEXT:    ret
+    %cmp = icmp ult i128 7, %a
+    ret i1 %cmp
+}
+
+define i1 @cmp_i128_ult_small_const_and_i64(i128 %a, i64 %b) {
+; CHECK-LABEL: cmp_i128_ult_small_const_and_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, #7
+; CHECK-NEXT:    ccmp x2, #11, #2, lo
+; CHECK-NEXT:    ccmp x1, #0, #0, lo
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+    %wide = icmp ult i128 %a, 7
+    %narrow = icmp ult i64 %b, 11
+    %cmp = and i1 %wide, %narrow
+    ret i1 %cmp
+}
+
+define i1 @cmp_i128_small_const_ult_or_i64(i128 %a, i64 %b) {
+; CHECK-LABEL: cmp_i128_small_const_ult_or_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    ccmp x0, #7, #2, eq
+; CHECK-NEXT:    ccmp x2, #11, #0, ls
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
+    %wide = icmp ult i128 7, %a
+    %narrow = icmp ult i64 %b, 11
+    %cmp = or i1 %wide, %narrow
+    ret i1 %cmp
+}

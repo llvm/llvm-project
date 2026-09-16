@@ -315,9 +315,6 @@ def AMDGPUbfe_i32_impl : SDNode<"AMDGPUISD::BFE_I32", AMDGPUDTIntTernaryOp>;
 // (src0 & src1) | (~src0 & src2)
 def AMDGPUbfi : SDNode<"AMDGPUISD::BFI", AMDGPUDTIntTernaryOp>;
 
-// Insert a range of bits into a 32-bit word.
-def AMDGPUbfm : SDNode<"AMDGPUISD::BFM", SDTIntBinOp>;
-
 // ctlz with -1 if input is zero.
 def AMDGPUffbh_u32_impl : SDNode<"AMDGPUISD::FFBH_U32", SDTIntBitCountUnaryOp>;
 

@@ -45,6 +45,7 @@
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
@@ -93,6 +94,7 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
     : D(D), Triple(T), Args(Args), CachedRTTIArg(GetRTTIArgument(Args)),
       CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)),
       CachedExceptionsMode(CalculateExceptionsMode(Args)) {
+  assert(T.str() == T.normalize() && "triple should be normalized");
   auto addIfExists = [this](path_list &List, const std::string &Path) {
     if (getVFS().exists(Path))
       List.push_back(Path);
@@ -288,17 +290,17 @@ static void getAArch64MultilibFlags(const Driver &D,
                                        UnifiedFeatures.end());
   std::vector<std::string> MArch;
   for (const auto &Ext : AArch64::Extensions)
-    if (!Ext.UserVisibleName.empty())
-      if (FeatureSet.contains(Ext.PosTargetFeature))
-        MArch.push_back(Ext.UserVisibleName.str());
+    if (Ext.UserVisibleName.value())
+      if (FeatureSet.contains(AArch64::StrTab[Ext.PosTargetFeature]))
+        MArch.push_back(AArch64::StrTab[Ext.UserVisibleName].str());
   for (const auto &Ext : AArch64::Extensions)
-    if (!Ext.UserVisibleName.empty())
-      if (FeatureSet.contains(Ext.NegTargetFeature))
-        MArch.push_back(("no" + Ext.UserVisibleName).str());
+    if (Ext.UserVisibleName.value())
+      if (FeatureSet.contains(AArch64::StrTab[Ext.NegTargetFeature]))
+        MArch.push_back(("no" + AArch64::StrTab[Ext.UserVisibleName]).str());
   StringRef ArchName;
   for (const auto &ArchInfo : AArch64::ArchInfos)
-    if (FeatureSet.contains(ArchInfo->ArchFeature))
-      ArchName = ArchInfo->Name;
+    if (FeatureSet.contains(AArch64::StrTab[ArchInfo.ArchFeature]))
+      ArchName = AArch64::StrTab[ArchInfo.Name];
   if (!ArchName.empty()) {
     MArch.insert(MArch.begin(), ("-march=" + ArchName).str());
     Result.push_back(llvm::join(MArch, "+"));
@@ -444,6 +446,18 @@ static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
     Result.push_back("-fsanitize=shadow-call-stack");
   else
     Result.push_back("-fno-sanitize=shadow-call-stack");
+
+  const Arg *CFProtectionArg =
+      Args.getLastArgNoClaim(options::OPT_fcf_protection_EQ);
+  StringRef CFProtectionVal =
+      CFProtectionArg ? CFProtectionArg->getValue() : "none";
+  Result.push_back(("-fcf-protection=" + CFProtectionVal).str());
+
+  if (CFProtectionVal == "branch" || CFProtectionVal == "full") {
+    if (const Arg *SchemeArg =
+            Args.getLastArgNoClaim(options::OPT_mcf_branch_label_scheme_EQ))
+      Result.push_back(SchemeArg->getAsString(Args));
+  }
 }
 
 Multilib::flags_list
@@ -491,6 +505,10 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
 
   processMultilibCustomFlags(Result, Args);
 
+  if (Arg *CStdLibArg = Args.getLastArg(options::OPT_cstdlib_EQ))
+    Result.push_back(std::string(CStdLibArg->getOption().getPrefixedName()) +
+                     CStdLibArg->getValue());
+
   // Include fno-exceptions and fno-rtti
   // to improve multilib selection
   if (getRTTIMode() == ToolChain::RTTIMode::RM_Disabled)
@@ -516,14 +534,22 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
 }
 
 SanitizerArgs
-ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs,
-                            StringRef BoundArch,
+ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs, BoundArch BA,
                             Action::OffloadKind DeviceOffloadKind) const {
+  // When -fno-gpu-sanitize is specified for GPU targets, don't emit
+  // diagnostics about unsupported sanitizers for specific GPU arches,
+  // since sanitizers are disabled for the GPU anyway.
+  bool DiagnoseBoundArchErrors =
+      BoundArchSanitizerArgsChecked.insert(BA.ArchName).second;
+  if (BA && getTriple().isGPU() &&
+      !JobArgs.hasFlag(options::OPT_fgpu_sanitize,
+                       options::OPT_fno_gpu_sanitize, true)) {
+    DiagnoseBoundArchErrors = false;
+  }
+
   SanitizerArgs SanArgs(*this, JobArgs,
                         /*DiagnoseErrors=*/!SanitizerArgsChecked,
-                        /*DiagnoseBoundArchErrors=*/
-                        BoundArchSanitizerArgsChecked.insert(BoundArch).second,
-                        BoundArch, DeviceOffloadKind);
+                        DiagnoseBoundArchErrors, BA, DeviceOffloadKind);
 
   SanitizerArgsChecked = true;
   return SanArgs;
@@ -789,7 +815,6 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
     return getClang();
 
   case Action::OffloadBundlingJobClass:
-  case Action::OffloadUnbundlingJobClass:
     return getOffloadBundler();
 
   case Action::OffloadPackagerJobClass:
@@ -827,6 +852,8 @@ static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
 StringRef ToolChain::getOSLibName() const {
   if (Triple.isOSDarwin())
     return "darwin";
+  if (Triple.isWindowsCygwinEnvironment())
+    return "cygwin";
 
   switch (Triple.getOS()) {
   case llvm::Triple::FreeBSD:
@@ -1022,10 +1049,8 @@ void ToolChain::addFlangRTLibPath(const ArgList &Args,
                    options::OPT_shared_libflangrt, getTriple().isOSAIX()))
     CmdArgs.push_back(
         getCompilerRTArgString(Args, "runtime", ToolChain::FT_Static, true));
-  else {
+  else
     CmdArgs.push_back("-lflang_rt.runtime");
-    addArchSpecificRPath(*this, Args, CmdArgs);
-  }
 }
 
 // Android target triples contain a target version. If we don't have libraries
@@ -1096,6 +1121,20 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   const llvm::Triple &T = getTriple();
   if (auto Path = getPathForTriple(T))
     return *Path;
+
+  if (T.isAMDGCN()) {
+    // Clear the subarch as a fallback.
+    // TODO: Remove this when libc and compiler-rt builds are migrated.
+    llvm::Triple AMDGPUTriple = T;
+    AMDGPUTriple.setArch(Triple::amdgpu);
+    if (auto Path = getPathForTriple(AMDGPUTriple))
+      return *Path;
+
+    // Try legacy architecture name.
+    AMDGPUTriple.setArchName("amdgcn");
+    if (auto Path = getPathForTriple(AMDGPUTriple))
+      return *Path;
+  }
 
   if (T.isOSAIX()) {
     llvm::Triple AIXTriple;
@@ -1190,6 +1229,22 @@ ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
   };
 
   AddPath({getTriple().str()});
+
+  // For AMDGPU, fall back to the subarch-stripped triple path, trying both the
+  // canonical "amdgpu" name and the legacy "amdgcn" name.
+  //
+  // TODO: Also try major subarch?
+  // TODO: Remove this when libc and compiler-rt builds are migrated.
+  if (getTriple().isAMDGCN()) {
+    llvm::Triple Canon(getTriple());
+    for (StringRef ArchName : {"amdgpu", "amdgcn"}) {
+      if (ArchName == getTriple().getArchName())
+        continue;
+      Canon.setArchName(ArchName);
+      AddPath({Canon.str()});
+    }
+  }
+
   AddPath({getOSLibName(), llvm::Triple::getArchTypeName(getArch())});
   return Paths;
 }
@@ -1227,6 +1282,14 @@ Tool *ToolChain::SelectTool(const JobAction &JA) const {
 
 std::string ToolChain::GetFilePath(const char *Name) const {
   return D.GetFilePath(Name, *this);
+}
+
+std::optional<std::string>
+ToolChain::GetFilePathIfExists(const char *Name) const {
+  std::string Path = D.GetFilePath(Name, *this);
+  if (Path == Name)
+    return std::nullopt;
+  return Path;
 }
 
 std::string ToolChain::GetProgramPath(const char *Name) const {
@@ -1405,7 +1468,7 @@ ObjCRuntime ToolChain::getDefaultObjCRuntime(bool isNonFragile) const {
 
 llvm::ExceptionHandling
 ToolChain::GetExceptionModel(const llvm::opt::ArgList &Args) const {
-  return llvm::ExceptionHandling::None;
+  return llvm::ExceptionHandling::Default;
 }
 
 bool ToolChain::isThreadModelSupported(const StringRef Model) const {
@@ -1421,8 +1484,7 @@ bool ToolChain::isThreadModelSupported(const StringRef Model) const {
   return false;
 }
 
-std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
-                                         StringRef BoundArch,
+std::string ToolChain::ComputeLLVMTriple(const ArgList &Args, BoundArch BA,
                                          types::ID InputType) const {
   switch (getTriple().getArch()) {
   default:
@@ -1458,9 +1520,10 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
   }
   case llvm::Triple::aarch64_32:
     return getTripleString().str();
-  case llvm::Triple::amdgcn: {
+  case llvm::Triple::amdgpu: {
     llvm::Triple Triple = getTriple();
-    tools::AMDGPU::setArchNameInTriple(getDriver(), Args, InputType, Triple);
+    tools::AMDGPU::setArchNameInTriple(getDriver(), Args, BA, InputType,
+                                       Triple);
     return Triple.getTriple();
   }
   case llvm::Triple::arm:
@@ -1470,15 +1533,16 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
     llvm::Triple Triple = getTriple();
     tools::arm::setArchNameInTriple(getDriver(), Args, InputType, Triple);
     tools::arm::setFloatABIInTriple(getDriver(), Args, Triple);
+    tools::arm::setEABIInTriple(getDriver(), Args, Triple);
     return Triple.getTriple();
   }
   }
 }
 
 std::string ToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
-                                                   StringRef BoundArch,
+                                                   BoundArch BA,
                                                    types::ID InputType) const {
-  return ComputeLLVMTriple(Args, BoundArch, InputType);
+  return ComputeLLVMTriple(Args, BA, InputType);
 }
 
 std::string ToolChain::computeSysRoot() const {
@@ -1491,7 +1555,7 @@ void ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 }
 
 void ToolChain::addClangTargetOptions(
-    const ArgList &DriverArgs, ArgStringList &CC1Args,
+    const ArgList &DriverArgs, ArgStringList &CC1Args, BoundArch BA,
     Action::OffloadKind DeviceOffloadKind) const {}
 
 void ToolChain::addClangCC1ASTargetOptions(const ArgList &Args,
@@ -1593,6 +1657,16 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   }
 
   return *cxxStdlibType;
+}
+
+StringRef ToolChain::GetCXXStdlibName(const ArgList &Args) const {
+  switch (GetCXXStdlibType(Args)) {
+  case ToolChain::CST_Libcxx:
+    return "libc++";
+  case ToolChain::CST_Libstdcxx:
+    return "libstdc++";
+  }
+  llvm_unreachable("unknown C++ standard library type");
 }
 
 ToolChain::CStdlibType ToolChain::GetCStdlibType(const ArgList &Args) const {
@@ -1830,7 +1904,7 @@ ToolChain::getSystemGPUArchs(const llvm::opt::ArgList &Args) const {
 }
 
 SanitizerMask
-ToolChain::getSupportedSanitizers(StringRef BoundArch,
+ToolChain::getSupportedSanitizers(BoundArch BA,
                                   Action::OffloadKind DeviceOffloadKind) const {
   // Return sanitizers which don't require runtime support and are not
   // platform dependent.
@@ -1871,7 +1945,7 @@ void ToolChain::addSYCLIncludeArgs(const ArgList &DriverArgs,
                                    ArgStringList &CC1Args) const {}
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
-ToolChain::getDeviceLibs(const ArgList &DriverArgs,
+ToolChain::getDeviceLibs(const ArgList &DriverArgs, BoundArch BA,
                          const Action::OffloadKind DeviceOffloadingKind) const {
   return {};
 }
@@ -2086,12 +2160,18 @@ void ToolChain::TranslateXarchArgs(
 static bool isXArchCompatibleTripleArch(const llvm::Triple &TT,
                                         StringRef XArchVal) {
   llvm::Triple ParsedTriple(XArchVal);
+
+  // Accept -Xarch_amdgcn for all amdgpu subarches, and -Xarch_amdgpu9 for
+  // amdgpu9.xx
+  if (TT.isAMDGCN() && ParsedTriple.isAMDGCN())
+    return llvm::AMDGPU::isSubArchCompatible(TT, ParsedTriple);
+
   return TT.getArch() == ParsedTriple.getArch() &&
          TT.getSubArch() == ParsedTriple.getSubArch();
 }
 
 llvm::opt::DerivedArgList *ToolChain::TranslateXarchArgs(
-    const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+    const llvm::opt::DerivedArgList &Args, BoundArch BA,
     Action::OffloadKind OFK,
     SmallVectorImpl<llvm::opt::Arg *> *AllocatedArgs) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
@@ -2109,8 +2189,7 @@ llvm::opt::DerivedArgList *ToolChain::TranslateXarchArgs(
       Skip = IsDevice;
     } else if (A->getOption().matches(options::OPT_Xarch__)) {
       StringRef Val = A->getValue();
-      NeedTrans = Val == getArchName() ||
-                  (!BoundArch.empty() && Val == BoundArch) ||
+      NeedTrans = Val == getArchName() || (BA && Val == BA.ArchName) ||
                   isXArchCompatibleTripleArch(Triple, Val);
       Skip = !NeedTrans;
     }

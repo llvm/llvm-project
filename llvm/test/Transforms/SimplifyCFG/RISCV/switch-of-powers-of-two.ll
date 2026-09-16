@@ -35,8 +35,9 @@ define i32 @switch_of_powers(i32 %x) {
 ; RV64ZBB-NEXT:  entry:
 ; RV64ZBB-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
 ; RV64ZBB-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TMP0]] to i64
-; RV64ZBB-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], ptr @switch.table.switch_of_powers, i64 0, i64 [[TMP1]]
-; RV64ZBB-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; RV64ZBB-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i8], ptr @switch.table.switch_of_powers, i64 0, i64 [[TMP1]]
+; RV64ZBB-NEXT:    [[SWITCH_LOAD1:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
+; RV64ZBB-NEXT:    [[SWITCH_LOAD:%.*]] = zext i8 [[SWITCH_LOAD1]] to i32
 ; RV64ZBB-NEXT:    ret i32 [[SWITCH_LOAD]]
 ;
 entry:

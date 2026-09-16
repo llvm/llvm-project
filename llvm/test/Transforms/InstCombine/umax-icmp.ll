@@ -828,4 +828,15 @@ if.else:
   ret i1 false
 }
 
+define i32 @select_zero_umax(i32 %pos, i32 %len) {
+; CHECK-LABEL: @select_zero_umax(
+; CHECK-NEXT:    [[CLAMPED:%.*]] = call i32 @llvm.umax.i32(i32 [[POS:%.*]], i32 [[LEN:%.*]])
+; CHECK-NEXT:    ret i32 [[CLAMPED]]
+;
+  %is_zero = icmp eq i32 %pos, 0
+  %clamped = call i32 @llvm.umax.i32(i32 %pos, i32 %len)
+  %out = select i1 %is_zero, i32 %len, i32 %clamped
+  ret i32 %out
+}
+
 declare i32 @llvm.umax.i32(i32, i32)

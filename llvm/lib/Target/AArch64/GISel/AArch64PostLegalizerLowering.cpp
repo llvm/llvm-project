@@ -192,15 +192,16 @@ bool matchTRN(MachineInstr &MI, MachineRegisterInfo &MRI,
               ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   unsigned WhichResult;
-  unsigned OperandOrder;
+  unsigned OperandOrder = 0;
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isTRNMask(ShuffleMask, NumElts, WhichResult, OperandOrder))
+  bool TRNMask = isTRNMask(ShuffleMask, NumElts, WhichResult, OperandOrder);
+  if (!TRNMask && !isTRN_v_undef_Mask(ShuffleMask, NumElts, WhichResult))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_TRN1 : AArch64::G_TRN2;
   Register V1 = MI.getOperand(OperandOrder == 0 ? 1 : 2).getReg();
-  Register V2 = MI.getOperand(OperandOrder == 0 ? 2 : 1).getReg();
+  Register V2 = MI.getOperand(OperandOrder == 0 && TRNMask ? 2 : 1).getReg();
   MatchInfo = ShuffleVectorPseudo(Opc, Dst, {V1, V2});
   return true;
 }
@@ -217,11 +218,12 @@ bool matchUZP(MachineInstr &MI, MachineRegisterInfo &MRI,
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isUZPMask(ShuffleMask, NumElts, WhichResult))
+  bool UZPMask = isUZPMask(ShuffleMask, NumElts, WhichResult);
+  if (!UZPMask && !isUZP_v_undef_Mask(ShuffleMask, NumElts, WhichResult))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_UZP1 : AArch64::G_UZP2;
   Register V1 = MI.getOperand(1).getReg();
-  Register V2 = MI.getOperand(2).getReg();
+  Register V2 = MI.getOperand(UZPMask ? 2 : 1).getReg();
   MatchInfo = ShuffleVectorPseudo(Opc, Dst, {V1, V2});
   return true;
 }
@@ -230,15 +232,16 @@ bool matchZip(MachineInstr &MI, MachineRegisterInfo &MRI,
               ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   unsigned WhichResult;
-  unsigned OperandOrder;
+  unsigned OperandOrder = 0;
   ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
   Register Dst = MI.getOperand(0).getReg();
   unsigned NumElts = MRI.getType(Dst).getNumElements();
-  if (!isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder))
+  bool ZIPMask = isZIPMask(ShuffleMask, NumElts, WhichResult, OperandOrder);
+  if (!ZIPMask && !isZIP_v_undef_Mask(ShuffleMask, NumElts, WhichResult))
     return false;
   unsigned Opc = (WhichResult == 0) ? AArch64::G_ZIP1 : AArch64::G_ZIP2;
   Register V1 = MI.getOperand(OperandOrder == 0 ? 1 : 2).getReg();
-  Register V2 = MI.getOperand(OperandOrder == 0 ? 2 : 1).getReg();
+  Register V2 = MI.getOperand(OperandOrder == 0 && ZIPMask ? 2 : 1).getReg();
   MatchInfo = ShuffleVectorPseudo(Opc, Dst, {V1, V2});
   return true;
 }
@@ -578,12 +581,6 @@ void applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
-bool isLegalCmpImmed(const APInt &C) {
-  // Works for negative immediates too, as it can be written as an ADDS
-  // instruction with a negated immediate.
-  return isLegalArithImmed(C.abs().getZExtValue());
-}
-
 /// Determine whether an integer G_ICMP against 1 or -1 can compare
 /// against 0 instead.
 ///
@@ -656,7 +653,7 @@ tryAdjustICmpImmAndPred(Register LHS, Register RHS, CmpInst::Predicate P,
   if (shouldBeAdjustedToZero(LHS, C, P, MRI))
     return {{0, P}};
 
-  if (isLegalCmpImmed(C))
+  if (AArch64_AM::isLegalCmpImmed(C))
     return std::nullopt;
 
   uint64_t OriginalC = C.getZExtValue();
@@ -722,7 +719,7 @@ tryAdjustICmpImmAndPred(Register LHS, Register RHS, CmpInst::Predicate P,
   // Check if the new constant is valid, and return the updated constant and
   // predicate if it is.
   uint64_t NewC = C.getZExtValue();
-  if (isLegalCmpImmed(C))
+  if (AArch64_AM::isLegalCmpImmed(C))
     return {{NewC, P}};
 
   auto NumberOfInstrToLoadImm = [=](uint64_t Imm) {
@@ -992,7 +989,7 @@ bool trySwapICmpOperands(MachineInstr &MI, MachineRegisterInfo &MRI) {
   // immediate, because we know we can fold that.
   Register RHS = MI.getOperand(3).getReg();
   auto RHSCst = getIConstantVRegValWithLookThrough(RHS, MRI);
-  if (RHSCst && isLegalCmpImmed(RHSCst->Value))
+  if (RHSCst && AArch64_AM::isLegalCmpImmed(RHSCst->Value))
     return false;
 
   Register LHS = MI.getOperand(2).getReg();
@@ -1017,7 +1014,7 @@ void applySwapICmpOperands(MachineInstr &MI, GISelChangeObserver &Observer) {
   auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
   Register LHS = MI.getOperand(2).getReg();
   Register RHS = MI.getOperand(3).getReg();
-  Observer.changedInstr(MI);
+  Observer.changingInstr(MI);
   MI.getOperand(1).setPredicate(CmpInst::getSwappedPredicate(Pred));
   MI.getOperand(2).setReg(RHS);
   MI.getOperand(3).setReg(LHS);
@@ -1174,6 +1171,8 @@ bool matchFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
                          Register &SrcReg) {
   assert(MI.getOpcode() == TargetOpcode::G_STORE);
   Register DstReg = MI.getOperand(0).getReg();
+  if (cast<GLoadStore>(MI).isAtomic())
+    return false;
   if (MRI.getType(DstReg).isVector())
     return false;
   // Match a store of a truncate.

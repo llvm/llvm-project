@@ -17,7 +17,9 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/Allocator.h"
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <new>
 
 namespace llvm {
@@ -86,10 +88,21 @@ public:
     const ImmutableListImpl<T>* L = nullptr;
 
   public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = std::remove_reference_t<T>;
+    using difference_type = std::ptrdiff_t;
+    using pointer = const value_type *;
+    using reference = const value_type &;
+
     iterator() = default;
     iterator(ImmutableList l) : L(l.getInternalPointer()) {}
 
     iterator& operator++() { L = L->getTail(); return *this; }
+    iterator operator++(int) {
+      iterator Tmp = *this;
+      ++*this;
+      return Tmp;
+    }
     bool operator==(const iterator& I) const { return L == I.L; }
     bool operator!=(const iterator& I) const { return L != I.L; }
     const value_type& operator*() const { return L->getHead(); }
@@ -175,11 +188,11 @@ public:
   [[nodiscard]] ImmutableList<T> concat(ElemT &&Head, ImmutableList<T> Tail) {
     // Profile the new list to see if it already exists in our cache.
     FoldingSetNodeID ID;
-    void* InsertPos;
+    FoldingSetInsertToken Token;
 
     const ListTy* TailImpl = Tail.getInternalPointer();
     ListTy::Profile(ID, Head, TailImpl);
-    ListTy* L = Cache.FindNodeOrInsertPos(ID, InsertPos);
+    ListTy* L = Cache.lookup(ID, Token);
 
     if (!L) {
       // The list does not exist in our cache.  Create it.
@@ -188,7 +201,7 @@ public:
       new (L) ListTy(std::forward<ElemT>(Head), TailImpl);
 
       // Insert the new list into the cache.
-      Cache.InsertNode(L, InsertPos);
+      Cache.insert(L, Token);
     }
 
     return L;
@@ -220,14 +233,8 @@ public:
 //===----------------------------------------------------------------------===//
 
 template <typename T> struct DenseMapInfo<ImmutableList<T>, void> {
-  static inline ImmutableList<T> getEmptyKey() {
-    return reinterpret_cast<ImmutableListImpl<T>*>(-1);
-  }
-
   static unsigned getHashValue(ImmutableList<T> X) {
-    uintptr_t PtrVal = reinterpret_cast<uintptr_t>(X.getInternalPointer());
-    return (unsigned((uintptr_t)PtrVal) >> 4) ^
-           (unsigned((uintptr_t)PtrVal) >> 9);
+    return DenseMapInfo<const void *>::getHashValue(X.getInternalPointer());
   }
 
   static bool isEqual(ImmutableList<T> X1, ImmutableList<T> X2) {

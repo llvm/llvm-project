@@ -1,3 +1,8 @@
+; On z/OS, ebcdic output from printf is converted into utf-8 as
+; the output being redirected, causing the magic bytes to be incorrect.
+; TODO: use a builtin version of printf
+; UNSUPPORTED: system-zos
+
 ; RUN: llvm-offload-binary -o %t --image=file=%s,arch=abc,triple=x-y-z
 ; RUN: llvm-objdump --offloading %t | FileCheck %s
 ; RUN: llvm-offload-binary %t --image=file=%t2,arch=abc,triple=x-y-z

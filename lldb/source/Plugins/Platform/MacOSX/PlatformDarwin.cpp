@@ -209,12 +209,11 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
 
   llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs;
   const FileSpec original_module_spec = module_spec;
-  while (module_spec.GetFilename()) {
+  while (!module_spec.GetFilename().empty()) {
     ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
         target.GetDebugger()
             .GetScriptInterpreter()
-            ->GetSanitizedScriptingModuleName(
-                module_spec.GetFilename().GetStringRef());
+            ->GetSanitizedScriptingModuleName(module_spec.GetFilename());
 
     StreamString path_string;
     StreamString original_path_string;
@@ -222,11 +221,10 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     // .dSYM/Contents/Resources/DWARF/<basename> let us go to
     // .dSYM/Contents/Resources/Python/<basename>.py and see if the
     // file exists
-    path_string.Format("{0}/../Python/{1}.py",
-                       symfile_spec.GetDirectory().GetStringRef(),
+    path_string.Format("{0}/../Python/{1}.py", symfile_spec.GetDirectory(),
                        sanitized_name.GetSanitizedName());
     original_path_string.Format("{0}/../Python/{1}.py",
-                                symfile_spec.GetDirectory().GetStringRef(),
+                                symfile_spec.GetDirectory(),
                                 sanitized_name.GetOriginalName());
 
     FileSpec script_fspec(path_string.GetString());
@@ -345,7 +343,7 @@ Status PlatformDarwin::ResolveSymbolFile(Target &target,
 }
 
 Status PlatformDarwin::GetSharedModule(
-    const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
+    const ModuleSpec &module_spec, Target &target, ModuleSP &module_sp,
     llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   Status error;
   module_sp.reset();
@@ -355,21 +353,17 @@ Status PlatformDarwin::GetSharedModule(
     // module first.
     if (m_remote_platform_sp) {
       error = m_remote_platform_sp->GetSharedModule(
-          module_spec, process, module_sp, old_modules, did_create_ptr);
+          module_spec, target, module_sp, old_modules, did_create_ptr);
     }
   }
 
   if (!module_sp) {
     // Fall back to the local platform and find the file locally
-    error = Platform::GetSharedModule(module_spec, process, module_sp,
+    error = Platform::GetSharedModule(module_spec, target, module_sp,
                                       old_modules, did_create_ptr);
 
     const FileSpec &platform_file = module_spec.GetFileSpec();
-    // Get module search paths from the target if available.
-    TargetSP target_sp = module_spec.GetTargetSP();
-    FileSpecList module_search_paths;
-    if (target_sp)
-      module_search_paths = target_sp->GetExecutableSearchPaths();
+    FileSpecList module_search_paths = target.GetExecutableSearchPaths();
     if (!module_sp && !module_search_paths.IsEmpty() && platform_file) {
       // We can try to pull off part of the file path up to the bundle
       // directory level and try any module search paths...
@@ -379,7 +373,7 @@ Status PlatformDarwin::GetSharedModule(
           ModuleSpec new_module_spec(module_spec);
           new_module_spec.GetFileSpec() = bundle_directory;
           if (Host::ResolveExecutableInBundle(new_module_spec.GetFileSpec())) {
-            Status new_error(Platform::GetSharedModule(new_module_spec, process,
+            Status new_error(Platform::GetSharedModule(new_module_spec, target,
                                                        module_sp, old_modules,
                                                        did_create_ptr));
 
@@ -407,7 +401,7 @@ Status PlatformDarwin::GetSharedModule(
                 ModuleSpec new_module_spec(module_spec);
                 new_module_spec.GetFileSpec() = new_file_spec;
                 Status new_error(Platform::GetSharedModule(
-                    new_module_spec, process, module_sp, old_modules,
+                    new_module_spec, target, module_sp, old_modules,
                     did_create_ptr));
 
                 if (module_sp) {
@@ -426,13 +420,14 @@ Status PlatformDarwin::GetSharedModule(
   return error;
 }
 Status PlatformDarwin::GetModuleFromSharedCaches(
-    const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
+    const ModuleSpec &module_spec, Target &target, ModuleSP &module_sp,
     llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   Status err;
 
   SymbolSharedCacheUse sc_mode =
       ModuleList::GetGlobalModuleListProperties().GetSharedCacheBinaryLoading();
   SharedCacheImageInfo image_info;
+  Process *process = target.GetProcessSP().get();
   if (process && process->GetDynamicLoader()) {
     addr_t sc_base_addr;
     UUID sc_uuid;
@@ -444,15 +439,18 @@ Status PlatformDarwin::GetModuleFromSharedCaches(
       if (module_spec.GetUUID())
         image_info = HostInfo::GetSharedCacheImageInfo(module_spec.GetUUID(),
                                                        sc_uuid, sc_mode);
-      else
-        image_info = HostInfo::GetSharedCacheImageInfo(
-            module_spec.GetFileSpec().GetPathAsConstString(), sc_uuid, sc_mode);
+      else {
+        std::string filepath = module_spec.GetFileSpec().GetPath();
+        image_info =
+            HostInfo::GetSharedCacheImageInfo(filepath, sc_uuid, sc_mode);
+      }
     }
   }
   // Fall back to looking for the file in lldb's own shared cache.
-  if (!image_info.GetUUID())
-    image_info = HostInfo::GetSharedCacheImageInfo(
-        module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
+  if (!image_info.GetUUID()) {
+    std::string filepath = module_spec.GetFileSpec().GetPath();
+    image_info = HostInfo::GetSharedCacheImageInfo(filepath, sc_mode);
+  }
 
   // If we found it and it has the correct UUID, let's proceed with
   // creating a module from the memory contents.
@@ -973,7 +971,7 @@ StructuredData::ArraySP
 PlatformDarwin::ExtractCrashInfoAnnotations(Process &process) {
   Log *log = GetLog(LLDBLog::Process);
 
-  ConstString section_name("__crash_info");
+  llvm::StringRef section_name("__crash_info");
   Target &target = process.GetTarget();
   StructuredData::ArraySP array_sp = std::make_shared<StructuredData::Array>();
 
@@ -1251,13 +1249,11 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   }
 }
 
-ConstString PlatformDarwin::GetFullNameForDylib(ConstString basename) {
-  if (basename.IsEmpty())
-    return basename;
+std::string PlatformDarwin::GetFullNameForDylib(llvm::StringRef basename) {
+  if (basename.empty())
+    return basename.str();
 
-  StreamString stream;
-  stream.Printf("lib%s.dylib", basename.GetCString());
-  return ConstString(stream.GetString());
+  return llvm::formatv("lib{0}.dylib", basename).str();
 }
 
 llvm::VersionTuple PlatformDarwin::GetOSVersion(Process *process) {
@@ -1310,7 +1306,7 @@ lldb_private::FileSpec PlatformDarwin::LocateExecutable(const char *basename) {
       xcode_lldb_resources.AppendPathComponent("Resources");
       if (FileSystem::Instance().Exists(xcode_lldb_resources)) {
         FileSpec dir;
-        dir.SetDirectory(xcode_lldb_resources.GetPathAsConstString());
+        dir.SetDirectory(xcode_lldb_resources.GetPath());
         g_executable_dirs.push_back(dir);
       }
     }
@@ -1323,7 +1319,7 @@ lldb_private::FileSpec PlatformDarwin::LocateExecutable(const char *basename) {
       cmd_line_lldb_resources.AppendPathComponent("Resources");
       if (FileSystem::Instance().Exists(cmd_line_lldb_resources)) {
         FileSpec dir;
-        dir.SetDirectory(cmd_line_lldb_resources.GetPathAsConstString());
+        dir.SetDirectory(cmd_line_lldb_resources.GetPath());
         g_executable_dirs.push_back(dir);
       }
     }
@@ -1364,13 +1360,10 @@ PlatformDarwin::LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) {
 }
 
 lldb_private::Status PlatformDarwin::FindBundleBinaryInExecSearchPaths(
-    const ModuleSpec &module_spec, Process *process, ModuleSP &module_sp,
+    const ModuleSpec &module_spec, Target &target, ModuleSP &module_sp,
     llvm::SmallVectorImpl<ModuleSP> *old_modules, bool *did_create_ptr) {
   const FileSpec &platform_file = module_spec.GetFileSpec();
-  TargetSP target_sp = module_spec.GetTargetSP();
-  FileSpecList module_search_paths;
-  if (target_sp)
-    module_search_paths = target_sp->GetExecutableSearchPaths();
+  FileSpecList module_search_paths = target.GetExecutableSearchPaths();
   // See if the file is present in any of the module_search_paths
   // directories.
   if (!module_sp && !module_search_paths.IsEmpty() && platform_file) {
@@ -1421,9 +1414,8 @@ lldb_private::Status PlatformDarwin::FindBundleBinaryInExecSearchPaths(
         if (FileSystem::Instance().Exists(path_to_try)) {
           ModuleSpec new_module_spec(module_spec);
           new_module_spec.GetFileSpec() = path_to_try;
-          Status new_error(Platform::GetSharedModule(new_module_spec, process,
-                                                     module_sp, old_modules,
-                                                     did_create_ptr));
+          Status new_error(Platform::GetSharedModule(
+              new_module_spec, target, module_sp, old_modules, did_create_ptr));
 
           if (module_sp) {
             module_sp->SetPlatformFileSpec(path_to_try);
@@ -1465,7 +1457,7 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
         llvm::formatv("No symbol file available for module '{0}'",
-                      module.GetFileSpec().GetFilename().AsCString("")));
+                      module.GetFileSpec().GetFilename()));
 
   if (sym_file->GetNumCompileUnits() == 0)
     return llvm::createStringError(

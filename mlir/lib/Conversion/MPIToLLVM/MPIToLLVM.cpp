@@ -15,7 +15,6 @@
 #include "mlir/Conversion/MPIToLLVM/MPIToLLVM.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -56,24 +55,33 @@ std::pair<Value, Value> getRawPtrAndSize(const Location loc,
                                          Value memRef, int64_t rank,
                                          Type elType) {
   Type ptrType = LLVM::LLVMPointerType::get(rewriter.getContext());
+  Type i32Type = rewriter.getI32Type();
+  auto descriptorType = cast<LLVM::LLVMStructType>(memRef.getType());
+  // The offset and the sizes of a memref descriptor have the converted index
+  // type, which is not necessarily `i64`. Take it from the descriptor itself.
+  auto indexType = cast<IntegerType>(descriptorType.getBody()[2]);
+
   Value dataPtr =
       LLVM::ExtractValueOp::create(rewriter, loc, ptrType, memRef, 1);
-  Value offset = LLVM::ExtractValueOp::create(rewriter, loc,
-                                              rewriter.getI64Type(), memRef, 2);
+  Value offset =
+      LLVM::ExtractValueOp::create(rewriter, loc, indexType, memRef, 2);
   Value resPtr =
       LLVM::GEPOp::create(rewriter, loc, ptrType, elType, dataPtr, offset);
-  Value size = LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(),
-                                        rewriter.getIndexAttr(1));
-  if (cast<LLVM::LLVMStructType>(memRef.getType()).getBody().size() > 3) {
+  Value size = LLVM::ConstantOp::create(rewriter, loc, i32Type,
+                                        rewriter.getI32IntegerAttr(1));
+  if (descriptorType.getBody().size() > 3) {
     for (int64_t i = 0; i < rank; ++i) {
       Value dim = LLVM::ExtractValueOp::create(rewriter, loc, memRef,
                                                ArrayRef<int64_t>{3, i});
-      dim = LLVM::TruncOp::create(rewriter, loc, rewriter.getI32Type(), dim);
-      size =
-          LLVM::MulOp::create(rewriter, loc, rewriter.getI32Type(), dim, size);
+      // The MPI interface counts elements in an `i32`, so adjust the
+      // index-typed extent to that width. Extents are non-negative, hence the
+      // zero extension.
+      if (indexType.getWidth() > 32)
+        dim = LLVM::TruncOp::create(rewriter, loc, i32Type, dim);
+      else if (indexType.getWidth() < 32)
+        dim = LLVM::ZExtOp::create(rewriter, loc, i32Type, dim);
+      size = LLVM::MulOp::create(rewriter, loc, i32Type, dim, size);
     }
-  } else {
-    size = arith::ConstantIntOp::create(rewriter, loc, 1, 32);
   }
   return {resPtr, size};
 }

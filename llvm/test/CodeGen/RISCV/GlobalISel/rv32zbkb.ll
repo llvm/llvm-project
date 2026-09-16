@@ -110,9 +110,9 @@ define i32 @packh_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: packh_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a2, 16
-; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    addi a2, a2, -256
 ; CHECK-NEXT:    slli a1, a1, 8
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    and a1, a1, a2
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    ret
@@ -126,8 +126,8 @@ define i32 @packh_i32(i32 %a, i32 %b) nounwind {
 define i32 @packh_i32_2(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: packh_i32_2:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    zext.b a1, a1
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    slli a1, a1, 8
 ; RV32I-NEXT:    or a0, a1, a0
 ; RV32I-NEXT:    ret
@@ -148,9 +148,9 @@ define i64 @packh_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: packh_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, 16
-; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    addi a1, a1, -256
 ; CHECK-NEXT:    slli a2, a2, 8
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    and a1, a2, a1
 ; CHECK-NEXT:    or a0, a1, a0
 ; CHECK-NEXT:    li a1, 0
@@ -166,8 +166,8 @@ define i64 @packh_i64(i64 %a, i64 %b) nounwind {
 define i64 @packh_i64_2(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: packh_i64_2:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    zext.b a1, a2
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    slli a2, a1, 8
 ; RV32I-NEXT:    srli a1, a1, 24
 ; RV32I-NEXT:    or a0, a2, a0

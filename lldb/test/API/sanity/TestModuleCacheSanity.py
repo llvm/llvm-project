@@ -15,5 +15,5 @@ class ModuleCacheSanityTestCase(TestBase):
     def test(self):
         self.expect(
             "settings show symbols.clang-modules-cache-path",
-            substrs=["lldb-test-build.noindex", "module-cache-lldb"],
+            substrs=["lldb-test-build", "module-cache-lldb"],
         )

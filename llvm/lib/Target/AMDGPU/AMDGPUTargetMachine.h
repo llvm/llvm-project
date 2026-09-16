@@ -107,6 +107,11 @@ public:
 
   void registerMachineRegisterInfoCallback(MachineFunction &MF) const override;
 
+  /// Get xnack/sramecc setting from module flag or cl::opt (for testing).
+  /// Returns Any if not specified.
+  static AMDGPU::TargetIDSetting
+  getTargetIDSettingFromModuleFlag(const Module &M, StringRef FlagName);
+
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;

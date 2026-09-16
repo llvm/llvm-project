@@ -25,7 +25,6 @@
 
 namespace clang {
 namespace interp {
-class Program;
 class ByteCodeEmitter;
 class Pointer;
 enum PrimType : uint8_t;
@@ -37,10 +36,10 @@ class Scope final {
 public:
   /// Information about a local's storage.
   struct Local {
+    /// Descriptor of the local.
+    const Descriptor *Desc;
     /// Offset of the local in frame.
     unsigned Offset;
-    /// Descriptor of the local.
-    Descriptor *Desc;
     /// If the cleanup for this local should be emitted.
     bool EnabledByDefault = true;
   };
@@ -148,7 +147,7 @@ public:
   }
 
   /// Returns a parameter descriptor.
-  ParamDescriptor getParamDescriptor(unsigned Index) const {
+  const ParamDescriptor &getParamDescriptor(unsigned Index) const {
     return ParamDescriptors[Index];
   }
 
@@ -178,7 +177,7 @@ public:
   SourceInfo getSource(CodePtr PC) const;
 
   /// Checks if the function is valid to call.
-  bool isValid() const { return IsValid || isLambdaStaticInvoker(); }
+  bool isValid() const { return IsValid; }
 
   /// Checks if the function is virtual.
   bool isVirtual() const { return Virtual; };
@@ -224,6 +223,12 @@ public:
   bool isFullyCompiled() const { return IsFullyCompiled; }
 
   bool hasThisPointer() const { return HasThisPointer; }
+  bool hasExplicitThisPointer() const {
+    return HasThisPointer && ExplicitThisPointer;
+  }
+  bool hasImplicitThisPointer() const {
+    return HasThisPointer && !ExplicitThisPointer;
+  }
 
   /// Checks if the function already has a body attached.
   bool hasBody() const { return HasBody; }
@@ -232,7 +237,8 @@ public:
   bool isDefined() const { return Defined; }
 
   bool isVariadic() const { return Variadic; }
-
+  /// Returs the full number of parameters, including implicit instance and RVO
+  /// pointers.
   unsigned getNumParams() const {
     return ParamDescriptors.size() + hasThisPointer() + hasRVO();
   }
@@ -247,20 +253,9 @@ public:
     return ArgSize - (align(primSize(PT_Ptr)) * (hasThisPointer() + hasRVO()));
   }
 
-  bool isThisPointerExplicit() const {
-    if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(
-            dyn_cast<const FunctionDecl *>(Source)))
-      return MD->isExplicitObjectMemberFunction();
-    return false;
-  }
-
-  bool hasImplicitThisParam() const {
-    return hasThisPointer() && !isThisPointerExplicit();
-  }
-
 private:
   /// Construct a function representing an actual function.
-  Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
+  Function(FunctionDeclTy Source, unsigned ArgSize,
            llvm::SmallVectorImpl<ParamDescriptor> &&ParamDescriptors,
            bool HasThisPointer, bool HasRVO, bool IsLambdaStaticInvoker);
 
@@ -286,24 +281,22 @@ private:
   friend class ByteCodeEmitter;
   friend class Context;
 
-  /// Program reference.
-  Program &P;
-  /// Function Kind.
-  FunctionKind Kind;
   /// Declaration this function was compiled from.
   FunctionDeclTy Source;
-  /// Local area size: storage + metadata.
-  unsigned FrameSize = 0;
-  /// Size of the argument stack.
-  unsigned ArgSize;
   /// Program code.
   llvm::SmallVector<std::byte> Code;
   /// Opcode-to-expression mapping.
   SourceMap SrcMap;
   /// List of block descriptors.
   llvm::SmallVector<Scope, 2> Scopes;
-  /// List of all parameters, including RVO and instance pointer.
+  /// List of all parameters, excluding RVO and instance pointer.
   llvm::SmallVector<ParamDescriptor> ParamDescriptors;
+  /// Local area size: storage + metadata.
+  unsigned FrameSize = 0;
+  /// Size of the argument stack.
+  unsigned ArgSize;
+  /// Function Kind.
+  FunctionKind Kind;
   /// Flag to indicate if the function is valid.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsValid : 1;
@@ -315,6 +308,8 @@ private:
   /// as the first implicit argument
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasThisPointer : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ExplicitThisPointer : 1;
   /// Whether this function has Return Value Optimization, i.e.
   /// the return value is constructed in the caller's stack frame.
   /// This is done for functions that return non-primive values.

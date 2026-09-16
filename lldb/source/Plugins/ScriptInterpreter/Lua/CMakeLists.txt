@@ -19,6 +19,8 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
       lldbPluginScriptInterpreterLua)
   endif()
 
+  lldb_add_scriptinterpreter_plugin_to_framework(lldbPluginScriptInterpreterLua)
+
   # Static variant linked directly by unit tests. Separate compilation is
   # required so llvm::Error RTTI (ErrorInfoBase::ID) has a single address
   # shared between the test binary and the plugin code.

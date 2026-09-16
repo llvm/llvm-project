@@ -4,7 +4,7 @@
 ! default component values, used in a target offload region.
 ! The init region must initialize components using the type's default values.
 
-! CHECK-LABEL: omp.declare_reduction @add_pts
+! CHECK-LABEL: omp.declare_reduction @_QQFadd_pts
 ! CHECK-SAME:    : !fir.ref<!fir.type<_QFTpoint{x:f32,y:f32}>>
 ! CHECK:       init {
 ! CHECK:       ^bb0(%{{.*}}: !fir.ref<!fir.type<_QFTpoint{{.*}}>>,

@@ -61,19 +61,7 @@ def update_test(ti: common.TestInfo):
             common.warn("Skipping unparsable RUN line: " + l)
             continue
 
-        cropped_content = l
-        if "%if" in l:
-            match = re.search(r"%{\s*(.*?)\s*%}", l)
-            if match:
-                cropped_content = match.group(1)
-
-        commands = [cmd.strip() for cmd in cropped_content.split("|")]
-        assert len(commands) >= 2
-        preprocess_cmd = None
-        if len(commands) > 2:
-            preprocess_cmd = " | ".join(commands[:-2])
-        tool_cmd = commands[-2]
-        filecheck_cmd = commands[-1]
+        tool_cmd, filecheck_cmd, preprocess_cmd = common.split_run_line(l)
         common.verify_filecheck_prefixes(filecheck_cmd)
         if not tool_cmd.startswith(tool_basename + " "):
             common.warn("Skipping non-%s RUN line: %s" % (tool_basename, l))
@@ -84,7 +72,11 @@ def update_test(ti: common.TestInfo):
             continue
 
         tool_cmd_args = tool_cmd[len(tool_basename) :].strip()
-        tool_cmd_args = tool_cmd_args.replace("< %s", "").replace("%s", "").strip()
+        # Strip standalone positional '%s' or '< %s' when feeding the input file
+        # via stdin, while preserving '%s' inside option arguments (e.g. -flag=%s).
+        tool_cmd_args = re.sub(
+            r"(?:^|\s)(?:<\s*)?%s(?=\s|$)", "", tool_cmd_args
+        ).strip()
         check_prefixes = common.get_check_prefixes(filecheck_cmd)
 
         # FIXME: We should use multiple check prefixes to common check lines. For

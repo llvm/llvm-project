@@ -212,6 +212,76 @@ DWARF:
   llvm::consumeError(path_or_err.takeError());
 }
 
+TEST_F(XcodeSDKModuleTests, TestSDKPathFromDebugInfo_RemappedSysroot) {
+  // Tests that we can parse a CU whose DW_AT_LLVM_sysroot doesn't end in the
+  // SDK name recorded in DW_AT_APPLE_sdk. Clang produces such debug-info
+  // whenever the sysroot is subject to a -fdebug-prefix-map remapping, because
+  // it derives DW_AT_APPLE_sdk from the unremapped sysroot path. The remapped
+  // sysroot is what the source path mappings are keyed off, so it needs to
+  // survive parsing unchanged.
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_APPLE_sdk
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_LLVM_sysroot
+              Form:            DW_FORM_string
+  debug_info:
+    - Version:         2
+      AddrSize:        8
+      AbbrevTableID:   0
+      AbbrOffset:      0x0
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:       0x000000000000000C
+            - CStr:        "MacOSX10.9.sdk"
+            - CStr:        "/REMAPPED_SYSROOT"
+        - AbbrCode:        0x00000000
+...
+)";
+
+  YAMLModuleTester t(yamldata);
+  DWARFUnit *dwarf_unit = t.GetDwarfUnit();
+  auto *dwarf_cu = llvm::cast<DWARFCompileUnit>(dwarf_unit);
+  ASSERT_TRUE(static_cast<bool>(dwarf_cu));
+  SymbolFileDWARF &sym_file = dwarf_cu->GetSymbolFileDWARF();
+  CompUnitSP comp_unit = sym_file.GetCompileUnitAtIndex(0);
+  ASSERT_TRUE(static_cast<bool>(comp_unit.get()));
+
+  XcodeSDK cu_sdk = sym_file.ParseXcodeSDK(*comp_unit);
+  EXPECT_EQ(cu_sdk.GetString(), "MacOSX10.9.sdk");
+  EXPECT_EQ(cu_sdk.GetSysroot().GetPath(), "/REMAPPED_SYSROOT");
+
+  // Merging must not rewrite the sysroot to match the SDK name either.
+  ModuleSP module = t.GetModule();
+  ASSERT_NE(module, nullptr);
+
+  auto platform_sp = Platform::GetHostPlatform();
+  ASSERT_TRUE(platform_sp);
+  auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(*module);
+  ASSERT_TRUE(static_cast<bool>(sdk_or_err));
+
+  auto [sdk, found_mismatch] = *sdk_or_err;
+  EXPECT_FALSE(found_mismatch);
+  EXPECT_EQ(sdk.GetString(), "MacOSX10.9.sdk");
+  EXPECT_EQ(sdk.GetSysroot().GetPath(), "/REMAPPED_SYSROOT");
+}
+
 TEST_P(SDKPathParsingMultiparamTests, TestSDKPathFromDebugInfo) {
   // Tests that we can parse the SDK path from debug-info.
   // In the presence of multiple compile units, one of which
@@ -276,59 +346,59 @@ DWARF:
 
 SDKPathParsingTestData sdkPathParsingTestCases[] = {
     /// Multiple CUs with a mix of internal and public SDKs
-    {.input_sdk_paths =
-         {"/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk",
-          "/invalid/path/to/something.invalid.sdk",
-          "/Library/Developer/CommandLineTools/SDKs/iPhoneOS14.0.Internal.sdk",
-          "/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk"},
-     .expect_mismatch = true,
-     .expect_internal_sdk = true,
-     .expect_sdk_path_pattern = "Internal.sdk"},
+    {/*.input_sdk_paths=*/{
+         "/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk",
+         "/invalid/path/to/something.invalid.sdk",
+         "/Library/Developer/CommandLineTools/SDKs/iPhoneOS14.0.Internal.sdk",
+         "/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk"},
+     /*.expect_mismatch=*/true,
+     /*.expect_internal_sdk=*/true,
+     /*.expect_sdk_path_pattern=*/"Internal.sdk"},
 
     /// Single CU with a public SDK
-    {.input_sdk_paths =
-         {"/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk"},
-     .expect_mismatch = false,
-     .expect_internal_sdk = false,
-     .expect_sdk_path_pattern = "MacOSX10.9.sdk"},
+    {/*.input_sdk_paths=*/{
+         "/Library/Developer/CommandLineTools/SDKs/MacOSX10.9.sdk"},
+     /*.expect_mismatch=*/false,
+     /*.expect_internal_sdk=*/false,
+     /*.expect_sdk_path_pattern=*/"MacOSX10.9.sdk"},
 
     /// Single CU with an internal SDK
-    {.input_sdk_paths =
-         {"/Library/Developer/CommandLineTools/SDKs/iPhoneOS14.0.Internal.sdk"},
-     .expect_mismatch = false,
-     .expect_internal_sdk = true,
-     .expect_sdk_path_pattern = "Internal.sdk"},
+    {/*.input_sdk_paths=*/{
+         "/Library/Developer/CommandLineTools/SDKs/iPhoneOS14.0.Internal.sdk"},
+     /*.expect_mismatch=*/false,
+     /*.expect_internal_sdk=*/true,
+     /*.expect_sdk_path_pattern=*/"Internal.sdk"},
 
     /// Two CUs with an internal SDK each
-    {.input_sdk_paths =
-         {"/Library/Developer/CommandLineTools/SDKs/iPhoneOS14.0.Internal.sdk",
-          "/Library/Developer/CommandLineTools/SDKs/iPhoneOS12.9.Internal.sdk"},
-     .expect_mismatch = false,
-     .expect_internal_sdk = true,
-     .expect_sdk_path_pattern = "Internal.sdk"},
+    {/*.input_sdk_paths=*/{
+         "/Library/Developer/CommandLineTools/SDKs/iPhoneOS14.0.Internal.sdk",
+         "/Library/Developer/CommandLineTools/SDKs/iPhoneOS12.9.Internal.sdk"},
+     /*.expect_mismatch=*/false,
+     /*.expect_internal_sdk=*/true,
+     /*.expect_sdk_path_pattern=*/"Internal.sdk"},
 
     /// Two CUs with a public (non-CommandLineTools) SDK each
-    {.input_sdk_paths = {"/Path/To/SDKs/iPhoneOS14.1.sdk",
-                         "/Path/To/SDKs/MacOSX11.3.sdk"},
-     .expect_mismatch = false,
-     .expect_internal_sdk = false,
-     .expect_sdk_path_pattern = "iPhoneOS14.1.sdk"},
+    {/*.input_sdk_paths=*/{"/Path/To/SDKs/iPhoneOS14.1.sdk",
+                           "/Path/To/SDKs/MacOSX11.3.sdk"},
+     /*.expect_mismatch=*/false,
+     /*.expect_internal_sdk=*/false,
+     /*.expect_sdk_path_pattern=*/"iPhoneOS14.1.sdk"},
 
     /// One CU with CommandLineTools and the other a public SDK
-    {.input_sdk_paths =
-         {"/Library/Developer/CommandLineTools/SDKs/iPhoneOS14.1.sdk",
-          "/Path/To/SDKs/MacOSX11.3.sdk"},
-     .expect_mismatch = false,
-     .expect_internal_sdk = false,
-     .expect_sdk_path_pattern = "iPhoneOS14.1.sdk"},
+    {/*.input_sdk_paths=*/{
+         "/Library/Developer/CommandLineTools/SDKs/iPhoneOS14.1.sdk",
+         "/Path/To/SDKs/MacOSX11.3.sdk"},
+     /*.expect_mismatch=*/false,
+     /*.expect_internal_sdk=*/false,
+     /*.expect_sdk_path_pattern=*/"iPhoneOS14.1.sdk"},
 
     /// One CU with CommandLineTools and the other an internal SDK
-    {.input_sdk_paths =
-         {"/Library/Developer/CommandLineTools/SDKs/iPhoneOS14.1.sdk",
-          "/Path/To/SDKs/MacOSX11.3.Internal.sdk"},
-     .expect_mismatch = true,
-     .expect_internal_sdk = true,
-     .expect_sdk_path_pattern = "iPhoneOS14.1.Internal.sdk"},
+    {/*.input_sdk_paths=*/{
+         "/Library/Developer/CommandLineTools/SDKs/iPhoneOS14.1.sdk",
+         "/Path/To/SDKs/MacOSX11.3.Internal.sdk"},
+     /*.expect_mismatch=*/true,
+     /*.expect_internal_sdk=*/true,
+     /*.expect_sdk_path_pattern=*/"iPhoneOS14.1.Internal.sdk"},
 };
 
 INSTANTIATE_TEST_SUITE_P(SDKPathParsingTests, SDKPathParsingMultiparamTests,

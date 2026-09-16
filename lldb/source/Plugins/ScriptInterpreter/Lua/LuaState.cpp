@@ -149,8 +149,8 @@ llvm::Error LuaState::LoadModule(llvm::StringRef filename) {
     return e;
   }
 
-  ConstString module_name = file.GetFileNameStrippingExtension();
-  lua_setglobal(m_lua_state, module_name.GetCString());
+  const std::string module_name = file.GetFileNameStrippingExtension().str();
+  lua_setglobal(m_lua_state, module_name.c_str());
   return llvm::Error::success();
 }
 

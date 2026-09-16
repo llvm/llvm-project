@@ -23,12 +23,6 @@ namespace llvm {
 
 namespace AArch64GISelUtils {
 
-/// \returns true if \p C is a legal immediate operand for an arithmetic
-/// instruction.
-constexpr bool isLegalArithImmed(const uint64_t C) {
-  return (C >> 12 == 0) || ((C & 0xFFFULL) == 0 && C >> 24 == 0);
-}
-
 /// \returns A value when \p MI is a vector splat of a Register or constant.
 /// Checks for generic opcodes and AArch64-specific generic opcodes.
 std::optional<RegOrConstant>
@@ -50,9 +44,12 @@ bool isCMN(const MachineInstr *MaybeSub, const CmpInst::Predicate &Pred,
 ///
 /// \note This only applies on Darwin.
 ///
-/// \returns true if \p MI was replaced with a G_BZERO.
-bool tryEmitBZero(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
-                  const LibcallLoweringInfo &Libcalls, bool MinSize);
+/// \returns true if \p MI can be replaced with a G_BZERO.
+bool matchEmitBZero(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+                    const LibcallLoweringInfo &Libcalls, bool MinSize);
+///
+/// Replace \p MI with a G_BZERO.
+void applyEmitBZero(MachineInstr &MI, MachineIRBuilder &MIRBuilder);
 
 /// Analyze a ptrauth discriminator value to try to find the constant integer
 /// and address parts, cracking a ptrauth_blend intrinsic if there is one.

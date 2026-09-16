@@ -32,7 +32,7 @@ llvm.func @_QPtest() {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -87,7 +87,7 @@ llvm.func @_QPtest2() {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -147,7 +147,7 @@ llvm.func @_QPtest3() {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -207,7 +207,7 @@ llvm.func @_QPtest4() {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -269,7 +269,7 @@ llvm.func @_QPtest5() {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -327,7 +327,7 @@ llvm.func @_QPtest6() {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 

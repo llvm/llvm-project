@@ -62,8 +62,8 @@ without going through `perf.data`.
 ```
 E <event>
 S <start> <count>
-[TR] <branch> <ft_start> <ft_end> <count>
-B <start> <end> <count> <mispred_count>
+[TR] <branch> <ft_start> <ft_end> <count> [<mispred_count>]
+B <start> <end> <count> [<mispred_count>]
 [Ff] <start> <end> <count>
 r <start> <end> <count>
 ```
@@ -163,6 +163,15 @@ perf2bolt ./binary -p perf.data -o perf.preagg --profile-format=preagg
 # Symbolized profiles
 The profiles accepted by llvm-bolt. fdata is the legacy format, YAML is the rich (metadata-enabled) format.
 
+As local symbol names are not guaranteed to be unique, BOLT disambiguates them with suffixes:
+- short form `<name>/<id>`,
+- long form `<name>/<file>/<id>`, where `<file>` is the containing debug file symbol.
+
+(Debug file symbols can be preserved when stripping debug information using `--keep-file-symbols`).
+
+As such, symbolized profiles are not expected to be produced by external tools, except the **symbols** fdata
+format mode which accepts names without suffixes but matches all aliases.
+
 ## fdata format
 
 Plaintext, space-separated branch profile format written by `perf2bolt` and
@@ -198,6 +207,19 @@ Requires `no_lbr` header followed by an optional event name:
 no_lbr <event_name>
 <is_sym> <sym> <off> <count>
 ```
+
+### Symbols mode format
+
+Requires `symbols` header, followed by a list of (mangled) symbol names:
+
+```
+symbols
+main
+BZ2_compressBlock
+```
+
+Each line matches all aliases of the symbol, each matching function is assigned
+an execution count of `1`.
 
 ### Special headers
 
