@@ -917,7 +917,7 @@ public:
   /// Add a register allocation anti-hint for the specified virtual register.
   /// This tells the allocator to avoid allocating VReg to the same physical
   /// register as AntiHintVReg (or overlapping ones).
-  void addRegAllocAntiHint(Register VReg, Register AntiHintVReg) {
+  void addRegAllocationAntiHint(Register VReg, Register AntiHintVReg) {
     assert(VReg.isVirtual() && AntiHintVReg.isVirtual() &&
            "Anti-hints and anti-hint targets are only for virtual registers");
     AntiHintRegs.grow(VReg);
@@ -931,7 +931,7 @@ public:
   void addRegAllocationAntiHints(Register VReg,
                                  ArrayRef<Register> AntiHintVRegs) {
     for (Register AntiHint : AntiHintVRegs)
-      addRegAllocAntiHint(VReg, AntiHint);
+      addRegAllocationAntiHint(VReg, AntiHint);
   }
 
   /// Clear all anti-hints for a register.

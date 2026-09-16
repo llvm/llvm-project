@@ -703,6 +703,13 @@ protected:
     return RCInfos[getNumRegClasses() * HwMode + RC.getID()];
   }
 
+  /// Custom reordering of the allocation order.
+  virtual void filterAndSortForAntiHintedRegs(
+      Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
+      const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+      const LiveRegMatrix *Matrix = nullptr,
+      const RegisterClassInfo *RegClassInfo = nullptr) const;
+
 public:
   /// Returns the register class associated with the enumeration value.
   /// See class MCOperandInfo.
@@ -861,13 +868,6 @@ public:
   void applyRegAllocationAntiHints(
       Register VirtReg, ArrayRef<MCPhysReg> Order,
       SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
-      const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
-      const LiveRegMatrix *Matrix = nullptr,
-      const RegisterClassInfo *RegClassInfo = nullptr) const;
-
-  /// Custom reordering of the allocation order.
-  virtual void filterAndSortForAntiHintedRegs(
-      Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
       const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
       const LiveRegMatrix *Matrix = nullptr,
       const RegisterClassInfo *RegClassInfo = nullptr) const;
