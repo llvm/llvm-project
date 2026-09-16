@@ -1211,13 +1211,23 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     bool isHostDeviceProc{procedure.cudaSubprogramAttrs &&
         *procedure.cudaSubprogramAttrs ==
             common::CUDASubprogramAttrs::HostDevice};
+    bool actualIsAllocatableOrPointer{false};
+    if (actualIsVariable) {
+      for (const Symbol &s : evaluate::GetSymbolVector(actual)) {
+        if (IsAllocatableOrPointer(ResolveAssociations(s))) {
+          actualIsAllocatableOrPointer = true;
+          break;
+        }
+      }
+    }
     // TYPE(*) assumed-size/rank dummies are opaque buffers (e.g. MPI) and do
     // not impose a CUDA address space on their actual argument.
     bool skipCudaDataAttrCheck{IsCUDAAddressSpaceAgnostic(dummy)};
     if (!skipCudaDataAttrCheck &&
         !common::AreCompatibleCUDADataAttrs(dummyDataAttr, actualDataAttr,
             dummy.ignoreTKR, /*allowUnifiedMatchingRule=*/true,
-            isHostDeviceProc, &context.languageFeatures(), actualIsVariable)) {
+            isHostDeviceProc, &context.languageFeatures(), actualIsVariable,
+            actualIsAllocatableOrPointer)) {
       auto toStr{[](std::optional<common::CUDADataAttr> x) {
         return x ? "ATTRIBUTES("s +
                 parser::ToUpperCaseLetters(common::EnumToString(*x)) + ")"s
