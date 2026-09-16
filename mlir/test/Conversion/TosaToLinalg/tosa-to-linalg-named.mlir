@@ -465,6 +465,48 @@ func.func @avg_pool_dyn(%arg0: tensor<?x6x34x62xf32>) -> (tensor<?x5x33x62xf32>)
 
 // -----
 
+// Verify adaptive average pooling resolves shape operands and reuses the
+// padding-aware floating-point average-pool lowering.
+// CHECK-LABEL: @avg_pool_adaptive_f32
+func.func @avg_pool_adaptive_f32(%arg0: tensor<1x5x6x2xf32>) -> tensor<1x3x3x2xf32> {
+  // CHECK: %[[PADDED:.+]] = tensor.pad %arg0 low[0, 1, 0, 0] high[0, 1, 0, 0]
+  // CHECK: %[[WINDOW:.+]] = tensor.empty() : tensor<3x2xf32>
+  // CHECK: %[[POOL:.+]] = linalg.pooling_nhwc_sum
+  // CHECK-SAME: strides = dense<2> : vector<2xi64>
+  // CHECK-SAME: ins(%[[PADDED]], %[[WINDOW]] : tensor<1x7x6x2xf32>, tensor<3x2xf32>)
+  // CHECK: linalg.generic
+  // CHECK: arith.divf
+  // CHECK-NOT: tosa.avg_pool2d_adaptive
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape values(dense<[3, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %stride = tosa.const_shape values(dense<[2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %pad = tosa.const_shape values(dense<[1, 1, 0, 0]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %0 = tosa.avg_pool2d_adaptive %arg0, %input_zp, %output_zp, %kernel, %stride, %pad acc_type(f32) : (tensor<1x5x6x2xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x3x3x2xf32>
+  return %0 : tensor<1x3x3x2xf32>
+}
+
+// -----
+
+// Verify adaptive average pooling preserves integer zero points and the i32
+// accumulator path when resolving its shape operands.
+// CHECK-LABEL: @avg_pool_adaptive_i8
+func.func @avg_pool_adaptive_i8(%arg0: tensor<1x4x4x1xi8>) -> tensor<1x2x2x1xi8> {
+  // CHECK: linalg.pooling_nhwc_sum
+  // CHECK: tosa.apply_scale
+  // CHECK: arith.addi
+  // CHECK-NOT: tosa.avg_pool2d_adaptive
+  %input_zp = "tosa.const"() <{values = dense<-3> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %output_zp = "tosa.const"() <{values = dense<5> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %kernel = tosa.const_shape values(dense<[2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %stride = tosa.const_shape values(dense<[2, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %pad = tosa.const_shape values(dense<[0, 0, 0, 0]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %0 = tosa.avg_pool2d_adaptive %arg0, %input_zp, %output_zp, %kernel, %stride, %pad acc_type(i32) : (tensor<1x4x4x1xi8>, tensor<1xi8>, tensor<1xi8>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x2x2x1xi8>
+  return %0 : tensor<1x2x2x1xi8>
+}
+
+// -----
+
 // CHECK: #[[$MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (0)>
 // CHECK: #[[$MAP2:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 
