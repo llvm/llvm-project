@@ -1,10 +1,10 @@
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --implicit-check-not=DebugDeclare --implicit-check-not=DebugExpression
+; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --implicit-check-not=DebugDeclare --implicit-check-not=DebugExpression --implicit-check-not=DebugValue
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; A variadic #dbg_value. IRTranslator cannot lower the DIArgList.
 ; It emits DBG_VALUE $noreg, 0, which is an indirect DBG_VALUE just like a
 ; declare is.
-; The test checks that it must not become a DebugDeclare.
+; The test checks that it becomes neither DebugDeclare nor DebugValue.
 
 ; Clang seem to emit no DIArgList. The optimizer does,
 ; when it deletes a dead binary operation and rewrites the variable as an

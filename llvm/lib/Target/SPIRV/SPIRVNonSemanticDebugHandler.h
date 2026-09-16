@@ -21,11 +21,13 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRVModuleAnalysis.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegister.h"
@@ -35,6 +37,16 @@ namespace llvm {
 
 class GlobalVariable;
 class SPIRVSubtarget;
+
+namespace SPIRV {
+/// A #dbg_value that assigns a literal, as collected from LLVM IR.
+struct ConstantAssignment {
+  const DIBasicType *Type; ///< The variable's type, stripped to a scalar.
+  uint64_t Bits;           ///< The value, narrowed to that type.
+  const DILocalVariable *Var;
+  const DIExpression *Expr;
+};
+} // namespace SPIRV
 
 /// AsmPrinter handler that emits NonSemantic.Shader.DebugInfo.100 (NSDI)
 /// instructions for the SPIR-V backend. Registered with SPIRVAsmPrinter when
@@ -46,10 +58,13 @@ class SPIRVSubtarget;
 /// - emitNonSemanticDebugStrings() emits NSDI OpStrings in section 7.
 /// - emitNonSemanticGlobalDebugInfo() emits module-scope NSDI and sets
 ///   GlobalNSDIEnabled.
-/// - beginFunctionImpl() prepares per-function DebugFunctionDefinition state.
+/// - beginFunctionImpl() prepares per-function DebugFunctionDefinition state
+///   and runs analyzeDebugRecords() over the whole function.
 /// - endInstruction() emits DebugFunctionDefinition after the last function-
 ///   level OpVariable; SPIRVAsmPrinter calls notifyEntryLabelEmitted() after
 ///   the synthesized entry OpLabel when there are no OpVariables.
+/// - beginInstruction() emits the DebugScope and DebugLine for the instruction
+///   being printed, and the DebugDeclare and DebugValue anchored on it.
 /// - endFunctionImpl() resets per-function state.
 class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   static constexpr unsigned NSSet = static_cast<unsigned>(
@@ -158,6 +173,27 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // duplicate OpConstant instructions for the same integer value.
   DenseMap<uint32_t, MCRegister> I32ConstantCache;
 
+  // Result id per SPIR-V scalar type this handler needed, keyed by opcode and
+  // width. MB_TypeConstVars holds only what module analysis collected, so a
+  // type emitted here has to be remembered separately to stay unique.
+  DenseMap<std::pair<unsigned, int64_t>, MCRegister> ScalarTypeCache;
+
+  // Result id per scalar constant, keyed by its type's id and its bits.
+  // MB_TypeConstVars does not hold what this handler emitted either, and
+  // keying on the type lets two DIBasicTypes describing it share a constant.
+  DenseMap<std::pair<unsigned, uint64_t>, MCRegister> ScalarConstantCache;
+
+  // Constant assignments collected in beginModule(). A record only earns an
+  // OpConstant when it can produce a DebugValue, so these are filtered rather
+  // than emitted wholesale.
+  SmallVector<SPIRV::ConstantAssignment> ConstantAssignments;
+
+  // Result id per collected constant, keyed by its type and bits. Filled
+  // during module-scope emission, since an OpConstant has to precede every
+  // function body that names it.
+  DenseMap<std::pair<const DIBasicType *, uint64_t>, MCRegister>
+      ConstantValueRegs;
+
   // Cache of already-emitted DebugTypeFunction instructions, keyed by operand
   // ids (flags, return type, parameters).
   DenseMap<SmallVector<MCRegister, 8>, MCRegister> DebugTypeFunctionCache;
@@ -197,6 +233,27 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // either one can skip emission on a cache miss.
   const MachineInstr *LastLineMI = nullptr;
   const MachineInstr *LastScopeMI = nullptr;
+
+  // Result ids in MB_TypeConstVars, which precedes every function body. Filled
+  // once per module in prepareModuleOutput().
+  DenseSet<MCRegister> ModuleScopeIds;
+
+  /// A DebugDeclare or DebugValue waiting for its anchor to be printed.
+  struct DebugRecord {
+    const MachineInstr *MI; ///< The DBG_VALUE this came from.
+    SPIRV::NonSemanticExtInst::NonSemanticExtInst Opcode;
+    MCRegister LocationReg; ///< The Variable or Value operand.
+  };
+
+  // A record can name a function-local definition only when that definition
+  // dominates the record. Requiring MachineDominatorTreeWrapperPass in
+  // SPIRVAsmPrinter::getAnalysisUsage() would build a tree for every SPIR-V
+  // compilation, so this one is built on the first record of each function.
+  std::unique_ptr<MachineDominatorTree> DomTree;
+
+  // Records to emit before their anchor is printed, built once per function by
+  // analyzeDebugRecords() and only read afterwards.
+  DenseMap<const MachineInstr *, SmallVector<DebugRecord>> Records;
 
 public:
   explicit SPIRVNonSemanticDebugHandler(AsmPrinter &AP);
@@ -272,7 +329,12 @@ private:
   std::optional<const MachineInstr *>
   resolveDebugLocTarget(const MachineInstr *MI);
 
-  void emitDebugScopeForInstruction(const MachineInstr *MI);
+  /// Open the DebugScope region \p MI belongs to, closing the previous one.
+  ///
+  /// \returns False when module-scope emission produced no DebugScope for that
+  /// scope, or no DebugInlinedAt for its chain, so the open region is not
+  /// \p MI's.
+  bool emitDebugScopeForInstruction(const MachineInstr *MI);
   void emitDebugLineForInstruction(const MachineInstr *MI);
   void preparePerFunctionDebug(const MachineFunction *MF);
   void tryEmitDebugFunctionDefinition(SPIRV::ModuleAnalysisInfo &MAI);
@@ -462,15 +524,60 @@ private:
                                                 MCRegister ExtInstSetReg,
                                                 SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Emit \c DebugDeclare for \p MI when it is an indirect \c DBG_VALUE whose
-  /// location register is defined by \c OpVariable, which is the shape
-  /// \c IRTranslator gives a \c #dbg_declare on storage the backend kept.
+  /// Fill \c Records from the debug records in \p MF.
   ///
-  /// Emits nothing when \p MI is not such a declare, when the variable has no
-  /// \c DebugLocalVariable, when the expression was not lowered, or when the
-  /// storage is anything other than an \c OpVariable (an access chain, a
-  /// constant, a function parameter, or a dead alloca with no def at all).
-  void emitDebugDeclare(const MachineInstr *MI);
+  /// Where a record may legally sit is a property of the whole function, and
+  /// emission is unbuffered, so it is settled here rather than while printing.
+  void analyzeDebugRecords(const MachineFunction &MF);
+
+  /// Place the single record \p MI. \p LastEmitted is the nearest preceding
+  /// instruction in this block that reaches the output, or null when there is
+  /// none.
+  ///
+  /// Places nothing when this backend cannot name the record: an unavailable
+  /// location, a declare whose storage is not an \c OpVariable, a constant
+  /// with no module-scope id, a physical register, a variadic value, an
+  /// instruction reference, or a definition that does not dominate \p MI.
+  void resolveDebugRecord(const MachineInstr &MI,
+                          const MachineInstr *LastEmitted);
+
+  /// Store \p MI on \p Anchor, to emit before \p Anchor is printed.
+  void placeRecord(SPIRV::NonSemanticExtInst::NonSemanticExtInst Opcode,
+                   const MachineInstr &MI, MCRegister LocationReg,
+                   const MachineInstr *Anchor);
+
+  /// Emit the records \c analyzeDebugRecords() anchored on \p Anchor.
+  void emitAnalyzedRecords(const MachineInstr *Anchor);
+
+  /// The module-scope constant \p MI assigns, or \c std::nullopt when \p MI
+  /// is not a constant assignment this backend collected a constant for.
+  std::optional<MCRegister> getConstantValueReg(const MachineInstr &MI) const;
+
+  /// Result id of the constant \p Opcode of type \p TypeReg holding
+  /// \p Value in \c MB_TypeConstVars, or an invalid register when the module
+  /// does not already define it.
+  MCRegister findModuleConstant(unsigned Opcode, MCRegister TypeReg,
+                                uint64_t Value, bool IsBool, bool IsWide,
+                                SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Result id of the SPIR-V type for \p BT, reusing one from
+  /// \c MB_TypeConstVars when the module already defines it. Invalid when
+  /// declaring it would require a capability the module does not have, since
+  /// debug info must not change what the module requires.
+  MCRegister findOrEmitScalarType(const DIBasicType *BT,
+                                  SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Result id of the constant \p Value of type \p BT, reusing one from
+  /// \c MB_TypeConstVars when the module already defines it.
+  MCRegister findOrEmitScalarConstant(const DIBasicType *BT, uint64_t Value,
+                                      SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \p Opcode naming \p MI's variable, \p LocationReg and \p MI's
+  /// expression, after \p MI's own \c DebugScope and \c DebugLine. Emits
+  /// nothing when \p MI's variable has no \c DebugLocalVariable, its
+  /// expression no \c DebugExpression, or its scope no id.
+  void emitDebugBinding(SPIRV::NonSemanticExtInst::NonSemanticExtInst Opcode,
+                        const MachineInstr *MI, MCRegister LocationReg);
 
   /// Emit \c DebugTypeVector for the vector composite type \p VT.
   ///

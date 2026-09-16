@@ -3,8 +3,8 @@
 
 ; Collect DILocalVariable from a #dbg_value record. No retainedNodes.
 ;
-; The record is a plain #dbg_value, so it lowers to a direct DBG_VALUE and gets
-; no DebugDeclare.
+; The record is a plain #dbg_value, so it lowers to a direct DBG_VALUE and
+; becomes DebugValue rather than DebugDeclare.
 
 ; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
@@ -19,7 +19,11 @@
 ; CHECK-DAG: [[DS:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugSource [[PATH]]
 ; CHECK-DAG: [[INT:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypeBasic [[INTNAME]] {{.*}} [[C0]]
 ; CHECK-DAG: [[DF:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugFunction {{.*}}
-; CHECK: OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[XNAME]] [[INT]] [[DS]] [[C8]] [[C0]] [[DF]] [[C0]] [[C1]]
+; CHECK-DAG: [[XVAR:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[XNAME]] [[INT]] [[DS]] [[C8]] [[C0]] [[DF]] [[C0]] [[C1]]
+; CHECK-DAG: [[EXPR:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugExpression{{ *$}}
+; CHECK: [[XVAL:%[0-9]+]] = OpFunctionParameter [[I32T]]
+; CHECK: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition
+; CHECK: OpExtInst [[VOID]] [[EXT]] DebugValue [[XVAR]] [[XVAL]] [[EXPR]]{{ *$}}
 
 target triple = "spirv64-unknown-unknown"
 

@@ -1,15 +1,19 @@
 ; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
+; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=UNIQUE
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; Anchor on OpTypeVoid rather than OpTypeInt 32 0. The module may already contain
-; OpConstant i32 N instructions (e.g. for array dimensions) before the NSDI section,
-; which have the same pattern as the NSDI-emitted constants. Anchoring after
-; OpTypeVoid (emitted immediately before the NSDI constants) ensures the DAG group
-; binds [[i32_8]] etc. to the NSDI constants rather than earlier module constants.
+; UNIQUE: [[i32:%[0-9]+]] = OpTypeInt 32 0
+; UNIQUE-COUNT-1: OpConstant [[i32]] 8{{$}}
+; UNIQUE-NOT: OpConstant [[i32]] 8{{$}}
+
+; Anchor the DAG group on OpTypeInt 32 0. A module constant with the same type
+; and value is now reused rather than emitted a second time for the NSDI
+; section, so there is one OpConstant i32 N to bind and it can sit anywhere
+; after the type. The UNIQUE prefix above asserts that reuse: a DAG group only
+; proves a match exists, so it would pass against a duplicate.
 ; CHECK-SPIRV:	[[i32type:%[0-9]+]] = OpTypeInt 32 0
-; CHECK-SPIRV:	[[void_type:%[0-9]+]] = OpTypeVoid
 ; CHECK-SPIRV-DAG:	[[i32_8:%[0-9]+]] = OpConstant [[i32type]] 8{{$}}
 ; CHECK-SPIRV-DAG:	[[i32_0:%[0-9]+]] = OpConstant [[i32type]] 0{{$}}
 ; CHECK-SPIRV-DAG:	[[i32_5:%[0-9]+]] = OpConstant [[i32type]] 5{{$}}
