@@ -93,7 +93,7 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.hasErrorOccurred()) {
     CleanUpPTU(C.getTranslationUnitDecl());
-    // Consumer->HandleTranslationUnit(C);
+
     Diags.Reset(/*soft=*/true);
     Diags.getClient()->clear();
     return llvm::make_error<llvm::StringError>("Parsing failed.",

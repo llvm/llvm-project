@@ -186,7 +186,6 @@ class SemaSystemZ;
 class SemaWasm;
 class SemaX86;
 class StandardConversionSequence;
-class SemaStateRecovery;
 class TemplateArgument;
 class TemplateArgumentLoc;
 class TemplateInstantiationCallback;
@@ -1588,7 +1587,6 @@ protected:
   friend class ASTReader;
   friend class ASTDeclReader;
   friend class ASTWriter;
-  friend class SemaStateRecovery;
 
 private:
   std::optional<std::unique_ptr<DarwinSDKInfo>> CachedDarwinSDKInfo;

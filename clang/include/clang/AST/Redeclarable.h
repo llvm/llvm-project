@@ -25,9 +25,7 @@
 namespace clang {
 
 class ASTContext;
-class ASTDeclDetacher;
 class Decl;
-class DeclContextRepairer;
 
 // Some notes on redeclarables:
 //
@@ -191,8 +189,6 @@ public:
   friend class ASTDeclUnmerger;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
-  friend class ASTDeclDetacher;
-  friend class DeclContextRepairer;
   friend class IncrementalParser;
 
   Redeclarable(const ASTContext &Ctx)
