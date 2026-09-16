@@ -709,6 +709,10 @@ static Value addOffsetToBaseAddr(ConversionPatternRewriter &rewriter,
 // whole contiguous block on element 0 is equivalent. Splat constants, an
 // all-ones or all-zeros `vector.constant_mask`, broadcasts of a scalar, and a
 // `vector.from_elements` of one repeated value qualify.
+//
+// TODO: this recognizes a fixed list of producers. A general uniformity query
+// on the vector dialect would cover more forms and would not need updating
+// every time a new producer shows up here.
 static bool isUniformMask(Value mask) {
   if (!isa<VectorType>(mask.getType()))
     return true;
@@ -726,6 +730,10 @@ static bool isUniformMask(Value mask) {
     return !isa<VectorType>(broadcast.getSource().getType());
   if (auto fromElements = mask.getDefiningOp<vector::FromElementsOp>())
     return llvm::all_equal(fromElements.getElements());
+  // Flattening a rank > 1 operand to rank 1 inserts a shape cast. It keeps the
+  // same elements, so it keeps uniformity.
+  if (auto shapeCast = mask.getDefiningOp<vector::ShapeCastOp>())
+    return isUniformMask(shapeCast.getSource());
   return false;
 }
 

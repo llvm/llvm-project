@@ -84,6 +84,30 @@ gpu.func @load_gather_step_offsets(%src: i64, %pred: i1) -> vector<4xf32> {
 
 // -----
 
+// A rank-2 access with a unit leading dim is flattened to rank 1 by lane
+// distribution, which shape-casts the offsets and the mask. The shape cast keeps
+// the same elements, so a uniform mask stays uniform through it.
+
+gpu.module @test {
+// CHECK-LABEL: @load_gather_shape_cast_mask
+// CHECK-SAME: %[[ARG0:.*]]: i64, %[[ARG1:.*]]: index, %[[ARG2:.*]]: i1
+gpu.func @load_gather_shape_cast_mask(%src: i64, %base: index, %pred: i1) -> vector<2xf32> {
+  %mask2d = vector.broadcast %pred : i1 to vector<1x2xi1>
+  %mask = vector.shape_cast %mask2d : vector<1x2xi1> to vector<2xi1>
+  %c1 = arith.constant 1 : index
+  %o1 = arith.addi %base, %c1 : index
+  %offsets = vector.from_elements %base, %o1 : vector<2xindex>
+  // CHECK: %[[BASE:.*]] = vector.extract %{{.*}}[0] : i64 from vector<2xi64>
+  // CHECK: scf.if %[[ARG2]] -> (vector<2xf32>) {
+  // CHECK:   llvm.load %{{.*}} : !llvm.ptr<1> -> vector<2xf32>
+  %0 = xegpu.load %src[%offsets], %mask <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>
+      : i64, vector<2xindex>, vector<2xi1> -> vector<2xf32>
+  gpu.return %0 : vector<2xf32>
+}
+}
+
+// -----
+
 // An all-ones `vector.constant_mask` is uniform. It is not an `arith.constant`,
 // so it needs its own case.
 
