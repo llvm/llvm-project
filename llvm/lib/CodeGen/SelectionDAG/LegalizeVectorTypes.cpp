@@ -8072,6 +8072,14 @@ SDValue DAGTypeLegalizer::WidenVecOp_CONCAT_VECTORS(SDNode *N) {
       return GetWidenedVector(N->getOperand(0));
   }
 
+  if (VT.isScalableVector()) {
+    SDValue Res = DAG.getPOISON(VT);
+    unsigned NumInElts = InVT.getVectorMinNumElements();
+    for (unsigned I = 0; I < NumOperands; ++I)
+      Res = DAG.getInsertSubvector(dl, Res, N->getOperand(I), I * NumInElts);
+    return Res;
+  }
+
   // Otherwise, fall back to a nasty build vector.
   unsigned NumElts = VT.getVectorNumElements();
   SmallVector<SDValue, 16> Ops(NumElts);
