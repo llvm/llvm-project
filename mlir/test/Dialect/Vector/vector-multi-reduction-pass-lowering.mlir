@@ -61,3 +61,21 @@ func.func @vector_multi_reduction_masked(%arg0: vector<2x4xf32>, %acc: vector<2x
 //  INNER-PARALLEL: %[[INNERMASK:.+]] = vector.extract %[[TPMASK]][0] : vector<2xi1> from vector<4x2xi1>
 //  INNER-PARALLEL: %[[REDUCED:.+]] = arith.mulf %[[INNERVEC]], %[[ACC]] : vector<2xf32>
 //  INNER-PARALLEL: arith.select %[[INNERMASK]], %[[REDUCED]], %[[ACC]] : vector<2xi1>, vector<2xf32>
+
+// -----
+
+// INNER-REDUCTION-LABEL: @negative_multi_reduction_scalable_outer
+//       INNER-REDUCTION: vector.multi_reduction <mul>, %{{.*}}, %{{.*}} [1] : vector<[2]x4xf32> to vector<[2]xf32>
+func.func @negative_multi_reduction_scalable_outer(%arg0: vector<[2]x4xf32>, %acc: vector<[2]xf32>) -> vector<[2]xf32> {
+    %0 = vector.multi_reduction <mul>, %arg0, %acc [1] : vector<[2]x4xf32> to vector<[2]xf32>
+    return %0 : vector<[2]xf32>
+}
+
+// -----
+
+// INNER-PARALLEL-LABEL: @negative_multi_reduction_scalable_outer_reduce
+//       INNER-PARALLEL: vector.multi_reduction <mul>, %{{.*}}, %{{.*}} [0] : vector<[2]x4xf32> to vector<4xf32>
+func.func @negative_multi_reduction_scalable_outer_reduce(%arg0: vector<[2]x4xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
+    %0 = vector.multi_reduction <mul>, %arg0, %acc [0] : vector<[2]x4xf32> to vector<4xf32>
+    return %0 : vector<4xf32>
+}
