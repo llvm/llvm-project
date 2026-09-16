@@ -96,19 +96,10 @@ define void @blend_chain_iv(i1 %c) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [32 x i16], ptr @dst, i16 0, i64 [[TMP7]]
-; CHECK-NEXT:    store i16 0, ptr [[TMP2]], align 2
-; CHECK-NEXT:    store i16 0, ptr [[TMP4]], align 2
-; CHECK-NEXT:    store i16 0, ptr [[TMP6]], align 2
-; CHECK-NEXT:    store i16 0, ptr [[TMP8]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP8]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP7]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
