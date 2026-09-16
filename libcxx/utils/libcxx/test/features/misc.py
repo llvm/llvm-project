@@ -42,6 +42,7 @@ def _mingwSupportsModules(cfg):
         """,
     )
 
+
 def _needsLibatomic(cfg):
     # Check if linking -latomic is both necessary (atomic operations fail to
     # link without it) and functional (linking with -latomic succeeds).
@@ -60,6 +61,7 @@ def _needsLibatomic(cfg):
         }
     """
     return not sourceBuilds(cfg, source) and sourceBuilds(cfg, source, ["-latomic"])
+
 
 features = [
     Feature(
