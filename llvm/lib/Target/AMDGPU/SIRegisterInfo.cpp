@@ -4183,15 +4183,16 @@ bool SIRegisterInfo::shouldApplyAntiHints(
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   unsigned DynamicVGPRBlockSize = MFI->getDynamicVGPRBlockSize();
-  unsigned TargetOccupancy = MFI->getOccupancy();
+  unsigned RecordedMaxOccupancy = MFI->getOccupancy();
   unsigned CurrentOccupancy =
       ST.getOccupancyWithNumVGPRs(NumAllocatedVGPRs, DynamicVGPRBlockSize);
   MaxVGPRsForCurrentOccupancy =
       ST.getMaxNumVGPRs(CurrentOccupancy, DynamicVGPRBlockSize);
 
   LLVM_DEBUG(dbgs() << "anti-hints: " << NumAllocatedVGPRs
-                    << " VGPRs allocated, target occupancy " << TargetOccupancy
-                    << ", current occupancy " << CurrentOccupancy << '\n');
+                    << " VGPRs allocated, RecordedMaxOccupancy "
+                    << RecordedMaxOccupancy << ", current occupancy "
+                    << CurrentOccupancy << '\n');
 
   // If we are already at lowest occupancy, then there is no need to protect
   // against occupancy regression.
@@ -4199,19 +4200,21 @@ bool SIRegisterInfo::shouldApplyAntiHints(
     return true;
 
   // Do not apply anti-hints if we are reaching close to the VGPR budget. For
-  // target occupancy, the 80% cutoff is a conservative: anti-hints are disabled
-  // early enough that later registers still have headroom to stay at target
-  // occupancy. For current occupancy, the 95% cutoff margin is used to not
-  // apply anti-hints close to the limit of the current occupancy budget.
-  unsigned MaxVGPRsCutOffForTargetOccupancy =
-      (ST.getMaxNumVGPRs(TargetOccupancy, DynamicVGPRBlockSize) * 80) / 100;
+  // recorded max occupancy, the 80% cutoff is a conservative: anti-hints are
+  // disabled early enough that later registers still have headroom to stay at
+  // recorded max occupancy. For current occupancy, the 95% cutoff margin is
+  // used to not apply anti-hints close to the limit of the current occupancy
+  // budget.
+  unsigned MaxVGPRsCutOffForRecordedMaxOccupancy =
+      (ST.getMaxNumVGPRs(RecordedMaxOccupancy, DynamicVGPRBlockSize) * 80) /
+      100;
   unsigned MaxVGPRsCutOffForCurrentOccupancy =
       (MaxVGPRsForCurrentOccupancy * 95) / 100;
 
-  if (NumAllocatedVGPRs >= MaxVGPRsCutOffForTargetOccupancy) {
+  if (NumAllocatedVGPRs >= MaxVGPRsCutOffForRecordedMaxOccupancy) {
     LLVM_DEBUG(dbgs() << "anti-hints: not applied, at or above the "
-                      << MaxVGPRsCutOffForTargetOccupancy
-                      << " VGPR cutoff for target occupancy\n");
+                      << MaxVGPRsCutOffForRecordedMaxOccupancy
+                      << " VGPR cutoff for RecordedMaxOccupancy\n");
     return false;
   }
 
@@ -4232,7 +4235,7 @@ bool SIRegisterInfo::isRegWithinOccupancyBudget(
   const TargetRegisterClass *RC = getPhysRegBaseClass(Reg);
 
   // No VGPR or AGPR usage.
-  if (!RC || (!isVGPRClass(RC) && !isAGPRClass(RC)))
+  if (!RC || !hasVectorRegisters(RC))
     return true;
 
   unsigned RegEndIndex =
@@ -4262,18 +4265,20 @@ void SIRegisterInfo::filterAndSortForAntiHintedRegs(
     return;
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  unsigned NumVGPRs = getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass,
-                                         /*IncludeCalls=*/false);
-  unsigned NumAGPRs = getNumUsedPhysRegs(MRI, AMDGPU::AGPR_32RegClass,
-                                         /*IncludeCalls=*/false);
-  if (Matrix) {
-    for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::VGPR_32RegClass))
-      if (Matrix->isPhysRegUsed(Reg))
-        NumVGPRs = std::max(NumVGPRs, getHWRegIndex(Reg) + 1);
-    for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::AGPR_32RegClass))
-      if (Matrix->isPhysRegUsed(Reg))
-        NumAGPRs = std::max(NumAGPRs, getHWRegIndex(Reg) + 1);
-  }
+  assert(hasVectorRegisters(MRI.getRegClass(VirtReg)) &&
+         "SGPR anti-hints are not handled");
+  unsigned NumVGPRs = 0;
+  unsigned NumAGPRs = 0;
+
+  assert(RegClassInfo && "RegClassInfo required to compute occupancy");
+  for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::VGPR_32RegClass))
+    if ((Matrix && Matrix->isPhysRegUsed(Reg)) ||
+        MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true))
+      NumVGPRs = std::max(NumVGPRs, getHWRegIndex(Reg) + 1);
+  for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::AGPR_32RegClass))
+    if ((Matrix && Matrix->isPhysRegUsed(Reg)) ||
+        MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true))
+      NumAGPRs = std::max(NumAGPRs, getHWRegIndex(Reg) + 1);
 
   unsigned NumAllocatedVGPRs =
       AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), NumAGPRs, NumVGPRs);
@@ -4291,7 +4296,7 @@ void SIRegisterInfo::filterAndSortForAntiHintedRegs(
                                           MaxVGPRsForCurrentOccupancy);
       });
 
-  auto *PartitionPoint = std::stable_partition(
+  [[maybe_unused]] auto *PartitionPoint = std::stable_partition(
       CustomOrder.begin(), BeyondBudgetStart,
       [&](MCPhysReg Reg) { return !isAntiHintedReg(Reg, AntiHintedRegUnits); });
 
