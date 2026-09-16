@@ -65,6 +65,7 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -2084,9 +2085,56 @@ bool DevirtModule::areRemarksEnabled() {
   return false;
 }
 
+/// Find assumes whose conditions depend on this type test through phi or select
+/// nodes. SimplifyCFG can produce these patterns by merging type test + assume
+/// sequences from different predecessors.
+static void
+findAssumesThroughMergesForTypeTest(SmallVectorImpl<CallInst *> &Assumes,
+                                    CallInst &TypeTest,
+                                    SmallPtrSetImpl<Value *> &VisitedMerges) {
+  SmallVector<Value *, 4> Worklist;
+
+  auto GetMergeUser = [](User *U, Value *V) -> Value * {
+    if (isa<PHINode>(U))
+      return U;
+    if (auto *Select = dyn_cast<SelectInst>(U);
+        Select && (Select->getTrueValue() == V || Select->getFalseValue() == V))
+      return Select;
+    return nullptr;
+  };
+
+  // Direct assume users were already collected by
+  // findDevirtualizableCallsForTypeTest. Start from merge users so this search
+  // finds only assumptions that depend on the type test through merges.
+  for (User *U : TypeTest.users())
+    if (Value *Merge = GetMergeUser(U, &TypeTest))
+      Worklist.push_back(Merge);
+
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!VisitedMerges.insert(V).second)
+      continue;
+
+    for (User *U : V->users()) {
+      if (auto *Assume = dyn_cast<AssumeInst>(U)) {
+        if (Assume->getArgOperand(0) == V)
+          Assumes.push_back(Assume);
+        continue;
+      }
+
+      if (Value *Merge = GetMergeUser(U, V))
+        Worklist.push_back(Merge);
+    }
+  }
+}
+
 void DevirtModule::scanTypeTestUsers(
     Function *TypeTestFunc,
     DenseMap<Metadata *, std::set<TypeMemberInfo>> &TypeIdMap) {
+  // Cleanup removes every assume reachable through a merge, so each merge only
+  // needs to be processed once even if multiple unresolved type tests reach it.
+  SmallPtrSet<Value *, 8> VisitedMerges;
+
   // Find all virtual calls via a virtual table pointer %p under an assumption
   // of the form llvm.assume(llvm.type.test(%p, %md)) or
   // llvm.assume(llvm.public.type.test(%p, %md)).
@@ -2113,6 +2161,12 @@ void DevirtModule::scanTypeTestUsers(
     }
 
     auto RemoveTypeTestAssumes = [&]() {
+      // A merge of type test results does not imply that any individual type
+      // test can be assumed, so don't use these assumes to identify
+      // devirtualizable calls. They still need to be removed when type
+      // information is missing for any value contributing to the merge.
+      findAssumesThroughMergesForTypeTest(Assumes, *CI, VisitedMerges);
+
       // We no longer need the assumes or the type test.
       for (auto *Assume : Assumes)
         Assume->eraseFromParent();
