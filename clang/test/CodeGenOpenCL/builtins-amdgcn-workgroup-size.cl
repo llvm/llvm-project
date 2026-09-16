@@ -6,6 +6,8 @@
 // RUN: %clang_cc1 -cl-std=CL2.0 -cl-uniform-work-group-size -triple amdgpu6.00-unknown-unknown -mcode-object-version=4 -emit-llvm -o - %s | FileCheck -check-prefixes=UNIFORM-V4  %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu-unknown-unknown -mcode-object-version=none -emit-llvm -o - %s | FileCheck -check-prefixes=NONUNIFORM-UNKNOWN  %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -cl-uniform-work-group-size -triple amdgpu-unknown-unknown -mcode-object-version=none -emit-llvm -o - %s | FileCheck -check-prefixes=UNIFORM-UNKNOWN  %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -mcode-object-version=none -emit-llvm -o - %s | FileCheck -check-prefixes=NONUNIFORM-UNKNOWN  %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -cl-uniform-work-group-size -triple amdgcn-amd-amdhsa -mcode-object-version=none -emit-llvm -o - %s | FileCheck -check-prefixes=UNIFORM-UNKNOWN  %s
 
 
 // NONUNIFORM-V5-LABEL: define dso_local range(i32 1, 1025) i32 @test_get_workgroup_size_x(
