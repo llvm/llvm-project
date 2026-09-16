@@ -248,6 +248,12 @@ functions:
     return_type: void
     arguments:
       - type: unsigned int
+  - name: secure_getenv
+    standards:
+      - posix
+    return_type: char *
+    arguments:
+      - type: const char *
   - name: setenv
     standards:
       - posix
