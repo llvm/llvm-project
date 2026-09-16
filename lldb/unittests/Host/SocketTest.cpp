@@ -115,7 +115,7 @@ TEST_F(SocketTest, CreatePair) {
   }
 
   std::vector<Socket::SocketProtocol> erroring_protocols = {
-#if !LLDB_ENABLE_POSIX
+#ifdef _WIN32
       // Windows has AF_UNIX domain sockets but no abstract-namespace sockets.
       Socket::ProtocolUnixAbstract,
 #endif
