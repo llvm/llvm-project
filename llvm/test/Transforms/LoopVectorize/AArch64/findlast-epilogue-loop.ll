@@ -24,13 +24,13 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ splat (i32 -1), %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt <vscale x 4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = freeze <vscale x 4 x i1> [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP7]])
-; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP4]]
+; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

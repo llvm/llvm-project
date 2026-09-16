@@ -39,13 +39,13 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; SVE:       [[VECTOR_BODY]]:
 ; SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ splat (i32 -1), %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
-; SVE-NEXT:    [[TMP4:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
+; SVE-NEXT:    [[TMP2:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[INDEX]]
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
 ; SVE-NEXT:    [[TMP13:%.*]] = icmp slt <vscale x 4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; SVE-NEXT:    [[TMP7:%.*]] = freeze <vscale x 4 x i1> [[TMP13]]
 ; SVE-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP7]])
-; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP13]], <vscale x 4 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> [[TMP2]]
 ; SVE-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
 ; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -128,14 +128,14 @@ define ptr @simple_csa_ptr_select(i64 %N, ptr %data, i64 %a, ptr %init) {
 ; SVE:       [[LOOP]]:
 ; SVE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
 ; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x ptr> [ [[BROADCAST_SPLAT2]], %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[LOOP]] ]
-; SVE-NEXT:    [[TMP4:%.*]] = phi <vscale x 2 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[LOOP]] ]
+; SVE-NEXT:    [[TMP2:%.*]] = phi <vscale x 2 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[LOOP]] ]
 ; SVE-NEXT:    [[LD_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[DATA]], i64 [[IV]]
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x ptr>, ptr [[LD_ADDR]], align 4
 ; SVE-NEXT:    [[TMP6:%.*]] = ptrtoint <vscale x 2 x ptr> [[WIDE_LOAD]] to <vscale x 2 x i64>
 ; SVE-NEXT:    [[TMP7:%.*]] = icmp slt <vscale x 2 x i64> [[BROADCAST_SPLAT]], [[TMP6]]
 ; SVE-NEXT:    [[TMP8:%.*]] = freeze <vscale x 2 x i1> [[TMP7]]
 ; SVE-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1> [[TMP8]])
-; SVE-NEXT:    [[TMP10]] = select i1 [[TMP9]], <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP10]] = select i1 [[TMP9]], <vscale x 2 x i1> [[TMP8]], <vscale x 2 x i1> [[TMP2]]
 ; SVE-NEXT:    [[TMP11]] = select i1 [[TMP9]], <vscale x 2 x ptr> [[WIDE_LOAD]], <vscale x 2 x ptr> [[VEC_PHI]]
 ; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; SVE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -198,13 +198,13 @@ define float @simple_csa_float_select(i64 %N, ptr %data, float %a) {
 ; NEON:       [[LOOP]]:
 ; NEON-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
 ; NEON-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -1.000000e+00), %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[LOOP]] ]
-; NEON-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[LOOP]] ]
+; NEON-NEXT:    [[TMP1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[LOOP]] ]
 ; NEON-NEXT:    [[LD_ADDR:%.*]] = getelementptr inbounds float, ptr [[DATA]], i64 [[IV]]
 ; NEON-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[LD_ADDR]], align 4
 ; NEON-NEXT:    [[TMP2:%.*]] = fcmp olt <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; NEON-NEXT:    [[TMP3:%.*]] = freeze <4 x i1> [[TMP2]]
 ; NEON-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP3]])
-; NEON-NEXT:    [[TMP5]] = select i1 [[TMP4]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
+; NEON-NEXT:    [[TMP5]] = select i1 [[TMP4]], <4 x i1> [[TMP3]], <4 x i1> [[TMP1]]
 ; NEON-NEXT:    [[TMP6]] = select i1 [[TMP4]], <4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI]]
 ; NEON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; NEON-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -247,13 +247,13 @@ define float @simple_csa_float_select(i64 %N, ptr %data, float %a) {
 ; SVE:       [[LOOP]]:
 ; SVE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
 ; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ splat (float -1.000000e+00), %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[LOOP]] ]
-; SVE-NEXT:    [[TMP4:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[LOOP]] ]
+; SVE-NEXT:    [[TMP2:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[LOOP]] ]
 ; SVE-NEXT:    [[LD_ADDR:%.*]] = getelementptr inbounds float, ptr [[DATA]], i64 [[IV]]
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[LD_ADDR]], align 4
 ; SVE-NEXT:    [[TMP6:%.*]] = fcmp olt <vscale x 4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; SVE-NEXT:    [[TMP7:%.*]] = freeze <vscale x 4 x i1> [[TMP6]]
 ; SVE-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP7]])
-; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> [[TMP2]]
 ; SVE-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x float> [[VEC_PHI]]
 ; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; SVE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -404,14 +404,14 @@ define i32 @multi_use_cmp_for_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
 ; SVE-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[TMP4]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP]] ]
 ; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ splat (i32 -1), %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[LOOP]] ]
-; SVE-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[LOOP]] ]
+; SVE-NEXT:    [[TMP3:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[LOOP]] ]
 ; SVE-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[LOOP]] ]
 ; SVE-NEXT:    [[LD_ADDR:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV]]
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[LD_ADDR]], align 4
 ; SVE-NEXT:    [[TMP7:%.*]] = icmp slt <vscale x 4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; SVE-NEXT:    [[TMP8:%.*]] = freeze <vscale x 4 x i1> [[TMP7]]
 ; SVE-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP8]])
-; SVE-NEXT:    [[TMP10]] = select i1 [[TMP9]], <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> [[TMP5]]
+; SVE-NEXT:    [[TMP10]] = select i1 [[TMP9]], <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i1> [[TMP3]]
 ; SVE-NEXT:    [[TMP11]] = select i1 [[TMP9]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
 ; SVE-NEXT:    [[TMP12]] = select <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i64> [[VEC_IND]], <vscale x 4 x i64> [[VEC_PHI3]]
 ; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
@@ -616,7 +616,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; NEON:       [[VECTOR_BODY]]:
 ; NEON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; NEON-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 -1), %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
-; NEON-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
+; NEON-NEXT:    [[TMP14:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
 ; NEON-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
 ; NEON-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; NEON-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[WIDE_LOAD]], splat (i32 13)
@@ -629,7 +629,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; NEON-NEXT:    [[TMP7:%.*]] = icmp slt <4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; NEON-NEXT:    [[TMP8:%.*]] = freeze <4 x i1> [[TMP7]]
 ; NEON-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP8]])
-; NEON-NEXT:    [[TMP10]] = select i1 [[TMP9]], <4 x i1> [[TMP7]], <4 x i1> [[TMP0]]
+; NEON-NEXT:    [[TMP10]] = select i1 [[TMP9]], <4 x i1> [[TMP8]], <4 x i1> [[TMP14]]
 ; NEON-NEXT:    [[TMP11]] = select i1 [[TMP9]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]]
 ; NEON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; NEON-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -679,7 +679,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; SVE:       [[VECTOR_BODY]]:
 ; SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ splat (i32 -1), %[[VECTOR_PH]] ], [ [[TMP15:%.*]], %[[VECTOR_BODY]] ]
-; SVE-NEXT:    [[TMP4:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[VECTOR_BODY]] ]
+; SVE-NEXT:    [[TMP2:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 4
 ; SVE-NEXT:    [[TMP6:%.*]] = mul <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 13)
@@ -692,7 +692,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; SVE-NEXT:    [[TMP11:%.*]] = icmp slt <vscale x 4 x i32> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; SVE-NEXT:    [[TMP12:%.*]] = freeze <vscale x 4 x i1> [[TMP11]]
 ; SVE-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP12]])
-; SVE-NEXT:    [[TMP14]] = select i1 [[TMP13]], <vscale x 4 x i1> [[TMP11]], <vscale x 4 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP14]] = select i1 [[TMP13]], <vscale x 4 x i1> [[TMP12]], <vscale x 4 x i1> [[TMP2]]
 ; SVE-NEXT:    [[TMP15]] = select i1 [[TMP13]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
 ; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -786,13 +786,13 @@ define i8 @simple_csa_byte_select(i64 %N, ptr %data, i8 %a) {
 ; SVE:       [[VECTOR_BODY]]:
 ; SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 16 x i8> [ splat (i8 -1), %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
-; SVE-NEXT:    [[TMP4:%.*]] = phi <vscale x 16 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
+; SVE-NEXT:    [[TMP2:%.*]] = phi <vscale x 16 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 [[INDEX]]
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[TMP5]], align 4
 ; SVE-NEXT:    [[TMP6:%.*]] = icmp slt <vscale x 16 x i8> [[BROADCAST_SPLAT]], [[WIDE_LOAD]]
 ; SVE-NEXT:    [[TMP7:%.*]] = freeze <vscale x 16 x i1> [[TMP6]]
 ; SVE-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP7]])
-; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP2]]
 ; SVE-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 16 x i8> [[WIDE_LOAD]], <vscale x 16 x i8> [[VEC_PHI]]
 ; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -853,8 +853,8 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; NEON-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; NEON-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 -1), %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; NEON-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ splat (i32 -1), %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[VECTOR_BODY]] ]
-; NEON-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; NEON-NEXT:    [[TMP1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; NEON-NEXT:    [[TMP1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
+; NEON-NEXT:    [[TMP15:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
 ; NEON-NEXT:    [[LD_ADDR:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[IV]]
 ; NEON-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[LD_ADDR]], i64 4
 ; NEON-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[LD_ADDR]], align 4
@@ -865,8 +865,8 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; NEON-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP10]]
 ; NEON-NEXT:    [[TMP14:%.*]] = or <4 x i1> [[TMP3]], [[TMP12]]
 ; NEON-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP14]])
-; NEON-NEXT:    [[TMP5]] = select i1 [[TMP4]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
-; NEON-NEXT:    [[TMP11]] = select i1 [[TMP4]], <4 x i1> [[TMP10]], <4 x i1> [[TMP1]]
+; NEON-NEXT:    [[TMP5]] = select i1 [[TMP4]], <4 x i1> [[TMP3]], <4 x i1> [[TMP1]]
+; NEON-NEXT:    [[TMP11]] = select i1 [[TMP4]], <4 x i1> [[TMP12]], <4 x i1> [[TMP15]]
 ; NEON-NEXT:    [[TMP6]] = select i1 [[TMP4]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]]
 ; NEON-NEXT:    [[TMP13]] = select i1 [[TMP4]], <4 x i32> [[WIDE_LOAD2]], <4 x i32> [[VEC_PHI1]]
 ; NEON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
@@ -913,8 +913,8 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ splat (i32 -1), %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i32> [ splat (i32 -1), %[[VECTOR_PH]] ], [ [[TMP18:%.*]], %[[VECTOR_BODY]] ]
-; SVE-NEXT:    [[TMP4:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
-; SVE-NEXT:    [[TMP15:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP16:%.*]], %[[VECTOR_BODY]] ]
+; SVE-NEXT:    [[TMP14:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
+; SVE-NEXT:    [[TMP4:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP16:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[INDEX]]
 ; SVE-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 [[TMP3]]
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 4
@@ -925,8 +925,8 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    [[TMP20:%.*]] = freeze <vscale x 4 x i1> [[TMP19]]
 ; SVE-NEXT:    [[TMP13:%.*]] = or <vscale x 4 x i1> [[TMP7]], [[TMP20]]
 ; SVE-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP13]])
-; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP4]]
-; SVE-NEXT:    [[TMP16]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP19]], <vscale x 4 x i1> [[TMP15]]
+; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> [[TMP14]]
+; SVE-NEXT:    [[TMP16]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP20]], <vscale x 4 x i1> [[TMP4]]
 ; SVE-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
 ; SVE-NEXT:    [[TMP18]] = select i1 [[TMP8]], <vscale x 4 x i32> [[WIDE_LOAD2]], <vscale x 4 x i32> [[VEC_PHI1]]
 ; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
@@ -1024,7 +1024,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE:       [[VECTOR_BODY]]:
 ; SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ [[BROADCAST_SPLAT2]], %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
-; SVE-NEXT:    [[TMP4:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
+; SVE-NEXT:    [[TMP2:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[INDEX]]
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 4
 ; SVE-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
@@ -1032,7 +1032,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP7]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i32> poison)
 ; SVE-NEXT:    [[TMP8:%.*]] = freeze <vscale x 4 x i1> [[TMP6]]
 ; SVE-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP8]])
-; SVE-NEXT:    [[TMP10]] = select i1 [[TMP9]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP10]] = select i1 [[TMP9]], <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i1> [[TMP2]]
 ; SVE-NEXT:    [[TMP11]] = select i1 [[TMP9]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
 ; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1142,14 +1142,14 @@ define i32 @simple_csa_int_divide(ptr noalias %a, ptr noalias %b, i32 %default_v
 ; SVE:       [[VECTOR_BODY]]:
 ; SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ [[BROADCAST_SPLAT2]], %[[VECTOR_PH]] ], [ [[TMP12:%.*]], %[[VECTOR_BODY]] ]
-; SVE-NEXT:    [[TMP4:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; SVE-NEXT:    [[TMP2:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[INDEX]]
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 4
 ; SVE-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; SVE-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i32> @llvm.masked.sdiv.nxv4i32(<vscale x 4 x i32> splat (i32 42), <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i1> [[TMP6]])
 ; SVE-NEXT:    [[TMP9:%.*]] = freeze <vscale x 4 x i1> [[TMP6]]
 ; SVE-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP9]])
-; SVE-NEXT:    [[TMP11]] = select i1 [[TMP10]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP11]] = select i1 [[TMP10]], <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i1> [[TMP2]]
 ; SVE-NEXT:    [[TMP12]] = select i1 [[TMP10]], <vscale x 4 x i32> [[TMP8]], <vscale x 4 x i32> [[VEC_PHI]]
 ; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1266,7 +1266,7 @@ define i32 @csa_load_nested_ifs(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[TMP4]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ [[BROADCAST_SPLAT2]], %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[VECTOR_BODY]] ]
-; SVE-NEXT:    [[TMP5:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[VECTOR_BODY]] ]
+; SVE-NEXT:    [[TMP3:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[TMP6:%.*]] = icmp ult <vscale x 4 x i64> [[VEC_IND]], splat (i64 100)
 ; SVE-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX]]
 ; SVE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP7]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i32> poison)
@@ -1276,7 +1276,7 @@ define i32 @csa_load_nested_ifs(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP10]], <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i32> poison)
 ; SVE-NEXT:    [[TMP11:%.*]] = freeze <vscale x 4 x i1> [[TMP9]]
 ; SVE-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP11]])
-; SVE-NEXT:    [[TMP13]] = select i1 [[TMP12]], <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i1> [[TMP5]]
+; SVE-NEXT:    [[TMP13]] = select i1 [[TMP12]], <vscale x 4 x i1> [[TMP11]], <vscale x 4 x i1> [[TMP3]]
 ; SVE-NEXT:    [[TMP14]] = select i1 [[TMP12]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD5]], <vscale x 4 x i32> [[VEC_PHI]]
 ; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT4]]
@@ -1802,7 +1802,7 @@ define i32 @csa_find_last_phi_use_iv(ptr noalias %mask, ptr noalias %src, ptr no
 ; SVE-NEXT:    [[TMP11:%.*]] = add nuw nsw <vscale x 16 x i32> [[VEC_IND]], [[TMP10]]
 ; SVE-NEXT:    [[TMP12:%.*]] = freeze <vscale x 16 x i1> [[TMP8]]
 ; SVE-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP12]])
-; SVE-NEXT:    [[TMP14]] = select i1 [[TMP13]], <vscale x 16 x i1> [[TMP8]], <vscale x 16 x i1> [[TMP6]]
+; SVE-NEXT:    [[TMP14]] = select i1 [[TMP13]], <vscale x 16 x i1> [[TMP12]], <vscale x 16 x i1> [[TMP6]]
 ; SVE-NEXT:    [[TMP15]] = select i1 [[TMP13]], <vscale x 16 x i32> [[TMP11]], <vscale x 16 x i32> [[VEC_PHI]]
 ; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
@@ -1925,9 +1925,9 @@ define i32 @csa_multiple_find_last_phi_reductions(ptr noalias %mask, ptr noalias
 ; SVE:       [[VECTOR_BODY]]:
 ; SVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP15:%.*]], %[[VECTOR_BODY]] ]
-; SVE-NEXT:    [[TMP4:%.*]] = phi <vscale x 16 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[VECTOR_BODY]] ]
+; SVE-NEXT:    [[TMP2:%.*]] = phi <vscale x 16 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP17:%.*]], %[[VECTOR_BODY]] ]
-; SVE-NEXT:    [[TMP5:%.*]] = phi <vscale x 16 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP16:%.*]], %[[VECTOR_BODY]] ]
+; SVE-NEXT:    [[TMP3:%.*]] = phi <vscale x 16 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP16:%.*]], %[[VECTOR_BODY]] ]
 ; SVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[MASK]], i64 [[INDEX]]
 ; SVE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i32>, ptr [[TMP6]], align 4
 ; SVE-NEXT:    [[TMP7:%.*]] = icmp ne <vscale x 16 x i32> [[WIDE_LOAD]], zeroinitializer
@@ -1939,9 +1939,9 @@ define i32 @csa_multiple_find_last_phi_reductions(ptr noalias %mask, ptr noalias
 ; SVE-NEXT:    [[TMP11:%.*]] = zext <vscale x 16 x i8> [[WIDE_MASKED_LOAD2]] to <vscale x 16 x i32>
 ; SVE-NEXT:    [[TMP12:%.*]] = freeze <vscale x 16 x i1> [[TMP7]]
 ; SVE-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP12]])
-; SVE-NEXT:    [[TMP14]] = select i1 [[TMP13]], <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP4]]
+; SVE-NEXT:    [[TMP14]] = select i1 [[TMP13]], <vscale x 16 x i1> [[TMP12]], <vscale x 16 x i1> [[TMP2]]
 ; SVE-NEXT:    [[TMP15]] = select i1 [[TMP13]], <vscale x 16 x i32> [[TMP9]], <vscale x 16 x i32> [[VEC_PHI]]
-; SVE-NEXT:    [[TMP16]] = select i1 [[TMP13]], <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP5]]
+; SVE-NEXT:    [[TMP16]] = select i1 [[TMP13]], <vscale x 16 x i1> [[TMP12]], <vscale x 16 x i1> [[TMP3]]
 ; SVE-NEXT:    [[TMP17]] = select i1 [[TMP13]], <vscale x 16 x i32> [[TMP11]], <vscale x 16 x i32> [[VEC_PHI1]]
 ; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
