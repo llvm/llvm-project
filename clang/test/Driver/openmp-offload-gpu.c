@@ -406,6 +406,43 @@
 // RUN:   | FileCheck --check-prefix=THINLTO-SM52 %s
 // THINLTO-SM52: --device-compiler=nvptx64-nvidia-cuda=-flto=thin
 
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     --offload-arch=sm_52 -fwhole-program-vtables \
+// RUN:     -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=NO-LTO %s
+// NO-LTO: invalid argument '-fwhole-program-vtables' only allowed with '-flto'
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     --offload-arch=sm_52 -fwhole-program-vtables \
+// RUN:     -Xarch_device -flto=thin -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=DEVICE-LTO %s
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     --offload-arch=sm_52 -foffload-lto=thin -fno-lto \
+// RUN:     -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=DEVICE-LTO %s
+// DEVICE-LTO: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
+// DEVICE-LTO-NOT: "-flto=thin"
+// DEVICE-LTO: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-flto=thin"
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     --offload-arch=sm_52 -flto=thin -fno-offload-lto \
+// RUN:     -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=HOST-LTO %s
+// HOST-LTO: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-flto=thin"
+// HOST-LTO: "-cc1" "-triple" "nvptx64-nvidia-cuda"
+// HOST-LTO-NOT: "-flto=thin"
+// HOST-LTO: ptxas
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     --offload-arch=sm_52 -flto=thin -fno-lto \
+// RUN:     -foffload-lto=thin -fno-offload-lto -nogpulib -nogpuinc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=DISABLE-LTO %s
+// DISABLE-LTO: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
+// DISABLE-LTO-NOT: "-flto=thin"
+// DISABLE-LTO: "-cc1" "-triple" "nvptx64-nvidia-cuda"
+// DISABLE-LTO-NOT: "-flto=thin"
+// DISABLE-LTO: clang-linker-wrapper
+
 //
 // Check the requested architecture is passed if provided.
 //

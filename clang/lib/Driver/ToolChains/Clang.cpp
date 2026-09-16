@@ -113,6 +113,28 @@ forAllAssociatedToolChains(Compilation &C, const JobAction &JA,
   }
 }
 
+static bool compilationUsesLTO(Compilation &C) {
+  const Driver &D = C.getDriver();
+  if (!D.offloadDeviceOnly() &&
+      C.getLTOMode(C.getDefaultToolChain()) != LTOK_None)
+    return true;
+  if (D.offloadHostOnly())
+    return false;
+
+  static constexpr Action::OffloadKind Kinds[] = {
+      Action::OFK_Cuda, Action::OFK_OpenMP, Action::OFK_HIP, Action::OFK_SYCL};
+  return llvm::any_of(Kinds, [&](Action::OffloadKind Kind) {
+    return llvm::any_of(
+        llvm::make_range(C.getOffloadToolChains(Kind)), [&](const auto &Entry) {
+          const ToolChain &TC = *Entry.second;
+          return llvm::any_of(D.getOffloadArchs(C, C.getArgs(), Kind, TC),
+                              [&](BoundArch BA) {
+                                return C.getLTOMode(TC, BA, Kind) != LTOK_None;
+                              });
+        });
+  });
+}
+
 static bool
 shouldUseExceptionTablesForObjCExceptions(const ObjCRuntime &runtime,
                                           const llvm::Triple &Triple) {
@@ -8468,8 +8490,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // ThinLTO mode.
     bool IsPS4 = getToolChain().getTriple().isPS4();
 
-    // Offload compilations may use LTO only for another target.
-    if ((!IsUsingLTO && !IsDeviceOffloadAction && !IsHostOffloadingAction) ||
+    if ((!compilationUsesLTO(C)) ||
         (IsPS4 && !UnifiedLTO && (TC.getLTOMode(Args) != LTOK_Full)))
       D.Diag(diag::err_drv_argument_only_allowed_with)
           << "-fwhole-program-vtables"
