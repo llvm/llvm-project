@@ -39,77 +39,24 @@ namespace lldb_private {
 /// location expression or a location list and interprets it.
 class DWARFExpression {
 public:
-  /// The stack used while evaluating a DWARF expression. Each eagerly
-  /// materialized value retains the kind of location description that
-  /// produced it.
-  class Stack {
-  public:
-    enum class LocationDescriptionKind { Empty, Memory, Register, Implicit };
+  enum class LocationDescriptionKind { Empty, Memory, Register, Implicit };
 
-    bool empty() const { return m_entries.empty(); }
-    size_t size() const { return m_entries.size(); }
+  /// An eagerly materialized value on the DWARF expression stack together
+  /// with the kind of location description that produced it.
+  struct StackEntry {
+    StackEntry(const Value &value, LocationDescriptionKind loc_desc_kind =
+                                       LocationDescriptionKind::Memory)
+        : value(value), loc_desc_kind(loc_desc_kind) {}
 
-    Value &back() { return m_entries.back().value; }
-    const Value &back() const { return m_entries.back().value; }
+    StackEntry(const Scalar &value, LocationDescriptionKind loc_desc_kind =
+                                        LocationDescriptionKind::Memory)
+        : value(value), loc_desc_kind(loc_desc_kind) {}
 
-    Value &operator[](size_t index) { return m_entries[index].value; }
-    const Value &operator[](size_t index) const {
-      return m_entries[index].value;
-    }
-
-    void push_back(Value value, LocationDescriptionKind loc_desc_kind =
-                                    LocationDescriptionKind::Memory) {
-      m_entries.push_back({std::move(value), loc_desc_kind});
-    }
-
-    /// Push a copy of the entry at \p index, or return false if it is invalid.
-    [[nodiscard]] bool PushCopy(size_t index) {
-      if (index >= size())
-        return false;
-      Entry entry = m_entries[index];
-      m_entries.push_back(std::move(entry));
-      return true;
-    }
-
-    void pop_back() { m_entries.pop_back(); }
-
-    LocationDescriptionKind GetLocationDescriptionKind() const {
-      return m_entries.back().loc_desc_kind;
-    }
-
-    void SetLocationDescriptionKind(LocationDescriptionKind loc_desc_kind) {
-      m_entries.back().loc_desc_kind = loc_desc_kind;
-    }
-
-    /// Swap the top two entries, or return false if fewer than two exist.
-    [[nodiscard]] bool SwapTopTwo() {
-      if (size() < 2)
-        return false;
-      const size_t last = size() - 1;
-      std::swap(m_entries[last], m_entries[last - 1]);
-      return true;
-    }
-
-    /// Rotate the top three entries, or return false if fewer than three exist.
-    [[nodiscard]] bool RotateTopThree() {
-      if (size() < 3)
-        return false;
-      const size_t last = size() - 1;
-      Entry old_top = m_entries[last];
-      m_entries[last] = m_entries[last - 1];
-      m_entries[last - 1] = m_entries[last - 2];
-      m_entries[last - 2] = std::move(old_top);
-      return true;
-    }
-
-  private:
-    struct Entry {
-      Value value;
-      LocationDescriptionKind loc_desc_kind;
-    };
-
-    std::vector<Entry> m_entries;
+    Value value;
+    LocationDescriptionKind loc_desc_kind;
   };
+
+  using Stack = std::vector<StackEntry>;
 
   class Delegate {
   public:
