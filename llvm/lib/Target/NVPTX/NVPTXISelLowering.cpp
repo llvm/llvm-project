@@ -3281,6 +3281,16 @@ static void appendSplitSPOperands(ArrayRef<SDUse> Input,
       continue;
     }
 
+    EVT VT = Operand.getValueType();
+    // Pack partial .b32 operands at their natural width before extending them
+    // to avoid redundant cvt/prmt sequences.
+    if (VT.getSizeInBits() < 32) {
+      EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+      SDValue Packed = DAG.getBitcast(IntVT, Operand);
+      Output.push_back(DAG.getAnyExtOrTrunc(Packed, SDLoc(Operand), MVT::i32));
+      continue;
+    }
+
     SmallVector<SDValue> Parts;
     splitSPVector(Operand, Parts, DAG);
     for (SDValue Part : Parts)
