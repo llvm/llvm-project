@@ -1038,6 +1038,8 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
                                         AMDGPUAsmVariants.Disable);
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
   let DecoderNamespace = "GFX8";
+  let GFX1250BlockingCycles = 2;
+  let HasGFX1250BlockingCycles = true;
 }
 
 class VOP3_DPP_Pseudo <string OpName, VOPProfile P> :
@@ -1255,6 +1257,8 @@ class VOP_DPP8_Pseudo<string OpName, VOPProfile P, list<dag> pattern=[]> :
   let AssemblerPredicate = HasDPP8;
   let AsmVariantName = AMDGPUAsmVariants.Disable;
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
+  let GFX1250BlockingCycles = 2;
+  let HasGFX1250BlockingCycles = true;
 }
 
 class VOP3_DPP8_Base<string OpName, VOPProfile P> :

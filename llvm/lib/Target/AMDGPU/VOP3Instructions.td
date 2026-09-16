@@ -2019,7 +2019,8 @@ def VOP_Pseudo_Scalar_F16_NoInline : VOP_Pseudo_Scalar<SReg_32_XEXEC, SSrc_NoInl
 // Define regular and "no inline constant" variant of a F16 pseudo
 // scalar transcendental instruction.
 multiclass VOP3PseudoScalarInst_F16<string opName> {
-  let TRANS = 1, isReMaterializable = 1, SchedRW = [WritePseudoScalarTrans] in {
+  let TRANS = 1, isReMaterializable = 1, SchedRW = [WritePseudoScalarTrans],
+      GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
     let SubtargetPredicate = Predicate<"Subtarget->hasPseudoScalarTrans() && !Subtarget->hasNoF16PseudoScalarTransInlineConstants()"> in {
       defm NAME : VOP3PseudoScalarInst<opName, VOP_Pseudo_Scalar_F16>;
     }
@@ -2031,7 +2032,8 @@ multiclass VOP3PseudoScalarInst_F16<string opName> {
 }
 
 let SubtargetPredicate = HasPseudoScalarTrans, TRANS = 1,
-    isReMaterializable = 1, SchedRW = [WritePseudoScalarTrans] in {
+    isReMaterializable = 1, SchedRW = [WritePseudoScalarTrans],
+    GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
   defm V_S_EXP_F32  : VOP3PseudoScalarInst<"v_s_exp_f32", VOP_Pseudo_Scalar_F32, AMDGPUexp>;
   defm V_S_EXP_F16  : VOP3PseudoScalarInst_F16<"v_s_exp_f16">;
   defm V_S_LOG_F32  : VOP3PseudoScalarInst<"v_s_log_f32", VOP_Pseudo_Scalar_F32, AMDGPUlog>;

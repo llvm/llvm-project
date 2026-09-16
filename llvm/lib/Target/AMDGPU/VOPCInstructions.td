@@ -840,7 +840,7 @@ defm V_CMPX_GT_I64 : VOPCX_I64 <"v_cmpx_gt_i64">;
 defm V_CMPX_NE_I64 : VOPCX_I64 <"v_cmpx_ne_i64">;
 defm V_CMPX_GE_I64 : VOPCX_I64 <"v_cmpx_ge_i64">;
 defm V_CMPX_T_I64 : VOPCX_I64 <"v_cmpx_t_i64">;
-} // End GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
+} // End GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
 
 defm V_CMP_F_U32 : VOPC_I32 <"v_cmp_f_u32">;
 defm V_CMP_LT_U32 : VOPC_I32 <"v_cmp_lt_u32", COND_ULT, "v_cmp_gt_u32">;
@@ -877,7 +877,7 @@ defm V_CMPX_GT_U64 : VOPCX_I64 <"v_cmpx_gt_u64">;
 defm V_CMPX_NE_U64 : VOPCX_I64 <"v_cmpx_ne_u64">;
 defm V_CMPX_GE_U64 : VOPCX_I64 <"v_cmpx_ge_u64">;
 defm V_CMPX_T_U64 : VOPCX_I64 <"v_cmpx_t_u64">;
-} // End GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
+} // End GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
 
 //===----------------------------------------------------------------------===//
 // Class instructions
@@ -1219,13 +1219,16 @@ multiclass VOPCX_CLASS_F32 <string opName> :
 
 // FIXME: let IsDPMACCInstruction = 1 in
 multiclass VOPC_CLASS_F64 <string opName> {
+  let GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in
   defm NAME : VOPC_Class_Pseudos <opName, VOPC_I1_F64_I32, 0>;
   defm : VOPCClassPat64<NAME>;
 }
 
 // FIXME: let IsDPMACCInstruction = 1 in
-multiclass VOPCX_CLASS_F64 <string opName> :
-  VOPCX_Class_Pseudos <opName, VOPC_I1_F64_I32, VOPC_F64_I32>;
+multiclass VOPCX_CLASS_F64 <string opName> {
+  let GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in
+  defm NAME : VOPCX_Class_Pseudos <opName, VOPC_I1_F64_I32, VOPC_F64_I32>;
+}
 
 defm V_CMP_CLASS_F32 : VOPC_CLASS_F32 <"v_cmp_class_f32">;
 defm V_CMPX_CLASS_F32 : VOPCX_CLASS_F32 <"v_cmpx_class_f32">;
