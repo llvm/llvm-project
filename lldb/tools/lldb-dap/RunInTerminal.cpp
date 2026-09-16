@@ -49,7 +49,7 @@ RunInTerminalMessageError::RunInTerminalMessageError(StringRef error)
     : RunInTerminalMessage(eRunInTerminalMessageKindError), error(error) {}
 
 json::Value RunInTerminalMessageError::ToJSON() const {
-  return json::Object{{"kind", "error"}, {"value", error}};
+  return json::Object{{"kind", "error"}, {"error", error}};
 }
 
 RunInTerminalMessageDidAttach::RunInTerminalMessageDidAttach()

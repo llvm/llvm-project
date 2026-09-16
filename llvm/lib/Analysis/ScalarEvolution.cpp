@@ -3680,15 +3680,17 @@ const SCEV *ScalarEvolution::getUDivExactExpr(SCEVUse LHS, SCEVUse RHS) {
 
 /// Get an add recurrence expression for the specified loop.  Simplify the
 /// expression as much as possible.
-const SCEV *ScalarEvolution::getAddRecExpr(SCEVUse Start, SCEVUse Step,
-                                           const Loop *L,
-                                           SCEV::NoWrapFlags Flags) {
+SCEVUse ScalarEvolution::getAddRecExpr(SCEVUse Start, SCEVUse Step,
+                                       const Loop *L, SCEVFlags Flags) {
   SmallVector<SCEVUse, 4> Operands;
   Operands.push_back(Start);
   if (const SCEVAddRecExpr *StepChrec = dyn_cast<SCEVAddRecExpr>(Step))
     if (StepChrec->getLoop() == L) {
       append_range(Operands, StepChrec->operands());
-      return getAddRecExpr(Operands, L, maskFlags(Flags, SCEV::FlagNW));
+      // The use flags describe the two-operand recurrence, not the flattened
+      // one built here, so drop them just like the expression's NUW/NSW.
+      return getAddRecExpr(Operands, L,
+                           maskFlags(Flags.ExprFlags, SCEV::FlagNW));
     }
 
   Operands.push_back(Step);
@@ -3697,9 +3699,12 @@ const SCEV *ScalarEvolution::getAddRecExpr(SCEVUse Start, SCEVUse Step,
 
 /// Get an add recurrence expression for the specified loop.  Simplify the
 /// expression as much as possible.
-const SCEV *ScalarEvolution::getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
-                                           const Loop *L,
-                                           SCEV::NoWrapFlags Flags) {
+SCEVUse ScalarEvolution::getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
+                                       const Loop *L, SCEVFlags NWFlags) {
+  SCEV::NoWrapFlags Flags = NWFlags.ExprFlags;
+  SCEV::NoWrapFlags UseFlags = NWFlags.UseFlags;
+  assert(!(UseFlags & ~(SCEV::FlagNUW | SCEV::FlagNSW)) &&
+         "only nuw or nsw allowed");
   if (Operands.size() == 1) return Operands[0];
 #ifndef NDEBUG
   Type *ETy = getEffectiveSCEVType(Operands[0]->getType());
@@ -3711,6 +3716,10 @@ const SCEV *ScalarEvolution::getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
   for (const SCEV *Op : Operands)
     assert(isAvailableAtLoopEntry(Op, L) &&
            "SCEVAddRecExpr operand is not available at loop entry!");
+
+  // Keep track of the original operands, for verification when adding
+  // use-specific flags.
+  const SmallVector<SCEVUse, 4> OrigOperands(Operands.begin(), Operands.end());
 #endif
 
   if (Operands.back()->isZero()) {
@@ -3771,7 +3780,9 @@ const SCEV *ScalarEvolution::getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
 
   // Okay, it looks like we really DO need an addrec expr.  Check to see if we
   // already have one, otherwise create a new one.
-  return getOrCreateAddRecExpr(Operands, L, Flags);
+  assert((UseFlags == SCEV::FlagAnyWrap || equal(OrigOperands, Operands)) &&
+         "Tried to add SCEVUse flags after operands changed");
+  return {getOrCreateAddRecExpr(Operands, L, Flags), UseFlags};
 }
 
 const SCEV *ScalarEvolution::getGEPExpr(GEPOperator *GEP,
@@ -5618,7 +5629,7 @@ ScalarEvolution::createAddRecFromPHIWithCastsImpl(const SCEVUnknown *SymbolicPHI
   // which the casts had been folded away. The caller can rewrite SymbolicPHI
   // into NewAR if it will also add the runtime overflow checks specified in
   // Predicates.
-  auto *NewAR = getAddRecExpr(StartVal, Accum, L, SCEV::FlagAnyWrap);
+  const SCEV *NewAR = getAddRecExpr(StartVal, Accum, L, SCEV::FlagAnyWrap);
 
   std::pair<const SCEV *, SmallVector<const SCEVPredicate *, 3>> PredRewrite =
       std::make_pair(NewAR, Predicates);
@@ -13406,9 +13417,9 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
           // if we'd been able to infer the fact just above at that time.
           const SCEV *Step = AR->getStepRecurrence(*this);
           Type *Ty = ZExt->getType();
-          auto *S = getAddRecExpr(
-            getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, 0),
-            getZeroExtendExpr(Step, Ty, 0), L, AR->getNoWrapFlags());
+          const SCEV *S = getAddRecExpr(
+              getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, 0),
+              getZeroExtendExpr(Step, Ty, 0), L, AR->getNoWrapFlags());
           IV = dyn_cast<SCEVAddRecExpr>(S);
         }
       }
@@ -14042,20 +14053,10 @@ bool ScalarEvolution::containsErasedValue(const SCEV *S) const {
 
 /// Return the size of an element read or written by Inst.
 const SCEV *ScalarEvolution::getElementSize(Instruction *Inst) {
-  Type *Ty;
-  Type *PtrTy;
-  if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
-    Ty = Store->getValueOperand()->getType();
-    PtrTy = Store->getPointerOperandType();
-  } else if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
-    Ty = Load->getType();
-    PtrTy = Load->getPointerOperandType();
-  } else {
+  if (!isa<LoadInst, StoreInst>(Inst))
     return nullptr;
-  }
-
-  Type *ETy = getEffectiveSCEVType(PtrTy);
-  return getSizeOfExpr(ETy, Ty);
+  Type *ETy = getEffectiveSCEVType(getLoadStorePointerOperand(Inst)->getType());
+  return getSizeOfExpr(ETy, getLoadStoreType(Inst));
 }
 
 //===----------------------------------------------------------------------===//

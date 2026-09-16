@@ -719,11 +719,12 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
 }
 
 /// If R is a phi-like recipe starting a dead cycle of recipes, erase all
-/// reachable recipes of the dead cycle.
-static void tryToRemoveDeadCycle(VPRecipeBase *R) {
+/// reachable recipes of the dead cycle and return true. Otherwise leave the
+/// plan unchanged and return false.
+static bool tryToRemoveDeadCycle(VPRecipeBase *R) {
   auto *PhiR = dyn_cast<VPSingleDefRecipe>(R);
   if (!PhiR || !isa<VPPhi, VPReductionPHIRecipe>(R))
-    return;
+    return false;
 
   // The transitive users of PhiR are closed under users, so the cycle is dead
   // if every one of them can be erased.
@@ -732,7 +733,7 @@ static void tryToRemoveDeadCycle(VPRecipeBase *R) {
     // Bail out if a user must be retained, or if it is a phi-like recipe other
     // than PhiR;
     if (R->mayHaveSideEffects() || (R != PhiR && isa<VPPhiAccessors>(R)))
-      return;
+      return false;
   }
 
   // Break the cycle by replacing PhiR with its first incoming value, which is
@@ -742,6 +743,7 @@ static void tryToRemoveDeadCycle(VPRecipeBase *R) {
   PhiR->eraseFromParent();
   for (VPValue *Op : Incoming)
     vputils::recursivelyDeleteDeadRecipes(Op);
+  return true;
 }
 
 void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
@@ -750,15 +752,23 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
     // The recipes in the block are processed in reverse order, to catch chains
     // of dead recipes.
-    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (vputils::isDeadRecipe(R)) {
+    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB)))
+      if (vputils::isDeadRecipe(R))
         R.eraseFromParent();
-        continue;
-      }
 
-      // If R is a phi-like recipe starting a dead cycle of recipes, erase the
-      // whole cycle.
-      tryToRemoveDeadCycle(&R);
+    // Erase dead cycles starting at one of VPBB's phi-like recipes. Erasing a
+    // cycle may also erase other phi-like recipes of VPBB, so restart the scan
+    // of the phi section after each removal. This terminates, as each removal
+    // erases the cycle's phi.
+    bool Changed = true;
+    while (Changed) {
+      Changed = false;
+      for (VPRecipeBase &R : VPBB->phis()) {
+        if (tryToRemoveDeadCycle(&R)) {
+          Changed = true;
+          break;
+        }
+      }
     }
   }
 }

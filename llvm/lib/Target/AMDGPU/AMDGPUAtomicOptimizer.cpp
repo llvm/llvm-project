@@ -183,6 +183,9 @@ static bool isLegalCrossLaneType(Type *Ty) {
 }
 
 void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
+  if (I.getType()->isVectorTy())
+    return;
+
   // Early exit for unhandled address space atomic instructions.
   switch (I.getPointerAddressSpace()) {
   default:
@@ -251,6 +254,9 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
 }
 
 void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
+  if (I.getType()->isVectorTy())
+    return;
+
   AtomicRMWInst::BinOp Op;
 
   switch (I.getIntrinsicID()) {
