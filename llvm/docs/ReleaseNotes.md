@@ -254,6 +254,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Removed support for the `Ventana Conditional Operations` extension.
 * Added support for `tail symbol, rt` form that takes an address (materialisation)
   register, that is used when software guarded branch is needed.
+* Updated the experimental `Zvzip` extension to the v0.3 draft specification.
+* Added the experimental `RVA23P1S64` and `RVB23P1S64` profiles.
 
 ### Changes to the WebAssembly Backend
 

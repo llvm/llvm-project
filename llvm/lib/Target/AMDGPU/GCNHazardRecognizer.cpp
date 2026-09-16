@@ -345,27 +345,27 @@ GCNHazardRecognizer::checkWMMACoexecSlot(const MachineInstr &MI) const {
 
   unsigned Stage = *CurrentCoExecStage;
   AMDGPU::CoExecMaskT InstMask = getCoExecMaskForMI(MI, TII);
-  // Check if the instruction can co-execute at the current stage.
-  if (ActiveCoExecInfo.canCoExec(InstMask, Stage))
+  unsigned StallCycles = ActiveCoExecInfo.getStallCycles(InstMask, Stage);
+
+  // No stall required if the instruction can co-execute at the current stage.
+  if (StallCycles == 0)
     return 0;
 
-  // Find next allowed stage and return stall cycles.
-  auto NextStage = ActiveCoExecInfo.findNextAllowedStage(InstMask, Stage);
-  if (NextStage.has_value()) {
-    unsigned StallCycles = *NextStage - Stage;
+  // Stall for the required number of cycles until the next allowed stage.
+  unsigned NextStage = Stage + StallCycles;
+  if (NextStage < ActiveCoExecInfo.TotalWindow) {
     DEBUG_WITH_TYPE(
         DEBUG_TYPE_VERBOSE,
         dbgs() << "    CoExec stall: stage=" << Stage << "("
                << AMDGPU::getStageTypeName(ActiveCoExecInfo.getType(Stage))
                << ") mask=" << AMDGPU::getCoExecMaskName(InstMask)
-               << " -> stall " << StallCycles << " (next allowed=" << *NextStage
+               << " -> stall " << StallCycles << " (next allowed=" << NextStage
                << ")\n"
                << "      " << MI);
     return StallCycles;
   }
 
   // No compatible slot in window - stall until window ends.
-  unsigned StallCycles = ActiveCoExecInfo.TotalWindow - Stage;
   DEBUG_WITH_TYPE(
       DEBUG_TYPE_VERBOSE,
       dbgs() << "    CoExec stall: stage=" << Stage << "("
@@ -398,21 +398,8 @@ GCNHazardRecognizer::checkMultiShadowHazard(const MachineInstr &MI) const {
 
   unsigned LookAheadStage = *CurrentCoExecStage + CyclesUntilTRANS;
   AMDGPU::CoExecMaskT InstMask = getCoExecMaskForMI(MI, TII);
-  // Check if the instruction can co-execute at the current stage.
-  if (ActiveCoExecInfo.canCoExec(InstMask, LookAheadStage))
-    return CyclesUntilTRANS;
-
-  // Find next allowed stage and return stall cycles.
-  auto NextStage =
-      ActiveCoExecInfo.findNextAllowedStage(InstMask, LookAheadStage);
-  if (NextStage.has_value()) {
-    unsigned StallCycles = *NextStage - *CurrentCoExecStage;
-    return StallCycles;
-  }
-
-  // No compatible slot in window - stall until window ends.
-  unsigned StallCycles = ActiveCoExecInfo.TotalWindow - *CurrentCoExecStage;
-  return StallCycles;
+  return CyclesUntilTRANS +
+         ActiveCoExecInfo.getStallCycles(InstMask, LookAheadStage);
 }
 
 void GCNHazardRecognizer::schedulerEmitInstruction(MachineInstr *MI) {
