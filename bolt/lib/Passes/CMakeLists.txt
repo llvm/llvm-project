@@ -33,6 +33,7 @@ add_llvm_library(LLVMBOLTPasses
   ProfileQualityStats.cpp
   RegAnalysis.cpp
   RegReAssign.cpp
+  RISCVLongJmpPass.cpp
   ReorderAlgorithm.cpp
   ReorderFunctions.cpp
   ReorderData.cpp
