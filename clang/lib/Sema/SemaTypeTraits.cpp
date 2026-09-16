@@ -2006,7 +2006,15 @@ ExprResult Sema::BuildExpressionTrait(ExpressionTrait ET, SourceLocation KWLoc,
       ExpressionTraitExpr(KWLoc, ET, Queried, Value, RParen, Context.BoolTy);
 }
 
+// std::is_trivially_copy_constructible<T> is
+// __is_trivially_constructible(T, const T &). It is not in the generated table
+// because the builtin takes an extra argument that the std trait does not.
+static constexpr StringRef TriviallyCopyConstructibleName =
+    "is_trivially_copy_constructible";
+
 static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
+  if (Name == TriviallyCopyConstructibleName)
+    return TT_IsTriviallyConstructible;
   return llvm::StringSwitch<std::optional<TypeTrait>>(Name)
 #define EMIT_STD_NAME_CASES
 #include "clang/Basic/BuiltinTraits.inc"
@@ -2023,6 +2031,13 @@ using ExtractedTypeTraitInfo =
 static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
   llvm::SmallVector<QualType, 1> Args;
   std::optional<TypeTrait> Trait;
+
+  // Build the (T, const T &) argument list of the builtin for
+  // std::is_trivially_copy_constructible<T>, decided by the std name.
+  auto AddCopySourceArg = [&](ASTContext &Ctx, StringRef Name) {
+    if (Name == TriviallyCopyConstructibleName && Args.size() == 1)
+      Args.push_back(Ctx.getLValueReferenceType(Args[0].withConst()));
+  };
 
   // builtins
   if (const auto *TraitExpr = dyn_cast<TypeTraitExpr>(E)) {
@@ -2056,6 +2071,7 @@ static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
         llvm_unreachable("Unexpected kind");
       }
     }
+    AddCopySourceArg(VD->getASTContext(), Name);
     return {{Trait.value(), std::move(Args)}};
   }
 
@@ -2071,11 +2087,13 @@ static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
     const TemplateDecl *D = Ts->getTemplateName().getAsTemplateDecl();
     if (!D || !D->isInStdNamespace())
       return std::nullopt;
-    Trait = StdNameToTypeTrait(D->getIdentifier()->getName());
+    StringRef Name = D->getIdentifier()->getName();
+    Trait = StdNameToTypeTrait(Name);
     if (!Trait)
       return std::nullopt;
     for (const auto &Arg : Ts->template_arguments())
       Args.push_back(Arg.getAsType());
+    AddCopySourceArg(D->getASTContext(), Name);
     return {{Trait.value(), std::move(Args)}};
   }
   return std::nullopt;
@@ -2309,6 +2327,78 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
   if (D->hasDefinition())
     DiagnoseNonTriviallyCopyableReason(SemaRef, Loc, D);
 
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
+static void
+DiagnoseNonTriviallyCopyConstructibleReason(Sema &SemaRef, SourceLocation Loc,
+                                            const CXXRecordDecl *D) {
+  for (const CXXBaseSpecifier &B : D->bases()) {
+    if (B.isVirtual())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VBase << B.getType()
+          << B.getSourceRange();
+    else if (const CXXRecordDecl *BD = B.getType()->getAsCXXRecordDecl();
+             BD && BD->hasNonTrivialCopyConstructor())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NTCCBase << B.getType()
+          << B.getSourceRange();
+  }
+
+  for (const FieldDecl *F : D->fields()) {
+    // Use getBaseElementType to see through array types (e.g. NTBase arr[2]).
+    // Print the declared field type so the note matches the source.
+    QualType ElemTy = SemaRef.Context.getBaseElementType(F->getType());
+    const CXXRecordDecl *FD = ElemTy->getAsCXXRecordDecl();
+    if (FD && FD->hasNonTrivialCopyConstructor())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NTCCField << F << F->getType()
+          << F->getSourceRange();
+  }
+
+  if (D->isPolymorphic())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::PolymorphicType;
+
+  for (const CXXConstructorDecl *Ctor : D->ctors()) {
+    if (!Ctor->isCopyConstructor())
+      continue;
+    if (Ctor->isDeleted())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::DeletedCtr << /*copy*/ 0
+          << Ctor->getSourceRange();
+    else if (Ctor->isUserProvided())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::UserProvidedCtr << /*copy*/ 0
+          << Ctor->getSourceRange();
+    else if (Ctor->getAccess() != AS_public)
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::InaccessibleCtr << /*copy*/ 0
+          << Ctor->getSourceRange();
+  }
+}
+
+static void DiagnoseNonTriviallyCopyConstructibleReason(Sema &SemaRef,
+                                                        SourceLocation Loc,
+                                                        QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::TriviallyCopyConstructible;
+
+  if (T->isVoidType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::CVVoidType;
+  else if (T->isFunctionType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::FunctionType;
+  else if (T->isIncompleteArrayType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::IncompleteArrayType;
+
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+  if (!D || D->isInvalidDecl() || !D->hasDefinition())
+    return;
+
+  DiagnoseNonTriviallyCopyConstructibleReason(SemaRef, Loc, D);
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
@@ -2793,6 +2883,18 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   }
   case UTT_IsAbstract:
     DiagnoseNonAbstractReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case TT_IsTriviallyConstructible:
+    if (Args.size() == 2) {
+      // Check that the second arg is `cv T &` (copy-construction shape).
+      // Args[1] is the source type as it appears in
+      // __is_trivially_constructible.
+      if (const auto *LVRef = Args[1]->getAs<LValueReferenceType>()) {
+        if (Context.hasSameUnqualifiedType(Args[0], LVRef->getPointeeType()))
+          DiagnoseNonTriviallyCopyConstructibleReason(*this, E->getBeginLoc(),
+                                                      Args[0]);
+      }
+    }
     break;
   default:
     break;
