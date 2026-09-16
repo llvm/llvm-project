@@ -42,6 +42,25 @@ def _mingwSupportsModules(cfg):
         """,
     )
 
+def _needsLibatomic(cfg):
+    # Check if linking -latomic is both necessary (atomic operations fail to
+    # link without it) and functional (linking with -latomic succeeds).
+    source = """
+        #include <atomic>
+        #include <cstdint>
+        struct Large { char storage[1024 / 8]; };
+        std::atomic<Large> x;
+        std::atomic<std::uint64_t> y;
+        int main(int, char**) {
+          (void)x.load();
+          (void)x.is_lock_free();
+          (void)y.load();
+          (void)y.is_lock_free();
+          return 0;
+        }
+    """
+    return not sourceBuilds(cfg, source) and sourceBuilds(cfg, source, ["-latomic"])
+
 features = [
     Feature(
         name="diagnose-if-support",
@@ -84,11 +103,11 @@ features = [
         name="verify-support",
         when=lambda cfg: hasCompileFlag(cfg, "-Xclang -verify-ignore-unexpected"),
     ),
+    # Some toolchains require linking -latomic explicitly when std::atomic emits
+    # runtime libcalls, because the compiler driver does not link it automatically.
     Feature(
-        name="add-latomic-workaround",  # https://llvm.org/PR73361
-        when=lambda cfg: sourceBuilds(
-            cfg, "int main(int, char**) { return 0; }", ["-latomic"]
-        ),
+        name="needs-libatomic",
+        when=_needsLibatomic,
         actions=[AddLinkFlag("-latomic")],
     ),
     *(
