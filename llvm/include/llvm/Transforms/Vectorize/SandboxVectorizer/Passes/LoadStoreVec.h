@@ -55,22 +55,22 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
 
   /// Checks legality of vectorization and \returns the vector type on success,
   /// nullopt otherwise.
-  std::optional<Type *> canVectorize(ArrayRef<Instruction *> Bndl);
+  std::optional<Type *> canVectorize(BndlRef<Instruction *> Bndl);
 
   /// Builds a single vector load out of \p Loads. \returns the new load,
   /// or nullptr if \p Loads are not a vectorizable.
-  LoadInst *createVectorLoad(ArrayRef<Instruction *> Loads);
+  LoadInst *createVectorLoad(BndlRef<Instruction *> Loads);
 
   /// Builds a ConstantVector from per-lane constant store operands in \p
   /// Constants. \returns the packed ConstantVector.
-  Value *createConstantVector(ArrayRef<Value *> Constants);
+  Value *createConstantVector(BndlRef<Value *> Constants);
 
   /// Vectorizes \p Stores and their operands if constants or consecutive
   /// loads. \returns true on success.
-  bool vectorizeStores(ArrayRef<Instruction *> Stores, Region &Rgn);
+  bool vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn);
 
   /// Vectorizes \p Loads into a single load. \return the packed load.
-  LoadInst *vectorizeLoads(ArrayRef<Instruction *> Loads, Region &Rgn);
+  LoadInst *vectorizeLoads(BndlRef<Instruction *> Loads, Region &Rgn);
 
 public:
   LoadStoreVec(StringRef AuxArg) : RegionPass("load-store-vec") {
