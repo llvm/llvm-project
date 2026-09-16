@@ -25,10 +25,10 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "SuperHGenSubtargetInfo.inc"
 
-SuperHSubtarget::SuperHSubtarget(const StringRef &CPU, const StringRef &TuneCPU, 
-                                 const StringRef &FS,  const TargetMachine &TM)
-    : SuperHGenSubtargetInfo(TM.getTargetTriple(), CPU, TuneCPU, FS), TM(TM),
-      InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)), 
+SuperHSubtarget::SuperHSubtarget(const StringRef &CPU, const StringRef &FS,
+                                 const TargetMachine &TM)
+    : SuperHGenSubtargetInfo(TM.getTargetTriple(), CPU, CPU, FS), TM(TM),
+      InstrInfo(initializeSubtargetDependencies(CPU, FS)), 
       TLInfo(TM, *this), TSInfo(), FrameLowering(*this) {
 }
 
@@ -36,15 +36,13 @@ SuperHSubtarget::~SuperHSubtarget() = default;
 
 
 SuperHSubtarget &SuperHSubtarget::initializeSubtargetDependencies(
-    StringRef CPU, StringRef TuneCPU, StringRef FS) {
-  const Triple &TT = getTargetTriple();
+    StringRef CPU, StringRef FS) {
   // Determine default and user specified characteristics
+  const Triple &TT = getTargetTriple();
   std::string CPUName = std::string(CPU);
-  if (TuneCPU.empty())
-    TuneCPU = CPUName;
 
   // Parse features string.
-  ParseSubtargetFeatures(CPUName, TuneCPU, FS);
+  ParseSubtargetFeatures(CPUName, CPUName, FS);
   return *this;
 }
 

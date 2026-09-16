@@ -84,6 +84,7 @@ def IsRISCV64 : LibcallPredicate<[{TT.isRISCV64()}]>;
 def IsSPARC : LibcallPredicate<[{TT.isSPARC()}]>;
 def IsSPARC32 : LibcallPredicate<[{TT.isSPARC32()}]>;
 def IsSPARC64 : LibcallPredicate<[{TT.isSPARC64()}]>;
+def IsSuperH : LibcallPredicate<[{TT.isSuperH()}]>;
 def IsSPIRV : LibcallPredicate<[{TT.isSPIRV()}]>;
 
 def IsX86_32 : LibcallPredicate<[{TT.getArch() == Triple::x86}]>;
@@ -3402,7 +3403,7 @@ defvar SuperH_DivCalls = [
   __divqi3, __divhi3, __divsi3, __udivqi3, __udivhi3, __udivsi3
 ];
 
-def isSuperH : RuntimeLibcallPredicate<"TT.isSuperH()">;
+def isSuperH : RuntimeLibcallAvailability<(all_of IsSuperH)>;
 def SuperHSystemLibrary 
       : SystemRuntimeLibrary<isSuperH,
                             (add (sub DefaultLibcallImpls32, SuperH_DivCalls),

@@ -105,20 +105,15 @@ TargetPassConfig *SuperHTargetMachine::createPassConfig(PassManagerBase &PM) {
 const TargetSubtargetInfo *
 SuperHTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
 
   std::string CPU =
       CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
-  std::string TuneCPU =
-      TuneAttr.isValid() ? TuneAttr.getValueAsString().str() : CPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
-  resetTargetOptions(F);
-  if (!ST) {
-    ST = std::make_unique<SuperHSubtarget>(CPU, TuneCPU, FS, *this);
-  }
+  if (!ST)
+    ST = std::make_unique<SuperHSubtarget>(CPU, FS, *this);
   return ST.get();
 }
 
