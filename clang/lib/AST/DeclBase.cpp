@@ -547,10 +547,6 @@ TranslationUnitDecl *Decl::getTranslationUnitDecl() {
   return cast<TranslationUnitDecl>(DC);
 }
 
-ASTContext &Decl::getASTContext() const {
-  return getTranslationUnitDecl()->getASTContext();
-}
-
 /// Helper to get the language options from the ASTContext.
 /// Defined out of line to avoid depending on ASTContext.h.
 const LangOptions &Decl::getLangOpts() const {
@@ -1308,7 +1304,7 @@ Decl *DeclContext::getNonClosureAncestor() {
 // DeclContext Implementation
 //===----------------------------------------------------------------------===//
 
-DeclContext::DeclContext(Decl::Kind K) {
+DeclContext::DeclContext(ASTContext &Ctx, Decl::Kind K) : Ctx(Ctx) {
   DeclContextBits.DeclKind = K;
   setHasExternalLexicalStorage(false);
   setHasExternalVisibleStorage(false);

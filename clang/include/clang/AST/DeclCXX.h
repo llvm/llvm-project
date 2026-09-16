@@ -2117,7 +2117,8 @@ public:
 /// template argument list imposed by the compound requirement.
 class RequiresExprBodyDecl : public Decl, public DeclContext {
   RequiresExprBodyDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc)
-      : Decl(RequiresExprBody, DC, StartLoc), DeclContext(RequiresExprBody) {}
+      : Decl(RequiresExprBody, DC, StartLoc), DeclContext(C, RequiresExprBody) {
+  }
 
 public:
   friend class ASTDeclReader;
@@ -3052,7 +3053,7 @@ class LinkageSpecDecl : public Decl, public DeclContext {
   /// The source location for the right brace (if valid).
   SourceLocation RBraceLoc;
 
-  LinkageSpecDecl(DeclContext *DC, SourceLocation ExternLoc,
+  LinkageSpecDecl(ASTContext &C, DeclContext *DC, SourceLocation ExternLoc,
                   SourceLocation LangLoc, LinkageSpecLanguageIDs lang,
                   bool HasBraces);
 

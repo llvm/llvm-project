@@ -2101,13 +2101,16 @@ protected:
   /// another pointer.
   mutable Decl *LastDecl = nullptr;
 
+  /// The owning AST context.
+  ASTContext &Ctx;
+
   /// Build up a chain of declarations.
   ///
   /// \returns the first/last pair of declarations.
   static std::pair<Decl *, Decl *>
   BuildDeclChain(ArrayRef<Decl*> Decls, bool FieldsAlreadyLoaded);
 
-  DeclContext(Decl::Kind K);
+  DeclContext(ASTContext &Ctx, Decl::Kind K);
 
 public:
   ~DeclContext();
@@ -2152,9 +2155,7 @@ public:
     return const_cast<DeclContext*>(this)->getLookupParent();
   }
 
-  ASTContext &getParentASTContext() const {
-    return cast<Decl>(this)->getASTContext();
-  }
+  ASTContext &getParentASTContext() const { return Ctx; }
 
   bool isClosure() const { return getDeclKind() == Decl::Block; }
 
@@ -2823,6 +2824,14 @@ private:
 inline bool Decl::isTemplateParameter() const {
   return getKind() == TemplateTypeParm || getKind() == NonTypeTemplateParm ||
          getKind() == TemplateTemplateParm;
+}
+
+inline ASTContext &Decl::getASTContext() const {
+  const DeclContext *DC = getDeclContext();
+  // The translation unit has no parent context and owns the AST context.
+  if (!DC)
+    DC = castToDeclContext(this);
+  return DC->getParentASTContext();
 }
 
 // Specialization selected when ToTy is not a known subclass of DeclContext.

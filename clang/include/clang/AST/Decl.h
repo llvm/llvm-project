@@ -246,9 +246,9 @@ public:
 /// The declaration at #3 finds it is a redeclaration of \c N::f through
 /// lookup in the extern "C" context.
 class ExternCContextDecl : public Decl, public DeclContext {
-  explicit ExternCContextDecl(TranslationUnitDecl *TU)
-    : Decl(ExternCContext, TU, SourceLocation()),
-      DeclContext(ExternCContext) {}
+  ExternCContextDecl(ASTContext &C, TranslationUnitDecl *TU)
+      : Decl(ExternCContext, TU, SourceLocation()),
+        DeclContext(C, ExternCContext) {}
 
   virtual void anchor();
 
@@ -4776,8 +4776,8 @@ class TopLevelStmtDecl : public Decl, public DeclContext {
   /// Position among all top-level statements of the session, in parse order.
   unsigned Ordinal = 0;
 
-  TopLevelStmtDecl(DeclContext *DC, SourceLocation L, Stmt *S)
-      : Decl(TopLevelStmt, DC, L), DeclContext(TopLevelStmt), Statement(S) {}
+  TopLevelStmtDecl(ASTContext &C, DeclContext *DC, SourceLocation L, Stmt *S)
+      : Decl(TopLevelStmt, DC, L), DeclContext(C, TopLevelStmt), Statement(S) {}
 
   virtual void anchor();
 
@@ -4874,7 +4874,7 @@ private:
   Decl *ManglingContextDecl = nullptr;
 
 protected:
-  BlockDecl(DeclContext *DC, SourceLocation CaretLoc);
+  BlockDecl(ASTContext &C, DeclContext *DC, SourceLocation CaretLoc);
 
 public:
   static BlockDecl *Create(ASTContext &C, DeclContext *DC, SourceLocation L);
@@ -5022,7 +5022,7 @@ private:
   /// The body of the outlined function.
   llvm::PointerIntPair<Stmt *, 1, bool> BodyAndNothrow;
 
-  explicit OutlinedFunctionDecl(DeclContext *DC, unsigned NumParams);
+  OutlinedFunctionDecl(ASTContext &C, DeclContext *DC, unsigned NumParams);
 
   ImplicitParamDecl *const *getParams() const { return getTrailingObjects(); }
 
@@ -5095,7 +5095,7 @@ private:
   /// The body of the outlined function.
   llvm::PointerIntPair<Stmt *, 1, bool> BodyAndNothrow;
 
-  explicit CapturedDecl(DeclContext *DC, unsigned NumParams);
+  CapturedDecl(ASTContext &C, DeclContext *DC, unsigned NumParams);
 
   ImplicitParamDecl *const *getParams() const { return getTrailingObjects(); }
 
@@ -5276,8 +5276,8 @@ private:
   /// The source location for the right brace (if valid).
   SourceLocation RBraceLoc;
 
-  ExportDecl(DeclContext *DC, SourceLocation ExportLoc)
-      : Decl(Export, DC, ExportLoc), DeclContext(Export),
+  ExportDecl(ASTContext &C, DeclContext *DC, SourceLocation ExportLoc)
+      : Decl(Export, DC, ExportLoc), DeclContext(C, Export),
         RBraceLoc(SourceLocation()) {}
 
 public:
@@ -5350,8 +5350,8 @@ class HLSLBufferDecl final : public NamedDecl, public DeclContext {
   // allocator in HLSLBufferDecl::CreateDefaultCBuffer.
   ArrayRef<Decl *> DefaultBufferDecls;
 
-  HLSLBufferDecl(DeclContext *DC, bool CBuffer, SourceLocation KwLoc,
-                 IdentifierInfo *ID, SourceLocation IDLoc,
+  HLSLBufferDecl(ASTContext &C, DeclContext *DC, bool CBuffer,
+                 SourceLocation KwLoc, IdentifierInfo *ID, SourceLocation IDLoc,
                  SourceLocation LBrace);
 
   void setDefaultBufferDecls(ArrayRef<Decl *> Decls);

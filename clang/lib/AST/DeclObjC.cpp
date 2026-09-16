@@ -66,7 +66,8 @@ ObjCContainerDecl::ObjCContainerDecl(Kind DK, DeclContext *DC,
                                      const IdentifierInfo *Id,
                                      SourceLocation nameLoc,
                                      SourceLocation atStartLoc)
-    : NamedDecl(DK, DC, nameLoc, Id), DeclContext(DK) {
+    : NamedDecl(DK, DC, nameLoc, Id),
+      DeclContext(DC->getParentASTContext(), DK) {
   setAtStartLoc(atStartLoc);
 }
 
@@ -823,8 +824,8 @@ ObjCMethodDecl::ObjCMethodDecl(
     bool isSynthesizedAccessorStub, bool isImplicitlyDeclared, bool isDefined,
     ObjCImplementationControl impControl, bool HasRelatedResultType)
     : NamedDecl(ObjCMethod, contextDecl, beginLoc, SelInfo),
-      DeclContext(ObjCMethod), MethodDeclType(T), ReturnTInfo(ReturnTInfo),
-      DeclEndLoc(endLoc) {
+      DeclContext(contextDecl->getParentASTContext(), ObjCMethod),
+      MethodDeclType(T), ReturnTInfo(ReturnTInfo), DeclEndLoc(endLoc) {
 
   // Initialized the bits stored in DeclContext.
   ObjCMethodDeclBits.Family =
@@ -861,8 +862,9 @@ ObjCMethodDecl *ObjCMethodDecl::Create(
 
 ObjCMethodDecl *ObjCMethodDecl::CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID) {
-  return new (C, ID) ObjCMethodDecl(SourceLocation(), SourceLocation(),
-                                    Selector(), QualType(), nullptr, nullptr);
+  return new (C, ID)
+      ObjCMethodDecl(SourceLocation(), SourceLocation(), Selector(), QualType(),
+                     nullptr, C.getTranslationUnitDecl());
 }
 
 void ObjCMethodDecl::getNameForDiagnostic(raw_ostream &OS,
@@ -1573,8 +1575,8 @@ ObjCInterfaceDecl *ObjCInterfaceDecl::Create(
 ObjCInterfaceDecl *ObjCInterfaceDecl::CreateDeserialized(const ASTContext &C,
                                                          GlobalDeclID ID) {
   auto *Result = new (C, ID)
-      ObjCInterfaceDecl(C, nullptr, SourceLocation(), nullptr, nullptr,
-                        SourceLocation(), nullptr, false);
+      ObjCInterfaceDecl(C, C.getTranslationUnitDecl(), SourceLocation(),
+                        nullptr, nullptr, SourceLocation(), nullptr, false);
   Result->Data.setInt(!C.getLangOpts().Modules);
   return Result;
 }
@@ -1971,8 +1973,8 @@ ObjCProtocolDecl *ObjCProtocolDecl::Create(ASTContext &C, DeclContext *DC,
 ObjCProtocolDecl *ObjCProtocolDecl::CreateDeserialized(ASTContext &C,
                                                        GlobalDeclID ID) {
   ObjCProtocolDecl *Result =
-      new (C, ID) ObjCProtocolDecl(C, nullptr, nullptr, SourceLocation(),
-                                   SourceLocation(), nullptr);
+      new (C, ID) ObjCProtocolDecl(C, C.getTranslationUnitDecl(), nullptr,
+                                   SourceLocation(), SourceLocation(), nullptr);
   Result->Data.setInt(!C.getLangOpts().Modules);
   return Result;
 }
@@ -2150,10 +2152,9 @@ ObjCCategoryDecl *ObjCCategoryDecl::Create(
     const IdentifierInfo *Id, ObjCInterfaceDecl *IDecl,
     ObjCTypeParamList *typeParamList, SourceLocation IvarLBraceLoc,
     SourceLocation IvarRBraceLoc) {
-  auto *CatDecl =
-      new (C, DC) ObjCCategoryDecl(DC, AtLoc, ClassNameLoc, CategoryNameLoc, Id,
-                                   IDecl, typeParamList, IvarLBraceLoc,
-                                   IvarRBraceLoc);
+  auto *CatDecl = new (C, DC)
+      ObjCCategoryDecl(DC, AtLoc, ClassNameLoc, CategoryNameLoc, Id, IDecl,
+                       typeParamList, IvarLBraceLoc, IvarRBraceLoc);
   if (IDecl) {
     // Link this category into its class's category list.
     CatDecl->NextClassCategory = IDecl->getCategoryListRaw();
@@ -2169,9 +2170,9 @@ ObjCCategoryDecl *ObjCCategoryDecl::Create(
 
 ObjCCategoryDecl *ObjCCategoryDecl::CreateDeserialized(ASTContext &C,
                                                        GlobalDeclID ID) {
-  return new (C, ID) ObjCCategoryDecl(nullptr, SourceLocation(),
-                                      SourceLocation(), SourceLocation(),
-                                      nullptr, nullptr, nullptr);
+  return new (C, ID) ObjCCategoryDecl(
+      C.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
+      SourceLocation(), nullptr, nullptr, nullptr);
 }
 
 ObjCCategoryImplDecl *ObjCCategoryDecl::getImplementation() const {
@@ -2210,9 +2211,9 @@ ObjCCategoryImplDecl *ObjCCategoryImplDecl::Create(
 
 ObjCCategoryImplDecl *
 ObjCCategoryImplDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
-  return new (C, ID) ObjCCategoryImplDecl(nullptr, nullptr, nullptr,
-                                          SourceLocation(), SourceLocation(),
-                                          SourceLocation());
+  return new (C, ID) ObjCCategoryImplDecl(C.getTranslationUnitDecl(), nullptr,
+                                          nullptr, SourceLocation(),
+                                          SourceLocation(), SourceLocation());
 }
 
 ObjCCategoryDecl *ObjCCategoryImplDecl::getCategoryDecl() const {
@@ -2310,15 +2311,16 @@ ObjCImplementationDecl::Create(ASTContext &C, DeclContext *DC,
                                SourceLocation IvarRBraceLoc) {
   if (ClassInterface && ClassInterface->hasDefinition())
     ClassInterface = ClassInterface->getDefinition();
-  return new (C, DC) ObjCImplementationDecl(DC, ClassInterface, SuperDecl,
-                                            nameLoc, atStartLoc, superLoc,
-                                            IvarLBraceLoc, IvarRBraceLoc);
+  return new (C, DC)
+      ObjCImplementationDecl(DC, ClassInterface, SuperDecl, nameLoc, atStartLoc,
+                             superLoc, IvarLBraceLoc, IvarRBraceLoc);
 }
 
 ObjCImplementationDecl *
 ObjCImplementationDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
-  return new (C, ID) ObjCImplementationDecl(nullptr, nullptr, nullptr,
-                                            SourceLocation(), SourceLocation());
+  return new (C, ID)
+      ObjCImplementationDecl(C.getTranslationUnitDecl(), nullptr, nullptr,
+                             SourceLocation(), SourceLocation());
 }
 
 void ObjCImplementationDecl::setIvarInitializers(ASTContext &C,
