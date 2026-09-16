@@ -56,6 +56,7 @@ libc_startup_library(
         "//libc:__support_macros_config",
         "//libc:__support_osutil_linux_auxv",
         "//libc:__support_osutil_syscall",
+        "//libc:__support_threads_tcb",
         "//libc:__support_threads_thread",
         "//libc:__support_threads_thread_headers",
         "//libc:_r_debug",
