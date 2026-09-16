@@ -84,7 +84,6 @@ TEST(LlvmLibcFallocateTest, InvalidMode) {
     EXPECT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
   });
 
-  // FALLOC_FL_PUNCH_HOLE without FALLOC_FL_KEEP_SIZE must fail with EINVAL
   ASSERT_EQ(LIBC_NAMESPACE::fallocate(fd, -1, 0, 4096), -1);
   // Could be any one of those and potentially more depending on the file system
   ASSERT_TRUE(libc_errno == EINVAL || libc_errno == ENOTSUP ||

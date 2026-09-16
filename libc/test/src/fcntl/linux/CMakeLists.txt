@@ -1,5 +1,3 @@
-add_custom_target(libc_fallocate_unittests)
-
 add_libc_test(
   fallocate_test
   SUITE
