@@ -2492,8 +2492,8 @@ class UnaryOperator(BaseEnumeration):
     Describes the UnaryOperator of a declaration
     """
 
-    def __nonzero__(self):
-        """Allows checks of the kind ```if cursor.unary_operator:```"""
+    def __bool__(self):
+        """Indicates whether this object is a valid UnaryOperator."""
         return self.value != 0
 
     def is_postfix(self):

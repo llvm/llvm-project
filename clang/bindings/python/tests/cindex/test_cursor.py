@@ -1043,6 +1043,12 @@ int d_noninline;
         for postfix in operators["postfix"].values():
             assert postfix.is_postfix()
 
+        for operator in UnaryOperator:
+            if operator:
+                assert operator is not UnaryOperator.Invalid
+            else:
+                assert operator is UnaryOperator.Invalid
+
     def test_from_result_null(self):
         tu = get_tu("int a = 1+2;", lang="cpp")
         op = next(next(tu.cursor.get_children()).get_children())
