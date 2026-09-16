@@ -32,7 +32,8 @@ Security Response Group Members
 
 The members of the group represent a wide cross-section of the community, and
 meet the criteria for inclusion below. The list is in the format
-`* ${full_name} (${affiliation}) [${github_username}]`.
+`* ${full_name} (${affiliation}) [${github_username}]`. If the member is a
+vendor observer the ${affiliation} has the suffix `, observer`.
 
 * Abhay Kanhere (Apple) [@AbhayKanhere]
 * Ahmed Bougacha (Apple) [@ahmedbougacha]
