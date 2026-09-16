@@ -67,7 +67,7 @@ class DynamicAllocLValue {
   // lower NumAlignmentBits: alignment exponent
   // remaining bits: allocation index incremented by one
   // value of zero indicates distinct empty state
-  unsigned AlignAndIndex;
+  uintptr_t AlignAndIndex;
 
 public:
   DynamicAllocLValue() : AlignAndIndex(0) {}
@@ -98,13 +98,13 @@ public:
     return V;
   }
 
-  static unsigned getMaxIndex() {
-    return (std::numeric_limits<unsigned>::max() >>
+  static uintptr_t getMaxIndex() {
+    return (std::numeric_limits<uintptr_t>::max() >>
             (NumLowBitsAvailable + NumAlignmentBits)) -
            1;
   }
 
-  static constexpr int NumLowBitsAvailable = 3;
+  static constexpr int NumLowBitsAvailable = 2;
   static constexpr int NumAlignmentBits = 5;
 };
 }

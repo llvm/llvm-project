@@ -857,7 +857,7 @@ namespace {
     std::map<DynamicAllocLValue, DynAlloc, DynAllocOrder> HeapAllocs;
 
     /// The number of heap allocations performed so far in this evaluation.
-    unsigned NumHeapAllocs = 0;
+    uintptr_t NumHeapAllocs = 0;
 
     struct EvaluatingConstructorRAII {
       EvalInfo &EI;
