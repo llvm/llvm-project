@@ -4116,11 +4116,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     assert(
         (BitWidth == 8 || BitWidth == 16 || BitWidth == 32 || BitWidth == 64) &&
         "unexpected bit width for stdc_load8_*");
-    CharUnits Alignment = IsAligned
-                              ? getContext().getTypeAlignInChars(E->getType())
-                              : CharUnits::One();
-    Address Addr =
-        EmitPointerWithAlignment(E->getArg(0)).withAlignment(Alignment);
+    Address Addr = EmitPointerWithAlignment(E->getArg(0));
+    if (IsAligned) {
+      CharUnits TypeAlign = getContext().getTypeAlignInChars(E->getType());
+      Addr = Addr.withAlignment(std::max(Addr.getAlignment(), TypeAlign));
+    }
     Addr = Addr.withElementType(IntTy);
     Value *Val = Builder.CreateLoad(Addr);
     if ((BitWidth == 16 || BitWidth == 32 || BitWidth == 64) &&
