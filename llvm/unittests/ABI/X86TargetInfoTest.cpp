@@ -347,6 +347,22 @@ TEST_F(X86TargetInfoTest, UnionTailPaddingNarrowsHighHalfToByte) {
   expectInteger(Pair[1].FieldType, 8);
 }
 
+// One more byte of data is enough to stop the narrowing, so the high half
+// covers the union's remaining bytes rather than the two that hold data.
+TEST_F(X86TargetInfoTest, UnionTailPaddingKeepsHighHalfPastOneByte) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *Bytes = TB.getArrayType(I8, /*NumElements=*/10,
+                                         /*SizeInBits=*/80);
+  const ABIType *Ptr = TB.getPointerType(64, llvm::Align(8));
+  const ABIType *U =
+      unionOf({FieldInfo(Bytes), FieldInfo(Ptr)}, 128, llvm::Align(8));
+  llvm::ArrayRef<FieldInfo> Pair = directPair(classifyArg(U, FI, TI));
+  ASSERT_EQ(Pair.size(), 2u);
+  EXPECT_TRUE(Pair[0].FieldType->isPointer());
+  expectInteger(Pair[1].FieldType, 64);
+}
+
 // A union that stops short of two full eightbytes sizes the high half from
 // what it has left rather than from a whole eightbyte.
 TEST_F(X86TargetInfoTest, UnionTailPaddingClampsHighHalfToUnionSize) {
