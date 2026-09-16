@@ -14778,7 +14778,12 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
 
   // If the VT is larger than LMUL=8, we need to split and reassemble.
   if ((ContainerVecVT.getSizeInBits().getKnownMinValue() * Factor) >
-      (8 * RISCV::RVVBitsPerBlock)) {
+          (8 * RISCV::RVVBitsPerBlock) ||
+      // In an unlikely case, a vector type might be legal to RISC-V but
+      // exceeds the MVT limit, in which we also want to split it.
+      (Subtarget.hasStdExtZvzip() && Factor == 2 &&
+       !VecVT.changeVectorElementCount(VecVT.getVectorElementCount() * Factor)
+            .isValid())) {
     SmallVector<SDValue, 8> Ops(Factor * 2);
     for (unsigned i = 0; i != Factor; ++i) {
       auto [OpLo, OpHi] = DAG.SplitVectorOperand(Op.getNode(), i);
@@ -14875,10 +14880,6 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
 
     return DAG.getMergeValues(Loads, DL);
   }
-
-  assert(!VecVT.isFixedLengthVector() &&
-         "Fixed factor=2 vector interleave should already lower to "
-         "SHUFFLE_VECTOR");
 
   if (Subtarget.hasStdExtZvzip() && !Op.getOperand(0).isUndef() &&
       !Op.getOperand(1).isUndef()) {
@@ -22218,44 +22219,15 @@ static SDValue performMaskedLoadToVPLoadCombine(MaskedLoadSDNode *MLoad,
   return DAG.getMergeValues({VPMerge, VPLoad.getValue(1)}, DL);
 }
 
-static SDValue
-performVECTOR_INTERLEAVECombine(SDNode *N, SelectionDAG &DAG,
-                                const RISCVSubtarget &Subtarget) {
+static SDValue performVECTOR_INTERLEAVECombine(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
   const unsigned Factor = N->getNumOperands();
   assert(Factor <= 8);
   MVT VecVT = N->getSimpleValueType(0);
 
-  if (!Subtarget.hasStdExtZvzip() || (Factor != 4 && Factor != 8))
+  if (Factor != 4 && Factor != 8)
     return SDValue();
 
-  const bool IsFixedVector = VecVT.isFixedLengthVector();
-  auto *TLI = Subtarget.getTargetLowering();
-  MVT LegalVecVT = VecVT;
-  if (!TLI->isTypeLegal(LegalVecVT))
-    LegalVecVT = TLI->getLegalTypeToTransformTo(*DAG.getContext(), LegalVecVT)
-                     .getSimpleVT();
-  if (LegalVecVT.getVectorElementType() == MVT::i1)
-    LegalVecVT = LegalVecVT.changeVectorElementType(MVT::i8);
-
-  auto getScalableVT = [&](MVT VT) -> MVT {
-    return IsFixedVector ? getContainerForFixedLengthVector(VT, Subtarget) : VT;
-  };
-  for (MVT ContainerVecVT = getScalableVT(LegalVecVT);
-       (ContainerVecVT.getSizeInBits().getKnownMinValue() * Factor) >
-       (8 * RISCV::RVVBitsPerBlock);
-       ContainerVecVT = getScalableVT(LegalVecVT))
-    LegalVecVT = LegalVecVT.getHalfNumVectorElementsVT();
-
-  // If the eventual interleaved vector will exceed MVT limit,
-  // it is not profitable to use tree decomposition compared
-  // to just using segmented store + unit-stride load.
-  if (!LegalVecVT
-           .changeVectorElementCount(LegalVecVT.getVectorElementCount() *
-                                     Factor)
-           .isValid())
-    return SDValue();
-
-  SDLoc DL(N);
   // Interleave by a tree of vzip.vv instructions.
   SmallVector<SDValue, 8> Operands(N->op_values());
   // First, reorder the operands.
@@ -22274,29 +22246,22 @@ performVECTOR_INTERLEAVECombine(SDNode *N, SelectionDAG &DAG,
       assert(Operands[I].getValueType() == Operands[I + 1].getValueType());
       EVT OperandEVT = Operands[I].getValueType();
       EVT ResEVT = OperandEVT.getDoubleNumVectorElementsVT(*DAG.getContext());
-      if (IsFixedVector) {
-        SDValue V = DAG.getNode(ISD::CONCAT_VECTORS, DL, ResEVT, Operands[I],
-                                Operands[I + 1]);
-        Operands[I / 2] = DAG.getVectorShuffle(
-            ResEVT, DL, V, DAG.getPOISON(ResEVT),
-            createInterleaveMask(OperandEVT.getVectorNumElements(), 2));
-      } else {
-        SDValue V = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
-                                DAG.getVTList(OperandEVT, OperandEVT),
-                                Operands[I], Operands[I + 1]);
-        Operands[I / 2] =
-            DAG.getNode(ISD::CONCAT_VECTORS, DL, ResEVT, V, V.getValue(1));
-      }
+
+      SDValue V = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
+                              DAG.getVTList(OperandEVT, OperandEVT),
+                              Operands[I], Operands[I + 1]);
+      Operands[I / 2] =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, ResEVT, V, V.getValue(1));
     }
   }
 
   // Operands[0] is the resulting concat vector, but we need to split into
   // Factor parts.
   SDValue Interleaved = Operands[0];
-  for (unsigned I = 0U; I < Factor; ++I) {
+  for (unsigned I = 0U; I < Factor; ++I)
     Operands[I] = DAG.getExtractSubvector(DL, VecVT, Interleaved,
                                           I * VecVT.getVectorMinNumElements());
-  }
+
   return DAG.getMergeValues(Operands, DL);
 }
 
@@ -25635,7 +25600,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::MLOAD:
     return performMaskedLoadToVPLoadCombine(cast<MaskedLoadSDNode>(N), DAG);
   case ISD::VECTOR_INTERLEAVE:
-    return performVECTOR_INTERLEAVECombine(N, DAG, Subtarget);
+    assert(Subtarget.hasStdExtZvzip());
+    return performVECTOR_INTERLEAVECombine(N, DAG);
   }
 
   return SDValue();
