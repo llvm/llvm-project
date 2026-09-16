@@ -18,7 +18,7 @@ define void @sext_i32_arg(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    mv s1, a1
 ; CHECK-NEXT:  .LBB0_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sext.w a0, s0
+; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    sllw s0, s0, s1
 ; CHECK-NEXT:    bnez a0, .LBB0_1
@@ -132,7 +132,7 @@ define void @zext_i16_arg(i16 zeroext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    mv s1, a1
 ; CHECK-NEXT:  .LBB2_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sext.w a0, s0
+; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    sllw s0, s0, s1
 ; CHECK-NEXT:    bnez a0, .LBB2_1
@@ -189,7 +189,7 @@ define void @zext_i1_arg(i1 zeroext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    mv s1, a1
 ; CHECK-NEXT:  .LBB3_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sext.w a0, s0
+; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    call bar
 ; CHECK-NEXT:    sllw s0, s0, s1
 ; CHECK-NEXT:    bnez a0, .LBB3_1

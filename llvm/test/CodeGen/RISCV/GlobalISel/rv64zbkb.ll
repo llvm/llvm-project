@@ -28,9 +28,8 @@ define signext i32 @pack_i32(i32 signext %a, i32 signext %b) nounwind {
 define signext i32 @pack_i32_2(i16 zeroext %a, i16 zeroext %b) nounwind {
 ; RV64I-LABEL: pack_i32_2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a1, 16
+; RV64I-NEXT:    slliw a1, a1, 16
 ; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: pack_i32_2:
@@ -329,9 +328,8 @@ define signext i32 @pack_i32_allWUsers(i16 zeroext %0, i16 zeroext %1, i16 zeroe
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    slli a0, a0, 48
 ; RV64I-NEXT:    srli a0, a0, 48
-; RV64I-NEXT:    slli a0, a0, 16
+; RV64I-NEXT:    slliw a0, a0, 16
 ; RV64I-NEXT:    or a0, a0, a2
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: pack_i32_allWUsers:
