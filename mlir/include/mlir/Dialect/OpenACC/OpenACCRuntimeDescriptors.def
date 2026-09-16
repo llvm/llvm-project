@@ -1,0 +1,81 @@
+//===- OpenACCRuntimeDescriptors.def - ACC descriptor catalog ---*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+/// \file
+///
+/// X-macro catalog of the argument descriptors the compiler materializes for
+/// the `arg_descs` parameter of the `__tgt_acc_data_*` entry points. Field
+/// order, field types, and padding are part of the runtime ABI and must match
+/// the `AccDataDesc*` types of the offload runtime, which are not restated
+/// here. Include this file after defining ACC_DESC_BEGIN.
+///
+/// ACC_DESC_BEGIN(Enum, NameStr, DescKind)
+///   Enum     - enumerator used as DataDescriptor::Enum
+///   NameStr  - name of the runtime type this layout materializes
+///   DescKind - `acc::DataDescKind` the runtime reads from the version field
+///
+/// ACC_DESC_FIELD(Enum, Field, TypeToken)
+///   Field     - enumerator used as Enum##Field::Field, in declaration order
+///   TypeToken - MLIR LLVM type token (Int8, Int32, Int64, Ptr), or Base for
+///               the descriptor a layout nests
+///
+/// ACC_DESC_END(Enum)
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef ACC_DESC_BEGIN
+#error "define ACC_DESC_BEGIN before including OpenACCRuntimeDescriptors.def"
+#endif
+
+#ifndef ACC_DESC_FIELD
+#define ACC_DESC_FIELD(Enum, Field, TypeToken)
+#endif
+
+#ifndef ACC_DESC_END
+#define ACC_DESC_END(Enum)
+#endif
+
+// A mapping that needs no descriptor of its own, used as the base of an
+// OpenACC overlay that only carries bounds.
+ACC_DESC_BEGIN(AccDataDescGeneric, "AccDataDescGeneric", DataDescKind::none)
+ACC_DESC_FIELD(AccDataDescGeneric, Version, Int32)
+ACC_DESC_FIELD(AccDataDescGeneric, Padding, Int32)
+ACC_DESC_END(AccDataDescGeneric)
+
+// A mapping described by a Fortran descriptor (`CFI_cdesc_t` of
+// ISO_Fortran_binding.h), which the descriptor field addresses.
+ACC_DESC_BEGIN(AccDataDescCFI, "AccDataDescCFI", DataDescKind::cfi)
+ACC_DESC_FIELD(AccDataDescCFI, Version, Int32)
+ACC_DESC_FIELD(AccDataDescCFI, CFIDescriptor, Ptr)
+ACC_DESC_END(AccDataDescCFI)
+
+// A mapping described by the memref descriptor the memref-to-LLVM conversion
+// produced, which the descriptor field addresses.
+ACC_DESC_BEGIN(AccDataDescMemRef, "AccDataDescMemRef", DataDescKind::memref)
+ACC_DESC_FIELD(AccDataDescMemRef, Version, Int32)
+ACC_DESC_FIELD(AccDataDescMemRef, Rank, Int8)
+ACC_DESC_FIELD(AccDataDescMemRef, ElementSize, Int64)
+ACC_DESC_FIELD(AccDataDescMemRef, MemRefDescriptor, Ptr)
+ACC_DESC_END(AccDataDescMemRef)
+
+// Bounds of a mapping, overlaid on the descriptor that states its storage.
+// Rank is the number of bounds and each array below holds that many entries,
+// in dimension order.
+ACC_DESC_BEGIN(AccDataDescOpenACC, "AccDataDescOpenACC", DataDescKind::openacc)
+ACC_DESC_FIELD(AccDataDescOpenACC, Base, Base)
+ACC_DESC_FIELD(AccDataDescOpenACC, Rank, Int8)
+ACC_DESC_FIELD(AccDataDescOpenACC, ElementSize, Int64)
+ACC_DESC_FIELD(AccDataDescOpenACC, LowerBounds, Ptr)
+ACC_DESC_FIELD(AccDataDescOpenACC, UpperBounds, Ptr)
+ACC_DESC_FIELD(AccDataDescOpenACC, Extents, Ptr)
+ACC_DESC_FIELD(AccDataDescOpenACC, StridesInBytes, Ptr)
+ACC_DESC_FIELD(AccDataDescOpenACC, StartIndices, Ptr)
+ACC_DESC_END(AccDataDescOpenACC)
+
+#undef ACC_DESC_BEGIN
+#undef ACC_DESC_FIELD
+#undef ACC_DESC_END

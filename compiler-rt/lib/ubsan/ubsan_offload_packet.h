@@ -13,9 +13,8 @@
 #ifndef UBSAN_OFFLOAD_PACKET_H
 #define UBSAN_OFFLOAD_PACKET_H
 
+#include "sanitizer_common/sanitizer_offload_opcodes.h"
 #include <stdint.h>
-
-#define UBSAN_OFFLOAD_REPORT_OPCODE (('s' << 24) | 0)
 
 enum __ubsan_report_kind : uint8_t {
 #define UBSAN_OFFLOAD_HANDLER(kind, ...) UBSAN_OFFLOAD_##kind,

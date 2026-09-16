@@ -67,7 +67,7 @@
 #if defined(_WIN32)
 #include "lldb/Host/windows/ConnectionGenericFileWindows.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
-#else
+#elif !defined(__EMSCRIPTEN__)
 #include "lldb/Host/posix/ProcessLauncherPosixFork.h"
 #endif
 
@@ -581,7 +581,7 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
 
 // The functions below implement process launching for non-Apple-based
 // platforms
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
 Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   std::unique_ptr<ProcessLauncher> delegate_launcher;
 #if defined(_WIN32)
@@ -600,7 +600,7 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
 
   return error;
 }
-#endif // !defined(__APPLE__)
+#endif // !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
 
 #ifndef _WIN32
 void Host::Kill(lldb::pid_t pid, int signo) { ::kill(pid, signo); }
