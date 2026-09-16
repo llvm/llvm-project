@@ -872,7 +872,7 @@ bool __pointer_to_member_type_info::can_catch_nested(const __shim_type_info* thr
 //    (static_ptr, static_type), then return dynamic_ptr.
 // Else return nullptr.
 
-extern "C" _LIBCXXABI_FUNC_VIS void*
+extern "C" _LIBCXXABI_FUNC_VIS const void*
 __dynamic_cast(const void* static_ptr,
                const __class_type_info* static_type,
                const __class_type_info* dst_type,
@@ -880,28 +880,20 @@ __dynamic_cast(const void* static_ptr,
   // Get (dynamic_ptr, dynamic_type) from static_ptr
   derived_object_info derived_info = dyn_cast_get_derived_info(static_ptr);
 
-  // Initialize answer to nullptr.  This will be changed from the search
-  //    results if a non-null answer is found.  Regardless, this is what will
-  //    be returned.
-  const void* dst_ptr = 0;
-
   // Find out if we can use a giant short cut in the search
   if (is_equal(derived_info.dynamic_type, dst_type, false)) {
-    dst_ptr = dyn_cast_to_derived(
+    return dyn_cast_to_derived(
         static_ptr, derived_info.dynamic_ptr, static_type, dst_type, derived_info.offset_to_derived, src2dst_offset);
   } else {
     // Optimize toward downcasting: let's first try to do a downcast before
     //   falling back to the slow path.
-    dst_ptr = dyn_cast_try_downcast(
-        static_ptr, derived_info.dynamic_ptr, dst_type, derived_info.dynamic_type, src2dst_offset);
+    if (const void* res = dyn_cast_try_downcast(
+            static_ptr, derived_info.dynamic_ptr, dst_type, derived_info.dynamic_type, src2dst_offset))
+      return res;
 
-    if (!dst_ptr) {
-      dst_ptr = dyn_cast_slow(
-          static_ptr, derived_info.dynamic_ptr, static_type, dst_type, derived_info.dynamic_type, src2dst_offset);
-    }
+    return dyn_cast_slow(
+        static_ptr, derived_info.dynamic_ptr, static_type, dst_type, derived_info.dynamic_type, src2dst_offset);
   }
-
-  return const_cast<void*>(dst_ptr);
 }
 
 #pragma GCC diagnostic pop

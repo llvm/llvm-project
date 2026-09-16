@@ -708,8 +708,8 @@ void AArch64PassConfig::addIRPasses() {
   // Try to use tbl in place of other shuffling operations if doing so would
   // reduce the total number of instructions. Shuffle masks for big endian may
   // be different, so require a little endian target.
-  if (TM->createDataLayout().isLittleEndian() &&
-      getOptLevel() >= CodeGenOptLevel::Default && EnableSVEShuffleOpt)
+  if (getOptLevel() >= CodeGenOptLevel::Default && EnableSVEShuffleOpt &&
+      TM->getTargetTriple().isLittleEndian())
     addPass(createSVEShuffleOptsPass());
 
   // Match complex arithmetic patterns

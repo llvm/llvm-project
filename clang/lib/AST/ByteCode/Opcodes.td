@@ -959,6 +959,9 @@ def CheckNonNullArg : Opcode {
 }
 
 def Memcpy : Opcode;
+def TrivialCopy : Opcode {
+  let Args = [ArgBool, ArgFunction];
+}
 
 def ToMemberPtr : SuccessOpcode;
 def CastMemberPtrPtr : Opcode;
