@@ -155,3 +155,33 @@ TEST(InstSizes, StatePoint) {
         EXPECT_EQ(4u, II.getInstSizeInBytes(*I));
       });
 }
+
+TEST(InstSizes, StackMap) {
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<LoongArchInstrInfo> II = createInstrInfo(TM.get());
+
+  runChecks(TM.get(), II.get(), "",
+            "    STACKMAP 0, 16\n"
+            "    STACKMAP 1, 32\n",
+            [](LoongArchInstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(16u, II.getInstSizeInBytes(*I));
+              ++I;
+              EXPECT_EQ(32u, II.getInstSizeInBytes(*I));
+            });
+}
+
+TEST(InstSizes, PatchPoint) {
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<LoongArchInstrInfo> II = createInstrInfo(TM.get());
+
+  runChecks(TM.get(), II.get(), "",
+            "    PATCHPOINT 0, 16, 0, 0, 0, csr_ilp32d_lp64d\n"
+            "    PATCHPOINT 1, 32, 0, 0, 0, csr_ilp32d_lp64d\n",
+            [](LoongArchInstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(16u, II.getInstSizeInBytes(*I));
+              ++I;
+              EXPECT_EQ(32u, II.getInstSizeInBytes(*I));
+            });
+}
