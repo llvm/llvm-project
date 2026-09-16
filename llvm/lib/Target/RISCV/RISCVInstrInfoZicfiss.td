@@ -62,8 +62,7 @@ def SSPUSH : RVInstR<0b1100111, 0b100, OPC_SYSTEM, (outs), (ins GPRX1X5:$rs2),
 // Compressed Zicfiss instructions use Zcmop encoding space and are available
 // when Zcmop is enabled, without requiring Zicfiss explicitly. Per psABI
 // decision (riscv-non-isa/riscv-elf-psabi-doc#474).
-let Predicates = [HasStdExtZcmop],
-    DecoderNamespace = "Zicfiss" in {
+let Predicates = [HasStdExtZcmop] in {
 let Uses = [SSP], Defs = [SSP], hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 def C_SSPUSH : RVC_SSInst<0b00001, GPRX1, "c.sspush">;
 

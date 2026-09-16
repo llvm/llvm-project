@@ -61,6 +61,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mkfifo
+  SRCS
+    mkfifo.cpp
+  HDRS
+    ../mkfifo.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.mode_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mknodat
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   stat
   SRCS
     stat.cpp
