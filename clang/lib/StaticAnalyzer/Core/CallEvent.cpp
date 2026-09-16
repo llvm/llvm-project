@@ -826,6 +826,11 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
     return {};
   }
 
+  // A final method or a method of a final class cannot be overriden in a
+  // subclass.
+  if (Result->hasAttr<FinalAttr>() || Result->getParent()->hasAttr<FinalAttr>())
+    CanBeSubClass = false;
+
   // Does the decl that we found have an implementation?
   const FunctionDecl *Definition;
   if (!Result->hasBody(Definition)) {

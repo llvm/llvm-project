@@ -82,8 +82,6 @@ void entrypoint(Child *p) {
 namespace final_method_on_base_ptr_with_known_dyn_type {
 // A final method should also be inlined when it is called through a pointer
 // whose dynamic type is a child of the class where it was defined.
-// FIXME: This is not yet implemented, 'final' is only checked on the method
-// and class declaration corresponding to the static type of the pointee.
 struct Base : Msg {};
 
 struct Ctrl : Base {
@@ -94,7 +92,6 @@ struct Ctrl : Base {
 void test(Base* p) {
   clang_analyzer_dump(p->cmd());
   // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Element{SymRegion{reg_${{[0-9]+}}<Ctrl * p>},0 S64b,struct {{[0-9A-Za-z_]+}}::Ctrl}.c>}}
-  // expected-warning@-2 {{conj_$}}
   clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
   clang_analyzer_eval(p->cmd() == p->cmd());
   // FIXME: For unclear reasons, this clang_analyzer_eval call is not reached.
