@@ -17,6 +17,7 @@
 #include "orc-rt/support/sps/SimplePackedSerialization.h"
 
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace orc_rt {
@@ -74,6 +75,41 @@ Error SimpleRemoteCA::decodeHangup(WrapperFunctionBuffer Payload) {
   return SE.toError();
 }
 
+std::pair<SimpleRemoteCA::ResultKind, WrapperFunctionBuffer>
+SimpleRemoteCA::encodeResult(WrapperFunctionBuffer ResultBytes) {
+  const char *ErrMsg = ResultBytes.getOutOfBandError();
+  if (!ErrMsg)
+    return {ResultKind::Value, std::move(ResultBytes)};
+
+  using Serialize = SPSArgList<SPSString>;
+  std::string_view Msg(ErrMsg);
+  auto Payload = WrapperFunctionBuffer::allocate(Serialize::size(Msg));
+  SPSOutputBuffer OB(Payload.data(), Payload.size());
+  if (!Serialize::serialize(OB, Msg))
+    ORC_RT_UNREACHABLE("serialization should not fail");
+  return {ResultKind::OutOfBandError, std::move(Payload)};
+}
+
+WrapperFunctionBuffer
+SimpleRemoteCA::decodeResult(ResultKind Kind, WrapperFunctionBuffer Payload) {
+  switch (Kind) {
+  case ResultKind::Value:
+    return Payload;
+  case ResultKind::OutOfBandError: {
+    // A payload that will not decode becomes the out-of-band error itself: the
+    // call waiting on this result has to be completed either way, and an error
+    // about the error tells the caller more than a dead session would.
+    std::string Msg;
+    SPSInputBuffer IB(Payload.data(), Payload.size());
+    if (!SPSArgList<SPSString>::deserialize(IB, Msg))
+      return WrapperFunctionBuffer::createOutOfBandError(
+          "Malformed result message: could not deserialize out-of-band error");
+    return WrapperFunctionBuffer::createOutOfBandError(Msg.c_str());
+  }
+  }
+  ORC_RT_UNREACHABLE("Unrecognized result kind");
+}
+
 uint64_t SimpleRemoteCA::registerCall(OnControllerCallReturn OnComplete) {
   assert(OnComplete && "Registered handler must contain a value");
   uint64_t SeqNo = NextSeqNo++;
@@ -119,14 +155,18 @@ SimpleRemoteCA::handleMessage(uint64_t OpC, uint64_t SeqNo, ExecutorAddr Tag,
     return Action::End;
   }
 
-  case Opcode::Result:
-    // A result is not associated with a handler tag.
-    if (Tag)
-      return make_error<StringError>(
-          "Result message should not carry a handler tag");
-    if (auto Err = handleResult(SeqNo, std::move(Payload)))
+  case Opcode::Result: {
+    // The tag carries the result kind rather than a handler tag. Checked here,
+    // so that decodeResult only ever sees a kind it can interpret.
+    uint64_t KindVal = Tag.getValue();
+    if (KindVal > static_cast<uint64_t>(ResultKind::LastResultKind))
+      return make_error<StringError>("Malformed result message: invalid kind " +
+                                     std::to_string(KindVal));
+    if (auto Err = handleResult(SeqNo, static_cast<ResultKind>(KindVal),
+                                std::move(Payload)))
       return std::move(Err);
     return Action::Continue;
+  }
 
   case Opcode::Call:
     handleWrapperCall(Tag.toPtr<orc_rt_WrapperFunction>(), std::move(Payload),
@@ -136,14 +176,15 @@ SimpleRemoteCA::handleMessage(uint64_t OpC, uint64_t SeqNo, ExecutorAddr Tag,
   ORC_RT_UNREACHABLE("Unrecognized opcode");
 }
 
-Error SimpleRemoteCA::handleResult(uint64_t SeqNo,
+Error SimpleRemoteCA::handleResult(uint64_t SeqNo, ResultKind Kind,
                                    WrapperFunctionBuffer ResultBytes) {
   auto OnComplete = takePendingCall(SeqNo);
   if (!OnComplete)
     return make_error<StringError>("No pending call for sequence number " +
                                    std::to_string(SeqNo));
 
-  handleControllerCallResult(std::move(OnComplete), std::move(ResultBytes));
+  handleControllerCallResult(std::move(OnComplete),
+                             decodeResult(Kind, std::move(ResultBytes)));
   return Error::success();
 }
 
