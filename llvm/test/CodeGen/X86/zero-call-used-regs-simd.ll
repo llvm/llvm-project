@@ -192,6 +192,7 @@ define void @zero_k(<8 x i32> %arg, <8 x i1> %mask) #0 {
 ; AVX512F-NEXT:    vmovdqu32 %zmm0, 0 {%k1}
 ; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    kxorw %k0, %k0, %k1
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
@@ -373,6 +374,14 @@ define void @all_no_live_vec() #1 {
 ; AVX512F-NEXT:    vpxord %zmm29, %zmm29, %zmm29
 ; AVX512F-NEXT:    vpxord %zmm30, %zmm30, %zmm30
 ; AVX512F-NEXT:    vpxord %zmm31, %zmm31, %zmm31
+; AVX512F-NEXT:    kxorw %k0, %k0, %k0
+; AVX512F-NEXT:    kxorw %k0, %k0, %k1
+; AVX512F-NEXT:    kxorw %k0, %k0, %k2
+; AVX512F-NEXT:    kxorw %k0, %k0, %k3
+; AVX512F-NEXT:    kxorw %k0, %k0, %k4
+; AVX512F-NEXT:    kxorw %k0, %k0, %k5
+; AVX512F-NEXT:    kxorw %k0, %k0, %k6
+; AVX512F-NEXT:    kxorw %k0, %k0, %k7
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: all_no_live_vec:
