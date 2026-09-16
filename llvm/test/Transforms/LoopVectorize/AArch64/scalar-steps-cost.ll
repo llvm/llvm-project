@@ -77,9 +77,9 @@ exit:
 define void @scalar_steps_in_replicate_region(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'scalar_steps_in_replicate_region'
 ; CHECK: Cost of 0 for VF 2: {{.*}} = SCALAR-STEPS {{.*}}, ir<1>, {{.*}}
-; CHECK: Cost of 0 for VF 2: {{.*}} = SCALAR-STEPS {{.*}}, ir<1>, {{.*}}
+; CHECK: Cost of 0.5 for VF 2: {{.*}} = SCALAR-STEPS {{.*}}, ir<1>, {{.*}}
 ; CHECK: Cost of 0 for VF 4: {{.*}} = SCALAR-STEPS {{.*}}, ir<1>, {{.*}}
-; CHECK: Cost of 0 for VF 4: {{.*}} = SCALAR-STEPS {{.*}}, ir<1>, {{.*}}
+; CHECK: Cost of 0.5 for VF 4: {{.*}} = SCALAR-STEPS {{.*}}, ir<1>, {{.*}}
 entry:
   br label %loop
 

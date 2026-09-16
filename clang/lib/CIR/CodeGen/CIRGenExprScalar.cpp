@@ -628,10 +628,88 @@ public:
     mlir::Value value;
     mlir::Value input;
 
-    if (type->getAs<AtomicType>()) {
+    if (const AtomicType *atomicTy = type->getAs<AtomicType>()) {
+      QualType valType = atomicTy->getValueType();
+      mlir::Location loc = cgf.getLoc(e->getSourceRange());
+      bool isInc = e->isIncrementOp();
+      bool isPre = e->isPrefix();
+
+      // Bools are always set-to-true, as decrement isn't legal on bools.
+      if (valType->isBooleanType()) {
+        assert(isInc);
+        // Atomic operations require an integer type; reinterpret the bool
+        // pointer as a pointer to its underlying storage integer type.
+        cir::IntType intTy = builder.getBoolMemoryTy();
+        mlir::Value one = builder.getConstInt(loc, intTy, 1);
+        Address intAddr = lv.getAddress().withElementType(builder, intTy);
+
+        if (isPre) {
+          // Pre-increment: atomically store true, return true.
+          cir::StoreOp store = builder.createStore(loc, one, intAddr);
+          store.setMemOrder(cir::MemOrder::SequentiallyConsistent);
+          if (lv.isVolatileQualified())
+            store.setIsVolatile(true);
+          return builder.getTrue(loc);
+        }
+        // Post-increment: atomically exchange with true, return old value.
+        auto xchg = cir::AtomicXchgOp::create(
+            builder, loc, intAddr.getPointer(), one,
+            cir::MemOrder::SequentiallyConsistent, cir::SyncScopeKind::System,
+            lv.isVolatileQualified());
+        return builder.createCast(cir::CastKind::int_to_bool, xchg.getResult(),
+                                  builder.getBoolTy());
+      }
+
+      // Special case for atomic increment / decrement on integers, emit
+      // atomicrmw instructions.  We skip this if we want to be doing overflow
+      // checking, and fall into the slow path with the atomic cmpxchg loop.
+      if (valType->isIntegerType() &&
+          !(valType->isUnsignedIntegerType() &&
+            cgf.sanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
+          cgf.getLangOpts().getSignedOverflowBehavior() !=
+              LangOptions::SOB_Trapping) {
+        mlir::Type intTy = cgf.convertType(valType);
+        mlir::Value one = builder.getConstInt(loc, intTy, 1);
+        cir::AtomicFetchKind kind =
+            isInc ? cir::AtomicFetchKind::Add : cir::AtomicFetchKind::Sub;
+        auto rmw = cir::AtomicFetchOp::create(
+            builder, loc, lv.getPointer(), one, kind,
+            cir::MemOrder::SequentiallyConsistent, cir::SyncScopeKind::System,
+            lv.isVolatileQualified(), /*fetch_first=*/true);
+        mlir::Value oldVal = rmw->getResult(0);
+        // Prefix returns new value; postfix returns old value.
+        return isPre ? emitIncOrDec(e, oldVal) : oldVal;
+      }
+
+      // Special case for atomic increment/decrement on floats.
+      // Bail out non-power-of-2-sized floating point types (e.g., x86_fp80).
+      if (valType->isFloatingType()) {
+        mlir::Type fpTy = cgf.convertType(valType);
+        auto fpType = mlir::cast<cir::FPTypeInterface>(fpTy);
+        // Bail on non-power-of-2 types (e.g., x86_fp80 is 80 bits).
+        if (llvm::has_single_bit(fpType.getWidth())) {
+          CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+          mlir::Value amt = builder.getConstFP(
+              loc, fpTy, llvm::APFloat(fpType.getFloatSemantics(), 1));
+          cir::AtomicFetchKind kind =
+              isInc ? cir::AtomicFetchKind::Add : cir::AtomicFetchKind::Sub;
+          auto rmw = cir::AtomicFetchOp::create(
+              builder, loc, lv.getPointer(), amt, kind,
+              cir::MemOrder::SequentiallyConsistent, cir::SyncScopeKind::System,
+              lv.isVolatileQualified(), /*fetch_first=*/true);
+          mlir::Value oldVal = rmw->getResult(0);
+          if (isPre)
+            return isInc ? builder.createFAdd(loc, oldVal, amt)
+                         : builder.createFSub(loc, oldVal, amt);
+          return oldVal;
+        } else {
+          cgf.cgm.errorNYI(e->getSourceRange(),
+                           "Atomic inc/dec of non-power-of-2 float");
+        }
+      }
+
+      // Otherwise we need a loop on compare-exchange.
       cgf.cgm.errorNYI(e->getSourceRange(), "Atomic inc/dec");
-      // TODO(cir): This is not correct, but it will produce reasonable code
-      // until atomic operations are implemented.
       value = cgf.emitLoadOfLValue(lv, e->getExprLoc()).getValue();
       input = value;
     } else {
@@ -738,8 +816,7 @@ public:
       return {};
     }
 
-    CIRGenFunction::SourceLocRAIIObject sourceloc{
-        cgf, cgf.getLoc(e->getSourceRange())};
+    CIRGenFunction::SourceLocRAIIObject sourceloc{cgf, e->getSourceRange()};
 
     // Store the updated result through the lvalue
     if (lv.isBitField())
@@ -1288,13 +1365,11 @@ public:
       // 'An assignment expression has the value of the left operand after the
       // assignment...'.
       if (lhs.isBitField()) {
-        CIRGenFunction::SourceLocRAIIObject loc{
-            cgf, cgf.getLoc(e->getSourceRange())};
+        CIRGenFunction::SourceLocRAIIObject loc{cgf, e->getSourceRange()};
         rhs = cgf.emitStoreThroughBitfieldLValue(RValue::get(rhs), lhs);
       } else {
         cgf.emitNullabilityCheck(lhs, rhs, e->getExprLoc());
-        CIRGenFunction::SourceLocRAIIObject loc{
-            cgf, cgf.getLoc(e->getSourceRange())};
+        CIRGenFunction::SourceLocRAIIObject loc{cgf, e->getSourceRange()};
         cgf.emitStoreThroughLValue(RValue::get(rhs), lhs);
       }
     }
@@ -1600,8 +1675,7 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
 
   opInfo.lhs = emitLoadOfLValue(lhsLV, e->getExprLoc());
 
-  CIRGenFunction::SourceLocRAIIObject sourceloc{
-      cgf, cgf.getLoc(e->getSourceRange())};
+  CIRGenFunction::SourceLocRAIIObject sourceloc{cgf, e->getSourceRange()};
   SourceLocation loc = e->getExprLoc();
   if (!promotionTypeLHS.isNull())
     opInfo.lhs = emitScalarConversion(opInfo.lhs, lhsTy, promotionTypeLHS, loc);

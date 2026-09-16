@@ -215,12 +215,6 @@ unsigned getMaxNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
 unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
                           bool FlatScrUsed, bool XNACKUsed);
 
-/// \returns Number of extra SGPRs implicitly required by given subtarget \p
-/// STI when the given special registers are used. XNACK is inferred from
-/// \p STI.
-unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
-                          bool FlatScrUsed);
-
 /// \returns Number of SGPR blocks needed for given subtarget \p STI when
 /// \p NumSGPRs are used. \p NumSGPRs should already include any special
 /// register counts.
@@ -637,6 +631,10 @@ enum Component : unsigned {
 // 4 banks result in a mask 3, setting 2 lower bits.
 constexpr unsigned VOPD_VGPR_BANK_MASKS[] = {1, 3, 3, 1};
 constexpr unsigned VOPD3_VGPR_BANK_MASKS[] = {1, 3, 3, 3};
+// GFX11 VOPD interlock hazard requires SRC0/SRC1 to have
+// different parities, not just on different banks. Else,
+// non-deterministic forwarding error may occur.
+constexpr unsigned VOPD_GFX11_VGPR_BANK_MASKS[] = {1, 1, 1, 1};
 
 enum ComponentIndex : unsigned { X = 0, Y = 1 };
 constexpr unsigned COMPONENTS[] = {ComponentIndex::X, ComponentIndex::Y};
@@ -882,12 +880,15 @@ public:
   // even though it violates requirement to be from different banks.
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even and instruction may have real src2 as opposed to tied accumulator.
+  // If \p HasGFX11InterlockHazard is set then X/Y SRC0 and SRC1 VGPRs
+  // must have different register-number parity.
   bool
   hasInvalidOperand(std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
                     const MCRegisterInfo &MRI, bool SkipSrc = false,
-                    bool AllowSameVGPR = false, bool VOPD3 = false) const {
+                    bool AllowSameVGPR = false, bool VOPD3 = false,
+                    bool HasGFX11InterlockHazard = false) const {
     return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc, AllowSameVGPR,
-                                      VOPD3)
+                                      VOPD3, HasGFX11InterlockHazard)
         .has_value();
   }
 
@@ -899,10 +900,13 @@ public:
   // even though it violates requirement to be from different banks.
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even and instruction may have real src2 as opposed to tied accumulator.
+  // If \p HasGFX11InterlockHazard is set then X/Y SRC0 and SRC1 VGPRs
+  // must have different register-number parity.
   std::optional<unsigned> getInvalidCompOperandIndex(
       std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
       const MCRegisterInfo &MRI, bool SkipSrc = false,
-      bool AllowSameVGPR = false, bool VOPD3 = false) const;
+      bool AllowSameVGPR = false, bool VOPD3 = false,
+      bool HasGFX11InterlockHazard = false) const;
 
 private:
   RegIndices
@@ -1552,6 +1556,12 @@ inline bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   return isSISrcOperand(Desc.operands()[OpNo]);
 }
 
+/// Is this a scalar (i.e. not packed) bf16 source operand?
+constexpr bool isBF16SrcOperand(const MCOperandInfo &OpInfo) {
+  return OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_BF16 ||
+         OpInfo.OperandType == AMDGPU::OPERAND_REG_INLINE_C_BF16;
+}
+
 /// Is this a KImm operand?
 bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
@@ -1596,6 +1606,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_IMM_BF16:
   case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
@@ -1735,7 +1746,7 @@ inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned DC) {
 }
 
 /// \returns true if an instruction may have a 64-bit VGPR operand.
-bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc,
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
                              const MCSubtargetInfo &ST);
 
 /// \returns true if an instruction is a DP ALU DPP without any 64-bit operands.

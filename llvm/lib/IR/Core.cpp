@@ -4009,8 +4009,7 @@ LLVMValueRef LLVMBuildMalloc(LLVMBuilderRef B, LLVMTypeRef Ty,
   Type* ITy = Type::getInt32Ty(unwrap(B)->GetInsertBlock()->getContext());
   Constant* AllocSize = ConstantExpr::getSizeOf(unwrap(Ty));
   AllocSize = ConstantExpr::getTruncOrBitCast(AllocSize, ITy);
-  return wrap(unwrap(B)->CreateMalloc(ITy, unwrap(Ty), AllocSize, nullptr,
-                                      nullptr, Name));
+  return wrap(unwrap(B)->CreateMalloc(ITy, AllocSize, nullptr, nullptr, Name));
 }
 
 LLVMValueRef LLVMBuildArrayMalloc(LLVMBuilderRef B, LLVMTypeRef Ty,
@@ -4018,8 +4017,8 @@ LLVMValueRef LLVMBuildArrayMalloc(LLVMBuilderRef B, LLVMTypeRef Ty,
   Type* ITy = Type::getInt32Ty(unwrap(B)->GetInsertBlock()->getContext());
   Constant* AllocSize = ConstantExpr::getSizeOf(unwrap(Ty));
   AllocSize = ConstantExpr::getTruncOrBitCast(AllocSize, ITy);
-  return wrap(unwrap(B)->CreateMalloc(ITy, unwrap(Ty), AllocSize, unwrap(Val),
-                                      nullptr, Name));
+  return wrap(
+      unwrap(B)->CreateMalloc(ITy, AllocSize, unwrap(Val), nullptr, Name));
 }
 
 LLVMValueRef LLVMBuildMemSet(LLVMBuilderRef B, LLVMValueRef Ptr,
