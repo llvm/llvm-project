@@ -16,6 +16,11 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/SandboxIR/Pass.h"
+#include "llvm/Support/InstructionCost.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
+
+#include <optional>
 
 namespace llvm {
 
@@ -23,20 +28,49 @@ class DataLayout;
 
 namespace sandboxir {
 
+class Context;
+class Function;
 class Value;
 class Instruction;
-class Scheduler;
 class Type;
 
 class LLVM_ABI LoadStoreVec final : public RegionPass {
   const DataLayout *DL = nullptr;
+  /// The region saved by saveIR(), used by acceptOrRevert().
+  Region *Rgn = nullptr;
+  /// The region's cost at the time of saveIR().
+  InstructionCost CostBefore = 0;
+  const Analyses *A = nullptr;
+  Context *Ctx = nullptr;
+  std::unique_ptr<Scheduler> Sched;
+  VecUtils::DeadInstructionMorgue DeadInstrMorgue;
+
+  /// Saves the IR along with the current cost of \p Rgn, so that
+  /// acceptOrRevert() can tell whether vectorizing was profitable.
+  void saveIR(Region &Rgn);
+
+  /// Accepts the transaction saved by saveIR() if vectorizing was profitable,
+  /// reverts it otherwise. \returns true if the transaction was accepted.
+  bool acceptOrRevert();
+
   /// Checks legality of vectorization and \returns the vector type on success,
   /// nullopt otherwise.
-  std::optional<Type *> canVectorize(ArrayRef<Instruction *> Bndl,
-                                     Scheduler &Sched);
+  std::optional<Type *> canVectorize(ArrayRef<Instruction *> Bndl);
 
-  void tryEraseDeadInstrs(ArrayRef<Instruction *> Stores,
-                          ArrayRef<Value *> Operands);
+  /// Builds a single vector load out of \p Loads. \returns the new load,
+  /// or nullptr if \p Loads are not a vectorizable.
+  LoadInst *createVectorLoad(ArrayRef<Instruction *> Loads);
+
+  /// Builds a ConstantVector from per-lane constant store operands in \p
+  /// Constants. \returns the packed ConstantVector.
+  Value *createConstantVector(ArrayRef<Value *> Constants);
+
+  /// Vectorizes \p Stores and their operands if constants or consecutive
+  /// loads. \returns true on success.
+  bool vectorizeStores(ArrayRef<Instruction *> Stores, Region &Rgn);
+
+  /// Vectorizes \p Loads into a single load. \return the packed load.
+  LoadInst *vectorizeLoads(ArrayRef<Instruction *> Loads, Region &Rgn);
 
 public:
   LoadStoreVec(StringRef AuxArg) : RegionPass("load-store-vec") {

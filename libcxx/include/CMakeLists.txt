@@ -244,6 +244,7 @@ set(files
   __bit/invert_if.h
   __bit/popcount.h
   __bit/rotate.h
+  __bit/shift.h
   __bit_reference
   __charconv/chars_format.h
   __charconv/from_chars_floating_point.h
@@ -308,6 +309,7 @@ set(files
   __compare/strong_order.h
   __compare/synth_three_way.h
   __compare/three_way_comparable.h
+  __compare/type_order.h
   __compare/weak_order.h
   __concepts/arithmetic.h
   __concepts/assignable.h
@@ -396,11 +398,11 @@ set(files
   __flat_set/ra_iterator.h
   __flat_set/utils.h
   __format/buffer.h
-  __format/concepts.h
   __format/container_adaptor.h
   __format/enable_insertable.h
   __format/escaped_output_table.h
   __format/extended_grapheme_cluster_table.h
+  __format/fmt_char_type.h
   __format/fmt_pair_like.h
   __format/format_arg.h
   __format/format_arg_store.h
@@ -411,6 +413,7 @@ set(files
   __format/format_parse_context.h
   __format/format_string.h
   __format/format_to_n_result.h
+  __format/formattable.h
   __format/formatter.h
   __format/formatter_bool.h
   __format/formatter_bool_impl.h
@@ -695,9 +698,13 @@ set(files
   __pstl/cpu_algos/any_of.h
   __pstl/cpu_algos/cpu_traits.h
   __pstl/cpu_algos/fill.h
+  __pstl/cpu_algos/find_end.h
   __pstl/cpu_algos/find_if.h
   __pstl/cpu_algos/for_each.h
+  __pstl/cpu_algos/is_heap_until.h
   __pstl/cpu_algos/merge.h
+  __pstl/cpu_algos/min_element.h
+  __pstl/cpu_algos/minmax_element.h
   __pstl/cpu_algos/mismatch.h
   __pstl/cpu_algos/reverse.h
   __pstl/cpu_algos/search.h
@@ -905,6 +912,7 @@ set(files
   __type_traits/is_polymorphic.h
   __type_traits/is_reference.h
   __type_traits/is_reference_wrapper.h
+  __type_traits/is_relocatable.h
   __type_traits/is_same.h
   __type_traits/is_scalar.h
   __type_traits/is_signed.h
@@ -917,7 +925,6 @@ set(files
   __type_traits/is_trivially_copyable.h
   __type_traits/is_trivially_destructible.h
   __type_traits/is_trivially_lexicographically_comparable.h
-  __type_traits/is_trivially_relocatable.h
   __type_traits/is_union.h
   __type_traits/is_unqualified.h
   __type_traits/is_unsigned.h
@@ -956,6 +963,7 @@ set(files
   __undef_macros
   __utility/as_const.h
   __utility/as_lvalue.h
+  __utility/assume.h
   __utility/auto_cast.h
   __utility/cmp.h
   __utility/constant_wrapper.h

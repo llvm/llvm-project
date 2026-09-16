@@ -80,8 +80,6 @@ TEST_P(olLaunchKernelFooTest, Success) {
 }
 
 TEST_P(olLaunchKernelFooTest, SuccessThreaded) {
-  SKIP_KNOWN_FAILURE(LevelZero{"thread-safety issues"});
-
   threadify([&](size_t) {
     void *DevAlloc, *HstAlloc;
     size_t Size = LaunchArgs.GroupSize.x * sizeof(uint32_t);
@@ -252,8 +250,6 @@ TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
 }
 
 TEST_P(olLaunchKernelLocalMemStaticTest, Success) {
-  SKIP_KNOWN_FAILURE(LevelZero{"unsupported DynSharedMemory"});
-
   LaunchArgs.NumGroups.x = 4;
   LaunchArgs.DynSharedMemory = 0;
 

@@ -29,10 +29,11 @@ DWARFLinkerImpl::DWARFLinkerImpl(MessageHandlerTy ErrorHandler,
 DWARFLinkerImpl::LinkContext::LinkContext(LinkingGlobalData &GlobalData,
                                           DWARFFile &File, uint64_t ObjFileIdx,
                                           StringMap<uint64_t> &ClangModules,
+                                          uint64_t &ModuleUnitIdx,
                                           std::atomic<size_t> &UniqueUnitID)
     : OutputSections(GlobalData), InputDWARFFile(File),
       ObjectFileIdx(ObjFileIdx), ClangModules(ClangModules),
-      UniqueUnitID(UniqueUnitID) {
+      ModuleUnitIdx(ModuleUnitIdx), UniqueUnitID(UniqueUnitID) {
 
   if (File.Dwarf) {
     if (!File.Dwarf->compile_units().empty())
@@ -49,7 +50,8 @@ DWARFLinkerImpl::LinkContext::LinkContext(LinkingGlobalData &GlobalData,
 void DWARFLinkerImpl::addObjectFile(DWARFFile &File, ObjFileLoaderTy Loader,
                                     CompileUnitHandlerTy OnCUDieLoaded) {
   ObjectContexts.emplace_back(std::make_unique<LinkContext>(
-      GlobalData, File, ObjectContexts.size(), ClangModules, UniqueUnitID));
+      GlobalData, File, FirstObjFileIdx + ObjectContexts.size(), ClangModules,
+      ModuleUnitIdx, UniqueUnitID));
 
   if (ObjectContexts.back()->InputDWARFFile.Dwarf) {
     for (const std::unique_ptr<DWARFUnit> &CU :
@@ -470,6 +472,12 @@ Error DWARFLinkerImpl::LinkContext::loadClangModule(
   }
 
   if (Unit) {
+    // Incrementing the shared counter needs no synchronization: reaching this
+    // point requires a loader, and only the serial pass over the object files
+    // supplies one.
+    if (Error E = Unit->setPriority(ModuleUnitObjFileIdx, ModuleUnitIdx++))
+      return E;
+
     ModulesCompileUnits.emplace_back(std::move(Unit));
     // Preload line table, as it can't be loaded asynchronously.
     ModulesCompileUnits.back()->loadLineTable();
@@ -486,13 +494,6 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
   // Preload macro tables, as they can't be loaded asynchronously.
   InputDWARFFile.Dwarf->getDebugMacinfo();
   InputDWARFFile.Dwarf->getDebugMacro();
-
-  // Assign deterministic priorities to module CUs for type DIE allocation.
-  uint64_t LocalCUIdx = 0;
-  for (std::unique_ptr<CompileUnit> &Mod : ModulesCompileUnits) {
-    if (Error E = Mod->setPriority(ObjectFileIdx, LocalCUIdx++))
-      return E;
-  }
 
   // Link modules compile units first.
   parallelForEach(ModulesCompileUnits, [&](std::unique_ptr<CompileUnit> &Mod) {
@@ -516,6 +517,7 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
 
   // Create CompileUnit structures to keep information about source
   // DWARFUnit`s, load line tables.
+  uint64_t LocalCUIdx = 0;
   for (const auto &OrigCU : InputDWARFFile.Dwarf->compile_units()) {
     // Load only unit DIE at this stage.
     auto CUDie = OrigCU->getUnitDIE();
@@ -650,7 +652,12 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
             // registerModuleReferences doesn't do any new work, but it
             // will collect top-level errors, which are suppressed. Module
             // warnings were already displayed in the first iteration.
-            if (registerModuleReference(
+            //
+            // Runs concurrently, so it must stay a no-op: it may only be
+            // entered when the serial pass in addObjectFile() has already
+            // populated the module map.
+            if (!GlobalData.getOptions().UpdateIndexTablesOnly &&
+                registerModuleReference(
                     CU.getOrigUnit().getUnitDIE(), nullptr,
                     [](const DWARFUnit &) {}, 0))
               CU.setStage(CompileUnit::Stage::PatchesUpdated);
@@ -716,6 +723,13 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
         case CompileUnit::Stage::Cloned:
           // Update DIEs referencies.
           CU.updateDieRefPatchesWithClonedOffsets();
+
+          // Later than cloning, so that the offsets are final, and no later,
+          // because a unit which got this far can no longer be skipped and have
+          // its section dropped from the output.
+          if (CU.isClangModule())
+            CU.noteModuleAnchors();
+
           CU.setStage(CompileUnit::Stage::PatchesUpdated);
           break;
 

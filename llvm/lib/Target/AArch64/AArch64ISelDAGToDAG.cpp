@@ -638,9 +638,11 @@ static APInt DecodeFMOVImm(uint64_t Imm, unsigned RegWidth) {
 }
 
 // Decodes the raw integer splat value from a NEON splat operation.
-static std::optional<APInt> DecodeNEONSplat(SDValue N) {
+static std::optional<APInt> DecodeNEONSplat(SDValue N,
+                                            const AArch64Subtarget *Subtarget) {
   assert(N.getValueType().isInteger() && "Only integers are supported");
-  if (N->getOpcode() == AArch64ISD::NVCAST)
+  if (N->getOpcode() == AArch64ISD::NVCAST ||
+      (N->getOpcode() == ISD::BITCAST && Subtarget->isLittleEndian()))
     N = N->getOperand(0);
   unsigned SplatWidth = N.getScalarValueSizeInBits();
   if (N.getOpcode() == AArch64ISD::FMOV)
@@ -669,9 +671,10 @@ static std::optional<APInt> DecodeNEONSplat(SDValue N) {
 
 // If \p N is a NEON splat operation (movi, fmov, etc), return the splat value
 // matching the element size of N.
-static std::optional<APInt> GetNEONSplatValue(SDValue N) {
+static std::optional<APInt>
+GetNEONSplatValue(SDValue N, const AArch64Subtarget *Subtarget) {
   unsigned SplatWidth = N.getScalarValueSizeInBits();
-  if (std::optional<APInt> SplatVal = DecodeNEONSplat(N)) {
+  if (std::optional<APInt> SplatVal = DecodeNEONSplat(N, Subtarget)) {
     if (SplatVal->getBitWidth() <= SplatWidth)
       return APInt::getSplat(SplatWidth, *SplatVal);
     if (SplatVal->isSplat(SplatWidth))
@@ -682,7 +685,7 @@ static std::optional<APInt> GetNEONSplatValue(SDValue N) {
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfSVELogicalImm(SDValue N,
                                                          SDValue &Imm) {
-  std::optional<APInt> ImmVal = GetNEONSplatValue(N);
+  std::optional<APInt> ImmVal = GetNEONSplatValue(N, Subtarget);
   if (!ImmVal)
     return false;
   uint64_t Encoding;
@@ -696,7 +699,7 @@ bool AArch64DAGToDAGISel::SelectNEONSplatOfSVELogicalImm(SDValue N,
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfSVEAddSubImm(SDValue N, SDValue &Imm,
                                                         SDValue &Shift) {
-  if (std::optional<APInt> ImmVal = GetNEONSplatValue(N))
+  if (std::optional<APInt> ImmVal = GetNEONSplatValue(N, Subtarget))
     return SelectSVEAddSubImm(SDLoc(N), *ImmVal,
                               N.getValueType().getScalarType().getSimpleVT(),
                               Imm, Shift,
@@ -706,13 +709,13 @@ bool AArch64DAGToDAGISel::SelectNEONSplatOfSVEAddSubImm(SDValue N, SDValue &Imm,
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfSVEArithSImm(SDValue N,
                                                         SDValue &Imm) {
-  if (std::optional<APInt> ImmVal = GetNEONSplatValue(N))
+  if (std::optional<APInt> ImmVal = GetNEONSplatValue(N, Subtarget))
     return SelectSVESignedArithImm(SDLoc(N), *ImmVal, Imm);
   return false;
 }
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfSImm8(SDValue N, SDValue &Imm) {
-  std::optional<APInt> ImmAPIntVal = GetNEONSplatValue(N);
+  std::optional<APInt> ImmAPIntVal = GetNEONSplatValue(N, Subtarget);
   if (!ImmAPIntVal)
     return false;
 
@@ -725,7 +728,7 @@ bool AArch64DAGToDAGISel::SelectNEONSplatOfSImm8(SDValue N, SDValue &Imm) {
 }
 
 bool AArch64DAGToDAGISel::SelectNEONSplatOfUImm8(SDValue N, SDValue &Imm) {
-  std::optional<APInt> ImmAPIntVal = GetNEONSplatValue(N);
+  std::optional<APInt> ImmAPIntVal = GetNEONSplatValue(N, Subtarget);
   if (!ImmAPIntVal)
     return false;
 
@@ -1871,6 +1874,10 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
 
   ISD::LoadExtType ExtType = LD->getExtensionType();
   bool InsertTo64 = false;
+  bool UseLd1 =
+      (VT.is64BitVector() || VT.is128BitVector()) &&
+      (!Subtarget->isLittleEndian() || (Subtarget->requiresStrictAlign() &&
+                                        LD->getAlign() < VT.getStoreSize()));
   if (VT == MVT::i64)
     Opcode = IsPre ? AArch64::LDRXpre : AArch64::LDRXpost;
   else if (VT == MVT::i32) {
@@ -1917,12 +1924,11 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
     Opcode = IsPre ? AArch64::LDRHpre : AArch64::LDRHpost;
   } else if (VT == MVT::f32) {
     Opcode = IsPre ? AArch64::LDRSpre : AArch64::LDRSpost;
-  } else if (VT == MVT::f64 ||
-             (VT.is64BitVector() && Subtarget->isLittleEndian())) {
+  } else if (VT == MVT::f64 || (VT.is64BitVector() && !UseLd1)) {
     Opcode = IsPre ? AArch64::LDRDpre : AArch64::LDRDpost;
-  } else if (VT.is128BitVector() && Subtarget->isLittleEndian()) {
+  } else if (VT.is128BitVector() && !UseLd1) {
     Opcode = IsPre ? AArch64::LDRQpre : AArch64::LDRQpost;
-  } else if (VT.is64BitVector()) {
+  } else if (VT.is64BitVector() && UseLd1) {
     if (IsPre || OffsetVal != 8)
       return false;
     switch (VT.getScalarSizeInBits()) {
@@ -1941,7 +1947,7 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
     default:
       llvm_unreachable("Expected vector element to be a power of 2");
     }
-  } else if (VT.is128BitVector()) {
+  } else if (VT.is128BitVector() && UseLd1) {
     if (IsPre || OffsetVal != 16)
       return false;
     switch (VT.getScalarSizeInBits()) {
@@ -1966,9 +1972,8 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
   SDValue Base = LD->getBasePtr();
   SDLoc dl(N);
   // LD1 encodes an immediate offset by using XZR as the offset register.
-  SDValue Offset = (VT.isVector() && !Subtarget->isLittleEndian())
-                       ? CurDAG->getRegister(AArch64::XZR, MVT::i64)
-                       : CurDAG->getTargetConstant(OffsetVal, dl, MVT::i64);
+  SDValue Offset = UseLd1 ? CurDAG->getRegister(AArch64::XZR, MVT::i64)
+                          : CurDAG->getTargetConstant(OffsetVal, dl, MVT::i64);
   SDValue Ops[] = { Base, Offset, Chain };
   SDNode *Res = CurDAG->getMachineNode(Opcode, dl, MVT::i64, DstVT,
                                        MVT::Other, Ops);

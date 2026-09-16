@@ -287,6 +287,9 @@ def XLenVecI16VT : ValueTypeByHwMode<[RV32,  RV64],
                                      [v2i16, v4i16]>;
 def XLenVecI32VT : ValueTypeByHwMode<[RV64],
                                      [v2i32]>;
+
+def XLenVecQAccVT : ValueTypeByHwMode<[RV32, RV64],
+                                      [v2i16, v2i32]>;
 def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
@@ -341,11 +344,13 @@ def GPRX0 : GPRRegisterClass<(add X0)> {
 }
 
 def GPRX1 : GPRRegisterClass<(add X1)> {
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X1, 1>";
   let DiagnosticType = "InvalidRegClassGPRX1";
   let DiagnosticString = "register must be ra (x1)";
 }
 
 def GPRX5 : GPRRegisterClass<(add X5)> {
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X5, 5>";
   let DiagnosticType = "InvalidRegClassGPRX5";
   let DiagnosticString = "register must be t0 (x5)";
 }
@@ -391,14 +396,15 @@ def GPRTC : GPRRegisterClass<(add (sequence "X%u", 6, 7),
 def GPRTCNonX7 : GPRRegisterClass<(sub GPRTC, X7)>;
 
 def SP : GPRRegisterClass<(add X2)> {
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X2, 2>";
   let DiagnosticType = "InvalidRegClassSP";
   let DiagnosticString = "register must be sp (x2)";
 }
 
-// Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
-def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
+// Callee-saved Registers from s0 to s7, used by instructions in Zcmp and Xqccmp.
+def GPRS07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
                                  (sequence "X%u", 18, 23))> {
-  let DiagnosticType = "InvalidRegClassSR07";
+  let DiagnosticType = "InvalidRegClassGPRS07";
   let DiagnosticString = "register must be GPR from s0 to s7 (x8, x9 or x18-x23)";
 }
 

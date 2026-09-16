@@ -79,7 +79,7 @@ public:
 
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
   InstructionCost
@@ -157,9 +157,7 @@ public:
       ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
       TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
       TTI::TargetCostKind CostKind,
-      std::optional<FastMathFlags> FMF) const override {
-    return InstructionCost::getInvalid();
-  }
+      std::optional<FastMathFlags> FMF) const override;
 
   InstructionCost getMinMaxCost(Intrinsic::ID IID, Type *Ty,
                                 TTI::TargetCostKind CostKind,

@@ -905,7 +905,8 @@ private:
   bool isUsedByReturnOnly(SDNode *N, SDValue &Chain) const override;
   bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
   bool getIndexedAddressParts(SDNode *N, SDNode *Op, SDValue &Base,
-                              SDValue &Offset, SelectionDAG &DAG) const;
+                              SDValue &Offset, SelectionDAG &DAG,
+                              ISD::MemIndexedMode AM) const;
   bool getPreIndexedAddressParts(SDNode *N, SDValue &Base, SDValue &Offset,
                                  ISD::MemIndexedMode &AM,
                                  SelectionDAG &DAG) const override;
@@ -980,6 +981,11 @@ namespace AArch64 {
 FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
                          const TargetLibraryInfo *libInfo,
                          const LibcallLoweringInfo *libcallLowering);
+
+// Determine the effective TLS model for an ELF global, applying
+// AArch64-specific restrictions and configuration.
+TLSModel::Model getELFTLSModel(const GlobalValue *GV, const TargetMachine &TM,
+                               bool HasELFSignedGOT);
 } // end namespace AArch64
 
 } // end namespace llvm

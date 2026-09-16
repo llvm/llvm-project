@@ -217,6 +217,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseOperandWithSpecifier(OperandVector &Operands);
   ParseStatus parseBareSymbol(OperandVector &Operands);
   ParseStatus parseCallSymbol(OperandVector &Operands);
+  ParseStatus parseTailCallSymbol(OperandVector &Operands);
   ParseStatus parsePseudoJumpSymbol(OperandVector &Operands);
   ParseStatus parseJALOffset(OperandVector &Operands);
   ParseStatus parseVTypeI(OperandVector &Operands);
@@ -331,27 +332,21 @@ public:
     Parser.addAliasForDirective(".dword", ".8byte");
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
-    auto ABIName = StringRef(getTargetOptions().ABIName);
-    if (ABIName.ends_with("f") && !getSTI().hasFeature(RISCV::FeatureStdExtF)) {
-      errs() << "Hard-float 'f' ABI can't be used for a target that "
-                "doesn't support the F instruction set extension (ignoring "
-                "target-abi)\n";
-    } else if (ABIName.ends_with("d") &&
-               !getSTI().hasFeature(RISCV::FeatureStdExtD)) {
-      errs() << "Hard-float 'd' ABI can't be used for a target that "
-                "doesn't support the D instruction set extension (ignoring "
-                "target-abi)\n";
-    }
-
-    // Use computeTargetABI to check if ABIName is valid. If invalid, output
-    // error message.
-    RISCVABI::computeTargetABI(STI, ABIName);
-
     const MCObjectFileInfo *MOFI = Parser.getContext().getObjectFileInfo();
     ParserOptions.IsPicEnabled = MOFI->isPositionIndependent();
 
     if (AddBuildAttributes)
       getTargetStreamer().emitTargetAttributes(STI, /*EmitStackAlign*/ false);
+  }
+
+  // Validate the requested -target-abi now that the lexer has been primed
+  // with the first token, so diagnostics can be reported with a real source
+  // location instead of being printed with no location information.
+  void onBeginOfFile() override {
+    Expected<RISCVABI::ABI> ABIOrErr =
+        RISCVABI::computeTargetABI(getSTI(), getTargetOptions().ABIName);
+    if (!ABIOrErr)
+      getParser().printError(getLoc(), toString(ABIOrErr.takeError()));
   }
 };
 
@@ -618,6 +613,8 @@ public:
     return RISCVAsmParser::classifySymbolRef(getExpr(), VK) &&
            VK == RISCV::S_CALL_PLT;
   }
+
+  bool isTailCallSymbol() const { return isCallSymbol(); }
 
   bool isPseudoJumpSymbol() const {
     int64_t Imm;
@@ -895,6 +892,7 @@ public:
   bool isSImm11() const { return isSImm<11>(); }
   bool isSImm12() const { return isSImm<12>(); }
   bool isSImm16() const { return isSImm<16>(); }
+  bool isSImm18() const { return isSImm<18>(); }
   bool isSImm26() const { return isSImm<26>(); }
 
   bool isSImm5NonZero() const {
@@ -1064,10 +1062,6 @@ public:
   bool isSImm5Plus1() const {
     return isSImmPred(
         [](int64_t Imm) { return Imm != INT64_MIN && isInt<5>(Imm - 1); });
-  }
-
-  bool isSImm18() const {
-    return isSImmPred([](int64_t Imm) { return isInt<18>(Imm); });
   }
 
   bool isSImm18Lsb0() const {
@@ -2403,6 +2397,40 @@ ParseStatus RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
       return Error(Loc, "@ (except the deprecated/ignored @plt) is disallowed");
   } else if (!getLexer().peekTok().is(AsmToken::EndOfStatement)) {
     // Avoid parsing the register in `call rd, foo` as a call symbol.
+    return ParseStatus::NoMatch;
+  } else {
+    Lex();
+  }
+
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
+  RISCV::Specifier Kind = RISCV::S_CALL_PLT;
+
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
+  Res = MCSymbolRefExpr::create(Sym, getContext());
+  Res = MCSpecifierExpr::create(Res, Kind, getContext());
+  Operands.push_back(RISCVOperand::createExpr(Res, S, E, isRV64()));
+  return ParseStatus::Success;
+}
+
+// Like parseCallSymbol but allows the symbol to be followed by a comma
+// (for "tail address, register" form where the symbol is not the last operand).
+ParseStatus RISCVAsmParser::parseTailCallSymbol(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  const MCExpr *Res;
+
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return ParseStatus::NoMatch;
+  std::string Identifier(getTok().getIdentifier());
+
+  if (getLexer().peekTok().is(AsmToken::At)) {
+    Lex();
+    Lex();
+    StringRef PLT;
+    SMLoc Loc = getLoc();
+    if (getParser().parseIdentifier(PLT) || PLT != "plt")
+      return Error(Loc, "@ (except the deprecated/ignored @plt) is disallowed");
+  } else if (!getLexer().peekTok().is(AsmToken::EndOfStatement) &&
+             !getLexer().peekTok().is(AsmToken::Comma)) {
     return ParseStatus::NoMatch;
   } else {
     Lex();
@@ -4403,6 +4431,36 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   switch (Inst.getOpcode()) {
   default:
     break;
+  case RISCV::MOP_RR_7: {
+    // Remap mop.rr.7 x0, x0, x1/x5 to sspush x1/x5.
+    if (Inst.getOperand(0).getReg() == RISCV::X0 &&
+        Inst.getOperand(1).getReg() == RISCV::X0 &&
+        (Inst.getOperand(2).getReg() == RISCV::X1 ||
+         Inst.getOperand(2).getReg() == RISCV::X5)) {
+      emitToStreamer(
+          Out, MCInstBuilder(RISCV::SSPUSH).addOperand(Inst.getOperand(2)));
+      return false;
+    }
+    break;
+  }
+  case RISCV::MOP_R_28: {
+    // Remap mop.r.28 x0, x1/x5 to sspopchk x1/x5.
+    if (Inst.getOperand(0).getReg() == RISCV::X0 &&
+        (Inst.getOperand(1).getReg() == RISCV::X1 ||
+         Inst.getOperand(1).getReg() == RISCV::X5)) {
+      emitToStreamer(
+          Out, MCInstBuilder(RISCV::SSPOPCHK).addOperand(Inst.getOperand(1)));
+      return false;
+    }
+    // Remap mop.r.28 rN, x0 to ssrdp rN.
+    if (Inst.getOperand(0).getReg() != RISCV::X0 &&
+        Inst.getOperand(1).getReg() == RISCV::X0) {
+      emitToStreamer(
+          Out, MCInstBuilder(RISCV::SSRDP).addOperand(Inst.getOperand(0)));
+      return false;
+    }
+    break;
+  }
   case RISCV::PseudoC_ADDI_NOP: {
     if (Inst.getOperand(2).getImm() == 0)
       emitToStreamer(Out, MCInstBuilder(RISCV::C_NOP));

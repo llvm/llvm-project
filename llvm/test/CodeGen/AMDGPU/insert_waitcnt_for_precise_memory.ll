@@ -271,6 +271,7 @@ define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_bfi_b32 v2, v3, -5, -1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -802,7 +803,7 @@ define amdgpu_kernel void @atomic_add_local(ptr addrspace(3) %local) {
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
 ; GFX12-NEXT:  .LBB5_2:
 ; GFX12-NEXT:    s_endpgm
-   %unused = atomicrmw volatile add ptr addrspace(3) %local, i32 5 seq_cst
+   %unused = atomicrmw add ptr addrspace(3) %local, i32 5 seq_cst
    ret void
 }
 
@@ -1061,7 +1062,7 @@ define amdgpu_kernel void @atomic_add_ret_local(ptr addrspace(1) %out, ptr addrs
 ; GFX12-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_endpgm
-  %val = atomicrmw volatile add ptr addrspace(3) %local, i32 5 seq_cst
+  %val = atomicrmw add ptr addrspace(3) %local, i32 5 seq_cst
   store i32 %val, ptr addrspace(1) %out
   ret void
 }

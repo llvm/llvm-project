@@ -10,6 +10,7 @@
 #include "CIRDiagnosticHandler.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/Basic/DiagnosticCodeGen.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/CIRToCIRPasses.h"
@@ -193,6 +194,10 @@ public:
         if (!ec)
           MlirModule->print(out);
       }
+
+      // If errors occurred during codegen, stop before running the backend.
+      if (CI.getDiagnostics().hasErrorOccurred())
+        return;
 
       std::unique_ptr<llvm::Module> LLVMModule = lowerFromCIRToLLVMIR(
           MlirModule, LLVMCtx, C.getLangOpts().OpenMP, mlirSaveTempsOutFile,

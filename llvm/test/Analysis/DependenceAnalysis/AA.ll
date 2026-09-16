@@ -99,11 +99,11 @@ define void @test_global_size() {
 
 define void @test_tbaa_same(ptr %A, ptr %B) {
 ; CHECK-LABEL: 'test_tbaa_same'
-; CHECK-NEXT:  Src: store i32 1, ptr %A, align 4, !tbaa !0 --> Dst: store i32 1, ptr %A, align 4, !tbaa !0
+; CHECK-NEXT:  Src: store i32 1, ptr %A, align 4, !tbaa !{{[0-9]+}} --> Dst: store i32 1, ptr %A, align 4, !tbaa !{{[0-9]+}}
 ; CHECK-NEXT:    da analyze - none!
-; CHECK-NEXT:  Src: store i32 1, ptr %A, align 4, !tbaa !0 --> Dst: store i32 2, ptr %B, align 4, !tbaa !0
+; CHECK-NEXT:  Src: store i32 1, ptr %A, align 4, !tbaa !{{[0-9]+}} --> Dst: store i32 2, ptr %B, align 4, !tbaa !{{[0-9]+}}
 ; CHECK-NEXT:    da analyze - confused!
-; CHECK-NEXT:  Src: store i32 2, ptr %B, align 4, !tbaa !0 --> Dst: store i32 2, ptr %B, align 4, !tbaa !0
+; CHECK-NEXT:  Src: store i32 2, ptr %B, align 4, !tbaa !{{[0-9]+}} --> Dst: store i32 2, ptr %B, align 4, !tbaa !{{[0-9]+}}
 ; CHECK-NEXT:    da analyze - none!
 ;
   store i32 1, ptr %A, !tbaa !5
@@ -113,11 +113,11 @@ define void @test_tbaa_same(ptr %A, ptr %B) {
 
 define void @test_tbaa_diff(ptr %A, ptr %B) {
 ; CHECK-LABEL: 'test_tbaa_diff'
-; CHECK-NEXT:  Src: store i32 1, ptr %A, align 4, !tbaa !0 --> Dst: store i32 1, ptr %A, align 4, !tbaa !0
+; CHECK-NEXT:  Src: store i32 1, ptr %A, align 4, !tbaa !{{[0-9]+}} --> Dst: store i32 1, ptr %A, align 4, !tbaa !{{[0-9]+}}
 ; CHECK-NEXT:    da analyze - none!
-; CHECK-NEXT:  Src: store i32 1, ptr %A, align 4, !tbaa !0 --> Dst: store i16 2, ptr %B, align 2, !tbaa !4
+; CHECK-NEXT:  Src: store i32 1, ptr %A, align 4, !tbaa !{{[0-9]+}} --> Dst: store i16 2, ptr %B, align 2, !tbaa !{{[0-9]+}}
 ; CHECK-NEXT:    da analyze - none!
-; CHECK-NEXT:  Src: store i16 2, ptr %B, align 2, !tbaa !4 --> Dst: store i16 2, ptr %B, align 2, !tbaa !4
+; CHECK-NEXT:  Src: store i16 2, ptr %B, align 2, !tbaa !{{[0-9]+}} --> Dst: store i16 2, ptr %B, align 2, !tbaa !{{[0-9]+}}
 ; CHECK-NEXT:    da analyze - none!
 ;
   store i32 1, ptr %A, !tbaa !5
@@ -127,11 +127,11 @@ define void @test_tbaa_diff(ptr %A, ptr %B) {
 
 define void @tbaa_loop(i32 %I, i32 %J, ptr nocapture %A, ptr nocapture readonly %B) {
 ; CHECK-LABEL: 'tbaa_loop'
-; CHECK-NEXT:  Src: %0 = load i16, ptr %arrayidx.us, align 4, !tbaa !0 --> Dst: %0 = load i16, ptr %arrayidx.us, align 4, !tbaa !0
+; CHECK-NEXT:  Src: %0 = load i16, ptr %arrayidx.us, align 4, !tbaa !{{[0-9]+}} --> Dst: %0 = load i16, ptr %arrayidx.us, align 4, !tbaa !{{[0-9]+}}
 ; CHECK-NEXT:    da analyze - input [* *]!
-; CHECK-NEXT:  Src: %0 = load i16, ptr %arrayidx.us, align 4, !tbaa !0 --> Dst: store i32 %add.us.lcssa, ptr %arrayidx6.us, align 4, !tbaa !4
+; CHECK-NEXT:  Src: %0 = load i16, ptr %arrayidx.us, align 4, !tbaa !{{[0-9]+}} --> Dst: store i32 %add.us.lcssa, ptr %arrayidx6.us, align 4, !tbaa !{{[0-9]+}}
 ; CHECK-NEXT:    da analyze - none!
-; CHECK-NEXT:  Src: store i32 %add.us.lcssa, ptr %arrayidx6.us, align 4, !tbaa !4 --> Dst: store i32 %add.us.lcssa, ptr %arrayidx6.us, align 4, !tbaa !4
+; CHECK-NEXT:  Src: store i32 %add.us.lcssa, ptr %arrayidx6.us, align 4, !tbaa !{{[0-9]+}} --> Dst: store i32 %add.us.lcssa, ptr %arrayidx6.us, align 4, !tbaa !{{[0-9]+}}
 ; CHECK-NEXT:    da analyze - output [*]!
 ;
 entry:

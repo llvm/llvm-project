@@ -27,18 +27,17 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_agent_scope_
 ; GFX7LESS-NEXT:  ; %bb.1:
 ; GFX7LESS-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GFX7LESS-NEXT:    s_bcnt1_i32_b64 s2, s[2:3]
-; GFX7LESS-NEXT:    v_cvt_f32_ubyte0_e32 v0, s2
 ; GFX7LESS-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7LESS-NEXT:    s_mov_b32 s3, 0xf000
+; GFX7LESS-NEXT:    v_cvt_f32_ubyte0_e32 v2, s2
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    s_load_dword s6, s[0:1], 0x0
-; GFX7LESS-NEXT:    v_mul_f32_e32 v2, 4.0, v0
 ; GFX7LESS-NEXT:    s_mov_b32 s2, -1
 ; GFX7LESS-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-NEXT:    v_mov_b32_e32 v1, s6
 ; GFX7LESS-NEXT:  .LBB0_2: ; %atomicrmw.start
 ; GFX7LESS-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX7LESS-NEXT:    v_add_f32_e32 v0, v1, v2
+; GFX7LESS-NEXT:    v_madmk_f32 v0, v2, 0x40800000, v1
 ; GFX7LESS-NEXT:    s_waitcnt expcnt(0)
 ; GFX7LESS-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX7LESS-NEXT:    v_mov_b32_e32 v3, v0
@@ -63,17 +62,16 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_agent_scope_
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-NEXT:    s_bcnt1_i32_b64 s5, s[2:3]
-; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v0, s5
 ; GFX9-NEXT:    s_mov_b64 s[2:3], 0
-; GFX9-NEXT:    v_mul_f32_e32 v2, 4.0, v0
+; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v2, s5
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_load_dword s4, s[0:1], 0x0
-; GFX9-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:  .LBB0_2: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-NEXT:    v_add_f32_e32 v0, v1, v2
+; GFX9-NEXT:    v_madmk_f32 v0, v2, 0x40800000, v1
 ; GFX9-NEXT:    global_atomic_cmpswap v0, v3, v[0:1], s[0:1] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
@@ -96,16 +94,15 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_agent_scope_
 ; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX1064-NEXT:    s_bcnt1_i32_b64 s2, s[2:3]
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, 0
-; GFX1064-NEXT:    v_cvt_f32_ubyte0_e32 v0, s2
+; GFX1064-NEXT:    v_cvt_f32_ubyte0_e32 v2, s2
 ; GFX1064-NEXT:    s_mov_b64 s[2:3], 0
-; GFX1064-NEXT:    v_mul_f32_e32 v2, 4.0, v0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-NEXT:    s_load_dword s4, s[0:1], 0x0
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX1064-NEXT:  .LBB0_2: ; %atomicrmw.start
 ; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1064-NEXT:    v_add_f32_e32 v0, v1, v2
+; GFX1064-NEXT:    v_mad_f32 v0, 4.0, v2, v1
 ; GFX1064-NEXT:    global_atomic_cmpswap v0, v3, v[0:1], s[0:1] glc
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
@@ -128,15 +125,14 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_agent_scope_
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX1032-NEXT:    s_bcnt1_i32_b32 s3, s3
 ; GFX1032-NEXT:    v_mov_b32_e32 v3, 0
-; GFX1032-NEXT:    v_cvt_f32_ubyte0_e32 v0, s3
-; GFX1032-NEXT:    v_mul_f32_e32 v2, 4.0, v0
+; GFX1032-NEXT:    v_cvt_f32_ubyte0_e32 v2, s3
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-NEXT:    s_load_dword s4, s[0:1], 0x0
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX1032-NEXT:  .LBB0_2: ; %atomicrmw.start
 ; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1032-NEXT:    v_add_f32_e32 v0, v1, v2
+; GFX1032-NEXT:    v_mad_f32 v0, 4.0, v2, v1
 ; GFX1032-NEXT:    global_atomic_cmpswap v0, v3, v[0:1], s[0:1] glc
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
@@ -198,18 +194,17 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_agent_scope_
 ; GFX7LESS-DPP-NEXT:  ; %bb.1:
 ; GFX7LESS-DPP-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GFX7LESS-DPP-NEXT:    s_bcnt1_i32_b64 s2, s[2:3]
-; GFX7LESS-DPP-NEXT:    v_cvt_f32_ubyte0_e32 v0, s2
 ; GFX7LESS-DPP-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7LESS-DPP-NEXT:    s_mov_b32 s3, 0xf000
+; GFX7LESS-DPP-NEXT:    v_cvt_f32_ubyte0_e32 v2, s2
 ; GFX7LESS-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-DPP-NEXT:    s_load_dword s6, s[0:1], 0x0
-; GFX7LESS-DPP-NEXT:    v_mul_f32_e32 v2, 4.0, v0
 ; GFX7LESS-DPP-NEXT:    s_mov_b32 s2, -1
 ; GFX7LESS-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7LESS-DPP-NEXT:    v_mov_b32_e32 v1, s6
 ; GFX7LESS-DPP-NEXT:  .LBB0_2: ; %atomicrmw.start
 ; GFX7LESS-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX7LESS-DPP-NEXT:    v_add_f32_e32 v0, v1, v2
+; GFX7LESS-DPP-NEXT:    v_madmk_f32 v0, v2, 0x40800000, v1
 ; GFX7LESS-DPP-NEXT:    s_waitcnt expcnt(0)
 ; GFX7LESS-DPP-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX7LESS-DPP-NEXT:    v_mov_b32_e32 v3, v0
@@ -234,17 +229,16 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_agent_scope_
 ; GFX9-DPP-NEXT:  ; %bb.1:
 ; GFX9-DPP-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-DPP-NEXT:    s_bcnt1_i32_b64 s5, s[2:3]
-; GFX9-DPP-NEXT:    v_cvt_f32_ubyte0_e32 v0, s5
 ; GFX9-DPP-NEXT:    s_mov_b64 s[2:3], 0
-; GFX9-DPP-NEXT:    v_mul_f32_e32 v2, 4.0, v0
+; GFX9-DPP-NEXT:    v_cvt_f32_ubyte0_e32 v2, s5
+; GFX9-DPP-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX9-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-DPP-NEXT:    s_load_dword s4, s[0:1], 0x0
-; GFX9-DPP-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX9-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-DPP-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-DPP-NEXT:  .LBB0_2: ; %atomicrmw.start
 ; GFX9-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX9-DPP-NEXT:    v_add_f32_e32 v0, v1, v2
+; GFX9-DPP-NEXT:    v_madmk_f32 v0, v2, 0x40800000, v1
 ; GFX9-DPP-NEXT:    global_atomic_cmpswap v0, v3, v[0:1], s[0:1] glc
 ; GFX9-DPP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
@@ -267,16 +261,15 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_agent_scope_
 ; GFX1064-DPP-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX1064-DPP-NEXT:    s_bcnt1_i32_b64 s2, s[2:3]
 ; GFX1064-DPP-NEXT:    v_mov_b32_e32 v3, 0
-; GFX1064-DPP-NEXT:    v_cvt_f32_ubyte0_e32 v0, s2
+; GFX1064-DPP-NEXT:    v_cvt_f32_ubyte0_e32 v2, s2
 ; GFX1064-DPP-NEXT:    s_mov_b64 s[2:3], 0
-; GFX1064-DPP-NEXT:    v_mul_f32_e32 v2, 4.0, v0
 ; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-DPP-NEXT:    s_load_dword s4, s[0:1], 0x0
 ; GFX1064-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1064-DPP-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX1064-DPP-NEXT:  .LBB0_2: ; %atomicrmw.start
 ; GFX1064-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1064-DPP-NEXT:    v_add_f32_e32 v0, v1, v2
+; GFX1064-DPP-NEXT:    v_mad_f32 v0, 4.0, v2, v1
 ; GFX1064-DPP-NEXT:    global_atomic_cmpswap v0, v3, v[0:1], s[0:1] glc
 ; GFX1064-DPP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-DPP-NEXT:    v_cmp_eq_u32_e32 vcc, v0, v1
@@ -299,15 +292,14 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_agent_scope_
 ; GFX1032-DPP-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX1032-DPP-NEXT:    s_bcnt1_i32_b32 s3, s3
 ; GFX1032-DPP-NEXT:    v_mov_b32_e32 v3, 0
-; GFX1032-DPP-NEXT:    v_cvt_f32_ubyte0_e32 v0, s3
-; GFX1032-DPP-NEXT:    v_mul_f32_e32 v2, 4.0, v0
+; GFX1032-DPP-NEXT:    v_cvt_f32_ubyte0_e32 v2, s3
 ; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-DPP-NEXT:    s_load_dword s4, s[0:1], 0x0
 ; GFX1032-DPP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-DPP-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX1032-DPP-NEXT:  .LBB0_2: ; %atomicrmw.start
 ; GFX1032-DPP-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1032-DPP-NEXT:    v_add_f32_e32 v0, v1, v2
+; GFX1032-DPP-NEXT:    v_mad_f32 v0, 4.0, v2, v1
 ; GFX1032-DPP-NEXT:    global_atomic_cmpswap v0, v3, v[0:1], s[0:1] glc
 ; GFX1032-DPP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-DPP-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
@@ -357,7 +349,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_agent_scope_
 ; GFX1132-DPP-NEXT:    global_atomic_add_f32 v1, v0, s[2:3]
 ; GFX1132-DPP-NEXT:  .LBB0_2:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 
@@ -1139,7 +1131,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 ; GFX1132-DPP-NEXT:  .LBB1_2:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call float @div.float.value()
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, float %divValue syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float %divValue syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 
@@ -1583,7 +1575,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_one_as_scope
 ; GFX1132-DPP-NEXT:    global_atomic_add_f32 v1, v0, s[0:1]
 ; GFX1132-DPP-NEXT:  .LBB2_2:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 syncscope("one-as") monotonic, !amdgpu.no.fine.grained.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0 syncscope("one-as") monotonic, !amdgpu.no.fine.grained.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 
@@ -2366,7 +2358,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_one_as_scope
 ; GFX1132-DPP-NEXT:  .LBB3_2:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call float @div.float.value() strictfp
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, float %divValue syncscope("one-as") monotonic, !amdgpu.no.fine.grained.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float %divValue syncscope("one-as") monotonic, !amdgpu.no.fine.grained.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 
@@ -3653,7 +3645,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 ; GFX1132-DPP-NEXT:  .LBB5_2:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call float @div.float.value()
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, float %divValue syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float %divValue syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 
@@ -4436,7 +4428,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_div_value_agent_scope_
 ; GFX1132-DPP-NEXT:  .LBB6_2:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call float @div.float.value() strictfp
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, float %divValue syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float %divValue syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 
@@ -6206,7 +6198,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_agent
 ; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB9_2
 ; GFX1132-DPP-NEXT:  .LBB9_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 
@@ -7129,7 +7121,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_agent
 ; GFX1132-DPP-NEXT:  .LBB10_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call double @div.float.value()
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, double %divValue syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, double %divValue syncscope("agent") monotonic, align 8, !amdgpu.no.fine.grained.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 
@@ -7647,7 +7639,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_one_a
 ; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB11_2
 ; GFX1132-DPP-NEXT:  .LBB11_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 syncscope("one-as") monotonic, !amdgpu.no.fine.grained.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 syncscope("one-as") monotonic, !amdgpu.no.fine.grained.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 
@@ -8570,7 +8562,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_one_a
 ; GFX1132-DPP-NEXT:  .LBB12_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call double @div.double.value() strictfp
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, double %divValue syncscope("one-as") monotonic, !amdgpu.no.fine.grained.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, double %divValue syncscope("one-as") monotonic, !amdgpu.no.fine.grained.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 
@@ -9088,7 +9080,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_agent
 ; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB13_2
 ; GFX1132-DPP-NEXT:  .LBB13_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 
@@ -10011,7 +10003,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_agent
 ; GFX1132-DPP-NEXT:  .LBB14_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call double @div.double.value()
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, double %divValue syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, double %divValue syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 
@@ -10934,7 +10926,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_agent
 ; GFX1132-DPP-NEXT:  .LBB15_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call double @div.float.value() strictfp
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, double %divValue syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, double %divValue syncscope("agent") monotonic, !amdgpu.no.fine.grained.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 
@@ -11452,7 +11444,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_uni_value_defau
 ; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB16_2
 ; GFX1132-DPP-NEXT:  .LBB16_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 monotonic, align 8, !amdgpu.no.fine.grained.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, double 4.0 monotonic, align 8, !amdgpu.no.fine.grained.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 
@@ -12375,7 +12367,7 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_defau
 ; GFX1132-DPP-NEXT:  .LBB17_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
   %divValue = call double @div.float.value() strictfp
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, double %divValue monotonic, align 8, !amdgpu.no.fine.grained.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, double %divValue monotonic, align 8, !amdgpu.no.fine.grained.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 
@@ -12721,7 +12713,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1132-DPP-NEXT:    global_atomic_add_f32 v1, v0, s[2:3]
 ; GFX1132-DPP-NEXT:  .LBB18_2:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0  monotonic, align 8, !amdgpu.no.fine.grained.memory !1, !amdgpu.no.remote.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0  monotonic, align 8, !amdgpu.no.fine.grained.memory !1, !amdgpu.no.remote.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 

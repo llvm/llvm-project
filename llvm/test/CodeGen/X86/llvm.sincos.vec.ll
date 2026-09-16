@@ -12,11 +12,11 @@ define void @test_sincos_v4f32(<4 x float> %x, ptr noalias %out_sin, ptr noalias
 ; X86-NEXT:    subl $52, %esp
 ; X86-NEXT:    movl 84(%esp), %esi
 ; X86-NEXT:    flds 76(%esp)
-; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    fstps 32(%esp) # 4-byte Folded Spill
 ; X86-NEXT:    flds 64(%esp)
-; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    fstps 28(%esp) # 4-byte Folded Spill
 ; X86-NEXT:    flds 72(%esp)
-; X86-NEXT:    fstps {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-NEXT:    fstps 24(%esp) # 4-byte Folded Spill
 ; X86-NEXT:    flds 68(%esp)
 ; X86-NEXT:    movl 80(%esp), %edi
 ; X86-NEXT:    leal 40(%esp), %eax
@@ -29,20 +29,20 @@ define void @test_sincos_v4f32(<4 x float> %x, ptr noalias %out_sin, ptr noalias
 ; X86-NEXT:    movl %eax, 8(%esp)
 ; X86-NEXT:    leal 8(%edi), %eax
 ; X86-NEXT:    movl %eax, 4(%esp)
-; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    flds 24(%esp) # 4-byte Folded Reload
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll sincosf
 ; X86-NEXT:    leal 36(%esp), %eax
 ; X86-NEXT:    movl %eax, 8(%esp)
 ; X86-NEXT:    movl %edi, 4(%esp)
-; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    flds 28(%esp) # 4-byte Folded Reload
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll sincosf
 ; X86-NEXT:    leal 48(%esp), %eax
 ; X86-NEXT:    movl %eax, 8(%esp)
 ; X86-NEXT:    addl $12, %edi
 ; X86-NEXT:    movl %edi, 4(%esp)
-; X86-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-NEXT:    flds 32(%esp) # 4-byte Folded Reload
 ; X86-NEXT:    fstps (%esp)
 ; X86-NEXT:    calll sincosf
 ; X86-NEXT:    flds 36(%esp)
@@ -65,21 +65,21 @@ define void @test_sincos_v4f32(<4 x float> %x, ptr noalias %out_sin, ptr noalias
 ; X64-NEXT:    subq $56, %rsp
 ; X64-NEXT:    movq %rsi, %rbx
 ; X64-NEXT:    movq %rdi, %r14
-; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-NEXT:    movaps %xmm0, 32(%rsp) # 16-byte Spill
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; X64-NEXT:    leaq 4(%rsp), %rdi
 ; X64-NEXT:    movq %rsp, %rsi
 ; X64-NEXT:    callq sincosf@PLT
-; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-NEXT:    movaps 32(%rsp), %xmm0 # 16-byte Reload
 ; X64-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; X64-NEXT:    leaq 12(%rsp), %rdi
 ; X64-NEXT:    leaq 8(%rsp), %rsi
 ; X64-NEXT:    callq sincosf@PLT
 ; X64-NEXT:    leaq 28(%rsp), %rdi
 ; X64-NEXT:    leaq 24(%rsp), %rsi
-; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-NEXT:    movaps 32(%rsp), %xmm0 # 16-byte Reload
 ; X64-NEXT:    callq sincosf@PLT
-; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-NEXT:    movaps 32(%rsp), %xmm0 # 16-byte Reload
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    leaq 20(%rsp), %rdi
 ; X64-NEXT:    leaq 16(%rsp), %rsi
@@ -112,38 +112,38 @@ define void @test_sincos_v4f32(<4 x float> %x, ptr noalias %out_sin, ptr noalias
 ; MACOS-SINCOS-STRET-NEXT:    subq $104, %rsp
 ; MACOS-SINCOS-STRET-NEXT:    movq %rsi, %rbx
 ; MACOS-SINCOS-STRET-NEXT:    movq %rdi, %r14
-; MACOS-SINCOS-STRET-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; MACOS-SINCOS-STRET-NEXT:    movaps %xmm0, 16(%rsp) ## 16-byte Spill
 ; MACOS-SINCOS-STRET-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; MACOS-SINCOS-STRET-NEXT:    callq ___sincosf_stret
-; MACOS-SINCOS-STRET-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; MACOS-SINCOS-STRET-NEXT:    movaps %xmm0, 80(%rsp) ## 16-byte Spill
 ; MACOS-SINCOS-STRET-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; MACOS-SINCOS-STRET-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
-; MACOS-SINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
+; MACOS-SINCOS-STRET-NEXT:    movaps 16(%rsp), %xmm0 ## 16-byte Reload
 ; MACOS-SINCOS-STRET-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; MACOS-SINCOS-STRET-NEXT:    callq ___sincosf_stret
-; MACOS-SINCOS-STRET-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; MACOS-SINCOS-STRET-NEXT:    movaps %xmm0, 64(%rsp) ## 16-byte Spill
 ; MACOS-SINCOS-STRET-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; MACOS-SINCOS-STRET-NEXT:    unpcklps (%rsp), %xmm0 ## 16-byte Folded Reload
 ; MACOS-SINCOS-STRET-NEXT:    ## xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; MACOS-SINCOS-STRET-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
-; MACOS-SINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
+; MACOS-SINCOS-STRET-NEXT:    movaps 16(%rsp), %xmm0 ## 16-byte Reload
 ; MACOS-SINCOS-STRET-NEXT:    callq ___sincosf_stret
-; MACOS-SINCOS-STRET-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; MACOS-SINCOS-STRET-NEXT:    movaps %xmm0, 32(%rsp) ## 16-byte Spill
 ; MACOS-SINCOS-STRET-NEXT:    movaps %xmm0, %xmm1
 ; MACOS-SINCOS-STRET-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
-; MACOS-SINCOS-STRET-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; MACOS-SINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
+; MACOS-SINCOS-STRET-NEXT:    movaps %xmm1, 48(%rsp) ## 16-byte Spill
+; MACOS-SINCOS-STRET-NEXT:    movaps 16(%rsp), %xmm0 ## 16-byte Reload
 ; MACOS-SINCOS-STRET-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; MACOS-SINCOS-STRET-NEXT:    callq ___sincosf_stret
-; MACOS-SINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
+; MACOS-SINCOS-STRET-NEXT:    movaps 32(%rsp), %xmm1 ## 16-byte Reload
 ; MACOS-SINCOS-STRET-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; MACOS-SINCOS-STRET-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; MACOS-SINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 ## 16-byte Reload
+; MACOS-SINCOS-STRET-NEXT:    movaps 48(%rsp), %xmm2 ## 16-byte Reload
 ; MACOS-SINCOS-STRET-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
 ; MACOS-SINCOS-STRET-NEXT:    unpcklpd (%rsp), %xmm2 ## 16-byte Folded Reload
 ; MACOS-SINCOS-STRET-NEXT:    ## xmm2 = xmm2[0],mem[0]
-; MACOS-SINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
-; MACOS-SINCOS-STRET-NEXT:    unpcklps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Folded Reload
+; MACOS-SINCOS-STRET-NEXT:    movaps 64(%rsp), %xmm0 ## 16-byte Reload
+; MACOS-SINCOS-STRET-NEXT:    unpcklps 80(%rsp), %xmm0 ## 16-byte Folded Reload
 ; MACOS-SINCOS-STRET-NEXT:    ## xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; MACOS-SINCOS-STRET-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; MACOS-SINCOS-STRET-NEXT:    movups %xmm1, (%r14)
@@ -162,47 +162,47 @@ define void @test_sincos_v4f32(<4 x float> %x, ptr noalias %out_sin, ptr noalias
 ; MACOS-NOSINCOS-STRET-NEXT:    movq %rdi, %r14
 ; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
 ; MACOS-NOSINCOS-STRET-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, 16(%rsp) ## 16-byte Spill
 ; MACOS-NOSINCOS-STRET-NEXT:    callq _cosf
-; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, 32(%rsp) ## 16-byte Spill
 ; MACOS-NOSINCOS-STRET-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, 80(%rsp) ## 16-byte Spill
 ; MACOS-NOSINCOS-STRET-NEXT:    callq _cosf
-; MACOS-NOSINCOS-STRET-NEXT:    unpcklps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Folded Reload
+; MACOS-NOSINCOS-STRET-NEXT:    unpcklps 32(%rsp), %xmm0 ## 16-byte Folded Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    ## xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, 48(%rsp) ## 16-byte Spill
 ; MACOS-NOSINCOS-STRET-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    callq _cosf
-; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, 32(%rsp) ## 16-byte Spill
 ; MACOS-NOSINCOS-STRET-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, 64(%rsp) ## 16-byte Spill
 ; MACOS-NOSINCOS-STRET-NEXT:    callq _cosf
-; MACOS-NOSINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
+; MACOS-NOSINCOS-STRET-NEXT:    movaps 32(%rsp), %xmm1 ## 16-byte Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; MACOS-NOSINCOS-STRET-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Folded Reload
+; MACOS-NOSINCOS-STRET-NEXT:    unpcklpd 48(%rsp), %xmm1 ## 16-byte Folded Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    ## xmm1 = xmm1[0],mem[0]
-; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; MACOS-NOSINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
+; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm1, 32(%rsp) ## 16-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    movaps 16(%rsp), %xmm0 ## 16-byte Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    callq _sinf
-; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; MACOS-NOSINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
+; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, 16(%rsp) ## 16-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    movaps 80(%rsp), %xmm0 ## 16-byte Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    callq _sinf
-; MACOS-NOSINCOS-STRET-NEXT:    unpcklps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Folded Reload
+; MACOS-NOSINCOS-STRET-NEXT:    unpcklps 16(%rsp), %xmm0 ## 16-byte Folded Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    ## xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, 16(%rsp) ## 16-byte Spill
 ; MACOS-NOSINCOS-STRET-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    callq _sinf
 ; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
-; MACOS-NOSINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
+; MACOS-NOSINCOS-STRET-NEXT:    movaps 64(%rsp), %xmm0 ## 16-byte Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    callq _sinf
 ; MACOS-NOSINCOS-STRET-NEXT:    movaps (%rsp), %xmm1 ## 16-byte Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; MACOS-NOSINCOS-STRET-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Folded Reload
+; MACOS-NOSINCOS-STRET-NEXT:    unpcklpd 16(%rsp), %xmm1 ## 16-byte Folded Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    ## xmm1 = xmm1[0],mem[0]
 ; MACOS-NOSINCOS-STRET-NEXT:    movups %xmm1, (%r14)
-; MACOS-NOSINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
+; MACOS-NOSINCOS-STRET-NEXT:    movaps 32(%rsp), %xmm0 ## 16-byte Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    movups %xmm0, (%rbx)
 ; MACOS-NOSINCOS-STRET-NEXT:    addq $104, %rsp
 ; MACOS-NOSINCOS-STRET-NEXT:    popq %rbx
@@ -224,7 +224,7 @@ define void @test_sincos_v2f64(<2 x double> %x, ptr noalias %out_sin, ptr noalia
 ; X86-NEXT:    subl $52, %esp
 ; X86-NEXT:    movl 84(%esp), %esi
 ; X86-NEXT:    fldl 72(%esp)
-; X86-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; X86-NEXT:    fstpl 44(%esp) # 8-byte Folded Spill
 ; X86-NEXT:    fldl 64(%esp)
 ; X86-NEXT:    movl 80(%esp), %edi
 ; X86-NEXT:    leal 24(%esp), %eax
@@ -236,7 +236,7 @@ define void @test_sincos_v2f64(<2 x double> %x, ptr noalias %out_sin, ptr noalia
 ; X86-NEXT:    movl %eax, 12(%esp)
 ; X86-NEXT:    addl $8, %edi
 ; X86-NEXT:    movl %edi, 8(%esp)
-; X86-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; X86-NEXT:    fldl 44(%esp) # 8-byte Folded Reload
 ; X86-NEXT:    fstpl (%esp)
 ; X86-NEXT:    calll sincos
 ; X86-NEXT:    fldl 24(%esp)
@@ -255,11 +255,11 @@ define void @test_sincos_v2f64(<2 x double> %x, ptr noalias %out_sin, ptr noalia
 ; X64-NEXT:    subq $56, %rsp
 ; X64-NEXT:    movq %rsi, %rbx
 ; X64-NEXT:    movq %rdi, %r14
-; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-NEXT:    movaps %xmm0, 32(%rsp) # 16-byte Spill
 ; X64-NEXT:    leaq 24(%rsp), %rdi
 ; X64-NEXT:    leaq 16(%rsp), %rsi
 ; X64-NEXT:    callq sincos@PLT
-; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-NEXT:    movaps 32(%rsp), %xmm0 # 16-byte Reload
 ; X64-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; X64-NEXT:    leaq 8(%rsp), %rdi
 ; X64-NEXT:    movq %rsp, %rsi
@@ -284,14 +284,14 @@ define void @test_sincos_v2f64(<2 x double> %x, ptr noalias %out_sin, ptr noalia
 ; MACOS-SINCOS-STRET-NEXT:    movq %rdi, %r14
 ; MACOS-SINCOS-STRET-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
 ; MACOS-SINCOS-STRET-NEXT:    callq ___sincos_stret
-; MACOS-SINCOS-STRET-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; MACOS-SINCOS-STRET-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; MACOS-SINCOS-STRET-NEXT:    movaps %xmm0, 32(%rsp) ## 16-byte Spill
+; MACOS-SINCOS-STRET-NEXT:    movaps %xmm1, 16(%rsp) ## 16-byte Spill
 ; MACOS-SINCOS-STRET-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
 ; MACOS-SINCOS-STRET-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; MACOS-SINCOS-STRET-NEXT:    callq ___sincos_stret
-; MACOS-SINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 ## 16-byte Reload
+; MACOS-SINCOS-STRET-NEXT:    movaps 16(%rsp), %xmm2 ## 16-byte Reload
 ; MACOS-SINCOS-STRET-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm1[0]
-; MACOS-SINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
+; MACOS-SINCOS-STRET-NEXT:    movaps 32(%rsp), %xmm1 ## 16-byte Reload
 ; MACOS-SINCOS-STRET-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; MACOS-SINCOS-STRET-NEXT:    movups %xmm1, (%r14)
 ; MACOS-SINCOS-STRET-NEXT:    movups %xmm2, (%rbx)
@@ -309,23 +309,23 @@ define void @test_sincos_v2f64(<2 x double> %x, ptr noalias %out_sin, ptr noalia
 ; MACOS-NOSINCOS-STRET-NEXT:    movq %rdi, %r14
 ; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
 ; MACOS-NOSINCOS-STRET-NEXT:    callq _cos
-; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, 16(%rsp) ## 16-byte Spill
 ; MACOS-NOSINCOS-STRET-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
-; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, 32(%rsp) ## 16-byte Spill
 ; MACOS-NOSINCOS-STRET-NEXT:    callq _cos
-; MACOS-NOSINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
+; MACOS-NOSINCOS-STRET-NEXT:    movaps 16(%rsp), %xmm1 ## 16-byte Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm1, 16(%rsp) ## 16-byte Spill
 ; MACOS-NOSINCOS-STRET-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    callq _sin
 ; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
-; MACOS-NOSINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
+; MACOS-NOSINCOS-STRET-NEXT:    movaps 32(%rsp), %xmm0 ## 16-byte Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    callq _sin
 ; MACOS-NOSINCOS-STRET-NEXT:    movaps (%rsp), %xmm1 ## 16-byte Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; MACOS-NOSINCOS-STRET-NEXT:    movups %xmm1, (%r14)
-; MACOS-NOSINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
+; MACOS-NOSINCOS-STRET-NEXT:    movaps 16(%rsp), %xmm0 ## 16-byte Reload
 ; MACOS-NOSINCOS-STRET-NEXT:    movups %xmm0, (%rbx)
 ; MACOS-NOSINCOS-STRET-NEXT:    addq $56, %rsp
 ; MACOS-NOSINCOS-STRET-NEXT:    popq %rbx

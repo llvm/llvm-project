@@ -18,6 +18,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -27,6 +28,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
+#include <iterator>
 #include <limits.h>
 
 /// Shared headers from LLVM libc
@@ -233,6 +235,70 @@ bool APFloatBase::isRepresentableBy(const fltSemantics &A,
          A.precision <= B.precision;
 }
 
+bool APFloatBase::isLosslesslyConvertibleTo(const fltSemantics &From,
+                                            const fltSemantics &To,
+                                            bool IgnoreNaNs) {
+  if (&From == &To)
+    return true;
+
+  // PPC double-double cannot be described by a conventional exponent range
+  // and precision. In particular, converting it to another semantics drops
+  // its low double, so conservatively reject conversions involving it.
+  if (&From == &semPPCDoubleDouble || &To == &semPPCDoubleDouble)
+    return false;
+
+  if (!isRepresentableBy(From, To))
+    return false;
+
+  if ((From.hasZero && !To.hasZero) ||
+      (From.hasSignedRepr && !To.hasSignedRepr))
+    return false;
+
+  // NegativeZero NaN encoding repurposes the negative-zero bit pattern, so a
+  // conversion to such a format cannot preserve a source negative zero.
+  bool FromHasSignedZero = From.hasZero && From.hasSignedRepr &&
+                           From.nanEncoding != fltNanEncoding::NegativeZero;
+  bool ToHasSignedZero = To.hasZero && To.hasSignedRepr &&
+                         To.nanEncoding != fltNanEncoding::NegativeZero;
+  if (FromHasSignedZero && !ToHasSignedZero)
+    return false;
+
+  // isRepresentableBy compares normalized exponent ranges. Also ensure that
+  // the smallest source value, which may be denormal, is represented exactly
+  // by the destination semantics.
+  APFloat SmallestFrom = APFloat::getSmallest(From);
+  bool LosesInfo = false;
+  (void)SmallestFrom.convert(To, APFloat::rmNearestTiesToEven, &LosesInfo);
+  if (LosesInfo)
+    return false;
+
+  if (From.nonFiniteBehavior == fltNonfiniteBehavior::FiniteOnly)
+    return true;
+
+  // Even when NaN representations can be ignored, NaNs must remain NaNs and
+  // infinities must remain infinities. Otherwise the conversion can change
+  // whether an operation with nnan has poison-producing operands.
+  if (IgnoreNaNs) {
+    if (From.nonFiniteBehavior == fltNonfiniteBehavior::IEEE754)
+      return To.nonFiniteBehavior == fltNonfiniteBehavior::IEEE754;
+    return To.nonFiniteBehavior != fltNonfiniteBehavior::FiniteOnly;
+  }
+
+  if (From.nonFiniteBehavior == fltNonfiniteBehavior::IEEE754) {
+    // Converting an IEEE signaling NaN to another semantics quiets it, so the
+    // original value cannot be recovered by converting it back.
+    return false;
+  }
+
+  // NanOnly formats have no signaling NaNs. IEEE semantics can represent
+  // their quiet NaNs; conversions between NanOnly formats are conservatively
+  // accepted only when they use the same NaN encoding.
+  if (To.nonFiniteBehavior == fltNonfiniteBehavior::IEEE754)
+    return true;
+  return To.nonFiniteBehavior == fltNonfiniteBehavior::NanOnly &&
+         From.nanEncoding == To.nanEncoding;
+}
+
 /* A tight upper bound on number of parts required to hold the value
    pow(5, power) is
 
@@ -244,12 +310,21 @@ bool APFloatBase::isRepresentableBy(const fltSemantics &A,
    being zero (consider the trivial case of 1 * 1, tcFullMultiply
    requires two parts to hold the single-part result).  So we add an
    extra one to guarantee enough space whilst multiplying.  */
-const unsigned int maxExponent = 16383;
-const unsigned int maxPrecision = 113;
-const unsigned int maxPowerOfFiveExponent = maxExponent + maxPrecision - 1;
-const unsigned int maxPowerOfFiveParts =
-    2 +
-    ((maxPowerOfFiveExponent * 815) / (351 * APFloatBase::integerPartWidth));
+[[maybe_unused]] constexpr unsigned maxExponent = 16383;
+
+// Decimal exponents in the f16 and f32 ranges need at most 2 and 6 parts.
+// Keep 16 parts (128 bytes) inline: enough for 5^413, but not a large stack
+// frame. Longer fractional spellings use heap storage.
+static constexpr unsigned NumPow5PartsOnStack = 16;
+
+static unsigned int powerOfFivePartsForExponent(unsigned int power) {
+  assert(power <= maxExponent);
+
+  // 815 / 351 is an upper bound on log2(5).  Reserve an additional part for
+  // tcFullMultiply, which writes the full product width even when its most
+  // significant part is zero.
+  return 2 + ((power * 815) / (351 * APFloatBase::integerPartWidth));
+}
 
 unsigned int APFloatBase::semanticsPrecision(const fltSemantics &semantics) {
   return semantics.precision;
@@ -700,36 +775,44 @@ ulpsFromBoundary(const APFloatBase::integerPart *parts, unsigned int bits,
   return ~(APFloatBase::integerPart) 0; /* A lot.  */
 }
 
+static constexpr unsigned PowerOfFivePartCounts[] = {1,  1,  2,  3,   5,  10,
+                                                     19, 38, 75, 149, 298};
+
+static constexpr APFloatBase::integerPart PowerOfFiveParts[] = {
+#include "APFloatPowerOfFiveTable.inc"
+};
+
+static_assert([] {
+  unsigned Sum = 0;
+  for (unsigned Count : PowerOfFivePartCounts)
+    Sum += Count;
+  return Sum;
+}() == std::size(PowerOfFiveParts));
+
 /* Place pow(5, power) in DST, and return the number of parts used.
    DST must be at least one part larger than size of the answer.  */
 static unsigned int
 powerOf5(APFloatBase::integerPart *dst, unsigned int power) {
-  static const APFloatBase::integerPart firstEightPowers[] = { 1, 5, 25, 125, 625, 3125, 15625, 78125 };
-  APFloatBase::integerPart pow5s[maxPowerOfFiveParts * 2 + 5];
-  pow5s[0] = 78125 * 5;
+  static const APFloatBase::integerPart firstEightPowers[] = {
+      1, 5, 25, 125, 625, 3125, 15625, 78125};
 
-  unsigned int partsCount = 1;
-  APFloatBase::integerPart scratch[maxPowerOfFiveParts], *p1, *p2, *pow5;
-  assert(power <= maxExponent);
+  SmallVector<APFloatBase::integerPart, NumPow5PartsOnStack> scratch;
+  scratch.resize_for_overwrite(powerOfFivePartsForExponent(power));
+
+  APFloatBase::integerPart *p1, *p2;
+  const APFloatBase::integerPart *pow5;
 
   p1 = dst;
-  p2 = scratch;
+  p2 = scratch.data();
 
   *p1 = firstEightPowers[power & 7];
   power >>= 3;
 
   unsigned result = 1;
-  pow5 = pow5s;
+  pow5 = PowerOfFiveParts;
 
   for (unsigned int n = 0; power; power >>= 1, n++) {
-    /* Calculate pow(5,pow(2,n+3)) if we haven't yet.  */
-    if (n != 0) {
-      APInt::tcFullMultiply(pow5, pow5 - partsCount, pow5 - partsCount,
-                            partsCount, partsCount);
-      partsCount *= 2;
-      if (pow5[partsCount - 1] == 0)
-        partsCount--;
-    }
+    unsigned partsCount = PowerOfFivePartCounts[n];
 
     if (power & 1) {
       APFloatBase::integerPart *tmp;
@@ -2903,7 +2986,10 @@ IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
                                         unsigned sigPartCount, int exp,
                                         roundingMode rounding_mode) {
   fltSemantics calcSemantics = { 32767, -32767, 0, 0 };
-  integerPart pow5Parts[maxPowerOfFiveParts];
+  unsigned int power = exp >= 0 ? exp : -exp;
+  unsigned int pow5PartCapacity = powerOfFivePartsForExponent(power);
+  SmallVector<integerPart, NumPow5PartsOnStack> pow5Parts;
+  pow5Parts.resize_for_overwrite(pow5PartCapacity);
 
   bool isNearest = rounding_mode == rmNearestTiesToEven ||
                    rounding_mode == rmNearestTiesToAway;
@@ -2911,7 +2997,7 @@ IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
   unsigned parts = partCountForBits(semantics->precision + 11);
 
   /* Calculate pow(5, abs(exp)).  */
-  unsigned pow5PartCount = powerOf5(pow5Parts, exp >= 0 ? exp : -exp);
+  unsigned pow5PartCount = powerOf5(pow5Parts.data(), power);
 
   for (;; parts *= 2) {
     unsigned int excessPrecision, truncatedBits;
@@ -2926,8 +3012,8 @@ IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
 
     opStatus sigStatus = decSig.convertFromUnsignedParts(
         decSigParts, sigPartCount, rmNearestTiesToEven);
-    opStatus powStatus = pow5.convertFromUnsignedParts(pow5Parts, pow5PartCount,
-                                                       rmNearestTiesToEven);
+    opStatus powStatus = pow5.convertFromUnsignedParts(
+        pow5Parts.data(), pow5PartCount, rmNearestTiesToEven);
     /* Add exp, as 10^n = 5^n * 2^n.  */
     decSig.exponent += exp;
 

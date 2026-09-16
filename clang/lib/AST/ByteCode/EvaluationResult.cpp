@@ -11,7 +11,7 @@
 #include "Pointer.h"
 #include "Record.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <iterator>
 
 namespace clang {
@@ -171,15 +171,16 @@ static bool isOrHasPtr(const Descriptor *D) {
   return false;
 }
 
-static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks,
+static void collectBlocks(PtrView Ptr,
+                          llvm::SmallPtrSet<const Block *, 4> &Blocks,
                           bool IsCompleteClass = true) {
   auto isUsefulPtr = [](const Pointer &P) -> bool {
     return P.isLive() && P.isBlockPointer() && !P.isZero() && !P.isDummy() &&
            P.isDereferencable() && !P.isUnknownSizeArray() && !P.isOnePastEnd();
   };
 
-  if (!Ptr.isLive() || Ptr.isZero() || Ptr.isDummy() ||
-      Ptr.isUnknownSizeArray() || Ptr.isOnePastEnd())
+  if (!Ptr.isLive() || Ptr.isZero() || Ptr.isUnknownSizeArray() ||
+      Ptr.isOnePastEnd())
     return;
 
   Blocks.insert(Ptr.Pointee);
@@ -250,7 +251,7 @@ bool EvaluationResult::checkDynamicAllocations(InterpState &S,
     return true;
   // Collect all blocks that this pointer (transitively) points to and
   // return false if any of them is a dynamic block.
-  llvm::SetVector<const Block *> Blocks;
+  llvm::SmallPtrSet<const Block *, 4> Blocks;
 
   collectBlocks(Ptr.view(), Blocks);
 

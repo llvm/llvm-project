@@ -42,6 +42,7 @@
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/CommandLine.h>
+#include <llvm/TargetParser/Triple.h>
 
 #include <functional>
 #include <iterator>
@@ -80,12 +81,6 @@ bool requiresImplicitDefaultDeclareMapper(
 
   std::function<bool(const semantics::DerivedTypeSpec &)> requiresMapper =
       [&](const semantics::DerivedTypeSpec &spec) -> bool {
-    // ISO C interoperable types (e.g., c_ptr, c_funptr) must always have
-    // implicit default mappers available so that OpenMP offloading can
-    // correctly map them.
-    if (semantics::IsIsoCType(&spec))
-      return true;
-
     if (!visited.insert(&spec).second)
       return false;
 
@@ -578,6 +573,33 @@ void insertChildMapInfoIntoParent(
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
     llvm::SmallVectorImpl<Object> &mapObjects) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  // If any of our children have the close map type applied and our parent
+  // does not, we must remove it as a user has specified only the members
+  // get close e.g.
+  //
+  //    map(close, to: x%y, x%z)
+  //
+  // This will generate invalid code that will crash at runtime. As we must
+  // allocate this parent, to then transfer individual members, and the
+  // parent has not been specified to have close mapping. As close is
+  // considered a hint, we simply remove it/ignore it.
+  //
+  // The alternative would be to promote the parent to close in these
+  // scenarios, the downside would be cases such as map(close, to: x%x, x%z)
+  // any intermediate member that was not specified in the parent between
+  // the x and z members (e.g. x.y in prior example) would also get close
+  // mapping from the parent. But this way we would still be able to have
+  // close map apply to member mappings, without having to allocate the whole
+  // record type.
+  auto removeCloseMapType = [](OmpMapParentAndMemberData &data) {
+    for (mlir::omp::MapInfoOp memberMap : data.memberMap)
+      if ((memberMap.getMapType() & mlir::omp::ClauseMapFlags::close) ==
+          mlir::omp::ClauseMapFlags::close)
+        memberMap.setMapType(memberMap.getMapType() &
+                             ~mlir::omp::ClauseMapFlags::close);
+  };
+
   for (auto indices : parentMemberIndices) {
     auto *parentIter =
         llvm::find_if(mapObjects, [&indices](const Object &object) {
@@ -593,6 +615,13 @@ void insertChildMapInfoIntoParent(
       // components leading to duplicate mappings at runtime.
       if (!indices.second.memberMap.empty() && mapOp.getMapperIdAttr())
         mapOp.setMapperIdAttr(nullptr);
+
+      // If the explicit parent map itself does not have close mapping, then
+      // close mapping for its explicitly mapped members must be ignored. The
+      // semantic checker emits the corresponding user warning.
+      if ((mapOp.getMapType() & mlir::omp::ClauseMapFlags::close) !=
+          mlir::omp::ClauseMapFlags::close)
+        removeCloseMapType(indices.second);
 
       // NOTE: To maintain appropriate SSA ordering, we move the parent map
       // which will now have references to its children after the last
@@ -621,6 +650,11 @@ void insertChildMapInfoIntoParent(
         if ((memberMap.getMapType() & mlir::omp::ClauseMapFlags::present) ==
             mlir::omp::ClauseMapFlags::present)
           mapType |= mlir::omp::ClauseMapFlags::present;
+
+      // A synthesized parent map cannot request close mapping. Remove close
+      // mapping from its explicitly mapped members. The semantic checker emits
+      // the corresponding user warning.
+      removeCloseMapType(indices.second);
 
       llvm::SmallVector<mlir::Value> members;
       members.reserve(indices.second.memberMap.size());
@@ -709,7 +743,7 @@ static void processTileSizesFromOpenMPConstruct(
 // can happen when COLLAPSE counts loops that a transforming construct such as
 // TILE generates from the source DO loops. getNestedDoConstruct wraps this for
 // callers that require a DO construct and asserts when none is found.
-static pft::Evaluation *tryGetNestedDoConstruct(pft::Evaluation &eval) {
+pft::Evaluation *tryGetNestedDoConstruct(pft::Evaluation &eval) {
   for (pft::Evaluation &nested : eval.getNestedEvaluations()) {
     // In an OpenMPConstruct there can be compiler directives:
     // 1 <<OpenMPConstruct>>
@@ -1381,6 +1415,48 @@ static llvm::Triple getOffloadTargetTriple(mlir::ModuleOp module) {
             llvm::dyn_cast<mlir::StringAttr>(targetTriples.front()))
       return llvm::Triple(tripleAttr.getValue());
   return llvm::Triple();
+}
+
+bool hasOnlyAMDGCNTargets(mlir::ModuleOp module) {
+  auto offloadModule =
+      llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation());
+  if (offloadModule.getIsTargetDevice())
+    return fir::getTargetTriple(module).isAMDGCN();
+  llvm::ArrayRef<mlir::Attribute> targetTriples =
+      offloadModule.getTargetTriples();
+  return !targetTriples.empty() &&
+         llvm::all_of(targetTriples, [](mlir::Attribute attr) {
+           auto tripleAttr = llvm::dyn_cast<mlir::StringAttr>(attr);
+           return tripleAttr && llvm::Triple(tripleAttr.getValue()).isAMDGCN();
+         });
+}
+
+static bool scopeRequiresUnifiedSharedMemory(const semantics::Scope &scope) {
+  if (const semantics::Symbol *symbol = scope.symbol()) {
+    bool requiresUSM = common::visit(
+        [](const auto &details) {
+          using Details = std::decay_t<decltype(details)>;
+          if constexpr (std::is_base_of_v<semantics::WithOmpDeclarative,
+                                          Details>)
+            return details.ompRequires().test(
+                llvm::omp::Clause::OMPC_unified_shared_memory);
+          return false;
+        },
+        symbol->details());
+    if (requiresUSM)
+      return true;
+  }
+
+  return llvm::any_of(scope.children(), scopeRequiresUnifiedSharedMemory);
+}
+
+bool requiresUnifiedSharedMemory(mlir::ModuleOp module,
+                                 semantics::SemanticsContext &semaCtx) {
+  auto offloadModule = llvm::cast<mlir::omp::OffloadModuleInterface>(*module);
+  return mlir::omp::bitEnumContainsAny(
+             offloadModule.getRequires(),
+             mlir::omp::ClauseRequires::unified_shared_memory) ||
+         scopeRequiresUnifiedSharedMemory(semaCtx.globalScope());
 }
 
 semantics::omp::OmpVariantMatchContext makeVariantMatchContext(

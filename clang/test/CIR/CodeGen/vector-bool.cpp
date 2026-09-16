@@ -8,6 +8,12 @@
 typedef bool v4b __attribute__((ext_vector_type(4)));
 typedef bool v5b __attribute__((ext_vector_type(5)));
 typedef bool v8b __attribute__((ext_vector_type(8)));
+typedef int v8i __attribute__((ext_vector_type(8)));
+
+v8b a;
+
+// CIR: cir.global external @a = #cir.zero : !cir.vector<8 x !cir.bool>
+// SHARED: @a = global i8 0, align 1
 
 void constant_vec_bool() {
     v8b a = {true, false, true, false, true, false, true, false};
@@ -333,3 +339,76 @@ void vec_bool_compare() {
 // SHARED: %[[LE:.*]] = icmp ule <8 x i1> %[[TMP_A_VEC]], %[[TMP_B_VEC]]
 // SHARED: %[[LE_I8:.*]] = bitcast <8 x i1> %[[LE]] to i8
 // SHARED: store i8 %[[LE_I8]], ptr %[[LE_ADDR]], align 1
+
+void vec_bool_shuffling() {
+  v8b a;
+  v8b b;
+  v8b c = __builtin_shufflevector(a, b, 0, 1, 2, 3, 4, 5, 6, 7);
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<8 x !cir.bool>>, !cir.vector<8 x !cir.bool>
+// CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<8 x !cir.bool>>, !cir.vector<8 x !cir.bool>
+// CIR: %[[RESULT:.*]] = cir.vec.shuffle(%[[TMP_A]], %[[TMP_B]] : !cir.vector<8 x !cir.bool>) [#cir.int<0> : !s64i, #cir.int<1> : !s64i, #cir.int<2> : !s64i, #cir.int<3> : !s64i, #cir.int<4> : !s64i, #cir.int<5> : !s64i, #cir.int<6> : !s64i, #cir.int<7> : !s64i] : !cir.vector<8 x !cir.bool>
+// CIR: cir.store {{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.vector<8 x !cir.bool>, !cir.ptr<!cir.vector<8 x !cir.bool>>
+
+// SHARED: %[[A_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[B_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[C_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[TMP_A:.*]] = load i8, ptr %[[A_ADDR]], align 1
+// SHARED: %[[TMP_A_VEC:.*]] = bitcast i8 %[[TMP_A]] to <8 x i1>
+// SHARED: %[[TMP_B:.*]] = load i8, ptr %[[B_ADDR]], align 1
+// SHARED: %[[TMP_B_VEC:.*]] = bitcast i8 %[[TMP_B]] to <8 x i1>
+// SHARED: %[[RESULT:.*]] = shufflevector <8 x i1> %[[TMP_A_VEC]], <8 x i1> %[[TMP_B_VEC]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// SHARED: %[[RESULT_I8:.*]] = bitcast <8 x i1> %[[RESULT]] to i8
+// SHARED: store i8 %[[RESULT_I8]], ptr %[[C_ADDR]], align 1
+
+void vec_bool_dynamic_shuffling() {
+  v8b a;
+  v8i b;
+  v8b c = __builtin_shufflevector(a, b);
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<8 x !s32i>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<8 x !cir.bool>>, !cir.vector<8 x !cir.bool>
+// CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<8 x !s32i>>, !cir.vector<8 x !s32i>
+// CIR: %[[RESULT:.*]] = cir.vec.shuffle.dynamic %[[TMP_A]] : !cir.vector<8 x !cir.bool>, %[[TMP_B]] : !cir.vector<8 x !s32i>
+// CIR: cir.store {{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.vector<8 x !cir.bool>, !cir.ptr<!cir.vector<8 x !cir.bool>>
+
+// SHARED: %[[A_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[B_ADDR:.*]] = alloca <8 x i32>, align 32
+// SHARED: %[[C_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[TMP_A:.*]] = load i8, ptr %[[A_ADDR]], align 1
+// SHARED: %[[TMP_A_VEC:.*]] = bitcast i8 %[[TMP_A]] to <8 x i1>
+// SHARED: %[[TMP_B:.*]] = load <8 x i32>, ptr %[[B_ADDR]], align 32
+// SHARED: %[[MASK:.*]] = and <8 x i32> %[[TMP_B]], splat (i32 7)
+// SHARED: %[[SHUF_IDX_0:.*]] = extractelement <8 x i32> %[[MASK]], i64 0
+// SHARED: %[[SHUF_ELT_0:.*]] = extractelement <8 x i1> %[[TMP_A_VEC]], i32 %[[SHUF_IDX_0]]
+// SHARED: %[[SHUF_INS_0:.*]] = insertelement <8 x i1> {{.*}}, i1 %[[SHUF_ELT_0]], i64 0
+// SHARED: %[[SHUF_IDX_1:.*]] = extractelement <8 x i32> %[[MASK]], i64 1
+// SHARED: %[[SHUF_ELT_1:.*]] = extractelement <8 x i1> %[[TMP_A_VEC]], i32 %[[SHUF_IDX_1]]
+// SHARED: %[[SHUF_INS_1:.*]] = insertelement <8 x i1> %[[SHUF_INS_0]], i1 %[[SHUF_ELT_1]], i64 1
+// SHARED: %[[SHUF_IDX_2:.*]] = extractelement <8 x i32> %[[MASK]], i64 2
+// SHARED: %[[SHUF_ELT_2:.*]] = extractelement <8 x i1> %[[TMP_A_VEC]], i32 %[[SHUF_IDX_2]]
+// SHARED: %[[SHUF_INS_2:.*]] = insertelement <8 x i1> %[[SHUF_INS_1]], i1 %[[SHUF_ELT_2]], i64 2
+// SHARED: %[[SHUF_IDX_3:.*]] = extractelement <8 x i32> %[[MASK]], i64 3
+// SHARED: %[[SHUF_ELT_3:.*]] = extractelement <8 x i1> %[[TMP_A_VEC]], i32 %[[SHUF_IDX_3]]
+// SHARED: %[[SHUF_INS_3:.*]] = insertelement <8 x i1> %[[SHUF_INS_2]], i1 %[[SHUF_ELT_3]], i64 3
+// SHARED: %[[SHUF_IDX_4:.*]] = extractelement <8 x i32> %[[MASK]], i64 4
+// SHARED: %[[SHUF_ELT_4:.*]] = extractelement <8 x i1> %[[TMP_A_VEC]], i32 %[[SHUF_IDX_4]]
+// SHARED: %[[SHUF_INS_4:.*]] = insertelement <8 x i1> %[[SHUF_INS_3]], i1 %[[SHUF_ELT_4]], i64 4
+// SHARED: %[[SHUF_IDX_5:.*]] = extractelement <8 x i32> %[[MASK]], i64 5
+// SHARED: %[[SHUF_ELT_5:.*]] = extractelement <8 x i1> %[[TMP_A_VEC]], i32 %[[SHUF_IDX_5]]
+// SHARED: %[[SHUF_INS_5:.*]] = insertelement <8 x i1> %[[SHUF_INS_4]], i1 %[[SHUF_ELT_5]], i64 5
+// SHARED: %[[SHUF_IDX_6:.*]] = extractelement <8 x i32> %[[MASK]], i64 6
+// SHARED: %[[SHUF_ELT_6:.*]] = extractelement <8 x i1> %[[TMP_A_VEC]], i32 %[[SHUF_IDX_6]]
+// SHARED: %[[SHUF_INS_6:.*]] = insertelement <8 x i1> %[[SHUF_INS_5]], i1 %[[SHUF_ELT_6]], i64 6
+// SHARED: %[[SHUF_IDX_7:.*]] = extractelement <8 x i32> %[[MASK]], i64 7
+// SHARED: %[[SHUF_ELT_7:.*]] = extractelement <8 x i1> %[[TMP_A_VEC]], i32 %[[SHUF_IDX_7]]
+// SHARED: %[[SHUF_INS_7:.*]] = insertelement <8 x i1> %[[SHUF_INS_6]], i1 %[[SHUF_ELT_7]], i64 7
+// SHARED: %[[RESULT_I8:.*]] = bitcast <8 x i1> %[[SHUF_INS_7]] to i8
+// SHARED: store i8 %[[RESULT_I8]], ptr %[[C_ADDR]], align 1

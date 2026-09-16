@@ -148,8 +148,9 @@ jobs:
 
       - name: Run the benchmarks
         env:
-          COMMIT: ${{ inputs.commit }}
           BENCHMARK_SUITE_VERSION: ${{ matrix.benchmark-suite-version }}
+          CMAKE_CACHE: ${{ matrix.cmake-cache }}
+          COMMIT: ${{ inputs.commit }}
           FILTER: ${{ inputs.filter }}
           LNT_MACHINE: ${{ matrix.lnt-machine }}
         run: |
@@ -163,6 +164,7 @@ jobs:
             --machine "${LNT_MACHINE}"                                  \
             --compiler "${COMPILER}"                                    \
             --benchmark-commit "${COMMIT}"                              \
+            --cmake-cache "${CMAKE_CACHE}"                              \
             "${filter_arg[@]}"                                          \
             --output "${COMMIT}.json"
 

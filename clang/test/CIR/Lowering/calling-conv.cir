@@ -1,5 +1,6 @@
 // RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
 // RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering | FileCheck %s -check-prefix=LLVM
+// REQUIRES: target={{x86_64-linux}}
 
 module {
   // MLIR: llvm.func @default_cc()
