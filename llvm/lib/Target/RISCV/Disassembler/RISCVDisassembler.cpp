@@ -278,16 +278,38 @@ static DecodeStatus decodeFixedImmOperand(MCInst &Inst,
   return MCDisassembler::Success;
 }
 
-template <unsigned N, unsigned LowerBound = 0>
+template <unsigned N>
 static DecodeStatus decodeUImmOperand(MCInst &Inst, uint32_t Imm,
                                       int64_t Address,
                                       const MCDisassembler *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+template <unsigned Width, unsigned LowerBound>
+static DecodeStatus decodeUImmOperandGE(MCInst &Inst, uint32_t Imm,
+                                        int64_t Address,
+                                        const MCDisassembler *Decoder) {
+  assert(isUInt<Width>(Imm) && "Invalid immediate");
 
   if (Imm < LowerBound)
     return MCDisassembler::Fail;
 
   Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+template <unsigned Width, unsigned LowerBound>
+static DecodeStatus decodeUImmPlus1OperandGE(MCInst &Inst, uint32_t Imm,
+                                             int64_t Address,
+                                             const MCDisassembler *Decoder) {
+  assert(isUInt<Width>(Imm) && "Invalid immediate");
+
+  if ((Imm + 1) < LowerBound)
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm + 1));
   return MCDisassembler::Success;
 }
 
@@ -344,15 +366,11 @@ decodeUImmLog2XLenNonZeroOperand(MCInst &Inst, uint32_t Imm, int64_t Address,
   return decodeUImmLog2XLenOperand(Inst, Imm, Address, Decoder);
 }
 
-template <unsigned N, unsigned LowerBound = 1>
+template <unsigned N>
 static DecodeStatus decodeUImmPlus1Operand(MCInst &Inst, uint32_t Imm,
                                            int64_t Address,
                                            const MCDisassembler *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid immediate");
-
-  if ((Imm + 1) < LowerBound)
-    return MCDisassembler::Fail;
-
   Inst.addOperand(MCOperand::createImm(Imm + 1));
   return MCDisassembler::Success;
 }

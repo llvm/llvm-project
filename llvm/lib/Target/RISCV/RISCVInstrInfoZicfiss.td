@@ -20,14 +20,6 @@ class RVC_SSInst<bits<5> rs1val, RegisterClass reg_class, string opcodestr> :
   let Inst{1-0} = 0b01;
 }
 
-// ssrdp (below) shares its encoding with the generic mop.r.28 Zimop
-// instruction except when rd is x0, so fall back to decoding mop.r.28.
-// GPRNoX0 itself is used far too widely to set hasCompleteDecoder on directly,
-// so wrap it here instead.
-def GPRNoX0Zicfiss : RegisterOperand<GPRNoX0> {
-  let hasCompleteDecoder = false;
-}
-
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -44,9 +36,7 @@ def SSPOPCHK : RVInstI<0b100, OPC_SYSTEM, (outs), (ins GPRX1X5:$rs1), "sspopchk"
 } // Uses = [SSP],  Defs = [SSP], hasSideEffects = 0, mayLoad = 1, mayStore = 0
 
 let Uses = [SSP], hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
-def SSRDP : RVInstI<0b100, OPC_SYSTEM,
-                    (outs GPRNoX0Zicfiss:$rd), (ins),
-                    "ssrdp", "$rd"> {
+def SSRDP : RVInstI<0b100, OPC_SYSTEM, (outs GPRNoX0:$rd), (ins), "ssrdp", "$rd"> {
   let imm12 = 0b110011011100;
   let rs1 = 0b00000;
 }

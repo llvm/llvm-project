@@ -220,17 +220,3 @@ source_set("nolibc_sources") {
   deps = [ "//llvm/utils/gn/build/libs/pthread" ]
   sources = [ "sanitizer_common_nolibc.cpp" ]
 }
-
-# This currently unreferenced and exists to make
-# sync_source_lists_from_cmake.py happy.
-source_set("RTSanitizerOffload_dummy") {
-  sources = [
-    "sanitizer_offload.cpp",
-    "sanitizer_offload.h",
-    "sanitizer_offload_hsa.h",
-    "sanitizer_offload_image.cpp",
-    "sanitizer_offload_opcodes.h",
-    "sanitizer_offload_rpc.cpp",
-    "sanitizer_offload_rpc.h",
-  ]
-}

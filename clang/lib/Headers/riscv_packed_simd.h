@@ -335,18 +335,6 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return __v;                                                                \
   }
 
-#define __packed_join2(name, ty, elt_ty)                                       \
-  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(elt_ty __e0,          \
-                                                         elt_ty __e1) {        \
-    return (ty){__e0, __e1};                                                   \
-  }
-
-#define __packed_join4(name, ty, elt_ty)                                       \
-  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(                      \
-      elt_ty __e0, elt_ty __e1, elt_ty __e2, elt_ty __e3) {                    \
-    return (ty){__e0, __e1, __e2, __e3};                                       \
-  }
-
 // clang-format off: macro call sites have no trailing semicolons, which
 // confuses clang-format into a deeply nested expression.
 
@@ -613,18 +601,6 @@ __packed_insert(pset_i16_i16x4, int16x4_t, int16_t, 3)
 __packed_insert(pset_u16_u16x4, uint16x4_t, uint16_t, 3)
 __packed_insert(pset_i32_i32x2, int32x2_t, int32_t, 1)
 __packed_insert(pset_u32_u32x2, uint32x2_t, uint32_t, 1)
-
-/* Packed Element Join (32-bit) */
-__packed_join4(pjoin4_i8x4, int8x4_t, int8_t)
-__packed_join4(pjoin4_u8x4, uint8x4_t, uint8_t)
-__packed_join2(pjoin2_i16x2, int16x2_t, int16_t)
-__packed_join2(pjoin2_u16x2, uint16x2_t, uint16_t)
-
-/* Packed Element Join (64-bit) */
-__packed_join4(pjoin4_i16x4, int16x4_t, int16_t)
-__packed_join4(pjoin4_u16x4, uint16x4_t, uint16_t)
-__packed_join2(pjoin2_i32x2, int32x2_t, int32_t)
-__packed_join2(pjoin2_u32x2, uint32x2_t, uint32_t)
 
 /* Packed Logical Operations (32-bit) */
 __packed_binary_op(pand_i8x4, int8x4_t, &)
@@ -1273,8 +1249,6 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_ternary_builtin_cast
 #undef __packed_extract
 #undef __packed_insert
-#undef __packed_join2
-#undef __packed_join4
 #undef __packed_reinterpret
 #undef __DEFAULT_FN_ATTRS
 
