@@ -40,7 +40,7 @@ enum BackendAction {
 };
 
 void emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
-                       StringRef TDesc, llvm::Module *M, BackendAction Action,
+                       llvm::Module *M, BackendAction Action,
                        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                        std::unique_ptr<raw_pwrite_stream> OS,
                        BackendConsumer *BC = nullptr);

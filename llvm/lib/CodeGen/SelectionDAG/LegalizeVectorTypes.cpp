@@ -5550,6 +5550,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
       Res = WidenVecRes_UnaryOpWithTwoResults(N, ResNo);
     break;
   }
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
   case ISD::PARTIAL_REDUCE_FMLA:
     Res = WidenVecRes_PARTIAL_REDUCE_MLA(N);
     break;
@@ -8067,6 +8070,18 @@ SDValue DAGTypeLegalizer::WidenVecOp_CONCAT_VECTORS(SDNode *N) {
 
     if (i == NumOperands)
       return GetWidenedVector(N->getOperand(0));
+  }
+
+  if (VT.isScalableVector()) {
+    SDValue Result = DAG.getPOISON(VT);
+    unsigned NumInElts = InVT.getVectorMinNumElements();
+    for (unsigned i = 0; i < NumOperands; ++i) {
+      SDValue InOp = GetWidenedVector(N->getOperand(i));
+      if (InOp.getValueType() != InVT)
+        InOp = DAG.getExtractSubvector(dl, InVT, InOp, 0);
+      Result = DAG.getInsertSubvector(dl, Result, InOp, i * NumInElts);
+    }
+    return Result;
   }
 
   // Otherwise, fall back to a nasty build vector.

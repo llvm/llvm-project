@@ -8,8 +8,8 @@ add_mlir_library(MLIRTestAliasAnalysis
 
   EXCLUDE_FROM_LIBMLIR
   PARTIAL_SOURCES_INTENDED
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRTestAliasAnalysis PUBLIC
   MLIRAnalysis
   MLIRFunctionInterfaces
   MLIRIR

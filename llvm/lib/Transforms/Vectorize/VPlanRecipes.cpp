@@ -329,7 +329,9 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
     RecipeCost = computeCost(VF, Ctx);
     if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
         RecipeCost.isValid()) {
-      if (UI)
+      // VPDerivedIVRecipe and VPScalarIVStepsRecipe never have underlying
+      // instructions.
+      if (UI || isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe>(this))
         RecipeCost = InstructionCost(ForceTargetInstructionCost);
       else
         RecipeCost = InstructionCost(0);
@@ -4985,6 +4987,15 @@ InstructionCost VPInterleaveBase::computeCost(ElementCount VF,
                     Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
                                            VectorTy, VectorTy, Ctx.CostKind, {},
                                            0);
+}
+
+InstructionCost
+VPWidenPointerInductionRecipe::computeCost(ElementCount VF,
+                                           VPCostContext &Ctx) const {
+  // The recipe creates a scalar phi, a GEP to increment the induction and
+  // vector add to compute the vector of pointers.
+  // TODO: Charge costs for induction increment and vector add as well.
+  return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
 }
 
 bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {
