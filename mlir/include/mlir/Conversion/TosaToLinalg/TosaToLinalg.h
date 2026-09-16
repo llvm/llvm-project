@@ -54,6 +54,10 @@ void populateTosaToLinalgNamedConversionPatterns(
     const TypeConverter &converter, RewritePatternSet *patterns,
     const TosaToLinalgNamedOptions &options);
 
+/// Returns true if `op` is a TOSA elementwise operation that the
+/// TosaToLinalgNamed conversion can lower to a `linalg.elementwise` named op.
+bool isConvertibleToLinalgElementwise(Operation *op);
+
 } // namespace tosa
 } // namespace mlir
 

@@ -1078,3 +1078,43 @@ func.func @max_pool2d_nan_ignore(%arg0: tensor<1x6x34x62xf32>) -> (tensor<1x4x32
   %0 = tosa.max_pool2d %arg0 {pad = array<i64: 0, 0, 0, 0>, kernel = array<i64: 3, 3>, stride = array<i64: 1, 1>, nan_mode = IGNORE} : (tensor<1x6x34x62xf32>) -> tensor<1x4x32x62xf32>
   return %0: tensor<1x4x32x62xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @elementwise_unary_dyn
+func.func @elementwise_unary_dyn(%arg0: tensor<?x3xf32>) -> tensor<?x3xf32> {
+  // CHECK: %[[C0:.+]] = arith.constant 0 : index
+  // CHECK: %[[DIM:.+]] = tensor.dim %arg0, %[[C0]] : tensor<?x3xf32>
+  // CHECK: %[[EMPTY:.+]] = tensor.empty(%[[DIM]]) : tensor<?x3xf32>
+  // CHECK: linalg.elementwise <abs> ins(%arg0 : tensor<?x3xf32>) outs(%[[EMPTY]] : tensor<?x3xf32>) -> tensor<?x3xf32>
+  %0 = tosa.abs %arg0 : (tensor<?x3xf32>) -> tensor<?x3xf32>
+  return %0 : tensor<?x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_binary_dyn
+func.func @elementwise_binary_dyn(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  // CHECK: %[[C0:.+]] = arith.constant 0 : index
+  // CHECK: %[[DIM0:.+]] = tensor.dim %arg0, %[[C0]] : tensor<?x?xf32>
+  // CHECK: %[[C1:.+]] = arith.constant 1 : index
+  // CHECK: %[[DIM1:.+]] = tensor.dim %arg0, %[[C1]] : tensor<?x?xf32>
+  // CHECK: %[[EMPTY:.+]] = tensor.empty(%[[DIM0]], %[[DIM1]]) : tensor<?x?xf32>
+  // CHECK: linalg.elementwise <add> ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[EMPTY]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %0 = tosa.add %arg0, %arg1 : (tensor<?x?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_ternary_select_dyn
+func.func @elementwise_ternary_select_dyn(%arg0: tensor<?x?xi1>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  // CHECK: %[[C0:.+]] = arith.constant 0 : index
+  // CHECK: %[[DIM0:.+]] = tensor.dim %arg0, %[[C0]] : tensor<?x?xi1>
+  // CHECK: %[[C1:.+]] = arith.constant 1 : index
+  // CHECK: %[[DIM1:.+]] = tensor.dim %arg0, %[[C1]] : tensor<?x?xi1>
+  // CHECK: %[[EMPTY:.+]] = tensor.empty(%[[DIM0]], %[[DIM1]]) : tensor<?x?xf32>
+  // CHECK: linalg.elementwise <select> ins(%arg0, %arg1, %arg2 : tensor<?x?xi1>, tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[EMPTY]] : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %0 = tosa.select %arg0, %arg1, %arg2 : (tensor<?x?xi1>, tensor<?x?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
