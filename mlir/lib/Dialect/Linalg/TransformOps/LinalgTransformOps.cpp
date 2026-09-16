@@ -1925,7 +1925,7 @@ PackGreedilyOp::apply(transform::TransformRewriter &rewriter,
                       transform::TransformResults &transformResults,
                       transform::TransformState &state) {
   SmallVector<Operation *> results;
-  for (LinalgOp linalgOp :
+  for (auto linalgOp :
        llvm::make_isa_range<LinalgOp>(state.getPayloadOps(getTarget()))) {
     // linalgOp will be replaced and the insertion point may be invalidated if
     // we set it before -> set it after.

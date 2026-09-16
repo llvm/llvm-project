@@ -1395,8 +1395,7 @@ public:
     // Search for siblings which load the same memref block argument.
     Block *block = dstNode->op->getBlock();
     for (unsigned i = 0, e = block->getNumArguments(); i != e; ++i) {
-      for (AffineReadOpInterface loadOp :
-           llvm::make_isa_range<AffineReadOpInterface>(
+      for (auto loadOp : llvm::make_isa_range<AffineReadOpInterface>(
                block->getArgument(i).getUsers())) {
         // Gather loops surrounding 'use'.
         SmallVector<AffineForOp, 4> loops;

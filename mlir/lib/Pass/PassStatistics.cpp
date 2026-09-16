@@ -219,7 +219,7 @@ void OpPassManager::mergeStatisticsInto(OpPassManager &other) {
 /// Prepare the statistics of passes within the given pass manager for
 /// consumption(e.g. dumping).
 static void prepareStatistics(OpPassManager &pm) {
-  for (OpToOpPassAdaptor &adaptor :
+  for (auto &adaptor :
        llvm::make_isa_range<OpToOpPassAdaptor>(pm.getPasses())) {
     MutableArrayRef<OpPassManager> nestedPms = adaptor.getPassManagers();
 

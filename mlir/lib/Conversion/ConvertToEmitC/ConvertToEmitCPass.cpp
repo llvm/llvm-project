@@ -80,7 +80,7 @@ public:
   void apply(MLIRContext *context,
              MutableArrayRef<Dialect *> dialects) const final {
     LLVM_DEBUG(llvm::dbgs() << "Convert to EmitC extension load\n");
-    for (ConvertToEmitCPatternInterface *iface :
+    for (auto *iface :
          llvm::make_isa_range<ConvertToEmitCPatternInterface>(dialects)) {
       LLVM_DEBUG(llvm::dbgs() << "Convert to EmitC found dialect interface for "
                               << iface->getDialect()->getNamespace() << "\n");
@@ -211,7 +211,7 @@ LogicalResult ConvertToEmitCPassInterface::visitInterfaces(
     // Normal mode: Populate all patterns from all dialects that implement the
     // interface.
     std::vector<Dialect *> dialects = context->getLoadedDialects();
-    for (ConvertToEmitCPatternInterface *iface :
+    for (auto *iface :
          llvm::make_isa_range<ConvertToEmitCPatternInterface>(dialects))
       visitor(iface);
   }

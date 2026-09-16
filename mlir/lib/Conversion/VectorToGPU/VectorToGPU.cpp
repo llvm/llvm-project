@@ -554,7 +554,7 @@ static const char *inferFragType(Operation *op) {
       return inferFragType(userOp);
   }
 
-  for (vector::ContractionOp contract :
+  for (auto contract :
        llvm::make_isa_range<vector::ContractionOp>(op->getUsers())) {
     assert(op->getNumResults() == 1);
     if (contract.getLhs() == op->getResult(0))
