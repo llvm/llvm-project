@@ -6,25 +6,25 @@ define <16 x i64> @test(<16 x i8> %x) {
 ; CHECK-SAME: <16 x i8> [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext <16 x i8> [[X]] to <16 x i64>
-; CHECK-NEXT:    [[TMP1:%.*]] = sub <16 x i64> zeroinitializer, [[TMP0]]
+; CHECK-NEXT:    [[TMP12:%.*]] = sub <16 x i64> zeroinitializer, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <16 x i8> zeroinitializer to <16 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = sub <16 x i64> zeroinitializer, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call <16 x i64> @llvm.smin.v16i64(<16 x i64> [[TMP1]], <16 x i64> [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <16 x i8> zeroinitializer to <16 x i64>
-; CHECK-NEXT:    [[TMP6:%.*]] = sub <16 x i64> zeroinitializer, [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i64> @llvm.smin.v16i64(<16 x i64> [[TMP4]], <16 x i64> [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = zext <16 x i8> zeroinitializer to <16 x i64>
-; CHECK-NEXT:    [[TMP9:%.*]] = sub <16 x i64> zeroinitializer, [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call <16 x i64> @llvm.smin.v16i64(<16 x i64> [[TMP7]], <16 x i64> [[TMP9]])
-; CHECK-NEXT:    [[TMP11:%.*]] = sub <16 x i64> zeroinitializer, zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = call <16 x i64> @llvm.smin.v16i64(<16 x i64> [[TMP10]], <16 x i64> [[TMP11]])
-; CHECK-NEXT:    [[TMP13:%.*]] = sub <16 x i64> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = sub <16 x i64> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call <16 x i64> @llvm.smin.v16i64(<16 x i64> [[TMP12]], <16 x i64> [[TMP13]])
-; CHECK-NEXT:    [[TMP15:%.*]] = sub <16 x i64> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <16 x i8> zeroinitializer to <16 x i64>
+; CHECK-NEXT:    [[TMP15:%.*]] = sub <16 x i64> zeroinitializer, [[TMP5]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = call <16 x i64> @llvm.smin.v16i64(<16 x i64> [[TMP14]], <16 x i64> [[TMP15]])
-; CHECK-NEXT:    [[TMP17:%.*]] = sub <16 x i64> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = zext <16 x i8> zeroinitializer to <16 x i64>
+; CHECK-NEXT:    [[TMP17:%.*]] = sub <16 x i64> zeroinitializer, [[TMP8]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = call <16 x i64> @llvm.smin.v16i64(<16 x i64> [[TMP16]], <16 x i64> [[TMP17]])
-; CHECK-NEXT:    ret <16 x i64> [[TMP48]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sub <16 x i64> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP19:%.*]] = call <16 x i64> @llvm.smin.v16i64(<16 x i64> [[TMP48]], <16 x i64> [[TMP11]])
+; CHECK-NEXT:    [[TMP20:%.*]] = sub <16 x i64> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP21:%.*]] = call <16 x i64> @llvm.smin.v16i64(<16 x i64> [[TMP19]], <16 x i64> [[TMP20]])
+; CHECK-NEXT:    [[TMP22:%.*]] = sub <16 x i64> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP23:%.*]] = call <16 x i64> @llvm.smin.v16i64(<16 x i64> [[TMP21]], <16 x i64> [[TMP22]])
+; CHECK-NEXT:    [[TMP24:%.*]] = sub <16 x i64> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP18:%.*]] = call <16 x i64> @llvm.smin.v16i64(<16 x i64> [[TMP23]], <16 x i64> [[TMP24]])
+; CHECK-NEXT:    ret <16 x i64> [[TMP18]]
 ;
 entry:
   %0 = zext <16 x i8> %x to <16 x i64>
