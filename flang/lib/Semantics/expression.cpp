@@ -3101,10 +3101,10 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
   // host_data use_device clause: the variable itself is host-resident, but
   // inside the host_data region it is referenced via its device address.
   // It matches a Device dummy with distance 0, a host dummy (no attribute)
-  // with distance 3, and is incompatible with any other dummy attribute.
+  // with distance 1, and is incompatible with any other dummy attribute.
   if (actualDataAttr && *actualDataAttr == common::CUDADataAttr::UseDevice) {
     if (!dummyDataAttr)
-      return 3;
+      return 1;
     if (*dummyDataAttr == common::CUDADataAttr::Device)
       return 0;
   }

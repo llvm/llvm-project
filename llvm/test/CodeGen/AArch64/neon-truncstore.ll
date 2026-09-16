@@ -208,3 +208,65 @@ define void @v32i16_v32i8(<32 x i16> %a, ptr %result) {
   store <32 x i8> %b, ptr %result
   ret void
 }
+
+
+define void @extract_v2i16_v8i16(<8 x i16> %a, ptr %p) {
+; CHECK-LABEL: extract_v2i16_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov h1, v0.h[1]
+; CHECK-NEXT:    str h0, [x0]
+; CHECK-NEXT:    str h1, [x0, #2]
+; CHECK-NEXT:    ret
+  %c = shufflevector <8 x i16> %a, <8 x i16> poison, <2 x i32> <i32 0, i32 1>
+  store <2 x i16> %c, ptr %p
+  ret void
+}
+
+define void @extract_v4i16_v8i16(<8 x i16> %a, ptr %p) {
+; CHECK-LABEL: extract_v4i16_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    ret
+  %c = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  store <4 x i16> %c, ptr %p
+  ret void
+}
+
+define void @extract_v2i16_v4i16(<4 x i16> %a, ptr %p) {
+; CHECK-LABEL: extract_v2i16_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    mov s1, v0.s[1]
+; CHECK-NEXT:    str h0, [x0]
+; CHECK-NEXT:    str h1, [x0, #2]
+; CHECK-NEXT:    ret
+  %c = shufflevector <4 x i16> %a, <4 x i16> poison, <2 x i32> <i32 0, i32 1>
+  store <2 x i16> %c, ptr %p
+  ret void
+}
+
+define void @extract_v2i8_v8i8(<8 x i8> %a, ptr %p) {
+; CHECK-LABEL: extract_v2i8_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov b1, v0.b[1]
+; CHECK-NEXT:    str b0, [x0]
+; CHECK-NEXT:    stur b1, [x0, #1]
+; CHECK-NEXT:    ret
+  %c = shufflevector <8 x i8> %a, <8 x i8> poison, <2 x i32> <i32 0, i32 1>
+  store <2 x i8> %c, ptr %p
+  ret void
+}
+
+define void @extract_v4i8_v8i8(<8 x i8> %a, ptr %p) {
+; CHECK-LABEL: extract_v4i8_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    zip1 v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    str s0, [x0]
+; CHECK-NEXT:    ret
+  %c = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  store <4 x i8> %c, ptr %p
+  ret void
+}

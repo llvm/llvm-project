@@ -83,16 +83,6 @@ extern char **environ;
 #include <sys/mount.h>
 #include <sys/param.h>
 #elif defined(__linux__) || defined(__managarm__)
-#if defined(HAVE_LINUX_MAGIC_H)
-#include <linux/magic.h>
-#else
-#if defined(HAVE_LINUX_NFS_FS_H)
-#include <linux/nfs_fs.h>
-#endif
-#if defined(HAVE_LINUX_SMB_H)
-#include <linux/smb.h>
-#endif
-#endif
 #include <sys/vfs.h>
 #elif defined(_AIX)
 #include <sys/statfs.h>

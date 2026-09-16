@@ -1,4 +1,12 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
+// RUN:   -finclude-default-header -fsyntax-only -verify=expected,offset,dim1 \
+// RUN:   -DHAS_OFFSET -DOFFSET_TYPE=int -DTEXTURE=Texture1D \
+// RUN:   -DCOORD_TYPE=float -DGRAD_TYPE=float %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
+// RUN:   -finclude-default-header -fsyntax-only -verify=expected,offset,dim1 \
+// RUN:   -DHAS_OFFSET -DOFFSET_TYPE=int -DTEXTURE=Texture1DArray \
+// RUN:   -DCOORD_TYPE=float2 -DGRAD_TYPE=float %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
 // RUN:   -finclude-default-header -fsyntax-only -verify=expected,offset,dim2 \
 // RUN:   -DHAS_OFFSET -DOFFSET_TYPE=int2 -DTEXTURE=Texture2D \
 // RUN:   -DCOORD_TYPE=float2 -DGRAD_TYPE=float2 %s
@@ -33,9 +41,10 @@
 //
 // Check prefixes:
 //   offset             diagnostics for types that have offset overloads
+//   nooffset           diagnostics for types that have no offset overloads
+//   dim1               diagnostics naming a scalar offset or location
 //   dim2               diagnostics naming a 2-component offset or location
 //                      vector
-//   nooffset           diagnostics for types that have no offset overloads
 //   dim3               diagnostics naming a 3-component offset or location
 //                      vector
 //

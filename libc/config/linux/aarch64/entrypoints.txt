@@ -42,6 +42,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.open
     libc.src.fcntl.openat
     libc.src.fcntl.posix_fadvise
+    libc.src.fcntl.posix_fadvise64
 
     # poll.h entrypoints
     libc.src.poll.poll
@@ -352,6 +353,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.lstat
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
+    libc.src.sys.stat.mkfifo
     libc.src.sys.stat.stat
     libc.src.sys.stat.umask
     libc.src.sys.stat.utimensat
@@ -408,7 +410,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.chdir
     libc.src.unistd.chown
     libc.src.unistd.chroot
-    libc.src.unistd.confstr
     libc.src.unistd.close
     libc.src.unistd.dup
     libc.src.unistd.dup2
@@ -458,7 +459,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.sleep
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
-    libc.src.unistd.sysconf
     libc.src.unistd.tcgetpgrp
     libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate
@@ -1383,6 +1383,7 @@ if(LLVM_LIBC_FULL_BUILD)
     # unistd.h entrypoints
     libc.src.unistd.__llvm_libc_syscall
     libc.src.unistd._exit
+    libc.src.unistd.confstr
     libc.src.unistd.environ
     libc.src.unistd.execl
     libc.src.unistd.execv
@@ -1393,6 +1394,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.unistd.optind
     libc.src.unistd.optopt
     libc.src.unistd.swab
+    libc.src.unistd.sysconf
 
     # sys/select.h entrypoints
     libc.src.sys.select.select
