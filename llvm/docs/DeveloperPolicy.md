@@ -791,9 +791,11 @@ binutils compatibility.
 To update the default value on the minimum bintutils version we use a similar
 process to {ref}`Updating Toolchain Requirements <toolchain>`:
 
-- It is a general goal to support binutils versions from the last 2 years at a
+- It is a general goal to support binutils versions from the last 3 years at a
   minimum. This time-based guideline is not strict: we may support much older
   binutils versions.
+- The default binutils version must be no higher than the highest version that there is a
+  test for in the codebase.
 - An RFC is sent to the [LLVM Discourse forums](https://discourse.llvm.org)
   - Detail upsides of the version increase (e.g. which binutils features become available).
   - Detail downsides on important platforms (i.e. LTS releases for popular Linux
