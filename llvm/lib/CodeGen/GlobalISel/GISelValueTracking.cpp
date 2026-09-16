@@ -328,11 +328,9 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
   case TargetOpcode::G_FREEZE: {
     Register Src = MI.getOperand(1).getReg();
-    // freeze of undef/poison is an arbitrary noundef bit pattern, so known
-    // bits of the source are only valid when that source cannot be undef or
-    // poison.
-    if (Src.isVirtual() && MRI.getType(Src).isValid() &&
-        isGuaranteedNotToBeUndefOrPoison(Src, MRI, Depth + 1))
+    // freeze of undef/poison is an arbitrary noundef bit pattern, so the known
+    // bits of the source only carry over when it cannot be undef or poison.
+    if (isGuaranteedNotToBeUndefOrPoison(Src, MRI, Depth + 1))
       computeKnownBitsImpl(Src, Known, DemandedElts, Depth + 1);
     break;
   }
@@ -2265,8 +2263,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   }
   case TargetOpcode::G_FREEZE: {
     Register Src = MI.getOperand(1).getReg();
-    if (Src.isVirtual() && MRI.getType(Src).isValid() &&
-        isGuaranteedNotToBeUndefOrPoison(Src, MRI, Depth + 1))
+    if (isGuaranteedNotToBeUndefOrPoison(Src, MRI, Depth + 1))
       computeKnownFPClass(Src, DemandedElts, InterestedClasses, Known,
                           Depth + 1);
     break;
@@ -2492,8 +2489,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
   }
   case TargetOpcode::G_FREEZE: {
     Register Src = MI.getOperand(1).getReg();
-    if (Src.isVirtual() && MRI.getType(Src).isValid() &&
-        isGuaranteedNotToBeUndefOrPoison(Src, MRI, Depth + 1))
+    if (isGuaranteedNotToBeUndefOrPoison(Src, MRI, Depth + 1))
       return computeNumSignBits(Src, DemandedElts, Depth + 1);
     break;
   }
