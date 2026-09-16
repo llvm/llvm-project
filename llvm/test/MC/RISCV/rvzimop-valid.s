@@ -4,10 +4,10 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zimop < %s \
 # RUN:     | llvm-objdump --mattr=+zimop -d -r - \
-# RUN:     | FileCheck --check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zimop < %s \
 # RUN:     | llvm-objdump --mattr=+zimop -d -r - \
-# RUN:     | FileCheck --check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: mop.r.0 a2, a1
 # CHECK-ASM: encoding: [0x73,0xc6,0xc5,0x81]
