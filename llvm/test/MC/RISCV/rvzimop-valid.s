@@ -174,7 +174,7 @@ mop.rr.7 a3, a2, a1
 # on Zimop. sspopchk/sspush only accept x1 or x5 for their free register,
 # and ssrdp rejects x0. When those constraints aren't met, the disassembler
 # falls back to decoding the generic mop.r.28/mop.rr.7 instruction instead
-# (via hasCompleteDecoder = 0 on GPRX1X5/GPRNoX0Zicfiss).
+# (via hasCompleteDecoder = false on GPRX1X5/GPRNoX0Zicfiss).
 # CHECK-ASM-AND-OBJ: mop.r.28 zero, gp
 # CHECK-ASM: encoding: [0x73,0xc0,0xc1,0xcd]
 mop.r.28 x0, x3
