@@ -16,6 +16,7 @@
 #include <__compare/three_way_comparable.h>
 #include <__concepts/convertible_to.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__cstddef/size_t.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
@@ -57,12 +58,15 @@ consteval bool __range_fits_in_alignment(size_t __alignment, size_t __num_elems)
 }
 
 template <class _Ptr, size_t _RangeCapacity>
-  requires(is_pointer_v<_Ptr> && std::__range_fits_in_alignment(alignof(iter_value_t<_Ptr>), _RangeCapacity))
 class __static_packed_bounded_iterator {
+  static_assert(is_pointer_v<_Ptr>, "__static_packed_bounded_iterator requires a pointer type");
+  static_assert(std::__range_fits_in_alignment(alignof(iter_value_t<_Ptr>), _RangeCapacity),
+                "__static_packed_bounded_iterator requires the range to fit in the alignment bits");
+
 public:
-  using iterator_category = iterator_traits<_Ptr>::iterator_category;
+  using iterator_category = random_access_iterator_tag;
   using iterator_concept  = contiguous_iterator_tag;
-  using difference_type   = iter_difference_t<_Ptr>;
+  using difference_type   = ptrdiff_t;
   using pointer           = iterator_traits<_Ptr>::pointer;
   using reference         = iter_reference_t<_Ptr>;
   using value_type        = iter_value_t<_Ptr>;
@@ -71,16 +75,11 @@ private:
   static constexpr uintptr_t __CountMask = (1 << std::countr_zero(alignof(value_type))) - 1;
   static constexpr uintptr_t __PtrMask   = ~__CountMask;
 
-  alignas(pointer) uintptr_t __data_;
+  uintptr_t __data_;
 
   size_t __count() const noexcept { return __data_ & __CountMask; }
 
   _Ptr __current() const noexcept { return reinterpret_cast<pointer>(__data_ & __PtrMask); }
-
-  void __increment(difference_type __n) noexcept {
-    // Increment as if incrementing pointer, and the count
-    __data_ += (__n * sizeof(value_type)) + __n;
-  }
 
   explicit __static_packed_bounded_iterator(_Ptr __p) noexcept : __data_(reinterpret_cast<uintptr_t>(__p)) {
     _LIBCPP_ASSERT_INTERNAL(
@@ -88,7 +87,6 @@ private:
   }
 
   template <class _Ptr2, size_t _RangeCapacity2>
-    requires(is_pointer_v<_Ptr2> && std::__range_fits_in_alignment(alignof(iter_value_t<_Ptr2>), _RangeCapacity2))
   friend class __static_packed_bounded_iterator;
 
 public:
@@ -121,8 +119,7 @@ public:
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __count() != _RangeCapacity,
         "__static_packed_bounded_iterator::operator++: Attempt to advance an iterator past the end");
-
-    __increment(1);
+    *this += 1;
 
     return *this;
   }
@@ -136,8 +133,7 @@ public:
   __static_packed_bounded_iterator& operator--() noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __count() != 0u, "__static_packed_bounded_iterator::operator--: Attempt to rewind an iterator past the start");
-
-    __increment(-1);
+    *this += -1;
 
     return *this;
   }
@@ -159,7 +155,8 @@ public:
           "__static_packed_bounded_iterator::operator+=: Attempt to advance an iterator past the end");
     }
 
-    __increment(__n);
+    // Increment as if incrementing pointer, and the count
+    __data_ += (__n * sizeof(value_type)) + __n;
 
     return *this;
   }
@@ -175,7 +172,7 @@ public:
           "__static_packed_bounded_iterator::operator-=: Attempt to advance an iterator past the end");
     }
 
-    __increment(-__n);
+    *this += -__n;
 
     return *this;
   }
