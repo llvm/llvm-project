@@ -1792,8 +1792,8 @@ static bool isDeviceDataImpl(mlir::Value var) {
     cuf::DataAttribute attr = dataAttr.getValue();
     if (cuf::isDeviceDataAttribute(attr)) {
       // Managed/Unified establish device accessibility, not device
-      // residency: the data is reachable from the device but is not an
-      // already-resident device object. Treating it as deviceptr skips the
+      // residency: the data is reachable from the device but may not already
+      // reside on the device. Treating it as deviceptr skips the
       // mapping/attach, so classify it as non-device data and let it be mapped
       // instead. Device/Constant/Shared are genuinely device-resident and stay
       // device data.
