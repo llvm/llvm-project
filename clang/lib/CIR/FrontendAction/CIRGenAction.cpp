@@ -203,6 +203,8 @@ public:
           MlirModule, LLVMCtx, C.getLangOpts().OpenMP, mlirSaveTempsOutFile,
           &CI.getVirtualFileSystem());
 
+      LLVMModule->setDataLayout(C.getTargetInfo().getDataLayoutString());
+
       if (linkInModules(*LLVMModule))
         return;
 
