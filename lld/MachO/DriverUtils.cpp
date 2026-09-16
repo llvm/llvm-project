@@ -136,9 +136,9 @@ void MachOOptTable::printHelp(CommonLinkerContext &ctx, const char *argv0,
 
 // If any SDK contains the directory, use those directories in SDK order
 // instead of falling back to the host.
-std::vector<StringRef>
+SmallVector<StringRef>
 macho::getRerootedSearchPaths(StringRef searchPath, ArrayRef<StringRef> roots) {
-  std::vector<StringRef> paths;
+  SmallVector<StringRef> paths;
   // NOTE: only absolute paths are re-rooted to syslibroot(s)
   if (path::is_absolute(searchPath, path::Style::posix)) {
     for (StringRef root : roots) {
