@@ -66,6 +66,9 @@ packSignatureStacked(MutableArrayRef<SemanticSignatureElement> Elements,
 ///
 /// See llvm/docs/DirectX/SemanticSignatures.md#indexed-packing for details.
 ///
+/// Requires each eligible element to occupy exactly one row and have exactly
+/// one semantic index. Semantic indices must be unique among eligible elements.
+///
 /// Returns one past the highest allocated row, or zero if no elements were
 /// allocated. Gaps between semantic indices count towards this row extent.
 ///
