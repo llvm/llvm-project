@@ -20,6 +20,17 @@ using namespace mlir;
 /// Include the definitions of the side effect interfaces.
 #include "mlir/Interfaces/SideEffectInterfaces.cpp.inc"
 
+template MemoryEffects::Allocate *
+SideEffects::Effect::get<MemoryEffects::Allocate>();
+template MemoryEffects::Free *SideEffects::Effect::get<MemoryEffects::Free>();
+template MemoryEffects::Read *SideEffects::Effect::get<MemoryEffects::Read>();
+template MemoryEffects::Write *SideEffects::Effect::get<MemoryEffects::Write>();
+template SideEffects::DefaultResource *
+SideEffects::Resource::Base<SideEffects::DefaultResource>::get();
+template SideEffects::AutomaticAllocationScopeResource *
+SideEffects::Resource::Base<SideEffects::AutomaticAllocationScopeResource,
+                            SideEffects::DefaultResource>::get();
+
 //===----------------------------------------------------------------------===//
 // MemoryEffects
 //===----------------------------------------------------------------------===//
