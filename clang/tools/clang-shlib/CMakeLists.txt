@@ -1,8 +1,3 @@
-# Building libclang-cpp.so fails if LLVM_ENABLE_PIC=Off
-if (NOT LLVM_ENABLE_PIC)
-  return()
-endif()
-
 get_property(clang_libs GLOBAL PROPERTY CLANG_STATIC_LIBS)
 
 foreach (lib ${clang_libs})
