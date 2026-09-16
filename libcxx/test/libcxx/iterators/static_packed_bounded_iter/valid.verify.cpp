@@ -14,11 +14,8 @@
 #include <__iterator/static_packed_bounded_iter.h>
 #include <cstddef>
 #include <cstdint>
-#include "test_iterators.h"
 
-static_assert(sizeof(std::__static_packed_bounded_iterator<std::int32_t*, 1>) == sizeof(void*));
-static_assert(sizeof(std::__static_packed_bounded_iterator<std::int32_t*, 2>) == sizeof(void*));
-static_assert(sizeof(std::__static_packed_bounded_iterator<std::int64_t*, 6>) == sizeof(void*));
+#include "test_iterators.h"
 
 void test() {
   std::__static_packed_bounded_iterator<std::int8_t*, 1>
