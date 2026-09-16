@@ -463,6 +463,7 @@ math_mpfr_test(
 
 # TODO: Add fmal test.  Missing stdlib/rand dependency.
 
+# NOTE: fmal is not yet implemented in libc/src/math; omitted until it lands.
 math_mpfr_test(
     name = "fma",
     hdrs = ["FmaTest.h"],
@@ -513,6 +514,7 @@ math_mpfr_test(
         "//libc:srand",
     ],
 )
+
 
 math_mpfr_test(
     name = "f16mul",
@@ -585,7 +587,7 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
-    name = "8frexp",
+    name = "frexp",
     hdrs = ["FrexpTest.h"],
 )
 
@@ -593,12 +595,16 @@ math_mpfr_test(
     name = "frexpf",
     hdrs = ["FrexpTest.h"],
 )
+
 math_mpfr_test(name = "fmaxl")
+
 math_mpfr_test(name = "fminl")
+
 math_mpfr_test(
     name = "frexpf16",
     hdrs = ["FrexpTest.h"],
 )
+
 math_mpfr_test(
     name = "frexpbf16",
     hdrs = ["FrexpTest.h"],
