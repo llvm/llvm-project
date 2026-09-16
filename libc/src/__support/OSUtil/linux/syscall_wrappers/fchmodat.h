@@ -16,7 +16,7 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/types/mode_t.h"
-#include "src/__support/OSUtil/linux/syscall.h" // syscall_impl
+#include "src/__support/OSUtil/linux/syscall.h" // syscall_checked
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
@@ -28,24 +28,14 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<int> fchmodat(int fd, const char *path, mode_t mode,
                                   int flags) {
 #if defined(SYS_fchmodat2)
-  int ret = syscall_impl<int>(SYS_fchmodat2, fd, path, mode, flags);
-#if defined(SYS_fchmodat)
-  if (ret == -ENOSYS) {
-    if (flags != 0)
-      return Error(ENOTSUP);
-    ret = syscall_impl<int>(SYS_fchmodat, fd, path, mode);
-  }
-#endif
+  return syscall_checked<int>(SYS_fchmodat2, fd, path, mode, flags);
 #elif defined(SYS_fchmodat)
   if (flags != 0)
     return Error(ENOTSUP);
-  int ret = syscall_impl<int>(SYS_fchmodat, fd, path, mode);
+  return syscall_checked<int>(SYS_fchmodat, fd, path, mode);
 #else
 #error "fchmodat2 and fchmodat syscalls not available."
 #endif
-  if (ret < 0)
-    return Error(-ret);
-  return ret;
 }
 
 } // namespace linux_syscalls
