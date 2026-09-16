@@ -189,11 +189,12 @@ FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA, bool *IsLoadCSE,
 /// location in memory, as opposed to the value operand of a store.
 ///
 /// \returns The found value, or nullptr if no value is found.
-LLVM_ABI Value *findAvailablePtrLoadStore(
-    const MemoryLocation &Loc, Type *AccessTy, bool AtLeastAtomic,
-    bool IsElementwise, BasicBlock *ScanBB, BasicBlock::iterator &ScanFrom,
-    unsigned MaxInstsToScan, BatchAAResults *AA, bool *IsLoadCSE,
-    unsigned *NumScanedInst);
+LLVM_ABI Value *
+findAvailablePtrLoadStore(const MemoryLocation &Loc, Type *AccessTy,
+                          bool AtLeastAtomic, bool IsElementwise,
+                          BasicBlock *ScanBB, BasicBlock::iterator &ScanFrom,
+                          unsigned MaxInstsToScan, BatchAAResults *AA,
+                          bool *IsLoadCSE, unsigned *NumScanedInst);
 
 /// Returns true if a pointer value \p From can be replaced with another pointer
 /// value \To if they are deemed equal through some means (e.g. information from

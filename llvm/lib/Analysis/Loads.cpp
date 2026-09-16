@@ -559,9 +559,9 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
     return nullptr;
 
   MemoryLocation Loc = MemoryLocation::get(Load);
-  return findAvailablePtrLoadStore(
-      Loc, Load->getType(), Load->isAtomic(), Load->isElementwise(), ScanBB,
-      ScanFrom, MaxInstsToScan, AA, IsLoad, NumScanedInst);
+  return findAvailablePtrLoadStore(Loc, Load->getType(), Load->isAtomic(),
+                                   Load->isElementwise(), ScanBB, ScanFrom,
+                                   MaxInstsToScan, AA, IsLoad, NumScanedInst);
 }
 
 // Check if the load and the store have the same base, constant offsets and
@@ -601,11 +601,9 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
     if (!AtLeastAtomic)
       return true;
 
-    Type *AtomicAccessTy =
-        IsElementwise ? AccessTy->getScalarType() : AccessTy;
-    Type *OtherAtomicAccessTy = OtherIsElementwise
-                                    ? OtherAccessTy->getScalarType()
-                                    : OtherAccessTy;
+    Type *AtomicAccessTy = IsElementwise ? AccessTy->getScalarType() : AccessTy;
+    Type *OtherAtomicAccessTy =
+        OtherIsElementwise ? OtherAccessTy->getScalarType() : OtherAccessTy;
     return DL.getTypeStoreSize(AtomicAccessTy) ==
            DL.getTypeStoreSize(OtherAtomicAccessTy);
   };
@@ -705,11 +703,13 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
   return nullptr;
 }
 
-Value *llvm::findAvailablePtrLoadStore(
-    const MemoryLocation &Loc, Type *AccessTy, bool AtLeastAtomic,
-    bool IsElementwise, BasicBlock *ScanBB, BasicBlock::iterator &ScanFrom,
-    unsigned MaxInstsToScan, BatchAAResults *AA, bool *IsLoadCSE,
-    unsigned *NumScanedInst) {
+Value *llvm::findAvailablePtrLoadStore(const MemoryLocation &Loc,
+                                       Type *AccessTy, bool AtLeastAtomic,
+                                       bool IsElementwise, BasicBlock *ScanBB,
+                                       BasicBlock::iterator &ScanFrom,
+                                       unsigned MaxInstsToScan,
+                                       BatchAAResults *AA, bool *IsLoadCSE,
+                                       unsigned *NumScanedInst) {
   if (MaxInstsToScan == 0)
     MaxInstsToScan = ~0U;
 
@@ -735,9 +735,9 @@ Value *llvm::findAvailablePtrLoadStore(
 
     --ScanFrom;
 
-    if (Value *Available = getAvailableLoadStore(
-            Inst, StrippedPtr, AccessTy, AtLeastAtomic, IsElementwise, DL,
-            IsLoadCSE))
+    if (Value *Available =
+            getAvailableLoadStore(Inst, StrippedPtr, AccessTy, AtLeastAtomic,
+                                  IsElementwise, DL, IsLoadCSE))
       return Available;
 
     // Try to get the store size for the type.
@@ -815,9 +815,9 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
     if (MaxInstsToScan-- == 0)
       return nullptr;
 
-    Available = getAvailableLoadStore(&Inst, StrippedPtr, AccessTy,
-                                      AtLeastAtomic, Load->isElementwise(), DL,
-                                      IsLoadCSE);
+    Available =
+        getAvailableLoadStore(&Inst, StrippedPtr, AccessTy, AtLeastAtomic,
+                              Load->isElementwise(), DL, IsLoadCSE);
     if (Available)
       break;
 
