@@ -1262,8 +1262,10 @@ static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,
   case AtomicExpr::AO__atomic_store:
   case AtomicExpr::AO__atomic_store_n:
   case AtomicExpr::AO__c11_atomic_store:
+  case AtomicExpr::AO__hip_atomic_store:
+  case AtomicExpr::AO__opencl_atomic_store:
   case AtomicExpr::AO__scoped_atomic_store:
-  case AtomicExpr::AO__scoped_atomic_store_n: {
+  case AtomicExpr::AO__scoped_atomic_store_n:
     calleeName = "__atomic_store";
     retTy = cgf.getContext().VoidTy;
     hasRetTy = true;
@@ -1271,41 +1273,17 @@ static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,
                                                 e->getVal1()->getType())),
              cgf.getContext().VoidPtrTy);
     break;
-  }
-
-  case AtomicExpr::AO__hip_atomic_store:
-  case AtomicExpr::AO__opencl_atomic_store:
-    cgf.cgm.errorNYI(loc,
-                     "emitLibCallForAtomicExpr: atomic store for hip/opencl");
-    return RValue::get(nullptr);
 
   // void __atomic_load(size_t size, void *mem, void *return, int order)
   case AtomicExpr::AO__atomic_load:
   case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__c11_atomic_load:
-  case AtomicExpr::AO__scoped_atomic_load:
-  case AtomicExpr::AO__scoped_atomic_load_n: {
-    calleeName = "__atomic_load";
-    break;
-  }
-
   case AtomicExpr::AO__hip_atomic_load:
   case AtomicExpr::AO__opencl_atomic_load:
-    cgf.cgm.errorNYI(loc,
-                     "emitLibCallForAtomicExpr: atomic load for hip/opencl");
-    return RValue::get(nullptr);
-
-  case AtomicExpr::AO__atomic_fetch_fmaximum:
-  case AtomicExpr::AO__atomic_fetch_fmaximum_num:
-  case AtomicExpr::AO__atomic_fetch_fminimum:
-  case AtomicExpr::AO__atomic_fetch_fminimum_num:
-  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum:
-  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum_num:
-  case AtomicExpr::AO__scoped_atomic_fetch_fminimum:
-  case AtomicExpr::AO__scoped_atomic_fetch_fminimum_num:
-    cgf.cgm.errorNYI(
-        loc, "emitLibCallForAtomicExpr: atomic fetch fmaximum/fminimum");
-    return RValue::get(nullptr);
+  case AtomicExpr::AO__scoped_atomic_load:
+  case AtomicExpr::AO__scoped_atomic_load_n:
+    calleeName = "__atomic_load";
+    break;
 
   case AtomicExpr::AO__atomic_add_fetch:
   case AtomicExpr::AO__scoped_atomic_add_fetch:
@@ -1363,6 +1341,14 @@ static RValue emitLibCallForAtomicExpr(CIRGenFunction &cgf, AtomicExpr *e,
   case AtomicExpr::AO__scoped_atomic_max_fetch:
   case AtomicExpr::AO__scoped_atomic_fetch_uinc:
   case AtomicExpr::AO__scoped_atomic_fetch_udec:
+  case AtomicExpr::AO__atomic_fetch_fmaximum:
+  case AtomicExpr::AO__atomic_fetch_fmaximum_num:
+  case AtomicExpr::AO__atomic_fetch_fminimum:
+  case AtomicExpr::AO__atomic_fetch_fminimum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum_num:
   case AtomicExpr::AO__atomic_test_and_set:
   case AtomicExpr::AO__atomic_clear:
   case AtomicExpr::AO__atomic_fetch_uinc:
