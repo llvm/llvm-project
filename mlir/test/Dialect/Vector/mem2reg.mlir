@@ -615,9 +615,9 @@ func.func @masked_write(%v: vector<8xf32>, %w: vector<8xf32>, %m: vector<8xi1>, 
 // CHECK-LABEL: func.func @masked_write_static_subview(
 // CHECK-SAME:      %[[V:.*]]: vector<4xf32>, %[[INIT:.*]]: vector<8xf32>, %{{.*}}: f32, %[[M:.*]]: vector<4xi1>
 // CHECK-NOT:     memref.alloca
-// CHECK:         %[[EX:.*]] = vector.extract_strided_slice %[[INIT]] {offsets = [2], sizes = [4]
+// CHECK:         %[[EX:.*]] = vector.extract_strided_slice %[[INIT]] offsets = [2], sizes = [4]
 // CHECK:         %[[SEL:.*]] = arith.select %[[M]], %[[V]], %[[EX]]
-// CHECK:         %[[INS:.*]] = vector.insert_strided_slice %[[SEL]], %[[INIT]] {offsets = [2]
+// CHECK:         %[[INS:.*]] = vector.insert_strided_slice %[[SEL]], %[[INIT]] offsets = [2]
 // CHECK:         return %[[INS]]
 func.func @masked_write_static_subview(%v: vector<4xf32>, %init: vector<8xf32>, %pad: f32, %m: vector<4xi1>) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
@@ -627,4 +627,150 @@ func.func @masked_write_static_subview(%v: vector<4xf32>, %init: vector<8xf32>, 
   vector.transfer_write %v, %sv[%c0], %m {in_bounds = [true]} : vector<4xf32>, memref<4xf32, strided<[1], offset: 2>>
   %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<8xf32>
   return %r : vector<8xf32>
+}
+
+// -----
+
+// A `memref.collapse_shape` view is an alias of the reshaped value: it covers the
+// same elements in the same row-major order, so a read through it is the slot
+// value `vector.shape_cast` to the collapsed shape.
+
+// CHECK-LABEL: func.func @collapse_shape_read
+// CHECK-SAME:      %[[V:.*]]: vector<8x16xf32>
+//    CHECK-NOT:   memref.alloca
+//    CHECK-NOT:   memref.collapse_shape
+//        CHECK:   %[[SC:.*]] = vector.shape_cast %[[V]] : vector<8x16xf32> to vector<128xf32>
+//        CHECK:   return %[[SC]]
+func.func @collapse_shape_read(%v: vector<8x16xf32>, %pad: f32) -> vector<128xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8x16xf32>
+  vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>
+  %flat = memref.collapse_shape %a [[0, 1]] : memref<8x16xf32> into memref<128xf32>
+  %r = vector.transfer_read %flat[%c0], %pad {in_bounds = [true]} : memref<128xf32>, vector<128xf32>
+  return %r : vector<128xf32>
+}
+
+// -----
+
+// `memref.expand_shape` is handled the same way, in the other direction.
+
+// CHECK-LABEL: func.func @expand_shape_read
+// CHECK-SAME:      %[[V:.*]]: vector<128xf32>
+//    CHECK-NOT:   memref.alloca
+//    CHECK-NOT:   memref.expand_shape
+//        CHECK:   %[[SC:.*]] = vector.shape_cast %[[V]] : vector<128xf32> to vector<8x16xf32>
+//        CHECK:   return %[[SC]]
+func.func @expand_shape_read(%v: vector<128xf32>, %pad: f32) -> vector<8x16xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<128xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<128xf32>, memref<128xf32>
+  %exp = memref.expand_shape %a [[0, 1]] output_shape [8, 16] : memref<128xf32> into memref<8x16xf32>
+  %r = vector.transfer_read %exp[%c0, %c0], %pad {in_bounds = [true, true]} : memref<8x16xf32>, vector<8x16xf32>
+  return %r : vector<8x16xf32>
+}
+
+// -----
+
+// A write through the view covers the whole buffer, so it redefines the slot
+// value: the stored value is reshaped back to the buffer's shape.
+
+// CHECK-LABEL: func.func @collapse_shape_write
+// CHECK-SAME:      %{{.*}}: vector<8x16xf32>, %[[W:.*]]: vector<128xf32>
+//    CHECK-NOT:   memref.alloca
+//        CHECK:   %[[SC:.*]] = vector.shape_cast %[[W]] : vector<128xf32> to vector<8x16xf32>
+//        CHECK:   return %[[SC]]
+func.func @collapse_shape_write(%v: vector<8x16xf32>, %w: vector<128xf32>, %pad: f32) -> vector<8x16xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8x16xf32>
+  vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>
+  %flat = memref.collapse_shape %a [[0, 1]] : memref<8x16xf32> into memref<128xf32>
+  vector.transfer_write %w, %flat[%c0] {in_bounds = [true]} : vector<128xf32>, memref<128xf32>
+  %r = vector.transfer_read %a[%c0, %c0], %pad {in_bounds = [true, true]} : memref<8x16xf32>, vector<8x16xf32>
+  return %r : vector<8x16xf32>
+}
+
+// -----
+
+// Views compose: a subview aliases the sub-slice, and collapsing it reshapes that
+// sub-slice value (the collapse is contiguous within the subview).
+
+// CHECK-LABEL: func.func @subview_then_collapse_shape
+// CHECK-SAME:      %[[V:.*]]: vector<8x16xf32>
+//    CHECK-NOT:   memref.alloca
+//        CHECK:   %[[EX:.*]] = vector.extract_strided_slice %[[V]] offsets = [0, 0], sizes = [4, 16]
+//        CHECK:   %[[SC:.*]] = vector.shape_cast %[[EX]] : vector<4x16xf32> to vector<64xf32>
+//        CHECK:   return %[[SC]]
+func.func @subview_then_collapse_shape(%v: vector<8x16xf32>, %pad: f32) -> vector<64xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8x16xf32>
+  vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>
+  %sv = memref.subview %a[0, 0] [4, 16] [1, 1] : memref<8x16xf32> to memref<4x16xf32, strided<[16, 1]>>
+  %flat = memref.collapse_shape %sv [[0, 1]] : memref<4x16xf32, strided<[16, 1]>> into memref<64xf32, strided<[1]>>
+  %r = vector.transfer_read %flat[%c0], %pad {in_bounds = [true]} : memref<64xf32, strided<[1]>>, vector<64xf32>
+  return %r : vector<64xf32>
+}
+
+// -----
+
+// An expansion composes with a subview the same way. The subview's layout is
+// strided rather than identity, so what matters is that it is a contiguous slab:
+// its elements keep their row-major order under the expansion.
+
+// CHECK-LABEL: func.func @subview_then_expand_shape
+// CHECK-SAME:      %[[V:.*]]: vector<8x16xf32>
+//    CHECK-NOT:   memref.alloca
+//    CHECK-NOT:   memref.expand_shape
+//        CHECK:   %[[EX:.*]] = vector.extract_strided_slice %[[V]] offsets = [0, 0], sizes = [4, 16]
+//        CHECK:   %[[SC:.*]] = vector.shape_cast %[[EX]] : vector<4x16xf32> to vector<1x4x16xf32>
+//        CHECK:   return %[[SC]]
+func.func @subview_then_expand_shape(%v: vector<8x16xf32>, %pad: f32) -> vector<1x4x16xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8x16xf32>
+  vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>
+  %sv = memref.subview %a[0, 0] [4, 16] [1, 1] : memref<8x16xf32> to memref<4x16xf32, strided<[16, 1]>>
+  %exp = memref.expand_shape %sv [[0, 1], [2]] output_shape [1, 4, 16] : memref<4x16xf32, strided<[16, 1]>> into memref<1x4x16xf32, strided<[64, 16, 1]>>
+  %r = vector.transfer_read %exp[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} : memref<1x4x16xf32, strided<[64, 16, 1]>>, vector<1x4x16xf32>
+  return %r : vector<1x4x16xf32>
+}
+
+// -----
+
+// The slab need not start at the origin: a non-zero constant offset only shifts
+// which sub-vector the alias extracts, it does not affect element order.
+
+// CHECK-LABEL: func.func @subview_offset_then_expand_shape
+// CHECK-SAME:      %[[V:.*]]: vector<8x16xf32>
+//    CHECK-NOT:   memref.alloca
+//        CHECK:   %[[EX:.*]] = vector.extract_strided_slice %[[V]] offsets = [2, 0], sizes = [4, 16]
+//        CHECK:   %[[SC:.*]] = vector.shape_cast %[[EX]] : vector<4x16xf32> to vector<1x4x16xf32>
+//        CHECK:   return %[[SC]]
+func.func @subview_offset_then_expand_shape(%v: vector<8x16xf32>, %pad: f32) -> vector<1x4x16xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8x16xf32>
+  vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>
+  %sv = memref.subview %a[2, 0] [4, 16] [1, 1] : memref<8x16xf32> to memref<4x16xf32, strided<[16, 1], offset: 32>>
+  %exp = memref.expand_shape %sv [[0, 1], [2]] output_shape [1, 4, 16] : memref<4x16xf32, strided<[16, 1], offset: 32>> into memref<1x4x16xf32, strided<[64, 16, 1], offset: 32>>
+  %r = vector.transfer_read %exp[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} : memref<1x4x16xf32, strided<[64, 16, 1], offset: 32>>, vector<1x4x16xf32>
+  return %r : vector<1x4x16xf32>
+}
+
+// -----
+
+// Negative: the subview keeps only part of each row, so its rows are strided in
+// the parent (stride 16 over an 8-element row). Expanding it would not preserve
+// element order, and the buffer stays in memory.
+
+// CHECK-LABEL: func.func @neg_expand_shape_strided_subview
+//        CHECK:   memref.alloca
+//        CHECK:   memref.subview
+//        CHECK:   memref.expand_shape
+//        CHECK:   vector.transfer_read
+func.func @neg_expand_shape_strided_subview(%v: vector<8x16xf32>, %pad: f32) -> vector<1x4x8xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8x16xf32>
+  vector.transfer_write %v, %a[%c0, %c0] {in_bounds = [true, true]} : vector<8x16xf32>, memref<8x16xf32>
+  %sv = memref.subview %a[0, 0] [4, 8] [1, 1] : memref<8x16xf32> to memref<4x8xf32, strided<[16, 1]>>
+  %exp = memref.expand_shape %sv [[0, 1], [2]] output_shape [1, 4, 8] : memref<4x8xf32, strided<[16, 1]>> into memref<1x4x8xf32, strided<[64, 16, 1]>>
+  %r = vector.transfer_read %exp[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} : memref<1x4x8xf32, strided<[64, 16, 1]>>, vector<1x4x8xf32>
+  return %r : vector<1x4x8xf32>
 }
