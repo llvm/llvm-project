@@ -10,8 +10,6 @@
 
 #include "RegisterTypeBuilderClang.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/DataFormatters/DataVisualization.h"
-#include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Utility/RegisterType.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/bit.h"
@@ -239,16 +237,6 @@ RegisterTypeBuilderClang::BuildUnionType(const RegisterTypeUnion *union_type,
   if (llvm::expectedToOptional(compiler_type.GetByteSize(nullptr)) !=
       expected_byte_size)
     return {};
-
-  TypeSummaryImpl::Flags summary_flags;
-  summary_flags.SetShowMembersOneLiner(true);
-  auto summary_sp = std::make_shared<StringSummaryFormat>(summary_flags, "");
-  lldb::TypeCategoryImplSP category_sp;
-  DataVisualization::Categories::GetCategory(ConstString("default"),
-                                             category_sp);
-  if (category_sp)
-    category_sp->AddTypeSummary(type_name, lldb::eFormatterMatchExact,
-                                summary_sp);
 
   m_type_cache.try_emplace(
       std::make_pair(union_type->GetUID(), expected_byte_size), compiler_type);
