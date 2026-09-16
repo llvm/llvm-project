@@ -235,33 +235,37 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                 OpInfo, I);
 }
 
-/* Do not promote loop access to memmove if source or destination
- * array cannot be aligned to 8 byte boundary. memmove is beneficial
- * only if source and destination are 8 byte aligned or memmove
- * supports unaligned accesses. For example
- * char a[100] ;
- * for(i=n; i> 0; i--)
- *     a[i] = a[i-1];
- * We can never align source and destination simultaneously at
- * 8 byte boundary. If we convert this loop to memmove then
- * memmove will do alignment checks and it fails so eventually
- * do copy byte by byte. As a result, memmove will be relatively
- * slow (due to call overhead and checks inside memmove)
- * as compared to the loop access for unaligned accesses.*/
+// Do not promote loop access to memmove if the source or destination cannot be
+// aligned to an 8-byte boundary. Memmove is beneficial only if both pointers
+// are 8-byte aligned or if memmove supports unaligned accesses. For example:
+//
+//   char a[100];
+//   for (i = n; i > 0; i--)
+//     a[i] = a[i - 1];
+//
+// The source and destination can never be aligned simultaneously at an
+// 8-byte boundary. If this loop is converted to memmove, memmove performs
+// alignment checks and eventually copies byte by byte. As a result, memmove
+// is relatively slow due to call overhead and checks compared with the loop's
+// unaligned accesses.
 
 bool HexagonTTIImpl::isMemmoveProfitable(
-    const std::optional<APInt> &PtrDiff) const {
+    Align DstAlign, Align SrcAlign, const std::optional<APInt> &PtrDiff) const {
   if (HexagonEnableMemmove)
     return true;
 
-  // Conservatively return false if we can't reason the difference between the
-  // pointers.
-  if (!PtrDiff)
+  const Align RequiredAlign(8);
+  bool DstAligned = DstAlign >= RequiredAlign;
+  bool SrcAligned = SrcAlign >= RequiredAlign;
+  if (DstAligned && SrcAligned)
+    return true;
+
+  if (!PtrDiff || PtrDiff->countTrailingZeros() < Log2(RequiredAlign))
     return false;
 
-  // If the difference is not a multiple of 8, the pointers can never be
-  // simultaneously aligned to an 8-byte boundary.
-  return PtrDiff->getSExtValue() % 8 == 0;
+  // A multiple-of-8 difference preserves 8-byte alignment. It proves the
+  // other pointer aligned only when one pointer is already known aligned.
+  return DstAligned || SrcAligned;
 }
 
 InstructionCost HexagonTTIImpl::getShuffleCost(

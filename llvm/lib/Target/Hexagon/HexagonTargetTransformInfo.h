@@ -114,7 +114,8 @@ public:
                                    ArrayRef<Type *> Tys,
                                    TTI::TargetCostKind CostKind) const override;
 
-  bool isMemmoveProfitable(const std::optional<APInt> &PtrDiff) const override;
+  bool isMemmoveProfitable(Align DstAlign, Align SrcAlign,
+                           const std::optional<APInt> &PtrDiff) const override;
 
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,

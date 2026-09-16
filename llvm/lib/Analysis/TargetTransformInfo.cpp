@@ -1327,8 +1327,8 @@ InstructionCost TargetTransformInfo::getMemoryOpCost(
 }
 
 bool TargetTransformInfo::isMemmoveProfitable(
-    const std::optional<APInt> &PtrDiff) const {
-  return TTIImpl->isMemmoveProfitable(PtrDiff);
+    Align DstAlign, Align SrcAlign, const std::optional<APInt> &PtrDiff) const {
+  return TTIImpl->isMemmoveProfitable(DstAlign, SrcAlign, PtrDiff);
 }
 
 InstructionCost TargetTransformInfo::getInterleavedMemoryOpCost(
