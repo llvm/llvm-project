@@ -217,16 +217,15 @@ getModeSetregField(const MachineInstr &MI, const SIInstrInfo *TII) {
   return std::make_pair(Offset, maskTrailingOnes<unsigned>(Width) << Offset);
 }
 
-// Not the wave-ending opcodes. Tail calls: see isCall.
+// The wave-ending opcodes are isReturn too, but have no caller to restore for.
 static bool isReturnToCaller(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
-  case AMDGPU::SI_RETURN:
-  case AMDGPU::SI_RETURN_TO_EPILOG:
-  case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN:
-  case AMDGPU::S_SETPC_B64_return:
-    return true;
-  default:
+  case AMDGPU::S_ENDPGM:
+  case AMDGPU::S_ENDPGM_SAVED:
+  case AMDGPU::S_ENDPGM_ORDERED_PS_DONE:
     return false;
+  default:
+    return MI.isReturn();
   }
 }
 
