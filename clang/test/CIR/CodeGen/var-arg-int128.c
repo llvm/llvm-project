@@ -20,11 +20,11 @@ __int128 varargs_int128(int count, ...) {
 // CIR:   %[[GP_OFFSET:.+]] = cir.load %[[GP_OFFSET_P]] : !cir.ptr<!u32i>, !u32i
 // CIR:   %[[GP_LIMIT:.+]] = cir.const #cir.int<32> : !u32i
 // CIR:   %[[FITS_GP:.+]] = cir.cmp le %[[GP_OFFSET]], %[[GP_LIMIT]] : !u32i
+// CIR:   %[[REG_TMP:.+]] = cir.alloca "vaarg.reg" {{.*}} : !cir.ptr<!s128i>
 // CIR:   %[[VA_ARG:.+]] = cir.ternary(%[[FITS_GP]], true {
 // CIR:     %[[REG_SAVE:.+]] = cir.load %{{.+}}
 // CIR:     %[[REG_SAVE_B:.+]] = cir.cast bitcast %[[REG_SAVE]] : !cir.ptr<!void> -> !cir.ptr<!u8i>
 // CIR:     %[[REG_ADDR:.+]] = cir.ptr_stride %[[REG_SAVE_B]], %[[GP_OFFSET]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
-// CIR:     %[[REG_TMP:.+]] = cir.alloca "vaarg.reg" {{.*}} : !cir.ptr<!s128i>
 // CIR:     %[[REG_ADDR_V:.+]] = cir.cast bitcast %[[REG_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!s128i>
 // CIR:     %[[REG_VAL:.+]] = cir.load align(8) %[[REG_ADDR_V]] : !cir.ptr<!s128i>, !s128i
 // CIR:     cir.store %[[REG_VAL]], %[[REG_TMP]] : !s128i, !cir.ptr<!s128i>

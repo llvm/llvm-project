@@ -16,8 +16,14 @@ struct Empty only_empty(int count, ...) {
 }
 
 // An empty record travels in no register and no stack slot, so fetching one
-// reads no argument and advances no field of the cursor.
+// reads no argument, advances no field of the cursor, and yields poison.
 // CIR-LABEL: cir.func {{.*}} @only_empty(
+// CIR-NOT:     cir.va_arg
+// CIR-NOT:     gp_offset
+// CIR-NOT:     fp_offset
+// CIR-NOT:     overflow_arg_area
+// CIR:         %{{.+}} = cir.const #cir.poison : !rec_Empty
+// The negatives are restated because the match above ends their range.
 // CIR-NOT:     cir.va_arg
 // CIR-NOT:     gp_offset
 // CIR-NOT:     fp_offset
@@ -27,8 +33,10 @@ struct Empty only_empty(int count, ...) {
 // LLVM-LABEL: define dso_local void @only_empty(i32 noundef %{{.*}}, ...)
 // LLVM-NOT:     va_arg
 // LLVM-NOT:     getelementptr inbounds nuw %struct.__va_list_tag
-// The fetch produces a value with no bytes, which LLVMCIR initializes the
-// variable from with a zero-length copy.  OGCG emits nothing at all.
+// LLVMCIR:      store %struct.Empty poison, ptr %{{.+}}, align 1
+// LLVMCIR-NOT:  getelementptr inbounds nuw %struct.__va_list_tag
+// The variable is initialized from that value with a copy of no bytes.  OGCG
+// emits nothing at all.
 // LLVMCIR:      call void @llvm.memcpy.p0.p0.i64(ptr align 1 %{{.+}}, ptr align 1 %{{.+}}, i64 0, i1 false)
 // OGCG-NOT:     memcpy
 // LLVM:       call void @llvm.va_end.p0(

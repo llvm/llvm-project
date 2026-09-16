@@ -369,16 +369,16 @@ struct OverAligned varargs_aggregate_overaligned(int count, ...) {
 }
 
 // An alignment attribute raises the record above what its two long members
-// imply, and only the record layout records that.  Both arms have to honor
-// it: the register arm copies through a 16-byte-aligned temp, and the
-// overflow arm rounds the cursor up to 16 before reading.
+// imply, and only the record layout carries that.  Both arms have to honor it:
+// the register arm copies through a 16-byte-aligned temp, and the overflow arm
+// rounds the cursor up to 16 before reading.
 // CIR-LABEL: cir.func {{.*}} @varargs_aggregate_overaligned(
 // CIR:   %[[GP_OFFSET:.+]] = cir.load %{{.+}} : !cir.ptr<!u32i>, !u32i
 // CIR:   %[[GP_LIMIT:.+]] = cir.const #cir.int<32> : !u32i
 // CIR:   %[[FITS:.+]] = cir.cmp le %[[GP_OFFSET]], %[[GP_LIMIT]] : !u32i
+// CIR:   %[[TEMP:.+]] = cir.alloca "vaarg.reg" align(16) : !cir.ptr<!rec_OverAligned>
 // CIR:   %[[ADDR:.+]] = cir.ternary(%[[FITS]], true {
 // CIR:     %[[REG_ADDR:.+]] = cir.ptr_stride %{{.+}}, %[[GP_OFFSET]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
-// CIR:     %[[TEMP:.+]] = cir.alloca "vaarg.reg" align(16) : !cir.ptr<!rec_OverAligned>
 // CIR:     %[[REG_ADDR_V:.+]] = cir.cast bitcast %[[REG_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_OverAligned>
 // CIR:     %[[VAL:.+]] = cir.load align(8) %[[REG_ADDR_V]] : !cir.ptr<!rec_OverAligned>, !rec_OverAligned
 // CIR:     cir.store %[[VAL]], %[[TEMP]] : !rec_OverAligned, !cir.ptr<!rec_OverAligned>
@@ -393,12 +393,91 @@ struct OverAligned varargs_aggregate_overaligned(int count, ...) {
 // LLVM:   %[[GP_OFFSET:.+]] = load i32, ptr %{{.+}}, align {{[0-9]+}}
 // LLVM:   icmp ule i32 %[[GP_OFFSET]], 32
 // The register slot is only 8-aligned, so the copy reads at 8 and stores
-// into a temp carrying the record's declared 16.
+// into a temp carrying the record's declared 16.  The temp is bound at its
+// alloca, so that an under-aligned one cannot satisfy the store below.
+// LLVMCIR: %[[TEMP:.+]] = alloca %struct.OverAligned, align 16
 // LLVMCIR: %[[VAL:.+]] = load %struct.OverAligned, ptr %{{.+}}, align 8
-// LLVMCIR: store %struct.OverAligned %[[VAL]], ptr %[[TEMP:.+]], align 8
+// LLVMCIR: store %struct.OverAligned %[[VAL]], ptr %[[TEMP]], align 8
 // OGCG:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[TEMP:.+]], ptr align 8 %{{.+}}, i64 16, i1 false)
 // LLVMCIR: %[[ALIGNED:.+]] = inttoptr i64 %{{.+}} to ptr
 // OGCG:    %[[ALIGNED:.+]] = call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -16)
 // LLVM:   %[[MEM_NEXT:.+]] = getelementptr i8, ptr %[[ALIGNED]], i{{32|64}} 16
 // LLVMCIR: %[[ADDR:.+]] = phi ptr [ %[[ALIGNED]], %{{.+}} ], [ %[[TEMP]], %{{.+}} ]
 // OGCG:    %[[ADDR:.+]] = phi ptr [ %[[TEMP]], %{{.+}} ], [ %[[ALIGNED]], %{{.+}} ]
+
+// A record can require more alignment than the types of its members imply,
+// and the attribute that raises it need not sit on the record: it can sit on a
+// field, or on a member record whose own storage is only byte-aligned.  None
+// of those raise the alignment of any type, so the fetch takes the alignment
+// from the record layout.  Each of these reads from the overflow area, since
+// 32 bytes is too large for registers.
+
+union OverAlignedUnion {
+  char buf[32];
+} __attribute__((aligned(32)));
+
+long varargs_overaligned_union(int count, ...) {
+  __builtin_va_list args;
+  __builtin_va_start(args, count);
+  union OverAlignedUnion res = __builtin_va_arg(args, union OverAlignedUnion);
+  __builtin_va_end(args);
+  return res.buf[0];
+}
+
+// LLVM-LABEL: define dso_local {{.*}} @varargs_overaligned_union(
+// LLVMCIR:   and i64 %{{.+}}, -32
+// OGCG:      call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)
+
+struct FieldOverAligned {
+  __attribute__((aligned(32))) char c;
+  char rest[31];
+};
+
+long varargs_field_overaligned(int count, ...) {
+  __builtin_va_list args;
+  __builtin_va_start(args, count);
+  struct FieldOverAligned res = __builtin_va_arg(args, struct FieldOverAligned);
+  __builtin_va_end(args);
+  return res.c;
+}
+
+// LLVM-LABEL: define dso_local {{.*}} @varargs_field_overaligned(
+// LLVMCIR:   and i64 %{{.+}}, -32
+// OGCG:      call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)
+
+struct HoldsOverAlignedUnion {
+  union OverAlignedUnion u;
+};
+
+long varargs_holds_overaligned_union(int count, ...) {
+  __builtin_va_list args;
+  __builtin_va_start(args, count);
+  struct HoldsOverAlignedUnion res =
+      __builtin_va_arg(args, struct HoldsOverAlignedUnion);
+  __builtin_va_end(args);
+  return res.u.buf[0];
+}
+
+// LLVM-LABEL: define dso_local {{.*}} @varargs_holds_overaligned_union(
+// LLVMCIR:   and i64 %{{.+}}, -32
+// OGCG:      call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)
+
+// Packing lowers the alignment the members imply, and an attribute can still
+// raise the record above it.
+struct __attribute__((packed, aligned(32))) PackedOverAligned {
+  char c;
+  int i;
+};
+
+long varargs_packed_overaligned(int count, ...) {
+  __builtin_va_list args;
+  __builtin_va_start(args, count);
+  struct PackedOverAligned res =
+      __builtin_va_arg(args, struct PackedOverAligned);
+  __builtin_va_end(args);
+  return res.i;
+}
+
+// LLVM-LABEL: define dso_local {{.*}} @varargs_packed_overaligned(
+// LLVMCIR:   and i64 %{{.+}}, -32
+// OGCG:      call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)

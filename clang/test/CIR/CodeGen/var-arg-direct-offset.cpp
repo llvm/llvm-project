@@ -40,10 +40,10 @@ EmptyLow varargs_empty_low(int count, ...) {
 // CIR:   %[[GP:.+]] = cir.load %[[GP_P]] : !cir.ptr<!u32i>, !u32i
 // CIR:   %[[LIMIT:.+]] = cir.const #cir.int<40> : !u32i
 // CIR:   %[[FITS:.+]] = cir.cmp le %[[GP]], %[[LIMIT]] : !u32i
+// CIR:   %[[TEMP:.+]] = cir.alloca "vaarg.reg" align(8) : !cir.ptr<!rec_EmptyLow>
 // CIR:   %[[ADDR:.+]] = cir.ternary(%[[FITS]], true {
 // CIR:     %[[RSA_B:.+]] = cir.cast bitcast %{{.+}} : !cir.ptr<!void> -> !cir.ptr<!u8i>
 // CIR:     %[[SLOT:.+]] = cir.ptr_stride %[[RSA_B]], %[[GP]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
-// CIR:     %[[TEMP:.+]] = cir.alloca "vaarg.reg" align(8) : !cir.ptr<!rec_EmptyLow>
 // CIR:     %[[SLOT_I:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
 // CIR:     %[[VAL:.+]] = cir.load align(8) %[[SLOT_I]] : !cir.ptr<!s64i>, !s64i
 // CIR:     %[[TEMP_B:.+]] = cir.cast bitcast %[[TEMP]] : !cir.ptr<!rec_EmptyLow> -> !cir.ptr<!u8i>
@@ -97,9 +97,9 @@ double varargs_empty_low_sse(int count, ...) {
 // CIR:   %[[FP:.+]] = cir.load %[[FP_P]] : !cir.ptr<!u32i>, !u32i
 // CIR:   %[[LIMIT:.+]] = cir.const #cir.int<160> : !u32i
 // CIR:   %[[FITS:.+]] = cir.cmp le %[[FP]], %[[LIMIT]] : !u32i
+// CIR:   %[[TEMP:.+]] = cir.alloca "vaarg.reg" align(8) : !cir.ptr<!rec_EmptyLowSse>
 // CIR:   %[[ADDR:.+]] = cir.ternary(%[[FITS]], true {
 // CIR:     %[[SLOT:.+]] = cir.ptr_stride %{{.+}}, %[[FP]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
-// CIR:     %[[TEMP:.+]] = cir.alloca "vaarg.reg" align(8) : !cir.ptr<!rec_EmptyLowSse>
 // CIR:     %[[SLOT_D:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.double>
 // CIR:     %[[VAL:.+]] = cir.load align(8) %[[SLOT_D]] : !cir.ptr<!cir.double>, !cir.double
 // CIR:     %[[TEMP_B:.+]] = cir.cast bitcast %[[TEMP]] : !cir.ptr<!rec_EmptyLowSse> -> !cir.ptr<!u8i>
@@ -140,9 +140,9 @@ long varargs_tail_pad(int count, ...) {
 // CIR:   %[[GP:.+]] = cir.load %{{.+}} : !cir.ptr<!u32i>, !u32i
 // CIR:   %[[LIMIT:.+]] = cir.const #cir.int<40> : !u32i
 // CIR:   %[[FITS:.+]] = cir.cmp le %[[GP]], %[[LIMIT]] : !u32i
+// CIR:   %[[TEMP:.+]] = cir.alloca "vaarg.reg" align(8) : !cir.ptr<!rec_TailPad>
 // CIR:   %[[ADDR:.+]] = cir.ternary(%[[FITS]], true {
 // CIR:     %[[SLOT:.+]] = cir.ptr_stride %{{.+}}, %[[GP]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
-// CIR:     %[[TEMP:.+]] = cir.alloca "vaarg.reg" align(8) : !cir.ptr<!rec_TailPad>
 // CIR:     %[[SLOT_I:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
 // CIR:     %[[VAL:.+]] = cir.load align(8) %[[SLOT_I]] : !cir.ptr<!s64i>, !s64i
 // CIR:     %[[TEMP_I:.+]] = cir.cast bitcast %[[TEMP]] : !cir.ptr<!rec_TailPad> -> !cir.ptr<!s64i>
