@@ -1890,7 +1890,7 @@ void ClauseProcessor::processMapObjects(
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapVars,
     llvm::SmallVectorImpl<Object> &mapObjects, llvm::StringRef mapperIdNameRef,
-    bool isMotionModifier, llvm::omp::Directive directive) const {
+    bool isMotionModifier) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   for (const omp::Object &object : objects) {
@@ -1924,9 +1924,8 @@ void ClauseProcessor::processMapObjects(
       }
     }
 
-    mlir::FlatSymbolRefAttr mapperId =
-        resolveMapperId(converter, clauseLocation, object, mapperIdNameRef,
-                        mapTypeBits, directive);
+    mlir::FlatSymbolRefAttr mapperId = resolveMapperId(
+        converter, clauseLocation, object, mapperIdNameRef, mapTypeBits);
 
     // Explicit map captures are captured ByRef by default,
     // optimisation passes may alter this to ByCopy or other capture
@@ -2078,7 +2077,7 @@ bool ClauseProcessor::processMap(
     processMapObjects(stmtCtx, clauseLocation,
                       std::get<omp::ObjectList>(clause.t), mapTypeBits,
                       parentMemberIndices, result.mapVars, *ptrMapObjects,
-                      mapperIdName, /*isMotionModifier=*/false, directive);
+                      mapperIdName, /*isMotionModifier=*/false);
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::Map>(process);
