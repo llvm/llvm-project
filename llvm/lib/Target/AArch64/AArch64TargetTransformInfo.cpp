@@ -7988,7 +7988,7 @@ bool AArch64TTIImpl::isLegalMaskedCompressStore(Type *DataType,
     return false;
 
   if (isa<FixedVectorType>(DataType) &&
-      DataType->getPrimitiveSizeInBits() < 128)
+      DataType->getPrimitiveSizeInBits().getFixedValue() < 128)
     return false;
 
   if (!isa<VectorType>(DataType))
