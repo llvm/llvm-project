@@ -1723,7 +1723,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_rotateleft16:
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
-    return emitRotate(e, /*isRotateLeft=*/true);
   case Builtin::BI__builtin_stdc_rotate_left:
   case Builtin::BIstdc_rotate_left_uc:
   case Builtin::BIstdc_rotate_left_us:
@@ -1736,7 +1735,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_rotateright16:
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
-    return emitRotate(e, /*isRotateLeft=*/false);
   case Builtin::BI__builtin_stdc_rotate_right:
   case Builtin::BIstdc_rotate_right_uc:
   case Builtin::BIstdc_rotate_right_us:
@@ -1744,6 +1742,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIstdc_rotate_right_ul:
   case Builtin::BIstdc_rotate_right_ull:
     return emitRotate(e, /*isRotateLeft=*/false);
+
+  // stdc_memreverse8u8 is a no-op (single byte, nothing to swap).
   case Builtin::BIstdc_memreverse8u8:
     return RValue::get(emitScalarExpr(e->getArg(0)));
   case Builtin::BIstdc_memreverse8u16:
