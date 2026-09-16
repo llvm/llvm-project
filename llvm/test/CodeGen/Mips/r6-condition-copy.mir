@@ -1,0 +1,35 @@
+# RUN: llc -mtriple=mipsel-linux-gnu -mcpu=mips32r6 -target-abi=o32 -run-pass=postrapseudos -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=mips-linux-gnu -mcpu=mips32r6 -target-abi=o32 -run-pass=postrapseudos -verify-machineinstrs %s -o - | FileCheck %s
+
+# Neither copy has a directly adjacent CMP/SEL proving where the predicate
+# originated or where it will be consumed. The low word must still transfer.
+--- |
+  define void @copy_condition_to_fpr() { ret void }
+  define void @copy_condition_to_gpr() { ret void }
+...
+---
+name: copy_condition_to_fpr
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $a0
+    $d0_64 = COPY killed $a0
+    $d2_64 = COPY killed $d0_64
+    RetRA implicit killed $d2_64
+# CHECK-LABEL: name: copy_condition_to_fpr
+# CHECK: $d0_64 = MTC1_D64 killed $a0
+# CHECK-NEXT: $d2_64 = FMOV_D64 killed $d0_64
+...
+---
+name: copy_condition_to_gpr
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $d12_64
+    $d2_64 = COPY killed $d12_64
+    $v0 = COPY killed $d2_64
+    RetRA implicit killed $v0
+# CHECK-LABEL: name: copy_condition_to_gpr
+# CHECK: $d2_64 = FMOV_D64 killed $d12_64
+# CHECK-NEXT: $v0 = MFC1_D64 killed $d2_64
+...
