@@ -4692,8 +4692,8 @@ mlir::LogicalResult CIRToLLVMEhInflightOpLowering::matchAndRewrite(
     // An empty list is throw() and lowers to [0 x ptr] zeroinitializer.
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(entryBlock);
-    auto filterArrayTy = mlir::LLVM::LLVMArrayType::get(
-        llvmPtrTy, filterListAttr.size());
+    auto filterArrayTy =
+        mlir::LLVM::LLVMArrayType::get(llvmPtrTy, filterListAttr.size());
     mlir::Value filterVal;
     if (filterListAttr.empty()) {
       filterVal = mlir::LLVM::ZeroOp::create(rewriter, loc, filterArrayTy);

@@ -732,14 +732,14 @@ void ItaniumEHLowering::lowerDispatch(cir::EhDispatchOp dispatch,
       // The personality reports a filter failure with a negative selector.
       // Type ids are still !u32i on the eh_token replacement pair, so recast
       // to !s32i for the signed comparison. TODO: produce !s32i throughout.
-      auto *cmpBlock = builder.createBlock(
-          insertBefore, {voidPtrType, u32Type}, {dispLoc, dispLoc});
+      auto *cmpBlock = builder.createBlock(insertBefore, {voidPtrType, u32Type},
+                                           {dispLoc, dispLoc});
       mlir::Value cmpExnPtr = cmpBlock->getArgument(0);
       mlir::Value cmpTypeId = cmpBlock->getArgument(1);
       mlir::Value signedTypeId = cir::CastOp::create(
           builder, dispLoc, s32Type, cir::CastKind::integral, cmpTypeId);
-      mlir::Value zero = cir::ConstantOp::create(
-          builder, dispLoc, cir::IntAttr::get(s32Type, 0));
+      mlir::Value zero = cir::ConstantOp::create(builder, dispLoc,
+                                                 cir::IntAttr::get(s32Type, 0));
       auto cmpOp = cir::CmpOp::create(builder, dispLoc, cir::CmpOpKind::lt,
                                       signedTypeId, zero);
       cir::BrCondOp::create(builder, dispLoc, cmpOp, filterDest, defaultDest,
