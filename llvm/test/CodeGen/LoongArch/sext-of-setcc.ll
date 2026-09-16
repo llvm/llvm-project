@@ -19,17 +19,12 @@ define i64 @sext_setcc_lt(i64 %x, i64 %y) {
 ; (sext i1 (xor (icmp slt x, y), true)) == (x >= y) ? -1 : 0. The xor is
 ; folded into the setcc condition code by the generic combiner, and inverting
 ; setge to setlt avoids the slt + xori sequence.
-;
-; TODO: The xori is redundant here and should be folded into the setcc
-; condition code, selecting to just slt + addi.d -1. Expected to change
-; when the setcc sign-extension combine lands.
 
 define i64 @sext_xor_setcc(i64 %x, i64 %y) {
 ; CHECK-LABEL: sext_xor_setcc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slt $a0, $a0, $a1
-; CHECK-NEXT:    xori $a0, $a0, 1
-; CHECK-NEXT:    sub.d $a0, $zero, $a0
+; CHECK-NEXT:    addi.d $a0, $a0, -1
 ; CHECK-NEXT:    ret
   %c = icmp slt i64 %x, %y
   %n = xor i1 %c, true
