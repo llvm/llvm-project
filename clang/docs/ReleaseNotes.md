@@ -646,10 +646,7 @@ features cannot lower the translation-unit ABI level;
   (#GH215900)
 
 - Fixed an assertion when mangling an abbreviated function template whose
-  constrained `auto` parameter refers to an earlier parameter (e.g.
-  `template<typename T> auto f(T t, C<decltype(t)> auto) -> S`) and whose
-  return type has an ABI tag, such as a type declared in an `abi_tag` inline
-  namespace like `std::string` under libstdc++. (#GH204178)
+  return type has an ABI tag. (#GH204178)
 
 - Fixed an assertion during template argument deduction where a function parameter pack is referenced by other types in the function type. (#GH28877), (#GH213760)
 
