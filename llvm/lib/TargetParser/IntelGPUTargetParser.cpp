@@ -16,45 +16,41 @@
 using namespace llvm;
 using namespace IntelGPU;
 
-// A GMDID packs the architecture, release and revision of the GPU IP.
+// A GPU IP version, the "GMDID", packs the architecture into the bits above the
+// release, which in turn sits above the revision. The bits between the release
+// and the revision are reserved.
 static constexpr uint32_t GMDIDArchitectureShift = 22;
 static constexpr uint32_t GMDIDReleaseShift = 14;
 static constexpr uint32_t GMDIDReleaseMask = 0xff;
 static constexpr uint32_t GMDIDRevisionMask = 0x3f;
 
-GMDID llvm::IntelGPU::decodeGMDID(uint32_t GPUIPVersion) {
-  return {GPUIPVersion >> GMDIDArchitectureShift,
-          (GPUIPVersion >> GMDIDReleaseShift) & GMDIDReleaseMask,
-          GPUIPVersion & GMDIDRevisionMask};
+// The bits that identify a device: the architecture and the release. Neither
+// the revision nor the reserved bits take part in the lookup, because every
+// stepping of a release is one device as far as the compiler is concerned.
+static constexpr uint32_t GMDIDDeviceMask = ~0u << GMDIDReleaseShift;
+
+// Pack an architecture and a release the way a GPU IP version does, so that a
+// row of the table can be compared against a reported version as it is.
+static constexpr uint32_t packDevice(uint32_t Architecture, uint32_t Release) {
+  return (Architecture << GMDIDArchitectureShift) |
+         (Release << GMDIDReleaseShift);
 }
 
-GPUKind llvm::IntelGPU::getKindForGMDID(GMDID ID) {
-  // Only INTEL_GPU rows are expanded, so a compatibility name can never match.
-  // The rows are ordered so that the first match in a group names the group.
+StringRef llvm::IntelGPU::getArchName(uint32_t GPUIPVersion) {
+  const uint32_t Device = GPUIPVersion & GMDIDDeviceMask;
 #define INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_TARGET, IGCA_SUFFIX) \
-  if (ID.Architecture == ARCHITECTURE && ID.Release == RELEASE)                \
-    return GK_##KIND;
-#include "llvm/TargetParser/IntelGPUTargetParser.def"
-  return GK_NONE;
-}
-
-StringRef llvm::IntelGPU::getArchName(GPUKind Kind) {
-  switch (Kind) {
-  case GK_NONE:
-    return "";
-#define INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_TARGET, IGCA_SUFFIX) \
-  case GK_##KIND:                                                              \
-    return NAME;
-#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_SUFFIX)                 \
-  case GK_##KIND:                                                              \
+  if (Device == packDevice(ARCHITECTURE, RELEASE))                             \
     return NAME;
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
-  }
-  llvm_unreachable("invalid Intel GPU GPUKind");
+  return "";
 }
 
-std::string llvm::IntelGPU::getNumericArchName(GMDID ID) {
-  return ("xe_" + Twine(ID.Architecture) + "." + Twine(ID.Release) + "." +
-          Twine(ID.Revision))
+std::string llvm::IntelGPU::getNumericArchName(uint32_t GPUIPVersion) {
+  const uint32_t Architecture = GPUIPVersion >> GMDIDArchitectureShift;
+  const uint32_t Release =
+      (GPUIPVersion >> GMDIDReleaseShift) & GMDIDReleaseMask;
+  const uint32_t Revision = GPUIPVersion & GMDIDRevisionMask;
+  return ("xe_" + Twine(Architecture) + "." + Twine(Release) + "." +
+          Twine(Revision))
       .str();
 }

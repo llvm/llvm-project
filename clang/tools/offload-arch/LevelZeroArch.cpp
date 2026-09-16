@@ -161,11 +161,8 @@ static bool loadLevelZero() {
 // Translate a GMDID into an architecture name that is a legal --offload-arch
 // parameter. A device that has no name in the table is named after its GMDID.
 std::string getIntelGPUArchName(uint32_t IPVersion) {
-  IntelGPU::GMDID ID = IntelGPU::decodeGMDID(IPVersion);
-  StringRef Name = IntelGPU::getArchName(IntelGPU::getKindForGMDID(ID));
-  if (!Name.empty())
-    return Name.str();
-  return IntelGPU::getNumericArchName(ID);
+  StringRef Name = IntelGPU::getArchName(IPVersion);
+  return Name.empty() ? IntelGPU::getNumericArchName(IPVersion) : Name.str();
 }
 
 int printGPUsByLevelZero() {
