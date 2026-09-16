@@ -72,7 +72,7 @@ export SamplerState testSampler(unsigned Index) {
 }
 
 void useAppendBuffer(AppendStructuredBuffer<int> Buffer, int Value) {
-  Buffer.Append(1);
+  Buffer.Append(Value);
 }
 
 // CHECK-LABEL: testCounterBuffer
