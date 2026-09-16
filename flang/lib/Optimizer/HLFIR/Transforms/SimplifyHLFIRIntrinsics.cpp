@@ -1461,10 +1461,11 @@ public:
           return rewriter.notifyMatchFailure(
               op, "EOSHIFT with BOUNDARY being CHARACTER expression");
       }
-      // TODO: selecting between ARRAY and BOUNDARY values with derived types
-      // need more work.
-      if (fir::isa_derived(expr.getEleTy()))
-        return rewriter.notifyMatchFailure(op, "EOSHIFT of derived type");
+      // TODO: selecting between ARRAY and BOUNDARY values with derived or
+      // polymorphic types need more work.
+      if (fir::isa_derived(expr.getEleTy()) || expr.isPolymorphic())
+        return rewriter.notifyMatchFailure(
+            op, "EOSHIFT of derived or polymorphic type");
     }
 
     // When DIM==1 and the contiguity of the input array is not statically

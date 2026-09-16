@@ -1050,9 +1050,22 @@ const Type *X86_64TargetInfo::getIntegerTypeAtOffset(const Type *ABIType,
   if (const auto *RTy = dyn_cast<RecordType>(ABIType)) {
     if (RTy->isUnion()) {
       const Type *ReducedType = reduceUnionForX8664(RTy, TB);
-      if (ReducedType)
-        return getIntegerTypeAtOffset(ReducedType, ABIOffset, SourceTy,
-                                      SourceOffset, true);
+      if (ReducedType) {
+        if (ABIOffset * 8 < ReducedType->getSizeInBits().getFixedValue())
+          return getIntegerTypeAtOffset(ReducedType, ABIOffset, SourceTy,
+                                        SourceOffset, true);
+        // The storage type stops before this offset, so size the coercion
+        // from the union itself: a byte when the rest of this eightbyte
+        // holds no data, and the union's remaining bytes otherwise.
+        if (bitsContainNoUserData(SourceTy, SourceOffset * 8 + 8,
+                                  SourceOffset * 8 + 64))
+          return TB.getIntegerType(8, Align(1), /*Signed=*/false);
+        unsigned RemainingBytes =
+            llvm::divideCeil(SourceTy->getSizeInBits().getFixedValue(), 8) -
+            SourceOffset;
+        return TB.getIntegerType(std::min(RemainingBytes, 8U) * 8, Align(1),
+                                 /*Signed=*/false);
+      }
     }
     if (const FieldInfo *Element =
             RTy->getElementContainingOffset(ABIOffset * 8)) {
