@@ -424,6 +424,8 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
     {ArchSpec::eCore_riscv64,         llvm::ELF::EM_RISCV,      ArchSpec::eRISCVSubType_riscv64}, // riscv64
     {ArchSpec::eCore_loongarch32,     llvm::ELF::EM_LOONGARCH,  ArchSpec::eLoongArchSubType_loongarch32}, // loongarch32
     {ArchSpec::eCore_loongarch64,     llvm::ELF::EM_LOONGARCH,  ArchSpec::eLoongArchSubType_loongarch64}, // loongarch64
+    // Match every AMDGPU ELF subtype. SetArchitecture() converts recognized
+    // AMDGCN EF_AMDGPU_MACH values to triple subarchitectures.
     {ArchSpec::eCore_amd_gpu,         llvm::ELF::EM_AMDGPU,     0,  UINT32_MAX, 0},
 };
 // clang-format on
@@ -845,6 +847,9 @@ void ArchSpec::MergeFrom(const ArchSpec &other) {
     if (other.GetCore() != eCore_uknownMach64)
       UpdateCore();
   }
+  // AMDGPU models share one LLDB core, so merge their triple subarchitectures
+  // explicitly. Keep this ArchSpec's platform fields in the comparison triple
+  // because they are handled separately in this function.
   if (GetTriple().getArch() == llvm::Triple::amdgpu &&
       other.GetTriple().getArch() == llvm::Triple::amdgpu) {
     llvm::Triple other_arch = GetTriple();
@@ -959,6 +964,8 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
           m_triple.setArch(core_def->machine);
           break;
         case llvm::Triple::amdgpu: {
+          // Known models must have an AMDGPU triple subarchitecture. This
+          // rejects legacy R600 models while leaving unknown values generic.
           llvm::StringRef gpu = GetAMDGPUVariantName(sub);
           if (!gpu.empty()) {
             llvm::Triple::SubArchType sub_arch =
@@ -1040,6 +1047,9 @@ bool ArchSpec::IsMatch(const ArchSpec &rhs, MatchType match) const {
   const llvm::Triple &lhs_triple = GetTriple();
   const llvm::Triple &rhs_triple = rhs.GetTriple();
 
+  // AMDGPU models share one LLDB core, so compare their triple
+  // subarchitectures explicitly. Keep the LHS platform fields in the
+  // comparison triple because ArchSpec compares them separately below.
   if (lhs_triple.getArch() == llvm::Triple::amdgpu &&
       rhs_triple.getArch() == llvm::Triple::amdgpu) {
     llvm::Triple rhs_arch = lhs_triple;
@@ -1128,6 +1138,8 @@ bool ArchSpec::IsMatch(const ArchSpec &rhs, MatchType match) const {
 
 void ArchSpec::UpdateCore() {
   const CoreDefinition *core_def;
+  // AMDGPU subarchitectures have distinct architecture names (for example,
+  // "amdgpu9.42"), but all share the generic LLDB AMDGPU core definition.
   if (m_triple.getArch() == llvm::Triple::amdgpu) {
     core_def = FindCoreDefinition(eCore_amd_gpu);
   } else {
