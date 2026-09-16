@@ -287,6 +287,151 @@ TLI_DEFINE_VECFUNC("atanh", "_ZGVdN4v_atanh", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("atanhf", "_ZGVbN4v_atanhf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("atanhf", "_ZGVdN8v_atanhf", FIXED(8), "_ZGV_LLVM_N8v")
 
+// The llvm.* rows are needed because clang lowers some of these to LLVM
+// intrinsics rather than libcalls. hypot has no intrinsic, so it is
+// libcall-only.
+TLI_DEFINE_VECFUNC("acos", "_ZGVbN2v_acos", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("acos", "_ZGVdN4v_acos", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("acosf", "_ZGVbN4v_acosf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("acosf", "_ZGVdN8v_acosf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.acos.f64", "_ZGVbN2v_acos", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.acos.f64", "_ZGVdN4v_acos", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("llvm.acos.f32", "_ZGVbN4v_acosf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.acos.f32", "_ZGVdN8v_acosf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("asin", "_ZGVbN2v_asin", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("asin", "_ZGVdN4v_asin", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("asinf", "_ZGVbN4v_asinf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("asinf", "_ZGVdN8v_asinf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.asin.f64", "_ZGVbN2v_asin", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.asin.f64", "_ZGVdN4v_asin", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("llvm.asin.f32", "_ZGVbN4v_asinf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.asin.f32", "_ZGVdN8v_asinf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("atan", "_ZGVbN2v_atan", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("atan", "_ZGVdN4v_atan", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("atanf", "_ZGVbN4v_atanf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("atanf", "_ZGVdN8v_atanf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.atan.f64", "_ZGVbN2v_atan", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.atan.f64", "_ZGVdN4v_atan", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("llvm.atan.f32", "_ZGVbN4v_atanf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.atan.f32", "_ZGVdN8v_atanf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("cosh", "_ZGVbN2v_cosh", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("cosh", "_ZGVdN4v_cosh", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("coshf", "_ZGVbN4v_coshf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("coshf", "_ZGVdN8v_coshf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.cosh.f64", "_ZGVbN2v_cosh", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.cosh.f64", "_ZGVdN4v_cosh", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("llvm.cosh.f32", "_ZGVbN4v_coshf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.cosh.f32", "_ZGVdN8v_coshf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("sinh", "_ZGVbN2v_sinh", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("sinh", "_ZGVdN4v_sinh", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("sinhf", "_ZGVbN4v_sinhf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("sinhf", "_ZGVdN8v_sinhf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.sinh.f64", "_ZGVbN2v_sinh", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.sinh.f64", "_ZGVdN4v_sinh", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("llvm.sinh.f32", "_ZGVbN4v_sinhf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.sinh.f32", "_ZGVdN8v_sinhf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("tanh", "_ZGVbN2v_tanh", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("tanh", "_ZGVdN4v_tanh", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("tanhf", "_ZGVbN4v_tanhf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("tanhf", "_ZGVdN8v_tanhf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.tanh.f64", "_ZGVbN2v_tanh", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.tanh.f64", "_ZGVdN4v_tanh", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("llvm.tanh.f32", "_ZGVbN4v_tanhf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.tanh.f32", "_ZGVdN8v_tanhf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("exp10", "_ZGVbN2v_exp10", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("exp10", "_ZGVdN4v_exp10", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("exp10f", "_ZGVbN4v_exp10f", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("exp10f", "_ZGVdN8v_exp10f", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.exp10.f64", "_ZGVbN2v_exp10", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.exp10.f64", "_ZGVdN4v_exp10", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("llvm.exp10.f32", "_ZGVbN4v_exp10f", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.exp10.f32", "_ZGVdN8v_exp10f", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("exp2", "_ZGVbN2v_exp2", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("exp2", "_ZGVdN4v_exp2", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("exp2f", "_ZGVbN4v_exp2f", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("exp2f", "_ZGVdN8v_exp2f", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.exp2.f64", "_ZGVbN2v_exp2", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.exp2.f64", "_ZGVdN4v_exp2", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("llvm.exp2.f32", "_ZGVbN4v_exp2f", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.exp2.f32", "_ZGVdN8v_exp2f", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("log10", "_ZGVbN2v_log10", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("log10", "_ZGVdN4v_log10", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("log10f", "_ZGVbN4v_log10f", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("log10f", "_ZGVdN8v_log10f", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.log10.f64", "_ZGVbN2v_log10", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.log10.f64", "_ZGVdN4v_log10", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("llvm.log10.f32", "_ZGVbN4v_log10f", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.log10.f32", "_ZGVdN8v_log10f", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("log2", "_ZGVbN2v_log2", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("log2", "_ZGVdN4v_log2", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("log2f", "_ZGVbN4v_log2f", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("log2f", "_ZGVdN8v_log2f", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("llvm.log2.f64", "_ZGVbN2v_log2", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("llvm.log2.f64", "_ZGVdN4v_log2", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("llvm.log2.f32", "_ZGVbN4v_log2f", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("llvm.log2.f32", "_ZGVdN8v_log2f", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("atan2", "_ZGVbN2vv_atan2", FIXED(2), "_ZGV_LLVM_N2vv")
+TLI_DEFINE_VECFUNC("atan2", "_ZGVdN4vv_atan2", FIXED(4), "_ZGV_LLVM_N4vv")
+
+TLI_DEFINE_VECFUNC("atan2f", "_ZGVbN4vv_atan2f", FIXED(4), "_ZGV_LLVM_N4vv")
+TLI_DEFINE_VECFUNC("atan2f", "_ZGVdN8vv_atan2f", FIXED(8), "_ZGV_LLVM_N8vv")
+
+TLI_DEFINE_VECFUNC("llvm.atan2.f64", "_ZGVbN2vv_atan2", FIXED(2), "_ZGV_LLVM_N2vv")
+TLI_DEFINE_VECFUNC("llvm.atan2.f64", "_ZGVdN4vv_atan2", FIXED(4), "_ZGV_LLVM_N4vv")
+
+TLI_DEFINE_VECFUNC("llvm.atan2.f32", "_ZGVbN4vv_atan2f", FIXED(4), "_ZGV_LLVM_N4vv")
+TLI_DEFINE_VECFUNC("llvm.atan2.f32", "_ZGVdN8vv_atan2f", FIXED(8), "_ZGV_LLVM_N8vv")
+
+TLI_DEFINE_VECFUNC("hypot", "_ZGVbN2vv_hypot", FIXED(2), "_ZGV_LLVM_N2vv")
+TLI_DEFINE_VECFUNC("hypot", "_ZGVdN4vv_hypot", FIXED(4), "_ZGV_LLVM_N4vv")
+
+TLI_DEFINE_VECFUNC("hypotf", "_ZGVbN4vv_hypotf", FIXED(4), "_ZGV_LLVM_N4vv")
+TLI_DEFINE_VECFUNC("hypotf", "_ZGVdN8vv_hypotf", FIXED(8), "_ZGV_LLVM_N8vv")
+
+// sincos/sincosf held out: glibc exports _ZGV{b,c,d,e}N?vvv_sincos
+// (three v's), which does not match the vl8l8 linear-pointer
+// convention every other sincos entry in this file uses.
+
 #elif defined(TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS)
 
 TLI_DEFINE_VECFUNC("acos", "_ZGVnN2v_acos", FIXED(2), NOMASK, "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall)
