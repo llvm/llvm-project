@@ -8605,13 +8605,13 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
   }
 
   // Generic mode runs the main thread on a warp of its own, past thread_limit.
-  // Reserve the widest warp any target has. Not on SPIR-V, causes problems with
+  // Reserve one warp for that master thread. Not on SPIR-V, causes problems with
   // Level Zero.
   if (MaxThreadsVal > 0 && Attrs.ExecFlags == omp::OMP_TGT_EXEC_MODE_GENERIC &&
       hasGridValue(T) && !T.isSPIRV())
-    MaxThreadsVal = int32_t(
-        std::min<int64_t>(int64_t(MaxThreadsVal) + 64,
-                          int64_t(getGridValue(T, Kernel).GV_Max_WG_Size)));
+    MaxThreadsVal = int32_t(std::min<int64_t>(
+        int64_t(MaxThreadsVal) + getGridValue(T, Kernel).GV_Warp_Size,
+        int64_t(getGridValue(T, Kernel).GV_Max_WG_Size)));
 
   if (MaxThreadsVal > 0)
     writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads.front(),

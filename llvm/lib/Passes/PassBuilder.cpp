@@ -579,6 +579,13 @@ static const Regex DefaultAliasRegex(
     "^(default|default-post-link|thinlto-pre-link|thinlto|lto-pre-link|lto)"
     "<(O[0123sz])>$");
 
+/// Tests whether a pass name starts with a valid prefix for a default pipeline
+/// alias.
+static bool startsWithDefaultPipelineAliasPrefix(StringRef Name) {
+  return Name.starts_with("default") || Name.starts_with("thinlto") ||
+         Name.starts_with("lto");
+}
+
 AnalysisKey NoOpModuleAnalysis::Key;
 AnalysisKey NoOpCGSCCAnalysis::Key;
 AnalysisKey NoOpFunctionAnalysis::Key;
