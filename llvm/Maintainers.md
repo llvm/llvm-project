@@ -159,6 +159,11 @@ mnadeem@quicinc.com (email), [UsmanNadeem](https://github.com/UsmanNadeem) (Gith
 Vitaly Buka \
 vitalybuka@google.com (email), [vitalybuka](https://github.com/vitalybuka) (GitHub)
 
+#### CopyProf
+
+Snehasish Kumar \
+snehasishk@google.com (email), [snehasish](https://github.com/snehasish) (GitHub)
+
 #### NumericalStabilitySanitizer
 
 Alexander Shaposhnikov \
@@ -288,6 +293,15 @@ luweining@loongson.cn (email), [SixWeining](https://github.com/SixWeining) (GitH
 
 Min-Yih Hsu \
 min@myhsu.dev (email), [mshockwave](https://github.com/mshockwave) (GitHub)
+
+#### MIPS backend
+
+Weining Lu \
+luweining@loongson.cn (email), [SixWeining](https://github.com/SixWeining) (GitHub) \
+Ying Huang \
+yingopqq@gmail.com (email), [yingopq](https://github.com/yingopq) (GitHub) \
+Jiaxun Yang \
+jiaxun.yang@flygoat.com (email), [FlyGoat](https://github.com/FlyGoat) (GitHub)
 
 #### MSP430 backend
 

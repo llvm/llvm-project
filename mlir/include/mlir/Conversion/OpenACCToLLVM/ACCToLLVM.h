@@ -76,6 +76,19 @@ void populateACCDataDirectivePatterns(
     SymbolTable &symbolTable, const acc::ACCRuntimeCallConfig &config = {},
     acc::DeviceType clauseDeviceType = acc::DeviceType::None);
 
+/// Configure conversion legality for the OpenACC `host_data` construct.
+void configureACCHostDataConversionLegality(ConversionTarget &target);
+
+/// Populate patterns that lower the OpenACC `host_data` construct to runtime
+/// calls, one per `use_device` clause, so that the body of the construct works
+/// on device addresses. The runtime declarations and globals the patterns add
+/// are created in \p globalSymbolRegion and registered in \p symbolTable.
+void populateACCHostDataPatterns(LLVMTypeConverter &converter,
+                                 RewritePatternSet &patterns,
+                                 Region &globalSymbolRegion,
+                                 SymbolTable &symbolTable,
+                                 const acc::ACCRuntimeCallConfig &config = {});
+
 /// Populate the patterns that remove OpenACC data clause operations once the
 /// constructs holding them have turned their mappings into runtime calls. A
 /// data entry operation is replaced by the address of the object it named, and
@@ -85,8 +98,10 @@ void populateACCDataDirectivePatterns(
 /// A conversion has to populate these only once every construct holding such a
 /// clause operation is lowered in the same conversion, as the mappings would
 /// otherwise be lost.
-void populateACCDataClauseOpPatterns(LLVMTypeConverter &converter,
-                                     RewritePatternSet &patterns);
+void populateACCDataClauseOpPatterns(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    acc::OpenACCSupport &accSupport, Region &globalSymbolRegion,
+    SymbolTable &symbolTable, const acc::ACCRuntimeCallConfig &config = {});
 
 } // namespace mlir
 

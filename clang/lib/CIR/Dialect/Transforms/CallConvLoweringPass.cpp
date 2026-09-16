@@ -74,18 +74,8 @@ namespace {
 // Maps CIR types to llvm::abi::Type, runs the LLVM ABI Lowering Library's SysV
 // x86_64 classifier, and converts the result back into the dialect-agnostic
 // mlir::abi::FunctionClassification that CIRABIRewriteContext consumes.
-// Integer (including `_BitInt` of any width and `__int128`) / pointer /
-// vtable pointer / bool / floating-point scalars are handled, as are struct /
-// union / array aggregates, `_Complex`, and a fixed-width vector whose width
-// is a power of two.  Other vectors, a struct whose `empty` member is an
-// empty-for-ABI record occupying bytes or is zero-sized and off its own
-// alignment, a union no member of which spans its declared size (a
-// single-declaration bit-field member counting as far as its declared type
-// extends, and only for a union of one eightbyte or less), a member-less
-// union past two eightbytes, and a union with a named bit-field access unit
-// no spanning member of which supplies data are reported NYI by
-// classifyX86_64Function so an unsupported signature fails the pass instead
-// of being misclassified.
+// isSupportedType says which CIR types the bridge handles, and a signature
+// naming any other fails the pass instead of being misclassified.
 //===----------------------------------------------------------------------===//
 
 /// Whether a struct's declared argument-passing kind (from the module's
@@ -97,6 +87,41 @@ static bool recordCanPassInRegs(ModuleOp modOp, cir::RecordType recTy) {
   if (!layout)
     return true;
   return layout.getArgPassingKind() == cir::ArgPassingKind::CanPassInRegs;
+}
+
+/// Whether the classifier could give this type the SSEUP class, looking
+/// through arrays and records at the types they hold.
+static bool mayReachSseUp(mlir::Type ty, const DataLayout &dl) {
+  if (isa<cir::VectorType>(ty))
+    return dl.getTypeSizeInBits(ty).getFixedValue() >= 128;
+  if (auto fpTy = dyn_cast<cir::FPTypeInterface>(ty))
+    return &fpTy.getFloatSemantics() == &llvm::APFloat::IEEEquad();
+  if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
+    return mayReachSseUp(arrTy.getElementType(), dl);
+  if (auto recTy = dyn_cast<cir::RecordType>(ty))
+    return recTy.isComplete() &&
+           llvm::any_of(recTy.getMembers(),
+                        [&](mlir::Type m) { return mayReachSseUp(m, dl); });
+  // The rest classify integer, SSE or memory.  A complex is SSE at float and
+  // double width and memory above that, so it needs no walk of its own.
+  assert((isa<cir::IntType, cir::BoolType, cir::PointerType, cir::VPtrType,
+              cir::VoidType, cir::ComplexType, cir::BitFieldType>(ty)) &&
+         "unhandled type in the SSEUP walk");
+  return false;
+}
+
+/// Whether the record's size has no SSEUP coerce.  That coerce is a vector as
+/// wide as the record, so only 128, 256 and 512 bits have one.  A record past
+/// 512 bits classifies memory before any coerce is asked for.
+static bool sseUpCoerceSizeUnsupported(uint64_t recordBits,
+                                       llvm::ArrayRef<mlir::Type> members,
+                                       const DataLayout &dl) {
+  if (recordBits == 128 || recordBits == 256 || recordBits == 512)
+    return false;
+  if (recordBits < 128 || recordBits > 512)
+    return false;
+  return llvm::any_of(members,
+                      [&](mlir::Type m) { return mayReachSseUp(m, dl); });
 }
 
 /// Whether a member is an empty record, looking through arrays, since an array
@@ -219,54 +244,36 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
     // An incomplete record has no layout to classify.
     if (!recTy.isComplete())
       return false;
+    // The members are checked first so that everything below reasons only
+    // about types the bridge handles.
+    if (!llvm::all_of(recTy.getMembers(),
+                      [&](mlir::Type m) { return isSupportedType(m, dl); }))
+      return false;
     if (recTy.isUnion()) {
-      // The classifier sizes a union's eightbytes from the union itself, which
-      // is only sound when some member spans that size.  Short of that, the
-      // remaining bytes are either tail padding or the rest of a bitfield
-      // storage unit, and the CIR type cannot tell those apart even though
-      // classic CodeGen coerces them to i32 and i8 respectively.
       llvm::ArrayRef<mlir::Type> members = recTy.getMembers();
       uint64_t recordBits = dl.getTypeSizeInBits(recTy).getFixedValue();
-      if (members.empty()) {
-        // A member-less union is all padding, which classifies Ignore up to two
-        // eightbytes.  Past that SysV says MEMORY regardless of content, and
-        // no source spells a union with no member at all, so refusing beats
-        // guessing at the Indirect coercion.
-        if (recordBits > 128)
-          return false;
-      } else {
-        // A declared type may reach past its unit and overshoot the union,
-        // which stored bytes never do, hence the inequality.  It counts only
-        // within the first eightbyte: past that reduceUnionForX8664 picks the
-        // coerce basis from the fields the union stores.
-        const bool declaredExtentCounts = recordBits <= 64;
-        auto spansRecord = [&](mlir::Type m) {
-          if (dl.getTypeSizeInBits(m).getFixedValue() == recordBits)
-            return true;
-          if (!declaredExtentCounts)
-            return false;
-          auto bfTy = dyn_cast<cir::BitFieldType>(m);
-          if (!bfTy)
-            return false;
-          std::optional<uint64_t> extentBits =
-              bfTy.getSoleDeclaredExtentInBits(dl);
-          return extentBits && *extentBits >= recordBits;
-        };
-        if (!llvm::any_of(members, spansRecord))
-          return false;
-        // A bit-field's access unit may be wider than the bits the field
-        // holds, so some member (that bit-field or another one) must both
-        // match the union's size and hold data.
-        llvm::ArrayRef<cir::RecordMemberKind> kinds = recTy.getMemberKinds();
-        if (llvm::any_of(kinds, cir::isNamedBitField) &&
-            !llvm::any_of(
-                llvm::zip_equal(members, kinds), [&](const auto &pair) {
-                  auto [memberTy, kind] = pair;
-                  return spansRecord(memberTy) && cir::holdsDataForABI(kind) &&
-                         !memberIsEmptyRecord(memberTy);
-                }))
-          return false;
-      }
+      // Refuse a union that could reach SSEUP at a size no coerce exists for.
+      // The classifier asserts on those rather than returning a coerce.
+      if (sseUpCoerceSizeUnsupported(recordBits, members, dl))
+        return false;
+      // A member-less union is all padding, which classifies Ignore up to two
+      // eightbytes.  Past that SysV says MEMORY regardless of content, and
+      // there is no member here to build the Indirect coercion from.
+      if (members.empty() && recordBits > 128)
+        return false;
+      // A `_BitInt` access unit past an eightbyte has byte-array storage in
+      // CIR and integer storage in classic CodeGen, so the narrowing walk
+      // finds an i8 in the second eightbyte where classic keeps an i64.
+      if (llvm::any_of(members, [&](mlir::Type m) {
+            auto bfTy = dyn_cast<cir::BitFieldType>(m);
+            if (!bfTy || dl.getTypeSizeInBits(bfTy).getFixedValue() <= 64)
+              return false;
+            return llvm::any_of(bfTy.getFields(), [](cir::BitFieldDeclAttr d) {
+              auto intTy = dyn_cast<cir::IntType>(d.getDeclaredType());
+              return intTy && intTy.getIsBitInt();
+            });
+          }))
+        return false;
     } else {
       // A struct's `empty` member that occupies bytes is later read as an
       // unnamed bit-field.  An empty-for-ABI record occupies its own padding,
@@ -289,8 +296,7 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
         }
       }
     }
-    return llvm::all_of(recTy.getMembers(),
-                        [&](mlir::Type m) { return isSupportedType(m, dl); });
+    return true;
   }
   return false;
 }
