@@ -1133,6 +1133,19 @@ func.func @fold_reshape_constant_splat(%shape : tensor<1xi32>) -> tensor<4xf32> 
 
 // -----
 
+// CHECK-LABEL: func @reshape_quantized_splat_constant
+//   CHECK-NOT: arith.constant
+//       CHECK: %[[CST:.*]] = "tosa.const"
+//       CHECK: tensor.reshape %[[CST]]
+func.func @reshape_quantized_splat_constant(%shape : tensor<1xi32>) -> tensor<4x!quant.uniform<i8:f32, 1.000000e+00>> {
+  %cst = "tosa.const"() <{values = dense<7> : tensor<4x1xi8>}> : () -> tensor<4x1x!quant.uniform<i8:f32, 1.000000e+00>>
+  %0 = tensor.reshape %cst(%shape)
+             : (tensor<4x1x!quant.uniform<i8:f32, 1.000000e+00>>, tensor<1xi32>) -> tensor<4x!quant.uniform<i8:f32, 1.000000e+00>>
+  return %0 : tensor<4x!quant.uniform<i8:f32, 1.000000e+00>>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_reshape_chain
 //  CHECK-SAME: %[[INPUT:[a-zA-Z0-9_]+]]: tensor<*xf32>
 //  CHECK-SAME: %[[SHAPE_0:[a-zA-Z0-9_]+]]: tensor<?xindex>
@@ -1860,6 +1873,34 @@ func.func @expand_shape_splat_constant_dynamic_result(%n: index) -> tensor<?xi32
   %cst = arith.constant dense<1> : tensor<i32>
   %result = tensor.expand_shape %cst [] output_shape [%n] : tensor<i32> into tensor<?xi32>
   return %result : tensor<?xi32>
+}
+
+// -----
+
+// Regression tests for https://github.com/llvm/llvm-project/issues/204907:
+// a quantized tosa.const holds its values in the storage element type (i8),
+// so the constant cannot be reshaped into the quantized result type.
+
+// CHECK-LABEL: @expand_shape_quantized_constant
+//   CHECK-NOT:   arith.constant
+//       CHECK:   %[[CST:.*]] = "tosa.const"
+//       CHECK:   tensor.expand_shape %[[CST]]
+func.func @expand_shape_quantized_constant() -> tensor<1x3x!quant.uniform<i8:f32, 1.000000e+00>> {
+  %cst = "tosa.const"() <{values = dense<[1, 2, 3]> : tensor<3xi8>}> : () -> tensor<3x!quant.uniform<i8:f32, 1.000000e+00>>
+  %result = tensor.expand_shape %cst [[0, 1]] output_shape [1, 3] : tensor<3x!quant.uniform<i8:f32, 1.000000e+00>> into tensor<1x3x!quant.uniform<i8:f32, 1.000000e+00>>
+  return %result : tensor<1x3x!quant.uniform<i8:f32, 1.000000e+00>>
+}
+
+// -----
+
+// CHECK-LABEL: @collapse_shape_quantized_splat_constant
+//   CHECK-NOT:   arith.constant
+//       CHECK:   %[[CST:.*]] = "tosa.const"
+//       CHECK:   tensor.collapse_shape %[[CST]]
+func.func @collapse_shape_quantized_splat_constant() -> tensor<6x!quant.uniform<i8:f32, 1.000000e+00>> {
+  %cst = "tosa.const"() <{values = dense<7> : tensor<2x3xi8>}> : () -> tensor<2x3x!quant.uniform<i8:f32, 1.000000e+00>>
+  %result = tensor.collapse_shape %cst [[0, 1]] : tensor<2x3x!quant.uniform<i8:f32, 1.000000e+00>> into tensor<6x!quant.uniform<i8:f32, 1.000000e+00>>
+  return %result : tensor<6x!quant.uniform<i8:f32, 1.000000e+00>>
 }
 
 // -----

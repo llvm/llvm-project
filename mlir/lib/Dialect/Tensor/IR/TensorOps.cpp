@@ -2151,11 +2151,15 @@ struct FoldReshapeWithConstant : OpRewritePattern<TensorReshapeOp> {
     if (!attr || !attr.isSplat())
       return failure();
     // DenseElementsAttr requires a static shape; skip folding for dynamic
-    // result types.
-    if (!reshapeOp.getResultType().hasStaticShape())
+    // result types. The raw data can only be reused when the element types
+    // match; a constant may hold its values in the storage type of a
+    // quantized result type.
+    RankedTensorType resultType = reshapeOp.getResultType();
+    if (!resultType.hasStaticShape() ||
+        attr.getType().getElementType() != resultType.getElementType())
       return failure();
-    DenseElementsAttr newAttr = DenseElementsAttr::getFromRawBuffer(
-        reshapeOp.getResultType(), attr.getRawData());
+    DenseElementsAttr newAttr =
+        DenseElementsAttr::getFromRawBuffer(resultType, attr.getRawData());
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(reshapeOp, newAttr);
     return success();
   }
