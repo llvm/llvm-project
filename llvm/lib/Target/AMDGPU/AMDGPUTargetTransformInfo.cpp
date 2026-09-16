@@ -1087,20 +1087,16 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   if (IsIntToFP) {
     const unsigned ExtOps = UsesInt64 && SrcBits < 64 ? (IsSigned ? 2 : 1) : 0;
     if (FPTy->isBFloatTy()) {
-      const bool NarrowLanes =
-          SrcBits >= 8 && SrcBits < 32 && isa<FixedVectorType>(Src);
-      if (!NarrowLanes && SrcBits != 8 && SrcBits != 16 && SrcBits != 32 &&
-          !UsesInt64)
+      if (SrcBits < 8 || (SrcBits > 32 && !UsesInt64))
         return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
       // Each integer is converted to f32 first.
       InstructionCost FloatCost =
           Scale(UsesInt64 ? ExtOps + (IsSigned ? 12 : 8) : 1);
-      if (NarrowLanes) {
-        auto *FloatTy =
-            FixedVectorType::get(Type::getFloatTy(Dst->getContext()), NElts);
-        FloatCost = getCastInstrCost(Opcode, FloatTy, Src, CCH, CostKind);
-      }
+      if (SrcBits < 32)
+        FloatCost = getCastInstrCost(
+            Opcode, Dst->getWithNewType(Type::getFloatTy(Dst->getContext())),
+            Src, CCH, CostKind);
 
       // Native rounding can convert a pair. With 16 bit instructions the
       // expansion extracts the low significand bit, adds the rounding bias,
@@ -1172,6 +1168,30 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       if (SrcBits < 16 && ST->has16BitInsts())
         ++PerElt;
       return Scale(PerElt);
+    }
+
+    // A narrow scalar source is extended before the conversion. An unsigned
+    // byte is converted straight out of its register, and a signed one with
+    // SDWA. A source wider than a byte but narrower than 16 bits is masked
+    // or sign extended first. Without 16 bit instructions a half result is
+    // rounded from f32.
+    if (SrcBits >= 8 && SrcBits < 32) {
+      const bool Narrow = SrcBits > 8 && SrcBits < 16;
+      const bool SignExtend16 = IsSigned && Narrow && ST->has16BitInsts();
+      if (FPTy->isDoubleTy())
+        return Scale(1 + 2 * SignExtend16, 1);
+      if (SrcBits > 16)
+        return Scale(FPTy->isHalfTy() ? 3 : 2);
+      if (FPTy->isHalfTy() && ST->has16BitInsts())
+        return Scale(Narrow ? (IsSigned ? 3 : 2)
+                     : SrcBits == 8 && !ST->hasSDWA() ? 2
+                                                      : 1);
+      const InstructionCost FloatCost =
+          SignExtend16                ? Scale(ST->hasSDWA() ? 3 : 4)
+          : Narrow                    ? Scale(2)
+          : SrcBits == 8 && !IsSigned ? Scale(1)
+                                      : Scale(ST->hasSDWA() ? 1 : 2);
+      return FPTy->isHalfTy() ? FloatCost + Scale(1) : FloatCost;
     }
 
     return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
