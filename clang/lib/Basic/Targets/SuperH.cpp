@@ -40,7 +40,7 @@ void SuperHTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) cons
     Values.push_back(Info.Name);
 }
 
-bool SuperHTargetInfo::setCPU(const std::string &Name) {
+bool SuperHTargetInfo::setCPU(StringRef Name) {
   // Set the ABI field based on the device or family name.
   const auto *It = llvm::find_if(
       CPUInfo, [&](const SHCPUInfo &Info) { return Info.Name == Name; });

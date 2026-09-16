@@ -137,6 +137,7 @@ static bool RetCC_SH_SRet(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   return true;
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "SuperHGenCallingConv.inc"
 
 

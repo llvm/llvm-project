@@ -344,7 +344,7 @@ bool SuperHFrameLowering::canSimplifyCallFramePseudos(
 
 bool SuperHFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MF.getTarget().Options.DisableFramePointerElim(MF) ||
+  return MF.disableFramePointerElim() ||
          MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken();
 }
 
