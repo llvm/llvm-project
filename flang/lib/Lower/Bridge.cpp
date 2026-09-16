@@ -3711,9 +3711,13 @@ private:
       if (curEval->lowerAsStructured()) {
         curEval = &curEval->getFirstNestedEvaluation();
         // A DO CONCURRENT holds all controls in one construct; the per-level
-        // descent would overshoot into its body and drop it.
+        // descent would overshoot into its body and drop it. collapse(force:
+        // ...) explicitly allows prologue/epilogue statements between loop
+        // levels and has its own descent below to sink them, so this
+        // strict per-level descent -- which does not expect them -- must
+        // not run for it; curEval's value here is unused in that case.
         const auto *outerDo = curEval->getIf<Fortran::parser::DoConstruct>();
-        if (!(outerDo && outerDo->IsDoConcurrent()))
+        if (!collapseForce && !(outerDo && outerDo->IsDoConcurrent()))
           for (uint64_t i = 1; i < loopCount; i++) {
             llvm::SmallVector<Fortran::lower::pft::Evaluation *> skipped;
             Fortran::lower::pft::Evaluation *nextDo =
