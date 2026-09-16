@@ -785,6 +785,28 @@ class VPatUnaryVL_V<SDPatternOperator vop,
                    op1_reg_class:$rs2,
                    (mask_type VMV0:$vm), GPR:$vl, log2sew, TAIL_AGNOSTIC)>;
 
+class VPatUnaryVLNoMask_V<SDPatternOperator vop,
+                          string instruction_name,
+                          string suffix,
+                          ValueType result_type,
+                          ValueType op1_type,
+                          int log2sew,
+                          LMULInfo vlmul,
+                          VReg result_reg_class,
+                          VReg op1_reg_class,
+                          bit isSEWAware = 0>
+    : Pat<(result_type (vop
+                       (op1_type op1_reg_class:$rs2),
+                       (result_type result_reg_class:$passthru),
+                       VLOpFrag)),
+      (!cast<Instruction>(
+                   !if(isSEWAware,
+                       instruction_name#"_"#suffix#"_"#vlmul.MX#"_E"#!shl(1, log2sew),
+                       instruction_name#"_"#suffix#"_"#vlmul.MX))
+                   result_reg_class:$passthru,
+                   op1_reg_class:$rs2,
+                   GPR:$vl, log2sew, TAIL_AGNOSTIC)>;
+
 class VPatBinaryVL_V<SDPatternOperator vop,
                      string instruction_name,
                      string suffix,
@@ -987,6 +1009,31 @@ multiclass VPatBinaryVL_VV_VX_VI<SDPatternOperator vop, string instruction_name,
                           vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
                           !cast<ComplexPattern>(SplatPat#_#ImmType),
                           ImmType>;
+  }
+}
+
+// Pattern for the reversed .vx form, where the scalar splat is the *first*
+// source operand and the vector is the second, e.g. vrsub.vx and vdot4aus.vx.
+// This is the integer counterpart of VPatBinaryFPVL_R_VF.
+multiclass VPatBinaryVL_R_VX<SDPatternOperator vop, string instruction_name,
+                             list<VTypeInfo> vtilist = AllIntegerVectors,
+                             bit isSEWAware = 0,
+                             list<Predicate> ExtraPreds = []> {
+  foreach vti = vtilist in {
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
+    def : Pat<(vti.Vector (vop (vti.Vector (SplatPat (XLenVT GPR:$rs2))),
+                               (vti.Vector vti.RegClass:$rs1),
+                               (vti.Vector vti.RegClass:$passthru),
+                               (vti.Mask VMV0:$vm),
+                               VLOpFrag)),
+              (!cast<Instruction>(
+                           !if(isSEWAware,
+                               instruction_name#"_VX_"#vti.LMul.MX#"_E"#vti.SEW#"_MASK",
+                               instruction_name#"_VX_"#vti.LMul.MX#"_MASK"))
+                           vti.RegClass:$passthru,
+                           vti.RegClass:$rs1, GPR:$rs2,
+                           (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW,
+                           TAIL_AGNOSTIC)>;
   }
 }
 
@@ -2014,16 +2061,10 @@ multiclass VPatUnaryVL_V<SDPatternOperator op, string instruction_name,
 // 11.1. Vector Single-Width Integer Add and Subtract
 defm : VPatBinaryVL_VV_VX_VI<riscv_add_vl, "PseudoVADD">;
 defm : VPatBinaryVL_VV_VX<riscv_sub_vl, "PseudoVSUB">;
+// vrsub has reversed pattern operands: the splat is the first source operand.
+defm : VPatBinaryVL_R_VX<riscv_sub_vl, "PseudoVRSUB">;
 foreach vti = AllIntegerVectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in {
-    // Handle VRSUB specially since it's the only integer binary op with
-    // reversed pattern operands
-    def : Pat<(riscv_sub_vl (vti.Vector (SplatPat (XLenVT GPR:$rs2))),
-                            (vti.Vector vti.RegClass:$rs1),
-                            vti.RegClass:$passthru, (vti.Mask VMV0:$vm), VLOpFrag),
-              (!cast<Instruction>("PseudoVRSUB_VX_"# vti.LMul.MX#"_MASK")
-                   vti.RegClass:$passthru, vti.RegClass:$rs1, GPR:$rs2,
-                   (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
     def : Pat<(riscv_sub_vl (vti.Vector (SplatPat_simm5 simm5:$rs2)),
                             (vti.Vector vti.RegClass:$rs1),
                             vti.RegClass:$passthru, (vti.Mask VMV0:$vm), VLOpFrag),

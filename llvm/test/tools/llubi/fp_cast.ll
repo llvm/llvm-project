@@ -8,6 +8,29 @@ define void @main() {
   %si2fp = sitofp i32 -2 to float
   %ui2fp = uitofp i32 255 to float
 
+  %si2fp_zero = sitofp i32 0 to float
+  %ui2fp_zero = uitofp i32 0 to float
+
+  %si2fp_nsz_zero_1 = sitofp nsz i32 0 to float
+  %si2fp_nsz_zero_2 = sitofp nsz i32 0 to float
+  %ui2fp_nsz_zero_1 = uitofp nsz i32 0 to float
+  %ui2fp_nsz_zero_2 = uitofp nsz i32 0 to float
+
+  %si2fp_nsz_zero_vec = sitofp nsz <4 x i32> zeroinitializer to <4 x float>
+  %ui2fp_nsz_zero_vec = uitofp nsz <4 x i32> zeroinitializer to <4 x float>
+
+  %si2fp_ninf_oob = sitofp ninf i32 -100000 to half
+  %ui2fp_ninf_oob = uitofp ninf i32 100000 to half
+
+  %si2fp_ninf_vec_oob = sitofp ninf <4 x i32> <i32 -100000, i32 -100000, i32 -100000, i32 -100000> to <4 x half>
+  %ui2fp_ninf_vec_oob = uitofp ninf <4 x i32> <i32 100000, i32 100000, i32 100000, i32 100000> to <4 x half>
+
+  %si2fp_ninf = sitofp ninf i32 -100000 to float
+  %ui2fp_ninf = uitofp ninf i32 100000 to float
+
+  %si2fp_ninf_vec = sitofp ninf <4 x i32> <i32 -100000, i32 -100000, i32 -100000, i32 -100000> to <4 x float>
+  %ui2fp_ninf_vec = uitofp ninf <4 x i32> <i32 100000, i32 100000, i32 100000, i32 100000> to <4 x float>
+
   %ui2fp_nneg_pos = uitofp nneg i32 255 to float
   %ui2fp_nneg_neg = uitofp nneg i32 -255 to float
 
@@ -27,6 +50,22 @@ define void @main() {
 ; CHECK-NEXT:   %trunc = fptrunc double 3.500000e+00 to float => float 3.500000e+00
 ; CHECK-NEXT:   %si2fp = sitofp i32 -2 to float => float -2.000000e+00
 ; CHECK-NEXT:   %ui2fp = uitofp i32 255 to float => float 2.550000e+02
+; CHECK-NEXT:   %si2fp_zero = sitofp i32 0 to float => float 0.000000e+00
+; CHECK-NEXT:   %ui2fp_zero = uitofp i32 0 to float => float 0.000000e+00
+; CHECK-NEXT:   %si2fp_nsz_zero_1 = sitofp nsz i32 0 to float => float 0.000000e+00
+; CHECK-NEXT:   %si2fp_nsz_zero_2 = sitofp nsz i32 0 to float => float -0.000000e+00
+; CHECK-NEXT:   %ui2fp_nsz_zero_1 = uitofp nsz i32 0 to float => float -0.000000e+00
+; CHECK-NEXT:   %ui2fp_nsz_zero_2 = uitofp nsz i32 0 to float => float 0.000000e+00
+; CHECK-NEXT:   %si2fp_nsz_zero_vec = sitofp nsz <4 x i32> zeroinitializer to <4 x float> => { float 0.000000e+00, float 0.000000e+00, float -0.000000e+00, float 0.000000e+00 }
+; CHECK-NEXT:   %ui2fp_nsz_zero_vec = uitofp nsz <4 x i32> zeroinitializer to <4 x float> => { float 0.000000e+00, float -0.000000e+00, float -0.000000e+00, float 0.000000e+00 }
+; CHECK-NEXT:   %si2fp_ninf_oob = sitofp ninf i32 -100000 to half => poison
+; CHECK-NEXT:   %ui2fp_ninf_oob = uitofp ninf i32 100000 to half => poison
+; CHECK-NEXT:   %si2fp_ninf_vec_oob = sitofp ninf <4 x i32> splat (i32 -100000) to <4 x half> => { poison, poison, poison, poison }
+; CHECK-NEXT:   %ui2fp_ninf_vec_oob = uitofp ninf <4 x i32> splat (i32 100000) to <4 x half> => { poison, poison, poison, poison }
+; CHECK-NEXT:   %si2fp_ninf = sitofp ninf i32 -100000 to float => float -1.000000e+05
+; CHECK-NEXT:   %ui2fp_ninf = uitofp ninf i32 100000 to float => float 1.000000e+05
+; CHECK-NEXT:   %si2fp_ninf_vec = sitofp ninf <4 x i32> splat (i32 -100000) to <4 x float> => { float -1.000000e+05, float -1.000000e+05, float -1.000000e+05, float -1.000000e+05 }
+; CHECK-NEXT:   %ui2fp_ninf_vec = uitofp ninf <4 x i32> splat (i32 100000) to <4 x float> => { float 1.000000e+05, float 1.000000e+05, float 1.000000e+05, float 1.000000e+05 }
 ; CHECK-NEXT:   %ui2fp_nneg_pos = uitofp nneg i32 255 to float => float 2.550000e+02
 ; CHECK-NEXT:   %ui2fp_nneg_neg = uitofp nneg i32 -255 to float => poison
 ; CHECK-NEXT:   %fp2si = fptosi double -4.750000e+00 to i32 => i32 -4

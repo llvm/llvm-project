@@ -17,6 +17,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
@@ -25,6 +26,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
+#include <numeric>
 #include <string>
 #include <type_traits>
 
@@ -314,6 +316,103 @@ void reorderScalars(SmallVectorImpl<Value *> &Scalars, ArrayRef<int> Mask) {
       Scalars[Mask[I]] = Prev[I];
 }
 
+void reorderReuses(SmallVectorImpl<int> &Reuses, ArrayRef<int> Mask) {
+  assert(!Mask.empty() && Reuses.size() == Mask.size() &&
+         "Expected non-empty mask.");
+  SmallVector<int> Prev(Reuses.begin(), Reuses.end());
+  Prev.swap(Reuses);
+  for (unsigned I = 0, E = Prev.size(); I < E; ++I)
+    if (Mask[I] != PoisonMaskElem)
+      Reuses[Mask[I]] = Prev[I];
+}
+
+void reorderOrder(SmallVectorImpl<unsigned> &Order, ArrayRef<int> Mask,
+                  bool BottomOrder) {
+  assert(!Mask.empty() && "Expected non-empty mask.");
+  unsigned Sz = Mask.size();
+  if (BottomOrder) {
+    SmallVector<unsigned> PrevOrder;
+    if (Order.empty()) {
+      PrevOrder.resize(Sz);
+      std::iota(PrevOrder.begin(), PrevOrder.end(), 0);
+    } else {
+      PrevOrder.swap(Order);
+    }
+    Order.assign(Sz, Sz);
+    for (unsigned I = 0; I < Sz; ++I)
+      if (Mask[I] != PoisonMaskElem)
+        Order[I] = PrevOrder[Mask[I]];
+    if (all_of(enumerate(Order), [&](const auto &Data) {
+          return Data.value() == Sz || Data.index() == Data.value();
+        })) {
+      Order.clear();
+      return;
+    }
+    fixupOrderingIndices(Order);
+    return;
+  }
+  SmallVector<int> MaskOrder;
+  if (Order.empty()) {
+    MaskOrder.resize(Sz);
+    std::iota(MaskOrder.begin(), MaskOrder.end(), 0);
+  } else {
+    inversePermutation(Order, MaskOrder);
+  }
+  reorderReuses(MaskOrder, Mask);
+  if (ShuffleVectorInst::isIdentityMask(MaskOrder, Sz)) {
+    Order.clear();
+    return;
+  }
+  Order.assign(Sz, Sz);
+  for (unsigned I = 0; I < Sz; ++I)
+    if (MaskOrder[I] != PoisonMaskElem)
+      Order[MaskOrder[I]] = I;
+  fixupOrderingIndices(Order);
+}
+
+bool isReverseOrder(ArrayRef<unsigned> Order) {
+  assert(!Order.empty() &&
+         "Order is empty. Please check it before using isReverseOrder.");
+  unsigned Sz = Order.size();
+  return all_of(enumerate(Order), [&](const auto &Pair) {
+    return Pair.value() == Sz || Sz - Pair.index() - 1 == Pair.value();
+  });
+}
+
+bool isRepeatedNonIdentityClusteredMask(ArrayRef<int> Mask, unsigned Sz) {
+  ArrayRef<int> FirstCluster = Mask.slice(0, Sz);
+  if (ShuffleVectorInst::isIdentityMask(FirstCluster, Sz))
+    return false;
+  for (unsigned I = Sz, E = Mask.size(); I < E; I += Sz) {
+    ArrayRef<int> Cluster = Mask.slice(I, Sz);
+    if (Cluster != FirstCluster)
+      return false;
+  }
+  return true;
+}
+
+void combineOrders(MutableArrayRef<unsigned> Order,
+                   ArrayRef<unsigned> SecondaryOrder) {
+  assert((SecondaryOrder.empty() || Order.size() == SecondaryOrder.size()) &&
+         "Expected same size of orders");
+  size_t Sz = Order.size();
+  SmallBitVector UsedIndices(Sz);
+  for (unsigned Idx : seq<unsigned>(0, Sz)) {
+    if (Order[Idx] != Sz)
+      UsedIndices.set(Order[Idx]);
+  }
+  if (SecondaryOrder.empty()) {
+    for (unsigned Idx : seq<unsigned>(0, Sz))
+      if (Order[Idx] == Sz && !UsedIndices.test(Idx))
+        Order[Idx] = Idx;
+  } else {
+    for (unsigned Idx : seq<unsigned>(0, Sz))
+      if (SecondaryOrder[Idx] != Sz && Order[Idx] == Sz &&
+          !UsedIndices.test(SecondaryOrder[Idx]))
+        Order[Idx] = SecondaryOrder[Idx];
+  }
+}
+
 bool allSameType(ArrayRef<Value *> VL) {
   assert(!VL.empty() && "Expected non-empty list of values.");
   Type *Ty = VL.consume_front()->getType();
@@ -572,6 +671,42 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
   // we have permutation of 2 vectors.
   return Vec2 ? TargetTransformInfo::SK_PermuteTwoSrc
               : TargetTransformInfo::SK_PermuteSingleSrc;
+}
+
+Value *createInsertVector(
+    IRBuilderBase &Builder, Value *Vec, Value *V, unsigned Index,
+    function_ref<Value *(Value *, Value *, ArrayRef<int>)> Generator) {
+  if (isa<PoisonValue>(Vec) && isa<PoisonValue>(V))
+    return Vec;
+  const unsigned SubVecVF = getNumElements(V->getType());
+  // Create shuffle, insertvector requires that index is multiple of
+  // the subvector length.
+  const unsigned VecVF = getNumElements(Vec->getType());
+  SmallVector<int> Mask(VecVF, PoisonMaskElem);
+  if (isa<PoisonValue>(Vec)) {
+    auto *Begin = std::next(Mask.begin(), Index);
+    std::iota(Begin, std::next(Begin, SubVecVF), 0);
+    Vec = Builder.CreateShuffleVector(V, Mask);
+    return Vec;
+  }
+  std::iota(Mask.begin(), Mask.end(), 0);
+  std::iota(std::next(Mask.begin(), Index),
+            std::next(Mask.begin(), Index + SubVecVF), VecVF);
+  if (Generator)
+    return Generator(Vec, V, Mask);
+  // 1. Resize V to the size of Vec.
+  SmallVector<int> ResizeMask(VecVF, PoisonMaskElem);
+  std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), SubVecVF), 0);
+  V = Builder.CreateShuffleVector(V, ResizeMask);
+  // 2. Insert V into Vec.
+  return Builder.CreateShuffleVector(Vec, V, Mask);
+}
+
+Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
+                           unsigned SubVecVF, unsigned Index) {
+  SmallVector<int> Mask(SubVecVF, PoisonMaskElem);
+  std::iota(Mask.begin(), Mask.end(), Index);
+  return Builder.CreateShuffleVector(Vec, Mask);
 }
 
 SmallBitVector buildUseMask(int VF, ArrayRef<int> Mask, UseMask MaskArg) {

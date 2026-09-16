@@ -1065,14 +1065,14 @@ backend:AMDGPU:
 backend:NVPTX:
   - changed-files:
     - any-glob-to-any-file:
-      - 'llvm/**/*nvvm*'
-      - 'llvm/**/*NVVM*'
-      - 'llvm/**/*nvptx*'
-      - 'llvm/**/*NVPTX*'
-      - 'llvm/**/*nvvm*/**'
-      - 'llvm/**/*NVVM*/**'
-      - 'llvm/**/*nvptx*/**'
-      - 'llvm/**/*NVPTX*/**'
+      - '**/*nvvm*'
+      - '**/*NVVM*'
+      - '**/*nvptx*'
+      - '**/*NVPTX*'
+      - '**/*nvvm*/**'
+      - '**/*NVVM*/**'
+      - '**/*nvptx*/**'
+      - '**/*NVPTX*/**'
 
 backend:MIPS:
   - changed-files:
