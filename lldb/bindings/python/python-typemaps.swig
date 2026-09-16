@@ -218,9 +218,9 @@ AND call SWIG_fail at the same time, because it will result in a double free.
     str_len = $2 - 1;
   }
 
-  llvm::StringRef ref(static_cast<const char *>($1), str_len);
-  PythonString string(ref);
-  $result = string.release();
+  /* Debuggee bytes, so not guaranteed valid UTF-8.  "replace" keeps the result printable. */
+  $result =
+      PyUnicode_DecodeUTF8(static_cast<const char *>($1), str_len, "replace");
 }
 
 // SBProcess::ReadCStringFromMemory() uses a void*, but needs to be treated
@@ -270,9 +270,8 @@ AND call SWIG_fail at the same time, because it will result in a double free.
 
 %typemap(argout) (char *dst_or_null, size_t dst_len) {
   Py_XDECREF($result); /* Blow away any previous result */
-  llvm::StringRef ref($1);
-  PythonString string(ref);
-  $result = string.release();
+  /* Not guaranteed valid UTF-8. */
+  $result = PyUnicode_DecodeUTF8($1, ::strlen($1), "replace");
   free($1);
 }
 

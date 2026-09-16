@@ -118,8 +118,8 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
 
 %feature("docstring", "
     Reads a NUL terminated C string from the current process's address space.
-    It returns a python string of the exact length, or truncates the string if
-    the maximum character limit is reached. Example: ::
+    It reads at most one byte less than the buffer size, and any byte that is
+    not valid UTF-8 is replaced by U+FFFD. Example: ::
 
         # Read a C string of at most 256 bytes from address '0x1000'
         error = lldb.SBError()
