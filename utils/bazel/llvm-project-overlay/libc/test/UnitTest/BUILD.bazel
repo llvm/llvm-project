@@ -78,11 +78,56 @@ libc_test_library(
         "//libc:func_realloc",
         "//libc:hdr_stdint_proxy",
         "//libc:llvm_libc_macros_stdfix_macros",
-        "//llvm:Support",
-    ],
+    ] + select({
+        "//libc:full_build": [
+            "//libc:clock",
+            "//libc:close",
+            "//libc:exit",
+            "//libc:fflush",
+            "//libc:fork",
+            "//libc:getenv",
+            "//libc:kill",
+            "//libc:llvm_libc_macros_poll_macros",
+            "//libc:llvm_libc_macros_signal_macros",
+            "//libc:llvm_libc_macros_sys_wait_macros",
+            "//libc:llvm_libc_types_pid_t",
+            "//libc:llvm_libc_types_struct_pollfd",
+            "//libc:pipe",
+            "//libc:poll",
+            "//libc:stderr",
+            "//libc:stdout",
+            "//libc:strsignal",
+            "//libc:waitpid",
+        ],
+        "//conditions:default": [],
+    }),
     # Force linking in this library's `main()` to surface
     # a duplicate symbol error if a test defines its own main.
     alwayslink = True,
+)
+
+libc_test_library(
+    name = "HermeticTestUtils",
+    srcs = ["HermeticTestUtils.cpp"],
+    # Only intended to be used with full-build tests.
+    target_compatible_with = select({
+        "//libc:full_build": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//libc:__support_common",
+        "//libc:__support_libc_errno",
+        "//libc:__support_macros_config",
+        "//libc:atexit",
+        "//libc:bcmp",
+        "//libc:bzero",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_stdint_proxy",
+        "//libc:memcmp",
+        "//libc:memcpy",
+        "//libc:memmove",
+        "//libc:memset",
+    ],
 )
 
 libc_test_library(
@@ -91,7 +136,7 @@ libc_test_library(
     hdrs = ["LibcCTest.h"],
     deps = [
         ":LibcUnitTest",
-        "//libc:public_headers_deps",
+        "//libc:llvm_libc_common_h",
     ],
 )
 
