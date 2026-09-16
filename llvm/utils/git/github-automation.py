@@ -87,9 +87,11 @@ class IssueSubscriber:
 
     def run(self) -> bool:
         if self.team_name.endswith("miscompilation:undef"):
-            comment = """
-Undef values are deprecated. Unless this miscompilation is observable in real-world programs, we don't want to fix it.
-"""
+            comment = textwrap.dedent(
+                """
+                Undef values are deprecated. Unless this miscompilation is observable in real-world programs, we don't want to fix it.
+            """
+            )
             self.issue.create_comment(comment)
             return True
 
