@@ -12,6 +12,7 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <initializer_list>
+#include <string>
 
 using namespace llvm;
 using namespace llvm::hlsl;
@@ -438,7 +439,8 @@ TEST_F(HLSLSemanticSignaturePackingTest, IndexedLeavesSemanticIndexGaps) {
                 {{/*Row=*/1, /*Col=*/0}, {/*Row=*/7, /*Col=*/0}});
 }
 
-TEST_F(HLSLSemanticSignaturePackingTest, IndexedRejectsSemanticIndexOverflow) {
+TEST_F(HLSLSemanticSignaturePackingTest,
+       IndexedRejectsOutOfRangeSemanticIndex) {
   // A semantic index outside the 32-row signature cannot be allocated.
 
   // struct PSOut {
@@ -451,8 +453,14 @@ TEST_F(HLSLSemanticSignaturePackingTest, IndexedRejectsSemanticIndexOverflow) {
         /*SemanticIndex=*/MaxSignatureRows}});
 
   verifyPackingError(PackingMethod::Indexed, Config,
-                     SignaturePackingError::SignatureOverflow,
+                     SignaturePackingError::SemanticIndexOutOfRange,
                      /*ExpectedElementIndex=*/0);
+
+  SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
+  EXPECT_THAT_EXPECTED(pack(PackingMethod::Indexed, Elements, Config),
+                       FailedWithMessage("semantic index must be less than " +
+                                         std::to_string(MaxSignatureRows) +
+                                         " (element 0)"));
 }
 
 } // namespace

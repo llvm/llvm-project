@@ -25,6 +25,9 @@ void SignaturePackingError::log(raw_ostream &OS) const {
   case SignatureOverflow:
     OS << "signature elements do not fit in " << MaxSignatureRows << " rows";
     break;
+  case SemanticIndexOutOfRange:
+    OS << "semantic index must be less than " << MaxSignatureRows;
+    break;
   }
   OS << " (element " << ElementIndex << ")";
 }
@@ -95,7 +98,7 @@ Expected<unsigned> llvm::hlsl::packSignatureIndexed(
     const uint32_t Row = Element.SemanticIndices.front();
     if (Row >= MaxSignatureRows)
       return make_error<SignaturePackingError>(
-          SignaturePackingError::SignatureOverflow,
+          SignaturePackingError::SemanticIndexOutOfRange,
           static_cast<unsigned>(Index));
 
     Element.StartRow = Row;

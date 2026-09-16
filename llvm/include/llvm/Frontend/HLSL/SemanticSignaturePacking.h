@@ -29,6 +29,7 @@ class LLVM_ABI SignaturePackingError : public ErrorInfo<SignaturePackingError> {
 public:
   enum ErrorKind {
     SignatureOverflow,
+    SemanticIndexOutOfRange,
   };
 
   static char ID;
