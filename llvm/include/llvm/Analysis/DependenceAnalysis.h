@@ -40,6 +40,7 @@
 #define LLVM_ANALYSIS_DEPENDENCEANALYSIS_H
 
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
@@ -51,6 +52,7 @@ class AAResults;
 template <typename T> class ArrayRef;
 class Loop;
 class LoopInfo;
+class MDNode;
 class SCEVConstant;
 class raw_ostream;
 
@@ -330,6 +332,11 @@ private:
   ScalarEvolution *SE;
   LoopInfo *LI;
   Function *F;
+
+  SmallPtrSet<const MDNode *, 4> LoopAliasScopes;
+  bool LoopAliasScopesPopulated = false;
+
+  const SmallPtrSetImpl<const MDNode *> &getLoopAliasScopes();
 
   /// Subscript - This private struct represents a pair of subscripts from
   /// a pair of potentially multi-dimensional array references. We use a
