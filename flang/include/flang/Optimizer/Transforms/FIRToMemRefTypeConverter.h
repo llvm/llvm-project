@@ -32,19 +32,6 @@ private:
   bool convertComplexTypes = false;
   bool convertScalarTypesOnly = false;
 
-  /// Peel one `!fir.ref` / `!fir.ptr` / `!fir.heap`. Returns a null type if
-  /// \p ty is none of those. Nested wrappers are left on the result; a
-  /// remaining pointer is a heap/pointer address, not memref data.
-  static mlir::Type peelPointerWrapper(mlir::Type ty) {
-    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty))
-      return refTy.getElementType();
-    if (auto pointerTy = mlir::dyn_cast<fir::PointerType>(ty))
-      return pointerTy.getElementType();
-    if (auto heapTy = mlir::dyn_cast<fir::HeapType>(ty))
-      return heapTy.getElementType();
-    return {};
-  }
-
   mlir::MemRefType convertMemrefBaseType(mlir::Type baseTy) const {
     if (auto charTy = mlir::dyn_cast<fir::CharacterType>(baseTy)) {
       unsigned kind = charTy.getFKind();
@@ -107,12 +94,12 @@ public:
   void setConvertScalarTypesOnly(bool value) { convertScalarTypesOnly = value; }
 
   /// Return true if the given FIR type can be converted to a MemRef-typed
-  /// descriptor. Uses the same `peelPointerWrapper` / `box` recursion as
+  /// descriptor. Uses the same `dyn_cast_ptrEleTy` / `box` recursion as
   /// `convertMemrefType`. Nested pointers such as
   /// `!fir.ref<!fir.heap<!fir.array<?xf32>>>` hold a heap address, not the
   /// array, and are not convertible.
   bool convertibleMemrefType(mlir::Type ty) {
-    if (mlir::Type pointee = peelPointerWrapper(ty))
+    if (mlir::Type pointee = fir::dyn_cast_ptrEleTy(ty))
       ty = pointee;
     else if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty))
       return convertibleMemrefType(boxTy.getElementType());
@@ -190,7 +177,7 @@ public:
 
   /// Convert a FIR element / aggregate type to a MemRef descriptor type.
   mlir::MemRefType convertMemrefType(mlir::Type firTy) const {
-    if (mlir::Type pointee = peelPointerWrapper(firTy))
+    if (mlir::Type pointee = fir::dyn_cast_ptrEleTy(firTy))
       return convertMemrefBaseType(pointee);
 
     if (auto boxTy = mlir::dyn_cast<fir::BoxType>(firTy)) {
