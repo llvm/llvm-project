@@ -3969,7 +3969,8 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     if (!FVTy)
       return nullptr;
     unsigned Width = Ty->getIntegerBitWidth();
-    if (APInt::getMaxValue(Width).ult(FVTy->getNumElements()))
+    if (APInt::getMaxValue(Width).ult(FVTy->getNumElements()) ||
+        Operands[0]->containsPoisonElement())
       return PoisonValue::get(Ty);
     for (unsigned I = 0; I < FVTy->getNumElements(); ++I) {
       Constant *Elt = Operands[0]->getAggregateElement(I);
