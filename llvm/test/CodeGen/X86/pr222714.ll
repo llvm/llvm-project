@@ -8,12 +8,13 @@ define i64 @pr222714(i64 %x, ptr %p) {
 ; CHECK-LABEL: pr222714:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shlq $30, %rdi
-; CHECK-NEXT:    movabsq $17179869183, %rcx # imm = 0x3FFFFFFFF
-; CHECK-NEXT:    movabsq $-4294967295, %rax # imm = 0xFFFFFFFF00000001
-; CHECK-NEXT:    addq %rax, %rcx
+; CHECK-NEXT:    movabsq $17179869183, %rax # imm = 0x3FFFFFFFF
+; CHECK-NEXT:    movabsq $-4294967295, %rcx # imm = 0xFFFFFFFF00000001
+; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    cmovneq %rax, %rcx
-; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    cmovneq %rcx, %rax
+; CHECK-NEXT:    movzwl %ax, %ecx
+; CHECK-NEXT:    movl %eax, %eax
 ; CHECK-NEXT:    addq (%rsi,%rcx,8), %rax
 ; CHECK-NEXT:    retq
   %m = and i64 %x, 17179869183
