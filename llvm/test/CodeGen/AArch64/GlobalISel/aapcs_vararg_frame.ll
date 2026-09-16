@@ -31,15 +31,13 @@ define void @va_used(i32 %count, half %f, ...) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #208
 ; CHECK-NEXT:    mov x8, #-56 // =0xffffffffffffffc8
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    add x10, sp, #120
-; CHECK-NEXT:    movk x8, #65424, lsl #32
-; CHECK-NEXT:    add x9, x9, #112
+; CHECK-NEXT:    add x9, sp, #112
 ; CHECK-NEXT:    stp x2, x3, [sp, #128]
-; CHECK-NEXT:    stp x9, x8, [sp, #192]
-; CHECK-NEXT:    add x8, x10, #56
-; CHECK-NEXT:    add x9, sp, #208
+; CHECK-NEXT:    movk x8, #65424, lsl #32
 ; CHECK-NEXT:    str x1, [sp, #120]
+; CHECK-NEXT:    stp x9, x8, [sp, #192]
+; CHECK-NEXT:    add x8, sp, #176
+; CHECK-NEXT:    add x9, sp, #208
 ; CHECK-NEXT:    stp x4, x5, [sp, #144]
 ; CHECK-NEXT:    stp x6, x7, [sp, #160]
 ; CHECK-NEXT:    stp q1, q2, [sp]
