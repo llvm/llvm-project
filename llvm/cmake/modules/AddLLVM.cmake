@@ -2510,14 +2510,21 @@ function(add_lit_testsuites project directory)
     # use one shared stamp to represent the dependency closure and make each
     # check command depend only on that stamp.
     set(use_factored_lit_dependencies OFF)
-    # TODO: Remove the CMake version fallback once LLVM requires CMake 3.31.
+    if(CMAKE_MINIMUM_REQUIRED_VERSION VERSION_GREATER_EQUAL 3.27)
+      get_property(lit_version_fallback_warned GLOBAL PROPERTY
+        LLVM_LIT_VERSION_FALLBACK_WARNED)
+      if(NOT lit_version_fallback_warned)
+        message(WARNING
+          "The pre-CMake-3.27 fallback in add_lit_testsuites can be removed")
+        set_property(GLOBAL PROPERTY LLVM_LIT_VERSION_FALLBACK_WARNED TRUE)
+      endif()
+    endif()
     if (CMAKE_GENERATOR STREQUAL "Ninja" AND
         CMAKE_VERSION VERSION_GREATER_EQUAL 3.27)
       set(use_factored_lit_dependencies ON)
-      string(SHA1 lit_testsuites_id
-        "${CMAKE_CURRENT_BINARY_DIR};${project};${directory}")
+      string(TOLOWER "${project}" project_lower)
       set(lit_deps_stamp
-        "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${lit_testsuites_id}.stamp")
+        "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/check-${project_lower}-test-depends.stamp")
       add_custom_command(OUTPUT ${lit_deps_stamp}
         COMMAND ${CMAKE_COMMAND} -E touch ${lit_deps_stamp}
         DEPENDS ${ARG_DEPENDS}
@@ -2570,6 +2577,8 @@ function(add_lit_testsuites project directory)
             COMMENT "Running lit suite ${lit_suite}"
             USES_TERMINAL
           )
+          # The command intentionally does not create this output. Marking it
+          # symbolic keeps Ninja's directly invokable check-* target dirty.
           set_source_files_properties(${lit_test_output} PROPERTIES SYMBOLIC TRUE)
           list(APPEND lit_test_outputs ${lit_test_output})
         else()
@@ -2586,7 +2595,10 @@ function(add_lit_testsuites project directory)
     endforeach()
 
     if (use_factored_lit_dependencies)
-      add_custom_target(lit-testsuites-${lit_testsuites_id}
+      # CMake only emits an add_custom_command(OUTPUT) rule when a target in
+      # the same directory consumes its output. This internal target anchors
+      # the per-directory check commands in the generated build graph.
+      add_custom_target(lit-testsuites-${project_lower}-anchor
         DEPENDS ${lit_test_outputs})
     endif()
   endif()
