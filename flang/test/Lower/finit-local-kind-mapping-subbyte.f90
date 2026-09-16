@@ -1,14 +1,14 @@
 ! Tests that -finit-local= handles all CHARACTER kind-mapping widths correctly
 ! using the code unit's allocation stride (alignTo(ceil(charBits/8), ABI)),
-! that sub-byte (l4:1) LOGICAL mappings and non-byte-multiple-without-padding
-! (l4:12) hex-mode LOGICAL mappings emit a controlled diagnostic, and that
-! padded LOGICAL mappings
-! (allocSize > storeSize, e.g. l4:24 and l4:20) use a byte-fill loop in both
-! hex and zero modes.
+! that sub-byte (l4:1) and non-byte-multiple-without-padding (l4:12) LOGICAL
+! mappings emit a controlled diagnostic in hex mode, and that padded LOGICAL
+! mappings (allocSize > storeSize, e.g. l4:24 and l4:20) use a byte-fill loop
+! in both hex and zero modes.
 !
 ! LOGICAL sub-byte: --kind-mapping=l4:1 maps LOGICAL(4) to 1 bit.
 ! APInt::getSplat(1, APInt(8, 0xAA)) asserts because the destination width is
-! less than 8; a TODO is emitted in both modes.
+! less than 8; a TODO is emitted in hex mode; zero mode uses fir.zero_bits and
+! works correctly.
 !
 ! LOGICAL non-byte-multiple (unpadded): --kind-mapping=l4:12 maps LOGICAL(4)
 ! to 12 bits (storeSize=2, allocSize=2 -- no padding).  makeIntCst(12) would
@@ -106,9 +106,9 @@ end subroutine
 ! LOGICAL padded non-byte-multiple: --kind-mapping=l4:20 maps LOGICAL(4) to
 ! 20 bits (storeSize=3, allocSize=4 on most targets since i20 gets 4-byte ABI
 ! alignment).  Unlike l4:12 (where allocSize==storeSize so the padding guard
-! does not fire and a TODO is emitted), l4:20 has allocSize > storeSize, so
-! the padding guard fires and both zero and hex modes use a byte-fill loop
-! over the full 4-byte allocation.
+! does not fire and a TODO is emitted in hex mode), l4:20 has
+! allocSize > storeSize, so the padding guard fires and both zero and hex
+! modes use a byte-fill loop over the full 4-byte allocation.
 !
 ! RUN: bbc -emit-hlfir --kind-mapping=l4:20 -finit-local=zero %s -o - 2>&1 | \
 ! RUN:     FileCheck --check-prefix=LOG-20-ZERO %s
