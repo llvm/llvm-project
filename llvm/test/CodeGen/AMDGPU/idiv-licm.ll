@@ -678,8 +678,9 @@ define amdgpu_kernel void @udiv16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    v_add_nc_u32_e32 v3, 1, v3
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x400, v4
 ; GFX11-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_dual_mul_f32 v3, v3, v0 :: v_dual_lshlrev_b32 v2, 1, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_mul_f32_e32 v3, v3, v0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 1, v2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX11-NEXT:    global_store_b16 v2, v3, s[0:1]
@@ -787,9 +788,10 @@ define amdgpu_kernel void @urem16_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    v_add_nc_u32_e32 v3, 1, v3
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x400, v4
 ; GFX11-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_dual_mul_f32 v3, v3, v0 :: v_dual_lshlrev_b32 v4, 1, v2
+; GFX11-NEXT:    v_mul_f32_e32 v3, v3, v0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 1, v2
 ; GFX11-NEXT:    s_and_b32 vcc_lo, exec_lo, vcc_lo
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
