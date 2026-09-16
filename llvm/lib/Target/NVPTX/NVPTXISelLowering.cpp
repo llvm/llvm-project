@@ -7862,12 +7862,12 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   assert(SSID.has_value() && "Expected an atomic operation");
 
   bool IsEmulated =
-      CI ? cast<IntegerType>(CI->getCompareOperand()->getType())
-                   ->getBitWidth() < STI.getMinCmpXchgSizeInBits()
-         : shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg;
-  bool NeedsTrailingFence = !STI.hasMemoryOrdering() || IsEmulated;
+      !STI.hasMemoryOrdering() ||
+      (CI ? cast<IntegerType>(CI->getCompareOperand()->getType())
+                    ->getBitWidth() < STI.getMinCmpXchgSizeInBits()
+          : shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg);
 
-  if (isAcquireOrStronger(Ord) && NeedsTrailingFence)
+  if (isAcquireOrStronger(Ord) && IsEmulated)
     return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());
 
   return nullptr;
