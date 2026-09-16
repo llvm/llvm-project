@@ -35,7 +35,7 @@ AST_MATCHER(ParenExpr, isInMacro) {
 }
 
 AST_MATCHER(TypeLoc, isTypeOfExprTypeLoc) {
-  return !Node.getAs<TypeOfExprTypeLoc>().isNull();
+  return !Node.getUnqualifiedLoc().getAs<TypeOfExprTypeLoc>().isNull();
 }
 
 } // namespace

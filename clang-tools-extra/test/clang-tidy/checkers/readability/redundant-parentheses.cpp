@@ -62,6 +62,7 @@ void exceptions() {
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant parentheses around expression [readability-redundant-parentheses]
   // CHECK-FIXES:    alignof(3);
   __typeof__(1) t;
+  const __typeof__(1) ct = 1;
 }
 
 namespace std {
