@@ -1,5 +1,7 @@
-; In coro-split, this coroutine code reduced IR, produced using clang with async-exceptions
-; crashed after first phase of fix because the terminator cleanupret was not implemented on predecessor fixer at the time
+; Reduced IR from clang with async exceptions (/EHa), see pr148035.
+; Variant where a cleanupret is the predecessor terminator of the
+; not-dominated parameter cleanup; exercises the SSA repair in insertSpills
+; through a cleanupret edge.
 ; RUN: opt < %s -passes='coro-split' -S
 
 target triple = "x86_64-pc-windows-msvc"

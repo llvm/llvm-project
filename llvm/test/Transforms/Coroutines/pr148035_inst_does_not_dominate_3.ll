@@ -1,5 +1,8 @@
-; In coro-split, this coroutine code reduced IR, produced using clang with async-exceptions
-; crashed before fix because of the validation mismatch of Instruction does not dominate all uses!
+; Reduced IR from clang with async exceptions (/EHa), see pr148035.
+; Used to break "Instruction does not dominate all uses!": a parameter
+; cleanup reachable both before coro.begin (entry unwind edge) and after
+; suspend points was rewritten into a frame reload that pre-coro.begin paths
+; cannot dominate. insertSpills now repairs such uses with SSA construction.
 ; RUN: opt < %s -passes='coro-split' -S
 
 ; Function Attrs: presplitcoroutine

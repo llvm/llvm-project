@@ -1,16 +1,17 @@
-; Reduced IR from clang with async exceptions (/EHa), see pr148035.
-; The parameter cleanup (block 14) is reachable both from the entry unwind
-; edge, before coro.begin has allocated the frame, and from post-suspend
-; unwind paths. Rewriting its parameter use into a frame reload used to break
-; "Instruction does not dominate all uses!". insertSpills now repairs such
-; uses with SSA construction: the original value flows in on pre-coro.begin
-; edges and a frame reload, materialized in the dominated predecessor, flows
-; in on post-coro.begin edges.
+; Variant of pr148035_inst_does_not_dominate.ll where the last dominated
+; block before the merged parameter cleanup is terminated by a catchswitch.
+; A catchswitch must be the only non-PHI instruction in its block, so the
+; frame reload cannot be materialized there; insertSpills hoists it to the
+; nearest dominator that can hold it (here, the coro.begin block).
 ; RUN: opt < %s -passes='coro-split' -S | FileCheck %s
 
+; The reload is hoisted above the catchswitch, into the block terminated by
+; the seh.try.begin invoke, and the catchswitch's unwind edge feeds it into
+; the merge PHI.
 ; CHECK-LABEL: define i8 @"?resuming_on_new_thread@@YA?AUtask@@Vunique_ptr@@@Z"(
 ; CHECK: %.reload = load ptr, ptr %.reload.addr
-; CHECK-NEXT: invoke void @llvm.seh.scope.end()
+; CHECK-NEXT: invoke void @llvm.seh.try.begin()
+; CHECK: catchswitch within none
 ; CHECK: %.pre.begin.merge = phi ptr [ %.reload, %{{.*}} ], [ %0, %{{.*}} ]
 ; CHECK-NEXT: %{{.*}} = cleanuppad within none []
 ; CHECK-NEXT: store i32 0, ptr %.pre.begin.merge
@@ -20,7 +21,7 @@ target triple = "x86_64-pc-windows-msvc"
 ; Function Attrs: presplitcoroutine
 define i8 @"?resuming_on_new_thread@@YA?AUtask@@Vunique_ptr@@@Z"(ptr %0) #0 personality ptr null {
   invoke void @llvm.seh.scope.begin()
-          to label %2 unwind label %14
+          to label %2 unwind label %11
 
 2:                                                ; preds = %1
   %3 = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
@@ -34,25 +35,17 @@ define i8 @"?resuming_on_new_thread@@YA?AUtask@@Vunique_ptr@@@Z"(ptr %0) #0 pers
 common.ret:                                       ; preds = %10, %2
   ret i8 0
 
-cleanup.ret:                                      ; preds = %12
-  cleanupret from %13 unwind to caller
-
 8:                                                ; preds = %2
-  %9 = catchswitch within none [label %10] unwind label %12
+  %9 = catchswitch within none [label %10] unwind label %11
 
 10:                                               ; preds = %8
-  %11 = catchpad within %9 [ptr null, i32 0, ptr null]
-  catchret from %11 to label %common.ret
+  %catch.pad = catchpad within %9 [ptr null, i32 0, ptr null]
+  catchret from %catch.pad to label %common.ret
 
-12:                                               ; preds = %8
-  %13 = cleanuppad within none []
-  invoke void @llvm.seh.scope.end()
-          to label %cleanup.ret unwind label %14
-
-14:                                               ; preds = %12, %1
-  %15 = cleanuppad within none []
+11:                                               ; preds = %8, %1
+  %12 = cleanuppad within none []
   store i32 0, ptr %0, align 4
-  cleanupret from %15 unwind to caller
+  cleanupret from %12 unwind to caller
 }
 
 attributes #0 = { presplitcoroutine }

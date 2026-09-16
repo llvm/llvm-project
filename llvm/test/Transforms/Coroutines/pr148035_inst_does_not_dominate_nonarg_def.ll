@@ -1,11 +1,22 @@
-; In coro-split, this coroutine code reduced IR, produced using clang with async-exceptions
-; crashed before fix because of the validation mismatch of Instruction does not dominate all uses!
-; RUN: opt < %s -passes='coro-split' -S
+; Variant of pr148035_inst_does_not_dominate.ll where the spilled value is
+; not an argument but an instruction computed before coro.begin (%p). The
+; SSA repair registers the original value at its defining block rather than
+; the entry block; the merge PHI receives %p on the pre-coro.begin edge and
+; the frame reload on the post-coro.begin edge.
+; RUN: opt < %s -passes='coro-split' -S | FileCheck %s
+
+; CHECK-LABEL: define i8 @"?resuming_on_new_thread@@YA?AUtask@@Vunique_ptr@@@Z"(
+; CHECK: %p.reload = load ptr, ptr %p.reload.addr
+; CHECK-NEXT: invoke void @llvm.seh.scope.end()
+; CHECK: %p.pre.begin.merge = phi ptr [ %p.reload, %{{.*}} ], [ %p, %{{.*}} ]
+; CHECK-NEXT: %{{.*}} = cleanuppad within none []
+; CHECK-NEXT: store i32 0, ptr %p.pre.begin.merge
 
 target triple = "x86_64-pc-windows-msvc"
 
 ; Function Attrs: presplitcoroutine
 define i8 @"?resuming_on_new_thread@@YA?AUtask@@Vunique_ptr@@@Z"(ptr %0) #0 personality ptr null {
+  %p = load ptr, ptr %0, align 8
   invoke void @llvm.seh.scope.begin()
           to label %2 unwind label %14
 
@@ -38,7 +49,7 @@ cleanup.ret:                                      ; preds = %12
 
 14:                                               ; preds = %12, %1
   %15 = cleanuppad within none []
-  store i32 0, ptr %0, align 4
+  store i32 0, ptr %p, align 4
   cleanupret from %15 unwind to caller
 }
 
