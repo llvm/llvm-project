@@ -11204,8 +11204,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       MF.getFunction().getParent()->getModuleFlag("import-call-optimization"))
     DAG.addCalledGlobal(Chain.getNode(), CalledGlobal, OpFlags);
 
-  uint64_t CalleePopBytes =
-      DoesCalleeRestoreStack(CallConv, TailCallOpt) ? alignTo(NumBytes, 16) : 0;
+  uint64_t CalleePopBytes = DoesCalleeRestoreStack(CallConv, TailCallOpt)
+                                ? alignTo(NumBytes, StackAlign)
+                                : 0;
 
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, CalleePopBytes, InGlue, DL);
   InGlue = Chain.getValue(1);
