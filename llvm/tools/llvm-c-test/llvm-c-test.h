@@ -31,6 +31,7 @@ LLVMModuleRef llvm_load_module(LLVMContextRef C, bool Lazy, bool New);
 int llvm_module_dump(bool Lazy, bool New);
 int llvm_module_list_functions(void);
 int llvm_module_list_globals(void);
+int llvm_module_get_producer_string(void);
 
 // calc.c
 int llvm_calc(void);
