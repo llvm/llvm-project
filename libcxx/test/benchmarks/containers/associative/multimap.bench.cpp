@@ -19,8 +19,8 @@ template <class K, class V>
 struct support::adapt_operations<std::multimap<K, V>> {
   using ValueType = typename std::multimap<K, V>::value_type;
   using KeyType   = typename std::multimap<K, V>::key_type;
-  static ValueType value_from_key(KeyType const& k) { return {k, Generate<V>::arbitrary()}; }
-  static KeyType key_from_value(ValueType const& value) { return value.first; }
+  static ValueType make_value_from_key(KeyType const& k) { return {k, Generate<V>::arbitrary()}; }
+  static KeyType const& key_from_value(ValueType const& value) { return value.first; }
 
   using InsertionResult = typename std::multimap<K, V>::iterator;
   static auto get_iterator(InsertionResult const& result) { return result; }
