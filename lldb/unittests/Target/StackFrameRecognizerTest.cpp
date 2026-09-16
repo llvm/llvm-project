@@ -17,6 +17,7 @@
 #include "lldb/lldb-private.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -57,6 +58,15 @@ void RegisterDummyStackFrameRecognizer(StackFrameRecognizerManager &manager) {
                         Mangled::NamePreference::ePreferDemangled, false);
 }
 
+void RegisterModulelessStackFrameRecognizer(
+    StackFrameRecognizerManager &manager) {
+  StackFrameRecognizerSP dummy_recognizer_sp(new DummyStackFrameRecognizer());
+
+  manager.AddRecognizer(dummy_recognizer_sp, ConstString(),
+                        {ConstString("boom")},
+                        Mangled::NamePreference::ePreferDemangled, false);
+}
+
 } // namespace
 
 TEST_F(StackFrameRecognizerTest, NullModuleRegex) {
@@ -75,4 +85,23 @@ TEST_F(StackFrameRecognizerTest, NullModuleRegex) {
                                  bool regexp) { any_printed = true; });
 
   EXPECT_TRUE(any_printed);
+}
+
+TEST_F(StackFrameRecognizerTest, EmptyModuleName) {
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  StackFrameRecognizerManager manager;
+
+  RegisterModulelessStackFrameRecognizer(manager);
+
+  std::optional<std::string> printed_module;
+  manager.ForEach([&printed_module](uint32_t recognizer_id, bool enabled,
+                                    std::string name, std::string module,
+                                    llvm::ArrayRef<ConstString> symbols,
+                                    Mangled::NamePreference symbol_mangling,
+                                    bool regexp) { printed_module = module; });
+
+  ASSERT_TRUE(printed_module);
+  EXPECT_TRUE(printed_module->empty());
 }

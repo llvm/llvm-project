@@ -150,9 +150,13 @@ void StackFrameRecognizerManager::ForEach(
                module_name, llvm::ArrayRef(ConstString(symbol_name)),
                entry.symbol_mangling, true);
     } else {
+      // A recognizer registered without a module matches any module. Use
+      // GetStringRef, since GetCString returns nullptr for an empty
+      // ConstString, which the std::string callback parameter can't be
+      // constructed from.
       callback(entry.recognizer_id, entry.enabled, entry.recognizer->GetName(),
-               entry.module.GetCString(), entry.symbols, entry.symbol_mangling,
-               false);
+               entry.module.GetStringRef().str(), entry.symbols,
+               entry.symbol_mangling, false);
     }
   }
 }
