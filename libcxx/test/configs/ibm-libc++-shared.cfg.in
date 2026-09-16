@@ -13,10 +13,10 @@ config.substitutions.append(('%{compile_flags}',
     '-nostdinc++ -D__LIBC_NO_CPP_MATH_OVERLOADS__ -I %{include-dir} -I %{libcxx-dir}/test/support'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{lib-dir} -lc++ -lc++abi -latomic -Wl,-bbigtoc -Wl,-blibpath:%{lib-dir}:/usr/lib:/lib'
+    '-nostdlib++ -L %{lib-dir} -lc++ -lc++abi -latomic -Wl,-bbigtoc'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %{temp} -- '
+    '%{executor} --execdir %{temp} --env LIBPATH=%{lib-dir} -- '
 ))
 
 # LIBCXX-AIX-FIXME is the feature name used to XFAIL the
