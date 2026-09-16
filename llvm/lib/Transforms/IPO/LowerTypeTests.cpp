@@ -676,7 +676,7 @@ class LowerTypeTestsModule {
   // Cache variable used by hasBranchTargetEnforcement().
   int HasBranchTargetEnforcement = -1;
 
-  unique_function<const BlockFrequencyInfo *(Function &) const> BFIGetter;
+  unique_function<const BlockFrequencyInfo &(Function &) const> BFIGetter;
 
   // Map from function to hotness passed via cfi.functions metadata.
   DenseMap<const Function *, uint64_t> FunctionSummaryHotness;
@@ -2239,8 +2239,8 @@ LowerTypeTestsModule::LowerTypeTestsModule(
   Triple TargetTriple(M.getTargetTriple());
   Arch = TargetTriple.getArch();
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  BFIGetter = [&FAM](Function &F) -> const BlockFrequencyInfo * {
-    return &FAM.getResult<BlockFrequencyAnalysis>(F);
+  BFIGetter = [&FAM](Function &F) -> const BlockFrequencyInfo & {
+    return FAM.getResult<BlockFrequencyAnalysis>(F);
   };
 
   if (Arch == Triple::arm)
