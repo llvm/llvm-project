@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_COFFPLATFORM_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ExecutionEngine/Orc/COFF.h"
 #include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -139,7 +140,7 @@ private:
 
   COFFPlatform(
       ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
-      std::unique_ptr<StaticLibraryDefinitionGenerator> OrcRuntimeGenerator,
+      std::unique_ptr<COFFStaticLibraryDefinitionGenerator> OrcRuntimeGenerator,
       std::set<std::string> DylibsToPreload,
       std::unique_ptr<MemoryBuffer> OrcRuntimeArchiveBuffer,
       std::unique_ptr<object::Archive> OrcRuntimeArchive,

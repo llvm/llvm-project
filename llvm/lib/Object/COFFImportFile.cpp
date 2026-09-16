@@ -73,9 +73,13 @@ static StringRef applyNameType(ImportNameType Type, StringRef name) {
   return name;
 }
 
+StringRef COFFImportFile::getSymbolName() const {
+  return Data.getBuffer().substr(sizeof(coff_import_header)).split('\0').first;
+}
+
 StringRef COFFImportFile::getExportName() const {
   const coff_import_header *hdr = getCOFFImportHeader();
-  StringRef name = Data.getBuffer().substr(sizeof(*hdr)).split('\0').first;
+  StringRef name = getSymbolName();
 
   switch (hdr->getNameType()) {
   case IMPORT_ORDINAL:
