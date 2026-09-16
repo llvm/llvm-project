@@ -63,8 +63,8 @@ define signext i32 @t3(ppc_fp128 %x) local_unnamed_addr #0 {
 ; CHECK-NEXT:    xxlxor 0, 0, 0
 ; CHECK-NEXT:    li 3, 11
 ; CHECK-NEXT:    li 4, 43
-; CHECK-NEXT:    fcmpu 0, 2, 0
-; CHECK-NEXT:    fcmpu 1, 1, 0
+; CHECK-NEXT:    xscmpudp 0, 2, 0
+; CHECK-NEXT:    xscmpudp 1, 1, 0
 ; CHECK-NEXT:    crand 20, 6, 1
 ; CHECK-NEXT:    cror 20, 5, 20
 ; CHECK-NEXT:    isel 3, 4, 3, 20

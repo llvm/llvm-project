@@ -8,32 +8,32 @@ declare ppc_fp128 @llvm.ppc.maxfe(ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ...)
 define ppc_fp128 @test_maxfe(ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ppc_fp128 %d) {
 ; CHECK-LABEL: test_maxfe:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fcmpu 0, 6, 4
-; CHECK-NEXT:    fcmpu 1, 5, 3
+; CHECK-NEXT:    xscmpudp 0, 6, 4
+; CHECK-NEXT:    xscmpudp 1, 5, 3
 ; CHECK-NEXT:    crand 20, 6, 1
 ; CHECK-NEXT:    cror 20, 5, 20
 ; CHECK-NEXT:    bc 12, 20, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    fmr 6, 4
 ; CHECK-NEXT:  .LBB0_2: # %entry
-; CHECK-NEXT:    fcmpu 0, 6, 2
+; CHECK-NEXT:    xscmpudp 0, 6, 2
 ; CHECK-NEXT:    bc 12, 20, .LBB0_4
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    fmr 5, 3
 ; CHECK-NEXT:  .LBB0_4: # %entry
-; CHECK-NEXT:    fcmpu 1, 5, 1
+; CHECK-NEXT:    xscmpudp 1, 5, 1
 ; CHECK-NEXT:    crand 20, 6, 1
 ; CHECK-NEXT:    cror 20, 5, 20
 ; CHECK-NEXT:    bc 12, 20, .LBB0_6
 ; CHECK-NEXT:  # %bb.5: # %entry
 ; CHECK-NEXT:    fmr 6, 2
 ; CHECK-NEXT:  .LBB0_6: # %entry
-; CHECK-NEXT:    fcmpu 0, 6, 8
+; CHECK-NEXT:    xscmpudp 0, 6, 8
 ; CHECK-NEXT:    bc 12, 20, .LBB0_8
 ; CHECK-NEXT:  # %bb.7: # %entry
 ; CHECK-NEXT:    fmr 5, 1
 ; CHECK-NEXT:  .LBB0_8: # %entry
-; CHECK-NEXT:    fcmpu 1, 5, 7
+; CHECK-NEXT:    xscmpudp 1, 5, 7
 ; CHECK-NEXT:    crand 20, 6, 1
 ; CHECK-NEXT:    cror 20, 5, 20
 ; CHECK-NEXT:    bc 12, 20, .LBB0_10
@@ -134,32 +134,32 @@ declare ppc_fp128 @llvm.ppc.minfe(ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ...)
 define ppc_fp128 @test_minfe(ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ppc_fp128 %d) {
 ; CHECK-LABEL: test_minfe:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fcmpu 0, 6, 4
-; CHECK-NEXT:    fcmpu 1, 5, 3
+; CHECK-NEXT:    xscmpudp 0, 6, 4
+; CHECK-NEXT:    xscmpudp 1, 5, 3
 ; CHECK-NEXT:    crand 20, 6, 0
 ; CHECK-NEXT:    cror 20, 4, 20
 ; CHECK-NEXT:    bc 12, 20, .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    fmr 6, 4
 ; CHECK-NEXT:  .LBB3_2: # %entry
-; CHECK-NEXT:    fcmpu 0, 6, 2
+; CHECK-NEXT:    xscmpudp 0, 6, 2
 ; CHECK-NEXT:    bc 12, 20, .LBB3_4
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    fmr 5, 3
 ; CHECK-NEXT:  .LBB3_4: # %entry
-; CHECK-NEXT:    fcmpu 1, 5, 1
+; CHECK-NEXT:    xscmpudp 1, 5, 1
 ; CHECK-NEXT:    crand 20, 6, 0
 ; CHECK-NEXT:    cror 20, 4, 20
 ; CHECK-NEXT:    bc 12, 20, .LBB3_6
 ; CHECK-NEXT:  # %bb.5: # %entry
 ; CHECK-NEXT:    fmr 6, 2
 ; CHECK-NEXT:  .LBB3_6: # %entry
-; CHECK-NEXT:    fcmpu 0, 6, 8
+; CHECK-NEXT:    xscmpudp 0, 6, 8
 ; CHECK-NEXT:    bc 12, 20, .LBB3_8
 ; CHECK-NEXT:  # %bb.7: # %entry
 ; CHECK-NEXT:    fmr 5, 1
 ; CHECK-NEXT:  .LBB3_8: # %entry
-; CHECK-NEXT:    fcmpu 1, 5, 7
+; CHECK-NEXT:    xscmpudp 1, 5, 7
 ; CHECK-NEXT:    crand 20, 6, 0
 ; CHECK-NEXT:    cror 20, 4, 20
 ; CHECK-NEXT:    bc 12, 20, .LBB3_10

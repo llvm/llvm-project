@@ -44,11 +44,11 @@ define zeroext i1 @test1(float %v1, float %v2) #0 {
 ;
 ; CHECK-P10-LABEL: test1:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    fcmpu cr0, f1, f2
+; CHECK-P10-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-P10-NEXT:    xxlxor f0, f0, f0
-; CHECK-P10-NEXT:    fcmpu cr1, f2, f2
+; CHECK-P10-NEXT:    xscmpudp cr1, f2, f2
 ; CHECK-P10-NEXT:    crnor 4*cr5+lt, un, lt
-; CHECK-P10-NEXT:    fcmpu cr0, f2, f0
+; CHECK-P10-NEXT:    xscmpudp cr0, f2, f0
 ; CHECK-P10-NEXT:    crnor 4*cr5+gt, 4*cr1+un, gt
 ; CHECK-P10-NEXT:    crand 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
 ; CHECK-P10-NEXT:    setbc r3, 4*cr5+lt
@@ -94,11 +94,11 @@ define zeroext i1 @test2(float %v1, float %v2) #0 {
 ;
 ; CHECK-P10-LABEL: test2:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    fcmpu cr0, f1, f2
+; CHECK-P10-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-P10-NEXT:    xxlxor f0, f0, f0
-; CHECK-P10-NEXT:    fcmpu cr1, f2, f2
+; CHECK-P10-NEXT:    xscmpudp cr1, f2, f2
 ; CHECK-P10-NEXT:    crnor 4*cr5+lt, un, lt
-; CHECK-P10-NEXT:    fcmpu cr0, f2, f0
+; CHECK-P10-NEXT:    xscmpudp cr0, f2, f0
 ; CHECK-P10-NEXT:    crnor 4*cr5+gt, 4*cr1+un, gt
 ; CHECK-P10-NEXT:    crxor 4*cr5+lt, 4*cr5+lt, 4*cr5+gt
 ; CHECK-P10-NEXT:    setbc r3, 4*cr5+lt
@@ -148,11 +148,11 @@ define zeroext i1 @test3(float %v1, float %v2, i32 signext %x) #0 {
 ;
 ; CHECK-P10-LABEL: test3:
 ; CHECK-P10:       # %bb.0: # %entry
-; CHECK-P10-NEXT:    fcmpu cr0, f1, f2
+; CHECK-P10-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-P10-NEXT:    xxlxor f0, f0, f0
-; CHECK-P10-NEXT:    fcmpu cr1, f2, f2
+; CHECK-P10-NEXT:    xscmpudp cr1, f2, f2
 ; CHECK-P10-NEXT:    crnor 4*cr5+lt, un, lt
-; CHECK-P10-NEXT:    fcmpu cr0, f2, f0
+; CHECK-P10-NEXT:    xscmpudp cr0, f2, f0
 ; CHECK-P10-NEXT:    crnor 4*cr5+gt, 4*cr1+un, gt
 ; CHECK-P10-NEXT:    cmpwi r5, -2
 ; CHECK-P10-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, eq

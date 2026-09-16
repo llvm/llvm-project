@@ -8,10 +8,10 @@ define i32 @fcmpu(double %a, double %b) {
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   liveins: $f1, $f2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:f8rc = COPY $f2
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:f8rc = COPY $f1
-  ; CHECK-NEXT:   [[FCMPUD:%[0-9]+]]:crrc = nofpexcept FCMPUD [[COPY1]], [[COPY]]
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:crbitrc = COPY [[FCMPUD]].sub_gt
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vsfrc = COPY $f2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vsfrc = COPY $f1
+  ; CHECK-NEXT:   [[XSCMPUDP:%[0-9]+]]:crrc = nofpexcept XSCMPUDP [[COPY1]], [[COPY]], implicit $rm
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:crbitrc = COPY [[XSCMPUDP]].sub_gt
   ; CHECK-NEXT:   [[LI8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = LI8 0
   ; CHECK-NEXT:   [[LI8_1:%[0-9]+]]:g8rc_and_g8rc_nox0 = LI8 1
   ; CHECK-NEXT:   [[ISEL8_:%[0-9]+]]:g8rc = ISEL8 [[LI8_1]], [[LI8_]], [[COPY2]]
@@ -110,14 +110,14 @@ define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, ptr %addr1, ptr %addr2) 
   ; CHECK-NEXT:   [[ADDIStocHA8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, %const.0
   ; CHECK-NEXT:   [[DFLOADf32_:%[0-9]+]]:vssrc = DFLOADf32 target-flags(ppc-toc-lo) %const.0, killed [[ADDIStocHA8_]] :: (load (s32) from constant-pool)
   ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:f8rc = COPY killed [[DFLOADf32_]]
-  ; CHECK-NEXT:   [[FCMPOD:%[0-9]+]]:crrc = FCMPOD [[COPY4]], [[COPY13]]
-  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:crbitrc = COPY [[FCMPOD]].sub_eq
+  ; CHECK-NEXT:   [[XSCMPODP:%[0-9]+]]:crrc = XSCMPODP [[COPY4]], [[COPY13]], implicit $rm
+  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:crbitrc = COPY [[XSCMPODP]].sub_eq
   ; CHECK-NEXT:   [[XXLXORdpz:%[0-9]+]]:f8rc = XXLXORdpz
-  ; CHECK-NEXT:   [[FCMPOD1:%[0-9]+]]:crrc = FCMPOD [[COPY3]], [[XXLXORdpz]]
-  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:crbitrc = COPY [[FCMPOD1]].sub_lt
+  ; CHECK-NEXT:   [[XSCMPODP1:%[0-9]+]]:crrc = XSCMPODP [[COPY3]], [[XXLXORdpz]], implicit $rm
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:crbitrc = COPY [[XSCMPODP1]].sub_lt
   ; CHECK-NEXT:   [[CRAND:%[0-9]+]]:crbitrc = CRAND killed [[COPY14]], killed [[COPY15]]
-  ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:crbitrc = COPY [[FCMPOD]].sub_eq
-  ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:crbitrc = COPY [[FCMPOD]].sub_lt
+  ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:crbitrc = COPY [[XSCMPODP]].sub_eq
+  ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:crbitrc = COPY [[XSCMPODP]].sub_lt
   ; CHECK-NEXT:   [[CRANDC:%[0-9]+]]:crbitrc = CRANDC killed [[COPY17]], killed [[COPY16]]
   ; CHECK-NEXT:   [[CROR:%[0-9]+]]:crbitrc = CROR killed [[CRANDC]], killed [[CRAND]]
   ; CHECK-NEXT:   [[LIS:%[0-9]+]]:gprc_and_gprc_nor0 = LIS 32768

@@ -4241,6 +4241,60 @@ defm : FSetCCPat<strict_fsetccs, f64, FCMPOD>;
 defm : FSetCCPat<strict_fsetccs, f128, XSCMPOQP>;
 }
 
+// Prefer xscmpudp/xscmpodp over fcmpu/fcmpo on P8 and later. The VSX instructions
+// have access to all 64 registers compared to 32 FPRS.
+multiclass VSXFSetCCPatF32<SDPatternOperator SetCC, ValueType Ty, I FCmp> {
+  defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETUGE)),
+                  (EXTRACT_SUBREG (FCmp (COPY_TO_REGCLASS $s1, VSFRC),
+                                        (COPY_TO_REGCLASS $s2, VSFRC)), sub_lt)>;
+  defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETGE)),
+                  (EXTRACT_SUBREG (FCmp (COPY_TO_REGCLASS $s1, VSFRC),
+                                        (COPY_TO_REGCLASS $s2, VSFRC)), sub_lt)>;
+  defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETULE)),
+                  (EXTRACT_SUBREG (FCmp (COPY_TO_REGCLASS $s1, VSFRC),
+                                        (COPY_TO_REGCLASS $s2, VSFRC)), sub_gt)>;
+  defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETLE)),
+                  (EXTRACT_SUBREG (FCmp (COPY_TO_REGCLASS $s1, VSFRC),
+                                        (COPY_TO_REGCLASS $s2, VSFRC)), sub_gt)>;
+  defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETUNE)),
+                  (EXTRACT_SUBREG (FCmp (COPY_TO_REGCLASS $s1, VSFRC),
+                                        (COPY_TO_REGCLASS $s2, VSFRC)), sub_eq)>;
+  defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETNE)),
+                  (EXTRACT_SUBREG (FCmp (COPY_TO_REGCLASS $s1, VSFRC),
+                                        (COPY_TO_REGCLASS $s2, VSFRC)), sub_eq)>;
+  defm : CRNotPat<(i1 (SetCC Ty:$s1, Ty:$s2, SETO)),
+                  (EXTRACT_SUBREG (FCmp (COPY_TO_REGCLASS $s1, VSFRC),
+                                        (COPY_TO_REGCLASS $s2, VSFRC)), sub_un)>;
+  def : Pat<(i1 (SetCC Ty:$s1, Ty:$s2, SETOLT)),
+            (EXTRACT_SUBREG (FCmp (COPY_TO_REGCLASS $s1, VSFRC),
+                                  (COPY_TO_REGCLASS $s2, VSFRC)), sub_lt)>;
+  def : Pat<(i1 (SetCC Ty:$s1, Ty:$s2, SETLT)),
+            (EXTRACT_SUBREG (FCmp (COPY_TO_REGCLASS $s1, VSFRC),
+                                  (COPY_TO_REGCLASS $s2, VSFRC)), sub_lt)>;
+  def : Pat<(i1 (SetCC Ty:$s1, Ty:$s2, SETOGT)),
+            (EXTRACT_SUBREG (FCmp (COPY_TO_REGCLASS $s1, VSFRC),
+                                  (COPY_TO_REGCLASS $s2, VSFRC)), sub_gt)>;
+  def : Pat<(i1 (SetCC Ty:$s1, Ty:$s2, SETGT)),
+            (EXTRACT_SUBREG (FCmp (COPY_TO_REGCLASS $s1, VSFRC),
+                                  (COPY_TO_REGCLASS $s2, VSFRC)), sub_gt)>;
+  def : Pat<(i1 (SetCC Ty:$s1, Ty:$s2, SETOEQ)),
+            (EXTRACT_SUBREG (FCmp (COPY_TO_REGCLASS $s1, VSFRC),
+                                  (COPY_TO_REGCLASS $s2, VSFRC)), sub_eq)>;
+  def : Pat<(i1 (SetCC Ty:$s1, Ty:$s2, SETEQ)),
+            (EXTRACT_SUBREG (FCmp (COPY_TO_REGCLASS $s1, VSFRC),
+                                  (COPY_TO_REGCLASS $s2, VSFRC)), sub_eq)>;
+  def : Pat<(i1 (SetCC Ty:$s1, Ty:$s2, SETUO)),
+            (EXTRACT_SUBREG (FCmp (COPY_TO_REGCLASS $s1, VSFRC),
+                                  (COPY_TO_REGCLASS $s2, VSFRC)), sub_un)>;
+}
+
+let Predicates = [HasVSX, HasP8Vector], AddedComplexity = 400 in {
+  defm : FSetCCPat<any_fsetcc,      f64, XSCMPUDP>;
+  defm : FSetCCPat<strict_fsetccs,  f64, XSCMPODP>;
+  defm : VSXFSetCCPatF32<any_fsetcc,    f32, XSCMPUDP>;
+  defm : VSXFSetCCPatF32<strict_fsetccs, f32, XSCMPODP>;
+}
+
 // This must be in this file because it relies on patterns defined in this file
 // after the inclusion of the instruction sets.
 let Predicates = [HasSPE] in {
