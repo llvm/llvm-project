@@ -53,6 +53,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCContext.h"
@@ -692,6 +693,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(ISD::BR_CC, VT, Expand);
   }
 
+  setOperationAction(ISD::SDIVREM, {MVT::i32, MVT::i64}, Expand);
+  setOperationAction(ISD::UDIVREM, {MVT::i32, MVT::i64}, Expand);
+
   // We don't want ops like FMINIMUM or UMAX to be lowered to SETCC+VSELECT.
   setOperationAction(ISD::VSELECT, {MVT::v2f32, MVT::v2i32}, Expand);
 
@@ -711,6 +715,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::SRA_PARTS, MVT::i64  , Custom);
   setOperationAction(ISD::SRL_PARTS, MVT::i64  , Custom);
 
+  if (STI.hasCLMAD())
+    setOperationAction({ISD::CLMUL, ISD::CLMULH}, MVT::i64, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
 
@@ -4754,6 +4760,28 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     return;
   }
 
+  case Intrinsic::nvvm_mbarrier_init: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align = Align(8);
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_mbarrier_check_layout: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::i64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align = Align(8);
+    Infos.push_back(Info);
+    return;
+  }
+
   case Intrinsic::nvvm_tensormap_replace_global_address:
   case Intrinsic::nvvm_tensormap_replace_global_stride: {
     Info.opc = ISD::INTRINSIC_VOID;
@@ -6324,37 +6352,6 @@ static SDValue PerformFMinMaxCombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue PerformREMCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 CodeGenOptLevel OptLevel) {
-  assert(N->getOpcode() == ISD::SREM || N->getOpcode() == ISD::UREM);
-
-  // Don't do anything at less than -O2.
-  if (OptLevel < CodeGenOptLevel::Default)
-    return SDValue();
-
-  SelectionDAG &DAG = DCI.DAG;
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  bool IsSigned = N->getOpcode() == ISD::SREM;
-  unsigned DivOpc = IsSigned ? ISD::SDIV : ISD::UDIV;
-
-  const SDValue &Num = N->getOperand(0);
-  const SDValue &Den = N->getOperand(1);
-
-  for (const SDNode *U : Num->users()) {
-    if (U->getOpcode() == DivOpc && U->getOperand(0) == Num &&
-        U->getOperand(1) == Den) {
-      // Num % Den -> Num - (Num / Den) * Den
-      return DAG.getNode(ISD::SUB, DL, VT, Num,
-                         DAG.getNode(ISD::MUL, DL, VT,
-                                     DAG.getNode(DivOpc, DL, VT, Num, Den),
-                                     Den));
-    }
-  }
-  return SDValue();
-}
-
 // sext (mul.iN nsw x, y)     => mul.wide.sN x, y
 // zext (mul.iN nuw x, y)     => mul.wide.uN x, y
 // sext (shl.iN nsw x, const) => mul.wide.sN x, (1 << const)
@@ -7179,22 +7176,45 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
   }
 }
 
-static unsigned getF16SubOpc(Intrinsic::ID AddIntrinsicID) {
-  switch (AddIntrinsicID) {
-  default:
-    break;
-  case Intrinsic::nvvm_add_rn_sat_f16:
-  case Intrinsic::nvvm_add_rn_sat_v2f16:
-    return NVPTXISD::SUB_RN_SAT;
-  case Intrinsic::nvvm_add_rn_ftz_sat_f16:
-  case Intrinsic::nvvm_add_rn_ftz_sat_v2f16:
-    return NVPTXISD::SUB_RN_FTZ_SAT;
+static unsigned getFAddWithNegOpcode(EVT VT, Intrinsic::ID IID,
+                                     APFloat::roundingMode RoundingMode) {
+  const bool IsFTZ =
+      IID == Intrinsic::nvvm_fadd_ftz || IID == Intrinsic::nvvm_fadd_ftz_sat;
+  const bool IsSat =
+      IID == Intrinsic::nvvm_fadd_sat || IID == Intrinsic::nvvm_fadd_ftz_sat;
+  switch (VT.getScalarType().getSimpleVT().SimpleTy) {
+  case MVT::f16: {
+    static constexpr unsigned SubRNOpcodes[2][2] = {
+        {NVPTXISD::SUB_RN, NVPTXISD::SUB_RN_SAT},
+        {NVPTXISD::SUB_RN_FTZ, NVPTXISD::SUB_RN_FTZ_SAT}};
+    return SubRNOpcodes[IsFTZ][IsSat];
   }
-  llvm_unreachable("Invalid F16 add intrinsic");
+  case MVT::bf16:
+    return NVPTXISD::SUB_RN;
+  case MVT::f32: {
+    // for f32x2 inputs
+    if (!VT.isVector() || IsSat)
+      return 0;
+    static constexpr unsigned SubF32x2Opcodes[4][2] = {
+        {NVPTXISD::SUB_RZ, NVPTXISD::SUB_RZ_FTZ},  // RZ
+        {NVPTXISD::SUB_RN, NVPTXISD::SUB_RN_FTZ},  // RN
+        {NVPTXISD::SUB_RP, NVPTXISD::SUB_RP_FTZ},  // RP
+        {NVPTXISD::SUB_RM, NVPTXISD::SUB_RM_FTZ}}; // RM
+    return SubF32x2Opcodes[static_cast<unsigned>(RoundingMode)][IsFTZ];
+  }
+  default:
+    return 0;
+  }
 }
 
-static SDValue combineF16AddWithNeg(SDNode *N, SelectionDAG &DAG,
-                                    Intrinsic::ID AddIntrinsicID) {
+static SDValue combineFAddWithNeg(SDNode *N, SelectionDAG &DAG,
+                                  Intrinsic::ID AddIntrinsicID,
+                                  APFloat::roundingMode RoundingMode) {
+  const EVT VT = N->getValueType(0);
+  const unsigned Opc = getFAddWithNegOpcode(VT, AddIntrinsicID, RoundingMode);
+  if (!Opc)
+    return SDValue();
+
   SDValue Op1 = N->getOperand(1);
   SDValue Op2 = N->getOperand(2);
 
@@ -7210,24 +7230,69 @@ static SDValue combineF16AddWithNeg(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   }
 
-  SDLoc DL(N);
-  return DAG.getNode(getF16SubOpc(AddIntrinsicID), DL, N->getValueType(0),
-                     SubOp1, SubOp2);
+  return DAG.getNode(Opc, SDLoc(N), VT, SubOp1, SubOp2);
+}
+
+// TODO: Remove the type-legality checks here once
+// https://github.com/llvm/llvm-project/pull/172442 lands, adding support for
+// explicit type constraints for overloaded intrinsics in tablegen.
+static bool isSupportedFAdd(EVT VT, const NVPTXSubtarget &STI,
+                            Intrinsic::ID IID,
+                            APFloat::roundingMode RoundingMode) {
+  if (VT.isVector() && VT.getVectorElementCount() != ElementCount::getFixed(2))
+    return false;
+
+  const bool IsRN = RoundingMode == APFloat::rmNearestTiesToEven;
+  const bool IsFTZ =
+      IID == Intrinsic::nvvm_fadd_ftz || IID == Intrinsic::nvvm_fadd_ftz_sat;
+  const bool IsSat =
+      IID == Intrinsic::nvvm_fadd_sat || IID == Intrinsic::nvvm_fadd_ftz_sat;
+  switch (VT.getScalarType().getSimpleVT().SimpleTy) {
+  case MVT::f16:
+    return IsRN;
+  case MVT::bf16:
+    return IsRN && !IsSat && !IsFTZ && STI.hasNativeBF16Support(ISD::FADD);
+  case MVT::f32:
+    return !VT.isVector() || (!IsSat && STI.hasF32x2Instructions());
+  case MVT::f64:
+    return !VT.isVector() && !IsSat && !IsFTZ;
+  default:
+    return false;
+  }
+}
+
+static SDValue diagnoseUnsupportedFAdd(SDNode *N, SelectionDAG &DAG,
+                                       Intrinsic::ID IID,
+                                       APFloat::roundingMode RoundingMode) {
+  const EVT VT = N->getValueType(0);
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      DAG.getMachineFunction().getFunction(),
+      Twine(Intrinsic::getBaseName(IID)) + " with rounding mode " +
+          nvvm::GetRoundingModeName(RoundingMode) + " and operand type " +
+          VT.getEVTString() + " is not supported on this target",
+      SDLoc(N).getDebugLoc()));
+  return DAG.getPOISON(VT);
 }
 
 static SDValue combineIntrinsicWOChain(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const NVPTXSubtarget &STI) {
-  unsigned IID = N->getConstantOperandVal(0);
+  const Intrinsic::ID IID =
+      static_cast<Intrinsic::ID>(N->getConstantOperandVal(0));
 
   switch (IID) {
   default:
     break;
-  case Intrinsic::nvvm_add_rn_sat_f16:
-  case Intrinsic::nvvm_add_rn_ftz_sat_f16:
-  case Intrinsic::nvvm_add_rn_sat_v2f16:
-  case Intrinsic::nvvm_add_rn_ftz_sat_v2f16:
-    return combineF16AddWithNeg(N, DCI.DAG, IID);
+  case Intrinsic::nvvm_fadd:
+  case Intrinsic::nvvm_fadd_ftz:
+  case Intrinsic::nvvm_fadd_sat:
+  case Intrinsic::nvvm_fadd_ftz_sat: {
+    const auto RoundingMode = static_cast<APFloat::roundingMode>(
+        N->getConstantOperandAPInt(3).getSExtValue());
+    if (!isSupportedFAdd(N->getValueType(0), STI, IID, RoundingMode))
+      return diagnoseUnsupportedFAdd(N, DCI.DAG, IID, RoundingMode);
+    return combineFAddWithNeg(N, DCI.DAG, IID, RoundingMode);
+  }
   }
   return SDValue();
 }
@@ -7292,9 +7357,6 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformSETCCCombine(N, DCI, STI);
   case ISD::SHL:
     return PerformSHLCombine(N, DCI, OptLevel);
-  case ISD::SREM:
-  case ISD::UREM:
-    return PerformREMCombine(N, DCI, OptLevel);
   case ISD::STORE:
   case NVPTXISD::StoreV2:
   case NVPTXISD::StoreV4:

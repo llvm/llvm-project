@@ -2268,6 +2268,15 @@ func.func @test_reshape_block_scaled_rank0_scale_input(%arg0 : tensor<64xf8E4M3F
 
 // -----
 
+func.func @test_reshape_block_scaled_rank0_shape_unranked_inputs(%arg0 : tensor<*xf8E4M3FN>, %arg1 : tensor<*xf8E8M0FNU>) -> () {
+  %s = tosa.const_shape {values = dense<> : tensor<0xindex>} : () -> !tosa.shape<0>
+  // expected-error@+1 {{'tosa.reshape_block_scaled' op requires new shape to have a rank greater than 0}}
+  %0:2 = "tosa.reshape_block_scaled"(%arg0, %arg1, %s) {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<*xf8E4M3FN>, tensor<*xf8E8M0FNU>, !tosa.shape<0>) -> (tensor<*xf8E4M3FN>, tensor<*xf8E8M0FNU>)
+  return
+}
+
+// -----
+
 func.func @test_reshape_non_block_scaled_block_size_mismatch(%arg0: tensor<13x21x3xf32>) -> tensor<1x819xf32> {
   %s = tosa.const_shape {values = dense<[1, 819]> : tensor<2xindex>} : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.reshape_block_scaled' op expect block size to be 1, got 32}}
@@ -2427,4 +2436,14 @@ func.func @test_transpose_block_scaled_illegal_perms(%input: tensor<29x12x32x96x
   // expected-error@+1 {{expected no-op permutation on innermost dimension for block scaled input}}
   %transpose = tosa.transpose %input  { perms = array<i32: 3, 0, 1, 2> } : (tensor<29x12x32x96x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<96x29x12x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
   return %transpose : tensor<96x29x12x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
+}
+
+// -----
+
+func.func @test_slice_block_scaled_invalid_block_size(%arg0: tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %start = tosa.const_shape {values = dense<[0, 0, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %size = tosa.const_shape {values = dense<[1, 1, 32]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.slice' op expected start innermost block size to match data type for block scaled input, got start block=1, scale block=32}}
+  %0 = tosa.slice %arg0, %start, %size {input_unsigned = false} : (tensor<4x4x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %0 : tensor<1x1x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
 }

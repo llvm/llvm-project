@@ -387,6 +387,11 @@ bool isGslOwnerType(const CXXRecordDecl *RD) {
   return isRecordWithAttr<OwnerAttr>(RD);
 }
 
+bool isOwnerPtrCtor(const CXXConstructorDecl *Ctor, const ParmVarDecl *PVD) {
+  return Ctor && PVD->getType()->isPointerType() &&
+         isGslOwnerType(Ctor->getParent());
+}
+
 static StringRef getName(const CXXRecordDecl &RD) {
   if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(&RD))
     return CTSD->getSpecializedTemplate()->getName();

@@ -1452,7 +1452,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BIstpncpy:
   case Builtin::BI__builtin_stpncpy:
   case Builtin::BIstrlcat:
-  case Builtin::BI__builtin_strlcat: {
+  case Builtin::BI__builtin_strlcat:
+  case Builtin::BIstrlcpy:
+  case Builtin::BI__builtin_strlcpy: {
     // Whether these functions overflow depends on the runtime strlen of the
     // string, not just the buffer size, so emitting the "always overflow"
     // diagnostic isn't quite right. We should still diagnose passing a buffer
@@ -6588,8 +6590,18 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
     // with mask.  If so, verify that RHS is an integer vector type with the
     // same number of elts as lhs.
     if (NumArgs == 2) {
-      if (!RHSType->hasIntegerRepresentation() ||
-          RHSType->castAs<VectorType>()->getNumElements() != NumElements)
+      auto *RHSVecType = RHSType->castAs<VectorType>();
+      if (RHSVecType->getElementType()->isBooleanType() ||
+          !RHSVecType->getElementType()->isIntegerType()) {
+        return ExprError(
+            Diag(TheCall->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+            << /* Arg ordinal */ 2 << /*vector of*/ 4 << /*integer*/ 1
+            << /*no fp*/ 0 << RHSType
+            << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                           TheCall->getArg(1)->getEndLoc()));
+      }
+
+      if (RHSVecType->getNumElements() != NumElements)
         return ExprError(Diag(TheCall->getBeginLoc(),
                               diag::err_vec_builtin_incompatible_vector)
                          << TheCall->getDirectCallee()
@@ -6685,9 +6697,12 @@ bool Sema::BuiltinPrefetch(CallExpr *TheCall) {
 
   // Argument 0 is checked for us and the remaining arguments must be
   // constant integers.
-  for (unsigned i = 1; i != NumArgs; ++i)
+  for (unsigned i = 1; i != NumArgs; ++i) {
+    if (convertArgumentToType(*this, TheCall->getArgs()[i], Context.IntTy))
+      return true;
     if (BuiltinConstantArgRange(TheCall, i, 0, i == 1 ? 1 : 3))
       return true;
+  }
 
   return false;
 }
@@ -12224,7 +12239,7 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
       return IntRange::forValueOfType(C, GetExprType(E));
 
     case UO_Minus: {
-      if (E->getType()->isUnsignedIntegerType()) {
+      if (GetExprType(E)->hasUnsignedIntegerRepresentation()) {
         return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
                                Approximate);
       }
@@ -12242,7 +12257,7 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
     }
 
     case UO_Not: {
-      if (E->getType()->isUnsignedIntegerType()) {
+      if (GetExprType(E)->hasUnsignedIntegerRepresentation()) {
         return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
                                Approximate);
       }
@@ -13268,7 +13283,8 @@ static void DiagnoseNullConversion(Sema &S, Expr *E, QualType T,
 }
 
 // Helper function to filter out cases for constant width constant conversion.
-// Don't warn on char array initialization or for non-decimal values.
+// Don't warn on unsigned char array initialization or for non-decimal
+// values.
 static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
                                           SourceLocation CC) {
   // If initializing from a constant, and the constant starts with '0',
@@ -13281,9 +13297,9 @@ static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
       return false;
   }
 
-  // If the CC location points to a '{', and the type is char, then assume
-  // assume it is an array initialization.
-  if (CC.isValid() && T->isCharType()) {
+  // If the CC location points to a '{' and the type is an unsigned char
+  // type, assume it is an array initialization.
+  if (T->isCharType() && !T->isSignedIntegerType() && CC.isValid()) {
     const char FirstContextCharacter =
         S.getSourceManager().getCharacterData(CC)[0];
     if (FirstContextCharacter == '{')
@@ -13587,6 +13603,11 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 
   if (TargetBT && TargetBT->isSveVLSBuiltinType())
     Target = TargetBT->getSveEltType(Context).getTypePtr();
+
+  // Nothing to diagnose if stripping the wrappers left identical element types
+  // (e.g. a scalar splatted to a vector of its own type).
+  if (Source == Target)
+    return;
 
   // If the source is floating point...
   if (SourceBT && SourceBT->isFloatingPoint()) {

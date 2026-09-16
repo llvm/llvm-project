@@ -3639,10 +3639,10 @@ void SelectionDAGBuilder::visitLandingPad(const LandingPadInst &LP) {
   // exceptions), then don't bother to create these DAG nodes.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   const Constant *PersonalityFn = FuncInfo.Fn->getPersonalityFn();
-  if (TLI.getExceptionPointerRegister(
-          TLI.getTargetMachine().getExceptionModel(), PersonalityFn) == 0 &&
-      TLI.getExceptionSelectorRegister(
-          TLI.getTargetMachine().getExceptionModel(), PersonalityFn) == 0)
+  if (TLI.getExceptionPointerRegister(FuncInfo.ExceptionModel, PersonalityFn) ==
+          0 &&
+      TLI.getExceptionSelectorRegister(FuncInfo.ExceptionModel,
+                                       PersonalityFn) == 0)
     return;
 
   // If landingpad's return type is token type, we don't create DAG nodes
@@ -4176,8 +4176,12 @@ void SelectionDAGBuilder::visitAddrSpaceCast(const User &I) {
   unsigned SrcAS = SV->getType()->getPointerAddressSpace();
   unsigned DestAS = I.getType()->getPointerAddressSpace();
 
-  if (!TM.isNoopAddrSpaceCast(SrcAS, DestAS))
-    N = DAG.getAddrSpaceCast(getCurSDLoc(), DestVT, N, SrcAS, DestAS);
+  if (!TM.isNoopAddrSpaceCast(SrcAS, DestAS)) {
+    SDNodeFlags Flags;
+    if (const auto *ASC = dyn_cast<AddrSpaceCastInst>(&I))
+      Flags.setNonNull(ASC->hasNonNull());
+    N = DAG.getAddrSpaceCast(getCurSDLoc(), DestVT, N, SrcAS, DestAS, Flags);
+  }
 
   setValue(&I, N);
 }
@@ -7229,8 +7233,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::fmuladd: {
     EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
-    if (TM.Options.AllowFPOpFusion != FPOpFusion::Strict &&
-        TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
+    if (TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
       setValue(&I, DAG.getNode(ISD::FMA, sdl,
                                getValue(I.getArgOperand(0)).getValueType(),
                                getValue(I.getArgOperand(0)),
@@ -7527,6 +7530,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue X = getValue(I.getArgOperand(0));
     SDValue Y = getValue(I.getArgOperand(1));
     setValue(&I, DAG.getNode(ISD::PDEP, sdl, X.getValueType(), X, Y));
+    return;
+  }
+  case Intrinsic::smulh:
+  case Intrinsic::umulh: {
+    auto Opc = Intrinsic == Intrinsic::smulh ? ISD::MULHS : ISD::MULHU;
+    SDValue X = getValue(I.getArgOperand(0));
+    SDValue Y = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(Opc, sdl, X.getValueType(), X, Y));
     return;
   }
   case Intrinsic::sadd_sat: {
@@ -8724,8 +8735,7 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   case Intrinsic::experimental_constrained_fmuladd: {
     Opcode = ISD::STRICT_FMA;
     // Break fmuladd into fmul and fadd.
-    if (TM.Options.AllowFPOpFusion == FPOpFusion::Strict ||
-        !TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
+    if (!TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
       Opers.pop_back();
       SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, sdl, VTs, Opers, Flags);
       pushFPOpOutChain(Mul, EB);

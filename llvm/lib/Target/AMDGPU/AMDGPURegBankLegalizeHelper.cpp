@@ -943,6 +943,7 @@ bool RegBankLegalizeHelper::lowerSplitTo32Select(MachineInstr &MI) {
   auto Op2 = B.buildUnmerge({VgprRB, Ty}, MI.getOperand(2).getReg());
   auto Op3 = B.buildUnmerge({VgprRB, Ty}, MI.getOperand(3).getReg());
   Register Cond = MI.getOperand(1).getReg();
+  Cond = B.buildFreeze(VccRB_S1, Cond).getReg(0);
   auto Flags = MI.getFlags();
   auto Lo =
       B.buildSelect({VgprRB, Ty}, Cond, Op2.getReg(0), Op3.getReg(0), Flags);
@@ -1484,7 +1485,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
   }
   case VgprToVccCopy: {
     Register Src = MI.getOperand(1).getReg();
-    LLT Ty = MRI.getType(Src);
+    LLT Ty = LLT::integer(MRI.getType(Src).getSizeInBits());
     // Take lowest bit from each lane and put it in lane mask.
     // Lowering via compare, but we need to clean high bits first as compare
     // compares all bits in register.

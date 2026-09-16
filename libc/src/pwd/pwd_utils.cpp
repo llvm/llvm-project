@@ -13,11 +13,12 @@
 
 #include "src/pwd/pwd_utils.h"
 #include "hdr/errno_macros.h"
+#include "hdr/types/size_t.h"
 #include "hdr/types/struct_passwd.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/attributes.h"
-#include "src/pwd/flat_file_db.h"
+#include "src/__support/pwd/flat_file_db.h"
 #include "src/string/string_utils.h"
 
 #ifndef LIBC_COPT_PWD_FILE_PATH
@@ -33,8 +34,9 @@ ErrorOr<struct passwd> parse_passwd_line(char *line) {
 
   struct passwd pwd;
   size_t len = internal::string_length(line);
-  if (!parse_line(cpp::span<char>(line, len + 1), &pwd))
-    return Error(EINVAL);
+  auto res = parse_line(cpp::span<char>(line, len + 1), {}, &pwd);
+  if (!res.has_value())
+    return Error(res.error());
 
   return pwd;
 }

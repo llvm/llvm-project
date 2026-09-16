@@ -23,16 +23,22 @@
 ; CHECK-NEXT:   exact-asm                        - Enable Exact Assembly (Disables Compression and Relaxation).
 ; CHECK-NEXT:   experimental                     - Experimental intrinsics.
 ; CHECK-NEXT:   experimental-p                   - 'P' ('Base P' (Packed SIMD)).
+; CHECK-NEXT:   experimental-rva23p1s64          - RISC-V experimental-rva23p1s64 profile.
+; CHECK-NEXT:   experimental-rvb23p1s64          - RISC-V experimental-rvb23p1s64 profile.
 ; CHECK-NEXT:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
 ; CHECK-NEXT:   experimental-smcsps              - 'Smcsps' (Conditional Stack Pointer Swap at Machine Level).
 ; CHECK-NEXT:   experimental-smehv               - 'Smehv' (Synchronous Exception Hardware Vectoring at Machine Level).
+; CHECK-NEXT:   experimental-smidctrl            - 'Smidctrl' (Interrupt Domain Control Interface at Machine Level).
 ; CHECK-NEXT:   experimental-smijt               - 'Smijt' (Interrupt Jump Table at Machine Level).
 ; CHECK-NEXT:   experimental-smip                - 'Smip' (Support for Interrupt Handler Push/Pop at Machine Level).
+; CHECK-NEXT:   experimental-smnip               - 'Smnip' (Nested Interrupt Preemption Support at Machine Level).
 ; CHECK-NEXT:   experimental-smpmpmt             - 'Smpmpmt' (PMP-based Memory Types Extension).
 ; CHECK-NEXT:   experimental-sscsps              - 'Sscsps' (Conditional Stack Pointer Swap at Supervisor Level).
 ; CHECK-NEXT:   experimental-ssehv               - 'Ssehv' (Synchronous Exception Hardware Vectoring at Supervisor Level).
+; CHECK-NEXT:   experimental-ssidctrl            - 'Ssidctrl' (Interrupt Domain Control Interface at Supervisor Level).
 ; CHECK-NEXT:   experimental-ssijt               - 'Ssijt' (Interrupt Jump Table at Supervisor Level).
 ; CHECK-NEXT:   experimental-ssip                - 'Ssip' (Support for Interrupt Handler Push/Pop at Supervisor Level).
+; CHECK-NEXT:   experimental-ssnip               - 'Ssnip' (Nested Interrupt Preemption Support at Supervisor Level).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
 ; CHECK-NEXT:   experimental-xqccmt              - 'Xqccmt' (Qualcomm 16-bit Table Jump).
 ; CHECK-NEXT:   experimental-xsfmclic            - 'XSfmclic' (SiFive CLIC Machine-mode CSRs).
@@ -214,7 +220,6 @@
 ; CHECK-NEXT:   unaligned-vector-mem             - Has reasonably performant unaligned vector loads and stores.
 ; CHECK-NEXT:   use-postra-scheduler             - Schedule again after register allocation.
 ; CHECK-NEXT:   v                                - 'V' (Vector Extension for Application Processors).
-; CHECK-NEXT:   ventana-veyron                   - Ventana Veyron-Series processors.
 ; CHECK-NEXT:   vl-dependent-latency             - Latency of vector instructions is dependent on the dynamic value of vl.
 ; CHECK-NEXT:   vxrm-pipeline-flush              - VXRM writes causes pipeline flush.
 ; CHECK-NEXT:   xaifet                           - 'XAIFET' (AI Foundry ET Extension).
@@ -294,7 +299,6 @@
 ; CHECK-NEXT:   xtheadmempair                    - 'XTHeadMemPair' (T-Head two-GPR Memory Operations).
 ; CHECK-NEXT:   xtheadsync                       - 'XTHeadSync' (T-Head multicore synchronization instructions).
 ; CHECK-NEXT:   xtheadvdot                       - 'XTHeadVdot' (T-Head Vector Extensions for Dot).
-; CHECK-NEXT:   xventanacondops                  - 'XVentanaCondOps' (Ventana Conditional Ops).
 ; CHECK-NEXT:   xwchc                            - 'Xwchc' (WCH/QingKe additional compressed opcodes).
 ; CHECK-NEXT:   za128rs                          - 'Za128rs' (Reservation Set Size of at Most 128 Bytes).
 ; CHECK-NEXT:   za64rs                           - 'Za64rs' (Reservation Set Size of at Most 64 Bytes).

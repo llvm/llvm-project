@@ -402,6 +402,20 @@ def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
 }
 
 //===----------------------------------------------------------------------===//
+// CUDADeviceSurfaceType
+//===----------------------------------------------------------------------===//
+
+def CIR_CUDADeviceSurfaceType :
+    CIR_Type<"CUDADeviceSurface", "cuda_surface"> {
+  let summary = "CUDA device surface reference type";
+  let description = [{
+    `!cir.cuda_surface` represents a CUDA built-in surface reference in CIR.
+    The type preserves surface semantics at the CIR level and lowers to the NVPTX
+    device-side handle representation (`i64`) during lowering to LLVM IR.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CUDADeviceTextureType
 //===----------------------------------------------------------------------===//
 
@@ -734,6 +748,12 @@ def CIR_BitFieldType : CIR_Type<"BitField", "bitfield", [
         offset += decl.getWidth();
       return offset;
     }
+
+    /// The size of the type this unit's bit-field was declared with, which
+    /// can exceed the storage type's size.  Returns nullopt when the unit
+    /// holds more than one bit-field.
+    std::optional<uint64_t>
+    getSoleDeclaredExtentInBits(const mlir::DataLayout &dataLayout) const;
   }];
 
   let genVerifyDecl = 1;
@@ -745,12 +765,12 @@ def CIR_BitFieldType : CIR_Type<"BitField", "bitfield", [
 // What a record member holds, and whether its extent is a declared one.
 //===----------------------------------------------------------------------===//
 
-def CIR_RecordMemberKind : CIR_I32EnumAttr<
+def CIR_RecordMemberKind : CIR_I32Enum<
     "RecordMemberKind", "what a record member holds", [
-  I32EnumAttrCase<"Data", 0, "data">,
-  I32EnumAttrCase<"Pad", 1, "pad">,
-  I32EnumAttrCase<"Empty", 2, "empty">,
-  I32EnumAttrCase<"BitField", 3, "bitfield">
+  I32EnumCase<"Data", 0, "data">,
+  I32EnumCase<"Pad", 1, "pad">,
+  I32EnumCase<"Empty", 2, "empty">,
+  I32EnumCase<"BitField", 3, "bitfield">
 ]> {
   let description = [{
     `pad` is storage the compiler inserted to place a later member at its
@@ -783,8 +803,6 @@ def CIR_RecordMemberKind : CIR_I32EnumAttr<
     whose trailing member is a unit of unnamed bit-fields keeps that unit in
     its data size.
   }];
-
-  let genSpecializedAttr = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1165,7 +1183,8 @@ def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
   CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
   CIR_UnionType, CIR_BitFieldType,
-  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceTextureType,
+  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceSurfaceType,
+  CIR_CUDADeviceTextureType,
   CIR_DataMemberType, CIR_MethodType,
   CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType
 ]>;

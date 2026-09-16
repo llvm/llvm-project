@@ -527,7 +527,7 @@ public:
   Metadata *getRawAddress() const {
     return isDbgAssign() ? DebugValues[1] : DebugValues[0];
   }
-  Metadata *getRawAssignID() const { return DebugValues[2]; }
+  Metadata *getRawAssignID() const { return DebugValues[AssignIDIdx]; }
   LLVM_ABI DIAssignID *getAssignID() const;
   DIExpression *getAddressExpression() const { return AddressExpression.get(); }
   MDNode *getRawAddressExpression() const {

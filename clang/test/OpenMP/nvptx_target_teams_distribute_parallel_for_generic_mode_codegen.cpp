@@ -205,7 +205,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l24_omp_outlined_omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[ARGC:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[ARGC:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -294,10 +294,10 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP19]], 1
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[I5]], align 4
-// CHECK1-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z3fooPi(ptr noundef [[I5]]) #[[ATTR5:[0-9]+]]
-// CHECK1-NEXT:    [[CALL11:%.*]] = call noundef i32 @_Z3fooPi(ptr noundef [[TMP0]]) #[[ATTR5]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z3fooPi(ptr noundef [[I5]]) #[[ATTR6:[0-9]+]]
+// CHECK1-NEXT:    [[CALL11:%.*]] = call noundef i32 @_Z3fooPi(ptr noundef [[TMP0]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[ADD12:%.*]] = add nsw i32 [[CALL]], [[CALL11]]
-// CHECK1-NEXT:    [[CALL13:%.*]] = call noundef i32 @_Z3fooPi(ptr noundef [[ARGC_ADDR]]) #[[ATTR5]]
+// CHECK1-NEXT:    [[CALL13:%.*]] = call noundef i32 @_Z3fooPi(ptr noundef [[ARGC_ADDR]]) #[[ATTR6]]
 // CHECK1-NEXT:    [[ADD14:%.*]] = add nsw i32 [[ADD12]], [[CALL13]]
 // CHECK1-NEXT:    store i32 [[ADD14]], ptr [[TMP0]], align 4
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -503,7 +503,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l24_omp_outlined_omp_outlined
-// CHECK2-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[ARGC:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
+// CHECK2-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[ARGC:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -588,10 +588,10 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP19]], 1
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK2-NEXT:    store i32 [[ADD]], ptr [[I4]], align 4
-// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z3fooPi(ptr noundef [[I4]]) #[[ATTR5:[0-9]+]]
-// CHECK2-NEXT:    [[CALL8:%.*]] = call noundef i32 @_Z3fooPi(ptr noundef [[TMP0]]) #[[ATTR5]]
+// CHECK2-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z3fooPi(ptr noundef [[I4]]) #[[ATTR6:[0-9]+]]
+// CHECK2-NEXT:    [[CALL8:%.*]] = call noundef i32 @_Z3fooPi(ptr noundef [[TMP0]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[ADD9:%.*]] = add nsw i32 [[CALL]], [[CALL8]]
-// CHECK2-NEXT:    [[CALL10:%.*]] = call noundef i32 @_Z3fooPi(ptr noundef [[ARGC_ADDR]]) #[[ATTR5]]
+// CHECK2-NEXT:    [[CALL10:%.*]] = call noundef i32 @_Z3fooPi(ptr noundef [[ARGC_ADDR]]) #[[ATTR6]]
 // CHECK2-NEXT:    [[ADD11:%.*]] = add nsw i32 [[ADD9]], [[CALL10]]
 // CHECK2-NEXT:    store i32 [[ADD11]], ptr [[TMP0]], align 4
 // CHECK2-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]

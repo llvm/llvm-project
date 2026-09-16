@@ -4960,6 +4960,54 @@ static std::optional<int64_t> getOffsetDifferenceInBits(CodeGenFunction &CGF,
   return std::make_optional<int64_t>(FD1Offset - FD2Offset);
 }
 
+/// Convert a '__sized_by' byte-count bound to an element-count bound so it can
+/// be compared against an element index. \p BoundsVal is the loaded byte count
+/// and \p PointeeTy is the pointer's pointee type. Returns \p BoundsVal
+/// unchanged when no scaling is needed, otherwise returns a new `llvm::Value*`
+/// that is element count.
+static llvm::Value *convertSizedByBoundToElementCount(CodeGenFunction &CGF,
+                                                      llvm::Value *BoundsVal,
+                                                      QualType PointeeTy,
+                                                      bool CountSigned) {
+  assert(BoundsVal->getType()->isIntegerTy());
+  assert(!PointeeTy.isNull() && "pointee type is never null");
+  assert(!PointeeTy->isFunctionType() &&
+         "Sema guarantees a '__sized_by' pointee is a non-function type");
+
+  if (PointeeTy->isIncompleteType()) {
+    // Sema enforces that only 'void' can be subscripted here (GNU extension,
+    // 1-byte stride), so the byte count already equals the element count.
+    assert(PointeeTy->isVoidType() && "expected a 'void' incomplete pointee");
+    return BoundsVal;
+  }
+
+  CharUnits ElemSize = CGF.getContext().getTypeSizeInChars(PointeeTy);
+  if (ElemSize <= CharUnits::One())
+    return BoundsVal;
+
+  int64_t ElemSizeQ = ElemSize.getQuantity();
+  unsigned CountWidth = BoundsVal->getType()->getIntegerBitWidth();
+
+  // The divisor must be representable in the count field's type.
+  bool ElemSizeFits =
+      CountSigned ? llvm::isIntN(CountWidth, ElemSizeQ)
+                  : llvm::isUIntN(CountWidth, static_cast<uint64_t>(ElemSizeQ));
+  if (!ElemSizeFits)
+    // No whole element fits in any representable byte count. Use a bound of 0
+    // to always trap.
+    // FIXME: Sema should just reject this (#223525).
+    return llvm::ConstantInt::get(BoundsVal->getType(), 0);
+
+  llvm::Value *ElemSizeV =
+      llvm::ConstantInt::get(BoundsVal->getType(), ElemSizeQ);
+  // Use signed division for a signed count field so a negative byte count stays
+  // non-positive and is still rejected by the negative-bounds guard in
+  // EmitBoundsCheckImpl (unsigned division would turn it into a large positive
+  // count).
+  return CountSigned ? CGF.Builder.CreateSDiv(BoundsVal, ElemSizeV)
+                     : CGF.Builder.CreateUDiv(BoundsVal, ElemSizeV);
+}
+
 /// EmitCountedByBoundsChecking - If the array being accessed has a "counted_by"
 /// attribute, generate bounds checking code. The "count" field is at the top
 /// level of the struct or in an anonymous struct, that's also at the top level.
@@ -5001,15 +5049,39 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
 
     // Create a GEP with the byte offset between the counted object and the
     // count and use that to load the count value.
-    ArrayInst = Builder.CreatePointerBitCastOrAddrSpaceCast(ArrayInst,
-                                                            Int8PtrTy, Int8Ty);
+    Address CountAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+        ArrayInst, Int8PtrTy, Int8Ty);
 
     llvm::Type *BoundsType = ConvertType(CountFD->getType());
     llvm::Value *BoundsVal =
-        Builder.CreateInBoundsGEP(Int8Ty, ArrayInst.emitRawPointer(*this),
+        Builder.CreateInBoundsGEP(Int8Ty, CountAddr.emitRawPointer(*this),
                                   Builder.getInt32(*Diff), ".counted_by.gep");
     BoundsVal = Builder.CreateAlignedLoad(BoundsType, BoundsVal, getIntAlign(),
                                           ".counted_by.load");
+
+    const auto *CountAttributedTy = FD->getType()->getAs<CountAttributedType>();
+    assert(CountAttributedTy && "expected FD to have a CountAttributedType");
+
+    // For the '_or_null' variants a null pointer describes no accessible
+    // memory, so treat the bound as 0 when the pointer is null; any access then
+    // traps.
+    if (CountAttributedTy->isOrNull()) {
+      // Load the pointer from its address rather than re-emitting the
+      // member expression, which would re-evaluate a side-effecting base.
+      llvm::Value *Ptr = Builder.CreateLoad(ArrayInst);
+      llvm::Value *IsNull = Builder.CreateIsNull(Ptr);
+      BoundsVal = Builder.CreateSelect(
+          IsNull, llvm::ConstantInt::get(BoundsType, 0), BoundsVal);
+    }
+
+    // For '__sized_by' the loaded bound is a byte count. Convert it to an
+    // element count by dividing by the element size so the check can compare
+    // the (element) index directly. '__counted_by' already counts elements so
+    // needs no special handling.
+    if (CountAttributedTy->isCountInBytes())
+      BoundsVal = convertSizedByBoundToElementCount(
+          *this, BoundsVal, ArrayType->getPointeeType(),
+          CountFD->getType()->isSignedIntegerOrEnumerationType());
 
     // Now emit the bounds checking.
     EmitBoundsCheckImpl(ArrayExpr, ArrayType, IndexVal, IndexType, BoundsVal,
@@ -6016,6 +6088,13 @@ LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
   Address DeclPtr = CreateMemTempWithoutCast(E->getType(), ".compoundliteral");
   const Expr *InitExpr = E->getInitializer();
   LValue Result = MakeAddrLValue(DeclPtr, E->getType(), AlignmentSource::Decl);
+
+  if (!getLangOpts().CPlusPlus) {
+    if (HaveInsertPoint() && !hasLabelBeenSeenInCurrentScope() &&
+        EmitLifetimeStart(DeclPtr.getBasePointer()))
+      pushCleanupAfterFullExpr<CallLifetimeEnd>(NormalEHLifetimeMarker,
+                                                DeclPtr);
+  }
 
   EmitAnyExprToMem(InitExpr, DeclPtr, E->getType().getQualifiers(),
                    /*Init*/ true);
