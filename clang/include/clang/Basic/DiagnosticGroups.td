@@ -1897,7 +1897,35 @@ def CrossTURemarks : DiagGroup<"ctu-remarks">;
 
 def CTADMaybeUnsupported : DiagGroup<"ctad-maybe-unsupported">;
 
-def FortifySource : DiagGroup<"fortify-source", [FormatOverflow, FormatTruncation]>;
+def FortifySource : DiagGroup<"fortify-source", [FormatOverflow, FormatTruncation]> {
+  code Documentation = [{
+Warns at compile time when calls to standard C library or POSIX functions have
+provably out-of-bounds destination buffers or invalid constant arguments,
+modeled after [`_FORTIFY_SOURCE`](https://www.gnu.org/software/libc/manual/html_node/Source-Fortification.html)
+compile-time checks.
+
+This diagnostic group checks:
+
+1. **Destination buffer overflows and format truncation**: Diagnoses when a
+   write operation will always overflow the destination buffer, when an
+   explicit size argument exceeds the known size of the destination buffer, or
+   when formatted output will always be truncated:
+   - `<string.h>` / `<strings.h>`: `memcpy`, `memmove`, `memset`, `mempcpy`,
+     `bcopy`, `bzero`, `strcpy`, `stpcpy`, `strcat`, `strncpy`, `stpncpy`,
+     `strncat`, `strlcpy`, `strlcat` (and their `__builtin_` variants).
+   - `<stdio.h>`: `sprintf`, `snprintf`, `vsnprintf` (format overflow and
+     truncation also controlled by {ref}`-Wformat-overflow` and
+     {ref}`-Wformat-truncation`), and `scanf`, `fscanf`, `sscanf`.
+
+2. **Invalid constant arguments**:
+   - `<sys/stat.h>`: `umask` when called with constant mode bits outside `0777`
+     that are silently ignored.
+
+Note: Related bounds checks for most `__builtin___*_chk` functions and source buffer
+overreads in memory functions (such as `memcpy` and `memcmp`) are controlled
+separately by {ref}`-Wbuiltin-memcpy-chk-size` and {ref}`-Wstringop-overread`.
+  }];
+}
 
 def OverflowBehaviorAttributeIgnored
     : DiagGroup<"overflow-behavior-attribute-ignored">;
