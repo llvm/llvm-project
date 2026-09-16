@@ -36,7 +36,7 @@ TEST_F(LlvmLibcLgammabf16Test, SubnormalPositiveRange) {
   for (uint16_t v = SUBNORM_POS_START; v <= SUBNORM_POS_STOP; ++v) {
     bfloat16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Lgamma, x,
-                                    LIBC_NAMESPACE::lgammabf16(x), 0.5);
+                                   LIBC_NAMESPACE::lgammabf16(x), 0.5);
   }
 }
 
@@ -44,7 +44,7 @@ TEST_F(LlvmLibcLgammabf16Test, NormalPositiveRange) {
   for (uint16_t v = NORMAL_POS_START; v <= NORMAL_POS_STOP; ++v) {
     bfloat16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Lgamma, x,
-                                    LIBC_NAMESPACE::lgammabf16(x), 0.5);
+                                   LIBC_NAMESPACE::lgammabf16(x), 0.5);
   }
 }
 
@@ -52,7 +52,7 @@ TEST_F(LlvmLibcLgammabf16Test, SubnormalNegativeRange) {
   for (uint16_t v = SUBNORM_NEG_START; v <= SUBNORM_NEG_STOP; ++v) {
     bfloat16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Lgamma, x,
-                                    LIBC_NAMESPACE::lgammabf16(x), 0.5);
+                                   LIBC_NAMESPACE::lgammabf16(x), 0.5);
   }
 }
 
@@ -60,6 +60,6 @@ TEST_F(LlvmLibcLgammabf16Test, NormalNegativeRange) {
   for (uint16_t v = NORMAL_NEG_START; v <= NORMAL_NEG_STOP; ++v) {
     bfloat16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Lgamma, x,
-                                    LIBC_NAMESPACE::lgammabf16(x), 0.5);
+                                   LIBC_NAMESPACE::lgammabf16(x), 0.5);
   }
 }
