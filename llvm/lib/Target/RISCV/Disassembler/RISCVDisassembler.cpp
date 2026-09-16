@@ -132,17 +132,6 @@ static DecodeStatus DecodeSingleRegister(MCInst &Inst,
 constexpr auto DecodeGPRRegisterClass =
     DecodeSimpleRegisterClass<RISCV::X0, 32, /*RVELimit=*/16>;
 
-static DecodeStatus DecodeGPRX1X5RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder) {
-  MCRegister Reg = RISCV::X0 + RegNo;
-  if (Reg != RISCV::X1 && Reg != RISCV::X5)
-    return MCDisassembler::Fail;
-
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
 template <auto DecodeFn, auto PredicateFn>
 static DecodeStatus DecodeFilteredRegisterClass(MCInst &Inst, uint32_t RegNo,
                                                 uint64_t Address,
@@ -155,6 +144,7 @@ static DecodeStatus DecodeFilteredRegisterClass(MCInst &Inst, uint32_t RegNo,
 constexpr bool PredNoX0(uint32_t RegNo) { return RegNo != 0; }
 constexpr bool PredNoX2(uint32_t RegNo) { return RegNo != 2; }
 constexpr bool PredNoX31(uint32_t RegNo) { return RegNo != 31; }
+constexpr bool PredX1OrX5(uint32_t RegNo) { return RegNo == 1 || RegNo == 5; }
 
 constexpr auto DecodeGPRNoX0RegisterClass =
     DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredNoX0>;
@@ -162,6 +152,8 @@ constexpr auto DecodeGPRNoX2RegisterClass =
     DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredNoX2>;
 constexpr auto DecodeGPRNoX31RegisterClass =
     DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredNoX31>;
+constexpr auto DecodeGPRX1X5RegisterClass =
+    DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredX1OrX5>;
 
 static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
                                                uint64_t Address,
@@ -188,14 +180,7 @@ static DecodeStatus DecodeGPRPairCRegisterClass(MCInst &Inst, uint32_t RegNo,
   if (RegNo >= 8 || RegNo % 2)
     return MCDisassembler::Fail;
 
-  const RISCVDisassembler *Dis =
-      static_cast<const RISCVDisassembler *>(Decoder);
-  const MCRegisterInfo *RI = Dis->getContext().getRegisterInfo();
-  MCRegister Reg = RI->getMatchingSuperReg(
-      RISCV::X8 + RegNo, RISCV::sub_gpr_even,
-      &getRISCVMCRegisterClass(RISCV::GPRPairCRegClassID));
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
+  return DecodeGPRPairRegisterClass(Inst, RegNo + 8, Address, Decoder);
 }
 
 static DecodeStatus DecodeGPRS07RegisterClass(MCInst &Inst, uint32_t RegNo,
@@ -638,8 +623,6 @@ static constexpr DecoderListEntry DecoderList16[]{
      "Xqccmt (Qualcomm 16-bit Table Jump Instructions)"},
     {DecoderTableXwchc16, {RISCV::FeatureVendorXwchc}, "WCH QingKe XW"},
     // Standard Extensions
-    // DecoderTableZicfiss16 must be checked before DecoderTable16.
-    {DecoderTableZicfiss16, {}, "Zicfiss (Shadow Stack 16-bit)"},
     {DecoderTable16, {}, "standard 16-bit instructions"},
     {DecoderTableRV32Only16, {}, "RV32-only 16-bit instructions"},
     // Zc* instructions incompatible with Zcf or Zcd
