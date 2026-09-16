@@ -44,6 +44,7 @@
 #define LIBC_TARGET_CPU_HAS_SSE2
 #define LIBC_TARGET_CPU_HAS_FPU_FLOAT
 #define LIBC_TARGET_CPU_HAS_FPU_DOUBLE
+#define LIBC_TARGET_CPU_GENERIC_VECTOR_SIZE_MAX 128
 #endif
 
 #if defined(__SSE4_2__)
@@ -52,6 +53,8 @@
 
 #if defined(__AVX__)
 #define LIBC_TARGET_CPU_HAS_AVX
+#undef LIBC_TARGET_CPU_GENERIC_VECTOR_SIZE_MAX
+#define LIBC_TARGET_CPU_GENERIC_VECTOR_SIZE_MAX 256
 #endif
 
 #if defined(__AVX2__)
@@ -60,6 +63,8 @@
 
 #if defined(__AVX512F__)
 #define LIBC_TARGET_CPU_HAS_AVX512F
+#undef LIBC_TARGET_CPU_GENERIC_VECTOR_SIZE_MAX
+#define LIBC_TARGET_CPU_GENERIC_VECTOR_SIZE_MAX 512
 #endif
 
 #if defined(__AVX512BW__)
@@ -87,6 +92,7 @@
 
 #if defined(__ARM_NEON)
 #define LIBC_TARGET_CPU_HAS_ARM_NEON
+#define LIBC_TARGET_CPU_GENERIC_VECTOR_SIZE_MAX 512
 #endif
 
 #if defined(__riscv_flen)
@@ -104,6 +110,10 @@
 #define LIBC_TARGET_CPU_HAS_FPU_DOUBLE
 #endif // LIBC_TARGET_CPU_HAS_RISCV_FPU_DOUBLE
 #endif // __riscv_flen
+
+#if defined(__riscv_v_min_vlen)
+#define LIBC_TARGET_CPU_GENERIC_VECTOR_SIZE_MAX __riscv_v_min_vlen
+#endif // __riscv_v_min_vlen
 
 #if defined(__NVPTX__) || defined(__AMDGPU__) || defined(__SPIRV__)
 #define LIBC_TARGET_CPU_HAS_FPU_FLOAT

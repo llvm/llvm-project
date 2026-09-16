@@ -1760,6 +1760,8 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::usub_with_overflow:
   case Intrinsic::smul_with_overflow:
   case Intrinsic::umul_with_overflow:
+  case Intrinsic::smulh:
+  case Intrinsic::umulh:
   case Intrinsic::sadd_sat:
   case Intrinsic::uadd_sat:
   case Intrinsic::ssub_sat:
@@ -2237,7 +2239,7 @@ Constant *GetConstantFoldFPValue128(float128 V, Type *Ty) {
 
 /// Clear the floating-point exception state.
 inline void llvm_fenv_clearexcept() {
-#if HAVE_DECL_FE_ALL_EXCEPT
+#if defined(FE_ALL_EXCEPT)
   feclearexcept(FE_ALL_EXCEPT);
 #endif
   errno = 0;
@@ -2248,7 +2250,7 @@ inline bool llvm_fenv_testexcept() {
   int errno_val = errno;
   if (errno_val == ERANGE || errno_val == EDOM)
     return true;
-#if HAVE_DECL_FE_ALL_EXCEPT && HAVE_DECL_FE_INEXACT
+#if defined(FE_ALL_EXCEPT) && defined(FE_INEXACT)
   if (fetestexcept(FE_ALL_EXCEPT & ~FE_INEXACT))
     return true;
 #endif
@@ -3898,6 +3900,14 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       if (!C0 || !C1)
         return Constant::getNullValue(Ty);
       return ConstantInt::get(Ty, APIntOps::pext(*C0, *C1));
+    case Intrinsic::smulh:
+      if (!C0 || !C1)
+        return Constant::getNullValue(Ty);
+      return ConstantInt::get(Ty, APIntOps::mulhs(*C0, *C1));
+    case Intrinsic::umulh:
+      if (!C0 || !C1)
+        return Constant::getNullValue(Ty);
+      return ConstantInt::get(Ty, APIntOps::mulhu(*C0, *C1));
     case Intrinsic::amdgcn_wave_reduce_umin:
     case Intrinsic::amdgcn_wave_reduce_umax:
     case Intrinsic::amdgcn_wave_reduce_max:

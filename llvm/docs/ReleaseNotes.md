@@ -75,6 +75,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Added `llvm.vector.reduce.fmaximumnum` and `llvm.vector.reduce.fminimumnum`
   intrinsics, the reduction variants of `llvm.maximumnum` and
   `llvm.minimumnum`. 
+* Added `llvm.smulh` and `llvm.umulh` intrinsics for signed and unsigned
+  multiply returning the high-order half of the 2N-bit product of iN operands.
 * Added `nofreeobj` attribute for attributes and returns, which forbids
   freeing the underlying object (as opposed to only frees through that specific
   pointer). Renamed `!nofree` metadata to `!nofreeobj`, as it has the same
@@ -159,10 +161,18 @@ Makes programs 10x faster by doing Special New Thing.
   The `llvm.vp.merge` will be folded away but the `%evl` will be propagated to
   the add instruction.
 
+* Introduced the generic `!atomic.ignore.denormal.mode` metadata for
+  floating-point `atomicrmw` instructions, generalizing the previously
+  AMDGPU-specific `!amdgpu.ignore.denormal.mode`.
+
 ### Changes to LLVM infrastructure
 
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.
+
+* Removed `TargetOptions::EABIVersion` and the `llc`/`opt` `-meabi` flag. The
+  GNU-vs-EABI distinction is now derived entirely from the target triple's
+  environment (e.g. `arm-none-gnueabi` vs `arm-none-eabi`).
 
 ### Changes to building LLVM
 
@@ -245,6 +255,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Added support for `tail symbol, rt` form that takes an address (materialisation)
   register, that is used when software guarded branch is needed.
 * Updated the experimental `Zvzip` extension to the v0.3 draft specification.
+* Added the experimental `RVA23P1S64` and `RVB23P1S64` profiles.
 
 ### Changes to the WebAssembly Backend
 

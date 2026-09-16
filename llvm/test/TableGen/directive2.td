@@ -66,7 +66,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    Delimited,
 // CHECK-NEXT:    Explicit,
 // CHECK-NEXT:    LoopNest,
-// CHECK-NEXT:    LoopSeq,
+// CHECK-NEXT:    LoopSequence,
 // CHECK-NEXT:    None,
 // CHECK-NEXT:    Separating,
 // CHECK-NEXT:    Last_ = Separating,

@@ -123,7 +123,7 @@
 // '-mllvm -emscripten-cxx-exceptions-allowed=foo,bar' sets
 // '-mllvm --force-attribute=foo:noinline -mllvm --force-attribute=bar:noinline'
 // RUN: %clang -### --target=wasm32-unknown-unknown \
-// RUN:    --sysroot=/foo %s -mllvm -enable-emscripten-cxx-exceptions \
+// RUN:    --sysroot=/foo %s -femscripten-exceptions \
 // RUN:    -mllvm -emscripten-cxx-exceptions-allowed=foo,bar 2>&1 \
 // RUN:  | FileCheck -check-prefix=EMSCRIPTEN_EH_ALLOWED_NOINLINE %s
 // EMSCRIPTEN_EH_ALLOWED_NOINLINE: "-cc1" {{.*}} "-mllvm" "--force-attribute=foo:noinline" "-mllvm" "--force-attribute=bar:noinline"
@@ -135,11 +135,11 @@
 // RUN:   | FileCheck -check-prefix=EMSCRIPTEN_EH_ALLOWED_WO_ENABLE %s
 // EMSCRIPTEN_EH_ALLOWED_WO_ENABLE: invalid argument '-mllvm -emscripten-cxx-exceptions-allowed' only allowed with '-femscripten-exceptions'
 
-// '-femscripten-exceptions' sets '-mllvm -enable-emscripten-cxx-exceptions'
+// '-femscripten-exceptions' sets '-exception-model=emscripten'
 // RUN: %clang -### --target=wasm32-unknown-unknown \
 // RUN:    --sysroot=/foo %s -femscripten-exceptions 2>&1 \
 // RUN:  | FileCheck -check-prefix=EMSCRIPTEN_EXCEPTIONS %s
-// EMSCRIPTEN_EXCEPTIONS: "-cc1" {{.*}} "-mllvm" "-enable-emscripten-cxx-exceptions"
+// EMSCRIPTEN_EXCEPTIONS: "-cc1" {{.*}} "-exception-model=emscripten"
 
 // '-femscripten-exceptions' satisfies the '-emscripten-cxx-exceptions-allowed'
 // companion requirement.

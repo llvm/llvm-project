@@ -402,8 +402,7 @@ public:
   }
   void VisitUnaryExtension(UnaryOperator *e) { Visit(e->getSubExpr()); }
   void VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitSubstNonTypeTemplateParmExpr");
+    Visit(e->getReplacement());
   }
   void VisitConstantExpr(ConstantExpr *e) {
     ensureDest(cgf.getLoc(e->getSourceRange()), e->getType());
@@ -427,12 +426,14 @@ public:
 
   void VisitPredefinedExpr(const PredefinedExpr *e) { emitAggLoadOfLValue(e); }
   void VisitBinaryOperator(const BinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitBinaryOperator");
+    if (e->getOpcode() == BO_PtrMemD || e->getOpcode() == BO_PtrMemI)
+      VisitPointerToDataMemberBinaryOperator(e);
+    else
+      cgf.cgm.errorUnsupported(e, "aggregate binary expression");
   }
   void VisitPointerToDataMemberBinaryOperator(const BinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitPointerToDataMemberBinaryOperator");
+    LValue lv = cgf.emitPointerToDataMemberBinaryExpr(e);
+    emitFinalDestCopy(e->getType(), lv);
   }
   void VisitBinComma(const BinaryOperator *e) {
     cgf.emitIgnoredExpr(e->getLHS());
