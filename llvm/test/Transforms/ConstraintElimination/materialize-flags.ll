@@ -156,7 +156,7 @@ define i32 @sub_nsw_relational(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[A]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
 entry:
@@ -176,7 +176,7 @@ define i32 @sub_nuw_gains_nsw(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i32 [[A]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
 entry:
@@ -194,7 +194,7 @@ define i32 @sub_nsw_constant_operand(i32 %a) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp sle i32 [[A]], 100
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[A]], -5
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[A]], -5
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
 entry:

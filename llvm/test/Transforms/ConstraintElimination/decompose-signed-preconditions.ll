@@ -109,8 +109,7 @@ define i1 @sub_via_operand_signs(i8 %a, i8 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[A]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_2]])
-; CHECK-NEXT:    [[C:%.*]] = icmp sle i8 [[S]], [[A]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %s = sub i8 %a, %b
@@ -152,8 +151,7 @@ define i1 @sub_via_negative_constant_range(i8 %a) {
 ; CHECK-NEXT:    call void @use(i8 [[S]])
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sle i8 [[A]], 100
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
-; CHECK-NEXT:    [[C:%.*]] = icmp sge i8 [[S]], [[A]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %s = sub i8 %a, -5
