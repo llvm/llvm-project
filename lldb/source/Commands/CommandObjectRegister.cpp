@@ -65,48 +65,41 @@ FindRegisterWithExpressionPath(RegisterContext &reg_ctx, llvm::StringRef name) {
   return {nullptr, {}};
 }
 
-static ValueObjectSP
-GetRegisterValueForExpressionPath(ValueObjectSP value,
-                                  llvm::StringRef expression_path) {
-  while (!expression_path.empty()) {
-    if (expression_path.consume_front(".")) {
-      size_t separator = expression_path.find_first_of(".[");
-      llvm::StringRef member = separator == llvm::StringRef::npos
-                                   ? expression_path
-                                   : expression_path.take_front(separator);
-      if (member.empty())
-        return {};
-      value = value->GetChildMemberWithName(member);
-      expression_path = separator == llvm::StringRef::npos
-                            ? llvm::StringRef()
-                            : expression_path.drop_front(separator);
-    } else if (expression_path.consume_front("[")) {
-      size_t closing_bracket = expression_path.find(']');
-      if (closing_bracket == llvm::StringRef::npos)
-        return {};
+static bool HasValidRegisterIndexes(ValueObjectSP value,
+                                    llvm::StringRef expression_path) {
+  size_t search_from = 0;
+  while (true) {
+    size_t open_bracket = expression_path.find('[', search_from);
+    if (open_bracket == llvm::StringRef::npos)
+      return true;
 
-      uint32_t index = 0;
-      if (expression_path.take_front(closing_bracket).getAsInteger(10, index))
-        return {};
+    size_t close_bracket = expression_path.find(']', open_bracket + 1);
+    if (close_bracket == llvm::StringRef::npos)
+      return false;
 
-      llvm::Expected<uint32_t> num_children = value->GetNumChildren();
-      if (!num_children) {
-        llvm::consumeError(num_children.takeError());
-        return {};
-      }
-      if (index >= *num_children)
-        return {};
+    uint32_t index;
+    if (expression_path.slice(open_bracket + 1, close_bracket)
+            .getAsInteger(0, index))
+      return false;
 
-      value = value->GetChildAtIndex(index);
-      expression_path = expression_path.drop_front(closing_bracket + 1);
-    } else {
-      return {};
+    llvm::StringRef parent_path = expression_path.take_front(open_bracket);
+    ValueObjectSP parent = parent_path.empty()
+                               ? value
+                               : value->GetValueForExpressionPath(parent_path);
+    if (!parent)
+      return false;
+
+    llvm::Expected<uint32_t> num_children = parent->GetNumChildren();
+    if (!num_children) {
+      llvm::consumeError(num_children.takeError());
+      return false;
     }
+    if (index >= *num_children)
+      return false;
 
-    if (!value)
-      return {};
+    search_from = close_bracket + 1;
   }
-  return value;
+  return true;
 }
 
 static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
@@ -248,9 +241,19 @@ public:
     lldb::RegisterContextSP reg_ctx_sp = frame->GetRegisterContextSP();
     ValueObjectSP register_value =
         ValueObjectRegister::Create(frame, reg_ctx_sp, &reg_info);
-    ValueObjectSP child =
-        GetRegisterValueForExpressionPath(register_value, expression_path);
-    if (!child) {
+    ValueObject::ExpressionPathScanEndReason reason =
+        ValueObject::eExpressionPathScanEndReasonUnknown;
+    ValueObject::ExpressionPathEndResultType result_type =
+        ValueObject::eExpressionPathEndResultTypeInvalid;
+    ValueObjectSP child;
+    // Generic expression paths permit out-of-bounds synthetic array members,
+    // but register paths must stay within the bytes supplied by the target.
+    if (HasValidRegisterIndexes(register_value, expression_path))
+      child = register_value->GetValueForExpressionPath(expression_path,
+                                                        &reason, &result_type);
+    if (!child ||
+        reason != ValueObject::eExpressionPathScanEndReasonEndOfString ||
+        result_type != ValueObject::eExpressionPathEndResultTypePlain) {
       llvm::StringRef error_path = expression_path;
       error_path.consume_front(".");
       result.AppendErrorWithFormat("No field path '%s' in register '%s'",
