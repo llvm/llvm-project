@@ -219,7 +219,7 @@ const char *SBValue::GetObjectDescription() {
     llvm::consumeError(str.takeError());
     return nullptr;
   }
-  return ConstString(*str).AsCString();
+  return ConstString(*str).AsCString(nullptr);
 }
 
 SBType SBValue::GetType() {
@@ -310,6 +310,24 @@ bool SBValue::SetValueFromCString(const char *value_str, lldb::SBError &error) {
   return success;
 }
 
+bool SBValue::CanSetValue() {
+  LLDB_INSTRUMENT_VA(this);
+
+  return CanSet().Success();
+}
+
+lldb::SBError SBValue::CanSet() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (!value_sp)
+    return SBError(Status::FromErrorStringWithFormat(
+        "Could not get value: %s", locker.GetError().AsCString()));
+
+  return SBError(Status::FromError(value_sp->CanSetValue()));
+}
+
 lldb::SBTypeFormat SBValue::GetTypeFormat() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -382,6 +400,33 @@ lldb::SBTypeSynthetic SBValue::GetTypeSynthetic() {
   return synthetic;
 }
 
+void SBValue::SetTypeSynthetic(lldb::SBTypeSynthetic &synthetic) {
+  LLDB_INSTRUMENT_VA(this);
+
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  lldb::ScriptedSyntheticChildrenSP synthetic_sp(synthetic.GetSP());
+  if (value_sp) {
+    value_sp->SetSyntheticChildrenOverride(synthetic_sp);
+  }
+}
+
+lldb::SBScriptObject SBValue::GetTypeSyntheticImplementation() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (!value_sp)
+    return lldb::SBScriptObject(nullptr, eScriptLanguageDefault);
+
+  auto frontend = value_sp->GetSyntheticChildrenFrontEnd();
+  if (!frontend)
+    return lldb::SBScriptObject(nullptr, eScriptLanguageDefault);
+
+  return lldb::SBScriptObject(frontend->GetImplementation(),
+                              eScriptLanguageDefault);
+}
+
 lldb::SBValue SBValue::CreateChildAtOffset(const char *name, uint32_t offset,
                                            SBType type) {
   LLDB_INSTRUMENT_VA(this, name, offset, type);
@@ -420,6 +465,9 @@ lldb::SBValue SBValue::CreateValueFromExpression(const char *name,
 
   SBExpressionOptions options;
   options.ref().SetKeepInMemory(true);
+  TargetSP target_sp(GetTarget().GetSP());
+  if (target_sp)
+    options.SetTryDILFirst(target_sp->GetUseDILForCreatingValues());
   return CreateValueFromExpression(name, expression, options);
 }
 
@@ -428,18 +476,55 @@ lldb::SBValue SBValue::CreateValueFromExpression(const char *name,
                                                  SBExpressionOptions &options) {
   LLDB_INSTRUMENT_VA(this, name, expression, options);
 
-  lldb::SBValue sb_value;
+  lldb::ValueObjectSP new_value_sp;
+  StackFrameSP frame_sp(GetFrame().GetFrameSP());
+  TargetSP target_sp(GetTarget().GetSP());
+  // If enabled, attempt to use DIL to evaluate the expression.
+  bool DIL_success = false;
+  if (frame_sp && target_sp) {
+    if (options.GetTryDILFirst()) {
+      Status error;
+      uint32_t expr_path_options =
+          StackFrame::eExpressionPathOptionCheckPtrVsMember |
+          StackFrame::eExpressionPathOptionsAllowDirectIVarAccess;
+      lldb::VariableSP var_sp;
+      new_value_sp = frame_sp->GetValueForVariableExpressionPath(
+          expression, options.GetFetchDynamicValue(), expr_path_options, var_sp,
+          error);
+      DIL_success = new_value_sp && new_value_sp->GetError().Success();
+    }
+  }
+
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  lldb::ValueObjectSP new_value_sp;
-  if (value_sp) {
+  // Fall back to full expression evaluation if DIL did not succeed.
+  if (!DIL_success && value_sp) {
     ExecutionContext exe_ctx(value_sp->GetExecutionContextRef());
-    new_value_sp = ValueObject::CreateValueObjectFromExpression(
+    new_value_sp = value_sp->CreateChildValueObjectFromExpression(
         name, expression, exe_ctx, options.ref());
-    if (new_value_sp)
-      new_value_sp->SetName(ConstString(name));
   }
+
+  if (new_value_sp)
+    new_value_sp->SetName(name);
+  lldb::SBValue sb_value;
   sb_value.SetSP(new_value_sp);
+
+  Log *log = GetLog(LLDBLog::Expressions);
+  if (new_value_sp && new_value_sp->GetError().Success())
+    LLDB_LOGF(log,
+              "** [SBValue::CreateValueFromExpression] Expression result: "
+              "(%s) %s = %s (evaluated by: %s) **",
+              new_value_sp->GetTypeName().GetCString(),
+              new_value_sp->GetName().GetCString(),
+              new_value_sp->GetValueAsCString(),
+              DIL_success ? "DIL" : "UserExpression");
+  else
+    LLDB_LOGF(log,
+              "** [SBValue::CreateValueFromExpression] Expression evaluation "
+              "failed: %s **",
+              new_value_sp ? new_value_sp->GetError().AsCString()
+                           : "unknown error");
+
   return sb_value;
 }
 
@@ -456,8 +541,8 @@ lldb::SBValue SBValue::CreateValueFromAddress(const char *name,
   if (value_sp && type_impl_sp) {
     CompilerType ast_type(type_impl_sp->GetCompilerType(true));
     ExecutionContext exe_ctx(value_sp->GetExecutionContextRef());
-    new_value_sp = ValueObject::CreateValueObjectFromAddress(name, address,
-                                                             exe_ctx, ast_type);
+    new_value_sp = value_sp->CreateChildValueObjectFromAddress(
+        name, address, exe_ctx, ast_type);
   }
   sb_value.SetSP(new_value_sp);
   return sb_value;
@@ -474,7 +559,7 @@ lldb::SBValue SBValue::CreateValueFromData(const char *name, SBData data,
   lldb::TypeImplSP type_impl_sp(sb_type.GetSP());
   if (value_sp && type_impl_sp) {
     ExecutionContext exe_ctx(value_sp->GetExecutionContextRef());
-    new_value_sp = ValueObject::CreateValueObjectFromData(
+    new_value_sp = value_sp->CreateChildValueObjectFromData(
         name, **data, exe_ctx, type_impl_sp->GetCompilerType(true));
     new_value_sp->SetAddressTypeOfChildren(eAddressTypeLoad);
   }
@@ -486,15 +571,32 @@ lldb::SBValue SBValue::CreateBoolValue(const char *name, bool value) {
   LLDB_INSTRUMENT_VA(this, name);
 
   lldb::SBValue sb_value;
-  lldb::ValueObjectSP new_value_sp;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  lldb::TargetSP target_sp = m_opaque_sp->GetTargetSP();
-  if (value_sp && target_sp) {
-    new_value_sp =
-        ValueObject::CreateValueObjectFromBool(target_sp, value, name);
-  }
-  sb_value.SetSP(new_value_sp);
+
+  auto get_new_value = [&]() -> lldb::ValueObjectSP {
+    if (!value_sp)
+      return {};
+
+    lldb::TargetSP target_sp = value_sp->GetTargetSP();
+    if (!target_sp)
+      return {};
+
+    lldb::LanguageType language = lldb::eLanguageTypeC;
+    ExecutionContext exe_ctx(value_sp->GetExecutionContextRef());
+    if (StackFrame *frame = exe_ctx.GetFramePtr())
+      language = frame->GuessLanguage().AsLanguageType();
+    auto type_system_or_err =
+        target_sp->GetScratchTypeSystemForLanguage(language);
+    if (!type_system_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), type_system_or_err.takeError(),
+                     "cannot get a type system: {0}");
+      return {};
+    }
+    return value_sp->CreateChildValueObjectFromBool(
+        exe_ctx, *type_system_or_err, value, name);
+  };
+  sb_value.SetSP(get_new_value());
   return sb_value;
 }
 
@@ -578,6 +680,20 @@ SBValue::GetChildMemberWithName(const char *name,
   SBValue sb_value;
   sb_value.SetSP(child_sp, use_dynamic_value, GetPreferSyntheticValue());
 
+  return sb_value;
+}
+
+lldb::SBValue SBValue::GetParent() {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBValue sb_value;
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (value_sp) {
+    ValueObject *parent = value_sp->GetParent();
+    if (parent)
+      sb_value.SetSP(parent->GetSP());
+  }
   return sb_value;
 }
 
@@ -930,9 +1046,9 @@ lldb::ValueObjectSP SBValue::GetSP(ValueLocker &locker) const {
   // IsValid means that the SBValue has a value in it.  But that's not the
   // only time that ValueObjects are useful.  We also want to return the value
   // if there's an error state in it.
-  if (!m_opaque_sp || (!m_opaque_sp->IsValid()
-      && (m_opaque_sp->GetRootSP()
-          && !m_opaque_sp->GetRootSP()->GetError().Fail()))) {
+  if (!m_opaque_sp || (!m_opaque_sp->IsValid() &&
+                       (m_opaque_sp->GetRootSP() &&
+                        !m_opaque_sp->GetRootSP()->GetError().Fail()))) {
     locker.GetError() = Status::FromErrorString("No value");
     return ValueObjectSP();
   }
@@ -1062,7 +1178,6 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
     return SBValue();
   }
 
-
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (!value_sp) {
@@ -1074,7 +1189,8 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
     return SBValue();
   }
 
-  std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+  TargetAPIMutex api_lock = target_sp->GetAPIMutex();
+  std::lock_guard<TargetAPIMutex> guard(api_lock);
   ExecutionContext exe_ctx(target_sp.get());
 
   StackFrame *frame = exe_ctx.GetFramePtr();
@@ -1087,7 +1203,7 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
                                 value_sp.get());
 
   if (name)
-    res_val_sp->SetName(ConstString(name));
+    res_val_sp->SetName(name);
 
   SBValue result;
   result.SetSP(res_val_sp, options.GetFetchDynamicValue());
@@ -1297,7 +1413,7 @@ lldb::SBValue SBValue::Clone(const char *new_name) {
   lldb::ValueObjectSP value_sp(GetSP(locker));
 
   if (value_sp)
-    return lldb::SBValue(value_sp->Clone(ConstString(new_name)));
+    return lldb::SBValue(value_sp->Clone(new_name));
   else
     return lldb::SBValue();
 }

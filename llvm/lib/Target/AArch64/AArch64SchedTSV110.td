@@ -25,9 +25,10 @@ def TSV110Model : SchedMachineModel {
   let CompleteModel         =   1;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
+                                                    SVE2p1Unsupported.F,
                                                     PAUnsupported.F,
                                                     SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC]);
+                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
 // Define each kind of processor resource and number available on the TSV110,

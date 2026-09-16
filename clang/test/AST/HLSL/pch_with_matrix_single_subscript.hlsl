@@ -9,7 +9,7 @@ float3x2 gM;
 // CHECK-NEXT: ReturnStmt {{.*}}
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 2>' <LValueToRValue>
 // CHECK-NEXT: MatrixSingleSubscriptExpr {{.*}} 'vector<float, 2>' lvalue matrixcomponent
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl_constant float3x2':'matrix<float hlsl_constant, 3, 2>' lvalue Var {{.*}} 'gM' 'hlsl_constant float3x2':'matrix<float hlsl_constant, 3, 2>'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl_constant float3x2':'matrix<float, 3, 2> hlsl_constant' lvalue Var {{.*}} 'gM' 'hlsl_constant float3x2':'matrix<float, 3, 2> hlsl_constant'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'uint':'unsigned int' lvalue ParmVar {{.*}} 'row' 'uint':'unsigned int'
 float2 getRow(uint row) {  
   return gM[row];

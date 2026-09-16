@@ -160,8 +160,12 @@ void OpenFile::Open(OpenStatus status, common::optional<Action> action,
       mayPosition_ = S_ISREG(buf.st_mode);
       knownSize_ = buf.st_size;
     }
-#else // TODO: _WIN32
-    mayPosition_ = true;
+#else // _WIN32
+    struct _stat64 buf;
+    if (fd_ >= 0 && ::_fstat64(fd_, &buf) == 0) {
+      mayPosition_ = S_IFREG & buf.st_mode;
+      knownSize_ = buf.st_size;
+    }
 #endif
   } else {
     knownSize_ = 0;

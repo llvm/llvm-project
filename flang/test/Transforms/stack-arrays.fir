@@ -495,5 +495,35 @@ func.func @finding_freemem_in_block() {
   return
 }
 // CHECK-LABEL: func.func @finding_freemem_in_block()
+// CHECK:     llvm.intr.stacksave
 // CHECK:     fir.alloca !fir.array<?xi32>
+// CHECK:     llvm.intr.stackrestore
 // CHECK-NOT: fir.freemem
+
+// Test temporary inside a CFG loop where freemem is reached via a convert
+// chain.
+func.func private @_QPuse_array(!fir.ref<!fir.array<?xf64>>) -> ()
+func.func @freemem_through_convert_in_loop(%arg0: i1, %n: index) {
+  cf.br ^bb1
+^bb1:  // 2 preds: ^bb0, ^bb2
+  cf.cond_br %arg0, ^bb2, ^bb3
+^bb2:  // pred: ^bb1
+  %shape = fir.shape %n : (index) -> !fir.shape<1>
+  %mem = fir.allocmem !fir.array<?xf64>, %n {bindc_name = ".tmp.array", uniq_name = ""}
+  %decl = fir.declare %mem(%shape) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<?xf64>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xf64>>
+  %ref = fir.convert %decl : (!fir.heap<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
+  fir.call @_QPuse_array(%ref) : (!fir.ref<!fir.array<?xf64>>) -> ()
+  %heap = fir.convert %ref : (!fir.ref<!fir.array<?xf64>>) -> !fir.heap<!fir.array<?xf64>>
+  fir.freemem %heap : !fir.heap<!fir.array<?xf64>>
+  cf.br ^bb1
+^bb3:  // pred: ^bb1
+  return
+}
+// CHECK-LABEL: func.func @freemem_through_convert_in_loop(
+// CHECK:       ^bb2:
+// CHECK:         %[[SP:.*]] = llvm.intr.stacksave : !llvm.ptr
+// CHECK:         fir.alloca !fir.array<?xf64>
+// CHECK:         fir.call @_QPuse_array(
+// CHECK:         llvm.intr.stackrestore %[[SP]] : !llvm.ptr
+// CHECK-NOT:     fir.freemem
+// CHECK:         cf.br ^bb1

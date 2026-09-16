@@ -28,6 +28,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/GOFFObjectFile.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
@@ -801,8 +802,9 @@ static void printSymbolList(SymbolicFile &Obj,
     if (OutputFormat == sysv || !symbolIsDefined(S)) {
       if (OutputFormat == posix) {
         format(printFormat, S.Address)
-            .print(SymbolAddrStr, sizeof(SymbolAddrStr));
-        format(printFormat, S.Size).print(SymbolSizeStr, sizeof(SymbolSizeStr));
+            .snprint(SymbolAddrStr, sizeof(SymbolAddrStr));
+        format(printFormat, S.Size)
+            .snprint(SymbolSizeStr, sizeof(SymbolSizeStr));
       } else {
         strcpy(SymbolAddrStr, printBlanks);
         strcpy(SymbolSizeStr, printBlanks);
@@ -817,8 +819,8 @@ static void printSymbolList(SymbolicFile &Obj,
         strcpy(SymbolAddrStr, printBlanks);
       else
         format(printFormat, S.Address)
-            .print(SymbolAddrStr, sizeof(SymbolAddrStr));
-      format(printFormat, S.Size).print(SymbolSizeStr, sizeof(SymbolSizeStr));
+            .snprint(SymbolAddrStr, sizeof(SymbolAddrStr));
+      format(printFormat, S.Size).snprint(SymbolSizeStr, sizeof(SymbolSizeStr));
     }
 
     // If OutputFormat is darwin or we are printing Mach-O symbols in hex and
@@ -1012,6 +1014,25 @@ static char getSymbolNMTypeChar(COFFImportFile &Obj) {
   return '?';
 }
 
+static char getSymbolNMTypeChar(GOFFObjectFile &, basic_symbol_iterator I) {
+  GOFFSymbolRef Ref(*I);
+  Expected<SymbolRef::Type> Type = Ref.getSymbolGOFFType();
+  // TODO: Add a test using yaml2obj once GOFF ESD record support is
+  // available in yaml2obj.
+  if (!Type) {
+    consumeError(Type.takeError());
+    return '?';
+  }
+  switch (*Type) {
+  case SymbolRef::ST_Data:
+    return 'd';
+  case SymbolRef::ST_Function:
+    return 't';
+  default:
+    llvm_unreachable("GOFFObjectFile::getSymbolType returned unexpected type");
+  }
+}
+
 static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
   DataRefImpl Symb = I->getRawDataRefImpl();
   uint8_t NType = Obj.is64Bit() ? Obj.getSymbol64TableEntry(Symb).n_type
@@ -1172,6 +1193,8 @@ static char getNMSectionTagAndName(SymbolicFile &Obj, basic_symbol_iterator I,
     Ret = getSymbolNMTypeChar(*ELF, I);
     if (ELFSymbolRef(*I).getBinding() == ELF::STB_GNU_UNIQUE)
       return Ret;
+  } else if (GOFFObjectFile *GOFF = dyn_cast<GOFFObjectFile>(&Obj)) {
+    Ret = getSymbolNMTypeChar(*GOFF, I);
   } else
     llvm_unreachable("unknown binary format");
 
@@ -1825,17 +1848,20 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
         return false;
       }
 
-      // Don't drop format specifc symbols for ARM and AArch64 ELF targets, they
-      // are used to repesent mapping symbols and needed to honor the
-      // --special-syms option.
-      auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
-      bool HasMappingSymbol =
-          ELFObj && llvm::is_contained({ELF::EM_ARM, ELF::EM_AARCH64,
-                                        ELF::EM_CSKY, ELF::EM_RISCV},
-                                       ELFObj->getEMachine());
-      if (!HasMappingSymbol && !DebugSyms &&
-          (*SymFlagsOrErr & SymbolRef::SF_FormatSpecific))
-        continue;
+      // Drop format-specific symbols (STT_FILE, STT_SECTION, etc.) but
+      // retain mapping symbols (STT_NOTYPE such as $d, $x) on ARM, AArch64,
+      // CSKY, and RISC-V targets to honor the --special-syms option.
+      if (!DebugSyms && (*SymFlagsOrErr & SymbolRef::SF_FormatSpecific)) {
+        auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
+        bool IsMappingSymbol =
+            ELFObj &&
+            llvm::is_contained(
+                {ELF::EM_ARM, ELF::EM_AARCH64, ELF::EM_CSKY, ELF::EM_RISCV},
+                ELFObj->getEMachine()) &&
+            ELFSymbolRef(Sym).getELFType() == ELF::STT_NOTYPE;
+        if (!IsMappingSymbol)
+          continue;
+      }
       if (WithoutAliases && (*SymFlagsOrErr & SymbolRef::SF_Indirect))
         continue;
       // If a "-s segname sectname" option was specified and this is a Mach-O
@@ -1848,6 +1874,8 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
       S.Address = 0;
       if (isa<ELFObjectFileBase>(&Obj))
         S.Size = ELFSymbolRef(Sym).getSize();
+      else if (isa<GOFFObjectFile>(&Obj))
+        S.Size = GOFFSymbolRef(Sym).getSize();
 
       if (const XCOFFObjectFile *XCOFFObj =
               dyn_cast<const XCOFFObjectFile>(&Obj))
@@ -2041,9 +2069,39 @@ static bool checkMachOAndArchFlags(SymbolicFile *O, StringRef Filename) {
   return true;
 }
 
-static void printArchiveMap(iterator_range<Archive::symbol_iterator> &map,
-                            StringRef Filename) {
-  for (auto I : map) {
+/// Decode the low 3 bits of a z/OS archive symbol attribute word into a
+/// human-readable description written to OS, e.g. "[64-bit + XPLink]".
+/// Any bits above the known 3-bit mask produce a trailing "?" flag.
+static void decodeZOSAttributes(raw_ostream &OS, uint32_t Attrs) {
+  bool Unknown = (Attrs & ~Archive::Symbol::ZOSKnownAttrMask) != 0;
+  bool Is64Bit = (Attrs & Archive::Symbol::ZOSAttr64Bit) != 0;
+  bool IsXPLink = (Attrs & Archive::Symbol::ZOSAttrXPLink) != 0;
+  bool IsWSA = (Attrs & Archive::Symbol::ZOSAttrWSA) != 0;
+
+  OS << "[";
+  bool NeedPlus = false;
+  auto Append = [&](const char *S) {
+    if (NeedPlus)
+      OS << " + ";
+    OS << S;
+    NeedPlus = true;
+  };
+  if (Is64Bit)
+    Append("64-bit");
+  if (IsXPLink)
+    Append("XPLink");
+  if (IsWSA)
+    Append("WSA");
+  if (Unknown)
+    Append("?");
+  if (!NeedPlus)
+    Append("none");
+  OS << "]";
+}
+
+static void printArchiveMap(iterator_range<Archive::symbol_iterator> &Map,
+                            StringRef Filename, Archive::Kind Kind) {
+  for (auto I : Map) {
     Expected<Archive::Child> C = I.getMember();
     if (!C) {
       error(C.takeError(), Filename);
@@ -2055,7 +2113,14 @@ static void printArchiveMap(iterator_range<Archive::symbol_iterator> &map,
       break;
     }
     StringRef SymName = I.getName();
-    outs() << SymName << " in " << FileNameOrErr.get() << "\n";
+    outs() << SymName << " in " << FileNameOrErr.get();
+    if (Kind == Archive::K_ZOS) {
+      uint32_t Attrs = I.getZOSAttributes();
+      outs() << format(" (flags: 0x%08x ", Attrs);
+      decodeZOSAttributes(outs(), Attrs);
+      outs() << ")";
+    }
+    outs() << "\n";
   }
 
   outs() << "\n";
@@ -2065,7 +2130,7 @@ static void dumpArchiveMap(Archive *A, StringRef Filename) {
   auto Map = A->symbols();
   if (!Map.empty()) {
     outs() << "Archive map\n";
-    printArchiveMap(Map, Filename);
+    printArchiveMap(Map, Filename, A->kind());
   }
 
   auto ECMap = A->ec_symbols();
@@ -2073,7 +2138,7 @@ static void dumpArchiveMap(Archive *A, StringRef Filename) {
     warn(ECMap.takeError(), Filename);
   } else if (!ECMap->empty()) {
     outs() << "Archive EC map\n";
-    printArchiveMap(*ECMap, Filename);
+    printArchiveMap(*ECMap, Filename, A->kind());
   }
 }
 

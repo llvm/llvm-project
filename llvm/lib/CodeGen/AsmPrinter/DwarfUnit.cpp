@@ -185,6 +185,13 @@ bool DwarfUnit::isShareableAcrossCUs(const DINode *D) const {
   // level already) but may be implementable for some value in projects
   // building multiple independent libraries with LTO and then linking those
   // together.
+
+  // Prevent generation of cross-CU references for DWARF v2 due to conflicts
+  // resulting from the FAQ recommendation: "If you are producing DWARF V2,
+  // please use the DWARF V3 definition of DW_FORM_ref_addr."
+  // (https://dwarfstd.org/faq.html)
+  if (DD->getDwarfVersion() == 2)
+    return false;
   if (isDwoUnit() && !DD->shareAcrossDWOCUs())
     return false;
   return (isa<DIType>(D) ||
@@ -231,9 +238,7 @@ void DwarfUnit::addUInt(DIEValueList &Block, dwarf::Form Form,
   addUInt(Block, (dwarf::Attribute)0, Form, Integer);
 }
 
-void DwarfUnit::addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt &Val) {
-  DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
-
+void DwarfUnit::addIntToBlock(DIEBlock &Block, const APInt &Val) {
   // Get the raw data form of the large APInt.
   const uint64_t *Ptr64 = Val.getRawData();
 
@@ -247,10 +252,16 @@ void DwarfUnit::addIntAsBlock(DIE &Die, dwarf::Attribute Attribute, const APInt 
       c = Ptr64[i / 8] >> (8 * (i & 7));
     else
       c = Ptr64[(NumBytes - 1 - i) / 8] >> (8 * ((NumBytes - 1 - i) & 7));
-    addUInt(*Block, dwarf::DW_FORM_data1, c);
+    addUInt(Block, dwarf::DW_FORM_data1, c);
   }
+}
 
-  addBlock(Die, Attribute, Block);
+void DwarfUnit::addIntAsBlock(DIE &Die, dwarf::Attribute Attribute,
+                              const APInt &Val) {
+  DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
+  addIntToBlock(*Block, Val);
+  Block->computeSize(Asm->getDwarfFormParams());
+  addBlock(Die, Attribute, Block->BestForm(), Block);
 }
 
 void DwarfUnit::addInt(DIE &Die, dwarf::Attribute Attribute,
@@ -497,6 +508,12 @@ void DwarfUnit::addSourceLine(DIE &Die, const DIObjCProperty *Ty) {
   assert(Ty);
 
   addSourceLine(Die, Ty->getLine(), /*Column*/ 0, Ty->getFile());
+}
+
+void DwarfUnit::addSourceLine(DIE &Die, const DIProperty *P) {
+  assert(P);
+
+  addSourceLine(Die, P->getLine(), /*Column*/ 0, P->getFile());
 }
 
 void DwarfUnit::addConstantFPValue(DIE &Die, const ConstantFP *CFP) {
@@ -1134,14 +1151,15 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
         if (unsigned PropertyAttributes = Property->getAttributes())
           addUInt(ElemDie, dwarf::DW_AT_APPLE_property_attribute, std::nullopt,
                   PropertyAttributes);
+      } else if (auto *Property = dyn_cast<DIProperty>(Element)) {
+        constructPropertyDIE(Buffer, Property);
       } else if (auto *Composite = dyn_cast<DICompositeType>(Element)) {
         if (Composite->getTag() == dwarf::DW_TAG_variant_part) {
           DIE &VariantPart = createAndAddDIE(Composite->getTag(), Buffer);
           constructTypeDIE(VariantPart, Composite);
         }
       } else if (Tag == dwarf::DW_TAG_namelist) {
-        auto *Var = dyn_cast<DINode>(Element);
-        auto *VarDIE = getDIE(Var);
+        auto *VarDIE = getDIE(Element);
         if (VarDIE) {
           DIE &ItemDie = createAndAddDIE(dwarf::DW_TAG_namelist_item, Buffer);
           addDIEEntry(ItemDie, dwarf::DW_AT_namelist_item, *VarDIE);
@@ -1532,13 +1550,12 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
   if (!SP->isLocalToUnit())
     addFlag(SPDie, dwarf::DW_AT_external);
 
-  if (DD->useAppleExtensionAttributes()) {
-    if (SP->isOptimized())
-      addFlag(SPDie, dwarf::DW_AT_APPLE_optimized);
+  if (SP->isOptimized())
+    addFlag(SPDie, dwarf::DW_AT_APPLE_optimized);
 
+  if (DD->useAppleExtensionAttributes())
     if (unsigned isa = Asm->getISAEncoding())
       addUInt(SPDie, dwarf::DW_AT_APPLE_isa, dwarf::DW_FORM_flag, isa);
-  }
 
   if (SP->isLValueReference())
     addFlag(SPDie, dwarf::DW_AT_reference);
@@ -2002,6 +2019,33 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
   return MemberDie;
 }
 
+void DwarfUnit::constructPropertyDIE(DIE &Buffer, const DIProperty *P) {
+  DIE &PropertyDie = createAndAddDIE(dwarf::DW_TAG_property, Buffer, P);
+  addString(PropertyDie, dwarf::DW_AT_name, P->getName());
+  if (DIType *Ty = P->getType())
+    addType(PropertyDie, Ty);
+  addSourceLine(PropertyDie, P);
+
+  if (DINode *BackingStorage = P->getBackingStorage()) {
+    DIE &GetterDie =
+        createAndAddDIE(dwarf::DW_TAG_property_getter, PropertyDie);
+    PropertyForwardMap.insert(std::make_pair(&GetterDie, BackingStorage));
+  }
+}
+
+void DwarfUnit::constructPropertyForwardDIEs() {
+  for (auto &P : PropertyForwardMap) {
+    DIE &GetterDie = *P.first;
+    const DINode *Target = P.second;
+    if (!Target)
+      continue;
+    DIE *TargetDie = getDIE(Target);
+    if (!TargetDie)
+      continue;
+    addDIEEntry(GetterDie, dwarf::DW_AT_property_forward, *TargetDie);
+  }
+}
+
 DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
   if (!DT)
     return nullptr;
@@ -2036,8 +2080,20 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
 
   if (const ConstantInt *CI = dyn_cast_or_null<ConstantInt>(DT->getConstant()))
     addConstantValue(StaticMemberDIE, CI, Ty);
-  if (const ConstantFP *CFP = dyn_cast_or_null<ConstantFP>(DT->getConstant()))
+  else if (const ConstantFP *CFP =
+               dyn_cast_or_null<ConstantFP>(DT->getConstant()))
     addConstantFPValue(StaticMemberDIE, CFP);
+  else if (auto *CDS =
+               dyn_cast_or_null<ConstantDataSequential>(DT->getConstant())) {
+    assert(CDS->getElementType()->isIntegerTy() &&
+           "Non-integer arrays not supported.");
+    DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
+    for (unsigned I = 0; I != CDS->getNumElements(); ++I)
+      addIntToBlock(*Block, CDS->getElementAsAPInt(I));
+    Block->computeSize(Asm->getDwarfFormParams());
+    addBlock(StaticMemberDIE, dwarf::DW_AT_const_value, Block->BestForm(),
+             Block);
+  }
 
   if (uint32_t AlignInBytes = DT->getAlignInBytes())
     addUInt(StaticMemberDIE, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
@@ -2064,7 +2120,7 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
     Asm->OutStreamer->AddComment("DWARF Unit Type");
     Asm->emitInt8(UT);
     Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->emitInt8(Asm->MAI->getCodePointerSize());
+    Asm->emitInt8(Asm->MAI.getCodePointerSize());
   }
 
   // We share one abbreviations table across all units so it's always at the
@@ -2080,7 +2136,7 @@ void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
 
   if (Version <= 4) {
     Asm->OutStreamer->AddComment("Address Size (in bytes)");
-    Asm->emitInt8(Asm->MAI->getCodePointerSize());
+    Asm->emitInt8(Asm->MAI.getCodePointerSize());
   }
 }
 
@@ -2107,7 +2163,9 @@ void DwarfUnit::addSectionDelta(DIE &Die, dwarf::Attribute Attribute,
 
 void DwarfUnit::addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
                                 const MCSymbol *Label, const MCSymbol *Sec) {
-  if (Asm->doesDwarfUseRelocationsAcrossSections())
+  // If we are in an object file and not a DWO, emit a label. Otherwise we are
+  // in a DWO and we cannot emit relocations, so emit a section delta.
+  if (Asm->doesDwarfUseRelocationsAcrossSections() && !isDwoUnit())
     addLabel(Die, Attribute, DD->getDwarfSectionOffsetForm(), Label);
   else
     addSectionDelta(Die, Attribute, Label, Sec);

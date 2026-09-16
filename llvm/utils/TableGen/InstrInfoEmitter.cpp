@@ -663,6 +663,16 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
     OS << "class MCInst;\n";
     OS << "class FeatureBitset;\n\n";
 
+    const CodeGenTarget &Target = CDP.getTargetInfo();
+    ArrayRef<const Record *> RegClassByHwMode = Target.getAllRegClassByHwMode();
+    if (!RegClassByHwMode.empty()) {
+      const CodeGenHwModes &CGH = Target.getHwModes();
+      unsigned NumModes = CGH.getNumModeIds();
+      unsigned NumClassesByHwMode = RegClassByHwMode.size();
+      OS << "extern const int16_t " << TargetName << "RegClassByHwModeTables["
+         << NumModes << "][" << NumClassesByHwMode << "];\n\n";
+    }
+
     NamespaceEmitter TargetNS(OS, (TargetName + "_MC").str());
     for (const Record *Rec : TIIPredicates)
       OS << "bool " << Rec->getValueAsString("FunctionName")
@@ -1079,20 +1089,16 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     }
 
     if (HasComplexDeprecationInfos) {
-      OS << "extern const MCInstrInfo::ComplexDeprecationPredicate "
-         << TargetName << "InstrComplexDeprecationInfos[] = {";
-      Num = 0;
+      OS << "bool " << TargetName << "InstrComplexDeprecationInfo("
+         << "MCInst &Inst, const MCSubtargetInfo &STI, std::string &Info) {\n"
+         << "  switch (Inst.getOpcode()) {\n";
       for (const CodeGenInstruction *Inst : NumberedInstructions) {
-        if (Num % 8 == 0)
-          OS << "\n    ";
-        if (Inst->HasComplexDeprecationPredicate)
-          // Emit a function pointer to the complex predicate method.
-          OS << "&get" << Inst->DeprecatedReason << "DeprecationInfo, ";
-        else
-          OS << "nullptr, ";
-        ++Num;
+        if (!Inst->HasComplexDeprecationPredicate)
+          continue;
+        OS << "  case " << getQualifiedName(Inst->TheDef) << ": return get"
+           << Inst->DeprecatedReason << "DeprecationInfo(Inst, STI, Info);\n";
       }
-      OS << "\n};\n\n";
+      OS << "  }\n  return false;\n}\n\n";
     }
 
     // MCInstrInfo initialization routine.
@@ -1141,7 +1147,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     else
       OS << "nullptr, ";
     if (HasComplexDeprecationInfos)
-      OS << TargetName << "InstrComplexDeprecationInfos, ";
+      OS << TargetName << "InstrComplexDeprecationInfo, ";
     else
       OS << "nullptr, ";
     OS << NumberedInstructions.size() << ", ";
@@ -1216,8 +1222,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
       OS << "extern const uint8_t " << TargetName
          << "InstrDeprecationFeatures[];\n";
     if (HasComplexDeprecationInfos)
-      OS << "extern const MCInstrInfo::ComplexDeprecationPredicate "
-         << TargetName << "InstrComplexDeprecationInfos[];\n";
+      OS << "bool " << TargetName << "InstrComplexDeprecationInfo("
+         << "MCInst &Inst, const MCSubtargetInfo &STI, std::string &Info);\n";
     Twine ClassName = TargetName + "GenInstrInfo";
     OS << ClassName << "::" << ClassName
        << "(const TargetSubtargetInfo &STI, const TargetRegisterInfo &TRI, "
@@ -1239,7 +1245,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     else
       OS << "nullptr, ";
     if (HasComplexDeprecationInfos)
-      OS << TargetName << "InstrComplexDeprecationInfos, ";
+      OS << TargetName << "InstrComplexDeprecationInfo, ";
     else
       OS << "nullptr, ";
     OS << NumberedInstructions.size();

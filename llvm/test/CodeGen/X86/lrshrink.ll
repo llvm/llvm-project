@@ -83,6 +83,8 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !1 = !{i32 2, !"Dwarf Version", i32 4}
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !DIFile(filename: "a.c", directory: "./")
-!4 = distinct !DISubprogram(name: "test", scope: !3, unit: !0)
+!4 = distinct !DISubprogram(name: "test", scope: !3, unit: !0, type: !8)
 !5 = !DILocalVariable(name: "x", scope: !4)
 !6 = !DILocation(line: 4, scope: !4)
+!7 = !{null}
+!8 = !DISubroutineType(types: !7)

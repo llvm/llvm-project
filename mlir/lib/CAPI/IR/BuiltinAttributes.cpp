@@ -347,7 +347,7 @@ MlirTypeID mlirSymbolRefAttrGetTypeID(void) {
   return wrap(SymbolRefAttr::getTypeID());
 }
 
-MlirAttribute mlirDisctinctAttrCreate(MlirAttribute referencedAttr) {
+MlirAttribute mlirDistinctAttrCreate(MlirAttribute referencedAttr) {
   return wrap(mlir::DistinctAttr::create(unwrap(referencedAttr)));
 }
 
@@ -559,8 +559,13 @@ bool mlirAttributeIsADenseFPElements(MlirAttribute attr) {
   return llvm::isa<DenseFPElementsAttr>(unwrap(attr));
 }
 
+MlirTypeID mlirDenseTypedElementsAttrGetTypeID(void) {
+  return wrap(DenseTypedElementsAttr::getTypeID());
+}
+
+// Deprecated API. Will be removed in the future.
 MlirTypeID mlirDenseIntOrFPElementsAttrGetTypeID(void) {
-  return wrap(DenseIntOrFPElementsAttr::getTypeID());
+  return mlirDenseTypedElementsAttrGetTypeID();
 }
 
 //===----------------------------------------------------------------------===//

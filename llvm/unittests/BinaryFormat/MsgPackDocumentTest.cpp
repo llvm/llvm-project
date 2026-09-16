@@ -22,6 +22,262 @@ TEST(MsgPackDocument, DocNodeTest) {
   ASSERT_TRUE(Str1 == Str2);
 }
 
+TEST(MsgPackDocument, DocNodeEmptyAndNilEquality) {
+  Document Doc1, Doc2;
+
+  // Two empty nodes are equal.
+  EXPECT_FALSE(Doc1.getEmptyNode() != Doc1.getEmptyNode());
+  // Cross-document empty nodes are equal.
+  EXPECT_FALSE(Doc1.getEmptyNode() != Doc2.getEmptyNode());
+  // Default-constructed (no document) empty nodes are equal.
+  DocNode Default1, Default2;
+  EXPECT_FALSE(Default1 != Default2);
+  // Empty vs non-empty are not equal.
+  EXPECT_FALSE(Doc1.getEmptyNode() == Doc1.getNode(0));
+
+  // Two nil nodes are equal.
+  EXPECT_FALSE(Doc1.getNode() != Doc1.getNode());
+  // Cross-document nil nodes are equal.
+  EXPECT_FALSE(Doc1.getNode() != Doc2.getNode());
+}
+
+TEST(MsgPackDocument, DocNodeDifferentTypesNotEqual) {
+  Document Doc;
+  // Int vs String.
+  EXPECT_FALSE(Doc.getNode(1) == Doc.getNode("1"));
+  // Int vs UInt.
+  EXPECT_FALSE(Doc.getNode(int64_t(1)) == Doc.getNode(uint64_t(1)));
+  // Boolean vs Int.
+  EXPECT_FALSE(Doc.getNode(true) == Doc.getNode(1));
+  // Scalar vs Array.
+  DocNode Arr = Doc.getArrayNode();
+  EXPECT_FALSE(Doc.getNode(1) == Arr);
+  // Scalar vs Map.
+  DocNode Map = Doc.getMapNode();
+  EXPECT_FALSE(Doc.getNode(1) == Map);
+  // Array vs Map.
+  EXPECT_FALSE(Arr == Map);
+}
+
+TEST(MsgPackDocument, DocNodeCrossDocumentScalarEquality) {
+  Document Doc1, Doc2;
+  // Same values across documents should be equal.
+  EXPECT_FALSE(Doc1.getNode(42) != Doc2.getNode(42));
+  EXPECT_FALSE(Doc1.getNode(42U) != Doc2.getNode(42U));
+  EXPECT_FALSE(Doc1.getNode(int64_t(-1)) != Doc2.getNode(int64_t(-1)));
+  EXPECT_FALSE(Doc1.getNode(true) != Doc2.getNode(true));
+  EXPECT_FALSE(Doc1.getNode(3.14) != Doc2.getNode(3.14));
+  EXPECT_FALSE(Doc1.getNode("hello") != Doc2.getNode("hello"));
+
+  // Different values across documents should not be equal.
+  EXPECT_FALSE(Doc1.getNode(1) == Doc2.getNode(2));
+  EXPECT_FALSE(Doc1.getNode("foo") == Doc2.getNode("bar"));
+  EXPECT_FALSE(Doc1.getNode(true) == Doc2.getNode(false));
+  EXPECT_FALSE(Doc1.getNode(1U) == Doc2.getNode(2U));
+}
+
+TEST(MsgPackDocument, DocNodeCrossDocumentScalarOrdering) {
+  Document Doc1, Doc2;
+  // operator< should compare by value across documents.
+  EXPECT_TRUE(Doc1.getNode(1) < Doc2.getNode(2));
+  EXPECT_FALSE(Doc1.getNode(2) < Doc2.getNode(1));
+  EXPECT_FALSE(Doc1.getNode(1) < Doc2.getNode(1));
+
+  EXPECT_TRUE(Doc1.getNode("abc") < Doc2.getNode("def"));
+  EXPECT_FALSE(Doc1.getNode("def") < Doc2.getNode("abc"));
+
+  EXPECT_TRUE(Doc1.getNode(1U) < Doc2.getNode(2U));
+  EXPECT_FALSE(Doc1.getNode(2U) < Doc2.getNode(1U));
+}
+
+TEST(MsgPackDocument, DocNodeArrayEquality) {
+  Document Doc;
+  auto A1 = Doc.getArrayNode();
+  A1.push_back(Doc.getNode(int64_t(1)));
+  A1.push_back(Doc.getNode(int64_t(2)));
+
+  auto A2 = Doc.getArrayNode();
+  A2.push_back(Doc.getNode(int64_t(1)));
+  A2.push_back(Doc.getNode(int64_t(2)));
+
+  // Same contents should be equal.
+  DocNode N1 = A1, N2 = A2;
+  EXPECT_FALSE(N1 != N2);
+
+  // Different contents should not be equal.
+  auto A3 = Doc.getArrayNode();
+  A3.push_back(Doc.getNode(int64_t(1)));
+  A3.push_back(Doc.getNode(int64_t(99)));
+  DocNode N3 = A3;
+  EXPECT_FALSE(N1 == N3);
+
+  // Different sizes should not be equal.
+  auto A4 = Doc.getArrayNode();
+  A4.push_back(Doc.getNode(int64_t(1)));
+  DocNode N4 = A4;
+  EXPECT_FALSE(N1 == N4);
+}
+
+TEST(MsgPackDocument, DocNodeMapEquality) {
+  Document Doc;
+  auto M1 = Doc.getMapNode();
+  M1["x"] = 10;
+  M1["y"] = 20;
+
+  auto M2 = Doc.getMapNode();
+  M2["x"] = 10;
+  M2["y"] = 20;
+
+  DocNode N1 = M1, N2 = M2;
+  EXPECT_FALSE(N1 != N2);
+
+  // Different value.
+  auto M3 = Doc.getMapNode();
+  M3["x"] = 10;
+  M3["y"] = 99;
+  DocNode N3 = M3;
+  EXPECT_FALSE(N1 == N3);
+
+  // Different key.
+  auto M4 = Doc.getMapNode();
+  M4["x"] = 10;
+  M4["z"] = 20;
+  DocNode N4 = M4;
+  EXPECT_FALSE(N1 == N4);
+}
+
+TEST(MsgPackDocument, DocNodeCrossDocumentArrayEquality) {
+  Document Doc1, Doc2;
+  auto A1 = Doc1.getArrayNode();
+  A1.push_back(Doc1.getNode("hello"));
+  A1.push_back(Doc1.getNode(42));
+
+  auto A2 = Doc2.getArrayNode();
+  A2.push_back(Doc2.getNode("hello"));
+  A2.push_back(Doc2.getNode(42));
+
+  DocNode N1 = A1, N2 = A2;
+  EXPECT_FALSE(N1 != N2);
+
+  auto A3 = Doc2.getArrayNode();
+  A3.push_back(Doc2.getNode("hello"));
+  A3.push_back(Doc2.getNode(99));
+  DocNode N3 = A3;
+  EXPECT_FALSE(N1 == N3);
+}
+
+TEST(MsgPackDocument, DocNodeCrossDocumentMapEquality) {
+  Document Doc1, Doc2;
+  auto M1 = Doc1.getMapNode();
+  M1["key"] = Doc1.getNode("value");
+
+  auto M2 = Doc2.getMapNode();
+  M2["key"] = Doc2.getNode("value");
+
+  DocNode N1 = M1, N2 = M2;
+  EXPECT_FALSE(N1 != N2);
+
+  auto M3 = Doc2.getMapNode();
+  M3["key"] = Doc2.getNode("other");
+  DocNode N3 = M3;
+  EXPECT_FALSE(N1 == N3);
+}
+
+TEST(MsgPackDocument, CopyNodeEmpty) {
+  Document Src, Dst;
+  auto Copied = Dst.copyNode(Src.getEmptyNode());
+  EXPECT_TRUE(Copied.isEmpty());
+}
+
+TEST(MsgPackDocument, CopyNodeScalar) {
+  Document Src, Dst;
+  auto Node = Src.getNode("hello", /*Copy=*/true);
+  auto Copied = Dst.copyNode(Node);
+  EXPECT_FALSE(Node != Copied);
+  EXPECT_EQ(Copied.getKind(), Type::String);
+  EXPECT_EQ(Copied.getString(), "hello");
+}
+
+TEST(MsgPackDocument, CopyNodeArray) {
+  Document Src, Dst;
+  auto A = Src.getArrayNode();
+  A.push_back(Src.getNode(int64_t(1)));
+  A.push_back(Src.getNode("two", /*Copy=*/true));
+  A.push_back(Src.getNode(3.0));
+
+  DocNode SrcNode = A;
+  auto Copied = Dst.copyNode(SrcNode);
+  EXPECT_FALSE(SrcNode != Copied);
+  EXPECT_EQ(Copied.getArray().size(), 3u);
+  EXPECT_EQ(Copied.getArray()[0].getInt(), int64_t(1));
+  EXPECT_EQ(Copied.getArray()[1].getString(), "two");
+  EXPECT_EQ(Copied.getArray()[2].getFloat(), 3.0);
+}
+
+TEST(MsgPackDocument, CopyNodeMap) {
+  Document Src, Dst;
+  auto M = Src.getMapNode();
+  M["name"] = Src.getNode("test", /*Copy=*/true);
+  M["count"] = 42;
+
+  DocNode SrcNode = M;
+  auto Copied = Dst.copyNode(SrcNode);
+  EXPECT_FALSE(SrcNode != Copied);
+
+  // Verify by iterating the map directly.
+  auto &CopiedMap = Copied.getMap();
+  EXPECT_EQ(CopiedMap.size(), 2u);
+  for (auto &Entry : CopiedMap) {
+    EXPECT_TRUE(Entry.first.isString());
+    if (Entry.first.getString() == "name")
+      EXPECT_EQ(Entry.second.getString(), "test");
+    else if (Entry.first.getString() == "count")
+      EXPECT_EQ(Entry.second.getInt(), int64_t(42));
+    else
+      FAIL() << "unexpected key: " << Entry.first.toString();
+  }
+}
+
+TEST(MsgPackDocument, CopyNodeNested) {
+  Document Src, Dst;
+  auto M = Src.getMapNode();
+  auto Inner = Src.getArrayNode();
+  Inner.push_back(Src.getNode(int64_t(1)));
+  Inner.push_back(Src.getNode(int64_t(2)));
+  M["arr"] = Inner;
+  M["val"] = Src.getNode("x", /*Copy=*/true);
+
+  DocNode SrcNode = M;
+  auto Copied = Dst.copyNode(SrcNode);
+  EXPECT_FALSE(SrcNode != Copied);
+  auto &CopiedMap = Copied.getMap();
+  EXPECT_TRUE(CopiedMap["arr"].isArray());
+  EXPECT_EQ(CopiedMap["arr"].getArray().size(), 2u);
+  EXPECT_EQ(CopiedMap["arr"].getArray()[0].getInt(), int64_t(1));
+}
+
+TEST(MsgPackDocument, CopyNodeIndependence) {
+  Document Src, Dst;
+  auto A = Src.getArrayNode();
+  A.push_back(Src.getNode(int64_t(1)));
+  A.push_back(Src.getNode(int64_t(2)));
+
+  DocNode SrcNode = A;
+  auto Copied = Dst.copyNode(SrcNode);
+  EXPECT_FALSE(SrcNode != Copied);
+
+  // Mutate the source — the copy should be unaffected.
+  A.push_back(Src.getNode(int64_t(3)));
+  EXPECT_EQ(A.size(), 3u);
+  EXPECT_EQ(Copied.getArray().size(), 2u);
+
+  // Mutate the copy — the source should be unaffected.
+  Copied.getArray().push_back(Dst.getNode(int64_t(10)));
+  Copied.getArray().push_back(Dst.getNode(int64_t(20)));
+  EXPECT_EQ(Copied.getArray().size(), 4u);
+  EXPECT_EQ(A.size(), 3u);
+}
+
 TEST(MsgPackDocument, TestReadBoolean) {
   Document Doc1;
   bool Ok = Doc1.readFromBlob(StringRef("\xC2", 1), /*Multi=*/false);

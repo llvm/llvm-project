@@ -14,17 +14,19 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_PRINTOPSTATS
+#define GEN_PASS_DEF_PRINTOPSTATSPASS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
 using namespace mlir;
 
 namespace {
-struct PrintOpStatsPass : public impl::PrintOpStatsBase<PrintOpStatsPass> {
-  explicit PrintOpStatsPass(raw_ostream &os) : os(os) {}
+struct PrintOpStatsPass : public impl::PrintOpStatsPassBase<PrintOpStatsPass> {
+  using impl::PrintOpStatsPassBase<PrintOpStatsPass>::PrintOpStatsPassBase;
 
-  explicit PrintOpStatsPass(raw_ostream &os, bool printAsJSON) : os(os) {
+  explicit PrintOpStatsPass(raw_ostream &os) : os(&os) {}
+
+  explicit PrintOpStatsPass(raw_ostream &os, bool printAsJSON) : os(&os) {
     this->printAsJSON = printAsJSON;
   }
 
@@ -39,7 +41,7 @@ struct PrintOpStatsPass : public impl::PrintOpStatsBase<PrintOpStatsPass> {
 
 private:
   llvm::StringMap<int64_t> opCount;
-  raw_ostream &os;
+  raw_ostream *os = &llvm::errs();
 };
 } // namespace
 
@@ -57,8 +59,8 @@ void PrintOpStatsPass::runOnOperation() {
 }
 
 void PrintOpStatsPass::printSummary() {
-  os << "Operations encountered:\n";
-  os << "-----------------------\n";
+  *os << "Operations encountered:\n";
+  *os << "-----------------------\n";
   SmallVector<StringRef, 64> sorted(opCount.keys());
   llvm::sort(sorted);
 
@@ -84,13 +86,13 @@ void PrintOpStatsPass::printSummary() {
     // below. The alignment is for readability and does not affect CSV/FileCheck
     // parsing.
     if (dialectName.empty())
-      os.indent(maxLenDialect + 3);
+      os->indent(maxLenDialect + 3);
     else
-      os << llvm::right_justify(dialectName, maxLenDialect + 2) << '.';
+      *os << llvm::right_justify(dialectName, maxLenDialect + 2) << '.';
 
     // Left justify the operation name.
-    os << llvm::left_justify(opName, maxLenOpName) << " , " << opCount[key]
-       << '\n';
+    *os << llvm::left_justify(opName, maxLenOpName) << " , " << opCount[key]
+        << '\n';
   }
 }
 
@@ -98,17 +100,17 @@ void PrintOpStatsPass::printSummaryInJSON() {
   SmallVector<StringRef, 64> sorted(opCount.keys());
   llvm::sort(sorted);
 
-  os << "{\n";
+  *os << "{\n";
 
   for (unsigned i = 0, e = sorted.size(); i != e; ++i) {
     const auto &key = sorted[i];
-    os << "  \"" << key << "\" : " << opCount[key];
+    *os << "  \"" << key << "\" : " << opCount[key];
     if (i != e - 1)
-      os << ",\n";
+      *os << ",\n";
     else
-      os << "\n";
+      *os << "\n";
   }
-  os << "}\n";
+  *os << "}\n";
 }
 
 std::unique_ptr<Pass> mlir::createPrintOpStatsPass(raw_ostream &os) {

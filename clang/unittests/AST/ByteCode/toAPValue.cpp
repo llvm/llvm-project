@@ -102,8 +102,6 @@ TEST(ToAPValue, Pointers) {
     ASSERT_EQ(A.getLValuePath()[0].getAsArrayIndex(), 2u);
     ASSERT_EQ(A.getLValuePath()[1].getAsArrayIndex(), 4u);
     ASSERT_EQ(A.getLValueOffset().getQuantity(), 56u);
-    ASSERT_TRUE(
-        GP.atIndex(0).getFieldDesc()->getElemQualType()->isIntegerType());
   }
 }
 
@@ -151,7 +149,8 @@ TEST(ToAPValue, FunctionPointers) {
     const ValueDecl *D = getDecl("nullp");
     ASSERT_NE(D, nullptr);
     const Pointer &GP = getGlobalPtr("nullp");
-    const auto &P = GP.deref<FunctionPointer>();
+    const auto &P = GP.deref<Pointer>();
+    ASSERT_TRUE(P.isZero());
     APValue A = P.toAPValue(ASTCtx);
     ASSERT_TRUE(A.isLValue());
     ASSERT_TRUE(A.getLValueBase().isNull());

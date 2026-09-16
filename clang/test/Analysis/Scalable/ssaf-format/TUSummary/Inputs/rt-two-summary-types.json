@@ -1,0 +1,210 @@
+{
+  "data": [
+    {
+      "summary_data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "pairs": []
+          }
+        },
+        {
+          "entity_id": 1,
+          "entity_summary": {
+            "pairs": [
+              {
+                "first": {
+                  "@": 1
+                },
+                "second": {
+                  "@": 3
+                }
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 2,
+          "entity_summary": {
+            "pairs": [
+              {
+                "first": {
+                  "@": 2
+                },
+                "second": {
+                  "@": 4
+                }
+              },
+              {
+                "first": {
+                  "@": 2
+                },
+                "second": {
+                  "@": 3
+                }
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 3,
+          "entity_summary": {
+            "pairs": [
+              {
+                "first": {
+                  "@": 3
+                },
+                "second": {
+                  "@": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "entity_id": 4,
+          "entity_summary": {
+            "pairs": [
+              {
+                "first": {
+                  "@": 4
+                },
+                "second": {
+                  "@": 0
+                }
+              },
+              {
+                "first": {
+                  "@": 4
+                },
+                "second": {
+                  "@": 2
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "summary_name": "PairsEntitySummary"
+    },
+    {
+      "summary_data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "tags": [
+              "entry-point"
+            ]
+          }
+        },
+        {
+          "entity_id": 1,
+          "entity_summary": {
+            "tags": [
+              "internal-only"
+            ]
+          }
+        },
+        {
+          "entity_id": 2,
+          "entity_summary": {
+            "tags": []
+          }
+        },
+        {
+          "entity_id": 3,
+          "entity_summary": {
+            "tags": [
+              "internal-only"
+            ]
+          }
+        },
+        {
+          "entity_id": 4,
+          "entity_summary": {
+            "tags": [
+              "exported",
+              "hot"
+            ]
+          }
+        }
+      ],
+      "summary_name": "TagsEntitySummary"
+    }
+  ],
+  "id_table": [
+    {
+      "id": 1,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@bar"
+      }
+    },
+    {
+      "id": 2,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@baz"
+      }
+    },
+    {
+      "id": 0,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@foo"
+      }
+    },
+    {
+      "id": 4,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@quux"
+      }
+    },
+    {
+      "id": 3,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@qux"
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "None"
+      }
+    },
+    {
+      "id": 1,
+      "linkage": {
+        "type": "None"
+      }
+    },
+    {
+      "id": 2,
+      "linkage": {
+        "type": "Internal"
+      }
+    },
+    {
+      "id": 3,
+      "linkage": {
+        "type": "Internal"
+      }
+    },
+    {
+      "id": 4,
+      "linkage": {
+        "type": "External"
+      }
+    }
+  ],
+  "target_triple": "arm64-apple-macosx",
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "test.cpp"
+  },
+  "type": "TUSummary"
+}

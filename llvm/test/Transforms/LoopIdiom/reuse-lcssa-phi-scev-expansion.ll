@@ -223,11 +223,11 @@ exit:
   ret void
 }
 
-define void @expand_truncated_ptrtoint(ptr %A, ptr %B) {
-; CHECK-LABEL: define void @expand_truncated_ptrtoint(
+define void @expand_truncated_ptrtoaddr(ptr %A, ptr %B) {
+; CHECK-LABEL: define void @expand_truncated_ptrtoaddr(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; CHECK-NEXT:    br label %[[LOOP_1:.*]]
 ; CHECK:       [[LOOP_1]]:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ [[INDVAR_NEXT:%.*]], %[[LOOP_1]] ], [ 0, %[[ENTRY]] ]
@@ -239,17 +239,17 @@ define void @expand_truncated_ptrtoint(ptr %A, ptr %B) {
 ; CHECK:       [[MIDDLE]]:
 ; CHECK-NEXT:    [[INDVAR_LCSSA:%.*]] = phi i32 [ [[INDVAR]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[P_0_LCSSA:%.*]] = phi ptr [ [[P_0]], %[[LOOP_1]] ]
-; CHECK-NEXT:    [[P_0_TO_INT:%.*]] = ptrtoint ptr [[P_0_LCSSA]] to i64
+; CHECK-NEXT:    [[P_0_TO_INT:%.*]] = ptrtoaddr ptr [[P_0_LCSSA]] to i64
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[P_0_TO_INT]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[TRUNC]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 [[TMP0]], -1
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[A1]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[INDVAR_LCSSA]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP6]], [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP5]] to i64
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[SCEVGEP]], i8 0, i64 [[TMP4]], i1 false)
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[INDVAR_LCSSA]], -1
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[SCEVGEP]], i8 0, i64 [[TMP6]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP_2:.*]]
 ; CHECK:       [[LOOP_2]]:
 ; CHECK-NEXT:    [[P_1:%.*]] = phi ptr [ [[B]], %[[MIDDLE]] ], [ [[P_1_NEXT:%.*]], %[[LOOP_2]] ]
@@ -271,7 +271,7 @@ loop.1:
   br i1 false, label %middle, label %loop.1
 
 middle:
-  %p.0.to.int = ptrtoint ptr %p.0 to i64
+  %p.0.to.int = ptrtoaddr ptr %p.0 to i64
   %trunc = trunc i64 %p.0.to.int to i32
   br label %loop.2
 

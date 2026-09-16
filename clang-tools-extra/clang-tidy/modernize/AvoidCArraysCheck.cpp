@@ -17,49 +17,44 @@ namespace clang::tidy::modernize {
 
 template <typename TargetType, typename NodeType>
 static const TargetType *getAs(const NodeType *Node) {
-  if constexpr (std::is_same_v<NodeType, clang::DynTypedNode>)
+  if constexpr (std::is_same_v<NodeType, DynTypedNode>)
     return Node->template get<TargetType>();
   else
-    return llvm::dyn_cast<TargetType>(Node);
+    return dyn_cast<TargetType>(Node);
 }
 
 namespace {
 
-AST_MATCHER(clang::TypeLoc, hasValidBeginLoc) {
-  return Node.getBeginLoc().isValid();
-}
+AST_MATCHER(TypeLoc, hasValidBeginLoc) { return Node.getBeginLoc().isValid(); }
 
-AST_MATCHER_P(clang::TypeLoc, hasType,
-              clang::ast_matchers::internal::Matcher<clang::Type>,
+AST_MATCHER_P(TypeLoc, hasType, ast_matchers::internal::Matcher<Type>,
               InnerMatcher) {
-  const clang::Type *TypeNode = Node.getTypePtr();
+  const Type *TypeNode = Node.getTypePtr();
   return TypeNode != nullptr &&
          InnerMatcher.matches(*TypeNode, Finder, Builder);
 }
 
-AST_MATCHER(clang::RecordDecl, isExternCContext) {
-  return Node.isExternCContext();
-}
+AST_MATCHER(RecordDecl, isExternCContext) { return Node.isExternCContext(); }
 
-AST_MATCHER(clang::ParmVarDecl, isArgvOfMain) {
-  const clang::DeclContext *DC = Node.getDeclContext();
-  const auto *FD = llvm::dyn_cast<clang::FunctionDecl>(DC);
+AST_MATCHER(ParmVarDecl, isArgvOfMain) {
+  const DeclContext *DC = Node.getDeclContext();
+  const auto *FD = dyn_cast<FunctionDecl>(DC);
   return FD ? FD->isMain() : false;
 }
 
-AST_MATCHER(clang::TypeLoc, isWithinImplicitTemplateInstantiation) {
+AST_MATCHER(TypeLoc, isWithinImplicitTemplateInstantiation) {
   const auto IsImplicitTemplateInstantiation = [](const auto *Node) {
     const auto IsImplicitInstantiation = [](const auto *Node) {
       return (Node != nullptr) && (Node->getTemplateSpecializationKind() ==
                                    TSK_ImplicitInstantiation);
     };
-    return (IsImplicitInstantiation(getAs<clang::CXXRecordDecl>(Node)) ||
-            IsImplicitInstantiation(getAs<clang::FunctionDecl>(Node)) ||
-            IsImplicitInstantiation(getAs<clang::VarDecl>(Node)));
+    return (IsImplicitInstantiation(getAs<CXXRecordDecl>(Node)) ||
+            IsImplicitInstantiation(getAs<FunctionDecl>(Node)) ||
+            IsImplicitInstantiation(getAs<VarDecl>(Node)));
   };
 
   DynTypedNodeList ParentNodes = Finder->getASTContext().getParents(Node);
-  const clang::NamedDecl *ParentDecl = nullptr;
+  const NamedDecl *ParentDecl = nullptr;
   while (!ParentNodes.empty()) {
     const DynTypedNode &ParentNode = ParentNodes[0];
     if (IsImplicitTemplateInstantiation(&ParentNode))
@@ -68,14 +63,14 @@ AST_MATCHER(clang::TypeLoc, isWithinImplicitTemplateInstantiation) {
     // in case of a `NamedDecl` as parent node, it is more efficient to proceed
     // with the upward traversal via DeclContexts (see below) instead of via
     // parent nodes
-    if ((ParentDecl = ParentNode.template get<clang::NamedDecl>()))
+    if ((ParentDecl = ParentNode.get<NamedDecl>()))
       break;
 
     ParentNodes = Finder->getASTContext().getParents(ParentNode);
   }
 
   if (ParentDecl != nullptr) {
-    const clang::DeclContext *DeclContext = ParentDecl->getDeclContext();
+    const DeclContext *DeclContext = ParentDecl->getDeclContext();
     while (DeclContext != nullptr) {
       if (IsImplicitTemplateInstantiation(DeclContext))
         return true;
@@ -141,7 +136,7 @@ void AvoidCArraysCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<ParmVarDecl>("param_decl") != nullptr;
   const bool IsVLA = ArrayTypeLoc.getTypePtr()->isVariableArrayType();
   enum class RecommendType { Array, Vector, Span };
-  llvm::SmallVector<const char *> RecommendTypes{};
+  SmallVector<const char *> RecommendTypes{};
   if (IsVLA) {
     RecommendTypes.push_back("'std::vector'");
   } else if (ArrayTypeLoc.getTypePtr()->isIncompleteArrayType() && IsInParam) {

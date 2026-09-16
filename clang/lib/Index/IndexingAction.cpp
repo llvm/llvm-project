@@ -9,6 +9,7 @@
 #include "clang/Index/IndexingAction.h"
 #include "IndexingContext.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Index/IndexDataConsumer.h"
@@ -254,7 +255,8 @@ static void indexPreprocessorModuleMacros(Preprocessor &PP,
     if (M.second.getLatest() == nullptr) {
       for (auto *MM : PP.getLeafModuleMacros(M.first)) {
         auto *OwningMod = MM->getOwningModule();
-        if (OwningMod && OwningMod->getASTFile() == Mod.File) {
+        if (OwningMod && OwningMod->getASTFileKey() &&
+            *OwningMod->getASTFileKey() == Mod.FileKey) {
           if (auto *MI = MM->getMacroInfo()) {
             indexPreprocessorMacro(M.first, MI, MacroDirective::MD_Define,
                                    MI->getDefinitionLoc(), DataConsumer);

@@ -13,7 +13,7 @@ extern "C" {
 extern int printf(const char *restrict, ...);
 }
 
-struct Val {int X; void g(); };
+struct Val {int X; void g(); int** f(); };
 
 struct MutableVal {
   void constFun(int) const;

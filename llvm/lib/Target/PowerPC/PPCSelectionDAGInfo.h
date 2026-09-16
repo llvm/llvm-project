@@ -71,6 +71,10 @@ public:
 
   void verifyTargetNode(const SelectionDAG &DAG,
                         const SDNode *N) const override;
+  std::pair<SDValue, SDValue>
+  EmitTargetCodeForMemccpy(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                           SDValue Dst, SDValue Src, SDValue C, SDValue Size,
+                           const CallInst *CI) const override;
 
   std::pair<SDValue, SDValue>
   EmitTargetCodeForMemcmp(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,

@@ -1,27 +1,9 @@
 #ifndef USE_RANGES_FAKE_STD_H
 #define USE_RANGES_FAKE_STD_H
+
+#include <vector>
+
 namespace std {
-
-template <typename T> class vector {
-public:
-  using iterator = T *;
-  using const_iterator = const T *;
-  using reverse_iterator = T*;
-  using reverse_const_iterator = const T*;
-
-  constexpr const_iterator begin() const;
-  constexpr const_iterator end() const;
-  constexpr const_iterator cbegin() const;
-  constexpr const_iterator cend() const;
-  constexpr iterator begin();
-  constexpr iterator end();
-  constexpr reverse_const_iterator rbegin() const;
-  constexpr reverse_const_iterator rend() const;
-  constexpr reverse_const_iterator crbegin() const;
-  constexpr reverse_const_iterator crend() const;
-  constexpr reverse_iterator rbegin();
-  constexpr reverse_iterator rend();
-};
 
 template <typename Container> constexpr auto begin(const Container &Cont) {
   return Cont.begin();

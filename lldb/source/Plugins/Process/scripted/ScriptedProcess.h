@@ -17,8 +17,6 @@
 
 #include "ScriptedThread.h"
 
-#include <mutex>
-
 namespace lldb_private {
 class ScriptedProcess : public Process {
 public:
@@ -69,7 +67,7 @@ public:
 
   bool IsAlive() override;
 
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
+  size_t DoReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                       Status &error) override;
 
   size_t DoWriteMemory(lldb::addr_t vm_addr, const void *buf, size_t size,
@@ -84,8 +82,8 @@ public:
 
   bool GetProcessInfo(ProcessInstanceInfo &info) override;
 
-  lldb_private::StructuredData::ObjectSP
-  GetLoadedDynamicLibrariesInfos() override;
+  lldb_private::StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level) override;
 
   lldb_private::StructuredData::DictionarySP GetMetadata() override;
 
@@ -98,7 +96,8 @@ public:
     // dictionary before emitting the private stop event to avoid having the
     // module loading happen while the process state is changing.
     if (StateIsStoppedState(state, true))
-      GetLoadedDynamicLibrariesInfos();
+      GetLoadedDynamicLibrariesInfos(
+          lldb::BinaryInformationLevel::eBinaryInformationLevelFull);
     SetPrivateState(state);
   }
 

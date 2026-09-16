@@ -14,6 +14,7 @@
 #ifndef FORTRAN_DIALECT_CUF_CUF_OPS
 #define FORTRAN_DIALECT_CUF_CUF_OPS
 
+include "flang/Optimizer/Dialect/CUDAKernelOpInterface.td"
 include "flang/Optimizer/Dialect/CUF/CUFDialect.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
@@ -176,9 +177,10 @@ def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
   }];
 
   let arguments = (ins Arg<AnyType, "", [MemRead]>:$src,
-                       Arg<AnyRefOrBoxType, "", [MemWrite]>:$dst,
-                       Optional<AnyShapeOrShiftType>:$shape,
-                       cuf_DataTransferKindAttr:$transfer_kind);
+      Arg<AnyRefOrBoxType, "", [MemWrite]>:$dst,
+      Optional<AnyShapeOrShiftType>:$shape,
+      cuf_DataTransferKindAttr:$transfer_kind,
+      UnitAttr:$hasManagedOrUnifedSymbols);
 
   let assemblyFormat = [{
     $src `to` $dst (`,` $shape^ `:` type($shape) )? attr-dict `:` type($src) `,` type($dst)
@@ -245,7 +247,7 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
 }
 
 def cuf_KernelOp
-    : cuf_Op<"kernel", [AttrSizedOperandSegments,
+    : cuf_Op<"kernel", [AttrSizedOperandSegments, CUDAKernelOpInterface,
                         DeclareOpInterfaceMethods<LoopLikeOpInterface>,
                         DeclareOpInterfaceMethods<OperationMoveOpInterface>]> {
 
@@ -329,6 +331,27 @@ def cuf_RegisterKernelOp : cuf_Op<"register_kernel", []> {
   let extraClassDeclaration = [{
     mlir::StringAttr getKernelName();
     mlir::StringAttr getKernelModuleName();
+  }];
+}
+
+def cuf_RegisterVariableStaticOp : cuf_Op<"register_variable_static", []> {
+  let summary = "Register global variables in unified mode";
+
+  let description = [{
+    Emitted under -gpu=mem:unified for globals.
+    Registers the global with the runtime as unified variable or device-resident
+    if the `deviceResident` attribute is present.
+  }];
+
+  let arguments = (ins
+    SymbolRefAttr:$global,
+    StrAttr:$varName,
+    I64Attr:$size,
+    UnitAttr:$deviceResident
+  );
+
+  let assemblyFormat = [{
+    $global `(` $varName `,` $size `)` attr-dict
   }];
 }
 

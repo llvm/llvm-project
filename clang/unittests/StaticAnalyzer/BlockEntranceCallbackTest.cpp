@@ -39,8 +39,7 @@ public:
     if (!Node)
       return;
 
-    const auto *FD =
-        cast<FunctionDecl>(C.getLocationContext()->getStackFrame()->getDecl());
+    const auto *FD = cast<FunctionDecl>(C.getStackFrame()->getDecl());
 
     std::string Description = llvm::formatv(
         "Within '{0}' B{1} -> B{2}", FD->getIdentifier()->getName(),
@@ -61,8 +60,7 @@ public:
     ExplodedNode *Node = C.generateNonFatalErrorNode(C.getState());
     if (!Node)
       return;
-    const auto *FD =
-        cast<FunctionDecl>(C.getLocationContext()->getStackFrame()->getDecl());
+    const auto *FD = cast<FunctionDecl>(C.getStackFrame()->getDecl());
 
     std::string Buffer =
         (llvm::Twine("Within '") + FD->getIdentifier()->getName() +

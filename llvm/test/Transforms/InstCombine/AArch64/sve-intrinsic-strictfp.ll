@@ -11,8 +11,7 @@ define <vscale x 2 x double> @replace_fadd_intrinsic_double_strictfp(<vscale x 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.fadd.u.nxv2f64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP2]]
 ;
-  %1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31) #1
-  %2 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fadd.nxv2f64(<vscale x 2 x i1> %1, <vscale x 2 x double> %a, <vscale x 2 x double> %b) #1
+  %2 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fadd.nxv2f64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x double> %a, <vscale x 2 x double> %b) #1
   ret <vscale x 2 x double> %2
 }
 
@@ -36,8 +35,7 @@ define <vscale x 2 x double> @replace_fmul_intrinsic_double_strictfp(<vscale x 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.fmul.u.nxv2f64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP2]]
 ;
-  %1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31) #1
-  %2 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fmul.nxv2f64(<vscale x 2 x i1> %1, <vscale x 2 x double> %a, <vscale x 2 x double> %b) #1
+  %2 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fmul.nxv2f64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x double> %a, <vscale x 2 x double> %b) #1
   ret <vscale x 2 x double> %2
 }
 
@@ -61,8 +59,7 @@ define <vscale x 2 x double> @replace_fsub_intrinsic_double_strictfp(<vscale x 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.fsub.u.nxv2f64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP2]]
 ;
-  %1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31) #1
-  %2 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fsub.nxv2f64(<vscale x 2 x i1> %1, <vscale x 2 x double> %a, <vscale x 2 x double> %b) #1
+  %2 = tail call <vscale x 2 x double> @llvm.aarch64.sve.fsub.nxv2f64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x double> %a, <vscale x 2 x double> %b) #1
   ret <vscale x 2 x double> %2
 }
 
@@ -81,8 +78,6 @@ define <vscale x 2 x double> @call_replace_fsub_intrinsic_double_strictfp(<vscal
 declare <vscale x 2 x double> @llvm.aarch64.sve.fadd.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>, <vscale x 2 x double>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.fmul.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>, <vscale x 2 x double>)
 declare <vscale x 2 x double> @llvm.aarch64.sve.fsub.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>, <vscale x 2 x double>)
-
-declare <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32)
 
 attributes #0 = { "target-features"="+sve" strictfp }
 attributes #1 = { strictfp }

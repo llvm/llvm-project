@@ -24,6 +24,23 @@ using namespace llvm;
 // Clients are responsible for avoid race conditions in registration.
 static Target *FirstTarget = nullptr;
 
+bool Target::isValidFeatureListFormat(StringRef Features) {
+  if (Features.empty())
+    return true;
+
+  // Each feature starts with '+'/'-' followed by at least one non-comma
+  // character. Features are comma-separated with an optional trailing comma.
+  for (size_t I = 0, E = Features.size(); I != E; ++I) {
+    if (I == 0 || Features[I - 1] == ',') {
+      // At the start of a feature: must have a sign and a non-empty name.
+      if ((Features[I] != '+' && Features[I] != '-') ||
+          I + 1 == Features.size() || Features[I + 1] == ',')
+        return false;
+    }
+  }
+  return true;
+}
+
 MCStreamer *Target::createMCObjectStreamer(
     const Triple &T, MCContext &Ctx, std::unique_ptr<MCAsmBackend> TAB,
     std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter,
@@ -33,8 +50,7 @@ MCStreamer *Target::createMCObjectStreamer(
   case Triple::UnknownObjectFormat:
     llvm_unreachable("Unknown object format");
   case Triple::COFF:
-    assert((T.isOSWindows() || T.isUEFI()) &&
-           "only Windows and UEFI COFF are supported");
+    assert(T.isOSWindowsOrUEFI() && "only Windows and UEFI COFF are supported");
     S = COFFStreamerCtorFn(Ctx, std::move(TAB), std::move(OW),
                            std::move(Emitter));
     break;

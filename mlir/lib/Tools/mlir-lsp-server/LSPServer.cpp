@@ -32,7 +32,6 @@ using llvm::lsp::Hover;
 using llvm::lsp::InitializedParams;
 using llvm::lsp::InitializeParams;
 using llvm::lsp::JSONTransport;
-using llvm::lsp::Location;
 using llvm::lsp::Logger;
 using llvm::lsp::MessageHandler;
 using llvm::lsp::MLIRConvertBytecodeParams;
@@ -72,9 +71,9 @@ struct LSPServer {
   // Definitions and References
 
   void onGoToDefinition(const TextDocumentPositionParams &params,
-                        Callback<std::vector<Location>> reply);
+                        Callback<std::vector<llvm::lsp::Location>> reply);
   void onReference(const ReferenceParams &params,
-                   Callback<std::vector<Location>> reply);
+                   Callback<std::vector<llvm::lsp::Location>> reply);
 
   //===--------------------------------------------------------------------===//
   // Hover
@@ -130,6 +129,17 @@ struct LSPServer {
 
 void LSPServer::onInitialize(const InitializeParams &params,
                              Callback<llvm::json::Value> reply) {
+  // Configure the workspace root if it was provided.
+  if (params.rootUri) {
+    llvm::Expected<URIForFile> rootURI = URIForFile::fromURI(*params.rootUri);
+    if (rootURI)
+      server.setWorkspaceRoot(rootURI->file());
+    else
+      consumeError(rootURI.takeError());
+  } else if (params.rootPath) {
+    server.setWorkspaceRoot(*params.rootPath);
+  }
+
   // Send a response with the capabilities of this server.
   llvm::json::Object serverCaps{
       {"textDocumentSync",
@@ -229,16 +239,17 @@ void LSPServer::onDocumentDidChange(const DidChangeTextDocumentParams &params) {
 // Definitions and References
 //===----------------------------------------------------------------------===//
 
-void LSPServer::onGoToDefinition(const TextDocumentPositionParams &params,
-                                 Callback<std::vector<Location>> reply) {
-  std::vector<Location> locations;
+void LSPServer::onGoToDefinition(
+    const TextDocumentPositionParams &params,
+    Callback<std::vector<llvm::lsp::Location>> reply) {
+  std::vector<llvm::lsp::Location> locations;
   server.getLocationsOf(params.textDocument.uri, params.position, locations);
   reply(std::move(locations));
 }
 
 void LSPServer::onReference(const ReferenceParams &params,
-                            Callback<std::vector<Location>> reply) {
-  std::vector<Location> locations;
+                            Callback<std::vector<llvm::lsp::Location>> reply) {
+  std::vector<llvm::lsp::Location> locations;
   server.findReferencesOf(params.textDocument.uri, params.position, locations);
   reply(std::move(locations));
 }

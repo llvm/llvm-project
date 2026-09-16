@@ -1,6 +1,58 @@
 add_custom_target(libc-complex-unittests)
 
 add_fp_unittest(
+  cabs_test
+  NEED_MPC
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cabs_test.cpp
+  HDRS
+    CAbsTest.h
+  DEPENDS
+    libc.src.complex.cabs
+)
+
+add_fp_unittest(
+  cabsf_test
+  NEED_MPC
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cabsf_test.cpp
+  HDRS
+    CAbsTest.h
+  DEPENDS
+    libc.src.complex.cabsf
+)
+
+add_fp_unittest(
+  carg_test
+  NEED_MPC
+  SUITE
+    libc-complex-unittests
+  SRCS
+    carg_test.cpp
+  HDRS
+    CArgTest.h
+  DEPENDS
+    libc.src.complex.carg
+)
+
+add_fp_unittest(
+  cargf_test
+  NEED_MPC
+  SUITE
+    libc-complex-unittests
+  SRCS
+    cargf_test.cpp
+  HDRS
+    CArgTest.h
+  DEPENDS
+    libc.src.complex.cargf
+)
+
+add_fp_unittest(
   conj_test
   SUITE
     libc-complex-unittests

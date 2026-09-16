@@ -188,8 +188,8 @@ config("compiler_defaults") {
       # expand __VA_ARGS__ in "OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__)"
       cflags += [ "/Zc:preprocessor" ]
 
-      # cl.exe doesn't set __cplusplus correctly by default.
-      # clang-cl gets it right by default, so don't needlessly add the flag there.
+      # cl.exe doesn't set __cplusplus correctly by default. clang-cl gets it
+      # right by default, so don't needlessly add the flag there.
       cflags_cc += [ "/Zc:__cplusplus" ]
     }
 
@@ -510,8 +510,9 @@ config("crt_code") {
     ]
   } else {
     cflags += [
-      # Disable thread safe initialization for static locals. ASan shouldn't need it.
-      # Thread safe initialization assumes that the CRT has already been initialized, but ASan initializes before the CRT.
+      # Disable thread safe initialization for static locals. ASan shouldn't
+      # need it. Thread safe initialization assumes that the CRT has already
+      # been initialized, but ASan initializes before the CRT.
       "/Zc:threadSafeInit-",
     ]
   }

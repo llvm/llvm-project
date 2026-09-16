@@ -729,24 +729,33 @@ RISCVLoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     }
   }
 
+  // Remember the original position of the instruction we're moving so we can
+  // restore it if we fail to form a pair.
+  MachineBasicBlock::iterator OrigNext = std::next(DeletionPoint);
+
   MachineInstr *ToInsert = DeletionPoint->removeFromParent();
   MachineBasicBlock &MBB = *InsertionPoint->getParent();
-  MachineBasicBlock::iterator First, Second;
+  MachineBasicBlock::iterator First, Second, Moved;
 
   if (!InsertAfter) {
     First = MBB.insert(InsertionPoint, ToInsert);
     Second = InsertionPoint;
+    Moved = First;
   } else {
     Second = MBB.insertAfter(InsertionPoint, ToInsert);
     First = InsertionPoint;
+    Moved = Second;
   }
 
   if (tryConvertToLdStPair(First, Second)) {
     LLVM_DEBUG(dbgs() << "Pairing load/store:\n    ");
     LLVM_DEBUG(prev_nodbg(NextI, MBB.begin())->print(dbgs()));
   } else if (!STI->is64Bit() && STI->hasVendorXqcilsm()) {
-    // We were unable to form the pair, so use the next non-debug instruction
-    // after the first instruction we had wanted to merge.
+    // We were unable to form the pair, so move the instruction back to it's
+    // original place. Point NextI to the next non-debug instruction after the
+    // first instruction we had wanted to merge.
+    MachineInstr *MovedMI = Moved->removeFromParent();
+    MBB.insert(OrigNext, MovedMI);
     NextI = next_nodbg(I, E);
   }
 
@@ -907,8 +916,8 @@ bool RISCVLoadStoreOpt::fixInvalidRegPairOp(MachineBasicBlock &MBB,
   unsigned RealOpc = IsLoad ? RISCV::LD_RV32 : RISCV::SD_RV32;
 
   // Create register pair from the two individual registers
-  unsigned RegPair = TRI->getMatchingSuperReg(FirstReg, RISCV::sub_gpr_even,
-                                              &RISCV::GPRPairRegClass);
+  MCRegister RegPair = TRI->getMatchingSuperReg(FirstReg, RISCV::sub_gpr_even,
+                                                &RISCV::GPRPairRegClass);
   // Create the real LD/SD instruction with register pair
   MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(RealOpc));
 

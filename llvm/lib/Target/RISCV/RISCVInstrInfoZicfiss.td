@@ -12,10 +12,10 @@
 
 class RVC_SSInst<bits<5> rs1val, RegisterClass reg_class, string opcodestr> :
   RVInst16<(outs), (ins reg_class:$rs1), opcodestr, "$rs1", [], InstFormatOther> {
-  bits<0> rs1;
+  bits<5> rs1 = rs1val;
   let Inst{15-13} = 0b011;
   let Inst{12} = 0;
-  let Inst{11-7} = rs1val;
+  let Inst{11-7} = rs1;
   let Inst{6-2} = 0b00000;
   let Inst{1-0} = 0b01;
 }
@@ -53,8 +53,7 @@ def SSPUSH : RVInstR<0b1100111, 0b100, OPC_SYSTEM, (outs), (ins GPRX1X5:$rs2),
 // Compressed Zicfiss instructions use Zcmop encoding space and are available
 // when Zcmop is enabled, without requiring Zicfiss explicitly. Per psABI
 // decision (riscv-non-isa/riscv-elf-psabi-doc#474).
-let Predicates = [HasStdExtZcmop],
-    DecoderNamespace = "Zicfiss" in {
+let Predicates = [HasStdExtZcmop] in {
 let Uses = [SSP], Defs = [SSP], hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 def C_SSPUSH : RVC_SSInst<0b00001, GPRX1, "c.sspush">;
 
@@ -67,21 +66,6 @@ defm SSAMOSWAP_W  : AMO_rr_aq_rl<0b01001, 0b010, "ssamoswap.w">;
 
 let Predicates = [HasStdExtZicfiss, IsRV64] in
 defm SSAMOSWAP_D  : AMO_rr_aq_rl<0b01001, 0b011, "ssamoswap.d">;
-
-let Predicates = [HasStdExtZimop] in {
-let hasSideEffects = 1, mayLoad = 0, mayStore = 1 in
-def PseudoMOP_SSPUSH : Pseudo<(outs), (ins GPRX1X5:$rs2), []>,
-    PseudoInstExpansion<(MOP_RR_7 X0, X0, GPR:$rs2)>;
-let hasSideEffects = 1, mayLoad = 1, mayStore = 0 in
-def PseudoMOP_SSPOPCHK : Pseudo<(outs), (ins GPRX1X5:$rs1), []>,
-    PseudoInstExpansion<(MOP_R_28 X0, GPR:$rs1)>;
-} // Predicates = [HasStdExtZimop]
-
-let Predicates = [HasStdExtZcmop] in {
-let Uses = [X1], hasSideEffects = 1, mayLoad = 0, mayStore = 1 in
-def PseudoMOP_C_SSPUSH : Pseudo<(outs), (ins), []>,
-    PseudoInstExpansion<(C_SSPUSH X1)>;
-} // Predicates = [HasStdExtZcmop]
 
 //===----------------------------------------------------------------------===/
 // Compress Instruction tablegen backend.

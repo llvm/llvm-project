@@ -10,22 +10,21 @@ define i8 @abd_ext_i8(i8 %a, i8 %b) nounwind {
 ; X86-LABEL: abd_ext_i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    subl %eax, %edx
-; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmovbl %edx, %eax
-; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    subb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    sbbl %ecx, %ecx
+; X86-NEXT:    xorb %cl, %al
+; X86-NEXT:    subb %cl, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_ext_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %sil, %eax
-; X64-NEXT:    movzbl %dil, %ecx
-; X64-NEXT:    movl %ecx, %edx
-; X64-NEXT:    subl %eax, %edx
-; X64-NEXT:    subl %ecx, %eax
-; X64-NEXT:    cmovbl %edx, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    subb %sil, %al
+; X64-NEXT:    sbbl %ecx, %ecx
+; X64-NEXT:    xorb %cl, %al
+; X64-NEXT:    subb %cl, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %aext = zext i8 %a to i64
@@ -39,22 +38,23 @@ define i8 @abd_ext_i8(i8 %a, i8 %b) nounwind {
 define i8 @abd_ext_i8_i16(i8 %a, i16 %b) nounwind {
 ; X86-LABEL: abd_ext_i8_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    subl %eax, %edx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    subw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    sbbl %ecx, %ecx
+; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmovbl %edx, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_ext_i8_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %dil, %ecx
-; X64-NEXT:    subl %esi, %edi
-; X64-NEXT:    movzwl %si, %eax
+; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    subw %si, %ax
+; X64-NEXT:    sbbl %ecx, %ecx
+; X64-NEXT:    xorl %ecx, %eax
 ; X64-NEXT:    subl %ecx, %eax
-; X64-NEXT:    cmovbl %edi, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %aext = zext i8 %a to i64
@@ -69,22 +69,21 @@ define i8 @abd_ext_i8_undef(i8 %a, i8 %b) nounwind {
 ; X86-LABEL: abd_ext_i8_undef:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    subl %eax, %edx
-; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmovbl %edx, %eax
-; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    subb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    sbbl %ecx, %ecx
+; X86-NEXT:    xorb %cl, %al
+; X86-NEXT:    subb %cl, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_ext_i8_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %sil, %eax
-; X64-NEXT:    movzbl %dil, %ecx
-; X64-NEXT:    movl %ecx, %edx
-; X64-NEXT:    subl %eax, %edx
-; X64-NEXT:    subl %ecx, %eax
-; X64-NEXT:    cmovbl %edx, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    subb %sil, %al
+; X64-NEXT:    sbbl %ecx, %ecx
+; X64-NEXT:    xorb %cl, %al
+; X64-NEXT:    subb %cl, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %aext = zext i8 %a to i64
@@ -99,22 +98,22 @@ define i16 @abd_ext_i16(i16 %a, i16 %b) nounwind {
 ; X86-LABEL: abd_ext_i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    subl %eax, %edx
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    subw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    sbbl %ecx, %ecx
+; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmovbl %edx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_ext_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl %si, %eax
-; X64-NEXT:    movzwl %di, %ecx
-; X64-NEXT:    movl %ecx, %edx
-; X64-NEXT:    subl %eax, %edx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    subw %si, %ax
+; X64-NEXT:    sbbl %ecx, %ecx
+; X64-NEXT:    xorl %ecx, %eax
 ; X64-NEXT:    subl %ecx, %eax
-; X64-NEXT:    cmovbl %edx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %aext = zext i16 %a to i64
@@ -158,22 +157,22 @@ define i16 @abd_ext_i16_undef(i16 %a, i16 %b) nounwind {
 ; X86-LABEL: abd_ext_i16_undef:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    subl %eax, %edx
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    subw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    sbbl %ecx, %ecx
+; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmovbl %edx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_ext_i16_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl %si, %eax
-; X64-NEXT:    movzwl %di, %ecx
-; X64-NEXT:    movl %ecx, %edx
-; X64-NEXT:    subl %eax, %edx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    subw %si, %ax
+; X64-NEXT:    sbbl %ecx, %ecx
+; X64-NEXT:    xorl %ecx, %eax
 ; X64-NEXT:    subl %ecx, %eax
-; X64-NEXT:    cmovbl %edx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %aext = zext i16 %a to i64
@@ -447,22 +446,21 @@ define i8 @abd_minmax_i8(i8 %a, i8 %b) nounwind {
 ; X86-LABEL: abd_minmax_i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    subl %eax, %edx
-; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmovbl %edx, %eax
-; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    subb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    sbbl %ecx, %ecx
+; X86-NEXT:    xorb %cl, %al
+; X86-NEXT:    subb %cl, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_minmax_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %sil, %eax
-; X64-NEXT:    movzbl %dil, %ecx
-; X64-NEXT:    movl %ecx, %edx
-; X64-NEXT:    subl %eax, %edx
-; X64-NEXT:    subl %ecx, %eax
-; X64-NEXT:    cmovbl %edx, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    subb %sil, %al
+; X64-NEXT:    sbbl %ecx, %ecx
+; X64-NEXT:    xorb %cl, %al
+; X64-NEXT:    subb %cl, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %min = call i8 @llvm.umin.i8(i8 %a, i8 %b)
@@ -475,22 +473,22 @@ define i16 @abd_minmax_i16(i16 %a, i16 %b) nounwind {
 ; X86-LABEL: abd_minmax_i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    subl %eax, %edx
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    subw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    sbbl %ecx, %ecx
+; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmovbl %edx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_minmax_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl %si, %eax
-; X64-NEXT:    movzwl %di, %ecx
-; X64-NEXT:    movl %ecx, %edx
-; X64-NEXT:    subl %eax, %edx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    subw %si, %ax
+; X64-NEXT:    sbbl %ecx, %ecx
+; X64-NEXT:    xorl %ecx, %eax
 ; X64-NEXT:    subl %ecx, %eax
-; X64-NEXT:    cmovbl %edx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %min = call i16 @llvm.umin.i16(i16 %a, i16 %b)
@@ -615,22 +613,21 @@ define i8 @abd_cmp_i8(i8 %a, i8 %b) nounwind {
 ; X86-LABEL: abd_cmp_i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    subl %eax, %edx
-; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmovbl %edx, %eax
-; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    subb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    sbbl %ecx, %ecx
+; X86-NEXT:    xorb %cl, %al
+; X86-NEXT:    subb %cl, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_cmp_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    movzbl %sil, %ecx
-; X64-NEXT:    movl %ecx, %edx
-; X64-NEXT:    subl %eax, %edx
-; X64-NEXT:    subl %ecx, %eax
-; X64-NEXT:    cmovbl %edx, %eax
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    subb %dil, %al
+; X64-NEXT:    sbbl %ecx, %ecx
+; X64-NEXT:    xorb %cl, %al
+; X64-NEXT:    subb %cl, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %cmp = icmp ugt i8 %a, %b
@@ -644,22 +641,22 @@ define i16 @abd_cmp_i16(i16 %a, i16 %b) nounwind {
 ; X86-LABEL: abd_cmp_i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    subl %eax, %edx
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    subw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    sbbl %ecx, %ecx
+; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmovbl %edx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_cmp_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl %si, %eax
-; X64-NEXT:    movzwl %di, %ecx
-; X64-NEXT:    movl %ecx, %edx
-; X64-NEXT:    subl %eax, %edx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    subw %si, %ax
+; X64-NEXT:    sbbl %ecx, %ecx
+; X64-NEXT:    xorl %ecx, %eax
 ; X64-NEXT:    subl %ecx, %eax
-; X64-NEXT:    cmovbl %edx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %cmp = icmp uge i16 %a, %b
@@ -788,22 +785,21 @@ define i8 @abd_select_i8(i8 %a, i8 %b) nounwind {
 ; X86-LABEL: abd_select_i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    subl %eax, %edx
-; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmovbl %edx, %eax
-; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    subb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    sbbl %ecx, %ecx
+; X86-NEXT:    xorb %cl, %al
+; X86-NEXT:    subb %cl, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_select_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %sil, %eax
-; X64-NEXT:    movzbl %dil, %ecx
-; X64-NEXT:    movl %ecx, %edx
-; X64-NEXT:    subl %eax, %edx
-; X64-NEXT:    subl %ecx, %eax
-; X64-NEXT:    cmovbl %edx, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    subb %sil, %al
+; X64-NEXT:    sbbl %ecx, %ecx
+; X64-NEXT:    xorb %cl, %al
+; X64-NEXT:    subb %cl, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %cmp = icmp ult i8 %a, %b
@@ -817,22 +813,22 @@ define i16 @abd_select_i16(i16 %a, i16 %b) nounwind {
 ; X86-LABEL: abd_select_i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    subl %eax, %edx
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    subw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    sbbl %ecx, %ecx
+; X86-NEXT:    xorl %ecx, %eax
 ; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    cmovbl %edx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_select_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl %si, %eax
-; X64-NEXT:    movzwl %di, %ecx
-; X64-NEXT:    movl %ecx, %edx
-; X64-NEXT:    subl %eax, %edx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    subw %si, %ax
+; X64-NEXT:    sbbl %ecx, %ecx
+; X64-NEXT:    xorl %ecx, %eax
 ; X64-NEXT:    subl %ecx, %eax
-; X64-NEXT:    cmovbl %edx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %cmp = icmp ule i16 %a, %b
@@ -951,6 +947,36 @@ define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
   %ba = select i1 %cmp, i128 %b, i128 %a
   %sub = sub i128 %ba, %ab
   ret i128 %sub
+}
+
+define i32 @abs_sub_abdu_sign_check(i32 %p0) {
+; X86-LABEL: abs_sub_abdu_sign_check:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $1000000000, %eax # imm = 0x3B9ACA00
+; X86-NEXT:    movl $-2039640824, %ecx # imm = 0x866D8D08
+; X86-NEXT:    cmovel %eax, %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    cmovsl %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: abs_sub_abdu_sign_check:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    movl $1000000000, %eax # imm = 0x3B9ACA00
+; X64-NEXT:    movl $-2039640824, %ecx # imm = 0x866D8D08
+; X64-NEXT:    cmovel %eax, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovsl %ecx, %eax
+; X64-NEXT:    retq
+entry:
+  %cmp = icmp eq i32 %p0, 0
+  %v = select i1 %cmp, i32 0, i32 1255326472
+  %s = sub i32 %v, -1000000000
+  %a = call i32 @llvm.abs.i32(i32 %s, i1 false)
+  ret i32 %a
 }
 
 declare i8 @llvm.abs.i8(i8, i1)

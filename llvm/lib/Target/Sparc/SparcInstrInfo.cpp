@@ -656,20 +656,75 @@ Register SparcInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
   return GlobalBaseReg;
 }
 
+bool SparcInstrInfo::needsUnimp(const MachineInstr &MI,
+                                unsigned &StructSize) const {
+  if (!MI.isCall())
+    return false;
+
+  unsigned StructSizeOpNum = 0;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unknown call opcode.");
+  case SP::CALL:
+    StructSizeOpNum = 1;
+    break;
+  case SP::CALLrr:
+  case SP::CALLri:
+    StructSizeOpNum = 2;
+    break;
+  case SP::TLS_CALL:
+    return false;
+  case SP::TAIL_CALLri:
+  case SP::TAIL_CALL:
+    return false;
+  }
+
+  const MachineOperand &MO = MI.getOperand(StructSizeOpNum);
+  if (!MO.isImm())
+    return false;
+
+  // A zero-sized return value has nothing for the callee to copy, so GCC emits
+  // no unimp for it and returns to the instruction right after the delay slot.
+  // We replicate this behavior here.
+  StructSize = MO.getImm();
+  return StructSize != 0;
+}
+
 unsigned SparcInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
 
   if (MI.isInlineAsm()) {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo());
+  }
+
+  if (Opcode == TargetOpcode::BUNDLE)
+    return getInstBundleSize(MI);
+
+  if (MI.getOpcode() == SP::GETPCX) {
+    const TargetMachine &TM = MI.getParent()->getParent()->getTarget();
+    if (TM.isPositionIndependent())
+      return 16;
+    switch (TM.getCodeModel()) {
+    default:
+      llvm_unreachable("Unsupported absolute code model");
+    case CodeModel::Small:
+      return 8;
+    case CodeModel::Medium:
+      return 16;
+    case CodeModel::Large:
+      return 24;
+    }
   }
 
   // If the instruction has a delay slot, be conservative and also include
   // it for sizing purposes. This is done so that the BranchRelaxation pass
   // will not mistakenly mark out-of-range branches as in-range.
-  if (MI.hasDelaySlot())
-    return get(Opcode).getSize() * 2;
+  if (MI.hasDelaySlot()) {
+    unsigned StructSize = 0;
+    return get(Opcode).getSize() * (2 + needsUnimp(MI, StructSize));
+  }
   return get(Opcode).getSize();
 }
 

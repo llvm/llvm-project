@@ -72,6 +72,7 @@ define void @types() {
   %10 = alloca ptr addrspace(5), align 8
   %11 = alloca <5 x ptr>, align 64
   %12 = alloca <1 x i64>, align 8
+  %13 = alloca b8, align 1
   ret void
 }
 
@@ -305,7 +306,7 @@ exit:
 
 define void @operandbundles() personality ptr @personalityFn {
   call void @decl() [ "foo"(), "bar\00x"(i32 0, ptr null, token none) ]
-  invoke void @decl() [ "baz"(label %bar) ] to label %foo unwind label %bar
+  invoke void @decl() [ "baz"(i32 0) ] to label %foo unwind label %bar
 foo:
   ret void
 bar:
@@ -397,7 +398,7 @@ define void @test_call_br_02(i32 %input0, i32 %input1) {
 entry:
   ; Multiple indirect destinations, operand bundles, and arguments
   callbr void asm "nop", "r,r,!i,!i"(i32 %input0, i32 %input1)
-    ["op0"(i32 %input1), "op1"(label %bb_02)]
+    ["op0"(i32 %input1), "op1"(i32 %input0)]
     to label %bb_01 [label %bb_03, label %bb_02]
 
 bb_01:

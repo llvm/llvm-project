@@ -584,7 +584,7 @@ public:
   static StructuredData::ObjectSP FromBoolean(bool value) {
     return std::make_shared<StructuredData::Boolean>(value);
   }
-  static StructuredData::ObjectSP FromString(std::string value) {
+  static StructuredData::ObjectSP FromString(llvm::StringRef value) {
     return std::make_shared<StructuredData::String>(value);
   }
   static StructuredData::ObjectSP FromGeneric(void *value) {

@@ -21,10 +21,10 @@ AST_MATCHER(FunctionDecl, hasAnyDefinition) {
       Node.isDeleted())
     return true;
 
-  if (const FunctionDecl *Definition = Node.getDefinition())
-    if (Definition->hasBody() || Definition->isPureVirtual() ||
-        Definition->isDefaulted() || Definition->isDeleted())
-      return true;
+  if (const FunctionDecl *Definition = Node.getDefinition();
+      Definition && (Definition->hasBody() || Definition->isPureVirtual() ||
+                     Definition->isDefaulted() || Definition->isDeleted()))
+    return true;
 
   return false;
 }

@@ -140,12 +140,6 @@ define void @call_msp430_intrcc() {
   ret void
 }
 
-define void @call_ptx_kernel() {
-; CHECK: call ptx_kernel void @ptx_kernel
-  call ptx_kernel void @ptx_kernel()
-  ret void
-}
-
 define void @call_ptx_device() {
 ; CHECK: call ptx_device void @ptx_device
   call ptx_device void @ptx_device()

@@ -28,8 +28,7 @@ namespace lldb_dap::protocol {
 enum ReferenceKind : uint8_t {
   eReferenceKindTemporary = 0,
   eReferenceKindPermanent = 1,
-  eReferenceKindScope = 1 << 1,
-  eReferenceKindInvalid = 0xFF
+  eReferenceKindInvalid = 0xFF,
 };
 
 /// The var_ref_t hold two values, the `ReferenceKind` and the
@@ -63,7 +62,6 @@ public:
     switch (current_kind) {
     case eReferenceKindTemporary:
     case eReferenceKindPermanent:
-    case eReferenceKindScope:
       return current_kind;
     default:
       return eReferenceKindInvalid;

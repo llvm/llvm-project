@@ -37,11 +37,11 @@ define i32 @ubfx2(i32 %a) {
 define i32 @ubfx_opt(ptr nocapture %ctx, i32 %x) nounwind readonly ssp {
 ; CHECK-LABEL: ubfx_opt:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    lsr r2, r1, #24
-; CHECK-NEXT:    ldr r2, [r0, r2, lsl #2]
 ; CHECK-NEXT:    ubfx r3, r1, #16, #8
-; CHECK-NEXT:    ldr r3, [r0, r3, lsl #2]
+; CHECK-NEXT:    lsr r2, r1, #24
 ; CHECK-NEXT:    ubfx r1, r1, #8, #8
+; CHECK-NEXT:    ldr r2, [r0, r2, lsl #2]
+; CHECK-NEXT:    ldr r3, [r0, r3, lsl #2]
 ; CHECK-NEXT:    ldr r0, [r0, r1, lsl #2]
 ; CHECK-NEXT:    add r2, r3, r2
 ; CHECK-NEXT:    add r0, r2, r0

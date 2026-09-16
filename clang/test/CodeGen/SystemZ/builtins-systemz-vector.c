@@ -13,16 +13,36 @@ typedef __attribute__((vector_size(16))) unsigned long long vec_ulong;
 typedef __attribute__((vector_size(16))) double vec_double;
 
 volatile vec_schar vsc;
+volatile vec_schar vsc1;
+volatile vec_schar vsc2;
 volatile vec_sshort vss;
+volatile vec_sshort vss1;
+volatile vec_sshort vss2;
 volatile vec_sint vsi;
+volatile vec_sint vsi1;
+volatile vec_sint vsi2;
 volatile vec_slong vsl;
+volatile vec_slong vsl1;
 volatile vec_uchar vuc;
+volatile vec_uchar vuc1;
+volatile vec_uchar vuc2;
 volatile vec_ushort vus;
+volatile vec_ushort vus1;
+volatile vec_ushort vus2;
 volatile vec_uint vui;
+volatile vec_uint vui1;
+volatile vec_uint vui2;
 volatile vec_ulong vul;
+volatile vec_ulong vul1;
+volatile vec_ulong vul2;
 volatile vec_double vd;
+volatile vec_double vd1;
+volatile vec_double vd2;
 volatile signed __int128 si128;
+volatile signed __int128 si1281;
 volatile unsigned __int128 ui128;
+volatile unsigned __int128 ui1281;
+volatile unsigned __int128 ui1282;
 
 volatile unsigned int len;
 volatile unsigned char amt;
@@ -44,40 +64,40 @@ void test_core(void) {
   vsc = __builtin_s390_vll(len, cptr);
   // CHECK: call <16 x i8> @llvm.s390.vll(i32 %{{.*}}, ptr %{{.*}})
 
-  vul = __builtin_s390_vpdi(vul, vul, 0);
+  vul = __builtin_s390_vpdi(vul, vul1, 0);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 0)
-  vul = __builtin_s390_vpdi(vul, vul, 15);
+  vul = __builtin_s390_vpdi(vul, vul1, 15);
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 15)
 
-  vuc = __builtin_s390_vperm(vuc, vuc, vuc);
+  vuc = __builtin_s390_vperm(vuc, vuc1, vuc2);
   // CHECK: call <16 x i8> @llvm.s390.vperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
 
-  vuc = __builtin_s390_vpklsh(vus, vus);
+  vuc = __builtin_s390_vpklsh(vus, vus1);
   // CHECK: call <16 x i8> @llvm.s390.vpklsh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vus = __builtin_s390_vpklsf(vui, vui);
+  vus = __builtin_s390_vpklsf(vui, vui1);
   // CHECK: call <8 x i16> @llvm.s390.vpklsf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vui = __builtin_s390_vpklsg(vul, vul);
+  vui = __builtin_s390_vpklsg(vul, vul1);
   // CHECK: call <4 x i32> @llvm.s390.vpklsg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
-  vuc = __builtin_s390_vpklshs(vus, vus, &cc);
+  vuc = __builtin_s390_vpklshs(vus, vus1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vpklshs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vus = __builtin_s390_vpklsfs(vui, vui, &cc);
+  vus = __builtin_s390_vpklsfs(vui, vui1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vpklsfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vui = __builtin_s390_vpklsgs(vul, vul, &cc);
+  vui = __builtin_s390_vpklsgs(vul, vul1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vpklsgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
-  vsc = __builtin_s390_vpksh(vss, vss);
+  vsc = __builtin_s390_vpksh(vss, vss1);
   // CHECK: call <16 x i8> @llvm.s390.vpksh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vss = __builtin_s390_vpksf(vsi, vsi);
+  vss = __builtin_s390_vpksf(vsi, vsi1);
   // CHECK: call <8 x i16> @llvm.s390.vpksf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vsi = __builtin_s390_vpksg(vsl, vsl);
+  vsi = __builtin_s390_vpksg(vsl, vsl1);
   // CHECK: call <4 x i32> @llvm.s390.vpksg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
-  vsc = __builtin_s390_vpkshs(vss, vss, &cc);
+  vsc = __builtin_s390_vpkshs(vss, vss1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vpkshs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vss = __builtin_s390_vpksfs(vsi, vsi, &cc);
+  vss = __builtin_s390_vpksfs(vsi, vsi1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vpksfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vsi = __builtin_s390_vpksgs(vsl, vsl, &cc);
+  vsi = __builtin_s390_vpksgs(vsl, vsl1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vpksgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
   __builtin_s390_vstl(vsc, len, ptr);
@@ -113,43 +133,43 @@ void test_core(void) {
 }
 
 void test_integer(void) {
-  si128 = __builtin_s390_vaq(si128, si128);
+  si128 = __builtin_s390_vaq(si128, si1281);
   // CHECK: call i128 @llvm.s390.vaq(i128 %{{.*}}, i128 %{{.*}})
-  ui128 = __builtin_s390_vacq(ui128, ui128, ui128);
+  ui128 = __builtin_s390_vacq(ui128, ui1281, ui1282);
   // CHECK: call i128 @llvm.s390.vacq(i128 %{{.*}}, i128 %{{.*}}, i128 %{{.*}})
-  ui128 = __builtin_s390_vaccq(ui128, ui128);
+  ui128 = __builtin_s390_vaccq(ui128, ui1281);
   // CHECK: call i128 @llvm.s390.vaccq(i128 %{{.*}}, i128 %{{.*}})
-  ui128 = __builtin_s390_vacccq(ui128, ui128, ui128);
+  ui128 = __builtin_s390_vacccq(ui128, ui1281, ui1282);
   // CHECK: call i128 @llvm.s390.vacccq(i128 %{{.*}}, i128 %{{.*}}, i128 %{{.*}})
 
-  vuc = __builtin_s390_vaccb(vuc, vuc);
+  vuc = __builtin_s390_vaccb(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vaccb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vus = __builtin_s390_vacch(vus, vus);
+  vus = __builtin_s390_vacch(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vacch(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_vaccf(vui, vui);
+  vui = __builtin_s390_vaccf(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vaccf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vul = __builtin_s390_vaccg(vul, vul);
+  vul = __builtin_s390_vaccg(vul, vul1);
   // CHECK: call <2 x i64> @llvm.s390.vaccg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
-  vsc = __builtin_s390_vavgb(vsc, vsc);
+  vsc = __builtin_s390_vavgb(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vavgb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vss = __builtin_s390_vavgh(vss, vss);
+  vss = __builtin_s390_vavgh(vss, vss1);
   // CHECK: call <8 x i16> @llvm.s390.vavgh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vsi = __builtin_s390_vavgf(vsi, vsi);
+  vsi = __builtin_s390_vavgf(vsi, vsi1);
   // CHECK: call <4 x i32> @llvm.s390.vavgf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vsl = __builtin_s390_vavgg(vsl, vsl);
+  vsl = __builtin_s390_vavgg(vsl, vsl1);
   // CHECK: call <2 x i64> @llvm.s390.vavgg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
-  vuc = __builtin_s390_vavglb(vuc, vuc);
+  vuc = __builtin_s390_vavglb(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vavglb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vus = __builtin_s390_vavglh(vus, vus);
+  vus = __builtin_s390_vavglh(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vavglh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_vavglf(vui, vui);
+  vui = __builtin_s390_vavglf(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vavglf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vul = __builtin_s390_vavglg(vul, vul);
+  vul = __builtin_s390_vavglg(vul, vul1);
   // CHECK: call <2 x i64> @llvm.s390.vavglg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
-  vui = __builtin_s390_vcksm(vui, vui);
+  vui = __builtin_s390_vcksm(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vcksm(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
 
   vuc = __builtin_s390_vclzb(vuc);
@@ -170,21 +190,21 @@ void test_integer(void) {
   vul = __builtin_s390_vctzg(vul);
   // CHECK: call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %{{.*}}, i1 false)
 
-  vuc = __builtin_s390_verimb(vuc, vuc, vuc, 0);
+  vuc = __builtin_s390_verimb(vuc, vuc1, vuc2, 0);
   // CHECK: call <16 x i8> @llvm.s390.verimb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
-  vuc = __builtin_s390_verimb(vuc, vuc, vuc, 255);
+  vuc = __builtin_s390_verimb(vuc, vuc1, vuc2, 255);
   // CHECK: call <16 x i8> @llvm.s390.verimb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 255)
-  vus = __builtin_s390_verimh(vus, vus, vus, 0);
+  vus = __builtin_s390_verimh(vus, vus1, vus2, 0);
   // CHECK: call <8 x i16> @llvm.s390.verimh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
-  vus = __builtin_s390_verimh(vus, vus, vus, 255);
+  vus = __builtin_s390_verimh(vus, vus1, vus2, 255);
   // CHECK: call <8 x i16> @llvm.s390.verimh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 255)
-  vui = __builtin_s390_verimf(vui, vui, vui, 0);
+  vui = __builtin_s390_verimf(vui, vui1, vui2, 0);
   // CHECK: call <4 x i32> @llvm.s390.verimf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
-  vui = __builtin_s390_verimf(vui, vui, vui, 255);
+  vui = __builtin_s390_verimf(vui, vui1, vui2, 255);
   // CHECK: call <4 x i32> @llvm.s390.verimf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 255)
-  vul = __builtin_s390_verimg(vul, vul, vul, 0);
+  vul = __builtin_s390_verimg(vul, vul1, vul2, 0);
   // CHECK: call <2 x i64> @llvm.s390.verimg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 0)
-  vul = __builtin_s390_verimg(vul, vul, vul, 255);
+  vul = __builtin_s390_verimg(vul, vul1, vul2, 255);
   // CHECK: call <2 x i64> @llvm.s390.verimg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 255)
 
   vuc = __builtin_s390_verllb(vuc, amt);
@@ -196,246 +216,246 @@ void test_integer(void) {
   vul = __builtin_s390_verllg(vul, amt);
   // CHECK: call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
-  vuc = __builtin_s390_verllvb(vuc, vuc);
+  vuc = __builtin_s390_verllvb(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vus = __builtin_s390_verllvh(vus, vus);
+  vus = __builtin_s390_verllvh(vus, vus1);
   // CHECK: call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_verllvf(vui, vui);
+  vui = __builtin_s390_verllvf(vui, vui1);
   // CHECK: call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vul = __builtin_s390_verllvg(vul, vul);
+  vul = __builtin_s390_verllvg(vul, vul1);
   // CHECK: call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
-  vus = __builtin_s390_vgfmb(vuc, vuc);
+  vus = __builtin_s390_vgfmb(vuc, vuc1);
   // CHECK: call <8 x i16> @llvm.s390.vgfmb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vui = __builtin_s390_vgfmh(vus, vus);
+  vui = __builtin_s390_vgfmh(vus, vus1);
   // CHECK: call <4 x i32> @llvm.s390.vgfmh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vul = __builtin_s390_vgfmf(vui, vui);
+  vul = __builtin_s390_vgfmf(vui, vui1);
   // CHECK: call <2 x i64> @llvm.s390.vgfmf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  ui128 = __builtin_s390_vgfmg(vul, vul);
+  ui128 = __builtin_s390_vgfmg(vul, vul1);
   // CHECK: call i128 @llvm.s390.vgfmg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
-  vus = __builtin_s390_vgfmab(vuc, vuc, vus);
+  vus = __builtin_s390_vgfmab(vuc, vuc1, vus);
   // CHECK: call <8 x i16> @llvm.s390.vgfmab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_vgfmah(vus, vus, vui);
+  vui = __builtin_s390_vgfmah(vus, vus1, vui);
   // CHECK: call <4 x i32> @llvm.s390.vgfmah(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <4 x i32> %{{.*}})
-  vul = __builtin_s390_vgfmaf(vui, vui, vul);
+  vul = __builtin_s390_vgfmaf(vui, vui1, vul);
   // CHECK: call <2 x i64> @llvm.s390.vgfmaf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
-  ui128 = __builtin_s390_vgfmag(vul, vul, ui128);
+  ui128 = __builtin_s390_vgfmag(vul, vul1, ui128);
   // CHECK: call i128 @llvm.s390.vgfmag(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i128 %{{.*}})
 
-  vsc = __builtin_s390_vmahb(vsc, vsc, vsc);
+  vsc = __builtin_s390_vmahb(vsc, vsc1, vsc2);
   // CHECK: call <16 x i8> @llvm.s390.vmahb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vss = __builtin_s390_vmahh(vss, vss, vss);
+  vss = __builtin_s390_vmahh(vss, vss1, vss2);
   // CHECK: call <8 x i16> @llvm.s390.vmahh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vsi = __builtin_s390_vmahf(vsi, vsi, vsi);
+  vsi = __builtin_s390_vmahf(vsi, vsi1, vsi2);
   // CHECK: call <4 x i32> @llvm.s390.vmahf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vuc = __builtin_s390_vmalhb(vuc, vuc, vuc);
+  vuc = __builtin_s390_vmalhb(vuc, vuc1, vuc2);
   // CHECK: call <16 x i8> @llvm.s390.vmalhb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vus = __builtin_s390_vmalhh(vus, vus, vus);
+  vus = __builtin_s390_vmalhh(vus, vus1, vus2);
   // CHECK: call <8 x i16> @llvm.s390.vmalhh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_vmalhf(vui, vui, vui);
+  vui = __builtin_s390_vmalhf(vui, vui1, vui2);
   // CHECK: call <4 x i32> @llvm.s390.vmalhf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}})
 
-  vss = __builtin_s390_vmaeb(vsc, vsc, vss);
+  vss = __builtin_s390_vmaeb(vsc, vsc1, vss);
   // CHECK: call <8 x i16> @llvm.s390.vmaeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <8 x i16> %{{.*}})
-  vsi = __builtin_s390_vmaeh(vss, vss, vsi);
+  vsi = __builtin_s390_vmaeh(vss, vss1, vsi);
   // CHECK: call <4 x i32> @llvm.s390.vmaeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <4 x i32> %{{.*}})
-  vsl = __builtin_s390_vmaef(vsi, vsi, vsl);
+  vsl = __builtin_s390_vmaef(vsi, vsi1, vsl);
   // CHECK: call <2 x i64> @llvm.s390.vmaef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
-  vus = __builtin_s390_vmaleb(vuc, vuc, vus);
+  vus = __builtin_s390_vmaleb(vuc, vuc1, vus);
   // CHECK: call <8 x i16> @llvm.s390.vmaleb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_vmaleh(vus, vus, vui);
+  vui = __builtin_s390_vmaleh(vus, vus1, vui);
   // CHECK: call <4 x i32> @llvm.s390.vmaleh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <4 x i32> %{{.*}})
-  vul = __builtin_s390_vmalef(vui, vui, vul);
+  vul = __builtin_s390_vmalef(vui, vui1, vul);
   // CHECK: call <2 x i64> @llvm.s390.vmalef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
 
-  vss = __builtin_s390_vmaob(vsc, vsc, vss);
+  vss = __builtin_s390_vmaob(vsc, vsc1, vss);
   // CHECK: call <8 x i16> @llvm.s390.vmaob(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <8 x i16> %{{.*}})
-  vsi = __builtin_s390_vmaoh(vss, vss, vsi);
+  vsi = __builtin_s390_vmaoh(vss, vss1, vsi);
   // CHECK: call <4 x i32> @llvm.s390.vmaoh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <4 x i32> %{{.*}})
-  vsl = __builtin_s390_vmaof(vsi, vsi, vsl);
+  vsl = __builtin_s390_vmaof(vsi, vsi1, vsl);
   // CHECK: call <2 x i64> @llvm.s390.vmaof(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
-  vus = __builtin_s390_vmalob(vuc, vuc, vus);
+  vus = __builtin_s390_vmalob(vuc, vuc1, vus);
   // CHECK: call <8 x i16> @llvm.s390.vmalob(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_vmaloh(vus, vus, vui);
+  vui = __builtin_s390_vmaloh(vus, vus1, vui);
   // CHECK: call <4 x i32> @llvm.s390.vmaloh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <4 x i32> %{{.*}})
-  vul = __builtin_s390_vmalof(vui, vui, vul);
+  vul = __builtin_s390_vmalof(vui, vui1, vul);
   // CHECK: call <2 x i64> @llvm.s390.vmalof(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
 
-  vsc = __builtin_s390_vmhb(vsc, vsc);
+  vsc = __builtin_s390_vmhb(vsc, vsc1);
   // CHECK: call <16 x i8> @llvm.s390.vmhb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vss = __builtin_s390_vmhh(vss, vss);
+  vss = __builtin_s390_vmhh(vss, vss1);
   // CHECK: call <8 x i16> @llvm.s390.vmhh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vsi = __builtin_s390_vmhf(vsi, vsi);
+  vsi = __builtin_s390_vmhf(vsi, vsi1);
   // CHECK: call <4 x i32> @llvm.s390.vmhf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vuc = __builtin_s390_vmlhb(vuc, vuc);
+  vuc = __builtin_s390_vmlhb(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vmlhb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vus = __builtin_s390_vmlhh(vus, vus);
+  vus = __builtin_s390_vmlhh(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vmlhh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_vmlhf(vui, vui);
+  vui = __builtin_s390_vmlhf(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vmlhf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
 
-  vss = __builtin_s390_vmeb(vsc, vsc);
+  vss = __builtin_s390_vmeb(vsc, vsc1);
   // CHECK: call <8 x i16> @llvm.s390.vmeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vsi = __builtin_s390_vmeh(vss, vss);
+  vsi = __builtin_s390_vmeh(vss, vss1);
   // CHECK: call <4 x i32> @llvm.s390.vmeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vsl = __builtin_s390_vmef(vsi, vsi);
+  vsl = __builtin_s390_vmef(vsi, vsi1);
   // CHECK: call <2 x i64> @llvm.s390.vmef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vus = __builtin_s390_vmleb(vuc, vuc);
+  vus = __builtin_s390_vmleb(vuc, vuc1);
   // CHECK: call <8 x i16> @llvm.s390.vmleb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vui = __builtin_s390_vmleh(vus, vus);
+  vui = __builtin_s390_vmleh(vus, vus1);
   // CHECK: call <4 x i32> @llvm.s390.vmleh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vul = __builtin_s390_vmlef(vui, vui);
+  vul = __builtin_s390_vmlef(vui, vui1);
   // CHECK: call <2 x i64> @llvm.s390.vmlef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
 
-  vss = __builtin_s390_vmob(vsc, vsc);
+  vss = __builtin_s390_vmob(vsc, vsc1);
   // CHECK: call <8 x i16> @llvm.s390.vmob(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vsi = __builtin_s390_vmoh(vss, vss);
+  vsi = __builtin_s390_vmoh(vss, vss1);
   // CHECK: call <4 x i32> @llvm.s390.vmoh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vsl = __builtin_s390_vmof(vsi, vsi);
+  vsl = __builtin_s390_vmof(vsi, vsi1);
   // CHECK: call <2 x i64> @llvm.s390.vmof(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vus = __builtin_s390_vmlob(vuc, vuc);
+  vus = __builtin_s390_vmlob(vuc, vuc1);
   // CHECK: call <8 x i16> @llvm.s390.vmlob(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vui = __builtin_s390_vmloh(vus, vus);
+  vui = __builtin_s390_vmloh(vus, vus1);
   // CHECK: call <4 x i32> @llvm.s390.vmloh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vul = __builtin_s390_vmlof(vui, vui);
+  vul = __builtin_s390_vmlof(vui, vui1);
   // CHECK: call <2 x i64> @llvm.s390.vmlof(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
 
-  si128 = __builtin_s390_vsq(si128, si128);
+  si128 = __builtin_s390_vsq(si128, si1281);
   // CHECK: call i128 @llvm.s390.vsq(i128 %{{.*}}, i128 %{{.*}})
-  ui128 = __builtin_s390_vsbiq(ui128, ui128, ui128);
+  ui128 = __builtin_s390_vsbiq(ui128, ui1281, ui1282);
   // CHECK: call i128 @llvm.s390.vsbiq(i128 %{{.*}}, i128 %{{.*}}, i128 %{{.*}})
-  ui128 = __builtin_s390_vscbiq(ui128, ui128);
+  ui128 = __builtin_s390_vscbiq(ui128, ui1281);
   // CHECK: call i128 @llvm.s390.vscbiq(i128 %{{.*}}, i128 %{{.*}})
-  ui128 = __builtin_s390_vsbcbiq(ui128, ui128, ui128);
+  ui128 = __builtin_s390_vsbcbiq(ui128, ui1281, ui1282);
   // CHECK: call i128 @llvm.s390.vsbcbiq(i128 %{{.*}}, i128 %{{.*}}, i128 %{{.*}})
 
-  vuc = __builtin_s390_vscbib(vuc, vuc);
+  vuc = __builtin_s390_vscbib(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vscbib(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vus = __builtin_s390_vscbih(vus, vus);
+  vus = __builtin_s390_vscbih(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vscbih(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_vscbif(vui, vui);
+  vui = __builtin_s390_vscbif(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vscbif(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vul = __builtin_s390_vscbig(vul, vul);
+  vul = __builtin_s390_vscbig(vul, vul1);
   // CHECK: call <2 x i64> @llvm.s390.vscbig(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
-  vuc = __builtin_s390_vsldb(vuc, vuc, 0);
+  vuc = __builtin_s390_vsldb(vuc, vuc1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
-  vuc = __builtin_s390_vsldb(vuc, vuc, 15);
+  vuc = __builtin_s390_vsldb(vuc, vuc1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vsldb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
 
-  vuc = __builtin_s390_vsl(vuc, vuc);
+  vuc = __builtin_s390_vsl(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vsl(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vuc = __builtin_s390_vslb(vuc, vuc);
+  vuc = __builtin_s390_vslb(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vslb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
 
-  vuc = __builtin_s390_vsra(vuc, vuc);
+  vuc = __builtin_s390_vsra(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vsra(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vuc = __builtin_s390_vsrab(vuc, vuc);
+  vuc = __builtin_s390_vsrab(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vsrab(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
 
-  vuc = __builtin_s390_vsrl(vuc, vuc);
+  vuc = __builtin_s390_vsrl(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vsrl(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vuc = __builtin_s390_vsrlb(vuc, vuc);
+  vuc = __builtin_s390_vsrlb(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vsrlb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
 
-  vui = __builtin_s390_vsumb(vuc, vuc);
+  vui = __builtin_s390_vsumb(vuc, vuc1);
   // CHECK: call <4 x i32> @llvm.s390.vsumb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vui = __builtin_s390_vsumh(vus, vus);
+  vui = __builtin_s390_vsumh(vus, vus1);
   // CHECK: call <4 x i32> @llvm.s390.vsumh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vul = __builtin_s390_vsumgh(vus, vus);
+  vul = __builtin_s390_vsumgh(vus, vus1);
   // CHECK: call <2 x i64> @llvm.s390.vsumgh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vul = __builtin_s390_vsumgf(vui, vui);
+  vul = __builtin_s390_vsumgf(vui, vui1);
   // CHECK: call <2 x i64> @llvm.s390.vsumgf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  ui128 = __builtin_s390_vsumqf(vui, vui);
+  ui128 = __builtin_s390_vsumqf(vui, vui1);
   // CHECK: call i128 @llvm.s390.vsumqf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  ui128 = __builtin_s390_vsumqg(vul, vul);
+  ui128 = __builtin_s390_vsumqg(vul, vul1);
   // CHECK: call i128 @llvm.s390.vsumqg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
-  len = __builtin_s390_vtm(vuc, vuc);
+  len = __builtin_s390_vtm(vuc, vuc1);
   // CHECK: call i32 @llvm.s390.vtm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
 
-  vsc = __builtin_s390_vceqbs(vuc, vuc, &cc);
+  vsc = __builtin_s390_vceqbs(vuc, vuc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vceqbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vss = __builtin_s390_vceqhs(vus, vus, &cc);
+  vss = __builtin_s390_vceqhs(vus, vus1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vceqhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vsi = __builtin_s390_vceqfs(vui, vui, &cc);
+  vsi = __builtin_s390_vceqfs(vui, vui1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vceqfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vsl = __builtin_s390_vceqgs(vul, vul, &cc);
+  vsl = __builtin_s390_vceqgs(vul, vul1, &cc);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vceqgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
-  vsc = __builtin_s390_vchbs(vsc, vsc, &cc);
+  vsc = __builtin_s390_vchbs(vsc, vsc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vss = __builtin_s390_vchhs(vss, vss, &cc);
+  vss = __builtin_s390_vchhs(vss, vss1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vsi = __builtin_s390_vchfs(vsi, vsi, &cc);
+  vsi = __builtin_s390_vchfs(vsi, vsi1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vsl = __builtin_s390_vchgs(vsl, vsl, &cc);
+  vsl = __builtin_s390_vchgs(vsl, vsl1, &cc);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
-  vsc = __builtin_s390_vchlbs(vuc, vuc, &cc);
+  vsc = __builtin_s390_vchlbs(vuc, vuc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vchlbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vss = __builtin_s390_vchlhs(vus, vus, &cc);
+  vss = __builtin_s390_vchlhs(vus, vus1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vchlhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vsi = __builtin_s390_vchlfs(vui, vui, &cc);
+  vsi = __builtin_s390_vchlfs(vui, vui1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vchlfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-  vsl = __builtin_s390_vchlgs(vul, vul, &cc);
+  vsl = __builtin_s390_vchlgs(vul, vul1, &cc);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vchlgs(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 }
 
 void test_string(void) {
-  vuc = __builtin_s390_vfaeb(vuc, vuc, 0);
+  vuc = __builtin_s390_vfaeb(vuc, vuc1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vfaeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
-  vuc = __builtin_s390_vfaeb(vuc, vuc, 15);
+  vuc = __builtin_s390_vfaeb(vuc, vuc1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vfaeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
-  vus = __builtin_s390_vfaeh(vus, vus, 0);
+  vus = __builtin_s390_vfaeh(vus, vus1, 0);
   // CHECK: call <8 x i16> @llvm.s390.vfaeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
-  vus = __builtin_s390_vfaeh(vus, vus, 15);
+  vus = __builtin_s390_vfaeh(vus, vus1, 15);
   // CHECK: call <8 x i16> @llvm.s390.vfaeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 15)
-  vui = __builtin_s390_vfaef(vui, vui, 0);
+  vui = __builtin_s390_vfaef(vui, vui1, 0);
   // CHECK: call <4 x i32> @llvm.s390.vfaef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
-  vui = __builtin_s390_vfaef(vui, vui, 15);
+  vui = __builtin_s390_vfaef(vui, vui1, 15);
   // CHECK: call <4 x i32> @llvm.s390.vfaef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 15)
 
-  vuc = __builtin_s390_vfaezb(vuc, vuc, 0);
+  vuc = __builtin_s390_vfaezb(vuc, vuc1, 0);
   // CHECK: call <16 x i8> @llvm.s390.vfaezb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
-  vuc = __builtin_s390_vfaezb(vuc, vuc, 15);
+  vuc = __builtin_s390_vfaezb(vuc, vuc1, 15);
   // CHECK: call <16 x i8> @llvm.s390.vfaezb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
-  vus = __builtin_s390_vfaezh(vus, vus, 0);
+  vus = __builtin_s390_vfaezh(vus, vus1, 0);
   // CHECK: call <8 x i16> @llvm.s390.vfaezh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
-  vus = __builtin_s390_vfaezh(vus, vus, 15);
+  vus = __builtin_s390_vfaezh(vus, vus1, 15);
   // CHECK: call <8 x i16> @llvm.s390.vfaezh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 15)
-  vui = __builtin_s390_vfaezf(vui, vui, 0);
+  vui = __builtin_s390_vfaezf(vui, vui1, 0);
   // CHECK: call <4 x i32> @llvm.s390.vfaezf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
-  vui = __builtin_s390_vfaezf(vui, vui, 15);
+  vui = __builtin_s390_vfaezf(vui, vui1, 15);
   // CHECK: call <4 x i32> @llvm.s390.vfaezf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 15)
 
-  vuc = __builtin_s390_vfeeb(vuc, vuc);
+  vuc = __builtin_s390_vfeeb(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vfeeb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vus = __builtin_s390_vfeeh(vus, vus);
+  vus = __builtin_s390_vfeeh(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vfeeh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_vfeef(vui, vui);
+  vui = __builtin_s390_vfeef(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vfeef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
 
-  vuc = __builtin_s390_vfeezb(vuc, vuc);
+  vuc = __builtin_s390_vfeezb(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vfeezb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vus = __builtin_s390_vfeezh(vus, vus);
+  vus = __builtin_s390_vfeezh(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vfeezh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_vfeezf(vui, vui);
+  vui = __builtin_s390_vfeezf(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vfeezf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
 
-  vuc = __builtin_s390_vfeneb(vuc, vuc);
+  vuc = __builtin_s390_vfeneb(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vfeneb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vus = __builtin_s390_vfeneh(vus, vus);
+  vus = __builtin_s390_vfeneh(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vfeneh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_vfenef(vui, vui);
+  vui = __builtin_s390_vfenef(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vfenef(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
 
-  vuc = __builtin_s390_vfenezb(vuc, vuc);
+  vuc = __builtin_s390_vfenezb(vuc, vuc1);
   // CHECK: call <16 x i8> @llvm.s390.vfenezb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vus = __builtin_s390_vfenezh(vus, vus);
+  vus = __builtin_s390_vfenezh(vus, vus1);
   // CHECK: call <8 x i16> @llvm.s390.vfenezh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_vfenezf(vui, vui);
+  vui = __builtin_s390_vfenezf(vui, vui1);
   // CHECK: call <4 x i32> @llvm.s390.vfenezf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
 
   vuc = __builtin_s390_vistrb(vuc);
@@ -445,84 +465,84 @@ void test_string(void) {
   vui = __builtin_s390_vistrf(vui);
   // CHECK: call <4 x i32> @llvm.s390.vistrf(<4 x i32> %{{.*}})
 
-  vuc = __builtin_s390_vstrcb(vuc, vuc, vuc, 0);
+  vuc = __builtin_s390_vstrcb(vuc, vuc1, vuc2, 0);
   // CHECK: call <16 x i8> @llvm.s390.vstrcb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
-  vuc = __builtin_s390_vstrcb(vuc, vuc, vuc, 15);
+  vuc = __builtin_s390_vstrcb(vuc, vuc1, vuc2, 15);
   // CHECK: call <16 x i8> @llvm.s390.vstrcb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
-  vus = __builtin_s390_vstrch(vus, vus, vus, 0);
+  vus = __builtin_s390_vstrch(vus, vus1, vus2, 0);
   // CHECK: call <8 x i16> @llvm.s390.vstrch(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
-  vus = __builtin_s390_vstrch(vus, vus, vus, 15);
+  vus = __builtin_s390_vstrch(vus, vus1, vus2, 15);
   // CHECK: call <8 x i16> @llvm.s390.vstrch(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 15)
-  vui = __builtin_s390_vstrcf(vui, vui, vui, 0);
+  vui = __builtin_s390_vstrcf(vui, vui1, vui2, 0);
   // CHECK: call <4 x i32> @llvm.s390.vstrcf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
-  vui = __builtin_s390_vstrcf(vui, vui, vui, 15);
+  vui = __builtin_s390_vstrcf(vui, vui1, vui2, 15);
   // CHECK: call <4 x i32> @llvm.s390.vstrcf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 15)
 
-  vuc = __builtin_s390_vstrczb(vuc, vuc, vuc, 0);
+  vuc = __builtin_s390_vstrczb(vuc, vuc1, vuc2, 0);
   // CHECK: call <16 x i8> @llvm.s390.vstrczb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
-  vuc = __builtin_s390_vstrczb(vuc, vuc, vuc, 15);
+  vuc = __builtin_s390_vstrczb(vuc, vuc1, vuc2, 15);
   // CHECK: call <16 x i8> @llvm.s390.vstrczb(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
-  vus = __builtin_s390_vstrczh(vus, vus, vus, 0);
+  vus = __builtin_s390_vstrczh(vus, vus1, vus2, 0);
   // CHECK: call <8 x i16> @llvm.s390.vstrczh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
-  vus = __builtin_s390_vstrczh(vus, vus, vus, 15);
+  vus = __builtin_s390_vstrczh(vus, vus1, vus2, 15);
   // CHECK: call <8 x i16> @llvm.s390.vstrczh(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 15)
-  vui = __builtin_s390_vstrczf(vui, vui, vui, 0);
+  vui = __builtin_s390_vstrczf(vui, vui1, vui2, 0);
   // CHECK: call <4 x i32> @llvm.s390.vstrczf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
-  vui = __builtin_s390_vstrczf(vui, vui, vui, 15);
+  vui = __builtin_s390_vstrczf(vui, vui1, vui2, 15);
   // CHECK: call <4 x i32> @llvm.s390.vstrczf(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 15)
 
-  vuc = __builtin_s390_vfaebs(vuc, vuc, 0, &cc);
+  vuc = __builtin_s390_vfaebs(vuc, vuc1, 0, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
-  vuc = __builtin_s390_vfaebs(vuc, vuc, 15, &cc);
+  vuc = __builtin_s390_vfaebs(vuc, vuc1, 15, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
-  vus = __builtin_s390_vfaehs(vus, vus, 0, &cc);
+  vus = __builtin_s390_vfaehs(vus, vus1, 0, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
-  vus = __builtin_s390_vfaehs(vus, vus, 15, &cc);
+  vus = __builtin_s390_vfaehs(vus, vus1, 15, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 15)
-  vui = __builtin_s390_vfaefs(vui, vui, 0, &cc);
+  vui = __builtin_s390_vfaefs(vui, vui1, 0, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
-  vui = __builtin_s390_vfaefs(vui, vui, 15, &cc);
+  vui = __builtin_s390_vfaefs(vui, vui1, 15, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 15)
 
-  vuc = __builtin_s390_vfaezbs(vuc, vuc, 0, &cc);
+  vuc = __builtin_s390_vfaezbs(vuc, vuc1, 0, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaezbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
-  vuc = __builtin_s390_vfaezbs(vuc, vuc, 15, &cc);
+  vuc = __builtin_s390_vfaezbs(vuc, vuc1, 15, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfaezbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
-  vus = __builtin_s390_vfaezhs(vus, vus, 0, &cc);
+  vus = __builtin_s390_vfaezhs(vus, vus1, 0, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaezhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
-  vus = __builtin_s390_vfaezhs(vus, vus, 15, &cc);
+  vus = __builtin_s390_vfaezhs(vus, vus1, 15, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfaezhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 15)
-  vui = __builtin_s390_vfaezfs(vui, vui, 0, &cc);
+  vui = __builtin_s390_vfaezfs(vui, vui1, 0, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaezfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
-  vui = __builtin_s390_vfaezfs(vui, vui, 15, &cc);
+  vui = __builtin_s390_vfaezfs(vui, vui1, 15, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfaezfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 15)
 
-  vuc = __builtin_s390_vfeebs(vuc, vuc, &cc);
+  vuc = __builtin_s390_vfeebs(vuc, vuc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfeebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vus = __builtin_s390_vfeehs(vus, vus, &cc);
+  vus = __builtin_s390_vfeehs(vus, vus1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfeehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_vfeefs(vui, vui, &cc);
+  vui = __builtin_s390_vfeefs(vui, vui1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfeefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
 
-  vuc = __builtin_s390_vfeezbs(vuc, vuc, &cc);
+  vuc = __builtin_s390_vfeezbs(vuc, vuc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfeezbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vus = __builtin_s390_vfeezhs(vus, vus, &cc);
+  vus = __builtin_s390_vfeezhs(vus, vus1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfeezhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_vfeezfs(vui, vui, &cc);
+  vui = __builtin_s390_vfeezfs(vui, vui1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfeezfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
 
-  vuc = __builtin_s390_vfenebs(vuc, vuc, &cc);
+  vuc = __builtin_s390_vfenebs(vuc, vuc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfenebs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vus = __builtin_s390_vfenehs(vus, vus, &cc);
+  vus = __builtin_s390_vfenehs(vus, vus1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfenehs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_vfenefs(vui, vui, &cc);
+  vui = __builtin_s390_vfenefs(vui, vui1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfenefs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
 
-  vuc = __builtin_s390_vfenezbs(vuc, vuc, &cc);
+  vuc = __builtin_s390_vfenezbs(vuc, vuc1, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vfenezbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
-  vus = __builtin_s390_vfenezhs(vus, vus, &cc);
+  vus = __builtin_s390_vfenezhs(vus, vus1, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vfenezhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
-  vui = __builtin_s390_vfenezfs(vui, vui, &cc);
+  vui = __builtin_s390_vfenezfs(vui, vui1, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vfenezfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
 
   vuc = __builtin_s390_vistrbs(vuc, &cc);
@@ -532,39 +552,39 @@ void test_string(void) {
   vui = __builtin_s390_vistrfs(vui, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vistrfs(<4 x i32> %{{.*}})
 
-  vuc = __builtin_s390_vstrcbs(vuc, vuc, vuc, 0, &cc);
+  vuc = __builtin_s390_vstrcbs(vuc, vuc1, vuc2, 0, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vstrcbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
-  vuc = __builtin_s390_vstrcbs(vuc, vuc, vuc, 15, &cc);
+  vuc = __builtin_s390_vstrcbs(vuc, vuc1, vuc2, 15, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vstrcbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
-  vus = __builtin_s390_vstrchs(vus, vus, vus, 0, &cc);
+  vus = __builtin_s390_vstrchs(vus, vus1, vus2, 0, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vstrchs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
-  vus = __builtin_s390_vstrchs(vus, vus, vus, 15, &cc);
+  vus = __builtin_s390_vstrchs(vus, vus1, vus2, 15, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vstrchs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 15)
-  vui = __builtin_s390_vstrcfs(vui, vui, vui, 0, &cc);
+  vui = __builtin_s390_vstrcfs(vui, vui1, vui2, 0, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vstrcfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
-  vui = __builtin_s390_vstrcfs(vui, vui, vui, 15, &cc);
+  vui = __builtin_s390_vstrcfs(vui, vui1, vui2, 15, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vstrcfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 15)
 
-  vuc = __builtin_s390_vstrczbs(vuc, vuc, vuc, 0, &cc);
+  vuc = __builtin_s390_vstrczbs(vuc, vuc1, vuc2, 0, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vstrczbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
-  vuc = __builtin_s390_vstrczbs(vuc, vuc, vuc, 15, &cc);
+  vuc = __builtin_s390_vstrczbs(vuc, vuc1, vuc2, 15, &cc);
   // CHECK: call { <16 x i8>, i32 } @llvm.s390.vstrczbs(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
-  vus = __builtin_s390_vstrczhs(vus, vus, vus, 0, &cc);
+  vus = __builtin_s390_vstrczhs(vus, vus1, vus2, 0, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vstrczhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 0)
-  vus = __builtin_s390_vstrczhs(vus, vus, vus, 15, &cc);
+  vus = __builtin_s390_vstrczhs(vus, vus1, vus2, 15, &cc);
   // CHECK: call { <8 x i16>, i32 } @llvm.s390.vstrczhs(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, i32 15)
-  vui = __builtin_s390_vstrczfs(vui, vui, vui, 0, &cc);
+  vui = __builtin_s390_vstrczfs(vui, vui1, vui2, 0, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vstrczfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
-  vui = __builtin_s390_vstrczfs(vui, vui, vui, 15, &cc);
+  vui = __builtin_s390_vstrczfs(vui, vui1, vui2, 15, &cc);
   // CHECK: call { <4 x i32>, i32 } @llvm.s390.vstrczfs(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 15)
 }
 
 void test_float(void) {
-  vsl = __builtin_s390_vfcedbs(vd, vd, &cc);
+  vsl = __builtin_s390_vfcedbs(vd, vd1, &cc);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfcedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
-  vsl = __builtin_s390_vfchdbs(vd, vd, &cc);
+  vsl = __builtin_s390_vfchdbs(vd, vd1, &cc);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
-  vsl = __builtin_s390_vfchedbs(vd, vd, &cc);
+  vsl = __builtin_s390_vfchedbs(vd, vd1, &cc);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
 
   vsl = __builtin_s390_vftcidb(vd, 0, &cc);
@@ -575,9 +595,9 @@ void test_float(void) {
   vd = __builtin_s390_vfsqdb(vd);
   // CHECK: call <2 x double> @llvm.sqrt.v2f64(<2 x double> %{{.*}})
 
-  vd = __builtin_s390_vfmadb(vd, vd, vd);
+  vd = __builtin_s390_vfmadb(vd, vd1, vd2);
   // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
-  vd = __builtin_s390_vfmsdb(vd, vd, vd);
+  vd = __builtin_s390_vfmsdb(vd, vd1, vd2);
   // CHECK: [[NEG:%[^ ]+]] = fneg <2 x double> %{{.*}}
   // CHECK: call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]])
 

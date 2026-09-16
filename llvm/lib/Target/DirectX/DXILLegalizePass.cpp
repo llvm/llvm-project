@@ -18,6 +18,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <functional>
 
 #define DEBUG_TYPE "dxil-legalize"
@@ -356,54 +357,54 @@ static bool updateFnegToFsub(Instruction &I,
 }
 
 static bool
-legalizeGetHighLowi64Bytes(Instruction &I,
-                           SmallVectorImpl<Instruction *> &ToRemove,
-                           DenseMap<Value *, Value *> &ReplacedValues) {
-  if (auto *BitCast = dyn_cast<BitCastInst>(&I)) {
-    if (BitCast->getDestTy() ==
-            FixedVectorType::get(Type::getInt32Ty(I.getContext()), 2) &&
-        BitCast->getSrcTy()->isIntegerTy(64)) {
-      ToRemove.push_back(BitCast);
-      ReplacedValues[BitCast] = BitCast->getOperand(0);
-      return true;
+resolveUnreachableSwitchDefault(Instruction &I,
+                                SmallVectorImpl<Instruction *> &ToRemove,
+                                DenseMap<Value *, Value *> &) {
+  auto *SI = dyn_cast<SwitchInst>(&I);
+  if (!SI || SI->getNumCases() == 0)
+    return false;
+
+  BasicBlock *DefaultBB = SI->getDefaultDest();
+
+  // Check if the default destination ends with an unreachable instruction.
+  if (DefaultBB->size() == 0 ||
+      !isa<UnreachableInst>(DefaultBB->getTerminator()))
+    return false;
+
+  // Try to find a common successor of all case destinations. If all case
+  // blocks unconditionally branch to the same block, that is the common
+  // successor. This is just a best effort, and is done as the original form of
+  // the switch statement was likely in this form before being transformed to
+  // an unreachable branch.
+  BasicBlock *CommonSuccessor = nullptr;
+  for (auto &Case : SI->cases()) {
+    BasicBlock *CaseBB = Case.getCaseSuccessor();
+    auto *BI = dyn_cast<UncondBrInst>(CaseBB->getTerminator());
+    if (!BI) {
+      CommonSuccessor = nullptr;
+      break;
+    }
+    BasicBlock *Succ = BI->getSuccessor(0);
+    if (!CommonSuccessor)
+      CommonSuccessor = Succ;
+    else if (CommonSuccessor != Succ) {
+      CommonSuccessor = nullptr;
+      break;
     }
   }
 
-  if (auto *Extract = dyn_cast<ExtractElementInst>(&I)) {
-    if (!dyn_cast<BitCastInst>(Extract->getVectorOperand()))
-      return false;
-    auto *VecTy = dyn_cast<FixedVectorType>(Extract->getVectorOperandType());
-    if (VecTy && VecTy->getElementType()->isIntegerTy(32) &&
-        VecTy->getNumElements() == 2) {
-      if (auto *Index = dyn_cast<ConstantInt>(Extract->getIndexOperand())) {
-        unsigned Idx = Index->getZExtValue();
-        IRBuilder<> Builder(&I);
+  BasicBlock *NewDefault =
+      CommonSuccessor ? CommonSuccessor : SI->case_begin()->getCaseSuccessor();
 
-        auto *Replacement = ReplacedValues[Extract->getVectorOperand()];
-        assert(Replacement && "The BitCast replacement should have been set "
-                              "before working on ExtractElementInst.");
-        if (Idx == 0) {
-          Value *LowBytes = Builder.CreateTrunc(
-              Replacement, Type::getInt32Ty(I.getContext()));
-          ReplacedValues[Extract] = LowBytes;
-        } else {
-          assert(Idx == 1);
-          Value *LogicalShiftRight = Builder.CreateLShr(
-              Replacement,
-              ConstantInt::get(
-                  Replacement->getType(),
-                  APInt(Replacement->getType()->getIntegerBitWidth(), 32)));
-          Value *HighBytes = Builder.CreateTrunc(
-              LogicalShiftRight, Type::getInt32Ty(I.getContext()));
-          ReplacedValues[Extract] = HighBytes;
-        }
-        ToRemove.push_back(Extract);
-        Extract->replaceAllUsesWith(ReplacedValues[Extract]);
-        return true;
-      }
-    }
-  }
-  return false;
+  BasicBlock *SwitchBB = SI->getParent();
+  SI->setDefaultDest(NewDefault);
+
+  // Ensure all phi nodes are legal by adding an incoming poison value from the
+  // unreachable branch.
+  for (PHINode &Phi : NewDefault->phis())
+    Phi.addIncoming(PoisonValue::get(Phi.getType()), SwitchBB);
+
+  return true;
 }
 
 static bool
@@ -475,6 +476,9 @@ public:
       for (auto *Inst : reverse(ToRemove))
         Inst->eraseFromParent();
     }
+
+    if (MadeChange)
+      MadeChange |= removeUnreachableBlocks(F);
     return MadeChange;
   }
 
@@ -490,17 +494,12 @@ private:
   void initializeLegalizationPipeline() {
     LegalizationPipeline[Stage1].push_back(upcastI8AllocasAndUses);
     LegalizationPipeline[Stage1].push_back(fixI8UseChain);
-    LegalizationPipeline[Stage1].push_back(legalizeGetHighLowi64Bytes);
     LegalizationPipeline[Stage1].push_back(legalizeFreeze);
     LegalizationPipeline[Stage1].push_back(updateFnegToFsub);
-    // Note: legalizeGetHighLowi64Bytes and
-    // downcastI64toI32InsertExtractElements both modify extractelement, so they
-    // must run staggered stages. legalizeGetHighLowi64Bytes runs first b\c it
-    // removes extractelements, reducing the number that
-    // downcastI64toI32InsertExtractElements needs to handle.
-    LegalizationPipeline[Stage2].push_back(
+    LegalizationPipeline[Stage1].push_back(
         downcastI64toI32InsertExtractElements);
     LegalizationPipeline[Stage2].push_back(legalizeScalarLoadStoreOnArrays);
+    LegalizationPipeline[Stage2].push_back(resolveUnreachableSwitchDefault);
   }
 };
 

@@ -45,7 +45,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __set_union_result<_InIter1,
     if (__first2 == __last2) {
       auto __ret1 = std::__copy(std::move(__first1), std::move(__last1), std::move(__result));
       return __set_union_result<_InIter1, _InIter2, _OutIter>(
-          std::move(__ret1.first), std::move(__first2), std::move((__ret1.second)));
+          std::move(__ret1.__in_), std::move(__first2), std::move((__ret1.__out_)));
     }
     if (__comp(*__first2, *__first1)) {
       *__result = *__first2;
@@ -60,7 +60,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __set_union_result<_InIter1,
   }
   auto __ret2 = std::__copy(std::move(__first2), std::move(__last2), std::move(__result));
   return __set_union_result<_InIter1, _InIter2, _OutIter>(
-      std::move(__first1), std::move(__ret2.first), std::move((__ret2.second)));
+      std::move(__first1), std::move(__ret2.__in_), std::move((__ret2.__out_)));
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator, class _Compare>

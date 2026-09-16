@@ -33,6 +33,7 @@ enum EditingFlags {
   blankZero = 1, // BLANK=ZERO or BZ edit
   decimalComma = 2, // DECIMAL=COMMA or DC edit
   signPlus = 4, // SIGN=PLUS or SP edit
+  leadingZeroSuppress = 8, // LZS edit; clear for LZ & LZP
 };
 
 struct MutableModes {
@@ -44,7 +45,7 @@ struct MutableModes {
     return editingFlags & decimalComma ? char32_t{','} : char32_t{'.'};
   }
 
-  std::uint8_t editingFlags{0}; // BN, DP, SS
+  std::uint8_t editingFlags{0}; // BN, DP, SS, LZS
   enum decimal::FortranRounding round{
       executionEnvironment
           .defaultOutputRoundingMode}; // RP/ROUND='PROCESSOR_DEFAULT'
@@ -58,6 +59,7 @@ struct MutableModes {
 // A single edit descriptor extracted from a FORMAT
 struct DataEdit {
   char descriptor; // capitalized: one of A, I, B, O, Z, F, E(N/S/X), D, G
+                   // AT uses descriptor 'A' with variation 'T'
 
   // Special internal data edit descriptors for list-directed & NAMELIST I/O
   RT_OFFLOAD_VAR_GROUP_BEGIN
@@ -75,7 +77,8 @@ struct DataEdit {
     return IsListDirected() && modes.inNamelist;
   }
 
-  char variation{'\0'}; // N, S, or X for EN, ES, EX; G/l for original G/list
+  char variation{
+      '\0'}; // N, S, or X for EN, ES, EX; T for AT; G/l for original G/list
   common::optional<int> width; // the 'w' field; optional for A
   common::optional<int> digits; // the 'm' or 'd' field
   common::optional<int> expoDigits; // 'Ee' field

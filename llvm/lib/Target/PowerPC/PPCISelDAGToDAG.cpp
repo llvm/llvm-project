@@ -20,7 +20,6 @@
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -881,6 +880,12 @@ bool PPCDAGToDAGISel::tryBitfieldInsert(SDNode *N) {
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDLoc dl(N);
+
+  // If either operand is a constant, let ORI/ORIS/ADDI/ADDIS tablegen
+  // patterns handle it — they produce a single instruction without the
+  // tied-register constraint that RLWIMI requires.
+  if (isa<ConstantSDNode>(Op0) || isa<ConstantSDNode>(Op1))
+    return false;
 
   KnownBits LKnown = CurDAG->computeKnownBits(Op0);
   KnownBits RKnown = CurDAG->computeKnownBits(Op1);
@@ -3217,7 +3222,7 @@ SDValue IntegerCompareEliminator::addExtOrTrunc(SDValue NatWidthRes,
   SDLoc dl(NatWidthRes);
 
   // For reinterpreting 32-bit values as 64 bit values, we generate
-  // INSERT_SUBREG IMPLICIT_DEF:i64, <input>, TargetConstant:i32<1>
+  // INSERT_SUBREG IMPLICIT_DEF:i64, <input>, TargetConstant:i32<%subreg.sub_32>
   if (Conv == ExtOrTruncConversion::Ext) {
     SDValue ImDef(CurDAG->getMachineNode(PPC::IMPLICIT_DEF, dl, MVT::i64), 0);
     SDValue SubRegIdx =
@@ -5177,7 +5182,7 @@ bool PPCDAGToDAGISel::tryAsSingleRLDICL(SDNode *N) {
 
       Val = SDValue(CurDAG->getMachineNode(PPC::INSERT_SUBREG, dl, ResultType,
                                            IDVal, Op0.getOperand(0),
-                                           getI32Imm(1, dl)),
+                                           getI32Imm(PPC::sub_32, dl)),
                     0);
       SH = 64 - Imm;
     }

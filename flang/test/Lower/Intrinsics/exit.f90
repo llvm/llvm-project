@@ -1,6 +1,5 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck --check-prefixes=CHECK,CHECK-32 -DDEFAULT_INTEGER_SIZE=32 %s
-! bbc doesn't have a way to set the default kinds so we use flang driver
-! RUN: %flang_fc1 -fdefault-integer-8 -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck --check-prefixes=CHECK,CHECK-64 -DDEFAULT_INTEGER_SIZE=64 %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck --check-prefixes=CHECK,CHECK-32 -DDEFAULT_INTEGER_SIZE=32 %s
+! RUN: %flang_fc1 -fdefault-integer-8 -emit-hlfir %s -o - | FileCheck --check-prefixes=CHECK,CHECK-64 -DDEFAULT_INTEGER_SIZE=64 %s
 
 ! CHECK-LABEL: func @_QPexit_test1() {
 subroutine exit_test1
@@ -16,15 +15,19 @@ subroutine exit_test1
   subroutine exit_test2(status)
     integer :: status
     call exit(status)
-  ! CHECK: %[[status:.*]] = fir.load %[[statusArg]] : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
+  ! CHECK: %[[DSTATUS:.*]]:2 = hlfir.declare %[[statusArg]]
+  ! CHECK: %[[status:.*]] = fir.load %[[DSTATUS]]#0 : !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>
   ! CHECK-64: %[[statusConv:.*]] = fir.convert %[[status]] : (i64) -> i32
   ! CHECK-32: fir.call @_FortranAExit(%[[status]]) {{.*}}: (i32) -> ()
   ! CHECK-64: fir.call @_FortranAExit(%[[statusConv]]) {{.*}}: (i32) -> ()
   end subroutine exit_test2
 
-subroutine exit_test3(status)
+  ! CHECK-LABEL: func @_QPexit_test3(
+  ! CHECK-SAME: %[[statusArg:.*]]: !fir.ref<i32>{{.*}}) {
+  subroutine exit_test3(status)
     integer(kind=4) :: status
-  ! CHECK: %[[status:.*]] = fir.load %[[statusArg]] : !fir.ref<i32>
+  ! CHECK: %[[DSTATUS:.*]]:2 = hlfir.declare %[[statusArg]]
+  ! CHECK: %[[status:.*]] = fir.load %[[DSTATUS]]#0 : !fir.ref<i32>
   ! CHECK-32: fir.call @_FortranAExit(%[[status]]) {{.*}}: (i32) -> ()
   ! CHECK-64: fir.call @_FortranAExit(%[[status]]) {{.*}}: (i32) -> ()
     call exit(status)

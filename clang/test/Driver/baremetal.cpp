@@ -1,8 +1,17 @@
 // UNSUPPORTED: system-windows
 
-// RUN: %clang -### %s --target=armv6-none-eabi --emit-static-lib 2>&1 \
+// RUN: %clang -### %s --target=armv6-none-eabi --emit-static-lib  \
+// RUN:     -Xstatic-lib-tool -U -Xstatic-lib-tool --format=gnu -o %t.out 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHECK-STATIC-LIB %s
-// CHECK-STATIC-LIB: {{.*}}llvm-ar{{.*}}" "rcsD"
+// CHECK-STATIC-LIB: {{.*}}llvm-ar{{.*}}" "rcsD" "-U" "--format=gnu" "{{.*}}.out"
+
+// RUN: %clang -### %s --target=armv6-none-eabi --emit-static-lib \
+// RUN:     --static-lib-target-arch-only 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHECK-LIBTOOL-ARG %s
+// CHECK-LIBTOOL-ARG: warning: argument unused during compilation: '--static-lib-target-arch-only'
+// CHECK-LIBTOOL-ARG: {{.*}}llvm-ar{{.*}}" "rcsD"
+// CHECK-LIBTOOL-ARG-NOT: "--static-lib-target-arch-only"
+// CHECK-LIBTOOL-ARG-NOT: "-arch_only"
 
 // RUN: %clang %s -### --target=arm-none-eabi -o %t.out 2>&1 \
 // RUN:     --sysroot=%S/Inputs/multiarch-sysroot-tree \
@@ -176,6 +185,18 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-RTLIB-GCC
 // CHECK-RTLIB-GCC: -lgcc
 
+// RUN: %clang -### --target=arm-none-eabi -rtlib=compiler-rt \
+// RUN:   -fprofile-instr-generate %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PROFILE
+// CHECK-PROFILE: "{{[^"]*}}libclang_rt.profile.a"
+
+// RUN: %clang -### --target=arm-none-eabi -nostdlib -rtlib=compiler-rt \
+// RUN:   -fprofile-instr-generate %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PROFILE-NOSTDLIB
+// CHECK-PROFILE-NOSTDLIB: "{{[^"]*}}libclang_rt.profile.a"
+// CHECK-PROFILE-NOSTDLIB-NOT: "-lc"
+// CHECK-PROFILE-NOSTDLIB-NOT: "{{[^"]*}}libclang_rt.builtins.a"
+
 // RUN: %clang -### --target=arm-none-eabi -nolibc -rtlib=compiler-rt %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NOLIBC
 // CHECK-NOLIBC-NOT: "-lc"
@@ -262,6 +283,22 @@
 // CHECK-RISCV64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
 // CHECK-RISCV64-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-RISCV64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+
+// RUN: %clang -no-canonical-prefixes %s -### --target=i386-unknown-elf 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-PCX86-NO-HOST-INC %s
+// CHECK-PCX86-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-PCX86-NO-HOST-INC: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-PCX86-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-PCX86-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-PCX86-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+
+// RUN: %clang -no-canonical-prefixes %s -### --target=x86_64-unknown-elf 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-PCX86_64-NO-HOST-INC %s
+// CHECK-PCX86_64-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-PCX86_64-NO-HOST-INC: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-PCX86_64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-PCX86_64-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-PCX86_64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
 
 // RUN: %clang %s -### --target=riscv64-unknown-elf -o %t.out -L some/directory/user/asked/for \
 // RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 \
@@ -578,6 +615,36 @@
 // CHECK-PPC64LEEABI-SAME: "{{[^"]*}}libclang_rt.builtins.a"
 // CHECK-PPC64LEEABI-SAME: "-lc"
 // CHECK-PPC64LEEABI-SAME: "-o" "a.out"
+
+// RUN: %clang -no-canonical-prefixes %s -### --target=i386-unknown-elf 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-PCX86ELF %s
+// CHECK-PCX86ELF: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-PCX86ELF: "-nostdsysteminc"
+// CHECK-PCX86ELF-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-PCX86ELF-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-PCX86ELF-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-PCX86ELF-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-PCX86ELF-NEXT: ld{{(.exe)?}}" "-Bstatic" "-m" "elf_i386"
+// CHECK-PCX86ELF-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
+// CHECK-PCX86ELF-SAME:"{{.*}}.o"
+// CHECK-PCX86ELF-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-PCX86ELF-SAME: "-lc"
+// CHECK-PCX86ELF-SAME: "-o" "a.out"
+
+// RUN: %clang -no-canonical-prefixes %s -### --target=x86_64-unknown-elf 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-PCX86_64ELF %s
+// CHECK-PCX86_64ELF: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-PCX86_64ELF: "-nostdsysteminc"
+// CHECK-PCX86_64ELF-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-PCX86_64ELF-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-PCX86_64ELF-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-PCX86_64ELF-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-PCX86_64ELF-NEXT: ld{{(.exe)?}}" "-Bstatic" "-m" "elf_x86_64"
+// CHECK-PCX86_64ELF-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
+// CHECK-PCX86_64ELF-SAME:"{{.*}}.o"
+// CHECK-PCX86_64ELF-SAME: "{{[^"]*}}libclang_rt.builtins.a"
+// CHECK-PCX86_64ELF-SAME: "-lc"
+// CHECK-PCX86_64ELF-SAME: "-o" "a.out"
 
 // Check that compiler-rt library without the arch filename suffix will
 // be used if present.

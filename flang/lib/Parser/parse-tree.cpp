@@ -12,11 +12,9 @@
 #include "flang/Common/indirection.h"
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/tools.h"
-#include "flang/Parser/user-state.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 
 namespace Fortran::parser {
 
@@ -281,16 +279,12 @@ OmpDirectiveName::OmpDirectiveName(const Verbatim &name) {
 }
 
 OmpDependenceType::Value OmpDoacross::GetDepType() const {
-  return common::visit( //
-      common::visitors{
-          [](const OmpDoacross::Sink &) {
-            return OmpDependenceType::Value::Sink;
-          },
-          [](const OmpDoacross::Source &) {
-            return OmpDependenceType::Value::Source;
-          },
-      },
-      u);
+  auto &modifiers{std::get<std::optional<std::list<Modifier>>>(t)};
+  if (modifiers && !modifiers->empty()) {
+    return common::visit([](auto &&s) { return s.v; }, modifiers->front().u);
+  } else {
+    llvm_unreachable("expecting modifiers on OmpDoacross");
+  }
 }
 
 OmpTaskDependenceType::Value OmpDependClause::TaskDep::GetTaskDepType() const {
@@ -347,16 +341,12 @@ llvm::omp::Clause OpenMPAtomicConstruct::GetKind() const {
 
 bool OpenMPAtomicConstruct::IsCapture() const {
   const OmpDirectiveSpecification &dirSpec{std::get<OmpBeginDirective>(t)};
-  return llvm::any_of(dirSpec.Clauses().v, [](auto &clause) {
-    return clause.Id() == llvm::omp::Clause::OMPC_capture;
-  });
+  return omp::FindClause(dirSpec, llvm::omp::Clause::OMPC_capture);
 }
 
 bool OpenMPAtomicConstruct::IsCompare() const {
   const OmpDirectiveSpecification &dirSpec{std::get<OmpBeginDirective>(t)};
-  return llvm::any_of(dirSpec.Clauses().v, [](auto &clause) {
-    return clause.Id() == llvm::omp::Clause::OMPC_compare;
-  });
+  return omp::FindClause(dirSpec, llvm::omp::Clause::OMPC_compare);
 }
 } // namespace Fortran::parser
 

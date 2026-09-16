@@ -83,7 +83,9 @@ bool R600TTIImpl::isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
   return isLegalToVectorizeMemChain(ChainSizeInBytes, Alignment, AddrSpace);
 }
 
-unsigned R600TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned
+R600TTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                    bool HasUnorderedReductions) const {
   // Disable unrolling if the loop is not vectorized.
   // TODO: Enable this again.
   if (VF.isScalar())
@@ -100,7 +102,8 @@ InstructionCost R600TTIImpl::getCFInstrCost(unsigned Opcode,
 
   // XXX - For some reason this isn't called for switch.
   switch (Opcode) {
-  case Instruction::Br:
+  case Instruction::UncondBr:
+  case Instruction::CondBr:
   case Instruction::Ret:
     return 10;
   default:

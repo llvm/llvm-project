@@ -13,8 +13,6 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/VMRange.h"
-
 #include <cinttypes>
 #include <limits>
 #include <utility>
@@ -155,6 +153,8 @@ const char *Section::GetTypeAsCString() const {
     return "swift-modules";
   case eSectionTypeWasmName:
     return "wasm-name";
+  case eSectionTypeWasmGlobal:
+    return "wasm-global";
   case eSectionTypeOther:
     return "regular";
   }
@@ -254,8 +254,7 @@ bool Section::ResolveContainedAddress(addr_t offset, Address &so_addr,
       return child_section->ResolveContainedAddress(offset - child_offset,
                                                     so_addr, allow_section_end);
   }
-  so_addr.SetOffset(offset);
-  so_addr.SetSection(const_cast<Section *>(this)->shared_from_this());
+  so_addr = Address(const_cast<Section *>(this)->shared_from_this(), offset);
 
   // Ensure that there are no orphaned (i.e., moduleless) sections.
   assert(GetModule().get());
@@ -292,8 +291,7 @@ void Section::Dump(llvm::raw_ostream &s, unsigned indent, Target *target,
       addr = GetFileAddress();
     }
 
-    VMRange range(addr, addr + m_byte_size);
-    range.Dump(s, 0);
+    DumpAddressRange(s, addr, addr + m_byte_size, 8);
   }
 
   s << llvm::format("%c %c%c%c  0x%8.8" PRIx64 " 0x%8.8" PRIx64 " 0x%8.8x ",
@@ -316,16 +314,16 @@ void Section::DumpName(llvm::raw_ostream &s) const {
     s << '.';
   } else {
     // The top most section prints the module basename
-    const char *name = nullptr;
+    llvm::StringRef name;
     ModuleSP module_sp(GetModule());
 
     if (m_obj_file) {
       const FileSpec &file_spec = m_obj_file->GetFileSpec();
-      name = file_spec.GetFilename().AsCString();
+      name = file_spec.GetFilename();
     }
-    if ((!name || !name[0]) && module_sp)
-      name = module_sp->GetFileSpec().GetFilename().AsCString();
-    if (name && name[0])
+    if (name.empty() && module_sp)
+      name = module_sp->GetFileSpec().GetFilename();
+    if (!name.empty())
       s << name << '.';
   }
   s << m_name;
@@ -414,6 +412,7 @@ bool Section::ContainsOnlyDebugInfo() const {
   case eSectionTypeGoSymtab:
   case eSectionTypeAbsoluteAddress:
   case eSectionTypeWasmName:
+  case eSectionTypeWasmGlobal:
   case eSectionTypeOther:
   // Used for "__dof_cache" in mach-o or ".debug" for COFF which isn't debug
   // information that we parse at all. This was causing system files with no
@@ -521,18 +520,21 @@ size_t SectionList::AddUniqueSection(const lldb::SectionSP &sect_sp) {
   return sect_idx;
 }
 
-bool SectionList::ReplaceSection(user_id_t sect_id,
-                                 const lldb::SectionSP &sect_sp,
+bool SectionList::ReplaceSection(const lldb::SectionSP &remove_sect_sp,
+                                 const lldb::SectionSP &replace_sect_sp,
                                  uint32_t depth) {
+  // Make sure this isn't the same section pointer.
+  if (remove_sect_sp == replace_sect_sp)
+    return false;
   iterator sect_iter, end = m_sections.end();
   for (sect_iter = m_sections.begin(); sect_iter != end; ++sect_iter) {
-    if ((*sect_iter)->GetID() == sect_id) {
-      *sect_iter = sect_sp;
+    if (*sect_iter == remove_sect_sp) {
+      *sect_iter = replace_sect_sp;
       return true;
     } else if (depth > 0) {
       if ((*sect_iter)
               ->GetChildren()
-              .ReplaceSection(sect_id, sect_sp, depth - 1))
+              .ReplaceSection(remove_sect_sp, replace_sect_sp, depth - 1))
         return true;
     }
   }
@@ -557,21 +559,21 @@ SectionSP SectionList::GetSectionAtIndex(size_t idx) const {
   return sect_sp;
 }
 
-SectionSP SectionList::FindSectionByName(ConstString section_dstr) const {
+SectionSP SectionList::FindSectionByName(llvm::StringRef section_name) const {
   SectionSP sect_sp;
   // Check if we have a valid section string
-  if (section_dstr && !m_sections.empty()) {
+  if (!section_name.empty() && !m_sections.empty()) {
     const_iterator sect_iter;
     const_iterator end = m_sections.end();
     for (sect_iter = m_sections.begin();
          sect_iter != end && sect_sp.get() == nullptr; ++sect_iter) {
       Section *child_section = sect_iter->get();
       if (child_section) {
-        if (child_section->GetName() == section_dstr) {
+        if (child_section->GetName() == section_name) {
           sect_sp = *sect_iter;
         } else {
           sect_sp =
-              child_section->GetChildren().FindSectionByName(section_dstr);
+              child_section->GetChildren().FindSectionByName(section_name);
         }
       }
     }

@@ -18,10 +18,10 @@ namespace lldb_private {
 
 template <unsigned N> class StreamBuffer : public Stream {
 public:
-  StreamBuffer() : Stream(0, 4, lldb::eByteOrderBig), m_packet() {}
+  StreamBuffer() : Stream(0, lldb::eByteOrderBig), m_packet() {}
 
-  StreamBuffer(uint32_t flags, uint32_t addr_size, lldb::ByteOrder byte_order)
-      : Stream(flags, addr_size, byte_order), m_packet() {}
+  StreamBuffer(uint32_t flags, lldb::ByteOrder byte_order)
+      : Stream(flags, byte_order), m_packet() {}
 
   ~StreamBuffer() override = default;
 

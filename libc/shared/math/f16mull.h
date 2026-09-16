@@ -13,6 +13,11 @@
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
+#include "shared/libc_common.h"
+#include "src/__support/macros/properties/types.h"
+
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+
 #include "src/__support/math/f16mull.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -22,6 +27,8 @@ using math::f16mull;
 
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 
 #endif // LIBC_TYPES_HAS_FLOAT16
 

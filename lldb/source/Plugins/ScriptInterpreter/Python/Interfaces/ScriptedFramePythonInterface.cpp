@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lldb-python.h"
+
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
-
-// LLDB Python header must be included first
-#include "../lldb-python.h"
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
@@ -34,9 +35,9 @@ ScriptedFramePythonInterface::CreatePluginObject(
     StructuredData::DictionarySP args_sp, StructuredData::Generic *script_obj) {
   ExecutionContextRefSP exe_ctx_ref_sp =
       std::make_shared<ExecutionContextRef>(exe_ctx);
-  StructuredDataImpl sd_impl(args_sp);
-  return ScriptedPythonInterface::CreatePluginObject(class_name, script_obj,
-                                                     exe_ctx_ref_sp, sd_impl);
+  ScriptedMetadata scripted_metadata(class_name, args_sp);
+  return ScriptedPythonInterface::CreatePluginObject(
+      scripted_metadata, script_obj, exe_ctx_ref_sp, args_sp);
 }
 
 lldb::user_id_t ScriptedFramePythonInterface::GetID() {
@@ -164,6 +165,21 @@ lldb::ValueObjectListSP ScriptedFramePythonInterface::GetVariables() {
   return vals;
 }
 
+std::optional<lldb::ValueType>
+ScriptedFramePythonInterface::GetValueTypeForVariable(
+    lldb::ValueObjectSP value) {
+  Status error;
+  auto val = Dispatch<std::optional<lldb::ValueType>>(
+      "get_value_type_for_variable", error, std::move(value));
+
+  if (error.Fail()) {
+    return ErrorWithMessage<std::optional<lldb::ValueType>>(
+        LLVM_PRETTY_FUNCTION, error.AsCString(), error);
+  }
+
+  return val;
+}
+
 lldb::ValueObjectSP
 ScriptedFramePythonInterface::GetValueObjectForVariableExpression(
     llvm::StringRef expr, uint32_t options, Status &status) {
@@ -178,4 +194,16 @@ ScriptedFramePythonInterface::GetValueObjectForVariableExpression(
   }
 
   return val;
+}
+
+void ScriptedFramePythonInterface::Initialize() {
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(),
+      "Provide frame state for scripted threads and frame providers.",
+      CreateInstance, eScriptedExtensionScriptedFrame, eScriptLanguagePython,
+      {});
+}
+
+void ScriptedFramePythonInterface::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
 }

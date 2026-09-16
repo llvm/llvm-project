@@ -61,22 +61,16 @@ TEST(DAPTypesTest, DAPSymbol) {
 
 TEST(DapTypesTest, DAP_var_ref_t) {
   // Check the masked ref constructor.
-  const uint32_t scope_masked_var_ref = 0x2000001;
-  const var_ref_t scope_ref(scope_masked_var_ref);
-  EXPECT_EQ(scope_ref.AsUInt32(), scope_masked_var_ref);
-  EXPECT_EQ(scope_ref.Reference(), 1U);
-  EXPECT_EQ(scope_ref.Kind(), eReferenceKindScope);
-
-  const uint32_t temp_masked_var_ref = 0x0000021;
+  const uint32_t temp_masked_var_ref = 0x00000201U;
   const var_ref_t temp_ref(temp_masked_var_ref);
   EXPECT_EQ(temp_ref.AsUInt32(), temp_masked_var_ref);
-  EXPECT_EQ(temp_ref.Reference(), 0x21U);
+  EXPECT_EQ(temp_ref.Reference(), 0x0201U);
   EXPECT_EQ(temp_ref.Kind(), eReferenceKindTemporary);
 
-  const uint32_t perm_masked_var_ref = 0x1000032;
+  const uint32_t perm_masked_var_ref = 0x1000032U;
   const var_ref_t perm_ref(perm_masked_var_ref);
   EXPECT_EQ(perm_ref.AsUInt32(), perm_masked_var_ref);
-  EXPECT_EQ(perm_ref.Reference(), 0x32U);
+  EXPECT_EQ(perm_ref.Reference(), 0x032U);
   EXPECT_EQ(perm_ref.Kind(), eReferenceKindPermanent);
 
   const var_ref_t invalid_ref{};
@@ -96,11 +90,11 @@ TEST(DapTypesTest, DAP_var_ref_t) {
   EXPECT_EQ(no_child_ref.Kind(), eReferenceKindTemporary);
 
   // Check the refkind constructor.
-  const uint32_t scope2_masked_ref = 0x2000003;
-  const var_ref_t scope_ref2(3, eReferenceKindScope);
+  const uint32_t scope2_masked_ref = 0x0000003;
+  const var_ref_t scope_ref2(3, eReferenceKindTemporary);
   EXPECT_EQ(scope_ref2.AsUInt32(), scope2_masked_ref);
   EXPECT_EQ(scope_ref2.Reference(), 3U);
-  EXPECT_EQ(scope_ref2.Kind(), eReferenceKindScope);
+  EXPECT_EQ(scope_ref2.Kind(), eReferenceKindTemporary);
 
   EXPECT_EQ(var_ref_t().AsUInt32(),
             var_ref_t{var_ref_t::k_invalid_var_ref}.AsUInt32());

@@ -130,6 +130,22 @@ std::size_t RTDECL(Verify4)(const char32_t *, std::size_t, const char32_t *set,
 void RTDECL(Verify)(Descriptor &result, const Descriptor &string,
     const Descriptor &set, const Descriptor *back /*can be null*/, int kind,
     const char *sourceFile = nullptr, int sourceLine = 0);
+
+void RTDECL(Tokenize)(Descriptor &tokens, Descriptor *separator,
+    const Descriptor &string, const Descriptor &set,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+void RTDECL(TokenizePositions)(Descriptor &first, Descriptor &last,
+    const Descriptor &string, const Descriptor &set,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+
+std::size_t RTDECL(Split1)(const char *string, std::size_t stringLen,
+    const char *set, std::size_t setLen, std::size_t pos, bool back = false);
+std::size_t RTDECL(Split2)(const char16_t *string, std::size_t stringLen,
+    const char16_t *set, std::size_t setLen, std::size_t pos,
+    bool back = false);
+std::size_t RTDECL(Split4)(const char32_t *string, std::size_t stringLen,
+    const char32_t *set, std::size_t setLen, std::size_t pos,
+    bool back = false);
 }
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_CHARACTER_H_

@@ -8,7 +8,7 @@ define void @vslidedown() {
   ; CHECK-NEXT:   [[PseudoVLE8_V_M8_:%[0-9]+]]:vrm8 = PseudoVLE8_V_M8 $noreg, killed [[ADDI]], -1 /* vl=VLMAX */, 3 /* e8 */, 3 /* ta, ma */ :: (load (<vscale x 1 x s512>) from %ir.v, align 1)
   ; CHECK-NEXT:   [[ADDI1:%[0-9]+]]:gpr = ADDI %stack.1, 0
   ; CHECK-NEXT:   PseudoVSE8_V_M8 killed [[PseudoVLE8_V_M8_]], killed [[ADDI1]], -1 /* vl=VLMAX */, 3 /* e8 */ :: (store (<vscale x 1 x s512>) into %stack.1)
-  ; CHECK-NEXT:   INLINEASM &"vadd.vv $0, $0, $0", 25 /* sideeffect mayload maystore attdialect */, 262166 /* mem:m */, %stack.0.v, 0, 262166 /* mem:m */, %stack.1, 0
+  ; CHECK-NEXT:   INLINEASM &"vadd.vv $0, $0, $0", sideeffect mayload maystore attdialect, mem:m, %stack.0.v, 0, mem:m, %stack.1, 0
   ; CHECK-NEXT:   PseudoRET
 entry:
   %v = alloca <vscale x 64 x i8>, align 1

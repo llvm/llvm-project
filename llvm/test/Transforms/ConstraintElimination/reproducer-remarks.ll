@@ -264,6 +264,33 @@ entry:
   ret i1 %c.5
 }
 
+; Variable shared operand: with 'b <=u a' in scope the decomposed subs still
+; cancel, so the compare is retained (contrast @shared_operand above).
+define i1 @shared_operand_no_const(i8 %a, i8 %b) {
+; CHECK-LABEL: define i1 @"{{.+}}shared_operand_no_constrepro"(i8 %a, i8 %b) {
+; CHECK-NEXT: entry:
+; CHECK-NEXT:   %0 = icmp ule i8 %b, %a
+; CHECK-NEXT:   call void @llvm.assume(i1 %0)
+; CHECK-NEXT:   %sub = sub nuw i8 %a, %b
+; CHECK-NEXT:   %sub.2 = sub nuw i8 %sub, 0
+; CHECK-NEXT:   %c.5 = icmp ult i8 %sub.2, %sub
+; CHECK-NEXT:   ret i1 %c.5
+; CHECK-NEXT: }
+;
+entry:
+  %precond = icmp ule i8 %b, %a
+  br i1 %precond, label %then, label %exit
+
+then:
+  %sub = sub i8 %a, %b
+  %sub.2 = sub nuw i8 %sub, 0
+  %c.5 = icmp ult i8 %sub.2, %sub
+  ret i1 %c.5
+
+exit:
+  ret i1 false
+}
+
 @glob = external global i32
 
 define i1 @load_global() {
@@ -318,6 +345,50 @@ then:
   %src.end = getelementptr inbounds i8, ptr %src, i16 %N
   %cmp.src.start = icmp ule ptr %src, %src.end
   ret i1 %cmp.src.start
+
+else:
+  ret i1 false
+}
+
+define i1 @test_icmp_trunc_nuw_reproducer(i8 %x) {
+; CHECK-LABEL: define i1 @"{{.+}}test_icmp_trunc_nuw_reproducerrepro"(i8 %x) {
+; CHECK-NEXT: entry:
+; CHECK-NEXT:   %0 = icmp eq i8 %x, 0
+; CHECK-NEXT:   call void @llvm.assume(i1 %0)
+; CHECK-NEXT:   %check = trunc nuw i8 %x to i1
+; CHECK-NEXT:   ret i1 %check
+; CHECK-NEXT: }
+;
+entry:
+  %iszero = icmp eq i8 %x, 0
+  br i1 %iszero, label %then, label %else
+
+then:
+  %check = trunc nuw i8 %x to i1
+  call void @use(i1 %check)
+  ret i1 %check
+
+else:
+  ret i1 false
+}
+
+define i1 @test_trunc_nuw_icmp_reproducer(i8 %x) {
+; CHECK-LABEL: define i1 @"{{.+}}test_trunc_nuw_icmp_reproducerrepro"(i8 %x) {
+; CHECK-NEXT: entry:
+; CHECK-NEXT:   %0 = icmp eq i8 %x, 0
+; CHECK-NEXT:   call void @llvm.assume(i1 %0)
+; CHECK-NEXT:   %check = icmp ne i8 %x, 0
+; CHECK-NEXT:   ret i1 %check
+; CHECK-NEXT: }
+;
+entry:
+  %iszero = trunc nuw i8 %x to i1
+  br i1 %iszero, label %else, label %then
+
+then:
+  %check = icmp ne i8 %x, 0
+  call void @use(i1 %check)
+  ret i1 %check
 
 else:
   ret i1 false

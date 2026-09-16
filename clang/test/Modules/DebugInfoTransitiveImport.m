@@ -1,7 +1,7 @@
 // UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fmodules -fmodule-format=obj -debug-info-kind=limited -dwarf-ext-refs \
-// RUN:     -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs \
+// RUN:     -fimplicit-module-maps -fmodules-cache-path=%t/cache -I %S/Inputs \
 // RUN:     %s -mllvm -debug-only=pchcontainer -debugger-tuning=lldb 2>&1 | FileCheck %s
 // REQUIRES: asserts
 

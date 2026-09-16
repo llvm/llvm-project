@@ -728,7 +728,7 @@ func.func @make_dma_descriptor_workgroup_mask(%base: !amdgpu.tdm_base<i32>, %wg_
 func.func @tensor_load_to_lds(%desc: !amdgpu.tdm_descriptor) {
   // CHECK: %[[DGROUPS:.+]]:4 = builtin.unrealized_conversion_cast %[[DESC]]
   // CHECK: %[[DGROUP4:.+]] = llvm.mlir.zero : vector<8xi32>
-  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3, %[[DGROUP4]] cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  // CHECK: rocdl.tensor.load.to.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3, %[[DGROUP4]], 0 : vector<4xi32>, vector<8xi32>
   amdgpu.tensor_load_to_lds %desc : !amdgpu.tdm_descriptor
   func.return
 }
@@ -738,7 +738,7 @@ func.func @tensor_load_to_lds(%desc: !amdgpu.tdm_descriptor) {
 func.func @tensor_store_from_lds(%desc: !amdgpu.tdm_descriptor) {
   // CHECK: %[[DGROUPS:.+]]:4 = builtin.unrealized_conversion_cast %[[DESC]]
   // CHECK: %[[DGROUP4:.+]] = llvm.mlir.zero : vector<8xi32>
-  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3, %[[DGROUP4]] cachepolicy 0 : vector<4xi32>, vector<8xi32>
+  // CHECK: rocdl.tensor.store.from.lds %[[DGROUPS]]#0, %[[DGROUPS]]#1, %[[DGROUPS]]#2, %[[DGROUPS]]#3, %[[DGROUP4]], 0 : vector<4xi32>, vector<8xi32>
   amdgpu.tensor_store_from_lds %desc : !amdgpu.tdm_descriptor
   func.return
 }
@@ -849,6 +849,25 @@ func.func @make_gather_dma_descriptor(%base: !amdgpu.tdm_gather_base<i32, i16>, 
   func.return %descriptor : !amdgpu.tdm_descriptor
 }
 
+// CHECK-LABEL: func @make_gather_dma_descriptor_i32
+// CHECK-SAME: (%[[BASE:.+]]: !amdgpu.tdm_gather_base<i32, i32>, %[[INDICES:.+]]: vector<5xi32>)
+func.func @make_gather_dma_descriptor_i32(%base: !amdgpu.tdm_gather_base<i32, i32>, %indices: vector<5xi32>) -> !amdgpu.tdm_descriptor {
+  // CHECK: %[[IDX0:.+]] = llvm.extractelement %[[INDICES]][{{.*}}] : vector<5xi32>
+  // CHECK: %[[IDX1:.+]] = llvm.extractelement %[[INDICES]][{{.*}}] : vector<5xi32>
+  // CHECK: %[[IDX2:.+]] = llvm.extractelement %[[INDICES]][{{.*}}] : vector<5xi32>
+  // CHECK: %[[IDX3:.+]] = llvm.extractelement %[[INDICES]][{{.*}}] : vector<5xi32>
+  // CHECK-NEXT: %[[DGROUP2_INIT:.+]] = llvm.mlir.poison : vector<4xi32>
+  // CHECK-NEXT: %[[DGROUP2_0:.+]] = llvm.insertelement %[[IDX0]], %[[DGROUP2_INIT]][{{.*}}]
+  // CHECK-NEXT: %[[DGROUP2_1:.+]] = llvm.insertelement %[[IDX1]], %[[DGROUP2_0]][{{.*}}]
+  // CHECK-NEXT: %[[DGROUP2_2:.+]] = llvm.insertelement %[[IDX2]], %[[DGROUP2_1]][{{.*}}]
+  // CHECK-NEXT: %[[DGROUP2:.+]] = llvm.insertelement %[[IDX3]], %[[DGROUP2_2]][{{.*}}]
+  // CHECK-NEXT: %[[IDX4:.+]] = llvm.extractelement %[[INDICES]][{{.*}}] : vector<5xi32>
+  // CHECK-NEXT: %[[DGROUP3_INIT:.+]] = llvm.mlir.poison : vector<4xi32>
+  // CHECK-NEXT: %[[DGROUP3:.+]] = llvm.insertelement %[[IDX4]], %[[DGROUP3_INIT]][{{.*}}]
+  %descriptor = amdgpu.make_gather_dma_descriptor %base[%indices] globalSize [128, 64] globalStride [64, 1] sharedSize [128, 64] : !amdgpu.tdm_gather_base<i32, i32>, vector<5xi32> -> !amdgpu.tdm_descriptor
+  func.return %descriptor : !amdgpu.tdm_descriptor
+}
+
 /// LDS barriers
 
 // CHECK-LABEL: func @ds_barrier_init
@@ -940,4 +959,94 @@ func.func @ds_barrier_state_phase_parity(%state: !amdgpu.ds_barrier_state) -> i1
   // CHECK: return [[PARITY]]
   %parity = amdgpu.ds_barrier_state_phase_parity %state : !amdgpu.ds_barrier_state -> i1
   func.return %parity : i1
+}
+
+// -----
+// global_load_async_to_lds_bN
+
+// CHECK-LABEL: func @global_load_async_to_lds_b32
+func.func @global_load_async_to_lds_b32(
+    %global : memref<128x72xf32, #gpu.address_space<global>>) {
+  %c0 = arith.constant 0 : index
+  %c12 = arith.constant 12 : index
+  %c32 = arith.constant 32 : index
+  %alloc = memref.alloc() : memref<64x64xf32, #gpu.address_space<workgroup>>
+  // CHECK: rocdl.global.load.async.to.lds.b32
+  amdgpu.global_load_async_to_lds %global[%c12, %c0], %alloc[%c32, %c0]
+    : f32, memref<128x72xf32, #gpu.address_space<global>>,
+      memref<64x64xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @global_load_async_to_lds_b8
+func.func @global_load_async_to_lds_b8(
+    %global : memref<128x72xi8, #gpu.address_space<global>>) {
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc() : memref<64x64xi8, #gpu.address_space<workgroup>>
+  // CHECK: rocdl.global.load.async.to.lds.b8
+  amdgpu.global_load_async_to_lds %global[%c0, %c0], %alloc[%c0, %c0]
+    : i8, memref<128x72xi8, #gpu.address_space<global>>,
+      memref<64x64xi8, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @global_load_async_to_lds_b64
+func.func @global_load_async_to_lds_b64(
+    %global : memref<128x72xf32, #gpu.address_space<global>>) {
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc() : memref<64x64xf32, #gpu.address_space<workgroup>>
+  // CHECK: rocdl.global.load.async.to.lds.b64
+  amdgpu.global_load_async_to_lds %global[%c0, %c0], %alloc[%c0, %c0]
+    : vector<2xf32>, memref<128x72xf32, #gpu.address_space<global>>,
+      memref<64x64xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @global_load_async_to_lds_b128
+func.func @global_load_async_to_lds_b128(
+    %global : memref<128x72xf32, #gpu.address_space<global>>) {
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc() : memref<64x64xf32, #gpu.address_space<workgroup>>
+  // CHECK: rocdl.global.load.async.to.lds.b128
+  amdgpu.global_load_async_to_lds %global[%c0, %c0], %alloc[%c0, %c0]
+    : vector<4xf32>, memref<128x72xf32, #gpu.address_space<global>>,
+      memref<64x64xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @global_load_async_to_lds_dynamic_indices
+func.func @global_load_async_to_lds_dynamic_indices(
+    %global : memref<512xi32, #gpu.address_space<global>>,
+    %src_idx : index, %dst_idx : index) {
+  %alloc = memref.alloc() : memref<256xi32, #gpu.address_space<workgroup>>
+  // CHECK: rocdl.global.load.async.to.lds.b32
+  amdgpu.global_load_async_to_lds %global[%src_idx], %alloc[%dst_idx]
+    : i32, memref<512xi32, #gpu.address_space<global>>,
+      memref<256xi32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @global_load_async_to_lds_b128_masked
+func.func @global_load_async_to_lds_b128_masked(
+    %global : memref<128x72xf32, #gpu.address_space<global>>, %mask : i1) {
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc() : memref<64x64xf32, #gpu.address_space<workgroup>>
+  // CHECK: [[NULLPTR_INT:%.*]] = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK: [[NULLPTR:%.*]] = llvm.inttoptr [[NULLPTR_INT]] : i32 to !llvm.ptr<3>
+  // CHECK: [[DST:%.*]] = llvm.select {{.*}}, {{.*}}, [[NULLPTR]] : i1, !llvm.ptr<3>
+  // CHECK: rocdl.global.load.async.to.lds.b128 {{.*}}, [[DST]]
+  amdgpu.global_load_async_to_lds %global[%c0, %c0], %alloc[%c0, %c0], %mask
+    : vector<4xf32>, memref<128x72xf32, #gpu.address_space<global>>,
+      memref<64x64xf32, #gpu.address_space<workgroup>>
+  func.return
 }

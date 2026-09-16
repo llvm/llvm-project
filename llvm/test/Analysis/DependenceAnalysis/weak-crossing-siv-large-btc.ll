@@ -13,25 +13,22 @@
 ;     A[i1] = 0;
 ; }
 ;
-; FIXME: Both `A[i0] = 0` and `A[i1] = 0` must be executed, so there is a
-; dependency between them.
-;
 define void @weak_crossing_siv_large_btc(ptr %A) {
 ; CHECK-ALL-LABEL: 'weak_crossing_siv_large_btc'
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.1, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ;
 ; CHECK-WEAK-CROSSING-SIV-LABEL: 'weak_crossing_siv_large_btc'
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
-; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*]!
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
-; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - none!
+; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %gep.1, align 1 --> Dst: store i8 0, ptr %gep.1, align 1
-; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*]!
 ;
 entry:
   br label %loop.header

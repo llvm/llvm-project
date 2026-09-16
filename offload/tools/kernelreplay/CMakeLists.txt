@@ -1,6 +1,6 @@
 message(STATUS "Building the llvm-omp-kernel-replay tool")
 
-add_openmp_tool(llvm-omp-kernel-replay llvm-omp-kernel-replay.cpp)
+add_offload_tool(llvm-omp-kernel-replay llvm-omp-kernel-replay.cpp)
 
 llvm_update_compile_flags(llvm-omp-kernel-replay)
 

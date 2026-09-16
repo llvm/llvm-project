@@ -51,26 +51,23 @@
 // CHECK-DAG: obj%p0.tgt.fir#0 <-> obj%p1.fir#0: NoAlias
 // CHECK-DAG: obj%p1.fir#0 <-> obj%p1.tgt.fir#0: NoAlias
 
-// For some cases, AliasAnalysis analyzes hlfir.designate like fir.box_addr, so
-// make sure it doesn't mistakenly see the address of obj%arr(1) as an address
-// that was loaded from a pointer and that could alias something.  However,
-// t_obj%arr is a target.
-// TODO: Thus, we expect the first case (and corresponding .fir case) below to
-// be NoAlias.  However, the addresses obj%p0.tgt and obj%arr(1) are analyzed as
-// MayAlias because they have the same source and both are data.
-// CHECK-DAG: obj%p0.tgt#0 <-> obj%arr(1)#0: MayAlias
+// The address in a pointer component cannot alias the address of a sibling
+// data component when the root variable does not have TARGET, because only
+// TARGET subobjects are valid pointer association targets (Fortran 2018
+// 8.5.7).  However, t_obj has TARGET, so its components may alias the
+// pointer's target.
+// CHECK-DAG: obj%p0.tgt#0 <-> obj%arr(1)#0: NoAlias
 // CHECK-DAG: obj%p0.tgt#0 <-> t_obj%arr(1)#0: MayAlias
-// CHECK-DAG: obj%p0.tgt.fir#0 <-> obj%arr(1).fir#0: MayAlias
+// CHECK-DAG: obj%p0.tgt.fir#0 <-> obj%arr(1).fir#0: NoAlias
 // CHECK-DAG: obj%p0.tgt.fir#0 <-> t_obj%arr(1).fir#0: MayAlias
 
 // Like a pointer, an allocatable contains an address, but an allocatable is not
-// a pointer and so cannot alias pointers.  However, t_obj%alloc is a target.
-// TODO: Thus, we expect the first case (and corresponding .fir case) below to
-// be NoAlias.  However, the addresses obj%p0.tgt and obj%alloc.tgt are analyzed
-// as MayAlias because they have the same source and both are data.
-// CHECK-DAG: obj%p0.tgt#0 <-> obj%alloc.tgt#0: MayAlias
+// a pointer and so cannot alias pointers.  obj does not have TARGET, so its
+// allocatable's data and pointer's target are disjoint.  However, t_obj has
+// TARGET, so its allocatable data may alias the pointer target.
+// CHECK-DAG: obj%p0.tgt#0 <-> obj%alloc.tgt#0: NoAlias
 // CHECK-DAG: obj%p0.tgt#0 <-> t_obj%alloc.tgt#0: MayAlias
-// CHECK-DAG: obj%p0.tgt.fir#0 <-> obj%alloc.tgt.fir#0: MayAlias
+// CHECK-DAG: obj%p0.tgt.fir#0 <-> obj%alloc.tgt.fir#0: NoAlias
 // CHECK-DAG: obj%p0.tgt.fir#0 <-> t_obj%alloc.tgt.fir#0: MayAlias
 
 // The address in an allocatable cannot alias the address of that allocatable.
@@ -213,26 +210,18 @@ func.func @_QPtest.fir() {
 // CHECK-DAG: obj%p0.tgt.fir#0 <-> obj%p1.fir#0: NoAlias
 // CHECK-DAG: obj%p1.fir#0 <-> obj%p1.tgt.fir#0: NoAlias
 
-// For some cases, AliasAnalysis analyzes hlfir.designate like fir.box_addr, so
-// make sure it doesn't mistakenly see the address of obj%arr(1) as an address
-// that was loaded from a pointer and that could alias something.  However,
-// t_obj%arr is a target.
-// TODO: Thus, we expect the first case (and corresponding .fir case) below to
-// be NoAlias.  However, the addresses obj%p0.tgt and obj%arr(1) are analyzed as
-// MayAlias because they have the same source and both are data.
-// CHECK-DAG: obj%p0.tgt#0 <-> obj%arr(1)#0: MayAlias
+// The address in a pointer component cannot alias the address of a sibling
+// data component when the root variable does not have TARGET.
+// CHECK-DAG: obj%p0.tgt#0 <-> obj%arr(1)#0: NoAlias
 // CHECK-DAG: obj%p0.tgt#0 <-> t_obj%arr(1)#0: MayAlias
-// CHECK-DAG: obj%p0.tgt.fir#0 <-> obj%arr(1).fir#0: MayAlias
+// CHECK-DAG: obj%p0.tgt.fir#0 <-> obj%arr(1).fir#0: NoAlias
 // CHECK-DAG: obj%p0.tgt.fir#0 <-> t_obj%arr(1).fir#0: MayAlias
 
 // Like a pointer, an allocatable contains an address, but an allocatable is not
-// a pointer and so cannot alias pointers.  However, t_obj%alloc is a target.
-// TODO: Thus, we expect the first case (and corresponding .fir case) below to
-// be NoAlias.  However, the addresses obj%p0.tgt and obj%alloc.tgt are analyzed
-// as MayAlias because they have the same source and both are data.
-// CHECK-DAG: obj%p0.tgt#0 <-> obj%alloc.tgt#0: MayAlias
+// a pointer and so cannot alias pointers.  obj does not have TARGET.
+// CHECK-DAG: obj%p0.tgt#0 <-> obj%alloc.tgt#0: NoAlias
 // CHECK-DAG: obj%p0.tgt#0 <-> t_obj%alloc.tgt#0: MayAlias
-// CHECK-DAG: obj%p0.tgt.fir#0 <-> obj%alloc.tgt.fir#0: MayAlias
+// CHECK-DAG: obj%p0.tgt.fir#0 <-> obj%alloc.tgt.fir#0: NoAlias
 // CHECK-DAG: obj%p0.tgt.fir#0 <-> t_obj%alloc.tgt.fir#0: MayAlias
 
 // The address in an allocatable cannot alias the address of that allocatable.
@@ -373,26 +362,18 @@ func.func @_QPtest.fir(%arg0: !fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f3
 // CHECK-DAG: obj%p0.tgt.fir#0 <-> obj%p1.fir#0: NoAlias
 // CHECK-DAG: obj%p1.fir#0 <-> obj%p1.tgt.fir#0: NoAlias
 
-// For some cases, AliasAnalysis analyzes hlfir.designate like fir.box_addr, so
-// make sure it doesn't mistakenly see the address of obj%arr(1) as an address
-// that was loaded from a pointer and that could alias something.  However,
-// t_obj%arr is a target.
-// TODO: Thus, we expect the first case (and corresponding .fir case) below to
-// be NoAlias.  However, the addresses obj%p0.tgt and obj%arr(1) are analyzed as
-// MayAlias because they have the same source and both are data.
-// CHECK-DAG: obj%p0.tgt#0 <-> obj%arr(1)#0: MayAlias
+// The address in a pointer component cannot alias the address of a sibling
+// data component when the root variable does not have TARGET.
+// CHECK-DAG: obj%p0.tgt#0 <-> obj%arr(1)#0: NoAlias
 // CHECK-DAG: obj%p0.tgt#0 <-> t_obj%arr(1)#0: MayAlias
-// CHECK-DAG: obj%p0.tgt.fir#0 <-> obj%arr(1).fir#0: MayAlias
+// CHECK-DAG: obj%p0.tgt.fir#0 <-> obj%arr(1).fir#0: NoAlias
 // CHECK-DAG: obj%p0.tgt.fir#0 <-> t_obj%arr(1).fir#0: MayAlias
 
 // Like a pointer, an allocatable contains an address, but an allocatable is not
-// a pointer and so cannot alias pointers.  However, t_obj%alloc is a target.
-// TODO: Thus, we expect the first case (and corresponding .fir case) below to
-// be NoAlias.  However, the addresses obj%p0.tgt and obj%alloc.tgt are analyzed
-// as MayAlias because they have the same source and both are data.
-// CHECK-DAG: obj%p0.tgt#0 <-> obj%alloc.tgt#0: MayAlias
+// a pointer and so cannot alias pointers.  obj does not have TARGET.
+// CHECK-DAG: obj%p0.tgt#0 <-> obj%alloc.tgt#0: NoAlias
 // CHECK-DAG: obj%p0.tgt#0 <-> t_obj%alloc.tgt#0: MayAlias
-// CHECK-DAG: obj%p0.tgt.fir#0 <-> obj%alloc.tgt.fir#0: MayAlias
+// CHECK-DAG: obj%p0.tgt.fir#0 <-> obj%alloc.tgt.fir#0: NoAlias
 // CHECK-DAG: obj%p0.tgt.fir#0 <-> t_obj%alloc.tgt.fir#0: MayAlias
 
 // The address in an allocatable cannot alias the address of that allocatable.
@@ -419,6 +400,9 @@ func.func @_QPtest.fir(%arg0: !fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f3
 // allocatable can alias.
 // CHECK-DAG: obj%alloc.tgt#0 <-> obj%alloc.tgt2#0: MayAlias
 // CHECK-DAG: obj%alloc.tgt.fir#0 <-> obj%alloc.tgt2.fir#0: MayAlias
+
+fir.global @_QMmEobj : !fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>
+fir.global @_QMmEt_obj target : !fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>
 
 func.func @_QPtest() {
   %0 = fir.address_of(@_QMmEobj) : !fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f32>>,p1:!fir.box<!fir.ptr<f32>>,arr:!fir.array<2xf32>,alloc:!fir.box<!fir.heap<f32>>}>>

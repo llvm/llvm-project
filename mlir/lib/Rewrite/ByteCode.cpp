@@ -1788,7 +1788,9 @@ void ByteCodeExecutor::executeGetAttribute() {
   unsigned memIndex = read();
   Operation *op = read<Operation *>();
   StringAttr attrName = read<StringAttr>();
-  Attribute attr = op->getAttr(attrName);
+  Attribute attr = op->getDiscardableAttr(attrName);
+  if (op->getPropertiesStorageSize())
+    attr = op->getInherentAttr(attrName).value_or(attr);
 
   LDBG() << "  * Operation: " << *op << "\n  * Attribute: " << attrName
          << "\n  * Result: " << attr;
@@ -1857,7 +1859,8 @@ executeGetOperandsResults(RangeT values, Operation *op, unsigned index,
   } else if (op->hasTrait<AttrSizedSegmentsT>()) {
     LDBG() << "  * Extracting values from `" << attrSizedSegments << "`";
 
-    auto segmentAttr = op->getAttrOfType<DenseI32ArrayAttr>(attrSizedSegments);
+    auto segmentAttr = dyn_cast_or_null<DenseI32ArrayAttr>(
+        op->getInherentAttr(attrSizedSegments).value_or(Attribute{}));
     if (!segmentAttr || segmentAttr.asArrayRef().size() <= index)
       return nullptr;
 
@@ -2075,7 +2078,7 @@ void ByteCodeExecutor::executeSwitchAttribute() {
 void ByteCodeExecutor::executeSwitchOperandCount() {
   LDBG() << "Executing SwitchOperandCount:";
   Operation *op = read<Operation *>();
-  auto cases = read<DenseIntOrFPElementsAttr>().getValues<uint32_t>();
+  auto cases = read<DenseTypedElementsAttr>().getValues<uint32_t>();
 
   LDBG() << "  * Operation: " << *op;
   handleSwitch(op->getNumOperands(), cases);
@@ -2112,7 +2115,7 @@ void ByteCodeExecutor::executeSwitchOperationName() {
 void ByteCodeExecutor::executeSwitchResultCount() {
   LDBG() << "Executing SwitchResultCount:";
   Operation *op = read<Operation *>();
-  auto cases = read<DenseIntOrFPElementsAttr>().getValues<uint32_t>();
+  auto cases = read<DenseTypedElementsAttr>().getValues<uint32_t>();
 
   LDBG() << "  * Operation: " << *op;
   handleSwitch(op->getNumResults(), cases);

@@ -13,6 +13,7 @@
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
+#include "flang/Runtime/CUDA/allocatable.h"
 #include "flang/Runtime/CUDA/allocator.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
@@ -208,4 +209,47 @@ TEST(AllocatableAsyncTest, SetStreamTest) {
   auto b{createAllocatable(TypeCategory::Real, 4)};
   int stat2 = RTDECL(CUFSetAssociatedStream)(b->raw().base_addr, stream);
   EXPECT_EQ(stat2, StatBaseNull);
+}
+
+TEST(AllocatableAsyncTest, DestroyStreamTest) {
+  using Fortran::common::TypeCategory;
+  RTNAME(CUFRegisterAllocator)();
+  // REAL(4), DEVICE, ALLOCATABLE :: a(:)
+  auto a{createAllocatable(TypeCategory::Real, 4)};
+  a->SetAllocIdx(kDeviceAllocatorPos);
+  EXPECT_EQ((int)kDeviceAllocatorPos, a->GetAllocIdx());
+  EXPECT_FALSE(a->HasAddendum());
+  RTNAME(AllocatableSetBounds)(*a, 0, 1, 10);
+
+  cudaStream_t stream;
+  cudaStreamCreate(&stream);
+  EXPECT_EQ(cudaSuccess, cudaGetLastError());
+
+  RTNAME(AllocatableAllocate)
+  (*a, /*asyncObject=*/(std::int64_t *)&stream, /*hasStat=*/false,
+      /*errMsg=*/nullptr, __FILE__, __LINE__);
+  EXPECT_TRUE(a->IsAllocated());
+  cudaDeviceSynchronize();
+  EXPECT_EQ(cudaSuccess, cudaGetLastError());
+
+  cudaStream_t s = RTNAME(CUFGetAssociatedStream)(a->raw().base_addr);
+  EXPECT_EQ(s, stream);
+
+  RTNAME(CUFStreamDestroy)(stream);
+  s = RTNAME(CUFGetAssociatedStream)(a->raw().base_addr);
+  EXPECT_EQ(s, nullptr);
+
+  RTNAME(AllocatableDeallocate)
+  (*a, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  EXPECT_FALSE(a->IsAllocated());
+  cudaDeviceSynchronize();
+  EXPECT_EQ(cudaSuccess, cudaGetLastError());
+}
+
+TEST(AllocatableCUFTest, DeviceIsActiveKeepsLastErrorClean) {
+  // CUFDeviceIsActive() probes primary-context state (including a version-
+  // skew fallback). It must not leave a sticky cudaGetLastError behind.
+  (void)cudaGetLastError(); // start from a clean error state
+  (void)RTNAME(CUFDeviceIsActive)();
+  EXPECT_EQ(cudaGetLastError(), cudaSuccess);
 }

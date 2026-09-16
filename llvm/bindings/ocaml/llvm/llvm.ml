@@ -180,7 +180,7 @@ module Opcode  = struct
   | Invalid (* not an instruction *)
   (* Terminator Instructions *)
   | Ret
-  | Br
+  | Invalid3
   | Switch
   | IndirectBr
   | Invoke
@@ -252,6 +252,9 @@ module Opcode  = struct
   | FNeg
   | CallBr
   | Freeze
+  | PtrToAddr
+  | UncondBr
+  | CondBr
 end
 
 module LandingPadClauseTy = struct
@@ -644,8 +647,6 @@ external aggregate_element : llvalue -> int -> llvalue option
                            = "llvm_aggregate_element"
 
 (*--... Constant expressions ...............................................--*)
-external align_of : lltype -> llvalue = "llvm_align_of"
-external size_of : lltype -> llvalue = "llvm_size_of"
 external const_neg : llvalue -> llvalue = "llvm_const_neg"
 external const_nsw_neg : llvalue -> llvalue = "llvm_const_nsw_neg"
 external const_not : llvalue -> llvalue = "llvm_const_not"
@@ -1089,7 +1090,7 @@ let is_terminator llv =
   let open ValueKind in
   let open Opcode in
   match classify_value llv with
-    | Instruction (Br | IndirectBr | Invoke | Resume | Ret | Switch | Unreachable)
+    | Instruction (UncondBr | CondBr | IndirectBr | Invoke | Resume | Ret | Switch | Unreachable)
       -> true
     | _ -> false
 
@@ -1133,12 +1134,13 @@ external set_condition : llvalue -> llvalue -> unit
 external is_conditional : llvalue -> bool = "llvm_is_conditional"
 
 let get_branch llv =
-  if classify_value llv <> ValueKind.Instruction Opcode.Br then
-    None
-  else if is_conditional llv then
+  let kind = classify_value llv in
+  if kind = ValueKind.Instruction Opcode.UncondBr then
+    Some (`Unconditional (successor llv 0))
+  else if kind = ValueKind.Instruction Opcode.CondBr then
     Some (`Conditional (condition llv, successor llv 0, successor llv 1))
   else
-    Some (`Unconditional (successor llv 0))
+    None
 
 (*--... Operations on phi nodes ............................................--*)
 external add_incoming : (llvalue * llbasicblock) -> llvalue -> unit

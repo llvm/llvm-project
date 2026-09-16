@@ -404,7 +404,7 @@ TEST(DataLayout, ParsePointerSpec) {
         DataLayout::parse(Str),
         FailedWithMessage("index size cannot be larger than the pointer size"));
 
-  // Only 'e', 'u', and 'n' flags are valid.
+  // Only 'e', 'u', 'z', and 'o' flags are valid.
   EXPECT_THAT_EXPECTED(
       DataLayout::parse("pa:32:32"),
       FailedWithMessage("'a' is not a valid pointer specification flag"));
@@ -815,17 +815,58 @@ TEST(DataLayoutTest, GlobalsAddressSpace) {
 }
 
 TEST(DataLayoutTest, VectorAlign) {
-  Expected<DataLayout> DL = DataLayout::parse("v64:64");
-  EXPECT_THAT_EXPECTED(DL, Succeeded());
-
   LLVMContext Context;
   Type *const FloatTy = Type::getFloatTy(Context);
-  Type *const V8F32Ty = FixedVectorType::get(FloatTy, 8);
+  Type *const V4F32 = FixedVectorType::get(FloatTy, 4);
+  Type *const V8F32 = FixedVectorType::get(FloatTy, 8);
+  Type *const HalfTy = Type::getHalfTy(Context);
+  Type *const V4F16 = FixedVectorType::get(HalfTy, 4);
 
-  // The alignment for a vector type larger than any specified vector type uses
-  // the natural alignment as a fallback.
-  EXPECT_EQ(Align(4 * 8), DL->getABITypeAlign(V8F32Ty));
-  EXPECT_EQ(Align(4 * 8), DL->getPrefTypeAlign(V8F32Ty));
+  {
+    Expected<DataLayout> DL = DataLayout::parse("v64:16:64-v128:32:128");
+    EXPECT_THAT_EXPECTED(DL, Succeeded());
+    EXPECT_FALSE(DL->vectorsAreElementAligned());
+
+    EXPECT_EQ(Align(2), DL->getABITypeAlign(V4F16));
+    EXPECT_EQ(Align(8), DL->getPrefTypeAlign(V4F16));
+
+    EXPECT_EQ(Align(4), DL->getABITypeAlign(V4F32));
+    EXPECT_EQ(Align(16), DL->getPrefTypeAlign(V4F32));
+
+    // The alignment for a vector type larger than any specified vector type
+    // uses the natural alignment as a fallback.
+    EXPECT_EQ(Align(4 * 8), DL->getABITypeAlign(V8F32));
+    EXPECT_EQ(Align(4 * 8), DL->getPrefTypeAlign(V8F32));
+  }
+
+  {
+    Expected<DataLayout> DL = DataLayout::parse("ve");
+    EXPECT_THAT_EXPECTED(DL, Succeeded());
+    EXPECT_TRUE(DL->vectorsAreElementAligned());
+
+    EXPECT_EQ(DL->getABITypeAlign(FloatTy), DL->getABITypeAlign(V4F32));
+    EXPECT_EQ(DL->getABITypeAlign(FloatTy), DL->getABITypeAlign(V8F32));
+    EXPECT_EQ(DL->getABITypeAlign(HalfTy), DL->getABITypeAlign(V4F16));
+
+    EXPECT_EQ(DL->getPrefTypeAlign(FloatTy), DL->getPrefTypeAlign(V4F32));
+    EXPECT_EQ(DL->getPrefTypeAlign(FloatTy), DL->getPrefTypeAlign(V8F32));
+    EXPECT_EQ(DL->getPrefTypeAlign(HalfTy), DL->getPrefTypeAlign(V4F16));
+  }
+
+  {
+    Expected<DataLayout> DL = DataLayout::parse("ve-v64:64-v128:128-v256:256");
+    EXPECT_THAT_EXPECTED(DL, Succeeded());
+    EXPECT_TRUE(DL->vectorsAreElementAligned());
+
+    // Specific vector alignments override "ve"
+    EXPECT_EQ(Align(16), DL->getABITypeAlign(V4F32));
+    EXPECT_EQ(Align(32), DL->getABITypeAlign(V8F32));
+    EXPECT_EQ(Align(8), DL->getABITypeAlign(V4F16));
+
+    EXPECT_EQ(Align(16), DL->getPrefTypeAlign(V4F32));
+    EXPECT_EQ(Align(32), DL->getPrefTypeAlign(V8F32));
+    EXPECT_EQ(Align(8), DL->getPrefTypeAlign(V4F16));
+  }
 }
 
 TEST(DataLayoutTest, Equality) {
@@ -837,6 +878,80 @@ TEST(DataLayoutTest, Equality) {
   EXPECT_EQ(DL0.getStringRepresentation(), Layout0);
   EXPECT_EQ(DL1.getStringRepresentation(), Layout1);
   EXPECT_EQ(DL0, DL1);
+}
+
+TEST(DataLayoutTest, NullPointerValue) {
+  // Default: null pointer is all-zeros for every address space.
+  {
+    const DataLayout DL = cantFail(DataLayout::parse(""));
+    APInt Val = DL.getNullPtrValue(0);
+    EXPECT_TRUE(Val.isZero());
+    EXPECT_EQ(Val.getBitWidth(), 64U);
+    APInt UnlistedVal = DL.getNullPtrValue(42);
+    EXPECT_TRUE(UnlistedVal.isZero());
+    EXPECT_EQ(UnlistedVal.getBitWidth(), 64U);
+  }
+
+  // Explicit 'z' flag.
+  {
+    const DataLayout DL = cantFail(DataLayout::parse("pz1:32:32"));
+    APInt Val = DL.getNullPtrValue(1);
+    EXPECT_TRUE(Val.isZero());
+    EXPECT_EQ(Val.getBitWidth(), 32U);
+  }
+
+  // 'o' flag: null pointer is all-ones.
+  {
+    const DataLayout DL = cantFail(DataLayout::parse("po1:32:32"));
+    APInt Val = DL.getNullPtrValue(1);
+    EXPECT_TRUE(Val.isAllOnes());
+    EXPECT_EQ(Val.getBitWidth(), 32U);
+  }
+
+  // 'o' flag with 64-bit pointer.
+  {
+    const DataLayout DL = cantFail(DataLayout::parse("po1:64:64"));
+    APInt Val = DL.getNullPtrValue(1);
+    EXPECT_TRUE(Val.isAllOnes());
+    EXPECT_EQ(Val.getBitWidth(), 64U);
+  }
+
+  // Combination with other flags: 'o' + 'u'.
+  {
+    const DataLayout DL = cantFail(DataLayout::parse("pou1:32:32"));
+    APInt Val = DL.getNullPtrValue(1);
+    EXPECT_TRUE(Val.isAllOnes());
+    EXPECT_TRUE(DL.hasUnstableRepresentation(1));
+  }
+
+  // Multiple address spaces with different null values.
+  {
+    const DataLayout DL = cantFail(DataLayout::parse("po1:32:32-pz3:32:32"));
+    APInt Val1 = DL.getNullPtrValue(1);
+    EXPECT_TRUE(Val1.isAllOnes());
+    APInt Val3 = DL.getNullPtrValue(3);
+    EXPECT_TRUE(Val3.isZero());
+  }
+
+  // Error: multiple null-ptr flags.
+  for (StringRef Str : {"pzo1:32:32", "poz1:32:32", "pzoz1:32:32"})
+    EXPECT_THAT_EXPECTED(
+        DataLayout::parse(Str),
+        FailedWithMessage("only one of 'z' or 'o' may be specified"));
+
+  // 'c' flag is no longer supported.
+  EXPECT_THAT_EXPECTED(DataLayout::parse("pc1:32:32"),
+                       FailedWithMessage("'c' is not a valid pointer "
+                                         "specification flag"));
+
+  // Equality: different null pointer values make layouts not equal.
+  {
+    DataLayout DL1 = cantFail(DataLayout::parse("po1:32:32"));
+    DataLayout DL2 = cantFail(DataLayout::parse("pz1:32:32"));
+    DataLayout DL3 = cantFail(DataLayout::parse("po1:32:32"));
+    EXPECT_NE(DL1, DL2);
+    EXPECT_EQ(DL1, DL3);
+  }
 }
 
 } // anonymous namespace

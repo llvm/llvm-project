@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98,cxx98-11,cxx98-14,cxx98-17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,cxx98-11,cxx98-14,cxx98-17,cxx11-14 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,cxx98-14,cxx98-17,cxx11-14 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17,cxx98-17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98,cxx98-11,cxx98-14,cxx98-17
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,cxx98-11,cxx98-14,cxx98-17,cxx11-14
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,cxx98-14,cxx98-17,cxx11-14
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17,cxx98-17
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -632,7 +632,7 @@ namespace example3 {
 struct Base {
 private:
   static const int i = 10; // #cwg138-ex3-Base-i
-  
+
 public:
   struct Data;
   // Elaborated type specifier is not the sole constituent of declaration,
@@ -646,7 +646,7 @@ public:
   };
 };
 struct Data {
-  void f() {  
+  void f() {
     int i2 = Base::i;
     // expected-error@-1 {{'i' is a private member of 'cwg138::example3::Base'}}
     //   expected-note@#cwg138-ex3-Base-i {{declared private here}}
@@ -1415,9 +1415,9 @@ namespace cwg194 { // cwg194: 2.7
 namespace cwg195 { // cwg195: 2.7
   void f();
   int *p = (int*)&f;
-  // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is an extension}}
+  // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is a C++11 extension}}
   void (*q)() = (void(*)())&p;
-  // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is an extension}}
+  // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is a C++11 extension}}
 } // namespace cwg195
 
 namespace cwg197 { // cwg197: 2.7

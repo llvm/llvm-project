@@ -9,14 +9,18 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 #define LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 
+#include "file_mode.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/stdio_macros.h"
 #include "hdr/types/off_t.h"
+#include "hdr/types/wchar_t.h"
+#include "hdr/types/wint_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/threads/mutex.h"
+#include "src/__support/wchar/mbstate.h"
 
 #include <stddef.h>
 
@@ -39,7 +43,20 @@ struct FileIOResult {
 // suitable for their platform.
 class File {
 public:
+  static void add_file(File *f);
+  static void remove_file(File *f);
+  static File *get_first_file();
+  static void lock_list();
+  static void unlock_list();
+
+  static File *list_all;
+  static Mutex list_lock;
+
+  File *get_next() const { return next; }
+
   static constexpr size_t DEFAULT_BUFFER_SIZE = 1024;
+
+  enum class Orientation { UNORIENTED, BYTE, WIDE };
 
   using LockFunc = void(File *);
   using UnlockFunc = void(File *);
@@ -51,29 +68,17 @@ public:
   using SeekFunc = ErrorOr<off_t>(File *, off_t, int);
   using CloseFunc = int(File *);
 
-  using ModeFlags = uint32_t;
+  // This is a convenience RAII class to lock and unlock file objects.
+  class FileLock {
+    File *file;
 
-  // The three different types of flags below are to be used with '|' operator.
-  // Their values correspond to mutually exclusive bits in a 32-bit unsigned
-  // integer value. A flag set can include both READ and WRITE if the file
-  // is opened in update mode (ie. if the file was opened with a '+' the mode
-  // string.)
-  enum class OpenMode : ModeFlags {
-    READ = 0x1,
-    WRITE = 0x2,
-    APPEND = 0x4,
-    PLUS = 0x8,
-  };
+  public:
+    explicit FileLock(File *f) : file(f) { file->lock(); }
 
-  // Denotes a file opened in binary mode (which is specified by including
-  // the 'b' character in teh mode string.)
-  enum class ContentType : ModeFlags {
-    BINARY = 0x10,
-  };
+    ~FileLock() { file->unlock(); }
 
-  // Denotes a file to be created for writing.
-  enum class CreateType : ModeFlags {
-    EXCLUSIVE = 0x100,
+    FileLock(const FileLock &) = delete;
+    FileLock(FileLock &&) = delete;
   };
 
 private:
@@ -91,8 +96,9 @@ private:
 
   // For files which are readable, we should be able to support one ungetc
   // operation even if |buf| is nullptr. So, in the constructor of File, we
-  // set |buf| to point to this buffer character.
-  uint8_t ungetc_buf;
+  // set |buf| to point to this buffer character. It needs to be at least 4
+  // bytes so we can store a widechar.
+  uint8_t ungetc_buf[4];
 
   uint8_t *buf;   // Pointer to the stream buffer for buffered streams
   size_t bufsize; // Size of the buffer pointed to by |buf|.
@@ -104,8 +110,8 @@ private:
   // free-ed when close method is called on the stream.
   bool own_buf;
 
-  // The mode in which the file was opened.
-  ModeFlags mode;
+  // Used to handle the File's mode
+  FileMode mode;
 
   // Current read or write pointer.
   size_t pos;
@@ -120,29 +126,24 @@ private:
   bool eof;
   bool err;
 
-  // This is a convenience RAII class to lock and unlock file objects.
-  class FileLock {
-    File *file;
-
-  public:
-    explicit FileLock(File *f) : file(f) { file->lock(); }
-
-    ~FileLock() { file->unlock(); }
-
-    FileLock(const FileLock &) = delete;
-    FileLock(FileLock &&) = delete;
-  };
+  Orientation orientation;
+  internal::mbstate mbstate;
 
 protected:
-  constexpr bool write_allowed() const {
-    return mode & (static_cast<ModeFlags>(OpenMode::WRITE) |
-                   static_cast<ModeFlags>(OpenMode::APPEND) |
-                   static_cast<ModeFlags>(OpenMode::PLUS));
-  }
+  constexpr bool write_allowed() const { return mode.write_allowed(); }
 
-  constexpr bool read_allowed() const {
-    return mode & (static_cast<ModeFlags>(OpenMode::READ) |
-                   static_cast<ModeFlags>(OpenMode::PLUS));
+  constexpr bool read_allowed() const { return mode.read_allowed(); }
+
+  void reset_stream_state_unlocked(FileMode new_mode) {
+    mode = new_mode;
+    pos = 0;
+    prev_op = FileOp::NONE;
+    read_limit = 0;
+    eof = false;
+    err = false;
+    orientation = Orientation::UNORIENTED;
+    mbstate = internal::mbstate();
+    adjust_buf();
   }
 
 public:
@@ -155,13 +156,15 @@ public:
   // the set_buffer method and allocate a buffer.
   constexpr File(WriteFunc *wf, ReadFunc *rf, SeekFunc *sf, CloseFunc *cf,
                  uint8_t *buffer, size_t buffer_size, int buffer_mode,
-                 bool owned, ModeFlags modeflags)
+                 bool owned, FileMode mode)
       : platform_write(wf), platform_read(rf), platform_seek(sf),
         platform_close(cf), mutex(/*timed=*/false, /*recursive=*/false,
                                   /*robust=*/false, /*pshared=*/false),
-        ungetc_buf(0), buf(buffer), bufsize(buffer_size), bufmode(buffer_mode),
-        own_buf(owned), mode(modeflags), pos(0), prev_op(FileOp::NONE),
-        read_limit(0), eof(false), err(false) {
+        ungetc_buf{}, buf(buffer), bufsize(buffer_size), bufmode(buffer_mode),
+        own_buf(owned), mode(mode), pos(0), prev_op(FileOp::NONE),
+        read_limit(0), eof(false), err(false),
+        orientation(Orientation::UNORIENTED), mbstate(), prev(nullptr),
+        next(nullptr) {
     adjust_buf();
   }
 
@@ -202,6 +205,27 @@ public:
   int ungetc(int c) {
     FileLock lock(this);
     return ungetc_unlocked(c);
+  }
+
+  FileIOResult write_unlocked(const wchar_t *ws, size_t len);
+
+  FileIOResult write(const wchar_t *ws, size_t len) {
+    FileLock l(this);
+    return write_unlocked(ws, len);
+  }
+
+  FileIOResult read_unlocked(wchar_t *ws, size_t len);
+
+  FileIOResult read(wchar_t *ws, size_t len) {
+    FileLock l(this);
+    return read_unlocked(ws, len);
+  }
+
+  ErrorOr<wint_t> ungetwc_unlocked(wint_t wc);
+
+  ErrorOr<wint_t> ungetwc(wint_t wc) {
+    FileLock lock(this);
+    return ungetwc_unlocked(wc);
   }
 
   // Does the following:
@@ -279,11 +303,28 @@ public:
     return iseof_unlocked();
   }
 
-  // Returns an bit map of flags corresponding to enumerations of
-  // OpenMode, ContentType and CreateType.
-  static ModeFlags mode_flags(const char *mode);
+  Orientation get_orientation_unlocked() const { return orientation; }
+
+  Orientation get_orientation() {
+    FileLock l(this);
+    return get_orientation_unlocked();
+  }
+
+  Orientation try_set_orientation_unlocked(Orientation o) {
+    if (orientation == Orientation::UNORIENTED)
+      orientation = o;
+    return orientation;
+  }
+
+  Orientation try_set_orientation(Orientation o) {
+    FileLock l(this);
+    return try_set_orientation_unlocked(o);
+  }
 
 private:
+  FileIOResult write_unlocked_impl(const void *data, size_t len);
+  FileIOResult read_unlocked_impl(void *data, size_t len);
+
   FileIOResult write_unlocked_lbf(const uint8_t *data, size_t len);
   FileIOResult write_unlocked_fbf(const uint8_t *data, size_t len);
   FileIOResult write_unlocked_nbf(const uint8_t *data, size_t len);
@@ -308,24 +349,32 @@ private:
       // 3. If user wants _IONBF, then the buffer is ignored for writing.
       // So, all of the above cases, having a single ungetc buffer does not
       // affect the behavior experienced by the user.
-      buf = &ungetc_buf;
-      bufsize = 1;
+      buf = ungetc_buf;
+      bufsize = sizeof(ungetc_buf);
       own_buf = false; // We shouldn't call free on |buf| when closing the file.
     }
   }
+
+  File *prev;
+  File *next;
 };
 
-// The implementaiton of this function is provided by the platform_file
+// The implementation of this function is provided by the platform_file
 // library.
 ErrorOr<File *> openfile(const char *path, const char *mode);
+// Reopens a file stream.
+// Note: On failure, `reopenfile` will place the file stream in an invalid state
+// (closing the underlying file descriptor) but will not deallocate the `File`
+// object itself, ensuring static streams like stdin/stdout/stderr are
+// preserved.
+int reopenfile(File *f, const char *path, const char *mode);
+// Expected to be implemented by the platform file, will be called after
+// locking.
+int reopenfile_unlocked(File *f, const char *path, const char *mode);
 
 // The platform_file library should implement it if it relevant for that
 // platform.
 int get_fileno(File *f);
-
-extern File *stdin;
-extern File *stdout;
-extern File *stderr;
 
 } // namespace LIBC_NAMESPACE_DECL
 

@@ -28,12 +28,12 @@ struct WarpExecuteOnLane0LoweringOptions {
       Location, OpBuilder &, gpu::WarpExecuteOnLane0Op, Type)>;
   WarpAllocationFn warpAllocationFn = nullptr;
 
-  /// Lamdba function to let user emit operation to syncronize all the thread
+  /// Lamdba function to let user emit operation to synchronize all the thread
   /// within a warp. After this operation all the threads can see any memory
   /// written before the operation.
-  using WarpSyncronizationFn =
+  using WarpSynchronizationFn =
       std::function<void(Location, OpBuilder &, gpu::WarpExecuteOnLane0Op)>;
-  WarpSyncronizationFn warpSyncronizationFn = nullptr;
+  WarpSynchronizationFn warpSynchronizationFn = nullptr;
 };
 
 void populateWarpExecuteOnLane0OpToScfForPattern(

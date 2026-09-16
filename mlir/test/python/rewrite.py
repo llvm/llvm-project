@@ -316,5 +316,14 @@ def testConversionPattern():
             apply_partial_conversion(module, target, frozen)
         except MLIRError as e:
             # CHECK: caught exception: partial conversion failed
-            # CHECK: failed to legalize unresolved materialization
+            # CHECK: failed to legalize unresolved target materialization
             print("caught exception:", e)
+
+        t1 = converter.convert_type(IntegerType.get_signless(64))
+        # CHECK: IntType
+        print(type(t1))
+        # CHECK: !smt.int
+        print(str(t1))
+        t2 = converter.convert_type(F32Type.get())
+        # CHECK: None
+        print(t2)

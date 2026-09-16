@@ -2,11 +2,30 @@
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/OSUtil/io.h" // write_to_stderr
 #include "src/__support/big_int.h"   // is_big_int
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "src/__support/uint128.h"
+
+#ifdef LIBC_TEST_USE_SYSTEM_PRINTF
+
+#include <stdio.h>
+
+namespace LIBC_NAMESPACE_DECL {
+namespace testing {
+
+void write_to_stderr(cpp::string_view str) {
+  fprintf(stderr, "%.*s", static_cast<int>(str.size()), str.data());
+}
+
+} // namespace testing
+} // namespace LIBC_NAMESPACE_DECL
+
+#else // !LIBC_TEST_USE_SYSTEM_PRINTF
+
+#include "src/__support/OSUtil/io.h" // write_to_stderr
+
+#endif // LIBC_TEST_USE_SYSTEM_PRINTF
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
@@ -14,7 +33,7 @@ namespace testing {
 // cpp::string_view specialization
 template <>
 TestLogger &TestLogger::operator<< <cpp::string_view>(cpp::string_view str) {
-  LIBC_NAMESPACE::write_to_stderr(str);
+  write_to_stderr(str);
   return *this;
 }
 

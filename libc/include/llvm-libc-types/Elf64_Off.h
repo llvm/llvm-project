@@ -13,4 +13,4 @@
 
 typedef uint64_t Elf64_Off;
 
-#endif // LLVM_LIBC_TYPES_ELF32_OFF_H
+#endif // LLVM_LIBC_TYPES_ELF64_OFF_H

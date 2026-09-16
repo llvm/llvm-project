@@ -18,4 +18,11 @@ DbiStream:
               Type:            4494
               Register:        RSP
               VarName:         this
+          - Kind:            S_REGREL32_INDIR
+            RegRelativeIndirSym:
+              Offset:          64
+              Type:            116
+              Register:        RSP
+              OffsetInUdt:     4
+              VarName:         a
 ...

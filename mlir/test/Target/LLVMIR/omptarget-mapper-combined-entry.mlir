@@ -9,10 +9,9 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   ^bb0(%arg0: !llvm.ptr):
     %field0 = llvm.getelementptr %arg0[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"S", (i32, i32)>
     %map_field0 = omp.map.info var_ptr(%field0 : !llvm.ptr, i32)
-        map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+        map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
     %map_parent = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<"S", (i32, i32)>)
-        map_clauses(tofrom) capture(ByRef) members(%map_field0 : [0] : !llvm.ptr) -> !llvm.ptr
-        {name = "", partial_map = true}
+        map_clauses(tofrom) capture(ByRef) members(%map_field0 : [0] : !llvm.ptr) name("") partial_map(true) -> !llvm.ptr
     omp.declare_mapper.info map_entries(%map_parent, %map_field0 : !llvm.ptr, !llvm.ptr)
   }
 
@@ -21,11 +20,10 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
     %s = llvm.alloca %one x !llvm.struct<"S", (i32, i32)> : (i64) -> !llvm.ptr
     %field0 = llvm.getelementptr %s[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"S", (i32, i32)>
     %map_field0 = omp.map.info var_ptr(%field0 : !llvm.ptr, i32)
-        map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "s.f0"}
+        map_clauses(tofrom) capture(ByRef) name("s.f0") -> !llvm.ptr
     %map_parent = omp.map.info var_ptr(%s : !llvm.ptr, !llvm.struct<"S", (i32, i32)>)
-        map_clauses(tofrom) capture(ByRef) mapper(@mapper) members(%map_field0 : [0] : !llvm.ptr) -> !llvm.ptr
-        {name = "s"}
-    omp.target map_entries(%map_parent -> %arg0, %map_field0 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+        map_clauses(tofrom) capture(ByRef) mapper(@mapper) members(%map_field0 : [0] : !llvm.ptr) name("s") -> !llvm.ptr
+    omp.target kernel_type(generic) map_entries(%map_parent -> %arg0, %map_field0 -> %arg1 : !llvm.ptr, !llvm.ptr) {
       omp.terminator
     }
     llvm.return
@@ -40,3 +38,5 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK: store ptr null, ptr %[[MAPPER1]]
 // CHECK: %[[MAPPER2:.*]] = getelementptr inbounds [4 x ptr], ptr %[[MAPPERS]], i64 0, i64 2
 // CHECK: store ptr null, ptr %[[MAPPER2]]
+// CHECK: %[[MAPPER3:.*]] = getelementptr inbounds [4 x ptr], ptr %[[MAPPERS]], i64 0, i64 3
+// CHECK: store ptr null, ptr %[[MAPPER3]]

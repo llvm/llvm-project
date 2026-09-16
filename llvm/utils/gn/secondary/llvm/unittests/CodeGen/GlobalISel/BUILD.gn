@@ -2,6 +2,7 @@ import("//third-party/unittest/unittest.gni")
 
 unittest("GlobalISelTests") {
   deps = [
+    "//llvm/lib/Analysis",
     "//llvm/lib/CodeGen",
     "//llvm/lib/CodeGen/GlobalISel",
     "//llvm/lib/CodeGen/MIRParser",
@@ -21,6 +22,7 @@ unittest("GlobalISelTests") {
     "GISelAliasTest.cpp",
     "GISelMITest.cpp",
     "GISelUtilsTest.cpp",
+    "IRTranslatorBF16Test.cpp",
     "InstructionSelectTest.cpp",
     "KnownBitsTest.cpp",
     "KnownBitsVectorTest.cpp",

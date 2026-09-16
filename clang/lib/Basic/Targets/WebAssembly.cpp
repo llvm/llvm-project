@@ -66,6 +66,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("mutable-globals", HasMutableGlobals)
       .Case("nontrapping-fptoint", HasNontrappingFPToInt)
       .Case("reference-types", HasReferenceTypes)
+      .Case("relaxed-atomics", HasRelaxedAtomics)
       .Case("relaxed-simd", SIMDLevel >= RelaxedSIMD)
       .Case("sign-ext", HasSignExt)
       .Case("simd128", SIMDLevel >= SIMD128)
@@ -110,6 +111,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_nontrapping_fptoint__");
   if (HasReferenceTypes)
     Builder.defineMacro("__wasm_reference_types__");
+  if (HasRelaxedAtomics)
+    Builder.defineMacro("__wasm_relaxed_atomics__");
   if (SIMDLevel >= RelaxedSIMD)
     Builder.defineMacro("__wasm_relaxed_simd__");
   if (HasSignExt)
@@ -120,6 +123,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_tail_call__");
   if (HasWideArithmetic)
     Builder.defineMacro("__wasm_wide_arithmetic__");
+  if (HasLibcallThreadContext)
+    Builder.defineMacro("__wasm_libcall_thread_context__");
   // Note that not all wasm features appear here.   For example,
   // HasCompatctImports
 
@@ -200,6 +205,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["fp16"] = true;
     Features["gc"] = true;
     Features["multimemory"] = true;
+    Features["relaxed-atomics"] = true;
     Features["tail-call"] = true;
     Features["wide-arithmetic"] = true;
     setSIMDLevel(Features, RelaxedSIMD, true);
@@ -332,6 +338,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       HasReferenceTypes = false;
       continue;
     }
+    if (Feature == "+relaxed-atomics") {
+      HasRelaxedAtomics = true;
+      continue;
+    }
+    if (Feature == "-relaxed-atomics") {
+      HasRelaxedAtomics = false;
+      continue;
+    }
     if (Feature == "+relaxed-simd") {
       SIMDLevel = std::max(SIMDLevel, RelaxedSIMD);
       continue;
@@ -410,7 +424,7 @@ void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
   // Turn off POSIXThreads and ThreadModel so that we don't predefine _REENTRANT
   // or __STDCPP_THREADS__ if we will eventually end up stripping atomics
   // because they are unsupported.
-  if (!HasAtomics || !HasBulkMemory) {
+  if ((!HasCooperativeThreading && !HasAtomics) || !HasBulkMemory) {
     Opts.POSIXThreads = false;
     Opts.setThreadModel(LangOptions::ThreadModelKind::Single);
     Opts.ThreadsafeStatics = false;

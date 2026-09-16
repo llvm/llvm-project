@@ -77,6 +77,12 @@
 // REFERENCE-TYPES: "-target-feature" "+reference-types"
 // NO-REFERENCE-TYPES: "-target-feature" "-reference-types"
 
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mrelaxed-atomics 2>&1 | FileCheck %s -check-prefix=RELAXED-ATOMICS
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-relaxed-atomics 2>&1 | FileCheck %s -check-prefix=NO-RELAXED-ATOMICS
+
+// RELAXED-ATOMICS: "-target-feature" "+relaxed-atomics"
+// NO-RELAXED-ATOMICS: "-target-feature" "-relaxed-atomics"
+
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mrelaxed-simd 2>&1 | FileCheck %s -check-prefix=RELAXED-SIMD
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-relaxed-simd 2>&1 | FileCheck %s -check-prefix=NO-RELAXED-SIMD
 

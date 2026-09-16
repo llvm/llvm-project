@@ -1,6 +1,5 @@
 // clang-format off
 // RUN: %libomptarget-compilexx-generic -Wno-openmp-mapping && %libomptarget-run-generic
-// XFAIL: intelgpu
 
 #include <assert.h>
 

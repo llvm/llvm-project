@@ -247,7 +247,7 @@ if(WIN32)
   set(LLVM_ON_UNIX 0)
 elseif(FUCHSIA OR UNIX OR CYGWIN)
   set(LLVM_ON_UNIX 1)
-  if(APPLE OR CYGWIN OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+  if(APPLE OR CYGWIN OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX|Emscripten")
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
   else()
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
@@ -332,6 +332,13 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     # FIXME: Remove this warning if this rpath is no longer hardcoded.
     message(WARNING "Build and install environment path info may be exposed; binaries will also be unrelocatable.")
   endif()
+endif()
+
+if(CMAKE_SYSTEM_NAME MATCHES "OS390")
+  # COMPRESS=YES reduces the size of the binaries by compression the
+  # non-loadable parts.
+  append("-Wl,-bcompress=yes"
+         CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
 endif()
 
 # Pass -Wl,-z,defs. This makes sure all symbols are defined. Otherwise a DSO
@@ -429,14 +436,20 @@ if( LLVM_ENABLE_LLD )
 endif()
 
 if( LLVM_USE_LINKER )
+  check_cxx_source_compiles("int main() { return 0; }" _CAN_LINK_EXECUTABLE)
+  mark_as_advanced(_CAN_LINK_EXECUTABLE)
   append("-fuse-ld=${LLVM_USE_LINKER}"
     CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
-  check_cxx_source_compiles("int main() { return 0; }" CXX_SUPPORTS_CUSTOM_LINKER)
-  if ( NOT CXX_SUPPORTS_CUSTOM_LINKER )
-    message(FATAL_ERROR "Host compiler does not support '-fuse-ld=${LLVM_USE_LINKER}'. "
-                        "Please make sure that '${LLVM_USE_LINKER}' is installed and "
-                        "that your host compiler can compile a simple program when "
-                        "given the option '-fuse-ld=${LLVM_USE_LINKER}'.")
+  if(_CAN_LINK_EXECUTABLE)
+    check_cxx_source_compiles("int main() { return 0; }" CXX_SUPPORTS_CUSTOM_LINKER)
+    if ( NOT CXX_SUPPORTS_CUSTOM_LINKER )
+      message(FATAL_ERROR "Host compiler does not support '-fuse-ld=${LLVM_USE_LINKER}'. "
+                          "Please make sure that '${LLVM_USE_LINKER}' is installed and "
+                          "that your host compiler can compile a simple program when "
+                          "given the option '-fuse-ld=${LLVM_USE_LINKER}'.")
+    endif()
+  else()
+    message(STATUS "Skipping custom linker check: offload target cannot link executable")
   endif()
 endif()
 
@@ -564,14 +577,15 @@ if( MSVC_IDE )
 endif()
 
 # set stack reserved size to ~10MB
-if(MSVC)
+set(_is_exe "$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>")
+if(MSVC OR (CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC"))
   # CMake previously automatically set this value for MSVC builds, but the
   # behavior was changed in CMake 2.8.11 (Issue 12437) to use the MSVC default
   # value (1 MB) which is not enough for us in tasks such as parsing recursive
   # C++ templates in Clang.
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_CXX_LINKER_WRAPPER_FLAG}/STACK:10000000")
+  add_link_options("$<${_is_exe}:LINKER:/STACK:10000000>")
 elseif(MINGW OR CYGWIN)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--stack,16777216")
+  add_link_options("$<${_is_exe}:LINKER:--stack,16777216>")
 
   # Pass -mbig-obj to mingw gas to avoid COFF 2**16 section limit.
   if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -580,6 +594,7 @@ elseif(MINGW OR CYGWIN)
 endif()
 
 option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
+option(LLVM_ENABLE_WARNING_SUPPRESSIONS "Suppress compiler warnings." ON)
 
 if( MSVC )
 
@@ -692,7 +707,8 @@ if( MSVC )
     has_msvc_incremental_no_flag("${CMAKE_MODULE_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_MODULE_LINKER_FLAGS}" NO_INCR_MODULE)
     has_msvc_incremental_no_flag("${CMAKE_SHARED_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_SHARED_LINKER_FLAGS}" NO_INCR_SHARED)
     if (NO_INCR_EXE AND NO_INCR_MODULE AND NO_INCR_SHARED)
-      append("/Brepro" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+      # The /Brepro flag in `clang-cl` omits the timestamp for .obj files while the linker flag omits the timestamp for .exe and .dll files.
+      append("/Brepro" CMAKE_C_FLAGS CMAKE_CXX_FLAGS CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
     else()
       message(WARNING "/Brepro not compatible with /INCREMENTAL linking - builds will be non-deterministic")
     endif()
@@ -784,6 +800,9 @@ if (MSVC)
       # Promoted warnings to errors.
       -we4238 # Promote 'nonstandard extension used : class rvalue used as lvalue' to error.
       )
+    if (NOT LLVM_ENABLE_WARNING_SUPPRESSIONS)
+      list(FILTER msvc_warning_flags EXCLUDE REGEX "^-wd")
+    endif()
   endif(NOT CLANG_CL)
 
   # Enable warnings
@@ -808,6 +827,12 @@ if (MSVC)
     append("${flag}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endforeach(flag)
 endif (MSVC)
+
+if (NOT LLVM_ENABLE_WARNING_SUPPRESSIONS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
+  # Keep track of the flags before LLVM appends its default warnings
+  set(PRE_CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+  set(PRE_CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+endif()
 
 if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
@@ -888,6 +913,20 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11.1)
       append("-Wno-stringop-overread" CMAKE_CXX_FLAGS)
     endif()
+
+    # Disable -Wdangling-pointer on GCC 12+; this warning produces false
+    # positives for the RAII listener pattern (storing `this` in a constructor
+    # that is cleaned up in the destructor).
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12.1)
+      append("-Wno-dangling-pointer" CMAKE_CXX_FLAGS)
+    endif()
+
+    # Silence a false positive GCC -Wunused-but-set-parameter warning in
+    # constexpr cases. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85827
+    # for details
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "14.0")
+      append("-Wno-unused-but-set-parameter" CMAKE_CXX_FLAGS)
+    endif()
   endif()
 
   # The LLVM libraries have no stable C++ API, so -Wnoexcept-type is not useful.
@@ -949,11 +988,24 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   endif()
 
   # Enable -Wctad-maybe-unsupported to catch unintended use of CTAD.
-  add_flag_if_supported("-Wctad-maybe-unsupported" CTAD_MAYBE_UNSPPORTED_FLAG)
+  add_flag_if_supported("-Wctad-maybe-unsupported" CTAD_MAYBE_UNSUPPORTED_FLAG)
 endif (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT LLVM_ENABLE_WARNINGS)
   append("-w" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+endif()
+
+if (NOT LLVM_ENABLE_WARNING_SUPPRESSIONS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
+  # Strip the -Wno- flags from the substring of flags added by LLVM in this block
+  string(LENGTH "${PRE_CMAKE_C_FLAGS}" PRE_CMAKE_C_LEN)
+  string(SUBSTRING "${CMAKE_C_FLAGS}" ${PRE_CMAKE_C_LEN} -1 ADDED_CMAKE_C_FLAGS)
+  string(REGEX REPLACE "(^| +)-Wno-[a-zA-Z0-9_-]+" "" ADDED_CMAKE_C_FLAGS "${ADDED_CMAKE_C_FLAGS}")
+  set(CMAKE_C_FLAGS "${PRE_CMAKE_C_FLAGS}${ADDED_CMAKE_C_FLAGS}")
+
+  string(LENGTH "${PRE_CMAKE_CXX_FLAGS}" PRE_CMAKE_CXX_LEN)
+  string(SUBSTRING "${CMAKE_CXX_FLAGS}" ${PRE_CMAKE_CXX_LEN} -1 ADDED_CMAKE_CXX_FLAGS)
+  string(REGEX REPLACE "(^| +)-Wno-[a-zA-Z0-9_-]+" "" ADDED_CMAKE_CXX_FLAGS "${ADDED_CMAKE_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${PRE_CMAKE_CXX_FLAGS}${ADDED_CMAKE_CXX_FLAGS}")
 endif()
 
 macro(append_common_sanitizer_flags)
@@ -1115,6 +1167,25 @@ if (LLVM_USE_SPLIT_DWARF AND
   endif()
 endif()
 
+# For PIC builds, enable RELR if supported by the linker and loader.
+# glibc supports RELR since 2.36. musl supports RELR since 1.2.4, but there's
+# no easy way to detect or feature-test this.
+if (LLVM_ENABLE_PIC AND LLVM_USING_GLIBC)
+  CHECK_CXX_SOURCE_COMPILES("
+  #include <cstdio>
+  #if __GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 36)
+  #error
+  #endif
+  int main() { return 0; }
+  " GLIBC_2_36_OR_NEWER)
+  if (GLIBC_2_36_OR_NEWER)
+    include(CheckLinkerFlag)
+    check_linker_flag(CXX "-Wl,-z,pack-relative-relocs" LINKER_SUPPORTS_RELR)
+    append_if(LINKER_SUPPORTS_RELR "-Wl,-z,pack-relative-relocs"
+      CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  endif()
+endif()
+
 add_compile_definitions(__STDC_CONSTANT_MACROS)
 add_compile_definitions(__STDC_FORMAT_MACROS)
 add_compile_definitions(__STDC_LIMIT_MACROS)
@@ -1129,7 +1200,7 @@ if (UNIX AND
 endif()
 
 # lld doesn't print colored diagnostics when invoked from Ninja
-if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja" AND NOT "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
+if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja" AND NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx64")
   include(CheckLinkerFlag)
   check_linker_flag(CXX "-Wl,--color-diagnostics" LINKER_SUPPORTS_COLOR_DIAGNOSTICS)
   append_if(LINKER_SUPPORTS_COLOR_DIAGNOSTICS "-Wl,--color-diagnostics"
@@ -1315,6 +1386,13 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
       "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
     set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
   endif()
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "OS390")
+    # There are occasional issues with PCH on z/OS, therefore disable PCH by
+    # default.
+    message(NOTICE "Precompiled headers are disabled by default on z/OS. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # Pre-compiled headers with GCC (tested versions 14+15) provide very little
     # compile-time improvements, but substantially increase the build dir size.
@@ -1340,6 +1418,14 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
     # See: https://github.com/mozilla/sccache/issues/615
     # See: https://github.com/mozilla/sccache/issues/2562
     message(NOTICE "Precompiled headers are disabled by default with sccache. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  elseif(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "clang-cache")
+    # clang-cache does compilation caching through the LLVMCAS. When using PCH,
+    # there are extra build dependencies for PCH that live in the CAS which
+    # build system is not aware of. Re-using PCH might cause incremental build
+    # to fail due to missing dependencies.
+    message(NOTICE "Precompiled headers are disabled by default with clang-cache. "
       "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
     set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
   elseif(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")

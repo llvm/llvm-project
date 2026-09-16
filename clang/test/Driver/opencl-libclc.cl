@@ -42,3 +42,12 @@
 // RUN:   -resource-dir %S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:   %s 2>&1 | FileCheck %s --check-prefix=AMDGPU-LLVM-ENV-NO-OFFLOAD-LIB
 // AMDGPU-LLVM-ENV-NO-OFFLOAD-LIB-NOT: libclc.bc
+
+// With amdgcn-amd-amdhsa and --libclc-lib, should use libclc and NOT link ROCm device libs
+// RUN: %clang -### -target amdgcn-amd-amdhsa --libclc-lib=:%S/Inputs/libclc/libclc.bc \
+// RUN:   -resource-dir %S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:   %s 2>&1 | FileCheck %s --check-prefix=AMDHSA-LIBCLC
+// AMDHSA-LIBCLC: -mlink-builtin-bitcode{{.*}}Inputs{{/|\\\\}}libclc{{/|\\\\}}libclc.bc
+// AMDHSA-LIBCLC-NOT: ocml
+// AMDHSA-LIBCLC-NOT: ockl
+// AMDHSA-LIBCLC-NOT: oclc

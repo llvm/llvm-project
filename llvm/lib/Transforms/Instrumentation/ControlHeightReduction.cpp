@@ -342,12 +342,12 @@ class CHR {
                         BasicBlock *ExitBlock,
                         Region *LastRegion,
                         ValueToValueMapTy &VMap);
-  BranchInst *createMergedBranch(BasicBlock *PreEntryBlock,
+  CondBrInst *createMergedBranch(BasicBlock *PreEntryBlock,
                                  BasicBlock *EntryBlock,
                                  BasicBlock *NewEntryBlock,
                                  ValueToValueMapTy &VMap);
   void fixupBranchesAndSelects(CHRScope *Scope, BasicBlock *PreEntryBlock,
-                               BranchInst *MergedBR, uint64_t ProfileCount);
+                               CondBrInst *MergedBR, uint64_t ProfileCount);
   void fixupBranch(Region *R, CHRScope *Scope, IRBuilder<> &IRB,
                    Value *&MergedCondition, BranchProbability &CHRBranchBias);
   void fixupSelect(SelectInst *SI, CHRScope *Scope, IRBuilder<> &IRB,
@@ -624,12 +624,11 @@ static bool checkBias(K *Key, BranchProbability TrueProb,
 
 // Returns true and insert a region into the right biased set and the map if the
 // branch of the region is biased.
-static bool checkBiasedBranch(BranchInst *BI, Region *R,
-                              DenseSet<Region *> &TrueBiasedRegionsGlobal,
-                              DenseSet<Region *> &FalseBiasedRegionsGlobal,
-                              DenseMap<Region *, BranchProbability> &BranchBiasMap) {
-  if (!BI->isConditional())
-    return false;
+static bool
+checkBiasedBranch(CondBrInst *BI, Region *R,
+                  DenseSet<Region *> &TrueBiasedRegionsGlobal,
+                  DenseSet<Region *> &FalseBiasedRegionsGlobal,
+                  DenseMap<Region *, BranchProbability> &BranchBiasMap) {
   BranchProbability ThenProb, ElseProb;
   if (!extractBranchProbabilities(BI, ThenProb, ElseProb))
     return false;
@@ -774,12 +773,8 @@ CHRScope * CHR::findScope(Region *R) {
     // if (cond) {
     //  ...
     // }
-    auto *BI = dyn_cast<BranchInst>(Entry->getTerminator());
-    if (BI)
-      CHR_DEBUG(dbgs() << "BI.isConditional " << BI->isConditional() << "\n");
-    else
-      CHR_DEBUG(dbgs() << "BI null\n");
-    if (BI && BI->isConditional()) {
+    if (auto *BI = dyn_cast<CondBrInst>(Entry->getTerminator())) {
+      CHR_DEBUG(dbgs() << "BI conditional\n");
       BasicBlock *S0 = BI->getSuccessor(0);
       BasicBlock *S1 = BI->getSuccessor(1);
       CHR_DEBUG(dbgs() << "S0 " << S0->getName() << "\n");
@@ -890,8 +885,8 @@ void CHR::checkScopeHoistable(CHRScope *Scope) {
   RegInfo &RI = Scope->RegInfos[0];
   Region *R = RI.R;
   BasicBlock *EntryBB = R->getEntry();
-  auto *Branch = RI.HasBranch ?
-                 cast<BranchInst>(EntryBB->getTerminator()) : nullptr;
+  auto *Branch =
+      RI.HasBranch ? cast<CondBrInst>(EntryBB->getTerminator()) : nullptr;
   SmallVector<SelectInst *, 8> &Selects = RI.Selects;
   if (RI.HasBranch || !Selects.empty()) {
     Instruction *InsertPoint = getBranchInsertPoint(RI);
@@ -1038,7 +1033,7 @@ CHRScope * CHR::findScopes(Region *R, Region *NextRegion, Region *ParentRegion,
 static DenseSet<Value *> getCHRConditionValuesForRegion(RegInfo &RI) {
   DenseSet<Value *> ConditionValues;
   if (RI.HasBranch) {
-    auto *BI = cast<BranchInst>(RI.R->getEntry()->getTerminator());
+    auto *BI = cast<CondBrInst>(RI.R->getEntry()->getTerminator());
     ConditionValues.insert(BI->getCondition());
   }
   for (SelectInst *SI : RI.Selects) {
@@ -1395,7 +1390,7 @@ void CHR::setCHRRegions(CHRScope *Scope, CHRScope *OutermostScope) {
       assert((OutermostScope->TrueBiasedRegions.contains(R) ||
               OutermostScope->FalseBiasedRegions.contains(R)) &&
              "Must be truthy or falsy");
-      auto *BI = cast<BranchInst>(R->getEntry()->getTerminator());
+      auto *BI = cast<CondBrInst>(R->getEntry()->getTerminator());
       // Note checkHoistValue fills in HoistStops.
       DenseMap<Instruction *, bool> Visited;
       bool IsHoistable = checkHoistValue(BI->getCondition(), InsertPoint, DT,
@@ -1495,7 +1490,7 @@ static void hoistScopeConditions(CHRScope *Scope, Instruction *HoistPoint,
     bool IsTrueBiased = Scope->TrueBiasedRegions.count(R);
     bool IsFalseBiased = Scope->FalseBiasedRegions.count(R);
     if (RI.HasBranch && (IsTrueBiased || IsFalseBiased)) {
-      auto *BI = cast<BranchInst>(R->getEntry()->getTerminator());
+      auto *BI = cast<CondBrInst>(R->getEntry()->getTerminator());
       hoistValue(BI->getCondition(), HoistPoint, R, Scope->HoistStopMap,
                  HoistedSet, TrivialPHIs, DT);
     }
@@ -1518,7 +1513,7 @@ static bool negateICmpIfUsedByBranchOrSelectOnly(ICmpInst *ICmp,
   for (User *U : ICmp->users()) {
     if (U == ExcludedUser)
       continue;
-    if (isa<BranchInst>(U) && cast<BranchInst>(U)->isConditional())
+    if (isa<CondBrInst>(U))
       continue;
     if (isa<SelectInst>(U) && cast<SelectInst>(U)->getCondition() == ICmp)
       continue;
@@ -1527,8 +1522,7 @@ static bool negateICmpIfUsedByBranchOrSelectOnly(ICmpInst *ICmp,
   for (User *U : ICmp->users()) {
     if (U == ExcludedUser)
       continue;
-    if (auto *BI = dyn_cast<BranchInst>(U)) {
-      assert(BI->isConditional() && "Must be conditional");
+    if (auto *BI = dyn_cast<CondBrInst>(U)) {
       BI->swapSuccessors();
       // Don't need to swap this in terms of
       // TrueBiasedRegions/FalseBiasedRegions because true-based/false-based
@@ -1671,7 +1665,7 @@ assertBranchOrSelectConditionHoisted(CHRScope *Scope,
     bool IsTrueBiased = Scope->TrueBiasedRegions.count(R);
     bool IsFalseBiased = Scope->FalseBiasedRegions.count(R);
     if (RI.HasBranch && (IsTrueBiased || IsFalseBiased)) {
-      auto *BI = cast<BranchInst>(R->getEntry()->getTerminator());
+      auto *BI = cast<CondBrInst>(R->getEntry()->getTerminator());
       Value *V = BI->getCondition();
       CHR_DEBUG(dbgs() << *V << "\n");
       if (auto *I = dyn_cast<Instruction>(V)) {
@@ -1775,8 +1769,8 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
 
   // Replace the old (placeholder) branch with the new (merged) conditional
   // branch.
-  BranchInst *MergedBr = createMergedBranch(PreEntryBlock, EntryBlock,
-                                            NewEntryBlock, VMap);
+  CondBrInst *MergedBr =
+      createMergedBranch(PreEntryBlock, EntryBlock, NewEntryBlock, VMap);
 
 #ifndef NDEBUG
   assertCHRRegionsHaveBiasedBranchOrSelect(Scope);
@@ -1857,12 +1851,12 @@ void CHR::cloneScopeBlocks(CHRScope *Scope,
 
 // A helper for transformScope. Replace the old (placeholder) branch with the
 // new (merged) conditional branch.
-BranchInst *CHR::createMergedBranch(BasicBlock *PreEntryBlock,
+CondBrInst *CHR::createMergedBranch(BasicBlock *PreEntryBlock,
                                     BasicBlock *EntryBlock,
                                     BasicBlock *NewEntryBlock,
                                     ValueToValueMapTy &VMap) {
-  BranchInst *OldBR = cast<BranchInst>(PreEntryBlock->getTerminator());
-  assert(OldBR->isUnconditional() && OldBR->getSuccessor(0) == NewEntryBlock &&
+  UncondBrInst *OldBR = cast<UncondBrInst>(PreEntryBlock->getTerminator());
+  assert(OldBR->getSuccessor() == NewEntryBlock &&
          "SplitBlock did not work correctly!");
   assert(NewEntryBlock->getSinglePredecessor() == EntryBlock &&
          "NewEntryBlock's only pred must be EntryBlock");
@@ -1872,9 +1866,9 @@ BranchInst *CHR::createMergedBranch(BasicBlock *PreEntryBlock,
   OldBR->eraseFromParent();
   // The true predicate is a placeholder. It will be replaced later in
   // fixupBranchesAndSelects().
-  BranchInst *NewBR = BranchInst::Create(NewEntryBlock,
-                                         cast<BasicBlock>(VMap[NewEntryBlock]),
-                                         ConstantInt::getTrue(F.getContext()));
+  CondBrInst *NewBR =
+      CondBrInst::Create(ConstantInt::getTrue(F.getContext()), NewEntryBlock,
+                         cast<BasicBlock>(VMap[NewEntryBlock]));
   NewBR->insertInto(PreEntryBlock, PreEntryBlock->end());
   assert(NewEntryBlock->getSinglePredecessor() == EntryBlock &&
          "NewEntryBlock's only pred must be EntryBlock");
@@ -1883,10 +1877,8 @@ BranchInst *CHR::createMergedBranch(BasicBlock *PreEntryBlock,
 
 // A helper for transformScopes. Create the combined branch condition and
 // constant-fold the branches/selects in the hot path.
-void CHR::fixupBranchesAndSelects(CHRScope *Scope,
-                                  BasicBlock *PreEntryBlock,
-                                  BranchInst *MergedBR,
-                                  uint64_t ProfileCount) {
+void CHR::fixupBranchesAndSelects(CHRScope *Scope, BasicBlock *PreEntryBlock,
+                                  CondBrInst *MergedBR, uint64_t ProfileCount) {
   Value *MergedCondition = ConstantInt::getTrue(F.getContext());
   BranchProbability CHRBranchBias(1, 1);
   uint64_t NumCHRedBranches = 0;
@@ -1932,7 +1924,7 @@ void CHR::fixupBranch(Region *R, CHRScope *Scope,
   bool IsTrueBiased = Scope->TrueBiasedRegions.count(R);
   assert((IsTrueBiased || Scope->FalseBiasedRegions.count(R)) &&
          "Must be truthy or falsy");
-  auto *BI = cast<BranchInst>(R->getEntry()->getTerminator());
+  auto *BI = cast<CondBrInst>(R->getEntry()->getTerminator());
   assert(BranchBiasMap.contains(R) && "Must be in the bias map");
   BranchProbability Bias = BranchBiasMap[R];
   assert(Bias >= getCHRBiasThreshold() && "Must be highly biased");

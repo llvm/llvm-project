@@ -36,6 +36,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/SplitModuleCommon.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
 #include <iterator>
@@ -125,8 +126,7 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
     if (GV.isDeclaration())
       return;
 
-    if (!GV.hasName())
-      GV.setName("__llvmsplit_unnamed");
+    nameUnnamedGlobalValue(GV);
 
     // Comdat groups must not be partitioned. For comdat groups that contain
     // locals, record all their members here so we can keep them together.
@@ -162,6 +162,7 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
   llvm::for_each(M.functions(), recordGVSet);
   llvm::for_each(M.globals(), recordGVSet);
   llvm::for_each(M.aliases(), recordGVSet);
+  llvm::for_each(M.ifuncs(), recordGVSet);
 
   // Assigned all GVs to merged clusters while balancing number of objects in
   // each.
@@ -202,18 +203,6 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
   }
 }
 
-static void externalize(GlobalValue *GV) {
-  if (GV->hasLocalLinkage()) {
-    GV->setLinkage(GlobalValue::ExternalLinkage);
-    GV->setVisibility(GlobalValue::HiddenVisibility);
-  }
-
-  // Unnamed entities must be named consistently between modules. setName will
-  // give a distinct name to each such entity.
-  if (!GV->hasName())
-    GV->setName("__llvmsplit_unnamed");
-}
-
 // Returns whether GV should be in partition (0-based) I of N.
 static bool isInPartition(const GlobalValue *GV, unsigned I, unsigned N) {
   if (const GlobalObject *Root = getGVPartitioningRoot(GV))
@@ -241,13 +230,13 @@ void llvm::SplitModule(
     bool PreserveLocals, bool RoundRobin) {
   if (!PreserveLocals) {
     for (Function &F : M)
-      externalize(&F);
+      externalizeGlobal(F);
     for (GlobalVariable &GV : M.globals())
-      externalize(&GV);
+      externalizeGlobal(GV);
     for (GlobalAlias &GA : M.aliases())
-      externalize(&GA);
+      externalizeGlobal(GA);
     for (GlobalIFunc &GIF : M.ifuncs())
-      externalize(&GIF);
+      externalizeGlobal(GIF);
   }
 
   // This performs splitting without a need for externalization, which might not
@@ -303,7 +292,7 @@ void llvm::SplitModule(
             return isInPartition(GV, I, N);
         }));
     if (I != 0)
-      MPart->setModuleInlineAsm("");
+      MPart->removeModuleInlineAsm();
     ModuleCallback(std::move(MPart));
   }
 }

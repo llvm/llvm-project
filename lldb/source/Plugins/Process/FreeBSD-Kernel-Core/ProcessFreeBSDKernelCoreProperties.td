@@ -4,5 +4,5 @@ let Definition = "processfreebsdkernelcore", Path = "plugin.process.freebsd-kern
   def ReadOnly: Property<"read-only", "Boolean">,
     Global,
     DefaultTrue,
-    Desc<"Disable memory writes to the core. This is enabled by default for safety.">;
+    Desc<"Disable memory writes to the core. This is enabled by default for safety reasons.">;
 }

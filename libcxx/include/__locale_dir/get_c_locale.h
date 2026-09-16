@@ -29,7 +29,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #  else
 #    define _LIBCPP_GET_C_LOCALE __cloc()
 // Get the C locale object
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI __locale::__locale_t __cloc();
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 #    define __cloc_defined
 #  endif
 

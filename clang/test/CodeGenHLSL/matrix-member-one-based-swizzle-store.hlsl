@@ -6,6 +6,7 @@
 // CHECK-LABEL: define hidden void @_Z19OnesSwizzleToScalarRu11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -17,13 +18,13 @@
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 4
 // CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 8
 // CHECK-NEXT:    store i32 [[TMP6]], ptr [[TMP7]], align 4
 // CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
-// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 3
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 12
 // CHECK-NEXT:    store i32 [[TMP8]], ptr [[TMP9]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -34,22 +35,23 @@ void OnesSwizzleToScalar(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z19OnesSwizzleToVectorRu11matrix_typeILm4ELm4EiEDv4_i(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], <4 x i32> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 16
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP1]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP0]], i32 1
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 4
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 1
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP0]], i32 2
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 8
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 2
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[TMP6]], align 4
 // CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP0]], i32 3
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 12
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 3
 // CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP8]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -60,6 +62,7 @@ void OnesSwizzleToVector(out int4x4 A, int4 V) {
 // CHECK-LABEL: define hidden void @_Z19TwosSwizzleToScalarRu11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -69,16 +72,16 @@ void OnesSwizzleToVector(out int4x4 A, int4 V) {
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x i32> [[CAST_SPLAT]], <1 x i32> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 4
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 1
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 5
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[TMP6]], align 4
 // CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 6
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 9
 // CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP8]], align 4
 // CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
-// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 7
+// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 13
 // CHECK-NEXT:    store i32 [[TMP9]], ptr [[TMP10]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -89,23 +92,24 @@ void TwosSwizzleToScalar(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z19TwosSwizzleToVectorRu11matrix_typeILm4ELm4EiEDv4_i(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], <4 x i32> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 16
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 4
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP0]], i32 1
 // CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 5
 // CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP0]], i32 2
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 9
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 6
 // CHECK-NEXT:    store i32 [[TMP6]], ptr [[TMP7]], align 4
 // CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP0]], i32 3
-// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 13
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 7
 // CHECK-NEXT:    store i32 [[TMP8]], ptr [[TMP9]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -116,6 +120,7 @@ void TwosSwizzleToVector(out int4x4 A, int4 V) {
 // CHECK-LABEL: define hidden void @_Z21ThreesSwizzleToScalarRu11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -125,16 +130,16 @@ void TwosSwizzleToVector(out int4x4 A, int4 V) {
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x i32> [[CAST_SPLAT]], <1 x i32> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 8
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 2
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 9
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 6
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[TMP6]], align 4
 // CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
 // CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 10
 // CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP8]], align 4
 // CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
-// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 11
+// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 14
 // CHECK-NEXT:    store i32 [[TMP9]], ptr [[TMP10]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -145,23 +150,24 @@ void ThreesSwizzleToScalar(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z21ThreesSwizzleToVectorRu11matrix_typeILm4ELm4EiEDv4_i(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], <4 x i32> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 16
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 2
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 8
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP0]], i32 1
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 6
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 9
 // CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP0]], i32 2
 // CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 10
 // CHECK-NEXT:    store i32 [[TMP6]], ptr [[TMP7]], align 4
 // CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP0]], i32 3
-// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 14
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 11
 // CHECK-NEXT:    store i32 [[TMP8]], ptr [[TMP9]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -172,6 +178,7 @@ void ThreesSwizzleToVector(out int4x4 A, int4 V) {
 // CHECK-LABEL: define hidden void @_Z20FoursSwizzleToScalarRu11matrix_typeILm4ELm4EiEi(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
@@ -181,13 +188,13 @@ void ThreesSwizzleToVector(out int4x4 A, int4 V) {
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <1 x i32> [[CAST_SPLAT]], <1 x i32> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 12
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 3
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 13
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 7
 // CHECK-NEXT:    store i32 [[TMP5]], ptr [[TMP6]], align 4
 // CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 14
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 11
 // CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP8]], align 4
 // CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
 // CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <16 x i32>, ptr [[TMP2]], i32 0, i32 15
@@ -201,20 +208,21 @@ void FoursSwizzleToScalar(out int4x4 A, int I) {
 // CHECK-LABEL: define hidden void @_Z20FoursSwizzleToVectorRu11matrix_typeILm4ELm4EiEDv4_i(
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[A:%.*]], <4 x i32> noundef [[V:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 16
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 16
+// CHECK-NEXT:    store <4 x i32> [[V]], ptr [[V_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META4]], !align [[META5]]
 // CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 12
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 3
 // CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP3]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP0]], i32 1
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 13
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 7
 // CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
 // CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP0]], i32 2
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 14
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 11
 // CHECK-NEXT:    store i32 [[TMP6]], ptr [[TMP7]], align 4
 // CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP0]], i32 3
 // CHECK-NEXT:    [[TMP9:%.*]] = getelementptr <16 x i32>, ptr [[TMP1]], i32 0, i32 15

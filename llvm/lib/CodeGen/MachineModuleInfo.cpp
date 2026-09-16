@@ -40,7 +40,7 @@ void MachineModuleInfo::finalize() {
 MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
     : TM(std::move(MMI.TM)),
       Context(TM.getTargetTriple(), TM.getMCAsmInfo(), TM.getMCRegisterInfo(),
-              TM.getMCSubtargetInfo(), nullptr, &TM.Options.MCOptions, false),
+              TM.getMCSubtargetInfo(), nullptr, false),
       MachineFunctions(std::move(MMI.MachineFunctions)) {
   Context.setObjectFileInfo(TM.getObjFileLowering());
   ObjFileMMI = MMI.ObjFileMMI;
@@ -51,7 +51,7 @@ MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
 MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM)
     : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
                        TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
-                       nullptr, &TM->Options.MCOptions, false) {
+                       nullptr, false) {
   Context.setObjectFileInfo(TM->getObjFileLowering());
   initialize();
 }
@@ -60,7 +60,7 @@ MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM,
                                      MCContext *ExtContext)
     : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
                        TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
-                       nullptr, &TM->Options.MCOptions, false),
+                       nullptr, false),
       ExternalContext(ExtContext) {
   Context.setObjectFileInfo(TM->getObjFileLowering());
   initialize();
@@ -104,9 +104,25 @@ MachineFunction &MachineModuleInfo::getOrCreateMachineFunction(Function &F) {
 }
 
 void MachineModuleInfo::deleteMachineFunctionFor(Function &F) {
-  MachineFunctions.erase(&F);
+  FinalizedMFs.insert(&F);
   LastRequest = nullptr;
   LastResult = nullptr;
+  auto Leader = MFDeletionGrouping.findLeader(&F);
+  if (Leader == MFDeletionGrouping.member_end()) {
+    MachineFunctions.erase(&F);
+    return;
+  }
+
+  if (llvm::all_of(MFDeletionGrouping.members(*Leader),
+                   [this](const Function *Member) {
+                     return FinalizedMFs.count(Member);
+                   })) {
+    // All functions in the same deletion grouping have been finalized,
+    // so delete all of them.
+    for (const Function *Member : MFDeletionGrouping.members(*Leader)) {
+      MachineFunctions.erase(Member);
+    }
+  }
 }
 
 void MachineModuleInfo::insertFunction(const Function &F,
@@ -202,6 +218,7 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
         Ctx.diagnose(
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
+  MMI.getTarget().verifyOptionsConsistency(M);
   return false;
 }
 
@@ -226,5 +243,6 @@ MachineModuleAnalysis::run(Module &M, ModuleAnalysisManager &) {
         Ctx.diagnose(
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
+  MMI.getTarget().verifyOptionsConsistency(M);
   return Result(MMI);
 }

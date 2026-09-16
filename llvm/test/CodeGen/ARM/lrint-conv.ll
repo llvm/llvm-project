@@ -56,15 +56,3 @@ entry:
   %0 = tail call i32 @llvm.lrint.i32.f64(double %x)
   ret i32 %0
 }
-
-define i32 @testmswq_builtin(fp128 %x) {
-; CHECK-LABEL: testmswq_builtin:
-; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r11, lr}
-; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    bl lrintl
-; CHECK-NEXT:    pop {r11, pc}
-entry:
-  %0 = tail call i32 @llvm.lrint.i32.f128(fp128 %x)
-  ret i32 %0
-}

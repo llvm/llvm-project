@@ -14,6 +14,7 @@
 #include "lldb/Host/ProcessRunLock.h"
 #include "lldb/Target/StackID.h"
 #include "lldb/Target/SyntheticFrameProvider.h"
+#include "lldb/Target/TargetAPIMutex.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -109,29 +110,6 @@ public:
   /// selected frame). If there is no selected frame, default to the first
   /// frame.
   ExecutionContextRef(Thread *thread, bool adopt_selected);
-
-  /// Construct using an execution context scope.
-  ///
-  /// If the ExecutionContextScope object is valid and refers to a frame, make
-  /// weak references too the frame, thread, process and target. If the
-  /// ExecutionContextScope object is valid and refers to a thread, make weak
-  /// references too the thread, process and target. If the
-  /// ExecutionContextScope object is valid and refers to a process, make weak
-  /// references too the process and target. If the ExecutionContextScope
-  /// object is valid and refers to a target, make weak references too the
-  /// target.
-  ExecutionContextRef(ExecutionContextScope *exe_scope);
-
-  /// Construct using an execution context scope.
-  ///
-  /// If the ExecutionContextScope object refers to a frame, make weak
-  /// references too the frame, thread, process and target. If the
-  /// ExecutionContextScope object refers to a thread, make weak references
-  /// too the thread, process and target. If the ExecutionContextScope object
-  /// refers to a process, make weak references too the process and target. If
-  /// the ExecutionContextScope object refers to a target, make weak
-  /// references too the target.
-  ExecutionContextRef(ExecutionContextScope &exe_scope);
 
   ~ExecutionContextRef();
 
@@ -588,16 +566,24 @@ protected:
 /// The locks are private by design: to unlock them, destroy the
 /// StoppedExecutionContext.
 struct StoppedExecutionContext : ExecutionContext {
+  /// `locker` is consumed purely for its side effect: moving a
+  /// std::unique_lock disarms the source, so the caller's own locker (which
+  /// referenced `api_mutex` before it was moved here) stops believing it
+  /// owns the lock, without an explicit release() call at the call site.
+  /// `m_api_locker` re-adopts the lock against this object's own
+  /// `m_api_mutex`, since a unique_lock can't be retargeted by moving it.
   StoppedExecutionContext(lldb::TargetSP &target_sp,
                           lldb::ProcessSP &process_sp,
                           lldb::ThreadSP &thread_sp,
                           lldb::StackFrameSP &frame_sp,
-                          std::unique_lock<std::recursive_mutex> api_lock,
+                          TargetAPIMutex api_mutex,
+                          std::unique_lock<TargetAPIMutex> locker,
                           ProcessRunLock::ProcessRunLocker stop_locker)
-      : m_api_lock(std::move(api_lock)), m_stop_locker(std::move(stop_locker)) {
+      : m_api_mutex(std::move(api_mutex)),
+        m_api_locker(m_api_mutex, std::adopt_lock),
+        m_stop_locker(std::move(stop_locker)) {
     assert(target_sp);
     assert(process_sp);
-    assert(m_api_lock.owns_lock());
     assert(m_stop_locker.IsLocked());
     SetTargetSP(target_sp);
     SetProcessSP(process_sp);
@@ -608,20 +594,21 @@ struct StoppedExecutionContext : ExecutionContext {
   /// Transfers ownership of the locks from `other` to `this`, making `other`
   /// unusable.
   StoppedExecutionContext(StoppedExecutionContext &&other)
-      : StoppedExecutionContext(other.m_target_sp, other.m_process_sp,
-                                other.m_thread_sp, other.m_frame_sp,
-                                std::move(other.m_api_lock),
-                                std::move(other.m_stop_locker)) {
+      : StoppedExecutionContext(
+            other.m_target_sp, other.m_process_sp, other.m_thread_sp,
+            other.m_frame_sp, std::move(other.m_api_mutex),
+            std::move(other.m_api_locker), std::move(other.m_stop_locker)) {
     other.Clear();
   }
 
   /// Clears this context, unlocking the ProcessRunLock and returning the
   /// locked API lock, allowing callers to resume the process. Similar to
   /// a move operation, this object is no longer usable.
-  [[nodiscard]] std::unique_lock<std::recursive_mutex> AllowResume();
+  [[nodiscard]] TargetAPIMutex AllowResume();
 
 private:
-  std::unique_lock<std::recursive_mutex> m_api_lock;
+  TargetAPIMutex m_api_mutex;
+  std::unique_lock<TargetAPIMutex> m_api_locker;
   ProcessRunLock::ProcessRunLocker m_stop_locker;
 };
 

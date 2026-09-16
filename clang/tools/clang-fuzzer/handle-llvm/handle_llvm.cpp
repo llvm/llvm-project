@@ -103,7 +103,10 @@ static void RunOptimizationPasses(raw_ostream &OS, Module &M,
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
   ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OL);
-  MPM.addPass(PrintModulePass(OS));
+  MPM.addPass(PrintModulePass(OS, /*Banner=*/"",
+                              /*ShouldPreserveUseListOrder=*/false,
+                              /*EmitSummaryIndex=*/false,
+                              /*ShouldRenumberMetadata=*/true));
 
   MPM.run(M, MAM);
 }
@@ -133,8 +136,8 @@ static std::string OptLLVM(const std::string &IR, CodeGenOptLevel OLvl) {
   if (!TM)
     ErrorAndExit("Could not create target machine");
 
-  codegen::setFunctionAttributes(codegen::getCPUStr(),
-                                 codegen::getFeaturesStr(), *M);
+  codegen::setFunctionAttributes(*M, codegen::getCPUStr(),
+                                 codegen::getFeaturesStr());
 
   // Add a pass that writes the optimized IR to an output stream
   std::string outString;

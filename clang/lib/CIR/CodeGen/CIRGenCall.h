@@ -202,7 +202,7 @@ private:
 
   /// A data-flow flag to make sure getRValue and/or copyInto are not
   /// called twice for duplicated IR emission.
-  [[maybe_unused]] mutable bool isUsed;
+  mutable bool isUsed;
 
 public:
   clang::QualType ty;
@@ -214,6 +214,10 @@ public:
       : lv(lv), hasLV(true), isUsed(false), ty(ty) {}
 
   bool hasLValue() const { return hasLV; }
+
+  /// \returns an independent RValue. If the CallArg contains an LValue,
+  /// a temporary copy is returned.
+  RValue getRValue(CIRGenFunction &cgf, mlir::Location loc) const;
 
   LValue getKnownLValue() const {
     assert(hasLV && !isUsed);

@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/MSF/IMSFFile.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
+#include "llvm/Object/DXContainer.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/Compiler.h"
@@ -105,6 +106,7 @@ public:
   Expected<SymbolStream &> getPDBSymbolStream();
   Expected<PDBStringTable &> getStringTable();
   Expected<InjectedSourceStream &> getInjectedSourceStream();
+  Expected<object::DXContainer &> getDXContainerStream();
 
   BumpPtrAllocator &getAllocator() { return Allocator; }
 
@@ -133,6 +135,7 @@ private:
   std::unique_ptr<DbiStream> Dbi;
   std::unique_ptr<TpiStream> Tpi;
   std::unique_ptr<TpiStream> Ipi;
+  std::unique_ptr<object::DXContainer> Dxc;
   std::unique_ptr<PublicsStream> Publics;
   std::unique_ptr<SymbolStream> Symbols;
   std::unique_ptr<msf::MappedBlockStream> DirectoryStream;

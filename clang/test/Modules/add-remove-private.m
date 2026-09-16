@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 // RUN: rm -rf %t.mcp
 // RUN: mkdir -p %t
-// RUN: cp -r %S/Inputs/AddRemovePrivate.framework %t/AddRemovePrivate.framework
+// RUN: cp -R %S/Inputs/AddRemovePrivate.framework %t/AddRemovePrivate.framework
 
 // Build with module.private.modulemap
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t.mcp -fdisable-module-hash -F %t %s -verify -DP -Wno-private-module

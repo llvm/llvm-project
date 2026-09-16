@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/windows/LazyImport.h"
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -29,23 +30,59 @@
 using namespace lldb;
 using namespace lldb_private;
 
-using GetThreadDescriptionFunctionPtr =
-    HRESULT(WINAPI *)(HANDLE hThread, PWSTR *ppszThreadDescription);
-
 TargetThreadWindows::TargetThreadWindows(ProcessWindows &process,
                                          const HostThread &thread)
     : Thread(process, thread.GetNativeThread().GetThreadId()),
-      m_thread_reg_ctx_sp(), m_host_thread(thread) {}
+      m_host_thread(thread) {}
 
 TargetThreadWindows::~TargetThreadWindows() { DestroyThread(); }
 
 void TargetThreadWindows::RefreshStateAfterStop() {
   ::SuspendThread(m_host_thread.GetNativeThread().GetSystemHandle());
-  SetState(eStateStopped);
   GetRegisterContext()->InvalidateIfNeeded(false);
 }
 
 void TargetThreadWindows::WillResume(lldb::StateType resume_state) {}
+
+StructuredData::ObjectSP TargetThreadWindows::FetchThreadExtendedInfo() {
+  struct ThreadBasicInformation {
+    LONG ExitStatus;
+    PVOID TebBaseAddress;
+    struct {
+      HANDLE UniqueProcess;
+      HANDLE UniqueThread;
+    } ClientId;
+    ULONG_PTR AffinityMask;
+    LONG Priority;
+    LONG BasePriority;
+  };
+  using NtQueryInformationThreadFn =
+      LONG(WINAPI *)(HANDLE ThreadHandle, ULONG ThreadInformationClass,
+                     PVOID ThreadInformation, ULONG ThreadInformationLength,
+                     PULONG ReturnLength);
+
+  static LazyImport<NtQueryInformationThreadFn> s_query_information_thread{
+      L"Kernel32.dll", "NtQueryInformationThread"};
+  if (!s_query_information_thread)
+    return StructuredData::ObjectSP();
+  auto NtQueryInformationThread = *s_query_information_thread;
+
+  HANDLE handle = m_host_thread.GetNativeThread().GetSystemHandle();
+  if (!handle || handle == INVALID_HANDLE_VALUE)
+    return StructuredData::ObjectSP();
+
+  ThreadBasicInformation info = {};
+  // ThreadInformationClass 0 is ThreadBasicInformation.
+  if (NtQueryInformationThread(handle, 0, &info, sizeof(info), nullptr) < 0)
+    return StructuredData::ObjectSP();
+  if (!info.TebBaseAddress)
+    return StructuredData::ObjectSP();
+
+  auto dict = std::make_shared<StructuredData::Dictionary>();
+  dict->AddIntegerItem("teb_address",
+                       reinterpret_cast<uint64_t>(info.TebBaseAddress));
+  return dict;
+}
 
 void TargetThreadWindows::DidStop() {}
 
@@ -166,7 +203,7 @@ Status TargetThreadWindows::DoResume() {
       // explicitly compare with -1.
       previous_suspend_count = ::ResumeThread(thread_handle);
 
-      if (previous_suspend_count == (DWORD)-1)
+      if (previous_suspend_count == static_cast<DWORD>(-1))
         return Status(::GetLastError(), eErrorTypeWin32);
 
     } while (previous_suspend_count > 1);
@@ -177,17 +214,12 @@ Status TargetThreadWindows::DoResume() {
 
 const char *TargetThreadWindows::GetName() {
   Log *log = GetLog(LLDBLog::Thread);
-  static GetThreadDescriptionFunctionPtr GetThreadDescription = []() {
-    HMODULE hModule = ::LoadLibraryW(L"Kernel32.dll");
-    return hModule
-               ? reinterpret_cast<GetThreadDescriptionFunctionPtr>(
-                     (void *)::GetProcAddress(hModule, "GetThreadDescription"))
-               : nullptr;
-  }();
-  LLDB_LOGF(log, "GetProcAddress: %p",
-            reinterpret_cast<void *>(GetThreadDescription));
-  if (!GetThreadDescription)
+  static LazyImport<HRESULT(WINAPI *)(HANDLE, PWSTR *)>
+      s_get_thread_description{L"Kernel32.dll", "GetThreadDescription"};
+  if (!s_get_thread_description)
     return m_name.c_str();
+  auto GetThreadDescription = *s_get_thread_description;
+
   PWSTR pszThreadName;
   if (SUCCEEDED(GetThreadDescription(
           m_host_thread.GetNativeThread().GetSystemHandle(), &pszThreadName))) {

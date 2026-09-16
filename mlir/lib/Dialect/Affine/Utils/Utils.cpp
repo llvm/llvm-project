@@ -312,7 +312,7 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
   operandMap.clear();
   b.setInsertionPointAfter(hoistOverOp);
   // We'll set an attribute to identify this op in a clone of this sub-tree.
-  ifOp->setAttr(idForIfOp, b.getBoolAttr(true));
+  ifOp->setDiscardableAttr(idForIfOp, b.getBoolAttr(true));
   hoistOverOpClone = b.clone(*hoistOverOp, operandMap);
 
   // Promote the 'then' block of the original affine.if in the then version.
@@ -327,7 +327,7 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
   // Find the clone of the original affine.if op in the else version.
   AffineIfOp ifCloneInElse;
   hoistOverOpClone->walk([&](AffineIfOp ifClone) {
-    if (!ifClone->getAttr(idForIfOp))
+    if (!ifClone->getDiscardableAttr(idForIfOp))
       return WalkResult::advance();
     ifCloneInElse = ifClone;
     return WalkResult::interrupt();
@@ -908,8 +908,9 @@ mlir::affine::hasNoInterveningEffect<mlir::MemoryEffects::Read,
 // This attempts to find stores which have no impact on the final result.
 // A writing op writeA will be eliminated if there exists an op writeB if
 // 1) writeA and writeB have mathematically equivalent affine access functions.
-// 2) writeB postdominates writeA.
-// 3) There is no potential read between writeA and writeB.
+// 2) writeB writes the same type as writeA (so it fully covers writeA's bytes).
+// 3) writeB postdominates writeA.
+// 4) There is no potential read between writeA and writeB.
 static void findUnusedStore(AffineWriteOpInterface writeA,
                             SmallVectorImpl<Operation *> &opsToErase,
                             PostDominanceInfo &postDominanceInfo,
@@ -934,6 +935,16 @@ static void findUnusedStore(AffineWriteOpInterface writeA,
     MemRefAccess destAccess(writeA);
 
     if (srcAccess != destAccess)
+      continue;
+
+    // Check that the store types match. If types differ, writeB may not cover
+    // all bytes written by writeA (e.g. a narrower vector type), so
+    // conservatively assume writeA is not dead.
+    // One could be tempted whether writeA type is smaller than writeB, however
+    // it can become tricky with cases like vector<4xi6> vs vector<3xi8> due to
+    // padding that can be datalayout dependent.
+    if (writeA.getValueToStore().getType() !=
+        writeB.getValueToStore().getType())
       continue;
 
     // writeB must postdominate writeA.
@@ -1287,17 +1298,16 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
 
   // Add attribute for 'newMap', other Attributes do not change.
   auto newMapAttr = AffineMapAttr::get(newMap);
-  for (auto namedAttr : op->getAttrs()) {
-    if (affMapAccInterface &&
-        namedAttr.getName() ==
-            affMapAccInterface.getAffineMapAttrForMemRef(oldMemRef).getName())
-      state.attributes.push_back({namedAttr.getName(), newMapAttr});
-    else
-      state.attributes.push_back(namedAttr);
-  }
+  state.addAttributes(op->getDiscardableAttrDictionary().getValue());
+  state.propertiesAttr = op->getPropertiesAsAttribute();
 
   // Create the new operation.
   auto *repOp = builder.create(state);
+  if (affMapAccInterface) {
+    StringAttr mapAttrName =
+        affMapAccInterface.getAffineMapAttrForMemRef(oldMemRef).getName();
+    repOp->setInherentAttr(mapAttrName, newMapAttr);
+  }
   op->replaceAllUsesWith(repOp);
   op->erase();
 
@@ -1374,7 +1384,7 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
     if (failed(replaceAllMemRefUsesWith(
             oldMemRef, newMemRef, user, extraIndices, indexRemap, extraOperands,
             symbolOperands, allowNonDereferencingOps)))
-      llvm_unreachable("memref replacement guaranteed to succeed here");
+      return failure();
   }
 
   return success();

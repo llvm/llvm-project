@@ -9,6 +9,8 @@ class ScriptedThreadPlan:
 
     """
 
+    thread_plan: lldb.SBThreadPlan
+
     def __init__(self, thread_plan: lldb.SBThreadPlan):
         """Initialization needs a valid lldb.SBThreadPlan object. This plug-in will get created after a live process is valid and has stopped.
 

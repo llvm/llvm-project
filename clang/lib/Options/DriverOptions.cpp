@@ -41,11 +41,13 @@ class DriverOptTable : public PrecomputedOptTable {
 public:
   DriverOptTable()
       : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                            OptionPrefixesUnion) {}
+                            OptionPrefixesUnion) {
+    setValuesCodeFn(getOptionValuesCode);
+  }
 };
 } // anonymous namespace
 
 const llvm::opt::OptTable &clang::getDriverOptTable() {
-  static DriverOptTable Table;
+  static const DriverOptTable Table;
   return Table;
 }

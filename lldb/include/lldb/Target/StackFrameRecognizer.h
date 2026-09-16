@@ -14,6 +14,7 @@
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectList.h"
+#include "lldb/ValueObject/ValueObjectSynthesizedValue.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
 
@@ -47,6 +48,8 @@ public:
   /// displaying backtraces, for example.
   virtual bool ShouldHide() { return false; }
 
+  virtual lldb::ThreadPlanSP GetStepThroughPlan() { return {}; }
+
 protected:
   lldb::ValueObjectListSP m_arguments;
   std::string m_stop_desc;
@@ -77,8 +80,7 @@ public:
 /// tracks a particular Python classobject, which will be asked to recognize
 /// stack frames.
 class ScriptedStackFrameRecognizer : public StackFrameRecognizer {
-  lldb_private::ScriptInterpreter *m_interpreter;
-  lldb_private::StructuredData::ObjectSP m_python_object_sp;
+  lldb::ScriptedStackFrameRecognizerInterfaceSP m_interface_sp;
 
   std::string m_python_class;
 
@@ -164,43 +166,9 @@ private:
   uint16_t m_generation = 0;
 };
 
-/// \class ValueObjectRecognizerSynthesizedValue
-///
-/// ValueObject subclass that presents the passed ValueObject as a recognized
-/// value with the specified ValueType. Frame recognizers should return
-/// instances of this class as the returned objects in GetRecognizedArguments().
-class ValueObjectRecognizerSynthesizedValue : public ValueObject {
- public:
-  static lldb::ValueObjectSP Create(ValueObject &parent, lldb::ValueType type) {
-    return (new ValueObjectRecognizerSynthesizedValue(parent, type))->GetSP();
-  }
-  ValueObjectRecognizerSynthesizedValue(ValueObject &parent,
-                                        lldb::ValueType type)
-      : ValueObject(parent), m_type(type) {
-    SetName(parent.GetName());
-  }
-
-  llvm::Expected<uint64_t> GetByteSize() override {
-    return m_parent->GetByteSize();
-  }
-  lldb::ValueType GetValueType() const override { return m_type; }
-  bool UpdateValue() override {
-    if (!m_parent->UpdateValueIfNeeded()) return false;
-    m_value = m_parent->GetValue();
-    return true;
-  }
-  llvm::Expected<uint32_t>
-  CalculateNumChildren(uint32_t max = UINT32_MAX) override {
-    return m_parent->GetNumChildren(max);
-  }
-  CompilerType GetCompilerTypeImpl() override {
-    return m_parent->GetCompilerType();
-  }
-  bool IsSynthetic() override { return true; }
-
- private:
-  lldb::ValueType m_type;
-};
+/// Frame recognizers should return ValueObjectSynthesizedValue instances as the
+/// returned objects in GetRecognizedArguments().
+using ValueObjectRecognizerSynthesizedValue = ValueObjectSynthesizedValue;
 
 } // namespace lldb_private
 

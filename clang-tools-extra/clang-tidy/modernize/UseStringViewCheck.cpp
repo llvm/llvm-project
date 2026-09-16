@@ -21,6 +21,49 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+namespace {
+AST_MATCHER(Expr, isStringLiteralOrTernary) {
+  const auto Matches = [](const auto &Self, const Expr &Expression) -> bool {
+    const Expr *Unwrapped = Expression.IgnoreParenImpCasts();
+    if (const auto *Ternary = dyn_cast<ConditionalOperator>(Unwrapped))
+      return Self(Self, *Ternary->getTrueExpr()) &&
+             Self(Self, *Ternary->getFalseExpr());
+    return isa<StringLiteral>(Unwrapped);
+  };
+  return Matches(Matches, Node);
+}
+
+AST_MATCHER(FunctionDecl, isOverloaded) {
+  const DeclarationName Name = Node.getDeclName();
+  // Sanity check
+  if (Name.isEmpty())
+    return false;
+  const DeclContext *DC = Node.getDeclContext();
+  const auto LookupResult = DC->lookup(Name);
+  size_t UniqueSignatures = 0;
+  llvm::SmallPtrSet<const FunctionDecl *, 2> SeenFunctions;
+  for (NamedDecl *ND : LookupResult) {
+    const FunctionDecl *FD = nullptr;
+    if (const auto *Func = dyn_cast<FunctionDecl>(ND)) {
+      // Regular functions
+      FD = Func;
+    } else if (const auto *USD = dyn_cast<UsingShadowDecl>(ND)) {
+      // Overloads via "using ns::func_name"
+      FD = dyn_cast<FunctionDecl>(USD->getTargetDecl());
+    } else if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(ND)) {
+      // Templated functions
+      FD = FTD->getTemplatedDecl();
+    }
+    if (FD && SeenFunctions.insert(FD->getCanonicalDecl()).second) {
+      UniqueSignatures++;
+      if (UniqueSignatures > 1)
+        return true;
+    }
+  }
+  return false;
+}
+} // namespace
+
 static constexpr StringRef StringViewClassKey = "string";
 static constexpr StringRef WStringViewClassKey = "wstring";
 static constexpr StringRef U8StringViewClassKey = "u8string";
@@ -31,9 +74,9 @@ static auto getStringTypeMatcher(StringRef CharType) {
   return hasCanonicalType(hasDeclaration(cxxRecordDecl(hasName(CharType))));
 }
 
-static void fixReturns(const FunctionDecl *FuncDecl, DiagnosticBuilder &Diag,
-                       ASTContext &Context) {
-  auto Matches = match(
+static void fixReturns(const FunctionDecl *FuncDecl,
+                       const DiagnosticBuilder &Diag, ASTContext &Context) {
+  const auto Matches = match(
       findAll(returnStmt(hasReturnValue(ignoringParenImpCasts(
           cxxTemporaryObjectExpr(argumentCountIs(0)).bind("temp_obj_expr"))))),
       *FuncDecl->getBody(), Context);
@@ -48,6 +91,7 @@ static void fixReturns(const FunctionDecl *FuncDecl, DiagnosticBuilder &Diag,
 UseStringViewCheck::UseStringViewCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
+      CheckOverloadedFunctions(Options.get("CheckOverloadedFunctions", false)),
       IgnoredFunctions(utils::options::parseStringList(
           Options.get("IgnoredFunctions", "toString$;ToString$;to_string$"))) {
   parseReplacementStringViewClass(
@@ -55,6 +99,7 @@ UseStringViewCheck::UseStringViewCheck(StringRef Name,
 }
 
 void UseStringViewCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "CheckOverloadedFunctions", CheckOverloadedFunctions);
   Options.store(Opts, "IgnoredFunctions",
                 utils::options::serializeStringList(IgnoredFunctions));
   Options.store(Opts, "ReplacementStringViewClass",
@@ -72,19 +117,20 @@ void UseStringViewCheck::registerMatchers(MatchFinder *Finder) {
   const auto IsStdStringView = getStringTypeMatcher("::std::basic_string_view");
   const auto IgnoredFunctionsMatcher =
       matchers::matchesAnyListedRegexName(IgnoredFunctions);
-  const auto TernaryOperator = conditionalOperator(
-      hasTrueExpression(ignoringParenImpCasts(stringLiteral())),
-      hasFalseExpression(ignoringParenImpCasts(stringLiteral())));
   const auto VirtualOrOperator =
       cxxMethodDecl(anyOf(cxxConversionDecl(), isVirtual()));
+  const auto CheckOverloaded =
+      CheckOverloadedFunctions ? unless(anything()) : isOverloaded();
   Finder->addMatcher(
       functionDecl(
           isDefinition(),
           unless(anyOf(VirtualOrOperator, IgnoredFunctionsMatcher,
+                       CheckOverloaded,
                        ast_matchers::isExplicitTemplateSpecialization())),
           returns(IsStdString), hasDescendant(returnStmt()),
           unless(hasDescendant(returnStmt(hasReturnValue(unless(
-              anyOf(stringLiteral(), hasType(IsStdStringView), TernaryOperator,
+              anyOf(stringLiteral(), hasType(IsStdStringView),
+                    isStringLiteralOrTernary(),
                     cxxConstructExpr(anyOf(
                         allOf(hasType(IsStdString), argumentCountIs(0)),
                         allOf(isListInitialization(),
@@ -100,12 +146,12 @@ void UseStringViewCheck::check(const MatchFinder::MatchResult &Result) {
   assert(MatchedDecl);
   bool ShouldAKA = false;
   const std::string DesugaredTypeStr =
-      clang::desugarForDiagnostic(
-          *Result.Context, QualType(MatchedDecl->getReturnType()), ShouldAKA)
+      desugarForDiagnostic(*Result.Context,
+                           QualType(MatchedDecl->getReturnType()), ShouldAKA)
           .getAsString();
   const StringRef DestReturnTypeStr = toStringViewTypeStr(DesugaredTypeStr);
 
-  auto Diag =
+  const auto Diag =
       diag(MatchedDecl->getTypeSpecStartLoc(),
            "consider using '%0' to avoid unnecessary copying and allocations")
       << DestReturnTypeStr;
@@ -142,7 +188,7 @@ void UseStringViewCheck::parseReplacementStringViewClass(StringRef Options) {
       {U32StringViewClassKey, &U32StringViewClass}};
   for (const auto &Option : utils::options::parseStringList(Options)) {
     const auto Split = Option.split('=');
-    if (auto It = StringClassesMap.find(Split.first);
+    if (const auto It = StringClassesMap.find(Split.first);
         It != StringClassesMap.end())
       *It->second = Split.second;
   }

@@ -46,7 +46,7 @@ public:
   };
 
 private:
-  Triple TargetTriple;
+  const Triple &TargetTriple;
 
 protected:
   bool HasMulI24 = true;
@@ -54,14 +54,17 @@ protected:
   bool HasSMulHi = false;
   bool HasFminFmaxLegacy = true;
 
-  unsigned EUsPerCU = 4;
-  unsigned MaxWavesPerEU = 10;
+  unsigned NumWorkGroupSIMDs = 4;
+  // Set from TableGen subtarget features; R600Subtarget sets it directly.
+  unsigned MaxWavesPerEU = 0;
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
+  unsigned LDSAllocationGranularity = 0;
   char WavefrontSizeLog2 = 0;
+  unsigned FlatOffsetBitWidth = 0;
 
 public:
-  AMDGPUSubtarget(Triple TT) : TargetTriple(std::move(TT)) {}
+  AMDGPUSubtarget(const Triple &TT) : TargetTriple(TT) {}
 
   static const AMDGPUSubtarget &get(const MachineFunction &MF);
   static const AMDGPUSubtarget &get(const TargetMachine &TM,
@@ -235,10 +238,9 @@ public:
     return AddressableLocalMemorySize;
   }
 
-  /// Number of SIMDs/EUs (execution units) per "CU" ("compute unit"), where the
-  /// "CU" is the unit onto which workgroups are mapped. This takes WGP mode vs.
-  /// CU mode into account.
-  unsigned getEUsPerCU() const { return EUsPerCU; }
+  /// \returns Number of SIMDs a work-group's waves run on: all of the block's
+  /// SIMDs in full-SIMD mode, half of them otherwise.
+  unsigned getNumWorkGroupSIMDs() const { return NumWorkGroupSIMDs; }
 
   Align getAlignmentForImplicitArgPtr() const {
     return isAmdHsaOS() ? Align(8) : Align(4);
@@ -288,9 +290,6 @@ public:
   /// Return the maximum workitem ID value in the function, for the given (0, 1,
   /// 2) dimension.
   unsigned getMaxWorkitemID(const Function &Kernel, unsigned Dimension) const;
-
-  /// Return the number of work groups for the function.
-  SmallVector<unsigned> getMaxNumWorkGroups(const Function &F) const;
 
   /// Return true if only a single workitem can be active in a wave.
   bool isSingleLaneExecution(const Function &Kernel) const;

@@ -478,11 +478,11 @@ public:
     return ModelDef;
   }
 
-  const CodeGenProcModel &getModelForProc(const Record *ProcDef) const {
+  unsigned getModelIndexForProc(const Record *ProcDef) const {
     const Record *ModelDef = getModelOrItinDef(ProcDef);
     auto I = ProcModelMap.find(ModelDef);
     assert(I != ProcModelMap.end() && "missing machine model");
-    return ProcModels[I->second];
+    return I->second;
   }
 
   const CodeGenProcModel &getProcModel(const Record *ModelDef) const {

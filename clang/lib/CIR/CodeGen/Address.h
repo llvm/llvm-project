@@ -14,9 +14,12 @@
 #ifndef CLANG_LIB_CIR_ADDRESS_H
 #define CLANG_LIB_CIR_ADDRESS_H
 
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Value.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -127,7 +130,7 @@ public:
     return elementType;
   }
 
-  cir::TargetAddressSpaceAttr getAddressSpace() const {
+  mlir::ptr::MemorySpaceAttrInterface getAddressSpace() const {
     auto ptrTy = mlir::dyn_cast<cir::PointerType>(getType());
     return ptrTy.getAddrSpace();
   }
@@ -143,6 +146,11 @@ public:
 
   template <typename OpTy> OpTy getDefiningOp() const {
     return mlir::dyn_cast_or_null<OpTy>(getDefiningOp());
+  }
+
+  /// Return the underlying alloca for this address, if any.
+  cir::AllocaOp getUnderlyingAllocaOp() const {
+    return cir::getUnderlyingAlloca(getPointer());
   }
 
   /// Whether the pointer is known not to be null.

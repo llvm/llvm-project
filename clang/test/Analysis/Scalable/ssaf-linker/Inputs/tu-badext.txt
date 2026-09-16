@@ -1,0 +1,1 @@
+This file exists to exercise the unsupported-extension error path in cli.test.

@@ -1,0 +1,27 @@
+# REQUIRES: python, system-darwin
+
+# Test that when a module is NOT in target.auto-load-scripts-for-modules, the existing
+# target.load-script-from-symbol-file setting controls whether scripts load.
+# With load-script-from-symbol-file=true and no dictionary entry, scripts
+# should still load normally.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g %t/main.c -o %t/TestModule.out
+# RUN: mkdir -p %t/TestModule.out.dSYM/Contents/Resources/Python
+# RUN: cp %t/dsym_script.py %t/TestModule.out.dSYM/Contents/Resources/Python/TestModule.py
+
+## A different module is in the dictionary; TestModule is not.
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file warn' \
+# RUN:   -o 'settings set target.auto-load-scripts-for-modules SomeOtherModule=true' \
+# RUN:   -o 'target create %t/TestModule.out' 2>&1 | FileCheck %s --implicit-check-not=AUTOLOAD_SUCCESS
+
+# CHECK: warning: 'TestModule' contains an untrusted debug script. To run this script in this debug session
+
+#--- main.c
+int main() { return 0; }
+
+#--- dsym_script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("AUTOLOAD_SUCCESS", file=sys.stderr)

@@ -16,7 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE int canonicalizef(float *cx, const float *x) {
+LIBC_INLINE constexpr int canonicalizef(float *cx, const float *x) {
   return fputil::canonicalize(*cx, *x);
 }
 

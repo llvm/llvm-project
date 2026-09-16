@@ -53,14 +53,13 @@ inline constexpr char kSanitizerBinaryMetadataAtomicsSection[] =
 //
 /// The pass should be inserted after optimizations.
 class SanitizerBinaryMetadataPass
-    : public PassInfoMixin<SanitizerBinaryMetadataPass> {
+    : public RequiredPassInfoMixin<SanitizerBinaryMetadataPass> {
 public:
   LLVM_ABI explicit SanitizerBinaryMetadataPass(
       SanitizerBinaryMetadataOptions Opts = {},
       IntrusiveRefCntPtr<vfs::FileSystem> VFS = nullptr,
       ArrayRef<std::string> IgnorelistFiles = {});
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 
 private:
   const SanitizerBinaryMetadataOptions Options;

@@ -33,12 +33,11 @@ namespace process_freebsd {
 
 class NativeProcessFreeBSD;
 
-class NativeRegisterContextFreeBSD_x86_64
-    : public NativeRegisterContextFreeBSD,
-      public NativeRegisterContextDBReg_x86 {
+class NativeRegisterContextFreeBSD_x86 : public NativeRegisterContextFreeBSD,
+                                         public NativeRegisterContextDBReg_x86 {
 public:
-  NativeRegisterContextFreeBSD_x86_64(const ArchSpec &target_arch,
-                                      NativeThreadFreeBSD &native_thread);
+  NativeRegisterContextFreeBSD_x86(const ArchSpec &target_arch,
+                                   NativeThreadFreeBSD &native_thread);
   uint32_t GetRegisterSetCount() const override;
 
   const RegisterSet *GetRegisterSet(uint32_t set_index) const override;

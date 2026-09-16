@@ -83,9 +83,8 @@ void ModuloScheduleExpander::expand() {
       Register Reg = Op.getReg();
       unsigned MaxDiff = 0;
       bool PhiIsSwapped = false;
-      for (MachineOperand &UseOp : MRI.use_operands(Reg)) {
-        MachineInstr *UseMI = UseOp.getParent();
-        int UseStage = Schedule.getStage(UseMI);
+      for (MachineInstr &UseMI : MRI.use_instructions(Reg)) {
+        int UseStage = Schedule.getStage(&UseMI);
         unsigned Diff = 0;
         if (UseStage != -1 && UseStage >= DefStage)
           Diff = UseStage - DefStage;
@@ -161,7 +160,7 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
   KernelBB->replaceSuccessor(BB, KernelBB);
 
   generateExistingPhis(KernelBB, PrologBBs.back(), KernelBB, KernelBB, VRMap,
-                       InstrMap, MaxStageCount, MaxStageCount, false);
+                       VRMapPhi, InstrMap, MaxStageCount, MaxStageCount, false);
   generatePhis(KernelBB, PrologBBs.back(), KernelBB, KernelBB, VRMap, VRMapPhi,
                InstrMap, MaxStageCount, MaxStageCount, false);
 
@@ -313,7 +312,7 @@ void ModuloScheduleExpander::generateEpilog(
       }
     }
     generateExistingPhis(NewBB, PrologBBs[i - 1], PredBB, KernelBB, VRMap,
-                         InstrMap, LastStage, EpilogStage, i == 1);
+                         VRMapPhi, InstrMap, LastStage, EpilogStage, i == 1);
     generatePhis(NewBB, PrologBBs[i - 1], PredBB, KernelBB, VRMap, VRMapPhi,
                  InstrMap, LastStage, EpilogStage, i == 1);
     PredBB = NewBB;
@@ -359,8 +358,8 @@ static void replaceRegUsesAfterLoop(Register FromReg, Register ToReg,
 /// specified loop.
 static bool hasUseAfterLoop(Register Reg, MachineBasicBlock *BB,
                             MachineRegisterInfo &MRI) {
-  for (const MachineOperand &MO : MRI.use_operands(Reg))
-    if (MO.getParent()->getParent() != BB)
+  for (const MachineInstr &UseMI : MRI.use_instructions(Reg))
+    if (UseMI.getParent() != BB)
       return true;
   return false;
 }
@@ -370,8 +369,9 @@ static bool hasUseAfterLoop(Register Reg, MachineBasicBlock *BB,
 /// creation of new Phis.
 void ModuloScheduleExpander::generateExistingPhis(
     MachineBasicBlock *NewBB, MachineBasicBlock *BB1, MachineBasicBlock *BB2,
-    MachineBasicBlock *KernelBB, ValueMapTy *VRMap, InstrMapTy &InstrMap,
-    unsigned LastStageNum, unsigned CurStageNum, bool IsLast) {
+    MachineBasicBlock *KernelBB, ValueMapTy *VRMap, ValueMapTy *VRMapPhi,
+    InstrMapTy &InstrMap, unsigned LastStageNum, unsigned CurStageNum,
+    bool IsLast) {
   // Compute the stage number for the initial value of the Phi, which
   // comes from the prolog. The prolog to use depends on to which kernel/
   // epilog that we're adding the Phi.
@@ -499,23 +499,26 @@ void ModuloScheduleExpander::generateExistingPhis(
         // contains the last definition of the Phi.
         if (np == 0 && PrevStage == LastStageNum &&
             (StageScheduled != 0 || LoopValStage != 0) &&
-            VRMap[PrevStage - StageDiffAdj].count(LoopVal))
-          PhiOp2 = VRMap[PrevStage - StageDiffAdj][LoopVal];
+            getMapPhiReg(VRMap, VRMapPhi, PrevStage - StageDiffAdj, LoopVal))
+          PhiOp2 =
+              getMapPhiReg(VRMap, VRMapPhi, PrevStage - StageDiffAdj, LoopVal);
         // Use the value defined by the Phi. We add one because we switch
         // from looking at the loop value to the Phi definition.
         else if (np > 0 && PrevStage == LastStageNum &&
-                 VRMap[PrevStage - np + 1].count(Def))
-          PhiOp2 = VRMap[PrevStage - np + 1][Def];
+                 getMapPhiReg(VRMap, VRMapPhi, PrevStage - np + 1, Def))
+          PhiOp2 = getMapPhiReg(VRMap, VRMapPhi, PrevStage - np + 1, Def);
         // Use the loop value defined in the kernel.
         else if (static_cast<unsigned>(LoopValStage) > PrologStage + 1 &&
-                 VRMap[PrevStage - StageDiffAdj - np].count(LoopVal))
-          PhiOp2 = VRMap[PrevStage - StageDiffAdj - np][LoopVal];
+                 getMapPhiReg(VRMap, VRMapPhi, PrevStage - StageDiffAdj - np,
+                              LoopVal))
+          PhiOp2 = getMapPhiReg(VRMap, VRMapPhi, PrevStage - StageDiffAdj - np,
+                                LoopVal);
         // Use the value defined by the Phi, unless we're generating the first
         // epilog and the Phi refers to a Phi in a different stage.
-        else if (VRMap[PrevStage - np].count(Def) &&
+        else if (getMapPhiReg(VRMap, VRMapPhi, PrevStage - np, Def) &&
                  (!LoopDefIsPhi || (PrevStage != LastStageNum) ||
                   (LoopValStage == StageScheduled)))
-          PhiOp2 = VRMap[PrevStage - np][Def];
+          PhiOp2 = getMapPhiReg(VRMap, VRMapPhi, PrevStage - np, Def);
       }
 
       // Check if we can reuse an existing Phi. This occurs when a Phi
@@ -771,10 +774,10 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
           continue;
         }
         unsigned realUses = 0;
-        for (const MachineOperand &U : MRI.use_operands(reg)) {
+        for (const MachineInstr &UseMI : MRI.use_instructions(reg)) {
           // Check if there are any uses that occur only in the original
           // loop.  If so, that's not a real use.
-          if (U.getParent()->getParent() != BB) {
+          if (UseMI.getParent() != BB) {
             realUses++;
             used = true;
             break;
@@ -945,6 +948,8 @@ bool ModuloScheduleExpander::computeDelta(MachineInstr &MI, unsigned &Delta) {
     return false;
 
   Register BaseReg = BaseOp->getReg();
+  if (!BaseReg.isVirtual())
+    return false;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   // Check if there is a Phi. If so, get the definition in the loop.
@@ -1718,7 +1723,7 @@ void PeelingModuloScheduleExpander::moveStageBetweenBlocks(
         continue;
       if (auto It = Remaps.find(MO.getReg()); It != Remaps.end())
         MO.setReg(It->second);
-      else {
+      else if (MO.getReg().isVirtual()) {
         // If we are using a phi from the source block we need to add a new phi
         // pointing to the old one.
         MachineInstr *Use = MRI.getUniqueVRegDef(MO.getReg());
@@ -2743,8 +2748,7 @@ bool ModuloScheduleExpanderMVE::canApply(MachineLoop &L) {
     // most.
     Register InitVal, LoopVal;
     getPhiRegs(MI, MI.getParent(), InitVal, LoopVal);
-    if (!Register(LoopVal).isVirtual() ||
-        MRI.getVRegDef(LoopVal)->getParent() != BB) {
+    if (!Register(LoopVal).isVirtual() || MRI.getDefBlock(LoopVal) != BB) {
       LLVM_DEBUG(
           dbgs() << "Can not apply MVE expander: A phi source value coming "
                     "from the loop is not defined in the loop.\n");

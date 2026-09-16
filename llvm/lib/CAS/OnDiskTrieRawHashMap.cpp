@@ -282,6 +282,7 @@ public:
   explicit operator bool() const { return H; }
   const Header &getHeader() const { return *H; }
   SubtrieHandle getRoot() const;
+  int64_t getRootTrieOffset() const { return H->RootTrieOffset; }
   Expected<SubtrieHandle> getOrCreateRoot(MappedFileRegionArena &Alloc);
   MappedFileRegion &getRegion() const { return *Region; }
 
@@ -387,8 +388,7 @@ TrieRawHashMapHandle::getOrCreateRoot(MappedFileRegionArena &Alloc) {
     return LazyRoot.takeError();
 
   if (H->RootTrieOffset.compare_exchange_strong(
-          Race, LazyRoot->getOffset().asSubtrie()),
-      Logger.get())
+          Race, LazyRoot->getOffset().asSubtrie()))
     return *LazyRoot;
 
   // There was a race. Return the other root.
@@ -646,6 +646,12 @@ void OnDiskTrieRawHashMap::print(
 
 Error OnDiskTrieRawHashMap::validate(
     function_ref<Error(FileOffset, ConstValueProxy)> RecordVerifier) const {
+  uint64_t BumpPtr = Impl->File.getAlloc().size();
+  if (!isAligned(MappedFileRegionArena::getAlign(), BumpPtr))
+    return createStringError(make_error_code(std::errc::protocol_error),
+                             "arena bump pointer is not aligned: 0x" +
+                                 utohexstr(BumpPtr, /*LowerCase=*/true));
+
   return Impl->Trie.validate(RecordVerifier);
 }
 
@@ -748,6 +754,10 @@ OnDiskTrieRawHashMap::create(const Twine &PathTwine, const Twine &TrieNameTwine,
   StringRef Path = PathTwine.toStringRef(PathStorage);
   SmallString<128> TrieNameStorage;
   StringRef TrieName = TrieNameTwine.toStringRef(TrieNameStorage);
+
+  if (MaxFileSize == 0)
+    return createTableConfigError(std::errc::invalid_argument, Path, TrieName,
+                                  "invalid size");
 
   constexpr size_t DefaultNumRootBits = 10;
   constexpr size_t DefaultNumSubtrieBits = 6;
@@ -874,6 +884,8 @@ private:
   Error traverseTrieNode(SubtrieHandle Node, StringRef Prefix);
 
   Error validateSubTrie(SubtrieHandle Node, bool IsRoot);
+
+  Error validateSubtrieHeader(uint64_t Offset, bool IsRoot);
 
   // Helper function to capture errors when visiting the trie nodes.
   void addError(Error NewError) {
@@ -1006,6 +1018,12 @@ private:
       if (!isAligned(MappedFileRegionArena::getAlign(), Slot.asData()))
         return createInvalidTrieError(Slot.asData(), "mis-aligned data entry");
 
+      uint64_t DataOffset = Slot.asData();
+      uint64_t RecordEnd = DataOffset + Trie.getRecordSize();
+      if (RecordEnd > (uint64_t)Trie.getRegion().size())
+        return createInvalidTrieError(DataOffset,
+                                      "data entry extends past end of file");
+
       TrieRawHashMapHandle::RecordData Record =
           Trie.getRecord(SubtrieSlotValue::getDataOffset(Slot.asData()));
       return RecordVerifier(Slot.asDataFileOffset(),
@@ -1021,6 +1039,11 @@ private:
 } // namespace
 
 Error TrieVisitor::visit() {
+  if (int64_t RootOffset = Trie.getRootTrieOffset()) {
+    if (auto Err = validateSubtrieHeader(RootOffset, /*IsRoot=*/true))
+      return Err;
+  }
+
   auto Root = Trie.getRoot();
   if (!Root)
     return Error::success();
@@ -1044,6 +1067,8 @@ Error TrieVisitor::visit() {
     std::string SubtriePrefix;
     appendIndexBits(SubtriePrefix, I, NumSlots);
     if (Slot.isSubtrie()) {
+      if (auto Err = validateSubtrieHeader(Slot.asSubtrie(), /*IsRoot=*/false))
+        return Err;
       SubtrieHandle S(Trie.getRegion(), Slot, Trie.getLogger());
       Subs.push_back(S);
       Prefixes.push_back(SubtriePrefix);
@@ -1097,6 +1122,26 @@ Error TrieVisitor::validateSubTrie(SubtrieHandle Node, bool IsRoot) {
   return Error::success();
 }
 
+Error TrieVisitor::validateSubtrieHeader(uint64_t Offset, bool IsRoot) {
+  uint64_t RegionSize = Trie.getRegion().size();
+  if (Offset + sizeof(SubtrieHandle::Header) > RegionSize)
+    return createInvalidTrieError(Offset, "subtrie header out of bound");
+
+  auto *H = reinterpret_cast<const SubtrieHandle::Header *>(
+      Trie.getRegion().data() + Offset);
+  if (H->NumBits == 0)
+    return createInvalidTrieError(Offset, "invalid subtrie NumBits");
+
+  if (!IsRoot && H->NumBits > Trie.getNumSubtrieBits())
+    return createInvalidTrieError(Offset, "subtrie has corrupt NumBits");
+
+  if (Offset + static_cast<uint64_t>(SubtrieHandle::getSize(H->NumBits)) >
+      RegionSize)
+    return createInvalidTrieError(Offset, "subtrie node spans out of bound");
+
+  return Error::success();
+}
+
 Error TrieVisitor::traverseTrieNode(SubtrieHandle Node, StringRef Prefix) {
   if (auto Err = validateSubTrie(Node, /*IsRoot=*/false))
     return Err;
@@ -1117,6 +1162,8 @@ Error TrieVisitor::traverseTrieNode(SubtrieHandle Node, StringRef Prefix) {
     std::string SubtriePrefix = Prefix.str();
     appendIndexBits(SubtriePrefix, I, NumSlots);
     if (Slot.isSubtrie()) {
+      if (auto Err = validateSubtrieHeader(Slot.asSubtrie(), /*IsRoot=*/false))
+        return Err;
       SubtrieHandle S(Trie.getRegion(), Slot, Trie.getLogger());
       Subs.push_back(S);
       Prefixes.push_back(SubtriePrefix);
