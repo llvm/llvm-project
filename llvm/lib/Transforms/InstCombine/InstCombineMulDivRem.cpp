@@ -1962,8 +1962,17 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     }
   }
 
-  // -X / Y --> -(X / Y)
   Value *Y;
+  // -X / -Y --> X / Y, unless X == INT_MIN and Y == -1.
+  if (match(&I, m_SDiv(m_NSWNeg(m_Value(X)), m_NSWNeg(m_Value(Y)))) &&
+      (!computeKnownBits(X, &I).getSignedMinValue().isMinSignedValue() ||
+       !computeKnownBits(Y, &I).Zero.isZero())) {
+    auto *BO = BinaryOperator::CreateSDiv(X, Y);
+    BO->setIsExact(I.isExact());
+    return BO;
+  }
+
+  // -X / Y --> -(X / Y)
   if (match(&I, m_SDiv(m_OneUse(m_NSWNeg(m_Value(X))), m_Value(Y))))
     return BinaryOperator::CreateNSWNeg(
         Builder.CreateSDiv(X, Y, I.getName(), I.isExact()));
