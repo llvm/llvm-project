@@ -28,7 +28,15 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<int> fchmodat(int fd, const char *path, mode_t mode,
                                   int flags) {
 #if defined(SYS_fchmodat2)
-  return syscall_checked<int>(SYS_fchmodat2, fd, path, mode, flags);
+  auto ret = syscall_checked<int>(SYS_fchmodat2, fd, path, mode, flags);
+#if defined(SYS_fchmodat)
+  if (!ret && ret.error() == ENOSYS) {
+    if (flags != 0)
+      return Error(ENOTSUP);
+    return syscall_checked<int>(SYS_fchmodat, fd, path, mode);
+  }
+#endif
+  return ret;
 #elif defined(SYS_fchmodat)
   if (flags != 0)
     return Error(ENOTSUP);
