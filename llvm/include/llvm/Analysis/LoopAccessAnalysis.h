@@ -987,7 +987,7 @@ LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     DominatorTree *DT, AssumptionCache *AC,
     std::optional<ScalarEvolution::LoopGuards> &LoopGuards);
 
-/// This function will detect whether the loop is uncountabel because the
+/// This function will detect whether the loop is uncountable because the
 /// tripcount is based on a load. If yes, then it will build a dependency chain
 /// of instructions, and a list of loads which are used to compute the
 /// tripcount.

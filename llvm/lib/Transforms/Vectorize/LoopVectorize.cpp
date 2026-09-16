@@ -7865,24 +7865,21 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
       Phi.eraseFromParent();
 }
 
-bool EnableLoadBoundVectorization(Loop *L, PredicatedScalarEvolution &PSE,
-                                  ScalarEvolution *SE, DominatorTree *DT,
-                                  AssumptionCache *AC) {
+static bool enableLoadBoundVectorization(Loop *L,
+                                         PredicatedScalarEvolution &PSE,
+                                         ScalarEvolution *SE, DominatorTree *DT,
+                                         AssumptionCache *AC) {
   if (!L->isInnermost() || !L->isLoopSimplifyForm() ||
-      L->getNumBackEdges() != 1 || !L->getUniqueExitBlock()) {
+      L->getNumBackEdges() != 1 || !L->getUniqueExitBlock())
     return false;
-  }
 
-  if (!isa<SCEVCouldNotCompute>(SE->getBackedgeTakenCount(L))) {
+  if (!isa<SCEVCouldNotCompute>(SE->getBackedgeTakenCount(L)))
     return false;
-  }
 
   SmallVector<Instruction *, 16> HoistedDeps;
   SmallVector<LoadInst *, 4> BoundLoads;
-  if (!collectInvariantLoadsBoundChain(L, SE, DT, AC, HoistedDeps,
-                                       BoundLoads)) {
+  if (!collectInvariantLoadsBoundChain(L, SE, DT, AC, HoistedDeps, BoundLoads))
     return false;
-  }
 
   BasicBlock *Preheader = L->getLoopPreheader();
   Instruction *InsertPt = Preheader->getTerminator();
@@ -7891,34 +7888,28 @@ bool EnableLoadBoundVectorization(Loop *L, PredicatedScalarEvolution &PSE,
   for (Instruction *I : HoistedDeps) {
     Instruction *Clone = I->clone();
     Clone->setName(I->getName() + ".bound.pre");
-    for (Use &U : Clone->operands()) {
-      if (auto *OpI = dyn_cast<Instruction>(U.get())) {
-        if (L->contains(OpI)) {
+    for (Use &U : Clone->operands())
+      if (auto *OpI = dyn_cast<Instruction>(U.get()))
+        if (L->contains(OpI))
           U.set(CloneMap[OpI]);
-        }
-      }
-    }
     Clone->insertBefore(InsertPt->getIterator());
     CloneMap[I] = Clone;
   }
 
   bool Added = false;
   for (LoadInst *LI : BoundLoads) {
-    auto It = CloneMap.find(LI);
-    if (It == CloneMap.end()) {
+    Value *V = CloneMap.lookup(LI);
+    if (!V)
       continue;
-    }
     const SCEV *LoadSCEV = SE->getSCEV(LI);
-    const SCEV *InvSCEV = SE->getSCEV(It->second);
-    if (!isa<SCEVUnknown>(LoadSCEV)) {
+    const SCEV *InvSCEV = SE->getSCEV(V);
+    if (!isa<SCEVUnknown>(LoadSCEV))
       continue;
-    }
     PSE.addAssumption(SE->getEqualPredicate(LoadSCEV, InvSCEV));
     Added = true;
   }
-  if (!Added) {
+  if (!Added)
     return false;
-  }
 
   LLVM_DEBUG(dbgs() << "LV: Assuming in-loop bound load(s) invariant to make '"
                     << L->getHeader()->getName()
@@ -7965,9 +7956,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   PredicatedScalarEvolution PSE(*SE, *L);
 
-  if (EnableVectorizeLoadsAsBound && L->isInnermost()) {
-    EnableLoadBoundVectorization(L, PSE, SE, DT, AC);
-  }
+  if (EnableVectorizeLoadsAsBound && L->isInnermost())
+    enableLoadBoundVectorization(L, PSE, SE, DT, AC);
 
   // Query this against the original loop and save it here because the profile
   // of the original loop header may change as the transformation happens.

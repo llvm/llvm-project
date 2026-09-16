@@ -3185,9 +3185,8 @@ static bool isBoundLoadSafeToLoadAtCtx(Value *Ptr, Type *Ty, Align Alignment,
     BasicBlock *BB = Node->getBlock();
     Instruction *ScanFrom =
         (BB == CtxI->getParent()) ? CtxI : BB->getTerminator();
-    if (isSafeToLoadUnconditionally(Ptr, Ty, Alignment, DL, ScanFrom, AC, DT)) {
+    if (isSafeToLoadUnconditionally(Ptr, Ty, Alignment, DL, ScanFrom, AC, DT))
       return true;
-    }
   }
   return false;
 }
@@ -3197,26 +3196,22 @@ static bool isSafeToHoistBoundLoad(Instruction *I,
                                    Instruction *CtxI, DominatorTree *DT,
                                    AssumptionCache *AC) {
   if (auto *LI = dyn_cast<LoadInst>(I)) {
-    if (!LI->isSimple()) {
+    if (!LI->isSimple())
       return false;
-    }
     Value *Ptr = LI->getPointerOperand();
-    if (ModifiedPtrs.count(Ptr)) {
+    if (ModifiedPtrs.count(Ptr))
       return false;
-    }
     if (!isBoundLoadSafeToLoadAtCtx(Ptr, LI->getType(), LI->getAlign(), CtxI,
-                                    DT, AC)) {
+                                    DT, AC))
       return false;
-    }
     return true;
   }
 
   // Limiting down the kind of instructions we can hoist to avoid any unforeseen
   // side effects.
   if (I->isBinaryOp() || I->isUnaryOp() || I->isCast() ||
-      isa<GetElementPtrInst>(I)) {
+      isa<GetElementPtrInst>(I))
     return isSafeToSpeculativelyExecute(I, CtxI, AC, DT);
-  }
   return false;
 }
 
@@ -3228,50 +3223,41 @@ LLVM_ABI bool llvm::collectInvariantLoadsBoundChain(
   BoundLoads.clear();
 
   BasicBlock *ExitingBB = L->getExitingBlock();
-  if (!ExitingBB || ExitingBB != L->getLoopLatch()) {
+  if (!ExitingBB || ExitingBB != L->getLoopLatch())
     return false;
-  }
   auto *ExitBranch = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
-  if (!ExitBranch) {
+  if (!ExitBranch)
     return false;
-  }
   auto *ExitCmp = dyn_cast<ICmpInst>(ExitBranch->getCondition());
-  if (!ExitCmp) {
+  if (!ExitCmp)
     return false;
-  }
   PHINode *IndVar = L->getInductionVariable(*SE);
-  if (!IndVar) {
+  if (!IndVar)
     return false;
-  }
   Value *StepInst = IndVar->getIncomingValueForBlock(L->getLoopLatch());
   auto IsIVOrStep = [&](Value *V) { return V == IndVar || V == StepInst; };
 
   Value *DynamicUpperBound = nullptr;
-  if (IsIVOrStep(ExitCmp->getOperand(0))) {
+  if (IsIVOrStep(ExitCmp->getOperand(0)))
     DynamicUpperBound = ExitCmp->getOperand(1);
-  } else if (IsIVOrStep(ExitCmp->getOperand(1))) {
+  else if (IsIVOrStep(ExitCmp->getOperand(1)))
     DynamicUpperBound = ExitCmp->getOperand(0);
-  } else {
+  else
     return false;
-  }
 
   /// Anything written inside the loop is a "not-invariant" pointer; the bound
   /// load cannot share a pointer with such writes.
   /// This is to prune out cases like for (i = 0; i < *Len; ++i) { Len[i] =
   /// ..*.. }
   SmallPtrSet<Value *, 16> ModifiedPtrs;
-  for (BasicBlock *BB : L->getBlocks()) {
-    for (Instruction &I : *BB) {
-      if (auto *SI = dyn_cast<StoreInst>(&I)) {
+  for (BasicBlock *BB : L->getBlocks())
+    for (Instruction &I : *BB)
+      if (auto *SI = dyn_cast<StoreInst>(&I))
         ModifiedPtrs.insert(SI->getPointerOperand());
-      }
-    }
-  }
 
   BasicBlock *Preheader = L->getLoopPreheader();
-  if (!Preheader) {
+  if (!Preheader)
     return false;
-  }
   Instruction *CtxI = Preheader->getTerminator();
 
   // The bound must depend on at least one in-loop load (otherwise the loop
@@ -3280,9 +3266,8 @@ LLVM_ABI bool llvm::collectInvariantLoadsBoundChain(
   SmallPtrSet<Instruction *, 16> VisitedForHoisting;
   SmallPtrSet<Instruction *, 16> VisitedForChecking;
 
-  if (auto *I = dyn_cast<Instruction>(DynamicUpperBound)) {
+  if (auto *I = dyn_cast<Instruction>(DynamicUpperBound))
     Worklist.push_back(I);
-  }
 
   while (!Worklist.empty()) {
     Instruction *I = Worklist.back();
@@ -3298,21 +3283,16 @@ LLVM_ABI bool llvm::collectInvariantLoadsBoundChain(
     }
 
     if (VisitedForChecking.insert(I).second) {
-      if (!isSafeToHoistBoundLoad(I, ModifiedPtrs, CtxI, DT, AC)) {
+      if (!isSafeToHoistBoundLoad(I, ModifiedPtrs, CtxI, DT, AC))
         return false;
-      }
 
-      if (auto *LI = dyn_cast<LoadInst>(I)) {
+      if (auto *LI = dyn_cast<LoadInst>(I))
         BoundLoads.push_back(LI);
-      }
 
-      for (Use &U : I->operands()) {
-        if (auto *OpI = dyn_cast<Instruction>(U.get())) {
-          if (L->contains(OpI)) {
+      for (Use &U : I->operands())
+        if (auto *OpI = dyn_cast<Instruction>(U.get()))
+          if (L->contains(OpI))
             Worklist.push_back(OpI);
-          }
-        }
-      }
 
       continue;
     }
@@ -3424,9 +3404,8 @@ LoopAccessInfoManager::getInfo(Loop &L, bool AllowPartial,
   auto SameAssumptions = [&]() {
     ArrayRef<const SCEVPredicate *> CachedAssumptions =
         It->second->getAssumptions();
-    if (CachedAssumptions.size() != Assumptions.size()) {
+    if (CachedAssumptions.size() != Assumptions.size())
       return false;
-    }
     return std::equal(CachedAssumptions.begin(), CachedAssumptions.end(),
                       Assumptions.begin());
   };
