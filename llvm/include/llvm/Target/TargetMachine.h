@@ -258,11 +258,10 @@ public:
   /// assembly.
   const MCSubtargetInfo &getMCSubtargetInfo(StringRef CPU, StringRef FS);
 
-  /// Return the ExceptionHandling to use, considering TargetOptions and the
-  /// Triple's default.
+  /// Return the ExceptionHandling to use. A Default model resolves to the
+  /// triple's default; None means exceptions are disabled.
   ExceptionHandling getExceptionModel() const {
-    // FIXME: This interface fails to distinguish default from not supported.
-    return Options.ExceptionModel == ExceptionHandling::None
+    return Options.ExceptionModel == ExceptionHandling::Default
                ? TargetTriple.getDefaultExceptionHandling()
                : Options.ExceptionModel;
   }

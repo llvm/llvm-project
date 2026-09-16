@@ -976,8 +976,8 @@ unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
 
 std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
-    const MCRegisterInfo &MRI, bool SkipSrc, bool AllowSameVGPR,
-    bool VOPD3) const {
+    const MCRegisterInfo &MRI, bool SkipSrc, bool AllowSameVGPR, bool VOPD3,
+    bool HasGFX11InterlockHazard) const {
 
   auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx,
                                CompInfo[ComponentIndex::X].isVOP3());
@@ -1009,7 +1009,9 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
   unsigned CompOprIdx;
   for (CompOprIdx = 0; CompOprIdx < Component::MAX_OPR_NUM; ++CompOprIdx) {
     unsigned BanksMasks = VOPD3 ? VOPD3_VGPR_BANK_MASKS[CompOprIdx]
-                                : VOPD_VGPR_BANK_MASKS[CompOprIdx];
+                          : HasGFX11InterlockHazard
+                              ? VOPD_GFX11_VGPR_BANK_MASKS[CompOprIdx]
+                              : VOPD_VGPR_BANK_MASKS[CompOprIdx];
     if (!OpXRegs[CompOprIdx] || !OpYRegs[CompOprIdx])
       continue;
 

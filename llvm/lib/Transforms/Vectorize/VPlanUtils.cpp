@@ -325,7 +325,8 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
               return SE.getTruncateExpr(AddRec, R->getScalarType());
             return AddRec;
           })
-          .Case([&SE, &PSE, L](const VPWidenPointerInductionRecipe *R) {
+          .Case([&SE, &PSE,
+                 L](const VPWidenPointerInductionRecipe *R) -> const SCEV * {
             const SCEV *Start =
                 getSCEVExprForVPValue(R->getStartValue(), PSE, L);
             if (!L || isa<SCEVCouldNotCompute>(Start))

@@ -42,6 +42,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.open
     libc.src.fcntl.openat
     libc.src.fcntl.posix_fadvise
+    libc.src.fcntl.posix_fadvise64
 
     # poll.h entrypoints
     libc.src.poll.poll
@@ -352,6 +353,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.lstat
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
+    libc.src.sys.stat.mkfifo
     libc.src.sys.stat.stat
     libc.src.sys.stat.umask
     libc.src.sys.stat.utimensat
