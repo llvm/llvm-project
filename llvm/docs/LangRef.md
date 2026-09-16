@@ -472,7 +472,8 @@ added in the future:
     registers to pass arguments. This attribute doesn't impact non-general
     purpose registers (e.g., floating point registers, on X86 XMMs/YMMs).
     Non-general purpose registers still follow the standard C calling
-    convention. Currently it is for x86_64, AArch64 and LoongArch only.
+    convention. Currently it is for x86_64, AArch64, LoongArch and RISC-V
+    only.
 
 "`cxx_fast_tlscc`" - The `CXX_FAST_TLS` calling convention for access functions
 :   Clang generates an access function to access C++-style Thread Local Storage
