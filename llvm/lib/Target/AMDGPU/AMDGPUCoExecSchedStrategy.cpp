@@ -549,7 +549,7 @@ unsigned CandidateHeuristics::getHWUICyclesForInst(SUnit *SU) {
 
   MachineInstr *MI = SU->getInstr();
   if (MI->mayLoadOrStore())
-    return SchedModel->computeInstrLatency(MI);
+    return SII->getInstrLatency(*MI);
 
   unsigned ReleaseAtCycle = 0;
   const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
@@ -1118,6 +1118,7 @@ ScheduleDAGInstrs *
 llvm::createGCNCoExecMachineScheduler(MachineSchedContext *C) {
   LLVM_DEBUG(dbgs() << "AMDGPU coexec preRA scheduler selected for "
                     << C->MF->getName() << '\n');
+
   ScheduleDAGMILive *DAG = new GCNScheduleDAGMILive(
       C, std::make_unique<AMDGPUCoExecSchedStrategy>(C));
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
