@@ -16,7 +16,7 @@ using namespace llvm;
 
 namespace {
 
-std::unique_ptr<LLVMToolSession> Session;
+std::unique_ptr<ToolSession> Session;
 unsigned CompilerCalls;
 unsigned LinkerCalls;
 unsigned WrapperCalls;
@@ -119,7 +119,7 @@ int main(int Argc, char **Argv) {
        }},
       {"wasm-ld", linkerMain},
   };
-  Session = std::make_unique<LLVMToolSession>(Argc, Argv, Tools);
+  Session = std::make_unique<ToolSession>(Argc, Argv, Tools);
   testing::InitGoogleTest(&Argc, Argv);
   int Result = RUN_ALL_TESTS();
   Session.reset();

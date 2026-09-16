@@ -1,7 +1,7 @@
 set(test_name LLVMToolSessionTests)
 set(test_suite UnitTests)
 
-# This test supplies its own main() so a single LLVMToolSession can own
+# This test supplies its own main() so a single ToolSession can own
 # InitLLVM for the complete test process.
 if (NOT LLVM_BUILD_TESTS)
   set(EXCLUDE_FROM_ALL ON)

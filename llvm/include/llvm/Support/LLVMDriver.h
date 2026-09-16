@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-class LLVMToolSession;
+class ToolSession;
 class ToolContext;
 
 using ToolMainFn = std::function<int(int, char **, const ToolContext &)>;
@@ -34,9 +34,9 @@ struct CallableTool {
 
 /// Describes how a tool was invoked and provides access to its host session.
 class ToolContext {
-  LLVMToolSession *Session = nullptr;
+  ToolSession *Session = nullptr;
 
-  friend class LLVMToolSession;
+  friend class ToolSession;
 
 public:
   const char *Path;
@@ -66,15 +66,15 @@ public:
 ///
 /// LLVM tools may use process-global state. Tool invocations must be externally
 /// serialized; concurrent calls are not supported.
-class LLVM_ABI LLVMToolSession {
+class LLVM_ABI ToolSession {
 public:
-  LLVMToolSession(int &Argc, char **&Argv, ArrayRef<CallableTool> Tools,
-                  bool InstallPipeSignalExitHandler = true,
-                  bool NeedsPOSIXUtilitySignalHandling = false);
-  ~LLVMToolSession();
+  ToolSession(int &Argc, char **&Argv, ArrayRef<CallableTool> Tools,
+              bool InstallPipeSignalExitHandler = true,
+              bool NeedsPOSIXUtilitySignalHandling = false);
+  ~ToolSession();
 
-  LLVMToolSession(const LLVMToolSession &) = delete;
-  LLVMToolSession &operator=(const LLVMToolSession &) = delete;
+  ToolSession(const ToolSession &) = delete;
+  ToolSession &operator=(const ToolSession &) = delete;
 
   /// Invokes the tool named by Args[0]. Args may instead contain a
   /// process-style argv beginning with the session executable or an LLVM

@@ -25,20 +25,21 @@ namespace {
 
 bool matchesToolName(StringRef RegisteredName, StringRef InvokedName) {
   StringRef Stem = sys::path::stem(InvokedName);
+  StringRef Filename = sys::path::filename(InvokedName);
   auto Matches = [RegisteredName](StringRef Candidate) {
     size_t Position = Candidate.rfind_insensitive(RegisteredName);
     return Position != StringRef::npos &&
            (Position + RegisteredName.size() == Candidate.size() ||
             !llvm::isAlnum(Candidate[Position + RegisteredName.size()]));
   };
-  return Matches(Stem) || Matches(sys::path::filename(InvokedName));
+  return Matches(Stem) || Matches(Filename);
 }
 
 bool isMulticallName(StringRef Name) { return matchesToolName("llvm", Name); }
 
 } // namespace
 
-struct LLVMToolSession::Impl {
+struct ToolSession::Impl {
   InitLLVM Initialization;
   std::string ExecutablePath;
   std::vector<std::pair<std::string, ToolMainFn>> Tools;
@@ -54,20 +55,18 @@ struct LLVMToolSession::Impl {
   }
 };
 
-LLVMToolSession::LLVMToolSession(int &Argc, char **&Argv,
-                                 ArrayRef<CallableTool> Tools,
-                                 bool InstallPipeSignalExitHandler,
-                                 bool NeedsPOSIXUtilitySignalHandling) {
-  assert(Argc > 0 && Argv && Argv[0] &&
-         "LLVMToolSession requires a valid argv[0]");
+ToolSession::ToolSession(int &Argc, char **&Argv, ArrayRef<CallableTool> Tools,
+                         bool InstallPipeSignalExitHandler,
+                         bool NeedsPOSIXUtilitySignalHandling) {
+  assert(Argc > 0 && Argv && Argv[0] && "ToolSession requires a valid argv[0]");
   PImpl =
       std::make_unique<Impl>(Argc, Argv, Tools, InstallPipeSignalExitHandler,
                              NeedsPOSIXUtilitySignalHandling);
 }
 
-LLVMToolSession::~LLVMToolSession() = default;
+ToolSession::~ToolSession() = default;
 
-ErrorOr<CallableTool> LLVMToolSession::findTool(StringRef Name) const {
+ErrorOr<CallableTool> ToolSession::findTool(StringRef Name) const {
   StringRef Stem = sys::path::stem(Name);
   StringRef Filename = sys::path::filename(Name);
   for (const auto &[RegisteredName, Main] : PImpl->Tools)
@@ -81,8 +80,8 @@ ErrorOr<CallableTool> LLVMToolSession::findTool(StringRef Name) const {
   return make_error_code(std::errc::no_such_file_or_directory);
 }
 
-ToolContext LLVMToolSession::makeContext(StringRef InvokedName,
-                                         const char *PrependArg) {
+ToolContext ToolSession::makeContext(StringRef InvokedName,
+                                     const char *PrependArg) {
   bool NeedsPrependArg = !matchesToolName(InvokedName, PImpl->ExecutablePath);
   ToolContext Context(PImpl->ExecutablePath.c_str(), PrependArg,
                       NeedsPrependArg);
@@ -90,7 +89,7 @@ ToolContext LLVMToolSession::makeContext(StringRef InvokedName,
   return Context;
 }
 
-ErrorOr<int> LLVMToolSession::callTool(ArrayRef<const char *> Args) {
+ErrorOr<int> ToolSession::callTool(ArrayRef<const char *> Args) {
   if (Args.empty())
     return make_error_code(std::errc::invalid_argument);
 

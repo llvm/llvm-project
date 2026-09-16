@@ -39,7 +39,7 @@ int main(int Argc, char **Argv) {
 #include "LLVMDriverTools.def"
   };
 
-  LLVMToolSession Session(Argc, Argv, Tools);
+  ToolSession Session(Argc, Argv, Tools);
 
   StringRef Stem = sys::path::stem(Argv[0]);
   if (Stem.equals_insensitive("llvm") &&
