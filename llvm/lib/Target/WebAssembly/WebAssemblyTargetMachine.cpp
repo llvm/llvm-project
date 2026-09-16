@@ -160,7 +160,7 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
     report_fatal_error(
         "-exception-model=emscripten not allowed with -wasm-enable-sjlj");
 
-  if (TM->Options.ExceptionModel == ExceptionHandling::None) {
+  if (TM->Options.ExceptionModel == ExceptionHandling::Default) {
     // FIXME: These flags should be removed in favor of directly using the
     // generically configured ExceptionsType
     if (WebAssembly::WasmEnableEH || WebAssembly::WasmEnableSjLj)
@@ -168,7 +168,8 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
   }
 
   // Basic Correctness checking related to -exception-model
-  if (TM->Options.ExceptionModel != ExceptionHandling::None &&
+  if (TM->Options.ExceptionModel != ExceptionHandling::Default &&
+      TM->Options.ExceptionModel != ExceptionHandling::None &&
       TM->Options.ExceptionModel != ExceptionHandling::Wasm &&
       TM->Options.ExceptionModel != ExceptionHandling::Emscripten)
     report_fatal_error(

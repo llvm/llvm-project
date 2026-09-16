@@ -59,6 +59,9 @@ cc_library(
         [
             "lib/sanitizer_common/*.cpp",
         ],
+        exclude = [
+            "lib/sanitizer_common/sanitizer_offload*.cpp",
+        ],
     ),
     linkstatic = True,
     deps = [

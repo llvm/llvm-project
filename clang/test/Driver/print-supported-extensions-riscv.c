@@ -271,7 +271,7 @@
 // CHECK-NEXT:     zvvmm                0.1       'Zvvmm' (Integer Matrix Multiply-Accumulate)
 // CHECK-NEXT:     zvvmtls              0.1       'Zvvmtls' (Matrix Tile Load/Store)
 // CHECK-NEXT:     zvvmttls             0.1       'Zvvmttls' (Transposing Matrix Tile Load/Store)
-// CHECK-NEXT:     zvzip                0.1       'Zvzip' (Vector Reordering Structured Data)
+// CHECK-NEXT:     zvzip                0.3       'Zvzip' (Vector Reordering Structured Data)
 // CHECK-NEXT:     smcsps               0.20      'Smcsps' (Conditional Stack Pointer Swap at Machine Level)
 // CHECK-NEXT:     smehv                0.20      'Smehv' (Synchronous Exception Hardware Vectoring at Machine Level)
 // CHECK-NEXT:     smidctrl             0.20      'Smidctrl' (Interrupt Domain Control Interface at Machine Level)
@@ -303,6 +303,8 @@
 // CHECK-NEXT:     rvi20u64
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental Profiles
+// CHECK-NEXT:     rva23p1s64
+// CHECK-NEXT:     rvb23p1s64
 // CHECK-NEXT:     rvm23u32
 // CHECK-EMPTY:
 // CHECK-NEXT: Use -march to specify the target's extension.
