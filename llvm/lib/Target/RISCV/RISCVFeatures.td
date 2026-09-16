@@ -702,7 +702,8 @@ def FeatureStdExtV
       RISCVExtensionBitmask<0, 21>;
 
 def FeatureStdExtZvabd
-    : RISCVExperimentalExtension<0, 9, "Vector Absolute Difference">;
+    : RISCVExperimentalExtension<0, 9, "Vector Absolute Difference",
+                                 [FeatureStdExtZve32x]>;
 def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvabd),
                                         "'Zvabd' (Vector Absolute Difference)">;
@@ -924,7 +925,7 @@ def HasStdExtZvdot4a8i : Predicate<"Subtarget->hasStdExtZvdot4a8i()">,
 
 // Vector Reordering Structured Data
 def FeatureStdExtZvzip
-    : RISCVExperimentalExtension<0, 1, "Vector Reordering Structured Data",
+    : RISCVExperimentalExtension<0, 3, "Vector Reordering Structured Data",
                                  [FeatureStdExtZve32x]>;
 def HasStdExtZvzip : Predicate<"Subtarget->hasStdExtZvzip()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvzip),

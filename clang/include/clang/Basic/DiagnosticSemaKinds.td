@@ -38,6 +38,12 @@ defm template_outside_of_template : CXX11Compat<
   "use of 'template' keyword outside of a template is">;
 defm explicit_conversion_functions : CXX11Compat<
   "explicit conversion functions are">;
+defm cast_fn_obj : CXX11Compat<
+  "cast between pointer-to-function and pointer-to-object is",
+  /*ext_warn*/false>;
+defm array_size_conversion : CXX11Compat<
+  "implicit conversion from array size expression of type %0 to "
+  "%select{integral|enumeration}1 type %2 is", /*ext_warn*/false>;
 
 // C++14 compatibility with C++11 and earlier.
 defm constexpr_type_definition : CXX14Compat<
@@ -4211,6 +4217,9 @@ def err_overflow_behavior_unknown_ident
 def err_overflow_behavior_non_integer_type
     : Error<"%0 %select{attribute|specifier}2 cannot be applied to "
             "non-integer type '%1'">;
+def err_overflow_behavior_atomic_type
+    : Error<"%0 %select{attribute|specifier}2 cannot be applied to atomic type "
+            "'%1'">;
 def err_conflicting_overflow_behaviors
     : Error<"conflicting %select{'overflow_behavior' attributes|overflow "
             "behavior specification; specifier specifies '%1' but attribute "
@@ -7522,8 +7531,8 @@ def err_func_def_incomplete_result : Error<
 def err_atomic_specifier_bad_type
     : Error<"_Atomic cannot be applied to "
             "%select{incomplete |array |function |reference |atomic |qualified "
-            "|sizeless ||integer |}0type "
-            "%1 %select{|||||||which is not trivially copyable||in C23}0">;
+            "|sizeless ||integer ||overflow behavior }0type "
+            "%1 %select{|||||||which is not trivially copyable||in C23|}0">;
 def warn_atomic_member_access : Warning<
   "accessing a member of an atomic structure or union is undefined behavior">,
   InGroup<DiagGroup<"atomic-access">>, DefaultError;
@@ -8546,14 +8555,9 @@ def ext_bad_cxx_cast_qualifiers_away_incoherent : ExtWarn<
 def err_bad_const_cast_dest : Error<
   "%select{const_cast||||C-style cast|functional-style cast|}0 to %2, "
   "which is not a reference, pointer-to-object, or pointer-to-data-member">;
-def ext_cast_fn_obj : Extension<
-  "cast between pointer-to-function and pointer-to-object is an extension">;
 def ext_ms_cast_fn_obj : ExtWarn<
   "static_cast between pointer-to-function and pointer-to-object is a "
   "Microsoft extension">, InGroup<MicrosoftCast>;
-def warn_cxx98_compat_cast_fn_obj : Warning<
-  "cast between pointer-to-function and pointer-to-object is incompatible with C++98">,
-  InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def err_bad_reinterpret_cast_small_int : Error<
   "cast from pointer to smaller type %2 loses information">;
 def err_bad_cxx_cast_vector_to_scalar_different_size : Error<
@@ -8653,14 +8657,6 @@ def note_array_size_conversion : Note<
 def err_array_size_ambiguous_conversion : Error<
   "ambiguous conversion of array size expression of type %0 to an integral or "
   "enumeration type">;
-def ext_array_size_conversion : Extension<
-  "implicit conversion from array size expression of type %0 to "
-  "%select{integral|enumeration}1 type %2 is a C++11 extension">,
-  InGroup<CXX11>;
-def warn_cxx98_compat_array_size_conversion : Warning<
-  "implicit conversion from array size expression of type %0 to "
-  "%select{integral|enumeration}1 type %2 is incompatible with C++98">,
-  InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def err_address_space_qualified_new : Error<
   "'new' cannot allocate objects of type %0 in address space '%1'">;
 def err_address_space_qualified_delete : Error<
@@ -13837,6 +13833,9 @@ def err_hlsl_gathercmp_invalid_component
 
 def err_hlsl_resource_member_array_access_not_constant
     : Error<"index for struct array inside cbuffer that contains resources must be a constant integer expression">;
+
+def err_matrix_logical_operations_supported_for_hlsl : Error<
+  "matix logical operations are only supported for HLSL">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

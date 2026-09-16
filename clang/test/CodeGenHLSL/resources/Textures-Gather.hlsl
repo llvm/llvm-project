@@ -1,3 +1,5 @@
+// Texture2D
+// Texture2D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - \
 // RUN:   -DOFFSET_ARG="int2(1, 2)" -DHAS_OFFSET -DTEXTURE=Texture2D \
@@ -6,18 +8,6 @@
 // RUN:   | FileCheck %s -DTEXTURE=Texture2D -DCOORD_DIM=2 \
 // RUN:   --check-prefixes=CHECK,DXIL,DXIL-TEXEL,CHECK-OFFSET,DXIL-OFFSET \
 // RUN:   -DDXIL_TY=2 -DRW=0 -DDIM=2 -DOFFSET_CONST="<i32 1, i32 2>"
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
-// RUN:   -disable-llvm-passes -finclude-default-header -o - \
-// RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 %s \
-// RUN:   | llvm-cxxfilt \
-// RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 \
-// RUN:   --check-prefixes=CHECK,DXIL,DXIL-NOTEXEL -DDXIL_TY=5 -DRW=0 -DDIM=3
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
-// RUN:   -disable-llvm-passes -finclude-default-header -o - \
-// RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 %s \
-// RUN:   | llvm-cxxfilt \
-// RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray -DCOORD_DIM=4 \
-// RUN:   --check-prefixes=CHECK,DXIL,DXIL-NOTEXEL -DDXIL_TY=9 -DRW=0 -DDIM=3
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - \
 // RUN:   -DOFFSET_ARG="int2(1, 2)" -DHAS_OFFSET -DTEXTURE=Texture2D \
@@ -27,20 +17,8 @@
 // RUN:   --check-prefixes=CHECK,SPIRV,SPIRV-TEXEL,CHECK-OFFSET,SPIRV-OFFSET \
 // RUN:   -DARRAYED=0 -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=1 -DDIM=2 \
 // RUN:   -DOFFSET_CONST="<i32 1, i32 2>"
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
-// RUN:   -disable-llvm-passes -finclude-default-header -o - \
-// RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 %s \
-// RUN:   | llvm-cxxfilt \
-// RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 \
-// RUN:   --check-prefixes=CHECK,SPIRV,SPIRV-NOTEXEL -DARRAYED=0 -DSAMPLED=1 \
-// RUN:   -DIMG_FMT=0 -DSPV_DIM=3 -DDIM=3
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
-// RUN:   -disable-llvm-passes -finclude-default-header -o - \
-// RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 %s \
-// RUN:   | llvm-cxxfilt \
-// RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray -DCOORD_DIM=4 \
-// RUN:   --check-prefixes=CHECK,SPIRV,SPIRV-NOTEXEL -DARRAYED=1 -DSAMPLED=1 \
-// RUN:   -DIMG_FMT=0 -DSPV_DIM=3 -DDIM=3
+
+// Texture2DArray
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - \
 // RUN:   -DOFFSET_ARG="int2(1, 2)" -DHAS_OFFSET -DTEXTURE=Texture2DArray \
@@ -58,6 +36,36 @@
 // RUN:   --check-prefixes=CHECK,SPIRV,SPIRV-TEXEL,CHECK-OFFSET,SPIRV-OFFSET \
 // RUN:   -DARRAYED=1 -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=1 -DDIM=2 \
 // RUN:   -DOFFSET_CONST="<i32 1, i32 2>"
+
+// TextureCube
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - \
+// RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 \
+// RUN:   --check-prefixes=CHECK,DXIL,DXIL-NOTEXEL -DDXIL_TY=5 -DRW=0 -DDIM=3
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - \
+// RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 \
+// RUN:   --check-prefixes=CHECK,SPIRV,SPIRV-NOTEXEL -DARRAYED=0 -DSAMPLED=1 \
+// RUN:   -DIMG_FMT=0 -DSPV_DIM=3 -DDIM=3
+
+// TextureCubeArray
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - \
+// RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray -DCOORD_DIM=4 \
+// RUN:   --check-prefixes=CHECK,DXIL,DXIL-NOTEXEL -DDXIL_TY=9 -DRW=0 -DDIM=3
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - \
+// RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray -DCOORD_DIM=4 \
+// RUN:   --check-prefixes=CHECK,SPIRV,SPIRV-NOTEXEL -DARRAYED=1 -DSAMPLED=1 \
+// RUN:   -DIMG_FMT=0 -DSPV_DIM=3 -DDIM=3
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
@@ -266,8 +274,6 @@ float4 test_cmp(COORD_TYPE loc : LOC) : SV_Target {
 // CHECK: %[[SAMPLER_H:.*]] = load target{{.*}}, ptr %[[SAMPLER_GEP]]
 // CHECK: %[[COORD_VAL:.*]] = load <[[COORD_DIM]] x float>, ptr %[[COORD_ADDR]]
 // CHECK: %[[CMP_VAL:.*]] = load float, ptr %[[CMP_ADDR]]
-// CHECK: %[[CONV:.*]] = fpext {{.*}} float %[[CMP_VAL]] to double
-// CHECK: %[[TRUNC:.*]] = fptrunc {{.*}} double %[[CONV]] to float
-// DXIL: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.gather.cmp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], target("dx.Sampler", 0) %[[SAMPLER_H]], <[[COORD_DIM]] x float> %[[COORD_VAL]], float %[[TRUNC]], i32 0, <[[DIM]] x i32> zeroinitializer)
-// SPIRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.gather.cmp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], target("spirv.Sampler") %[[SAMPLER_H]], <[[COORD_DIM]] x float> %[[COORD_VAL]], float %[[TRUNC]], <[[DIM]] x i32> zeroinitializer)
+// DXIL: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.gather.cmp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], target("dx.Sampler", 0) %[[SAMPLER_H]], <[[COORD_DIM]] x float> %[[COORD_VAL]], float %[[CMP_VAL]], i32 0, <[[DIM]] x i32> zeroinitializer)
+// SPIRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.gather.cmp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], target("spirv.Sampler") %[[SAMPLER_H]], <[[COORD_DIM]] x float> %[[COORD_VAL]], float %[[CMP_VAL]], <[[DIM]] x i32> zeroinitializer)
 // CHECK: ret <4 x float> %[[RES]]
