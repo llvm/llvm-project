@@ -1,4 +1,4 @@
-//===-- LLVMToolSession.cpp ----------------------------------------------===//
+//===-- Driver.cpp -------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/Driver.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"

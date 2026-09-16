@@ -1,4 +1,4 @@
-//===- LLVMDriver.h ---------------------------------------------*- C++ -*-===//
+//===- Driver.h -------------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_LLVMDRIVER_H
-#define LLVM_SUPPORT_LLVMDRIVER_H
+#ifndef LLVM_SUPPORT_DRIVER_H
+#define LLVM_SUPPORT_DRIVER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"

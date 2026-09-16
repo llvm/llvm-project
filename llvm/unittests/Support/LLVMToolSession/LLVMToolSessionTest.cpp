@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/Driver.h"
 #include "gtest/gtest.h"
 
 #include <memory>
