@@ -806,6 +806,10 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
   if (!RD || !RD->hasDefinition())
     return {};
 
+  // We can confidently inline a method called on an object with final type.
+  if (RD->hasAttr<FinalAttr>())
+    CanBeSubClass = false;
+
   // Find the decl for this method in that class.
   const CXXMethodDecl *Result = MD->getCorrespondingMethodInClass(RD, true);
   if (!Result) {
@@ -826,8 +830,7 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
     return {};
   }
 
-  // A final method or a method of a final class cannot be overriden in a
-  // subclass.
+  // A final method cannot be overriden in a subclass.
   if (Result->hasAttr<FinalAttr>() || Result->getParent()->hasAttr<FinalAttr>())
     CanBeSubClass = false;
 

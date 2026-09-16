@@ -56,6 +56,24 @@ void test(Child* p) {
 }
 } // namespace final_method_on_child_ptr
 
+namespace nonfinal_method_on_final_child_ptr {
+// We can confidently inline even a non-final method of a non-final class if it
+// is called on an object whose type is final and does not override it.
+struct Ctrl : Msg {
+  unsigned c;
+  unsigned cmd() const override { return c; }
+};
+
+struct Child final : Ctrl {};
+
+void test(Child* p) {
+  clang_analyzer_dump(p->cmd());
+  // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Base{SymRegion{reg_${{[0-9]+}}<Child * p>},Ctrl}.c>}}
+  clang_analyzer_eval(p->cmd() == p->cmd()); // expected-warning {{TRUE}}
+}
+} // namespace nonfinal_method_on_final_child_ptr
+
+
 namespace final_method_on_ptr_with_dyn_type_child {
 // A final method should also be inlined when it is called through a pointer
 // whose dynamic type is a child of the class where it was defined.
@@ -102,6 +120,29 @@ void entrypoint(Ctrl *p) {
 }
 } // namespace final_method_on_base_ptr_with_known_dyn_type
 
+namespace nonfinal_method_on_ptr_with_dyn_type_final {
+// We can confidently inline even a non-final method of a non-final class if it
+// is called on an object whose dynamic type is final and does not override it.
+struct Ctrl : Msg {
+  unsigned c;
+  unsigned cmd() const override { return c; }
+};
+
+struct Child final : Ctrl {};
+
+void test(Ctrl* p) {
+  clang_analyzer_dump(p->cmd());
+  // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Base{SymRegion{reg_${{[0-9]+}}<Child * p>},Ctrl}.c>}}
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+  clang_analyzer_eval(p->cmd() == p->cmd());
+  // FIXME: For unclear reasons, this clang_analyzer_eval call is not reached.
+}
+
+void entrypoint(Child *p) {
+  test(p);
+}
+} // namespace nonfinal_method_on_ptr_with_dyn_type_final
+
 namespace nonfinal_bifurcates {
 // When the method is non-final and the dynamic type is unclear, the analysis
 // should bifurcate, with one branch inlining the method and the other branch
@@ -120,4 +161,4 @@ void test(Ctrl* p) {
   // expected-warning@-1 {{TRUE}}
   // expected-warning@-2 {{FALSE}}
 }
-} // namespace nonfinal_bifurcate
+} // namespace nonfinal_bifurcates
