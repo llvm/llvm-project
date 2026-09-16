@@ -305,28 +305,32 @@ void ScopArrayInfo::updateElementType(Type *NewElementType) {
   if (NewElementSize == OldElementSize || NewElementSize == 0)
     return;
 
+  Type *CanonicalType;
   if (NewElementSize % OldElementSize == 0 && NewElementSize < OldElementSize) {
-    ElementType = NewElementType;
+    CanonicalType = NewElementType;
   } else {
     auto GCD = std::gcd((uint64_t)NewElementSize, (uint64_t)OldElementSize);
-    ElementType = IntegerType::get(ElementType->getContext(), GCD);
+    CanonicalType = IntegerType::get(ElementType->getContext(), GCD);
   }
 
-  // The sizes recorded so far count elements of the type we just replaced, so
-  // they no longer describe the same memory. Restate them in the new element.
-  // Leaving them alone would shrink every row along with the element type and
-  // model in-bounds accesses as running past its end, which makes the inbounds
-  // assumption infeasible and drops the SCoP.
+  // The sizes on record count elements of the type being replaced, so they no
+  // longer describe the same memory once it changes. Restate them in the new
+  // element. Leaving them alone would shrink every row along with the element
+  // type and model in-bounds accesses as running past its end, which makes the
+  // inbounds assumption infeasible and drops the SCoP.
   //
   // The canonical type is an integer of the greatest common divisor of two
   // sizes, and rounding that up to its allocation size can leave it not
-  // dividing the type it replaces. There is no whole number of new elements
-  // per old one to restate the sizes in, so leave them as they are.
-  uint64_t FinalElementSize = DL.getTypeAllocSizeInBits(ElementType);
-  if (FinalElementSize == 0 || (uint64_t)OldElementSize % FinalElementSize != 0)
+  // dividing the type it replaces. There is then no whole number of new
+  // elements per old one to restate the sizes in. Give up before touching
+  // anything rather than leave the element type and the sizes disagreeing.
+  uint64_t CanonicalSize = DL.getTypeAllocSizeInBits(CanonicalType);
+  if (CanonicalSize == 0 || (uint64_t)OldElementSize % CanonicalSize != 0)
     return;
 
-  uint64_t Factor = (uint64_t)OldElementSize / FinalElementSize;
+  ElementType = CanonicalType;
+
+  uint64_t Factor = (uint64_t)OldElementSize / CanonicalSize;
   if (Factor == 1)
     return;
 

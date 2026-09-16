@@ -157,6 +157,10 @@ end:
 ; THREE-NEXT:     Stmt_for_k
 ; THREE:              MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
 ; THREE-NEXT:             [q, r] -> { Stmt_for_k[i0, i1, i2] -> MemRef_A[i0, i1, o2] : 8i2 <= o2 <= 7 + 8i2 };
+; THREE-NEXT:     Stmt_memset_bb
+; THREE:              MustWriteAccess :=    [Reduction Type: NONE] [Scalar: 0]
+; THREE-NEXT:             [q, r] -> { Stmt_memset_bb[] -> MemRef_A[0, 0, o2] : 0 <= o2 < 8r };
+; THREE-NEXT: }
 
 define void @three_dimensions(i64 %q, i64 %r, ptr %A) {
 entry:
