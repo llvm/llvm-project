@@ -1697,10 +1697,8 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     // copy-in depends on its contiguity, like a variable, so fall through
     // to the analysis below.  Other expressions are copy-in, but not
     // copy-out.
-    const auto dataRef{ExtractDataRef(
-        *actual, /*intoSubstring=*/true, /*intoComplexPart=*/true)};
-    if (!dataRef ||
-        !semantics::IsNamedConstant(dataRef->GetFirstSymbol().GetUltimate())) {
+    const Expr<SomeType> *expr{actual->UnwrapExpr()};
+    if (!expr || !IsNamedConstantDesignator(*expr)) {
       return forCopyIn;
     }
     if (forCopyOut) {
