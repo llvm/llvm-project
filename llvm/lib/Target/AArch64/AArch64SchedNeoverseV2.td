@@ -135,6 +135,10 @@ def V2Write_3c_1V0   : SchedWriteRes<[V2UnitV0]>  { let Latency = 3; }
 def V2Write_3c_1V02  : SchedWriteRes<[V2UnitV02]> { let Latency = 3; }
 def V2Write_4c_1V0   : SchedWriteRes<[V2UnitV0]>  { let Latency = 4; }
 def V2Write_4c_1V02  : SchedWriteRes<[V2UnitV02]> { let Latency = 4; }
+def V2Write_4c_2V02_1uop : SchedWriteRes<[V2UnitV02,
+                                          V2UnitV02]> { let Latency = 4; }
+def V2Write_6c_4V02_1uop : SchedWriteRes<[V2UnitV02, V2UnitV02, V2UnitV02,
+                                          V2UnitV02]>  { let Latency = 6; }
 def V2Write_7c_1V0   : SchedWriteRes<[V2UnitV0]>  { let Latency = 7;
                                                     let ReleaseAtCycles = [7]; }
 def V2Write_7c_1V02  : SchedWriteRes<[V2UnitV02]> { let Latency = 7;
@@ -1566,13 +1570,13 @@ def : InstRW<[V2Write_4c_1V13],
 def : InstRW<[V2Wr_VFCMA, V2Rd_VFCMA], (instregex "^FCMLAv")>;
 
 // ASIMD FP convert, long (F16 to F32)
-def : InstRW<[V2Write_4c_2V02], (instregex "^FCVTL(v4|v8)i16")>;
+def : InstRW<[V2Write_4c_2V02_1uop], (instregex "^FCVTL(v4|v8)i16")>;
 
 // ASIMD FP convert, long (F32 to F64)
 def : InstRW<[V2Write_3c_1V02], (instregex "^FCVTL(v2|v4)i32")>;
 
 // ASIMD FP convert, narrow (F32 to F16)
-def : InstRW<[V2Write_4c_2V02], (instregex "^FCVTN(v4|v8)i16")>;
+def : InstRW<[V2Write_4c_2V02_1uop], (instregex "^FCVTN(v4|v8)i16")>;
 
 // ASIMD FP convert, narrow (F64 to F32)
 def : InstRW<[V2Write_3c_1V02], (instregex "^FCVTN(v2|v4)i32",
@@ -1581,32 +1585,32 @@ def : InstRW<[V2Write_3c_1V02], (instregex "^FCVTN(v2|v4)i32",
 // ASIMD FP convert, other, D-form F32 and Q-form F64
 def : InstRW<[V2Write_3c_1V02], (instregex "^FCVT[AMNPZ][SU]v2f(32|64)$",
                                            "^FCVT[AMNPZ][SU]v2i(32|64)_shift$",
+                                           "^FCVT[AMNPZ][SU]v1i32$",
                                            "^FCVT[AMNPZ][SU]v1i64$",
+                                           "^FCVT[AMNPZ][SU]v1f16$",
+                                           "^FCVTZ[SU]h$",
+                                           "^FCVTZ[SU]s$",
                                            "^FCVTZ[SU]d$",
                                            "^[SU]CVTFv2f(32|64)$",
                                            "^[SU]CVTFv2i(32|64)_shift$",
+                                           "^[SU]CVTFv1i16$",
+                                           "^[SU]CVTFv1i32$",
                                            "^[SU]CVTFv1i64$",
+                                           "^[SU]CVTFh$",
+                                           "^[SU]CVTFs$",
                                            "^[SU]CVTFd$")>;
 
 // ASIMD FP convert, other, D-form F16 and Q-form F32
-def : InstRW<[V2Write_4c_2V02], (instregex "^FCVT[AMNPZ][SU]v4f(16|32)$",
-                                           "^FCVT[AMNPZ][SU]v4i(16|32)_shift$",
-                                           "^FCVT[AMNPZ][SU]v1i32$",
-                                           "^FCVTZ[SU]s$",
-                                           "^[SU]CVTFv4f(16|32)$",
-                                           "^[SU]CVTFv4i(16|32)_shift$",
-                                           "^[SU]CVTFv1i32$",
-                                           "^[SU]CVTFs$")>;
+def : InstRW<[V2Write_4c_2V02_1uop], (instregex "^FCVT[AMNPZ][SU]v4f(16|32)$",
+                                                "^FCVT[AMNPZ][SU]v4i(16|32)_shift$",
+                                                "^[SU]CVTFv4f(16|32)$",
+                                                "^[SU]CVTFv4i(16|32)_shift$")>;
 
 // ASIMD FP convert, other, Q-form F16
-def : InstRW<[V2Write_6c_4V02], (instregex "^FCVT[AMNPZ][SU]v8f16$",
-                                           "^FCVT[AMNPZ][SU]v8i16_shift$",
-                                           "^FCVT[AMNPZ][SU]v1f16$",
-                                           "^FCVTZ[SU]h$",
-                                           "^[SU]CVTFv8f16$",
-                                           "^[SU]CVTFv8i16_shift$",
-                                           "^[SU]CVTFv1i16$",
-                                           "^[SU]CVTFh$")>;
+def : InstRW<[V2Write_6c_4V02_1uop], (instregex "^FCVT[AMNPZ][SU]v8f16$",
+                                                "^FCVT[AMNPZ][SU]v8i16_shift$",
+                                                "^[SU]CVTFv8f16$",
+                                                "^[SU]CVTFv8i16_shift$")>;
 
 // ASIMD FP divide, D-form, F16
 def : InstRW<[V2Write_7c_1V02_7rc], (instrs FDIVv4f16)>;
@@ -1644,12 +1648,12 @@ def : InstRW<[V2Write_3c_1V02],
                         "^FRINT(32|64)[XZ]v2f(32|64)$")>;
 
 // ASIMD FP round, D-form F16 and Q-form F32
-def : InstRW<[V2Write_4c_2V02],
+def : InstRW<[V2Write_4c_2V02_1uop],
              (instregex "^FRINT[AIMNPXZ]v4f(16|32)$",
                         "^FRINT(32|64)[XZ]v4f32$")>;
 
 // ASIMD FP round, Q-form F16
-def : InstRW<[V2Write_6c_4V02], (instregex "^FRINT[AIMNPXZ]v8f16$")>;
+def : InstRW<[V2Write_6c_4V02_1uop], (instregex "^FRINT[AIMNPXZ]v8f16$")>;
 
 // ASIMD FP square root, D-form, F16
 def : InstRW<[V2Write_7c_1V02_7rc], (instrs FSQRTv4f16)>;
@@ -1670,7 +1674,7 @@ def : InstRW<[V2Write_16c_1V02_15rc], (instrs FSQRTv2f64)>;
 // -----------------------------------------------------------------------------
 
 // ASIMD convert, F32 to BF16
-def : InstRW<[V2Write_4c_2V02], (instrs BFCVTN, BFCVTN2)>;
+def : InstRW<[V2Write_4c_2V02_1uop], (instrs BFCVTN, BFCVTN2)>;
 
 // ASIMD dot product
 def : InstRW<[V2Wr_VBFDOT, V2Rd_VBFDOT], (instrs BFDOTv4bf16, BFDOTv8bf16)>;
