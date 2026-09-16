@@ -1689,8 +1689,7 @@ SBSymbolContextList SBTarget::FindCompileUnits(const SBFileSpec &sb_file_spec) {
   return sb_sc_list;
 }
 
-SBSymbolContextList
-SBTarget::FindSymbolContexts(const SBLineSpec &line_spec) {
+SBSymbolContextList SBTarget::FindSymbolContexts(const SBLineSpec &line_spec) {
   LLDB_INSTRUMENT_VA(this, line_spec);
 
   SBSymbolContextList sc_list;

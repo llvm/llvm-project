@@ -95,9 +95,7 @@ class FindSymbolContextsAPITestCase(TestBase):
         self.assertFalse(empty_spec.IsValid())
         self.assertEqual(target.FindSymbolContexts(empty_spec).GetSize(), 0)
 
-        empty_result = target.FindSymbolContexts(
-            lldb.SBLineSpec(lldb.SBFileSpec(), 1)
-        )
+        empty_result = target.FindSymbolContexts(lldb.SBLineSpec(lldb.SBFileSpec(), 1))
         self.assertEqual(empty_result.GetSize(), 0)
 
         missing_line = lldb.SBLineSpec(lldb.SBFileSpec("main.cpp"))
