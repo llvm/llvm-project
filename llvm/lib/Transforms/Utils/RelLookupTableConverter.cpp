@@ -19,15 +19,18 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 
+#include <optional>
+
 using namespace llvm;
 
 struct LookupTableInfo {
   Value *Index;
   SmallVector<Constant *> Ptrs;
+  SmallVector<GlobalVariable *> GVOps;
 };
 
-static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
-                                          GlobalVariable &GV) {
+static std::optional<LookupTableInfo>
+shouldConvertToRelLookupTable(const Module &M, GlobalVariable &GV) {
   // If lookup table has more than one user,
   // do not generate a relative lookup table.
   // This is to simplify the analysis that needs to be done for this pass.
@@ -44,21 +47,21 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
   // that they should resolve to symbols within the same linkage unit.
   if (!GV.hasInitializer() || !GV.isConstant() || !GV.hasOneUse() ||
       !GV.hasLocalLinkage() || !GV.isDSOLocal() || !GV.isImplicitDSOLocal())
-    return false;
+    return std::nullopt;
 
   auto *GEP = dyn_cast<GetElementPtrInst>(GV.use_begin()->getUser());
   if (!GEP || !GEP->hasOneUse())
-    return false;
+    return std::nullopt;
 
   auto *Load = dyn_cast<LoadInst>(GEP->use_begin()->getUser());
   if (!Load)
-    return false;
+    return std::nullopt;
 
   // If values are not 64-bit pointers, do not generate a relative lookup table.
   const DataLayout &DL = M.getDataLayout();
   Type *ElemType = Load->getType();
   if (!ElemType->isPointerTy() || DL.getPointerTypeSizeInBits(ElemType) != 64)
-    return false;
+    return std::nullopt;
 
   // Make sure this is a gep of the form GV + scale*var.
   unsigned IndexWidth =
@@ -67,16 +70,16 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
   APInt ConstOffset(IndexWidth, 0);
   if (!GEP->collectOffset(DL, IndexWidth, VarOffsets, ConstOffset) ||
       !ConstOffset.isZero() || VarOffsets.size() != 1)
-    return false;
+    return std::nullopt;
 
   // This can't be a pointer lookup table if the stride is smaller than a
   // pointer.
+  LookupTableInfo Info;
   Info.Index = VarOffsets.front().first;
   const APInt &Stride = VarOffsets.front().second;
   if (Stride.ult(DL.getTypeStoreSize(ElemType)))
-    return false;
+    return std::nullopt;
 
-  SmallVector<GlobalVariable *, 4> GVOps;
   Triple TT = M.getTargetTriple();
   // FIXME: This should be removed in the future.
   bool ShouldDropUnnamedAddr =
@@ -96,7 +99,7 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
     Constant *C =
         ConstantFoldLoadFromConst(GV.getInitializer(), ElemType, Offset, DL);
     if (!C)
-      return false;
+      return std::nullopt;
 
     GlobalValue *GVOp;
     APInt GVOffset;
@@ -104,16 +107,16 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
     // If an operand is not a constant offset from a lookup table,
     // do not generate a relative lookup table.
     if (!IsConstantOffsetFromGlobal(C, GVOp, GVOffset, DL))
-      return false;
+      return std::nullopt;
 
     // If operand is mutable, do not generate a relative lookup table.
     auto *GlobalVarOp = dyn_cast<GlobalVariable>(GVOp);
     if (!GlobalVarOp || !GlobalVarOp->isConstant())
-      return false;
+      return std::nullopt;
 
     if (!GlobalVarOp->hasLocalLinkage() || !GlobalVarOp->isDSOLocal() ||
         !GlobalVarOp->isImplicitDSOLocal())
-      return false;
+      return std::nullopt;
 
     // On AArch64 small code model, the text-to-data span can be up to 4GB,
     // which exceeds 32-bit signed relative offsets. Avoid converting if the
@@ -122,19 +125,15 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
     if (TT.isAArch64() &&
         (!GlobalVarOp->hasInitializer() ||
          GlobalVarOp->getInitializer()->needsDynamicRelocation()))
-      return false;
+      return std::nullopt;
 
     if (ShouldDropUnnamedAddr)
-      GVOps.push_back(GlobalVarOp);
+      Info.GVOps.push_back(GlobalVarOp);
 
     Info.Ptrs.push_back(C);
   }
 
-  if (ShouldDropUnnamedAddr)
-    for (auto *GVOp : GVOps)
-      GVOp->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
-
-  return true;
+  return Info;
 }
 
 static GlobalVariable *createRelLookupTable(LookupTableInfo &Info,
@@ -173,6 +172,9 @@ static GlobalVariable *createRelLookupTable(LookupTableInfo &Info,
 
 static void convertToRelLookupTable(LookupTableInfo &Info,
                                     GlobalVariable &LookupTable) {
+  for (GlobalVariable *GVOp : Info.GVOps)
+    GVOp->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+
   GetElementPtrInst *GEP =
       cast<GetElementPtrInst>(LookupTable.use_begin()->getUser());
   LoadInst *Load = cast<LoadInst>(GEP->use_begin()->getUser());
@@ -228,11 +230,11 @@ static bool convertToRelativeLookupTables(
   bool Changed = false;
 
   for (GlobalVariable &GV : llvm::make_early_inc_range(M.globals())) {
-    LookupTableInfo Info;
-    if (!shouldConvertToRelLookupTable(Info, M, GV))
+    std::optional<LookupTableInfo> Info = shouldConvertToRelLookupTable(M, GV);
+    if (!Info)
       continue;
 
-    convertToRelLookupTable(Info, GV);
+    convertToRelLookupTable(*Info, GV);
 
     // Remove the original lookup table.
     GV.eraseFromParent();
