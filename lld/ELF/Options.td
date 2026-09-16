@@ -315,6 +315,10 @@ defm init: Eq<"init", "Specify an initializer function">,
 
 defm just_symbols: Eq<"just-symbols", "Just link symbols">;
 
+defm keep_folded_debug_info: BB<"keep-folded-debug-info",
+  "Preserve debug information for folded symbols",
+  "Tombstone relocations referencing folded symbols (default)">;
+
 defm keep_unique: Eq<"keep-unique", "Do not fold this symbol during ICF">;
 
 def library: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libname>">,

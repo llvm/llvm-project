@@ -372,6 +372,7 @@ struct Config {
   bool gnuUnique;
   bool ignoreDataAddressEquality;
   bool ignoreFunctionAddressEquality;
+  bool keepFoldedDebugInfo;
   bool ltoCSProfileGenerate;
   bool ltoPGOWarnMismatch;
   bool ltoDebugPassManager;

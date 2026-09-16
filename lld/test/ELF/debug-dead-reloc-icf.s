@@ -8,8 +8,13 @@
 # RUN: ld.lld --icf=all %t.o -o %t
 # RUN: llvm-objdump -s %t | FileCheck %s
 
+# RUN: ld.lld %t.o --icf=all --keep-folded-debug-info -o %t.kept
+# RUN: llvm-objdump -s %t.kept | FileCheck %s --check-prefix=KEPT
+
 # CHECK:      Contents of section .debug_info:
 # CHECK-NEXT:  0000 {{[0-9a-f]+}}000 00000000 00000000 00000000
+# KEPT:       Contents of section .debug_info:
+# KEPT-NEXT:   0000 [[ADDR:[0-9a-f]+]] 00000000 [[ADDR]] 00000000
 # CHECK:      Contents of section .debug_line:
 # CHECK-NEXT:  0000 [[ADDR:[0-9a-f]+]] 00000000
 # CHECK-SAME:                                   [[ADDR]] 00000000
