@@ -1,7 +1,9 @@
 ! RUN: not %flang_fc1 -fsyntax-only -fenumeration-type -pedantic %s 2>&1 | FileCheck %s
-! Test intrinsics HUGE, NEXT, PREVIOUS, INT for enumeration types (F2023 7.6.2)
-! NOTE: This test will start failing when the whole PR stack is merged.  It will
-!       need to have expected results changed and the "not" above removed.
+! Test intrinsics HUGE, NEXT, PREVIOUS, INT for enumeration types (F2023 7.6.2).
+! With lowering/runtime support in place, the previously-gated cases (non-
+! constant argument, STAT=, runtime boundary) now compile cleanly; the only
+! remaining compile-time errors are an unsupported INT kind and NEXT/PREVIOUS
+! boundary hits in a required-constant context.
 
 module enum_intrinsics_mod
   enumeration type :: color
@@ -33,19 +35,16 @@ subroutine test_next()
   type(color) :: c, nc
   integer :: istat
 
-  ! NEXT(a) returns the next enumerator
+  ! NEXT(a) with a non-constant argument now lowers at run time.
   c = red
-  !CHECK: error: NEXT() with a non-constant argument is not yet supported
   nc = next(c)
 
   ! NEXT with constants
   nc = next(red)
   nc = next(green)
 
-  ! NEXT with STAT= argument (temporarily unsupported)
-  !CHECK: error: NEXT() with STAT= is not yet supported
+  ! NEXT with STAT= (now supported).
   nc = next(c, stat=istat)
-  !CHECK: error: NEXT() with STAT= is not yet supported
   nc = next(blue, stat=istat)
 end subroutine
 
@@ -54,19 +53,16 @@ subroutine test_previous()
   type(color) :: c, pc
   integer :: istat
 
-  ! PREVIOUS(a) returns the previous enumerator
+  ! PREVIOUS(a) with a non-constant argument now lowers at run time.
   c = blue
-  !CHECK: error: PREVIOUS() with a non-constant argument is not yet supported
   pc = previous(c)
 
   ! PREVIOUS with constants
   pc = previous(blue)
   pc = previous(green)
 
-  ! PREVIOUS with STAT= argument (temporarily unsupported)
-  !CHECK: error: PREVIOUS() with STAT= is not yet supported
+  ! PREVIOUS with STAT= (now supported).
   pc = previous(c, stat=istat)
-  !CHECK: error: PREVIOUS() with STAT= is not yet supported
   pc = previous(red, stat=istat)
 end subroutine
 
@@ -124,10 +120,9 @@ subroutine test_next_boundary_with_stat()
   use enum_intrinsics_mod
   type(color) :: nc
   integer :: istat
-  ! NEXT at boundary with STAT — TEMPORARILY rejected until lowering lands in PR 4/5
-  !CHECK: error: NEXT() with STAT= is not yet supported
+  ! NEXT at a boundary WITH STAT= is valid: the boundary is reported at run
+  ! time via STAT=, so nothing is diagnosed at compile time.
   nc = next(blue, stat=istat)
-  !CHECK: error: NEXT() with STAT= is not yet supported
   nc = next(huge(red), stat=istat)
 end subroutine
 
@@ -142,53 +137,55 @@ subroutine test_previous_boundary_with_stat()
   use enum_intrinsics_mod
   type(color) :: pc
   integer :: istat
-  ! PREVIOUS at boundary with STAT — TEMPORARILY rejected until lowering lands in PR 4/5
-  !CHECK: error: PREVIOUS() with STAT= is not yet supported
+  ! PREVIOUS at a boundary WITH STAT= is valid (boundary reported at run time).
   pc = previous(red, stat=istat)
 end subroutine
 
 subroutine test_next_boundary()
   use enum_intrinsics_mod
   type(color) :: nc
-  ! NEXT at the last enumerator without STAT is, in the final design, a runtime
-  ! error termination.  Until the lowering handler lands (PR 4/5) the constant
-  ! boundary case is temporarily rejected at compile time rather than reaching
-  ! the unimplemented lowering path.
-  !CHECK: error: NEXT() at the last enumerator is not yet supported
+  ! NEXT at the last enumerator without STAT in a non-constant context is a
+  ! run-time error termination; it is deferred to lowering, so nothing is
+  ! diagnosed here at compile time.
   nc = next(blue)
 end subroutine
 
 subroutine test_previous_boundary()
   use enum_intrinsics_mod
   type(color) :: pc
-  ! PREVIOUS at the first enumerator without STAT is, in the final design, a
-  ! runtime error termination.  Temporarily rejected until lowering lands.
-  !CHECK: error: PREVIOUS() at the first enumerator is not yet supported
+  ! PREVIOUS at the first enumerator without STAT in a non-constant context is
+  ! deferred to run time; nothing is diagnosed at compile time.
   pc = previous(red)
 end subroutine
 
 subroutine test_next_previous_array_boundary()
   use enum_intrinsics_mod
   type(color) :: nc(2), pc(2)
-  ! NEXT/PREVIOUS are elemental: a constant array with any element at the
-  ! boundary is a runtime error termination without STAT=.  Temporarily
-  ! rejected until lowering lands (same as the scalar boundary case).
-  !CHECK: error: NEXT() at the last enumerator is not yet supported
+  ! NEXT/PREVIOUS are elemental: an array with a boundary element without STAT=
+  ! in a non-constant context is deferred to run-time error termination, so it
+  ! is not diagnosed at compile time.
   nc = next([green, blue])
-  !CHECK: error: PREVIOUS() at the first enumerator is not yet supported
   pc = previous([red, green])
 end subroutine
 
 subroutine test_next_previous_boundary_constant()
   use enum_intrinsics_mod
-  ! A required-constant boundary case would normally be diagnosed as out of
-  ! range at compile time.  While NEXT/PREVIOUS are temporarily gated (PR 4/5),
-  ! the runtime-context gate fires first and reports "not yet supported"
-  ! instead; this reverts to "out of range" once the lowering handler lands.
-  !CHECK: error: NEXT() at the last enumerator is not yet supported
+  ! A required-constant boundary case cannot be deferred to run time, so it is
+  ! diagnosed as out of range at compile time.
+  !CHECK: error: NEXT() of the last enumerator is out of range
   logical, parameter :: nb = next(blue) == green
-  !CHECK: error: PREVIOUS() at the first enumerator is not yet supported
+  !CHECK: error: PREVIOUS() of the first enumerator is out of range
   logical, parameter :: pb = previous(red) == green
+end subroutine
+
+subroutine test_next_previous_array_boundary_constant()
+  use enum_intrinsics_mod
+  ! Elemental boundary hit in a required-constant array context is likewise
+  ! diagnosed at compile time.
+  !CHECK: error: NEXT() of the last enumerator is out of range
+  type(color), parameter :: nbad(2) = next([green, blue])
+  !CHECK: error: PREVIOUS() of the first enumerator is out of range
+  type(color), parameter :: pbad(2) = previous([red, green])
 end subroutine
 
 subroutine test_huge_real_still_works()
@@ -199,17 +196,25 @@ subroutine test_huge_real_still_works()
   i = huge(i)
 end subroutine
 
-! NOTE: This test will need to be modified after completion of the feature.
 subroutine test_next_previous_keyword_order()
   use enum_intrinsics_mod
   type(color) :: nc
   integer :: istat
   ! The enum argument passed by keyword AFTER a non-enum keyword (STAT=) must
-  ! still be recognized as the enumeration call.  Reaching the STAT handler
-  ! (rather than the "must be of enumeration type" diagnostic) proves the
-  ! keyword-order dispatch works.
-  !CHECK: error: NEXT() with STAT= is not yet supported
+  ! still be recognized as the enumeration call; these now compile cleanly.
   nc = next(stat=istat, a=red)
-  !CHECK: error: PREVIOUS() with STAT= is not yet supported
   nc = previous(stat=istat, a=blue)
+end subroutine
+
+subroutine test_next_previous_stat_nonconformant()
+  use enum_intrinsics_mod
+  type(color) :: arr(3), nc(3), pc(3)
+  integer :: stat2(2)
+  ! NEXT/PREVIOUS are elemental with an INTENT(OUT) STAT=, so a STAT= array
+  ! must conform with A; a differently shaped STAT= is caught by the general
+  ! elemental-conformance check on the resolved call.
+  !CHECK: error: Dimension 1 of actual argument (arr) corresponding to dummy argument #1 ('a') has extent 3, but actual argument (stat2) corresponding to dummy argument #2 ('stat') has extent 2
+  nc = next(arr, stat=stat2)
+  !CHECK: error: Dimension 1 of actual argument (arr) corresponding to dummy argument #1 ('a') has extent 3, but actual argument (stat2) corresponding to dummy argument #2 ('stat') has extent 2
+  pc = previous(arr, stat=stat2)
 end subroutine

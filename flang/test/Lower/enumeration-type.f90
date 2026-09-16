@@ -1,6 +1,6 @@
 ! Test lowering of enumeration types to HLFIR/FIR.
 ! Enumeration types lower to i32 values representing 1-based ordinal positions.
-! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fenumeration-type -emit-hlfir %s -o - | FileCheck %s
 
 module enum_mod
   enumeration type :: color

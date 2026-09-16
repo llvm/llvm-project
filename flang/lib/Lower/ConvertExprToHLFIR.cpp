@@ -1808,70 +1808,161 @@ private:
     }
   }
 
-  // Lower NEXT(a [, stat]) for non-constant enumeration arguments.
-  // Produces: min(ordinal + 1, enumeratorCount) with STAT handling.
-  hlfir::EntityWithAttributes genEnumerationNext(
-      const Fortran::evaluate::FunctionRef<Fortran::evaluate::SomeDerived>
-          &expr,
-      mlir::Type resType) {
-    mlir::Location loc = getLoc();
-    fir::FirOpBuilder &builder = getBuilder();
-    auto [derived, count] = getEnumerationTypeInfo(expr, "NEXT");
-    (void)derived;
-    // Lower argument A (the enum variable).
-    assert(expr.arguments().size() >= 1 && expr.arguments()[0]);
-    const auto *argExpr = expr.arguments()[0]->UnwrapExpr();
-    assert(argExpr && "NEXT argument must be an expression");
-    hlfir::Entity arg = Fortran::lower::convertExprToHLFIR(
-        loc, converter, *argExpr, getSymMap(), getStmtCtx());
-    mlir::Value ordinal = hlfir::loadTrivialScalar(loc, builder, arg);
-    // Produce: min(ordinal + 1, enumeratorCount)
+  // Compute the per-element NEXT/PREVIOUS result and boundary flag from a
+  // scalar ordinal.  isNext selects NEXT (min(ordinal+1, count)) versus
+  // PREVIOUS (max(ordinal-1, 1)); the returned atBoundary is an i1.
+  std::pair<mlir::Value, mlir::Value>
+  genEnumOrdinalStep(fir::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::Value ordinal, mlir::Type resType, int count,
+                     bool isNext) {
     mlir::Value one = builder.createIntegerConstant(loc, resType, 1);
-    mlir::Value incremented =
-        mlir::arith::AddIOp::create(builder, loc, ordinal, one);
-    mlir::Value maxVal = builder.createIntegerConstant(loc, resType, count);
-    mlir::Value cmp = mlir::arith::CmpIOp::create(
-        builder, loc, mlir::arith::CmpIPredicate::sle, incremented, maxVal);
-    mlir::Value result =
-        mlir::arith::SelectOp::create(builder, loc, cmp, incremented, maxVal);
-    // Handle STAT: boundary when ordinal == enumeratorCount
-    mlir::Value atBoundary = mlir::arith::CmpIOp::create(
-        builder, loc, mlir::arith::CmpIPredicate::eq, ordinal, maxVal);
-    genEnumerationStatHandling(expr, atBoundary, resType);
-    return hlfir::EntityWithAttributes{result};
-  }
-
-  // Lower PREVIOUS(a [, stat]) for non-constant enumeration arguments.
-  // Produces: max(ordinal - 1, 1) with STAT handling.
-  hlfir::EntityWithAttributes genEnumerationPrevious(
-      const Fortran::evaluate::FunctionRef<Fortran::evaluate::SomeDerived>
-          &expr,
-      mlir::Type resType) {
-    mlir::Location loc = getLoc();
-    fir::FirOpBuilder &builder = getBuilder();
-    auto [derived, count] = getEnumerationTypeInfo(expr, "PREVIOUS");
-    (void)derived;
-    (void)count;
-    // Lower argument A (the enum variable).
-    assert(expr.arguments().size() >= 1 && expr.arguments()[0]);
-    const auto *argExpr = expr.arguments()[0]->UnwrapExpr();
-    assert(argExpr && "PREVIOUS argument must be an expression");
-    hlfir::Entity arg = Fortran::lower::convertExprToHLFIR(
-        loc, converter, *argExpr, getSymMap(), getStmtCtx());
-    mlir::Value ordinal = hlfir::loadTrivialScalar(loc, builder, arg);
-    // Produce: max(ordinal - 1, 1)
-    mlir::Value one = builder.createIntegerConstant(loc, resType, 1);
+    if (isNext) {
+      mlir::Value maxVal = builder.createIntegerConstant(loc, resType, count);
+      mlir::Value incremented =
+          mlir::arith::AddIOp::create(builder, loc, ordinal, one);
+      mlir::Value cmp = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::sle, incremented, maxVal);
+      mlir::Value result =
+          mlir::arith::SelectOp::create(builder, loc, cmp, incremented, maxVal);
+      mlir::Value atBoundary = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::eq, ordinal, maxVal);
+      return {result, atBoundary};
+    }
     mlir::Value decremented =
         mlir::arith::SubIOp::create(builder, loc, ordinal, one);
     mlir::Value cmp = mlir::arith::CmpIOp::create(
         builder, loc, mlir::arith::CmpIPredicate::sge, decremented, one);
     mlir::Value result =
         mlir::arith::SelectOp::create(builder, loc, cmp, decremented, one);
-    // Handle STAT: boundary when ordinal == 1
     mlir::Value atBoundary = mlir::arith::CmpIOp::create(
         builder, loc, mlir::arith::CmpIPredicate::eq, ordinal, one);
+    return {result, atBoundary};
+  }
+
+  // Lower NEXT/PREVIOUS applied to a whole-array (elemental) enumeration
+  // argument.  The result is a pure hlfir.elemental; STAT/error-termination
+  // side effects are handled after it, per element.
+  hlfir::EntityWithAttributes genEnumerationArray(
+      const Fortran::evaluate::FunctionRef<Fortran::evaluate::SomeDerived>
+          &expr,
+      hlfir::Entity arg, mlir::Type resType, int count, bool isNext) {
+    mlir::Location loc = getLoc();
+    fir::FirOpBuilder &builder = getBuilder();
+    mlir::Value shape = hlfir::genShape(loc, builder, arg);
+    // resType is the whole array type here; the ordinal arithmetic and result
+    // element type need the scalar (i32) element type.
+    mlir::Type eleTy = hlfir::getFortranElementType(resType);
+
+    auto resultKernel = [&](mlir::Location l, fir::FirOpBuilder &b,
+                            mlir::ValueRange idx) -> hlfir::Entity {
+      mlir::Value ordinal =
+          hlfir::loadTrivialScalar(l, b, hlfir::getElementAt(l, b, arg, idx));
+      auto [result, atBoundary] =
+          genEnumOrdinalStep(b, l, ordinal, eleTy, count, isNext);
+      (void)atBoundary;
+      return hlfir::Entity{result};
+    };
+    mlir::Value resultElem =
+        hlfir::genElementalOp(loc, builder, eleTy, shape, /*typeParams=*/{},
+                              resultKernel, /*isUnordered=*/true);
+    fir::FirOpBuilder *bldr = &builder;
+    getStmtCtx().attachCleanup(
+        [=]() { hlfir::DestroyOp::create(*bldr, loc, resultElem); });
+
+    if (expr.arguments().size() >= 2 && expr.arguments()[1]) {
+      // STAT present: elementwise 0/112 into the conformable STAT array.
+      const auto *statExpr = expr.arguments()[1]->UnwrapExpr();
+      assert(statExpr && "STAT argument must be an expression");
+      hlfir::Entity statEntity = Fortran::lower::convertExprToHLFIR(
+          loc, converter, *statExpr, getSymMap(), getStmtCtx());
+      mlir::Type statType = statEntity.getFortranElementType();
+      auto statKernel = [&](mlir::Location l, fir::FirOpBuilder &b,
+                            mlir::ValueRange idx) -> hlfir::Entity {
+        mlir::Value ordinal =
+            hlfir::loadTrivialScalar(l, b, hlfir::getElementAt(l, b, arg, idx));
+        auto [result, atBoundary] =
+            genEnumOrdinalStep(b, l, ordinal, eleTy, count, isNext);
+        (void)result;
+        mlir::Value boundaryConst = b.createIntegerConstant(l, statType, 112);
+        mlir::Value zeroConst = b.createIntegerConstant(l, statType, 0);
+        return hlfir::Entity{mlir::arith::SelectOp::create(
+            b, l, atBoundary, boundaryConst, zeroConst)};
+      };
+      mlir::Value statElem = hlfir::genElementalOp(
+          loc, builder, statType, shape, /*typeParams=*/{}, statKernel,
+          /*isUnordered=*/true);
+      hlfir::AssignOp::create(builder, loc, statElem, statEntity);
+      getStmtCtx().attachCleanup(
+          [=]() { hlfir::DestroyOp::create(*bldr, loc, statElem); });
+    } else {
+      // STAT absent: error termination if any element is at a boundary.
+      mlir::Type logType = fir::LogicalType::get(builder.getContext(), 4);
+      auto maskKernel = [&](mlir::Location l, fir::FirOpBuilder &b,
+                            mlir::ValueRange idx) -> hlfir::Entity {
+        mlir::Value ordinal =
+            hlfir::loadTrivialScalar(l, b, hlfir::getElementAt(l, b, arg, idx));
+        auto [result, atBoundary] =
+            genEnumOrdinalStep(b, l, ordinal, eleTy, count, isNext);
+        (void)result;
+        return hlfir::Entity{b.createConvert(l, logType, atBoundary)};
+      };
+      mlir::Value mask =
+          hlfir::genElementalOp(loc, builder, logType, shape, /*typeParams=*/{},
+                                maskKernel, /*isUnordered=*/true);
+      mlir::Value anyBoundary =
+          hlfir::AnyOp::create(builder, loc, logType, mask,
+                               /*dim=*/mlir::Value{});
+      mlir::Value cond =
+          builder.createConvert(loc, builder.getI1Type(), anyBoundary);
+      auto ifOp = fir::IfOp::create(builder, loc, {}, cond,
+                                    /*withElseRegion=*/false);
+      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+      fir::runtime::genReportFatalUserError(
+          builder, loc,
+          "NEXT or PREVIOUS of enumeration type at boundary without STAT=");
+      builder.setInsertionPointAfter(ifOp);
+      hlfir::DestroyOp::create(builder, loc, mask);
+    }
+    return hlfir::EntityWithAttributes{resultElem};
+  }
+
+  // Lower NEXT/PREVIOUS for non-constant enumeration arguments, dispatching to
+  // the scalar or elemental-array path.  isNext selects NEXT versus PREVIOUS.
+  hlfir::EntityWithAttributes genEnumerationNextOrPrevious(
+      const Fortran::evaluate::FunctionRef<Fortran::evaluate::SomeDerived>
+          &expr,
+      mlir::Type resType, bool isNext) {
+    mlir::Location loc = getLoc();
+    fir::FirOpBuilder &builder = getBuilder();
+    auto [derived, count] =
+        getEnumerationTypeInfo(expr, isNext ? "NEXT" : "PREVIOUS");
+    (void)derived;
+    assert(expr.arguments().size() >= 1 && expr.arguments()[0]);
+    const auto *argExpr = expr.arguments()[0]->UnwrapExpr();
+    assert(argExpr && "NEXT/PREVIOUS argument must be an expression");
+    hlfir::Entity arg = Fortran::lower::convertExprToHLFIR(
+        loc, converter, *argExpr, getSymMap(), getStmtCtx());
+    if (arg.isArray())
+      return genEnumerationArray(expr, arg, resType, count, isNext);
+    mlir::Value ordinal = hlfir::loadTrivialScalar(loc, builder, arg);
+    auto [result, atBoundary] =
+        genEnumOrdinalStep(builder, loc, ordinal, resType, count, isNext);
     genEnumerationStatHandling(expr, atBoundary, resType);
     return hlfir::EntityWithAttributes{result};
+  }
+
+  hlfir::EntityWithAttributes genEnumerationNext(
+      const Fortran::evaluate::FunctionRef<Fortran::evaluate::SomeDerived>
+          &expr,
+      mlir::Type resType) {
+    return genEnumerationNextOrPrevious(expr, resType, /*isNext=*/true);
+  }
+
+  hlfir::EntityWithAttributes genEnumerationPrevious(
+      const Fortran::evaluate::FunctionRef<Fortran::evaluate::SomeDerived>
+          &expr,
+      mlir::Type resType) {
+    return genEnumerationNextOrPrevious(expr, resType, /*isNext=*/false);
   }
 
   // Lower HUGE(enumVar) for non-constant enumeration arguments.
