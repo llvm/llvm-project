@@ -11495,15 +11495,15 @@ bool SystemZTargetLowering::isInternal(const Function *Fn) const {
 }
 
 bool SystemZTargetLowering::enableNarrowIntArgsVerification() const {
-#ifdef NDEBUG
-  return false;
-#endif
-
   if (!Subtarget.isTargetELF())
     return false;
 
   if (EnableIntArgExtCheck.getNumOccurrences())
     return EnableIntArgExtCheck;
+
+#ifdef NDEBUG
+  return false;
+#endif
 
   return getTargetMachine().Options.VerifyArgABICompliance;
 }
