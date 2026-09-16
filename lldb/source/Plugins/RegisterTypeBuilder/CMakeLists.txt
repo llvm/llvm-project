@@ -7,6 +7,5 @@ add_lldb_library(lldbPluginRegisterTypeBuilderClang PLUGIN
     Support
   LINK_LIBS
     lldbCore
-    lldbDataFormatters
     lldbTarget
   )
