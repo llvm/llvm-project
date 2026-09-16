@@ -4044,7 +4044,8 @@ void ScalarEvolution::getPoisonGeneratingValues(
 
 bool ScalarEvolution::canReuseInstruction(
     const SCEV *S, Instruction *I,
-    SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts) {
+    SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts,
+    SmallVectorImpl<BinaryOperator *> *ReplaceDisjointOrs) {
   // If the instruction cannot be poison, it's always safe to reuse.
   if (programUndefinedIfPoison(I))
     return true;
@@ -4079,12 +4080,16 @@ bool ScalarEvolution::canReuseInstruction(
     if (!I)
       return false;
 
-    // Disjoint or instructions are interpreted as adds by SCEV. However, we
-    // can't replace an arbitrary add with disjoint or, even if we drop the
-    // flag. We would need to convert the or into an add.
-    if (auto *PDI = dyn_cast<PossiblyDisjointInst>(I))
-      if (PDI->isDisjoint())
+    // SCEV models disjoint ors as adds. Dropping the flag is not sufficient,
+    // so reject the or unless the caller can replace it with an add.
+    bool IsDisjointOr = false;
+    if (auto *PDI = dyn_cast<PossiblyDisjointInst>(I);
+        PDI && PDI->isDisjoint()) {
+      if (!ReplaceDisjointOrs)
         return false;
+      ReplaceDisjointOrs->push_back(cast<BinaryOperator>(PDI));
+      IsDisjointOr = true;
+    }
 
     // FIXME: Ignore vscale, even though it technically could be poison. Do this
     // because SCEV currently assumes it can't be poison. Remove this special
@@ -4097,7 +4102,8 @@ bool ScalarEvolution::canReuseInstruction(
       return false;
 
     // If the instruction can't create poison, we can recurse to its operands.
-    if (I->hasPoisonGeneratingAnnotations())
+    // Replaced ors do not need their annotations dropped separately.
+    if (!IsDisjointOr && I->hasPoisonGeneratingAnnotations())
       DropPoisonGeneratingInsts.push_back(I);
 
     llvm::append_range(Worklist, I->operands());
@@ -13940,7 +13946,8 @@ ScalarEvolution::ScalarEvolution(Function &F, TargetLibraryInfo &TLI,
 
 ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
     : Opts(Arg.Opts), F(Arg.F), DL(Arg.DL), HasGuards(Arg.HasGuards),
-      TLI(Arg.TLI), AC(Arg.AC), DT(Arg.DT), LI(Arg.LI),
+      HasDisjointOrRefinement(Arg.HasDisjointOrRefinement), TLI(Arg.TLI),
+      AC(Arg.AC), DT(Arg.DT), LI(Arg.LI),
       CouldNotCompute(std::move(Arg.CouldNotCompute)),
       ValueExprMap(std::move(Arg.ValueExprMap)),
       PendingLoopPredicates(std::move(Arg.PendingLoopPredicates)),
