@@ -3487,6 +3487,8 @@ bool VPlanTransforms::handleUncountableEarlyExits(
         // Add phis so IncomingVal is defined on all paths to the latch.
         DenseMap<VPBasicBlock *, VPValue *> Defs = {
             {HeaderVPBB, Plan.getPoison(IncomingVal->getScalarType())}};
+        assert(IncomingVal->hasDefiningRecipe() &&
+               "Non-live-in IncomingVal without a recipe?");
         VPBasicBlock *DefVPBB = IncomingVal->getDefiningRecipe()->getParent();
         assert(VPDT.dominates(HeaderVPBB, DefVPBB) &&
                "IncomingVal defined outside of vector body?");
