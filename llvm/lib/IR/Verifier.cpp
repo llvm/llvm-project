@@ -5573,13 +5573,9 @@ void Verifier::visitDIAssignIDMetadata(Instruction &I, MDNode *MD) {
                 "dbg.assign not in same function as inst", DAI, &I);
     }
   }
-  for (DbgVariableRecord *DVR :
-       cast<DIAssignID>(MD)->getAllDbgVariableRecordUsers()) {
-    CheckDI(DVR->isDbgAssign(),
-            "!DIAssignID should only be used by Assign DVRs.", MD, DVR);
+  for (DbgVariableRecord *DVR : at::getAssignmentMarkers(cast<DIAssignID>(MD)))
     CheckDI(DVR->getFunction() == I.getFunction(),
             "DVRAssign not in same function as inst", DVR, &I);
-  }
 }
 
 void Verifier::visitMMRAMetadata(Instruction &I, MDNode *MD) {
@@ -7218,6 +7214,20 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "reg_count argument to nvvm.setmaxnreg must be in multiples of 8");
     break;
   }
+  case Intrinsic::nvvm_cp_async_bulk_global_to_shared_cta:
+  case Intrinsic::nvvm_cp_async_bulk_global_to_shared_cta_relaxed: {
+    const unsigned ArgSize = Call.arg_size();
+    const unsigned FlagValidPatternIndex = ArgSize - 1;
+    const unsigned IgnoreOOBFlagIndex = 8;
+    bool IgnoreOOB =
+        cast<ConstantInt>(Call.getArgOperand(IgnoreOOBFlagIndex))->isOne();
+    const auto *FlagValidPattern =
+        cast<ConstantInt>(Call.getArgOperand(FlagValidPatternIndex));
+    Check(!IgnoreOOB || FlagValidPattern->isZero(),
+          "flag_valid_pattern must be 0 (disabled) when ignore_oob is enabled",
+          &Call);
+    break;
+  }
   case Intrinsic::experimental_convergence_entry:
   case Intrinsic::experimental_convergence_anchor:
     break;
@@ -7408,6 +7418,8 @@ void Verifier::visit(DbgVariableRecord &DVR) {
   CheckDI(MD && (isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
                  (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands())),
           "invalid #dbg record address/value", &DVR, MD, BB, F);
+  CheckDI(DVR.isDbgAssign() || !isa<DIAssignID>(MD),
+          "!DIAssignID should only be used by Assign DVRs.", MD, &DVR);
   if (auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
     visitValueAsMetadata(*VAM, F);
     if (DVR.isDbgDeclare()) {

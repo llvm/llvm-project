@@ -122,6 +122,10 @@ bool tryToFindPtrOrigin(
             }
             continue;
           }
+          if (isGetterOfUniquePtr(decl)) {
+            E = memberCall->getImplicitObjectArgument();
+            continue;
+          }
         }
       }
 

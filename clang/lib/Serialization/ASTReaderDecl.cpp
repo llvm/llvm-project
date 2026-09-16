@@ -1778,6 +1778,10 @@ void ASTDeclReader::VisitFileScopeAsmDecl(FileScopeAsmDecl *AD) {
 
 void ASTDeclReader::VisitTopLevelStmtDecl(TopLevelStmtDecl *D) {
   VisitDecl(D);
+  D->Ordinal = Record.readInt();
+  // Keep new statements numbered after the ones loaded from an AST file.
+  ASTContext &Ctx = Reader.getContext();
+  Ctx.NumTopLevelStmtDecls = std::max(Ctx.NumTopLevelStmtDecls, D->Ordinal + 1);
   D->Statement = Record.readStmt();
 }
 
