@@ -1221,9 +1221,10 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     invalidateAndEraseMI(GR, MI);
 }
 
-// Returns the value of the switch case operand in Reg. It is a G_CONSTANT
-// unless the module has already emitted a SPIR-V constant for the same value,
-// in which case it is that constant.
+// Returns the value of the switch case operand in Reg. The case value stays a
+// G_CONSTANT until the module emits a SPIR-V constant for the same value, at
+// which point the case register is replaced with the one defining that
+// constant, which keeps its value in literal operands rather than in a CImm.
 static const ConstantInt *getSwitchCaseValue(Register Reg,
                                              const MachineRegisterInfo &MRI,
                                              LLVMContext &Ctx) {
@@ -1232,20 +1233,26 @@ static const ConstantInt *getSwitchCaseValue(Register Reg,
     return ConstantInt::get(Ctx, Val);
 
   const MachineInstr *Def = nullptr;
-  if (!mi_match(Reg, MRI, m_MInstr(Def)) ||
-      (Def->getOpcode() != SPIRV::OpConstantI &&
-       Def->getOpcode() != SPIRV::OpConstantNull))
-    llvm_unreachable("Unexpected definition of a switch case value");
+  if (!mi_match(Reg, MRI, m_MInstr(Def)))
+    llvm_unreachable("Switch case operand has no definition");
 
   LLT Ty = MRI.getType(Reg);
   assert(Ty.isValid() && "Expected a typed switch case value");
-
-  // Operands after the type are 32-bit literal words, least significant
-  // first, as written by addNumImm().
   Val = APInt(Ty.getScalarSizeInBits(), 0);
-  for (unsigned I = 2, E = Def->getNumExplicitOperands(); I != E; ++I) {
-    uint32_t Word = static_cast<uint32_t>(Def->getOperand(I).getImm());
-    Val |= APInt(Val.getBitWidth(), Word).shl((I - 2) * 32);
+
+  switch (Def->getOpcode()) {
+  case SPIRV::OpConstantNull:
+  case SPIRV::OpConstantI:
+    // The operands after the type are 32-bit literal words, least significant
+    // first, as written by addNumImm(). OpConstantNull carries none, so it
+    // decodes to zero without a case of its own.
+    for (unsigned I = 2, E = Def->getNumExplicitOperands(); I != E; ++I) {
+      uint32_t Word = static_cast<uint32_t>(Def->getOperand(I).getImm());
+      Val |= APInt(Val.getBitWidth(), Word).shl((I - 2) * 32);
+    }
+    break;
+  default:
+    llvm_unreachable("Unexpected definition of a switch case value");
   }
   return ConstantInt::get(Ctx, Val);
 }
