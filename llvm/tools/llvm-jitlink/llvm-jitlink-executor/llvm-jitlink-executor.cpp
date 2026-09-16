@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
@@ -79,6 +80,7 @@ int openListener(std::string Host, std::string PortStr) {
     errs() << "Error setting up bind address: " << gai_strerror(EC) << "\n";
     exit(1);
   }
+  auto FreeAI = scope_exit([&]() { freeaddrinfo(AI); });
 
   // Create a socket from first addrinfo structure returned by getaddrinfo.
   int SockFD;

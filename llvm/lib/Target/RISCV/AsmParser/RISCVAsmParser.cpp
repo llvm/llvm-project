@@ -4434,6 +4434,36 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   switch (Inst.getOpcode()) {
   default:
     break;
+  case RISCV::MOP_RR_7: {
+    // Remap mop.rr.7 x0, x0, x1/x5 to sspush x1/x5.
+    if (Inst.getOperand(0).getReg() == RISCV::X0 &&
+        Inst.getOperand(1).getReg() == RISCV::X0 &&
+        (Inst.getOperand(2).getReg() == RISCV::X1 ||
+         Inst.getOperand(2).getReg() == RISCV::X5)) {
+      emitToStreamer(
+          Out, MCInstBuilder(RISCV::SSPUSH).addOperand(Inst.getOperand(2)));
+      return false;
+    }
+    break;
+  }
+  case RISCV::MOP_R_28: {
+    // Remap mop.r.28 x0, x1/x5 to sspopchk x1/x5.
+    if (Inst.getOperand(0).getReg() == RISCV::X0 &&
+        (Inst.getOperand(1).getReg() == RISCV::X1 ||
+         Inst.getOperand(1).getReg() == RISCV::X5)) {
+      emitToStreamer(
+          Out, MCInstBuilder(RISCV::SSPOPCHK).addOperand(Inst.getOperand(1)));
+      return false;
+    }
+    // Remap mop.r.28 rN, x0 to ssrdp rN.
+    if (Inst.getOperand(0).getReg() != RISCV::X0 &&
+        Inst.getOperand(1).getReg() == RISCV::X0) {
+      emitToStreamer(
+          Out, MCInstBuilder(RISCV::SSRDP).addOperand(Inst.getOperand(0)));
+      return false;
+    }
+    break;
+  }
   case RISCV::PseudoC_ADDI_NOP: {
     if (Inst.getOperand(2).getImm() == 0)
       emitToStreamer(Out, MCInstBuilder(RISCV::C_NOP));
