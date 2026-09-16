@@ -976,6 +976,7 @@ void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
       CheckSimple(Target.getDirectAlign(), Res.getDirectAlign(), "DirectAlign");
       CheckSimple(Target.getDirectOffset(), Res.getDirectOffset(),
                   "DirectOffset");
+      // Extend falls through to here, and only Direct carries the flag.
       if (Res.isDirect())
         CheckSimple(Target.getCanBeFlattened(), Res.getCanBeFlattened(),
                     "CanBeFlattened");

@@ -91,8 +91,8 @@ public:
   ///               return value on x86-64).
   /// \param Align  Override for the argument's alignment. If absent, the
   ///               default alignment for \p T is used.
-  /// \param CanBeFlattened Whether a record may be passed as its individual
-  ///               elements rather than as one value.
+  /// \param CanBeFlattened Whether a record coercion may be split into one
+  ///               wire argument per field. See getCanBeFlattened.
   static ArgInfo getDirect(const Type *T = nullptr, unsigned Offset = 0,
                            MaybeAlign Align = std::nullopt,
                            bool CanBeFlattened = true) {
@@ -160,6 +160,13 @@ public:
     return *this;
   }
 
+  /// See getCanBeFlattened.
+  ArgInfo &setCanBeFlattened(bool Flatten) {
+    assert(isDirect() && "Invalid Kind!");
+    CanBeFlattened = Flatten;
+    return *this;
+  }
+
   Kind getKind() const { return TheKind; }
   bool isDirect() const { return TheKind == Direct; }
   bool isIndirect() const { return TheKind == Indirect; }
@@ -175,11 +182,6 @@ public:
   MaybeAlign getDirectAlign() const {
     assert((isDirect() || isExtend()) && "Not a direct or extend kind");
     return Alignment;
-  }
-
-  bool getCanBeFlattened() const {
-    assert(isDirect() && "Invalid Kind!");
-    return CanBeFlattened;
   }
 
   Align getIndirectAlign() const {
@@ -202,6 +204,13 @@ public:
   bool getIndirectRealign() const {
     assert((isIndirect() || isIndirectAliased()) && "Invalid Kind!");
     return IndirectRealign;
+  }
+
+  /// Whether a Direct record coercion may be split into one wire argument
+  /// per field. Mirrors clang::CodeGen::ABIArgInfo::CanBeFlattened.
+  bool getCanBeFlattened() const {
+    assert(isDirect() && "Invalid Kind!");
+    return CanBeFlattened;
   }
 
   bool isSignExt() const {

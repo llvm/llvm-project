@@ -2157,6 +2157,17 @@ Verifier::visitModuleFlag(const MDNode *Op,
     return;
   }
 
+  if (ID->getString() == "exception-model") {
+    Check(MFB == Module::Error,
+          "exception-model module flag must use 'error' merge behavior", Op);
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value, "exception-model metadata requires a string argument");
+    if (Value)
+      Check(parseExceptionModel(Value->getString()).has_value(),
+            "invalid exception-model metadata value", Op);
+    return;
+  }
+
   if (Name == "Linker Options") {
     // If the llvm.linker.options named metadata exists, we assume that the
     // bitcode reader has upgraded the module flag. Otherwise the flag might
@@ -7207,6 +7218,20 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "reg_count argument to nvvm.setmaxnreg must be in multiples of 8");
     break;
   }
+  case Intrinsic::nvvm_cp_async_bulk_global_to_shared_cta:
+  case Intrinsic::nvvm_cp_async_bulk_global_to_shared_cta_relaxed: {
+    const unsigned ArgSize = Call.arg_size();
+    const unsigned FlagValidPatternIndex = ArgSize - 1;
+    const unsigned IgnoreOOBFlagIndex = 8;
+    bool IgnoreOOB =
+        cast<ConstantInt>(Call.getArgOperand(IgnoreOOBFlagIndex))->isOne();
+    const auto *FlagValidPattern =
+        cast<ConstantInt>(Call.getArgOperand(FlagValidPatternIndex));
+    Check(!IgnoreOOB || FlagValidPattern->isZero(),
+          "flag_valid_pattern must be 0 (disabled) when ignore_oob is enabled",
+          &Call);
+    break;
+  }
   case Intrinsic::experimental_convergence_entry:
   case Intrinsic::experimental_convergence_anchor:
     break;
@@ -7297,26 +7322,32 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       if (BlockEHFuncletColors.empty())
         BlockEHFuncletColors = colorEHFunclets(*F);
 
-      // Check for catch-/cleanup-pad in first funclet block
-      bool InEHFunclet = false;
+      // colorEHFunclets() leaves unreachable blocks colorless. Such a call
+      // is in no funclet and WinEHPrepare will not see it, so there is
+      // nothing to check.
       BasicBlock *CallBB = Call.getParent();
-      const ColorVector &CV = BlockEHFuncletColors.find(CallBB)->second;
-      assert(CV.size() > 0 && "Uncolored block");
-      for (BasicBlock *ColorFirstBB : CV)
-        if (auto It = ColorFirstBB->getFirstNonPHIIt();
-            It != ColorFirstBB->end())
-          if (isa_and_nonnull<FuncletPadInst>(&*It))
-            InEHFunclet = true;
+      auto ColorsIt = BlockEHFuncletColors.find(CallBB);
+      if (ColorsIt != BlockEHFuncletColors.end()) {
+        // Check for catch-/cleanup-pad in first funclet block
+        bool InEHFunclet = false;
+        const ColorVector &CV = ColorsIt->second;
+        assert(CV.size() > 0 && "Uncolored block");
+        for (BasicBlock *ColorFirstBB : CV)
+          if (auto It = ColorFirstBB->getFirstNonPHIIt();
+              It != ColorFirstBB->end())
+            if (isa_and_nonnull<FuncletPadInst>(&*It))
+              InEHFunclet = true;
 
-      // Check for funclet operand bundle
-      bool HasToken = false;
-      for (unsigned I = 0, E = Call.getNumOperandBundles(); I != E; ++I)
-        if (Call.getOperandBundleAt(I).getTagID() == LLVMContext::OB_funclet)
-          HasToken = true;
+        // Check for funclet operand bundle
+        bool HasToken = false;
+        for (unsigned I = 0, E = Call.getNumOperandBundles(); I != E; ++I)
+          if (Call.getOperandBundleAt(I).getTagID() == LLVMContext::OB_funclet)
+            HasToken = true;
 
-      // This would cause silent code truncation in WinEHPrepare
-      if (InEHFunclet)
-        Check(HasToken, "Missing funclet token on intrinsic call", &Call);
+        // This would cause silent code truncation in WinEHPrepare
+        if (InEHFunclet)
+          Check(HasToken, "Missing funclet token on intrinsic call", &Call);
+      }
     }
   }
 

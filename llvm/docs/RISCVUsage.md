@@ -83,7 +83,14 @@ Profiles that are not yet ratified cannot be used unless
 `-menable-experimental-extensions` (or equivalent for other tools) is
 specified. This applies to the following profiles:
 
+- `rva23p1s64`
+- `rvb23p1s64`
 - `rvm23u32`
+
+The `rva23p1s64` and `rvb23p1s64` profiles enable the same mandatory extensions
+as `rva23s64` and `rvb23s64`, respectively. Their additional optional extensions
+must be requested explicitly, for example
+`-march=rva23p1s64_ssctr -menable-experimental-extensions`.
 
 (riscv-extensions)=
 
@@ -349,7 +356,7 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 : LLVM implements the [1.0 release specification](https://github.com/riscv/riscv-cfi/releases/tag/v1.0).
 
-`experimental-smcsps`, `experimental-sscsps`, `experimental-smijt`, `experimental-ssijt`, `experimental-smehv`, `experimental-ssehv`, `experimental-smip`, `experimental-ssip`
+`experimental-smcsps`, `experimental-sscsps`, `experimental-smijt`, `experimental-ssijt`, `experimental-smehv`, `experimental-ssehv`, `experimental-smip`, `experimental-ssip`, `experimental-smidctrl`, `experimental-ssidctrl`, `experimental-smnip`, `experimental-ssnip`
 
 : LLVM implements the [0.20 release specification](https://github.com/riscv/riscv-fast-interrupt/releases/tag/v0.20).
 
