@@ -16,9 +16,15 @@
 using namespace llvm;
 using namespace IntelGPU;
 
-// A GPU IP version packs the architecture into the bits above the release,
-// which in turn sits above the revision. The bits between the release and the
-// revision are reserved.
+// A GPU IP version packs four fields, from the most significant bit down:
+//
+//    31           22 21      14 13       6 5        0
+//   +---------------+----------+----------+----------+
+//   |  architecture |  release | reserved | revision |
+//   +---------------+----------+----------+----------+
+//        10 bits      8 bits     8 bits     6 bits
+//
+// The reserved bits carry no information.
 static constexpr uint32_t GPUIPArchitectureShift = 22;
 static constexpr uint32_t GPUIPReleaseShift = 14;
 static constexpr uint32_t GPUIPReleaseMask = 0xff;
