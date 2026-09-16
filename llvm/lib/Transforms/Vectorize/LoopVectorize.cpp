@@ -6420,20 +6420,6 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
     InterleaveGroups.insert(IG);
   }
 
-  bool RequiresScalarEpilogue =
-      PlanCM.isEpilogueAllowed() && any_of(InterleaveGroups, [](auto *IG) {
-        return isa<LoadInst>(IG->getInsertPos()) &&
-               IG->requiresScalarEpilogue();
-      });
-  // Update the branch in the middle block if a scalar epilogue is required.
-  VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
-  if (RequiresScalarEpilogue && MiddleVPBB->getNumSuccessors() == 2) {
-    auto *BranchOnCond = cast<VPInstruction>(MiddleVPBB->getTerminator());
-    assert(MiddleVPBB->getSuccessors()[1] == Plan->getScalarPreheader() &&
-           "second successor must be scalar preheader");
-    BranchOnCond->setOperand(0, Plan->getFalse());
-  }
-
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar
   // VPInstructions in the loop.
