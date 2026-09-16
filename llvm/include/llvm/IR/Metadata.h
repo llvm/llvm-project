@@ -225,6 +225,8 @@ protected:
   // restructure the DbgVariableRecord class then we can template parameterize
   // this array size.
   std::array<Metadata *, 3> DebugValues;
+  // The slot holding the DIAssignID of a dbg_assign record.
+  static constexpr size_t AssignIDIdx = 2;
 
   ArrayRef<Metadata *> getDebugValues() const { return DebugValues; }
 
@@ -1262,8 +1264,7 @@ public:
   bool isDistinct() const { return Storage == Distinct; }
   bool isTemporary() const { return Storage == Temporary; }
 
-  bool isReplaceable() const { return isTemporary() || isAlwaysReplaceable(); }
-  bool isAlwaysReplaceable() const { return getMetadataID() == DIAssignIDKind; }
+  bool isReplaceable() const { return isTemporary(); }
 
   unsigned getNumTemporaryUses() const {
     assert(isTemporary() && "Only for temporaries");
