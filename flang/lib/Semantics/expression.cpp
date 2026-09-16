@@ -1645,6 +1645,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
                           std::get_if<Expr<SomeInteger>>(&expr->u)}) {
                     if (coarrayRef.stat()) {
                       Say("coindexed reference has multiple STAT= specifiers"_err_en_US);
+                    } else if (!IsVariable(*intExpr)) {
+                      // A parser::Variable may resolve to a nonpointer
+                      // function reference.
+                      SayAt(x.v,
+                          "STAT= specifier must be a scalar integer variable"_err_en_US);
                     } else {
                       coarrayRef.set_stat(Expr<SomeInteger>{*intExpr});
                     }
@@ -3101,10 +3106,10 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
   // host_data use_device clause: the variable itself is host-resident, but
   // inside the host_data region it is referenced via its device address.
   // It matches a Device dummy with distance 0, a host dummy (no attribute)
-  // with distance 3, and is incompatible with any other dummy attribute.
+  // with distance 1, and is incompatible with any other dummy attribute.
   if (actualDataAttr && *actualDataAttr == common::CUDADataAttr::UseDevice) {
     if (!dummyDataAttr)
-      return 3;
+      return 1;
     if (*dummyDataAttr == common::CUDADataAttr::Device)
       return 0;
   }
