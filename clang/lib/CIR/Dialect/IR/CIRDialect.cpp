@@ -4689,6 +4689,22 @@ LogicalResult cir::TryOp::verify() {
     return emitOpError(
         "number of handler regions and handler types must match");
 
+  // A filter handler and an unexpected handler together implement a dynamic
+  // exception specification. The filter try operation wraps the whole function
+  // body and exists only to check the specification, so the two must appear
+  // together and must stand alone. A catch-all in the same list would make the
+  // filter unreachable, and the filter handler already provides the
+  // continue-unwinding path that an unwind handler would supply.
+  if (llvm::any_of(handlerTypes, [](mlir::Attribute typeAttr) {
+        return mlir::isa<cir::EhFilterAttr, cir::EhUnexpectedAttr>(typeAttr);
+      })) {
+    if (handlerTypes.size() != 2 ||
+        !mlir::isa<cir::EhFilterAttr>(handlerTypes[0]) ||
+        !mlir::isa<cir::EhUnexpectedAttr>(handlerTypes[1]))
+      return emitOpError("a filter handler must be followed by an unexpected "
+                         "handler, and the two must be the only handlers");
+  }
+
   for (const auto &[typeAttr, handlerRegion] :
        llvm::zip(handlerTypes, handlerRegions)) {
     // Verify that handler regions have a !cir.eh_token block argument.
@@ -4698,8 +4714,10 @@ LogicalResult cir::TryOp::verify() {
       return emitOpError(
           "handler region must have a single '!cir.eh_token' argument");
 
-    // The unwind region does not require a cir.begin_catch.
-    if (mlir::isa<cir::UnwindAttr>(typeAttr))
+    // The unwind, filter and unexpected regions do not require a
+    // cir.begin_catch. None of them catches the exception.
+    if (mlir::isa<cir::UnwindAttr, cir::EhFilterAttr, cir::EhUnexpectedAttr>(
+            typeAttr))
       continue;
 
     // Nothing may run in a catch handler before cir.begin_catch, so it has to
@@ -4761,6 +4779,14 @@ printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
       printer << "catch all ";
     } else if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
       printer << "unwind ";
+    } else if (auto filterAttr = mlir::dyn_cast<cir::EhFilterAttr>(typeAttr)) {
+      printer << "filter [";
+      llvm::interleaveComma(
+          filterAttr.getPermittedTypes(), printer,
+          [&](mlir::Attribute sym) { printer.printAttribute(sym); });
+      printer << "] ";
+    } else if (mlir::isa<cir::EhUnexpectedAttr>(typeAttr)) {
+      printer << "unexpected ";
     } else {
       printer << "catch [type ";
       printer.printAttribute(typeAttr);
@@ -4854,6 +4880,45 @@ static mlir::ParseResult parseTryHandlerRegions(
       return parser.emitError(parser.getCurrentLocation(),
                               "expected `]` after RTTI info attribute");
 
+    if (parseCheckedCatcherRegion().failed())
+      return mlir::failure();
+  }
+
+  // A filter handler carries the type info symbols permitted by the enclosing
+  // function's dynamic exception specification. TryOp::verify enforces that it
+  // is paired with an unexpected handler and that the two stand alone.
+  if (parser.parseOptionalKeyword("filter").succeeded()) {
+    mlir::SMLoc filterLoc = parser.getCurrentLocation();
+    llvm::SmallVector<mlir::Attribute, 4> permittedTypes;
+    auto parsePermittedType = [&]() -> mlir::ParseResult {
+      mlir::SMLoc typeLoc = parser.getCurrentLocation();
+      mlir::Attribute rtti;
+      if (parser.parseAttribute(rtti).failed())
+        return mlir::failure();
+      if (!mlir::isa<cir::GlobalViewAttr>(rtti))
+        return parser.emitError(typeLoc, "expected a type info symbol naming a "
+                                         "permitted exception type");
+      permittedTypes.push_back(rtti);
+      return mlir::success();
+    };
+    if (parser
+            .parseCommaSeparatedList(mlir::OpAsmParser::Delimiter::Square,
+                                     parsePermittedType)
+            .failed())
+      return mlir::failure();
+
+    auto filterAttr = cir::EhFilterAttr::getChecked(
+        [&]() { return parser.emitError(filterLoc); }, parser.getContext(),
+        parser.getBuilder().getArrayAttr(permittedTypes));
+    if (!filterAttr)
+      return mlir::failure();
+    catcherAttrs.push_back(filterAttr);
+    if (parseCheckedCatcherRegion().failed())
+      return mlir::failure();
+  }
+
+  if (parser.parseOptionalKeyword("unexpected").succeeded()) {
+    catcherAttrs.push_back(cir::EhUnexpectedAttr::get(parser.getContext()));
     if (parseCheckedCatcherRegion().failed())
       return mlir::failure();
   }
@@ -4985,6 +5050,31 @@ LogicalResult cir::ConstructCatchParamOp::verifySymbolUses(
 // EhDispatchOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult cir::EhDispatchOp::verify() {
+  mlir::ArrayAttr handlerTypes = getCatchTypesAttr();
+  if (!handlerTypes)
+    return success();
+
+  bool hasFilter = false;
+  for (mlir::Attribute typeAttr : handlerTypes) {
+    if (!mlir::isa<cir::EhFilterAttr>(typeAttr))
+      continue;
+    if (hasFilter)
+      return emitOpError("can't have more than one 'filter' handler");
+    hasFilter = true;
+  }
+
+  // Unlike the other handlers, a filter does not take the place of the default
+  // destination. Its destination is taken when the exception is not permitted
+  // by the specification, and the default 'unwind' destination is taken when
+  // it is. A catch-all default would leave the filter unreachable.
+  if (hasFilter && getDefaultIsCatchAll())
+    return emitOpError(
+        "'filter' handler requires an 'unwind' default destination");
+
+  return success();
+}
+
 static ParseResult
 parseEhDispatchDestinations(OpAsmParser &parser, mlir::ArrayAttr &catchTypes,
                             SmallVectorImpl<Block *> &catchDestinations,
@@ -5033,6 +5123,47 @@ parseEhDispatchDestinations(OpAsmParser &parser, mlir::ArrayAttr &catchTypes,
 
       if (parser.parseSuccessor(defaultDestination).failed())
         return failure();
+      return success();
+    }
+
+    // A filter handler carries the type info symbols permitted by the
+    // enclosing function's dynamic exception specification. Its destination is
+    // taken when the exception is *not* one of those types.
+    if (succeeded(parser.parseOptionalKeyword("filter"))) {
+      SMLoc filterLoc = parser.getCurrentLocation();
+      SmallVector<Attribute, 4> permittedTypes;
+      auto parsePermittedType = [&]() -> ParseResult {
+        mlir::SMLoc typeLoc = parser.getCurrentLocation();
+        mlir::Attribute rtti;
+        if (parser.parseAttribute(rtti).failed())
+          return failure();
+        if (!mlir::isa<cir::GlobalViewAttr>(rtti))
+          return parser.emitError(typeLoc,
+                                  "expected a type info symbol naming a "
+                                  "permitted exception type");
+        permittedTypes.push_back(rtti);
+        return success();
+      };
+      if (parser
+              .parseCommaSeparatedList(OpAsmParser::Delimiter::Paren,
+                                       parsePermittedType)
+              .failed())
+        return failure();
+
+      auto filterAttr = cir::EhFilterAttr::getChecked(
+          [&]() { return parser.emitError(filterLoc); }, parser.getContext(),
+          parser.getBuilder().getArrayAttr(permittedTypes));
+      if (!filterAttr)
+        return failure();
+      handlerTypes.push_back(filterAttr);
+
+      if (parser.parseColon().failed())
+        return failure();
+
+      Block *dest;
+      if (parser.parseSuccessor(dest).failed())
+        return failure();
+      catchDestinations.push_back(dest);
       return success();
     }
 
@@ -5098,8 +5229,16 @@ static void printEhDispatchDestinations(OpAsmPrinter &p, cir::EhDispatchOp op,
     llvm::interleave(
         llvm::zip(catchTypes, catchDestinations),
         [&](auto i) {
-          p << "  catch(";
-          p.printAttribute(std::get<0>(i));
+          mlir::Attribute typeAttr = std::get<0>(i);
+          if (auto filterAttr = mlir::dyn_cast<cir::EhFilterAttr>(typeAttr)) {
+            p << "  filter(";
+            llvm::interleaveComma(
+                filterAttr.getPermittedTypes(), p,
+                [&](mlir::Attribute sym) { p.printAttribute(sym); });
+          } else {
+            p << "  catch(";
+            p.printAttribute(typeAttr);
+          }
           p << ") : ";
           p.printSuccessor(std::get<1>(i));
         },
