@@ -198,13 +198,13 @@ define half @test_fdiv(half %a, half %b) #0 {
 ; CHECK-DAG:  ld.param.b16    [[B:%rs[0-9]+]], [test_frem_param_1];
 ; CHECK-NOFTZ-DAG:  cvt.f32.f16     [[FA:%r[0-9]+]], [[A]];
 ; CHECK-NOFTZ-DAG:  cvt.f32.f16     [[FB:%r[0-9]+]], [[B]];
-; CHECK-NOFTZ-NEXT: div.rn.f32      [[D:%r[0-9]+]], [[FA]], [[FB]];
+; CHECK-NOFTZ-NEXT: div.approx.f32  [[D:%r[0-9]+]], [[FA]], [[FB]];
 ; CHECK-NOFTZ-NEXT: cvt.rzi.f32.f32 [[DI:%r[0-9]+]], [[D]];
 ; CHECK-NOFTZ-NEXT: neg.f32         [[DNEG:%r[0-9]+]], [[DI]];
 ; CHECK-NOFTZ-NEXT: fma.rn.f32      [[RF:%r[0-9]+]], [[DNEG]], [[FB]], [[FA]];
 ; CHECK-F16-FTZ-DAG:  cvt.ftz.f32.f16     [[FA:%r[0-9]+]], [[A]];
 ; CHECK-F16-FTZ-DAG:  cvt.ftz.f32.f16     [[FB:%r[0-9]+]], [[B]];
-; CHECK-F16-FTZ-NEXT: div.rn.ftz.f32      [[D:%r[0-9]+]], [[FA]], [[FB]];
+; CHECK-F16-FTZ-NEXT: div.approx.ftz.f32  [[D:%r[0-9]+]], [[FA]], [[FB]];
 ; CHECK-F16-FTZ-NEXT: cvt.rzi.ftz.f32.f32 [[DI:%r[0-9]+]], [[D]];
 ; CHECK-F16-FTZ-NEXT: neg.ftz.f32         [[DNEG:%r[0-9]+]], [[DI]];
 ; CHECK-F16-FTZ-NEXT: fma.rn.ftz.f32      [[RF:%r[0-9]+]], [[DNEG]], [[FB]], [[FA]];
@@ -214,7 +214,7 @@ define half @test_fdiv(half %a, half %b) #0 {
 ; CHECK-NEXT: st.param.b16       [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define half @test_frem(half %a, half %b) #0 {
-  %r = frem half %a, %b
+  %r = frem afn half %a, %b
   ret half %r
 }
 

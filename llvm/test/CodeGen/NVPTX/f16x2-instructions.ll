@@ -350,7 +350,7 @@ define <2 x half> @test_frem(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NEXT:    cvt.f32.f16 %r3, %rs2;
 ; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
 ; CHECK-NEXT:    cvt.f32.f16 %r4, %rs4;
-; CHECK-NEXT:    div.rn.f32 %r5, %r4, %r3;
+; CHECK-NEXT:    div.approx.f32 %r5, %r4, %r3;
 ; CHECK-NEXT:    cvt.rzi.f32.f32 %r6, %r5;
 ; CHECK-NEXT:    neg.f32 %r7, %r6;
 ; CHECK-NEXT:    fma.rn.f32 %r8, %r7, %r3, %r4;
@@ -359,7 +359,7 @@ define <2 x half> @test_frem(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NEXT:    cvt.rn.f16.f32 %rs5, %r9;
 ; CHECK-NEXT:    cvt.f32.f16 %r10, %rs1;
 ; CHECK-NEXT:    cvt.f32.f16 %r11, %rs3;
-; CHECK-NEXT:    div.rn.f32 %r12, %r11, %r10;
+; CHECK-NEXT:    div.approx.f32 %r12, %r11, %r10;
 ; CHECK-NEXT:    cvt.rzi.f32.f32 %r13, %r12;
 ; CHECK-NEXT:    neg.f32 %r14, %r13;
 ; CHECK-NEXT:    fma.rn.f32 %r15, %r14, %r10, %r11;
@@ -369,7 +369,7 @@ define <2 x half> @test_frem(<2 x half> %a, <2 x half> %b) #0 {
 ; CHECK-NEXT:    mov.b32 %r17, {%rs6, %rs5};
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r17;
 ; CHECK-NEXT:    ret;
-  %r = frem <2 x half> %a, %b
+  %r = frem afn <2 x half> %a, %b
   ret <2 x half> %r
 }
 

@@ -545,7 +545,7 @@ define double @frem_f64(double %a, double %b) {
 ; CHECK-NEXT:    fma.rn.f64 %rd6, %rd5, %rd2, %rd1;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd6;
 ; CHECK-NEXT:    ret;
-  %rem = frem ninf double %a, %b
+  %rem = frem afn ninf double %a, %b
   ret double %rem
 }
 

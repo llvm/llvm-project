@@ -3302,15 +3302,26 @@ static SDValue lowerROT(SDValue Op, SelectionDAG &DAG) {
 }
 
 static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG) {
-  // Lower (frem x, y) into (sub x, (mul (ftrunc (div x, y)) y)),
-  // i.e. "poor man's fmod()". When y is infinite, x is returned. This matches
-  // the semantics of LLVM's frem.
   SDLoc DL(Op);
   SDValue X = Op->getOperand(0);
   SDValue Y = Op->getOperand(1);
   EVT Ty = Op.getValueType();
   SDNodeFlags Flags = Op->getFlags();
 
+  if (!Flags.hasApproximateFuncs()) {
+    StringRef LibdeviceFunction = Ty == MVT::f32 ? "__nv_fmodf" : "__nv_fmod";
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(),
+        Twine("frem without the 'afn' fast-math flag is not supported; use the "
+              "libdevice ") +
+            LibdeviceFunction + " function instead",
+        DL.getDebugLoc()));
+    // Keep using the approximation if the diagnostic handler returns.
+  }
+
+  // Approximate (frem x, y) with x - trunc(x / y) * y. This requires afn:
+  // rounding or overflow in the quotient can produce an incorrect remainder,
+  // even when the division is correctly rounded and the subtraction is fused.
   SDValue Div = DAG.getNode(ISD::FDIV, DL, Ty, X, Y, Flags);
   SDValue Trunc = DAG.getNode(ISD::FTRUNC, DL, Ty, Div, Flags);
   SDValue Mul = DAG.getNode(ISD::FMUL, DL, Ty, Trunc, Y,
