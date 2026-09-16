@@ -2157,7 +2157,11 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
         S.getASTContext().getTypeAlignInChars(Call->getType());
     CharUnits BaseAlignment =
         getBaseAlignment(S.getASTContext(), getLValueBase(Ptr));
-    CharUnits PtrOffset = Ptr.toAPValue(S.getASTContext()).getLValueOffset();
+    std::optional<size_t> LayoutOffset =
+        Ptr.computeLayoutOffset(S.getASTContext());
+    if (!LayoutOffset)
+      return false;
+    CharUnits PtrOffset = CharUnits::fromQuantity(*LayoutOffset);
     CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(PtrOffset);
     if (PtrAlign < RequiredAlign) {
       S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_load8_unaligned)
