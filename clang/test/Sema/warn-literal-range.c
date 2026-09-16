@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c99 -verify %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c99 -fexperimental-strict-floating-point -verify %s
 
 float f0 = 0.42f; // no-warning
 
@@ -35,3 +35,6 @@ long double ld3 = 0x0.42p42L; // no-warning
 long double ld4 = 0x0.42p-42000L; // expected-warning {{magnitude of floating-point constant too small for type 'long double'; minimum is 3.64519953188247460253E-4951}}
 
 long double ld5 = 0x0.42p+42000L; // expected-warning {{magnitude of floating-point constant too large for type 'long double'; maximum is 1.18973149535723176502E+4932}}
+
+#pragma STDC FENV_ROUND FE_TOWARDZERO // {{pragma STDC FENV_ROUND is not supported}}
+double d6 = 1e400; // expected-warning {{magnitude of floating-point constant too large for type 'double'; maximum is 1.7976931348623157E+308}}

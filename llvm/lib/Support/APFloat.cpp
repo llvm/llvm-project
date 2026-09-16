@@ -5581,10 +5581,8 @@ APFloat::opStatus DoubleAPFloat::handleOverflow(roundingMode RM) {
   default:
     llvm_unreachable("Invalid rounding mode found");
   }
-  opStatus S = opInexact;
-  if (!getFirst().isFinite())
-    S = static_cast<opStatus>(S | opOverflow);
-  return S;
+
+  return static_cast<opStatus>(opInexact | opOverflow);
 }
 
 APFloat::opStatus DoubleAPFloat::convertFromUnsignedParts(

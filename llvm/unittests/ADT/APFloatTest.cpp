@@ -7582,7 +7582,7 @@ TEST(APFloatTest, PPCDoubleDoubleConvertFromAPIntEnormous) {
       EXPECT_EQ(ConvertFromStatus, APFloat::opInexact | APFloat::opOverflow);
     } else {
       EXPECT_EQ(F, Largest);
-      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact);
+      EXPECT_EQ(ConvertFromStatus, APFloat::opInexact | APFloat::opOverflow);
     }
   }
 
@@ -8361,10 +8361,12 @@ TEST(APFloatTest, Float8E4M3FNAdd) {
       {QNaN, FromStr("-448"), "NaN", APFloat::opOK, APFloat::fcNaN},
       {FromStr("448"), FromStr("-32"), "416", APFloat::opOK, APFloat::fcNormal},
       {FromStr("448"), FromStr("0"), "448", APFloat::opOK, APFloat::fcNormal},
-      {FromStr("448"), FromStr("32"), "448", APFloat::opOverflow | APFloat::opInexact,
-       APFloat::fcNormal, APFloat::rmTowardZero},
-      {FromStr("448"), FromStr("448"), "448", APFloat::opOverflow | APFloat::opInexact,
-       APFloat::fcNormal, APFloat::rmTowardZero},
+      {FromStr("448"), FromStr("32"), "448",
+       APFloat::opOverflow | APFloat::opInexact, APFloat::fcNormal,
+       APFloat::rmTowardZero},
+      {FromStr("448"), FromStr("448"), "448",
+       APFloat::opOverflow | APFloat::opInexact, APFloat::fcNormal,
+       APFloat::rmTowardZero},
   };
 
   for (size_t i = 0; i < std::size(AdditionTests); ++i) {
@@ -8706,8 +8708,9 @@ TEST(APFloatTest, Float8E5M2FNUZAdd) {
        APFloat::fcNormal},
       {FromStr("57344"), FromStr("4096"), "57344", APFloat::opInexact,
        APFloat::fcNormal, APFloat::rmTowardZero},
-      {FromStr("57344"), FromStr("57344"), "57344", APFloat::opOverflow | APFloat::opInexact,
-       APFloat::fcNormal, APFloat::rmTowardZero},
+      {FromStr("57344"), FromStr("57344"), "57344",
+       APFloat::opOverflow | APFloat::opInexact, APFloat::fcNormal,
+       APFloat::rmTowardZero},
   };
 
   for (size_t i = 0; i < std::size(AdditionTests); ++i) {
@@ -8902,10 +8905,12 @@ TEST(APFloatTest, Float8E4M3FNUZAdd) {
       {QNaN, FromStr("-240"), "NaN", APFloat::opOK, APFloat::fcNaN},
       {FromStr("240"), FromStr("-16"), "224", APFloat::opOK, APFloat::fcNormal},
       {FromStr("240"), FromStr("0"), "240", APFloat::opOK, APFloat::fcNormal},
-      {FromStr("240"), FromStr("32"), "240", APFloat::opOverflow | APFloat::opInexact,
-       APFloat::fcNormal, APFloat::rmTowardZero},
-      {FromStr("240"), FromStr("240"), "240", APFloat::opOverflow | APFloat::opInexact,
-       APFloat::fcNormal, APFloat::rmTowardZero},
+      {FromStr("240"), FromStr("32"), "240",
+       APFloat::opOverflow | APFloat::opInexact, APFloat::fcNormal,
+       APFloat::rmTowardZero},
+      {FromStr("240"), FromStr("240"), "240",
+       APFloat::opOverflow | APFloat::opInexact, APFloat::fcNormal,
+       APFloat::rmTowardZero},
   };
 
   for (size_t i = 0; i < std::size(AdditionTests); ++i) {
