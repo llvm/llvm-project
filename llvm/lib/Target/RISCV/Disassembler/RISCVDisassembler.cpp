@@ -116,17 +116,6 @@ static DecodeStatus DecodeSimpleRegisterClass(MCInst &Inst, uint32_t RegNo,
 constexpr auto DecodeGPRRegisterClass =
     DecodeSimpleRegisterClass<RISCV::X0, 32, /*RVELimit=*/16>;
 
-static DecodeStatus DecodeGPRX1X5RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                               uint64_t Address,
-                                               const MCDisassembler *Decoder) {
-  MCRegister Reg = RISCV::X0 + RegNo;
-  if (Reg != RISCV::X1 && Reg != RISCV::X5)
-    return MCDisassembler::Fail;
-
-  Inst.addOperand(MCOperand::createReg(Reg));
-  return MCDisassembler::Success;
-}
-
 static DecodeStatus DecodeGPRX1RegisterClass(MCInst &Inst, uint32_t RegNo,
                                              uint32_t Address,
                                              const MCDisassembler *Decoder) {
@@ -169,6 +158,7 @@ static DecodeStatus DecodeFilteredRegisterClass(MCInst &Inst, uint32_t RegNo,
 constexpr bool PredNoX0(uint32_t RegNo) { return RegNo != 0; }
 constexpr bool PredNoX2(uint32_t RegNo) { return RegNo != 2; }
 constexpr bool PredNoX31(uint32_t RegNo) { return RegNo != 31; }
+constexpr bool PredX1OrX5(uint32_t RegNo) { return RegNo == 1 || RegNo == 5; }
 
 constexpr auto DecodeGPRNoX0RegisterClass =
     DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredNoX0>;
@@ -176,6 +166,8 @@ constexpr auto DecodeGPRNoX2RegisterClass =
     DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredNoX2>;
 constexpr auto DecodeGPRNoX31RegisterClass =
     DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredNoX31>;
+constexpr auto DecodeGPRX1X5RegisterClass =
+    DecodeFilteredRegisterClass<DecodeGPRRegisterClass, PredX1OrX5>;
 
 static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
                                                uint64_t Address,
