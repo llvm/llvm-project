@@ -3892,6 +3892,11 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     assert(!cir::MissingFeatures::addressSpace());
     return mlir::LLVM::LLVMPointerType::get(type.getContext());
   });
+  // On the device side, surface reference is represented as an object handle
+  // in 64-bit integer.
+  converter.addConversion([&](cir::CUDADeviceSurfaceType type) -> mlir::Type {
+    return mlir::IntegerType::get(type.getContext(), 64);
+  });
   converter.addConversion([&](cir::CUDADeviceTextureType type) -> mlir::Type {
     return mlir::IntegerType::get(type.getContext(), 64);
   });

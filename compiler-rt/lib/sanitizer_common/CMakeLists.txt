@@ -348,13 +348,15 @@ include(FindLibcCommonUtils)
 if(OS_NAME MATCHES "Linux" AND TARGET llvm-libc-common-utilities)
   add_compiler_rt_object_libraries(RTSanitizerOffload
     ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
-    SOURCES sanitizer_offload.cpp
-            sanitizer_offload_image.cpp
-            sanitizer_offload_rpc.cpp
-    ADDITIONAL_HEADERS sanitizer_offload.h
-                       sanitizer_offload_hsa.h
-                       sanitizer_offload_opcodes.h
-                       sanitizer_offload_rpc.h
+    SOURCES
+      sanitizer_offload.cpp
+      sanitizer_offload_image.cpp
+      sanitizer_offload_rpc.cpp
+    ADDITIONAL_HEADERS
+      sanitizer_offload.h
+      sanitizer_offload_hsa.h
+      sanitizer_offload_opcodes.h
+      sanitizer_offload_rpc.h
     CFLAGS ${SANITIZER_CFLAGS}
     DEFS ${SANITIZER_COMMON_DEFINITIONS})
   foreach(arch ${SANITIZER_COMMON_SUPPORTED_ARCH})
