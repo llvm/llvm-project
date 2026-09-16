@@ -3291,7 +3291,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPExpandSCEVSC:
       case VPRecipeBase::VPPredInstPHISC:
       case VPRecipeBase::VPBranchOnMaskSC:
-      case VPRecipeBase::VPMonotonicPHISC:
+      case VPRecipeBase::VPConditionalInductionPHISC:
         continue;
       case VPRecipeBase::VPReductionSC:
       case VPRecipeBase::VPActiveLaneMaskPHISC:
@@ -3689,8 +3689,8 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   if (Plan.hasEarlyExit())
     return 1;
 
-  // Monotonic vars don't support interleaving.
-  if (Legal->hasMonotonicPHIs())
+  // Conditional inductions don't support interleaving.
+  if (Legal->hasConditionalInductions())
     return 1;
 
   const bool HasReductions =
@@ -6177,13 +6177,12 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
                                VPI->getDebugLoc());
 }
 
-VPWidenMemIntrinsicRecipe *
-VPRecipeBuilder::widenIfCompressedLoadOrStore(VPInstruction *VPI,
-                                              VPMonotonicPHIRecipe *PhiR) {
+VPWidenMemIntrinsicRecipe *VPRecipeBuilder::widenIfCompressedLoadOrStore(
+    VPInstruction *VPI, VPConditionalInductionPHIRecipe *PhiR) {
   Instruction *I = VPI->getUnderlyingInstr();
 
   std::optional<CompressedPtrInfo> Info = Legal->isCompressedLoadOrStore(I);
-  if (!Info || Info->MonotonicPHI != PhiR->getPHINode())
+  if (!Info || Info->ConditionalInductionPHI != PhiR->getPHINode())
     return nullptr;
 
   VPBuilder::InsertPointGuard Guard(Builder);
@@ -6469,7 +6468,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   if (!RUN_VPLAN_PASS(
           VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE, *OrigLoop,
           VPDT, Legal->getInductionVars(), Legal->getReductionVars(),
-          Legal->getMonotonicPHIs(), Legal->getFixedOrderRecurrences(),
+          Legal->getConditionalInductions(), Legal->getFixedOrderRecurrences(),
           Config.getInLoopReductions(), Config.getHints().allowReordering())) {
     return nullptr;
   }
@@ -7572,7 +7571,8 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
       }
     } else {
       // Retrieve the induction resume value via ResumeForEpilogue.
-      assert(isa<VPWidenInductionRecipe>(&R) || isa<VPMonotonicPHIRecipe>(&R));
+      assert(isa<VPWidenInductionRecipe>(&R) ||
+             isa<VPConditionalInductionPHIRecipe>(&R));
       PHINode *IndPhi = cast<VPHeaderPHIRecipe>(&R)->getPHINode();
       ResumeV = IRPhiToResumeForEpi.at(IndPhi)->getUnderlyingValue();
     }
@@ -7983,11 +7983,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
     unsigned SelectedIC = std::max(IC, UserIC);
 
-    if (LVL.hasMonotonicPHIs() && SelectedIC > 1) {
+    if (LVL.hasConditionalInductions() && SelectedIC > 1) {
       reportVectorizationFailure(
-          "Interleaving of loop with monotonic vars",
-          "Interleaving of loops with monotonic vars is not supported",
-          "CantInterleaveWithMonotonicVars", ORE, L);
+          "Interleaving of loop with conditional inductions",
+          "Interleaving of loops with conditional inductions is not supported",
+          "CantInterleaveWithConditionalInductions", ORE, L);
       return false;
     }
 

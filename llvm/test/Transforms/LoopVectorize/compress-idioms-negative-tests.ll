@@ -1,4 +1,4 @@
-; RUN: opt < %s -lv-monotonic-patterns=true -enable-early-exit-vectorization-with-side-effects -force-target-supports-masked-memory-ops -force-vector-width=4 -passes=loop-vectorize -disable-output -pass-remarks-missed=".*" 2>&1 | FileCheck %s
+; RUN: opt < %s -lv-compressing-patterns=true -enable-early-exit-vectorization-with-side-effects -force-target-supports-masked-memory-ops -force-vector-width=4 -passes=loop-vectorize -disable-output -pass-remarks-missed=".*" 2>&1 | FileCheck %s
 
 ; CHECK: loop not vectorized
 
@@ -174,8 +174,8 @@ early.exit:
 
 ; CHECK: loop not vectorized
 
-; Negative test: Using the monotonic phi outside the loop is not supported.
-define i64 @out_of_loop_use_of_monotonic_phi(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
+; Negative test: Using the conditional induction outside the loop is not supported.
+define i64 @out_of_loop_use_of_conditional_induction(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 entry:
   br label %for.body
 
@@ -205,7 +205,7 @@ exit:
 
 ; CHECK: loop not vectorized
 
-; Negative test: Matching an extended monotonic phi index is not supported yet.
+; Negative test: Matching an extended conditional induction index is not supported yet.
 ; Note: We should be able to support this case by using the no-wrap flags on %idx.next.
 define void @test_compress_store_with_extended_index_with_nsw(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 entry:
@@ -238,7 +238,7 @@ exit:
 
 ; CHECK: loop not vectorized
 
-; Negative test: We can't vectorize a extended monotonic phi use without no-wrap flags on the step.
+; Negative test: We can't vectorize an extended conditional induction use without no-wrap flags on the step.
 define void @test_compress_store_with_extended_index(ptr writeonly noalias %dst, ptr readonly %src, i32 %c, i64 %n) {
 entry:
   br label %for.body

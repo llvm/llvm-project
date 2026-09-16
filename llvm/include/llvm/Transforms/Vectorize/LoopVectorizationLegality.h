@@ -247,10 +247,10 @@ struct HistogramInfo {
       : Load(Load), Update(Update), Store(Store) {}
 };
 
-/// Holds details about a "compressed" pointer: the monotonic PHI used to
-/// derive the pointer and the SCEV expression for the pointer.
+/// Holds details about a "compressed" pointer: the conditional induction PHI
+/// used to derive the pointer and the SCEV expression for the pointer.
 struct CompressedPtrInfo {
-  PHINode *MonotonicPHI;
+  PHINode *ConditionalInductionPHI;
   const SCEVAddRecExpr *PtrSCEV;
 };
 
@@ -294,9 +294,10 @@ public:
   /// induction descriptor.
   using InductionList = MapVector<PHINode *, InductionDescriptor>;
 
-  /// MonotonicPHIList saves monotonic phi variables and maps them to the
-  /// monotonic phi descriptor.
-  using MonotonicPHIList = MapVector<PHINode *, MonotonicDescriptor>;
+  /// ConditionalInductionList saves conditional inductions and maps them to
+  /// their descriptors.
+  using ConditionalInductionList =
+      MapVector<PHINode *, ConditionalInductionDescriptor>;
 
   /// RecurrenceSet contains the phi nodes that are recurrences other than
   /// inductions and reductions.
@@ -341,10 +342,14 @@ public:
   /// Returns the induction variables found in the loop.
   const InductionList &getInductionVars() const { return Inductions; }
 
-  /// Returns the monotonic phi variables found in the loop.
-  const MonotonicPHIList &getMonotonicPHIs() const { return MonotonicPHIs; }
+  /// Returns the conditional inductions found in the loop.
+  const ConditionalInductionList &getConditionalInductions() const {
+    return ConditionalInductions;
+  }
 
-  bool hasMonotonicPHIs() const { return !MonotonicPHIs.empty(); }
+  bool hasConditionalInductions() const {
+    return !ConditionalInductions.empty();
+  }
 
   /// Return the fixed-order recurrences found in the loop.
   RecurrenceSet &getFixedOrderRecurrences() { return FixedOrderRecurrences; }
@@ -492,7 +497,7 @@ public:
   bool hasHistograms() const { return !Histograms.empty(); }
 
   /// Returns the CompressedPtrInfo for \p Ptr if the pointer is defined via
-  /// a monotonic PHI, otherwise std::nullptr.
+  /// a conditional induction PHI, otherwise std::nullopt.
   std::optional<CompressedPtrInfo>
   getCompressedPtrInfo(const Value *Ptr) const {
     auto It = CompressedPtrs.find(Ptr);
@@ -681,9 +686,11 @@ private:
   /// better choice for the main induction than the existing one.
   void addInductionPhi(PHINode *Phi, const InductionDescriptor &ID);
 
-  /// Adds \p Phi to the monotonic PHI list and collects load/store users of
-  /// the phi. Returns true if all users of \p Phi are legal for vectorization.
-  bool addMonotonicPHI(PHINode *Phi, const MonotonicDescriptor &MD);
+  /// Adds \p Phi to the conditional induction list and collects load/store
+  /// users of the PHI. Returns true if all users of \p Phi are legal for
+  /// vectorization.
+  bool addConditionalInduction(PHINode *Phi,
+                               const ConditionalInductionDescriptor &CondID);
 
   /// The loop that we evaluate.
   Loop *TheLoop;
@@ -729,8 +736,8 @@ private:
   /// variables can be pointers.
   InductionList Inductions;
 
-  /// Holds all of the monotonic phi variables that we found in the loop.
-  MonotonicPHIList MonotonicPHIs;
+  /// Holds all of the conditional inductions found in the loop.
+  ConditionalInductionList ConditionalInductions;
 
   /// Holds all the casts that participate in the update chain of the induction
   /// variables, and that have been proven to be redundant (possibly under a
@@ -770,8 +777,8 @@ private:
   SmallVector<HistogramInfo, 1> Histograms;
 
   /// Contains all pointers used in the loop that are defined using an index
-  /// derived from a monotonic PHI. Loads/stores to these pointers map to
-  /// expandloads or compressstores.
+  /// derived from a conditional induction PHI. Loads/stores to these pointers
+  /// map to expandloads or compressstores.
   SmallDenseMap<const Value *, CompressedPtrInfo> CompressedPtrs;
 
   /// Whether or not creating SCEV predicates is allowed.

@@ -6046,16 +6046,19 @@ bool VPlanTransforms::handleCompressingPatterns(
 
   VPBuilder Builder;
   for (VPRecipeBase &R : HeaderVPBB->phis()) {
-    auto *MonotonicPhi = dyn_cast<VPMonotonicPHIRecipe>(&R);
-    if (!MonotonicPhi)
+    auto *ConditionalInductionPhi =
+        dyn_cast<VPConditionalInductionPHIRecipe>(&R);
+    if (!ConditionalInductionPhi)
       continue;
 
-    // Obtain the mask for the monotonic phi update from the VPBlendRecipe.
-    auto *BlendR = cast<VPBlendRecipe>(MonotonicPhi->getBackedgeValue());
+    // Obtain the mask for the conditional induction update from the
+    // VPBlendRecipe.
+    auto *BlendR =
+        cast<VPBlendRecipe>(ConditionalInductionPhi->getBackedgeValue());
     VPValue *Mask = nullptr;
     for (unsigned I = 0, E = BlendR->getNumIncomingValues(); I != E; ++I)
       if (auto *IncomingVal = BlendR->getIncomingValue(I);
-          IncomingVal != MonotonicPhi) {
+          IncomingVal != ConditionalInductionPhi) {
         Mask = BlendR->getMask(I);
         break;
       }
@@ -6064,8 +6067,8 @@ bool VPlanTransforms::handleCompressingPatterns(
     // Replace all "compressed" loads and stores with expandload and
     // compressstore respectively.
     for (VPInstruction *&VPI : MemOps) {
-      auto *CompressedMemOp =
-          RecipeBuilder.widenIfCompressedLoadOrStore(VPI, MonotonicPhi);
+      auto *CompressedMemOp = RecipeBuilder.widenIfCompressedLoadOrStore(
+          VPI, ConditionalInductionPhi);
       if (!CompressedMemOp)
         continue;
 
@@ -6073,7 +6076,7 @@ bool VPlanTransforms::handleCompressingPatterns(
       Builder.insert(CompressedMemOp);
 
       // Bail out if the mask for the memory op does not match the condition
-      // used to update the montontic phi.
+      // used to update the conditional induction.
       VPValue *MemOpMask = CompressedMemOp->getMask();
       if (MemOpMask != Mask)
         return false;
@@ -6089,13 +6092,13 @@ bool VPlanTransforms::handleCompressingPatterns(
         remove_if(MemOps, [](VPInstruction *VPI) { return VPI == nullptr; }),
         MemOps.end());
 
-    // Update the monotonic PHI to increment by the number of active lanes in
-    // the mask.
-    auto *BackedgeVal = MonotonicPhi->getBackedgeValue();
+    // Update the conditional induction to increment by the number of active
+    // lanes in the mask.
+    auto *BackedgeVal = ConditionalInductionPhi->getBackedgeValue();
     auto *InsertBlock = BackedgeVal->getDefiningRecipe()->getParent();
     Builder.setInsertPoint(InsertBlock, InsertBlock->getFirstNonPhi());
 
-    Type *UpdateType = MonotonicPhi->getScalarType();
+    Type *UpdateType = ConditionalInductionPhi->getScalarType();
     if (UpdateType->isPointerTy())
       UpdateType = Plan.getDataLayout().getIndexType(UpdateType);
 
@@ -6103,12 +6106,13 @@ bool VPlanTransforms::handleCompressingPatterns(
         VPInstruction::NumActiveLanes, {Mask}, nullptr, {}, {},
         DebugLoc::getUnknown(), "handled.lanes", UpdateType);
     VPValue *Offset = Builder.createOverflowingOp(
-        Instruction::Mul, {MonotonicPhi->getStep(), HandledLanes});
+        Instruction::Mul, {ConditionalInductionPhi->getStep(), HandledLanes});
     VPValue *Update;
-    if (MonotonicPhi->getScalarType()->isPointerTy())
-      Update = Builder.createPtrAdd(MonotonicPhi, Offset);
+    if (ConditionalInductionPhi->getScalarType()->isPointerTy())
+      Update = Builder.createPtrAdd(ConditionalInductionPhi, Offset);
     else
-      Update = Builder.createAdd(MonotonicPhi, Offset, {}, "monotonic.add");
+      Update = Builder.createAdd(ConditionalInductionPhi, Offset, {},
+                                 "conditional.step");
 
     BackedgeVal->replaceAllUsesWith(Update);
   }

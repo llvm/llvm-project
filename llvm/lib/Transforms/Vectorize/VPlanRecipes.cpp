@@ -151,7 +151,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenStoreEVLSC:
   case VPWidenStoreSC:
   case VPExpandSCEVSC:
-  case VPMonotonicPHISC:
+  case VPConditionalInductionPHISC:
     return false;
   case VPBlendSC:
   case VPReductionEVLSC:
@@ -5147,14 +5147,14 @@ bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   return vputils::onlyFirstLaneUsed(this);
 }
 
-void VPMonotonicPHIRecipe::execute(VPTransformState &State) {
-  executePhiRecipe(this, *this, State, /*IsScalar=*/true, "monotonic.iv");
+void VPConditionalInductionPHIRecipe::execute(VPTransformState &State) {
+  executePhiRecipe(this, *this, State, /*IsScalar=*/true, "conditional.iv");
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPMonotonicPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
-                                       VPSlotTracker &SlotTracker) const {
-  O << Indent << "MONOTONIC-PHI ";
+void VPConditionalInductionPHIRecipe::printRecipe(
+    raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
+  O << Indent << "CONDITIONAL-INDUCTION-PHI ";
 
   printAsOperand(O, SlotTracker);
   O << " = phi ";

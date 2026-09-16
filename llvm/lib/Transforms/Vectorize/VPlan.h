@@ -462,13 +462,13 @@ public:
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
     VPReductionPHISC,
-    VPMonotonicPHISC,
+    VPConditionalInductionPHISC,
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes
     VPFirstPHISC = VPWidenPHISC,
     VPFirstHeaderPHISC = VPCurrentIterationPHISC,
-    VPLastHeaderPHISC = VPMonotonicPHISC,
-    VPLastPHISC = VPMonotonicPHISC,
+    VPLastHeaderPHISC = VPConditionalInductionPHISC,
+    VPLastPHISC = VPConditionalInductionPHISC,
   };
 
   VPRecipeBase(VPRecipeTy SC, ArrayRef<VPValue *> Operands,
@@ -661,7 +661,7 @@ public:
     case VPRecipeBase::VPReductionPHISC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
-    case VPRecipeBase::VPMonotonicPHISC:
+    case VPRecipeBase::VPConditionalInductionPHISC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveEVLSC:
@@ -2959,14 +2959,15 @@ protected:
 #endif
 };
 
-/// A recipe for handling monotonic phis. The start value is the first operand
-/// of the recipe, the incoming value from the backedge is the second
-/// operand, and the third operand is the step.
-class VPMonotonicPHIRecipe : public VPHeaderPHIRecipe {
+/// A recipe for handling conditional induction PHIs. The start value is the
+/// first operand of the recipe, the incoming value from the backedge is the
+/// second operand, and the third operand is the step.
+class VPConditionalInductionPHIRecipe : public VPHeaderPHIRecipe {
 public:
-  VPMonotonicPHIRecipe(PHINode &Phi, VPValue &Start, VPValue &BackedgeValue,
-                       VPValue &Step)
-      : VPHeaderPHIRecipe(VPRecipeBase::VPMonotonicPHISC, &Phi, &Start) {
+  VPConditionalInductionPHIRecipe(PHINode &Phi, VPValue &Start,
+                                  VPValue &BackedgeValue, VPValue &Step)
+      : VPHeaderPHIRecipe(VPRecipeBase::VPConditionalInductionPHISC, &Phi,
+                          &Start) {
     addOperand(&BackedgeValue);
     addOperand(&Step);
   }
@@ -2975,17 +2976,17 @@ public:
 
   unsigned getNumIncoming() const override { return 2; }
 
-  ~VPMonotonicPHIRecipe() override = default;
+  ~VPConditionalInductionPHIRecipe() override = default;
 
-  VPMonotonicPHIRecipe *clone() override {
-    return new VPMonotonicPHIRecipe(*getPHINode(), *getStartValue(),
-                                    *getBackedgeValue(), *getStep());
+  VPConditionalInductionPHIRecipe *clone() override {
+    return new VPConditionalInductionPHIRecipe(*getPHINode(), *getStartValue(),
+                                               *getBackedgeValue(), *getStep());
   }
 
-  VP_CLASSOF_IMPL(VPRecipeBase::VPMonotonicPHISC)
+  VP_CLASSOF_IMPL(VPRecipeBase::VPConditionalInductionPHISC)
 
   static inline bool classof(const VPHeaderPHIRecipe *R) {
-    return R->getVPRecipeID() == VPRecipeBase::VPMonotonicPHISC;
+    return R->getVPRecipeID() == VPRecipeBase::VPConditionalInductionPHISC;
   }
 
   void execute(VPTransformState &State) override;
@@ -4410,7 +4411,7 @@ template <>
 struct CastInfo<VPPhiAccessors, VPRecipeBase *>
     : vpdetail::CastInfoMixinImpl<VPPhiAccessors, VPPhi, VPIRPhi,
                                   VPWidenPHIRecipe, VPHeaderPHIRecipe,
-                                  VPMonotonicPHIRecipe> {};
+                                  VPConditionalInductionPHIRecipe> {};
 
 template <>
 struct CastInfo<VPPhiAccessors, const VPRecipeBase *>

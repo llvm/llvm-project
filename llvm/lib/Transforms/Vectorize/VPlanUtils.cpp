@@ -462,7 +462,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
   if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe,
-          VPMonotonicPHIRecipe>(VPV))
+          VPConditionalInductionPHIRecipe>(VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
     return Expr->isVectorToScalar();

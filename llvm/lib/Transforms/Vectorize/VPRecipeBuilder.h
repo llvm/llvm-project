@@ -82,7 +82,8 @@ public:
   /// LoopVectorizationLegality) whose pointer is derived from \p PhiR, lower it
   /// to a llvm.masked.expandload or llvm.masked.compressstore intrinsic.
   VPWidenMemIntrinsicRecipe *
-  widenIfCompressedLoadOrStore(VPInstruction *VPI, VPMonotonicPHIRecipe *PhiR);
+  widenIfCompressedLoadOrStore(VPInstruction *VPI,
+                               VPConditionalInductionPHIRecipe *PhiR);
 
   /// If \p VPI is a store of a reduction into an invariant address, delete it.
   /// If it is the final store of a reduction result, a uniform store recipe

@@ -2541,16 +2541,16 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
 
 bool llvm::collectCompressedPtrs(
     DenseMap<Value *, const SCEV *> &CompressedPtrs, const Loop &L,
-    const MonotonicDescriptor &MD, ScalarEvolution &SE) {
-  // Over-approximates the monotonic PHI as a SCEVAddRec assuming the condition
-  // is always true.
+    const ConditionalInductionDescriptor &CondID, ScalarEvolution &SE) {
+  // Over-approximates the conditional induction as a SCEVAddRec assuming the
+  // condition is always true.
   const SCEV *ApproximatePhiSCEV = SE.getAddRecExpr(
-      MD.getStartSCEV(), MD.getStepSCEV(), &L, SCEV::FlagAnyWrap);
+      CondID.getStartSCEV(), CondID.getStepSCEV(), &L, SCEV::FlagAnyWrap);
 
   // TODO: Take into account the non-wrap flags of the MD when rewriting the
   // SCEV expressions for pointers. This should allow folding away zext/sext
   // operations.
-  ValueToSCEVMapTy PhiMap{{MD.getHeaderPHI(), ApproximatePhiSCEV}};
+  ValueToSCEVMapTy PhiMap{{CondID.getHeaderPHI(), ApproximatePhiSCEV}};
 
   auto GetCompressedPtrSCEV = [&](Value *Ptr, Type *AccessTy) -> const SCEV * {
     const SCEV *PtrSCEV =
@@ -2568,7 +2568,8 @@ bool llvm::collectCompressedPtrs(
   };
 
   SmallPtrSet<Use *, 16> Seen;
-  SmallVector<Use *> Worklist(make_pointer_range(MD.getHeaderPHI()->uses()));
+  SmallVector<Use *> Worklist(
+      make_pointer_range(CondID.getHeaderPHI()->uses()));
   while (!Worklist.empty()) {
     Use *U = Worklist.pop_back_val();
     if (!Seen.insert(U).second)
@@ -2576,7 +2577,7 @@ bool llvm::collectCompressedPtrs(
 
     // Always allow uses outside the loop or by the backedge update.
     auto *I = cast<Instruction>(U->getUser());
-    if (I == MD.getBackedgePHI() || !L.contains(I))
+    if (I == CondID.getBackedgePHI() || !L.contains(I))
       continue;
 
     Value *CurrentVal = U->get();

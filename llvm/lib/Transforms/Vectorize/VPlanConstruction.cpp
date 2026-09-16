@@ -928,7 +928,8 @@ bool VPlanTransforms::createHeaderPhiRecipes(
     const VPDominatorTree &VPDT,
     const MapVector<PHINode *, InductionDescriptor> &Inductions,
     const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
-    const MapVector<PHINode *, MonotonicDescriptor> &MonotonicPHIs,
+    const MapVector<PHINode *, ConditionalInductionDescriptor>
+        &ConditionalInductions,
     const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
     const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering) {
   // Retrieve the header manually from the intial plain-CFG VPlan.
@@ -961,12 +962,14 @@ bool VPlanTransforms::createHeaderPhiRecipes(
                                         Plan, PSE, OrigLoop,
                                         PhiR->getDebugLoc());
 
-    auto MonotonicIt = MonotonicPHIs.find(Phi);
-    if (MonotonicIt != MonotonicPHIs.end()) {
-      const MonotonicDescriptor &MD = MonotonicIt->second;
+    auto ConditionalInductionIt = ConditionalInductions.find(Phi);
+    if (ConditionalInductionIt != ConditionalInductions.end()) {
+      const ConditionalInductionDescriptor &CondID =
+          ConditionalInductionIt->second;
       VPValue *Step =
-          vputils::getOrCreateVPValueForSCEVExpr(Plan, MD.getStepSCEV());
-      return new VPMonotonicPHIRecipe(*Phi, *Start, *BackedgeValue, *Step);
+          vputils::getOrCreateVPValueForSCEVExpr(Plan, CondID.getStepSCEV());
+      return new VPConditionalInductionPHIRecipe(*Phi, *Start, *BackedgeValue,
+                                                 *Step);
     }
 
     assert(Reductions.contains(Phi) && "only reductions are expected now");

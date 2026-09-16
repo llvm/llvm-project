@@ -370,7 +370,8 @@ void VPTransformState::fixupHeaderPhis() {
 
     for (VPRecipeBase &R : Header->phis()) {
       auto *PhiR = cast<VPSingleDefRecipe>(&R);
-      bool NeedsScalar = isa<VPPhi>(PhiR) || isa<VPMonotonicPHIRecipe>(PhiR) ||
+      bool NeedsScalar = isa<VPPhi>(PhiR) ||
+                         isa<VPConditionalInductionPHIRecipe>(PhiR) ||
                          (isa<VPReductionPHIRecipe>(PhiR) &&
                           cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
 

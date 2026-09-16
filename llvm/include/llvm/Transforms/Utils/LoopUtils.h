@@ -44,7 +44,7 @@ class TargetLibraryInfo;
 class LPPassManager;
 class Instruction;
 struct RuntimeCheckingPtrGroup;
-class MonotonicDescriptor;
+class ConditionalInductionDescriptor;
 
 typedef std::pair<const RuntimeCheckingPtrGroup *,
                   const RuntimeCheckingPtrGroup *>
@@ -713,9 +713,10 @@ hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
 /// from the monotonic PHI described by \p MD. The pointer operands and
 /// approximate SCEV expressions (assuming the monotonic PHI always increments)
 /// for the pointers are placed in \p CompressedPtrs. Returns true if all
-/// in-loop users of the monotonic PHI are loads/stores.
+/// in-loop users of the conditional induction are loads/stores.
 bool collectCompressedPtrs(DenseMap<Value *, const SCEV *> &CompressedPtrs,
-                           const Loop &L, const MonotonicDescriptor &MD,
+                           const Loop &L,
+                           const ConditionalInductionDescriptor &CondID,
                            ScalarEvolution &SE);
 
 } // end namespace llvm
