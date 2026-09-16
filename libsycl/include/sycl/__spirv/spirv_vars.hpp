@@ -64,7 +64,7 @@ namespace __spirv {
     return InitSizesST##POSTFIX<Dims, DstT>::initSize();                       \
   }
 
-__SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInGlobalSize);
+__SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInGlobalSize)
 __SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInGlobalInvocationId)
 __SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInGlobalOffset)
 __SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInWorkgroupId)
