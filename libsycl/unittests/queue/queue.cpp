@@ -25,7 +25,7 @@ TEST(Queue, CommonQueriesAndLifetime) {
   EXPECT_CALL(Mock.get(), olDestroyQueue(_)).Times(1);
   {
     queue Q;
-    EXPECT_EQ(Q.get_backend(), sycl::backend::level_zero);
+    EXPECT_EQ(Q.get_backend(), sycl::backend::ext_llvm_level_zero);
     EXPECT_EQ(Q.is_in_order(), false);
   }
 }

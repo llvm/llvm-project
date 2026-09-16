@@ -53,11 +53,11 @@ const char *stringifyErrorCode(ol_errc_t Error) {
 backend convertBackend(ol_platform_backend_t Backend) {
   switch (Backend) {
   case OL_PLATFORM_BACKEND_LEVEL_ZERO:
-    return backend::level_zero;
+    return backend::ext_llvm_level_zero;
   case OL_PLATFORM_BACKEND_CUDA:
-    return backend::cuda;
+    return backend::ext_llvm_cuda;
   case OL_PLATFORM_BACKEND_AMDGPU:
-    return backend::hip;
+    return backend::ext_llvm_hip;
   default:
     throw exception(make_error_code(errc::runtime), "Unsupported backend");
   }
