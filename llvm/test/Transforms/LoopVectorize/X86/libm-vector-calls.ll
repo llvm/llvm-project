@@ -36,6 +36,32 @@ declare double @asinh(double) #0
 declare double @acosh(double) #0
 declare double @atanh(double) #0
 
+; GLIBC 2.35 libmvec functions that also have an LLVM intrinsic (plus hypot, which does not)
+declare float @acosf(float) #0
+declare double @acos(double) #0
+declare float @asinf(float) #0
+declare double @asin(double) #0
+declare float @atanf(float) #0
+declare double @atan(double) #0
+declare float @coshf(float) #0
+declare double @cosh(double) #0
+declare float @sinhf(float) #0
+declare double @sinh(double) #0
+declare float @tanhf(float) #0
+declare double @tanh(double) #0
+declare float @exp10f(float) #0
+declare double @exp10(double) #0
+declare float @exp2f(float) #0
+declare double @exp2(double) #0
+declare float @log10f(float) #0
+declare double @log10(double) #0
+declare float @log2f(float) #0
+declare double @log2(double) #0
+declare float @atan2f(float, float) #0
+declare double @atan2(double, double) #0
+declare float @hypotf(float, float) #0
+declare double @hypot(double, double) #0
+
 define void @sin_f64(ptr nocapture %varray) {
 ; CHECK-VF2-LABEL: define void @sin_f64(
 ; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
@@ -1125,6 +1151,1470 @@ for.body:
   %call = tail call fast double @atanh(double %conv)
   %arrayidx = getelementptr inbounds double, ptr %varray, i64 %indvars.iv
   store double %call, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @acos_f32(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @acos_f32(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x float> @llvm.acos.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @acos_f32(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVbN4v_acosf(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @acos_f32(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_acosf(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @acosf(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %indvars.iv
+  store float %call, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @acos_f64(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @acos_f64(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVbN2v_acos(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @acos_f64(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_acos(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @acos_f64(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x double> @llvm.acos.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call fast double @acos(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %indvars.iv
+  store double %call, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @acos_f32_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @acos_f32_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x float> @llvm.acos.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @acos_f32_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x float> @_ZGVbN4v_acosf(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @acos_f32_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x float> @_ZGVdN8v_acosf(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @llvm.acos.f32(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @acos_f64_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @acos_f64_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x double> @_ZGVbN2v_acos(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @acos_f64_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x double> @_ZGVdN4v_acos(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @acos_f64_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x double> @llvm.acos.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @llvm.acos.f64(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @asin_f32(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @asin_f32(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x float> @llvm.asin.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @asin_f32(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVbN4v_asinf(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @asin_f32(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_asinf(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @asinf(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %indvars.iv
+  store float %call, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @asin_f64(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @asin_f64(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVbN2v_asin(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @asin_f64(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_asin(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @asin_f64(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x double> @llvm.asin.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call fast double @asin(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %indvars.iv
+  store double %call, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @asin_f32_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @asin_f32_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x float> @llvm.asin.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @asin_f32_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x float> @_ZGVbN4v_asinf(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @asin_f32_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x float> @_ZGVdN8v_asinf(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @llvm.asin.f32(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @asin_f64_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @asin_f64_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x double> @_ZGVbN2v_asin(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @asin_f64_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x double> @_ZGVdN4v_asin(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @asin_f64_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x double> @llvm.asin.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @llvm.asin.f64(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @atan_f32(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @atan_f32(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x float> @llvm.atan.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @atan_f32(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVbN4v_atanf(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @atan_f32(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_atanf(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @atanf(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %indvars.iv
+  store float %call, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @atan_f64(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @atan_f64(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVbN2v_atan(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @atan_f64(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_atan(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @atan_f64(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x double> @llvm.atan.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call fast double @atan(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %indvars.iv
+  store double %call, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @atan_f32_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @atan_f32_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x float> @llvm.atan.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @atan_f32_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x float> @_ZGVbN4v_atanf(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @atan_f32_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x float> @_ZGVdN8v_atanf(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @llvm.atan.f32(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @atan_f64_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @atan_f64_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x double> @_ZGVbN2v_atan(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @atan_f64_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x double> @_ZGVdN4v_atan(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @atan_f64_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x double> @llvm.atan.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @llvm.atan.f64(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @cosh_f32(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @cosh_f32(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x float> @llvm.cosh.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @cosh_f32(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVbN4v_coshf(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @cosh_f32(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_coshf(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @coshf(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %indvars.iv
+  store float %call, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @cosh_f64(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @cosh_f64(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVbN2v_cosh(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @cosh_f64(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_cosh(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @cosh_f64(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x double> @llvm.cosh.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call fast double @cosh(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %indvars.iv
+  store double %call, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @cosh_f32_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @cosh_f32_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x float> @llvm.cosh.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @cosh_f32_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x float> @_ZGVbN4v_coshf(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @cosh_f32_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x float> @_ZGVdN8v_coshf(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @llvm.cosh.f32(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @cosh_f64_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @cosh_f64_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x double> @_ZGVbN2v_cosh(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @cosh_f64_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x double> @_ZGVdN4v_cosh(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @cosh_f64_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x double> @llvm.cosh.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @llvm.cosh.f64(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @sinh_f32(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @sinh_f32(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x float> @llvm.sinh.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @sinh_f32(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVbN4v_sinhf(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @sinh_f32(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_sinhf(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @sinhf(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %indvars.iv
+  store float %call, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @sinh_f64(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @sinh_f64(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVbN2v_sinh(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @sinh_f64(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_sinh(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @sinh_f64(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x double> @llvm.sinh.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call fast double @sinh(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %indvars.iv
+  store double %call, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @sinh_f32_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @sinh_f32_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x float> @llvm.sinh.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @sinh_f32_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x float> @_ZGVbN4v_sinhf(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @sinh_f32_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x float> @_ZGVdN8v_sinhf(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @llvm.sinh.f32(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @sinh_f64_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @sinh_f64_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x double> @_ZGVbN2v_sinh(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @sinh_f64_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x double> @_ZGVdN4v_sinh(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @sinh_f64_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x double> @llvm.sinh.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @llvm.sinh.f64(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @tanh_f32(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @tanh_f32(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x float> @llvm.tanh.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @tanh_f32(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVbN4v_tanhf(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @tanh_f32(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_tanhf(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @tanhf(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %indvars.iv
+  store float %call, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @tanh_f64(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @tanh_f64(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVbN2v_tanh(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @tanh_f64(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_tanh(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @tanh_f64(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x double> @llvm.tanh.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call fast double @tanh(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %indvars.iv
+  store double %call, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @tanh_f32_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @tanh_f32_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x float> @llvm.tanh.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @tanh_f32_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x float> @_ZGVbN4v_tanhf(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @tanh_f32_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x float> @_ZGVdN8v_tanhf(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @llvm.tanh.f32(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @tanh_f64_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @tanh_f64_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x double> @_ZGVbN2v_tanh(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @tanh_f64_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x double> @_ZGVdN4v_tanh(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @tanh_f64_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x double> @llvm.tanh.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @llvm.tanh.f64(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @exp10_f32(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @exp10_f32(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x float> @llvm.exp10.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @exp10_f32(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVbN4v_exp10f(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @exp10_f32(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_exp10f(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @exp10f(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %indvars.iv
+  store float %call, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @exp10_f64(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @exp10_f64(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVbN2v_exp10(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @exp10_f64(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_exp10(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @exp10_f64(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x double> @llvm.exp10.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call fast double @exp10(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %indvars.iv
+  store double %call, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @exp10_f32_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @exp10_f32_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x float> @llvm.exp10.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @exp10_f32_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x float> @_ZGVbN4v_exp10f(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @exp10_f32_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x float> @_ZGVdN8v_exp10f(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @llvm.exp10.f32(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @exp10_f64_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @exp10_f64_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x double> @_ZGVbN2v_exp10(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @exp10_f64_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x double> @_ZGVdN4v_exp10(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @exp10_f64_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x double> @llvm.exp10.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @llvm.exp10.f64(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @exp2_f32(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @exp2_f32(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @exp2_f32(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVbN4v_exp2f(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @exp2_f32(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_exp2f(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @exp2f(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %indvars.iv
+  store float %call, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @exp2_f64(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @exp2_f64(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVbN2v_exp2(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @exp2_f64(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_exp2(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @exp2_f64(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x double> @llvm.exp2.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call fast double @exp2(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %indvars.iv
+  store double %call, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @exp2_f32_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @exp2_f32_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x float> @llvm.exp2.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @exp2_f32_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x float> @_ZGVbN4v_exp2f(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @exp2_f32_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x float> @_ZGVdN8v_exp2f(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @llvm.exp2.f32(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @exp2_f64_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @exp2_f64_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x double> @_ZGVbN2v_exp2(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @exp2_f64_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x double> @_ZGVdN4v_exp2(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @exp2_f64_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x double> @llvm.exp2.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @llvm.exp2.f64(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @log10_f32(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @log10_f32(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x float> @llvm.log10.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @log10_f32(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVbN4v_log10f(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @log10_f32(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_log10f(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @log10f(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %indvars.iv
+  store float %call, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @log10_f64(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @log10_f64(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVbN2v_log10(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @log10_f64(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_log10(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @log10_f64(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x double> @llvm.log10.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call fast double @log10(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %indvars.iv
+  store double %call, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @log10_f32_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @log10_f32_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x float> @llvm.log10.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @log10_f32_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x float> @_ZGVbN4v_log10f(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @log10_f32_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x float> @_ZGVdN8v_log10f(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @llvm.log10.f32(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @log10_f64_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @log10_f64_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x double> @_ZGVbN2v_log10(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @log10_f64_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x double> @_ZGVdN4v_log10(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @log10_f64_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x double> @llvm.log10.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @llvm.log10.f64(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @log2_f32(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @log2_f32(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x float> @llvm.log2.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @log2_f32(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVbN4v_log2f(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @log2_f32(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x float> @_ZGVdN8v_log2f(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call fast float @log2f(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %indvars.iv
+  store float %call, ptr %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @log2_f64(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @log2_f64(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVbN2v_log2(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @log2_f64(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call fast <4 x double> @_ZGVdN4v_log2(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @log2_f64(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call fast <8 x double> @llvm.log2.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call fast double @log2(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %indvars.iv
+  store double %call, ptr %arrayidx, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @log2_f32_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @log2_f32_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x float> @llvm.log2.v2f32(<2 x float> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @log2_f32_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x float> @_ZGVbN4v_log2f(<4 x float> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @log2_f32_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x float> @_ZGVdN8v_log2f(<8 x float> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %call = tail call float @llvm.log2.f32(float %conv)
+  %arrayidx = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %call, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @log2_f64_intrinsic(ptr nocapture %varray) {
+; CHECK-VF2-LABEL: define void @log2_f64_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF2:    [[TMP1:%.*]] = call <2 x double> @_ZGVbN2v_log2(<2 x double> [[TMP0:%.*]])
+;
+; CHECK-VF4-LABEL: define void @log2_f64_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF4:    [[TMP1:%.*]] = call <4 x double> @_ZGVdN4v_log2(<4 x double> [[TMP0:%.*]])
+;
+; CHECK-VF8-LABEL: define void @log2_f64_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]]) {
+; CHECK-VF8:    [[TMP1:%.*]] = call <8 x double> @llvm.log2.v8f64(<8 x double> [[TMP0:%.*]])
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %call = tail call double @llvm.log2.f64(double %conv)
+  %arrayidx = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %call, ptr %arrayidx, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @atan2_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
+; CHECK-VF2-LABEL: define void @atan2_f32(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF2:    [[TMP4:%.*]] = call fast <2 x float> @llvm.atan2.v2f32(<2 x float> [[TMP2:%.*]], <2 x float> [[WIDE_LOAD:%.*]])
+; CHECK-VF2:    [[I2:%.*]] = tail call fast float @atan2f(float [[CONV:%.*]], float [[I1:%.*]]) #[[ATTR13:[0-9]+]]
+;
+; CHECK-VF4-LABEL: define void @atan2_f32(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF4:    [[TMP4:%.*]] = call fast <4 x float> @_ZGVbN4vv_atan2f(<4 x float> [[TMP2:%.*]], <4 x float> [[WIDE_LOAD:%.*]])
+; CHECK-VF4:    [[I2:%.*]] = tail call fast float @atan2f(float [[CONV:%.*]], float [[I1:%.*]]) #[[ATTR5:[0-9]+]]
+;
+; CHECK-VF8-LABEL: define void @atan2_f32(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF8:    [[TMP4:%.*]] = call fast <8 x float> @_ZGVdN8vv_atan2f(<8 x float> [[TMP2:%.*]], <8 x float> [[WIDE_LOAD:%.*]])
+; CHECK-VF8:    [[I2:%.*]] = tail call fast float @atan2f(float [[CONV:%.*]], float [[I1:%.*]]) #[[ATTR13:[0-9]+]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %arrayidx = getelementptr inbounds float, ptr %exp, i64 %indvars.iv
+  %i1 = load float, ptr %arrayidx, align 4
+  %i2 = tail call fast float @atan2f(float %conv, float %i1)
+  %arrayidx2 = getelementptr inbounds float, ptr %varray, i64 %indvars.iv
+  store float %i2, ptr %arrayidx2, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @atan2_f64(ptr nocapture %varray, ptr nocapture readonly %exp) {
+; CHECK-VF2-LABEL: define void @atan2_f64(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF2:    [[TMP4:%.*]] = call fast <2 x double> @_ZGVbN2vv_atan2(<2 x double> [[TMP2:%.*]], <2 x double> [[WIDE_LOAD:%.*]])
+; CHECK-VF2:    [[I2:%.*]] = tail call fast double @atan2(double [[CONV:%.*]], double [[I1:%.*]]) #[[ATTR14:[0-9]+]]
+;
+; CHECK-VF4-LABEL: define void @atan2_f64(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF4:    [[TMP4:%.*]] = call fast <4 x double> @_ZGVdN4vv_atan2(<4 x double> [[TMP2:%.*]], <4 x double> [[WIDE_LOAD:%.*]])
+; CHECK-VF4:    [[I2:%.*]] = tail call fast double @atan2(double [[CONV:%.*]], double [[I1:%.*]]) #[[ATTR6:[0-9]+]]
+;
+; CHECK-VF8-LABEL: define void @atan2_f64(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF8:    [[TMP4:%.*]] = call fast <8 x double> @llvm.atan2.v8f64(<8 x double> [[TMP2:%.*]], <8 x double> [[WIDE_LOAD:%.*]])
+; CHECK-VF8:    [[I2:%.*]] = tail call fast double @atan2(double [[CONV:%.*]], double [[I1:%.*]]) #[[ATTR14:[0-9]+]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to double
+  %arrayidx = getelementptr inbounds double, ptr %exp, i64 %indvars.iv
+  %i1 = load double, ptr %arrayidx, align 8
+  %i2 = tail call fast double @atan2(double %conv, double %i1)
+  %arrayidx2 = getelementptr inbounds double, ptr %varray, i64 %indvars.iv
+  store double %i2, ptr %arrayidx2, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @atan2_f32_intrinsic(ptr nocapture %varray, ptr nocapture readonly %exp) {
+; CHECK-VF2-LABEL: define void @atan2_f32_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF2:    [[TMP4:%.*]] = call <2 x float> @llvm.atan2.v2f32(<2 x float> [[TMP2:%.*]], <2 x float> [[WIDE_LOAD:%.*]])
+; CHECK-VF2:    [[I2:%.*]] = tail call float @llvm.atan2.f32(float [[CONV:%.*]], float [[I1:%.*]]) #[[ATTR15:[0-9]+]]
+;
+; CHECK-VF4-LABEL: define void @atan2_f32_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF4:    [[TMP4:%.*]] = call <4 x float> @_ZGVbN4vv_atan2f(<4 x float> [[TMP2:%.*]], <4 x float> [[WIDE_LOAD:%.*]])
+; CHECK-VF4:    [[I2:%.*]] = tail call float @llvm.atan2.f32(float [[CONV:%.*]], float [[I1:%.*]]) #[[ATTR7:[0-9]+]]
+;
+; CHECK-VF8-LABEL: define void @atan2_f32_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF8:    [[TMP4:%.*]] = call <8 x float> @_ZGVdN8vv_atan2f(<8 x float> [[TMP2:%.*]], <8 x float> [[WIDE_LOAD:%.*]])
+; CHECK-VF8:    [[I2:%.*]] = tail call float @llvm.atan2.f32(float [[CONV:%.*]], float [[I1:%.*]]) #[[ATTR15:[0-9]+]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to float
+  %arrayidx = getelementptr inbounds float, ptr %exp, i64 %iv
+  %i1 = load float, ptr %arrayidx, align 4
+  %i2 = tail call float @llvm.atan2.f32(float %conv, float %i1)
+  %arrayidx2 = getelementptr inbounds float, ptr %varray, i64 %iv
+  store float %i2, ptr %arrayidx2, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @atan2_f64_intrinsic(ptr nocapture %varray, ptr nocapture readonly %exp) {
+; CHECK-VF2-LABEL: define void @atan2_f64_intrinsic(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF2:    [[TMP4:%.*]] = call <2 x double> @_ZGVbN2vv_atan2(<2 x double> [[TMP2:%.*]], <2 x double> [[WIDE_LOAD:%.*]])
+; CHECK-VF2:    [[I2:%.*]] = tail call double @llvm.atan2.f64(double [[CONV:%.*]], double [[I1:%.*]]) #[[ATTR16:[0-9]+]]
+;
+; CHECK-VF4-LABEL: define void @atan2_f64_intrinsic(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF4:    [[TMP4:%.*]] = call <4 x double> @_ZGVdN4vv_atan2(<4 x double> [[TMP2:%.*]], <4 x double> [[WIDE_LOAD:%.*]])
+; CHECK-VF4:    [[I2:%.*]] = tail call double @llvm.atan2.f64(double [[CONV:%.*]], double [[I1:%.*]]) #[[ATTR8:[0-9]+]]
+;
+; CHECK-VF8-LABEL: define void @atan2_f64_intrinsic(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF8:    [[TMP4:%.*]] = call <8 x double> @llvm.atan2.v8f64(<8 x double> [[TMP2:%.*]], <8 x double> [[WIDE_LOAD:%.*]])
+; CHECK-VF8:    [[I2:%.*]] = tail call double @llvm.atan2.f64(double [[CONV:%.*]], double [[I1:%.*]]) #[[ATTR16:[0-9]+]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %tmp = trunc i64 %iv to i32
+  %conv = sitofp i32 %tmp to double
+  %arrayidx = getelementptr inbounds double, ptr %exp, i64 %iv
+  %i1 = load double, ptr %arrayidx, align 8
+  %i2 = tail call double @llvm.atan2.f64(double %conv, double %i1)
+  %arrayidx2 = getelementptr inbounds double, ptr %varray, i64 %iv
+  store double %i2, ptr %arrayidx2, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @hypot_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
+; CHECK-VF2-LABEL: define void @hypot_f32(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF2:    [[TMP6:%.*]] = tail call fast float @hypotf(float [[TMP4:%.*]], float [[TMP5:%.*]]) #[[ATTR17:[0-9]+]]
+; CHECK-VF2:    [[TMP9:%.*]] = tail call fast float @hypotf(float [[TMP7:%.*]], float [[TMP8:%.*]]) #[[ATTR17]]
+; CHECK-VF2:    [[I2:%.*]] = tail call fast float @hypotf(float [[CONV:%.*]], float [[I1:%.*]]) #[[ATTR17]]
+;
+; CHECK-VF4-LABEL: define void @hypot_f32(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF4:    [[TMP4:%.*]] = call fast <4 x float> @_ZGVbN4vv_hypotf(<4 x float> [[TMP2:%.*]], <4 x float> [[WIDE_LOAD:%.*]])
+; CHECK-VF4:    [[I2:%.*]] = tail call fast float @hypotf(float [[CONV:%.*]], float [[I1:%.*]]) #[[ATTR9:[0-9]+]]
+;
+; CHECK-VF8-LABEL: define void @hypot_f32(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF8:    [[TMP4:%.*]] = call fast <8 x float> @_ZGVdN8vv_hypotf(<8 x float> [[TMP2:%.*]], <8 x float> [[WIDE_LOAD:%.*]])
+; CHECK-VF8:    [[I2:%.*]] = tail call fast float @hypotf(float [[CONV:%.*]], float [[I1:%.*]]) #[[ATTR17:[0-9]+]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to float
+  %arrayidx = getelementptr inbounds float, ptr %exp, i64 %indvars.iv
+  %i1 = load float, ptr %arrayidx, align 4
+  %i2 = tail call fast float @hypotf(float %conv, float %i1)
+  %arrayidx2 = getelementptr inbounds float, ptr %varray, i64 %indvars.iv
+  store float %i2, ptr %arrayidx2, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+define void @hypot_f64(ptr nocapture %varray, ptr nocapture readonly %exp) {
+; CHECK-VF2-LABEL: define void @hypot_f64(
+; CHECK-VF2-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF2:    [[TMP4:%.*]] = call fast <2 x double> @_ZGVbN2vv_hypot(<2 x double> [[TMP2:%.*]], <2 x double> [[WIDE_LOAD:%.*]])
+; CHECK-VF2:    [[I2:%.*]] = tail call fast double @hypot(double [[CONV:%.*]], double [[I1:%.*]]) #[[ATTR18:[0-9]+]]
+;
+; CHECK-VF4-LABEL: define void @hypot_f64(
+; CHECK-VF4-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF4:    [[TMP4:%.*]] = call fast <4 x double> @_ZGVdN4vv_hypot(<4 x double> [[TMP2:%.*]], <4 x double> [[WIDE_LOAD:%.*]])
+; CHECK-VF4:    [[I2:%.*]] = tail call fast double @hypot(double [[CONV:%.*]], double [[I1:%.*]]) #[[ATTR10:[0-9]+]]
+;
+; CHECK-VF8-LABEL: define void @hypot_f64(
+; CHECK-VF8-SAME: ptr captures(none) [[VARRAY:%.*]], ptr readonly captures(none) [[EXP:%.*]]) {
+; CHECK-VF8:    [[TMP6:%.*]] = tail call fast double @hypot(double [[TMP4:%.*]], double [[TMP5:%.*]]) #[[ATTR18:[0-9]+]]
+; CHECK-VF8:    [[TMP9:%.*]] = tail call fast double @hypot(double [[TMP7:%.*]], double [[TMP8:%.*]]) #[[ATTR18]]
+; CHECK-VF8:    [[TMP12:%.*]] = tail call fast double @hypot(double [[TMP10:%.*]], double [[TMP11:%.*]]) #[[ATTR18]]
+; CHECK-VF8:    [[TMP15:%.*]] = tail call fast double @hypot(double [[TMP13:%.*]], double [[TMP14:%.*]]) #[[ATTR18]]
+; CHECK-VF8:    [[TMP18:%.*]] = tail call fast double @hypot(double [[TMP16:%.*]], double [[TMP17:%.*]]) #[[ATTR18]]
+; CHECK-VF8:    [[TMP21:%.*]] = tail call fast double @hypot(double [[TMP19:%.*]], double [[TMP20:%.*]]) #[[ATTR18]]
+; CHECK-VF8:    [[TMP24:%.*]] = tail call fast double @hypot(double [[TMP22:%.*]], double [[TMP23:%.*]]) #[[ATTR18]]
+; CHECK-VF8:    [[TMP27:%.*]] = tail call fast double @hypot(double [[TMP25:%.*]], double [[TMP26:%.*]]) #[[ATTR18]]
+; CHECK-VF8:    [[I2:%.*]] = tail call fast double @hypot(double [[CONV:%.*]], double [[I1:%.*]]) #[[ATTR18]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %tmp = trunc i64 %indvars.iv to i32
+  %conv = sitofp i32 %tmp to double
+  %arrayidx = getelementptr inbounds double, ptr %exp, i64 %indvars.iv
+  %i1 = load double, ptr %arrayidx, align 8
+  %i2 = tail call fast double @hypot(double %conv, double %i1)
+  %arrayidx2 = getelementptr inbounds double, ptr %varray, i64 %indvars.iv
+  store double %i2, ptr %arrayidx2, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.end, label %for.body
