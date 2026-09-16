@@ -59,9 +59,9 @@ TEST(IntelGPUTargetParserTest, ArchNames) {
 TEST(IntelGPUTargetParserTest, EveryKindIsNamed) {
   // A row with no name would make the offload-arch utility print an empty
   // architecture, so every kind the table declares must have a spelling.
-#define INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_LEVEL, IGCA_SUFFIX)  \
+#define INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_TARGET, IGCA_SUFFIX) \
   EXPECT_FALSE(IntelGPU::getArchName(IntelGPU::GK_##KIND).empty()) << #KIND;
-#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_LEVEL, IGCA_SUFFIX)                  \
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_SUFFIX)                 \
   EXPECT_FALSE(IntelGPU::getArchName(IntelGPU::GK_##KIND).empty()) << #KIND;
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
 }

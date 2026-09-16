@@ -8,21 +8,21 @@
 //
 // This file is the single source of truth for the Intel GPU list. Each row
 // describes one architecture name that --offload-arch accepts, along with the
-// IGCA (Intel Graphics Compute Architecture) level the compiler targets when
-// the user names it. Adding a device is a single row here.
+// IGCA (Intel Graphics Compute Architecture) target the compiler compiles for
+// when the user names it. Adding a device is a single row here.
 //
-//   INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_LEVEL, IGCA_SUFFIX)
+//   INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_TARGET, IGCA_SUFFIX)
 //     NAME         - Human-friendly device name, e.g. "xe-cri".
 //     KIND         - GPUKind enumerator suffix; the enumerator is GK_<KIND>.
 //     ARCHITECTURE - Architecture component of the GMDID the device reports.
 //     RELEASE      - Release component of the GMDID the device reports.
-//     IGCA_LEVEL   - Numeric IGCA level.
-//     IGCA_SUFFIX  - Token naming the feature sets that the level comprises:
+//     IGCA_TARGET  - Numeric IGCA target.
+//     IGCA_SUFFIX  - Token naming the feature sets that the target comprises:
 //                    Core (no suffix), Compute ("c"), Render ("r"),
 //                    ComputeExact ("ca") or RenderExact ("ra"). A consumer maps
 //                    the token onto an enumerator of its own.
 //
-//   INTEL_GPU_COMPAT(NAME, KIND, IGCA_LEVEL, IGCA_SUFFIX)
+//   INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_SUFFIX)
 //     A compatibility name that covers several releases, e.g. "xe-dg2", which
 //     covers every xe-dg2-* and xe-acm-* platform. These names have no GMDID
 //     of their own, so no device reports one and the offload-arch utility
@@ -30,7 +30,7 @@
 //     mean the same as above.
 //
 // The revision (stepping) component of the GMDID is deliberately not part of
-// the key: every stepping of a release shares one name and one IGCA level.
+// the key: every stepping of a release shares one name and one IGCA target.
 //
 // Several devices can share an architecture and a release. The rows are ordered
 // so that the name to print for such a group comes first.
@@ -38,11 +38,11 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef INTEL_GPU
-#define INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_LEVEL, IGCA_SUFFIX)
+#define INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_TARGET, IGCA_SUFFIX)
 #endif
 
 #ifndef INTEL_GPU_COMPAT
-#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_LEVEL, IGCA_SUFFIX)
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_SUFFIX)
 #endif
 
 INTEL_GPU("xe-cri",      XE_CRI,      35, 11,  60, Compute)

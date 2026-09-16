@@ -31,7 +31,7 @@ GMDID llvm::IntelGPU::decodeGMDID(uint32_t GPUIPVersion) {
 GPUKind llvm::IntelGPU::getKindForGMDID(GMDID ID) {
   // Only INTEL_GPU rows are expanded, so a compatibility name can never match.
   // The rows are ordered so that the first match in a group names the group.
-#define INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_LEVEL, IGCA_SUFFIX)  \
+#define INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_TARGET, IGCA_SUFFIX) \
   if (ID.Architecture == ARCHITECTURE && ID.Release == RELEASE)                \
     return GK_##KIND;
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
@@ -42,10 +42,10 @@ StringRef llvm::IntelGPU::getArchName(GPUKind Kind) {
   switch (Kind) {
   case GK_NONE:
     return "";
-#define INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_LEVEL, IGCA_SUFFIX)  \
+#define INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_TARGET, IGCA_SUFFIX) \
   case GK_##KIND:                                                              \
     return NAME;
-#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_LEVEL, IGCA_SUFFIX)                  \
+#define INTEL_GPU_COMPAT(NAME, KIND, IGCA_TARGET, IGCA_SUFFIX)                 \
   case GK_##KIND:                                                              \
     return NAME;
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
