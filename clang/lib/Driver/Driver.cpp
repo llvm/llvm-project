@@ -108,7 +108,6 @@
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include <cstdlib> // ::getenv
@@ -3958,21 +3957,14 @@ static StringRef getCanonicalArchString(Compilation &C,
   if (Arch.isNVPTX())
     return Args.MakeArgStringRef(OffloadArchToString(Arch));
 
-  // AMDGCN target IDs carry a processor and xnack/sramecc modifiers to
-  // canonicalize. Other AMD offload arches (e.g. the amdgcnspirv pseudo-arch on
-  // a SPIR-V triple) have no target-id features and pass through unchanged.
-  if (Arch.isAMDGPU() && Triple.isAMDGCN()) {
-    StringRef TargetIDStr = ArchStr;
-    if (llvm::Triple::parseSubArch(ArchStr) != llvm::Triple::NoSubArch)
-      TargetIDStr = getProcessorFromTargetID(Triple, ArchStr);
-
-    std::optional<llvm::AMDGPU::TargetID> ID =
-        llvm::AMDGPU::TargetID::parse(Triple, TargetIDStr);
-    if (!ID) {
+  if (Arch.isAMDGPU() || Arch.isAMDGCNSPIRV()) {
+    llvm::StringMap<bool> Features;
+    std::optional<StringRef> Arch = parseTargetID(Triple, ArchStr, &Features);
+    if (!Arch) {
       C.getDriver().Diag(clang::diag::err_drv_bad_target_id) << ArchStr;
       return StringRef();
     }
-    return Args.MakeArgStringRef(ID->getCanonicalTargetIDString());
+    return Args.MakeArgStringRef(getCanonicalTargetID(*Arch, Features));
   }
 
   // If the input isn't CUDA or HIP just return the architecture.
@@ -3983,18 +3975,13 @@ static StringRef getCanonicalArchString(Compilation &C,
 /// incompatible pair if a conflict occurs.
 static std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
 getConflictOffloadArchCombination(const llvm::DenseSet<StringRef> &Archs,
-                                  const llvm::Triple &Triple) {
+                                  llvm::Triple Triple) {
   if (!Triple.isAMDGPU())
     return std::nullopt;
 
-  // Sort for a deterministic conflicting pair in the diagnostic.
-  llvm::SmallVector<StringRef> ArchList(Archs.begin(), Archs.end());
-  llvm::sort(ArchList);
-
-  llvm::SmallVector<clang::TargetIDEntry> Entries;
-  for (StringRef Arch : ArchList)
-    Entries.emplace_back(Triple, Arch);
-  return getConflictTargetIDCombination(Entries);
+  std::set<StringRef> ArchSet;
+  llvm::copy(Archs, std::inserter(ArchSet, ArchSet.begin()));
+  return getConflictTargetIDCombination(ArchSet);
 }
 
 llvm::SmallVector<BoundArch>
