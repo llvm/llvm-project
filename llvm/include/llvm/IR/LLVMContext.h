@@ -27,6 +27,7 @@ namespace llvm {
 
 class DiagnosticInfo;
 enum DiagnosticSeverity : char;
+class DebugInfoODRUniquer;
 class Function;
 class Instruction;
 class LLVMContextImpl;
@@ -164,6 +165,7 @@ public:
   LLVM_ABI bool isODRUniquingDebugTypes() const;
   LLVM_ABI void enableDebugTypeODRUniquing();
   LLVM_ABI void disableDebugTypeODRUniquing();
+  LLVM_ABI DebugInfoODRUniquer *getDebugTypeODRUniquer();
 
   /// generateMachineFunctionNum - Get a unique number for MachineFunction
   /// that associated with the given Function.
