@@ -35,9 +35,11 @@ struct ReadLineResult {
   size_t bytes_read;
   size_t raw_bytes_consumed;
   bool truncated;
-  // True only when zero bytes were read because the stream was already at EOF.
-  // A final line without a trailing newline returns bytes_read > 0 and
-  // eof == false; the following call returns bytes_read == 0 and eof == true.
+  // True only when no raw bytes were read (raw_bytes_consumed == 0) because the
+  // stream was already at EOF. A blank line ("\n") or a final line without a
+  // trailing newline consumes at least one raw byte and returns eof == false
+  // (with bytes_read == 0 for "\n"); the following call returns
+  // raw_bytes_consumed == 0 and eof == true.
   bool eof;
 };
 
@@ -58,6 +60,19 @@ private:
   File *file = nullptr;
   off_t current_offset = 0;
   off_t last_line_start = 0;
+
+  // Closes the file stream if open and resets stream position tracking.
+  LIBC_INLINE ErrorOr<void> clear_file_stream() {
+    current_offset = 0;
+    last_line_start = 0;
+    if (file) {
+      int result = file->close();
+      file = nullptr;
+      if (result != 0)
+        return Error(result);
+    }
+    return {};
+  }
 
   // Reads a single line from the given file into the provided buffer, stripping
   // any trailing '\n' and ensuring the result is null-terminated. A line too
@@ -93,7 +108,7 @@ private:
         break;
     }
 
-    bool eof = (bytes_read == 0);
+    bool eof = (raw_bytes_consumed == 0);
 
     auto read_span = buf.first(bytes_read);
     if (result.value == 1 && !read_span.empty() && read_span.back() != '\n') {
@@ -136,11 +151,13 @@ private:
     while (true) {
       // One byte for the character about to be read, one for the terminator.
       if (bytes_read > cpp::numeric_limits<size_t>::max() - 2 ||
-          (bytes_read + 2 > buf.capacity() && !buf.reserve(bytes_read + 2))) {
+          !buf.reserve(bytes_read + 2)) {
         char c = '\0';
         while (true) {
           FileIOResult drain = f->read_unlocked(&c, 1);
-          if (drain.has_error() || drain.value != 1 || c == '\n')
+          if (drain.has_error())
+            return Error(drain.error);
+          if (drain.value != 1 || c == '\n')
             break;
         }
         return Error(ENOMEM);
@@ -161,8 +178,8 @@ private:
     if (f->error_unlocked())
       return Error(EIO);
 
-    bool eof = (bytes_read == 0);
     size_t raw_bytes_consumed = bytes_read;
+    bool eof = (raw_bytes_consumed == 0);
 
     // If the line ended with a newline, strip it.
     if (bytes_read > 0 && buf.span()[bytes_read - 1] == '\n')
@@ -184,13 +201,8 @@ public:
   LIBC_INLINE void set_path(const char *path) {
     if (!path)
       return;
-    if (file) {
-      file->close();
-      file = nullptr;
-    }
+    clear_file_stream();
     file_path = path;
-    current_offset = 0;
-    last_line_start = 0;
   }
 
   // Opens or rewinds the database file stream.
@@ -212,17 +224,7 @@ public:
   }
 
   // Closes the database file stream.
-  LIBC_INLINE ErrorOr<void> enddb() {
-    current_offset = 0;
-    last_line_start = 0;
-    if (file) {
-      int result = file->close();
-      file = nullptr;
-      if (result != 0)
-        return Error(result);
-    }
-    return {};
-  }
+  LIBC_INLINE ErrorOr<void> enddb() { return clear_file_stream(); }
 
   // Reads and parses the next record from the database into a fixed buffer.
   // Returns true if an entry was read, false if EOF was reached, or an Error on

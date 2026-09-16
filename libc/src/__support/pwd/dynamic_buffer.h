@@ -32,7 +32,7 @@ namespace pwd {
 // constant-initialised process global. The owner releases the storage
 // explicitly when done.
 class DynamicBuffer {
-  static constexpr size_t INITIAL_CAPACITY = 256;
+  static constexpr size_t INITIAL_CAPACITY = 1024;
 
   char *ptr = nullptr;
   size_t cap = 0;
@@ -83,7 +83,7 @@ public:
     cap = 0;
   }
 
-  [[nodiscard]] LIBC_INLINE cpp::span<char> span() { return {ptr, cap}; }
+  [[nodiscard]] LIBC_INLINE cpp::span<char> span() const { return {ptr, cap}; }
   [[nodiscard]] LIBC_INLINE size_t capacity() const { return cap; }
 };
 
