@@ -1307,7 +1307,7 @@ class VariadicDynCastAllOfMatcher
     : public VariadicFunction<BindableMatcher<SourceT>, Matcher<TargetT>,
                               makeDynCastAllOfComposite<SourceT, TargetT>> {
 public:
-  VariadicDynCastAllOfMatcher() {}
+  constexpr VariadicDynCastAllOfMatcher() {}
 };
 
 /// A \c VariadicAllOfMatcher<T> object is a variadic functor that takes
@@ -1325,7 +1325,7 @@ class VariadicAllOfMatcher
     : public VariadicFunction<BindableMatcher<T>, Matcher<T>,
                               makeAllOfComposite<T>> {
 public:
-  VariadicAllOfMatcher() {}
+  constexpr VariadicAllOfMatcher() {}
 };
 
 /// VariadicOperatorMatcher related types.
@@ -1886,7 +1886,7 @@ public:
 
   struct Func
       : public VariadicFunction<Self, Matcher<InnerTBase>, &Self::create> {
-    Func() {}
+    constexpr Func() {}
   };
 
 private:
