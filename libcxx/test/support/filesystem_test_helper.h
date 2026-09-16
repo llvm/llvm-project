@@ -106,7 +106,7 @@ namespace utils {
     // foo64 -> foo or vice versa.
 #if defined(_WIN32)
     using off64_t = std::int64_t;
-#elif defined(__MVS__) || defined(__LP64__)
+#elif defined(__MVS__) || defined(__LP64__) || defined(_LIBCPP_HAS_MUSL_LIBC)
     using off64_t = ::off_t;
 #else
     using ::off64_t;
@@ -115,7 +115,8 @@ namespace utils {
     inline FILE* fopen64(const char* pathname, const char* mode) {
         // Bionic does not distinguish between fopen and fopen64, but fopen64
         // wasn't added until API 24.
-#if defined(_WIN32) || defined(__MVS__) || defined(__LP64__) || defined(__BIONIC__)
+#if defined(_WIN32) || defined(__MVS__) || defined(__LP64__) || defined(__BIONIC__) \
+ || defined(_LIBCPP_HAS_MUSL_LIBC)
         return ::fopen(pathname, mode);
 #else
         return ::fopen64(pathname, mode);
@@ -126,7 +127,7 @@ namespace utils {
 #if defined(_WIN32)
         // _chsize_s sets errno on failure and also returns the error number.
         return ::_chsize_s(fd, length) ? -1 : 0;
-#elif defined(__MVS__) || defined(__LP64__)
+#elif defined(__MVS__) || defined(__LP64__) || defined(_LIBCPP_HAS_MUSL_LIBC) 
         return ::ftruncate(fd, length);
 #else
         return ::ftruncate64(fd, length);
