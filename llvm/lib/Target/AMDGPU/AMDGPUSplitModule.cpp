@@ -56,7 +56,6 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-#include "llvm/Transforms/Utils/SplitModuleCommon.h"
 #include <cassert>
 #include <cmath>
 #include <utility>
@@ -1385,7 +1384,7 @@ static void splitAMDGPUModule(
       if (Fn.hasLocalLinkage() && Fn.hasAddressTaken()) {
         LLVM_DEBUG(dbgs() << "[externalize] "; Fn.printAsOperand(dbgs());
                    dbgs() << " because its address is taken\n");
-        externalizeGlobal(Fn);
+        Fn.externalize();
       }
     }
   }
@@ -1396,14 +1395,14 @@ static void splitAMDGPUModule(
     for (auto &GV : M.globals()) {
       if (GV.hasLocalLinkage())
         LLVM_DEBUG(dbgs() << "[externalize] GV " << GV.getName() << '\n');
-      externalizeGlobal(GV);
+      GV.externalize();
     }
   }
 
   for (auto &GA : M.aliases()) {
     if (GA.hasLocalLinkage()) {
       LLVM_DEBUG(dbgs() << "[externalize] alias " << GA.getName() << '\n');
-      externalizeGlobal(GA);
+      GA.externalize();
     }
   }
 
