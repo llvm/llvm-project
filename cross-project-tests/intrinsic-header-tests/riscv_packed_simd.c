@@ -4628,8 +4628,7 @@ uint16x2_t test_pjoin2_u16x2(uint16_t e0, uint16_t e1) {
 // RV32-COUNT-2: pack
 // RV64-COUNT-2: ppaire.h
 // RV64:         pack
-int16x4_t test_pjoin4_i16x4(int16_t e0, int16_t e1, int16_t e2,
-                            int16_t e3) {
+int16x4_t test_pjoin4_i16x4(int16_t e0, int16_t e1, int16_t e2, int16_t e3) {
   return __riscv_pjoin4_i16x4(e0, e1, e2, e3);
 }
 

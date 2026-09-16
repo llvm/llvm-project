@@ -343,8 +343,8 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
 
 #define __packed_join4(name, ty, elt_ty)                                       \
   static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(                      \
-      elt_ty __e0, elt_ty __e1, elt_ty __e2, elt_ty __e3) {                   \
-    return (ty){__e0, __e1, __e2, __e3};                                      \
+      elt_ty __e0, elt_ty __e1, elt_ty __e2, elt_ty __e3) {                    \
+    return (ty){__e0, __e1, __e2, __e3};                                       \
   }
 
 // clang-format off: macro call sites have no trailing semicolons, which
