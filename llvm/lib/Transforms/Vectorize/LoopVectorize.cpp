@@ -6630,20 +6630,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
     InterleaveGroups.insert(IG);
   }
 
-  bool RequiresScalarEpilogue =
-      CM->isEpilogueAllowed() && any_of(InterleaveGroups, [](auto *IG) {
-        return isa<LoadInst>(IG->getInsertPos()) &&
-               IG->requiresScalarEpilogue();
-      });
-  // Update the branch in the middle block if a scalar epilogue is required.
-  VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
-  if (RequiresScalarEpilogue && MiddleVPBB->getNumSuccessors() == 2) {
-    auto *BranchOnCond = cast<VPInstruction>(MiddleVPBB->getTerminator());
-    assert(MiddleVPBB->getSuccessors()[1] == Plan->getScalarPreheader() &&
-           "second successor must be scalar preheader");
-    BranchOnCond->setOperand(0, Plan->getFalse());
-  }
-
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar
   // VPInstructions in the loop.
@@ -6746,6 +6732,12 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan))
     return nullptr;
 
+  // Interleave memory: for each Interleave Group we marked earlier as relevant
+  // for this VPlan, replace the Recipes widening its memory instructions with a
+  // single VPInterleaveRecipe at its insertion point.
+  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
+                 InterleaveGroups, CM->isEpilogueAllowed());
+
   RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, *Plan, false);
 
   // Create partial reduction recipes for scaled reductions and transform
@@ -6755,12 +6747,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
                  Range);
   RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
                  Range);
-
-  // Interleave memory: for each Interleave Group we marked earlier as relevant
-  // for this VPlan, replace the Recipes widening its memory instructions with a
-  // single VPInterleaveRecipe at its insertion point.
-  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
-                 InterleaveGroups, CM->isEpilogueAllowed());
 
   // Convert memory recipes to strided access recipes if the strided access is
   // legal and profitable.

@@ -2915,6 +2915,7 @@ void VPlanTransforms::createInterleaveGroups(
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
   VPDominatorTree VPDT(Plan);
+  bool RequiresScalarEpilogue = false;
   for (const auto *IG : InterleaveGroups) {
     VPWidenMemoryRecipe *Start = nullptr;
     Instruction *StartMember = nullptr;
@@ -2926,6 +2927,7 @@ void VPlanTransforms::createInterleaveGroups(
       }
     if (!StartMember) // All member recipes are dead, so the group is dead.
       continue;
+
     VPIRMetadata InterleaveMD(*Start);
     SmallVector<VPValue *, 4> StoredValues;
     for (unsigned I = 0; I < IG->getFactor(); ++I) {
@@ -2940,6 +2942,9 @@ void VPlanTransforms::createInterleaveGroups(
         InterleaveMD.intersect(VPIRMetadata(*MemberI));
       }
     }
+
+    RequiresScalarEpilogue |=
+        EpilogueAllowed && StoredValues.empty() && IG->requiresScalarEpilogue();
 
     bool NeedsMaskForGaps =
         (IG->requiresScalarEpilogue() && !EpilogueAllowed) ||
@@ -3018,6 +3023,19 @@ void VPlanTransforms::createInterleaveGroups(
         if (MemberR)
           MemberR->getAsRecipe()->eraseFromParent();
       }
+  }
+
+  // If an applied interleave group requires a scalar epilogue, force the
+  // middle block to always branch to the scalar preheader, if it still has a
+  // branch to it.
+  if (RequiresScalarEpilogue) {
+    VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
+    if (MiddleVPBB->getNumSuccessors() == 2) {
+      auto *BranchOnCond = cast<VPInstruction>(MiddleVPBB->getTerminator());
+      assert(MiddleVPBB->getSuccessors()[1] == Plan.getScalarPreheader() &&
+             "second successor must be scalar preheader");
+      BranchOnCond->setOperand(0, Plan.getFalse());
+    }
   }
 }
 
