@@ -372,10 +372,7 @@ public:
         Relocation{Offset, Symbol, Type, Addend, Value, IsRELR});
   }
 
-  void addDynamicRelocation(const Relocation &Reloc) {
-    assert(Reloc.Offset < getSize() && "offset not within section bounds");
-    DynamicRelocations.emplace(Reloc);
-  }
+  void addDynamicRelocation(const Relocation &Reloc);
 
   /// Add relocation against the original contents of this section.
   void addPendingRelocation(const Relocation &Rel) {
