@@ -1,4 +1,4 @@
-; Tests that verify functionality for -opt-disable and -opt-bisect-funcs
+; Tests that verify functionality for -opt-bisect-funcs
 
 ; If enabling bisect function filtering, do not skip Module Passes.
 ; RUN: opt -disable-output -disable-verify -passes=inferattrs \
@@ -32,32 +32,6 @@
 ; CHECK-CGSCC-PASS-FILTER: BISECT: running pass (3) function-attrs on (f3)
 ; CHECK-CGSCC-PASS-FILTER: BISECT: running pass (4) function-attrs on (f4)
 
-
-; RUN: opt -disable-output -disable-verify -opt-disable=3,7 \
-; RUN:     -passes='inferattrs,cgscc(function-attrs,function(early-cse))' -opt-bisect-verbose=true %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-DISABLE-PASS
-; CHECK-DISABLE-PASS: BISECT: running pass (1) inferattrs on [module]
-; CHECK-DISABLE-PASS: BISECT: running pass (2) function-attrs on (f1)
-; CHECK-DISABLE-PASS: BISECT: NOT running pass (3) early-cse on f1
-; CHECK-DISABLE-PASS: BISECT: running pass (4) function-attrs on (f2)
-; CHECK-DISABLE-PASS: BISECT: running pass (5) early-cse on f2
-; CHECK-DISABLE-PASS: BISECT: running pass (6) function-attrs on (f3)
-; CHECK-DISABLE-PASS: BISECT: NOT running pass (7) early-cse on f3
-; CHECK-DISABLE-PASS: BISECT: running pass (8) function-attrs on (f4)
-; CHECK-DISABLE-PASS: BISECT: running pass (9) early-cse on f4
-
-; RUN: opt -disable-output -disable-verify -opt-disable=3-7 \
-; RUN:     -passes='inferattrs,cgscc(function-attrs,function(early-cse))' -opt-bisect-verbose=true %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-DISABLE-INTERVAL
-; CHECK-DISABLE-INTERVAL: BISECT: running pass (1) inferattrs on [module]
-; CHECK-DISABLE-INTERVAL: BISECT: running pass (2) function-attrs on (f1)
-; CHECK-DISABLE-INTERVAL: BISECT: NOT running pass (3) early-cse on f1
-; CHECK-DISABLE-INTERVAL: BISECT: NOT running pass (4) function-attrs on (f2)
-; CHECK-DISABLE-INTERVAL: BISECT: NOT running pass (5) early-cse on f2
-; CHECK-DISABLE-INTERVAL: BISECT: NOT running pass (6) function-attrs on (f3)
-; CHECK-DISABLE-INTERVAL: BISECT: NOT running pass (7) early-cse on f3
-; CHECK-DISABLE-INTERVAL: BISECT: running pass (8) function-attrs on (f4)
-; CHECK-DISABLE-INTERVAL: BISECT: running pass (9) early-cse on f4
 
 declare i32 @g()
 

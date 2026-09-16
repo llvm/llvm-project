@@ -14,7 +14,6 @@
 #ifndef LLVM_IR_OPTBISECT_H
 #define LLVM_IR_OPTBISECT_H
 
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Compiler.h"
@@ -79,14 +78,12 @@ public:
 
   /// isEnabled() should return true before calling shouldRunPass().
   bool isEnabled() const override {
-    return !BisectIntervals.empty() || !DisabledPasses.empty() ||
-           !DisabledIntervals.empty();
+    return !BisectIntervals.empty() || !DisabledPasses.empty();
   }
 
   void reset() override {
     clearIntervals();
     DisabledPasses.clear();
-    clearDisabledIntervals();
     clearEnabledFuncs();
   }
 
@@ -105,18 +102,6 @@ public:
   /// to be disabled. Multiple pass names can be provided with comma separation.
   void setDisabled(StringRef Pass) { DisabledPasses.insert(Pass); }
 
-  /// Set intervals directly from an IntervalList.
-  void
-  setDisabledIntervals(IntegerInclusiveIntervalUtils::IntervalList Intervals) {
-    DisabledIntervals.append(Intervals);
-  }
-
-  /// Clear all disabled intervals.
-  void clearDisabledIntervals() {
-    DisabledIntervals.clear();
-    LastDisableNum = 0;
-  }
-
   /// Add a function name to the set of functions enabled for opt bisect.
   void setEnabledFunc(StringRef FuncName) {
     OptBisectFuncNames.insert(FuncName);
@@ -131,8 +116,6 @@ private:
   IntegerInclusiveIntervalUtils::IntervalList BisectIntervals;
 
   StringSet<> DisabledPasses = {};
-  IntegerInclusiveIntervalUtils::IntervalList DisabledIntervals;
-  mutable int LastDisableNum = 0;
 
   StringSet<> OptBisectFuncNames = {};
 };
