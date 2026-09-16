@@ -249,7 +249,8 @@ TEST(IntelGPUArchName, UnknownArchitecturesGetANumericName) {
   EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(12, 99, 3)), "xe_12.99.3");
 }
 
-// Pre-Xe devices report a version too, and none of them are in the table.
+// Pre-Xe devices report a GPU IP version too, but they have no human-friendly
+// identifier.
 TEST(IntelGPUArchName, LegacyArchitecture) {
   EXPECT_EQ(getIntelGPUArchName(gpuIPVersion(9, 0, 9)), "xe_9.0.9");
 }

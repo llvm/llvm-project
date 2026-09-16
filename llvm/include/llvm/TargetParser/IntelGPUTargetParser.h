@@ -34,14 +34,13 @@ enum GPUKind : uint8_t {
 #include "llvm/TargetParser/IntelGPUTargetParser.def"
 };
 
-/// Return the name of the device that \p GPUIPVersion, as reported by the
-/// driver, identifies, e.g. "xe-pvc", or "" if the table lists no such device.
-/// The revision is ignored: every stepping of a release is one device. If
-/// several rows match, the first one in IntelGPUTargetParser.def wins.
+/// \return the device name that \p GPUIPVersion identifies, as reported by the
+/// driver, e.g. "xe-pvc". If the table lists no such device, return an empty
+/// string. The revision is ignored: every stepping of a release is one device.
+/// If several rows match, the first one in IntelGPUTargetParser.def wins.
 LLVM_ABI StringRef getArchName(uint32_t GPUIPVersion);
 
-/// Return the numeric name of \p GPUIPVersion, e.g. "xe_35.11.0", which every
-/// device has, even one that the table does not list.
+/// \return the numeric name of \p GPUIPVersion, e.g. "xe_35.11.0".
 LLVM_ABI std::string getNumericArchName(uint32_t GPUIPVersion);
 
 } // namespace IntelGPU

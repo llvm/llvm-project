@@ -202,10 +202,9 @@ int printGPUsByLevelZero() {
 
       if (IPVersion.ipVersion == 0) {
         if (Verbose)
-          llvm::errs() << "warning: skipping device '" << DeviceProperties.name
-                       << "': this version of the Level Zero driver does not "
-                          "support ZE_STRUCTURE_TYPE_DEVICE_IP_VERSION_EXT, so "
-                          "the device architecture cannot be determined\n";
+          llvm::errs()
+              << "warning: skipping device '" << DeviceProperties.name
+              << "': the device does not support Device IP Version Extension\n";
         continue;
       }
 
