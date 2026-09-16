@@ -32,6 +32,7 @@ class AssumptionCache;
 class BasicBlock;
 class CallInst;
 class DominatorTree;
+class Function;
 class InnerLoopVectorizer;
 class IRBuilderBase;
 class LoopInfo;
@@ -432,20 +433,25 @@ class VPSlotTracker {
   /// Cached metadata kind names from the Module's LLVMContext.
   SmallVector<StringRef> MDNames;
 
-  /// Cached Module pointer for printing metadata.
-  const Module *M = nullptr;
+  /// Cached Function pointer for printing names and metadata.
+  const Function *F = nullptr;
 
   void assignName(const VPValue *V);
   LLVM_ABI_FOR_TEST void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
   std::string getName(const Value *V);
 
+  /// Lazily create the ModuleSlotTracker.
+  ModuleSlotTracker &getOrCreateMST();
+
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
     if (Plan) {
+      if (auto *ScalarHeader = Plan->getScalarHeader()) {
+        const BasicBlock *ScalarHeaderIRBB = ScalarHeader->getIRBasicBlock();
+        F = ScalarHeaderIRBB->getParent();
+      }
       assignNames(*Plan);
-      if (auto *ScalarHeader = Plan->getScalarHeader())
-        M = ScalarHeader->getIRBasicBlock()->getModule();
     }
   }
 
@@ -456,13 +462,14 @@ public:
 
   /// Returns the cached metadata kind names.
   ArrayRef<StringRef> getMDNames() {
+    const Module *M = getModule();
     if (MDNames.empty() && M)
       M->getContext().getMDKindNames(MDNames);
     return MDNames;
   }
 
-  /// Returns the cached Module pointer.
-  const Module *getModule() const { return M; }
+  /// Returns the module the plan operates on, if any.
+  const Module *getModule() const { return F ? F->getParent() : nullptr; }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
