@@ -1980,9 +1980,9 @@ bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr,
   // Retain the casted type for opaque pointers.
   if (Ptr.isOpaquePointer()) {
     Pointer P = S.Stk.pop<Pointer>();
-    auto OP = P.asOpaquePointer();
+    const OpaquePointer &OP = P.asOpaquePointer();
 
-    if (!validType(TargetType->getPointeeType()))
+    if (OP.hasDeclBase() && !validType(TargetType->getPointeeType()))
       return Invalid(S, OpPC);
 
     S.Stk.push<Pointer>(OP.withFieldType(TargetType), P.getByteOffset());

@@ -437,6 +437,7 @@ struct OpaquePointer {
   unsigned PathLength = 0;
 
   ArrayRef<PointerPathEntry> path() const { return ArrayRef(Path, PathLength); }
+  bool hasDeclBase() const { return Base.isDecl(); }
   const VarDecl *getBaseDecl() const { return Base.asVarDecl(); }
   const Expr *getBaseExpr() const { return Base.asExpr(); }
 
