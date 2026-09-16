@@ -6512,7 +6512,7 @@ void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
     BuildMI(*MBB, I, DL, get(Opcode), Reg)
         .addImm(0) // src0_modifiers
         .add(MO)
-       .addImm(0); // op_sel
+        .addImm(0); // op_sel
   } else if (Size == 16 && ST.useRealTrue16Insts() && Opcode == AMDGPU::COPY) {
     // SGPR32 to VGPR16
     const TargetRegisterClass *CurrRC = MRI.getRegClass(MO.getReg());
