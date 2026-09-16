@@ -55,6 +55,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalValue.h"
@@ -1431,6 +1432,9 @@ bool CodeGenPrepare::simplifyOffsetableRelocate(GCStatepointInst &I) {
 /// Sink the specified cast instruction into its user blocks.
 static bool SinkCast(CastInst *CI) {
   BasicBlock *DefBB = CI->getParent();
+  // This rewrite changes instructions, not edges, so one snapshot suffices for
+  // its uses. Do not cache it across other CodeGenPrepare rewrites of the CFG.
+  SEHTryRegionInfo SEHRegions(*CI->getFunction());
 
   /// InsertedCasts - Only insert a cast in each block once.
   DenseMap<BasicBlock *, CastInst *> InsertedCasts;
@@ -1464,6 +1468,11 @@ static bool SinkCast(CastInst *CI) {
 
     // If this user is in the same block as the cast, don't change the cast.
     if (UserBB == DefBB)
+      continue;
+
+    // Preserve protection at the execution point, including the incoming edge
+    // chosen above for a PHI use, not just at the block containing the user.
+    if (!SEHRegions.isSameRegion(DefBB, UserBB))
       continue;
 
     // If we have already inserted a cast into this block, use it.
@@ -1944,6 +1953,7 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI,
 
   // Only insert a cmp in each block once.
   DenseMap<BasicBlock *, CmpInst *> InsertedCmps;
+  SEHTryRegionInfo SEHRegions(*Cmp->getFunction());
 
   bool MadeChange = false;
   for (Instruction::user_iterator UI = Cmp->user_begin(), E = Cmp->user_end();
@@ -1964,6 +1974,10 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI,
 
     // If this user is in the same block as the cmp, don't change the cmp.
     if (UserBB == DefBB)
+      continue;
+
+    // Cloning a comparison into its user's block must not change its region.
+    if (!SEHRegions.isSameRegion(DefBB, UserBB))
       continue;
 
     // If we have already inserted a cmp into this block, use it.
@@ -2358,11 +2372,15 @@ static bool sinkAndCmp0Expression(Instruction *AndI, const TargetLowering &TLI,
       AndI->getOperand(0)->hasOneUse() && AndI->getOperand(1)->hasOneUse())
     return false;
 
+  SEHTryRegionInfo SEHRegions(*AndI->getFunction());
   for (auto *U : AndI->users()) {
     Instruction *User = cast<Instruction>(U);
 
     // Only sink 'and' feeding icmp with 0.
     if (!isa<ICmpInst>(User))
+      return false;
+
+    if (!SEHRegions.isSameRegion(AndI->getParent(), User->getParent()))
       return false;
 
     auto *CmpC = dyn_cast<ConstantInt>(User->getOperand(1));
