@@ -149,7 +149,7 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   bool NoLibc = Args.hasArg(options::OPT_nolibc);
   bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
                              !Args.hasArg(options::OPT_static);
-  bool Pthreads = Args.hasArg(options::OPT_pthread, options::OPT_pthreads);
+  bool Pthreads = Args.hasArg(options::OPT_pthread);
   bool SplitStack = Args.hasArg(options::OPT_fsplit_stack);
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
                    options::OPT_r)) {
