@@ -434,7 +434,7 @@ bool TargetRegisterInfo::getRegAllocationHints(
     // Don't add the same reg twice (Hints_MRI may contain multiple virtual
     // registers allocated to the same physreg, or Hints may already contain
     // it).
-    if (is_contained(Hints, Phys.id()))
+    if (is_contained(Hints, Phys))
       continue;
 
     // All clear, tell the register allocator to prefer this register.
