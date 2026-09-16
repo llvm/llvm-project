@@ -45,7 +45,9 @@ getShuffleCost(const TargetTransformInfo &TTI,
                TargetTransformInfo::ShuffleKind Kind, VectorType *Tp,
                const TargetTransformInfo::TargetCostKind CostKind,
                ArrayRef<int> Mask = {}, int Index = 0,
-               VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {});
+               VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {},
+               TargetTransformInfo::VectorInstrContext VIC =
+                   TargetTransformInfo::VectorInstrContext::None);
 
 /// Calculate the scalar and the vector costs from vectorizing set of GEPs.
 std::pair<InstructionCost, InstructionCost>
@@ -110,7 +112,8 @@ getVectorInstrCost(const TargetTransformInfo &TTI, bool ReVec, Type *ScalarTy,
                    unsigned Opcode, Type *Val,
                    const TargetTransformInfo::TargetCostKind CostKind,
                    unsigned Index, Value *Scalar,
-                   ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx);
+                   ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
+                   TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None);
 
 /// This is similar to TargetTransformInfo::getExtractWithExtendCost, but if Dst
 /// is a FixedVectorType, a vector will be extracted instead of a scalar.

@@ -1,13 +1,15 @@
-// RUN: mlir-opt %s -convert-math-to-xevm \
-// RUN:   | FileCheck %s -check-prefixes='CHECK,CHECK-ARITH' 
-// RUN: mlir-opt %s -convert-math-to-xevm='convert-arith=false' \
+// RUN: mlir-opt %s -convert-math-to-xevm='convert-to-ocl=false' \
+// RUN:   | FileCheck %s -check-prefixes='CHECK,CHECK-ARITH'
+// RUN: mlir-opt %s -convert-math-to-xevm='convert-to-ocl=false convert-arith=false' \
 // RUN:   | FileCheck %s -check-prefixes='CHECK,CHECK-NO-ARITH'
 
-// RUN: mlir-opt --pass-pipeline="builtin.module(convert-math-to-xevm)" %s \
+// RUN: mlir-opt --pass-pipeline="builtin.module(convert-math-to-xevm{convert-to-ocl=false})" %s \
 // RUN:   | FileCheck %s -check-prefixes='CHECK-MODULE,CHECK-ENTIRE-MODULE'
-// RUN: mlir-opt --pass-pipeline="builtin.module(gpu.module(convert-math-to-xevm))" %s \
+// RUN: mlir-opt --pass-pipeline="builtin.module(gpu.module(convert-math-to-xevm{convert-to-ocl=false}))" %s \
 // RUN:   | FileCheck %s -check-prefixes='CHECK-MODULE,CHECK-ONLY-GPU'
 
+// This test pins the native (`afn`) half of MathToXeVM, so it turns
+// convert-to-ocl off. See math-to-ocl.mlir for the precise-OCL half.
 // This test:
 // - check that MathToXeVM converts fastmath math/arith ops properly;
 // - check that MathToXeVM handles nested modules while respecting pass manager.

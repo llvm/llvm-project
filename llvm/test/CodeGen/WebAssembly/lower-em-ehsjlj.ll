@@ -1,5 +1,5 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-cxx-exceptions -enable-emscripten-sjlj -S | FileCheck %s
-; RUN: llc < %s -enable-emscripten-cxx-exceptions -enable-emscripten-sjlj -verify-machineinstrs
+; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj -S | FileCheck %s
+; RUN: llc < %s -exception-model=emscripten -enable-emscripten-sjlj -verify-machineinstrs
 
 ; Tests for cases when exception handling and setjmp/longjmp handling are mixed.
 
@@ -270,3 +270,6 @@ declare ptr @__cxa_allocate_exception(i32)
 attributes #0 = { returns_twice }
 attributes #1 = { noreturn }
 attributes #2 = { nounwind }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"emscripten"}

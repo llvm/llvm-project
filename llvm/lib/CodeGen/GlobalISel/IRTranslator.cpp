@@ -70,6 +70,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
@@ -2674,8 +2675,9 @@ void IRTranslatorImpl::getStackGuard(Register DstReg,
     return;
   }
 
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-  MRI->setRegClass(DstReg, TRI->getPointerRegClass());
+  const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
+  MRI->setRegClass(DstReg,
+                   TII.getRegClass(TII.get(TargetOpcode::LOAD_STACK_GUARD), 0));
   auto MIB =
       MIRBuilder.buildInstr(TargetOpcode::LOAD_STACK_GUARD, {DstReg}, {});
 
@@ -2740,6 +2742,10 @@ unsigned IRTranslatorImpl::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FCOSH;
     case Intrinsic::ctpop:
       return TargetOpcode::G_CTPOP;
+    case Intrinsic::smulh:
+      return TargetOpcode::G_SMULH;
+    case Intrinsic::umulh:
+      return TargetOpcode::G_UMULH;
     case Intrinsic::exp:
       return TargetOpcode::G_FEXP;
     case Intrinsic::exp2:
@@ -3940,10 +3946,10 @@ bool IRTranslatorImpl::translateLandingPad(const User &U,
   // If there aren't registers to copy the values into (e.g., during SjLj
   // exceptions), then don't bother.
   const Constant *PersonalityFn = MF->getFunction().getPersonalityFn();
-  if (TLI->getExceptionPointerRegister(
-          TLI->getTargetMachine().getExceptionModel(), PersonalityFn) == 0 &&
-      TLI->getExceptionSelectorRegister(
-          TLI->getTargetMachine().getExceptionModel(), PersonalityFn) == 0)
+  if (TLI->getExceptionPointerRegister(FuncInfo.ExceptionModel,
+                                       PersonalityFn) == 0 &&
+      TLI->getExceptionSelectorRegister(FuncInfo.ExceptionModel,
+                                        PersonalityFn) == 0)
     return true;
 
   // If landingpad's return type is token type, we don't create DAG nodes
@@ -3974,8 +3980,8 @@ bool IRTranslatorImpl::translateLandingPad(const User &U,
   assert(Tys.size() == 2 && "Only two-valued landingpads are supported");
 
   // Mark exception register as live in.
-  Register ExceptionReg = TLI->getExceptionPointerRegister(
-      TLI->getTargetMachine().getExceptionModel(), PersonalityFn);
+  Register ExceptionReg =
+      TLI->getExceptionPointerRegister(FuncInfo.ExceptionModel, PersonalityFn);
   if (!ExceptionReg)
     return false;
 
@@ -3983,8 +3989,8 @@ bool IRTranslatorImpl::translateLandingPad(const User &U,
   ArrayRef<Register> ResRegs = getOrCreateVRegs(LP);
   MIRBuilder.buildCopy(ResRegs[0], ExceptionReg);
 
-  Register SelectorReg = TLI->getExceptionSelectorRegister(
-      TLI->getTargetMachine().getExceptionModel(), PersonalityFn);
+  Register SelectorReg =
+      TLI->getExceptionSelectorRegister(FuncInfo.ExceptionModel, PersonalityFn);
   if (!SelectorReg)
     return false;
 
@@ -5031,6 +5037,10 @@ bool IRTranslatorImpl::runOnMachineFunction(
   const TargetMachine &TM = MF->getTarget();
   EnableOpts = OptLevel != CodeGenOptLevel::None && !ShouldSkipOpts;
   FuncInfo.MF = MF;
+  // Prefer the "exception-model" module flag, else the TargetOptions default.
+  FuncInfo.ExceptionModel = F.getParent()->getExceptionModel();
+  if (FuncInfo.ExceptionModel == ExceptionHandling::Default)
+    FuncInfo.ExceptionModel = TM.getExceptionModel();
   if (EnableOpts) {
     AA = GetAAResults();
     FuncInfo.BPI = GetBPI();

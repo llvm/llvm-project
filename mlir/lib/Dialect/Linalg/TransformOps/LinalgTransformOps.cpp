@@ -1423,10 +1423,8 @@ transform::SpecializeOp::applyToOne(transform::TransformRewriter &rewriter,
     return DiagnosedSilenceableFailure::success();
   }
   rewriter.setInsertionPoint(target);
-  GenericOpSpecializationOptions opts;
-  opts.emitCategoryOps = getEmitCategory();
   FailureOr<LinalgOp> named =
-      specializeGenericOp(rewriter, cast<GenericOp>(target), opts);
+      specializeGenericOp(rewriter, cast<GenericOp>(target), getEmitCategory());
   if (succeeded(named)) {
     results.push_back(named->getOperation());
     return DiagnosedSilenceableFailure::success();
@@ -1927,10 +1925,8 @@ PackGreedilyOp::apply(transform::TransformRewriter &rewriter,
                       transform::TransformResults &transformResults,
                       transform::TransformState &state) {
   SmallVector<Operation *> results;
-  for (Operation *op : state.getPayloadOps(getTarget())) {
-    auto linalgOp = dyn_cast<LinalgOp>(op);
-    if (!linalgOp)
-      continue;
+  for (auto linalgOp :
+       llvm::make_isa_range<LinalgOp>(state.getPayloadOps(getTarget()))) {
     // linalgOp will be replaced and the insertion point may be invalidated if
     // we set it before -> set it after.
     rewriter.setInsertionPointAfter(linalgOp);

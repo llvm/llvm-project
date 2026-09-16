@@ -516,8 +516,7 @@ define <4 x i8> @mgather_truemask_v4i8(<4 x ptr> %ptrs, <4 x i8> %passthru) {
 ; RV32-LABEL: mgather_truemask_v4i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV32-NEXT:    vluxei32.v v9, (zero), v8
-; RV32-NEXT:    vmv1r.v v8, v9
+; RV32-NEXT:    vluxei32.v v8, (zero), v8
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_truemask_v4i8:
@@ -1197,8 +1196,7 @@ define <4 x i16> @mgather_truemask_v4i16(<4 x ptr> %ptrs, <4 x i16> %passthru) {
 ; RV32-LABEL: mgather_truemask_v4i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vluxei32.v v9, (zero), v8
-; RV32-NEXT:    vmv1r.v v8, v9
+; RV32-NEXT:    vluxei32.v v8, (zero), v8
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_truemask_v4i16:
@@ -6945,8 +6943,7 @@ define <4 x bfloat> @mgather_truemask_v4bf16(<4 x ptr> %ptrs, <4 x bfloat> %pass
 ; RV32-LABEL: mgather_truemask_v4bf16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vluxei32.v v9, (zero), v8
-; RV32-NEXT:    vmv1r.v v8, v9
+; RV32-NEXT:    vluxei32.v v8, (zero), v8
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_truemask_v4bf16:
@@ -7901,8 +7898,7 @@ define <4 x half> @mgather_truemask_v4f16(<4 x ptr> %ptrs, <4 x half> %passthru)
 ; RV32-LABEL: mgather_truemask_v4f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NEXT:    vluxei32.v v9, (zero), v8
-; RV32-NEXT:    vmv1r.v v8, v9
+; RV32-NEXT:    vluxei32.v v8, (zero), v8
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_truemask_v4f16:
