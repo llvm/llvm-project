@@ -2101,6 +2101,10 @@ protected:
   /// another pointer.
   mutable Decl *LastDecl = nullptr;
 
+  /// A primary context whose identity cannot change. Incomplete C++ records
+  /// and contexts with mutable primary identities remain uncached.
+  DeclContext *CachedPrimaryContext = nullptr;
+
   /// The owning AST context, which remains the same for this context's
   /// lifetime. Null until first queried.
   mutable ASTContext *CachedASTContext = nullptr;
@@ -2294,7 +2298,11 @@ public:
   /// a different set of declarations. This routine returns the
   /// "primary" DeclContext structure, which will contain the
   /// information needed to perform name lookup into this context.
-  DeclContext *getPrimaryContext();
+  DeclContext *getPrimaryContext() {
+    if (DeclContext *Cached = CachedPrimaryContext)
+      return Cached;
+    return getPrimaryContextSlow();
+  }
   const DeclContext *getPrimaryContext() const {
     return const_cast<DeclContext*>(this)->getPrimaryContext();
   }
@@ -2820,6 +2828,7 @@ private:
   StoredDeclsMap *CreateStoredDeclsMap(ASTContext &C) const;
 
   ASTContext &getParentASTContextSlow() const;
+  DeclContext *getPrimaryContextSlow();
 
   void loadLazyLocalLexicalLookups();
   void buildLookupImpl(DeclContext *DCtx, bool Internal);
