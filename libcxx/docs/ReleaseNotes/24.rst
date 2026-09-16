@@ -53,6 +53,7 @@ Implemented Papers
 - P3778R0: Fix for ``type_order`` template definition (`Github <https://llvm.org/PR216616>`__)
 - P4140R0: Proposed resolution for US70-126: allow incomplete types in type_order (`Github <https://llvm.org/PR216616>`__)
 - P3450R1: Extend ``std::is_within_lifetime`` (`Github <https://llvm.org/PR189610>`__)
+- P3793R2: Better shifting (`Github <https://llvm.org/PR219389>`__) (no ``std::simd`` overloads)
 
 Improvements and New Features
 -----------------------------
