@@ -2414,14 +2414,14 @@ void CodeGenRegBank::computeRegUnitLaneMasks() {
     // none of its leaves account for. If left unclaimed, those lanes would
     // not appear in any register unit's mask, making them invisible to
     // interference and liveness queries. Backfill the missing lanes onto the
-    // sub-register's own units.
+    // sub-register's own native units.
     for (auto [SubRegIndex, SubReg] : SubRegs) {
       if (SubReg->CoveredBySubRegs || SubReg->getSubRegs().empty())
         continue;
       LaneBitmask Unclaimed = SubRegIndex->LaneMask;
-      for (unsigned SUI : SubReg->getRegUnits())
+      for (unsigned SUI : SubReg->getNativeRegUnits())
         Unclaimed &= ~RegUnitLaneMasks[UnitMaskIdx(SUI)];
-      for (unsigned SUI : SubReg->getRegUnits())
+      for (unsigned SUI : SubReg->getNativeRegUnits())
         RegUnitLaneMasks[UnitMaskIdx(SUI)] |= Unclaimed;
     }
 
