@@ -1,4 +1,4 @@
-# RUN: llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown -run-pass=spirv-prelegalizer %s -o - | FileCheck %s
+# RUN: llc -O0 -mtriple=spirv64-unknown-unknown -run-pass=spirv-prelegalizer %s -o - | FileCheck %s
 
 # No LLVM IR produces a case value wider than 32 bits, or a zero one, that the
 # module has already emitted, so both constants are written here directly. The

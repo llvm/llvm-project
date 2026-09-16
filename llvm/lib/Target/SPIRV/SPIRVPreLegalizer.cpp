@@ -1225,11 +1225,11 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
 // this is in operand 1. For SPIR-V constants, this is in the literal operands
 // after the type.
 static const ConstantInt *getSwitchCaseValue(const MachineInstr *Def,
-                                             const MachineRegisterInfo &MRI) {
+                                             const MachineRegisterInfo &MRI,
+                                             LLVMContext &Ctx) {
   if (Def->getOpcode() == TargetOpcode::G_CONSTANT)
     return Def->getOperand(1).getCImm();
 
-  LLVMContext &Ctx = Def->getMF()->getFunction().getContext();
   LLT Ty = MRI.getType(Def->getOperand(0).getReg());
   assert(Ty.isValid() && "Expected a typed switch case value");
   unsigned BitWidth = Ty.getScalarSizeInBits();
@@ -1259,6 +1259,7 @@ static void processSwitchesConstants(MachineFunction &MF,
                                      SPIRVGlobalRegistry *GR,
                                      MachineIRBuilder MIB) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  LLVMContext &Ctx = MF.getFunction().getContext();
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       if (!isSpvIntrinsic(MI, Intrinsic::spv_switch))
@@ -1271,8 +1272,8 @@ static void processSwitchesConstants(MachineFunction &MF,
       for (unsigned i = 3; i < MI.getNumOperands(); i += 2) {
         Register Reg = MI.getOperand(i).getReg();
         MachineInstr *ConstInstr = getDefInstrMaybeConstant(Reg, &MRI);
-        NewOperands.push_back(
-            MachineOperand::CreateCImm(getSwitchCaseValue(ConstInstr, MRI)));
+        NewOperands.push_back(MachineOperand::CreateCImm(
+            getSwitchCaseValue(ConstInstr, MRI, Ctx)));
 
         NewOperands.push_back(MI.getOperand(i + 1));
       }
