@@ -2039,10 +2039,7 @@ class Cursor(Structure):
     @property
     @cursor_null_guard
     def unary_operator(self) -> UnaryOperator:
-        """
-        Retrieves the opcode if this cursor points to a unary operator
-        :return:
-        """
+        """Retrieves the unary operator if this cursor has one."""
 
         if not hasattr(self, "_unopcode"):
             self._unopcode = conf.lib.clang_getCursorUnaryOperatorKind(self)
@@ -2488,9 +2485,7 @@ class BinaryOperator(BaseEnumeration):
 
 
 class UnaryOperator(BaseEnumeration):
-    """
-    Describes the UnaryOperator of a declaration
-    """
+    """A UnaryOperator describes an expression's of unary operator kind."""
 
     def __bool__(self):
         """Indicates whether this object is a valid UnaryOperator."""
