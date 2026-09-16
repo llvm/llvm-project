@@ -25,7 +25,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include <deque>
 
@@ -48,9 +47,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
       return false;
     }
   }
-  return GetNonCallSiteUnwindPlanFromAssembly(range, function_text.data(),
-                                              function_text.size(),
-                                              target_sp.get(), unwind_plan);
+  return GetNonCallSiteUnwindPlanFromAssembly(
+      range, function_text.data(), function_text.size(), unwind_plan);
 }
 
 static void DumpUnwindRowsToLog(Log *log, AddressRange range,
@@ -82,16 +80,13 @@ static void DumpInstToLog(Log *log, Instruction &inst,
 
 bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     AddressRange &range, uint8_t *opcode_data, size_t opcode_size,
-    Target *target, UnwindPlan &unwind_plan) {
+    UnwindPlan &unwind_plan) {
   if (opcode_data == nullptr || opcode_size == 0)
     return false;
 
   if (range.GetByteSize() == 0 || !range.GetBaseAddress().IsValid() ||
       !m_inst_emulator_up)
     return false;
-
-  m_target = target;
-  llvm::scope_exit clear_target([this] { m_target = nullptr; });
 
   // The instruction emulation subclass setup the unwind plan for the first
   // instruction.
@@ -271,9 +266,6 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 }
 
 bool UnwindAssemblyInstEmulation::EmulateOutlinedFunction(Address func_addr) {
-  if (!m_target)
-    return false;
-
   Symbol *symbol = func_addr.CalculateSymbolContextSymbol();
   if (!symbol)
     return false;
@@ -288,11 +280,14 @@ bool UnwindAssemblyInstEmulation::EmulateOutlinedFunction(Address func_addr) {
   if (helper_addr.GetFileAddress() != func_addr.GetFileAddress())
     return false;
 
+  SectionSP section_sp = helper_addr.GetSection();
+  if (!section_sp)
+    return false;
+
   const size_t byte_size = symbol->GetByteSize();
   std::vector<uint8_t> text(byte_size);
-  Status error;
-  if (m_target->ReadMemory(helper_addr, text.data(), byte_size, error) !=
-      byte_size)
+  if (section_sp->GetSectionData(text.data(), byte_size,
+                                 helper_addr.GetOffset()) != byte_size)
     return false;
 
   DisassemblerSP disasm_sp(Disassembler::DisassembleBytes(

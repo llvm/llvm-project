@@ -26,7 +26,6 @@ public:
   bool
   GetNonCallSiteUnwindPlanFromAssembly(lldb_private::AddressRange &func,
                                        uint8_t *opcode_data, size_t opcode_size,
-                                       lldb_private::Target *target,
                                        lldb_private::UnwindPlan &unwind_plan);
 
   bool
@@ -156,10 +155,6 @@ private:
   int64_t m_branch_offset = 0;
   // The instruction is a non-tail function call.
   bool m_branch_is_call = false;
-  // Borrowed for the duration of a scan, to resolve and read a callee that the
-  // outliner may have moved instructions into. Null when the plan is built
-  // from a raw buffer with no target behind it.
-  lldb_private::Target *m_target = nullptr;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_UNWINDASSEMBLY_INSTEMULATION_UNWINDASSEMBLYINSTEMULATION_H

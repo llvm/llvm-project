@@ -23,16 +23,13 @@
 #include "Plugins/Disassembler/LLVMC/DisassemblerLLVMC.h"
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
-#include "Plugins/Platform/Linux/PlatformLinux.h"
 #include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
 #include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "TestingSupport/TestUtilities.h"
-#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/Symbol.h"
-#include "lldb/Target/Target.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/TargetSelect.h"
@@ -62,16 +59,9 @@ void TestArm64InstEmulation::SetUpTestCase() {
   EmulateInstructionARM64::Initialize();
   ObjectFileELF::Initialize();
   SymbolFileSymtab::Initialize();
-  platform_linux::PlatformLinux::Initialize();
-  // Creating a Debugger requires a host platform. Set one explicitly so this
-  // does not depend on which host the test is built for.
-  ArchSpec linux_arm64("aarch64-pc-linux");
-  Platform::SetHostPlatform(
-      platform_linux::PlatformLinux::CreateInstance(true, &linux_arm64));
 }
 
 void TestArm64InstEmulation::TearDownTestCase() {
-  platform_linux::PlatformLinux::Terminate();
   SymbolFileSymtab::Terminate();
   ObjectFileELF::Terminate();
   EmulateInstructionARM64::Terminate();
@@ -114,7 +104,7 @@ TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
   sample_range = AddressRange(0x1000, sizeof(data));
 
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
-      sample_range, data, sizeof(data), /*target=*/nullptr, unwind_plan));
+      sample_range, data, sizeof(data), unwind_plan));
 
   // CFA=sp +0 => fp= <same> lr= <same>
   row = unwind_plan.GetRowForFunctionOffset(0);
@@ -243,7 +233,7 @@ TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
   sample_range = AddressRange(0x1000, sizeof(data));
 
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
-      sample_range, data, sizeof(data), /*target=*/nullptr, unwind_plan));
+      sample_range, data, sizeof(data), unwind_plan));
 
   // 0: CFA=sp +0 =>
   row = unwind_plan.GetRowForFunctionOffset(0);
@@ -397,7 +387,7 @@ TEST_F(TestArm64InstEmulation, TestFramelessThreeEpilogueFunction) {
   sample_range = AddressRange(0x1000, sizeof(data));
 
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
-      sample_range, data, sizeof(data), /*target=*/nullptr, unwind_plan));
+      sample_range, data, sizeof(data), unwind_plan));
 
   // 0: CFA=sp +0 =>
   row = unwind_plan.GetRowForFunctionOffset(0);
@@ -528,7 +518,7 @@ TEST_F(TestArm64InstEmulation, TestRegisterSavedTwice) {
   sample_range = AddressRange(0x1000, sizeof(data));
 
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
-      sample_range, data, sizeof(data), /*target=*/nullptr, unwind_plan));
+      sample_range, data, sizeof(data), unwind_plan));
 
   row = unwind_plan.GetRowForFunctionOffset(36);
   EXPECT_EQ(28, row->GetOffset());
@@ -641,7 +631,7 @@ TEST_F(TestArm64InstEmulation, TestRegisterDoubleSpills) {
   sample_range = AddressRange(0x1000, sizeof(data));
 
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
-      sample_range, data, sizeof(data), /*target=*/nullptr, unwind_plan));
+      sample_range, data, sizeof(data), unwind_plan));
 
   //  28: CFA=fp+16 => x27=[CFA-24] x28=[CFA-32] fp=[CFA-16] lr=[CFA-8]
   //  d8=[CFA-40] d9=[CFA-48] d10=[CFA-56] d11=[CFA-64] d12=[CFA-72]
@@ -789,7 +779,7 @@ TEST_F(TestArm64InstEmulation, TestCFARegisterTrackedAcrossJumps) {
   sample_range = AddressRange(0x1000, sizeof(data));
 
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
-      sample_range, data, sizeof(data), /*target=*/nullptr, unwind_plan));
+      sample_range, data, sizeof(data), unwind_plan));
 
   // Confirm CFA at mid-func epilogue 'ret' is $sp+0
   row = unwind_plan.GetRowForFunctionOffset(40);
@@ -869,7 +859,7 @@ TEST_F(TestArm64InstEmulation, TestCFAResetToSP) {
   sample_range = AddressRange(0x1000, sizeof(data));
 
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
-      sample_range, data, sizeof(data), /*target=*/nullptr, unwind_plan));
+      sample_range, data, sizeof(data), unwind_plan));
 
   // Confirm CFA before epilogue instructions is in terms of $fp
   row = unwind_plan.GetRowForFunctionOffset(12);
@@ -936,7 +926,7 @@ TEST_F(TestArm64InstEmulation, TestPrologueStartsWithStrD8) {
   sample_range = AddressRange(0x1000, sizeof(data));
 
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
-      sample_range, data, sizeof(data), /*target=*/nullptr, unwind_plan));
+      sample_range, data, sizeof(data), unwind_plan));
 
   //   4: CFA=sp+32 => d8=[CFA-32]
   row = unwind_plan.GetRowForFunctionOffset(4);
@@ -1048,7 +1038,7 @@ TEST_F(TestArm64InstEmulation, TestMidFunctionEpilogueAndBackwardsJump) {
   sample_range = AddressRange(0x1000, sizeof(data));
 
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
-      sample_range, data, sizeof(data), /*target=*/nullptr, unwind_plan));
+      sample_range, data, sizeof(data), unwind_plan));
 
   // At the end of prologue (+12), CFA = fp + 16.
   // <+0>:  sub    sp, sp, #0x30
@@ -1121,12 +1111,10 @@ namespace {
 constexpr size_t kCallerSize = 16;
 
 /// An ELF module holding a `caller` function at 0x1000 immediately followed by
-/// an OUTLINED_FUNCTION_TEST helper, plus a Target able to read it.
+/// an OUTLINED_FUNCTION_TEST helper.
 struct OutlinedFunctionFixture {
   std::optional<TestFile> file;
   ModuleSP module_sp;
-  DebuggerSP debugger_sp;
-  TargetSP target_sp;
   Address caller_addr;
 };
 
@@ -1171,15 +1159,7 @@ Symbols:
   fixture.file = std::move(*file);
 
   fixture.module_sp = std::make_shared<Module>(fixture.file->moduleSpec());
-  fixture.debugger_sp = Debugger::CreateInstance();
-  if (!fixture.module_sp || !fixture.debugger_sp)
-    return std::nullopt;
-
-  PlatformSP platform_sp;
-  fixture.debugger_sp->GetTargetList().CreateTarget(
-      *fixture.debugger_sp, "", fixture.module_sp->GetArchitecture(),
-      eLoadDependentsNo, platform_sp, fixture.target_sp);
-  if (!fixture.target_sp)
+  if (!fixture.module_sp)
     return std::nullopt;
 
   if (!fixture.module_sp->ResolveFileAddress(0x1000, fixture.caller_addr))
@@ -1221,7 +1201,7 @@ TEST_F(TestArm64InstEmulation, TestOutlinedPrologueIsFollowed) {
 
   UnwindPlan unwind_plan(eRegisterKindLLDB);
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
-      sample_range, text, kCallerSize, fixture->target_sp.get(), unwind_plan));
+      sample_range, text, kCallerSize, unwind_plan));
 
   UnwindPlan::Row::AbstractRegisterLocation regloc;
 
@@ -1285,7 +1265,7 @@ TEST_F(TestArm64InstEmulation, TestBranchingOutlinedFunctionIsNotFollowed) {
 
   UnwindPlan unwind_plan(eRegisterKindLLDB);
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
-      sample_range, text, kCallerSize, fixture->target_sp.get(), unwind_plan));
+      sample_range, text, kCallerSize, unwind_plan));
 
   // The call adds no row of its own: the state after it is still the one
   // established at offset 4 by the caller's own save.

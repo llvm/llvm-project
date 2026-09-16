@@ -13,6 +13,5 @@ add_lldb_unittest(Arm64InstEmulationTests
     lldbPluginProcessUtility
     lldbPluginObjectFileELF
     lldbPluginSymbolFileSymtab
-    lldbPluginPlatformLinux
     lldbUtilityHelpers
   )
