@@ -70,6 +70,7 @@
 ; SPIRV-O0-NEXT:      Fixup Statepoint Caller Saved
 ; SPIRV-O0-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-O0-NEXT:      Machine Optimization Remark Emitter
+; SPIRV-O0-NEXT:      Machine Register Class Info Analysis
 ; SPIRV-O0-NEXT:      Prologue/Epilogue Insertion & Frame Finalization
 ; SPIRV-O0-NEXT:      Post-RA pseudo instruction expansion pass
 ; SPIRV-O0-NEXT:      Analyze Machine Code For Garbage Collection
