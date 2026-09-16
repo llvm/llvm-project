@@ -3429,7 +3429,16 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       // Scaling FrameReg in place is the last resort when there is nothing to
       // scavenge. It has to be undone after MI, which is only possible while MI
       // does not use FrameReg for anything besides the frame index.
+      // Lowering a second frame index on the same MI would read FrameReg after
+      // it has been scaled in place, and any emergency spill in between would
+      // use the scaled value as its scratch offset, so require this to be the
+      // only frame index left.
+      bool IsOnlyFrameIndex =
+          llvm::count_if(MI->operands(), [](const MachineOperand &MO) {
+            return MO.isFI();
+          }) == 1;
       bool CanUseFrameRegAsScratch = IsSALU && !LiveSCC && FrameReg &&
+                                     IsOnlyFrameIndex &&
                                      !MI->readsRegister(FrameReg, this) &&
                                      !MI->modifiesRegister(FrameReg, this);
 
