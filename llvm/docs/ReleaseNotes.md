@@ -161,10 +161,18 @@ Makes programs 10x faster by doing Special New Thing.
   The `llvm.vp.merge` will be folded away but the `%evl` will be propagated to
   the add instruction.
 
+* Introduced the generic `!atomic.ignore.denormal.mode` metadata for
+  floating-point `atomicrmw` instructions, generalizing the previously
+  AMDGPU-specific `!amdgpu.ignore.denormal.mode`.
+
 ### Changes to LLVM infrastructure
 
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be
   controlled by setting the `"float-abi"` module flag.
+
+* Removed `TargetOptions::EABIVersion` and the `llc`/`opt` `-meabi` flag. The
+  GNU-vs-EABI distinction is now derived entirely from the target triple's
+  environment (e.g. `arm-none-gnueabi` vs `arm-none-eabi`).
 
 ### Changes to building LLVM
 
@@ -246,6 +254,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Removed support for the `Ventana Conditional Operations` extension.
 * Added support for `tail symbol, rt` form that takes an address (materialisation)
   register, that is used when software guarded branch is needed.
+* Updated the experimental `Zvzip` extension to the v0.3 draft specification.
+* Added the experimental `RVA23P1S64` and `RVB23P1S64` profiles.
 
 ### Changes to the WebAssembly Backend
 
@@ -260,9 +270,16 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the OCaml bindings
 
+* Removed the `size_of` and `align_of` functions. Create a constant based on
+  the result of `DataLayout.abi_size` or `DataLayout.abi_align` instead.
+
 ### Changes to the Python bindings
 
 ### Changes to the C API
+
+* `LLVMAlignOf()` and `LLVMSizeOf()` have been deprecated. Create a constant
+  based on the result of `LLVMABIAlignmentOfType()` or `LLVMABISizeOfType()`
+  instead.
 
 ### Changes to the CodeGen infrastructure
 

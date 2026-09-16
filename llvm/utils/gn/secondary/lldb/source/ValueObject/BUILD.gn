@@ -39,6 +39,7 @@ static_library("ValueObject") {
     "ValueObjectList.cpp",
     "ValueObjectMemory.cpp",
     "ValueObjectRegister.cpp",
+    "ValueObjectSynthesizedValue.cpp",
     "ValueObjectSynthetic.cpp",
     "ValueObjectUpdater.cpp",
     "ValueObjectVTable.cpp",
