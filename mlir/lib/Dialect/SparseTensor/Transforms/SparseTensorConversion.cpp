@@ -588,8 +588,14 @@ public:
   LogicalResult
   matchAndRewrite(NumberOfEntriesOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Query values array size for the actually stored values size.
     auto stt = getSparseTensorType(op.getTensor());
+    // Loose-compressed tensors may have holes in their values buffer. Their
+    // entry counts must be lowered to foreach before converting storage.
+    if (llvm::any_of(stt.getLvlTypes(), isLooseCompressedLT))
+      return rewriter.notifyMatchFailure(
+          op, "loose-compressed entry count must be lowered to foreach");
+
+    // Query values array size for the actually stored values size.
     auto vals = genValuesCall(rewriter, op.getLoc(), stt, adaptor.getTensor());
     auto zero = constantIndex(rewriter, op.getLoc(), 0);
     rewriter.replaceOpWithNewOp<memref::DimOp>(op, vals, zero);
