@@ -180,13 +180,8 @@ NativeProcessWindows::GetThreadByID(lldb::tid_t thread_id) {
 Status NativeProcessWindows::Halt() {
   bool caused_stop = false;
   StateType state = GetState();
-  if (state != eStateStopped) {
-    m_pending_halt = true;
-    Status err = HaltProcess(caused_stop);
-    if (err.Fail() || !caused_stop)
-      m_pending_halt = false;
-    return err;
-  }
+  if (state != eStateStopped)
+    return HaltProcess(caused_stop);
   return Status();
 }
 
@@ -599,13 +594,13 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
   }
 
   // Our own DebugBreakProcess() injection, used to implement
-  // Halt()/Interrupt().
-  if (m_pending_halt) {
+  // Halt()/Interrupt(). The int3 runs on a thread the OS created for us, which
+  // is what tells it apart from an int3 the inferior itself executed.
+  if (IsBreakInThread(thread_id)) {
     LLDB_LOG(log,
              "DebugBreakProcess injection treated as Halt SIGSTOP for tid "
              "{0:x}",
              thread_id);
-    m_pending_halt = false;
     ThreadStopInfo signal_info;
     signal_info.reason = StopReason::eStopReasonSignal;
     signal_info.signo = 19; // SIGSTOP on POSIX
@@ -696,7 +691,10 @@ NativeProcessWindows::OnDebugException(bool first_chance,
   return result;
 }
 
-void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
+void NativeProcessWindows::OnCreateThread(const HostThread &new_thread,
+                                          lldb::addr_t start_address) {
+  ProcessDebugger::OnCreateThread(new_thread, start_address);
+
   llvm::sys::ScopedLock lock(m_mutex);
 
   auto thread = std::make_unique<NativeThreadWindows>(*this, new_thread);
@@ -724,6 +722,8 @@ void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
 
 void NativeProcessWindows::OnExitThread(lldb::tid_t thread_id,
                                         uint32_t exit_code) {
+  ProcessDebugger::OnExitThread(thread_id, exit_code);
+
   std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   llvm::erase_if(m_threads, [thread_id](const auto &t) {
     return t->GetID() == thread_id;

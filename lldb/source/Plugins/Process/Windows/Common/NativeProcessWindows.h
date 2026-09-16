@@ -131,7 +131,8 @@ public:
   void OnDebuggerConnected(lldb::addr_t image_base) override;
   ExceptionResult OnDebugException(bool first_chance,
                                    const ExceptionRecord &record) override;
-  void OnCreateThread(const HostThread &thread) override;
+  void OnCreateThread(const HostThread &thread,
+                      lldb::addr_t start_address) override;
   void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) override;
   DllEventAction OnLoadDll(const ModuleSpec &module_spec,
                            lldb::addr_t module_addr,
@@ -186,9 +187,6 @@ private:
 
   bool m_expecting_loader_int3 = false;
 
-  /// Set when Halt() / Interrupt() schedules a DebugBreakProcess injection.
-  bool m_pending_halt = false;
-
   bool m_client_supports_libraries_read = false;
 
   /// PseudoConsole for the lldb-server stdio-forwarding path.
@@ -229,8 +227,9 @@ public:
     return m_process.OnDebugException(first_chance, record);
   }
 
-  void OnCreateThread(const HostThread &thread) override {
-    m_process.OnCreateThread(thread);
+  void OnCreateThread(const HostThread &thread,
+                      lldb::addr_t start_address) override {
+    m_process.OnCreateThread(thread, start_address);
   }
 
   void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) override {

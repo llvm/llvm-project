@@ -301,12 +301,8 @@ Status ProcessWindows::DoDestroy() {
 
 Status ProcessWindows::DoHalt(bool &caused_stop) {
   StateType state = GetPrivateState();
-  if (state != eStateStopped) {
-    m_pending_halt = true;
-    Status error = HaltProcess(caused_stop);
-    if (error.Fail() || !caused_stop)
-      m_pending_halt = false;
-  }
+  if (state != eStateStopped)
+    return HaltProcess(caused_stop);
   caused_stop = false;
   return Status();
 }
@@ -722,12 +718,13 @@ ProcessWindows::OnDebugException(bool first_chance,
   switch (record.GetExceptionValue()) {
   case EXCEPTION_BREAKPOINT: {
     const lldb::addr_t bp_addr = record.GetExceptionAddress();
-    if (m_pending_halt) {
-      m_pending_halt = false;
-    } else if (m_expecting_loader_int3 && first_chance &&
-               m_session_data->m_initial_stop_received &&
-               !GetBreakpointSiteList().FindByAddress(bp_addr) &&
-               IsSystemModuleAddress(bp_addr)) {
+    // A break-in thread's int3 is the one we asked DebugBreakProcess() for, so
+    // it must reach the generic breakpoint handling below even though it lands
+    // in ntdll.
+    if (!IsBreakInThread(record.GetThreadID()) && m_expecting_loader_int3 &&
+        first_chance && m_session_data->m_initial_stop_received &&
+        !GetBreakpointSiteList().FindByAddress(bp_addr) &&
+        IsSystemModuleAddress(bp_addr)) {
       m_expecting_loader_int3 = false;
       LLDB_LOG(log,
                "Skipping expected loader breakpoint at address {0:x} in a "
@@ -781,7 +778,10 @@ ProcessWindows::OnDebugException(bool first_chance,
   return result;
 }
 
-void ProcessWindows::OnCreateThread(const HostThread &new_thread) {
+void ProcessWindows::OnCreateThread(const HostThread &new_thread,
+                                    lldb::addr_t start_address) {
+  ProcessDebugger::OnCreateThread(new_thread, start_address);
+
   llvm::sys::ScopedLock lock(m_mutex);
 
   ThreadSP thread = std::make_shared<TargetThreadWindows>(*this, new_thread);
@@ -802,6 +802,8 @@ void ProcessWindows::OnCreateThread(const HostThread &new_thread) {
 }
 
 void ProcessWindows::OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) {
+  ProcessDebugger::OnExitThread(thread_id, exit_code);
+
   llvm::sys::ScopedLock lock(m_mutex);
 
   // On a forced termination, we may get exit thread events after the session

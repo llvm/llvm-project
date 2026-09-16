@@ -34,9 +34,10 @@ LocalDebugDelegate::OnDebugException(bool first_chance,
     return ExceptionResult::MaskException;
 }
 
-void LocalDebugDelegate::OnCreateThread(const HostThread &thread) {
+void LocalDebugDelegate::OnCreateThread(const HostThread &thread,
+                                        lldb::addr_t start_address) {
   if (ProcessWindowsSP process = GetProcessPointer())
-    process->OnCreateThread(thread);
+    process->OnCreateThread(thread, start_address);
 }
 
 void LocalDebugDelegate::OnExitThread(lldb::tid_t thread_id,
