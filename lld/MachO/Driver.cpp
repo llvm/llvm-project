@@ -172,7 +172,7 @@ getSearchPaths(unsigned optionCode, InputArgList &args,
   StringRef optionLetter{optionCode == OPT_F ? "F" : "L"};
   for (StringRef path : args::getStrings(args, optionCode))
     for (StringRef searchPath : getRerootedSearchPaths(path, roots))
-      if (warnIfNotDirectory(optionLetter, searchPath))
+      if (searchPath != path || warnIfNotDirectory(optionLetter, searchPath))
         paths.push_back(searchPath);
 
   // `-Z` suppresses the standard "system" search paths.
