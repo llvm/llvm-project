@@ -167,6 +167,8 @@ def fdisable_integer_2 : Flag<["-"],"fdisable-integer-2">, Group<f_Group>,
   HelpText<"Disable integer(KIND=2) from TargetCharacteristics">, Flags<[HelpHidden]>;
 def fdisable_integer_16 : Flag<["-"],"fdisable-integer-16">, Group<f_Group>,
   HelpText<"Disable integer(KIND=16) from TargetCharacteristics">, Flags<[HelpHidden]>;
+def fdisable_real_16 : Flag<["-"], "fdisable-real-16">, Group<f_Group>,
+  HelpText<"Disable real(KIND=16) from TargetCharacteristics">, Flags<[HelpHidden]>;
 def flarge_sizes : Flag<["-"],"flarge-sizes">, Group<f_Group>,
   HelpText<"Use INTEGER(KIND=8) for the result type in size-related intrinsics">;
 
