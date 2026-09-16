@@ -145,3 +145,27 @@ __INT_LEAST32_TYPE__ test_aligned_les32(const unsigned char *p) { return stdc_lo
 // BE: load i32, ptr {{.+}}, align 4
 // BE-NOT: bswap
 __INT_LEAST32_TYPE__ test_aligned_bes32(const unsigned char *p) { return stdc_load8_aligned_bes32(p); }
+
+// The unaligned variants must not throw away alignment info that is already
+// known for the pointer expression: buf's declared alignment is 4, so the
+// load should use align 4, not be forced down to align 1.
+alignas(4) unsigned char buf4[4];
+// LE-LABEL: @test_leu32_known_alignment(
+// LE: load i32, ptr @buf4, align 4
+// LE-NOT: bswap
+// BE-LABEL: @test_leu32_known_alignment(
+// BE: load i32, ptr @buf4, align 4
+// BE: call i32 @llvm.bswap.i32(
+__UINT_LEAST32_TYPE__ test_leu32_known_alignment(void) { return stdc_load8_leu32(buf4); }
+
+// The aligned variants must keep a stronger alignment than the minimum they
+// require: buf16's declared alignment (16) exceeds the 4-byte alignment
+// stdc_load8_aligned_leu32 needs, so the load should use align 16.
+alignas(16) unsigned char buf16[4];
+// LE-LABEL: @test_aligned_leu32_stronger_known_alignment(
+// LE: load i32, ptr @buf16, align 16
+// LE-NOT: bswap
+// BE-LABEL: @test_aligned_leu32_stronger_known_alignment(
+// BE: load i32, ptr @buf16, align 16
+// BE: call i32 @llvm.bswap.i32(
+__UINT_LEAST32_TYPE__ test_aligned_leu32_stronger_known_alignment(void) { return stdc_load8_aligned_leu32(buf16); }
