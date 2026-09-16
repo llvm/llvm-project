@@ -3930,6 +3930,18 @@ Ex2Op::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   return {id, {mt.lookupValue(thisOp.getSrc())}};
 }
 
+LogicalResult NVVM::Ex2Op::verify() {
+  auto vectorType = dyn_cast<VectorType>(getSrc().getType());
+  if (!vectorType)
+    return success();
+
+  if (vectorType.getElementType().isF16() && getFtz())
+    return emitOpError("FTZ is not supported for vector<2xf16>");
+  if (vectorType.getElementType().isBF16() && !getFtz())
+    return emitOpError("FTZ is required for vector<2xbf16>");
+  return success();
+}
+
 mlir::NVVM::IDArgPair
 RsqrtOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
                                llvm::IRBuilderBase &builder) {
@@ -4255,13 +4267,19 @@ mlir::NVVM::IDArgPair MBarrierArriveDropOp::getIntrinsicIDAndArgs(
   if (needCast)
     mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
 
+  // We have the most basic mbarrier.arrive_drop supported on sm_80.
+  // It supports: Space=cta, scope=cta, No relaxed, No explicit count.
+  // So, only for this combination use the legacy intrinsic.
+  bool hasCount = static_cast<bool>(thisOp.getCount());
+  if (!hasCount &&
+      (id == llvm::Intrinsic::nvvm_mbarrier_arrive_drop_scope_cta_space_cta))
+    return {llvm::Intrinsic::nvvm_mbarrier_arrive_drop_shared, {mbar}};
+
   // When count is not explicitly specified, the default is 1.
   llvm::LLVMContext &ctx = mt.getLLVMContext();
-  bool hasCount = static_cast<bool>(thisOp.getCount());
   llvm::Value *count =
       hasCount ? mt.lookupValue(thisOp.getCount())
                : llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1);
-
   return {id, {mbar, count}};
 }
 
