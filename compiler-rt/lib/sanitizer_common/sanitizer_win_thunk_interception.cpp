@@ -91,6 +91,7 @@ extern "C" int __sanitizer_thunk_init() {
 #  pragma section(".CRT$XIB", long, read)
 extern "C" IN_SECTION(".CRT$XIB") int (*__sanitizer_thunk_init_ptr)() =
     __sanitizer_thunk_init;
+WIN_FORCE_LINK(__sanitizer_thunk_init_ptr)
 
 static void WINAPI sanitizer_thunk_thread_init(void *mod, unsigned long reason,
                                                void *reserved) {
@@ -102,5 +103,6 @@ static void WINAPI sanitizer_thunk_thread_init(void *mod, unsigned long reason,
 extern "C" IN_SECTION(".CRT$XLAB") void(
     WINAPI* __sanitizer_thunk_thread_init_ptr)(void*, unsigned long, void*) =
     sanitizer_thunk_thread_init;
+WIN_FORCE_LINK(__sanitizer_thunk_thread_init_ptr)
 #endif  // defined(SANITIZER_STATIC_RUNTIME_THUNK) ||
         // defined(SANITIZER_DYNAMIC_RUNTIME_THUNK)
