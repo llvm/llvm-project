@@ -209,3 +209,21 @@ void test_macros(int in_int) {
   _Static_assert(_Generic(c, int : 1));
   _Static_assert(_Generic(result, int : 1));
 }
+
+// Regression test for #164930: `auto <typedef-name> <var>;` should parse as a
+// declaration of <var> with type <typedef-name> (auto used as storage-class in
+// C23 with an explicit type-name), not as inferred type deduction on the
+// typedef.
+void test_auto_typedef(void) {
+  typedef int T;
+  {
+    auto T at_local;
+    at_local = 42;
+    _Static_assert(_Generic(at_local, int : 1));
+  }
+  {
+    // Also works with qualifiers.
+    const auto T at_const = 1;
+    _Static_assert(_Generic(&at_const, const int * : 1));
+  }
+}

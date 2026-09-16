@@ -4119,6 +4119,27 @@ void Parser::ParseDeclarationSpecifiers(
       break;
     case tok::kw_auto:
       if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
+        // FIXME: In C++, `auto` as a storage-class specifier is a
+        // deprecated extension. This lookahead runs for C only; teaching it
+        // to also recognize typedef-names in C++ would require broader
+        // design discussion around `ext_auto_storage_class`. See
+        // https://github.com/llvm/llvm-project/issues/164930.
+        auto IsTypedefName = [&](const Token &T) {
+          if (!T.is(tok::identifier))
+            return false;
+          IdentifierInfo *II = T.getIdentifierInfo();
+          if (!II)
+            return false;
+          // Use a raw suppressed lookup (rather than Sema::getTypeName) to
+          // avoid emitting deprecation/availability diagnostics on the
+          // typedef during this speculative peek — the real parse will look
+          // the name up again and emit them at the right time.
+          LookupResult R(Actions, II, T.getLocation(), Sema::LookupOrdinaryName);
+          Actions.LookupName(R, getCurScope(),
+                             /*AllowBuiltinCreation=*/false);
+          R.suppressDiagnostics();
+          return R.isSingleResult() && isa<TypeDecl>(R.getFoundDecl());
+        };
         auto MayBeTypeSpecifier = [&]() {
           // In pre-C23 C, auto can be used as a storage-class specifier.
           // C23 removes auto from the storage-class specifiers and repurposes
@@ -4131,6 +4152,16 @@ void Parser::ParseDeclarationSpecifiers(
           while (true) {
             const Token &T = GetLookAheadToken(I);
             if (isKnownToBeTypeSpecifier(T))
+              return true;
+
+            // C23: a bare identifier that names a typedef is a type
+            // specifier here, so `auto typedefName varName;` should be
+            // parsed with `auto` as the storage-class specifier — not as
+            // type inference. Without this check the parser would consume
+            // `auto` as type-inference and then error on the missing
+            // initializer for what it thinks is `typedefName` (issue
+            // #164930).
+            if (getLangOpts().C23 && IsTypedefName(T))
               return true;
 
             if (getLangOpts().C23 && isTypeSpecifierQualifier(T))
