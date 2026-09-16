@@ -319,6 +319,78 @@ define void @test_atomic_store_stream_seqcst_double(ptr %ptr, double %val) nounw
 }
 
 ;
+; STCPH
+;
+
+define void @test_atomic_store_stcph_relaxed_i8(ptr %ptr, i8 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_stcph_relaxed_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stcph
+; CHECK-NEXT:    strb w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i8 %val, ptr %ptr monotonic, align 8, !mem.cache_hint !4
+  ret void
+}
+
+define void @test_atomic_store_stcph_release_i64(ptr %ptr, i64 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_stcph_release_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stcph
+; CHECK-NEXT:    stlr x1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i64 %val, ptr %ptr release, align 8, !mem.cache_hint !4
+  ret void
+}
+
+;
+; SHUH
+;
+
+define void @test_atomic_store_shuh_relaxed_i8(ptr %ptr, i8 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_relaxed_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh{{$}}
+; CHECK-NEXT:    strb w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i8 %val, ptr %ptr monotonic, align 8, !mem.cache_hint !6
+  ret void
+}
+
+define void @test_atomic_store_shuh_release_i64(ptr %ptr, i64 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_release_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh{{$}}
+; CHECK-NEXT:    stlr x1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i64 %val, ptr %ptr release, align 8, !mem.cache_hint !6
+  ret void
+}
+
+;
+; SHUH PH
+;
+
+define void @test_atomic_store_shuh_ph_relaxed_i8(ptr %ptr, i8 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_ph_relaxed_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh ph
+; CHECK-NEXT:    strb w1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i8 %val, ptr %ptr monotonic, align 8, !mem.cache_hint !8
+  ret void
+}
+
+define void @test_atomic_store_shuh_ph_release_i64(ptr %ptr, i64 %val) nounwind {
+; CHECK-LABEL: test_atomic_store_shuh_ph_release_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shuh ph
+; CHECK-NEXT:    stlr x1, [x0]
+; CHECK-NEXT:    ret
+  store atomic i64 %val, ptr %ptr release, align 8, !mem.cache_hint !8
+  ret void
+}
+
+;
 ; Invalid Hint
 ;
 
@@ -327,7 +399,7 @@ define void @test_atomic_store_invalid_hint(ptr %ptr, i8 %val) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stlrb w1, [x0]
 ; CHECK-NEXT:    ret
-  store atomic i8 %val, ptr %ptr release, align 8, !mem.cache_hint !4
+  store atomic i8 %val, ptr %ptr release, align 8, !mem.cache_hint !10
   ret void
 }
 
@@ -337,3 +409,9 @@ define void @test_atomic_store_invalid_hint(ptr %ptr, i8 %val) nounwind {
 !3 = !{!"aarch64.mem_hint", i32 1}
 !4 = !{i32 1, !5}
 !5 = !{!"aarch64.mem_hint", i32 2}
+!6 = !{i32 1, !7}
+!7 = !{!"aarch64.mem_hint", i32 3}
+!8 = !{i32 1, !9}
+!9 = !{!"aarch64.mem_hint", i32 4}
+!10 = !{i32 1, !11}
+!11 = !{!"aarch64.mem_hint", i32 5}
