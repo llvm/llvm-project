@@ -47,23 +47,16 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   if (!MappingConfig::get().UseEventsForAtomicTransfers)
     return OFFLOAD_SUCCESS;
 
-  void *Event = getEvent();
-  bool NeedNewEvent = Event == nullptr;
-  if (NeedNewEvent && Device.createEvent(&Event) != OFFLOAD_SUCCESS) {
-    REPORT() << "Failed to create event";
-    return OFFLOAD_FAIL;
-  }
-
   // We cannot assume the event should not be nullptr because we don't
   // know if the target support event. But if a target doesn't,
   // recordEvent should always return success.
-  if (Device.recordEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
+  void *Event = getEvent();
+  if (Device.recordEvent(&Event, AsyncInfo) != OFFLOAD_SUCCESS) {
     REPORT() << "Failed to set dependence on event " << Event;
     return OFFLOAD_FAIL;
   }
 
-  if (NeedNewEvent)
-    setEvent(Event);
+  setEvent(Event);
 
   return OFFLOAD_SUCCESS;
 }
@@ -512,24 +505,48 @@ int32_t DeviceTy::queryAsync(AsyncInfoTy &AsyncInfo) {
   return OFFLOAD_SUCCESS;
 }
 
-int32_t DeviceTy::createEvent(void **Event) {
-  return RTL->create_event(RTLDeviceID, Event);
-}
+int32_t DeviceTy::recordEvent(void **Event, AsyncInfoTy &AsyncInfo) {
+  ol_event_handle_t NewEvent;
+  if (auto Res =
+          olCreateEvent(AsyncInfo.getQueue(), OL_EVENT_FLAGS_NONE, &NewEvent)) {
+    REPORT() << "Failure to record event: " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
 
-int32_t DeviceTy::recordEvent(void *Event, AsyncInfoTy &AsyncInfo) {
-  return RTL->record_event(RTLDeviceID, Event, AsyncInfo);
+  if (*Event) {
+    if (auto Res = olDestroyEvent(static_cast<ol_event_handle_t>(*Event)))
+      REPORT() << "Failure to destroy previous event " << *Event << ": "
+               << Res->Details;
+  }
+
+  *Event = NewEvent;
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::waitEvent(void *Event, AsyncInfoTy &AsyncInfo) {
-  return RTL->wait_event(RTLDeviceID, Event, AsyncInfo);
+  ol_event_handle_t E = static_cast<ol_event_handle_t>(Event);
+  if (auto Res = olWaitEvents(AsyncInfo.getQueue(), &E, 1)) {
+    REPORT() << "Failure to wait for event " << Event << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::syncEvent(void *Event) {
-  return RTL->sync_event(RTLDeviceID, Event);
+  if (auto Res = olSyncEvent(static_cast<ol_event_handle_t>(Event))) {
+    REPORT() << "Failure to synchronize event " << Event << ": "
+             << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::destroyEvent(void *Event) {
-  return RTL->destroy_event(RTLDeviceID, Event);
+  if (auto Res = olDestroyEvent(static_cast<ol_event_handle_t>(Event))) {
+    REPORT() << "Failure to destroy event " << Event << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 void DeviceTy::dumpOffloadEntries() {
