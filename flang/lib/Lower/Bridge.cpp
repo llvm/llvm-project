@@ -3488,6 +3488,12 @@ private:
   /// DO CONSTRUCT (see findNestedDoConstructEvaluation): since the
   /// directive is neither part of the collapsed loop's body nor attached
   /// to a DO statement that is separately lowered, it has no effect.
+  ///
+  /// This uses mlir::emitWarning rather than SemanticsContext::Warn:
+  /// SemanticsContext::EmitMessages runs once, immediately after semantic
+  /// analysis and before lowering ever starts (see FrontendAction.cpp and
+  /// bbc.cpp), so a Warn() call made here during lowering would be buffered
+  /// into the SemanticsContext's message list and never flushed to output.
   void warnAboutSkippedDirectives(
       llvm::ArrayRef<Fortran::lower::pft::Evaluation *> skipped) {
     for (Fortran::lower::pft::Evaluation *e : skipped)
