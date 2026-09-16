@@ -273,6 +273,30 @@ TEST(LegalizerInfoTest, RuleSets) {
     EXPECT_ACTION(WidenScalar, 1, v2s32, LegalityQuery(G_SELECT, {v2p1, v2s1}));
   }
 
+  // Test maxScalarSameAs
+  {
+    LegalizerInfo LI;
+
+    LI.getActionDefinitionsBuilder(G_CTPOP).maxScalarSameAs(0, 1);
+
+    EXPECT_ACTION(Unsupported, 0, LLT(), LegalityQuery(G_CTPOP, {v4s32, v4s32}));
+    EXPECT_ACTION(NarrowScalar, 0, v2s16,
+                  LegalityQuery(G_CTPOP, {v2s32, v2s16}));
+    EXPECT_ACTION(NarrowScalar, 0, s16, LegalityQuery(G_CTPOP, {s32, s16}));
+  }
+
+  // Test minScalarSameAs
+  {
+    LegalizerInfo LI;
+
+    LI.getActionDefinitionsBuilder(G_CTPOP).minScalarSameAs(0, 1);
+
+    EXPECT_ACTION(Unsupported, 0, LLT(), LegalityQuery(G_CTPOP, {v4s32, v4s32}));
+    EXPECT_ACTION(WidenScalar, 0, v2s32,
+                  LegalityQuery(G_CTPOP, {v2s16, v2s32}));
+    EXPECT_ACTION(WidenScalar, 0, s32, LegalityQuery(G_CTPOP, {s16, s32}));
+  }
+
   // Test immIs
   {
     LegalizerInfo LI;
