@@ -1212,6 +1212,9 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
     return false;
   }
 
+  if (BuiltinID == AArch64::BI__clrex)
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 15);
+
   if (CheckNeonBuiltinFunctionCall(TI, BuiltinID, TheCall))
     return true;
 
