@@ -402,6 +402,20 @@ def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
 }
 
 //===----------------------------------------------------------------------===//
+// CUDADeviceSurfaceType
+//===----------------------------------------------------------------------===//
+
+def CIR_CUDADeviceSurfaceType :
+    CIR_Type<"CUDADeviceSurface", "cuda_surface"> {
+  let summary = "CUDA device surface reference type";
+  let description = [{
+    `!cir.cuda_surface` represents a CUDA built-in surface reference in CIR.
+    The type preserves surface semantics at the CIR level and lowers to the NVPTX
+    device-side handle representation (`i64`) during lowering to LLVM IR.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CUDADeviceTextureType
 //===----------------------------------------------------------------------===//
 
@@ -735,11 +749,6 @@ def CIR_BitFieldType : CIR_Type<"BitField", "bitfield", [
       return offset;
     }
 
-    /// The size of the type this unit's bit-field was declared with, which
-    /// can exceed the storage type's size.  Returns nullopt when the unit
-    /// holds more than one bit-field.
-    std::optional<uint64_t>
-    getSoleDeclaredExtentInBits(const mlir::DataLayout &dataLayout) const;
   }];
 
   let genVerifyDecl = 1;
@@ -1169,7 +1178,8 @@ def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_IntType,
   CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
   CIR_UnionType, CIR_BitFieldType,
-  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceTextureType,
+  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceSurfaceType,
+  CIR_CUDADeviceTextureType,
   CIR_DataMemberType, CIR_MethodType,
   CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType
 ]>;

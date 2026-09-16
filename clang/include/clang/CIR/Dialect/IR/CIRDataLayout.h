@@ -120,6 +120,15 @@ public:
   bool typeSizeEqualsStoreSize(mlir::Type ty) const {
     return getTypeSizeInBits(ty) == getTypeStoreSizeInBits(ty);
   }
+
+  mlir::ptr::MemorySpaceAttrInterface
+  getAllocaAddrSpace(mlir::MLIRContext *ctx) {
+    auto allocaASAttr = mlir::dyn_cast_if_present<mlir::IntegerAttr>(
+        layout.getAllocaMemorySpace());
+    if (!allocaASAttr)
+      return {};
+    return cir::TargetAddressSpaceAttr::get(ctx, allocaASAttr.getUInt());
+  }
 };
 
 } // namespace cir

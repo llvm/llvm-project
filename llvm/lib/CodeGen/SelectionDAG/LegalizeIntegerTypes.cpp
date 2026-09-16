@@ -6578,7 +6578,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_CONCAT_VECTORS(SDNode *N) {
   unsigned NumElems = N->getNumOperands();
 
   if (ResVT.isScalableVector()) {
-    SDValue ResVec = DAG.getUNDEF(ResVT);
+    SDValue ResVec = DAG.getPOISON(ResVT);
 
     for (unsigned OpIdx = 0; OpIdx < NumElems; ++OpIdx) {
       SDValue Op = N->getOperand(OpIdx);

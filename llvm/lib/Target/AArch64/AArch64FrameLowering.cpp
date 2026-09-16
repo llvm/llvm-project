@@ -948,7 +948,7 @@ AArch64FrameLowering::findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
     if (LiveRegs.available(MRI, Reg))
       return Reg;
   }
-  return AArch64::NoRegister;
+  return Register();
 }
 
 bool AArch64FrameLowering::canUseAsPrologue(
@@ -979,14 +979,14 @@ bool AArch64FrameLowering::canUseAsPrologue(
     return false;
 
   if (RegInfo->hasStackRealignment(*MF) || TLI->hasInlineStackProbe(*MF))
-    if (findScratchNonCalleeSaveRegister(TmpMBB) == AArch64::NoRegister)
+    if (!findScratchNonCalleeSaveRegister(TmpMBB).isValid())
       return false;
 
   // May need a scratch register (for return value) if require making a special
   // call
   if (requiresSaveVG(*MF) ||
       windowsRequiresStackProbe(*MF, std::numeric_limits<uint64_t>::max()))
-    if (findScratchNonCalleeSaveRegister(TmpMBB, true) == AArch64::NoRegister)
+    if (!findScratchNonCalleeSaveRegister(TmpMBB, true).isValid())
       return false;
 
   return true;
@@ -2046,7 +2046,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
 
     Register X0Scratch;
     llvm::scope_exit RestoreX0([&] {
-      if (X0Scratch != AArch64::NoRegister)
+      if (X0Scratch.isValid())
         BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), AArch64::X0)
             .addReg(X0Scratch)
             .setMIFlag(MachineInstr::FrameSetup);
@@ -2055,7 +2055,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     if (Reg1 == AArch64::VG) {
       // Find an available register to store value of VG to.
       Reg1 = findScratchNonCalleeSaveRegister(&MBB, true);
-      assert(Reg1 != AArch64::NoRegister);
+      assert(Reg1.isValid());
       if (MF.getSubtarget<AArch64Subtarget>().hasSVE()) {
         BuildMI(MBB, MI, DL, TII.get(AArch64::CNTD_XPiI), Reg1)
             .addImm(31)
@@ -2530,8 +2530,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  unsigned UnspilledCSGPR = AArch64::NoRegister;
-  unsigned UnspilledCSGPRPaired = AArch64::NoRegister;
+  Register UnspilledCSGPR;
+  Register UnspilledCSGPRPaired;
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
@@ -2539,7 +2539,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   MCRegister BasePointerReg =
       RegInfo->hasBasePointer(MF) ? RegInfo->getBaseRegister() : MCRegister();
 
-  unsigned ExtraCSSpill = 0;
+  Register ExtraCSSpill;
   bool HasUnpairedGPR64 = false;
   bool HasPairZReg = false;
   BitVector UserReservedRegs = RegInfo->getUserReservedRegs(MF);
@@ -2578,10 +2578,10 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     // PairedReg could be in a different register class from Reg, which would
     // lead to a FPR (usually D8) accidentally being marked saved.
     if (RegIsGPR64 && !AArch64::GPR64RegClass.contains(PairedReg)) {
-      PairedReg = AArch64::NoRegister;
+      PairedReg = Register();
       HasUnpairedGPR64 = true;
     }
-    assert(PairedReg == AArch64::NoRegister ||
+    assert(!PairedReg.isValid() ||
            AArch64::GPR64RegClass.contains(Reg, PairedReg) ||
            AArch64::FPR64RegClass.contains(Reg, PairedReg) ||
            AArch64::FPR128RegClass.contains(Reg, PairedReg));
@@ -2597,7 +2597,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     // MachO's compact unwind format relies on all registers being stored in
     // pairs.
     // FIXME: the usual format is actually better if unwinding isn't needed.
-    if (producePairRegisters(MF) && PairedReg != AArch64::NoRegister &&
+    if (producePairRegisters(MF) && PairedReg.isValid() &&
         !SavedRegs.test(PairedReg)) {
       SavedRegs.set(PairedReg);
       if (AArch64::GPR64RegClass.contains(PairedReg) &&
@@ -2738,7 +2738,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // above to keep the number of spills even, we don't need to do anything else
   // here.
   if (BigStack) {
-    if (!ExtraCSSpill && UnspilledCSGPR != AArch64::NoRegister) {
+    if (!ExtraCSSpill.isValid() && UnspilledCSGPR.isValid()) {
       LLVM_DEBUG(dbgs() << "Spilling " << printReg(UnspilledCSGPR, RegInfo)
                         << " to get a scratch register.\n");
       SavedRegs.set(UnspilledCSGPR);
@@ -2748,11 +2748,11 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       // pairs, so if we need to spill one extra for BigStack, then we need to
       // store the pair.
       if (producePairRegisters(MF)) {
-        if (UnspilledCSGPRPaired == AArch64::NoRegister) {
+        if (!UnspilledCSGPRPaired.isValid()) {
           // Failed to make a pair for compact unwind format, revert spilling.
           if (produceCompactUnwindFrame(*this, MF)) {
             SavedRegs.reset(UnspilledCSGPR);
-            ExtraCSSpill = AArch64::NoRegister;
+            ExtraCSSpill = Register();
           }
         } else
           SavedRegs.set(UnspilledCSGPRPaired);
@@ -2761,7 +2761,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
     // If we didn't find an extra callee-saved register to spill, create
     // an emergency spill slot.
-    if (!ExtraCSSpill || MF.getRegInfo().isPhysRegUsed(ExtraCSSpill)) {
+    if (!ExtraCSSpill.isValid() ||
+        MF.getRegInfo().isPhysRegUsed(ExtraCSSpill)) {
       const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
       const TargetRegisterClass &RC = AArch64::GPR64RegClass;
       unsigned Size = TRI->getSpillSize(RC);

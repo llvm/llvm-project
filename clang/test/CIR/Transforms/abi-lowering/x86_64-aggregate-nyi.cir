@@ -3,46 +3,35 @@
 !s8i = !cir.int<s, 8>
 !s16i = !cir.int<s, 16>
 !s32i = !cir.int<s, 32>
-!s64i = !cir.int<s, 64>
-!s128i = !cir.int<s, 128>
 !u8i = !cir.int<u, 8>
-!u32i = !cir.int<u, 32>
-!u64i = !cir.int<u, 64>
-!rec_UOverAligned = !cir.union<"UOverAligned" {data !s32i}, padding = {!cir.array<!u8i x 12>}>
-!rec_UShortStorage = !cir.union<"UShortStorage" {data !s16i, data !cir.array<!s8i x 3>}, padding = {!cir.array<!u8i x 2>}>
-!rec_UByteBlobs = !cir.union<"UByteBlobs" {data !u8i, data !u8i}, padding = {!cir.array<!u8i x 3>}>
-!rec_SWrapsOverAligned = !cir.struct<"SWrapsOverAligned" {data !cir.double, data !rec_UOverAligned}>
 !rec_UEmptyLarge = !cir.union<"UEmptyLarge" {}, padding = {!cir.array<!u8i x 32>}>
 !rec_ZeroLenArr = !cir.struct<"ZeroLenArr" packed {data !s8i, empty !cir.array<!s32i x 0>}>
-!rec_UPadByte = !cir.union<"UPadByte" {data !u8i}, padding = {!cir.array<!u8i x 3>}>
 !rec_E = !cir.struct<"E" {pad !u8i}>
-!rec_UBitOverAligned =
-    !cir.union<"UBitOverAligned" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 3>]>},
-               padding = {!cir.array<!u8i x 7>}>
 !rec_UBitIntUnit =
     !cir.union<"UBitIntUnit" {bitfield !cir.bitfield<!cir.array<!u8i x 9>,
                                                      [#cir.bitfield_decl<!cir.int<s, 72, bitint>, 70>]>},
                padding = {!cir.array<!u8i x 7>}>
-!rec_UBitWideDecl =
-    !cir.union<"UBitWideDecl" {bitfield !cir.bitfield<!cir.array<!u8i x 13>,
-                                                      [#cir.bitfield_decl<!s128i, 100>]>},
-               padding = {!cir.array<!u8i x 3>}>
-!rec_UMultiDecl =
-    !cir.union<"UMultiDecl" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s8i, 4>,
-                                                           #cir.bitfield_decl<!s32i, 4>]>},
-               padding = {!cir.array<!u8i x 3>}>
-!rec_UNamedPlusUnnamedSpan =
-    !cir.union<"UNamedPlusUnnamedSpan" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 3>]>,
-                                        empty !cir.bitfield<!cir.array<!u8i x 5>,
-                                                            [#cir.bitfield_decl<!s64i, 40, unnamed>]>},
-               padding = {!cir.array<!u8i x 3>}>
-!rec_UBitUnnamed =
-    !cir.union<"UBitUnnamed" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 8>]>,
-                              empty !cir.bitfield<!u64i, [#cir.bitfield_decl<!s64i, 64, unnamed>]>}>
-!rec_UWideBitUnnamed =
-    !cir.union<"UWideBitUnnamed" {bitfield !cir.bitfield<!cir.array<!u8i x 3>, [#cir.bitfield_decl<!s32i, 24>]>,
-                                  empty !cir.bitfield<!u64i, [#cir.bitfield_decl<!s64i, 64, unnamed>]>}>
-!rec_UEmptyNarrow = !cir.union<"UEmptyNarrow" {data !rec_E, data !s16i}, padding = {!cir.array<!u8i x 2>}>
+!rec_SVec = !cir.struct<"SVec" {data !cir.vector<4 x !cir.float>}>
+!rec_UVec384 =
+    !cir.union<"UVec384" {data !cir.vector<4 x !cir.float>, data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 32>}>
+!rec_UVecInArr =
+    !cir.union<"UVecInArr" {data !cir.array<!cir.vector<4 x !cir.float> x 2>,
+                            data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 16>}>
+!rec_UVecInRec =
+    !cir.union<"UVecInRec" {data !rec_SVec, data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 32>}>
+!rec_UQuad384 =
+    !cir.union<"UQuad384" {data !cir.f128, data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 32>}>
+!rec_ULongDouble384 =
+    !cir.union<"ULongDouble384" {data !cir.long_double<!cir.f128>,
+                                 data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 32>}>
+!rec_UQuadPacked =
+    !cir.union<"UQuadPacked" packed {data !cir.f128, data !cir.array<!s8i x 17>},
+               padding = {!u8i}>
 !rec_S1 = !cir.struct<"S1" {data !s16i, data !s16i, data !s16i}>
 !rec_AtomicWrapper = !cir.struct<{data !rec_S1, pad !cir.array<!s8i x 2>}>
 !rec_HoldsAllPad = !cir.struct<"HoldsAllPad" {data !s32i, empty !rec_E}>
@@ -56,44 +45,15 @@ module attributes {
     #dlti.dl_entry<f64, dense<64>: vector<2xi64>>>
 } {
 
-  // No member of this union spans its 16-byte declared size, so the bytes past
-  // the int cannot be told apart from the rest of a wider storage unit, and the
-  // eightbyte the classifier would build from the union's size is a guess.
-  cir.func @take_over_aligned_union(%arg0: !rec_UOverAligned) {
-    cir.return
-  }
 
-  // CHECK: not yet implemented for type '!cir.union<"UOverAligned"
 
-  // Same rule one eightbyte down: the widest member covers 3 of the union's 4
-  // declared bytes.
-  cir.func @take_short_storage_union(%arg0: !rec_UShortStorage) {
-    cir.return
-  }
 
-  // CHECK: not yet implemented for type '!cir.union<"UShortStorage"
-
-  // A union of narrow bit-fields and a union of two aligned `unsigned char`
-  // members produce this same shape, and classic CodeGen coerces them
-  // differently, so neither can be accepted.
-  cir.func @take_byte_blob_union(%arg0: !rec_UByteBlobs) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UByteBlobs"
-
-  // The reject propagates out of an enclosing struct rather than being silently
-  // dropped at the member level.
-  cir.func @take_struct_wrapping_over_aligned(%arg0: !rec_SWrapsOverAligned) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.struct<"SWrapsOverAligned"
 
   // A member-less union past two eightbytes still classifies Indirect in
-  // classic CodeGen, but this bridge has no member to build an Indirect
-  // coercion from.  Below the threshold the same shape is accepted and
-  // classifies Ignore, matching classic; see x86_64-union.cir take_empty.
+  // classic CodeGen, but no source spells a union with no member at all, so
+  // this bridge refuses the shape rather than guessing at it.  Below the
+  // threshold the same shape is accepted and classifies Ignore, matching
+  // classic; see x86_64-union.cir take_empty.
   cir.func @take_empty_large_union(%arg0: !rec_UEmptyLarge) {
     cir.return
   }
@@ -109,22 +69,7 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.struct<"ZeroLenArr" packed
 
-  // A union holds padding in a slot of its own, so its lone byte member is
-  // data.  Rejected by the union rule (no member spans the declared size), not
-  // the empty-class one.
-  cir.func @take_padded_byte_union(%arg0: !rec_UPadByte) {
-    cir.return
-  }
 
-  // CHECK: not yet implemented for type '!cir.union<"UPadByte"
-
-  // A bit-field's declared type reaches past its access unit, but `int` still
-  // leaves 4 of this union's 8 bytes to nothing at all.
-  cir.func @take_bitfield_over_aligned_union(%arg0: !rec_UBitOverAligned) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.union<"UBitOverAligned"
 
   // Past one eightbyte the declared extent settles nothing: the coercion
   // follows this 9-byte unit and would give i8 for the second eightbyte,
@@ -135,62 +80,54 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.union<"UBitIntUnit"
 
-  // A 13-byte unit does land on classic's i64 here, but by covering 5 bytes of
-  // the second eightbyte itself rather than through the declaration the basis
-  // skipped, so this is refused alongside the case above.
-  cir.func @take_wide_decl_union(%arg0: !rec_UBitWideDecl) {
+
+
+
+
+
+
+  // 48 bytes with a vector member, a size no SSEUP coerce can be named from.
+  cir.func @take_vec384_union(%arg0: !rec_UVec384) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.union<"UBitWideDecl"
+  // CHECK: not yet implemented for type '!cir.union<"UVec384"
 
-  // A unit's second declaration is a field of its own at a nonzero offset, so
-  // covering the union from there would put that field past the union's bytes.
-  // A unit holding more than one declaration is refused outright rather than
-  // credited for the `int` here, which starts a byte in.
-  cir.func @take_multi_decl_union(%arg0: !rec_UMultiDecl) {
+  // The same vector, an array away.
+  cir.func @take_vec_in_arr_union(%arg0: !rec_UVecInArr) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.union<"UMultiDecl"
+  // CHECK: not yet implemented for type '!cir.union<"UVecInArr"
 
-  // Unlike take_bitfield_unnamed_span below, the unnamed-only unit here covers
-  // the union only through its declared `long long`, its storage being 5 of
-  // the 8 bytes.  It still supplies no data, and the named unit that does
-  // stops at 4.
-  cir.func @take_named_plus_unnamed_span(%arg0: !rec_UNamedPlusUnnamedSpan) {
+  // The same vector, a record away.
+  cir.func @take_vec_in_rec_union(%arg0: !rec_UVecInRec) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.union<"UNamedPlusUnnamedSpan"
+  // CHECK: not yet implemented for type '!cir.union<"UVecInRec"
 
-  // The spanning member here is an access unit holding only unnamed
-  // bit-fields, which supplies no data either, so the named unit alone would
-  // coerce to i8 where classic gives i64.
-  cir.func @take_bitfield_unnamed_span(%arg0: !rec_UBitUnnamed) {
+  // An IEEE-quad float reaches SSEUP as well.
+  cir.func @take_quad384_union(%arg0: !rec_UQuad384) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.union<"UBitUnnamed"
+  // CHECK: not yet implemented for type '!cir.union<"UQuad384"
 
-  // The same shape with a wider named unit, whose coercion happens to reach
-  // classic's i64 anyway once the union sizes its eightbyte.  The rule cannot
-  // tell that apart from the case above, where the narrower unit coerces to
-  // i8, so this one is NYI as well.
-  cir.func @take_wide_bitfield_unnamed_span(%arg0: !rec_UWideBitUnnamed) {
+  // A long double carrying quad semantics is the same float.
+  cir.func @take_long_double384_union(%arg0: !rec_ULongDouble384) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.union<"UWideBitUnnamed"
+  // CHECK: not yet implemented for type '!cir.union<"ULongDouble384"
 
-  // An empty member does not exempt a union from the spanning rule above:
-  // as with take_short_storage_union, neither member reaches the union's
-  // 4 declared bytes.
-  cir.func @take_empty_narrow_union(%arg0: !rec_UEmptyNarrow) {
+  // Packed, so 17 bytes, another size no coerce can be named from.  Its
+  // 17-byte member spans the union, so only refusing the size catches it.
+  cir.func @take_quad_packed_union(%arg0: !rec_UQuadPacked) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.union<"UEmptyNarrow"
+  // CHECK: not yet implemented for type '!cir.union<"UQuadPacked"
 
   // A bit-field carries the type its declaration named, so a record whose
   // padding a coercion would have to read through is classified rather than
