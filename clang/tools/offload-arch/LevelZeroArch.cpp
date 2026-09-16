@@ -203,12 +203,12 @@ int printGPUsByLevelZero() {
       DeviceProperties.pNext = &IPVersion;
       CALL_ZE_AND_CHECK(zeDeviceGetProperties, Device, &DeviceProperties);
 
-      // A driver that does not support the extension leaves the chained
-      // structure untouched, in which case there is no architecture to name.
       if (IPVersion.ipVersion == 0) {
         if (Verbose)
-          llvm::errs() << "Unable to query the IP version of device '"
-                       << DeviceProperties.name << "'\n";
+          llvm::errs() << "warning: skipping device '" << DeviceProperties.name
+                       << "': this version of the Level Zero driver does not "
+                          "support ZE_STRUCTURE_TYPE_DEVICE_IP_VERSION_EXT, so "
+                          "the device architecture cannot be determined\n";
         continue;
       }
 
