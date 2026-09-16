@@ -871,7 +871,6 @@ void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
   // Output name of the function.
   FunctionEncodingMangler.disableDerivedAbiTags();
 
-  // Enter the function parameter scope on the mangler that mangles the name.
   FunctionTypeDepthState EncodingSaved =
       FunctionEncodingMangler.FunctionTypeDepth.push();
   FunctionEncodingMangler.mangleNameWithAbiTags(FD);
