@@ -6619,6 +6619,8 @@ bool SPIRVInstructionSelector::selectResourceGetPointer(Register &ResVReg,
   };
 
   SPIRVTypeInst ResourceElemType = getIndexedType(ResourceType, 0);
+  // Only resource.getpointer has an index operand; resource.getbasepointer
+  // stops at the resource operand.
   if (I.getNumExplicitOperands() > 3) {
     assert(ResourceElemType && "Resource type is not indexable");
     unsigned Index = ResourceElemType->getOpcode() == SPIRV::OpTypeStruct

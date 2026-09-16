@@ -796,6 +796,11 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
     llvm::ArrayType *RuntimeArrayType = llvm::ArrayType::get(ElemType, 0);
     uint32_t StorageClass = /* StorageBuffer storage class */ 12;
     bool IsWritable = ResAttrs.ResourceClass == llvm::dxil::ResourceClass::UAV;
+    bool IsByteAddressBuffer = ContainedTy == CGM.getContext().Char8Ty;
+    if (IsByteAddressBuffer)
+      return llvm::TargetExtType::get(
+          Ctx, "spirv.VulkanBuffer", {RuntimeArrayType},
+          {StorageClass, IsWritable, IsByteAddressBuffer});
     return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer",
                                     {RuntimeArrayType},
                                     {StorageClass, IsWritable});
