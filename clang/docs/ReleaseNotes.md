@@ -879,6 +879,11 @@ features cannot lower the translation-unit ABI level;
   `set_x(decltype(x) val)`. This affects the completion strings produced by
   libclang as well as those used by clangd.
 
+- Members inherited from a dependent base class that is named through an alias
+  template are now offered. Previously such a base was skipped entirely, so for
+  example a dependent `std::allocator<T>`, which derives from the alias template
+  `__allocator_base<T>`, offered none of the members it inherits.
+
 ### Static Analyzer
 
 #### Crash and bug fixes
