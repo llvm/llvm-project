@@ -946,8 +946,8 @@ define i64 @v_mul_i64(i64 %num, i64 %den) {
 ; GFX11-LABEL: v_mul_i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v5, v2
-; GFX11-NEXT:    v_mov_b32_e32 v6, v1
+; GFX11-NEXT:    v_mov_b32_e32 v4, v0
+; GFX11-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v6, v1
 ; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v4, v5, 0
 ; GFX11-NEXT:    v_mad_u64_u32 v[7:8], null, v4, v3, v[1:2]
 ; GFX11-NEXT:    v_mad_u64_u32 v[1:2], null, v6, v5, v[7:8]
@@ -1642,8 +1642,8 @@ define i128 @v_mul_i128(i128 %num, i128 %den) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v8, v0 :: v_dual_mov_b32 v9, v1
-; GFX11-NEXT:    v_dual_mov_b32 v10, v2 :: v_dual_mov_b32 v11, v4
-; GFX11-NEXT:    v_mov_b32_e32 v12, v3
+; GFX11-NEXT:    v_mov_b32_e32 v10, v2
+; GFX11-NEXT:    v_dual_mov_b32 v11, v4 :: v_dual_mov_b32 v12, v3
 ; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v8, v6, 0
 ; GFX11-NEXT:    v_mul_lo_u32 v4, v9, v6
 ; GFX11-NEXT:    v_mul_lo_u32 v6, v8, v7

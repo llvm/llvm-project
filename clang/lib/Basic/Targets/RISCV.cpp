@@ -243,7 +243,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro("__riscv_32e");
   }
 
-  if (Opts.CFProtectionReturn && ISAInfo->hasExtension("zicfiss"))
+  if (Opts.CFProtectionReturn && ISAInfo->hasExtension("zimop"))
     Builder.defineMacro("__riscv_shadow_stack");
 
   if (Opts.CFProtectionBranch) {

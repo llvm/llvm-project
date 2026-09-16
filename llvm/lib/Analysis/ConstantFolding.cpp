@@ -2239,7 +2239,7 @@ Constant *GetConstantFoldFPValue128(float128 V, Type *Ty) {
 
 /// Clear the floating-point exception state.
 inline void llvm_fenv_clearexcept() {
-#if HAVE_DECL_FE_ALL_EXCEPT
+#if defined(FE_ALL_EXCEPT)
   feclearexcept(FE_ALL_EXCEPT);
 #endif
   errno = 0;
@@ -2250,7 +2250,7 @@ inline bool llvm_fenv_testexcept() {
   int errno_val = errno;
   if (errno_val == ERANGE || errno_val == EDOM)
     return true;
-#if HAVE_DECL_FE_ALL_EXCEPT && HAVE_DECL_FE_INEXACT
+#if defined(FE_ALL_EXCEPT) && defined(FE_INEXACT)
   if (fetestexcept(FE_ALL_EXCEPT & ~FE_INEXACT))
     return true;
 #endif
@@ -3979,7 +3979,8 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     if (!FVTy)
       return nullptr;
     unsigned Width = Ty->getIntegerBitWidth();
-    if (APInt::getMaxValue(Width).ult(FVTy->getNumElements()))
+    if (APInt::getMaxValue(Width).ult(FVTy->getNumElements()) ||
+        Operands[0]->containsPoisonElement())
       return PoisonValue::get(Ty);
     for (unsigned I = 0; I < FVTy->getNumElements(); ++I) {
       Constant *Elt = Operands[0]->getAggregateElement(I);
