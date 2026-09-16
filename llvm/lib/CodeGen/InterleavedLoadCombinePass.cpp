@@ -27,6 +27,7 @@
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -1182,6 +1183,20 @@ bool InterleavedLoadCombineImpl::combine(ArrayRef<VectorInfo *> InterleavedLoad,
       return false;
   }
   assert(!LIs.empty() && "There are no LoadInst to combine");
+
+  // The wide load reads the whole span at once and is inserted at the first
+  // load, so widening must not pull a later load across an instruction that may
+  // not transfer control to its successor (e.g. a call that might not return or
+  // might throw). Otherwise a load the original program reached only
+  // conditionally would run unconditionally. All combined loads are in one
+  // block, so check the span from the first to the last is barrier-free.
+  LoadInst *Last = First;
+  for (auto *LI : LIs)
+    if (Last->comesBefore(LI))
+      Last = LI;
+  if (!isGuaranteedToTransferExecutionToSuccessor(First->getIterator(),
+                                                  Last->getIterator()))
+    return false;
 
   // It is necessary that insertion point dominates all final ShuffleVectorInst.
   for (const VectorInfo *VI : InterleavedLoad) {
