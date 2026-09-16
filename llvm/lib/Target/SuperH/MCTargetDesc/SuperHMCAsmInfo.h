@@ -11,7 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_LIB_TARGET_SUPERH_MCTARGETDESC_SUPERHMCASMINFO_H
 #define LLVM_LIB_TARGET_SUPERH_MCTARGETDESC_SUPERHMCASMINFO_H
 
@@ -28,10 +27,10 @@ class Triple;
 //===----------------------------------------------------------------------===//
 class SuperHMCAsmInfo : public MCAsmInfoELF {
 private:
-	void anchor() override;
+  void anchor() override;
 
 public:
-	explicit SuperHMCAsmInfo(const Triple &TheTriple,
+  explicit SuperHMCAsmInfo(const Triple &TheTriple,
                            const MCTargetOptions &Options);
 };
 

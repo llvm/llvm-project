@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/SuperHMCTargetDesc.h"
 #include "SuperH.h"
 #include "SuperHInstrInfo.h"
 #include "SuperHTargetMachine.h"
-#include "MCTargetDesc/SuperHMCTargetDesc.h"
 
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -37,7 +37,9 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  StringRef getPassName() const override { return SUPERH_FILL_DELAY_SLOTS_NAME; }
+  StringRef getPassName() const override {
+    return SUPERH_FILL_DELAY_SLOTS_NAME;
+  }
 
 private:
   typedef MachineBasicBlock Block;
@@ -66,7 +68,8 @@ private:
 
 // Walks backwards through the basic block to find a candidate that is eligible
 // for filling delay slots.
-MachineInstr *SuperHFillDelaySlots::findSlotCandidate(Block &MBB, BlockIt MBBI) {
+MachineInstr *SuperHFillDelaySlots::findSlotCandidate(Block &MBB,
+                                                      BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   auto *Prev = MBBI->getPrevNode();
 
@@ -77,7 +80,8 @@ MachineInstr *SuperHFillDelaySlots::findSlotCandidate(Block &MBB, BlockIt MBBI) 
   // // We might have a useful instruction above the instruction that
   // // loads our destination address.
   // if (MI.isCall() && Prev) {
-  //   if (!Prev->getPrevNode()->definesRegister(MI.getOperand(0).getReg(), TRI))
+  //   if (!Prev->getPrevNode()->definesRegister(MI.getOperand(0).getReg(),
+  //   TRI))
   //     Prev = Prev->getPrevNode();
   // }
 
@@ -88,13 +92,13 @@ MachineInstr *SuperHFillDelaySlots::findSlotCandidate(Block &MBB, BlockIt MBBI) 
 
     // If we encounter a branch instruction, then it's no longer safe to
     // move the instruction down.
-    if (Prev->isBranch() || Prev->isCall() || Prev->isReturn()) 
+    if (Prev->isBranch() || Prev->isCall() || Prev->isReturn())
       return nullptr;
 
     // NOTE:  RTS has an extra constraint that it cannot have
     //        lds @r15+,PR or equivalent in its delay slot.
     if (MI.isReturn()) {
-      
+
       // Skip the LDS instruction.
       if (Opcode == SH::LDSPR || Opcode == SH::LDSMPR)
         return nullptr;
@@ -102,7 +106,7 @@ MachineInstr *SuperHFillDelaySlots::findSlotCandidate(Block &MBB, BlockIt MBBI) 
 
     // NOTE:  Conditional branches can't have their condition code set
     //        in the delay slot. As such, if the previous instruction
-    //        implicitly defines the status register, assume that the 
+    //        implicitly defines the status register, assume that the
     //        T bit was set.
     if (MI.isConditionalBranch()) {
       if (Prev->definesRegister(SH::SR, TRI))
@@ -126,19 +130,20 @@ bool SuperHFillDelaySlots::fillDelaySlot(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
 
   if (auto *Candidate = findSlotCandidate(MBB, MBBI)) {
-      LLVM_DEBUG(dbgs() << "Swapping " << TII->getName(MI.getOpcode()) 
-                        << " and " << TII->getName(Candidate->getOpcode()) 
-                        << " @ " << MBB.getParent()->getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Swapping " << TII->getName(MI.getOpcode()) << " and "
+                      << TII->getName(Candidate->getOpcode()) << " @ "
+                      << MBB.getParent()->getName() << "\n");
 
-      MBB.insertAfter(MBBI, Candidate->removeFromParent());
-      return true;
+    MBB.insertAfter(MBBI, Candidate->removeFromParent());
+    return true;
   }
 
   LLVM_DEBUG(dbgs() << "Inserting NOP after " << TII->getName(MI.getOpcode())
                     << " @ " << MBB.getParent()->getName() << "\n");
 
   // Otherwise just insert a NOP.
-  MBB.insertAfter(MBBI, MF.CreateMachineInstr(TII->get(SH::NOP), MI.getDebugLoc())); 
+  MBB.insertAfter(MBBI,
+                  MF.CreateMachineInstr(TII->get(SH::NOP), MI.getDebugLoc()));
   return true;
 }
 
@@ -188,11 +193,10 @@ bool SuperHFillDelaySlots::runOnMachineFunction(MachineFunction &MF) {
   return Modified;
 }
 
-
 char SuperHFillDelaySlots::ID = 0;
 
-INITIALIZE_PASS(SuperHFillDelaySlots, "sh-fill-delay-slots", SUPERH_FILL_DELAY_SLOTS_NAME,
-                false, false)
+INITIALIZE_PASS(SuperHFillDelaySlots, "sh-fill-delay-slots",
+                SUPERH_FILL_DELAY_SLOTS_NAME, false, false)
 
 FunctionPass *llvm::createSuperHFillDelaySlotsPass() {
   return new SuperHFillDelaySlots();

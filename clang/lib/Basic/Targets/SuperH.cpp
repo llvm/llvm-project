@@ -22,20 +22,16 @@ struct LLVM_LIBRARY_VISIBILITY SHCPUInfo {
 };
 
 static constexpr SHCPUInfo CPUInfo[] = {
-  {{"sh1"}},
-  {{"sh2"}},
-  {{"sh2a"}},
-  {{"sh3"}},
-  {{"sh4"}},
-  {{"sh4a"}},
+    {{"sh1"}}, {{"sh2"}}, {{"sh2a"}}, {{"sh3"}}, {{"sh4"}}, {{"sh4a"}},
 };
 
 bool SuperHTargetInfo::isValidCPUName(StringRef Name) const {
-  return llvm::any_of(
-      CPUInfo, [&](const SHCPUInfo &Info) { return Info.Name == Name; });
+  return llvm::any_of(CPUInfo,
+                      [&](const SHCPUInfo &Info) { return Info.Name == Name; });
 }
 
-void SuperHTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
+void SuperHTargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
   for (const SHCPUInfo &Info : CPUInfo)
     Values.push_back(Info.Name);
 }
@@ -60,7 +56,7 @@ SuperHTargetInfo::handleAsmEscapedChar(char EscChar) const {
 }
 
 void SuperHTargetInfo::getTargetDefines(const LangOptions &Opts,
-                                     MacroBuilder &Builder) const {
+                                        MacroBuilder &Builder) const {
   Builder.defineMacro("SH");
   Builder.defineMacro("__SH");
   Builder.defineMacro("__SH__");

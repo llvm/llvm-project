@@ -52,10 +52,10 @@ unsigned SuperHBasicBlockUtils::getOffsetOf(MachineInstr *MI) const {
 /// isBBInRange - Returns true if the distance between specific MI and
 /// specific BB can fit in MI's displacement field.
 bool SuperHBasicBlockUtils::isBBInRange(MachineInstr *MI,
-                                     MachineBasicBlock *DestBB,
-                                     unsigned MaxDisp) const {
-  unsigned PCAdj      = 4;
-  unsigned BrOffset   = getOffsetOf(MI) + PCAdj;
+                                        MachineBasicBlock *DestBB,
+                                        unsigned MaxDisp) const {
+  unsigned PCAdj = 4;
+  unsigned BrOffset = getOffsetOf(MI) + PCAdj;
   unsigned DestOffset = BBInfo[DestBB->getNumber()].Offset;
 
   LLVM_DEBUG(dbgs() << "Branch of destination " << printMBBReference(*DestBB)
@@ -66,10 +66,10 @@ bool SuperHBasicBlockUtils::isBBInRange(MachineInstr *MI,
 
   if (BrOffset <= DestOffset) {
     // Branch before the Dest.
-    if (DestOffset-BrOffset <= MaxDisp)
+    if (DestOffset - BrOffset <= MaxDisp)
       return true;
   } else {
-    if (BrOffset-DestOffset <= MaxDisp)
+    if (BrOffset - DestOffset <= MaxDisp)
       return true;
   }
   return false;
@@ -81,12 +81,12 @@ void SuperHBasicBlockUtils::adjustBBOffsetsAfter(MachineBasicBlock *BB) {
 
   unsigned BBNum = BB->getNumber();
   LLVM_DEBUG(dbgs() << "Adjust block:\n"
-             << " - name: " << BB->getName() << "\n"
-             << " - number: " << BB->getNumber() << "\n"
-             << " - function: " << MF.getName() << "\n"
-             << "   - blocks: " << MF.getNumBlockIDs() << "\n");
+                    << " - name: " << BB->getName() << "\n"
+                    << " - number: " << BB->getNumber() << "\n"
+                    << " - function: " << MF.getName() << "\n"
+                    << "   - blocks: " << MF.getNumBlockIDs() << "\n");
 
-  for(unsigned i = BBNum + 1, e = MF.getNumBlockIDs(); i < e; ++i) {
+  for (unsigned i = BBNum + 1, e = MF.getNumBlockIDs(); i < e; ++i) {
     // Get the offset and known bits at the end of the layout predecessor.
     // Include the alignment of the current block.
     const Align Align = MF.getBlockNumbered(i)->getAlignment();
@@ -96,8 +96,7 @@ void SuperHBasicBlockUtils::adjustBBOffsetsAfter(MachineBasicBlock *BB) {
     // This is where block i begins.  Stop if the offset is already correct,
     // and we have updated 2 blocks.  This is the maximum number of blocks
     // changed before calling this function.
-    if (i > BBNum + 2 &&
-        BBInfo[i].Offset == Offset &&
+    if (i > BBNum + 2 && BBInfo[i].Offset == Offset &&
         BBInfo[i].KnownBits == KnownBits)
       break;
 
@@ -105,6 +104,5 @@ void SuperHBasicBlockUtils::adjustBBOffsetsAfter(MachineBasicBlock *BB) {
     BBInfo[i].KnownBits = KnownBits;
   }
 }
-
 
 } // namespace llvm

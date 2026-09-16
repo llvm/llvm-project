@@ -26,7 +26,7 @@ namespace llvm {
 
 class SuperHMachineFunctionInfo : public MachineFunctionInfo {
 
-  /// CPIndexCount - How many constant pool indices are allocated. 
+  /// CPIndexCount - How many constant pool indices are allocated.
   unsigned CPIndexCount = 0;
 
   BitVector UsedRegs;
@@ -47,9 +47,9 @@ public:
   // createConstIndex - Creates a new PIC Label UId.
   unsigned createConstIndex() { return CPIndexCount++; }
 
-  // tryGetConstant - SuperH's compressed instruction set means that 
-  // immediates and displacements can not be larger than 8 bits. 
-  // As such we need to store said immediates and displacements within 
+  // tryGetConstant - SuperH's compressed instruction set means that
+  // immediates and displacements can not be larger than 8 bits.
+  // As such we need to store said immediates and displacements within
   // constants that are within range of the program counter.
   //
   // As such this function is a helper that:
@@ -57,18 +57,26 @@ public:
   //  2. Inserts the target into said slot.
   //  3. Returns the allocated slot, ready to be loaded via
   //     a PC-relative load.
-  SuperHConstantPoolConstant *tryGetConstant(GlobalAddressSDNode *N, SelectionDAG &DAG, SHCP::SHCPModifier Modifier);
-  SuperHConstantPoolConstant *tryGetConstant(BlockAddressSDNode *N, SelectionDAG &DAG, SHCP::SHCPModifier Modifier);
-  SuperHConstantPoolConstant *tryGetConstant(ConstantSDNode *N, SelectionDAG &DAG, SHCP::SHCPModifier Modifier);
-  SuperHConstantPoolSymbol *tryGetConstant(ExternalSymbolSDNode *N, SelectionDAG &DAG, SHCP::SHCPModifier Modifier);
+  SuperHConstantPoolConstant *tryGetConstant(GlobalAddressSDNode *N,
+                                             SelectionDAG &DAG,
+                                             SHCP::SHCPModifier Modifier);
+  SuperHConstantPoolConstant *tryGetConstant(BlockAddressSDNode *N,
+                                             SelectionDAG &DAG,
+                                             SHCP::SHCPModifier Modifier);
+  SuperHConstantPoolConstant *tryGetConstant(ConstantSDNode *N,
+                                             SelectionDAG &DAG,
+                                             SHCP::SHCPModifier Modifier);
+  SuperHConstantPoolSymbol *tryGetConstant(ExternalSymbolSDNode *N,
+                                           SelectionDAG &DAG,
+                                           SHCP::SHCPModifier Modifier);
 
   // Helper for lower level passes that gets global value constants.
-  SuperHConstantPoolConstant *tryGetConstant(const GlobalValue *G, const MachineFunction& MF) const;
+  SuperHConstantPoolConstant *tryGetConstant(const GlobalValue *G,
+                                             const MachineFunction &MF) const;
 
 private:
-	virtual void anchor();
+  virtual void anchor();
 };
-
 
 } // namespace llvm
 

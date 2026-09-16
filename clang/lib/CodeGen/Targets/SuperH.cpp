@@ -22,15 +22,13 @@ using namespace clang::CodeGen;
 namespace {
 class SuperHABIInfo : public DefaultABIInfo {
 public:
-  SuperHABIInfo(CodeGenTypes &CGT)
-      : DefaultABIInfo(CGT) {}
+  SuperHABIInfo(CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
 
   ABIArgInfo classifyReturnType(QualType Ty, bool &LargeRet) const {
 
     // We have a total of 64 bits of return space in R0 and R1,
     // if we can fit a struct in there, do.
-    if (isAggregateTypeForABI(Ty) && 
-        getContext().getTypeSize(Ty) <= 64)
+    if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) <= 64)
       return ABIArgInfo::getDirect();
 
     // Otherwise, we store a pointer to the struct in R2 and return that.
@@ -70,22 +68,20 @@ public:
     bool LargeRet = false;
     if (!getCXXABI().classifyReturnType(FI))
       FI.getReturnInfo() = classifyReturnType(FI.getReturnType(), LargeRet);
-    
+
     // Decide each argument type.
     unsigned NumRegs = 4;
     for (auto &I : FI.arguments())
       I.info = classifyArgumentType(I.type, NumRegs);
   }
-
 };
 
 class SuperHTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   SuperHTargetCodeGenInfo(CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<SuperHABIInfo>(CGT)) {}
-
 };
-}
+} // namespace
 
 std::unique_ptr<TargetCodeGenInfo>
 CodeGen::createSuperHTargetCodeGenInfo(CodeGenModule &CGM) {

@@ -38,7 +38,6 @@ public:
   static char ID;
 
 private:
-
   /// MCP - Keep a pointer to constantpool entries of the current
   /// MachineFunction.
   const MachineConstantPool *MCP;
@@ -50,16 +49,16 @@ private:
   /// Set of globals in PromotedGlobals that we've emitted labels for.
   /// We need to emit labels even for promoted globals so that DWARF
   /// debug info can link properly.
-  SmallPtrSet<const GlobalVariable*,2> EmittedPromotedGlobalLabels;
+  SmallPtrSet<const GlobalVariable *, 2> EmittedPromotedGlobalLabels;
 
-	SuperHTargetStreamer &getTargetStreamer() {
-		return static_cast<SuperHTargetStreamer &>(
-			*OutStreamer->getTargetStreamer());
-	}
+  SuperHTargetStreamer &getTargetStreamer() {
+    return static_cast<SuperHTargetStreamer &>(
+        *OutStreamer->getTargetStreamer());
+  }
 
 public:
   explicit SuperHAsmPrinter(TargetMachine &TM,
-                           std::unique_ptr<MCStreamer> Streamer)
+                            std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer), ID), MCP(nullptr) {}
 
   StringRef getPassName() const override { return "SuperH Assembly Printer"; }
@@ -73,7 +72,7 @@ public:
   void emitInstruction(const MachineInstr *MI) override;
 
   // We emit them ourselves.
-  void emitConstantPool() override { }
+  void emitConstantPool() override {}
   void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
 
   static std::string getRegisterName(MCRegister Reg) {
@@ -122,7 +121,8 @@ static uint8_t getModifierSpecifier(SHCP::SHCPModifier Modifier) {
 //                                  Operands
 //===----------------------------------------------------------------------===//
 
-void SuperHAsmPrinter::printOperand(const MachineInstr *MI, int OpNo, raw_ostream &O) {
+void SuperHAsmPrinter::printOperand(const MachineInstr *MI, int OpNo,
+                                    raw_ostream &O) {
   const MachineOperand &MO = MI->getOperand(OpNo);
 
   switch (MO.getType()) {
@@ -147,7 +147,7 @@ void SuperHAsmPrinter::printOperand(const MachineInstr *MI, int OpNo, raw_ostrea
 }
 
 bool SuperHAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &O) {
+                                       const char *ExtraCode, raw_ostream &O) {
   if (!AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, O))
     return false;
 
@@ -160,8 +160,10 @@ bool SuperHAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   return false;
 }
 
-bool SuperHAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &O) {
+bool SuperHAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
+                                             unsigned OpNo,
+                                             const char *ExtraCode,
+                                             raw_ostream &O) {
   if (ExtraCode && ExtraCode[0])
     return true; // Unknown modifier
 
@@ -182,14 +184,15 @@ bool SuperHAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned Op
 //                                Constant Pool
 //===----------------------------------------------------------------------===//
 
-void SuperHAsmPrinter::emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) {
+void SuperHAsmPrinter::emitMachineConstantPoolValue(
+    MachineConstantPoolValue *MCPV) {
   const DataLayout &DL = getDataLayout();
   int Size = DL.getTypeAllocSize(MCPV->getType());
   if (Size < 4)
     Size = 4;
 
   // Handle promoted constants (eg. immediates that don't fit in 8 bits).
-  SuperHConstantPoolValue *SCPV = static_cast<SuperHConstantPoolValue*>(MCPV);
+  SuperHConstantPoolValue *SCPV = static_cast<SuperHConstantPoolValue *>(MCPV);
   if (SCPV->isPromotedGlobal()) {
     auto *SCPC = cast<SuperHConstantPoolConstant>(SCPV);
     for (const auto *GV : SCPC->promotedGlobals()) {
@@ -200,38 +203,35 @@ void SuperHAsmPrinter::emitMachineConstantPoolValue(MachineConstantPoolValue *MC
       }
     }
     return emitGlobalConstant(DL, SCPC->getPromotedGlobalInit());
-  } 
+  }
 
   MCSymbol *MCSym;
   if (SCPV->isBlockAddress()) {
     const BlockAddress *BA =
-      cast<SuperHConstantPoolConstant>(SCPV)->getBlockAddress();
+        cast<SuperHConstantPoolConstant>(SCPV)->getBlockAddress();
     MCSym = GetBlockAddressSymbol(BA);
 
-    LLVM_DEBUG(dbgs() << "Emit CPV BlockAddress " << SCPV->getLabelId() 
-                      << " \"" << MCSym->getName() << "\"...\n");
+    LLVM_DEBUG(dbgs() << "Emit CPV BlockAddress " << SCPV->getLabelId() << " \""
+                      << MCSym->getName() << "\"...\n");
 
   } else if (SCPV->isGlobalValue()) {
     const GlobalValue *GV = cast<SuperHConstantPoolConstant>(SCPV)->getGV();
     MCSym = getSymbolPreferLocal(*GV);
 
-    LLVM_DEBUG(dbgs() << "Emit CPV GlobalValue " << SCPV->getLabelId() 
-                      << " \"" << MCSym->getName() << "\"...\n");
-  
+    LLVM_DEBUG(dbgs() << "Emit CPV GlobalValue " << SCPV->getLabelId() << " \""
+                      << MCSym->getName() << "\"...\n");
+
   } else {
     assert(SCPV->isExtSymbol() && "unrecognized constant pool value");
     auto Sym = cast<SuperHConstantPoolSymbol>(SCPV)->getSymbol();
     MCSym = GetExternalSymbolSymbol(Sym);
 
-    LLVM_DEBUG(dbgs() << "Emit CPV GlobalValue " << SCPV->getLabelId() 
-                      << " \"" << MCSym->getName() << "\"...\n");
+    LLVM_DEBUG(dbgs() << "Emit CPV GlobalValue " << SCPV->getLabelId() << " \""
+                      << MCSym->getName() << "\"...\n");
   }
 
   // Create an MCSymbol for the reference.
-  const MCExpr *Expr = MCSymbolRefExpr::create(
-    MCSym,
-    OutContext
-  );
+  const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, OutContext);
   OutStreamer->emitValue(Expr, Size);
 }
 
@@ -249,7 +249,6 @@ void SuperHAsmPrinter::emitFunctionBodyEnd() {
   InConstantPool = false;
   OutStreamer->emitDataRegion(MCDR_DataRegionEnd);
 }
-
 
 void SuperHAsmPrinter::emitInstruction(const MachineInstr *MI) {
   const SuperHSubtarget &STI = MF->getSubtarget<SuperHSubtarget>();
@@ -276,7 +275,7 @@ void SuperHAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case SH::CONSTPOOL_ENTRY: {
     unsigned LabelId = (unsigned)MI->getOperand(0).getImm();
-    unsigned CPIdx   = (unsigned)MI->getOperand(1).getIndex();
+    unsigned CPIdx = (unsigned)MI->getOperand(1).getIndex();
 
     // If this is the first entry of the pool, mark it.
     if (!InConstantPool) {

@@ -17,9 +17,9 @@
 #include "SuperHConstantPoolValue.h"
 #include "SuperHInstrInfo.h"
 #include "SuperHMachineFunctionInfo.h"
+#include "SuperHSelectionDAGInfo.h"
 #include "SuperHSubtarget.h"
 #include "SuperHTargetMachine.h"
-#include "SuperHSelectionDAGInfo.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
@@ -31,9 +31,9 @@
 #define DEBUG_TYPE "sh-isel"
 #define PASS_NAME "SH DAG->DAG Instruction Selection"
 
-static cl::opt<bool>
-CBranchForceDelaySlot("sh-cbranch-force-delay-slot", cl::Hidden, cl::init(false),
-          cl::desc("Force the usage of delay slots for conditional branches."));
+static cl::opt<bool> CBranchForceDelaySlot(
+    "sh-cbranch-force-delay-slot", cl::Hidden, cl::init(false),
+    cl::desc("Force the usage of delay slots for conditional branches."));
 
 using namespace llvm;
 
@@ -51,21 +51,18 @@ public:
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,
                                     InlineAsm::ConstraintCode ConstraintCode,
                                     std::vector<SDValue> &OutOps) override;
-  
-  bool SelectAddr(SDNode *Op, SDValue N, SDValue &Base, SDValue &Disp);
 
+  bool SelectAddr(SDNode *Op, SDValue N, SDValue &Base, SDValue &Disp);
 
   /// Return a target constant with the specified value of type i4.
   inline SDValue getI4Imm(int64_t Imm, const SDLoc &DL) {
     return CurDAG->getSignedTargetConstant(Imm, DL, MVT::i4);
   }
 
-
   /// Return a target constant with the specified value of type i8.
   inline SDValue getI8Imm(int64_t Imm, const SDLoc &DL) {
     return CurDAG->getSignedTargetConstant(Imm, DL, MVT::i8);
   }
-
 
   /// Return a target constant with the specified value of type i16.
   inline SDValue getI16Imm(int64_t Imm, const SDLoc &DL) {
@@ -80,8 +77,7 @@ private:
 
   bool trySelect(SDNode *N);
 
-  template<unsigned Opcode>
-  bool trySelect(SDNode *N);
+  template <unsigned Opcode> bool trySelect(SDNode *N);
 
   const SuperHSubtarget *Subtarget;
 };
@@ -89,8 +85,10 @@ private:
 class SuperHDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
   static char ID;
-  explicit SuperHDAGToDAGISelLegacy(SuperHTargetMachine &TM, CodeGenOptLevel OptLevel)
-      : SelectionDAGISelLegacy(ID, std::make_unique<SuperHDAGToDAGISel>(TM, OptLevel)) {}
+  explicit SuperHDAGToDAGISelLegacy(SuperHTargetMachine &TM,
+                                    CodeGenOptLevel OptLevel)
+      : SelectionDAGISelLegacy(
+            ID, std::make_unique<SuperHDAGToDAGISel>(TM, OptLevel)) {}
 };
 } // end anonymous namespace
 
@@ -103,9 +101,9 @@ bool SuperHDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   return SelectionDAGISel::runOnMachineFunction(MF);
 }
 
-bool SuperHDAGToDAGISel::SelectInlineAsmMemoryOperand(const SDValue &Op,
-                                    InlineAsm::ConstraintCode ConstraintCode,
-                                    std::vector<SDValue> &OutOps) {
+bool SuperHDAGToDAGISel::SelectInlineAsmMemoryOperand(
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintCode,
+    std::vector<SDValue> &OutOps) {
   return false;
 }
 
@@ -136,7 +134,8 @@ bool SuperHDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
     // Handle reg + offset
     if (N.getOpcode() == ISD::ADD) {
       Base = N.getOperand(0);
-      Disp = CurDAG->getTargetConstant(RHS->getZExtValue(), SDLoc(Op), MVT::i32);
+      Disp =
+          CurDAG->getTargetConstant(RHS->getZExtValue(), SDLoc(Op), MVT::i32);
       return true;
     }
   }
@@ -157,8 +156,7 @@ bool SuperHDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
 //                             Address Lowering
 //===----------------------------------------------------------------------===//
 
-template<>
-bool SuperHDAGToDAGISel::trySelect<SHISD::WRAPPER>(SDNode *N) {
+template <> bool SuperHDAGToDAGISel::trySelect<SHISD::WRAPPER>(SDNode *N) {
   auto PtrVT = getTargetLowering()->getPointerTy(CurDAG->getDataLayout());
   auto DL = SDLoc(N);
 
@@ -167,7 +165,8 @@ bool SuperHDAGToDAGISel::trySelect<SHISD::WRAPPER>(SDNode *N) {
   SDValue N0 = N->getOperand(0);
 
   // External Symbols
-  if (ExternalSymbolSDNode* Sym = dyn_cast<ExternalSymbolSDNode>(N0.getNode())) {
+  if (ExternalSymbolSDNode *Sym =
+          dyn_cast<ExternalSymbolSDNode>(N0.getNode())) {
     if (auto *CPV = SFI->tryGetConstant(Sym, *CurDAG, SHCP::no_modifier)) {
       SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
       MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLI, DL, MVT::i32, TGA);
@@ -177,7 +176,7 @@ bool SuperHDAGToDAGISel::trySelect<SHISD::WRAPPER>(SDNode *N) {
   }
 
   // Block Addresses
-  if (BlockAddressSDNode* BA = dyn_cast<BlockAddressSDNode>(N0.getNode())) {
+  if (BlockAddressSDNode *BA = dyn_cast<BlockAddressSDNode>(N0.getNode())) {
     if (auto *CPV = SFI->tryGetConstant(BA, *CurDAG, SHCP::no_modifier)) {
       SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
       MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLI, DL, MVT::i32, TGA);
@@ -186,7 +185,7 @@ bool SuperHDAGToDAGISel::trySelect<SHISD::WRAPPER>(SDNode *N) {
     }
   }
 
-  if (ConstantSDNode* Const = dyn_cast<ConstantSDNode>(N0.getNode())) {
+  if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(N0.getNode())) {
     if (auto *CPV = SFI->tryGetConstant(Const, *CurDAG, SHCP::no_modifier)) {
       SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
       MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLI, DL, MVT::i32, TGA);
@@ -196,7 +195,7 @@ bool SuperHDAGToDAGISel::trySelect<SHISD::WRAPPER>(SDNode *N) {
   }
 
   // Global Addresses
-  if (GlobalAddressSDNode* GA = dyn_cast<GlobalAddressSDNode>(N0.getNode())) {
+  if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N0.getNode())) {
     if (auto *CPV = SFI->tryGetConstant(GA, *CurDAG, SHCP::no_modifier)) {
       SDValue TGA = CurDAG->getTargetConstantPool(CPV, PtrVT, Align(4), 0);
       MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVLI, DL, MVT::i32, TGA);
@@ -214,18 +213,19 @@ bool SuperHDAGToDAGISel::trySelect<SHISD::WRAPPER>(SDNode *N) {
 //                          Conditionals Lowering
 //===----------------------------------------------------------------------===//
 
-template<>
-bool SuperHDAGToDAGISel::trySelect<SHISD::CMP>(SDNode *N) {
+template <> bool SuperHDAGToDAGISel::trySelect<SHISD::CMP>(SDNode *N) {
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
-  SHCC::CondCode CC = (SHCC::CondCode)dyn_cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
+  SHCC::CondCode CC = (SHCC::CondCode)dyn_cast<ConstantSDNode>(N->getOperand(2))
+                          ->getZExtValue();
   SDLoc DL(N);
 
   // NOTE:  The comparisons just set the T bit, it's up to later instructions
   //        to interpret the T bit as positive or negative.
   SDNode *Res = nullptr;
-  switch(CC) {
-  default: break;
+  switch (CC) {
+  default:
+    break;
   case SHCC::COND_EQ: {
 
     // TST would be faster in this case.
@@ -273,26 +273,27 @@ bool SuperHDAGToDAGISel::trySelect<SHISD::CMP>(SDNode *N) {
   return false;
 }
 
-template<>
-bool SuperHDAGToDAGISel::trySelect<SHISD::BRCOND>(SDNode *N) {
+template <> bool SuperHDAGToDAGISel::trySelect<SHISD::BRCOND>(SDNode *N) {
   SDValue Chain = N->getOperand(0);
   SDValue Dest = N->getOperand(1);
-  SHCC::CondCode CC = (SHCC::CondCode)dyn_cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
+  SHCC::CondCode CC = (SHCC::CondCode)dyn_cast<ConstantSDNode>(N->getOperand(2))
+                          ->getZExtValue();
   SDValue Cmp = N->getOperand(3);
   SDLoc DL(N);
 
   // NOTE:  The comparisons just set the T bit, it's up to later instructions
   //        to interpret the T bit as positive or negative.
   MachineSDNode *Res = nullptr;
-  switch(CC) {
-  default: break;
+  switch (CC) {
+  default:
+    break;
   case SHCC::COND_T:
-    Res = CurDAG->getMachineNode(CBranchForceDelaySlot ? SH::BTS : SH::BT, 
-          DL, MVT::Other, Dest, Chain, Cmp);
+    Res = CurDAG->getMachineNode(CBranchForceDelaySlot ? SH::BTS : SH::BT, DL,
+                                 MVT::Other, Dest, Chain, Cmp);
     break;
   case SHCC::COND_F:
-    Res = CurDAG->getMachineNode(CBranchForceDelaySlot ? SH::BFS : SH::BF, 
-          DL, MVT::Other, Dest, Chain, Cmp);
+    Res = CurDAG->getMachineNode(CBranchForceDelaySlot ? SH::BFS : SH::BF, DL,
+                                 MVT::Other, Dest, Chain, Cmp);
     break;
   }
 
@@ -312,13 +313,13 @@ bool SuperHDAGToDAGISel::trySelect<SHISD::BRCOND>(SDNode *N) {
 //                             Branch Lowering
 //===----------------------------------------------------------------------===//
 
-template<>
-bool SuperHDAGToDAGISel::trySelect<ISD::FrameIndex>(SDNode *N) {
+template <> bool SuperHDAGToDAGISel::trySelect<ISD::FrameIndex>(SDNode *N) {
   auto DL = CurDAG->getDataLayout();
 
   // Get the effective address of the stack slot.
   int FI = cast<FrameIndexSDNode>(N)->getIndex();
-  SDValue TFI = CurDAG->getTargetFrameIndex(FI, getTargetLowering()->getPointerTy(DL));
+  SDValue TFI =
+      CurDAG->getTargetFrameIndex(FI, getTargetLowering()->getPointerTy(DL));
   CurDAG->SelectNodeTo(N, SH::SHFrmIdx, getTargetLowering()->getPointerTy(DL),
                        TFI, CurDAG->getTargetConstant(0, SDLoc(N), MVT::i32));
   return true;
@@ -339,21 +340,21 @@ bool SuperHDAGToDAGISel::trySelect(SDNode *N) {
   case Op:                                                                     \
     return trySelect<Op>(N)
 
-  switch(Opcode) {
-  default: break;
+  switch (Opcode) {
+  default:
+    break;
   case ISD::GLOBAL_OFFSET_TABLE: {
-    SDValue GOT = CurDAG->getTargetExternalSymbol(
-        "_GLOBAL_OFFSET_TABLE_", MVT::i32, SHII::MO_GOTPC);
-    MachineSDNode *Res = 
-        CurDAG->getMachineNode(SH::MOVA, DL, MVT::i32, GOT);
+    SDValue GOT = CurDAG->getTargetExternalSymbol("_GLOBAL_OFFSET_TABLE_",
+                                                  MVT::i32, SHII::MO_GOTPC);
+    MachineSDNode *Res = CurDAG->getMachineNode(SH::MOVA, DL, MVT::i32, GOT);
     ReplaceNode(N, Res);
     return true;
   }
 
-  SELECT(ISD::FrameIndex);
-  SELECT(SHISD::WRAPPER);
-  SELECT(SHISD::BRCOND);
-  SELECT(SHISD::CMP);
+    SELECT(ISD::FrameIndex);
+    SELECT(SHISD::WRAPPER);
+    SELECT(SHISD::BRCOND);
+    SELECT(SHISD::CMP);
   }
 
 #undef SELECT
@@ -363,7 +364,7 @@ bool SuperHDAGToDAGISel::trySelect(SDNode *N) {
 void SuperHDAGToDAGISel::Select(SDNode *N) {
 
   LLVM_DEBUG(dbgs() << "SH: Selecting "; N->dump(CurDAG); dbgs() << '\n');
-  
+
   // Node was already selected?
   if (N->isMachineOpcode()) {
     LLVM_DEBUG(dbgs() << "== "; N->dump(CurDAG); dbgs() << '\n');
@@ -380,6 +381,6 @@ void SuperHDAGToDAGISel::Select(SDNode *N) {
 }
 
 FunctionPass *llvm::createSuperHISelDag(SuperHTargetMachine &TM,
-                                     CodeGenOptLevel OptLevel) {
+                                        CodeGenOptLevel OptLevel) {
   return new SuperHDAGToDAGISelLegacy(TM, OptLevel);
 }

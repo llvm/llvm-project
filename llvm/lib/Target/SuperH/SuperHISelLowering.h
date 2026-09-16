@@ -16,16 +16,16 @@
 
 #include "SuperH.h"
 #include "SuperHInstrInfo.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/CodeGen/MachineConstantPool.h"
 
 namespace llvm {
 class SuperHSubtarget;
 class MachineConstantPool;
 
-class SuperHTargetLowering : public TargetLowering  {
+class SuperHTargetLowering : public TargetLowering {
   const SuperHSubtarget *Subtarget;
 
 public:
@@ -34,11 +34,11 @@ public:
   /// ReplaceNodeResults - Replace a node with an illegal result type
   /// with a new node built out of custom code.
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
-                                           SelectionDAG &DAG) const override;
+                          SelectionDAG &DAG) const override;
 
-  // LowerToConstantPool - SuperH's compressed instruction set means that 
-  // immediates and displacements can not be larger than 8 bits. 
-  // As such we need to store said immediates and displacements within 
+  // LowerToConstantPool - SuperH's compressed instruction set means that
+  // immediates and displacements can not be larger than 8 bits.
+  // As such we need to store said immediates and displacements within
   // constants that are within range of the program counter.
   //
   // As such this function is a helper that:
@@ -46,27 +46,27 @@ public:
   //  2. Inserts the target address into said slot.
   //  3. Returns the neccesary, but non-legalized instruction sequence to fetch
   //     the address from that constant pool slot.
-  template<class NodeTy>
-  SDValue LowerToConstantPool(NodeTy* N, SelectionDAG &DAG) const;
+  template <class NodeTy>
+  SDValue LowerToConstantPool(NodeTy *N, SelectionDAG &DAG) const;
 
-  SDValue LowerFormalArguments(SDValue Chain,
-                         CallingConv::ID CallConv, bool IsVarArg,
-                         const SmallVectorImpl<ISD::InputArg> &Ins,
-                         const SDLoc &dl, SelectionDAG &DAG,
-                         SmallVectorImpl<SDValue> &InVals) const override;
-  SDValue LowerReturn(SDValue Chain,
-                      CallingConv::ID CallConv, bool IsVarArg,
+  SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
+                               bool IsVarArg,
+                               const SmallVectorImpl<ISD::InputArg> &Ins,
+                               const SDLoc &dl, SelectionDAG &DAG,
+                               SmallVectorImpl<SDValue> &InVals) const override;
+  SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      const SmallVectorImpl<SDValue> &OutVals,
-                      const SDLoc &dl, SelectionDAG &DAG) const override;
-  bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
-                      const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
-                      const Type *RetTy) const override;
-  SDValue LowerCall(CallLoweringInfo &/*CLI*/,
-              SmallVectorImpl<SDValue> &/*InVals*/) const override;
+                      const SmallVectorImpl<SDValue> &OutVals, const SDLoc &dl,
+                      SelectionDAG &DAG) const override;
+  bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
+                      bool isVarArg,
+                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      LLVMContext &Context, const Type *RetTy) const override;
+  SDValue LowerCall(CallLoweringInfo & /*CLI*/,
+                    SmallVectorImpl<SDValue> & /*InVals*/) const override;
 
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
-  
+
   // Lowerings
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;
@@ -78,28 +78,29 @@ public:
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
-  SDValue getSHCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
-                   SDValue &OutCC, SelectionDAG &DAG, SDLoc DL) const;
+  SDValue getSHCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC, SDValue &OutCC,
+                   SelectionDAG &DAG, SDLoc DL) const;
 
   // Inserters
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
-private:
-  MachineBasicBlock *insertSELECTCC(MachineInstr &MI, 
-                                    MachineBasicBlock *BB) const;
-  MachineBasicBlock *insertLoad(MachineInstr &MI, 
-                                MachineBasicBlock *BB) const;
-  MachineBasicBlock *insertStore(MachineInstr &MI, 
-                                 MachineBasicBlock *BB) const;
 
-  SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG) const override;
+private:
+  MachineBasicBlock *insertSELECTCC(MachineInstr &MI,
+                                    MachineBasicBlock *BB) const;
+  MachineBasicBlock *insertLoad(MachineInstr &MI, MachineBasicBlock *BB) const;
+  MachineBasicBlock *insertStore(MachineInstr &MI, MachineBasicBlock *BB) const;
+
+  SDValue getPICJumpTableRelocBase(SDValue Table,
+                                   SelectionDAG &DAG) const override;
 
   // Lowerings
-  SDValue LowerCallResult(
-    SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool isVarArg,
-    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
-    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const;
+  SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
+                          CallingConv::ID CallConv, bool isVarArg,
+                          const SmallVectorImpl<ISD::InputArg> &Ins,
+                          const SDLoc &dl, SelectionDAG &DAG,
+                          SmallVectorImpl<SDValue> &InVals) const;
 };
 
 } // namespace llvm

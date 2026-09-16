@@ -116,7 +116,7 @@ private:
 public:
   SuperHBasicBlockUtils(MachineFunction &MF) : MF(MF) {
     TII =
-      static_cast<const SuperHInstrInfo*>(MF.getSubtarget().getInstrInfo());
+        static_cast<const SuperHInstrInfo *>(MF.getSubtarget().getInstrInfo());
   }
 
   void computeAllBlockSizes() {
@@ -149,7 +149,6 @@ public:
   void clear() { BBInfo.clear(); }
 
   BBInfoVector &getBBInfo() { return BBInfo; }
-
 };
 
 } // end namespace llvm

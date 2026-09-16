@@ -1193,7 +1193,7 @@ public:
   bool isSPARC() const { return isSPARC32() || isSPARC64(); }
 
   /// Tests whether the target is SuperH.
-  bool isSuperH() const { 
+  bool isSuperH() const {
     return getArch() == Triple::sh || getArch() == Triple::shl;
   }
 

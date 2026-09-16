@@ -34,15 +34,14 @@
 
 using namespace llvm;
 
-SuperHAsmBackend::SuperHAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI) : 
-                  MCAsmBackend(STI.getTargetTriple().isLittleEndian()
-                         ? llvm::endianness::little
-                         : llvm::endianness::big),
-                  STI(STI), OSABI(OSABI) {
-}
+SuperHAsmBackend::SuperHAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI)
+    : MCAsmBackend(STI.getTargetTriple().isLittleEndian()
+                       ? llvm::endianness::little
+                       : llvm::endianness::big),
+      STI(STI), OSABI(OSABI) {}
 
 bool SuperHAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
-                    const MCSubtargetInfo *STI) const {
+                                    const MCSubtargetInfo *STI) const {
   const uint16_t SHNopEnc = 0b0000000000001001;
 
   // If the count is not 4-byte aligned, we must be writing data into the
@@ -56,7 +55,8 @@ bool SuperHAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   OS.write_zeros(Count & 1);
   return true;
 }
-std::optional<MCFixupKind> SuperHAsmBackend::getFixupKind(StringRef Name) const {
+std::optional<MCFixupKind>
+SuperHAsmBackend::getFixupKind(StringRef Name) const {
   if (STI.getTargetTriple().isOSBinFormatELF()) {
     unsigned Type;
     Type = llvm::StringSwitch<unsigned>(Name)
@@ -99,9 +99,11 @@ MCFixupKindInfo SuperHAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
-unsigned SuperHAsmBackend::adjustFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
-                                            const MCValue &Target, uint64_t Value,
-                                            bool IsResolved, MCContext &Ctx,
+unsigned SuperHAsmBackend::adjustFixupValue(const MCAssembler &Asm,
+                                            const MCFixup &Fixup,
+                                            const MCValue &Target,
+                                            uint64_t Value, bool IsResolved,
+                                            MCContext &Ctx,
                                             const MCSubtargetInfo *STI) const {
   unsigned Kind = Fixup.getKind();
   int64_t Addend = Target.getConstant();
@@ -111,31 +113,31 @@ unsigned SuperHAsmBackend::adjustFixupValue(const MCAssembler &Asm, const MCFixu
     return Value;
 
   case SH::fixup_32:
-    return (Value+Addend) & 0xFFFFFFFF;
+    return (Value + Addend) & 0xFFFFFFFF;
 
   case SH::fixup_pcrel4_by2:
-    return ((Value+Addend) / 2) & 0xF;
+    return ((Value + Addend) / 2) & 0xF;
 
   case SH::fixup_pcrel4_by4:
-    return ((Value+Addend) / 4) & 0xF;
-  
+    return ((Value + Addend) / 4) & 0xF;
+
   case SH::fixup_pcrel8_by4:
-    return ((Value+Addend) / 4) & 0xFF;
-  
+    return ((Value + Addend) / 4) & 0xFF;
+
   case SH::fixup_pcrel8_4by2:
     return ((alignTo(Value, 2) + Addend - 4) / 2) & 0xFF;
-  
+
   case SH::fixup_pcrel8_4by4:
     return ((alignTo(Value, 4) + Addend - 4) / 4) & 0xFF;
-  
+
   case SH::fixup_pcrel12_4by2:
     return ((alignTo(Value, 2) + Addend - 4) / 2) & 0xFFF;
   }
 }
 
 bool SuperHAsmBackend::tryAddReloc(const MCFragment &F, const MCFixup &Fixup,
-                               const MCValue &Target, uint64_t &FixedValue,
-                               bool IsResolved) {
+                                   const MCValue &Target, uint64_t &FixedValue,
+                                   bool IsResolved) {
   if (!IsResolved) {
     Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
     return false;
@@ -143,19 +145,21 @@ bool SuperHAsmBackend::tryAddReloc(const MCFragment &F, const MCFixup &Fixup,
   return true;
 }
 
-std::optional<bool> SuperHAsmBackend::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
-                                                    MCValue &Target, uint64_t &FixedValue) {
+std::optional<bool> SuperHAsmBackend::evaluateFixup(const MCFragment &F,
+                                                    MCFixup &Fixup,
+                                                    MCValue &Target,
+                                                    uint64_t &FixedValue) {
   MCValue PCITarget; // PC-Indirect Target
 
   // Get indirect target location.
-  switch(Fixup.getKind()) {
-  default: 
+  switch (Fixup.getKind()) {
+  default:
     return {};
 
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
-  case FK_Data_8: 
+  case FK_Data_8:
   case SH::fixup_pcrel4_by2:
   case SH::fixup_pcrel4_by4:
   case SH::fixup_pcrel8_by4:
@@ -180,8 +184,8 @@ std::optional<bool> SuperHAsmBackend::evaluateFixup(const MCFragment &F, MCFixup
 
   // Check if resolvable.
   bool IsResolved = &SA.getSection() == F.getParent() &&
-                     SA.getBinding() == ELF::STB_LOCAL &&
-                     SA.getType() != ELF::STT_GNU_IFUNC;
+                    SA.getBinding() == ELF::STB_LOCAL &&
+                    SA.getType() != ELF::STT_GNU_IFUNC;
   if (!IsResolved)
     return false;
 
@@ -194,20 +198,20 @@ std::optional<bool> SuperHAsmBackend::evaluateFixup(const MCFragment &F, MCFixup
 }
 
 void SuperHAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                 const MCValue &Target, uint8_t *Data,
-                                 uint64_t Value, bool IsResolved) {
-  
+                                  const MCValue &Target, uint8_t *Data,
+                                  uint64_t Value, bool IsResolved) {
+
   // Handle Relocations
   IsResolved = tryAddReloc(F, Fixup, Target, Value, IsResolved);
   MCFixupKind Kind = Fixup.getKind();
-  if (mc::isRelocation(Kind)) 
+  if (mc::isRelocation(Kind))
     return;
 
   // Handle non-relocations
   MCContext &Ctx = getContext();
   MCFixupKindInfo Info = getFixupKindInfo(Kind);
-  Value = adjustFixupValue(*Asm, Fixup, Target, Value, IsResolved, 
-                           Ctx, getSubtargetInfo(F));
+  Value = adjustFixupValue(*Asm, Fixup, Target, Value, IsResolved, Ctx,
+                           getSubtargetInfo(F));
 
   if (!Value)
     return; // No encoding change.
@@ -226,15 +230,16 @@ void SuperHAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   }
 }
 
-std::unique_ptr<MCObjectTargetWriter> 
+std::unique_ptr<MCObjectTargetWriter>
 SuperHAsmBackend::createObjectTargetWriter() const {
   return createSuperHELFObjectWriter(OSABI);
 }
 
 MCAsmBackend *llvm::createSuperHAsmBackend(const Target &T,
-                                          const MCSubtargetInfo &STI,
-                                          const MCRegisterInfo &MRI,
-                                          const MCTargetOptions &Options) {
-  uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(STI.getTargetTriple().getOS());
+                                           const MCSubtargetInfo &STI,
+                                           const MCRegisterInfo &MRI,
+                                           const MCTargetOptions &Options) {
+  uint8_t OSABI =
+      MCELFObjectTargetWriter::getOSABI(STI.getTargetTriple().getOS());
   return new SuperHAsmBackend(STI, OSABI);
 }

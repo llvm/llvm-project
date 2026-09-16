@@ -27,10 +27,10 @@ class SuperHTargetMachine : public CodeGenTargetMachineImpl {
 
 public:
   SuperHTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                     StringRef FS, const TargetOptions &Options,
-                     std::optional<Reloc::Model> RM,
-                     std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
-                     bool JIT);
+                      StringRef FS, const TargetOptions &Options,
+                      std::optional<Reloc::Model> RM,
+                      std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
+                      bool JIT);
   ~SuperHTargetMachine() override;
 
   MachineFunctionInfo *
@@ -42,7 +42,6 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
-
 };
 
 } // end namespace llvm

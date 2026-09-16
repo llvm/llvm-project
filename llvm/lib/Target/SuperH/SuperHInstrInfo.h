@@ -15,10 +15,10 @@
 #define LLVM_LIB_TARGET_SUPERH_SUPERHINSTRINFO_H
 
 #include "SuperHRegisterInfo.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
 
 #define GET_INSTRINFO_HEADER
 #include "SuperHGenInstrInfo.inc"
@@ -60,8 +60,8 @@ public:
   const SuperHRegisterInfo &getRegisterInfo() const { return RI; }
 
   /// Gets whether a given opcode can fill a delay slot.
-  /// 
-  /// SuperH does not allow branch instructions of any kind to be situated 
+  ///
+  /// SuperH does not allow branch instructions of any kind to be situated
   /// in a delay slot, nor does it allow instructions with delay slots
   /// to be chained together.
   bool canFillDelaySlot(unsigned Opcode) const;
@@ -74,16 +74,14 @@ public:
 
   /// Return the noop instruction to use for a noop.
   MCInst getNop() const override;
-  void insertNoop(MachineBasicBlock &MBB, 
+  void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;
 
-
   // Stack Frames
-  void copyPhysReg(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MI, const DebugLoc &DL,
-                           Register DestReg, Register SrcReg, bool KillSrc,
-                           bool RenamableDest = false,
-                           bool RenamableSrc = false) const override;
+  void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
+                   bool KillSrc, bool RenamableDest = false,
+                   bool RenamableSrc = false) const override;
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
       bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
@@ -97,7 +95,6 @@ public:
                                int &FrameIndex) const override;
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
-
 
   // Branch Analysis
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
@@ -120,6 +117,6 @@ public:
 };
 
 const SuperHInstrInfo *createSuperHInstrInfo(const SuperHSubtarget &STI);
-}
+} // namespace llvm
 
 #endif // end LLVM_LIB_TARGET_SUPERH_SUPERHINSTRINFO_H

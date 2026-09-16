@@ -25,7 +25,8 @@ class MachineInstr;
 class PassRegistry;
 class SuperHTargetMachine;
 
-FunctionPass *createSuperHISelDag(SuperHTargetMachine &TM, CodeGenOptLevel OptLevel);
+FunctionPass *createSuperHISelDag(SuperHTargetMachine &TM,
+                                  CodeGenOptLevel OptLevel);
 FunctionPass *createSuperHFillDelaySlotsPass();
 FunctionPass *createSuperHConstantIslandPass();
 FunctionPass *createSuperHExpandPseudoPass();
@@ -38,6 +39,5 @@ void initializeSuperHFillDelaySlotsPass(PassRegistry &);
 void initializeSuperHConstantIslandsPass(PassRegistry &);
 void initializeSuperHExpandPseudoPass(PassRegistry &);
 } // namespace llvm
-
 
 #endif
