@@ -874,8 +874,7 @@ define void @memset_pattern_i64_as7_dynlen_dynval(ptr addrspace(7) inreg align 1
 ; GFX942-SDAG-NEXT:    s_cbranch_execz .LBB13_3
 ; GFX942-SDAG-NEXT:  ; %bb.1: ; %memset.pattern-expansion-main-body.preheader
 ; GFX942-SDAG-NEXT:    v_add_u32_e32 v6, s16, v0
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v10, v8
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v11, v9
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[10:11], v[8:9]
 ; GFX942-SDAG-NEXT:    s_mov_b64 s[8:9], 0
 ; GFX942-SDAG-NEXT:  .LBB13_2: ; %memset.pattern-expansion-main-body
 ; GFX942-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
