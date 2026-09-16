@@ -26,7 +26,7 @@ static cl::opt<bool>
 
 #define LoadSeedsDef "loads"
 #define StoreSeedsDef "stores"
-cl::opt<std::string> CollectSeeds(
+static cl::opt<std::string> CollectSeeds(
     "sbvec-collect-seeds", cl::init(StoreSeedsDef), cl::Hidden,
     cl::desc("Collect these seeds. Use empty for none or a comma-separated "
              "list of '" StoreSeedsDef "' and '" LoadSeedsDef "'."));
