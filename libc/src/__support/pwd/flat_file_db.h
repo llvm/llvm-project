@@ -16,7 +16,6 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/stdio_macros.h"
-#include "hdr/types/off_t.h"
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/limits.h"
@@ -33,13 +32,11 @@ namespace pwd {
 // Struct to hold the result of a line read operation.
 struct ReadLineResult {
   size_t bytes_read;
-  size_t raw_bytes_consumed;
   bool truncated;
-  // True only when no raw bytes were read (raw_bytes_consumed == 0) because the
-  // stream was already at EOF. A blank line ("\n") or a final line without a
-  // trailing newline consumes at least one raw byte and returns eof == false
-  // (with bytes_read == 0 for "\n"); the following call returns
-  // raw_bytes_consumed == 0 and eof == true.
+  // True only when zero raw bytes were read because the stream was already at
+  // EOF. A blank line ("\n") or a final line without a trailing newline
+  // consumes at least one raw byte and returns eof == false (with
+  // bytes_read == 0 for "\n"); the following call returns eof == true.
   bool eof;
 };
 
@@ -58,13 +55,9 @@ public:
 private:
   const char *file_path;
   File *file = nullptr;
-  off_t current_offset = 0;
-  off_t last_line_start = 0;
 
-  // Closes the file stream if open and resets stream position tracking.
+  // Closes the file stream if open.
   LIBC_INLINE ErrorOr<void> clear_file_stream() {
-    current_offset = 0;
-    last_line_start = 0;
     if (file) {
       int result = file->close();
       file = nullptr;
@@ -92,7 +85,6 @@ private:
 
     File::FileLock lock(f);
     size_t bytes_read = 0;
-    size_t raw_bytes_consumed = 0;
     FileIOResult result(0);
     bool truncated = false;
 
@@ -103,12 +95,11 @@ private:
       if (result.value != 1)
         break;
       ++bytes_read;
-      ++raw_bytes_consumed;
       if (ch == '\n')
         break;
     }
 
-    bool eof = (raw_bytes_consumed == 0);
+    bool eof = (bytes_read == 0);
 
     auto read_span = buf.first(bytes_read);
     if (result.value == 1 && !read_span.empty() && read_span.back() != '\n') {
@@ -117,10 +108,7 @@ private:
         result = f->read_unlocked(&c, 1);
         if (result.has_error())
           return Error(result.error);
-        if (result.value != 1)
-          break;
-        ++raw_bytes_consumed;
-        if (c == '\n')
+        if (result.value != 1 || c == '\n')
           break;
         truncated = true;
       }
@@ -134,7 +122,7 @@ private:
       --bytes_read;
 
     buf[bytes_read] = '\0';
-    return ReadLineResult{bytes_read, raw_bytes_consumed, truncated, eof};
+    return ReadLineResult{bytes_read, truncated, eof};
   }
 
   // Reads a single line into a caller-owned buffer, growing it as needed so
@@ -178,16 +166,14 @@ private:
     if (f->error_unlocked())
       return Error(EIO);
 
-    size_t raw_bytes_consumed = bytes_read;
-    bool eof = (raw_bytes_consumed == 0);
+    bool eof = (bytes_read == 0);
 
     // If the line ended with a newline, strip it.
     if (bytes_read > 0 && buf.span()[bytes_read - 1] == '\n')
       --bytes_read;
 
     buf.span()[bytes_read] = '\0';
-    return ReadLineResult{bytes_read, raw_bytes_consumed, /*truncated=*/false,
-                          eof};
+    return ReadLineResult{bytes_read, /*truncated=*/false, eof};
   }
 
 public:
@@ -207,8 +193,6 @@ public:
 
   // Opens or rewinds the database file stream.
   LIBC_INLINE ErrorOr<void> setdb() {
-    current_offset = 0;
-    last_line_start = 0;
     if (!file) {
       auto result = openfile(file_path, "r");
       if (!result.has_value())
@@ -241,13 +225,11 @@ public:
     }
 
     while (true) {
-      last_line_start = current_offset;
       auto result = read_line(file, buffer);
       if (!result.has_value())
         return Error(result.error());
 
       ReadLineResult res = result.value();
-      current_offset += static_cast<off_t>(res.raw_bytes_consumed);
       if (res.eof)
         return false; // EOF
 
@@ -279,13 +261,11 @@ public:
     }
 
     while (true) {
-      last_line_start = current_offset;
       auto result = read_line_growing(file, buffer);
       if (!result.has_value())
         return Error(result.error());
 
       ReadLineResult res = result.value();
-      current_offset += static_cast<off_t>(res.raw_bytes_consumed);
       if (res.eof)
         return false; // EOF
 
@@ -309,57 +289,12 @@ public:
   // Searches for a record matching a given predicate. Returns true if the
   // entry was found, false if it's missing, or an Error if lookup failed.
   //
-  // Per POSIX, ERANGE is reported only if the matched entry does not fit in the
-  // caller's buffer; unrelated preceding records larger than buffer are
-  // skipped.
+  // When BufferType is cpp::span<char>, lookup never allocates and returns
+  // ERANGE if any record encountered exceeds buffer (matching glibc and
+  // FreeBSD). When BufferType is DynamicBuffer, the buffer grows as needed.
+  template <typename BufferType>
   LIBC_INLINE ErrorOr<bool> lookup(const Matcher &matcher, EntryType *entry,
-                                   cpp::span<char> buffer) {
-    if (!entry)
-      return Error(EINVAL);
-
-    auto res = setdb();
-    if (!res.has_value())
-      return Error(res.error());
-
-    ScopedDynamicBuffer scratch_buf;
-    while (true) {
-      auto next_res = getnext(entry, buffer);
-      if (next_res.has_value()) {
-        if (!next_res.value())
-          return false; // EOF without match
-        if (matcher(*entry))
-          return true;
-        continue;
-      }
-
-      if (next_res.error() != ERANGE)
-        return Error(next_res.error());
-
-      // The record at last_line_start exceeded buffer. Check whether it is
-      // actually the target entry before reporting ERANGE. Use a stack-local
-      // scratch_entry so we do not leave dangling pointers in the caller's
-      // *entry when scratch_buf goes out of scope.
-      auto seek_res = file->seek(last_line_start, SEEK_SET);
-      if (!seek_res.has_value())
-        return Error(seek_res.error());
-      file->clearerr();
-      current_offset = last_line_start;
-
-      EntryType scratch_entry{};
-      auto dyn_res = getnext(&scratch_entry, scratch_buf);
-      if (!dyn_res.has_value())
-        return Error(dyn_res.error());
-      if (!dyn_res.value())
-        return false;
-      if (matcher(scratch_entry))
-        return Error(ERANGE);
-    }
-  }
-
-  // As above, but reads into a caller-owned buffer that grows to fit long
-  // records instead of reporting ERANGE.
-  LIBC_INLINE ErrorOr<bool> lookup(const Matcher &matcher, EntryType *entry,
-                                   DynamicBuffer &buffer) {
+                                   BufferType &buffer) {
     if (!entry)
       return Error(EINVAL);
 

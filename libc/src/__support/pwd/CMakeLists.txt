@@ -33,7 +33,6 @@ add_header_library(
     .dynamic_buffer
     libc.hdr.errno_macros
     libc.hdr.stdio_macros
-    libc.hdr.types.off_t
     libc.hdr.types.size_t
     libc.src.__support.CPP.functional
     libc.src.__support.CPP.limits

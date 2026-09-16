@@ -245,20 +245,20 @@ TEST_F(LlvmLibcFlatFileDbTest, DynamicBufferReadsArbitrarilyLongLines) {
   auto r1 = db.getnext(&entry, buffer);
   ASSERT_TRUE(r1.has_value());
   ASSERT_TRUE(r1.value());
-  ASSERT_STREQ(entry.key, "key0");
-  ASSERT_EQ(LIBC_NAMESPACE::internal::string_length(entry.val), VALUE_LENGTH);
+  EXPECT_STREQ(entry.key, "key0");
+  EXPECT_EQ(LIBC_NAMESPACE::internal::string_length(entry.val), VALUE_LENGTH);
 
   auto r2 = db.getnext(&entry, buffer);
   ASSERT_TRUE(r2.has_value());
   ASSERT_TRUE(r2.value());
-  ASSERT_STREQ(entry.key, "key1");
+  EXPECT_STREQ(entry.key, "key1");
 
   auto r3 = db.getnext(&entry, buffer);
   ASSERT_TRUE(r3.has_value());
-  ASSERT_FALSE(r3.value());
+  EXPECT_FALSE(r3.value());
 }
 
-TEST_F(LlvmLibcFlatFileDbTest, PrecedingLongRecordsSkippedDuringLookup) {
+TEST_F(LlvmLibcFlatFileDbTest, LookupOversizedPrecedingRecord) {
   const char *content =
       "huge_unrelated_key:012345678901234567890123456789012345\n"
       "target:short\n";
@@ -267,41 +267,46 @@ TEST_F(LlvmLibcFlatFileDbTest, PrecedingLongRecordsSkippedDuringLookup) {
 
   LIBC_NAMESPACE::pwd::ScopedFlatFileDatabase<SimpleTestEntry> db(
       test_file.get_path());
-  // 24 bytes is large enough for "target:short" (12 chars + '\0') but smaller
-  // than "huge_unrelated_key:...". Fixed-buffer lookup must proceed past
-  // unrelated long records without falsely returning ERANGE.
-  constexpr size_t SMALL_BUFFER_SIZE = 24;
-  char buffer[SMALL_BUFFER_SIZE];
-  SimpleTestEntry entry;
+  auto matcher = [](const SimpleTestEntry &e) {
+    return LIBC_NAMESPACE::cpp::string_view(e.key) == "target";
+  };
 
-  auto res = db.lookup(
-      [](const SimpleTestEntry &e) {
-        return LIBC_NAMESPACE::cpp::string_view(e.key) == "target";
-      },
-      &entry, buffer);
-  ASSERT_TRUE(res.has_value());
-  ASSERT_TRUE(res.value());
-  ASSERT_STREQ(entry.key, "target");
-  ASSERT_STREQ(entry.val, "short");
+  // Fixed-buffer lookup never allocates and returns ERANGE when any record
+  // encountered exceeds the caller's buffer (matching glibc and FreeBSD).
+  constexpr size_t SMALL_BUFFER_SIZE = 24;
+  char small_buffer[SMALL_BUFFER_SIZE];
+  SimpleTestEntry entry;
+  auto fixed_res = db.lookup(matcher, &entry, small_buffer);
+  ASSERT_FALSE(fixed_res.has_value());
+  EXPECT_EQ(fixed_res.error(), ERANGE);
+
+  // DynamicBuffer lookup grows the buffer across oversized preceding records
+  // and locates the target entry.
+  LIBC_NAMESPACE::pwd::ScopedDynamicBuffer dyn_buffer;
+  auto dyn_res = db.lookup(matcher, &entry, dyn_buffer);
+  ASSERT_TRUE(dyn_res.has_value());
+  ASSERT_TRUE(dyn_res.value());
+  EXPECT_STREQ(entry.key, "target");
+  EXPECT_STREQ(entry.val, "short");
 }
 
 TEST_F(LlvmLibcFlatFileDbTest, DynamicBufferReserveGrowRelease) {
   LIBC_NAMESPACE::pwd::ScopedDynamicBuffer buffer;
-  ASSERT_EQ(buffer.capacity(), static_cast<size_t>(0));
+  EXPECT_EQ(buffer.capacity(), static_cast<size_t>(0));
 
   ASSERT_TRUE(buffer.grow());
   size_t initial = buffer.capacity();
-  ASSERT_GT(initial, static_cast<size_t>(0));
+  EXPECT_GT(initial, static_cast<size_t>(0));
 
   ASSERT_TRUE(buffer.grow());
-  ASSERT_EQ(buffer.capacity(), initial * 2);
+  EXPECT_EQ(buffer.capacity(), initial * 2);
 
   buffer.release();
-  ASSERT_EQ(buffer.capacity(), static_cast<size_t>(0));
+  EXPECT_EQ(buffer.capacity(), static_cast<size_t>(0));
   buffer.release();
-  ASSERT_EQ(buffer.capacity(), static_cast<size_t>(0));
+  EXPECT_EQ(buffer.capacity(), static_cast<size_t>(0));
 
   constexpr size_t TARGET_RESERVE_CAPACITY = 1024;
   ASSERT_TRUE(buffer.reserve(TARGET_RESERVE_CAPACITY));
-  ASSERT_GE(buffer.capacity(), TARGET_RESERVE_CAPACITY);
+  EXPECT_GE(buffer.capacity(), TARGET_RESERVE_CAPACITY);
 }
