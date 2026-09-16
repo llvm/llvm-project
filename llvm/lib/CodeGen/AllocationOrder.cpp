@@ -71,12 +71,10 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
     }
   });
 
-  if (AntiHintedRegUnits.any()) {
-    HintsAndCustomOrder.reserve(NumHints + Order.size());
+  if (AntiHintedRegUnits.any())
     TRI->applyRegAllocationAntiHints(VirtReg, Order, HintsAndCustomOrder,
                                      NumHints, AntiHintedRegUnits, MF, Matrix,
                                      &RegClassInfo);
-  }
 
   // Create allocation order object.
   AllocationOrder AO(std::move(HintsAndCustomOrder), NumHints, Order,
