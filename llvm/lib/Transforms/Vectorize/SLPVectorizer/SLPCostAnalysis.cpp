@@ -299,11 +299,11 @@ InstructionCost getBoolReduxBitcastCmpCost(const TargetTransformInfo &TTI,
                               TruncI) +
          TTI.getCastInstrCost(Instruction::BitCast, IntTy, I1VecTy,
                               TTI.getCastContextHint(TruncI), CostKind) +
-         TTI.getCmpSelInstrCost(Instruction::ICmp, IntTy, /*CondTy=*/nullptr,
-                                RdxKind == RecurKind::And ? CmpInst::ICMP_EQ
-                                                          : CmpInst::ICMP_NE,
-                                CostKind, TTI.getOperandInfo(Root),
-                                TTI.getOperandInfo(CmpRHS), CmpI);
+         TTI.getCmpSelInstrCost(
+             Instruction::ICmp, IntTy, CmpInst::makeCmpResultType(IntTy),
+             RdxKind == RecurKind::And ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE,
+             CostKind, TTI.getOperandInfo(Root), TTI.getOperandInfo(CmpRHS),
+             CmpI);
 }
 
 static InstructionCost
@@ -318,14 +318,12 @@ getBoolLogicRdxBitcastCost(RecurKind Kind, const TargetTransformInfo &TTI,
   CmpInst::Predicate Pred =
       Kind == RecurKind::And ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
   // The compare is against the all-ones (and) or zero (or) constant.
-  Constant *CmpConst = Kind == RecurKind::And
-                           ? ConstantInt::getAllOnesValue(IntTy)
-                           : ConstantInt::getNullValue(IntTy);
   return TTI.getCastInstrCost(Instruction::BitCast, IntTy, VectorTy, Ctx,
                               CostKind) +
-         TTI.getCmpSelInstrCost(
-             Instruction::ICmp, IntTy, CmpInst::makeCmpResultType(IntTy), Pred,
-             CostKind, /*Op1Info=*/{}, TTI::getOperandInfo(CmpConst));
+         TTI.getCmpSelInstrCost(Instruction::ICmp, IntTy,
+                                CmpInst::makeCmpResultType(IntTy), Pred,
+                                CostKind, /*Op1Info=*/{},
+                                {TTI::OK_UniformConstantValue, TTI::OP_None});
 }
 
 std::pair<InstructionCost, bool>

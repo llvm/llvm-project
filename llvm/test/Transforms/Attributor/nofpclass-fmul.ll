@@ -44,6 +44,46 @@ define float @ret_mul_exponent_f32_22(float %arg0) {
   ret float %call
 }
 
+define float @fmul_no_nan(float nofpclass(nan) %arg0, float nofpclass(nan) %arg1) {
+; CHECK-LABEL: define nofpclass(snan) float @fmul_no_nan(
+; CHECK-SAME: float nofpclass(nan) [[ARG0:%.*]], float nofpclass(nan) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @fmul_no_snan(float nofpclass(snan) %arg0, float nofpclass(snan) %arg1) {
+; CHECK-LABEL: define nofpclass(snan) float @fmul_no_snan(
+; CHECK-SAME: float nofpclass(snan) [[ARG0:%.*]], float nofpclass(snan) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @fmul_lhs_no_snan(float nofpclass(snan) %arg0, float %arg1) {
+; CHECK-LABEL: define float @fmul_lhs_no_snan(
+; CHECK-SAME: float nofpclass(snan) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
+define float @fmul_rhs_no_snan(float %arg0, float nofpclass(snan) %arg1) {
+; CHECK-LABEL: define float @fmul_rhs_no_snan(
+; CHECK-SAME: float [[ARG0:%.*]], float nofpclass(snan) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %fmul = fmul float %arg0, %arg1
+  ret float %fmul
+}
+
 define float @ret_fmul_square_f32_src_no_nan(float noundef nofpclass(nan) %arg) {
 ; CHECK-LABEL: define noundef nofpclass(nan ninf nzero nsub nnorm) float @ret_fmul_square_f32_src_no_nan(
 ; CHECK-SAME: float noundef nofpclass(nan) [[ARG:%.*]]) #[[ATTR0]] {
@@ -528,7 +568,7 @@ define float @ret_fmul_f32_known_ninf_or_nan_rhs(float %arg0, float nofpclass(pi
 
 ; -> nan
 define float @ret_known_inf_mul_known_zero(float nofpclass(nan norm sub zero) %arg0, float nofpclass(nan inf norm sub) %arg1) {
-; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret_known_inf_mul_known_zero(
+; CHECK-LABEL: define nofpclass(snan inf zero sub norm) float @ret_known_inf_mul_known_zero(
 ; CHECK-SAME: float nofpclass(nan zero sub norm) [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FMUL]]
@@ -561,7 +601,7 @@ define float @ret_known_inf_mul_known_zero_or_nan(float nofpclass(nan norm sub z
 
 ; -> nan
 define float @ret_known_ninf_mul_known_zero(float nofpclass(nan pinf norm sub zero) %arg0, float nofpclass(nan inf norm sub) %arg1) {
-; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret_known_ninf_mul_known_zero(
+; CHECK-LABEL: define nofpclass(snan inf zero sub norm) float @ret_known_ninf_mul_known_zero(
 ; CHECK-SAME: float nofpclass(nan pinf zero sub norm) [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FMUL]]
@@ -572,7 +612,7 @@ define float @ret_known_ninf_mul_known_zero(float nofpclass(nan pinf norm sub ze
 
 ; -> nan
 define float @ret_known_pinf_mul_known_zero(float nofpclass(nan ninf norm sub zero) %arg0, float nofpclass(nan inf norm sub) %arg1) {
-; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret_known_pinf_mul_known_zero(
+; CHECK-LABEL: define nofpclass(snan inf zero sub norm) float @ret_known_pinf_mul_known_zero(
 ; CHECK-SAME: float nofpclass(nan ninf zero sub norm) [[ARG0:%.*]], float nofpclass(nan inf sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FMUL]]
@@ -583,7 +623,7 @@ define float @ret_known_pinf_mul_known_zero(float nofpclass(nan ninf norm sub ze
 
 ; -> nan
 define float @ret_known_zero_mul_known_inf(float nofpclass(nan inf norm sub) %arg0, float nofpclass(nan norm sub zero) %arg1) {
-; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret_known_zero_mul_known_inf(
+; CHECK-LABEL: define nofpclass(snan inf zero sub norm) float @ret_known_zero_mul_known_inf(
 ; CHECK-SAME: float nofpclass(nan inf sub norm) [[ARG0:%.*]], float nofpclass(nan zero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[FMUL]]
