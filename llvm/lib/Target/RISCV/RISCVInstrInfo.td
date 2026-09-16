@@ -206,7 +206,9 @@ class ImmXLenAsmOperand<string prefix, string suffix = ""> : AsmOperandClass {
 
 class ImmAsmOperand<string prefix, int width, string suffix> : AsmOperandClass {
   let Name = prefix # "Imm" # width # suffix;
-  let PredicateMethod = "is" # prefix # "Imm" # width # suffix;
+  let PredicateMethod = !if(!eq(suffix, ""),
+                            "is" # prefix # "Imm<" # width # ">",
+                            "is" # prefix # "Imm" # width # suffix);
   let RenderMethod = "addImmOperands";
   let DiagnosticType = !strconcat("Invalid", Name);
 }
