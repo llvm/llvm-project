@@ -245,3 +245,84 @@ define double @test_fadd_fmul_c_double(double %a, double %b, double %c) {
   %add = fadd contract double %mul, %c
   ret double %add
 }
+
+
+; fadd(fmul(a, b), c) => fma(a, b, c)
+define <2 x float> @test_fadd_fmul_c_v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
+; CHECK-LABEL: define <2 x float> @test_fadd_fmul_c_v2f32(
+; CHECK-SAME: <2 x float> [[A:%.*]], <2 x float> [[B:%.*]], <2 x float> [[C:%.*]]) {
+; CHECK-NEXT:    [[ADD:%.*]] = call contract <2 x float> @llvm.fma.v2f32(<2 x float> [[A]], <2 x float> [[B]], <2 x float> [[C]])
+; CHECK-NEXT:    ret <2 x float> [[ADD]]
+;
+  %mul = fmul contract <2 x float> %a, %b
+  %add = fadd contract <2 x float> %mul, %c
+  ret <2 x float> %add
+}
+
+
+; fadd(c, fmul(a, b)) => fma(a, b, c)
+define <2 x float> @test_fadd_c_fmul_v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
+; CHECK-LABEL: define <2 x float> @test_fadd_c_fmul_v2f32(
+; CHECK-SAME: <2 x float> [[A:%.*]], <2 x float> [[B:%.*]], <2 x float> [[C:%.*]]) {
+; CHECK-NEXT:    [[ADD:%.*]] = call contract <2 x float> @llvm.fma.v2f32(<2 x float> [[A]], <2 x float> [[B]], <2 x float> [[C]])
+; CHECK-NEXT:    ret <2 x float> [[ADD]]
+;
+  %mul = fmul contract <2 x float> %a, %b
+  %add = fadd contract <2 x float> %c, %mul
+  ret <2 x float> %add
+}
+
+
+; fsub(fmul(a, b), c) => fma(a, b, fneg(c))
+define <2 x float> @test_fsub_fmul_c_v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
+; CHECK-LABEL: define <2 x float> @test_fsub_fmul_c_v2f32(
+; CHECK-SAME: <2 x float> [[A:%.*]], <2 x float> [[B:%.*]], <2 x float> [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg contract <2 x float> [[C]]
+; CHECK-NEXT:    [[SUB:%.*]] = call contract <2 x float> @llvm.fma.v2f32(<2 x float> [[A]], <2 x float> [[B]], <2 x float> [[TMP1]])
+; CHECK-NEXT:    ret <2 x float> [[SUB]]
+;
+  %mul = fmul contract <2 x float> %a, %b
+  %sub = fsub contract <2 x float> %mul, %c
+  ret <2 x float> %sub
+}
+
+
+; fsub(c, fmul(a, b)) => fma(fneg(a), b, c)
+define <2 x float> @test_fsub_c_fmul_v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
+; CHECK-LABEL: define <2 x float> @test_fsub_c_fmul_v2f32(
+; CHECK-SAME: <2 x float> [[A:%.*]], <2 x float> [[B:%.*]], <2 x float> [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg contract <2 x float> [[A]]
+; CHECK-NEXT:    [[SUB:%.*]] = call contract <2 x float> @llvm.fma.v2f32(<2 x float> [[TMP1]], <2 x float> [[B]], <2 x float> [[C]])
+; CHECK-NEXT:    ret <2 x float> [[SUB]]
+;
+  %mul = fmul contract <2 x float> %a, %b
+  %sub = fsub contract <2 x float> %c, %mul
+  ret <2 x float> %sub
+}
+
+
+; fadd(fmul(a, b), c) => fma(a, b, c)
+define <2 x double> @test_fadd_fmul_c_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+; CHECK-LABEL: define <2 x double> @test_fadd_fmul_c_v2f64(
+; CHECK-SAME: <2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> [[C:%.*]]) {
+; CHECK-NEXT:    [[ADD:%.*]] = call contract <2 x double> @llvm.fma.v2f64(<2 x double> [[A]], <2 x double> [[B]], <2 x double> [[C]])
+; CHECK-NEXT:    ret <2 x double> [[ADD]]
+;
+  %mul = fmul contract <2 x double> %a, %b
+  %add = fadd contract <2 x double> %mul, %c
+  ret <2 x double> %add
+}
+
+
+; fsub(fmul(a, b), c) => fma(a, b, fneg(c))
+define <2 x double> @test_fsub_fmul_c_v2f64(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+; CHECK-LABEL: define <2 x double> @test_fsub_fmul_c_v2f64(
+; CHECK-SAME: <2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg contract <2 x double> [[C]]
+; CHECK-NEXT:    [[SUB:%.*]] = call contract <2 x double> @llvm.fma.v2f64(<2 x double> [[A]], <2 x double> [[B]], <2 x double> [[TMP1]])
+; CHECK-NEXT:    ret <2 x double> [[SUB]]
+;
+  %mul = fmul contract <2 x double> %a, %b
+  %sub = fsub contract <2 x double> %mul, %c
+  ret <2 x double> %sub
+}

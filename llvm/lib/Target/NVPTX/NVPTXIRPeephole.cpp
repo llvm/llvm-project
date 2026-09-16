@@ -10,7 +10,7 @@
 // run late in the NVPTX IR pass pipeline just before the instruction selection.
 //
 // Currently, it implements the following transformation(s):
-// 1. FMA folding (float/double types):
+// 1. FMA folding (float/double types and vectors thereof):
 //    Transforms FMUL+FADD/FSUB sequences into FMA intrinsics when the
 //    'contract' fast-math flag is present. Supported patterns:
 //    - fadd(fmul(a, b), c) => fma(a, b, c)
@@ -125,8 +125,9 @@ static bool foldFMA(Function &F) {
       if (!BI->hasAllowContract())
         continue;
 
-      // Only float and double are supported.
-      if (!BI->getType()->isFloatTy() && !BI->getType()->isDoubleTy())
+      // Float, double, and vectors thereof are supported.
+      Type *ScalarTy = BI->getType()->getScalarType();
+      if (!ScalarTy->isFloatTy() && !ScalarTy->isDoubleTy())
         continue;
 
       if (tryFoldBinaryFMul(BI))
