@@ -2415,8 +2415,10 @@ define void @compressstore_v32f32_v32i32(ptr %base, <32 x float> %V, <32 x i32> 
 ; AVX512-NEXT:    shrl $4, %ecx
 ; AVX512-NEXT:    addl %eax, %ecx
 ; AVX512-NEXT:    andl $252645135, %ecx ## imm = 0xF0F0F0F
-; AVX512-NEXT:    imull $16843009, %ecx, %eax ## imm = 0x1010101
-; AVX512-NEXT:    shrl $24, %eax
+; AVX512-NEXT:    movl %ecx, %eax
+; AVX512-NEXT:    shrl $8, %eax
+; AVX512-NEXT:    addl %ecx, %eax
+; AVX512-NEXT:    movzbl %al, %eax
 ; AVX512-NEXT:    vcompressps %zmm1, (%rdi,%rax,4) {%k1}
 ; AVX512-NEXT:    vcompressps %zmm0, (%rdi) {%k2}
 ; AVX512-NEXT:    vzeroupper

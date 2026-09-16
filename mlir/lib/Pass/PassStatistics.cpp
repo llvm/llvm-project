@@ -219,15 +219,13 @@ void OpPassManager::mergeStatisticsInto(OpPassManager &other) {
 /// Prepare the statistics of passes within the given pass manager for
 /// consumption(e.g. dumping).
 static void prepareStatistics(OpPassManager &pm) {
-  for (Pass &pass : pm.getPasses()) {
-    OpToOpPassAdaptor *adaptor = dyn_cast<OpToOpPassAdaptor>(&pass);
-    if (!adaptor)
-      continue;
-    MutableArrayRef<OpPassManager> nestedPms = adaptor->getPassManagers();
+  for (auto &adaptor :
+       llvm::make_isa_range<OpToOpPassAdaptor>(pm.getPasses())) {
+    MutableArrayRef<OpPassManager> nestedPms = adaptor.getPassManagers();
 
     // Merge the statistics from the async pass managers into the main nested
     // pass managers.  Prepare recursively before merging.
-    for (auto &asyncPM : adaptor->getParallelPassManagers()) {
+    for (auto &asyncPM : adaptor.getParallelPassManagers()) {
       for (unsigned i = 0, e = asyncPM.size(); i != e; ++i) {
         prepareStatistics(asyncPM[i]);
         asyncPM[i].mergeStatisticsInto(nestedPms[i]);

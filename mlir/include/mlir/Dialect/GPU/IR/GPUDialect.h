@@ -17,9 +17,9 @@
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/DLTI/Traits.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
+#include "mlir/Dialect/GPU/IR/GPUDialectDecl.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/RegionKindInterface.h"
@@ -218,10 +218,6 @@ public:
 
 } // namespace gpu
 } // namespace mlir
-
-#include "mlir/Dialect/GPU/IR/GPUOpsEnums.h.inc"
-
-#include "mlir/Dialect/GPU/IR/GPUOpsDialect.h.inc"
 
 #include "mlir/Dialect/GPU/IR/GPUOpInterfaces.h.inc"
 

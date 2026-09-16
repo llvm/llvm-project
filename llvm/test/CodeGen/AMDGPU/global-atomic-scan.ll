@@ -17,14 +17,14 @@ define amdgpu_kernel void @atomic_add_i32_offset(ptr addrspace(1) %out, i32 %in)
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile add ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw add ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    ret void
 ;
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i64 4
-  %val = atomicrmw volatile add ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw add ptr addrspace(1) %gep, i32 %in seq_cst
   ret void
 }
 
@@ -44,14 +44,14 @@ define amdgpu_kernel void @atomic_add_i32_max_neg_offset(ptr addrspace(1) %out, 
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile add ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw add ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    ret void
 ;
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i64 -1024
-  %val = atomicrmw volatile add ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw add ptr addrspace(1) %gep, i32 %in seq_cst
   ret void
 }
 
@@ -71,14 +71,14 @@ define amdgpu_kernel void @atomic_add_i32_soffset(ptr addrspace(1) %out, i32 %in
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile add ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw add ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    ret void
 ;
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i64 9000
-  %val = atomicrmw volatile add ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw add ptr addrspace(1) %gep, i32 %in seq_cst
   ret void
 }
 
@@ -98,7 +98,7 @@ define amdgpu_kernel void @atomic_add_i32_huge_offset(ptr addrspace(1) %out, i32
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile add ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw add ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    ret void
@@ -106,7 +106,7 @@ define amdgpu_kernel void @atomic_add_i32_huge_offset(ptr addrspace(1) %out, i32
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i64 47224239175595
 
-  %val = atomicrmw volatile add ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw add ptr addrspace(1) %gep, i32 %in seq_cst
   ret void
 }
 
@@ -126,7 +126,7 @@ define amdgpu_kernel void @atomic_add_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile add ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw add ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
@@ -138,7 +138,7 @@ define amdgpu_kernel void @atomic_add_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ;
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i64 4
-  %val = atomicrmw volatile add ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw add ptr addrspace(1) %gep, i32 %in seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -160,7 +160,7 @@ define amdgpu_kernel void @atomic_add_i32_addr64_offset(ptr addrspace(1) %out, i
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile add ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw add ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    ret void
@@ -168,7 +168,7 @@ define amdgpu_kernel void @atomic_add_i32_addr64_offset(ptr addrspace(1) %out, i
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4
-  %val = atomicrmw volatile add ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw add ptr addrspace(1) %gep, i32 %in seq_cst
   ret void
 }
 
@@ -189,7 +189,7 @@ define amdgpu_kernel void @atomic_add_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile add ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw add ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
@@ -202,7 +202,7 @@ define amdgpu_kernel void @atomic_add_i32_ret_addr64_offset(ptr addrspace(1) %ou
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4
-  %val = atomicrmw volatile add ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw add ptr addrspace(1) %gep, i32 %in seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -222,13 +222,13 @@ define amdgpu_kernel void @atomic_add_i32(ptr addrspace(1) %out, i32 %in) {
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile add ptr addrspace(1) [[OUT:%.*]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw add ptr addrspace(1) [[OUT:%.*]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    ret void
 ;
 entry:
-  %val = atomicrmw volatile add ptr addrspace(1) %out, i32 %in seq_cst
+  %val = atomicrmw add ptr addrspace(1) %out, i32 %in seq_cst
   ret void
 }
 
@@ -247,7 +247,7 @@ define amdgpu_kernel void @atomic_add_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile add ptr addrspace(1) [[OUT:%.*]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw add ptr addrspace(1) [[OUT:%.*]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
@@ -258,7 +258,7 @@ define amdgpu_kernel void @atomic_add_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-NEXT:    ret void
 ;
 entry:
-  %val = atomicrmw volatile add ptr addrspace(1) %out, i32 %in seq_cst
+  %val = atomicrmw add ptr addrspace(1) %out, i32 %in seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -279,14 +279,14 @@ define amdgpu_kernel void @atomic_add_i32_addr64(ptr addrspace(1) %out, i32 %in,
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile add ptr addrspace(1) [[PTR]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    ret void
 ;
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
-  %val = atomicrmw volatile add ptr addrspace(1) %ptr, i32 %in seq_cst
+  %val = atomicrmw add ptr addrspace(1) %ptr, i32 %in seq_cst
   ret void
 }
 
@@ -306,7 +306,7 @@ define amdgpu_kernel void @atomic_add_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile add ptr addrspace(1) [[PTR]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
@@ -318,7 +318,7 @@ define amdgpu_kernel void @atomic_add_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ;
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
-  %val = atomicrmw volatile add ptr addrspace(1) %ptr, i32 %in seq_cst
+  %val = atomicrmw add ptr addrspace(1) %ptr, i32 %in seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -336,14 +336,14 @@ define amdgpu_kernel void @atomic_and_i32_offset(ptr addrspace(1) %out, i32 %in)
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile and ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw and ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    ret void
 ;
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i64 4
-  %val = atomicrmw volatile and ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw and ptr addrspace(1) %gep, i32 %in seq_cst
   ret void
 }
 
@@ -360,7 +360,7 @@ define amdgpu_kernel void @atomic_and_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile and ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw and ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
@@ -372,7 +372,7 @@ define amdgpu_kernel void @atomic_and_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ;
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i64 4
-  %val = atomicrmw volatile and ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw and ptr addrspace(1) %gep, i32 %in seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -391,7 +391,7 @@ define amdgpu_kernel void @atomic_and_i32_addr64_offset(ptr addrspace(1) %out, i
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile and ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw and ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    ret void
@@ -399,7 +399,7 @@ define amdgpu_kernel void @atomic_and_i32_addr64_offset(ptr addrspace(1) %out, i
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4
-  %val = atomicrmw volatile and ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw and ptr addrspace(1) %gep, i32 %in seq_cst
   ret void
 }
 
@@ -417,7 +417,7 @@ define amdgpu_kernel void @atomic_and_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile and ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw and ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
@@ -430,7 +430,7 @@ define amdgpu_kernel void @atomic_and_i32_ret_addr64_offset(ptr addrspace(1) %ou
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4
-  %val = atomicrmw volatile and ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw and ptr addrspace(1) %gep, i32 %in seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -447,13 +447,13 @@ define amdgpu_kernel void @atomic_and_i32(ptr addrspace(1) %out, i32 %in) {
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile and ptr addrspace(1) [[OUT:%.*]], i32 [[IN:%.*]] seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw and ptr addrspace(1) [[OUT:%.*]], i32 [[IN:%.*]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    ret void
 ;
 entry:
-  %val = atomicrmw volatile and ptr addrspace(1) %out, i32 %in seq_cst
+  %val = atomicrmw and ptr addrspace(1) %out, i32 %in seq_cst
   ret void
 }
 
@@ -469,7 +469,7 @@ define amdgpu_kernel void @atomic_and_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile and ptr addrspace(1) [[OUT:%.*]], i32 [[IN:%.*]] seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw and ptr addrspace(1) [[OUT:%.*]], i32 [[IN:%.*]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
@@ -480,7 +480,7 @@ define amdgpu_kernel void @atomic_and_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-NEXT:    ret void
 ;
 entry:
-  %val = atomicrmw volatile and ptr addrspace(1) %out, i32 %in seq_cst
+  %val = atomicrmw and ptr addrspace(1) %out, i32 %in seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -498,14 +498,14 @@ define amdgpu_kernel void @atomic_and_i32_addr64(ptr addrspace(1) %out, i32 %in,
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile and ptr addrspace(1) [[PTR]], i32 [[IN:%.*]] seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i32 [[IN:%.*]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    ret void
 ;
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
-  %val = atomicrmw volatile and ptr addrspace(1) %ptr, i32 %in seq_cst
+  %val = atomicrmw and ptr addrspace(1) %ptr, i32 %in seq_cst
   ret void
 }
 
@@ -522,7 +522,7 @@ define amdgpu_kernel void @atomic_and_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile and ptr addrspace(1) [[PTR]], i32 [[IN:%.*]] seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i32 [[IN:%.*]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
@@ -534,7 +534,7 @@ define amdgpu_kernel void @atomic_and_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ;
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
-  %val = atomicrmw volatile and ptr addrspace(1) %ptr, i32 %in seq_cst
+  %val = atomicrmw and ptr addrspace(1) %ptr, i32 %in seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -555,14 +555,14 @@ define amdgpu_kernel void @atomic_sub_i32_offset(ptr addrspace(1) %out, i32 %in)
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile sub ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw sub ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    ret void
 ;
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i64 4
-  %val = atomicrmw volatile sub ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw sub ptr addrspace(1) %gep, i32 %in seq_cst
   ret void
 }
 
@@ -582,7 +582,7 @@ define amdgpu_kernel void @atomic_sub_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile sub ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw sub ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
@@ -594,7 +594,7 @@ define amdgpu_kernel void @atomic_sub_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ;
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i64 4
-  %val = atomicrmw volatile sub ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw sub ptr addrspace(1) %gep, i32 %in seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -616,7 +616,7 @@ define amdgpu_kernel void @atomic_sub_i32_addr64_offset(ptr addrspace(1) %out, i
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile sub ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw sub ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    ret void
@@ -624,7 +624,7 @@ define amdgpu_kernel void @atomic_sub_i32_addr64_offset(ptr addrspace(1) %out, i
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4
-  %val = atomicrmw volatile sub ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw sub ptr addrspace(1) %gep, i32 %in seq_cst
   ret void
 }
 
@@ -645,7 +645,7 @@ define amdgpu_kernel void @atomic_sub_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile sub ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw sub ptr addrspace(1) [[GEP]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
@@ -658,7 +658,7 @@ define amdgpu_kernel void @atomic_sub_i32_ret_addr64_offset(ptr addrspace(1) %ou
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4
-  %val = atomicrmw volatile sub ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw sub ptr addrspace(1) %gep, i32 %in seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -678,13 +678,13 @@ define amdgpu_kernel void @atomic_sub_i32(ptr addrspace(1) %out, i32 %in) {
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile sub ptr addrspace(1) [[OUT:%.*]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw sub ptr addrspace(1) [[OUT:%.*]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    ret void
 ;
 entry:
-  %val = atomicrmw volatile sub ptr addrspace(1) %out, i32 %in seq_cst
+  %val = atomicrmw sub ptr addrspace(1) %out, i32 %in seq_cst
   ret void
 }
 
@@ -703,7 +703,7 @@ define amdgpu_kernel void @atomic_sub_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile sub ptr addrspace(1) [[OUT:%.*]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw sub ptr addrspace(1) [[OUT:%.*]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
@@ -714,7 +714,7 @@ define amdgpu_kernel void @atomic_sub_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-NEXT:    ret void
 ;
 entry:
-  %val = atomicrmw volatile sub ptr addrspace(1) %out, i32 %in seq_cst
+  %val = atomicrmw sub ptr addrspace(1) %out, i32 %in seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -735,14 +735,14 @@ define amdgpu_kernel void @atomic_sub_i32_addr64(ptr addrspace(1) %out, i32 %in,
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile sub ptr addrspace(1) [[PTR]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    ret void
 ;
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
-  %val = atomicrmw volatile sub ptr addrspace(1) %ptr, i32 %in seq_cst
+  %val = atomicrmw sub ptr addrspace(1) %ptr, i32 %in seq_cst
   ret void
 }
 
@@ -762,7 +762,7 @@ define amdgpu_kernel void @atomic_sub_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP12:%.*]]
 ; IR:       10:
-; IR-NEXT:    [[TMP11:%.*]] = atomicrmw volatile sub ptr addrspace(1) [[PTR]], i32 [[TMP8]] seq_cst, align 4
+; IR-NEXT:    [[TMP11:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i32 [[TMP8]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
 ; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
@@ -774,7 +774,7 @@ define amdgpu_kernel void @atomic_sub_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ;
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
-  %val = atomicrmw volatile sub ptr addrspace(1) %ptr, i32 %in seq_cst
+  %val = atomicrmw sub ptr addrspace(1) %ptr, i32 %in seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -792,14 +792,14 @@ define amdgpu_kernel void @atomic_max_i32_offset(ptr addrspace(1) %out, i32 %in)
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile max ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw max ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    ret void
 ;
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i64 4
-  %val = atomicrmw volatile max ptr addrspace(1) %gep, i32 %in seq_cst
+  %val = atomicrmw max ptr addrspace(1) %gep, i32 %in seq_cst
   ret void
 }
 
@@ -816,7 +816,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile max ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw max ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
@@ -829,7 +829,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ;
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i64 4
-  %val = atomicrmw volatile max ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw max ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -848,7 +848,7 @@ define amdgpu_kernel void @atomic_max_i32_addr64_offset(ptr addrspace(1) %out, i
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile max ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw max ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    ret void
@@ -856,7 +856,7 @@ define amdgpu_kernel void @atomic_max_i32_addr64_offset(ptr addrspace(1) %out, i
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4
-  %val = atomicrmw volatile max ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw max ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
   ret void
 }
 
@@ -874,7 +874,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile max ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw max ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
@@ -888,7 +888,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64_offset(ptr addrspace(1) %ou
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4
-  %val = atomicrmw volatile max ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw max ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -905,13 +905,13 @@ define amdgpu_kernel void @atomic_max_i32(ptr addrspace(1) %out, i32 %in) {
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile max ptr addrspace(1) [[OUT:%.*]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw max ptr addrspace(1) [[OUT:%.*]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    ret void
 ;
 entry:
-  %val = atomicrmw volatile max ptr addrspace(1) %out, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw max ptr addrspace(1) %out, i32 %in syncscope("workgroup") seq_cst
   ret void
 }
 
@@ -927,7 +927,7 @@ define amdgpu_kernel void @atomic_max_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile max ptr addrspace(1) [[OUT:%.*]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw max ptr addrspace(1) [[OUT:%.*]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
@@ -939,7 +939,7 @@ define amdgpu_kernel void @atomic_max_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-NEXT:    ret void
 ;
 entry:
-  %val = atomicrmw volatile max ptr addrspace(1) %out, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw max ptr addrspace(1) %out, i32 %in syncscope("workgroup") seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -957,14 +957,14 @@ define amdgpu_kernel void @atomic_max_i32_addr64(ptr addrspace(1) %out, i32 %in,
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile max ptr addrspace(1) [[PTR]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw max ptr addrspace(1) [[PTR]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    ret void
 ;
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
-  %val = atomicrmw volatile max ptr addrspace(1) %ptr, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw max ptr addrspace(1) %ptr, i32 %in syncscope("workgroup") seq_cst
   ret void
 }
 
@@ -981,7 +981,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile max ptr addrspace(1) [[PTR]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw max ptr addrspace(1) [[PTR]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
@@ -994,7 +994,7 @@ define amdgpu_kernel void @atomic_max_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ;
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
-  %val = atomicrmw volatile max ptr addrspace(1) %ptr, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw max ptr addrspace(1) %ptr, i32 %in syncscope("workgroup") seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -1012,14 +1012,14 @@ define amdgpu_kernel void @atomic_umax_i32_offset(ptr addrspace(1) %out, i32 %in
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile umax ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw umax ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    ret void
 ;
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i64 4
-  %val = atomicrmw volatile umax ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw umax ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
   ret void
 }
 
@@ -1036,7 +1036,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_offset(ptr addrspace(1) %out, ptr
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile umax ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw umax ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
@@ -1049,7 +1049,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_offset(ptr addrspace(1) %out, ptr
 ;
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i64 4
-  %val = atomicrmw volatile umax ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw umax ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -1068,7 +1068,7 @@ define amdgpu_kernel void @atomic_umax_i32_addr64_offset(ptr addrspace(1) %out, 
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile umax ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw umax ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    ret void
@@ -1076,7 +1076,7 @@ define amdgpu_kernel void @atomic_umax_i32_addr64_offset(ptr addrspace(1) %out, 
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4
-  %val = atomicrmw volatile umax ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw umax ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
   ret void
 }
 
@@ -1094,7 +1094,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64_offset(ptr addrspace(1) %o
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile umax ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw umax ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
@@ -1108,7 +1108,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64_offset(ptr addrspace(1) %o
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4
-  %val = atomicrmw volatile umax ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw umax ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -1125,13 +1125,13 @@ define amdgpu_kernel void @atomic_umax_i32(ptr addrspace(1) %out, i32 %in) {
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile umax ptr addrspace(1) [[OUT:%.*]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw umax ptr addrspace(1) [[OUT:%.*]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    ret void
 ;
 entry:
-  %val = atomicrmw volatile umax ptr addrspace(1) %out, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw umax ptr addrspace(1) %out, i32 %in syncscope("workgroup") seq_cst
   ret void
 }
 
@@ -1147,7 +1147,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret(ptr addrspace(1) %out, ptr addrsp
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile umax ptr addrspace(1) [[OUT:%.*]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw umax ptr addrspace(1) [[OUT:%.*]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
@@ -1159,7 +1159,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret(ptr addrspace(1) %out, ptr addrsp
 ; IR-NEXT:    ret void
 ;
 entry:
-  %val = atomicrmw volatile umax ptr addrspace(1) %out, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw umax ptr addrspace(1) %out, i32 %in syncscope("workgroup") seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -1177,14 +1177,14 @@ define amdgpu_kernel void @atomic_umax_i32_addr64(ptr addrspace(1) %out, i32 %in
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile umax ptr addrspace(1) [[PTR]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw umax ptr addrspace(1) [[PTR]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    ret void
 ;
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
-  %val = atomicrmw volatile umax ptr addrspace(1) %ptr, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw umax ptr addrspace(1) %ptr, i32 %in syncscope("workgroup") seq_cst
   ret void
 }
 
@@ -1201,7 +1201,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64(ptr addrspace(1) %out, ptr
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile umax ptr addrspace(1) [[PTR]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw umax ptr addrspace(1) [[PTR]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
@@ -1214,7 +1214,7 @@ define amdgpu_kernel void @atomic_umax_i32_ret_addr64(ptr addrspace(1) %out, ptr
 ;
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
-  %val = atomicrmw volatile umax ptr addrspace(1) %ptr, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw umax ptr addrspace(1) %ptr, i32 %in syncscope("workgroup") seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -1232,14 +1232,14 @@ define amdgpu_kernel void @atomic_min_i32_offset(ptr addrspace(1) %out, i32 %in)
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile min ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw min ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    ret void
 ;
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i64 4
-  %val = atomicrmw volatile min ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw min ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
   ret void
 }
 
@@ -1256,7 +1256,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile min ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw min ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
@@ -1269,7 +1269,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_offset(ptr addrspace(1) %out, ptr 
 ;
 entry:
   %gep = getelementptr i32, ptr addrspace(1) %out, i64 4
-  %val = atomicrmw volatile min ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw min ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -1288,7 +1288,7 @@ define amdgpu_kernel void @atomic_min_i32_addr64_offset(ptr addrspace(1) %out, i
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile min ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw min ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    ret void
@@ -1296,7 +1296,7 @@ define amdgpu_kernel void @atomic_min_i32_addr64_offset(ptr addrspace(1) %out, i
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4
-  %val = atomicrmw volatile min ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw min ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
   ret void
 }
 
@@ -1314,7 +1314,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64_offset(ptr addrspace(1) %ou
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile min ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw min ptr addrspace(1) [[GEP]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
@@ -1328,7 +1328,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64_offset(ptr addrspace(1) %ou
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4
-  %val = atomicrmw volatile min ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw min ptr addrspace(1) %gep, i32 %in syncscope("workgroup") seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -1345,13 +1345,13 @@ define amdgpu_kernel void @atomic_min_i32(ptr addrspace(1) %out, i32 %in) {
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile min ptr addrspace(1) [[OUT:%.*]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw min ptr addrspace(1) [[OUT:%.*]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    ret void
 ;
 entry:
-  %val = atomicrmw volatile min ptr addrspace(1) %out, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw min ptr addrspace(1) %out, i32 %in syncscope("workgroup") seq_cst
   ret void
 }
 
@@ -1367,7 +1367,7 @@ define amdgpu_kernel void @atomic_min_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile min ptr addrspace(1) [[OUT:%.*]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw min ptr addrspace(1) [[OUT:%.*]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
@@ -1379,7 +1379,7 @@ define amdgpu_kernel void @atomic_min_i32_ret(ptr addrspace(1) %out, ptr addrspa
 ; IR-NEXT:    ret void
 ;
 entry:
-  %val = atomicrmw volatile min ptr addrspace(1) %out, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw min ptr addrspace(1) %out, i32 %in syncscope("workgroup") seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }
@@ -1397,14 +1397,14 @@ define amdgpu_kernel void @atomic_min_i32_addr64(ptr addrspace(1) %out, i32 %in,
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile min ptr addrspace(1) [[PTR]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw min ptr addrspace(1) [[PTR]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    ret void
 ;
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
-  %val = atomicrmw volatile min ptr addrspace(1) %ptr, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw min ptr addrspace(1) %ptr, i32 %in syncscope("workgroup") seq_cst
   ret void
 }
 
@@ -1421,7 +1421,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ; IR-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
 ; IR-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP9:%.*]]
 ; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile min ptr addrspace(1) [[PTR]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw min ptr addrspace(1) [[PTR]], i32 [[IN:%.*]] syncscope("workgroup") seq_cst, align 4
 ; IR-NEXT:    br label [[TMP9]]
 ; IR:       9:
 ; IR-NEXT:    [[TMP10:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP8]], [[TMP7]] ]
@@ -1434,7 +1434,7 @@ define amdgpu_kernel void @atomic_min_i32_ret_addr64(ptr addrspace(1) %out, ptr 
 ;
 entry:
   %ptr = getelementptr i32, ptr addrspace(1) %out, i64 %index
-  %val = atomicrmw volatile min ptr addrspace(1) %ptr, i32 %in syncscope("workgroup") seq_cst
+  %val = atomicrmw min ptr addrspace(1) %ptr, i32 %in syncscope("workgroup") seq_cst
   store i32 %val, ptr addrspace(1) %out2
   ret void
 }

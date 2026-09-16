@@ -225,7 +225,7 @@ struct MemRefPointerLikeModel
     if (memrefTy.getRank() != 0)
       return {};
 
-    return memref::LoadOp::create(builder, loc, memrefValue);
+    return memref::LoadOp::create(builder, loc, memrefValue, ValueRange{});
   }
 
   bool genStore(Type pointer, OpBuilder &builder, Location loc,
@@ -1686,21 +1686,6 @@ void acc::UpdateHostOp::getEffects(
   addOperandEffect<MemoryEffects::Write>(effects, getVarMutable());
 }
 
-template <typename StructureOp>
-static ParseResult parseRegions(OpAsmParser &parser, OperationState &state,
-                                unsigned nRegions = 1) {
-
-  SmallVector<Region *, 2> regions;
-  for (unsigned i = 0; i < nRegions; ++i)
-    regions.push_back(state.addRegion());
-
-  for (Region *region : regions)
-    if (parser.parseRegion(*region, /*arguments=*/{}, /*argTypes=*/{}))
-      return failure();
-
-  return success();
-}
-
 namespace {
 /// Pattern to remove operation without region that have constant false `ifCond`
 /// and remove the condition from the operation if the `ifCond` is a true
@@ -2430,9 +2415,9 @@ void ParallelOp::build(mlir::OpBuilder &odsBuilder,
       /*numGangsDeviceType=*/nullptr, numWorkers,
       /*numWorkersDeviceType=*/nullptr, vectorLength,
       /*vectorLengthDeviceType=*/nullptr, ifCond, selfCond,
-      /*selfAttr=*/nullptr, reductionOperands, gangPrivateOperands,
+      /*selfAttr=*/false, reductionOperands, gangPrivateOperands,
       gangFirstPrivateOperands, dataClauseOperands,
-      /*defaultAttr=*/nullptr, /*combined=*/nullptr);
+      /*defaultAttr=*/nullptr, /*combined=*/false);
 }
 
 void acc::ParallelOp::addNumWorkersOperand(

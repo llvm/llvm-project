@@ -776,7 +776,7 @@ void VPlanTransforms::materializeConstantVectorTripCount(
   if (!isa<SCEVConstant>(TCScev))
     return;
   const SCEV *VFxUF = SE.getElementCount(TCScev->getType(), BestVF * BestUF);
-  auto VecTCScev = SE.getMulExpr(SE.getUDivExpr(TCScev, VFxUF), VFxUF);
+  const SCEV *VecTCScev = SE.getMulExpr(SE.getUDivExpr(TCScev, VFxUF), VFxUF);
   if (auto *ConstVecTC = dyn_cast<SCEVConstant>(VecTCScev))
     Plan.getVectorTripCount().setUnderlyingValue(ConstVecTC->getValue());
 }
@@ -1002,8 +1002,8 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
 
     // TODO: Only freeze the required pointer (not both src and sink).
     if (Check.NeedsFreeze) {
-      Src = Builder.createScalarFreeze(Src, DebugLoc::getUnknown());
-      Sink = Builder.createScalarFreeze(Sink, DebugLoc::getUnknown());
+      Src = Builder.createFreeze(Src);
+      Sink = Builder.createFreeze(Sink);
     }
 
     // TODO: Generate loop_dependence_raw_mask when there's a read-after-write
