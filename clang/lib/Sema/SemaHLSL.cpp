@@ -941,12 +941,14 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
 
   Twine BaseName = Twine(ActiveSemantic.Semantic->getAttrName()->getName());
   for (unsigned I = 0; I < ElementCount; ++I) {
-    Twine VariableName = BaseName.concat(Twine(Location + I));
+    std::string VariableName = BaseName.concat(Twine(Location + I)).str();
 
-    auto [_, Inserted] = SC.ActiveSemantics.insert(VariableName.str());
+    auto [It, Inserted] = SC.ActiveSemantics.try_emplace(
+        StringRef(VariableName).lower(), D->getLocation());
     if (!Inserted) {
       Diag(D->getLocation(), diag::err_hlsl_semantic_index_overlap)
-          << VariableName.str();
+          << VariableName;
+      Diag(It->second, diag::note_hlsl_semantic_index_previous_use);
       return false;
     }
   }

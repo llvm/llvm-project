@@ -23,7 +23,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Frontend/HLSL/SemanticSignatures.h"
 #include "llvm/TargetParser/Triple.h"
 #include <initializer_list>
@@ -292,9 +292,9 @@ private:
     // Present if any semantic sharing the same IO type has an explicit or
     // implicit SPIR-V location index assigned.
     std::optional<bool> UsesExplicitVkLocations = std::nullopt;
-    // The set of semantics found to be active during flattening. Used to detect
-    // index collisions.
-    llvm::StringSet<> ActiveSemantics = {};
+    // Lowercased semantic names with indices, mapped to their first use for
+    // overlap diagnostics.
+    llvm::StringMap<SourceLocation> ActiveSemantics = {};
     // The IOType of this semantic set.
     llvm::hlsl::IOType CurrentIOType;
   };

@@ -13686,6 +13686,7 @@ def err_hlsl_semantic_invalid_type
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 def err_hlsl_semantic_index_overlap : Error<"semantic index overlap %0">;
+def note_hlsl_semantic_index_previous_use : Note<"previous use is here">;
 def err_hlsl_semantic_unsupported_iotype_for_stage
     : Error<"semantic %0 is not supported in %1 shader %2">;
 def err_hlsl_semantic_partial_explicit_indexing
