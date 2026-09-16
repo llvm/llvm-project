@@ -109,6 +109,10 @@ public:
   InstructionCost getCallInstrCost(Function *F, Type *RetTy,
                                    ArrayRef<Type *> Tys,
                                    TTI::TargetCostKind CostKind) const override;
+
+  bool isMemmoveProfitable(
+      const std::optional<APInt> &PtrDiff) const override;
+
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;
