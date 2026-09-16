@@ -50,6 +50,29 @@ struct CollideArray {
 float4 collide_array(CollideArray C) : SV_Target { return C.B; }
 // expected-note@-1 {{'C' declared here}}
 
+// All four elements of the nested array reserve semantic indices.
+struct CollideNestedArray {
+  float4 A[2][2] : USER0;
+// expected-note@-1 {{previous use is here}}
+  float4 B : USER3;
+// expected-error@-1 {{semantic index overlap USER3}}
+// expected-note@-2 {{'B' used here}}
+};
+
+[shader("pixel")]
+float4 collide_nested_array(CollideNestedArray C) : SV_Target { return C.B; }
+// expected-note@-1 {{'C' declared here}}
+
+struct NoCollideNestedArray {
+  float4 A[2][2] : USER0;
+  float4 B : USER4;
+};
+
+[shader("pixel")]
+float4 no_collide_nested_array(NoCollideNestedArray C) : SV_Target {
+  return C.B;
+}
+
 struct NoCollide {
   float4 A : USER0;
   float4 B : USER1;
@@ -58,5 +81,6 @@ struct NoCollide {
 [shader("pixel")]
 float4 no_collide(NoCollide C) : SV_Target { return C.A; }
 
-[shader("pixel")]
-float4 separate_signatures(float4 C : USER0) : SV_Target { return C; }
+// The same semantic index is allowed in separate input and output signatures.
+[shader("vertex")]
+float4 separate_signatures(float4 C : USER0) : USER0 { return C; }

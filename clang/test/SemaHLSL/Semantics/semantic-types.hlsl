@@ -11,6 +11,15 @@ float4 position_double(double4 P : SV_Position) : SV_Target { return (float4)P; 
 [shader("pixel")]
 float4 position_half(half4 P : SV_Position) : SV_Target { return (float4)P; }
 
+// A single matrix element does not make a matrix a scalar semantic value.
+[shader("pixel")]
+float4 position_matrix(float1x1 P : SV_Position) : SV_Target { return 0; }
+// expected-error@-1 {{semantic 'SV_Position' must be a scalar or vector of up to 4 components of 16 or 32 bit floating-point type (was 'float1x1' (aka 'matrix<float, 1, 1>'))}}
+
+[shader("compute")][numthreads(1,1,1)]
+void group_index_matrix(uint1x1 GI : SV_GroupIndex) {}
+// expected-error@-1 {{semantic 'SV_GroupIndex' must be a scalar of 32 bit integer type (was 'uint1x1' (aka 'matrix<uint, 1, 1>'))}}
+
 [shader("compute")][numthreads(1,1,1)]
 void group_index_vector(uint2 GI : SV_GroupIndex) {}
 // expected-error@-1 {{semantic 'SV_GroupIndex' must be a scalar of 32 bit integer type (was 'uint2' (aka 'vector<uint, 2>'))}}

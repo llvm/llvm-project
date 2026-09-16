@@ -23,6 +23,33 @@ void target_array_fits(out float4 T[2] : SV_Target6) { T[0] = 0; T[1] = 0; }
 void target_array_overflows(out float4 T[2] : SV_Target7) { T[0] = 0; T[1] = 0; }
 // expected-error@-1 {{semantic 'SV_Target' index 8 exceeds the maximum supported index 7}}
 
+// Every dimension contributes to the semantic index range.
+typedef float4 TargetGrid[2][2];
+
+[shader("pixel")]
+void target_nested_array_fits(out TargetGrid T : SV_Target4) {}
+
+[shader("pixel")]
+void target_nested_array_overflows(out float4 T[2][2] : SV_Target5) {}
+// expected-error@-1 {{semantic 'SV_Target' index 8 exceeds the maximum supported index 7}}
+
+struct NestedTargets {
+  TargetGrid A;
+  float4 B;
+};
+
+// Inherited indices must advance past every element of the nested array.
+[shader("pixel")]
+NestedTargets target_nested_struct_fits() : SV_Target3 {
+  return (NestedTargets)0;
+}
+
+[shader("pixel")]
+NestedTargets target_nested_struct_overflows() : SV_Target4 {
+// expected-error@-1 {{semantic 'SV_Target' index 8 exceeds the maximum supported index 7}}
+  return (NestedTargets)0;
+}
+
 // The return semantic assigns consecutive indices to the fields.
 struct TwoTargets {
   float4 A;

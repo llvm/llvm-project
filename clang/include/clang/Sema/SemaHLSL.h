@@ -199,14 +199,6 @@ public:
   void propagateContextualMatrixLayout(Expr *E, QualType DestType);
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
-  template <typename T>
-  T *createSemanticAttr(const AttributeCommonInfo &ACI,
-                        std::optional<unsigned> Location) {
-    return ::new (getASTContext())
-        T(getASTContext(), ACI, ACI.getAttrName()->getName(),
-          Location.value_or(0));
-  }
-
   void handleSemanticAttr(Decl *D, const ParsedAttr &AL);
 
   void handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL);
@@ -338,7 +330,6 @@ private:
                              llvm::dxbc::PSV::SemanticKind SemanticKind,
                              unsigned ElementCount);
 
-  // Called only for system-value interpretations.
   void diagnoseSystemSemanticType(const Decl *D,
                                   const HLSLAppliedSemanticAttr *A,
                                   llvm::dxbc::PSV::SemanticKind SemanticKind);
