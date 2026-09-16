@@ -1191,7 +1191,7 @@ class MapInfoFinalizationPass
   /// This function checks if the given value is the result of fir::alloca
   /// operation
   bool isAllocaOp(mlir::Value &val) {
-    return mlir::isa<fir::AllocaOp>(val.getDefiningOp());
+    return mlir::isa_and_present<fir::AllocaOp>(val.getDefiningOp());
   }
 
   /// Use the materialized descriptor's address for target data block arguments.
@@ -1229,6 +1229,57 @@ class MapInfoFinalizationPass
                argIface.getUseDeviceAddrBlockArgs());
     updateArgs(targetData.getUseDevicePtrVars(),
                argIface.getUseDevicePtrBlockArgs());
+  }
+
+  /// Check if we can optimize the descriptor mappings for use_device_addr
+  bool canOptimizeUseDeviceAddrMapping(fir::FirOpBuilder &builder,
+                                       mlir::Value descriptor,
+                                       mlir::omp::MapInfoOp op,
+                                       mlir::Operation *target) {
+    // optimize only temporary descriptors (i.e. allocated on function stack)
+    if (!isAllocaOp(descriptor))
+      return false;
+    // check if given descriptor is mapped as use_device_addr argument
+    if (getUseDeviceAddrBlockArg(op, *target) == nullptr)
+      return false;
+    auto module = builder.getModule();
+    // check if the OpenMP offload target device is specified
+    auto iface =
+        llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation());
+    if (iface.getTargetTriples().empty())
+      return false;
+
+    // Only optimize descriptors whose element size is known at compile time.
+    // Excluded:
+    //   - polymorphic entities (!fir.class): elem_len is a runtime property,
+    //     since the dynamic type may extend the declared type.
+    //   - deferred-length characters (!fir.char<k,?>) and parameterized
+    //     derived types: LEN parameters are runtime values.
+    //   - assumed-rank arrays (!fir.array<*:T>): descriptor layout depends on
+    //     a rank that is not known here.
+    //
+    // TODO: The restrictions can be lifted if fir.create_box operation supports
+    // creation of box with dynamical element size.
+    bool isArray = false;
+    bool knownRanks = false;
+    fir::BaseBoxType baseBoxTy = mlir::dyn_cast<fir::BaseBoxType>(
+        fir::unwrapRefType(descriptor.getType()));
+    if (baseBoxTy) {
+      isArray = baseBoxTy.isArray();
+      knownRanks = !baseBoxTy.isAssumedRank();
+    }
+    if (!isArray)
+      return false;
+    if (!knownRanks)
+      return false;
+    auto eleTy = baseBoxTy.unwrapInnerType();
+    if (fir::hasDynamicSize(eleTy))
+      return false;
+    if (fir::isPolymorphicType(eleTy))
+      return false;
+    if (fir::isAssumedType(eleTy))
+      return false;
+    return true;
   }
 
   // This function handles the splitting of allocatable/pointer maps in
@@ -1270,19 +1321,8 @@ class MapInfoFinalizationPass
     mlir::Value descriptor = getDescriptorFromBoxMap(
         op, builder, descCanBeDeferred, canOptimizeDescViaPrivatization);
     updateUseDeviceDescriptorArgs(op, descriptor, target, builder);
-    bool isNewDescriptor = isAllocaOp(descriptor);
-    bool isUseDeviceAddrItem =
-        (getUseDeviceAddrBlockArg(op, *target) != nullptr);
-    bool isArray = false;
-    bool knownRanks = false;
-    fir::BaseBoxType bt = mlir::dyn_cast<fir::BaseBoxType>(
-        fir::unwrapRefType(descriptor.getType()));
-    if (bt) {
-      isArray = bt.isArray();
-      knownRanks = !bt.isAssumedRank();
-    }
     canOptimizeUseDeviceAddr =
-        (isNewDescriptor && isUseDeviceAddrItem && isArray && knownRanks);
+        canOptimizeUseDeviceAddrMapping(builder, descriptor, op, target);
     mapOnlyDescriptor = isHasDeviceAddrFlag | canOptimizeUseDeviceAddr;
     mlir::FlatSymbolRefAttr mapperId = op.getMapperIdAttr();
     // Exclude irregular maps from optimization via privatization; at least for
@@ -1482,12 +1522,59 @@ class MapInfoFinalizationPass
 
   mlir::Value genTgtGetMappedPtrCall(fir::FirOpBuilder &builder,
                                      mlir::Location loc, mlir::Value deviceNum,
-                                     mlir::Value hostPtr,
+                                     mlir::Value ifCond, mlir::Value hostPtr,
                                      mlir::ModuleOp module) {
     auto *context = builder.getContext();
     auto voidPtrType = fir::LLVMPointerType::get(context, builder.getI8Type());
     auto i32Type = builder.getI32Type();
     auto i64Type = builder.getI64Type();
+
+    // Helper funtion which creates calls to omp_get_default_device()
+    // or omp_get_initial_device()
+    auto createOmpGetFunction = [&](llvm::StringRef funcName) -> mlir::Value {
+      auto funcOmpGetDeviceOp =
+          module.lookupSymbol<mlir::func::FuncOp>(funcName);
+      if (!funcOmpGetDeviceOp) {
+        auto funcType = mlir::FunctionType::get(context, {}, {i32Type});
+
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToStart(module.getBody());
+
+        funcOmpGetDeviceOp =
+            mlir::func::FuncOp::create(builder, loc, funcName, funcType);
+        funcOmpGetDeviceOp.setPrivate();
+      }
+      auto callOmpGetFuncOp =
+          fir::CallOp::create(builder, loc, funcOmpGetDeviceOp, {});
+      return callOmpGetFuncOp.getResult(0);
+      ;
+    };
+
+    if (!deviceNum) {
+      deviceNum = createOmpGetFunction("omp_get_default_device");
+    }
+
+    if (ifCond) {
+      auto allocaIfDevice = fir::AllocaOp::create(builder, loc, i32Type);
+      mlir::Value initialDeviceNum = nullptr;
+      mlir::Value boolIfCond =
+          builder.createConvert(loc, builder.getI1Type(), ifCond);
+
+      builder.genIfThenElse(loc, boolIfCond)
+          .genThen([&]() {
+            fir::StoreOp::create(builder, loc, deviceNum, allocaIfDevice);
+          })
+          .genElse([&]() {
+            // omp_get_initial_device returns host id
+            initialDeviceNum = createOmpGetFunction("omp_get_initial_device");
+            fir::StoreOp::create(builder, loc, initialDeviceNum,
+                                 allocaIfDevice);
+          })
+          .end();
+      auto loadIfDevice = fir::LoadOp::create(builder, loc, allocaIfDevice);
+      deviceNum = loadIfDevice.getResult();
+    }
+
     auto funcName = "__tgt_get_mapped_ptr";
     auto funcOp = module.lookupSymbol<mlir::func::FuncOp>(funcName);
 
@@ -1500,24 +1587,6 @@ class MapInfoFinalizationPass
 
       funcOp = mlir::func::FuncOp::create(builder, loc, funcName, funcType);
       funcOp.setPrivate();
-    }
-    if (!deviceNum) {
-      auto funcGetDefaultDeviceName = "omp_get_default_device";
-      auto funcGetDefaultDeviceOp =
-          module.lookupSymbol<mlir::func::FuncOp>(funcGetDefaultDeviceName);
-      if (!funcGetDefaultDeviceOp) {
-        auto funcType = mlir::FunctionType::get(context, {}, {i32Type});
-
-        mlir::OpBuilder::InsertionGuard guard(builder);
-        builder.setInsertionPointToStart(module.getBody());
-
-        funcGetDefaultDeviceOp = mlir::func::FuncOp::create(
-            builder, loc, funcGetDefaultDeviceName, funcType);
-        funcGetDefaultDeviceOp.setPrivate();
-      }
-      auto callGetDefaultDeviceOp =
-          fir::CallOp::create(builder, loc, funcGetDefaultDeviceOp, {});
-      deviceNum = callGetDefaultDeviceOp.getResult(0);
     }
     llvm::SmallVector<mlir::Value> args;
     args.push_back(fir::ConvertOp::create(builder, loc, i64Type, deviceNum));
@@ -1541,8 +1610,7 @@ class MapInfoFinalizationPass
     assert((isArgBoxType || useArgLoad) &&
            "Expected either BaseBox item or Load operation");
 
-    auto argUserOp = arg.use_begin()->getOwner();
-    auto insertionPoint = builder.saveInsertionPoint();
+    mlir::OpBuilder::InsertionGuard guard(builder);
     mlir::Value hostDescriptor;
     if (isArgBoxType) {
       hostDescriptor = arg;
@@ -1566,8 +1634,9 @@ class MapInfoFinalizationPass
         builder, loc,
         fir::LLVMPointerType::get(builder.getContext(), builder.getI8Type()),
         hostAddrPtr);
-    auto newAddr = genTgtGetMappedPtrCall(
-        builder, loc, targetDataOp.getDevice(), convertedAddr, module);
+    auto newAddr =
+        genTgtGetMappedPtrCall(builder, loc, targetDataOp.getDevice(),
+                               targetDataOp.getIfExpr(), convertedAddr, module);
     auto convertedGPUAddr =
         fir::ConvertOp::create(builder, loc, hostAddrPtr.getType(), newAddr);
     llvm::SmallVector<mlir::Value> lbounds;
@@ -1584,7 +1653,6 @@ class MapInfoFinalizationPass
       mlir::Operation *user = use.getOwner();
       return res->isBeforeInBlock(user);
     });
-    builder.restoreInsertionPoint(insertionPoint);
   }
 
   // This pass executes on omp::MapInfoOp's containing descriptor based types

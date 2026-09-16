@@ -1,6 +1,7 @@
 ! The "use_device_addr" was added to the "target data" directive in OpenMP 5.0.
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -fopenmp-targets=amdgcn-amd-amdhsa %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=50 -fopenmp-targets=amdgcn-amd-amdhsa %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s --check-prefix=HOSTONLY
 ! This test primary goal is to check that we update only base addr for
 ! arrays used in used_device_addr clause.
 
@@ -29,13 +30,47 @@
   END SUBROUTINE
 
 ! Goal: check if we take into account device clause
-!CHECK: func.func @{{.*}}device_addr_device_2(
-!CHECK: omp.target_data device(%[[DEVICE_ID_CONST:.*]] : i32) use_device_addr(%{{.*}} -> %{{.*}} : !fir.ref<!fir.box<!fir.array<?xi32>>>)
-!CHECK: %[[DEVICE_ID_CONST_CONV:.*]] = fir.convert %c2_i32 : (i32) -> i64
-!CHECK: %[[TGT_PTR1:.*]] = fir.call @__tgt_get_mapped_ptr(%[[DEVICE_ID_CONST_CONV]], %[[BASE_PTR:.*]]) : (i64, !fir.llvm_ptr<i8>) -> !fir.llvm_ptr<i8>
+!CHECK:   func.func @{{.*}}device_addr_device_2(
+!CHECK:   omp.target_data device(%[[DEVICE_ID_CONST:.*]] : i32) use_device_addr(%{{.*}} -> %{{.*}} : !fir.ref<!fir.box<!fir.array<?xi32>>>)
+!CHECK:   %[[DEVICE_ID_CONST_CONV:.*]] = fir.convert %c2_i32 : (i32) -> i64
+!CHECK:   %[[TGT_PTR1:.*]] = fir.call @__tgt_get_mapped_ptr(%[[DEVICE_ID_CONST_CONV]], %[[BASE_PTR:.*]]) : (i64, !fir.llvm_ptr<i8>) -> !fir.llvm_ptr<i8>
   SUBROUTINE device_addr_device_2(x)
     INTEGER, TARGET, INTENT(IN)    :: x(:)
     !$omp target data use_device_addr (x) device(2)
     !$omp end target data
   END SUBROUTINE
 
+! Goal: check if we take into account if clause
+!CHECK:   func.func @{{.*}}device_addr_device_if(
+!CHECK:   omp.target_data if(%[[COND:.*]]) use_device_addr(%{{.*}} -> %{{.*}} : !fir.ref<!fir.box<!fir.array<?xi32>>>) {
+!CHECK:   %[[GPU_ID:.*]] = fir.call @omp_get_default_device() : () -> i32
+!CHECK:   %[[DEVICE_ID_ALLOCA:.*]] = fir.alloca i32
+!CHECK:   fir.if %[[COND]] {
+!CHECK:     fir.store %[[GPU_ID]] to %[[DEVICE_ID_ALLOCA]] : !fir.ref<i32>
+!CHECK:   } else {
+!CHECK:     %[[HOST_ID:.*]] = fir.call @omp_get_initial_device() : () -> i32
+!CHECK:      fir.store %[[HOST_ID]] to %[[DEVICE_ID_ALLOCA]] : !fir.ref<i32>
+!CHECK:   }
+!CHECK:   %[[DEVICE_ID:.*]] = fir.load %[[DEVICE_ID_ALLOCA]] : !fir.ref<i32>
+!CHECK:   %[[DEVICE_ID_CONV:.*]] = fir.convert %[[DEVICE_ID]] : (i32) -> i64
+!CHECK:  %{{.*}} = fir.call @__tgt_get_mapped_ptr(%[[DEVICE_ID_CONV]], %{{.*}}) : (i64, !fir.llvm_ptr<i8>) -> !fir.llvm_ptr<i8>
+
+  SUBROUTINE device_addr_device_if(x, n)
+    INTEGER, TARGET, INTENT(IN)    :: x(:)
+    INTEGER, INTENT(IN)            :: n
+    !$omp target data use_device_addr (x) if(n > 2)
+    !$omp end target data
+  END SUBROUTINE
+
+! Goal: check if we don't optimize array with dynamically sized elements
+!CHECK:   func.func @{{.*}}device_addr_device_char(
+!CHECK-NOT:  %{{.*}} = fir.call @__tgt_get_mapped_ptr(%{{.*}}, %{{.*}}) : (i64, !fir.llvm_ptr<i8>) -> !fir.llvm_ptr<i8>
+  SUBROUTINE device_addr_device_char(x, n)
+    CHARACTER(*), TARGET :: x(:)
+    !$omp target data use_device_addr(x)
+    !$omp end target data
+  END SUBROUTINE
+
+! Goal: check if we skip optimization for host only code (i.e. we don't use
+! __tgt_get_mapped_ptr).
+! HOSTONLY-NOT: func.func private @__tgt_get_mapped_ptr(i64, !fir.llvm_ptr<i8>) -> !fir.llvm_ptr<i8>
