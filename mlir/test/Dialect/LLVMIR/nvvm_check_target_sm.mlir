@@ -227,3 +227,209 @@ gpu.module @tensormap_replace_sm90 [#nvvm.target<chip = "sm_90">] {
     return
   }
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// mbarrier
+//===----------------------------------------------------------------------===//
+
+// Just check these don't emit errors: every op at exactly its floor.
+gpu.module @mbarrier_sm80 [#nvvm.target<chip = "sm_80">] {
+  func.func @mbarrier_sm80(%addr: !llvm.ptr, %count: i32, %state: i64) {
+    nvvm.mbarrier.init %addr, %count : !llvm.ptr, i32
+    %0 = nvvm.mbarrier.arrive %addr : !llvm.ptr -> i64
+    %1 = nvvm.mbarrier.arrive_drop %addr : !llvm.ptr -> i64
+    %2 = nvvm.mbarrier.arrive.nocomplete %addr, %count : !llvm.ptr, i32 -> i64
+    %3 = nvvm.mbarrier.arrive_drop.nocomplete %addr, %count : !llvm.ptr, i32 -> i64
+    %4 = nvvm.mbarrier.test.wait %addr, %state : !llvm.ptr, i64 -> i1
+    nvvm.mbarrier.inval %addr : !llvm.ptr
+    return
+  }
+}
+
+// -----
+
+gpu.module @mbarrier_sm90 [#nvvm.target<chip = "sm_90">] {
+  func.func @mbarrier_sm90(%addr: !llvm.ptr, %shared: !llvm.ptr<3>, %count: i32,
+                           %state: i64, %phase: i32, %ticks: i32) {
+    %0 = nvvm.mbarrier.arrive.expect_tx %addr, %count : !llvm.ptr, i32 -> i64
+    %1 = nvvm.mbarrier.arrive_drop.expect_tx %addr, %count : !llvm.ptr, i32 -> i64
+    nvvm.mbarrier.expect_tx %shared, %count : !llvm.ptr<3>, i32
+    nvvm.mbarrier.complete_tx %shared, %count : !llvm.ptr<3>, i32
+    %2 = nvvm.mbarrier.try_wait %addr, %state : !llvm.ptr, i64 -> i1
+    nvvm.mbarrier.try_wait.parity %addr, %phase, %ticks : !llvm.ptr, i32, i32
+    return
+  }
+}
+
+// -----
+
+// Arch-accelerated targets satisfy a plain NVVMRequiresSM floor: sm_90a is
+// >= sm_80 and >= sm_90. This is the chip string real Hopper users write.
+gpu.module @mbarrier_sm90a [#nvvm.target<chip = "sm_90a">] {
+  func.func @mbarrier_sm90a(%addr: !llvm.ptr, %shared: !llvm.ptr<3>, %count: i32) {
+    nvvm.mbarrier.init %addr, %count : !llvm.ptr, i32
+    nvvm.mbarrier.expect_tx %shared, %count : !llvm.ptr<3>, i32
+    return
+  }
+}
+
+// -----
+
+// NVVMRequiresSM is a floor, not an equality: every sm_80 op stays valid on
+// sm_90. These positive modules pass before and after the traits were added;
+// they exist to catch a floor set too high, which the negatives cannot.
+gpu.module @mbarrier_sm80_ops_on_sm90 [#nvvm.target<chip = "sm_90">] {
+  func.func @mbarrier_sm80_ops_on_sm90(%addr: !llvm.ptr, %count: i32, %state: i64) {
+    nvvm.mbarrier.init %addr, %count : !llvm.ptr, i32
+    %0 = nvvm.mbarrier.arrive %addr : !llvm.ptr -> i64
+    %1 = nvvm.mbarrier.arrive_drop %addr : !llvm.ptr -> i64
+    %2 = nvvm.mbarrier.arrive.nocomplete %addr, %count : !llvm.ptr, i32 -> i64
+    %3 = nvvm.mbarrier.arrive_drop.nocomplete %addr, %count : !llvm.ptr, i32 -> i64
+    %4 = nvvm.mbarrier.test.wait %addr, %state : !llvm.ptr, i64 -> i1
+    nvvm.mbarrier.inval %addr : !llvm.ptr
+    return
+  }
+}
+
+// -----
+
+// The check stays opt-out, as for every other op in this file.
+gpu.module @mbarrier_verify_target_disabled
+    [#nvvm.target<chip = "sm_70", verifyTarget = false>] {
+  func.func @mbarrier_verify_target_disabled(%addr: !llvm.ptr, %count: i32) {
+    nvvm.mbarrier.init %addr, %count : !llvm.ptr, i32
+    return
+  }
+}
+
+// -----
+
+gpu.module @mbarrier_init_sm70 [#nvvm.target<chip = "sm_70">] {
+  func.func @mbarrier_init_sm70(%addr: !llvm.ptr, %count: i32) {
+    // expected-error @below {{'nvvm.mbarrier.init' op is not supported on sm_70}}
+    nvvm.mbarrier.init %addr, %count : !llvm.ptr, i32
+    return
+  }
+}
+
+// -----
+
+gpu.module @mbarrier_inval_sm70 [#nvvm.target<chip = "sm_70">] {
+  func.func @mbarrier_inval_sm70(%addr: !llvm.ptr) {
+    // expected-error @below {{'nvvm.mbarrier.inval' op is not supported on sm_70}}
+    nvvm.mbarrier.inval %addr : !llvm.ptr
+    return
+  }
+}
+
+// -----
+
+gpu.module @mbarrier_arrive_sm70 [#nvvm.target<chip = "sm_70">] {
+  func.func @mbarrier_arrive_sm70(%addr: !llvm.ptr) {
+    // expected-error @below {{'nvvm.mbarrier.arrive' op is not supported on sm_70}}
+    %0 = nvvm.mbarrier.arrive %addr : !llvm.ptr -> i64
+    return
+  }
+}
+
+// -----
+
+gpu.module @mbarrier_arrive_drop_sm70 [#nvvm.target<chip = "sm_70">] {
+  func.func @mbarrier_arrive_drop_sm70(%addr: !llvm.ptr) {
+    // expected-error @below {{'nvvm.mbarrier.arrive_drop' op is not supported on sm_70}}
+    %0 = nvvm.mbarrier.arrive_drop %addr : !llvm.ptr -> i64
+    return
+  }
+}
+
+// -----
+
+gpu.module @mbarrier_arrive_nocomplete_sm70 [#nvvm.target<chip = "sm_70">] {
+  func.func @mbarrier_arrive_nocomplete_sm70(%addr: !llvm.ptr, %count: i32) {
+    // expected-error @below {{'nvvm.mbarrier.arrive.nocomplete' op is not supported on sm_70}}
+    %0 = nvvm.mbarrier.arrive.nocomplete %addr, %count : !llvm.ptr, i32 -> i64
+    return
+  }
+}
+
+// -----
+
+gpu.module @mbarrier_arrive_drop_nocomplete_sm70 [#nvvm.target<chip = "sm_70">] {
+  func.func @mbarrier_arrive_drop_nocomplete_sm70(%addr: !llvm.ptr, %count: i32) {
+    // expected-error @below {{'nvvm.mbarrier.arrive_drop.nocomplete' op is not supported on sm_70}}
+    %0 = nvvm.mbarrier.arrive_drop.nocomplete %addr, %count : !llvm.ptr, i32 -> i64
+    return
+  }
+}
+
+// -----
+
+gpu.module @mbarrier_test_wait_sm70 [#nvvm.target<chip = "sm_70">] {
+  func.func @mbarrier_test_wait_sm70(%addr: !llvm.ptr, %state: i64) {
+    // expected-error @below {{'nvvm.mbarrier.test.wait' op is not supported on sm_70}}
+    %0 = nvvm.mbarrier.test.wait %addr, %state : !llvm.ptr, i64 -> i1
+    return
+  }
+}
+
+// -----
+
+gpu.module @mbarrier_arrive_expect_tx_sm80 [#nvvm.target<chip = "sm_80">] {
+  func.func @mbarrier_arrive_expect_tx_sm80(%addr: !llvm.ptr, %count: i32) {
+    // expected-error @below {{'nvvm.mbarrier.arrive.expect_tx' op is not supported on sm_80}}
+    %0 = nvvm.mbarrier.arrive.expect_tx %addr, %count : !llvm.ptr, i32 -> i64
+    return
+  }
+}
+
+// -----
+
+gpu.module @mbarrier_arrive_drop_expect_tx_sm80 [#nvvm.target<chip = "sm_80">] {
+  func.func @mbarrier_arrive_drop_expect_tx_sm80(%addr: !llvm.ptr, %count: i32) {
+    // expected-error @below {{'nvvm.mbarrier.arrive_drop.expect_tx' op is not supported on sm_80}}
+    %0 = nvvm.mbarrier.arrive_drop.expect_tx %addr, %count : !llvm.ptr, i32 -> i64
+    return
+  }
+}
+
+// -----
+
+gpu.module @mbarrier_expect_tx_sm80 [#nvvm.target<chip = "sm_80">] {
+  func.func @mbarrier_expect_tx_sm80(%addr: !llvm.ptr<3>, %count: i32) {
+    // expected-error @below {{'nvvm.mbarrier.expect_tx' op is not supported on sm_80}}
+    nvvm.mbarrier.expect_tx %addr, %count : !llvm.ptr<3>, i32
+    return
+  }
+}
+
+// -----
+
+gpu.module @mbarrier_complete_tx_sm80 [#nvvm.target<chip = "sm_80">] {
+  func.func @mbarrier_complete_tx_sm80(%addr: !llvm.ptr<3>, %count: i32) {
+    // expected-error @below {{'nvvm.mbarrier.complete_tx' op is not supported on sm_80}}
+    nvvm.mbarrier.complete_tx %addr, %count : !llvm.ptr<3>, i32
+    return
+  }
+}
+
+// -----
+
+gpu.module @mbarrier_try_wait_sm80 [#nvvm.target<chip = "sm_80">] {
+  func.func @mbarrier_try_wait_sm80(%addr: !llvm.ptr, %state: i64) {
+    // expected-error @below {{'nvvm.mbarrier.try_wait' op is not supported on sm_80}}
+    %0 = nvvm.mbarrier.try_wait %addr, %state : !llvm.ptr, i64 -> i1
+    return
+  }
+}
+
+// -----
+
+gpu.module @mbarrier_try_wait_parity_sm80 [#nvvm.target<chip = "sm_80">] {
+  func.func @mbarrier_try_wait_parity_sm80(%addr: !llvm.ptr, %phase: i32, %ticks: i32) {
+    // expected-error @below {{'nvvm.mbarrier.try_wait.parity' op is not supported on sm_80}}
+    nvvm.mbarrier.try_wait.parity %addr, %phase, %ticks : !llvm.ptr, i32, i32
+    return
+  }
+}
