@@ -3606,7 +3606,7 @@ TargetTransformInfo::VectorInstrContext RISCVTTIImpl::getBuildVectorContextHint(
     ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
     function_ref<bool(SmallVectorImpl<TargetTransformInfo::BuildVectorUseOp> &)>
         GatherUseOps) const {
-  if (Scalars.empty() || !ST->sinkSplatOperands() ||
+  if (Scalars.empty() || !ST->hasVInstructions() || !ST->sinkSplatOperands() ||
       !ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()))
     return VectorInstrContext::None;
 
