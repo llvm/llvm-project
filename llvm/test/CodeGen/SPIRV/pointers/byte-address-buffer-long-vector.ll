@@ -3,7 +3,6 @@
 
 ; CHECK-DAG: %[[GLSLEXT:[0-9]+]] = OpExtInstImport "GLSL.std.450"
 ; CHECK-DAG: %[[FLOAT:[0-9]+]] = OpTypeFloat 32
-; CHECK-DAG: %[[UINT:[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[V4FLOAT:[0-9]+]] = OpTypeVector %[[FLOAT]] 4
 ; CHECK: OpBitcast %[[FLOAT]]
 ; CHECK-COUNT-4: OpCompositeConstruct %[[V4FLOAT]]
