@@ -616,10 +616,10 @@ body: |
     ; NEW_RBS-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr3
     ; NEW_RBS-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY $vgpr4
     ; NEW_RBS-NEXT: [[MV:%[0-9]+]]:vgpr(p1) = G_MERGE_VALUES [[COPY3]](s32), [[COPY4]](s32)
-    ; NEW_RBS-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
-    ; NEW_RBS-NEXT: [[AND:%[0-9]+]]:vgpr(s32) = G_AND [[COPY]], [[C]]
-    ; NEW_RBS-NEXT: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; NEW_RBS-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[AND]](s32), [[C1]]
+    ; NEW_RBS-NEXT: [[C:%[0-9]+]]:vgpr(i32) = G_CONSTANT i32 1
+    ; NEW_RBS-NEXT: [[AND:%[0-9]+]]:vgpr(i32) = G_AND [[COPY]], [[C]]
+    ; NEW_RBS-NEXT: [[C1:%[0-9]+]]:vgpr(i32) = G_CONSTANT i32 0
+    ; NEW_RBS-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[AND]](i32), [[C1]]
     ; NEW_RBS-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[COPY1]], [[COPY2]]
     ; NEW_RBS-NEXT: G_STORE [[SELECT]](s32), [[MV]](p1) :: (store (s32), addrspace 1)
     ; NEW_RBS-NEXT: S_ENDPGM 0

@@ -153,8 +153,12 @@ public:
         if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
           AnnotationWarningsMap.try_emplace(PVD, ReturnEsc->getReturnExpr());
         else if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF);
-                 FieldEsc && isa<CXXConstructorDecl>(FD))
-          AnnotationWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
+                 FieldEsc && isa<CXXConstructorDecl>(FD)) {
+          // Disable inference for pointers being captured by an owner type,
+          // as owners typically consume these pointers rather than borrow them.
+          if (!isOwnerPtrCtor(dyn_cast<CXXConstructorDecl>(FD), PVD))
+            AnnotationWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
+        }
       }
       // TODO: Suggest lifetime_capture_by(this) for parameter escaping to a
       // field!

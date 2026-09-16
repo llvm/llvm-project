@@ -1337,12 +1337,16 @@ public:
 
   /// getAlignOf constant expr - computes the alignment of a type in a target
   /// independent way (Note: the return type is an i64).
+  [[deprecated(
+      "Create a constant based on DataLayout::getABITypeAlign() instead")]]
   LLVM_ABI static Constant *getAlignOf(Type *Ty);
 
   /// getSizeOf constant expr - computes the (alloc) size of a type (in
   /// address-units, not bits) in a target independent way (Note: the return
   /// type is an i64).
   ///
+  [[deprecated(
+      "Create a constant based on DataLayout::getTypeAllocSize() instead")]]
   LLVM_ABI static Constant *getSizeOf(Type *Ty);
 
   LLVM_ABI static Constant *getNeg(Constant *C, bool HasNSW = false);
