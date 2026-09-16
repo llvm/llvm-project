@@ -4262,22 +4262,14 @@ private:
             // there anyway.
             continue;
           }
-          const auto *TST = BaseType->getAs<TemplateSpecializationType>();
+          // Look through an alias template, whose TemplateName is a
+          // TypeAliasTemplateDecl rather than the ClassTemplateDecl we are
+          // after; otherwise the base is skipped entirely. libstdc++'s
+          // std::allocator<T> relies on this: it derives from
+          // __allocator_base<T>, an alias template for __new_allocator<T>.
+          const auto *TST = BaseType->getAsNonAliasTemplateSpecializationType();
           if (!TST)
             continue;
-          // The base may be named through an alias template, whose
-          // TemplateName is a TypeAliasTemplateDecl rather than the
-          // ClassTemplateDecl we are after. Look through the alias, otherwise
-          // the base is skipped entirely. libstdc++'s std::allocator<T> hits
-          // this: it derives from __allocator_base<T>, an alias template for
-          // __new_allocator<T>.
-          while (TST->isTypeAlias()) {
-            const auto *Aliased =
-                TST->getAliasedType()->getAs<TemplateSpecializationType>();
-            if (!Aliased)
-              break;
-            TST = Aliased;
-          }
           TemplateName TN = TST->getTemplateName();
           const auto *TD =
               dyn_cast_or_null<ClassTemplateDecl>(TN.getAsTemplateDecl());
