@@ -639,7 +639,7 @@ class ScriptedFrame(metaclass=ABCMeta):
         """
         pass
 
-    # def get_plan_for_step_type(self, step_type : lldb.StepType):
+    # def get_plan_spec_for_step_type(self, step_type : lldb.StepType):
     #    """Optional method.  If this ScriptedFrame can produce a ThreadPlan
     #    that implements the given step_type, then it should return a Python
     #    dictionary with the `class_name` key giving the name of a class that

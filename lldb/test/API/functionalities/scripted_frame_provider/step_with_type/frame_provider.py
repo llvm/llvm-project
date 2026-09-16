@@ -83,7 +83,7 @@ class BaseStepFrame(ScriptedFrame):
 
 
 class StepTypeFrame(BaseStepFrame):
-    def get_plan_for_step_type(self, step_type):
+    def get_plan_spec_for_step_type(self, step_type):
         dict = {
             "class_name": "frame_provider.StepTwice",
             "extra_args": {"step_type": str(step_type)},
@@ -92,7 +92,7 @@ class StepTypeFrame(BaseStepFrame):
 
 
 class BadStepFrame(BaseStepFrame):
-    def get_plan_for_step_type(self, step_type):
+    def get_plan_spec_for_step_type(self, step_type):
         dict = {
             "class_name": "frame_provider.Oops",
             "extra_args": {"step_type": str(step_type)},
@@ -101,7 +101,7 @@ class BadStepFrame(BaseStepFrame):
 
 
 class NoStepFrame(BaseStepFrame):
-    def get_plan_for_step_type(self, step_type):
+    def get_plan_spec_for_step_type(self, step_type):
         dict = {
             "class_name": "",
             "extra_args": {"step_type": str(step_type)},
