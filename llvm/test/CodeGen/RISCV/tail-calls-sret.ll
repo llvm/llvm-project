@@ -8,34 +8,31 @@ declare void @forward_sret(ptr sret(%struct.Buffer), i64)
 declare void @use_pointer(ptr)
 declare void @use_as_second_arg(i32, ptr)
 
+; The caller's sret pointer can be passed as an ordinary first argument, such
+; as the `this` pointer of a C++ constructor.
+define void @caller_sret_as_first_arg(ptr noalias sret(%struct.Buffer) %result) {
+; RV32-LABEL: caller_sret_as_first_arg:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    tail use_pointer
+;
+; RV64-LABEL: caller_sret_as_first_arg:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    tail use_pointer
+entry:
+  tail call void @use_pointer(ptr %result)
+  ret void
+}
+
 ; Matching caller and callee sret semantics can reuse the incoming
 ; return buffer.
 define void @forward_result(ptr noalias sret(%struct.Buffer) %result, i64 %tag) {
 ; RV32-LABEL: forward_result:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    call forward_sret
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    ret
+; RV32-NEXT:    tail forward_sret
 ;
 ; RV64-LABEL: forward_result:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    call forward_sret
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
-; RV64-NEXT:    addi sp, sp, 16
-; RV64-NEXT:    .cfi_def_cfa_offset 0
-; RV64-NEXT:    ret
+; RV64-NEXT:    tail forward_sret
 entry:
   tail call void @forward_sret(ptr sret(%struct.Buffer) %result, i64 %tag)
   ret void
@@ -46,31 +43,13 @@ entry:
 define void @caller_sret_unused(ptr noalias sret(%struct.Buffer) %result, ptr %other) {
 ; RV32-LABEL: caller_sret_unused:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:    call use_pointer
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    ret
+; RV32-NEXT:    tail use_pointer
 ;
 ; RV64-LABEL: caller_sret_unused:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    mv a0, a1
-; RV64-NEXT:    call use_pointer
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
-; RV64-NEXT:    addi sp, sp, 16
-; RV64-NEXT:    .cfi_def_cfa_offset 0
-; RV64-NEXT:    ret
+; RV64-NEXT:    tail use_pointer
 entry:
   tail call void @use_pointer(ptr %other)
   ret void
@@ -81,35 +60,17 @@ entry:
 define void @caller_sret_as_second_arg(ptr noalias sret(%struct.Buffer) %result, i32 %tag) {
 ; RV32-LABEL: caller_sret_as_second_arg:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    mv a2, a0
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    mv a1, a2
-; RV32-NEXT:    call use_as_second_arg
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    ret
+; RV32-NEXT:    tail use_as_second_arg
 ;
 ; RV64-LABEL: caller_sret_as_second_arg:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    mv a2, a0
 ; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:    mv a1, a2
-; RV64-NEXT:    call use_as_second_arg
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
-; RV64-NEXT:    addi sp, sp, 16
-; RV64-NEXT:    .cfi_def_cfa_offset 0
-; RV64-NEXT:    ret
+; RV64-NEXT:    tail use_as_second_arg
 entry:
   tail call void @use_as_second_arg(i32 %tag, ptr %result)
   ret void

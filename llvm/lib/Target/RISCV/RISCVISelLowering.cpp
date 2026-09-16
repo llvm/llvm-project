@@ -27587,12 +27587,23 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
     if (VA.getLocInfo() == CCValAssign::Indirect)
       return false;
 
-  // Do not tail call opt if either caller or callee uses struct return
-  // semantics.
-  auto IsCallerStructRet = Caller.hasStructRetAttr();
+  // If the callee has an sret parameter, conservatively require it to receive
+  // the caller's sret pointer. If only the caller has an sret parameter, treat
+  // that pointer like an ordinary pointer when passing call arguments.
+  // TODO: Support other sret buffers that outlive the caller, such as globals.
+  auto IsCallerStructRet =
+      !Caller.arg_empty() && Caller.getArg(0)->hasStructRetAttr();
   auto IsCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
-  if (IsCallerStructRet || IsCalleeStructRet)
-    return false;
+  if (IsCalleeStructRet) {
+    // Do not allow the tail call if the caller has no sret parameter.
+    if (!IsCallerStructRet)
+      return false;
+    // RISC-V passes the sret pointer as the first argument in a0. Require the
+    // callee's sret argument to be the caller's incoming sret pointer.
+    if (!CLI.CB || CLI.CB->arg_empty() ||
+        CLI.CB->getArgOperand(0) != Caller.getArg(0))
+      return false;
+  }
 
   // The callee has to preserve all registers the caller needs to preserve.
   const RISCVRegisterInfo *TRI = Subtarget.getRegisterInfo();
