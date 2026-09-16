@@ -23,10 +23,10 @@
 llvm.func @foo(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   %0 = llvm.mlir.constant(5 : i64) : i64
   llvm.intr.experimental.noalias.scope.decl #alias_scope
-  %2 = llvm.load %arg1 {alias_scopes = [#alias_scope], alignment = 4 : i64, noalias_scopes = [#alias_scope1]} : !llvm.ptr -> f32
+  %2 = llvm.load %arg1 <alias_scopes = [#alias_scope], alignment = 4, noalias_scopes = [#alias_scope1]> : !llvm.ptr -> f32
   "test.one_region_op"() ({
     %3 = llvm.getelementptr inbounds %arg0[%0] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %2, %3 {alias_scopes = [#alias_scope1], alignment = 4 : i64, noalias_scopes = [#alias_scope]} : f32, !llvm.ptr
+    llvm.store %2, %3 <alias_scopes = [#alias_scope1], alignment = 4, noalias_scopes = [#alias_scope]> : f32, !llvm.ptr
     "test.terminator"() : () -> ()
   }) : () -> ()
   llvm.return
@@ -85,15 +85,15 @@ llvm.func @callee_with_metadata(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm
   %0 = llvm.mlir.constant(5 : i64) : i64
   %1 = llvm.mlir.constant(8 : i64) : i64
   %2 = llvm.mlir.constant(7 : i64) : i64
-  %3 = llvm.load %arg2 {alignment = 4 : i64, noalias_scopes = [#alias_scope, #alias_scope1]} : !llvm.ptr -> f32
+  %3 = llvm.load %arg2 <alignment = 4, noalias_scopes = [#alias_scope, #alias_scope1]> : !llvm.ptr -> f32
   %4 = llvm.getelementptr inbounds %arg0[%0] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  llvm.store %3, %4 {alias_scopes = [#alias_scope], alignment = 4 : i64, noalias_scopes = [#alias_scope1]} : f32, !llvm.ptr
+  llvm.store %3, %4 <alias_scopes = [#alias_scope], alignment = 4, noalias_scopes = [#alias_scope1]> : f32, !llvm.ptr
   %5 = llvm.getelementptr inbounds %arg1[%1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  llvm.store %3, %5 {alias_scopes = [#alias_scope1], alignment = 4 : i64, noalias_scopes = [#alias_scope]} : f32, !llvm.ptr
+  llvm.store %3, %5 <alias_scopes = [#alias_scope1], alignment = 4, noalias_scopes = [#alias_scope]> : f32, !llvm.ptr
   "test.one_region_op"() ({
-    %6 = llvm.load %arg2 {alignment = 4 : i64} : !llvm.ptr -> f32
+    %6 = llvm.load %arg2 <alignment = 4> : !llvm.ptr -> f32
     %7 = llvm.getelementptr inbounds %arg0[%2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %6, %7 {alignment = 4 : i64} : f32, !llvm.ptr
+    llvm.store %6, %7 <alignment = 4> : f32, !llvm.ptr
     "test.terminator"() : () -> ()
   }) : () -> ()
   llvm.return
@@ -106,15 +106,15 @@ llvm.func @callee_without_metadata(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !l
   %0 = llvm.mlir.constant(5 : i64) : i64
   %1 = llvm.mlir.constant(8 : i64) : i64
   %2 = llvm.mlir.constant(7 : i64) : i64
-  %3 = llvm.load %arg2 {alignment = 4 : i64} : !llvm.ptr -> f32
+  %3 = llvm.load %arg2 <alignment = 4> : !llvm.ptr -> f32
   %4 = llvm.getelementptr inbounds %arg0[%0] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  llvm.store %3, %4 {alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.store %3, %4 <alignment = 4> : f32, !llvm.ptr
   %5 = llvm.getelementptr inbounds %arg1[%1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  llvm.store %3, %5 {alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.store %3, %5 <alignment = 4> : f32, !llvm.ptr
   "test.one_region_op"() ({
-    %6 = llvm.load %arg2 {alignment = 4 : i64} : !llvm.ptr -> f32
+    %6 = llvm.load %arg2 <alignment = 4> : !llvm.ptr -> f32
     %7 = llvm.getelementptr inbounds %arg0[%2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %6, %7 {alignment = 4 : i64} : f32, !llvm.ptr
+    llvm.store %6, %7 <alignment = 4> : f32, !llvm.ptr
     "test.terminator"() : () -> ()
   }) : () -> ()
 
@@ -198,7 +198,7 @@ llvm.func @callee_without_metadata(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !l
 // CHECK-NOT: noalias_scopes
 
 llvm.func @caller(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
-  %0 = llvm.load %arg2 {alias_scopes = [#alias_scope2], alignment = 8 : i64} : !llvm.ptr -> !llvm.ptr
+  %0 = llvm.load %arg2 <alias_scopes = [#alias_scope2], alignment = 8> : !llvm.ptr -> !llvm.ptr
   llvm.call @callee_with_metadata(%arg0, %arg1, %0) {noalias_scopes = [#alias_scope2]} : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
   llvm.call @callee_with_metadata(%arg1, %arg1, %arg0) {alias_scopes = [#alias_scope2]} : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
   llvm.call @callee_without_metadata(%arg0, %arg1, %0) {noalias_scopes = [#alias_scope2]} : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
@@ -214,9 +214,9 @@ llvm.func @caller(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
 
 llvm.func @foo(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr {llvm.noalias}) {
   %0 = llvm.mlir.constant(5 : i64) : i64
-  %1 = llvm.load %arg1 {alignment = 4 : i64} : !llvm.ptr -> f32
+  %1 = llvm.load %arg1 <alignment = 4> : !llvm.ptr -> f32
   %2 = llvm.getelementptr inbounds %arg0[%0] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  llvm.store %1, %2 {alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.store %1, %2 <alignment = 4> : f32, !llvm.ptr
   llvm.return
 }
 
@@ -239,9 +239,9 @@ llvm.func @bar(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
 
 llvm.func @foo(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr) {
   %0 = llvm.mlir.constant(5 : i64) : i64
-  %1 = llvm.load %arg0 {alignment = 4 : i64} : !llvm.ptr -> f32
+  %1 = llvm.load %arg0 <alignment = 4> : !llvm.ptr -> f32
   %2 = llvm.getelementptr inbounds %arg1[%0] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  llvm.store %1, %2 {alignment = 4 : i64} : f32, !llvm.ptr
+  llvm.store %1, %2 <alignment = 4> : f32, !llvm.ptr
   llvm.return
 }
 

@@ -20,86 +20,40 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 
 #include <cstdint>
-#include <iterator>
 
 using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
-static Value castToInt(Location loc, Value value, IntegerType targetType,
-                       bool isUnsigned, ConversionPatternRewriter &rewriter) {
+static Value castToI32(Location loc, Value value, bool isUnsigned,
+                       ConversionPatternRewriter &rewriter) {
+  Type i32Ty = rewriter.getI32Type();
   unsigned bitwidth = value.getType().getIntOrFloatBitWidth();
-  if (bitwidth > targetType.getWidth())
-    return arith::TruncIOp::create(rewriter, loc, targetType, value);
-  if (bitwidth < targetType.getWidth()) {
+  if (bitwidth > 32)
+    return arith::TruncIOp::create(rewriter, loc, i32Ty, value);
+  if (bitwidth < 32) {
     if (isUnsigned)
-      return arith::ExtUIOp::create(rewriter, loc, targetType, value);
-    return arith::ExtSIOp::create(rewriter, loc, targetType, value);
+      return arith::ExtUIOp::create(rewriter, loc, i32Ty, value);
+    return arith::ExtSIOp::create(rewriter, loc, i32Ty, value);
   }
   return value;
-}
-
-static Value castToI64(Location loc, Value value,
-                       ConversionPatternRewriter &rewriter) {
-  return castToInt(loc, value, rewriter.getI64Type(), /*isUnsigned=*/false,
-                   rewriter);
-}
-
-static Value getAsyncQueue(WaitOp op, ConversionPatternRewriter &rewriter,
-                           const ACCRuntimeCallConfig &config) {
-  Location loc = op->getLoc();
-  Type i64Ty = IntegerType::get(rewriter.getContext(), 64);
-  if (op.getAsync())
-    return LLVM::ConstantOp::create(rewriter, loc, i64Ty,
-                                    config.getAsyncNoValueRuntimeValue());
-  if (Value asyncValue = op.getAsyncOperand()) {
-    asyncValue = rewriter.getRemappedValue(asyncValue);
-    return castToI64(loc, asyncValue, rewriter);
-  }
-  return LLVM::ConstantOp::create(rewriter, loc, i64Ty,
-                                  config.getAsyncSyncRuntimeValue());
-}
-
-static LogicalResult createIfThen(Location loc, Value ifCond,
-                                  ConversionPatternRewriter &rewriter,
-                                  function_ref<LogicalResult()> thenFn) {
-  Block *parentBlock = rewriter.getInsertionBlock();
-  Block *continueBlock =
-      rewriter.splitBlock(parentBlock, rewriter.getInsertionPoint());
-  Block *thenBlock = rewriter.createBlock(
-      parentBlock->getParent(), std::next(Region::iterator(parentBlock)));
-
-  rewriter.setInsertionPointToEnd(parentBlock);
-  LLVM::CondBrOp::create(rewriter, loc, ifCond, thenBlock, ValueRange{},
-                         continueBlock, ValueRange{});
-
-  rewriter.setInsertionPointToStart(thenBlock);
-  LogicalResult result = thenFn();
-  rewriter.setInsertionPointToEnd(thenBlock);
-  LLVM::BrOp::create(rewriter, loc, ValueRange{}, continueBlock);
-  rewriter.setInsertionPointToStart(continueBlock);
-  return result;
-}
-
-/// Run \p emitFn, guarded by a branch on \p ifCond when it is present.
-static LogicalResult emitGuardedByIfCond(Location loc, Value ifCond,
-                                         ConversionPatternRewriter &rewriter,
-                                         function_ref<LogicalResult()> emitFn) {
-  if (ifCond)
-    return createIfThen(loc, ifCond, rewriter, emitFn);
-  return emitFn();
 }
 
 template <typename OpTy>
 struct ACCExecutableDirectivePattern : public ConvertOpToLLVMPattern<OpTy> {
   ACCExecutableDirectivePattern(const LLVMTypeConverter &converter,
+                                Region &globalSymbolRegion,
+                                SymbolTable &symbolTable,
                                 const ACCRuntimeCallConfig &config,
                                 PatternBenefit benefit = 1)
-      : ConvertOpToLLVMPattern<OpTy>(converter, benefit), config(config) {}
+      : ConvertOpToLLVMPattern<OpTy>(converter, benefit),
+        globalSymbolRegion(globalSymbolRegion), symbolTable(symbolTable),
+        config(config) {}
 
+  Region &globalSymbolRegion;
+  SymbolTable &symbolTable;
   ACCRuntimeCallConfig config;
 };
 
@@ -110,55 +64,26 @@ struct WaitOpLowering : public ACCExecutableDirectivePattern<WaitOp> {
   matchAndRewrite(WaitOp op, WaitOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
-    ModuleOp module = op->getParentOfType<ModuleOp>();
-    Type i32Ty = rewriter.getI32Type();
-    Type i64Ty = rewriter.getI64Type();
-    Type ptrTy = LLVM::LLVMPointerType::get(rewriter.getContext());
 
     auto emitWait = [&]() -> LogicalResult {
-      Value asyncQueue = getAsyncQueue(op, rewriter, config);
+      Value asyncOperand = op.getAsyncOperand()
+                               ? rewriter.getRemappedValue(op.getAsyncOperand())
+                               : Value();
+      Value asyncQueue =
+          getAsyncQueue(loc, asyncOperand, op.getAsync(), rewriter, config);
       SmallVector<Value> waitValues;
       for (Value operand : op.getWaitOperands())
-        waitValues.push_back(
-            castToI64(loc, rewriter.getRemappedValue(operand), rewriter));
+        waitValues.push_back(rewriter.getRemappedValue(operand));
 
-      unsigned size = waitValues.size();
-      Value waitNum = LLVM::ConstantOp::create(rewriter, loc, i32Ty, size);
-      Value waitList;
-      if (size == 0) {
-        waitList = LLVM::ZeroOp::create(rewriter, loc, ptrTy);
-      } else {
-        waitList = LLVM::AllocaOp::create(rewriter, loc, ptrTy, i64Ty, waitNum);
-        for (auto [index, waitValue] : llvm::enumerate(waitValues)) {
-          Value idx = LLVM::ConstantOp::create(rewriter, loc, i32Ty,
-                                               static_cast<int64_t>(index));
-          Value elementPtr = LLVM::GEPOp::create(
-              rewriter, loc, ptrTy, i64Ty, waitList, ArrayRef<Value>{idx});
-          LLVM::StoreOp::create(rewriter, loc, waitValue, elementPtr);
-        }
-      }
-
-      StringRef functionName = getParentFunctionName(waitValues);
-      if (functionName.empty())
-        functionName = getParentFunctionName(op);
-      Value ident = createIdent(loc, functionName, rewriter, module, config);
-      Value flags = LLVM::ConstantOp::create(rewriter, loc, i64Ty, 0);
-      Value deviceType = LLVM::ConstantOp::create(
-          rewriter, loc, i64Ty,
-          config.getDeviceTypeRuntimeValue(DeviceType::None));
       Value deviceNum = adaptor.getWaitDevnum();
       if (deviceNum) {
         // The converted operand is signless, so inspect the original type.
         bool isUnsigned = op.getWaitDevnum().getType().isUnsignedInteger();
-        deviceNum = castToInt(loc, deviceNum, rewriter.getI32Type(), isUnsigned,
-                              rewriter);
-      } else {
-        deviceNum = LLVM::ConstantOp::create(rewriter, loc, i32Ty, 0);
+        deviceNum = castToI32(loc, deviceNum, isUnsigned, rewriter);
       }
 
-      return createRuntimeCall(
-          loc, rewriter, module, RuntimeFunction::ACCRTL_tgt_acc_wait, config,
-          {ident, flags, deviceType, deviceNum, waitNum, waitList, asyncQueue});
+      return emitWaitCall(loc, waitValues, asyncQueue, rewriter,
+                          globalSymbolRegion, symbolTable, config, deviceNum);
     };
 
     if (failed(emitGuardedByIfCond(loc, op.getIfCond(), rewriter, emitWait)))
@@ -175,17 +100,20 @@ struct WaitOpLowering : public ACCExecutableDirectivePattern<WaitOp> {
 static LogicalResult
 emitDeviceOperationCall(Location loc, RuntimeFunction fn, DeviceType deviceType,
                         Value deviceNum, StringRef functionName,
-                        ModuleOp module, ConversionPatternRewriter &rewriter,
+                        Region &globalSymbolRegion, SymbolTable &symbolTable,
+                        ConversionPatternRewriter &rewriter,
                         const ACCRuntimeCallConfig &config) {
   Type i64Ty = rewriter.getI64Type();
   Value deviceTypeValue = LLVM::ConstantOp::create(
       rewriter, loc, i64Ty, config.getDeviceTypeRuntimeValue(deviceType));
-  Value ident = createIdent(loc, functionName, rewriter, module, config);
+  Value ident = createIdent(loc, functionName, rewriter, globalSymbolRegion,
+                            config, &symbolTable);
   Value flags = LLVM::ConstantOp::create(rewriter, loc, i64Ty, 0);
   Value deviceNumValue =
       deviceNum ? castToI64(loc, deviceNum, rewriter)
                 : LLVM::ConstantOp::create(rewriter, loc, i64Ty, -1);
-  return createRuntimeCall(loc, rewriter, module, fn, config,
+  return createRuntimeCall(loc, rewriter, globalSymbolRegion, symbolTable, fn,
+                           config,
                            {ident, flags, deviceTypeValue, deviceNumValue});
 }
 
@@ -193,8 +121,9 @@ static LogicalResult rewriteInitOrShutdown(Operation *op, Value deviceNum,
                                            ArrayAttr deviceTypesAttr,
                                            Value ifCond, bool isInit,
                                            ConversionPatternRewriter &rewriter,
+                                           Region &globalSymbolRegion,
+                                           SymbolTable &symbolTable,
                                            const ACCRuntimeCallConfig &config) {
-  ModuleOp module = op->getParentOfType<ModuleOp>();
   Location loc = op->getLoc();
 
   auto emitCalls = [&]() -> LogicalResult {
@@ -205,7 +134,8 @@ static LogicalResult rewriteInitOrShutdown(Operation *op, Value deviceNum,
 
     auto emitOne = [&](DeviceType deviceType) {
       return emitDeviceOperationCall(loc, fn, deviceType, deviceNum,
-                                     functionName, module, rewriter, config);
+                                     functionName, globalSymbolRegion,
+                                     symbolTable, rewriter, config);
     };
 
     if (!deviceTypesAttr)
@@ -232,9 +162,9 @@ struct InitOpLowering : public ACCExecutableDirectivePattern<InitOp> {
   LogicalResult
   matchAndRewrite(InitOp op, InitOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    return rewriteInitOrShutdown(op, adaptor.getDeviceNum(),
-                                 op.getDeviceTypesAttr(), op.getIfCond(),
-                                 /*isInit=*/true, rewriter, config);
+    return rewriteInitOrShutdown(
+        op, adaptor.getDeviceNum(), op.getDeviceTypesAttr(), op.getIfCond(),
+        /*isInit=*/true, rewriter, globalSymbolRegion, symbolTable, config);
   }
 };
 
@@ -245,9 +175,9 @@ struct ShutdownOpLowering : public ACCExecutableDirectivePattern<ShutdownOp> {
   LogicalResult
   matchAndRewrite(ShutdownOp op, ShutdownOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    return rewriteInitOrShutdown(op, adaptor.getDeviceNum(),
-                                 op.getDeviceTypesAttr(), op.getIfCond(),
-                                 /*isInit=*/false, rewriter, config);
+    return rewriteInitOrShutdown(
+        op, adaptor.getDeviceNum(), op.getDeviceTypesAttr(), op.getIfCond(),
+        /*isInit=*/false, rewriter, globalSymbolRegion, symbolTable, config);
   }
 };
 
@@ -257,17 +187,17 @@ struct SetOpLowering : public ACCExecutableDirectivePattern<SetOp> {
   LogicalResult
   matchAndRewrite(SetOp op, SetOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    ModuleOp module = op->getParentOfType<ModuleOp>();
     Location loc = op.getLoc();
     Type i64Ty = rewriter.getI64Type();
 
     auto emitSet = [&]() -> LogicalResult {
       if (Value asyncValue = adaptor.getDefaultAsync()) {
         asyncValue = castToI64(loc, asyncValue, rewriter);
-        Value ident = createIdent(loc, getParentFunctionName(asyncValue),
-                                  rewriter, module, config);
+        Value ident =
+            createIdent(loc, getParentFunctionName(asyncValue), rewriter,
+                        globalSymbolRegion, config, &symbolTable);
         if (failed(createRuntimeCall(
-                loc, rewriter, module,
+                loc, rewriter, globalSymbolRegion, symbolTable,
                 RuntimeFunction::ACCRTL_tgt_acc_set_default_async, config,
                 {ident, asyncValue})))
           return failure();
@@ -280,17 +210,18 @@ struct SetOpLowering : public ACCExecutableDirectivePattern<SetOp> {
           deviceType = deviceTypeAttr.getValue();
         return emitDeviceOperationCall(
             loc, RuntimeFunction::ACCRTL_tgt_acc_set_device_num, deviceType,
-            deviceNum, getParentFunctionName(deviceNum), module, rewriter,
-            config);
+            deviceNum, getParentFunctionName(deviceNum), globalSymbolRegion,
+            symbolTable, rewriter, config);
       }
       if (auto deviceTypeAttr = op.getDeviceTypeAttr()) {
         Value deviceTypeValue = LLVM::ConstantOp::create(
             rewriter, loc, i64Ty,
             config.getDeviceTypeRuntimeValue(deviceTypeAttr.getValue()));
-        Value ident = createIdent(loc, StringRef(), rewriter, module, config);
+        Value ident = createIdent(loc, StringRef(), rewriter,
+                                  globalSymbolRegion, config, &symbolTable);
         Value flags = LLVM::ConstantOp::create(rewriter, loc, i64Ty, 0);
         return createRuntimeCall(
-            loc, rewriter, module,
+            loc, rewriter, globalSymbolRegion, symbolTable,
             RuntimeFunction::ACCRTL_tgt_acc_set_device_type, config,
             {ident, flags, deviceTypeValue});
       }
@@ -314,8 +245,9 @@ void mlir::configureACCExecutableDirectiveConversionLegality(
 
 void mlir::populateACCExecutableDirectivePatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    Region &globalSymbolRegion, SymbolTable &symbolTable,
     const acc::ACCRuntimeCallConfig &config) {
   patterns
       .add<WaitOpLowering, InitOpLowering, ShutdownOpLowering, SetOpLowering>(
-          converter, config);
+          converter, globalSymbolRegion, symbolTable, config);
 }

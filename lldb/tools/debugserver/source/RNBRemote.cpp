@@ -26,6 +26,7 @@
 #include <os/security_config.h>
 #endif
 #include <pwd.h>
+#include <set>
 #include <string>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
@@ -2687,14 +2688,48 @@ void RNBRemote::DispatchQueueOffsets::GetThreadQueueInfo(
   }
 }
 
-struct StackMemory {
-  uint8_t bytes[2 * sizeof(nub_addr_t)];
-  nub_size_t length;
+// A single contiguous chunk of expedited memory.
+struct ExpeditedMemory {
+  nub_addr_t addr;
+  std::vector<uint8_t> bytes;
 };
-typedef std::map<nub_addr_t, StackMemory> StackMemoryMap;
+
+// Read one range and append it as an expedited chunk.
+static void AppendExpeditedMemory(nub_process_t pid, nub_addr_t addr,
+                                  nub_size_t size,
+                                  std::vector<ExpeditedMemory> &chunks) {
+  if (size == 0)
+    return;
+  std::vector<uint8_t> buf(size);
+  if (DNBProcessMemoryRead(pid, addr, size, buf.data()) != size)
+    return;
+  chunks.push_back({addr, std::move(buf)});
+}
+
+static void
+AppendExpeditedMemoryToJSON(const std::vector<ExpeditedMemory> &chunks,
+                            JSONGenerator::ArraySP &memory_array_sp) {
+  for (const ExpeditedMemory &chunk : chunks) {
+    JSONGenerator::DictionarySP chunk_sp(new JSONGenerator::Dictionary());
+    chunk_sp->AddIntegerItem("address", chunk.addr);
+    chunk_sp->AddBytesAsHexASCIIString("bytes", chunk.bytes.data(),
+                                       chunk.bytes.size());
+    memory_array_sp->AddItem(chunk_sp);
+  }
+}
+
+static void
+AppendExpeditedMemoryToStopReply(const std::vector<ExpeditedMemory> &chunks,
+                                 std::ostringstream &ostrm) {
+  for (const ExpeditedMemory &chunk : chunks) {
+    ostrm << "memory:" << HEXBASE << chunk.addr << '=';
+    append_hex_value(ostrm, chunk.bytes.data(), chunk.bytes.size(), false);
+    ostrm << ';';
+  }
+}
 
 static void ReadStackMemory(nub_process_t pid, nub_thread_t tid,
-                            StackMemoryMap &stack_mmap,
+                            std::vector<ExpeditedMemory> &chunks,
                             uint32_t backtrace_limit = 256) {
   std::unique_ptr<DNBRegisterValue> reg_value =
       std::make_unique<DNBRegisterValue>();
@@ -2706,6 +2741,7 @@ static void ReadStackMemory(nub_process_t pid, nub_thread_t tid,
       fp = reg_value->value.uint32;
     else
       fp = reg_value->value.uint64;
+    std::set<uint64_t> visited;
     while (fp != 0) {
       // Make sure we never recurse more than 256 times so we don't recurse too
       // far or
@@ -2714,21 +2750,19 @@ static void ReadStackMemory(nub_process_t pid, nub_thread_t tid,
         break;
 
       const nub_size_t read_size = reg_value->info.size * 2;
-      StackMemory stack_memory;
-      stack_memory.length = read_size;
-      if (DNBProcessMemoryRead(pid, fp, read_size, stack_memory.bytes) !=
-          read_size)
+      std::vector<uint8_t> buf(read_size);
+      if (DNBProcessMemoryRead(pid, fp, read_size, buf.data()) != read_size)
         break;
       // Make sure we don't try to put the same stack memory in more than once
-      if (stack_mmap.find(fp) != stack_mmap.end())
+      if (!visited.insert(fp).second)
         break;
-      // Put the entry into the cache
-      stack_mmap[fp] = stack_memory;
+      const nub_addr_t frame_addr = fp;
       // Dereference the frame pointer to get to the previous frame pointer
       if (reg_value->info.size == 4)
-        fp = ((uint32_t *)stack_memory.bytes)[0];
+        fp = ((uint32_t *)buf.data())[0];
       else
-        fp = ((uint64_t *)stack_memory.bytes)[0];
+        fp = ((uint64_t *)buf.data())[0];
+      chunks.push_back({frame_addr, std::move(buf)});
     }
   }
 }
@@ -2744,12 +2778,6 @@ static const nub_size_t k_expedite_stack_arg_size = 160;
 
 static_assert(k_expedite_stack_arg_size <= k_expedite_stack_window,
               "above-fp arg window must fit within the total stack budget");
-
-// A single contiguous chunk of expedited memory.
-struct ExpeditedMemory {
-  nub_addr_t addr;
-  std::vector<uint8_t> bytes;
-};
 
 // Heuristic to decide whether frame 0's $fp looks like a valid frame pointer.
 static bool FrameZeroFPLooksValid(nub_process_t pid, nub_thread_t tid,
@@ -2789,31 +2817,23 @@ static std::vector<ExpeditedMemory> ReadFrameZeroStackMemory(nub_process_t pid,
   uint64_t sp = (ptr_size == 4) ? sp_value.value.uint32 : sp_value.value.uint64;
   uint64_t fp = (ptr_size == 4) ? fp_value.value.uint32 : fp_value.value.uint64;
 
-  auto read_range = [&](uint64_t start, uint64_t length) {
-    if (length == 0)
-      return;
-    std::vector<uint8_t> buf(length);
-    if (DNBProcessMemoryRead(pid, start, length, buf.data()) != length)
-      return;
-    chunks.push_back({start, std::move(buf)});
-  };
-
   if (FrameZeroFPLooksValid(pid, tid, sp, fp, ptr_size)) {
     // above-fp: stack-passed params, skipping the already-expedited frame
     // record.
-    read_range(fp + 2 * ptr_size, k_expedite_stack_arg_size);
+    AppendExpeditedMemory(pid, fp + 2 * ptr_size, k_expedite_stack_arg_size,
+                          chunks);
 
     // below-fp: locals + spilled register args, clamped at $sp so a small frame
     // reads only [sp, fp).
     uint64_t below = std::min<uint64_t>(fp - sp, k_expedite_stack_window -
                                                      k_expedite_stack_arg_size);
-    read_range(fp - below, below);
+    AppendExpeditedMemory(pid, fp - below, below, chunks);
     return chunks;
   }
 
   // Frameless / cannot validate $fp: expedite a single window anchored at $sp.
   if (sp != 0)
-    read_range(sp, k_expedite_stack_window);
+    AppendExpeditedMemory(pid, sp, k_expedite_stack_window, chunks);
   return chunks;
 }
 
@@ -3063,18 +3083,10 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
     }
 
     // Add expedited stack memory so stack backtracing doesn't need to read
-    // anything from the
-    // frame pointer chain.
-    StackMemoryMap stack_mmap;
-    ReadStackMemory(pid, tid, stack_mmap, 2);
-    if (!stack_mmap.empty()) {
-      for (const auto &stack_memory : stack_mmap) {
-        ostrm << "memory:" << HEXBASE << stack_memory.first << '=';
-        append_hex_value(ostrm, stack_memory.second.bytes,
-                         stack_memory.second.length, false);
-        ostrm << ';';
-      }
-    }
+    // anything from the frame pointer chain.
+    std::vector<ExpeditedMemory> stack_chunks;
+    ReadStackMemory(pid, tid, stack_chunks, 2);
+    AppendExpeditedMemoryToStopReply(stack_chunks, ostrm);
 
     std::vector<uint64_t> added_binaries;
     JSONGenerator::ObjectSP detailed_binary_infos;
@@ -5948,38 +5960,19 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
         }
 
         // Add expedited stack memory so stack backtracing doesn't need to read
-        // anything from the
-        // frame pointer chain.
-        StackMemoryMap stack_mmap;
-        ReadStackMemory(pid, tid, stack_mmap);
+        // anything from the frame pointer chain.
+        std::vector<ExpeditedMemory> stack_chunks;
+        ReadStackMemory(pid, tid, stack_chunks);
 
         JSONGenerator::ArraySP memory_array_sp(new JSONGenerator::Array());
-
-        if (!stack_mmap.empty()) {
-          for (const auto &stack_memory : stack_mmap) {
-            JSONGenerator::DictionarySP stack_memory_sp(
-                new JSONGenerator::Dictionary());
-            stack_memory_sp->AddIntegerItem("address", stack_memory.first);
-            stack_memory_sp->AddBytesAsHexASCIIString(
-                "bytes", stack_memory.second.bytes, stack_memory.second.length);
-            memory_array_sp->AddItem(stack_memory_sp);
-          }
-        }
+        AppendExpeditedMemoryToJSON(stack_chunks, memory_array_sp);
 
         // Also expedite the innermost frame's stack memory of the thread that
         // stopped.
         if (tid == DNBProcessGetCurrentThread(pid)) {
           std::vector<ExpeditedMemory> frame_zero_chunks =
               ReadFrameZeroStackMemory(pid, tid);
-
-          for (const auto &chunk : frame_zero_chunks) {
-            JSONGenerator::DictionarySP frame_zero_sp(
-                new JSONGenerator::Dictionary());
-            frame_zero_sp->AddIntegerItem("address", chunk.addr);
-            frame_zero_sp->AddBytesAsHexASCIIString("bytes", chunk.bytes.data(),
-                                                    chunk.bytes.size());
-            memory_array_sp->AddItem(frame_zero_sp);
-          }
+          AppendExpeditedMemoryToJSON(frame_zero_chunks, memory_array_sp);
         }
 
         if (!memory_array_sp->empty())

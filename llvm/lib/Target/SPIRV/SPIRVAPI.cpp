@@ -79,10 +79,10 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   if (!TheTarget)
     return false;
 
-  // A call to codegen::InitTargetOptionsFromCodeGenFlags(TargetTriple)
-  // hits the following assertion: llvm/lib/CodeGen/CommandFlags.cpp:78:
-  // llvm::FPOpFusion::FPOpFusionMode llvm::codegen::getFuseFPOps(): Assertion
-  // `FuseFPOpsView && "RegisterCodeGenFlags not created."' failed.
+  // A call to codegen::InitTargetOptionsFromCodeGenFlags(TargetTriple) hits an
+  // assertion in one of the codegen flag getters in
+  // llvm/lib/CodeGen/CommandFlags.cpp:
+  // `...View && "RegisterCodeGenFlags not created."' failed.
   TargetOptions Options;
   std::optional<Reloc::Model> RM;
   std::optional<CodeModel::Model> CM;

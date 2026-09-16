@@ -16,6 +16,7 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -557,34 +558,35 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
 MCSymbol *BinaryContext::handleExternalBranchTarget(uint64_t Address,
                                                     BinaryFunction &Source,
                                                     BinaryFunction &Target) {
+  const auto Reference = std::make_pair(&Source, Address);
+  // Avoid processing a known-invalid reference again when an ignored source
+  // is rescanned.
+  if (InvalidInterproceduralReferences.contains(Reference))
+    return nullptr;
+
   const uint64_t Offset = Address - Target.getAddress();
   assert(Offset < Target.getSize() &&
          "Address should be inside the referenced function");
 
   bool IsValid = true;
-  if (Source.NeedBranchValidation) {
-    if (Target.CurrentState == BinaryFunction::State::Disassembled &&
-        !Target.getInstructionAtOffset(Offset)) {
-      this->errs()
-          << "BOLT-WARNING: corrupted control flow detected in function "
-          << Source
-          << ": an external branch/call targets an invalid instruction "
-          << "in function " << Target << " at address 0x"
-          << Twine::utohexstr(Address) << "; ignoring both functions\n";
-      IsValid = false;
-    }
-    if (Target.isInConstantIsland(Address)) {
-      this->errs() << "BOLT-WARNING: ignoring entry point at address 0x"
-                   << Twine::utohexstr(Address)
-                   << " in constant island of function " << Target << '\n';
-      IsValid = false;
-    }
+  if (Target.CurrentState == BinaryFunction::State::Disassembled &&
+      !Target.getInstructionAtOffset(Offset)) {
+    this->errs() << "BOLT-WARNING: corrupted control flow detected in function "
+                 << Source
+                 << ": an external branch/call targets an invalid instruction "
+                 << "in function " << Target << " at address 0x"
+                 << Twine::utohexstr(Address) << "; ignoring both functions\n";
+    IsValid = false;
+  }
+  if (Target.isInConstantIsland(Address)) {
+    this->errs() << "BOLT-WARNING: ignoring entry point at address 0x"
+                 << Twine::utohexstr(Address)
+                 << " in constant island of function " << Target << '\n';
+    IsValid = false;
   }
 
   if (!IsValid) {
-    Source.NeedBranchValidation = false;
-    Source.setIgnored();
-    Target.setIgnored();
+    InvalidInterproceduralReferences.insert(Reference);
     return nullptr;
   }
 
@@ -1466,6 +1468,8 @@ bool BinaryContext::handleAArch64Veneer(uint64_t Address, bool MatchOnly) {
 }
 
 void BinaryContext::processInterproceduralReferences() {
+  SmallPtrSet<BinaryFunction *, 4> InvalidFunctions;
+
   for (const std::pair<BinaryFunction *, uint64_t> &It :
        InterproceduralReferences) {
     BinaryFunction &Function = *It.first;
@@ -1490,9 +1494,12 @@ void BinaryContext::processInterproceduralReferences() {
             << TargetFunction->getPrintName() << '\n';
       }
 
-      // Create an extra entry point if needed. Can also render the target
-      // function ignored if the reference is invalid.
-      handleExternalBranchTarget(Address, Function, *TargetFunction);
+      // Create an extra entry point if needed. Defer state changes for invalid
+      // references until all references have been validated.
+      if (!handleExternalBranchTarget(Address, Function, *TargetFunction)) {
+        InvalidFunctions.insert(&Function);
+        InvalidFunctions.insert(TargetFunction);
+      }
 
       continue;
     }
@@ -1535,6 +1542,13 @@ void BinaryContext::processInterproceduralReferences() {
       TargetFunction->setMaxSize(TargetFunction->getSize());
     }
   }
+
+  // Defer applying state changes until the entire validation scan is complete.
+  // Ignoring a function during the scan may lead to missed references or
+  // targets.
+  for (BinaryFunction *Function : InvalidFunctions)
+    if (!Function->isIgnored())
+      Function->setIgnored();
 
   InterproceduralReferences.clear();
 }

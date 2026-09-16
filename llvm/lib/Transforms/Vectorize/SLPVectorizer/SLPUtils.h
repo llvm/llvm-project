@@ -278,7 +278,7 @@ Value *createInsertVector(
     IRBuilderBase &Builder, Value *Vec, Value *V, unsigned Index,
     function_ref<Value *(Value *, Value *, ArrayRef<int>)> Generator = {});
 
-/// Generates subvector extract using \p Generator or using default shuffle.
+/// Generates subvector extract.
 Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
                            unsigned SubVecVF, unsigned Index);
 

@@ -244,7 +244,6 @@
 // CHECK-NEXT:     xtheadmempair        1.0       'XTHeadMemPair' (T-Head two-GPR Memory Operations)
 // CHECK-NEXT:     xtheadsync           1.0       'XTHeadSync' (T-Head multicore synchronization instructions)
 // CHECK-NEXT:     xtheadvdot           1.0       'XTHeadVdot' (T-Head Vector Extensions for Dot)
-// CHECK-NEXT:     xventanacondops      1.0       'XVentanaCondOps' (Ventana Conditional Ops)
 // CHECK-NEXT:     xwchc                2.2       'Xwchc' (WCH/QingKe additional compressed opcodes)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
@@ -275,13 +274,17 @@
 // CHECK-NEXT:     zvzip                0.1       'Zvzip' (Vector Reordering Structured Data)
 // CHECK-NEXT:     smcsps               0.20      'Smcsps' (Conditional Stack Pointer Swap at Machine Level)
 // CHECK-NEXT:     smehv                0.20      'Smehv' (Synchronous Exception Hardware Vectoring at Machine Level)
+// CHECK-NEXT:     smidctrl             0.20      'Smidctrl' (Interrupt Domain Control Interface at Machine Level)
 // CHECK-NEXT:     smijt                0.20      'Smijt' (Interrupt Jump Table at Machine Level)
 // CHECK-NEXT:     smip                 0.20      'Smip' (Support for Interrupt Handler Push/Pop at Machine Level)
+// CHECK-NEXT:     smnip                0.20      'Smnip' (Nested Interrupt Preemption Support at Machine Level)
 // CHECK-NEXT:     smpmpmt              0.6       'Smpmpmt' (PMP-based Memory Types Extension)
 // CHECK-NEXT:     sscsps               0.20      'Sscsps' (Conditional Stack Pointer Swap at Supervisor Level)
 // CHECK-NEXT:     ssehv                0.20      'Ssehv' (Synchronous Exception Hardware Vectoring at Supervisor Level)
+// CHECK-NEXT:     ssidctrl             0.20      'Ssidctrl' (Interrupt Domain Control Interface at Supervisor Level)
 // CHECK-NEXT:     ssijt                0.20      'Ssijt' (Interrupt Jump Table at Supervisor Level)
 // CHECK-NEXT:     ssip                 0.20      'Ssip' (Support for Interrupt Handler Push/Pop at Supervisor Level)
+// CHECK-NEXT:     ssnip                0.20      'Ssnip' (Nested Interrupt Preemption Support at Supervisor Level)
 // CHECK-NEXT:     svukte               1.0       'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses)
 // CHECK-NEXT:     xqccmt               0.1       'Xqccmt' (Qualcomm 16-bit Table Jump)
 // CHECK-NEXT:     xsfmclic             0.1       'XSfmclic' (SiFive CLIC Machine-mode CSRs)
@@ -300,6 +303,8 @@
 // CHECK-NEXT:     rvi20u64
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental Profiles
+// CHECK-NEXT:     rva23p1s64
+// CHECK-NEXT:     rvb23p1s64
 // CHECK-NEXT:     rvm23u32
 // CHECK-EMPTY:
 // CHECK-NEXT: Use -march to specify the target's extension.

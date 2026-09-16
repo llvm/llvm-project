@@ -143,7 +143,6 @@ SimpleRemoteEPC::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
       break;
     case SimpleRemoteEPCOpcode::Result:
       dbgs() << "Result";
-      assert(!TagAddr && "Non-zero TagAddr for Result?");
       break;
     case SimpleRemoteEPCOpcode::CallWrapper:
       dbgs() << "CallWrapper";
@@ -242,7 +241,6 @@ Error SimpleRemoteEPC::sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
       break;
     case SimpleRemoteEPCOpcode::Result:
       dbgs() << "Result";
-      assert(!TagAddr && "Non-zero TagAddr for Result?");
       break;
     case SimpleRemoteEPCOpcode::CallWrapper:
       dbgs() << "CallWrapper";
@@ -353,9 +351,9 @@ Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
                                     shared::WrapperFunctionBuffer ArgBytes) {
   IncomingWFRHandler SendResult;
 
-  if (TagAddr)
-    return make_error<StringError>("Unexpected TagAddr in result message",
-                                   inconvertibleErrorCode());
+  auto WFR = decodeResultMessage(TagAddr, std::move(ArgBytes));
+  if (!WFR)
+    return WFR.takeError();
 
   {
     std::lock_guard<std::mutex> Lock(SimpleRemoteEPCMutex);
@@ -369,9 +367,7 @@ Error SimpleRemoteEPC::handleResult(uint64_t SeqNo, ExecutorAddr TagAddr,
     releaseSeqNo(SeqNo);
   }
 
-  auto WFR =
-      shared::WrapperFunctionBuffer::copyFrom(ArgBytes.data(), ArgBytes.size());
-  SendResult(std::move(WFR));
+  SendResult(std::move(*WFR));
   return Error::success();
 }
 
@@ -383,9 +379,10 @@ void SimpleRemoteEPC::handleCallWrapper(
       [this, RemoteSeqNo, TagAddr, ArgBytes = std::move(ArgBytes)]() mutable {
         ES->runJITDispatchHandler(
             [this, RemoteSeqNo](shared::WrapperFunctionBuffer WFR) {
+              auto [ResultTag, Payload] = encodeResultMessage(std::move(WFR));
               if (auto Err =
                       sendMessage(SimpleRemoteEPCOpcode::Result, RemoteSeqNo,
-                                  ExecutorAddr(), {WFR.data(), WFR.size()}))
+                                  ResultTag, {Payload.data(), Payload.size()}))
                 getExecutionSession().reportError(std::move(Err));
             },
             TagAddr, std::move(ArgBytes));
