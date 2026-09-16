@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fsyntax-only %s 2>&1
+! RUN: %flang_fc1 -fsyntax-only %s
 ! RUN: %flang -E %s 2>&1 | FileCheck %s
 
       implicit none

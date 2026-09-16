@@ -455,20 +455,12 @@ void Prescanner::LabelField(TokenSequence &token) {
     std::uint64_t spaces{HasTabInLabelField(start - colOffset, limit_)
             ? 6
             : static_cast<std::uint64_t>(p - start)};
-    if (spaces < 6 && IsCComment(p)) {
+    if (colOffset + spaces < 6 && IsCComment(p)) {
       at_ += spaces;
       column_ += spaces;
-      SkipCComments(/*noError=*/false);
+      SkipCComments(/*reportUnterminated=*/true);
       if (at_ > start + spaces) {
         WarnCComment(p);
-        // Fix `column_`, which may be incorrect after multi-line comments.
-        p = at_ - 1;
-        while (p > start && *p != '\n') {
-          --p;
-        }
-        if (*p == '\n') {
-          column_ = at_ - p;
-        }
         colOffset = column_ - 1;
         start = at_;
       }
@@ -641,7 +633,7 @@ void Prescanner::NextChar() {
 // fixed form, and all forms of line continuation.
 bool Prescanner::SkipToNextSignificantCharacter() {
   if (inPreprocessorDirective_) {
-    SkipCComments(/*noError=*/true);
+    SkipCComments(/*reportUnterminated=*/false);
     return false;
   } else {
     auto anyContinuationLine{false};
@@ -665,7 +657,7 @@ bool Prescanner::SkipToNextSignificantCharacter() {
   }
 }
 
-void Prescanner::SkipCComments(bool noError) {
+void Prescanner::SkipCComments(bool reportUnterminated) {
   while (true) {
     if (IsCComment(at_)) {
       if (const char *after{SkipCComment(at_)}) {
@@ -678,7 +670,7 @@ void Prescanner::SkipCComments(bool noError) {
         // when processing label fields, while others keep the old behavior of
         // ignoring unterminated C-style comments.
         // TODO Always emit an error when preprocessing is enabled.
-        if (preprocessingEnabled_ && !noError) {
+        if (preprocessingEnabled_ && reportUnterminated) {
           Say(GetProvenance(at_), "unterminated C-style comment"_err_en_US);
         }
         break;
@@ -816,11 +808,15 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
   if (compilingFixedForm) {
     SkipSpaces();
   }
-  if (*at_ == '/' && IsCComment(at_)) {
+  if (*at_ == '/' && IsCComment(at_) &&
+      (!compilingFixedForm || preprocessingEnabled_)) {
     // Recognize and skip over classic C style /*comments*/ when
     // outside a character literal.
-    WarnCComment(at_);
-    SkipCComments(/*noError=*/true);
+    const char *before{at_};
+    SkipCComments(/*reportUnterminated=*/false);
+    if (at_ > before) {
+      WarnCComment(before);
+    }
     if (compilingFixedForm) {
       SkipSpaces();
     }
@@ -1719,8 +1715,8 @@ bool Prescanner::FixedFormContinuation(bool atNewline) {
     return false;
   }
   do {
-    const char *cComment;
-    const char *unterminatedCComment;
+    const char *cComment{nullptr};
+    const char *unterminatedCComment{nullptr};
     if (const char *cont{FixedFormContinuationLine(
             atNewline, cComment, unterminatedCComment)}) {
       if (cComment) {

@@ -232,7 +232,7 @@ private:
   void NextChar();
   // True when input flowed to a continuation line
   bool SkipToNextSignificantCharacter();
-  void SkipCComments(bool noError);
+  void SkipCComments(bool reportUnterminated);
   void WarnCComment(const char *at);
   void SkipSpaces();
   static const char *SkipWhiteSpace(const char *);

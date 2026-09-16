@@ -276,13 +276,12 @@ end
 * Outside a character literal, a comment after a continuation marker (&)
   need not begin with a comment marker (!).
 * Classic C-style `/*comments*/` are skipped, so multi-language header
-  files are easier to write and use.
-* Classic C-style `/*comments*/` in fixed source form label fields are
-  skipped only when preprocessing is enabled. Otherwise, valid Fortran
-  programs could be rejected. For example:
+  files are easier to write and use. In fixed source form label fields, C
+  comments are skipped only when preprocessing is enabled. Otherwise, valid
+  Fortran programs could be rejected. For example:
 ```fortran
       x = x
-     /* 2
+     /* 2                           ! fixed-form continuation line
       print *, x, 'tail */ text'
 ```
 * $ and \ edit descriptors are supported in FORMAT to suppress newline
