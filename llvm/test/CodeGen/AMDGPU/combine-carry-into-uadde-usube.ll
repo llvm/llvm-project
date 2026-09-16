@@ -5,41 +5,22 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
 
 define amdgpu_ps void @s_uaddo_carry(i32 inreg %a, i32 inreg %b, ptr addrspace(1) %out) {
-; GFX9-SDAG-LABEL: s_uaddo_carry:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_add_u32 s0, s0, s1
-; GFX9-SDAG-NEXT:    s_addc_u32 s0, s0, 0
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; GFX9-SDAG-NEXT:    global_store_dword v[0:1], v2, off
-; GFX9-SDAG-NEXT:    s_endpgm
+; GFX9-LABEL: s_uaddo_carry:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_add_u32 s0, s0, s1
+; GFX9-NEXT:    s_addc_u32 s0, s0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v2, s0
+; GFX9-NEXT:    global_store_dword v[0:1], v2, off
+; GFX9-NEXT:    s_endpgm
 ;
-; GFX9-GISEL-LABEL: s_uaddo_carry:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_add_u32 s0, s0, s1
-; GFX9-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX9-GISEL-NEXT:    s_add_i32 s0, s0, s1
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GFX9-GISEL-NEXT:    global_store_dword v[0:1], v2, off
-; GFX9-GISEL-NEXT:    s_endpgm
-;
-; GFX12-SDAG-LABEL: s_uaddo_carry:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_add_co_u32 s0, s0, s1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-SDAG-NEXT:    s_add_co_ci_u32 s0, s0, 0
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; GFX12-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: s_uaddo_carry:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_add_co_u32 s0, s0, s1
-; GFX12-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    s_add_co_i32 s0, s0, s1
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GFX12-GISEL-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-GISEL-NEXT:    s_endpgm
+; GFX12-LABEL: s_uaddo_carry:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_add_co_u32 s0, s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_add_co_ci_u32 s0, s0, 0
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
+; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX12-NEXT:    s_endpgm
   %o = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %sum = extractvalue { i32, i1 } %o, 0
   %c = extractvalue { i32, i1 } %o, 1
@@ -50,37 +31,20 @@ define amdgpu_ps void @s_uaddo_carry(i32 inreg %a, i32 inreg %b, ptr addrspace(1
 }
 
 define amdgpu_ps void @v_uaddo_carry(i32 %a, i32 %b, ptr addrspace(1) %out) {
-; GFX9-SDAG-LABEL: v_uaddo_carry:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v1
-; GFX9-SDAG-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v0, vcc
-; GFX9-SDAG-NEXT:    global_store_dword v[2:3], v0, off
-; GFX9-SDAG-NEXT:    s_endpgm
+; GFX9-LABEL: v_uaddo_carry:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v1
+; GFX9-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v0, vcc
+; GFX9-NEXT:    global_store_dword v[2:3], v0, off
+; GFX9-NEXT:    s_endpgm
 ;
-; GFX9-GISEL-LABEL: v_uaddo_carry:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
-; GFX9-GISEL-NEXT:    v_add_u32_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    global_store_dword v[2:3], v0, off
-; GFX9-GISEL-NEXT:    s_endpgm
-;
-; GFX12-SDAG-LABEL: v_uaddo_carry:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v0, vcc_lo
-; GFX12-SDAG-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: v_uaddo_carry:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_add_co_u32 v0, s0, v0, v1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
-; GFX12-GISEL-NEXT:    v_add_nc_u32_e32 v0, v0, v1
-; GFX12-GISEL-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX12-GISEL-NEXT:    s_endpgm
+; GFX12-LABEL: v_uaddo_carry:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v0, vcc_lo
+; GFX12-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX12-NEXT:    s_endpgm
   %o = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %sum = extractvalue { i32, i1 } %o, 0
   %c = extractvalue { i32, i1 } %o, 1
@@ -91,41 +55,22 @@ define amdgpu_ps void @v_uaddo_carry(i32 %a, i32 %b, ptr addrspace(1) %out) {
 }
 
 define amdgpu_ps void @s_usubo_carry(i32 inreg %a, i32 inreg %b, ptr addrspace(1) %out) {
-; GFX9-SDAG-LABEL: s_usubo_carry:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_sub_u32 s0, s0, s1
-; GFX9-SDAG-NEXT:    s_subb_u32 s0, s0, 0
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; GFX9-SDAG-NEXT:    global_store_dword v[0:1], v2, off
-; GFX9-SDAG-NEXT:    s_endpgm
+; GFX9-LABEL: s_usubo_carry:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_sub_u32 s0, s0, s1
+; GFX9-NEXT:    s_subb_u32 s0, s0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v2, s0
+; GFX9-NEXT:    global_store_dword v[0:1], v2, off
+; GFX9-NEXT:    s_endpgm
 ;
-; GFX9-GISEL-LABEL: s_usubo_carry:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_sub_u32 s0, s0, s1
-; GFX9-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX9-GISEL-NEXT:    s_sub_i32 s0, s0, s1
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GFX9-GISEL-NEXT:    global_store_dword v[0:1], v2, off
-; GFX9-GISEL-NEXT:    s_endpgm
-;
-; GFX12-SDAG-LABEL: s_usubo_carry:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_sub_co_u32 s0, s0, s1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-SDAG-NEXT:    s_sub_co_ci_u32 s0, s0, 0
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v2, s0
-; GFX12-SDAG-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: s_usubo_carry:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_sub_co_u32 s0, s0, s1
-; GFX12-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    s_sub_co_i32 s0, s0, s1
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s0
-; GFX12-GISEL-NEXT:    global_store_b32 v[0:1], v2, off
-; GFX12-GISEL-NEXT:    s_endpgm
+; GFX12-LABEL: s_usubo_carry:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_sub_co_u32 s0, s0, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_sub_co_ci_u32 s0, s0, 0
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
+; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX12-NEXT:    s_endpgm
   %o = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
   %diff = extractvalue { i32, i1 } %o, 0
   %c = extractvalue { i32, i1 } %o, 1
@@ -136,37 +81,20 @@ define amdgpu_ps void @s_usubo_carry(i32 inreg %a, i32 inreg %b, ptr addrspace(1
 }
 
 define amdgpu_ps void @v_usubo_carry(i32 %a, i32 %b, ptr addrspace(1) %out) {
-; GFX9-SDAG-LABEL: v_usubo_carry:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v1
-; GFX9-SDAG-NEXT:    v_subbrev_co_u32_e32 v0, vcc, 0, v0, vcc
-; GFX9-SDAG-NEXT:    global_store_dword v[2:3], v0, off
-; GFX9-SDAG-NEXT:    s_endpgm
+; GFX9-LABEL: v_usubo_carry:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v1
+; GFX9-NEXT:    v_subbrev_co_u32_e32 v0, vcc, 0, v0, vcc
+; GFX9-NEXT:    global_store_dword v[2:3], v0, off
+; GFX9-NEXT:    s_endpgm
 ;
-; GFX9-GISEL-LABEL: v_usubo_carry:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
-; GFX9-GISEL-NEXT:    v_sub_u32_e32 v0, v0, v1
-; GFX9-GISEL-NEXT:    global_store_dword v[2:3], v0, off
-; GFX9-GISEL-NEXT:    s_endpgm
-;
-; GFX12-SDAG-LABEL: v_usubo_carry:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_subrev_co_ci_u32_e64 v0, null, 0, v0, vcc_lo
-; GFX12-SDAG-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: v_usubo_carry:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_sub_co_u32 v0, s0, v0, v1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
-; GFX12-GISEL-NEXT:    v_sub_nc_u32_e32 v0, v0, v1
-; GFX12-GISEL-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX12-GISEL-NEXT:    s_endpgm
+; GFX12-LABEL: v_usubo_carry:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_subrev_co_ci_u32_e64 v0, null, 0, v0, vcc_lo
+; GFX12-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX12-NEXT:    s_endpgm
   %o = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
   %diff = extractvalue { i32, i1 } %o, 0
   %c = extractvalue { i32, i1 } %o, 1
@@ -177,37 +105,20 @@ define amdgpu_ps void @v_usubo_carry(i32 %a, i32 %b, ptr addrspace(1) %out) {
 }
 
 define amdgpu_ps void @v_uaddo_carry_commuted(i32 %a, i32 %b, ptr addrspace(1) %out) {
-; GFX9-SDAG-LABEL: v_uaddo_carry_commuted:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v1
-; GFX9-SDAG-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v0, vcc
-; GFX9-SDAG-NEXT:    global_store_dword v[2:3], v0, off
-; GFX9-SDAG-NEXT:    s_endpgm
+; GFX9-LABEL: v_uaddo_carry_commuted:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v1
+; GFX9-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v0, vcc
+; GFX9-NEXT:    global_store_dword v[2:3], v0, off
+; GFX9-NEXT:    s_endpgm
 ;
-; GFX9-GISEL-LABEL: v_uaddo_carry_commuted:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
-; GFX9-GISEL-NEXT:    v_add_u32_e32 v0, v1, v0
-; GFX9-GISEL-NEXT:    global_store_dword v[2:3], v0, off
-; GFX9-GISEL-NEXT:    s_endpgm
-;
-; GFX12-SDAG-LABEL: v_uaddo_carry_commuted:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v0, vcc_lo
-; GFX12-SDAG-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: v_uaddo_carry_commuted:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_add_co_u32 v0, s0, v0, v1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
-; GFX12-GISEL-NEXT:    v_add_nc_u32_e32 v0, v1, v0
-; GFX12-GISEL-NEXT:    global_store_b32 v[2:3], v0, off
-; GFX12-GISEL-NEXT:    s_endpgm
+; GFX12-LABEL: v_uaddo_carry_commuted:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v0, vcc_lo
+; GFX12-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX12-NEXT:    s_endpgm
   %o = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %sum = extractvalue { i32, i1 } %o, 0
   %c = extractvalue { i32, i1 } %o, 1
@@ -218,37 +129,20 @@ define amdgpu_ps void @v_uaddo_carry_commuted(i32 %a, i32 %b, ptr addrspace(1) %
 }
 
 define amdgpu_ps void @v_add_of_usubo_carry(i32 %a, i32 %b, i32 %x, ptr addrspace(1) %out) {
-; GFX9-SDAG-LABEL: v_add_of_usubo_carry:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v1
-; GFX9-SDAG-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v2, vcc
-; GFX9-SDAG-NEXT:    global_store_dword v[3:4], v0, off
-; GFX9-SDAG-NEXT:    s_endpgm
+; GFX9-LABEL: v_add_of_usubo_carry:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v1
+; GFX9-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v2, vcc
+; GFX9-NEXT:    global_store_dword v[3:4], v0, off
+; GFX9-NEXT:    s_endpgm
 ;
-; GFX9-GISEL-LABEL: v_add_of_usubo_carry:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX9-GISEL-NEXT:    v_add_u32_e32 v0, v2, v0
-; GFX9-GISEL-NEXT:    global_store_dword v[3:4], v0, off
-; GFX9-GISEL-NEXT:    s_endpgm
-;
-; GFX12-SDAG-LABEL: v_add_of_usubo_carry:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v2, vcc_lo
-; GFX12-SDAG-NEXT:    global_store_b32 v[3:4], v0, off
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: v_add_of_usubo_carry:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_sub_co_u32 v0, s0, v0, v1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX12-GISEL-NEXT:    v_add_nc_u32_e32 v0, v2, v0
-; GFX12-GISEL-NEXT:    global_store_b32 v[3:4], v0, off
-; GFX12-GISEL-NEXT:    s_endpgm
+; GFX12-LABEL: v_add_of_usubo_carry:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v0, null, 0, v2, vcc_lo
+; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX12-NEXT:    s_endpgm
   %o = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
   %c = extractvalue { i32, i1 } %o, 1
   %ce = zext i1 %c to i32
@@ -258,37 +152,20 @@ define amdgpu_ps void @v_add_of_usubo_carry(i32 %a, i32 %b, i32 %x, ptr addrspac
 }
 
 define amdgpu_ps void @v_sub_of_uaddo_carry(i32 %a, i32 %b, i32 %x, ptr addrspace(1) %out) {
-; GFX9-SDAG-LABEL: v_sub_of_uaddo_carry:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v1
-; GFX9-SDAG-NEXT:    v_subbrev_co_u32_e32 v0, vcc, 0, v2, vcc
-; GFX9-SDAG-NEXT:    global_store_dword v[3:4], v0, off
-; GFX9-SDAG-NEXT:    s_endpgm
+; GFX9-LABEL: v_sub_of_uaddo_carry:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v1
+; GFX9-NEXT:    v_subbrev_co_u32_e32 v0, vcc, 0, v2, vcc
+; GFX9-NEXT:    global_store_dword v[3:4], v0, off
+; GFX9-NEXT:    s_endpgm
 ;
-; GFX9-GISEL-LABEL: v_sub_of_uaddo_carry:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GFX9-GISEL-NEXT:    v_sub_u32_e32 v0, v2, v0
-; GFX9-GISEL-NEXT:    global_store_dword v[3:4], v0, off
-; GFX9-GISEL-NEXT:    s_endpgm
-;
-; GFX12-SDAG-LABEL: v_sub_of_uaddo_carry:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_subrev_co_ci_u32_e64 v0, null, 0, v2, vcc_lo
-; GFX12-SDAG-NEXT:    global_store_b32 v[3:4], v0, off
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: v_sub_of_uaddo_carry:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_add_co_u32 v0, s0, v0, v1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX12-GISEL-NEXT:    v_sub_nc_u32_e32 v0, v2, v0
-; GFX12-GISEL-NEXT:    global_store_b32 v[3:4], v0, off
-; GFX12-GISEL-NEXT:    s_endpgm
+; GFX12-LABEL: v_sub_of_uaddo_carry:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_subrev_co_ci_u32_e64 v0, null, 0, v2, vcc_lo
+; GFX12-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX12-NEXT:    s_endpgm
   %o = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %c = extractvalue { i32, i1 } %o, 1
   %ce = zext i1 %c to i32
@@ -347,6 +224,3 @@ define amdgpu_ps void @v_uaddo_carry_multi_use(i32 %a, i32 %b, ptr addrspace(1) 
   store i32 %r2, ptr addrspace(1) %out
   ret void
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX12: {{.*}}
-; GFX9: {{.*}}
