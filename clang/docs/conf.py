@@ -30,6 +30,7 @@ extensions += [
     "sphinx.ext.mathjax",
     "sphinx.ext.graphviz",
     "llvm_sphinx.ext.ghlinks",
+    "llvm_sphinx.ext.checks",
 ]
 
 import sphinx
