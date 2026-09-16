@@ -4351,7 +4351,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Concat &x) {
       return common::visit(
           [&](auto &&x, auto &&y) -> MaybeExpr {
             using T = ResultType<decltype(x)>;
-            if constexpr (std::is_same_v<T, ResultType<decltype(y)>>) {
+            if (std::is_same_v<T, ResultType<decltype(y)>> &&
+                x.kind() == y.kind()) {
               return AsGenericExpr(Concat{std::move(x), std::move(y)});
             } else {
               DIE("different types for intrinsic concat");

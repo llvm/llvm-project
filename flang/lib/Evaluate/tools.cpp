@@ -729,7 +729,8 @@ std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
                 [&](auto &&cxk,
                     auto &&cyk) -> std::optional<Expr<LogicalResult>> {
                   using Ty = ResultType<decltype(cxk)>;
-                  if constexpr (std::is_same_v<Ty, ResultType<decltype(cyk)>>) {
+                  if (std::is_same_v<Ty, ResultType<decltype(cyk)>> &&
+                      cxk.kind() == cyk.kind()) {
                     return PackageRelation(opr, std::move(cxk), std::move(cyk));
                   } else {
                     messages.Say(

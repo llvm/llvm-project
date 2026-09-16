@@ -957,7 +957,7 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
   } else if (name == "maxval") {
     return FoldMaxvalMinval<T>(kind, context, std::move(funcRef),
         RelationalOperator::GT,
-        T::category == TypeCategory::Unsigned ? typename T::Scalar{}
+        T::category == TypeCategory::Unsigned ? T::Scalar::Zero(kind)
                                               : T::Scalar::Least(kind));
   } else if (name == "merge_bits") {
     return FoldElementalIntrinsic<T, T, T, T>(kind, {kind, kind, kind}, context,
@@ -967,7 +967,7 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
   } else if (name == "minval") {
     return FoldMaxvalMinval<T>(kind, context, std::move(funcRef),
         RelationalOperator::LT,
-        T::category == TypeCategory::Unsigned ? typename T::Scalar{}.NOT()
+        T::category == TypeCategory::Unsigned ? T::Scalar::Zero(kind).NOT()
                                               : T::Scalar::HUGE(kind));
   } else if (name == "not") {
     return FoldElementalIntrinsic<T, T>(
