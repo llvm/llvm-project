@@ -14,6 +14,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
+#include <limits>
 
 using namespace llvm;
 using namespace llvm::hlsl;
@@ -76,6 +78,9 @@ Expected<unsigned> llvm::hlsl::packSignatureIndexed(
   assert(ShaderStage == Triple::Pixel && IOTy == IOType::Out &&
          "indexed packing is only valid for a pixel shader output signature");
 
+  static_assert(MaxSignatureRows <= std::numeric_limits<uint32_t>::digits,
+                "row allocation mask is too small");
+  [[maybe_unused]] uint32_t AllocatedRows = 0;
   unsigned NumRows = 0;
   for (auto &&[Index, Element] : enumerate(Elements)) {
     assert(Element.StartRow == UnallocatedRow &&
@@ -100,6 +105,11 @@ Expected<unsigned> llvm::hlsl::packSignatureIndexed(
       return make_error<SignaturePackingError>(
           SignaturePackingError::SemanticIndexOutOfRange,
           static_cast<unsigned>(Index));
+
+    const uint32_t RowMask = uint32_t{1} << Row;
+    assert(!(AllocatedRows & RowMask) &&
+           "target semantic indices must be unique, verified in SemaHLSL");
+    AllocatedRows |= RowMask;
 
     Element.StartRow = Row;
     Element.StartCol = 0;
