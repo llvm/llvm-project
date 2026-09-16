@@ -12,7 +12,7 @@ define i8 @"?resuming_on_new_thread@@YA?AUtask@@V?$unique_ptr@HU?$default_delete
           to label %2 unwind label %15
 
 2:                                                ; preds = %1
-  %3 = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %3 = call token @llvm.coro.id(i32 0, ptr null, ptr @"?resuming_on_new_thread@@YA?AUtask@@V?$unique_ptr@HU?$default_delete@H@std@@@std@@0@Z", ptr null)
   %4 = call ptr @llvm.coro.begin(token %3, ptr null)
   %5 = call token @llvm.coro.save(ptr null)
   %6 = call i8 @llvm.coro.suspend(token none, i1 false)

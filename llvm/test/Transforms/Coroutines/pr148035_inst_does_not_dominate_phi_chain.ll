@@ -23,7 +23,7 @@ entry:
           to label %coro.check.alloc unwind label %padA
 
 coro.check.alloc:                                 ; preds = %entry
-  %id = call token @llvm.coro.id(i32 16, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 16, ptr null, ptr @"?resuming_on_new_thread@@YA?AUtask@@Vunique_ptr@@@Z", ptr null)
   %need.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.alloc, label %coro.alloc, label %coro.init
 

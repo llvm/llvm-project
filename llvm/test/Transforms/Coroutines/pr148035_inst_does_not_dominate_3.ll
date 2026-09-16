@@ -11,7 +11,7 @@ define i8 @"?resuming_on_new_thread@@YA?AUtask@@Vunique_ptr@@@Z"(ptr %0) #0 pers
           to label %2 unwind label %14
 
 2:                                                ; preds = %1
-  %3 = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %3 = call token @llvm.coro.id(i32 0, ptr null, ptr @"?resuming_on_new_thread@@YA?AUtask@@Vunique_ptr@@@Z", ptr null)
   %4 = load volatile ptr, ptr null, align 8
   %5 = call ptr @llvm.coro.begin(token %3, ptr %4)
   %6 = call token @llvm.coro.save(ptr null)

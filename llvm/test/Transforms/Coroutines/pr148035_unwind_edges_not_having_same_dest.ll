@@ -4,7 +4,7 @@
 
 ; Function Attrs: presplitcoroutine
 define i8 @"?resuming_on_new_thread@@YA?AUtask@@AEAVjthread@std@@@Z"() #0 personality ptr null {
-  %1 = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %1 = call token @llvm.coro.id(i32 0, ptr null, ptr @"?resuming_on_new_thread@@YA?AUtask@@AEAVjthread@std@@@Z", ptr null)
   %2 = call ptr @llvm.coro.begin(token %1, ptr null)
   %3 = call token @llvm.coro.save(ptr null)
   %4 = call i8 @llvm.coro.suspend(token none, i1 false)
