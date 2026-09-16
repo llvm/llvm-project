@@ -23,11 +23,10 @@ public:
 
   RuntimeLibraryAnalysis() = default;
   RuntimeLibraryAnalysis(ExceptionHandling ExceptionModel,
-                         EABI EABIVersion = EABI::Default,
                          StringRef ABIName = "",
                          VectorLibrary VecLib = VectorLibrary::NoLibrary)
-      : ExceptionModel(ExceptionModel), EABIVersion(EABIVersion),
-        ABIName(ABIName.str()), VecLib(VecLib) {}
+      : ExceptionModel(ExceptionModel), ABIName(ABIName.str()), VecLib(VecLib) {
+  }
 
   RTLIB::RuntimeLibcallsInfo run(const Module &M, ModuleAnalysisManager &);
 
@@ -39,7 +38,6 @@ private:
   // IR, copied here so run() can forward them to the RuntimeLibcallsInfo Module
   // constructor. Delete each one as they are migrated to module flags.
   ExceptionHandling ExceptionModel = ExceptionHandling::None;
-  EABI EABIVersion = EABI::Default;
   std::string ABIName;
   VectorLibrary VecLib = VectorLibrary::NoLibrary;
 };
@@ -52,7 +50,6 @@ public:
   static char ID;
   RuntimeLibraryInfoWrapper();
   RuntimeLibraryInfoWrapper(ExceptionHandling ExceptionModel,
-                            EABI EABIVersion = EABI::Default,
                             StringRef ABIName = "",
                             VectorLibrary VecLib = VectorLibrary::NoLibrary);
 

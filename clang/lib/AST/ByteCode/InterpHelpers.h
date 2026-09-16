@@ -40,7 +40,11 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK);
 
 /// Checks if a pointer is a dummy pointer.
-bool CheckDummy(InterpState &S, CodePtr OpPC, const Block *B, AccessKinds AK);
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                AccessKinds AK);
+
+bool arrayElemPtrOpaque(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                        APSInt &&Index, bool AllowReplace = true);
 
 /// Checks if a pointer is in range.
 template <typename T>

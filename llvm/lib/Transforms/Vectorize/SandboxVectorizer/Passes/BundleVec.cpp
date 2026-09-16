@@ -41,7 +41,7 @@ static cl::opt<unsigned long>
 
 namespace sandboxir {
 
-static BundleTy getOperand(ArrayRef<Value *> Bndl, unsigned OpIdx) {
+static BundleTy getOperand(BndlRef<Value *> Bndl, unsigned OpIdx) {
   BundleTy Operands;
   for (Value *BndlV : Bndl) {
     auto *BndlI = cast<Instruction>(BndlV);
@@ -50,10 +50,10 @@ static BundleTy getOperand(ArrayRef<Value *> Bndl, unsigned OpIdx) {
   return Operands;
 }
 
-Value *BundleVec::createVectorInstr(ArrayRef<Value *> Bndl,
-                                    ArrayRef<Value *> Operands) {
-  auto CreateVectorInstr = [](ArrayRef<Value *> Bndl,
-                              ArrayRef<Value *> Operands) -> Value * {
+Value *BundleVec::createVectorInstr(BndlRef<Value *> Bndl,
+                                    BndlRef<Value *> Operands) {
+  auto CreateVectorInstr = [](BndlRef<Value *> Bndl,
+                              BndlRef<Value *> Operands) -> Value * {
     assert(all_of(Bndl, [](auto *V) { return isa<Instruction>(V); }) &&
            "Expect Instructions!");
     auto &Ctx = Bndl[0]->getContext();
@@ -161,26 +161,6 @@ Value *BundleVec::createVectorInstr(ArrayRef<Value *> Bndl,
   return NewI;
 }
 
-void BundleVec::tryEraseDeadInstrs() {
-  DenseMap<BasicBlock *, SmallVector<Instruction *>> SortedDeadInstrCandidates;
-  // The dead instrs could span BBs, so we need to collect and sort them per BB.
-  for (auto *DeadI : DeadInstrCandidates)
-    SortedDeadInstrCandidates[DeadI->getParent()].push_back(DeadI);
-  for (auto &Pair : SortedDeadInstrCandidates)
-    sort(Pair.second,
-         [](Instruction *I1, Instruction *I2) { return I1->comesBefore(I2); });
-  for (const auto &Pair : SortedDeadInstrCandidates) {
-    for (Instruction *I : reverse(Pair.second)) {
-      if (I->hasNUses(0)) {
-        // Erase the dead instructions bottom-to-top.
-        LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Erase dead: " << *I << "\n");
-        I->eraseFromParent();
-      }
-    }
-  }
-  DeadInstrCandidates.clear();
-}
-
 Value *BundleVec::createShuffle(Value *VecOp, const ShuffleMask &Mask,
                                 BasicBlock *UserBB) {
   BasicBlock::iterator WhereIt =
@@ -189,7 +169,7 @@ Value *BundleVec::createShuffle(Value *VecOp, const ShuffleMask &Mask,
                                    VecOp->getContext(), "VShuf");
 }
 
-Value *BundleVec::createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB) {
+Value *BundleVec::createPack(BndlRef<Value *> ToPack, BasicBlock *UserBB) {
   BasicBlock::iterator WhereIt =
       VecUtils::getInsertPointAfterInstrs(ToPack, UserBB);
 
@@ -241,33 +221,8 @@ Value *BundleVec::createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB) {
   return LastInsert;
 }
 
-void BundleVec::collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl) {
-  for (Value *V : Bndl)
-    DeadInstrCandidates.insert(cast<Instruction>(V));
-  // Also collect the GEPs of vectorized loads and stores.
-  auto Opcode = cast<Instruction>(Bndl[0])->getOpcode();
-  switch (Opcode) {
-  case Instruction::Opcode::Load: {
-    for (Value *V : drop_begin(Bndl))
-      if (auto *Ptr =
-              dyn_cast<Instruction>(cast<LoadInst>(V)->getPointerOperand()))
-        DeadInstrCandidates.insert(Ptr);
-    break;
-  }
-  case Instruction::Opcode::Store: {
-    for (Value *V : drop_begin(Bndl))
-      if (auto *Ptr =
-              dyn_cast<Instruction>(cast<StoreInst>(V)->getPointerOperand()))
-        DeadInstrCandidates.insert(Ptr);
-    break;
-  }
-  default:
-    break;
-  }
-}
-
-Action *BundleVec::vectorizeRec(ArrayRef<Value *> Bndl,
-                                ArrayRef<Value *> UserBndl, unsigned Depth,
+Action *BundleVec::vectorizeRec(BndlRef<Value *> Bndl,
+                                BndlRef<Value *> UserBndl, unsigned Depth,
                                 LegalityAnalysis &Legality) {
   bool StopForDebug =
       DebugBndlCnt++ >= StopBundle && StopBundle != StopBundleDisabled;
@@ -284,8 +239,8 @@ Action *BundleVec::vectorizeRec(ArrayRef<Value *> Bndl,
     if (LegalityRes.getSubclassID() != LegalityResultID::Widen)
       return nullptr;
 
-    auto ActionPtr = std::make_unique<Action>(&LegalityRes, Bndl,
-                                              ArrayRef<Value *>(), Depth);
+    auto ActionPtr =
+        std::make_unique<Action>(&LegalityRes, Bndl, BndlRef<Value *>(), Depth);
     Action *Action = ActionPtr.get();
     IMaps->registerVector(Bndl, Action);
     Actions.push_back(std::move(ActionPtr));
@@ -354,8 +309,7 @@ void BundleVec::ActionsVector::print(raw_ostream &OS) const {
 void BundleVec::ActionsVector::dump() const { print(dbgs()); }
 #endif // NDEBUG
 
-void BundleVec::emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl,
-                                           Value *Vec) {
+void BundleVec::emitUnpacksForExternalUses(BndlRef<Value *> Bndl, Value *Vec) {
   // Find where we should emit the unpacks.
   BasicBlock::iterator WhereIt;
   if (auto *VecI = dyn_cast<Instruction>(Vec)) {
@@ -395,8 +349,8 @@ void BundleVec::emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl,
 Value *BundleVec::emitVectors() {
   Value *NewVec = nullptr;
   for (const auto &ActionPtr : Actions) {
-    ArrayRef<Value *> Bndl = ActionPtr->Bndl;
-    ArrayRef<Value *> UserBndl = ActionPtr->UserBndl;
+    BndlRef<Value *> Bndl = ActionPtr->Bndl;
+    BndlRef<Value *> UserBndl = ActionPtr->UserBndl;
     const LegalityResult &LegalityRes = *ActionPtr->LegalityRes;
     unsigned Depth = ActionPtr->Depth;
     auto *UserBB = !UserBndl.empty()
@@ -450,7 +404,7 @@ Value *BundleVec::emitVectors() {
       // Collect any potentially dead scalar instructions, including the
       // original scalars and pointer operands of loads/stores.
       if (NewVec != nullptr)
-        collectPotentiallyDeadInstrs(Bndl);
+        DeadInstrMorgue.collectPotentiallyDeadInstrs(Bndl);
 
       // Emit unpacks for all external uses, if any.
       emitUnpacksForExternalUses(ActionPtr->Bndl, NewVec);
@@ -557,12 +511,11 @@ Value *BundleVec::emitVectors() {
   return NewVec;
 }
 
-bool BundleVec::tryVectorize(ArrayRef<Value *> Bndl,
+bool BundleVec::tryVectorize(BndlRef<Value *> Bndl,
                              LegalityAnalysis &Legality) {
   Change = false;
   if (LLVM_UNLIKELY(InvocationCnt++ >= StopAt && StopAt != StopAtDisabled))
     return false;
-  DeadInstrCandidates.clear();
   Legality.clear();
   Actions.clear();
   DebugBndlCnt = 0;
@@ -571,7 +524,7 @@ bool BundleVec::tryVectorize(ArrayRef<Value *> Bndl,
                     << "Vec: Vectorization Actions:\n";
              Actions.dump());
   emitVectors();
-  tryEraseDeadInstrs();
+  DeadInstrMorgue.tryEraseDeadInstrs();
   return Change;
 }
 

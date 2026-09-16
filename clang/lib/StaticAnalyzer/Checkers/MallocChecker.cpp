@@ -941,13 +941,18 @@ protected:
     // branch. That said, would a synthesized body ever intend to handle
     // ownership? As of today they don't. And if they did, how would we
     // put notes inside it, given that it doesn't match any source locations?
-    if (!FD || !FD->hasBody())
+    if (!FD)
       return false;
+
+    Stmt *Body = FD->getBody();
+    if (!Body)
+      return false;
+
     using namespace clang::ast_matchers;
 
     auto Matches = match(findAll(stmt(anyOf(cxxDeleteExpr().bind("delete"),
                                             callExpr().bind("call")))),
-                         *FD->getBody(), ACtx);
+                         *Body, ACtx);
     for (BoundNodes Match : Matches) {
       if (Match.getNodeAs<CXXDeleteExpr>("delete"))
         return true;

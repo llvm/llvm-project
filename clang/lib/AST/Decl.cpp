@@ -2258,8 +2258,8 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   // a static data member template outside the containing class?
   if (isStaticDataMember()) {
     if (isOutOfLine() &&
-        !(getCanonicalDecl()->isInline() &&
-          getCanonicalDecl()->isConstexpr()) &&
+        !(getCanonicalDecl()->isInline() && getCanonicalDecl()->isConstexpr() &&
+          !getCanonicalDecl()->isOutOfLine()) &&
         (hasInit() ||
          // If the first declaration is out-of-line, this may be an
          // instantiation of an out-of-line partial specialization of a variable
@@ -4640,6 +4640,7 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
   case Builtin::BImemmove:
     return Builtin::BImemmove;
 
+  case Builtin::BI__builtin_strlcpy:
   case Builtin::BIstrlcpy:
   case Builtin::BI__builtin___strlcpy_chk:
     return Builtin::BIstrlcpy;
@@ -4726,6 +4727,8 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
         return Builtin::BIbcopy;
       if (FnInfo->isStr("strlcat"))
         return Builtin::BIstrlcat;
+      if (FnInfo->isStr("strlcpy"))
+        return Builtin::BIstrlcpy;
     } else if (isInStdNamespace()) {
       if (FnInfo->isStr("free"))
         return Builtin::BIfree;

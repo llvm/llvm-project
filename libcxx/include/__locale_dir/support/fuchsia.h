@@ -155,4 +155,6 @@ _LIBCPP_END_NAMESPACE_STD
 #include <__locale_dir/support/no_locale/characters.h>
 #include <__locale_dir/support/no_locale/strtonum.h>
 
+#define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 1
+
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_FUCHSIA_H
