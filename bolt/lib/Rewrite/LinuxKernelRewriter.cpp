@@ -480,6 +480,7 @@ void LinuxKernelRewriter::processLKKSymtab(bool IsGPL) {
          "__ksymtab[_gpl] section not found in Linux Kernel binary");
   const uint64_t SectionSize = SectionOrError->getSize();
   const uint64_t SectionAddress = SectionOrError->getAddress();
+  const uint32_t PC32 = BC.getRelocationHandler().getPC32();
   assert((SectionSize % 4) == 0 &&
          "The size of the __ksymtab[_gpl] section should be a multiple of 4");
 
@@ -493,8 +494,7 @@ void LinuxKernelRewriter::processLKKSymtab(bool IsGPL) {
     if (!BF)
       continue;
 
-    BC.addRelocation(EntryAddress, BF->getSymbol(),
-                     BC.getRelocationHandler().getPC32(), 0, *Offset);
+    BC.addRelocation(EntryAddress, BF->getSymbol(), PC32, 0, *Offset);
   }
 }
 
@@ -801,6 +801,8 @@ Error LinuxKernelRewriter::rewriteORCTables() {
   if (!NumORCEntries)
     return Error::success();
 
+  const uint32_t PC32 = BC.getRelocationHandler().getPC32();
+
   // Update ORC sections in-place. As we change the code, the number of ORC
   // entries may increase for some functions. However, as we remove terminator
   // redundancy (see below), more space is freed up and we should always be able
@@ -831,8 +833,7 @@ Error LinuxKernelRewriter::rewriteORCTables() {
                                "exceeded the number of allocated ORC entries");
 
     if (Label)
-      ORCUnwindIPSection->addRelocation(UnwindIPWriter.getOffset(), Label,
-                                        BC.getRelocationHandler().getPC32(),
+      ORCUnwindIPSection->addRelocation(UnwindIPWriter.getOffset(), Label, PC32,
                                         /*Addend*/ 0);
 
     const int32_t IPValue =

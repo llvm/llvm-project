@@ -152,20 +152,20 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
     return true;
   }
 
+  const bool IsPCRelative =
+      BC.getRelocationHandler().isPCRelative(Relocation->Type);
   uint64_t SymbolValue = Relocation->Value - Relocation->Addend;
-  if (BC.getRelocationHandler().isPCRelative(Relocation->Type))
+  if (IsPCRelative)
     SymbolValue += InstAddress + ImmOffset;
 
   // Process reference to the symbol.
   if (CreateNewSymbols)
-    BC.handleAddressRef(
-        SymbolValue, Function,
-        BC.getRelocationHandler().isPCRelative(Relocation->Type));
+    BC.handleAddressRef(SymbolValue, Function, IsPCRelative);
 
   uint64_t Addend = Relocation->Addend;
   // Real addend for pc-relative targets is adjusted with a delta from
   // the relocation placement to the next instruction.
-  if (BC.getRelocationHandler().isPCRelative(Relocation->Type))
+  if (IsPCRelative)
     Addend += InstOffset + InstSize - Relocation->Offset;
 
   addOperand(Relocation->Symbol, Addend);

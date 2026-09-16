@@ -64,6 +64,8 @@ RISCVMCSymbolizer::RISCVMCSymbolizer(BinaryFunction &Function,
                                      bool CreateNewSymbols)
     : MCSymbolizer(*Function.getBinaryContext().Ctx, nullptr),
       Function(Function), CreateNewSymbols(CreateNewSymbols) {
+  BinaryContext &BC = Function.getBinaryContext();
+  const RelocationHandler &RH = BC.getRelocationHandler();
   // Discover instruction references before decoding starts. This lets us
   // attach a label while decoding the referenced %pcrel_hi instruction even
   // though its %pcrel_lo user is normally decoded later.
@@ -73,9 +75,7 @@ RISCVMCSymbolizer::RISCVMCSymbolizer(BinaryFunction &Function,
     if (!Rel)
       break;
 
-    if (Function.getBinaryContext()
-            .getRelocationHandler()
-            .isInstructionReference(Rel->Type)) {
+    if (RH.isInstructionReference(Rel->Type)) {
       assert(Rel->Value >= Function.getAddress() &&
              Rel->Value < Function.getAddress() + Function.getSize() &&
              "RISC-V instruction reference outside of function");
@@ -99,6 +99,7 @@ MCSymbol *RISCVMCSymbolizer::getOrCreateInstructionLabel(
 
 uint64_t RISCVMCSymbolizer::getGOTValue(const Relocation &Rel) const {
   BinaryContext &BC = Function.getBinaryContext();
+  const RelocationHandler &RH = BC.getRelocationHandler();
   const uint64_t HiAddress = Function.getAddress() + Rel.Offset;
 
   // A GOT high relocation records a combined high/low value. Locate the low
@@ -109,15 +110,13 @@ uint64_t RISCVMCSymbolizer::getGOTValue(const Relocation &Rel) const {
     const Relocation *LoRel = It->second.LowRelocation;
     ErrorOr<uint64_t> HiContents = BC.getUnsignedValueAtAddress(HiAddress, 4);
     ErrorOr<uint64_t> LoContents = BC.getUnsignedValueAtAddress(
-        Function.getAddress() + LoRel->Offset,
-        BC.getRelocationHandler().getSizeForType(LoRel->Type));
+        Function.getAddress() + LoRel->Offset, RH.getSizeForType(LoRel->Type));
     assert(HiContents && LoContents &&
            "cannot read RISC-V GOT relocation pair");
 
-    return BC.getRelocationHandler().extractValue(ELF::R_RISCV_PCREL_HI20,
-                                                  *HiContents, HiAddress) +
-           BC.getRelocationHandler().extractValue(
-               LoRel->Type, *LoContents, Function.getAddress() + LoRel->Offset);
+    return RH.extractValue(ELF::R_RISCV_PCREL_HI20, *HiContents, HiAddress) +
+           RH.extractValue(LoRel->Type, *LoContents,
+                           Function.getAddress() + LoRel->Offset);
   }
 
   return Rel.Value;
@@ -183,6 +182,7 @@ bool RISCVMCSymbolizer::tryAddingSymbolicOperand(
     MCInst &Inst, raw_ostream &CStream, int64_t Value, uint64_t InstAddress,
     bool IsBranch, uint64_t ImmOffset, uint64_t ImmSize, uint64_t InstSize) {
   BinaryContext &BC = Function.getBinaryContext();
+  const RelocationHandler &RH = BC.getRelocationHandler();
   MCContext *Ctx = BC.Ctx.get();
   const uint64_t InstOffset = InstAddress - Function.getAddress();
 
@@ -203,7 +203,7 @@ bool RISCVMCSymbolizer::tryAddingSymbolicOperand(
   MCSymbol *Symbol = Rel->Symbol;
   uint64_t Addend = Rel->Addend;
 
-  if (BC.getRelocationHandler().isInstructionReference(Rel->Type)) {
+  if (RH.isInstructionReference(Rel->Type)) {
     if (!CreateNewSymbols)
       return false;
     auto [It, _] =
@@ -218,8 +218,8 @@ bool RISCVMCSymbolizer::tryAddingSymbolicOperand(
   // GOT high relocations name the object stored in the GOT, not the GOT entry
   // addressed by AUIPC. Preserve the actual entry address using a zero-based
   // symbol, as the RISC-V emitter reuses the input GOT.
-  if (BC.getRelocationHandler().isGOT(Rel->Type)) {
-    assert(BC.getRelocationHandler().isPCRelative(Rel->Type) &&
+  if (RH.isGOT(Rel->Type)) {
+    assert(RH.isPCRelative(Rel->Type) &&
            "GOT relocation must be PC-relative on RISC-V");
     Symbol = BC.registerNameAtAddress("__BOLT_got_zero", 0, 0, 0);
     Addend = getGOTValue(*Rel) + InstAddress;

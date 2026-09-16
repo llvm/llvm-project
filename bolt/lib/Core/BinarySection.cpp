@@ -81,6 +81,7 @@ BinarySection::hash(const BinaryData &BD,
 
 void BinarySection::emitAsData(MCStreamer &Streamer,
                                const Twine &SectionName) const {
+  const RelocationHandler &RH = BC.getRelocationHandler();
   StringRef SectionContents =
       isFinalized() ? getOutputContents() : getContents();
   MCSectionELF *ELFSection =
@@ -131,19 +132,17 @@ void BinarySection::emitAsData(MCStreamer &Streamer,
 
 #ifndef NDEBUG
       for (const auto &Relocation : make_range(ROI, ROE)) {
-        LLVM_DEBUG(
-            dbgs() << "BOLT-DEBUG: emitting relocation for symbol "
-                   << (Relocation.Symbol ? Relocation.Symbol->getName()
-                                         : StringRef("<none>"))
-                   << " at offset 0x" << Twine::utohexstr(Relocation.Offset)
-                   << " with size "
-                   << BC.getRelocationHandler().getSizeForType(Relocation.Type)
-                   << '\n');
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: emitting relocation for symbol "
+                          << (Relocation.Symbol ? Relocation.Symbol->getName()
+                                                : StringRef("<none>"))
+                          << " at offset 0x"
+                          << Twine::utohexstr(Relocation.Offset)
+                          << " with size " << RH.getSizeForType(Relocation.Type)
+                          << '\n');
       }
 #endif
 
-      size_t RelocationSize =
-          Relocation::emit(ROI, ROE, &Streamer, BC.getRelocationHandler());
+      size_t RelocationSize = Relocation::emit(ROI, ROE, &Streamer, RH);
       SectionOffset += RelocationSize;
     }
     assert(SectionOffset <= SectionContents.size() && "overflow error");
@@ -170,6 +169,7 @@ void BinarySection::flushPendingRelocations(raw_fd_ostream &OS,
     return;
 
   const uint64_t SectionAddress = getAddress();
+  const RelocationHandler &RH = BC.getRelocationHandler();
 
   // We apply relocations to original section contents. For allocatable sections
   // this means using their input file offsets, since the output file offset
@@ -195,28 +195,24 @@ void BinarySection::flushPendingRelocations(raw_fd_ostream &OS,
 
     // Safely skip any optional pending relocation that cannot be encoded.
     if (Reloc.isOptional() &&
-        !BC.getRelocationHandler().canEncodeValue(
-            Reloc.Type, Value, SectionAddress + Reloc.Offset)) {
+        !RH.canEncodeValue(Reloc.Type, Value, SectionAddress + Reloc.Offset)) {
 
       ++SkippedPendingRelocations;
       continue;
     }
-    Value = BC.getRelocationHandler().encodeValue(
-        Reloc.Type, Value, SectionAddress + Reloc.Offset);
+    Value = RH.encodeValue(Reloc.Type, Value, SectionAddress + Reloc.Offset);
 
     safePWrite(OS, reinterpret_cast<const char *>(&Value),
-               BC.getRelocationHandler().getSizeForType(Reloc.Type),
-               SectionFileOffset + Reloc.Offset);
+               RH.getSizeForType(Reloc.Type), SectionFileOffset + Reloc.Offset);
 
-    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: writing value 0x"
-                      << Twine::utohexstr(Value) << " of size "
-                      << BC.getRelocationHandler().getSizeForType(Reloc.Type)
-                      << " at section offset 0x"
-                      << Twine::utohexstr(Reloc.Offset) << " address 0x"
-                      << Twine::utohexstr(SectionAddress + Reloc.Offset)
-                      << " file offset 0x"
-                      << Twine::utohexstr(SectionFileOffset + Reloc.Offset)
-                      << '\n';);
+    LLVM_DEBUG(
+        dbgs() << "BOLT-DEBUG: writing value 0x" << Twine::utohexstr(Value)
+               << " of size " << RH.getSizeForType(Reloc.Type)
+               << " at section offset 0x" << Twine::utohexstr(Reloc.Offset)
+               << " address 0x"
+               << Twine::utohexstr(SectionAddress + Reloc.Offset)
+               << " file offset 0x"
+               << Twine::utohexstr(SectionFileOffset + Reloc.Offset) << '\n';);
   }
 
   clearList(PendingRelocations);
@@ -285,6 +281,7 @@ BinarySection::reorderRelocations(bool Inplace) const {
 
 void BinarySection::reorderContents(const std::vector<BinaryData *> &Order,
                                     bool Inplace) {
+  const RelocationHandler &RH = BC.getRelocationHandler();
   IsReordered = true;
 
   Relocations = reorderRelocations(Inplace);
@@ -310,8 +307,7 @@ void BinarySection::reorderContents(const std::vector<BinaryData *> &Order,
     // of the reordered segment to force LLVM to recognize and map this
     // section.
     MCSymbol *ZeroSym = BC.registerNameAtAddress("Zero", 0, 0, 0);
-    addRelocation(OS.tell(), ZeroSym, BC.getRelocationHandler().getAbs64(),
-                  0xdeadbeef);
+    addRelocation(OS.tell(), ZeroSym, RH.getAbs64(), 0xdeadbeef);
 
     uint64_t Zero = 0;
     OS.write(reinterpret_cast<const char *>(&Zero), sizeof(Zero));
