@@ -5443,21 +5443,6 @@ InstructionCost
 LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
                                           VPCostContext &CostCtx) const {
   InstructionCost Cost;
-  // Cost modeling for inductions is inaccurate in the legacy cost model
-  // compared to the recipes that are generated. To match here initially during
-  // VPlan cost model bring up directly use the induction costs from the legacy
-  // cost model. Note that we do this as pre-processing; the VPlan may not have
-  // any recipes associated with the original induction increment instruction
-  // and may replace truncates with VPWidenIntOrFpInductionRecipe. We precompute
-  // the cost of induction phis and increments (both that are represented by
-  // recipes and those that are not), to avoid distinguishing between them here,
-  // and skip all recipes that represent induction phis and increments (the
-  // former case) later on, if they exist, to avoid counting them twice.
-  // Similarly we pre-compute the cost of any optimized truncates.
-  // Inductions that are represented by a VPWidenIntOrFpInductionRecipe are an
-  // exception: their cost is computed by the recipe's computeCost (see below),
-  // so they are not precomputed here.
-  // TODO: Switch to more accurate costing based on VPlan.
 
   // If the vector loop gets executed exactly once with the given VF, ignore the
   // costs of comparison and induction instructions, as they'll get simplified
@@ -5465,60 +5450,9 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // TODO: Remove this code after stepping away from the legacy cost model and
   // adding code to simplify VPlans before calculating their costs.
   auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
-  SmallPtrSet<const Value *, 4> WidenedIVs;
-  if (TC == VF && !Plan.hasTailFolded()) {
+  if (TC == VF && !Plan.hasTailFolded())
     addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
                                          CostCtx.SkipCostComputation);
-  } else {
-    // Inductions represented by a VPWidenIntOrFpInductionRecipe have their cost
-    // computed by the recipe, so collect their phis to skip the legacy
-    // increment cost below.
-    VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-    for (VPRecipeBase &R : *LoopRegion->getEntryBasicBlock())
-      if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
-        if (PHINode *IVPhi = WideIV->getPHINode())
-          WidenedIVs.insert(IVPhi);
-      }
-  }
-
-  for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
-    // Integer inductions are always costed via the VPlan-based cost model.
-    // TODO: Also migrate FP and pointer inductions.
-    if (IndDesc.getKind() == InductionDescriptor::IK_IntInduction)
-      continue;
-    if (WidenedIVs.contains(IV))
-      continue;
-    Instruction *IVInc = cast<Instruction>(
-        IV->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
-    SmallVector<Instruction *> IVInsts = {IVInc};
-    for (unsigned I = 0; I != IVInsts.size(); I++) {
-      for (Value *Op : IVInsts[I]->operands()) {
-        auto *OpI = dyn_cast<Instruction>(Op);
-        if (Op == IV || !OpI || !OrigLoop->contains(OpI) || !Op->hasOneUse())
-          continue;
-        IVInsts.push_back(OpI);
-      }
-    }
-    IVInsts.push_back(IV);
-    for (User *U : IV->users()) {
-      auto *CI = cast<Instruction>(U);
-      if (!CostCtx.CM.isOptimizableIVTruncate(CI, VF))
-        continue;
-      IVInsts.push_back(CI);
-    }
-
-    for (Instruction *IVInst : IVInsts) {
-      if (CostCtx.skipCostComputation(IVInst, VF.isVector()))
-        continue;
-      InstructionCost InductionCost = CostCtx.getLegacyCost(IVInst, VF);
-      LLVM_DEBUG({
-        dbgs() << "Cost of " << InductionCost << " for VF " << VF
-               << ": induction instruction " << *IVInst << "\n";
-      });
-      Cost += InductionCost;
-      CostCtx.SkipCostComputation.insert(IVInst);
-    }
-  }
 
   // Pre-compute the costs for branches except for the backedge, as the number
   // of replicate regions in a VPlan may not directly match the number of
@@ -7324,8 +7258,7 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
         continue;
       if (isGuaranteedNotToBeUndefOrPoison(OrigStart->getLiveInIRValue()))
         continue;
-      VPInstruction *Freeze =
-          Builder.createNaryOp(Instruction::Freeze, {OrigStart}, {}, "fr");
+      VPInstruction *Freeze = Builder.createFreeze(OrigStart, {}, "fr");
       VPI->setOperand(2, Freeze);
       if (UpdateResumePhis)
         OrigStart->replaceUsesWithIf(Freeze, [Freeze](VPUser &U, unsigned) {

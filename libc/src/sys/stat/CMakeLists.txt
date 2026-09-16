@@ -52,10 +52,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mkfifo
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mkfifo
+)
+
+add_entrypoint_object(
   stat
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.stat
+)
+
+add_entrypoint_object(
+  umask
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.umask
 )
 
 add_entrypoint_object(

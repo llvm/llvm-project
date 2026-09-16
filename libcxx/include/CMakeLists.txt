@@ -244,6 +244,7 @@ set(files
   __bit/invert_if.h
   __bit/popcount.h
   __bit/rotate.h
+  __bit/shift.h
   __bit_reference
   __charconv/chars_format.h
   __charconv/from_chars_floating_point.h
@@ -651,6 +652,7 @@ set(files
   __mutex/tag_types.h
   __mutex/unique_lock.h
   __new/align_val_t.h
+  __new/allocate.h
   __new/destroying_delete_t.h
   __new/exceptions.h
   __new/global_new_delete.h
@@ -961,6 +963,7 @@ set(files
   __undef_macros
   __utility/as_const.h
   __utility/as_lvalue.h
+  __utility/assume.h
   __utility/auto_cast.h
   __utility/cmp.h
   __utility/constant_wrapper.h
