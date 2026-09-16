@@ -7388,8 +7388,8 @@ EVT DAGTypeLegalizer::unifyMaskTypes(SDValue &Op0, bool IsOpLenient0,
     return OpVT;
   }
 
-  unsigned Bits0 = Op0.getValueType().getScalarSizeInBits();
-  unsigned Bits1 = Op1.getValueType().getScalarSizeInBits();
+  unsigned Bits0 = Op0.getScalarValueSizeInBits();
+  unsigned Bits1 = Op1.getScalarValueSizeInBits();
   unsigned NarrowBits = std::min(Bits0, Bits1);
   unsigned WideBits = std::max(Bits0, Bits1);
   unsigned ToBits = ToVT.getScalarSizeInBits();
@@ -7397,8 +7397,8 @@ EVT DAGTypeLegalizer::unifyMaskTypes(SDValue &Op0, bool IsOpLenient0,
                      : ToBits >= WideBits   ? WideBits
                      : ToBits <= NarrowBits ? NarrowBits
                                             : ToBits;
-  EVT OpVT = EVT::getVectorVT(*DAG.getContext(), MVT::getIntegerVT(IntBits),
-                              Op0.getValueType().getVectorNumElements());
+  EVT OpVT = Op0.getValueType().changeVectorElementType(
+      *DAG.getContext(), MVT::getIntegerVT(IntBits));
   Op0 = adjustMaskToType(Op0, OpVT);
   Op1 = adjustMaskToType(Op1, OpVT);
   return OpVT;
@@ -7437,11 +7437,13 @@ DAGTypeLegalizer::convertMaskTreeImpl(SDValue V, EVT ToVT, unsigned Depth) {
   //   |
   //   VSELECT
   //
-  if (Depth >= DAG.MaxRecursionDepth ||
-      // Bail out when encounter the vector element count mismatch.
-      // It potentially can be just an assertion, but we deliberately try to
-      // be overly conservative here.
-      V.getValueType().getVectorNumElements() != ToVT.getVectorNumElements())
+  if (Depth >= DAG.MaxRecursionDepth)
+    return {};
+
+  // Bail out when encounter the vector element count mismatch.
+  // It potentially can be just an assertion, but we deliberately try to
+  // be overly conservative here.
+  if (V.getValueType().getVectorNumElements() != ToVT.getVectorNumElements())
     return {};
 
   unsigned Opcode = V.getOpcode();
@@ -7452,14 +7454,14 @@ DAGTypeLegalizer::convertMaskTreeImpl(SDValue V, EVT ToVT, unsigned Depth) {
     return {convertMask(V, MaskVT, MaskVT), /*IsTypeLenient=*/false};
   }
 
+  SDLoc DL(V);
+
   // Base case: all-zeros or all-ones BUILD_VECTOR. Type-lenient since these are
   // invariant under sign-extend/truncate.
   if (ISD::isBuildVectorAllZeros(V.getNode()))
-    return {DAG.getConstant(0, SDLoc(V), ToVT), /*IsTypeLenient=*/true};
+    return {DAG.getConstant(0, DL, ToVT), /*IsTypeLenient=*/true};
   if (ISD::isBuildVectorAllOnes(V.getNode()))
-    return {DAG.getAllOnesConstant(SDLoc(V), ToVT), /*IsTypeLenient=*/true};
-
-  SDLoc DL(V);
+    return {DAG.getAllOnesConstant(DL, ToVT), /*IsTypeLenient=*/true};
 
   // Logical operations (AND/OR/XOR): try picking the best fitting width out
   // of children's element widths.
