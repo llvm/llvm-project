@@ -1314,8 +1314,8 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
                        LocationSize::precise(DL.getTypeStoreSize(AccessTy)),
                        AATags);
     PredAvailable = findAvailablePtrLoadStore(
-        Loc, AccessTy, LoadI->isAtomic(), PredBB, BBIt, DefMaxInstsToScan,
-        &BatchAA, &IsLoadCSE, &NumScanedInst);
+        Loc, AccessTy, LoadI->isAtomic(), LoadI->isElementwise(), PredBB, BBIt,
+        DefMaxInstsToScan, &BatchAA, &IsLoadCSE, &NumScanedInst);
 
     // If PredBB has a single predecessor, continue scanning through the
     // single predecessor.
@@ -1326,9 +1326,9 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
       if (SinglePredBB) {
         BBIt = SinglePredBB->end();
         PredAvailable = findAvailablePtrLoadStore(
-            Loc, AccessTy, LoadI->isAtomic(), SinglePredBB, BBIt,
-            (DefMaxInstsToScan - NumScanedInst), &BatchAA, &IsLoadCSE,
-            &NumScanedInst);
+            Loc, AccessTy, LoadI->isAtomic(), LoadI->isElementwise(),
+            SinglePredBB, BBIt, (DefMaxInstsToScan - NumScanedInst), &BatchAA,
+            &IsLoadCSE, &NumScanedInst);
       }
     }
 

@@ -177,6 +177,7 @@ FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA, bool *IsLoadCSE,
 /// \param AtLeastAtomic Are we looking for at-least an atomic load/store ? In
 /// case it is false, we can return an atomic or non-atomic load or store. In
 /// case it is true, we need to return an atomic load or store.
+/// \param IsElementwise Whether the requested atomic access is elementwise.
 /// \param ScanBB The basic block to scan.
 /// \param [in,out] ScanFrom The location to start scanning from. When this
 /// function returns, it points at the last instruction scanned.
@@ -190,8 +191,9 @@ FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA, bool *IsLoadCSE,
 /// \returns The found value, or nullptr if no value is found.
 LLVM_ABI Value *findAvailablePtrLoadStore(
     const MemoryLocation &Loc, Type *AccessTy, bool AtLeastAtomic,
-    BasicBlock *ScanBB, BasicBlock::iterator &ScanFrom, unsigned MaxInstsToScan,
-    BatchAAResults *AA, bool *IsLoadCSE, unsigned *NumScanedInst);
+    bool IsElementwise, BasicBlock *ScanBB, BasicBlock::iterator &ScanFrom,
+    unsigned MaxInstsToScan, BatchAAResults *AA, bool *IsLoadCSE,
+    unsigned *NumScanedInst);
 
 /// Returns true if a pointer value \p From can be replaced with another pointer
 /// value \To if they are deemed equal through some means (e.g. information from

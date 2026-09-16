@@ -479,13 +479,12 @@ define void @store_merge_elementwise_different_element_size(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[B:%.*]] to <4 x i32>
+; CHECK-NEXT:    store atomic elementwise <2 x i64> [[B:%.*]], ptr [[P:%.*]] unordered, align 16
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       else:
+; CHECK-NEXT:    store atomic elementwise <4 x i32> [[A:%.*]], ptr [[P]] unordered, align 16
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi <4 x i32> [ [[A:%.*]], [[ELSE]] ], [ [[TMP0]], [[THEN]] ]
-; CHECK-NEXT:    store atomic elementwise <4 x i32> [[STOREMERGE]], ptr [[P:%.*]] unordered, align 16
 ; CHECK-NEXT:    ret void
 ;
   ptr %p, i1 %c, <4 x i32> %a, <2 x i64> %b) {
@@ -535,7 +534,7 @@ define <4 x i32> @load_cse_elementwise_different_element_size(ptr %p) {
 ; CHECK-LABEL: @load_cse_elementwise_different_element_size(
 ; CHECK-NEXT:    [[A:%.*]] = load atomic elementwise <2 x i64>, ptr [[P:%.*]] unordered, align 16
 ; CHECK-NEXT:    call void @use_v2i64(<2 x i64> [[A]])
-; CHECK-NEXT:    [[B_CAST:%.*]] = bitcast <2 x i64> [[A]] to <4 x i32>
+; CHECK-NEXT:    [[B_CAST:%.*]] = load atomic elementwise <4 x i32>, ptr [[P]] unordered, align 16
 ; CHECK-NEXT:    ret <4 x i32> [[B_CAST]]
 ;
   %a = load atomic elementwise <2 x i64>, ptr %p unordered, align 16
@@ -560,7 +559,7 @@ define <4 x float> @load_cse_elementwise_same_element_size(ptr %p) {
 define <4 x i32> @store_to_load_elementwise_different_element_size(
 ; CHECK-LABEL: @store_to_load_elementwise_different_element_size(
 ; CHECK-NEXT:    store atomic elementwise <2 x i64> [[A:%.*]], ptr [[P:%.*]] unordered, align 16
-; CHECK-NEXT:    [[B_CAST:%.*]] = bitcast <2 x i64> [[A]] to <4 x i32>
+; CHECK-NEXT:    [[B_CAST:%.*]] = load atomic elementwise <4 x i32>, ptr [[P]] unordered, align 16
 ; CHECK-NEXT:    ret <4 x i32> [[B_CAST]]
 ;
   ptr %p, <2 x i64> %a) {
@@ -585,7 +584,8 @@ define <4 x i32> @load_cse_whole_to_elementwise(ptr %p) {
 ; CHECK-LABEL: @load_cse_whole_to_elementwise(
 ; CHECK-NEXT:    [[A:%.*]] = load atomic <4 x i32>, ptr [[P:%.*]] unordered, align 16
 ; CHECK-NEXT:    call void @use_v4i32(<4 x i32> [[A]])
-; CHECK-NEXT:    ret <4 x i32> [[A]]
+; CHECK-NEXT:    [[B:%.*]] = load atomic elementwise <4 x i32>, ptr [[P]] unordered, align 16
+; CHECK-NEXT:    ret <4 x i32> [[B]]
 ;
   %a = load atomic <4 x i32>, ptr %p unordered, align 16
   call void @use_v4i32(<4 x i32> %a)

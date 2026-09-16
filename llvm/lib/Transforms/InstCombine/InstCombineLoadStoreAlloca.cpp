@@ -1669,8 +1669,16 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
 
     auto *SIVTy = SI.getValueOperand()->getType();
     auto *OSVTy = OtherStore->getValueOperand()->getType();
-    return CastInst::isBitOrNoopPointerCastable(OSVTy, SIVTy, DL) &&
-           SI.hasSameSpecialState(OtherStore);
+    if (!CastInst::isBitOrNoopPointerCastable(OSVTy, SIVTy, DL) ||
+        !SI.hasSameSpecialState(OtherStore))
+      return false;
+
+    // Elementwise atomic stores behave as one atomic store per vector
+    // element. Do not split or merge those atomic accesses by changing the
+    // element size.
+    return !SI.isElementwise() ||
+           DL.getTypeStoreSize(SIVTy->getScalarType()) ==
+               DL.getTypeStoreSize(OSVTy->getScalarType());
   };
 
   // If the other block ends in an unconditional branch, check for the 'if then
