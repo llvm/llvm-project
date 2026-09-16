@@ -7,11 +7,8 @@
 define void @nop_test() {
 ; CHECK-LABEL: nop_test:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq %rsp, %rbp
-; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:  Ltmp0:
 ; CHECK-NEXT:  Ltmp1:
 ; CHECK-NEXT:    nop
@@ -104,16 +101,13 @@ define void @nop_test() {
 ; CHECK-NEXT:    nopw %cs:512(%rax,%rax)
 ; CHECK-NEXT:    nopw %cs:512(%rax,%rax)
 ; CHECK-NEXT:  Ltmp31:
-; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-AMD-LABEL: nop_test:
 ; CHECK-AMD:       ## %bb.0: ## %entry
-; CHECK-AMD-NEXT:    pushq %rbp
+; CHECK-AMD-NEXT:    pushq %rax
 ; CHECK-AMD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-AMD-NEXT:    .cfi_offset %rbp, -16
-; CHECK-AMD-NEXT:    movq %rsp, %rbp
-; CHECK-AMD-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-AMD-NEXT:  Ltmp0:
 ; CHECK-AMD-NEXT:  Ltmp1:
 ; CHECK-AMD-NEXT:    nop
@@ -296,7 +290,7 @@ define void @nop_test() {
 ; CHECK-AMD-NEXT:    .byte 102
 ; CHECK-AMD-NEXT:    nopw %cs:512(%rax,%rax)
 ; CHECK-AMD-NEXT:  Ltmp31:
-; CHECK-AMD-NEXT:    popq %rbp
+; CHECK-AMD-NEXT:    popq %rax
 ; CHECK-AMD-NEXT:    retq
 entry:
   tail call void (i64, i32, ...) @llvm.experimental.stackmap(i64  0, i32  0)

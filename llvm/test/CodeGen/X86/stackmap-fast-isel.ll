@@ -22,7 +22,7 @@
 ; CHECK-NEXT:   .quad 8
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _directFrameIdx
-; CHECK-NEXT:   .quad 40
+; CHECK-NEXT:   .quad 24
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _longid
 ; CHECK-NEXT:   .quad 8
@@ -157,11 +157,11 @@ define void @liveConstant() {
 ; CHECK-NEXT:   .short 0
 ; 1 location
 ; CHECK-NEXT:   .short	1
-; Loc 0: Direct rbp - ofs
+; Loc 0: Direct rsp + ofs
 ; CHECK-NEXT:   .byte	2
 ; CHECK-NEXT:   .byte	0
 ; CHECK-NEXT:   .short	8
-; CHECK-NEXT:   .short	6
+; CHECK-NEXT:   .short	7
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long
 

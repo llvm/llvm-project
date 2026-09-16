@@ -915,7 +915,6 @@ void X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // The frame index format for stackmaps and patchpoints is different from the
   // X86 format. It only has a FI and an offset.
   if (Opc == TargetOpcode::STACKMAP || Opc == TargetOpcode::PATCHPOINT) {
-    assert(BasePtr == FramePtr && "Expected the FP as base register");
     int64_t Offset = MI.getOperand(FIOperandNum + 1).getImm() + FIOffset;
     MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
     return;
@@ -995,7 +994,6 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // The frame index format for stackmaps and patchpoints is different from the
   // X86 format. It only has a FI and an offset.
   if (Opc == TargetOpcode::STACKMAP || Opc == TargetOpcode::PATCHPOINT) {
-    assert(BasePtr == FramePtr && "Expected the FP as base register");
     int64_t Offset = MI.getOperand(FIOperandNum + 1).getImm() + FIOffset;
     MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
     return false;

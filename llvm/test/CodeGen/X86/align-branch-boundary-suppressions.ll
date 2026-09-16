@@ -62,11 +62,8 @@ declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
 define void @patchpoint(i64 %a, i64 %b) {
 ; CHECK-LABEL: patchpoint:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq %rsp, %rbp
-; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    #noautopadding
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    .byte 102
@@ -76,8 +73,8 @@ define void @patchpoint(i64 %a, i64 %b) {
 ; CHECK-NEXT:    .byte 102
 ; CHECK-NEXT:    nopw %cs:512(%rax,%rax)
 ; CHECK-NEXT:    #autopadding
-; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 4, i32 15, ptr null, i32 0, i64 %a, i64 %b)
