@@ -35,13 +35,13 @@ namespace pwd {
 
 // Parses a colon-separated line in-place into a struct passwd.
 template <>
-LIBC_INLINE ErrorOr<void> parse_line<struct passwd>(cpp::span<char> buffer,
-                                                    size_t line_len,
+LIBC_INLINE ErrorOr<void> parse_line<struct passwd>(cpp::span<char> line,
+                                                    cpp::span<char> /*scratch*/,
                                                     struct passwd *pwd) {
-  if (!pwd || line_len == 0 || line_len >= buffer.size())
+  if (!pwd || line.empty() || line.back() != '\0')
     return Error(EINVAL);
 
-  FieldTokenizer tokenizer(buffer.first(line_len + 1));
+  FieldTokenizer tokenizer(line);
 
   auto name = tokenizer.next_field();
   if (!name || name->empty() || name->front() == '\0')

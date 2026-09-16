@@ -32,6 +32,12 @@ struct SimpleTestEntry {
   const char *val;
 };
 
+struct ScratchRequiringEntry {
+  const char *key = nullptr;
+  const char *val = nullptr;
+  LIBC_NAMESPACE::cpp::span<char> extra_storage;
+};
+
 class HermeticFile {
   char path[256];
 
@@ -62,13 +68,13 @@ namespace LIBC_NAMESPACE_DECL {
 namespace pwd {
 
 template <>
-inline ErrorOr<void> parse_line<SimpleTestEntry>(cpp::span<char> buffer,
-                                                 size_t line_len,
+inline ErrorOr<void> parse_line<SimpleTestEntry>(cpp::span<char> line,
+                                                 cpp::span<char> /*scratch*/,
                                                  SimpleTestEntry *entry) {
-  if (!entry || line_len == 0 || line_len >= buffer.size())
+  if (!entry || line.empty() || line.back() != '\0')
     return Error(EINVAL);
 
-  FieldTokenizer tokenizer(buffer.first(line_len + 1));
+  FieldTokenizer tokenizer(line);
   auto k = tokenizer.next_field();
   if (!k)
     return Error(EINVAL);
@@ -79,6 +85,32 @@ inline ErrorOr<void> parse_line<SimpleTestEntry>(cpp::span<char> buffer,
     return Error(EINVAL);
   entry->val = v->data();
 
+  return {};
+}
+
+template <>
+inline ErrorOr<void>
+parse_line<ScratchRequiringEntry>(cpp::span<char> line, cpp::span<char> scratch,
+                                  ScratchRequiringEntry *entry) {
+  if (!entry || line.empty() || line.back() != '\0')
+    return Error(EINVAL);
+
+  constexpr size_t REQUIRED_SCRATCH = 2048;
+  if (scratch.size() < REQUIRED_SCRATCH)
+    return Error(ERANGE);
+
+  FieldTokenizer tokenizer(line);
+  auto k = tokenizer.next_field();
+  if (!k)
+    return Error(EINVAL);
+  entry->key = k->data();
+
+  auto v = tokenizer.next_field();
+  if (!v)
+    return Error(EINVAL);
+  entry->val = v->data();
+
+  entry->extra_storage = scratch;
   return {};
 }
 
@@ -309,4 +341,33 @@ TEST_F(LlvmLibcFlatFileDbTest, DynamicBufferReserveGrowRelease) {
   constexpr size_t TARGET_RESERVE_CAPACITY = 1024;
   ASSERT_TRUE(buffer.reserve(TARGET_RESERVE_CAPACITY));
   EXPECT_GE(buffer.capacity(), TARGET_RESERVE_CAPACITY);
+}
+
+TEST_F(LlvmLibcFlatFileDbTest,
+       ScratchInsufficientReturnsErangeAndDynamicBufferGrows) {
+  const char *content = "user1:secret1\n";
+  HermeticFile test_file(libc_make_test_file_path("flat_db_scratch.test"),
+                         content);
+
+  // Fixed buffer with insufficient scratch returns ERANGE.
+  constexpr size_t SMALL_BUFFER_SIZE = 64;
+  char small_buffer[SMALL_BUFFER_SIZE];
+  LIBC_NAMESPACE::pwd::ScopedFlatFileDatabase<ScratchRequiringEntry> db_fixed(
+      test_file.get_path());
+  ScratchRequiringEntry fixed_entry;
+  auto fixed_res = db_fixed.getnext(&fixed_entry, small_buffer);
+  ASSERT_FALSE(fixed_res.has_value());
+  EXPECT_EQ(fixed_res.error(), ERANGE);
+
+  // DynamicBuffer grows until scratch requirement (2048 bytes) is satisfied.
+  LIBC_NAMESPACE::pwd::ScopedFlatFileDatabase<ScratchRequiringEntry> db_dyn(
+      test_file.get_path());
+  LIBC_NAMESPACE::pwd::ScopedDynamicBuffer dyn_buffer;
+  ScratchRequiringEntry dyn_entry;
+  auto dyn_res = db_dyn.getnext(&dyn_entry, dyn_buffer);
+  ASSERT_TRUE(dyn_res.has_value());
+  ASSERT_TRUE(dyn_res.value());
+  EXPECT_STREQ(dyn_entry.key, "user1");
+  EXPECT_STREQ(dyn_entry.val, "secret1");
+  EXPECT_GE(dyn_entry.extra_storage.size(), static_cast<size_t>(2048));
 }

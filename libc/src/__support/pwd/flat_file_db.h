@@ -41,10 +41,13 @@ struct ReadLineResult {
 };
 
 // Parses a record in place and fills entry.
-// If the buffer is too small for auxiliary structures (such as pointer arrays),
-// specializations must return Error(ERANGE) prior to modifying the buffer.
+// line is the record bytes including the terminating NUL (line.back() == '\0').
+// scratch is spare writable storage for auxiliary structures (such as pointer
+// arrays) and may be empty. Specialisations that require scratch storage must
+// return Error(ERANGE) prior to modifying the buffer if scratch is
+// insufficient.
 template <typename EntryType>
-ErrorOr<void> parse_line(cpp::span<char> buffer, size_t line_len,
+ErrorOr<void> parse_line(cpp::span<char> line, cpp::span<char> scratch,
                          EntryType *entry);
 
 // Generic flat colon-delimited database engine.
@@ -240,7 +243,11 @@ public:
       if (res.truncated)
         return Error(ERANGE);
 
-      auto parse_res = parse_line<EntryType>(buffer, res.bytes_read, entry);
+      // Slicing at bytes_read + 1 includes the terminating null byte written
+      // by read_line; the remainder of the buffer serves as scratch space.
+      auto parse_res =
+          parse_line<EntryType>(buffer.first(res.bytes_read + 1),
+                                buffer.subspan(res.bytes_read + 1), entry);
       if (!parse_res.has_value())
         return Error(parse_res.error());
       return true;
@@ -274,8 +281,12 @@ public:
         continue;
 
       while (true) {
-        auto parse_res =
-            parse_line<EntryType>(buffer.span(), res.bytes_read, entry);
+        // Slicing at bytes_read + 1 includes the terminating null byte written
+        // by read_line_growing; the remainder of the buffer serves as scratch
+        // space.
+        auto parse_res = parse_line<EntryType>(
+            buffer.span().first(res.bytes_read + 1),
+            buffer.span().subspan(res.bytes_read + 1), entry);
         if (parse_res.has_value())
           return true;
         if (parse_res.error() != ERANGE)

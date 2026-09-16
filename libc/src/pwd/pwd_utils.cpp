@@ -34,7 +34,7 @@ ErrorOr<struct passwd> parse_passwd_line(char *line) {
 
   struct passwd pwd;
   size_t len = internal::string_length(line);
-  auto res = parse_line(cpp::span<char>(line, len + 1), len, &pwd);
+  auto res = parse_line(cpp::span<char>(line, len + 1), {}, &pwd);
   if (!res.has_value())
     return Error(res.error());
 
