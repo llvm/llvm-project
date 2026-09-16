@@ -141,7 +141,7 @@ RUN wget https://ftp.gnu.org/gnu/mpc/mpc-1.4.1.tar.xz && \
     rm mpc-1.4.1.tar.xz
 
 # Install gcc-7 and g++-7.
-RUN wget https://ftp.gnu.org/gnu/gcc/gcc-7.5.0/gcc-7.5.0.tar.xz && \
+RUN wget --progress=dot:mega https://ftp.gnu.org/gnu/gcc/gcc-7.5.0/gcc-7.5.0.tar.xz && \
     tar -xf gcc-7.5.0.tar.xz && \
     cd gcc-7.5.0 && \
     ./contrib/download_prerequisites && \
@@ -158,7 +158,7 @@ RUN wget https://ftp.gnu.org/gnu/gcc/gcc-7.5.0/gcc-7.5.0.tar.xz && \
     rm gcc-7.5.0.tar.xz
 
 # Install gcc-8 and g++-8.
-RUN wget https://ftp.gnu.org/gnu/gcc/gcc-8.5.0/gcc-8.5.0.tar.xz && \
+RUN wget --progress=dot:mega https://ftp.gnu.org/gnu/gcc/gcc-8.5.0/gcc-8.5.0.tar.xz && \
     tar -xf gcc-8.5.0.tar.xz && \
     cd gcc-8.5.0 && \
     ./contrib/download_prerequisites && \
