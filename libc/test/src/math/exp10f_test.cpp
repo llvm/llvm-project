@@ -69,11 +69,12 @@ TEST_F(LlvmLibcExp10fTest, Underflow) {
 }
 
 TEST_F(LlvmLibcExp10fTest, TrickyInputs) {
-  constexpr int N = 20;
+  constexpr int N = 21;
   constexpr uint32_t INPUTS[N] = {
       0x325e5bd8, // x = 0x1.bcb7bp-27f
       0x325e5bd9, // x = 0x1.bcb7b2p-27f
       0x325e5bda, // x = 0x1.bcb7b4p-27f
+      0x3ba05982, // x = 0x1.40b304p-8f
       0x3d14d956, // x = 0x1.29b2acp-5f
       0x4116498a, // x = 0x1.2c9314p3f
       0x4126f431, // x = 0x1.4de862p3f
