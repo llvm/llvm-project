@@ -347,48 +347,49 @@ static BitcodeLineMap processModule(Module *Mod, bool MaybeUndefined) {
       SmallPtrSet<BasicBlock *, 8> Visited;
       DenseSet<std::pair<StringRef, uint32_t>> Lines;
 
-      SmallVector<BasicBlock *> BlocksToVisit;
       if (MaybeUndefined) {
         // Visit all basic blocks that are reachable from a definition.
         auto B = Var.Definitions.keys();
-        BlocksToVisit.append(B.begin(), B.end());
-      } else {
-        // Visit all basic blocks that are reachable from the entry block
-        // without going through a block that stores to the variable.
-        BlocksToVisit.push_back(&F.getEntryBlock());
-      }
+        SmallVector<BasicBlock *> BlocksToVisit{B.begin(), B.end()};
 
-      while (!BlocksToVisit.empty()) {
-        BasicBlock *BB = BlocksToVisit.pop_back_val();
-        if (!Visited.insert(BB).second)
-          continue;
-
-        if (!MaybeUndefined) {
-          auto I = Var.Definitions.find(BB);
-          if (I != Var.Definitions.end()) {
-            // Block contains a definition: add all lines after it to the set
-            // and don't visit the block's successors.
-            if (I->second != nullptr)
-              addModuleLines(I->second, Var, Lines);
+        while (!BlocksToVisit.empty()) {
+          BasicBlock *BB = BlocksToVisit.pop_back_val();
+          if (!Visited.insert(BB).second)
             continue;
-          }
-        }
 
-        auto S = successors(BB);
-        BlocksToVisit.append(S.begin(), S.end());
-        if (MaybeUndefined) {
+          auto S = successors(BB);
+          BlocksToVisit.append(S.begin(), S.end());
           // Treat all successor blocks as live throughout.
           for (auto *BB : S)
             Var.Definitions.insert_or_assign(BB, &BB->front());
         }
-      }
 
-      if (MaybeUndefined) {
         // Add lines to the set for all blocks in the definition map.
         for (auto I : Var.Definitions)
           if (I.second != nullptr)
             addModuleLines(I.second, Var, Lines);
       } else {
+        // Visit all basic blocks that are reachable from the entry block
+        // without going through a block that stores to the variable.
+        SmallVector<BasicBlock *> BlocksToVisit{&F.getEntryBlock()};
+
+        while (!BlocksToVisit.empty()) {
+          BasicBlock *BB = BlocksToVisit.pop_back_val();
+          if (!Visited.insert(BB).second)
+            continue;
+
+          auto I = Var.Definitions.find(BB);
+          if (I != Var.Definitions.end()) {
+            // Block contains a definition: add all lines after it to the set
+            if (I->second != nullptr)
+              addModuleLines(I->second, Var, Lines);
+          } else {
+            // Block does not contain a definition: visit its successors
+            auto S = successors(BB);
+            BlocksToVisit.append(S.begin(), S.end());
+          }
+        }
+
         // All unvisited basic blocks must only be reachable by going through a
         // block that stores to the variable, so add lines to the set for all of
         // their instructions.
