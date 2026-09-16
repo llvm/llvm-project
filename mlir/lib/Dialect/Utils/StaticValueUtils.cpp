@@ -447,9 +447,9 @@ LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs,
   for (OpFoldResult &ofr : ofrs) {
     if (isa<Attribute>(ofr))
       continue;
-    // Note: All ofrs have index type.
+    // Note: All ofrs have index type; the kDynamic sentinel stays dynamic.
     std::optional<int64_t> intVal = getConstantIntValue(ofr);
-    if (!intVal)
+    if (!intVal || *intVal == ShapedType::kDynamic)
       continue;
     if (onlyNonNegative && *intVal < 0)
       continue;
