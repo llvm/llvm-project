@@ -1,7 +1,7 @@
 // RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !u8i = !cir.int<u, 8>
-!u32i = !cir.int<u, 32>
+!u64i = !cir.int<u, 64>
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
 
@@ -17,12 +17,12 @@ module {
 
   // CHECK-LABEL: cir.func @mask_unsigned(
   cir.func @mask_unsigned(%arg0: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
-    %0 = cir.const #cir.int<4294967280> : !u32i
-    %1 = cir.ptr_mask %arg0, %0 : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
+    %0 = cir.const #cir.int<18446744073709551584> : !u64i
+    %1 = cir.ptr_mask %arg0, %0 : (!cir.ptr<!u8i>, !u64i) -> !cir.ptr<!u8i>
     cir.return %1 : !cir.ptr<!u8i>
   }
-  // CHECK: %[[MASK:.+]] = cir.const #cir.int<4294967280> : !u32i
-  // CHECK: cir.ptr_mask %arg0, %[[MASK]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
+  // CHECK: %[[MASK:.+]] = cir.const #cir.int<18446744073709551584> : !u64i
+  // CHECK: cir.ptr_mask %arg0, %[[MASK]] : (!cir.ptr<!u8i>, !u64i) -> !cir.ptr<!u8i>
 
   // CHECK-LABEL: cir.func @mask_typed_ptr(
   cir.func @mask_typed_ptr(%arg0: !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {

@@ -557,10 +557,7 @@ def CIR_PtrMaskOp : CIR_Op<"ptr_mask", [
     `mask`.  The result stays a pointer, whereas masking it as an integer
     would lose provenance.
 
-    Lowering resizes `mask` to the target's pointer index width, sign-extending
-    a narrower signed `mask`, zero-extending a narrower unsigned one, and
-    truncating a wider one.  Pointer bits above the index width are not
-    affected.
+    `mask` must be exactly the target's pointer index width.
 
     ```
     %m = cir.const #cir.int<-32> : !s64i
@@ -578,6 +575,8 @@ def CIR_PtrMaskOp : CIR_Op<"ptr_mask", [
   let assemblyFormat = [{
     $ptr`,` $mask `:` functional-type(operands, results) attr-dict
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -25,4 +25,27 @@ module {
     %0 = cir.ptr_mask %arg0, %arg1 : (!cir.ptr<!u8i>, !s31i) -> !cir.ptr<!u8i>
     cir.return %0 : !cir.ptr<!u8i>
   }
+
+  cir.func @mask_narrower_than_index(%arg0: !cir.ptr<!u8i>, %arg1: !s32i) -> !cir.ptr<!u8i> {
+    // expected-error@+1 {{'cir.ptr_mask' op mask width 32 must equal the pointer index width 64}}
+    %0 = cir.ptr_mask %arg0, %arg1 : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s64i = !cir.int<s, 64>
+
+// The index width, not the pointer size, is what the mask must match.
+module attributes {dlti.dl_spec = #dlti.dl_spec<
+                     #dlti.dl_entry<!cir.ptr<!cir.void>,
+                                    #cir.ptr_spec<size = 64, abi = 64,
+                                                  preferred = 64, index = 32>>>} {
+  cir.func @mask_matches_size_not_index(%arg0: !cir.ptr<!u8i>, %arg1: !s64i) -> !cir.ptr<!u8i> {
+    // expected-error@+1 {{'cir.ptr_mask' op mask width 64 must equal the pointer index width 32}}
+    %0 = cir.ptr_mask %arg0, %arg1 : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+    cir.return %0 : !cir.ptr<!u8i>
+  }
 }

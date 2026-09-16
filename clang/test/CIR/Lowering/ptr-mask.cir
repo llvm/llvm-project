@@ -2,7 +2,7 @@
 // RUN: FileCheck --input-file=%t.mlir %s
 
 !u8i = !cir.int<u, 8>
-!u32i = !cir.int<u, 32>
+!u64i = !cir.int<u, 64>
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
 
@@ -18,88 +18,58 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu",
     cir.return %1 : !cir.ptr<!u8i>
   }
 
-  // CHECK-LABEL: llvm.func @mask_narrow(
-  // CHECK-NEXT:    %[[NARROW:.*]] = llvm.mlir.constant(-16 : i32) : i32
-  // CHECK-NEXT:    %[[WIDE:.*]] = llvm.sext %[[NARROW]] : i32 to i64
-  // CHECK-NEXT:    %[[RES:.*]] = llvm.intr.ptrmask %arg0, %[[WIDE]] : (!llvm.ptr, i64) -> !llvm.ptr
+  // The mask reaches the intrinsic as it was written, with no conversion.
+  // CHECK-LABEL: llvm.func @mask_unsigned(
+  // CHECK-NEXT:    %[[MASK:.*]] = llvm.mlir.constant(-32 : i64) : i64
+  // CHECK-NEXT:    %[[RES:.*]] = llvm.intr.ptrmask %arg0, %[[MASK]] : (!llvm.ptr, i64) -> !llvm.ptr
   // CHECK-NEXT:    llvm.return %[[RES]] : !llvm.ptr
-  cir.func @mask_narrow(%arg0: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
-    %0 = cir.const #cir.int<-16> : !s32i
-    %1 = cir.ptr_mask %arg0, %0 : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
+  cir.func @mask_unsigned(%arg0: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
+    %0 = cir.const #cir.int<18446744073709551584> : !u64i
+    %1 = cir.ptr_mask %arg0, %0 : (!cir.ptr<!u8i>, !u64i) -> !cir.ptr<!u8i>
     cir.return %1 : !cir.ptr<!u8i>
   }
 
-  // An unsigned mask is zero-extended, so the high bits of the pointer are
-  // cleared rather than preserved.
-  // CHECK-LABEL: llvm.func @mask_narrow_unsigned(
-  // CHECK-NEXT:    %[[NARROW:.*]] = llvm.mlir.constant(-16 : i32) : i32
-  // CHECK-NEXT:    %[[WIDE:.*]] = llvm.zext %[[NARROW]] : i32 to i64
-  // CHECK-NEXT:    %[[RES:.*]] = llvm.intr.ptrmask %arg0, %[[WIDE]] : (!llvm.ptr, i64) -> !llvm.ptr
+  // CHECK-LABEL: llvm.func @mask_argument(
+  // CHECK-SAME:    %[[PTR:.*]]: !llvm.ptr, %[[MASK:.*]]: i64)
+  // CHECK-NEXT:    %[[RES:.*]] = llvm.intr.ptrmask %[[PTR]], %[[MASK]] : (!llvm.ptr, i64) -> !llvm.ptr
   // CHECK-NEXT:    llvm.return %[[RES]] : !llvm.ptr
-  cir.func @mask_narrow_unsigned(%arg0: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
-    %0 = cir.const #cir.int<4294967280> : !u32i
-    %1 = cir.ptr_mask %arg0, %0 : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
-    cir.return %1 : !cir.ptr<!u8i>
-  }
-
-  // CHECK-LABEL: llvm.func @mask_narrow_argument(
-  // CHECK-SAME:    %[[PTR:.*]]: !llvm.ptr, %[[MASK:.*]]: i32)
-  // CHECK-NEXT:    %[[WIDE:.*]] = llvm.sext %[[MASK]] : i32 to i64
-  // CHECK-NEXT:    %[[RES:.*]] = llvm.intr.ptrmask %[[PTR]], %[[WIDE]] : (!llvm.ptr, i64) -> !llvm.ptr
-  // CHECK-NEXT:    llvm.return %[[RES]] : !llvm.ptr
-  cir.func @mask_narrow_argument(%arg0: !cir.ptr<!u8i>, %arg1: !s32i) -> !cir.ptr<!u8i> {
-    %0 = cir.ptr_mask %arg0, %arg1 : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
+  cir.func @mask_argument(%arg0: !cir.ptr<!u8i>, %arg1: !s64i) -> !cir.ptr<!u8i> {
+    %0 = cir.ptr_mask %arg0, %arg1 : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
     cir.return %0 : !cir.ptr<!u8i>
   }
-}
 
-// -----
-
-!u8i = !cir.int<u, 8>
-!s64i = !cir.int<s, 64>
-
-// This layout gives the pointer a 64-bit size and a 32-bit index width, so the
-// mask is truncated to the index width rather than to the size.
-module attributes {cir.triple = "x86_64-unknown-linux-gnu",
-                   dlti.dl_spec = #dlti.dl_spec<
-                     #dlti.dl_entry<!llvm.ptr,
-                                    dense<[64, 64, 64, 32]> : vector<4xi64>>>} {
-  // CHECK-LABEL: llvm.func @mask_wide(
-  // CHECK-NEXT:    %[[WIDE:.*]] = llvm.mlir.constant(-32 : i64) : i64
-  // CHECK-NEXT:    %[[NARROW:.*]] = llvm.trunc %[[WIDE]] : i64 to i32
-  // CHECK-NEXT:    %[[RES:.*]] = llvm.intr.ptrmask %arg0, %[[NARROW]] : (!llvm.ptr, i32) -> !llvm.ptr
+  // CHECK-LABEL: llvm.func @mask_typed_ptr(
+  // CHECK-NEXT:    %[[MASK:.*]] = llvm.mlir.constant(-8 : i64) : i64
+  // CHECK-NEXT:    %[[RES:.*]] = llvm.intr.ptrmask %arg0, %[[MASK]] : (!llvm.ptr, i64) -> !llvm.ptr
   // CHECK-NEXT:    llvm.return %[[RES]] : !llvm.ptr
-  cir.func @mask_wide(%arg0: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
-    %0 = cir.const #cir.int<-32> : !s64i
-    %1 = cir.ptr_mask %arg0, %0 : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
-    cir.return %1 : !cir.ptr<!u8i>
+  cir.func @mask_typed_ptr(%arg0: !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {
+    %0 = cir.const #cir.int<-8> : !s64i
+    %1 = cir.ptr_mask %arg0, %0 : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
+    cir.return %1 : !cir.ptr<!s32i>
   }
 }
 
 // -----
 
 !u8i = !cir.int<u, 8>
-!s64i = !cir.int<s, 64>
+!s32i = !cir.int<s, 32>
 
-// The index width is read for the pointer's own address space.  On x86-64 a
-// __ptr32 lives in address space 271 and is indexed with 32 bits.
+// This layout gives the pointer a 64-bit size and a 32-bit index width, so the
+// mask is 32 bits, matching the index rather than the size.
 module attributes {cir.triple = "x86_64-unknown-linux-gnu",
                    dlti.dl_spec = #dlti.dl_spec<
+                     #dlti.dl_entry<!cir.ptr<!cir.void>,
+                                    #cir.ptr_spec<size = 64, abi = 64,
+                                                  preferred = 64, index = 32>>,
                      #dlti.dl_entry<!llvm.ptr,
-                                    dense<[64, 64, 64, 64]> : vector<4xi64>>,
-                     #dlti.dl_entry<!llvm.ptr<271>,
-                                    dense<[32, 32, 32, 32]> : vector<4xi64>>>} {
-  // CHECK-LABEL: llvm.func @mask_addrspace(
-  // CHECK-NEXT:    %[[WIDE:.*]] = llvm.mlir.constant(-32 : i64) : i64
-  // CHECK-NEXT:    %[[NARROW:.*]] = llvm.trunc %[[WIDE]] : i64 to i32
-  // CHECK-NEXT:    %[[RES:.*]] = llvm.intr.ptrmask %arg0, %[[NARROW]] : (!llvm.ptr<271>, i32) -> !llvm.ptr<271>
-  // CHECK-NEXT:    llvm.return %[[RES]] : !llvm.ptr<271>
-  cir.func @mask_addrspace(%arg0: !cir.ptr<!u8i, target_address_space(271)>)
-      -> !cir.ptr<!u8i, target_address_space(271)> {
-    %0 = cir.const #cir.int<-32> : !s64i
-    %1 = cir.ptr_mask %arg0, %0
-        : (!cir.ptr<!u8i, target_address_space(271)>, !s64i)
-        -> !cir.ptr<!u8i, target_address_space(271)>
-    cir.return %1 : !cir.ptr<!u8i, target_address_space(271)>
+                                    dense<[64, 64, 64, 32]> : vector<4xi64>>>} {
+  // CHECK-LABEL: llvm.func @mask_narrow_index(
+  // CHECK-NEXT:    %[[MASK:.*]] = llvm.mlir.constant(-32 : i32) : i32
+  // CHECK-NEXT:    %[[RES:.*]] = llvm.intr.ptrmask %arg0, %[[MASK]] : (!llvm.ptr, i32) -> !llvm.ptr
+  // CHECK-NEXT:    llvm.return %[[RES]] : !llvm.ptr
+  cir.func @mask_narrow_index(%arg0: !cir.ptr<!u8i>) -> !cir.ptr<!u8i> {
+    %0 = cir.const #cir.int<-32> : !s32i
+    %1 = cir.ptr_mask %arg0, %0 : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
+    cir.return %1 : !cir.ptr<!u8i>
   }
 }
