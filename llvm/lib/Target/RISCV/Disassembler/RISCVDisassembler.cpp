@@ -113,38 +113,24 @@ static DecodeStatus DecodeSimpleRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+template <unsigned PhysReg, unsigned Encoding>
+static DecodeStatus DecodeSingleRegister(MCInst &Inst, uint32_t RegNo,
+                                         uint64_t Address,
+                                         const MCDisassembler *Decoder) {
+  assert(RegNo == Encoding);
+  Inst.addOperand(MCOperand::createReg(PhysReg));
+  return MCDisassembler::Success;
+}
+
+template <unsigned PhysReg, unsigned Encoding>
+static DecodeStatus DecodeSingleRegister(MCInst &Inst,
+                                         const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(PhysReg));
+  return MCDisassembler::Success;
+}
+
 constexpr auto DecodeGPRRegisterClass =
     DecodeSimpleRegisterClass<RISCV::X0, 32, /*RVELimit=*/16>;
-
-static DecodeStatus DecodeGPRX1RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                             uint32_t Address,
-                                             const MCDisassembler *Decoder) {
-  assert(RegNo == 1);
-  Inst.addOperand(MCOperand::createReg(RISCV::X1));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeSPRegisterClass(MCInst &Inst,
-                                          const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createReg(RISCV::X2));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeSPRegisterClass(MCInst &Inst, uint64_t RegNo,
-                                          uint32_t Address,
-                                          const MCDisassembler *Decoder) {
-  assert(RegNo == 2);
-  Inst.addOperand(MCOperand::createReg(RISCV::X2));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeGPRX5RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                             uint32_t Address,
-                                             const MCDisassembler *Decoder) {
-  assert(RegNo == 5);
-  Inst.addOperand(MCOperand::createReg(RISCV::X5));
-  return MCDisassembler::Success;
-}
 
 template <auto DecodeFn, auto PredicateFn>
 static DecodeStatus DecodeFilteredRegisterClass(MCInst &Inst, uint32_t RegNo,

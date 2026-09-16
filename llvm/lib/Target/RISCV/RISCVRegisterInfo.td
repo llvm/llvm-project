@@ -344,11 +344,13 @@ def GPRX0 : GPRRegisterClass<(add X0)> {
 }
 
 def GPRX1 : GPRRegisterClass<(add X1)> {
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X1, 1>";
   let DiagnosticType = "InvalidRegClassGPRX1";
   let DiagnosticString = "register must be ra (x1)";
 }
 
 def GPRX5 : GPRRegisterClass<(add X5)> {
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X5, 5>";
   let DiagnosticType = "InvalidRegClassGPRX5";
   let DiagnosticString = "register must be t0 (x5)";
 }
@@ -394,6 +396,7 @@ def GPRTC : GPRRegisterClass<(add (sequence "X%u", 6, 7),
 def GPRTCNonX7 : GPRRegisterClass<(sub GPRTC, X7)>;
 
 def SP : GPRRegisterClass<(add X2)> {
+  let DecoderMethod = "DecodeSingleRegister<RISCV::X2, 2>";
   let DiagnosticType = "InvalidRegClassSP";
   let DiagnosticString = "register must be sp (x2)";
 }
