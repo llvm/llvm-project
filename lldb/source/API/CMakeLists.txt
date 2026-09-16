@@ -167,17 +167,6 @@ set_target_properties(liblldb
 
 target_compile_definitions(liblldb PRIVATE LLDB_IN_LIBLLDB)
 
-if(LLDB_BUILD_STATIC_LIBLLDB)
-  install(TARGETS liblldb
-    COMPONENT liblldb
-    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX})
-  if(NOT CMAKE_CONFIGURATION_TYPES)
-    add_llvm_install_targets(install-liblldb
-      DEPENDS liblldb
-      COMPONENT liblldb)
-  endif()
-endif()
-
 if (NOT LLDB_BUILD_STATIC_LIBLLDB AND
     NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
   if (LLDB_EXPORT_ALL_SYMBOLS)

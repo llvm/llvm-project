@@ -67,8 +67,14 @@ add_optional_dependency(LLDB_ENABLE_TREESITTER "Enable Tree-sitter syntax highli
 
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  set(default_build_static_liblldb ON)
+else()
+  set(default_build_static_liblldb OFF)
+endif()
 option(LLDB_BUILD_STATIC_LIBLLDB
-  "Build liblldb as a static library for Emscripten" OFF)
+  "Build liblldb as a static library"
+  ${default_build_static_liblldb})
 if(LLDB_BUILD_STATIC_LIBLLDB AND
    NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
   message(FATAL_ERROR "LLDB_BUILD_STATIC_LIBLLDB is only supported for Emscripten")
