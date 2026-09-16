@@ -1,6 +1,64 @@
 VERS1.0 {
 global:
   ol*;
+  # Symbols currently used by libomptarget. They should be removed from here as
+  # they become replaced by calls to the liboffload API.
+  # No new symbols should be added here.
+  extern "C++" {
+    error::OffloadError::ID;
+    "error::OffloadErrCategory()";
+    "llvm::omp::target::RPCServerTy::registerCallback(unsigned int (*)(void*, unsigned int))";
+    "llvm::omp::target::plugin::GenericDeviceTy::dataFill(void*, void const*, long, long, __tgt_async_info*)";
+    "llvm::omp::target::plugin::GenericPluginTy::async_barrier(omp_interop_val_t*)";
+    "llvm::omp::target::plugin::GenericPluginTy::create_event(int, void**)";
+    "llvm::omp::target::plugin::GenericPluginTy::create_interop(int, int, interop_spec_t*)";
+    "llvm::omp::target::plugin::GenericPluginTy::data_alloc(int, long, void*, int)";
+    "llvm::omp::target::plugin::GenericPluginTy::data_delete(int, void*, int)";
+    "llvm::omp::target::plugin::GenericPluginTy::data_exchange(int, void*, int, void*, long)";
+    "llvm::omp::target::plugin::GenericPluginTy::data_exchange_async(int, void*, int, void*, long, __tgt_async_info*)";
+    "llvm::omp::target::plugin::GenericPluginTy::data_fence(int, __tgt_async_info*)";
+    "llvm::omp::target::plugin::GenericPluginTy::data_lock(int, void*, long, void**)";
+    "llvm::omp::target::plugin::GenericPluginTy::data_notify_mapped(int, void*, long)";
+    "llvm::omp::target::plugin::GenericPluginTy::data_notify_unmapped(int, void*)";
+    "llvm::omp::target::plugin::GenericPluginTy::data_retrieve_async(int, void*, void*, long, __tgt_async_info*)";
+    "llvm::omp::target::plugin::GenericPluginTy::data_submit(int, void*, void*, long)";
+    "llvm::omp::target::plugin::GenericPluginTy::data_submit_async(int, void*, void*, long, __tgt_async_info*)";
+    "llvm::omp::target::plugin::GenericPluginTy::data_unlock(int, void*)";
+    "llvm::omp::target::plugin::GenericPluginTy::destroy_event(int, void*)";
+    "llvm::omp::target::plugin::GenericPluginTy::flush_queue(omp_interop_val_t*)";
+    "llvm::omp::target::plugin::GenericPluginTy::get_function(__tgt_device_binary, char const*, void**)";
+    "llvm::omp::target::plugin::GenericPluginTy::get_global(__tgt_device_binary, unsigned long, char const*, void**)";
+    "llvm::omp::target::plugin::GenericPluginTy::init()";
+    "llvm::omp::target::plugin::GenericPluginTy::deinit()";
+    "llvm::omp::target::plugin::GenericPluginTy::init_device(int)";
+    "llvm::omp::target::plugin::GenericPluginTy::initialize_record_replay(int, long, void*, bool, bool, bool, bool, char const*, char const*)";
+    "llvm::omp::target::plugin::GenericPluginTy::isDeviceCompatible(int, llvm::StringRef)";
+    "llvm::omp::target::plugin::GenericPluginTy::isPluginCompatible(llvm::StringRef)";
+    "llvm::omp::target::plugin::GenericPluginTy::is_accessible_ptr(int, void const*, unsigned long)";
+    "llvm::omp::target::plugin::GenericPluginTy::is_data_exchangable(int, int)";
+    "llvm::omp::target::plugin::GenericPluginTy::is_device_initialized(int) const";
+    "llvm::omp::target::plugin::GenericPluginTy::is_initialized() const";
+    "llvm::omp::target::plugin::GenericPluginTy::launch_kernel(int, void*, llvm::omp::target::plugin::KernelLaunchArgsTy&, __tgt_async_info*)";
+    "llvm::omp::target::plugin::GenericPluginTy::load_binary(int, __tgt_device_image*, __tgt_device_binary*)";
+    "llvm::omp::target::plugin::GenericPluginTy::number_of_devices()";
+    "llvm::omp::target::plugin::GenericPluginTy::obtain_device_info(int)";
+    "llvm::omp::target::plugin::GenericPluginTy::print_device_info(int)";
+    "llvm::omp::target::plugin::GenericPluginTy::query_async(int, __tgt_async_info*)";
+    "llvm::omp::target::plugin::GenericPluginTy::record_event(int, void*, __tgt_async_info*)";
+    "llvm::omp::target::plugin::GenericPluginTy::release_interop(int, omp_interop_val_t*)";
+    "llvm::omp::target::plugin::GenericPluginTy::set_device_identifier(int, int)";
+    "llvm::omp::target::plugin::GenericPluginTy::sync_barrier(omp_interop_val_t*)";
+    "llvm::omp::target::plugin::GenericPluginTy::sync_event(int, void*)";
+    "llvm::omp::target::plugin::GenericPluginTy::synchronize(int, __tgt_async_info*)";
+    "llvm::omp::target::plugin::GenericPluginTy::use_auto_zero_copy(int)";
+    "llvm::omp::target::plugin::GenericPluginTy::wait_event(int, void*, __tgt_async_info*)";
+    llvm::omp::target::ompt::Initialized;
+    llvm::omp::target::ompt::lookupCallbackByCode;
+    llvm::omp::target::ompt::lookupCallbackByName;
+    createPlugin_*;
+    # Temporary helpers to help transition of libomptarget to liboffload.
+    __ol_tgt_setInfoFlag;
+  };
 local:
   *;
 };
