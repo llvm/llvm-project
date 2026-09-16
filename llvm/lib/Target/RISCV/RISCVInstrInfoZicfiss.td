@@ -44,8 +44,9 @@ def SSPOPCHK : RVInstI<0b100, OPC_SYSTEM, (outs), (ins GPRX1X5:$rs1), "sspopchk"
 } // Uses = [SSP],  Defs = [SSP], hasSideEffects = 0, mayLoad = 1, mayStore = 0
 
 let Uses = [SSP], hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
-def SSRDP : RVInstI<0b100, OPC_SYSTEM, (outs GPRNoX0Zicfiss:$rd), (ins), "ssrdp",
-                    "$rd"> {
+def SSRDP : RVInstI<0b100, OPC_SYSTEM,
+                    (outs GPRNoX0Zicfiss:$rd), (ins),
+                    "ssrdp", "$rd"> {
   let imm12 = 0b110011011100;
   let rs1 = 0b00000;
 }
