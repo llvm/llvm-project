@@ -592,23 +592,7 @@ class ThreeOpFragSDAG<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
     if (!N->isDivergent())
       return false;
 
-    // Check constant bus limitations.
-    //
-    // Note: Use !isDivergent as a conservative proxy for whether the value
-    //       is in an SGPR (uniform values can end up in VGPRs as well).
-    unsigned ConstantBusUses = 0;
-    for (unsigned i = 0; i < 3; ++i) {
-      if (!Operands[i]->isDivergent() &&
-          !isInlineImmediate(Operands[i].getNode())) {
-        ConstantBusUses++;
-        // This uses AMDGPU::V_ADD3_U32_e64, but all three operand instructions
-        // have the same constant bus limit.
-        if (ConstantBusUses > Subtarget->getConstantBusLimit(AMDGPU::V_ADD3_U32_e64))
-          return false;
-      }
-    }
-
-    return true;
+    return checkThreeOpFragConstantBus(N, Operands);
   }]> {
   let PredicateCodeUsesOperands = 1;
 }

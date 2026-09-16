@@ -441,3 +441,140 @@ define amdgpu_ps <2 x i32> @s_and_or_v2i32(<2 x i32> inreg %a, <2 x i32> inreg %
   %result = or <2 x i32> %x, %c
   ret <2 x i32> %result
 }
+
+define amdgpu_ps <3 x float> @and_or_shared_literals(<3 x i32> %a) {
+; VI-LABEL: and_or_shared_literals:
+; VI:       ; %bb.0:
+; VI-NEXT:    v_and_b32_e32 v2, 0xf000f, v2
+; VI-NEXT:    v_and_b32_e32 v1, 0xf000f, v1
+; VI-NEXT:    v_and_b32_e32 v0, 0xf000f, v0
+; VI-NEXT:    v_or_b32_e32 v0, 0x64006400, v0
+; VI-NEXT:    v_or_b32_e32 v1, 0x64006400, v1
+; VI-NEXT:    v_or_b32_e32 v2, 0x64006400, v2
+; VI-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: and_or_shared_literals:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b32 s0, 0xf000f
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0x64006400
+; GFX9-NEXT:    v_and_or_b32 v0, v0, s0, v3
+; GFX9-NEXT:    v_and_or_b32 v1, v1, s0, v3
+; GFX9-NEXT:    v_and_or_b32 v2, v2, s0, v3
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: and_or_shared_literals:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mov_b32 s0, 0xf000f
+; GFX10-NEXT:    v_and_or_b32 v0, v0, s0, 0x64006400
+; GFX10-NEXT:    v_and_or_b32 v1, v1, s0, 0x64006400
+; GFX10-NEXT:    v_and_or_b32 v2, v2, s0, 0x64006400
+; GFX10-NEXT:    ; return to shader part epilog
+  %x = and <3 x i32> %a, splat (i32 983055)
+  %r = or <3 x i32> %x, splat (i32 1677747200)
+  %f = bitcast <3 x i32> %r to <3 x float>
+  ret <3 x float> %f
+}
+
+define amdgpu_ps <2 x float> @and_or_shared_literals_break_even(<2 x i32> %a) {
+; VI-LABEL: and_or_shared_literals_break_even:
+; VI:       ; %bb.0:
+; VI-NEXT:    v_and_b32_e32 v1, 0xf000f, v1
+; VI-NEXT:    v_and_b32_e32 v0, 0xf000f, v0
+; VI-NEXT:    v_or_b32_e32 v1, 0x64006400, v1
+; VI-NEXT:    v_or_b32_e32 v0, 0x64006400, v0
+; VI-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: and_or_shared_literals_break_even:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_and_b32_e32 v1, 0xf000f, v1
+; GFX9-NEXT:    v_and_b32_e32 v0, 0xf000f, v0
+; GFX9-NEXT:    v_or_b32_e32 v1, 0x64006400, v1
+; GFX9-NEXT:    v_or_b32_e32 v0, 0x64006400, v0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: and_or_shared_literals_break_even:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mov_b32 s0, 0xf000f
+; GFX10-NEXT:    v_and_or_b32 v0, v0, s0, 0x64006400
+; GFX10-NEXT:    v_and_or_b32 v1, v1, s0, 0x64006400
+; GFX10-NEXT:    ; return to shader part epilog
+  %x = and <2 x i32> %a, splat (i32 983055)
+  %r = or <2 x i32> %x, splat (i32 1677747200)
+  %f = bitcast <2 x i32> %r to <2 x float>
+  ret <2 x float> %f
+}
+
+; Plain adds keep the literal in a free operand slot, so nothing is shared.
+define amdgpu_ps <5 x float> @and_or_literal_used_by_nonfused(i32 %a, <4 x i32> %b) {
+; VI-LABEL: and_or_literal_used_by_nonfused:
+; VI:       ; %bb.0:
+; VI-NEXT:    v_and_b32_e32 v0, 0xf000f, v0
+; VI-NEXT:    v_or_b32_e32 v0, 0x64006400, v0
+; VI-NEXT:    v_add_u32_e32 v1, vcc, 0xf000f, v1
+; VI-NEXT:    v_add_u32_e32 v2, vcc, 0xf000f, v2
+; VI-NEXT:    v_add_u32_e32 v3, vcc, 0x64006400, v3
+; VI-NEXT:    v_add_u32_e32 v4, vcc, 0x64006400, v4
+; VI-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: and_or_literal_used_by_nonfused:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_and_b32_e32 v0, 0xf000f, v0
+; GFX9-NEXT:    v_or_b32_e32 v0, 0x64006400, v0
+; GFX9-NEXT:    v_add_u32_e32 v1, 0xf000f, v1
+; GFX9-NEXT:    v_add_u32_e32 v2, 0xf000f, v2
+; GFX9-NEXT:    v_add_u32_e32 v3, 0x64006400, v3
+; GFX9-NEXT:    v_add_u32_e32 v4, 0x64006400, v4
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: and_or_literal_used_by_nonfused:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mov_b32 s0, 0xf000f
+; GFX10-NEXT:    v_add_nc_u32_e32 v1, 0xf000f, v1
+; GFX10-NEXT:    v_and_or_b32 v0, v0, s0, 0x64006400
+; GFX10-NEXT:    v_add_nc_u32_e32 v2, 0xf000f, v2
+; GFX10-NEXT:    v_add_nc_u32_e32 v3, 0x64006400, v3
+; GFX10-NEXT:    v_add_nc_u32_e32 v4, 0x64006400, v4
+; GFX10-NEXT:    ; return to shader part epilog
+  %x = and i32 %a, 983055
+  %r = or i32 %x, 1677747200
+  %u = add <4 x i32> %b, <i32 983055, i32 983055, i32 1677747200, i32 1677747200>
+  %s = shufflevector <4 x i32> %u, <4 x i32> poison, <5 x i32> <i32 poison, i32 0, i32 1, i32 2, i32 3>
+  %v = insertelement <5 x i32> %s, i32 %r, i32 0
+  %f = bitcast <5 x i32> %v to <5 x float>
+  ret <5 x float> %f
+}
+
+; Fusing a multiply and add pair selects the quarter rate 64-bit MAD.
+define amdgpu_ps <3 x float> @mul_add_shared_literals(<3 x i32> %a) {
+; VI-LABEL: mul_add_shared_literals:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_mov_b32 s0, 0xf000f
+; VI-NEXT:    v_mul_lo_u32 v0, v0, s0
+; VI-NEXT:    v_mul_lo_u32 v2, v2, s0
+; VI-NEXT:    v_mul_lo_u32 v1, v1, s0
+; VI-NEXT:    v_add_u32_e32 v0, vcc, 0x64006400, v0
+; VI-NEXT:    v_add_u32_e32 v1, vcc, 0x64006400, v1
+; VI-NEXT:    v_add_u32_e32 v2, vcc, 0x64006400, v2
+; VI-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: mul_add_shared_literals:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_mov_b32 s0, 0xf000f
+; GFX9-NEXT:    v_mul_lo_u32 v0, v0, s0
+; GFX9-NEXT:    v_mul_lo_u32 v1, v1, s0
+; GFX9-NEXT:    v_mul_lo_u32 v2, v2, s0
+; GFX9-NEXT:    v_add_u32_e32 v0, 0x64006400, v0
+; GFX9-NEXT:    v_add_u32_e32 v1, 0x64006400, v1
+; GFX9-NEXT:    v_add_u32_e32 v2, 0x64006400, v2
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; gfx10 and gfx11 differ in the moves, so check the fused pair only.
+; GFX10-LABEL: mul_add_shared_literals:
+; GFX10-DAG:     v_mad_u64_u32 v[0:1], {{.*}}, s{{[0-9]+}}, 0x64006400
+; GFX10-DAG:     v_mad_u64_u32 v[1:2], {{.*}}, s{{[0-9]+}}, 0x64006400
+; GFX10-DAG:     v_mad_u64_u32 v[2:3], {{.*}}, s{{[0-9]+}}, 0x64006400
+  %x = mul <3 x i32> %a, splat (i32 983055)
+  %r = add <3 x i32> %x, splat (i32 1677747200)
+  %f = bitcast <3 x i32> %r to <3 x float>
+  ret <3 x float> %f
+}

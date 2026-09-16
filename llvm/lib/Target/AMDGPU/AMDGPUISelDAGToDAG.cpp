@@ -341,7 +341,7 @@ bool AMDGPUDAGToDAGISel::matchLoadD16FromBuildVector(SDNode *N) const {
   return false;
 }
 
-void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
+void AMDGPUDAGToDAGISel::matchLoadD16FromBuildVectors() {
   if (!Subtarget->d16PreservesUnusedBits())
     return;
 
@@ -368,6 +368,86 @@ void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
     LLVM_DEBUG(dbgs() << "After PreProcess:\n";
                CurDAG->dump(););
   }
+}
+
+void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
+  matchLoadD16FromBuildVectors();
+  computeSharedConstantUses();
+}
+
+/// ThreeOpFragSDAG also covers arithmetic pairs, excluded from this model.
+static bool isBitwiseThreeOpPair(const SDNode *Outer, const SDNode *Inner,
+                                 const GCNSubtarget &ST) {
+  if (Outer->getValueType(0) != MVT::i32)
+    return false;
+
+  unsigned Op2 = Outer->getOpcode(), Op1 = Inner->getOpcode();
+  // V_AND_OR_B32 and V_OR3_B32.
+  if (Op2 == ISD::OR && (Op1 == ISD::AND || Op1 == ISD::OR))
+    return ST.getGeneration() >= AMDGPUSubtarget::GFX9;
+  // V_XOR3_B32.
+  return Op2 == ISD::XOR && Op1 == ISD::XOR &&
+         ST.getGeneration() >= AMDGPUSubtarget::GFX10;
+}
+
+void AMDGPUDAGToDAGISel::computeSharedConstantUses() {
+  SharedConstantUses.clear();
+
+  // Fast path: nothing can match below gfx9.
+  if (Subtarget->getGeneration() < AMDGPUSubtarget::GFX9)
+    return;
+
+  for (SDNode &N : CurDAG->allnodes()) {
+    if (!N.isDivergent() || !ISD::isBitwiseLogicOp(N.getOpcode()))
+      continue;
+
+    // Either operand can be the inner half.
+    for (unsigned I : {0u, 1u}) {
+      SDValue Inner = N.getOperand(I);
+      if (!Inner->hasOneUse() ||
+          !isBitwiseThreeOpPair(&N, Inner.getNode(), *Subtarget))
+        continue;
+
+      SDValue Ops[] = {Inner.getOperand(0), Inner.getOperand(1),
+                       N.getOperand(1 - I)};
+      if (fitsConstantBusLimit(Ops))
+        continue;
+
+      // A constant in two slots is still one sharer.
+      SmallPtrSet<const ConstantInt *, 3> Counted;
+      for (SDValue Op : Ops)
+        if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
+          const ConstantInt *CI = C->getConstantIntValue();
+          if (Counted.insert(CI).second)
+            SharedConstantUses[CI]++;
+        }
+    }
+  }
+}
+
+bool AMDGPUDAGToDAGISel::fitsConstantBusLimit(ArrayRef<SDValue> Ops) const {
+  // All three operand instructions have the same limit.
+  return count_if(Ops, [this](SDValue Op) { return usesConstantBus(Op); }) <=
+         Subtarget->getConstantBusLimit(AMDGPU::V_ADD3_U32_e64);
+}
+
+bool AMDGPUDAGToDAGISel::checkThreeOpFragConstantBus(
+    const SDNode *N, ArrayRef<SDValue> Ops) const {
+  if (fitsConstantBusLimit(Ops))
+    return true;
+  // Past the limit operands come from a register, which pays only if shared.
+  SDValue Inner =
+      N->getOperand(0) == Ops[2] ? N->getOperand(1) : N->getOperand(0);
+  if (!isBitwiseThreeOpPair(N, Inner.getNode(), *Subtarget))
+    return false;
+
+  return all_of(Ops, [this](SDValue Op) {
+    if (!usesConstantBus(Op))
+      return true;
+    // Two users only break even, and cost a register on top.
+    auto *C = dyn_cast<ConstantSDNode>(Op);
+    return C && SharedConstantUses.lookup(C->getConstantIntValue()) >= 3;
+  });
 }
 
 bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N) const {
