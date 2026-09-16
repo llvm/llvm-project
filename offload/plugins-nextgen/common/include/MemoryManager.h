@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cassert>
 #include <functional>
+#include <limits>
 #include <list>
 #include <mutex>
 #include <set>
@@ -260,7 +261,14 @@ public:
     if (Size == 0)
       return nullptr;
 
-    size_t AllocationSize = Alignment > 0 ? (Size + Alignment - 1) : Size;
+    if (Alignment > 0 &&
+        Size > std::numeric_limits<size_t>::max() - (Alignment - 1)) {
+      ODBG(OLDT_Alloc) << "MemoryManagerTy::allocate: warning: size+alignment "
+                          "overflow, bailing out.";
+      return nullptr;
+    }
+
+    const size_t AllocationSize = Alignment > 0 ? (Size + Alignment - 1) : Size;
 
     ODBG(OLDT_Alloc) << "MemoryManagerTy::allocate: requested memory " << Size
                      << ", allocated:  " << AllocationSize
