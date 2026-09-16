@@ -364,6 +364,11 @@ public:
 
   bool isCuModeEnabled() const { return EnableCuMode; }
 
+  /// \returns Whether a work-group runs on all of the block's SIMDs.
+  bool isFullSIMDMode() const {
+    return (HasGFX1250Insts && getGeneration() < GFX13) || !EnableCuMode;
+  }
+
   bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
 
   bool hasFlatScrRegister() const { return hasFlatAddressSpace(); }
@@ -623,6 +628,10 @@ public:
   bool hasVALUPartialForwardingHazard() const {
     return getGeneration() == GFX11;
   }
+
+  /// GFX11 VOPD dest-buffer forwarding can drop the interlock when SRC0 or
+  /// SRC1 X/Y are distinct VGPRs with the same parity.
+  bool hasGFX11VOPDInterlockHazard() const { return getGeneration() == GFX11; }
 
   bool hasCvtScaleForwardingHazard() const { return HasGFX950Insts; }
 

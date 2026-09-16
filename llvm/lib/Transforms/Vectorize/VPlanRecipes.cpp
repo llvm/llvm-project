@@ -4989,6 +4989,15 @@ InstructionCost VPInterleaveBase::computeCost(ElementCount VF,
                                            0);
 }
 
+InstructionCost
+VPWidenPointerInductionRecipe::computeCost(ElementCount VF,
+                                           VPCostContext &Ctx) const {
+  // The recipe creates a scalar phi, a GEP to increment the induction and
+  // vector add to compute the vector of pointers.
+  // TODO: Charge costs for induction increment and vector add as well.
+  return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
+}
+
 bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {
   return vputils::onlyScalarValuesUsed(this) &&
          (!IsScalable || vputils::onlyFirstLaneUsed(this));

@@ -1756,10 +1756,12 @@ public:
       if (!isUIntN(RetBW, Vec.size()))
         return AnyValue::poison();
 
-      uint64_t Count = 0;
-      for (const AnyValue &V : Vec) {
+      for (const AnyValue &V : Vec)
         if (V.isPoison())
           return AnyValue::poison();
+
+      uint64_t Count = 0;
+      for (const AnyValue &V : Vec) {
         if (!V.asInteger().isZero())
           break;
         ++Count;

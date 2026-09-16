@@ -307,9 +307,10 @@ InstructionCost getBoolReduxBitcastCmpCost(const TargetTransformInfo &TTI,
 
 InstructionCost getBoolBitmaskCost(const TargetTransformInfo &TTI,
                                    bool NeedMask, Type *NarrowScalarTy,
-                                   Type *WideTy, unsigned VF, const Value *Root,
+                                   Type *WideTy, unsigned VF,
+                                   ArrayRef<int> PermMask, const Value *Root,
                                    const TTI::TargetCostKind CostKind) {
-  Type *NarrowVecTy = getWidenedType(NarrowScalarTy, VF);
+  auto *NarrowVecTy = cast<VectorType>(getWidenedType(NarrowScalarTy, VF));
   Type *CmpTy = CmpInst::makeCmpResultType(NarrowVecTy);
   auto *MaskTy = IntegerType::get(WideTy->getContext(), VF);
   // The result cast inherits the uses of the reduction root.
@@ -321,13 +322,18 @@ InstructionCost getBoolBitmaskCost(const TargetTransformInfo &TTI,
         Instruction::And, NarrowVecTy, CostKind,
         {TTI::OK_AnyValue, TTI::OP_None},
         {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CxtI);
+  if (!ShuffleVectorInst::isIdentityMask(PermMask, VF))
+    Cost += getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, NarrowVecTy, CostKind,
+                           PermMask);
   if (!NarrowScalarTy->isIntegerTy(1))
     Cost += TTI.getCmpSelInstrCost(
         Instruction::ICmp, NarrowVecTy, CmpTy, CmpInst::ICMP_NE, CostKind,
         {TTI::OK_AnyValue, TTI::OP_None},
         {TTI::OK_UniformConstantValue, TTI::OP_None});
-  Cost +=
-      TTI.getCastInstrCost(Instruction::BitCast, MaskTy, CmpTy, CCH, CostKind);
+  // Only the final cast inherits the uses of the reduction root.
+  Cost += TTI.getCastInstrCost(
+      Instruction::BitCast, MaskTy, CmpTy,
+      MaskTy == WideTy ? CCH : TTI::CastContextHint::None, CostKind);
   if (MaskTy != WideTy)
     Cost +=
         TTI.getCastInstrCost(Instruction::ZExt, WideTy, MaskTy, CCH, CostKind);

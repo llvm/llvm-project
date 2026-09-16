@@ -18723,6 +18723,13 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       (Worklist.top().first->Idx == 0 || Worklist.top().first->Idx == 1))
     return Cost;
 
+  // Original gather costs before any trimming; used to rebase the reference
+  // cost on the recosted gathers if the trimming is reverted.
+  SmallDenseMap<const TreeEntry *, InstructionCost> OrigGatherCosts;
+  if (!SplatGatheredScalarsRoots.empty())
+    for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree)
+      if (TE->isGather())
+        OrigGatherCosts.try_emplace(TE.get(), NodesCosts.lookup(TE.get()));
   bool Changed = false;
   bool PreferTrimmedTree = false;
   while (!Worklist.empty() && std::get<0>(Worklist.top().second) > 0) {
@@ -18969,6 +18976,10 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
         *TTI, SLPReVec, ScalarTy,
         cast<VectorType>(getWidenedType(ScalarTy, TE->getVectorFactor())),
         ExtractElts, /*Insert=*/false, /*Extract=*/true, CostKind);
+    // Scale the extract cost to the subtree's execution frequency: the
+    // subtree and gather costs it is compared against are already loop-scaled.
+    if (KeepCost.isValid() && KeepCost != 0)
+      KeepCost *= getEntryEffectiveScale(*TE);
     // Add the cost of the subtree itself, computed before any trimming:
     // trimming of the subtree's own nodes would otherwise make it look
     // artificially cheap.
@@ -18998,7 +19009,16 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     DeletedNodes.erase(TE);
     for (TreeEntry *Child : TempDeleted)
       DeletedNodes.erase(Child);
-    return KeepCost <= DroppedGathersCost;
+    // On a cost tie prefer dropping the subtree: the reusing gathers
+    // materialize the scalars at the same price with fewer instructions.
+    return KeepCost < DroppedGathersCost;
+  };
+  // Re-price the gathers that reused a dropped splat subtree, so the
+  // remaining subtrees are checked against the costs with it deleted.
+  auto SyncGatherCosts = [&](const ValuesToInsertTy &ValuesToInsert) {
+    for (const auto &[BVE, _] : ValuesToInsert)
+      if (!DeletedNodes.contains(BVE))
+        NodesCosts[BVE] = RecostEntry(BVE);
   };
   if (!Changed) {
     // The splat subtrees are not linked to the tree root, so their cost is
@@ -19019,6 +19039,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
         DeletedNodes.insert(VectorizableTree[Idx].get());
       // The gather nodes that reused the subtree are re-emitted without it.
       TotalCost += DroppedGathersCost - CurrentGathersCost;
+      SyncGatherCosts(ValuesToInsert);
     }
     // Gathered loads subtrees left without surviving gather users are dead.
     for (TreeEntry *TE : GatheredLoadsNodes) {
@@ -19139,6 +19160,51 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     DeletedNodes.insert(DroppedSplatSubtrees.begin(),
                         DroppedSplatSubtrees.end());
     NewCost = Cost;
+    if (!SplatGatheredScalarsRoots.empty()) {
+      // The revert restores the pre-trimming tree, including the splat
+      // subtrees that were deleted as unused while their reusing gathers were
+      // trimmed. Recost the gather nodes for the restored set of vectorized
+      // nodes, then drop the splat subtrees that do not pay off in the
+      // restored tree. The reference cost still holds the gather costs of the
+      // full tree, where the already dropped splat subtrees served as reuse
+      // sources; rebase it on the recosted costs.
+      for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+        if (!TE->isGather() || DeletedNodes.contains(TE.get()))
+          continue;
+        InstructionCost C = RecostEntry(TE.get());
+        NewCost += C - OrigGatherCosts.lookup(TE.get());
+        NodesCosts[TE.get()] = C;
+      }
+      for (TreeEntry *TE : SplatGatheredScalarsRoots) {
+        if (DeletedNodes.contains(TE))
+          continue;
+        ValuesToInsertTy ValuesToInsert;
+        InstructionCost CurrentGathersCost = 0, DroppedGathersCost = 0;
+        if (!FindDemandedElts(TE, ValuesToInsert).isZero() &&
+            IsSplatSubtreeProfitable(TE, ValuesToInsert, CurrentGathersCost,
+                                     DroppedGathersCost))
+          continue;
+        DeletedNodes.insert(TE);
+        for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx]))
+          DeletedNodes.insert(VectorizableTree[Idx].get());
+        NewCost += DroppedGathersCost - CurrentGathersCost -
+                   std::get<1>(SubtreeCosts[TE->Idx]);
+        SyncGatherCosts(ValuesToInsert);
+      }
+      // Dropping the splat subtrees may leave the gathered loads subtrees
+      // built for them without surviving gather users; delete those too.
+      for (TreeEntry *TE : GatheredLoadsNodes) {
+        if (DeletedNodes.contains(TE))
+          continue;
+        ValuesToInsertTy ValuesToInsert;
+        if (!FindDemandedElts(TE, ValuesToInsert).isZero())
+          continue;
+        DeletedNodes.insert(TE);
+        for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx]))
+          DeletedNodes.insert(VectorizableTree[Idx].get());
+        NewCost -= std::get<1>(SubtreeCosts[TE->Idx]);
+      }
+    }
   } else {
     // If the remaining tree is just a buildvector - exit, it will cause
     // endless attempts to vectorize.
@@ -21203,6 +21269,17 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
 void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   auto *Front = E->getMainOp();
   Instruction *LastInst = &getLastInstructionInBundle(E);
+  // Struct-call extractvalue entries may have scalars in different basic
+  // blocks. The vector extractvalue depends only on the vectorized call, so
+  // use the call bundle to set the insert point and dominate all uses.
+  const bool UseCallBundleInsertPoint =
+      E->getOpcode() == Instruction::ExtractValue &&
+      !E->StructEVIndices.empty() &&
+      any_of(E->Scalars, [BB = Front->getParent()](Value *V) {
+        return cast<Instruction>(V)->getParent() != BB;
+      });
+  if (UseCallBundleInsertPoint)
+    LastInst = &getLastInstructionInBundle(getOperandEntry(E, 0));
   assert(LastInst && "Failed to find last instruction in bundle");
   BasicBlock::iterator LastInstIt = LastInst->getIterator();
   // If the instruction is PHI, set the insert point after all the PHIs.
@@ -21215,6 +21292,7 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   }
   if (IsPHI ||
       (!E->isGather() && E->State != TreeEntry::SplitVectorize &&
+       !UseCallBundleInsertPoint &&
        (E->doesNotNeedToSchedule() ||
         (E->hasCopyableElements() && !E->isCopyableElement(LastInst) &&
          isUsedOutsideBlock(LastInst)))) ||
@@ -31272,8 +31350,8 @@ public:
           ReductionCost = 0;
         else
           ReductionCost =
-              getReductionCost(TTI, VL, SameValuesCounter, IsCmpSelMinMax,
-                               GroupRdxFMF, V, DT, DL, TLI);
+              getReductionCost(TTI, VL, TrackedToOrig, Pos, SameValuesCounter,
+                               IsCmpSelMinMax, GroupRdxFMF, V, DT, DL, TLI);
         // If the root is a select (min/max idiom), the insert point is the
         // compare condition of that select.
         Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
@@ -31400,9 +31478,9 @@ public:
           }
           if (Value *Bitmask = emitBoolBitmaskRdx(
                   Builder, V, *TTI, DL, VectorizedRoot, VL, TrackedToOrig, Pos,
-                  MaskConsts, GroupRdxFMF))
+                  MaskConsts, GroupRdxFMF)) {
             VectorizedRoot = Bitmask;
-          else {
+          } else {
             if (AnyMask)
               VectorizedRoot = Builder.CreateAnd(
                   VectorizedRoot, ConstantVector::get(MaskConsts));
@@ -31837,9 +31915,9 @@ public:
           V.calculateTreeCostAndTrimNonProfitable(VL, RdxRootInst);
       V.buildExternalUses(LocalExternallyUsedValues);
 
-      InstructionCost ReductionCost =
-          getReductionCost(TTI, VL, EmptySameValuesCounter,
-                           /*IsCmpSelMinMax=*/false, RdxFMF, V, DT, DL, TLI);
+      InstructionCost ReductionCost = getReductionCost(
+          TTI, VL, /*TrackedToOrig=*/{}, /*Pos=*/0, EmptySameValuesCounter,
+          /*IsCmpSelMinMax=*/false, RdxFMF, V, DT, DL, TLI);
       InstructionCost Cost =
           V.getTreeCost(TreeCost, VL, ReductionCost, RdxRootInst);
       LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
@@ -32054,6 +32132,19 @@ private:
     return Rdx;
   }
 
+  /// The lane order of the zero tests by their bit position, shared between
+  /// the cost evaluation and the emission of the boolean bitmask reduction.
+  SmallVector<int> getBoolBitmaskPermMask(ArrayRef<Value *> VL,
+                                          ArrayRef<Value *> TrackedToOrig,
+                                          unsigned Pos,
+                                          const BoUpSLP &R) const {
+    SmallVector<int> PermMask(VL.size(), PoisonMaskElem);
+    for (auto [Idx, Val] : enumerate(VL))
+      PermMask[NarrowedLeafShifts.at(TrackedToOrig[Pos + Idx]).Shift] =
+          R.findRootLaneForValue(Val);
+    return PermMask;
+  }
+
   /// Emits the boolean bitmask form of the narrowed-leaf or-reduction (a
   /// bitcast of the per-lane zero tests to an integer) if it covers the whole
   /// reduction in a single vector part and is cheaper than the shift and
@@ -32079,6 +32170,8 @@ private:
     BoolBitmask Match = isBoolBitmaskRdx(RdxKind, NarrowedLeafShifts, DL);
     if (Match == BoolBitmask::None)
       return nullptr;
+    SmallVector<int> PermMask =
+        getBoolBitmaskPermMask(VL, TrackedToOrig, Pos, R);
     // Emit the bitmask form only if it is cheaper than the shift and
     // reduction sequence.
     const TTI::TargetCostKind CostKind = R.getCostKind();
@@ -32102,12 +32195,14 @@ private:
           {TTI::OK_AnyValue, TTI::OP_None},
           {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CxtI);
     if (getBoolBitmaskCost(TTI, Match == BoolBitmask::NeedMask, NarrowTy,
-                           WideTy, VF, ReductionRoot, CostKind) >= GenericCost)
+                           WideTy, VF, PermMask, ReductionRoot,
+                           CostKind) >= GenericCost)
       return nullptr;
     Value *Vec = VectorizedRoot;
     switch (Match) {
     case BoolBitmask::NeedMask:
       Vec = Builder.CreateAnd(Vec, ConstantVector::get(MaskConsts));
+      ++NumVectorInstructions;
       break;
     case BoolBitmask::NoMask:
       break;
@@ -32116,12 +32211,10 @@ private:
     }
     // Reorder the lanes by their bit position and pack the zero tests into an
     // integer.
-    SmallVector<int> PermMask(VF, PoisonMaskElem);
-    for (auto [Idx, Val] : enumerate(VL))
-      PermMask[NarrowedLeafShifts.at(TrackedToOrig[Pos + Idx]).Shift] =
-          R.findRootLaneForValue(Val);
-    if (!ShuffleVectorInst::isIdentityMask(PermMask, VF))
+    if (!ShuffleVectorInst::isIdentityMask(PermMask, VF)) {
       Vec = Builder.CreateShuffleVector(Vec, PermMask);
+      ++NumVectorInstructions;
+    }
     if (!NarrowTy->isIntegerTy(1)) {
       Vec = Builder.CreateICmpNE(Vec, Constant::getNullValue(Vec->getType()));
       ++NumVectorInstructions;
@@ -32136,6 +32229,7 @@ private:
   /// Calculate the cost of a reduction.
   InstructionCost getReductionCost(
       TargetTransformInfo *TTI, ArrayRef<Value *> ReducedVals,
+      ArrayRef<Value *> TrackedToOrig, unsigned Pos,
       const SmallMapVector<Value *, unsigned, 16> SameValuesCounter,
       bool IsCmpSelMinMax, FastMathFlags FMF, const BoUpSLP &R,
       DominatorTree &DT, const DataLayout &DL, const TargetLibraryInfo &TLI) {
@@ -32271,13 +32365,16 @@ private:
           // The boolean bitmask emission may be cheaper.
           BoolBitmask Match =
               NarrowedLeafShifts.size() == ReduxWidth &&
+                      R.getRootNode().getVectorFactor() == ReduxWidth &&
                       R.getRootNode().ReuseShuffleIndices.empty()
                   ? isBoolBitmaskRdx(RdxKind, NarrowedLeafShifts, DL)
                   : BoolBitmask::None;
           if (Match != BoolBitmask::None) {
+            SmallVector<int> PermMask =
+                getBoolBitmaskPermMask(ReducedVals, TrackedToOrig, Pos, R);
             InstructionCost BitmaskCost = getBoolBitmaskCost(
                 *TTI, Match == BoolBitmask::NeedMask, ScalarTy, WideTy,
-                ReduxWidth, ReductionRoot, CostKind);
+                ReduxWidth, PermMask, ReductionRoot, CostKind);
             for (Instruction *I : NarrowedChainInsts)
               BitmaskCost -= TTI->getInstructionCost(I, CostKind);
             VectorCost = std::min(VectorCost, BitmaskCost);

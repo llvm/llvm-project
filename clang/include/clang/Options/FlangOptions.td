@@ -199,6 +199,9 @@ defm openacc_default_none_scalars_strict : OptOutFC1FFlag<"openacc-default-none-
 defm openacc_multiple_names_in_routine : OptOutFC1FFlag<"openacc-multiple-names-in-routine",
   "Accept multiple names in OpenACC ROUTINE directive (extension)",
   "Do not accept multiple names in OpenACC ROUTINE directive">;
+defm openacc_combined_loop_firstprivate : OptOutFC1FFlag<"openacc-combined-loop-firstprivate",
+  "Attach firstprivate on combined loop in addition to compute construct (extension)",
+  "Keep firstprivate only on the compute construct for combined loop">;
 defm prefer_intrinsic_module_use_association : OptOutFC1FFlag<"prefer-intrinsic-module-use-association",
   "Resolve a USE association conflict in favor of an intrinsic module generic (extension)",
   "Diagnose a USE association conflict with an intrinsic module generic">;
@@ -314,6 +317,10 @@ def ffast_real_mod : Flag<["-"], "ffast-real-mod">, Group<f_Group>,
   HelpText<"Enable optimization of MOD for REAL types">;
 def fno_fast_real_mod : Flag<["-"], "fno-fast-real-mod">, Group<f_Group>,
   HelpText<"Disable optimization of MOD for REAL types in presence of -ffast-math">;
+
+def fcheck_integer_mod_zero_divisor
+    : Flag<["-"], "fcheck-integer-mod-zero-divisor">, Group<f_Group>,
+      HelpText<"Check for a zero divisor in integer MOD and MODULO">;
 
 defm fp_sum_reassociation
     : BoolOptionWithoutMarshalling<
