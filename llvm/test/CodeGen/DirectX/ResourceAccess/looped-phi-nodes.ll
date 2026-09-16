@@ -14,10 +14,6 @@
 ;   }
 
 ; CHECK: error: Resource access is not guaranteed to map to a unique global resource
-; CHECK: note: At resource access:  %count = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %src, i8 1)
-; CHECK-DAG: note: Uses resource handle:  %handle0 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
-; CHECK-DAG: note: Uses resource handle:  %handle1 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 1, i32 1, i32 0, ptr nonnull @.str.2)
-; CHECK: error: Resource access is not guaranteed to map to a unique global resource
 
 @.str = private unnamed_addr constant [5 x i8] c"bufA\00", align 1
 @.str.2 = private unnamed_addr constant [5 x i8] c"bufB\00", align 1
@@ -47,6 +43,11 @@ for.body:
 end:
   ret void
 }
+
+; CHECK: error: Resource access is not guaranteed to map to a unique global resource
+; CHECK: note: At resource access:  %count = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %src, i8 1)
+; CHECK-DAG: note: Uses resource handle:  %handle0 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+; CHECK-DAG: note: Uses resource handle:  %handle1 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 1, i32 1, i32 0, ptr nonnull @.str.2)
 
 define i32 @updatecounter_loop(i32 %n) {
 entry:
