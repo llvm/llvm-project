@@ -132,6 +132,11 @@ public:
     return false;
   }
 
+  virtual bool
+  isMemmoveProfitable(const std::optional<APInt> &PtrDiff) const {
+    return true;
+  }
+
   virtual ValueUniformity getValueUniformity(const Value *V) const {
     return ValueUniformity::Default;
   }
