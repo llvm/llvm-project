@@ -378,10 +378,12 @@ LIBC_INLINE double pow(double x, double y) {
   unsigned idx_x = static_cast<unsigned>(x_mant >> (FPBits::FRACTION_LEN - 4));
   if (idx_x == 15)
     e_x += 1.0;
-  FPBits m_x = FPBits(x_mant | 0x3ff0'0000'0000'0000ULL);
+  FPBits m_x = FPBits(static_cast<uint64_t>(x_mant | 0x3ff0'0000'0000'0000ULL));
   double m = m_x.get_val();
   double r_x = RD_16[idx_x];
-  double m_hi = FPBits(m_x.uintval() & 0xffff'fff0'0000'0000ULL).get_val();
+  double m_hi =
+      FPBits(static_cast<uint64_t>(m_x.uintval() & 0xffff'fff0'0000'0000ULL))
+          .get_val();
   double m_lo = m - m_hi;
   double u_hi = fputil::multiply_add(r_x, m_hi, -1.0);
   double u_lo = r_x * m_lo;

@@ -920,7 +920,8 @@ LIBC_INLINE double log2(double x) {
   uint64_t x_m = (x_u & 0x000F'FFFF'FFFF'FFFFULL) | 0x3FF0'0000'0000'0000ULL;
   double m = FPBits_t(x_m).get_val();
 
-  double m_hi = FPBits_t(x_m & 0xFFFF'FFF0'0000'0000ULL).get_val();
+  double m_hi =
+      FPBits_t(static_cast<uint64_t>(x_m & 0xFFFF'FFF0'0000'0000ULL)).get_val();
   double m_lo = m - m_hi;
   double u_hi = fputil::multiply_add(r, m_hi, -1.0);
   double u_lo = r * m_lo;
