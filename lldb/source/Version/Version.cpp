@@ -11,7 +11,7 @@
 #include "lldb/Version/Version.inc"
 #include "clang/Basic/Version.h"
 
-const char *aix_version_string = " AIX pre-release VRMF: 23.1.0.1 \n";
+const char *aix_version_string = " AIX pre-release VRMF: 23.1.0.2 \n";
 
 static const char *GetLLDBVersion() {
 #ifdef LLDB_FULL_VERSION_STRING
