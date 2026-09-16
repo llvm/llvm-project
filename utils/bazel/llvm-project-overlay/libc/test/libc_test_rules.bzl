@@ -18,12 +18,8 @@ load("//libc:libc_configure_options.bzl", "LIBC_CONFIGURE_OPTIONS")
 
 _TEST_DEFINES = [
     "LIBC_TEST_SUBPROCESS_TESTS=1",
-] + select({
-    "//libc:full_build": [
-        "TARGET_SUPPORTS_CLOCK",
-    ],
-    "//conditions:default": [],
-})
+    "TARGET_SUPPORTS_CLOCK",
+]
 
 def libc_test(
         name,
