@@ -116,8 +116,10 @@ static DecodeStatus DecodeSimpleRegisterClass(MCInst &Inst, uint32_t RegNo,
 constexpr auto DecodeGPRRegisterClass =
     DecodeSimpleRegisterClass<RISCV::X0, 32, /*RVELimit=*/16>;
 
-static DecodeStatus DecodeGPRX1RegisterClass(MCInst &Inst,
+static DecodeStatus DecodeGPRX1RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                             uint32_t Address,
                                              const MCDisassembler *Decoder) {
+  assert(RegNo == 1);
   Inst.addOperand(MCOperand::createReg(RISCV::X1));
   return MCDisassembler::Success;
 }
@@ -136,8 +138,10 @@ static DecodeStatus DecodeSPRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeGPRX5RegisterClass(MCInst &Inst,
+static DecodeStatus DecodeGPRX5RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                             uint32_t Address,
                                              const MCDisassembler *Decoder) {
+  assert(RegNo == 5);
   Inst.addOperand(MCOperand::createReg(RISCV::X5));
   return MCDisassembler::Success;
 }
@@ -640,8 +644,6 @@ static constexpr DecoderListEntry DecoderList16[]{
      "Xqccmt (Qualcomm 16-bit Table Jump Instructions)"},
     {DecoderTableXwchc16, {RISCV::FeatureVendorXwchc}, "WCH QingKe XW"},
     // Standard Extensions
-    // DecoderTableZicfiss16 must be checked before DecoderTable16.
-    {DecoderTableZicfiss16, {}, "Zicfiss (Shadow Stack 16-bit)"},
     {DecoderTable16, {}, "standard 16-bit instructions"},
     {DecoderTableRV32Only16, {}, "RV32-only 16-bit instructions"},
     // Zc* instructions incompatible with Zcf or Zcd
