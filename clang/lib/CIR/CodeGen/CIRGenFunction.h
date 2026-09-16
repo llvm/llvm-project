@@ -1106,6 +1106,13 @@ public:
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);
 
+  /// Wrap the function body in a filter `cir.try` when \p d has a dynamic
+  /// exception specification (`throw(T...)` or pre-C++17 `throw()`).
+  void emitStartEHSpec(const clang::Decl *d);
+
+  /// Close the filter `cir.try` opened by emitStartEHSpec.
+  void emitEndEHSpec(const clang::Decl *d);
+
   /// returns true if aggregate type has a volatile member.
   bool hasVolatileMember(QualType t) {
     if (const auto *rd = t->getAsRecordDecl())
@@ -1119,6 +1126,10 @@ public:
   /// The cleanup depth enclosing all the cleanups associated with the
   /// parameters.
   EHScopeStack::stable_iterator prologueCleanupDepth;
+
+  /// The `cir.try` wrapping a function with a dynamic exception specification.
+  /// Null when the current function has no such specification.
+  cir::TryOp ehSpecTryOp;
 
   bool isCatchOrCleanupRequired();
 

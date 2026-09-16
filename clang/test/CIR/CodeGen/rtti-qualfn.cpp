@@ -8,8 +8,10 @@
 // Test that throwing a pointer to a noexcept function produces correct RTTI
 // with the PTI_Noexcept flag (0x40 = 64) set in the __pointer_type_info.
 
-void f() noexcept {
-  throw f;
+void g() noexcept;
+
+void f() {
+  throw g;
 }
 
 // The pointee type _ZTIFvvE (function type info for void()) must be emitted
@@ -33,4 +35,4 @@ void f() noexcept {
 // OGCG-DAG: @_ZTIFvvE = linkonce_odr constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__function_type_infoE, i64 2), ptr @_ZTSFvvE }, comdat
 // OGCG-DAG: @_ZTSPDoFvvE = linkonce_odr constant [8 x i8] c"PDoFvvE\00", comdat
 // OGCG-DAG: @_ZTIPDoFvvE = linkonce_odr constant { ptr, ptr, i32, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv119__pointer_type_infoE, i64 2), ptr @_ZTSPDoFvvE, i32 64, ptr @_ZTIFvvE }, comdat
-// OGCG: invoke void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIPDoFvvE, ptr null)
+// OGCG: call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIPDoFvvE, ptr null)

@@ -9,7 +9,7 @@
 // must not crash during TryOp flattening when handler regions reference
 // values inlined from the try body.
 
-int nonThrowing() noexcept { return 42; }
+int nonThrowing() throw() { return 42; }
 
 int test() {
   int result = 0;
