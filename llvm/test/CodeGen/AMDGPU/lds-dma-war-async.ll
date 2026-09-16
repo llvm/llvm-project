@@ -45,8 +45,8 @@ define i32 @lds_then_dma.global.wg(ptr addrspace(1) %g, ptr addrspace(3) inreg %
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s0
 ; CHECK-NEXT:    ds_load_b32 v2, v3
-; CHECK-NEXT:    global_load_async_to_lds_b32 v3, v[0:1], off
 ; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    global_load_async_to_lds_b32 v3, v[0:1], off
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
@@ -136,6 +136,7 @@ define i32 @lds_then_dma.global.wg.partial(ptr addrspace(1) %g, ptr addrspace(3)
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v4, s1
 ; CHECK-NEXT:    ds_load_b32 v3, v2
+; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    ds_load_b32 v4, v4
 ; CHECK-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
 ; CHECK-NEXT:    s_wait_dscnt 0x0
@@ -230,8 +231,8 @@ define i32 @lds_then_dma.tensor.wg(<4 x i32> inreg %D0, <8 x i32> inreg %D1, ptr
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s24
 ; CHECK-NEXT:    ds_load_b32 v0, v0
-; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
 ; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
   fence syncscope("workgroup") release, !mmra !0
@@ -318,6 +319,7 @@ define i32 @lds_then_dma.tensor.wg.partial(<4 x i32> inreg %D0, <8 x i32> inreg 
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_dual_mov_b32 v0, s24 :: v_dual_mov_b32 v1, s25
 ; CHECK-NEXT:    ds_load_b32 v0, v0
+; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    ds_load_b32 v1, v1
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
 ; CHECK-NEXT:    s_wait_dscnt 0x0

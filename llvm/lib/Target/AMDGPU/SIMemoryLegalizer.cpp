@@ -317,7 +317,7 @@ public:
   /// Construct class to support accessing the machine memory operands
   /// of instructions.
   SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI, const GCNSubtarget &ST,
-                const Function &F);
+                const MachineFunction &MF);
 
   /// \returns Load info if \p MI is a load operation, "std::nullopt" otherwise.
   std::optional<SIMemOpInfo>
@@ -838,13 +838,23 @@ SIAtomicAddrSpace SIMemOpAccess::toSIAtomicAddrSpace(unsigned AS) const {
   return SIAtomicAddrSpace::OTHER;
 }
 
+/// returns true if any instruction in \p MF accesses LDS through DMA.
+static bool containsLDSDMA(const MachineFunction &MF) {
+  return any_of(MF, [](const MachineBasicBlock &MBB) {
+    return any_of(MBB.instrs(), [](const MachineInstr &MI) {
+      return SIInstrInfo::isLDSDMA(MI);
+    });
+  });
+}
+
 // TODO: Consider moving single-wave workgroup->wavefront scope relaxation to an
 // IR pass (and extending it to other scoped operations), so middle-end
 // optimizations see wavefront scope earlier.
 SIMemOpAccess::SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI_,
-                             const GCNSubtarget &ST, const Function &F)
-    : MMI(&MMI_), ST(ST),
-      CanDemoteWorkgroupToWavefront(ST.isSingleWavefrontWorkgroup(F)) {}
+                             const GCNSubtarget &ST, const MachineFunction &MF)
+    : MMI(&MMI_), ST(ST), CanDemoteWorkgroupToWavefront(
+                              ST.isSingleWavefrontWorkgroup(MF.getFunction()) &&
+                              !containsLDSDMA(MF)) {}
 
 std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     const MachineBasicBlock::iterator &MI) const {
@@ -2604,7 +2614,7 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const Function &F = MF.getFunction();
-  SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>(), ST, F);
+  SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>(), ST, MF);
   bool TgSplit = ST.hasTgSplitSupport() && AMDGPU::isTgSplitEnabled(F);
   CC = SICacheControl::create(ST, TgSplit);
 
