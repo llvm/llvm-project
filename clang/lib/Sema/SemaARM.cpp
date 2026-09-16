@@ -372,8 +372,10 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
       SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(1));
   if (DataArgRes.isInvalid())
     return true;
-  QualType DataQT = Context.getCanonicalType(DataArgRes.get()->getType())
-                        .getUnqualifiedType();
+  auto *DataArg = DataArgRes.get();
+  QualType DataQT =
+      Context.getCanonicalType(DataArg->getType()).getUnqualifiedType();
+  TheCall->setArg(1, DataArg);
 
   if (PtrQT != DataQT)
     return Diag(TheCall->getBeginLoc(),
@@ -382,20 +384,27 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
 
   // Arg 2 is the memory order, which must be relaxed, release or seq_cst
   auto MemOrdArg =
-      SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(2)).get();
-  if (!MemOrdArg->isValueDependent()) {
+      SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(2));
+  if (MemOrdArg.isInvalid())
+    return true;
+  auto *MemOrd = MemOrdArg.get();
+  if (SemaRef.convertArgumentToType(MemOrd, Context.IntTy))
+    return true;
+  TheCall->setArg(2, MemOrd);
+
+  if (!MemOrd->isValueDependent()) {
     std::optional<llvm::APSInt> MemOrdAP =
-        MemOrdArg->getIntegerConstantExpr(Context);
+        MemOrd->getIntegerConstantExpr(Context);
     if (!MemOrdAP)
       return Diag(TheCall->getBeginLoc(),
                   diag::err_atomic_hint_has_invalid_memory_order)
-             << MemOrdArg->getType() << MemOrdArg->getSourceRange();
+             << MemOrd->getType() << MemOrd->getSourceRange();
 
     unsigned Ordering = MemOrdAP->getZExtValue();
     if (!llvm::isValidAtomicOrderingCABI(Ordering))
       return Diag(TheCall->getBeginLoc(),
                   diag::err_atomic_hint_has_invalid_memory_order)
-             << *MemOrdAP << MemOrdArg->getSourceRange();
+             << *MemOrdAP << MemOrd->getSourceRange();
 
     auto AtomicOrdering = static_cast<llvm::AtomicOrderingCABI>(Ordering);
     if (AtomicOrdering != llvm::AtomicOrderingCABI::relaxed &&
@@ -403,28 +412,34 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
         AtomicOrdering != llvm::AtomicOrderingCABI::seq_cst)
       return Diag(TheCall->getBeginLoc(),
                   diag::err_atomic_hint_has_invalid_memory_order)
-             << *MemOrdAP << MemOrdArg->getSourceRange();
+             << *MemOrdAP << MemOrd->getSourceRange();
   }
 
   // Arg 3 is the hint type. Only values represented by AArch64MemoryHint
   // are valid.
   auto HintArg =
-      SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(3)).get();
-  if (!HintArg->isValueDependent()) {
-    std::optional<llvm::APSInt> HintAP =
-        HintArg->getIntegerConstantExpr(Context);
-    if (!HintAP) {
-      Diag(TheCall->getBeginLoc(), diag::err_atomic_hint_has_invalid_hint_type)
-          << HintArg->getType() << HintArg->getSourceRange();
+      SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(3));
+  if (HintArg.isInvalid())
+    return true;
+  auto Hint = HintArg.get();
+  if (SemaRef.convertArgumentToType(Hint, Context.IntTy))
+    return true;
+  TheCall->setArg(3, Hint);
+
+  if (!Hint->isValueDependent()) {
+    std::optional<llvm::APSInt> HintAP = Hint->getIntegerConstantExpr(Context);
+    if (!HintAP)
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_atomic_hint_has_invalid_hint_type)
+             << Hint->getType() << Hint->getSourceRange();
+
+    if (llvm::toAArch64MemoryHint(HintAP->getZExtValue()) ==
+        llvm::AArch64MemoryHint::HINT_NONE) {
+      Diag(TheCall->getBeginLoc(), diag::warn_atomic_hint_has_invalid_hint_type)
+          << *HintAP << Hint->getSourceRange();
       return false;
     }
-
-    unsigned Hint = HintAP->getZExtValue();
-    if (llvm::toAArch64MemoryHint(Hint) == llvm::AArch64MemoryHint::HINT_NONE)
-      Diag(TheCall->getBeginLoc(), diag::warn_atomic_hint_has_invalid_hint_type)
-          << *HintAP << HintArg->getSourceRange();
   }
-
   return false;
 }
 
