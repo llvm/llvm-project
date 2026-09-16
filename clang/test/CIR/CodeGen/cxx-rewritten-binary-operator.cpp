@@ -165,7 +165,7 @@ void cxx_rewritten_binary_operator_lvalue_expr() {
 
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_LValueItem>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_LValueItem>
-// CIR: %[[REF_ADDR:.*]] = cir.alloca "ref" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
+// CIR: %[[REF_ADDR:.*]] = cir.alloca "ref" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[TMP_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_SpaceshipLValueResult>
 // CIR: cir.call @_ZNK10LValueItemssERKS_(%[[A_ADDR]], %[[B_ADDR]]) : (!cir.ptr<!rec_LValueItem> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!rec_LValueItem> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}) -> ()
 // CIR: %[[OP_RESULT:.*]] = cir.const #cir.poison : !rec_SpaceshipLValueResult
