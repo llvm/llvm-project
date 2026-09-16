@@ -271,15 +271,10 @@ static DecodeStatus decodeVMaskReg(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeImmThreeOperand(MCInst &Inst,
+template <int64_t Imm>
+static DecodeStatus decodeFixedImmOperand(MCInst &Inst,
                                           const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createImm(3));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeImmFourOperand(MCInst &Inst,
-                                         const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createImm(4));
+  Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
 
