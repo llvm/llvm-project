@@ -943,10 +943,7 @@ cc_test(
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
-    ] + select({
-        "@platforms//os:linux": ["//llvm:maybe_pfm"],
-        "//conditions:default": [],
-    }),
+    ],
 )
 
 cc_test(
