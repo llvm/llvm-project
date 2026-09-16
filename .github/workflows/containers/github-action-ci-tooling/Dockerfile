@@ -2,7 +2,7 @@ ARG LLVM_VERSION=23.1.0
 # FIXME: Use "${LLVM_VERSION%%.*}" instead of "LLVM_VERSION_MAJOR" once we update runners to Ubuntu-26.04 with Buildah >= 1.37
 ARG LLVM_VERSION_MAJOR=23
 
-FROM docker.io/library/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b AS llvm-downloader
+FROM docker.io/library/ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6 AS llvm-downloader
 ARG LLVM_VERSION
 ARG LLVM_VERSION_MAJOR
 
@@ -19,7 +19,7 @@ RUN apt-get update && \
         LLVM-${LLVM_VERSION}-Linux-X64/bin/git-clang-format && \
     rm llvm.tar.xz
 
-FROM docker.io/library/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b AS minimal
+FROM docker.io/library/ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6 AS minimal
 # Create a new user with id 1001 as that is the user id that
 # Github Actions uses to perform the checkout action.
 RUN useradd gha -u 1001 -m -s /bin/bash
@@ -129,7 +129,7 @@ USER gha
 
 ADD github-automation.py /usr/local/bin/
 
-FROM docker.io/library/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b AS ids-builder
+FROM docker.io/library/ubuntu:26.04@sha256:61ebaa5cc23ca45450db85eac015435199ec569e28ec222ea13f2aed2110b8a6 AS ids-builder
 ARG LLVM_VERSION_MAJOR
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y wget gpg python3 python3-pip git cmake
