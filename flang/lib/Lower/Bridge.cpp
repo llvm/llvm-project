@@ -39,6 +39,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
+#include "flang/Optimizer/Builder/Runtime/CUDA/Support.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
@@ -52,6 +53,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -529,6 +531,7 @@ public:
     // - Module variables are lowered once all the function declarations are
     // available.
     bool hasMainProgram = false;
+    Fortran::parser::CharBlock mainProgramPosition{};
     llvm::SmallVector<const Fortran::semantics::Symbol *>
         globalOmpRequiresSymbols;
     createBuilderOutsideOfFuncOpAndDo([&]() {
@@ -536,8 +539,10 @@ public:
         Fortran::common::visit(
             Fortran::common::visitors{
                 [&](Fortran::lower::pft::FunctionLikeUnit &f) {
-                  if (f.isMainProgram())
+                  if (f.isMainProgram()) {
                     hasMainProgram = true;
+                    mainProgramPosition = f.getStartingSourceLoc();
+                  }
                   declareFunction(f);
                   globalOmpRequiresSymbols.push_back(f.getScope().symbol());
                 },
@@ -615,6 +620,9 @@ public:
     // Generate the `main` entry point if necessary
     if (hasMainProgram)
       createBuilderOutsideOfFuncOpAndDo([&]() {
+        // Lowering has walked every unit, so the current position is the END
+        // statement of the last one. Reset it to the main program's start.
+        setCurrentPosition(mainProgramPosition);
         fir::runtime::genMain(
             *builder, toLocation(), bridge.getEnvironmentDefaults(),
             (getFoldingContext().languageFeatures().IsEnabled(
@@ -2004,7 +2012,10 @@ private:
         mlir::Value active =
             fir::runtime::cuda::genDeviceIsActive(*builder, loc);
         builder->genIfThen(loc, active)
-            .genThen([&]() { bridge.cudaCleanupCtx().finalizeAndKeep(); })
+            .genThen([&]() {
+              fir::runtime::cuda::genCUDADeviceSynchronize(*builder, loc);
+              bridge.cudaCleanupCtx().finalizeAndKeep();
+            })
             .end();
       }
       bridge.fctCtx().finalizeAndKeep();
@@ -2078,6 +2089,21 @@ private:
                 loc, resultRefType, resultRef);
           return fir::LoadOp::create(*builder, loc, resultRef);
         });
+    // CUDA function-result descriptors are allocated with cuf.alloc and freed
+    // on exit. Abstract-result rewrites `return %v` into a store to the hidden
+    // result argument at the return point, which would run after that free if
+    // %v is still a load or rebox of the CUDA descriptor. Spill %v to a stack
+    // temporary first so the rewrite stores to the hidden argument before the
+    // free.
+    if (bridge.cudaCleanupCtx().hasCode() &&
+        mlir::isa<fir::BaseBoxType>(resultVal.getType()))
+      if (std::optional<Fortran::common::CUDADataAttr> cudaAttr =
+              Fortran::semantics::GetCUDADataAttr(&resultSym.GetUltimate()))
+        if (*cudaAttr != Fortran::common::CUDADataAttr::Shared) {
+          mlir::Value tmp = builder->createTemporary(loc, resultVal.getType());
+          fir::StoreOp::create(*builder, loc, resultVal, tmp);
+          resultVal = fir::LoadOp::create(*builder, loc, tmp);
+        }
     genExitRoutine(false, resultVal);
   }
 
@@ -6944,6 +6970,8 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
   fir::setRelocationModel(*module, cgOpts.getRelocationModel());
   fir::setIsPIE(*module, cgOpts.IsPIE);
+  fir::setAllocationPolicy(
+      *module, fir::getCommandLineAllocationPolicy(cgOpts.StackArrays));
   if (cgOpts.RecordCommandLine)
     fir::setCommandline(*module, *cgOpts.RecordCommandLine);
   // Under -gpu=mem:unified|managed, host heap allocations use the matching

@@ -450,7 +450,10 @@ public:
   /// getInstSizeInBytes() should be verified.
   virtual InstSizeVerifyMode
   getInstSizeVerifyMode(const MachineInstr &MI) const {
-    return InstSizeVerifyMode::NoVerify;
+    // FIXME: Incorrect size reported if nop inserted for async exceptions.
+    if (MI.getOpcode() == TargetOpcode::EH_LABEL)
+      return InstSizeVerifyMode::NoVerify;
+    return InstSizeVerifyMode::AllowOverEstimate;
   }
 
   /// Return true if the instruction is as cheap as a move instruction.

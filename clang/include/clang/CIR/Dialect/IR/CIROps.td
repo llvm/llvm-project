@@ -844,6 +844,21 @@ def CIR_LoadOp : CIR_Op<"load", [
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
 
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$addr), [{
+      build($_builder, $_state, addr, /*isDeref=*/false,
+            /*is_volatile=*/false, /*is_nontemporal=*/false,
+            /*alignment=*/mlir::IntegerAttr{}, cir::SyncScopeKindAttr{},
+            cir::MemOrderAttr{}, /*invariant=*/false);
+    }]>,
+    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$addr), [{
+      build($_builder, $_state, result, addr, /*isDeref=*/false,
+            /*is_volatile=*/false, /*is_nontemporal=*/false,
+            /*alignment=*/mlir::IntegerAttr{}, cir::SyncScopeKindAttr{},
+            cir::MemOrderAttr{}, /*invariant=*/false);
+    }]>
+  ];
+
   // FIXME: add verifier.
 }
 
@@ -4362,7 +4377,7 @@ def CIR_FuncOp : CIR_Op<"func", [
   let extraLLVMLoweringPatternDecl = [{
     static mlir::StringRef getLinkageAttrNameString() { return "linkage"; }
 
-    void lowerFuncAttributes(
+    mlir::LogicalResult lowerFuncAttributes(
         cir::FuncOp func, bool includeFunctionOnlyAttrs,
         mlir::SmallVectorImpl<mlir::NamedAttribute> &result) const;
 
@@ -5017,6 +5032,49 @@ def CIR_CoroPromiseOp : CIR_CoroIntrinsicOp<"promise",
   }];
 
   let llvmOp = "CoroPromiseOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic ResumeOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroResumeOp : CIR_CoroIntrinsicOp<"resume",
+    (ins CIR_VoidPtrType:$handle), (outs )> {
+  let summary = "Represents llvm.coro.resume";
+  let description = [{
+    Resumes a suspended coroutine identified by `handle`. Resuming a
+    coroutine that is not currently suspended is undefined behavior.
+  }];
+  let llvmOp = "CoroResumeOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic DestroyOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroDestroyOp : CIR_CoroIntrinsicOp<"destroy",
+    (ins CIR_VoidPtrType:$handle), (outs )> {
+  let summary = "Represents llvm.coro.destroy";
+  let description = [{
+    Destroys a suspended coroutine identified by `handle`. Destroying a
+    coroutine that is not currently suspended is undefined behavior.
+  }];
+  let llvmOp = "CoroDestroyOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic DoneOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroDoneOp : CIR_CoroIntrinsicOp<"done", (ins CIR_VoidPtrType:$handle),
+    (outs CIR_BoolType:$done)> {
+  let summary = "Represents llvm.coro.done";
+  let description = [{
+    Checks whether the coroutine identified by `handle` is currently
+    suspended at its final suspend point. `handle` must be a handle to a
+    suspended coroutine.
+  }];
+  let llvmOp = "CoroDoneOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -8194,6 +8252,23 @@ def CIR_TryOp : CIR_RegionBranchOpBase<"try", [
     into the body of the cleanup scope. This ensures that all paths out of the
     catch handler will execute the end_catch operation.
 
+    A `cir.try` operation may instead have a `filter` handler paired with an
+    `unexpected` handler, which together implement the dynamic exception
+    specification of the enclosing function. The `filter` handler lists the
+    permitted type info symbols and holds the path taken when the in-flight
+    exception is permitted, which is a `cir.resume` that continues unwinding
+    to the caller. The `unexpected` handler holds the path taken when the
+    specification is violated, which is a `cir.eh.unexpected`. An empty
+    permitted type list represents `throw()`, which permits nothing, so the
+    filter handler region holds a `cir.unreachable` instead. Like `unwind`,
+    and unlike a catch handler, neither region begins with `cir.begin_catch`.
+
+    The two handlers must appear together, with the filter first, and must be
+    the only handlers on the operation. The try operation created for an
+    exception specification wraps the entire function body, and each try
+    statement written in the source becomes a separate `cir.try` operation
+    nested inside it.
+
     Example:
 
     ```
@@ -8213,6 +8288,20 @@ def CIR_TryOp : CIR_RegionBranchOpBase<"try", [
       cir.yield
     } unwind (%eh_token : !cir.eh_token) {
       cir.resume %eh_token : !cir.eh_token
+    }
+    ```
+
+    Example of a `void f() throw(int)` exception specification:
+
+    ```
+    cir.try {
+      cir.call exception @function() : () -> ()
+      cir.yield
+    } filter [#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>]
+        (%eh_token : !cir.eh_token) {
+      cir.resume %eh_token : !cir.eh_token
+    } unexpected (%eh_token.1 : !cir.eh_token) {
+      cir.eh.unexpected %eh_token.1 : !cir.eh_token
     }
     ```
   }];
@@ -8314,6 +8403,15 @@ def CIR_EhInflightOp : CIR_Op<"eh.inflight_exception"> {
     alongside typed catches, the landing pad will contain both the typed catch
     clauses and a trailing `catch ptr null`.
 
+    The `filter_type_list` attribute lists the type info symbols permitted by
+    the dynamic exception specification of the enclosing function. It lowers to
+    the `filter` clause of the LLVM IR landingpad instruction. An empty list is
+    distinct from an absent one: it represents `throw()` and lowers to a
+    zero-length filter clause, which the personality routine treats as
+    permitting nothing. Since the exception specification encloses the whole
+    function body, the filter clause always comes after any catch clauses, and
+    it terminates the clause list in the same way that `catch_all` does.
+
     Example:
 
     ```
@@ -8321,17 +8419,21 @@ def CIR_EhInflightOp : CIR_Op<"eh.inflight_exception"> {
     %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi, @_ZTIPKc]
     %exception_ptr, %type_id = cir.eh.inflight_exception cleanup
     %exception_ptr, %type_id = cir.eh.inflight_exception catch_all [@_ZTIi]
+    %exception_ptr, %type_id = cir.eh.inflight_exception filter [@_ZTIi]
+    %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi] filter []
     ``
   }];
 
   let arguments = (ins UnitAttr:$cleanup,
                        UnitAttr:$catch_all,
-                       OptionalAttr<FlatSymbolRefArrayAttr>:$catch_type_list);
+                       OptionalAttr<FlatSymbolRefArrayAttr>:$catch_type_list,
+                       OptionalAttr<FlatSymbolRefArrayAttr>:$filter_type_list);
   let results = (outs CIR_VoidPtrType:$exception_ptr, CIR_UInt32:$type_id);
   let assemblyFormat = [{
     (`cleanup` $cleanup^)?
     (`catch_all` $catch_all^)?
     ($catch_type_list^)?
+    (`filter` $filter_type_list^)?
     attr-dict
   }];
 }
@@ -8493,6 +8595,49 @@ def CIR_EhTerminateOp : CIR_Op<"eh.terminate", [
 }
 
 //===----------------------------------------------------------------------===//
+// Exception related: EhUnexpectedOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhUnexpectedOp : CIR_Op<"eh.unexpected", [
+  Terminator
+]> {
+  let summary = "Handle an exception that violates an exception specification";
+  let description = [{
+    `cir.eh.unexpected` signals that the in-flight exception violated the
+    dynamic exception specification of the enclosing function, and that
+    `std::unexpected()` must be called. The C++ standard requires this when an
+    exception that the specification does not permit tries to escape the
+    function.
+
+    This operation takes a `!cir.eh_token` and acts as a terminator. In
+    high-level CIR it is the only operation in the `unexpected` handler region
+    of a `cir.try` operation, where the token comes from the handler region's
+    block argument. After CFG flattening the token comes from a
+    `cir.eh.initiate` operation.
+
+    Like `cir.eh.terminate`, this operation is ABI-agnostic. During EH ABI
+    lowering it is replaced with target-specific code. For the Itanium ABI it
+    becomes a call to `__cxa_call_unexpected` with the exception pointer,
+    followed by an unreachable operation.
+
+    Example:
+
+    ```
+    ^unexpected:
+      %eh_token = cir.eh.initiate : !cir.eh_token
+      cir.eh.unexpected %eh_token : !cir.eh_token
+    ```
+  }];
+
+  let arguments = (ins CIR_EhTokenType:$eh_token);
+  let assemblyFormat = [{
+    $eh_token `:` type($eh_token) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // Flattened EH Operations: EhDispatchOp
 //===----------------------------------------------------------------------===//
 
@@ -8517,6 +8662,17 @@ def CIR_EhDispatchOp : CIR_Op<"eh.dispatch", [
     another type handler. The `unwind` handler is used when no handler is
     matched.
 
+    A handler may also be a `filter`, which carries the list of type info
+    symbols permitted by the dynamic exception specification of the enclosing
+    function. A `filter` handler has the *opposite* polarity from a `catch`
+    handler: its destination is taken when the in-flight exception is **not**
+    one of the listed types. The polarity comes from the Itanium personality
+    routine, which reports a filter failure by selecting the filter clause of
+    the landing pad. A `filter` handler therefore does not take the place of
+    the default destination, and a dispatch that has one always also has an
+    `unwind` handler, whose destination is taken when the exception is
+    permitted. A dispatch has at most one `filter` handler.
+
     Example:
 
     ```
@@ -8529,6 +8685,12 @@ def CIR_EhDispatchOp : CIR_Op<"eh.dispatch", [
     cir.eh.dispatch %eh_token : !cir.eh_token [
       catch (#cir.global_view<type @_ZTIi> : !cir.ptr<!u8i>) : ^catch_int,
       unwind : ^continue_unwind
+    ]
+
+    cir.eh.dispatch %eh_token : !cir.eh_token [
+      filter(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>)
+          : ^specification_violated,
+      unwind : ^exception_permitted
     ]
     ```
   }];
@@ -8543,6 +8705,8 @@ def CIR_EhDispatchOp : CIR_Op<"eh.dispatch", [
      AnySuccessor:$default_destination,
      VariadicSuccessor<AnySuccessor>:$catch_destinations
   );
+
+  let hasVerifier = 1;
 
   let assemblyFormat = [{
     $eh_token `:` type($eh_token)

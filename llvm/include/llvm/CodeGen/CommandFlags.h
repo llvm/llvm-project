@@ -44,8 +44,6 @@ LLVM_ABI std::vector<std::string> getMAttrs();
 LLVM_ABI Reloc::Model getRelocModel();
 LLVM_ABI std::optional<Reloc::Model> getExplicitRelocModel();
 
-LLVM_ABI ThreadModel::Model getThreadModel();
-
 LLVM_ABI CodeModel::Model getCodeModel();
 LLVM_ABI std::optional<CodeModel::Model> getExplicitCodeModel();
 
@@ -65,15 +63,11 @@ LLVM_ABI DenormalMode::DenormalModeKind getDenormalFP32Math();
 
 LLVM_ABI llvm::FloatABI::ABIType getFloatABIForCalls();
 
-LLVM_ABI llvm::FPOpFusion::FPOpFusionMode getFuseFPOps();
-
 LLVM_ABI SwiftAsyncFramePointerMode getSwiftAsyncFramePointer();
 
 LLVM_ABI bool getDontPlaceZerosInBSS();
 
 LLVM_ABI bool getEnableGuaranteedTailCallOpt();
-
-LLVM_ABI bool getEnableAIXExtendedAltivecABI();
 
 LLVM_ABI bool getDisableTailCalls();
 
@@ -110,8 +104,6 @@ LLVM_ABI bool getUniqueSectionNames();
 LLVM_ABI bool getUniqueBasicBlockSectionNames();
 
 LLVM_ABI bool getSeparateNamedSections();
-
-LLVM_ABI llvm::EABI getEABIVersion();
 
 LLVM_ABI llvm::DebuggerKind getDebuggerTuningOpt();
 

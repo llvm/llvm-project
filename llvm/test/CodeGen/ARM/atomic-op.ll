@@ -1,9 +1,12 @@
-; RUN: llc < %s -mtriple=armv7-apple-ios -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix CHECK-ARMV7
-; RUN: llc < %s -mtriple=thumbv7-apple-ios -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-T2
-; RUN: llc < %s -mtriple=thumbv6-apple-ios -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-T1
-; RUN: llc < %s -mtriple=thumbv6-apple-ios -verify-machineinstrs -mcpu=cortex-m0 | FileCheck %s --check-prefix=CHECK-T1-M0
-; RUN: llc < %s -mtriple=thumbv7--none-eabi -thread-model single -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-BAREMETAL
+; RUN: split-file %s %t
+; RUN: llc < %t/body.ll -mtriple=armv7-apple-ios -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix CHECK-ARMV7
+; RUN: llc < %t/body.ll -mtriple=thumbv7-apple-ios -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-T2
+; RUN: llc < %t/body.ll -mtriple=thumbv6-apple-ios -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-T1
+; RUN: llc < %t/body.ll -mtriple=thumbv6-apple-ios -verify-machineinstrs -mcpu=cortex-m0 | FileCheck %s --check-prefix=CHECK-T1-M0
+;; The single-threaded thread model is selected by the "thread-model" module flag.
+; RUN: cat %t/body.ll %t/single.ll | llc -mtriple=thumbv7--none-eabi -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-BAREMETAL
 
+;--- body.ll
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
 ; CHECK-LABEL: _func:
@@ -426,3 +429,8 @@ define void @load_fence_store_monotonic(ptr %mem1, ptr %mem2) {
 
   ret void
 }
+
+;--- single.ll
+; Appended to the body to select the single-threaded thread model.
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"thread-model", !"single"}

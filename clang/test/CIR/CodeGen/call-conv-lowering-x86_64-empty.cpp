@@ -26,6 +26,7 @@ struct EmptySecond { long a; Empty e; };
 struct EmptySSE { double a; Empty e; };
 struct FloatEmpty { float a; Empty e; };
 struct FloatEmptyFirst { Empty e; float a; };
+struct HiWord { Empty e; long hi; };
 struct alignas(32) Big32 {};
 struct EBits { int : 0; };
 struct HoldsEmptyBits { EBits e; int i; };
@@ -41,6 +42,27 @@ union UBigEmpty { Big32 e; int i; };
 union UEmptyBaseMem { HasEmptyBase e; int i; };
 union UValue { Empty mono; int i; long long ll; double d; const char *s; };
 struct ArgStore { UValue value; unsigned char type; };
+union UNuaEmptyInt { [[no_unique_address]] Empty e; int i; };
+union UNuaEmptyAligned { [[no_unique_address]] Aligned e; int i; };
+union UNuaEmptyOnly { [[no_unique_address]] Empty e; };
+union UNuaEmptyDouble { [[no_unique_address]] Empty e; double d; };
+union UNuaBigEmpty { [[no_unique_address]] Big32 e; int i; };
+union UNuaEmptyBaseMem { [[no_unique_address]] HasEmptyBase e; int i; };
+union UNuaEmptyUnnamedBits { [[no_unique_address]] Empty e; int : 24; };
+union UNuaEmptyBitInt { [[no_unique_address]] Empty e; int b : 20; int i; };
+struct SFloatPair { float a, b; };
+union UNuaEmptyFloats { [[no_unique_address]] Empty e; SFloatPair f; };
+union UNuaEmptyBytes16 { [[no_unique_address]] Empty e; char c[16]; };
+union UNuaEmptyNarrowHi { [[no_unique_address]] Aligned e; char c[9]; };
+union UNuaBigEmptyOnly { [[no_unique_address]] Big32 e; };
+union UZeroLenArr { int x[0]; int i; };
+union UZeroLenOnly { int x[0]; };
+union UNuaNoRegs { [[no_unique_address]] Empty e; int i; ~UNuaNoRegs(); };
+struct NuaHiWord { UNuaEmptyOnly u; long hi; };
+struct NuaExpected {
+  [[no_unique_address]] UNuaEmptyInt u;
+  [[no_unique_address]] bool has;
+};
 
 // An empty class is passed in no register at all.
 int takeEmpty(Empty v, int k) { return k; }
@@ -166,6 +188,59 @@ float takeFloatEmptyFirst(FloatEmptyFirst v) { return v.a; }
 // CIR: cir.func {{.*}}@_Z19takeFloatEmptyFirst15FloatEmptyFirst(%arg0: !cir.double {{.*}}) -> (!cir.float
 // LLVM: define dso_local noundef float @_Z19takeFloatEmptyFirst15FloatEmptyFirst(double %{{[^,]+}})
 
+// Here the empty member owns eightbyte 0 rather than eightbyte 1, so NoClass
+// cannot just be dropped: the coercion has to start at byte 8.
+long takeHiWord(HiWord v) { return v.hi; }
+
+// CIR: cir.func {{.*}}@_Z10takeHiWord6HiWord(%arg0: !s64i {{.*}}) -> (!s64i
+// CIR:   %[[SLOT:.+]] = cir.alloca "coerce"
+// CIR:   %[[U8:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_HiWord> -> !cir.ptr<!u8i>
+// CIR:   %[[OFF:.+]] = cir.const #cir.int<8> : !s64i
+// CIR:   %[[GEP:.+]] = cir.ptr_stride %[[U8]], %[[OFF]]
+// CIR:   %[[HI:.+]] = cir.cast bitcast %[[GEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+// CIR:   cir.store %arg0, %[[HI]] : !s64i, !cir.ptr<!s64i>
+// LLVM: define dso_local noundef i64 @_Z10takeHiWord6HiWord(i64 %[[ARG:[^)]+]])
+// LLVM:   %[[SLOT:.+]] = alloca %struct.HiWord, align 8
+// LLVM:   %[[HI:.+]] = getelementptr{{( inbounds)?}} i8, ptr %[[SLOT]], i64 8
+// LLVM:   store i64 %[[ARG]], ptr %[[HI]], align 8
+
+// The same offset on the return side.
+HiWord giveHiWord(long hi) {
+  HiWord w;
+  w.hi = hi;
+  return w;
+}
+
+// CIR: cir.func {{.*}}@_Z10giveHiWordl(%arg0: !s64i {llvm.noundef} {{.*}}) -> !s64i
+// LLVM: define dso_local i64 @_Z10giveHiWordl(i64 noundef %{{[^,]+}})
+// LLVM:   %[[RGEP:.+]] = getelementptr{{( inbounds)?}} i8, ptr %{{.+}}, i64 8
+// LLVM:   %[[RVAL:.+]] = load i64, ptr %[[RGEP]], align 8
+// LLVM:   ret i64 %[[RVAL]]
+
+// Caller-side coercion, on the return received and the argument passed.
+long callerHiWord(long hi) {
+  return takeHiWord(giveHiWord(hi));
+}
+
+// CIR: cir.func {{.*}}@_Z12callerHiWordl(%arg0: !s64i {{.*}}) -> (!s64i
+// CIR:   %[[RET:.+]] = cir.call @_Z10giveHiWordl(
+// CIR:   %[[ROFF:.+]] = cir.const #cir.int<8> : !s64i
+// CIR:   %[[RGEP:.+]] = cir.ptr_stride %{{.+}}, %[[ROFF]]
+// CIR:   %[[RPTR:.+]] = cir.cast bitcast %[[RGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+// CIR:   cir.store %[[RET]], %[[RPTR]] : !s64i, !cir.ptr<!s64i>
+// CIR:   %[[AOFF:.+]] = cir.const #cir.int<8> : !s64i
+// CIR:   %[[AGEP:.+]] = cir.ptr_stride %{{.+}}, %[[AOFF]]
+// CIR:   %[[APTR:.+]] = cir.cast bitcast %[[AGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+// CIR:   %[[AVAL:.+]] = cir.load %[[APTR]] : !cir.ptr<!s64i>, !s64i
+// CIR:   %{{.+}} = cir.call @_Z10takeHiWord6HiWord(%[[AVAL]])
+// LLVM: define dso_local noundef i64 @_Z12callerHiWordl(i64 noundef %{{[^,)]+}})
+// LLVM:   %[[RET:.+]] = call i64 @_Z10giveHiWordl(i64 noundef %{{.+}})
+// LLVM:   %[[RSLOT:.+]] = getelementptr{{( inbounds)?}} i8, ptr %{{.+}}, i64 8
+// LLVM:   store i64 %[[RET]], ptr %[[RSLOT]], align 8
+// LLVM:   %[[ASLOT:.+]] = getelementptr{{( inbounds)?}} i8, ptr %{{.+}}, i64 8
+// LLVM:   %[[AVAL:.+]] = load i64, ptr %[[ASLOT]], align 8
+// LLVM:   %{{.+}} = call noundef i64 @_Z10takeHiWord6HiWord(i64 %[[AVAL]])
+
 // Past two eightbytes SysV says memory whatever the content, so an empty class
 // this size is passed indirectly at its declared alignment.
 int takeBig32(Big32 v, int k) { return k; }
@@ -285,6 +360,151 @@ UValue retUValue() { return UValue{}; }
 
 // CIR: cir.func {{.*}}@_Z9retUValuev() -> !s64i
 // LLVM: define dso_local i64 @_Z9retUValuev()
+
+// A variant of empty class type is marked data unless [[no_unique_address]]
+// makes CIRGen mark it empty.  Neither mark reaches the classifier, so where
+// a case below repeats a shape from above it classifies the same either way.
+int takeUNuaEmptyInt(UNuaEmptyInt v) { return v.i; }
+
+// CIR: cir.func {{.*}}@_Z16takeUNuaEmptyInt12UNuaEmptyInt(%arg0: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z16takeUNuaEmptyInt12UNuaEmptyInt(i32 %{{[^,]+}})
+
+int takeUNuaEmptyAligned(UNuaEmptyAligned v) { return v.i; }
+
+// CIR: cir.func {{.*}}@_Z20takeUNuaEmptyAligned16UNuaEmptyAligned(%arg0: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z20takeUNuaEmptyAligned16UNuaEmptyAligned(i32 %{{[^,]+}})
+
+int takeUNuaEmptyOnly(UNuaEmptyOnly v, int k) { return k; }
+
+// CIR: cir.func {{.*}}@_Z17takeUNuaEmptyOnly13UNuaEmptyOnlyi(%arg0: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z17takeUNuaEmptyOnly13UNuaEmptyOnlyi(i32 noundef %{{[^,]+}})
+
+double takeUNuaEmptyDouble(UNuaEmptyDouble v) { return v.d; }
+
+// CIR: cir.func {{.*}}@_Z19takeUNuaEmptyDouble15UNuaEmptyDouble(%arg0: !cir.double {{.*}}) -> (!cir.double
+// LLVM: define dso_local noundef double @_Z19takeUNuaEmptyDouble15UNuaEmptyDouble(double %{{[^,]+}})
+
+int takeUNuaBigEmpty(UNuaBigEmpty v, int k) { return k; }
+
+// CIR: cir.func {{.*}}@_Z16takeUNuaBigEmpty12UNuaBigEmptyi(%arg0: !cir.ptr<!rec_UNuaBigEmpty> {llvm.align = 32 : i64, llvm.byval = !rec_UNuaBigEmpty, llvm.noundef}{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z16takeUNuaBigEmpty12UNuaBigEmptyi(ptr noundef byval(%union.UNuaBigEmpty) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+
+UNuaBigEmpty retUNuaBigEmpty() { return UNuaBigEmpty{}; }
+
+// CIR: cir.func {{.*}}@_Z15retUNuaBigEmptyv(%arg0: !cir.ptr<!rec_UNuaBigEmpty> {llvm.align = 32 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_UNuaBigEmpty, llvm.writable}
+// LLVM: define dso_local void @_Z15retUNuaBigEmptyv(ptr dead_on_unwind noalias writable sret(%union.UNuaBigEmpty) align 32 %{{[^,]+}})
+
+// A union of nothing but an over-aligned empty variant is still sized by it,
+// so past two eightbytes it goes to memory rather than being dropped.
+int takeUNuaBigEmptyOnly(UNuaBigEmptyOnly v, int k) { return k; }
+
+// CIR: cir.func {{.*}}@_Z20takeUNuaBigEmptyOnly16UNuaBigEmptyOnlyi(%arg0: !cir.ptr<!rec_UNuaBigEmptyOnly> {llvm.align = 32 : i64, llvm.byval = !rec_UNuaBigEmptyOnly, llvm.noundef}{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z20takeUNuaBigEmptyOnly16UNuaBigEmptyOnlyi(ptr noundef byval(%union.UNuaBigEmptyOnly) align 32 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+
+// A zero-length array variant is marked empty and occupies nothing, so
+// dropping it cannot lose data and the int decides.
+int takeUZeroLenArr(UZeroLenArr v) { return v.i; }
+
+// CIR: cir.func {{.*}}@_Z15takeUZeroLenArr11UZeroLenArr(%arg0: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z15takeUZeroLenArr11UZeroLenArr(i32 %{{[^,]+}})
+
+int takeUZeroLenOnly(UZeroLenOnly v, int k) { return k; }
+
+// CIR: cir.func {{.*}}@_Z16takeUZeroLenOnly12UZeroLenOnlyi(%arg0: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z16takeUZeroLenOnly12UZeroLenOnlyi(i32 noundef %{{[^,]+}})
+
+// A destructor forces the union indirect without byval, so the argument is a
+// pointer to the caller's own storage rather than a coercion.
+int takeUNuaNoRegs(UNuaNoRegs v, int k) { return k; }
+
+// CIR: cir.func {{.*}}@_Z14takeUNuaNoRegs10UNuaNoRegsi(%arg0: !cir.ptr<!rec_UNuaNoRegs> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z14takeUNuaNoRegs10UNuaNoRegsi(ptr nofreeobj noundef align 4 dereferenceable(4) %{{[^,]+}}, i32 noundef %{{[^,]+}})
+
+// The caller copies into a temporary and forwards that, since the callee
+// works on the object it is handed.
+int callTakeUNuaNoRegs(int k) {
+  UNuaNoRegs v;
+  return takeUNuaNoRegs(v, k);
+}
+
+// CIR: cir.func {{.*}}@_Z18callTakeUNuaNoRegsi
+// CIR:   cir.call @_Z14takeUNuaNoRegs10UNuaNoRegsi(%{{.+}}, %{{.+}}) : (!cir.ptr<!rec_UNuaNoRegs> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}, !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z18callTakeUNuaNoRegsi(i32 noundef %{{[^,]+}})
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[TMP:[^,]+]], ptr align 4 %{{[^,]+}}, i64 4, i1 false)
+// LLVM:   call noundef i32 @_Z14takeUNuaNoRegs10UNuaNoRegsi(ptr nofreeobj noundef align 4 dereferenceable(4) %[[TMP]], i32 noundef %{{[^,]+}})
+
+// The same union returned uses sret.
+UNuaNoRegs retUNuaNoRegs();
+UNuaNoRegs callRetUNuaNoRegs() { return retUNuaNoRegs(); }
+
+// CIR: cir.func {{.*}}@_Z17callRetUNuaNoRegsv(%arg0: !cir.ptr<!rec_UNuaNoRegs> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_UNuaNoRegs, llvm.writable}
+// LLVM: define dso_local void @_Z17callRetUNuaNoRegsv(ptr dead_on_unwind noalias writable sret(%union.UNuaNoRegs) align 4 %{{[^,]+}})
+// LLVM:   call void @_Z13retUNuaNoRegsv(ptr dead_on_unwind writable sret(%union.UNuaNoRegs) align 4 %{{[^,)]+}})
+
+int takeUNuaEmptyBaseMem(UNuaEmptyBaseMem v) { return v.i; }
+
+// CIR: cir.func {{.*}}@_Z20takeUNuaEmptyBaseMem16UNuaEmptyBaseMem(%arg0: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z20takeUNuaEmptyBaseMem16UNuaEmptyBaseMem(i32 %{{[^,]+}})
+
+// An unnamed bit-field variant holds data for the ABI, so it is the storage the
+// coercion reads while the empty variant contributes nothing.
+int takeUNuaEmptyUnnamedBits(UNuaEmptyUnnamedBits v, int k) { return k; }
+
+// CIR: cir.func {{.*}}@_Z24takeUNuaEmptyUnnamedBits20UNuaEmptyUnnamedBitsi(%arg0: !cir.int<u, 24>{{.*}}, %arg1: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z24takeUNuaEmptyUnnamedBits20UNuaEmptyUnnamedBitsi(i24 %{{[^,]+}}, i32 noundef %{{[^,]+}})
+
+// A named access unit narrower than the int it holds, alongside the empty
+// variant: the plain int member is what satisfies the spanning-data rule.
+int takeUNuaEmptyBitInt(UNuaEmptyBitInt v) { return v.i; }
+
+// CIR: cir.func {{.*}}@_Z19takeUNuaEmptyBitInt15UNuaEmptyBitInt(%arg0: !s32i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z19takeUNuaEmptyBitInt15UNuaEmptyBitInt(i32 %{{[^,]+}})
+
+// A pair of floats in one eightbyte still coerces to a vector, not an integer.
+float takeUNuaEmptyFloats(UNuaEmptyFloats v) { return v.f.a; }
+
+// CIR: cir.func {{.*}}@_Z19takeUNuaEmptyFloats15UNuaEmptyFloats(%arg0: !cir.vector<2 x !cir.float> {{.*}}) -> (!cir.float
+// LLVM: define dso_local noundef float @_Z19takeUNuaEmptyFloats15UNuaEmptyFloats(<2 x float> %{{[^,]+}})
+
+// The empty variant does not disturb a multi-eightbyte coercion.
+char takeUNuaEmptyBytes16(UNuaEmptyBytes16 v) { return v.c[0]; }
+
+// CIR: cir.func {{.*}}@_Z20takeUNuaEmptyBytes1616UNuaEmptyBytes16(%arg0: !u64i {{.*}}, %arg1: !u64i {{.*}}) -> (!s8i
+// LLVM: define dso_local noundef signext i8 @_Z20takeUNuaEmptyBytes1616UNuaEmptyBytes16(i64 %{{[^,]+}}, i64 %{{[^,]+}})
+
+// Here the empty variant is what reaches the second eightbyte, which the
+// data variant covers only one byte of, so the high half narrows to i8.
+char takeUNuaEmptyNarrowHi(UNuaEmptyNarrowHi v) { return v.c[0]; }
+
+// CIR: cir.func {{.*}}@_Z21takeUNuaEmptyNarrowHi17UNuaEmptyNarrowHi(%arg0: !u64i {{.*}}, %arg1: !s8i {{.*}}) -> (!s8i
+// LLVM: define dso_local noundef signext i8 @_Z21takeUNuaEmptyNarrowHi17UNuaEmptyNarrowHi(i64 %{{[^,]+}}, i8 %{{[^,]+}})
+
+// An all-empty union owns eightbyte 0, so as with takeHiWord the coercion has
+// to start at byte 8 rather than dropping the NoClass half.
+long takeNuaHiWord(NuaHiWord v) { return v.hi; }
+
+// CIR: cir.func {{.*}}@_Z13takeNuaHiWord9NuaHiWord(%arg0: !s64i {{.*}}) -> (!s64i
+// CIR:   %[[NSLOT:.+]] = cir.alloca "coerce"
+// CIR:   %[[NU8:.+]] = cir.cast bitcast %[[NSLOT]] : !cir.ptr<!rec_NuaHiWord> -> !cir.ptr<!u8i>
+// CIR:   %[[NOFF:.+]] = cir.const #cir.int<8> : !s64i
+// CIR:   %[[NGEP:.+]] = cir.ptr_stride %[[NU8]], %[[NOFF]]
+// CIR:   %[[NHI:.+]] = cir.cast bitcast %[[NGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+// CIR:   cir.store %arg0, %[[NHI]] : !s64i, !cir.ptr<!s64i>
+// LLVM: define dso_local noundef i64 @_Z13takeNuaHiWord9NuaHiWord(i64 %[[NARG:[^,)]+]])
+// LLVM:   %[[NSLOT:.+]] = alloca %struct.NuaHiWord, align 8
+// LLVM:   %[[NHI:.+]] = getelementptr{{( inbounds)?}} i8, ptr %[[NSLOT]], i64 8
+// LLVM:   store i64 %[[NARG]], ptr %[[NHI]], align 8
+
+// The shape libc++ builds std::expected out of.
+bool takeNuaExpected(NuaExpected v) { return v.has; }
+
+// CIR: cir.func {{.*}}@_Z15takeNuaExpected11NuaExpected(%arg0: !u64i {{.*}}) -> (!cir.bool
+// LLVM: define dso_local noundef zeroext i1 @_Z15takeNuaExpected11NuaExpected(i64 %{{[^,]+}})
+
+NuaExpected retNuaExpected() { return NuaExpected{}; }
+
+// CIR: cir.func {{.*}}@_Z14retNuaExpectedv() -> !u64i
+// LLVM: define dso_local i64 @_Z14retNuaExpectedv()
 
 // An empty return is dropped to void.
 Empty retEmpty() { return Empty{}; }

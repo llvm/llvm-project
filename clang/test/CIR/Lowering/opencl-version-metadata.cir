@@ -1,0 +1,16 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s
+
+module attributes {
+  cir.cl.cxx.version = #cir.cl.version<2021, 0>,
+  cir.cl.version = #cir.cl.version<3, 0>,
+  cir.triple = "x86_64-unknown-linux-gnu"
+} {
+  cir.func @version_marker() {
+    cir.return
+  }
+}
+
+// CHECK-NOT: cir.cl.version
+// CHECK-NOT: cir.cl.cxx.version
+// CHECK-DAG: llvm.named_metadata "opencl.ocl.version" [#llvm.md_node<#llvm.md_const<3 : i32>, #llvm.md_const<0 : i32>>]
+// CHECK-DAG: llvm.named_metadata "opencl.cxx.version" [#llvm.md_node<#llvm.md_const<2021 : i32>, #llvm.md_const<0 : i32>>]
