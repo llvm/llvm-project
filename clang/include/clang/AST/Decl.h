@@ -422,6 +422,9 @@ public:
   /// those.
   Linkage getLinkageInternal() const;
 
+  /// Compute this entity's linkage without caching it.
+  Linkage computeLinkageInternal() const;
+
   /// Get the linkage from a semantic point of view. Entities in
   /// anonymous namespaces are external (in c++98).
   Linkage getFormalLinkage() const;
