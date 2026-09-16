@@ -1169,6 +1169,15 @@ TEST_F(TokenCollectorTest, Pragmas) {
   )cpp");
 }
 
+TEST_F(TokenCollectorTest, DebugPragmaAtEndOfFile) {
+  AllowErrors = true;
+  recordTokens("}\n#pragma clang __debug dump\n");
+
+  // The end-of-directive token has no spelling and must not be collected.
+  EXPECT_THAT(Buffer.expandedTokens(),
+              ElementsAre(Kind(tok::r_brace), Kind(tok::eof)));
+}
+
 TEST_F(TokenBufferTest, EofTokenOnBracketDepthLimit) {
   // Force parser to bail out due to exceeding the bracket depth limit.
   recordTokens("((;", {"-fbracket-depth=1"});

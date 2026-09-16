@@ -14,7 +14,7 @@
 #ifndef LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 #define LLVM_CLANG_LIB_AST_EXPRCONSTSHARED_H
 
-#include "clang/Basic/TypeTraits.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include <cstdint>
 #include <optional>
 
@@ -30,6 +30,7 @@ class ASTContext;
 class CharUnits;
 class Expr;
 class CallExpr;
+class CXXRecordDecl;
 } // namespace clang
 using namespace clang;
 /// Values returned by __builtin_classify_type, chosen to match the values
@@ -109,5 +110,10 @@ llvm::APSInt NormalizeRotateAmount(const llvm::APSInt &Value,
 std::optional<llvm::APFloat>
 EvalScalarMinMaxFp(const llvm::APFloat &A, const llvm::APFloat &B,
                    std::optional<llvm::APSInt> RoundingMode, bool IsMin);
+
+const Expr *ignorePointerCastsAndParens(const Expr *E);
+
+bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD);
+bool isReadByLvalueToRvalueConversion(QualType T);
 
 #endif

@@ -12,7 +12,6 @@
 
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -43,7 +42,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
-#include <map>
 #include <utility>
 
 using namespace llvm;
@@ -893,7 +891,7 @@ bool BPIConstruction::calcZeroHeuristics(const BasicBlock *BB,
   if (TLI)
     if (CallInst *Call = dyn_cast<CallInst>(CI->getOperand(0)))
       if (Function *CalledFn = Call->getCalledFunction())
-        TLI->getLibFunc(*CalledFn, Func);
+        Func = TLI->getLibFunc(*CalledFn);
 
   bool Likely;
   if (Func == LibFunc_strcasecmp ||

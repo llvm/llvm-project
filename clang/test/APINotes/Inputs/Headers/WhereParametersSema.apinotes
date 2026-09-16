@@ -64,6 +64,46 @@ Functions:
     Parameters:
     - int
   SwiftName: constValueGlobal(_:)
+- Name: volatileValueGlobal
+  Where:
+    Parameters:
+    - int
+  SwiftName: volatileValueGlobal(_:)
+- Name: pointerVolatileGlobal
+  Where:
+    Parameters:
+    - 'int *'
+  SwiftName: pointerVolatileGlobal(_:)
+- Name: pointeeVolatileMismatchGlobal
+  Where:
+    Parameters:
+    - 'int *'
+  SwiftName: shouldNotApplyPointeeVolatile(_:)
+- Name: nestedNullableGlobal
+  Where:
+    Parameters:
+    - 'int **'
+  SwiftName: nestedNullableGlobal(_:)
+- Name: nullableArrayGlobal
+  Where:
+    Parameters:
+    - 'int **'
+  SwiftName: nullableArrayGlobal(_:)
+- Name: nullableFunctionPointerItselfGlobal
+  Where:
+    Parameters:
+    - 'void (*)(int *)'
+  SwiftName: nullableFunctionPointerItselfGlobal(_:)
+- Name: nullableFunctionPointerGlobal
+  Where:
+    Parameters:
+    - 'void (*)(int *)'
+  SwiftName: nullableFunctionPointerGlobal(_:)
+- Name: nullableNonnullFunctionPointerGlobal
+  Where:
+    Parameters:
+    - 'void (*)(int *, int *)'
+  SwiftName: nullableNonnullFunctionPointerGlobal(_:)
 Namespaces:
 - Name: SelectorNamespace
   Functions:

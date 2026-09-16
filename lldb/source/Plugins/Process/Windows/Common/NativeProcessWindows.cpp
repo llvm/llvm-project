@@ -9,6 +9,7 @@
 #include "lldb/Host/windows/windows.h"
 #include <dbghelp.h>
 #include <excpt.h>
+#include <pathcch.h>
 #include <psapi.h>
 
 #include "NativeProcessWindows.h"
@@ -26,6 +27,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/State.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
@@ -49,44 +51,6 @@ using namespace lldb_private;
 using namespace llvm;
 
 namespace lldb_private {
-
-namespace {
-
-void NormalizeWindowsPath(std::string &s) {
-  for (char &c : s) {
-    if (c == '/')
-      c = '\\';
-    else
-      c = std::tolower(static_cast<unsigned char>(c));
-  }
-}
-
-bool IsSystemDLL(const FileSpec &spec) {
-  if (!spec)
-    return false;
-
-  static const std::string windows_prefix = []() {
-    std::string prefix;
-    wchar_t buf[MAX_PATH];
-    UINT len = ::GetWindowsDirectoryW(buf, MAX_PATH);
-    if (len == 0 || len >= MAX_PATH)
-      return prefix;
-    llvm::convertWideToUTF8(std::wstring_view(buf, len), prefix);
-    NormalizeWindowsPath(prefix);
-    if (!prefix.empty() && prefix.back() != '\\')
-      prefix += '\\';
-    return prefix;
-  }();
-
-  if (windows_prefix.empty())
-    return false;
-
-  std::string path = spec.GetPath();
-  NormalizeWindowsPath(path);
-  return llvm::StringRef(path).starts_with(windows_prefix);
-}
-
-} // namespace
 
 NativeProcessWindows::NativeProcessWindows(ProcessLaunchInfo &launch_info,
                                            NativeDelegate &delegate,
@@ -121,6 +85,8 @@ NativeProcessWindows::NativeProcessWindows(lldb::pid_t pid, int terminal_fd,
   E = AttachProcess(pid, attach_info, delegate_sp).ToError();
   if (E)
     return;
+
+  m_expecting_loader_int3 = true;
 
   SetID(GetDebuggedProcessId());
 
@@ -188,7 +154,7 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
 
     // Resume the debug loop.
     ExceptionRecordSP active_exception =
-        m_session_data->m_debugger->GetActiveException().lock();
+        m_session_data->m_debugger->GetActiveException();
     if (active_exception) {
       // Resume the process and continue processing debug events.  Mask the
       // exception so that from the process's view, there is no indication that
@@ -268,13 +234,15 @@ Status NativeProcessWindows::GetMemoryRegionInfo(lldb::addr_t load_addr,
   return ProcessDebugger::GetMemoryRegionInfo(load_addr, range_info);
 }
 
-Status NativeProcessWindows::ReadMemory(lldb::addr_t addr, void *buf,
-                                        size_t size, size_t &bytes_read) {
+Status NativeProcessWindows::ReadMemory(const ProcessAddress &process_addr,
+                                        void *buf, size_t size,
+                                        size_t &bytes_read) {
+  lldb::addr_t addr = process_addr.GetValue();
   return ProcessDebugger::ReadMemory(addr, buf, size, bytes_read);
 }
 
-Status NativeProcessWindows::WriteMemory(lldb::addr_t addr, const void *buf,
-                                         size_t size, size_t &bytes_written) {
+Status NativeProcessWindows::DoWriteMemory(lldb::addr_t addr, const void *buf,
+                                           size_t size, size_t &bytes_written) {
   return ProcessDebugger::WriteMemory(addr, buf, size, bytes_written);
 }
 
@@ -392,31 +360,94 @@ Status NativeProcessWindows::RemoveBreakpoint(lldb::addr_t addr,
   return RemoveSoftwareBreakpoint(addr);
 }
 
+// Resolve the fully qualified, normalized on disk path of a module loaded in
+// the target process.
+static bool GetLoadedModulePath(HANDLE process, HMODULE module,
+                                std::string &path) {
+  std::vector<wchar_t> name(MAX_PATH);
+  DWORD len = 0;
+  while (true) {
+    len = ::GetModuleFileNameExW(process, module, name.data(),
+                                 static_cast<DWORD>(name.size()));
+    if (len == 0)
+      return false;
+    if (len < name.size())
+      break;
+    if (name.size() >= PATHCCH_MAX_CCH)
+      return false;
+    name.resize(name.size() * 2);
+  }
+
+  std::wstring wpath(name.data(), len);
+
+  // Canonicalize through a handle to the image file so the reported path
+  // matches the on-disk name exactly.
+  AutoHandle file(::CreateFileW(
+      wpath.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+      nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
+
+  if (!file.IsValid())
+    return llvm::convertWideToUTF8(wpath, path);
+
+  // Unlike GetModuleFileNameExW, GetFinalPathNameByHandleW reports the buffer
+  // size it needs instead of truncating, so start empty and let the first call
+  // size the buffer rather than guessing.
+  std::vector<wchar_t> full;
+  while (true) {
+    DWORD needed = ::GetFinalPathNameByHandleW(
+        file.get(), full.data(), static_cast<DWORD>(full.size()),
+        FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+    if (needed == 0)
+      break;
+    if (needed < full.size()) {
+      std::wstring canonical(full.data(), needed);
+      // GetFinalPathNameByHandleW returns an extended-length ("\\?\") path.
+      static const wchar_t kUNCPrefix[] = L"\\\\?\\UNC\\";
+      static const wchar_t kDOSPrefix[] = L"\\\\?\\";
+      if (canonical.rfind(kUNCPrefix, 0) == 0)
+        canonical.replace(0, wcslen(kUNCPrefix), L"\\\\");
+      else if (canonical.rfind(kDOSPrefix, 0) == 0)
+        canonical.erase(0, wcslen(kDOSPrefix));
+      wpath = std::move(canonical);
+      break;
+    }
+    full.resize(needed);
+  }
+
+  return llvm::convertWideToUTF8(wpath, path);
+}
+
 Status NativeProcessWindows::CacheLoadedModules() {
   Status error;
-  if (!m_loaded_modules.empty())
+  if (!m_loaded_modules.IsEmpty())
     return Status();
 
-  // Retrieve loaded modules by a Target/Module-free implementation.
-  AutoHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetID()));
-  if (snapshot.IsValid()) {
-    MODULEENTRY32W me;
-    me.dwSize = sizeof(MODULEENTRY32W);
-    if (Module32FirstW(snapshot.get(), &me)) {
-      do {
-        std::string path;
-        if (!llvm::convertWideToUTF8(me.szExePath, path))
-          continue;
+  AutoHandle process(::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+                                   FALSE, GetID()),
+                     nullptr);
+  if (!process.IsValid())
+    return Status(::GetLastError(), eErrorTypeWin32);
 
-        FileSpec file_spec(path);
-        FileSystem::Instance().Resolve(file_spec);
-        m_loaded_modules[file_spec] = (addr_t)me.modBaseAddr;
-      } while (Module32Next(snapshot.get(), &me));
-    }
+  AutoHandle snapshot(::CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetID()));
+  if (!snapshot.IsValid())
+    return Status(::GetLastError(), eErrorTypeWin32);
 
-    if (!m_loaded_modules.empty())
-      return Status();
+  MODULEENTRY32W me;
+  me.dwSize = sizeof(MODULEENTRY32W);
+  if (::Module32FirstW(snapshot.get(), &me)) {
+    do {
+      std::string path;
+      if (!GetLoadedModulePath(process.get(), me.hModule, path))
+        continue;
+
+      FileSpec file_spec(path);
+      FileSystem::Instance().Resolve(file_spec);
+      m_loaded_modules.Add(file_spec, reinterpret_cast<addr_t>(me.modBaseAddr));
+    } while (::Module32NextW(snapshot.get(), &me));
   }
+
+  if (!m_loaded_modules.IsEmpty())
+    return Status();
 
   error = Status(::GetLastError(), lldb::ErrorType::eErrorTypeWin32);
   return error;
@@ -430,11 +461,9 @@ Status NativeProcessWindows::GetLoadedModuleFileSpec(const char *module_path,
 
   FileSpec module_file_spec(module_path);
   FileSystem::Instance().Resolve(module_file_spec);
-  for (auto &it : m_loaded_modules) {
-    if (it.first == module_file_spec) {
-      file_spec = it.first;
-      return Status();
-    }
+  if (const FileSpec *found = m_loaded_modules.FindFile(module_file_spec)) {
+    file_spec = *found;
+    return Status();
   }
   return Status::FromErrorStringWithFormat(
       "Module (%s) not found in process %" PRIu64 "!",
@@ -451,11 +480,9 @@ NativeProcessWindows::GetFileLoadAddress(const llvm::StringRef &file_name,
   load_addr = LLDB_INVALID_ADDRESS;
   FileSpec file_spec(file_name);
   FileSystem::Instance().Resolve(file_spec);
-  for (auto &it : m_loaded_modules) {
-    if (it.first == file_spec) {
-      load_addr = it.second;
-      return Status();
-    }
+  if (std::optional<addr_t> base = m_loaded_modules.GetBaseAddress(file_spec)) {
+    load_addr = *base;
+    return Status();
   }
   return Status::FromErrorStringWithFormat(
       "Can't get loaded address of file (%s) in process %" PRIu64 "!",
@@ -468,11 +495,11 @@ NativeProcessWindows::GetLoadedLibraries() {
     return error.ToError();
 
   std::vector<LoadedLibraryInfo> libs;
-  libs.reserve(m_loaded_modules.size());
-  for (const auto &[file_spec, base] : m_loaded_modules) {
+  libs.reserve(m_loaded_modules.GetSize());
+  for (const auto &[file_spec, base_addrs] : m_loaded_modules) {
     LoadedLibraryInfo info;
     info.name = file_spec.GetPath();
-    info.base_addr = base;
+    info.base_addr = base_addrs.front();
     libs.push_back(std::move(info));
   }
   return libs;
@@ -526,7 +553,7 @@ void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
     FileSpec exe = info.GetExecutableFile();
     if (exe) {
       FileSystem::Instance().Resolve(exe);
-      m_loaded_modules[exe] = image_base;
+      m_loaded_modules.Add(exe, image_base);
     }
   }
 
@@ -538,9 +565,9 @@ void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
 
 ExceptionResult
 NativeProcessWindows::HandleSingleStepException(const ExceptionRecord &record) {
-  Log *log = GetLog(WindowsLog::Exception);
   uint32_t wp_id = LLDB_INVALID_INDEX32;
 #ifndef __aarch64__
+  Log *log = GetLog(WindowsLog::Exception);
   if (NativeThreadWindows *thread = GetThreadByID(record.GetThreadID())) {
     NativeRegisterContextWindows &reg_ctx = thread->GetRegisterContext();
     Status error =
@@ -635,9 +662,8 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
     return ExceptionResult::BreakInDebugger;
   }
 
-  // Any remaining STATUS_BREAKPOINT is a breakpoint instruction in the
-  // program's own code (e.g. `__debugbreak()` or `__builtin_debugtrap()`).
-  // Stop the debugger and let the user decide what to do.
+  // Our own DebugBreakProcess() injection, used to implement
+  // Halt()/Interrupt().
   if (m_pending_halt) {
     LLDB_LOG(log,
              "DebugBreakProcess injection treated as Halt SIGSTOP for tid "
@@ -662,6 +688,15 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
       injected->SetStopReason(signal_info, "interrupt");
     SetState(eStateStopped, true);
     return ExceptionResult::BreakInDebugger;
+  }
+
+  if (m_expecting_loader_int3 && IsSystemModuleAddress(exception_addr)) {
+    m_expecting_loader_int3 = false;
+    LLDB_LOG(log,
+             "Skipping expected loader breakpoint at address {0:x} in a "
+             "system module.",
+             exception_addr);
+    return ExceptionResult::MaskException;
   }
 
   std::string desc = formatv("Exception {0:x8} encountered at address {1:x8}",
@@ -768,7 +803,7 @@ DllEventAction NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
   FileSpec resolved = module_spec.GetFileSpec();
   if (resolved) {
     FileSystem::Instance().Resolve(resolved);
-    m_loaded_modules[resolved] = module_addr;
+    m_loaded_modules.Add(resolved, module_addr);
   }
   m_pending_library_events = true;
 
@@ -776,7 +811,7 @@ DllEventAction NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
     return DllEventAction::ContinueDebugLoop;
 
   // Can't resolve a breakpoint in a system DLL.
-  if (!resolved || IsSystemDLL(resolved))
+  if (!resolved || ProcessDebugger::IsSystemDLL(resolved.GetPath()))
     return DllEventAction::ContinueDebugLoop;
 
   NativeThreadWindows *loader_thread = GetThreadByID(thread_id);
@@ -805,21 +840,13 @@ DllEventAction NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
   Log *log = GetLog(WindowsLog::Process);
   llvm::sys::ScopedLock lock(m_mutex);
 
-  FileSpec unloaded_spec;
-  for (auto it = m_loaded_modules.begin(); it != m_loaded_modules.end();) {
-    if (it->second == module_addr) {
-      unloaded_spec = it->first;
-      it = m_loaded_modules.erase(it);
-    } else {
-      ++it;
-    }
-  }
+  FileSpec unloaded_spec = m_loaded_modules.Remove(module_addr);
   m_pending_library_events = true;
 
   if (!m_initial_stop_seen || !m_client_supports_libraries_read)
     return DllEventAction::ContinueDebugLoop;
 
-  if (!unloaded_spec || IsSystemDLL(unloaded_spec))
+  if (!unloaded_spec || ProcessDebugger::IsSystemDLL(unloaded_spec.GetPath()))
     return DllEventAction::ContinueDebugLoop;
 
   NativeThreadWindows *unloader_thread = GetThreadByID(thread_id);

@@ -5311,6 +5311,207 @@ TEST(Hover, FunctionParameters) {
   }
 }
 
+static void configureHLSL(TestTU &TU, bool EnableMatrix = false) {
+  TU.Filename = "TestTU.hlsl";
+  TU.ExtraArgs.push_back("-x");
+  TU.ExtraArgs.push_back("hlsl");
+  if (EnableMatrix)
+    TU.ExtraArgs.push_back("-fenable-matrix");
+  TU.ExtraArgs.push_back("--target=dxil-pc-shadermodel6.3-library");
+}
+
+TEST(Hover, HLSLVectorAndMatrixSwizzle) {
+  struct {
+    const char *const Code;
+    const std::function<void(HoverInfo &)> ExpectedBuilder;
+  } Cases[] = {
+      {
+          R"hlsl(
+            typedef float float3 __attribute__((ext_vector_type(3)));
+            void main() {
+              float3 v;
+              float3 s = v.^[[xyz]];
+            }
+          )hlsl",
+          [](HoverInfo &HI) {
+            HI.Name = "xyz";
+            HI.Type = "float3";
+          }},
+      {
+          R"hlsl(
+            typedef float float3 __attribute__((ext_vector_type(3)));
+            typedef float float2 __attribute__((ext_vector_type(2)));
+            void main() {
+              float3 v;
+              float2 s = v.^[[xy]];
+            }
+          )hlsl",
+          [](HoverInfo &HI) {
+            HI.Name = "xy";
+            HI.Type = "float2";
+          }},
+      {
+          R"hlsl(
+            typedef float float4x4 __attribute__((matrix_type(4, 4)));
+            void main() {
+              float4x4 m;
+              float e = m.^[[_m00]];
+            }
+          )hlsl",
+          [](HoverInfo &HI) {
+            HI.Name = "_m00";
+            HI.Type = "float";
+          }},
+  };
+
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    Annotations T(Case.Code);
+    TestTU TU = TestTU::withCode(T.code());
+    configureHLSL(TU, /*EnableMatrix=*/true);
+    auto AST = TU.build();
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+    HoverInfo Expected;
+    Expected.SymRange = T.range();
+    Case.ExpectedBuilder(Expected);
+    SCOPED_TRACE(H->present(MarkupKind::PlainText));
+    EXPECT_EQ(H->Name, Expected.Name);
+    EXPECT_EQ(H->Type, Expected.Type);
+    EXPECT_EQ(H->SymRange, Expected.SymRange);
+  }
+}
+
+TEST(Hover, HLSLInvalidMatrixSwizzleNoCrash) {
+  Annotations T(R"hlsl(
+    typedef float float2x2 __attribute__((matrix_type(2, 2)));
+    void main() {
+      float2x2 m;
+      float bad = m.^[[_m22]]; // out of bounds for a 2x2 matrix /*error-ok*/
+    }
+  )hlsl");
+  TestTU TU = TestTU::withCode(T.code());
+  configureHLSL(TU, /*EnableMatrix=*/true);
+  auto AST = TU.build();
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  EXPECT_FALSE(H);
+}
+
+TEST(Hover, HLSLInvalidVectorSwizzleNoCrash) {
+  Annotations T(R"hlsl(
+    typedef float float3 __attribute__((ext_vector_type(3)));
+    void main() {
+      float3 v;
+      float bad = v.^[[w]]; // 'w' is not a valid component for a 3-component vector /*error-ok*/
+    }
+  )hlsl");
+  TestTU TU = TestTU::withCode(T.code());
+  configureHLSL(TU);
+  auto AST = TU.build();
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  EXPECT_FALSE(H);
+}
+
+TEST(Hover, AttributedStmt) {
+  struct {
+    const char *const Code;
+    const char *const ExpectedName;
+    bool IsHLSL;
+    bool ExpectDocumentation;
+  } Cases[] = {
+      {R"hlsl(
+         [numthreads(1, 1, 1)]
+         void main() {
+           [^unroll]
+           for (int i = 0; i < 4; i++) {}
+         }
+       )hlsl",
+       "unroll", /*IsHLSL=*/true, /*ExpectDocumentation=*/true},
+      {R"hlsl(
+         [numthreads(1, 1, 1)]
+         void main() {
+           [l^oop]
+           for (int i = 0; i < 4; i++) {}
+         }
+       )hlsl",
+       "loop", /*IsHLSL=*/true, /*ExpectDocumentation=*/true},
+      {R"hlsl(
+         [numthreads(1, 1, 1)]
+         void main() {
+           [b^ranch]
+           if (true) {}
+         }
+       )hlsl",
+       "branch", /*IsHLSL=*/true, /*ExpectDocumentation=*/false},
+      {R"hlsl(
+         [numthreads(1, 1, 1)]
+         void main() {
+           [f^latten]
+           if (true) {}
+         }
+       )hlsl",
+       "flatten", /*IsHLSL=*/true, /*ExpectDocumentation=*/false},
+      {R"cpp(
+         void foo() {
+           [[^likely]] if (true) {}
+         }
+       )cpp",
+       "likely", /*IsHLSL=*/false, /*ExpectDocumentation=*/false},
+      {R"cpp(
+         void foo() {
+           [[^unlikely]] if (true) {}
+         }
+       )cpp",
+       "unlikely", /*IsHLSL=*/false, /*ExpectDocumentation=*/false},
+      {R"cpp(
+         void foo() {
+           switch (1) {
+           case 1:
+             [[^fallthrough]];
+           case 2:
+             break;
+           }
+         }
+       )cpp",
+       "fallthrough", /*IsHLSL=*/false, /*ExpectDocumentation=*/false},
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    Annotations T(Case.Code,
+                  Annotations::Markers().setRangeBegin("{{").setRangeEnd("}}"));
+    TestTU TU = TestTU::withCode(T.code());
+    if (Case.IsHLSL)
+      configureHLSL(TU);
+    else
+      TU.ExtraArgs.push_back("-std=c++20");
+    auto AST = TU.build();
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+    EXPECT_EQ(H->Name, Case.ExpectedName);
+    if (Case.ExpectDocumentation) {
+      EXPECT_FALSE(H->Documentation.empty());
+    }
+  }
+}
+TEST(Hover, HLSLRegisterAttributeRange) {
+  Annotations T(R"hlsl(
+    Texture2D tex : [[^register]]([[^t1]]);
+  )hlsl");
+
+  TestTU TU = TestTU::withCode(T.code());
+  configureHLSL(TU);
+
+  auto AST = TU.build();
+
+  for (const auto &P : T.points()) {
+    auto H = getHover(AST, P, format::getLLVMStyle(), nullptr);
+
+    ASSERT_TRUE(H);
+    EXPECT_EQ(H->Name, "register");
+    EXPECT_FALSE(H->Documentation.empty());
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

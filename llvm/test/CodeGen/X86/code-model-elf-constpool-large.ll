@@ -1,20 +1,37 @@
 ; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=large -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s
+; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=medium -large-data-threshold=0 -o %t2
+; RUN: llvm-readelf -S %t2 | FileCheck %s --check-prefix=MED
+
+; RUN: llc < %s -relocation-model=pic -code-model=medium -large-data-threshold=0 | FileCheck %s --check-prefix=ASM-MED
+; RUN: llc < %s -relocation-model=pic -code-model=large | FileCheck %s --check-prefix=ASM-LARGE
 
 ; Verify that anonymous constant pool entries get SHF_X86_64_LARGE
-; and are placed in .lrodata.cst* sections under the large code model.
+; and are placed in .lrodata.cst* sections under the large code model,
+; but stay in .rodata.cst* under the medium code model.
 
 ; CHECK: .lrodata.cst16 {{.*}} AMl
 ; CHECK: .lrodata.cst4  {{.*}} AMl
+
+; MED: .rodata.cst16 {{.*}} AM
+; MED: .rodata.cst4  {{.*}} AM
+
+; ASM-MED: movaps .LCPI0_0(%rip),
+; ASM-LARGE: movabsq $.LCPI0_0@GOTOFF,
 
 ; Also verify the suffixed path (via -partition-static-data-sections).
 ; The .hot suffix requires profile information (see !prof metadata below)
 ; so that the partitioner can distinguish hot from cold constant pool entries.
 ; RUN: llc < %s -relocation-model=pic -code-model=large \
 ; RUN:     -partition-static-data-sections -o - | FileCheck %s --check-prefix=SUFFIX
+; RUN: llc < %s -relocation-model=pic -code-model=medium -large-data-threshold=0 \
+; RUN:     -partition-static-data-sections -o - | FileCheck %s --check-prefix=SUFFIX-MED
 
 ; SUFFIX: .section .lrodata.cst16.hot.,"aMl",@progbits,16
 ; SUFFIX: .section .lrodata.cst4,"aMl",@progbits,4
+
+; SUFFIX-MED: .section .rodata.cst16.hot.,"aM",@progbits,16
+; SUFFIX-MED: .section .rodata.cst4,"aM",@progbits,4
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64--linux"

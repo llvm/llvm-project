@@ -2,7 +2,7 @@
 
 --- |
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-  target triple = "thumbv7m-unknown-none-eabihf"
+  target triple = "thumbv7m-unknown-none-eabi"
 
   define void @callee_saved() #0 { ret void }
   define void @caller_saved() #0 { ret void }

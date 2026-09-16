@@ -70,7 +70,7 @@ protected:
   bool checkingForUndefinedBehavior() const { return false; }
 
   /// Callback for local registration.
-  Local createLocal(Descriptor *D);
+  Local createLocal(const Descriptor *D);
 
   /// Parameter indices.
   llvm::DenseMap<const ParmVarDecl *, FuncParam> Params;

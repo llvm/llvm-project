@@ -614,8 +614,7 @@ static void genBufferDestruction(mlir::Location loc, fir::FirOpBuilder &builder,
                       /*doFinalize=*/false);
   };
   if (auto cstMustFree = fir::getIntIfConstant(mustFree)) {
-    genFreeOrFinalize(*cstMustFree != 0 ? true : false, deallocComponents,
-                      mustFinalize);
+    genFreeOrFinalize(!cstMustFree->isZero(), deallocComponents, mustFinalize);
     return;
   }
 

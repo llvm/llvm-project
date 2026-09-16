@@ -70,6 +70,7 @@ define void @test_readfirstlane_i1_select(ptr addrspace(1) %out, i32 %src, i32 %
 ; CHECK-GISEL-NEXT:    v_cmp_lt_u32_e32 vcc, 42, v2
 ; CHECK-GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s4, v4
+; CHECK-GISEL-NEXT:    s_and_b32 s4, s4, 1
 ; CHECK-GISEL-NEXT:    s_cmp_lg_u32 s4, 0
 ; CHECK-GISEL-NEXT:    s_cselect_b64 vcc, exec, 0
 ; CHECK-GISEL-NEXT:    v_cndmask_b32_e32 v2, v3, v2, vcc

@@ -56,6 +56,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
@@ -168,6 +169,7 @@ char X86CmovConversionLegacy::ID = 0;
 void X86CmovConversionLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
   AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
 }
 
 bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
@@ -313,7 +315,7 @@ bool X86CmovConversionImpl::collectCmovCandidates(
       // unpredictable, skip it and do not convert it to branch.
       if (CC != X86::COND_INVALID &&
           !I.getFlag(MachineInstr::MIFlag::Unpredictable) &&
-          (IncludeLoads || !I.mayLoad())) {
+          (IncludeLoads || !I.mayLoad()) && !I.hasOrderedMemoryRef()) {
         if (Group.empty()) {
           // We found first CMOV in the range, reset flags.
           FirstCC = CC;

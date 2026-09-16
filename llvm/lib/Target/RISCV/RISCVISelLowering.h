@@ -64,8 +64,8 @@ public:
   int getLegalZfaFPImm(const APFloat &Imm, EVT VT) const;
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
-  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                               unsigned Index) const override;
+  ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                               unsigned Index) const override;
 
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
@@ -100,6 +100,8 @@ public:
   /// should be stack expanded.
   bool isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
 
+  bool isVectorClearMaskLegal(ArrayRef<int> M, EVT VT) const override;
+
   bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const override {
     // If the pair to store is a mixture of float and int values, we will
     // save two bitwise instructions and one float-to-int instruction and
@@ -119,8 +121,6 @@ public:
   bool
   shouldExpandBuildVectorWithShuffles(EVT VT,
                                       unsigned DefinedValues) const override;
-
-  bool shouldExpandCttzElements(EVT VT) const override;
 
   /// Return the cost of LMUL for linear operations.
   InstructionCost getLMULCost(MVT VT) const;
@@ -217,8 +217,18 @@ public:
 
   bool storeOfVectorConstantIsCheap(bool IsZero, EVT MemVT, unsigned NumElem,
                                     unsigned AddrSpace) const override {
-    // If we can replace 4 or more scalar stores, there will be a reduction
-    // in instructions even after we add a vector constant load.
+    // Replacing 4 or more element stores is a net reduction in instructions
+    // even after accounting for the vmv.v.i needed to materialize the zero
+    // vector.  MemVT may already be a vector, since memset lowers to LMUL1
+    // stores that we rely on this merge to widen, so use the total element
+    // count.
+    unsigned NumMemElts = MemVT.isVector() ? MemVT.getVectorNumElements() : 1;
+    if (IsZero)
+      return NumElem * NumMemElts >= 4;
+
+    // Materializing a non-zero vector constant isn't free (it may need
+    // several instructions like li + vmv.v.x or a constant-pool load), so stay
+    // conservative and only merge when replacing 4 or more stores.
     return NumElem >= 4;
   }
 
@@ -271,12 +281,14 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   Register
-  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+  getExceptionPointerRegister(ExceptionHandling EH,
+                              const Constant *PersonalityFn) const override;
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   Register
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+  getExceptionSelectorRegister(ExceptionHandling EH,
+                               const Constant *PersonalityFn) const override;
 
   bool shouldExtendTypeInLibCall(EVT Type) const override;
   bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
@@ -539,8 +551,6 @@ private:
   SDValue lowerLoadFF(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMaskedStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVectorCompress(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerFixedLengthVectorFCOPYSIGNToRVV(SDValue Op,
-                                               SelectionDAG &DAG) const;
   SDValue lowerMaskedGather(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMaskedScatter(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorLoadToRVV(SDValue Op, SelectionDAG &DAG) const;

@@ -159,9 +159,7 @@ TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
 namespace IsaInfo {
 
 enum {
-  // The closed Vulkan driver sets 96, which limits the wave count to 8 but
-  // doesn't spill SGPRs as much as when 80 is set.
-  FIXED_NUM_SGPRS_FOR_INIT_BUG = 96,
+  FIXED_NUM_SGPRS_FOR_INIT_BUG = AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG,
   TRAP_NUM_SGPRS = 16
 };
 
@@ -185,53 +183,23 @@ unsigned getLocalMemorySize(const MCSubtargetInfo &STI);
 /// \p STI.
 unsigned getAddressableLocalMemorySize(const MCSubtargetInfo &STI);
 
-/// \returns Number of execution units per compute unit for given subtarget \p
-/// STI.
-unsigned getEUsPerCU(const MCSubtargetInfo &STI);
-
 /// \returns Maximum number of work groups per compute unit for given subtarget
 /// \p STI and limited by given \p FlatWorkGroupSize.
 unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
                                unsigned FlatWorkGroupSize);
-
-/// \returns Minimum number of waves per execution unit for given subtarget \p
-/// STI.
-unsigned getMinWavesPerEU(const MCSubtargetInfo &STI);
-
-/// \returns Maximum number of waves per execution unit for given subtarget \p
-/// STI without any kind of limitation.
-unsigned getMaxWavesPerEU(const MCSubtargetInfo &STI);
 
 /// \returns Number of waves per execution unit required to support the given \p
 /// FlatWorkGroupSize.
 unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo &STI,
                                    unsigned FlatWorkGroupSize);
 
-/// \returns Minimum flat work group size for given subtarget \p STI.
-unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo &STI);
-
-/// \returns Maximum flat work group size
-constexpr unsigned getMaxFlatWorkGroupSize() {
-  // Some subtargets allow encoding 2048, but this isn't tested or supported.
-  return 1024;
-}
-
 /// \returns Number of waves per work group for given subtarget \p STI and
 /// \p FlatWorkGroupSize.
 unsigned getWavesPerWorkGroup(const MCSubtargetInfo &STI,
                               unsigned FlatWorkGroupSize);
 
-/// \returns SGPR allocation granularity for given subtarget \p STI.
-unsigned getSGPRAllocGranule(const MCSubtargetInfo &STI);
-
 /// \returns SGPR encoding granularity for given subtarget \p STI.
 unsigned getSGPREncodingGranule(const MCSubtargetInfo &STI);
-
-/// \returns Total number of SGPRs for given subtarget \p STI.
-unsigned getTotalNumSGPRs(const MCSubtargetInfo &STI);
-
-/// \returns Addressable number of SGPRs for given subtarget \p STI.
-unsigned getAddressableNumSGPRs(const MCSubtargetInfo &STI);
 
 /// \returns Minimum number of SGPRs that meets the given number of waves per
 /// execution unit requirement for given subtarget \p STI.
@@ -246,12 +214,6 @@ unsigned getMaxNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
 /// STI when the given special registers are used.
 unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
                           bool FlatScrUsed, bool XNACKUsed);
-
-/// \returns Number of extra SGPRs implicitly required by given subtarget \p
-/// STI when the given special registers are used. XNACK is inferred from
-/// \p STI.
-unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
-                          bool FlatScrUsed);
 
 /// \returns Number of SGPR blocks needed for given subtarget \p STI when
 /// \p NumSGPRs are used. \p NumSGPRs should already include any special
@@ -277,9 +239,6 @@ unsigned getVGPREncodingGranule(
 /// For subtargets with a unified VGPR file and mixed ArchVGPR/AGPR usage,
 /// returns the allocation granule for ArchVGPRs.
 unsigned getArchVGPRAllocGranule();
-
-/// \returns Total number of VGPRs for given subtarget \p STI.
-unsigned getTotalNumVGPRs(const MCSubtargetInfo &STI);
 
 /// Maximum number of VGPR blocks that can be allocated in dynamic VGPR mode.
 static constexpr unsigned MaxDynamicVGPRBlocks = 8;
@@ -421,6 +380,7 @@ const MIMGBaseOpcodeInfo *getMIMGBaseOpcodeInfo(unsigned BaseOpcode);
 
 struct MIMGDimInfo {
   MIMGDim Dim;
+  MIMGDim NonArrayDim;
   uint8_t NumCoords;
   uint8_t NumGradients;
   bool MSAA;
@@ -671,6 +631,10 @@ enum Component : unsigned {
 // 4 banks result in a mask 3, setting 2 lower bits.
 constexpr unsigned VOPD_VGPR_BANK_MASKS[] = {1, 3, 3, 1};
 constexpr unsigned VOPD3_VGPR_BANK_MASKS[] = {1, 3, 3, 3};
+// GFX11 VOPD interlock hazard requires SRC0/SRC1 to have
+// different parities, not just on different banks. Else,
+// non-deterministic forwarding error may occur.
+constexpr unsigned VOPD_GFX11_VGPR_BANK_MASKS[] = {1, 1, 1, 1};
 
 enum ComponentIndex : unsigned { X = 0, Y = 1 };
 constexpr unsigned COMPONENTS[] = {ComponentIndex::X, ComponentIndex::Y};
@@ -916,12 +880,15 @@ public:
   // even though it violates requirement to be from different banks.
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even and instruction may have real src2 as opposed to tied accumulator.
+  // If \p HasGFX11InterlockHazard is set then X/Y SRC0 and SRC1 VGPRs
+  // must have different register-number parity.
   bool
   hasInvalidOperand(std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
                     const MCRegisterInfo &MRI, bool SkipSrc = false,
-                    bool AllowSameVGPR = false, bool VOPD3 = false) const {
+                    bool AllowSameVGPR = false, bool VOPD3 = false,
+                    bool HasGFX11InterlockHazard = false) const {
     return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc, AllowSameVGPR,
-                                      VOPD3)
+                                      VOPD3, HasGFX11InterlockHazard)
         .has_value();
   }
 
@@ -933,10 +900,13 @@ public:
   // even though it violates requirement to be from different banks.
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even and instruction may have real src2 as opposed to tied accumulator.
+  // If \p HasGFX11InterlockHazard is set then X/Y SRC0 and SRC1 VGPRs
+  // must have different register-number parity.
   std::optional<unsigned> getInvalidCompOperandIndex(
       std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
       const MCRegisterInfo &MRI, bool SkipSrc = false,
-      bool AllowSameVGPR = false, bool VOPD3 = false) const;
+      bool AllowSameVGPR = false, bool VOPD3 = false,
+      bool HasGFX11InterlockHazard = false) const;
 
 private:
   RegIndices
@@ -1524,6 +1494,11 @@ bool isGFX1250(const MCSubtargetInfo &STI);
 bool isGFX1250Plus(const MCSubtargetInfo &STI);
 bool isGFX13(const MCSubtargetInfo &STI);
 bool isGFX13Plus(const MCSubtargetInfo &STI);
+
+/// \returns true if a work-group's waves run on all four SIMD32s (one
+/// contiguous LDS) and not just on two.
+bool isFullSIMDMode(const MCSubtargetInfo &STI);
+
 bool supportsWGP(const MCSubtargetInfo &STI);
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
@@ -1535,12 +1510,15 @@ bool isGFX90A(const MCSubtargetInfo &STI);
 bool isGFX940(const MCSubtargetInfo &STI);
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
+bool hasPopsExitingWaveID(const MCSubtargetInfo &STI);
+
+/// \returns true if the src_private_base and src_private_limit aperture
+/// registers are available on \p STI. Targets with globally addressable
+/// scratch have no private aperture and expose src_flat_scratch_base instead.
+bool hasPrivateApertureRegs(const MCSubtargetInfo &STI);
+
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
-
-inline bool supportsWave32(const MCSubtargetInfo &STI) {
-  return AMDGPU::isGFX10Plus(STI) && !AMDGPU::isGFX1250(STI);
-}
 
 int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
@@ -1548,6 +1526,10 @@ bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
 
 /// Is Reg - scalar register
 bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI);
+
+/// \returns true if \p Reg is an indexed-resource index register, i.e. either a
+/// 32-bit SGPR (uniform-indexed form) or a Lo256 VGPR (per-lane indexed form).
+bool isRsrcIndexReg(MCRegister Reg, const MCRegisterInfo &MRI);
 
 /// \returns if \p Reg occupies the high 16-bits of a 32-bit register.
 bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI);
@@ -1572,6 +1554,12 @@ constexpr bool isSISrcOperand(const MCOperandInfo &OpInfo) {
 
 inline bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   return isSISrcOperand(Desc.operands()[OpNo]);
+}
+
+/// Is this a scalar (i.e. not packed) bf16 source operand?
+constexpr bool isBF16SrcOperand(const MCOperandInfo &OpInfo) {
+  return OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_BF16 ||
+         OpInfo.OperandType == AMDGPU::OPERAND_REG_INLINE_C_BF16;
 }
 
 /// Is this a KImm operand?
@@ -1618,6 +1606,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_IMM_BF16:
   case AMDGPU::OPERAND_REG_IMM_FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
@@ -1702,11 +1691,17 @@ bool isArgPassedInSGPR(const Argument *Arg);
 
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
 
-LLVM_READONLY bool isPackedFP32Inst(unsigned Opc);
+/// The opcode is a packed fp32 instruction which only reads low 32 bits of
+/// a scalar operand and propagates it to high channel.
+LLVM_READONLY bool isPackedSingleSGPRFP32Inst(unsigned Opc);
 
-LLVM_READONLY bool isPacked64BitInst(unsigned Opc);
+/// The opcode is a packed 64-bit instruction which only reads low 64 bits of
+/// a scalar operand and propagates it to high channel.
+LLVM_READONLY bool isPackedSingleSGPR64BitInst(unsigned Opc);
 
-LLVM_READONLY bool isPackedFP32or64BitInst(unsigned Opc);
+/// Packed instructions that read a single SGPR for SGPR operands, except for
+/// 64-bit elements which read two SGPRs.
+LLVM_READONLY bool isSingleSGPRReadInst(unsigned Opc);
 
 LLVM_READONLY
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
@@ -1751,7 +1746,7 @@ inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned DC) {
 }
 
 /// \returns true if an instruction may have a 64-bit VGPR operand.
-bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc,
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
                              const MCSubtargetInfo &ST);
 
 /// \returns true if an instruction is a DP ALU DPP without any 64-bit operands.

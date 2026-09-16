@@ -81,7 +81,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include <array>
@@ -250,10 +250,10 @@ struct SVEShuffleOpts : public LoopPass {
 
     TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
     const AArch64TargetMachine &TM = TPC.getTM<AArch64TargetMachine>();
-    const AArch64Subtarget &ST =
-        *TM.getSubtargetImpl(*L->getHeader()->getParent());
+    const Function *F = L->getHeader()->getParent();
+    const AArch64Subtarget &ST = *TM.getSubtargetImpl(*F);
 
-    return processLoop(*L, ST, TM.createDataLayout());
+    return processLoop(*L, ST, F->getParent()->getDataLayout());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -273,13 +273,13 @@ INITIALIZE_PASS_END(SVEShuffleOpts, DEBUG_TYPE, name, false, false)
 
 Pass *llvm::createSVEShuffleOptsPass() { return new SVEShuffleOpts(); }
 
-PreservedAnalyses SVEShuffleOptsPass::run(Loop &L, LoopAnalysisManager &AM,
-                                          LoopStandardAnalysisResults &AR,
-                                          LPMUpdater &U) {
-  const AArch64Subtarget &ST =
-      *TM.getSubtargetImpl(*L.getHeader()->getParent());
+PreservedAnalyses
+AArch64SVEShuffleOptsPass::run(Loop &L, LoopAnalysisManager &AM,
+                               LoopStandardAnalysisResults &AR, LPMUpdater &U) {
+  const Function *F = L.getHeader()->getParent();
+  const AArch64Subtarget &ST = *TM.getSubtargetImpl(*F);
 
-  if (processLoop(L, ST, TM.createDataLayout())) {
+  if (processLoop(L, ST, F->getParent()->getDataLayout())) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
     PA.preserve<TargetIRAnalysis>();

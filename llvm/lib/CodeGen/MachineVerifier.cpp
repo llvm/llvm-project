@@ -731,12 +731,19 @@ void MachineVerifier::visitMachineFunctionBefore() {
   }
 }
 
+static bool hasPHIs(const MachineFunction &MF) {
+  return !MF.getProperties().hasNoPHIs() &&
+         any_of(MF, [](const MachineBasicBlock &MBB) {
+           return !MBB.phis().empty();
+         });
+}
+
 void
 MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   FirstTerminator = nullptr;
   FirstNonPHI = nullptr;
 
-  if (!MF->getProperties().hasNoPHIs() && MRI->tracksLiveness()) {
+  if (MRI->tracksLiveness() && hasPHIs(*MF)) {
     // If this block has allocatable physical registers live-in, check that
     // it is an entry block or landing pad.
     for (const auto &LI : MBB->liveins()) {
@@ -793,10 +800,9 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     report("MBB has more than one landing pad successor", MBB);
 
   // Call analyzeBranch. If it succeeds, there several more conditions to check.
-  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  const MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
-  if (!TII->analyzeBranch(*const_cast<MachineBasicBlock *>(MBB), TBB, FBB,
-                          Cond)) {
+  if (!TII->analyzeBranch(*MBB, TBB, FBB, Cond)) {
     // Ok, analyzeBranch thinks it knows what's going on with this block. Let's
     // check whether its answers match up with reality.
     if (!TBB && !FBB) {
@@ -2191,6 +2197,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   case TargetOpcode::G_VECREDUCE_FMIN:
   case TargetOpcode::G_VECREDUCE_FMAXIMUM:
   case TargetOpcode::G_VECREDUCE_FMINIMUM:
+  case TargetOpcode::G_VECREDUCE_FMAXIMUMNUM:
+  case TargetOpcode::G_VECREDUCE_FMINIMUMNUM:
   case TargetOpcode::G_VECREDUCE_ADD:
   case TargetOpcode::G_VECREDUCE_MUL:
   case TargetOpcode::G_VECREDUCE_AND:
@@ -2360,7 +2368,7 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     if (!MI->getOperand(0).isReg() || !MI->getOperand(0).isDef())
       report("Unspillable Terminator does not define a reg", MI);
     Register Def = MI->getOperand(0).getReg();
-    if (Def.isVirtual() && !MF->getProperties().hasNoPHIs() &&
+    if (Def.isVirtual() && hasPHIs(*MF) &&
         std::distance(MRI->use_nodbg_begin(Def), MRI->use_nodbg_end()) > 1)
       report("Unspillable Terminator expected to have at most one use!", MI);
   }

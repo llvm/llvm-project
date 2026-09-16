@@ -9,6 +9,7 @@
 # CHECK-NEXT:  "result": [
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "data": "{{.*}}",
+# CHECK-NEXT:      "detail": "callee",
 # CHECK-NEXT:      "kind": 12,
 # CHECK-NEXT:      "name": "callee",
 # CHECK-NEXT:      "range": {
@@ -31,6 +32,9 @@
 # CHECK-NEXT:          "line": 0
 # CHECK-NEXT:        }
 # CHECK-NEXT:      },
+# CHECK-NEXT:      "tags": [
+# CHECK-NEXT:        18
+# CHECK-NEXT:      ],
 # CHECK-NEXT:      "uri": "file://{{.*}}/clangd-test/main.cpp"
 # CHECK-NEXT:    }
 ---

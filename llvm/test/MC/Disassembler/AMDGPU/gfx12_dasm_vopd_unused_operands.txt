@@ -1,5 +1,5 @@
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -disassemble -show-encoding < %s | FileCheck %s -strict-whitespace --check-prefix=GFX12
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -disassemble -show-encoding < %s | FileCheck %s -strict-whitespace --check-prefix=GFX12
+# RUN: llvm-mc -triple=amdgpu12.00 -disassemble -show-encoding < %s | FileCheck %s -strict-whitespace --check-prefix=GFX12
+# RUN: llvm-mc -triple=amdgpu12.50 -disassemble -show-encoding < %s | FileCheck %s -strict-whitespace --check-prefix=GFX12
 
 # Test that VOPD instructions with v_dual_mov_b32 tolerate non-zero bits in
 # the unused vsrc1 field.

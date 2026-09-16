@@ -17,9 +17,9 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Rewrite/PatternApplicator.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
@@ -525,7 +525,7 @@ public:
   // The condition test is sunk to the top of the scope body (a false
   // result becomes a cir.break out of the loop) and, for a for loop, the step
   // is appended to the end of the scope body. The loop's cleanup region becomes
-  // the a cir.cleanup.scope enclosing the body region.
+  // the cleanup region of a cir.cleanup.scope enclosing the new body.
   //
   // For example, a while loop:
   //
@@ -682,9 +682,9 @@ public:
     // exceptions that might be thrown from the step region. Rather than trying
     // to figure out all of the cleanup routing here, we sink the condition into
     // the body region, hoist the step region (if any) and create a new
-    // cir.cleanup.scope enclosing the body region. Subsequent passes of the
-    // greedy driver will flatten the cir.cleanup.scope and the loop reusing
-    // the normal handlers.
+    // cir.cleanup.scope enclosing the body region. A subsequent sweep of the
+    // pass will flatten the cir.cleanup.scope and the loop reusing the normal
+    // handlers.
     if (op.maybeGetCleanup())
       return rewriteLoopWithCleanup(op, rewriter);
 
@@ -830,8 +830,9 @@ static cir::AllocaOp getOrCreateCleanupDestSlot(cir::FuncOp funcOp,
   rewriter.setInsertionPointToStart(&entryBlock);
   cir::IntType s32Type =
       cir::IntType::get(rewriter.getContext(), 32, /*isSigned=*/true);
-  cir::PointerType ptrToS32Type = cir::PointerType::get(s32Type);
   cir::CIRDataLayout dataLayout(funcOp->getParentOfType<mlir::ModuleOp>());
+  cir::PointerType ptrToS32Type = cir::PointerType::get(
+      s32Type, dataLayout.getAllocaAddrSpace(rewriter.getContext()));
   uint64_t alignment = dataLayout.getAlignment(s32Type, true).value();
   auto allocaOp = cir::AllocaOp::create(
       rewriter, loc, ptrToS32Type, "__cleanup_dest_slot",
@@ -1723,21 +1724,53 @@ public:
     mlir::Block *defaultDest = nullptr;
     bool defaultIsCatchAll = false;
 
-    for (auto [typeAttr, handlerBlock] :
-         llvm::zip(handlerTypes, catchHandlerBlocks)) {
-      if (mlir::isa<cir::CatchAllAttr>(typeAttr)) {
-        assert(!defaultDest && "multiple catch_all or unwind handlers");
-        defaultDest = handlerBlock;
-        defaultIsCatchAll = true;
-      } else if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
-        assert(!defaultDest && "multiple catch_all or unwind handlers");
-        defaultDest = handlerBlock;
-        defaultIsCatchAll = false;
-      } else {
-        // This is a typed catch handler (GlobalViewAttr with type info).
-        catchTypeAttrs.push_back(typeAttr);
-        catchDests.push_back(handlerBlock);
-      }
+    // A filter try operation has exactly two handlers. The unexpected region
+    // is the destination of the filter clause (taken when the exception is
+    // *not* permitted). The filter region is the unwind destination (taken
+    // when it is).
+    cir::EhFilterAttr filterAttr;
+    mlir::Block *filterUnwindDest = nullptr;
+    mlir::Block *filterClauseDest = nullptr;
+
+    for (auto zipped : llvm::zip(handlerTypes, catchHandlerBlocks)) {
+      mlir::Attribute typeAttr = std::get<0>(zipped);
+      mlir::Block *handlerBlock = std::get<1>(zipped);
+      llvm::TypeSwitch<mlir::Attribute>(typeAttr)
+          .Case<cir::CatchAllAttr>([&](auto) {
+            assert(!defaultDest && "multiple catch_all or unwind handlers");
+            defaultDest = handlerBlock;
+            defaultIsCatchAll = true;
+          })
+          .Case<cir::UnwindAttr>([&](auto) {
+            assert(!defaultDest && "multiple catch_all or unwind handlers");
+            defaultDest = handlerBlock;
+            defaultIsCatchAll = false;
+          })
+          .Case<cir::EhFilterAttr>([&](cir::EhFilterAttr ehFilter) {
+            assert(!filterAttr && "multiple filter handlers");
+            filterAttr = ehFilter;
+            filterUnwindDest = handlerBlock;
+          })
+          .Case<cir::EhUnexpectedAttr>([&](auto) {
+            assert(!filterClauseDest && "multiple unexpected handlers");
+            filterClauseDest = handlerBlock;
+          })
+          .Default([&](mlir::Attribute attr) {
+            // Typed catch handler (GlobalViewAttr with type info).
+            catchTypeAttrs.push_back(attr);
+            catchDests.push_back(handlerBlock);
+          });
+    }
+
+    if (filterAttr) {
+      assert(filterUnwindDest && filterClauseDest &&
+             "filter handler requires an unexpected handler");
+      assert(!defaultDest &&
+             "filter handler cannot share a dispatch with catch_all or unwind");
+      catchTypeAttrs.push_back(filterAttr);
+      catchDests.push_back(filterClauseDest);
+      defaultDest = filterUnwindDest;
+      defaultIsCatchAll = false;
     }
 
     assert(defaultDest && "dispatch must have a catch_all or unwind handler");
@@ -1823,12 +1856,12 @@ public:
     return handlerEntry;
   }
 
-  // Flatten an unwind handler region. The unwind region just contains a
-  // cir.resume that continues unwinding. We inline it and leave the resume
-  // in place. If this try op is nested inside an EH cleanup or another try op,
-  // the enclosing op will rewrite the resume as a branch to its cleanup or
-  // dispatch block when it is flattened. Otherwise, the resume will unwind to
-  // the caller.
+  // Flatten an unwind, filter, or unexpected handler region. These regions
+  // do not catch the exception. They resume, are unreachable, or call
+  // cir.eh.unexpected. We inline them and leave the terminator in place. If
+  // this try op is nested inside an EH cleanup or another try op, the
+  // enclosing op will rewrite a resume as a branch to its cleanup or dispatch
+  // block when it is flattened. Otherwise, a resume will unwind to the caller.
   mlir::Block *flattenUnwindHandler(mlir::Region &unwindRegion,
                                     mlir::Location loc,
                                     mlir::Block *insertBefore,
@@ -1918,7 +1951,8 @@ public:
     for (const auto &[idx, typeAttr] : llvm::enumerate(handlerTypes)) {
       mlir::Region &handlerRegion = handlerRegions[idx];
 
-      if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
+      if (mlir::isa<cir::UnwindAttr, cir::EhFilterAttr, cir::EhUnexpectedAttr>(
+              typeAttr)) {
         mlir::Block *unwindEntry =
             flattenUnwindHandler(handlerRegion, loc, continueBlock, rewriter);
         catchHandlerBlocks.push_back(unwindEntry);
@@ -2000,21 +2034,75 @@ void populateFlattenCFGPatterns(RewritePatternSet &patterns) {
           patterns.getContext());
 }
 
+namespace {
+// An implementation of RewriterBase::Listener that determines whether the IR
+// has been modified since the last time it was 'reset'. At the moment, this is
+// the only use for something like this, but we might wish to move this
+// somewhere if someone else needs similar functionality in the future.
+class MLIRChangedListener final : public mlir::RewriterBase::Listener {
+  bool hasChanged = false;
+
+public:
+  void reset() { hasChanged = false; }
+
+  bool changed() const { return hasChanged; }
+
+  void notifyBlockErased(Block *) override { hasChanged = true; }
+  void notifyOperationModified(Operation *) override { hasChanged = true; }
+  void notifyOperationReplaced(Operation *, Operation *) override {
+    hasChanged = true;
+  }
+  void notifyOperationReplaced(Operation *, ValueRange) override {
+    hasChanged = true;
+  }
+  void notifyOperationErased(Operation *) override { hasChanged = true; }
+
+  // notifyPatternBegin, notifyPatternEnd, notifyMatchFailure all skipped, since
+  // they don't modify.
+  void notifyOperationInserted(Operation *,
+                               mlir::IRRewriter::InsertPoint) override {
+    hasChanged = true;
+  }
+  void notifyBlockInserted(Block *, Region *, Region::iterator) override {
+    hasChanged = true;
+  }
+};
+} // namespace
+
 void CIRFlattenCFGPass::runOnOperation() {
-  RewritePatternSet patterns(&getContext());
-  populateFlattenCFGPatterns(patterns);
+  RewritePatternSet patternList(&getContext());
+  populateFlattenCFGPatterns(patternList);
+  FrozenRewritePatternSet patterns(std::move(patternList));
 
-  // Collect operations to apply patterns.
-  llvm::SmallVector<Operation *, 16> ops;
-  getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
-    if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp, CleanupScopeOp,
-            TryOp>(op))
-      ops.push_back(op);
-  });
+  PatternApplicator applicator(patterns);
+  // We need _A_ cost model, and everything here is the same cost-model, so this
+  // is effectively a no-op, but necessary to use the PatternApplicator.
+  applicator.applyDefaultCostModel();
 
-  // Apply patterns.
-  if (applyOpPatternsGreedily(ops, std::move(patterns)).failed())
-    signalPassFailure();
+  mlir::PatternRewriter rewriter(&getContext());
+  MLIRChangedListener changedListener;
+  rewriter.setListener(&changedListener);
+
+  do {
+    changedListener.reset();
+
+    // Collect flatten candidates post-order so an inner op is handled before
+    // its parent; op pointers stay valid across the block splits / region
+    // inlines the patterns perform (a pattern only erases the matched op and
+    // its descendants, which are visited first), so the list can be iterated
+    // directly.
+    llvm::SmallVector<Operation *, 16> ops;
+    getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
+      if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp,
+              CleanupScopeOp, TryOp>(op))
+        ops.push_back(op);
+    });
+
+    for (mlir::Operation *op : ops) {
+      rewriter.setInsertionPoint(op);
+      (void)applicator.matchAndRewrite(op, rewriter);
+    }
+  } while (changedListener.changed());
 }
 
 } // namespace

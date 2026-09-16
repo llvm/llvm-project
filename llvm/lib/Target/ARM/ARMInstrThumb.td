@@ -657,8 +657,8 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1 in {
                      (tBX GPR:$dst, (ops 14, zero_reg))>,
                      Requires<[IsThumb]>, Sched<[WriteBr]>;
   }
-  // tTAILJMPd: MachO version uses a Thumb2 branch (no Thumb1 tail calls
-  // on MachO), so it's in ARMInstrThumb2.td.
+  // tTAILJMPd: MachO version uses a wide branch, so it's in
+  // ARMInstrThumb2.td.
   // Non-MachO version:
   let Uses = [SP] in {
     def tTAILJMPdND : tPseudoExpand<(outs),
@@ -1549,10 +1549,10 @@ def tInt_eh_sjlj_setjmp : ThumbXI<(outs),(ins tGPR:$src, tGPR:$val),
                                   AddrModeNone, 0, NoItinerary, "","",
                           [(set R0, (ARMeh_sjlj_setjmp tGPR:$src, tGPR:$val))]>;
 
-// This gets lowered to an instruction sequence of 10 bytes
+// This gets lowered to an instruction sequence of 10 or 12 bytes
 // FIXME: Non-IOS version(s)
 let isBarrier = 1, hasSideEffects = 1, isTerminator = 1, isCodeGenOnly = 1,
-    Size = 10, Defs = [ R7, LR, SP ] in
+    Defs = [ R7, LR, SP ] in
 def tInt_eh_sjlj_longjmp : XI<(outs), (ins tGPR:$src, tGPR:$scratch),
                               AddrModeNone, 0, IndexModeNone,
                               Pseudo, NoItinerary, "", "",

@@ -135,6 +135,12 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     if (Field1Ty)
       return false;
     QualType EltTy = CTy->getElementType();
+    // Only floating-point complex types (e.g. _Complex float/double) are
+    // eligible to be passed in floating-point argument registers. Complex
+    // integer types (a GNU extension) should be treated like a normal
+    // aggregate and packed into GARs instead.
+    if (!EltTy->isRealFloatingType())
+      return false;
     if (getContext().getTypeSize(EltTy) > FRLen)
       return false;
     Field1Ty = CGT.ConvertType(EltTy);

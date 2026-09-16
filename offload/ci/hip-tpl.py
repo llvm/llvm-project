@@ -112,7 +112,7 @@ with worker.run(
                 f"-DTEST_SUITE_EXTERNALS_DIR={test_suite_externals}",
                 f"-DAMDGPU_ARCHS={w.args.amdgpu_arch}",
                 f"-DTEST_SUITE_SUBDIRS=External",
-                f"-DEXTERNAL_HIP_TESTS_KOKKOS=ON",
+                f"-DENABLE_HIP_KOKKOS_TESTS=ON",
                 f"-DCMAKE_C_COMPILER={clang}",
                 f"-DCMAKE_CXX_COMPILER={clangxx}",
             ]

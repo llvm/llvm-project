@@ -513,6 +513,9 @@ gpu.module @kernels {
 // CHECK:           %[[VAL_79:.*]] = llvm.mlir.constant(32 : i64) : i64
 // CHECK:           %[[VAL_80:.*]] = llvm.alloca %[[VAL_79]] x i32 : (i64) -> !llvm.ptr
 
+// Anchor past the first private descriptor, whose size constant is
+// indistinguishable from the next alloca's.
+// CHECK:           llvm.insertvalue %{{.*}}[4, 0]
 // CHECK:           %[[VAL_91:.*]] = llvm.mlir.constant(32 : i64) : i64
 // CHECK-64:        %[[VAL_92:.*]] = llvm.alloca %[[VAL_91]] x i64 : (i64) -> !llvm.ptr
 // CHECK-32:        %[[VAL_92:.*]] = llvm.alloca %[[VAL_91]] x i32 : (i64) -> !llvm.ptr

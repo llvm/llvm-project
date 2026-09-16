@@ -22,6 +22,15 @@ void multiAliasGlobal(DeepAliasInt);
 void nullableGlobal(char * _Nonnull);
 void rawIntGlobal(int);
 void constValueGlobal(const int);
+void volatileValueGlobal(volatile int);
+void pointerVolatileGlobal(int *volatile);
+void pointeeVolatileMismatchGlobal(volatile int *);
+void nestedNullableGlobal(int * _Nullable * _Nullable);
+void nullableArrayGlobal(int * _Nullable values[4]);
+void nullableFunctionPointerItselfGlobal(void (* _Nullable callback)(int *));
+void nullableFunctionPointerGlobal(void (*callback)(int * _Nullable));
+void nullableNonnullFunctionPointerGlobal(void (*callback)(int * _Nullable,
+                                                          int * _Nonnull));
 
 namespace SelectorNamespace {
 void makeNamespaced(int);

@@ -65,7 +65,7 @@ try.cont:                                         ; preds = %entry, %catch
 
 declare void @may_throw(...)
 
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn
 declare ptr @llvm.wasm.get.exception(token)
@@ -85,5 +85,3 @@ declare void @__cxa_end_catch()
 
 ; Function Attrs: noreturn
 declare void @llvm.wasm.rethrow()
-
-

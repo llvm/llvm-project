@@ -29,9 +29,11 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -43,10 +45,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "aggressive-instcombine"
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
-
 STATISTIC(NumAnyOrAllBitsSet, "Number of any/all-bits-set patterns folded");
 STATISTIC(NumGuardedRotates,
           "Number of guarded rotates transformed into funnel shifts");
@@ -57,6 +55,7 @@ STATISTIC(NumSelectCTTZFolded,
           "Number of select-based split cttz patterns folded");
 STATISTIC(NumSelectCTLZFolded,
           "Number of select-based split ctlz patterns folded");
+STATISTIC(NumMemSetsGuarded, "Number of memsets guarded for a zero length");
 
 static cl::opt<unsigned> MaxInstrsToScan(
     "aggressive-instcombine-max-scan-instrs", cl::init(64), cl::Hidden,
@@ -71,6 +70,10 @@ static cl::opt<unsigned>
     MemChrInlineThreshold("memchr-inline-threshold", cl::init(3), cl::Hidden,
                           cl::desc("The maximum length of a constant string to "
                                    "inline a memchr call."));
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
 
 /// Try to fold a select-based split cttz pattern into a single full-width cttz.
 ///
@@ -987,37 +990,34 @@ static bool tryToRecognizeTableBasedCttz(LoadInst *LI, Type *AccessType,
 
   ConstantInt *ZeroTableElem = cast<ConstantInt>(
       ConstantFoldLoadFromConst(GVTable->getInitializer(), AccessType, DL));
-  bool DefinedForZero = ZeroTableElem->getZExtValue() == InputBits;
+  bool DefinedForZero = ZeroTableElem->equalsInt(InputBits);
 
   IRBuilder<> B(LI);
   ConstantInt *BoolConst = B.getInt1(!DefinedForZero);
   Type *XType = X1->getType();
   auto Cttz = B.CreateIntrinsic(Intrinsic::cttz, {XType}, {X1, BoolConst});
-  Value *ZExtOrTrunc = nullptr;
+  Value *Res = B.CreateZExtOrTrunc(Cttz, AccessType);
 
-  if (DefinedForZero) {
-    ZExtOrTrunc = B.CreateZExtOrTrunc(Cttz, AccessType);
-  } else {
+  if (!DefinedForZero) {
     // If the value in elem 0 isn't the same as InputBits, we still want to
-    // produce the value from the table.
+    // produce the value from the table. Emit the select in AccessType with elem
+    // 0 unchanged, as the table's element type may be wider than the input
+    // type (and directly truncating ZeroTableElem into the input type could
+    // incorrectly drop bits).
     auto Cmp = B.CreateICmpEQ(X1, ConstantInt::get(XType, 0));
-    auto Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Cttz);
+    Res = B.CreateSelect(Cmp, ZeroTableElem, Res);
 
     // The true branch of select handles the cttz(0) case, which is rare.
-    if (!ProfcheckDisableMetadataFixes) {
-      if (Instruction *SelectI = dyn_cast<Instruction>(Select))
-        SelectI->setMetadata(
-            LLVMContext::MD_prof,
-            MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
-    }
+    if (Instruction *SelectI = dyn_cast<Instruction>(Res))
+      SelectI->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
 
     // NOTE: If the table[0] is 0, but the cttz(0) is defined by the Target
     // it should be handled as: `cttz(x) & (typeSize - 1)`.
-
-    ZExtOrTrunc = B.CreateZExtOrTrunc(Select, AccessType);
   }
 
-  LI->replaceAllUsesWith(ZExtOrTrunc);
+  LI->replaceAllUsesWith(Res);
 
   return true;
 }
@@ -1223,12 +1223,10 @@ static bool tryToRecognizeTableBasedLog2(LoadInst *LI, Type *AccessType,
         B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Sub);
 
     // The true branch of select handles the log2(0) case, which is rare.
-    if (!ProfcheckDisableMetadataFixes) {
-      if (Instruction *SelectI = dyn_cast<Instruction>(Select))
-        SelectI->setMetadata(
-            LLVMContext::MD_prof,
-            MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
-    }
+    if (Instruction *SelectI = dyn_cast<Instruction>(Select))
+      SelectI->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
 
     Result = Select;
   }
@@ -1259,7 +1257,8 @@ static bool tryToRecognizeTableBasedCttzOrLog2(Instruction &I,
     return false;
 
   GlobalVariable *GVTable = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
-  if (!GVTable || !GVTable->hasInitializer() || !GVTable->isConstant())
+  if (!GVTable || !GVTable->isConstant() ||
+      !GVTable->hasDefinitiveInitializer())
     return false;
 
   unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
@@ -1463,9 +1462,9 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   IRBuilder<> Builder(&I);
   LoadInst *NewLoad = nullptr, *LI1 = LOps.Root;
 
-  IntegerType *WiderType = IntegerType::get(I.getContext(), LOps.LoadSize);
-  // TTI based checks if we want to proceed with wider load
-  bool Allowed = TTI.isTypeLegal(WiderType);
+  // Allow a power of 2 number of bytes that fit in a legal integer type.
+  bool Allowed = LOps.LoadSize >= 16 && isPowerOf2_64(LOps.LoadSize) &&
+                 DL.fitsInLegalInteger(LOps.LoadSize);
   if (!Allowed)
     return false;
 
@@ -1486,6 +1485,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     Load1Ptr = Builder.CreatePtrAdd(Load1Ptr, Builder.getInt(Offset1));
   }
   // Generate wider load.
+  IntegerType *WiderType = IntegerType::get(I.getContext(), LOps.LoadSize);
   NewLoad = Builder.CreateAlignedLoad(WiderType, Load1Ptr, LI1->getAlign(),
                                       LI1->isVolatile(), "");
   NewLoad->takeName(LI1);
@@ -1516,7 +1516,11 @@ struct PartStore {
   StoreInst *Store;
 
   bool isCompatibleWith(const PartStore &Other) const {
-    return PtrBase == Other.PtrBase && Val == Other.Val;
+    // Offset stripping looks through addrspacecasts, so an equal PtrBase does
+    // not imply an equal address space, and thus not an equal PtrOffset width.
+    return PtrBase == Other.PtrBase && Val == Other.Val &&
+           Store->getPointerAddressSpace() ==
+               Other.Store->getPointerAddressSpace();
   }
 
   bool operator<(const PartStore &Other) const {
@@ -1558,9 +1562,10 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
   // FIXME: We could generate smaller stores if we can't produce a large one.
   const PartStore &First = Parts.front();
   LLVMContext &Ctx = First.Store->getContext();
-  Type *NewTy = Type::getIntNTy(Ctx, Width);
   unsigned Fast = 0;
-  if (!TTI.isTypeLegal(NewTy) ||
+  bool Allowed =
+      Width >= 16 && isPowerOf2_64(Width) && DL.fitsInLegalInteger(Width);
+  if (!Allowed ||
       !TTI.allowsMisalignedMemoryAccesses(Ctx, Width,
                                           First.Store->getPointerAddressSpace(),
                                           First.Store->getAlign(), &Fast) ||
@@ -1569,6 +1574,7 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
 
   // Generate the combined store.
   IRBuilder<> Builder(First.Store);
+  Type *NewTy = Type::getIntNTy(Ctx, Width);
   Value *Val = First.Val;
   if (First.ValOffset != 0)
     Val = Builder.CreateLShr(Val, First.ValOffset);
@@ -2107,9 +2113,8 @@ static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
   if (!CalledFunc)
     return false;
 
-  LibFunc LF;
-  if (!TLI.getLibFunc(*CalledFunc, LF) ||
-      !isLibFuncEmittable(CI->getModule(), &TLI, LF))
+  LibFunc LF = TLI.getLibFunc(*CalledFunc);
+  if (!isLibFuncEmittable(CI->getModule(), &TLI, LF))
     return false;
 
   DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);
@@ -2460,6 +2465,66 @@ static bool foldMulHigh(Instruction &I) {
   return false;
 }
 
+/// Guard a memset whose nonconstant length is known to be in [0, 1].
+/// Inserts a conditional branch around the memset and specialises the
+/// executed path to a one-byte store.
+static bool foldMemSetZeroOrOneLength(Instruction &I, const DataLayout &DL,
+                                      TargetLibraryInfo &TLI,
+                                      AssumptionCache &AC, DominatorTree &DT,
+                                      bool &MadeCFGChange) {
+  auto *MI = dyn_cast<MemSetInst>(&I);
+  if (!MI || isa<ConstantInt>(MI->getLength()))
+    return false;
+
+  SimplifyQuery SQ(DL, &TLI, &DT, &AC, MI);
+  KnownBits KnownLen = computeKnownBits(MI->getLength(), SQ);
+  if (!KnownLen.getMaxValue().isOne())
+    return false;
+
+  uint64_t TotalCount;
+  SmallVector<InstrProfValueData> MemsetVPMetadata = getValueProfDataFromInst(
+      I, InstrProfValueKind::IPVK_MemOPSize, 2, TotalCount);
+  std::optional<uint64_t> ZeroCount = std::nullopt;
+  std::optional<uint64_t> OneCount = std::nullopt;
+  for (const auto [MemOpSize, SizeFrequency] : MemsetVPMetadata) {
+    if (MemOpSize == 0)
+      ZeroCount = SizeFrequency;
+    else if (MemOpSize == 1)
+      OneCount = SizeFrequency;
+  }
+  // If we only have one value in the profile, we assume that the other is zero.
+  if (MemsetVPMetadata.size() == 1) {
+    if (ZeroCount.has_value())
+      OneCount = 0;
+    else if (OneCount.has_value())
+      ZeroCount = 0;
+  }
+
+  BasicBlock *HeadBlock = MI->getIterator()->getParent();
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  IRBuilder<> B(MI);
+  Value *IsNonZero = B.CreateIsNotNull(MI->getLength(), "memset.notzero");
+  Instruction *ThenTerm = SplitBlockAndInsertIfThen(
+      IsNonZero, MI->getIterator(), /*Unreachable=*/false,
+      /*BranchWeights=*/nullptr, &DTU);
+
+  Instruction &IsNonZeroBranch = *HeadBlock->getTerminator();
+  if (!ProfcheckDisableMetadataFixes && OneCount.has_value() &&
+      ZeroCount.has_value() && (*OneCount + *ZeroCount > 0))
+    setFittedBranchWeights(IsNonZeroBranch, {*OneCount, *ZeroCount}, false);
+  else
+    setExplicitlyUnknownBranchWeightsIfProfiled(IsNonZeroBranch, DEBUG_TYPE);
+
+  IRBuilder<> StoreBuilder(ThenTerm);
+  StoreInst *Store = StoreBuilder.CreateAlignedStore(
+      MI->getValue(), MI->getDest(), MI->getDestAlign(), MI->isVolatile());
+  Store->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
+  MI->eraseFromParent();
+  ++NumMemSetsGuarded;
+  MadeCFGChange = true;
+  return true;
+}
+
 /// This is the entry point for folds that could be implemented in regular
 /// InstCombine, but they are separated because they are not expected to
 /// occur frequently and/or have more than a constant-length pattern match.
@@ -2493,10 +2558,14 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= foldPatternedLoads(I, DL);
       MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);
       MadeChange |= foldMulHigh(I);
-      // NOTE: This function introduces erasing of the instruction `I`, so it
-      // needs to be called at the end of this sequence, otherwise we may make
-      // bugs.
-      MadeChange |= foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange);
+      // These folds can erase the instruction `I`, so they need to be called
+      // at the end of this sequence.
+      if (foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange)) {
+        MadeChange = true;
+        continue;
+      }
+      if (foldMemSetZeroOrOneLength(I, DL, TLI, AC, DT, MadeCFGChange))
+        MadeChange = true;
     }
 
     // Do this separately to avoid redundantly scanning stores multiple times.

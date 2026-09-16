@@ -14,8 +14,8 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::android {
 
 void CloexecCreatCheck::registerMatchers(MatchFinder *Finder) {
-  auto CharPointerType = hasType(pointerType(pointee(isAnyCharacter())));
-  auto MODETType = hasType(namedDecl(hasName("mode_t")));
+  const auto CharPointerType = hasType(pointerType(pointee(isAnyCharacter())));
+  const auto MODETType = hasType(namedDecl(hasName("mode_t")));
   registerMatchersImpl(Finder, functionDecl(isExternC(), returns(isInteger()),
                                             hasName("creat"),
                                             hasParameter(0, CharPointerType),

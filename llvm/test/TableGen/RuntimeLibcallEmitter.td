@@ -13,14 +13,11 @@ def MEMCPY : RuntimeLibcall;
 def MEMSET : RuntimeLibcall;
 def CALLOC : RuntimeLibcall;
 
-// Test default names.
-let IsDefault = true in {
-  def __ashlsi3 : RuntimeLibcallImpl<SHL_I32>;
-  def __lshrdi3 : RuntimeLibcallImpl<SRL_I64>;
+def __ashlsi3 : RuntimeLibcallImpl<SHL_I32>;
+def __lshrdi3 : RuntimeLibcallImpl<SRL_I64>;
 
-  def sqrtl_f128 : RuntimeLibcallImpl<SQRT_F128, "sqrtl">;
-  def sqrtl_f80 : RuntimeLibcallImpl<SQRT_F80, "sqrtl">;
-}
+def sqrtl_f128 : RuntimeLibcallImpl<SQRT_F128, "sqrtl">;
+def sqrtl_f80 : RuntimeLibcallImpl<SQRT_F80, "sqrtl">;
 
 // Ignore non-default in initDefaultLibCallNames.
 def bzero : RuntimeLibcallImpl<BZERO>;
@@ -33,21 +30,32 @@ def calloc  : RuntimeLibcallImpl<CALLOC, "calloc">;
 def CompilerRTLibcalls : LibcallImpls<(add __ashlsi3, __lshrdi3)>;
 def LibmLibcalls : LibcallImpls<(add sqrtl_f80)>;
 
-def isSimpleArch : RuntimeLibcallAvailability<[{TT.getArch() == Triple::simple}]>;
-def isFooArch : RuntimeLibcallAvailability<[{TT.getArch() == Triple::foo}]>;
+def IsSimpleArch : LibcallPredicate<[{TT.getArch() == Triple::simple}]>;
+def IsFooArch : LibcallPredicate<[{TT.getArch() == Triple::foo}]>;
+def IsZOS : LibcallPredicate<[{TT.getOS() == Triple::zos}]>;
+def IsPPCLeaf : LibcallPredicate<[{TT.getArch().isPPC()}]>;
+def IsPPC64Leaf : LibcallPredicate<[{TT.getArch().isPPC64()}]>;
+def IsFoo : LibcallPredicate<[{isFOO()}]>;
+def IsBarOS : LibcallPredicate<[{TT.getOS() == Triple::bar}]>;
+def IsBuzzArch : LibcallPredicate<[{TT.getArch() == Triple::buzz}]>;
+def IsBlahArch : LibcallPredicate<[{TT.getArch() == Triple::blah}]>;
+def HasCompilerRT : LibcallPredicate<[{TT.hasCompilerRT()}]>;
+
+def isSimpleArch : RuntimeLibcallAvailability<(all_of IsSimpleArch)>;
+def isFooArch : RuntimeLibcallAvailability<(all_of IsFooArch)>;
 
 
-def isZOS : RuntimeLibcallAvailability<[{TT.getOS() == Triple::zos}]>;
-def isPPC : RuntimeLibcallAvailability<[{TT.getArch().isPPC()}]>;
-def isPPC64 : RuntimeLibcallAvailability<[{TT.getArch().isPPC64()}]>;
+def isZOS : RuntimeLibcallAvailability<(all_of IsZOS)>;
+def isPPC : RuntimeLibcallAvailability<(all_of IsPPCLeaf)>;
+def isPPC64 : RuntimeLibcallAvailability<(all_of IsPPC64Leaf)>;
 
 
-def isFoo : RuntimeLibcallAvailability<[{isFOO()}]>;
-def isBarOS : RuntimeLibcallAvailability<[{TT.getOS() == Triple::bar}]>;
-def isBuzzArch : RuntimeLibcallAvailability<[{TT.getArch() == Triple::buzz}]>;
-def isBlahArch : RuntimeLibcallAvailability<[{TT.getArch() == Triple::blah}]>;
+def isFoo : RuntimeLibcallAvailability<(all_of IsFoo)>;
+def isBarOS : RuntimeLibcallAvailability<(all_of IsBarOS)>;
+def isBuzzArch : RuntimeLibcallAvailability<(all_of IsBuzzArch)>;
+def isBlahArch : RuntimeLibcallAvailability<(all_of IsBlahArch)>;
 
-def hasCompilerRT : RuntimeLibcallAvailability<[{TT.hasCompilerRT()}]>;
+def hasCompilerRT : RuntimeLibcallAvailability<(all_of HasCompilerRT)>;
 
 
 def SimpleLibrary : SystemRuntimeLibrary<isSimpleArch,
@@ -199,7 +207,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK: return enum_seq(RTLIB::Unsupported, RTLIB::Unsupported);
 // CHECK-NEXT: }
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
 // CHECK-EMPTY:
 // CHECK-NEXT: if (TT.getArch() == Triple::blah) {
 // CHECK-NEXT:     static constexpr LibcallImplBitset SystemAvailableImpls({

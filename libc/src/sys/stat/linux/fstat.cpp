@@ -18,7 +18,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fstat, (int fd, struct stat *statbuf)) {
-  ErrorOr<int> result =
+  ErrorOr<void> result =
       internal::stat_via_statx(fd, "", AT_EMPTY_PATH, statbuf);
   if (!result) {
     libc_errno = result.error();

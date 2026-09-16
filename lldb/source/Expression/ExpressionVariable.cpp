@@ -11,6 +11,9 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+
+#include "llvm/Support/Error.h"
+
 #include <optional>
 
 using namespace lldb_private;
@@ -81,16 +84,18 @@ void ExpressionVariable::TransferAddress(bool force) {
 
     Status error;
     Log *log = GetLog(LLDBLog::Expressions);
-    lldb::addr_t cur_value =
-        process_sp->ReadPointerFromMemory(live_addr, error);
-    if (error.Fail())
+    llvm::Expected<lldb::addr_t> cur_value =
+        process_sp->ReadPointerFromMemory(live_addr);
+    if (!cur_value) {
+      llvm::consumeError(cur_value.takeError());
       return;
+    }
 
-    if (cur_value != static_addr.address) {
+    if (*cur_value != static_addr.address) {
       LLDB_LOG(log,
                "Stored value: {0} read from {1} doesn't "
                "match static addr: {2}",
-               cur_value, live_addr, static_addr.address);
+               *cur_value, live_addr, static_addr.address);
       return;
     }
 

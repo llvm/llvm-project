@@ -11,8 +11,8 @@ define void @store_i48(ptr addrspace(1) %ptr, i48 %arg) #0 {
   ; UNPACKED-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
   ; UNPACKED-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr2
   ; UNPACKED-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $vgpr3
-  ; UNPACKED-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](i32), [[COPY3]](i32)
-  ; UNPACKED-NEXT:   [[COPY4:%[0-9]+]]:_(i64) = COPY [[MV1]](s64)
+  ; UNPACKED-NEXT:   [[MV1:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[COPY2]](i32), [[COPY3]](i32)
+  ; UNPACKED-NEXT:   [[COPY4:%[0-9]+]]:_(i64) = COPY [[MV1]](i64)
   ; UNPACKED-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 32
   ; UNPACKED-NEXT:   [[LSHR:%[0-9]+]]:_(i64) = G_LSHR [[COPY4]], [[C]](i32)
   ; UNPACKED-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
@@ -35,7 +35,7 @@ define void @store_i55(ptr addrspace(1) %ptr, i55 %arg) #0 {
   ; UNPACKED-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
   ; UNPACKED-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr2
   ; UNPACKED-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $vgpr3
-  ; UNPACKED-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](i32), [[COPY3]](i32)
+  ; UNPACKED-NEXT:   [[MV1:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[COPY2]](i32), [[COPY3]](i32)
   ; UNPACKED-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 36028797018963967
   ; UNPACKED-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[MV1]], [[C]]
   ; UNPACKED-NEXT:   [[COPY4:%[0-9]+]]:_(i64) = COPY [[AND]](i64)
@@ -67,8 +67,8 @@ define void @store_i56(ptr addrspace(1) %ptr, i56 %arg) #0 {
   ; UNPACKED-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
   ; UNPACKED-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr2
   ; UNPACKED-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $vgpr3
-  ; UNPACKED-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](i32), [[COPY3]](i32)
-  ; UNPACKED-NEXT:   [[COPY4:%[0-9]+]]:_(i64) = COPY [[MV1]](s64)
+  ; UNPACKED-NEXT:   [[MV1:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[COPY2]](i32), [[COPY3]](i32)
+  ; UNPACKED-NEXT:   [[COPY4:%[0-9]+]]:_(i64) = COPY [[MV1]](i64)
   ; UNPACKED-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 32
   ; UNPACKED-NEXT:   [[LSHR:%[0-9]+]]:_(i64) = G_LSHR [[COPY4]], [[C]](i32)
   ; UNPACKED-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 4

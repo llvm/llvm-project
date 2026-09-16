@@ -8,9 +8,7 @@
 //
 // This program tries to reduce an IR test case for a given interesting-ness
 // test. It runs multiple delta debugging passes in order to minimize the input
-// file. It's worth noting that this is a part of the bugpoint redesign
-// proposal, and thus a *temporary* tool that will eventually be integrated
-// into the bugpoint tool itself.
+// file.
 //
 //===----------------------------------------------------------------------===//
 

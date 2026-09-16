@@ -17,6 +17,7 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX, LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/BacktraceTools.h"
+#include "llvm/ExecutionEngine/Orc/COFFAutoImportGenerator.h"
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
@@ -32,6 +33,7 @@
 #include "llvm/ExecutionEngine/Orc/JITLinkReentryTrampolines.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/MachO.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
@@ -39,6 +41,8 @@
 #include "llvm/ExecutionEngine/Orc/SectCreate.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SharedMemoryMapperSPSCI.h"
+#include "llvm/ExecutionEngine/Orc/SimpleMemoryMapSPS.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteMemoryMapper.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
@@ -166,6 +170,12 @@ static cl::list<std::string> WeakLibraries(
              "TextAPI file, and all symbols in the interface will "
              "resolve to null"),
     cl::cat(JITLinkCategory));
+
+static cl::list<std::string>
+    LibrariesAuto("auto-l",
+                  cl::desc("Link against library X in the library search paths "
+                           "(auto-generate corresponding import library)"),
+                  cl::Prefix, cl::cat(JITLinkCategory));
 
 static cl::opt<bool> SearchSystemLibrary(
     "search-sys-lib",
@@ -754,38 +764,34 @@ static std::unique_ptr<JITLinkMemoryManager> createInProcessMemoryManager() {
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 createSimpleRemoteMemoryManager(ExecutorProcessControl &EPC) {
-  SimpleRemoteMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = EPC.getBootstrapSymbols(
-          {{SAs.Instance, rt::SimpleExecutorMemoryManagerInstanceName},
-           {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
-           {SAs.Initialize,
-            rt::SimpleExecutorMemoryManagerInitializeWrapperName},
-           {SAs.Deinitialize,
-            rt::SimpleExecutorMemoryManagerDeinitializeWrapperName},
-           {SAs.Release, rt::SimpleExecutorMemoryManagerReleaseWrapperName}}))
-    return std::move(Err);
+  auto &ES = EPC.getExecutionSession();
+  auto B = sps::createSimpleMemoryMapBindings(ES);
+  if (!B)
+    return B.takeError();
 #ifdef _WIN32
   size_t SlabSize = 1024 * 1024;
 #else
   size_t SlabSize = 1024 * 1024 * 1024;
 #endif
   return MapperJITLinkMemoryManager::CreateWithMapper<SimpleRemoteMemoryMapper>(
-      SlabSize, EPC, SAs);
+      SlabSize, ES, std::move(*B));
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(ExecutorProcessControl &EPC) {
   SharedMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = EPC.getBootstrapSymbols(
-          {{SAs.Instance, rt::ExecutorSharedMemoryMapperServiceInstanceName},
-           {SAs.Reserve,
-            rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
-           {SAs.Initialize,
-            rt::ExecutorSharedMemoryMapperServiceInitializeWrapperName},
-           {SAs.Deinitialize,
-            rt::ExecutorSharedMemoryMapperServiceDeinitializeWrapperName},
-           {SAs.Release,
-            rt::ExecutorSharedMemoryMapperServiceReleaseWrapperName}}))
+  if (auto Err = lookupAndApply(
+          EPC.getExecutionSession().getBootstrapJITDylib(),
+          {recordAddr(rt::sps_ci::SharedMemoryMapperInstanceName,
+                      &SAs.Instance),
+           recordAddr(rt::sps_ci::SharedMemoryMapperReserve::Name,
+                      &SAs.Reserve),
+           recordAddr(rt::sps_ci::SharedMemoryMapperInitialize::Name,
+                      &SAs.Initialize),
+           recordAddr(rt::sps_ci::SharedMemoryMapperDeinitialize::Name,
+                      &SAs.Deinitialize),
+           recordAddr(rt::sps_ci::SharedMemoryMapperRelease::Name,
+                      &SAs.Release)}))
     return std::move(Err);
 
 #ifdef _WIN32
@@ -926,60 +932,35 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
       inconvertibleErrorCode());
 #else
 
-  constexpr int ReadEnd = 0;
-  constexpr int WriteEnd = 1;
-
-  // Pipe FDs.
-  int ToExecutor[2];
-  int FromExecutor[2];
+  constexpr int ParentSocket = 0, ChildSocket = 1;
+  int Sockets[2];
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, Sockets) == -1)
+    return make_error<StringError>(
+        Twine("Unable to create socket for executor: ") + strerror(errno),
+        inconvertibleErrorCode());
 
   pid_t ChildPID;
-
-  // Create pipes to/from the executor..
-  if (pipe(ToExecutor) != 0 || pipe(FromExecutor) != 0)
-    return make_error<StringError>("Unable to create pipe for executor",
-                                   inconvertibleErrorCode());
-
   ChildPID = fork();
 
   if (ChildPID == 0) {
     // In the child...
-
-    // Close the parent ends of the pipes
-    close(ToExecutor[WriteEnd]);
-    close(FromExecutor[ReadEnd]);
-
-    // Execute the child process.
-    std::unique_ptr<char[]> ExecutorPath, FDSpecifier;
-    {
-      ExecutorPath = std::make_unique<char[]>(OutOfProcessExecutor.size() + 1);
-      strcpy(ExecutorPath.get(), OutOfProcessExecutor.data());
-
-      std::string FDSpecifierStr("filedescs=");
-      FDSpecifierStr += utostr(ToExecutor[ReadEnd]);
-      FDSpecifierStr += ',';
-      FDSpecifierStr += utostr(FromExecutor[WriteEnd]);
-      FDSpecifier = std::make_unique<char[]>(FDSpecifierStr.size() + 1);
-      strcpy(FDSpecifier.get(), FDSpecifierStr.c_str());
-    }
-
-    char *const Args[] = {ExecutorPath.get(), FDSpecifier.get(), nullptr};
-    int RC = execvp(ExecutorPath.get(), Args);
+    close(Sockets[ParentSocket]);
+    std::string ConnSpec = "fd=" + std::to_string(Sockets[ChildSocket]);
+    char *const Args[] = {OutOfProcessExecutor.data(), ConnSpec.data(),
+                          nullptr};
+    int RC = execvp(OutOfProcessExecutor.data(), Args);
     if (RC != 0) {
       errs() << "unable to launch out-of-process executor \""
-             << ExecutorPath.get() << "\"\n";
+             << OutOfProcessExecutor << "\"\n";
       exit(1);
     }
   }
   // else we're the parent...
-
-  // Close the child ends of the pipes
-  close(ToExecutor[ReadEnd]);
-  close(FromExecutor[WriteEnd]);
+  close(Sockets[ChildSocket]);
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(MaterializationThreads),
-      FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
+      Sockets[ParentSocket], Sockets[ParentSocket]);
 #endif
 }
 
@@ -1270,13 +1251,8 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   }
 
   if (DebuggerSupport && TT.isOSBinFormatMachO()) {
-    if (!ProcessSymsJD) {
-      Err = make_error<StringError>("MachO debugging requires process symbols",
-                                    inconvertibleErrorCode());
-      return;
-    }
     ObjLayer->addPlugin(ExitOnErr(GDBJITDebugInfoRegistrationPlugin::Create(
-        this->ES, *ProcessSymsJD, TT)));
+        this->ES, this->ES.getBootstrapJITDylib())));
   }
 
   if (PerfSupport && TT.isOSBinFormatELF()) {
@@ -1364,7 +1340,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     if (DebuggerSupport) {
       Error TargetSymErr = Error::success();
       auto Plugin =
-          std::make_unique<ELFDebugObjectPlugin>(ES, true, true, TargetSymErr);
+          std::make_unique<ELFDebugObjectPlugin>(ES, true, TargetSymErr);
       if (!TargetSymErr)
         ObjLayer->addPlugin(std::move(Plugin));
       else
@@ -1498,9 +1474,8 @@ void Session::modifyPassConfig(LinkGraph &G, PassConfiguration &PassConfig) {
 
 Expected<JITDylib *> Session::getOrLoadDynamicLibrary(StringRef LibPath) {
   auto It = DynLibJDs.find(LibPath);
-  if (It != DynLibJDs.end()) {
+  if (It != DynLibJDs.end())
     return It->second;
-  }
   auto G =
       EPCDynamicLibrarySearchGenerator::Load(ES, *DylibMgr, LibPath.data());
   if (!G)
@@ -1524,6 +1499,37 @@ Error Session::loadAndLinkDynamicLibrary(JITDylib &JD, StringRef LibPath) {
   LLVM_DEBUG({
     dbgs() << "Linking dynamic library " << LibPath << " to " << JD.getName()
            << "\n";
+  });
+  return Error::success();
+}
+
+Expected<JITDylib *> Session::getOrLoadAutoImportDLL(StringRef LibPath) {
+  auto It = AutoImportJDs.find(LibPath);
+  if (It != AutoImportJDs.end())
+    return It->second;
+  auto G = orc::COFFAutoImportGenerator::Load(ES, *ObjLayer, *DylibMgr,
+                                              LibPath.data());
+  if (!G)
+    return G.takeError();
+  auto JD = &ES.createBareJITDylib(LibPath.str());
+
+  JD->addGenerator(std::move(*G));
+  AutoImportJDs.emplace(LibPath.str(), JD);
+  LLVM_DEBUG({
+    dbgs() << "Loaded auto-import dynamic library " << LibPath.data() << " for "
+           << LibPath << "\n";
+  });
+  return JD;
+}
+
+Error Session::loadAndLinkAutoImportDLL(JITDylib &JD, StringRef LibPath) {
+  auto DL = getOrLoadAutoImportDLL(LibPath);
+  if (!DL)
+    return DL.takeError();
+  JD.addToLinkOrder(**DL);
+  LLVM_DEBUG({
+    dbgs() << "Linking auto-import dynamic library " << LibPath << " to "
+           << JD.getName() << "\n";
   });
   return Error::success();
 }
@@ -2312,7 +2318,7 @@ static Error addLibraries(Session &S,
     bool IsPath = false;
     unsigned Position;
     ArrayRef<StringRef> CandidateExtensions;
-    enum { Standard, Hidden, Weak } Modifier;
+    enum { Standard, Hidden, Weak, Auto } Modifier;
   };
 
   // Queue to load library as in the order as it appears in the argument list.
@@ -2398,6 +2404,18 @@ static Error addLibraries(Session &S,
     LibraryLoadQueue.push_back(std::move(LL));
   }
 
+  // Add -auto-lx arguments to LibraryLoads.
+  for (auto LibAutoItr = LibrariesAuto.begin(),
+            LibAutoEnd = LibrariesAuto.end();
+       LibAutoItr != LibAutoEnd; ++LibAutoItr) {
+    LibraryLoad LL;
+    LL.LibName = *LibAutoItr;
+    LL.Position = LibrariesAuto.getPosition(LibAutoItr - LibrariesAuto.begin());
+    LL.CandidateExtensions = DynLibExtensionsOnly;
+    LL.Modifier = LibraryLoad::Auto;
+    LibraryLoadQueue.push_back(std::move(LL));
+  }
+
   // Sort library loads by position in the argument list.
   llvm::sort(LibraryLoadQueue,
              [](const LibraryLoad &LHS, const LibraryLoad &RHS) {
@@ -2418,6 +2436,7 @@ static Error addLibraries(Session &S,
       S.HiddenArchives.insert(Path);
       break;
     case LibraryLoad::Weak:
+    case LibraryLoad::Auto:
       llvm_unreachable("Unsupported");
       break;
     }
@@ -2489,6 +2508,10 @@ static Error addLibraries(Session &S,
             "Can't use -weak-lx or -weak_library to load JITDylib " +
                 LL.LibName,
             inconvertibleErrorCode());
+      if (LL.Modifier == LibraryLoad::Auto)
+        return make_error<StringError>("Can't use -auto-lx to load JITDylib " +
+                                           LL.LibName,
+                                       inconvertibleErrorCode());
       JD.addToLinkOrder(*LJD);
       continue;
     }
@@ -2559,6 +2582,9 @@ static Error addLibraries(Session &S,
               JD.addGenerator(std::move(*G));
             else
               return G.takeError();
+          } else if (LL.Modifier == LibraryLoad::Auto) {
+            if (auto Err = S.loadAndLinkAutoImportDLL(JD, LibPath.data()))
+              return Err;
           } else {
             if (auto Err = S.loadAndLinkDynamicLibrary(JD, LibPath.data()))
               return Err;

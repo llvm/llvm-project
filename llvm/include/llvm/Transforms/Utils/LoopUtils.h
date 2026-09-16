@@ -239,8 +239,10 @@ LLVM_ABI SmallVector<Instruction *, 8> findDefsUsedOutsideOfLoop(Loop *L);
 
 /// Find a combination of metadata ("llvm.loop.vectorize.width" and
 /// "llvm.loop.vectorize.scalable.enable") for a loop and use it to construct a
-/// ElementCount. If the metadata "llvm.loop.vectorize.width" cannot be found
-/// then std::nullopt is returned.
+/// ElementCount. If scalable.enable is present the count is scalable; if
+/// scalable.disable is present or the tag is absent, it is fixed-width. If the
+/// metadata "llvm.loop.vectorize.width" cannot be found then std::nullopt is
+/// returned.
 LLVM_ABI std::optional<ElementCount>
 getOptionalElementCountLoopAttribute(const Loop *TheLoop);
 
@@ -328,19 +330,26 @@ LLVM_ABI TransformationMode hasLICMVersioningTransformation(const Loop *L);
 LLVM_ABI void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
                                       unsigned V = 0);
 
+/// Add a single-operand (name-only) node \p MDString to the loop metadata of
+/// \p TheLoop, keeping other values intact. If a name-only node with the same
+/// string is already present, this is a no-op.
+LLVM_ABI void addStringMetadataToLoop(Loop *TheLoop, StringRef MDString);
+
 /// Return either:
 /// - \c std::nullopt, if the implementation is unable to handle the loop form
 ///   of \p L (e.g., \p L must have a latch block that controls the loop exit).
 /// - The value of \c llvm.loop.estimated_trip_count from the loop metadata of
-///   \p L, if that metadata is present.  In the special case that the value is
-///   zero, return \c std::nullopt instead as that is historically what callers
-///   expect when a loop is estimated to execute no iterations (i.e., its header
-///   is not reached).
+///   \p L, if that metadata is present.
 /// - Else, a new estimate of the trip count from the latch branch weights of
 ///   \p L.
 ///
-/// An estimated trip count is always a valid positive trip count, saturated at
-/// \c UINT_MAX.
+/// An estimate of zero is meaningful: it indicates that \p L is estimated not
+/// to be entered, that is, that its header is not reached.  For example, after
+/// peeling 10 or more iterations from a loop with an estimated trip count of
+/// 10, \c llvm.loop.estimated_trip_count becomes 0 on the remaining loop.
+/// Callers that need a positive trip count must check for zero.
+///
+/// An estimated trip count is saturated at \c UINT_MAX.
 ///
 /// In addition, if \p EstimatedLoopInvocationWeight, then either:
 /// - Set \c *EstimatedLoopInvocationWeight to the weight of the latch's branch
@@ -660,9 +669,10 @@ addRuntimeChecks(Instruction *Loc, Loop *TheLoop,
                  const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
                  SCEVExpander &Expander, bool HoistRuntimeChecks = false);
 
-LLVM_ABI Value *addDiffRuntimeChecks(
-    Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
-    function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC);
+LLVM_ABI Value *addDiffRuntimeChecks(Instruction *Loc,
+                                     ArrayRef<PointerDiffInfo> Checks,
+                                     SCEVExpander &Expander, ElementCount VF,
+                                     unsigned IC);
 
 /// Struct to hold information about a partially invariant condition.
 struct IVConditionInfo {

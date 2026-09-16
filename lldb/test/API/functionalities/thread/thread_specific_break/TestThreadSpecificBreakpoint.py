@@ -23,7 +23,7 @@ def set_thread_name(test, thread, breakpoint):
     breakpoint.SetThreadName("main-thread")
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 class ThreadSpecificBreakTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

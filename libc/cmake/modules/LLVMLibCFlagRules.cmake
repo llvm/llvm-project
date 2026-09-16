@@ -39,7 +39,7 @@ function(extract_flag_modifier input_flag output_flag modifier)
     set(${output_flag} ${input_flag} PARENT_SCOPE)
     set(${modifier} "" PARENT_SCOPE)
   endif()
-endfunction(extract_flag_modifier)
+endfunction()
 
 function(remove_duplicated_flags input_flags output_flags)
   set(out_flags "")
@@ -72,7 +72,7 @@ function(remove_duplicated_flags input_flags output_flags)
   endforeach()
 
   set(${output_flags} "${out_flags}" PARENT_SCOPE)
-endfunction(remove_duplicated_flags)
+endfunction()
 
 # Collect flags from dependency list.  To see which flags come with each
 # dependence, pass `SHOW_INTERMEDIATE_OBJECTS=DEPS` to cmake.
@@ -100,12 +100,12 @@ function(get_flags_from_dep_list output_list)
         list(APPEND flag_list ${flag})
       endif()
     endforeach()
-  endforeach(dep)
+  endforeach()
 
   list(REMOVE_DUPLICATES flag_list)
 
   set(${output_list} ${flag_list} PARENT_SCOPE)
-endfunction(get_flags_from_dep_list)
+endfunction()
 
 # Given a `flag` without modifier, scan through the list of dependency, append
 # `.__NO_flag` to any target that has `flag` in its FLAGS property.
@@ -125,9 +125,9 @@ function(get_fq_dep_list_without_flag output_list flag)
     else()
       list(APPEND fq_dep_no_flag_list ${fq_dep_name})
     endif()
-  endforeach(dep)
+  endforeach()
   set(${output_list} ${fq_dep_no_flag_list} PARENT_SCOPE)
-endfunction(get_fq_dep_list_without_flag)
+endfunction()
 
 # Check if a `flag` is set
 function(check_flag result flag_name)
@@ -140,7 +140,7 @@ function(check_flag result flag_name)
   else()
     set(${result} FALSE PARENT_SCOPE)
   endif()
-endfunction(check_flag)
+endfunction()
 
 # Generate all flags' combinations and call the corresponding function provided
 # by `CREATE_TARGET` to create a target for each combination.
@@ -203,7 +203,7 @@ function(expand_flags_for_target target_name flags)
     CREATE_TARGET ${EXPAND_FLAGS_CREATE_TARGET}
     ${EXPAND_FLAGS_UNPARSED_ARGUMENTS}
   )
-endfunction(expand_flags_for_target)
+endfunction()
 
 # Collect all flags from a target's dependency, and then forward to
 # `expand_flags_for_target to generate all flags' combinations and call
@@ -224,7 +224,7 @@ function(add_target_with_flags target_name)
 
   if(NOT ADD_TO_EXPAND_CREATE_TARGET)
     message(FATAL_ERROR "Missing function to create targets.  Please specify "
-                        "`CREATE_TARGET <function>`")
+      "`CREATE_TARGET <function>`")
   endif()
 
   get_fq_target_name(${target_name} fq_target_name)
@@ -251,7 +251,7 @@ function(add_target_with_flags target_name)
     if("${modifier}" STREQUAL "ONLY" AND SKIP_FLAG_EXPANSION_${flag})
       if(SHOW_INTERMEDIATE_OBJECTS)
         message(STATUS "Not generating ${fq_target_name} since "
-                       "${flag} is not available on the host.")
+          "${flag} is not available on the host.")
       endif()
       return()
     endif()
@@ -272,7 +272,7 @@ function(add_target_with_flags target_name)
     CREATE_TARGET ${ADD_TO_EXPAND_CREATE_TARGET}
     ${ADD_TO_EXPAND_UNPARSED_ARGUMENTS}
   )
-endfunction(add_target_with_flags)
+endfunction()
 
 # Special flags
 set(FMA_OPT_FLAG "FMA_OPT")
@@ -286,7 +286,7 @@ set(MISC_MATH_BASIC_OPS_OPT_FLAG "MISC_MATH_BASIC_OPS_OPT")
 # Skip FMA_OPT flag for targets that don't support fma.
 if(NOT DEFINED SKIP_FLAG_EXPANSION_FMA_OPT)
   if(NOT((LIBC_TARGET_ARCHITECTURE_IS_X86_64 AND (LIBC_CPU_FEATURES MATCHES "FMA")) OR
-        LIBC_TARGET_ARCHITECTURE_IS_ANY_RISCV))
+    LIBC_TARGET_ARCHITECTURE_IS_ANY_RISCV))
     set(SKIP_FLAG_EXPANSION_FMA_OPT TRUE)
   endif()
 endif()
@@ -304,7 +304,7 @@ endif()
 # SSE4.2 support.
 if(NOT DEFINED SKIP_FLAG_EXPANSION_ROUND_OPT)
   if(NOT((LIBC_TARGET_ARCHITECTURE_IS_X86_64 AND (LIBC_CPU_FEATURES MATCHES "SSE4_2")) OR
-        LIBC_TARGET_ARCHITECTURE_IS_AARCH64 OR LIBC_TARGET_OS_IS_GPU))
+    LIBC_TARGET_ARCHITECTURE_IS_AARCH64 OR LIBC_TARGET_OS_IS_GPU))
     set(SKIP_FLAG_EXPANSION_ROUND_OPT TRUE)
   endif()
 endif()

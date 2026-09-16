@@ -700,3 +700,698 @@ entry:
   %mul = add <4 x i32> %a, splat (i32 320)
   ret <4 x i32> %mul
 }
+
+define <1 x i64> @smax_v1i64(<1 x i64> %a) {
+; CHECK-NEON-LABEL: smax_v1i64:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    cmge d1, d0, #0
+; CHECK-NEON-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEON-NEXT:    orn v0.8b, v0.8b, v1.8b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smax_v1i64:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    smax z0.d, z0.d, #-1
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smax = call <1 x i64> @llvm.smax(<1 x i64> %a, <1 x i64> splat (i64 -1))
+  ret <1 x i64> %smax
+}
+
+define <2 x i64> @smax_v2i64(<2 x i64> %a) {
+; CHECK-NEON-LABEL: smax_v2i64:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    mov w8, #127 // =0x7f
+; CHECK-NEON-NEXT:    dup v1.2d, x8
+; CHECK-NEON-NEXT:    cmgt v2.2d, v0.2d, v1.2d
+; CHECK-NEON-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smax_v2i64:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    smax z0.d, z0.d, #127
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smax = call <2 x i64> @llvm.smax(<2 x i64> %a, <2 x i64> splat (i64 127))
+  ret <2 x i64> %smax
+}
+
+define <2 x i32> @smax_v2i32(<2 x i32> %a) {
+; CHECK-NEON-LABEL: smax_v2i32:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.2s, #7
+; CHECK-NEON-NEXT:    smax v0.2s, v0.2s, v1.2s
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smax_v2i32:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    smax z0.s, z0.s, #7
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smax = call <2 x i32> @llvm.smax(<2 x i32> %a, <2 x i32> splat (i32 7))
+  ret <2 x i32> %smax
+}
+
+define <4 x i32> @smax_v4i32(<4 x i32> %a) {
+; CHECK-NEON-LABEL: smax_v4i32:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    mvni v1.4s, #127
+; CHECK-NEON-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smax_v4i32:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    smax z0.s, z0.s, #-128
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smax = call <4 x i32> @llvm.smax(<4 x i32> %a, <4 x i32> splat (i32 -128))
+  ret <4 x i32> %smax
+}
+
+define <4 x i16> @smax_v4i16(<4 x i16> %a) {
+; CHECK-NEON-LABEL: smax_v4i16:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.4h, #5
+; CHECK-NEON-NEXT:    smax v0.4h, v0.4h, v1.4h
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smax_v4i16:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    smax z0.h, z0.h, #5
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smax = call <4 x i16> @llvm.smax(<4 x i16> %a, <4 x i16> splat (i16 5))
+  ret <4 x i16> %smax
+}
+
+define <8 x i16> @smax_v8i16(<8 x i16> %a) {
+; CHECK-NEON-LABEL: smax_v8i16:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    mvni v1.8h, #32
+; CHECK-NEON-NEXT:    smax v0.8h, v0.8h, v1.8h
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smax_v8i16:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    smax z0.h, z0.h, #-33
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smax = call <8 x i16> @llvm.smax(<8 x i16> %a, <8 x i16> splat (i16 -33))
+  ret <8 x i16> %smax
+}
+
+define <8 x i8> @smax_v8i8(<8 x i8> %a) {
+; CHECK-NEON-LABEL: smax_v8i8:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEON-NEXT:    smax v0.8b, v0.8b, v1.8b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smax_v8i8:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    smax z0.b, z0.b, #0
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smax = call <8 x i8> @llvm.smax(<8 x i8> %a, <8 x i8> splat (i8 0))
+  ret <8 x i8> %smax
+}
+
+define <16 x i8> @smax_v16i8(<16 x i8> %a) {
+; CHECK-NEON-LABEL: smax_v16i8:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.16b, #239
+; CHECK-NEON-NEXT:    smax v0.16b, v0.16b, v1.16b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smax_v16i8:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    smax z0.b, z0.b, #-17
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smax = call <16 x i8> @llvm.smax(<16 x i8> %a, <16 x i8> splat (i8 -17))
+  ret <16 x i8> %smax
+}
+
+define <4 x i32> @smax_too_low(<4 x i32> %a) {
+; CHECK-NEON-LABEL: smax_too_low:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    mvni v1.4s, #128
+; CHECK-NEON-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smax_too_low:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    mvni v1.4s, #128
+; CHECK-SVE-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smax = call <4 x i32> @llvm.smax(<4 x i32> %a, <4 x i32> splat (i32 -129))
+  ret <4 x i32> %smax
+}
+
+define <4 x i32> @smax_too_high(<4 x i32> %a) {
+; CHECK-NEON-LABEL: smax_too_high:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.4s, #128
+; CHECK-NEON-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smax_too_high:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    movi v1.4s, #128
+; CHECK-SVE-NEXT:    smax v0.4s, v0.4s, v1.4s
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smax = call <4 x i32> @llvm.smax(<4 x i32> %a, <4 x i32> splat (i32 128))
+  ret <4 x i32> %smax
+}
+
+define <1 x i64> @smin_v1i64(<1 x i64> %a) {
+; CHECK-NEON-LABEL: smin_v1i64:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.2d, #0xffffffffffffffff
+; CHECK-NEON-NEXT:    cmgt d1, d1, d0
+; CHECK-NEON-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEON-NEXT:    orn v0.8b, v0.8b, v1.8b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smin_v1i64:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    smin z0.d, z0.d, #-1
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smin = call <1 x i64> @llvm.smin(<1 x i64> %a, <1 x i64> splat (i64 -1))
+  ret <1 x i64> %smin
+}
+
+define <2 x i64> @smin_v2i64(<2 x i64> %a) {
+; CHECK-NEON-LABEL: smin_v2i64:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    mov w8, #127 // =0x7f
+; CHECK-NEON-NEXT:    dup v1.2d, x8
+; CHECK-NEON-NEXT:    cmgt v2.2d, v1.2d, v0.2d
+; CHECK-NEON-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smin_v2i64:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    smin z0.d, z0.d, #127
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smin = call <2 x i64> @llvm.smin(<2 x i64> %a, <2 x i64> splat (i64 127))
+  ret <2 x i64> %smin
+}
+
+define <2 x i32> @smin_v2i32(<2 x i32> %a) {
+; CHECK-NEON-LABEL: smin_v2i32:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.2s, #7
+; CHECK-NEON-NEXT:    smin v0.2s, v0.2s, v1.2s
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smin_v2i32:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    smin z0.s, z0.s, #7
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smin = call <2 x i32> @llvm.smin(<2 x i32> %a, <2 x i32> splat (i32 7))
+  ret <2 x i32> %smin
+}
+
+define <4 x i32> @smin_v4i32(<4 x i32> %a) {
+; CHECK-NEON-LABEL: smin_v4i32:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    mvni v1.4s, #127
+; CHECK-NEON-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smin_v4i32:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    smin z0.s, z0.s, #-128
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smin = call <4 x i32> @llvm.smin(<4 x i32> %a, <4 x i32> splat (i32 -128))
+  ret <4 x i32> %smin
+}
+
+define <4 x i16> @smin_v4i16(<4 x i16> %a) {
+; CHECK-NEON-LABEL: smin_v4i16:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.4h, #5
+; CHECK-NEON-NEXT:    smin v0.4h, v0.4h, v1.4h
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smin_v4i16:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    smin z0.h, z0.h, #5
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smin = call <4 x i16> @llvm.smin(<4 x i16> %a, <4 x i16> splat (i16 5))
+  ret <4 x i16> %smin
+}
+
+define <8 x i16> @smin_v8i16(<8 x i16> %a) {
+; CHECK-NEON-LABEL: smin_v8i16:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    mvni v1.8h, #32
+; CHECK-NEON-NEXT:    smin v0.8h, v0.8h, v1.8h
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smin_v8i16:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    smin z0.h, z0.h, #-33
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smin = call <8 x i16> @llvm.smin(<8 x i16> %a, <8 x i16> splat (i16 -33))
+  ret <8 x i16> %smin
+}
+
+define <8 x i8> @smin_v8i8(<8 x i8> %a) {
+; CHECK-NEON-LABEL: smin_v8i8:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEON-NEXT:    smin v0.8b, v0.8b, v1.8b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smin_v8i8:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    smin z0.b, z0.b, #0
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smin = call <8 x i8> @llvm.smin(<8 x i8> %a, <8 x i8> splat (i8 0))
+  ret <8 x i8> %smin
+}
+
+define <16 x i8> @smin_v16i8(<16 x i8> %a) {
+; CHECK-NEON-LABEL: smin_v16i8:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.16b, #239
+; CHECK-NEON-NEXT:    smin v0.16b, v0.16b, v1.16b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smin_v16i8:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    smin z0.b, z0.b, #-17
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smin = call <16 x i8> @llvm.smin(<16 x i8> %a, <16 x i8> splat (i8 -17))
+  ret <16 x i8> %smin
+}
+
+define <4 x i32> @smin_too_low(<4 x i32> %a) {
+; CHECK-NEON-LABEL: smin_too_low:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    mvni v1.4s, #128
+; CHECK-NEON-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smin_too_low:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    mvni v1.4s, #128
+; CHECK-SVE-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smin = call <4 x i32> @llvm.smin(<4 x i32> %a, <4 x i32> splat (i32 -129))
+  ret <4 x i32> %smin
+}
+
+define <4 x i32> @smin_too_high(<4 x i32> %a) {
+; CHECK-NEON-LABEL: smin_too_high:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.4s, #128
+; CHECK-NEON-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: smin_too_high:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    movi v1.4s, #128
+; CHECK-SVE-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-SVE-NEXT:    ret
+entry:
+  %smin = call <4 x i32> @llvm.smin(<4 x i32> %a, <4 x i32> splat (i32 128))
+  ret <4 x i32> %smin
+}
+
+define <1 x i64> @umax_v1i64(<1 x i64> %a) {
+; CHECK-NEON-LABEL: umax_v1i64:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEON-NEXT:    fmov d1, x8
+; CHECK-NEON-NEXT:    cmhi d1, d0, d1
+; CHECK-NEON-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEON-NEXT:    mvn v1.8b, v1.8b
+; CHECK-NEON-NEXT:    sub d0, d0, d1
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umax_v1i64:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    umax z0.d, z0.d, #1
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umax = call <1 x i64> @llvm.umax(<1 x i64> %a, <1 x i64> splat (i64 1))
+  ret <1 x i64> %umax
+}
+
+define <2 x i64> @umax_v2i64(<2 x i64> %a) {
+; CHECK-NEON-LABEL: umax_v2i64:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.2d, #0x000000000000ff
+; CHECK-NEON-NEXT:    cmhi v2.2d, v0.2d, v1.2d
+; CHECK-NEON-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umax_v2i64:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    umax z0.d, z0.d, #255
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umax = call <2 x i64> @llvm.umax(<2 x i64> %a, <2 x i64> splat (i64 255))
+  ret <2 x i64> %umax
+}
+
+define <2 x i32> @umax_v2i32(<2 x i32> %a) {
+; CHECK-NEON-LABEL: umax_v2i32:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.2s, #7
+; CHECK-NEON-NEXT:    umax v0.2s, v0.2s, v1.2s
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umax_v2i32:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    umax z0.s, z0.s, #7
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umax = call <2 x i32> @llvm.umax(<2 x i32> %a, <2 x i32> splat (i32 7))
+  ret <2 x i32> %umax
+}
+
+define <4 x i32> @umax_v4i32(<4 x i32> %a) {
+; CHECK-NEON-LABEL: umax_v4i32:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.4s, #47
+; CHECK-NEON-NEXT:    umax v0.4s, v0.4s, v1.4s
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umax_v4i32:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    umax z0.s, z0.s, #47
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umax = call <4 x i32> @llvm.umax(<4 x i32> %a, <4 x i32> splat (i32 47))
+  ret <4 x i32> %umax
+}
+
+define <4 x i16> @umax_v4i16(<4 x i16> %a) {
+; CHECK-NEON-LABEL: umax_v4i16:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.4h, #5
+; CHECK-NEON-NEXT:    umax v0.4h, v0.4h, v1.4h
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umax_v4i16:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    umax z0.h, z0.h, #5
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umax = call <4 x i16> @llvm.umax(<4 x i16> %a, <4 x i16> splat (i16 5))
+  ret <4 x i16> %umax
+}
+
+define <8 x i16> @umax_v8i16(<8 x i16> %a) {
+; CHECK-NEON-LABEL: umax_v8i16:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.8h, #33
+; CHECK-NEON-NEXT:    umax v0.8h, v0.8h, v1.8h
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umax_v8i16:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    umax z0.h, z0.h, #33
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umax = call <8 x i16> @llvm.umax(<8 x i16> %a, <8 x i16> splat (i16 33))
+  ret <8 x i16> %umax
+}
+
+define <8 x i8> @umax_v8i8(<8 x i8> %a) {
+; CHECK-NEON-LABEL: umax_v8i8:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.8b, #8
+; CHECK-NEON-NEXT:    umax v0.8b, v0.8b, v1.8b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umax_v8i8:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    umax z0.b, z0.b, #8
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umax = call <8 x i8> @llvm.umax(<8 x i8> %a, <8 x i8> splat (i8 8))
+  ret <8 x i8> %umax
+}
+
+define <16 x i8> @umax_v16i8(<16 x i8> %a) {
+; CHECK-NEON-LABEL: umax_v16i8:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.16b, #17
+; CHECK-NEON-NEXT:    umax v0.16b, v0.16b, v1.16b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umax_v16i8:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    umax z0.b, z0.b, #17
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umax = call <16 x i8> @llvm.umax(<16 x i8> %a, <16 x i8> splat (i8 17))
+  ret <16 x i8> %umax
+}
+
+define <4 x i32> @umax_too_high(<4 x i32> %a) {
+; CHECK-NEON-LABEL: umax_too_high:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.4s, #1, lsl #8
+; CHECK-NEON-NEXT:    umax v0.4s, v0.4s, v1.4s
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umax_too_high:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    movi v1.4s, #1, lsl #8
+; CHECK-SVE-NEXT:    umax v0.4s, v0.4s, v1.4s
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umax = call <4 x i32> @llvm.umax(<4 x i32> %a, <4 x i32> splat (i32 256))
+  ret <4 x i32> %umax
+}
+
+define <1 x i64> @umin_v1i64(<1 x i64> %a) {
+; CHECK-NEON-LABEL: umin_v1i64:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEON-NEXT:    fmov d1, x8
+; CHECK-NEON-NEXT:    cmhi d1, d1, d0
+; CHECK-NEON-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEON-NEXT:    mvn v1.8b, v1.8b
+; CHECK-NEON-NEXT:    sub d0, d0, d1
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umin_v1i64:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    umin z0.d, z0.d, #1
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umin = call <1 x i64> @llvm.umin(<1 x i64> %a, <1 x i64> splat (i64 1))
+  ret <1 x i64> %umin
+}
+
+define <2 x i64> @umin_v2i64(<2 x i64> %a) {
+; CHECK-NEON-LABEL: umin_v2i64:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.2d, #0x000000000000ff
+; CHECK-NEON-NEXT:    cmhi v2.2d, v1.2d, v0.2d
+; CHECK-NEON-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umin_v2i64:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    umin z0.d, z0.d, #255
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umin = call <2 x i64> @llvm.umin(<2 x i64> %a, <2 x i64> splat (i64 255))
+  ret <2 x i64> %umin
+}
+
+define <2 x i32> @umin_v2i32(<2 x i32> %a) {
+; CHECK-NEON-LABEL: umin_v2i32:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.2s, #7
+; CHECK-NEON-NEXT:    umin v0.2s, v0.2s, v1.2s
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umin_v2i32:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    umin z0.s, z0.s, #7
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umin = call <2 x i32> @llvm.umin(<2 x i32> %a, <2 x i32> splat (i32 7))
+  ret <2 x i32> %umin
+}
+
+define <4 x i32> @umin_v4i32(<4 x i32> %a) {
+; CHECK-NEON-LABEL: umin_v4i32:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.4s, #47
+; CHECK-NEON-NEXT:    umin v0.4s, v0.4s, v1.4s
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umin_v4i32:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    umin z0.s, z0.s, #47
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umin = call <4 x i32> @llvm.umin(<4 x i32> %a, <4 x i32> splat (i32 47))
+  ret <4 x i32> %umin
+}
+
+define <4 x i16> @umin_v4i16(<4 x i16> %a) {
+; CHECK-NEON-LABEL: umin_v4i16:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.4h, #5
+; CHECK-NEON-NEXT:    umin v0.4h, v0.4h, v1.4h
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umin_v4i16:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    umin z0.h, z0.h, #5
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umin = call <4 x i16> @llvm.umin(<4 x i16> %a, <4 x i16> splat (i16 5))
+  ret <4 x i16> %umin
+}
+
+define <8 x i16> @umin_v8i16(<8 x i16> %a) {
+; CHECK-NEON-LABEL: umin_v8i16:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.8h, #33
+; CHECK-NEON-NEXT:    umin v0.8h, v0.8h, v1.8h
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umin_v8i16:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    umin z0.h, z0.h, #33
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umin = call <8 x i16> @llvm.umin(<8 x i16> %a, <8 x i16> splat (i16 33))
+  ret <8 x i16> %umin
+}
+
+define <8 x i8> @umin_v8i8(<8 x i8> %a) {
+; CHECK-NEON-LABEL: umin_v8i8:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.8b, #8
+; CHECK-NEON-NEXT:    umin v0.8b, v0.8b, v1.8b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umin_v8i8:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-SVE-NEXT:    umin z0.b, z0.b, #8
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umin = call <8 x i8> @llvm.umin(<8 x i8> %a, <8 x i8> splat (i8 8))
+  ret <8 x i8> %umin
+}
+
+define <16 x i8> @umin_v16i8(<16 x i8> %a) {
+; CHECK-NEON-LABEL: umin_v16i8:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.16b, #17
+; CHECK-NEON-NEXT:    umin v0.16b, v0.16b, v1.16b
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umin_v16i8:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-SVE-NEXT:    umin z0.b, z0.b, #17
+; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umin = call <16 x i8> @llvm.umin(<16 x i8> %a, <16 x i8> splat (i8 17))
+  ret <16 x i8> %umin
+}
+
+define <4 x i32> @umin_too_high(<4 x i32> %a) {
+; CHECK-NEON-LABEL: umin_too_high:
+; CHECK-NEON:       // %bb.0: // %entry
+; CHECK-NEON-NEXT:    movi v1.4s, #1, lsl #8
+; CHECK-NEON-NEXT:    umin v0.4s, v0.4s, v1.4s
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umin_too_high:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    movi v1.4s, #1, lsl #8
+; CHECK-SVE-NEXT:    umin v0.4s, v0.4s, v1.4s
+; CHECK-SVE-NEXT:    ret
+entry:
+  %umin = call <4 x i32> @llvm.umin(<4 x i32> %a, <4 x i32> splat (i32 256))
+  ret <4 x i32> %umin
+}

@@ -1510,7 +1510,7 @@ PRE_SYSCALL(readlink)(const void *path, void *buf, long bufsiz) {
 POST_SYSCALL(readlink)(long res, const void *path, void *buf, long bufsiz) {
   if (res >= 0) {
     if (buf)
-      POST_WRITE(buf, __sanitizer::internal_strlen((const char *)buf) + 1);
+      POST_WRITE(buf, res);
   }
 }
 
@@ -1905,11 +1905,13 @@ PRE_SYSCALL(getsockopt)
 POST_SYSCALL(getsockopt)
 (long res, long fd, long level, long optname, void *optval, void *optlen) {
   if (res >= 0) {
-    if (optval)
-      POST_WRITE(optval,
-                 __sanitizer::internal_strlen((const char *)optval) + 1);
-    if (optlen)
+    // getsockopt cannot succeed with a null optlen, but guard it before
+    // dereferencing since the hook is called with raw, untrusted arguments.
+    if (optlen) {
       POST_WRITE(optlen, sizeof(int));
+      if (optval)
+        POST_WRITE(optval, *(unsigned int*)optlen);
+    }
   }
 }
 
@@ -2900,7 +2902,7 @@ POST_SYSCALL(readlinkat)
 (long res, long dfd, const void *path, void *buf, long bufsiz) {
   if (res >= 0) {
     if (buf)
-      POST_WRITE(buf, __sanitizer::internal_strlen((const char *)buf) + 1);
+      POST_WRITE(buf, res);
   }
 }
 

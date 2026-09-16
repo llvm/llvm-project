@@ -93,5 +93,14 @@ ENUM_LOWERINGOPT(PreserveUseDebugInfo, unsigned, 1, 0)
 /// Portable, Extremum, ExtremeNum). Default: Legacy.
 ENUM_LOWERINGOPT(FPMaxminBehavior, Fortran::common::FPMaxminBehavior, 2, 0)
 
+/// Bitmask of floating-point exceptions to trap on (from -ffpe-trap=).
+/// 0 means no trapping. Bit values match IEEE_FLAG_TYPE encoding.
+ENUM_LOWERINGOPT(FPExceptionTraps, unsigned, 8, 0)
+
+/// If true (default), attach an implicit firstprivate on the loop of a
+/// combined construct (parallel loop, serial loop) in addition to the compute
+/// construct. Controlled by -f[no-]openacc-combined-loop-firstprivate.
+ENUM_LOWERINGOPT(OpenACCCombinedLoopFirstprivate, unsigned, 1, 1)
+
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT
