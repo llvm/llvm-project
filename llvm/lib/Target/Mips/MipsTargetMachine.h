@@ -106,6 +106,19 @@ public:
                       bool JIT);
 };
 
+/// nanoMIPS target machine.
+///
+class NanoMipsTargetMachine : public MipsTargetMachine {
+  virtual void anchor();
+
+public:
+  NanoMipsTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
+                        StringRef FS, const TargetOptions &Options,
+                        std::optional<Reloc::Model> RM,
+                        std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
+                        bool JIT);
+};
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_MIPS_MIPSTARGETMACHINE_H

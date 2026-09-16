@@ -183,6 +183,13 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
       break;
     }
     break;
+  case ELF::EM_NANOMIPS:
+    switch (Type) {
+#include "llvm/BinaryFormat/ELFRelocs/NanoMips.def"
+    default:
+      break;
+    }
+    break;
   default:
     break;
   }
@@ -212,6 +219,7 @@ uint32_t llvm::object::getELFRelativeRelocationType(uint32_t Machine) {
   case ELF::EM_IAMCU:
     return ELF::R_386_RELATIVE;
   case ELF::EM_MIPS:
+  case ELF::EM_NANOMIPS:
     break;
   case ELF::EM_AARCH64:
     return ELF::R_AARCH64_RELATIVE;

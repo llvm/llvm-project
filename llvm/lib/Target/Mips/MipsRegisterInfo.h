@@ -28,6 +28,7 @@ using TargetRegisterClass = MCRegisterClass;
 class MipsRegisterInfo : public MipsGenRegisterInfo {
 private:
   const bool ArePtrs64bit;
+  const bool IsP32ABI;
 
 public:
   explicit MipsRegisterInfo(const MipsSubtarget &STI);

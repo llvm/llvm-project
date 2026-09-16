@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/MipsMCTargetDesc.h"
+#include "MipsCP0RegisterMap.h"
 #include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCContext.h"
@@ -224,6 +225,40 @@ static DecodeStatus DecodeCOP0RegisterClass(MCInst &Inst, unsigned RegNo,
 
   MCRegister Reg = getReg(Decoder, Mips::COP0RegClassID, RegNo);
   Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeCOP0SelRegisterClass(MCInst &Inst, unsigned RegNo,
+                                               uint64_t Address,
+                                               const MCDisassembler *Decoder) {
+  static MipsCP0SelMap COP0Map;
+  int COP0SelIdx = COP0Map.getEncIndexMap(RegNo);
+
+  if (COP0SelIdx != -1) {
+    MCRegister Reg = getReg(Decoder, Mips::COP0SelRegClassID, COP0SelIdx);
+    Inst.addOperand(MCOperand::createReg(Reg));
+  } else {
+    // Not a named register encoding - print numeric register and select value
+    switch (Inst.getOpcode()) {
+    case Mips::MFC0Sel_NM:
+      Inst.setOpcode(Mips::MFC0_NM);
+      break;
+    case Mips::MFHC0Sel_NM:
+      Inst.setOpcode(Mips::MFHC0_NM);
+      break;
+    case Mips::MTC0Sel_NM:
+      Inst.setOpcode(Mips::MTC0_NM);
+      break;
+    case Mips::MTHC0Sel_NM:
+      Inst.setOpcode(Mips::MTHC0_NM);
+      break;
+    default:
+      llvm_unreachable("Unknown instruction!");
+    }
+    MCRegister Reg = getReg(Decoder, Mips::COP0RegClassID, RegNo >> 5);
+    Inst.addOperand(MCOperand::createReg(Reg));
+    Inst.addOperand(MCOperand::createImm(RegNo & 0x1f));
+  }
   return MCDisassembler::Success;
 }
 
@@ -936,6 +971,92 @@ static DecodeStatus DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo,
   MCRegister Reg = getReg(Decoder, Mips::GPR32RegClassID, RegNo);
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeGPRNM32RegisterClass(MCInst &Inst, unsigned RegNo,
+                                               uint64_t Address,
+                                               const MCDisassembler *Decoder) {
+  if (RegNo > 31)
+    return MCDisassembler::Fail;
+  MCRegister Reg = getReg(Decoder, Mips::GPRNM32RegClassID, RegNo);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeGPRNM3RegisterClass(MCInst &Inst, unsigned RegNo,
+                                              uint64_t Address,
+                                              const MCDisassembler *Decoder) {
+  if (RegNo > 7)
+    return MCDisassembler::Fail;
+  RegNo |= ((RegNo & 0x4) ^ 0x4) << 2;
+  return DecodeGPRNM32RegisterClass(Inst, RegNo, Address, Decoder);
+}
+
+static DecodeStatus DecodeGPRNMRARegisterClass(MCInst &Inst, unsigned RegNo,
+                                               uint64_t Address,
+                                               const MCDisassembler *Decoder) {
+  if (RegNo != 1)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createReg(Mips::RA_NM));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeGPRNM3ZRegisterClass(MCInst &Inst, unsigned RegNo,
+                                               uint64_t Address,
+                                               const MCDisassembler *Decoder) {
+  if (RegNo > 7)
+    return MCDisassembler::Fail;
+  if (RegNo != 0)
+    RegNo |= ((RegNo & 0x4) ^ 0x4) << 2;
+  return DecodeGPRNM32RegisterClass(Inst, RegNo, Address, Decoder);
+}
+
+static DecodeStatus DecodeGPRNM4RegisterClass(MCInst &Inst, unsigned RegNo,
+                                              uint64_t Address,
+                                              const MCDisassembler *Decoder) {
+  RegNo &= ~0x8;
+  RegNo += (RegNo < 4 ? 8 : 0);
+  return DecodeGPRNM32RegisterClass(Inst, RegNo, Address, Decoder);
+}
+
+static DecodeStatus DecodeGPRNM4ZRegisterClass(MCInst &Inst, unsigned RegNo,
+                                               uint64_t Address,
+                                               const MCDisassembler *Decoder) {
+  RegNo &= ~0x8;
+  if (RegNo == 3)
+    RegNo = 0;
+  else
+    RegNo += (RegNo < 3 ? 8 : 0);
+  return DecodeGPRNM32RegisterClass(Inst, RegNo, Address, Decoder);
+}
+
+static DecodeStatus
+DecodeGPRNM32NZRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                             const MCDisassembler *Decoder) {
+  if (RegNo == 0)
+    return MCDisassembler::Fail;
+  return DecodeGPRNM32RegisterClass(Inst, RegNo, Address, Decoder);
+}
+
+static DecodeStatus DecodeGPRNM2R1RegisterClass(MCInst &Inst, unsigned RegNo,
+                                                uint64_t Address,
+                                                const MCDisassembler *Decoder) {
+  if (RegNo > 31)
+    return MCDisassembler::Fail;
+  RegNo += 4;
+  MCRegister Reg = getReg(Decoder, Mips::GPRNM32RegClassID, RegNo);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  Inst.addOperand(MCOperand::createReg(Reg + 1));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeGPRNM1R1RegisterClass(MCInst &Inst, unsigned RegNo,
+                                                uint64_t Address,
+                                                const MCDisassembler *Decoder) {
+  if (RegNo != 0 && RegNo != 1)
+    return MCDisassembler::Fail;
+  RegNo += 4;
+  return DecodeGPRNM32RegisterClass(Inst, RegNo, Address, Decoder);
 }
 
 static DecodeStatus DecodePtrRegisterClass(MCInst &Inst, unsigned RegNo,

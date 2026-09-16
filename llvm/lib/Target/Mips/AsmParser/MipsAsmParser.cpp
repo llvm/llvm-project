@@ -121,16 +121,15 @@ private:
 } // end anonymous namespace
 
 const FeatureBitset MipsAssemblerOptions::AllArchRelatedMask = {
-    Mips::FeatureMips1, Mips::FeatureMips2, Mips::FeatureMips3,
-    Mips::FeatureMips3_32, Mips::FeatureMips3_32r2, Mips::FeatureMips4,
-    Mips::FeatureMips4_32, Mips::FeatureMips4_32r2, Mips::FeatureMips5,
-    Mips::FeatureMips5_32r2, Mips::FeatureMips32, Mips::FeatureMips32r2,
-    Mips::FeatureMips32r3, Mips::FeatureMips32r5, Mips::FeatureMips32r6,
-    Mips::FeatureMips64, Mips::FeatureMips64r2, Mips::FeatureMips64r3,
-    Mips::FeatureMips64r5, Mips::FeatureMips64r6, Mips::FeatureCnMips,
-    Mips::FeatureCnMipsP, Mips::FeatureFP64Bit, Mips::FeatureGP64Bit,
-    Mips::FeatureNaN2008
-};
+    Mips::FeatureMips1,      Mips::FeatureMips2,      Mips::FeatureMips3,
+    Mips::FeatureMips3_32,   Mips::FeatureMips3_32r2, Mips::FeatureMips4,
+    Mips::FeatureMips4_32,   Mips::FeatureMips4_32r2, Mips::FeatureMips5,
+    Mips::FeatureMips5_32r2, Mips::FeatureMips32,     Mips::FeatureMips32r2,
+    Mips::FeatureMips32r3,   Mips::FeatureMips32r5,   Mips::FeatureMips32r6,
+    Mips::FeatureMips64,     Mips::FeatureMips64r2,   Mips::FeatureMips64r3,
+    Mips::FeatureMips64r5,   Mips::FeatureMips64r6,   Mips::FeatureCnMips,
+    Mips::FeatureCnMipsP,    Mips::FeatureFP64Bit,    Mips::FeatureGP64Bit,
+    Mips::FeatureNaN2008,    Mips::FeatureNanoMips};
 
 namespace {
 
@@ -669,6 +668,10 @@ public:
 
   bool hasMips64r6() const {
     return getSTI().hasFeature(Mips::FeatureMips64r6);
+  }
+
+  bool hasNanoMips() const {
+    return getSTI().hasFeature(Mips::FeatureNanoMips);
   }
 
   bool hasDSP() const {
@@ -1664,6 +1667,90 @@ public:
 
   bool isMSACtrlAsmReg() const {
     return isRegIdx() && RegIdx.Kind & RegKind_MSACtrl && RegIdx.Index <= 7;
+  }
+
+  bool isNM16AsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return ((RegIdx.Index >= 4 && RegIdx.Index <= 7) ||
+            (RegIdx.Index >= 16 && RegIdx.Index <= 19));
+  }
+
+  bool isNM16ZeroAsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return ((RegIdx.Index == 0) || (RegIdx.Index >= 4 && RegIdx.Index <= 7) ||
+            (RegIdx.Index >= 17 && RegIdx.Index <= 19));
+  }
+
+  bool isNM4AsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return ((RegIdx.Index >= 4 && RegIdx.Index <= 11) ||
+            (RegIdx.Index >= 16 && RegIdx.Index <= 23));
+  }
+
+  bool isCOP0SelAsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return RegIdx.Index <= 160;
+  }
+
+  bool isNM4ZeroAsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return ((RegIdx.Index == 0) || (RegIdx.Index >= 4 && RegIdx.Index <= 10) ||
+            (RegIdx.Index >= 16 && RegIdx.Index <= 23));
+  }
+
+  bool isNM2R1AsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return RegIdx.Index >= 4 && RegIdx.Index <= 7;
+  }
+
+  bool isNM2R2AsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return RegIdx.Index >= 5 && RegIdx.Index <= 8;
+  }
+
+  bool isNM1R1AsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return RegIdx.Index == 4 || RegIdx.Index == 5;
+  }
+
+  template <unsigned RegClassID = Mips::GPRNM32RegClassID>
+  bool isGPRNMAsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    switch (RegClassID) {
+    case Mips::GPRNMGPRegClassID:
+      return (RegIdx.Index == 28);
+    case Mips::GPRNMSPRegClassID:
+      return (RegIdx.Index == 29);
+    case Mips::GPRNMRARegClassID:
+      return (RegIdx.Index == 31);
+    case Mips::GPRNM32NZRegClassID:
+      return (RegIdx.Index > 0 && RegIdx.Index < 32);
+    case Mips::GPRNM3RegClassID:
+      return isNM16AsmReg();
+    case Mips::GPRNM3ZRegClassID:
+      return isNM16ZeroAsmReg();
+    case Mips::GPRNM4RegClassID:
+      return isNM4AsmReg();
+    case Mips::GPRNM4ZRegClassID:
+      return isNM4ZeroAsmReg();
+    case Mips::GPRNM2R1RegClassID:
+      return isNM2R1AsmReg();
+    case Mips::GPRNM2R2RegClassID:
+      return isNM2R2AsmReg();
+    case Mips::GPRNM1R1RegClassID:
+      return isNM1R1AsmReg();
+    default:
+      return RegIdx.Index < 32;
+    }
   }
 
   /// getStartLoc - Get the location of the first token of this operand.

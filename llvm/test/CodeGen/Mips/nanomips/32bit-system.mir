@@ -1,0 +1,336 @@
+# RUN: llc %s -mtriple=nanomips-elf -start-after=mips-branch-expansion -show-mc-encoding -o - \
+# RUN:   | FileCheck %s
+
+# Encoding tests for 32-bit nanoMIPS system and coprocessor instructions
+# (system control, CP0 access, misc/ASE ops, save/restore)
+#
+# Encoding bytes are shown in on-disk order: each halfword is little-endian,
+# more significant halfword first.
+
+# --- system control ---
+---
+# CHECK-LABEL: break:
+# CHECK: break 7 # encoding: [0x10,0x00,0x07,0x00]
+name: break
+body: |
+  bb.0:
+    BREAK_NM 7
+...
+---
+# CHECK-LABEL: crc32b:
+# CHECK: crc32b $a0, $a1 # encoding: [0x85,0x20,0xe8,0x03]
+name: crc32b
+body: |
+  bb.0:
+    $a0_nm = CRC32B_NM $a0_nm, $a1_nm
+...
+---
+# CHECK-LABEL: crc32cb:
+# CHECK: crc32cb $a0, $a1 # encoding: [0x85,0x20,0xe8,0x13]
+name: crc32cb
+body: |
+  bb.0:
+    $a0_nm = CRC32CB_NM $a0_nm, $a1_nm
+...
+---
+# CHECK-LABEL: crc32ch:
+# CHECK: crc32ch $a0, $a1 # encoding: [0x85,0x20,0xe8,0x17]
+name: crc32ch
+body: |
+  bb.0:
+    $a0_nm = CRC32CH_NM $a0_nm, $a1_nm
+...
+---
+# CHECK-LABEL: crc32cw:
+# CHECK: crc32cw $a0, $a1 # encoding: [0x85,0x20,0xe8,0x1b]
+name: crc32cw
+body: |
+  bb.0:
+    $a0_nm = CRC32CW_NM $a0_nm, $a1_nm
+...
+---
+# CHECK-LABEL: crc32h:
+# CHECK: crc32h $a0, $a1 # encoding: [0x85,0x20,0xe8,0x07]
+name: crc32h
+body: |
+  bb.0:
+    $a0_nm = CRC32H_NM $a0_nm, $a1_nm
+...
+---
+# CHECK-LABEL: crc32w:
+# CHECK: crc32w $a0, $a1 # encoding: [0x85,0x20,0xe8,0x0b]
+name: crc32w
+body: |
+  bb.0:
+    $a0_nm = CRC32W_NM $a0_nm, $a1_nm
+...
+---
+# CHECK-LABEL: deret:
+# CHECK: deret # encoding: [0x00,0x20,0x7f,0xe3]
+name: deret
+body: |
+  bb.0:
+    DERET_NM
+...
+---
+# CHECK-LABEL: ehb:
+# CHECK: ehb # encoding: [0x00,0x80,0x03,0xc0]
+name: ehb
+body: |
+  bb.0:
+    EHB_NM
+...
+---
+# CHECK-LABEL: eret:
+# CHECK: eret # encoding: [0x00,0x20,0x7f,0xf3]
+name: eret
+body: |
+  bb.0:
+    ERET_NM
+...
+---
+# CHECK-LABEL: eretnc:
+# CHECK: eretnc # encoding: [0x01,0x20,0x7f,0xf3]
+name: eretnc
+body: |
+  bb.0:
+    ERETNC_NM
+...
+---
+# CHECK-LABEL: nop:
+# CHECK: nop # encoding: [0x08,0x90]
+name: nop
+body: |
+  bb.0:
+    NOP_NM
+...
+---
+# CHECK-LABEL: nop32:
+# CHECK: nop32 # encoding: [0x00,0x80,0x00,0xc0]
+name: nop32
+body: |
+  bb.0:
+    NOP32_NM
+...
+---
+# CHECK-LABEL: pause:
+# CHECK: pause # encoding: [0x00,0x80,0x05,0xc0]
+name: pause
+body: |
+  bb.0:
+    PAUSE_NM
+...
+---
+# CHECK-LABEL: sdbbp:
+# CHECK: sdbbp 7 # encoding: [0x18,0x00,0x07,0x00]
+name: sdbbp
+body: |
+  bb.0:
+    SDBBP_NM 7
+...
+---
+# CHECK-LABEL: sigrie:
+# CHECK: sigrie 7 # encoding: [0x00,0x00,0x07,0x00]
+name: sigrie
+body: |
+  bb.0:
+    SIGRIE_NM 7
+...
+---
+# CHECK-LABEL: syscall:
+# CHECK: syscall 7 # encoding: [0x08,0x00,0x07,0x00]
+name: syscall
+body: |
+  bb.0:
+    SYSCALL_NM 7
+...
+---
+# CHECK-LABEL: teq:
+# CHECK: teq $a0, $a1, 0 # encoding: [0xa4,0x20,0x00,0x00]
+name: teq
+body: |
+  bb.0:
+    TEQ_NM $a0_nm, $a1_nm, 0
+...
+---
+# CHECK-LABEL: tne:
+# CHECK: tne $a0, $a1, 0 # encoding: [0xa4,0x20,0x00,0x04]
+name: tne
+body: |
+  bb.0:
+    TNE_NM $a0_nm, $a1_nm, 0
+...
+
+# --- coprocessor-0 access ---
+---
+# CHECK-LABEL: mfc0:
+# CHECK: mfc0 $a0, $0, 0 # encoding: [0x80,0x20,0x30,0x00]
+name: mfc0
+body: |
+  bb.0:
+    $a0_nm = MFC0_NM $cop00, 0
+...
+---
+# CHECK-LABEL: mfc0sel:
+# CHECK: mfc0 $a0, $index # encoding: [0x80,0x20,0x30,0x00]
+name: mfc0sel
+body: |
+  bb.0:
+    $a0_nm = MFC0Sel_NM $cop0sel_index
+...
+---
+# CHECK-LABEL: mfhc0:
+# CHECK: mfhc0 $a0, $0, 0 # encoding: [0x80,0x20,0x38,0x00]
+name: mfhc0
+body: |
+  bb.0:
+    $a0_nm = MFHC0_NM $cop00, 0
+...
+---
+# CHECK-LABEL: mfhc0sel:
+# CHECK: mfhc0 $a0, $index # encoding: [0x80,0x20,0x38,0x00]
+name: mfhc0sel
+body: |
+  bb.0:
+    $a0_nm = MFHC0Sel_NM $cop0sel_index
+...
+---
+# CHECK-LABEL: mtc0:
+# CHECK: mtc0 $a0, $0, 0 # encoding: [0x80,0x20,0x70,0x00]
+name: mtc0
+body: |
+  bb.0:
+    MTC0_NM $a0_nm, $cop00, 0
+...
+---
+# CHECK-LABEL: mtc0sel:
+# CHECK: mtc0 $a0, $index # encoding: [0x80,0x20,0x70,0x00]
+name: mtc0sel
+body: |
+  bb.0:
+    MTC0Sel_NM $a0_nm, $cop0sel_index
+...
+---
+# CHECK-LABEL: mthc0:
+# CHECK: mthc0 $a0, $0, 0 # encoding: [0x80,0x20,0x78,0x00]
+name: mthc0
+body: |
+  bb.0:
+    MTHC0_NM $a0_nm, $cop00, 0
+...
+---
+# CHECK-LABEL: mthc0sel:
+# CHECK: mthc0 $a0, $index # encoding: [0x80,0x20,0x78,0x00]
+name: mthc0sel
+body: |
+  bb.0:
+    MTHC0Sel_NM $a0_nm, $cop0sel_index
+...
+---
+# CHECK-LABEL: rdhwr:
+# CHECK: rdhwr $a0, $0, 0 # encoding: [0x80,0x20,0xc0,0x01]
+name: rdhwr
+body: |
+  bb.0:
+    $a0_nm = RDHWR_NM $cop00, 0
+...
+
+# --- misc / ASE ---
+---
+# CHECK-LABEL: di:
+# CHECK: di $a0 # encoding: [0x80,0x20,0x7f,0x47]
+name: di
+body: |
+  bb.0:
+    $a0_nm = DI_NM
+...
+---
+# CHECK-LABEL: dvp:
+# CHECK: dvp $a0 # encoding: [0x80,0x20,0x90,0x03]
+name: dvp
+body: |
+  bb.0:
+    $a0_nm = DVP_NM
+...
+---
+# CHECK-LABEL: ei:
+# CHECK: ei $a0 # encoding: [0x80,0x20,0x7f,0x57]
+name: ei
+body: |
+  bb.0:
+    $a0_nm = EI_NM
+...
+---
+# CHECK-LABEL: evp:
+# CHECK: evp $a0 # encoding: [0x80,0x20,0x90,0x07]
+name: evp
+body: |
+  bb.0:
+    $a0_nm = EVP_NM
+...
+---
+# CHECK-LABEL: ginvi:
+# CHECK: ginvi $a0 # encoding: [0x04,0x20,0x7f,0x1f]
+name: ginvi
+body: |
+  bb.0:
+    GINVI_NM $a0_nm
+...
+---
+# CHECK-LABEL: ginvt:
+# CHECK: ginvt $a0, 0 # encoding: [0x04,0x20,0x7f,0x0f]
+name: ginvt
+body: |
+  bb.0:
+    GINVT_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: lsa:
+# CHECK: lsa $a0, $a1, $a2, 1 # encoding: [0xc5,0x20,0x0f,0x22]
+name: lsa
+body: |
+  bb.0:
+    $a0_nm = LSA_NM $a1_nm, $a2_nm, 1
+...
+---
+# CHECK-LABEL: sync:
+# CHECK: sync 0 # encoding: [0x00,0x80,0x06,0xc0]
+name: sync
+body: |
+  bb.0:
+    SYNC_NM 0
+...
+---
+# CHECK-LABEL: wait:
+# CHECK: wait 0 # encoding: [0x00,0x20,0x7f,0xc3]
+name: wait
+body: |
+  bb.0:
+    WAIT_NM 0
+...
+
+# --- save / restore ---
+---
+# CHECK-LABEL: restore:
+# CHECK: restore 00 # encoding: [0x00,0x80,0x02,0x30]
+name: restore
+body: |
+  bb.0:
+    RESTORE_NM 0, 0
+...
+---
+# CHECK-LABEL: restorejrc:
+# CHECK: restore.jrc 00 # encoding: [0x00,0x80,0x03,0x30]
+name: restorejrc
+body: |
+  bb.0:
+    RESTOREJRC_NM 0, 0
+...
+---
+# CHECK-LABEL: save:
+# CHECK: save 00 # encoding: [0x00,0x80,0x00,0x30]
+name: save
+body: |
+  bb.0:
+    SAVE_NM 0, 0
+...
