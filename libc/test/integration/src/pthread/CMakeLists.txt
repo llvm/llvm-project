@@ -151,6 +151,19 @@ add_integration_test(
 )
 
 add_integration_test(
+  pthread_tls_align_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_tls_align_test.cpp
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.pthread
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+)
+
+add_integration_test(
   pthread_equal_test
   SUITE
     libc-pthread-integration-tests

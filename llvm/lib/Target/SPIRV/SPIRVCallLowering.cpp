@@ -285,6 +285,12 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::FuncParamAttr, {Attr});
         }
+        if (Arg.hasAttribute(Attribute::ReadNone)) {
+          auto Attr = static_cast<unsigned>(
+              SPIRV::FunctionParameterAttribute::NoReadWrite);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
         if (Arg.hasAttribute(Attribute::ZExt)) {
           auto Attr =
               static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Zext);

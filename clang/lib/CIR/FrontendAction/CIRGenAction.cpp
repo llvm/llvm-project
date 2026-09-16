@@ -195,17 +195,22 @@ public:
           MlirModule->print(out);
       }
 
+      // If errors occurred during codegen, stop before running the backend.
+      if (CI.getDiagnostics().hasErrorOccurred())
+        return;
+
       std::unique_ptr<llvm::Module> LLVMModule = lowerFromCIRToLLVMIR(
           MlirModule, LLVMCtx, C.getLangOpts().OpenMP, mlirSaveTempsOutFile,
           &CI.getVirtualFileSystem());
+
+      LLVMModule->setDataLayout(C.getTargetInfo().getDataLayoutString());
 
       if (linkInModules(*LLVMModule))
         return;
 
       BackendAction BEAction = getBackendActionFromOutputType(Action);
-      emitBackendOutput(
-          CI, CI.getCodeGenOpts(), C.getTargetInfo().getDataLayoutString(),
-          LLVMModule.get(), BEAction, FS, std::move(OutputStream));
+      emitBackendOutput(CI, CI.getCodeGenOpts(), LLVMModule.get(), BEAction, FS,
+                        std::move(OutputStream));
       break;
     }
     }

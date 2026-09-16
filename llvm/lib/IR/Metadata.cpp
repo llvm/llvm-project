@@ -176,27 +176,31 @@ void DebugValueUser::handleChangedValue(void *Old, Metadata *New) {
 void DebugValueUser::trackDebugValue(size_t Idx) {
   assert(Idx < 3 && "Invalid debug value index.");
   Metadata *&MD = DebugValues[Idx];
-  if (MD)
-    MetadataTracking::track(&MD, *MD, *this);
+  if (!MD)
+    return;
+  MetadataTracking::track(&MD, *MD, *this);
+  if (auto *ID = Idx == AssignIDIdx ? dyn_cast<DIAssignID>(MD) : nullptr)
+    ID->Records.push_back(getUser());
 }
 
 void DebugValueUser::trackDebugValues() {
-  for (Metadata *&MD : DebugValues)
-    if (MD)
-      MetadataTracking::track(&MD, *MD, *this);
+  for (size_t I = 0, E = DebugValues.size(); I != E; ++I)
+    trackDebugValue(I);
 }
 
 void DebugValueUser::untrackDebugValue(size_t Idx) {
   assert(Idx < 3 && "Invalid debug value index.");
   Metadata *&MD = DebugValues[Idx];
-  if (MD)
-    MetadataTracking::untrack(MD);
+  if (!MD)
+    return;
+  MetadataTracking::untrack(MD);
+  if (auto *ID = Idx == AssignIDIdx ? dyn_cast<DIAssignID>(MD) : nullptr)
+    ID->Records.erase(llvm::find(ID->Records, getUser()));
 }
 
 void DebugValueUser::untrackDebugValues() {
-  for (Metadata *&MD : DebugValues)
-    if (MD)
-      MetadataTracking::untrack(MD);
+  for (size_t I = 0, E = DebugValues.size(); I != E; ++I)
+    untrackDebugValue(I);
 }
 
 void DebugValueUser::retrackDebugValues(DebugValueUser &X) {
@@ -204,6 +208,8 @@ void DebugValueUser::retrackDebugValues(DebugValueUser &X) {
   for (const auto &[MD, XMD] : zip(DebugValues, X.DebugValues))
     if (XMD)
       MetadataTracking::retrack(XMD, MD);
+  if (auto *ID = dyn_cast_or_null<DIAssignID>(DebugValues[AssignIDIdx]))
+    *llvm::find(ID->Records, X.getUser()) = getUser();
   X.DebugValues.fill(nullptr);
 }
 
@@ -454,35 +460,38 @@ void ReplaceableUses::resolveAllUses(bool ResolveUsers) {
   }
 }
 
+// A value without a use list (e.g. ConstantData) is never RAUW'd, so don't
+// create a ReplaceableUses instance for it.
+static bool isTrackedValue(const Metadata &MD) {
+  auto *VAM = dyn_cast<ValueAsMetadata>(&MD);
+  return VAM && VAM->getValue()->hasUseList();
+}
+
 // Special handing of DIArgList is required in the RemoveDIs project, see
 // commentry in DIArgList::handleChangedOperand for details. Hidden behind
 // conditional compilation to avoid a compile time regression.
 ReplaceableUses *ReplaceableUses::getOrCreate(Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD)) {
-    return !N->isResolved() || N->isAlwaysReplaceable()
-               ? N->Context.getOrCreateReplaceableUses()
-               : nullptr;
+    return N->isResolved() ? nullptr : N->Context.getOrCreateReplaceableUses();
   }
   if (auto ArgList = dyn_cast<DIArgList>(&MD))
     return ArgList;
-  return dyn_cast<ValueAsMetadata>(&MD);
+  return isTrackedValue(MD) ? cast<ValueAsMetadata>(&MD) : nullptr;
 }
 
 ReplaceableUses *ReplaceableUses::getIfExists(Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD)) {
-    return !N->isResolved() || N->isAlwaysReplaceable()
-               ? N->Context.getReplaceableUses()
-               : nullptr;
+    return N->isResolved() ? nullptr : N->Context.getReplaceableUses();
   }
   if (auto ArgList = dyn_cast<DIArgList>(&MD))
     return ArgList;
-  return dyn_cast<ValueAsMetadata>(&MD);
+  return isTrackedValue(MD) ? cast<ValueAsMetadata>(&MD) : nullptr;
 }
 
 bool ReplaceableUses::isReplaceable(const Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD))
-    return !N->isResolved() || N->isAlwaysReplaceable();
-  return isa<ValueAsMetadata>(&MD) || isa<DIArgList>(&MD);
+    return !N->isResolved();
+  return isTrackedValue(MD) || isa<DIArgList>(&MD);
 }
 
 static DISubprogram *getLocalFunctionMetadata(Value *V) {
@@ -550,16 +559,15 @@ void ValueAsMetadata::handleRAUW(Value *From, Value *To) {
   assert(To && "Expected valid value");
   assert(From != To && "Expected changed value");
   assert(&From->getContext() == &To->getContext() && "Expected same context");
+  assert(From->hasUseList() && "Must have use list");
 
-  LLVMContext &Context = From->getType()->getContext();
-  auto &Store = Context.pImpl->ValuesAsMetadata;
+  auto &Store = From->getContext().pImpl->ValuesAsMetadata;
   auto I = Store.find(From);
   if (I == Store.end()) {
     assert(!From->IsUsedByMD && "Expected From not to be used by metadata");
     return;
   }
 
-  // Remove old entry from the map.
   assert(From->IsUsedByMD && "Expected From to be used by metadata");
   From->IsUsedByMD = false;
   ValueAsMetadata *MD = I->second;
@@ -567,40 +575,19 @@ void ValueAsMetadata::handleRAUW(Value *From, Value *To) {
   assert(MD->getValue() == From && "Expected valid mapping");
   Store.erase(I);
 
-  if (isa<LocalAsMetadata>(MD)) {
-    if (auto *C = dyn_cast<Constant>(To)) {
-      // Local became a constant.
-      MD->replaceAllUsesWith(ConstantAsMetadata::get(C));
-      delete MD;
-      return;
-    }
-    if (getLocalFunctionMetadata(From) && getLocalFunctionMetadata(To) &&
-        getLocalFunctionMetadata(From) != getLocalFunctionMetadata(To)) {
-      // DISubprogram changed.
-      MD->replaceAllUsesWith(nullptr);
-      delete MD;
-      return;
-    }
-  } else if (!isa<Constant>(To)) {
-    // Changed to function-local value.
-    MD->replaceAllUsesWith(nullptr);
-    delete MD;
-    return;
+  // Move the uses to To's node. Uses of a function-local value are dropped if
+  // it becomes a local of another function or replaces a constant.
+  Metadata *New = nullptr;
+  if (isa<Constant>(To)) {
+    New = ValueAsMetadata::get(To);
+  } else if (isa<LocalAsMetadata>(MD)) {
+    DISubprogram *FromSP = getLocalFunctionMetadata(From);
+    DISubprogram *ToSP = FromSP ? getLocalFunctionMetadata(To) : nullptr;
+    if (!FromSP || !ToSP || FromSP == ToSP)
+      New = ValueAsMetadata::get(To);
   }
-
-  auto *&Entry = Store[To];
-  if (Entry) {
-    // The target already exists.
-    MD->replaceAllUsesWith(Entry);
-    delete MD;
-    return;
-  }
-
-  // Update MD in place (and update the map entry).
-  assert(!To->IsUsedByMD && "Expected this to be the only metadata use");
-  To->IsUsedByMD = true;
-  MD->V = To;
-  Entry = MD;
+  MD->replaceAllUsesWith(New);
+  delete MD;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1771,34 +1758,14 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
 }
 
 void Instruction::updateDIAssignIDMapping(DIAssignID *ID) {
-  auto &IDToInstrs = getContext().pImpl->AssignmentIDToInstrs;
-  if (const DIAssignID *CurrentID =
+  if (auto *CurrentID =
           cast_or_null<DIAssignID>(getMetadata(LLVMContext::MD_DIAssignID))) {
-    // Nothing to do if the ID isn't changing.
     if (ID == CurrentID)
       return;
-
-    // Unmap this instruction from its current ID.
-    auto InstrsIt = IDToInstrs.find(CurrentID);
-    assert(InstrsIt != IDToInstrs.end() &&
-           "Expect existing attachment to be mapped");
-
-    auto &InstVec = InstrsIt->second;
-    auto *InstIt = llvm::find(InstVec, this);
-    assert(InstIt != InstVec.end() &&
-           "Expect instruction to be mapped to attachment");
-    // The vector contains a ptr to this. If this is the only element in the
-    // vector, remove the ID:vector entry, otherwise just remove the
-    // instruction from the vector.
-    if (InstVec.size() == 1)
-      IDToInstrs.erase(InstrsIt);
-    else
-      InstVec.erase(InstIt);
+    CurrentID->Instrs.erase(llvm::find(CurrentID->Instrs, this));
   }
-
-  // Map this instruction to the new ID.
   if (ID)
-    IDToInstrs[ID].push_back(this);
+    ID->Instrs.push_back(this);
 }
 
 void Instruction::setMetadata(unsigned KindID, MDNode *Node) {
