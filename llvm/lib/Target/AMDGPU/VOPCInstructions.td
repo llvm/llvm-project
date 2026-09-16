@@ -215,16 +215,9 @@ multiclass VOPC_NoSdst_Profile_t16<list<SchedReadWrite> sched, ValueType vt0, Va
 
 class VOPC_Pseudo <string opName, VOPC_Profile P, list<dag> pattern=[],
                    bit DefVcc = 1> :
-  InstSI<(outs), P.Ins32, "", pattern>,
-  VOP <opName>,
-  SIMCInstr<opName#"_e32", SIEncodingFamily.NONE> {
+  VOP_Pseudo<opName, "_e32", P, (outs), P.Ins32, "", pattern> {
 
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-  let UseNamedOperandTable = 1;
-
-  string Mnemonic = opName;
-  string AsmOperands = P.Asm32;
+  let AsmOperands = P.Asm32;
 
   let Size = 4;
   let mayLoad = 0;
@@ -237,11 +230,6 @@ class VOPC_Pseudo <string opName, VOPC_Profile P, list<dag> pattern=[],
   let VOPC = 1;
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
   let Defs = !if(DefVcc, [VCC], []);
-
-  VOPProfile Pfl = P;
-
-  bits<8> GFX1250BlockingCycles = 0;
-  bit HasGFX1250BlockingCycles = false;
 }
 
 class VOPC_Real <VOPC_Pseudo ps, int EncodingFamily, string asm_name = ps.PseudoInstr> :

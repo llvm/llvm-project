@@ -8,6 +8,7 @@
   define void @blocking_cycles_cvt_scale_pk8() #0 { ret void }
   define void @blocking_cycles_cvt_f64() #0 { ret void }
   define void @blocking_cycles_cmp_f64() #0 { ret void }
+  define void @blocking_cycles_cmp_f64_e32() #0 { ret void }
   define void @blocking_cycles_arith_f64() #0 { ret void }
   define void @blocking_cycles_shift_64() #0 { ret void }
   define void @blocking_cycles_swap() #0 { ret void }
@@ -15,6 +16,8 @@
   define void @blocking_cycles_arith_f64_pseudo() #0 { ret void }
   define void @blocking_cycles_shift_64_pseudo() #0 { ret void }
   define void @blocking_cycles_cmp_class_f64() #0 { ret void }
+  define void @blocking_cycles_cmp_class_f64_e32() #0 { ret void }
+  define void @blocking_cycles_cmp_i64_e32() #0 { ret void }
   define void @blocking_cycles_pseudo_scalar_trans() #0 { ret void }
   define void @blocking_cycles_dot() #0 { ret void }
   define void @blocking_cycles_dpp() #0 { ret void }
@@ -136,6 +139,20 @@ body: |
     S_ENDPGM 0, implicit %1
 ...
 
+# CHECK-LABEL: blocking_cycles_cmp_f64_e32:
+# CHECK: VALU(Nc): 32 cycles, 1 instrs
+
+---
+name: blocking_cycles_cmp_f64_e32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    nofpexcept V_CMP_GT_F64_e32 %0, %0, implicit-def $vcc, implicit $mode, implicit $exec
+
+    S_ENDPGM 0, implicit $vcc
+...
+
 # CHECK-LABEL: blocking_cycles_arith_f64:
 # CHECK: VALU(Nc): 32 cycles, 1 instrs
 
@@ -234,6 +251,35 @@ body: |
     %2:sreg_32 = V_CMP_CLASS_F64_e64 0, %0, %1, implicit $exec
 
     S_ENDPGM 0, implicit %2
+...
+
+# CHECK-LABEL: blocking_cycles_cmp_class_f64_e32:
+# CHECK: VALU(Nc): 32 cycles, 1 instrs
+
+---
+name: blocking_cycles_cmp_class_f64_e32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    V_CMP_CLASS_F64_e32 %0, %1, implicit-def $vcc, implicit $exec
+
+    S_ENDPGM 0, implicit $vcc
+...
+
+# CHECK-LABEL: blocking_cycles_cmp_i64_e32:
+# CHECK: VALU(Nc): 2 cycles, 1 instrs
+
+---
+name: blocking_cycles_cmp_i64_e32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    V_CMP_LT_I64_e32 %0, %0, implicit-def $vcc, implicit $exec
+
+    S_ENDPGM 0, implicit $vcc
 ...
 
 # CHECK-LABEL: blocking_cycles_pseudo_scalar_trans:
