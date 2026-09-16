@@ -197,10 +197,11 @@ struct PackedOperandDetails {
   AffineMap indexingMap;
 };
 
-/// Helper function for getOrCreatePackedViewOfOperand that populates
-/// the details of the packedOperand that needs to be formed and also
-/// returns if the packing would require padding.
-static bool getPackedOperandDetails(
+/// Populates the packed operand details and returns whether packing requires
+/// padding. Returns failure when propagation is unsupported, such as when an
+/// outer-dimension permutation would need to remap a non-dimension,
+/// non-constant affine expression.
+static FailureOr<bool> getPackedOperandDetails(
     OpBuilder &b, PackInfo packInfo, GenericOp genericOp, OpOperand *opOperand,
     DenseMap<OpOperand *, PackedOperandDetails> &packedOperandMap) {
   PackedOperandDetails currOperandDetails;
@@ -253,8 +254,8 @@ static bool getPackedOperandDetails(
         exprs[i] = b.getAffineDimExpr(inversedOuterPerm[dimPos]);
         continue;
       }
-      assert(isa<AffineConstantExpr>(exprs[i]) &&
-             "Attempted to permute non-constant and non-affine dim expression");
+      if (!isa<AffineConstantExpr>(exprs[i]))
+        return failure();
     }
     // Step 2.2: Undo the transposition on `exprs` and propagate the
     // transposition on the pack using outerDimsPerm.
@@ -352,12 +353,13 @@ static std::tuple<Value, AffineMap> getOrCreatePackedViewOfOperand(
 /// will create a new generic op with the packed operand and the packed output
 /// according to packInfo when we attempt to push down unpack or bubble up pack
 /// around it. Implicitly this will only work when a packInfo can be obtained.
-/// This make sure that we are only using this function on parallel permuted
+/// This ensures that the function is only used for parallel permuted
 /// dimensions.
-static FailureOr<GenericOp>
-packGenericOp(RewriterBase &rewriter, GenericOp genericOp, Value dest,
-              AffineMap packedOutIndexingMap, const PackInfo &packInfo,
-              bool isFoldableUnpackPack, bool poisonPaddingOk) {
+static GenericOp packGenericOp(
+    RewriterBase &rewriter, GenericOp genericOp, Value dest,
+    AffineMap packedOutIndexingMap, const PackInfo &packInfo,
+    const DenseMap<OpOperand *, PackedOperandDetails> &packedOperandMap,
+    bool isFoldableUnpackPack) {
   Location loc = genericOp.getLoc();
   SmallVector<Value> inputOperands;
   SmallVector<Value> inputOperandsFromUnpackedSource;
@@ -367,14 +369,6 @@ packGenericOp(RewriterBase &rewriter, GenericOp genericOp, Value dest,
            packOp.getInnerDimsPos() == unPackOp.getInnerDimsPos() &&
            llvm::equal(packOp.getMixedTiles(), unPackOp.getMixedTiles());
   };
-  DenseMap<OpOperand *, PackedOperandDetails> packedOperandMap;
-  bool requiresPadding = false;
-  for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
-    requiresPadding |= getPackedOperandDetails(rewriter, packInfo, genericOp,
-                                               inputOperand, packedOperandMap);
-  }
-  if (requiresPadding && !poisonPaddingOk)
-    return failure();
 
   for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
     auto [packedOperand, packedIndexingMap] = getOrCreatePackedViewOfOperand(
@@ -390,7 +384,7 @@ packGenericOp(RewriterBase &rewriter, GenericOp genericOp, Value dest,
     indexingMaps.push_back(packedIndexingMap);
   }
 
-  // If the unpack->pack sequences can be folded, replace use the sources of
+  // If the unpack->pack sequences can be folded, use the sources of
   // the unpack ops in any unpack->pack chains on the generic op operands.
   if (isFoldableUnpackPack) {
     inputOperands = inputOperandsFromUnpackedSource;
@@ -509,10 +503,6 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, linalg::PackOp packOp,
   if (failed(packInfo))
     return failure();
 
-  // We want to move the pack not the generic.
-  OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPoint(genericOp);
-
   // We need to handle two cases:
   // 1) The linalg.pack destination is a tensor.empty. If this is the case, we
   // create a new tensor.empty to avoid breaking dominance, as we are moving the
@@ -522,22 +512,41 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, linalg::PackOp packOp,
   Value packOpDest = packOp.getDest();
   if (!packOpDest.hasOneUse())
     return failure();
-  if (auto emptyOp = packOpDest.getDefiningOp<tensor::EmptyOp>()) {
-    packOpDest = tensor::EmptyOp::create(rewriter, genericOp->getLoc(),
-                                         emptyOp.getMixedSizes(),
-                                         emptyOp.getType().getElementType());
-  } else {
+
+  tensor::EmptyOp emptyOp = packOpDest.getDefiningOp<tensor::EmptyOp>();
+  if (!emptyOp) {
     DominanceInfo dom(genericOp);
     if (!dom.properlyDominates(packOpDest, genericOp))
       return failure();
   }
 
-  // Rebuild the indexing map for the corresponding init operand.
+  // Rebuild the indexing maps for all operands before mutating the IR.
   DenseMap<OpOperand *, PackedOperandDetails> packedOperandMap;
-  bool requiresPadding = getPackedOperandDetails(rewriter, *packInfo, genericOp,
-                                                 opOperand, packedOperandMap);
+  FailureOr<bool> outputRequiresPadding = getPackedOperandDetails(
+      rewriter, *packInfo, genericOp, opOperand, packedOperandMap);
+  if (failed(outputRequiresPadding))
+    return failure();
+
+  bool requiresPadding = *outputRequiresPadding;
+  for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
+    FailureOr<bool> inputRequiresPadding = getPackedOperandDetails(
+        rewriter, *packInfo, genericOp, inputOperand, packedOperandMap);
+    if (failed(inputRequiresPadding))
+      return failure();
+    requiresPadding |= *inputRequiresPadding;
+  }
   if (requiresPadding && !poisonPaddingOk)
     return failure();
+
+  // We want to move the pack, not the generic.
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(genericOp);
+
+  if (emptyOp) {
+    packOpDest = tensor::EmptyOp::create(rewriter, genericOp->getLoc(),
+                                         emptyOp.getMixedSizes(),
+                                         emptyOp.getType().getElementType());
+  }
 
   auto [packedOutOperand, packedOutIndexingMap] =
       getOrCreatePackedViewOfOperand(rewriter, genericOp.getLoc(), opOperand,
@@ -556,8 +565,8 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, linalg::PackOp packOp,
   // pack(unpack) isn't naively foldable because the unpack op can be from
   // an arbitrary domain so we need to keep both.
   return packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap,
-                       *packInfo, /*isFoldableUnpackPack=*/false,
-                       poisonPaddingOk);
+                       *packInfo, packedOperandMap,
+                       /*isFoldableUnpackPack=*/false);
 }
 
 /// Wrapper pattern that applies bubbleUpPackOpThroughGenericOp method.
@@ -1200,11 +1209,22 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
   if (failed(packInfo))
     return failure();
 
-  // Rebuild the indexing map for the corresponding init operand.
+  // Rebuild the indexing maps for all operands before mutating the IR.
   DenseMap<OpOperand *, PackedOperandDetails> packedOperandMap;
-  bool requiresPadding =
+  FailureOr<bool> outputRequiresPadding =
       getPackedOperandDetails(rewriter, *packInfo, genericOp,
                               genericOp.getDpsInitOperand(0), packedOperandMap);
+  if (failed(outputRequiresPadding))
+    return failure();
+
+  bool requiresPadding = *outputRequiresPadding;
+  for (OpOperand *inputOperand : genericOp.getDpsInputOperands()) {
+    FailureOr<bool> inputRequiresPadding = getPackedOperandDetails(
+        rewriter, *packInfo, genericOp, inputOperand, packedOperandMap);
+    if (failed(inputRequiresPadding))
+      return failure();
+    requiresPadding |= *inputRequiresPadding;
+  }
   if (requiresPadding && !poisonPaddingOk)
     return failure();
 
@@ -1231,12 +1251,9 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
   // pack(unpack) is foldable in this case. This is because in pushing down the
   // unpack, by default we will populate an additional pack op after the unpack.
   // This guarantees them to be foldable.
-  auto maybeGenericOp =
+  GenericOp newGenericOp =
       packGenericOp(rewriter, genericOp, dest, packedOutIndexingMap, *packInfo,
-                    /*isFoldableUnpackPack=*/true, poisonPaddingOk);
-  if (failed(maybeGenericOp))
-    return failure();
-  GenericOp newGenericOp = *maybeGenericOp;
+                    packedOperandMap, /*isFoldableUnpackPack=*/true);
   Value newResult =
       newGenericOp.getTiedOpResult(newGenericOp.getDpsInitOperand(0));
 
