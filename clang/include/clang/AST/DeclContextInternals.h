@@ -301,13 +301,10 @@ public:
   }
 };
 
-class ASTContextStateRecovery;
-
 class StoredDeclsMap
     : public llvm::SmallDenseMap<DeclarationName, StoredDeclsList, 4> {
   friend class ASTContext; // walks the chain deleting these
   friend class DeclContext;
-  friend class ASTContextStateRecovery;
 
   llvm::PointerIntPair<StoredDeclsMap*, 1> Previous;
 public:

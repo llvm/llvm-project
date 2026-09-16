@@ -87,7 +87,7 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.hasErrorOccurred()) {
     CleanUpPTU(C.getTranslationUnitDecl());
-    // Consumer->HandleTranslationUnit(C);
+
     Diags.Reset(/*soft=*/true);
     Diags.getClient()->clear();
     return llvm::make_error<llvm::StringError>("Parsing failed.",
@@ -248,17 +248,6 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
     }
   }
 
-  // llvm::SmallVector<llvm::StringRef> Decls;
-  // Decls.reserve(64);
-  // auto *Gen = Act->getCodeGen();
-  // for (auto &F : Gen->GetModule()->functions()) {
-  //   if (const Decl *D = Gen->GetDeclForMangledName(F.getName())) {
-  //     if (D->getTranslationUnitDecl() == MostRecentTU)
-  //       Decls.push_back(F.getName());
-  //   }
-  // }
-
-  // Act->getCodeGen()->restoreManglings(Decls);
   // Act->getCodeGen()->restoreManglings();
 
   // FIXME: We should de-allocate MostRecentTU

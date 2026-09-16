@@ -32,7 +32,6 @@
 namespace clang {
 
 class ASTContext;
-class ASTContextStateRecovery;
 template <typename> class CanQual;
 class DeclarationName;
 class DeclarationNameTable;
@@ -592,7 +591,6 @@ inline bool operator>=(DeclarationName LHS, DeclarationName RHS) {
 /// uniqued versions of each of the C++ special names, which can be
 /// retrieved using its member functions (e.g., getCXXConstructorName).
 class DeclarationNameTable {
-  friend class ASTContextStateRecovery;
   /// Used to allocate elements in the FoldingSets below.
   const ASTContext &Ctx;
 

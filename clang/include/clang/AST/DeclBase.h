@@ -43,13 +43,10 @@
 namespace clang {
 
 class ASTContext;
-class ASTContextStateRecovery;
-class ASTDeclDetacher;
 class ASTMutationListener;
 class Attr;
 class BlockDecl;
 class DeclContext;
-class DeclContextRepairer;
 class ExternalSourceSymbolAttr;
 class FunctionDecl;
 class FunctionType;
@@ -261,9 +258,6 @@ protected:
 
 private:
   friend class DeclContext;
-  // friend class ASTContextStateRecovery;
-  friend class ASTDeclDetacher;
-  friend class DeclContextRepairer;
 
   struct MultipleDC {
     DeclContext *SemanticDC;
@@ -1351,7 +1345,6 @@ namespace clang {
 /// A list storing NamedDecls in the lookup tables.
 class DeclListNode {
   friend class ASTContext; // allocate, deallocate nodes.
-  friend class ASTContextStateRecovery;
   friend class StoredDeclsList;
 public:
   using Decls = llvm::PointerUnion<NamedDecl*, DeclListNode*>;
@@ -1471,10 +1464,6 @@ enum class LinkageSpecLanguageIDs;
 ///   BlockDecl
 ///   CapturedDecl
 class DeclContext {
-  /// For restoring decl to its previous state (clang-repl error-recovery).
-  friend class ASTDeclDetacher;
-
-  friend class DeclContextRepairer;
   /// For makeDeclVisibleInContextImpl
   friend class ASTDeclReader;
   /// For checking the new bits in the Serialization part.

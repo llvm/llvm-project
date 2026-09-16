@@ -24,309 +24,6 @@
 namespace clang {
 class ASTContext;
 
-struct SemaStashCheckPoint {
-  /// Sema::*
-  llvm::SlabCheckPoint SemaBumpSlabCP;
-  size_t CachedFunctionScopeSize = 0;
-  size_t FunctionScopesSize = 0;
-  size_t Ident_superSize = 0;
-  size_t PragmaClangBSSSectionSize = 0;
-  size_t PragmaClangDataSectionSize = 0;
-  size_t PragmaClangRodataSectionSize = 0;
-  size_t PragmaClangRelroSectionSize = 0;
-  size_t PragmaClangTextSectionSize = 0;
-  size_t VtorDispStackSize = 0;
-  size_t AlignPackStackSize = 0;
-  size_t AlignPackIncludeStackSize = 0;
-  size_t DataSegStackSize = 0;
-  size_t BSSSegStackSize = 0;
-  size_t ConstSegStackSize = 0;
-  size_t CodeSegStackSize = 0;
-  size_t StrictGuardStackCheckStackSize = 0;
-  size_t FpPragmaStackSize = 0;
-  size_t FunctionToSectionMapSize = 0;
-  size_t PragmaAttributeStackSize = 0;
-  size_t MSFunctionNoBuiltinsSize = 0;
-  size_t PendingExportedNamesSize = 0;
-  size_t TypoCorrectedFunctionDefinitionsSize = 0;
-  size_t FlagBitsCacheSize = 0;
-  size_t AssignEnumCacheSize = 0;
-  size_t WeakUndeclaredIdentifiersSize = 0;
-  size_t ExtnameUndeclaredIdentifiersSize = 0;
-  size_t UnusedLocalTypedefNameCandidatesSize = 0;
-  Sema::UnusedFileScopedDeclsType::iterator UnusedFileScopedDeclsSize;
-  Sema::TentativeDefinitionsType::iterator TentativeDefinitionsSize;
-  size_t ExternalDeclarationsSize = 0;
-  size_t ParsingInitForAutoVarsSize = 0;
-  size_t DeclsToCheckForDeferredDiagsSize = 0;
-  size_t ShadowingDeclsSize = 0;
-  size_t WeakTopLevelDeclSize = 0;
-  Sema::ExtVectorDeclsType::iterator ExtVectorDeclsSize;
-  size_t VTableUsesSize = 0;
-  size_t VTablesUsedSize = 0;
-  size_t DelayedDllExportClassesSize = 0;
-  size_t DelayedDllExportMemberFunctionsSize = 0;
-  size_t InventedParameterInfosSize = 0;
-  size_t FieldCollectorSize = 0;
-  size_t UnusedPrivateFieldsSize = 0;
-  size_t PureVirtualClassDiagSetSize = 0;
-  Sema::DelegatingCtorDeclsType::iterator DelegatingCtorDeclsSize;
-  size_t StdNamespaceSize = 0;
-  size_t UnparsedDefaultArgLocsSize = 0;
-  size_t UndefinedButUsedSize = 0;
-  size_t SpecialMembersBeingDeclaredSize = 0;
-  size_t DelayedOverridingExceptionSpecChecksSize = 0;
-  size_t DelayedEquivalentExceptionSpecChecksSize = 0;
-  size_t MaybeODRUseExprsSize = 0;
-  size_t RefsMinusAssignmentsSize = 0;
-  size_t ExprCleanupObjectsSize = 0;
-  size_t ExprEvalContextsSize = 0;
-  size_t FailedImmediateInvocationsSize = 0;
-  size_t ImplicitlyRetainedSelfLocsSize = 0;
-  size_t DeleteExprsSize = 0;
-  size_t CurrentParameterCopyTypesSize = 0;
-  size_t AggregateDeductionCandidatesSize = 0;
-  size_t TypoCorrectionFailuresSize = 0;
-  size_t SpecialMemberCacheSize = 0;
-  size_t ModuleScopesSize = 0;
-  size_t DeferredExportedNamespacesSize = 0;
-  size_t PendingInlineFuncDeclsSize = 0;
-  size_t CurrentSEHFinallySize = 0;
-  size_t CurrentDeferSize = 0;
-  size_t LateParsedTemplateMapSize = 0;
-  size_t SuppressedDiagnosticsSize = 0;
-  size_t CurrentInstantiationScopeSize = 0;
-  size_t UnparsedDefaultArgInstantiationsSize = 0;
-  size_t CodeSynthesisContextsSize = 0;
-  size_t InstantiatingSpecializationsSize = 0;
-  size_t InstantiatedNonDependentTypesSize = 0;
-  size_t CodeSynthesisContextLookupModulesSize = 0;
-  size_t LookupModulesCacheSize = 0;
-  size_t VisibleNamespaceCacheSize = 0;
-  // size_t TemplateInstCallbacksSize = 0;
-  size_t PendingInstantiationsSize = 0;
-  size_t LateParsedInstantiationsSize = 0;
-  size_t SavedVTableUsesSize = 0;
-  size_t SavedPendingInstantiationsSize = 0;
-  size_t PendingLocalImplicitInstantiationsSize = 0;
-  size_t CurrentCachedTemplateArgsSize = 0;
-  size_t UnsubstitutedConstraintSatisfactionCacheSize = 0;
-  size_t SubsumptionCacheSize = 0;
-  size_t NormalizationCacheSize = 0;
-  size_t SatisfactionCacheSize = 0;
-  size_t SatisfactionStackSize = 0;
-  //   size_t NullabilityMapSize = 0;
-  size_t DeclsWithEffectsToVerifySize = 0;
-  //   size_t AllEffectsToVerifySize = 0;
-};
-
-/// Stashes and restores persistent Sema state around an incremental parse.
-///
-/// Usage:
-///   SemaStashCheckPoint CP;
-///   SemaStateRecovery Stash(S);
-///   Stash.stash(CP);
-///   // ... parse ...
-///   if (failed)
-///     Stash.restore(CP, ASTSlabCP);
-class SemaStateRecovery {
-  Sema &S;
-
-  /// Holds full copies of PragmaStack, PragmaClangSection, FileNullabilityMap,
-  /// etc.
-  //   struct PragmaSnapshot;
-  //   std::unique_ptr<PragmaSnapshot> Pragmas;
-
-public:
-  explicit SemaStateRecovery(Sema &S) : S(S) {}
-  //   ~SemaStateRecovery();
-
-  void stash(SemaStashCheckPoint &CP);
-  void restore(SemaStashCheckPoint &CP, llvm::SlabCheckPoint SlabCP);
-};
-
-struct StashCheckPoint {
-  // Types vector
-  size_t TypesSize = 0;
-
-  // FoldingSets — store count of nodes
-  size_t ExtQualNodesSize = 0;
-  size_t ComplexTypesSize = 0;
-  size_t PointerTypesSize = 0;
-  size_t AdjustedTypesSize = 0;
-  size_t BlockPointerTypesSize = 0;
-  size_t LValueReferenceTypesSize = 0;
-  size_t RValueReferenceTypesSize = 0;
-  size_t MemberPointerTypesSize = 0;
-
-  size_t ConstantArrayTypesSize = 0;
-  size_t IncompleteArrayTypesSize = 0;
-  size_t VariableArrayTypesSize = 0;
-
-  size_t DependentSizedArrayTypesSize = 0;
-  size_t DependentSizedExtVectorTypesSize = 0;
-  size_t DependentAddressSpaceTypesSize = 0;
-  size_t VectorTypesSize = 0;
-  size_t DependentVectorTypesSize = 0;
-  size_t MatrixTypesSize = 0;
-  size_t DependentSizedMatrixTypesSize = 0;
-  size_t FunctionNoProtoTypesSize = 0;
-  size_t FunctionProtoTypesSize = 0;
-  size_t DependentTypeOfExprTypesSize = 0;
-  size_t DependentDecltypeTypesSize = 0;
-
-  size_t DependentPackIndexingTypesSize = 0;
-
-  size_t TemplateTypeParmTypesSize = 0;
-  size_t ObjCTypeParamTypesSize = 0;
-  size_t SubstTemplateTypeParmTypesSize = 0;
-  size_t SubstTemplateTypeParmPackTypesSize = 0;
-  size_t SubstBuiltinTemplatePackTypesSize = 0;
-
-  size_t TemplateSpecializationTypesSize = 0;
-  size_t ParenTypesSize = 0;
-  size_t TagTypesSize = 0;
-  size_t UnresolvedUsingTypesSize = 0;
-  size_t UsingTypesSize = 0;
-  size_t TypedefTypesSize = 0;
-  size_t DependentNameTypesSize = 0;
-  size_t PackExpansionTypesSize = 0;
-  size_t UnaryTransformTypesSize = 0;
-
-  size_t AutoTypesSize = 0;
-  size_t DeducedTemplateSpecializationTypesSize = 0;
-  size_t AtomicTypesSize = 0;
-  size_t AttributedTypesSize = 0;
-  size_t PipeTypesSize = 0;
-  size_t BitIntTypesSize = 0;
-  size_t DependentBitIntTypesSize = 0;
-  size_t BTFTagAttributedTypesSize = 0;
-  size_t HLSLAttributedResourceTypesSize = 0;
-  size_t HLSLInlineSpirvTypesSize = 0;
-
-  size_t CountAttributedTypesSize = 0;
-
-  size_t QualifiedTemplateNamesSize = 0;
-  size_t DependentTemplateNamesSize = 0;
-  size_t SubstTemplateTemplateParmsSize = 0;
-  size_t SubstTemplateTemplateParmPacksSize = 0;
-  size_t DeducedTemplatesSize = 0;
-
-  size_t ArrayParameterTypesSize = 0;
-
-  size_t PredefinedSugarTypesSize = 0;
-
-  size_t NamespaceAndPrefixStoragesSize = 0;
-
-  size_t ASTRecordLayoutsSize = 0;
-
-  size_t MemoizedTypeInfoSize = 0;
-
-  size_t MemoizedUnadjustedAlignSize = 0;
-
-  size_t KeyFunctionsSize = 0;
-
-  size_t BlockVarCopyInitsSize = 0;
-
-  size_t MSGuidDeclsSize = 0;
-
-  size_t UnnamedGlobalConstantDeclsSize = 0;
-
-  size_t TemplateParamObjectDeclsSize = 0;
-
-  size_t StringLiteralCacheSize = 0;
-
-  size_t DestroyingOperatorDeletesSize = 0;
-  size_t TypeAwareOperatorNewAndDeletesSize = 0;
-
-  size_t OperatorDeletesForVirtualDtorSize = 0;
-
-  size_t GlobalOperatorDeletesForVirtualDtorSize = 0;
-
-  size_t ArrayOperatorDeletesForVirtualDtorSize = 0;
-  size_t GlobalArrayOperatorDeletesForVirtualDtorSize = 0;
-
-  size_t MaybeRequireVectorDeletingDtorSize = 0;
-
-  size_t MergedDeclsSize = 0;
-  size_t DeclAttrsSize = 0;
-  size_t MergedDefModulesSize = 0;
-
-  size_t ModuleInitializersSize = 0;
-  size_t PrimaryModuleNameMapSize = 0;
-  size_t SameModuleLookupSetSize = 0;
-
-  size_t ScalableVecTyMapSize = 0;
-  size_t LambdaCastPathsSize = 0;
-  size_t RawCommentsSize = 0;
-  size_t RedeclChainCommentsSize = 0;
-  size_t CommentlessRedeclChainsSize = 0;
-  size_t ParsedCommentsSize = 0;
-  size_t RelocatableClassesSize = 0;
-  size_t ParamIndicesSize = 0;
-  size_t MangleNumbersSize = 0;
-  size_t StaticLocalNumbersSize = 0;
-  size_t TemplateOrInstantiationSize = 0;
-
-  size_t InstantiatedFromUsingDeclSize = 0;
-  size_t InstantiatedFromUsingEnumDeclSize = 0;
-
-  size_t InstantiatedFromUsingShadowDeclSize = 0;
-
-  size_t InstantiatedFromUnnamedFieldDeclSize = 0;
-  size_t OverriddenMethodsSize = 0;
-  size_t MangleNumberingContextsSize = 0;
-  size_t ExtraMangleNumberingContextsSize = 0;
-
-  size_t TraversalScopeSize = 0;
-
-  /// object-c
-  size_t ObjCObjectTypesSize = 0;
-  size_t ObjCObjectPointerTypesSize = 0;
-
-  mutable TypedefDecl *ObjCIdDeclCP = nullptr;
-
-  mutable TypedefDecl *ObjCSelDeclCP = nullptr;
-
-  mutable TypedefDecl *ObjCClassDeclCP = nullptr;
-
-  mutable ObjCInterfaceDecl *ObjCProtocolClassDeclCP = nullptr;
-
-  // llvm::PointerIntPair<StoredDeclsMap *, 1> LastSDM;
-  //    = llvm::PointerIntPair<StoredDeclsMap *, 1>(nullptr, 0);
-  mutable QualType AutoDeductTy;     // Deduction against 'auto'.
-  mutable QualType AutoRRefDeductTy; // Deduction against 'auto &&'.
-
-  // mutable DeclarationNameTable DeclarationNames; need to revert.
-  struct DeclarationNamesCP {
-    size_t CXXConstructorNamesSize = 0;
-    size_t CXXDestructorNamesSize = 0;
-    size_t CXXConversionFunctionNamesSize = 0;
-    detail::CXXOperatorIdName CXXOperatorNamesCP[NUM_OVERLOADED_OPERATORS];
-
-    size_t CXXLiteralOperatorNamesSize = 0;
-
-    size_t CXXDeductionGuideNamesSize = 0;
-  };
-
-  DeclarationNamesCP DeclarationNames;
-};
-
-class ASTContextStateRecovery {
-private:
-  ASTContext &Ctx;
-
-public:
-  explicit ASTContextStateRecovery(ASTContext &Ctx) : Ctx(Ctx) {}
-
-  ASTContextStateRecovery(const ASTContextStateRecovery &) = delete;
-  ASTContextStateRecovery &operator=(const ASTContextStateRecovery &) = delete;
-
-  void stash(StashCheckPoint &CP);
-  void restore(StashCheckPoint &CP, llvm::SlabCheckPoint SlabCP);
-  void commit();
-};
-
 /// Index of a per PTU State.
 using PTUID = unsigned;
 
@@ -572,8 +269,77 @@ struct MemberSpecializationFootprint {
   }
 };
 
-class ASTStateReader {
-public:
+class DeclStateReverter {
+private:
+  struct TemplateCommonAccess : RedeclarableTemplateDecl {
+    using RedeclarableTemplateDecl::Common;
+  };
+
+  static const void *rawCommonPtr(const RedeclarableTemplateDecl &RT) {
+    return static_cast<const TemplateCommonAccess &>(RT).Common;
+  }
+
+  // Common is `mutable`, so this is legal to call through a const
+  // reference too -- no const_cast needed at any call site.
+  static void clearCommonPtr(const RedeclarableTemplateDecl &RT) {
+    static_cast<const TemplateCommonAccess &>(RT).Common = nullptr;
+  }
+
+  struct ClassTemplateCommonAccess : ClassTemplateDecl {
+    using ClassTemplateDecl::getCommonPtr;
+  };
+
+  static bool canonInjectedTSTValid(const ClassTemplateDecl &CTD) {
+    auto *Ptr =
+        static_cast<const ClassTemplateCommonAccess &>(CTD).getCommonPtr();
+    return !Ptr->CanonInjectedTST.isNull();
+  }
+
+  static void clearCanonInjectedTST(ClassTemplateDecl &CTD) {
+    auto *Ptr = static_cast<ClassTemplateCommonAccess &>(CTD).getCommonPtr();
+    Ptr->CanonInjectedTST = CanQualType();
+  }
+
+  // DeclContext::FirstDecl/LastDecl -- protected.
+  struct DeclContextLinkAccess : DeclContext {
+    using DeclContext::FirstDecl;
+    using DeclContext::LastDecl;
+  };
+
+  static void clearDeclContextChain(DeclContext &DC) {
+    auto &Access = static_cast<DeclContextLinkAccess &>(DC);
+    Access.FirstDecl = nullptr;
+    Access.LastDecl = nullptr;
+  }
+
+  struct TagDeclDefinitionAccess : TagDecl {
+    using TagDecl::setBeingDefined;
+  };
+
+  static void clearBeingDefined(TagDecl &TD) {
+    static_cast<TagDeclDefinitionAccess &>(TD).setBeingDefined(false);
+  }
+
+  struct DeclLexicalLinkAccess : Decl {
+    using Decl::NextInContextAndBits;
+  };
+
+  static void clearNextInContext(Decl &D) {
+    static_cast<DeclLexicalLinkAccess &>(D).NextInContextAndBits.setPointer(
+        nullptr);
+  }
+
+  template <typename decl_type>
+  struct RedeclLinkAccess : Redeclarable<decl_type> {
+    using Redeclarable<decl_type>::RedeclLink;
+  };
+
+  template <typename decl_type>
+  static void setLatestRedecl(Redeclarable<decl_type> &D, decl_type *Latest) {
+    static_cast<RedeclLinkAccess<decl_type> &>(D).RedeclLink.setLatest(Latest);
+  }
+
+protected:
   static DefinitionDataFootprint *
   createDefinitionDataFootprint(const ASTContext &Ctx, const CXXRecordDecl &RD);
 
@@ -585,8 +351,12 @@ public:
 
   static SpecializationFootprint *
   createSpecializationFootprint(const ASTContext &Ctx,
-                                const ClassTemplateSpecializationDecl &Spec);
-
+                                const ClassTemplateSpecializationDecl &Spec) {
+    auto *FP =
+        new (Ctx, alignof(SpecializationFootprint)) SpecializationFootprint();
+    FP->update(Spec);
+    return FP;
+  }
   static bool
   compareSpecializationFootprint(const SpecializationFootprint &FP,
                                  const ClassTemplateSpecializationDecl &Spec) {
@@ -602,8 +372,12 @@ public:
 
   static VarSpecializationFootprint *
   createVarSpecializationFootprint(const ASTContext &Ctx,
-                                   const VarTemplateSpecializationDecl &Spec);
-
+                                   const VarTemplateSpecializationDecl &Spec) {
+    auto *FP = new (Ctx, alignof(VarSpecializationFootprint))
+        VarSpecializationFootprint();
+    FP->update(Spec);
+    return FP;
+  }
   static bool
   compareVarSpecializationFootprint(const VarSpecializationFootprint &FP,
                                     const VarTemplateSpecializationDecl &Spec) {
@@ -619,11 +393,18 @@ public:
 
   static FunctionSpecializationFootprint *
   createFunctionSpecializationFootprint(const ASTContext &Ctx,
-                                        const FunctionDecl &FD);
-
+                                        const FunctionDecl &FD) {
+    auto *FP = new (Ctx, alignof(FunctionSpecializationFootprint))
+        FunctionSpecializationFootprint();
+    FP->update(FD);
+    return FP;
+  }
   static bool compareFunctionSpecializationFootprint(
-      const FunctionSpecializationFootprint &FP, const FunctionDecl &FD);
-
+      const FunctionSpecializationFootprint &FP, const FunctionDecl &FD) {
+    FunctionSpecializationFootprint Live;
+    Live.update(FD);
+    return FP == Live;
+  }
   static void restoreFunctionSpecializationFootprint(
       const FunctionSpecializationFootprint &FP, FunctionDecl &FD) {
     FP.restore(FD);
@@ -631,32 +412,115 @@ public:
 
   template <typename OwnerT>
   static MemberSpecializationFootprint *
-  createMemberSpecializationFootprint(const ASTContext &Ctx, const OwnerT &D);
-
+  createMemberSpecializationFootprint(const ASTContext &Ctx, const OwnerT &D) {
+    auto *FP = new (Ctx, alignof(MemberSpecializationFootprint))
+        MemberSpecializationFootprint();
+    FP->update(D);
+    return FP;
+  }
   template <typename OwnerT>
   static bool
   compareMemberSpecializationFootprint(const MemberSpecializationFootprint &FP,
-                                       const OwnerT &D);
+                                       const OwnerT &D) {
+    MemberSpecializationFootprint Live;
+    Live.update(D);
+    return FP == Live;
+  }
   template <typename OwnerT>
   static void
   restoreMemberSpecializationFootprint(const MemberSpecializationFootprint &FP,
-                                       OwnerT &D);
+                                       OwnerT &D) {
+    FP.restore(D);
+  }
 
   static void restoreDefinitionAndRevertDC(CXXRecordDecl &RD);
 
   static void revertDefinitionArrival(Decl &D);
 
-  static const void *getRawCommonPtr(const RedeclarableTemplateDecl &RT);
+  // True if Common could still be created later -- i.e. nobody has called
+  // getCommonPtr() anywhere in this template's redecl chain yet.
+  static bool needToTrackCommonPtr(const RedeclarableTemplateDecl &RT) {
+    return !rawCommonPtr(RT);
+  }
 
-  static bool isTemplateCanonInjectedTSTValid(const ClassTemplateDecl *CTD);
+  // True if CanonInjectedTST could still be cached later. Only valid to
+  // call once Common itself is confirmed to exist (see needToTrackCommonPtr).
+  static bool
+  needToTrackTemplateCanonInjectedTST(const ClassTemplateDecl *CTD) {
+    return !canonInjectedTSTValid(*CTD);
+  }
 
-  static void resetTemplateCommonBase(RedeclarableTemplateDecl &RT);
+  // Write-once fields, fixed null prior state (Common/CanonInjectedTST
+  // never existed before whichever PTU created them), so revert is a
+  // direct reset, not a snapshot restore.
+  static void resetTemplateCommonBase(RedeclarableTemplateDecl &RT) {
+    clearCommonPtr(RT);
+  }
 
-  static void resetCanonInjectedTST(ClassTemplateDecl &CTD);
+  static void resetCanonInjectedTST(ClassTemplateDecl &CTD) {
+    clearCanonInjectedTST(CTD);
+  }
 
-  static const Type *getRawTypeForDecl(const TypeDecl *TD);
+  // static const Type *getRawTypeForDecl(const TypeDecl *TD) {
+  //   return TD->TypeForDecl;
+  // }
 
-  static void resetTypeForDecl(TypeDecl *TD);
+  // static bool needToTrackTypeForDecl(const TypeDecl *TD) {
+  //   const Type *T = getRawTypeForDecl(TD);
+  //   return !T || T->isCanonicalUnqualified();
+  // }
+
+  // static void resetTypeForDecl(TypeDecl *TD) { TD->TypeForDecl = nullptr; }
+
+private:
+  ASTContext &Ctx;
+  llvm::SlabCheckPoint SlabCP;
+  llvm::SmallPtrSet<const DeclContext *, 8> RepairedLexicalContexts;
+
+  bool isAfterCP(const void *P) const {
+    return Ctx.getAllocator().isAfterCheckpoint(P, SlabCP);
+  }
+
+public:
+  DeclStateReverter(ASTContext &Ctx, llvm::SlabCheckPoint CP)
+      : Ctx(Ctx), SlabCP(CP) {}
+
+  static bool isExtensibleContainer(const Decl *D) {
+    return isa<NamespaceDecl>(D) || isa<CXXRecordDecl>(D);
+  }
+
+  static bool isRedeclarableOrOnlyDecl(Decl *D) {
+    return D->getPreviousDecl() != nullptr;
+  }
+
+  void detachDefData(const Decl *D);
+
+  void detachCommonBase(const Decl *D);
+
+  /// Remove D from its semantic context's lookup map, reinstating the
+  /// previous declaration if D had replaced one in-place (which is what
+  /// StoredDeclsList::HandleRedeclaration does on a redeclaration --
+  /// erasing the slot outright would lose the older decl entirely; that
+  /// is the ReopenNs failure).
+  void detachFromDCLookup(const Decl *D);
+
+  // Walk D's redecl chain looking for the newest decl that predates this
+  // PTU. Returns nullptr if the entire chain was created this PTU.
+  template <typename DeclT> DeclT *findSurvivor(DeclT *D) const;
+
+  template <typename decl_type>
+  void patchRedeclLink(Redeclarable<decl_type> *D, decl_type *Survivor) {
+    setLatestRedecl<decl_type>(*D->getFirstDecl(), Survivor);
+  }
+
+  /// Point the canonical decl's "most recent" link back at the newest
+  /// redeclaration that predates this PTU.
+  void detachFromRedeclChain(const Decl *D);
+
+  void repairLexicalChain(DeclContext &DC);
+
+private:
+  NamedDecl *tryDetachRedeclChain(Decl *D);
 };
 
 template <typename DataT> struct Snapshot {
@@ -714,12 +578,6 @@ using SpecializationChain = StateAwareChain<SpecializationFootprint>;
 using VarSpecializationChain = StateAwareChain<VarSpecializationFootprint>;
 using FunctionSpecializationChain =
     StateAwareChain<FunctionSpecializationFootprint>;
-// One chain type shared by all four MemberSpecializationInfo-backed owner
-// kinds (Function/Var/Record/Enum) -- the footprint shape is identical
-// across all four (see MemberSpecializationFootprint's own comment), so
-// unlike the three chains above, a single alias is enough; what varies is
-// only the DenseMap key type in IncrementalStateTracker
-// (FunctionDecl*/VarDecl*/ CXXRecordDecl*/EnumDecl*), one map per owner kind.
 using MemberSpecializationChain =
     StateAwareChain<MemberSpecializationFootprint>;
 
@@ -781,8 +639,6 @@ public:
       CheckpointBeforePTU.resize(ID);
   }
 };
-
-/// need to handle this     TagDeclBitfields TagDeclBits;
 
 template <typename ValueT> struct FieldMutation {
   PTUID ID;
@@ -848,14 +704,8 @@ public:
   void forget(const OwnerT *Owner) { Log.erase(Owner); }
 };
 
-// struct FunctionTypeEntry {
-//   QualType Type;
-//   QualType OverridingType;
-// };
 using FunctionExceptionSpecChain = FieldMutationChain<FunctionDecl, QualType>;
 using TypeForDeclChain = FieldMutationChain<TagDecl, const Type *>;
-// using CanonInjectedTSTChain =
-//     FieldMutationChain<ClassTemplateDecl, CanQualType>;
 
 struct MutationRecord {
   enum class DeclShape : uint16_t {
@@ -908,12 +758,6 @@ struct PTUStateInfo {
 
   llvm::MapVector<const Decl *, MutationRecord> Mutations;
 
-  // struct CreationRecord {
-  //   DeclShape S;
-  //   CreatedType Type;
-  // };
-
-  // llvm::MapVector<const Decl *, CreationRecord> CreatedDecls;
   llvm::SmallPtrSet<const Decl *, 4> ImplicitDecls;
 
   /// here touched info mean other this belongs to other PTUs;
@@ -1201,7 +1045,6 @@ private:
 
   FunctionExceptionSpecChain FunctionTypeMutations;
   TypeForDeclChain TagdeclInfos;
-  // CanonInjectedTSTChain;
 
   friend class PTUMutationActions;
 
@@ -1362,6 +1205,7 @@ public:
   }
 
   PTUCheckpointLedger &getPTUSlabCheckpoints() { return PTUSlabCheckpoints; }
+
   bool isFromThisPTU(const void *Ptr, PTUID ID) {
     return PTUSlabCheckpoints.isFromThisPTU(Ctx, Ptr, ID);
   }
@@ -1373,10 +1217,9 @@ public:
     return It->second;
   }
 
-  // Pops this PTU's own tail entry (if any) from *Field. If the chain is
-  // now empty -- meaning everything it ever held belonged to the PTU being
-  // rolled back -- releases it back to its pool and nulls the pointer.
-  // Returns whether the chain still has surviving (earlier-PTU) history.
+  void undoLastEntries();
+
+private:
   template <typename ChainT>
   static bool rollbackChainField(ChainT *&Field, PTUID ID,
                                  LinkedDeclNodeGenerator &Gen);
@@ -1387,7 +1230,6 @@ public:
       PTUID ID, LinkedDeclNodeGenerator &Gen);
   void removeLinkedDecl(const Decl *D, PTUID ID);
   // just only remove entries from current();
-  void undoLastEntries();
 };
 
 class PTUMutationActions {
@@ -1468,7 +1310,8 @@ public:
   /// EvaluatedValueCached likewise) is never returned as verified --
   /// there is nothing to compare it against, so it cannot be confirmed,
   /// full stop, not assumed either way.
-  // static uint32_t verifyMutationFor(const Decl *D, DeclShape S, uint32_t FlaggedKinds,
+  // static uint32_t verifyMutationFor(const Decl *D, DeclShape S, uint32_t
+  // FlaggedKinds,
   //                            PTUID ID);
 
   void commitLevel1(PTUID ID, const Decl *D, MutationRecord &Rec,
@@ -1588,13 +1431,11 @@ public:
   /// A templated variable's definition was implicitly instantiated.
   void VariableDefinitionInstantiated(const VarDecl *D) override {
     noteDefinitionInstantiated(D);
-    // handle Memberinfo
   }
 
   /// A function template's definition was instantiated.
   void FunctionDefinitionInstantiated(const FunctionDecl *D) override {
     noteDefinitionInstantiated(D);
-    // handle Memberinfo
   }
 
   /// A default argument was instantiated.
@@ -1678,8 +1519,6 @@ public:
   /// \param AnonNamespace The anonymous namespace that was added
   void AddedAnonymousNamespace(const TranslationUnitDecl *TU,
                                NamespaceDecl *AnonNamespace) override {}
-
-  void AddedTagDeclType(const TagDecl *TD, const Type *T) override {}
 };
 } // end namespace clang
 #endif // LLVM_CLANG_INTERPRETER_ERROR_RECOVERY_H

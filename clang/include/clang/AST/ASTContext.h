@@ -85,7 +85,6 @@ template <> struct DenseMapInfo<ScalableVecTyKey> {
 namespace clang {
 
 class APValue;
-class ASTContextStateRecovery;
 class ASTMutationListener;
 class ASTRecordLayout;
 class AtomicExpr;
@@ -610,7 +609,6 @@ private:
   template <class> friend class serialization::AbstractTypeReader;
   friend class CXXRecordDecl;
   friend class IncrementalParser;
-  friend class ASTContextStateRecovery;
 
   /// A mapping to contain the template or declaration that
   /// a variable declaration describes or was instantiated from,
@@ -1355,10 +1353,6 @@ public:
       TraversalScope = {NewTUDecl};
     if (TUDecl)
       NewTUDecl->setPreviousDecl(TUDecl);
-    TUDecl = NewTUDecl;
-  }
-
-  void setTranslationUnitDecl(TranslationUnitDecl *NewTUDecl) {
     TUDecl = NewTUDecl;
   }
 

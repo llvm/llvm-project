@@ -554,37 +554,29 @@ size_t Interpreter::getEffectivePTUSize() const {
 
 llvm::Expected<PartialTranslationUnit &>
 Interpreter::Parse(llvm::StringRef Code) {
-  class PTUSlabRollback {
+  class PTURollbackGuard {
   public:
-    explicit PTUSlabRollback(Sema &S)
-        : Ctx(S.getASTContext()), ASTCtxState(Ctx), SemaState(S),
+    explicit PTURollbackGuard(Sema &S)
+        : Ctx(S.getASTContext()),
           CheckPoint(Ctx.getAllocator().checkPoint()) {
-            SemaState.stash(SemaCheckPoint);
-            ASTCtxState.stash(CtxCheckPoint);
           }
 
-    ~PTUSlabRollback() {
+    ~PTURollbackGuard() {
       if (!Committed) {
-        SemaState.restore(SemaCheckPoint, CheckPoint);
-        ASTCtxState.restore(CtxCheckPoint, CheckPoint);
-        Ctx.getAllocator().restoreToCheckPoint(CheckPoint);
+        // TODO add memory restore support.
+        // Ctx.getAllocator().restoreToCheckPoint(CheckPoint);
       }
     }
 
     void commit(PartialTranslationUnit &PTU) {
-      ASTCtxState.commit();
       PTU.SlabCheckPoint = CheckPoint;
       Committed = true;
     }
 
   private:
     ASTContext &Ctx;
-    ASTContextStateRecovery ASTCtxState;
-    SemaStateRecovery SemaState;
     llvm::SlabCheckPoint CheckPoint;
     bool Committed = false;
-    StashCheckPoint CtxCheckPoint;
-    SemaStashCheckPoint SemaCheckPoint;
   };
 
   // If we have a device parser, parse it first. The generated code will be
@@ -613,10 +605,8 @@ Interpreter::Parse(llvm::StringRef Code) {
   // PTUSlabRollback Rollback(CI->getSema());
 
   llvm::Expected<TranslationUnitDecl *> TuOrErr = IncrParser->Parse(Code);
-  if (!TuOrErr) {
-    // Act->GenModule();
+  if (!TuOrErr)
     return TuOrErr.takeError();
-  }
 
   PartialTranslationUnit &LastPTU = IncrParser->RegisterPTU(*TuOrErr);
 
