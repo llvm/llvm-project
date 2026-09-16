@@ -598,12 +598,16 @@ def update_checks_list(clang_tidy_path: str) -> None:
                 f.write("| --- | --- |\n")
                 f.writelines(sorted(filter(None, map(format_link, doc_files))))
                 # and the aliases
-                f.write("\n## Check aliases\n\n")
+                f.write("\n:::\n\n## Check aliases\n\n")
+                f.write(":::{table}\n")
+                f.write(":class: clang-tidy-checks-table\n")
+                f.write(":widths: 45 45 10\n\n")
                 f.write("| Name | Redirect | Offers fixes |\n")
                 f.write("| --- | --- | --- |\n")
                 alias_rows = list(map(format_link_alias, doc_files))
                 alias_rows.extend(clang_analyzer_alias_rows)
                 f.writelines(sorted(filter(None, alias_rows)))
+                f.write("\n:::\n")
                 break
 
 
