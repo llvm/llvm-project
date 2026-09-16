@@ -6487,9 +6487,9 @@ static void handleAnalyzeAsClass(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 // for now this only handles std::optional (POC)
 static bool isValidAnalyzeAsMethodAttr(Decl *D, StringRef Tag) {
-  // no validation is done currently.  if someone writes something with a nonsense name,
-  // it simply won't be validated but also no warning will be emitted
-  // would be nice to do something smarter in the real implementation
+  // no validation is done currently.  if someone writes something with a
+  // nonsense name, it simply won't be validated but also no warning will be
+  // emitted would be nice to do something smarter in the real implementation
   return true;
 }
 
