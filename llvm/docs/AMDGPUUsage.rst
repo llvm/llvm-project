@@ -2650,8 +2650,11 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       CLANG attribute [CLANG-ATTR]_. This is an optimization hint,
                                                       and the backend may not be able to satisfy the request. If
                                                       the specified range is incompatible with the function's
-                                                      "amdgpu-flat-work-group-size" value, the implied occupancy
-                                                      bounds by the workgroup size takes precedence.
+                                                      "amdgpu-flat-work-group-size" value, the occupancy bounds
+                                                      implied by the workgroup size take precedence. Under object
+                                                      linking, this hint cannot lower occupancy below the ABI
+                                                      occupancy floor (and therefore cannot raise the register
+                                                      cap); see :ref:`amdgpu-abi-occupancy`.
 
      "amdgpu-ieee" true/false.                        GFX6-GFX11 (Except GFX11.7) Only
                                                       Specify whether the function expects the IEEE field of the
@@ -3067,6 +3070,54 @@ unit's worst case (i.e, maxima) ``num_vgpr``, ``num_agpr``, and
 ``numbered_sgpr`` which may be referenced and used by the aforementioned
 symbolic expressions. These three symbols are ``amdgcn.max_num_vgpr``,
 ``amdgcn.max_num_agpr``, and ``amdgcn.max_num_sgpr``.
+
+.. _amdgpu-abi-occupancy:
+
+ABI Occupancy (Object Linking)
+------------------------------
+
+*ABI occupancy* is the resource-bounded occupancy of a separately compiled
+function under the object-linking ABI: a floor on waves per EU, which is a cap
+on the register budget. Callers and callees rely on this floor without seeing
+each other's register usage. It is not the occupancy the function achieves: a
+function may use fewer registers than the cap and therefore achieve a higher
+occupancy. For example, the ABI occupancy may be 4 even when the function
+achieves an occupancy of 10. ``.amdgpu_occupancy`` records this floor; see
+:ref:`amdgpu-assembler-directive-amdgpu-info`.
+
+A caller with occupancy ``N`` can call a callee only when the callee's ABI
+occupancy is at least ``N``. A lower ABI occupancy raises the callee's register
+cap, which can exceed the register budget implied by the caller's occupancy.
+
+When object linking is enabled, the AMDGPU backend no longer assumes
+whole-program visibility. The default ABI occupancy is the number of waves per
+EU required to support a 1024-workitem workgroup:
+
+``ceil(ceil(1024 / wavefront-size) / workgroup-SIMDs)``, where
+``workgroup-SIMDs`` is the number of SIMDs that a workgroup's waves run on.
+
+For example, on ``gfx900`` (wave64, 4 workgroup SIMDs) the default ABI occupancy
+is ``ceil(ceil(1024 / 64) / 4) = 4``, which caps VGPRs at
+``getMaxNumVGPRs(4) = 64``. On a gfx12 target such as ``gfx1200`` (wave32,
+4 workgroup SIMDs), the default ABI occupancy is ``ceil(ceil(1024 / 32) / 4) =
+8``, which caps VGPRs at ``getMaxNumVGPRs(8) = 192``.
+
+The ``amdgpu_abi_waves_per_eu`` module flag overrides the default ABI occupancy
+floor for a module. A value lower than the default lowers that floor and raises
+the register cap (a looser ABI contract). A value higher than the default
+raises the floor and lowers the register cap (a stricter ABI contract).
+
+``amdgpu-flat-work-group-size`` is ABI-significant. If a function carries this
+attribute, the occupancy implied by its maximum flat workgroup size replaces
+the default ABI occupancy for that function. It takes precedence over the
+``amdgpu_abi_waves_per_eu`` module flag, so it can either raise or lower the
+occupancy floor and the matching register cap.
+
+``amdgpu-waves-per-eu`` remains a hint. It cannot lower the ABI occupancy. A
+hint that asks for fewer waves than the ABI occupancy is rejected and leaves
+the floor and the register cap unchanged. A hint that asks for more waves is
+accepted: it raises the ABI occupancy and lowers the register cap. The raised
+value is still the floor, not the occupancy the function achieves.
 
 .. _amdgpu-elf-code-object:
 
@@ -22003,19 +22054,21 @@ The following sub-directives may appear inside the block:
   .. table:: .amdgpu_info Sub-Directives
      :name: amdgpu-info-sub-directives-table
 
-     ====================================== ==========================================
+     ====================================== =======================================================
      Directive                              Description
-     ====================================== ==========================================
+     ====================================== =======================================================
      ``.amdgpu_flags`` *value*              ``FuncInfoFlags`` bitfield (u32)
      ``.amdgpu_num_sgpr`` *value*           SGPRs explicitly used (u32)
      ``.amdgpu_num_vgpr`` *value*           Architectural VGPRs used (u32)
      ``.amdgpu_num_agpr`` *value*           Accumulator VGPRs used (u32)
      ``.amdgpu_private_segment_size`` *n*   Private segment size in bytes (u32)
+     ``.amdgpu_occupancy`` *value*          ABI occupancy (u32). See
+                                            :ref:`amdgpu-abi-occupancy` for more details.
      ``.amdgpu_use`` *symbol*               Resource dependency (LDS or barrier)
      ``.amdgpu_call`` *symbol*              Direct call edge to *symbol*
      ``.amdgpu_indirect_call`` *"type-id"*  Indirect call with given type-ID string
      ``.amdgpu_typeid`` *"type-id"*         Type-ID for an address-taken function
-     ====================================== ==========================================
+     ====================================== =======================================================
 
 Example:
 
@@ -22027,6 +22080,7 @@ Example:
      .amdgpu_num_vgpr 32
      .amdgpu_num_agpr 0
      .amdgpu_private_segment_size 0
+     .amdgpu_occupancy 4
      .amdgpu_use lds_var
      .amdgpu_call helper
      .amdgpu_indirect_call "vi"
