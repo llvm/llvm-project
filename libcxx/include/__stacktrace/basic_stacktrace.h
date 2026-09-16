@@ -105,21 +105,21 @@ class basic_stacktrace : private __stacktrace::_Trace {
 
     _LIBCPP_HIDE_FROM_ABI explicit _Resource(basic_stacktrace* __owner) noexcept : __owner_(__owner) {}
 
-    _LIBCPP_HIDE_FROM_ABI void* do_allocate(size_t __bytes, size_t) override {
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL void* do_allocate(size_t __bytes, size_t) override {
       using _Value = typename allocator_traits<_Allocator>::value_type;
       size_t __n   = (__bytes + sizeof(_Value) - 1) / sizeof(_Value);
       _Allocator __a(__owner_->__entries_.get_allocator());
       return static_cast<void*>(std::to_address(allocator_traits<_Allocator>::allocate(__a, __n)));
     }
 
-    _LIBCPP_HIDE_FROM_ABI void do_deallocate(void* __p, size_t __bytes, size_t) override {
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL void do_deallocate(void* __p, size_t __bytes, size_t) override {
       using _Value = typename allocator_traits<_Allocator>::value_type;
       size_t __n   = (__bytes + sizeof(_Value) - 1) / sizeof(_Value);
       _Allocator __a(__owner_->__entries_.get_allocator());
       allocator_traits<_Allocator>::deallocate(__a, static_cast<_Value*>(__p), __n);
     }
 
-    _LIBCPP_HIDE_FROM_ABI bool do_is_equal(const std::pmr::memory_resource& __other) const noexcept override {
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL bool do_is_equal(const std::pmr::memory_resource& __other) const noexcept override {
       return this == &__other;
     }
   };
@@ -132,7 +132,7 @@ class basic_stacktrace : private __stacktrace::_Trace {
   _LIBCPP_HIDE_FROM_ABI __stacktrace::_Entry& __entry_append() {
     __stacktrace::_Entry& __e = (__stacktrace::_Entry&)__entries_.emplace_back();
     __e.~_Entry();
-    ::new (static_cast<void*>(&__e)) __stacktrace::_Entry(&__resource_);
+    ::new (static_cast<void*>(&__e)) __stacktrace::_Entry(std::addressof(__resource_));
     return __e;
   }
 
@@ -194,23 +194,24 @@ public:
       : basic_stacktrace(allocator_type()) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit basic_stacktrace(const allocator_type& __alloc) noexcept
-      : _Trace(__entry_iters_fn(), __entry_append_fn(), &__resource_), __entries_(__alloc) {}
+      : _Trace(__entry_iters_fn(), __entry_append_fn(), std::addressof(__resource_)), __entries_(__alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(const basic_stacktrace& __other)
-      : _Trace(__entry_iters_fn(), __entry_append_fn(), &__resource_) {
+      : _Trace(__entry_iters_fn(), __entry_append_fn(), std::addressof(__resource_)) {
     __entries_ = __other.__entries_;
   }
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace&& __other) noexcept
-      : _Trace(__entry_iters_fn(), __entry_append_fn(), &__resource_) {
+      : _Trace(__entry_iters_fn(), __entry_append_fn(), std::addressof(__resource_)) {
     __entries_ = std::move(__other.__entries_);
   }
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(const basic_stacktrace& __other, const allocator_type& __alloc)
-      : _Trace(__entry_iters_fn(), __entry_append_fn(), &__resource_), __entries_(__other.__entries_, __alloc) {}
+      : _Trace(__entry_iters_fn(), __entry_append_fn(), std::addressof(__resource_)),
+        __entries_(__other.__entries_, __alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace&& __other, const allocator_type& __alloc)
-      : _Trace(__entry_iters_fn(), __entry_append_fn(), &__resource_),
+      : _Trace(__entry_iters_fn(), __entry_append_fn(), std::addressof(__resource_)),
         __entries_(std::move(__other.__entries_), __alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace& operator=(const basic_stacktrace& __other) {
