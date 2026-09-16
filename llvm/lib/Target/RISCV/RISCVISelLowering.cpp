@@ -22269,51 +22269,51 @@ static SDValue performVSlideUpDownCombine(SDNode *N, SelectionDAG &DAG,
                                           const RISCVSubtarget &Subtarget) {
   unsigned Opcode = N->getOpcode();
   assert(Opcode == RISCVISD::VSLIDEUP_VL || Opcode == RISCVISD::VSLIDEDOWN_VL);
-  SDValue Passthru = N->getOperand(0);
-  SDValue Val = N->getOperand(1);
-  SDValue ShiftAmt = N->getOperand(2);
-  SDValue Mask = N->getOperand(3);
-  SDValue VL = N->getOperand(4);
 
   // Trivial case.
   if (N->getOperand(1)->isUndef())
     return N->getOperand(0);
 
+  SDValue SlideDown = N->getOperand(1);
+  SDValue SlideUpOffset = N->getOperand(2);
+  SDValue SlideUpMask = N->getOperand(3);
+  SDValue SlideUpVL = N->getOperand(4);
+
   // Given this pattern
   // ```
-  //   %down = RISCVISD::VSLIDEDOWN_VL undef, %val, %shift, %mask, %vl0
-  // %up = RISCVISD::VSLIDEUP_VL %val, %down, %shift, %mask, %vl1
+  //   %down = RISCVISD::VSLIDEDOWN_VL undef, %val, %offset, %mask, %vl0
+  // %up = RISCVISD::VSLIDEUP_VL %val, %down, %offset, %mask, %vl1
   // ```
   // We can simplify it with `%val`, as it's doing redundant shifting.
   // Note that we actually don't need to check their VLs: First, VSLIDEUP_VL
   // is literally just putting %down back to their original position in %val.
   // The only situation we need to worry about is actually the zeros shifted
   // into VSLIDEDOWN_VL. In this scenario, the worst case would be %vl0 = VLMAX,
-  // as %down is gaurantee to have those zeros. Our goal here is to ensure
+  // as %down is guaranteed to have those zeros. Our goal here is to ensure
   // elements from %down that are actually inserted into %up are not those
   // zeros. The number of %down that are actually inserted would be `%vl1 -
-  // %shift`, and the number of non-zero elements from %down would be `VLMAX -
-  // %shift`. Therefore, the invariant would be
-  // `%vl1 - %shift <= VLMAX - %shift` ---> `%vl1 <= VLMAX`
+  // %offset`, and the number of non-zero elements from %down would be `VLMAX -
+  // %offset`. Therefore, the invariant would be
+  // `%vl1 - %offset <= VLMAX - %offset` ---> `%vl1 <= VLMAX`
   // Thus, we will never read those zeros that are shifted in by VSLIDEDOWN_VL.
-  if (Opcode != RISCVISD::VSLIDEUP_VL || !Val ||
-      Val->getOpcode() != RISCVISD::VSLIDEDOWN_VL)
+  if (Opcode != RISCVISD::VSLIDEUP_VL ||
+      SlideDown.getOpcode() != RISCVISD::VSLIDEDOWN_VL)
     return SDValue();
 
-  SDValue SlideDown = Val;
   SDValue SlideDownPassthru = SlideDown->getOperand(0);
   SDValue SlideDownVal = SlideDown->getOperand(1);
-  SDValue SlideDownShiftAmt = SlideDown->getOperand(2);
+  SDValue SlideDownOffset = SlideDown->getOperand(2);
   SDValue SlideDownMask = SlideDown->getOperand(3);
   SDValue SlideDownVL = SlideDown->getOperand(4);
-  if (!SlideDownPassthru.isUndef() || SlideDownVal != Passthru ||
-      SlideDownShiftAmt != ShiftAmt)
+  if (!SlideDownPassthru.isUndef() || SlideDownVal != N->getOperand(0) ||
+      SlideDownOffset != SlideUpOffset)
     return SDValue();
   // We can loosen the mask requirement in the future.
-  if (SlideDownMask != Mask &&
+  if (SlideDownMask != SlideUpMask &&
       (SlideDownMask.getOpcode() != RISCVISD::VMSET_VL ||
-       Mask.getOpcode() != RISCVISD::VMSET_VL ||
-       SlideDownMask.getOperand(0) != SlideDownVL || Mask.getOperand(0) != VL))
+       SlideUpMask.getOpcode() != RISCVISD::VMSET_VL ||
+       SlideDownMask.getOperand(0) != SlideDownVL ||
+       SlideUpMask.getOperand(0) != SlideUpVL))
     return SDValue();
 
   return SlideDownVal;
