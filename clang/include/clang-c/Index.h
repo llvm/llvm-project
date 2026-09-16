@@ -6916,35 +6916,35 @@ clang_getCursorBinaryOperatorKind(CXCursor cursor);
  */
 enum CXUnaryOperatorKind {
   /** This value describes cursors which are not unary operators. */
-  CXUnaryOperator_Invalid = 0,
+  CXUnaryOperator_Invalid,
   /** Postfix increment operator. */
-  CXUnaryOperator_PostInc = 1,
+  CXUnaryOperator_PostInc,
   /** Postfix decrement operator. */
-  CXUnaryOperator_PostDec = 2,
+  CXUnaryOperator_PostDec,
   /** Prefix increment operator. */
-  CXUnaryOperator_PreInc = 3,
+  CXUnaryOperator_PreInc,
   /** Prefix decrement operator. */
-  CXUnaryOperator_PreDec = 4,
+  CXUnaryOperator_PreDec,
   /** Address of operator. */
-  CXUnaryOperator_AddrOf = 5,
+  CXUnaryOperator_AddrOf,
   /** Dereference operator. */
-  CXUnaryOperator_Deref = 6,
+  CXUnaryOperator_Deref,
   /** Plus operator. */
-  CXUnaryOperator_Plus = 7,
+  CXUnaryOperator_Plus,
   /** Minus operator. */
-  CXUnaryOperator_Minus = 8,
+  CXUnaryOperator_Minus,
   /** Not operator. */
-  CXUnaryOperator_Not = 9,
+  CXUnaryOperator_Not,
   /** LNot operator. */
-  CXUnaryOperator_LNot = 10,
+  CXUnaryOperator_LNot,
   /** "__real expr" operator. */
-  CXUnaryOperator_Real = 11,
+  CXUnaryOperator_Real,
   /** "__imag expr" operator. */
-  CXUnaryOperator_Imag = 12,
+  CXUnaryOperator_Imag,
   /** __extension__ marker operator. */
-  CXUnaryOperator_Extension = 13,
+  CXUnaryOperator_Extension,
   /** C++ co_await operator. */
-  CXUnaryOperator_Coawait = 14,
+  CXUnaryOperator_Coawait,
   CXUnaryOperator_Last = CXUnaryOperator_Coawait
 };
 
