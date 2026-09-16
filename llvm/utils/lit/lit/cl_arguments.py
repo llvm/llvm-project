@@ -6,6 +6,7 @@ import sys
 
 import lit.reports
 import lit.util
+import lit.FilterRequires
 
 
 @enum.unique
@@ -457,6 +458,18 @@ def parse_args():
         default=os.environ.get("LIT_FILTER_OUT", "^$"),
     )
     selection_group.add_argument(
+        "--filter-requires",
+        metavar="EXPR",
+        type=_requires_filter,
+        help="Select REQUIRES combinations with exactly the requested "
+        "positive features and no unrequested exclusions. Supports &&, ||, !, "
+        "parentheses, and commas (AND), not regexes or wildcards. Feature names "
+        "are case-sensitive. Base selects tests with no REQUIRES entries. "
+        "Bypasses REQUIRES feature availability checks; "
+        "the caller must schedule on capable devices. Nonmatching tests are "
+        "excluded. WTT reports also omit unsupported tests in filtered runs.",
+    )
+    selection_group.add_argument(
         "--filter-failed",
         dest="filterFailed",
         help="Only run tests which failed in the previous run",
@@ -644,6 +657,13 @@ def _float(arg, kind, pred):
             f"conversion error - requires {kind} float, but found '{arg}'"
         )
     return f
+
+
+def _requires_filter(arg):
+    try:
+        return lit.FilterRequires.FilterRequires(arg)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(str(error))
 
 
 def _case_insensitive_regex(arg):

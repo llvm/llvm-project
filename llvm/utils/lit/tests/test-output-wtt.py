@@ -122,3 +122,30 @@
 # CHECK-NEXT: <ctx id="1" />
 # CHECK-NEXT: </PFRollup>
 # CHECK-NEXT: </WTT-Logger>
+
+# Filter nonmembers and selected-but-unsupported tests have no WTT test entries.
+# RUN: %{lit} --filter-requires=Half --wtt-output %t.filtered.wtl %S/Inputs/filter-requires/half.txt %S/Inputs/filter-requires/base.txt %S/Inputs/filter-requires/unsupported.txt %S/Inputs/filter-requires/xfail.txt
+# RUN: %{python} -c "import io; io.open(r'%t.filtered.utf8','w',encoding='utf-8').write(io.open(r'%t.filtered.wtl',encoding='utf-16').read())"
+# RUN: FileCheck %s --check-prefix=FILTERED --implicit-check-not=base.txt --implicit-check-not=unsupported.txt --implicit-check-not="<StartTest" --implicit-check-not="<EndTest" < %t.filtered.utf8
+# FILTERED: <StartTest Title="filter-requires :: half.txt"
+# FILTERED: <EndTest Title="filter-requires :: half.txt" TUID="" Result="Pass"
+# FILTERED: <StartTest Title="filter-requires :: xfail.txt"
+# FILTERED: <EndTest Title="filter-requires :: xfail.txt" TUID="" Result="Pass"
+# FILTERED: 2 test(s) were not run (1 excluded, 1 unsupported) and are omitted from the pass/fail results.
+# FILTERED: <PFRollup Total="2" Passed="2" Failed="0"
+
+# A selected test that fails during execution must still be reported.
+# RUN: not %{lit} --filter-requires=Half --xfail-not=xfail.txt --wtt-output %t.failed.wtl %S/Inputs/filter-requires/xfail.txt
+# RUN: %{python} -c "import io; io.open(r'%t.failed.utf8','w',encoding='utf-8').write(io.open(r'%t.failed.wtl',encoding='utf-16').read())"
+# RUN: FileCheck %s --check-prefix=ATTEMPTED-FAIL < %t.failed.utf8
+# ATTEMPTED-FAIL: <StartTest Title="filter-requires :: xfail.txt"
+# ATTEMPTED-FAIL: <Error UserText=
+# ATTEMPTED-FAIL: <EndTest Title="filter-requires :: xfail.txt" TUID="" Result="Fail"
+# ATTEMPTED-FAIL: <PFRollup Total="1" Passed="0" Failed="1"
+
+# An entirely excluded/unsupported run must not manufacture passing tests.
+# RUN: %{lit} --filter-requires=Half --wtt-output %t.empty.wtl %S/Inputs/filter-requires/base.txt %S/Inputs/filter-requires/unsupported.txt
+# RUN: %{python} -c "import io; io.open(r'%t.empty.utf8','w',encoding='utf-8').write(io.open(r'%t.empty.wtl',encoding='utf-16').read())"
+# RUN: FileCheck %s --check-prefix=EMPTY --implicit-check-not="<StartTest" --implicit-check-not="<EndTest" --implicit-check-not=base.txt --implicit-check-not=unsupported.txt < %t.empty.utf8
+# EMPTY: 2 test(s) were not run (1 excluded, 1 unsupported) and are omitted from the pass/fail results.
+# EMPTY: <PFRollup Total="0" Passed="0" Failed="0"
