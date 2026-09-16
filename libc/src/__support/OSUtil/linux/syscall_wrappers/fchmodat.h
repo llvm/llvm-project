@@ -27,7 +27,7 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> fchmodat(int fd, const char *path, mode_t mode,
                                   int flags) {
-#ifdef SYS_fchmodat2
+#if defined(SYS_fchmodat2)
   int ret = syscall_impl<int>(SYS_fchmodat2, fd, path, mode, flags);
 #if defined(SYS_fchmodat)
   if (ret == -ENOSYS) {
