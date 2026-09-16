@@ -146,9 +146,7 @@ __INT_LEAST32_TYPE__ test_aligned_les32(const unsigned char *p) { return stdc_lo
 // BE-NOT: bswap
 __INT_LEAST32_TYPE__ test_aligned_bes32(const unsigned char *p) { return stdc_load8_aligned_bes32(p); }
 
-// The unaligned variants must not throw away alignment info that is already
-// known for the pointer expression: buf's declared alignment is 4, so the
-// load should use align 4, not be forced down to align 1.
+// buf's alignment (4) must be kept, not forced down to align 1.
 alignas(4) unsigned char buf4[4];
 // LE-LABEL: @test_leu32_known_alignment(
 // LE: load i32, ptr @buf4, align 4
@@ -158,9 +156,132 @@ alignas(4) unsigned char buf4[4];
 // BE: call i32 @llvm.bswap.i32(
 __UINT_LEAST32_TYPE__ test_leu32_known_alignment(void) { return stdc_load8_leu32(buf4); }
 
-// The aligned variants must keep a stronger alignment than the minimum they
-// require: buf16's declared alignment (16) exceeds the 4-byte alignment
-// stdc_load8_aligned_leu32 needs, so the load should use align 16.
+// 8-bit unsigned big-endian, and the aligned variants of both endian orders.
+// LE-LABEL: @test_beu8(
+// LE: load i8, ptr {{.+}}, align 1
+// LE-NOT: bswap
+// BE-LABEL: @test_beu8(
+// BE: load i8, ptr {{.+}}, align 1
+// BE-NOT: bswap
+__UINT_LEAST8_TYPE__ test_beu8(const unsigned char *p) { return stdc_load8_beu8(p); }
+
+// LE-LABEL: @test_aligned_leu8(
+// LE: load i8, ptr {{.+}}, align 1
+// LE-NOT: bswap
+// BE-LABEL: @test_aligned_leu8(
+// BE: load i8, ptr {{.+}}, align 1
+// BE-NOT: bswap
+__UINT_LEAST8_TYPE__ test_aligned_leu8(const unsigned char *p) { return stdc_load8_aligned_leu8(p); }
+
+// LE-LABEL: @test_aligned_beu8(
+// LE: load i8, ptr {{.+}}, align 1
+// LE-NOT: bswap
+// BE-LABEL: @test_aligned_beu8(
+// BE: load i8, ptr {{.+}}, align 1
+// BE-NOT: bswap
+__UINT_LEAST8_TYPE__ test_aligned_beu8(const unsigned char *p) { return stdc_load8_aligned_beu8(p); }
+
+// Signed 8-bit variants (unaligned and aligned, both endian orders).
+// LE-LABEL: @test_les8(
+// LE: load i8, ptr {{.+}}, align 1
+// LE-NOT: bswap
+// BE-LABEL: @test_les8(
+// BE: load i8, ptr {{.+}}, align 1
+// BE-NOT: bswap
+__INT_LEAST8_TYPE__ test_les8(const unsigned char *p) { return stdc_load8_les8(p); }
+
+// LE-LABEL: @test_bes8(
+// LE: load i8, ptr {{.+}}, align 1
+// LE-NOT: bswap
+// BE-LABEL: @test_bes8(
+// BE: load i8, ptr {{.+}}, align 1
+// BE-NOT: bswap
+__INT_LEAST8_TYPE__ test_bes8(const unsigned char *p) { return stdc_load8_bes8(p); }
+
+// LE-LABEL: @test_aligned_les8(
+// LE: load i8, ptr {{.+}}, align 1
+// LE-NOT: bswap
+// BE-LABEL: @test_aligned_les8(
+// BE: load i8, ptr {{.+}}, align 1
+// BE-NOT: bswap
+__INT_LEAST8_TYPE__ test_aligned_les8(const unsigned char *p) { return stdc_load8_aligned_les8(p); }
+
+// LE-LABEL: @test_aligned_bes8(
+// LE: load i8, ptr {{.+}}, align 1
+// LE-NOT: bswap
+// BE-LABEL: @test_aligned_bes8(
+// BE: load i8, ptr {{.+}}, align 1
+// BE-NOT: bswap
+__INT_LEAST8_TYPE__ test_aligned_bes8(const unsigned char *p) { return stdc_load8_aligned_bes8(p); }
+
+// Signed 16-bit, unaligned and aligned, both endian orders.
+// LE-LABEL: @test_les16(
+// LE: load i16, ptr {{.+}}, align 1
+// LE-NOT: bswap
+// BE-LABEL: @test_les16(
+// BE: load i16, ptr {{.+}}, align 1
+// BE: call i16 @llvm.bswap.i16(
+__INT_LEAST16_TYPE__ test_les16(const unsigned char *p) { return stdc_load8_les16(p); }
+
+// LE-LABEL: @test_bes16(
+// LE: load i16, ptr {{.+}}, align 1
+// LE: call i16 @llvm.bswap.i16(
+// BE-LABEL: @test_bes16(
+// BE: load i16, ptr {{.+}}, align 1
+// BE-NOT: bswap
+__INT_LEAST16_TYPE__ test_bes16(const unsigned char *p) { return stdc_load8_bes16(p); }
+
+// LE-LABEL: @test_aligned_les16(
+// LE: load i16, ptr {{.+}}, align 2
+// LE-NOT: bswap
+// BE-LABEL: @test_aligned_les16(
+// BE: load i16, ptr {{.+}}, align 2
+// BE: call i16 @llvm.bswap.i16(
+__INT_LEAST16_TYPE__ test_aligned_les16(const unsigned char *p) { return stdc_load8_aligned_les16(p); }
+
+// LE-LABEL: @test_aligned_bes16(
+// LE: load i16, ptr {{.+}}, align 2
+// LE: call i16 @llvm.bswap.i16(
+// BE-LABEL: @test_aligned_bes16(
+// BE: load i16, ptr {{.+}}, align 2
+// BE-NOT: bswap
+__INT_LEAST16_TYPE__ test_aligned_bes16(const unsigned char *p) { return stdc_load8_aligned_bes16(p); }
+
+// Signed 64-bit, unaligned and aligned, both endian orders.
+// LE-LABEL: @test_les64(
+// LE: load i64, ptr {{.+}}, align 1
+// LE-NOT: bswap
+// BE-LABEL: @test_les64(
+// BE: load i64, ptr {{.+}}, align 1
+// BE: call i64 @llvm.bswap.i64(
+__INT_LEAST64_TYPE__ test_les64(const unsigned char *p) { return stdc_load8_les64(p); }
+
+// LE-LABEL: @test_bes64(
+// LE: load i64, ptr {{.+}}, align 1
+// LE: call i64 @llvm.bswap.i64(
+// BE-LABEL: @test_bes64(
+// BE: load i64, ptr {{.+}}, align 1
+// BE-NOT: bswap
+__INT_LEAST64_TYPE__ test_bes64(const unsigned char *p) { return stdc_load8_bes64(p); }
+
+// LE-LABEL: @test_aligned_les64(
+// LE: load i64, ptr {{.+}}, align 8
+// LE-NOT: bswap
+// BE-LABEL: @test_aligned_les64(
+// BE: load i64, ptr {{.+}}, align 8
+// BE: call i64 @llvm.bswap.i64(
+__INT_LEAST64_TYPE__ test_aligned_les64(const unsigned char *p) { return stdc_load8_aligned_les64(p); }
+
+// LE-LABEL: @test_aligned_bes64(
+// LE: load i64, ptr {{.+}}, align 8
+// LE: call i64 @llvm.bswap.i64(
+// BE-LABEL: @test_aligned_bes64(
+// BE: load i64, ptr {{.+}}, align 8
+// BE-NOT: bswap
+__INT_LEAST64_TYPE__ test_aligned_bes64(const unsigned char *p) { return stdc_load8_aligned_bes64(p); }
+
+// buf16's alignment (16) exceeds the 4-byte minimum aligned_leu32 needs;
+// the load should keep align 16.
 alignas(16) unsigned char buf16[4];
 // LE-LABEL: @test_aligned_leu32_stronger_known_alignment(
 // LE: load i32, ptr @buf16, align 16
