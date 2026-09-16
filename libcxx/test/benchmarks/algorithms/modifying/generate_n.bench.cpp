@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
@@ -27,7 +28,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto generate_n) {
       benchmark::RegisterBenchmark(
           name,
-          [generate_n](auto& st) {
+          [generate_n](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             Container c(size);
             using ValueType = typename Container::value_type;
@@ -50,9 +51,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::generate_n(vector<int>)", std_generate_n);
     bm.operator()<std::deque<int>>("std::generate_n(deque<int>)", std_generate_n);
     bm.operator()<std::list<int>>("std::generate_n(list<int>)", std_generate_n);
-    bm.operator()<std::vector<int>>("rng::generate_n(vector<int>)", std::ranges::generate_n);
-    bm.operator()<std::deque<int>>("rng::generate_n(deque<int>)", std::ranges::generate_n);
-    bm.operator()<std::list<int>>("rng::generate_n(list<int>)", std::ranges::generate_n);
   }
 
   benchmark::Initialize(&argc, argv);

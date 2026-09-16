@@ -4,6 +4,7 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestPreRunLibraries(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

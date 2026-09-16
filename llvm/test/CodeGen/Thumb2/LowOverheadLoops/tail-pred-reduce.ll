@@ -289,8 +289,6 @@ define dso_local void @Correlation(ptr nocapture readonly %Input, ptr nocapture 
 ; CHECK-NEXT:    [[LSR_IV51:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[FOR_END:.*]] ], [ [[TMP0]], %[[FOR_BODY_LR_PH]] ]
 ; CHECK-NEXT:    [[LSR_IV46:%.*]] = phi ptr [ [[SCEVGEP47:%.*]], %[[FOR_END]] ], [ [[INPUT]], %[[FOR_BODY_LR_PH]] ]
 ; CHECK-NEXT:    [[I_037:%.*]] = phi i32 [ 0, %[[FOR_BODY_LR_PH]] ], [ [[INC16:%.*]], %[[FOR_END]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i32 [[I_037]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[CONV2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw i32 [[I_037]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP4]], 2
@@ -298,6 +296,7 @@ define dso_local void @Correlation(ptr nocapture readonly %Input, ptr nocapture 
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], -4
 ; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[TMP7]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i32 [[TMP8]], 1
+; CHECK-NEXT:    [[TMP26:%.*]] = sub i32 [[CONV2]], [[I_037]]
 ; CHECK-NEXT:    [[CMP433:%.*]] = icmp slt i32 [[I_037]], [[CONV2]]
 ; CHECK-NEXT:    br i1 [[CMP433]], label %[[VECTOR_PH:.*]], label %[[FOR_END]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -308,7 +307,7 @@ define dso_local void @Correlation(ptr nocapture readonly %Input, ptr nocapture 
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], %[[VECTOR_BODY]] ], [ [[INPUT]], %[[VECTOR_PH]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP20:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi i32 [ [[START]], %[[VECTOR_PH]] ], [ [[TMP21:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ [[TMP2]], %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ [[TMP26]], %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[TMP11]])
 ; CHECK-NEXT:    [[TMP13]] = sub i32 [[TMP11]], 4
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr align 2 [[LSR_IV]], <4 x i1> [[TMP12]], <4 x i16> undef)

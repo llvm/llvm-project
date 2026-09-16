@@ -1,5 +1,13 @@
 # MLIR project.
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "MLIR")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
@@ -95,13 +103,6 @@ append_if(C_SUPPORTS_WERROR_MISMATCHED_TAGS "-Werror=mismatched-tags" CMAKE_C_FL
 append_if(C_SUPPORTS_WERROR_MISMATCHED_TAGS "-Werror=mismatched-tags" CMAKE_CXX_FLAGS)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  # Silence a false positive GCC -Wunused-but-set-parameter warning in
-  # constexpr cases. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85827
-  # for details
-  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "14.0")
-    check_cxx_compiler_flag("-Wno-unused-but-set-parameter" CXX_SUPPORTS_WNO_UNUSED_BUT_SET_PARAMETER)
-    append_if(CXX_SUPPORTS_WNO_UNUSED_BUT_SET_PARAMETER "-Wno-unused-but-set-parameter" CMAKE_CXX_FLAGS)
-  endif()
   # Silence a false positive GCC -Wdeprecated-copy warning in cases where
   # a copy operator is defined through "using" a base class copy operator.
   if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12.0")
@@ -131,14 +132,6 @@ endif()
 option(MLIR_ENABLE_EXECUTION_ENGINE
        "Enable building the MLIR Execution Engine."
        ${MLIR_ENABLE_EXECUTION_ENGINE_default})
-
-# Build the ROCm conversions and run according tests if the AMDGPU backend
-# is available.
-if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
-  set(MLIR_ENABLE_ROCM_CONVERSIONS 1)
-else()
-  set(MLIR_ENABLE_ROCM_CONVERSIONS 0)
-endif()
 
 # Build the XeVM conversions and run according tests if the SPIRV backend
 # is available.
@@ -200,6 +193,14 @@ set(MLIR_PYTHON_PACKAGE_PREFIX "mlir"
   embedded in a relocatable way).")
 set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
        "Enables building of Python bindings.")
+set(MLIR_ENABLE_PYTHON_STABLE_ABI 0 CACHE BOOL
+       "Build Python bindings against the stable ABI (abi3, PEP 384) for \
+       cross-version compatibility. Requires Python 3.12+.")
+if(MLIR_ENABLE_PYTHON_STABLE_ABI AND CMAKE_VERSION VERSION_LESS "3.26.0")
+  message(FATAL_ERROR
+    "MLIR_ENABLE_PYTHON_STABLE_ABI requires CMake >= 3.26 "
+    "(Python::SABIModule not available in ${CMAKE_VERSION}).")
+endif()
 set(MLIR_BINDINGS_PYTHON_INSTALL_PREFIX "python_packages/mlir_core/mlir" CACHE STRING
        "Prefix under install directory to place python bindings")
 set(MLIR_DETECT_PYTHON_ENV_PRIME_SEARCH 1 CACHE BOOL
@@ -261,6 +262,12 @@ add_subdirectory(lib)
 add_subdirectory(lib/CAPI)
 
 if (MLIR_INCLUDE_TESTS)
+  add_subdirectory(test/lib)
+elseif("mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+  add_subdirectory(test/lib EXCLUDE_FROM_ALL)
+endif()
+
+if (MLIR_INCLUDE_TESTS)
   add_definitions(-DMLIR_INCLUDE_TESTS)
   add_custom_target(MLIRUnitTests)
   set_target_properties(MLIRUnitTests PROPERTIES FOLDER "MLIR/Tests")
@@ -299,6 +306,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "*.h"
     PATTERN "*.inc"
     PATTERN "*.td"
+    PATTERN "*.pdll"
     PATTERN "LICENSE.TXT"
     )
 

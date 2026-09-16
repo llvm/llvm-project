@@ -63,6 +63,11 @@ public:
 
   unsigned size() const { return (unsigned)Instructions.size(); }
   bool empty() const { return Instructions.empty(); }
+
+  /// Discard the instructions decoded so far, e.g. the partial program left
+  /// behind by a parse() that failed, before decoding it again.
+  void clear() { Instructions.clear(); }
+
   uint64_t codeAlign() const { return CodeAlignmentFactor; }
   int64_t dataAlign() const { return DataAlignmentFactor; }
   Triple::ArchType triple() const { return Arch; }
@@ -122,6 +127,12 @@ public:
         // No operands
         addInstruction(Opcode);
         break;
+      case DW_CFA_AARCH64_set_ra_state: {
+        uint64_t RAState = Data.getULEB128(C);
+        uint64_t FactoredOffset = static_cast<uint64_t>(Data.getSLEB128(C));
+        addInstruction(Opcode, RAState, FactoredOffset);
+        break;
+      }
       case DW_CFA_set_loc:
         // Operands: Address
         addInstruction(Opcode, Data.getRelocatedAddress(C));
@@ -189,8 +200,7 @@ public:
         addInstruction(Opcode, 0);
         StringRef Expression = Data.getBytes(C, ExprLength);
 
-        DataExtractor Extractor(Expression, Data.isLittleEndian(),
-                                Data.getAddressSize());
+        DataExtractor Extractor(Expression, Data.isLittleEndian());
         // Note. We do not pass the DWARF format to DWARFExpression, because
         // DW_OP_call_ref, the only operation which depends on the format, is
         // prohibited in call frame instructions, see sec. 6.4.2 in DWARFv5.
@@ -205,8 +215,7 @@ public:
 
         uint64_t BlockLength = Data.getULEB128(C);
         StringRef Expression = Data.getBytes(C, BlockLength);
-        DataExtractor Extractor(Expression, Data.isLittleEndian(),
-                                Data.getAddressSize());
+        DataExtractor Extractor(Expression, Data.isLittleEndian());
         // Note. We do not pass the DWARF format to DWARFExpression, because
         // DW_OP_call_ref, the only operation which depends on the format, is
         // prohibited in call frame instructions, see sec. 6.4.2 in DWARFv5.
@@ -238,11 +247,13 @@ public:
     OT_Address,
     OT_Offset,
     OT_FactoredCodeOffset,
+    OT_SignedFactCodeOffset,
     OT_SignedFactDataOffset,
     OT_UnsignedFactDataOffset,
     OT_Register,
     OT_AddressSpace,
-    OT_Expression
+    OT_Expression,
+    OT_RAState,
   };
 
   /// Get the OperandType as a "const char *".

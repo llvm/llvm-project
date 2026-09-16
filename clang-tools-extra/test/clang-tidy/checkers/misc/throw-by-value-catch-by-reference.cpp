@@ -1,5 +1,6 @@
 // RUN: %check_clang_tidy %s misc-throw-by-value-catch-by-reference %t -- -- -fcxx-exceptions
 
+#include <utility>
 
 class logic_error {
 public:
@@ -10,14 +11,6 @@ typedef logic_error *logic_ptr;
 typedef logic_ptr logic_double_typedef;
 
 int lastException;
-
-template <class T> struct remove_reference { typedef T type; };
-template <class T> struct remove_reference<T &> { typedef T type; };
-template <class T> struct remove_reference<T &&> { typedef T type; };
-
-template <typename T> typename remove_reference<T>::type &&move(T &&arg) {
-  return static_cast<typename remove_reference<T>::type &&>(arg);
-}
 
 logic_error CreateException() { return logic_error("created"); }
 
@@ -41,7 +34,7 @@ void testThrowFunc() {
   throw lvalue;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: throw expression should throw anonymous temporary values instead [misc-throw-by-value-catch-by-reference]
 
-  throw move(lvalue);
+  throw std::move(lvalue);
   int &ex = lastException;
   throw ex;
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: throw expression should throw anonymous temporary values instead [misc-throw-by-value-catch-by-reference]

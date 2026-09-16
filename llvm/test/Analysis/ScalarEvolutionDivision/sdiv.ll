@@ -91,7 +91,7 @@ define void @addrec_step0(i8 %n, i8 %step) {
 ; CHECK-NEXT:  Instruction: %div = sdiv i8 %num, %step
 ; CHECK-NEXT:    Numerator: {0,+,%step}<nuw><nsw><%loop>
 ; CHECK-NEXT:    Denominator: %step
-; CHECK-NEXT:    Quotient: {0,+,1}<nuw><nsw><%loop>
+; CHECK-NEXT:    Quotient: {0,+,1}<%loop>
 ; CHECK-NEXT:    Remainder: 0
 ;
 entry:
@@ -115,14 +115,14 @@ exit:
 ;   if (cond)
 ;     div = (step * i) / step;
 ;
-; FIXME: The quotient can cause signed wrap, e.g., when %step is 0 and %n is
-; larger than 127.
+; The quotient can cause signed wrap, e.g., when %step is 0 and %n is larger
+; than 127.
 define void @addrec_step1(i8 %n, i8 %step) {
 ; CHECK-LABEL: 'addrec_step1'
 ; CHECK-NEXT:  Instruction: %div = sdiv i8 %num, %step
 ; CHECK-NEXT:    Numerator: {0,+,%step}<nuw><nsw><%loop.header>
 ; CHECK-NEXT:    Denominator: %step
-; CHECK-NEXT:    Quotient: {0,+,1}<nuw><nsw><%loop.header>
+; CHECK-NEXT:    Quotient: {0,+,1}<%loop.header>
 ; CHECK-NEXT:    Remainder: 0
 ;
 entry:
@@ -152,14 +152,14 @@ exit:
 ; for (i = 0; i < n; i++)
 ;   div = (a + b) * i / a;
 ;
-; FIXME: Both the quotient and the remainder can cause signed/unsigned wrap,
-; e.g., when %a + %b = 0 && %a != 0.
+; Both the quotient and the remainder can cause signed/unsigned wrap, e.g.,
+; when %a + %b = 0 && %a != 0.
 define void @addrec_a_b(i8 %n, i8 %a, i8 %b) {
 ; CHECK-LABEL: 'addrec_a_b'
 ; CHECK-NEXT:  Instruction: %div = sdiv i8 %num, %step
 ; CHECK-NEXT:    Numerator: {0,+,(%a + %b)}<nuw><nsw><%loop>
 ; CHECK-NEXT:    Denominator: (%a + %b)
-; CHECK-NEXT:    Quotient: {0,+,1}<nuw><nsw><%loop>
+; CHECK-NEXT:    Quotient: {0,+,1}<%loop>
 ; CHECK-NEXT:    Remainder: 0
 ;
 entry:

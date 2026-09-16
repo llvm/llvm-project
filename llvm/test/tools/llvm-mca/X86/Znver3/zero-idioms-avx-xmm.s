@@ -180,7 +180,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vxorps	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vxorps	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [1] Code Region
 
@@ -271,7 +271,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vxorpd	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vxorpd	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [2] Code Region
 
@@ -362,7 +362,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vandnps	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vandnps	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [3] Code Region
 
@@ -453,7 +453,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vandnpd	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vandnpd	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [4] Code Region
 
@@ -544,7 +544,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpxor	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpxor	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [5] Code Region
 
@@ -635,7 +635,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpandn	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpandn	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [6] Code Region
 
@@ -726,7 +726,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpsubb	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpsubb	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [7] Code Region
 
@@ -817,7 +817,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpsubw	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpsubw	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [8] Code Region
 
@@ -908,7 +908,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpsubd	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpsubd	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [9] Code Region
 
@@ -999,7 +999,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpsubq	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpsubq	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [10] Code Region
 
@@ -1090,7 +1090,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       vpsubsb	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       vpxor	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [11] Code Region
 
@@ -1181,7 +1181,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       vpsubsw	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       vpxor	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [12] Code Region
 
@@ -1272,7 +1272,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       vpsubusb	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       vpxor	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [13] Code Region
 
@@ -1363,7 +1363,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    1.0    0.5       vpsubusw	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     2.0    0.0    0.0       vpxor	%xmm1, %xmm0, %xmm0
-# CHECK-NEXT:        2     1.5    0.5    0.3       <total>
+# CHECK-NEXT:        4     1.5    0.5    0.3       <total>
 
 # CHECK:      [14] Code Region
 
@@ -1454,7 +1454,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpcmpgtb	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpaddb	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [15] Code Region
 
@@ -1545,7 +1545,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpcmpgtw	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpaddw	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [16] Code Region
 
@@ -1636,7 +1636,7 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpcmpgtd	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpaddd	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>
 
 # CHECK:      [17] Code Region
 
@@ -1727,4 +1727,4 @@ vpaddq %xmm0, %xmm0, %xmm0
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     0.0    0.0    1.0       vpcmpgtq	%xmm0, %xmm0, %xmm0
 # CHECK-NEXT: 1.     2     1.0    1.0    0.0       vpaddq	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT:        2     0.5    0.5    0.5       <total>
+# CHECK-NEXT:        4     0.5    0.5    0.5       <total>

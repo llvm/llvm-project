@@ -40,7 +40,9 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/RecyclingAllocator.h"
+#include "llvm/Support/UndefPoison.h"
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -77,9 +79,7 @@ struct KnownBits;
 class LLVMContext;
 class MachineBasicBlock;
 class MachineConstantPoolValue;
-class MachineModuleInfo;
 class MCSymbol;
-class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
 class SDDbgValue;
 class SDDbgOperand;
@@ -97,50 +97,48 @@ using SSAContext = GenericSSAContext<Function>;
 template <typename T> class GenericUniformityInfo;
 using UniformityInfo = GenericUniformityInfo<SSAContext>;
 
-class SDVTListNode : public FoldingSetNode {
-  friend struct FoldingSetTrait<SDVTListNode>;
-
-  /// A reference to an Interned FoldingSetNodeID for this node.
-  /// The Allocator in SelectionDAG holds the data.
-  /// SDVTList contains all types which are frequently accessed in SelectionDAG.
-  /// The size of this list is not expected to be big so it won't introduce
-  /// a memory penalty.
-  FoldingSetNodeIDRef FastID;
+/// The key SelectionDAG uniques SDNodes by.  \p Tail carries the opcode
+/// specific data, which most opcodes do not have, still serialized; a lookup
+/// site appends it through the FoldingSetNodeID-shaped forwarders below.
+struct SDNodeKey {
+  unsigned Opcode;
   const EVT *VTs;
-  unsigned int NumVTs;
-  /// The hash value for SDVTList is fixed, so cache it to avoid
-  /// hash calculation.
-  unsigned HashValue;
+  ArrayRef<SDValue> Ops;
+  FoldingSetNodeID Tail;
+  /// Backs \p Ops when the key is built from a node; empty otherwise.  No
+  /// inline capacity: only that one path pays for the storage.
+  SmallVector<SDValue, 0> OpStorage;
 
-public:
-  SDVTListNode(const FoldingSetNodeIDRef ID, const EVT *VT, unsigned int Num) :
-      FastID(ID), VTs(VT), NumVTs(Num) {
-    HashValue = ID.ComputeHash();
-  }
+  SDNodeKey(unsigned Opcode, SDVTList VTList, ArrayRef<SDValue> Ops)
+      : Opcode(Opcode), VTs(VTList.VTs), Ops(Ops) {}
+  LLVM_ABI explicit SDNodeKey(const SDNode &N);
 
-  SDVTList getSDVTList() {
-    SDVTList result = {VTs, NumVTs};
-    return result;
-  }
+  SDNodeKey(const SDNodeKey &) = delete;
+  SDNodeKey &operator=(const SDNodeKey &) = delete;
+
+  // Forward to FoldingSetNodeID's own overload set, so a lookup site resolves
+  // the same way it did when profiling into one.
+  template <typename T> void AddInteger(T I) { Tail.AddInteger(I); }
+  void AddBoolean(bool B) { Tail.AddBoolean(B); }
+  void AddPointer(const void *P) { Tail.AddPointer(P); }
 };
 
-/// Specialize FoldingSetTrait for SDVTListNode
-/// to avoid computing temp FoldingSetNodeID and hash value.
-template<> struct FoldingSetTrait<SDVTListNode> : DefaultFoldingSetTrait<SDVTListNode> {
-  static void Profile(const SDVTListNode &X, FoldingSetNodeID& ID) {
-    ID = X.FastID;
+struct SDNodeKeyInfo {
+  using KeyTy = SDNodeKey;
+
+  static KeyTy getKey(const SDNode &N) { return SDNodeKey(N); }
+
+  static unsigned getHashValue(const KeyTy &Key) {
+    unsigned H = detail::combineHashValue(
+        Key.Opcode, DenseMapInfo<const EVT *>::getHashValue(Key.VTs));
+    for (const SDValue &Op : Key.Ops)
+      H = detail::combineHashValue(H, DenseMapInfo<SDValue>::getHashValue(Op));
+    for (unsigned Word : Key.Tail.getRef())
+      H = detail::combineHashValue(H, Word);
+    return H;
   }
 
-  static bool Equals(const SDVTListNode &X, const FoldingSetNodeID &ID,
-                     unsigned IDHash, FoldingSetNodeID &TempID) {
-    if (X.HashValue != IDHash)
-      return false;
-    return ID == X.FastID;
-  }
-
-  static unsigned ComputeHash(const SDVTListNode &X, FoldingSetNodeID &TempID) {
-    return X.HashValue;
-  }
+  LLVM_ABI static bool isEqual(const KeyTy &Key, const SDNode &N);
 };
 
 template <> struct ilist_alloc_traits<SDNode> {
@@ -231,32 +229,35 @@ class SelectionDAG {
   const SelectionDAGTargetInfo *TSI = nullptr;
   const TargetLowering *TLI = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
-  const RTLIB::RuntimeLibcallsInfo *RuntimeLibcallInfo = nullptr;
   const LibcallLoweringInfo *Libcalls = nullptr;
 
   const FunctionVarLocs *FnVarLocs = nullptr;
   MachineFunction *MF;
   MachineFunctionAnalysisManager *MFAM = nullptr;
-  Pass *SDAGISelPass = nullptr;
   LLVMContext *Context;
   CodeGenOptLevel OptLevel;
 
   UniformityInfo *UA = nullptr;
   FunctionLoweringInfo * FLI = nullptr;
 
-  /// The function-level optimization remark emitter.  Used to emit remarks
-  /// whenever manipulating the DAG.
-  OptimizationRemarkEmitter *ORE;
-
   ProfileSummaryInfo *PSI = nullptr;
   BlockFrequencyInfo *BFI = nullptr;
-  MachineModuleInfo *MMI = nullptr;
 
-  /// Extended EVTs used for single value VTLists.
-  std::set<EVT, EVT::compareRawBits> EVTs;
-
-  /// List of non-single value types.
-  FoldingSet<SDVTListNode> VTListMap;
+  /// Uniquing of VT lists.  Each key aliases the EVT array that the returned
+  /// SDVTList points at, allocated from \p Allocator.
+  struct VTListInfo {
+    static unsigned getHashValue(ArrayRef<EVT> VTs) {
+      unsigned H = VTs.size();
+      for (EVT VT : VTs)
+        H = detail::combineHashValue(
+            H, DenseMapInfo<intptr_t>::getHashValue(VT.getRawBits()));
+      return H;
+    }
+    static bool isEqual(ArrayRef<EVT> LHS, ArrayRef<EVT> RHS) {
+      return LHS == RHS;
+    }
+  };
+  DenseSet<ArrayRef<EVT>, VTListInfo> VTLists;
 
   /// Pool allocation for misc. objects that are created once per SelectionDAG.
   BumpPtrAllocator Allocator;
@@ -281,7 +282,7 @@ class SelectionDAG {
 
   /// This structure is used to memoize nodes, automatically performing
   /// CSE with existing nodes when a duplicate is requested.
-  FoldingSet<SDNode> CSEMap;
+  UniquingSet<SDNode, SDNodeKeyInfo> CSEMap;
 
   /// Pool allocation for machine-opcode SDNode operands.
   BumpPtrAllocator OperandAllocator;
@@ -438,10 +439,18 @@ private:
 
   template <typename SDNodeTy>
   static uint16_t getSyntheticNodeSubclassData(unsigned Opc, unsigned Order,
-                                                SDVTList VTs, EVT MemoryVT,
-                                                MachineMemOperand *MMO) {
+                                               SDVTList VTs, EVT MemoryVT,
+                                               MachineMemOperand *MMO) {
     return SDNodeTy(Opc, Order, DebugLoc(), VTs, MemoryVT, MMO)
-         .getRawSubclassData();
+        .getRawSubclassData();
+  }
+
+  template <typename SDNodeTy>
+  static uint16_t getSyntheticNodeSubclassData(
+      unsigned Opc, unsigned Order, SDVTList VTs, EVT MemoryVT,
+      PointerUnion<MachineMemOperand *, MachineMemOperand **> MemRefs) {
+    return SDNodeTy(Opc, Order, DebugLoc(), VTs, MemoryVT, MemRefs)
+        .getRawSubclassData();
   }
 
   void createOperands(SDNode *Node, ArrayRef<SDValue> Vals);
@@ -470,21 +479,19 @@ public:
   LLVM_ABI ~SelectionDAG();
 
   /// Prepare this SelectionDAG to process code in the given MachineFunction.
-  LLVM_ABI void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
-                     Pass *PassPtr, const TargetLibraryInfo *LibraryInfo,
+  LLVM_ABI void init(MachineFunction &NewMF,
+                     const TargetLibraryInfo *LibraryInfo,
                      const LibcallLoweringInfo *LibcallsInfo,
                      UniformityInfo *UA, ProfileSummaryInfo *PSIin,
-                     BlockFrequencyInfo *BFIin, MachineModuleInfo &MMI,
+                     BlockFrequencyInfo *BFIin,
                      FunctionVarLocs const *FnVarLocs);
 
-  void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
-            MachineFunctionAnalysisManager &AM,
+  void init(MachineFunction &NewMF, MachineFunctionAnalysisManager &AM,
             const TargetLibraryInfo *LibraryInfo,
             const LibcallLoweringInfo *LibcallsInfo, UniformityInfo *UA,
             ProfileSummaryInfo *PSIin, BlockFrequencyInfo *BFIin,
-            MachineModuleInfo &MMI, FunctionVarLocs const *FnVarLocs) {
-    init(NewMF, NewORE, nullptr, LibraryInfo, LibcallsInfo, UA, PSIin, BFIin,
-         MMI, FnVarLocs);
+            FunctionVarLocs const *FnVarLocs) {
+    init(NewMF, LibraryInfo, LibcallsInfo, UA, PSIin, BFIin, FnVarLocs);
     MFAM = &AM;
   }
 
@@ -497,8 +504,9 @@ public:
   LLVM_ABI void clear();
 
   MachineFunction &getMachineFunction() const { return *MF; }
-  const Pass *getPass() const { return SDAGISelPass; }
   MachineFunctionAnalysisManager *getMFAM() { return MFAM; }
+
+  bool hasSwiftErrorArg() const;
 
   CodeGenOptLevel getOptLevel() const { return OptLevel; }
   const DataLayout &getDataLayout() const { return MF->getDataLayout(); }
@@ -512,20 +520,14 @@ public:
 
   const LibcallLoweringInfo &getLibcalls() const { return *Libcalls; }
 
-  const RTLIB::RuntimeLibcallsInfo &getRuntimeLibcallInfo() const {
-    return *RuntimeLibcallInfo;
-  }
-
   const SelectionDAGTargetInfo &getSelectionDAGInfo() const { return *TSI; }
   const UniformityInfo *getUniformityInfo() const { return UA; }
   /// Returns the result of the AssignmentTrackingAnalysis pass if it's
   /// available, otherwise return nullptr.
   const FunctionVarLocs *getFunctionVarLocs() const { return FnVarLocs; }
   LLVMContext *getContext() const { return Context; }
-  OptimizationRemarkEmitter &getORE() const { return *ORE; }
   ProfileSummaryInfo *getPSI() const { return PSI; }
   BlockFrequencyInfo *getBFI() const { return BFI; }
-  MachineModuleInfo *getMMI() const { return MMI; }
 
   FlagInserter *getFlagInserter() { return Inserter; }
   void setFlagInserter(FlagInserter *FI) { Inserter = FI; }
@@ -883,6 +885,9 @@ public:
   /// which must be a vector type, must match the number of operands in Ops.
   /// The operands must have the same type as (or, for integers, a type wider
   /// than) VT's element type.
+  ///
+  /// If the vector elements are all POISON or UNDEF, return a ISD::POISON or
+  /// ISD::UNDEF node instead.
   SDValue getBuildVector(EVT VT, const SDLoc &DL, ArrayRef<SDValue> Ops) {
     // VerifySDNode (via InsertNode) checks BUILD_VECTOR later.
     return getNode(ISD::BUILD_VECTOR, DL, VT, Ops);
@@ -892,6 +897,9 @@ public:
   /// which must be a vector type, must match the number of operands in Ops.
   /// The operands must have the same type as (or, for integers, a type wider
   /// than) VT's element type.
+  ///
+  /// If the vector elements are all POISON or UNDEF, return a ISD::POISON or
+  /// ISD::UNDEF node instead.
   SDValue getBuildVector(EVT VT, const SDLoc &DL, ArrayRef<SDUse> Ops) {
     // VerifySDNode (via InsertNode) checks BUILD_VECTOR later.
     return getNode(ISD::BUILD_VECTOR, DL, VT, Ops);
@@ -1066,24 +1074,9 @@ public:
   LLVM_ABI SDValue getBitcastedAnyExtOrTrunc(SDValue Op, const SDLoc &DL,
                                              EVT VT);
 
-  /// Convert Op, which must be of integer type, to the
-  /// integer type VT, by first bitcasting (from potential vector) to
-  /// corresponding scalar type then either sign-extending or truncating it.
-  LLVM_ABI SDValue getBitcastedSExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
-
-  /// Convert Op, which must be of integer type, to the
-  /// integer type VT, by first bitcasting (from potential vector) to
-  /// corresponding scalar type then either zero-extending or truncating it.
-  LLVM_ABI SDValue getBitcastedZExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
-
   /// Return the expression required to zero extend the Op
   /// value assuming it was the smaller SrcTy value.
   LLVM_ABI SDValue getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT);
-
-  /// Return the expression required to zero extend the Op
-  /// value assuming it was the smaller SrcTy value.
-  LLVM_ABI SDValue getVPZeroExtendInReg(SDValue Op, SDValue Mask, SDValue EVL,
-                                        const SDLoc &DL, EVT VT);
 
   /// Convert Op, which must be of integer type, to the integer type VT, by
   /// either truncating it or performing either zero or sign extension as
@@ -1109,26 +1102,6 @@ public:
 
   /// Create a logical NOT operation as (XOR Val, BooleanOne).
   LLVM_ABI SDValue getLogicalNOT(const SDLoc &DL, SDValue Val, EVT VT);
-
-  /// Create a vector-predicated logical NOT operation as (VP_XOR Val,
-  /// BooleanOne, Mask, EVL).
-  LLVM_ABI SDValue getVPLogicalNOT(const SDLoc &DL, SDValue Val, SDValue Mask,
-                                   SDValue EVL, EVT VT);
-
-  /// Convert a vector-predicated Op, which must be an integer vector, to the
-  /// vector-type VT, by performing either vector-predicated zext or truncating
-  /// it. The Op will be returned as-is if Op and VT are vectors containing
-  /// integer with same width.
-  LLVM_ABI SDValue getVPZExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op,
-                                    SDValue Mask, SDValue EVL);
-
-  /// Convert a vector-predicated Op, which must be of integer type, to the
-  /// vector-type integer type VT, by either truncating it or performing either
-  /// vector-predicated zero or sign extension as appropriate extension for the
-  /// pointer's semantics. This function just redirects to getVPZExtOrTrunc
-  /// right now.
-  LLVM_ABI SDValue getVPPtrExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op,
-                                      SDValue Mask, SDValue EVL);
 
   /// Returns sum of the base pointer and offset.
   /// Unlike getObjectPtrOffset this does not set NoUnsignedWrap and InBounds by
@@ -1284,11 +1257,23 @@ public:
   /// stack arguments from being clobbered.
   LLVM_ABI SDValue getStackArgumentTokenFactor(SDValue Chain);
 
+  /// Lower a memccpy operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue>
+  getMemccpy(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
+             SDValue C, SDValue Size, const CallInst *CI);
+
   /// Lower a memcmp operation into a target library call and return the
   /// resulting chain and call result as SelectionDAG SDValues.
   LLVM_ABI std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
                                                  SDValue Dst, SDValue Src,
                                                  SDValue Size,
+                                                 const CallInst *CI);
+
+  /// Lower a strcmp operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue> getStrcmp(SDValue Chain, const SDLoc &dl,
+                                                 SDValue S0, SDValue S1,
                                                  const CallInst *CI);
 
   /// Lower a strcpy operation into a target library call and return the
@@ -1311,21 +1296,19 @@ public:
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override
    * the tail call optimization decision. */
-  LLVM_ABI SDValue getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,
-                             SDValue Src, SDValue Size, Align Alignment,
-                             bool isVol, bool AlwaysInline, const CallInst *CI,
-                             std::optional<bool> OverrideTailCall,
-                             MachinePointerInfo DstPtrInfo,
-                             MachinePointerInfo SrcPtrInfo,
-                             const AAMDNodes &AAInfo = AAMDNodes(),
-                             BatchAAResults *BatchAA = nullptr);
+  LLVM_ABI SDValue getMemcpy(
+      SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src, SDValue Size,
+      Align DstAlign, Align SrcAlign, bool isVol, bool AlwaysInline,
+      const CallInst *CI, std::optional<bool> OverrideTailCall,
+      MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo,
+      const AAMDNodes &AAInfo = AAMDNodes(), BatchAAResults *BatchAA = nullptr);
 
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override
    * the tail call optimization decision. */
   LLVM_ABI SDValue getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
-                              SDValue Src, SDValue Size, Align Alignment,
-                              bool isVol, const CallInst *CI,
+                              SDValue Src, SDValue Size, Align DstAlign,
+                              Align SrcAlign, bool isVol, const CallInst *CI,
                               std::optional<bool> OverrideTailCall,
                               MachinePointerInfo DstPtrInfo,
                               MachinePointerInfo SrcPtrInfo,
@@ -1359,7 +1342,7 @@ public:
   /// ISD::CondCode instead of an SDValue.
   SDValue getSetCC(const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS,
                    ISD::CondCode Cond, SDValue Chain = SDValue(),
-                   bool IsSignaling = false) {
+                   bool IsSignaling = false, SDNodeFlags Flags = {}) {
     assert(LHS.getValueType().isVector() == RHS.getValueType().isVector() &&
            "Vector/scalar operand type mismatch for setcc");
     assert(LHS.getValueType().isVector() == VT.isVector() &&
@@ -1368,20 +1351,9 @@ public:
            "Cannot create a setCC of an invalid node.");
     if (Chain)
       return getNode(IsSignaling ? ISD::STRICT_FSETCCS : ISD::STRICT_FSETCC, DL,
-                     {VT, MVT::Other}, {Chain, LHS, RHS, getCondCode(Cond)});
-    return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond));
-  }
-
-  /// Helper function to make it easier to build VP_SETCCs if you just have an
-  /// ISD::CondCode instead of an SDValue.
-  SDValue getSetCCVP(const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS,
-                     ISD::CondCode Cond, SDValue Mask, SDValue EVL) {
-    assert(LHS.getValueType().isVector() && RHS.getValueType().isVector() &&
-           "Cannot compare scalars");
-    assert(Cond != ISD::SETCC_INVALID &&
-           "Cannot create a setCC of an invalid node.");
-    return getNode(ISD::VP_SETCC, DL, VT, LHS, RHS, getCondCode(Cond), Mask,
-                   EVL);
+                     {VT, MVT::Other}, {Chain, LHS, RHS, getCondCode(Cond)},
+                     Flags);
+    return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond), Flags);
   }
 
   /// Helper function to make it easier to build Select's if you just have
@@ -1475,6 +1447,12 @@ public:
                                        SDVTList VTList, ArrayRef<SDValue> Ops,
                                        EVT MemVT, MachineMemOperand *MMO);
 
+  /// getMemIntrinsicNode - Creates a MemIntrinsicNode with multiple MMOs.
+  LLVM_ABI SDValue getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
+                                       SDVTList VTList, ArrayRef<SDValue> Ops,
+                                       EVT MemVT,
+                                       ArrayRef<MachineMemOperand *> MMOs);
+
   /// Creates a LifetimeSDNode that starts (`IsStart==true`) or ends
   /// (`IsStart==false`) the lifetime of the `FrameIndex`.
   LLVM_ABI SDValue getLifetimeNode(bool IsStart, const SDLoc &dl, SDValue Chain,
@@ -1490,16 +1468,23 @@ public:
   /// Create a MERGE_VALUES node from the given operands.
   LLVM_ABI SDValue getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl);
 
+  /// Return poison values for each of \p ResultTypes, substituting \p Chain
+  /// for any result of type MVT::Other, merged into a single MERGE_VALUES
+  /// node. Used to salvage a chain when an operation cannot be lowered due
+  /// to an error, and the program will be discarded.
+  LLVM_ABI SDValue getErrorMergeValues(ArrayRef<EVT> ResultTypes, SDValue Chain,
+                                       const SDLoc &dl);
+
   /// Loads are not normal binary operators: their result type is not
   /// determined by their operands, and they produce a value AND a token chain.
   ///
   /// This function will set the MOLoad flag on MMOFlags, but you can set it if
   /// you want.  The MOStore flag must not be set.
-  LLVM_ABI SDValue getLoad(
-      EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
-      MachinePointerInfo PtrInfo, MaybeAlign Alignment = MaybeAlign(),
-      MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-      const AAMDNodes &AAInfo = AAMDNodes(), const MDNode *Ranges = nullptr);
+  LLVM_ABI SDValue
+  getLoad(EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
+          MachinePointerInfo PtrInfo, MaybeAlign Alignment = MaybeAlign(),
+          MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
+          const MMOMetadata &Metadata = MMOMetadata());
   LLVM_ABI SDValue getLoad(EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
                            MachineMemOperand *MMO);
   LLVM_ABI SDValue
@@ -1507,29 +1492,29 @@ public:
              SDValue Ptr, MachinePointerInfo PtrInfo, EVT MemVT,
              MaybeAlign Alignment = MaybeAlign(),
              MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-             const AAMDNodes &AAInfo = AAMDNodes());
+             const MMOMetadata &Metadata = MMOMetadata());
   LLVM_ABI SDValue getExtLoad(ISD::LoadExtType ExtType, const SDLoc &dl, EVT VT,
                               SDValue Chain, SDValue Ptr, EVT MemVT,
                               MachineMemOperand *MMO);
   LLVM_ABI SDValue getIndexedLoad(SDValue OrigLoad, const SDLoc &dl,
                                   SDValue Base, SDValue Offset,
                                   ISD::MemIndexedMode AM);
-  LLVM_ABI SDValue getLoad(
-      ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT, const SDLoc &dl,
-      SDValue Chain, SDValue Ptr, SDValue Offset, MachinePointerInfo PtrInfo,
-      EVT MemVT, Align Alignment,
-      MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-      const AAMDNodes &AAInfo = AAMDNodes(), const MDNode *Ranges = nullptr);
-  inline SDValue getLoad(
-      ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT, const SDLoc &dl,
-      SDValue Chain, SDValue Ptr, SDValue Offset, MachinePointerInfo PtrInfo,
-      EVT MemVT, MaybeAlign Alignment = MaybeAlign(),
-      MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-      const AAMDNodes &AAInfo = AAMDNodes(), const MDNode *Ranges = nullptr) {
+  LLVM_ABI SDValue
+  getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT,
+          const SDLoc &dl, SDValue Chain, SDValue Ptr, SDValue Offset,
+          MachinePointerInfo PtrInfo, EVT MemVT, Align Alignment,
+          MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
+          const MMOMetadata &Metadata = MMOMetadata());
+  inline SDValue
+  getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT,
+          const SDLoc &dl, SDValue Chain, SDValue Ptr, SDValue Offset,
+          MachinePointerInfo PtrInfo, EVT MemVT,
+          MaybeAlign Alignment = MaybeAlign(),
+          MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
+          const MMOMetadata &Metadata = MMOMetadata()) {
     // Ensures that codegen never sees a None Alignment.
     return getLoad(AM, ExtType, VT, dl, Chain, Ptr, Offset, PtrInfo, MemVT,
-                   Alignment.value_or(getEVTAlign(MemVT)), MMOFlags, AAInfo,
-                   Ranges);
+                   Alignment.value_or(getEVTAlign(MemVT)), MMOFlags, Metadata);
   }
   LLVM_ABI SDValue getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
                            EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
@@ -1544,32 +1529,41 @@ public:
   getStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
            MachinePointerInfo PtrInfo, Align Alignment,
            MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-           const AAMDNodes &AAInfo = AAMDNodes());
+           const MMOMetadata &Metadata = MMOMetadata());
   inline SDValue
   getStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
            MachinePointerInfo PtrInfo, MaybeAlign Alignment = MaybeAlign(),
            MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-           const AAMDNodes &AAInfo = AAMDNodes()) {
+           const MMOMetadata &Metadata = MMOMetadata()) {
     return getStore(Chain, dl, Val, Ptr, PtrInfo,
                     Alignment.value_or(getEVTAlign(Val.getValueType())),
-                    MMOFlags, AAInfo);
+                    MMOFlags, Metadata);
   }
   LLVM_ABI SDValue getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                             SDValue Ptr, MachineMemOperand *MMO);
+  LLVM_ABI SDValue getTruncStore(
+      SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr, SDValue Offset,
+      MachinePointerInfo PtrInfo, EVT SVT, Align Alignment,
+      MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
+      const MMOMetadata &Metadata = MMOMetadata());
   LLVM_ABI SDValue
   getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
                 MachinePointerInfo PtrInfo, EVT SVT, Align Alignment,
                 MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-                const AAMDNodes &AAInfo = AAMDNodes());
+                const MMOMetadata &Metadata = MMOMetadata());
+  LLVM_ABI SDValue getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
+                                 SDValue Ptr, SDValue Offset, EVT SVT,
+                                 MachineMemOperand *MMO);
+
   inline SDValue
   getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
                 MachinePointerInfo PtrInfo, EVT SVT,
                 MaybeAlign Alignment = MaybeAlign(),
                 MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-                const AAMDNodes &AAInfo = AAMDNodes()) {
+                const MMOMetadata &Metadata = MMOMetadata()) {
     return getTruncStore(Chain, dl, Val, Ptr, PtrInfo, SVT,
                          Alignment.value_or(getEVTAlign(SVT)), MMOFlags,
-                         AAInfo);
+                         Metadata);
   }
   LLVM_ABI SDValue getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                                  SDValue Ptr, EVT SVT, MachineMemOperand *MMO);
@@ -1627,9 +1621,6 @@ public:
                                 SDValue Mask, SDValue EVL, EVT MemVT,
                                 MachineMemOperand *MMO,
                                 bool IsExpanding = false);
-  LLVM_ABI SDValue getIndexedLoadVP(SDValue OrigLoad, const SDLoc &dl,
-                                    SDValue Base, SDValue Offset,
-                                    ISD::MemIndexedMode AM);
   LLVM_ABI SDValue getStoreVP(SDValue Chain, const SDLoc &dl, SDValue Val,
                               SDValue Ptr, SDValue Offset, SDValue Mask,
                               SDValue EVL, EVT MemVT, MachineMemOperand *MMO,
@@ -1646,9 +1637,6 @@ public:
                                    SDValue Ptr, SDValue Mask, SDValue EVL,
                                    EVT SVT, MachineMemOperand *MMO,
                                    bool IsCompressing = false);
-  LLVM_ABI SDValue getIndexedStoreVP(SDValue OrigStore, const SDLoc &dl,
-                                     SDValue Base, SDValue Offset,
-                                     ISD::MemIndexedMode AM);
 
   LLVM_ABI SDValue getStridedLoadVP(
       ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT, const SDLoc &DL,
@@ -1671,12 +1659,6 @@ public:
                                      ISD::MemIndexedMode AM,
                                      bool IsTruncating = false,
                                      bool IsCompressing = false);
-  LLVM_ABI SDValue getTruncStridedStoreVP(SDValue Chain, const SDLoc &DL,
-                                          SDValue Val, SDValue Ptr,
-                                          SDValue Stride, SDValue Mask,
-                                          SDValue EVL, EVT SVT,
-                                          MachineMemOperand *MMO,
-                                          bool IsCompressing = false);
 
   LLVM_ABI SDValue getGatherVP(SDVTList VTs, EVT VT, const SDLoc &dl,
                                ArrayRef<SDValue> Ops, MachineMemOperand *MMO,
@@ -1737,10 +1719,17 @@ public:
 
   /// Return an AddrSpaceCastSDNode.
   LLVM_ABI SDValue getAddrSpaceCast(const SDLoc &dl, EVT VT, SDValue Ptr,
-                                    unsigned SrcAS, unsigned DestAS);
+                                    unsigned SrcAS, unsigned DestAS,
+                                    const SDNodeFlags Flags = SDNodeFlags());
 
   /// Return a freeze using the SDLoc of the value operand.
   LLVM_ABI SDValue getFreeze(SDValue V);
+
+  /// Return a freeze of V if any of the demanded elts may be undef or poison.
+  /// \p Kind can be used to selectively freeze poison and/or undef bits only.
+  LLVM_ABI SDValue
+  getFreeze(SDValue V, const APInt &DemandedElts,
+            UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison);
 
   /// Return an AssertAlignSDNode.
   LLVM_ABI SDValue getAssertAlign(const SDLoc &DL, SDValue V, Align A);
@@ -2051,9 +2040,14 @@ public:
   /// function mirrors \c llvm::salvageDebugInfo.
   LLVM_ABI void salvageDebugInfo(SDNode &N);
 
+  /// Dump the textual format of this DAG. Nodes are not sorted.
+  /// Note that we overload it instead of using default value so that it is
+  /// convenient to be called from debuggers.
+  LLVM_ABI void dump() const;
+
   /// Dump the textual format of this DAG. Print nodes in sorted orders if \p
   /// Sorted is true.
-  LLVM_ABI void dump(bool Sorted = false) const;
+  LLVM_ABI void dump(bool Sorted) const;
 
   /// In most cases this function returns the ABI alignment for a given type,
   /// except for illegal vector types where the alignment exceeds that of the
@@ -2071,6 +2065,13 @@ public:
   /// Create a stack temporary suitable for holding either of the specified
   /// value types.
   LLVM_ABI SDValue CreateStackTemporary(EVT VT1, EVT VT2);
+
+  /// Emit a store/load combination to the stack. This stores
+  /// SrcOp to a stack slot of type SlotVT, truncating it if needed. It then
+  /// does a load from the stack slot to DestVT, extending it if needed. The
+  /// resultant code need not be legal.
+  LLVM_ABI SDValue emitStackConvert(SDValue SrcOp, EVT SlotVT, EVT DestVT,
+                                    const SDLoc &DL, SDValue Chain);
 
   LLVM_ABI SDValue FoldSymbolOffset(unsigned Opcode, EVT VT,
                                     const GlobalAddressSDNode *GA,
@@ -2092,7 +2093,7 @@ public:
 
   /// Constant fold a setcc to true or false.
   LLVM_ABI SDValue FoldSetCC(EVT VT, SDValue N1, SDValue N2, ISD::CondCode Cond,
-                             const SDLoc &dl);
+                             const SDLoc &dl, SDNodeFlags Flags = {});
 
   /// Return true if the sign bit of Op is known to be zero.
   /// We use this predicate to simplify operations downstream.
@@ -2144,6 +2145,30 @@ public:
   /// TargetLowering class to allow target nodes to be understood.
   LLVM_ABI KnownBits computeKnownBits(SDValue Op, const APInt &DemandedElts,
                                       unsigned Depth = 0) const;
+
+  /// Determine the possible constant range of an integer or vector of integers.
+  LLVM_ABI ConstantRange computeConstantRange(SDValue Op, bool ForSigned,
+                                              unsigned Depth = 0) const;
+
+  /// Determine the possible constant range of an integer or vector of integers.
+  /// The DemandedElts argument allows us to only collect the known ranges that
+  /// are shared by the requested vector elements.
+  LLVM_ABI ConstantRange computeConstantRange(SDValue Op,
+                                              const APInt &DemandedElts,
+                                              bool ForSigned,
+                                              unsigned Depth = 0) const;
+
+  /// Combine constant ranges from computeConstantRange() and
+  /// computeKnownBits().
+  LLVM_ABI ConstantRange computeConstantRangeIncludingKnownBits(
+      SDValue Op, bool ForSigned, unsigned Depth = 0) const;
+
+  /// Combine constant ranges from computeConstantRange() and
+  /// computeKnownBits(). The DemandedElts argument allows us to only collect
+  /// the known ranges that are shared by the requested vector elements.
+  LLVM_ABI ConstantRange computeConstantRangeIncludingKnownBits(
+      SDValue Op, const APInt &DemandedElts, bool ForSigned,
+      unsigned Depth = 0) const;
 
   /// Used to represent the possible overflow behavior of an operation.
   /// Never: the operation cannot overflow.
@@ -2215,10 +2240,34 @@ public:
     return computeOverflowForMul(IsSigned, N0, N1) == OFK_Never;
   }
 
+  /// Returns true if \p V is an identity element of Opc with Flags.
+  /// When OperandNo is 0, it checks that V is a left identity. Otherwise, it
+  /// checks that V is a right identity.
+  LLVM_ABI bool isIdentityElement(unsigned Opc, SDNodeFlags Flags, SDValue V,
+                                  unsigned OperandNo, unsigned Depth = 0) const;
+
+  /// Returns true if the demanded vector elements of \p V is an identity
+  /// element of Opc with Flags. When OperandNo is 0, it checks that V is a left
+  /// identity. Otherwise, it checks that V is a right identity.
+  LLVM_ABI bool isIdentityElement(unsigned Opc, SDNodeFlags Flags, SDValue V,
+                                  const APInt &DemandedElts, unsigned OperandNo,
+                                  unsigned Depth = 0) const;
+
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit
-  /// is set.
-  LLVM_ABI bool isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth = 0) const;
+  /// is set. If 'OrZero' is set, then return true if the given value is either
+  /// a power of two or zero.
+  LLVM_ABI bool isKnownToBeAPowerOfTwo(SDValue Val, bool OrZero = false,
+                                       unsigned Depth = 0) const;
+
+  /// Test if the given value is known to have exactly one bit set. This differs
+  /// from computeKnownBits in that it doesn't necessarily determine which bit
+  /// is set. The DemandedElts argument allows us to only collect the minimum
+  /// sign bits of the requested vector elements. If 'OrZero' is set, then
+  /// return true if the given value is either a power of two or zero.
+  LLVM_ABI bool isKnownToBeAPowerOfTwo(SDValue Val, const APInt &DemandedElts,
+                                       bool OrZero = false,
+                                       unsigned Depth = 0) const;
 
   /// Test if the given _fp_ value is known to be an integer power-of-2, either
   /// positive or negative.
@@ -2260,22 +2309,23 @@ public:
                                               unsigned Depth = 0) const;
 
   /// Return true if this function can prove that \p Op is never poison
-  /// and, if \p PoisonOnly is false, does not have undef bits.
-  LLVM_ABI bool isGuaranteedNotToBeUndefOrPoison(SDValue Op,
-                                                 bool PoisonOnly = false,
-                                                 unsigned Depth = 0) const;
+  /// and, \p Kind can be used to track poison and/or undef bits.
+  LLVM_ABI bool isGuaranteedNotToBeUndefOrPoison(
+      SDValue Op, UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison,
+      unsigned Depth = 0) const;
 
   /// Return true if this function can prove that \p Op is never poison
-  /// and, if \p PoisonOnly is false, does not have undef bits. The DemandedElts
-  /// argument limits the check to the requested vector elements.
-  LLVM_ABI bool isGuaranteedNotToBeUndefOrPoison(SDValue Op,
-                                                 const APInt &DemandedElts,
-                                                 bool PoisonOnly = false,
-                                                 unsigned Depth = 0) const;
+  /// and, \p Kind can be used to track poison and/or undef bits. The
+  /// DemandedElts argument limits the check to the requested vector elements.
+  LLVM_ABI bool isGuaranteedNotToBeUndefOrPoison(
+      SDValue Op, const APInt &DemandedElts,
+      UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison,
+      unsigned Depth = 0) const;
 
   /// Return true if this function can prove that \p Op is never poison.
   bool isGuaranteedNotToBePoison(SDValue Op, unsigned Depth = 0) const {
-    return isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly*/ true, Depth);
+    return isGuaranteedNotToBeUndefOrPoison(Op, UndefPoisonKind::PoisonOnly,
+                                            Depth);
   }
 
   /// Return true if this function can prove that \p Op is never poison. The
@@ -2283,7 +2333,7 @@ public:
   bool isGuaranteedNotToBePoison(SDValue Op, const APInt &DemandedElts,
                                  unsigned Depth = 0) const {
     return isGuaranteedNotToBeUndefOrPoison(Op, DemandedElts,
-                                            /*PoisonOnly*/ true, Depth);
+                                            UndefPoisonKind::PoisonOnly, Depth);
   }
 
   /// Return true if Op can create undef or poison from non-undef & non-poison
@@ -2295,10 +2345,10 @@ public:
   /// could still introduce undef or poison even without poison generating flags
   /// which might be on the instruction.  (i.e. could the result of
   /// Op->dropPoisonGeneratingFlags() still create poison or undef)
-  LLVM_ABI bool canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
-                                       bool PoisonOnly = false,
-                                       bool ConsiderFlags = true,
-                                       unsigned Depth = 0) const;
+  LLVM_ABI bool
+  canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
+                         UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison,
+                         bool ConsiderFlags = true, unsigned Depth = 0) const;
 
   /// Return true if Op can create undef or poison from non-undef & non-poison
   /// operands.
@@ -2308,9 +2358,10 @@ public:
   /// could still introduce undef or poison even without poison generating flags
   /// which might be on the instruction.  (i.e. could the result of
   /// Op->dropPoisonGeneratingFlags() still create poison or undef)
-  LLVM_ABI bool canCreateUndefOrPoison(SDValue Op, bool PoisonOnly = false,
-                                       bool ConsiderFlags = true,
-                                       unsigned Depth = 0) const;
+  LLVM_ABI bool
+  canCreateUndefOrPoison(SDValue Op,
+                         UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison,
+                         bool ConsiderFlags = true, unsigned Depth = 0) const;
 
   /// Return true if the specified operand is an ISD::OR or ISD::XOR node
   /// that can be treated as an ISD::ADD node.
@@ -2325,6 +2376,24 @@ public:
   /// equivalence:
   ///     X|Cst == X+Cst iff X&Cst = 0.
   LLVM_ABI bool isBaseWithConstantOffset(SDValue Op) const;
+
+  /// Determine floating-point class information about \p Op. For vectors, the
+  /// known FP classes are those shared by every demanded vector element.
+  /// \p InterestedClasses is a hint for which FP classes we care about;
+  /// the implementation may bail out early if it can determine that
+  /// none of the interested classes are possible.
+  LLVM_ABI KnownFPClass computeKnownFPClass(SDValue Op,
+                                            FPClassTest InterestedClasses,
+                                            unsigned Depth = 0) const;
+
+  /// Determine floating-point class information about \p Op. The
+  /// DemandedElts argument allows us to only collect the known FP classes
+  /// that are shared by the requested vector elements.
+  /// \p InterestedClasses is a hint for which FP classes we care about.
+  LLVM_ABI KnownFPClass computeKnownFPClass(SDValue Op,
+                                            const APInt &DemandedElts,
+                                            FPClassTest InterestedClasses,
+                                            unsigned Depth = 0) const;
 
   /// Test whether the given SDValue (or all elements of it, if it is a
   /// vector) is known to never be NaN in \p DemandedElts. If \p SNaN is true,
@@ -2351,12 +2420,24 @@ public:
     return isKnownNeverNaN(Op, true, Depth);
   }
 
-  /// Test whether the given floating point SDValue is known to never be
-  /// positive or negative zero.
-  LLVM_ABI bool isKnownNeverZeroFloat(SDValue Op) const;
+  /// Test whether the given floating point SDValue (or all elements of it, if
+  /// it is a vector) is known to never be interpretable as zero in \p
+  /// DemandedElts.
+  LLVM_ABI bool isKnownNeverLogicalZero(SDValue Op, const APInt &DemandedElts,
+                                        unsigned Depth = 0) const;
+
+  /// Test whether the given floating point SDValue (or all elements of it, if
+  /// it is a vector) is known to never be interpretable as zero.
+  LLVM_ABI bool isKnownNeverLogicalZero(SDValue Op, unsigned Depth = 0) const;
 
   /// Test whether the given SDValue is known to contain non-zero value(s).
   LLVM_ABI bool isKnownNeverZero(SDValue Op, unsigned Depth = 0) const;
+
+  /// Test whether the given SDValue is known to contain non-zero value(s).
+  /// The DemandedElts argument limits the check to the requested vector
+  /// elements.
+  LLVM_ABI bool isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
+                                 unsigned Depth = 0) const;
 
   /// Test whether the given float value is known to be positive. +0.0, +inf and
   /// +nan are considered positive, -0.0, -inf and -nan are not.
@@ -2365,7 +2446,8 @@ public:
   /// Check if a use of a float value is insensitive to signed zeros.
   LLVM_ABI bool canIgnoreSignBitOfZero(const SDUse &Use) const;
 
-  /// Check if at most two uses of a value are insensitive to signed zeros.
+  /// Check if \p Op has no-signed-zeros, or all users (limited to checking two
+  /// for compile-time performance) are insensitive to signed zeros.
   LLVM_ABI bool canIgnoreSignBitOfZero(SDValue Op) const;
 
   /// Test whether two SDValues are known to compare equal. This
@@ -2469,6 +2551,13 @@ public:
   /// location that the 'Base' load is loading from.
   LLVM_ABI bool areNonVolatileConsecutiveLoads(LoadSDNode *LD, LoadSDNode *Base,
                                                unsigned Bytes, int Dist) const;
+
+  /// Return true if stores are next to each other and can be merged. Check that
+  /// both are nonvolatile and if \p ST is storing \p Bytes bytes to a location
+  /// that is \p Dist units away from the location that \p Base is storing to.
+  LLVM_ABI bool areNonVolatileConsecutiveStores(StoreSDNode *ST,
+                                                StoreSDNode *Base,
+                                                unsigned Bytes, int Dist) const;
 
   /// Infer alignment of a load / store address. Return std::nullopt if it
   /// cannot be inferred.
@@ -2622,9 +2711,20 @@ public:
 
   LLVM_ABI bool shouldOptForSize() const;
 
-  /// Get the (commutative) neutral element for the given opcode, if it exists.
-  LLVM_ABI SDValue getNeutralElement(unsigned Opcode, const SDLoc &DL, EVT VT,
-                                     SDNodeFlags Flags);
+  /// Get the (commutative) identity element for the given opcode, if it exists.
+  LLVM_ABI SDValue getIdentityElement(unsigned Opcode, const SDLoc &DL, EVT VT,
+                                      SDNodeFlags Flags);
+
+  /// Get an expression that implements a partial multiply-subtract reduction.
+  /// In practice this means that parts of the expression are negated, e.g.
+  ///
+  ///     partial_reduce_fmls acc, lhs, rhs
+  /// <=> partial_reduce_fmla acc, lhs, -rhs
+  ///
+  ///      partial_reduce_umls acc, lhs, rhs
+  /// <=> -partial_reduce_umla -acc, lhs, rhs
+  LLVM_ABI SDValue getPartialReduceMLS(unsigned Opc, const SDLoc &DL,
+                                       SDValue Acc, SDValue LHS, SDValue RHS);
 
   /// Some opcodes may create immediate undefined behavior when used with some
   /// values (integer division-by-zero for example). Therefore, these operations
@@ -2659,6 +2759,16 @@ public:
   LLVM_ABI SDValue makeStateFunctionCall(unsigned LibFunc, SDValue Ptr,
                                          SDValue InChain, const SDLoc &DLoc);
 
+  /// Returns the maximum runtime number of elements in VT if known, or 0
+  /// otherwise.
+  unsigned getMaxRuntimeNumElements(EVT VT) const;
+
+  /// Returns a vector constructed from the scalar values in order. The number
+  /// of scalars must match the maximum runtime length of VT, but only the first
+  /// actual runtime length scalars are included in the result.
+  SDValue buildVectorFromUnrolledParts(EVT VT, const SDLoc &DL,
+                                       ArrayRef<SDValue> Scalars);
+
 private:
 #ifndef NDEBUG
   void verifyNode(SDNode *N) const;
@@ -2666,11 +2776,12 @@ private:
   void InsertNode(SDNode *N);
   bool RemoveNodeFromCSEMaps(SDNode *N);
   void AddModifiedNodeToCSEMaps(SDNode *N);
-  SDNode *FindModifiedNodeSlot(SDNode *N, SDValue Op, void *&InsertPos);
+  SDNode *FindModifiedNodeSlot(SDNode *N, SDValue Op,
+                               FoldingSetInsertToken &InsertToken);
   SDNode *FindModifiedNodeSlot(SDNode *N, SDValue Op1, SDValue Op2,
-                               void *&InsertPos);
+                               FoldingSetInsertToken &InsertToken);
   SDNode *FindModifiedNodeSlot(SDNode *N, ArrayRef<SDValue> Ops,
-                               void *&InsertPos);
+                               FoldingSetInsertToken &InsertToken);
   SDNode *UpdateSDLocOnMergeSDNode(SDNode *N, const SDLoc &loc);
 
   void DeleteNodeNotInCSEMaps(SDNode *N);
@@ -2678,17 +2789,17 @@ private:
 
   void allnodes_clear();
 
-  /// Look up the node specified by ID in CSEMap.  If it exists, return it.  If
-  /// not, return the insertion token that will make insertion faster.  This
-  /// overload is for nodes other than Constant or ConstantFP, use the other one
-  /// for those.
-  SDNode *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos);
+  /// Look up the node specified by ID in CSEMap. If it exists, return it and
+  /// clear \p InsertToken; otherwise return null and set \p InsertToken for a
+  /// subsequent insert. This overload is for nodes other than Constant or
+  /// ConstantFP, use the other one for those.
+  SDNode *lookupNode(const SDNodeKey &Key, FoldingSetInsertToken &InsertToken);
 
-  /// Look up the node specified by ID in CSEMap.  If it exists, return it.  If
-  /// not, return the insertion token that will make insertion faster.  Performs
-  /// additional processing for constant nodes.
-  SDNode *FindNodeOrInsertPos(const FoldingSetNodeID &ID, const SDLoc &DL,
-                              void *&InsertPos);
+  /// Look up the node specified by ID in CSEMap. If it exists, return it and
+  /// clear \p InsertToken; otherwise return null and set \p InsertToken for a
+  /// subsequent insert. Performs additional processing for constant nodes.
+  SDNode *lookupNode(const SDNodeKey &Key, const SDLoc &DL,
+                     FoldingSetInsertToken &InsertToken);
 
   /// Maps to auto-CSE operations.
   std::vector<CondCodeSDNode*> CondCodeNodes;

@@ -62,7 +62,7 @@ createLoongArchMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
 static MCAsmInfo *createLoongArchMCAsmInfo(const MCRegisterInfo &MRI,
                                            const Triple &TT,
                                            const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new LoongArchMCAsmInfo(TT);
+  MCAsmInfo *MAI = new LoongArchMCAsmInfo(TT, Options);
 
   // Initial state of the frame pointer is sp(r3).
   unsigned SP = MRI.getDwarfRegNum(LoongArch::R3, true);
@@ -139,7 +139,8 @@ public:
 
   void resetState() override { GPRValidMask.reset(); }
 
-  void updateState(const MCInst &Inst, uint64_t Addr) override {
+  void updateState(const MCInst &Inst, const MCSubtargetInfo *STI,
+                   uint64_t Addr) override {
     // Terminators mark the end of a basic block which means the sequentially
     // next instruction will be the first of another basic block and the current
     // state will typically not be valid anymore. For calls, we assume all

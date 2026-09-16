@@ -78,14 +78,12 @@ public:
       const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
       const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
-  static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataBufferSP &data_sp,
-                                        lldb::offset_t data_offset,
-                                        lldb::offset_t file_offset,
-                                        lldb::offset_t length,
-                                        lldb_private::ModuleSpecList &specs);
+  static lldb_private::ModuleSpecList
+  GetModuleSpecifications(const lldb_private::FileSpec &file,
+                          lldb::DataExtractorSP &extractor_sp,
+                          lldb::offset_t file_offset, lldb::offset_t length);
 
-  static bool MagicBytesMatch(lldb::DataBufferSP &data_sp, lldb::addr_t offset,
+  static bool MagicBytesMatch(lldb::DataBufferSP data_sp, lldb::addr_t offset,
                               lldb::addr_t length);
 
   // PluginInterface protocol
@@ -129,6 +127,12 @@ public:
   std::optional<lldb_private::FileSpec> GetDebugLink();
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
+
+  lldb_private::FileSpecList GetReExportedLibraries() override;
+
+  bool ReExportedLibrariesShadowLocalDefinitions() const override {
+    return true;
+  }
 
   lldb_private::Address
   GetImageInfoAddress(lldb_private::Target *target) override;
@@ -178,7 +182,7 @@ private:
   typedef std::vector<elf::ELFProgramHeader> ProgramHeaderColl;
 
   struct ELFSectionHeaderInfo : public elf::ELFSectionHeader {
-    lldb_private::ConstString section_name;
+    std::string section_name;
   };
 
   typedef std::vector<ELFSectionHeaderInfo> SectionHeaderColl;
@@ -275,6 +279,10 @@ private:
                                  uint64_t length,
                                  lldb_private::ArchSpec &arch_spec);
 
+  static void ParseRISCVAttributes(const lldb_private::DataExtractor &data,
+                                   uint64_t length,
+                                   lldb_private::ArchSpec &arch_spec);
+
   /// Parses the elf section headers and returns the uuid, debug link name,
   /// crc, archspec.
   static size_t GetSectionHeaderInfo(SectionHeaderColl &section_headers,
@@ -346,7 +354,7 @@ private:
   /// index of the corresponding section or zero if no section with the given
   /// name can be found (note that section indices are always 1 based, and so
   /// section index 0 is never valid).
-  lldb::user_id_t GetSectionIndexByName(const char *name);
+  lldb::user_id_t GetSectionIndexByName(llvm::StringRef name);
 
   /// Returns the section header with the given id or NULL.
   const ELFSectionHeaderInfo *GetSectionHeaderByIndex(lldb::user_id_t id);

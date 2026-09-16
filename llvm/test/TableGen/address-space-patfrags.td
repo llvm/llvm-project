@@ -96,37 +96,42 @@ def truncstorei16_addrspace : PatFrag<(ops node:$val, node:$ptr),
 }
 
 // Test truncstore without a specific MemoryVT
-// GISEL: GIM_Try, /*On fail goto*//*Label 2*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 2 //
-// GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
-// GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_STORE),
-// GISEL-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
-// GISEL-NEXT: GIM_CheckMemorySizeLessThanLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
-// GISEL-NEXT: // MIs[0] src0
-// GISEL-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-def : Pat <
-  (truncstore GPR32:$src0, GPR32:$src1),
-  (inst_c GPR32:$src0, GPR32:$src1)
->;
-
-// Test non-truncstore has a size equal to LLT check.
-// GISEL: GIM_Try, /*On fail goto*//*Label 3*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 3 //
-// GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
-// GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_STORE),
-// GISEL-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
-// GISEL-NEXT: GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
-def : Pat <
-  (store GPR32:$src0, GPR32:$src1),
-  (inst_d GPR32:$src0, GPR32:$src1)
->;
-
-// Test truncstore with specific MemoryVT
-// GISEL: GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 4 //
+// GISEL: GIM_Try, /*On fail goto*//*Label 2*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 4 //
 // GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_STORE),
 // GISEL-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // GISEL-NEXT: GIM_CheckMemorySizeLessThanLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // GISEL-NEXT: GIM_CheckMemorySizeEqualTo, /*MI*/0, /*MMO*/0, /*Size*/GIMT_Encode4(2),
 // GISEL-NEXT: GIM_CheckMemoryAddressSpace, /*MI*/0, /*MMO*/0, /*NumAddrSpace*/2, /*AddrSpace*/123, /*AddrSpace*//* 455(*/0xC7, 0x03/*)*/,
+// GISEL-NEXT: // MIs[0] src0
+// GISEL-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
+
+
+
+def : Pat <
+  (truncstore GPR32:$src0, GPR32:$src1),
+  (inst_c GPR32:$src0, GPR32:$src1)
+>;
+
+// Test non-truncstore has a size equal to LLT check.
+// GISEL: GIM_Try, /*On fail goto*//*Label 3*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 2 //
+// GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_STORE),
+// GISEL-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
+// GISEL-NEXT: GIM_CheckMemorySizeLessThanLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
+
+def : Pat <
+  (store GPR32:$src0, GPR32:$src1),
+  (inst_d GPR32:$src0, GPR32:$src1)
+>;
+
+// Test truncstore with specific MemoryVT
+// GISEL: GIM_Try, /*On fail goto*//*Label 4*/ GIMT_Encode4({{[0-9]+}}), // Rule ID 3 //
+// GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
+// GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_STORE),
+// GISEL-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
+// GISEL-NEXT: GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
+
 def : Pat <
   (truncstorei16_addrspace GPR32:$src0, GPR32:$src1),
   (inst_c GPR32:$src0, GPR32:$src1)

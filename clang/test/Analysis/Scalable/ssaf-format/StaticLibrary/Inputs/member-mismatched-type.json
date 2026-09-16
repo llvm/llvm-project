@@ -1,0 +1,18 @@
+{
+  "type": "StaticLibrary",
+  "target_triple": "arm64-apple-macosx",
+  "namespace": {
+    "kind": "StaticLibrary",
+    "name": "libfoo"
+  },
+  "members": [
+    {
+      "type": "LUSummary",
+      "target_triple": "arm64-apple-macosx",
+      "lu_namespace": [],
+      "id_table": [],
+      "linkage_table": [],
+      "data": []
+    }
+  ]
+}

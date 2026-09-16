@@ -84,10 +84,6 @@ public:
     return getUInt64IntegerValue(getSpelling());
   }
 
-  /// For a floatliteral token, return its value as a double. Returns
-  /// std::nullopt in the case of underflow or overflow.
-  std::optional<double> getFloatingPointValue() const;
-
   /// For an inttype token, return its bitwidth.
   std::optional<unsigned> getIntTypeBitwidth() const;
 

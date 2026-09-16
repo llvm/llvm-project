@@ -41,31 +41,38 @@ static void dump(const StructuredData::Array &array, Stream &s) {
   s << '[' << llvm::join(values, ", ") << ']';
 }
 
-// The default dump output is too verbose.
 static void dump(const StructuredData::Dictionary &config, Stream &s) {
+  // Dump the keys in alphabetical order.
+  llvm::SmallVector<llvm::StringRef> keys;
+  keys.reserve(config.GetSize());
   config.ForEach(
-      [&](llvm::StringRef key, StructuredData::Object *object) -> bool {
-        assert(object);
-
-        StructuredData::Dictionary *value_dict = object->GetAsDictionary();
-        assert(value_dict);
-
-        StructuredData::ObjectSP value_sp = value_dict->GetValueForKey("value");
-        assert(value_sp);
-
-        s << "  " << key << ": ";
-        if (StructuredData::Boolean *boolean = value_sp->GetAsBoolean())
-          s << (boolean->GetValue() ? "yes" : "no");
-        else if (StructuredData::Array *array = value_sp->GetAsArray())
-          dump(*array, s);
-        s << '\n';
-
+      [&keys](llvm::StringRef key, StructuredData::Object *) -> bool {
+        keys.push_back(key);
         return true;
       });
+  llvm::sort(keys);
+
+  for (auto key : keys) {
+    StructuredData::ObjectSP object = config.GetValueForKey(key);
+    assert(object);
+
+    StructuredData::Dictionary *value_dict = object->GetAsDictionary();
+    assert(value_dict);
+
+    StructuredData::ObjectSP value_sp = value_dict->GetValueForKey("value");
+    assert(value_sp);
+
+    s << "  " << key << ": ";
+    if (StructuredData::Boolean *boolean = value_sp->GetAsBoolean())
+      s << (boolean->GetValue() ? "yes" : "no");
+    else if (StructuredData::Array *array = value_sp->GetAsArray())
+      dump(*array, s);
+    s << '\n';
+  }
 }
 
 void CommandObjectVersion::DoExecute(Args &args, CommandReturnObject &result) {
-  result.AppendMessageWithFormat("%s\n", lldb_private::GetVersion());
+  result.AppendMessageWithFormatv("{0}", lldb_private::GetVersion());
 
   if (m_options.verbose)
     dump(*Debugger::GetBuildConfiguration(), result.GetOutputStream());

@@ -16,6 +16,7 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -124,6 +125,19 @@ static void emitProperty(const Record *Property, raw_ostream &OS) {
   OS << "},\n";
 }
 
+static std::optional<StringRef>
+getPropertyPath(const std::vector<const Record *> &PropertyRecords) {
+  std::optional<StringRef> Path;
+  for (const Record *R : PropertyRecords) {
+    StringRef P = R->getValueAsString("Path");
+    if (!Path)
+      Path.emplace(P);
+    assert(*Path == P &&
+           "All records with one definition should have the same path");
+  }
+  return Path;
+}
+
 /// Emits all property initializers to the raw_ostream.
 static void emityProperties(std::string PropertyName,
                             const std::vector<const Record *> &PropertyRecords,
@@ -132,6 +146,8 @@ static void emityProperties(std::string PropertyName,
   // *.inc file.
   std::string NeededMacro = "LLDB_PROPERTIES_" + PropertyName;
   llvm::replace(NeededMacro, ' ', '_');
+
+  std::optional<StringRef> Path = getPropertyPath(PropertyRecords);
 
   // All options are in one file, so we need put them behind macros and ask the
   // user to define the macro for the options that are needed.
@@ -142,6 +158,14 @@ static void emityProperties(std::string PropertyName,
   for (const Record *R : PropertyRecords)
     emitProperty(R, OS);
   OS << "};\n";
+
+  OS << "static constexpr PropertyCollectionDefinition g_" << PropertyName
+     << "_properties_def = {\n";
+  OS << "/*properties=*/g_" << PropertyName << "_properties,\n";
+  if (Path)
+    OS << "/*expected_path=*/\"" << *Path << "\",\n";
+  OS << "};\n";
+
   // We undefine the macro for the user like Clang's include files are doing it.
   OS << "#undef " << NeededMacro << "\n";
   OS << "#endif // " << PropertyName << " Property\n\n";

@@ -23,10 +23,12 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
   %i3 = call ptr @llvm.coro.begin(token %i2, ptr null)
 ; CHECK-LABEL: define {{.*}} @coroutineA(
 ; CHECK-SAME:    ptr swiftasync %[[frame_ptr:.*]])
-; CHECK:      #dbg_declare(ptr %[[frame_ptr]], {{.*}} !DIExpression(
-; CHECK-SAME:                   DW_OP_plus_uconst, 24)
-; CHECK:      #dbg_value(ptr %[[frame_ptr]], {{.*}} !DIExpression(
-; CHECK-SAME:                 DW_OP_plus_uconst, 16, DW_OP_deref)
+; CHECK:      %[[frame_ptr_alloca:.*]] = alloca ptr
+; CHECK:      #dbg_declare(ptr %[[frame_ptr_alloca]], {{.*}} !DIExpression(
+; CHECK-SAME:                   DW_OP_deref, DW_OP_plus_uconst, 24)
+; CHECK:      store ptr %[[frame_ptr]], ptr %[[frame_ptr_alloca]]
+; CHECK:      #dbg_value(ptr %[[frame_ptr_alloca]], {{.*}} !DIExpression(
+; CHECK-SAME:                 DW_OP_deref, DW_OP_plus_uconst, 16, DW_OP_deref)
 ; CHECK:      call {{.*}} @swift_task_switch
 
   %i7 = call ptr @llvm.coro.async.resume(), !dbg !54

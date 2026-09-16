@@ -300,6 +300,7 @@ User settings can set the default value for the following supported
 | **timeout**                       | number   |  `30`   |
 | **targetTriple**                  | string   |  `""`   |
 | **platformName**                  | string   |  `""`   |
+| **platformUrl**                   | string   |  `""`   |
 | **initCommands**                  | [string] |  `[]`   |
 | **preRunCommands**                | [string] |  `[]`   |
 | **postRunCommands**               | [string] |  `[]`   |

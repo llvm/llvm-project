@@ -1,0 +1,28 @@
+#ifndef _STACK_
+#define _STACK_
+
+#include <deque>
+
+namespace std {
+
+template <typename T, typename Container = deque<T>>
+class stack {
+public:
+  using value_type = T;
+
+  void push(const T &) {}
+  void push(T &&) {}
+
+  template <typename... Args>
+  void emplace(Args &&...args) {}
+
+  T &top();
+  const T &top() const;
+
+  bool empty() const;
+  size_t size() const;
+};
+
+} // namespace std
+
+#endif // _STACK_

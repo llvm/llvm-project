@@ -2,10 +2,6 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for load_zext_i8_v4bf16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for load_zext_i16_v4bf16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for load_zext_i32_v4bf16
-
 define <4 x i16> @z_i32_v4i16(i32 %x) {
 ; CHECK-SD-LABEL: z_i32_v4i16:
 ; CHECK-SD:       // %bb.0:
@@ -17,14 +13,7 @@ define <4 x i16> @z_i32_v4i16(i32 %x) {
 ; CHECK-GI-LABEL: z_i32_v4i16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[2]
-; CHECK-GI-NEXT:    mov b0, v0.b[3]
-; CHECK-GI-NEXT:    mov v2.b[1], v1.b[0]
-; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
-; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
-; CHECK-GI-NEXT:    ushll v0.8h, v2.8b, #0
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %b = bitcast i32 %x to <4 x i8>
@@ -36,10 +25,9 @@ define <4 x i32> @z_i32_v4i32(i32 %x) {
 ; CHECK-SD-LABEL: z_i32_v4i32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    movi v1.2d, #0x0000ff000000ff
 ; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: z_i32_v4i32:
@@ -72,16 +60,16 @@ define <4 x i32> @z_i32_v4i32(i32 %x) {
 define <4 x i64> @z_i32_v4i64(i32 %x) {
 ; CHECK-SD-LABEL: z_i32_v4i64:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    movi v1.2d, #0x000000000000ff
-; CHECK-SD-NEXT:    mov b2, v0.b[0]
-; CHECK-SD-NEXT:    mov b3, v0.b[2]
-; CHECK-SD-NEXT:    mov v2.b[4], v0.b[1]
-; CHECK-SD-NEXT:    mov v3.b[4], v0.b[3]
-; CHECK-SD-NEXT:    ushll v0.2d, v2.2s, #0
-; CHECK-SD-NEXT:    ushll v2.2d, v3.2s, #0
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-SD-NEXT:    fmov s1, w0
+; CHECK-SD-NEXT:    movi d0, #0x0000ff000000ff
+; CHECK-SD-NEXT:    mov b2, v1.b[0]
+; CHECK-SD-NEXT:    mov b3, v1.b[2]
+; CHECK-SD-NEXT:    mov v2.b[4], v1.b[1]
+; CHECK-SD-NEXT:    mov v3.b[4], v1.b[3]
+; CHECK-SD-NEXT:    and v1.8b, v2.8b, v0.8b
+; CHECK-SD-NEXT:    and v2.8b, v3.8b, v0.8b
+; CHECK-SD-NEXT:    ushll v0.2d, v1.2s, #0
+; CHECK-SD-NEXT:    ushll v1.2d, v2.2s, #0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: z_i32_v4i64:
@@ -120,14 +108,7 @@ define <4 x i16> @s_i32_v4i16(i32 %x) {
 ; CHECK-GI-LABEL: s_i32_v4i16:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    mov b1, v0.b[1]
-; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-GI-NEXT:    mov b3, v0.b[2]
-; CHECK-GI-NEXT:    mov b0, v0.b[3]
-; CHECK-GI-NEXT:    mov v2.b[1], v1.b[0]
-; CHECK-GI-NEXT:    mov v2.b[2], v3.b[0]
-; CHECK-GI-NEXT:    mov v2.b[3], v0.b[0]
-; CHECK-GI-NEXT:    sshll v0.8h, v2.8b, #0
+; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %b = bitcast i32 %x to <4 x i8>
@@ -339,9 +320,8 @@ define <8 x i8> @load_sext_i32_v8i8(ptr %p) {
 define <16 x i8> @load_zext_v16i8(ptr %p) {
 ; CHECK-SD-LABEL: load_zext_v16i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    ldr w8, [x0]
-; CHECK-SD-NEXT:    mov v0.d[0], x8
+; CHECK-SD-NEXT:    ldr s0, [x0]
+; CHECK-SD-NEXT:    fmov d0, d0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: load_zext_v16i8:

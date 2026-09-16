@@ -1,4 +1,4 @@
-// RUN: cir-opt %s -verify-diagnostics
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
 
 module {
   cir.func @l0() {
@@ -8,4 +8,57 @@ module {
   cir.func @l1() alias(@l0) { // expected-error {{function alias shall not have a body}}
     cir.return
   }
+}
+
+// -----
+
+module {
+  cir.func @l0() func_info<> { // expected-error {{expected attribute value}}
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  // expected-error@below {{expected a function info attribute, got 32 : i32}}
+  cir.func @l0() func_info<32 : i32> {
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  cir.func @l0() -> i32 // expected-error {{expected all types in the function signature to be CIR types}}
+}
+
+// -----
+
+module {
+  cir.func @l0(i32) // expected-error {{expected all types in the function signature to be CIR types}}
+}
+
+// -----
+
+module {
+  cir.func @l0(!cir.ptr<i32>) // expected-error {{expected all types in the function signature to be CIR types}}
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {data !s32i, data i32}>
+
+module {
+  cir.func private @l0(!cir.ptr<!rec_S>) // expected-error {{expected all types in the function signature to be CIR types}}
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!rec_U = !cir.union<"U" {data !s32i, data i32}>
+
+module {
+  cir.func private @l0(!rec_U) // expected-error {{expected all types in the function signature to be CIR types}}
 }

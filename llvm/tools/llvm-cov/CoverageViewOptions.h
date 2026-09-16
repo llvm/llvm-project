@@ -31,6 +31,7 @@ struct CoverageViewOptions {
   bool ShowLineStats;
   bool ShowRegionMarkers;
   bool ShowMCDC;
+  bool ShowMCDCNonExecutedVectors = false;
   bool ShowBranchCounts;
   bool ShowBranchPercents;
   bool ShowExpandedRegions;

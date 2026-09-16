@@ -1,6 +1,6 @@
 message(STATUS "Building the llvm-offload-device-info tool")
 
-add_openmp_tool(llvm-offload-device-info llvm-offload-device-info.cpp)
+add_offload_tool(llvm-offload-device-info llvm-offload-device-info.cpp)
 
 llvm_update_compile_flags(llvm-offload-device-info)
 

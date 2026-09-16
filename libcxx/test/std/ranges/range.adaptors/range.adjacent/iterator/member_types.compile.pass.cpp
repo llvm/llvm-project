@@ -11,9 +11,11 @@
 // Iterator traits and member typedefs in adjacent_view::iterator.
 
 #include <array>
+#include <cstdint>
 #include <iterator>
 #include <ranges>
 #include <tuple>
+#include <utility>
 
 #include "test_iterators.h"
 
@@ -109,7 +111,7 @@ void test() {
 
     static_assert(std::is_same_v<typename Iter::iterator_concept, std::forward_iterator_tag>);
     static_assert(std::is_same_v<typename Iter::iterator_category, std::input_iterator_tag>);
-    static_assert(std::is_same_v<typename Iter::difference_type, std::ptrdiff_t>);
+    static_assert(std::is_same_v<typename Iter::difference_type, std::intptr_t>);
     static_assert(std::is_same_v<typename Iter::value_type, expected_value_type>);
   }
 

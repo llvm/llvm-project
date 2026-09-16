@@ -688,10 +688,10 @@ define <vscale x 1 x i64> @vdivu_vi_nxv1i64_0(<vscale x 1 x i64> %va) {
 ; RV32-V:       # %bb.0:
 ; RV32-V-NEXT:    addi sp, sp, -16
 ; RV32-V-NEXT:    .cfi_def_cfa_offset 16
-; RV32-V-NEXT:    lui a0, 131072
-; RV32-V-NEXT:    li a1, 1
-; RV32-V-NEXT:    sw a1, 8(sp)
-; RV32-V-NEXT:    sw a0, 12(sp)
+; RV32-V-NEXT:    li a0, 1
+; RV32-V-NEXT:    lui a1, 131072
+; RV32-V-NEXT:    sw a0, 8(sp)
+; RV32-V-NEXT:    sw a1, 12(sp)
 ; RV32-V-NEXT:    addi a0, sp, 8
 ; RV32-V-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV32-V-NEXT:    vlse64.v v9, (a0), zero
@@ -787,10 +787,10 @@ define <vscale x 2 x i64> @vdivu_vi_nxv2i64_0(<vscale x 2 x i64> %va) {
 ; RV32-V:       # %bb.0:
 ; RV32-V-NEXT:    addi sp, sp, -16
 ; RV32-V-NEXT:    .cfi_def_cfa_offset 16
-; RV32-V-NEXT:    lui a0, 131072
-; RV32-V-NEXT:    li a1, 1
-; RV32-V-NEXT:    sw a1, 8(sp)
-; RV32-V-NEXT:    sw a0, 12(sp)
+; RV32-V-NEXT:    li a0, 1
+; RV32-V-NEXT:    lui a1, 131072
+; RV32-V-NEXT:    sw a0, 8(sp)
+; RV32-V-NEXT:    sw a1, 12(sp)
 ; RV32-V-NEXT:    addi a0, sp, 8
 ; RV32-V-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; RV32-V-NEXT:    vlse64.v v10, (a0), zero
@@ -886,10 +886,10 @@ define <vscale x 4 x i64> @vdivu_vi_nxv4i64_0(<vscale x 4 x i64> %va) {
 ; RV32-V:       # %bb.0:
 ; RV32-V-NEXT:    addi sp, sp, -16
 ; RV32-V-NEXT:    .cfi_def_cfa_offset 16
-; RV32-V-NEXT:    lui a0, 131072
-; RV32-V-NEXT:    li a1, 1
-; RV32-V-NEXT:    sw a1, 8(sp)
-; RV32-V-NEXT:    sw a0, 12(sp)
+; RV32-V-NEXT:    li a0, 1
+; RV32-V-NEXT:    lui a1, 131072
+; RV32-V-NEXT:    sw a0, 8(sp)
+; RV32-V-NEXT:    sw a1, 12(sp)
 ; RV32-V-NEXT:    addi a0, sp, 8
 ; RV32-V-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; RV32-V-NEXT:    vlse64.v v12, (a0), zero
@@ -985,10 +985,10 @@ define <vscale x 8 x i64> @vdivu_vi_nxv8i64_0(<vscale x 8 x i64> %va) {
 ; RV32-V:       # %bb.0:
 ; RV32-V-NEXT:    addi sp, sp, -16
 ; RV32-V-NEXT:    .cfi_def_cfa_offset 16
-; RV32-V-NEXT:    lui a0, 131072
-; RV32-V-NEXT:    li a1, 1
-; RV32-V-NEXT:    sw a1, 8(sp)
-; RV32-V-NEXT:    sw a0, 12(sp)
+; RV32-V-NEXT:    li a0, 1
+; RV32-V-NEXT:    lui a1, 131072
+; RV32-V-NEXT:    sw a0, 8(sp)
+; RV32-V-NEXT:    sw a1, 12(sp)
 ; RV32-V-NEXT:    addi a0, sp, 8
 ; RV32-V-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32-V-NEXT:    vlse64.v v16, (a0), zero

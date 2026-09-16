@@ -20,9 +20,11 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Frontend/HLSL/SemanticSignatures.h"
 #include "llvm/TargetParser/Triple.h"
 #include <initializer_list>
 
@@ -60,7 +62,8 @@ using llvm::dxil::ResourceClass;
 // longer need to create builtin buffer types in HLSLExternalSemaSource.
 bool CreateHLSLAttributedResourceType(
     Sema &S, QualType Wrapped, ArrayRef<const Attr *> AttrList,
-    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo = nullptr);
+    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo = nullptr,
+    Expr *SampleCountExpr = nullptr);
 
 enum class BindingType : uint8_t { NotAssigned, Explicit, Implicit };
 
@@ -131,14 +134,29 @@ public:
   void ActOnVariableDeclarator(VarDecl *VD);
   bool ActOnUninitializedVarDecl(VarDecl *D);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
+  bool ActOnResourceMemberAccessExpr(MemberExpr *ME);
   void CheckEntryPoint(FunctionDecl *FD);
+
+  // Return true if everything is ok; returns false if there was an error.
   bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,
                           SourceLocation Loc);
+
+  bool canHaveOverloadedBinOp(QualType Ty, BinaryOperatorKind Opc);
 
   QualType handleVectorBinOpConversion(ExprResult &LHS, ExprResult &RHS,
                                        QualType LHSType, QualType RHSType,
                                        bool IsCompAssign);
   void emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS, BinaryOperatorKind Opc);
+
+  // Returns the result of converting ConstantBuffer<T> to
+  // `const hlsl_constant T&`. If `BaseExpr`'s type is not ConstantBuffer<T>
+  // then the return value is `std::nullopt`.
+  std::optional<ExprResult> tryPerformConstantBufferConversion(Expr *BaseExpr);
+
+  // Returns the conversion operator to convert `RD` to `const hlsl_constant
+  // Type&`. Returns `nullptr` if it could not be found.
+  NamedDecl *getConstantBufferConversionFunction(QualType Type,
+                                                 CXXRecordDecl *RD);
 
   /// Computes the unique Root Signature identifier from the given signature,
   /// then lookup if there is a previousy created Root Signature decl.
@@ -173,6 +191,12 @@ public:
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
+  Attr *buildMatrixLayoutTypeAttr(QualType T, const ParsedAttr &AL);
+  bool diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
+                                         SourceLocation Loc);
+  // Re-type a layout-adapting matrix builtin call \p E with \p DestType's
+  // row_major/column_major sugar so CodeGen lowers it into that layout.
+  void propagateContextualMatrixLayout(Expr *E, QualType DestType);
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
   template <typename T>
@@ -184,10 +208,12 @@ public:
   }
 
   void diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
+                                  llvm::dxbc::PSV::SemanticKind SemanticKind,
                                   std::optional<unsigned> Index);
   void handleSemanticAttr(Decl *D, const ParsedAttr &AL);
 
   void handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkExtBuiltinOutputAttr(Decl *D, const ParsedAttr &AL);
   void handleVkPushConstantAttr(Decl *D, const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
@@ -198,12 +224,17 @@ public:
   // HLSL Type trait implementations
   bool IsScalarizedLayoutCompatible(QualType T1, QualType T2) const;
   bool IsTypedResourceElementCompatible(QualType T1);
+  bool IsConstantBufferElementCompatible(QualType T1);
 
   bool CheckCompatibleParameterABI(FunctionDecl *New, FunctionDecl *Old);
 
-  // Diagnose whether the input ID is uint/unit2/uint3 type.
-  bool diagnoseInputIDType(QualType T, const ParsedAttr &AL);
-  bool diagnosePositionType(QualType T, const ParsedAttr &AL);
+  QualType ActOnTemplateShorthand(TemplateDecl *Template,
+                                  SourceLocation NameLoc);
+
+  // Diagnose whether the index type is uint/unit2/uint3 type.
+  bool diagnoseIndexType(QualType T, const ParsedAttr &AL);
+  // Diagnose whether the type is float/float2/float3/float4 type.
+  bool diagnoseFloatType(QualType T, const ParsedAttr &AL);
 
   bool CanPerformScalarCast(QualType SrcTy, QualType DestTy);
   bool CanPerformElementwiseCast(Expr *Src, QualType DestType);
@@ -215,6 +246,17 @@ public:
   bool transformInitList(const InitializedEntity &Entity, InitListExpr *Init);
   bool handleInitialization(VarDecl *VDecl, Expr *&Init);
   void deduceAddressSpace(VarDecl *Decl);
+  QualType checkMatrixComponent(Sema &S, QualType baseType, ExprValueKind &VK,
+                                SourceLocation OpLoc,
+                                const IdentifierInfo *CompName,
+                                SourceLocation CompLoc);
+
+  uint32_t getNextImplicitBindingOrderID() {
+    return ImplicitBindingNextOrderID++;
+  }
+
+  bool initGlobalResourceDecl(VarDecl *VD);
+  bool initGlobalResourceArrayDecl(VarDecl *VD);
 
 private:
   // HLSL resource type attributes need to be processed all at once.
@@ -229,6 +271,12 @@ private:
 
   // List of all resource bindings
   ResourceBindings Bindings;
+
+  // Map of local resource variables to their assigned global resources.
+  //
+  // The binding can be a nullptr, in which case, the variable has yet to be
+  // initialized or assigned to.
+  llvm::DenseMap<const VarDecl *, const DeclBindingInfo *> Assigns;
 
   // Global declaration collected for the $Globals default constant
   // buffer which will be created at the end of the translation unit.
@@ -246,14 +294,6 @@ private:
     std::optional<uint32_t> Index = std::nullopt;
   };
 
-  // Bitmask used to recall if the current semantic subtree is
-  // input, output or inout.
-  enum IOType {
-    In = 0b01,
-    Out = 0b10,
-    InOut = 0b11,
-  };
-
   // The context shared by all semantics with the same IOType during
   // flattening.
   struct SemanticContext {
@@ -264,12 +304,7 @@ private:
     // index collisions.
     llvm::StringSet<> ActiveSemantics = {};
     // The IOType of this semantic set.
-    IOType CurrentIOType;
-  };
-
-  struct SemanticStageInfo {
-    llvm::Triple::EnvironmentType Stage;
-    IOType AllowedIOTypesMask;
+    llvm::hlsl::IOType CurrentIOType;
   };
 
 private:
@@ -299,16 +334,22 @@ private:
       const Attr *A, llvm::Triple::EnvironmentType Stage,
       std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
 
-  void diagnoseSemanticStageMismatch(
-      const Attr *A, llvm::Triple::EnvironmentType Stage, IOType CurrentIOType,
-      std::initializer_list<SemanticStageInfo> AllowedStages);
+  void
+  diagnoseSemanticStageMismatch(const Attr *A,
+                                llvm::Triple::EnvironmentType Stage,
+                                llvm::hlsl::IOType CurrentIOType,
+                                llvm::dxbc::PSV::SemanticKind SemanticKind);
 
-  uint32_t getNextImplicitBindingOrderID() {
-    return ImplicitBindingNextOrderID++;
-  }
+  void handleGlobalStructOrArrayOfWithResources(VarDecl *VD);
 
-  bool initGlobalResourceDecl(VarDecl *VD);
-  bool initGlobalResourceArrayDecl(VarDecl *VD);
+  // Infer a common global binding info for an Expr
+  //
+  // Returns std::nullopt if the expr refers to non-unique global bindings.
+  // Returns nullptr if it refer to any global binding, otherwise it returns
+  // a reference to the global binding info.
+  std::optional<const DeclBindingInfo *> inferGlobalBinding(Expr *E);
+
+  void trackLocalResource(VarDecl *VDecl, Expr *E);
 };
 
 } // namespace clang

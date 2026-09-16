@@ -10,7 +10,7 @@
 ; RUN: opt -S -passes='simplifycfg<switch-to-lookup>' -mtriple=arm -relocation-model=rwpi      < %s | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
 ; RUN: opt -S -passes='simplifycfg<switch-to-lookup>' -mtriple=arm -relocation-model=ropi-rwpi < %s | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
 
-; CHECK:       @{{.*}} = private unnamed_addr constant [3 x i32] [i32 1234, i32 5678, i32 15532]
+; CHECK:       @{{.*}} = private unnamed_addr constant [3 x i16] [i16 1234, i16 5678, i16 15532]
 ; ENABLE:      @{{.*}} = private unnamed_addr constant [3 x ptr] [ptr @c1, ptr @c2, ptr @c3]
 ; DISABLE-NOT: @{{.*}} = private unnamed_addr constant [3 x ptr] [ptr @c1, ptr @c2, ptr @c3]
 ; ENABLE:      @{{.*}} = private unnamed_addr constant [3 x ptr] [ptr @g1, ptr @g2, ptr @g3]

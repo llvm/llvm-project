@@ -563,7 +563,7 @@ def P5600WriteLoadFPU : WriteSequence<[P5600WriteLoadToOtherUnits,
 // ctc1, mtc1, mthc1
 def : InstRW<[P5600WriteMoveGPRToFPU], (instrs CTC1, MTC1, MTC1_D64, MTHC1_D32,
                                         MTHC1_D64, BuildPairF64,
-                                        BuildPairF64_64)>;
+                                        BuildPairF64_64, BuildPairF64_FPR)>;
 
 // copy.[su]_[bhwd]
 def : InstRW<[P5600WriteMoveFPUToGPR], (instregex "^COPY_U_[BHW]$")>;
@@ -579,7 +579,6 @@ def : InstRW<[P5600WriteMoveFPUToGPR], (instrs BC1F, BC1FL, BC1T, BC1TL, CFC1,
 def : InstRW<[P5600WriteStoreFPUS], (instrs SDC1, SDC164, SDXC1, SDXC164,
                                      SWC1, SWXC1, SUXC1, SUXC164)>;
 def : InstRW<[P5600WriteStoreFPUS], (instregex "^ST_[BHWD]$")>;
-def : InstRW<[P5600WriteStoreFPUS], (instrs ST_F16)>;
 
 // movn.[ds], movz.[ds]
 def : InstRW<[P5600WriteStoreFPUL], (instrs MOVN_I_D32, MOVN_I_D64, MOVN_I_S,
@@ -589,7 +588,6 @@ def : InstRW<[P5600WriteStoreFPUL], (instrs MOVN_I_D32, MOVN_I_D64, MOVN_I_S,
 def : InstRW<[P5600WriteLoadFPU], (instrs LDC1, LDC164, LDXC1, LDXC164,
                                    LWC1, LWXC1, LUXC1, LUXC164)>;
 def : InstRW<[P5600WriteLoadFPU], (instregex "LD_[BHWD]")>;
-def : InstRW<[P5600WriteLoadFPU], (instrs LD_F16)>;
 
 // Unsupported Instructions
 // ========================

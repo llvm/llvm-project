@@ -664,12 +664,32 @@ def testPackUnPackOp():
 
                 return unpacked
 
+            @func.FuncOp.from_py_func(
+                MemRefType.get((128, 128), f32),
+                MemRefType.get((16, 16, 8, 8), f32),
+            )
+            def memref_pack(src, dst):
+                linalg.pack(src, dst, inner_dims_pos=[1, 0], inner_tiles=[8, 8])
+
+                linalg.unpack(
+                    dst,
+                    src,
+                    inner_dims_pos=[0, 1],
+                    inner_tiles=[8, 8],
+                )
+
         # CHECK-LABEL:   func.func @tensor_pack(
         # CHECK-SAME:      %[[VAL_0:.*]]: tensor<128x128xf32>, %[[VAL_1:.*]]: tensor<16x16x8x8xf32>) -> tensor<128x128xf32> {
         # CHECK:           %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f32
         # CHECK:           %[[VAL_3:.*]] = linalg.pack %[[VAL_0]] padding_value(%[[VAL_2]] : f32) inner_dims_pos = [1, 0] inner_tiles = [8, 8] into %[[VAL_1]] : tensor<128x128xf32> -> tensor<16x16x8x8xf32>
         # CHECK:           %[[VAL_4:.*]] = linalg.unpack %[[VAL_3]] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %[[VAL_0]] : tensor<16x16x8x8xf32> -> tensor<128x128xf32>
         # CHECK:           return %[[VAL_4]] : tensor<128x128xf32>
+        # CHECK:         }
+        # CHECK-LABEL:   func.func @memref_pack(
+        # CHECK-SAME:      %[[VAL_0:.*]]: memref<128x128xf32>, %[[VAL_1:.*]]: memref<16x16x8x8xf32>) {
+        # CHECK:           linalg.pack %[[VAL_0]] inner_dims_pos = [1, 0] inner_tiles = [8, 8] into %[[VAL_1]] : memref<128x128xf32> -> memref<16x16x8x8xf32>
+        # CHECK:           linalg.unpack %[[VAL_1]] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %[[VAL_0]] : memref<16x16x8x8xf32> -> memref<128x128xf32>
+        # CHECK:           return
         # CHECK:         }
         print(module)
 
@@ -732,7 +752,7 @@ def testElementwiseOp():
 
                 if _inferred_affine_maps := True:
                     # CHECK: linalg.elementwise
-                    # CHECK-SAME: kind=#linalg.elementwise_kind<exp>
+                    # CHECK-SAME: <exp>
                     # CHECK-SAME: ins(%[[Rect]] : tensor<8x16xf32>)
                     # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
                     op1 = linalg.ElementwiseOp(
@@ -744,7 +764,7 @@ def testElementwiseOp():
                     linalg.fill_builtin_region(op1.operation)
 
                     # CHECK: linalg.elementwise
-                    # CHECK-SAME: kind=#linalg.elementwise_kind<exp>
+                    # CHECK-SAME: <exp>
                     # CHECK-SAME: ins(%[[Rect]] : tensor<8x16xf32>)
                     # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
                     linalg.elementwise(
@@ -754,7 +774,7 @@ def testElementwiseOp():
                     )
 
                     # CHECK: linalg.elementwise
-                    # CHECK-SAME: kind=#linalg.elementwise_kind<exp>
+                    # CHECK-SAME: <exp>
                     # CHECK-SAME: ins(%[[RectMem]] : memref<8x16xf32>)
                     # CHECK-SAME: outs(%[[OutRectMem]] : memref<8x16xf32>)
                     linalg.elementwise(
@@ -766,7 +786,7 @@ def testElementwiseOp():
                 if _explicit_ident_affine_maps := True:
                     # Same as above but with default identity indexing_maps explicitly provided.
                     # CHECK: linalg.elementwise
-                    # CHECK-SAME: kind=#linalg.elementwise_kind<exp>
+                    # CHECK-SAME: <exp>
                     # CHECK-SAME: ins(%[[Rect]] : tensor<8x16xf32>)
                     # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
                     op3 = linalg.ElementwiseOp(
@@ -779,7 +799,7 @@ def testElementwiseOp():
                     linalg.fill_builtin_region(op3.operation)
 
                     # CHECK: linalg.elementwise
-                    # CHECK-SAME: kind=#linalg.elementwise_kind<exp>
+                    # CHECK-SAME: <exp>
                     # CHECK-SAME: ins(%[[RectMem]] : memref<8x16xf32>)
                     # CHECK-SAME: outs(%[[OutRectMem]] : memref<8x16xf32>)
                     linalg.elementwise(
@@ -790,7 +810,8 @@ def testElementwiseOp():
                     )
 
                 if _ops_with_non_ident_input_maps := True:
-                    # CHECK: linalg.elementwise kind=#linalg.elementwise_kind<exp>
+                    # CHECK: linalg.elementwise
+                    # CHECK-SAME: <exp>
                     # CHECK-SAME: indexing_maps = [#[[$VertLineBCastMap]], #[[$IdentMap2D]]]
                     # CHECK-SAME: ins(%[[VertLine]] : tensor<8xf32>)
                     # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
@@ -803,7 +824,8 @@ def testElementwiseOp():
                     )
                     linalg.fill_builtin_region(op4.operation)
 
-                    # CHECK: linalg.elementwise kind=#linalg.elementwise_kind<add>
+                    # CHECK: linalg.elementwise
+                    # CHECK-SAME: <add>
                     # CHECK-SAME: indexing_maps = [#[[$IdentMap2D]], #[[$VertLineBCastMap]], #[[$IdentMap2D]]]
                     # CHECK-SAME: ins(%[[Rect]], %[[VertLine]] : tensor<8x16xf32>, tensor<8xf32>)
                     # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
@@ -816,7 +838,8 @@ def testElementwiseOp():
                     )
                     linalg.fill_builtin_region(op4.operation)
 
-                    # CHECK: linalg.elementwise kind=#linalg.elementwise_kind<div>
+                    # CHECK: linalg.elementwise
+                    # CHECK-SAME: <div>
                     # CHECK-SAME: indexing_maps = [#[[$VertLineBCastMap]], #[[$HorLineBCastMap]], #[[$IdentMap2D]]]
                     # CHECK-SAME: ins(%[[VertLine]], %[[HorLine]] : tensor<8xf32>, tensor<16xf32>)
                     # CHECK-SAME: outs(%[[OutRect]] : tensor<8x16xf32>) -> tensor<8x16xf32>
@@ -839,7 +862,8 @@ def testElementwiseOp():
                         [],
                         [],
                     )
-                    # CHECK: linalg.elementwise kind=#linalg.elementwise_kind<select>
+                    # CHECK: linalg.elementwise
+                    # CHECK-SAME: <select>
                     # CHECK-SAME: indexing_maps = [#[[$VertLineBCastMap]], #[[$HorLineBCastMap]], #[[$TransMap2D]], #[[$IdentMap2D]]]
                     # CHECK-SAME: ins(%[[VertLineBoolsMem]], %[[HorLineMem]], %[[TransRectMem]] : memref<8xi1>, memref<16xf32>, memref<16x8xf32>)
                     # CHECK-SAME: outs(%[[OutRectMem]] : memref<8x16xf32>)

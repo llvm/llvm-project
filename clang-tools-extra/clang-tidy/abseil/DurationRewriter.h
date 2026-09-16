@@ -11,7 +11,7 @@
 
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include <cinttypes>
+#include <cstdint>
 #include <optional>
 
 namespace clang::tidy::abseil {
@@ -28,11 +28,11 @@ enum class DurationScale : std::uint8_t {
 
 /// Given a `Scale`, return the appropriate factory function call for
 /// constructing a `Duration` for that scale.
-llvm::StringRef getDurationFactoryForScale(DurationScale Scale);
+StringRef getDurationFactoryForScale(DurationScale Scale);
 
 /// Given a 'Scale', return the appropriate factory function call for
 /// constructing a `Time` for that scale.
-llvm::StringRef getTimeFactoryForScale(DurationScale Scale);
+StringRef getTimeFactoryForScale(DurationScale Scale);
 
 // Determine if `Node` represents a literal floating point or integral zero.
 bool isLiteralZero(const ast_matchers::MatchFinder::MatchResult &Result,
@@ -63,20 +63,20 @@ simplifyDurationFactoryArg(const ast_matchers::MatchFinder::MatchResult &Result,
 
 /// Given the name of an inverse Duration function (e.g., `ToDoubleSeconds`),
 /// return its `DurationScale`, or `std::nullopt` if a match is not found.
-std::optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name);
+std::optional<DurationScale> getScaleForDurationInverse(StringRef Name);
 
 /// Given the name of an inverse Time function (e.g., `ToUnixSeconds`),
 /// return its `DurationScale`, or `std::nullopt` if a match is not found.
-std::optional<DurationScale> getScaleForTimeInverse(llvm::StringRef Name);
+std::optional<DurationScale> getScaleForTimeInverse(StringRef Name);
 
 /// Given a `Scale` return the fully qualified inverse functions for it.
 /// The first returned value is the inverse for `double`, and the second
 /// returned value is the inverse for `int64`.
-const std::pair<llvm::StringRef, llvm::StringRef> &
+const std::pair<StringRef, StringRef> &
 getDurationInverseForScale(DurationScale Scale);
 
 /// Returns the Time inverse function name for a given `Scale`.
-llvm::StringRef getTimeInverseForScale(DurationScale Scale);
+StringRef getTimeInverseForScale(DurationScale Scale);
 
 /// Assuming `Node` has type `double` or `int` representing a time interval of
 /// `Scale`, return the expression to make it a suitable `Duration`.

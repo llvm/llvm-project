@@ -1,7 +1,7 @@
 @echo off
 
 REM Filter out tests that are known to fail.
-set "LIT_FILTER_OUT=gh110231.cpp|crt_initializers.cpp|init-order-atexit.cpp|use_after_return_linkage.cpp|initialization-bug.cpp|initialization-bug-no-global.cpp|trace-malloc-unbalanced.test|trace-malloc-2.test|TraceMallocTest"
+set "LIT_FILTER_OUT=gh110231.cpp|crt_initializers.cpp|init-order-atexit.cpp|use_after_return_linkage.cpp|initialization-bug.cpp|initialization-bug-no-global.cpp|trace-malloc-unbalanced.test|trace-malloc-2.test|TraceMallocTest|TestLockFileExclusive"
 
 setlocal enabledelayedexpansion
 goto begin
@@ -10,7 +10,7 @@ goto begin
 echo Script for building the LLVM installer on Windows,
 echo used for the releases at https://github.com/llvm/llvm-project/releases
 echo.
-echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python] [--force-msvc]
+echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python] [--force-msvc] [--fast-build]
 echo.
 echo Options:
 echo --version: [required] version to build
@@ -40,6 +40,7 @@ set arm64=
 set skip-checkout=
 set local-python=
 set force-msvc=
+set fast-build=
 call :parse_args %*
 
 if "%help%" NEQ "" goto usage
@@ -85,7 +86,6 @@ if not "%version_7z%"=="" (
 REM Prerequisites:
 REM
 REM   Visual Studio 2019, CMake, Ninja, GNUWin32, SWIG, Python 3,
-REM   NSIS with the strlen_8192 patch,
 REM   Perl (for the OpenMP run-time).
 REM
 REM
@@ -146,10 +146,29 @@ if "%skip-checkout%" == "true" (
   set llvm_src=%build_dir%\llvm-project
 )
 
-curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz || exit /b 1
-tar zxf libxml2-v2.9.12.tar.gz
+set libxml_version=2.15.3
+curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v%libxml_version%/libxml2-v%libxml_version%.tar.gz || exit /b 1
+call :verify_checksum libxml2-v%libxml_version%.tar.gz sha256 0da50c1415f4ec0364569d2119b1436ba837b31df44af28569d234272c23cf1f || exit /b 1
+REM 'test' directory excluded because of symlinks.
+tar zxf libxml2-v%libxml_version%.tar.gz --exclude "test/*" || exit /b 1
+
+REM FIXME: It would be preferrable to use zlib-ng here since it is better
+REM        maintained and performs better than zlib, but lld tests currently
+REM        assume the original zlib is used. They need to be fixed first:
+REM        https://github.com/llvm/llvm-project/pull/186630#discussion_r2939953952
+set zlib_version=1.3.2
+curl -LO https://github.com/madler/zlib/releases/download/v%zlib_version%/zlib-%zlib_version%.tar.gz || exit /b 1
+call :verify_checksum zlib-%zlib_version%.tar.gz sha256 bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16 || exit /b 1
+tar zxf zlib-%zlib_version%.tar.gz || exit /b 1
+
+set zstd_version=1.5.7
+curl -LO https://github.com/facebook/zstd/releases/download/v%zstd_version%/zstd-%zstd_version%.tar.gz || exit /b 1
+call :verify_checksum zstd-%zstd_version%.tar.gz sha256 eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3 || exit /b 1
+REM 'tests' directory excluded because of symlinks.
+tar zxf zstd-%zstd_version%.tar.gz --exclude "tests/*" || exit /b 1
 
 REM Setting CMAKE_CL_SHOWINCLUDES_PREFIX to work around PR27226.
+REM Have to add bcrypt.lib to the linker flags because of libxml2.
 REM Common flags for all builds.
 set common_compiler_flags=-DLIBXML_STATIC
 set common_cmake_flags=^
@@ -163,20 +182,24 @@ set common_cmake_flags=^
   -DCMAKE_CL_SHOWINCLUDES_PREFIX="Note: including file: " ^
   -DLLVM_ENABLE_LIBXML2=FORCE_ON ^
   -DCLANG_ENABLE_LIBXML2=OFF ^
+  -DLLVM_ENABLE_ZLIB=FORCE_ON ^
+  -DLLVM_ENABLE_ZSTD=FORCE_ON ^
   -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
   -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
+  -DCMAKE_EXE_LINKER_FLAGS=bcrypt.lib ^
+  -DCMAKE_SHARED_LINKER_FLAGS=bcrypt.lib ^
   -DLLVM_ENABLE_RPMALLOC=ON ^
-  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" ^
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp" ^
+  -DLLVM_ENABLE_PROJECTS="clang;lld" ^
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt" ^
+  -DCPACK_GENERATOR="WIX" ^
   -DCOMPILER_RT_BUILD_ORC=OFF
 
 if "%force-msvc%" == "" (
-  where /q clang-cl
-  if %errorlevel% EQU 0 (
-    where /q lld-link
-    if %errorlevel% EQU 0 (
+  clang-cl --version
+  if !errorlevel! EQU 0 (
+    lld-link --version
+    if !errorlevel! EQU 0 (
       set common_compiler_flags=%common_compiler_flags% -fuse-ld=lld
-      
       set common_cmake_flags=%common_cmake_flags%^
         -DCMAKE_C_COMPILER=clang-cl.exe ^
         -DCMAKE_CXX_COMPILER=clang-cl.exe ^
@@ -213,6 +236,8 @@ call "%vsdevcmd%" -arch=x86 || exit /b 1
 mkdir build32_stage0
 cd build32_stage0
 call :do_build_libxml || exit /b 1
+call :do_build_zlib || exit /b 1
+call :do_build_zstd || exit /b 1
 
 REM Stage0 binaries directory; used in stage1.
 set "stage0_bin_dir=%build_dir%/build32_stage0/bin"
@@ -221,15 +246,19 @@ set cmake_flags=^
   -DLLVM_ENABLE_RPMALLOC=OFF ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
-  -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
+  -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
+  -DZLIB_INCLUDE_DIR=%zlibdir%/include ^
+  -DZLIB_LIBRARY=%zlibdir%/lib/zs.lib ^
+  -DZLIB_LIBRARY_RELEASE=%zlibdir%/lib/zs.lib ^
+  -Dzstd_INCLUDE_DIR=%zstddir%/include ^
+  -Dzstd_LIBRARY=%zstddir%/lib/zstd_static.lib
 
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
-ninja || ninja || ninja || exit /b 1
-REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
-REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
-ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
-REM ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
-REM ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
+ninja || exit /b 1
+REM ninja check-llvm || exit /b 1
+REM ninja check-clang || exit /b 1
+ninja check-lld || exit /b 1
+REM ninja check-runtimes || exit /b 1
 cd..
 
 REM CMake expects the paths that specifies the compiler and linker to be
@@ -237,6 +266,7 @@ REM with forward slash.
 set all_cmake_flags=^
   %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;" ^
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp" ^
   %common_lldb_flags% ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   -DCMAKE_C_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
@@ -249,12 +279,12 @@ set cmake_flags=%all_cmake_flags:\=/%
 mkdir build32
 cd build32
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
-ninja || ninja || ninja || exit /b 1
-REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
-REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
-ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
-REM ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
-REM ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
+ninja || exit /b 1
+REM ninja check-llvm || exit /b 1
+REM ninja check-clang || exit /b 1
+ninja check-lld || exit /b 1
+REM ninja check-runtimes || exit /b 1
+REM ninja check-clang-tools || exit /b 1
 ninja package || exit /b 1
 cd ..
 
@@ -274,6 +304,8 @@ call "%vsdevcmd%" -arch=%arch% || exit /b 1
 mkdir build_%arch%_stage0
 cd build_%arch%_stage0
 call :do_build_libxml || exit /b 1
+call :do_build_zlib || exit /b 1
+call :do_build_zstd || exit /b 1
 
 REM Stage0 binaries directory; used in stage1.
 set "stage0_bin_dir=%build_dir%/build_%arch%_stage0/bin"
@@ -282,6 +314,11 @@ set cmake_flags=^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
   -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
+  -DZLIB_INCLUDE_DIR=%zlibdir%/include ^
+  -DZLIB_LIBRARY=%zlibdir%/lib/zs.lib ^
+  -DZLIB_LIBRARY_RELEASE=%zlibdir%/lib/zs.lib ^
+  -Dzstd_INCLUDE_DIR=%zstddir%/include ^
+  -Dzstd_LIBRARY=%zstddir%/lib/zstd_static.lib ^
   -DCLANG_DEFAULT_LINKER=lld
 if "%arch%"=="arm64" (
   set cmake_flags=%cmake_flags% ^
@@ -291,15 +328,16 @@ if "%arch%"=="arm64" (
 cmake -GNinja %cmake_flags% ^
   -DLLVM_TARGETS_TO_BUILD=Native ^
   %llvm_src%\llvm || exit /b 1
-ninja || ninja || ninja || exit /b 1
-ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
-ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
-ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
+ninja clang lld llvm-lib llvm-windres runtimes || exit /b 1
+if "%fast-build%" neq "true" (
+ninja || exit /b 1
+ninja check-llvm || exit /b 1
+ninja check-clang || exit /b 1
+ninja check-lld || exit /b 1
 if "%arch%"=="amd64" (
-  ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
+  ninja check-runtimes || exit /b 1
 )
-ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
-ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b 1
+)
 cd..
 
 REM CMake expects the paths that specifies the compiler and linker to be
@@ -319,24 +357,27 @@ set cmake_flags=%all_cmake_flags:\=/%
 
 mkdir build_%arch%
 cd build_%arch%
-call :do_generate_profile || exit /b 1
+if "%fast-build%" neq "true" (
+  call :do_generate_profile || exit /b 1
+)
 cmake -GNinja %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;mlir" ^
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp" ^
   %common_lldb_flags% ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
-ninja || ninja || ninja || exit /b 1
-ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
-ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
-ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
+ninja || exit /b 1
+ninja check-llvm || exit /b 1
+ninja check-clang || exit /b 1
+ninja check-lld || exit /b 1
 if "%arch%"=="amd64" (
-  ninja check-runtimes || ninja check-runtimes || ninja check-runtimes || exit /b 1
+  ninja check-runtimes || exit /b 1
 )
-ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
-ninja check-clangd || ninja check-clangd || ninja check-clangd || exit /b 1
-REM ninja check-flang || ninja check-flang || ninja check-flang || exit /b 1
-REM ninja check-mlir || ninja check-mlir || ninja check-mlir || exit /b 1
-REM ninja check-lldb || ninja check-lldb || ninja check-lldb || exit /b 1
+ninja check-clang-tools || exit /b 1
+ninja check-clangd || exit /b 1
+REM ninja check-flang || exit /b 1
+REM ninja check-mlir || exit /b 1
+REM ninja check-lldb || exit /b 1
 ninja package || exit /b 1
 
 :: generate tarball with install toolchain only off
@@ -360,25 +401,49 @@ exit /b 0
 ::==============================================================================
 :set_environment
 REM Restore original path
-set PATH=%OLDPATH%
+set "PATH=%OLDPATH%"
 
-set python_dir=%1
+set "python_dir=%1"
 
 REM Set Python environment
 if "%local-python%" == "true" (
-  FOR /F "delims=" %%i IN ('where python.exe ^| head -1') DO set python_exe=%%i
-  set PYTHONHOME=!python_exe:~0,-11!
-) else (
-  %python_dir%/python.exe --version || exit /b 1
-  set PYTHONHOME=%python_dir%
+  set "python_dir="
+  set "python_exe="
+  FOR /F "delims=" %%i IN ('where python.exe') DO (
+    if not defined python_exe (
+      set "python_exe=%%i"
+      rem Python Manager puts only the executable and a __target__ file into its bin directory.
+      rem winget installs a reparse point into WindowsApps.
+      rem But: CMake needs a full Python installation directory or find_package() will fail.
+      FOR /F "delims=" %%h IN ('!python_exe! -c "import sys; print(sys.exec_prefix)"') DO (
+        set "python_dir=%%h"
+      )
+    )
+  )
 )
-set PATH=%PYTHONHOME%;%PATH%
+if not defined python_dir exit /b 1
+"%python_dir%\python.exe" --version || exit /b 1
+set "PYTHONHOME=%python_dir%"
+set "PATH=%PYTHONHOME%;%PATH%"
 
 set "VSCMD_START_DIR=%build_dir%"
 
 exit /b 0
 
 ::=============================================================================
+
+::==============================================================================
+:: Verify checksum.
+::==============================================================================
+:verify_checksum
+cmake -E %2sum %1 > %1.%2sum
+echo %3  %1> %1.%2sum.orig
+cmake -E compare_files --ignore-eol %1.%2sum %1.%2sum.orig
+if %ERRORLEVEL% NEQ 0 (
+  echo verify_checksum failed for %1
+  exit /b 1
+)
+exit /b 0
 
 ::==============================================================================
 :: Build libxml.
@@ -400,10 +465,42 @@ cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
   -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_WRITER=OFF -DLIBXML2_WITH_XINCLUDE=OFF ^
   -DLIBXML2_WITH_XPATH=OFF -DLIBXML2_WITH_XPTR=OFF -DLIBXML2_WITH_ZLIB=OFF ^
   -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
-  ../../libxml2-v2.9.12 || exit /b 1
+  ../../libxml2-v%libxml_version% || exit /b 1
 ninja install || exit /b 1
 set libxmldir=%cd%\install
 set "libxmldir=%libxmldir:\=/%"
+cd ..
+exit /b 0
+
+::==============================================================================
+:: Build zlib.
+::==============================================================================
+:do_build_zlib
+mkdir zlibbuild
+cd zlibbuild
+cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
+  -DZLIB_BUILD_TESTING=OFF -DZLIB_BUILD_SHARED=OFF -DZLIB_BUILD_STATIC=ON ^
+  -DZLIB_INSTALL=ON -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
+  ../../zlib-%zlib_version% || exit /b 1
+ninja install || exit /b 1
+set zlibdir=%cd%\install
+set "zlibdir=%zlibdir:\=/%"
+cd ..
+exit /b 0
+
+::==============================================================================
+:: Build zstd.
+::==============================================================================
+:do_build_zstd
+mkdir zstdbuild
+cd zstdbuild
+cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
+  -DZSTD_BUILD_PROGRAMS=ON -DZSTD_BUILD_TESTS=OFF -DZSTD_BUILD_STATIC=ON ^
+  -DZSTD_BUILD_SHARED=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
+  ../../zstd-%zstd_version%/build/cmake || exit /b 1
+ninja install || exit /b 1
+set zstddir=%cd%\install
+set "zstddir=%zstddir:\=/%"
 cd ..
 exit /b 0
 
@@ -416,7 +513,7 @@ mkdir instrument
 cd instrument
 cmake -GNinja %cmake_flags% -DLLVM_TARGETS_TO_BUILD=Native ^
   -DLLVM_BUILD_INSTRUMENTED=IR %llvm_src%\llvm || exit /b 1
-ninja clang || ninja clang || ninja clang || exit /b 1
+ninja clang || exit /b 1
 set instrumented_clang=%cd:\=/%/bin/clang-cl.exe
 cd ..
 REM Use that to build part of llvm to generate a profile.

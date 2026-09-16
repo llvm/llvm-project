@@ -43,6 +43,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 
 using namespace llvm;
 
@@ -214,6 +215,16 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     LLVM_DEBUG(dbgs() << "  failed: no DPP opcode\n");
     return nullptr;
   }
+
+  const int OldIdx = AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::old);
+  const int MovDstIdx =
+      AMDGPU::getNamedOperandIdx(MovMI.getOpcode(), AMDGPU::OpName::vdst);
+  if (OldIdx != -1 &&
+      TII->getOpSize(DPPOp, OldIdx) != TII->getOpSize(MovMI, MovDstIdx)) {
+    LLVM_DEBUG(dbgs() << "  failed: old operand size differs from dst\n");
+    return nullptr;
+  }
+
   int OrigOpE32 = AMDGPU::getVOPe32(OrigOp);
   // Prior checks cover Mask with VOPC condition, but not on purpose
   auto *RowMaskOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::row_mask);
@@ -247,7 +258,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       // If we shrunk a 64bit vop3b to 32bits, just ignore the sdst
     }
 
-    const int OldIdx = AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::old);
     if (OldIdx != -1) {
       assert(OldIdx == NumOperands);
       assert(isOfRegClass(
@@ -307,14 +317,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     if (Src1) {
       assert(AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::src1) &&
              "dpp version of instruction missing src1");
-      // If subtarget does not support SGPRs for src1 operand then the
-      // requirements are the same as for src0. We check src0 instead because
-      // pseudos are shared between subtargets and allow SGPR for src1 on all.
-      if (!ST->hasDPPSrc1SGPR()) {
-        assert(TII->getOpSize(*DPPInst, Src0Idx) ==
-                   TII->getOpSize(*DPPInst, NumOperands) &&
-               "Src0 and Src1 operands should have the same size");
-      }
 
       DPPInst.add(*Src1);
       ++NumOperands;
@@ -486,6 +488,44 @@ static bool isIdentityValue(unsigned OrigMIOp, MachineOperand *OldOpnd) {
   case AMDGPU::V_MUL_U32_U24_e32:
   case AMDGPU::V_MUL_U32_U24_e64:
     if (OldOpnd->getImm() == 1)
+      return true;
+    break;
+  case AMDGPU::V_MIN_F32_e32:
+  case AMDGPU::V_MIN_F32_e64:
+    if (static_cast<uint32_t>(OldOpnd->getImm()) == /*+inf=*/0x7F800000)
+      return true;
+    break;
+  case AMDGPU::V_MAX_F32_e32:
+  case AMDGPU::V_MAX_F32_e64:
+    if (static_cast<uint32_t>(OldOpnd->getImm()) == /*-inf=*/0xFF800000)
+      return true;
+    break;
+  case AMDGPU::V_MIN_F64_e64:
+  case AMDGPU::V_MIN_NUM_F64_e64:
+    if (static_cast<uint64_t>(OldOpnd->getImm()) == /*+inf=*/0x7FF0000000000000)
+      return true;
+    break;
+  case AMDGPU::V_MAX_F64_e64:
+  case AMDGPU::V_MAX_NUM_F64_e64:
+    if (static_cast<uint64_t>(OldOpnd->getImm()) == /*-inf=*/0xFFF0000000000000)
+      return true;
+    break;
+  case AMDGPU::V_MIN_F16_e32:
+  case AMDGPU::V_MIN_F16_e64:
+  case AMDGPU::V_MIN_F16_t16_e32:
+  case AMDGPU::V_MIN_F16_t16_e64:
+  case AMDGPU::V_MIN_F16_fake16_e32:
+  case AMDGPU::V_MIN_F16_fake16_e64:
+    if (static_cast<uint16_t>(OldOpnd->getImm()) == /*+inf=*/0x7C00)
+      return true;
+    break;
+  case AMDGPU::V_MAX_F16_e32:
+  case AMDGPU::V_MAX_F16_e64:
+  case AMDGPU::V_MAX_F16_t16_e32:
+  case AMDGPU::V_MAX_F16_t16_e64:
+  case AMDGPU::V_MAX_F16_fake16_e32:
+  case AMDGPU::V_MAX_F16_fake16_e64:
+    if (static_cast<uint16_t>(OldOpnd->getImm()) == /*-inf=*/0xFC00)
       return true;
     break;
   }
@@ -714,8 +754,24 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       break;
     }
 
+    // We have to be careful to prevent trying to fold into the first source
+    // operand of instructions that apply DPP to the second source operand.
+    // This could be directly, or when folding into an instruction that will
+    // get commuted into one.
+    int FoldedOp =
+        (Use == Src0) ? static_cast<int>(OrigOp) : TII->commuteOpcode(OrigOp);
+    if (FoldedOp < 0 || TII->isSrc1DPPRevOpcode(*ST, FoldedOp)) {
+      LLVM_DEBUG(
+          dbgs() << "  failed: Use operand cannot have DPP applied to it\n");
+      break;
+    }
+
+    // Without DPALU DPP there are no 64-bit DPP encodings. The 64-bit move is
+    // rejected above, but a 32-bit move folded into a source of a 64-bit
+    // instruction reaches here, so the operands have to be checked too.
     if (!ST->hasFeature(AMDGPU::FeatureDPALU_DPP) &&
-        AMDGPU::isDPALU_DPP32BitOpc(OrigOp)) {
+        (AMDGPU::isDPALU_DPP32BitOpc(OrigOp) ||
+         AMDGPU::hasAny64BitVGPROperands(TII->get(OrigOp), *TII, *ST))) {
       LLVM_DEBUG(dbgs() << "  " << OrigMI
                         << "  failed: DPP ALU DPP is not supported\n");
       break;

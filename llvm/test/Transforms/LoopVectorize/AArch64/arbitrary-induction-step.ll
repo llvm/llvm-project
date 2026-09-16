@@ -30,7 +30,7 @@ define i32 @ind_plus2(ptr %A) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %A.addr = phi ptr [ %A, %entry ], [ %inc.ptr, %for.body ]
   %i = phi i32 [ 0, %entry ], [ %add1, %for.body ]
   %sum = phi i32 [ 0, %entry ], [ %add, %for.body ]
@@ -42,7 +42,7 @@ for.body:                                         ; preds = %entry, %for.body
   %cmp = icmp slt i32 %add1, 1024
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   %add.lcssa = phi i32 [ %add, %for.body ]
   ret i32 %add.lcssa
 }
@@ -74,7 +74,7 @@ define i32 @ind_minus2(ptr %A) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %A.addr = phi ptr [ %A, %entry ], [ %inc.ptr, %for.body ]
   %i = phi i32 [ 1024, %entry ], [ %sub, %for.body ]
   %sum = phi i32 [ 0, %entry ], [ %add, %for.body ]
@@ -86,7 +86,7 @@ for.body:                                         ; preds = %entry, %for.body
   %cmp = icmp sgt i32 %i, 2
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   %add.lcssa = phi i32 [ %add, %for.body ]
   ret i32 %add.lcssa
 }
@@ -127,7 +127,7 @@ define i32 @ptr_ind_plus2(ptr %A) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %A.addr = phi ptr [ %A, %entry ], [ %inc.ptr1, %for.body ]
   %sum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
@@ -141,7 +141,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %inc, 1024
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   %add.lcssa = phi i32 [ %add, %for.body ]
   ret i32 %add.lcssa
 }

@@ -1,7 +1,6 @@
 // RUN: %libomptarget-compileopt-run-and-check-generic
 //
 // REQUIRES: gpu
-// XFAIL: intelgpu
 
 #include <omp.h>
 #include <ompx.h>

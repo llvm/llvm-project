@@ -1,5 +1,5 @@
-; RUN: opt < %s -passes=gvn -enable-pre -S | FileCheck %s
-; RUN: opt < %s -passes="gvn<pre>" -enable-pre=false -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -enable-scalar-pre -S | FileCheck %s
+; RUN: opt < %s -passes="gvn<scalar-pre>" -enable-scalar-pre=false -S | FileCheck %s
 
 declare void @may_exit() nounwind
 

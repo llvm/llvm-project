@@ -1,17 +1,27 @@
 // RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!void = !cir.void
 
 module {
 
 cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
+cir.global "private" constant external @_ZTIf : !cir.ptr<!u8i>
 cir.global "private" constant external @_ZTIPKc : !cir.ptr<!u8i>
 
 cir.func dso_local @empty_try_block_with_catch_all() {
   cir.scope {
     cir.try {
       cir.yield
-    } catch all {
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %0 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.cleanup.scope {
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
       cir.yield
     }
   }
@@ -22,7 +32,14 @@ cir.func dso_local @empty_try_block_with_catch_all() {
 // CHECK:   cir.scope {
 // CHECK:     cir.try {
 // CHECK:       cir.yield
-// CHECK:     } catch all {
+// CHECK:     } catch all (%[[EH_TOKEN:.*]]: !cir.eh_token) {
+// CHECK:       %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[EH_TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CHECK:       cir.cleanup.scope {
+// CHECK:         cir.yield
+// CHECK:       } cleanup eh {
+// CHECK:         cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
+// CHECK:         cir.yield
+// CHECK:       }
 // CHECK:       cir.yield
 // CHECK:     }
 // CHECK:   }
@@ -33,7 +50,7 @@ cir.func dso_local @empty_try_block_with_catch_unwind() {
   cir.scope {
     cir.try {
       cir.yield
-    } unwind {
+    } unwind (%eh_token : !cir.eh_token) {
       cir.yield
     }
   }
@@ -44,7 +61,7 @@ cir.func dso_local @empty_try_block_with_catch_unwind() {
 // CHECK:   cir.scope {
 // CHECK:     cir.try {
 // CHECK:       cir.yield
-// CHECK:     } unwind {
+// CHECK:     } unwind (%{{.*}}: !cir.eh_token) {
 // CHECK:       cir.yield
 // CHECK:     }
 // CHECK:   }
@@ -55,11 +72,25 @@ cir.func dso_local @empty_try_block_with_catch_ist() {
   cir.scope {
     cir.try {
       cir.yield
-    } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] {
+    } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+      %catch_token, %0 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+      cir.cleanup.scope {
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
       cir.yield
-    } catch [type #cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>] {
+    } catch [type #cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>] (%eh_token_1 : !cir.eh_token) {
+      %catch_token_1, %1 = cir.begin_catch %eh_token_1 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!u8i>>)
+      cir.cleanup.scope {
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token_1 : !cir.catch_token
+        cir.yield
+      }
       cir.yield
-    } unwind {
+    } unwind (%eh_token_2 : !cir.eh_token) {
       cir.yield
     }
   }
@@ -70,11 +101,25 @@ cir.func dso_local @empty_try_block_with_catch_ist() {
 // CHECK:   cir.scope {
 // CHECK:     cir.try {
 // CHECK:       cir.yield
-// CHECK:     } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] {
+// CHECK:     } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%[[EH1:.*]]: !cir.eh_token) {
+// CHECK:       %[[CT1:.*]], %{{.*}} = cir.begin_catch %[[EH1]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+// CHECK:       cir.cleanup.scope {
+// CHECK:         cir.yield
+// CHECK:       } cleanup eh {
+// CHECK:         cir.end_catch %[[CT1]] : !cir.catch_token
+// CHECK:         cir.yield
+// CHECK:       }
 // CHECK:       cir.yield
-// CHECK:     } catch [type #cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>] {
+// CHECK:     } catch [type #cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>] (%[[EH2:.*]]: !cir.eh_token) {
+// CHECK:       %[[CT2:.*]], %{{.*}} = cir.begin_catch %[[EH2]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!u8i>>)
+// CHECK:       cir.cleanup.scope {
+// CHECK:         cir.yield
+// CHECK:       } cleanup eh {
+// CHECK:         cir.end_catch %[[CT2]] : !cir.catch_token
+// CHECK:         cir.yield
+// CHECK:       }
 // CHECK:       cir.yield
-// CHECK:     } unwind {
+// CHECK:     } unwind (%{{.*}}: !cir.eh_token) {
 // CHECK:       cir.yield
 // CHECK:     }
 // CHECK:   }
@@ -85,8 +130,8 @@ cir.func @empty_try_block_with_catch_unwind_contains_resume() {
   cir.scope {
     cir.try {
       cir.yield
-    } unwind {
-      cir.resume
+    } unwind (%eh_token : !cir.eh_token) {
+      cir.resume %eh_token : !cir.eh_token
     }
   }
   cir.return
@@ -96,11 +141,160 @@ cir.func @empty_try_block_with_catch_unwind_contains_resume() {
 // CHECK:   cir.scope {
 // CHECK:     cir.try {
 // CHECK:       cir.yield
-// CHECK:     } unwind {
-// CHECK:       cir.resume
+// CHECK:     } unwind (%[[ET:.*]]: !cir.eh_token) {
+// CHECK:       cir.resume %[[ET]] : !cir.eh_token
 // CHECK:     }
 // CHECK:   }
 // CHECK:   cir.return
 // CHECK: }
+
+cir.func private @_Z8externalv()
+
+// void target() throw(int)
+cir.func @filter_one_type() {
+  cir.try {
+    cir.call @_Z8externalv() : () -> ()
+    cir.yield
+  } filter [#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+    cir.resume %eh_token : !cir.eh_token
+  } unexpected (%eh_token.1 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.1 : !cir.eh_token
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func{{.*}} @filter_one_type
+// CHECK:         cir.try {
+// CHECK:           cir.call @_Z8externalv() : () -> ()
+// CHECK:           cir.yield
+// CHECK:         } filter [#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%[[TOK:.*]]: !cir.eh_token) {
+// CHECK:           cir.resume %[[TOK]] : !cir.eh_token
+// CHECK:         } unexpected (%[[UTOK:.*]]: !cir.eh_token) {
+// CHECK:           cir.eh.unexpected %[[UTOK]] : !cir.eh_token
+// CHECK:         }
+
+cir.func @filter_several_types() {
+  cir.try {
+    cir.call @_Z8externalv() : () -> ()
+    cir.yield
+  } filter [#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>,
+            #cir.global_view<@_ZTIf> : !cir.ptr<!u8i>,
+            #cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>]
+      (%eh_token : !cir.eh_token) {
+    cir.resume %eh_token : !cir.eh_token
+  } unexpected (%eh_token.1 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.1 : !cir.eh_token
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func{{.*}} @filter_several_types
+// CHECK:         } filter [#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>, #cir.global_view<@_ZTIf> : !cir.ptr<!u8i>, #cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>] (%{{.*}}: !cir.eh_token) {
+
+cir.func @filter_no_types() {
+  cir.try {
+    cir.call @_Z8externalv() : () -> ()
+    cir.yield
+  } filter [] (%eh_token : !cir.eh_token) {
+    cir.unreachable
+  } unexpected (%eh_token.1 : !cir.eh_token) {
+    cir.eh.unexpected %eh_token.1 : !cir.eh_token
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func{{.*}} @filter_no_types
+// CHECK:         } filter [] (%{{.*}}: !cir.eh_token) {
+// CHECK:           cir.unreachable
+// CHECK:         } unexpected (%[[UTOK:.*]]: !cir.eh_token) {
+// CHECK:           cir.eh.unexpected %[[UTOK]] : !cir.eh_token
+
+cir.func @flat_dispatch_filter() {
+  cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb5
+^bb2:
+  %0 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%0 : !cir.eh_token)
+^bb3(%eh_token: !cir.eh_token):
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    filter(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb6
+  ]
+^bb4(%eh_token.1: !cir.eh_token):
+  cir.eh.unexpected %eh_token.1 : !cir.eh_token
+^bb5:
+  cir.return
+^bb6(%eh_token.2: !cir.eh_token):
+  cir.resume %eh_token.2 : !cir.eh_token
+}
+
+// CHECK-LABEL: cir.func{{.*}} @flat_dispatch_filter
+// CHECK:         cir.eh.dispatch %{{.*}} : !cir.eh_token [
+// CHECK:           filter(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^[[VIOLATED:.*]],
+// CHECK:           unwind : ^[[PERMITTED:.*]]
+// CHECK:         ]
+// CHECK:       ^[[VIOLATED]](%[[UTOK:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.unexpected %[[UTOK]] : !cir.eh_token
+
+cir.func @flat_dispatch_filter_types() {
+  cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb5
+^bb2:
+  %0 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%0 : !cir.eh_token)
+^bb3(%eh_token: !cir.eh_token):
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTIl> : !cir.ptr<!u8i>) : ^bb7,
+    filter(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>,
+           #cir.global_view<@_ZTIf> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb6
+  ]
+^bb4(%eh_token.1: !cir.eh_token):
+  cir.eh.unexpected %eh_token.1 : !cir.eh_token
+^bb5:
+  cir.return
+^bb6(%eh_token.2: !cir.eh_token):
+  cir.resume %eh_token.2 : !cir.eh_token
+^bb7(%eh_token.3: !cir.eh_token):
+  cir.br ^bb5
+}
+
+// CHECK-LABEL: cir.func{{.*}} @flat_dispatch_filter_types
+// CHECK:           catch(#cir.global_view<@_ZTIl> : !cir.ptr<!u8i>) : ^{{.*}},
+// CHECK:           filter(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>, #cir.global_view<@_ZTIf> : !cir.ptr<!u8i>) : ^{{.*}},
+// CHECK:           unwind : ^{{.*}}
+
+// The landing pad accumulates the clauses of every dispatch the exception can
+// reach, so a catch clause and a filter clause may appear together.
+cir.func @inflight_filter() {
+  cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb3
+^bb2:
+  %exception_ptr, %type_id = cir.eh.inflight_exception filter [@_ZTIi]
+  cir.br ^bb3
+^bb3:
+  cir.return
+}
+
+// CHECK-LABEL: cir.func{{.*}} @inflight_filter
+// CHECK:         %{{.*}}, %{{.*}} = cir.eh.inflight_exception filter [@_ZTIi]
+
+cir.func @inflight_catch_and_empty_filter() {
+  cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb3
+^bb2:
+  %exception_ptr, %type_id =
+      cir.eh.inflight_exception cleanup [@_ZTIl] filter []
+  cir.br ^bb3
+^bb3:
+  cir.return
+}
+
+// CHECK-LABEL: cir.func{{.*}} @inflight_catch_and_empty_filter
+// CHECK:         cir.eh.inflight_exception cleanup [@_ZTIl] filter []
 
 }

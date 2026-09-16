@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
@@ -279,7 +280,8 @@ public:
     /// handle the appropriate COPY (either to or from) and mark any
     /// relevant uses/defines as needed.
     virtual void assignValueToReg(Register ValVReg, Register PhysReg,
-                                  const CCValAssign &VA) = 0;
+                                  const CCValAssign &VA,
+                                  ISD::ArgFlagsTy Flags) = 0;
 
     /// The specified value has been assigned to a stack
     /// location. Load or store it there, with appropriate extension
@@ -339,7 +341,8 @@ public:
 
     /// Provides a default implementation for argument handling.
     void assignValueToReg(Register ValVReg, Register PhysReg,
-                          const CCValAssign &VA) override;
+                          const CCValAssign &VA,
+                          ISD::ArgFlagsTy Flags = {}) override;
   };
 
   /// Base class for ValueHandlers used for arguments passed to a function call,
@@ -388,7 +391,7 @@ protected:
   void splitToValueTypes(const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
                          const DataLayout &DL, CallingConv::ID CallConv,
-                         SmallVectorImpl<uint64_t> *Offsets = nullptr) const;
+                         SmallVectorImpl<TypeSize> *Offsets = nullptr) const;
 
   /// Analyze the argument list in \p Args, using \p Assigner to populate \p
   /// CCInfo. This will determine the types and locations to use for passed or
@@ -484,6 +487,26 @@ public:
   void insertSRetOutgoingArgument(MachineIRBuilder &MIRBuilder,
                                   const CallBase &CB,
                                   CallLoweringInfo &Info) const;
+
+  /// Create a sequence of instructions to combine pieces split into register
+  /// typed values to the original IR value. \p OrigRegs contains the
+  /// destination value registers of type \p LLTy, and \p Regs contains the
+  /// legalized pieces with type \p PartLLT. This is used for incoming values
+  /// (physregs to vregs).
+  static void buildCopyFromRegs(MachineIRBuilder &B,
+                                ArrayRef<Register> OrigRegs,
+                                ArrayRef<Register> Regs, LLT LLTy, LLT PartLLT,
+                                const ISD::ArgFlagsTy Flags);
+
+  /// Create a sequence of instructions to expand the value in \p SrcReg (of
+  /// type
+  /// \p SrcTy) to the types in \p DstRegs (of type \p PartTy). \p ExtendOp
+  /// should contain the type of scalar value extension if necessary.
+  ///
+  /// This is used for outgoing values (vregs to physregs)
+  static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
+                              Register SrcReg, LLT SrcTy, LLT PartTy,
+                              unsigned ExtendOp = TargetOpcode::G_ANYEXT);
 
   /// \return True if the return type described by \p Outs can be returned
   /// without performing sret demotion.

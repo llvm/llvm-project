@@ -58,7 +58,6 @@ struct ConfigurationEnvironmentTy {
   int32_t MinTeams = -1;
   int32_t MaxTeams = -1;
   int32_t ReductionDataSize = 0;
-  int32_t ReductionBufferLength = 0;
   //}
 };
 
@@ -70,10 +69,24 @@ struct KernelEnvironmentTy {
   DynamicEnvironmentTy *DynamicEnv = nullptr;
 };
 
+/// The fallback types for the dynamic cgroup memory.
+enum class DynCGroupMemFallbackType : uint8_t {
+  /// None. Used for indicating that no fallback was triggered.
+  None = 0,
+  /// Abort the execution.
+  Abort = None,
+  /// Return null pointer.
+  Null = 1,
+  /// Allocate from a implementation defined memory space.
+  DefaultMem = 2
+};
+
 struct KernelLaunchEnvironmentTy {
-  uint32_t ReductionCnt = 0;
-  uint32_t ReductionIterCnt = 0;
   void *ReductionBuffer = nullptr;
+  void *DynCGroupMemFbPtr = nullptr;
+  uint32_t ReductionTeamsDone = 0;
+  uint32_t DynCGroupMemSize = 0;
+  DynCGroupMemFallbackType DynCGroupMemFb = DynCGroupMemFallbackType::None;
 };
 
 #endif // OMPTARGET_SHARED_ENVIRONMENT_H

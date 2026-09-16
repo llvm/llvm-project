@@ -17,9 +17,12 @@
 #include "../lib/Transforms/Vectorize/VPlanTransforms.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
@@ -41,6 +44,10 @@ protected:
   std::unique_ptr<ScalarEvolution> SE;
   std::unique_ptr<TargetLibraryInfoImpl> TLII;
   std::unique_ptr<TargetLibraryInfo> TLI;
+  std::unique_ptr<CycleInfo> CI;
+  std::unique_ptr<BranchProbabilityInfo> BPI;
+
+  MapVector<PHINode *, InductionDescriptor> Inductions;
 
   VPlanTestIRBase()
       : DL("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-"
@@ -62,23 +69,50 @@ protected:
     LI.reset(new LoopInfo(*DT));
     AC.reset(new AssumptionCache(F));
     SE.reset(new ScalarEvolution(F, *TLI, *AC, *DT, *LI));
+    CI.reset(new CycleInfo());
+    CI->compute(F);
+    BPI.reset(new BranchProbabilityInfo(F, *CI, TLI.get(), DT.get()));
   }
 
   /// Build the VPlan for the loop starting from \p LoopHeader.
-  VPlanPtr buildVPlan(BasicBlock *LoopHeader, bool HasUncountableExit = false) {
+  VPlanPtr buildVPlan(BasicBlock *LoopHeader,
+                      std::optional<UncountableExitStyle> Style = std::nullopt,
+                      bool CreateLoopRegions = true) {
     Function &F = *LoopHeader->getParent();
     assert(!verifyFunction(F) && "input function must be valid");
     doAnalysis(F);
 
     Loop *L = LI->getLoopFor(LoopHeader);
     PredicatedScalarEvolution PSE(*SE, *L);
-    auto Plan = VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
-                                             {}, PSE);
+    auto Plan = VPlanTransforms::buildVPlan0(
+        L, *LI, IntegerType::get(*Ctx, 64), PSE, /*LVer=*/nullptr,
+        [this]() -> const BranchProbabilityInfo & { return *BPI; });
 
-    VPlanTransforms::handleEarlyExits(*Plan, HasUncountableExit);
-    VPlanTransforms::addMiddleCheck(*Plan, true, false);
+    if (Style) {
+      Inductions.clear();
+      // handleUncountableEarlyExits requires induction phi recipes.
+      for (PHINode &Phi : LoopHeader->phis()) {
+        InductionDescriptor ID;
+        if (InductionDescriptor::isInductionPHI(&Phi, L, PSE, ID))
+          Inductions[&Phi] = ID;
+      }
+      VPDominatorTree VPDT(*Plan);
+      VPlanTransforms::createHeaderPhiRecipes(
+          *Plan, PSE, *L, VPDT, Inductions,
+          MapVector<PHINode *, RecurrenceDescriptor>(),
+          SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
+          /*AllowReordering=*/false);
+    }
 
-    VPlanTransforms::createLoopRegions(*Plan);
+    if (Style)
+      VPlanTransforms::handleUncountableEarlyExits(*Plan, L, PSE, *DT, AC.get(),
+                                                   *Style);
+    else
+      VPlanTransforms::handleCountableEarlyExits(*Plan);
+    VPlanTransforms::addMiddleCheck(*Plan);
+
+    if (CreateLoopRegions)
+      VPlanTransforms::createLoopRegions(*Plan, {});
     return Plan;
   }
 };
@@ -96,11 +130,12 @@ protected:
     FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), false);
     F = Function::Create(FTy, GlobalValue::ExternalLinkage, "f", M.get());
     ScalarHeader = BasicBlock::Create(C, "scalar.header", F);
-    BranchInst::Create(ScalarHeader, ScalarHeader);
+    UncondBrInst::Create(ScalarHeader, ScalarHeader);
   }
 
   VPlan &getPlan() {
-    Plans.push_back(std::make_unique<VPlan>(ScalarHeader));
+    Plans.push_back(
+        std::make_unique<VPlan>(ScalarHeader, IntegerType::get(C, 64)));
     VPlan &Plan = *Plans.back();
     VPValue *DefaultTC = Plan.getConstantInt(32, 1024);
     Plan.setTripCount(DefaultTC);

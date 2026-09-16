@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,GFX678 %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,GFX678 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=GCN,GFX678 %s
+; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefixes=GCN,GFX678 %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 
 declare double @llvm.minnum.f64(double, double) #0
 declare <2 x double> @llvm.minnum.v2f64(<2 x double>, <2 x double>) #0
@@ -113,5 +113,5 @@ define amdgpu_kernel void @test_fmin_v16f64(ptr addrspace(1) %out, <16 x double>
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "denormal-fp-math"="ieee,ieee" }
-attributes #2 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #1 = { nounwind denormal_fpenv(ieee|ieee) }
+attributes #2 = { nounwind denormal_fpenv(preservesign) }

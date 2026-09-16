@@ -40,11 +40,10 @@ static cl::opt<RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode> Mode(
             RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development,
             "development", "for training")));
 
-static cl::opt<bool> EnableLocalReassignment(
+static cl::opt<cl::boolOrDefault> EnableLocalReassignment(
     "enable-local-reassign", cl::Hidden,
     cl::desc("Local reassignment can yield better allocation decisions, but "
-             "may be compile time intensive"),
-    cl::init(false));
+             "may be compile time intensive"));
 
 namespace llvm {
 cl::opt<unsigned> EvictInterferenceCutoff(
@@ -184,9 +183,26 @@ RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(const MachineFunction &MF,
       LIS(RA.getLiveIntervals()), VRM(RA.getVirtRegMap()),
       MRI(&VRM->getRegInfo()), TRI(MF.getSubtarget().getRegisterInfo()),
       RegClassInfo(RA.getRegClassInfo()), RegCosts(TRI->getRegisterCosts(MF)),
-      EnableLocalReassign(EnableLocalReassignment ||
-                          MF.getSubtarget().enableRALocalReassignment(
-                              MF.getTarget().getOptLevel())) {}
+      EnableLocalReassign(
+          EnableLocalReassignment == cl::boolOrDefault::BOU_TRUE ||
+          (EnableLocalReassignment != cl::boolOrDefault::BOU_FALSE &&
+           MF.getSubtarget().enableRALocalReassignment(
+               MF.getTarget().getOptLevel()))) {}
+
+/// isUrgentEviction - Returns true if this is an urgent eviction. Once a live
+/// range becomes small enough, it is urgent that we find a register for it.
+/// This is indicated by an infinite spill weight. These urgent live ranges
+/// get to evict almost anything.
+///
+/// Also allow urgent evictions of unspillable ranges from a strictly larger
+/// allocation order.
+bool RegAllocEvictionAdvisor::isUrgentEviction(const LiveInterval &VirtReg,
+                                               const LiveInterval &Intf) const {
+  return !VirtReg.isSpillable() &&
+         (Intf.isSpillable() ||
+          RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg())) <
+              RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(Intf.reg())));
+}
 
 /// shouldEvict - determine if A should evict the assigned live range B. The
 /// eviction policy defined by this function together with the allocation order
@@ -278,18 +294,8 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
       // Never evict spill products. They cannot split or spill.
       if (RA.getExtraInfo().getStage(*Intf) == RS_Done)
         return false;
-      // Once a live range becomes small enough, it is urgent that we find a
-      // register for it. This is indicated by an infinite spill weight. These
-      // urgent live ranges get to evict almost anything.
-      //
-      // Also allow urgent evictions of unspillable ranges from a strictly
-      // larger allocation order.
-      bool Urgent =
-          !VirtReg.isSpillable() &&
-          (Intf->isSpillable() ||
-           RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg())) <
-               RegClassInfo.getNumAllocatableRegs(
-                   MRI->getRegClass(Intf->reg())));
+
+      bool Urgent = isUrgentEviction(VirtReg, *Intf);
       // Only evict older cascades or live ranges without a cascade.
       unsigned IntfCascade = RA.getExtraInfo().getCascade(Intf->reg());
       if (Cascade == IntfCascade)

@@ -40,6 +40,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSSAUpdater.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
@@ -63,7 +64,7 @@ using namespace llvm;
 STATISTIC(NumCondBranchesTraced, "Number of conditional branches traced");
 STATISTIC(NumBranchesUntraced, "Number of branches unable to trace");
 STATISTIC(NumAddrRegsHardened,
-          "Number of address mode used registers hardaned");
+          "Number of address mode used registers hardened");
 STATISTIC(NumPostLoadRegsHardened,
           "Number of post-load register values hardened");
 STATISTIC(NumCallsOrJumpsHardened,
@@ -231,6 +232,7 @@ char X86SpeculativeLoadHardeningLegacy::ID = 0;
 
 void X86SpeculativeLoadHardeningLegacy::getAnalysisUsage(
     AnalysisUsage &AU) const {
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -356,7 +358,6 @@ static void canonicalizePHIOperands(MachineFunction &MF) {
 
       // Now walk the duplicate indices, removing both the block and value. Note
       // that these are stored as a vector making this element-wise removal
-      // :w
       // potentially quadratic.
       //
       // FIXME: It is really frustrating that we have to use a quadratic
@@ -501,7 +502,6 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
     ZeroEFLAGSDefOp->setIsDead(true);
     BuildMI(Entry, EntryInsertPt, Loc, TII->get(X86::SUBREG_TO_REG),
             PS->InitialReg)
-        .addImm(0)
         .addReg(PredStateSubReg)
         .addImm(X86::sub_32bit);
   }
@@ -1926,7 +1926,7 @@ Register X86SpeculativeLoadHardeningImpl::hardenValueInRegister(
     unsigned SubRegImm = SubRegImms[Log2_32(Bytes)];
     Register NarrowStateReg = MRI->createVirtualRegister(RC);
     BuildMI(MBB, InsertPt, Loc, TII->get(TargetOpcode::COPY), NarrowStateReg)
-        .addReg(StateReg, 0, SubRegImm);
+        .addReg(StateReg, {}, SubRegImm);
     StateReg = NarrowStateReg;
   }
 

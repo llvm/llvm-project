@@ -24,7 +24,7 @@ omp.declare_reduction @max_f32 : f32 init {
   omp.yield(%0 : f32)
 } combiner {
 ^bb0(%arg0: f32, %arg1: f32):
-  %0 = llvm.intr.maxnum(%arg0, %arg1) {fastmathFlags = #llvm.fastmath<contract>} : (f32, f32) -> f32
+  %0 = llvm.intr.maxnum(%arg0, %arg1) fastmath<contract> : (f32, f32) -> f32
   omp.yield(%0 : f32)
 }
 
@@ -72,7 +72,7 @@ llvm.func @wsloop_private_(%arg0: !llvm.ptr {fir.bindc_name = "y"}) attributes {
 
 // Third, check that reduction init took place.
 // CHECK: [[RED_INIT_BB]]:
-// CHECK:   store float 0x{{.*}}, ptr %[[FLT]], align 4
+// CHECK:   store float f0x{{.*}}, ptr %[[FLT]], align 4
 
 // Finally, check for the private dealloc region
 // CHECK:   call void @foo_free(ptr %[[CHR]])

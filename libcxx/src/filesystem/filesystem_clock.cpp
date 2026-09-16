@@ -14,11 +14,11 @@
 #include <ratio>
 #include <time.h>
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  include "time_utils.h"
 #endif
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <windows.h>
@@ -42,6 +42,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated")
@@ -50,7 +51,7 @@ _LIBCPP_DIAGNOSTIC_POP
 
 _FilesystemClock::time_point _FilesystemClock::now() noexcept {
   typedef chrono::duration<rep> __secs;
-#if defined(_LIBCPP_WIN32API)
+#if defined(_WIN32)
   typedef chrono::duration<rep, nano> __nsecs;
   FILETIME time;
   GetSystemTimeAsFileTime(&time);
@@ -76,4 +77,5 @@ _FilesystemClock::time_point _FilesystemClock::now() noexcept {
 #endif
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM

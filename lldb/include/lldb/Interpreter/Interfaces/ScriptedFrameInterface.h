@@ -49,6 +49,31 @@ public:
   virtual std::optional<std::string> GetRegisterContext() {
     return std::nullopt;
   }
+
+  virtual lldb::ValueObjectListSP GetVariables() { return nullptr; }
+
+  /// Report which kind of variable \a valobj is presented as, for instance
+  /// \a eValueTypeVariableLocal to have it listed among the frame's locals.
+  ///
+  /// A ValueObject the ScriptedFrame built itself should have
+  /// \a eValueTypeSyntheticFlag set in the ValueType it reports. LLDB uses that
+  /// flag to skip the scope rules it applies to a declared variable, which a
+  /// made-up ValueObject cannot satisfy: it has no storage to locate, so an
+  /// in-scope-only listing drops it. A variable the frame is only forwarding
+  /// should leave the flag clear, so those rules still apply to it.
+  ///
+  /// If this returns std::nullopt, LLDB keeps the ValueType the ValueObject
+  /// already reports and adds the synthetic flag to it.
+  virtual std::optional<lldb::ValueType>
+  GetValueTypeForVariable(lldb::ValueObjectSP valobj) {
+    return std::nullopt;
+  }
+
+  virtual lldb::ValueObjectSP
+  GetValueObjectForVariableExpression(llvm::StringRef expr, uint32_t options,
+                                      Status &error) {
+    return nullptr;
+  }
 };
 } // namespace lldb_private
 

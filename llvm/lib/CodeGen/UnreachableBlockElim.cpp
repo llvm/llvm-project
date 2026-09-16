@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
@@ -46,10 +47,7 @@ class UnreachableBlockElimLegacyPass : public FunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  UnreachableBlockElimLegacyPass() : FunctionPass(ID) {
-    initializeUnreachableBlockElimLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+  UnreachableBlockElimLegacyPass() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addPreserved<DominatorTreeWrapperPass>();
@@ -115,6 +113,7 @@ void UnreachableMachineBlockElimLegacy::getAnalysisUsage(
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
   AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -236,11 +235,6 @@ bool UnreachableMachineBlockElim::run(MachineFunction &F) {
   }
 
   F.RenumberBlocks();
-  if (MDT)
-    MDT->updateBlockNumbers();
-
-  if (MPDT)
-    MPDT->updateBlockNumbers();
 
   return (!DeadBlocks.empty() || ModifiedPHI);
 }

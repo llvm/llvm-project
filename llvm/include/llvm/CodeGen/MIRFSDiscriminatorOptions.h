@@ -16,7 +16,7 @@
 #include "llvm/Support/CommandLine.h"
 
 namespace llvm {
-extern cl::opt<bool> ImprovedFSDiscriminator;
+extern LLVM_ABI cl::opt<bool> ImprovedFSDiscriminator;
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_MIRFSDISCRIMINATOR_OPTIONS_H

@@ -47,15 +47,31 @@ SparcInstrInfo::SparcInstrInfo(const SparcSubtarget &ST)
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than loading from the stack slot.
 Register SparcInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
-                                             int &FrameIndex) const {
-  if (MI.getOpcode() == SP::LDri || MI.getOpcode() == SP::LDXri ||
-      MI.getOpcode() == SP::LDFri || MI.getOpcode() == SP::LDDFri ||
-      MI.getOpcode() == SP::LDQFri) {
-    if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
-        MI.getOperand(2).getImm() == 0) {
-      FrameIndex = MI.getOperand(1).getIndex();
-      return MI.getOperand(0).getReg();
-    }
+                                             int &FrameIndex,
+                                             TypeSize &MemBytes) const {
+  switch (MI.getOpcode()) {
+  default:
+    return 0;
+  case SP::LDri:
+    MemBytes = TypeSize::getFixed(4);
+    break;
+  case SP::LDXri:
+    MemBytes = TypeSize::getFixed(8);
+    break;
+  case SP::LDFri:
+    MemBytes = TypeSize::getFixed(4);
+    break;
+  case SP::LDDFri:
+    MemBytes = TypeSize::getFixed(8);
+    break;
+  case SP::LDQFri:
+    MemBytes = TypeSize::getFixed(16);
+    break;
+  }
+  if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
+      MI.getOperand(2).getImm() == 0) {
+    FrameIndex = MI.getOperand(1).getIndex();
+    return MI.getOperand(0).getReg();
   }
   return 0;
 }
@@ -66,15 +82,31 @@ Register SparcInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than storing to the stack slot.
 Register SparcInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
-                                            int &FrameIndex) const {
-  if (MI.getOpcode() == SP::STri || MI.getOpcode() == SP::STXri ||
-      MI.getOpcode() == SP::STFri || MI.getOpcode() == SP::STDFri ||
-      MI.getOpcode() == SP::STQFri) {
-    if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
-        MI.getOperand(1).getImm() == 0) {
-      FrameIndex = MI.getOperand(0).getIndex();
-      return MI.getOperand(2).getReg();
-    }
+                                            int &FrameIndex,
+                                            TypeSize &MemBytes) const {
+  switch (MI.getOpcode()) {
+  default:
+    return 0;
+  case SP::STri:
+    MemBytes = TypeSize::getFixed(4);
+    break;
+  case SP::STXri:
+    MemBytes = TypeSize::getFixed(8);
+    break;
+  case SP::STFri:
+    MemBytes = TypeSize::getFixed(4);
+    break;
+  case SP::STDFri:
+    MemBytes = TypeSize::getFixed(8);
+    break;
+  case SP::STQFri:
+    MemBytes = TypeSize::getFixed(16);
+    break;
+  }
+  if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
+      MI.getOperand(1).getImm() == 0) {
+    FrameIndex = MI.getOperand(0).getIndex();
+    return MI.getOperand(2).getReg();
   }
   return 0;
 }
@@ -624,20 +656,75 @@ Register SparcInstrInfo::getGlobalBaseReg(MachineFunction *MF) const {
   return GlobalBaseReg;
 }
 
+bool SparcInstrInfo::needsUnimp(const MachineInstr &MI,
+                                unsigned &StructSize) const {
+  if (!MI.isCall())
+    return false;
+
+  unsigned StructSizeOpNum = 0;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unknown call opcode.");
+  case SP::CALL:
+    StructSizeOpNum = 1;
+    break;
+  case SP::CALLrr:
+  case SP::CALLri:
+    StructSizeOpNum = 2;
+    break;
+  case SP::TLS_CALL:
+    return false;
+  case SP::TAIL_CALLri:
+  case SP::TAIL_CALL:
+    return false;
+  }
+
+  const MachineOperand &MO = MI.getOperand(StructSizeOpNum);
+  if (!MO.isImm())
+    return false;
+
+  // A zero-sized return value has nothing for the callee to copy, so GCC emits
+  // no unimp for it and returns to the instruction right after the delay slot.
+  // We replicate this behavior here.
+  StructSize = MO.getImm();
+  return StructSize != 0;
+}
+
 unsigned SparcInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
 
   if (MI.isInlineAsm()) {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo());
+  }
+
+  if (Opcode == TargetOpcode::BUNDLE)
+    return getInstBundleSize(MI);
+
+  if (MI.getOpcode() == SP::GETPCX) {
+    const TargetMachine &TM = MI.getParent()->getParent()->getTarget();
+    if (TM.isPositionIndependent())
+      return 16;
+    switch (TM.getCodeModel()) {
+    default:
+      llvm_unreachable("Unsupported absolute code model");
+    case CodeModel::Small:
+      return 8;
+    case CodeModel::Medium:
+      return 16;
+    case CodeModel::Large:
+      return 24;
+    }
   }
 
   // If the instruction has a delay slot, be conservative and also include
   // it for sizing purposes. This is done so that the BranchRelaxation pass
   // will not mistakenly mark out-of-range branches as in-range.
-  if (MI.hasDelaySlot())
-    return get(Opcode).getSize() * 2;
+  if (MI.hasDelaySlot()) {
+    unsigned StructSize = 0;
+    return get(Opcode).getSize() * (2 + needsUnimp(MI, StructSize));
+  }
   return get(Opcode).getSize();
 }
 

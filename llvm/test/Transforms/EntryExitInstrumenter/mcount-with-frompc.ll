@@ -9,7 +9,7 @@
 
 define void @f1() "instrument-function-entry-inlined"="_mcount" {
 ; CHECK-LABEL: define void @f1() {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    call void @_mcount(ptr [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;

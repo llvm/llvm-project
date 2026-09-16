@@ -94,6 +94,9 @@ protected:
 
   bool IsLittleEndian;
 
+  /// The selected ABI variant.
+  PPCABI TargetABI = PPC_ABI_UNKNOWN;
+
   POPCNTDKind HasPOPCNTD;
 
   const PPCTargetMachine &TM;
@@ -115,7 +118,7 @@ public:
   /// of the specified triple.
   ///
   PPCSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU, StringRef FS,
-               const PPCTargetMachine &TM);
+               StringRef ABIName, const PPCTargetMachine &TM);
 
   ~PPCSubtarget() override;
 
@@ -208,6 +211,12 @@ public:
   bool isSVR4ABI() const { return !isAIXABI(); }
   bool isELFv2ABI() const;
 
+  /// Returns true when the AIX extended Altivec ABI ("vec-extabi") is in
+  /// effect, allowing use of the nonvolatile vector registers.
+  bool isAIXExtendedAltivecABI() const {
+    return TargetABI == PPC_ABI_AIX_EXTABI;
+  }
+
   bool is64BitELFABI() const { return isSVR4ABI() && isPPC64(); }
   bool is32BitELFABI() const { return isSVR4ABI() && !isPPC64(); }
   bool isUsingPCRelativeCalls() const;
@@ -284,6 +293,10 @@ public:
 
   MCRegister getStackPointerRegister() const {
     return IsPPC64 ? PPC::X1 : PPC::R1;
+  }
+
+  MCRegister getGlueCodeDescriptorRegister() const {
+    return IsPPC64 ? PPC::X11 : PPC::R11;
   }
 
   bool isXRaySupported() const override { return IsPPC64 && IsLittleEndian; }

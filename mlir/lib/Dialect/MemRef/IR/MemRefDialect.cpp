@@ -55,8 +55,9 @@ void mlir::memref::MemRefDialect::initialize() {
   declarePromisedInterfaces<RuntimeVerifiableOpInterface, AssumeAlignmentOp,
                             AtomicRMWOp, CastOp, CopyOp, DimOp, ExpandShapeOp,
                             GenericAtomicRMWOp, LoadOp, StoreOp, SubViewOp>();
-  declarePromisedInterfaces<ValueBoundsOpInterface, AllocOp, AllocaOp, CastOp,
-                            DimOp, GetGlobalOp, RankOp, SubViewOp>();
+  declarePromisedInterfaces<
+      ValueBoundsOpInterface, AllocOp, AllocaOp, AssumeAlignmentOp, CastOp,
+      DimOp, ExtractStridedMetadataOp, GetGlobalOp, RankOp, SubViewOp>();
   declarePromisedInterface<DestructurableTypeInterface, MemRefType>();
 }
 

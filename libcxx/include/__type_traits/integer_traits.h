@@ -10,6 +10,11 @@
 #define _LIBCPP___TYPE_TRAITS_INTEGER_TRAITS_H
 
 #include <__config>
+#include <__type_traits/is_integral.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/is_signed.h>
+#include <__type_traits/is_unqualified.h>
+#include <__type_traits/is_unsigned.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -17,43 +22,35 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// This trait is to determine whether a type is a /signed integer type/
-// See [basic.fundamental]/p1
-template <class _Tp>
-inline const bool __is_signed_integer_v = false;
-template <>
-inline const bool __is_signed_integer_v<signed char> = true;
-template <>
-inline const bool __is_signed_integer_v<signed short> = true;
-template <>
-inline const bool __is_signed_integer_v<signed int> = true;
-template <>
-inline const bool __is_signed_integer_v<signed long> = true;
-template <>
-inline const bool __is_signed_integer_v<signed long long> = true;
-#if _LIBCPP_HAS_INT128
-template <>
-inline const bool __is_signed_integer_v<__int128_t> = true;
-#endif
+// /signed integer type/ and /unsigned integer type/ per [basic.fundamental]
+// /p1-2: specific unqualified types plus extended integer types. bool and
+// character types are integral but excluded. cv-qualified versions are
+// distinct types ([basic.type.qualifier]) and so excluded.
 
-// This trait is to determine whether a type is an /unsigned integer type/
-// See [basic.fundamental]/p2
 template <class _Tp>
-inline const bool __is_unsigned_integer_v = false;
+inline const bool __is_character_v = false;
 template <>
-inline const bool __is_unsigned_integer_v<unsigned char> = true;
+inline const bool __is_character_v<char> = true;
 template <>
-inline const bool __is_unsigned_integer_v<unsigned short> = true;
+inline const bool __is_character_v<wchar_t> = true;
+#if _LIBCPP_HAS_CHAR8_T
 template <>
-inline const bool __is_unsigned_integer_v<unsigned int> = true;
-template <>
-inline const bool __is_unsigned_integer_v<unsigned long> = true;
-template <>
-inline const bool __is_unsigned_integer_v<unsigned long long> = true;
-#if _LIBCPP_HAS_INT128
-template <>
-inline const bool __is_unsigned_integer_v<__uint128_t> = true;
+inline const bool __is_character_v<char8_t> = true;
 #endif
+template <>
+inline const bool __is_character_v<char16_t> = true;
+template <>
+inline const bool __is_character_v<char32_t> = true;
+
+template <class _Tp>
+inline const bool __is_signed_integer_v =
+    is_integral<_Tp>::value && is_signed<_Tp>::value && !__is_character_v<_Tp> && !is_same<_Tp, bool>::value &&
+    __is_unqualified_v<_Tp>;
+
+template <class _Tp>
+inline const bool __is_unsigned_integer_v =
+    is_integral<_Tp>::value && is_unsigned<_Tp>::value && !__is_character_v<_Tp> && !is_same<_Tp, bool>::value &&
+    __is_unqualified_v<_Tp>;
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>

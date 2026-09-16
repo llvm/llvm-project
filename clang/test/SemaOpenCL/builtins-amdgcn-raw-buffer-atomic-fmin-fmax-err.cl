@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx10-1-generic -S -verify=expected -o - %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx10-3-generic -S -verify=expected -o - %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1250 -S -verify=expected -o - %s
+// RUN: %clang_cc1 -triple amdgpu10.1-unknown-unknown -S -verify=expected -o - %s
+// RUN: %clang_cc1 -triple amdgpu10.3-unknown-unknown -S -verify=expected -o - %s
+// RUN: %clang_cc1 -triple amdgpu12.50-unknown-unknown -S -verify=expected -o - %s
 
 // REQUIRES: amdgpu-registered-target
 

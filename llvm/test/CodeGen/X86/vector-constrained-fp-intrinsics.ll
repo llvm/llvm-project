@@ -415,7 +415,7 @@ define <1 x float> @constrained_vector_fmul_v1f32() #0 {
 ; AVX-NEXT:    retq
 entry:
   %mul = call <1 x float> @llvm.experimental.constrained.fmul.v1f32(
-           <1 x float> <float 0x7FF0000000000000>,
+           <1 x float> <float +inf>,
            <1 x float> <float 2.000000e+00>,
            metadata !"round.dynamic",
            metadata !"fpexcept.strict") #0
@@ -468,8 +468,8 @@ define <3 x float> @constrained_vector_fmul_v3f32() #0 {
 ; AVX-NEXT:    retq
 entry:
   %mul = call <3 x float> @llvm.experimental.constrained.fmul.v3f32(
-           <3 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000,
-                        float 0x7FF0000000000000>,
+           <3 x float> <float +inf, float +inf,
+                        float +inf>,
            <3 x float> <float 1.000000e+00, float 1.000000e+01, float 1.000000e+02>,
            metadata !"round.dynamic",
            metadata !"fpexcept.strict") #0
@@ -548,7 +548,7 @@ define <1 x float> @constrained_vector_fadd_v1f32() #0 {
 ; AVX-NEXT:    retq
 entry:
   %add = call <1 x float> @llvm.experimental.constrained.fadd.v1f32(
-           <1 x float> <float 0x7FF0000000000000>,
+           <1 x float> <float +inf>,
            <1 x float> <float 1.0>,
            metadata !"round.dynamic",
            metadata !"fpexcept.strict") #0
@@ -682,7 +682,7 @@ define <1 x float> @constrained_vector_fsub_v1f32() #0 {
 ; AVX-NEXT:    retq
 entry:
   %sub = call <1 x float> @llvm.experimental.constrained.fsub.v1f32(
-           <1 x float> <float 0x7FF0000000000000>,
+           <1 x float> <float +inf>,
            <1 x float> <float 1.000000e+00>,
            metadata !"round.dynamic",
            metadata !"fpexcept.strict") #0
@@ -7981,28 +7981,32 @@ define <4 x float> @constrained_vector_uitofp_v4f32_v4i64(<4 x i64> %x) #0 {
 ;
 ; AVX1-LABEL: constrained_vector_uitofp_v4f32_v4i64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vpsrlq $1, %xmm0, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpsrlq $1, %xmm2, %xmm3
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; AVX1-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm3
-; AVX1-NEXT:    vorpd %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vblendvpd %ymm0, %ymm1, %ymm0, %ymm1
-; AVX1-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm2, %xmm3
+; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm2
+; AVX1-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpsrlq $1, %xmm0, %xmm3
+; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
+; AVX1-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm4
+; AVX1-NEXT:    vorpd %ymm4, %ymm3, %ymm3
+; AVX1-NEXT:    vblendvpd %xmm0, %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm4
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[2,3]
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm3
+; AVX1-NEXT:    vblendvpd %xmm1, %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vmovq %xmm1, %rax
 ; AVX1-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm3
-; AVX1-NEXT:    vmovq %xmm1, %rax
-; AVX1-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm4
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[2,3]
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX1-NEXT:    vmovq %xmm1, %rax
-; AVX1-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm4
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1],xmm4[0],xmm3[3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm3[0],xmm0[3]
 ; AVX1-NEXT:    vpextrq $1, %xmm1, %rax
 ; AVX1-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm1
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm3[0,1,2],xmm1[0]
-; AVX1-NEXT:    vaddps %xmm1, %xmm1, %xmm3
-; AVX1-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vblendvps %xmm0, %xmm3, %xmm1, %xmm0
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; AVX1-NEXT:    vaddps %xmm0, %xmm0, %xmm1
+; AVX1-NEXT:    vblendvps %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;

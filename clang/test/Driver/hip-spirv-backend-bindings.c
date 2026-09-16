@@ -1,15 +1,16 @@
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -x hip %s -save-temps \
 // RUN:         -use-spirv-backend -ccc-print-bindings \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHECK-SPIRV-BASE,CHECK-SPIRV
 
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -x hip %s -save-temps \
 // RUN:         -use-spirv-backend -fgpu-rdc -ccc-print-bindings \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=CHECK-SPIRV-BASE,CHECK-SPIRV-RDC
 
 // CHECK-SPIRV-BASE: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HIPI:.+\.hipi]]"
-// CHECK-SPIRV-BASE: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[HIPI]]"], output: "[[SPV_BC:.+\.bc]]"
+// CHECK-SPIRV-BASE: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[HIPI]]"], output: "[[SPV_TMP_BC:.+\.tmp\.bc]]"
+// CHECK-SPIRV-BASE: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[SPV_TMP_BC]]"], output: "[[SPV_BC:.+\.o]]"
 // CHECK-SPIRV: # "spirv64-amd-amdhsa" - "Offload::Packager", inputs: ["[[SPV_BC]]"], output: "[[HIP_OUT:.+\.out]]"
 // CHECK-SPIRV: # "spirv64-amd-amdhsa" - "Offload::Linker", inputs: ["[[HIP_OUT]]"], output: "[[HIPFB:.+\.hipfb]]"
 // CHECK-SPIRV-RDC: # "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[SPV_BC]]"], output: "[[HIP_OUT:.+\.out]]"
@@ -23,31 +24,30 @@
 // CHECK-SPIRV # "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[x86_O]]"], output: "[[x86_O:.+\.o]]"
 // CHECK-SPIRV # "x86_64-unknown-linux-gnu" - "GNU::Linker", inputs: ["[[x86_O]]"], output: "{{.+\.out}}"
 
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -x hip %s -save-temps \
 // RUN:         -use-spirv-backend --offload-device-only -ccc-print-bindings \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-SPIRV-OFFLOAD-DEVICE-ONLY
 
 // CHECK-SPIRV-OFFLOAD-DEVICE-ONLY: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HIPI:.+\.hipi]]"
-// CHECK-SPIRV-OFFLOAD-DEVICE-ONLY: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[HIPI]]"], output: "[[SPV_BC:.+\.bc]]"
-// CHECK-SPIRV-OFFLOAD-DEVICE-ONLY: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[SPV_BC]]"], output: "[[SPV_OUT:.+\.out]]"
-// CHECK-SPIRV-OFFLOAD-DEVICE-ONLY: # "spirv64-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[SPV_OUT]]"], output: "{{.+\.hipfb}}"
+// CHECK-SPIRV-OFFLOAD-DEVICE-ONLY: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[HIPI]]"], output: "[[SPV_TMP_BC:.+\.bc]]"
+// CHECK-SPIRV-OFFLOAD-DEVICE-ONLY: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[SPV_TMP_BC]]"], output: "{{.+\.o}}"
 
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -x hip %s -save-temps \
 // RUN:         -use-spirv-backend --offload-device-only -fgpu-rdc -ccc-print-bindings \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC
 
 // CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HIPI:.+\.hipi]]"
-// CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[HIPI]]"], output: "[[SPV_BC:.+\.bc]]"
-// CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[SPV_BC]]"], output: "{{.+}}"
+// CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[HIPI]]"], output: "[[SPV_TMP_BC:.+\.bc]]"
+// CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC: # "spirv64-amd-amdhsa" - "clang", inputs: ["[[SPV_TMP_BC]]"], output: "{{.+\.(o|s)}}"
 
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -x hip %s -save-temps \
 // RUN:         -use-spirv-backend --offload-device-only -S -fgpu-rdc -ccc-print-bindings \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-SPIRV-OFFLOAD-DEVICE-ONLY-RDC
 
-// RUN: %clang --offload-new-driver --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
+// RUN: %clang --target=x86_64-unknown-linux-gnu --offload-arch=amdgcnspirv \
 // RUN:         -nogpuinc -nogpulib -x hip %s -save-temps \
 // RUN:         -use-spirv-backend --offload-device-only -S -ccc-print-bindings \
 // RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-SPIRV-TEXTUAL-OFFLOAD-DEVICE-ONLY

@@ -746,6 +746,20 @@ struct ClassTemplateWithMultipleDefaultCtors {
   __declspec(dllexport) ClassTemplateWithMultipleDefaultCtors(int = 30, ...) {} // ms-note{{declared here}}
 };
 
+struct ClassWithNestedMultipleDefaultCtors {
+  struct Nested {
+    __declspec(dllexport) Nested(int = 40) {}      // ms-error{{'__declspec(dllexport)' cannot be applied to more than one default constructor}}
+    __declspec(dllexport) Nested(int = 30, ...) {} // ms-note{{declared here}}
+  };
+};
+
+struct ClassWithNestedObviousMultipleDefaultCtors {
+  struct Nested {
+    __declspec(dllexport) Nested() {}    // ms-error{{'__declspec(dllexport)' cannot be applied to more than one default constructor}}
+    __declspec(dllexport) Nested(...) {} // ms-note{{declared here}}
+  };
+};
+
 template <typename T> struct HasDefaults {
   HasDefaults(int x = sizeof(T)) {} // ms-error {{invalid application of 'sizeof'}}
 };
@@ -1049,6 +1063,61 @@ template<typename T> __declspec(dllexport) constexpr int CTMR<T>::ConstexprField
 // dllexport.
 template <> void ExportClassTmplMembers<int>::normalDecl() = delete; // non-gnu-error {{attribute 'dllexport' cannot be applied to a deleted function}}
 
+struct InstTrig {
+    struct Spec;
+    struct Impl;
+    struct Decl;
+};
+template<bool InstDef, typename... Triggers>
+struct ClassTmplSpecializedMember { // gnu-note 5 {{'dllexport' attribute is missing on previous declaration}}
+  void specializedMember1();
+  void specializedMember2();
+  void instantiatedMember1();
+  void instantiatedMember2();
+  void member() {}
+};
+
+template <> void ClassTmplSpecializedMember<false, InstTrig::Spec>::specializedMember1();       // gnu-note{{implicit instantiation first required here}}
+extern template struct __declspec(dllexport) ClassTmplSpecializedMember<false, InstTrig::Spec>; // non-gnu-warning{{explicit instantiation declaration should not be 'dllexport'}} \
+                                                                                                   non-gnu-note{{attribute is here}} \
+                                                                                                   gnu-warning{{'dllexport' attribute ignored; class template is already instantiated}}
+template <> void ClassTmplSpecializedMember<true, InstTrig::Spec>::specializedMember1();
+template struct __declspec(dllexport) ClassTmplSpecializedMember<true, InstTrig::Spec>;         // gnu-warning{{'dllexport' attribute ignored on explicit instantiation definition}}
+
+void anchor(ClassTmplSpecializedMember<false, InstTrig::Impl> &x) { x.instantiatedMember1(); }  // gnu-note{{implicit instantiation first required here}}
+extern template struct __declspec(dllexport) ClassTmplSpecializedMember<false, InstTrig::Impl>; // non-gnu-warning{{explicit instantiation declaration should not be 'dllexport'}} \
+                                                                                                   non-gnu-note{{attribute is here}} \
+                                                                                                   gnu-warning{{'dllexport' attribute ignored; class template is already instantiated}}
+void anchor(ClassTmplSpecializedMember<true, InstTrig::Impl> &x) { x.instantiatedMember1(); }
+template struct __declspec(dllexport) ClassTmplSpecializedMember<true, InstTrig::Impl>;         // gnu-warning{{'dllexport' attribute ignored on explicit instantiation definition}}
+
+template <> void ClassTmplSpecializedMember<false, InstTrig::Spec, InstTrig::Spec>::specializedMember1();       // gnu-note{{implicit instantiation first required here}}
+template <> void ClassTmplSpecializedMember<false, InstTrig::Spec, InstTrig::Spec>::specializedMember2();
+extern template struct __declspec(dllexport) ClassTmplSpecializedMember<false, InstTrig::Spec, InstTrig::Spec>; // non-gnu-warning{{explicit instantiation declaration should not be 'dllexport'}} \
+                                                                                                                   non-gnu-note{{attribute is here}} \
+                                                                                                                   gnu-warning{{'dllexport' attribute ignored; class template is already instantiated}}
+template <> void ClassTmplSpecializedMember<true, InstTrig::Spec, InstTrig::Spec>::specializedMember1();
+template <> void ClassTmplSpecializedMember<true, InstTrig::Spec, InstTrig::Spec>::specializedMember2();
+template struct __declspec(dllexport) ClassTmplSpecializedMember<true, InstTrig::Spec, InstTrig::Spec>;         // gnu-warning{{'dllexport' attribute ignored on explicit instantiation definition}}
+
+template <> void ClassTmplSpecializedMember<false, InstTrig::Spec, InstTrig::Impl>::specializedMember1();       // gnu-note{{implicit instantiation first required here}}
+void anchor(ClassTmplSpecializedMember<false, InstTrig::Spec, InstTrig::Impl> &x) { x.instantiatedMember1(); }
+extern template struct __declspec(dllexport) ClassTmplSpecializedMember<false, InstTrig::Spec, InstTrig::Impl>; // non-gnu-warning{{explicit instantiation declaration should not be 'dllexport'}} \
+                                                                                                                   non-gnu-note{{attribute is here}} \
+                                                                                                                   gnu-warning{{'dllexport' attribute ignored; class template is already instantiated}}
+template <> void ClassTmplSpecializedMember<true, InstTrig::Spec, InstTrig::Impl>::specializedMember1();
+void anchor(ClassTmplSpecializedMember<true, InstTrig::Spec, InstTrig::Impl> &x) { x.instantiatedMember1(); }
+template struct __declspec(dllexport) ClassTmplSpecializedMember<true, InstTrig::Spec, InstTrig::Impl>;         // gnu-warning{{'dllexport' attribute ignored on explicit instantiation definition}}
+
+void anchor(ClassTmplSpecializedMember<false, InstTrig::Impl, InstTrig::Spec> &x) { x.instantiatedMember1(); }  // gnu-note{{implicit instantiation first required here}}
+template <> void ClassTmplSpecializedMember<false, InstTrig::Impl, InstTrig::Spec>::specializedMember1();
+extern template struct __declspec(dllexport) ClassTmplSpecializedMember<false, InstTrig::Impl, InstTrig::Spec>; // non-gnu-warning{{explicit instantiation declaration should not be 'dllexport'}} \
+                                                                                                                   non-gnu-note{{attribute is here}} \
+                                                                                                                   gnu-warning{{'dllexport' attribute ignored; class template is already instantiated}}
+void anchor(ClassTmplSpecializedMember<true, InstTrig::Impl, InstTrig::Spec> &x) { x.instantiatedMember1(); }
+template <> void ClassTmplSpecializedMember<true, InstTrig::Impl, InstTrig::Spec>::specializedMember1();
+template struct __declspec(dllexport) ClassTmplSpecializedMember<true, InstTrig::Impl, InstTrig::Spec>;         // gnu-warning{{'dllexport' attribute ignored on explicit instantiation definition}}
+
 
 //===----------------------------------------------------------------------===//
 // Class template member templates
@@ -1131,3 +1200,28 @@ template<typename T> template<typename U> __declspec(dllexport) constexpr int CT
 //===----------------------------------------------------------------------===//
 // The MS ABI doesn't provide a stable mangling for lambdas, so they can't be imported or exported.
 auto Lambda = []() __declspec(dllexport) -> bool { return true; }; // non-gnu-error {{lambda cannot be declared 'dllexport'}}
+
+//===----------------------------------------------------------------------===//
+// Inherited constructors: unsupported export warnings
+//===----------------------------------------------------------------------===//
+
+struct VariadicBase {
+  VariadicBase(int, ...);
+};
+
+struct __declspec(dllexport) VariadicChild : VariadicBase {
+  using VariadicBase::VariadicBase; // expected-warning{{exporting inherited constructor is not yet supported; 'dllexport' ignored on inherited constructor with variadic arguments}}
+};
+
+struct NontrivialDtorParam {
+  int x;
+  ~NontrivialDtorParam();
+};
+
+struct CalleeCleanupBase {
+  CalleeCleanupBase(NontrivialDtorParam);
+};
+
+struct __declspec(dllexport) CalleeCleanupChild : CalleeCleanupBase {
+  using CalleeCleanupBase::CalleeCleanupBase; // ms-warning{{exporting inherited constructor is not yet supported; 'dllexport' ignored on inherited constructor with callee-cleanup parameters}}
+};

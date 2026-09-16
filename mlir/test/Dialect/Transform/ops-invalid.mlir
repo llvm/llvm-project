@@ -51,6 +51,17 @@ transform.sequence failures(propagate) {
 
 // -----
 
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @foo(%arg0: !transform.any_op {transform.readonly}) {
+    // expected-error @+2 {{expected children ops to implement TransformOpInterface}}
+    // expected-note @below {{op without interface}}
+    "test.unknown_op" () : () -> ()
+    transform.yield
+  }
+}
+
+// -----
+
 // expected-error @below {{expects the types of the terminator operands to match the types of the result}}
 %0 = transform.sequence -> !transform.any_op failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
@@ -83,10 +94,10 @@ transform.sequence failures(propagate) {
 
 %0 = "test.generate_something"() : () -> !transform.any_op
 // expected-error @below {{does not expect extra operands when used as top-level}}
-"transform.sequence"(%0) ({
+"transform.sequence"(%0) <{failure_propagation_mode = 1 : i32, operandSegmentSizes = array<i32: 0, 1>}> ({
 ^bb0(%arg0: !transform.any_op):
   "transform.yield"() : () -> ()
-}) {failure_propagation_mode = 1 : i32, operandSegmentSizes = array<i32: 0, 1>} : (!transform.any_op) -> ()
+}) : (!transform.any_op) -> ()
 
 // -----
 
@@ -332,7 +343,7 @@ transform.sequence failures(suppress) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error @below {{TransformOpInterface requires memory effects on operands to be specified}}
   // expected-note @below {{no effects specified for operand #0}}
-  transform.test_required_memory_effects %arg0 {modifies_payload} : (!transform.any_op) -> !transform.any_op
+  transform.test_required_memory_effects %arg0 modifies_payload : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -341,13 +352,13 @@ transform.sequence failures(suppress) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error @below {{TransformOpInterface requires 'allocate' memory effect to be specified for results}}
   // expected-note @below {{no 'allocate' effect specified for result #0}}
-  transform.test_required_memory_effects %arg0 {has_operand_effect, modifies_payload} : (!transform.any_op) -> !transform.any_op
+  transform.test_required_memory_effects %arg0 has_operand_effect modifies_payload : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
 
 // expected-error @below {{attribute can only be attached to operations with symbol tables}}
-"test.unknown_container"() { transform.with_named_sequence } : () -> ()
+"test.unknown_container"() {transform.with_named_sequence} : () -> ()
 
 // -----
 
@@ -410,7 +421,7 @@ module attributes { transform.with_named_sequence } {
   transform.sequence failures(suppress) {
   ^bb0(%arg0: !transform.any_op):
     // expected-error @below {{requires attribute 'target'}}
-    "transform.include"() {failure_propagation_mode = 1 : i32} : () -> ()
+    "transform.include"() <{failure_propagation_mode = 1 : i32}> : () -> ()
   }
 }
 
@@ -500,7 +511,7 @@ module attributes { transform.with_named_sequence} {
   // expected-error @below {{expected 'transform.yield' as terminator}}
   transform.named_sequence @nested() {
     // expected-note @below {{terminator}}
-    func.call @foo() : () -> ()
+    func.return 
   }
 }
 
@@ -538,7 +549,7 @@ module attributes { transform.with_named_sequence } {
 
 module attributes { transform.with_named_sequence } {
   // expected-error @below {{argument #0 cannot be both readonly and consumed}}
-  transform.named_sequence @foo(%op: !transform.any_op { transform.readonly, transform.consumed } )
+  transform.named_sequence @foo(%op: !transform.any_op {transform.readonly, transform.consumed} )
 }
 
 // -----
@@ -613,7 +624,7 @@ module attributes { transform.with_named_sequence } {
 
 // Checking that consumptions annotations are used correctly in invocation checks.
 module attributes { transform.with_named_sequence } {
-  transform.named_sequence @foo(%op: !transform.any_op { transform.consumed } )
+  transform.named_sequence @foo(%op: !transform.any_op {transform.consumed} )
 
   // expected-error @below {{'transform.sequence' op block argument #0 has more than one potential consumer}}
   transform.sequence failures(propagate) {
@@ -960,4 +971,28 @@ module attributes { transform.with_named_sequence } {
     "transform.include"(%arg0) <{target = @print_message}> : (!transform.any_op) -> ()
     "transform.yield"() : () -> ()
   }) : () -> ()
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/60213:
+// Verifying a transform.sequence with an empty body region must not crash.
+// Previously, verifyTransformOpInterface called getEffects, which called
+// getBodyBlock() -> Region::front() on an empty region, causing an assertion.
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+// expected-error @below {{region #0 ('body') failed to verify constraint: region with 1 blocks}}
+  "transform.sequence"(%arg0) <{failure_propagation_mode = 1 : i32, operandSegmentSizes = array<i32: 1, 0>}> ({
+  }) : (!pdl.operation) -> ()
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // expected-error @below {{duplicate normal form: #transform.test_single_block_normal_form<nested false>}}
+    // expected-note @below {{previous instance: #transform.test_single_block_normal_form<nested true>}}
+    transform.structured.match attributes {sym_name = "nested"} in %arg0 : (!transform.any_op) -> !transform.normalized_op<#transform.test_single_block_normal_form<nested true>, #transform.test_single_block_normal_form<nested false>>
+    transform.yield
+  }
 }

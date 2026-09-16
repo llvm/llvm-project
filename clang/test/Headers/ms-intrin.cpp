@@ -44,6 +44,51 @@ typedef __SIZE_TYPE__ size_t;
 template <typename T>
 void foo(T V) {}
 
+#if defined(_M_X64) && !defined(_M_ARM64EC)
+static_assert(__is_same(decltype(__readcr0()), unsigned __int64), "");
+static_assert(__is_same(decltype(__readcr2()), unsigned __int64), "");
+static_assert(__is_same(decltype(__readcr3()), unsigned __int64), "");
+static_assert(__is_same(decltype(__readcr4()), unsigned __int64), "");
+static_assert(__is_same(decltype(__readcr8()), unsigned __int64), "");
+static_assert(__is_same(decltype(__readdr(0)), unsigned __int64), "");
+static_assert(__is_same(decltype(__readeflags()), unsigned __int64), "");
+static_assert(__is_same(decltype(__readmsr(0)), unsigned __int64), "");
+static_assert(__is_same(decltype(&__writecr0), void (*)(unsigned __int64)), "");
+static_assert(__is_same(decltype(&__writecr2), void (*)(unsigned __int64)), "");
+static_assert(__is_same(decltype(&__writecr3), void (*)(unsigned __int64)), "");
+static_assert(__is_same(decltype(&__writecr4), void (*)(unsigned __int64)), "");
+static_assert(__is_same(decltype(&__writecr8), void (*)(unsigned __int64)), "");
+static_assert(__is_same(decltype(&__writedr),
+                        void (*)(unsigned int, unsigned __int64)),
+              "");
+static_assert(__is_same(decltype(&__writeeflags), void (*)(unsigned __int64)),
+              "");
+static_assert(__is_same(decltype(&__writemsr),
+                        void (*)(unsigned long, unsigned __int64)),
+              "");
+#elif defined(_M_IX86)
+static_assert(__is_same(decltype(__readcr0()), unsigned long), "");
+static_assert(__is_same(decltype(__readcr2()), unsigned long), "");
+static_assert(__is_same(decltype(__readcr3()), unsigned long), "");
+static_assert(__is_same(decltype(__readcr4()), unsigned long), "");
+static_assert(__is_same(decltype(__readcr8()), unsigned long), "");
+static_assert(__is_same(decltype(__readdr(0)), unsigned int), "");
+static_assert(__is_same(decltype(__readeflags()), unsigned int), "");
+static_assert(__is_same(decltype(__readmsr(0)), unsigned __int64), "");
+static_assert(__is_same(decltype(&__writecr0), void (*)(unsigned int)), "");
+static_assert(__is_same(decltype(&__writecr2), void (*)(unsigned int)), "");
+static_assert(__is_same(decltype(&__writecr3), void (*)(unsigned int)), "");
+static_assert(__is_same(decltype(&__writecr4), void (*)(unsigned int)), "");
+static_assert(__is_same(decltype(&__writecr8), void (*)(unsigned int)), "");
+static_assert(__is_same(decltype(&__writedr),
+                        void (*)(unsigned int, unsigned int)),
+              "");
+static_assert(__is_same(decltype(&__writeeflags), void (*)(unsigned int)), "");
+static_assert(__is_same(decltype(&__writemsr),
+                        void (*)(unsigned long, unsigned __int64)),
+              "");
+#endif
+
 // __asm__ blocks are only checked for inline functions that end up being
 // emitted, so call functions with __asm__ blocks to make sure their inline
 // assembly parses.

@@ -283,10 +283,9 @@ public:
     return success();
   }
 
-  /// Parse a floating point value with given semantics from the stream. Since
-  /// this implementation parses the string as double precision and only
-  /// afterwards converts the value to the requested semantic, precision may be
-  /// lost.
+  /// Parse a floating point value with given semantics from the stream. The
+  /// literal is parsed directly using the requested semantics, avoiding range
+  /// or precision loss from an intermediate double conversion.
   ParseResult parseFloat(const llvm::fltSemantics &semantics,
                          APFloat &result) override {
     bool isNegative = parser.consumeIf(Token::minus);
@@ -383,9 +382,42 @@ public:
     return failure();
   }
 
+  /// Parse a string if it is one of the 'allowedKeywords'.
+  ParseResult
+  parseOptionalString(std::string *result,
+                      ArrayRef<StringRef> allowedKeywords) override {
+    // Check that the current token is a keyword.
+    if (!parser.getToken().is(Token::string))
+      return failure();
+
+    std::string string{};
+    string = parser.getToken().getStringValue();
+
+    if (llvm::is_contained(allowedKeywords, string)) {
+      parser.consumeToken();
+      if (result)
+        *result = std::move(string);
+      return success();
+    }
+
+    return failure();
+  }
+
   /// Parse an optional keyword or string and set instance into 'result'.`
   ParseResult parseOptionalKeywordOrString(std::string *result) override {
     return parser.parseOptionalKeywordOrString(result);
+  }
+
+  ParseResult
+  parseOptionalKeywordOrString(std::string *result,
+                               ArrayRef<StringRef> allowedValues) override {
+    StringRef keyword;
+    if (succeeded(parseOptionalKeyword(&keyword, allowedValues))) {
+      *result = keyword.str();
+      return success();
+    }
+
+    return parseOptionalString(result, allowedValues);
   }
 
   //===--------------------------------------------------------------------===//

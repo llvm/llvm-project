@@ -5,11 +5,11 @@
 ; hackery:
 
 ; RUN: cat %s > %t.ftz
-; RUN: echo 'attributes #0 = { "denormal-fp-math-f32" = "preserve-sign" }' >> %t.ftz
+; RUN: echo 'attributes #0 = { denormal_fpenv(float: preservesign) }' >> %t.ftz
 ; RUN: opt < %t.ftz -passes=instcombine -mtriple=nvptx64-nvidia-cuda -S | FileCheck %s --check-prefix=CHECK --check-prefix=FTZ
 
 ; RUN: cat %s > %t.noftz
-; RUN: echo 'attributes #0 = { "denormal-fp-math-f32" = "ieee" }' >> %t.noftz
+; RUN: echo 'attributes #0 = { denormal_fpenv(float: ieee) }' >> %t.noftz
 ; RUN: opt < %t.noftz -passes=instcombine -mtriple=nvptx64-nvidia-cuda -S | FileCheck %s --check-prefix=CHECK --check-prefix=NOFTZ
 
 ; We handle nvvm intrinsics with ftz variants as follows:
@@ -104,13 +104,13 @@ define float @fma_float_ftz(float %a, float %b, float %c) #0 {
 
 ; CHECK-LABEL: @fmax_double
 define double @fmax_double(double %a, double %b) #0 {
-; CHECK: call double @llvm.maxnum.f64
+; CHECK: call double @llvm.maximumnum.f64
   %ret = call double @llvm.nvvm.fmax.d(double %a, double %b)
   ret double %ret
 }
 ; CHECK-LABEL: @fmax_float
 define float @fmax_float(float %a, float %b) #0 {
-; NOFTZ: call float @llvm.maxnum.f32
+; NOFTZ: call float @llvm.maximumnum.f32
 ; FTZ: call float @llvm.nvvm.fmax.f
   %ret = call float @llvm.nvvm.fmax.f(float %a, float %b)
   ret float %ret
@@ -118,20 +118,20 @@ define float @fmax_float(float %a, float %b) #0 {
 ; CHECK-LABEL: @fmax_float_ftz
 define float @fmax_float_ftz(float %a, float %b) #0 {
 ; NOFTZ: call float @llvm.nvvm.fmax.ftz.f
-; FTZ: call float @llvm.maxnum.f32
+; FTZ: call float @llvm.maximumnum.f32
   %ret = call float @llvm.nvvm.fmax.ftz.f(float %a, float %b)
   ret float %ret
 }
 
 ; CHECK-LABEL: @fmin_double
 define double @fmin_double(double %a, double %b) #0 {
-; CHECK: call double @llvm.minnum.f64
+; CHECK: call double @llvm.minimumnum.f64
   %ret = call double @llvm.nvvm.fmin.d(double %a, double %b)
   ret double %ret
 }
 ; CHECK-LABEL: @fmin_float
 define float @fmin_float(float %a, float %b) #0 {
-; NOFTZ: call float @llvm.minnum.f32
+; NOFTZ: call float @llvm.minimumnum.f32
 ; FTZ: call float @llvm.nvvm.fmin.f
   %ret = call float @llvm.nvvm.fmin.f(float %a, float %b)
   ret float %ret
@@ -139,7 +139,7 @@ define float @fmin_float(float %a, float %b) #0 {
 ; CHECK-LABEL: @fmin_float_ftz
 define float @fmin_float_ftz(float %a, float %b) #0 {
 ; NOFTZ: call float @llvm.nvvm.fmin.ftz.f
-; FTZ: call float @llvm.minnum.f32
+; FTZ: call float @llvm.minimumnum.f32
   %ret = call float @llvm.nvvm.fmin.ftz.f(float %a, float %b)
   ret float %ret
 }
@@ -299,20 +299,20 @@ define float @test_ull2f(i64 %a) #0 {
 
 ; CHECK-LABEL: @test_add_rn_d
 define double @test_add_rn_d(double %a, double %b) #0 {
-; CHECK: call double @llvm.nvvm.add.rn.d
-  %ret = call double @llvm.nvvm.add.rn.d(double %a, double %b)
+; CHECK: call double @llvm.nvvm.fadd.f64
+  %ret = call double @llvm.nvvm.fadd.f64(double %a, double %b, /* rnd=rn */ i32 1)
   ret double %ret
 }
 ; CHECK-LABEL: @test_add_rn_f
 define float @test_add_rn_f(float %a, float %b) #0 {
-; CHECK: call float @llvm.nvvm.add.rn.f
-  %ret = call float @llvm.nvvm.add.rn.f(float %a, float %b)
+; CHECK: call float @llvm.nvvm.fadd.f32
+  %ret = call float @llvm.nvvm.fadd.f32(float %a, float %b, /* rnd=rn */ i32 1)
   ret float %ret
 }
 ; CHECK-LABEL: @test_add_rn_f_ftz
 define float @test_add_rn_f_ftz(float %a, float %b) #0 {
-; CHECK: call float @llvm.nvvm.add.rn.ftz.f(float %a, float %b)
-  %ret = call float @llvm.nvvm.add.rn.ftz.f(float %a, float %b)
+; CHECK: call float @llvm.nvvm.fadd.ftz.f32(float %a, float %b, /* rnd=rn */ i32 1)
+  %ret = call float @llvm.nvvm.fadd.ftz.f32(float %a, float %b, /* rnd=rn */ i32 1)
   ret float %ret
 }
 
@@ -437,9 +437,9 @@ define i32 @test_fshr_clamp_3(i32 %a, i32 %b, i32 %c) {
   ret i32 %call
 }
 
-declare double @llvm.nvvm.add.rn.d(double, double)
-declare float @llvm.nvvm.add.rn.f(float, float)
-declare float @llvm.nvvm.add.rn.ftz.f(float, float)
+declare double @llvm.nvvm.fadd.f64(double, double, i32 immarg)
+declare float @llvm.nvvm.fadd.f32(float, float, i32 immarg)
+declare float @llvm.nvvm.fadd.ftz.f32(float, float, i32 immarg)
 declare double @llvm.nvvm.ceil.d(double)
 declare float @llvm.nvvm.ceil.f(float)
 declare float @llvm.nvvm.ceil.ftz.f(float)

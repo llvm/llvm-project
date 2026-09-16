@@ -35,21 +35,6 @@ def MapsForPrivatizedSymbolsPass
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
-def MarkDeclareTargetPass
-    : Pass<"omp-mark-declare-target", "mlir::ModuleOp"> {
-  let summary = "Marks all functions called by an OpenMP declare target function as declare target";
-  let dependentDialects = ["mlir::omp::OpenMPDialect"];
-}
-
-def FunctionFilteringPass : Pass<"omp-function-filtering"> {
-  let summary = "Filters out functions intended for the host when compiling "
-                "for the target device.";
-  let dependentDialects = [
-    "mlir::func::FuncDialect",
-    "fir::FIROpsDialect"
-  ];
-}
-
 def DoConcurrentConversionPass : Pass<"omp-do-concurrent-conversion", "mlir::ModuleOp"> {
   let summary = "Map `DO CONCURRENT` loops to OpenMP worksharing loops.";
 
@@ -130,6 +115,22 @@ def AutomapToTargetDataPass
     or deallocation is detected in the FIR.
   }];
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
+
+def UnimplementedDeviceCheckPass
+    : Pass<"omp-unimplemented-device-check", "::mlir::ModuleOp"> {
+  let summary = "Report not-yet-implemented situations on target device code";
+  let description = [{
+    This pass is for not-yet-implemented cases that neither Flang lowering nor
+    MLIR to LLVM IR translation can properly identify. In particular, it should
+    be used to detect situations that meet all the following:
+      1. They are supported on the host but not on the device. Then, it cannot
+      be checked during Flang lowering because implicit `declare_target`
+      information hasn't been propagated yet.
+      2. They need to use FIR operations or types to be reliably detected.
+      Otherwise, `checkImplementationStatus()` in OpenMP MLIR to LLVM IR
+      translation is the preferred location of the check.
+  }];
 }
 
 #endif //FORTRAN_OPTIMIZER_OPENMP_PASSES

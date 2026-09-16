@@ -1,5 +1,5 @@
-; RUN: llc -aarch64-load-store-renaming=true < %s -mtriple=arm64-apple-darwin -mcpu=cyclone -enable-misched=false -frame-pointer=all | FileCheck %s
-; RUN: llc -aarch64-load-store-renaming=true  < %s -mtriple=arm64-apple-darwin -O0 -frame-pointer=all -fast-isel | FileCheck -check-prefix=FAST %s
+; RUN: llc < %s -mtriple=arm64-apple-darwin -mcpu=cyclone -enable-misched=false -frame-pointer=all | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-darwin -O0 -frame-pointer=all -fast-isel | FileCheck -check-prefix=FAST %s
 
 ; rdar://12648441
 ; Generated from arm64-arguments.c with -O2.
@@ -507,10 +507,10 @@ entry:
   ret i32 %call
 }
 
-attributes #0 = { noinline nounwind readnone "fp-contract-model"="standard" "relocation-model"="pic" "ssp-buffers-size"="8" }
-attributes #1 = { nounwind readonly "fp-contract-model"="standard" "relocation-model"="pic" "ssp-buffers-size"="8" }
-attributes #2 = { noinline nounwind readonly "fp-contract-model"="standard" "relocation-model"="pic" "ssp-buffers-size"="8" }
-attributes #3 = { nounwind "fp-contract-model"="standard" "relocation-model"="pic" "ssp-buffers-size"="8" }
+attributes #0 = { noinline nounwind readnone }
+attributes #1 = { nounwind readonly }
+attributes #2 = { noinline nounwind readonly }
+attributes #3 = { nounwind }
 attributes #4 = { nounwind }
 attributes #5 = { nobuiltin }
 

@@ -1,6 +1,6 @@
-; RUN: opt -S -passes=load-store-vectorizer --mcpu=hawaii -mattr=+unaligned-access-mode,+unaligned-scratch-access,+max-private-element-size-16 < %s | FileCheck --match-full-lines %s
+; RUN: opt -S -passes=load-store-vectorizer -mattr=+unaligned-access-mode,+unaligned-scratch-access,+max-private-element-size-16 < %s | FileCheck --match-full-lines %s
 
-target triple = "amdgcn--"
+target triple = "amdgpu7.01--"
 
 @G = internal addrspace(5) global [8 x i16] undef, align 1
 

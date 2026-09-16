@@ -39,8 +39,7 @@ Implemented Papers
 ------------------
 
 - P2592R3: Hashing support for ``std::chrono`` value classes (`Github <https://llvm.org/PR105358>`__)
-- P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__) (The paper is partially implemented. ``zip_transform_view``,
-  ``adjacent_view``, and ``adjacent_transform_view`` are implemented in this release)
+- P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__)
 - P2988R12: ``std::optional<T&>`` (`Github <https://llvm.org/PR148131>`__)
 - P3044R2: sub-``string_view`` from ``string`` (`Github <https://llvm.org/PR148140>`__)
 - P3223R2: Making ``std::istream::ignore`` less surprising (`Github <https://llvm.org/PR148178>`__)
@@ -107,6 +106,8 @@ Improvements and New Features
 Deprecations and Removals
 -------------------------
 
+- The minimally supported deployment target on macOS has been increased to 11.0.
+
 Potentially breaking changes
 ----------------------------
 
@@ -115,6 +116,13 @@ Potentially breaking changes
   always return the first equal element, like other implementations do. Starting with this release, code relying on the
   first element being returned from ``find`` will be broken, and ``lower_bound`` or ``equal_range`` should be used
   instead.
+
+- The algorithms for ``std::{map,set}`` ``lower_bound`` and ``upper_bound`` operations were modified such that their
+  result changed for comparators that are not a strict weak order. Being a strict weak order was always a requirement
+  of the Standard and still is, however in this release libc++ changed the behavior of ``std::{map,set}`` for such
+  comparators. Since this may be tricky to work around in some cases, an escape hatch is provided in this release:
+  defining ``_LIBCPP_ENABLE_LEGACY_TREE_LOWER_UPPER_BOUND`` will revert to the historical implementation of
+  these operations. That escape hatch will be removed in LLVM 23.
 
 - The ABI flag ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` has been split off from
   ``_LIBCPP_ABI_NO_ITERATOR_BASES``. If you are using this flag and care about ABI stability, you should set

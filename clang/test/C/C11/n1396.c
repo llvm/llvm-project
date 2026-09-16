@@ -31,7 +31,7 @@
 // CHECK-X64-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-X64-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-X64-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to x86_fp80
-// CHECK-X64-NEXT:    [[MUL:%.*]] = fmul x86_fp80 [[CONV]], 0xK3FFF8000000000000000
+// CHECK-X64-NEXT:    [[MUL:%.*]] = fmul x86_fp80 [[CONV]], 1.000000e+00
 // CHECK-X64-NEXT:    [[CONV1:%.*]] = fptrunc x86_fp80 [[MUL]] to float
 // CHECK-X64-NEXT:    ret float [[CONV1]]
 //
@@ -42,7 +42,7 @@
 // CHECK-AARCH64-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-AARCH64-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-AARCH64-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to fp128
-// CHECK-AARCH64-NEXT:    [[MUL:%.*]] = fmul fp128 [[CONV]], 0xL00000000000000003FFF000000000000
+// CHECK-AARCH64-NEXT:    [[MUL:%.*]] = fmul fp128 [[CONV]], 1.000000e+00
 // CHECK-AARCH64-NEXT:    [[CONV1:%.*]] = fptrunc fp128 [[MUL]] to float
 // CHECK-AARCH64-NEXT:    ret float [[CONV1]]
 //
@@ -64,7 +64,7 @@
 // CHECK-PPC32-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-PPC32-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-PPC32-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to ppc_fp128
-// CHECK-PPC32-NEXT:    [[MUL:%.*]] = fmul ppc_fp128 [[CONV]], 0xM3FF00000000000000000000000000000
+// CHECK-PPC32-NEXT:    [[MUL:%.*]] = fmul ppc_fp128 [[CONV]], 1.000000e+00
 // CHECK-PPC32-NEXT:    [[CONV1:%.*]] = fptrunc ppc_fp128 [[MUL]] to float
 // CHECK-PPC32-NEXT:    ret float [[CONV1]]
 //
@@ -75,7 +75,7 @@
 // CHECK-PPC64-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-PPC64-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-PPC64-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to ppc_fp128
-// CHECK-PPC64-NEXT:    [[MUL:%.*]] = fmul ppc_fp128 [[CONV]], 0xM3FF00000000000000000000000000000
+// CHECK-PPC64-NEXT:    [[MUL:%.*]] = fmul ppc_fp128 [[CONV]], 1.000000e+00
 // CHECK-PPC64-NEXT:    [[CONV1:%.*]] = fptrunc ppc_fp128 [[MUL]] to float
 // CHECK-PPC64-NEXT:    ret float [[CONV1]]
 //
@@ -86,7 +86,7 @@
 // CHECK-SPARCV9-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-SPARCV9-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-SPARCV9-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to fp128
-// CHECK-SPARCV9-NEXT:    [[MUL:%.*]] = fmul fp128 [[CONV]], 0xL00000000000000003FFF000000000000
+// CHECK-SPARCV9-NEXT:    [[MUL:%.*]] = fmul fp128 [[CONV]], 1.000000e+00
 // CHECK-SPARCV9-NEXT:    [[CONV1:%.*]] = fptrunc fp128 [[MUL]] to float
 // CHECK-SPARCV9-NEXT:    ret float [[CONV1]]
 //
@@ -102,7 +102,7 @@ float extended_float_func(float x) {
 // CHECK-X64-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-X64-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-X64-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to x86_fp80
-// CHECK-X64-NEXT:    [[MUL:%.*]] = fmul x86_fp80 [[CONV]], 0xK3FFF8000000000000000
+// CHECK-X64-NEXT:    [[MUL:%.*]] = fmul x86_fp80 [[CONV]], 1.000000e+00
 // CHECK-X64-NEXT:    [[CONV1:%.*]] = fptrunc x86_fp80 [[MUL]] to float
 // CHECK-X64-NEXT:    ret float [[CONV1]]
 //
@@ -113,7 +113,7 @@ float extended_float_func(float x) {
 // CHECK-AARCH64-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-AARCH64-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-AARCH64-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to fp128
-// CHECK-AARCH64-NEXT:    [[MUL:%.*]] = fmul fp128 [[CONV]], 0xL00000000000000003FFF000000000000
+// CHECK-AARCH64-NEXT:    [[MUL:%.*]] = fmul fp128 [[CONV]], 1.000000e+00
 // CHECK-AARCH64-NEXT:    [[CONV1:%.*]] = fptrunc fp128 [[MUL]] to float
 // CHECK-AARCH64-NEXT:    ret float [[CONV1]]
 //
@@ -135,7 +135,7 @@ float extended_float_func(float x) {
 // CHECK-PPC32-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-PPC32-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-PPC32-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to ppc_fp128
-// CHECK-PPC32-NEXT:    [[MUL:%.*]] = fmul ppc_fp128 [[CONV]], 0xM3FF00000000000000000000000000000
+// CHECK-PPC32-NEXT:    [[MUL:%.*]] = fmul ppc_fp128 [[CONV]], 1.000000e+00
 // CHECK-PPC32-NEXT:    [[CONV1:%.*]] = fptrunc ppc_fp128 [[MUL]] to float
 // CHECK-PPC32-NEXT:    ret float [[CONV1]]
 //
@@ -146,7 +146,7 @@ float extended_float_func(float x) {
 // CHECK-PPC64-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-PPC64-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-PPC64-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to ppc_fp128
-// CHECK-PPC64-NEXT:    [[MUL:%.*]] = fmul ppc_fp128 [[CONV]], 0xM3FF00000000000000000000000000000
+// CHECK-PPC64-NEXT:    [[MUL:%.*]] = fmul ppc_fp128 [[CONV]], 1.000000e+00
 // CHECK-PPC64-NEXT:    [[CONV1:%.*]] = fptrunc ppc_fp128 [[MUL]] to float
 // CHECK-PPC64-NEXT:    ret float [[CONV1]]
 //
@@ -157,7 +157,7 @@ float extended_float_func(float x) {
 // CHECK-SPARCV9-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-SPARCV9-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-SPARCV9-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to fp128
-// CHECK-SPARCV9-NEXT:    [[MUL:%.*]] = fmul fp128 [[CONV]], 0xL00000000000000003FFF000000000000
+// CHECK-SPARCV9-NEXT:    [[MUL:%.*]] = fmul fp128 [[CONV]], 1.000000e+00
 // CHECK-SPARCV9-NEXT:    [[CONV1:%.*]] = fptrunc fp128 [[MUL]] to float
 // CHECK-SPARCV9-NEXT:    ret float [[CONV1]]
 //
@@ -173,7 +173,7 @@ float extended_float_func_cast(float x) {
 // CHECK-X64-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-X64-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-X64-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to x86_fp80
-// CHECK-X64-NEXT:    [[MUL:%.*]] = fmul x86_fp80 [[CONV]], 0xK3FFF8000000000000000
+// CHECK-X64-NEXT:    [[MUL:%.*]] = fmul x86_fp80 [[CONV]], 1.000000e+00
 // CHECK-X64-NEXT:    [[CONV1:%.*]] = fptrunc x86_fp80 [[MUL]] to float
 // CHECK-X64-NEXT:    ret float [[CONV1]]
 //
@@ -184,7 +184,7 @@ float extended_float_func_cast(float x) {
 // CHECK-AARCH64-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-AARCH64-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-AARCH64-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to fp128
-// CHECK-AARCH64-NEXT:    [[MUL:%.*]] = fmul fp128 [[CONV]], 0xL00000000000000003FFF000000000000
+// CHECK-AARCH64-NEXT:    [[MUL:%.*]] = fmul fp128 [[CONV]], 1.000000e+00
 // CHECK-AARCH64-NEXT:    [[CONV1:%.*]] = fptrunc fp128 [[MUL]] to float
 // CHECK-AARCH64-NEXT:    ret float [[CONV1]]
 //
@@ -206,7 +206,7 @@ float extended_float_func_cast(float x) {
 // CHECK-PPC32-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-PPC32-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-PPC32-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to ppc_fp128
-// CHECK-PPC32-NEXT:    [[MUL:%.*]] = fmul ppc_fp128 [[CONV]], 0xM3FF00000000000000000000000000000
+// CHECK-PPC32-NEXT:    [[MUL:%.*]] = fmul ppc_fp128 [[CONV]], 1.000000e+00
 // CHECK-PPC32-NEXT:    [[CONV1:%.*]] = fptrunc ppc_fp128 [[MUL]] to float
 // CHECK-PPC32-NEXT:    ret float [[CONV1]]
 //
@@ -217,7 +217,7 @@ float extended_float_func_cast(float x) {
 // CHECK-PPC64-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-PPC64-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-PPC64-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to ppc_fp128
-// CHECK-PPC64-NEXT:    [[MUL:%.*]] = fmul ppc_fp128 [[CONV]], 0xM3FF00000000000000000000000000000
+// CHECK-PPC64-NEXT:    [[MUL:%.*]] = fmul ppc_fp128 [[CONV]], 1.000000e+00
 // CHECK-PPC64-NEXT:    [[CONV1:%.*]] = fptrunc ppc_fp128 [[MUL]] to float
 // CHECK-PPC64-NEXT:    ret float [[CONV1]]
 //
@@ -228,7 +228,7 @@ float extended_float_func_cast(float x) {
 // CHECK-SPARCV9-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-SPARCV9-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-SPARCV9-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to fp128
-// CHECK-SPARCV9-NEXT:    [[MUL:%.*]] = fmul fp128 [[CONV]], 0xL00000000000000003FFF000000000000
+// CHECK-SPARCV9-NEXT:    [[MUL:%.*]] = fmul fp128 [[CONV]], 1.000000e+00
 // CHECK-SPARCV9-NEXT:    [[CONV1:%.*]] = fptrunc fp128 [[MUL]] to float
 // CHECK-SPARCV9-NEXT:    ret float [[CONV1]]
 //
@@ -244,7 +244,7 @@ float extended_double_func(float x) {
 // CHECK-X64-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-X64-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-X64-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to x86_fp80
-// CHECK-X64-NEXT:    [[MUL:%.*]] = fmul x86_fp80 [[CONV]], 0xK3FFF8000000000000000
+// CHECK-X64-NEXT:    [[MUL:%.*]] = fmul x86_fp80 [[CONV]], 1.000000e+00
 // CHECK-X64-NEXT:    [[CONV1:%.*]] = fptrunc x86_fp80 [[MUL]] to float
 // CHECK-X64-NEXT:    ret float [[CONV1]]
 //
@@ -255,7 +255,7 @@ float extended_double_func(float x) {
 // CHECK-AARCH64-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-AARCH64-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-AARCH64-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to fp128
-// CHECK-AARCH64-NEXT:    [[MUL:%.*]] = fmul fp128 [[CONV]], 0xL00000000000000003FFF000000000000
+// CHECK-AARCH64-NEXT:    [[MUL:%.*]] = fmul fp128 [[CONV]], 1.000000e+00
 // CHECK-AARCH64-NEXT:    [[CONV1:%.*]] = fptrunc fp128 [[MUL]] to float
 // CHECK-AARCH64-NEXT:    ret float [[CONV1]]
 //
@@ -277,7 +277,7 @@ float extended_double_func(float x) {
 // CHECK-PPC32-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-PPC32-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-PPC32-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to ppc_fp128
-// CHECK-PPC32-NEXT:    [[MUL:%.*]] = fmul ppc_fp128 [[CONV]], 0xM3FF00000000000000000000000000000
+// CHECK-PPC32-NEXT:    [[MUL:%.*]] = fmul ppc_fp128 [[CONV]], 1.000000e+00
 // CHECK-PPC32-NEXT:    [[CONV1:%.*]] = fptrunc ppc_fp128 [[MUL]] to float
 // CHECK-PPC32-NEXT:    ret float [[CONV1]]
 //
@@ -288,7 +288,7 @@ float extended_double_func(float x) {
 // CHECK-PPC64-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-PPC64-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-PPC64-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to ppc_fp128
-// CHECK-PPC64-NEXT:    [[MUL:%.*]] = fmul ppc_fp128 [[CONV]], 0xM3FF00000000000000000000000000000
+// CHECK-PPC64-NEXT:    [[MUL:%.*]] = fmul ppc_fp128 [[CONV]], 1.000000e+00
 // CHECK-PPC64-NEXT:    [[CONV1:%.*]] = fptrunc ppc_fp128 [[MUL]] to float
 // CHECK-PPC64-NEXT:    ret float [[CONV1]]
 //
@@ -299,7 +299,7 @@ float extended_double_func(float x) {
 // CHECK-SPARCV9-NEXT:    store float [[X]], ptr [[X_ADDR]], align 4
 // CHECK-SPARCV9-NEXT:    [[TMP0:%.*]] = load float, ptr [[X_ADDR]], align 4
 // CHECK-SPARCV9-NEXT:    [[CONV:%.*]] = fpext float [[TMP0]] to fp128
-// CHECK-SPARCV9-NEXT:    [[MUL:%.*]] = fmul fp128 [[CONV]], 0xL00000000000000003FFF000000000000
+// CHECK-SPARCV9-NEXT:    [[MUL:%.*]] = fmul fp128 [[CONV]], 1.000000e+00
 // CHECK-SPARCV9-NEXT:    [[CONV1:%.*]] = fptrunc fp128 [[MUL]] to float
 // CHECK-SPARCV9-NEXT:    ret float [[CONV1]]
 //

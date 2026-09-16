@@ -16,7 +16,7 @@ class Module;
 
 /// Lower llvm.global_ctors and llvm.global_dtors to special kernels.
 class AMDGPUCtorDtorLoweringPass
-    : public PassInfoMixin<AMDGPUCtorDtorLoweringPass> {
+    : public OptionalPassInfoMixin<AMDGPUCtorDtorLoweringPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

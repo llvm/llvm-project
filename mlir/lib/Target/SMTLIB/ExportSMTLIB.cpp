@@ -13,7 +13,7 @@
 #include "mlir/Target/SMTLIB/ExportSMTLIB.h"
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/IR/FuncDialect.h"
 #include "mlir/Dialect/SMT/IR/SMTOps.h"
 #include "mlir/Dialect/SMT/IR/SMTVisitors.h"
 #include "mlir/Support/IndentedOstream.h"
@@ -674,7 +674,8 @@ static LogicalResult emit(SolverOp solver, const SMTEmissionOptions &options,
   if (result.wasInterrupted())
     return failure();
 
-  stream << "(reset)\n";
+  if (options.emitReset)
+    stream << "(reset)\n";
   return success();
 }
 

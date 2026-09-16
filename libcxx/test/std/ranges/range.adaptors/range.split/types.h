@@ -9,6 +9,7 @@
 #ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_SPLIT_TYPES_H
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_SPLIT_TYPES_H
 
+#include <cstdint>
 #include <functional>
 #include <ranges>
 

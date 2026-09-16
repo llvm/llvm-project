@@ -27,6 +27,11 @@ S s;
 // CHECK: @sp = constant ptr getelementptr (i8, ptr @s, i64 16), align 8
 float &sp = s.c[3];
 
+// CHECK: @PR9558 = global float 0.000000e+00
+float PR9558 = reinterpret_cast<const float&>("asd");
+// CHECK: @i = constant ptr @PR9558
+int &i = reinterpret_cast<int&>(PR9558);
+
 namespace NearlyZeroInit {
   // CHECK: @_ZN14NearlyZeroInit1bE ={{.*}} global{{.*}} { i32, <{ i32, [2147483647 x i32] }> } { i32 1, <{ i32, [2147483647 x i32] }> <{ i32 2, [2147483647 x i32] zeroinitializer }> }{{.*}}
   struct B { int n; int arr[1024 * 1024 * 1024 * 2u]; } b = {1, {2}};
@@ -113,7 +118,7 @@ int notdead() {
 // CHECK: _ZZ7notdeadvEN3$_0clEv
 // CHECK: ret i32 %cond
 
-/// The conmparison of those two parameters should NOT work.
+/// The comparison of those two parameters should NOT work.
 bool paramcmp(const int& lhs, const int& rhs) {
   if (&lhs == &rhs)
     return true;
@@ -143,3 +148,15 @@ X test24() {
 // CHECK: _Z6test24v
 // CHECK-NOT: eh.resume
 // CHECK-NOT: unreachable
+
+/// Used to crash in codegen because the cast worked.
+auto MemcpySemantics = *(_Complex double *)&(float[2]){};
+
+namespace InvalidReinterpretCast {
+  struct X {};
+  const X &_S_ti() {
+    constexpr char __tag{};
+    // CHECK: ret ptr %__tag
+    return reinterpret_cast<const X &>(__tag);
+  }
+}

@@ -202,7 +202,7 @@ Python Interactive Interpreter. To exit, type 'quit()', 'exit()' or Ctrl-D.
 >>> root = lldb.frame.FindVariable ("dictionary")
 >>> current_path = ""
 >>> path = tree_utils.DFS (root, "Romeo", current_path)
->>> print path
+>>> print(path)
 LLRRL
 >>> ^D
 (lldb)
@@ -254,7 +254,7 @@ Finally, we want to see if the word was found or not, and if so we want to see
 the path through the tree to the word. So we do
 
 ```python3
-print path
+print(path)
 ```
 
 From this we can see that the word "Romeo" was indeed found in the tree, and
@@ -318,7 +318,7 @@ if path[0] == 'R':
    process = thread.GetProcess()
    process.Continue()
 else:
-   print "Here is the problem; going right, should go left!"
+   print("Here is the problem; going right, should go left!")
 ```
 
 Just as a reminder, LLDB is going to take this script and wrap it up in a function, like this:
@@ -332,7 +332,7 @@ def some_unique_and_obscure_function_name (frame, bp_loc):
       process = thread.GetProcess()
       process.Continue()
    else:
-      print "Here is the problem; going right, should go left!"
+      print("Here is the problem; going right, should go left!")
 ```
 
 LLDB will call the function, passing in the correct frame and breakpoint
@@ -405,7 +405,7 @@ Enter your Python command(s). Type 'DONE' to end.
 >     process = thread.GetProcess()
 >     process.Continue()
 > else:
->     print "Here is the problem. Going left, should go right!"
+>     print("Here is the problem. Going left, should go right!")
 > DONE
 ```
 ```c++
@@ -420,7 +420,7 @@ Enter your Python command(s). Type 'DONE' to end.
 >     process = thread.GetProcess()
 >     process.Continue()
 > else:
->     print "Here is the problem. Going right, should go left!"
+>     print("Here is the problem. Going right, should go left!")
 > DONE
 ```
 ```
@@ -460,7 +460,7 @@ going right would be the correct decision. Let's ask Python what it thinks the
 path from the current node to our word is:
 
 ```c++
-(lldb) script print path
+(lldb) script print(path)
 LLRRL
 ```
 

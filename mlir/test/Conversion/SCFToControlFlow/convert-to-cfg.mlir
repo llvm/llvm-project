@@ -641,8 +641,8 @@ func.func @func_execute_region_elim_multi_yield() {
 
 // CHECK-LABEL: @index_switch
 func.func @index_switch(%i: index, %a: i32, %b: i32, %c: i32) -> i32 {
-  // CHECK: %[[CASE:.*]] = arith.index_cast %arg0 : index to i32
-  // CHECK: cf.switch %[[CASE]] : i32
+  // CHECK: %[[CASE:.*]] = arith.index_cast %arg0 : index to i64
+  // CHECK: cf.switch %[[CASE]] : i64
   // CHECK-NEXT: default: ^[[DEFAULT:.+]],
   // CHECK-NEXT: 0: ^[[bb1:.+]],
   // CHECK-NEXT: 1: ^[[bb2:.+]]
@@ -665,6 +665,32 @@ func.func @index_switch(%i: index, %a: i32, %b: i32, %c: i32) -> i32 {
   // CHECK: ^[[bb4]](%[[V:.*]]: i32
   // CHECK-NEXT: return %[[V]]
   return %0 : i32
+}
+
+// Verify that case values larger than INT32_MAX are not truncated (issue #111589).
+// In particular, case 4294967296 (2^32) must not alias with case 0 after lowering.
+// CHECK-LABEL: @index_switch_large_cases
+func.func @index_switch_large_cases(%i: index) {
+  // CHECK: %[[CASE:.*]] = arith.index_cast %arg0 : index to i64
+  // CHECK: cf.switch %[[CASE]] : i64, [
+  // CHECK-NEXT: default: ^[[DEFAULT:.+]],
+  // CHECK-NEXT: 0: ^[[bb0:.+]],
+  // CHECK-NEXT: 4294967296: ^[[bb1:.+]],
+  // CHECK-NEXT: 8589934592: ^[[bb2:.+]]
+  scf.index_switch %i
+  case 0 {
+    scf.yield
+  }
+  case 4294967296 { // 2^32, previously truncated to 0
+    scf.yield
+  }
+  case 8589934592 { // 2^33
+    scf.yield
+  }
+  default {
+    scf.yield
+  }
+  return
 }
 
 // Note: scf.forall is lowered to scf.parallel, which is currently lowered to
@@ -769,3 +795,42 @@ func.func @do_while_loops_annotation() {
   return
 }
 
+// -----
+
+// CHECK: #[[LOOP_UNROLL_DISABLE:.*]] = #llvm.loop_unroll<disable = true>
+// CHECK: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL_DISABLE]]>
+// CHECK: func @parallel_loop_annotation
+// CHECK: cf.cond_br
+// CHECK: cf.br {{.*}} {llvm.loop_annotation = #[[NO_UNROLL]]}
+// CHECK: return
+#no_unroll = #llvm.loop_annotation<unroll = <disable = true>>
+func.func @parallel_loop_annotation(%arg0 : index, %arg1 : index, %arg2 : index, %arg3 : memref<?xf32>) {
+  %cst = arith.constant 1.0 : f32
+  scf.parallel (%i) = (%arg0) to (%arg1) step (%arg2) {
+    memref.store %cst, %arg3[%i] : memref<?xf32>
+    scf.reduce
+  } {llvm.loop_annotation = #no_unroll}
+  return
+}
+
+// -----
+
+// A multi-dimensional scf.parallel lowers to a loop nest, and the metadata goes
+// to the innermost loop's latch only.
+// CHECK: #[[LOOP_UNROLL_DISABLE:.*]] = #llvm.loop_unroll<disable = true>
+// CHECK: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL_DISABLE]]>
+// CHECK: func @parallel_loop_annotation_2d
+// CHECK: cf.cond_br
+// CHECK: cf.cond_br
+// CHECK: cf.br {{.*}} {llvm.loop_annotation = #[[NO_UNROLL]]}
+// CHECK-NOT: llvm.loop_annotation
+// CHECK: return
+#no_unroll = #llvm.loop_annotation<unroll = <disable = true>>
+func.func @parallel_loop_annotation_2d(%arg0 : index, %arg1 : index, %arg2 : index, %arg3 : memref<?x?xf32>) {
+  %cst = arith.constant 1.0 : f32
+  scf.parallel (%i, %j) = (%arg0, %arg0) to (%arg1, %arg1) step (%arg2, %arg2) {
+    memref.store %cst, %arg3[%i, %j] : memref<?x?xf32>
+    scf.reduce
+  } {llvm.loop_annotation = #no_unroll}
+  return
+}

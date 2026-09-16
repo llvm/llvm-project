@@ -1549,7 +1549,6 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
     return return_valobj_sp;
 
   bool is_signed;
-  bool is_complex;
   bool is_vfp_candidate = false;
   uint8_t vfp_count = 0;
   uint8_t vfp_byte_size = 0;
@@ -1633,9 +1632,8 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
       if (!GetReturnValuePassedInMemory(thread, reg_ctx, *byte_size, value))
         return return_valobj_sp;
     }
-  } else if (compiler_type.IsFloatingPointType(is_complex)) {
-    // Vector types are handled above.
-    if (!is_complex) {
+  } else if (compiler_type.IsFloatingPointType()) {
+    if (!compiler_type.IsCompleteType()) {
       switch (*bit_width) {
       default:
         return return_valobj_sp;
@@ -1681,7 +1679,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
         break;
       }
       }
-    } else if (is_complex) {
+    } else {
       if (IsArmHardFloat(thread)) {
         is_vfp_candidate = true;
         vfp_byte_size = *byte_size / 2;
@@ -1689,9 +1687,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
       } else if (!GetReturnValuePassedInMemory(thread, reg_ctx, *bit_width / 8,
                                                value))
         return return_valobj_sp;
-    } else
-      // not handled yet
-      return return_valobj_sp;
+    }
   } else if (compiler_type.IsAggregateType()) {
     if (IsArmHardFloat(thread)) {
       CompilerType base_type;
@@ -1709,9 +1705,8 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
             vfp_count = (*base_byte_size == 8 ? homogeneous_count
                                               : homogeneous_count * 2);
           }
-        } else if (base_type.IsFloatingPointType(is_complex)) {
-          // Vector types are handled above.
-          if (!is_complex) {
+        } else if (base_type.IsFloatingPointType()) {
+          if (!base_type.IsComplexType()) {
             is_vfp_candidate = true;
             if (base_byte_size)
               vfp_byte_size = *base_byte_size;
@@ -1728,10 +1723,11 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
             base_type = compiler_type.GetFieldAtIndex(index, name, nullptr,
                                                       nullptr, nullptr);
 
-            if (base_type.IsFloatingPointType(is_complex)) {
+            // TODO: is this correct for float vector types?
+            if (base_type.GetTypeInfo() & eTypeIsFloat) {
               std::optional<uint64_t> base_byte_size =
                   llvm::expectedToOptional(base_type.GetByteSize(&thread));
-              if (is_complex) {
+              if (base_type.IsComplexType()) {
                 if (index != 0 && base_byte_size &&
                     vfp_byte_size != *base_byte_size)
                   break;
@@ -1842,7 +1838,6 @@ Status ABISysV_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   Thread *thread = frame_sp->GetThread().get();
 
   bool is_signed;
-  bool is_complex;
 
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
@@ -1884,13 +1879,6 @@ Status ABISysV_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning longer than 64 bit "
           "integer values at present.");
     }
-  } else if (compiler_type.IsFloatingPointType(is_complex)) {
-    if (is_complex)
-      error = Status::FromErrorString(
-          "We don't support returning complex values at present");
-    else
-      error = Status::FromErrorString(
-          "We don't support returning float values at present");
   }
 
   if (!set_it_simple)

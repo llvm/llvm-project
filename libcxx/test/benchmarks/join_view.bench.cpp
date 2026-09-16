@@ -13,9 +13,10 @@
 #include <ranges>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 namespace {
-void run_sizes(auto benchmark) {
+void run_sizes(benchmark::Benchmark* benchmark) {
   benchmark->Arg(0)
       ->Arg(1)
       ->Arg(2)
@@ -30,7 +31,7 @@ void run_sizes(auto benchmark) {
       ->Arg(70000);
 }
 
-void BM_join_view_in_vectors(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_join_view_in_vectors(benchmark::State& state) {
   auto size = state.range(0);
   std::vector<std::vector<int>> input(size, std::vector<int>(32));
   std::ranges::fill(input | std::views::join, 10);
@@ -45,7 +46,7 @@ void BM_join_view_in_vectors(benchmark::State& state) {
 }
 BENCHMARK(BM_join_view_in_vectors)->Apply(run_sizes);
 
-void BM_join_view_out_vectors(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_join_view_out_vectors(benchmark::State& state) {
   auto size = state.range(0);
   std::vector<std::vector<int>> output(size, std::vector<int>(32));
   std::vector<int> input;
@@ -60,7 +61,7 @@ void BM_join_view_out_vectors(benchmark::State& state) {
 }
 BENCHMARK(BM_join_view_out_vectors)->Apply(run_sizes);
 
-void BM_join_view_deques(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_join_view_deques(benchmark::State& state) {
   auto size = state.range(0);
   std::deque<std::deque<int>> deque(size, std::deque<int>(32));
   std::ranges::fill(deque | std::views::join, 10);

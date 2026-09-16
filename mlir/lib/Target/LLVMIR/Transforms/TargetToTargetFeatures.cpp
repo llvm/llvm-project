@@ -8,6 +8,7 @@
 
 #include "mlir/Target/LLVMIR/Transforms/Passes.h"
 #include "mlir/Target/LLVMIR/Transforms/TargetUtils.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -36,7 +37,7 @@ struct TargetToTargetFeaturesPass
     if (initializeLLVMTargets)
       LLVM::detail::initializeBackendsOnce();
 
-    auto targetAttr = op->getAttrOfType<LLVM::TargetAttr>(
+    auto targetAttr = op->getDiscardableAttrOfType<LLVM::TargetAttr>(
         LLVM::LLVMDialect::getTargetAttrName());
     if (!targetAttr) {
       op->emitError() << "no LLVM::TargetAttr attribute at key \""
@@ -52,19 +53,19 @@ struct TargetToTargetFeaturesPass
       return signalPassFailure();
     }
 
-    llvm::MCSubtargetInfo const *subTargetInfo =
+    llvm::MCSubtargetInfo const &subTargetInfo =
         (*targetMachine)->getMCSubtargetInfo();
 
-    const std::vector<llvm::SubtargetFeatureKV> enabledFeatures =
-        subTargetInfo->getEnabledProcessorFeatures();
+    const std::vector<const llvm::SubtargetFeatureKV *> enabledFeatures =
+        subTargetInfo.getEnabledProcessorFeatures();
 
-    auto plussedFeatures = llvm::to_vector(
-        llvm::map_range(enabledFeatures, [](llvm::SubtargetFeatureKV feature) {
-          return std::string("+") + feature.Key;
-        }));
+    auto plussedFeatures = llvm::map_to_vector(
+        enabledFeatures, [](const llvm::SubtargetFeatureKV *feature) {
+          return std::string("+") + feature->key();
+        });
 
-    auto plussedFeaturesRefs = llvm::to_vector(llvm::map_range(
-        plussedFeatures, [](auto &it) { return StringRef(it.c_str()); }));
+    auto plussedFeaturesRefs = llvm::map_to_vector(
+        plussedFeatures, [](auto &it) { return StringRef(it.c_str()); });
 
     auto fullTargetFeaturesAttr =
         LLVM::TargetFeaturesAttr::get(&getContext(), plussedFeaturesRefs);
@@ -73,6 +74,7 @@ struct TargetToTargetFeaturesPass
         LLVM::TargetAttr::get(&getContext(), targetAttr.getTriple(),
                               targetAttr.getChip(), fullTargetFeaturesAttr);
 
-    op->setAttr(LLVM::LLVMDialect::getTargetAttrName(), updatedTargetAttr);
+    op->setDiscardableAttr(LLVM::LLVMDialect::getTargetAttrName(),
+                           updatedTargetAttr);
   }
 };

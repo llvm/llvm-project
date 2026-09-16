@@ -1,0 +1,26 @@
+# RUN: not llc -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+
+# Stand in as a test of all uses of MIParser::getUnsigned to ensure it
+# rejects negative integers.
+
+--- |
+
+  define i32 @foo(i32 %a) {
+  entry:
+    %0 = icmp sle i32 %a, 10
+    br label %foo
+
+  foo:
+    ret i32 0
+  }
+
+...
+---
+name:            foo
+body: |
+  bb.0.entry:
+    ; CHECK: [[@LINE+1]]:27: expected unsigned integer
+    successors: %bb.1.foo(-2)
+
+  bb.1.foo:
+...

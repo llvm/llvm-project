@@ -1,0 +1,123 @@
+# RUN: llc %s -mtriple=x86_64-unknown -mattr=+avx512f,+nf -start-before=x86-compress-evex -show-mc-encoding -o - | FileCheck --check-prefixes=CHECK %s
+
+...
+---
+name:            test_andn_nf
+body:             |
+  bb.0.entry:
+    ; Test ANDN with NF - should NOT compress to VEX
+    ; CHECK-LABEL: test_andn_nf:
+    ; CHECK:       {nf} andnq %rdx, %r14, %r8
+    ; CHECK-NOT:   andnq %rdx, %r14, %r8 # EVEX TO VEX
+    ; CHECK:       {nf} andnl %esi, %edi, %eax
+    ; CHECK-NOT:   andnl %esi, %edi, %eax # EVEX TO VEX
+    successors: %bb.1(0x80000000)
+    liveins: $rdx, $r14, $r15, $rsi, $rdi
+    renamable $r15 = BLSR64rr killed renamable $r15, implicit-def $eflags
+    renamable $r8 = ANDN64rr_NF renamable $r14, renamable $rdx
+    renamable $eax = ANDN32rr_NF renamable $edi, renamable $esi
+    JCC_1 %bb.1, 4, implicit $eflags
+
+  bb.1:
+    RET64 $rax
+...
+---
+name:            test_bextr_nf
+body:             |
+  bb.0.entry:
+    ; Test BEXTR with NF - should NOT compress to VEX
+    ; CHECK-LABEL: test_bextr_nf:
+    ; CHECK:       {nf} bextrq %rcx, %rdx, %r8
+    ; CHECK-NOT:   bextrq %rcx, %rdx, %r8 # EVEX TO VEX
+    ; CHECK:       {nf} bextrl %ecx, %edx, %eax
+    ; CHECK-NOT:   bextrl %ecx, %edx, %eax # EVEX TO VEX
+    liveins: $rcx, $rdx, $r15
+    renamable $r15 = BLSR64rr killed renamable $r15, implicit-def $eflags
+    renamable $r8 = BEXTR64rr_NF renamable $rdx, renamable $rcx
+    renamable $eax = BEXTR32rr_NF renamable $edx, renamable $ecx
+    RET64 $rax
+...
+---
+name:            test_blsi_nf
+body:             |
+  bb.0.entry:
+    ; Test BLSI with NF - should NOT compress to VEX
+    ; CHECK-LABEL: test_blsi_nf:
+    ; CHECK:       {nf} blsiq %rdx, %r8
+    ; CHECK-NOT:   blsiq %rdx, %r8 # EVEX TO VEX
+    ; CHECK:       {nf} blsil %edx, %eax
+    ; CHECK-NOT:   blsil %edx, %eax # EVEX TO VEX
+    liveins: $rdx, $r15
+    renamable $r15 = BLSR64rr killed renamable $r15, implicit-def $eflags
+    renamable $r8 = BLSI64rr_NF renamable $rdx
+    renamable $eax = BLSI32rr_NF renamable $edx
+    RET64 $rax
+...
+---
+name:            test_blsmsk_nf
+body:             |
+  bb.0.entry:
+    ; Test BLSMSK with NF - should NOT compress to VEX
+    ; CHECK-LABEL: test_blsmsk_nf:
+    ; CHECK:       {nf} blsmskq %rdx, %r8
+    ; CHECK-NOT:   blsmskq %rdx, %r8 # EVEX TO VEX
+    ; CHECK:       {nf} blsmskl %edx, %eax
+    ; CHECK-NOT:   blsmskl %edx, %eax # EVEX TO VEX
+    liveins: $rdx, $r15
+    renamable $r15 = BLSR64rr killed renamable $r15, implicit-def $eflags
+    renamable $r8 = BLSMSK64rr_NF renamable $rdx
+    renamable $eax = BLSMSK32rr_NF renamable $edx
+    RET64 $rax
+...
+---
+name:            test_blsr_nf
+body:             |
+  bb.0.entry:
+    ; Test BLSR with NF - should NOT compress to VEX
+    ; CHECK-LABEL: test_blsr_nf:
+    ; CHECK:       {nf} blsrq %rdx, %r8
+    ; CHECK-NOT:   blsrq %rdx, %r8 # EVEX TO VEX
+    ; CHECK:       {nf} blsrl %edx, %eax
+    ; CHECK-NOT:   blsrl %edx, %eax # EVEX TO VEX
+    liveins: $rdx, $r15
+    renamable $r15 = BLSR64rr killed renamable $r15, implicit-def $eflags
+    renamable $r8 = BLSR64rr_NF renamable $rdx
+    renamable $eax = BLSR32rr_NF renamable $edx
+    RET64 $rax
+...
+---
+name:            test_bzhi_nf
+body:             |
+  bb.0.entry:
+    ; Test BZHI with NF - should NOT compress to VEX
+    ; CHECK-LABEL: test_bzhi_nf:
+    ; CHECK:       {nf} bzhiq %rcx, %rdx, %r8
+    ; CHECK-NOT:   bzhiq %rcx, %rdx, %r8 # EVEX TO VEX
+    ; CHECK:       {nf} bzhil %ecx, %edx, %eax
+    ; CHECK-NOT:   bzhil %ecx, %edx, %eax # EVEX TO VEX
+    liveins: $rcx, $rdx, $r15
+    renamable $r15 = BLSR64rr killed renamable $r15, implicit-def $eflags
+    renamable $r8 = BZHI64rr_NF renamable $rdx, renamable $rcx
+    renamable $eax = BZHI32rr_NF renamable $edx, renamable $ecx
+    RET64 $rax
+...
+---
+name:            test_memory_forms_nf
+alignment:       16
+body:             |
+  bb.0.entry:
+    ; Test memory forms with NF - should NOT compress to VEX
+    ; CHECK-LABEL: test_memory_forms_nf:
+    ; CHECK:       {nf} andnq (%rsi), %rdi, %rax
+    ; CHECK-NOT:   andnq (%rsi), %rdi, %rax # EVEX TO VEX
+    ; CHECK:       {nf} bextrq %rdi, (%rsi), %rcx
+    ; CHECK-NOT:   bextrq %rdi, (%rsi), %rcx # EVEX TO VEX
+    ; CHECK:       {nf} blsiq (%rsi), %rdx
+    ; CHECK-NOT:   blsiq (%rsi), %rdx # EVEX TO VEX
+    liveins: $rsi, $rdi, $r15
+    renamable $r15 = BLSR64rr killed renamable $r15, implicit-def $eflags
+    renamable $rax = ANDN64rm_NF renamable $rdi, renamable $rsi, 1, $noreg, 0, $noreg
+    renamable $rcx = BEXTR64rm_NF renamable $rsi, 1, $noreg, 0, $noreg, renamable $rdi
+    renamable $rdx = BLSI64rm_NF renamable $rsi, 1, $noreg, 0, $noreg
+    RET64 $rax
+...

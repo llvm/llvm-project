@@ -26,7 +26,8 @@ struct TestFuncInsertArg
 
     UnknownLoc unknownLoc = UnknownLoc::get(module.getContext());
     for (auto func : module.getOps<FunctionOpInterface>()) {
-      auto inserts = func->getAttrOfType<ArrayAttr>("test.insert_args");
+      auto inserts =
+          func->getDiscardableAttrOfType<ArrayAttr>("test.insert_args");
       if (!inserts || inserts.empty())
         continue;
       SmallVector<unsigned, 4> indicesToInsert;
@@ -44,7 +45,7 @@ struct TestFuncInsertArg
                                    ? Location(cast<LocationAttr>(insert[3]))
                                    : unknownLoc);
       }
-      func->removeAttr("test.insert_args");
+      func->removeDiscardableAttr("test.insert_args");
       if (succeeded(func.insertArguments(indicesToInsert, typesToInsert,
                                          attrsToInsert, locsToInsert)))
         continue;
@@ -68,7 +69,8 @@ struct TestFuncInsertResult
     auto module = getOperation();
 
     for (auto func : module.getOps<FunctionOpInterface>()) {
-      auto inserts = func->getAttrOfType<ArrayAttr>("test.insert_results");
+      auto inserts =
+          func->getDiscardableAttrOfType<ArrayAttr>("test.insert_results");
       if (!inserts || inserts.empty())
         continue;
       SmallVector<unsigned, 4> indicesToInsert;
@@ -82,7 +84,7 @@ struct TestFuncInsertResult
                                     ? cast<DictionaryAttr>(insert[2])
                                     : DictionaryAttr::get(&getContext()));
       }
-      func->removeAttr("test.insert_results");
+      func->removeDiscardableAttr("test.insert_results");
       if (succeeded(func.insertResults(indicesToInsert, typesToInsert,
                                        attrsToInsert)))
         continue;
@@ -106,9 +108,19 @@ struct TestFuncEraseArg
 
     for (auto func : module.getOps<FunctionOpInterface>()) {
       BitVector indicesToErase(func.getNumArguments());
-      for (auto argIndex : llvm::seq<int>(0, func.getNumArguments()))
-        if (func.getArgAttr(argIndex, "test.erase_this_arg"))
-          indicesToErase.set(argIndex);
+      bool hasUsedArg = false;
+      for (auto argIndex : llvm::seq<int>(0, func.getNumArguments())) {
+        if (!func.getArgAttr(argIndex, "test.erase_this_arg"))
+          continue;
+        indicesToErase.set(argIndex);
+        if (!func.isExternal() && !func.getArgument(argIndex).use_empty()) {
+          emitError(func->getLoc()) << "cannot erase argument " << argIndex
+                                    << " which still has uses";
+          hasUsedArg = true;
+        }
+      }
+      if (hasUsedArg)
+        return signalPassFailure();
       if (succeeded(func.eraseArguments(indicesToErase)))
         continue;
       emitError(func->getLoc()) << "failed to erase arguments";
@@ -156,7 +168,8 @@ struct TestFuncSetType
     SymbolTable symbolTable(module);
 
     for (auto func : module.getOps<FunctionOpInterface>()) {
-      auto sym = func->getAttrOfType<FlatSymbolRefAttr>("test.set_type_from");
+      auto sym = func->getDiscardableAttrOfType<FlatSymbolRefAttr>(
+          "test.set_type_from");
       if (!sym)
         continue;
       func.setType(symbolTable.lookup<FunctionOpInterface>(sym.getValue())

@@ -4479,10 +4479,9 @@ define void @c5_i64(i64 %arg, ptr %ptr) nounwind {
 ;
 ; V7A-LABEL: c5_i64:
 ; V7A:       @ %bb.0:
-; V7A-NEXT:    mov r0, #0
-; V7A-NEXT:    str r0, [r2, #4]
 ; V7A-NEXT:    ubfx r0, r1, #19, #10
-; V7A-NEXT:    str r0, [r2]
+; V7A-NEXT:    mov r3, #0
+; V7A-NEXT:    stm r2, {r0, r3}
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: c5_i64:
@@ -4517,10 +4516,9 @@ define void @c6_i64(i64 %arg, ptr %ptr) nounwind {
 ;
 ; V7A-LABEL: c6_i64:
 ; V7A:       @ %bb.0:
-; V7A-NEXT:    mov r0, #0
-; V7A-NEXT:    str r0, [r2, #4]
 ; V7A-NEXT:    ubfx r0, r1, #19, #12
-; V7A-NEXT:    str r0, [r2]
+; V7A-NEXT:    mov r3, #0
+; V7A-NEXT:    stm r2, {r0, r3}
 ; V7A-NEXT:    bx lr
 ;
 ; V7A-T-LABEL: c6_i64:

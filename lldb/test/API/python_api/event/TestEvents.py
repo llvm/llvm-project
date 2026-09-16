@@ -12,6 +12,7 @@ import random
 @skipIfLinux  # llvm.org/pr25924, sometimes generating SIGSEGV
 class EventAPITestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def setUp(self):
         # Call super's setUp().

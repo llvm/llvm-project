@@ -59,7 +59,7 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   static const std::string DefaultTriple = "spirv64-unknown-unknown";
   static const std::string DefaultMArch = "";
 
-  std::set<SPIRV::Extension::Extension> AllowedExtIds;
+  ExtensionSet AllowedExtIds;
   StringRef UnknownExt =
       SPIRVExtensionsParser::checkExtensions(AllowExtNames, AllowedExtIds);
   if (!UnknownExt.empty()) {
@@ -79,10 +79,10 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   if (!TheTarget)
     return false;
 
-  // A call to codegen::InitTargetOptionsFromCodeGenFlags(TargetTriple)
-  // hits the following assertion: llvm/lib/CodeGen/CommandFlags.cpp:78:
-  // llvm::FPOpFusion::FPOpFusionMode llvm::codegen::getFuseFPOps(): Assertion
-  // `FuseFPOpsView && "RegisterCodeGenFlags not created."' failed.
+  // A call to codegen::InitTargetOptionsFromCodeGenFlags(TargetTriple) hits an
+  // assertion in one of the codegen flag getters in
+  // llvm/lib/CodeGen/CommandFlags.cpp:
+  // `...View && "RegisterCodeGenFlags not created."' failed.
   TargetOptions Options;
   std::optional<Reloc::Model> RM;
   std::optional<CodeModel::Model> CM;

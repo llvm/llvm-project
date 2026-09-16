@@ -31,7 +31,7 @@ if.then:                                          ; preds = %entry
 
 if.end:                                           ; preds = %entry
 ; Materialize the constant.
-; CHECK:      .loc    1 0
+; CHECK:      .loc    1 6 7
 ; CHECK-NEXT: mvn     r0, #0
 
 ; The backend performs the store to %retval first, for some reason.

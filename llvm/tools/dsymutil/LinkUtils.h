@@ -9,6 +9,7 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_LINKOPTIONS_H
 #define LLVM_TOOLS_DSYMUTIL_LINKOPTIONS_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -64,7 +65,7 @@ struct LinkOptions {
   bool KeepFunctionForStatic = false;
 
   /// Type of DWARFLinker to use.
-  DsymutilDWARFLinkerType DWARFLinkerType = DsymutilDWARFLinkerType::Classic;
+  DsymutilDWARFLinkerType DWARFLinkerType = DsymutilDWARFLinkerType::Parallel;
 
   /// Use a 64-bit header when emitting universal binaries.
   bool Fat64 = false;
@@ -87,6 +88,9 @@ struct LinkOptions {
 
   /// The Resources directory in the .dSYM bundle.
   std::optional<std::string> ResourceDir;
+
+  /// Resources to embed in the dSYM bundle's Contents/Resources/ directory.
+  StringMap<std::string> EmbedResources;
 
   /// Virtual File System.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =

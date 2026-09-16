@@ -1,0 +1,197 @@
+// RUN: mlir-opt --convert-xevm-to-llvm --split-input-file %s | FileCheck %s
+
+module @test_illegal_vector {
+  // CHECK-LABEL: llvm.func @test_illegal_vector
+  // CHECK: %[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr, %[[ARG2:.*]]: !llvm.ptr, %[[ARG3:.*]]: !llvm.ptr, %[[ARG4:.*]]: !llvm.ptr
+  llvm.func @test_illegal_vector(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr, %arg3: !llvm.ptr, %arg4: !llvm.ptr) {
+    // CHECK: %[[LOAD0:.*]] = llvm.load %[[ARG0]] : !llvm.ptr -> vector<8xi16>
+    // CHECK: %[[BITCAST0:.*]] = llvm.bitcast %[[LOAD0]] : vector<8xi16> to vector<8xf16>
+    // CHECK: %[[FPEXT0:.*]] = llvm.fpext %[[BITCAST0]] : vector<8xf16> to vector<8xf32>
+    // CHECK: %[[GEP0:.*]] = llvm.getelementptr %[[ARG0]][8] : (!llvm.ptr) -> !llvm.ptr, i16
+    // CHECK: %[[LOAD1:.*]] = llvm.load %[[GEP0]] : !llvm.ptr -> vector<8xi16>
+    // CHECK: %[[BITCAST1:.*]] = llvm.bitcast %[[LOAD1]] : vector<8xi16> to vector<8xf16>
+    // CHECK: %[[FPEXT1:.*]] = llvm.fpext %[[BITCAST1]] : vector<8xf16> to vector<8xf32>
+    // CHECK: %[[BITCAST2:.*]] = llvm.bitcast %[[FPEXT0]] : vector<8xf32> to vector<8xi32>
+    // CHECK: llvm.store %[[BITCAST2]], %[[ARG1]] : vector<8xi32>, !llvm.ptr
+    // CHECK: %[[BITCAST3:.*]] = llvm.bitcast %[[FPEXT1]] : vector<8xf32> to vector<8xi32>
+    // CHECK: llvm.store %[[BITCAST3]], %[[ARG2]] : vector<8xi32>, !llvm.ptr
+    // CHECK: %[[GEP1:.*]] = llvm.getelementptr %[[ARG0]][16] : (!llvm.ptr) -> !llvm.ptr, i16
+    // CHECK: %[[LOAD2:.*]] = llvm.load %[[GEP1]] : !llvm.ptr -> vector<8xi16>
+    // CHECK: %[[BITCAST4:.*]] = llvm.bitcast %[[LOAD2]] : vector<8xi16> to vector<8xf16>
+    // CHECK: %[[FPEXT2:.*]] = llvm.fpext %[[BITCAST4]] : vector<8xf16> to vector<8xf32>
+    // CHECK: %[[GEP2:.*]] = llvm.getelementptr %[[ARG0]][24] : (!llvm.ptr) -> !llvm.ptr, i16
+    // CHECK: %[[LOAD3:.*]] = llvm.load %[[GEP2]] : !llvm.ptr -> vector<8xi16>
+    // CHECK: %[[BITCAST5:.*]] = llvm.bitcast %[[LOAD3]] : vector<8xi16> to vector<8xf16>
+    // CHECK: %[[FPEXT3:.*]] = llvm.fpext %[[BITCAST5]] : vector<8xf16> to vector<8xf32>
+    // CHECK: %[[BITCAST6:.*]] = llvm.bitcast %[[FPEXT2]] : vector<8xf32> to vector<8xi32>
+    // CHECK: llvm.store %[[BITCAST6]], %[[ARG3]] : vector<8xi32>, !llvm.ptr
+    // CHECK: %[[BITCAST7:.*]] = llvm.bitcast %[[FPEXT3]] : vector<8xf32> to vector<8xi32>
+    // CHECK: llvm.store %[[BITCAST7]], %[[ARG4]] : vector<8xi32>, !llvm.ptr
+    // CHECK: llvm.return
+      %0 = llvm.load %arg0 : !llvm.ptr -> vector<32xi16>
+      %1 = llvm.bitcast %0 : vector<32xi16> to vector<32xf16>
+      %2 = llvm.shufflevector %1, %1 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<32xf16>
+      %3 = llvm.shufflevector %1, %1 [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31] : vector<32xf16>
+      %4 = llvm.fpext %2 : vector<16xf16> to vector<16xf32>
+      %5 = llvm.fpext %3 : vector<16xf16> to vector<16xf32>
+      %6 = llvm.shufflevector %4, %4 [0, 1, 2, 3, 4, 5, 6, 7] : vector<16xf32>
+      %7 = llvm.shufflevector %4, %4 [8, 9, 10, 11, 12, 13, 14, 15] : vector<16xf32>
+      %8 = llvm.bitcast %6 : vector<8xf32> to vector<8xi32>
+      llvm.store %8, %arg1 : vector<8xi32>, !llvm.ptr
+      %9 = llvm.bitcast %7 : vector<8xf32> to vector<8xi32>
+      llvm.store %9, %arg2 : vector<8xi32>, !llvm.ptr
+      %10 = llvm.shufflevector %5, %5 [0, 1, 2, 3, 4, 5, 6, 7] : vector<16xf32>
+      %11 = llvm.shufflevector %5, %5 [8, 9, 10, 11, 12, 13, 14, 15] : vector<16xf32>
+      %12 = llvm.bitcast %10 : vector<8xf32> to vector<8xi32>
+      llvm.store %12, %arg3 : vector<8xi32>, !llvm.ptr
+      %13 = llvm.bitcast %11 : vector<8xf32> to vector<8xi32>
+      llvm.store %13, %arg4 : vector<8xi32>, !llvm.ptr
+      llvm.return
+  }
+}
+
+// -----
+
+module @test_match_fail {
+  // CHECK-LABEL: llvm.func @test_match_fail
+  // CHECK-SAME: %[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr, %[[ARG2:.*]]: !llvm.ptr, %[[ARG3:.*]]: !llvm.ptr
+  llvm.func @test_match_fail(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr, %arg3: !llvm.ptr) {
+    // CHECK: %[[VAR0:.*]] = llvm.load %[[ARG0]]
+    %0 = llvm.load %arg0 : !llvm.ptr -> vector<4xi16>
+    // CHECK: %[[VAR1:.*]] = llvm.load %[[ARG1]]
+    %1 = llvm.load %arg1 : !llvm.ptr -> vector<4xi16>
+    // CHECK: %[[VAR2:.*]] = llvm.shufflevector %[[VAR0]], %[[VAR1]]
+    %2 = llvm.shufflevector %0, %1 [0, 1, 2, 3, 4, 5, 6, 7] : vector<4xi16>
+    // CHECK: %[[VAR3:.*]] = llvm.shufflevector %[[VAR0]], %[[VAR0]]
+    %3 = llvm.shufflevector %0, %0 [0, 1, 2, 3, 4, 5, 6, 7] : vector<4xi16>
+    // CHECK: %[[VAR4:.*]] = llvm.shufflevector %[[VAR2]], %[[VAR2]]
+    %4 = llvm.shufflevector %2, %2 [0, 1, 2, 3, 4, 5] : vector<8xi16>
+    // CHECK: %[[VAR5:.*]] = llvm.shufflevector %[[VAR3]], %[[VAR3]]
+    %5 = llvm.shufflevector %3, %3 [0, 1, 2, 3, 4, 5] : vector<8xi16>
+    llvm.store %4, %arg2 : vector<6xi16>, !llvm.ptr
+    llvm.store %5, %arg3 : vector<6xi16>, !llvm.ptr
+    llvm.return
+  }
+}
+
+// -----
+
+module @test_non_private_addrspace {
+  // CHECK-LABEL: llvm.func @test_non_private_addrspace
+  // CHECK-SAME: %[[ARG0:.*]]: !llvm.ptr<1>, %[[ARG1:.*]]: !llvm.ptr<1>, %[[ARG2:.*]]: !llvm.ptr<1>
+  llvm.func @test_non_private_addrspace(%arg0: !llvm.ptr<1>, %arg1: !llvm.ptr<1>, %arg2: !llvm.ptr<1>) {
+    // CHECK: %[[VAR0:.*]] = llvm.load %[[ARG0]] : !llvm.ptr<1> -> vector<8xi16>
+    %0 = llvm.load %arg0 : !llvm.ptr<1> -> vector<8xi16>
+    // CHECK: %[[VAR1:.*]] = llvm.shufflevector %[[VAR0]], %[[VAR0]] [0, 1, 2, 3] : vector<8xi16>
+    %1 = llvm.shufflevector %0, %0 [0, 1, 2, 3] : vector<8xi16>
+    // CHECK: %[[VAR2:.*]] = llvm.shufflevector %[[VAR0]], %[[VAR0]] [4, 5, 6, 7] : vector<8xi16>
+    %2 = llvm.shufflevector %0, %0 [4, 5, 6, 7] : vector<8xi16>
+    // CHECK: llvm.store %[[VAR1]], %[[ARG1]] : vector<4xi16>, !llvm.ptr<1>
+    llvm.store %1, %arg1 : vector<4xi16>, !llvm.ptr<1>
+    // CHECK: llvm.store %[[VAR2]], %[[ARG2]] : vector<4xi16>, !llvm.ptr<1>
+    llvm.store %2, %arg2 : vector<4xi16>, !llvm.ptr<1>
+    llvm.return
+  }
+}
+
+// -----
+
+// The second shuffle operand is poison rather than a copy of the first one.
+// The mask only addresses elements of the first operand, so the slice is still
+// extractable and the oversized load must be split.
+module @test_poison_second_operand {
+  // CHECK-LABEL: llvm.func @test_poison_second_operand
+  // CHECK-SAME: %[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr, %[[ARG2:.*]]: !llvm.ptr
+  llvm.func @test_poison_second_operand(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
+    // CHECK-NOT: vector<32x
+    // CHECK: %[[LOAD0:.*]] = llvm.load %[[ARG0]] : !llvm.ptr -> vector<8xi16>
+    // CHECK: %[[BITCAST0:.*]] = llvm.bitcast %[[LOAD0]] : vector<8xi16> to vector<8xf16>
+    // CHECK: %[[GEP0:.*]] = llvm.getelementptr %[[ARG0]][8] : (!llvm.ptr) -> !llvm.ptr, i16
+    // CHECK: %[[LOAD1:.*]] = llvm.load %[[GEP0]] : !llvm.ptr -> vector<8xi16>
+    // CHECK: %[[BITCAST1:.*]] = llvm.bitcast %[[LOAD1]] : vector<8xi16> to vector<8xf16>
+    // CHECK: llvm.store %[[BITCAST0]], %[[ARG1]] : vector<8xf16>, !llvm.ptr
+    // CHECK: llvm.store %[[BITCAST1]], %[[ARG2]] : vector<8xf16>, !llvm.ptr
+    %poison = llvm.mlir.poison : vector<32xf16>
+    %0 = llvm.load %arg0 : !llvm.ptr -> vector<32xi16>
+    %1 = llvm.bitcast %0 : vector<32xi16> to vector<32xf16>
+    %2 = llvm.shufflevector %1, %poison [0, 1, 2, 3, 4, 5, 6, 7] : vector<32xf16>
+    %3 = llvm.shufflevector %1, %poison [8, 9, 10, 11, 12, 13, 14, 15] : vector<32xf16>
+    llvm.store %2, %arg1 : vector<8xf16>, !llvm.ptr
+    llvm.store %3, %arg2 : vector<8xf16>, !llvm.ptr
+    llvm.return
+  }
+}
+
+// -----
+
+// A wide *binary* element-wise op (fdiv) feeding a contiguous slice is
+// narrowed: the slice hoists through the binary op onto both operands, which
+// then terminate as legal-width slices of the (wide) arguments.
+module @test_binary_elementwise {
+  // CHECK-LABEL: llvm.func @test_binary_elementwise
+  // CHECK-NOT:     llvm.fdiv {{.*}} : vector<32xf32>
+  // CHECK:         %[[LO_A:.*]] = llvm.shufflevector %[[A:.*]], %[[A]] [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+  // CHECK:         %[[LO_B:.*]] = llvm.shufflevector %[[B:.*]], %[[B]] [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+  // CHECK:         llvm.fdiv %[[LO_A]], %[[LO_B]] : vector<16xf32>
+  llvm.func @test_binary_elementwise(%a: vector<32xf32>, %b: vector<32xf32>) -> vector<16xf32> {
+    %0 = llvm.fdiv %a, %b : vector<32xf32>
+    %1 = llvm.shufflevector %0, %0 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<32xf32>
+    llvm.return %1 : vector<16xf32>
+  }
+}
+
+// -----
+
+// A ternary `select` fed by a binary `icmp`, both wide, narrowed through the
+// contiguous slice. The `icmp` predicate must be preserved by the clone.
+module @test_select_icmp {
+  // CHECK-LABEL: llvm.func @test_select_icmp
+  // CHECK-NOT:     llvm.icmp {{.*}} : vector<32xi32>
+  // CHECK-NOT:     llvm.select {{.*}} : vector<32xi1>, vector<32xi32>
+  // CHECK:         llvm.icmp "eq" {{.*}} : vector<16xi32>
+  // CHECK:         llvm.select {{.*}} : vector<16xi1>, vector<16xi32>
+  llvm.func @test_select_icmp(%a: vector<32xi32>, %b: vector<32xi32>,
+                              %t: vector<32xi32>, %f: vector<32xi32>) -> vector<16xi32> {
+    %c = llvm.icmp "eq" %a, %b : vector<32xi32>
+    %s = llvm.select %c, %t, %f : vector<32xi1>, vector<32xi32>
+    %r = llvm.shufflevector %s, %s [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<32xi32>
+    llvm.return %r : vector<16xi32>
+  }
+}
+
+// -----
+
+// Negative: the hoist only fires when every operand has the same length as the
+// result. A length-changing bitcast (which is how packed sub-byte payloads are
+// formed) is handled by the dedicated bitcast case, not the n-ary path; here a
+// non-elementwise, side-effecting producer (a call) must be left untouched so
+// the slice is not pushed through it.
+module @test_nary_no_hoist_through_call {
+  llvm.func @producer(vector<32xf32>) -> vector<32xf32>
+  // CHECK-LABEL: llvm.func @test_nary_no_hoist_through_call
+  // CHECK:         %[[C:.*]] = llvm.call @producer
+  // CHECK:         llvm.shufflevector %[[C]], %[[C]] [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<32xf32>
+  llvm.func @test_nary_no_hoist_through_call(%a: vector<32xf32>) -> vector<16xf32> {
+    %0 = llvm.call @producer(%a) : (vector<32xf32>) -> vector<32xf32>
+    %1 = llvm.shufflevector %0, %0 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<32xf32>
+    llvm.return %1 : vector<16xf32>
+  }
+}
+
+// -----
+
+// A bitcast that widens the element count (8xi32 -> 16xbf16) feeding a
+// contiguous slice: the slice can only be expressed against the bitcast
+// source by rescaling the mask, which is the one path that rebuilds the mask
+// into a local buffer. Guards the lifetime of that buffer - reading it after
+// scope exit is a stack-use-after-scope that only sanitizer builds observe.
+module @test_bitcast_mask_rescale {
+  // CHECK-LABEL: llvm.func @test_bitcast_mask_rescale
+  // CHECK:         %[[S:.*]] = llvm.shufflevector %arg0, %arg0 [0, 1, 2, 3] : vector<8xi32>
+  // CHECK:         llvm.bitcast %[[S]] : vector<4xi32> to vector<8xbf16>
+  llvm.func @test_bitcast_mask_rescale(%a: vector<8xi32>) -> vector<8xbf16> {
+    %0 = llvm.bitcast %a : vector<8xi32> to vector<16xbf16>
+    %1 = llvm.shufflevector %0, %0 [0, 1, 2, 3, 4, 5, 6, 7] : vector<16xbf16>
+    llvm.return %1 : vector<8xbf16>
+  }
+}

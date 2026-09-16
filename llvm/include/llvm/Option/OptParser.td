@@ -134,8 +134,6 @@ class Option<list<string> prefixes, string name, OptionKind kind,
   code NormalizedValuesScope = "";
   code Normalizer = "";
   code Denormalizer = "";
-  code ValueMerger = "mergeForwardValue";
-  code ValueExtractor = "extractForwardValue";
   list<code> NormalizedValues = ?;
   list<SubCommand> SubCommands = subcommands;
 }
@@ -248,14 +246,6 @@ class MarshallingInfoNegativeFlag<KeyPathAndMacro kpm, code defaultvalue = "true
   code Denormalizer = "denormalizeSimpleFlag";
 }
 
-// Marshalled option - single flag contributing to a bitfield.
-class MarshallingInfoBitfieldFlag<KeyPathAndMacro kpm, code value>
-  : MarshallingInfoFlag<kpm, "0u"> {
-  code Normalizer = "makeFlagToValueNormalizer("#value#")";
-  code ValueMerger = "mergeMaskValue";
-  code ValueExtractor = "(extractMaskValue<unsigned, decltype("#value#"), "#value#">)";
-}
-
 // Implementation detail of BoolOption.
 class MarshallingInfoBooleanFlag<KeyPathAndMacro kpm, code defaultvalue, code value,
                                  code other_value, code other_name>
@@ -280,8 +270,6 @@ class Normalizer<code normalizer> { code Normalizer = normalizer; }
 class Denormalizer<code denormalizer> { code Denormalizer = denormalizer; }
 class NormalizedValuesScope<code scope> { code NormalizedValuesScope = scope; }
 class NormalizedValues<list<code> definitions> { list<code> NormalizedValues = definitions; }
-class ValueMerger<code merger> { code ValueMerger = merger; }
-class ValueExtractor<code extractor> { code ValueExtractor = extractor; }
 
 // Predefined options.
 

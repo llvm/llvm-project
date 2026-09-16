@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
@@ -25,7 +26,7 @@ int main(int argc, char** argv) {
   // {std,ranges}::reverse(normal container)
   {
     auto bm = []<class Container>(std::string name, auto reverse) {
-      benchmark::RegisterBenchmark(name, [reverse](auto& st) {
+      benchmark::RegisterBenchmark(name, [reverse](auto& st) TEST_ALIGN_BENCHMARK {
         std::size_t const size = st.range(0);
         using ValueType        = typename Container::value_type;
         Container c;
@@ -41,9 +42,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::reverse(vector<int>)", std_reverse);
     bm.operator()<std::deque<int>>("std::reverse(deque<int>)", std_reverse);
     bm.operator()<std::list<int>>("std::reverse(list<int>)", std_reverse);
-    bm.operator()<std::vector<int>>("rng::reverse(vector<int>)", std::ranges::reverse);
-    bm.operator()<std::deque<int>>("rng::reverse(deque<int>)", std::ranges::reverse);
-    bm.operator()<std::list<int>>("rng::reverse(list<int>)", std::ranges::reverse);
   }
 
   benchmark::Initialize(&argc, argv);

@@ -1,0 +1,33 @@
+# Identical zero-length insertions at the same (file, offset, text) from two
+# inputs (e.g., a `.data()` rewrite in a header included by N TUs) collapse
+# to ONE entry in the merged output, not concatenated into '.data().data()'.
+# This pins the libJP2-trigger shape from iter-09: the runaway-chain bug
+# where clang-apply-replacements' groupReplacements skipped dedup for plain
+# TUReplacements and AtomicChange::replace stacked the duplicates.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+
+# Two inputs with byte-identical zero-length insertions at offset 10.
+# RUN: cp %S/Inputs/single-zero-length-insert.tpl.yaml %t.dir/a.yaml
+# RUN: cp %S/Inputs/single-zero-length-insert.tpl.yaml %t.dir/b.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml %t.dir/b.yaml
+
+# RUN: clang-ssaf-src-edit-merge -o %t.dir/merged.yaml %t.dir/a.yaml %t.dir/b.yaml \
+# RUN:   2> %t.dir/stderr.txt
+
+# Exactly ONE Replacement entry survived — the duplicate from b.yaml is
+# collapsed by the pre-dedup pass before mergeAndDeduplicate runs.
+# Pre-fix this would have produced two stacked inserts whose AtomicChange
+# concatenation yielded '.data().data()'.
+# RUN: FileCheck --input-file=%t.dir/merged.yaml %s
+# CHECK: Replacements:
+# CHECK: Length:          0
+# CHECK-NEXT: ReplacementText: '.data()'
+# CHECK-NOT: ReplacementText:
+# CHECK: ...
+
+# No tool-level conflict line — identical entries are not conflicts.
+# RUN: FileCheck --input-file=%t.dir/stderr.txt --allow-empty --check-prefix=NOSTDERR %s
+# NOSTDERR-NOT: conflict:

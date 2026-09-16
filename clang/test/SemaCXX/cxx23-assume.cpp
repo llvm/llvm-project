@@ -129,6 +129,7 @@ struct F {
 template <typename T>
 constexpr int f5() requires C<T> { return 1; } // expected-note {{while checking the satisfaction}}
                                                // expected-note@-1 {{candidate template ignored}}
+                                               // expected-note@-2 {{because 'T' does not satisfy 'C'}}
 
 template <typename T>
 constexpr int f5() requires (!C<T>) { return 2; } // expected-note 3 {{while checking the satisfaction}} \

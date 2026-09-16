@@ -120,6 +120,11 @@ enum ModuleCodes {
 
   // IFUNC: [ifunc value type, addrspace, resolver val#, linkage, visibility]
   MODULE_CODE_IFUNC = 18,
+
+  MODULE_CODE_ASM_PROPERTY = 19, // [strchr x N]
+
+  // GUIDLIST: [n x i64]
+  MODULE_CODE_GUIDLIST = 20,
 };
 
 /// PARAMATTR blocks have code for defining a parameter attribute set.
@@ -177,6 +182,8 @@ enum TypeCodes {
   TYPE_CODE_OPAQUE_POINTER = 25, // OPAQUE_POINTER: [addrspace]
 
   TYPE_CODE_TARGET_TYPE = 26, // TARGET_TYPE
+
+  TYPE_CODE_BYTE = 27, // BYTE: [width]
 };
 
 enum OperandBundleTagCode {
@@ -265,6 +272,7 @@ enum GlobalValueSummarySymtabCodes {
   // strings in strtab.
   // [n * name]
   FS_CFI_FUNCTION_DECLS = 18,
+  // Deprecated, but still needed to read old bitcode files.
   // Per-module summary that also adds relative block frequency to callee info.
   // PERMODULE_RELBF: [valueid, flags, instcount, numrefs,
   //                   numrefs x valueid,
@@ -392,6 +400,7 @@ enum MetadataCodes {
   METADATA_ASSIGN_ID = 47,        // [distinct, ...]
   METADATA_SUBRANGE_TYPE = 48,    // [distinct, ...]
   METADATA_FIXED_POINT_TYPE = 49, // [distinct, ...]
+  METADATA_PROPERTY = 50, // [distinct, name, file, line, type, backing_storage]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
@@ -439,6 +448,8 @@ enum ConstantsCodes {
   CST_CODE_PTRAUTH = 33,              // [ptr, key, disc, addrdisc]
   CST_CODE_PTRAUTH2 = 34,             // [ptr, key, disc, addrdisc,
                                       //  deactivation_symbol]
+  CST_CODE_BYTE = 35,                 // BYTE:          [intval]
+  CST_CODE_WIDE_BYTE = 36,            // WIDE_BYTE:     [n x intval]
 };
 
 /// CastOpcodes - These are values used in the bitcode files to encode which
@@ -515,6 +526,12 @@ enum RMWOperations {
   RMW_USUB_SAT = 18,
   RMW_FMAXIMUM = 19,
   RMW_FMINIMUM = 20,
+  RMW_FMAXIMUMNUM = 21,
+  RMW_FMINIMUMNUM = 22,
+};
+
+enum RMWOperationFlags {
+  RMW_ELEMENTWISE_FLAG = 1 << 5,
 };
 
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing
@@ -555,6 +572,9 @@ enum PossiblyExactOperatorOptionalFlags { PEO_EXACT = 0 };
 /// PossiblyDisjointInstOptionalFlags - Flags for serializing
 /// PossiblyDisjointInst's SubclassOptionalData contents.
 enum PossiblyDisjointInstOptionalFlags { PDI_DISJOINT = 0 };
+
+/// Flags for serializing AddrSpaceCastInst's SubclassOptionalData contents.
+enum AddrSpaceCastInstOptionalFlags { ASCI_NON_NULL = 0 };
 
 /// Mark to distinguish metadata from value in an operator bundle.
 enum MetadataOperandBundleValueMarker { OB_METADATA = 0x80000000 };
@@ -806,6 +826,11 @@ enum AttributeKindCodes {
   ATTR_KIND_DEAD_ON_RETURN = 103,
   ATTR_KIND_SANITIZE_ALLOC_TOKEN = 104,
   ATTR_KIND_NO_CREATE_UNDEF_OR_POISON = 105,
+  ATTR_KIND_DENORMAL_FPENV = 106,
+  ATTR_KIND_NOOUTLINE = 107,
+  ATTR_KIND_FLATTEN = 108,
+  ATTR_KIND_NOIPA = 109,
+  ATTR_KIND_NOFREEOBJ = 110,
 };
 
 enum ComdatSelectionKindCodes {

@@ -17,6 +17,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <ranges>
 #include <vector>

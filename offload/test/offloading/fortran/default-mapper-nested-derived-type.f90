@@ -31,4 +31,4 @@ program test_omp_target_map_bug_v5
   deallocate(config%derived_field%alloc_field)
 end program test_omp_target_map_bug_v5
 
-! CHECK:  "PluginInterface" device {{[0-9]+}} info: Launching kernel {{.*}}
+! CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}}

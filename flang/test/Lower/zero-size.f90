@@ -1,36 +1,36 @@
-! RUN: bbc -hlfir=false -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
 
-! CHECK-LABEL: _QPzero1
+! CHECK-LABEL: func.func @_QPzero1
 subroutine zero1(z)
   real, dimension(:) :: z
   print*, size(z), z, ':'
 end
 
-! CHECK-LABEL: _QPzero2
+! CHECK-LABEL: func.func @_QPzero2
 subroutine zero2
   type dt
     integer :: j = 17
   end type
   ! CHECK: %[[z:[0-9]*]] = fir.alloca !fir.array<0x!fir.type<_QFzero2Tdt{j:i32}>> {bindc_name = "z", uniq_name = "_QFzero2Ez"}
   ! CHECK: %[[shape:[0-9]*]] = fir.shape %c0 : (index) -> !fir.shape<1>
-  ! CHECK: fir.embox %[[z]](%[[shape]]) : (!fir.ref<!fir.array<0x!fir.type<_QFzero2Tdt{j:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<0x!fir.type<_QFzero2Tdt{j:i32}>>>
+  ! CHECK: %{{.*}}:2 = hlfir.declare %[[z]](%[[shape]]) {uniq_name = "_QFzero2Ez"}
   type(dt) :: z(0)
   print*, size(z), z, ':'
 end
 
-! CHECK-LABEL: _QPzero3
+! CHECK-LABEL: func.func @_QPzero3
 subroutine zero3
   type dt
     integer :: j
   end type
   ! CHECK: %[[z:[0-9]*]] = fir.address_of(@_QFzero3Ez) : !fir.ref<!fir.array<0x!fir.type<_QFzero3Tdt{j:i32}>>>
   ! CHECK: %[[shape:[0-9]*]] = fir.shape %c0 : (index) -> !fir.shape<1>
-  ! CHECK: fir.embox %[[z]](%[[shape]]) : (!fir.ref<!fir.array<0x!fir.type<_QFzero3Tdt{j:i32}>>>, !fir.shape<1>) -> !fir.box<!fir.array<0x!fir.type<_QFzero3Tdt{j:i32}>>>
+  ! CHECK: %{{.*}}:2 = hlfir.declare %[[z]](%[[shape]]) {uniq_name = "_QFzero3Ez"}
   type(dt) :: z(0) = dt(99)
   print*, size(z), z, ':'
 end
 
-! CHECK-LABEL: _QQmain
+! CHECK-LABEL: func.func @_QQmain
 program prog
   real nada(2:-1)
   interface
@@ -39,7 +39,7 @@ program prog
     end
   end interface
   ! CHECK: %[[shape:[0-9]*]] = fir.shape_shift %c2, %c0 : (index, index) -> !fir.shapeshift<1>
-  ! CHECK: %2 = fir.embox %0(%[[shape]]) : (!fir.ref<!fir.array<0xf32>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<0xf32>>
+  ! CHECK: %{{.*}}:2 = hlfir.declare %{{.*}}(%[[shape]]) {uniq_name = "_QFEnada"}
   call zero1(nada)
   call zero2
   call zero3

@@ -16,7 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
-static constexpr llvm::StringRef DefaultExclusionStr =
+static constexpr StringRef DefaultExclusionStr =
     "::std::map;::std::unordered_map;::std::flat_map";
 
 ProBoundsAvoidUncheckedContainerAccessCheck::
@@ -153,11 +153,12 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::check(
           MatchedExpr->getDirectCallee()->getNumParams() == 0;
 
       if (EmptySubscript) {
-        auto D = diag(MatchedExpr->getCallee()->getBeginLoc(),
-                      "possibly unsafe 'operator[]'%select{, use safe "
-                      "function '%1() instead|}0")
-                 << FixFunctionEmptyArgs.empty() << FixFunctionEmptyArgs.str()
-                 << MatchedExpr->getCallee()->getSourceRange();
+        const auto D = diag(MatchedExpr->getCallee()->getBeginLoc(),
+                            "possibly unsafe 'operator[]'%select{, use safe "
+                            "function '%1() instead|}0")
+                       << FixFunctionEmptyArgs.empty()
+                       << FixFunctionEmptyArgs.str()
+                       << MatchedExpr->getCallee()->getSourceRange();
         if (!FixFunctionEmptyArgs.empty()) {
           D << FixItHint::CreateInsertion(OCE->getArg(0)->getBeginLoc(),
                                           FixFunctionEmptyArgs.str() + "(")
@@ -214,16 +215,17 @@ void ProBoundsAvoidUncheckedContainerAccessCheck::check(
           "(";
 
       if (Callee->isArrow())
-        BeginInsertion += "*";
+        BeginInsertion += '*';
 
       // Since C++23, the subscript operator may also be called without an
       // argument, which makes the following distinction necessary
       if (EmptySubscript) {
-        auto D = diag(MatchedExpr->getCallee()->getBeginLoc(),
-                      "possibly unsafe 'operator[]'%select{, use safe "
-                      "function '%1()' instead|}0")
-                 << FixFunctionEmptyArgs.empty() << FixFunctionEmptyArgs.str()
-                 << Callee->getSourceRange();
+        const auto D = diag(MatchedExpr->getCallee()->getBeginLoc(),
+                            "possibly unsafe 'operator[]'%select{, use safe "
+                            "function '%1()' instead|}0")
+                       << FixFunctionEmptyArgs.empty()
+                       << FixFunctionEmptyArgs.str()
+                       << Callee->getSourceRange();
 
         if (!FixFunctionEmptyArgs.empty()) {
           D << FixItHint::CreateInsertion(MatchedExpr->getBeginLoc(),

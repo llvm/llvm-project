@@ -121,7 +121,7 @@ bool DeclFinderASTVisitor::VisitNamedDecl(NamedDecl *D) {
 /// Forward any declaration references to the actual check on the
 /// referenced declaration.
 bool DeclFinderASTVisitor::VisitDeclRefExpr(DeclRefExpr *DeclRef) {
-  if (auto *D = dyn_cast<NamedDecl>(DeclRef->getDecl()))
+  if (ValueDecl *D = DeclRef->getDecl())
     return VisitNamedDecl(D);
   return true;
 }
@@ -139,12 +139,12 @@ bool DeclFinderASTVisitor::VisitTypeLoc(TypeLoc TL) {
   // Check for base type conflicts. For example, when a struct is being
   // referenced in the body of the loop, the above getAsString() will return the
   // whole type (ex. "struct s"), but will be caught here.
-  if (const IdentifierInfo *Ident = QType.getBaseTypeIdentifier()) {
-    if (Ident->getName() == Name) {
-      Found = true;
-      return false;
-    }
+  if (const IdentifierInfo *Ident = QType.getBaseTypeIdentifier();
+      Ident && Ident->getName() == Name) {
+    Found = true;
+    return false;
   }
+
   return true;
 }
 
@@ -179,14 +179,15 @@ const Expr *digThroughConstructorsConversions(const Expr *E) {
   }
   // If this is a conversion (as iterators commonly convert into their const
   // iterator counterparts), dig through that as well.
-  if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E))
-    if (isa<CXXConversionDecl>(ME->getMethodDecl()))
-      return digThroughConstructorsConversions(ME->getImplicitObjectArgument());
+  if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
+      ME && isa<CXXConversionDecl>(ME->getMethodDecl()))
+    return digThroughConstructorsConversions(ME->getImplicitObjectArgument());
   return E;
 }
 
 /// Returns true when two Exprs are equivalent.
-bool areSameExpr(ASTContext *Context, const Expr *First, const Expr *Second) {
+bool areSameExpr(const ASTContext *Context, const Expr *First,
+                 const Expr *Second) {
   return utils::areStatementsIdentical(First, Second, *Context, true);
 }
 
@@ -277,7 +278,8 @@ static bool isIndexInSubscriptExpr(const Expr *IndexExpr,
 ///   (*container)[index]
 ///   (*container).at(index)
 /// \endcode
-static bool isIndexInSubscriptExpr(ASTContext *Context, const Expr *IndexExpr,
+static bool isIndexInSubscriptExpr(const ASTContext *Context,
+                                   const Expr *IndexExpr,
                                    const VarDecl *IndexVar, const Expr *Obj,
                                    const Expr *SourceExpr, bool PermitDeref) {
   if (!SourceExpr || !Obj || !isIndexInSubscriptExpr(IndexExpr, IndexVar))
@@ -287,10 +289,11 @@ static bool isIndexInSubscriptExpr(ASTContext *Context, const Expr *IndexExpr,
                   Obj->IgnoreParenImpCasts()))
     return true;
 
-  if (const Expr *InnerObj = getDereferenceOperand(Obj->IgnoreParenImpCasts()))
-    if (PermitDeref && areSameExpr(Context, SourceExpr->IgnoreParenImpCasts(),
-                                   InnerObj->IgnoreParenImpCasts()))
-      return true;
+  if (const Expr *InnerObj = getDereferenceOperand(Obj->IgnoreParenImpCasts());
+      InnerObj && PermitDeref &&
+      areSameExpr(Context, SourceExpr->IgnoreParenImpCasts(),
+                  InnerObj->IgnoreParenImpCasts()))
+    return true;
 
   return false;
 }
@@ -339,7 +342,7 @@ static bool isDereferenceOfUop(const UnaryOperator *Uop,
 ///     // use t, do not use i
 ///   }
 /// \endcode
-static bool isAliasDecl(ASTContext *Context, const Decl *TheDecl,
+static bool isAliasDecl(const ASTContext *Context, const Decl *TheDecl,
                         const VarDecl *IndexVar) {
   const auto *VDecl = dyn_cast<VarDecl>(TheDecl);
   if (!VDecl)
@@ -422,7 +425,7 @@ static bool isAliasDecl(ASTContext *Context, const Decl *TheDecl,
 ///   for (int i = 0; i < N; ++i) {  /* use arr[i] */ }
 ///   for (int i = 0; i < arraysize(arr); ++i) { /* use arr[i] */ }
 /// \endcode
-static bool arrayMatchesBoundExpr(ASTContext *Context,
+static bool arrayMatchesBoundExpr(const ASTContext *Context,
                                   const QualType &ArrayType,
                                   const Expr *ConditionExpr) {
   if (!ConditionExpr || ConditionExpr->isValueDependent())
@@ -534,21 +537,21 @@ bool ForLoopIndexUseVisitor::TraverseMemberExpr(MemberExpr *Member) {
   const Expr *ResultExpr = Member;
   QualType ExprType;
   if (const auto *Call =
-          dyn_cast<CXXOperatorCallExpr>(Base->IgnoreParenImpCasts())) {
-    // If operator->() is a MemberExpr containing a CXXOperatorCallExpr, then
-    // the MemberExpr does not have the expression we want. We therefore catch
-    // that instance here.
-    // For example, if vector<Foo>::iterator defines operator->(), then the
-    // example `i->bar()` at the top of this function is a CXXMemberCallExpr
-    // referring to `i->` as the member function called. We want just `i`, so
-    // we take the argument to operator->() as the base object.
-    if (Call->getOperator() == OO_Arrow) {
-      assert(Call->getNumArgs() == 1 &&
-             "Operator-> takes more than one argument");
-      Obj = getDeclRef(Call->getArg(0));
-      ResultExpr = Obj;
-      ExprType = Call->getCallReturnType(*Context);
-    }
+          dyn_cast<CXXOperatorCallExpr>(Base->IgnoreParenImpCasts());
+      Call && Call->getOperator() == OO_Arrow)
+  // If operator->() is a MemberExpr containing a CXXOperatorCallExpr, then
+  // the MemberExpr does not have the expression we want. We therefore catch
+  // that instance here.
+  // For example, if vector<Foo>::iterator defines operator->(), then the
+  // example `i->bar()` at the top of this function is a CXXMemberCallExpr
+  // referring to `i->` as the member function called. We want just `i`, so
+  // we take the argument to operator->() as the base object.
+  {
+    assert(Call->getNumArgs() == 1 &&
+           "Operator-> takes more than one argument");
+    Obj = getDeclRef(Call->getArg(0));
+    ResultExpr = Obj;
+    ExprType = Call->getCallReturnType(*Context);
   }
 
   if (Obj && exprReferencesVariable(IndexVar, Obj)) {
@@ -589,7 +592,7 @@ bool ForLoopIndexUseVisitor::TraverseMemberExpr(MemberExpr *Member) {
 /// operator->(). The one exception is allowing vector::at() for pseudoarrays.
 bool ForLoopIndexUseVisitor::TraverseCXXMemberCallExpr(
     CXXMemberCallExpr *MemberCall) {
-  auto *Member =
+  const auto *Member =
       dyn_cast<MemberExpr>(MemberCall->getCallee()->IgnoreParenImpCasts());
   if (!Member)
     return VisitorBase::TraverseCXXMemberCallExpr(MemberCall);
@@ -598,13 +601,12 @@ bool ForLoopIndexUseVisitor::TraverseCXXMemberCallExpr(
   // this is restricted to pseudo-arrays by requiring a single, integer
   // argument.
   const IdentifierInfo *Ident = Member->getMemberDecl()->getIdentifier();
-  if (Ident && Ident->isStr("at") && MemberCall->getNumArgs() == 1) {
-    if (isIndexInSubscriptExpr(Context, MemberCall->getArg(0), IndexVar,
-                               Member->getBase(), ContainerExpr,
-                               ContainerNeedsDereference)) {
-      addUsage(Usage(MemberCall));
-      return true;
-    }
+  if (Ident && Ident->isStr("at") && MemberCall->getNumArgs() == 1 &&
+      isIndexInSubscriptExpr(Context, MemberCall->getArg(0), IndexVar,
+                             Member->getBase(), ContainerExpr,
+                             ContainerNeedsDereference)) {
+    addUsage(Usage(MemberCall));
+    return true;
   }
 
   if (containsExpr(Context, &DependentExprs, Member->getBase()))
@@ -795,9 +797,9 @@ bool ForLoopIndexUseVisitor::VisitDeclStmt(DeclStmt *S) {
     AliasDecl = S;
     if (CurrStmtParent) {
       if (isa<IfStmt>(CurrStmtParent) || isa<WhileStmt>(CurrStmtParent) ||
-          isa<SwitchStmt>(CurrStmtParent))
+          isa<SwitchStmt>(CurrStmtParent)) {
         ReplaceWithAliasUse = true;
-      else if (isa<ForStmt>(CurrStmtParent)) {
+      } else if (isa<ForStmt>(CurrStmtParent)) {
         if (cast<ForStmt>(CurrStmtParent)->getConditionVariableDeclStmt() == S)
           ReplaceWithAliasUse = true;
         else
@@ -826,12 +828,12 @@ bool ForLoopIndexUseVisitor::TraverseStmt(Stmt *S) {
   // traversal so that we don't end up diagnosing the contained DeclRefExpr as
   // inconsistent usage. No need to record the usage here -- this is done in
   // TraverseLambdaCapture().
-  if (const auto *LE = dyn_cast_or_null<LambdaExpr>(NextStmtParent)) {
+  if (const auto *LE = dyn_cast_or_null<LambdaExpr>(NextStmtParent);
+      LE && S != LE->getBody())
     // Any child of a LambdaExpr that isn't the body is an initialization
     // expression.
-    if (S != LE->getBody())
-      return true;
-  }
+    return true;
+
   return traverseStmtImpl(S);
 }
 

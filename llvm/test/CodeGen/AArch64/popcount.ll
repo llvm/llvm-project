@@ -439,8 +439,6 @@ declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>)
 define <1 x i64> @popcount1x64(<1 x i64> %0) {
 ; CHECKO0-LABEL: popcount1x64:
 ; CHECKO0:       // %bb.0: // %Entry
-; CHECKO0-NEXT:    fmov x0, d0
-; CHECKO0-NEXT:    fmov d0, x0
 ; CHECKO0-NEXT:    cnt v0.8b, v0.8b
 ; CHECKO0-NEXT:    uaddlv h0, v0.8b
 ; CHECKO0-NEXT:    // kill: def $q0 killed $h0
@@ -492,8 +490,6 @@ define <1 x i64> @popcount1x64(<1 x i64> %0) {
 ;
 ; GISELO0-LABEL: popcount1x64:
 ; GISELO0:       // %bb.0: // %Entry
-; GISELO0-NEXT:    fmov x0, d0
-; GISELO0-NEXT:    fmov d0, x0
 ; GISELO0-NEXT:    cnt v0.8b, v0.8b
 ; GISELO0-NEXT:    uaddlv h0, v0.8b
 ; GISELO0-NEXT:    // kill: def $q0 killed $h0
@@ -776,10 +772,11 @@ define i32 @ctpop_into_extract(ptr %p) {
 ; CHECKO0-NEXT:    // implicit-def: $d2
 ; CHECKO0-NEXT:    fmov s2, w8
 ; CHECKO0-NEXT:    ldr d0, [x0]
-; CHECKO0-NEXT:    fmov s1, s0
-; CHECKO0-NEXT:    fmov w8, s1
-; CHECKO0-NEXT:    fmov s1, w8
-; CHECKO0-NEXT:    // kill: def $d1 killed $s1
+; CHECKO0-NEXT:    // implicit-def: $q1
+; CHECKO0-NEXT:    fmov d1, d0
+; CHECKO0-NEXT:    mov w8, v1.s[0]
+; CHECKO0-NEXT:    mov w1, w8
+; CHECKO0-NEXT:    fmov d1, x1
 ; CHECKO0-NEXT:    cnt v1.8b, v1.8b
 ; CHECKO0-NEXT:    uaddlv h1, v1.8b
 ; CHECKO0-NEXT:    // kill: def $q1 killed $h1
@@ -858,8 +855,8 @@ define i32 @ctpop_into_extract(ptr %p) {
 ; GISEL-NEXT:    ldr d0, [x0]
 ; GISEL-NEXT:    mov x8, x0
 ; GISEL-NEXT:    mov w0, wzr
-; GISEL-NEXT:    fmov w9, s0
-; GISEL-NEXT:    fmov s1, w9
+; GISEL-NEXT:    mov w9, v0.s[0]
+; GISEL-NEXT:    fmov d1, x9
 ; GISEL-NEXT:    mov w9, #-1 // =0xffffffff
 ; GISEL-NEXT:    fmov s2, w9
 ; GISEL-NEXT:    cnt v1.8b, v1.8b
@@ -875,10 +872,11 @@ define i32 @ctpop_into_extract(ptr %p) {
 ; GISELO0-NEXT:    // implicit-def: $d2
 ; GISELO0-NEXT:    fmov s2, w8
 ; GISELO0-NEXT:    ldr d0, [x0]
-; GISELO0-NEXT:    fmov s1, s0
-; GISELO0-NEXT:    fmov w8, s1
-; GISELO0-NEXT:    fmov s1, w8
-; GISELO0-NEXT:    // kill: def $d1 killed $s1
+; GISELO0-NEXT:    // implicit-def: $q1
+; GISELO0-NEXT:    fmov d1, d0
+; GISELO0-NEXT:    mov w8, v1.s[0]
+; GISELO0-NEXT:    mov w1, w8
+; GISELO0-NEXT:    fmov d1, x1
 ; GISELO0-NEXT:    cnt v1.8b, v1.8b
 ; GISELO0-NEXT:    uaddlv h1, v1.8b
 ; GISELO0-NEXT:    // kill: def $q1 killed $h1
@@ -905,8 +903,9 @@ define <8 x i8> @bitcast_upper_bits(i32 %b, <8 x i8> %v) {
 ; CHECKO0-LABEL: bitcast_upper_bits:
 ; CHECKO0:       // %bb.0:
 ; CHECKO0-NEXT:    fmov d1, d0
-; CHECKO0-NEXT:    fmov s0, w0
-; CHECKO0-NEXT:    // kill: def $d0 killed $s0
+; CHECKO0-NEXT:    mov w8, w0
+; CHECKO0-NEXT:    mov w0, w8
+; CHECKO0-NEXT:    fmov d0, x0
 ; CHECKO0-NEXT:    add v0.8b, v0.8b, v1.8b
 ; CHECKO0-NEXT:    ret
 ;
@@ -926,15 +925,17 @@ define <8 x i8> @bitcast_upper_bits(i32 %b, <8 x i8> %v) {
 ;
 ; GISEL-LABEL: bitcast_upper_bits:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    fmov s1, w0
+; GISEL-NEXT:    mov w8, w0
+; GISEL-NEXT:    fmov d1, x8
 ; GISEL-NEXT:    add v0.8b, v1.8b, v0.8b
 ; GISEL-NEXT:    ret
 ;
 ; GISELO0-LABEL: bitcast_upper_bits:
 ; GISELO0:       // %bb.0:
 ; GISELO0-NEXT:    fmov d1, d0
-; GISELO0-NEXT:    fmov s0, w0
-; GISELO0-NEXT:    // kill: def $d0 killed $s0
+; GISELO0-NEXT:    mov w8, w0
+; GISELO0-NEXT:    mov w0, w8
+; GISELO0-NEXT:    fmov d0, x0
 ; GISELO0-NEXT:    add v0.8b, v0.8b, v1.8b
 ; GISELO0-NEXT:    ret
   %a = zext i32 %b to i64

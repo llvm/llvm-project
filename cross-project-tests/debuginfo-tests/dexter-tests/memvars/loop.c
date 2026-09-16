@@ -4,7 +4,7 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang -std=gnu11 -O3 -glldb %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w %dexter_lldb_args --binary %t -- %s
+// RUN: %dexter -w %dexter_lldb_args --binary %t -- %s | FileCheck %s
 
 //// Check that escaped local 'param' in function 'fun' has sensible debug info
 //// after the escaping function 'use' gets arg promotion (int* -> int). Currently
@@ -17,7 +17,7 @@ __attribute__((__noinline__))
 static void use(const int* p) {
   //// Promoted args would be a good candidate for an DW_OP_implicit_pointer.
   //// This desirable behaviour is checked for in the test implicit-ptr.c.
-  g = *p;
+  g = *p; // !dex_label s1
 }
 
 __attribute__((__noinline__))
@@ -27,7 +27,7 @@ void do_thing(int x) {
 
 __attribute__((__noinline__))
 int fun(int param) {
-  do_thing(0);                        // DexLabel('s2')
+  do_thing(0); // !dex_label s2
   for (int i = 0; i < param; ++i) {
     use(&param);
   }
@@ -45,12 +45,22 @@ int fun(int param) {
   ////    [0x0000000000400495, 0x00000000004004a2): DW_OP_reg3 RBX)
   //// DW_AT_name       ("param")
 
-  return g;                           // DexLabel('s3')
+  return g; // !dex_label s3
 }
 
 int main() {
   return fun(5);
 }
 
-// DexExpectWatchValue('*p', 5, 5, 5, 5, 5, on_line=ref('s1'))
-// DexExpectWatchValue('param', 5, from_line=ref('s2'), to_line=ref('s3'))
+// CHECK-DAG: seen_values: 2
+// CHECK-DAG: correct_step_coverage: 100.0%
+
+/*
+---
+!where {lines: !label s1}:
+  !value p:
+    "*": 5
+!where {lines: !range [!label s2, !label s3]}:
+  !value param: 5
+...
+*/

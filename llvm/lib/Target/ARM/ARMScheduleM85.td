@@ -410,7 +410,7 @@ def M85ReadALUsi : SchedReadVariant<[
 
 def : InstRW<[M85WriteALUsi, M85Read_EX1, M85ReadALUsi],
                (instregex "t2(ADC|ADDS|BIC|EOR|ORN|ORR|RSBS|RSB|SBC|"
-                          "SUBS|CMP|CMNz|TEQ|TST)rs$")>;
+                          "SUBS|CMP|CMN|TEQ|TST)rs$")>;
 def : InstRW<[M85WriteALUsi, M85ReadALUsi],
                (instregex "t2MVNs")>;
 
@@ -419,7 +419,7 @@ def : InstRW<[M85WriteALUsi, M85ReadALUsi],
 // shift resource.
 def : InstRW<[M85WriteALUsi, M85Read_EX1, M85ReadALUsi],
                (instregex "t2(ADC|ADDS|BIC|EOR|ORN|ORR|RSBS|RSB|SBC|"
-                          "SUBS|CMP|CMNz|TEQ|TST)rr$")>;
+                          "SUBS|CMP|CMN|TEQ|TST)rr$")>;
 def : InstRW<[M85WriteALUsi, M85ReadALUsi],
                (instregex "t2MVNr")>;
 
@@ -605,9 +605,7 @@ let SingleIssue = 1 in {
   def M85VMSRLate  : SchedWriteRes<[M85UnitVPort]> { let Latency = 3; }
 }
 
-def M85FPSCRFlagPred : MCSchedPredicate<
-                           CheckAll<[CheckIsRegOperand<0>,
-                                     CheckRegOperand<0, PC>]>>;
+def M85FPSCRFlagPred : MCSchedPredicate<CheckRegOperand<0, PC>>;
 
 def M85VMRSFPSCR : SchedWriteVariant<[
   SchedVar<M85FPSCRFlagPred, [M85VMRSEarly]>,

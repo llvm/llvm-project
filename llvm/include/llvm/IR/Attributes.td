@@ -22,7 +22,8 @@ def ParamAttr : AttrProperty;
 /// Can be used as return attribute.
 def RetAttr : AttrProperty;
 
-
+/// This is an ABI-affecting attribute.
+def ABIAttr : AttrProperty;
 
 /// Intersection rules. Used for example in sinking/hoisting two
 /// callbases to find a set of attributes that apply to both.
@@ -103,10 +104,10 @@ def AlwaysInline : EnumAttr<"alwaysinline", IntersectPreserve, [FnAttr]>;
 def Builtin : EnumAttr<"builtin", IntersectPreserve, [FnAttr]>;
 
 /// Pass structure by value.
-def ByVal : TypeAttr<"byval", IntersectPreserve, [ParamAttr]>;
+def ByVal : TypeAttr<"byval", IntersectPreserve, [ParamAttr, ABIAttr]>;
 
 /// Mark in-memory ABI type.
-def ByRef : TypeAttr<"byref", IntersectPreserve, [ParamAttr]>;
+def ByRef : TypeAttr<"byref", IntersectPreserve, [ParamAttr, ABIAttr]>;
 
 /// Parameter or return value may not contain uninitialized or poison bits.
 def NoUndef : EnumAttr<"noundef", IntersectAnd, [ParamAttr, RetAttr]>;
@@ -132,7 +133,10 @@ def DereferenceableOrNull : IntAttr<"dereferenceable_or_null", IntersectMin,
 def DisableSanitizerInstrumentation: EnumAttr<"disable_sanitizer_instrumentation", IntersectPreserve, [FnAttr]>;
 
 /// Provide pointer element type to intrinsic.
-def ElementType : TypeAttr<"elementtype", IntersectPreserve, [ParamAttr]>;
+def ElementType : TypeAttr<"elementtype", IntersectPreserve, [RetAttr, ParamAttr]>;
+
+/// Flatten function by recursively inlining all calls.
+def Flatten : EnumAttr<"flatten", IntersectPreserve, [FnAttr]>;
 
 /// Whether to keep return instructions, or replace with a jump to an external
 /// symbol.
@@ -142,7 +146,7 @@ def FnRetThunkExtern : EnumAttr<"fn_ret_thunk_extern", IntersectPreserve, [FnAtt
 def HybridPatchable : EnumAttr<"hybrid_patchable", IntersectPreserve, [FnAttr]>;
 
 /// Pass structure in an alloca.
-def InAlloca : TypeAttr<"inalloca", IntersectPreserve, [ParamAttr]>;
+def InAlloca : TypeAttr<"inalloca", IntersectPreserve, [ParamAttr, ABIAttr]>;
 
 /// Pointer argument memory is initialized.
 def Initializes : ConstantRangeListAttr<"initializes", IntersectPreserve, [ParamAttr]>;
@@ -151,7 +155,7 @@ def Initializes : ConstantRangeListAttr<"initializes", IntersectPreserve, [Param
 def InlineHint : EnumAttr<"inlinehint", IntersectAnd, [FnAttr]>;
 
 /// Force argument to be passed in register.
-def InReg : EnumAttr<"inreg", IntersectPreserve, [ParamAttr, RetAttr]>;
+def InReg : EnumAttr<"inreg", IntersectPreserve, [ParamAttr, RetAttr, ABIAttr]>;
 
 /// Build jump-instruction tables and replace refs.
 def JumpTable : EnumAttr<"jumptable", IntersectPreserve, [FnAttr]>;
@@ -169,7 +173,7 @@ def MinSize : EnumAttr<"minsize", IntersectPreserve, [FnAttr]>;
 def Naked : EnumAttr<"naked", IntersectPreserve, [FnAttr]>;
 
 /// Nested function static chain.
-def Nest : EnumAttr<"nest", IntersectPreserve, [ParamAttr]>;
+def Nest : EnumAttr<"nest", IntersectPreserve, [ParamAttr, ABIAttr]>;
 
 /// Considered to not alias after call.
 def NoAlias : EnumAttr<"noalias", IntersectAnd, [ParamAttr, RetAttr]>;
@@ -195,22 +199,32 @@ def NoDivergenceSource : EnumAttr<"nodivergencesource", IntersectAnd, [FnAttr]>;
 def NoDuplicate : EnumAttr<"noduplicate", IntersectPreserve, [FnAttr]>;
 
 /// No extension needed before/after call (high bits are undefined).
-def NoExt : EnumAttr<"noext", IntersectPreserve, [ParamAttr, RetAttr]>;
+def NoExt : EnumAttr<"noext", IntersectPreserve, [ParamAttr, RetAttr, ABIAttr]>;
 
 /// Function does not deallocate memory.
+/// Argument cannot be freed based on the argument pointer.
 def NoFree : EnumAttr<"nofree", IntersectAnd, [FnAttr, ParamAttr]>;
+
+/// Underlying object of argument/return cannot be freed.
+def NoFreeObj : EnumAttr<"nofreeobj", IntersectAnd, [ParamAttr, RetAttr]>;
 
 /// Argument is dead if the call unwinds.
 def DeadOnUnwind : EnumAttr<"dead_on_unwind", IntersectAnd, [ParamAttr]>;
 
 /// Argument is dead upon function return.
-def DeadOnReturn : EnumAttr<"dead_on_return", IntersectAnd, [ParamAttr]>;
+def DeadOnReturn : IntAttr<"dead_on_return", IntersectMin, [ParamAttr]>;
 
 /// Disable implicit floating point insts.
 def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;
 
 /// inline=never.
 def NoInline : EnumAttr<"noinline", IntersectPreserve, [FnAttr]>;
+
+/// nooutline
+def NoOutline : EnumAttr<"nooutline", IntersectPreserve, [FnAttr]>;
+
+/// Do not do interprocedural analysis or optimization including this function
+def NoIPA : EnumAttr<"noipa", IntersectPreserve, [FnAttr]>;
 
 /// Function is called early and/or often, so lazy binding isn't worthwhile.
 def NonLazyBind : EnumAttr<"nonlazybind", IntersectPreserve, [FnAttr]>;
@@ -268,7 +282,8 @@ def OptimizeForSize : EnumAttr<"optsize", IntersectPreserve, [FnAttr]>;
 def OptimizeNone : EnumAttr<"optnone", IntersectPreserve, [FnAttr]>;
 
 /// Similar to byval but without a copy.
-def Preallocated : TypeAttr<"preallocated", IntersectPreserve, [FnAttr, ParamAttr]>;
+def Preallocated : TypeAttr<"preallocated", IntersectPreserve,
+                            [FnAttr, ParamAttr, ABIAttr]>;
 
 /// Parameter or return value is within the specified range.
 def Range : ConstantRangeAttr<"range", IntersectCustom, [ParamAttr, RetAttr]>;
@@ -295,11 +310,13 @@ def SafeStack : EnumAttr<"safestack", IntersectPreserve, [FnAttr]>;
 def ShadowCallStack : EnumAttr<"shadowcallstack", IntersectPreserve, [FnAttr]>;
 
 /// Sign extended before/after call.
-def SExt : EnumAttr<"signext", IntersectPreserve, [ParamAttr, RetAttr]>;
+def SExt : EnumAttr<"signext", IntersectPreserve,
+                    [ParamAttr, RetAttr, ABIAttr]>;
 
 /// Alignment of stack for function (3 bits)  stored as log2 of alignment with
 /// +1 bias 0 means unaligned (different from alignstack=(1)).
-def StackAlignment : IntAttr<"alignstack", IntersectPreserve, [FnAttr, ParamAttr, RetAttr]>;
+def StackAlignment : IntAttr<"alignstack", IntersectPreserve,
+                             [FnAttr, ParamAttr, RetAttr, ABIAttr]>;
 
 /// Function can be speculated.
 def Speculatable : EnumAttr<"speculatable", IntersectAnd, [FnAttr]>;
@@ -317,7 +334,7 @@ def StackProtectStrong : EnumAttr<"sspstrong", IntersectPreserve, [FnAttr]>;
 def StrictFP : EnumAttr<"strictfp", IntersectPreserve, [FnAttr]>;
 
 /// Hidden pointer to structure to return.
-def StructRet : TypeAttr<"sret", IntersectPreserve, [ParamAttr]>;
+def StructRet : TypeAttr<"sret", IntersectPreserve, [ParamAttr, ABIAttr]>;
 
 /// AddressSanitizer is on.
 def SanitizeAddress : EnumAttr<"sanitize_address", IntersectPreserve, [FnAttr]>;
@@ -361,13 +378,13 @@ def SpeculativeLoadHardening : EnumAttr<"speculative_load_hardening",
                                         [FnAttr]>;
 
 /// Argument is swift error.
-def SwiftError : EnumAttr<"swifterror", IntersectPreserve, [ParamAttr]>;
+def SwiftError : EnumAttr<"swifterror", IntersectPreserve, [ParamAttr, ABIAttr]>;
 
 /// Argument is swift self/context.
-def SwiftSelf : EnumAttr<"swiftself", IntersectPreserve, [ParamAttr]>;
+def SwiftSelf : EnumAttr<"swiftself", IntersectPreserve, [ParamAttr, ABIAttr]>;
 
 /// Argument is swift async context.
-def SwiftAsync : EnumAttr<"swiftasync", IntersectPreserve, [ParamAttr]>;
+def SwiftAsync : EnumAttr<"swiftasync", IntersectPreserve, [ParamAttr, ABIAttr]>;
 
 /// Function must be in a unwind table.
 def UWTable : IntAttr<"uwtable", IntersectPreserve, [FnAttr]>;
@@ -385,7 +402,8 @@ def Writable : EnumAttr<"writable", IntersectAnd, [ParamAttr]>;
 def WriteOnly : EnumAttr<"writeonly", IntersectAnd, [ParamAttr]>;
 
 /// Zero extended before/after call.
-def ZExt : EnumAttr<"zeroext", IntersectPreserve, [ParamAttr, RetAttr]>;
+def ZExt : EnumAttr<"zeroext", IntersectPreserve,
+                    [ParamAttr, RetAttr, ABIAttr]>;
 
 /// Function is required to make Forward Progress.
 def MustProgress : EnumAttr<"mustprogress", IntersectAnd, [FnAttr]>;
@@ -400,6 +418,10 @@ def CoroDestroyOnlyWhenComplete : EnumAttr<"coro_only_destroy_when_complete", In
 /// pipeline to perform elide on the call or invoke instruction.
 def CoroElideSafe : EnumAttr<"coro_elide_safe", IntersectPreserve, [FnAttr]>;
 
+/// Indicate the denormal handling of the default floating-point
+/// environment.
+def DenormalFPEnv : IntAttr<"denormal_fpenv", IntersectPreserve, [FnAttr]>;
+
 /// Function is marked for Windows Hot Patching
 def MarkedForWindowsSecureHotPatching
     : StrBoolAttr<"marked_for_windows_hot_patching">;
@@ -412,17 +434,12 @@ def AllowDirectAccessInHotPatchFunction
 
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
-def NoInfsFPMath : StrBoolAttr<"no-infs-fp-math">;
-def NoNansFPMath : StrBoolAttr<"no-nans-fp-math">;
 def NoSignedZerosFPMath : StrBoolAttr<"no-signed-zeros-fp-math">;
 def NoJumpTables : StrBoolAttr<"no-jump-tables">;
 def NoInlineLineTables : StrBoolAttr<"no-inline-line-tables">;
 def ProfileSampleAccurate : StrBoolAttr<"profile-sample-accurate">;
 def UseSampleProfile : StrBoolAttr<"use-sample-profile">;
 def LoaderReplaceable : StrBoolAttr<"loader-replaceable">;
-
-def DenormalFPMath : ComplexStrAttr<"denormal-fp-math", [FnAttr]>;
-def DenormalFPMathF32 : ComplexStrAttr<"denormal-fp-math-f32", [FnAttr]>;
 
 // Attribute compatiblity rules are generated to check the attribute of the
 // caller and callee and decide whether inlining should be allowed. CompatRule
@@ -475,8 +492,6 @@ class MergeRule<string F> {
 }
 
 def : MergeRule<"setAND<LessPreciseFPMADAttr>">;
-def : MergeRule<"setAND<NoInfsFPMathAttr>">;
-def : MergeRule<"setAND<NoNansFPMathAttr>">;
 def : MergeRule<"setAND<NoSignedZerosFPMathAttr>">;
 def : MergeRule<"setOR<NoImplicitFloatAttr>">;
 def : MergeRule<"setOR<NoJumpTablesAttr>">;

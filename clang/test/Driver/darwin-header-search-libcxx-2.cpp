@@ -62,3 +62,6 @@
 // RUN:               -DSYSROOT=%S/Inputs/basic_darwin_sdk_no_libcxx \
 // RUN:               --check-prefix=CHECK-TOOLCHAIN-NO-SYSROOT %s
 // CHECK-TOOLCHAIN-NO-SYSROOT: "-internal-isystem" "[[TOOLCHAIN]]/bin/../include/c++/v1"
+
+// Clean up copy of large binary copied into temp directory to avoid bloat.
+// RUN: rm -f %t/install/bin/clang || true

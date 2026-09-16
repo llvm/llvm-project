@@ -90,49 +90,35 @@ static void test() {
              SV("0 is not a valid month/00 is not a valid day"));
   TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month_day{std::chrono::month{0}, 1d}),
              SV("0 is not a valid month/01"));
-#if defined(__APPLE__)
-  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month_day{std::chrono::month{1}, 255d}),
-             SV("jan/255 is not a valid day"));
-  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month_day{std::chrono::month{1}, 31d}), SV("jan/31"));
-  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month_day{std::chrono::month{2}, 29d}), SV("fév/29"));
-  TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month_day{std::chrono::month{6}, 31d}), SV("jui/31"));
-#else  //  defined(__APPLE__)
   TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month_day{std::chrono::month{1}, 255d}),
              SV("janv./255 is not a valid day"));
   TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month_day{std::chrono::month{1}, 31d}), SV("janv./31"));
   TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month_day{std::chrono::month{2}, 29d}), SV("févr./29"));
   TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month_day{std::chrono::month{6}, 31d}), SV("juin/31"));
-#endif //  defined(__APPLE__)
 
   TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{0}, 0d}),
              SV("0 is not a valid month/00 is not a valid day"));
   TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{0}, 1d}),
              SV("0 is not a valid month/01"));
-#if defined(__APPLE__)
-  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{1}, 255d}),
-             SV(" 1/255 is not a valid day"));
-  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{1}, 31d}), SV(" 1/31"));
-  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{2}, 29d}), SV(" 2/29"));
-  TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{6}, 31d}), SV(" 6/31"));
-#elif defined(_WIN32) //  defined(__APPLE__)
+#if defined(_WIN32)
   TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{1}, 255d}),
              SV("1/255 is not a valid day"));
   TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{1}, 31d}), SV("1/31"));
   TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{2}, 29d}), SV("2/29"));
   TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{6}, 31d}), SV("6/31"));
-#elif defined(_AIX)   //  defined(__APPLE__)
+#elif defined(_AIX)
   TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{1}, 255d}),
              SV("1月/255 is not a valid day"));
   TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{1}, 31d}), SV("1月/31"));
   TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{2}, 29d}), SV("2月/29"));
   TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{6}, 31d}), SV("6月/31"));
-#else                 //  defined(__APPLE__)
+#else
   TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{1}, 255d}),
              SV(" 1月/255 is not a valid day"));
   TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{1}, 31d}), SV(" 1月/31"));
   TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{2}, 29d}), SV(" 2月/29"));
   TEST_EQUAL(stream_ja_JP_locale<CharT>(std::chrono::month_day{std::chrono::month{6}, 31d}), SV(" 6月/31"));
-#endif                //  defined(__APPLE__)
+#endif
 }
 
 int main(int, char**) {

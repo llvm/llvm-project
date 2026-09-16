@@ -15,16 +15,14 @@
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Analysis/TBAAForest.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
@@ -65,10 +63,12 @@ extern llvm::cl::opt<bool> supportCrayPointers;
 
 namespace {
 
-// Return the size and alignment (in bytes) for the given type.
+// Return the size and alignment (in bytes) for the given type, or std::nullopt
+// if the type cannot be converted.
+//
 // TODO: this must be combined with DebugTypeGenerator::getFieldSizeAndAlign().
 // We'd better move fir::LLVMTypeConverter out of the FIRCodeGen component.
-static std::pair<std::uint64_t, unsigned short>
+static std::optional<std::pair<std::uint64_t, unsigned short>>
 getTypeSizeAndAlignment(mlir::Type type,
                         fir::LLVMTypeConverter &llvmTypeConverter) {
   mlir::Type llvmTy;
@@ -76,6 +76,9 @@ getTypeSizeAndAlignment(mlir::Type type,
     llvmTy = llvmTypeConverter.convertBoxTypeAsStruct(boxTy, getBoxRank(boxTy));
   else
     llvmTy = llvmTypeConverter.convertType(type);
+
+  if (!llvmTy)
+    return std::nullopt;
 
   const mlir::DataLayout &dataLayout = llvmTypeConverter.getDataLayout();
   uint64_t byteSize = dataLayout.getTypeSize(llvmTy);
@@ -213,10 +216,7 @@ public:
   void processFunctionScopes(mlir::func::FuncOp func);
   // For the given fir.declare returns the dominating fir.dummy_scope
   // operation.
-  fir::DummyScopeOp getDeclarationScope(fir::DeclareOp declareOp) const;
-  // For the given fir.declare returns the outermost fir.dummy_scope
-  // in the current function.
-  fir::DummyScopeOp getOutermostScope(fir::DeclareOp declareOp) const;
+  fir::DummyScopeOp getDeclarationScope(fir::DeclareOp declareOp);
   // Returns true, if the given type of a memref of a FirAliasTagOpInterface
   // operation is a descriptor or contains a descriptor
   // (e.g. !fir.ref<!fir.type<Derived{f:!fir.box<!fir.heap<f32>>}>>).
@@ -237,12 +237,15 @@ public:
   // about their physical storages and layouts.
   void collectPhysicalStorageAliasSets(mlir::Operation *op);
 
-  // Return the byte size of the given declaration.
-  std::size_t getDeclarationSize(fir::FortranVariableStorageOpInterface decl) {
+  // Return the byte size of the given declaration, or std::nullopt if the
+  // size could not be computed (e.g. the type contains !fir.boxproc members).
+  std::optional<std::size_t>
+  getDeclarationSize(fir::FortranVariableStorageOpInterface decl) {
     mlir::Type memType = fir::unwrapRefType(decl.getBase().getType());
-    auto [size, alignment] =
-        getTypeSizeAndAlignment(memType, llvmTypeConverter);
-    return llvm::alignTo(size, alignment);
+    auto sizeAndAlign = getTypeSizeAndAlignment(memType, llvmTypeConverter);
+    if (!sizeAndAlign)
+      return std::nullopt;
+    return llvm::alignTo(sizeAndAlign->first, sizeAndAlign->second);
   }
 
   // A StorageDesc specifies an operation that defines a physical storage
@@ -356,8 +359,9 @@ void PassState::processFunctionScopes(mlir::func::FuncOp func) {
   }
 }
 
-fir::DummyScopeOp
-PassState::getDeclarationScope(fir::DeclareOp declareOp) const {
+// For the given fir.declare returns the dominating fir.dummy_scope
+// operation.
+fir::DummyScopeOp PassState::getDeclarationScope(fir::DeclareOp declareOp) {
   auto func = declareOp->getParentOfType<mlir::func::FuncOp>();
   assert(func && "fir.declare does not have parent func.func");
   auto &scopeOps = sortedScopeOperations.at(func);
@@ -365,15 +369,6 @@ PassState::getDeclarationScope(fir::DeclareOp declareOp) const {
     if (domInfo.dominates(&**II, &*declareOp))
       return *II;
   }
-  return nullptr;
-}
-
-fir::DummyScopeOp PassState::getOutermostScope(fir::DeclareOp declareOp) const {
-  auto func = declareOp->getParentOfType<mlir::func::FuncOp>();
-  assert(func && "fir.declare does not have parent func.func");
-  auto &scopeOps = sortedScopeOperations.at(func);
-  if (!scopeOps.empty())
-    return scopeOps[0];
   return nullptr;
 }
 
@@ -465,30 +460,33 @@ void PassState::collectPhysicalStorageAliasSets(mlir::Operation *op) {
     fir::GlobalOp globalDef =
         getGlobalDefiningOp(addrOfOp.getSymbol().getRootReference());
     std::uint64_t storageOffset = decl.getStorageOffset();
-    std::size_t declSize = getDeclarationSize(decl);
+    std::optional<std::size_t> declSize = getDeclarationSize(decl);
     LLVM_DEBUG(llvm::dbgs()
                << "Found variable with storage:\n"
                << "Declaration: " << decl << "\n"
                << "Storage: " << (globalDef ? globalDef : nullptr) << "\n"
                << "Offset: " << storageOffset << "\n"
-               << "Size: " << declSize << "\n");
+               << "Size: "
+               << (declSize ? llvm::Twine(*declSize)
+                            : llvm::Twine("could not be computed"))
+               << "\n");
     if (!globalDef) {
       seenUnknownStorage = true;
       return mlir::WalkResult::advance();
     }
-    // Zero-sized variables do not need any TBAA tags, because
-    // they cannot be accessed.
-    if (declSize == 0)
+    // Skip variables whose size could not be computed or that are zero-sized,
+    // as they do not need any TBAA tags.
+    if (!declSize || *declSize == 0)
       return mlir::WalkResult::advance();
 
     declToStorageMap.try_emplace(decl.getOperation(), globalDef.getOperation(),
-                                 storageOffset, declSize);
+                                 storageOffset, *declSize);
     storageDecls.try_emplace(globalDef.getOperation())
         .first->second.push_back(decl.getOperation());
 
     auto &set =
         memberIntervals.try_emplace(globalDef.getOperation()).first->second;
-    set.insert(IntervalTy(storageOffset, declSize));
+    set.insert(IntervalTy(storageOffset, *declSize));
     return mlir::WalkResult::advance();
   });
 
@@ -820,23 +818,43 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
   } else if (enableLocalAllocs &&
              source.kind == fir::AliasAnalysis::SourceKind::Allocate) {
     std::optional<llvm::StringRef> name;
-    mlir::Operation *sourceOp =
-        llvm::cast<mlir::Value>(source.origin.u).getDefiningOp();
-    bool unknownAllocOp = false;
-    if (auto alloc = mlir::dyn_cast_or_null<fir::AllocaOp>(sourceOp))
-      name = alloc.getUniqName();
-    else if (auto alloc = mlir::dyn_cast_or_null<fir::AllocMemOp>(sourceOp))
-      name = alloc.getUniqName();
-    else
-      unknownAllocOp = true;
+    mlir::Value sourceVal = llvm::cast<mlir::Value>(source.origin.u);
+    mlir::Operation *sourceOp = sourceVal.getDefiningOp();
+    bool unknownAllocOp =
+        !fir::isNewAllocationResult(mlir::dyn_cast<mlir::OpResult>(sourceVal))
+             .value_or(false);
+    if (!unknownAllocOp) {
+      // Non-FIR allocation operations may carry the uniq_name preserved when
+      // a FIR allocation was rewritten.
+      if (auto alloc = mlir::dyn_cast<fir::AllocaOp>(sourceOp))
+        name = alloc.getUniqName();
+      else if (auto alloc = mlir::dyn_cast<fir::AllocMemOp>(sourceOp))
+        name = alloc.getUniqName();
+      else if (mlir::StringAttr nameAttr =
+                   sourceOp->getDiscardableAttrOfType<mlir::StringAttr>(
+                       fir::getUniqNameAttrName()))
+        name = nameAttr.getValue();
+    }
 
-    if (auto declOp = source.origin.instantiationPoint) {
-      // Use the outermost scope for local allocations,
-      // because using the innermost scope may result
-      // in incorrect TBAA, when calls are inlined in MLIR.
-      auto declareOp = mlir::dyn_cast<fir::DeclareOp>(declOp);
-      assert(declareOp && "Instantiation point must be fir.declare");
-      scopeOp = state.getOutermostScope(declareOp);
+    // Check if this allocation is a local copy of a VALUE dummy argument.
+    // A VALUE dummy arg is lowered as a local alloca declared with the
+    // fir::FortranVariableFlagsEnum::value flag. Accesses through this copy
+    // must be tagged under dummyArgDataTree (not allocatedDataTree) so they
+    // are consistent with other accesses to the same dummy variable, which
+    // are also tagged under dummyArgDataTree. Using allocatedDataTree here
+    // makes the copy-stores and dummy-arg reads appear non-aliasing to DSE,
+    // which then incorrectly eliminates the copy stores.
+    bool isValueDummyCopy = false;
+    if (!unknownAllocOp) {
+      if (fir::DeclareOp declareOp = getDeclareOp(sourceVal)) {
+        auto varIf = mlir::cast<fir::FortranVariableOpInterface>(
+            declareOp.getOperation());
+        auto fortranAttrs = varIf.getFortranAttrs();
+        if (fortranAttrs &&
+            bitEnumContainsAny(*fortranAttrs,
+                               fir::FortranVariableFlagsEnum::value))
+          isValueDummyCopy = true;
+      }
     }
 
     if (unknownAllocOp) {
@@ -857,12 +875,27 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
                  << "WARN: couldn't find a name for TARGET allocation " << *op
                  << "\n");
       tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
+    } else if (isValueDummyCopy && name && state.attachLocalAllocTag()) {
+      // VALUE dummy arg copy: tag under dummyArgDataTree to match the
+      // dummy arg reads, preventing DSE from treating stores as dead.
+      LLVM_DEBUG(llvm::dbgs().indent(2)
+                 << "Found reference to VALUE dummy copy " << name << " at "
+                 << *op << "\n");
+      tag = state.getFuncTreeWithScope(func, scopeOp)
+                .dummyArgDataTree.getTag(*name);
+    } else if (isValueDummyCopy && state.attachLocalAllocTag()) {
+      LLVM_DEBUG(llvm::dbgs().indent(2)
+                 << "WARN: couldn't find name for VALUE dummy copy at " << *op
+                 << "\n");
+      tag = state.getFuncTreeWithScope(func, scopeOp).dummyArgDataTree.getTag();
     } else if (name && state.attachLocalAllocTag()) {
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to allocation "
                                         << name << " at " << *op << "\n");
       tag = state.getFuncTreeWithScope(func, scopeOp)
                 .allocatedDataTree.getTag(*name);
     } else if (state.attachLocalAllocTag()) {
+      // Recognized anonymous allocations, including allocations from other
+      // dialects, use the generic "allocated data" tag.
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "WARN: couldn't find a name for allocation " << *op
                  << "\n");

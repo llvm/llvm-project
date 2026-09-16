@@ -29,20 +29,24 @@
 
 // Only use SANITIZER_*ATTRIBUTE* before the function return type!
 #if SANITIZER_WINDOWS
-#if SANITIZER_IMPORT_INTERFACE
-# define SANITIZER_INTERFACE_ATTRIBUTE __declspec(dllimport)
-#else
-# define SANITIZER_INTERFACE_ATTRIBUTE __declspec(dllexport)
-#endif
-# define SANITIZER_WEAK_ATTRIBUTE
-#  define SANITIZER_WEAK_IMPORT
-#elif SANITIZER_GO
-# define SANITIZER_INTERFACE_ATTRIBUTE
-# define SANITIZER_WEAK_ATTRIBUTE
+#  if SANITIZER_IMPORT_INTERFACE
+#    define SANITIZER_INTERFACE_ATTRIBUTE __declspec(dllimport)
+#  else
+#    define SANITIZER_INTERFACE_ATTRIBUTE __declspec(dllexport)
+#  endif
+#  define SANITIZER_WEAK_ATTRIBUTE
 #  define SANITIZER_WEAK_IMPORT
 #else
-# define SANITIZER_INTERFACE_ATTRIBUTE __attribute__((visibility("default")))
-# define SANITIZER_WEAK_ATTRIBUTE  __attribute__((weak))
+#  if SANITIZER_GO
+#    define SANITIZER_INTERFACE_ATTRIBUTE
+#    define SANITIZER_WEAK_ATTRIBUTE
+#  elif SANITIZER_AMDGPU || SANITIZER_NVPTX
+#    define SANITIZER_INTERFACE_ATTRIBUTE __attribute__((visibility("hidden")))
+#    define SANITIZER_WEAK_ATTRIBUTE __attribute__((weak))
+#  else
+#    define SANITIZER_INTERFACE_ATTRIBUTE __attribute__((visibility("default")))
+#    define SANITIZER_WEAK_ATTRIBUTE __attribute__((weak))
+#  endif  // SANITIZER_GO
 #  if SANITIZER_APPLE
 #    define SANITIZER_WEAK_IMPORT extern "C" __attribute((weak_import))
 #  else
@@ -59,10 +63,10 @@
 // For example:
 //   SANITIZER_INTERFACE_WEAK_DEF(bool, compare, int a, int b) { return a > b; }
 //
-#if SANITIZER_WINDOWS
-#include "sanitizer_win_defs.h"
-# define SANITIZER_INTERFACE_WEAK_DEF(ReturnType, Name, ...)                   \
-  WIN_WEAK_EXPORT_DEF(ReturnType, Name, __VA_ARGS__)
+#if SANITIZER_WINDOWS && (!defined(__GNUC__) || defined(__clang__))
+#  include "sanitizer_win_defs.h"
+#  define SANITIZER_INTERFACE_WEAK_DEF(ReturnType, Name, ...) \
+    WIN_WEAK_EXPORT_DEF(ReturnType, Name, __VA_ARGS__)
 #else
 # define SANITIZER_INTERFACE_WEAK_DEF(ReturnType, Name, ...)                   \
   extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE            \
@@ -187,10 +191,11 @@ typedef long pid_t;
 typedef int pid_t;
 #endif
 
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_APPLE ||             \
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_APPLE ||           \
     (SANITIZER_SOLARIS && (defined(_LP64) || _FILE_OFFSET_BITS == 64)) || \
     (SANITIZER_LINUX && !SANITIZER_GLIBC && !SANITIZER_ANDROID) ||        \
-    (SANITIZER_LINUX && (defined(__x86_64__) || defined(__hexagon__)))
+    (SANITIZER_LINUX && (defined(__x86_64__) || defined(__hexagon__))) || \
+    SANITIZER_WASI
 typedef u64 OFF_T;
 #else
 typedef uptr OFF_T;

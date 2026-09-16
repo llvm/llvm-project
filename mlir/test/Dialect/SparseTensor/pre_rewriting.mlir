@@ -99,3 +99,15 @@ func.func @sparse_select(%cond: tensor<4x4xi1>,
   } -> tensor<4x4xf64, #DCSR>
   return %0 : tensor<4x4xf64, #DCSR>
 }
+
+// The print rewrite generates vector.print, so the pass has to load the vector
+// dialect even when the input does not use it.
+//
+// CHECK-LABEL: func.func @sparse_print(
+//  CHECK-SAME: %[[A:.*]]: tensor<?x?xf32, #sparse{{[0-9]*}}>)
+//       CHECK:   vector.print
+//       CHECK:   return
+func.func @sparse_print(%arg0: tensor<?x?xf32, #DCSR>) {
+  sparse_tensor.print %arg0 : tensor<?x?xf32, #DCSR>
+  return
+}

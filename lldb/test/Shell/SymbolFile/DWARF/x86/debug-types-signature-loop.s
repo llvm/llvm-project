@@ -4,7 +4,7 @@
 # RUN: ld.lld %t.o -o %t
 # RUN: %lldb %t -o "target variable e" -b | FileCheck %s
 
-# CHECK: error: Invalid type: Cannot determine size
+# CHECK: error: invalid type: cannot determine size
 
         .type   e,@object               # @e
         .section        .rodata,"a",@progbits
@@ -19,15 +19,15 @@ e:
 .Linfo_string0:
         .asciz  "Hand-written DWARF"
 .Linfo_string1:
-        .asciz  "a.cpp"            
+        .asciz  "a.cpp"
 .Linfo_string3:
-        .asciz  "e"           
+        .asciz  "e"
 .Linfo_string4:
         .asciz  "unsigned int"
 .Linfo_string5:
-        .asciz  "e1"          
+        .asciz  "e1"
 .Linfo_string6:
-        .asciz  "E"           
+        .asciz  "E"
 
         .section        .debug_abbrev,"",@progbits
         .byte   1                       # Abbreviation Code

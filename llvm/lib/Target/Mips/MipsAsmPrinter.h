@@ -83,7 +83,8 @@ private:
   void emitInlineAsmStart() const override;
 
   void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                        const MCSubtargetInfo *EndInfo) const override;
+                        const MCSubtargetInfo *EndInfo,
+                        const MachineInstr *MI) override;
 
   void emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
                           const MachineBasicBlock *MBB,
@@ -158,6 +159,9 @@ public:
   void emitEndOfAsmFile(Module &M) override;
   void PrintDebugValueComment(const MachineInstr *MI, raw_ostream &OS);
   void emitDebugValue(const MCExpr *Value, unsigned Size) const override;
+  void emitDirectiveRelocJalr(const MachineInstr &MI, MCContext &OutContext,
+                              TargetMachine &TM, MCStreamer &OutStreamer,
+                              const MipsSubtarget &Subtarget);
 };
 
 } // end namespace llvm

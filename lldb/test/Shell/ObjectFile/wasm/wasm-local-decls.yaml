@@ -1,0 +1,70 @@
+# REQUIRES: webassembly
+
+# RUN: yaml2obj %s -o %t.wasm
+# RUN: %lldb %t.wasm -o 'dis -n no_locals' -o 'dis -n with_locals' \
+# RUN:   -o 'b no_locals' -o 'b with_locals' -o 'breakpoint list' \
+# RUN:   2>&1 | FileCheck %s
+
+# no_locals has zero local declarations (1 byte for the count of 0).
+# The first instruction should be at <+1>.
+# CHECK-LABEL: dis -n no_locals
+# CHECK:       {{.*}}`no_locals:
+# CHECK-NEXT:  {{.*}} <+1>: i32.const 42
+# CHECK-NEXT:  {{.*}} <+3>: return
+# CHECK-NEXT:  {{.*}} <+4>: end
+
+# with_locals has one local declaration (1 local of type i32 = 3 bytes).
+# The first instruction should be at <+3>.
+# CHECK-LABEL: dis -n with_locals
+# CHECK:       {{.*}}`with_locals:
+# CHECK-NEXT:  {{.*}} <+3>:  local.get 0
+# CHECK-NEXT:  {{.*}} <+5>:  local.get 1
+# CHECK-NEXT:  {{.*}} <+7>:  i32.add
+# CHECK-NEXT:  {{.*}} <+8>:  local.set 2
+# CHECK-NEXT:  {{.*}} <+10>: local.get 0
+# CHECK-NEXT:  {{.*}} <+12>: local.get 1
+# CHECK-NEXT:  {{.*}} <+14>: return
+# CHECK-NEXT:  {{.*}} <+15>: end
+
+# Breakpoints should land at the first instruction.
+# CHECK-LABEL: breakpoint list
+# CHECK: where = {{.*}}`no_locals + 1
+# CHECK: where = {{.*}}`with_locals + 3
+
+--- !WASM
+FileHeader:
+  Version: 0x1
+Sections:
+  - Type: TYPE
+    Signatures:
+      - Index: 0
+        ParamTypes: []
+        ReturnTypes:
+          - I32
+      - Index: 1
+        ParamTypes:
+          - I32
+          - I32
+        ReturnTypes:
+          - I32
+  - Type: FUNCTION
+    FunctionTypes: [ 0, 1 ]
+  - Type: CODE
+    Functions:
+      # no_locals: returns 42, no local variables.
+      - Index: 0
+        Locals: []
+        Body: 412A0F0B
+      # with_locals: adds two params using a local, has 1 local decl (1 x i32).
+      - Index: 1
+        Locals:
+          - Type: I32
+            Count: 1
+        Body: 200020016A2102200020010F0B
+  - Type: CUSTOM
+    Name: name
+    FunctionNames:
+      - Index: 0
+        Name: no_locals
+      - Index: 1
+        Name: with_locals

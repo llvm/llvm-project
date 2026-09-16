@@ -7,14 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/floorf128.h"
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/CPP/bit.h"
+#include "src/__support/math/floorf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::Float128;
+
 LLVM_LIBC_FUNCTION(float128, floorf128, (float128 x)) {
-  return fputil::floor(x);
+  return cpp::bit_cast<float128>(math::floorf128(cpp::bit_cast<Float128>(x)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -75,7 +75,13 @@ protected:
     SBCommandReturnObject sb_return(result);
     SBCommandInterpreter sb_interpreter(&m_interpreter);
     SBDebugger debugger_sb(m_interpreter.GetDebugger().shared_from_this());
-    m_backend->DoExecute(debugger_sb, command.GetArgumentVector(), sb_return);
+    bool success = m_backend->DoExecute(debugger_sb,
+                                        command.GetArgumentVector(), sb_return);
+    // If the plugin command did not set its own status, infer it from the
+    // boolean return value so that callers always see a defined status.
+    if (result.GetStatus() == eReturnStatusInvalid)
+      result.SetStatus(success ? eReturnStatusSuccessFinishResult
+                               : eReturnStatusFailed);
   }
   lldb::SBCommandPluginInterface *m_backend;
   std::optional<std::string> m_auto_repeat_command;
@@ -215,7 +221,7 @@ void SBCommandInterpreter::HandleCommandsFromFile(
   if (!file.IsValid()) {
     SBStream s;
     file.GetDescription(s);
-    result->AppendErrorWithFormat("File is not valid: %s.", s.GetData());
+    result->AppendErrorWithFormat("File is not valid: %s", s.GetData());
   }
 
   FileSpec tmp_spec = file.ref();
@@ -377,9 +383,10 @@ SBProcess SBCommandInterpreter::GetProcess() {
   SBProcess sb_process;
   ProcessSP process_sp;
   if (IsValid()) {
-    TargetSP target_sp(m_opaque_ptr->GetDebugger().GetSelectedTarget());
+    TargetSP target_sp(m_opaque_ptr->GetSelectedTarget());
     if (target_sp) {
-      std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+      TargetAPIMutex api_lock = target_sp->GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       process_sp = target_sp->GetProcessSP();
       sb_process.SetSP(process_sp);
     }
@@ -465,10 +472,13 @@ void SBCommandInterpreter::SourceInitFileInGlobalDirectory(
 
   result.Clear();
   if (IsValid()) {
-    TargetSP target_sp(m_opaque_ptr->GetDebugger().GetSelectedTarget());
-    std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp)
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    TargetSP target_sp(m_opaque_ptr->GetSelectedTarget());
+    TargetAPIMutex api_lock;
+    std::unique_lock<TargetAPIMutex> guard;
+    if (target_sp) {
+      api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+      guard = std::unique_lock<TargetAPIMutex>(api_lock);
+    }
     m_opaque_ptr->SourceInitFileGlobal(result.ref());
   } else {
     result->AppendError("SBCommandInterpreter is not valid");
@@ -488,10 +498,13 @@ void SBCommandInterpreter::SourceInitFileInHomeDirectory(
 
   result.Clear();
   if (IsValid()) {
-    TargetSP target_sp(m_opaque_ptr->GetDebugger().GetSelectedTarget());
-    std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp)
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    TargetSP target_sp(m_opaque_ptr->GetSelectedTarget());
+    TargetAPIMutex api_lock;
+    std::unique_lock<TargetAPIMutex> guard;
+    if (target_sp) {
+      api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+      guard = std::unique_lock<TargetAPIMutex>(api_lock);
+    }
     m_opaque_ptr->SourceInitFileHome(result.ref(), is_repl);
   } else {
     result->AppendError("SBCommandInterpreter is not valid");
@@ -504,10 +517,13 @@ void SBCommandInterpreter::SourceInitFileInCurrentWorkingDirectory(
 
   result.Clear();
   if (IsValid()) {
-    TargetSP target_sp(m_opaque_ptr->GetDebugger().GetSelectedTarget());
-    std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp)
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    TargetSP target_sp(m_opaque_ptr->GetSelectedTarget());
+    TargetAPIMutex api_lock;
+    std::unique_lock<TargetAPIMutex> guard;
+    if (target_sp) {
+      api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+      guard = std::unique_lock<TargetAPIMutex>(api_lock);
+    }
     m_opaque_ptr->SourceInitFileCwd(result.ref());
   } else {
     result->AppendError("SBCommandInterpreter is not valid");
@@ -526,7 +542,7 @@ const char *SBCommandInterpreter::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
   return ConstString(CommandInterpreter::GetStaticBroadcasterClass())
-      .AsCString();
+      .AsCString(nullptr);
 }
 
 const char *SBCommandInterpreter::GetArgumentTypeAsCString(
@@ -661,21 +677,22 @@ SBCommand::operator bool() const {
 const char *SBCommand::GetName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? ConstString(m_opaque_sp->GetCommandName()).AsCString()
-                    : nullptr);
+  return (IsValid()
+              ? ConstString(m_opaque_sp->GetCommandName()).AsCString(nullptr)
+              : nullptr);
 }
 
 const char *SBCommand::GetHelp() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? ConstString(m_opaque_sp->GetHelp()).AsCString()
+  return (IsValid() ? ConstString(m_opaque_sp->GetHelp()).AsCString(nullptr)
                     : nullptr);
 }
 
 const char *SBCommand::GetHelpLong() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? ConstString(m_opaque_sp->GetHelpLong()).AsCString()
+  return (IsValid() ? ConstString(m_opaque_sp->GetHelpLong()).AsCString(nullptr)
                     : nullptr);
 }
 

@@ -10,35 +10,15 @@
 #define MLIR_DIALECT_ARITH_IR_ARITH_H_
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/OpImplementation.h"
+#include "mlir/Dialect/Arith/IR/ArithDialect.h"
+#include "mlir/Dialect/Arith/IR/ArithOpInterfaces.h"
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/InferIntDivisibilityOpInterface.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
-#include "llvm/ADT/StringExtras.h"
-
-//===----------------------------------------------------------------------===//
-// ArithDialect
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/Arith/IR/ArithOpsDialect.h.inc"
-
-//===----------------------------------------------------------------------===//
-// Arith Dialect Enum Attributes
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/Arith/IR/ArithOpsEnums.h.inc"
-#define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/Arith/IR/ArithOpsAttributes.h.inc"
-
-//===----------------------------------------------------------------------===//
-// Arith Interfaces
-//===----------------------------------------------------------------------===//
-#include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.h.inc"
 
 //===----------------------------------------------------------------------===//
 // Arith Dialect Operations

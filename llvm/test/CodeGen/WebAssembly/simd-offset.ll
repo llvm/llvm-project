@@ -3254,9 +3254,7 @@ define <2 x double> @load_promote_v2f64_with_folded_offset(ptr %p) {
 ; CHECK:         .functype load_promote_v2f64_with_folded_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    v128.load64_zero 16
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
   %q = ptrtoint ptr %p to i32
@@ -3298,9 +3296,7 @@ define <2 x double> @load_promote_v2f64_with_folded_gep_offset(ptr %p) {
 ; CHECK:         .functype load_promote_v2f64_with_folded_gep_offset (i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 8
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    v128.load64_zero 8
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr inbounds <2 x float>, ptr %p, i32 1
@@ -3483,8 +3479,8 @@ define <2 x double> @load_promote_v2f64_from_numeric_address() {
 ; CHECK-LABEL: load_promote_v2f64_from_numeric_address:
 ; CHECK:         .functype load_promote_v2f64_from_numeric_address () -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 32
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    v128.load64_zero 32
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
   %s = inttoptr i32 32 to ptr
@@ -3524,8 +3520,8 @@ define <2 x double> @load_promote_v2f64_from_global_address() {
 ; CHECK-LABEL: load_promote_v2f64_from_global_address:
 ; CHECK:         .functype load_promote_v2f64_from_global_address () -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const gv_v2f32
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    v128.load64_zero gv_v2f32
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
   %e = load <2 x float>, ptr @gv_v2f32
@@ -3643,4 +3639,20 @@ define void @store_v2f64_to_global_address(<2 x double> %v) {
 ; CHECK-NEXT:    # fallthrough-return
   store <2 x double> %v , ptr @gv_v2f64
   ret void
+}
+
+; Test that load extends can fold through freeze nodes
+define <4 x i16> @test_freeze_zext(ptr %in) {
+; CHECK-LABEL: test_freeze_zext:
+; CHECK:         .functype test_freeze_zext (i32) -> (v128)
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load32_zero 0:p2align=0
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u
+; CHECK-NEXT:    # fallthrough-return
+entry:
+  %t = load <4 x i8>, ptr %in, align 1
+  %t.fr = freeze <4 x i8> %t
+  %w = zext <4 x i8> %t.fr to <4 x i16>
+  ret <4 x i16> %w
 }

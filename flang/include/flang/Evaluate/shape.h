@@ -15,10 +15,8 @@
 #include "expression.h"
 #include "traverse.h"
 #include "variable.h"
-#include "flang/Common/indirection.h"
 #include "flang/Evaluate/type.h"
 #include <optional>
-#include <variant>
 
 namespace Fortran::parser {
 class ContextualMessages;
@@ -165,6 +163,7 @@ public:
 
   Result operator()(const ImpliedDoIndex &) const { return ScalarShape(); }
   Result operator()(const DescriptorInquiry &) const { return ScalarShape(); }
+  Result operator()(const RankOneBoundElement &) const { return ScalarShape(); }
   Result operator()(const TypeParamInquiry &) const { return ScalarShape(); }
   Result operator()(const BOZLiteralConstant &) const { return ScalarShape(); }
   Result operator()(const StaticDataObject::Pointer &) const {
@@ -184,10 +183,26 @@ public:
   Result operator()(const CoarrayRef &) const;
   Result operator()(const Substring &) const;
   Result operator()(const ProcedureRef &) const;
+  Result operator()(const ActualArgument &) const;
 
   template <typename T>
   Result operator()(const ArrayConstructor<T> &aconst) const {
     return Shape{GetArrayConstructorExtent(aconst)};
+  }
+  template <typename T>
+  Result operator()(const ConditionalExpr<T> &conditional) const {
+    // Per F2023 10.1.4(7), the shape is that of the selected branch.
+    // When all branches have identical static extents, return the common shape.
+    int rank{conditional.thenValue().Rank()};
+    Result thenShape{(*this)(conditional.thenValue())};
+    if (!thenShape) {
+      return Shape(rank, std::nullopt);
+    }
+    Result elseShape{(*this)(conditional.elseValue())};
+    if (thenShape != elseShape) {
+      return Shape(rank, std::nullopt);
+    }
+    return thenShape;
   }
   template <typename D, typename R, typename LO, typename RO>
   Result operator()(const Operation<D, R, LO, RO> &operation) const {

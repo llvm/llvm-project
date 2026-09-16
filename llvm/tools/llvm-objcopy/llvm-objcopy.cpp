@@ -73,12 +73,26 @@ static Expected<DriverConfig> getDriverConfig(ArrayRef<const char *> Args) {
 
   if (Is("bitcode-strip") || Is("bitcode_strip"))
     return parseBitcodeStripOptions(Args, reportWarning);
-  else if (Is("strip"))
+
+  if (Is("strip"))
     return parseStripOptions(Args, reportWarning);
-  else if (Is("install-name-tool") || Is("install_name_tool"))
+
+  if (Is("install-name-tool") || Is("install_name_tool"))
     return parseInstallNameToolOptions(Args);
-  else
-    return parseObjcopyOptions(Args, reportWarning);
+
+  if (Is("llvm-extract-bundle-entry")) {
+    Expected<SmallVector<StringRef>> ArgsOrErr =
+        parseExtractBundleEntryOptions(Args);
+    if (!ArgsOrErr)
+      return ArgsOrErr.takeError();
+    if (Error Err = runExtractBundleEntry(*ArgsOrErr))
+      return Err;
+
+    // The functionality of llvm-extract-bundle-entry is completely
+    // handled in runExtractBundleEntry, so we can exit(0) here.
+    std::exit(0);
+  }
+  return parseObjcopyOptions(Args, reportWarning);
 }
 
 /// The function executeObjcopyOnIHex does the dispatch based on the format
@@ -118,6 +132,22 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
   llvm_unreachable("unsupported output format");
 }
 
+/// Returns the format name string for explicit file formats (binary, ihex,
+/// srec). Returns "" for all other formats so callers can fall back to the
+/// input object's own format string (e.g. "elf64-x86-64").
+static StringRef toFileFormatName(FileFormat Fmt) {
+  switch (Fmt) {
+  case FileFormat::Binary:
+    return "binary";
+  case FileFormat::IHex:
+    return "ihex";
+  case FileFormat::SREC:
+    return "srec";
+  default:
+    return "";
+  }
+}
+
 /// The function executeObjcopy does the higher level dispatch based on the type
 /// of input (raw binary, archive or single object file) and takes care of the
 /// format-agnostic modifications, i.e. preserving dates.
@@ -142,6 +172,11 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
       return createFileError(Config.InputFilename, BufOrErr.getError());
     MemoryBufferHolder = std::move(*BufOrErr);
 
+    if (Config.Verbose)
+      printCopyMessage(
+          Config.InputFilename, toFileFormatName(Config.InputFormat),
+          Config.OutputFilename, toFileFormatName(Config.OutputFormat));
+
     if (Config.InputFormat == FileFormat::Binary)
       ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
         // Handle FileFormat::Binary.
@@ -161,10 +196,14 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
     BinaryHolder = std::move(*BinaryOrErr);
 
     if (Archive *Ar = dyn_cast<Archive>(BinaryHolder.getBinary())) {
-      // Handle Archive.
       if (Error E = executeObjcopyOnArchive(ConfigMgr, *Ar))
         return E;
     } else {
+      if (Config.Verbose)
+        printCopyMessage(Config.InputFilename,
+                         getObjectFormatName(*BinaryHolder.getBinary()),
+                         Config.OutputFilename,
+                         toFileFormatName(Config.OutputFormat));
       // Handle llvm::object::Binary.
       ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
         return executeObjcopyOnBinary(ConfigMgr, *BinaryHolder.getBinary(),

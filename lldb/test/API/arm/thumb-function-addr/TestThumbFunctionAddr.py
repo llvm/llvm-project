@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestThumbFunctionAddr(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_thumb_function_test(self, language):
         self.build(dictionary={"CFLAGS_EXTRAS": f"-x {language} -mthumb"})
 

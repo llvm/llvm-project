@@ -28,6 +28,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
+#include "llvm/Support/Error.h"
+
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 
 #include "DynamicLoaderFreeBSDKernel.h"
@@ -162,7 +164,8 @@ bool DynamicLoaderFreeBSDKernel::ReadELFHeader(Process *process,
     *read_error = false;
 
   if (process->ReadMemory(addr, &header, sizeof(header), error) !=
-      sizeof(header)) {
+          sizeof(header) ||
+      error.Fail()) {
     if (read_error)
       *read_error = true;
     return false;
@@ -200,9 +203,17 @@ lldb_private::UUID DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress(
   if (header.e_type != llvm::ELF::ET_EXEC)
     return UUID();
 
-  ModuleSP memory_module_sp =
+  llvm::Expected<ModuleSP> memory_module_sp_or_err =
       process->ReadModuleFromMemory(FileSpec("temp_freebsd_kernel"), addr);
+  if (auto err = memory_module_sp_or_err.takeError()) {
+    LLDB_LOG_ERROR(log, std::move(err),
+                   "DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress: "
+                   "Failed to read module in memory -- {0}");
+    *read_error = true;
+    return UUID();
+  }
 
+  ModuleSP memory_module_sp = *memory_module_sp_or_err;
   if (!memory_module_sp.get()) {
     *read_error = true;
     return UUID();
@@ -247,8 +258,6 @@ void DynamicLoaderFreeBSDKernel::DebuggerInit(
 DynamicLoaderFreeBSDKernel::DynamicLoaderFreeBSDKernel(Process *process,
                                                        addr_t kernel_address)
     : DynamicLoader(process), m_process(process),
-      m_linker_file_list_struct_addr(LLDB_INVALID_ADDRESS),
-      m_linker_file_head_addr(LLDB_INVALID_ADDRESS),
       m_kernel_load_address(kernel_address), m_mutex() {
   process->SetCanRunCode(false);
 }
@@ -285,14 +294,22 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::ReadMemoryModule(
       llvm::ELF::Elf64_Ehdr elf_eheader;
       Status error;
       if (process->ReadMemory(m_load_address, &elf_eheader, sizeof(elf_eheader),
-                              error) == sizeof(elf_eheader))
+                              error) == sizeof(elf_eheader) &&
+          error.Success())
         size_to_read = sizeof(llvm::ELF::Elf64_Ehdr) +
                        elf_eheader.e_phnum * elf_eheader.e_phentsize;
     }
   }
 
-  memory_module_sp =
+  llvm::Expected<ModuleSP> memory_module_sp_or_err =
       process->ReadModuleFromMemory(file_spec, m_load_address, size_to_read);
+  if (auto err = memory_module_sp_or_err.takeError()) {
+    LLDB_LOG_ERROR(log, std::move(err),
+                   "KextImageInfo::ReadMemoryModule: Failed to read module "
+                   "from memory -- {0}");
+    return false;
+  }
+  memory_module_sp = *memory_module_sp_or_err;
 
   if (!memory_module_sp)
     return false;
@@ -345,7 +362,8 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
       if (IsKernel()) {
         Status error;
         if (PluginManager::DownloadObjectAndSymbolFile(module_spec, error,
-                                                       true)) {
+                                                       true) &&
+            error.Success()) {
           if (FileSystem::Instance().Exists(module_spec.GetFileSpec()))
             m_module_sp = std::make_shared<Module>(module_spec.GetFileSpec(),
                                                    target.GetArchitecture());
@@ -504,16 +522,14 @@ bool DynamicLoaderFreeBSDKernel::ReadKmodsListHeader() {
 
   if (m_linker_file_list_struct_addr.IsValid()) {
     // Get tqh_first struct element from linker_files
-    Status error;
-    addr_t address = m_process->ReadPointerFromMemory(
-        m_linker_file_list_struct_addr.GetLoadAddress(&m_process->GetTarget()),
-        error);
-    if (address != LLDB_INVALID_ADDRESS && error.Success()) {
-      m_linker_file_head_addr = Address(address);
-    } else {
+    llvm::Expected<lldb::addr_t> address = m_process->ReadPointerFromMemory(
+        m_linker_file_list_struct_addr.GetLoadAddress(&m_process->GetTarget()));
+    if (!address) {
+      llvm::consumeError(address.takeError());
       m_linker_file_list_struct_addr.Clear();
       return false;
     }
+    m_linker_file_head_addr = Address(*address);
 
     if (!m_linker_file_head_addr.IsValid() ||
         m_linker_file_head_addr.GetFileAddress() == 0) {
@@ -631,27 +647,34 @@ bool DynamicLoaderFreeBSDKernel::ReadAllKmods(
       linker_files_head_addr.GetLoadAddress(&m_process->GetTarget());
 
   while (current_kld != 0) {
-    addr_t kld_filename_addr =
-        m_process->ReadPointerFromMemory(current_kld + kld_off_filename, error);
-    if (error.Fail())
+    llvm::Expected<lldb::addr_t> kld_filename_addr =
+        m_process->ReadPointerFromMemory(current_kld + kld_off_filename);
+    if (!kld_filename_addr) {
+      llvm::consumeError(kld_filename_addr.takeError());
       return false;
-    addr_t kld_pathname_addr =
-        m_process->ReadPointerFromMemory(current_kld + kld_off_pathname, error);
-    if (error.Fail())
+    }
+    llvm::Expected<lldb::addr_t> kld_pathname_addr =
+        m_process->ReadPointerFromMemory(current_kld + kld_off_pathname);
+    if (!kld_pathname_addr) {
+      llvm::consumeError(kld_pathname_addr.takeError());
       return false;
+    }
 
-    m_process->ReadCStringFromMemory(kld_filename_addr, kld_filename,
+    m_process->ReadCStringFromMemory(*kld_filename_addr, kld_filename,
                                      sizeof(kld_filename), error);
     if (error.Fail())
       return false;
-    m_process->ReadCStringFromMemory(kld_pathname_addr, kld_pathname,
+    m_process->ReadCStringFromMemory(*kld_pathname_addr, kld_pathname,
                                      sizeof(kld_pathname), error);
     if (error.Fail())
       return false;
-    kld_load_addr =
-        m_process->ReadPointerFromMemory(current_kld + kld_off_address, error);
-    if (error.Fail())
+    llvm::Expected<lldb::addr_t> kld_load_addr_or_err =
+        m_process->ReadPointerFromMemory(current_kld + kld_off_address);
+    if (!kld_load_addr_or_err) {
+      llvm::consumeError(kld_load_addr_or_err.takeError());
       return false;
+    }
+    kld_load_addr = *kld_load_addr_or_err;
 
     kmods_list.emplace_back();
     KModImageInfo &kmod_info = kmods_list.back();
@@ -659,12 +682,17 @@ bool DynamicLoaderFreeBSDKernel::ReadAllKmods(
     kmod_info.SetLoadAddress(kld_load_addr);
     kmod_info.SetPath(kld_pathname);
 
-    current_kld =
-        m_process->ReadPointerFromMemory(current_kld + kld_off_next, error);
+    llvm::Expected<lldb::addr_t> next_kld =
+        m_process->ReadPointerFromMemory(current_kld + kld_off_next);
+
     if (kmod_info.GetName() == "kernel")
       kmods_list.pop_back();
-    if (error.Fail())
+
+    if (!next_kld) {
+      llvm::consumeError(next_kld.takeError());
       return false;
+    }
+    current_kld = *next_kld;
   }
 
   return true;
@@ -700,11 +728,8 @@ void DynamicLoaderFreeBSDKernel::LoadKernelModules() {
     llvm::StringRef kernel_name("freebsd_kernel");
     module_sp = m_kernel_image_info.GetModule();
     if (module_sp.get() && module_sp->GetObjectFile() &&
-        !module_sp->GetObjectFile()->GetFileSpec().GetFilename().IsEmpty())
-      kernel_name = module_sp->GetObjectFile()
-                        ->GetFileSpec()
-                        .GetFilename()
-                        .GetStringRef();
+        !module_sp->GetObjectFile()->GetFileSpec().GetFilename().empty())
+      kernel_name = module_sp->GetObjectFile()->GetFileSpec().GetFilename();
     m_kernel_image_info.SetName(kernel_name.data());
 
     if (m_kernel_image_info.GetLoadAddress() == LLDB_INVALID_ADDRESS) {

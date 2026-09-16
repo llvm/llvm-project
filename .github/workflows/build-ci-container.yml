@@ -36,16 +36,28 @@ jobs:
           - cd $HOME && printf '#include <iostream>\nint main(int argc, char **argv) { std::cout << "Hello\\n"; }' | clang++ -x c++ - && ./a.out | grep Hello
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
+          persist-credentials: false
           sparse-checkout: |
             .github/workflows/containers/github-action-ci/
             .github/actions/build-container
+      
+      # TODO(boomanaiden154): This is a temporary work-around for AArch64 that
+      # we should remove once the depot images no longer have the lock in them
+      # by default.
+      - name: Wait for apt-get to finish
+        if: runner.arch == 'ARM64'
+        run: |
+          while pgrep "apt-get" > /dev/null; do
+            echo "Waiting for apt-get to finish"
+            sleep 1
+          done
 
       - name: Build Container
         uses: ./.github/actions/build-container
         with:
-          container-name: ci-ubuntu-24.04${{ matrix.container-name && format('-{0}', matrix.container-name)}}
+          container-name: ci-ubuntu-26.04${{ matrix.container-name && format('-{0}', matrix.container-name)}}
           context: .github/workflows/containers/github-action-ci/
           dockerfile: .github/workflows/containers/github-action-ci/Dockerfile
           target: ci-container${{ matrix.container-name && format('-{0}', matrix.container-name) }}
@@ -62,8 +74,9 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
+          persist-credentials: false
           sparse-checkout: |
             .github/actions/push-container
 

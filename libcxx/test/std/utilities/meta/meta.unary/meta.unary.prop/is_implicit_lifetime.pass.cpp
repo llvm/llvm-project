@@ -8,9 +8,6 @@
 
 // REQUIRES: std-at-least-c++23
 
-// These compilers don't support __builtin_is_implicit_lifetime yet.
-// UNSUPPORTED: clang-19, gcc-15, apple-clang-17
-
 // <type_traits>
 
 // template<class T> struct is_implicit_lifetime;
@@ -201,7 +198,9 @@ constexpr bool test() {
   test_is_implicit_lifetime<DeletedDestructorViaBaseInNonAggregate, false>();
 
   test_is_implicit_lifetime<ConstrainedUserDeclaredDefaultConstructor<true>, true>();
+#if !defined(TEST_COMPILER_GCC) || TEST_GCC_VER >= 160200 // This is https://gcc.gnu.org/bugzilla/show_bug.cgi?id=126007
   test_is_implicit_lifetime<ConstrainedUserDeclaredDefaultConstructor<false>, false>();
+#endif
 
   test_is_implicit_lifetime<ConstrainedUserProvidedDestructor<true>, false>();
   test_is_implicit_lifetime<ConstrainedUserProvidedDestructor<false>, true>();

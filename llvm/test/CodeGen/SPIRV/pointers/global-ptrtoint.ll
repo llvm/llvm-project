@@ -14,7 +14,7 @@
 ; CHECK-DAG: %[[PtrToInt:.*]] = OpSpecConstantOp %[[TyI64]] ConvertPtrToU %[[GlobalValue]]
 ; TODO: The following bitcast line looks unneeded and we may expect it to be removed in future
 ; CHECK-DAG: %[[UseGlobalValue:.*]] = OpSpecConstantOp %[[TyI64]] Bitcast %[[PtrToInt]]
-; CHECK-DAG: %[[ConstComposite:.*]] = OpConstantComposite %[[TyStruct]] %[[Const128]] %[[UseGlobalValue]]
+; CHECK-DAG: %[[ConstComposite:.*]] = OpSpecConstantComposite %[[TyStruct]] %[[Const128]] %[[UseGlobalValue]]
 ; CHECK-DAG: %[[TyPtrStruct:.*]] = OpTypePointer CrossWorkgroup %[[TyStruct]]
 ; CHECK: OpVariable %[[TyPtrStruct]] CrossWorkgroup %[[ConstComposite]]
 ; CHECK: OpFunction

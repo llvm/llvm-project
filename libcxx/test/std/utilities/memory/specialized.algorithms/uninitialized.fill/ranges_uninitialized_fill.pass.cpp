@@ -27,6 +27,7 @@
 
 #include "../buffer.h"
 #include "../counted.h"
+#include "copy_move_types.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -39,6 +40,39 @@ LIBCPP_STATIC_ASSERT(std::is_class_v<decltype(std::ranges::uninitialized_fill)>)
 struct NotConvertibleFromInt {};
 static_assert(!std::is_invocable_v<decltype(std::ranges::uninitialized_fill), NotConvertibleFromInt*,
                                    NotConvertibleFromInt*, int>);
+
+TEST_CONSTEXPR_CXX26 bool test() {
+  constexpr int n = 3;
+  ConstCopy value(42);
+  std::allocator<ConstCopy> alloc;
+
+  // (iter, sentinel) overload.
+  {
+    ConstCopy* out = alloc.allocate(n);
+    auto result    = std::ranges::uninitialized_fill(out, out + n, value);
+    assert(result == out + n);
+    for (int i = 0; i != n; ++i)
+      assert(out[i].val == value.val);
+
+    std::destroy(out, out + n);
+    alloc.deallocate(out, n);
+  }
+
+  // (range) overload.
+  {
+    ConstCopy* out = alloc.allocate(n);
+    auto out_range = std::ranges::subrange(out, out + n);
+    auto result    = std::ranges::uninitialized_fill(out_range, value);
+    assert(result == out + n);
+    for (int i = 0; i != n; ++i)
+      assert(out[i].val == value.val);
+
+    std::destroy(out, out + n);
+    alloc.deallocate(out, n);
+  }
+
+  return true;
+}
 
 int main(int, char**) {
   constexpr int value = 42;
@@ -197,6 +231,11 @@ int main(int, char**) {
     Counted::reset();
   }
 #endif // TEST_HAS_NO_EXCEPTIONS
+
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

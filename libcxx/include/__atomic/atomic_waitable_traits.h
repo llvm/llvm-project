@@ -16,17 +16,15 @@
 #include <__type_traits/has_unique_object_representation.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_copyable.h>
-#include <__type_traits/void_t.h>
-#include <__utility/declval.h>
 #include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // The customisation points to enable the following functions:
 // - __atomic_wait
@@ -69,8 +67,11 @@ concept __atomic_waitable = requires(const _Tp __t, memory_order __order) {
 
 #  if defined(_LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE)
 
-_LIBCPP_HIDE_FROM_ABI constexpr bool __has_native_atomic_wait_impl(size_t __size) {
-  switch (__size) {
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr bool __has_native_atomic_wait_impl() {
+  if (alignof(_Tp) % sizeof(_Tp) != 0)
+    return false;
+  switch (sizeof(_Tp)) {
 #    define _LIBCPP_MAKE_CASE(n)                                                                                       \
     case n:                                                                                                            \
       return true;
@@ -84,7 +85,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __has_native_atomic_wait_impl(size_t __size
 template <class _Tp>
 concept __has_native_atomic_wait =
     has_unique_object_representations_v<_Tp> && is_trivially_copyable_v<_Tp> &&
-    __has_native_atomic_wait_impl(sizeof(_Tp));
+    std::__has_native_atomic_wait_impl<_Tp>();
 
 #  else // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 
@@ -93,8 +94,8 @@ concept __has_native_atomic_wait = is_same_v<_Tp, __cxx_contention_t>;
 
 #  endif // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 
-#endif // C++20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___ATOMIC_ATOMIC_WAITABLE_TRAITS_H

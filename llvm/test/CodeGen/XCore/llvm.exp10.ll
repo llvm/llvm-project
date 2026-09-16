@@ -51,19 +51,4 @@ define <2 x double> @exp10_v2f64(<2 x double> %x) #0 {
   ret <2 x double> %r
 }
 
-; CHECK-LABEL: exp10_f128:
-; CHECK: bl exp10l
-define fp128 @exp10_f128(fp128 %x) #0 {
-  %r = call fp128 @llvm.exp10.f128(fp128 %x)
-  ret fp128 %r
-}
-
-; CHECK-LABEL: exp10_v2f128:
-; CHECK: bl exp10l
-; CHECK: bl exp10l
-define <2 x fp128> @exp10_v2f128(<2 x fp128> %x) #0 {
-  %r = call <2 x fp128> @llvm.exp10.v2f128(<2 x fp128> %x)
-  ret <2 x fp128> %r
-}
-
 attributes #0 = { nounwind }

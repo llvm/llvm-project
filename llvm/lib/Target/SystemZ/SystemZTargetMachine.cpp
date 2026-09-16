@@ -36,6 +36,11 @@ static cl::opt<bool> EnableMachineCombinerPass(
     cl::desc("Enable the machine combiner pass"),
     cl::init(true), cl::Hidden);
 
+static cl::opt<bool> GenericSched(
+    "generic-sched", cl::Hidden, cl::init(false),
+    cl::desc("Run the generic pre-ra scheduler instead of the SystemZ "
+             "scheduler."));
+
 // NOLINTNEXTLINE(readability-identifier-naming)
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeSystemZTarget() {
@@ -63,9 +68,20 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   return std::make_unique<SystemZELFTargetObjectFile>();
 }
 
-static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
-  // Static code is suitable for use in a dynamic executable; there is no
-  // separate DynamicNoPIC model.
+static Reloc::Model getEffectiveRelocModel(const Triple &TT,
+                                           std::optional<Reloc::Model> RM) {
+  if (TT.isOSzOS()) {
+    // On z/OS, constant globals whose initializers contain pointer relocations
+    // (e.g. vtables) must be placed in a writable section (C_WSA64) so the
+    // GOFF binder can apply them at link time.  Using DynamicNoPIC causes
+    // getKindForGlobal() to classify such globals as ReadOnlyWithRel instead
+    // of ReadOnly, which routes them to C_WSA64 rather than C_CODE64.
+    if (!RM || *RM == Reloc::DynamicNoPIC)
+      return Reloc::DynamicNoPIC;
+    return *RM;
+  }
+  // For ELF/Linux, static code is suitable for use in a dynamic executable;
+  // there is no separate DynamicNoPIC model.
   if (!RM || *RM == Reloc::DynamicNoPIC)
     return Reloc::Static;
   return *RM;
@@ -123,8 +139,8 @@ SystemZTargetMachine::SystemZTargetMachine(const Target &T, const Triple &TT,
                                            CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(
           T, TT.computeDataLayout(), TT, CPU, FS, Options,
-          getEffectiveRelocModel(RM),
-          getEffectiveSystemZCodeModel(CM, getEffectiveRelocModel(RM), JIT),
+          getEffectiveRelocModel(TT, RM),
+          getEffectiveSystemZCodeModel(CM, getEffectiveRelocModel(TT, RM), JIT),
           OL),
       TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
@@ -157,15 +173,22 @@ SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
 
   auto &I = SubtargetMap[CPU + TuneCPU + FS];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
     I = std::make_unique<SystemZSubtarget>(TargetTriple, CPU, TuneCPU, FS,
                                            *this);
   }
 
   return I.get();
+}
+
+ScheduleDAGInstrs *
+SystemZTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  // Use GenericScheduler if requested on CL or for Z10 which has no sched
+  // model.
+  if (GenericSched ||
+      !C->MF->getSubtarget().getSchedModel().hasInstrSchedModel())
+    return nullptr;
+
+  return createSchedLive<SystemZPreRASchedStrategy>(C);
 }
 
 ScheduleDAGInstrs *

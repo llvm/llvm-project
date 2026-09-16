@@ -22,47 +22,98 @@ namespace LIBC_NAMESPACE_DECL {
 namespace asin_internal {
 
 using DoubleDouble = fputil::DoubleDouble;
-using Float128 = fputil::DyadicFloat<128>;
+using DFloat128 = fputil::DyadicFloat<128>;
 
-static constexpr DoubleDouble PI = {0x1.1a62633145c07p-53, 0x1.921fb54442d18p1};
+LIBC_INLINE_VAR constexpr DoubleDouble PI = {0x1.1a62633145c07p-53,
+                                             0x1.921fb54442d18p1};
 
-static constexpr DoubleDouble PI_OVER_TWO = {0x1.1a62633145c07p-54,
-                                             0x1.921fb54442d18p0};
+LIBC_INLINE_VAR constexpr DoubleDouble PI_OVER_TWO = {0x1.1a62633145c07p-54,
+                                                      0x1.921fb54442d18p0};
 
-#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-
-// When correct rounding is not needed, we use a degree-22 minimax polynomial to
-// approximate asin(x)/x on [0, 0.5] using Sollya with:
-// > P = fpminimax(asin(x)/x, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22|],
+// > Q = fpminimax(asin(x)/x, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24|],
 //                 [|1, D...|], [0, 0.5]);
-// > dirtyinfnorm(asin(x)/x - P, [0, 0.5]);
-// 0x1.1a71ef0a0f26a9fb7ed7e41dee788b13d1770db3dp-52
-
-static constexpr double ASIN_COEFFS[12] = {
-    0x1.0000000000000p0,  0x1.5555555556dcfp-3,  0x1.3333333082e11p-4,
-    0x1.6db6dd14099edp-5, 0x1.f1c69b35bf81fp-6,  0x1.6e97194225a67p-6,
-    0x1.1babddb82ce12p-6, 0x1.d55bd078600d6p-7,  0x1.33328959e63d6p-7,
-    0x1.2b5993bda1d9bp-6, -0x1.806aff270bf25p-7, 0x1.02614e5ed3936p-5,
+// > dirtyinfnorm((asin(x) - x*Q)/x, [0, 0.5]);
+//   0x1.feb2fcdba66447ccbe28a1a0f935b51678a718fb1p-59
+// Coefficients for float-precision asin (ASINF_COEFFS excludes the leading 1
+// term; used as: asin(x) ~ x + x^3 * asin_eval(x^2)).
+LIBC_INLINE_VAR constexpr double ASINF_COEFFS[12] = {
+    0x1.555555555538p-3,  0x1.333333336fd5bp-4,  0x1.6db6db41ce4bcp-5,
+    0x1.f1c72c66896dep-6, 0x1.6e89f0a0ac64bp-6,  0x1.1c6c111de4074p-6,
+    0x1.c6fa84b5699acp-7, 0x1.8ed60a3e6dd19p-7,  0x1.ab3a090750049p-8,
+    0x1.405213cd1ef46p-6, -0x1.0a5a381f73f65p-6, 0x1.05985a32a9045p-5,
 };
 
-LIBC_INLINE double asin_eval(double u) {
-  double u2 = u * u;
-  double c0 = fputil::multiply_add(u, ASIN_COEFFS[1], ASIN_COEFFS[0]);
-  double c1 = fputil::multiply_add(u, ASIN_COEFFS[3], ASIN_COEFFS[2]);
-  double c2 = fputil::multiply_add(u, ASIN_COEFFS[5], ASIN_COEFFS[4]);
-  double c3 = fputil::multiply_add(u, ASIN_COEFFS[7], ASIN_COEFFS[6]);
-  double c4 = fputil::multiply_add(u, ASIN_COEFFS[9], ASIN_COEFFS[8]);
-  double c5 = fputil::multiply_add(u, ASIN_COEFFS[11], ASIN_COEFFS[10]);
-
-  double u4 = u2 * u2;
-  double d0 = fputil::multiply_add(u2, c1, c0);
-  double d1 = fputil::multiply_add(u2, c3, c2);
-  double d2 = fputil::multiply_add(u2, c5, c4);
-
-  return fputil::polyeval(u4, d0, d1, d2);
+// Evaluate P(x^2) - 1, where P(x^2) ~ asin(x)/x, for float-precision asin.
+// Used as: asin(x) ~ x + x^3 * asin_eval(x^2).
+LIBC_INLINE double asin_eval(double xsq) {
+  double x4 = xsq * xsq;
+  double c0 = fputil::multiply_add(xsq, ASINF_COEFFS[1], ASINF_COEFFS[0]);
+  double c1 = fputil::multiply_add(xsq, ASINF_COEFFS[3], ASINF_COEFFS[2]);
+  double c2 = fputil::multiply_add(xsq, ASINF_COEFFS[5], ASINF_COEFFS[4]);
+  double c3 = fputil::multiply_add(xsq, ASINF_COEFFS[7], ASINF_COEFFS[6]);
+  double c4 = fputil::multiply_add(xsq, ASINF_COEFFS[9], ASINF_COEFFS[8]);
+  double c5 = fputil::multiply_add(xsq, ASINF_COEFFS[11], ASINF_COEFFS[10]);
+  double x8 = x4 * x4;
+  double d0 = fputil::multiply_add(x4, c1, c0);
+  double d1 = fputil::multiply_add(x4, c3, c2);
+  double d2 = fputil::multiply_add(x4, c5, c4);
+  return fputil::polyeval(x8, d0, d1, d2);
 }
 
-#else
+// the coefficients for the polynomial approximation of asin(x)/(pi*x) in the
+// range [0, 0.5] extracted using Sollya, for float-precision asinpi.
+//
+// Sollya code:
+// > prec = 200;
+// > display = hexadecimal;
+// > g = asin(x) / (pi * x);
+// > P = fpminimax(g, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22|],
+// >              [|D...|], [0, 0.5]);
+// > for i from 0 to degree(P) do coeff(P, i);
+// > print("Error:", dirtyinfnorm(P - g, [1e-30; 0.25]));
+// Error : 0x1.6b01ec54170565911f924eb53361de37df00d74e2a10a21d5p-56 ~ 2^−55.496
+//
+// Non-zero coefficients (even powers only):
+LIBC_INLINE_VAR constexpr double ASINPIF_COEFFS[13] = {
+    0x1.45f306dc9c883p-2,  // x^0
+    0x1.b2995e7b7af0fp-5,  // x^2
+    0x1.8723a1d61d2e9p-6,  // x^4
+    0x1.d1a4529a30a69p-7,  // x^6
+    0x1.3ce53861f8f1fp-7,  // x^8
+    0x1.d2b076c914efep-8,  // x^10
+    0x1.6a2b36f9aed68p-8,  // x^12
+    0x1.21604ae2879a2p-8,  // x^14
+    0x1.ff0549b4fd0d6p-9,  // x^16
+    0x1.035d343508f72p-9,  // x^18
+    0x1.a7b91f72b1592p-8,  // x^20
+    -0x1.6a3fb073e97aep-8, // x^22
+    0x1.547a51d51664ap-7   // x^24
+};
+
+// Evaluates P1(v2) = c1 + c2*v2 + ... + c12*v2^11 (tail of the asinpif
+// polynomial without c0) using Estrin's scheme.
+// Used as: asinpif(x) ~ x * (ASINPIF_COEFFS[0] + v2 * asinpi_eval(v2))
+// where v2 = x^2.
+LIBC_INLINE double asinpi_eval(double v2) {
+  double v4 = v2 * v2;
+  double v8 = v4 * v4;
+  double v16 = v8 * v8;
+
+  double p0 = fputil::multiply_add(v2, ASINPIF_COEFFS[2], ASINPIF_COEFFS[1]);
+  double p1 = fputil::multiply_add(v2, ASINPIF_COEFFS[4], ASINPIF_COEFFS[3]);
+  double p2 = fputil::multiply_add(v2, ASINPIF_COEFFS[6], ASINPIF_COEFFS[5]);
+  double p3 = fputil::multiply_add(v2, ASINPIF_COEFFS[8], ASINPIF_COEFFS[7]);
+  double p4 = fputil::multiply_add(v2, ASINPIF_COEFFS[10], ASINPIF_COEFFS[9]);
+  double p5 = fputil::multiply_add(v2, ASINPIF_COEFFS[12], ASINPIF_COEFFS[11]);
+
+  double q0 = fputil::multiply_add(v4, p1, p0);
+  double q1 = fputil::multiply_add(v4, p3, p2);
+  double q2 = fputil::multiply_add(v4, p5, p4);
+
+  double r0 = fputil::multiply_add(v8, q1, q0);
+
+  return fputil::multiply_add(v16, q2, r0);
+}
 
 // The Taylor expansion of asin(x) around 0 is:
 //   asin(x) = x + x^3/6 + 3x^5/40 + ...
@@ -123,7 +174,7 @@ LIBC_INLINE double asin_eval(double u) {
 // > dirtyinfnorm(asin(x)/x - P, [-1/64, 1/64]);
 // 0x1.999075402cafp-83
 
-static constexpr double ASIN_COEFFS[9][12] = {
+LIBC_INLINE_VAR constexpr double ASIN_COEFFS[9][12] = {
     {1.0, 0.0, 0x1.5555555555555p-3, 0x1.5555555555555p-57,
      0x1.3333333333333p-4, 0x1.6db6db6db6db7p-5, 0x1.f1c71c71c71c7p-6,
      0x1.6e8ba2e8ba2e9p-6, 0x1.1c4ec4ec4ec4fp-6, 0x1.c99999999999ap-7,
@@ -163,8 +214,8 @@ static constexpr double ASIN_COEFFS[9][12] = {
 };
 
 // We calculate the lower part of the approximation P(u).
-LIBC_INLINE static DoubleDouble asin_eval(const DoubleDouble &u, unsigned &idx,
-                                          double &err) {
+LIBC_INLINE DoubleDouble asin_eval(const DoubleDouble &u, unsigned &idx,
+                                   double &err) {
   using fputil::multiply_add;
   // k = round(u * 32).
   double k = fputil::nearest_integer(u.hi * 0x1.0p5);
@@ -238,7 +289,7 @@ LIBC_INLINE static DoubleDouble asin_eval(const DoubleDouble &u, unsigned &idx,
 //               + (676039 x^24)/104857600 + (1300075 x^26)/226492416 +
 //               + (5014575 x^28)/973078528 + (9694845 x^30)/2080374784.
 
-static constexpr Float128 ASIN_COEFFS_F128[17][16] = {
+LIBC_INLINE_VAR constexpr DFloat128 ASIN_COEFFS_F128[17][16] = {
     {
         {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128},
         {Sign::POS, -130, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128},
@@ -547,14 +598,13 @@ static constexpr Float128 ASIN_COEFFS_F128[17][16] = {
     },
 };
 
-static constexpr Float128 PI_OVER_TWO_F128 = {
+LIBC_INLINE_VAR constexpr DFloat128 PI_OVER_TWO_F128 = {
     Sign::POS, -127, 0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
 
-static constexpr Float128 PI_F128 = {
+LIBC_INLINE_VAR constexpr DFloat128 PI_F128 = {
     Sign::POS, -126, 0xc90fdaa2'2168c234'c4c6628b'80dc1cd1_u128};
 
-LIBC_INLINE static constexpr Float128 asin_eval(const Float128 &u,
-                                                unsigned idx) {
+LIBC_INLINE constexpr DFloat128 asin_eval(const DFloat128 &u, unsigned idx) {
   return fputil::polyeval(u, ASIN_COEFFS_F128[idx][0], ASIN_COEFFS_F128[idx][1],
                           ASIN_COEFFS_F128[idx][2], ASIN_COEFFS_F128[idx][3],
                           ASIN_COEFFS_F128[idx][4], ASIN_COEFFS_F128[idx][5],
@@ -565,7 +615,34 @@ LIBC_INLINE static constexpr Float128 asin_eval(const Float128 &u,
                           ASIN_COEFFS_F128[idx][14], ASIN_COEFFS_F128[idx][15]);
 }
 
-#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+// 1/pi as DoubleDouble (~106 bits of precision).
+LIBC_INLINE_VAR constexpr DoubleDouble ONE_OVER_PI_DD = {-0x1.6b01ec5417056p-56,
+                                                         0x1.45f306dc9c883p-2};
+
+// 1/pi as DFloat128 (~128 bits of precision).
+LIBC_INLINE_VAR constexpr DFloat128 ONE_OVER_PI_F128 = {
+    Sign::POS, -129, 0xa2f9836e'4e441529'fc2757d1'f534ddc0_u128};
+
+// 0.5 as DFloat128 (exact).
+LIBC_INLINE_VAR constexpr DFloat128 HALF_F128 = {
+    Sign::POS, -128, 0x80000000'00000000'00000000'00000000_u128};
+
+// Compute asin(sqrt(u))/(pi*sqrt(u)) in DoubleDouble precision by wrapping
+// asin_eval and multiplying by 1/pi.
+LIBC_INLINE DoubleDouble asinpi_eval(const DoubleDouble &u, unsigned &idx,
+                                     double &err) {
+  DoubleDouble p = asin_eval(u, idx, err);
+  DoubleDouble result = fputil::quick_mult(p, ONE_OVER_PI_DD);
+  // Scale error by ~1/pi and add multiplication rounding error.
+  err = err * 0x1.46p-2 + 0x1.0p-98;
+  return result;
+}
+
+// Compute asin(sqrt(u))/(pi*sqrt(u)) in DFloat128 precision.
+LIBC_INLINE constexpr DFloat128 asinpi_eval(const DFloat128 &u, unsigned idx) {
+  DFloat128 p = asin_eval(u, idx);
+  return fputil::quick_mul(p, ONE_OVER_PI_F128);
+}
 
 } // namespace asin_internal
 

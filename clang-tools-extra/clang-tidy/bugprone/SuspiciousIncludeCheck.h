@@ -29,8 +29,6 @@ public:
                            Preprocessor *ModuleExpanderPP) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
-  FileExtensionsSet HeaderFileExtensions;
-  FileExtensionsSet ImplementationFileExtensions;
   StringRef IgnoredRegexString;
   llvm::Regex IgnoredRegex;
 };

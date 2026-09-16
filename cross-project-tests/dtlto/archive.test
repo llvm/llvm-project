@@ -23,32 +23,32 @@ RUN:   -Wl,--save-temps
 RUN: ls | FileCheck %s --check-prefix=OUTPUTS
 
 # JSON jobs description.
-OUTPUTS-DAG:    {{^}}main.[[PID:[0-9]+]].dist-file.json
+OUTPUTS-DAG: {{^}}main.[[#PID:]].dist-file.json
 
 # Main source.
-OUTPUTS-DAG:    {{^}}main.{{[0-9]+}}.[[PID]].native.o{{$}}
-OUTPUTS-DAG:    {{^}}main.{{[0-9]+}}.[[PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG: {{^}}main.1.[[#PID]].native.o{{$}}
+OUTPUTS-DAG: {{^}}main.1.[[#PID]].native.o.thinlto.bc{{$}}
 
 # Regular archive members.
-# Filename composition: <archive>(<member> at <offset>).<task>.<pid>.<task>.<pid>.native.o[.thinlto.bc].
-OUTPUTS-DAG:    {{^}}archive.a(boo.o at {{[0-9]+}}).2.[[HEXPID:[a-fA-F0-9]+]].2.[[PID]].native.o{{$}}
-OUTPUTS-DAG:    {{^}}archive.a(boo.o at {{[0-9]+}}).2.[[HEXPID]].2.[[PID]].native.o.thinlto.bc{{$}}
+# Filename composition: <archive>(<member> at <offset>).<task>.<pid>.<task>.<pid>.native.o.
+OUTPUTS-DAG: {{^}}archive.a(boo.o at [[#BOO_OFFSET:]]).2.[[#%X,HEXPID:]].2.[[#PID]].native.o{{$}}
+OUTPUTS-DAG: {{^}}archive.a(boo.o at [[#BOO_OFFSET]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o.thinlto.bc{{$}}
 
-OUTPUTS-DAG:    {{^}}archive.a(foo.o at {{[0-9]+}}).3.[[HEXPID]].3.[[PID]].native.o{{$}}
-OUTPUTS-DAG:    {{^}}archive.a(foo.o at {{[0-9]+}}).3.[[HEXPID]].3.[[PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG: {{^}}archive.a(foo.o at [[#FOO_OFFSET:]]).3.[[#%X,HEXPID]].3.[[#PID]].native.o{{$}}
+OUTPUTS-DAG: {{^}}archive.a(foo.o at [[#FOO_OFFSET]]).3.[[#%X,HEXPID]].3.[[#PID]].native.o.thinlto.bc{{$}}
 
-OUTPUTS-DAG:    {{^}}archive.a(moo.o at {{[0-9]+}}).4.[[HEXPID]].4.[[PID]].native.o{{$}}
-OUTPUTS-DAG:    {{^}}archive.a(moo.o at {{[0-9]+}}).4.[[HEXPID]].4.[[PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG: {{^}}archive.a(moo.o at [[#MOO_OFFSET:]]).4.[[#%X,HEXPID]].4.[[#PID]].native.o{{$}}
+OUTPUTS-DAG: {{^}}archive.a(moo.o at [[#MOO_OFFSET]]).4.[[#%X,HEXPID]].4.[[#PID]].native.o.thinlto.bc{{$}}
 
 # Thin archive members.
-OUTPUTS-DAG:    {{^}}voo.{{[0-9]+}}.[[PID]].native.o{{$}}
-OUTPUTS-DAG:    {{^}}voo.{{[0-9]+}}.[[PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG: {{^}}voo.5.[[#PID]].native.o{{$}}
+OUTPUTS-DAG: {{^}}voo.5.[[#PID]].native.o.thinlto.bc{{$}}
 
-OUTPUTS-DAG:    {{^}}loo.{{[0-9]+}}.[[PID]].native.o{{$}}
-OUTPUTS-DAG:    {{^}}loo.{{[0-9]+}}.[[PID]].native.o.thinlto.bc{{$}}
+OUTPUTS-DAG: {{^}}loo.6.[[#PID]].native.o{{$}}
+OUTPUTS-DAG: {{^}}loo.6.[[#PID]].native.o.thinlto.bc{{$}}
 
 # Executable file.
-OUTPUTS-DAG:    {{^}}main.elf{{$}}
+OUTPUTS-DAG: {{^}}main.elf{{$}}
 
 #--- foo.c
 volatile int foo_int;
@@ -77,4 +77,3 @@ extern int voo(int x);
 __attribute__((retain)) int main(int argc, char** argv) {
   return boo(argc) + moo() + voo(argc + 3);
 }
-

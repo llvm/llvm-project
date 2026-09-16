@@ -277,7 +277,7 @@ void ARMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     return;
   }
 
-  // Combine 2 GPRs from disassember into a GPRPair to match with instr def.
+  // Combine 2 GPRs from disassembler into a GPRPair to match with instr def.
   // ldrexd/strexd require even/odd GPR pair. To enforce this constraint,
   // a single GPRPair reg operand is used in the .td file to replace the two
   // GPRs. However, when decoding them, the two GRPs cannot be automatically
@@ -917,8 +917,8 @@ void ARMInstPrinter::printMSRMaskOperand(const MCInst *MI, unsigned OpNum,
     if (Opcode == ARM::t2MSR_M && FeatureBits[ARM::FeatureDSP]) {
       auto TheReg =ARMSysReg::lookupMClassSysRegBy12bitSYSmValue(SYSm);
       if (TheReg && TheReg->isInRequiredFeatures({ARM::FeatureDSP})) {
-          O << TheReg->Name;
-          return;
+        O << ARMSysReg::getMClassSysRegStr(TheReg->Name);
+        return;
       }
     }
 
@@ -929,14 +929,14 @@ void ARMInstPrinter::printMSRMaskOperand(const MCInst *MI, unsigned OpNum,
       // alias for MSR APSR_nzcvq.
       auto TheReg = ARMSysReg::lookupMClassSysRegAPSRNonDeprecated(SYSm);
       if (TheReg) {
-          O << TheReg->Name;
-          return;
+        O << ARMSysReg::getMClassSysRegStr(TheReg->Name);
+        return;
       }
     }
 
     auto TheReg = ARMSysReg::lookupMClassSysRegBy8bitSYSmValue(SYSm);
     if (TheReg) {
-      O << TheReg->Name;
+      O << ARMSysReg::getMClassSysRegStr(TheReg->Name);
       return;
     }
 
@@ -991,7 +991,7 @@ void ARMInstPrinter::printBankedRegOperand(const MCInst *MI, unsigned OpNum,
   uint32_t Banked = MI->getOperand(OpNum).getImm();
   auto TheReg = ARMBankedReg::lookupBankedRegByEncoding(Banked);
   assert(TheReg && "invalid banked register operand");
-  std::string Name = TheReg->Name;
+  std::string Name = ARMBankedReg::getBankedRegStr(TheReg->Name).str();
 
   uint32_t isSPSR = (Banked & 0x20) >> 5;
   if (isSPSR)

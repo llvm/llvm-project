@@ -18,3 +18,6 @@ def all_x86combines : GICombineGroup<[identity_combines, reassocs,
 def X86PreLegalizerCombiner : GICombiner<"X86PreLegalizerCombinerImpl", [all_x86combines]> {
     let CombineAllMethodName = "tryCombineAllImpl";
 }
+def X86PostLegalizerCombiner : GICombiner<"X86PostLegalizerCombinerImpl", [redundant_or, constant_fold_fp_ops, identity_combines, copy_prop]> {
+    let CombineAllMethodName = "tryCombineAllImpl";
+}

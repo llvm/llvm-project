@@ -21,6 +21,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -59,10 +60,6 @@
 #include <vector>
 
 using namespace llvm;
-
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
 
 MetadataAsValue::MetadataAsValue(Type *Ty, Metadata *MD)
     : Value(Ty, MetadataAsValueVal), MD(MD) {
@@ -179,27 +176,31 @@ void DebugValueUser::handleChangedValue(void *Old, Metadata *New) {
 void DebugValueUser::trackDebugValue(size_t Idx) {
   assert(Idx < 3 && "Invalid debug value index.");
   Metadata *&MD = DebugValues[Idx];
-  if (MD)
-    MetadataTracking::track(&MD, *MD, *this);
+  if (!MD)
+    return;
+  MetadataTracking::track(&MD, *MD, *this);
+  if (auto *ID = Idx == AssignIDIdx ? dyn_cast<DIAssignID>(MD) : nullptr)
+    ID->Records.push_back(getUser());
 }
 
 void DebugValueUser::trackDebugValues() {
-  for (Metadata *&MD : DebugValues)
-    if (MD)
-      MetadataTracking::track(&MD, *MD, *this);
+  for (size_t I = 0, E = DebugValues.size(); I != E; ++I)
+    trackDebugValue(I);
 }
 
 void DebugValueUser::untrackDebugValue(size_t Idx) {
   assert(Idx < 3 && "Invalid debug value index.");
   Metadata *&MD = DebugValues[Idx];
-  if (MD)
-    MetadataTracking::untrack(MD);
+  if (!MD)
+    return;
+  MetadataTracking::untrack(MD);
+  if (auto *ID = Idx == AssignIDIdx ? dyn_cast<DIAssignID>(MD) : nullptr)
+    ID->Records.erase(llvm::find(ID->Records, getUser()));
 }
 
 void DebugValueUser::untrackDebugValues() {
-  for (Metadata *&MD : DebugValues)
-    if (MD)
-      MetadataTracking::untrack(MD);
+  for (size_t I = 0, E = DebugValues.size(); I != E; ++I)
+    untrackDebugValue(I);
 }
 
 void DebugValueUser::retrackDebugValues(DebugValueUser &X) {
@@ -207,6 +208,8 @@ void DebugValueUser::retrackDebugValues(DebugValueUser &X) {
   for (const auto &[MD, XMD] : zip(DebugValues, X.DebugValues))
     if (XMD)
       MetadataTracking::retrack(XMD, MD);
+  if (auto *ID = dyn_cast_or_null<DIAssignID>(DebugValues[AssignIDIdx]))
+    *llvm::find(ID->Records, X.getUser()) = getUser();
   X.DebugValues.fill(nullptr);
 }
 
@@ -214,7 +217,7 @@ bool MetadataTracking::track(void *Ref, Metadata &MD, OwnerTy Owner) {
   assert(Ref && "Expected live reference");
   assert((Owner || *static_cast<Metadata **>(Ref) == &MD) &&
          "Reference without owner must be direct");
-  if (auto *R = ReplaceableMetadataImpl::getOrCreate(MD)) {
+  if (auto *R = ReplaceableUses::getOrCreate(MD)) {
     R->addRef(Ref, Owner);
     return true;
   }
@@ -229,7 +232,7 @@ bool MetadataTracking::track(void *Ref, Metadata &MD, OwnerTy Owner) {
 
 void MetadataTracking::untrack(void *Ref, Metadata &MD) {
   assert(Ref && "Expected live reference");
-  if (auto *R = ReplaceableMetadataImpl::getIfExists(MD))
+  if (auto *R = ReplaceableUses::getIfExists(MD))
     R->dropRef(Ref);
   else if (auto *PH = dyn_cast<DistinctMDOperandPlaceholder>(&MD))
     PH->Use = nullptr;
@@ -239,7 +242,7 @@ bool MetadataTracking::retrack(void *Ref, Metadata &MD, void *New) {
   assert(Ref && "Expected live reference");
   assert(New && "Expected live reference");
   assert(Ref != New && "Expected change");
-  if (auto *R = ReplaceableMetadataImpl::getIfExists(MD)) {
+  if (auto *R = ReplaceableUses::getIfExists(MD)) {
     R->moveRef(Ref, New, MD);
     return true;
   }
@@ -251,10 +254,10 @@ bool MetadataTracking::retrack(void *Ref, Metadata &MD, void *New) {
 }
 
 bool MetadataTracking::isReplaceable(const Metadata &MD) {
-  return ReplaceableMetadataImpl::isReplaceable(MD);
+  return ReplaceableUses::isReplaceable(MD);
 }
 
-SmallVector<Metadata *> ReplaceableMetadataImpl::getAllArgListUsers() {
+SmallVector<Metadata *> ReplaceableUses::getAllArgListUsers() {
   SmallVector<std::pair<OwnerTy, uint64_t> *> MDUsersWithID;
   for (auto Pair : UseMap) {
     OwnerTy Owner = Pair.second.first;
@@ -276,7 +279,7 @@ SmallVector<Metadata *> ReplaceableMetadataImpl::getAllArgListUsers() {
 }
 
 SmallVector<DbgVariableRecord *>
-ReplaceableMetadataImpl::getAllDbgVariableRecordUsers() {
+ReplaceableUses::getAllDbgVariableRecordUsers() {
   SmallVector<std::pair<OwnerTy, uint64_t> *> DVRUsersWithID;
   for (auto Pair : UseMap) {
     OwnerTy Owner = Pair.second.first;
@@ -300,7 +303,7 @@ ReplaceableMetadataImpl::getAllDbgVariableRecordUsers() {
   return DVRUsers;
 }
 
-void ReplaceableMetadataImpl::addRef(void *Ref, OwnerTy Owner) {
+void ReplaceableUses::addRef(void *Ref, OwnerTy Owner) {
   bool WasInserted =
       UseMap.insert(std::make_pair(Ref, std::make_pair(Owner, NextIndex)))
           .second;
@@ -311,14 +314,13 @@ void ReplaceableMetadataImpl::addRef(void *Ref, OwnerTy Owner) {
   assert(NextIndex != 0 && "Unexpected overflow");
 }
 
-void ReplaceableMetadataImpl::dropRef(void *Ref) {
+void ReplaceableUses::dropRef(void *Ref) {
   bool WasErased = UseMap.erase(Ref);
   (void)WasErased;
   assert(WasErased && "Expected to drop a reference");
 }
 
-void ReplaceableMetadataImpl::moveRef(void *Ref, void *New,
-                                      const Metadata &MD) {
+void ReplaceableUses::moveRef(void *Ref, void *New, const Metadata &MD) {
   auto I = UseMap.find(Ref);
   assert(I != UseMap.end() && "Expected to move a reference");
   auto OwnerAndIndex = I->second;
@@ -335,7 +337,7 @@ void ReplaceableMetadataImpl::moveRef(void *Ref, void *New,
          "Reference without owner must be direct");
 }
 
-void ReplaceableMetadataImpl::SalvageDebugInfo(const Constant &C) {
+void ReplaceableUses::SalvageDebugInfo(const Constant &C) {
   if (!C.isUsedByMetadata()) {
     return;
   }
@@ -372,7 +374,7 @@ void ReplaceableMetadataImpl::SalvageDebugInfo(const Constant &C) {
   }
 }
 
-void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
+void ReplaceableUses::replaceAllUsesWith(Metadata *MD) {
   if (UseMap.empty())
     return;
 
@@ -425,7 +427,7 @@ void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
   assert(UseMap.empty() && "Expected all uses to be replaced");
 }
 
-void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
+void ReplaceableUses::resolveAllUses(bool ResolveUsers) {
   if (UseMap.empty())
     return;
 
@@ -458,35 +460,38 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
   }
 }
 
+// A value without a use list (e.g. ConstantData) is never RAUW'd, so don't
+// create a ReplaceableUses instance for it.
+static bool isTrackedValue(const Metadata &MD) {
+  auto *VAM = dyn_cast<ValueAsMetadata>(&MD);
+  return VAM && VAM->getValue()->hasUseList();
+}
+
 // Special handing of DIArgList is required in the RemoveDIs project, see
 // commentry in DIArgList::handleChangedOperand for details. Hidden behind
 // conditional compilation to avoid a compile time regression.
-ReplaceableMetadataImpl *ReplaceableMetadataImpl::getOrCreate(Metadata &MD) {
+ReplaceableUses *ReplaceableUses::getOrCreate(Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD)) {
-    return !N->isResolved() || N->isAlwaysReplaceable()
-               ? N->Context.getOrCreateReplaceableUses()
-               : nullptr;
+    return N->isResolved() ? nullptr : N->Context.getOrCreateReplaceableUses();
   }
   if (auto ArgList = dyn_cast<DIArgList>(&MD))
     return ArgList;
-  return dyn_cast<ValueAsMetadata>(&MD);
+  return isTrackedValue(MD) ? cast<ValueAsMetadata>(&MD) : nullptr;
 }
 
-ReplaceableMetadataImpl *ReplaceableMetadataImpl::getIfExists(Metadata &MD) {
+ReplaceableUses *ReplaceableUses::getIfExists(Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD)) {
-    return !N->isResolved() || N->isAlwaysReplaceable()
-               ? N->Context.getReplaceableUses()
-               : nullptr;
+    return N->isResolved() ? nullptr : N->Context.getReplaceableUses();
   }
   if (auto ArgList = dyn_cast<DIArgList>(&MD))
     return ArgList;
-  return dyn_cast<ValueAsMetadata>(&MD);
+  return isTrackedValue(MD) ? cast<ValueAsMetadata>(&MD) : nullptr;
 }
 
-bool ReplaceableMetadataImpl::isReplaceable(const Metadata &MD) {
+bool ReplaceableUses::isReplaceable(const Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD))
-    return !N->isResolved() || N->isAlwaysReplaceable();
-  return isa<ValueAsMetadata>(&MD) || isa<DIArgList>(&MD);
+    return !N->isResolved();
+  return isTrackedValue(MD) || isa<DIArgList>(&MD);
 }
 
 static DISubprogram *getLocalFunctionMetadata(Value *V) {
@@ -554,16 +559,15 @@ void ValueAsMetadata::handleRAUW(Value *From, Value *To) {
   assert(To && "Expected valid value");
   assert(From != To && "Expected changed value");
   assert(&From->getContext() == &To->getContext() && "Expected same context");
+  assert(From->hasUseList() && "Must have use list");
 
-  LLVMContext &Context = From->getType()->getContext();
-  auto &Store = Context.pImpl->ValuesAsMetadata;
+  auto &Store = From->getContext().pImpl->ValuesAsMetadata;
   auto I = Store.find(From);
   if (I == Store.end()) {
     assert(!From->IsUsedByMD && "Expected From not to be used by metadata");
     return;
   }
 
-  // Remove old entry from the map.
   assert(From->IsUsedByMD && "Expected From to be used by metadata");
   From->IsUsedByMD = false;
   ValueAsMetadata *MD = I->second;
@@ -571,40 +575,19 @@ void ValueAsMetadata::handleRAUW(Value *From, Value *To) {
   assert(MD->getValue() == From && "Expected valid mapping");
   Store.erase(I);
 
-  if (isa<LocalAsMetadata>(MD)) {
-    if (auto *C = dyn_cast<Constant>(To)) {
-      // Local became a constant.
-      MD->replaceAllUsesWith(ConstantAsMetadata::get(C));
-      delete MD;
-      return;
-    }
-    if (getLocalFunctionMetadata(From) && getLocalFunctionMetadata(To) &&
-        getLocalFunctionMetadata(From) != getLocalFunctionMetadata(To)) {
-      // DISubprogram changed.
-      MD->replaceAllUsesWith(nullptr);
-      delete MD;
-      return;
-    }
-  } else if (!isa<Constant>(To)) {
-    // Changed to function-local value.
-    MD->replaceAllUsesWith(nullptr);
-    delete MD;
-    return;
+  // Move the uses to To's node. Uses of a function-local value are dropped if
+  // it becomes a local of another function or replaces a constant.
+  Metadata *New = nullptr;
+  if (isa<Constant>(To)) {
+    New = ValueAsMetadata::get(To);
+  } else if (isa<LocalAsMetadata>(MD)) {
+    DISubprogram *FromSP = getLocalFunctionMetadata(From);
+    DISubprogram *ToSP = FromSP ? getLocalFunctionMetadata(To) : nullptr;
+    if (!FromSP || !ToSP || FromSP == ToSP)
+      New = ValueAsMetadata::get(To);
   }
-
-  auto *&Entry = Store[To];
-  if (Entry) {
-    // The target already exists.
-    MD->replaceAllUsesWith(Entry);
-    delete MD;
-    return;
-  }
-
-  // Update MD in place (and update the map entry).
-  assert(!To->IsUsedByMD && "Expected this to be the only metadata use");
-  To->IsUsedByMD = true;
-  MD->V = To;
-  Entry = MD;
+  MD->replaceAllUsesWith(New);
+  delete MD;
 }
 
 //===----------------------------------------------------------------------===//
@@ -619,6 +602,14 @@ MDString *MDString::get(LLVMContext &Context, StringRef Str) {
     return &MapEntry;
   MapEntry.Entry = &*I.first;
   return &MapEntry;
+}
+
+MDString *MDString::getIfExists(LLVMContext &Context, StringRef Str) {
+  auto &Store = Context.pImpl->MDStringCache;
+  auto I = Store.find(Str);
+  if (I == Store.end())
+    return nullptr;
+  return &I->getValue();
 }
 
 StringRef MDString::getString() const {
@@ -641,6 +632,8 @@ StringRef MDString::getString() const {
 void *MDNode::operator new(size_t Size, size_t NumOps, StorageType Storage) {
   // uint64_t is the most aligned type we need support (ensured by static_assert
   // above)
+  static_assert(sizeof(Header) == sizeof(size_t) + 2 * sizeof(uint32_t),
+                "MDNode header fields poorly packed");
   size_t AllocSize =
       alignTo(Header::getAllocSize(Storage, NumOps), alignof(uint64_t));
   char *Mem = reinterpret_cast<char *>(::operator new(AllocSize + Size));
@@ -658,6 +651,8 @@ void MDNode::operator delete(void *N) {
 MDNode::MDNode(LLVMContext &Context, unsigned ID, StorageType Storage,
                ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2)
     : Metadata(ID, Storage), Context(Context) {
+  getHeader().MetadataPrintID = Context.pImpl->allocateMetadataPrintID();
+
   unsigned Op = 0;
   for (Metadata *MD : Ops1)
     setOperand(Op++, MD);
@@ -772,6 +767,9 @@ void MDNode::countUnresolvedOperands() {
 void MDNode::makeUniqued() {
   assert(isTemporary() && "Expected this to be temporary");
   assert(!isResolved() && "Expected this to be unresolved");
+  bool WasTracked = getContext().pImpl->TemporaryMDNodes.erase(this);
+  assert(WasTracked && "Temporary node not tracked");
+  (void)WasTracked;
 
   // Enable uniquing callbacks.
   for (auto &Op : mutable_operands())
@@ -972,6 +970,11 @@ void MDNode::handleChangedOperand(void *Ref, Metadata *New) {
 }
 
 void MDNode::deleteAsSubclass() {
+  if (isTemporary()) {
+    bool WasTracked = getContext().pImpl->TemporaryMDNodes.erase(this);
+    assert(WasTracked && "Temporary node not tracked");
+    (void)WasTracked;
+  }
   switch (getMetadataID()) {
   default:
     llvm_unreachable("Invalid subclass of MDNode");
@@ -1057,6 +1060,11 @@ void MDNode::deleteTemporary(MDNode *N) {
 void MDNode::storeDistinctInContext() {
   assert(!Context.hasReplaceableUses() && "Unexpected replaceable uses");
   assert(!getNumUnresolved() && "Unexpected unresolved nodes");
+  if (isTemporary()) {
+    bool WasTracked = getContext().pImpl->TemporaryMDNodes.erase(this);
+    assert(WasTracked && "Temporary node not tracked");
+    (void)WasTracked;
+  }
   Storage = Distinct;
   assert(isResolved() && "Expected this to be resolved");
 
@@ -1228,7 +1236,7 @@ MDNode *MDNode::getMergedProfMetadata(MDNode *A, MDNode *B,
   auto IsLegal = [](const Instruction &I) -> bool {
     switch (I.getOpcode()) {
     case Instruction::Invoke:
-    case Instruction::Br:
+    case Instruction::CondBr:
     case Instruction::Switch:
     case Instruction::Call:
     case Instruction::IndirectBr:
@@ -1261,7 +1269,7 @@ MDNode *MDNode::getMergedProfMetadata(MDNode *A, MDNode *B,
       BCall->getCalledFunction())
     return mergeDirectCallProfMetadata(A, B, AInstr, BInstr);
 
-  if (A == B && !ProfcheckDisableMetadataFixes)
+  if (A == B)
     return A;
 
   // The rest of the cases are not implemented but could be added
@@ -1322,6 +1330,46 @@ MDNode *MDNode::getMergedCalleeTypeMetadata(const MDNode *A, const MDNode *B) {
   AddUniqueCallees(A);
   AddUniqueCallees(B);
   return MDNode::get(A->getContext(), AB);
+}
+
+MDNode *MDNode::getMergedAllocTokenMetadata(const MDNode *A, const MDNode *B) {
+  // Drop !alloc_token metadata if either instruction lacks it to avoid mis-
+  // classifying unclassified allocations, where the fallback token must be
+  // used instead.
+  if (!A || !B)
+    return nullptr;
+  if (A == B)
+    return const_cast<MDNode *>(A);
+  if (A->getNumOperands() != 2 || B->getNumOperands() != 2)
+    return nullptr;
+  auto *CIA = mdconst::dyn_extract_or_null<ConstantInt>(A->getOperand(1));
+  auto *CIB = mdconst::dyn_extract_or_null<ConstantInt>(B->getOperand(1));
+  if (!CIA || !CIB)
+    return nullptr;
+
+  MDString *NameA = dyn_cast<MDString>(A->getOperand(0));
+  MDString *NameB = dyn_cast<MDString>(B->getOperand(0));
+  if (!NameA || !NameB)
+    return nullptr;
+
+  if (NameA == NameB)
+    return CIA->isOne() ? const_cast<MDNode *>(A) : const_cast<MDNode *>(B);
+
+  LLVMContext &Ctx = A->getContext();
+  StringRef StrA = NameA->getString();
+  StringRef StrB = NameB->getString();
+
+  SmallString<64> Buffer;
+  Buffer.reserve(StrA.size() + 1 + StrB.size());
+  Buffer.append(StrA);
+  Buffer.push_back('|');
+  Buffer.append(StrB);
+
+  bool MergedContainsPointer = CIA->isOne() || CIB->isOne();
+  Metadata *Ops[] = {MDString::get(Ctx, Buffer),
+                     ConstantAsMetadata::get(ConstantInt::get(
+                         Type::getInt1Ty(Ctx), MergedContainsPointer))};
+  return MDNode::get(Ctx, Ops);
 }
 
 MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
@@ -1395,6 +1443,23 @@ MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
   for (auto *I : EndPoints)
     MDs.push_back(ConstantAsMetadata::get(I));
   return MDNode::get(A->getContext(), MDs);
+}
+
+MDNode *MDNode::getMostGenericNoFPClass(MDNode *A, MDNode *B) {
+  if (!A || !B)
+    return nullptr;
+
+  if (A == B)
+    return A;
+
+  ConstantInt *AVal = mdconst::extract<ConstantInt>(A->getOperand(0));
+  ConstantInt *BVal = mdconst::extract<ConstantInt>(B->getOperand(0));
+  unsigned Intersect = AVal->getZExtValue() & BVal->getZExtValue();
+  if (Intersect == 0)
+    return nullptr;
+
+  return MDNode::get(A->getContext(), ConstantAsMetadata::get(ConstantInt::get(
+                                          AVal->getType(), Intersect)));
 }
 
 MDNode *MDNode::getMostGenericNoaliasAddrspace(MDNode *A, MDNode *B) {
@@ -1522,128 +1587,102 @@ StringRef NamedMDNode::getName() const { return StringRef(Name); }
 // Instruction Metadata method implementations.
 //
 
-MDNode *MDAttachments::lookup(unsigned ID) const {
-  for (const auto &A : Attachments)
-    if (A.MDKind == ID)
-      return A.Node;
-  return nullptr;
+unsigned &Value::getMetadataIndex() {
+  if (auto *I = dyn_cast<Instruction>(this))
+    return I->MetadataIndex;
+  return cast<GlobalObject>(this)->MetadataIndex;
 }
 
-void MDAttachments::get(unsigned ID, SmallVectorImpl<MDNode *> &Result) const {
-  for (const auto &A : Attachments)
-    if (A.MDKind == ID)
-      Result.push_back(A.Node);
-}
-
-void MDAttachments::getAll(
-    SmallVectorImpl<std::pair<unsigned, MDNode *>> &Result) const {
-  for (const auto &A : Attachments)
-    Result.emplace_back(A.MDKind, A.Node);
-
-  // Sort the resulting array so it is stable with respect to metadata IDs. We
-  // need to preserve the original insertion order though.
-  if (Result.size() > 1)
-    llvm::stable_sort(Result, less_first());
-}
-
-void MDAttachments::set(unsigned ID, MDNode *MD) {
-  erase(ID);
-  if (MD)
-    insert(ID, *MD);
-}
-
-void MDAttachments::insert(unsigned ID, MDNode &MD) {
-  Attachments.push_back({ID, TrackingMDNodeRef(&MD)});
-}
-
-bool MDAttachments::erase(unsigned ID) {
-  if (empty())
-    return false;
-
-  // Common case is one value.
-  if (Attachments.size() == 1 && Attachments.back().MDKind == ID) {
-    Attachments.pop_back();
-    return true;
-  }
-
-  auto OldSize = Attachments.size();
-  llvm::erase_if(Attachments,
-                 [ID](const Attachment &A) { return A.MDKind == ID; });
-  return OldSize != Attachments.size();
+unsigned Value::getMetadataIndex() const {
+  return const_cast<Value *>(this)->getMetadataIndex();
 }
 
 MDNode *Value::getMetadata(StringRef Kind) const {
-  if (!hasMetadata())
-    return nullptr;
   unsigned KindID = getContext().getMDKindID(Kind);
   return getMetadataImpl(KindID);
 }
 
 MDNode *Value::getMetadataImpl(unsigned KindID) const {
   const LLVMContext &Ctx = getContext();
-  const MDAttachments &Attachements = Ctx.pImpl->ValueMetadata.at(this);
-  return Attachements.lookup(KindID);
+  unsigned Idx = getMetadataIndex();
+  while (Idx) {
+    const MDAttachment &A = Ctx.pImpl->Metadatas[Idx];
+    if (A.MDKind == KindID)
+      return A.Node;
+    Idx = A.Next;
+  }
+  return nullptr;
 }
 
-void Value::getMetadata(unsigned KindID, SmallVectorImpl<MDNode *> &MDs) const {
-  if (hasMetadata())
-    getContext().pImpl->ValueMetadata.at(this).get(KindID, MDs);
+void GlobalObject::getMetadata(unsigned KindID,
+                               SmallVectorImpl<MDNode *> &MDs) const {
+  const LLVMContext &Ctx = getContext();
+  unsigned Idx = MetadataIndex;
+  while (Idx) {
+    const MDAttachment &A = Ctx.pImpl->Metadatas[Idx];
+    if (A.MDKind == KindID)
+      MDs.push_back(A.Node);
+    Idx = A.Next;
+  }
+  // We store metadata in reverse order, so reverse for output.
+  std::reverse(MDs.begin(), MDs.end());
 }
 
-void Value::getMetadata(StringRef Kind, SmallVectorImpl<MDNode *> &MDs) const {
-  if (hasMetadata())
-    getMetadata(getContext().getMDKindID(Kind), MDs);
+void GlobalObject::getMetadata(StringRef Kind,
+                               SmallVectorImpl<MDNode *> &MDs) const {
+  getMetadata(getContext().getMDKindID(Kind), MDs);
 }
 
 void Value::getAllMetadata(
     SmallVectorImpl<std::pair<unsigned, MDNode *>> &MDs) const {
-  if (hasMetadata()) {
-    assert(getContext().pImpl->ValueMetadata.count(this) &&
-           "bit out of sync with hash table");
-    const MDAttachments &Info = getContext().pImpl->ValueMetadata.at(this);
-    Info.getAll(MDs);
+  const LLVMContext &Ctx = getContext();
+  unsigned Idx = getMetadataIndex();
+  while (Idx) {
+    const MDAttachment &A = Ctx.pImpl->Metadatas[Idx];
+    MDs.emplace_back(A.MDKind, A.Node);
+    Idx = A.Next;
+  }
+  // We store metadata in reverse order, so reverse for output in insertion
+  // order. Sort by metadata ID for stable output.
+  if (MDs.size() > 1) {
+    std::reverse(MDs.begin(), MDs.end());
+    llvm::stable_sort(MDs, less_first());
   }
 }
 
 void Value::setMetadata(unsigned KindID, MDNode *Node) {
   assert(isa<Instruction>(this) || isa<GlobalObject>(this));
 
-  // Handle the case when we're adding/updating metadata on a value.
-  if (Node) {
-    MDAttachments &Info = getContext().pImpl->ValueMetadata[this];
-    assert(!Info.empty() == HasMetadata && "bit out of sync with hash table");
-    if (Info.empty())
-      HasMetadata = true;
-    Info.set(KindID, Node);
-    return;
-  }
-
-  // Otherwise, we're removing metadata from an instruction.
-  assert((HasMetadata == (getContext().pImpl->ValueMetadata.count(this) > 0)) &&
-         "bit out of sync with hash table");
-  if (!HasMetadata)
-    return; // Nothing to remove!
-  MDAttachments &Info = getContext().pImpl->ValueMetadata.find(this)->second;
-
-  // Handle removal of an existing value.
-  Info.erase(KindID);
-  if (!Info.empty())
-    return;
-  getContext().pImpl->ValueMetadata.erase(this);
-  HasMetadata = false;
+  if (getMetadataIndex() != 0)
+    eraseMetadata(KindID);
+  if (Node)
+    addMetadata(KindID, *Node);
 }
 
 void Value::setMetadata(StringRef Kind, MDNode *Node) {
-  if (!Node && !HasMetadata)
+  if (!Node && getMetadataIndex() == 0)
     return;
   setMetadata(getContext().getMDKindID(Kind), Node);
 }
 
 void Value::addMetadata(unsigned KindID, MDNode &MD) {
-  assert(isa<Instruction>(this) || isa<GlobalObject>(this));
-  if (!HasMetadata)
-    HasMetadata = true;
-  getContext().pImpl->ValueMetadata[this].insert(KindID, MD);
+  const LLVMContext &Ctx = getContext();
+  unsigned &Idx = getMetadataIndex();
+  unsigned NewIdx = Ctx.pImpl->MetadataRecycleHead;
+  if (NewIdx == 0) {
+    NewIdx = Ctx.pImpl->Metadatas.size();
+    if (NewIdx == 0)
+      NewIdx = 1;
+    Ctx.pImpl->Metadatas.resize(NewIdx + 1);
+  } else {
+    Ctx.pImpl->MetadataRecycleHead = Ctx.pImpl->Metadatas[NewIdx].Next;
+#ifndef NDEBUG
+    Ctx.pImpl->MetadataRecycleSize -= 1;
+#endif
+  }
+  Ctx.pImpl->Metadatas[NewIdx] =
+      MDAttachment{Idx, KindID, TrackingMDNodeRef(&MD)};
+  Idx = NewIdx;
 }
 
 void Value::addMetadata(StringRef Kind, MDNode &MD) {
@@ -1651,43 +1690,40 @@ void Value::addMetadata(StringRef Kind, MDNode &MD) {
 }
 
 bool Value::eraseMetadata(unsigned KindID) {
-  // Nothing to unset.
-  if (!HasMetadata)
-    return false;
-
-  MDAttachments &Store = getContext().pImpl->ValueMetadata.find(this)->second;
-  bool Changed = Store.erase(KindID);
-  if (Store.empty())
-    clearMetadata();
+  bool Changed = false;
+  eraseMetadataIf([&Changed, KindID](unsigned MDKind, MDNode *) {
+    Changed |= MDKind == KindID;
+    return MDKind == KindID;
+  });
   return Changed;
 }
 
 void Value::eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred) {
-  if (!HasMetadata)
-    return;
-
-  auto &MetadataStore = getContext().pImpl->ValueMetadata;
-  MDAttachments &Info = MetadataStore.find(this)->second;
-  assert(!Info.empty() && "bit out of sync with hash table");
-  Info.remove_if([Pred](const MDAttachments::Attachment &I) {
-    return Pred(I.MDKind, I.Node);
-  });
-
-  if (Info.empty())
-    clearMetadata();
+  unsigned *Idx = &getMetadataIndex();
+  const LLVMContext &Ctx = getContext();
+  while (*Idx) {
+    MDAttachment &A = Ctx.pImpl->Metadatas[*Idx];
+    if (Pred(A.MDKind, A.Node)) {
+      A.Node.reset();
+      unsigned FreeIdx = *Idx;
+      *Idx = A.Next;
+      A.Next = Ctx.pImpl->MetadataRecycleHead;
+      Ctx.pImpl->MetadataRecycleHead = FreeIdx;
+#ifndef NDEBUG
+      Ctx.pImpl->MetadataRecycleSize += 1;
+#endif
+    } else {
+      Idx = &A.Next;
+    }
+  }
 }
 
 void Value::clearMetadata() {
-  if (!HasMetadata)
-    return;
-  assert(getContext().pImpl->ValueMetadata.count(this) &&
-         "bit out of sync with hash table");
-  getContext().pImpl->ValueMetadata.erase(this);
-  HasMetadata = false;
+  eraseMetadataIf([](unsigned, MDNode *) { return true; });
 }
 
 void Instruction::setMetadata(StringRef Kind, MDNode *Node) {
-  if (!Node && !hasMetadata())
+  if (!Node && MetadataIndex == 0)
     return;
   setMetadata(getContext().getMDKindID(Kind), Node);
 }
@@ -1697,7 +1733,7 @@ MDNode *Instruction::getMetadataImpl(StringRef Kind) const {
   unsigned KindID = Ctx.getMDKindID(Kind);
   if (KindID == LLVMContext::MD_dbg)
     return DbgLoc.getAsMDNode();
-  return Value::getMetadata(KindID);
+  return Value::getMetadataImpl(KindID);
 }
 
 void Instruction::eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred) {
@@ -1708,7 +1744,7 @@ void Instruction::eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred) {
 }
 
 void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
-  if (!Value::hasMetadata())
+  if (!hasMetadataOtherThanDebugLoc())
     return; // Nothing to remove!
 
   SmallSet<unsigned, 32> KnownSet(llvm::from_range, KnownIDs);
@@ -1722,34 +1758,14 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
 }
 
 void Instruction::updateDIAssignIDMapping(DIAssignID *ID) {
-  auto &IDToInstrs = getContext().pImpl->AssignmentIDToInstrs;
-  if (const DIAssignID *CurrentID =
+  if (auto *CurrentID =
           cast_or_null<DIAssignID>(getMetadata(LLVMContext::MD_DIAssignID))) {
-    // Nothing to do if the ID isn't changing.
     if (ID == CurrentID)
       return;
-
-    // Unmap this instruction from its current ID.
-    auto InstrsIt = IDToInstrs.find(CurrentID);
-    assert(InstrsIt != IDToInstrs.end() &&
-           "Expect existing attachment to be mapped");
-
-    auto &InstVec = InstrsIt->second;
-    auto *InstIt = llvm::find(InstVec, this);
-    assert(InstIt != InstVec.end() &&
-           "Expect instruction to be mapped to attachment");
-    // The vector contains a ptr to this. If this is the only element in the
-    // vector, remove the ID:vector entry, otherwise just remove the
-    // instruction from the vector.
-    if (InstVec.size() == 1)
-      IDToInstrs.erase(InstrsIt);
-    else
-      InstVec.erase(InstIt);
+    CurrentID->Instrs.erase(llvm::find(CurrentID->Instrs, this));
   }
-
-  // Map this instruction to the new ID.
   if (ID)
-    IDToInstrs[ID].push_back(this);
+    ID->Instrs.push_back(this);
 }
 
 void Instruction::setMetadata(unsigned KindID, MDNode *Node) {
@@ -1758,7 +1774,7 @@ void Instruction::setMetadata(unsigned KindID, MDNode *Node) {
 
   // Handle 'dbg' as a special case since it is not stored in the hash table.
   if (KindID == LLVMContext::MD_dbg) {
-    DbgLoc = DebugLoc(Node);
+    DbgLoc = DebugLoc(cast_or_null<DILocation>(Node));
     return;
   }
 
@@ -1825,15 +1841,30 @@ void Instruction::addAnnotationMetadata(StringRef Name) {
 
 AAMDNodes Instruction::getAAMetadata() const {
   AAMDNodes Result;
-  // Not using Instruction::hasMetadata() because we're not interested in
-  // DebugInfoMetadata.
-  if (Value::hasMetadata()) {
-    const MDAttachments &Info = getContext().pImpl->ValueMetadata.at(this);
-    Result.TBAA = Info.lookup(LLVMContext::MD_tbaa);
-    Result.TBAAStruct = Info.lookup(LLVMContext::MD_tbaa_struct);
-    Result.Scope = Info.lookup(LLVMContext::MD_alias_scope);
-    Result.NoAlias = Info.lookup(LLVMContext::MD_noalias);
-    Result.NoAliasAddrSpace = Info.lookup(LLVMContext::MD_noalias_addrspace);
+  if (hasMetadataOtherThanDebugLoc()) {
+    unsigned Idx = MetadataIndex;
+    const auto &Metadatas = getContext().pImpl->Metadatas;
+    while (Idx) {
+      const MDAttachment &A = Metadatas[Idx];
+      switch (A.MDKind) {
+      case LLVMContext::MD_tbaa:
+        Result.TBAA = A.Node;
+        break;
+      case LLVMContext::MD_tbaa_struct:
+        Result.TBAAStruct = A.Node;
+        break;
+      case LLVMContext::MD_alias_scope:
+        Result.Scope = A.Node;
+        break;
+      case LLVMContext::MD_noalias:
+        Result.NoAlias = A.Node;
+        break;
+      case LLVMContext::MD_noalias_addrspace:
+        Result.NoAliasAddrSpace = A.Node;
+        break;
+      }
+      Idx = A.Next;
+    }
   }
   return Result;
 }
@@ -1864,12 +1895,13 @@ void Instruction::getAllMetadataImpl(
 }
 
 bool Instruction::extractProfTotalWeight(uint64_t &TotalVal) const {
-  assert(
-      (getOpcode() == Instruction::Br || getOpcode() == Instruction::Select ||
-       getOpcode() == Instruction::Call || getOpcode() == Instruction::Invoke ||
-       getOpcode() == Instruction::IndirectBr ||
-       getOpcode() == Instruction::Switch) &&
-      "Looking for branch weights on something besides branch");
+  assert((getOpcode() == Instruction::CondBr ||
+          getOpcode() == Instruction::Select ||
+          getOpcode() == Instruction::Call ||
+          getOpcode() == Instruction::Invoke ||
+          getOpcode() == Instruction::IndirectBr ||
+          getOpcode() == Instruction::Switch) &&
+         "Looking for branch weights on something besides branch");
 
   return ::extractProfTotalWeight(*this, TotalVal);
 }

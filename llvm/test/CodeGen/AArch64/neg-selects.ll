@@ -35,9 +35,7 @@ define i32 @negneg_select_nega(i32 %a, i32 %b, i1 %bb) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    and w8, w2, #0x1
 ; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    csneg w8, w1, w0, eq
-; CHECK-GI-NEXT:    neg w8, w8
-; CHECK-GI-NEXT:    neg w0, w8
+; CHECK-GI-NEXT:    csneg w0, w1, w0, eq
 ; CHECK-GI-NEXT:    ret
   %nega = sub i32 0, %a
   %sel = select i1 %bb, i32 %nega, i32 %b

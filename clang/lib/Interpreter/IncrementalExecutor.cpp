@@ -27,14 +27,16 @@
 #include "llvm/ADT/Twine.h"
 
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SharedMemoryMapperSPSCI.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 
@@ -58,6 +60,30 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#endif
+
+// Address of the host's emulated-TLS runtime entry point, or null if the host
+// cannot provide one. clang-repl's JIT always lowers thread_local to emulated
+// TLS (JITTargetMachineBuilder forces EmulatedTLS on), so JIT'd code references
+// __emutls_get_address on every target. That symbol lives in the compiler
+// runtime -- libgcc_s.so on a glibc toolchain, or the compiler-rt builtins
+// static archive on Darwin and on compiler-rt-rtlib toolchains. When it is only
+// in a static archive and nothing else references it, it is never linked in and
+// ORC's process-symbol lookup cannot resolve it. Referencing it here
+// force-links the archive member so it is present regardless of how the host
+// provides it. Excluded where an emulated-TLS runtime is not guaranteed on the
+// link line, so the reference would fail to link: non-Unix (MSVC has no such
+// runtime), Emscripten (the wasm executor below does not use this JIT path),
+// and AIX / z/OS (whose runtimes may not provide the symbol). On those hosts
+// thread_locals instead rely on process-symbol lookup, unchanged from before.
+#if defined(LLVM_ON_UNIX) && !defined(__EMSCRIPTEN__) && !defined(_AIX) &&     \
+    !defined(__MVS__) && !defined(__FreeBSD__)
+extern "C" void *__emutls_get_address(void *);
+static void *getEmuTLSGetAddressPtr() {
+  return reinterpret_cast<void *>(&__emutls_get_address);
+}
+#else
+static void *getEmuTLSGetAddressPtr() { return nullptr; }
 #endif
 
 namespace clang {
@@ -87,23 +113,26 @@ createDefaultJITBuilder(llvm::orc::JITTargetMachineBuilder JTMB) {
 }
 
 Expected<std::unique_ptr<llvm::jitlink::JITLinkMemoryManager>>
-createSharedMemoryManager(llvm::orc::SimpleRemoteEPC &SREPC,
+createSharedMemoryManager(llvm::orc::ExecutorProcessControl &EPC,
                           unsigned SlabAllocateSize) {
   llvm::orc::SharedMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = SREPC.getBootstrapSymbols(
-          {{SAs.Instance,
-            llvm::orc::rt::ExecutorSharedMemoryMapperServiceInstanceName},
-           {SAs.Reserve,
-            llvm::orc::rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
-           {SAs.Initialize,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceInitializeWrapperName},
-           {SAs.Deinitialize,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceDeinitializeWrapperName},
-           {SAs.Release,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceReleaseWrapperName}}))
+  if (auto Err = llvm::orc::lookupAndApply(
+          EPC.getExecutionSession().getBootstrapJITDylib(),
+          {llvm::orc::recordAddr(
+               llvm::orc::rt::sps_ci::SharedMemoryMapperInstanceName,
+               &SAs.Instance),
+           llvm::orc::recordAddr(
+               llvm::orc::rt::sps_ci::SharedMemoryMapperReserve::Name,
+               &SAs.Reserve),
+           llvm::orc::recordAddr(
+               llvm::orc::rt::sps_ci::SharedMemoryMapperInitialize::Name,
+               &SAs.Initialize),
+           llvm::orc::recordAddr(
+               llvm::orc::rt::sps_ci::SharedMemoryMapperDeinitialize::Name,
+               &SAs.Deinitialize),
+           llvm::orc::recordAddr(
+               llvm::orc::rt::sps_ci::SharedMemoryMapperRelease::Name,
+               &SAs.Release)}))
     return std::move(Err);
 
   size_t SlabSize;
@@ -116,13 +145,13 @@ createSharedMemoryManager(llvm::orc::SimpleRemoteEPC &SREPC,
     SlabSize = SlabAllocateSize;
 
   return llvm::orc::MapperJITLinkMemoryManager::CreateWithMapper<
-      llvm::orc::SharedMemoryMapper>(SlabSize, SREPC, SAs);
+      llvm::orc::SharedMemoryMapper>(SlabSize, EPC, SAs);
 }
 
 static llvm::Expected<
     std::pair<std::unique_ptr<llvm::orc::SimpleRemoteEPC>, uint32_t>>
-launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
-               unsigned SlabAllocateSize, std::function<void()> CustomizeFork) {
+launchExecutor(llvm::StringRef ExecutablePath,
+               std::function<void()> CustomizeFork) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add support for Windows.
   return llvm::make_error<llvm::StringError>(
@@ -196,18 +225,11 @@ launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
   close(ToExecutor[ReadEnd]);
   close(FromExecutor[WriteEnd]);
 
-  llvm::orc::SimpleRemoteEPC::Setup S = llvm::orc::SimpleRemoteEPC::Setup();
-  if (UseSharedMemory)
-    S.CreateMemoryManager =
-        [SlabAllocateSize](llvm::orc::SimpleRemoteEPC &EPC) {
-          return createSharedMemoryManager(EPC, SlabAllocateSize);
-        };
-
   auto EPCOrErr =
       llvm::orc::SimpleRemoteEPC::Create<llvm::orc::FDSimpleRemoteEPCTransport>(
           std::make_unique<llvm::orc::DynamicThreadPoolTaskDispatcher>(
               std::nullopt),
-          std::move(S), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
+          FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
   if (!EPCOrErr)
     return EPCOrErr.takeError();
   return std::make_pair(std::move(*EPCOrErr), ChildPID);
@@ -256,8 +278,7 @@ static Expected<int> connectTCPSocketImpl(std::string Host,
 }
 
 static llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
-connectTCPSocket(llvm::StringRef NetworkAddress, bool UseSharedMemory,
-                 unsigned SlabAllocateSize) {
+connectTCPSocket(llvm::StringRef NetworkAddress) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add TCP support for Windows.
   return llvm::make_error<llvm::StringError>(
@@ -293,18 +314,11 @@ connectTCPSocket(llvm::StringRef NetworkAddress, bool UseSharedMemory,
   if (!SockFD)
     return SockFD.takeError();
 
-  llvm::orc::SimpleRemoteEPC::Setup S = llvm::orc::SimpleRemoteEPC::Setup();
-  if (UseSharedMemory)
-    S.CreateMemoryManager =
-        [SlabAllocateSize](llvm::orc::SimpleRemoteEPC &EPC) {
-          return createSharedMemoryManager(EPC, SlabAllocateSize);
-        };
-
   return llvm::orc::SimpleRemoteEPC::Create<
       llvm::orc::FDSimpleRemoteEPCTransport>(
       std::make_unique<llvm::orc::DynamicThreadPoolTaskDispatcher>(
           std::nullopt),
-      std::move(S), *SockFD, *SockFD);
+      *SockFD, *SockFD);
 #endif
 }
 #endif // _WIN32
@@ -334,8 +348,6 @@ outOfProcessJITBuilder(const IncrementalExecutorBuilder &IncrExecutorBuilder) {
   if (!IncrExecutorBuilder.OOPExecutor.empty()) {
     // Launch an out-of-process executor locally in a child process.
     auto ResultOrErr = launchExecutor(IncrExecutorBuilder.OOPExecutor,
-                                      IncrExecutorBuilder.UseSharedMemory,
-                                      IncrExecutorBuilder.SlabAllocateSize,
                                       IncrExecutorBuilder.CustomizeFork);
     if (!ResultOrErr)
       return ResultOrErr.takeError();
@@ -344,9 +356,7 @@ outOfProcessJITBuilder(const IncrementalExecutorBuilder &IncrExecutorBuilder) {
     EPC = std::move(EPCOrErr);
   } else if (IncrExecutorBuilder.OOPExecutorConnect != "") {
 #if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
-    auto EPCOrErr = connectTCPSocket(IncrExecutorBuilder.OOPExecutorConnect,
-                                     IncrExecutorBuilder.UseSharedMemory,
-                                     IncrExecutorBuilder.SlabAllocateSize);
+    auto EPCOrErr = connectTCPSocket(IncrExecutorBuilder.OOPExecutorConnect);
     if (!EPCOrErr)
       return EPCOrErr.takeError();
     EPC = std::move(*EPCOrErr);
@@ -364,6 +374,14 @@ outOfProcessJITBuilder(const IncrementalExecutorBuilder &IncrExecutorBuilder) {
     if (!JBOrErr)
       return JBOrErr.takeError();
     JB = std::move(*JBOrErr);
+
+    if (IncrExecutorBuilder.UseSharedMemory)
+      JB->setMemoryManagerCreator(
+          [SlabAllocateSize = IncrExecutorBuilder.SlabAllocateSize](
+              llvm::orc::ExecutionSession &ES) {
+            return createSharedMemoryManager(ES.getExecutorProcessControl(),
+                                             SlabAllocateSize);
+          });
   }
 
   return std::make_pair(std::move(JB), childPid);
@@ -399,6 +417,31 @@ IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
     if (!JB)
       return JB.takeError();
     JITBuilder = std::move(*JB);
+    // TODO: Switch to native TLS once clang-repl can adopt the ORC runtime
+    // (which provides __emutls_get_address and supports the full TLS
+    // lifecycle). That will also remove the in-process-only constraint below.
+    //
+    // clang-repl lowers thread_local to emulated TLS on every target (see
+    // JITTargetMachineBuilder), so JIT'd code calls __emutls_get_address. When
+    // the host cannot resolve that symbol through process-symbol lookup
+    // (Darwin, and ELF toolchains that link compiler-rt builtins rather than
+    // libgcc_s), define the force-linked host symbol (see
+    // getEmuTLSGetAddressPtr) as an absolute symbol so it is visible to JIT'd
+    // code. This is harmless where process-symbol lookup would already resolve
+    // it: an already-defined symbol shadows the process-symbols generator.
+    // In-process execution only -- the host address is meaningless in an
+    // out-of-process executor.
+    if (void *EmuTLSGetAddress = getEmuTLSGetAddressPtr())
+      JITBuilder->setNotifyCreatedCallback(
+          [EmuTLSGetAddress](llvm::orc::LLJIT &J) {
+            auto &JD = J.getProcessSymbolsJITDylib()
+                           ? *J.getProcessSymbolsJITDylib()
+                           : J.getMainJITDylib();
+            return JD.define(llvm::orc::absoluteSymbols(
+                {{J.mangleAndIntern("__emutls_get_address"),
+                  {llvm::orc::ExecutorAddr::fromPtr(EmuTLSGetAddress),
+                   llvm::JITSymbolFlags::Exported}}}));
+          });
   }
 
   llvm::Error Err = llvm::Error::success();
@@ -501,15 +544,15 @@ llvm::Error IncrementalExecutorBuilder::UpdateOrcRuntimePath(
   std::string Joined;
   for (size_t i = 0; i < triedPaths.size(); ++i) {
     if (i > 0)
-      Joined += "\n  "; // Use newlines for better readability
+      Joined += "\n  ";
     Joined += triedPaths[i];
   }
 
   return llvm::make_error<llvm::StringError>(
-      llvm::formatv("OrcRuntime library not found. Checked:\n  {0}",
+      llvm::formatv("OrcRuntime library not found. Checked:  {0}",
                     Joined.empty() ? "<none>" : Joined)
           .str(),
-      llvm::inconvertibleErrorCode());
+      std::make_error_code(std::errc::no_such_file_or_directory));
 }
 
 } // end namespace clang

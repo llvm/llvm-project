@@ -14,9 +14,9 @@ This is a DWARF-based feature. There is currently no plan to support CodeView.
 
 Set LLVM flag `-dwarf-use-key-instructions` to `false` to ignore Key Instructions metadata when emitting DWARF.
 
-# LLVM
+## LLVM
 
-## Problem statement
+### Problem statement
 
 A lot of the noise in stepping comes from code motion and instruction scheduling. Consider a long expression on a single line. It may involve multiple operations that optimisations move, re-order, and interleave with other instructions that have different line numbers.
 
@@ -24,7 +24,7 @@ DWARF provides a helpful tool the compiler can employ to mitigate this jumpiness
 
 (Note: It's up to the debugger if it wants to interpret `is_stmt` or not, and at time of writing LLDB doesn't; possibly because until now LLVM's `is_stmt`s convey no information that can't already be deduced from the rest of the line table.)
 
-## Solution overview
+### Solution overview
 
 Taking ideas from two papers [1][2] that explore the issue, especially C. Tice's:
 
@@ -36,7 +36,7 @@ From the perspective of a source-level debugger user:
 
 * Communicating where the key instructions are to the debugger (using DWARF’s is_stmt) avoids jumpiness introduced by scheduling non-key instructions without losing source attribution (because non-key instructions retain an associated source location, they’re just ignored for stepping).
 
-## Solution implementation
+### Solution implementation
 
 1. `DILocation` has 2 new fields, `atomGroup` and `atomRank`. `DISubprogram` has a new field `keyInstructions`.
 2. Clang creates `DILocations` using the new fields to communicate which instructions are "interesting", and sets `keyInstructions` true in `DISubprogram`s to tell LLVM to interpret the new metadata in those functions.
@@ -55,9 +55,9 @@ The `DILocations` carry over from IR to MIR as normal, without any changes.
 4. *DWARF emission* - Iterate over all instructions in a function. For each `(atomGroup, inlinedAt)` pair we find the set of instructions sharing the lowest rank. Only the last of these instructions in each basic block is included in the set. The instructions in this set get `is_stmt` applied to their source locations. That `is_stmt` then "floats" to the top of contiguous sequence of instructions with the same line number in the same basic block. That has two benefits when optimisations are enabled. First, this floats `is_stmt` to the top of epilogue instructions (rather than applying it to the `ret` instruction itself) which is important to avoid losing variable location coverage at return statements. Second, it reduces the difference in optimized code stepping behaviour between when Key Instructions is enabled and disabled in “uninteresting” cases. I.e., it appears to generally reduce unnecessary changes in stepping.\
 We’ve used contiguous line numbers rather than atom membership as the test there because of our choice to represent source atoms with a single integer ID. We can’t have instructions belonging to multiple atom groups or represent any kind of grouping hierarchy. That means we can’t rely on all the call setup instructions being in the same group currently (e.g., if one of the argument expressions contains key functionality such as a store, it will be in its own group).
 
-## Limitations
+### Limitations
 
-### Lack of multiple atom membership
+#### Lack of multiple atom membership
 
 Using a number to represent atom membership is limiting; currently an instruction that belongs to multiple source atoms cannot belong to multiple atom groups. This does occur in practice, both in the front end and during optimisations. Consider this C code:
 ```c
@@ -73,7 +73,7 @@ The load of `c` is used by both stores (which are the Key Instructions for each 
 
 Certain optimisations merge source locations, which presents another case where it might make sense to be able to represent an instruction belonging to multiple atoms. Currently we deterministically pick one (choosing to keep the lower rank one if there is one).
 
-### Disabled at O0
+#### Disabled at O0
 
 Consider the following code without optimisations:
 ```c
@@ -101,11 +101,11 @@ Without multiple-atom-membership or some kind of atom hierarchy it's not apparen
 
 O0 isn't a key use-case so solving this is not a priority for the initial implementation. The trade off, smoother stepping at the cost of not being able to edit variables to affect an expression in some cases (and at particular stop points), becomes more attractive when optimisations are enabled (we find that editing variables in the debugger in optimized code often produces unexpected effects, so it's not a big concern that Key Instructions makes it harder sometimes).
 
-# Clang and other front ends
+## Clang and other front ends
 
 Tell Clang [not] to produce Key Instructions metadata with `-g[no-]key-instructions`.
 
-## Implementation
+### Implementation
 
 Clang needs to annotate key instructions with the new metadata. Variable assignments (stores, memory intrinsics), control flow (branches and their conditions, some unconditional branches), and exception handling instructions are annotated. Calls are ignored as they're unconditionally marked `is_stmt`. This is achieved with a few simple constructs:
 
@@ -117,7 +117,7 @@ Class `ApplyAtomGroup` - This is a scoped helper similar to `ApplyDebugLocation`
 
 `CodeGenFunction::addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction, llvm::Value *Backup, uint64_t Atom)` adds the instruction (and backup instruction if non-null) to the specific group `Atom`. This is currently only used for `rets` which is explored in the examples below. Special handling is needed due to the fact that an existing atom group needs to be reused in some circumstances, so neither of the other helper functions are appropriate.
 
-## Examples
+### Examples
 
 A simple example walk through:
 ```c
@@ -147,7 +147,7 @@ The implicit return is also key (`atomGroup` 2) so that it's stepped on, to matc
 Explicit return statements are handled uniquely. Rather than emit a `ret` for each `return` Clang, in all but the simplest cases (as in the first example) emits a branch to a dedicated block with a single `ret`. That branch is the key instruction for the return statement. If there's only one branch to that block, because there's only one `return` (as in this example), Clang folds the block into its only predecessor. Handily `EmitReturnBlock` returns the `DebugLoc` associated with the single branch in that case, which is fed into `addInstToSpecificSourceAtom` to ensure the `ret` gets the right group.
 
 
-## Supporting Key Instructions from another front end
+### Supporting Key Instructions from another front end
 
 Front ends that want to use the feature need to group and rank instructions according to their source atoms and interingness by attaching `DILocations` with the necessary `atomGroup` and `atomRank` values. They also need to set the `keyInstructions` field to `true` in `DISubprogram`s to tell LLVM to interpret the new metadata in those functions.
 

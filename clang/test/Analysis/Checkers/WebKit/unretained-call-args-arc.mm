@@ -14,7 +14,7 @@ namespace raw_ptr {
 void foo() {
   [provide() doWork];
   CFArrayAppendValue(provide_cf(), nullptr);
-  // expected-warning@-1{{Call argument for parameter 'theArray' is unretained and unsafe [alpha.webkit.UnretainedCallArgsChecker]}}
+  // expected-warning@-1{{Function argument 'provide_cf()' (parameter 'theArray' to 'CFArrayAppendValue') is a RetainPtr-capable type 'CFMutableArrayRef'}}
   dispatch_queue_get_label(provide_os());
 }
 
@@ -35,7 +35,7 @@ CFDictionaryRef provide_dict();
 dispatch_queue_t provide_dispatch();
 void use_const_local() {
   doWork(provide_str(), provide_dict(), provide_dispatch());
-  // expected-warning@-1{{Call argument for parameter 'dict' is unretained and unsafe}}
+  // expected-warning@-1{{Function argument 'provide_dict()' (parameter 'dict' to 'const_global::doWork') is a RetainPtr-capable type 'CFDictionaryRef'}}
 }
 
 } // namespace const_global
@@ -50,7 +50,7 @@ void use_const_local() {
   [obj doWork];
   [provide() doWork];
   CFArrayAppendValue(provide_cf(), nullptr);
-  // expected-warning@-1{{Call argument for parameter 'theArray' is unretained and unsafe [alpha.webkit.UnretainedCallArgsChecker]}}
+  // expected-warning@-1{{Function argument 'provide_cf()' (parameter 'theArray' to 'CFArrayAppendValue') is a RetainPtr-capable type 'CFMutableArrayRef'}}
 }
 
 - (SomeObj *)getSomeObj {

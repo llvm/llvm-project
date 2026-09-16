@@ -1,0 +1,25 @@
+# Verify that `lldb-dap --list-processes` emits a JSON array on stdout with at
+# least one entry carrying a `pid` field, and that common optional keys
+# (`name`, `triple`) appear in the output.
+
+# RUN: lldb-dap --list-processes | FileCheck %s --check-prefix=HOST
+
+# HOST: [{
+# HOST-DAG: "pid":{{[0-9]+}}
+# HOST-DAG: "name":
+# HOST-DAG: "triple":
+
+# Selecting an unknown platform should fail with a clear error message on
+# stderr and a non-zero exit status.
+
+# RUN: not lldb-dap --list-processes --platform does-not-exist 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=BAD-PLATFORM
+
+# BAD-PLATFORM: unknown platform: does-not-exist
+
+# --platform-url without --platform should be rejected up front.
+
+# RUN: not lldb-dap --list-processes --platform-url connect://foo:1234 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=URL-WITHOUT-PLATFORM
+
+# URL-WITHOUT-PLATFORM: --platform-url requires --platform

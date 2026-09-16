@@ -1,6 +1,9 @@
 // RUN: %check_clang_tidy -std=c++14,c++17 %s readability-use-anyofallof %t -- -- -fexceptions
 // FIXME: Fix the checker to work in C++20 mode.
 
+#include <utility>
+#include <vector>
+
 bool good_any_of() {
   int v[] = {1, 2, 3};
   // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: replace loop by 'std::any_of()' [readability-use-anyofallof]
@@ -178,6 +181,60 @@ bool good_all_of() {
   int v[] = {1, 2, 3};
   // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: replace loop by 'std::all_of()' [readability-use-anyofallof]
   for (int i : v)
+    if (i)
+      return false;
+  return true;
+}
+
+std::vector<int> get_dummy_vec();
+
+bool good_any_of_temporary_vector() {
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: replace loop by 'std::any_of()'
+  // CHECK-MESSAGES: :[[@LINE+1]]:16: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first
+  for (int i : get_dummy_vec())
+    if (i)
+      return true;
+  return false;
+}
+
+bool all_of_temporary_vector() {
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: replace loop by 'std::all_of()'
+  // CHECK-MESSAGES: :[[@LINE+1]]:16: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first
+  for (int i : get_dummy_vec())
+    if (i)
+      return false;
+  return true;
+}
+
+bool any_of_initializer_list(int a, int b, int c) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: replace loop by 'std::any_of()'
+  // CHECK-MESSAGES: :[[@LINE+1]]:23: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first
+  for (const auto i : {a, b, c})
+    if (i == 0)
+      return true;
+  return false;
+}
+
+bool all_of_initializer_list(int a, int b, int c) {
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: replace loop by 'std::all_of()'
+  // CHECK-MESSAGES: :[[@LINE+1]]:23: note: reusing the temporary range directly in the replacement may be unsafe; consider materializing it in a local variable first
+  for (const auto i : {a, b, c})
+    if (i == 0)
+      return false;
+  return true;
+}
+
+bool good_xvalue(std::vector<int>& v) {
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: replace loop by 'std::any_of()' [readability-use-anyofallof]
+  for (int i : std::move(v))
+    if (i)
+      return true;
+  return false;
+}
+
+bool good_xvalue_all_of(std::vector<int>& v) {
+  // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: replace loop by 'std::all_of()' [readability-use-anyofallof]
+  for (int i : std::move(v))
     if (i)
       return false;
   return true;

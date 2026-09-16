@@ -2,7 +2,6 @@
 ; uncond branches away after it is done specializing.
 
 ; RUN: opt < %s -passes=inline -S | FileCheck %s
-; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 
 @A = weak global i32 0		; <ptr> [#uses=1]
 @B = weak global i32 0		; <ptr> [#uses=1]

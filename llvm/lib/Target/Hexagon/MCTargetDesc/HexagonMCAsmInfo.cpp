@@ -12,23 +12,33 @@
 
 #include "HexagonMCAsmInfo.h"
 #include "MCTargetDesc/HexagonMCExpr.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/MC/MCExpr.h"
 
 using namespace llvm;
 
-const MCAsmInfo::AtSpecifier atSpecifiers[] = {
-    {HexagonMCExpr::VK_DTPREL, "DTPREL"}, {HexagonMCExpr::VK_GD_GOT, "GDGOT"},
-    {HexagonMCExpr::VK_GD_PLT, "GDPLT"},  {HexagonMCExpr::VK_GOT, "GOT"},
-    {HexagonMCExpr::VK_GOTREL, "GOTREL"}, {HexagonMCExpr::VK_IE, "IE"},
-    {HexagonMCExpr::VK_IE_GOT, "IEGOT"},  {HexagonMCExpr::VK_LD_GOT, "LDGOT"},
-    {HexagonMCExpr::VK_LD_PLT, "LDPLT"},  {HexagonMCExpr::VK_PCREL, "PCREL"},
-    {HexagonMCExpr::VK_PLT, "PLT"},       {HexagonMCExpr::VK_TPREL, "TPREL"},
+constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
+    {{"DTPREL"}, HexagonMCExpr::VK_DTPREL},
+    {{"GDGOT"}, HexagonMCExpr::VK_GD_GOT},
+    {{"GDPLT"}, HexagonMCExpr::VK_GD_PLT},
+    {{"GOT"}, HexagonMCExpr::VK_GOT},
+    {{"GOTREL"}, HexagonMCExpr::VK_GOTREL},
+    {{"IE"}, HexagonMCExpr::VK_IE},
+    {{"IEGOT"}, HexagonMCExpr::VK_IE_GOT},
+    {{"LDGOT"}, HexagonMCExpr::VK_LD_GOT},
+    {{"LDPLT"}, HexagonMCExpr::VK_LD_PLT},
+    {{"PCREL"}, HexagonMCExpr::VK_PCREL},
+    {{"PLT"}, HexagonMCExpr::VK_PLT},
+    {{"TPREL"}, HexagonMCExpr::VK_TPREL},
 };
+constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
 // Pin the vtable to this file.
 void HexagonMCAsmInfo::anchor() {}
 
-HexagonMCAsmInfo::HexagonMCAsmInfo(const Triple &TT) {
+HexagonMCAsmInfo::HexagonMCAsmInfo(const Triple &TT,
+                                   const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   Data16bitsDirective = "\t.half\t";
   Data32bitsDirective = "\t.word\t";
   Data64bitsDirective = nullptr;  // .xword is only supported by V9.

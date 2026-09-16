@@ -7,18 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// ADDITIONAL_COMPILE_FLAGS: -O3
+
 #include <algorithm>
 #include <deque>
 #include <ranges>
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 namespace {
 
 template <size_t N>
-void BM_adjacent_full(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_adjacent_full(benchmark::State& state) {
   const std::vector<int> inputs(1000000, 42);
   auto view = inputs | std::views::adjacent<N>;
   for (auto _ : state) {
@@ -27,20 +28,13 @@ void BM_adjacent_full(benchmark::State& state) {
   }
 }
 
-BENCHMARK(BM_adjacent_full<2>);
-BENCHMARK(BM_adjacent_full<3>);
-BENCHMARK(BM_adjacent_full<4>);
-BENCHMARK(BM_adjacent_full<5>);
-BENCHMARK(BM_adjacent_full<6>);
-BENCHMARK(BM_adjacent_full<7>);
-BENCHMARK(BM_adjacent_full<8>);
-BENCHMARK(BM_adjacent_full<9>);
-BENCHMARK(BM_adjacent_full<10>);
-BENCHMARK(BM_adjacent_full<100>);
-BENCHMARK(BM_adjacent_full<1000>);
+BENCHMARK(BM_adjacent_full<2>)->Name("rng::adjacent_view::begin()/2 (full view)");
+BENCHMARK(BM_adjacent_full<10>)->Name("rng::adjacent_view::begin()/10 (full view)");
+BENCHMARK(BM_adjacent_full<100>)->Name("rng::adjacent_view::begin()/100 (full view)");
+BENCHMARK(BM_adjacent_full<1000>)->Name("rng::adjacent_view::begin()/1000 (full view)");
 
 template <size_t N>
-void BM_adjacent_empty(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_adjacent_empty(benchmark::State& state) {
   const std::vector<int> inputs;
   auto view = inputs | std::views::adjacent<N>;
   for (auto _ : state) {
@@ -49,17 +43,7 @@ void BM_adjacent_empty(benchmark::State& state) {
   }
 }
 
-BENCHMARK(BM_adjacent_empty<2>);
-BENCHMARK(BM_adjacent_empty<3>);
-BENCHMARK(BM_adjacent_empty<4>);
-BENCHMARK(BM_adjacent_empty<5>);
-BENCHMARK(BM_adjacent_empty<6>);
-BENCHMARK(BM_adjacent_empty<7>);
-BENCHMARK(BM_adjacent_empty<8>);
-BENCHMARK(BM_adjacent_empty<9>);
-BENCHMARK(BM_adjacent_empty<10>);
-BENCHMARK(BM_adjacent_empty<100>);
-BENCHMARK(BM_adjacent_empty<1000>);
+BENCHMARK(BM_adjacent_empty<1000>)->Name("rng::adjacent_view::begin()/1000 (empty view)");
 
 } // namespace
 

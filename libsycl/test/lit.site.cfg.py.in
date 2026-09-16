@@ -1,0 +1,34 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import subprocess
+import site
+
+site.addsitedir("@CMAKE_CURRENT_SOURCE_DIR@")
+
+config.libsycl_compiler = lit_config.params.get("libsycl_compiler", "@LIBSYCL_CXX_COMPILER@")
+config.libsycl_bin_dir  = os.path.dirname(config.libsycl_compiler)
+config.libsycl_root_dir = os.path.dirname(config.libsycl_bin_dir)
+
+config.cxx_flags = lit_config.params.get("cxx_flags", "@LIBSYCL_TEST_COMPILER_OPTIONS@")
+
+config.extra_environment = lit_config.params.get("extra_environment", "@LIT_EXTRA_ENVIRONMENT@")
+config.extra_system_environment = lit_config.params.get("extra_system_environment", "@LIT_EXTRA_SYSTEM_ENVIRONMENT@")
+
+def get_libsycl_tool_path(name):
+    try:
+        return subprocess.check_output([config.libsycl_compiler, "-print-prog-name=" + name], text=True)
+    except subprocess.CalledProcessError:
+        return os.path.join(config.libsycl_bin_dir, name)
+
+config.llvm_tools_dir = os.path.dirname(get_libsycl_tool_path("llvm-config"))
+config.lit_tools_dir = os.path.dirname("@TEST_SUITE_LIT@")
+
+config.libsycl_tools_dir = config.llvm_tools_dir
+config.libsycl_include = os.path.join(config.libsycl_root_dir, 'include')
+config.libsycl_obj_root = "@CMAKE_CURRENT_BINARY_DIR@"
+config.libsycl_libs_dir =  os.path.join(config.libsycl_root_dir, 'lib/x86_64-unknown-linux-gnu')
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
+
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg.py")

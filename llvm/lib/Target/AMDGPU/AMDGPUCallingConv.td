@@ -14,6 +14,10 @@
 class CCIfNotInReg<CCAction A> : CCIf<"!ArgFlags.isInReg()", A> {}
 class CCIfExtend<CCAction A>
   : CCIf<"ArgFlags.isSExt() || ArgFlags.isZExt()", A>;
+class CCIfOrigTypeShaderCCIsSGPR<CCAction A>
+  : CCIf<[{(!OrigTy->getScalarType()->isFloatTy() &&
+            !OrigTy->getScalarType()->isHalfTy()) }], A>;
+
 
 // Calling convention for SI
 def CC_SI_Gfx : CallingConv<[
@@ -56,14 +60,15 @@ def CC_SI_SHADER : CallingConv<[
   >>>
 ]>;
 
+
 def RetCC_SI_Shader : CallingConv<[
   CCIfType<[i1, i16], CCIfExtend<CCPromoteToType<i32>>>,
-  CCIfType<[i32, i16, v2i16] , CCAssignToReg<
+  CCIfType<[i32, i16, v2i16], CCIfOrigTypeShaderCCIsSGPR<CCAssignToReg<
     !foreach(i, !range(0, 44), !cast<Register>("SGPR"#i))  // SGPR0-43
-  >>,
+  >>>,
 
   // 32*4 + 4 is the minimum for a fetch shader with 32 outputs.
-  CCIfType<[f32, f16, v2f16, bf16, v2bf16] , CCAssignToReg<
+  CCIfType<[f32, f16, v2f16, bf16, v2bf16, i32, i16, v2i16] , CCAssignToReg<
     !foreach(i, !range(0, 136), !cast<Register>("VGPR"#i))  // VGPR0-135
   >>
 ]>;

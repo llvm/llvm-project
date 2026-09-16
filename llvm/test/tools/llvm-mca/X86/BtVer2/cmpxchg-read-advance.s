@@ -110,7 +110,7 @@ lock cmpxchg16b (%rsp)
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       imulq	%rax, %rax
 # CHECK-NEXT: 1.     1     3.0    0.0    0.0       cmpxchgq	%rcx, (%rdx)
-# CHECK-NEXT:        1     2.0    0.5    0.0       <total>
+# CHECK-NEXT:        2     2.0    0.5    0.0       <total>
 
 # CHECK:      [1] Code Region
 
@@ -177,7 +177,7 @@ lock cmpxchg16b (%rsp)
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       imulq	%rcx, %rcx
 # CHECK-NEXT: 1.     1     3.0    0.0    0.0       cmpxchgq	%rcx, (%rdx)
-# CHECK-NEXT:        1     2.0    0.5    0.0       <total>
+# CHECK-NEXT:        2     2.0    0.5    0.0       <total>
 
 # CHECK:      [2] Code Region
 
@@ -244,7 +244,7 @@ lock cmpxchg16b (%rsp)
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       imulq	%rax, %rax
 # CHECK-NEXT: 1.     1     3.0    0.0    0.0       lock		cmpxchgq	%rcx, (%rdx)
-# CHECK-NEXT:        1     2.0    0.5    0.0       <total>
+# CHECK-NEXT:        2     2.0    0.5    0.0       <total>
 
 # CHECK:      [3] Code Region
 
@@ -311,7 +311,7 @@ lock cmpxchg16b (%rsp)
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       imulq	%rcx, %rcx
 # CHECK-NEXT: 1.     1     3.0    0.0    0.0       lock		cmpxchgq	%rcx, (%rdx)
-# CHECK-NEXT:        1     2.0    0.5    0.0       <total>
+# CHECK-NEXT:        2     2.0    0.5    0.0       <total>
 
 # CHECK:      [4] Code Region
 
@@ -382,7 +382,7 @@ lock cmpxchg16b (%rsp)
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       imull	%eax, %eax
 # CHECK-NEXT: 1.     1     2.0    2.0    0.0       imull	%edx, %edx
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       cmpxchg8b	(%rsp)
-# CHECK-NEXT:        1     1.3    1.0    0.0       <total>
+# CHECK-NEXT:        3     1.3    1.0    0.0       <total>
 
 # CHECK:      [5] Code Region
 
@@ -453,7 +453,7 @@ lock cmpxchg16b (%rsp)
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       imull	%eax, %eax
 # CHECK-NEXT: 1.     1     2.0    2.0    0.0       imull	%edx, %edx
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       cmpxchg16b	(%rsp)
-# CHECK-NEXT:        1     1.3    1.0    0.0       <total>
+# CHECK-NEXT:        3     1.3    1.0    0.0       <total>
 
 # CHECK:      [6] Code Region
 
@@ -524,7 +524,7 @@ lock cmpxchg16b (%rsp)
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       imull	%ebx, %ebx
 # CHECK-NEXT: 1.     1     2.0    2.0    0.0       imull	%ecx, %ecx
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       lock		cmpxchg8b	(%rsp)
-# CHECK-NEXT:        1     1.3    1.0    0.0       <total>
+# CHECK-NEXT:        3     1.3    1.0    0.0       <total>
 
 # CHECK:      [7] Code Region
 
@@ -595,4 +595,4 @@ lock cmpxchg16b (%rsp)
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       imull	%ebx, %ebx
 # CHECK-NEXT: 1.     1     2.0    2.0    0.0       imull	%ecx, %ecx
 # CHECK-NEXT: 2.     1     1.0    0.0    0.0       lock		cmpxchg16b	(%rsp)
-# CHECK-NEXT:        1     1.3    1.0    0.0       <total>
+# CHECK-NEXT:        3     1.3    1.0    0.0       <total>

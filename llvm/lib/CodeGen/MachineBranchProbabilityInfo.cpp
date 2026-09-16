@@ -58,10 +58,7 @@ char MachineBranchProbabilityInfoWrapperPass::ID = 0;
 
 MachineBranchProbabilityInfoWrapperPass::
     MachineBranchProbabilityInfoWrapperPass()
-    : ImmutablePass(ID) {
-  PassRegistry &Registry = *PassRegistry::getPassRegistry();
-  initializeMachineBranchProbabilityInfoWrapperPassPass(Registry);
-}
+    : ImmutablePass(ID) {}
 
 void MachineBranchProbabilityInfoWrapperPass::anchor() {}
 
@@ -74,17 +71,17 @@ bool MachineBranchProbabilityInfo::invalidate(
   return !PAC.preservedWhenStateless();
 }
 
-BranchProbability MachineBranchProbabilityInfo::getEdgeProbability(
-    const MachineBasicBlock *Src,
-    MachineBasicBlock::const_succ_iterator Dst) const {
-  return Src->getSuccProbability(Dst);
+BranchProbability
+MachineBranchProbabilityInfo::getEdgeProbability(const MachineBasicBlock *Src,
+                                                 unsigned SuccIdx) const {
+  return Src->getSuccProbability(Src->succ_begin() + SuccIdx);
 }
 
 BranchProbability MachineBranchProbabilityInfo::getEdgeProbability(
     const MachineBasicBlock *Src, const MachineBasicBlock *Dst) const {
   // This is a linear search. Try to use the const_succ_iterator version when
   // possible.
-  return getEdgeProbability(Src, find(Src->successors(), Dst));
+  return Src->getSuccProbability(find(Src->successors(), Dst));
 }
 
 bool MachineBranchProbabilityInfo::isEdgeHot(

@@ -15,7 +15,7 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olDestroyEventTest);
 
 TEST_P(olDestroyEventTest, Success) {
   ol_event_handle_t Event = nullptr;
-  ASSERT_SUCCESS(olCreateEvent(Queue, &Event));
+  ASSERT_SUCCESS(olCreateEvent(Queue, OL_EVENT_FLAGS_NONE, &Event));
   ASSERT_NE(Event, nullptr);
   ASSERT_SUCCESS(olSyncQueue(Queue));
   ASSERT_SUCCESS(olDestroyEvent(Event));

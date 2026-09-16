@@ -138,7 +138,7 @@ define void @dividend_not_known_multiple_of_divisor(i64 %x) {
 ; CHECK-NEXT:    %m3 = mul i64 %div.16, 2
 ; CHECK-NEXT:    --> (2 * ((2 * %x) /u 16))<nuw><nsw> U: [0,2305843009213693951) S: [0,2305843009213693951)
 ; CHECK-NEXT:    %m4 = udiv i64 %m3, 4
-; CHECK-NEXT:    --> ((2 * ((2 * %x) /u 16))<nuw><nsw> /u 4) U: [0,576460752303423488) S: [0,576460752303423488)
+; CHECK-NEXT:    --> ((2 * %x) /u 32) U: [0,576460752303423488) S: [0,576460752303423488)
 ; CHECK-NEXT:  Determining loop execution counts for: @dividend_not_known_multiple_of_divisor
 ;
 entry:
@@ -163,9 +163,9 @@ define void @btc_depends_on_div_mul(i64 %x) {
 ; CHECK-NEXT:    %masked = and i64 %div.16, 1152921504606846974
 ; CHECK-NEXT:    --> (2 * ((2 * %x) /u 32))<nuw><nsw> U: [0,1152921504606846975) S: [0,1152921504606846975)
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,2}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: (-2 + (2 * ((2 * %x) /u 32))<nuw><nsw>)<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,2}<nuw><%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: (-2 + (2 * ((2 * %x) /u 32))<nuw><nsw>)<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 2
-; CHECK-NEXT:    --> {2,+,2}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: (2 * ((2 * %x) /u 32))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {2,+,2}<nw><%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: (2 * ((2 * %x) /u 32))<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @btc_depends_on_div_mul
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-2 + (2 * ((2 * %x) /u 32))<nuw><nsw>)<nsw> /u 2)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 9223372036854775807

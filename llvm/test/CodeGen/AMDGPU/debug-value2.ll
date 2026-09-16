@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa < %s | FileCheck %s
 
 %struct.ShapeData = type { <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, i32, i32, i64, <4 x float>, i32, i8, i8, i16, i32, i32 }
 
@@ -150,7 +150,7 @@ bb86:                                             ; preds = %bb
   br label %bb141
 
 bb96:                                             ; preds = %bb
-  %tmp97 = fcmp oeq float %tmp84, 0x7FF0000000000000
+  %tmp97 = fcmp oeq float %tmp84, +inf
   br i1 %tmp97, label %bb98, label %bb141
 
 bb98:                                             ; preds = %bb96
@@ -163,7 +163,7 @@ bb98:                                             ; preds = %bb96
   %tmp105 = tail call float @llvm.fmuladd.f32(float %tmp102, float %tmp102, float %tmp104)
   %tmp106 = tail call float @llvm.fmuladd.f32(float %tmp101, float %tmp101, float %tmp105)
   %tmp107 = tail call float @llvm.fmuladd.f32(float %tmp100, float %tmp100, float %tmp106)
-  %tmp108 = fcmp oeq float %tmp107, 0x7FF0000000000000
+  %tmp108 = fcmp oeq float %tmp107, +inf
   br i1 %tmp108, label %bb109, label %bb141
 
 bb109:                                            ; preds = %bb98

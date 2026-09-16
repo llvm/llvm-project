@@ -1,0 +1,17 @@
+# RUN: not llc -mtriple=amdgpu11.00 -run-pass=virtregmap \
+# RUN:     -filetype=null %s 2>&1 | FileCheck %s
+#
+# 'split-from' must reference a different vreg than 'id'.
+# I.e., disallow self-references
+
+# CHECK: 'split-from' references the same vreg as 'id' (%0)
+---
+name: self_split
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32, split-from: '%0' }
+body: |
+  bb.0:
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    S_ENDPGM 0, implicit %0
+...

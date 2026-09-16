@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include <optional>
 
@@ -59,14 +60,14 @@ CSKYTargetMachine::getSubtargetImpl(const Function &F) const {
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
+  FloatABI::ABIType FloatABI = F.getParent()->getFloatABI();
+
   std::string Key = CPU + TuneCPU + FS;
+  Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
   auto &I = SubtargetMap[Key];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
-    I = std::make_unique<CSKYSubtarget>(TargetTriple, CPU, TuneCPU, FS, *this);
+    I = std::make_unique<CSKYSubtarget>(TargetTriple, CPU, TuneCPU, FS,
+                                        FloatABI, *this);
     if (I->useHardFloat() && !I->hasAnyFloatExt())
       errs() << "Hard-float can't be used with current CPU,"
                 " set to Soft-float\n";

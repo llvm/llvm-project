@@ -19,6 +19,7 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_TEMPORARYSTORAGE_H
 #define FORTRAN_OPTIMIZER_BUILDER_TEMPORARYSTORAGE_H
 
+#include "flang/Common/idioms.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 
 namespace fir {
@@ -96,6 +97,34 @@ private:
   Counter counter;
   /// Temporary storage.
   mlir::Value temp;
+};
+
+/// Multidimensional temporary indexed directly by the enclosing loop induction
+/// variables (innermost loop is the first dimension). The indices passed to
+/// pushValue/fetch are interpreted in the array's domain, which is described
+/// by a fir.shape_shift built from the loop extents and lower bounds. This
+/// avoids the loop-carried counter used by HomogeneousScalarStack, keeping
+/// loop iterations independent. Limited to Fortran::common::maxRank dimensions.
+class ArrayTemp {
+public:
+  ArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
+            fir::SequenceType declaredType, llvm::ArrayRef<mlir::Value> extents,
+            llvm::ArrayRef<mlir::Value> lowerBounds,
+            llvm::ArrayRef<mlir::Value> lengths, bool allocateOnHeap,
+            llvm::StringRef name);
+
+  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                 mlir::Value value, mlir::ValueRange indices);
+  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder) {}
+  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder,
+                    mlir::ValueRange indices);
+  void destroy(mlir::Location loc, fir::FirOpBuilder &builder);
+  bool canBeFetchedAfterPush() const { return true; }
+
+private:
+  const bool allocateOnHeap;
+  mlir::Value temp;
+  llvm::SmallVector<mlir::Value> typeParams;
 };
 
 /// Structure to hold the value of a single entity.
@@ -255,16 +284,26 @@ public:
   TemporaryStorage(T &&impl) : impl{std::forward<T>(impl)} {}
 
   void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                 mlir::Value value) {
-    std::visit([&](auto &temp) { temp.pushValue(loc, builder, value); }, impl);
+                 mlir::Value value, mlir::ValueRange indices = {}) {
+    // Only ArrayTemp uses the loop indices; other temps don't take them.
+    std::visit(Fortran::common::visitors{
+                   [&](ArrayTemp &temp) {
+                     temp.pushValue(loc, builder, value, indices);
+                   },
+                   [&](auto &temp) { temp.pushValue(loc, builder, value); }},
+               impl);
   }
   void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder) {
     std::visit([&](auto &temp) { temp.resetFetchPosition(loc, builder); },
                impl);
   }
-  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder) {
-    return std::visit([&](auto &temp) { return temp.fetch(loc, builder); },
-                      impl);
+  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder,
+                    mlir::ValueRange indices = {}) {
+    return std::visit(
+        Fortran::common::visitors{
+            [&](ArrayTemp &temp) { return temp.fetch(loc, builder, indices); },
+            [&](auto &temp) { return temp.fetch(loc, builder); }},
+        impl);
   }
   void destroy(mlir::Location loc, fir::FirOpBuilder &builder) {
     std::visit([&](auto &temp) { temp.destroy(loc, builder); }, impl);
@@ -282,8 +321,9 @@ public:
   }
 
 private:
-  std::variant<HomogeneousScalarStack, SimpleCopy, SSARegister, AnyValueStack,
-               AnyVariableStack, AnyVectorSubscriptStack, AnyAddressStack>
+  std::variant<HomogeneousScalarStack, ArrayTemp, SimpleCopy, SSARegister,
+               AnyValueStack, AnyVariableStack, AnyVectorSubscriptStack,
+               AnyAddressStack>
       impl;
 };
 } // namespace fir::factory

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tahiti -amdgpu-s-branch-bits=5 -amdgpu-long-branch-factor=0  < %s | FileCheck --check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tahiti -amdgpu-s-branch-bits=5 -amdgpu-long-branch-factor=0 -amdgpu-use-amdgpu-trackers=1  < %s | FileCheck --check-prefix=GCN-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgpu6.00-amd-amdhsa -amdgpu-s-branch-bits=5 -amdgpu-long-branch-factor=0  < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00-amd-amdhsa -amdgpu-s-branch-bits=5 -amdgpu-long-branch-factor=0 -amdgpu-use-amdgpu-trackers=1  < %s | FileCheck --check-prefix=GCN-GCNTRACKERS %s
 
 ; CHECK-LABEL: {{^}}spill:
 ; GCN:    NumSgprs: 104
@@ -8,8 +8,8 @@
 ; GCN-GCNTRACKERS:    NumVgprs: 2
 ; GCN:    ScratchSize: 0
 ; GCN-GCNTRACKERS:    ScratchSize: 0
-; GCN:    Occupancy: 5
-; GCN-GCNTRACKERS:    Occupancy: 5
+; GCN:    Occupancy: 4
+; GCN-GCNTRACKERS:    Occupancy: 4
 
 ; FIXME: GCN Trackers do not track pressure from PhysRegs, so scheduling is actually worse
 

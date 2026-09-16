@@ -20,7 +20,7 @@ mlir::Value fir::runtime::genEnvironmentDefaults(
       fir::NameUniquer::doGenerated("EnvironmentDefaults");
 
   mlir::MLIRContext *context = builder.getContext();
-  mlir::StringAttr linkOnce = builder.createLinkOnceLinkage();
+  fir::LinkageAttr linkOnce = builder.createLinkOnceLinkage();
   mlir::IntegerType intTy = builder.getIntegerType(8 * sizeof(int));
   fir::ReferenceType charRefTy =
       fir::ReferenceType::get(builder.getIntegerType(8));

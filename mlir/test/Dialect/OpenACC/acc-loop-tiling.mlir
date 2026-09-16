@@ -14,9 +14,9 @@
 // CHECK:           %[[MIN_UB:.*]] = arith.minsi %[[NEW_UB]], %[[C10]] : index
 // CHECK:           acc.loop control(%[[INNER_IV:.*]] : index) = (%[[IV]] : index) to (%[[MIN_UB]] : index) step (%[[C1]] : index) {
 // CHECK:             acc.yield
-// CHECK:           } attributes {independent = [#acc.device_type<none>]}
+// CHECK:           } independent
 // CHECK:           acc.yield
-// CHECK:         } attributes {independent = [#acc.device_type<none>]}
+// CHECK:         } independent
 func.func @single_loop_tile(%arg0: memref<10xf32>) {
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
@@ -27,12 +27,13 @@ func.func @single_loop_tile(%arg0: memref<10xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i] : memref<10xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
 // Test 2-level nested loop tiling with tile(4, 8)
-// Creates: tile_loop_1 -> tile_loop_2 -> element_loop_1 -> element_loop_2
+// Produces one multi-IV tile-group loop (gang) wrapping one multi-IV
+// element-group loop (vector), each carrying both tiled induction variables.
 
 // CHECK-LABEL: func.func @nested_loop_tile
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
@@ -41,22 +42,16 @@ func.func @single_loop_tile(%arg0: memref<10xf32>) {
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
 // CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : index
 // CHECK-DAG:     %[[C8:.*]] = arith.constant 8 : index
-// Outer tile loop with gang
-// CHECK:         acc.loop gang control(%[[I:.*]] : index) = (%[[C0]] : index) to (%[[C100]] : index) step (%[[C4]] : index) {
-// Inner tile loop
-// CHECK:           acc.loop control(%[[J:.*]] : index) = (%[[C0]] : index) to (%[[C50]] : index) step (%[[C8]] : index) {
-// Outer element loop with vector
-// CHECK:             acc.loop vector control({{.*}} : index) = (%[[I]] : index) to ({{.*}} : index) step (%[[C1]] : index) {
-// Inner element loop
-// CHECK:               acc.loop control({{.*}} : index) = (%[[J]] : index) to ({{.*}} : index) step (%[[C1]] : index) {
-// CHECK:                 acc.yield
-// CHECK:               }
-// CHECK:               acc.yield
-// CHECK:             }
+// Tile-group loop with gang; steps scaled by the tile sizes.
+// CHECK:         acc.loop gang control(%[[I:.*]] : index, %[[J:.*]] : index) = (%[[C0]], %[[C0]] : index, index) to (%[[C100]], %[[C50]] : index, index) step (%[[C4]], %[[C8]] : index, index) {
+// CHECK:           %[[MUB0:.*]] = arith.minsi
+// CHECK:           %[[MUB1:.*]] = arith.minsi
+// Element-group loop with vector.
+// CHECK:           acc.loop vector control(%{{.*}} : index, %{{.*}} : index) = (%[[I]], %[[J]] : index, index) to (%[[MUB0]], %[[MUB1]] : index, index) step (%[[C1]], %[[C1]] : index, index) {
 // CHECK:             acc.yield
-// CHECK:           }
+// CHECK:           } independent
 // CHECK:           acc.yield
-// CHECK:         }
+// CHECK:         } independent
 func.func @nested_loop_tile(%arg0: memref<100x50xf32>) {
   %c0 = arith.constant 0 : index
   %c100 = arith.constant 100 : index
@@ -70,7 +65,75 @@ func.func @nested_loop_tile(%arg0: memref<100x50xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i, %j] : memref<100x50xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
+  return
+}
+
+// Regression test: a loop with GANG(STATIC: N) combined with a multi-dim
+// TILE clause used to crash with an assertion failure inside
+// LoopOp::getGangValue() when a leftover gang operand was copied onto a
+// generated loop without a corresponding gang device-type attribute. Check
+// that the pass completes and that gang (with its static operand) is only
+// preserved on the tile-group loop, never on the element group.
+
+// CHECK-LABEL: func.func @gang_static_with_multi_dim_tile
+// CHECK:         acc.loop gang({static=%{{.*}} : i32}) control(%[[I:.*]] : index, %[[J:.*]] : index) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
+// CHECK:           acc.loop control(%{{.*}} : index, %{{.*}} : index) = (%[[I]], %[[J]] : index, index) to ({{.*}}) step ({{.*}}) {
+// CHECK-NOT:         gang
+// CHECK:             acc.yield
+// CHECK:           } independent
+// CHECK:           acc.yield
+// CHECK:         } independent
+func.func @gang_static_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
+  %c0 = arith.constant 0 : index
+  %c100 = arith.constant 100 : index
+  %c50 = arith.constant 50 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c8 = arith.constant 8 : index
+  %cs = arith.constant 1 : i32
+  acc.loop gang({static=%cs : i32}) tile({%c4 : index, %c8 : index}) control(%i : index, %j : index) = (%c0, %c0 : index, index) to (%c100, %c50 : index, index) step (%c1, %c1 : index, index) {
+    %sum = arith.addi %i, %j : index
+    %val = arith.index_castui %sum : index to i32
+    %fval = arith.sitofp %val : i32 to f32
+    memref.store %fval, %arg0[%i, %j] : memref<100x50xf32>
+    acc.yield
+  } independent
+  return
+}
+
+// Regression test: a loop with WORKER(N) combined with VECTOR and a
+// multi-dim TILE clause used to produce invalid IR because a worker attribute
+// was removed from a generated loop without also clearing the worker operand
+// value copied onto it, leaving a non-empty worker operand list with no worker
+// device-type attribute (rejected by the verifier). Check that the pass
+// produces valid IR, with worker only on the tile-group loop and vector only
+// on the element-group loop.
+
+// CHECK-LABEL: func.func @worker_num_with_multi_dim_tile
+// CHECK:         acc.loop worker(%{{.*}} : i32) control(%[[I:.*]] : index, %[[J:.*]] : index) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
+// CHECK-NOT:       vector
+// CHECK:           acc.loop vector control(%{{.*}} : index, %{{.*}} : index) = (%[[I]], %[[J]] : index, index) to ({{.*}}) step ({{.*}}) {
+// CHECK-NOT:         worker
+// CHECK:             acc.yield
+// CHECK:           } independent
+// CHECK:           acc.yield
+// CHECK:         } independent
+func.func @worker_num_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
+  %c0 = arith.constant 0 : index
+  %c100 = arith.constant 100 : index
+  %c50 = arith.constant 50 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c8 = arith.constant 8 : index
+  %cw = arith.constant 4 : i32
+  acc.loop worker(%cw : i32) vector tile({%c4 : index, %c8 : index}) control(%i : index, %j : index) = (%c0, %c0 : index, index) to (%c100, %c50 : index, index) step (%c1, %c1 : index, index) {
+    %sum = arith.addi %i, %j : index
+    %val = arith.index_castui %sum : index to i32
+    %fval = arith.sitofp %val : i32 to f32
+    memref.store %fval, %arg0[%i, %j] : memref<100x50xf32>
+    acc.yield
+  } independent
   return
 }
 
@@ -99,6 +162,57 @@ func.func @unknown_tile_size(%arg0: memref<1000xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i] : memref<1000xf32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
+  return
+}
+
+// Test loop with no tile values: pattern should not apply and loop is unchanged.
+
+// CHECK-LABEL: func.func @no_tile_values
+// CHECK:         acc.loop control(%{{.*}} : index) = (%{{.*}} : index) to (%{{.*}} : index) step (%{{.*}} : index) {
+// CHECK-NOT:       acc.loop
+// CHECK:           acc.yield
+// CHECK:         }
+func.func @no_tile_values() {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  acc.loop control(%i : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
+    acc.yield
+  } independent
+  return
+}
+
+// Test loop tiling when the body contains ops with nested regions.
+// Exercises the walk() in moveOpsAndReplaceIVs that must notify the rewriter
+// about nested ops (required by MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS).
+
+// CHECK-LABEL: func.func @body_with_nested_region
+// CHECK:         acc.loop control(%[[TILE_IV:.*]] : index) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
+// CHECK:           acc.loop control(%[[ELEM_IV:.*]] : index) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
+// CHECK:             scf.if
+// CHECK:               arith.index_castui %[[ELEM_IV]]
+// CHECK:             acc.yield
+// CHECK:           }
+// CHECK:           acc.yield
+// CHECK:         }
+func.func @body_with_nested_region(%arg0: memref<10xi32>) {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  acc.loop tile({%c2 : index}) control(%i : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
+    %threshold = arith.constant 5 : index
+    %cond = arith.cmpi ult, %i, %threshold : index
+    %val = scf.if %cond -> (i32) {
+      %cast = arith.index_castui %i : index to i32
+      scf.yield %cast : i32
+    } else {
+      %c99 = arith.constant 99 : i32
+      scf.yield %c99 : i32
+    }
+    memref.store %val, %arg0[%i] : memref<10xi32>
+    acc.yield
+  } independent
   return
 }

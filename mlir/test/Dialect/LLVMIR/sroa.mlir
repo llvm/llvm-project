@@ -448,3 +448,18 @@ llvm.func @out_of_bound_gep_array_access(%arg: i32) {
   llvm.store %arg, %2 : i32, !llvm.ptr
   llvm.return
 }
+
+// -----
+
+// Regression test: SROA must not crash when processing an alloca of an empty
+// struct type. Empty structs have no sub-elements and cannot be destructured,
+// so the alloca must be left unchanged.
+// https://github.com/llvm/llvm-project/issues/108366
+// CHECK-LABEL: llvm.func @empty_struct_not_destructured
+llvm.func @empty_struct_not_destructured() -> !llvm.struct<()> {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.alloca %{{.*}} x !llvm.struct<()>
+  %1 = llvm.alloca %0 x !llvm.struct<()> : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> !llvm.struct<()>
+  llvm.return %2 : !llvm.struct<()>
+}

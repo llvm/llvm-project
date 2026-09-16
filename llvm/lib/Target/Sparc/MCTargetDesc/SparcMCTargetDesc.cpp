@@ -49,7 +49,7 @@ using namespace llvm;
 static MCAsmInfo *createSparcMCAsmInfo(const MCRegisterInfo &MRI,
                                        const Triple &TT,
                                        const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new SparcELFMCAsmInfo(TT);
+  MCAsmInfo *MAI = new SparcELFMCAsmInfo(TT, Options);
   unsigned Reg = MRI.getDwarfRegNum(SP::O6, true);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, Reg, 0);
   MAI->addInitialFrameState(Inst);
@@ -59,7 +59,7 @@ static MCAsmInfo *createSparcMCAsmInfo(const MCRegisterInfo &MRI,
 static MCAsmInfo *createSparcV9MCAsmInfo(const MCRegisterInfo &MRI,
                                          const Triple &TT,
                                          const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new SparcELFMCAsmInfo(TT);
+  MCAsmInfo *MAI = new SparcELFMCAsmInfo(TT, Options);
   unsigned Reg = MRI.getDwarfRegNum(SP::O6, true);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, Reg, 2047);
   MAI->addInitialFrameState(Inst);

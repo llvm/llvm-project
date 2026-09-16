@@ -128,7 +128,7 @@
 # NOALIAS-NEXT:  7.     1     5.0    1.0    0.0       addq	$44, 512(%r14)
 # NOALIAS-NEXT:  8.     1     5.0    1.0    0.0       addq	$44, 576(%r14)
 # NOALIAS-NEXT:  9.     1     6.0    1.0    0.0       addq	$44, 640(%r14)
-# NOALIAS-NEXT:         1     3.5    1.0    0.0       <total>
+# NOALIAS-NEXT:        10    3.5    1.0    0.0       <total>
 
 # YESALIAS-NEXT: 1.     1     8.0    0.0    0.0       addq	$44, 128(%r14)
 # YESALIAS-NEXT: 2.     1     14.0   0.0    0.0       addq	$44, 192(%r14)
@@ -139,4 +139,4 @@
 # YESALIAS-NEXT: 7.     1     47.0   0.0    0.0       addq	$44, 512(%r14)
 # YESALIAS-NEXT: 8.     1     53.0   0.0    0.0       addq	$44, 576(%r14)
 # YESALIAS-NEXT: 9.     1     60.0   0.0    0.0       addq	$44, 640(%r14)
-# YESALIAS-NEXT:        1     30.5   0.1    0.0       <total>
+# YESALIAS-NEXT:        10    30.5   0.1    0.0       <total>

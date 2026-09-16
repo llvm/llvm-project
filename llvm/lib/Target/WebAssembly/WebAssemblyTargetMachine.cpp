@@ -20,6 +20,10 @@
 #include "WebAssemblyTargetObjectFile.h"
 #include "WebAssemblyTargetTransformInfo.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
@@ -30,7 +34,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Scalar/LowerAtomicPass.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
 using namespace llvm;
@@ -41,16 +44,10 @@ using namespace llvm;
 // for the purpose of testing with lit/llc ONLY.
 // This produces output which is not valid WebAssembly, and is not supported
 // by assemblers/disassemblers and other MC based tools.
-static cl::opt<bool> WasmDisableExplicitLocals(
+cl::opt<bool> WebAssembly::WasmDisableExplicitLocals(
     "wasm-disable-explicit-locals", cl::Hidden,
     cl::desc("WebAssembly: output implicit locals in"
              " instruction output for test purposes only."),
-    cl::init(false));
-
-static cl::opt<bool> WasmDisableFixIrreducibleControlFlowPass(
-    "wasm-disable-fix-irreducible-control-flow-pass", cl::Hidden,
-    cl::desc("webassembly: disables the fix "
-             " irreducible control flow optimization pass"),
     cl::init(false));
 
 // Exception handling & setjmp-longjmp handling related options.
@@ -69,7 +66,7 @@ cl::opt<bool> WebAssembly::WasmEnableEmSjLj(
 cl::opt<bool>
     WebAssembly::WasmEnableEH("wasm-enable-eh",
                               cl::desc("WebAssembly exception handling"));
-// setjmp/longjmp handling using wasm EH instrutions
+// setjmp/longjmp handling using wasm EH instructions
 cl::opt<bool> WebAssembly::WasmEnableSjLj(
     "wasm-enable-sjlj", cl::desc("WebAssembly setjmp/longjmp handling"));
 // If true, use the legacy Wasm EH proposal:
@@ -92,34 +89,36 @@ LLVMInitializeWebAssemblyTarget() {
 
   // Register backend passes
   auto &PR = *PassRegistry::getPassRegistry();
-  initializeWebAssemblyAddMissingPrototypesPass(PR);
-  initializeWebAssemblyLowerEmscriptenEHSjLjPass(PR);
+  initializeGlobalISel(PR);
+  initializeWebAssemblyPreLegalizerCombinerLegacyPass(PR);
+  initializeWebAssemblyPostLegalizerCombinerLegacyPass(PR);
+  initializeWebAssemblyAddMissingPrototypesLegacyPass(PR);
+  initializeWebAssemblyLowerEmscriptenEHSjLjLegacyPass(PR);
   initializeLowerGlobalDtorsLegacyPassPass(PR);
-  initializeFixFunctionBitcastsPass(PR);
-  initializeOptimizeReturnedPass(PR);
-  initializeWebAssemblyRefTypeMem2LocalPass(PR);
-  initializeWebAssemblyArgumentMovePass(PR);
+  initializeWebAssemblyFixFunctionBitcastsLegacyPass(PR);
+  initializeWebAssemblyOptimizeReturnedLegacyPass(PR);
+  initializeWebAssemblyRefTypeMem2LocalLegacyPass(PR);
+  initializeWebAssemblyArgumentMoveLegacyPass(PR);
   initializeWebAssemblyAsmPrinterPass(PR);
-  initializeWebAssemblySetP2AlignOperandsPass(PR);
-  initializeWebAssemblyReplacePhysRegsPass(PR);
-  initializeWebAssemblyOptimizeLiveIntervalsPass(PR);
-  initializeWebAssemblyMemIntrinsicResultsPass(PR);
-  initializeWebAssemblyRegStackifyPass(PR);
-  initializeWebAssemblyRegColoringPass(PR);
-  initializeWebAssemblyNullifyDebugValueListsPass(PR);
-  initializeWebAssemblyFixIrreducibleControlFlowPass(PR);
-  initializeWebAssemblyLateEHPreparePass(PR);
-  initializeWebAssemblyExceptionInfoPass(PR);
-  initializeWebAssemblyCFGSortPass(PR);
-  initializeWebAssemblyCFGStackifyPass(PR);
-  initializeWebAssemblyExplicitLocalsPass(PR);
-  initializeWebAssemblyLowerBrUnlessPass(PR);
-  initializeWebAssemblyRegNumberingPass(PR);
-  initializeWebAssemblyDebugFixupPass(PR);
-  initializeWebAssemblyPeepholePass(PR);
-  initializeWebAssemblyMCLowerPrePassPass(PR);
-  initializeWebAssemblyLowerRefTypesIntPtrConvPass(PR);
-  initializeWebAssemblyFixBrTableDefaultsPass(PR);
+  initializeWebAssemblySetP2AlignOperandsLegacyPass(PR);
+  initializeWebAssemblyReplacePhysRegsLegacyPass(PR);
+  initializeWebAssemblyOptimizeLiveIntervalsLegacyPass(PR);
+  initializeWebAssemblyMemIntrinsicResultsLegacyPass(PR);
+  initializeWebAssemblyRegStackifyLegacyPass(PR);
+  initializeWebAssemblyRegColoringLegacyPass(PR);
+  initializeWebAssemblyNullifyDebugValueListsLegacyPass(PR);
+  initializeWebAssemblyFixIrreducibleControlFlowLegacyPass(PR);
+  initializeWebAssemblyLateEHPrepareLegacyPass(PR);
+  initializeWebAssemblyExceptionInfoWrapperPassPass(PR);
+  initializeWebAssemblyCFGSortLegacyPass(PR);
+  initializeWebAssemblyCFGStackifyLegacyPass(PR);
+  initializeWebAssemblyExplicitLocalsLegacyPass(PR);
+  initializeWebAssemblyLowerBrUnlessLegacyPass(PR);
+  initializeWebAssemblyRegNumberingLegacyPass(PR);
+  initializeWebAssemblyDebugFixupLegacyPass(PR);
+  initializeWebAssemblyPeepholeLegacyPass(PR);
+  initializeWebAssemblyMCLowerPreLegacyPass(PR);
+  initializeWebAssemblyFixBrTableDefaultsLegacyPass(PR);
   initializeWebAssemblyDAGToDAGISelLegacyPass(PR);
 }
 
@@ -128,12 +127,13 @@ LLVMInitializeWebAssemblyTarget() {
 //===----------------------------------------------------------------------===//
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
-  // Default to static relocation model.  This should always be more optimial
+  // Default to static relocation model.  This should always be more optimal
   // than PIC since the static linker can determine all global addresses and
   // assume direct function calls.
   return RM.value_or(Reloc::Static);
 }
 
+using WebAssembly::WasmDisableExplicitLocals;
 using WebAssembly::WasmEnableEH;
 using WebAssembly::WasmEnableEmEH;
 using WebAssembly::WasmEnableEmSjLj;
@@ -141,20 +141,26 @@ using WebAssembly::WasmEnableSjLj;
 
 static void basicCheckForEHAndSjLj(TargetMachine *TM) {
 
+  // Emscripten EH is selected by the exception model. WasmEnableEmEH is a
+  // deprecated cl::opt alias, OR-ed in here until it is removed.
+  bool EnableEmEH =
+      TM->Options.ExceptionModel == ExceptionHandling::Emscripten ||
+      WasmEnableEmEH;
+
   // You can't enable two modes of EH at the same time
-  if (WasmEnableEmEH && WasmEnableEH)
+  if (EnableEmEH && WasmEnableEH)
     report_fatal_error(
-        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-eh");
+        "-exception-model=emscripten not allowed with -wasm-enable-eh");
   // You can't enable two modes of SjLj at the same time
   if (WasmEnableEmSjLj && WasmEnableSjLj)
     report_fatal_error(
         "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
   // You can't mix Emscripten EH with Wasm SjLj.
-  if (WasmEnableEmEH && WasmEnableSjLj)
+  if (EnableEmEH && WasmEnableSjLj)
     report_fatal_error(
-        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-sjlj");
+        "-exception-model=emscripten not allowed with -wasm-enable-sjlj");
 
-  if (TM->Options.ExceptionModel == ExceptionHandling::None) {
+  if (TM->Options.ExceptionModel == ExceptionHandling::Default) {
     // FIXME: These flags should be removed in favor of directly using the
     // generically configured ExceptionsType
     if (WebAssembly::WasmEnableEH || WebAssembly::WasmEnableSjLj)
@@ -162,12 +168,12 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
   }
 
   // Basic Correctness checking related to -exception-model
-  if (TM->Options.ExceptionModel != ExceptionHandling::None &&
-      TM->Options.ExceptionModel != ExceptionHandling::Wasm)
-    report_fatal_error("-exception-model should be either 'none' or 'wasm'");
-  if (WasmEnableEmEH && TM->Options.ExceptionModel == ExceptionHandling::Wasm)
-    report_fatal_error("-exception-model=wasm not allowed with "
-                       "-enable-emscripten-cxx-exceptions");
+  if (TM->Options.ExceptionModel != ExceptionHandling::Default &&
+      TM->Options.ExceptionModel != ExceptionHandling::None &&
+      TM->Options.ExceptionModel != ExceptionHandling::Wasm &&
+      TM->Options.ExceptionModel != ExceptionHandling::Emscripten)
+    report_fatal_error(
+        "-exception-model should be either 'none', 'wasm', or 'emscripten'");
   if (WasmEnableEH && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
     report_fatal_error(
         "-wasm-enable-eh only allowed with -exception-model=wasm");
@@ -212,8 +218,11 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   this->Options.DataSections = true;
   this->Options.UniqueSectionNames = true;
 
-  initAsmInfo();
   basicCheckForEHAndSjLj(this);
+  initAsmInfo();
+
+  LLT::setUseExtended(true);
+
   // Note that we don't use setRequiresStructuredCFG(true). It disables
   // optimizations than we're ok with, and want, such as critical edge
   // splitting and tail merging.
@@ -246,175 +255,10 @@ WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
-  // This needs to be done before we create a new subtarget since any
-  // creation will depend on the TM and the code generation flags on the
-  // function that reside in TargetOptions.
-  resetTargetOptions(F);
-
   return getSubtargetImpl(CPU, FS);
 }
 
 namespace {
-
-class CoalesceFeaturesAndStripAtomics final : public ModulePass {
-  // Take the union of all features used in the module and use it for each
-  // function individually, since having multiple feature sets in one module
-  // currently does not make sense for WebAssembly. If atomics are not enabled,
-  // also strip atomic operations and thread local storage.
-  static char ID;
-  WebAssemblyTargetMachine *WasmTM;
-
-public:
-  CoalesceFeaturesAndStripAtomics(WebAssemblyTargetMachine *WasmTM)
-      : ModulePass(ID), WasmTM(WasmTM) {}
-
-  bool runOnModule(Module &M) override {
-    FeatureBitset Features = coalesceFeatures(M);
-
-    std::string FeatureStr = getFeatureString(Features);
-    WasmTM->setTargetFeatureString(FeatureStr);
-    for (auto &F : M)
-      replaceFeatures(F, FeatureStr);
-
-    bool StrippedAtomics = false;
-    bool StrippedTLS = false;
-
-    if (!Features[WebAssembly::FeatureAtomics]) {
-      StrippedAtomics = stripAtomics(M);
-      StrippedTLS = stripThreadLocals(M);
-    } else if (!Features[WebAssembly::FeatureBulkMemory]) {
-      StrippedTLS |= stripThreadLocals(M);
-    }
-
-    if (StrippedAtomics && !StrippedTLS)
-      stripThreadLocals(M);
-    else if (StrippedTLS && !StrippedAtomics)
-      stripAtomics(M);
-
-    recordFeatures(M, Features, StrippedAtomics || StrippedTLS);
-
-    // Conservatively assume we have made some change
-    return true;
-  }
-
-private:
-  FeatureBitset coalesceFeatures(const Module &M) {
-    // Union the features of all defined functions. Start with an empty set, so
-    // that if a feature is disabled in every function, we'll compute it as
-    // disabled. If any function lacks a target-features attribute, it'll
-    // default to the target CPU from the `TargetMachine`.
-    FeatureBitset Features;
-    bool AnyDefinedFuncs = false;
-    for (auto &F : M) {
-      if (F.isDeclaration())
-        continue;
-
-      Features |= WasmTM->getSubtargetImpl(F)->getFeatureBits();
-      AnyDefinedFuncs = true;
-    }
-
-    // If we have no defined functions, use the target CPU from the
-    // `TargetMachine`.
-    if (!AnyDefinedFuncs) {
-      Features =
-          WasmTM
-              ->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
-                                 std::string(WasmTM->getTargetFeatureString()))
-              ->getFeatureBits();
-    }
-
-    return Features;
-  }
-
-  static std::string getFeatureString(const FeatureBitset &Features) {
-    std::string Ret;
-    for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
-      if (Features[KV.Value])
-        Ret += (StringRef("+") + KV.Key + ",").str();
-      else
-        Ret += (StringRef("-") + KV.Key + ",").str();
-    }
-    // remove trailing ','
-    Ret.pop_back();
-    return Ret;
-  }
-
-  void replaceFeatures(Function &F, const std::string &Features) {
-    F.removeFnAttr("target-features");
-    F.removeFnAttr("target-cpu");
-    F.addFnAttr("target-features", Features);
-  }
-
-  bool stripAtomics(Module &M) {
-    // Detect whether any atomics will be lowered, since there is no way to tell
-    // whether the LowerAtomic pass lowers e.g. stores.
-    bool Stripped = false;
-    for (auto &F : M) {
-      for (auto &B : F) {
-        for (auto &I : B) {
-          if (I.isAtomic()) {
-            Stripped = true;
-            goto done;
-          }
-        }
-      }
-    }
-
-  done:
-    if (!Stripped)
-      return false;
-
-    LowerAtomicPass Lowerer;
-    FunctionAnalysisManager FAM;
-    for (auto &F : M)
-      Lowerer.run(F, FAM);
-
-    return true;
-  }
-
-  bool stripThreadLocals(Module &M) {
-    bool Stripped = false;
-    for (auto &GV : M.globals()) {
-      if (GV.isThreadLocal()) {
-        // replace `@llvm.threadlocal.address.pX(GV)` with `GV`.
-        for (Use &U : make_early_inc_range(GV.uses())) {
-          if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U.getUser())) {
-            if (II->getIntrinsicID() == Intrinsic::threadlocal_address &&
-                II->getArgOperand(0) == &GV) {
-              II->replaceAllUsesWith(&GV);
-              II->eraseFromParent();
-            }
-          }
-        }
-
-        Stripped = true;
-        GV.setThreadLocal(false);
-      }
-    }
-    return Stripped;
-  }
-
-  void recordFeatures(Module &M, const FeatureBitset &Features, bool Stripped) {
-    for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
-      if (Features[KV.Value]) {
-        // Mark features as used
-        std::string MDKey = (StringRef("wasm-feature-") + KV.Key).str();
-        M.addModuleFlag(Module::ModFlagBehavior::Error, MDKey,
-                        wasm::WASM_FEATURE_PREFIX_USED);
-      }
-    }
-    // Code compiled without atomics or bulk-memory may have had its atomics or
-    // thread-local data lowered to nonatomic operations or non-thread-local
-    // data. In that case, we mark the pseudo-feature "shared-mem" as disallowed
-    // to tell the linker that it would be unsafe to allow this code ot be used
-    // in a module with shared memory.
-    if (Stripped) {
-      M.addModuleFlag(Module::ModFlagBehavior::Error, "wasm-feature-shared-mem",
-                      wasm::WASM_FEATURE_PREFIX_DISALLOWED);
-    }
-  }
-};
-char CoalesceFeaturesAndStripAtomics::ID = 0;
 
 /// WebAssembly Code Generator Pass Configuration Options.
 class WebAssemblyPassConfig final : public TargetPassConfig {
@@ -442,6 +286,13 @@ public:
 
   // No reg alloc
   bool addRegAssignAndRewriteOptimized() override { return false; }
+
+  bool addIRTranslator() override;
+  void addPreLegalizeMachineIR() override;
+  bool addLegalizeMachineIR() override;
+  void addPreRegBankSelect() override;
+  bool addRegBankSelect() override;
+  bool addGlobalInstructionSelect() override;
 };
 } // end anonymous namespace
 
@@ -473,18 +324,18 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
 
 void WebAssemblyPassConfig::addIRPasses() {
   // Add signatures to prototype-less function declarations
-  addPass(createWebAssemblyAddMissingPrototypes());
+  addPass(createWebAssemblyAddMissingPrototypesLegacyPass());
 
   // Lower .llvm.global_dtors into .llvm.global_ctors with __cxa_atexit calls.
   addPass(createLowerGlobalDtorsLegacyPass());
 
   // Fix function bitcasts, as WebAssembly requires caller and callee signatures
   // to match.
-  addPass(createWebAssemblyFixFunctionBitcasts());
+  addPass(createWebAssemblyFixFunctionBitcastsLegacyPass());
 
   // Optimize "returned" function attributes.
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createWebAssemblyOptimizeReturned());
+    addPass(createWebAssemblyOptimizeReturnedLegacyPass());
 
   // If exception handling is not enabled and setjmp/longjmp handling is
   // enabled, we lower invokes into calls and delete unreachable landingpad
@@ -492,7 +343,10 @@ void WebAssemblyPassConfig::addIRPasses() {
   // TargetPassConfig::addPassesToHandleExceptions, but that runs after these IR
   // passes and Emscripten SjLj handling expects all invokes to be lowered
   // before.
-  if (!WasmEnableEmEH && !WasmEnableEH) {
+  bool EnableEmEH =
+      TM->Options.ExceptionModel == ExceptionHandling::Emscripten ||
+      WasmEnableEmEH;
+  if (!EnableEmEH && !WasmEnableEH) {
     addPass(createLowerInvokePass());
     // The lower invoke pass may create unreachable code. Remove it in order not
     // to process dead blocks in setjmp/longjmp handling.
@@ -503,11 +357,15 @@ void WebAssemblyPassConfig::addIRPasses() {
   // done in WasmEHPrepare pass, Wasm SjLj preparation shares libraries and
   // transformation algorithms with Emscripten SjLj, so we run
   // LowerEmscriptenEHSjLj pass also when Wasm SjLj is enabled.
-  if (WasmEnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj)
-    addPass(createWebAssemblyLowerEmscriptenEHSjLj());
+  if (EnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj)
+    addPass(createWebAssemblyLowerEmscriptenEHSjLjLegacyPass(EnableEmEH));
 
   // Expand indirectbr instructions to switches.
   addPass(createIndirectBrExpandPass());
+
+  // Try to expand `vecreduce_{and, or}` into `{any, all}_true`.
+  addPass(createWebAssemblyReduceToAnyAllTrueLegacyPass(
+      getWebAssemblyTargetMachine()));
 
   TargetPassConfig::addIRPasses();
 }
@@ -515,9 +373,10 @@ void WebAssemblyPassConfig::addIRPasses() {
 void WebAssemblyPassConfig::addISelPrepare() {
   // We need to move reference type allocas to WASM_ADDRESS_SPACE_VAR so that
   // loads and stores are promoted to local.gets/local.sets.
-  addPass(createWebAssemblyRefTypeMem2Local());
+  addPass(createWebAssemblyRefTypeMem2LocalLegacyPass());
   // Lower atomics and TLS if necessary
-  addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));
+  addPass(createWebAssemblyCoalesceFeaturesAndStripAtomicsLegacyPass(
+      getWebAssemblyTargetMachine()));
 
   // This is a no-op if atomics are not used in the module
   addPass(createAtomicExpandLegacyPass());
@@ -527,23 +386,23 @@ void WebAssemblyPassConfig::addISelPrepare() {
 
 bool WebAssemblyPassConfig::addInstSelector() {
   (void)TargetPassConfig::addInstSelector();
-  addPass(
-      createWebAssemblyISelDag(getWebAssemblyTargetMachine(), getOptLevel()));
+  addPass(createWebAssemblyISelDagLegacyPass(getWebAssemblyTargetMachine(),
+                                             getOptLevel()));
   // Run the argument-move pass immediately after the ScheduleDAG scheduler
   // so that we can fix up the ARGUMENT instructions before anything else
   // sees them in the wrong place.
-  addPass(createWebAssemblyArgumentMove());
+  addPass(createWebAssemblyArgumentMoveLegacyPass());
   // Set the p2align operands. This information is present during ISel, however
   // it's inconvenient to collect. Collect it now, and update the immediate
   // operands.
-  addPass(createWebAssemblySetP2AlignOperands());
+  addPass(createWebAssemblySetP2AlignOperandsLegacyPass());
 
   // Eliminate range checks and add default targets to br_table instructions.
-  addPass(createWebAssemblyFixBrTableDefaults());
+  addPass(createWebAssemblyFixBrTableDefaultsLegacyPass());
 
   // unreachable is terminator, non-terminator instruction after it is not
   // allowed.
-  addPass(createWebAssemblyCleanCodeAfterTrap());
+  addPass(createWebAssemblyCleanCodeAfterTrapLegacyPass());
 
   return false;
 }
@@ -588,29 +447,32 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   TargetPassConfig::addPreEmitPass();
 
   // Nullify DBG_VALUE_LISTs that we cannot handle.
-  addPass(createWebAssemblyNullifyDebugValueLists());
+  addPass(createWebAssemblyNullifyDebugValueListsLegacyPass());
+
+  // Remove any unreachable blocks that may be left floating around.
+  // Rare, but possible. Needed for WebAssemblyFixIrreducibleControlFlow.
+  addPass(&UnreachableMachineBlockElimID);
 
   // Eliminate multiple-entry loops.
-  if (!WasmDisableFixIrreducibleControlFlowPass)
-    addPass(createWebAssemblyFixIrreducibleControlFlow());
+  addPass(createWebAssemblyFixIrreducibleControlFlowLegacyPass());
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.
   if (TM->Options.ExceptionModel == ExceptionHandling::Wasm)
-    addPass(createWebAssemblyLateEHPrepare());
+    addPass(createWebAssemblyLateEHPrepareLegacyPass());
 
   // Now that we have a prologue and epilogue and all frame indices are
   // rewritten, eliminate SP and FP. This allows them to be stackified,
   // colored, and numbered with the rest of the registers.
-  addPass(createWebAssemblyReplacePhysRegs());
+  addPass(createWebAssemblyReplacePhysRegsLegacyPass());
 
   // Preparations and optimizations related to register stackification.
   if (getOptLevel() != CodeGenOptLevel::None) {
     // Depend on LiveIntervals and perform some optimizations on it.
-    addPass(createWebAssemblyOptimizeLiveIntervals());
+    addPass(createWebAssemblyOptimizeLiveIntervalsLegacyPass());
 
     // Prepare memory intrinsic calls for register stackifying.
-    addPass(createWebAssemblyMemIntrinsicResults());
+    addPass(createWebAssemblyMemIntrinsicResultsLegacyPass());
   }
 
   // Mark registers as representing wasm's value stack. This is a key
@@ -618,47 +480,86 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // MemIntrinsicResults above) very late, so that it sees as much code as
   // possible, including code emitted by PEI and expanded by late tail
   // duplication.
-  addPass(createWebAssemblyRegStackify(getOptLevel()));
+  addPass(createWebAssemblyRegStackifyLegacyPass(getOptLevel()));
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     // Run the register coloring pass to reduce the total number of registers.
     // This runs after stackification so that it doesn't consider registers
     // that become stackified.
-    addPass(createWebAssemblyRegColoring());
+    addPass(createWebAssemblyRegColoringLegacyPass());
   }
 
   // Sort the blocks of the CFG into topological order, a prerequisite for
   // BLOCK and LOOP markers.
-  addPass(createWebAssemblyCFGSort());
+  addPass(createWebAssemblyCFGSortLegacyPass());
 
   // Insert BLOCK and LOOP markers.
-  addPass(createWebAssemblyCFGStackify());
+  addPass(createWebAssemblyCFGStackifyLegacyPass());
 
   // Insert explicit local.get and local.set operators.
   if (!WasmDisableExplicitLocals)
-    addPass(createWebAssemblyExplicitLocals());
+    addPass(createWebAssemblyExplicitLocalsLegacyPass());
 
   // Lower br_unless into br_if.
-  addPass(createWebAssemblyLowerBrUnless());
+  addPass(createWebAssemblyLowerBrUnlessLegacyPass());
 
   // Perform the very last peephole optimizations on the code.
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createWebAssemblyPeephole());
+    addPass(createWebAssemblyPeepholeLegacyPass());
 
   // Create a mapping from LLVM CodeGen virtual registers to wasm registers.
-  addPass(createWebAssemblyRegNumbering());
+  addPass(createWebAssemblyRegNumberingLegacyPass());
 
   // Fix debug_values whose defs have been stackified.
   if (!WasmDisableExplicitLocals)
-    addPass(createWebAssemblyDebugFixup());
+    addPass(createWebAssemblyDebugFixupLegacyPass());
 
   // Collect information to prepare for MC lowering / asm printing.
-  addPass(createWebAssemblyMCLowerPrePass());
+  addPass(createWebAssemblyMCLowerPreLegacyPass());
 }
 
 bool WebAssemblyPassConfig::addPreISel() {
   TargetPassConfig::addPreISel();
-  addPass(createWebAssemblyLowerRefTypesIntPtrConv());
+  return false;
+}
+
+bool WebAssemblyPassConfig::addIRTranslator() {
+  addPass(new IRTranslatorLegacy());
+  return false;
+}
+
+void WebAssemblyPassConfig::addPreLegalizeMachineIR() {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createWebAssemblyPreLegalizerCombinerLegacyPass());
+  }
+}
+bool WebAssemblyPassConfig::addLegalizeMachineIR() {
+  addPass(new LegalizerLegacy());
+  return false;
+}
+
+void WebAssemblyPassConfig::addPreRegBankSelect() {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createWebAssemblyPostLegalizerCombinerLegacyPass());
+  }
+}
+
+bool WebAssemblyPassConfig::addRegBankSelect() {
+  addPass(new RegBankSelectLegacy());
+  return false;
+}
+
+bool WebAssemblyPassConfig::addGlobalInstructionSelect() {
+  addPass(new InstructionSelectLegacy(getOptLevel()));
+
+  // We insert only if ISelDAG won't insert these at a later point.
+  if (isGlobalISelAbortEnabled()) {
+    addPass(createWebAssemblyArgumentMoveLegacyPass());
+    addPass(createWebAssemblySetP2AlignOperandsLegacyPass());
+    addPass(createWebAssemblyFixBrTableDefaultsLegacyPass());
+    addPass(createWebAssemblyCleanCodeAfterTrapLegacyPass());
+  }
+
   return false;
 }
 

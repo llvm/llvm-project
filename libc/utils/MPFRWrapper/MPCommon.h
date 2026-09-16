@@ -200,6 +200,7 @@ public:
   MPFRNumber cosh() const;
   MPFRNumber cospi() const;
   MPFRNumber erf() const;
+  MPFRNumber erfc() const;
   MPFRNumber exp() const;
   MPFRNumber exp2() const;
   MPFRNumber exp2m1() const;
@@ -211,9 +212,12 @@ public:
   MPFRNumber fmod(const MPFRNumber &b);
   MPFRNumber frexp(int &exp);
   MPFRNumber hypot(const MPFRNumber &b);
+  MPFRNumber lgamma() const;
   MPFRNumber log() const;
   MPFRNumber log2() const;
+  MPFRNumber log2p1() const;
   MPFRNumber log10() const;
+  MPFRNumber log10p1() const;
   MPFRNumber log1p() const;
   MPFRNumber pow(const MPFRNumber &b);
   MPFRNumber remquo(const MPFRNumber &divisor, int &quotient);

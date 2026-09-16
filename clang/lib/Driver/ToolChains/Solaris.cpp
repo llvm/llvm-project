@@ -202,7 +202,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group});
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs, C);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
@@ -328,10 +328,12 @@ Solaris::Solaris(const Driver &D, const llvm::Triple &Triple,
   addPathIfExists(D, D.SysRoot + "/usr/lib" + LibSuffix, Paths);
 }
 
-SanitizerMask Solaris::getSupportedSanitizers() const {
+SanitizerMask
+Solaris::getSupportedSanitizers(BoundArch BA,
+                                Action::OffloadKind DeviceOffloadKind) const {
   const bool IsSparc = getTriple().getArch() == llvm::Triple::sparc;
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   // FIXME: Omit SparcV9 and X86_64 until 64-bit support is figured out.
   if (IsSparc || IsX86) {
     Res |= SanitizerKind::Address;

@@ -57,14 +57,9 @@ define <8 x float> @select_and_v8i1_3(<8 x i16> %m1, <8 x i16> %m2, <8 x i16> %m
 define <8 x float> @select_or_v8i1(<8 x i1> %a, <8 x i1> %b, <8 x i1> %c, <8 x float> %d) {
 ; CHECK-LABEL: select_or_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsllw $15, %xmm2, %xmm2
-; CHECK-NEXT:    vpmovw2m %xmm2, %k0
-; CHECK-NEXT:    vpsllw $15, %xmm1, %xmm1
-; CHECK-NEXT:    vpmovw2m %xmm1, %k1
+; CHECK-NEXT:    vpternlogq {{.*#+}} xmm0 = (xmm1 & ~xmm0) | xmm2
 ; CHECK-NEXT:    vpsllw $15, %xmm0, %xmm0
-; CHECK-NEXT:    vpmovw2m %xmm0, %k2
-; CHECK-NEXT:    kandnb %k1, %k2, %k1
-; CHECK-NEXT:    korb %k1, %k0, %k1
+; CHECK-NEXT:    vpmovw2m %xmm0, %k1
 ; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vmovaps %ymm3, %ymm0 {%k1}
 ; CHECK-NEXT:    retq

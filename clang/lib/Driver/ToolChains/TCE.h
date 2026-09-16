@@ -39,6 +39,13 @@ public:
   ~TCELEToolChain() override;
 };
 
+class LLVM_LIBRARY_VISIBILITY TCELE64ToolChain : public TCEToolChain {
+public:
+  TCELE64ToolChain(const Driver &D, const llvm::Triple &Triple,
+                   const llvm::opt::ArgList &Args);
+  ~TCELE64ToolChain() override;
+};
+
 } // end namespace toolchains
 } // end namespace driver
 } // end namespace clang

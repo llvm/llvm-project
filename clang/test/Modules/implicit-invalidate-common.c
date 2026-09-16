@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/implicit-invalidate-common
-// RUN: cp -r %S/Inputs/implicit-invalidate-common %t/
+// RUN: cp -R %S/Inputs/implicit-invalidate-common %t/
 // RUN: echo '#include "A.h"' > %t/A.c
 // RUN: echo '#include "B.h"' > %t/B.c
 

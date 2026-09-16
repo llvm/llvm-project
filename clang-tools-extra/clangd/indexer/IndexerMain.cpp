@@ -65,33 +65,33 @@ public:
       std::lock_guard<std::mutex> Lock(FilesMu);
       return Files.insert(*AbsPath).second; // Skip already processed files.
     };
-    return createStaticIndexingAction(
-        Opts,
-        [&](SymbolSlab S) {
-          // Merge as we go.
-          std::lock_guard<std::mutex> Lock(SymbolsMu);
-          for (const auto &Sym : S) {
-            if (const auto *Existing = Symbols.find(Sym.ID))
-              Symbols.insert(mergeSymbol(*Existing, Sym));
-            else
-              Symbols.insert(Sym);
-          }
-        },
-        [&](RefSlab S) {
-          std::lock_guard<std::mutex> Lock(RefsMu);
-          for (const auto &Sym : S) {
-            // Deduplication happens during insertion.
-            for (const auto &Ref : Sym.second)
-              Refs.insert(Sym.first, Ref);
-          }
-        },
-        [&](RelationSlab S) {
-          std::lock_guard<std::mutex> Lock(RelsMu);
-          for (const auto &R : S) {
-            Relations.insert(R);
-          }
-        },
-        /*IncludeGraphCallback=*/nullptr);
+    return createStaticIndexingAction(Opts, [&](IndexFileIn Result) {
+      {
+        // Merge as we go.
+        std::lock_guard<std::mutex> Lock(SymbolsMu);
+        for (const auto &Sym : *Result.Symbols) {
+          if (const auto *Existing = Symbols.find(Sym.ID))
+            Symbols.insert(mergeSymbol(*Existing, Sym));
+          else
+            Symbols.insert(Sym);
+        }
+      }
+      {
+        std::lock_guard<std::mutex> Lock(RefsMu);
+        for (const auto &Sym : *Result.Refs) {
+          // Deduplication happens during insertion.
+          for (const auto &Ref : Sym.second)
+            Refs.insert(Sym.first, Ref);
+        }
+      }
+      {
+        std::lock_guard<std::mutex> Lock(RelsMu);
+        for (const auto &R : *Result.Relations) {
+          Relations.insert(R);
+        }
+      }
+      // FIXME: Handle Result.Sources?
+    });
   }
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,

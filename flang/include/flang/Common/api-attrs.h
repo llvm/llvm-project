@@ -134,6 +134,18 @@
 #endif
 
 /*
+ * RT_GPU_TARGET is defined when compiling natively for a GPU
+ * target (AMDGPU or NVPTX) using a GPU-hosted libc/libc++. This is
+ * distinct from RT_DEVICE_COMPILATION which covers CUDA and OpenMP
+ * offload paths that use separate host/device compilation.
+ */
+#if defined(__AMDGPU__) || defined(__NVPTX__)
+#define RT_GPU_TARGET 1
+#else
+#undef RT_GPU_TARGET
+#endif
+
+/*
  * Recurrence in the call graph prevents computing minimal stack size
  * required for a kernel execution. This macro can be used to disable
  * some F18 runtime functionality that is implemented using recurrent

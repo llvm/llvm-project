@@ -6,6 +6,7 @@
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x100002 --stop-address=0x10000a  | FileCheck --check-prefix=CHECK1 %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x1000004 --stop-address=0x1000026  | FileCheck --check-prefix=CHECK2 %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x1100014 --stop-address=0x1100022  | FileCheck --check-prefix=CHECK3 %s
+// RUN: rm %t %t2
 // In this test case a branch that is in range and does not need its range
 // extended can be pushed out of range by another Thunk, necessitating another
 // pass

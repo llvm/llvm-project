@@ -43,9 +43,9 @@ loop:                                             ; preds = %loop, %entry
 define i64 @test_or3(i64 %a, i64 %b) {
 ; CHECK-LABEL: @test_or3(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = or i64 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV_NEXT:%.*]] = or i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -123,9 +123,9 @@ loop:                                             ; preds = %loop, %entry
 define i64 @test_and3(i64 %a, i64 %b) {
 ; CHECK-LABEL: @test_and3(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = and i64 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV_NEXT:%.*]] = and i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -160,6 +160,42 @@ loop:                                             ; preds = %loop, %entry
   %iv.next = and i64 %iv, %step
   tail call void @use(i64 %iv.next)
   br label %loop
+}
+
+declare i32 @get_step()
+
+define i1 @test_loop_variant_step_with_condition() {
+; CHECK-LABEL: @test_loop_variant_step_with_condition(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[STEP:%.*]] = call i32 @get_step()
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[STEP]], -1
+; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], [[STEP]]
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp sgt i32 [[IV]], -1
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
+  %step = call i32 @get_step()
+  %iv.next = add nsw i32 %iv, %step
+  %c = icmp sge i32 %step, 0
+  br i1 %c, label %exit, label %latch
+
+latch:
+  br label %loop
+
+exit:
+  %result = icmp sge i32 %iv, 0
+  ret i1 %result
 }
 
 declare void @use(i64)

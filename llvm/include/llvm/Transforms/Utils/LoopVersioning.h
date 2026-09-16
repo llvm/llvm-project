@@ -26,6 +26,7 @@ class SCEVPredicate;
 class ScalarEvolution;
 class LoopAccessInfo;
 class LoopInfo;
+class MemorySSAUpdater;
 struct RuntimeCheckingPtrGroup;
 typedef std::pair<const RuntimeCheckingPtrGroup *,
                   const RuntimeCheckingPtrGroup *>
@@ -44,12 +45,14 @@ public:
   /// It uses runtime check provided by the user. If \p UseLAIChecks is true,
   /// we will retain the default checks made by LAI. Otherwise, construct an
   /// object having no checks and we expect the user to add them.
-  LoopVersioning(const LoopAccessInfo &LAI,
-                 ArrayRef<RuntimePointerCheck> Checks, Loop *L, LoopInfo *LI,
-                 DominatorTree *DT, ScalarEvolution *SE);
+  LLVM_ABI LoopVersioning(const LoopAccessInfo &LAI,
+                          ArrayRef<RuntimePointerCheck> Checks, Loop *L,
+                          LoopInfo *LI, DominatorTree *DT, ScalarEvolution *SE,
+                          MemorySSAUpdater *MSSAU = nullptr);
 
   /// Performs the CFG manipulation part of versioning the loop including
-  /// the DominatorTree and LoopInfo updates.
+  /// the DominatorTree, LoopInfo and, if a MemorySSAUpdater was provided,
+  /// MemorySSA updates.
   ///
   /// The loop that was used to construct the class will be the "versioned" loop
   /// i.e. the loop that will receive control if all the memchecks pass.
@@ -65,7 +68,8 @@ public:
 
   /// Same but if the client has already precomputed the set of values
   /// used outside the loop, this API will allows passing that.
-  void versionLoop(const SmallVectorImpl<Instruction *> &DefsUsedOutside);
+  LLVM_ABI void
+  versionLoop(const SmallVectorImpl<Instruction *> &DefsUsedOutside);
 
   /// Returns the versioned loop.  Control flows here if pointers in the
   /// loop don't alias (i.e. all memchecks passed).  (This loop is actually the
@@ -81,24 +85,24 @@ public:
   ///
   /// This is just wrapper that calls prepareNoAliasMetadata and
   /// annotateInstWithNoAlias on the instructions of the versioned loop.
-  void annotateLoopWithNoAlias();
+  LLVM_ABI void annotateLoopWithNoAlias();
 
   /// Returns a pair containing the alias_scope and noalias metadata nodes for
   /// \p OrigInst, if they exists.
-  std::pair<MDNode *, MDNode *>
+  LLVM_ABI std::pair<MDNode *, MDNode *>
   getNoAliasMetadataFor(const Instruction *OrigInst) const;
 
   /// Set up the aliasing scopes based on the memchecks.  This needs to
   /// be called before the first call to annotateInstWithNoAlias.
-  void prepareNoAliasMetadata();
+  LLVM_ABI void prepareNoAliasMetadata();
 
   /// Add the noalias annotations to \p VersionedInst.
   ///
   /// \p OrigInst is the instruction corresponding to \p VersionedInst in the
   /// original loop.  Initialize the aliasing scopes with
   /// prepareNoAliasMetadata once before this can be called.
-  void annotateInstWithNoAlias(Instruction *VersionedInst,
-                               const Instruction *OrigInst);
+  LLVM_ABI void annotateInstWithNoAlias(Instruction *VersionedInst,
+                                        const Instruction *OrigInst);
 
 private:
   /// Adds the necessary PHI nodes for the versioned loops based on the
@@ -147,14 +151,18 @@ private:
   LoopInfo *LI;
   DominatorTree *DT;
   ScalarEvolution *SE;
+
+  /// Updater to keep MemorySSA up to date, or nullptr if MemorySSA does not
+  /// need updating.
+  MemorySSAUpdater *MSSAU;
 };
 
 /// Expose LoopVersioning as a pass.  Currently this is only used for
 /// unit-testing.  It adds all memchecks necessary to remove all may-aliasing
 /// array accesses from the loop.
-class LoopVersioningPass : public PassInfoMixin<LoopVersioningPass> {
+class LoopVersioningPass : public OptionalPassInfoMixin<LoopVersioningPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 }
 

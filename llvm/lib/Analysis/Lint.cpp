@@ -264,12 +264,13 @@ void Lint::visitCallBase(CallBase &I) {
 
         // Check that ABI attributes for the function and call-site match.
         unsigned ArgNo = AI->getOperandNo();
-        Attribute::AttrKind ABIAttributes[] = {
-            Attribute::ZExt,         Attribute::SExt,     Attribute::InReg,
-            Attribute::ByVal,        Attribute::ByRef,    Attribute::InAlloca,
-            Attribute::Preallocated, Attribute::StructRet};
         AttributeList CallAttrs = I.getAttributes();
-        for (Attribute::AttrKind Attr : ABIAttributes) {
+        for (Attribute::AttrKind Attr :
+             drop_begin(enum_seq(Attribute::None, Attribute::EndAttrKinds,
+                                 force_iteration_on_noniterable_enum))) {
+          if (!Attribute::isABIAttr(Attr))
+            continue;
+
           Attribute CallAttr = CallAttrs.getParamAttr(ArgNo, Attr);
           Attribute FnAttr = F->getParamAttribute(ArgNo, Attr);
           Check(CallAttr.isValid() == FnAttr.isValid(),
@@ -451,9 +452,9 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
     MaybeAlign BaseAlign;
 
     if (AllocaInst *AI = dyn_cast<AllocaInst>(Base)) {
-      Type *ATy = AI->getAllocatedType();
-      if (!AI->isArrayAllocation() && ATy->isSized() && !ATy->isScalableTy())
-        BaseSize = DL->getTypeAllocSize(ATy).getFixedValue();
+      std::optional<TypeSize> ATy = AI->getAllocationSize(*DL);
+      if (ATy && !ATy->isScalable())
+        BaseSize = ATy->getFixedValue();
       BaseAlign = AI->getAlign();
     } else if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Base)) {
       // If the global may be defined differently in another compilation unit
@@ -553,7 +554,7 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
   if (!C)
     return false;
 
-  if (C->isZeroValue())
+  if (C->isNullValue())
     return true;
 
   // For a vector, KnownZero will only be true if all values are zero, so check

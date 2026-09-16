@@ -44,6 +44,7 @@ class CXXDestructorDecl;
 class CXXRecordDecl;
 class CXXMethodDecl;
 class GlobalDecl;
+class ObjCContainerDecl;
 class ObjCMethodDecl;
 class ObjCProtocolDecl;
 
@@ -80,20 +81,22 @@ const CGFunctionInfo &
 arrangeCXXMethodCall(CodeGenModule &CGM, CanQualType returnType,
                      ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
                      ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
-                     RequiredArgs args);
+                     RequiredArgs args, const FunctionDecl *CallerFD);
 
 const CGFunctionInfo &arrangeFreeFunctionCall(
     CodeGenModule &CGM, CanQualType returnType, ArrayRef<CanQualType> argTypes,
     FunctionType::ExtInfo info,
-    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
-    RequiredArgs args);
+    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos, RequiredArgs args,
+    const FunctionDecl *CallerFD);
 
 // An overload with an empty `paramInfos`
 inline const CGFunctionInfo &
 arrangeFreeFunctionCall(CodeGenModule &CGM, CanQualType returnType,
                         ArrayRef<CanQualType> argTypes,
-                        FunctionType::ExtInfo info, RequiredArgs args) {
-  return arrangeFreeFunctionCall(CGM, returnType, argTypes, info, {}, args);
+                        FunctionType::ExtInfo info, RequiredArgs args,
+                        const FunctionDecl *CallerFD) {
+  return arrangeFreeFunctionCall(CGM, returnType, argTypes, info, {}, args,
+                                 CallerFD);
 }
 
 /// Returns the implicit arguments to add to a complete, non-delegating C++
@@ -212,6 +215,20 @@ llvm::Function *getNonTrivialCStructDestructor(CodeGenModule &CGM,
 /// object.
 llvm::Constant *emitObjCProtocolObject(CodeGenModule &CGM,
                                        const ObjCProtocolDecl *p);
+
+/// Get the appropriate callee for an ObjC direct method. Returns the thunk
+/// if the receiver may be null (or class may be unrealized) and precondition
+/// thunks are enabled, otherwise returns the true implementation.
+///
+/// This allows external compilers (e.g., Swift) to reuse Clang's thunk
+/// generation logic when calling ObjC direct methods, ensuring consistent
+/// nil-check behavior.
+llvm::Function *getObjCDirectMethodCallee(CodeGenModule &CGM,
+                                          const ObjCMethodDecl *OMD,
+                                          const ObjCContainerDecl *CD,
+                                          bool ReceiverCanBeNull,
+                                          bool ClassObjectCanBeUnrealized);
+
 }  // end namespace CodeGen
 }  // end namespace clang
 

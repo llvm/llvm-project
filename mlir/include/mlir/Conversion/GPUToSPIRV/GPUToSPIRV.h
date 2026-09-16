@@ -35,6 +35,10 @@ void populateGpuWMMAToSPIRVCoopMatrixKHRConversionPatterns(
 /// conversion to the type converter.
 void populateMMAToSPIRVCoopMatrixTypeConversion(
     SPIRVTypeConverter &typeConverter);
+
+/// Adds `gpu::NamedBarrierType` to `spirv::NamedBarrierType` conversion.
+void populateGPUNamedBarrierToSPIRVTypeConversion(
+    SPIRVTypeConverter &typeConverter);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUTOSPIRV_GPUTOSPIRV_H

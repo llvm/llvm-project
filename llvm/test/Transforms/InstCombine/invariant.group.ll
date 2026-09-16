@@ -216,9 +216,21 @@ define i1 @icmp_null_launder_bitcasts(ptr %a) {
   ret i1 %r
 }
 
+define i32 @retype_keeps_invariant_group(ptr %p) {
+; CHECK-LABEL: @retype_keeps_invariant_group(
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P:%.*]], align 4, !invariant.group [[META0:![0-9]+]]
+; CHECK-NEXT:    ret i32 [[V1]]
+;
+  %v = load float, ptr %p, !invariant.group !1
+  %i = bitcast float %v to i32
+  ret i32 %i
+}
+
 declare ptr @llvm.launder.invariant.group.p0(ptr)
 declare ptr addrspace(42) @llvm.launder.invariant.group.p42(ptr addrspace(42))
 declare ptr @llvm.strip.invariant.group.p0(ptr)
 declare ptr addrspace(42) @llvm.strip.invariant.group.p42(ptr addrspace(42))
 
 attributes #0 = { null_pointer_is_valid }
+
+!1 = !{}

@@ -101,6 +101,18 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
     # because they will be instantiated in the importing translation unit if
     # needed.
     elif symbol.startswith("??$"):
+        # Keep Type::getAs<T>() explicit template specializations. These are
+        # declared in headers but defined in Type.cpp, so they cannot be
+        # instantiated locally. Pattern: ??$getAs@<template_arg>@Type@clang@@...
+        if symbol.startswith("??$getAs@") and "@Type@clang@@" in symbol:
+            return symbol
+        # Keep the Registry<T> storage accessors: explicit specializations that
+        # LLVM_DEFINE_REGISTRY defines once, and that plugins call to register.
+        if (
+            symbol.startswith("??$getRegistryLinkListInstance@")
+            and "@detail@llvm@@" in symbol
+        ):
+            return symbol
         return None
     # Delete lambda object constructors and operator() functions. These start
     # with ??R<lambda_ or ??0<lambda_ and can be discarded because lambdas are
@@ -115,14 +127,9 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
     # Skip X86GenMnemonicTables functions, they are not exposed from llvm/include/.
     elif re.match(r"\?is[A-Z0-9]*@X86@llvm", symbol):
         return None
-    # Keep Registry<T>::Head and Registry<T>::Tail static members for plugin support.
-    # Pattern matches: ?Head@?$Registry@<template_args>@llvm@@ or ?Tail@?$Registry@...
-    elif (
-        "?$Registry@" in symbol
-        and "@llvm@@" in symbol
-        and (symbol.startswith("?Head@") or symbol.startswith("?Tail@"))
-    ):
-        return symbol
+    # Skip symbols added by the compiler with -fprofile-generate.
+    elif symbol.startswith("__prof"):
+        return None
     # Keep mangled llvm:: and clang:: function symbols. How we detect these is a
     # bit of a mess and imprecise, but that avoids having to completely demangle
     # the symbol name. The outermost namespace is at the end of the identifier
@@ -142,9 +149,14 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
     #                 ::= .*Z (list of types, varargs)
     # <throw-spec> ::= exceptions are not allowed
     elif re.search(r"@(llvm|clang)@@[A-Z][A-Z0-9_]*[A-JQ].+(X|.+@|.*Z)$", symbol):
-        # Remove llvm::<Class>::dump and clang::<Class>::dump methods because
-        # they are used for debugging only.
-        if symbol.startswith("?dump@"):
+        # Remove llvm::<Class>::dump, clang::<Class>::dump,
+        # clang::<Class>::dumpColor, and clang::<Class>::printPretty methods
+        # because they are used for debugging only.
+        if symbol.startswith(("?dump@", "?dumpColor@", "?printPretty@")):
+            return None
+        # Remove clang::interp:: symbols: the bytecode interpreter's headers are
+        # private to clang/lib/AST/ByteCode, so no plugin can reference them.
+        if "@interp@clang@@" in symbol:
             return None
         return symbol
     # Keep mangled global variables and static class members in llvm:: namespace.
@@ -506,6 +518,11 @@ if __name__ == "__main__":
         template = get_template_name(sym, args.mangling)
         if template:
             template_instantiation_refs.add(template)
+            # Registry<T> is only ever used through its storage accessor.
+            if template.endswith("getRegistryLinkListInstance"):
+                template_instantiation_refs.add(
+                    "Registry" if args.mangling == "microsoft" else "8Registry"
+                )
 
     # Print symbols which both:
     #  * Appear in exactly one input, as symbols defined in multiple

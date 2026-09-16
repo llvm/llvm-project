@@ -77,22 +77,22 @@ def XPairsClass : MyClass<64, [untyped], (add XPairs)>;
 // Modes who are not controlling Register related features will be manipulated
 // the same as DefaultMode.
 // CHECK-REG-LABEL: RegisterClass XRegs:
-// CHECK-REG: SpillSize: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
-// CHECK-REG: SpillAlignment: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: SpillSize: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: SpillAlignment: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
 // CHECK-REG: Regs: X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15
 
 // CHECK-REG-LABEL: RegisterClass XPairsClass:
-// CHECK-REG: SpillSize: { Default:64 TestMode:128 TestMode1:64 TestMode2:64 }
-// CHECK-REG: SpillAlignment: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: SpillSize: { DefaultMode:64 TestMode:128 TestMode1:64 TestMode2:64 }
+// CHECK-REG: SpillAlignment: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
 // CHECK-REG: CoveredBySubRegs: 1
 // CHECK-REG: Regs: X0_X1 X2_X3 X4_X5 X6_X7 X8_X9 X10_X11 X12_X13 X14_X15
 
 // CHECK-REG-LABEL: SubRegIndex sub_even:
-// CHECK-REG: Offset: { Default:0 TestMode:0 TestMode1:0 TestMode2:0 }
-// CHECK-REG: Size: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: Offset: { DefaultMode:0 TestMode:0 TestMode1:0 TestMode2:0 }
+// CHECK-REG: Size: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
 // CHECK-REG-LABEL: SubRegIndex sub_odd:
-// CHECK-REG: Offset: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
-// CHECK-REG: Size: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: Offset: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: Size: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
 
 //============================================================================//
 //--------------------- Encoding/Decoding parts ------------------------------//

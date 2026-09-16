@@ -23,6 +23,7 @@
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -66,24 +67,17 @@ using namespace llvm;
 
 CGOPT(std::string, MArch)
 CGOPT(std::string, MCPU)
+CGOPT(std::string, MTune)
 CGLIST(std::string, MAttrs)
 CGOPT_EXP(Reloc::Model, RelocModel)
-CGOPT(ThreadModel::Model, ThreadModel)
 CGOPT_EXP(CodeModel::Model, CodeModel)
 CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
-CGOPT(bool, EnableNoInfsFPMath)
-CGOPT(bool, EnableNoNaNsFPMath)
-CGOPT(bool, EnableNoSignedZerosFPMath)
-CGOPT(bool, EnableNoTrappingFPMath)
-CGOPT(bool, EnableAIXExtendedAltivecABI)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFPMath)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFP32Math)
-CGOPT(bool, EnableHonorSignDependentRoundingFPMath)
 CGOPT(FloatABI::ABIType, FloatABIForCalls)
-CGOPT(FPOpFusion::FPOpFusionMode, FuseFPOps)
 CGOPT(SwiftAsyncFramePointerMode, SwiftAsyncFramePointer)
 CGOPT(bool, DontPlaceZerosInBSS)
 CGOPT(bool, EnableGuaranteedTailCallOpt)
@@ -92,7 +86,6 @@ CGOPT(bool, StackSymbolOrdering)
 CGOPT(bool, StackRealign)
 CGOPT(std::string, TrapFuncName)
 CGOPT(bool, UseCtors)
-CGOPT(bool, DisableIntegratedAS)
 CGOPT_EXP(bool, DataSections)
 CGOPT_EXP(bool, FunctionSections)
 CGOPT(bool, IgnoreXCOFFVisibility)
@@ -105,7 +98,6 @@ CGOPT_EXP(bool, EnableTLSDESC)
 CGOPT(bool, UniqueSectionNames)
 CGOPT(bool, UniqueBasicBlockSectionNames)
 CGOPT(bool, SeparateNamedSections)
-CGOPT(EABI, EABIVersion)
 CGOPT(DebuggerKind, DebuggerTuningOpt)
 CGOPT(VectorLibrary, VectorLibrary)
 CGOPT(bool, EnableStackSizeSection)
@@ -162,14 +154,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                      "Combination of ropi and rwpi")));
   CGBINDOPT(RelocModel);
 
-  static cl::opt<ThreadModel::Model> ThreadModel(
-      "thread-model", cl::desc("Choose threading model"),
-      cl::init(ThreadModel::POSIX),
-      cl::values(
-          clEnumValN(ThreadModel::POSIX, "posix", "POSIX thread model"),
-          clEnumValN(ThreadModel::Single, "single", "Single thread model")));
-  CGBINDOPT(ThreadModel);
-
   static cl::opt<CodeModel::Model> CodeModel(
       "code-model", cl::desc("Choose code model"),
       cl::values(clEnumValN(CodeModel::Tiny, "tiny", "Tiny code model"),
@@ -187,10 +171,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
 
   static cl::opt<ExceptionHandling> ExceptionModel(
       "exception-model", cl::desc("exception model"),
-      cl::init(ExceptionHandling::None),
+      cl::init(ExceptionHandling::Default),
       cl::values(
-          clEnumValN(ExceptionHandling::None, "default",
+          clEnumValN(ExceptionHandling::Default, "default",
                      "default exception handling model"),
+          clEnumValN(ExceptionHandling::None, "none", "no exception handling"),
           clEnumValN(ExceptionHandling::DwarfCFI, "dwarf",
                      "DWARF-like CFI based exception handling"),
           clEnumValN(ExceptionHandling::SjLj, "sjlj",
@@ -199,7 +184,9 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(ExceptionHandling::WinEH, "wineh",
                      "Windows exception model"),
           clEnumValN(ExceptionHandling::Wasm, "wasm",
-                     "WebAssembly exception handling")));
+                     "WebAssembly exception handling"),
+          clEnumValN(ExceptionHandling::Emscripten, "emscripten",
+                     "Emscripten JavaScript-based exception handling")));
   CGBINDOPT(ExceptionModel);
 
   static cl::opt<CodeGenFileType> FileType(
@@ -233,32 +220,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
 
-  static cl::opt<bool> EnableNoInfsFPMath(
-      "enable-no-infs-fp-math",
-      cl::desc("Enable FP math optimizations that assume no +-Infs"),
-      cl::init(false));
-  CGBINDOPT(EnableNoInfsFPMath);
-
-  static cl::opt<bool> EnableNoNaNsFPMath(
-      "enable-no-nans-fp-math",
-      cl::desc("Enable FP math optimizations that assume no NaNs"),
-      cl::init(false));
-  CGBINDOPT(EnableNoNaNsFPMath);
-
-  static cl::opt<bool> EnableNoSignedZerosFPMath(
-      "enable-no-signed-zeros-fp-math",
-      cl::desc("Enable FP math optimizations that assume "
-               "the sign of 0 is insignificant"),
-      cl::init(false));
-  CGBINDOPT(EnableNoSignedZerosFPMath);
-
-  static cl::opt<bool> EnableNoTrappingFPMath(
-      "enable-no-trapping-fp-math",
-      cl::desc("Enable setting the FP exceptions build "
-               "attribute not to use exceptions"),
-      cl::init(false));
-  CGBINDOPT(EnableNoTrappingFPMath);
-
   static const auto DenormFlagEnumOptions = cl::values(
       clEnumValN(DenormalMode::IEEE, "ieee", "IEEE 754 denormal numbers"),
       clEnumValN(DenormalMode::PreserveSign, "preserve-sign",
@@ -284,12 +245,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
     DenormFlagEnumOptions);
   CGBINDOPT(DenormalFP32Math);
 
-  static cl::opt<bool> EnableHonorSignDependentRoundingFPMath(
-      "enable-sign-dependent-rounding-fp-math", cl::Hidden,
-      cl::desc("Force codegen to assume rounding mode can change dynamically"),
-      cl::init(false));
-  CGBINDOPT(EnableHonorSignDependentRoundingFPMath);
-
   static cl::opt<FloatABI::ABIType> FloatABIForCalls(
       "float-abi", cl::desc("Choose float ABI type"),
       cl::init(FloatABI::Default),
@@ -300,17 +255,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                  clEnumValN(FloatABI::Hard, "hard",
                             "Hard float ABI (uses FP registers)")));
   CGBINDOPT(FloatABIForCalls);
-
-  static cl::opt<FPOpFusion::FPOpFusionMode> FuseFPOps(
-      "fp-contract", cl::desc("Enable aggressive formation of fused FP ops"),
-      cl::init(FPOpFusion::Standard),
-      cl::values(
-          clEnumValN(FPOpFusion::Fast, "fast",
-                     "Fuse FP ops whenever profitable"),
-          clEnumValN(FPOpFusion::Standard, "on", "Only fuse 'blessed' FP ops."),
-          clEnumValN(FPOpFusion::Strict, "off",
-                     "Only fuse FP ops when the result won't be affected.")));
-  CGBINDOPT(FuseFPOps);
 
   static cl::opt<SwiftAsyncFramePointerMode> SwiftAsyncFramePointer(
       "swift-async-fp",
@@ -329,11 +273,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::desc("Don't place zero-initialized symbols into bss section"),
       cl::init(false));
   CGBINDOPT(DontPlaceZerosInBSS);
-
-  static cl::opt<bool> EnableAIXExtendedAltivecABI(
-      "vec-extabi", cl::desc("Enable the AIX Extended Altivec ABI."),
-      cl::init(false));
-  CGBINDOPT(EnableAIXExtendedAltivecABI);
 
   static cl::opt<bool> EnableGuaranteedTailCallOpt(
       "tailcallopt",
@@ -431,16 +370,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::desc("Use separate unique sections for named sections"),
       cl::init(false));
   CGBINDOPT(SeparateNamedSections);
-
-  static cl::opt<EABI> EABIVersion(
-      "meabi", cl::desc("Set EABI type (default depends on triple):"),
-      cl::init(EABI::Default),
-      cl::values(
-          clEnumValN(EABI::Default, "default", "Triple default EABI version"),
-          clEnumValN(EABI::EABI4, "4", "EABI version 4"),
-          clEnumValN(EABI::EABI5, "5", "EABI version 5"),
-          clEnumValN(EABI::GNU, "gnu", "EABI GNU")));
-  CGBINDOPT(EABIVersion);
 
   static cl::opt<DebuggerKind> DebuggerTuningOpt(
       "debugger-tune", cl::desc("Tune debug info for a particular debugger"),
@@ -547,12 +476,16 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(XCOFFReadOnlyPointers);
 
-  static cl::opt<bool> DisableIntegratedAS(
-      "no-integrated-as", cl::desc("Disable integrated assembler"),
-      cl::init(false));
-  CGBINDOPT(DisableIntegratedAS);
-
   mc::RegisterMCTargetOptionsFlags();
+}
+
+codegen::RegisterMTuneFlag::RegisterMTuneFlag() {
+  static cl::opt<std::string> MTune(
+      "mtune",
+      cl::desc("Tune for a specific CPU microarchitecture (-mtune=help for "
+               "details)"),
+      cl::value_desc("tune-cpu-name"), cl::init(""));
+  CGBINDOPT(MTune);
 }
 
 codegen::RegisterSaveStatsFlag::RegisterSaveStatsFlag() {
@@ -595,22 +528,10 @@ codegen::getBBSectionsMode(llvm::TargetOptions &Options) {
 TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
-  Options.AllowFPOpFusion = getFuseFPOps();
-  Options.NoInfsFPMath = getEnableNoInfsFPMath();
-  Options.NoNaNsFPMath = getEnableNoNaNsFPMath();
-  Options.NoSignedZerosFPMath = getEnableNoSignedZerosFPMath();
-  Options.NoTrappingFPMath = getEnableNoTrappingFPMath();
-
-  Options.HonorSignDependentRoundingFPMathOption =
-      getEnableHonorSignDependentRoundingFPMath();
-  if (getFloatABIForCalls() != FloatABI::Default)
-    Options.FloatABIType = getFloatABIForCalls();
-  Options.EnableAIXExtendedAltivecABI = getEnableAIXExtendedAltivecABI();
   Options.NoZerosInBSS = getDontPlaceZerosInBSS();
   Options.GuaranteedTailCallOpt = getEnableGuaranteedTailCallOpt();
   Options.StackSymbolOrdering = getStackSymbolOrdering();
   Options.UseInitArray = !getUseCtors();
-  Options.DisableIntegratedAS = getDisableIntegratedAS();
   Options.DataSections =
       getExplicitDataSections().value_or(TheTriple.hasDefaultDataSections());
   Options.FunctionSections = getFunctionSections();
@@ -644,21 +565,33 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
 
   Options.MCOptions = mc::InitMCTargetOptionsFromFlags();
 
-  Options.ThreadModel = getThreadModel();
-  Options.EABIVersion = getEABIVersion();
   Options.DebuggerTuning = getDebuggerTuningOpt();
   Options.SwiftAsyncFramePointer = getSwiftAsyncFramePointer();
   return Options;
 }
 
 std::string codegen::getCPUStr() {
-  // If user asked for the 'native' CPU, autodetect here. If autodection fails,
-  // this will set the CPU to an empty string which tells the target to
+  std::string MCPU = getMCPU();
+
+  // If user asked for the 'native' CPU, autodetect here. If auto-detection
+  // fails, this will set the CPU to an empty string which tells the target to
   // pick a basic default.
-  if (getMCPU() == "native")
+  if (MCPU == "native")
     return std::string(sys::getHostCPUName());
 
-  return getMCPU();
+  return MCPU;
+}
+
+std::string codegen::getTuneCPUStr() {
+  std::string TuneCPU = getMTune();
+
+  // If user asked for the 'native' tune CPU, autodetect here. If auto-detection
+  // fails, this will set the tune CPU to an empty string which tells the target
+  // to pick a basic default.
+  if (TuneCPU == "native")
+    return std::string(sys::getHostCPUName());
+
+  return TuneCPU;
 }
 
 std::string codegen::getFeaturesStr() {
@@ -705,16 +638,16 @@ void codegen::renderBoolStringAttr(AttrBuilder &B, StringRef Name, bool Val) {
       renderBoolStringAttr(NewAttrs, AttrName, *CL);                           \
   } while (0)
 
-/// Set function attributes of function \p F based on CPU, Features, and command
-/// line flags.
-void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
-                                    Function &F) {
+void codegen::setFunctionAttributes(Function &F, StringRef CPU,
+                                    StringRef Features, StringRef TuneCPU) {
   auto &Ctx = F.getContext();
   AttributeList Attrs = F.getAttributes();
   AttrBuilder NewAttrs(Ctx);
 
   if (!CPU.empty() && !F.hasFnAttribute("target-cpu"))
     NewAttrs.addAttribute("target-cpu", CPU);
+  if (!TuneCPU.empty() && !F.hasFnAttribute("tune-cpu"))
+    NewAttrs.addAttribute("tune-cpu", TuneCPU);
   if (!Features.empty()) {
     // Append the command line features to any that are already on the function.
     StringRef OldFeatures =
@@ -747,27 +680,16 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
   if (getStackRealign())
     NewAttrs.addAttribute("stackrealign");
 
-  HANDLE_BOOL_ATTR(EnableNoInfsFPMathView, "no-infs-fp-math");
-  HANDLE_BOOL_ATTR(EnableNoNaNsFPMathView, "no-nans-fp-math");
-  HANDLE_BOOL_ATTR(EnableNoSignedZerosFPMathView, "no-signed-zeros-fp-math");
-
-  if (DenormalFPMathView->getNumOccurrences() > 0 &&
-      !F.hasFnAttribute("denormal-fp-math")) {
+  if ((DenormalFPMathView->getNumOccurrences() > 0 ||
+       DenormalFP32MathView->getNumOccurrences() > 0) &&
+      !F.hasFnAttribute(Attribute::DenormalFPEnv)) {
     DenormalMode::DenormalModeKind DenormKind = getDenormalFPMath();
+    DenormalMode::DenormalModeKind DenormKindF32 = getDenormalFP32Math();
 
+    DenormalFPEnv FPEnv(DenormalMode{DenormKind, DenormKind},
+                        DenormalMode{DenormKindF32, DenormKindF32});
     // FIXME: Command line flag should expose separate input/output modes.
-    NewAttrs.addAttribute("denormal-fp-math",
-                          DenormalMode(DenormKind, DenormKind).str());
-  }
-
-  if (DenormalFP32MathView->getNumOccurrences() > 0 &&
-      !F.hasFnAttribute("denormal-fp-math-f32")) {
-    // FIXME: Command line flag should expose separate input/output modes.
-    DenormalMode::DenormalModeKind DenormKind = getDenormalFP32Math();
-
-    NewAttrs.addAttribute(
-      "denormal-fp-math-f32",
-      DenormalMode(DenormKind, DenormKind).str());
+    NewAttrs.addDenormalFPEnvAttr(FPEnv);
   }
 
   if (TrapFuncNameView->getNumOccurrences() > 0)
@@ -784,17 +706,35 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
   F.setAttributes(Attrs.addFnAttributes(Ctx, NewAttrs));
 }
 
-/// Set function attributes of functions in Module M based on CPU,
-/// Features, and command line flags.
-void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
-                                    Module &M) {
+void codegen::setFunctionAttributes(Module &M, StringRef CPU,
+                                    StringRef Features, StringRef TuneCPU) {
+  // Synthesize the "float-abi" module flag from the -float-abi option.
+  FloatABI::ABIType ABI = getFloatABIForCalls();
+  if (ABI != FloatABI::Default) {
+    if (auto *Existing =
+            dyn_cast_or_null<MDString>(M.getModuleFlag("float-abi"))) {
+      // The module already records a float ABI; -float-abi must not contradict
+      // it.
+      if (Existing->getString() != FloatABI::getABITypeName(ABI))
+        reportFatalUsageError(
+            "-float-abi=" + FloatABI::getABITypeName(ABI) +
+            " conflicts with the \"float-abi\" module flag \"" +
+            Existing->getString() + "\"");
+    } else {
+      M.addModuleFlag(
+          Module::Error, "float-abi",
+          MDString::get(M.getContext(), FloatABI::getABITypeName(ABI)));
+    }
+  }
+
   for (Function &F : M)
-    setFunctionAttributes(CPU, Features, F);
+    setFunctionAttributes(F, CPU, Features, TuneCPU);
 }
 
 Expected<std::unique_ptr<TargetMachine>>
-codegen::createTargetMachineForTriple(StringRef TargetTriple,
+codegen::createTargetMachineForTriple(const Triple &TargetTriple,
                                       CodeGenOptLevel OptLevel) {
+  // lookupTarget may mutate the triple, so we need a copy.
   Triple TheTriple(TargetTriple);
   std::string Error;
   const auto *TheTarget =
@@ -809,7 +749,7 @@ codegen::createTargetMachineForTriple(StringRef TargetTriple,
   if (!Target)
     return createStringError(inconvertibleErrorCode(),
                              Twine("could not allocate target machine for ") +
-                                 TargetTriple);
+                                 TheTriple.str());
   return std::unique_ptr<TargetMachine>(Target);
 }
 

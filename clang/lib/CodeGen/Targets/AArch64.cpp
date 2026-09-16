@@ -378,7 +378,8 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   if (IsVariadicFn && getTarget().getTriple().isWindowsArm64EC()) {
     // Arm64EC varargs functions use the x86_64 classification rules,
     // not the AArch64 ABI rules.
-    return WinX86_64CodegenInfo->getABIInfo().classifyArgForArm64ECVarArg(Ty);
+    return WinX86_64CodegenInfo->getABIInfo().classifyArgForArm64ECVarArg(
+        Ty, IsNamedArg);
   }
 
   // Handle illegal vector types here.
@@ -411,6 +412,9 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
           break;
         case BuiltinType::SveBoolx4:
           NPRN = std::min(NPRN + 4, 4u);
+          break;
+        case BuiltinType::MFloat8:
+          NSRN = std::min(NSRN + 1, 8u);
           break;
         default:
           if (BT->isSVESizelessBuiltinType())
@@ -1164,6 +1168,7 @@ RValue AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
 
 RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                    QualType Ty, AggValueSlot Slot) const {
+  bool AllowHigherAlign = false;
   bool IsIndirect = false;
 
   if (getTarget().getTriple().isWindowsArm64EC()) {
@@ -1172,6 +1177,10 @@ RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
     uint64_t Width = getContext().getTypeSize(Ty);
     IsIndirect = Width > 64 || !llvm::isPowerOf2_64(Width);
   } else {
+    // E.g. __int128 when passed is aligned to 16 bytes, so it must be read
+    // with the same alignment.
+    AllowHigherAlign = true;
+
     // Composites larger than 16 bytes are passed by reference.
     if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) > 128)
       IsIndirect = true;
@@ -1179,8 +1188,7 @@ RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           CGF.getContext().getTypeInfoInChars(Ty),
-                          CharUnits::fromQuantity(8),
-                          /*allowHigherAlign*/ false, Slot);
+                          CharUnits::fromQuantity(8), AllowHigherAlign, Slot);
 }
 
 static bool isStreamingCompatible(const FunctionDecl *F) {

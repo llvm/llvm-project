@@ -56,6 +56,8 @@ public:
   bool legalizeFPTOI(MachineInstr &MI, MachineRegisterInfo &MRI,
                      MachineIRBuilder &B, bool Signed) const;
   bool legalizeMinNumMaxNum(LegalizerHelper &Helper, MachineInstr &MI) const;
+  bool legalizeExtract(LegalizerHelper &Helper, MachineInstr &MI) const;
+  bool legalizeInsert(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeExtractVectorElt(MachineInstr &MI, MachineRegisterInfo &MRI,
                                 MachineIRBuilder &B) const;
   bool legalizeInsertVectorElt(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -97,8 +99,11 @@ public:
                           unsigned Flags) const;
   bool legalizeFExp10Unsafe(MachineIRBuilder &B, Register Dst, Register Src,
                             unsigned Flags) const;
+
+  bool legalizeFEXPF64(MachineInstr &MI, MachineIRBuilder &B) const;
+
   bool legalizeFExp(MachineInstr &MI, MachineIRBuilder &B) const;
-  bool legalizeFPow(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeFPow(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeFFloor(MachineInstr &MI, MachineRegisterInfo &MRI,
                       MachineIRBuilder &B) const;
 
@@ -112,8 +117,10 @@ public:
   bool legalizeMul(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeCTLZ_CTTZ(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) const;
-  bool legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI, MachineRegisterInfo &MRI,
-                               MachineIRBuilder &B) const;
+  bool legalizeCTLZ_ZERO_POISON(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                MachineIRBuilder &B) const;
+  bool legalizeCTLS(MachineInstr &MI, MachineRegisterInfo &MRI,
+                    MachineIRBuilder &B) const;
 
   void buildLoadInputValue(Register DstReg, MachineIRBuilder &B,
                            const ArgDescriptor *Arg,
@@ -224,8 +231,6 @@ public:
   bool legalizeLaneOp(LegalizerHelper &Helper, MachineInstr &MI,
                       Intrinsic::ID IID) const;
 
-  bool legalizeBVHIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
-
   bool legalizeStackSave(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeWaveID(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeConstHwRegRead(MachineInstr &MI, MachineIRBuilder &B,
@@ -246,10 +251,8 @@ public:
 
   bool legalizeSBufferPrefetch(LegalizerHelper &Helper, MachineInstr &MI) const;
 
-  bool legalizeTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
-                    MachineIRBuilder &B) const;
-  bool legalizeTrapEndpgm(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          MachineIRBuilder &B) const;
+  bool legalizeTrap(LegalizerHelper &Helper, MachineInstr &MI) const;
+  bool legalizeTrapEndpgm(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeTrapHsaQueuePtr(MachineInstr &MI, MachineRegisterInfo &MRI,
                                MachineIRBuilder &B) const;
   bool legalizeTrapHsa(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -259,6 +262,10 @@ public:
 
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
+
+private:
+  Register getBaseSegmentAperture(unsigned AS, MachineRegisterInfo &MRI,
+                                  MachineIRBuilder &B) const;
 };
 } // End llvm namespace.
 #endif
