@@ -2724,32 +2724,31 @@ TEST(TargetParserTest, testAMDGPUparseArchR600) {
   struct CanonicalGPU {
     StringRef Name;
     AMDGPU::GPUKind Kind;
-    AMDGPU::R600FeatureKind Features;
+    bool HasFMA;
   };
   static const CanonicalGPU Canonicals[] = {
-      {"r600", AMDGPU::GK_R600, AMDGPU::R600_FEATURE_NONE},
-      {"r630", AMDGPU::GK_R630, AMDGPU::R600_FEATURE_NONE},
-      {"rs880", AMDGPU::GK_RS880, AMDGPU::R600_FEATURE_NONE},
-      {"rv670", AMDGPU::GK_RV670, AMDGPU::R600_FEATURE_NONE},
-      {"rv710", AMDGPU::GK_RV710, AMDGPU::R600_FEATURE_NONE},
-      {"rv730", AMDGPU::GK_RV730, AMDGPU::R600_FEATURE_NONE},
-      {"rv770", AMDGPU::GK_RV770, AMDGPU::R600_FEATURE_NONE},
-      {"cedar", AMDGPU::GK_CEDAR, AMDGPU::R600_FEATURE_NONE},
-      {"cypress", AMDGPU::GK_CYPRESS, AMDGPU::R600_FEATURE_FMA},
-      {"juniper", AMDGPU::GK_JUNIPER, AMDGPU::R600_FEATURE_NONE},
-      {"redwood", AMDGPU::GK_REDWOOD, AMDGPU::R600_FEATURE_NONE},
-      {"sumo", AMDGPU::GK_SUMO, AMDGPU::R600_FEATURE_NONE},
-      {"barts", AMDGPU::GK_BARTS, AMDGPU::R600_FEATURE_NONE},
-      {"caicos", AMDGPU::GK_CAICOS, AMDGPU::R600_FEATURE_NONE},
-      {"cayman", AMDGPU::GK_CAYMAN, AMDGPU::R600_FEATURE_FMA},
-      {"turks", AMDGPU::GK_TURKS, AMDGPU::R600_FEATURE_NONE},
+      {"r600", AMDGPU::GK_R600, false},
+      {"r630", AMDGPU::GK_R630, false},
+      {"rs880", AMDGPU::GK_RS880, false},
+      {"rv670", AMDGPU::GK_RV670, false},
+      {"rv710", AMDGPU::GK_RV710, false},
+      {"rv730", AMDGPU::GK_RV730, false},
+      {"rv770", AMDGPU::GK_RV770, false},
+      {"cedar", AMDGPU::GK_CEDAR, false},
+      {"cypress", AMDGPU::GK_CYPRESS, true},
+      {"juniper", AMDGPU::GK_JUNIPER, false},
+      {"redwood", AMDGPU::GK_REDWOOD, false},
+      {"sumo", AMDGPU::GK_SUMO, false},
+      {"barts", AMDGPU::GK_BARTS, false},
+      {"caicos", AMDGPU::GK_CAICOS, false},
+      {"cayman", AMDGPU::GK_CAYMAN, true},
+      {"turks", AMDGPU::GK_TURKS, false},
   };
   for (const CanonicalGPU &G : Canonicals) {
     EXPECT_EQ(AMDGPU::parseArchR600(G.Name), G.Kind) << G.Name;
     EXPECT_EQ(AMDGPU::getArchNameR600(G.Kind), G.Name) << G.Name;
-    EXPECT_EQ(AMDGPU::getArchAttrR600(G.Kind), G.Features) << G.Name;
     EXPECT_EQ(AMDGPU::getFeatureBitsetR600(G.Kind).test(AMDGPU::R600_FEAT_FMAF),
-              G.Features == AMDGPU::R600_FEATURE_FMA)
+              G.HasFMA)
         << G.Name;
   }
 
@@ -2868,7 +2867,11 @@ TEST(TargetParserTest, testAMDGPUHalfAddressableLDSFeature) {
         AMDGPU::FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY);
   };
 
-  // Only gfx10/11/12 address half of the physical LDS block.
+  // Gfx6 and gfx10/11/12 address half of the physical LDS block.
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX600));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX601));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX602));
+  EXPECT_FALSE(Has(AMDGPU::GK_GFX700));
   EXPECT_FALSE(Has(AMDGPU::GK_GFX900));
   EXPECT_TRUE(Has(AMDGPU::GK_GFX1030));
   EXPECT_TRUE(Has(AMDGPU::GK_GFX1100));
@@ -3221,6 +3224,117 @@ TEST(TargetParserTest, testAMDGPUgetMaxHWAddressableLocalMemorySize) {
             327680u);
 }
 
+TEST(TargetParserTest, testAMDGPUgetBufferResourceNumRecordsWidth) {
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_GFX900), 32u);
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_GFX1201), 32u);
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_GFX1250), 45u);
+
+  // Generic families that agree on resource width behave.
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_GFX9_GENERIC),
+            32u);
+
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_GENERIC),
+            std::nullopt);
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_GENERIC_HSA),
+            std::nullopt);
+
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_NONE),
+            std::nullopt);
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(AMDGPU::GK_R600),
+            std::nullopt);
+
+  EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(Triple::NoSubArch),
+            std::nullopt);
+
+  SmallVector<StringRef, 0> AllGPUs;
+  AMDGPU::fillValidArchListAMDGCN(AllGPUs, Triple::NoSubArch);
+  ASSERT_FALSE(AllGPUs.empty());
+  for (StringRef Name : AllGPUs) {
+    AMDGPU::GPUKind Kind = AMDGPU::parseArchAMDGCN(Name);
+    std::optional<unsigned> Width =
+        AMDGPU::getBufferResourceNumRecordsWidth(Kind);
+    EXPECT_TRUE(Width.has_value())
+        << "no num_records width for '" << Name << "'";
+    // The two overloads must agree wherever the GPU has a subarch to look up.
+    Triple::SubArchType SubArch = AMDGPU::getSubArch(Kind);
+    EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(SubArch), Width)
+        << "overloads disagree for '" << Name << "'";
+  }
+}
+
+TEST(TargetParserTest, testAMDGPUgetLocalMemorySize) {
+  // gfx6 addresses 32 KiB of a 64 KiB block.
+  for (Triple::SubArchType SubArch :
+       {Triple::AMDGPUSubArch600, Triple::AMDGPUSubArch601,
+        Triple::AMDGPUSubArch602}) {
+    SCOPED_TRACE(AMDGPU::getArchNameFromSubArch(SubArch));
+    EXPECT_EQ(AMDGPU::getLocalMemorySize(SubArch, true), 65536u);
+    EXPECT_EQ(AMDGPU::getLocalMemorySize(SubArch, false), 32768u);
+  }
+
+  // Without a half-addressable physical block the total matches the
+  // addressable cap, and running on two SIMDs halves it.
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX700, true), 65536u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX700, false), 32768u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX900, true), 65536u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX950, true), 163840u);
+
+  // gfx10/11/12 address 64 KiB of a 128 KiB block.
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1030, true), 131072u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1030, false), 65536u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1100, true), 131072u);
+
+  // gfx12.5 and gfx13 dropped the half-addressable block.
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1250, true), 327680u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1310, true), 196608u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1310, false), 98304u);
+
+  // An unknown GPU falls back to the smallest block.
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_NONE, true), 32768u);
+
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(Triple::AMDGPUSubArch900, true), 65536u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(Triple::AMDGPUSubArch1030, true),
+            131072u);
+}
+
+TEST(TargetParserTest, testAMDGPUgetAddressableLocalMemorySize) {
+  // A work-group never allocates past the hardware cap, so the doubled
+  // gfx6 and gfx10/11/12 blocks are capped back to the addressable size.
+  for (Triple::SubArchType SubArch :
+       {Triple::AMDGPUSubArch600, Triple::AMDGPUSubArch601,
+        Triple::AMDGPUSubArch602}) {
+    SCOPED_TRACE(AMDGPU::getArchNameFromSubArch(SubArch));
+    EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(SubArch, true), 32768u);
+    EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(SubArch, false), 32768u);
+  }
+
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX1030, true),
+            65536u);
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX1030, false),
+            65536u);
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX1100, true),
+            65536u);
+
+  // Without a doubled block the cap is only reached in full-SIMD mode.
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX700, true),
+            65536u);
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX700, false),
+            32768u);
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX950, true),
+            163840u);
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX1250, true),
+            327680u);
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX1310, false),
+            98304u);
+
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_NONE, true),
+            32768u);
+
+  EXPECT_EQ(
+      AMDGPU::getAddressableLocalMemorySize(Triple::AMDGPUSubArch1030, true),
+      65536u);
+}
+
 TEST(TargetParserTest, testAMDGPUgetNumWorkGroupSIMDs) {
   EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(true), 4u);
   EXPECT_EQ(AMDGPU::getNumWorkGroupSIMDs(false), 2u);
@@ -3310,8 +3424,8 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
       "amdgcn-amd-amdhsa-unknown-gfx900:sramecc+"));
 
   // xnack is only a valid modifier when the processor supports on/off modes.
-  // gfx1250 has xnack permanently enabled (FEATURE_XNACK without
-  // FEATURE_XNACK_ON_OFF_MODES), so an xnack modifier is rejected.
+  // gfx1250 has xnack permanently enabled (xnack supported but without
+  // on/off modes), so an xnack modifier is rejected.
   EXPECT_FALSE(TargetID::parseTargetIDString(
       "amdgcn-amd-amdhsa-unknown-gfx1250:xnack+"));
   EXPECT_FALSE(TargetID::parseTargetIDString(

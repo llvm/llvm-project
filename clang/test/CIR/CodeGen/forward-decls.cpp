@@ -122,3 +122,61 @@ struct A {
   } b;
 };
 void test(struct A *a){};
+
+
+//--- incomplete_class_comma_expr
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -fclangir -emit-cir %t/incomplete_class_comma_expr -o %t/incomplete_class_comma_expr.cir
+// RUN: FileCheck %s --input-file=%t/incomplete_class_comma_expr.cir --check-prefix=CHECK6
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -fclangir -emit-llvm %t/incomplete_class_comma_expr -o %t/incomplete_class_comma_expr-cir.ll
+// RUN: FileCheck %s --input-file=%t/incomplete_class_comma_expr-cir.ll --check-prefix=CIR6
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -emit-llvm %t/incomplete_class_comma_expr -o %t/incomplete_class_comma_expr-ogcg.ll
+// RUN: FileCheck %s --input-file=%t/incomplete_class_comma_expr-ogcg.ll --check-prefix=OGCG6
+
+class Enum extern const writeTypeNames;
+int flags = (writeTypeNames, flags);
+
+// Incomplete type, never constant even though its an enum.
+// CHECK6:      cir.global "private" external @writeTypeNames : !rec_Enum
+// CHECK6-NOT:  constant
+
+// CIR6:        @writeTypeNames = external global %class.Enum
+// CIR6-NOT:    constant
+
+// OGCG6:       @writeTypeNames = external global %class.Enum
+// OGCG6-NOT:   constant
+
+//--- extern_const_global_constant
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -fclangir -emit-cir %t/extern_const_global_constant -o %t/extern_const_global_constant.cir
+// RUN: FileCheck %s --input-file=%t/extern_const_global_constant.cir --check-prefix=CHECK7
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -fclangir -emit-llvm %t/extern_const_global_constant -o %t/extern_const_global_constant-cir.ll
+// RUN: FileCheck %s --input-file=%t/extern_const_global_constant-cir.ll --check-prefix=CIR7
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -emit-llvm %t/extern_const_global_constant -o %t/extern_const_global_constant-ogcg.ll
+// RUN: FileCheck %s --input-file=%t/extern_const_global_constant-ogcg.ll --check-prefix=OGCG7
+
+// Complete class with no mutable fields, can be marked constant.
+struct NoMutable { int x; };
+extern const NoMutable no_mutable_val;
+// CHECK7:  cir.global "private" constant external @no_mutable_val : !rec_NoMutable
+// Note: This is a case where CIR is doing a better job than classic, which
+// always fails to exclude ctor/dtor.
+// CIR7:    @no_mutable_val = external constant %struct.NoMutable
+// OGCG7:   @no_mutable_val = external global %struct.NoMutable
+
+// Complete class with a mutable field.
+struct WithMutable { mutable int x; };
+extern const WithMutable with_mutable_val;
+// CHECK7:      cir.global "private" external @with_mutable_val : !rec_WithMutable
+// CHECK7-NOT:  constant
+// CIR7:        @with_mutable_val = external global %struct.WithMutable
+// CIR7-NOT:    constant
+// OGCG7:       @with_mutable_val = external global %struct.WithMutable
+
+// Incomplete class - cannot be marked constant.
+class Incomplete;
+extern const Incomplete incomplete_val;
+// CHECK7:      cir.global "private" external @incomplete_val : !rec_Incomplete
+// CIR7:        @incomplete_val = external global %class.Incomplete
+// OGCG7:       @incomplete_val = external global %class.Incomplete
+
+void use(const NoMutable &, const WithMutable &, const Incomplete *);
+void foo() { use(no_mutable_val, with_mutable_val, &incomplete_val); }

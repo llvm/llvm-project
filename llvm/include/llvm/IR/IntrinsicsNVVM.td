@@ -162,6 +162,37 @@ defvar MAX_BLOCK_SIZE_X = 1024;
 defvar MAX_BLOCK_SIZE_Y = 1024;
 defvar MAX_BLOCK_SIZE_Z = 64;
 
+// Helper class that pre-computes the ImmArg property list 
+// with optional trailing defaults.
+class BuildImmArgProps<list<LLVMType> flags, list<LLVMType> param_types,
+                       list<DefaultValue> trailing_defaults = []> {
+  defvar NumFlags = !size(flags);
+  defvar NumDefaults = !size(trailing_defaults);
+  defvar FirstDefault = !sub(NumFlags, NumDefaults);
+  list<IntrinsicProperty> Props =
+      !foreach(i, !range(flags),
+          ImmArg<ArgIndex<!add(i, !size(param_types))>,
+                 !if(!lt(i, FirstDefault),
+                     NoDefault,
+                     trailing_defaults[!sub(i, FirstDefault)])>);
+}
+
+class DefaultAttrsIntrinsicFlags<list<LLVMType> ret_types,
+                list<LLVMType> param_types,
+                list<LLVMType> flags,
+                list<IntrinsicProperty> intr_properties,
+                string name = "",
+                list<DefaultValue> trailing_flag_defaults = []>
+  : DefaultAttrsIntrinsic<
+        ret_types,
+        !listconcat(param_types, flags),
+        !listconcat(intr_properties,
+                    BuildImmArgProps<flags, param_types, trailing_flag_defaults>.Props),
+        name> {
+  assert !le(!size(trailing_flag_defaults), !size(flags)),
+         "number of trailing flag defaults exceeds number of flags";
+}
+
 // Helper class that concatenates list elements with
 // a given separator 'sep' and returns the result.
 // Handles empty strings.
@@ -1432,14 +1463,24 @@ class NVVM_EVICT_POLICY_RANGED_ARGPROP<int argNo, int upperBound = 2> {
   ];
 }
 
-// Helper that emits the intrinsic-property set for the `validate_pattern`
+// Helper that emits the intrinsic-property set for the `flag_valid_pattern`
 // immediate argument used by the TMA g2s (global-to-shared copy) intrinsics.
 // The allowed values correspond to `TMAValidateDataPattern`, i.e. [0, 6).
 class NVVM_TMA_VALIDATE_PATTERN_ARGPROP<int argNo> {
   list<IntrinsicProperty> Prop = [
     Range<ArgIndex<argNo>, 0, 6>,
-    ArgInfo<ArgIndex<argNo>, [ArgName<"validate_pattern">,
+    ArgInfo<ArgIndex<argNo>, [ArgName<"flag_valid_pattern">,
                               ImmArgPrinter<"printTMAValidateDataPattern">]>
+  ];
+}
+
+// Helper that emits the intrinsic-property set for the `flag_scope` immediate
+// argument. The allowed values are: cta, cluster, gpu, sys. i.e. [0, 4).
+class NVVM_MEM_SCOPE_ARGPROP<int argNo> {
+  list<IntrinsicProperty> Prop = [
+    Range<ArgIndex<argNo>, 0, 4>,
+    ArgInfo<ArgIndex<argNo>, [ArgName<"flag_scope">,
+                              ImmArgPrinter<"printMemScope">]>
   ];
 }
 
@@ -1484,7 +1525,7 @@ class CP_ASYNC_BULK_TENSOR_G2S_OVERRIDE_INTR<int dim, string mode, string overri
   list<LLVMType> FlagsTy = [llvm_i1_ty,   // Flag for cta_mask
                             llvm_i1_ty,   // Flag for cache_hint
                             llvm_i32_ty,  // cta_group
-                            llvm_i32_ty]; // validate_pattern
+                            llvm_i32_ty]; // flag_valid_pattern
   defvar CtaGroupIdx = !add(!size(ArgsTy), 2);
   defvar ValidateIdx = !add(!size(ArgsTy), 3);
   list<IntrinsicProperty> IntrProp = !listconcat(
@@ -1506,7 +1547,7 @@ class CP_ASYNC_BULK_TENSOR_G2S_CTA_OVERRIDE_INTR<int dim, string mode, string ov
       Im2ColOffsetsTy,      // im2col offsets
       [llvm_i64_ty]);       // cache_hint
   list<LLVMType> FlagsTy = [llvm_i1_ty,   // Flag for cache_hint
-                            llvm_i32_ty]; // validate_pattern
+                            llvm_i32_ty]; // flag_valid_pattern
   defvar ValidateIdx = !add(!size(ArgsTy), 1);
   list<IntrinsicProperty> IntrProp = !listconcat(
       [IntrConvergent, WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
@@ -2346,13 +2387,19 @@ def int_nvvm_cp_async_bulk_wait_group_read :
     Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
 
 // mbarrier
+
+def int_nvvm_mbarrier_init :
+    DefaultAttrsIntrinsicFlags<[],
+                               [llvm_anyptr_ty,  // mbar (generic or shared AS)
+                                llvm_i32_ty],    // count
+                               [llvm_i32_ty],    // layout
+              [IntrConvergent, Range<ArgIndex<2>, 0, 2>,
+               ArgInfo<ArgIndex<2>, [ArgName<"layout">,
+                                     ImmArgPrinter<"printMBarrierLayout">]>]>;
+
 foreach is_shared = [true, false] in {
   defvar mbarrier_ptr_ty = !if(is_shared, llvm_shared_ptr_ty, llvm_ptr_ty);
   defvar shared = !if(is_shared, "_shared", "");
-
-  def int_nvvm_mbarrier_init # shared : NVVMBuiltin,
-      Intrinsic<[], [mbarrier_ptr_ty, llvm_i32_ty],
-                [IntrConvergent, IntrNoCallback]>;
 
   def int_nvvm_mbarrier_inval # shared : NVVMBuiltin,
       Intrinsic<[], [mbarrier_ptr_ty],
@@ -2374,6 +2421,17 @@ foreach is_shared = [true, false] in {
 
 def int_nvvm_mbarrier_pending_count : NVVMBuiltin,
     NVVMPureIntrinsic<[llvm_i32_ty], [llvm_i64_ty]>;
+
+def int_nvvm_mbarrier_check_layout :
+    DefaultAttrsIntrinsicFlags<[llvm_i1_ty],
+                               [llvm_anyptr_ty], // mbar
+                               [llvm_i32_ty],   // layout
+                          [IntrReadMem,
+                           Range<ArgIndex<1>, 0, 2>,
+                           ArgInfo<ArgIndex<1>,
+                                   [ArgName<"layout">,
+                                    ImmArgPrinter<"printMBarrierLayout">]>],
+                          "llvm.nvvm.mbarrier.check_layout">;
 
 // mbarrier.{expect_tx/complete_tx}
 foreach op = ["expect_tx", "complete_tx"] in {
@@ -3127,19 +3185,6 @@ foreach op = ["dec", "inc"] in
 def int_nvvm_exit : NVVMBuiltin,
     Intrinsic<[], [], [IntrConvergent, IntrInaccessibleMemOnly, IntrNoReturn]>;
 
-class DefaultAttrsIntrinsicFlags<list<LLVMType> ret_types,
-                list<LLVMType> param_types,
-                list<LLVMType> flags,
-                list<IntrinsicProperty> intr_properties,
-                string name = "">
-  : DefaultAttrsIntrinsic<
-        ret_types,
-        !listconcat(param_types, flags),
-        !listconcat(intr_properties,
-                    !foreach(i, !range(flags),
-                        ImmArg<ArgIndex<!add(i, !size(param_types))>>)),
-        name>;
-
 // TMA Tensor Copy Intrinsics: S2G -> From Shared to Global memory variants
 foreach dim = 1...5 in {
   defvar tensor_dim_args = !listsplat(llvm_i32_ty, dim);
@@ -3240,7 +3285,7 @@ foreach dim = 1...5 in {
     defvar g2s_flags = [llvm_i1_ty,             // Flag for cta_mask
                         llvm_i1_ty,             // Flag for cache_hint
                         llvm_i32_ty,            // cta_group
-                        llvm_i32_ty];           // validate_pattern
+                        llvm_i32_ty];           // flag_valid_pattern
     defvar cta_group_idx = !add(
                              !size(g2s_params),
                              !sub(!size(g2s_flags), 2));
@@ -3316,7 +3361,7 @@ foreach dim = 1...5 in {
                        im2col_offsets_args, // im2col offsets
                        [llvm_i64_ty]),      // cache_hint
           [llvm_i1_ty,                      // Flag for cache_hint
-           llvm_i32_ty],                    // validate_pattern
+           llvm_i32_ty],                    // flag_valid_pattern
           !listconcat([IntrConvergent, WriteOnly<ArgIndex<0>>,
                        ReadOnly<ArgIndex<2>>],
                       NVVM_TMA_VALIDATE_PATTERN_ARGPROP<g2s_cta_validate_idx>.Prop)>;
@@ -3336,7 +3381,7 @@ def int_nvvm_cp_async_bulk_tensor_g2s_tile_gather4_2d
       [llvm_i1_ty,                 // Flag for cta_mask
        llvm_i1_ty,                 // Flag for cache_hint
        llvm_i32_ty,                // cta_group
-       llvm_i32_ty],               // validate_pattern
+       llvm_i32_ty],               // flag_valid_pattern
       !listconcat([IntrConvergent,
                    WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
                    // Allowed values for cta_group are [0, 3).
@@ -3352,7 +3397,7 @@ def int_nvvm_cp_async_bulk_tensor_g2s_cta_tile_gather4_2d
        !listsplat(llvm_i32_ty, 5), // co-ordinates
       [llvm_i64_ty]),              // cache_hint
       [llvm_i1_ty,                 // Flag for cache_hint
-       llvm_i32_ty],               // validate_pattern
+       llvm_i32_ty],               // flag_valid_pattern
       !listconcat([IntrConvergent,
                    WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>],
                   NVVM_TMA_VALIDATE_PATTERN_ARGPROP<10>.Prop)>;
@@ -3371,7 +3416,7 @@ def int_nvvm_cp_async_bulk_tensor_g2s_tile_gather4_override_addr_2d
       [llvm_i1_ty,                 // Flag for cta_mask
        llvm_i1_ty,                 // Flag for cache_hint
        llvm_i32_ty,                // cta_group
-       llvm_i32_ty],               // validate_pattern
+       llvm_i32_ty],               // flag_valid_pattern
       !listconcat([IntrConvergent,
                    WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
                    ReadOnly<ArgIndex<3>>,
@@ -3390,7 +3435,7 @@ def int_nvvm_cp_async_bulk_tensor_g2s_cta_tile_gather4_override_addr_2d
        !listsplat(llvm_i32_ty, 5), // co-ordinates
       [llvm_i64_ty]),              // cache_hint
       [llvm_i1_ty,                 // Flag for cache_hint
-       llvm_i32_ty],               // validate_pattern
+       llvm_i32_ty],               // flag_valid_pattern
       !listconcat([IntrConvergent,
                    WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
                    ReadOnly<ArgIndex<3>>],
@@ -3519,31 +3564,75 @@ let IntrProperties = [NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>, IntrHasSideEf
 }
 
 // Intrinsics for Bulk Copy using TMA (non-tensor)
-// From Global to Shared Cluster
+// From Global to Shared Cluster (weak memory ordering).
 def int_nvvm_cp_async_bulk_global_to_shared_cluster
   : DefaultAttrsIntrinsicFlags<[],
       [llvm_shared_cluster_ptr_ty, // dst_shared_cluster_ptr
        llvm_shared_ptr_ty,         // mbarrier_ptr
        llvm_global_ptr_ty,         // src_gmem_ptr
        llvm_i32_ty,                // copy_size
-       llvm_i16_ty,                // cta_mask
+       llvm_anyint_ty,             // cta_mask (i16 or i32 overload)
        llvm_i64_ty],               // cache_hint
       [llvm_i1_ty,                 // Flag for cta_mask
-       llvm_i1_ty],                // Flag for cache_hint
-      [IntrConvergent, IntrArgMemOnly,
-       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
+       llvm_i1_ty,                 // Flag for cache_hint
+       llvm_i32_ty],               // flag_valid_pattern
+      !listconcat([IntrConvergent, IntrArgMemOnly,
+                   WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>],
+                   NVVM_TMA_VALIDATE_PATTERN_ARGPROP<8>.Prop)>;
 
-// From Global to Shared CTA
+// From Global to Shared Cluster (relaxed memory ordering semantics).
+def int_nvvm_cp_async_bulk_global_to_shared_cluster_relaxed
+  : DefaultAttrsIntrinsicFlags<[],
+      [llvm_shared_cluster_ptr_ty, // dst_shared_cluster_ptr
+       llvm_shared_ptr_ty,         // mbarrier_ptr
+       llvm_global_ptr_ty,         // src_gmem_ptr
+       llvm_i32_ty,                // copy_size
+       llvm_anyint_ty,             // cta_mask (i16 or i32 overload)
+       llvm_i64_ty],               // cache_hint
+      [llvm_i1_ty,                 // Flag for cta_mask
+       llvm_i1_ty,                 // Flag for cache_hint
+       llvm_i32_ty,                // flag_scope (cta/cluster/gpu/sys)
+       llvm_i32_ty],               // flag_valid_pattern
+      !listconcat([IntrConvergent, IntrArgMemOnly,
+                   WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>],
+                   NVVM_MEM_SCOPE_ARGPROP<8>.Prop,
+                   NVVM_TMA_VALIDATE_PATTERN_ARGPROP<9>.Prop)>;
+
+// From Global to Shared CTA (weak memory ordering).
 def int_nvvm_cp_async_bulk_global_to_shared_cta
   : DefaultAttrsIntrinsicFlags<[],
       [llvm_shared_ptr_ty, // dst_shared_cta_ptr
        llvm_shared_ptr_ty, // mbarrier_ptr
        llvm_global_ptr_ty, // src_gmem_ptr
        llvm_i32_ty,        // copy_size
+       llvm_i32_ty,        // ignore_bytes_left (controlled by flag_oob)
+       llvm_i32_ty,        // ignore_bytes_right (controlled by flag_oob)
        llvm_i64_ty],       // cache_hint
-      [llvm_i1_ty],        // Flag for cache_hint
-      [IntrConvergent, IntrArgMemOnly,
-       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
+      [llvm_i1_ty,         // Flag for cache_hint
+       llvm_i1_ty,         // Flag for ignore_oob
+       llvm_i32_ty],       // flag_valid_pattern
+      !listconcat([IntrConvergent, IntrArgMemOnly,
+                   WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>],
+                   NVVM_TMA_VALIDATE_PATTERN_ARGPROP<9>.Prop)>;
+
+// From Global to Shared CTA (relaxed memory ordering semantics).
+def int_nvvm_cp_async_bulk_global_to_shared_cta_relaxed
+  : DefaultAttrsIntrinsicFlags<[],
+      [llvm_shared_ptr_ty, // dst_shared_cta_ptr
+       llvm_shared_ptr_ty, // mbarrier_ptr
+       llvm_global_ptr_ty, // src_gmem_ptr
+       llvm_i32_ty,        // copy_size
+       llvm_i32_ty,        // ignore_bytes_left (controlled by flag_oob)
+       llvm_i32_ty,        // ignore_bytes_right (controlled by flag_oob)
+       llvm_i64_ty],       // cache_hint
+      [llvm_i1_ty,         // Flag for cache_hint
+       llvm_i1_ty,         // Flag for ignore_oob
+       llvm_i32_ty,        // flag_scope (cta/cluster/gpu/sys)
+       llvm_i32_ty],       // flag_valid_pattern
+      !listconcat([IntrConvergent, IntrArgMemOnly,
+                   WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>],
+                   NVVM_MEM_SCOPE_ARGPROP<9>.Prop,
+                   NVVM_TMA_VALIDATE_PATTERN_ARGPROP<10>.Prop)>;
 
 // From Shared CTA to Shared Cluster
 def int_nvvm_cp_async_bulk_shared_cta_to_cluster
@@ -3838,7 +3927,7 @@ foreach sparse = [0, 1] in {
 
         def mma.record_name:
               DefaultAttrsIntrinsicFlags<[], args, flags, intrinsic_properties,
-                mma.intr_name>;
+                mma.intr_name, [DefaultValue<0>]>;
       } // ashift
     } // scale_d
   } // space
@@ -3882,7 +3971,8 @@ foreach sparse = [0, 1] in {
                   );
 
           def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
-                                  intrinsic_properties, mma.intr_name>;
+                                  intrinsic_properties, mma.intr_name,
+                                  [DefaultValue<0>]>;
         } // ashift
       } // scale_d
     } // cta_group
@@ -3917,7 +4007,7 @@ foreach sparse = [0, 1] in {
                          ArgInfo<cta_group, [ArgName<"cta_group">]>,
                          NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_a, "a">.Prop,
                          NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b, "b">.Prop]),
-            mma.intr_name>;
+            mma.intr_name, [DefaultValue<0>]>;
         }
       } // scale_vec_size
     } // kind

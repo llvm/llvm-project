@@ -95,3 +95,10 @@ if ubsan_lit_test_mode in ["AddressSanitizer", "MemorySanitizer", "ThreadSanitiz
         config.parallelism_group = "shadow-memory"
     if config.target_os == "NetBSD":
         config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))
+
+# Device tests need this suite's GPU runtime, not just a usable machine.
+if ubsan_lit_test_mode == "Standalone" and "ubsan_standalone" in config.gpu_runtimes:
+    if "hip" in config.available_features:
+        config.available_features.add("ubsan-hip")
+    if "openmp-offload" in config.available_features:
+        config.available_features.add("ubsan-openmp-offload")

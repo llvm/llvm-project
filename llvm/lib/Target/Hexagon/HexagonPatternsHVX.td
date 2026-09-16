@@ -676,6 +676,10 @@ let Predicates = [UseHVXV68, UseHVX128B, UseHVXQFloat] in {
   def: OpR_RR_pat<V6_vmax_hf, pf2<fmaxnum>, VecF16, HVF16>;
   def: OpR_RR_pat<V6_vmin_sf, pf2<fminnum>, VecF32, HVF32>;
   def: OpR_RR_pat<V6_vmax_sf, pf2<fmaxnum>, VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vmin_hf, pf2<fminimum>,    VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vmax_hf, pf2<fmaximum>,    VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vmin_sf, pf2<fminimum>,    VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vmax_sf, pf2<fmaximum>,    VecF32, HVF32>;
 }
 
 // V6_veqsf/V6_veqhf use IEEE-754 float equality (NaN != NaN), which correctly
@@ -709,6 +713,10 @@ let Predicates = [UseHVXV68, UseHVX128B, UseHVXIEEEFP] in {
   def: OpR_RR_pat<V6_vfmax_hf, pf2<fmaxnum>, VecF16, HVF16>;
   def: OpR_RR_pat<V6_vfmin_sf, pf2<fminnum>, VecF32, HVF32>;
   def: OpR_RR_pat<V6_vfmax_sf, pf2<fmaxnum>, VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vfmin_hf, pf2<fminimum>,    VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vfmax_hf, pf2<fmaximum>,    VecF16, HVF16>;
+  def: OpR_RR_pat<V6_vfmin_sf, pf2<fminimum>,    VecF32, HVF32>;
+  def: OpR_RR_pat<V6_vfmax_sf, pf2<fmaximum>,    VecF32, HVF32>;
 }
 
 let Predicates = [UseHVX] in {

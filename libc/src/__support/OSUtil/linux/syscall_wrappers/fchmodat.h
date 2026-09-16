@@ -24,9 +24,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
-LIBC_INLINE ErrorOr<int> fchmodat(int fd, const char *path, mode_t mode,
-                                  int flags) {
-  int ret = syscall_impl<int>(SYS_fchmodat, fd, path, mode, flags);
+LIBC_INLINE ErrorOr<int> fchmodat(int fd, const char *path, mode_t mode) {
+  int ret = syscall_impl<int>(SYS_fchmodat, fd, path, mode);
   if (ret < 0)
     return Error(-ret);
   return ret;
