@@ -1150,8 +1150,12 @@ void Parser::parseOMPContextSelector(
     if (!Condition.isUsable())
       return FinishSelector();
     TISelector.ScoreOrCondition = Condition.get();
+    StringRef ConditionText = Lexer::getSourceText(
+        CharSourceRange::getTokenRange(Condition.get()->getSourceRange()),
+        PP.getSourceManager(), PP.getLangOpts());
     TISelector.Properties.push_back(
-        {TraitProperty::user_condition_unknown, "<condition>"});
+        {TraitProperty::user_condition_unknown,
+         ConditionText.empty() ? "<condition>" : ConditionText});
     return;
   }
 

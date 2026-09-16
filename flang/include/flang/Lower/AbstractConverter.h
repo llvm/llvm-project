@@ -337,6 +337,9 @@ public:
   /// Get the converter's current scope
   virtual const Fortran::semantics::Scope &getCurrentScope() = 0;
 
+  /// Get the PFT evaluation currently being lowered.
+  virtual pft::Evaluation &getCurrentEvaluation() = 0;
+
   //===--------------------------------------------------------------------===//
   // FIR/MLIR
   //===--------------------------------------------------------------------===//

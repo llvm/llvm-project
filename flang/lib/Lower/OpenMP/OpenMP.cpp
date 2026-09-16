@@ -7427,8 +7427,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
-  collectEnclosingConstructTraits(builder.getInsertionBlock()->getParentOp(),
-                                  constructTraits);
+  collectEnclosingConstructTraits(converter, eval, constructTraits);
   semantics::omp::OmpVariantMatchContext ompCtx =
       makeVariantMatchContext(builder.getModule(), constructTraits);
 
@@ -7655,6 +7654,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
       if (marking == MetadirectiveLoopIVMarking::ThreadprivateIV)
         TODO(variantLoc, "THREADPRIVATE loop iteration variable in "
                          "loop-associated METADIRECTIVE variant");
+      mlir::SaveStateStack<OpenMPContextFrame> context{
+          converter.getStateStack(), eval, spec->DirId()};
       genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
                      queue.begin(), dsaGuard.getMarkedSymbols());
       return;
@@ -7668,8 +7669,15 @@ static void genMetadirective(lower::AbstractConverter &converter,
       TODO(variantLoc,
            "METADIRECTIVE with both block- and loop-associated variants");
 
-    genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
-                   queue.begin());
+    if (consumesBody) {
+      mlir::SaveStateStack<OpenMPContextFrame> context{
+          converter.getStateStack(), eval, spec->DirId()};
+      genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
+                     queue.begin());
+    } else {
+      genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
+                     queue.begin());
+    }
     // A standalone variant (Association::None, e.g. barrier/taskwait/nothing)
     // does not consume the metadirective's nested block, so lower it here.
     if (!consumesBody && eval.hasNestedEvaluations())
