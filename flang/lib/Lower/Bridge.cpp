@@ -6845,9 +6845,22 @@ private:
                           Fortran::common::TypeCategory::Derived) {
               if (const auto *constant =
                       std::get_if<Fortran::evaluate::Constant<
-                          Fortran::evaluate::SomeDerived>>(&x.u))
+                          Fortran::evaluate::SomeDerived>>(&x.u)) {
+                const auto &spec = constant->GetType().GetDerivedTypeSpec();
+                const auto *dtDetails =
+                    spec.typeSymbol()
+                        .template detailsIf<
+                            Fortran::semantics::DerivedTypeDetails>();
+                if (dtDetails && dtDetails->isEnumerationType())
+                  // Enumeration types lower to i32 (no RecordType); mangle the
+                  // name from the type spec instead of the element type.
+                  return Fortran::lower::mangle::mangleArrayLiteral(
+                      constant->values().size() * sizeof(constant->values()[0]),
+                      constant->shape(), Fortran::common::TypeCategory::Derived,
+                      /*kind=*/0, /*charLen=*/-1, mangleName(spec));
                 return Fortran::lower::mangle::mangleArrayLiteral(eleTy,
                                                                   *constant);
+              }
               fir::emitFatalError(loc,
                                   "non a constant derived type expression");
             } else {

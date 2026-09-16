@@ -1293,26 +1293,18 @@ static inline Expr<SomeDerived> FoldEnumerationNextOrPrevious(
     return Expr<SomeDerived>{std::move(funcRef)};
   }
   // A boundary hit (NEXT() of the last enumerator or PREVIOUS() of the first)
-  // without STAT= is, in the final design, a runtime error termination.  In a
-  // required-constant context that value cannot be deferred, so it is
-  // diagnosed as out of range.  Outside a constant context the reference would
-  // otherwise be left unfolded and deferred to run time — but lowering has no
-  // NEXT/PREVIOUS support yet (IntrinsicCall.cpp aborts), so a constant
-  // boundary argument is temporarily gated here, mirroring the STAT= and
-  // non-constant guards in intrinsics.cpp, until the lowering handler lands.
+  // without STAT= is a runtime error termination.  In a required-constant
+  // context that value cannot be deferred, so it is diagnosed as out of range.
+  // Outside a constant context the reference is left unfolded and deferred to
+  // run time, where lowering emits the STAT assignment or error termination.
   auto handleBoundary{[&]() -> Expr<SomeDerived> {
     if (context.inConstantContext()) {
       context.messages().Say(isNext
               ? "NEXT() of the last enumerator is out of range"_err_en_US
               : "PREVIOUS() of the first enumerator is out of range"_err_en_US);
-    } else {
-      // TEMPORARY: gate the boundary case until lowering handler lands in PR
-      // 4/5
-      context.messages().Say(isNext
-              ? "NEXT() at the last enumerator is not yet supported"_err_en_US
-              : "PREVIOUS() at the first enumerator is not yet supported"_err_en_US);
+      return MakeInvalidIntrinsic<SomeDerived>(std::move(funcRef));
     }
-    return MakeInvalidIntrinsic<SomeDerived>(std::move(funcRef));
+    return Expr<SomeDerived>{std::move(funcRef)};
   }};
   if (auto sc{constant->GetScalarValue()}) {
     if (auto ordExpr{sc->Find(ordSym)}) {
@@ -1332,20 +1324,8 @@ static inline Expr<SomeDerived> FoldEnumerationNextOrPrevious(
     // Array constant: NEXT/PREVIOUS are elemental, so fold elementwise into
     // a constant array of enumerators.  STAT= is absent here (the
     // STAT-present case bails out above), so there is no side effect to
-    // preserve.
-    //
-    // NOTE (enum-lowering / next PR): the runtime counterpart of this array
-    // case is not yet implemented.  genEnumerationNext/Previous in
-    // flang/lib/Lower/ConvertExprToHLFIR.cpp call hlfir::loadTrivialScalar
-    // and emit scalar arith, so they only accept scalar arguments.  When a
-    // non-constant array argument reaches lowering, those emitters must be
-    // wrapped in an hlfir.elemental region (one scalar min/max plus a
-    // per-element boundary test, per element), and STAT handling must reduce
-    // the per-element boundary flags (any-boundary -> STAT/abort).  This
-    // elementwise fold is the compile-time mirror of that loop.  Until the
-    // lowering lands, only constant array arguments fold here; the sem-3
-    // handler's temporary "non-constant argument is not yet supported" guard
-    // still rejects runtime arrays.
+    // preserve.  This elementwise fold mirrors the runtime elemental lowering
+    // in genEnumerationArray (flang/lib/Lower/ConvertExprToHLFIR.cpp).
     std::vector<StructureConstructor> elements;
     elements.reserve(constant->values().size());
     for (const StructureConstructorValues &scv : constant->values()) {
