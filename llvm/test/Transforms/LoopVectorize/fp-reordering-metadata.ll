@@ -18,7 +18,7 @@ loop:
   %sum.next = fadd float %sum, %val
   %i.next = add nuw nsw i64 %i, 1
   %cond = icmp eq i64 %i.next, %n
-  br i1 %cond, label %exit, label %loop, !llvm.loop !0
+  br i1 %cond, label %exit, label %loop
 
 exit:
   ret float %sum.next
@@ -40,7 +40,7 @@ loop:
   %sum.next = fadd float %sum, %val
   %i.next = add nuw nsw i64 %i, 1
   %cond = icmp eq i64 %i.next, %n
-  br i1 %cond, label %exit, label %loop, !llvm.loop !2
+  br i1 %cond, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret float %sum.next
@@ -61,19 +61,14 @@ loop:
   %sum.next = fadd float %sum, %val
   %i.next = add nuw nsw i64 %i, 1
   %cond = icmp eq i64 %i.next, %n
-  br i1 %cond, label %exit, label %loop, !llvm.loop !4
+  br i1 %cond, label %exit, label %loop, !llvm.loop !2
 
 exit:
   ret float %sum.next
 }
 
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.enable"}
+!1 = !{!"llvm.loop.vectorize.fp_reordering.enable"}
 
-!2 = distinct !{!2, !3, !5}
-!3 = !{!"llvm.loop.vectorize.enable"}
-!5 = !{!"llvm.loop.vectorize.fp_reordering.enable"}
-
-!4 = distinct !{!4, !6, !7}
-!6 = !{!"llvm.loop.vectorize.enable"}
-!7 = !{!"llvm.loop.vectorize.fp_reordering.disable"}
+!2 = distinct !{!2, !3}
+!3 = !{!"llvm.loop.vectorize.fp_reordering.disable"}
