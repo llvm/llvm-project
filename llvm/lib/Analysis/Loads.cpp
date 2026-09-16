@@ -611,8 +611,7 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
                                     Type *AccessTy,
                                     const LoadStoreInstProperties &AccessProps,
                                     const DataLayout &DL, bool *IsLoadCSE) {
-  const bool AtLeastAtomic =
-      AccessProps.Ordering != AtomicOrdering::NotAtomic;
+  const bool AtLeastAtomic = AccessProps.Ordering != AtomicOrdering::NotAtomic;
 
   // If this is a load of Ptr, the loaded value is available.
   // (This is true even if the load is volatile or atomic, although
