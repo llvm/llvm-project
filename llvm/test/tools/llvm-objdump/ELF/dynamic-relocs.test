@@ -1,5 +1,5 @@
 ## Show that llvm-objdump can dump dynamic relocations.
-## Specifically, we are checking that the tags DT_RELA, DT_REL and DT_JMPREL
+## Specifically, we are checking that DT_RELA, DT_REL, DT_RELR and DT_JMPREL
 ## properly identify relocation tables.
 
 # RUN: yaml2obj --docnum=1 %s -o %t.empty
@@ -27,6 +27,8 @@ FileHeader:
 # CHECK-NEXT:0000000000000000 R_X86_64_RELATIVE        *ABS*
 # CHECK-NEXT:0000000000000000 R_X86_64_JUMP_SLOT       bar
 # CHECK-NEXT:0000000000000008 R_X86_64_NONE            foo
+# CHECK-NEXT:0000000000100000 R_X86_64_RELATIVE        -
+# CHECK-NEXT:0000000000100008 R_X86_64_RELATIVE        -
 #CHECK-EMPTY:
 
 ## -r ignores dynamic relocations.
@@ -85,6 +87,11 @@ Sections:
       - Offset: 8
         Symbol: foo
         Type:   R_X86_64_NONE
+  - Name:         .relr.dyn
+    Type:         SHT_RELR
+    Address:      0x100480
+    Flags:        [SHF_ALLOC]
+    Entries:      [0x100000, 3]
   - Name:         .dynamic
     Type:         SHT_DYNAMIC
     Address:      0x100500
@@ -110,6 +117,12 @@ Sections:
         Value: 16
       - Tag: DT_RELENT
         Value: 16
+      - Tag: DT_RELR
+        Value: 0x100480
+      - Tag: DT_RELRSZ
+        Value: 16
+      - Tag: DT_RELRENT
+        Value: 8
       - Tag: DT_NULL
         Value: 0
 ProgramHeaders:

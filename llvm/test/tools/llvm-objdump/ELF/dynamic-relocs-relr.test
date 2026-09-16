@@ -1,0 +1,63 @@
+## RELR tables do not need a dynamic symbol table. Expand address entries and
+## consecutive bitmaps, displaying offsets and types without inventing values.
+# RUN: yaml2obj %s -o %t64
+# RUN: llvm-objdump -R %t64 | FileCheck %s --check-prefix=ELF64
+
+# ELF64:      DYNAMIC RELOCATION RECORDS
+# ELF64-NEXT: OFFSET           TYPE                     VALUE
+# ELF64-NEXT: 0000000000001000 R_X86_64_RELATIVE        -
+# ELF64-NEXT: 0000000000001008 R_X86_64_RELATIVE        -
+# ELF64-NEXT: 0000000000001010 R_X86_64_RELATIVE        -
+# ELF64-NEXT: 0000000000001200 R_X86_64_RELATIVE        -
+# ELF64-NEXT: 0000000000002000 R_X86_64_RELATIVE        -
+# ELF64-NOT:  {{.}}
+
+## Also exercise 32-bit bitmap offsets and big-endian input.
+# RUN: yaml2obj -DCLASS=ELFCLASS32 -DDATA=ELFDATA2MSB -DMACHINE=EM_ARM \
+# RUN:   -DRELSIZE=16 -DRELENT=4 %s -o %t32
+# RUN: llvm-objdump --dynamic-reloc %t32 | FileCheck %s --check-prefix=ELF32
+
+# ELF32:      DYNAMIC RELOCATION RECORDS
+# ELF32-NEXT: OFFSET   TYPE                     VALUE
+# ELF32-NEXT: 00001000 R_ARM_RELATIVE           -
+# ELF32-NEXT: 00001004 R_ARM_RELATIVE           -
+# ELF32-NEXT: 00001008 R_ARM_RELATIVE           -
+# ELF32-NEXT: 00001080 R_ARM_RELATIVE           -
+# ELF32-NEXT: 00002000 R_ARM_RELATIVE           -
+# ELF32-NOT:  {{.}}
+
+## A malformed RELR table is diagnosed, not silently omitted.
+# RUN: yaml2obj -DENTSIZE=1 %s -o %t.bad
+# RUN: not llvm-objdump -R %t.bad 2>&1 | FileCheck %s --check-prefix=BAD
+# BAD: error: '{{.*}}': section [index 1] has invalid sh_entsize: expected 8, but got 1
+
+--- !ELF
+FileHeader:
+  Class:   [[CLASS=ELFCLASS64]]
+  Data:    [[DATA=ELFDATA2LSB]]
+  Type:    ET_DYN
+  Machine: [[MACHINE=EM_X86_64]]
+Sections:
+  - Name:    .relr.dyn
+    Type:    SHT_RELR
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x100
+    EntSize: [[ENTSIZE=<none>]]
+    Entries: [ 0x1000, 7, 3, 0x2000 ]
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Flags:   [ SHF_ALLOC ]
+    Link:    .dynstr
+    Entries:
+      - Tag:   DT_RELR
+        Value: 0x100
+      - Tag:   DT_RELRSZ
+        Value: [[RELSIZE=32]]
+      - Tag:   DT_RELRENT
+        Value: [[RELENT=8]]
+      - Tag:   DT_NULL
+        Value: 0
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Flags:   [ SHF_ALLOC ]
+    Content: '00'

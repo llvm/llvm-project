@@ -364,7 +364,23 @@ template <typename ELFT> void ELFDumper<ELFT>::printDynamicRelocations() {
          << left_justify("TYPE", TypePadding) << " VALUE\n";
 
   StringRef Fmt = Obj.getBytesInAddress() > 4 ? "%016" PRIx64 : "%08" PRIx64;
-  for (const SectionRef &Section : DynRelSec)
+  for (const SectionRef &Section : DynRelSec) {
+    if (ELFSectionRef(Section).getType() == ELF::SHT_RELR) {
+      const auto &Elf = getELFFile();
+      auto Relrs =
+          unwrapOrError(Elf.relrs(*Obj.getSection(Section.getRawDataRefImpl())),
+                        Obj.getFileName());
+      StringRef RelocName =
+          Elf.getRelocationTypeName(Elf.getRelativeRelocationType());
+      for (const auto &Rel : Elf.decode_relrs(Relrs)) {
+        uint64_t Address = Rel.r_offset;
+        // RELR has neither a symbol reference nor an explicit addend.
+        outs() << format(Fmt.data(), Address) << ' '
+               << left_justify(RelocName, TypePadding) << " -\n";
+      }
+      continue;
+    }
+
     for (const RelocationRef &Reloc : Section.relocations()) {
       uint64_t Address = Reloc.getOffset();
       SmallString<32> RelocName;
@@ -375,6 +391,7 @@ template <typename ELFT> void ELFDumper<ELFT>::printDynamicRelocations() {
       outs() << format(Fmt.data(), Address) << ' '
              << left_justify(RelocName, TypePadding) << ' ' << ValueStr << '\n';
     }
+  }
 }
 
 template <class ELFT>
