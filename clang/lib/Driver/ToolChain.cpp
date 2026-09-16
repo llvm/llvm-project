@@ -1533,6 +1533,7 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args, BoundArch BA,
     llvm::Triple Triple = getTriple();
     tools::arm::setArchNameInTriple(getDriver(), Args, InputType, Triple);
     tools::arm::setFloatABIInTriple(getDriver(), Args, Triple);
+    tools::arm::setEABIInTriple(getDriver(), Args, Triple);
     return Triple.getTriple();
   }
   }

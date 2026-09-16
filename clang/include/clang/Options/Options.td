@@ -2601,8 +2601,8 @@ defm keep_persistent_storage_variables : BoolFOption<"keep-persistent-storage-va
           " keeping all variables that have a persistent storage duration, including global, static and thread-local variables, to guarantee that they can be directly addressed">>;
 defm keep_inline_functions : BoolFOption<"keep-inline-functions",
   CodeGenOpts<"KeepInlineFunctions">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Keep">,
-  NegFlag<SetFalse, [], [ClangOption], "Don't keep">,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption], "Keep">,
+  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Don't keep">,
   BothFlags<[], [],
           " inline functions whose definition is owned by this translation unit, even if they are inlined into all callers.">>;
 defm fixed_point : BoolFOption<"fixed-point",
