@@ -1,5 +1,5 @@
 # RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
-{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{"textDocument":{"references":{"referenceItemsSupport":true}}},"trace":"off"}}
 ---
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
   "uri":"test:///main.cpp",
@@ -17,20 +17,92 @@
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": [
 # CHECK-NEXT:    {
-# CHECK-NEXT:      "range": {
-# CHECK-NEXT:        "end": {
-# CHECK-NEXT:          "character": 16,
-# CHECK-NEXT:          "line": 0
+# CHECK-NEXT:      "location": {
+# CHECK-NEXT:        "range": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": 16,
+# CHECK-NEXT:            "line": 0
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": 15,
+# CHECK-NEXT:            "line": 0
+# CHECK-NEXT:          }
 # CHECK-NEXT:        },
-# CHECK-NEXT:        "start": {
-# CHECK-NEXT:          "character": 15,
-# CHECK-NEXT:          "line": 0
-# CHECK-NEXT:        }
+# CHECK-NEXT:        "uri": "{{.*}}/main.cpp"
 # CHECK-NEXT:      },
-# CHECK-NEXT:      "uri": "{{.*}}/main.cpp"
+# CHECK-NEXT:      "referenceTags": [
+# CHECK-NEXT:        1
+# CHECK-NEXT:      ]
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 ---
-{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///write.cpp",
+  "languageId":"cpp",
+  "version":1,
+  "text":"int w; void h() { w = 5; }"
+}}}
+---
+{"jsonrpc":"2.0","id":2,"method":"textDocument/references","params":{
+  "textDocument":{"uri":"test:///write.cpp"},
+  "position":{"line":0,"character":4},
+  "context":{"includeDeclaration": false}
+}}
+#      CHECK:  "id": 2
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "location": {
+# CHECK-NEXT:        "range": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": 19,
+# CHECK-NEXT:            "line": 0
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": 18,
+# CHECK-NEXT:            "line": 0
+# CHECK-NEXT:          }
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "uri": "{{.*}}/write.cpp"
+# CHECK-NEXT:      },
+# CHECK-NEXT:      "referenceTags": [
+# CHECK-NEXT:        2
+# CHECK-NEXT:      ]
+# CHECK-NEXT:    }
+# CHECK-NEXT:  ]
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///func.cpp",
+  "languageId":"cpp",
+  "version":1,
+  "text":"void func(); void caller() { func(); }"
+}}}
+---
+{"jsonrpc":"2.0","id":4,"method":"textDocument/references","params":{
+  "textDocument":{"uri":"test:///func.cpp"},
+  "position":{"line":0,"character":5},
+  "context":{"includeDeclaration": false}
+}}
+#      CHECK:  "id": 4
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "location": {
+# CHECK-NEXT:        "range": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": 33,
+# CHECK-NEXT:            "line": 0
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": 29,
+# CHECK-NEXT:            "line": 0
+# CHECK-NEXT:          }
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "uri": "{{.*}}/func.cpp"
+# CHECK-NEXT:      }
+# CHECK-NEXT:    }
+# CHECK-NEXT:  ]
+---
+{"jsonrpc":"2.0","id":5,"method":"shutdown"}
 ---
 {"jsonrpc":"2.0","method":"exit"}
