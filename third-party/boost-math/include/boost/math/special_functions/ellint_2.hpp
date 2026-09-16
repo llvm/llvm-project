@@ -122,7 +122,7 @@ BOOST_MATH_GPU_ENABLED T ellint_e_imp(T phi, T k, const Policy& pol)
           rphi = constants::half_pi<T>() - rphi;
        }
        T k2 = k * k;
-       if(boost::math::pow<3>(rphi) * k2 / 6 < tools::epsilon<T>() * fabs(rphi))
+       if(boost::math::pow<3>(rphi) * k2 / 6 <= tools::epsilon<T>() * fabs(rphi))
        {
           // See http://functions.wolfram.com/EllipticIntegrals/EllipticE2/06/01/03/0001/
           result = s * rphi;
