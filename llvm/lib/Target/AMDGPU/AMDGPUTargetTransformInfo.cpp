@@ -1087,15 +1087,19 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   if (IsIntToFP) {
     const unsigned ExtOps = UsesInt64 && SrcBits < 64 ? (IsSigned ? 2 : 1) : 0;
     if (FPTy->isBFloatTy()) {
-      if (SrcBits != 8 && SrcBits != 16 && SrcBits != 32 && !UsesInt64)
+      const bool NarrowLanes =
+          SrcBits >= 8 && SrcBits < 32 && isa<FixedVectorType>(Src);
+      if (!NarrowLanes && SrcBits != 8 && SrcBits != 16 && SrcBits != 32 &&
+          !UsesInt64)
         return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 
       // Each integer is converted to f32 first.
-      unsigned PerElt = UsesInt64 ? ExtOps + (IsSigned ? 12 : 8) : 1;
-      if (isa<FixedVectorType>(Src) && SrcBits < 32 &&
-          (IsSigned || SrcBits == 16)) {
-        PerElt =
-            (ST->hasSDWA() ? 1 : 2) + (SrcBits == 8 && ST->has16BitInsts());
+      InstructionCost FloatCost =
+          Scale(UsesInt64 ? ExtOps + (IsSigned ? 12 : 8) : 1);
+      if (NarrowLanes) {
+        auto *FloatTy =
+            FixedVectorType::get(Type::getFloatTy(Dst->getContext()), NElts);
+        FloatCost = getCastInstrCost(Opcode, FloatTy, Src, CCH, CostKind);
       }
 
       // Native rounding can convert a pair. With 16 bit instructions the
@@ -1108,7 +1112,7 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
               : Scale(!ST->has16BitInsts() ? 1
                       : ST->hasGFX9Insts() ? 6
                                            : 7);
-      return Scale(PerElt) + RoundCost;
+      return FloatCost + RoundCost;
     }
 
     // No instruction converts from a 64 bit integer.
