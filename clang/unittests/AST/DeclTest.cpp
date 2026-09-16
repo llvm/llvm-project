@@ -37,6 +37,24 @@ using namespace clang::ast_matchers;
 using namespace clang::tooling;
 using namespace clang;
 
+TEST(Decl, ParentASTContext) {
+  auto AST = tooling::buildASTFromCode("namespace N { struct S {}; }");
+  ASSERT_NE(nullptr, AST);
+  ASTContext &Ctx = AST->getASTContext();
+  const auto *Record = selectFirst<CXXRecordDecl>(
+      "s",
+      match(cxxRecordDecl(hasName("S"), unless(isImplicit())).bind("s"), Ctx));
+  ASSERT_NE(nullptr, Record);
+  // Check repeated queries through nested contexts and the translation unit,
+  // which has no parent.
+  const DeclContext *Contexts[] = {Record, Record->getParent(),
+                                   Ctx.getTranslationUnitDecl()};
+  for (const DeclContext *DC : Contexts) {
+    EXPECT_EQ(&Ctx, &DC->getParentASTContext());
+    EXPECT_EQ(&Ctx, &DC->getParentASTContext());
+  }
+}
+
 TEST(Decl, CleansUpAPValues) {
   MatchFinder Finder;
   std::unique_ptr<FrontendActionFactory> Factory(

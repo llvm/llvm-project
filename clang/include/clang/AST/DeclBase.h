@@ -2101,6 +2101,10 @@ protected:
   /// another pointer.
   mutable Decl *LastDecl = nullptr;
 
+  /// The owning AST context, which remains the same for this context's
+  /// lifetime. Null until first queried.
+  mutable ASTContext *CachedASTContext = nullptr;
+
   /// Build up a chain of declarations.
   ///
   /// \returns the first/last pair of declarations.
@@ -2153,7 +2157,9 @@ public:
   }
 
   ASTContext &getParentASTContext() const {
-    return cast<Decl>(this)->getASTContext();
+    if (ASTContext *Cached = CachedASTContext)
+      return *Cached;
+    return getParentASTContextSlow();
   }
 
   bool isClosure() const { return getDeclKind() == Decl::Block; }
@@ -2813,6 +2819,8 @@ private:
 
   StoredDeclsMap *CreateStoredDeclsMap(ASTContext &C) const;
 
+  ASTContext &getParentASTContextSlow() const;
+
   void loadLazyLocalLexicalLookups();
   void buildLookupImpl(DeclContext *DCtx, bool Internal);
   void makeDeclVisibleInContextWithFlags(NamedDecl *D, bool Internal,
@@ -2823,6 +2831,14 @@ private:
 inline bool Decl::isTemplateParameter() const {
   return getKind() == TemplateTypeParm || getKind() == NonTypeTemplateParm ||
          getKind() == TemplateTemplateParm;
+}
+
+inline ASTContext &Decl::getASTContext() const {
+  const DeclContext *DC = getDeclContext();
+  // The translation unit has no parent context and owns the AST context.
+  if (!DC)
+    DC = castToDeclContext(this);
+  return DC->getParentASTContext();
 }
 
 // Specialization selected when ToTy is not a known subclass of DeclContext.
