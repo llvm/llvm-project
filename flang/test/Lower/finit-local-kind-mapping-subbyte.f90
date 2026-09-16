@@ -1,18 +1,19 @@
 ! Tests that -finit-local= handles all CHARACTER kind-mapping widths correctly
 ! using the code unit's allocation stride (alignTo(ceil(charBits/8), ABI)),
-! that sub-byte (l4:1) and non-byte-multiple-without-padding (l4:12) LOGICAL
-! mappings emit a controlled diagnostic, and that padded LOGICAL mappings
+! that sub-byte (l4:1) LOGICAL mappings and non-byte-multiple-without-padding
+! (l4:12) hex-mode LOGICAL mappings emit a controlled diagnostic, and that
+! padded LOGICAL mappings
 ! (allocSize > storeSize, e.g. l4:24 and l4:20) use a byte-fill loop in both
 ! hex and zero modes.
 !
 ! LOGICAL sub-byte: --kind-mapping=l4:1 maps LOGICAL(4) to 1 bit.
 ! APInt::getSplat(1, APInt(8, 0xAA)) asserts because the destination width is
-! less than 8; a TODO is emitted.
+! less than 8; a TODO is emitted in both modes.
 !
 ! LOGICAL non-byte-multiple (unpadded): --kind-mapping=l4:12 maps LOGICAL(4)
 ! to 12 bits (storeSize=2, allocSize=2 -- no padding).  makeIntCst(12) would
 ! produce 0xAAA (i12), storing as AA 0A -- the high nibble unfilled.  A TODO
-! is emitted instead.
+! is emitted in hex mode; zero mode uses fir.zero_bits and works correctly.
 !
 ! All CHARACTER kind widths are now handled without diagnostics.
 !
@@ -27,9 +28,9 @@ subroutine test_logical4_subbyte(res)
   if (l) res = 1
 end subroutine
 
-! LOGICAL non-byte-multiple: --kind-mapping=l4:12 maps LOGICAL(4) to 12 bits.
-! makeIntCst(12) would splat 0xAA into i12 -> 0xAAA, which stores as AA 0A.
-! The guard (bits % 8 != 0) catches this and emits a TODO.
+! LOGICAL non-byte-multiple, hex mode: --kind-mapping=l4:12 maps LOGICAL(4)
+! to 12 bits.  makeIntCst(12) would splat 0xAA into i12 -> 0xAAA, storing as
+! AA 0A.  The guard (bits % 8 != 0) catches this in hex mode and emits a TODO.
 !
 ! RUN: %not_todo_cmd bbc -emit-hlfir --kind-mapping=l4:12 -finit-local=0xAA %s -o - 2>&1 | \
 ! RUN:     FileCheck --check-prefix=LOG-NONBYTE %s
@@ -59,7 +60,8 @@ subroutine test_logical4_padded(res)
   if (l) res = 1
 end subroutine
 
-! CHARACTER a1:1: i1 rounds up to i8 (stride = 1 byte).  No diagnostic.
+! CHARACTER a1:1: the stride formula alignTo(ceil(1/8),ABI(i1)) gives
+! 1 byte per code unit.  No diagnostic.
 !
 ! RUN: bbc -emit-hlfir --kind-mapping=a1:1 -finit-local=0xAA %s -o - 2>&1 | \
 ! RUN:     FileCheck --check-prefix=CHAR-1BIT %s
