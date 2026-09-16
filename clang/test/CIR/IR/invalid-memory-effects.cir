@@ -1,0 +1,50 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+cir.func private @f1()
+cir.func @bare_class_name() {
+  // expected-error @below {{expected a memory access kind or class}}
+  cir.call @f1() memory(argmem) : () -> ()
+  cir.return
+}
+
+// -----
+
+cir.func private @f1()
+cir.func @bad_named_access() {
+  // expected-error @below {{expected a memory access kind}}
+  cir.call @f1() memory(argmem: bogus) : () -> ()
+  cir.return
+}
+
+// -----
+
+cir.func private @f1()
+cir.func @duplicate_class() {
+  // expected-error @below {{duplicate memory class 'argmem'}}
+  cir.call @f1() memory(argmem: read, argmem: write) : () -> ()
+  cir.return
+}
+
+// -----
+
+cir.func private @f1()
+cir.func @unknown_class() {
+  // expected-error @below {{unknown memory class 'stackmem'}}
+  cir.call @f1() memory(stackmem: read) : () -> ()
+  cir.return
+}
+
+// -----
+
+cir.func private @f1()
+cir.func @unknown_class_after_shared_access() {
+  // expected-error @below {{unknown memory class 'stackmem'}}
+  cir.call @f1() memory(read, stackmem: read) : () -> ()
+  cir.return
+}
+
+// -----
+
+// cir.func parses memory effects separately from cir.call.
+// expected-error @below {{expected a memory access kind or class}}
+cir.func private @on_a_func() memory(nonsense)

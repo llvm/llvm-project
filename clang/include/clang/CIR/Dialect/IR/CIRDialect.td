@@ -46,7 +46,9 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getCalleeAttrName() { return "callee"; }
     static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }
     static llvm::StringRef getNoReturnAttrName() { return "noreturn"; }
-    static llvm::StringRef getSideEffectAttrName() { return "side_effect"; }
+    static llvm::StringRef getMemoryEffectsAttrName() {
+      return "memory_effects";
+    }
     static llvm::StringRef getReturnsTwiceAttrName() { return "returns_twice"; }
     static llvm::StringRef getColdAttrName() { return "cold"; }
     static llvm::StringRef getHotAttrName() { return "hot"; }
@@ -54,6 +56,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getNoDuplicatesAttrName() { return "noduplicate"; }
     static llvm::StringRef getConvergentAttrName() { return "convergent"; }
     static llvm::StringRef getNoUnwindAttrName() { return "nounwind"; }
+    static llvm::StringRef getWillReturnAttrName() { return "willreturn"; }
     static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }
     static llvm::StringRef getGlobalCtorsAttrName() { return "cir.global_ctors"; }
     static llvm::StringRef getGlobalDtorsAttrName() { return "cir.global_dtors"; }

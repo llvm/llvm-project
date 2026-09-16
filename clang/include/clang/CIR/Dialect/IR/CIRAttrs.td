@@ -1953,39 +1953,74 @@ def CIR_BlockAddrDiffAttr
 }
 
 //===----------------------------------------------------------------------===//
-// Side Effect
+// Memory Effects
 //===----------------------------------------------------------------------===//
 
-def CIR_SideEffect : CIR_I32Enum<
-    "SideEffect", "allowed side effects of a function", [
-      I32EnumCase<"All", 0, "all">,
-      I32EnumCase<"Pure", 1, "pure">,
-      I32EnumCase<"Const", 2, "const">
+def CIR_ModRefInfo : CIR_I32Enum<
+    "ModRefInfo", "how a function accesses one class of memory", [
+      I32EnumCase<"NoModRef", 0, "none">,
+      I32EnumCase<"Ref", 1, "read">,
+      I32EnumCase<"Mod", 2, "write">,
+      I32EnumCase<"ModRef", 3, "readwrite">
 ]> {
   let description = [{
-    The side effect attribute specifies the possible side effects of a function
-    or the target of a call operation.  This is an enumeration attribute with
-    the following possible values:
-
-    - all: The function or callee can have any side effects. This is the default
-      if no side effects are explicitly listed.
-    - pure: The function or callee may read data from memory, but it cannot
-      write data to memory. This has the same effect as the GNU C/C++ attribute
-      `__attribute__((pure))`.
-    - const: The function or callee may not read or write data from memory. This
-      has the same effect as the GNU C/C++ attribute `__attribute__((const))`.
-
-    Examples:
-
-    ```
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
-    ```
+    Whether a function may read and/or write one class of memory.  The
+    spellings match LLVM's, so `none` means neither read nor written and
+    `readwrite` means both may happen.
   }];
 }
 
-def CIR_SideEffectAttr : CIR_EnumAttr<CIR_SideEffect, "side_effect">;
+def CIR_MemoryEffectsAttr : CIR_Attr<"MemoryEffects", "memory_effects"> {
+  let summary = "What memory a function or callee may touch";
+  let description = [{
+    The memory a function or the target of a call may read and write, given
+    per class of memory so that a promise about one class does not have to be
+    a promise about all of them.
+
+    `other` covers every location not named by one of the remaining
+    parameters, so a function that only touches its pointer arguments has
+    `other = none` and `arg_mem = readwrite`.
+
+    An absent attribute means the effects are unknown, which is the
+    conservative default and what a function with no memory annotation gets.
+
+    On an operation the effects print as the access shared by every class not
+    named individually, followed by only the classes that differ from it.
+    The shared access is left out when it is `none` and some class does
+    differ, since an unnamed class reads back as `none`.
+
+    ```
+    cir.func private @a() -> !s32i memory(none)
+    cir.func private @b() -> !s32i memory(read)
+    cir.func private @c(!cir.ptr<!s32i>) memory(argmem: readwrite)
+    cir.func private @d(!cir.ptr<!s32i>) memory(read, argmem: readwrite)
+    %2 = cir.call @a() memory(none) : () -> !s32i
+    ```
+  }];
+
+  let parameters = (ins "ModRefInfo":$other, "ModRefInfo":$arg_mem,
+                        "ModRefInfo":$inaccessible_mem,
+                        "ModRefInfo":$errno_mem, "ModRefInfo":$target_mem0,
+                        "ModRefInfo":$target_mem1);
+
+  let builders = [
+    AttrBuilder<(ins "ModRefInfo":$all), [{
+      return $_get($_ctxt, all, all, all, all, all, all);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Whether every class of memory carries the same access as `other`.
+    bool isUniform() const {
+      return getArgMem() == getOther() && getInaccessibleMem() == getOther() &&
+             getErrnoMem() == getOther() && getTargetMem0() == getOther() &&
+             getTargetMem1() == getOther();
+    }
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+  let canHaveIllegalCXXABIType = 0;
+}
 
 //===----------------------------------------------------------------------===//
 // StaticLocalGuardAttr

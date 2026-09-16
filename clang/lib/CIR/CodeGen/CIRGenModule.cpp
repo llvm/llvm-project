@@ -3232,7 +3232,6 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
                                             cir::FuncOp func, bool isThunk) {
   // TODO(cir): More logic of constructAttributeList is needed.
   cir::CallingConv callingConv;
-  cir::SideEffect sideEffect;
 
   // TODO(cir): The current list should be initialized with the extra function
   // attributes, but we don't have those yet.  For now, the PAL is initialized
@@ -3243,7 +3242,7 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
   std::vector<mlir::NamedAttrList> argAttrs(info.arguments().size());
   mlir::NamedAttrList retAttrs{};
   constructAttributeList(func.getName(), info, globalDecl, pal, argAttrs,
-                         retAttrs, callingConv, sideEffect,
+                         retAttrs, callingConv,
                          /*attrOnCallSite=*/false, isThunk);
 
   for (mlir::NamedAttribute attr : pal)

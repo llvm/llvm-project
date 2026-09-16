@@ -120,11 +120,15 @@ cir.func @calling_conv_attr() {
                           #cir.calling_conv<amdgpu_kernel>]}
 }
 
-// CHECK-LABEL: cir.func @side_effect_attr() {
-cir.func @side_effect_attr() {
-  // CHECK: cir.return {cir.test = [#cir.side_effect<all>, #cir.side_effect<pure>, #cir.side_effect<const>]}
-  cir.return {cir.test = [#cir.side_effect<all>, #cir.side_effect<pure>,
-                          #cir.side_effect<const>]}
+// CHECK-LABEL: cir.func @memory_effects_attr() {
+cir.func @memory_effects_attr() {
+  // CHECK: cir.return {cir.test = [#cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>, #cir.memory_effects<other = read, arg_mem = readwrite, inaccessible_mem = write, errno_mem = read, target_mem0 = read, target_mem1 = read>]}
+  cir.return {cir.test = [#cir.memory_effects<other = none, arg_mem = none,
+                            inaccessible_mem = none, errno_mem = none,
+                            target_mem0 = none, target_mem1 = none>,
+                          #cir.memory_effects<other = read, arg_mem = readwrite,
+                            inaccessible_mem = write, errno_mem = read,
+                            target_mem0 = read, target_mem1 = read>]}
 }
 
 // A bit enum, so a value can name several flags.

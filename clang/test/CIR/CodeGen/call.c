@@ -150,9 +150,9 @@ int f12(void) {
 
 // CIR-LABEL: cir.func{{.*}} @f12() -> !s32i{{.*}} {
 // CIR:         %[[A:.+]] = cir.const #cir.int<1> : !s32i
-// CIR-NEXT:    %{{.+}} = cir.call @f10(%[[A]]) side_effect(pure) : (!s32i {llvm.noundef}) -> !s32i
+// CIR-NEXT:    %{{.+}} = cir.call @f10(%[[A]]) nounwind willreturn memory(read) : (!s32i {llvm.noundef}) -> !s32i
 // CIR-NEXT:    %[[B:.+]] = cir.const #cir.int<2> : !s32i
-// CIR-NEXT:    %{{.+}} = cir.call @f11(%[[B]]) side_effect(const) : (!s32i {llvm.noundef}) -> !s32i
+// CIR-NEXT:    %{{.+}} = cir.call @f11(%[[B]]) nounwind willreturn memory(none) : (!s32i {llvm.noundef}) -> !s32i
 
 // LLVM-LABEL: define{{.*}} i32 @f12(){{.*}}
 // LLVM:         %{{.+}} = call i32 @f10(i32 noundef 1) #[[ATTR0:.+]]

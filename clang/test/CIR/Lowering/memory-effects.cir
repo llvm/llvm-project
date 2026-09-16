@@ -1,0 +1,39 @@
+// RUN: cir-translate %s -cir-to-llvmir --target x86_64-unknown-linux-gnu -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func private @reads() -> !s32i memory(read)
+  cir.func private @reads_nounwind() -> !s32i memory(read)
+      attributes {nounwind, willreturn}
+  cir.func private @writes_args(!cir.ptr<!s32i>) memory(argmem: readwrite)
+  cir.func private @only_nounwind() -> !s32i attributes {nounwind}
+  cir.func private @only_willreturn() -> !s32i attributes {willreturn}
+
+  cir.func @caller(%arg0: !cir.ptr<!s32i>) {
+    %0 = cir.call @reads() memory(read) : () -> !s32i
+    %1 = cir.call @reads_nounwind() nounwind willreturn memory(read) : () -> !s32i
+    cir.call @writes_args(%arg0) memory(argmem: readwrite) : (!cir.ptr<!s32i>) -> ()
+    cir.return
+  }
+}
+
+// Memory effects alone must not imply nounwind or willreturn, so the group for
+// @reads has to be exactly memory(read).
+// LLVM: declare i32 @reads() #[[READS:[0-9]+]]
+// LLVM: declare i32 @reads_nounwind() #[[BOTH:[0-9]+]]
+// LLVM: declare void @writes_args(ptr) #[[ARGMEM:[0-9]+]]
+// LLVM: declare i32 @only_nounwind() #[[NUW:[0-9]+]]
+// LLVM: declare i32 @only_willreturn() #[[WR:[0-9]+]]
+// An absent attribute must stay unknown rather than lowering as memory(none),
+// so @caller's define carries no attribute group.
+// LLVM: define void @caller(ptr %{{.+}}) {
+// LLVM: call i32 @reads() #[[READS]]
+// LLVM: call i32 @reads_nounwind() #[[BOTH]]
+// LLVM: call void @writes_args(ptr %{{.+}}) #[[ARGMEM]]
+// LLVM-DAG: attributes #[[READS]] = { memory(read) }
+// LLVM-DAG: attributes #[[BOTH]] = { nounwind willreturn memory(read) }
+// LLVM-DAG: attributes #[[ARGMEM]] = { memory(argmem: readwrite) }
+// LLVM-DAG: attributes #[[NUW]] = { nounwind }
+// LLVM-DAG: attributes #[[WR]] = { willreturn }

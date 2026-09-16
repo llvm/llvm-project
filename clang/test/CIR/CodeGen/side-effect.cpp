@@ -8,7 +8,7 @@ extern "C" {
 
 // FIXME: We should figure out how to better print this on functions in the
 // future.
-// CIR: cir.func{{.*}}@pure_func() -> !s32i side_effect(pure) attributes {{{.*}}nothrow} {
+// CIR: cir.func{{.*}}@pure_func() -> !s32i memory(read) attributes {{{.*}}nothrow, nounwind, willreturn} {
 // LLVM: Function Attrs: {{.*}}nounwind{{.*}}willreturn{{.*}}memory(read)
 // LLVM: define{{.*}} @pure_func() #{{.*}} {
 // OGCG: Function Attrs: {{.*}}nounwind{{.*}}willreturn{{.*}}memory(read)
@@ -16,7 +16,7 @@ extern "C" {
 __attribute__((pure))
 int pure_func() { return 2;}
 
-// CIR: cir.func{{.*}}@const_func() -> !s32i side_effect(const) attributes {{{.*}}nothrow} {
+// CIR: cir.func{{.*}}@const_func() -> !s32i memory(none) attributes {{{.*}}nothrow, nounwind, willreturn} {
 // LLVM: Function Attrs: {{.*}}nounwind{{.*}}willreturn{{.*}}memory(none)
 // LLVM: define{{.*}} @const_func() #{{.*}} {
 // OGCG: Function Attrs: {{.*}}nounwind{{.*}}willreturn{{.*}}memory(none)
@@ -25,11 +25,11 @@ __attribute__((const))
 int const_func() { return 1;}
 
 void use() {
-  // CIR: cir.call @pure_func() side_effect(pure) : () -> !s32i
+  // CIR: cir.call @pure_func() nounwind willreturn memory(read) : () -> !s32i
   // LLVM: call i32 @pure_func() #[[PURE_ATTR:.*]]
   // OGCG: call i32 @pure_func() #[[PURE_ATTR:.*]]
   pure_func();
-  // CIR: cir.call @const_func() side_effect(const) : () -> !s32i
+  // CIR: cir.call @const_func() nounwind willreturn memory(none) : () -> !s32i
   // LLVM: call i32 @const_func() #[[CONST_ATTR:.*]]
   // OGCG: call i32 @const_func() #[[CONST_ATTR:.*]]
   const_func();

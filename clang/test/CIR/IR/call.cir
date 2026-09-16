@@ -8,17 +8,41 @@ cir.func private @f1()
 
 cir.func @f2() {
   cir.call @f1() : () -> ()
-  cir.call @f1() side_effect(pure) : () -> ()
-  cir.call @f1() side_effect(const) : () -> ()
+  cir.call @f1() memory(read) : () -> ()
+  cir.call @f1() memory(none) : () -> ()
+  cir.call @f1() nounwind : () -> ()
+  cir.call @f1() willreturn : () -> ()
+  cir.call @f1() nothrow nounwind willreturn memory(none) : () -> ()
+  cir.call @f1() memory(write) : () -> ()
+  cir.call @f1() memory(readwrite) : () -> ()
+  cir.call @f1() memory(argmem: readwrite) : () -> ()
+  cir.call @f1() memory(read, argmem: readwrite) : () -> ()
+  cir.call @f1() memory(inaccessiblemem: write, errnomem: read) : () -> ()
+  cir.call @f1() memory(argmem: read, inaccessiblemem: write) : () -> ()
+  cir.call @f1() memory(readwrite, target_mem0: read, target_mem1: none) : () -> ()
   cir.return
 }
 
 // CHECK:      cir.func{{.*}} @f2() {
 // CHECK-NEXT:   cir.call @f1() : () -> ()
-// CHECK-NEXT:   cir.call @f1() side_effect(pure) : () -> ()
-// CHECK-NEXT:   cir.call @f1() side_effect(const) : () -> ()
+// CHECK-NEXT:   cir.call @f1() memory(read) : () -> ()
+// CHECK-NEXT:   cir.call @f1() memory(none) : () -> ()
+// CHECK-NEXT:   cir.call @f1() nounwind : () -> ()
+// CHECK-NEXT:   cir.call @f1() willreturn : () -> ()
+// CHECK-NEXT:   cir.call @f1() nothrow nounwind willreturn memory(none) : () -> ()
+// CHECK-NEXT:   cir.call @f1() memory(write) : () -> ()
+// CHECK-NEXT:   cir.call @f1() memory(readwrite) : () -> ()
+// CHECK-NEXT:   cir.call @f1() memory(argmem: readwrite) : () -> ()
+// CHECK-NEXT:   cir.call @f1() memory(read, argmem: readwrite) : () -> ()
+// CHECK-NEXT:   cir.call @f1() memory(inaccessiblemem: write, errnomem: read) : () -> ()
+// CHECK-NEXT:   cir.call @f1() memory(argmem: read, inaccessiblemem: write) : () -> ()
+// CHECK-NEXT:   cir.call @f1() memory(readwrite, target_mem0: read, target_mem1: none) : () -> ()
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
+
+// cir.func parses memory effects separately from cir.call.
+// CHECK: cir.func private @f8() memory(read, argmem: readwrite)
+cir.func private @f8() memory(read, argmem: readwrite)
 
 cir.func private @f3() -> !s32i
 
