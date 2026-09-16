@@ -459,7 +459,8 @@ void TargetRegisterInfo::applyRegAllocationAntiHints(
   if (AntiHintedRegUnits.none())
     return;
 
-  HintsAndCustomOrder.truncate(NumHints);
+  assert(HintsAndCustomOrder.size() == NumHints &&
+         "HintsAndCustomOrder should only contain the hints here.");
   HintsAndCustomOrder.append(Order.begin(), Order.end());
 
   // Custom reordering of the allocation order.
@@ -475,7 +476,7 @@ void TargetRegisterInfo::filterAndSortForAntiHintedRegs(
     const LiveRegMatrix *Matrix, const RegisterClassInfo *RegClassInfo) const {
 
   // Partition non-anti-hinted register go first.
-  auto *PartitionPoint = std::stable_partition(
+  [[maybe_unused]] auto *PartitionPoint = std::stable_partition(
       CustomOrder.begin(), CustomOrder.end(),
       [&](MCPhysReg Reg) { return !isAntiHintedReg(Reg, AntiHintedRegUnits); });
 
