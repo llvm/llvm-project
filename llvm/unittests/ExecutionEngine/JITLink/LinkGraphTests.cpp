@@ -907,3 +907,52 @@ TEST(LinkGraphTest, BasicLayoutHonorsNoAlloc) {
   EXPECT_EQ(SegInfo.Alignment, 8U);
   EXPECT_EQ(SegInfo.ContentSize, 8U);
 }
+
+TEST(LinkGraphTest, DuplicateSymbolDetection) {
+  // Check that duplicate definitions of non-local symbols are diagnosed, and
+  // that same-named local symbols are still permitted.
+  LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
+              Triple("x86_64-apple-darwin"), SubtargetFeatures(),
+              getGenericEdgeKindName);
+
+  auto &Sec =
+      G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
+  auto &B = G.createContentBlock(Sec, BlockContent, orc::ExecutorAddr(0x1000),
+                                 8, 0);
+
+  G.addDefinedSymbol(B, 0, "defined", 4, Linkage::Strong, Scope::Default,
+                     false, false);
+  G.addAbsoluteSymbol("absolute", orc::ExecutorAddr(0x2000), 4,
+                      Linkage::Strong, Scope::Default, false);
+
+  // Local symbols are permitted to share a name with a non-local symbol.
+  G.addDefinedSymbol(B, 4, "defined", 4, Linkage::Strong, Scope::Local, false,
+                     false);
+  G.addAbsoluteSymbol("absolute", orc::ExecutorAddr(0x2004), 4,
+                      Linkage::Strong, Scope::Local, false);
+
+  // Removing a symbol releases its name, so it can be used again without
+  // tripping the duplicate checks.
+  Symbol &ToRemove = G.addDefinedSymbol(B, 8, "reused", 4, Linkage::Strong,
+                                        Scope::Default, false, false);
+  G.removeDefinedSymbol(ToRemove);
+  G.addDefinedSymbol(B, 8, "reused", 4, Linkage::Strong, Scope::Default, false,
+                     false);
+
+  Symbol &AbsToRemove =
+      G.addAbsoluteSymbol("reused_absolute", orc::ExecutorAddr(0x3000), 4,
+                          Linkage::Strong, Scope::Default, false);
+  G.removeAbsoluteSymbol(AbsToRemove);
+  G.addAbsoluteSymbol("reused_absolute", orc::ExecutorAddr(0x3000), 4,
+                      Linkage::Strong, Scope::Default, false);
+
+#ifndef NDEBUG
+  EXPECT_DEATH(G.addDefinedSymbol(B, 0, "defined", 4, Linkage::Strong,
+                                  Scope::Default, false, false),
+               "Duplicate defined symbol");
+
+  EXPECT_DEATH(G.addAbsoluteSymbol("absolute", orc::ExecutorAddr(0x2000), 4,
+                                   Linkage::Strong, Scope::Default, false),
+               "Duplicate absolute symbol");
+#endif
+}
