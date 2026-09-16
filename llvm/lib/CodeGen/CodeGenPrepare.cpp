@@ -577,18 +577,9 @@ static bool isCheapConstantDivisor(Value *V, const TargetLowering *TLI,
   if (!C)
     return false;
   Type *ScalarTy = C->getType()->getScalarType();
-  if (auto *VecTy = dyn_cast<FixedVectorType>(C->getType())) {
-    // BuildSDIV compute per lane so divisors can be nonuniform
-    for (unsigned I = 0, E = VecTy->getNumElements(); I != E; ++I) {
-      auto *CI = dyn_cast_or_null<ConstantInt>(C->getAggregateElement(I));
-      if (!CI || CI->isZero())
-        return false;
-    }
-  } else {
-    auto *CI = dyn_cast<ConstantInt>(C);
-    if (!CI || CI->isZero())
-      return false;
-  }
+  // Every lane needs to be not poison.
+  if (!isKnownNonZero(C, SimplifyQuery(DL)) || !isGuaranteedNotToBePoison(C))
+    return false;
   return !TLI->isIntDivCheap(TLI->getValueType(DL, ScalarTy), Attr);
 }
 
