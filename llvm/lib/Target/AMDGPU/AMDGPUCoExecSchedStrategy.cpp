@@ -1343,6 +1343,7 @@ ScheduleDAGInstrs *
 llvm::createGCNCoExecMachineScheduler(MachineSchedContext *C) {
   LLVM_DEBUG(dbgs() << "AMDGPU coexec preRA scheduler selected for "
                     << C->MF->getName() << '\n');
+
   ScheduleDAGMILive *DAG = new GCNScheduleDAGMILive(
       C, std::make_unique<AMDGPUCoExecSchedStrategy>(C));
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
