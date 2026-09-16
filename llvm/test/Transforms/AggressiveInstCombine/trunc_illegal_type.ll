@@ -59,3 +59,34 @@ define <4 x i24> @illegal_dst_legal_src_vec(<4 x i24> %a, <4 x i24> %b) {
   %t = trunc <4 x i32> %add to <4 x i24>
   ret <4 x i24> %t
 }
+
+; As a special case, i1 is always considered legal. We allow truncating both
+; legal and illegal types to i1.
+
+define i1 @legal_to_i1(i24 %a, i24 %b) {
+; CHECK-LABEL: @legal_to_i1(
+; CHECK-NEXT:    [[ZA:%.*]] = trunc i24 [[A:%.*]] to i1
+; CHECK-NEXT:    [[ZB:%.*]] = trunc i24 [[B:%.*]] to i1
+; CHECK-NEXT:    [[ADD:%.*]] = add i1 [[ZA]], [[ZB]]
+; CHECK-NEXT:    ret i1 [[ADD]]
+;
+  %za = zext i24 %a to i32
+  %zb = zext i24 %b to i32
+  %add = add i32 %za, %zb
+  %t = trunc i32 %add to i1
+  ret i1 %t
+}
+
+define i1 @illegal_to_i1(i24 %a, i24 %b) {
+; CHECK-LABEL: @illegal_to_i1(
+; CHECK-NEXT:    [[ZA:%.*]] = trunc i24 [[A:%.*]] to i1
+; CHECK-NEXT:    [[ZB:%.*]] = trunc i24 [[B:%.*]] to i1
+; CHECK-NEXT:    [[ADD:%.*]] = add i1 [[ZA]], [[ZB]]
+; CHECK-NEXT:    ret i1 [[ADD]]
+;
+  %za = zext i24 %a to i33
+  %zb = zext i24 %b to i33
+  %add = add i33 %za, %zb
+  %t = trunc i33 %add to i1
+  ret i1 %t
+}
