@@ -816,6 +816,35 @@ bool AArch64RegisterBankInfo::prefersFPUse(const MachineInstr &MI,
   return onlyDefinesFP(MI, MRI, TRI, Depth);
 }
 
+static bool shouldUseFPRForCvtOperand(
+    const RegisterBankInfo &RBI, const MachineInstr &MI,
+    const MachineRegisterInfo &MRI, const AArch64RegisterInfo &TRI,
+    function_ref<bool(const MachineInstr &)> HasFPConstraints,
+    unsigned BankedOpIdx, unsigned OtherOpIdx, bool ForceFPRForBankedOp16,
+    bool ForceFPRForOtherOp16, bool AllowFPRCVT, bool CheckBankedOpUses) {
+  Register BankedReg = MI.getOperand(BankedOpIdx).getReg();
+  if (MRI.getType(BankedReg).isVector())
+    return true;
+
+  TypeSize BankedSize = RBI.getSizeInBits(BankedReg, MRI, TRI);
+  TypeSize OtherSize =
+      RBI.getSizeInBits(MI.getOperand(OtherOpIdx).getReg(), MRI, TRI);
+  if ((ForceFPRForBankedOp16 && BankedSize == 16) ||
+      (ForceFPRForOtherOp16 && OtherSize == 16))
+    return true;
+
+  if (BankedSize != OtherSize && !AllowFPRCVT)
+    return false;
+
+  if (CheckBankedOpUses)
+    return all_of(
+        MRI.use_nodbg_instructions(BankedReg),
+        [&](const MachineInstr &UseMI) { return HasFPConstraints(UseMI); });
+
+  const MachineInstr *DefMI = MRI.getVRegDef(BankedReg);
+  return DefMI && HasFPConstraints(*DefMI);
+}
+
 bool AArch64RegisterBankInfo::isLoadFromFPType(const MachineInstr &MI) const {
   // GMemOperation because we also want to match indexed loads.
   auto *MemOp = cast<GMemOperation>(&MI);
@@ -1396,6 +1425,9 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS: {
+    auto HasFPConstraints = [&](const MachineInstr &MI) {
+      return onlyUsesFP(MI, MRI, TRI) || prefersFPUse(MI, MRI, TRI);
+    };
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
     case Intrinsic::aarch64_neon_fcvtas:
     case Intrinsic::aarch64_neon_fcvtau:
@@ -1408,59 +1440,41 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::aarch64_neon_fcvtps:
     case Intrinsic::aarch64_neon_fcvtpu: {
       OpRegBankIdx[2] = PMI_FirstFPR;
-      if (MRI.getType(MI.getOperand(0).getReg()).isVector()) {
-        OpRegBankIdx[0] = PMI_FirstFPR;
-        break;
-      }
-      TypeSize DstSize = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
-      TypeSize SrcSize = getSizeInBits(MI.getOperand(2).getReg(), MRI, TRI);
-      // Fp conversions to i16 must be kept on fp register banks to ensure
-      // proper saturation, as there are no 16-bit gprs.
-      // In addition, conversion intrinsics have fpr output when the input
-      // size matches the output size, or FPRCVT is present.
-      if (DstSize == 16 ||
-          ((DstSize == SrcSize || STI.hasFeature(AArch64::FeatureFPRCVT)) &&
-           all_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
-                  [&](const MachineInstr &UseMI) {
-                    return onlyUsesFP(UseMI, MRI, TRI) ||
-                           prefersFPUse(UseMI, MRI, TRI);
-                  })))
+      if (shouldUseFPRForCvtOperand(
+              *this, MI, MRI, TRI, HasFPConstraints, /*BankedOpIdx=*/0,
+              /*OtherOpIdx=*/2,
+              /*ForceFPRForBankedOp16=*/true,
+              /*ForceFPRForOtherOp16=*/false,
+              /*AllowFPRCVT=*/STI.hasFeature(AArch64::FeatureFPRCVT),
+              /*CheckBankedOpUses=*/true))
         OpRegBankIdx[0] = PMI_FirstFPR;
       else
         OpRegBankIdx[0] = PMI_FirstGPR;
       break;
     }
     case Intrinsic::aarch64_neon_vcvtfxs2fp:
-    case Intrinsic::aarch64_neon_vcvtfxu2fp:
-      // Override these intrinsics, because they would have a partial
-      // mapping. This is needed for 'half' types, which otherwise don't
-      // get legalised correctly.
+    case Intrinsic::aarch64_neon_vcvtfxu2fp: {
       OpRegBankIdx[0] = PMI_FirstFPR;
-      OpRegBankIdx[2] = PMI_FirstFPR;
-      // OpRegBankIdx[1] is the intrinsic ID.
-      // OpRegBankIdx[3] is an integer immediate.
+      if (shouldUseFPRForCvtOperand(
+              *this, MI, MRI, TRI, HasFPConstraints, /*BankedOpIdx=*/2,
+              /*OtherOpIdx=*/0,
+              /*ForceFPRForBankedOp16=*/false,
+              /*ForceFPRForOtherOp16=*/true, /*AllowFPRCVT=*/false,
+              /*CheckBankedOpUses=*/false))
+        OpRegBankIdx[2] = PMI_FirstFPR;
+      else
+        OpRegBankIdx[2] = PMI_FirstGPR;
       break;
+    }
     case Intrinsic::aarch64_neon_vcvtfp2fxs:
     case Intrinsic::aarch64_neon_vcvtfp2fxu: {
       OpRegBankIdx[2] = PMI_FirstFPR;
-      if (MRI.getType(MI.getOperand(0).getReg()).isVector()) {
-        OpRegBankIdx[0] = PMI_FirstFPR;
-        break;
-      }
-
-      TypeSize DstSize = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
-      TypeSize SrcSize = getSizeInBits(MI.getOperand(2).getReg(), MRI, TRI);
-
-      // Half-precision fixed-point FP-to-int scalar intrinsics are specified as
-      // producing an H-register result. The LLVM intrinsic may still return an
-      // i32/i64 type, so check the source size for 16 bits.
-      if (SrcSize == 16 ||
-          ((DstSize == SrcSize) &&
-           all_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
-                  [&](const MachineInstr &UseMI) {
-                    return onlyUsesFP(UseMI, MRI, TRI) ||
-                           prefersFPUse(UseMI, MRI, TRI);
-                  })))
+      if (shouldUseFPRForCvtOperand(
+              *this, MI, MRI, TRI, HasFPConstraints, /*BankedOpIdx=*/0,
+              /*OtherOpIdx=*/2,
+              /*ForceFPRForBankedOp16=*/false,
+              /*ForceFPRForOtherOp16=*/true, /*AllowFPRCVT=*/false,
+              /*CheckBankedOpUses=*/true))
         OpRegBankIdx[0] = PMI_FirstFPR;
       else
         OpRegBankIdx[0] = PMI_FirstGPR;

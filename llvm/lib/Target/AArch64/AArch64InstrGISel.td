@@ -386,6 +386,39 @@ def : Pat<(int_aarch64_stlxp GPR64:$lo, GPR64:$hi, GPR64:$addr),
 def : Pat<(int_aarch64_stxp GPR64:$lo, GPR64:$hi, GPR64:$addr),
           (STXPX GPR64:$lo, GPR64:$hi, GPR64:$addr)>;
 
+def : Pat<(int_aarch64_neon_vcvtfxu2fp FPR32:$Rn, vecshiftR32:$imm),
+          (UCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
+def : Pat<(f64 (int_aarch64_neon_vcvtfxu2fp (i64 FPR64:$Rn),
+                                                vecshiftR64:$imm)),
+          (UCVTFd FPR64:$Rn, vecshiftR64:$imm)>;
+def : Pat<(f64 (int_aarch64_neon_vcvtfxs2fp (i64 FPR64:$Rn),
+                                                vecshiftR64:$imm)),
+          (SCVTFd FPR64:$Rn, vecshiftR64:$imm)>;
+def : Pat<(int_aarch64_neon_vcvtfxs2fp FPR32:$Rn, vecshiftR32:$imm),
+          (SCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
+
+multiclass GIIntegerToFPScalarPats<SDPatternOperator OpNode, string INST> {
+  def : Pat<(f32 (fmul (f32 (OpNode (i32 FPR32:$Rn))),
+                         fixedpoint_recip_f32_i32:$scale)),
+            (!cast<Instruction>(INST # "s") FPR32:$Rn,
+              (fixedpoint_recip_xform fixedpoint_recip_f32_i32:$scale))>;
+  def : Pat<(f64 (fmul (f64 (OpNode (i64 FPR64:$Rn))),
+                         fixedpoint_recip_f64_i64:$scale)),
+            (!cast<Instruction>(INST # "d") FPR64:$Rn,
+              (fixedpoint_recip_xform fixedpoint_recip_f64_i64:$scale))>;
+  def : Pat<(f32 (fdiv (f32 (OpNode (i32 FPR32:$Rn))),
+                         fixedpoint_f32_i32:$scale)),
+            (!cast<Instruction>(INST # "s") FPR32:$Rn,
+              (fixedpoint_xform fixedpoint_f32_i32:$scale))>;
+  def : Pat<(f64 (fdiv (f64 (OpNode (i64 FPR64:$Rn))),
+                         fixedpoint_f64_i64:$scale)),
+            (!cast<Instruction>(INST # "d") FPR64:$Rn,
+              (fixedpoint_xform fixedpoint_f64_i64:$scale))>;
+}
+
+defm : GIIntegerToFPScalarPats<any_sint_to_fp, "SCVTF">;
+defm : GIIntegerToFPScalarPats<any_uint_to_fp, "UCVTF">;
+
 let GIIgnoreCopies = 1 in
 class PatIgnoreCopies<dag pattern, dag result> : Pat<pattern, result>, GISelFlags;
 

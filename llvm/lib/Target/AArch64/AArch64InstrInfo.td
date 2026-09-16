@@ -7172,6 +7172,13 @@ def fixedpoint_xform : SDNodeXForm<timm, [{
 }]>;
 def gi_fixedpoint_xform : GICustomOperandRenderer<"renderFixedPointXForm">,
                               GISDNodeXFormEquiv<fixedpoint_xform>;
+def fixedpoint_recip_xform : SDNodeXForm<timm, [{
+  (void)N;
+  return V;
+}]>;
+def gi_fixedpoint_recip_xform
+    : GICustomOperandRenderer<"renderFixedPointRecipXForm">,
+      GISDNodeXFormEquiv<fixedpoint_recip_xform>;
 
 def gi_fixedpoint_f16_i32 : GIComplexOperandMatcher<s32, "selectCVTFixedPoint<32>">,
                             GIComplexPatternEquiv<fixedpoint_f16_i32>;
@@ -7185,6 +7192,13 @@ def gi_fixedpoint_f64_i32 : GIComplexOperandMatcher<s64, "selectCVTFixedPoint<32
                             GIComplexPatternEquiv<fixedpoint_f64_i32>;
 def gi_fixedpoint_f64_i64 : GIComplexOperandMatcher<s64, "selectCVTFixedPoint<64>">,
                             GIComplexPatternEquiv<fixedpoint_f64_i64>;
+
+def gi_fixedpoint_recip_f32_i32
+    : GIComplexOperandMatcher<s32, "selectCVTFixedPosRecipOperand<32>">,
+      GIComplexPatternEquiv<fixedpoint_recip_f32_i32>;
+def gi_fixedpoint_recip_f64_i64
+    : GIComplexOperandMatcher<s64, "selectCVTFixedPosRecipOperand<64>">,
+      GIComplexPatternEquiv<fixedpoint_recip_f64_i64>;
 
 multiclass FPToIntegerFmulPats<SDPatternOperator round, string INST> { 
   let Predicates = [HasFullFP16] in {
@@ -9718,12 +9732,10 @@ multiclass IntegerToFPScalarPats<SDPatternOperator OpNode, string INST> {
   // Expect the integer operand to be in FPR register. The AdvSIMD scalar
   // shifted conversion forms are same-width, so only i32->f32 and i64->f64
   // can use them for generic integer-to-fp fixed-point conversions.
-  let GISelShouldIgnore = 1 in {
   def : Pat<(f32 (fmul (f32 (OpNode (i32 (bitconvert (f32 FPR32:$Rn))))), fixedpoint_recip_f32_i32:$scale)),
-            (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform fixedpoint_recip_f32_i32:$scale))>;
+            (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_recip_xform fixedpoint_recip_f32_i32:$scale))>;
   def : Pat<(f64 (fmul (f64 (OpNode (i64 (bitconvert (f64 FPR64:$Rn))))), fixedpoint_recip_f64_i64:$scale)),
-            (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_xform fixedpoint_recip_f64_i64:$scale))>;
-  }
+            (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_recip_xform fixedpoint_recip_f64_i64:$scale))>;
 
   def : Pat<(f32 (fdiv (f32 (OpNode (i32 (bitconvert (f32 FPR32:$Rn))))), fixedpoint_f32_i32:$scale)),
             (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform fixedpoint_f32_i32:$scale))>;
