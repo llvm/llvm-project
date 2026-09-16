@@ -20,7 +20,7 @@
 //                                                             InputIterator first, Size n,
 //                                                             ForwardIterator result);
 
-#include <atomic>
+#include <array>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -42,13 +42,14 @@ static_assert(!sfinae_test_uninitialized_move_n<std::execution::parallel_policy,
 
 // Source type
 struct Src {
-  Src(int v) : value_(v) {}
+  Src()                      = default;
   Src(const Src&)            = delete;
   Src& operator=(const Src&) = delete;
   int value() const { return value_; }
+  void set_value(int v) { value_ = v; }
 
 private:
-  int value_;
+  int value_ = 0;
   friend struct Dst;
 };
 
@@ -70,21 +71,21 @@ struct TestCustomTypes {
   template <class ExecutionPolicy>
   void operator()(ExecutionPolicy&& policy) {
     constexpr size_t n = 1073;
-    std::allocator<Src> alloc_src;
+    std::array<Src, n> source;
+
     std::allocator<Dst> alloc_dst;
-    Src* source = alloc_src.allocate(n);
-    Dst* dest   = alloc_dst.allocate(n);
+    Dst* dest = alloc_dst.allocate(n);
 
     // Move-construct different ranges of Y [0..size) from the source X array
     runway_sample(n + 1, [&](size_t size) {
       // Construct the source array for this iteration: X(1), X(2), X(3), ...
       for (size_t i = 0; i < size; ++i) {
-        std::allocator_traits<std::allocator<Src>>::construct(alloc_src, source + i, static_cast<int>(i + 1));
+        source[i].set_value(static_cast<int>(i + 1));
       }
 
-      auto ret = std::uninitialized_move_n(policy, Iter1(source), size, Iter2(dest));
+      auto ret = std::uninitialized_move_n(policy, Iter1(source.begin()), size, Iter2(dest));
       ASSERT_SAME_TYPE(decltype(ret), std::pair<Iter1, Iter2>);
-      assert(ret.first == Iter1(source + size));
+      assert(ret.first == Iter1(source.data() + size));
       assert(ret.second == Iter2(dest + size));
 
       for (size_t i = 0; i < size; ++i) {
@@ -92,11 +93,9 @@ struct TestCustomTypes {
         assert(dest[i].value() == static_cast<int>(i + 1)); // Dest is Y(1), Y(2), Y(3), ...
       }
 
-      std::destroy_n(source, size); // Clear source for the next iteration
-      std::destroy_n(dest, size);   // Clear dest for the next iteration
+      std::destroy_n(dest, size); // Clear dest for the next iteration
     });
 
-    alloc_src.deallocate(source, n);
     alloc_dst.deallocate(dest, n);
   }
 };
@@ -107,17 +106,18 @@ struct TestInt {
   void operator()(ExecutionPolicy&& policy) {
     {
       constexpr size_t n = 1073;
-      std::allocator<int> alloc;
-      int* source = alloc.allocate(n);
-      int* dest   = alloc.allocate(n);
 
-      std::iota(source, source + n, 1); // Source is 1 2 3 4 ...
-      std::fill(dest, dest + n, 0);     // Dest is 0 0 0 0 ...
+      std::array<int, n> source;
+      std::iota(source.begin(), source.end(), 1); // Source is 1 2 3 4 ...
+
+      std::allocator<int> alloc;
+      int* dest = alloc.allocate(n);
+      std::fill(dest, dest + n, 0); // Dest is 0 0 0 0 ...
 
       runway_sample(n + 1, [&](size_t size) {
-        auto ret = std::uninitialized_move_n(policy, Iter1(source), size, Iter2(dest));
+        auto ret = std::uninitialized_move_n(policy, Iter1(source.data()), size, Iter2(dest));
         ASSERT_SAME_TYPE(decltype(ret), std::pair<Iter1, Iter2>);
-        assert(ret.first == Iter1(source + size));
+        assert(ret.first == Iter1(source.data() + size));
         assert(ret.second == Iter2(dest + size));
 
         for (size_t i = 0; i < size; ++i) {
@@ -129,7 +129,6 @@ struct TestInt {
         std::fill(dest, dest + size, 0); // Clear dest for the next iteration
       });
 
-      alloc.deallocate(source, n);
       alloc.deallocate(dest, n);
     }
   }

@@ -19,7 +19,7 @@
 //                                      InputIterator first, InputIterator last,
 //                                      ForwardIterator result);
 
-#include <atomic>
+#include <array>
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -41,13 +41,14 @@ static_assert(!sfinae_test_uninitialized_copy<std::execution::parallel_policy, i
 
 // Source type
 struct Src {
-  Src(int v) : value_(v) {}
+  Src()                      = default;
   Src(const Src&)            = delete;
   Src& operator=(const Src&) = delete;
   int value() const { return value_; }
+  void set_value(int v) { value_ = v; }
 
 private:
-  int value_;
+  int value_ = 0;
 };
 
 // Destination type
@@ -67,19 +68,19 @@ struct TestCustomTypes {
   template <class ExecutionPolicy>
   void operator()(ExecutionPolicy&& policy) {
     constexpr size_t n = 1073;
-    std::allocator<Src> alloc_src;
-    std::allocator<Dst> alloc_dst;
-    Src* source = alloc_src.allocate(n);
-    Dst* dest   = alloc_dst.allocate(n);
 
     // Source is Src(1), Src(2), Src(3), ...
+    std::array<Src, n> source;
     for (size_t i = 0; i < n; ++i) {
-      std::allocator_traits<std::allocator<Src>>::construct(alloc_src, source + i, static_cast<int>(i + 1));
+      source[i].set_value(static_cast<int>(i + 1));
     }
+
+    std::allocator<Dst> alloc_dst;
+    Dst* dest = alloc_dst.allocate(n);
 
     // Copy-construct different ranges of Y [0..size) from the source X array
     runway_sample(n + 1, [&](size_t size) {
-      auto ret = std::uninitialized_copy(policy, Iter1(source), Iter1(source + size), Iter2(dest));
+      auto ret = std::uninitialized_copy(policy, Iter1(source.data()), Iter1(source.data() + size), Iter2(dest));
       ASSERT_SAME_TYPE(decltype(ret), Iter2);
       assert(ret == Iter2(dest + size));
 
@@ -90,8 +91,6 @@ struct TestCustomTypes {
       std::destroy_n(dest, size); // Clear dest for the next iteration
     });
 
-    std::destroy_n(source, n);
-    alloc_src.deallocate(source, n);
     alloc_dst.deallocate(dest, n);
   }
 };
@@ -102,15 +101,16 @@ struct TestInt {
   void operator()(ExecutionPolicy&& policy) {
     {
       constexpr size_t n = 1073;
-      std::allocator<int> alloc;
-      int* source = alloc.allocate(n);
-      int* dest   = alloc.allocate(n);
 
-      std::iota(source, source + n, 1); // Source is 1 2 3 4 ...
-      std::fill(dest, dest + n, 0);     // Dest is 0 0 0 0 ...
+      std::array<int, n> source;
+      std::iota(source.begin(), source.end(), 1); // Source is 1 2 3 4 ...
+
+      std::allocator<int> alloc;
+      int* dest = alloc.allocate(n);
+      std::fill(dest, dest + n, 0); // Dest is 0 0 0 0 ...
 
       runway_sample(n + 1, [&](size_t size) {
-        auto ret = std::uninitialized_copy(policy, Iter1(source), Iter1(source + size), Iter2(dest));
+        auto ret = std::uninitialized_copy(policy, Iter1(source.data()), Iter1(source.data() + size), Iter2(dest));
         ASSERT_SAME_TYPE(decltype(ret), Iter2);
         assert(ret == Iter2(dest + size));
 
@@ -121,7 +121,6 @@ struct TestInt {
         std::fill(dest, dest + size, 0); // Clear dest for the next iteration
       });
 
-      alloc.deallocate(source, n);
       alloc.deallocate(dest, n);
     }
   }
