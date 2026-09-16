@@ -66,6 +66,29 @@ static bool canEmitGPUFusedDistSchedule(const CodeGenModule &CGM,
          !S.getSingleClause<OMPOrderedClause>();
 }
 
+static bool isLoopCounter(const OMPLoopDirective &S, const Expr *E) {
+  const VarDecl *Canonical =
+      cast<VarDecl>(cast<DeclRefExpr>(E->IgnoreParenImpCasts())->getDecl())
+          ->getCanonicalDecl();
+  for (const Expr *C : S.counters())
+    if (cast<VarDecl>(cast<DeclRefExpr>(C)->getDecl())->getCanonicalDecl() ==
+        Canonical)
+      return true;
+  return false;
+}
+
+static bool
+hasLoopLastprivateVariable(const OMPLoopDirective &S,
+                           llvm::function_ref<bool(const Expr *)> Pred) {
+  for (const auto *C : S.getClausesOfKind<OMPLastprivateClause>()) {
+    for (const Expr *E : C->varlist()) {
+      if (Pred(E))
+        return true;
+    }
+  }
+  return false;
+}
+
 static bool canEmitGPUNoLoopKernel(CodeGenModule &CGM,
                                    const OMPLoopDirective &S) {
   const auto *D = dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(&S);
@@ -3772,6 +3795,10 @@ emitInnerParallelForWhenCombined(CodeGenFunction &CGF,
       CGF.EmitOMPPrivateLoopCounters(S, PrivateScope);
       (void)PrivateScope.Privatize();
 
+      CodeGenFunction::OMPPrivateScope LastprivateScope(CGF);
+      (void)CGF.EmitOMPLastprivateClauseInit(S, LastprivateScope);
+      (void)LastprivateScope.Privatize();
+
       if (isOpenMPTargetExecutionDirective(EKind))
         CGM.getOpenMPRuntime().adjustTargetSpecificDataForLambdas(CGF, S);
 
@@ -3795,17 +3822,33 @@ emitInnerParallelForWhenCombined(CodeGenFunction &CGF,
           CGF.AllocaInsertPt->getParent(), CGF.AllocaInsertPt->getIterator());
       llvm::OpenMPIRBuilder &OMPBuilder =
           CGM.getOpenMPRuntime().getOMPBuilder();
+      bool NeedsLastprivateFinalCopy = hasLoopLastprivateVariable(
+          S, [&S](const Expr *E) { return !isLoopCounter(S, E); });
 
       cantFail(OMPBuilder.applyWorkshareLoop(
           CGF.Builder.getCurrentDebugLocation(), CLI, AllocaIP,
-          /*NeedsBarrier=*/!S.getSingleClause<OMPNowaitClause>(),
+          /*NeedsBarrier=*/!S.getSingleClause<OMPNowaitClause>() ||
+              NeedsLastprivateFinalCopy,
           llvm::omp::OMP_SCHEDULE_Default,
           /*ChunkSize=*/nullptr, /*HasSimdModifier=*/false,
           /*HasMonotonicModifier=*/false, /*HasNonmonotonicModifier=*/false,
           /*HasOrderedClause=*/false,
           llvm::omp::WorksharingLoopType::DistributeForStaticLoop,
           /*NoLoop=*/true, /*HasDistSchedule=*/false,
-          /*DistScheduleChunkSize=*/nullptr));
+          /*DistScheduleChunkSize=*/nullptr,
+          /*NeedsLastIter=*/NeedsLastprivateFinalCopy));
+
+      // Emit final copy for lastprivate variables, excluding counters deferred
+      // to the distribute level.
+      if (NeedsLastprivateFinalCopy) {
+        llvm::Value *LastIter = CLI->getLastIter();
+        assert(LastIter && "workshare loop did not publish last iteration");
+        CGF.EmitOMPLastprivateClauseFinal(
+            S, /*NoFinals=*/true,
+            CGF.Builder.CreateIsNotNull(CGF.Builder.CreateAlignedLoad(
+                CGF.Int32Ty, LastIter, CharUnits::fromQuantity(4),
+                ".omp.is_last")));
+      }
       return;
     }
 
@@ -6364,8 +6407,11 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
           !isOpenMPTeamsDirective(S.getDirectiveKind()))
         EmitOMPReductionClauseInit(S, LoopScope);
 
+      // Defer lastprivate init to the parallel region for no-loop
       const bool NoLoopKernel = canEmitGPUNoLoopKernel(CGM, S);
-      HasLastprivateClause = EmitOMPLastprivateClauseInit(S, LoopScope);
+      if (!NoLoopKernel)
+        HasLastprivateClause = EmitOMPLastprivateClauseInit(S, LoopScope);
+
       EmitOMPPrivateLoopCounters(S, LoopScope);
       (void)LoopScope.Privatize();
       if (isOpenMPTargetExecutionDirective(S.getDirectiveKind()))
@@ -6501,7 +6547,10 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
                                      CodeGenLoop);
         }
       }
-      if (isOpenMPSimdDirective(S.getDirectiveKind())) {
+      if (isOpenMPSimdDirective(S.getDirectiveKind()) ||
+          (NoLoopKernel && hasLoopLastprivateVariable(S, [&S](const Expr *E) {
+             return isLoopCounter(S, E);
+           }))) {
         EmitOMPSimdFinal(
             S, [IL, &S, NoLoopKernel](CodeGenFunction &CGF) -> llvm::Value * {
               if (NoLoopKernel)
