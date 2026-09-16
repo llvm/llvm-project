@@ -178,9 +178,9 @@ body:             |
     %8.sub2:sgpr_128 = COPY %9.sub2
     %8.sub3:sgpr_128 = COPY %9.sub3
     $m0 = S_MOV_B32 45408
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %106, %8, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %106, %8, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     $m0 = S_MOV_B32 46432
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %107, %8, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %107, %8, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     %108:vgpr_32 = nuw nsw V_LSHLREV_B32_e32 3, %22, implicit $exec
     %109:vgpr_32 = disjoint V_OR_B32_e32 512, %108, implicit $exec
     %110:vgpr_32 = disjoint V_OR_B32_e32 1024, %108, implicit $exec
@@ -194,41 +194,41 @@ body:             |
     %7.sub3:sgpr_128 = COPY %9.sub3
     %116:vgpr_32 = V_LSHLREV_B32_e32 1, %112, implicit $exec
     $m0 = S_MOV_B32 32768
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %116, %7, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %116, %7, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     %117:vgpr_32 = V_LSHLREV_B32_e32 1, %113, implicit $exec
     $m0 = S_MOV_B32 33824
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %117, %7, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %117, %7, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     %118:vgpr_32 = V_LSHLREV_B32_e32 1, %114, implicit $exec
     $m0 = S_MOV_B32 34880
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %118, %7, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %118, %7, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     %119:vgpr_32 = V_LSHLREV_B32_e32 1, %115, implicit $exec
     $m0 = S_MOV_B32 35936
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %119, %7, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %119, %7, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     %120:sreg_32 = disjoint S_OR_B32 %105, 2048, implicit-def dead $scc
     %121:vgpr_32 = disjoint V_OR_B32_e32 %120, %29, implicit $exec
     %122:vgpr_32 = disjoint V_OR_B32_e32 %120, %30, implicit $exec
     S_WAITCNT 49279
     WAVE_BARRIER
     $m0 = S_MOV_B32 47456
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %121, %8, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %121, %8, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     $m0 = S_MOV_B32 48480
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %122, %8, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %122, %8, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     %123:vgpr_32 = disjoint V_OR_B32_e32 %120, %108, implicit $exec
     %124:vgpr_32 = disjoint V_OR_B32_e32 %120, %109, implicit $exec
     %125:vgpr_32 = disjoint V_OR_B32_e32 %120, %110, implicit $exec
     %126:vgpr_32 = V_OR_B32_e32 %120, %111, implicit $exec
     %127:vgpr_32 = V_LSHLREV_B32_e32 1, %123, implicit $exec
     $m0 = S_MOV_B32 36992
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %127, %7, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %127, %7, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     %128:vgpr_32 = V_LSHLREV_B32_e32 1, %124, implicit $exec
     $m0 = S_MOV_B32 38048
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %128, %7, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %128, %7, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     %129:vgpr_32 = V_LSHLREV_B32_e32 1, %125, implicit $exec
     $m0 = S_MOV_B32 39104
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %129, %7, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %129, %7, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     %130:vgpr_32 = V_LSHLREV_B32_e32 1, %126, implicit $exec
     $m0 = S_MOV_B32 40160
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %130, %7, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %130, %7, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     S_WAITCNT 49279
     WAVE_BARRIER
     %131:sreg_32 = disjoint S_OR_B32 %105, 4096, implicit-def dead $scc
@@ -719,9 +719,9 @@ body:             |
     %389:sreg_32 = S_LSHL_B32 %17, 11, implicit-def dead $scc
     %14:sreg_32 = S_ADD_I32 %389, 45408, implicit-def dead $scc
     $m0 = COPY %14
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %387, %8, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %387, %8, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     $m0 = S_ADD_I32 %389, 46432, implicit-def dead $scc
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %388, %8, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %388, %8, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     %390:vgpr_32 = nuw V_ADD_U32_e32 %316, %133, implicit $exec
     %391:vreg_128_align2 = DS_READ_B128_gfx9 %390, 0, 0, implicit $exec
     %392:vreg_128_align2 = DS_READ_B128_gfx9 %390, 16, 0, implicit $exec
@@ -2666,16 +2666,16 @@ body:             |
     %15:sreg_32 = S_ADD_I32 %1162, 32768, implicit-def dead $scc
     %1163:vgpr_32 = V_LSHLREV_B32_e32 1, %1156, implicit $exec
     $m0 = COPY %15
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %1163, %7, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %1163, %7, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     $m0 = S_ADD_I32 %1162, 33824, implicit-def dead $scc
     %1164:vgpr_32 = V_LSHLREV_B32_e32 1, %1157, implicit $exec
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %1164, %7, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %1164, %7, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     $m0 = S_ADD_I32 %1162, 34880, implicit-def dead $scc
     %1165:vgpr_32 = V_LSHLREV_B32_e32 1, %1158, implicit $exec
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %1165, %7, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %1165, %7, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     $m0 = S_ADD_I32 %1162, 35936, implicit-def dead $scc
     %1166:vgpr_32 = V_LSHLREV_B32_e32 1, %1159, implicit $exec
-    BUFFER_LOAD_DWORDX4_LDS_OFFEN %1166, %7, 0, 0, 0, 0, 1, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORDX4_LDS_OFFEN_ASYNC %1166, %7, 0, 0, 0, 0, implicit $exec, implicit $m0, implicit $asyncmarker
     %1167:vgpr_32 = nuw V_ADD_U32_e32 %319, %108, implicit $exec
     undef %1168.sub0_sub1:av_128_align2 = DS_READ_B64_TR_B16 %1167, 0, 0, implicit $exec
     %1168.sub2_sub3:av_128_align2 = DS_READ_B64_TR_B16 %1167, 512, 0, implicit $exec
