@@ -2677,7 +2677,7 @@ void SelectionDAGBuilder::FindMergedConditions(const Value *Cond,
   }
 
   const Instruction *BOp = dyn_cast<Instruction>(Cond);
-  const Value *BOpOp0, *BOpOp1;
+  const Value *BOpOp0 = nullptr, *BOpOp1 = nullptr;
   // Compute the effective opcode for Cond, taking into account whether it needs
   // to be inverted, e.g.
   //   and (not (or A, B)), C

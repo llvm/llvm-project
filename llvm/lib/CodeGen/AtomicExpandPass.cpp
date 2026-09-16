@@ -1656,7 +1656,7 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
                        MDBuilder(F->getContext()).createLikelyBranchWeights());
 
   Builder.SetInsertPoint(ReleasedLoadBB);
-  Value *SecondLoad;
+  Value *SecondLoad = nullptr;
   if (HasReleasedLoadBB) {
     SecondLoad =
         TLI->emitLoadLinked(Builder, PMV.WordType, PMV.AlignedAddr, MemOpOrder);
