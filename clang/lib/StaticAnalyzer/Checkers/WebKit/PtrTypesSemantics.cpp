@@ -35,7 +35,7 @@ bool hasPublicMethodInBaseClass(const CXXRecordDecl *R, StringRef NameToMatch) {
     const auto *Shadow = dyn_cast<UsingShadowDecl>(D);
     if (!Shadow || Shadow->getAccess() != AS_public)
       continue;
-    const auto *MD = dyn_cast_or_null<CXXMethodDecl>(Shadow->getTargetDecl());
+    const auto *MD = dyn_cast<CXXMethodDecl>(Shadow->getTargetDecl());
     if (MD && safeGetName(MD) == NameToMatch)
       return true;
   }
