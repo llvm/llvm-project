@@ -1480,10 +1480,10 @@ libc_support_library(
 libc_support_library(
     name = "types_char8_t",
     hdrs = ["hdr/types/char8_t.h"],
-    deps = [
-        ":hdr_uchar_overlay",
-        ":llvm_libc_types_char8_t",
-    ],
+    deps = select({
+        ":full_build": [":llvm_libc_types_char8_t"],
+        "//conditions:default": [":hdr_uchar_overlay"],
+    }),
 )
 
 ############################### Support libraries ##############################
@@ -2216,13 +2216,17 @@ libc_support_library(
         "include/llvm-libc-types/off_t.h",
         "src/__support/File/file.cpp",
     ],
-    hdrs = ["src/__support/File/file.h"],
+    hdrs = [
+        "src/__support/File/file.h",
+        "src/__support/File/file_mode.h",
+    ],
     deps = [
         ":__support_alloc_checker",
         ":__support_cpp_new",
         ":__support_cpp_span",
         ":__support_error_or",
         ":__support_libc_errno",
+        ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
         ":__support_threads_mutex",
@@ -2252,6 +2256,7 @@ libc_support_library(
     ],
     hdrs = [
         "src/__support/File/linux/file.h",
+        "src/__support/File/linux/file_flags.h",
     ],
     deps = [
         ":__support_alloc_checker",
@@ -2260,6 +2265,7 @@ libc_support_library(
         ":__support_error_or",
         ":__support_file_file",
         ":__support_libc_errno",
+        ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_close",
         ":__support_osutil_linux_syscall_wrappers_dup2",
@@ -2272,6 +2278,7 @@ libc_support_library(
         ":hdr_stdint_proxy",
         ":hdr_stdio_macros",
         ":hdr_sys_stat_macros",
+        ":types_mode_t",
         ":types_off_t",
     ],
 )
@@ -2460,8 +2467,10 @@ libc_support_library(
         ":__support_error_or",
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_rt_sigprocmask",
+        ":__support_osutil_linux_syscall_wrappers_tgkill",
         ":__support_osutil_syscall",
         ":hdr_signal_macros",
+        ":types_pid_t",
         ":types_sigset_t",
     ],
 )
@@ -2813,6 +2822,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_tgkill",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/tgkill.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_pid_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_printf_core_printf_config",
     hdrs = ["src/__support/printf_core/printf_config.h"],
 )
@@ -2825,6 +2850,7 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_fputil_fp_bits",
         ":__support_macros_config",
+        ":__support_macros_properties_types",
         ":__support_printf_core_printf_config",
     ],
 )
@@ -3128,6 +3154,7 @@ libc_support_library(
         ":hdr_fenv_macros",
         ":hdr_math_macros",
         ":hdr_stdint_proxy",
+        ":string_memory_utils",
         ":types_fenv_t",
     ],
 )
@@ -4349,6 +4376,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
+        ":__support_threads_tcb",
         ":__support_threads_thread_attributes",
         ":hdr_stdint_proxy",
         ":types_struct_sched_param",
@@ -4376,6 +4404,7 @@ libc_support_library(
 libc_support_library(
     name = "__support_threads_linux_thread",
     srcs = ["src/__support/threads/linux/thread.cpp"],
+    copt_sets = ["threading"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -4394,6 +4423,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_close",
+        ":__support_osutil_linux_syscall_wrappers_getpid",
         ":__support_osutil_linux_syscall_wrappers_mmap",
         ":__support_osutil_linux_syscall_wrappers_mprotect",
         ":__support_osutil_linux_syscall_wrappers_munmap",
@@ -4402,17 +4432,20 @@ libc_support_library(
         ":__support_osutil_linux_syscall_wrappers_sched_getparam",
         ":__support_osutil_linux_syscall_wrappers_sched_getscheduler",
         ":__support_osutil_linux_syscall_wrappers_sched_setscheduler",
+        ":__support_osutil_linux_syscall_wrappers_tgkill",
         ":__support_osutil_linux_syscall_wrappers_write",
         ":__support_osutil_syscall",
         ":__support_threads_futex_utils",
         ":__support_threads_linux_futex_utils",
         ":__support_threads_linux_futex_word_type",
         ":__support_threads_mutex",
+        ":__support_threads_thread_attributes",
         ":__support_threads_thread_headers",
         ":config_app_h",
         ":hdr_errno_macros",
         ":hdr_fcntl_macros",
         ":hdr_sched_macros",
+        ":hdr_signal_macros",
         ":hdr_stdint_proxy",
         ":hdr_sys_mman_macros",
     ],
@@ -4501,6 +4534,7 @@ libc_support_library(
     hdrs = ["src/__support/wctype_utils.h"],
     deps = [
         ":__support_cpp_array",
+        ":__support_cpp_bit",
         ":__support_cpp_string_view",
         ":__support_macros_attributes",
         ":__support_macros_config",
@@ -11753,13 +11787,6 @@ libc_math_function(
 )
 
 libc_math_function(
-    name = "canonicalize",
-    additional_deps = [
-        ":__support_math_canonicalize",
-    ],
-)
-
-libc_math_function(
     name = "bf16divf",
     additional_deps = [
         ":__support_math_bf16divf",
@@ -11774,9 +11801,23 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "canonicalize",
+    additional_deps = [
+        ":__support_math_canonicalize",
+    ],
+)
+
+libc_math_function(
     name = "canonicalizef",
     additional_deps = [
         ":__support_math_canonicalizef",
+    ],
+)
+
+libc_math_function(
+    name = "canonicalizebf16",
+    additional_deps = [
+        ":__support_math_canonicalizebf16",
     ],
 )
 
@@ -13352,6 +13393,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "getpayloadbf16",
+    additional_deps = [
+        ":__support_math_getpayloadbf16",
+    ],
+)
+
+libc_math_function(
     name = "getpayloadf",
     additional_deps = [
         ":__support_math_getpayloadf",
@@ -14456,6 +14504,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "setpayloadbf16",
+    additional_deps = [
+        ":__support_math_setpayloadbf16",
+    ],
+)
+
+libc_math_function(
     name = "setpayloadf",
     additional_deps = [
         ":__support_math_setpayloadf",
@@ -14487,6 +14542,13 @@ libc_math_function(
     name = "setpayloadsig",
     additional_deps = [
         ":__support_math_setpayloadsig",
+    ],
+)
+
+libc_math_function(
+    name = "setpayloadsigbf16",
+    additional_deps = [
+        ":__support_math_setpayloadsigbf16",
     ],
 )
 
@@ -15551,6 +15613,14 @@ libc_function(
 libc_support_library(
     name = "string_memory_utils",
     hdrs = [
+        "src/string/memory_utils/inline_bcmp.h",
+        "src/string/memory_utils/inline_bzero.h",
+        "src/string/memory_utils/inline_memcmp.h",
+        "src/string/memory_utils/inline_memcpy.h",
+        "src/string/memory_utils/inline_memmem.h",
+        "src/string/memory_utils/inline_memmove.h",
+        "src/string/memory_utils/inline_memset.h",
+        "src/string/memory_utils/inline_strcmp.h",
         "src/string/memory_utils/op_aarch64.h",
         "src/string/memory_utils/op_builtin.h",
         "src/string/memory_utils/op_generic.h",
@@ -15569,16 +15639,9 @@ libc_support_library(
         "src/string/memory_utils/arm/inline_memcpy.h",
         "src/string/memory_utils/arm/inline_memset.h",
         "src/string/memory_utils/generic/aligned_access.h",
+        "src/string/memory_utils/generic/builtin.h",
         "src/string/memory_utils/generic/byte_per_byte.h",
         "src/string/memory_utils/generic/inline_strlen.h",
-        "src/string/memory_utils/inline_bcmp.h",
-        "src/string/memory_utils/inline_bzero.h",
-        "src/string/memory_utils/inline_memcmp.h",
-        "src/string/memory_utils/inline_memcpy.h",
-        "src/string/memory_utils/inline_memmem.h",
-        "src/string/memory_utils/inline_memmove.h",
-        "src/string/memory_utils/inline_memset.h",
-        "src/string/memory_utils/inline_strcmp.h",
         "src/string/memory_utils/inline_strstr.h",
         "src/string/memory_utils/riscv/inline_bcmp.h",
         "src/string/memory_utils/riscv/inline_memcmp.h",
@@ -16916,6 +16979,10 @@ libc_function(
     name = "sysconf",
     srcs = ["src/unistd/linux/sysconf.cpp"],
     hdrs = ["src/unistd/sysconf.h"],
+    target_compatible_with = select({
+        ":full_build_linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_libc_errno",
@@ -16970,6 +17037,7 @@ libc_support_library(
     hdrs = ["src/stdio/stdout.h"],
     deps = [
         ":__support_common",
+        ":__support_file_file",
         ":__support_file_platform_file",
         ":__support_macros_config",
         ":types_FILE",
@@ -16982,6 +17050,7 @@ libc_support_library(
     hdrs = ["src/stdio/stderr.h"],
     deps = [
         ":__support_common",
+        ":__support_file_file",
         ":__support_file_platform_file",
         ":__support_macros_config",
         ":types_FILE",

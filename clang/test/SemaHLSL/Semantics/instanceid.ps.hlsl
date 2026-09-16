@@ -2,6 +2,6 @@
 // RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -finclude-default-header -x hlsl -verify -o - %s
 
 float4 main(uint id : SV_InstanceID) : SV_Target {
-// expected-error@-1 {{attribute 'SV_InstanceID' is unsupported in 'pixel' shaders, requires vertex}}
+// expected-error@-1 {{semantic 'SV_InstanceID' is not supported in pixel shader inputs}}
   return float4(1, 1, 1, 1);
 }

@@ -274,7 +274,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                             options::OPT_s, options::OPT_t});
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs, C);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
@@ -507,7 +507,7 @@ llvm::ExceptionHandling NetBSD::GetExceptionModel(const ArgList &Args) const {
   if (TArch == llvm::Triple::arm || TArch == llvm::Triple::armeb ||
       TArch == llvm::Triple::thumb || TArch == llvm::Triple::thumbeb)
     return llvm::ExceptionHandling::DwarfCFI;
-  return llvm::ExceptionHandling::None;
+  return llvm::ExceptionHandling::Default;
 }
 
 SanitizerMask

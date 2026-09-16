@@ -16,6 +16,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <algorithm>
 #include <array>
 #include <cassert>
 
@@ -36,19 +37,19 @@ struct GPUNameAlias {
 struct GPUInfo {
   StringTable::Offset Name;
   Triple::SubArchType SubArch;
-  unsigned ArchFeatures;
   AMDGPUFeatureBitset Features;
   IsaVersion Version;
   StringTable::Offset FamilyName;
   uint8_t MaxWavesPerEU;
   uint32_t MaxHWAddressableLocalMemorySize;
   uint8_t LDSBankCount;
+  uint8_t BufferResourceNumRecordsWidth;
 };
 
 // Per-GPU data for the R600 GPUKinds.
 struct R600Info {
   StringTable::Offset Name;
-  R600FeatureKind ArchFeatures;
+  R600FeatureBitset Features;
 };
 
 #define GET_AMDGPU_NAME_TABLE
@@ -62,6 +63,7 @@ struct R600Info {
 #define GET_R600_NAME_TABLE
 #define GET_R600_GPU_TABLE
 #define GET_R600_GPU_ALIAS_TABLE
+#define GET_R600_FEATURE_NAME_TABLE
 #include "llvm/TargetParser/R600TargetParserDef.inc"
 
 // The string tables holding GPU-name-derived strings as offsets. R600 and
@@ -310,24 +312,15 @@ AMDGPU::GPUKind llvm::AMDGPU::parseArchR600(StringRef CPU) {
                        R600GPUAliases);
 }
 
-unsigned AMDGPU::getArchAttrAMDGCN(GPUKind AK) {
-  const GPUInfo *Info = getAMDGPUInfo(AK);
-  return Info ? Info->ArchFeatures : FEATURE_NONE;
-}
-
-unsigned AMDGPU::getArchAttrAMDGCN(Triple::SubArchType SubArch) {
-  const GPUInfo *Info = getAMDGPUInfo(getGPUKindFromSubArch(SubArch));
-  return Info ? Info->ArchFeatures : FEATURE_NONE;
-}
-
-R600FeatureKind AMDGPU::getArchAttrR600(GPUKind AK) {
-  const R600Info *Info = getR600Info(AK);
-  return Info ? Info->ArchFeatures : R600_FEATURE_NONE;
-}
-
 const AMDGPUFeatureBitset &AMDGPU::getFeatureBitset(GPUKind AK) {
   static constexpr AMDGPUFeatureBitset Empty{};
   const GPUInfo *Info = getAMDGPUInfo(AK);
+  return Info ? Info->Features : Empty;
+}
+
+const R600FeatureBitset &AMDGPU::getFeatureBitsetR600(GPUKind AK) {
+  static constexpr R600FeatureBitset Empty{};
+  const R600Info *Info = getR600Info(AK);
   return Info ? Info->Features : Empty;
 }
 
@@ -485,6 +478,35 @@ AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch) {
   return getMaxHWAddressableLocalMemorySize(getGPUKindFromSubArch(SubArch));
 }
 
+unsigned AMDGPU::getLocalMemorySize(GPUKind AK, bool FullSIMDMode) {
+  // gfx6 and gfx10/11/12 address half of the physical block.
+  unsigned Size = getMaxHWAddressableLocalMemorySize(AK);
+  if (getFeatureBitset(AK).test(FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY))
+    Size *= 2;
+
+  // In half-SIMD mode the work-group reaches only half of the block.
+  if (!FullSIMDMode)
+    Size /= 2;
+
+  return Size;
+}
+
+unsigned AMDGPU::getLocalMemorySize(Triple::SubArchType SubArch,
+                                    bool FullSIMDMode) {
+  return getLocalMemorySize(getGPUKindFromSubArch(SubArch), FullSIMDMode);
+}
+
+unsigned AMDGPU::getAddressableLocalMemorySize(GPUKind AK, bool FullSIMDMode) {
+  return std::min(getMaxHWAddressableLocalMemorySize(AK),
+                  getLocalMemorySize(AK, FullSIMDMode));
+}
+
+unsigned AMDGPU::getAddressableLocalMemorySize(Triple::SubArchType SubArch,
+                                               bool FullSIMDMode) {
+  return getAddressableLocalMemorySize(getGPUKindFromSubArch(SubArch),
+                                       FullSIMDMode);
+}
+
 unsigned AMDGPU::getLDSBankCount(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? Info->LDSBankCount : 32;
@@ -492,6 +514,18 @@ unsigned AMDGPU::getLDSBankCount(GPUKind AK) {
 
 unsigned AMDGPU::getLDSBankCount(Triple::SubArchType SubArch) {
   return getLDSBankCount(getGPUKindFromSubArch(SubArch));
+}
+
+std::optional<unsigned> AMDGPU::getBufferResourceNumRecordsWidth(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  if (!Info || Info->BufferResourceNumRecordsWidth == 0)
+    return std::nullopt;
+  return Info->BufferResourceNumRecordsWidth;
+}
+
+std::optional<unsigned>
+AMDGPU::getBufferResourceNumRecordsWidth(Triple::SubArchType SubArch) {
+  return getBufferResourceNumRecordsWidth(getGPUKindFromSubArch(SubArch));
 }
 
 unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {

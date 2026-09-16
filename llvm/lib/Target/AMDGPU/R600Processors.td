@@ -126,9 +126,8 @@ def : R600ProcessorModel<"cedar", R600_VLIW5_Itin,
 def : ProcessorAlias<"palm", "cedar">;
 
 def : R600ProcessorModel<"cypress", R600_VLIW5_Itin,
-  [FeatureEvergreen, FeatureWavefrontSize64, FeatureVertexCache, FeatureFMA]> {
-  let ArchFeatures = [R600_FEATURE_FMA];
-}
+  [FeatureEvergreen, FeatureWavefrontSize64, FeatureVertexCache, FeatureFMA]
+>;
 
 def : ProcessorAlias<"hemlock", "cypress">;
 
@@ -162,10 +161,14 @@ def : R600ProcessorModel<"caicos", R600_VLIW5_Itin,
 def : ProcessorAlias<"aruba", "cayman">;
 
 def : R600ProcessorModel<"cayman", R600_VLIW4_Itin,
-  [FeatureNorthernIslands, FeatureCaymanISA, FeatureFMA]> {
-  let ArchFeatures = [R600_FEATURE_FMA];
-}
+  [FeatureNorthernIslands, FeatureCaymanISA, FeatureFMA]
+>;
 
 def : R600ProcessorModel<"turks", R600_VLIW5_Itin,
   [FeatureNorthernIslands, FeatureVertexCache, FeatureCFALUBug]
 >;
+
+// The subset of R600 SubtargetFeatures exposed outside of the backend.
+def R600FrontendVisibleFeatures {
+  list<SubtargetFeature> Features = [FeatureFMA];
+}

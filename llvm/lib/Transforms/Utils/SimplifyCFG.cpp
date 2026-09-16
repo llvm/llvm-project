@@ -5100,6 +5100,10 @@ bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
   BasicBlock *OldDest = CaseC->getCaseSuccessor();
   BasicBlock *BB = SI->getParent();
 
+  // Switch on X first: removePredecessor() below may fold X away if it is a
+  // PHI in OldDest, and the RAUW must update the switch condition too.
+  SI->setCondition(X);
+
   if (OldDest != DestFork) {
     if (!IsDefault)
       OldDest->removePredecessor(BB);
@@ -5176,8 +5180,7 @@ bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
     }
   }
 
-  // X replaces the condition so compare/select are now dead.
-  SI->setCondition(X);
+  // The compare/select are now dead.
   RecursivelyDeleteTriviallyDeadInstructions(Select);
   return true;
 }

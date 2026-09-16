@@ -27,7 +27,11 @@ add_libc_test(
     libc.src.__support.CPP.string_view
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
+    libc.src.__support.error_or
+    libc.src.__support.pwd.dynamic_buffer
+    libc.src.__support.pwd.field_tokenizer
     libc.src.__support.pwd.flat_file_db
     libc.src.stdio.remove
     libc.src.string.string_utils
+    libc.test.UnitTest.ErrnoCheckingTest
 )

@@ -5,7 +5,7 @@
 // rejected.
 [shader("vertex")]
 uint main(out uint id : SV_InstanceID) : A {
-// expected-error@-1 {{semantic 'SV_InstanceID' does not support output}}
+// expected-error@-1 {{semantic 'SV_InstanceID' is not supported in vertex shader outputs}}
   id = 0;
   return 0;
 }

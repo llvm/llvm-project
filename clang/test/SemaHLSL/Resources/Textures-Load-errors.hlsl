@@ -9,6 +9,11 @@
 // RUN:   -DOFFSET_TYPE=int2 -DOFFSET_FLOAT_TYPE=float2 \
 // RUN:   -DWIDE_OFFSET_TYPE=int3 -verify %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=Texture3D -DHAS_OFFSET \
+// RUN:   -DLOAD_TYPE=int4 -DLOAD_FLOAT_TYPE=float4 -DNARROW_LOAD_TYPE=int3 \
+// RUN:   -DOFFSET_TYPE=int3 -DOFFSET_FLOAT_TYPE=float3 \
+// RUN:   -DWIDE_OFFSET_TYPE=int4 -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -DTEXTURE=RWTexture2D -DLOAD_TYPE=int2 \
 // RUN:   -DLOAD_FLOAT_TYPE=float2 -DNARROW_LOAD_TYPE=int1 \
 // RUN:   -DWIDE_LOAD_TYPE=int3 -DOFFSET_TYPE=int2 -verify %s
@@ -16,6 +21,10 @@
 // RUN:   -finclude-default-header -DTEXTURE=RWTexture2DArray -DLOAD_TYPE=int3 \
 // RUN:   -DLOAD_FLOAT_TYPE=float3 -DNARROW_LOAD_TYPE=int2 \
 // RUN:   -DWIDE_LOAD_TYPE=int4 -DOFFSET_TYPE=int2 -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=RWTexture3D -DLOAD_TYPE=int3 \
+// RUN:   -DLOAD_FLOAT_TYPE=float3 -DNARROW_LOAD_TYPE=int2 \
+// RUN:   -DWIDE_LOAD_TYPE=int4 -DOFFSET_TYPE=int3 -verify %s
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.

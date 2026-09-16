@@ -25,11 +25,14 @@
 
 namespace llvm {
 class APInt;
+class FastMathFlags;
 class FixedVectorType;
+class Instruction;
 class Type;
 class User;
 class Value;
 class VectorType;
+enum class RecurKind;
 } // namespace llvm
 
 namespace llvm::slpvectorizer {
@@ -42,7 +45,9 @@ getShuffleCost(const TargetTransformInfo &TTI,
                TargetTransformInfo::ShuffleKind Kind, VectorType *Tp,
                const TargetTransformInfo::TargetCostKind CostKind,
                ArrayRef<int> Mask = {}, int Index = 0,
-               VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {});
+               VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {},
+               TargetTransformInfo::VectorInstrContext VIC =
+                   TargetTransformInfo::VectorInstrContext::None);
 
 /// Calculate the scalar and the vector costs from vectorizing set of GEPs.
 std::pair<InstructionCost, InstructionCost>
@@ -70,6 +75,24 @@ getMaskedDivRemCost(const TargetTransformInfo &TTI, bool ReVec, unsigned Opcode,
                     const TargetTransformInfo::TargetCostKind CostKind,
                     FixedVectorType **PaddedTy = nullptr);
 
+/// Returns the cost of the booleanized logical and/or reduction of a vector
+/// of type \p VecTy with the i1 root \p Root, emitted as the wide reduction
+/// plus the result trunc.
+InstructionCost
+getBoolReduxWideRdxCost(const TargetTransformInfo &TTI, RecurKind RdxKind,
+                        FixedVectorType *VecTy, const Value *Root,
+                        FastMathFlags FMF,
+                        TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of the booleanized logical and/or reduction of a vector
+/// of type \p VecTy with the i1 root \p Root, emitted as trunc+bitcast+cmp,
+/// estimated in the context of the replaced cast chain \p ChainInsts.
+InstructionCost
+getBoolReduxBitcastCmpCost(const TargetTransformInfo &TTI, RecurKind RdxKind,
+                           FixedVectorType *VecTy, const Value *Root,
+                           ArrayRef<Instruction *> ChainInsts,
+                           TargetTransformInfo::TargetCostKind CostKind);
+
 /// This is similar to TargetTransformInfo::getScalarizationOverhead, but if
 /// ScalarTy is a FixedVectorType, a vector will be inserted or extracted
 /// instead of a scalar.
@@ -89,7 +112,8 @@ getVectorInstrCost(const TargetTransformInfo &TTI, bool ReVec, Type *ScalarTy,
                    unsigned Opcode, Type *Val,
                    const TargetTransformInfo::TargetCostKind CostKind,
                    unsigned Index, Value *Scalar,
-                   ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx);
+                   ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
+                   TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None);
 
 /// This is similar to TargetTransformInfo::getExtractWithExtendCost, but if Dst
 /// is a FixedVectorType, a vector will be extracted instead of a scalar.

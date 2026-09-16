@@ -1086,6 +1086,27 @@ public:
   /// @}
 
   /// @}
+  /// @name Utility function for querying and setting the thread model
+  /// @{
+
+  /// Returns the thread model recorded by the "thread-model" module flag, or
+  /// the model implied by the target triple when the flag is absent.
+  ThreadModel getThreadModel() const;
+
+  /// Set the thread model.
+  void setThreadModel(ThreadModel Model);
+
+  /// @name Utility function for querying the exception model
+  /// @{
+
+  /// Returns the exception model recorded by the "exception-model" module flag,
+  /// or ExceptionHandling::Default when the flag is absent (meaning
+  /// unspecified; callers with a TargetMachine should fall back to its
+  /// exception model).
+  ExceptionHandling getExceptionModel() const;
+  /// @}
+
+  /// @}
   /// @name Utility function for querying and setting the large data threshold
   /// @{
 

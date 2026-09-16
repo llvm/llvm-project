@@ -24,30 +24,23 @@ using namespace orc_rt;
 
 namespace {
 
-class CallSPSCITest : public ::testing::Test {
-protected:
-  void SetUp() override { cantFail(sps_ci::addCall(CI)); }
+static DirectCaller caller(orc_rt_WrapperFunction Fn) { return {nullptr, Fn}; }
 
-  DirectCaller caller(const char *Name) {
-    return DirectCaller(nullptr, reinterpret_cast<orc_rt_WrapperFunction>(
-                                     const_cast<void *>(CI.at(Name))));
-  }
-
+TEST(CallSPSCITest, Registration) {
   SimpleSymbolTable CI;
-};
+  cantFail(sps_ci::addCall(CI));
 
-TEST_F(CallSPSCITest, Registration) {
-  EXPECT_TRUE(CI.count("orc_rt_ci_sps_call_void_void"));
-  EXPECT_TRUE(CI.count("orc_rt_ci_sps_call_main"));
+  EXPECT_TRUE(CI.count(SymbolNameSpec::c("orc_rt_ci_sps_call_void_void")));
+  EXPECT_TRUE(CI.count(SymbolNameSpec::c("orc_rt_ci_sps_call_main")));
 }
 
 static int CallVoidVoidCount = 0;
 static void callVoidVoidFn() { ++CallVoidVoidCount; }
 
-TEST_F(CallSPSCITest, CallVoidVoid) {
+TEST(CallSPSCITest, CallVoidVoid) {
   using SPSSig = void(SPSExecutorAddr);
   SPSWrapperFunction<SPSSig>::call(
-      caller("orc_rt_ci_sps_call_void_void"),
+      caller(orc_rt_ci_sps_call_void_void),
       [](Error Err) { cantFail(std::move(Err)); },
       reinterpret_cast<void *>(callVoidVoidFn));
   EXPECT_EQ(CallVoidVoidCount, 1);
@@ -64,12 +57,12 @@ static int callMainFn(int argc, char *argv[]) {
   return 42;
 }
 
-TEST_F(CallSPSCITest, CallMain) {
+TEST(CallSPSCITest, CallMain) {
   using SPSSig = int64_t(SPSExecutorAddr, SPSSequence<SPSString>);
   std::optional<Expected<int64_t>> Result;
   std::vector<std::string> Args = {"prog", "arg1", "arg2"};
   SPSWrapperFunction<SPSSig>::call(
-      caller("orc_rt_ci_sps_call_main"),
+      caller(orc_rt_ci_sps_call_main),
       [&](Expected<int64_t> R) { Result = std::move(R); },
       reinterpret_cast<void *>(callMainFn), Args);
 
@@ -96,12 +89,12 @@ static int callMainEmptyArgVFn(int argc, char *argv[]) {
   return 42;
 }
 
-TEST_F(CallSPSCITest, CallMainEmptyArgV) {
+TEST(CallSPSCITest, CallMainEmptyArgV) {
   using SPSSig = int64_t(SPSExecutorAddr, SPSSequence<SPSString>);
   std::optional<Expected<int64_t>> Result;
   std::vector<std::string> Args;
   SPSWrapperFunction<SPSSig>::call(
-      caller("orc_rt_ci_sps_call_main"),
+      caller(orc_rt_ci_sps_call_main),
       [&](Expected<int64_t> R) { Result = std::move(R); },
       reinterpret_cast<void *>(callMainEmptyArgVFn), Args);
 
