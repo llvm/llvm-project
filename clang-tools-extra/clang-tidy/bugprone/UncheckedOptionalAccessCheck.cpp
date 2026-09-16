@@ -27,18 +27,17 @@ static constexpr StringRef FuncID = "fun";
 void UncheckedOptionalAccessCheck::registerMatchers(MatchFinder *Finder) {
   using namespace ast_matchers;
 
-  auto HasModeledCallDescendant = hasDescendant(callExpr(
-      anyOf(UncheckedOptionalAccessModel::callToBehaviouralRoleClass(),
-            UncheckedOptionalAccessModel::memberCallToOptionalClass(),
+  auto HasOptionalCallDescendant = hasDescendant(callExpr(
+      anyOf(UncheckedOptionalAccessModel::memberCallToOptionalClass(),
             UncheckedOptionalAccessModel::operatorCallToOptionalClass())));
   Finder->addMatcher(
       decl(anyOf(functionDecl(
                      // FIXME: Remove the filter below when lambdas are
                      // well supported by the check.
                      unless(hasDeclContext(cxxRecordDecl(isLambda()))),
-                     hasBody(HasModeledCallDescendant)),
+                     hasBody(HasOptionalCallDescendant)),
                  cxxConstructorDecl(hasAnyConstructorInitializer(
-                     withInitializer(HasModeledCallDescendant)))))
+                     withInitializer(HasOptionalCallDescendant)))))
           .bind(FuncID),
       this);
 }
