@@ -27,6 +27,13 @@ void CSMain3(uint4 ID : SV_DispatchThreadID) {
 
 }
 
+// Array elements also require distinct semantic indices.
+[shader("compute")][numthreads(8,8,1)]
+void CSMain4(uint3 ID[2] : SV_DispatchThreadID) {
+// expected-error@-1 {{semantic 'SV_DispatchThreadID' does not allow indexing}}
+
+}
+
 void foo() {
 // expected-warning@+1 {{'SV_DispatchThreadID' attribute only applies to parameters, non-static data members, and functions}}
   uint V : SV_DispatchThreadID;

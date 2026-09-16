@@ -13676,6 +13676,8 @@ def note_hlsl_semantic_used_here : Note<"%0 used here">;
 def err_hlsl_unknown_semantic : Error<"unknown HLSL semantic %0">;
 def err_hlsl_semantic_indexing_not_supported
     : Error<"semantic %0 does not allow indexing">;
+def err_hlsl_semantic_index_out_of_range
+    : Error<"semantic %0 index %1 exceeds the maximum supported index %2">;
 def err_hlsl_semantic_invalid_type
     : Error<"semantic %0 must be a "
             "%select{scalar|scalar or vector of up to %2 components}1 of "

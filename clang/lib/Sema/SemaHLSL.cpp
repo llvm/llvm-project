@@ -913,7 +913,11 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
   if (!A)
     return false;
 
-  checkSemanticAnnotation(FD, D, A, SC);
+  // Each array element occupies a separate semantic index.
+  const ConstantArrayType *AT = dyn_cast<ConstantArrayType>(D->getType());
+  unsigned ElementCount = AT ? AT->getZExtSize() : 1;
+
+  checkSemanticAnnotation(FD, D, A, SC, ElementCount);
   OutputDecl->addAttr(A);
 
   unsigned Location = ActiveSemantic.Index.value_or(0);
@@ -933,8 +937,6 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
     SC.UsesExplicitVkLocations = HasVkLocation;
   }
 
-  const ConstantArrayType *AT = dyn_cast<ConstantArrayType>(D->getType());
-  unsigned ElementCount = AT ? AT->getZExtSize() : 1;
   ActiveSemantic.Index = Location + ElementCount;
 
   Twine BaseName = Twine(ActiveSemantic.Semantic->getAttrName()->getName());
@@ -1081,7 +1083,8 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
 
 void SemaHLSL::checkSemanticAnnotation(
     FunctionDecl *EntryPoint, const Decl *Param,
-    const HLSLAppliedSemanticAttr *SemanticAttr, const SemanticContext &SC) {
+    const HLSLAppliedSemanticAttr *SemanticAttr, const SemanticContext &SC,
+    unsigned ElementCount) {
   auto *ShaderAttr = EntryPoint->getAttr<HLSLShaderAttr>();
   assert(ShaderAttr && "Entry point has no shader attribute");
   llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
@@ -1100,24 +1103,35 @@ void SemaHLSL::checkSemanticAnnotation(
   if (Interpretation == llvm::hlsl::SemanticInterpretation::Arbitrary)
     return;
 
-  switch (Kind) {
-  case SemanticKind::DispatchThreadID:
-  case SemanticKind::GroupID:
-  case SemanticKind::GroupIndex:
-  case SemanticKind::GroupThreadID:
-    if (SemanticAttr->getSemanticIndex() != 0) {
-      std::string PrettyName =
-          "'" + SemanticAttr->getSemanticName().str() + "'";
-      Diag(SemanticAttr->getLoc(),
-           diag::err_hlsl_semantic_indexing_not_supported)
-          << PrettyName;
-    }
-    break;
-  default:
-    break;
-  }
-
+  diagnoseSemanticIndex(SemanticAttr, Kind, ElementCount);
   diagnoseSystemSemanticType(Param, SemanticAttr, Kind);
+}
+
+void SemaHLSL::diagnoseSemanticIndex(const HLSLAppliedSemanticAttr *A,
+                                     SemanticKind Kind, unsigned ElementCount) {
+  assert(ElementCount > 0 && "a semantic covers at least one element");
+  uint32_t LastIndex = A->getSemanticIndex() + ElementCount - 1;
+  if (LastIndex == 0)
+    return;
+
+  switch (Kind) {
+  // These semantics are limited by signature packing, not semantic indices.
+  case SemanticKind::Arbitrary:
+  case SemanticKind::ClipDistance:
+  case SemanticKind::CullDistance:
+    return;
+  case SemanticKind::Target: {
+    constexpr unsigned MaxTargetIndex = 7;
+    if (LastIndex > MaxTargetIndex)
+      Diag(A->getLoc(), diag::err_hlsl_semantic_index_out_of_range)
+          << A->getAttrName() << LastIndex << MaxTargetIndex;
+  }
+    return;
+  default:
+    Diag(A->getLoc(), diag::err_hlsl_semantic_indexing_not_supported)
+        << A->getAttrName();
+    return;
+  }
 }
 
 static QualType getElementTypeOf(QualType T, bool IncludeMatrix) {

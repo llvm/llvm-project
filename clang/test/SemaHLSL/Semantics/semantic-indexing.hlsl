@@ -17,3 +17,20 @@ void derived_index(Pair GI : SV_GroupIndex) {}
 
 [shader("compute")][numthreads(1,1,1)]
 void no_index(uint GI : SV_GroupIndex) {}
+
+// An array also derives an index per element.
+[shader("compute")][numthreads(1,1,1)]
+void array_index(uint3 ID[2] : SV_DispatchThreadID) {}
+// expected-error@-1 {{semantic 'SV_DispatchThreadID' does not allow indexing}}
+
+// SV_Position is non-indexable on pixel shader inputs.
+[shader("pixel")]
+float4 position_ps(float4 P : SV_Position1) : SV_Target { return P; }
+// expected-error@-1 {{semantic 'SV_Position' does not allow indexing}}
+
+// On vertex shader inputs, SV_Position is arbitrary and may be indexed.
+[shader("vertex")]
+float4 position_vs(float4 P : SV_Position1) : SV_Position { return P; }
+
+[shader("pixel")]
+float4 user_index(float4 P : USER7) : SV_Target { return P; }

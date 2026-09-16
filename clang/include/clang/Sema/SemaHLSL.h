@@ -309,7 +309,8 @@ private:
 
   void checkSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
                                const HLSLAppliedSemanticAttr *SemanticAttr,
-                               const SemanticContext &SC);
+                               const SemanticContext &SC,
+                               unsigned ElementCount);
 
   bool determineActiveSemanticOnScalar(FunctionDecl *FD,
                                        DeclaratorDecl *OutputDecl,
@@ -334,6 +335,11 @@ private:
                                 llvm::Triple::EnvironmentType Stage,
                                 llvm::hlsl::IOType CurrentIOType,
                                 llvm::dxbc::PSV::SemanticKind SemanticKind);
+
+  // Check ElementCount consecutive indices for a system-value interpretation.
+  void diagnoseSemanticIndex(const HLSLAppliedSemanticAttr *A,
+                             llvm::dxbc::PSV::SemanticKind SemanticKind,
+                             unsigned ElementCount);
 
   // Called only for system-value interpretations.
   void diagnoseSystemSemanticType(const Decl *D,
