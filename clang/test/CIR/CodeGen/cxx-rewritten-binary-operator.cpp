@@ -171,8 +171,8 @@ void cxx_rewritten_binary_operator_lvalue_expr() {
 // CIR: %[[OP_RESULT:.*]] = cir.const #cir.poison : !rec_SpaceshipLValueResult
 // CIR: cir.store {{.*}} %[[OP_RESULT]], %[[TMP_ADDR]] : !rec_SpaceshipLValueResult, !cir.ptr<!rec_SpaceshipLValueResult>
 // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
-// CIR: %[[RESULT:.*]] = cir.call @_ZNK21SpaceshipLValueResultltEi(%[[TMP_ADDR]], %[[CONST_0]]) : (!cir.ptr<!rec_SpaceshipLValueResult> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !s32i {llvm.noundef}) -> !cir.ptr<!s32i>
-// CIR: cir.store %[[RESULT]], %[[REF_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CIR: %[[RESULT:.*]] = cir.call @_ZNK21SpaceshipLValueResultltEi(%[[TMP_ADDR]], %[[CONST_0]]) : (!cir.ptr<!rec_SpaceshipLValueResult> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !s32i {llvm.noundef}) -> (!cir.ptr<!s32i> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nonnull, llvm.noundef})
+// CIR: cir.store {{.*}} %[[RESULT]], %[[REF_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 
 // LLVM: %[[A_ADDR:.*]] = alloca %struct.LValueItem, align 1
 // LLVM: %[[B_ADDR:.*]] = alloca %struct.LValueItem, align 1
