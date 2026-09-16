@@ -66,4 +66,43 @@ entry:
   ret void
 }
 
+; A musttail call from a function with no arguments (and therefore no reusable
+; stack arg area) to a function with 11 i32 arguments that overflow the 8 GPR
+; argument registers, leaving 4 bytes of stack arg area:
+;   * The first 8 i32 arguments land in registers w0-w7
+;   * The arg is passed on the stack, consuming 4 bytes
+; We round up that stack arg area to keep the FPDiff (and therefore the stack)
+; 16-byte aligned going into the callee.
+define swifttailcc void @caller_no_args() {
+; CHECK-LABEL: caller_no_args:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    mov w8, #8 ; =0x8
+; CHECK-NEXT:    str w8, [sp, #-16]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    mov w1, #1 ; =0x1
+; CHECK-NEXT:    mov w2, #2 ; =0x2
+; CHECK-NEXT:    mov w3, #3 ; =0x3
+; CHECK-NEXT:    mov w4, #4 ; =0x4
+; CHECK-NEXT:    mov w5, #5 ; =0x5
+; CHECK-NEXT:    mov w6, #6 ; =0x6
+; CHECK-NEXT:    mov w7, #7 ; =0x7
+; CHECK-NEXT:    b _callee_11_args
+entry:
+  musttail call swifttailcc void @callee_11_args(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8)
+  ret void
+}
+
+; The corresponding callee pops swifttail callee, with 11 i32 arguments that
+; overflow the 8 GPR argument registers, leaving 4 bytes of stack arg area,
+; which is rounded up to keep the stack 16-byte aligned. The amount popped here
+; must match what was pushed in @caller_no_args.
+define swifttailcc void @callee_11_args(i32, i32, i32, i32, i32, i32, i32, i32, i32) "noinline" {
+; CHECK-LABEL: callee_11_args:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    ret
+  ret void
+}
+
 attributes #0 = { nounwind "frame-pointer"="non-leaf-no-reserve" }
