@@ -929,13 +929,13 @@ public:
   // Given:
   //    (icmp eq/ne (and X, C0), (shift X, C1))
   // or
-  //    (icmp eq/ne X, (rotate X, CPow2))
+  //    (icmp eq/ne X, (rotate X, C1))
 
   // If C0 is a mask or shifted mask and the shift amt (C1) isolates the
   // remaining bits (i.e something like `(x64 & UINT32_MAX) == (x64 >> 32)`)
   // Do we prefer the shift to be shift-right, shift-left, or rotate.
-  // Note: Its only valid to convert the rotate version to the shift version iff
-  // the shift-amt (`C1`) is a power of 2 (including 0).
+  // Note: It's only valid to convert between the rotate and shift versions iff
+  // the shift-amt (`C1`) divides the bit width.
   // If ShiftOpc (current Opcode) is returned, do nothing.
   virtual unsigned preferedOpcodeForCmpEqPiecesOfOperand(
       EVT VT, unsigned ShiftOpc, bool MayTransformRotate,
@@ -5060,14 +5060,14 @@ public:
                                 const CallBase &Call) {
       RetTy = OrigRetTy = ResultType;
 
-      IsInReg = Call.hasABIRetAttr(Attribute::InReg);
+      IsInReg = Call.hasRetAttr(Attribute::InReg);
       DoesNotReturn =
           Call.doesNotReturn() ||
           (!isa<InvokeInst>(Call) && isa<UnreachableInst>(Call.getNextNode()));
       IsVarArg = FTy->isVarArg();
       IsReturnValueUsed = !Call.use_empty();
-      RetSExt = Call.hasABIRetAttr(Attribute::SExt);
-      RetZExt = Call.hasABIRetAttr(Attribute::ZExt);
+      RetSExt = Call.hasRetAttr(Attribute::SExt);
+      RetZExt = Call.hasRetAttr(Attribute::ZExt);
       NoMerge = Call.hasFnAttr(Attribute::NoMerge);
 
       Callee = Target;
@@ -5994,6 +5994,9 @@ public:
   /// expansion was successful and populates the Result and Overflow arguments.
   bool expandMULO(SDNode *Node, SDValue &Result, SDValue &Overflow,
                   SelectionDAG &DAG) const;
+
+  // Expand ISD::MULH[SU]. Can expand to MUL_LOHI or wide MUL if available.
+  SDValue expandMULH(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Calculate the product twice the width of LHS and RHS. If HiLHS/HiRHS are
   /// non-null they will be included in the multiplication. The expansion works

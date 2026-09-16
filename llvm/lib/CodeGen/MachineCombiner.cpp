@@ -584,9 +584,7 @@ bool MachineCombinerImpl::combineInstructions(MachineBasicBlock *MBB) {
       continue;
 
     // Only used when VerifyPatternOrder is enabled.
-    [[maybe_unused]] long PrevLatencyDiff = std::numeric_limits<long>::max();
-    [[maybe_unused]] CombinerObjective PrevObjective =
-        CombinerObjective::Default;
+    [[maybe_unused]] SmallDenseMap<CombinerObjective, long> PrevLatencyDiff;
 
     for (const auto P : Patterns) {
       SmallVector<MachineInstr *, 16> InsInstrs;
@@ -623,12 +621,14 @@ bool MachineCombinerImpl::combineInstructions(MachineBasicBlock *MBB) {
             MI, InsInstrs, DelInstrs, TraceEnsemble->getTrace(MBB));
         long CurrentLatencyDiff = ((long)RootLatency) - ((long)NewRootLatency);
         CombinerObjective Objective = getCombinerObjective(P);
-        assert((Objective != PrevObjective ||
-                CurrentLatencyDiff <= PrevLatencyDiff) &&
+        auto PrevIt =
+            PrevLatencyDiff
+                .try_emplace(Objective, std::numeric_limits<long>::max())
+                .first;
+        assert(CurrentLatencyDiff <= PrevIt->second &&
                "Current pattern is expected to be better than the previous "
                "pattern.");
-        PrevLatencyDiff = CurrentLatencyDiff;
-        PrevObjective = Objective;
+        PrevIt->second = CurrentLatencyDiff;
       }
 
       if (IncrementalUpdate && LastUpdate != BlockIter) {

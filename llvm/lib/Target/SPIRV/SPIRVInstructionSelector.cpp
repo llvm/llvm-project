@@ -5872,8 +5872,8 @@ bool SPIRVInstructionSelector::selectCounterHandleFromBinding(
   assert(MainHandleDef->getIntrinsicID() ==
          Intrinsic::spv_resource_handlefrombinding);
 
-  uint32_t Set = getIConstVal(Intr.getOperand(4).getReg(), MRI);
-  uint32_t Binding = getIConstVal(Intr.getOperand(3).getReg(), MRI);
+  uint32_t Set = getIConstVal(Intr.getOperand(3).getReg(), MRI);
+  uint32_t Binding = getIConstVal(Intr.getOperand(4).getReg(), MRI);
   uint32_t ArraySize = getIConstVal(MainHandleDef->getOperand(4).getReg(), MRI);
   Register IndexReg = MainHandleDef->getOperand(5).getReg();
   std::string CounterName =
@@ -7639,7 +7639,9 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
     SC = GR.getPointerStorageClass(ResType);
   }
 
-  if (ResType->getOpcode() == SPIRV::OpTypeImage && ArraySize == 0)
+  // ArraySize 0 means an unbounded array and we need to set to required
+  // capability.
+  if (ArraySize == 0)
     MIRBuilder.buildInstr(SPIRV::OpCapability)
         .addImm(SPIRV::Capability::RuntimeDescriptorArrayEXT);
 

@@ -976,8 +976,8 @@ unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
 
 std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
-    const MCRegisterInfo &MRI, bool SkipSrc, bool AllowSameVGPR,
-    bool VOPD3) const {
+    const MCRegisterInfo &MRI, bool SkipSrc, bool AllowSameVGPR, bool VOPD3,
+    bool HasGFX11InterlockHazard) const {
 
   auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx,
                                CompInfo[ComponentIndex::X].isVOP3());
@@ -1009,7 +1009,9 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
   unsigned CompOprIdx;
   for (CompOprIdx = 0; CompOprIdx < Component::MAX_OPR_NUM; ++CompOprIdx) {
     unsigned BanksMasks = VOPD3 ? VOPD3_VGPR_BANK_MASKS[CompOprIdx]
-                                : VOPD_VGPR_BANK_MASKS[CompOprIdx];
+                          : HasGFX11InterlockHazard
+                              ? VOPD_GFX11_VGPR_BANK_MASKS[CompOprIdx]
+                              : VOPD_VGPR_BANK_MASKS[CompOprIdx];
     if (!OpXRegs[CompOprIdx] || !OpYRegs[CompOprIdx])
       continue;
 
@@ -1130,8 +1132,9 @@ static unsigned getMaxHWAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
 
 // Total physical size of LDS on the block, in bytes. On targets with
 // FeatureHalfAddressablePhysicalLocalMemory the physical block is twice the
-// addressable size (gfx10/11/12, 128k physical and 64k addressable). On other
-// targets it is equal to the addressable size.
+// addressable size (gfx6: 64 KiB physical and 32 KiB addressable;
+// gfx10/11/12: 128 KiB physical and 64 KiB addressable). On other targets it is
+// equal to the addressable size.
 static unsigned getPhysicalLocalMemorySize(const MCSubtargetInfo &STI) {
   unsigned Addressable = getMaxHWAddressableLocalMemorySize(STI);
   if (STI.getFeatureBits().test(FeatureHalfAddressablePhysicalLocalMemory))
@@ -1140,7 +1143,7 @@ static unsigned getPhysicalLocalMemorySize(const MCSubtargetInfo &STI) {
 }
 
 // Sizes in use, by generation (addressable / physical block):
-//   gfx6              :  32 KiB
+//   gfx6              :  32 KiB addressable, 64 KiB physical block
 //   gfx7 / gfx8 / gfx9:  64 KiB
 //   gfx9.5 (gfx950)   : 160 KiB
 //   gfx10 / 11 / 12   :  64 KiB addressable, 128 KiB physical block
@@ -3278,10 +3281,10 @@ bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo) {
   case CallingConv::AMDGPU_CS_ChainPreserve:
     // For non-compute shaders, SGPR inputs are marked with either inreg or
     // byval. Everything else is in VGPRs.
-    return CB->hasABIParamAttr(ArgNo, Attribute::InReg) ||
+    return CB->paramHasAttr(ArgNo, Attribute::InReg) ||
            CB->isByValArgument(ArgNo);
   default:
-    return CB->hasABIParamAttr(ArgNo, Attribute::InReg);
+    return CB->paramHasAttr(ArgNo, Attribute::InReg);
   }
 }
 
@@ -3688,24 +3691,17 @@ bool isPackedSingleSGPRFP32Inst(unsigned Opc) {
   }
 }
 
+// NOTE: This function is currently only used before pseudo-expansion.
 bool isPackedSingleSGPR64BitInst(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::V_PK_ADD_F64:
-  case AMDGPU::V_PK_ADD_F64_gfx1250:
   case AMDGPU::V_PK_MUL_F64:
-  case AMDGPU::V_PK_MUL_F64_gfx1250:
   case AMDGPU::V_PK_FMA_F64:
-  case AMDGPU::V_PK_FMA_F64_gfx1250:
   case AMDGPU::V_PK_MAX_NUM_F64:
-  case AMDGPU::V_PK_MAX_NUM_F64_gfx1250:
   case AMDGPU::V_PK_MIN_NUM_F64:
-  case AMDGPU::V_PK_MIN_NUM_F64_gfx1250:
   case AMDGPU::V_PK_ADD_NC_U64:
-  case AMDGPU::V_PK_ADD_NC_U64_gfx1250:
   case AMDGPU::V_PK_SUB_NC_U64:
-  case AMDGPU::V_PK_SUB_NC_U64_gfx1250:
   case AMDGPU::V_PK_LSHL_ADD_U64:
-  case AMDGPU::V_PK_LSHL_ADD_U64_gfx1250:
     return true;
   default:
     return false;

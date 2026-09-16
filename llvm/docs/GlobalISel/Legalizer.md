@@ -56,7 +56,7 @@ that information is entirely contained within the single instruction.
 
 ## API: LegalizerInfo
 
-The recommended [^legalizer-legacy-footnote] API looks like this:
+The API looks like this:
 
 ```
 getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR, G_SHL})
@@ -89,13 +89,6 @@ enum tokens (`Legal`, `WidenScalar`, ...) that instruct it to call a
 function. This would have some benefits, most notable being that Custom could
 be removed.
 :::
-
-```{rubric} Footnotes
-```
-
-[^legalizer-legacy-footnote]: An API that is broadly similar to
-    SelectionDAG/TargetLowering is available, but is not recommended as a more
-    powerful API is available.
 
 ### Rule Processing and Declaring Rules
 

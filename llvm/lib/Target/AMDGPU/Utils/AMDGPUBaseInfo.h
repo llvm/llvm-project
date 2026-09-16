@@ -123,6 +123,18 @@ struct CvtScaleF32_F32F16ToF8F4_Info {
   unsigned Opcode;
 };
 
+/// Normalized WMMA or SWMMAC family used to select co-execution rules.
+enum class WMMAVariant {
+  Unknown = 0,
+  IU8_16x16x64,
+  F8F6F4_16x16x128,
+  F8F6F4_16x16x128_BothF4,
+  FP8BF8_16x16x64,
+  F16BF16_16x16x32,
+  FP8BF8_16x16x128,
+  F4_32x16x128,
+};
+
 struct True16D16Info {
   unsigned T16Op;
   unsigned HiOp;
@@ -133,6 +145,7 @@ struct WMMAInstInfo {
   uint32_t Opcode;
   bool is_wmma_xdl;
   bool HasMatrixScale;
+  WMMAVariant CoExecVariant;
 };
 
 #define GET_MIMGBaseOpcode_DECL
@@ -631,6 +644,10 @@ enum Component : unsigned {
 // 4 banks result in a mask 3, setting 2 lower bits.
 constexpr unsigned VOPD_VGPR_BANK_MASKS[] = {1, 3, 3, 1};
 constexpr unsigned VOPD3_VGPR_BANK_MASKS[] = {1, 3, 3, 3};
+// GFX11 VOPD interlock hazard requires SRC0/SRC1 to have
+// different parities, not just on different banks. Else,
+// non-deterministic forwarding error may occur.
+constexpr unsigned VOPD_GFX11_VGPR_BANK_MASKS[] = {1, 1, 1, 1};
 
 enum ComponentIndex : unsigned { X = 0, Y = 1 };
 constexpr unsigned COMPONENTS[] = {ComponentIndex::X, ComponentIndex::Y};
@@ -876,12 +893,15 @@ public:
   // even though it violates requirement to be from different banks.
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even and instruction may have real src2 as opposed to tied accumulator.
+  // If \p HasGFX11InterlockHazard is set then X/Y SRC0 and SRC1 VGPRs
+  // must have different register-number parity.
   bool
   hasInvalidOperand(std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
                     const MCRegisterInfo &MRI, bool SkipSrc = false,
-                    bool AllowSameVGPR = false, bool VOPD3 = false) const {
+                    bool AllowSameVGPR = false, bool VOPD3 = false,
+                    bool HasGFX11InterlockHazard = false) const {
     return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc, AllowSameVGPR,
-                                      VOPD3)
+                                      VOPD3, HasGFX11InterlockHazard)
         .has_value();
   }
 
@@ -893,10 +913,13 @@ public:
   // even though it violates requirement to be from different banks.
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even and instruction may have real src2 as opposed to tied accumulator.
+  // If \p HasGFX11InterlockHazard is set then X/Y SRC0 and SRC1 VGPRs
+  // must have different register-number parity.
   std::optional<unsigned> getInvalidCompOperandIndex(
       std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
       const MCRegisterInfo &MRI, bool SkipSrc = false,
-      bool AllowSameVGPR = false, bool VOPD3 = false) const;
+      bool AllowSameVGPR = false, bool VOPD3 = false,
+      bool HasGFX11InterlockHazard = false) const;
 
 private:
   RegIndices
@@ -1546,6 +1569,12 @@ inline bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   return isSISrcOperand(Desc.operands()[OpNo]);
 }
 
+/// Is this a scalar (i.e. not packed) bf16 source operand?
+constexpr bool isBF16SrcOperand(const MCOperandInfo &OpInfo) {
+  return OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_BF16 ||
+         OpInfo.OperandType == AMDGPU::OPERAND_REG_INLINE_C_BF16;
+}
+
 /// Is this a KImm operand?
 bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo);
 
@@ -1730,7 +1759,7 @@ inline bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned DC) {
 }
 
 /// \returns true if an instruction may have a 64-bit VGPR operand.
-bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc,
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
                              const MCSubtargetInfo &ST);
 
 /// \returns true if an instruction is a DP ALU DPP without any 64-bit operands.

@@ -119,19 +119,19 @@ bool TargetLowering::parametersInCSRMatch(const MachineRegisterInfo &MRI,
 /// and called function attributes.
 void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
                                                      unsigned ArgIdx) {
-  IsSExt = Call->hasABIParamAttr(ArgIdx, Attribute::SExt);
-  IsZExt = Call->hasABIParamAttr(ArgIdx, Attribute::ZExt);
-  IsNoExt = Call->hasABIParamAttr(ArgIdx, Attribute::NoExt);
-  IsInReg = Call->hasABIParamAttr(ArgIdx, Attribute::InReg);
-  IsSRet = Call->hasABIParamAttr(ArgIdx, Attribute::StructRet);
-  IsNest = Call->hasABIParamAttr(ArgIdx, Attribute::Nest);
-  IsByVal = Call->hasABIParamAttr(ArgIdx, Attribute::ByVal);
-  IsPreallocated = Call->hasABIParamAttr(ArgIdx, Attribute::Preallocated);
-  IsInAlloca = Call->hasABIParamAttr(ArgIdx, Attribute::InAlloca);
+  IsSExt = Call->paramHasAttr(ArgIdx, Attribute::SExt);
+  IsZExt = Call->paramHasAttr(ArgIdx, Attribute::ZExt);
+  IsNoExt = Call->paramHasAttr(ArgIdx, Attribute::NoExt);
+  IsInReg = Call->paramHasAttr(ArgIdx, Attribute::InReg);
+  IsSRet = Call->paramHasAttr(ArgIdx, Attribute::StructRet);
+  IsNest = Call->paramHasAttr(ArgIdx, Attribute::Nest);
+  IsByVal = Call->paramHasAttr(ArgIdx, Attribute::ByVal);
+  IsPreallocated = Call->paramHasAttr(ArgIdx, Attribute::Preallocated);
+  IsInAlloca = Call->paramHasAttr(ArgIdx, Attribute::InAlloca);
   IsReturned = Call->paramHasAttr(ArgIdx, Attribute::Returned);
-  IsSwiftSelf = Call->hasABIParamAttr(ArgIdx, Attribute::SwiftSelf);
-  IsSwiftAsync = Call->hasABIParamAttr(ArgIdx, Attribute::SwiftAsync);
-  IsSwiftError = Call->hasABIParamAttr(ArgIdx, Attribute::SwiftError);
+  IsSwiftSelf = Call->paramHasAttr(ArgIdx, Attribute::SwiftSelf);
+  IsSwiftAsync = Call->paramHasAttr(ArgIdx, Attribute::SwiftAsync);
+  IsSwiftError = Call->paramHasAttr(ArgIdx, Attribute::SwiftError);
   Alignment = Call->getParamStackAlign(ArgIdx);
   IndirectType = nullptr;
   assert(IsByVal + IsPreallocated + IsInAlloca + IsSRet <= 1 &&
@@ -10811,6 +10811,19 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
   SDValue Op = Node->getOperand(0);
   unsigned Len = VT.getScalarSizeInBits();
+
+  // Compute effective bit width from known bits, allowing us to shift the
+  // active bits down if necessary to fit into smaller specialized expansions.
+  KnownBits Known = DAG.computeKnownBits(Op);
+  unsigned LZ = Known.countMinLeadingZeros();
+  unsigned TZ = Known.countMinTrailingZeros();
+  unsigned ShiftedActiveBits = Known.getBitWidth() - (LZ + TZ);
+
+  // Round up to 8-bit boundary for byte-oriented SWAR algorithm
+  unsigned EffectiveLen = Len;
+  if (ShiftedActiveBits > 0 && ShiftedActiveBits < Len)
+    EffectiveLen = std::min(alignTo(ShiftedActiveBits, 8), Len);
+
   assert(VT.isInteger() && "CTPOP not implemented for this type.");
 
   // TODO: Add support for irregular type lengths.
@@ -10820,6 +10833,12 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
   // Only expand vector types if we have the appropriate vector bit operations.
   if (VT.isVector() && !canExpandVectorCTPOP(*this, VT))
     return SDValue();
+
+  // If the active bits are not at the low end, shift them down
+  if (EffectiveLen < Len && TZ > 0) {
+    Op = DAG.getNode(ISD::SRL, dl, VT, Op,
+                     DAG.getShiftAmountConstant(TZ, VT, dl));
+  }
 
   // This is the "best" algorithm from
   // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
@@ -10849,13 +10868,13 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
                                            DAG.getConstant(4, dl, ShVT))),
                    Mask0F);
 
-  if (Len <= 8)
+  if (EffectiveLen <= 8)
     return Op;
 
   // Avoid the multiply if we only have 2 bytes to add.
   // TODO: Only doing this for scalars because vectors weren't as obviously
   // improved.
-  if (Len == 16 && !VT.isVector()) {
+  if (EffectiveLen == 16 && !VT.isVector()) {
     // v = (v + (v >> 8)) & 0x00FF;
     return DAG.getNode(ISD::AND, dl, VT,
                      DAG.getNode(ISD::ADD, dl, VT, Op,
@@ -10873,7 +10892,7 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
     V = DAG.getNode(ISD::MUL, dl, VT, Op, Mask01);
   } else {
     V = Op;
-    for (unsigned Shift = 8; Shift < Len; Shift *= 2) {
+    for (unsigned Shift = 8; Shift < EffectiveLen; Shift *= 2) {
       SDValue ShiftC = DAG.getShiftAmountConstant(Shift, VT, dl);
       V = DAG.getNode(ISD::ADD, dl, VT, V,
                       DAG.getNode(ISD::SHL, dl, VT, V, ShiftC));
@@ -13072,6 +13091,41 @@ bool TargetLowering::expandMULO(SDNode *Node, SDValue &Result,
   assert(RType.getSizeInBits() == Overflow.getValueSizeInBits() &&
          "Unexpected result type for S/UMULO legalization");
   return true;
+}
+
+SDValue TargetLowering::expandMULH(SDNode *Node, SelectionDAG &DAG) const {
+  SDLoc dl(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+  bool IsSigned = Node->getOpcode() == ISD::MULHS;
+
+  // Use MUL_LOHI if legal/custom for the original type.
+  unsigned LoHiOp = IsSigned ? ISD::SMUL_LOHI : ISD::UMUL_LOHI;
+  if (isOperationLegalOrCustom(LoHiOp, VT))
+    return DAG.getNode(LoHiOp, dl, DAG.getVTList(VT, VT), LHS, RHS).getValue(1);
+
+  // Use a wide multiply if available.
+  EVT WideVT = VT.widenIntegerElementType(*DAG.getContext());
+  if (isOperationLegalOrCustom(ISD::MUL, WideVT)) {
+    unsigned BW = VT.getScalarSizeInBits();
+    LHS = DAG.getExtOrTrunc(IsSigned, LHS, dl, WideVT);
+    RHS = DAG.getExtOrTrunc(IsSigned, RHS, dl, WideVT);
+    return DAG.getNode(ISD::TRUNCATE, dl, VT,
+                       DAG.getNode(ISD::SRL, dl, WideVT,
+                                   DAG.getNode(ISD::MUL, dl, WideVT, LHS, RHS),
+                                   DAG.getShiftAmountConstant(BW, WideVT, dl)));
+  }
+
+  // Let fixed-length vectors be scalarised by the caller.
+  // Expand everything else with a wide multiply.
+  if (!VT.isFixedLengthVector()) {
+    SDValue Lo, Hi;
+    forceExpandWideMUL(DAG, dl, IsSigned, LHS, RHS, Lo, Hi);
+    return Hi;
+  }
+
+  return SDValue();
 }
 
 SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {

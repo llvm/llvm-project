@@ -104,7 +104,7 @@ void CIRGenFunction::emitAggregateStore(mlir::Value value, Address dest) {
   // scope as the value, don't make assumptions about current insertion point.
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointAfter(value.getDefiningOp());
-  builder.createStore(*currSrcLoc, value, dest);
+  builder.createStore(getLoc(*currSrcLoc), value, dest);
 }
 
 static void addAttributesFromFunctionProtoType(CIRGenBuilderTy &builder,
@@ -1210,13 +1210,31 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                                 ReturnValueSlot returnValue,
                                 const CallArgList &args,
                                 cir::CIRCallOpInterface *callOp,
-                                bool isMustTail, mlir::Location loc) {
+                                bool isMustTail, SourceRange clangLoc) {
   QualType retTy = funcInfo.getReturnType();
   cir::FuncType cirFuncTy = getTypes().getFunctionType(funcInfo);
+  mlir::Location loc = getLoc(clangLoc);
 
   SmallVector<mlir::Value, 16> cirCallArgs(args.size());
 
   const Decl *targetDecl = callee.getAbstractInfo().getCalleeDecl().getDecl();
+
+  if (const FunctionDecl *fd = dyn_cast_or_null<FunctionDecl>(targetDecl)) {
+    // We can only guarantee that a function is called from the correct
+    // context/function based on the appropriate target attributes,
+    // so only check in the case where we have both always_inline and target
+    // since otherwise we could be making a conditional call after a check for
+    // the proper cpu features (and it won't cause code generation issues due to
+    // function based code generation).
+    if ((targetDecl->hasAttr<AlwaysInlineAttr>() &&
+         (targetDecl->hasAttr<TargetAttr>() ||
+          (curFuncDecl && curFuncDecl->hasAttr<TargetAttr>()))) ||
+        (curFuncDecl && curFuncDecl->hasAttr<FlattenAttr>() &&
+         (curFuncDecl->hasAttr<TargetAttr>() ||
+          targetDecl->hasAttr<TargetAttr>())))
+      checkTargetFeatures(clangLoc.getBegin(), fd);
+  }
+
   const FunctionDecl *callerDecl = dyn_cast_or_null<FunctionDecl>(curCodeDecl);
   const FunctionDecl *calleeDecl = dyn_cast_or_null<FunctionDecl>(targetDecl);
 
@@ -1452,7 +1470,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     mlir::ResultRange results = theCall->getOpResults();
     assert(results.size() <= 1 && "multiple returns from a call");
 
-    SourceLocRAIIObject loc{*this, callLoc};
+    SourceLocRAIIObject loc{*this, clangLoc};
     emitAggregateStore(results[0], destPtr);
     return RValue::getAggregate(destPtr);
   }

@@ -1148,16 +1148,19 @@ static bool isPlainVirtRegOperand(const MachineOperand &MO) {
 // the links above Root, leaf first. Returns false if the chain is too short,
 // if Root is not the last link of the chain, if the links do not all
 // accumulate the same data type, or if a link of the upper half of the chain
-// cannot be re-emitted at Root (a folded load moved across a store).
+// cannot be re-emitted at Root (a folded load moved across a store, or a
+// physical register operand moved across its clobber).
 static bool collectFMAChain(const TargetInstrInfo &TII, MachineInstr &Root,
                             SmallVectorImpl<MachineInstr *> &Chain) {
   MachineBasicBlock &MBB = *Root.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
 
   // The transform reorders the additions and de-contracts one FMA into a
-  // plain multiply. The latter rounds the product separately and can turn a
-  // -0.0 result into +0.0, so both the reassoc and nsz flags are required, as
-  // for the other FP reassociations of the machine combiner. Constrained FP
+  // plain multiply. The de-contracted multiply rounds the product separately,
+  // so the result can differ from the fused chain by one rounding of one
+  // product and by the sign of a zero; both are accepted for instructions
+  // carrying the reassoc and nsz flags, which are required here as for the
+  // other FP reassociations of the machine combiner. Constrained FP
   // instructions, which may raise FP exceptions, are left alone.
   auto GetInfo = [&](const MachineInstr &MI)
       -> std::optional<TargetInstrInfo::FMAChainLinkInfo> {
@@ -1248,9 +1251,10 @@ static bool collectFMAChain(const TargetInstrInfo &TII, MachineInstr &Root,
 
   // The links of the upper half of the chain other than Root are re-emitted
   // right before Root. A link with a folded load must not be moved across a
-  // store, call or ordered memory access. The chain links are in program
-  // order, so it suffices to scan the block between the first moved link and
-  // Root once.
+  // store, call or ordered memory access, and a link reading a physical
+  // register must not be moved at all, as the read would land past any
+  // intervening clobber. The chain links are in program order, so it suffices
+  // to scan the block between the first moved link and Root once.
   unsigned Split = (Chain.size() + 1) / 2;
   SmallPtrSet<const MachineInstr *, 8> Moved(Chain.begin() + Split,
                                              Chain.end());
@@ -1259,6 +1263,10 @@ static bool collectFMAChain(const TargetInstrInfo &TII, MachineInstr &Root,
        llvm::make_range(Chain[Split]->getIterator(), Root.getIterator())) {
     if (Moved.contains(&MI)) {
       if (MI.hasOrderedMemoryRef() || MI.hasUnmodeledSideEffects())
+        return false;
+      if (llvm::any_of(MI.uses(), [](const MachineOperand &MO) {
+            return MO.isReg() && !MO.isImplicit() && MO.getReg().isPhysical();
+          }))
         return false;
       MovesLoad |= MI.mayLoad() && !MI.isDereferenceableInvariantLoad();
       continue;
@@ -1365,10 +1373,10 @@ void TargetInstrInfo::reassociateFMAChain(
     MachineInstr *NewInstr = MF->CloneMachineInstr(Link);
     if (I == S) {
       // The first link of the new chain is a plain multiply; its accumulator
-      // input stays in the lower half of the chain.
+      // input stays in the lower half of the chain. The multiply has no tied
+      // operands, so the destination's tie is dropped.
       assert(LAccIdx >= 0 && "fused link must have a register accumulator");
-      for (unsigned Op = 0, E = NewInstr->getNumOperands(); Op != E; ++Op)
-        NewInstr->untieRegOperand(Op);
+      NewInstr->untieRegOperand(0);
       NewInstr->removeOperand(LAccIdx);
       NewInstr->setDesc(get(LInfo->MulOpc));
     } else {

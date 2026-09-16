@@ -1393,6 +1393,34 @@ TEST(APFloatTest, fromZeroDecimalLargeExponentString) {
   EXPECT_EQ(0.0,  APFloat(APFloat::IEEEdouble(), StringRef("0e1234" "\0" "2", 6)).convertToDouble());
 }
 
+TEST(APFloatTest, DecimalStringsUseLargePowersOfFive) {
+  // These values are just below one, so they cannot take the early obvious
+  // underflow path. The number of fractional digits is the power passed to
+  // powerOf5(). Together, the cases exercise the high entries and different
+  // combinations of the precomputed powers-of-five table.
+  struct TestCase {
+    const fltSemantics &Sem;
+    unsigned FractionalDigits;
+  };
+  const TestCase Tests[] = {
+      {APFloat::IEEEhalf(), 8192},
+      {APFloat::IEEEsingle(), 12288},
+      {APFloat::IEEEdouble(), 16376},
+      {APFloat::IEEEquad(), 16383},
+  };
+
+  for (const TestCase &Test : Tests) {
+    std::string Input = "0." + std::string(Test.FractionalDigits, '9');
+    APFloat Value(Test.Sem);
+    auto StatusOr =
+        Value.convertFromString(Input, APFloat::rmNearestTiesToEven);
+    ASSERT_TRUE(!!StatusOr) << Test.FractionalDigits;
+    EXPECT_TRUE(*StatusOr & APFloat::opInexact) << Test.FractionalDigits;
+    EXPECT_TRUE(Value.bitwiseIsEqual(APFloat::getOne(Test.Sem, false)))
+        << Test.FractionalDigits;
+  }
+}
+
 TEST(APFloatTest, fromZeroHexadecimalString) {
   EXPECT_EQ( 0.0, APFloat(APFloat::IEEEdouble(),  "0x0p1").convertToDouble());
   EXPECT_EQ(+0.0, APFloat(APFloat::IEEEdouble(), "+0x0p1").convertToDouble());

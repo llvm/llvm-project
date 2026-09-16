@@ -172,6 +172,18 @@ public:
   }
   bool IsIntrinsic(
       const SourceName &name, std::optional<Symbol::Flag> flag) const {
+    // TEMPORARY (enumeration-type feature gating): NEXT and PREVIOUS are only
+    // recognized as intrinsic names when the enumeration-type feature is
+    // enabled, so that pre-F2023 programs may still use those names for
+    // implicit external procedures.  This gating is removed once the
+    // enumeration-type feature is fully implemented.
+    if (!context_->languageFeatures().IsEnabled(
+            common::LanguageFeature::EnumerationType)) {
+      const std::string nameStr{name.ToString()};
+      if (nameStr == "next" || nameStr == "previous") {
+        return false;
+      }
+    }
     if (!flag) {
       return context_->intrinsics().IsIntrinsic(name.ToString());
     } else if (flag == Symbol::Flag::Function) {
@@ -1329,7 +1341,7 @@ private:
       const parser::TypeParamValue &, common::TypeParamAttr attr);
   Attrs HandleSaveName(const SourceName &, Attrs);
   void AddSaveName(std::set<SourceName> &, const SourceName &);
-  bool HandleUnrestrictedSpecificIntrinsicFunction(const parser::Name &);
+  bool HandleSpecificIntrinsicFunction(const parser::Name &);
   const parser::Name *FindComponent(const parser::Name *, const parser::Name &);
   void Initialization(const parser::Name &, const parser::Initialization &,
       bool inComponentDecl);
@@ -4881,7 +4893,19 @@ void ModuleVisitor::ApplyDefaultAccess() {
     Symbol &symbol{*pair.second};
     if (!symbol.attrs().HasAny({Attr::PUBLIC, Attr::PRIVATE})) {
       Attr attr{defaultAttr};
-      if (auto *generic{symbol.detailsIf<GenericDetails>()}) {
+      if (symbol.test(Symbol::Flag::EnumeratorParameter)) {
+        // F2023 7.6.2p2: the access-spec on the ENUMERATION TYPE statement
+        // supplies the default accessibility of its enumerators.  A
+        // use-associated enumerator also carries the flag but holds UseDetails,
+        // not ObjectEntityDetails; it follows the module default here.
+        if (const auto *obj{symbol.detailsIf<ObjectEntityDetails>()}) {
+          const Symbol &typeSym{obj->type()->derivedTypeSpec().typeSymbol()};
+          if (auto a{typeSym.get<DerivedTypeDetails>()
+                      .enumeratorDefaultAccess()}) {
+            attr = *a;
+          }
+        }
+      } else if (auto *generic{symbol.detailsIf<GenericDetails>()}) {
         if (generic->derivedType()) {
           // If a generic interface has a derived type of the same
           // name that has an explicit accessibility attribute, then
@@ -6449,13 +6473,10 @@ bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
 void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
   const auto &name{std::get<parser::Name>(x.t)};
   Attrs attrs{EndAttrs()};
-  if (const auto &optAccessSpec{
-          std::get<std::optional<parser::AccessSpec>>(x.t)};
-      optAccessSpec) {
-    if (!NonDerivedTypeScope().IsModule()) { // F2023 C7114
-      Say(currStmtSource().value(),
-          "Access specifier on ENUMERATION TYPE may only appear in the specification part of a module"_err_en_US);
-    }
+  const auto &optAccessSpec{std::get<std::optional<parser::AccessSpec>>(x.t)};
+  if (optAccessSpec && !NonDerivedTypeScope().IsModule()) { // F2023 C7114
+    Say(currStmtSource().value(),
+        "Access specifier on ENUMERATION TYPE may only appear in the specification part of a module"_err_en_US);
   }
   // F2023 C7116: the enumeration-type-name in an enumeration-type-spec shall be
   // the name of a previously defined enumeration type.  Enumeration Types are
@@ -6471,6 +6492,12 @@ void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
   }
   DerivedTypeDetails details;
   details.set_isEnumerationType(true);
+  // An access-spec on the ENUMERATION TYPE statement sets the default
+  // accessibility of its enumerators.
+  if (optAccessSpec) {
+    details.set_enumeratorDefaultAccess(
+        attrs.test(Attr::PRIVATE) ? Attr::PRIVATE : Attr::PUBLIC);
+  }
   auto &symbol{MakeSymbol(name, attrs, std::move(details))};
   symbol.ReplaceName(name.source);
   PushScope(Scope::Kind::DerivedType, &symbol);
@@ -6508,6 +6535,7 @@ bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
         MakeSymbol(enclosingScope, name.source, Attrs{Attr::PARAMETER})};
     Resolve(name, enumerator);
     enumerator.set_details(ObjectEntityDetails{});
+    enumerator.set(Symbol::Flag::EnumeratorParameter);
     enumerator.SetType(declType);
     // Store the init as a StructureConstructor of the enumeration type with
     // the ordinal in the hidden __ordinal component.  This gives each
@@ -6591,7 +6619,8 @@ bool DeclarationVisitor::Pre(const parser::IntrinsicStmt &x) {
 }
 void DeclarationVisitor::DeclareIntrinsic(const parser::Name &name) {
   HandleAttributeStmt(Attr::INTRINSIC, name);
-  if (!IsIntrinsic(name.source, std::nullopt)) {
+  const bool isKnownIntrinsic{IsIntrinsic(name.source, std::nullopt)};
+  if (!isKnownIntrinsic) {
     Say(name.source, "'%s' is not a known intrinsic procedure"_err_en_US);
   }
   auto &symbol{DEREF(FindSymbol(name))};
@@ -6616,7 +6645,7 @@ void DeclarationVisitor::DeclareIntrinsic(const parser::Name &name) {
             "INTRINSIC statement for explicitly-typed '%s'"_en_US, name.source);
       }
     }
-    if (!symbol.test(Symbol::Flag::Function) &&
+    if (isKnownIntrinsic && !symbol.test(Symbol::Flag::Function) &&
         !symbol.test(Symbol::Flag::Subroutine) &&
         !context().intrinsics().IsDualIntrinsic(name.source.ToString())) {
       if (context().intrinsics().IsIntrinsicFunction(name.source.ToString())) {
@@ -8302,10 +8331,13 @@ Symbol &DeclarationVisitor::MakeCommonBlockSymbol(
 }
 
 bool DeclarationVisitor::NameIsKnownOrIntrinsic(const parser::Name &name) {
-  return FindSymbol(name) || HandleUnrestrictedSpecificIntrinsicFunction(name);
+  return FindSymbol(name) || HandleSpecificIntrinsicFunction(name);
 }
 
-bool DeclarationVisitor::HandleUnrestrictedSpecificIntrinsicFunction(
+// Create a symbol for a specific intrinsic function. Unrestricted names
+// receive their result type here; restricted names are kept typeless so
+// that later semantic checks can diagnose their invalid use.
+bool DeclarationVisitor::HandleSpecificIntrinsicFunction(
     const parser::Name &name) {
   if (auto interface{context().intrinsics().IsSpecificIntrinsicFunction(
           name.source.ToString())}) {
@@ -8314,17 +8346,19 @@ bool DeclarationVisitor::HandleUnrestrictedSpecificIntrinsicFunction(
     // INTRINSIC flag will cause this symbol to have a complete interface
     // recreated for it later on demand, but capturing its result type here
     // will make GetType() return a correct result without having to
-    // probe the intrinsics table again.
+    // probe the intrinsics table again.  Restricted specific intrinsic
+    // function names are also resolved here so that their use can be
+    // diagnosed later, but they do not need a result type.
     Symbol &symbol{MakeSymbol(InclusiveScope(), name.source, Attrs{})};
     SetImplicitAttr(symbol, Attr::INTRINSIC);
-    CHECK(interface->functionResult.has_value());
-    evaluate::DynamicType dyType{
-        DEREF(interface->functionResult->GetTypeAndShape()).type()};
-    CHECK(common::IsNumericTypeCategory(dyType.category()));
-    const DeclTypeSpec &typeSpec{
-        MakeNumericType(dyType.category(), dyType.kind())};
     ProcEntityDetails details;
-    details.set_type(typeSpec);
+    if (!interface->isRestrictedSpecific) {
+      CHECK(interface->functionResult.has_value());
+      evaluate::DynamicType dyType{
+          DEREF(interface->functionResult->GetTypeAndShape()).type()};
+      CHECK(common::IsNumericTypeCategory(dyType.category()));
+      details.set_type(MakeNumericType(dyType.category(), dyType.kind()));
+    }
     symbol.set_details(std::move(details));
     symbol.set(Symbol::Flag::Function);
     if (interface->IsElemental()) {
