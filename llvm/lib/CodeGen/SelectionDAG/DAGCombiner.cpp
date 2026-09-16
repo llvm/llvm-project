@@ -13886,6 +13886,10 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
 /// Check if Mask defines a known constant set of enabled lanes, where only the
 /// first N lanes are enabled. N is returned if so.
 static uint64_t calculateConstantLowMaskLanes(SDValue Mask) {
+  // We expect masks for masked load/store to be i1 predicates.
+  if (Mask.getValueType().getScalarSizeInBits() != 1)
+    return 0;
+
   if (Mask.getOpcode() == ISD::BUILD_VECTOR) {
     unsigned NumOnes = 0;
     auto Op = Mask->op_begin();
