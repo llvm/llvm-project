@@ -39,11 +39,19 @@ struct LoopInvariantSubsetHoisting
 } // namespace
 
 void LoopInvariantCodeMotion::runOnOperation() {
+  IRRewriter rewriter(getOperation()->getContext());
   // Walk through all loops in a function in innermost-loop-first order. This
   // way, we first LICM from the inner loop, and place the ops in
   // the outer loop, which in turn can be further LICM'ed.
-  getOperation()->walk(
-      [&](LoopLikeOpInterface loopLike) { moveLoopInvariantCode(loopLike); });
+  getOperation()->walk([&](LoopLikeOpInterface loopLike) {
+    // Try to hoist pure ops out of any nested if-like op whose region is
+    // provably always entered.
+    // Hoisted ops become top-level ops in this loop's body so
+    // moveLoopInvariantCode() picks them up right after.
+    hoistFromInvariantConditions(rewriter, loopLike);
+
+    moveLoopInvariantCode(loopLike);
+  });
 }
 
 void LoopInvariantSubsetHoisting::runOnOperation() {
