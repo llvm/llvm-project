@@ -1563,6 +1563,16 @@ Error ELFBuilder<ELFT>::initGroupSection(GroupSection *GroupSec) {
   return Error::success();
 }
 
+static bool isLinuxRelocatable(uint16_t Type, uint8_t OSABI) {
+  return Type == ET_REL && (OSABI == ELFOSABI_NONE || OSABI == ELFOSABI_GNU);
+}
+
+static bool isLivepatchRelocation(uint32_t Type, uint64_t Flags,
+                                  StringRef Name) {
+  return Type == SHT_RELA && (Flags & SHF_RELA_LIVEPATCH) &&
+         Name.starts_with(".klp.rela.");
+}
+
 template <class ELFT>
 Error ELFBuilder<ELFT>::initSymbolTable(SymbolTableSection *SymTab) {
   Expected<const Elf_Shdr *> Shdr = ElfFile.getSection(SymTab->Index);
@@ -1579,6 +1589,14 @@ Error ELFBuilder<ELFT>::initSymbolTable(SymbolTableSection *SymTab) {
       ElfFile.symbols(*Shdr);
   if (!Symbols)
     return Symbols.takeError();
+
+  // Livepatch generators may also mark auxiliary symbols with SHN_LIVEPATCH,
+  // e.g. objtool's .klp.tombstone.* symbols.
+  bool HasLivepatchRelocations =
+      llvm::any_of(Obj.sections(), [&](const auto &S) {
+        return S.Link == SymTab->Index &&
+               isLivepatchRelocation(S.Type, S.Flags, S.Name);
+      });
 
   for (const typename ELFFile<ELFT>::Elf_Sym &Sym : *Symbols) {
     SectionBase *DefSection = nullptr;
@@ -1620,7 +1638,12 @@ Error ELFBuilder<ELFT>::initSymbolTable(SymbolTableSection *SymTab) {
 
       DefSection = *Sec;
     } else if (Sym.st_shndx >= SHN_LORESERVE) {
-      if (!isValidReservedSectionIndex(Sym.st_shndx, Obj.Machine)) {
+      bool IsLivepatch =
+          Sym.st_shndx == SHN_LIVEPATCH &&
+          isLinuxRelocatable(Obj.Type, Obj.OSABI) &&
+          (Name->starts_with(".klp.sym.") || HasLivepatchRelocations);
+      if (!IsLivepatch &&
+          !isValidReservedSectionIndex(Sym.st_shndx, Obj.Machine)) {
         return createStringError(
             errc::invalid_argument,
             "symbol '" + *Name +
@@ -1708,14 +1731,24 @@ Expected<SectionBase &> ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
   switch (Shdr.sh_type) {
   case SHT_REL:
   case SHT_RELA:
-  case SHT_CREL:
-    if (Shdr.sh_flags & SHF_ALLOC) {
+  case SHT_CREL: {
+    Expected<StringRef> Name = ElfFile.getSectionName(Shdr);
+    if (!Name)
+      return Name.takeError();
+    const auto &Ehdr = ElfFile.getHeader();
+    // Livepatch relocations are allocated but refer to the regular symbol
+    // table, so their symbol references must be updated when it changes.
+    bool IsLivepatch =
+        isLinuxRelocatable(Ehdr.e_type, Ehdr.e_ident[EI_OSABI]) &&
+        isLivepatchRelocation(Shdr.sh_type, Shdr.sh_flags, *Name);
+    if ((Shdr.sh_flags & SHF_ALLOC) && !IsLivepatch) {
       if (Expected<ArrayRef<uint8_t>> Data = ElfFile.getSectionContents(Shdr))
         return Obj.addSection<DynamicRelocationSection>(*Data);
       else
         return Data.takeError();
     }
     return Obj.addSection<RelocationSection>(Obj);
+  }
   case SHT_STRTAB:
     // If a string table is allocated we don't want to mess with it. That would
     // mean altering the memory image. There are no special link types or

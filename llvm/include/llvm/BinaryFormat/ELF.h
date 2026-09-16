@@ -1144,6 +1144,7 @@ enum {
   SHN_LOPROC = 0xff00,    // Lowest processor-specific index
   SHN_HIPROC = 0xff1f,    // Highest processor-specific index
   SHN_LOOS = 0xff20,      // Lowest operating system-specific index
+  SHN_LIVEPATCH = 0xff20, // Linux livepatch symbol
   SHN_HIOS = 0xff3f,      // Highest operating system-specific index
   SHN_ABS = 0xfff1,       // Symbol has absolute value; does not need relocation
   SHN_COMMON = 0xfff2,    // FORTRAN COMMON or C external global variables
@@ -1295,6 +1296,9 @@ enum : unsigned {
   // Start of target-specific flags.
 
   SHF_MASKOS = 0x0ff00000,
+
+  // Linux livepatch relocation section.
+  SHF_RELA_LIVEPATCH = 0x00100000,
 
   // Solaris equivalent of SHF_GNU_RETAIN.
   SHF_SUNW_NODISCARD = 0x00100000,

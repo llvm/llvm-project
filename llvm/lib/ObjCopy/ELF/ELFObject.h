@@ -530,6 +530,8 @@ public:
   uint64_t Type = ELF::SHT_NULL;
   ArrayRef<uint8_t> OriginalData;
   bool HasSymbol = false;
+  // SHF_ALLOC does not distinguish dynamic from Linux livepatch relocations.
+  bool IsDynamicRelocation = false;
 
   SectionBase() = default;
   SectionBase(const SectionBase &) = default;
@@ -928,7 +930,7 @@ public:
   const Object &getObject() const { return Obj; }
 
   static bool classof(const SectionBase *S) {
-    if (S->OriginalFlags & ELF::SHF_ALLOC)
+    if (S->IsDynamicRelocation)
       return false;
     return RelocationSectionBase::classof(S);
   }
@@ -1006,7 +1008,9 @@ private:
   ArrayRef<uint8_t> Contents;
 
 public:
-  explicit DynamicRelocationSection(ArrayRef<uint8_t> Data) : Contents(Data) {}
+  explicit DynamicRelocationSection(ArrayRef<uint8_t> Data) : Contents(Data) {
+    IsDynamicRelocation = true;
+  }
 
   Error accept(SectionVisitor &) const override;
   Error accept(MutableSectionVisitor &Visitor) override;
@@ -1015,7 +1019,7 @@ public:
       function_ref<bool(const SectionBase *)> ToRemove) override;
 
   static bool classof(const SectionBase *S) {
-    if (!(S->OriginalFlags & ELF::SHF_ALLOC))
+    if (!S->IsDynamicRelocation)
       return false;
     return S->OriginalType == ELF::SHT_REL || S->OriginalType == ELF::SHT_RELA;
   }
