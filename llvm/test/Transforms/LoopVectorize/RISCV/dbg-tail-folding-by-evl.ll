@@ -7,7 +7,7 @@ define void @reverse_store(ptr %a, i64 %n) !dbg !3 {
 ; CHECK-LABEL: define void @reverse_store(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] !dbg [[DBG3:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[N]], i64 1)
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP1]], [[UMIN]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
