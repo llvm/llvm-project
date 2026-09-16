@@ -1959,6 +1959,77 @@ func.func @gather_int(%arg0: tensor<2x3x2xi32>, %arg1: tensor<2x3xi32>) -> () {
 
 // -----
 
+// Verify batched ROW_GATHER lowering and row_count output expansion.
+// CHECK-LABEL: @row_gather
+// CHECK-SAME: (%[[VALUES:[0-9a-zA-Z_]*]]
+// CHECK-SAME:  %[[INDICES:[0-9a-zA-Z_]*]]
+// CHECK-SAME:  %[[ROW_COUNT_TENSOR:[0-9a-zA-Z_]*]]
+func.func @row_gather(%values: tensor<2x5x3xf32>, %indices: tensor<2x2xi32>, %row_count: tensor<1xi32>) -> tensor<2x4x3xf32> {
+  // CHECK: %[[C0:.+]] = arith.constant 0 : index
+  // CHECK: %[[ROW_COUNT:.+]] = tensor.extract %[[ROW_COUNT_TENSOR]][%[[C0]]] : tensor<1xi32>
+  // CHECK: %[[ROW_COUNT_INDEX:.+]] = arith.index_cast %[[ROW_COUNT]] : i32 to index
+  // CHECK: %[[INIT:.+]] = tensor.empty() : tensor<2x4x3xf32>
+  // CHECK: %[[RESULT:.+]] = linalg.generic
+  // CHECK-SAME: outs(%[[INIT]] : tensor<2x4x3xf32>)
+  // CHECK:   %[[BATCH:.+]] = linalg.index 0 : index
+  // CHECK:   %[[OUTPUT_ROW:.+]] = linalg.index 1 : index
+  // CHECK:   %[[CHANNEL:.+]] = linalg.index 2 : index
+  // CHECK:   %[[INDEX_SLOT:.+]] = arith.divui %[[OUTPUT_ROW]], %[[ROW_COUNT_INDEX]] : index
+  // CHECK:   %[[ROW_OFFSET:.+]] = arith.remui %[[OUTPUT_ROW]], %[[ROW_COUNT_INDEX]] : index
+  // CHECK:   %[[INDEX:.+]] = tensor.extract %[[INDICES]][%[[BATCH]], %[[INDEX_SLOT]]] : tensor<2x2xi32>
+  // CHECK:   %[[ROW:.+]] = arith.index_cast %[[INDEX]] : i32 to index
+  // CHECK:   %[[INPUT_ROW:.+]] = arith.addi %[[ROW]], %[[ROW_OFFSET]] : index
+  // CHECK:   %[[VALUE:.+]] = tensor.extract %[[VALUES]][%[[BATCH]], %[[INPUT_ROW]], %[[CHANNEL]]] : tensor<2x5x3xf32>
+  // CHECK:   linalg.yield %[[VALUE]] : f32
+  // CHECK: return %[[RESULT]]
+  %0 = tosa.row_gather %values, %indices, %row_count : (tensor<2x5x3xf32>, tensor<2x2xi32>, tensor<1xi32>) -> tensor<2x4x3xf32>
+  return %0 : tensor<2x4x3xf32>
+}
+
+// -----
+
+// Verify i64 indices and the largest valid start row.
+// CHECK-LABEL: @row_gather_i64_boundary_indices
+func.func @row_gather_i64_boundary_indices(%values: tensor<2x5x2xi16>) -> tensor<2x4x2xi16> {
+  // CHECK: %[[INDICES:.+]] = "tosa.const"()
+  // CHECK: %[[ROW_COUNT:.+]] = "tosa.const"()
+  // CHECK: linalg.generic
+  // CHECK:   %[[INDEX:.+]] = tensor.extract %[[INDICES]][{{.+}}] : tensor<2x2xi64>
+  // CHECK:   %[[ROW:.+]] = arith.index_cast %[[INDEX]] : i64 to index
+  // CHECK:   %[[VALUE:.+]] = tensor.extract %arg0[{{.+}}, %{{.+}}, %{{.+}}] : tensor<2x5x2xi16>
+  // CHECK:   linalg.yield %[[VALUE]] : i16
+  %indices = "tosa.const"() <{values = dense<[[0, 3], [3, 1]]> : tensor<2x2xi64>}> : () -> tensor<2x2xi64>
+  %row_count = "tosa.const"() <{values = dense<2> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %0 = tosa.row_gather %values, %indices, %row_count : (tensor<2x5x2xi16>, tensor<2x2xi64>, tensor<1xi32>) -> tensor<2x4x2xi16>
+  return %0 : tensor<2x4x2xi16>
+}
+
+// -----
+
+// Verify dynamic output dimensions are materialized from the operands.
+// CHECK-LABEL: @row_gather_all_dynamic
+// CHECK-SAME: (%[[VALUES:[0-9a-zA-Z_]*]]
+// CHECK-SAME:  %[[INDICES:[0-9a-zA-Z_]*]]
+// CHECK-SAME:  %[[ROW_COUNT_TENSOR:[0-9a-zA-Z_]*]]
+func.func @row_gather_all_dynamic(%values: tensor<?x?x?xi8>, %indices: tensor<?x?xi32>, %row_count: tensor<1xi32>) -> tensor<?x?x?xi8> {
+  // CHECK: %[[C0:.+]] = arith.constant 0 : index
+  // CHECK: %[[ROW_COUNT:.+]] = tensor.extract %[[ROW_COUNT_TENSOR]][%[[C0]]] : tensor<1xi32>
+  // CHECK: %[[ROW_COUNT_INDEX:.+]] = arith.index_cast %[[ROW_COUNT]] : i32 to index
+  // CHECK: %[[BATCH:.+]] = tensor.dim %[[VALUES]], %[[C0]]
+  // CHECK: %[[C1:.+]] = arith.constant 1 : index
+  // CHECK: %[[WIDTH:.+]] = tensor.dim %[[INDICES]], %[[C1]]
+  // CHECK: %[[OUTPUT_ROWS:.+]] = arith.muli %[[WIDTH]], %[[ROW_COUNT_INDEX]] : index
+  // CHECK: %[[C2:.+]] = arith.constant 2 : index
+  // CHECK: %[[CHANNELS:.+]] = tensor.dim %[[VALUES]], %[[C2]]
+  // CHECK: %[[INIT:.+]] = tensor.empty(%[[BATCH]], %[[OUTPUT_ROWS]], %[[CHANNELS]]) : tensor<?x?x?xi8>
+  // CHECK: linalg.generic
+  // CHECK-SAME: outs(%[[INIT]] : tensor<?x?x?xi8>)
+  %0 = tosa.row_gather %values, %indices, %row_count : (tensor<?x?x?xi8>, tensor<?x?xi32>, tensor<1xi32>) -> tensor<?x?x?xi8>
+  return %0 : tensor<?x?x?xi8>
+}
+
+// -----
+
 // CHECK-LABEL: @table8
 // CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]:
 // CHECK-SAME:  %[[ARG1:[0-9a-zA-Z_]*]]:
