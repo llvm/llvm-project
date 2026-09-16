@@ -340,3 +340,38 @@ define i64 @fuzz_b369_f17(i64 %a, i64 %b, i64 %c, double %fa, double %fb) nounwi
   %v21 = xor i64 %v20, %v6
   ret i64 %v21
 }
+
+; TODO: The ori + slt + addi sequence can become slti + sub once the
+; inverted setlt constant is folded.
+define i64 @sext_not_slt_lhs(i64 %x) {
+; CHECK-LABEL: sext_not_slt_lhs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ori $a1, $zero, 1
+; CHECK-NEXT:    slt $a0, $a1, $a0
+; CHECK-NEXT:    addi.d $a0, $a0, -1
+; CHECK-NEXT:    ret
+  %c = icmp slt i64 1, %x
+  %z = zext i1 %c to i64
+  %n = xor i64 %z, 1
+  %s = shl i64 %n, 63
+  %m = ashr i64 %s, 63
+  ret i64 %m
+}
+
+; TODO: The ori + slt + sub sequence can become slti + addi once setge
+; is legalized as an inverted setlt.
+define i64 @sext_not_sge_lhs(i64 %x) {
+; CHECK-LABEL: sext_not_sge_lhs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ori $a1, $zero, 5
+; CHECK-NEXT:    slt $a0, $a1, $a0
+; CHECK-NEXT:    sub.d $a0, $zero, $a0
+; CHECK-NEXT:    ret
+  %c = icmp sge i64 5, %x
+  %z = zext i1 %c to i64
+  %n = xor i64 %z, 1
+  %s = shl i64 %n, 63
+  %m = ashr i64 %s, 63
+  ret i64 %m
+}
+
