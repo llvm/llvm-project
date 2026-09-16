@@ -2766,13 +2766,19 @@ void CodeGenFunction::EmitOMPLinearClauseFinal(
           EmitBlock(ThenBB);
         }
       }
-      const auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IC)->getDecl());
-      DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD),
-                      CapturedStmtInfo->lookup(OrigVD) != nullptr,
-                      (*IC)->getType(), VK_LValue, (*IC)->getExprLoc());
-      Address OrigAddr = EmitLValue(&DRE).getAddress();
+      const auto *OrigDecl = cast<DeclRefExpr>(*IC)->getDecl();
+      Address OrigAddr = Address::invalid();
+      if (const auto *BD = dyn_cast<BindingDecl>(OrigDecl)) {
+        OrigAddr = EmitOMPBindingOriginalAddr(BD, (*IC)->getExprLoc());
+      } else {
+        const auto *OrigVD = cast<VarDecl>(OrigDecl);
+        DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD),
+                        CapturedStmtInfo->lookup(OrigVD) != nullptr,
+                        (*IC)->getType(), VK_LValue, (*IC)->getExprLoc());
+        OrigAddr = EmitLValue(&DRE).getAddress();
+      }
       CodeGenFunction::OMPPrivateScope VarScope(*this);
-      VarScope.addPrivate(OrigVD, OrigAddr);
+      VarScope.addPrivate(OrigDecl, OrigAddr);
       (void)VarScope.Privatize();
       EmitIgnoredExpr(F);
       ++IC;

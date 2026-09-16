@@ -3038,21 +3038,12 @@ struct PrivateHelpersTy {
 typedef std::pair<CharUnits /*Align*/, PrivateHelpersTy> PrivateDataTy;
 } // anonymous namespace
 
-/// For BindingDecls, returns nullptr so caller can handle them specially.
-/// For VarDecls, returns the VarDecl itself.
-static const VarDecl *getVarDeclForPrivate(const ValueDecl *D) {
-  return dyn_cast<VarDecl>(D);
-}
-
 /// For BindingDecls, returns the DecomposedDecl as the original VarDecl.
 /// For regular VarDecls, returns the VarDecl itself.
 static const VarDecl *getOriginalVarDecl(const ValueDecl *Decl) {
-  const auto *VD = getVarDeclForPrivate(Decl);
-  // For BindingDecls, getVarDeclForPrivate returns null, so use DecomposedDecl
-  // as Original.
-  if (!VD && isa<BindingDecl>(Decl))
-    VD = cast<VarDecl>(cast<BindingDecl>(Decl)->getDecomposedDecl());
-  return VD;
+  if (const auto *BD = dyn_cast<BindingDecl>(Decl))
+    return cast<VarDecl>(BD->getDecomposedDecl());
+  return cast<VarDecl>(Decl);
 }
 
 static bool isAllocatableDecl(const VarDecl *VD) {
@@ -10481,8 +10472,7 @@ public:
   /// record field declaration \a RI and captured value \a CV.
   void generateDefaultMapInfo(const CapturedStmt::Capture &CI,
                               const FieldDecl &RI, llvm::Value *CV,
-                              MapCombinedInfoTy &CombinedInfo,
-                              ArrayRef<MapData> DeclComponentLists) const {
+                              MapCombinedInfoTy &CombinedInfo) const {
     bool IsImplicit = true;
     // Do the default mapping.
     if (CI.capturesThis()) {
@@ -11079,8 +11069,7 @@ static void genMapInfoForCaptures(
       // the base-variable, or attach pointer.
       if (DeclComponentLists.empty() ||
           (!HasEntryWithCVAsAttachPtr && !HasEntryWithoutAttachPtr))
-        MEHandler.generateDefaultMapInfo(*CI, **RI, *CV, CurInfo,
-                                         DeclComponentLists);
+        MEHandler.generateDefaultMapInfo(*CI, **RI, *CV, CurInfo);
 
       // If we have any information in the map clause, we use it, otherwise we
       // just do a default mapping.

@@ -899,9 +899,7 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   Tuple-like bindings (types using the tuple protocol with ``get<N>()``,
   such as ``std::pair`` or ``std::tuple``) are not yet supported and
   will produce a compilation error. Reduction clauses with structured bindings
-  are not yet supported. Bare task directives (without an
-  enclosing parallel region) with firstprivate structured bindings do not
-  execute correctly.
+  are not yet supported.
   When the original variable is explicitly mapped in a target region
   but only bindings from it are used (not the original variable itself),
   modifications to the bindings will not be reflected in the original variable.

@@ -4354,7 +4354,7 @@ public:
       MoveExpr = 3,     // Move expression.
     };
     const VarDecl *Var = nullptr;
-    DiagnosticKind DiagKind = MoveExpr;
+    DiagnosticKind DiagKind = Temporary;
   };
 
   /// If this decomposition was initialized from a variable (e.g., auto [a,b] =
