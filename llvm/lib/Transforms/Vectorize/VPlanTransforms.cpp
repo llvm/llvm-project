@@ -1186,8 +1186,7 @@ static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
 /// Try to simplify logical and bitwise recipes in \p Def.
 static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   // Simplify (X && Y) | (X && !Y) -> X.
-  // TODO: Split up into simpler, modular combines: (X && Y) | (X && Z) into X
-  // && (Y | Z) and (X | !X) into true.
+  // TODO: Remove now that we have smaller combines for this.
   VPValue *X, *Y;
   if (match(Def,
             m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
@@ -1731,8 +1730,8 @@ public:
       : VPBuilder(), Worklist(Worklist) {}
 
 protected:
-  virtual void insertHelper(VPRecipeBase *R, VPBasicBlock *VPBB,
-                            VPBasicBlock::iterator It) const override {
+  void insertHelper(VPRecipeBase *R, VPBasicBlock *VPBB,
+                    VPBasicBlock::iterator It) override {
     VPBuilder::insertHelper(R, VPBB, It);
     if (auto *Def = dyn_cast<VPSingleDefRecipe>(R))
       Worklist.push_back(Def);

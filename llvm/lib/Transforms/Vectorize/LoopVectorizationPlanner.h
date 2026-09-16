@@ -149,7 +149,7 @@ private:
 
 protected:
   virtual void insertHelper(VPRecipeBase *R, VPBasicBlock *VPBB,
-                            VPBasicBlock::iterator It) const {
+                            VPBasicBlock::iterator It) {
     VPBB->insert(R, It);
   }
 
