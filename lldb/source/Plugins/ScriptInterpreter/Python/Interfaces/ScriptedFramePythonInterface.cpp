@@ -216,16 +216,18 @@ ScriptedFramePythonInterface::GetThreadPlanMetadataForStepType(
   StructuredData::DictionarySP dict_sp = Dispatch<StructuredData::DictionarySP>(
       "get_plan_spec_for_step_type", error, step_type);
   if (error.Fail()) {
-    // There are two cases here.  The `get_plan_spec_for_step_type` didn't exist, in
-    // which case we should return no_plan_return
+    // There are two cases here.  The `get_plan_spec_for_step_type` didn't
+    // exist, in which case we should return no_plan_return
     // FIXME - Dispatch should distinguish between these two cases in a way
     // that's more definitive than this.
     llvm::StringRef err_str(error.AsCString());
-    if (err_str.contains("object has no attribute 'get_plan_spec_for_step_type'"))
+    if (err_str.contains(
+            "object has no attribute 'get_plan_spec_for_step_type'"))
       return no_plan_return;
     else
       return llvm::createStringError(
-          "error dispatching get_plan_spec_for_step_type: %s", error.AsCString());
+          "error dispatching get_plan_spec_for_step_type: %s",
+          error.AsCString());
   }
 
   // The return value is an StructuredData::Dictionary with the class name and

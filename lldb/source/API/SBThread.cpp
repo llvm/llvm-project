@@ -510,10 +510,9 @@ void SBThread::StepOver(lldb::RunMode stop_other_threads, SBError &error) {
   llvm::Expected<lldb::ThreadPlanSP> frame_plan_result =
       frame_sp->GetThreadPlanForStepType(step_type);
   if (auto llvm_err = frame_plan_result.takeError()) {
-    error.SetErrorStringWithFormat(
-        "scripted frame provider got an error "
-        "while constructing step plan: \"%s\"",
-        llvm::toString(std::move(llvm_err)).c_str());
+    error.SetErrorStringWithFormat("scripted frame provider got an error "
+                                   "while constructing step plan: \"%s\"",
+                                   llvm::toString(std::move(llvm_err)).c_str());
     return;
   }
   new_plan_sp = *frame_plan_result;
