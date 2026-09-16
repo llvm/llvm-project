@@ -820,7 +820,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   if (Subtarget.hasFPU()) {
     setOperationAction(ISD::IS_FPCLASS, MVT::f32, Custom);
     if (Subtarget.use64BitRegs() ||
-        (Subtarget.hasAltivec() && Subtarget.useCRBits()))
+        (Subtarget.hasP9Vector() && Subtarget.useCRBits()))
       setOperationAction(ISD::IS_FPCLASS, MVT::f64, Custom);
   }
 
@@ -12027,7 +12027,7 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
         0);
   }
 
-  // !useCRBits(): MVT::i1 is not a legal type ¡ª never emit EXTRACT_SUBREG to
+  // !useCRBits(): MVT::i1 is not a legal type, never emit EXTRACT_SUBREG to
   // i1.  Use SELECT_CC_I4 directly on the CR field (Cmp, MVT::i32) to produce
   // a legal MVT::i32 result without creating any i1 node.
   // PRED_UN: true when FU (unordered/NaN) bit is set.
