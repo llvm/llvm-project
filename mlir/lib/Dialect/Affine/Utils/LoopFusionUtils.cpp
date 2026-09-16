@@ -229,7 +229,7 @@ static unsigned getMaxLoopDepth(ArrayRef<Operation *> srcOps,
         // TODO: Cache dependence analysis results, check cache here.
         DependenceResult result =
             checkMemrefAccessDependence(srcAccess, dstAccess, d);
-        if (hasDependence(result)) {
+        if (mayHaveDependence(result)) {
           // Store minimum loop depth and break because we want the min 'd' at
           // which there is a dependence.
           loopDepth = std::min(loopDepth, d - 1);
