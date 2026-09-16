@@ -65,6 +65,11 @@ packSignatureStacked(MutableArrayRef<SemanticSignatureElement> Elements,
 /// Packs eligible signature elements at rows selected by semantic index.
 ///
 /// See llvm/docs/DirectX/SemanticSignatures.md#indexed-packing for details.
+///
+/// On failure, Elements is left partially packed: the elements preceding the
+/// one reported by the returned SignaturePackingError keep the locations
+/// they were assigned, while that element and the ones following it retain the
+/// unallocated row and column sentinels.
 LLVM_ABI Error
 packSignatureIndexed(MutableArrayRef<SemanticSignatureElement> Elements,
                      Triple::EnvironmentType ShaderStage, IOType IOTy);
