@@ -3034,9 +3034,7 @@ void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
 }
 
 void LoweringPreparePass::runOnOperation() {
-  mlir::Operation *op = getOperation();
-  assert(isa<::mlir::ModuleOp>(op) && "expected a ModuleOp");
-  mlirModule = cast<::mlir::ModuleOp>(op);
+  mlirModule = getOperation();
 
   // CIRGen always sets the triple, so this cannot fail.
   lowerModule = cir::createLowerModule(mlirModule);
@@ -3044,7 +3042,7 @@ void LoweringPreparePass::runOnOperation() {
 
   llvm::SmallVector<mlir::Operation *> opsToTransform;
 
-  op->walk([&](mlir::Operation *op) {
+  mlirModule->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
                   cir::ComplexConjOp, cir::ComplexMulOp, cir::ComplexDivOp,
                   cir::DynamicCastOp, cir::FuncOp, cir::CallOp,
