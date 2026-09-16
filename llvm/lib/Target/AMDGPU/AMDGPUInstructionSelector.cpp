@@ -2860,7 +2860,7 @@ static bool isExtractHiElt(MachineRegisterInfo &MRI, Register In,
   if (mi_match(In, MRI, m_GUnmerge(Unmerge))) {
     if (Unmerge->getNumDefs() == 2 && Unmerge->getOperand(1).getReg() == In &&
         MRI.getType(In).getSizeInBits() == 16) {
-      Out = Unmerge->getSourceReg();
+      Out = stripBitCast(Unmerge->getSourceReg(), MRI);
       return true;
     }
   }
@@ -2904,7 +2904,7 @@ static bool isExtractLoElt(MachineRegisterInfo &MRI, Register In,
   if (auto *Unmerge = dyn_cast<GUnmerge>(MRI.getVRegDef(In))) {
     if (Unmerge->getNumDefs() == 2 && Unmerge->getOperand(0).getReg() == In &&
         MRI.getType(In).getSizeInBits() == 16) {
-      Out = Unmerge->getSourceReg();
+      Out = stripBitCast(Unmerge->getSourceReg(), MRI);
       return true;
     }
   }

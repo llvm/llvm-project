@@ -3,46 +3,14 @@
 !s8i = !cir.int<s, 8>
 !s16i = !cir.int<s, 16>
 !s32i = !cir.int<s, 32>
-!s64i = !cir.int<s, 64>
-!s128i = !cir.int<s, 128>
 !u8i = !cir.int<u, 8>
-!u32i = !cir.int<u, 32>
-!u64i = !cir.int<u, 64>
-!rec_UOverAligned = !cir.union<"UOverAligned" {data !s32i}, padding = {!cir.array<!u8i x 12>}>
-!rec_UShortStorage = !cir.union<"UShortStorage" {data !s16i, data !cir.array<!s8i x 3>}, padding = {!cir.array<!u8i x 2>}>
-!rec_UByteBlobs = !cir.union<"UByteBlobs" {data !u8i, data !u8i}, padding = {!cir.array<!u8i x 3>}>
-!rec_SWrapsOverAligned = !cir.struct<"SWrapsOverAligned" {data !cir.double, data !rec_UOverAligned}>
 !rec_UEmptyLarge = !cir.union<"UEmptyLarge" {}, padding = {!cir.array<!u8i x 32>}>
 !rec_ZeroLenArr = !cir.struct<"ZeroLenArr" packed {data !s8i, empty !cir.array<!s32i x 0>}>
-!rec_UPadByte = !cir.union<"UPadByte" {data !u8i}, padding = {!cir.array<!u8i x 3>}>
 !rec_E = !cir.struct<"E" {pad !u8i}>
-!rec_UBitOverAligned =
-    !cir.union<"UBitOverAligned" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 3>]>},
-               padding = {!cir.array<!u8i x 7>}>
 !rec_UBitIntUnit =
     !cir.union<"UBitIntUnit" {bitfield !cir.bitfield<!cir.array<!u8i x 9>,
                                                      [#cir.bitfield_decl<!cir.int<s, 72, bitint>, 70>]>},
                padding = {!cir.array<!u8i x 7>}>
-!rec_UBitWideDecl =
-    !cir.union<"UBitWideDecl" {bitfield !cir.bitfield<!cir.array<!u8i x 13>,
-                                                      [#cir.bitfield_decl<!s128i, 100>]>},
-               padding = {!cir.array<!u8i x 3>}>
-!rec_UMultiDecl =
-    !cir.union<"UMultiDecl" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s8i, 4>,
-                                                           #cir.bitfield_decl<!s32i, 4>]>},
-               padding = {!cir.array<!u8i x 3>}>
-!rec_UNamedPlusUnnamedSpan =
-    !cir.union<"UNamedPlusUnnamedSpan" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 3>]>,
-                                        empty !cir.bitfield<!cir.array<!u8i x 5>,
-                                                            [#cir.bitfield_decl<!s64i, 40, unnamed>]>},
-               padding = {!cir.array<!u8i x 3>}>
-!rec_UBitUnnamed =
-    !cir.union<"UBitUnnamed" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 8>]>,
-                              empty !cir.bitfield<!u64i, [#cir.bitfield_decl<!s64i, 64, unnamed>]>}>
-!rec_UWideBitUnnamed =
-    !cir.union<"UWideBitUnnamed" {bitfield !cir.bitfield<!cir.array<!u8i x 3>, [#cir.bitfield_decl<!s32i, 24>]>,
-                                  empty !cir.bitfield<!u64i, [#cir.bitfield_decl<!s64i, 64, unnamed>]>}>
-!rec_UEmptyNarrow = !cir.union<"UEmptyNarrow" {data !rec_E, data !s16i}, padding = {!cir.array<!u8i x 2>}>
 !rec_SVec = !cir.struct<"SVec" {data !cir.vector<4 x !cir.float>}>
 !rec_UVec384 =
     !cir.union<"UVec384" {data !cir.vector<4 x !cir.float>, data !cir.array<!s8i x 33>},
@@ -82,9 +50,10 @@ module attributes {
 
 
   // A member-less union past two eightbytes still classifies Indirect in
-  // classic CodeGen, but this bridge has no member to build an Indirect
-  // coercion from.  Below the threshold the same shape is accepted and
-  // classifies Ignore, matching classic; see x86_64-union.cir take_empty.
+  // classic CodeGen, but no source spells a union with no member at all, so
+  // this bridge refuses the shape rather than guessing at it.  Below the
+  // threshold the same shape is accepted and classifies Ignore, matching
+  // classic; see x86_64-union.cir take_empty.
   cir.func @take_empty_large_union(%arg0: !rec_UEmptyLarge) {
     cir.return
   }

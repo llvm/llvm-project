@@ -274,23 +274,26 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
             });
           }))
         return false;
-    }
-    // An `empty` member that occupies bytes is later read as an unnamed
-    // bit-field.  One that is itself an empty-for-ABI record can occupy bytes
-    // by holding bit-fields of its own, which classic CodeGen reaches through
-    // the member's fields rather than as one unit.  A zero-sized one is
-    // dropped before classification, so a misaligned one never reaches the
-    // rule that sends its record to memory.
-    for (auto [idx, memberTy, kind] :
-         llvm::enumerate(recTy.getMembers(), recTy.getMemberKinds())) {
-      if (kind != cir::RecordMemberKind::Empty)
-        continue;
-      if (dl.getTypeSizeInBits(memberTy).getFixedValue()) {
-        if (memberIsEmptyRecord(memberTy))
+    } else {
+      // A struct's `empty` member that occupies bytes is later read as an
+      // unnamed bit-field.  An empty-for-ABI record occupies its own padding,
+      // and reading that as a unit would hand the classifier storage classic
+      // CodeGen ignores.  A zero-sized one is dropped before classification,
+      // so a misaligned one never reaches the rule that sends its record to
+      // memory.  A union needs neither rule: mapCIRType skips such a variant
+      // instead of reading it as a unit, and every variant sits at offset
+      // zero.
+      for (auto [idx, memberTy, kind] :
+           llvm::enumerate(recTy.getMembers(), recTy.getMemberKinds())) {
+        if (kind != cir::RecordMemberKind::Empty)
+          continue;
+        if (dl.getTypeSizeInBits(memberTy).getFixedValue()) {
+          if (memberIsEmptyRecord(memberTy))
+            return false;
+        } else if (recTy.getElementOffset(dl, idx) %
+                   dl.getTypeABIAlignment(memberTy)) {
           return false;
-      } else if (recTy.getElementOffset(dl, idx) %
-                 dl.getTypeABIAlignment(memberTy)) {
-        return false;
+        }
       }
     }
     return true;
@@ -466,23 +469,28 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         // the whole union rather than just the member the classifier reduces
         // it to.
         if (recTy.isUnion()) {
-          // Classify only the members that hold data for the ABI.  A member
-          // that holds none is skipped so it does not appear as a spurious
-          // argument.  Every variant starts at offset zero, so a bit-field
-          // variant needs no offset of its own.
-          for (auto [fieldTy, kind] :
-               llvm::zip_equal(recTy.getMembers(), recTy.getMemberKinds())) {
-            if (auto bfTy = dyn_cast<cir::BitFieldType>(fieldTy)) {
+          // Classify only the variants that supply data, judged by each
+          // variant's own storage rather than by its mark.  One supplying
+          // none is skipped so it does not appear as a spurious argument.
+          // Whether the record is empty at all is settled from the marks
+          // before this.  Every variant starts at offset zero, so a
+          // bit-field variant needs no offset of its own.
+          assert(!llvm::is_contained(recTy.getMemberKinds(),
+                                     cir::RecordMemberKind::Pad) &&
+                 "a union member cannot be marked pad");
+          for (mlir::Type variantTy : recTy.getMembers()) {
+            if (auto bfTy = dyn_cast<cir::BitFieldType>(variantTy)) {
               // A variant that is an unnamed bit-field holds data all the
               // same, so it is flagged rather than skipped, as in the struct
               // path below.
               addAccessUnit(bfTy, /*unitOffsetBits=*/0);
               continue;
             }
-            if (!cir::holdsDataForABI(kind))
+            if (dl.getTypeSizeInBits(variantTy).getFixedValue() == 0 ||
+                memberIsEmptyRecord(variantTy))
               continue;
             fields.push_back(llvm::abi::FieldInfo(
-                mapCIRType(fieldTy, typeMapper, dl, modOp)));
+                mapCIRType(variantTy, typeMapper, dl, modOp)));
           }
           return tb.getUnionType(fields, sizeBits, align,
                                  llvm::abi::StructPacking::Default, flags);

@@ -2216,13 +2216,17 @@ libc_support_library(
         "include/llvm-libc-types/off_t.h",
         "src/__support/File/file.cpp",
     ],
-    hdrs = ["src/__support/File/file.h"],
+    hdrs = [
+        "src/__support/File/file.h",
+        "src/__support/File/file_mode.h",
+    ],
     deps = [
         ":__support_alloc_checker",
         ":__support_cpp_new",
         ":__support_cpp_span",
         ":__support_error_or",
         ":__support_libc_errno",
+        ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
         ":__support_threads_mutex",
@@ -2252,6 +2256,7 @@ libc_support_library(
     ],
     hdrs = [
         "src/__support/File/linux/file.h",
+        "src/__support/File/linux/file_flags.h",
     ],
     deps = [
         ":__support_alloc_checker",
@@ -2260,6 +2265,7 @@ libc_support_library(
         ":__support_error_or",
         ":__support_file_file",
         ":__support_libc_errno",
+        ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_close",
         ":__support_osutil_linux_syscall_wrappers_dup2",
@@ -2272,6 +2278,7 @@ libc_support_library(
         ":hdr_stdint_proxy",
         ":hdr_stdio_macros",
         ":hdr_sys_stat_macros",
+        ":types_mode_t",
         ":types_off_t",
     ],
 )
@@ -4369,6 +4376,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
+        ":__support_threads_tcb",
         ":__support_threads_thread_attributes",
         ":hdr_stdint_proxy",
         ":types_struct_sched_param",
@@ -11779,13 +11787,6 @@ libc_math_function(
 )
 
 libc_math_function(
-    name = "canonicalize",
-    additional_deps = [
-        ":__support_math_canonicalize",
-    ],
-)
-
-libc_math_function(
     name = "bf16divf",
     additional_deps = [
         ":__support_math_bf16divf",
@@ -11800,9 +11801,23 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "canonicalize",
+    additional_deps = [
+        ":__support_math_canonicalize",
+    ],
+)
+
+libc_math_function(
     name = "canonicalizef",
     additional_deps = [
         ":__support_math_canonicalizef",
+    ],
+)
+
+libc_math_function(
+    name = "canonicalizebf16",
+    additional_deps = [
+        ":__support_math_canonicalizebf16",
     ],
 )
 
@@ -13378,6 +13393,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "getpayloadbf16",
+    additional_deps = [
+        ":__support_math_getpayloadbf16",
+    ],
+)
+
+libc_math_function(
     name = "getpayloadf",
     additional_deps = [
         ":__support_math_getpayloadf",
@@ -14482,6 +14504,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "setpayloadbf16",
+    additional_deps = [
+        ":__support_math_setpayloadbf16",
+    ],
+)
+
+libc_math_function(
     name = "setpayloadf",
     additional_deps = [
         ":__support_math_setpayloadf",
@@ -14513,6 +14542,13 @@ libc_math_function(
     name = "setpayloadsig",
     additional_deps = [
         ":__support_math_setpayloadsig",
+    ],
+)
+
+libc_math_function(
+    name = "setpayloadsigbf16",
+    additional_deps = [
+        ":__support_math_setpayloadsigbf16",
     ],
 )
 
@@ -17001,6 +17037,7 @@ libc_support_library(
     hdrs = ["src/stdio/stdout.h"],
     deps = [
         ":__support_common",
+        ":__support_file_file",
         ":__support_file_platform_file",
         ":__support_macros_config",
         ":types_FILE",
@@ -17013,6 +17050,7 @@ libc_support_library(
     hdrs = ["src/stdio/stderr.h"],
     deps = [
         ":__support_common",
+        ":__support_file_file",
         ":__support_file_platform_file",
         ":__support_macros_config",
         ":types_FILE",
