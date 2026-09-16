@@ -1228,8 +1228,7 @@ mlir::FlatSymbolRefAttr
 resolveMapperId(Fortran::lower::AbstractConverter &converter,
                 mlir::Location loc, const omp::Object &object,
                 llvm::StringRef mapperIdNameRef,
-                mlir::omp::ClauseMapFlags mapTypeBits,
-                llvm::omp::Directive directive, bool hasParentObj) {
+                mlir::omp::ClauseMapFlags mapTypeBits, bool hasParentObj) {
   const semantics::DerivedTypeSpec *objectTypeSpec =
       getSymbolDerivedType(*object.sym());
   if (!objectTypeSpec)
@@ -1250,19 +1249,12 @@ resolveMapperId(Fortran::lower::AbstractConverter &converter,
 
   if (mapperIdName == "__implicit_mapper") {
     mapperIdName = getDefaultMapperID(converter, firOpBuilder, objectTypeSpec);
-    // Currently we do not apply implicit compiler generated delcare mappers
-    // to enter, exit or update directives. However, we will syntheize one
-    // below if we're not a target enter/exit/update and no user defined
-    // implicit declare mapper has been defined and we meet the other
-    // conditions
-    // TODO/FIXME: Loosen this restriction to comply with the OpenMP
-    // specification.
+    // Synthesize an implicit compiler generated declare mapper if no user
+    // defined implicit declare mapper has been defined and the mapped object
+    // meets the other conditions below.
     auto *userDefinedDefault =
         converter.getModuleOp().lookupSymbol(mapperIdName);
-    if (!userDefinedDefault && !hasParentObj &&
-        (directive != llvm::omp::Directive::OMPD_target_enter_data &&
-         directive != llvm::omp::Directive::OMPD_target_exit_data &&
-         directive != llvm::omp::Directive::OMPD_target_update)) {
+    if (!userDefinedDefault && !hasParentObj) {
       bool isAllocOrPointer =
           semantics::IsAllocatableOrObjectPointer(object.sym());
       bool isPointer = semantics::IsPointer(*object.sym());
