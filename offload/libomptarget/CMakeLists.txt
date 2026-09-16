@@ -19,6 +19,7 @@ add_library(omptarget SHARED
   ../libompaccsupport/DeviceImage.cpp
   ../libompaccsupport/Mapping.cpp
   ../libompaccsupport/Program.cpp
+  ../libompaccsupport/OmpAccError.cpp
 
   KernelLanguage/API.cpp
 )
