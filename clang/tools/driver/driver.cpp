@@ -16,6 +16,7 @@
 #include "clang/Basic/HeaderInclude.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/ToolChain.h"
@@ -62,6 +63,14 @@
 using namespace clang;
 using namespace clang::driver;
 using namespace llvm::opt;
+
+static bool isSessionOwnedTool(const llvm::ToolContext &Context,
+                               llvm::StringRef Executable) {
+  // A bare name means that Clang did not find an external executable. A path
+  // is session-owned only when it names the session's multicall binary.
+  return llvm::sys::path::parent_path(Executable).empty() ||
+         llvm::sys::fs::equivalent(Executable, Context.Path);
+}
 
 std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
   if (!CanonicalPrefixes) {
@@ -397,6 +406,19 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
         continue;
       Job.enableFree();
       Job.InProcess = true;
+    }
+  }
+
+  // A host session may provide the linker as a callable tool. Other external
+  // commands retain the subprocess path.
+  if (ToolContext.hasSession()) {
+    for (Command &Job : C->getJobs()) {
+      if (!isa<LinkJobAction>(Job.getSource()))
+        continue;
+      if (!isSessionOwnedTool(ToolContext, Job.getExecutable()))
+        continue;
+      if (ToolContext.getCallableTool(Job.getExecutable()))
+        Job.setInProcessToolContext(ToolContext);
     }
   }
 

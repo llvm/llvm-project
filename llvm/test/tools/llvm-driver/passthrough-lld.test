@@ -4,5 +4,8 @@
 # RUN: %llvm ld --help | FileCheck %s
 # RUN: %llvm lld -flavor ld.lld --help | FileCheck %s
 # RUN: %llvm ld -flavor ld.lld --help | FileCheck %s
+# A session-owned LLD invocation must run even when test repetition is disabled.
+# RUN: env LLD_IN_TEST=0 %llvm wasm-ld --version | FileCheck %s --check-prefix=VERSION
 
 # CHECK: supported targets: elf
+# VERSION: LLD {{[0-9]+}}.{{[0-9]+}}.{{[0-9]+}}
