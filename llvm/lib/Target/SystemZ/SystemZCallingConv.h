@@ -96,21 +96,13 @@ inline bool CC_XPLINK64_Pointer(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   return false;
 }
 
-inline bool CC_XPLINK_Int128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
-                             CCValAssign::LocInfo &LocInfo,
-                             ISD::ArgFlagsTy &ArgFlags, CCState &State) {
-  LocVT = MVT::v16i8;
-  LocInfo = CCValAssign::BCvt;
-  return false;
-}
-
 inline bool CC_XPLINK64_Shadow_Reg(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                                    CCValAssign::LocInfo &LocInfo,
                                    ISD::ArgFlagsTy &ArgFlags, CCState &State) {
   if (LocVT == MVT::f32 || LocVT == MVT::f64) {
     State.AllocateReg(SystemZ::XPLINK64ArgGPRs);
   }
-  if (LocVT == MVT::f128 || LocVT.is128BitVector()) {
+  if (LocVT == MVT::f128 || LocVT.is128BitVector() || LocVT == MVT::i128) {
     // Shadow next two GPRs, if available.
     State.AllocateReg(SystemZ::XPLINK64ArgGPRs);
     State.AllocateReg(SystemZ::XPLINK64ArgGPRs);

@@ -1902,13 +1902,9 @@ static SDValue convertLocVTToValVT(SelectionDAG &DAG, const SDLoc &DL,
   else if (VA.getLocInfo() == CCValAssign::BCvt) {
     // If the argument is a short vector loaded from the stack,
     // extend it from i64 to the full vector size and then perform a bitcast.
-    // Alternatively, if the argument is an int128,
-    // directly bitcast it into a vector of v16i8.
-    assert(VA.getLocVT() == MVT::i64 || VA.getLocVT() == MVT::v16i8);
-    assert(VA.getValVT().isVector() || VA.getValVT() == MVT::i128);
-    if (VA.getLocVT() == MVT::i64)
-      Value =
-          DAG.getBuildVector(MVT::v2i64, DL, {Value, DAG.getUNDEF(MVT::i64)});
+    assert(VA.getLocVT() == MVT::i64);
+    assert(VA.getValVT().isVector());
+    Value = DAG.getBuildVector(MVT::v2i64, DL, {Value, DAG.getUNDEF(MVT::i64)});
     Value = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), Value);
   } else
     assert(VA.getLocInfo() == CCValAssign::Full && "Unsupported getLocInfo");
@@ -1931,8 +1927,7 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, const SDLoc &DL,
     assert(VA.getLocVT() == MVT::i64 || VA.getLocVT() == MVT::i128 ||
            VA.getLocVT() == MVT::v16i8);
     assert(VA.getValVT().isVector() || VA.getValVT() == MVT::f32 ||
-           VA.getValVT() == MVT::f64 || VA.getValVT() == MVT::f128 ||
-           VA.getValVT() == MVT::i128);
+           VA.getValVT() == MVT::f64 || VA.getValVT() == MVT::f128);
     // For an f32 vararg we need to first promote it to an f64 and then
     // bitcast it to an i64.
     if (VA.getValVT() == MVT::f32 && VA.getLocVT() == MVT::i64)
@@ -2437,10 +2432,11 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
       ArgValue = convertValVTToLocVT(DAG, DL, VA, ArgValue);
 
     if (VA.isRegLoc()) {
-      // In XPLINK64, for the 128-bit vararg case, ArgValue is bitcasted to a
-      // MVT::i128 type. We decompose the 128-bit type to a pair of its high
-      // and low values.
-      if (VA.getLocVT() == MVT::i128)
+      // i128 in a GR128 register pair (e.g. R2Q) must be decomposed into
+      // hi/lo GPR halves. i128 assigned to a VR128 vector register (V24-V31)
+      // is passed directly — do not decompose in that case.
+      if (VA.getLocVT() == MVT::i128 &&
+          !SystemZ::VR128BitRegClass.contains(VA.getLocReg()))
         ArgValue = lowerI128ToGR128(DAG, ArgValue);
       // Queue up the argument copies and emit them at the end.
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgValue));
@@ -2614,9 +2610,7 @@ bool SystemZTargetLowering::CanLowerReturn(
     const Type *RetTy) const {
   // Special case that we cannot easily detect in RetCC_SystemZ since
   // i128 may not be a legal type.
-  // On z/OS we need to skip the convention of passing the return value on
-  // the stack used on zLinux.
-  if (Subtarget.isTargetLinux())
+  if (!Subtarget.isTargetzOS())
     for (auto &Out : Outs)
       if (Out.ArgVT.isScalarInteger() && Out.ArgVT.getSizeInBits() > 64)
         return false;
