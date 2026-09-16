@@ -1555,12 +1555,9 @@ def : Pat<(i64 (anyext GR32:$src)),
 
 def : Pat<(i32 (anyext_sdiv GR8:$src)), (MOVSX32rr8 GR8:$src)>;
 
-// In the case of a 32-bit def that is known to implicitly zero-extend,
-// we can use a SUBREG_TO_REG.
-def : Pat<(i64 (zext def32:$src)),
-          (SUBREG_TO_REG GR32:$src, sub_32bit)>;
-def : Pat<(i64 (and (anyext def32:$src), 0x00000000FFFFFFFF)),
-          (SUBREG_TO_REG GR32:$src, sub_32bit)>;
+// Select like (i64 (zext GR32:$src)), see X86InstrExtension.td.
+def : Pat<(i64 (and (anyext GR32:$src), 0x00000000FFFFFFFF)),
+          (SUBREG_TO_REG (MOV32rr GR32:$src), sub_32bit)>;
 
 //===----------------------------------------------------------------------===//
 // Pattern match OR as ADD
@@ -1707,34 +1704,15 @@ def : Pat<(or (and GR64:$dst, -65536),
               (i64 (zextloadi16 addr:$src))),
           (INSERT_SUBREG (i64 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
 
-let Predicates = [Not64BitMode] in {
-  def : Pat<(or (and GR32:$dst, -256),
-                (i32 (zextloadi8 addr:$src))),
-            (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
+// The upper 32 bits of the result are those of $dst; a zero extension of the
+// result only drops its MOV32rr if X86DAGToDAGISel::isDef32 holds for $dst.
+def : Pat<(or (and GR32:$dst, -256),
+              (i32 (zextloadi8 addr:$src))),
+          (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
 
-  def : Pat<(or (and GR32:$dst, -65536),
-                (i32 (zextloadi16 addr:$src))),
-            (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
-}
-
-let Predicates = [In64BitMode] in {
-  def : Pat<(or (and def32:$dst, -256),
-                (i32 (zextloadi8 addr:$src))),
-            (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
-
-  def : Pat<(or (and def32:$dst, -65536),
-                (i32 (zextloadi16 addr:$src))),
-            (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
-
-  // These patterns use MOV32rr since GR32 could have junk in the upper 32-bits.
-  def : Pat<(or (and GR32:$dst, -256),
-                (i32 (zextloadi8 addr:$src))),
-            (MOV32rr (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit))>;
-
-  def : Pat<(or (and GR32:$dst, -65536),
-                (i32 (zextloadi16 addr:$src))),
-            (MOV32rr (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit))>;
-}
+def : Pat<(or (and GR32:$dst, -65536),
+              (i32 (zextloadi16 addr:$src))),
+          (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
 
 // To avoid needing to materialize an immediate in a register, use a 32-bit and
 // with implicit zero-extension instead of a 64-bit and if the immediate has at

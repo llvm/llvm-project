@@ -535,6 +535,11 @@ namespace {
       return Mask.countr_one() >= Width;
     }
 
+    /// Return true if the selected i32 value \p V is guaranteed to have the
+    /// upper 32 bits of its 64-bit super-register zeroed. Only valid once
+    /// every node has been selected.
+    bool isDef32(SDValue V) const;
+
     /// Return an SDNode that returns the value of the global base register.
     /// Output instructions required to initialize the global base register,
     /// if necessary.
@@ -1623,6 +1628,76 @@ bool X86DAGToDAGISel::tryOptimizeRem8Extend(SDNode *N) {
   return true;
 }
 
+// Any x86-64 instruction writing a 32-bit register zeroes the upper 32 bits of
+// the 64-bit register. This is only decided after selection, on the final
+// machine node: isel selects users before operands, so a predicate on the
+// unselected operand of a zero_extend can be invalidated by a transform that
+// later replaces that operand (e.g. shrinkAndImmediate replacing a redundant
+// 'and' with its truncate operand).
+bool X86DAGToDAGISel::isDef32(SDValue V) const {
+  const X86RegisterInfo *TRI = Subtarget->getRegisterInfo();
+  while (V.getValueType() == MVT::i32 && V.isMachineOpcode()) {
+    unsigned Opc = V.getMachineOpcode();
+    switch (Opc) {
+    case TargetOpcode::COPY:
+    case TargetOpcode::COPY_TO_REGCLASS:
+      V = V.getOperand(0);
+      continue;
+    case TargetOpcode::INSERT_SUBREG: {
+      // The upper 32 bits are those of the base register.
+      unsigned SubIdx = V.getConstantOperandVal(2);
+      if (SubIdx != X86::sub_8bit && SubIdx != X86::sub_8bit_hi &&
+          SubIdx != X86::sub_16bit)
+        return false;
+      V = V.getOperand(0);
+      continue;
+    }
+    case X86::BSF32rr:
+    case X86::BSF32rm:
+    case X86::BSR32rr:
+    case X86::BSR32rm: {
+      // A zero source leaves the tied destination untouched, i.e. the
+      // fallback value. An IMPLICIT_DEF fallback means the result is poison.
+      SDValue Fallback = V.getOperand(0);
+      if (Fallback.isMachineOpcode() &&
+          Fallback.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF)
+        return true;
+      V = Fallback;
+      continue;
+    }
+    // Pseudos that expand to a single instruction writing the whole register.
+    case X86::MOV32r0:
+    case X86::MOV32r1:
+    case X86::MOV32r_1:
+    case X86::SETB_C32r:
+    case X86::ADD32rr_DB:
+    case X86::ADD32ri_DB:
+      return true;
+    default:
+      break;
+    }
+
+    // EXTRACT_SUBREG, IMPLICIT_DEF and other pseudos (e.g. CMOV_GR32, which
+    // expands to a PHI) provide no guarantee.
+    if (Opc <= TargetOpcode::GENERIC_OP_END)
+      return false;
+    const MCInstrDesc &Desc = getInstrInfo()->get(Opc);
+    if (Desc.isPseudo())
+      return false;
+
+    // A real instruction writes all 32 bits of an explicit GR32 definition.
+    unsigned ResNo = V.getResNo();
+    if (ResNo >= Desc.getNumDefs())
+      return false;
+    const MCOperandInfo &OpInfo = Desc.operands()[ResNo];
+    if (OpInfo.OperandType != MCOI::OPERAND_REGISTER ||
+        OpInfo.isLookupRegClassByHwMode())
+      return false;
+    return X86::GR32RegClass.hasSubClassEq(TRI->getRegClass(OpInfo.RegClass));
+  }
+  return false;
+}
+
 void X86DAGToDAGISel::PostprocessISelDAG() {
   // Skip peepholes at -O0.
   if (TM.getOptLevel() == CodeGenOptLevel::None)
@@ -1772,14 +1847,28 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
       MadeChange = true;
       continue;
     }
-    // Attempt to remove vectors moves that were inserted to zero upper bits.
+    // Attempt to remove moves that were inserted to zero upper bits.
     case TargetOpcode::SUBREG_TO_REG: {
       unsigned SubRegIdx = N->getConstantOperandVal(1);
-      if (SubRegIdx != X86::sub_xmm && SubRegIdx != X86::sub_ymm)
-        continue;
-
       SDValue Move = N->getOperand(0);
       if (!Move.isMachineOpcode())
+        continue;
+
+      // (SUBREG_TO_REG (MOV32rr X)) from the i32->i64 zero_extend patterns:
+      // drop the MOV32rr if X already zeroes the upper 32 bits.
+      if (SubRegIdx == X86::sub_32bit) {
+        if (Move.getMachineOpcode() != X86::MOV32rr ||
+            !isDef32(Move.getOperand(0)))
+          continue;
+        SDNode *Res = CurDAG->UpdateNodeOperands(N, Move.getOperand(0),
+                                                 N->getOperand(1));
+        if (Res != N)
+          ReplaceUses(N, Res);
+        MadeChange = true;
+        continue;
+      }
+
+      if (SubRegIdx != X86::sub_xmm && SubRegIdx != X86::sub_ymm)
         continue;
 
       // Make sure its one of the move opcodes we recognize.
