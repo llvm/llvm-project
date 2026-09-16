@@ -369,17 +369,11 @@ def parse_args():
     execution_group.add_argument(
         "--rerun-failed-serially",
         dest="rerunFailedSerially",
-        action="store_true",
-        help="After the test run, rerun the tests that failed with a single "
-        "worker. Tests that pass the second time are reported as flaky",
-    )
-    execution_group.add_argument(
-        "--rerun-failed-matching",
-        dest="rerunFailedMatching",
         metavar="REGEX",
         type=_regex,
-        help="Only rerun failures whose output matches REGEX "
-        "(implies --rerun-failed-serially)",
+        help="After the test run, rerun the tests whose failure output matches "
+        "REGEX with a single worker. Tests that pass the second time are "
+        "reported as flaky",
     )
     execution_group.add_argument(
         "--max-failures",
@@ -582,9 +576,6 @@ def parse_args():
         opts.shard = (opts.runShard, opts.numShards)
     else:
         opts.shard = None
-
-    if opts.rerunFailedMatching is not None:
-        opts.rerunFailedSerially = True
 
     opts.reports = list(
         filter(

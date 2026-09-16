@@ -237,23 +237,20 @@ require a change in the test scripts or the test config:
 Any option in the list above overrules its predecessor.
 :::
 
-:::{option} --rerun-failed-serially
-Once all tests have run, run the tests that failed a second time, with a
-single worker regardless of {option}`-j`. Tests that pass the second time
-are reported as `FLAKYPASS`, so they do not count as failures and do not
-affect the exit status.
+:::{option} --rerun-failed-serially REGEX
+Once all tests have run, run the tests whose failure output matches `REGEX`
+a second time, with a single worker regardless of {option}`-j`. Tests that
+pass the second time are reported as `FLAKYPASS`, so they do not count as
+failures and do not affect the exit status.
+
+Matching on the output is what allows working around very specific known
+issues without allowing other tests to become unreliable due to the retry
+mechanism. Pass `.` to rerun every failure.
 
 {option}`--max-retries-per-test` retries a failed test immediately, in the
 same worker and alongside the tests that are still running; this option
 waits until nothing else is running. Both can be used at once, in which
 case each attempt of the rerun is retried as well.
-:::
-
-:::{option} --rerun-failed-matching REGEX
-Only rerun those failures whose output matches `REGEX`, to allow
-working around very specific known issues without allowing other
-tests to become unreliable due to the retry mechanism. Implies
-{option}`--rerun-failed-serially`.
 :::
 
 :::{option} --allow-empty-runs

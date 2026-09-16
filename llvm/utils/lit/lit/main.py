@@ -118,7 +118,7 @@ def main(builtin_params={}):
 
     start = time.time()
     run_tests(selected_tests, lit_config, opts, len(discovered_tests))
-    if opts.rerunFailedSerially:
+    if opts.rerunFailedSerially is not None:
         rerun_failed_serially(selected_tests, lit_config, opts, len(discovered_tests))
     elapsed = time.time() - start
 
@@ -290,18 +290,15 @@ def run_tests(tests, lit_config, opts, discovered_tests, workers=None):
 
 
 def rerun_failed_serially(tests, lit_config, opts, discovered_tests):
-    """Run the tests that failed a second time, with a single worker.
+    """Run the tests whose failure output matches, a second time, with a
+    single worker.
 
-    If opts.rerunFailedMatching is set, only reruns the tests whose output
-    matches it. Tests that pass the second time are reported as flaky, which
-    keeps them out of the failure count and the exit status.
+    Tests that pass the second time are reported as flaky, which keeps them
+    out of the failure count and the exit status.
     """
-    matching = opts.rerunFailedMatching
+    matching = opts.rerunFailedSerially
     failed = [
-        t
-        for t in tests
-        if t.isFailure()
-        and (matching is None or matching.search(t.result.output or ""))
+        t for t in tests if t.isFailure() and matching.search(t.result.output or "")
     ]
     if not failed:
         return

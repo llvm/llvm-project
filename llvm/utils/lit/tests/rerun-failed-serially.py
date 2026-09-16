@@ -15,11 +15,12 @@
 # CHECK-OFF-NEXT: rerun-failed-serially :: fails-once.py
 #      CHECK-OFF: Failed: 2
 
-# With the option, the failed tests are run again with a single worker. The one
-# that passes the second time is reported as flaky, the other one still fails.
+# With a pattern that matches every failure, the failed tests are run again
+# with a single worker. The one that passes the second time is reported as
+# flaky, the other one still fails.
 #
 # RUN: rm -f %t.counter
-# RUN: not %{lit} %{inputs}/rerun-failed-serially --rerun-failed-serially \
+# RUN: not %{lit} %{inputs}/rerun-failed-serially --rerun-failed-serially . \
 # RUN:     -Dcounter=%t.counter -Dpython=%{python} 2>&1 | \
 # RUN:   FileCheck --check-prefix=CHECK-ON %s
 #
@@ -30,13 +31,12 @@
 #      CHECK-ON: Passed With Retry: 1
 #      CHECK-ON: Failed{{ *}}: 1
 
-# --rerun-failed-matching restricts the rerun to the failures whose output
-# matches, so that a test failing for an unrelated reason is not given a
-# second chance.
+# A narrower pattern restricts the rerun to the failures whose output matches,
+# so that a test failing for an unrelated reason is not given a second chance.
 #
 # RUN: rm -f %t.counter
 # RUN: not %{lit} %{inputs}/rerun-failed-serially \
-# RUN:     --rerun-failed-matching "machine was busy" \
+# RUN:     --rerun-failed-serially "machine was busy" \
 # RUN:     -Dcounter=%t.counter -Dpython=%{python} 2>&1 | \
 # RUN:   FileCheck --check-prefix=CHECK-MATCHING %s
 #
@@ -50,7 +50,7 @@
 #
 # RUN: rm -f %t.counter
 # RUN: not %{lit} %{inputs}/rerun-failed-serially \
-# RUN:     --rerun-failed-matching "no failure says this" \
+# RUN:     --rerun-failed-serially "no failure says this" \
 # RUN:     -Dcounter=%t.counter -Dpython=%{python} 2>&1 | \
 # RUN:   FileCheck --check-prefix=CHECK-NO-MATCH %s
 #
@@ -67,7 +67,8 @@
 #
 # RUN: rm -f %t.counter
 # RUN: %{lit} %{inputs}/rerun-failed-serially-retries --max-retries-per-test 1 \
-# RUN:     --rerun-failed-serially -Dcounter=%t.counter -Dpython=%{python} 2>&1 | \
+# RUN:     --rerun-failed-serially "machine was busy" \
+# RUN:     -Dcounter=%t.counter -Dpython=%{python} 2>&1 | \
 # RUN:   FileCheck --check-prefix=CHECK-RETRIES %s
 #
 # CHECK-RETRIES: FAIL: rerun-failed-serially-retries :: needs-four-attempts.py (1 of 1, 2 of 2 attempts)
@@ -80,7 +81,8 @@
 #
 # RUN: rm -f %t.counter
 # RUN: %{lit} %{inputs}/rerun-failed-serially-retries --max-retries-per-test 2 \
-# RUN:     --rerun-failed-serially -Dcounter=%t.counter -Dpython=%{python} 2>&1 | \
+# RUN:     --rerun-failed-serially "machine was busy" \
+# RUN:     -Dcounter=%t.counter -Dpython=%{python} 2>&1 | \
 # RUN:   FileCheck --check-prefix=CHECK-RETRIES-PASS %s
 #
 # CHECK-RETRIES-PASS: FAIL: rerun-failed-serially-retries :: needs-four-attempts.py (1 of 1, 3 of 3 attempts)
