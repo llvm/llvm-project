@@ -2610,10 +2610,10 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
 
     unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
 
-    if (DstTy.isScalableVector())
-      break;
     if (TyBits == NumSrcBits)
       return computeNumSignBits(Src, DemandedElts, Depth + 1);
+    if (DstTy.isScalableVector())
+      break;
     if (NumSrcBits % TyBits == 0) {
       unsigned NumElts = DstTy.getNumElements();
       unsigned Scale = NumSrcBits / TyBits;
