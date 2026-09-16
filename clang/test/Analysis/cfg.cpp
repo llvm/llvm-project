@@ -455,9 +455,10 @@ int unknown();
 // CHECK-NEXT:    Preds (1): B5
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B2]
-// CHECK-NEXT:    1: 0
-// CHECK-NEXT:    2: ({ ... ; [B2.1] })
-// CHECK-NEXT:    3: return [B2.2];
+// CHECK-NEXT:    1: WhileStmt (LoopExit)
+// CHECK-NEXT:    2: 0
+// CHECK-NEXT:    3: ({ ... ; [B2.2] })
+// CHECK-NEXT:    4: return [B2.3];
 // CHECK-NEXT:    Preds (1): B4
 // CHECK-NEXT:    Succs (1): B0
 // FIXME: Why do we have [B3] at all?
