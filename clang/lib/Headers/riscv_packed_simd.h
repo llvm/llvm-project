@@ -75,6 +75,13 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return __v[__idx];                                                         \
   }
 
+#define __packed_store(name, ty, elt_ty)                                       \
+  static __inline__ void __DEFAULT_FN_ATTRS __riscv_##name(elt_ty *__p,        \
+                                                           ty __v) {           \
+    typedef ty __attribute__((__aligned__(1))) ua_ty;                          \
+    *(ua_ty *)__p = __v;                                                       \
+  }
+
 #define __packed_binary_builtin(name, ty, builtin)                             \
   static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
     return builtin(__rs1, __rs2);                                              \
@@ -326,6 +333,18 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
           "index must be a constant integer from 0 to " #max_idx))) {          \
     __v[__idx] = __e;                                                          \
     return __v;                                                                \
+  }
+
+#define __packed_join2(name, ty, elt_ty)                                       \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(elt_ty __e0,          \
+                                                         elt_ty __e1) {        \
+    return (ty){__e0, __e1};                                                   \
+  }
+
+#define __packed_join4(name, ty, elt_ty)                                       \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(                      \
+      elt_ty __e0, elt_ty __e1, elt_ty __e2, elt_ty __e3) {                    \
+    return (ty){__e0, __e1, __e2, __e3};                                       \
   }
 
 // clang-format off: macro call sites have no trailing semicolons, which
@@ -594,6 +613,18 @@ __packed_insert(pset_i16_i16x4, int16x4_t, int16_t, 3)
 __packed_insert(pset_u16_u16x4, uint16x4_t, uint16_t, 3)
 __packed_insert(pset_i32_i32x2, int32x2_t, int32_t, 1)
 __packed_insert(pset_u32_u32x2, uint32x2_t, uint32_t, 1)
+
+/* Packed Element Join (32-bit) */
+__packed_join4(pjoin4_i8x4, int8x4_t, int8_t)
+__packed_join4(pjoin4_u8x4, uint8x4_t, uint8_t)
+__packed_join2(pjoin2_i16x2, int16x2_t, int16_t)
+__packed_join2(pjoin2_u16x2, uint16x2_t, uint16_t)
+
+/* Packed Element Join (64-bit) */
+__packed_join4(pjoin4_i16x4, int16x4_t, int16_t)
+__packed_join4(pjoin4_u16x4, uint16x4_t, uint16_t)
+__packed_join2(pjoin2_i32x2, int32x2_t, int32_t)
+__packed_join2(pjoin2_u32x2, uint32x2_t, uint32_t)
 
 /* Packed Logical Operations (32-bit) */
 __packed_binary_op(pand_i8x4, int8x4_t, &)
@@ -1062,6 +1093,20 @@ __packed_binary_builtin_cast(pnclipup_u16x4, uint32x2_t, uint16x4_t, __builtin_r
 __packed_binary_builtin_cast(pnclipp_i32x2, int64_t, int32x2_t, __builtin_riscv_pnclipp_i32x2)
 __packed_binary_builtin_cast(pnclipup_u32x2, uint64_t, uint32x2_t, __builtin_riscv_pnclipup_u32x2)
 
+/* Packed Store (32-bit) */
+__packed_store(pst_i8x4, int8x4_t, int8_t)
+__packed_store(pst_u8x4, uint8x4_t, uint8_t)
+__packed_store(pst_i16x2, int16x2_t, int16_t)
+__packed_store(pst_u16x2, uint16x2_t, uint16_t)
+
+/* Packed Store (64-bit) */
+__packed_store(pst_i8x8, int8x8_t, int8_t)
+__packed_store(pst_u8x8, uint8x8_t, uint8_t)
+__packed_store(pst_i16x4, int16x4_t, int16_t)
+__packed_store(pst_u16x4, uint16x4_t, uint16_t)
+__packed_store(pst_i32x2, int32x2_t, int32_t)
+__packed_store(pst_u32x2, uint32x2_t, uint32_t)
+
 /* Packed Element Extract (32-bit) */
 __packed_extract(pget_i8x4_i8, int8_t, int8x4_t, 3)
 __packed_extract(pget_u8x4_u8, uint8_t, uint8x4_t, 3)
@@ -1179,6 +1224,7 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_scalar_binary_op
 #undef __packed_binary_op
 #undef __packed_unary_op
+#undef __packed_store
 #undef __packed_binary_builtin
 #undef __packed_binary_builtin_mixed
 #undef __packed_ternary_builtin
@@ -1227,6 +1273,8 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_ternary_builtin_cast
 #undef __packed_extract
 #undef __packed_insert
+#undef __packed_join2
+#undef __packed_join4
 #undef __packed_reinterpret
 #undef __DEFAULT_FN_ATTRS
 

@@ -11006,6 +11006,189 @@ uint32_t test_pget_u32x2_u32(uint32x2_t v) {
   return __riscv_pget_u32x2_u32(v, 1);
 }
 
+/* Packed Store (32-bit) */
+
+// RV32-LABEL: define dso_local void @test_pst_i8x4(
+// RV32-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_i8x4(
+// RV64-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_i8x4(int8_t *p, int8x4_t v) { __riscv_pst_i8x4(p, v); }
+
+// RV32-LABEL: define dso_local void @test_pst_u8x4(
+// RV32-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_u8x4(
+// RV64-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_u8x4(uint8_t *p, uint8x4_t v) { __riscv_pst_u8x4(p, v); }
+
+// RV32-LABEL: define dso_local void @test_pst_i16x2(
+// RV32-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_i16x2(
+// RV64-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_i16x2(int16_t *p, int16x2_t v) { __riscv_pst_i16x2(p, v); }
+
+// RV32-LABEL: define dso_local void @test_pst_u16x2(
+// RV32-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_u16x2(
+// RV64-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_u16x2(uint16_t *p, uint16x2_t v) { __riscv_pst_u16x2(p, v); }
+
+/* Packed Store (64-bit) */
+
+// RV32-LABEL: define dso_local void @test_pst_i8x8(
+// RV32-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_i8x8(
+// RV64-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_i8x8(int8_t *p, int8x8_t v) { __riscv_pst_i8x8(p, v); }
+
+// RV32-LABEL: define dso_local void @test_pst_u8x8(
+// RV32-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_u8x8(
+// RV64-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_u8x8(uint8_t *p, uint8x8_t v) { __riscv_pst_u8x8(p, v); }
+
+// RV32-LABEL: define dso_local void @test_pst_i16x4(
+// RV32-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_i16x4(
+// RV64-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_i16x4(int16_t *p, int16x4_t v) { __riscv_pst_i16x4(p, v); }
+
+// RV32-LABEL: define dso_local void @test_pst_u16x4(
+// RV32-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_u16x4(
+// RV64-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_u16x4(uint16_t *p, uint16x4_t v) { __riscv_pst_u16x4(p, v); }
+
+// RV32-LABEL: define dso_local void @test_pst_i32x2(
+// RV32-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_i32x2(
+// RV64-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_i32x2(int32_t *p, int32x2_t v) { __riscv_pst_i32x2(p, v); }
+
+// RV32-LABEL: define dso_local void @test_pst_u32x2(
+// RV32-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_u32x2(
+// RV64-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_u32x2(uint32_t *p, uint32x2_t v) { __riscv_pst_u32x2(p, v); }
+
+/* Packed Store with provable alignment (cf. the P-ext spec's note on
+ * __builtin_assume_aligned) */
+
+// RV32-LABEL: define dso_local void @test_pst_i8x4_aligned(
+// RV32-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i32 4) ]
+// RV32-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_i8x4_aligned(
+// RV64-SAME: ptr noundef [[P:%.*]], i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 4) ]
+// RV64-NEXT:    store i32 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_i8x4_aligned(int8_t *p, int8x4_t v) {
+  __riscv_pst_i8x4(__builtin_assume_aligned(p, 4), v);
+}
+
+// RV32-LABEL: define dso_local void @test_pst_i32x2_aligned(
+// RV32-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i32 8) ]
+// RV32-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV32-NEXT:    ret void
+//
+// RV64-LABEL: define dso_local void @test_pst_i32x2_aligned(
+// RV64-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
+// RV64-NEXT:    store i64 [[V_COERCE]], ptr [[P]], align 1
+// RV64-NEXT:    ret void
+//
+void test_pst_i32x2_aligned(int32_t *p, int32x2_t v) {
+  __riscv_pst_i32x2(__builtin_assume_aligned(p, 8), v);
+}
+
 /* Packed Element Insert (32-bit) */
 
 // RV32-LABEL: define dso_local i32 @test_pset_i8_i8x4(
@@ -11208,4 +11391,186 @@ int32x2_t test_pset_i32_i32x2(int32x2_t v, int32_t e) {
 //
 uint32x2_t test_pset_u32_u32x2(uint32x2_t v, uint32_t e) {
   return __riscv_pset_u32_u32x2(v, e, 0);
+}
+
+/* Packed Element Join (32-bit) */
+
+// RV32-LABEL: define dso_local i32 @test_pjoin4_i8x4(
+// RV32-SAME: i8 noundef signext [[E0:%.*]], i8 noundef signext [[E1:%.*]], i8 noundef signext [[E2:%.*]], i8 noundef signext [[E3:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i8> poison, i8 [[E0]], i64 0
+// RV32-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x i8> [[VECINIT_I]], i8 [[E1]], i64 1
+// RV32-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x i8> [[VECINIT1_I]], i8 [[E2]], i64 2
+// RV32-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x i8> [[VECINIT2_I]], i8 [[E3]], i64 3
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast <4 x i8> [[VECINIT3_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pjoin4_i8x4(
+// RV64-SAME: i8 noundef signext [[E0:%.*]], i8 noundef signext [[E1:%.*]], i8 noundef signext [[E2:%.*]], i8 noundef signext [[E3:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i8> poison, i8 [[E0]], i64 0
+// RV64-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x i8> [[VECINIT_I]], i8 [[E1]], i64 1
+// RV64-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x i8> [[VECINIT1_I]], i8 [[E2]], i64 2
+// RV64-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x i8> [[VECINIT2_I]], i8 [[E3]], i64 3
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast <4 x i8> [[VECINIT3_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int8x4_t test_pjoin4_i8x4(int8_t e0, int8_t e1, int8_t e2, int8_t e3) {
+  return __riscv_pjoin4_i8x4(e0, e1, e2, e3);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pjoin4_u8x4(
+// RV32-SAME: i8 noundef zeroext [[E0:%.*]], i8 noundef zeroext [[E1:%.*]], i8 noundef zeroext [[E2:%.*]], i8 noundef zeroext [[E3:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i8> poison, i8 [[E0]], i64 0
+// RV32-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x i8> [[VECINIT_I]], i8 [[E1]], i64 1
+// RV32-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x i8> [[VECINIT1_I]], i8 [[E2]], i64 2
+// RV32-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x i8> [[VECINIT2_I]], i8 [[E3]], i64 3
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast <4 x i8> [[VECINIT3_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pjoin4_u8x4(
+// RV64-SAME: i8 noundef zeroext [[E0:%.*]], i8 noundef zeroext [[E1:%.*]], i8 noundef zeroext [[E2:%.*]], i8 noundef zeroext [[E3:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i8> poison, i8 [[E0]], i64 0
+// RV64-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x i8> [[VECINIT_I]], i8 [[E1]], i64 1
+// RV64-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x i8> [[VECINIT1_I]], i8 [[E2]], i64 2
+// RV64-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x i8> [[VECINIT2_I]], i8 [[E3]], i64 3
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast <4 x i8> [[VECINIT3_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint8x4_t test_pjoin4_u8x4(uint8_t e0, uint8_t e1, uint8_t e2, uint8_t e3) {
+  return __riscv_pjoin4_u8x4(e0, e1, e2, e3);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pjoin2_i16x2(
+// RV32-SAME: i16 noundef signext [[E0:%.*]], i16 noundef signext [[E1:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i16> poison, i16 [[E0]], i64 0
+// RV32-NEXT:    [[VECINIT1_I:%.*]] = insertelement <2 x i16> [[VECINIT_I]], i16 [[E1]], i64 1
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i16> [[VECINIT1_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pjoin2_i16x2(
+// RV64-SAME: i16 noundef signext [[E0:%.*]], i16 noundef signext [[E1:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i16> poison, i16 [[E0]], i64 0
+// RV64-NEXT:    [[VECINIT1_I:%.*]] = insertelement <2 x i16> [[VECINIT_I]], i16 [[E1]], i64 1
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast <2 x i16> [[VECINIT1_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int16x2_t test_pjoin2_i16x2(int16_t e0, int16_t e1) {
+  return __riscv_pjoin2_i16x2(e0, e1);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pjoin2_u16x2(
+// RV32-SAME: i16 noundef zeroext [[E0:%.*]], i16 noundef zeroext [[E1:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i16> poison, i16 [[E0]], i64 0
+// RV32-NEXT:    [[VECINIT1_I:%.*]] = insertelement <2 x i16> [[VECINIT_I]], i16 [[E1]], i64 1
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i16> [[VECINIT1_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pjoin2_u16x2(
+// RV64-SAME: i16 noundef zeroext [[E0:%.*]], i16 noundef zeroext [[E1:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i16> poison, i16 [[E0]], i64 0
+// RV64-NEXT:    [[VECINIT1_I:%.*]] = insertelement <2 x i16> [[VECINIT_I]], i16 [[E1]], i64 1
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast <2 x i16> [[VECINIT1_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint16x2_t test_pjoin2_u16x2(uint16_t e0, uint16_t e1) {
+  return __riscv_pjoin2_u16x2(e0, e1);
+}
+
+/* Packed Element Join (64-bit) */
+
+// RV32-LABEL: define dso_local i64 @test_pjoin4_i16x4(
+// RV32-SAME: i16 noundef signext [[E0:%.*]], i16 noundef signext [[E1:%.*]], i16 noundef signext [[E2:%.*]], i16 noundef signext [[E3:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 [[E0]], i64 0
+// RV32-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 [[E1]], i64 1
+// RV32-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 [[E2]], i64 2
+// RV32-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 [[E3]], i64 3
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[VECINIT3_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pjoin4_i16x4(
+// RV64-SAME: i16 noundef signext [[E0:%.*]], i16 noundef signext [[E1:%.*]], i16 noundef signext [[E2:%.*]], i16 noundef signext [[E3:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 [[E0]], i64 0
+// RV64-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 [[E1]], i64 1
+// RV64-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 [[E2]], i64 2
+// RV64-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 [[E3]], i64 3
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[VECINIT3_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int16x4_t test_pjoin4_i16x4(int16_t e0, int16_t e1, int16_t e2,
+                            int16_t e3) {
+  return __riscv_pjoin4_i16x4(e0, e1, e2, e3);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pjoin4_u16x4(
+// RV32-SAME: i16 noundef zeroext [[E0:%.*]], i16 noundef zeroext [[E1:%.*]], i16 noundef zeroext [[E2:%.*]], i16 noundef zeroext [[E3:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 [[E0]], i64 0
+// RV32-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 [[E1]], i64 1
+// RV32-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 [[E2]], i64 2
+// RV32-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 [[E3]], i64 3
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[VECINIT3_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pjoin4_u16x4(
+// RV64-SAME: i16 noundef zeroext [[E0:%.*]], i16 noundef zeroext [[E1:%.*]], i16 noundef zeroext [[E2:%.*]], i16 noundef zeroext [[E3:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 [[E0]], i64 0
+// RV64-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 [[E1]], i64 1
+// RV64-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 [[E2]], i64 2
+// RV64-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 [[E3]], i64 3
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[VECINIT3_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+uint16x4_t test_pjoin4_u16x4(uint16_t e0, uint16_t e1, uint16_t e2,
+                             uint16_t e3) {
+  return __riscv_pjoin4_u16x4(e0, e1, e2, e3);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pjoin2_i32x2(
+// RV32-SAME: i32 noundef [[E0:%.*]], i32 noundef [[E1:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 [[E0]], i64 0
+// RV32-NEXT:    [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 [[E1]], i64 1
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i32> [[VECINIT1_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pjoin2_i32x2(
+// RV64-SAME: i32 noundef signext [[E0:%.*]], i32 noundef signext [[E1:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 [[E0]], i64 0
+// RV64-NEXT:    [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 [[E1]], i64 1
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast <2 x i32> [[VECINIT1_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int32x2_t test_pjoin2_i32x2(int32_t e0, int32_t e1) {
+  return __riscv_pjoin2_i32x2(e0, e1);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pjoin2_u32x2(
+// RV32-SAME: i32 noundef [[E0:%.*]], i32 noundef [[E1:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 [[E0]], i64 0
+// RV32-NEXT:    [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 [[E1]], i64 1
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast <2 x i32> [[VECINIT1_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pjoin2_u32x2(
+// RV64-SAME: i32 noundef signext [[E0:%.*]], i32 noundef signext [[E1:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 [[E0]], i64 0
+// RV64-NEXT:    [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 [[E1]], i64 1
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast <2 x i32> [[VECINIT1_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+uint32x2_t test_pjoin2_u32x2(uint32_t e0, uint32_t e1) {
+  return __riscv_pjoin2_u32x2(e0, e1);
 }
