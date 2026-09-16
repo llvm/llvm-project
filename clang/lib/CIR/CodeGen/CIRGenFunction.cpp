@@ -1212,9 +1212,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::UserDefinedLiteralClass:
     return emitCallExprLValue(cast<CallExpr>(e));
   case Expr::CXXRewrittenBinaryOperatorClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(),
-                               "emitLValue: CXXRewrittenBinaryOperator");
-    return LValue();
+    return emitLValue(cast<CXXRewrittenBinaryOperator>(e)->getSemanticForm());
   case Expr::VAArgExprClass:
     getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: VAArgExpr");
     return LValue();

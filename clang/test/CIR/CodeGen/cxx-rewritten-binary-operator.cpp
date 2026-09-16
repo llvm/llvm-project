@@ -148,3 +148,45 @@ void cxx_rewritten_binary_operator_aggr_expr() {
 // OGCG: %[[RESULT:.*]] = call i32 @_ZNK15SpaceshipResultltEi(ptr noundef nonnull align 1 dereferenceable(1) %[[TMP_ADDR]], i32 noundef 0)
 // OGCG: %[[R_ADDR_PTR:.*]] = getelementptr inbounds nuw %struct.Result, ptr %[[R_ADDR:.*]], i32 0, i32 0
 // OGCG: store i32 %[[RESULT:.*]], ptr %[[R_ADDR_PTR]], align 4
+
+struct SpaceshipLValueResult {
+  int &operator<(int) const;
+};
+
+struct LValueItem {
+  SpaceshipLValueResult operator<=>(const LValueItem &) const;
+};
+
+void cxx_rewritten_binary_operator_lvalue_expr() {
+  LValueItem a;
+  LValueItem b;
+  int &ref = (a < b);
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_LValueItem>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_LValueItem>
+// CIR: %[[REF_ADDR:.*]] = cir.alloca "ref" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
+// CIR: %[[TMP_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_SpaceshipLValueResult>
+// CIR: cir.call @_ZNK10LValueItemssERKS_(%[[A_ADDR]], %[[B_ADDR]]) : (!cir.ptr<!rec_LValueItem> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!rec_LValueItem> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}) -> ()
+// CIR: %[[OP_RESULT:.*]] = cir.const #cir.poison : !rec_SpaceshipLValueResult
+// CIR: cir.store {{.*}} %[[OP_RESULT]], %[[TMP_ADDR]] : !rec_SpaceshipLValueResult, !cir.ptr<!rec_SpaceshipLValueResult>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
+// CIR: %[[RESULT:.*]] = cir.call @_ZNK21SpaceshipLValueResultltEi(%[[TMP_ADDR]], %[[CONST_0]]) : (!cir.ptr<!rec_SpaceshipLValueResult> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !s32i {llvm.noundef}) -> !cir.ptr<!s32i>
+// CIR: cir.store %[[RESULT]], %[[REF_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca %struct.LValueItem, align 1
+// LLVM: %[[B_ADDR:.*]] = alloca %struct.LValueItem, align 1
+// LLVM: %[[REF_ADDR:.*]] = alloca ptr, align 8
+// LLVM: %[[TMP_ADDR:.*]] = alloca %struct.SpaceshipLValueResult, align 1
+// LLVM: call void @_ZNK10LValueItemssERKS_(ptr noundef nonnull align 1 dereferenceable(1) %[[A_ADDR]], ptr noundef nonnull align 1 dereferenceable(1) %[[B_ADDR]])
+// LLVM: store %struct.SpaceshipLValueResult poison, ptr %[[TMP_ADDR]], align 1
+// LLVM: %[[RESULT:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZNK21SpaceshipLValueResultltEi(ptr noundef nonnull align 1 dereferenceable(1) %[[TMP_ADDR]], i32 noundef 0)
+// LLVM: store ptr %[[RESULT]], ptr %[[REF_ADDR]], align 8
+
+// OGCG: %[[A_ADDR:.*]] = alloca %struct.LValueItem, align 1
+// OGCG: %[[B_ADDR:.*]] = alloca %struct.LValueItem, align 1
+// OGCG: %[[REF_ADDR:.*]] = alloca ptr, align 8
+// OGCG: %[[TMP_ADDR:.*]] = alloca %struct.SpaceshipLValueResult, align 1
+// OGCG: call void @_ZNK10LValueItemssERKS_(ptr noundef nonnull align 1 dereferenceable(1) %[[A_ADDR]], ptr noundef nonnull align 1 dereferenceable(1) %[[B_ADDR]])
+// OGCG: %[[RESULT:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZNK21SpaceshipLValueResultltEi(ptr noundef nonnull align 1 dereferenceable(1) %[[TMP_ADDR]], i32 noundef 0)
+// OGCG: store ptr %[[RESULT]], ptr %[[REF_ADDR]], align 8
