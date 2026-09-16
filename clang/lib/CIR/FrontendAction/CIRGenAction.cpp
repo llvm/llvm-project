@@ -207,9 +207,8 @@ public:
         return;
 
       BackendAction BEAction = getBackendActionFromOutputType(Action);
-      emitBackendOutput(
-          CI, CI.getCodeGenOpts(), C.getTargetInfo().getDataLayoutString(),
-          LLVMModule.get(), BEAction, FS, std::move(OutputStream));
+      emitBackendOutput(CI, CI.getCodeGenOpts(), LLVMModule.get(), BEAction, FS,
+                        std::move(OutputStream));
       break;
     }
     }
