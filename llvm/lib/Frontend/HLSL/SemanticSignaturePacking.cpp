@@ -87,7 +87,8 @@ Expected<unsigned> llvm::hlsl::packSignatureIndexed(
       continue;
 
     assert(Interpretation == SemanticInterpretation::Target &&
-           "unexpected semantic interpretation for indexed packing");
+           "unexpected semantic interpretation for indexed packing, should "
+           "have been diagnosed by Sema");
     assert(Element.Rows == 1 && Element.SemanticIndices.size() == 1 &&
            "target elements must occupy one semantic row");
 
