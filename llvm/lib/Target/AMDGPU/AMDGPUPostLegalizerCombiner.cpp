@@ -111,6 +111,11 @@ public:
   // bits are zero extended.
   bool matchCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode) const;
 
+  /// Check if register is carry-out (operand 1) of a carry-producing add/sub
+  bool isCarryOut(Register Reg) const;
+
+  bool shouldFoldCarryIntoAdd(Register Src) const;
+
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
 #define AMDGPUSubtarget GCNSubtarget
@@ -391,6 +396,35 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
     return true;
   }
   return false;
+}
+
+bool AMDGPUPostLegalizerCombinerImpl::isCarryOut(Register Reg) const {
+  const MachineInstr *Def = MRI.getVRegDef(Reg);
+  if (!Def)
+    return false;
+
+  switch (Def->getOpcode()) {
+  case TargetOpcode::G_UADDO:
+  case TargetOpcode::G_UADDE:
+  case TargetOpcode::G_USUBO:
+  case TargetOpcode::G_USUBE:
+    return Def->getOperand(1).getReg() == Reg;
+  default:
+    return false;
+  }
+}
+
+bool AMDGPUPostLegalizerCombinerImpl::shouldFoldCarryIntoAdd(
+    Register Src) const {
+  // Let right_identity_zero combine delete this instead.
+  if (mi_match(Src, MRI, m_SpecificICst(0)))
+    return false;
+
+  // When both operands are a carry only the right hand one is folded, so that
+  // the two carries never have to be live at the same time.
+  Register Carry;
+  return !(mi_match(Src, MRI, m_GZExt(m_Reg(Carry))) &&
+           MRI.hasOneNonDBGUse(Src) && isCarryOut(Carry));
 }
 
 // Pass boilerplate
