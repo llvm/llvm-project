@@ -1,3 +1,6 @@
+// https://github.com/llvm/llvm-project/issues/124541
+// XFAIL: target-x86
+
 // RUN: mlir-opt -test-tensor-transform-patterns=test-tracking-listener \
 // RUN:     -split-input-file -verify-diagnostics %s
 

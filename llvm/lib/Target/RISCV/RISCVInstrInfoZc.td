@@ -22,7 +22,7 @@ def uimm2_lsb0_optional : OptionalUImmLsbZeroOp<2, 1>;
 
 def uimm8ge32 : RISCVOp {
   let ParserMatchClass = UImmAsmOperand<8, "GE32">;
-  let DecoderMethod = "decodeUImmOperandGE<8, 32>";
+  let DecoderMethod = "decodeUImmOperand<8, 32>";
   let OperandType = "OPERAND_UIMM8_GE32";
 }
 
