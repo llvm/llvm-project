@@ -152,8 +152,11 @@ static ol_device_handle_t getAllocDevice(ol_context_handle_t Context,
       callNoCheck(olGetMemInfo, Context, ptr, OL_MEM_INFO_DEVICE,
                   sizeof(ol_device_handle_t), &Device);
   if (detail::isFailed(Result)) {
-    // If liboffload could not find the allocation, assume it is a host one.
-    if (Result->Code == OL_ERRC_NOT_FOUND) {
+    // NOT_FOUND: the pointer isn't a liboffload allocation at all (plain host
+    // malloc). INVALID_ARGUMENT: it's a liboffload host allocation, which has
+    // no per-device affinity. Either way, route through the host device.
+    if (Result->Code == OL_ERRC_NOT_FOUND ||
+        Result->Code == OL_ERRC_INVALID_ARGUMENT) {
       return getHostOLDevice();
     }
     checkAndThrow(Result);
