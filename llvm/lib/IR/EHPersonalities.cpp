@@ -124,6 +124,9 @@ static const InvokeInst *getSEHTryMarker(const BasicBlock *BB) {
 }
 
 SEHTryRegionInfo::SEHTryRegionInfo(const Function &F) {
+  // Do not impose SEH region rules on C++ personalities or infer this mode from
+  // markers alone. Its interpretation requires the asynchronous table-SEH
+  // contract as well as explicit try markers.
   if (!F.getParent()->getModuleFlag("eh-asynch") || !F.hasPersonalityFn() ||
       classifyEHPersonality(F.getPersonalityFn()) !=
           EHPersonality::MSVC_TableSEH)
@@ -135,6 +138,7 @@ SEHTryRegionInfo::SEHTryRegionInfo(const Function &F) {
     return;
 
   using Region = std::optional<const BasicBlock *>;
+  // The normal edge of try.end restores the region enclosing its matching try.
   DenseMap<const BasicBlock *, Region> Parents;
   SmallVector<const BasicBlock *, 32> Worklist;
   auto Assign = [&](const BasicBlock *BB, Region NewRegion) {
@@ -142,6 +146,8 @@ SEHTryRegionInfo::SEHTryRegionInfo(const Function &F) {
     if (Inserted) {
       Worklist.push_back(BB);
     } else if (Position->second && Position->second != NewRegion) {
+      // Conflicting paths lose precision permanently; never pick one handler
+      // according to traversal order and authorize a cross-region move.
       Position->second = std::nullopt;
       Worklist.push_back(BB);
     }
@@ -155,9 +161,13 @@ SEHTryRegionInfo::SEHTryRegionInfo(const Function &F) {
     if (const InvokeInst *Marker = getSEHTryMarker(BB)) {
       if (Marker->getIntrinsicID() == Intrinsic::seh_try_begin) {
         const BasicBlock *Pad = Marker->getUnwindDest();
+        // Only the normal successor enters the protected region. The handler
+        // itself runs under the enclosing region, not under its own protection.
         Normal = Pad;
         auto [Parent, Inserted] = Parents.try_emplace(Pad, Current);
         if (!Inserted && Parent->second != Current) {
+          // Earlier try.end results may depend on this parent assignment.
+          // Invalidate all answers rather than retaining traversal-order facts.
           for (auto &KnownRegion : RegionOf)
             KnownRegion.second = std::nullopt;
           return;
@@ -170,6 +180,8 @@ SEHTryRegionInfo::SEHTryRegionInfo(const Function &F) {
     }
 
     for (const BasicBlock *Successor : successors(BB)) {
+      // Handlers are seeded from try.begin above. Propagating the current
+      // region down unwind edges would make a handler protect itself.
       if (const auto *Invoke = dyn_cast<InvokeInst>(BB->getTerminator()))
         if (Successor == Invoke->getUnwindDest())
           continue;

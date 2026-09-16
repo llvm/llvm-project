@@ -925,7 +925,16 @@ public:
     return const_cast<MachineBasicBlock *>(this)->getFirstTerminator();
   }
 
+  /// Insert block-local code before terminators and all trailing SEH end
+  /// markers. Using getFirstTerminator() alone can put copies or spills past
+  /// the range's exclusive end, where they no longer have the block's
+  /// protection.
   LLVM_ABI iterator getInsertPtBeforeTerminators();
+
+  /// Compare known SEH states for blocks in the same function. With an active
+  /// table-SEH state map, unknown block identities do not compare equal. Other
+  /// modes impose no restriction here; instruction-level legality still
+  /// applies.
   LLVM_ABI bool hasSameSEHRegion(const MachineBasicBlock &Other) const;
   const_iterator getInsertPtBeforeTerminators() const {
     return const_cast<MachineBasicBlock *>(this)

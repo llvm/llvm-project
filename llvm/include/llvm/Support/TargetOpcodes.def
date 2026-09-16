@@ -235,6 +235,8 @@ HANDLE_TARGET_OPCODE(FAKE_USE)
 // barrier, but does not correspond to any generated instruction.
 HANDLE_TARGET_OPCODE(MEMBARRIER)
 
+// Pins a table-SEH region boundary for machine passes. It has compiler-visible
+// memory effects but emits no instruction; it is not a runtime memory fence.
 HANDLE_TARGET_OPCODE(SEH_REGION_BARRIER)
 
 // Provides information about what jump table the following indirect branch is

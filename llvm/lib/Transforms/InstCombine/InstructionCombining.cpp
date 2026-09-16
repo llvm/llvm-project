@@ -5565,6 +5565,9 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   if (isa<CatchSwitchInst>(DestBlock->getTerminator()))
     return false;
 
+  // Keep the instruction under the same handler even if ordinary use/dominance
+  // checks allow sinking. InstCombine can edit the CFG and markers between
+  // attempts, so do not reuse a region snapshot from an earlier attempt.
   if (F.getParent()->getModuleFlag("eh-asynch") &&
       !SEHTryRegionInfo(F).isSameRegion(SrcBlock, DestBlock))
     return false;

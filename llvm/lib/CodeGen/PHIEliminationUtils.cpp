@@ -37,8 +37,9 @@ llvm::findPHICopyInsertPoint(MachineBasicBlock* MBB, MachineBasicBlock* SuccMBB,
   if (MBB->empty())
     return MBB->begin();
 
-  // Usually, we just want to insert the copy before the first terminator
-  // instruction. However, for the edge going to a landing pad, we must insert
+  // On a normal edge, insert before both terminators and SEH end markers: the
+  // incoming value's copy belongs to the predecessor's region, including when
+  // it later becomes a stack access. For an edge to a landing pad, insert
   // the copy before the call/invoke instruction. Similarly for an INLINEASM_BR
   // going to an indirect target. This is similar to SplitKit.cpp's
   // computeLastInsertPoint, and similarly assumes that there cannot be multiple

@@ -747,7 +747,9 @@ void MachineLICMImpl::HoistPostRA(MachineInstr *MI, Register Def,
                     << " from " << printMBBReference(*MI->getParent()) << ": "
                     << *MI);
 
-  // Splice the instruction to the preheader.
+  // A valid insertion point cannot make a cross-region hoist safe: first keep
+  // the same protecting handler, then insert before the preheader's end
+  // markers.
   MachineBasicBlock *MBB = MI->getParent();
   if (!MBB->hasSameSEHRegion(*Preheader))
     return;
@@ -1617,6 +1619,8 @@ bool MachineLICMImpl::MayCSE(MachineInstr *MI) {
 unsigned MachineLICMImpl::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
                                 MachineLoop *CurLoop) {
   MachineBasicBlock *SrcBlock = MI->getParent();
+  // Check before either hoisting or CSE can replace the instruction with a
+  // computation outside its protected region.
   if (!SrcBlock->hasSameSEHRegion(*Preheader))
     return 0;
 

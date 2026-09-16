@@ -1678,6 +1678,9 @@ def MEMBARRIER : StandardPseudoInstruction {
   let Size = 0;
   let isMeta = true;
 }
+// Unlike MEMBARRIER, this is deliberately not isMeta: dependency analysis must
+// see its memory effects to keep accesses from crossing an SEH range boundary.
+// The effects model compiler ordering only; AsmPrinter emits no instruction.
 def SEH_REGION_BARRIER : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins);

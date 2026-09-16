@@ -264,6 +264,9 @@ bool MachineBasicBlock::hasSameSEHRegion(const MachineBasicBlock &Other) const {
   const WinEHFuncInfo *EHInfo = getParent()->getWinEHFuncInfo();
   if (!EHInfo || EHInfo->BlockToStateMap.empty())
     return true;
+  // Unknown is not the same as the known unguarded state (-1). Treating both
+  // as unguarded would let a block without an IR counterpart accept unsafe
+  // moves.
   auto From = EHInfo->BlockToStateMap.find(getBasicBlock());
   auto To = EHInfo->BlockToStateMap.find(Other.getBasicBlock());
   return From != EHInfo->BlockToStateMap.end() &&
@@ -272,6 +275,9 @@ bool MachineBasicBlock::hasSameSEHRegion(const MachineBasicBlock &Other) const {
 
 MachineBasicBlock::iterator MachineBasicBlock::getInsertPtBeforeTerminators() {
   iterator InsertPt = getFirstTerminator();
+  // A scope's end label is exclusive. Walk above every trailing end-label /
+  // barrier pair, not just one: nested boundaries can otherwise leave inserted
+  // code protected by an outer scope but no longer by the innermost one.
   while (InsertPt != begin()) {
     iterator Marker = std::prev(InsertPt);
     while (Marker != begin() && Marker->isDebugInstr())
@@ -1235,6 +1241,9 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   MachineFunction *MF = getParent();
   MachineBasicBlock *PrevFallthrough = getNextNode();
 
+  // An edge block has no independent IR identity. Its copies execute on the
+  // predecessor's outgoing edge, so retain that identity for SEH state lookup.
+  // Leave other modes unchanged, including their normal block naming.
   const BasicBlock *EdgeBB = nullptr;
   const Function &Function = MF->getFunction();
   if (Function.getParent()->getModuleFlag("eh-asynch") &&
@@ -1330,10 +1339,15 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     TII->insertBranch(*NMBB, Succ, nullptr, Cond, DL);
   }
 
+  // This block was created after ISel assigned ranges. Inheriting an IR block
+  // supplies the state, but not labels for its new instructions. Seed a range
+  // now so later PHI copies use the protected insertion point; the normal
+  // successor, liveness and index updates still apply to this split.
   if (EdgeBB) {
     if (WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo()) {
       auto State = EHInfo->BlockToStateMap.find(EdgeBB);
       if (State != EHInfo->BlockToStateMap.end() && State->second >= 0) {
+        // Barriers are non-meta instructions and need SlotIndexes when present.
         SlotIndexUpdateDelegate SlotUpdater(*MF, Indexes);
         const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
         auto InsertPt = NMBB->getFirstTerminator();

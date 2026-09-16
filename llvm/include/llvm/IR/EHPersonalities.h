@@ -108,12 +108,22 @@ inline bool isNoOpWithoutInvoke(EHPersonality Pers) {
 
 LLVM_ABI bool canSimplifyInvokeNoUnwind(const Function *F);
 
+/// Snapshot of the protecting EH pad for blocks in table-based asynchronous
+/// SEH. Scope-table dispatch depends on where an instruction executes, so
+/// moving it between regions can change the handler that observes a fault.
+/// Recompute this information after changing the CFG or the try markers.
 class LLVM_ABI SEHTryRegionInfo {
 public:
   explicit SEHTryRegionInfo(const Function &F);
+
+  /// Whether region membership permits the move, not a complete legality check.
+  /// With active region tracking, different blocks must have known, equal
+  /// regions. Without applicable markers, this query imposes no restriction.
   bool isSameRegion(const BasicBlock *From, const BasicBlock *To) const;
 
 private:
+  // An empty map disables this analysis. Otherwise, an absent key is unvisited,
+  // nullopt is ambiguous, and an engaged null pointer means unwind to caller.
   DenseMap<const BasicBlock *, std::optional<const BasicBlock *>> RegionOf;
 };
 

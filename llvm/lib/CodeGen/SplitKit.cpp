@@ -82,6 +82,9 @@ InsertPointAnalysis::computeLastInsertPoint(const LiveInterval &CurLI,
   // Compute insert points on the first call. The pair is independent of the
   // current live interval.
   if (!LIP.first.isValid()) {
+    // Bound register-allocation insertions by the protected end of the block,
+    // not just its branch. EH_LABEL is meta and has no SlotIndex, so obtain the
+    // index from the next indexed boundary instruction instead of the label.
     MachineBasicBlock::const_iterator FirstTerm =
         MBB.getInsertPtBeforeTerminators();
     while (FirstTerm != MBB.end() &&

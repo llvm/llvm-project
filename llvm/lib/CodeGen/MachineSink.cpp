@@ -1498,6 +1498,9 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
   if (SuccToSinkTo && SuccToSinkTo->isEHPad())
     return nullptr;
 
+  // A legal CFG destination is not enough: the instruction must keep the same
+  // protecting handler. Barriers constrain ordering inside a block, but do not
+  // by themselves make motion between differently guarded blocks legal.
   if (SuccToSinkTo && !MBB->hasSameSEHRegion(*SuccToSinkTo))
     return nullptr;
 
@@ -2341,6 +2344,8 @@ bool PostRAMachineSinkingImpl::tryToSinkCopy(MachineBasicBlock &CurBB,
            "Unexpected predecessor");
 
     if (!CurBB.hasSameSEHRegion(*SuccBB)) {
+      // The copy stays put, so subsequent candidates must still see its
+      // register effects even though we declined to move it.
       LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
                                         TRI);
       continue;

@@ -2191,6 +2191,9 @@ void AsmPrinter::emitFunctionBody() {
         //  Div with variable opnds won't be the first instruction in
         //  an EH region as it must be led by at least a Load
         {
+          // The region barrier advertises memory effects to optimizers, but it
+          // cannot fault or emit code. Padding it would add a spurious NOP at a
+          // boundary that may intentionally delimit an empty range.
           auto MI2 = std::next(MI.getIterator());
           if (NeedsEHaNops && MI2 != MBB.end() &&
               MI2->getOpcode() != TargetOpcode::SEH_REGION_BARRIER &&
@@ -2242,6 +2245,7 @@ void AsmPrinter::emitFunctionBody() {
           OutStreamer->emitRawComment("ARITH_FENCE");
         break;
       case TargetOpcode::SEH_REGION_BARRIER:
+        // This is compiler ordering, not a hardware fence or a trapping access.
         if (isVerbose())
           OutStreamer->emitRawComment("SEH_REGION_BARRIER");
         break;
@@ -2370,9 +2374,10 @@ void AsmPrinter::emitFunctionBody() {
       ++PrefetchTargetIt;
     }
 
-    // We must emit temporary symbol for the end of this basic block, if either
-    // we have BBLabels enabled or if this basic blocks marks the end of a
-    // section.
+    // Besides address maps and section sizes, asynchronous table SEH needs
+    // final block ends to cover trailing branches or stop a run at a layout
+    // gap. An EH_LABEL before the terminators cannot name that exclusive
+    // endpoint.
     if (MF->getTarget().Options.BBAddrMap ||
         (MAI.hasDotTypeDotSizeDirective() && MBB.isEndSection()) ||
         (MF->getFunction().getParent()->getModuleFlag("eh-asynch") &&

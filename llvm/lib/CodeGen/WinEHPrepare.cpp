@@ -322,6 +322,9 @@ void llvm::calculateSEHStateForAsynchEH(const BasicBlock *BB, int State,
     if (It->isEHPad())
       State = EHInfo.EHPadStateMap[&*It];
 
+    // An ordinary catchpad executes outside the try it handles. Record the
+    // enclosing state before walking the handler body, which may span several
+    // blocks; recording the pad's own state would make it protect itself.
     if (isa<CatchPadInst>(It)) {
       const Constant *FilterOrNull = cast<Constant>(
           cast<CatchPadInst>(It)->getArgOperand(0)->stripPointerCasts());
@@ -331,6 +334,9 @@ void llvm::calculateSEHStateForAsynchEH(const BasicBlock *BB, int State,
     }
     EHInfo.BlockToStateMap[BB] = State; // Record state
 
+    // Catchret does not pop another state: that happened on catchpad entry.
+    // Process other terminators separately so a nested try starting in a
+    // handler can still change the state of its normal successor.
     if (isa<CleanupReturnInst>(TI) && State > 0) {
       // Retrive the new State.
       State = EHInfo.SEHUnwindMap[State].ToState; // Retrive next State

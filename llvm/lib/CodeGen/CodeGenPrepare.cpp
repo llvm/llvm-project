@@ -1432,6 +1432,8 @@ bool CodeGenPrepare::simplifyOffsetableRelocate(GCStatepointInst &I) {
 /// Sink the specified cast instruction into its user blocks.
 static bool SinkCast(CastInst *CI) {
   BasicBlock *DefBB = CI->getParent();
+  // This rewrite changes instructions, not edges, so one snapshot suffices for
+  // its uses. Do not cache it across other CodeGenPrepare rewrites of the CFG.
   SEHTryRegionInfo SEHRegions(*CI->getFunction());
 
   /// InsertedCasts - Only insert a cast in each block once.
@@ -1468,10 +1470,12 @@ static bool SinkCast(CastInst *CI) {
     if (UserBB == DefBB)
       continue;
 
-    // If we have already inserted a cast into this block, use it.
+    // Preserve protection at the execution point, including the incoming edge
+    // chosen above for a PHI use, not just at the block containing the user.
     if (!SEHRegions.isSameRegion(DefBB, UserBB))
       continue;
 
+    // If we have already inserted a cast into this block, use it.
     CastInst *&InsertedCast = InsertedCasts[UserBB];
 
     if (!InsertedCast) {
@@ -1972,10 +1976,11 @@ static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI,
     if (UserBB == DefBB)
       continue;
 
-    // If we have already inserted a cmp into this block, use it.
+    // Cloning a comparison into its user's block must not change its region.
     if (!SEHRegions.isSameRegion(DefBB, UserBB))
       continue;
 
+    // If we have already inserted a cmp into this block, use it.
     CmpInst *&InsertedCmp = InsertedCmps[UserBB];
 
     if (!InsertedCmp) {

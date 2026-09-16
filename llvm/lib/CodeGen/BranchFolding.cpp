@@ -234,6 +234,9 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
   EHScopeMembership.erase(MBB);
 }
 
+// A boundary ties the block's instructions, including eligible trailing
+// branches, to an address range. A shared tail would need a new range of its
+// own.
 static bool hasSEHRegionBoundary(const MachineBasicBlock &MBB) {
   return any_of(MBB, [](const MachineInstr &MI) {
     return MI.getOpcode() == TargetOpcode::SEH_REGION_BARRIER;
@@ -655,6 +658,9 @@ ProfitableToMerge(MachineBasicBlock *MBB1, MachineBasicBlock *MBB2,
       return false;
   }
 
+  // Equal funclets do not imply equal try regions. Even equal region states do
+  // not justify moving a suffix past its explicit end label, so conservatively
+  // reject boundary-bearing blocks instead of constructing an unlabelled tail.
   if (hasSEHRegionBoundary(*MBB1) || hasSEHRegionBoundary(*MBB2) ||
       !MBB1->hasSameSEHRegion(*MBB2))
     return false;
@@ -793,7 +799,8 @@ void BranchFolder::RemoveBlocksWithHash(unsigned CurHash,
   for (CurMPIter = std::prev(MergePotentials.end()),
       B = MergePotentials.begin();
        CurMPIter->getHash() == CurHash; --CurMPIter) {
-    // Put the unconditional branch back, if we need one.
+    // Rejected candidates need their original branch locations restored. A
+    // shared tail hash identifies matching code, not matching source locations.
     MachineBasicBlock *CurMBB = CurMPIter->getBlock();
     if (SuccBB && CurMBB != PredBB)
       FixTail(CurMBB, SuccBB, TII, CurMPIter->getBranchDebugLoc());
