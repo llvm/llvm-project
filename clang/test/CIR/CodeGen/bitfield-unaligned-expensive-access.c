@@ -2,7 +2,7 @@
 //
 // RUN: %clang_cc1 -triple=amdgpu -fclangir -emit-cir %s -o - | FileCheck %s --check-prefix=CIR
 // RUN: %clang_cc1 -triple=amdgpu -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
-// RUN: %clang_cc1 -triple=amdgpu -emit-llvm %s -o -| FileCheck %s --check-prefix=OGCG
+// RUN: %clang_cc1 -triple=amdgpu -emit-llvm %s -o -| FileCheck %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple=amdgpu -fclangir -emit-cir -fdump-record-layouts %s -o /dev/null | FileCheck --check-prefix=LAYOUT %s
 // RUN: %clang_cc1 -triple=amdgpu -emit-llvm -fdump-record-layouts %s -o /dev/null | FileCheck --check-prefix=OGCG-LAYOUT %s
 
@@ -12,7 +12,6 @@ struct A {
 } a;
 // CIR-DAG:  !rec_A = !cir.struct<"A" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s8i, 7>]>, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s8i, 7>]>}>
 // LLVM-DAG: %struct.A = type { i8, i8 }
-// OGCG-DAG: %struct.A = type { i8, i8 }
 // LAYOUT-LABEL:      CIR Type:{{.*}}"A"
 // LAYOUT-NEXT:       IsZeroInitializable:1
 // LAYOUT-NEXT:       BitFields:[
@@ -32,7 +31,6 @@ struct __attribute__((aligned(2))) B {
 } b;
 // CIR-DAG:  !rec_B = !cir.struct<"B" {bitfield !cir.bitfield<!u16i, [#cir.bitfield_decl<!s8i, 7>, #cir.bitfield_decl<!s8i, 7>]>}>
 // LLVM-DAG: %struct.B = type { i16 }
-// OGCG-DAG: %struct.B = type { i16 }
 // LAYOUT-LABEL:      CIR Type:{{.*}}"B"
 // LAYOUT-NEXT:       IsZeroInitializable:1
 // LAYOUT-NEXT:       BitFields:[
@@ -54,7 +52,6 @@ struct C {
 } c;
 // CIR-DAG:  !rec_C = !cir.struct<"C" {data !s32i, data !s8i, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s8i, 7>]>, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s8i, 7>]>}>
 // LLVM-DAG: %struct.C = type { i32, i8, i8, i8 }
-// OGCG-DAG: %struct.C = type { i32, i8, i8, i8 }
 // LAYOUT-LABEL:      CIR Type:{{.*}}"C"
 // LAYOUT-NEXT:       IsZeroInitializable:1
 // LAYOUT-NEXT:       BitFields:[
@@ -76,7 +73,6 @@ struct __attribute__((packed)) D {
 } d;
 // CIR-DAG:  !rec_D = !cir.struct<"D" packed {data !s32i, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 8>]>, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 8>]>, data !s8i}>
 // LLVM-DAG: %struct.D = type <{ i32, i8, i8, i8 }>
-// OGCG-DAG: %struct.D = type <{ i32, i8, i8, i8 }>
 // LAYOUT-LABEL:      CIR Type:{{.*}}"D"
 // LAYOUT-NEXT:       IsZeroInitializable:1
 // LAYOUT-NEXT:       BitFields:[
@@ -97,7 +93,6 @@ struct E {
 } e;
 // CIR-DAG:  !rec_E = !cir.struct<"E" {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s8i, 7>, #cir.bitfield_decl<!s16i, 13>]>, bitfield !cir.bitfield<!u16i, [#cir.bitfield_decl<!u32i, 12>]>}>
 // LLVM-DAG: %struct.E = type { i32, i16 }
-// OGCG-DAG: %struct.E = type { i32, i16 }
 // LAYOUT-LABEL:      CIR Type:{{.*}}"E"
 // LAYOUT-NEXT:       IsZeroInitializable:1
 // LAYOUT-NEXT:       BitFields:[
@@ -121,7 +116,6 @@ struct F {
 } f;
 // CIR-DAG:  !rec_F = !cir.struct<"F" {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s8i, 7>, #cir.bitfield_decl<!s16i, 13>]>, bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!u32i, 12>, #cir.bitfield_decl<!s8i, 7>]>}>
 // LLVM-DAG: %struct.F = type { i32, i32 }
-// OGCG-DAG: %struct.F = type { i32, i32 }
 // LAYOUT-LABEL:      CIR Type:{{.*}}"F"
 // LAYOUT-NEXT:       IsZeroInitializable:1
 // LAYOUT-NEXT:       BitFields:[
@@ -148,7 +142,6 @@ struct G {
 } g;
 // CIR-DAG:  !rec_G = !cir.struct<"G" {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s8i, 7>, #cir.bitfield_decl<!s16i, 13>]>, bitfield !cir.bitfield<!u16i, [#cir.bitfield_decl<!u32i, 12>]>, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s8i, 7>]>, data !s8i}>
 // LLVM-DAG: %struct.G = type { i32, i16, i8, i8 }
-// OGCG-DAG: %struct.G = type { i32, i16, i8, i8 }
 // LAYOUT-LABEL:      CIR Type:{{.*}}"G"
 // LAYOUT-NEXT:       IsZeroInitializable:1
 // LAYOUT-NEXT:       BitFields:[
@@ -173,7 +166,6 @@ struct __attribute__((aligned(8))) H {
 } h;
 // CIR-DAG:  !rec_H = !cir.struct<"H" {data !s8i, bitfield !cir.bitfield<!cir.array<!u8i x 3>, [#cir.bitfield_decl<!u32i, 24>]>, pad !cir.array<!u8i x 4>, data !u32i, pad !cir.array<!u8i x 4>}>
 // LLVM-DAG: %struct.H = type { i8, [3 x i8], [4 x i8], i32, [4 x i8] }
-// OGCG-DAG: %struct.H = type { i8, [3 x i8], [4 x i8], i32, [4 x i8] }
 // LAYOUT-LABEL:      CIR Type:{{.*}}"H"
 // LAYOUT-NEXT:       IsZeroInitializable:1
 // LAYOUT-NEXT:       BitFields:[
@@ -194,7 +186,6 @@ struct A64 {
 } a64;
 // CIR-DAG:  !rec_A64 = !cir.struct<"A64" {bitfield !cir.bitfield<!u64i, [#cir.bitfield_decl<!s32i, 16>, #cir.bitfield_decl<!s16i, 8>, #cir.bitfield_decl<!s64i, 16>, #cir.bitfield_decl<!s32i, 16>, #cir.bitfield_decl<!s8i, 8>]>}>
 // LLVM-DAG: %struct.A64 = type { i64 }
-// OGCG-DAG: %struct.A64 = type { i64 }
 // LAYOUT-LABEL:      CIR Type:{{.*}}"A64"
 // LAYOUT-NEXT:       IsZeroInitializable:1
 // LAYOUT-NEXT:       BitFields:[
@@ -223,7 +214,6 @@ struct B64 {
 } b64;
 // CIR-DAG:  !rec_B64 = !cir.struct<"B64" packed {bitfield !cir.bitfield<!u16i, [#cir.bitfield_decl<!s32i, 16>]>, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s16i, 8>]>, bitfield !cir.bitfield<!u16i, [#cir.bitfield_decl<!s64i, 16>]>, bitfield !cir.bitfield<!u16i, [#cir.bitfield_decl<!s32i, 16>]>, data !s8i}>
 // LLVM-DAG: %struct.B64 = type <{ i16, i8, i16, i16, i8 }>
-// OGCG-DAG: %struct.B64 = type <{ i16, i8, i16, i16, i8 }>
 // LAYOUT-LABEL:      CIR Type:{{.*}}"B64"
 // LAYOUT-NEXT:       IsZeroInitializable:1
 // LAYOUT-NEXT:       BitFields:[
@@ -250,7 +240,6 @@ struct C64 {
 } c64;
 // CIR-DAG:  !rec_C64 = !cir.struct<"C64" {bitfield !cir.bitfield<!u64i, [#cir.bitfield_decl<!s32i, 15>, #cir.bitfield_decl<!s16i, 8>, #cir.bitfield_decl<!s64i, 16>, #cir.bitfield_decl<!s32i, 15>, #cir.bitfield_decl<!s8i, 7>]>}>
 // LLVM-DAG: %struct.C64 = type { i64 }
-// OGCG-DAG: %struct.C64 = type { i64 }
 // LAYOUT-LABEL:      CIR Type:{{.*}}"C64"
 // LAYOUT-NEXT:       IsZeroInitializable:1
 // LAYOUT-NEXT:       BitFields:[
