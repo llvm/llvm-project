@@ -344,17 +344,16 @@ ScriptedFrame::GetThreadPlanForStepType(lldb::StepType step_type) {
   llvm::Expected<ScriptedMetadata> metadata =
       m_scripted_frame_interface_sp->GetThreadPlanMetadataForStepType(
           step_type);
-  if (auto error = metadata.takeError()) {
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   llvm::toString(std::move(error)));
-  }
+  if (!metadata)
+    return metadata.takeError();
+
   // Returning a ScriptedMetadata with an empty class name means that the
   // scripted frame doesn't know how to step.  That's not an error, but don't
   // try to make a thread plan in this case.  The bool operator of
   // ScriptedMetadata checks the class name...
 
   ThreadSP thread_sp = GetThread();
-  if (*metadata && thread_sp && !metadata->GetClassName().empty()) {
+  if (thread_sp && !metadata->GetClassName().empty()) {
     lldb::ThreadPlanSP new_plan_sp(
         new ScriptedThreadPlan(*thread_sp.get(), *metadata));
     return new_plan_sp;

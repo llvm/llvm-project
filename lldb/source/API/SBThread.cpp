@@ -494,7 +494,6 @@ void SBThread::StepOver(lldb::RunMode stop_other_threads, SBError &error) {
   }
 
   Thread *thread = exe_ctx->GetThreadPtr();
-
   bool abort_other_plans = false;
   StackFrameSP frame_sp(thread->GetStackFrameAtIndex(0));
   if (!frame_sp) {
@@ -508,34 +507,30 @@ void SBThread::StepOver(lldb::RunMode stop_other_threads, SBError &error) {
           ? eStepTypeOver
           : eStepTypeTraceOver;
 
-  if (frame_sp) {
-    llvm::Expected<lldb::ThreadPlanSP> frame_plan_result =
-        frame_sp->GetThreadPlanForStepType(step_type);
-    if (auto llvm_err = frame_plan_result.takeError()) {
-      error.SetErrorStringWithFormat(
-          "scripted frame provider got an error "
-          "while constructing step plan: \"%s\"",
-          llvm::toString(std::move(llvm_err)).c_str());
-      return;
-    }
-    new_plan_sp = *frame_plan_result;
+  llvm::Expected<lldb::ThreadPlanSP> frame_plan_result =
+      frame_sp->GetThreadPlanForStepType(step_type);
+  if (auto llvm_err = frame_plan_result.takeError()) {
+    error.SetErrorStringWithFormat(
+        "scripted frame provider got an error "
+        "while constructing step plan: \"%s\"",
+        llvm::toString(std::move(llvm_err)).c_str());
+    return;
   }
+  new_plan_sp = *frame_plan_result;
 
   if (new_plan_sp) {
     thread->QueueThreadPlan(new_plan_sp, false);
   } else {
     Status new_plan_status;
-    if (frame_sp) {
-      if (step_type == eStepTypeOver) {
-        const LazyBool avoid_no_debug = eLazyBoolCalculate;
-        SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
-        new_plan_sp = thread->QueueThreadPlanForStepOverRange(
-            abort_other_plans, sc.line_entry, sc, stop_other_threads,
-            new_plan_status, avoid_no_debug);
-      } else {
-        new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-            true, abort_other_plans, stop_other_threads, new_plan_status);
-      }
+    if (step_type == eStepTypeOver) {
+      const LazyBool avoid_no_debug = eLazyBoolCalculate;
+      SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
+      new_plan_sp = thread->QueueThreadPlanForStepOverRange(
+          abort_other_plans, sc.line_entry, sc, stop_other_threads,
+          new_plan_status, avoid_no_debug);
+    } else {
+      new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
+          true, abort_other_plans, stop_other_threads, new_plan_status);
     }
   }
   error = ResumeNewPlan(std::move(*exe_ctx), new_plan_sp.get());
