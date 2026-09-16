@@ -3409,8 +3409,8 @@ bool VPlanTransforms::handleUncountableEarlyExits(
   for (const EarlyExitInfo &Info : drop_begin(Exits))
     Combined = LatchBuilder.createLogicalOr(Combined, Info.CondToExit);
 
-  // Even though the logical or prevents per-lane posion propagation, we need to
-  // freeze Combined to prevent poisoning the entire AnyOf result:
+  // Even though the logical or prevents posion propagation, we need to freeze
+  // Combined to prevent poisoning the entire AnyOf result:
   //
   // Exits[0].CondToExit = [0,1,0,0]
   // Exits[1].CondToExit = [0,0,p,p]
