@@ -1113,15 +1113,18 @@ UnwindPlanSP ABISysV_ppc64::CreateFunctionEntryUnwindPlan() {
 UnwindPlanSP ABISysV_ppc64::CreateDefaultUnwindPlan() {
   uint32_t sp_reg_num;
   uint32_t pc_reg_num;
+  uint32_t lr_reg_num;
   uint32_t cr_reg_num;
 
   if (GetByteOrder() == lldb::eByteOrderLittle) {
     sp_reg_num = ppc64le_dwarf::dwarf_r1_ppc64le;
-    pc_reg_num = ppc64le_dwarf::dwarf_lr_ppc64le;
+    pc_reg_num = ppc64le_dwarf::dwarf_pc_ppc64le;
+    lr_reg_num = ppc64le_dwarf::dwarf_lr_ppc64le;
     cr_reg_num = ppc64le_dwarf::dwarf_cr_ppc64le;
   } else {
     sp_reg_num = ppc64_dwarf::dwarf_r1_ppc64;
-    pc_reg_num = ppc64_dwarf::dwarf_lr_ppc64;
+    pc_reg_num = ppc64_dwarf::dwarf_pc_ppc64;
+    lr_reg_num = ppc64_dwarf::dwarf_lr_ppc64;
     cr_reg_num = ppc64_dwarf::dwarf_cr_ppc64;
   }
 
@@ -1140,7 +1143,7 @@ UnwindPlanSP ABISysV_ppc64::CreateDefaultUnwindPlan() {
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
   plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  plan_sp->SetReturnAddressRegister(pc_reg_num);
+  plan_sp->SetReturnAddressRegister(lr_reg_num);
   return plan_sp;
 }
 

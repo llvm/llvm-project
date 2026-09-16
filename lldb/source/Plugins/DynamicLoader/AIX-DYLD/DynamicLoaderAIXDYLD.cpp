@@ -241,8 +241,12 @@ bool DynamicLoaderAIXDYLD::IsCoreFile() const {
   return !m_process->IsLiveDebugSession();
 }
 
-void DynamicLoaderAIXDYLD::FillCoreLoaderData(lldb_private::DataExtractor &data,
-        uint64_t loader_offset, uint64_t loader_size) {
+void DynamicLoaderAIXDYLD::FillCoreLoaderData(
+    lldb_private::DataExtractor &data, uint64_t loader_offset,
+    uint64_t loader_size,
+    std::function<void(lldb::addr_t, lldb::addr_t)> text_range_cb,
+    std::function<void(lldb::addr_t, lldb::addr_t, lldb::addr_t)>
+        data_range_cb) {
 
     Log *log = GetLog(LLDBLog::DynamicLoader);
     LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s()", __FUNCTION__);
@@ -305,6 +309,15 @@ void DynamicLoaderAIXDYLD::FillCoreLoaderData(lldb_private::DataExtractor &data,
             snprintf(pathWithMember, sizeof(pathWithMember),"%s", filename);
 
         LLDB_LOGF(log, "Module: %s", pathWithMember);
+        // Always register the text segment as an executable address range so
+        // that the unwind engine can follow missing libraries address
+        if (text_range_cb)
+            text_range_cb((lldb::addr_t)textorg, (lldb::addr_t)textsize);
+
+        if (data_range_cb && core_offset != 0 && datasize != 0)
+            data_range_cb((lldb::addr_t)dataorg, (lldb::addr_t)core_offset,
+                          (lldb::addr_t)datasize);
+
         FileSpec file(pathWithMember);
         ModuleSpec module_spec(file, m_process->GetTarget().GetArchitecture());
         if (ModuleSP module_sp =
@@ -332,8 +345,12 @@ void DynamicLoaderAIXDYLD::FillCoreLoaderData(lldb_private::DataExtractor &data,
     }
 }
 
-void DynamicLoaderAIXDYLD::FillCoreLoader32Data(lldb_private::DataExtractor &data,
-        uint64_t loader_offset, uint64_t loader_size) {
+void DynamicLoaderAIXDYLD::FillCoreLoader32Data(
+    lldb_private::DataExtractor &data, uint64_t loader_offset,
+    uint64_t loader_size,
+    std::function<void(lldb::addr_t, lldb::addr_t)> text_range_cb,
+    std::function<void(lldb::addr_t, lldb::addr_t, lldb::addr_t)>
+        data_range_cb) {
 
     Log *log = GetLog(LLDBLog::DynamicLoader);
     LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s()", __FUNCTION__);
@@ -391,6 +408,15 @@ void DynamicLoaderAIXDYLD::FillCoreLoader32Data(lldb_private::DataExtractor &dat
         else
             snprintf(pathWithMember, sizeof(pathWithMember),
                      "%s", filename);
+
+        // Always register the text segment as executable so the unwind engine
+        // can walk through frames in missing libraries.
+        if (text_range_cb)
+            text_range_cb((lldb::addr_t)textorg, (lldb::addr_t)textsize);
+
+        if (data_range_cb && core_offset != 0 && datasize != 0)
+            data_range_cb((lldb::addr_t)dataorg, (lldb::addr_t)core_offset,
+                          (lldb::addr_t)datasize);
 
         FileSpec file(pathWithMember);
         ModuleSpec module_spec(file, m_process->GetTarget().GetArchitecture());

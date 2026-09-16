@@ -86,8 +86,15 @@ public:
   void ParseAIXCoreFile();
   void ParseAIXCore32File();
 
-  lldb::addr_t AddAddressRanges(AIXCORE::AIXCore64Header header); 
-  lldb::addr_t AddAddressRanges(AIXCORE::AIXCore32Header header);
+  lldb::addr_t AddAddressRanges(AIXCORE::AIXCore64Header header,
+                                lldb_private::DataExtractor &core_data);
+  lldb::addr_t AddAddressRanges(AIXCORE::AIXCore32Header header,
+                                lldb_private::DataExtractor &core_data);
+
+  void AddAddressRangeEntry(lldb::addr_t vm_addr, lldb::addr_t file_offset,
+                            lldb::addr_t size, uint32_t permissions);
+  void AddExecutableAddressRange(lldb::addr_t base, lldb::addr_t size);
+
   bool m_is64bit = true;
 
 private:

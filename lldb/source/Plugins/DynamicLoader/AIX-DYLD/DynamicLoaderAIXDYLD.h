@@ -12,6 +12,7 @@
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/lldb-forward.h"
 
+#include <functional>
 #include <map>
 
 namespace lldb_private {
@@ -33,10 +34,22 @@ public:
                     lldb::addr_t module_addr);
   void OnUnloadModule(lldb::addr_t module_addr);
 
-  void FillCoreLoaderData(lldb_private::DataExtractor &data,
-          uint64_t loader_offset, uint64_t loader_size); 
-  void FillCoreLoader32Data(lldb_private::DataExtractor &data,
-          uint64_t loader_offset, uint64_t loader_size); 
+  void FillCoreLoaderData(
+      lldb_private::DataExtractor &data, uint64_t loader_offset,
+      uint64_t loader_size,
+      /// text_range_cb, if provided, is called once per ld_info entry
+      /// for libraries that may be missing from disk.
+      std::function<void(lldb::addr_t, lldb::addr_t)> text_range_cb = nullptr,
+      /// data_range_cb, if provided, is called once per ld_info entry
+      /// mapped from the core file.
+      std::function<void(lldb::addr_t, lldb::addr_t, lldb::addr_t)>
+          data_range_cb = nullptr);
+  void FillCoreLoader32Data(
+      lldb_private::DataExtractor &data, uint64_t loader_offset,
+      uint64_t loader_size,
+      std::function<void(lldb::addr_t, lldb::addr_t)> text_range_cb = nullptr,
+      std::function<void(lldb::addr_t, lldb::addr_t, lldb::addr_t)>
+          data_range_cb = nullptr);
 
   void DidAttach() override;
   void DidLaunch() override;

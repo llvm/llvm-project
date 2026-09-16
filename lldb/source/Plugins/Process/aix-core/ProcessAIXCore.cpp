@@ -107,7 +107,8 @@ ProcessAIXCore::~ProcessAIXCore() {
   Finalize(true /* destructing */);
 }
 
-lldb::addr_t ProcessAIXCore::AddAddressRanges(AIXCORE::AIXCore64Header header) {
+lldb::addr_t ProcessAIXCore::AddAddressRanges(AIXCORE::AIXCore64Header header,
+                                              DataExtractor &core_data) {
   const uint32_t rw = lldb::ePermissionsReadable | lldb::ePermissionsWritable;
 
   // Helper lambda: append one (vm_addr, file_offset, size) region to both
@@ -142,10 +143,23 @@ lldb::addr_t ProcessAIXCore::AddAddressRanges(AIXCORE::AIXCore64Header header) {
   append(header.SDataBase, header.DataRegionOffset + header.DataSize,
          header.SDataSize, rw);
 
+  // vm_infox table: anonymous mmap regions 
+  if (header.NumVMRegions > 0 && header.VMOffset > 0) {
+    lldb::offset_t voff = static_cast<lldb::offset_t>(header.VMOffset);
+    for (uint64_t i = 0; i < header.NumVMRegions; ++i) {
+      uint64_t vm_addr   = core_data.GetU64(&voff);
+      uint64_t vm_size   = core_data.GetU64(&voff);
+      uint64_t vm_foff   = core_data.GetU64(&voff);
+      append((lldb::addr_t)vm_addr, (lldb::addr_t)vm_foff,
+             (lldb::addr_t)vm_size, rw);
+    }
+  }
+
   return header.StackBaseAddr;
 }
 
-lldb::addr_t ProcessAIXCore::AddAddressRanges(AIXCORE::AIXCore32Header header) {
+lldb::addr_t ProcessAIXCore::AddAddressRanges(AIXCORE::AIXCore32Header header,
+                                              DataExtractor &core_data) {
   const uint32_t rw = lldb::ePermissionsReadable | lldb::ePermissionsWritable;
 
   auto append = [&](lldb::addr_t vm_addr, lldb::addr_t file_offset,
@@ -177,6 +191,18 @@ lldb::addr_t ProcessAIXCore::AddAddressRanges(AIXCORE::AIXCore32Header header) {
   // Small-data region (.sdata)
   append(header.SDataBase, header.DataRegionOffset + header.DataSize,
          header.SDataSize, rw);
+
+  // vm_infox table
+  if (header.NumVMRegions > 0 && header.VMOffset > 0) {
+    lldb::offset_t voff = static_cast<lldb::offset_t>(header.VMOffset);
+    for (uint64_t i = 0; i < header.NumVMRegions; ++i) {
+      uint64_t vm_addr = core_data.GetU64(&voff);
+      uint64_t vm_size = core_data.GetU64(&voff);
+      uint64_t vm_foff = core_data.GetU64(&voff);
+      append((lldb::addr_t)vm_addr, (lldb::addr_t)vm_foff,
+             (lldb::addr_t)vm_size, rw);
+    }
+  }
 
   return header.StackBaseAddr;
 }
@@ -347,21 +373,41 @@ Status ProcessAIXCore::DoLoadCore() {
             if (magic == 0xfeeddb1) {
                 m_is64bit = false;
                 m_aixcore32_header.ParseCoreHeader(data, &offset);
-                lldb::addr_t addr = AddAddressRanges(m_aixcore32_header);
+                lldb::addr_t addr = AddAddressRanges(m_aixcore32_header, data);
                 if (addr == LLDB_INVALID_ADDRESS)
                     LLDB_LOGF(log, "ProcessAIXCore: Invalid base address. Stack information will be limited");
+                const uint32_t rw = lldb::ePermissionsReadable |
+                                    lldb::ePermissionsWritable;
                 auto dyld = static_cast<DynamicLoaderAIXDYLD *>(GetDynamicLoader());
-                dyld->FillCoreLoader32Data(data, m_aixcore32_header.LoaderOffset,
-                        m_aixcore32_header.LoaderSize);
+                dyld->FillCoreLoader32Data(
+                    data, m_aixcore32_header.LoaderOffset,
+                    m_aixcore32_header.LoaderSize,
+                    [this](lldb::addr_t base, lldb::addr_t size) {
+                        AddExecutableAddressRange(base, size);
+                    },
+                    [this, rw](lldb::addr_t base, lldb::addr_t foff,
+                               lldb::addr_t size) {
+                        AddAddressRangeEntry(base, foff, size, rw);
+                    });
             }
             else if (magic == 0xfeeddb2) {
                 m_aixcore_header.ParseCoreHeader(data, &offset);
-                lldb::addr_t addr = AddAddressRanges(m_aixcore_header);
+                lldb::addr_t addr = AddAddressRanges(m_aixcore_header, data);
                 if (addr == LLDB_INVALID_ADDRESS)
                     LLDB_LOGF(log, "ProcessAIXCore: Invalid base address. Stack information will be limited");
+                const uint32_t rw = lldb::ePermissionsReadable |
+                                    lldb::ePermissionsWritable;
                 auto dyld = static_cast<DynamicLoaderAIXDYLD *>(GetDynamicLoader());
-                dyld->FillCoreLoaderData(data, m_aixcore_header.LoaderOffset,
-                        m_aixcore_header.LoaderSize);
+                dyld->FillCoreLoaderData(
+                    data, m_aixcore_header.LoaderOffset,
+                    m_aixcore_header.LoaderSize,
+                    [this](lldb::addr_t base, lldb::addr_t size) {
+                        AddExecutableAddressRange(base, size);
+                    },
+                    [this, rw](lldb::addr_t base, lldb::addr_t foff,
+                               lldb::addr_t size) {
+                        AddAddressRangeEntry(base, foff, size, rw);
+                    });
             }
         }
         else {
@@ -529,3 +575,35 @@ Status ProcessAIXCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
 }
 
 Status ProcessAIXCore::DoDestroy() { return Status(); }
+
+void ProcessAIXCore::AddAddressRangeEntry(lldb::addr_t vm_addr,
+                                          lldb::addr_t file_offset,
+                                          lldb::addr_t size,
+                                          uint32_t permissions) {
+  if (size == 0 || vm_addr == LLDB_INVALID_ADDRESS || file_offset == 0)
+    return;
+  FileRange file_range(file_offset, size);
+  VMRangeToFileOffset::Entry range_entry(vm_addr, size, file_range);
+  VMRangeToFileOffset::Entry *last_entry = m_core_aranges.Back();
+  if (last_entry &&
+      last_entry->GetRangeEnd() == range_entry.GetRangeBase() &&
+      last_entry->data.GetRangeEnd() == range_entry.data.GetRangeBase() &&
+      last_entry->GetByteSize() == last_entry->data.GetByteSize()) {
+    last_entry->SetRangeEnd(range_entry.GetRangeEnd());
+    last_entry->data.SetRangeEnd(range_entry.data.GetRangeEnd());
+  } else {
+    m_core_aranges.Append(range_entry);
+  }
+  m_core_range_infos.Append(
+      VMRangeToPermissions::Entry(vm_addr, size, permissions));
+}
+
+void ProcessAIXCore::AddExecutableAddressRange(lldb::addr_t base,
+                                               lldb::addr_t size) {
+  if (size == 0 || base == LLDB_INVALID_ADDRESS)
+    return;
+  const uint32_t rx =
+      lldb::ePermissionsReadable | lldb::ePermissionsExecutable;
+  m_core_range_infos.Append(
+      VMRangeToPermissions::Entry(base, size, rx));
+}

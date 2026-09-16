@@ -110,7 +110,12 @@ bool AIXCore32Header::ParseCoreHeader(lldb_private::DataExtractor &data,
     DataBaseAddr = data.GetU64(offset);
     DataSize = data.GetU64(offset);
 
-    *offset += 104;
+    SDataBase    = data.GetU64(offset);
+    SDataSize    = data.GetU64(offset);
+    NumVMRegions = data.GetU64(offset);
+    VMOffset     = data.GetU64(offset);
+    *offset += 72;
+
     lldb::offset_t offset_to_user = (*offset + sizeof(mstsave32) +
             sizeof(thrdsinfo64));
     int ret = 0;
@@ -214,7 +219,12 @@ bool AIXCore64Header::ParseCoreHeader(lldb_private::DataExtractor &data,
     DataBaseAddr = data.GetU64(offset);
     DataSize = data.GetU64(offset);
 
-    *offset += 104;
+    SDataBase  = data.GetU64(offset);
+    SDataSize  = data.GetU64(offset);
+    NumVMRegions = data.GetU64(offset);
+    VMOffset     = data.GetU64(offset);
+    *offset += 72;
+
     // This offset calculation is due to the difference between
     // AIX register size and LLDB register variables order.
     // __context64 does not match RegContext
