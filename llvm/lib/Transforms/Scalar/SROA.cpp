@@ -1798,9 +1798,6 @@ static bool rewritePHINodeStore(PHINode &PN, StoreInst &SI, DomTreeUpdater &DTU,
 
     auto *NewStore = cast<StoreInst>(SI.clone());
     NewStore->setOperand(StoreInst::getPointerOperandIndex(), InVal);
-    // The clone uses a PHI incoming pointer instead of the original pointer
-    // operand, so !invariant.group cannot be transferred.
-    NewStore->setMetadata(LLVMContext::MD_invariant_group, nullptr);
     NewStore->insertBefore(StoreBB->getTerminator()->getIterator());
     ++NumStoresPredicated;
     LLVM_DEBUG(dbgs() << "          to: " << *NewStore << "\n");
@@ -1980,9 +1977,6 @@ static void rewriteMemOpOfSelect(SelectInst &SI, T &I,
     CondMemOp.insertBefore(NewMemOpBB->getTerminator()->getIterator());
     Value *Ptr = SI.getOperand(1 + SuccIdx);
     CondMemOp.setOperand(I.getPointerOperandIndex(), Ptr);
-    // The clone uses one arm of the select instead of the original pointer
-    // operand, so !invariant.group cannot be transferred.
-    CondMemOp.setMetadata(LLVMContext::MD_invariant_group, nullptr);
     if (isa<LoadInst>(I)) {
       CondMemOp.setName(I.getName() + (IsThen ? ".then" : ".else") + ".val");
       PN->addIncoming(&CondMemOp, NewMemOpBB);

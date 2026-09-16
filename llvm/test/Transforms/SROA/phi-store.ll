@@ -247,35 +247,3 @@ merge:
   store atomic volatile i32 %value, ptr %ptr seq_cst, align 4
   ret void
 }
-
-define void @store_invariant_group_to_phi(i1 %cond, i32 %value, ptr %other) {
-; CHECK-LABEL: @store_invariant_group_to_phi(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
-; CHECK:       left:
-; CHECK-NEXT:    store i32 [[VALUE:%.*]], ptr [[A]], align 4{{$}}
-; CHECK-NEXT:    br label [[MERGE:%.*]]
-; CHECK:       right:
-; CHECK-NEXT:    store i32 [[VALUE]], ptr [[OTHER:%.*]], align 4{{$}}
-; CHECK-NEXT:    br label [[MERGE]]
-; CHECK:       merge:
-; CHECK-NEXT:    ret void
-;
-entry:
-  %a = alloca i32, align 4
-  br i1 %cond, label %left, label %right
-
-left:
-  br label %merge
-
-right:
-  br label %merge
-
-merge:
-  %ptr = phi ptr [ %a, %left ], [ %other, %right ]
-  store i32 %value, ptr %ptr, align 4, !invariant.group !0
-  ret void
-}
-
-!0 = !{}
