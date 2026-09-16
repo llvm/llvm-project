@@ -28,6 +28,7 @@ class DataLayout;
 class DominatorTree;
 class Instruction;
 class LoadInst;
+struct LoadStoreInstProperties;
 class Loop;
 class MemoryLocation;
 class SCEV;
@@ -174,10 +175,7 @@ FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA, bool *IsLoadCSE,
 ///
 /// \param Loc The location we want the load and store to originate from.
 /// \param AccessTy The access type of the pointer.
-/// \param AtLeastAtomic Are we looking for at-least an atomic load/store ? In
-/// case it is false, we can return an atomic or non-atomic load or store. In
-/// case it is true, we need to return an atomic load or store.
-/// \param IsElementwise Whether the requested atomic access is elementwise.
+/// \param AccessProps The properties of the load we want to replace.
 /// \param ScanBB The basic block to scan.
 /// \param [in,out] ScanFrom The location to start scanning from. When this
 /// function returns, it points at the last instruction scanned.
@@ -191,7 +189,7 @@ FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA, bool *IsLoadCSE,
 /// \returns The found value, or nullptr if no value is found.
 LLVM_ABI Value *
 findAvailablePtrLoadStore(const MemoryLocation &Loc, Type *AccessTy,
-                          bool AtLeastAtomic, bool IsElementwise,
+                          const LoadStoreInstProperties &AccessProps,
                           BasicBlock *ScanBB, BasicBlock::iterator &ScanFrom,
                           unsigned MaxInstsToScan, BatchAAResults *AA,
                           bool *IsLoadCSE, unsigned *NumScanedInst);
