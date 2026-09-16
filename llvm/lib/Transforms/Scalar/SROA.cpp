@@ -5582,6 +5582,7 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
         new AllocaInst(PartitionTy, AI.getAddressSpace(), nullptr, Alignment,
                        AI.getName() + ".sroa." + Twine(P.begin() - AS.begin()),
                        AI.getIterator());
+    tryEnforceAlignment(NewAI, DL.getPrefTypeAlign(PartitionTy), DL);
     // Copy the old AI debug location over to the new one.
     NewAI->setDebugLoc(AI.getDebugLoc());
     ++NumNewAllocas;
