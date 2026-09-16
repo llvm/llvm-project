@@ -169,6 +169,9 @@ public:
 
 namespace cgdata {
 
+/// Return the path of the CGData file selected for consumption.
+LLVM_ABI StringRef getCodeGenDataUsePath();
+
 inline bool hasOutlinedHashTree() {
   return CodeGenData::getInstance().hasOutlinedHashTree();
 }
