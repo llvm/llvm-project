@@ -825,7 +825,6 @@ public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTReader;
-
   template <class decl_type> friend class RedeclarableTemplate;
 
   /// Retrieves the canonical declaration of this template.

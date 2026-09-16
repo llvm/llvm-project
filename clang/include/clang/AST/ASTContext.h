@@ -240,7 +240,6 @@ class ASTContext : public RefCountedBase<ASTContext> {
   friend class NestedNameSpecifier;
 
   mutable SmallVector<Type *, 0> Types;
-
   mutable llvm::FoldingSet<ExtQuals> ExtQualNodes;
   mutable llvm::UniquingSet<ComplexType> ComplexTypes;
   mutable llvm::UniquingSet<PointerType> PointerTypes{GeneralTypesLog2InitSize};
