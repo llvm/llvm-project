@@ -7,7 +7,6 @@ global:
   extern "C++" {
     error::OffloadError::ID;
     "error::OffloadErrCategory()";
-    "llvm::omp::target::RPCServerTy::registerCallback(unsigned int (*)(void*, unsigned int))";
     "llvm::omp::target::plugin::GenericPluginTy::async_barrier(omp_interop_val_t*)";
     "llvm::omp::target::plugin::GenericPluginTy::create_interop(int, int, interop_spec_t*)";
     "llvm::omp::target::plugin::GenericPluginTy::data_alloc(int, long, void*, int)";
@@ -23,7 +22,6 @@ global:
     "llvm::omp::target::plugin::GenericPluginTy::is_initialized() const";
     "llvm::omp::target::plugin::GenericPluginTy::launch_kernel(int, void*, llvm::omp::target::plugin::KernelLaunchArgsTy&, __tgt_async_info*)";
     "llvm::omp::target::plugin::GenericPluginTy::load_binary(int, __tgt_device_image*, __tgt_device_binary*)";
-    "llvm::omp::target::plugin::GenericPluginTy::number_of_devices()";
     "llvm::omp::target::plugin::GenericPluginTy::release_interop(int, omp_interop_val_t*)";
     "llvm::omp::target::plugin::GenericPluginTy::set_device_identifier(int, int)";
     "llvm::omp::target::plugin::GenericPluginTy::sync_barrier(omp_interop_val_t*)";
