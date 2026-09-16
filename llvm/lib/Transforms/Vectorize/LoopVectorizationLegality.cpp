@@ -444,6 +444,10 @@ static bool storeToSameAddress(ScalarEvolution *SE, StoreInst *A,
 
 SmallVector<const SCEVPredicate *>
 LoopVectorizationLegality::collectUnitStridePredicates() const {
+  // Since LoopAccessAnalysis' collectStridedAccess collects only unit-strided
+  // accesses, and SymbolicStrides is a map from a Value to a SCEVUnknown, with
+  // the implicit information that the SCEVUnknown was speculated to unit, we
+  // reconstruct SCEVUnknown = unit predicates here.
   ScalarEvolution &SE = *PSE.getSE();
   SmallVector<const SCEVPredicate *> Predicates;
   if (!AllowRuntimeSCEVChecks || !TheLoop->isInnermost())
