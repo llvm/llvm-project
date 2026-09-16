@@ -292,14 +292,11 @@ min@myhsu.dev (email), [mshockwave](https://github.com/mshockwave) (GitHub)
 #### MIPS backend
 
 Weining Lu \
-luweining@loongson.cn (email) 
-[SixWeining](https://github.com/SixWeining) (GitHub) \
+luweining@loongson.cn (email), [SixWeining](https://github.com/SixWeining) (GitHub) \
 Ying Huang \
-yingopqq@gmail.com (email)
-[yingopq](https://github.com/yingopq) (GitHub) \
+yingopqq@gmail.com (email), [yingopq](https://github.com/yingopq) (GitHub) \
 Jiaxun Yang \
-jiaxun.yang@flygoat.com (email)
-[FlyGoat](https://github.com/FlyGoat) (GitHub)
+jiaxun.yang@flygoat.com (email), [FlyGoat](https://github.com/FlyGoat) (GitHub)
 
 #### MSP430 backend
 
