@@ -45,6 +45,11 @@ using namespace common_constants_internal;
 // This is the same as -log2(RD[i]), with the least significant bits of the
 // high part set to be 2^-41, so that the sum of high parts + e_x is exact in
 // double precision.
+#if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
+    defined(LIBC_MATH_HAS_SMALL_TABLES)
+LIBC_INLINE_VAR constexpr DoubleDouble LOG2_E = {0x1.777d0ffda0d24p-56,
+                                                 0x1.71547652b82fep0};
+#else
 // We also replace the first and the last ones to be 0.
 LIBC_INLINE_VAR constexpr DoubleDouble LOG2_R_DD[128] = {
     {0.0, 0.0},
@@ -176,6 +181,7 @@ LIBC_INLINE_VAR constexpr DoubleDouble LOG2_R_DD[128] = {
     {0x1.ef5d00e390ap-44, 0x1.fa406bd244p-1},
     {0.0, 1.0},
 };
+#endif
 
 LIBC_INLINE bool is_odd_integer(double x) {
   using FPBits = fputil::FPBits<double>;
@@ -367,6 +373,119 @@ LIBC_INLINE double pow(double x, double y) {
   //     = 2^( y * ( e_x + log2(m_x) ) )
   // First we compute log2(x) = e_x + log2(m_x)
 
+#if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
+    defined(LIBC_MATH_HAS_SMALL_TABLES)
+  unsigned idx_x = static_cast<unsigned>(x_mant >> (FPBits::FRACTION_LEN - 4));
+  if (idx_x == 15)
+    e_x += 1.0;
+  FPBits m_x = FPBits(x_mant | 0x3ff0'0000'0000'0000ULL);
+  double m = m_x.get_val();
+  double r_x = RD_16[idx_x];
+  double m_hi = FPBits(m_x.uintval() & 0xffff'fff0'0000'0000ULL).get_val();
+  double m_lo = m - m_hi;
+  double u_hi = fputil::multiply_add(r_x, m_hi, -1.0);
+  double u_lo = r_x * m_lo;
+  double u = u_hi + u_lo;
+
+  double q_hi = -0.5 * (u_hi * u_hi);
+  double q_lo = -0.5 * u_lo * (u + u_hi);
+
+  double u2 = u * u;
+  double c0 = fputil::multiply_add(u, -0x1.0p-2, 0x1.5555555555555p-2);
+  double c1 =
+      fputil::multiply_add(u, -0x1.5555555555555p-3, 0x1.999999999999ap-3);
+  double c2 = fputil::multiply_add(u, -0x1.0p-3, 0x1.2492492492492p-3);
+  double c3 =
+      fputil::multiply_add(u, -0x1.999999999999ap-4, 0x1.c71c71c71c71cp-4);
+  double c4 =
+      fputil::multiply_add(u, -0x1.5555555555555p-4, 0x1.745d1745d1746p-4);
+  double c5 = 0x1.3b13b13b13b14p-4;
+  double p = fputil::multiply_add(u2, c5, c4);
+  p = fputil::multiply_add(u2, p, c3);
+  p = fputil::multiply_add(u2, p, c2);
+  p = fputil::multiply_add(u2, p, c1);
+  p = fputil::multiply_add(u2, p, c0);
+  p = (u * u2) * p;
+
+  DoubleDouble r1 = fputil::exact_add(LOG_R1_16[idx_x].hi, u_hi);
+  DoubleDouble r1_q = fputil::exact_add(r1.hi, q_hi);
+  r1_q.lo += r1.lo + u_lo + q_lo + LOG_R1_16[idx_x].lo + p;
+  r1 = fputil::exact_add(r1_q.hi, r1_q.lo);
+
+  DoubleDouble r2 = fputil::quick_mult(r1, LOG2_E);
+  DoubleDouble log2_x = fputil::exact_add(e_x, r2.hi);
+  log2_x.lo += r2.lo;
+  log2_x = fputil::exact_add(log2_x.hi, log2_x.lo);
+
+  double y3 = y * 0x1.0p3; // Exact.
+  DoubleDouble y3_log2_x = fputil::exact_mult(y3, log2_x.hi);
+  y3_log2_x.lo = fputil::multiply_add(y3, log2_x.lo, y3_log2_x.lo);
+
+  double scale = 1.0;
+  constexpr double UPPER_EXP_BOUND = 512.0 * 0x1.0p3;
+  if (LIBC_UNLIKELY(FPBits(y3_log2_x.hi).abs().get_val() >= UPPER_EXP_BOUND)) {
+    if (FPBits(y3_log2_x.hi).sign() == Sign::POS) {
+      scale = 0x1.0p512;
+      y3_log2_x.hi -= 512.0 * 8.0;
+      if (y3_log2_x.hi > 513.0 * 8.0)
+        y3_log2_x.hi = 513.0 * 8.0;
+    } else {
+      scale = 0x1.0p-512;
+      y3_log2_x.hi += 512.0 * 8.0;
+      if (y3_log2_x.hi < (-1076.0 + 512.0) * 8.0)
+        y3_log2_x.hi = -564.0 * 8.0;
+    }
+  }
+
+  double hm = fputil::nearest_integer(y3_log2_x.hi);
+  double lo3_hi = y3_log2_x.hi - hm;
+  double lo3 = lo3_hi + y3_log2_x.lo;
+
+  int hm_i = static_cast<int>(hm);
+  unsigned idx_y = static_cast<unsigned>(hm_i) & 0x7;
+
+  int64_t exp2_hi_i = static_cast<int64_t>(
+      static_cast<uint64_t>(static_cast<int64_t>(hm_i >> 3))
+      << FPBits::FRACTION_LEN);
+  int64_t exp2_mid_hi_i =
+      static_cast<int64_t>(FPBits(EXP2_MID_8[idx_y].hi).uintval());
+  int64_t exp2_mid_lo_i =
+      static_cast<int64_t>(FPBits(EXP2_MID_8[idx_y].lo).uintval());
+
+  uint64_t exp2_hm_hi_i =
+      static_cast<uint64_t>(exp2_hi_i + exp2_mid_hi_i) + sign;
+  uint64_t exp2_hm_lo_i =
+      idx_y != 0 ? static_cast<uint64_t>(exp2_hi_i + exp2_mid_lo_i) + sign
+                 : sign;
+  double exp2_hm_hi = FPBits(exp2_hm_hi_i).get_val();
+  double exp2_hm_lo = FPBits(exp2_hm_lo_i).get_val();
+
+  constexpr double EXP2_COEFFS_8[] = {
+      0x1.0000000000000p+0,  // k=0
+      0x1.62e42fefa39efp-4,  // k=1
+      0x1.ebfbdff82c58fp-9,  // k=2
+      0x1.c6b08d704a0c0p-14, // k=3
+      0x1.3b2ab6fba4e77p-19, // k=4
+      0x1.5d87fe78a6731p-25, // k=5
+      0x1.430912f86c787p-31, // k=6
+      0x1.ffcbfc588b0c7p-38, // k=7
+      0x1.62c0223a5c824p-44  // k=8
+  };
+
+  double lo3_sqr = lo3 * lo3;
+  double d0 = fputil::multiply_add(lo3, EXP2_COEFFS_8[2], EXP2_COEFFS_8[1]);
+  double d1 = fputil::multiply_add(lo3, EXP2_COEFFS_8[4], EXP2_COEFFS_8[3]);
+  double d2 = fputil::multiply_add(lo3, EXP2_COEFFS_8[6], EXP2_COEFFS_8[5]);
+  double d3 = fputil::multiply_add(lo3, EXP2_COEFFS_8[8], EXP2_COEFFS_8[7]);
+  double pp = fputil::multiply_add(lo3_sqr, d3, d2);
+  pp = fputil::multiply_add(lo3_sqr, pp, d1);
+  pp = fputil::multiply_add(lo3_sqr, pp, d0);
+
+  double r = fputil::multiply_add(exp2_hm_hi * lo3, pp, exp2_hm_lo);
+  r += exp2_hm_hi;
+
+  return r * scale;
+#else
   // Extract exponent field of x.
 
   // Use the highest 7 fractional bits of m_x as the index for look up tables.
@@ -538,6 +657,7 @@ LIBC_INLINE double pow(double x, double y) {
   r += exp2_hm_hi;
 
   return r * scale;
+#endif
 }
 
 } // namespace math

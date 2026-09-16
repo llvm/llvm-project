@@ -10,7 +10,10 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_LOG2_H
 
 #include "common_constants.h"
+#if !(defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                             \
+      defined(LIBC_MATH_HAS_SMALL_TABLES))
 #include "log_range_reduction.h"
+#endif
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -32,11 +35,16 @@ using DFloat128 = typename fputil::DyadicFloat<128>;
 using LIBC_NAMESPACE::operator""_u128;
 
 using namespace common_constants_internal;
+#if !(defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                             \
+      defined(LIBC_MATH_HAS_SMALL_TABLES))
 using namespace math::log_range_reduction_internal;
+#endif
 
 LIBC_INLINE_VAR constexpr fputil::DoubleDouble LOG2_E = {0x1.777d0ffda0d24p-56,
                                                          0x1.71547652b82fep0};
 
+#if !(defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                             \
+      defined(LIBC_MATH_HAS_SMALL_TABLES))
 alignas(16) LIBC_INLINE_VAR const fputil::DoubleDouble LOG_R1[128] = {
     {0.0, 0.0},
     {0x1.46662d417cedp-62, 0x1.010157588de71p-7},
@@ -167,6 +175,7 @@ alignas(16) LIBC_INLINE_VAR const fputil::DoubleDouble LOG_R1[128] = {
     {0x1.1c066d235ee63p-56, 0x1.5ee82aa24192p-1},
     {0.0, 0.0},
 };
+#endif
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Extra errors from P is from using x^2 to reduce evaluation latency.
@@ -899,6 +908,55 @@ LIBC_INLINE double log2(double x) {
     x_u = xbits.uintval();
   }
 
+#if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
+    defined(LIBC_MATH_HAS_SMALL_TABLES)
+  int shifted = static_cast<int>(x_u >> 48);
+  int index = shifted & 0xF;
+  double r = RD_16[index];
+
+  x_e += static_cast<int>((x_u + (1ULL << 48)) >> 52);
+  double e_x = static_cast<double>(x_e);
+
+  uint64_t x_m = (x_u & 0x000F'FFFF'FFFF'FFFFULL) | 0x3FF0'0000'0000'0000ULL;
+  double m = FPBits_t(x_m).get_val();
+
+  double m_hi = FPBits_t(x_m & 0xFFFF'FFF0'0000'0000ULL).get_val();
+  double m_lo = m - m_hi;
+  double u_hi = fputil::multiply_add(r, m_hi, -1.0);
+  double u_lo = r * m_lo;
+  double u = u_hi + u_lo;
+
+  double q_hi = -0.5 * (u_hi * u_hi);
+  double q_lo = -0.5 * u_lo * (u + u_hi);
+
+  double u2 = u * u;
+  double c0 = fputil::multiply_add(u, -0x1.0p-2, 0x1.5555555555555p-2);
+  double c1 =
+      fputil::multiply_add(u, -0x1.5555555555555p-3, 0x1.999999999999ap-3);
+  double c2 = fputil::multiply_add(u, -0x1.0p-3, 0x1.2492492492492p-3);
+  double c3 =
+      fputil::multiply_add(u, -0x1.999999999999ap-4, 0x1.c71c71c71c71cp-4);
+  double c4 =
+      fputil::multiply_add(u, -0x1.5555555555555p-4, 0x1.745d1745d1746p-4);
+  double c5 = 0x1.3b13b13b13b14p-4;
+  double p = fputil::multiply_add(u2, c5, c4);
+  p = fputil::multiply_add(u2, p, c3);
+  p = fputil::multiply_add(u2, p, c2);
+  p = fputil::multiply_add(u2, p, c1);
+  p = fputil::multiply_add(u2, p, c0);
+  p = (u * u2) * p;
+
+  fputil::DoubleDouble r1 = fputil::exact_add(LOG_R1_16[index].hi, u_hi);
+  fputil::DoubleDouble r1_q = fputil::exact_add(r1.hi, q_hi);
+  r1_q.lo += r1.lo + u_lo + q_lo + LOG_R1_16[index].lo + p;
+  r1 = fputil::exact_add(r1_q.hi, r1_q.lo);
+
+  fputil::DoubleDouble r2 = fputil::quick_mult(r1, LOG2_E);
+  fputil::DoubleDouble r3 = fputil::exact_add(e_x, r2.hi);
+  r3.lo += r2.lo;
+
+  return r3.hi + r3.lo;
+#else
   // log2(x) = log2(2^x_e * x_m)
   //         = x_e + log2(x_m)
   // Range reduction for log2(x_m):
@@ -969,6 +1027,7 @@ LIBC_INLINE double log2(double x) {
 
   return log2_accurate(x_e, index, u);
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#endif
 }
 
 } // namespace math

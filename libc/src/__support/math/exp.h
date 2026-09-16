@@ -51,6 +51,23 @@ LIBC_INLINE_VAR constexpr double EXP_ERR_D = 0x1.8p-63;
 LIBC_INLINE_VAR constexpr double EXP_ERR_DD = 0x1.0p-99;
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
+#if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
+    defined(LIBC_MATH_HAS_SMALL_TABLES)
+// Degree-7 polynomial for (exp(dx) - 1) / dx on |dx| <= log(2)/16 (~0.0433)
+LIBC_INLINE double poly_approx_small_d(double dx) {
+  double dx2 = dx * dx;
+  double c0 = fputil::multiply_add(dx, 0x1.5555555555555p-3, 0x1.0p-1);
+  double c1 =
+      fputil::multiply_add(dx, 0x1.1111111111111p-7, 0x1.5555555555555p-5);
+  double c2 =
+      fputil::multiply_add(dx, 0x1.a01a01a01a01ap-13, 0x1.6c16c16c16c17p-10);
+  double c3 = 0x1.a01a01a01a01ap-16;
+  double p = fputil::multiply_add(dx2, c3, c2);
+  p = fputil::multiply_add(dx2, p, c1);
+  p = fputil::multiply_add(dx2, p, c0);
+  return fputil::multiply_add(dx, p, 1.0);
+}
+#else
 // -2^-12 * log(2)
 // > a = -2^-12 * log(2);
 // > b = round(a, 30, RN);
@@ -81,6 +98,7 @@ LIBC_INLINE double poly_approx_d(double dx) {
   double p = fputil::multiply_add(dx2, c1, c0);
   return p;
 }
+#endif
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Polynomial approximation with double-double precision:
@@ -343,6 +361,30 @@ LIBC_INLINE double exp(double x) {
   //   C = 2^(33 - 12) + 2^(32 - 12) + 2^(-13 - 12), and
   //   k = int32_t(lower 51 bits of double(x * L2E + C) >> 19).
 
+#if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
+    defined(LIBC_MATH_HAS_SMALL_TABLES)
+  constexpr double LOG2_E_8 = 0x1.71547652b82fep+3;
+  constexpr double MLOG2_8_HI = -0x1.62e42fee00000p-4;
+  constexpr double MLOG2_8_LO = -0x1.a39ef35793c76p-36;
+
+  double tmp = fputil::multiply_add(x, LOG2_E_8, 0x1.8p52);
+  int k = static_cast<int>(static_cast<int32_t>(cpp::bit_cast<uint64_t>(tmp)));
+  double kd = tmp - 0x1.8p52;
+
+  uint32_t idx = k & 7;
+  int hi = k >> 3;
+
+  bool denorm = (hi <= -1022);
+
+  DoubleDouble exp_mid = EXP2_MID_8[idx];
+
+  double lo_h = fputil::multiply_add(kd, MLOG2_8_HI, x);
+  double dx = fputil::multiply_add(kd, MLOG2_8_LO, lo_h);
+
+  double mid_lo = dx * exp_mid.hi;
+  double p = poly_approx_small_d(dx);
+  double lo = fputil::multiply_add(p, mid_lo, exp_mid.lo);
+#else
   // Rounding errors <= 2^-31 + 2^-41.
   double tmp = fputil::multiply_add(x, LOG2_E, 0x1.8000'0000'4p21);
   int k = static_cast<int>(cpp::bit_cast<uint64_t>(tmp) >> 19);
@@ -389,6 +431,7 @@ LIBC_INLINE double exp(double x) {
   double p = poly_approx_d(dx);
 
   double lo = fputil::multiply_add(p, mid_lo, exp_mid.lo);
+#endif
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   if (LIBC_UNLIKELY(denorm)) {

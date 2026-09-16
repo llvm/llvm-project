@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_TANF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_TANF_H
 
-#include "sincosf_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -19,6 +18,26 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
+
+#if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
+    defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT) &&                       \
+    defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
+
+#include "sincosf_float_eval.h"
+
+namespace LIBC_NAMESPACE_DECL {
+
+namespace math {
+
+LIBC_INLINE float tanf(float x) { return sincosf_float_eval::tanf_eval(x); }
+
+} // namespace math
+
+} // namespace LIBC_NAMESPACE_DECL
+
+#else // !LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT
+
+#include "sincosf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -161,5 +180,7 @@ LIBC_INLINE float tanf(float x) {
 } // namespace math
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_TANF_H

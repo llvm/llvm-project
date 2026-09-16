@@ -214,6 +214,58 @@ template <bool IS_SIN> LIBC_INLINE float sincosf_eval(float x) {
   }
 }
 
+LIBC_INLINE float tanf_eval(float x) {
+  constexpr float SIN_K_PI_OVER_8[16] = {
+      0.0f,  0x1.87de2ap-2f,  0x1.6a09e6p-1f,  0x1.d906bcp-1f,
+      1.0f,  0x1.d906bcp-1f,  0x1.6a09e6p-1f,  0x1.87de2ap-2f,
+      0.0f,  -0x1.87de2ap-2f, -0x1.6a09e6p-1f, -0x1.d906bcp-1f,
+      -1.0f, -0x1.d906bcp-1f, -0x1.6a09e6p-1f, -0x1.87de2ap-2f,
+  };
+
+  using FPBits = fputil::FPBits<float>;
+  FPBits xbits(x);
+  uint32_t x_abs = xbits.uintval() & 0x7fff'ffffU;
+
+  if (LIBC_UNLIKELY(x_abs < 0x3980'0000U)) {
+    if (LIBC_UNLIKELY(x_abs == 0U))
+      return x;
+    return fputil::multiply_add(x, 0x1.0p-25f, x);
+  }
+
+  float y;
+  unsigned k = 0;
+  if (x_abs < 0x4880'0000U) {
+    k = sincosf_range_reduction_small(x, y);
+  } else {
+    if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+      if (x_abs == 0x7f80'0000U) {
+        fputil::set_errno_if_required(EDOM);
+        fputil::raise_except_if_required(FE_INVALID);
+      }
+      return x + FPBits::quiet_nan().get_val();
+    }
+    k = sincosf_range_reduction_large(x, y);
+  }
+
+  float sin_k = SIN_K_PI_OVER_8[k & 15];
+  float cos_k = SIN_K_PI_OVER_8[(k + 4) & 15];
+
+  float y_sq = y * y;
+  float p1 = fputil::multiply_add(y_sq, 0x1.111112p-7f, -0x1.555556p-3f);
+  float q1 = fputil::multiply_add(y_sq, 0x1.54b8bep-5f, -0x1.ffffc4p-2f);
+  float y3 = y_sq * y;
+  float c1 = fputil::multiply_add(y_sq, q1, 1.0f);
+  float s1 = fputil::multiply_add(y3, p1, y);
+
+  float sin_x = fputil::multiply_add(cos_k, s1, sin_k * c1);
+  float cos_x = fputil::multiply_add(cos_k, c1, -sin_k * s1);
+  return sin_x / cos_x;
+}
+
 } // namespace sincosf_float_eval
 
 } // namespace math

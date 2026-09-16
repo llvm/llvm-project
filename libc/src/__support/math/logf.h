@@ -9,7 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LOGF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_LOGF_H
 
+#if !(defined(LIBC_MATH_HAS_SMALL_TABLES) &&                                   \
+      defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT))
 #include "common_constants.h" // Lookup table for (1/f) and log(f)
+#endif
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -57,8 +60,6 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 LIBC_INLINE float logf(float x) {
-  using namespace common_constants_internal;
-  constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
   using FPBits = typename fputil::FPBits<float>;
 
   FPBits xbits(x);
@@ -146,6 +147,38 @@ LIBC_INLINE float logf(float x) {
     }
   }
 
+#if defined(LIBC_MATH_HAS_SMALL_TABLES) &&                                     \
+    defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT)
+  uint32_t mant = xbits.get_mantissa();
+  m += static_cast<int>(x_u >> FPBits::FRACTION_LEN);
+  if (mant > 0x0035'04f3U) {
+    xbits.set_biased_exponent(FPBits::EXP_BIAS - 1);
+    m += 1;
+  } else {
+    xbits.set_biased_exponent(FPBits::EXP_BIAS);
+  }
+  float d = xbits.get_val() - 1.0f;
+  float mf = static_cast<float>(m);
+
+  float s = d / (d + 2.0f);
+  float r_div = fputil::multiply_add(-s, d + 2.0f, d);
+  float s2 = s * s;
+  float p = fputil::polyeval(s2, 0x1.555556p-1f, 0x1.99999ap-2f, 0x1.24924ap-2f,
+                             0x1.c71c72p-3f);
+  float log_1pd_lo =
+      fputil::multiply_add(s, fputil::multiply_add(s2, p, -d), -s * r_div);
+  float log_1pd = d + log_1pd_lo;
+
+  constexpr float LN2_HI = 0x1.62e400p-1f;
+  constexpr float LN2_LO = 0x1.7f7d1cp-20f;
+
+  float hi = fputil::multiply_add(mf, LN2_HI, log_1pd);
+  float lo = fputil::multiply_add(mf, LN2_LO, (log_1pd - hi) + mf * LN2_HI);
+  return hi + lo;
+#else
+  using namespace common_constants_internal;
+  constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
+
 #ifndef LIBC_TARGET_CPU_HAS_FMA
   // Returning the correct +0 when x = 1.0 for non-FMA targets with FE_DOWNWARD
   // rounding mode.
@@ -183,6 +216,7 @@ LIBC_INLINE float logf(float x) {
   double r = fputil::multiply_add(static_cast<double>(m), LOG_2,
                                   fputil::polyeval(v2, p0, p1, p2));
   return static_cast<float>(r);
+#endif
 }
 
 } // namespace math
