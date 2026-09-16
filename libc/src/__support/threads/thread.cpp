@@ -155,7 +155,17 @@ ThreadAtExitCallbackMgr *get_thread_atexit_callback_mgr() {
 }
 
 void call_atexit_callbacks(ThreadAttributes *attrib) {
+  // Cancellation cleanup handlers (pthread_cleanup_push).
+  while (attrib->cleanup_stack != nullptr) {
+    auto *frame = attrib->cleanup_stack;
+    attrib->cleanup_stack = frame->__next;
+    frame->__routine(frame->__arg);
+  }
+
+  // thread exit callbacks (__cxa_thread_atexit).
   attrib->atexit_callback_mgr->call();
+
+  // Thread-specific keys (pthread_key_create).
   for (size_t i = 0; i < TSS_KEY_COUNT; ++i) {
     TSSValueUnit &unit = tss_values[i];
     // Both dtor and value need to nonnull to call dtor

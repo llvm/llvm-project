@@ -26,6 +26,7 @@ add_header_library(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.hdr.types.size_t
+    libc.hdr.types.struct___pthread_cleanup_frame
     libc.src.__support.CPP.atomic
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config

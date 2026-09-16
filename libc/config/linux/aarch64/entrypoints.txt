@@ -1115,6 +1115,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.netinet.in6addr_loopback
 
     # pthread.h entrypoints
+    libc.src.pthread.__pthread_cleanup_pop
+    libc.src.pthread.__pthread_cleanup_push
     libc.src.pthread.pthread_atfork
     libc.src.pthread.pthread_attr_destroy
     libc.src.pthread.pthread_attr_getdetachstate
