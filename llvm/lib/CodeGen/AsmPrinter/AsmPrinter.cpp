@@ -2097,10 +2097,9 @@ void AsmPrinter::emitFunctionBody() {
   // Print out code for the function.
   bool HasAnyRealCode = false;
   int NumInstsInFunction = 0;
-  // The AArch64 unwinder backs the PC up over a call itself, so it does not
-  // need the padding the EH_LABEL case below emits for the other targets.
+  // Only x86 needs this padding; the Arm unwinders back the PC up themselves.
   bool NeedsEHaNops = MMI->getModule()->getModuleFlag("eh-asynch") &&
-                      !TM.getTargetTriple().isAArch64();
+                      TM.getTargetTriple().isX86();
 
   const MCSubtargetInfo *STI = nullptr;
   if (this->MF)
