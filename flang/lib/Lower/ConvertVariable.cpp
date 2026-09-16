@@ -1440,11 +1440,12 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
   // width matches the actual allocation size.
   // The caller stores it via a bitcasted address to preserve the bit pattern
   // (fir.convert from integer to !fir.logical normalizes nonzero -> true).
-  // Sub-byte and non-byte-multiple LOGICAL mappings are not supported here:
+  // This function is only called in hex mode.  Sub-byte and
+  // non-byte-multiple-without-padding LOGICAL mappings are not supported:
   //   - sub-byte (e.g. l4:1): APInt::getSplat requires destination width >= 8.
-  //   - non-byte-multiple (e.g. l4:12): makeIntCst(12) builds an i12 splat of
-  //     0xAA -> 0xAAA, which occupies bytes AA 0A rather than AA AA -- the
-  //     high nibble of the second byte is not filled by the byte pattern.
+  //   - non-byte-multiple, unpadded (e.g. l4:12): makeIntCst(12) builds an i12
+  //     splat of 0xAA -> 0xAAA, stored as AA 0A -- the high nibble of the
+  //     second byte is unfilled.  (Zero mode uses fir.zero_bits and works.)
   // Padded mappings (e.g. l4:24 where allocSize=4 > storeSize=3, or
   // l4:20 where allocSize=4 > storeSize=3 on x86-64) are intercepted upfront
   // in genInitLocalStore via emitByteLoop before this function is called;
