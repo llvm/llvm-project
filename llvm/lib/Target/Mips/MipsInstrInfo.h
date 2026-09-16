@@ -145,6 +145,7 @@ public:
 
   /// Return the number of bytes of code the specified instruction may be.
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
+  unsigned getMFHIOrMFLOLength(const MachineInstr &MI) const;
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,

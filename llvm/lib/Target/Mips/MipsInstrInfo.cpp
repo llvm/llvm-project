@@ -704,6 +704,23 @@ bool MipsInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   return MI.isAsCheapAsAMove();
 }
 
+unsigned MipsInstrInfo::getMFHIOrMFLOLength(const MachineInstr &MI) const {
+  unsigned size = 0;
+  MachineBasicBlock::const_instr_iterator I = MI.getIterator();
+  MachineBasicBlock::const_instr_iterator E = MI.getParent()->instr_end();
+  while (++I != E) {
+    if (SafeAfterMflo(*I) && I->getOpcode() != Mips::NOP)
+      break;
+    else if (I->getOpcode() == Mips::NOP) {
+      size += 4;
+      continue;
+    } else if (!SafeAfterMflo(*I))
+      break;
+  }
+
+  return MI.getDesc().getSize() + size;
+}
+
 /// Return the number of bytes of code the specified instruction may be.
 unsigned MipsInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
@@ -711,9 +728,11 @@ unsigned MipsInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     // Handle non-finalized bundle.
     if (MI.isBundledWithSucc())
       return MI.getDesc().getSize() + getInstBundleSize(MI);
-    if (MI.hasDelaySlot()) {
+    else if (MI.hasDelaySlot() || HasLoadDelaySlot(MI) || HasFPUDelaySlot(MI)) {
       // instr + 1 nop
       return MI.getDesc().getSize() + 4;
+    } else if (IsMfloOrMfhi(MI)) {
+      return getMFHIOrMFLOLength(MI);
     }
     return MI.getDesc().getSize();
   case  TargetOpcode::INLINEASM:
