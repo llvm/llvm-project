@@ -242,6 +242,7 @@ public:
 
     eCore_wasm32,
 
+    // AMDGPU models are represented by the triple subarchitecture.
     eCore_amd_gpu,
 
     kNumCores,
