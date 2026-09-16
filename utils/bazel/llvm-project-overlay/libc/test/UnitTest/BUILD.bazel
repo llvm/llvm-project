@@ -71,6 +71,7 @@ libc_test_library(
         "//libc:__support_stringutil",
         "//libc:__support_uint128",
         "//libc:__support_wchar_string_converter",
+        "//libc:clock",
         "//libc:errno",
         "//libc:func_aligned_alloc",
         "//libc:func_free",
@@ -80,7 +81,6 @@ libc_test_library(
         "//libc:llvm_libc_macros_stdfix_macros",
     ] + select({
         "//libc:full_build": [
-            "//libc:clock",
             "//libc:close",
             "//libc:exit",
             "//libc:fflush",
