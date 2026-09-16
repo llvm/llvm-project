@@ -33,6 +33,8 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 
+#include <limits>
+
 #if defined(LLVM_HAVE_TFLITE)
 #include "llvm/Analysis/ModelUnderTrainingRunner.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"
@@ -325,6 +327,16 @@ MLPriorityAdvisor::MLPriorityAdvisor(const MachineFunction &MF,
   Runner->switchContext(MF.getName());
 }
 
+// Converting a NaN or an out-of-range float advice to unsigned is undefined.
+// Saturate instead.
+static unsigned convertAdviceToPriority(double Advice) {
+  if (!(Advice > 0.0)) // Also catches NaN.
+    return 0;
+  if (Advice >= static_cast<double>(std::numeric_limits<unsigned>::max()))
+    return std::numeric_limits<unsigned>::max();
+  return static_cast<unsigned>(Advice);
+}
+
 float MLPriorityAdvisor::getPriorityImpl(const LiveInterval &LI) const {
   const unsigned Size = LI.getSize();
   LiveRangeStage Stage = RA.getExtraInfo().getStage(LI);
@@ -337,7 +349,7 @@ float MLPriorityAdvisor::getPriorityImpl(const LiveInterval &LI) const {
 }
 
 unsigned MLPriorityAdvisor::getPriority(const LiveInterval &LI) const {
-  return static_cast<unsigned>(getPriorityImpl(LI));
+  return convertAdviceToPriority(getPriorityImpl(LI));
 }
 
 #ifdef LLVM_HAVE_TFLITE
@@ -348,10 +360,10 @@ llvm::createDevelopmentModePriorityAdvisorAnalysis() {
 
 unsigned
 DevelopmentModePriorityAdvisor::getPriority(const LiveInterval &LI) const {
-  double Prio = 0;
+  unsigned Prio = 0;
 
   if (isa<ModelUnderTrainingRunner>(getRunner())) {
-    Prio = MLPriorityAdvisor::getPriorityImpl(LI);
+    Prio = convertAdviceToPriority(MLPriorityAdvisor::getPriorityImpl(LI));
   } else {
     Prio = getDefaultAdvisor().getPriority(LI);
   }
@@ -385,7 +397,7 @@ DevelopmentModePriorityAdvisor::getPriority(const LiveInterval &LI) const {
   Log->logTensorValue(CurrentFeature, reinterpret_cast<const char *>(&Ret));
   Log->endObservation();
 
-  return static_cast<unsigned>(Prio);
+  return Prio;
 }
 
 RegAllocPriorityAdvisorProvider *

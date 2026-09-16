@@ -23,9 +23,12 @@ from typing import Callable, List, Union
 def send(f: io.BufferedWriter, value: Union[int, float], spec: log_reader.TensorSpec):
     """Send the `value` - currently just a scalar - formatted as per `spec`."""
 
-    # just int64 for now
-    assert spec.element_type == ctypes.c_int64
-    to_send = ctypes.c_int64(int(value))
+    if spec.element_type == ctypes.c_int64:
+        to_send = ctypes.c_int64(int(value))
+    elif spec.element_type == ctypes.c_float:
+        to_send = ctypes.c_float(float(value))
+    else:
+        raise ValueError(f"unsupported advice element type {spec.element_type}")
     assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * math.prod(
         spec.shape
     )
