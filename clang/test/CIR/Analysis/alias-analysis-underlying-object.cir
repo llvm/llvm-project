@@ -321,19 +321,19 @@ cir.func @base_class_addr_distinct_allocas() {
 // -----
 
 // CHECK-LABEL: Testing : "base_and_derived_class_addr"
-// CHECK-DAG: d#0 <-> base#0: MayAlias
-// CHECK-DAG: d#0 <-> derived#0: MustAlias
 // CHECK-DAG: base#0 <-> derived#0: MayAlias
-// CHECK-DAG: d#0 <-> first#0: MustAlias
 // CHECK-DAG: base#0 <-> first#0: MayAlias
 // CHECK-DAG: derived#0 <-> first#0: MustAlias
+// CHECK-DAG: base#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: derived#0 <-> func.region0#0: MustAlias
+// CHECK-DAG: first#0 <-> func.region0#0: MustAlias
 
 !u8i = !cir.int<u, 8>
 !s32i = !cir.int<s, 32>
 !rec_Base    = !cir.struct<"Base"    {data !u8i}>
 !rec_Derived = !cir.struct<"Derived" {data !s32i, data !rec_Base}>
-cir.func @base_and_derived_class_addr() {
-  %d = cir.alloca "d" align(4) : !cir.ptr<!rec_Derived> {test.ptr = "d"}
+cir.func @base_and_derived_class_addr(%d: !cir.ptr<!rec_Derived>)
+    attributes {test.ptr = "func"} {
   %base = cir.base_class_addr %d : !cir.ptr<!rec_Derived> nonnull [4]
              -> !cir.ptr<!rec_Base> {test.ptr = "base"}
   %derived = cir.derived_class_addr %base : !cir.ptr<!rec_Base> nonnull [4]
@@ -346,19 +346,19 @@ cir.func @base_and_derived_class_addr() {
 // -----
 
 // CHECK-LABEL: Testing : "base_and_derived_class_maybe_null"
-// CHECK-DAG: d#0 <-> base#0: MayAlias
-// CHECK-DAG: d#0 <-> derived#0: MustAlias
 // CHECK-DAG: base#0 <-> derived#0: MayAlias
-// CHECK-DAG: d#0 <-> first#0: MustAlias
 // CHECK-DAG: base#0 <-> first#0: MayAlias
 // CHECK-DAG: derived#0 <-> first#0: MustAlias
+// CHECK-DAG: base#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: derived#0 <-> func.region0#0: MustAlias
+// CHECK-DAG: first#0 <-> func.region0#0: MustAlias
 
 !u8i = !cir.int<u, 8>
 !s32i = !cir.int<s, 32>
 !rec_Base    = !cir.struct<"Base"    {data !u8i}>
 !rec_Derived = !cir.struct<"Derived" {data !s32i, data !rec_Base}>
-cir.func @base_and_derived_class_maybe_null() {
-  %d = cir.alloca "d" align(4) : !cir.ptr<!rec_Derived> {test.ptr = "d"}
+cir.func @base_and_derived_class_maybe_null(%d: !cir.ptr<!rec_Derived>)
+    attributes {test.ptr = "func"} {
   %base = cir.base_class_addr %d : !cir.ptr<!rec_Derived> [4]
              -> !cir.ptr<!rec_Base> {test.ptr = "base"}
   %derived = cir.derived_class_addr %base : !cir.ptr<!rec_Base> [4]
