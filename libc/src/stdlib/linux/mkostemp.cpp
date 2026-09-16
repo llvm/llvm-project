@@ -7,14 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation of mkostemp, a POSIX function that creates a unique temporary
-/// file from a template string ending in at least six 'X' characters with
-/// additional open flags.
+/// Implementation of the POSIX mkostemp function.
 ///
-/// Replaces the trailing X's with random characters from the POSIX portable
-/// filename character set, opens the file exclusively with the specified flags,
-/// and returns an open file descriptor, retrying automatically on name
-/// collision. See:
 /// https://pubs.opengroup.org/onlinepubs/9799919799/functions/mkdtemp.html
 ///
 //===----------------------------------------------------------------------===//
