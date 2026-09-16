@@ -5934,14 +5934,14 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i8 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i8 [[TMP6]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i8 [[TMP6]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP3]], i1 [[TMP8]], i1 [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ugt i64 [[TMP0]], 255
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = and i1 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP10]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = sext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP15:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STEP]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP14]], [[IDENT_CHECK]]
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -6006,16 +6006,16 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; IND-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP3]], i8 [[TMP4]])
 ; IND-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; IND-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; IND-NEXT:    [[TMP20:%.*]] = sub i8 0, [[MUL_RESULT]]
+; IND-NEXT:    [[TMP6:%.*]] = sub i8 0, [[MUL_RESULT]]
 ; IND-NEXT:    [[TMP5:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
-; IND-NEXT:    [[TMP6:%.*]] = icmp sgt i8 [[TMP20]], 0
-; IND-NEXT:    [[TMP7:%.*]] = select i1 [[TMP2]], i1 [[TMP6]], i1 [[TMP5]]
-; IND-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
+; IND-NEXT:    [[TMP20:%.*]] = icmp ugt i8 [[TMP6]], 0
+; IND-NEXT:    [[TMP22:%.*]] = select i1 [[TMP2]], i1 [[TMP20]], i1 [[TMP5]]
+; IND-NEXT:    [[TMP8:%.*]] = or i1 [[TMP22]], [[MUL_OVERFLOW]]
 ; IND-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP0]], 255
 ; IND-NEXT:    [[TMP10:%.*]] = icmp ne i8 [[TMP1]], 0
 ; IND-NEXT:    [[TMP11:%.*]] = and i1 [[TMP9]], [[TMP10]]
 ; IND-NEXT:    [[TMP12:%.*]] = or i1 [[TMP8]], [[TMP11]]
-; IND-NEXT:    [[TMP21:%.*]] = sext i8 [[TMP1]] to i32
+; IND-NEXT:    [[TMP21:%.*]] = zext i8 [[TMP1]] to i32
 ; IND-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STEP]], [[TMP21]]
 ; IND-NEXT:    [[TMP14:%.*]] = or i1 [[TMP12]], [[IDENT_CHECK]]
 ; IND-NEXT:    br i1 [[TMP14]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -6080,16 +6080,16 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; UNROLL-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP3]], i8 [[TMP4]])
 ; UNROLL-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; UNROLL-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; UNROLL-NEXT:    [[TMP23:%.*]] = sub i8 0, [[MUL_RESULT]]
+; UNROLL-NEXT:    [[TMP6:%.*]] = sub i8 0, [[MUL_RESULT]]
 ; UNROLL-NEXT:    [[TMP5:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
-; UNROLL-NEXT:    [[TMP6:%.*]] = icmp sgt i8 [[TMP23]], 0
-; UNROLL-NEXT:    [[TMP7:%.*]] = select i1 [[TMP2]], i1 [[TMP6]], i1 [[TMP5]]
-; UNROLL-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
+; UNROLL-NEXT:    [[TMP23:%.*]] = icmp ugt i8 [[TMP6]], 0
+; UNROLL-NEXT:    [[TMP24:%.*]] = select i1 [[TMP2]], i1 [[TMP23]], i1 [[TMP5]]
+; UNROLL-NEXT:    [[TMP8:%.*]] = or i1 [[TMP24]], [[MUL_OVERFLOW]]
 ; UNROLL-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP0]], 255
 ; UNROLL-NEXT:    [[TMP10:%.*]] = icmp ne i8 [[TMP1]], 0
 ; UNROLL-NEXT:    [[TMP11:%.*]] = and i1 [[TMP9]], [[TMP10]]
 ; UNROLL-NEXT:    [[TMP12:%.*]] = or i1 [[TMP8]], [[TMP11]]
-; UNROLL-NEXT:    [[TMP15:%.*]] = sext i8 [[TMP1]] to i32
+; UNROLL-NEXT:    [[TMP15:%.*]] = zext i8 [[TMP1]] to i32
 ; UNROLL-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STEP]], [[TMP15]]
 ; UNROLL-NEXT:    [[TMP14:%.*]] = or i1 [[TMP12]], [[IDENT_CHECK]]
 ; UNROLL-NEXT:    br i1 [[TMP14]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -6158,14 +6158,14 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; UNROLL-NO-IC-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
 ; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = sub i8 0, [[MUL_RESULT]]
 ; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
-; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = icmp sgt i8 [[TMP6]], 0
+; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = icmp ugt i8 [[TMP6]], 0
 ; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = select i1 [[TMP3]], i1 [[TMP8]], i1 [[TMP7]]
 ; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW]]
 ; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = icmp ugt i64 [[TMP0]], 255
 ; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = icmp ne i8 [[TMP1]], 0
 ; UNROLL-NO-IC-NEXT:    [[TMP13:%.*]] = and i1 [[TMP11]], [[TMP12]]
 ; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = or i1 [[TMP10]], [[TMP13]]
-; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = sext i8 [[TMP1]] to i32
+; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = zext i8 [[TMP1]] to i32
 ; UNROLL-NO-IC-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STEP]], [[TMP15]]
 ; UNROLL-NO-IC-NEXT:    [[TMP16:%.*]] = or i1 [[TMP14]], [[IDENT_CHECK]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP16]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -6232,16 +6232,16 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; INTERLEAVE-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP3]], i8 [[TMP4]])
 ; INTERLEAVE-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; INTERLEAVE-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; INTERLEAVE-NEXT:    [[TMP23:%.*]] = sub i8 0, [[MUL_RESULT]]
+; INTERLEAVE-NEXT:    [[TMP6:%.*]] = sub i8 0, [[MUL_RESULT]]
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
-; INTERLEAVE-NEXT:    [[TMP6:%.*]] = icmp sgt i8 [[TMP23]], 0
-; INTERLEAVE-NEXT:    [[TMP7:%.*]] = select i1 [[TMP2]], i1 [[TMP6]], i1 [[TMP5]]
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = or i1 [[TMP7]], [[MUL_OVERFLOW]]
+; INTERLEAVE-NEXT:    [[TMP23:%.*]] = icmp ugt i8 [[TMP6]], 0
+; INTERLEAVE-NEXT:    [[TMP24:%.*]] = select i1 [[TMP2]], i1 [[TMP23]], i1 [[TMP5]]
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = or i1 [[TMP24]], [[MUL_OVERFLOW]]
 ; INTERLEAVE-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP0]], 255
 ; INTERLEAVE-NEXT:    [[TMP10:%.*]] = icmp ne i8 [[TMP1]], 0
 ; INTERLEAVE-NEXT:    [[TMP11:%.*]] = and i1 [[TMP9]], [[TMP10]]
 ; INTERLEAVE-NEXT:    [[TMP12:%.*]] = or i1 [[TMP8]], [[TMP11]]
-; INTERLEAVE-NEXT:    [[TMP15:%.*]] = sext i8 [[TMP1]] to i32
+; INTERLEAVE-NEXT:    [[TMP15:%.*]] = zext i8 [[TMP1]] to i32
 ; INTERLEAVE-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STEP]], [[TMP15]]
 ; INTERLEAVE-NEXT:    [[TMP14:%.*]] = or i1 [[TMP12]], [[IDENT_CHECK]]
 ; INTERLEAVE-NEXT:    br i1 [[TMP14]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
