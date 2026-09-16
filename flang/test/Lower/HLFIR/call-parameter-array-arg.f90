@@ -210,3 +210,52 @@ subroutine derived_scalar_and_component()
   call dt_scalar(ds)
   call int_array(ds%a)
 end subroutine
+
+! ---- Character named-constant elements and assumed-length dummies ----
+
+module mq
+  implicit none
+  character(len=1), parameter :: letters(8) = &
+    ['p', 'q', 'r', 's', 't', 'u', 'v', 'w']
+  character(len=3), parameter :: trip(4) = ['abc', 'def', 'ghi', 'jkl']
+contains
+  subroutine asl1(x)
+    character(*), intent(in) :: x(8)
+  end subroutine
+  subroutine asl3(x)
+    character(*), intent(in) :: x(3)
+  end subroutine
+end module
+
+! Element of a character named constant passed to an assumed-length
+! explicit-shape array dummy (character storage sequence association,
+! F'2023 15.5.2.12 p4): the element is designated directly in the named
+! constant's storage and passed as a boxchar carrying the element length;
+! no temporary and no outlined copy.
+! CHECK-LABEL: func.func @_QPchar_elem_assumed_len
+! CHECK: %[[LADDR:.*]] = fir.address_of(@_QMmqECletters)
+! CHECK: %[[LDECL:.*]]:2 = hlfir.declare %[[LADDR]]
+! CHECK-NOT: hlfir.as_expr
+! CHECK: %[[LELT:.*]] = hlfir.designate %[[LDECL]]#0 (%{{.*}}) typeparams %c1{{.*}} : (!fir.ref<!fir.array<8x!fir.char<1>>>, i64, index) -> !fir.ref<!fir.char<1>>
+! CHECK-NOT: hlfir.as_expr
+! CHECK: %[[LBOX:.*]] = fir.emboxchar %[[LELT]], %c1{{.*}} : (!fir.ref<!fir.char<1>>, index) -> !fir.boxchar<1>
+! CHECK: fir.call @_QMmqPasl1(%[[LBOX]])
+subroutine char_elem_assumed_len()
+  use mq
+  call asl1(letters(1))
+end subroutine
+
+! Same with a multi-character element type: the boxchar carries the
+! named constant's element length (3).
+! CHECK-LABEL: func.func @_QPchar_elem_len3
+! CHECK: %[[TADDR:.*]] = fir.address_of(@_QMmqECtrip)
+! CHECK: %[[TDECL:.*]]:2 = hlfir.declare %[[TADDR]]
+! CHECK-NOT: hlfir.as_expr
+! CHECK: %[[TELT:.*]] = hlfir.designate %[[TDECL]]#0 (%{{.*}}) typeparams %c3{{.*}} : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, i64, index) -> !fir.ref<!fir.char<1,3>>
+! CHECK-NOT: hlfir.as_expr
+! CHECK: %[[TBOX:.*]] = fir.emboxchar %[[TELT]], %c3{{.*}} : (!fir.ref<!fir.char<1,3>>, index) -> !fir.boxchar<1>
+! CHECK: fir.call @_QMmqPasl3(%[[TBOX]])
+subroutine char_elem_len3()
+  use mq
+  call asl3(trip(2))
+end subroutine
