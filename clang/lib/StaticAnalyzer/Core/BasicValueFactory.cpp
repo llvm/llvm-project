@@ -126,19 +126,16 @@ APSIntPtr BasicValueFactory::getValue(uint64_t X, QualType T) {
 
 APFloatPtr BasicValueFactory::getFloatValue(const llvm::APFloat &X) {
   llvm::FoldingSetNodeID ID;
-  void *InsertPos;
+  llvm::FoldingSetInsertToken InsertToken;
 
   using FoldNodeTy = llvm::FoldingSetNodeWrapper<llvm::APFloat>;
 
-  // ID must be unique to differentiate between nodes. Unlike integers, bit
-  // size and pattern are not sufficient, so add semantics to the ID as well.
-  ID.AddInteger(llvm::APFloat::SemanticsToEnum(X.getSemantics()));
   X.Profile(ID);
-  FoldNodeTy *P = APFloatSet.FindNodeOrInsertPos(ID, InsertPos);
+  FoldNodeTy *P = APFloatSet.lookup(ID, InsertToken);
 
   if (!P) {
     P = new (BPAlloc) FoldNodeTy(X);
-    APFloatSet.InsertNode(P, InsertPos);
+    APFloatSet.insert(P, InsertToken);
   }
 
   return APFloatPtr(&P->getValue());

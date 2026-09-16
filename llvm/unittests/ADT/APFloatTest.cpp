@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -11171,3 +11172,34 @@ TEST(APFloatTest, exp_exceptions) {
 }
 
 } // namespace
+
+// Profile for APFloat should discriminate considering both bit patterns and
+// semantics.
+TEST(APFloatTest, Profile) {
+  auto profile = [](const APFloat &V) {
+    FoldingSetNodeID ID;
+    V.Profile(ID);
+    return ID;
+  };
+
+  EXPECT_EQ(profile(APFloat(APFloat::IEEEsingle(), "1.5")),
+            profile(APFloat(APFloat::IEEEsingle(), "1.5")));
+  EXPECT_NE(profile(APFloat(APFloat::IEEEsingle(), "1.5")),
+            profile(APFloat(APFloat::IEEEsingle(), "2.5")));
+
+  // These 16-bit values have the same bit pattern but different
+  // underlying value.
+  APFloat Half(APFloat::IEEEhalf(), APInt(16, 0x3C00));
+  APFloat BF(APFloat::BFloat(), APInt(16, 0x3C00));
+  EXPECT_EQ(Half.bitcastToAPInt(), BF.bitcastToAPInt());
+  EXPECT_NE(Half.convertToDouble(), BF.convertToDouble());
+  EXPECT_NE(profile(Half), profile(BF));
+
+  // Same case as above, but semantics differ only on infinity support.
+  APFloat E4M3(APFloat::Float8E4M3(), APInt(8, 0x78));
+  APFloat E4M3FN(APFloat::Float8E4M3FN(), APInt(8, 0x78));
+  EXPECT_EQ(E4M3.bitcastToAPInt(), E4M3FN.bitcastToAPInt());
+  EXPECT_TRUE(E4M3.isInfinity());
+  EXPECT_TRUE(E4M3FN.isFinite());
+  EXPECT_NE(profile(E4M3), profile(E4M3FN));
+}
