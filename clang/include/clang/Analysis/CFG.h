@@ -1306,6 +1306,23 @@ public:
     bool AddVirtualBaseBranches = false;
     bool OmitImplicitValueInitializers = false;
     bool AssumeReachableDefaultInSwitchStatements = false;
+    // Add the construction (including evaluation of any default member
+    // initializers) of a coroutine's promise object to the CFG being built
+    // for the coroutine. `AnalysisDeclContext::getBody()` returns only the
+    // as-written body of a coroutine (i.e. `CoroutineBodyStmt::getBody()`)
+    // so that CFG-based Sema warnings (e.g. -Wunreachable-code) don't have
+    // to reason about compiler-synthesized coroutine machinery. Because of
+    // that, by default, nothing in the CFG models the initialization of the
+    // promise object (`CoroutineBodyStmt::getPromiseDeclStmt()`), even
+    // though the promise is guaranteed to be constructed, with all of its
+    // default member initializers applied, before any of the coroutine's
+    // body -- including the first `co_await` -- executes. Clients that
+    // symbolically execute the CFG (namely the Static Analyzer) need this
+    // modeled or they will treat the promise's data members as
+    // uninitialized. This option is off by default to preserve the CFG
+    // shape relied upon by the existing Sema-level, non-path-sensitive
+    // warnings.
+    bool AddImplicitCoroutinePromiseConstruction = false;
 
     BuildOptions() = default;
 
