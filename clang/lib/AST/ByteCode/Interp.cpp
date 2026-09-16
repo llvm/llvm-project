@@ -50,6 +50,15 @@ using namespace clang::interp;
 #define USE_TAILCALLS 1
 #endif
 
+// FIXME: Code duplication with Pointer.cpp
+static bool validType(QualType T) {
+  if (const RecordDecl *RD = T->getAsRecordDecl())
+    return ASTContext::hasLayout(RD);
+  return !T->isDependentType() && !T->isUndeducedAutoType() &&
+         !T->isSpecificBuiltinType(BuiltinType::UnknownAny) &&
+         !T->isIncompleteType();
+}
+
 PRESERVE_NONE static bool RetValue(InterpState &S) {
   llvm::report_fatal_error("Interpreter cannot return values");
 }
@@ -1935,6 +1944,53 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
   return true;
 }
 
+bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr,
+                const Type *TargetType) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+
+  if (SrcIsVoidPtr && S.getLangOpts().CPlusPlus) {
+    bool HasValidResult = !Ptr.isZero();
+
+    if (HasValidResult) {
+      if (S.getStdAllocatorCaller("allocate"))
+        return true;
+
+      if (S.getLangOpts().CPlusPlus26 &&
+          S.getASTContext().hasSimilarType(Ptr.getType(),
+                                           TargetType->getPointeeType()))
+        return true;
+
+      const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
+      S.CCEDiag(E, diag::note_constexpr_invalid_void_star_cast)
+          << E->getSubExpr()->getType() << S.getLangOpts().CPlusPlus26
+          << Ptr.getType().getCanonicalType() << E->getType()->getPointeeType();
+    } else if (!S.getLangOpts().CPlusPlus26) {
+      const SourceInfo &E = S.Current->getSource(OpPC);
+      S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+          << diag::ConstexprInvalidCastKind::CastFrom << "'void *'"
+          << S.Current->getRange(OpPC);
+    }
+  } else {
+    const SourceInfo &E = S.Current->getSource(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+        << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+  }
+
+  // Retain the casted type for opaque pointers.
+  if (Ptr.isOpaquePointer()) {
+    Pointer P = S.Stk.pop<Pointer>();
+    auto OP = P.asOpaquePointer();
+
+    if (!validType(TargetType->getPointeeType()))
+      return Invalid(S, OpPC);
+
+    S.Stk.push<Pointer>(OP.withFieldType(TargetType), P.getByteOffset());
+  }
+
+  return true;
+}
+
 static void compileFunction(InterpState &S, const Function *Func) {
   const FunctionDecl *Definition;
   if (!Func->getDecl()->hasBody(Definition))
@@ -3203,6 +3259,11 @@ static bool castBackMemberPointer(InterpState &S,
                                   const MemberPointer &MemberPtr,
                                   int32_t BaseOffset,
                                   const RecordDecl *BaseDecl) {
+  if (!MemberPtr.getDecl()) {
+    S.Stk.push<MemberPointer>(MemberPtr);
+    return true;
+  }
+
   const CXXRecordDecl *Expected;
   if (MemberPtr.getPathLength() >= 2)
     Expected = MemberPtr.getPathEntry(MemberPtr.getPathLength() - 2);
@@ -3363,12 +3424,6 @@ bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
                              uint32_t FPOI) {
   Floating F = S.Stk.pop<Floating>();
   return floatAPCast<true>(S, OpPC, F, BitWidth, FPOI);
-}
-
-static bool validType(QualType T) {
-  if (const RecordDecl *RD = T->getAsRecordDecl())
-    return ASTContext::hasLayout(RD);
-  return true;
 }
 
 bool arrayElemPtrOpaque(InterpState &S, CodePtr OpPC, const Pointer &Ptr,

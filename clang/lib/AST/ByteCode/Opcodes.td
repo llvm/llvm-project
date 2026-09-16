@@ -860,7 +860,7 @@ def ShiftFixedPoint : Opcode {
 }
 
 def PtrPtrCast : Opcode {
-  let Args = [ArgBool];
+  let Args = [ArgBool, ArgTypePtr];
 
 }
 

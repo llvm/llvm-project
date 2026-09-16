@@ -2331,11 +2331,11 @@ define float @v_mad_mix_f32_precvtabsf16hi_f16lo_f16lo(i32 %src0.arg, half %src1
 }
 
 define float @v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
-; SDAG-GFX1100-LABEL: v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo:
-; SDAG-GFX1100:       ; %bb.0:
-; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, -v0, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; SDAG-GFX1100-NEXT:    s_setpc_b64 s[30:31]
+; GFX1100-LABEL: v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo:
+; GFX1100:       ; %bb.0:
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mix_f32 v0, -v0, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX900-LABEL: v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo:
 ; GFX900:       ; %bb.0:
@@ -2376,20 +2376,6 @@ define float @v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v2
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v0, v3, v1
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-TRUE16-LABEL: v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo:
-; GISEL-GFX1100-TRUE16:       ; %bb.0:
-; GISEL-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-TRUE16-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo:
-; GISEL-GFX1100-FAKE16:       ; %bb.0:
-; GISEL-GFX1100-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mix_f32 v0, -v0, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX9GEN-LABEL: v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo:
 ; GISEL-GFX9GEN:       ; %bb.0:
@@ -2432,11 +2418,11 @@ define float @v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half
 }
 
 define float @v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
-; SDAG-GFX1100-LABEL: v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo:
-; SDAG-GFX1100:       ; %bb.0:
-; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, |v0|, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; SDAG-GFX1100-NEXT:    s_setpc_b64 s[30:31]
+; GFX1100-LABEL: v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo:
+; GFX1100:       ; %bb.0:
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mix_f32 v0, |v0|, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX900-LABEL: v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo:
 ; GFX900:       ; %bb.0:
@@ -2477,20 +2463,6 @@ define float @v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo(i32 %src0.arg, half
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v2
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v0, v3, v1
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-TRUE16-LABEL: v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo:
-; GISEL-GFX1100-TRUE16:       ; %bb.0:
-; GISEL-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-TRUE16-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
-; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo:
-; GISEL-GFX1100-FAKE16:       ; %bb.0:
-; GISEL-GFX1100-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mix_f32 v0, |v0|, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX9GEN-LABEL: v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo:
 ; GISEL-GFX9GEN:       ; %bb.0:
@@ -2533,11 +2505,11 @@ define float @v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo(i32 %src0.arg, half
 }
 
 define float @v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half %src1, half %src2) #0 {
-; SDAG-GFX1100-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo:
-; SDAG-GFX1100:       ; %bb.0:
-; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, -|v0|, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; SDAG-GFX1100-NEXT:    s_setpc_b64 s[30:31]
+; GFX1100-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo:
+; GFX1100:       ; %bb.0:
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mix_f32 v0, -|v0|, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX900-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo:
 ; GFX900:       ; %bb.0:
@@ -2578,20 +2550,6 @@ define float @v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo(i32 %src0.arg, 
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v2
 ; SDAG-CI-NEXT:    v_mac_f32_e32 v0, v3, v1
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-TRUE16-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo:
-; GISEL-GFX1100-TRUE16:       ; %bb.0:
-; GISEL-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-TRUE16-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
-; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo:
-; GISEL-GFX1100-FAKE16:       ; %bb.0:
-; GISEL-GFX1100-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mix_f32 v0, -|v0|, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX9GEN-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo:
 ; GISEL-GFX9GEN:       ; %bb.0:
@@ -3926,11 +3884,11 @@ define float @v_mad_mix_f32_precvtabsf16hi_add_f16lo(i32 %src0.arg, half %src1) 
 }
 
 define float @v_mad_mix_f32_preextractfneg_f16hi_add_f16lo(i32 %src0.arg, half %src1)  {
-; SDAG-GFX1100-LABEL: v_mad_mix_f32_preextractfneg_f16hi_add_f16lo:
-; SDAG-GFX1100:       ; %bb.0:
-; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, -v0, 1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; SDAG-GFX1100-NEXT:    s_setpc_b64 s[30:31]
+; GFX1100-LABEL: v_mad_mix_f32_preextractfneg_f16hi_add_f16lo:
+; GFX1100:       ; %bb.0:
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mix_f32 v0, -v0, 1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX900-LABEL: v_mad_mix_f32_preextractfneg_f16hi_add_f16lo:
 ; SDAG-GFX900:       ; %bb.0:
@@ -3970,20 +3928,6 @@ define float @v_mad_mix_f32_preextractfneg_f16hi_add_f16lo(i32 %src0.arg, half %
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-CI-NEXT:    v_add_f32_e32 v0, v0, v1
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-TRUE16-LABEL: v_mad_mix_f32_preextractfneg_f16hi_add_f16lo:
-; GISEL-GFX1100-TRUE16:       ; %bb.0:
-; GISEL-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-TRUE16-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, 1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_f32_preextractfneg_f16hi_add_f16lo:
-; GISEL-GFX1100-FAKE16:       ; %bb.0:
-; GISEL-GFX1100-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mix_f32 v0, -v0, 1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX900-LABEL: v_mad_mix_f32_preextractfneg_f16hi_add_f16lo:
 ; GISEL-GFX900:       ; %bb.0:
@@ -4031,11 +3975,11 @@ define float @v_mad_mix_f32_preextractfneg_f16hi_add_f16lo(i32 %src0.arg, half %
 }
 
 define float @v_mad_mix_f32_preextractfabs_f16hi_add_f16lo(i32 %src0.arg, half %src1)  {
-; SDAG-GFX1100-LABEL: v_mad_mix_f32_preextractfabs_f16hi_add_f16lo:
-; SDAG-GFX1100:       ; %bb.0:
-; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, |v0|, 1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; SDAG-GFX1100-NEXT:    s_setpc_b64 s[30:31]
+; GFX1100-LABEL: v_mad_mix_f32_preextractfabs_f16hi_add_f16lo:
+; GFX1100:       ; %bb.0:
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mix_f32 v0, |v0|, 1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX900-LABEL: v_mad_mix_f32_preextractfabs_f16hi_add_f16lo:
 ; SDAG-GFX900:       ; %bb.0:
@@ -4075,20 +4019,6 @@ define float @v_mad_mix_f32_preextractfabs_f16hi_add_f16lo(i32 %src0.arg, half %
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-CI-NEXT:    v_add_f32_e32 v0, v0, v1
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-TRUE16-LABEL: v_mad_mix_f32_preextractfabs_f16hi_add_f16lo:
-; GISEL-GFX1100-TRUE16:       ; %bb.0:
-; GISEL-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-TRUE16-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
-; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, 1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_f32_preextractfabs_f16hi_add_f16lo:
-; GISEL-GFX1100-FAKE16:       ; %bb.0:
-; GISEL-GFX1100-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mix_f32 v0, |v0|, 1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX900-LABEL: v_mad_mix_f32_preextractfabs_f16hi_add_f16lo:
 ; GISEL-GFX900:       ; %bb.0:
@@ -4136,11 +4066,11 @@ define float @v_mad_mix_f32_preextractfabs_f16hi_add_f16lo(i32 %src0.arg, half %
 }
 
 define float @v_mad_mix_f32_preextractfabsfneg_f16hi_add_f16lo(i32 %src0.arg, half %src1)  {
-; SDAG-GFX1100-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_add_f16lo:
-; SDAG-GFX1100:       ; %bb.0:
-; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, -|v0|, 1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; SDAG-GFX1100-NEXT:    s_setpc_b64 s[30:31]
+; GFX1100-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_add_f16lo:
+; GFX1100:       ; %bb.0:
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mix_f32 v0, -|v0|, 1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX900-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_add_f16lo:
 ; SDAG-GFX900:       ; %bb.0:
@@ -4180,20 +4110,6 @@ define float @v_mad_mix_f32_preextractfabsfneg_f16hi_add_f16lo(i32 %src0.arg, ha
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-CI-NEXT:    v_add_f32_e32 v0, v0, v1
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-TRUE16-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_add_f16lo:
-; GISEL-GFX1100-TRUE16:       ; %bb.0:
-; GISEL-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-TRUE16-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
-; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, 1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_add_f16lo:
-; GISEL-GFX1100-FAKE16:       ; %bb.0:
-; GISEL-GFX1100-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mix_f32 v0, -|v0|, 1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
-; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX900-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_add_f16lo:
 ; GISEL-GFX900:       ; %bb.0:
@@ -5470,11 +5386,11 @@ define float @v_mad_mix_f32_precvtabsf16hi_mul_f16lo(i32 %src0.arg, half %src1) 
 }
 
 define float @v_mad_mix_f32_preextractfneg_f16hi_mul_f16lo(i32 %src0.arg, half %src1) {
-; SDAG-GFX1100-LABEL: v_mad_mix_f32_preextractfneg_f16hi_mul_f16lo:
-; SDAG-GFX1100:       ; %bb.0:
-; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, -v0, v1, neg(0) op_sel:[1,0,0] op_sel_hi:[1,1,0]
-; SDAG-GFX1100-NEXT:    s_setpc_b64 s[30:31]
+; GFX1100-LABEL: v_mad_mix_f32_preextractfneg_f16hi_mul_f16lo:
+; GFX1100:       ; %bb.0:
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mix_f32 v0, -v0, v1, neg(0) op_sel:[1,0,0] op_sel_hi:[1,1,0]
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX900-LABEL: v_mad_mix_f32_preextractfneg_f16hi_mul_f16lo:
 ; SDAG-GFX900:       ; %bb.0:
@@ -5514,20 +5430,6 @@ define float @v_mad_mix_f32_preextractfneg_f16hi_mul_f16lo(i32 %src0.arg, half %
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-CI-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-TRUE16-LABEL: v_mad_mix_f32_preextractfneg_f16hi_mul_f16lo:
-; GISEL-GFX1100-TRUE16:       ; %bb.0:
-; GISEL-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-TRUE16-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, v1, neg(0) op_sel:[1,0,0] op_sel_hi:[1,1,0]
-; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_f32_preextractfneg_f16hi_mul_f16lo:
-; GISEL-GFX1100-FAKE16:       ; %bb.0:
-; GISEL-GFX1100-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mix_f32 v0, -v0, v1, neg(0) op_sel:[1,0,0] op_sel_hi:[1,1,0]
-; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX900-LABEL: v_mad_mix_f32_preextractfneg_f16hi_mul_f16lo:
 ; GISEL-GFX900:       ; %bb.0:
@@ -5575,11 +5477,11 @@ define float @v_mad_mix_f32_preextractfneg_f16hi_mul_f16lo(i32 %src0.arg, half %
 }
 
 define float @v_mad_mix_f32_preextractfabs_f16hi_mul_f16lo(i32 %src0.arg, half %src1) {
-; SDAG-GFX1100-LABEL: v_mad_mix_f32_preextractfabs_f16hi_mul_f16lo:
-; SDAG-GFX1100:       ; %bb.0:
-; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, |v0|, v1, neg(0) op_sel:[1,0,0] op_sel_hi:[1,1,0]
-; SDAG-GFX1100-NEXT:    s_setpc_b64 s[30:31]
+; GFX1100-LABEL: v_mad_mix_f32_preextractfabs_f16hi_mul_f16lo:
+; GFX1100:       ; %bb.0:
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mix_f32 v0, |v0|, v1, neg(0) op_sel:[1,0,0] op_sel_hi:[1,1,0]
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX900-LABEL: v_mad_mix_f32_preextractfabs_f16hi_mul_f16lo:
 ; SDAG-GFX900:       ; %bb.0:
@@ -5619,20 +5521,6 @@ define float @v_mad_mix_f32_preextractfabs_f16hi_mul_f16lo(i32 %src0.arg, half %
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-CI-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-TRUE16-LABEL: v_mad_mix_f32_preextractfabs_f16hi_mul_f16lo:
-; GISEL-GFX1100-TRUE16:       ; %bb.0:
-; GISEL-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-TRUE16-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
-; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, v1, neg(0) op_sel:[1,0,0] op_sel_hi:[1,1,0]
-; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_f32_preextractfabs_f16hi_mul_f16lo:
-; GISEL-GFX1100-FAKE16:       ; %bb.0:
-; GISEL-GFX1100-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mix_f32 v0, |v0|, v1, neg(0) op_sel:[1,0,0] op_sel_hi:[1,1,0]
-; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX900-LABEL: v_mad_mix_f32_preextractfabs_f16hi_mul_f16lo:
 ; GISEL-GFX900:       ; %bb.0:
@@ -5680,11 +5568,11 @@ define float @v_mad_mix_f32_preextractfabs_f16hi_mul_f16lo(i32 %src0.arg, half %
 }
 
 define float @v_mad_mix_f32_preextractfabsfneg_f16hi_mul_f16lo(i32 %src0.arg, half %src1) {
-; SDAG-GFX1100-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_mul_f16lo:
-; SDAG-GFX1100:       ; %bb.0:
-; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, -|v0|, v1, neg(0) op_sel:[1,0,0] op_sel_hi:[1,1,0]
-; SDAG-GFX1100-NEXT:    s_setpc_b64 s[30:31]
+; GFX1100-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_mul_f16lo:
+; GFX1100:       ; %bb.0:
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mix_f32 v0, -|v0|, v1, neg(0) op_sel:[1,0,0] op_sel_hi:[1,1,0]
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX900-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_mul_f16lo:
 ; SDAG-GFX900:       ; %bb.0:
@@ -5724,20 +5612,6 @@ define float @v_mad_mix_f32_preextractfabsfneg_f16hi_mul_f16lo(i32 %src0.arg, ha
 ; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SDAG-CI-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-TRUE16-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_mul_f16lo:
-; GISEL-GFX1100-TRUE16:       ; %bb.0:
-; GISEL-GFX1100-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-TRUE16-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
-; GISEL-GFX1100-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX1100-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, v1, neg(0) op_sel:[1,0,0] op_sel_hi:[1,1,0]
-; GISEL-GFX1100-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX1100-FAKE16-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_mul_f16lo:
-; GISEL-GFX1100-FAKE16:       ; %bb.0:
-; GISEL-GFX1100-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-FAKE16-NEXT:    v_fma_mix_f32 v0, -|v0|, v1, neg(0) op_sel:[1,0,0] op_sel_hi:[1,1,0]
-; GISEL-GFX1100-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX900-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_mul_f16lo:
 ; GISEL-GFX900:       ; %bb.0:
