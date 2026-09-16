@@ -969,7 +969,11 @@ static bool expandBufferStoreIntrinsic(CallInst *Orig, bool IsRaw) {
     if (IsRaw) {
       StoreIntrinsic = Intrinsic::dx_resource_store_rawbuffer;
       Value *Tmp = Builder.getInt32(4 * Base);
-      Args.push_back(Builder.CreateAdd(Orig->getOperand(2), Tmp));
+      Value *Offset = Orig->getOperand(2);
+      Args.push_back(Offset);
+      unsigned AddressArg = isa<PoisonValue>(Offset) ? 1 : 2;
+      if (Base != 0)
+        Args[AddressArg] = Builder.CreateAdd(Args[AddressArg], Tmp);
     }
 
     SmallVector<int, 4> Mask;
