@@ -444,6 +444,10 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
     BF.duplicateConstantIslands();
   }
 
+  std::optional<unsigned> OffsetAliasIndex;
+  if (!EmitCodeOnly && BF.requiresPreciseAddressMap())
+    OffsetAliasIndex = BC.MIB->getAnnotationIndex("InputOffsetAlias");
+
   // Track the first emitted instruction with debug info.
   bool FirstInstr = true;
   for (BinaryBasicBlock *const BB : FF) {
@@ -486,8 +490,12 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         // updates).
         if (BF.requiresPreciseAddressMap()) {
           const std::optional<uint32_t> Offset = BC.MIB->getOffset(Instr);
-          const auto OffsetAlias =
-              BC.MIB->tryGetAnnotationAs<uint32_t>(Instr, "InputOffsetAlias");
+          std::optional<uint32_t> OffsetAlias;
+          if (OffsetAliasIndex) {
+            if (auto Alias = BC.MIB->tryGetAnnotationAs<uint32_t>(
+                    Instr, *OffsetAliasIndex))
+              OffsetAlias = *Alias;
+          }
           if (Offset || OffsetAlias) {
             if (!InstrLabel)
               InstrLabel = BC.Ctx->createTempSymbol();
