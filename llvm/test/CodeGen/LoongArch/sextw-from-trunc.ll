@@ -4,17 +4,11 @@
 ; On LA64, a 64-bit shift whose result is truncated to i32 and then sign
 ; extended back to i64 can be selected with the 32-bit shift instructions
 ; sll.w, which sign-extend their 32-bit result. This avoids the sll.d + addi.w sequence.
-;
-; TODO: The andi + sll.d + addi.w sequence should be selected as a single
-; sll.w, which sign-extends its 32-bit result. Expected to change when the
-; SIGN_EXTEND_INREG combine lands.
 
 define i64 @shl_trunc_sext(i64 %x, i64 %y0) {
 ; CHECK-LABEL: shl_trunc_sext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi $a1, $a1, 31
-; CHECK-NEXT:    sll.d $a0, $a0, $a1
-; CHECK-NEXT:    addi.w $a0, $a0, 0
+; CHECK-NEXT:    sll.w $a0, $a0, $a1
 ; CHECK-NEXT:    ret
   %y = and i64 %y0, 31
   %s = shl i64 %x, %y

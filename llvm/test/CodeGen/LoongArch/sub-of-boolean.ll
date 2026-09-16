@@ -5,18 +5,13 @@
 ; a 12-bit signed immediate is rewritten as (add (setcc inv), C - 1), letting
 ; the immediate fold into an ADDI. The boolean setcc is produced with one of
 ; the 1-instruction sltu/sltui forms.
-;
-; TODO: The ori + sub.d should fold into a single addi.d -1 (+ C - 1), since
-; the setcc is a bool and the subtraction can be rewritten as an add.
-; Expected to change when the boolean-sub combine lands.
 
 define i64 @sub_bool_even(i64 %x, i64 %y) {
 ; CHECK-LABEL: sub_bool_even:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor $a0, $a0, $a1
-; CHECK-NEXT:    sltui $a0, $a0, 1
-; CHECK-NEXT:    ori $a1, $zero, 6
-; CHECK-NEXT:    sub.d $a0, $a1, $a0
+; CHECK-NEXT:    sltu $a0, $zero, $a0
+; CHECK-NEXT:    addi.d $a0, $a0, 5
 ; CHECK-NEXT:    ret
   %c = icmp eq i64 %x, %y
   %z = zext i1 %c to i64

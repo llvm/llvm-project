@@ -73,10 +73,9 @@ define i64 @shl_i64(i64 %x, i64 %y) {
 ; LA32-NEXT:    srl.w $a4, $a5, $a4
 ; LA32-NEXT:    or $a1, $a1, $a4
 ; LA32-NEXT:  .LBB4_3:
-; LA32-NEXT:    slti $a3, $a3, 0
-; LA32-NEXT:    sub.w $a3, $zero, $a3
 ; LA32-NEXT:    sll.w $a0, $a0, $a2
-; LA32-NEXT:    and $a0, $a3, $a0
+; LA32-NEXT:    srai.w $a2, $a3, 31
+; LA32-NEXT:    and $a0, $a2, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: shl_i64:
