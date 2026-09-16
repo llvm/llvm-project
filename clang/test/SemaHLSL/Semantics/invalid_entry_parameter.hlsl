@@ -1,7 +1,9 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -x hlsl -ast-dump -verify -o - %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -finclude-default-header -x hlsl -fsyntax-only -verify %s
 
-[numthreads(8,8,1)]
-// expected-error@+1 {{attribute 'SV_DispatchThreadID' only applies to a field or parameter of type 'uint/uint2/uint3'}}
+// Type and index checks require an entry point.
+
+[shader("compute")][numthreads(8,8,1)]
+// expected-error@+1 {{semantic 'SV_DispatchThreadID' must be a scalar or vector of up to 3 components of 16 or 32 bit integer type (was 'float')}}
 void CSMain(float ID : SV_DispatchThreadID) {
 
 }
@@ -10,9 +12,18 @@ struct ST {
   int a;
   float b;
 };
-[numthreads(8,8,1)]
-// expected-error@+1 {{attribute 'SV_DispatchThreadID' only applies to a field or parameter of type 'uint/uint2/uint3'}}
+
+// The second field gets index 1, which SV_DispatchThreadID rejects.
+[shader("compute")][numthreads(8,8,1)]
 void CSMain2(ST ID : SV_DispatchThreadID) {
+// expected-error@-1 {{semantic 'SV_DispatchThreadID' does not allow indexing}}
+// expected-error@-2 {{semantic 'SV_DispatchThreadID' must be a scalar or vector of up to 3 components of 16 or 32 bit integer type (was 'float')}}
+
+}
+
+[shader("compute")][numthreads(8,8,1)]
+// expected-error@+1 {{semantic 'SV_DispatchThreadID' must be a scalar or vector of up to 3 components of 16 or 32 bit integer type (was 'uint4' (aka 'vector<uint, 4>'))}}
+void CSMain3(uint4 ID : SV_DispatchThreadID) {
 
 }
 
@@ -28,14 +39,15 @@ struct ST2 {
     uint s : SV_DispatchThreadID;
 };
 
-[numthreads(8,8,1)]
-// expected-error@+1 {{attribute 'SV_GroupID' only applies to a field or parameter of type 'uint/uint2/uint3'}}
+[shader("compute")][numthreads(8,8,1)]
+// expected-error@+1 {{semantic 'SV_GroupID' must be a scalar or vector of up to 3 components of 16 or 32 bit integer type (was 'float')}}
 void CSMain_GID(float ID : SV_GroupID) {
 }
 
-[numthreads(8,8,1)]
-// expected-error@+1 {{attribute 'SV_GroupID' only applies to a field or parameter of type 'uint/uint2/uint3'}}
+[shader("compute")][numthreads(8,8,1)]
 void CSMain2_GID(ST GID : SV_GroupID) {
+// expected-error@-1 {{semantic 'SV_GroupID' does not allow indexing}}
+// expected-error@-2 {{semantic 'SV_GroupID' must be a scalar or vector of up to 3 components of 16 or 32 bit integer type (was 'float')}}
 
 }
 
@@ -50,15 +62,15 @@ struct ST2_GID {
     uint s_gid : SV_GroupID;
 };
 
-[numthreads(8,8,1)]
-// expected-error@+1 {{attribute 'SV_GroupThreadID' only applies to a field or parameter of type 'uint/uint2/uint3'}}
+[shader("compute")][numthreads(8,8,1)]
+// expected-error@+1 {{semantic 'SV_GroupThreadID' must be a scalar or vector of up to 3 components of 16 or 32 bit integer type (was 'float')}}
 void CSMain_GThreadID(float ID : SV_GroupThreadID) {
 }
 
-[numthreads(8,8,1)]
-// expected-error@+1 {{attribute 'SV_GroupThreadID' only applies to a field or parameter of type 'uint/uint2/uint3'}}
+[shader("compute")][numthreads(8,8,1)]
 void CSMain2_GThreadID(ST GID : SV_GroupThreadID) {
-
+// expected-error@-1 {{semantic 'SV_GroupThreadID' does not allow indexing}}
+// expected-error@-2 {{semantic 'SV_GroupThreadID' must be a scalar or vector of up to 3 components of 16 or 32 bit integer type (was 'float')}}
 }
 
 void foo_GThreadID() {
@@ -72,6 +84,10 @@ struct ST2_GThreadID {
     uint s_gthreadid : SV_GroupThreadID;
 };
 
+[shader("compute")][numthreads(8,8,1)]
+// expected-error@+1 {{semantic 'SV_GroupIndex' must be a scalar of 32 bit integer type (was 'uint2' (aka 'vector<uint, 2>'))}}
+void CSMain_GIndex(uint2 GI : SV_GroupIndex) {
+}
 
 [shader("vertex")]
 // expected-error@+4 {{semantic 'SV_GroupIndex' is not supported in vertex shader inputs}}

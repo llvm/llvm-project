@@ -231,11 +231,6 @@ public:
   QualType ActOnTemplateShorthand(TemplateDecl *Template,
                                   SourceLocation NameLoc);
 
-  // Diagnose whether the index type is uint/unit2/uint3 type.
-  bool diagnoseIndexType(QualType T, const ParsedAttr &AL);
-  // Diagnose whether the type is float/float2/float3/float4 type.
-  bool diagnoseFloatType(QualType T, const ParsedAttr &AL);
-
   bool CanPerformScalarCast(QualType SrcTy, QualType DestTy);
   bool CanPerformElementwiseCast(Expr *Src, QualType DestType);
   bool CanPerformAggregateSplatCast(Expr *Src, QualType DestType);
@@ -339,6 +334,11 @@ private:
                                 llvm::Triple::EnvironmentType Stage,
                                 llvm::hlsl::IOType CurrentIOType,
                                 llvm::dxbc::PSV::SemanticKind SemanticKind);
+
+  // Called only for system-value interpretations.
+  void diagnoseSystemSemanticType(const Decl *D,
+                                  const HLSLAppliedSemanticAttr *A,
+                                  llvm::dxbc::PSV::SemanticKind SemanticKind);
 
   void handleGlobalStructOrArrayOfWithResources(VarDecl *VD);
 
