@@ -172,6 +172,10 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_mutex.h
   sanitizer_new_handler.h
   sanitizer_new_operators.inc
+  sanitizer_offload.h
+  sanitizer_offload_hsa.h
+  sanitizer_offload_opcodes.h
+  sanitizer_offload_rpc.h
   sanitizer_placement_new.h
   sanitizer_platform.h
   sanitizer_platform_interceptors.h
@@ -337,6 +341,26 @@ if(WIN32)
       sanitizer_coverage_win_sections.cpp
     CFLAGS ${SANITIZER_CFLAGS} ${RUNTIME_THUNK_CFLAGS}
     DEFS ${SANITIZER_COMMON_DEFINITIONS})
+endif()
+
+# Host offload helpers for device sanitizers.
+include(FindLibcCommonUtils)
+if(OS_NAME MATCHES "Linux" AND TARGET llvm-libc-common-utilities)
+  add_compiler_rt_object_libraries(RTSanitizerOffload
+    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    SOURCES sanitizer_offload.cpp
+            sanitizer_offload_image.cpp
+            sanitizer_offload_rpc.cpp
+    ADDITIONAL_HEADERS sanitizer_offload.h
+                       sanitizer_offload_hsa.h
+                       sanitizer_offload_opcodes.h
+                       sanitizer_offload_rpc.h
+    CFLAGS ${SANITIZER_CFLAGS}
+    DEFS ${SANITIZER_COMMON_DEFINITIONS})
+  foreach(arch ${SANITIZER_COMMON_SUPPORTED_ARCH})
+    target_link_libraries(RTSanitizerOffload.${arch} PRIVATE
+                          llvm-libc-common-utilities)
+  endforeach()
 endif()
 
 # Unit tests for common sanitizer runtime.

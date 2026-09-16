@@ -105,11 +105,22 @@ features cannot lower the translation-unit ABI level;
   This also fixes a crash when such a struct was passed or returned.
   `-fclang-abi-compat=23` restores the previous behavior. (#GH202205)
 
+- Clang now considers matrix types in its isHomogeneousAggregate() handling,
+  which can lead to differences in how structures containing matrix types are
+  classified for ABI purposes. The previous exclusion of matrix types appears
+  to have been accidental. Matrix types now follow the same rules as arrays
+  for homogeneous aggregate classification.
+  `-fclang-abi-compat=23` restores the previous behavior. (#GH218799)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
 
 - Templight support has been removed.
+
+- `-fstack-clash-protection` has been enabled implicitly by default for android
+  target triples (except 32b arm targets). Can be disabled via
+  `-fno-stack-clash-protection`.
 
 ### Clang Python Bindings Potentially Breaking Changes
 
@@ -656,6 +667,9 @@ features cannot lower the translation-unit ABI level;
   to a subobject and is used in a context that requires an implicit conversion.
   (#GH215900)
 
+- Fixed an assertion when mangling an abbreviated function template whose
+  return type has an ABI tag. (#GH204178)
+
 - Fixed an assertion during template argument deduction where a function parameter pack is referenced by other types in the function type. (#GH28877), (#GH213760)
 
 - Fixed a regression where deprecation warnings were omitted for synthesized
@@ -686,6 +700,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when a defaulted comparison operator was synthesized for a
   class with an invalid non-static data member, such as one qualified with an
   address space. (#GH194605)
+
+- Fixed an issue where an explicit specialization of a constexpr variable would
+  result in a link error. (#GH219796)
 
 #### Bug Fixes to AST Handling
 

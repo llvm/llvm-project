@@ -83,8 +83,8 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(
 
   if (!TypeBasedOnly)
     Arguments.insert(Arguments.begin(), CI.arg_begin(), CI.arg_end());
-  FunctionType *FTy = CI.getCalledFunction()->getFunctionType();
-  ParamTys.insert(ParamTys.begin(), FTy->param_begin(), FTy->param_end());
+  for (const Value *Arg : CI.args())
+    ParamTys.push_back(Arg->getType());
 }
 
 IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,

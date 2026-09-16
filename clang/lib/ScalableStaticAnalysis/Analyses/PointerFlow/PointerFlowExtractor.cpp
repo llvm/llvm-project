@@ -26,10 +26,6 @@
 #include "llvm/Support/Error.h"
 #include <memory>
 
-namespace clang::ssaf {
-extern PointerFlowEntitySummary buildPointerFlowEntitySummary(EdgeSet Edges);
-} // namespace  clang::ssaf
-
 namespace {
 using namespace clang;
 using namespace ssaf;

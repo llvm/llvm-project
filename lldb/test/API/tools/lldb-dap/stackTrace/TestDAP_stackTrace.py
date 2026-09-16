@@ -327,18 +327,28 @@ class TestDAP_stackTrace(DAPTestCaseBase):
         )
         thread_id = self.expect_not_none(stop_event.body.threadId)
         stack_frames = session.stack_trace(thread_id).body.stackFrames
+        module_id = self.expect_not_none(stack_frames[0].moduleId)
 
+        # Get the sole compile unit id for main.c
         ids = {
             frame.compileUnitId
             for frame in stack_frames
-            if frame.compileUnitId is not None
+            if (
+                frame.moduleId == module_id
+                and frame.compileUnitId is not None
+                and frame.source.name == "main.c"
+            )
         }
         self.assertEqual(len(ids), 1, f"expected a single compile unit, got: {ids}")
         compile_unit_id = ids.pop()
         self.assertEqual(stack_frames[0].compileUnitId, compile_unit_id)
 
+        # Confirm there are no other frames with the same compile unit id as main.c
+        for frame in stack_frames:
+            if frame.compileUnitId == compile_unit_id:
+                self.assertEqual(frame.source.name, "main.c")
+
         expected = CompileUnit(id=compile_unit_id, compileUnitPath=source)
-        module_id = self.expect_not_none(stack_frames[0].moduleId)
 
         response = session.send_request(CompileUnitsArgs(moduleId=module_id)).result()
         all_units = response.body.compileUnits

@@ -98,9 +98,12 @@ static_library("Host") {
       "posix/LockFilePosix.cpp",
       "posix/MainLoopPosix.cpp",
       "posix/PipePosix.cpp",
-      "posix/ProcessLauncherPosixFork.cpp",
       "posix/Support.cpp",
     ]
+
+    if (current_os != "emscripten") {
+      sources += [ "posix/ProcessLauncherPosixFork.cpp" ]
+    }
   }
 
   if (current_os == "aix") {
@@ -124,6 +127,13 @@ static_library("Host") {
     deps += [ "macosx/objcxx" ]
 
     # FIXME: Maybe define NO_XPC_SERVICES
+  }
+
+  if (current_os == "emscripten") {
+    sources += [
+      "emscripten/Host.cpp",
+      "emscripten/HostInfoEmscripten.cpp",
+    ]
   }
 
   if (current_os == "linux" || current_os == "android") {
