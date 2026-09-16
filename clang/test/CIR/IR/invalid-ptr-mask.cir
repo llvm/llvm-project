@@ -1,0 +1,28 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!u8i = !cir.int<u, 8>
+!s31i = !cir.int<s, 31>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!bitint64 = !cir.int<s, 64, bitint>
+
+module {
+  cir.func @result_pointee_differs(%arg0: !cir.ptr<!u8i>) -> !cir.ptr<!s32i> {
+    %0 = cir.const #cir.int<-32> : !s64i
+    // expected-error@+1 {{'cir.ptr_mask' op failed to verify that all of {ptr, result} have same type}}
+    %1 = cir.ptr_mask %arg0, %0 : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!s32i>
+    cir.return %1 : !cir.ptr<!s32i>
+  }
+
+  cir.func @bitint_mask(%arg0: !cir.ptr<!u8i>, %arg1: !bitint64) -> !cir.ptr<!u8i> {
+    // expected-error@+1 {{'cir.ptr_mask' op operand #1 must be fundamental integer type, but got '!cir.int<s, 64, bitint>'}}
+    %0 = cir.ptr_mask %arg0, %arg1 : (!cir.ptr<!u8i>, !bitint64) -> !cir.ptr<!u8i>
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+
+  cir.func @non_fundamental_width(%arg0: !cir.ptr<!u8i>, %arg1: !s31i) -> !cir.ptr<!u8i> {
+    // expected-error@+1 {{'cir.ptr_mask' op operand #1 must be fundamental integer type, but got '!cir.int<s, 31>'}}
+    %0 = cir.ptr_mask %arg0, %arg1 : (!cir.ptr<!u8i>, !s31i) -> !cir.ptr<!u8i>
+    cir.return %0 : !cir.ptr<!u8i>
+  }
+}

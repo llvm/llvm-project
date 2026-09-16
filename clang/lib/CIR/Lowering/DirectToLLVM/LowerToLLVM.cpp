@@ -1938,6 +1938,27 @@ mlir::LogicalResult CIRToLLVMPtrStrideOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMPtrMaskOpLowering::matchAndRewrite(
+    cir::PtrMaskOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  const mlir::Type resultTy = getTypeConverter()->convertType(op.getType());
+
+  // llvm.ptrmask requires the mask to be exactly the pointer index width, so
+  // resize it.
+  std::optional<uint64_t> indexWidth =
+      dataLayout.getTypeIndexBitwidth(adaptor.getPtr().getType());
+  assert(indexWidth && "!llvm.ptr always has an index width");
+
+  auto cirMaskTy = mlir::cast<cir::IntType>(op.getMask().getType());
+  mlir::Value mask = getLLVMIntCast(
+      rewriter, adaptor.getMask(), rewriter.getIntegerType(*indexWidth),
+      cirMaskTy.isUnsigned(), cirMaskTy.getWidth(), *indexWidth);
+
+  rewriter.replaceOpWithNewOp<mlir::LLVM::PtrMaskOp>(op, resultTy,
+                                                     adaptor.getPtr(), mask);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMGetElementOpLowering::matchAndRewrite(
     cir::GetElementOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
