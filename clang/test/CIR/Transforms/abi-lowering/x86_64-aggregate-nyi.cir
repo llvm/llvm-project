@@ -43,6 +43,11 @@
     !cir.union<"UWideBitUnnamed" {bitfield !cir.bitfield<!cir.array<!u8i x 3>, [#cir.bitfield_decl<!s32i, 24>]>,
                                   empty !cir.bitfield<!u64i, [#cir.bitfield_decl<!s64i, 64, unnamed>]>}>
 !rec_UEmptyNarrow = !cir.union<"UEmptyNarrow" {data !rec_E, data !s16i}, padding = {!cir.array<!u8i x 2>}>
+!rec_UNuaEmptyNarrow = !cir.union<"UNuaEmptyNarrow" {empty !rec_E, data !s16i}, padding = {!cir.array<!u8i x 2>}>
+!rec_EOver = !cir.struct<"EOver" {pad !cir.array<!u8i x 16>}>
+!rec_UNuaBitEmpty =
+    !cir.union<"UNuaBitEmpty" {empty !rec_EOver,
+                               bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 8>]>}>
 !rec_S1 = !cir.struct<"S1" {data !s16i, data !s16i, data !s16i}>
 !rec_AtomicWrapper = !cir.struct<{data !rec_S1, pad !cir.array<!s8i x 2>}>
 !rec_HoldsAllPad = !cir.struct<"HoldsAllPad" {data !s32i, empty !rec_E}>
@@ -91,9 +96,10 @@ module attributes {
   // CHECK: not yet implemented for type '!cir.struct<"SWrapsOverAligned"
 
   // A member-less union past two eightbytes still classifies Indirect in
-  // classic CodeGen, but this bridge has no member to build an Indirect
-  // coercion from.  Below the threshold the same shape is accepted and
-  // classifies Ignore, matching classic; see x86_64-union.cir take_empty.
+  // classic CodeGen, but no source spells a union with no member at all, so
+  // this bridge refuses the shape rather than guessing at it.  Below the
+  // threshold the same shape is accepted and classifies Ignore, matching
+  // classic; see x86_64-union.cir take_empty.
   cir.func @take_empty_large_union(%arg0: !rec_UEmptyLarge) {
     cir.return
   }
@@ -164,6 +170,15 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.union<"UNamedPlusUnnamedSpan"
 
+  // A union whose only spanning member is `empty` rather than `data`, which
+  // is what CIRGen emits for a [[no_unique_address]] variant, is refused the
+  // same way: the empty member spans and the named unit does not.
+  cir.func @take_nua_bitfield_empty_span(%arg0: !rec_UNuaBitEmpty) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UNuaBitEmpty"
+
   // The spanning member here is an access unit holding only unnamed
   // bit-fields, which supplies no data either, so the named unit alone would
   // coerce to i8 where classic gives i64.
@@ -191,6 +206,14 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.union<"UEmptyNarrow"
+
+  // The `empty` mark a [[no_unique_address]] variant carries does not exempt
+  // it either: neither member reaches the union's 4 declared bytes.
+  cir.func @take_nua_empty_narrow_union(%arg0: !rec_UNuaEmptyNarrow) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UNuaEmptyNarrow"
 
   // A bit-field carries the type its declaration named, so a record whose
   // padding a coercion would have to read through is classified rather than

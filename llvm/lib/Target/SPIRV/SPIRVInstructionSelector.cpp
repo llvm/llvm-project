@@ -7639,7 +7639,9 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
     SC = GR.getPointerStorageClass(ResType);
   }
 
-  if (ResType->getOpcode() == SPIRV::OpTypeImage && ArraySize == 0)
+  // ArraySize 0 means an unbounded array and we need to set to required
+  // capability.
+  if (ArraySize == 0)
     MIRBuilder.buildInstr(SPIRV::OpCapability)
         .addImm(SPIRV::Capability::RuntimeDescriptorArrayEXT);
 
