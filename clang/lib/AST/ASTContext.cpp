@@ -15902,9 +15902,10 @@ private:
     //
     // FIXME: For over-sized bitfields in BE, Clang allocates padding bits
     // before the occupied bits. This violates the ABI rules, which say that
-    // padding should be allocated after, regardless of endianness. The current
-    // code accommodates for Clang's current behaviour though, and bumps Start
-    // forward to skip the leading padding bits.
+    // padding should be allocated after, regardless of endianness (Itanium C++
+    // ABI §2.4, II.1(b)). The current code accommodates for Clang's current
+    // behaviour though, and bumps Start forward to skip the leading padding
+    // bits.
     const uint64_t Start =
         StartBitOffset + DeclaredSizeInBits - OccupiedSizeInBits;
     const uint64_t End = Start + OccupiedSizeInBits;
