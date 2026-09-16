@@ -1032,8 +1032,8 @@ int d_noninline;
             },
         }
 
-        for operator_type, ops in operators.items():
-            root = get_cursor(tu, f"{operator_type}_func")
+        for operator_position, ops in operators.items():
+            root = get_cursor(tu, f"{operator_position}_func")
             for spelling, operator in ops.items():
                 c = get_cursor(root, spelling)
                 assert c is not None and c.unary_operator == operator
