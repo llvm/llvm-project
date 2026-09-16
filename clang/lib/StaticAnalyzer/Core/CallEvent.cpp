@@ -798,6 +798,10 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
   if (!MD->isVirtual())
     return AnyFunctionCall::getRuntimeDefinition();
 
+  // If the method is final or declared in a final class, we can inline it.
+  if (MD->hasAttr<FinalAttr>() || MD->getParent()->hasAttr<FinalAttr>())
+    return AnyFunctionCall::getRuntimeDefinition();
+
   auto [RD, CanBeSubClass] = getDeclForDynamicType();
   if (!RD || !RD->hasDefinition())
     return {};
