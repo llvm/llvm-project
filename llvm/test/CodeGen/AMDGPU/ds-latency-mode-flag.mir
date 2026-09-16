@@ -1,0 +1,29 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -debug-only=machine-scheduler -amdgpu-ds-latency-mode=fast %s -filetype=null 2>&1 | FileCheck -check-prefix=FAST %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -debug-only=machine-scheduler -amdgpu-ds-latency-mode=loaded %s -filetype=null 2>&1 | FileCheck -check-prefix=LOADED %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -debug-only=machine-scheduler -amdgpu-ds-latency-mode=overloaded %s -filetype=null 2>&1 | FileCheck -check-prefix=OVERLOADED %s
+
+# Test that the -amdgpu-ds-latency-mode command line flag affects DS cycle
+# accounting in the coexec scheduler.
+# DS instructions have base latency of 20 cycles each (4 instructions = 80 cycles).
+# - fast: 4 * 20 * 1 = 80 cycles
+# - loaded: 4 * 20 * 3 = 240 cycles
+# - overloaded: 4 * 20 * 5 = 400 cycles
+
+# FAST: DS: 80 cycles, 4 instrs
+# LOADED: DS: 240 cycles, 4 instrs
+# OVERLOADED: DS: 400 cycles, 4 instrs
+
+---
+name: test_ds_latency_flag
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_64_align2 = IMPLICIT_DEF
+    %2:vgpr_32 = DS_READ_B32 %0, 0, 0, implicit $m0, implicit $exec
+    %3:vreg_64_align2 = DS_READ_B64 %0, 0, 0, implicit $m0, implicit $exec
+    DS_WRITE_B32 %0, %2, 0, 0, implicit $m0, implicit $exec
+    DS_WRITE_B64 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_ENDPGM 0, implicit %2, implicit %3
+...
