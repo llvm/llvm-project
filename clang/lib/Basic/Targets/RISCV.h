@@ -154,7 +154,7 @@ public:
   }
 
   CFBranchLabelSchemeKind getDefaultCFBranchLabelScheme() const override {
-    return CFBranchLabelSchemeKind::FuncSig;
+    return CFBranchLabelSchemeKind::Unlabeled;
   }
 
   bool

@@ -1,32 +1,81 @@
+// Texture1D
+// Texture1D
+// Texture1D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header -DHAS_OFFSET \
-// RUN:   -DHAS_GETDIM_XY -DTEXTURE=Texture2D -DCOORD_TYPE=float2 \
-// RUN:   -DGRAD_TYPE=float2 -DLOD_LOCATION=loc -DOFFSET_ARG="int2(1, 2)" -o - \
+// RUN:   -DHAS_SAMPLE_CMP -DTEXTURE=Texture1D -DCOORD_TYPE=float \
+// RUN:   -DGRAD_TYPE=float -DLOD_LOCATION=loc -DOFFSET_ARG="1" -o - %s | \
+// RUN:   FileCheck %s \
+// RUN:   --check-prefixes=CHECK,TEXEL,OFFSET,SAMPLECMP,SAMPLECMP-OFFSET \
+// RUN:   -DTEXTURE=Texture1D -DDIM_NAME=1D -DLOAD_DIM=2 \
+// RUN:   -DINDEX_TYPE="unsigned int" -DIS_ARRAY="" -DLOCATION_TYPE=float \
+// RUN:   -DGRADIENT_TYPE=float -DOFFSET_TYPE=int
+
+// Texture1DArray
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DHAS_OFFSET \
+// RUN:   -DHAS_SAMPLE_CMP -DTEXTURE=Texture1DArray -DCOORD_TYPE=float2 \
+// RUN:   -DGRAD_TYPE=float -DLOD_LOCATION=loc.x -DOFFSET_ARG="1" -o - %s | \
+// RUN:   FileCheck %s \
+// RUN:   --check-prefixes=CHECK,TEXEL,OFFSET,SAMPLECMP,SAMPLECMP-OFFSET \
+// RUN:   -DTEXTURE=Texture1DArray -DDIM_NAME=1D -DLOAD_DIM=3 \
+// RUN:   -DINDEX_TYPE="vector<unsigned int, 2>" \
+// RUN:   -DIS_ARRAY=" [[hlsl::is_array]]" -DLOCATION_TYPE="vector<float, 2>" \
+// RUN:   -DGRADIENT_TYPE=float -DOFFSET_TYPE=int
+
+// Texture2D
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DHAS_OFFSET \
+// RUN:   -DHAS_GETDIM_XY -DHAS_SAMPLE_CMP -DHAS_GATHER -DTEXTURE=Texture2D \
+// RUN:   -DCOORD_TYPE=float2 -DGRAD_TYPE=float2 -DLOD_LOCATION=loc \
+// RUN:   -DOFFSET_ARG="int2(1, 2)" -o - %s | FileCheck %s \
+// RUN:   --check-prefixes=CHECK,TEXEL,OFFSET,GETDIM-XY,SAMPLECMP,SAMPLECMP-OFFSET,GATHER,GATHER-OFFSET \
+// RUN:   -DTEXTURE=Texture2D -DDIM_NAME=2D -DLOAD_DIM=3 \
+// RUN:   -DINDEX_TYPE="vector<unsigned int, 2>" -DIS_ARRAY="" \
+// RUN:   -DLOCATION_TYPE="vector<float, 2>" \
+// RUN:   -DGRADIENT_TYPE="vector<float, 2>" -DOFFSET_TYPE="vector<int, 2>"
+
+// Texture2DArray
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DHAS_OFFSET \
+// RUN:   -DHAS_GETDIM_XY -DHAS_SAMPLE_CMP -DHAS_GATHER \
+// RUN:   -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 -DGRAD_TYPE=float2 \
+// RUN:   -DLOD_LOCATION=loc.xy -DOFFSET_ARG="int2(1, 2)" -o - %s | FileCheck \
 // RUN:   %s \
-// RUN:   | FileCheck %s --check-prefixes=CHECK,TEXEL,OFFSET,GETDIM-XY \
-// RUN:   -DTEXTURE=Texture2D -DDIM_NAME=2D -DDIM=2 -DCOORD_DIM=2 -DLOAD_DIM=3 \
-// RUN:   -DINDEX_TYPE="vector<unsigned int, 2>" -DIS_ARRAY=""
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
-// RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=TextureCube \
-// RUN:   -DCOORD_TYPE=float3 -DGRAD_TYPE=float3 -DLOD_LOCATION=loc -o - %s \
-// RUN:   | FileCheck %s --check-prefixes=CHECK -DTEXTURE=TextureCube \
-// RUN:   -DDIM_NAME=Cube -DDIM=3 -DCOORD_DIM=3 -DIS_ARRAY=""
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
-// RUN:   -disable-llvm-passes -finclude-default-header \
-// RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 -DGRAD_TYPE=float3 \
-// RUN:   -DLOD_LOCATION=loc.xyz -o - %s \
-// RUN:   | FileCheck %s --check-prefixes=CHECK -DTEXTURE=TextureCubeArray \
-// RUN:   -DDIM_NAME=Cube -DDIM=3 -DCOORD_DIM=4 \
-// RUN:   -DIS_ARRAY=" [[hlsl::is_array]]"
+// RUN:   --check-prefixes=CHECK,ARRAY,TEXEL,OFFSET,GETDIM-XY,SAMPLECMP,SAMPLECMP-OFFSET,GATHER,GATHER-OFFSET \
+// RUN:   -DTEXTURE=Texture2DArray -DDIM_NAME=2D -DLOAD_DIM=4 \
+// RUN:   -DINDEX_TYPE="vector<unsigned int, 3>" \
+// RUN:   -DIS_ARRAY=" [[hlsl::is_array]]" -DLOCATION_TYPE="vector<float, 3>" \
+// RUN:   -DGRADIENT_TYPE="vector<float, 2>" -DOFFSET_TYPE="vector<int, 2>"
+
+// Texture3D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -disable-llvm-passes -finclude-default-header -DHAS_OFFSET \
-// RUN:   -DHAS_GETDIM_XY -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 \
-// RUN:   -DGRAD_TYPE=float2 -DLOD_LOCATION=loc.xy -DOFFSET_ARG="int2(1, 2)" \
-// RUN:   -o - %s \
-// RUN:   | FileCheck %s --check-prefixes=CHECK,ARRAY,TEXEL,OFFSET,GETDIM-XY \
-// RUN:   -DTEXTURE=Texture2DArray -DDIM_NAME=2D -DDIM=2 -DCOORD_DIM=3 \
-// RUN:   -DLOAD_DIM=4 -DINDEX_TYPE="vector<unsigned int, 3>" \
-// RUN:   -DIS_ARRAY=" [[hlsl::is_array]]"
+// RUN:   -DTEXTURE=Texture3D -DCOORD_TYPE=float3 -DGRAD_TYPE=float3 \
+// RUN:   -DLOD_LOCATION=loc -DOFFSET_ARG="int3(1, 2, 3)" -o - %s | FileCheck \
+// RUN:   %s --check-prefixes=CHECK,TEXEL,OFFSET -DTEXTURE=Texture3D \
+// RUN:   -DDIM_NAME=3D -DLOAD_DIM=4 -DINDEX_TYPE="vector<unsigned int, 3>" \
+// RUN:   -DIS_ARRAY="" -DLOCATION_TYPE="vector<float, 3>" \
+// RUN:   -DGRADIENT_TYPE="vector<float, 3>" -DOFFSET_TYPE="vector<int, 3>"
+
+// TextureCube
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DHAS_SAMPLE_CMP \
+// RUN:   -DHAS_GATHER -DTEXTURE=TextureCube -DCOORD_TYPE=float3 \
+// RUN:   -DGRAD_TYPE=float3 -DLOD_LOCATION=loc -o - %s | FileCheck %s \
+// RUN:   --check-prefixes=CHECK,SAMPLECMP,GATHER -DTEXTURE=TextureCube \
+// RUN:   -DDIM_NAME=Cube -DIS_ARRAY="" -DLOCATION_TYPE="vector<float, 3>" \
+// RUN:   -DGRADIENT_TYPE="vector<float, 3>" -DOFFSET_TYPE="vector<int, 3>"
+
+// TextureCubeArray
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN:   -disable-llvm-passes -finclude-default-header -DHAS_SAMPLE_CMP \
+// RUN:   -DHAS_GATHER -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 \
+// RUN:   -DGRAD_TYPE=float3 -DLOD_LOCATION=loc.xyz -o - %s | FileCheck %s \
+// RUN:   --check-prefixes=CHECK,SAMPLECMP,GATHER -DTEXTURE=TextureCubeArray \
+// RUN:   -DDIM_NAME=Cube -DIS_ARRAY=" [[hlsl::is_array]]" \
+// RUN:   -DLOCATION_TYPE="vector<float, 4>" \
+// RUN:   -DGRADIENT_TYPE="vector<float, 3>" -DOFFSET_TYPE="vector<int, 3>"
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
@@ -35,7 +84,12 @@
 //                      have overloads taking an offset
 //   HAS_GETDIM_XY      defined for types that have the width/height
 //                      GetDimensions overloads
+//   HAS_SAMPLE_CMP     defined for types that have the comparison sampling
+//                      methods
+//   HAS_GATHER         defined for types that have the Gather* methods
 //   TEXTURE            resource type name
+//   IS_ARRAY           the hlsl::is_array attribute as it appears on the
+//                      handle of an array texture, empty otherwise
 //   COORD_TYPE         sample location type (DIM components plus the array
 //                      slice)
 //   GRAD_TYPE          SampleGrad ddx/ddy type, one component per resource
@@ -43,9 +97,12 @@
 //   LOD_LOCATION       expression producing a LOD_TYPE location from `loc`
 //   OFFSET_ARG         a literal offset argument
 //   DIM_NAME           hlsl::dimension spelling
-//   DIM                number of resource dimensions (offset, ddx/ddy, LOD
-//                      location)
-//   COORD_DIM          sample location components (DIM plus the array slice)
+//   LOCATION_TYPE      sample location type in the declarations, one
+//                      component per resource dimension plus the array slice
+//   GRADIENT_TYPE      ddx/ddy type in the declarations, one component per
+//                      resource dimension
+//   OFFSET_TYPE        offset type in the declarations, one component per
+//                      resource dimension
 //   LOAD_DIM           Load location components (COORD_DIM plus the mip level)
 //   INDEX_TYPE         operator[] index type
 //
@@ -56,6 +113,10 @@
 //   OFFSET             the sampling and gathering methods have offset
 //                      overloads
 //   GETDIM-XY          the width/height GetDimensions overloads exist
+//   SAMPLECMP          the comparison sampling methods exist
+//   SAMPLECMP-OFFSET   the comparison sampling methods have offset overloads
+//   GATHER             the Gather* methods exist
+//   GATHER-OFFSET      the Gather* methods have offset overloads
 //   ARRAY              the resource has an array slice
 //   IS_ARRAY           the [[hlsl::is_array]] attribute on arrayed resources,
 //                      or empty
@@ -67,7 +128,7 @@
 
 // CHECK: CXXRecordDecl {{.*}} SamplerComparisonState definition
 // CHECK: FinalAttr {{.*}} Implicit final
-// CHECK-NEXT: FieldDecl {{.*}} implicit {{.*}} __handle '__hlsl_resource_t
+// CHECK-NEXT: FieldDecl {{.*}} implicit {{.*}}__handle '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 
 // CHECK: ClassTemplateDecl {{.*}} [[TEXTURE]]
@@ -95,9 +156,9 @@
 // TEXEL-NEXT: DeclRefExpr {{.*}} 'vector<int, [[LOAD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<int, [[LOAD_DIM]]>'
 // TEXEL-NEXT: AlwaysInlineAttr
 
-// TEXEL: CXXMethodDecl {{.*}} Load 'element_type (vector<int, [[LOAD_DIM]]>, vector<int, [[DIM]]>)'
+// TEXEL: CXXMethodDecl {{.*}} Load 'element_type (vector<int, [[LOAD_DIM]]>, [[OFFSET_TYPE]])'
 // TEXEL-NEXT: ParmVarDecl {{.*}} Location 'vector<int, [[LOAD_DIM]]>'
-// TEXEL-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
+// TEXEL-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
 // TEXEL-NEXT: CompoundStmt
 // TEXEL-NEXT: ReturnStmt
 // TEXEL-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
@@ -111,7 +172,7 @@
 // TEXEL-SAME: ' lvalue .__handle
 // TEXEL-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
 // TEXEL-NEXT: DeclRefExpr {{.*}} 'vector<int, [[LOAD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<int, [[LOAD_DIM]]>'
-// TEXEL-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
+// TEXEL-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
 // TEXEL-NEXT: AlwaysInlineAttr
 
 // TEXEL: CXXMethodDecl {{.*}} operator[] 'const hlsl_device element_type &([[INDEX_TYPE]]) const' inline
@@ -132,9 +193,9 @@
 // TEXEL-NEXT: DeclRefExpr {{.*}} '[[INDEX_TYPE]]' lvalue ParmVar {{.*}} 'Index' '[[INDEX_TYPE]]'
 // TEXEL-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} Sample 'element_type (hlsl::SamplerState, vector<float, [[COORD_DIM]]>)'
+// CHECK: CXXMethodDecl {{.*}} Sample 'element_type (hlsl::SamplerState, [[LOCATION_TYPE]])'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
+// CHECK-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
@@ -149,13 +210,13 @@
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} Sample 'element_type (hlsl::SamplerState, vector<float, [[COORD_DIM]]>, vector<int, [[DIM]]>)'
+// OFFSET: CXXMethodDecl {{.*}} Sample 'element_type (hlsl::SamplerState, [[LOCATION_TYPE]], [[OFFSET_TYPE]])'
 // OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
+// OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
 // OFFSET-NEXT: CompoundStmt
 // OFFSET-NEXT: ReturnStmt
 // OFFSET-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
@@ -172,14 +233,14 @@
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
 // OFFSET-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} Sample 'element_type (hlsl::SamplerState, vector<float, [[COORD_DIM]]>, vector<int, [[DIM]]>, float)'
+// OFFSET: CXXMethodDecl {{.*}} Sample 'element_type (hlsl::SamplerState, [[LOCATION_TYPE]], [[OFFSET_TYPE]], float)'
 // OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
+// OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
 // OFFSET-NEXT: ParmVarDecl {{.*}} Clamp 'float'
 // OFFSET-NEXT: CompoundStmt
 // OFFSET-NEXT: ReturnStmt
@@ -197,14 +258,14 @@
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
 // OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Clamp' 'float'
 // OFFSET-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} SampleBias 'element_type (hlsl::SamplerState, vector<float, [[COORD_DIM]]>, float)'
+// CHECK: CXXMethodDecl {{.*}} SampleBias 'element_type (hlsl::SamplerState, [[LOCATION_TYPE]], float)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
+// CHECK-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
 // CHECK-NEXT: ParmVarDecl {{.*}} Bias 'float'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt
@@ -220,15 +281,15 @@
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Bias' 'float'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} SampleBias 'element_type (hlsl::SamplerState, vector<float, [[COORD_DIM]]>, float, vector<int, [[DIM]]>)'
+// OFFSET: CXXMethodDecl {{.*}} SampleBias 'element_type (hlsl::SamplerState, [[LOCATION_TYPE]], float, [[OFFSET_TYPE]])'
 // OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
+// OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
 // OFFSET-NEXT: ParmVarDecl {{.*}} Bias 'float'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
+// OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
 // OFFSET-NEXT: CompoundStmt
 // OFFSET-NEXT: ReturnStmt
 // OFFSET-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
@@ -245,16 +306,16 @@
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
 // OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Bias' 'float'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
 // OFFSET-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} SampleBias 'element_type (hlsl::SamplerState, vector<float, [[COORD_DIM]]>, float, vector<int, [[DIM]]>, float)'
+// OFFSET: CXXMethodDecl {{.*}} SampleBias 'element_type (hlsl::SamplerState, [[LOCATION_TYPE]], float, [[OFFSET_TYPE]], float)'
 // OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
+// OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
 // OFFSET-NEXT: ParmVarDecl {{.*}} Bias 'float'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
+// OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
 // OFFSET-NEXT: ParmVarDecl {{.*}} Clamp 'float'
 // OFFSET-NEXT: CompoundStmt
 // OFFSET-NEXT: ReturnStmt
@@ -272,17 +333,17 @@
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
 // OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Bias' 'float'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
 // OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Clamp' 'float'
 // OFFSET-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} SampleGrad 'element_type (hlsl::SamplerState, vector<float, [[COORD_DIM]]>, vector<float, [[DIM]]>, vector<float, [[DIM]]>)'
+// CHECK: CXXMethodDecl {{.*}} SampleGrad 'element_type (hlsl::SamplerState, [[LOCATION_TYPE]], [[GRADIENT_TYPE]], [[GRADIENT_TYPE]])'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: ParmVarDecl {{.*}} DDX 'vector<float, [[DIM]]>'
-// CHECK-NEXT: ParmVarDecl {{.*}} DDY 'vector<float, [[DIM]]>'
+// CHECK-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// CHECK-NEXT: ParmVarDecl {{.*}} DDX '[[GRADIENT_TYPE]]'
+// CHECK-NEXT: ParmVarDecl {{.*}} DDY '[[GRADIENT_TYPE]]'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
@@ -297,17 +358,17 @@
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[DIM]]>' lvalue ParmVar {{.*}} 'DDX' 'vector<float, [[DIM]]>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[DIM]]>' lvalue ParmVar {{.*}} 'DDY' 'vector<float, [[DIM]]>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// CHECK-NEXT: DeclRefExpr {{.*}} '[[GRADIENT_TYPE]]' lvalue ParmVar {{.*}} 'DDX' '[[GRADIENT_TYPE]]'
+// CHECK-NEXT: DeclRefExpr {{.*}} '[[GRADIENT_TYPE]]' lvalue ParmVar {{.*}} 'DDY' '[[GRADIENT_TYPE]]'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} SampleGrad 'element_type (hlsl::SamplerState, vector<float, [[COORD_DIM]]>, vector<float, [[DIM]]>, vector<float, [[DIM]]>, vector<int, [[DIM]]>)'
+// OFFSET: CXXMethodDecl {{.*}} SampleGrad 'element_type (hlsl::SamplerState, [[LOCATION_TYPE]], [[GRADIENT_TYPE]], [[GRADIENT_TYPE]], [[OFFSET_TYPE]])'
 // OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} DDX 'vector<float, [[DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} DDY 'vector<float, [[DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
+// OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// OFFSET-NEXT: ParmVarDecl {{.*}} DDX '[[GRADIENT_TYPE]]'
+// OFFSET-NEXT: ParmVarDecl {{.*}} DDY '[[GRADIENT_TYPE]]'
+// OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
 // OFFSET-NEXT: CompoundStmt
 // OFFSET-NEXT: ReturnStmt
 // OFFSET-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
@@ -324,18 +385,18 @@
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[DIM]]>' lvalue ParmVar {{.*}} 'DDX' 'vector<float, [[DIM]]>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[DIM]]>' lvalue ParmVar {{.*}} 'DDY' 'vector<float, [[DIM]]>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[GRADIENT_TYPE]]' lvalue ParmVar {{.*}} 'DDX' '[[GRADIENT_TYPE]]'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[GRADIENT_TYPE]]' lvalue ParmVar {{.*}} 'DDY' '[[GRADIENT_TYPE]]'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
 // OFFSET-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} SampleGrad 'element_type (hlsl::SamplerState, vector<float, [[COORD_DIM]]>, vector<float, [[DIM]]>, vector<float, [[DIM]]>, vector<int, [[DIM]]>, float)'
+// OFFSET: CXXMethodDecl {{.*}} SampleGrad 'element_type (hlsl::SamplerState, [[LOCATION_TYPE]], [[GRADIENT_TYPE]], [[GRADIENT_TYPE]], [[OFFSET_TYPE]], float)'
 // OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} DDX 'vector<float, [[DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} DDY 'vector<float, [[DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
+// OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// OFFSET-NEXT: ParmVarDecl {{.*}} DDX '[[GRADIENT_TYPE]]'
+// OFFSET-NEXT: ParmVarDecl {{.*}} DDY '[[GRADIENT_TYPE]]'
+// OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
 // OFFSET-NEXT: ParmVarDecl {{.*}} Clamp 'float'
 // OFFSET-NEXT: CompoundStmt
 // OFFSET-NEXT: ReturnStmt
@@ -353,16 +414,16 @@
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[DIM]]>' lvalue ParmVar {{.*}} 'DDX' 'vector<float, [[DIM]]>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[DIM]]>' lvalue ParmVar {{.*}} 'DDY' 'vector<float, [[DIM]]>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[GRADIENT_TYPE]]' lvalue ParmVar {{.*}} 'DDX' '[[GRADIENT_TYPE]]'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[GRADIENT_TYPE]]' lvalue ParmVar {{.*}} 'DDY' '[[GRADIENT_TYPE]]'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
 // OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Clamp' 'float'
 // OFFSET-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} SampleLevel 'element_type (hlsl::SamplerState, vector<float, [[COORD_DIM]]>, float)'
+// CHECK: CXXMethodDecl {{.*}} SampleLevel 'element_type (hlsl::SamplerState, [[LOCATION_TYPE]], float)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
+// CHECK-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
 // CHECK-NEXT: ParmVarDecl {{.*}} LOD 'float'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt
@@ -378,15 +439,15 @@
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'LOD' 'float'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} SampleLevel 'element_type (hlsl::SamplerState, vector<float, [[COORD_DIM]]>, float, vector<int, [[DIM]]>)'
+// OFFSET: CXXMethodDecl {{.*}} SampleLevel 'element_type (hlsl::SamplerState, [[LOCATION_TYPE]], float, [[OFFSET_TYPE]])'
 // OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
+// OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
 // OFFSET-NEXT: ParmVarDecl {{.*}} LOD 'float'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
+// OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
 // OFFSET-NEXT: CompoundStmt
 // OFFSET-NEXT: ReturnStmt
 // OFFSET-NEXT: CStyleCastExpr {{.*}} 'element_type' <Dependent>
@@ -403,138 +464,138 @@
 // OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // OFFSET-SAME: ' lvalue .__handle
 // OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
 // OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'LOD' 'float'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
+// OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
 // OFFSET-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} SampleCmp 'float (hlsl::SamplerComparisonState, vector<float, [[COORD_DIM]]>, float)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME: {{\[\[}}hlsl::resource_class("SRV"){{\]\]}}[[IS_ARRAY]] {{\[\[}}hlsl::contained_type(element_type){{\]\]}}
-// CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
-// CHECK-NEXT: AlwaysInlineAttr
+// SAMPLECMP: CXXMethodDecl {{.*}} SampleCmp 'float (hlsl::SamplerComparisonState, [[LOCATION_TYPE]], float)'
+// SAMPLECMP-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
+// SAMPLECMP-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// SAMPLECMP-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
+// SAMPLECMP-NEXT: CompoundStmt
+// SAMPLECMP-NEXT: ReturnStmt
+// SAMPLECMP-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
+// SAMPLECMP-NEXT: CallExpr {{.*}} '<dependent type>'
+// SAMPLECMP-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp' 'void (...) noexcept'
+// SAMPLECMP-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// SAMPLECMP-SAME: {{\[\[}}hlsl::resource_class("SRV"){{\]\]}}[[IS_ARRAY]] {{\[\[}}hlsl::contained_type(element_type){{\]\]}}
+// SAMPLECMP-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// SAMPLECMP-SAME: ' lvalue .__handle
+// SAMPLECMP-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
+// SAMPLECMP-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// SAMPLECMP-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
+// SAMPLECMP-SAME: ' lvalue .__handle
+// SAMPLECMP-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
+// SAMPLECMP-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// SAMPLECMP-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
+// SAMPLECMP-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} SampleCmp 'float (hlsl::SamplerComparisonState, vector<float, [[COORD_DIM]]>, float, vector<int, [[DIM]]>)'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: CompoundStmt
-// OFFSET-NEXT: ReturnStmt
-// OFFSET-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
-// OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// OFFSET-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// SAMPLECMP-OFFSET: CXXMethodDecl {{.*}} SampleCmp 'float (hlsl::SamplerComparisonState, [[LOCATION_TYPE]], float, [[OFFSET_TYPE]])'
+// SAMPLECMP-OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
+// SAMPLECMP-OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// SAMPLECMP-OFFSET-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
+// SAMPLECMP-OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
+// SAMPLECMP-OFFSET-NEXT: CompoundStmt
+// SAMPLECMP-OFFSET-NEXT: ReturnStmt
+// SAMPLECMP-OFFSET-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
+// SAMPLECMP-OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
+// SAMPLECMP-OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp' 'void (...) noexcept'
+// SAMPLECMP-OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// SAMPLECMP-OFFSET-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
-// OFFSET-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// OFFSET-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
-// OFFSET-SAME: ' lvalue .__handle
-// OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
-// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
-// OFFSET-SAME: ' lvalue .__handle
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: AlwaysInlineAttr
+// SAMPLECMP-OFFSET-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// SAMPLECMP-OFFSET-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// SAMPLECMP-OFFSET-SAME: ' lvalue .__handle
+// SAMPLECMP-OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
+// SAMPLECMP-OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// SAMPLECMP-OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
+// SAMPLECMP-OFFSET-SAME: ' lvalue .__handle
+// SAMPLECMP-OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
+// SAMPLECMP-OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// SAMPLECMP-OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
+// SAMPLECMP-OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
+// SAMPLECMP-OFFSET-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} SampleCmp 'float (hlsl::SamplerComparisonState, vector<float, [[COORD_DIM]]>, float, vector<int, [[DIM]]>, float)'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Clamp 'float'
-// OFFSET-NEXT: CompoundStmt
-// OFFSET-NEXT: ReturnStmt
-// OFFSET-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
-// OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// OFFSET-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// SAMPLECMP-OFFSET: CXXMethodDecl {{.*}} SampleCmp 'float (hlsl::SamplerComparisonState, [[LOCATION_TYPE]], float, [[OFFSET_TYPE]], float)'
+// SAMPLECMP-OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
+// SAMPLECMP-OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// SAMPLECMP-OFFSET-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
+// SAMPLECMP-OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
+// SAMPLECMP-OFFSET-NEXT: ParmVarDecl {{.*}} Clamp 'float'
+// SAMPLECMP-OFFSET-NEXT: CompoundStmt
+// SAMPLECMP-OFFSET-NEXT: ReturnStmt
+// SAMPLECMP-OFFSET-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
+// SAMPLECMP-OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
+// SAMPLECMP-OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp' 'void (...) noexcept'
+// SAMPLECMP-OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// SAMPLECMP-OFFSET-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
-// OFFSET-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// OFFSET-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
-// OFFSET-SAME: ' lvalue .__handle
-// OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
-// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
-// OFFSET-SAME: ' lvalue .__handle
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Clamp' 'float'
-// OFFSET-NEXT: AlwaysInlineAttr
+// SAMPLECMP-OFFSET-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// SAMPLECMP-OFFSET-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// SAMPLECMP-OFFSET-SAME: ' lvalue .__handle
+// SAMPLECMP-OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
+// SAMPLECMP-OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// SAMPLECMP-OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
+// SAMPLECMP-OFFSET-SAME: ' lvalue .__handle
+// SAMPLECMP-OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
+// SAMPLECMP-OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// SAMPLECMP-OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
+// SAMPLECMP-OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
+// SAMPLECMP-OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'Clamp' 'float'
+// SAMPLECMP-OFFSET-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} SampleCmpLevelZero 'float (hlsl::SamplerComparisonState, vector<float, [[COORD_DIM]]>, float)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp_level_zero' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME: {{\[\[}}hlsl::resource_class("SRV"){{\]\]}}[[IS_ARRAY]] {{\[\[}}hlsl::contained_type(element_type){{\]\]}}
-// CHECK-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
-// CHECK-SAME: ' lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
-// CHECK-NEXT: AlwaysInlineAttr
+// SAMPLECMP: CXXMethodDecl {{.*}} SampleCmpLevelZero 'float (hlsl::SamplerComparisonState, [[LOCATION_TYPE]], float)'
+// SAMPLECMP-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
+// SAMPLECMP-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// SAMPLECMP-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
+// SAMPLECMP-NEXT: CompoundStmt
+// SAMPLECMP-NEXT: ReturnStmt
+// SAMPLECMP-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
+// SAMPLECMP-NEXT: CallExpr {{.*}} '<dependent type>'
+// SAMPLECMP-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp_level_zero' 'void (...) noexcept'
+// SAMPLECMP-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// SAMPLECMP-SAME: {{\[\[}}hlsl::resource_class("SRV"){{\]\]}}[[IS_ARRAY]] {{\[\[}}hlsl::contained_type(element_type){{\]\]}}
+// SAMPLECMP-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// SAMPLECMP-SAME: ' lvalue .__handle
+// SAMPLECMP-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
+// SAMPLECMP-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// SAMPLECMP-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
+// SAMPLECMP-SAME: ' lvalue .__handle
+// SAMPLECMP-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
+// SAMPLECMP-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// SAMPLECMP-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
+// SAMPLECMP-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} SampleCmpLevelZero 'float (hlsl::SamplerComparisonState, vector<float, [[COORD_DIM]]>, float, vector<int, [[DIM]]>)'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: CompoundStmt
-// OFFSET-NEXT: ReturnStmt
-// OFFSET-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
-// OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp_level_zero' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// OFFSET-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// SAMPLECMP-OFFSET: CXXMethodDecl {{.*}} SampleCmpLevelZero 'float (hlsl::SamplerComparisonState, [[LOCATION_TYPE]], float, [[OFFSET_TYPE]])'
+// SAMPLECMP-OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
+// SAMPLECMP-OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// SAMPLECMP-OFFSET-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
+// SAMPLECMP-OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
+// SAMPLECMP-OFFSET-NEXT: CompoundStmt
+// SAMPLECMP-OFFSET-NEXT: ReturnStmt
+// SAMPLECMP-OFFSET-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
+// SAMPLECMP-OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
+// SAMPLECMP-OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_sample_cmp_level_zero' 'void (...) noexcept'
+// SAMPLECMP-OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// SAMPLECMP-OFFSET-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // ARRAY-SAME{LITERAL}: [[hlsl::is_array]]
-// OFFSET-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// OFFSET-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
-// OFFSET-SAME: ' lvalue .__handle
-// OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
-// OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
-// OFFSET-SAME: ' lvalue .__handle
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: AlwaysInlineAttr
+// SAMPLECMP-OFFSET-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
+// SAMPLECMP-OFFSET-SAME: {{\[\[}}hlsl::dimension("[[DIM_NAME]]"){{\]\]}}
+// SAMPLECMP-OFFSET-SAME: ' lvalue .__handle
+// SAMPLECMP-OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type>' lvalue implicit this
+// SAMPLECMP-OFFSET-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// SAMPLECMP-OFFSET-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
+// SAMPLECMP-OFFSET-SAME: ' lvalue .__handle
+// SAMPLECMP-OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
+// SAMPLECMP-OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// SAMPLECMP-OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
+// SAMPLECMP-OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
+// SAMPLECMP-OFFSET-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} CalculateLevelOfDetail 'float (hlsl::SamplerState, vector<float, [[DIM]]>)'
+// CHECK: CXXMethodDecl {{.*}} CalculateLevelOfDetail 'float (hlsl::SamplerState, [[GRADIENT_TYPE]])'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[DIM]]>'
+// CHECK-NEXT: ParmVarDecl {{.*}} Location '[[GRADIENT_TYPE]]'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
@@ -549,12 +610,12 @@
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[DIM]]>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '[[GRADIENT_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[GRADIENT_TYPE]]'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} CalculateLevelOfDetailUnclamped 'float (hlsl::SamplerState, vector<float, [[DIM]]>)'
+// CHECK: CXXMethodDecl {{.*}} CalculateLevelOfDetailUnclamped 'float (hlsl::SamplerState, [[GRADIENT_TYPE]])'
 // CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[DIM]]>'
+// CHECK-NEXT: ParmVarDecl {{.*}} Location '[[GRADIENT_TYPE]]'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'float' <Dependent>
@@ -569,7 +630,7 @@
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class("Sampler")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[DIM]]>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '[[GRADIENT_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[GRADIENT_TYPE]]'
 // CHECK-NEXT: AlwaysInlineAttr
 
 // GETDIM-XY: CXXMethodDecl {{.*}} GetDimensions 'void (out unsigned int, out unsigned int)'
@@ -658,287 +719,287 @@
 // GETDIM-XY-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'numberOfLevels' 'float &__restrict'
 // GETDIM-XY-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} Gather 'vector<element_type, 4> (hlsl::SamplerState, vector<float, [[COORD_DIM]]>)' inline
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
-// CHECK-NEXT: AlwaysInlineAttr
+// GATHER: CXXMethodDecl {{.*}} Gather 'vector<element_type, 4> (hlsl::SamplerState, [[LOCATION_TYPE]])' inline
+// GATHER-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
+// GATHER-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// GATHER-NEXT: CompoundStmt
+// GATHER-NEXT: ReturnStmt
+// GATHER-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
+// GATHER-NEXT: CallExpr {{.*}} '<dependent type>'
+// GATHER-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
+// GATHER-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// GATHER-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
+// GATHER-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} Gather 'vector<element_type, 4> (hlsl::SamplerState, vector<float, [[COORD_DIM]]>, vector<int, [[DIM]]>)' inline
-// OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: CompoundStmt
-// OFFSET-NEXT: ReturnStmt
-// OFFSET-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
-// OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
-// OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
-// OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: AlwaysInlineAttr
+// GATHER-OFFSET: CXXMethodDecl {{.*}} Gather 'vector<element_type, 4> (hlsl::SamplerState, [[LOCATION_TYPE]], [[OFFSET_TYPE]])' inline
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
+// GATHER-OFFSET-NEXT: CompoundStmt
+// GATHER-OFFSET-NEXT: ReturnStmt
+// GATHER-OFFSET-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
+// GATHER-OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
+// GATHER-OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
+// GATHER-OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// GATHER-OFFSET-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
+// GATHER-OFFSET-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherRed 'vector<element_type, 4> (hlsl::SamplerState, vector<float, [[COORD_DIM]]>)' inline
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
-// CHECK-NEXT: AlwaysInlineAttr
+// GATHER: CXXMethodDecl {{.*}} GatherRed 'vector<element_type, 4> (hlsl::SamplerState, [[LOCATION_TYPE]])' inline
+// GATHER-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
+// GATHER-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// GATHER-NEXT: CompoundStmt
+// GATHER-NEXT: ReturnStmt
+// GATHER-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
+// GATHER-NEXT: CallExpr {{.*}} '<dependent type>'
+// GATHER-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
+// GATHER-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// GATHER-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
+// GATHER-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} GatherRed 'vector<element_type, 4> (hlsl::SamplerState, vector<float, [[COORD_DIM]]>, vector<int, [[DIM]]>)' inline
-// OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: CompoundStmt
-// OFFSET-NEXT: ReturnStmt
-// OFFSET-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
-// OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
-// OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
-// OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: AlwaysInlineAttr
+// GATHER-OFFSET: CXXMethodDecl {{.*}} GatherRed 'vector<element_type, 4> (hlsl::SamplerState, [[LOCATION_TYPE]], [[OFFSET_TYPE]])' inline
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
+// GATHER-OFFSET-NEXT: CompoundStmt
+// GATHER-OFFSET-NEXT: ReturnStmt
+// GATHER-OFFSET-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
+// GATHER-OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
+// GATHER-OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
+// GATHER-OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// GATHER-OFFSET-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
+// GATHER-OFFSET-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherGreen 'vector<element_type, 4> (hlsl::SamplerState, vector<float, [[COORD_DIM]]>)' inline
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 1
-// CHECK-NEXT: AlwaysInlineAttr
+// GATHER: CXXMethodDecl {{.*}} GatherGreen 'vector<element_type, 4> (hlsl::SamplerState, [[LOCATION_TYPE]])' inline
+// GATHER-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
+// GATHER-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// GATHER-NEXT: CompoundStmt
+// GATHER-NEXT: ReturnStmt
+// GATHER-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
+// GATHER-NEXT: CallExpr {{.*}} '<dependent type>'
+// GATHER-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
+// GATHER-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// GATHER-NEXT: IntegerLiteral {{.*}} 'unsigned int' 1
+// GATHER-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} GatherGreen 'vector<element_type, 4> (hlsl::SamplerState, vector<float, [[COORD_DIM]]>, vector<int, [[DIM]]>)' inline
-// OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: CompoundStmt
-// OFFSET-NEXT: ReturnStmt
-// OFFSET-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
-// OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
-// OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
-// OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: IntegerLiteral {{.*}} 'unsigned int' 1
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: AlwaysInlineAttr
+// GATHER-OFFSET: CXXMethodDecl {{.*}} GatherGreen 'vector<element_type, 4> (hlsl::SamplerState, [[LOCATION_TYPE]], [[OFFSET_TYPE]])' inline
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
+// GATHER-OFFSET-NEXT: CompoundStmt
+// GATHER-OFFSET-NEXT: ReturnStmt
+// GATHER-OFFSET-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
+// GATHER-OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
+// GATHER-OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
+// GATHER-OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// GATHER-OFFSET-NEXT: IntegerLiteral {{.*}} 'unsigned int' 1
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
+// GATHER-OFFSET-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherBlue 'vector<element_type, 4> (hlsl::SamplerState, vector<float, [[COORD_DIM]]>)' inline
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 2
-// CHECK-NEXT: AlwaysInlineAttr
+// GATHER: CXXMethodDecl {{.*}} GatherBlue 'vector<element_type, 4> (hlsl::SamplerState, [[LOCATION_TYPE]])' inline
+// GATHER-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
+// GATHER-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// GATHER-NEXT: CompoundStmt
+// GATHER-NEXT: ReturnStmt
+// GATHER-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
+// GATHER-NEXT: CallExpr {{.*}} '<dependent type>'
+// GATHER-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
+// GATHER-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// GATHER-NEXT: IntegerLiteral {{.*}} 'unsigned int' 2
+// GATHER-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} GatherBlue 'vector<element_type, 4> (hlsl::SamplerState, vector<float, [[COORD_DIM]]>, vector<int, [[DIM]]>)' inline
-// OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: CompoundStmt
-// OFFSET-NEXT: ReturnStmt
-// OFFSET-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
-// OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
-// OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
-// OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: IntegerLiteral {{.*}} 'unsigned int' 2
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: AlwaysInlineAttr
+// GATHER-OFFSET: CXXMethodDecl {{.*}} GatherBlue 'vector<element_type, 4> (hlsl::SamplerState, [[LOCATION_TYPE]], [[OFFSET_TYPE]])' inline
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
+// GATHER-OFFSET-NEXT: CompoundStmt
+// GATHER-OFFSET-NEXT: ReturnStmt
+// GATHER-OFFSET-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
+// GATHER-OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
+// GATHER-OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
+// GATHER-OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// GATHER-OFFSET-NEXT: IntegerLiteral {{.*}} 'unsigned int' 2
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
+// GATHER-OFFSET-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherAlpha 'vector<element_type, 4> (hlsl::SamplerState, vector<float, [[COORD_DIM]]>)' inline
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 3
-// CHECK-NEXT: AlwaysInlineAttr
+// GATHER: CXXMethodDecl {{.*}} GatherAlpha 'vector<element_type, 4> (hlsl::SamplerState, [[LOCATION_TYPE]])' inline
+// GATHER-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
+// GATHER-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// GATHER-NEXT: CompoundStmt
+// GATHER-NEXT: ReturnStmt
+// GATHER-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
+// GATHER-NEXT: CallExpr {{.*}} '<dependent type>'
+// GATHER-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
+// GATHER-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// GATHER-NEXT: IntegerLiteral {{.*}} 'unsigned int' 3
+// GATHER-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} GatherAlpha 'vector<element_type, 4> (hlsl::SamplerState, vector<float, [[COORD_DIM]]>, vector<int, [[DIM]]>)' inline
-// OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: CompoundStmt
-// OFFSET-NEXT: ReturnStmt
-// OFFSET-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
-// OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
-// OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
-// OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: IntegerLiteral {{.*}} 'unsigned int' 3
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: AlwaysInlineAttr
+// GATHER-OFFSET: CXXMethodDecl {{.*}} GatherAlpha 'vector<element_type, 4> (hlsl::SamplerState, [[LOCATION_TYPE]], [[OFFSET_TYPE]])' inline
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerState'
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
+// GATHER-OFFSET-NEXT: CompoundStmt
+// GATHER-OFFSET-NEXT: ReturnStmt
+// GATHER-OFFSET-NEXT: CStyleCastExpr {{.*}} 'vector<element_type, 4>' <Dependent>
+// GATHER-OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather' 'void (...) noexcept'
+// GATHER-OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
+// GATHER-OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerState'
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// GATHER-OFFSET-NEXT: IntegerLiteral {{.*}} 'unsigned int' 3
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
+// GATHER-OFFSET-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherCmp 'vector<float, 4> (hlsl::SamplerComparisonState, vector<float, [[COORD_DIM]]>, float)' inline
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<float, 4>' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather_cmp' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
-// CHECK-NEXT: AlwaysInlineAttr
+// GATHER: CXXMethodDecl {{.*}} GatherCmp 'vector<float, 4> (hlsl::SamplerComparisonState, [[LOCATION_TYPE]], float)' inline
+// GATHER-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
+// GATHER-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// GATHER-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
+// GATHER-NEXT: CompoundStmt
+// GATHER-NEXT: ReturnStmt
+// GATHER-NEXT: CStyleCastExpr {{.*}} 'vector<float, 4>' <Dependent>
+// GATHER-NEXT: CallExpr {{.*}} '<dependent type>'
+// GATHER-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather_cmp' 'void (...) noexcept'
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
+// GATHER-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// GATHER-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
+// GATHER-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
+// GATHER-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} GatherCmp 'vector<float, 4> (hlsl::SamplerComparisonState, vector<float, [[COORD_DIM]]>, float, vector<int, [[DIM]]>)' inline
-// OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: CompoundStmt
-// OFFSET-NEXT: ReturnStmt
-// OFFSET-NEXT: CStyleCastExpr {{.*}} 'vector<float, 4>' <Dependent>
-// OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather_cmp' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
-// OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
-// OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
-// OFFSET-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: AlwaysInlineAttr
+// GATHER-OFFSET: CXXMethodDecl {{.*}} GatherCmp 'vector<float, 4> (hlsl::SamplerComparisonState, [[LOCATION_TYPE]], float, [[OFFSET_TYPE]])' inline
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
+// GATHER-OFFSET-NEXT: CompoundStmt
+// GATHER-OFFSET-NEXT: ReturnStmt
+// GATHER-OFFSET-NEXT: CStyleCastExpr {{.*}} 'vector<float, 4>' <Dependent>
+// GATHER-OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather_cmp' 'void (...) noexcept'
+// GATHER-OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
+// GATHER-OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
+// GATHER-OFFSET-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
+// GATHER-OFFSET-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherCmpRed 'vector<float, 4> (hlsl::SamplerComparisonState, vector<float, [[COORD_DIM]]>, float)' inline
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<float, 4>' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather_cmp' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
-// CHECK-NEXT: AlwaysInlineAttr
+// GATHER: CXXMethodDecl {{.*}} GatherCmpRed 'vector<float, 4> (hlsl::SamplerComparisonState, [[LOCATION_TYPE]], float)' inline
+// GATHER-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
+// GATHER-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// GATHER-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
+// GATHER-NEXT: CompoundStmt
+// GATHER-NEXT: ReturnStmt
+// GATHER-NEXT: CStyleCastExpr {{.*}} 'vector<float, 4>' <Dependent>
+// GATHER-NEXT: CallExpr {{.*}} '<dependent type>'
+// GATHER-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather_cmp' 'void (...) noexcept'
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
+// GATHER-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// GATHER-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
+// GATHER-NEXT: IntegerLiteral {{.*}} 'unsigned int' 0
+// GATHER-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherCmpGreen 'vector<float, 4> (hlsl::SamplerComparisonState, vector<float, [[COORD_DIM]]>, float)' inline
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<float, 4>' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather_cmp' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 1
-// CHECK-NEXT: AlwaysInlineAttr
+// GATHER: CXXMethodDecl {{.*}} GatherCmpGreen 'vector<float, 4> (hlsl::SamplerComparisonState, [[LOCATION_TYPE]], float)' inline
+// GATHER-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
+// GATHER-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// GATHER-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
+// GATHER-NEXT: CompoundStmt
+// GATHER-NEXT: ReturnStmt
+// GATHER-NEXT: CStyleCastExpr {{.*}} 'vector<float, 4>' <Dependent>
+// GATHER-NEXT: CallExpr {{.*}} '<dependent type>'
+// GATHER-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather_cmp' 'void (...) noexcept'
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
+// GATHER-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// GATHER-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
+// GATHER-NEXT: IntegerLiteral {{.*}} 'unsigned int' 1
+// GATHER-NEXT: AlwaysInlineAttr
 
-// CHECK: CXXMethodDecl {{.*}} GatherCmpBlue 'vector<float, 4> (hlsl::SamplerComparisonState, vector<float, [[COORD_DIM]]>, float)' inline
-// CHECK-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: CStyleCastExpr {{.*}} 'vector<float, 4>' <Dependent>
-// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather_cmp' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned int' 2
-// CHECK-NEXT: AlwaysInlineAttr
+// GATHER: CXXMethodDecl {{.*}} GatherCmpBlue 'vector<float, 4> (hlsl::SamplerComparisonState, [[LOCATION_TYPE]], float)' inline
+// GATHER-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
+// GATHER-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// GATHER-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
+// GATHER-NEXT: CompoundStmt
+// GATHER-NEXT: ReturnStmt
+// GATHER-NEXT: CStyleCastExpr {{.*}} 'vector<float, 4>' <Dependent>
+// GATHER-NEXT: CallExpr {{.*}} '<dependent type>'
+// GATHER-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather_cmp' 'void (...) noexcept'
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
+// GATHER-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
+// GATHER-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// GATHER-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
+// GATHER-NEXT: IntegerLiteral {{.*}} 'unsigned int' 2
+// GATHER-NEXT: AlwaysInlineAttr
 
-// OFFSET: CXXMethodDecl {{.*}} GatherCmpAlpha 'vector<float, 4> (hlsl::SamplerComparisonState, vector<float, [[COORD_DIM]]>, float, vector<int, [[DIM]]>)' inline
-// OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Location 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
-// OFFSET-NEXT: ParmVarDecl {{.*}} Offset 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: CompoundStmt
-// OFFSET-NEXT: ReturnStmt
-// OFFSET-NEXT: CStyleCastExpr {{.*}} 'vector<float, 4>' <Dependent>
-// OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather_cmp' 'void (...) noexcept'
-// OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
-// OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
-// OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<float, [[COORD_DIM]]>' lvalue ParmVar {{.*}} 'Location' 'vector<float, [[COORD_DIM]]>'
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
-// OFFSET-NEXT: IntegerLiteral {{.*}} 'unsigned int' 3
-// OFFSET-NEXT: DeclRefExpr {{.*}} 'vector<int, [[DIM]]>' lvalue ParmVar {{.*}} 'Offset' 'vector<int, [[DIM]]>'
-// OFFSET-NEXT: AlwaysInlineAttr
+// GATHER-OFFSET: CXXMethodDecl {{.*}} GatherCmpAlpha 'vector<float, 4> (hlsl::SamplerComparisonState, [[LOCATION_TYPE]], float, [[OFFSET_TYPE]])' inline
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Sampler 'hlsl::SamplerComparisonState'
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Location '[[LOCATION_TYPE]]'
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} CompareValue 'float'
+// GATHER-OFFSET-NEXT: ParmVarDecl {{.*}} Offset '[[OFFSET_TYPE]]'
+// GATHER-OFFSET-NEXT: CompoundStmt
+// GATHER-OFFSET-NEXT: ReturnStmt
+// GATHER-OFFSET-NEXT: CStyleCastExpr {{.*}} 'vector<float, 4>' <Dependent>
+// GATHER-OFFSET-NEXT: CallExpr {{.*}} '<dependent type>'
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_gather_cmp' 'void (...) noexcept'
+// GATHER-OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-OFFSET-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<{{.*}}>' lvalue implicit this
+// GATHER-OFFSET-NEXT: MemberExpr {{.*}} lvalue .__handle
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} 'hlsl::SamplerComparisonState' lvalue ParmVar {{.*}} 'Sampler' 'hlsl::SamplerComparisonState'
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '[[LOCATION_TYPE]]' lvalue ParmVar {{.*}} 'Location' '[[LOCATION_TYPE]]'
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'CompareValue' 'float'
+// GATHER-OFFSET-NEXT: IntegerLiteral {{.*}} 'unsigned int' 3
+// GATHER-OFFSET-NEXT: DeclRefExpr {{.*}} '[[OFFSET_TYPE]]' lvalue ParmVar {{.*}} 'Offset' '[[OFFSET_TYPE]]'
+// GATHER-OFFSET-NEXT: AlwaysInlineAttr
 
 TEXTURE<float> t;
 SamplerState s;
@@ -949,11 +1010,15 @@ void main(COORD_TYPE loc, float cmp) {
   t.SampleBias(s, loc, 0.0);
   t.SampleGrad(s, loc, (GRAD_TYPE)0, (GRAD_TYPE)0);
   t.SampleLevel(s, loc, 0.0);
+#ifdef HAS_SAMPLE_CMP
   t.SampleCmp(scs, loc, cmp);
   t.SampleCmpLevelZero(scs, loc, cmp);
+#endif
   t.CalculateLevelOfDetail(s, LOD_LOCATION);
   t.CalculateLevelOfDetailUnclamped(s, LOD_LOCATION);
+#ifdef HAS_GATHER
   t.Gather(s, loc);
+#endif
 
 #ifdef HAS_OFFSET
   t.Sample(s, loc, OFFSET_ARG);
@@ -963,10 +1028,12 @@ void main(COORD_TYPE loc, float cmp) {
   t.SampleGrad(s, loc, (GRAD_TYPE)0, (GRAD_TYPE)0, OFFSET_ARG);
   t.SampleGrad(s, loc, (GRAD_TYPE)0, (GRAD_TYPE)0, OFFSET_ARG, 1.0);
   t.SampleLevel(s, loc, 0.0, OFFSET_ARG);
+#ifdef HAS_SAMPLE_CMP
   t.SampleCmp(scs, loc, cmp, OFFSET_ARG);
   t.SampleCmp(scs, loc, cmp, OFFSET_ARG, 1.0f);
   t.SampleCmpLevelZero(scs, loc, cmp, OFFSET_ARG);
-#endif
+#endif // HAS_SAMPLE_CMP
+#endif // HAS_OFFSET
 
 #ifdef HAS_GETDIM_XY
   uint u_w, u_h, u_l;

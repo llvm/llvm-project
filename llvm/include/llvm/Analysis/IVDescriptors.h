@@ -30,6 +30,7 @@ class ScalarEvolution;
 class SCEV;
 class SCEVPredicate;
 class StoreInst;
+enum class SCEVNoWrapFlags;
 
 /// These are the kinds of recurrences that we support.
 enum class RecurKind {
@@ -480,6 +481,69 @@ private:
   SmallVector<Instruction *, 2> RedundantCasts;
   // SCEV predicates checking overflow needed for this induction.
   SmallVector<const SCEVPredicate *, 2> NoWrapPredicates;
+};
+
+/// Describes a conditional induction variable: an induction variable that is
+/// updated only on loop iterations for which a certain predicate is satisfied.
+/// Its step must be loop-invariant.
+class ConditionalInductionDescriptor {
+public:
+  ConditionalInductionDescriptor() = default;
+
+  /// Returns true if \p PN is a conditional induction variable in the loop
+  /// \p L. If it is, \p Desc will contain the data describing the PHI.
+  LLVM_ABI static bool
+  isConditionalInductionPHI(PHINode *PN, const Loop *L,
+                            ConditionalInductionDescriptor &Desc,
+                            ScalarEvolution &SE);
+
+  /// Returns the header PHI described by this descriptor.
+  PHINode *getHeaderPHI() const { return HeaderPHI; }
+
+  /// Returns the backedge PHI that selects between StepInst and the HeaderPHI.
+  PHINode *getBackedgePHI() const { return BackedgePHI; }
+
+  /// Returns the instruction that updates the conditional induction PHI.
+  Instruction *getStepInst() const { return StepInst; }
+
+  /// Returns a SCEV expression for the initial value of the conditional
+  /// induction PHI.
+  const SCEV *getStartSCEV() const { return StartSCEV; }
+
+  /// Returns a SCEV expression for the step of the conditional induction PHI.
+  /// This is the value it increments by when the predicate is satisfied.
+  const SCEV *getStepSCEV() const { return StepSCEV; }
+
+  /// Returns the SCEV no-wrap flags that apply to StepInst.
+  SCEVNoWrapFlags getSCEVNoWrapFlags() const { return NoWrapFlags; }
+
+private:
+  ConditionalInductionDescriptor(PHINode *HeaderPHI, PHINode *BackedgePHI,
+                                 Instruction *StepInst, const SCEV *StartSCEV,
+                                 const SCEV *StepSCEV,
+                                 SCEVNoWrapFlags NoWrapFlags)
+      : HeaderPHI(HeaderPHI), BackedgePHI(BackedgePHI), StepInst(StepInst),
+        StartSCEV(StartSCEV), StepSCEV(StepSCEV), NoWrapFlags(NoWrapFlags) {}
+
+  /// The header PHI (this is the PHI described by the descriptor).
+  PHINode *HeaderPHI = nullptr;
+
+  /// The backedge PHI that selects between StepInst and the HeaderPHI.
+  PHINode *BackedgePHI = nullptr;
+
+  /// The instruction that updates the conditional induction PHI.
+  Instruction *StepInst = nullptr;
+
+  /// SCEV expression representing the start value for the conditional
+  /// induction PHI.
+  const SCEV *StartSCEV = nullptr;
+
+  /// SCEV expression representing the step value for the conditional induction
+  /// PHI.
+  const SCEV *StepSCEV = nullptr;
+
+  /// The SCEV no-wrap flags that apply to StepInst.
+  SCEVNoWrapFlags NoWrapFlags{};
 };
 
 } // end namespace llvm

@@ -14,6 +14,13 @@
 #define ORC_RT_BEDROCK_SPS_SIMPLENATIVEMEMORYMAPSPSCI_H
 
 #include "orc-rt/bedrock/SimpleSymbolTable.h"
+#include "orc-rt/support/sps/SPSWrapperFunction.h"
+
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_SimpleNativeMemoryMap_reserve)
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple)
+ORC_RT_SPS_WRAPPER_DECL(orc_rt_ci_sps_SimpleNativeMemoryMap_initialize)
+ORC_RT_SPS_WRAPPER_DECL(
+    orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple)
 
 namespace orc_rt::sps_ci {
 

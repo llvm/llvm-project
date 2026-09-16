@@ -6805,9 +6805,10 @@ private:
 
   QualType UnderlyingType;
   OverflowBehaviorKind BehaviorKind;
+  const ASTContext &Context;
 
-  OverflowBehaviorType(QualType Canon, QualType Underlying,
-                       OverflowBehaviorKind Kind);
+  OverflowBehaviorType(const ASTContext &Context, QualType Canon,
+                       QualType Underlying, OverflowBehaviorKind Kind);
 
 public:
   QualType getUnderlyingType() const { return UnderlyingType; }
@@ -6818,6 +6819,8 @@ public:
 
   bool isSugared() const { return false; }
   QualType desugar() const { return getUnderlyingType(); }
+
+  SplitQualType getSplitUnqualifiedType() const;
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, UnderlyingType, BehaviorKind);
