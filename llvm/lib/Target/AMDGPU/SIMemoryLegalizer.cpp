@@ -159,7 +159,8 @@ private:
       bool IsCrossAddressSpaceOrdering = true,
       AtomicOrdering FailureOrdering = AtomicOrdering::SequentiallyConsistent,
       bool IsVolatile = false, bool IsNonTemporal = false,
-      bool IsLastUse = false, bool IsCooperative = false, bool IsAVNone = false)
+      bool IsLastUse = false, bool IsCooperative = false, bool IsAVNone = false,
+      bool CanDemoteWorkgroupToWavefront = false)
       : Ordering(Ordering), FailureOrdering(FailureOrdering), Scope(Scope),
         OrderingAddrSpace(OrderingAddrSpace), InstrAddrSpace(InstrAddrSpace),
         IsCrossAddressSpaceOrdering(IsCrossAddressSpaceOrdering),
@@ -207,6 +208,17 @@ private:
     // AGENT scope as a conservatively correct alternative.
     if (this->Scope == SIAtomicScope::CLUSTER && !ST.hasClusters())
       this->Scope = SIAtomicScope::AGENT;
+
+    // When max flat work-group size is at most the wavefront size, the
+    // work-group fits in a single wave, so LLVM workgroup scope matches
+    // wavefront scope. Demote workgroup → wavefront here for fences and for
+    // atomics with ordering stronger than monotonic.
+    if (CanDemoteWorkgroupToWavefront &&
+        this->Scope == SIAtomicScope::WORKGROUP &&
+        (llvm::isStrongerThan(this->Ordering, AtomicOrdering::Monotonic) ||
+         llvm::isStrongerThan(this->FailureOrdering,
+                              AtomicOrdering::Monotonic)))
+      this->Scope = SIAtomicScope::WAVEFRONT;
   }
 
 public:
@@ -280,6 +292,7 @@ class SIMemOpAccess final {
 private:
   const AMDGPUMachineModuleInfo *MMI = nullptr;
   const GCNSubtarget &ST;
+  const bool CanDemoteWorkgroupToWavefront;
 
   /// Reports unsupported message \p Msg for \p MI to LLVM context.
   void reportUnsupported(const MachineBasicBlock::iterator &MI,
@@ -303,7 +316,8 @@ private:
 public:
   /// Construct class to support accessing the machine memory operands
   /// of instructions.
-  SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI, const GCNSubtarget &ST);
+  SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI, const GCNSubtarget &ST,
+                const Function &F);
 
   /// \returns Load info if \p MI is a load operation, "std::nullopt" otherwise.
   std::optional<SIMemOpInfo>
@@ -824,9 +838,13 @@ SIAtomicAddrSpace SIMemOpAccess::toSIAtomicAddrSpace(unsigned AS) const {
   return SIAtomicAddrSpace::OTHER;
 }
 
+// TODO: Consider moving single-wave workgroup->wavefront scope relaxation to an
+// IR pass (and extending it to other scoped operations), so middle-end
+// optimizations see wavefront scope earlier.
 SIMemOpAccess::SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI_,
-                             const GCNSubtarget &ST)
-    : MMI(&MMI_), ST(ST) {}
+                             const GCNSubtarget &ST, const Function &F)
+    : MMI(&MMI_), ST(ST),
+      CanDemoteWorkgroupToWavefront(ST.isSingleWavefrontWorkgroup(F)) {}
 
 std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     const MachineBasicBlock::iterator &MI) const {
@@ -898,7 +916,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace, InstrAddrSpace,
                      IsCrossAddressSpaceOrdering, FailureOrdering, IsVolatile,
                      IsNonTemporal, IsLastUse, IsCooperative,
-                     hasAVNoneMMRA(*MI));
+                     hasAVNoneMMRA(*MI), CanDemoteWorkgroupToWavefront);
 }
 
 std::optional<SIMemOpInfo>
@@ -968,7 +986,7 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
   return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace,
                      SIAtomicAddrSpace::ATOMIC, IsCrossAddressSpaceOrdering,
                      AtomicOrdering::NotAtomic, false, false, false, false,
-                     hasAVNoneMMRA(*MI));
+                     hasAVNoneMMRA(*MI), CanDemoteWorkgroupToWavefront);
 }
 
 std::optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
@@ -2586,7 +2604,7 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const Function &F = MF.getFunction();
-  SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>(), ST);
+  SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>(), ST, F);
   bool TgSplit = ST.hasTgSplitSupport() && AMDGPU::isTgSplitEnabled(F);
   CC = SICacheControl::create(ST, TgSplit);
 
