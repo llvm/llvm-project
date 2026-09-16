@@ -538,6 +538,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
+- Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -667,6 +668,9 @@ features cannot lower the translation-unit ABI level;
   to a subobject and is used in a context that requires an implicit conversion.
   (#GH215900)
 
+- Fixed an assertion when mangling an abbreviated function template whose
+  return type has an ABI tag. (#GH204178)
+
 - Fixed an assertion during template argument deduction where a function parameter pack is referenced by other types in the function type. (#GH28877), (#GH213760)
 
 - Fixed a regression where deprecation warnings were omitted for synthesized
@@ -697,6 +701,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when a defaulted comparison operator was synthesized for a
   class with an invalid non-static data member, such as one qualified with an
   address space. (#GH194605)
+
+- Fixed an issue where an explicit specialization of a constexpr variable would
+  result in a link error. (#GH219796)
 
 #### Bug Fixes to AST Handling
 
