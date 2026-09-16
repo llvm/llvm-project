@@ -2361,7 +2361,74 @@ OpFoldResult arith::IndexCastOp::fold(FoldAdaptor adaptor) {
 
 void arith::IndexCastOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<IndexCastOfExtSI>(context);
+  struct WidenIndexCastOfTruncI final
+      : OpRewritePattern<arith::IndexCastOp> {
+    using OpRewritePattern::OpRewritePattern;
+
+    LogicalResult matchAndRewrite(arith::IndexCastOp indexCast,
+                                  PatternRewriter &rewriter) const override {
+      auto getWideTrunc = [](Value value) -> Value {
+        if (auto trunc = value.getDefiningOp<arith::TruncIOp>();
+            trunc && trunc.hasNoSignedWrap())
+          return trunc.getIn();
+        return {};
+      };
+      auto widenOperand = [&](Value value, Value wideTrunc,
+                              Type wideType) -> Value {
+        if (wideTrunc)
+          return wideTrunc;
+        return arith::ExtSIOp::create(rewriter, indexCast.getLoc(), wideType,
+                                      value);
+      };
+      auto replaceWithWideIndexCast = [&](Value wideValue) {
+        rewriter.replaceOpWithNewOp<arith::IndexCastOp>(
+            indexCast, indexCast.getType(), wideValue);
+      };
+
+      if (Value wideValue = getWideTrunc(indexCast.getIn())) {
+        replaceWithWideIndexCast(wideValue);
+        return success();
+      }
+
+      if (auto add = indexCast.getIn().getDefiningOp<arith::AddIOp>()) {
+        if (!add.hasNoSignedWrap())
+          return failure();
+        Value wideTruncLhs = getWideTrunc(add.getLhs());
+        Value wideTruncRhs = getWideTrunc(add.getRhs());
+        Value wideTrunc = wideTruncLhs ? wideTruncLhs : wideTruncRhs;
+        if (!wideTrunc)
+          return failure();
+        Type wideType = wideTrunc.getType();
+        Value wideLhs = widenOperand(add.getLhs(), wideTruncLhs, wideType);
+        Value wideRhs = widenOperand(add.getRhs(), wideTruncRhs, wideType);
+        Value wideAdd = arith::AddIOp::create(
+            rewriter, indexCast.getLoc(), wideLhs, wideRhs,
+            arith::IntegerOverflowFlags::nsw);
+        replaceWithWideIndexCast(wideAdd);
+        return success();
+      }
+
+      if (auto sub = indexCast.getIn().getDefiningOp<arith::SubIOp>()) {
+        if (!sub.hasNoSignedWrap())
+          return failure();
+        Value wideLhs = getWideTrunc(sub.getLhs());
+        if (!wideLhs)
+          return failure();
+        Value wideRhs =
+            widenOperand(sub.getRhs(), getWideTrunc(sub.getRhs()),
+                         wideLhs.getType());
+        Value wideSub = arith::SubIOp::create(
+            rewriter, indexCast.getLoc(), wideLhs, wideRhs,
+            arith::IntegerOverflowFlags::nsw);
+        replaceWithWideIndexCast(wideSub);
+        return success();
+      }
+
+      return failure();
+    }
+  };
+
+  patterns.add<IndexCastOfExtSI, WidenIndexCastOfTruncI>(context);
 }
 
 //===----------------------------------------------------------------------===//
