@@ -9376,10 +9376,17 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
       unsigned BitWidth = std::max(ValA.getBitWidth(), ValB.getBitWidth());
       return ValA.zext(BitWidth).ult(ValB.zext(BitWidth));
     };
-    bool PreferSigned =
-        SignedEL.hasFullInfo()
-            ? (!EL.hasFullInfo() || HasTighterConstantMax(SignedEL, EL))
-            : (!EL.hasAnyInfo() && SignedEL.hasAnyInfo());
+    // Prefer, in order: a result with full info, a result that needs no
+    // runtime predicates, and a tighter constant max. Ties keep unsigned.
+    bool PreferSigned;
+    if (SignedEL.hasFullInfo() != EL.hasFullInfo())
+      PreferSigned = SignedEL.hasFullInfo();
+    else if (!SignedEL.hasFullInfo())
+      PreferSigned = !EL.hasAnyInfo() && SignedEL.hasAnyInfo();
+    else if (SignedEL.Predicates.empty() != EL.Predicates.empty())
+      PreferSigned = SignedEL.Predicates.empty();
+    else
+      PreferSigned = HasTighterConstantMax(SignedEL, EL);
     if (PreferSigned)
       EL = SignedEL;
   }
