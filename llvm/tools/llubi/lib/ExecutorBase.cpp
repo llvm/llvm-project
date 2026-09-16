@@ -15,9 +15,11 @@
 namespace llvm::ubi {
 Frame::Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
              ArrayRef<AnyValue> Args, AnyValue &RetVal,
-             const TargetLibraryInfoImpl &TLIImpl)
+             const TargetLibraryInfoImpl &TLIImpl,
+             CapturedProvenanceList CapturedProvenances)
     : Func(F), LastFrame(LastFrame), CallSite(CallSite), Args(Args),
-      RetVal(RetVal), TLI(TLIImpl, &F) {
+      RetVal(RetVal), TLI(TLIImpl, &F),
+      CapturedProvenances(std::move(CapturedProvenances)) {
   assert((Args.size() == F.arg_size() ||
           (F.isVarArg() && Args.size() >= F.arg_size())) &&
          "Expected enough arguments to call the function.");
@@ -56,8 +58,11 @@ void ExecutorBase::reportErrorString(StringRef Msg) {
 std::pair<MemoryObject *, uint64_t>
 ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
                               Align Alignment, bool IsStore) {
-  auto *MO = Ctx.checkProvenance(Ptr, [](const Provenance &) {
-    // TODO: check provenance
+  auto *MO = Ctx.checkProvenance(Ptr, [IsStore](const Provenance &Prov) {
+    CaptureComponents CC = Prov.capability();
+    if (IsStore ? !capturesFullProvenance(CC) : !capturesAnyProvenance(CC))
+      return false;
+
     // TODO: check inrange(S, E)
     return true;
   });
