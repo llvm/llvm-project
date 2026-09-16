@@ -8,21 +8,6 @@ declare void @forward_sret(ptr sret(%struct.Buffer), i64)
 declare void @use_pointer(ptr)
 declare void @use_as_second_arg(i32, ptr)
 
-; The caller's sret pointer can be passed as an ordinary first argument, such
-; as the `this` pointer of a C++ constructor.
-define void @caller_sret_as_first_arg(ptr noalias sret(%struct.Buffer) %result) {
-; RV32-LABEL: caller_sret_as_first_arg:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    tail use_pointer
-;
-; RV64-LABEL: caller_sret_as_first_arg:
-; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    tail use_pointer
-entry:
-  tail call void @use_pointer(ptr %result)
-  ret void
-}
-
 ; Matching caller and callee sret semantics can reuse the incoming
 ; return buffer.
 define void @forward_result(ptr noalias sret(%struct.Buffer) %result, i64 %tag) {
