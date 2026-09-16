@@ -109,10 +109,6 @@ public:
 
   bool run();
 
-  /// Returns the Initiation Interval of the best scheduling result found, or
-  /// UINT_MAX if run() has not been called or found no valid schedule.
-  unsigned getBestII() const { return BestII; }
-
 protected:
   /// Two types of ScheduleDAGs are needed, one for creating dependency graphs
   /// only, and the other for list scheduling as determined by the target.

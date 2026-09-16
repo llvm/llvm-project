@@ -84,7 +84,8 @@ findPriorityOption(const ClangTidyOptions::OptionMap &Options,
 
 std::optional<StringRef>
 ClangTidyCheck::OptionsView::getLocalOrGlobal(StringRef LocalName) const {
-  auto Iter = findPriorityOption(CheckOptions, NamePrefix, LocalName, Context);
+  const auto Iter =
+      findPriorityOption(CheckOptions, NamePrefix, LocalName, Context);
   if (Iter != CheckOptions.end())
     return StringRef(Iter->getValue().Value);
   return std::nullopt;
@@ -115,7 +116,8 @@ ClangTidyCheck::OptionsView::get<bool>(StringRef LocalName) const {
 template <>
 std::optional<bool>
 ClangTidyCheck::OptionsView::getLocalOrGlobal<bool>(StringRef LocalName) const {
-  auto Iter = findPriorityOption(CheckOptions, NamePrefix, LocalName, Context);
+  const auto Iter =
+      findPriorityOption(CheckOptions, NamePrefix, LocalName, Context);
   if (Iter != CheckOptions.end()) {
     if (auto Result = getAsBool(Iter->getValue().Value))
       return Result;
@@ -155,9 +157,10 @@ ClangTidyCheck::OptionsView::getEnumInt(StringRef LocalName,
                                         bool CheckGlobal) const {
   if (!CheckGlobal && Context->getOptionsCollector())
     Context->getOptionsCollector()->insert((NamePrefix + LocalName).str());
-  auto Iter = CheckGlobal ? findPriorityOption(CheckOptions, NamePrefix,
-                                               LocalName, Context)
-                          : CheckOptions.find((NamePrefix + LocalName).str());
+  const auto Iter =
+      CheckGlobal
+          ? findPriorityOption(CheckOptions, NamePrefix, LocalName, Context)
+          : CheckOptions.find((NamePrefix + LocalName).str());
   if (Iter == CheckOptions.end())
     return std::nullopt;
 
@@ -207,8 +210,8 @@ void ClangTidyCheck::OptionsView::diagnoseBadIntegerOption(
 void ClangTidyCheck::OptionsView::diagnoseBadEnumOption(
     const Twine &Lookup, StringRef Unparsed, StringRef Suggestion) const {
   SmallString<64> Buffer;
-  auto Diag = Context->configurationDiag(ConfigWarning)
-              << Unparsed << Lookup.toStringRef(Buffer);
+  const auto Diag = Context->configurationDiag(ConfigWarning)
+                    << Unparsed << Lookup.toStringRef(Buffer);
   if (Suggestion.empty())
     Diag << 0;
   else

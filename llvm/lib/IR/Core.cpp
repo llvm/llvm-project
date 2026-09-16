@@ -474,6 +474,7 @@ LLVMBool LLVMPrintModuleToFile(LLVMModuleRef M, const char *Filename,
     return true;
   }
 
+  unwrap(M)->renumberMetadataForAssembly();
   unwrap(M)->print(dest, nullptr);
 
   dest.close();
@@ -491,6 +492,7 @@ char *LLVMPrintModuleToString(LLVMModuleRef M) {
   std::string buf;
   raw_string_ostream os(buf);
 
+  unwrap(M)->renumberMetadataForAssembly();
   unwrap(M)->print(os, nullptr);
 
   return strdup(buf.c_str());
@@ -1840,11 +1842,15 @@ LLVMOpcode LLVMGetConstOpcode(LLVMValueRef ConstantVal) {
 }
 
 LLVMValueRef LLVMAlignOf(LLVMTypeRef Ty) {
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   return wrap(ConstantExpr::getAlignOf(unwrap(Ty)));
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
 LLVMValueRef LLVMSizeOf(LLVMTypeRef Ty) {
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   return wrap(ConstantExpr::getSizeOf(unwrap(Ty)));
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 }
 
 LLVMValueRef LLVMConstNeg(LLVMValueRef ConstantVal) {
@@ -4004,20 +4010,23 @@ void LLVMSetIsDisjoint(LLVMValueRef Inst, LLVMBool IsDisjoint) {
 
 LLVMValueRef LLVMBuildMalloc(LLVMBuilderRef B, LLVMTypeRef Ty,
                              const char *Name) {
-  Type* ITy = Type::getInt32Ty(unwrap(B)->GetInsertBlock()->getContext());
-  Constant* AllocSize = ConstantExpr::getSizeOf(unwrap(Ty));
-  AllocSize = ConstantExpr::getTruncOrBitCast(AllocSize, ITy);
-  return wrap(unwrap(B)->CreateMalloc(ITy, unwrap(Ty), AllocSize, nullptr,
-                                      nullptr, Name));
+  BasicBlock *BB = unwrap(B)->GetInsertBlock();
+  const DataLayout &DL = BB->getDataLayout();
+  Type *ITy = Type::getInt32Ty(BB->getContext());
+  Value *AllocSize =
+      unwrap(B)->CreateTypeSize(ITy, DL.getTypeAllocSize(unwrap(Ty)));
+  return wrap(unwrap(B)->CreateMalloc(ITy, AllocSize, nullptr, nullptr, Name));
 }
 
 LLVMValueRef LLVMBuildArrayMalloc(LLVMBuilderRef B, LLVMTypeRef Ty,
                                   LLVMValueRef Val, const char *Name) {
-  Type* ITy = Type::getInt32Ty(unwrap(B)->GetInsertBlock()->getContext());
-  Constant* AllocSize = ConstantExpr::getSizeOf(unwrap(Ty));
-  AllocSize = ConstantExpr::getTruncOrBitCast(AllocSize, ITy);
-  return wrap(unwrap(B)->CreateMalloc(ITy, unwrap(Ty), AllocSize, unwrap(Val),
-                                      nullptr, Name));
+  BasicBlock *BB = unwrap(B)->GetInsertBlock();
+  const DataLayout &DL = BB->getDataLayout();
+  Type *ITy = Type::getInt32Ty(BB->getContext());
+  Value *AllocSize =
+      unwrap(B)->CreateTypeSize(ITy, DL.getTypeAllocSize(unwrap(Ty)));
+  return wrap(
+      unwrap(B)->CreateMalloc(ITy, AllocSize, unwrap(Val), nullptr, Name));
 }
 
 LLVMValueRef LLVMBuildMemSet(LLVMBuilderRef B, LLVMValueRef Ptr,

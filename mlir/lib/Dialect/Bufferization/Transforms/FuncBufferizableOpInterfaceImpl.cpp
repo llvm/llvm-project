@@ -332,10 +332,10 @@ struct CallOpInterface
     }
 
     // 3. Create the new CallOp.
-    Operation *newCallOp =
-        func::CallOp::create(rewriter, callOp.getLoc(), funcOp.getSymName(),
-                             resultTypes, newOperands);
-    newCallOp->setAttrs(callOp->getAttrs());
+    func::CallOp newCallOp =
+        func::CallOp::create(rewriter, callOp.getLoc(), resultTypes,
+                             newOperands, callOp.getProperties(),
+                             callOp->getDiscardableAttrDictionary().getValue());
 
     // 4. Replace the old op with the new op.
     replaceOpWithBufferizedValues(rewriter, callOp, newCallOp->getResults());

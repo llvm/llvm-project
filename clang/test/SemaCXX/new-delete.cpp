@@ -15,7 +15,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,since-cxx26,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++2c -fexperimental-new-constant-interpreter -DNEW_INTERP
 
 // FIXME Location is (frontend)
-// cxx17-note@*:* {{candidate function not viable: requires 2 arguments, but 3 were provided}}
+// cxx17-note@*:* {{candidate function not viable: requires 2 arguments, but 4 were provided}}
 
 #include <stddef.h>
 
@@ -718,7 +718,7 @@ int *fail = dependent_array_size("hello"); // expected-note {{instantiation of}}
 // FIXME: Our behavior here is incredibly inconsistent. GCC allows
 // constant-folding in array bounds in new-expressions.
 int (*const_fold)[12] = new int[3][&const_fold + 12 - &const_fold];
-#if __cplusplus >= 201402L && !defined(NEW_INTERP)
+#if __cplusplus >= 201402L
 // expected-error@-2 {{array size is not a constant expression}}
 // expected-note@-3 {{cannot refer to element 12 of non-array}}
 #elif __cplusplus < 201103L

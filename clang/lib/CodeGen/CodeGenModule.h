@@ -720,7 +720,8 @@ private:
   llvm::DenseMap<const CXXRecordDecl *, std::optional<PointerAuthQualifier>>
       VTablePtrAuthInfos;
   std::optional<PointerAuthQualifier>
-  computeVTPointerAuthentication(const CXXRecordDecl *ThisClass);
+  computeVTPointerAuthentication(const CXXRecordDecl *ThisClass,
+                                 bool IsVTTEntry);
 
   AtomicOptions AtomicOpts;
 
@@ -1161,13 +1162,14 @@ public:
                                    GlobalDecl SchemaDecl, QualType SchemaType);
 
   uint16_t getPointerAuthDeclDiscriminator(GlobalDecl GD);
-  std::optional<CGPointerAuthInfo>
-  getVTablePointerAuthInfo(CodeGenFunction *Context,
-                           const CXXRecordDecl *Record,
-                           llvm::Value *StorageAddress);
+
+  std::optional<CGPointerAuthInfo> getVTablePointerAuthInfo(
+      CodeGenFunction *Context, const CXXRecordDecl *Record,
+      llvm::Value *StorageAddress, bool IsVTTEntry = false);
 
   std::optional<PointerAuthQualifier>
-  getVTablePointerAuthentication(const CXXRecordDecl *thisClass);
+  getVTablePointerAuthentication(const CXXRecordDecl *thisClass,
+                                 bool IsVTTEntry = false);
 
   CGPointerAuthInfo EmitPointerAuthInfo(const RecordDecl *RD);
 
@@ -1766,6 +1768,17 @@ public:
   /// MDString.
   llvm::Metadata *CreateMetadataIdentifierForCallGraphType(QualType T);
 
+  /// Applies C default argument promotions to a parameter type for Call Graph
+  /// Section type reconstruction.
+  QualType GetCallGraphPromotedType(QualType Ty) const;
+
+  /// Reconstructs a FunctionProtoType for an unprototyped function type
+  /// (FunctionNoProtoType) using the given parameter/argument types, applying
+  /// default argument promotions to ensure call-site and definition-site type
+  /// signatures match.
+  QualType ReconstructCallGraphPrototype(const FunctionNoProtoType *FNPT,
+                                         ArrayRef<QualType> ParamTypes) const;
+
   /// Create a metadata identifier that is intended to be used to check virtual
   /// calls via a member function pointer.
   llvm::Metadata *CreateMetadataIdentifierForVirtualMemPtrType(QualType T);
@@ -2176,6 +2189,12 @@ private:
   /// sycl_external attribute to enable them to be identified as entry points
   /// by clang-sycl-linker during device-code splitting.
   void addSYCLModuleIdAttr(llvm::Function *Fn);
+
+  /// Embed the finalized SYCL device binary named by -foffload-include-binary
+  /// into the host module.
+  /// \return the function that registers the binary with the runtime, or null
+  /// if the binary could not be read.
+  llvm::Function *embedSYCLDeviceBinary();
 
   /// Determine whether the definition must be emitted; if this returns \c
   /// false, the definition can be emitted lazily if it's used.

@@ -866,9 +866,18 @@ public:
   /// Allow the target to override the cost of using a callee-saved register for
   /// the first time. Default value of 0 means we will use a callee-saved
   /// register if it is available.
-  virtual unsigned getCSRFirstUseCost() const { return 0; }
+  virtual unsigned getCSRFirstUseCost(const MachineFunction &MF) const {
+    return 0;
+  }
   /// FIXME: We should deprecate this usage.
   virtual unsigned getCSRCost() const { return 0; }
+
+  /// Scale the CSRFirstUseCost with this number.
+  /// The scale is a percentage (e.g., 30 means 30% of the base cost).
+  /// Target can tune and override this default value.
+  virtual unsigned getCSRCostScale(const MachineFunction &MF) const {
+    return 30;
+  }
 
   /// Returns true if the target requires (and can make use of) the register
   /// scavenger.
@@ -1081,8 +1090,8 @@ public:
       ArrayRef<MCPhysReg> Exceptions = ArrayRef<MCPhysReg>()) const;
 
   virtual const TargetRegisterClass *
-  getConstrainedRegClassForOperand(const MachineOperand &MO,
-                                   const MachineRegisterInfo &MRI) const {
+  getConstrainedRegClassForReg(Register Reg,
+                               const MachineRegisterInfo &MRI) const {
     return nullptr;
   }
 

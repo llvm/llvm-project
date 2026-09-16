@@ -3,12 +3,7 @@ Test the redirection after launching in the integrated terminal.
 """
 
 from DAP_launch_io import DAP_launchIO
-from lldbsuite.test.decorators import (
-    skipIfAsan,
-    skipIfBuildType,
-    skipIfRemote,
-    skipIfWindows,
-)
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap import DAPTestSession
 from lldbsuite.test.tools.lldb_dap.types import Console, RunInTerminalRequest
 
@@ -17,6 +12,7 @@ from lldbsuite.test.tools.lldb_dap.types import Console, RunInTerminalRequest
 @skipIfAsan
 @skipIfBuildType(["debug"])
 @skipIfWindows
+@skipIfWasm  # runInTerminal has the client run the program, and a Wasm module is not executable
 class TestDAP_launch_io_IntegratedTerminal(DAP_launchIO):
     console = Console.INTEGRATED_TERMINAL
 

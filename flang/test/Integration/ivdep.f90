@@ -120,5 +120,5 @@ end subroutine ivdep_test4
 ! CHECK: ![[PARALLEL_ACCESSES2]] = !{!"llvm.loop.parallel_accesses", [[DISTRINCT2]]}
 ! CHECK: [[DISTRINCT3:.*]] = distinct !{}
 ! CHECK: ![[ANNOTATION3]] = distinct !{![[ANNOTATION3]], ![[VECTORIZE:.*]], ![[PARALLEL_ACCESSES3:.*]]}
-! CHECK: ![[VECTORIZE]] = !{!"llvm.loop.vectorize.enable", i1 true}
+! CHECK: ![[VECTORIZE]] = !{!"llvm.loop.vectorize.enable"}
 ! CHECK: ![[PARALLEL_ACCESSES3]] = !{!"llvm.loop.parallel_accesses", [[DISTRINCT3]]}

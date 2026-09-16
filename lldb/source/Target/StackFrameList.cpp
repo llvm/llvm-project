@@ -15,6 +15,7 @@
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Target/BorrowedStackFrame.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -105,7 +106,7 @@ bool SyntheticStackFrameList::FetchFramesUpTo(
       if (!frame_or_err) {
         // Provider returned error - we've reached the end.
         LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), frame_or_err.takeError(),
-                       "Frame provider reached end at index {0}: {1}", idx);
+                       "Frame provider reached end at index {1}: {0}", idx);
         SetAllFramesFetched();
         break;
       }
@@ -424,13 +425,15 @@ uint32_t StackFrameList::SynthesizeInlineFrames(StackFrameSP frame_sp,
   Address next_frame_address;
   uint32_t num_inlined_frames = 0;
 
+  const bool behaves_like_zeroth_frame = frame_sp->m_behaves_like_zeroth_frame;
+
   while (unwind_sc.GetParentOfInlinedScope(curr_frame_address, next_frame_sc,
                                            next_frame_address)) {
     next_frame_sc.line_entry.ApplyFileMappings(target_sp);
     StackFrameSP inline_frame_sp = std::make_shared<StackFrame>(
         m_thread.shared_from_this(), m_frames.size(), concrete_frame_idx,
         frame_sp->GetRegisterContextSP(), cfa, next_frame_address,
-        /*behaves_like_zeroth_frame=*/false, &next_frame_sc);
+        behaves_like_zeroth_frame, &next_frame_sc);
 
     inline_frame_sp->m_frame_list_id = GetIdentifier();
     m_frames.push_back(inline_frame_sp);
@@ -636,6 +639,14 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       // Check the stack ID to make sure they are equal.
       if (curr_frame->GetStackID() != prev_frame->GetStackID())
         break;
+
+      // Never adopt a frame borrowed from another StackFrameList, which only a
+      // provider's SyntheticStackFrameList hands out: it keeps reporting the
+      // index of the frame it borrows, and the update below cannot change
+      // that. Skipping it is safe because the merge only carries cached state
+      // onto a frame this list has already unwound correctly.
+      if (llvm::isa<BorrowedStackFrame>(prev_frame))
+        continue;
 
       prev_frame->UpdatePreviousFrameFromCurrentFrame(*curr_frame);
       // Now copy the fixed up previous frame into the current frames so the

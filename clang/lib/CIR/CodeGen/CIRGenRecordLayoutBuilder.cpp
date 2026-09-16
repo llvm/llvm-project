@@ -13,6 +13,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenModule.h"
 #include "CIRGenTypes.h"
+#include "TargetInfo.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -21,6 +22,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/Support/Casting.h"
 
 #include <memory>
@@ -43,28 +45,66 @@ struct CIRRecordLowering final {
     CharUnits offset;
     enum class InfoKind { VFPtr, Field, Base, VBase } kind;
     mlir::Type data;
+    /// What this member holds, recorded on the CIR record type.
+    cir::RecordMemberKind memberKind;
     union {
       const FieldDecl *fieldDecl;
       const CXXRecordDecl *cxxRecordDecl;
     };
     MemberInfo(CharUnits offset, InfoKind kind, mlir::Type data,
+               cir::RecordMemberKind memberKind,
                const FieldDecl *fieldDecl = nullptr)
-        : offset{offset}, kind{kind}, data{data}, fieldDecl{fieldDecl} {}
+        : offset{offset}, kind{kind}, data{data}, memberKind{memberKind},
+          fieldDecl{fieldDecl} {}
     MemberInfo(CharUnits offset, InfoKind kind, mlir::Type data,
-               const CXXRecordDecl *rd)
-        : offset{offset}, kind{kind}, data{data}, cxxRecordDecl{rd} {}
+               cir::RecordMemberKind memberKind, const CXXRecordDecl *rd)
+        : offset{offset}, kind{kind}, data{data}, memberKind{memberKind},
+          cxxRecordDecl{rd} {}
     // MemberInfos are sorted so we define a < operator.
     bool operator<(const MemberInfo &other) const {
       return offset < other.offset;
     }
   };
+
+  static bool ownsBytes(const MemberInfo &member) {
+    return member.data && cir::memberOwnsBytes(member.data);
+  }
+
+  cir::BitFieldDeclAttr getBitFieldDecl(const FieldDecl *field) {
+    return cir::BitFieldDeclAttr::get(
+        cirGenTypes.convertTypeForMem(field->getType()),
+        field->getBitWidthValue(), field->isUnnamedBitField());
+  }
+
+  MemberInfo makeAccessUnitInfo(CharUnits offset, mlir::Type storage,
+                                llvm::ArrayRef<cir::BitFieldDeclAttr> fields) {
+    mlir::Type unitTy =
+        cir::BitFieldType::get(&cirGenTypes.getMLIRContext(), storage, fields);
+    // If the access unit doesn't hold any named fields, it's empty.
+    const bool holdsNamedField =
+        mlir::cast<cir::BitFieldType>(unitTy).holdsNamedField();
+    return makeStorageInfo(offset, unitTy,
+                           holdsNamedField ? cir::RecordMemberKind::BitField
+                                           : cir::RecordMemberKind::Empty);
+  }
+
+  /// The member for a zero-width bit-field, which belongs to no access unit
+  /// and owns no bytes.  It sits at its own offset, where the run it ended
+  /// stops.
+  MemberInfo makeZeroWidthBitFieldInfo(const FieldDecl *field) {
+    assert(field->isZeroLengthBitField() && "not a zero-width bit-field");
+    return makeAccessUnitInfo(bitsToCharUnits(getFieldBitOffset(field)),
+                              /*storage=*/mlir::Type{}, getBitFieldDecl(field));
+  }
+
   // The constructor.
   CIRRecordLowering(CIRGenTypes &cirGenTypes, const RecordDecl *recordDecl,
                     bool packed);
 
   /// Constructs a MemberInfo instance from an offset and mlir::Type.
-  MemberInfo makeStorageInfo(CharUnits offset, mlir::Type data) {
-    return MemberInfo(offset, MemberInfo::InfoKind::Field, data);
+  MemberInfo makeStorageInfo(CharUnits offset, mlir::Type data,
+                             cir::RecordMemberKind memberKind) {
+    return MemberInfo(offset, MemberInfo::InfoKind::Field, data, memberKind);
   }
 
   // Layout routines.
@@ -83,16 +123,12 @@ struct CIRRecordLowering final {
   void accumulateBases();
   void accumulateVPtrs();
   void accumulateVBases();
-  void accumulateFields();
+  void accumulateFields(bool nonVirtualBaseType);
   RecordDecl::field_iterator
   accumulateBitFields(RecordDecl::field_iterator field,
                       RecordDecl::field_iterator fieldEnd);
 
   mlir::Type getVFPtrType();
-
-  bool isAAPCS() const {
-    return astContext.getTargetInfo().getABI().starts_with("aapcs");
-  }
 
   /// Helper function to check if the target machine is BigEndian.
   bool isBigEndian() const { return astContext.getTargetInfo().isBigEndian(); }
@@ -130,7 +166,24 @@ struct CIRRecordLowering final {
   CharUnits getSizeInBits(mlir::Type ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSizeInBits(ty));
   }
-  CharUnits getAlignment(mlir::Type Ty) {
+
+  CharUnits getMemberAlignment(mlir::Type Ty) {
+    // An access unit takes the alignment of its storage type. A zero-width
+    // bit-field has no storage and so imposes no alignment.
+    if (auto bitFieldTy = mlir::dyn_cast<cir::BitFieldType>(Ty)) {
+      if (mlir::Type storage = bitFieldTy.getStorageType())
+        return getMemberAlignment(storage);
+      return CharUnits::One();
+    }
+    // Recurse on Arrays, they have the member alignment of their element type.
+    if (auto arrayTy = mlir::dyn_cast<cir::ArrayType>(Ty))
+      return getMemberAlignment(arrayTy.getElementType());
+    // Int types (_BitInt in particular) share the alignment of their storage
+    // type.
+    if (auto intTy = mlir::dyn_cast<cir::IntType>(Ty))
+      return CharUnits::fromQuantity(
+          intTy.getStorageTypeAlignment(dataLayout.layout));
+
     return CharUnits::fromQuantity(dataLayout.layout.getTypeABIAlignment(Ty));
   }
 
@@ -139,6 +192,37 @@ struct CIRRecordLowering final {
   }
   bool isZeroInitializable(const RecordDecl *rd) {
     return cirGenTypes.isZeroInitializable(rd);
+  }
+
+  /// The mark for a member, given whether it holds data for argument passing
+  /// and whether it is a bit-field.  A run of bit-fields shares one access
+  /// unit whose width can be narrower than the declared type of the bit-field
+  /// it holds.
+  static cir::RecordMemberKind makeMemberKind(bool holdsData,
+                                              bool isNamedBitField) {
+    if (!holdsData)
+      return cir::RecordMemberKind::Empty;
+    return isNamedBitField ? cir::RecordMemberKind::BitField
+                           : cir::RecordMemberKind::Data;
+  }
+
+  /// The mark for a field that is not a bit-field.  A run of bit-fields is one
+  /// member per access unit rather than one per field, so a bit-field is
+  /// marked where its unit is built.
+  cir::RecordMemberKind getFieldMemberKind(const FieldDecl *fd) {
+    assert(!fd->isBitField() && "a bit-field is marked with its access unit");
+    return makeMemberKind(/*holdsData=*/!isEmptyFieldForABI(astContext, fd),
+                          /*isNamedBitField=*/false);
+  }
+
+  /// The mark for a base subobject.  A base contributes no ABI data when it is
+  /// empty for the ABI, which is not the same as CXXRecordDecl::isEmpty(): a
+  /// base holding only unnamed bit-fields is laid out but carries no data.
+  cir::RecordMemberKind getBaseMemberKind(const CXXRecordDecl *baseDecl) {
+    return isEmptyRecordForABI(astContext,
+                               astContext.getCanonicalTagType(baseDecl))
+               ? cir::RecordMemberKind::Empty
+               : cir::RecordMemberKind::Data;
   }
 
   /// Wraps cir::IntType with some implicit arguments.
@@ -199,13 +283,27 @@ struct CIRRecordLowering final {
     if (size.isZero())
       return;
     mlir::Type padTy = getByteArrayType(size);
-    padded = true;
     if (recordDecl->isUnion()) {
       assert(!unionPadding && "at most one union tail-padding type");
       unionPadding = padTy;
     } else {
-      fieldTypes.push_back(padTy);
+      addField(padTy, cir::RecordMemberKind::Pad);
     }
+  }
+
+  void addField(mlir::Type ty, cir::RecordMemberKind memberKind) {
+    fieldTypes.push_back(ty);
+    fieldKinds.push_back(memberKind);
+  }
+
+  void clearFields() {
+    fieldTypes.clear();
+    fieldKinds.clear();
+  }
+
+  llvm::ArrayRef<mlir::Type> getFieldTypes() const { return fieldTypes; }
+  llvm::ArrayRef<cir::RecordMemberKind> getFieldKinds() const {
+    return fieldKinds;
   }
 
   CIRGenTypes &cirGenTypes;
@@ -216,8 +314,6 @@ struct CIRRecordLowering final {
   const ASTRecordLayout &astRecordLayout;
   // Helpful intermediate data-structures
   std::vector<MemberInfo> members;
-  // Output fields, consumed by CIRGenTypes::computeRecordLayout
-  llvm::SmallVector<mlir::Type, 16> fieldTypes;
   mlir::Type unionPadding;
   llvm::DenseMap<const FieldDecl *, CIRGenBitFieldInfo> bitFields;
   llvm::DenseMap<const FieldDecl *, unsigned> fieldIdxMap;
@@ -231,10 +327,14 @@ struct CIRRecordLowering final {
   unsigned zeroInitializableAsBase : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned packed : 1;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned padded : 1;
 
 private:
+  // Output fields, consumed by CIRGenTypes::computeRecordLayout.  Private so
+  // that every append goes through addField and fieldKinds stays parallel to
+  // fieldTypes.
+  llvm::SmallVector<mlir::Type, 16> fieldTypes;
+  llvm::SmallVector<cir::RecordMemberKind> fieldKinds;
+
   CIRRecordLowering(const CIRRecordLowering &) = delete;
   void operator=(const CIRRecordLowering &) = delete;
 }; // CIRRecordLowering
@@ -248,8 +348,7 @@ CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
       astRecordLayout{
           cirGenTypes.getASTContext().getASTRecordLayout(recordDecl)},
       dataLayout{cirGenTypes.getCGModule().getModule()},
-      zeroInitializable{true}, zeroInitializableAsBase{true}, packed{packed},
-      padded{false} {}
+      zeroInitializable{true}, zeroInitializableAsBase{true}, packed{packed} {}
 
 void CIRRecordLowering::setBitFieldInfo(const FieldDecl *fd,
                                         CharUnits startOffset,
@@ -288,7 +387,7 @@ void CIRRecordLowering::lower(bool nonVirtualBaseType) {
   CharUnits size = nonVirtualBaseType ? astRecordLayout.getNonVirtualSize()
                                       : astRecordLayout.getSize();
 
-  accumulateFields();
+  accumulateFields(nonVirtualBaseType);
 
   if (cxxRecordDecl) {
     accumulateVPtrs();
@@ -306,7 +405,10 @@ void CIRRecordLowering::lower(bool nonVirtualBaseType) {
   // TODO: Verify bitfield clipping
   assert(!cir::MissingFeatures::checkBitfieldClipping());
 
-  members.push_back(makeStorageInfo(size, getUIntNType(8)));
+  // The sentinel is popped before fillOutputFields, so its kind never reaches
+  // the type.
+  members.push_back(
+      makeStorageInfo(size, getUIntNType(8), cir::RecordMemberKind::Data));
   determinePacked(nonVirtualBaseType);
   insertPadding();
   members.pop_back();
@@ -319,16 +421,18 @@ void CIRRecordLowering::lower(bool nonVirtualBaseType) {
 void CIRRecordLowering::fillOutputFields() {
   for (const MemberInfo &member : members) {
     if (member.data)
-      fieldTypes.push_back(member.data);
+      addField(member.data, member.memberKind);
     if (member.kind == MemberInfo::InfoKind::Field) {
       if (member.fieldDecl)
         fieldIdxMap[member.fieldDecl->getCanonicalDecl()] =
             fieldTypes.size() - 1;
-      // A field without storage must be a bitfield.
+      // A bit-field carries no member of its own. It is numbered as the access
+      // unit ahead of it, whose storage it is read and written through.
       if (!member.data) {
         assert(member.fieldDecl &&
                "member.data is a nullptr so member.fieldDecl should not be");
-        setBitFieldInfo(member.fieldDecl, member.offset, fieldTypes.back());
+        setBitFieldInfo(member.fieldDecl, member.offset,
+                        cir::memberStorageType(fieldTypes.back()));
       }
     } else if (member.kind == MemberInfo::InfoKind::Base) {
       nonVirtualBases[member.cxxRecordDecl] = fieldTypes.size() - 1;
@@ -352,31 +456,46 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
     // used to determine if the ASTRecordLayout is treating these two bitfields
     // as contiguous. StartBitOffset is offset of the beginning of the Run.
     uint64_t startBitOffset, tail = 0;
+    // Where the current run's access unit sits in members, and the bit-fields
+    // it holds so far.  The unit grows as new bit-fields are added.
+    size_t unitIdx = 0;
+    mlir::Type unitStorage;
+    llvm::SmallVector<cir::BitFieldDeclAttr> unitFields;
     for (; field != fieldEnd && field->isBitField(); ++field) {
       // Zero-width bitfields end runs.
       if (field->isZeroLengthBitField()) {
+        members.push_back(makeZeroWidthBitFieldInfo(*field));
         run = fieldEnd;
         continue;
       }
       uint64_t bitOffset = getFieldBitOffset(*field);
       mlir::Type type = cirGenTypes.convertTypeForMem(field->getType());
+      cir::BitFieldDeclAttr decl = getBitFieldDecl(*field);
       // If we don't have a run yet, or don't live within the previous run's
       // allocated storage then we allocate some storage and start a new run.
       if (run == fieldEnd || bitOffset >= tail) {
         run = field;
         startBitOffset = bitOffset;
         tail = startBitOffset + dataLayout.getTypeAllocSizeInBits(type);
-        // Add the storage member to the record.  This must be added to the
-        // record before the bitfield members so that it gets laid out before
-        // the bitfields it contains get laid out.
-        members.push_back(
-            makeStorageInfo(bitsToCharUnits(startBitOffset), type));
+        // The access unit is added to the record before the bit-fields it
+        // holds so that it gets laid out ahead of them.
+        unitIdx = members.size();
+        unitStorage = type;
+        unitFields.assign(1, decl);
+        members.push_back(makeAccessUnitInfo(bitsToCharUnits(startBitOffset),
+                                             unitStorage, unitFields));
+      } else {
+        unitFields.push_back(decl);
+        members[unitIdx] = makeAccessUnitInfo(bitsToCharUnits(startBitOffset),
+                                              unitStorage, unitFields);
       }
-      // Bitfields get the offset of their storage but come afterward and remain
-      // there after a stable sort.
+      assert(members[unitIdx].offset == bitsToCharUnits(startBitOffset) &&
+             "unitIdx must name the current run's access unit");
+      // Bitfields get the offset of their access unit but come afterward and
+      // remain there after a stable sort.
       members.push_back(MemberInfo(bitsToCharUnits(startBitOffset),
                                    MemberInfo::InfoKind::Field, nullptr,
-                                   *field));
+                                   cir::RecordMemberKind::Data, *field));
     }
     return field;
   }
@@ -548,11 +667,21 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
           assert(getSize(type) == accessSize &&
                  "Unclipped access must be clipped");
         }
-        members.push_back(makeStorageInfo(beginOffset, type));
+        // A zero-length bit-field in the span was given a member of its own
+        // when it was accumulated, and belongs to no access unit, so it is not
+        // one of the fields this unit holds.
+        llvm::SmallVector<cir::BitFieldDeclAttr> unitFields;
+        for (auto occupant = begin; occupant != bestEnd; ++occupant)
+          if (!occupant->isZeroLengthBitField())
+            unitFields.push_back(getBitFieldDecl(*occupant));
+        assert(!unitFields.empty() && "an access unit holds a bit-field");
+        members.push_back(makeAccessUnitInfo(beginOffset, type, unitFields));
+
         for (; begin != bestEnd; ++begin)
           if (!begin->isZeroLengthBitField())
-            members.push_back(MemberInfo(
-                beginOffset, MemberInfo::InfoKind::Field, nullptr, *begin));
+            members.push_back(MemberInfo(beginOffset,
+                                         MemberInfo::InfoKind::Field, nullptr,
+                                         cir::RecordMemberKind::Data, *begin));
       }
       // Reset to start a new span.
       field = bestEnd;
@@ -561,6 +690,8 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
       assert(field != fieldEnd && field->isBitField() &&
              "Accumulating past end of bitfields");
       assert(!barrier && "Accumulating across barrier");
+      if (field->isZeroLengthBitField())
+        members.push_back(makeZeroWidthBitFieldInfo(*field));
       // Accumulate this bitfield into the current (potential) span.
       bitSizeSinceBegin += field->getBitWidthValue();
       ++field;
@@ -570,7 +701,7 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
   return field;
 }
 
-void CIRRecordLowering::accumulateFields() {
+void CIRRecordLowering::accumulateFields(bool nonVirtualBaseType) {
   for (RecordDecl::field_iterator field = recordDecl->field_begin(),
                                   fieldEnd = recordDecl->field_end();
        field != fieldEnd;) {
@@ -591,17 +722,29 @@ void CIRRecordLowering::accumulateFields() {
       // problem with taking the address of one of these, so it is in practice
       // not a horrifyingly problematic issue.
       assert(!cir::MissingFeatures::noUniqueAddressLayout());
+      // Dropping the field leaves no member to mark, so its bytes read as
+      // padding.  That is only sound when the field carries no ABI data, so
+      // make sure we add a member for it. if it does.
+      if (!isEmptyFieldForABI(astContext, *field))
+        members.push_back(
+            MemberInfo(bitsToCharUnits(getFieldBitOffset(*field)),
+                       MemberInfo::InfoKind::Field,
+                       getStorageType(field->getType()->getAsCXXRecordDecl()),
+                       getFieldMemberKind(*field), *field));
       ++field;
     } else {
       // Use base subobject layout for potentially-overlapping fields,
       // as it is done in RecordLayoutBuilder.
+      //
+      // The mark comes from isEmptyFieldForABI, not the isEmptyFieldForLayout
+      // above.  Neither predicate subsumes the other.
       members.push_back(MemberInfo(
           bitsToCharUnits(getFieldBitOffset(*field)),
           MemberInfo::InfoKind::Field,
           field->isPotentiallyOverlapping()
               ? getStorageType(field->getType()->getAsCXXRecordDecl())
               : getStorageType(*field),
-          *field));
+          getFieldMemberKind(*field), *field));
       ++field;
     }
   }
@@ -635,15 +778,17 @@ void CIRRecordLowering::determinePacked(bool nvBaseType) {
                          : CharUnits::Zero();
 
   for (const MemberInfo &member : members) {
-    if (!member.data)
+    // A member that owns no bytes sits inside another member's storage, whose
+    // own offset and alignment are what decide packing.
+    if (!ownsBytes(member))
       continue;
     // If any member falls at an offset that it not a multiple of its alignment,
     // then the entire record must be packed.
-    if (!member.offset.isMultipleOf(getAlignment(member.data)))
+    if (!member.offset.isMultipleOf(getMemberAlignment(member.data)))
       packed = true;
     if (member.offset < nvSize)
-      nvAlignment = std::max(nvAlignment, getAlignment(member.data));
-    alignment = std::max(alignment, getAlignment(member.data));
+      nvAlignment = std::max(nvAlignment, getMemberAlignment(member.data));
+    alignment = std::max(alignment, getMemberAlignment(member.data));
   }
   // If the size of the record (the capstone's offset) is not a multiple of the
   // record's alignment, it must be packed.
@@ -665,21 +810,33 @@ void CIRRecordLowering::insertPadding() {
   for (const MemberInfo &member : members) {
     if (!member.data)
       continue;
+    // A consumer recovers a member's offset by accumulating the sizes of the
+    // members before it, so the padding a zero-width bit-field sits inside has
+    // to be split at its offset for that sum to come out right.  The offset
+    // can sit behind the running size, since the access unit covering the bits
+    // around it may be wider than the offset it was declared at.
+    if (!ownsBytes(member)) {
+      if (member.offset > size) {
+        padding.push_back(std::make_pair(size, member.offset - size));
+        size = member.offset;
+      }
+      continue;
+    }
     CharUnits offset = member.offset;
     assert(offset >= size);
     // Insert padding if we need to.
-    if (offset !=
-        size.alignTo(packed ? CharUnits::One() : getAlignment(member.data)))
+    if (offset != size.alignTo(packed ? CharUnits::One()
+                                      : getMemberAlignment(member.data)))
       padding.push_back(std::make_pair(size, offset - size));
     size = offset + getSize(member.data);
   }
   if (padding.empty())
     return;
-  padded = true;
   // Add the padding to the Members list and sort it.
   for (const std::pair<CharUnits, CharUnits> &paddingPair : padding)
     members.push_back(makeStorageInfo(paddingPair.first,
-                                      getByteArrayType(paddingPair.second)));
+                                      getByteArrayType(paddingPair.second),
+                                      cir::RecordMemberKind::Pad));
   llvm::stable_sort(members);
 }
 
@@ -694,6 +851,15 @@ convertRecordArgPassingKind(RecordArgPassingKind kind) {
     return cir::ArgPassingKind::CanNeverPassInRegs;
   }
   llvm_unreachable("unknown RecordArgPassingKind");
+}
+
+/// Whether the member kinds on \p recordTy answer the record's ABI emptiness
+/// the same way the AST predicate does.
+[[maybe_unused]] static bool
+marksMatchABIEmptiness(const ASTContext &astContext, const RecordDecl *rd,
+                       cir::RecordType recordTy) {
+  return recordTy.isEmptyForABI() ==
+         isEmptyRecordForABI(astContext, astContext.getCanonicalTagType(rd));
 }
 
 std::unique_ptr<CIRGenRecordLayout>
@@ -726,8 +892,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       baseLowering.lower(/*nonVirtualBaseType=*/true);
       std::string baseIdentifier = getRecordTypeName(rd, ".base");
       baseTy = builder.getCompleteNamedRecordType(
-          baseLowering.fieldTypes, baseLowering.packed, baseLowering.padded,
-          baseIdentifier);
+          baseLowering.getFieldTypes(), baseLowering.packed, baseIdentifier,
+          baseLowering.getFieldKinds());
       // TODO(cir): add something like addRecordTypeName
 
       // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
@@ -738,6 +904,12 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       // size and so needs no such exemption.)
       assert((rd->isUnion() || lowering.packed == baseLowering.packed) &&
              "Non-virtual and complete types must agree on packedness");
+      // Emptiness is a property of the decl, so the base subobject must answer
+      // the same way the complete object does.  The two are not comparable
+      // mark by mark: they see different sizes and so different tail padding.
+      assert((marksMatchABIEmptiness(astContext, rd, baseTy) ||
+              cgm.getDiags().hasErrorOccurred()) &&
+             "base subobject member kinds must reproduce its ABI emptiness");
     }
   }
 
@@ -745,8 +917,16 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   // signifies that the type is no longer opaque and record layout is complete,
   // but we may need to recursively layout rd while laying D out as a base type.
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  ty->complete(lowering.fieldTypes, lowering.packed, lowering.padded,
-               lowering.unionPadding);
+  ty->complete(lowering.getFieldTypes(), lowering.packed, lowering.unionPadding,
+               lowering.getFieldKinds());
+
+  // The marks exist so that emptiness can be read off the type, so check that
+  // answer against the AST predicate on every record CIRGen lays out.  This
+  // does not check the individual marks, only what they add up to.  The marks
+  // themselves are pinned by clang/test/CIR/CodeGen/record-member-kinds.*.
+  assert((marksMatchABIEmptiness(astContext, rd, *ty) ||
+          cgm.getDiags().hasErrorOccurred()) &&
+         "member kinds must reproduce the ABI emptiness of the record");
 
   // Queue ABI metadata for the module-level cir.record_layouts attribute.
   if (ty->getName()) {
@@ -841,17 +1021,26 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
   // First, accumulate all the types.
   for (const FieldDecl *field : recordDecl->fields()) {
     mlir::Type fieldType;
+    cir::RecordMemberKind fieldKind;
     if (field->isBitField()) {
       if (field->isZeroLengthBitField())
         continue;
-      fieldType = getBitfieldStorageType(field->getBitWidthValue());
-      setBitFieldInfo(field, CharUnits::Zero(), fieldType);
+      // Every variant starts at offset zero, so a bit-field variant is an
+      // access unit of its own, holding that one field.
+      mlir::Type unitStorage =
+          getBitfieldStorageType(field->getBitWidthValue());
+      setBitFieldInfo(field, CharUnits::Zero(), unitStorage);
+      MemberInfo unit = makeAccessUnitInfo(CharUnits::Zero(), unitStorage,
+                                           getBitFieldDecl(field));
+      fieldType = unit.data;
+      fieldKind = unit.memberKind;
     } else {
       fieldType = getStorageType(field);
+      fieldKind = getFieldMemberKind(field);
     }
 
     fieldIdxMap[field->getCanonicalDecl()] = 0;
-    fieldTypes.push_back(fieldType);
+    addField(fieldType, fieldKind);
   }
 
   // Compute zero-initializable status.
@@ -878,13 +1067,13 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
     zeroInitializable = zeroInitializableAsBase = false;
 
   // If we have no candidates for storage, we are JUST padding.
-  if (fieldTypes.empty()) {
+  if (getFieldTypes().empty()) {
     appendPaddingBytes(layoutSize);
     return;
   }
 
   mlir::Type storageType =
-      cir::UnionType::getUnionStorageType(dataLayout.layout, fieldTypes);
+      cir::UnionType::getUnionStorageType(dataLayout.layout, getFieldTypes());
 
   // If our storage size was bigger than our required size (can happen in the
   // case of packed bitfields on Itanium) then just use an I8 array.
@@ -895,18 +1084,27 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
   // the storage type and any trailing padding as ordinary fields rather than
   // routing padding through the union's single tail-padding slot.
   if (nonVirtualBaseType) {
-    fieldTypes.clear();
-    fieldTypes.push_back(storageType);
+    // A bit-field mark here says the stand-in's extent is not a declared
+    // extent, not that its storage came from a bit-field: UnionBitAndWide in
+    // clang/test/CIR/CodeGen/no-unique-address.cpp takes its double as storage
+    // and still marks bitfield.  The stand-in describes every variant, so it
+    // takes the storage type rather than any one variant's `!cir.bitfield`,
+    // and is the one bit-field-marked member that is not one.  Computed before
+    // clearFields() drops the variant marks.
+    const cir::RecordMemberKind storageKind = makeMemberKind(
+        /*holdsData=*/cir::anyMemberHoldsDataForABI(getFieldKinds()),
+        /*isNamedBitField=*/llvm::any_of(getFieldKinds(),
+                                         cir::isNamedBitField));
+    clearFields();
+    addField(storageType, storageKind);
     CharUnits padding = layoutSize - getSize(storageType);
-    if (!padding.isZero()) {
-      fieldTypes.push_back(getByteArrayType(padding));
-      padded = true;
-    }
+    if (!padding.isZero())
+      addField(getByteArrayType(padding), cir::RecordMemberKind::Pad);
   } else {
     // Else we just add padding normally.
     appendPaddingBytes(layoutSize - getSize(storageType));
   }
-  packed = !layoutSize.isMultipleOf(getAlignment(storageType));
+  packed = !layoutSize.isMultipleOf(getMemberAlignment(storageType));
 }
 
 bool CIRRecordLowering::hasOwnStorage(const CXXRecordDecl *decl,
@@ -934,7 +1132,7 @@ bool CIRRecordLowering::hasOwnStorage(const CXXRecordDecl *decl,
 /// Enforcing the width restriction can be disabled using
 /// -fno-aapcs-bitfield-width.
 void CIRRecordLowering::computeVolatileBitfields() {
-  if (!isAAPCS() ||
+  if (!CodeGenUtils::isAAPCS(astContext.getTargetInfo()) ||
       !cirGenTypes.getCGModule().getCodeGenOpts().AAPCSBitfieldWidth)
     return;
 
@@ -1044,7 +1242,8 @@ void CIRRecordLowering::accumulateBases() {
   if (astRecordLayout.isPrimaryBaseVirtual()) {
     const CXXRecordDecl *baseDecl = astRecordLayout.getPrimaryBase();
     members.push_back(MemberInfo(CharUnits::Zero(), MemberInfo::InfoKind::Base,
-                                 getStorageType(baseDecl), baseDecl));
+                                 getStorageType(baseDecl),
+                                 getBaseMemberKind(baseDecl), baseDecl));
   }
 
   // Accumulate the non-virtual bases.
@@ -1058,7 +1257,8 @@ void CIRRecordLowering::accumulateBases() {
         !astContext.getASTRecordLayout(baseDecl).getNonVirtualSize().isZero()) {
       members.push_back(MemberInfo(astRecordLayout.getBaseClassOffset(baseDecl),
                                    MemberInfo::InfoKind::Base,
-                                   getStorageType(baseDecl), baseDecl));
+                                   getStorageType(baseDecl),
+                                   getBaseMemberKind(baseDecl), baseDecl));
     }
   }
 }
@@ -1073,8 +1273,8 @@ void CIRRecordLowering::accumulateVBases() {
     // get its own storage location but instead lives inside of that base.
     if (isOverlappingVBaseABI() && astContext.isNearlyEmpty(baseDecl) &&
         !hasOwnStorage(cxxRecordDecl, baseDecl)) {
-      members.push_back(
-          MemberInfo(offset, MemberInfo::InfoKind::VBase, nullptr, baseDecl));
+      members.push_back(MemberInfo(offset, MemberInfo::InfoKind::VBase, nullptr,
+                                   cir::RecordMemberKind::Data, baseDecl));
       continue;
     }
     // If we've got a vtordisp, add it as a storage type.
@@ -1082,16 +1282,18 @@ void CIRRecordLowering::accumulateVBases() {
             .find(baseDecl)
             ->second.hasVtorDisp())
       members.push_back(makeStorageInfo(offset - CharUnits::fromQuantity(4),
-                                        getUIntNType(32)));
+                                        getUIntNType(32),
+                                        cir::RecordMemberKind::Data));
     members.push_back(MemberInfo(offset, MemberInfo::InfoKind::VBase,
-                                 getStorageType(baseDecl), baseDecl));
+                                 getStorageType(baseDecl),
+                                 getBaseMemberKind(baseDecl), baseDecl));
   }
 }
 
 void CIRRecordLowering::accumulateVPtrs() {
   if (astRecordLayout.hasOwnVFPtr())
     members.push_back(MemberInfo(CharUnits::Zero(), MemberInfo::InfoKind::VFPtr,
-                                 getVFPtrType()));
+                                 getVFPtrType(), cir::RecordMemberKind::Data));
 
   if (astRecordLayout.hasOwnVBPtr())
     cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),

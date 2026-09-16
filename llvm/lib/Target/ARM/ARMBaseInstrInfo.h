@@ -193,6 +193,15 @@ public:
   ///
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
+  InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const override {
+    // FIXME: These instructions report an incorrect size, but the ARM constant
+    // islands pass somehow depends on it being incorrect.
+    if (MI.getOpcode() == ARM::tTBB_JT || MI.getOpcode() == ARM::tTBH_JT)
+      return InstSizeVerifyMode::NoVerify;
+    return InstSizeVerifyMode::AllowOverEstimate;
+  }
+
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
   Register isStoreToStackSlot(const MachineInstr &MI,
@@ -382,9 +391,8 @@ public:
 
   /// Analyze loop L, which must be a single-basic-block loop, and if the
   /// conditions can be understood enough produce a PipelinerLoopInfo object.
-  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> analyzeLoopForPipelining(
-      MachineBasicBlock *LoopBB,
-      MachineOptimizationRemarkEmitter *ORE = nullptr) const override;
+  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
+  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
 
 private:
   /// Returns an unused general-purpose register which can be used for

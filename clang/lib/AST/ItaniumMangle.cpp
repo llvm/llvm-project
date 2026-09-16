@@ -45,7 +45,8 @@ namespace UnsupportedItaniumManglingKind =
 namespace {
 
 static bool isLocalContainerContext(const DeclContext *DC) {
-  return isa<FunctionDecl, ObjCMethodDecl, BlockDecl, CXXExpansionStmtDecl>(DC);
+  return isa<FunctionDecl, ObjCMethodDecl, BlockDecl, CXXExpansionStmtDecl,
+             TopLevelStmtDecl>(DC);
 }
 
 static const FunctionDecl *getStructor(const FunctionDecl *fn) {
@@ -516,9 +517,10 @@ private:
                        ArrayRef<StringRef> AdditionalAbiTags = {});
   void mangleBlockForPrefix(const BlockDecl *Block);
   void mangleUnqualifiedBlock(const BlockDecl *Block);
+  void mangleTopLevelStmtEncoding(const TopLevelStmtDecl *D);
   void mangleTemplateParamDecl(const NamedDecl *Decl);
   void mangleTemplateParameterList(const TemplateParameterList *Params);
-  void mangleTypeConstraint(const TemplateDecl *Concept,
+  void mangleTypeConstraint(TemplateName Concept,
                             ArrayRef<TemplateArgument> Arguments);
   void mangleTypeConstraint(const TypeConstraint *Constraint);
   void mangleRequiresClause(const Expr *RequiresClause);
@@ -537,6 +539,7 @@ private:
   void manglePrefix(QualType type);
   void mangleTemplatePrefix(GlobalDecl GD, bool NoFunction=false);
   void mangleTemplatePrefix(TemplateName Template);
+  void DiagnoseUnsupportedPackIndexTemplateName();
   const NamedDecl *getClosurePrefix(const Decl *ND);
   void mangleClosurePrefix(const NamedDecl *ND, bool NoFunction = false);
   bool mangleUnresolvedTypeOrSimpleId(QualType DestroyedType,
@@ -872,9 +875,10 @@ void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
   // Output name of the function.
   FunctionEncodingMangler.disableDerivedAbiTags();
 
-  FunctionTypeDepthState Saved = FunctionTypeDepth.push();
+  FunctionTypeDepthState EncodingSaved =
+      FunctionEncodingMangler.FunctionTypeDepth.push();
   FunctionEncodingMangler.mangleNameWithAbiTags(FD);
-  FunctionTypeDepth.pop(Saved);
+  FunctionEncodingMangler.FunctionTypeDepth.pop(EncodingSaved);
 
   // Remember length of the function name in the buffer.
   size_t EncodingPositionStart = FunctionEncodingStream.str().size();
@@ -892,7 +896,7 @@ void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
       AdditionalAbiTags.end());
 
   // Output name with implicit tags and function encoding from temporary buffer.
-  Saved = FunctionTypeDepth.push();
+  FunctionTypeDepthState Saved = FunctionTypeDepth.push();
   mangleNameWithAbiTags(FD, AdditionalAbiTags);
   FunctionTypeDepth.pop(Saved);
   Out << FunctionEncodingStream.str().substr(EncodingPositionStart);
@@ -1264,6 +1268,12 @@ void CXXNameMangler::mangleFixedPointLiteral() {
   DiagnosticsEngine &Diags = Context.getDiags();
   Diags.Report(diag::err_unsupported_itanium_mangling)
       << UnsupportedItaniumManglingKind::FixedPointLiteral;
+}
+
+void CXXNameMangler::DiagnoseUnsupportedPackIndexTemplateName() {
+  DiagnosticsEngine &Diags = Context.getDiags();
+  Diags.Report(diag::err_unsupported_itanium_mangling)
+      << UnsupportedItaniumManglingKind::PackIndexTemplateName;
 }
 
 void CXXNameMangler::mangleNullPointer(QualType T) {
@@ -1899,6 +1909,8 @@ void CXXNameMangler::mangleLocalName(GlobalDecl GD,
       mangleObjCMethodName(MD);
     } else if (const BlockDecl *BD = dyn_cast<BlockDecl>(DC)) {
       mangleBlockForPrefix(BD);
+    } else if (const auto *TLSD = dyn_cast<TopLevelStmtDecl>(DC)) {
+      mangleTopLevelStmtEncoding(TLSD);
     } else {
       mangleFunctionEncoding(getParentOfLocalEntity(DC));
     }
@@ -2036,6 +2048,13 @@ void CXXNameMangler::mangleUnqualifiedBlock(const BlockDecl *Block) {
   Out << '_';
 }
 
+void CXXNameMangler::mangleTopLevelStmtEncoding(const TopLevelStmtDecl *D) {
+  // Numbered internal function, like Ub_ for blocks: locals get <local-name>s.
+  SmallString<16> Name("__stmt__");
+  Name += llvm::utostr(D->getOrdinal());
+  Out << 'L' << Name.size() << Name << 'v';
+}
+
 // <template-param-decl>
 //   ::= Ty                                  # template type parameter
 //   ::= Tk <concept name> [<template-args>] # constrained type parameter
@@ -2095,14 +2114,19 @@ void CXXNameMangler::mangleTemplateParameterList(
 }
 
 void CXXNameMangler::mangleTypeConstraint(
-    const TemplateDecl *Concept, ArrayRef<TemplateArgument> Arguments) {
-  const DeclContext *DC = Context.getEffectiveDeclContext(Concept);
+    TemplateName Concept, ArrayRef<TemplateArgument> Arguments) {
+  const TemplateDecl *TD = Concept.getAsTemplateDecl();
+  if (!TD) {
+    DiagnoseUnsupportedPackIndexTemplateName();
+    return;
+  }
+  const DeclContext *DC = Context.getEffectiveDeclContext(TD);
   if (!Arguments.empty())
-    mangleTemplateName(Concept, Arguments);
+    mangleTemplateName(TD, Arguments);
   else if (DC->isTranslationUnit() || isStdNamespace(DC))
-    mangleUnscopedName(Concept, DC);
+    mangleUnscopedName(TD, DC);
   else
-    mangleNestedName(Concept, DC);
+    mangleNestedName(TD, DC);
 }
 
 void CXXNameMangler::mangleTypeConstraint(const TypeConstraint *Constraint) {
@@ -2273,6 +2297,11 @@ void CXXNameMangler::mangleTemplatePrefix(TemplateName Template) {
   if (TemplateDecl *TD = Template.getAsTemplateDecl())
     return mangleTemplatePrefix(TD);
 
+  if (Template.getAsPackIndexingTemplate()) {
+    DiagnoseUnsupportedPackIndexTemplateName();
+    return;
+  }
+
   DependentTemplateName *Dependent = Template.getAsDependentTemplateName();
   assert(Dependent && "unexpected template name kind");
 
@@ -2430,6 +2459,11 @@ void CXXNameMangler::mangleType(TemplateName TN) {
     Out << "_SUBSTPACK_";
     break;
   }
+
+  case TemplateName::PackIndexingTemplate:
+    DiagnoseUnsupportedPackIndexTemplateName();
+    return;
+
   case TemplateName::DeducedTemplate:
     llvm_unreachable("Unexpected DeducedTemplate");
   }
@@ -2596,6 +2630,11 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
       Out << "_SUBSTPACK_";
       break;
     }
+
+    case TemplateName::PackIndexingTemplate:
+      DiagnoseUnsupportedPackIndexTemplateName();
+      return false;
+
     case TemplateName::UsingTemplate: {
       TemplateDecl *TD = TN.getAsTemplateDecl();
       assert(TD && !isa<TemplateTemplateParmDecl>(TD));
@@ -3525,6 +3564,11 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     mangleVendorType(#Name);                                                   \
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
+    mangleVendorType(Name);                                                    \
+    break;
+#include "clang/Basic/SPIRVTypes.def"
   }
 }
 
@@ -3541,7 +3585,6 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_AArch64VectorCall:
   case CC_AArch64SVEPCS:
   case CC_IntelOclBicc:
-  case CC_SpirFunction:
   case CC_DeviceKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
@@ -4581,7 +4624,7 @@ void CXXNameMangler::mangleType(const UnaryTransformType *T) {
   case UnaryTransformType::Enum:                                               \
     BuiltinName = "__" #Trait;                                                 \
     break;
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
     }
     mangleVendorType(BuiltinName);
   }
@@ -4691,7 +4734,7 @@ void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
     Str += "_Counter";
   if (Attrs.IsArray)
     Str += "_Array";
-  if (Attrs.IsMultiSampled)
+  if (Attrs.isMultiSampled())
     Str += "_MS";
   if (T->hasContainedType())
     Str += "_CT";
@@ -5313,6 +5356,19 @@ recurse:
     break;
   }
 
+  case Expr::DependentTemplateIdExprClass: {
+    NotPrimaryExpr();
+    const auto *DTI = cast<DependentTemplateIdExpr>(E);
+    if (DTI->getTemplateName().getAsPackIndexingTemplate()) {
+      DiagnoseUnsupportedPackIndexTemplateName();
+      break;
+    }
+    mangleUnresolvedName(/*NestedNameSpecifier=*/std::nullopt, DTI->getName(),
+                         DTI->template_arguments().data(),
+                         DTI->getNumTemplateArgs(), Arity);
+    break;
+  }
+
   case Expr::CXXUnresolvedConstructExprClass: {
     NotPrimaryExpr();
     const CXXUnresolvedConstructExpr *CE = cast<CXXUnresolvedConstructExpr>(E);
@@ -5697,7 +5753,7 @@ recurse:
       // entity, meaning that references to enclosing template arguments don't
       // work.
       Out << "L_Z";
-      mangleTemplateName(CSE->getNamedConcept(), CSE->getTemplateArguments());
+      mangleTemplateName(CSE->getConceptDecl(), CSE->getTemplateArguments());
       Out << 'E';
       break;
     }
@@ -7366,7 +7422,8 @@ static void mangleOverrideDiscrimination(CXXNameMangler &Mangler,
   const CXXRecordDecl *PtrauthClassRD =
       Context.baseForVTableAuthentication(ThisRD);
   unsigned TypedDiscriminator =
-      Context.getPointerAuthVTablePointerDiscriminator(ThisRD);
+      Context.getPointerAuthVTablePointerDiscriminator(ThisRD,
+                                                       /*IsVTTEntry=*/false);
   Mangler.mangleVendorQualifier("__vtptrauth");
   auto &ManglerStream = Mangler.getStream();
   ManglerStream << "I";

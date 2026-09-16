@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/OrcRTBootstrap.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Process.h"
@@ -44,6 +45,7 @@ SelfExecutorProcessControl::SelfExecutorProcessControl(
   this->PageSize = PageSize;
 
   addDefaultBootstrapValuesForHostProcess(BootstrapMap, BootstrapSymbols);
+  rt_bootstrap::addRunAsFunctionWrappersTo(BootstrapSymbols);
 
   BootstrapSymbols[rt::DispatchName] =
       ExecutorAddr::fromPtr(jitDispatchViaWrapperFunctionManager);
@@ -83,18 +85,6 @@ SelfExecutorProcessControl::runAsMain(ExecutorAddr MainFnAddr,
                                       ArrayRef<std::string> Args) {
   using MainTy = int (*)(int, char *[]);
   return orc::runAsMain(MainFnAddr.toPtr<MainTy>(), Args);
-}
-
-Expected<int32_t>
-SelfExecutorProcessControl::runAsVoidFunction(ExecutorAddr VoidFnAddr) {
-  using VoidTy = int (*)();
-  return orc::runAsVoidFunction(VoidFnAddr.toPtr<VoidTy>());
-}
-
-Expected<int32_t>
-SelfExecutorProcessControl::runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) {
-  using IntTy = int (*)(int);
-  return orc::runAsIntFunction(IntFnAddr.toPtr<IntTy>(), Arg);
 }
 
 void SelfExecutorProcessControl::callWrapperAsync(ExecutorAddr WrapperFnAddr,

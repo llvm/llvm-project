@@ -22,7 +22,6 @@
 #include "GCNVOPDUtils.h"
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -169,14 +168,16 @@ public:
   static char ID;
   GCNCreateVOPDLegacy() : MachineFunctionPass(ID) {}
 
+  StringRef getPassName() const override {
+    return "GCN Create VOPD Instructions";
+  }
+
+protected:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  StringRef getPassName() const override {
-    return "GCN Create VOPD Instructions";
-  }
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
       return false;

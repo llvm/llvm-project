@@ -87,6 +87,8 @@ public:
       const MachineInstr &MI,
       SmallVectorImpl<const MachineMemOperand *> &Accesses) const override;
 
+  using TargetInstrInfo::analyzeBranch;
+
   /// Analyze the branching code at the end of MBB, returning
   /// true if it cannot be understood (e.g. it's a switch dispatch or isn't
   /// implemented for a target).  Upon success, this returns false and returns
@@ -139,9 +141,8 @@ public:
 
   /// Analyze loop L, which must be a single-basic-block loop, and if the
   /// conditions can be understood enough produce a PipelinerLoopInfo object.
-  std::unique_ptr<PipelinerLoopInfo> analyzeLoopForPipelining(
-      MachineBasicBlock *LoopBB,
-      MachineOptimizationRemarkEmitter *ORE = nullptr) const override;
+  std::unique_ptr<PipelinerLoopInfo>
+  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
 
   /// Return true if it's profitable to predicate
   /// instructions with accumulated instruction latency of "NumCycles"

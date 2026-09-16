@@ -26,6 +26,10 @@ SymbolTable::Visibility OverriddenSymbolVisibilityOp::getVisibility() {
   return SymbolTable::Visibility::Private;
 }
 
+StringAttr OverriddenSymbolVisibilityOp::getNameAttr() {
+  return getSymNameAttr();
+}
+
 static StringLiteral getVisibilityString(SymbolTable::Visibility visibility) {
   switch (visibility) {
   case SymbolTable::Visibility::Private:
@@ -82,7 +86,7 @@ SuccessorOperands TestInternalBranchOp::getSuccessorOperands(unsigned index) {
 
 LogicalResult TestCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Check that the callee attribute was specified.
-  auto fnAttr = (*this)->getAttrOfType<FlatSymbolRefAttr>("callee");
+  auto fnAttr = getCalleeAttr();
   if (!fnAttr)
     return emitOpError("requires a 'callee' symbol reference attribute");
   if (!symbolTable.lookupNearestSymbolFrom<FunctionOpInterface>(*this, fnAttr))
@@ -459,7 +463,8 @@ struct TestResource : public SideEffects::Resource::Base<TestResource> {
 void SideEffectOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   // Check for an effects attribute on the op instance.
-  ArrayAttr effectsAttr = (*this)->getAttrOfType<ArrayAttr>("effects");
+  ArrayAttr effectsAttr =
+      (*this)->getDiscardableAttrOfType<ArrayAttr>("effects");
   if (!effectsAttr)
     return;
 
@@ -520,7 +525,8 @@ void ConditionalSideEffectOp::getEffects(
 void SideEffectWithRegionOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   // Check for an effects attribute on the op instance.
-  ArrayAttr effectsAttr = (*this)->getAttrOfType<ArrayAttr>("effects");
+  ArrayAttr effectsAttr =
+      (*this)->getDiscardableAttrOfType<ArrayAttr>("effects");
   if (!effectsAttr)
     return;
 
@@ -629,10 +635,15 @@ void StringAttrPrettyNameOp::print(OpAsmPrinter &p) {
     }
   }
 
-  if (namesDisagree)
-    p.printOptionalAttrDictWithKeyword((*this)->getAttrs());
-  else
-    p.printOptionalAttrDictWithKeyword((*this)->getAttrs(), {"names"});
+  if (namesDisagree) {
+    SmallVector<NamedAttribute> attrs((*this)->getDiscardableAttrs());
+    attrs.emplace_back(getNamesAttrName(), getNamesAttr());
+    llvm::sort(attrs);
+    p.printOptionalAttrDictWithKeyword(attrs);
+  } else {
+    p.printOptionalAttrDictWithKeyword(
+        (*this)->getDiscardableAttrDictionary().getValue(), {"names"});
+  }
 }
 
 // We set the SSA name in the asm syntax to the contents of the name
@@ -953,7 +964,13 @@ ParseResult TestWithBoundsRegionOp::parse(OpAsmParser &parser,
 }
 
 void TestWithBoundsRegionOp::print(OpAsmPrinter &p) {
-  p.printOptionalAttrDict((*this)->getAttrs());
+  SmallVector<NamedAttribute> attrs((*this)->getDiscardableAttrs());
+  attrs.emplace_back(getUminAttrName(), getUminAttr());
+  attrs.emplace_back(getUmaxAttrName(), getUmaxAttr());
+  attrs.emplace_back(getSminAttrName(), getSminAttr());
+  attrs.emplace_back(getSmaxAttrName(), getSmaxAttr());
+  llvm::sort(attrs);
+  p.printOptionalAttrDict(attrs);
   p << ' ';
   p.printRegionArgument(getRegion().getArgument(0), /*argAttrs=*/{},
                         /*omitType=*/false);
@@ -1340,6 +1357,37 @@ LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionSuccessor successor) {
 }
 
 //===----------------------------------------------------------------------===//
+// LoopWithExtraResultOp / LoopWithExtraResultYieldOp
+//===----------------------------------------------------------------------===//
+
+void LoopWithExtraResultOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  // Parent always enters the body; the body can loop back or exit to parent.
+  regions.emplace_back(&getBody());
+  if (!point.isParent())
+    regions.push_back(RegionSuccessor(getOperation()));
+}
+
+ValueRange
+LoopWithExtraResultOp::getSuccessorInputs(RegionSuccessor successor) {
+  // When branching to the parent, only iterResult (result #1) is a successor
+  // input; extraResult (#0) is not. Similaly when branching to the body, only
+  // body block arg #1 (iterArg) is a successor input; arg #0 is not.
+  if (successor.isOperation())
+    return getResults().drop_front(1);
+  return getBody().getArguments().drop_front(1);
+}
+
+OperandRange LoopWithExtraResultOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return MutableOperandRange(getInitMutable());
+}
+
+MutableOperandRange
+LoopWithExtraResultYieldOp::getMutableSuccessorOperands(RegionSuccessor) {
+  return getIterArgMutable();
+}
+
+//===----------------------------------------------------------------------===//
 // TestCrashingReturnOp
 //===----------------------------------------------------------------------===//
 
@@ -1442,6 +1490,37 @@ Operation::operand_range TestCallOnDeviceOp::getArgOperands() {
 
 MutableOperandRange TestCallOnDeviceOp::getArgOperandsMutable() {
   return getForwardedOperandsMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// TestCallAndProduceOp
+//===----------------------------------------------------------------------===//
+
+CallInterfaceCallable TestCallAndProduceOp::getCallableForCallee() {
+  return getCallee();
+}
+
+void TestCallAndProduceOp::setCalleeFromCallable(CallInterfaceCallable callee) {
+  setCalleeAttr(cast<SymbolRefAttr>(callee));
+}
+
+Operation::operand_range TestCallAndProduceOp::getArgOperands() {
+  return getForwardedOperands();
+}
+
+MutableOperandRange TestCallAndProduceOp::getArgOperandsMutable() {
+  return getForwardedOperandsMutable();
+}
+
+Operation::result_range TestCallAndProduceOp::getForwardedResults() {
+  // The first result (`produced_status`) is produced by this operation and is
+  // not forwarded from the callee.
+  return getForwarded();
+}
+
+LogicalResult
+TestCallAndProduceOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return call_interface_impl::verifyCallOpInterface(*this, symbolTable);
 }
 
 //===----------------------------------------------------------------------===//

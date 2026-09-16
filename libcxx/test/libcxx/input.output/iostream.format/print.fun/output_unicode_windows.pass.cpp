@@ -108,4 +108,6 @@ static void test() {
 int main(int, char**) {
   test_basics();
   test();
+
+  return 0;
 }

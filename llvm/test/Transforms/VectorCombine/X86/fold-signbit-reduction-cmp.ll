@@ -7,7 +7,7 @@
 define i1 @or_eq_0(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @or_eq_0(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -20,7 +20,7 @@ define i1 @or_eq_0(<4 x i32> %x) {
 define i1 @or_ne_0(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @or_ne_0(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -33,7 +33,7 @@ define i1 @or_ne_0(<4 x i32> %x) {
 define i1 @or_eq_max(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @or_eq_max(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -46,7 +46,7 @@ define i1 @or_eq_max(<4 x i32> %x) {
 define i1 @or_ne_max(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @or_ne_max(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -59,7 +59,7 @@ define i1 @or_ne_max(<4 x i32> %x) {
 define i1 @umax_eq_0(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @umax_eq_0(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -72,7 +72,7 @@ define i1 @umax_eq_0(<4 x i32> %x) {
 define i1 @umax_ne_0(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @umax_ne_0(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -85,7 +85,7 @@ define i1 @umax_ne_0(<4 x i32> %x) {
 define i1 @umax_eq_max(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @umax_eq_max(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -98,7 +98,7 @@ define i1 @umax_eq_max(<4 x i32> %x) {
 define i1 @umax_ne_max(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @umax_ne_max(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -111,7 +111,7 @@ define i1 @umax_ne_max(<4 x i32> %x) {
 define i1 @and_eq_0(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @and_eq_0(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -124,7 +124,7 @@ define i1 @and_eq_0(<4 x i32> %x) {
 define i1 @and_ne_0(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @and_ne_0(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -137,7 +137,7 @@ define i1 @and_ne_0(<4 x i32> %x) {
 define i1 @and_eq_max(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @and_eq_max(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -150,7 +150,7 @@ define i1 @and_eq_max(<4 x i32> %x) {
 define i1 @and_ne_max(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @and_ne_max(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -163,7 +163,7 @@ define i1 @and_ne_max(<4 x i32> %x) {
 define i1 @umin_eq_0(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @umin_eq_0(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -176,7 +176,7 @@ define i1 @umin_eq_0(<4 x i32> %x) {
 define i1 @umin_ne_0(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @umin_ne_0(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -189,7 +189,7 @@ define i1 @umin_ne_0(<4 x i32> %x) {
 define i1 @umin_eq_max(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @umin_eq_max(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -202,7 +202,7 @@ define i1 @umin_eq_max(<4 x i32> %x) {
 define i1 @umin_ne_max(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @umin_ne_max(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -215,7 +215,7 @@ define i1 @umin_ne_max(<4 x i32> %x) {
 define i1 @add_eq_0(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @add_eq_0(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -228,7 +228,7 @@ define i1 @add_eq_0(<4 x i32> %x) {
 define i1 @add_ne_0(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @add_ne_0(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -241,7 +241,7 @@ define i1 @add_ne_0(<4 x i32> %x) {
 define i1 @add_eq_max(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @add_eq_max(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -254,7 +254,7 @@ define i1 @add_eq_max(<4 x i32> %x) {
 define i1 @add_ne_max(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @add_ne_max(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -267,7 +267,7 @@ define i1 @add_ne_max(<4 x i32> %x) {
 define i1 @add_ult_max(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @add_ult_max(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -280,7 +280,7 @@ define i1 @add_ult_max(<4 x i32> %x) {
 define i1 @add_ugt_max_minus_1(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @add_ugt_max_minus_1(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -293,7 +293,7 @@ define i1 @add_ugt_max_minus_1(<4 x i32> %x) {
 define i1 @ashr_add_eq_0(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @ashr_add_eq_0(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -304,11 +304,23 @@ define i1 @ashr_add_eq_0(<4 x i32> %x) {
 }
 
 define i1 @or_eq_0_v8i16(<8 x i16> %x) {
-; CHECK-LABEL: define i1 @or_eq_0_v8i16(
-; CHECK-SAME: <8 x i16> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.umax.v8i16(<8 x i16> [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[TMP1]], -1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; SSE2-LABEL: define i1 @or_eq_0_v8i16(
+; SSE2-SAME: <8 x i16> [[X:%.*]]) #[[ATTR0]] {
+; SSE2-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> [[X]])
+; SSE2-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[TMP1]], -1
+; SSE2-NEXT:    ret i1 [[CMP]]
+;
+; SSE4-LABEL: define i1 @or_eq_0_v8i16(
+; SSE4-SAME: <8 x i16> [[X:%.*]]) #[[ATTR0]] {
+; SSE4-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.umax.v8i16(<8 x i16> [[X]])
+; SSE4-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[TMP1]], -1
+; SSE4-NEXT:    ret i1 [[CMP]]
+;
+; AVX-LABEL: define i1 @or_eq_0_v8i16(
+; AVX-SAME: <8 x i16> [[X:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> [[X]])
+; AVX-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[TMP1]], -1
+; AVX-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr <8 x i16> %x, splat (i16 15)
   %red = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> %shr)
@@ -317,23 +329,11 @@ define i1 @or_eq_0_v8i16(<8 x i16> %x) {
 }
 
 define i1 @and_eq_max_v2i64(<2 x i64> %x) {
-; SSE-LABEL: define i1 @and_eq_max_v2i64(
-; SSE-SAME: <2 x i64> [[X:%.*]]) #[[ATTR0]] {
-; SSE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.and.v2i64(<2 x i64> [[X]])
-; SSE-NEXT:    [[CMP:%.*]] = icmp slt i64 [[TMP1]], 0
-; SSE-NEXT:    ret i1 [[CMP]]
-;
-; AVX2-LABEL: define i1 @and_eq_max_v2i64(
-; AVX2-SAME: <2 x i64> [[X:%.*]]) #[[ATTR0]] {
-; AVX2-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.and.v2i64(<2 x i64> [[X]])
-; AVX2-NEXT:    [[CMP:%.*]] = icmp slt i64 [[TMP1]], 0
-; AVX2-NEXT:    ret i1 [[CMP]]
-;
-; AVX512-LABEL: define i1 @and_eq_max_v2i64(
-; AVX512-SAME: <2 x i64> [[X:%.*]]) #[[ATTR0]] {
-; AVX512-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.umin.v2i64(<2 x i64> [[X]])
-; AVX512-NEXT:    [[CMP:%.*]] = icmp slt i64 [[TMP1]], 0
-; AVX512-NEXT:    ret i1 [[CMP]]
+; CHECK-LABEL: define i1 @and_eq_max_v2i64(
+; CHECK-SAME: <2 x i64> [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vector.reduce.and.v2i64(<2 x i64> [[X]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr <2 x i64> %x, splat (i64 63)
   %red = call i64 @llvm.vector.reduce.and.v2i64(<2 x i64> %shr)
@@ -343,19 +343,12 @@ define i1 @and_eq_max_v2i64(<2 x i64> %x) {
 
 ; negative: shift amount is not bitwidth-1
 define i1 @negative_wrong_shift(<4 x i32> %x) {
-; SSE2-LABEL: define i1 @negative_wrong_shift(
-; SSE2-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; SSE2-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[X]], splat (i32 30)
-; SSE2-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[SHR]])
-; SSE2-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
-; SSE2-NEXT:    ret i1 [[CMP]]
-;
-; SSE4-LABEL: define i1 @negative_wrong_shift(
-; SSE4-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; SSE4-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[X]], splat (i32 30)
-; SSE4-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[SHR]], zeroinitializer
-; SSE4-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
-; SSE4-NEXT:    ret i1 [[CMP]]
+; SSE-LABEL: define i1 @negative_wrong_shift(
+; SSE-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[X]], splat (i32 30)
+; SSE-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[SHR]], zeroinitializer
+; SSE-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
+; SSE-NEXT:    ret i1 [[CMP]]
 ;
 ; AVX2-LABEL: define i1 @negative_wrong_shift(
 ; AVX2-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
@@ -367,7 +360,7 @@ define i1 @negative_wrong_shift(<4 x i32> %x) {
 ; AVX512-LABEL: define i1 @negative_wrong_shift(
 ; AVX512-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[X]], splat (i32 30)
-; AVX512-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[SHR]])
+; AVX512-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[SHR]])
 ; AVX512-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; AVX512-NEXT:    ret i1 [[CMP]]
 ;
@@ -394,21 +387,13 @@ define i1 @negative_wrong_cmp_const(<4 x i32> %x) {
 
 ; negative: shift has multiple uses
 define i1 @negative_multi_use_shift(<4 x i32> %x, ptr %p) {
-; SSE2-LABEL: define i1 @negative_multi_use_shift(
-; SSE2-SAME: <4 x i32> [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; SSE2-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[X]], splat (i32 31)
-; SSE2-NEXT:    store <4 x i32> [[SHR]], ptr [[P]], align 16
-; SSE2-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[SHR]])
-; SSE2-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
-; SSE2-NEXT:    ret i1 [[CMP]]
-;
-; SSE4-LABEL: define i1 @negative_multi_use_shift(
-; SSE4-SAME: <4 x i32> [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; SSE4-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[X]], splat (i32 31)
-; SSE4-NEXT:    store <4 x i32> [[SHR]], ptr [[P]], align 16
-; SSE4-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[SHR]], zeroinitializer
-; SSE4-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
-; SSE4-NEXT:    ret i1 [[CMP]]
+; SSE-LABEL: define i1 @negative_multi_use_shift(
+; SSE-SAME: <4 x i32> [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[X]], splat (i32 31)
+; SSE-NEXT:    store <4 x i32> [[SHR]], ptr [[P]], align 16
+; SSE-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[SHR]], zeroinitializer
+; SSE-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
+; SSE-NEXT:    ret i1 [[CMP]]
 ;
 ; AVX2-LABEL: define i1 @negative_multi_use_shift(
 ; AVX2-SAME: <4 x i32> [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
@@ -422,7 +407,7 @@ define i1 @negative_multi_use_shift(<4 x i32> %x, ptr %p) {
 ; AVX512-SAME: <4 x i32> [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
 ; AVX512-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[X]], splat (i32 31)
 ; AVX512-NEXT:    store <4 x i32> [[SHR]], ptr [[P]], align 16
-; AVX512-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[SHR]])
+; AVX512-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[SHR]])
 ; AVX512-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; AVX512-NEXT:    ret i1 [[CMP]]
 ;
@@ -481,7 +466,7 @@ define i1 @negative_add_numelts_overflow(<8 x i2> %x) {
 define i1 @ashr_add_eq_allneg(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @ashr_add_eq_allneg(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -494,7 +479,7 @@ define i1 @ashr_add_eq_allneg(<4 x i32> %x) {
 define i1 @ashr_add_ne_allneg(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @ashr_add_ne_allneg(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -507,7 +492,7 @@ define i1 @ashr_add_ne_allneg(<4 x i32> %x) {
 define i1 @ashr_add_sgt_minus1(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @ashr_add_sgt_minus1(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[RED]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -520,7 +505,7 @@ define i1 @ashr_add_sgt_minus1(<4 x i32> %x) {
 define i1 @ashr_add_slt_0(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @ashr_add_slt_0(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[RED]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -533,7 +518,7 @@ define i1 @ashr_add_slt_0(<4 x i32> %x) {
 define i1 @ashr_add_slt_minus3(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @ashr_add_slt_minus3(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -546,7 +531,7 @@ define i1 @ashr_add_slt_minus3(<4 x i32> %x) {
 define i1 @ashr_add_sgt_minus4(<4 x i32> %x) {
 ; CHECK-LABEL: define i1 @ashr_add_sgt_minus4(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -557,11 +542,23 @@ define i1 @ashr_add_sgt_minus4(<4 x i32> %x) {
 }
 
 define i1 @ashr_add_eq_allneg_v8i16(<8 x i16> %x) {
-; CHECK-LABEL: define i1 @ashr_add_eq_allneg_v8i16(
-; CHECK-SAME: <8 x i16> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[TMP1]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; SSE2-LABEL: define i1 @ashr_add_eq_allneg_v8i16(
+; SSE2-SAME: <8 x i16> [[X:%.*]]) #[[ATTR0]] {
+; SSE2-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.and.v8i16(<8 x i16> [[X]])
+; SSE2-NEXT:    [[CMP:%.*]] = icmp slt i16 [[TMP1]], 0
+; SSE2-NEXT:    ret i1 [[CMP]]
+;
+; SSE4-LABEL: define i1 @ashr_add_eq_allneg_v8i16(
+; SSE4-SAME: <8 x i16> [[X:%.*]]) #[[ATTR0]] {
+; SSE4-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> [[X]])
+; SSE4-NEXT:    [[CMP:%.*]] = icmp slt i16 [[TMP1]], 0
+; SSE4-NEXT:    ret i1 [[CMP]]
+;
+; AVX-LABEL: define i1 @ashr_add_eq_allneg_v8i16(
+; AVX-SAME: <8 x i16> [[X:%.*]]) #[[ATTR0]] {
+; AVX-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.and.v8i16(<8 x i16> [[X]])
+; AVX-NEXT:    [[CMP:%.*]] = icmp slt i16 [[TMP1]], 0
+; AVX-NEXT:    ret i1 [[CMP]]
 ;
   %shr = ashr <8 x i16> %x, splat (i16 15)
   %red = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %shr)
@@ -825,7 +822,7 @@ define i1 @multi_add_lshr_eq_0(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define i1 @multi_add_lshr_eq_0(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[B]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -841,7 +838,7 @@ define i1 @multi_add_lshr_ne_0(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define i1 @multi_add_lshr_ne_0(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[B]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -857,7 +854,7 @@ define i1 @multi_add_lshr_eq_8(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define i1 @multi_add_lshr_eq_8(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[B]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -873,7 +870,7 @@ define i1 @multi_add_lshr_ne_8(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define i1 @multi_add_lshr_ne_8(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[B]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -889,7 +886,7 @@ define i1 @multi_or_lshr_eq_0(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define i1 @multi_or_lshr_eq_0(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[B]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -905,7 +902,7 @@ define i1 @multi_and_lshr_eq_1(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define i1 @multi_and_lshr_eq_1(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[B]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -922,7 +919,7 @@ define i1 @multi_triple_add_lshr_eq_0(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) 
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[C]], [[B]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i32> [[TMP1]], [[A]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP2]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP3]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -941,7 +938,7 @@ define i1 @multi_triple_add_lshr_eq_12(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c)
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[C]], [[B]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], [[A]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP2]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP3]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -959,7 +956,7 @@ define i1 @multi_add_ashr_eq_0(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define i1 @multi_add_ashr_eq_0(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[B]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -975,7 +972,7 @@ define i1 @multi_add_ashr_eq_minus8(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define i1 @multi_add_ashr_eq_minus8(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[B]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -991,7 +988,7 @@ define i1 @multi_add_ashr_sgt_minus1(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define i1 @multi_add_ashr_sgt_minus1(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[B]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -1007,7 +1004,7 @@ define i1 @multi_add_ashr_slt_minus7(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define i1 @multi_add_ashr_slt_minus7(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[B]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -1023,7 +1020,7 @@ define i1 @multi_umax_or_tree_eq_0(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define i1 @multi_umax_or_tree_eq_0(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[B]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -1039,7 +1036,7 @@ define i1 @multi_umin_and_tree_eq_1(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define i1 @multi_umin_and_tree_eq_1(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[B]], [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -1091,25 +1088,15 @@ define i1 @negative_multi_overflow(<8 x i2> %a, <8 x i2> %b) {
 
 ; negative: shift has multiple uses
 define i1 @negative_multi_shift_multiuse(<4 x i32> %a, <4 x i32> %b, ptr %p) {
-; SSE2-LABEL: define i1 @negative_multi_shift_multiuse(
-; SSE2-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; SSE2-NEXT:    [[SA:%.*]] = lshr <4 x i32> [[A]], splat (i32 31)
-; SSE2-NEXT:    store <4 x i32> [[SA]], ptr [[P]], align 16
-; SSE2-NEXT:    [[SB:%.*]] = lshr <4 x i32> [[B]], splat (i32 31)
-; SSE2-NEXT:    [[SUM:%.*]] = add <4 x i32> [[SA]], [[SB]]
-; SSE2-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[SUM]])
-; SSE2-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
-; SSE2-NEXT:    ret i1 [[CMP]]
-;
-; SSE4-LABEL: define i1 @negative_multi_shift_multiuse(
-; SSE4-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; SSE4-NEXT:    [[SA:%.*]] = lshr <4 x i32> [[A]], splat (i32 31)
-; SSE4-NEXT:    store <4 x i32> [[SA]], ptr [[P]], align 16
-; SSE4-NEXT:    [[SB:%.*]] = lshr <4 x i32> [[B]], splat (i32 31)
-; SSE4-NEXT:    [[SUM:%.*]] = add <4 x i32> [[SA]], [[SB]]
-; SSE4-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[SUM]], zeroinitializer
-; SSE4-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
-; SSE4-NEXT:    ret i1 [[CMP]]
+; SSE-LABEL: define i1 @negative_multi_shift_multiuse(
+; SSE-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[SA:%.*]] = lshr <4 x i32> [[A]], splat (i32 31)
+; SSE-NEXT:    store <4 x i32> [[SA]], ptr [[P]], align 16
+; SSE-NEXT:    [[SB:%.*]] = lshr <4 x i32> [[B]], splat (i32 31)
+; SSE-NEXT:    [[SUM:%.*]] = add <4 x i32> [[SA]], [[SB]]
+; SSE-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[SUM]], zeroinitializer
+; SSE-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
+; SSE-NEXT:    ret i1 [[CMP]]
 ;
 ; AVX2-LABEL: define i1 @negative_multi_shift_multiuse(
 ; AVX2-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
@@ -1127,7 +1114,7 @@ define i1 @negative_multi_shift_multiuse(<4 x i32> %a, <4 x i32> %b, ptr %p) {
 ; AVX512-NEXT:    store <4 x i32> [[SA]], ptr [[P]], align 16
 ; AVX512-NEXT:    [[SB:%.*]] = lshr <4 x i32> [[B]], splat (i32 31)
 ; AVX512-NEXT:    [[SUM:%.*]] = add <4 x i32> [[SA]], [[SB]]
-; AVX512-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[SUM]])
+; AVX512-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[SUM]])
 ; AVX512-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; AVX512-NEXT:    ret i1 [[CMP]]
 ;
@@ -1142,29 +1129,17 @@ define i1 @negative_multi_shift_multiuse(<4 x i32> %a, <4 x i32> %b, ptr %p) {
 
 ; negative: internal tree node has multiple uses (cost driven)
 define i1 @negative_multi_tree_node_multiuse(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, ptr %p) {
-; SSE2-LABEL: define i1 @negative_multi_tree_node_multiuse(
-; SSE2-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; SSE2-NEXT:    [[SA:%.*]] = lshr <4 x i32> [[A]], splat (i32 31)
-; SSE2-NEXT:    [[SB:%.*]] = lshr <4 x i32> [[B]], splat (i32 31)
-; SSE2-NEXT:    [[SC:%.*]] = lshr <4 x i32> [[C]], splat (i32 31)
-; SSE2-NEXT:    [[AB:%.*]] = add <4 x i32> [[SA]], [[SB]]
-; SSE2-NEXT:    store <4 x i32> [[AB]], ptr [[P]], align 16
-; SSE2-NEXT:    [[ABC:%.*]] = add <4 x i32> [[AB]], [[SC]]
-; SSE2-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[ABC]])
-; SSE2-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
-; SSE2-NEXT:    ret i1 [[CMP]]
-;
-; SSE4-LABEL: define i1 @negative_multi_tree_node_multiuse(
-; SSE4-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; SSE4-NEXT:    [[SA:%.*]] = lshr <4 x i32> [[A]], splat (i32 31)
-; SSE4-NEXT:    [[SB:%.*]] = lshr <4 x i32> [[B]], splat (i32 31)
-; SSE4-NEXT:    [[SC:%.*]] = lshr <4 x i32> [[C]], splat (i32 31)
-; SSE4-NEXT:    [[AB:%.*]] = add <4 x i32> [[SA]], [[SB]]
-; SSE4-NEXT:    store <4 x i32> [[AB]], ptr [[P]], align 16
-; SSE4-NEXT:    [[ABC:%.*]] = add <4 x i32> [[AB]], [[SC]]
-; SSE4-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[ABC]], zeroinitializer
-; SSE4-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
-; SSE4-NEXT:    ret i1 [[CMP]]
+; SSE-LABEL: define i1 @negative_multi_tree_node_multiuse(
+; SSE-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[SA:%.*]] = lshr <4 x i32> [[A]], splat (i32 31)
+; SSE-NEXT:    [[SB:%.*]] = lshr <4 x i32> [[B]], splat (i32 31)
+; SSE-NEXT:    [[SC:%.*]] = lshr <4 x i32> [[C]], splat (i32 31)
+; SSE-NEXT:    [[AB:%.*]] = add <4 x i32> [[SA]], [[SB]]
+; SSE-NEXT:    store <4 x i32> [[AB]], ptr [[P]], align 16
+; SSE-NEXT:    [[ABC:%.*]] = add <4 x i32> [[AB]], [[SC]]
+; SSE-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[ABC]], zeroinitializer
+; SSE-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
+; SSE-NEXT:    ret i1 [[CMP]]
 ;
 ; AVX2-LABEL: define i1 @negative_multi_tree_node_multiuse(
 ; AVX2-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> [[C:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
@@ -1186,7 +1161,7 @@ define i1 @negative_multi_tree_node_multiuse(<4 x i32> %a, <4 x i32> %b, <4 x i3
 ; AVX512-NEXT:    [[AB:%.*]] = add <4 x i32> [[SA]], [[SB]]
 ; AVX512-NEXT:    store <4 x i32> [[AB]], ptr [[P]], align 16
 ; AVX512-NEXT:    [[ABC:%.*]] = add <4 x i32> [[AB]], [[SC]]
-; AVX512-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[ABC]])
+; AVX512-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[ABC]])
 ; AVX512-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; AVX512-NEXT:    ret i1 [[CMP]]
 ;
@@ -1203,14 +1178,32 @@ define i1 @negative_multi_tree_node_multiuse(<4 x i32> %a, <4 x i32> %b, <4 x i3
 
 ; negative: tree op (add) doesn't match reduction (or/umax expects or tree)
 define i1 @negative_multi_op_mismatch(<4 x i32> %a, <4 x i32> %b) {
-; CHECK-LABEL: define i1 @negative_multi_op_mismatch(
-; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SA:%.*]] = lshr <4 x i32> [[A]], splat (i32 31)
-; CHECK-NEXT:    [[SB:%.*]] = lshr <4 x i32> [[B]], splat (i32 31)
-; CHECK-NEXT:    [[SUM:%.*]] = add <4 x i32> [[SA]], [[SB]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[SUM]], zeroinitializer
-; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
-; CHECK-NEXT:    ret i1 [[CMP]]
+; SSE-LABEL: define i1 @negative_multi_op_mismatch(
+; SSE-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[SA:%.*]] = lshr <4 x i32> [[A]], splat (i32 31)
+; SSE-NEXT:    [[SB:%.*]] = lshr <4 x i32> [[B]], splat (i32 31)
+; SSE-NEXT:    [[SUM:%.*]] = add <4 x i32> [[SA]], [[SB]]
+; SSE-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[SUM]], zeroinitializer
+; SSE-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
+; SSE-NEXT:    ret i1 [[CMP]]
+;
+; AVX2-LABEL: define i1 @negative_multi_op_mismatch(
+; AVX2-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:    [[SA:%.*]] = lshr <4 x i32> [[A]], splat (i32 31)
+; AVX2-NEXT:    [[SB:%.*]] = lshr <4 x i32> [[B]], splat (i32 31)
+; AVX2-NEXT:    [[SUM:%.*]] = add <4 x i32> [[SA]], [[SB]]
+; AVX2-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[SUM]], zeroinitializer
+; AVX2-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
+; AVX2-NEXT:    ret i1 [[CMP]]
+;
+; AVX512-LABEL: define i1 @negative_multi_op_mismatch(
+; AVX512-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:    [[SA:%.*]] = lshr <4 x i32> [[A]], splat (i32 31)
+; AVX512-NEXT:    [[SB:%.*]] = lshr <4 x i32> [[B]], splat (i32 31)
+; AVX512-NEXT:    [[SUM:%.*]] = add <4 x i32> [[SA]], [[SB]]
+; AVX512-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[SUM]])
+; AVX512-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
+; AVX512-NEXT:    ret i1 [[CMP]]
 ;
   %sa = lshr <4 x i32> %a, splat (i32 31)
   %sb = lshr <4 x i32> %b, splat (i32 31)
@@ -1229,7 +1222,7 @@ define i32 @PR209714(ptr %pa, ptr %pb) {
 ; CHECK-NEXT:    [[A_NOT:%.*]] = xor <2 x i64> [[A]], splat (i64 -1)
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[B]], [[A_NOT]]
 ; CHECK-NEXT:    [[AND_BC:%.*]] = bitcast <2 x i64> [[AND]] to <4 x i32>
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[AND_BC]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[AND_BC]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[RES:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -1245,5 +1238,3 @@ define i32 @PR209714(ptr %pa, ptr %pb) {
   %res = zext i1 %cmp to i32
   ret i32 %res
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; AVX: {{.*}}

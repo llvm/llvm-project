@@ -220,12 +220,45 @@
 //          in the text format documentation above).
 //        FUNCTION BODY
 //          A FUNCTION BODY entry describing the inlined function.
+//
+// An ExtBinary file may contain both legacy and composite profile sections.
+// Each section's type independently selects its function-body encoding.
+//
+// COMPOSITE FUNCTION BODY (used by SecCompositeProfile)
+//    NAME_IDX (uint64_t)
+//        Index into the name table indicating the function name.
+//    NUM_PROFILE_TYPES (uint64_t)
+//        Number of typed profile blocks attached to this function. Zero is
+//        valid when the function has no payload for any profile type.
+//    PROFILE TYPE BLOCKS
+//        A list of NUM_PROFILE_TYPES entries. Each entry contains:
+//          TYPE (uint64_t)
+//              Profile type ID. A type may occur at most once per function;
+//              duplicate IDs make the profile malformed.
+//          PAYLOAD_SIZE (uint64_t)
+//              Size of PAYLOAD in bytes.
+//          PAYLOAD
+//              Type-specific data occupying exactly PAYLOAD_SIZE bytes.
+//              Readers skip unknown types using PAYLOAD_SIZE.
+//              A known type must consume exactly PAYLOAD_SIZE bytes; extend an
+//              existing payload by assigning a new profile type ID.
+//
+//        The ProfTypeLBR payload contains HEAD_SAMPLES for top-level functions,
+//        followed by SAMPLES, NRECS, and BODY RECORDS as described above.
+//        Nested functions omit HEAD_SAMPLES.
+//    NUM_INLINED_FUNCTIONS (uint32_t)
+//        Number of callees inlined into this function.
+//    INLINED FUNCTION RECORDS
+//        Encoded as described above, except each nested FUNCTION BODY uses the
+//        composite representation.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_PROFILEDATA_SAMPLEPROFREADER_H
 #define LLVM_PROFILEDATA_SAMPLEPROFREADER_H
 
 #include "llvm/ADT/Eytzinger.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -240,7 +273,6 @@
 #include "llvm/Support/Discriminator.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/OnDiskHashTable.h"
 #include <array>
 #include <cstdint>
 #include <list>
@@ -396,8 +428,42 @@ public:
   bool empty() const { return size() == 0; }
   virtual FunctionId operator[](size_t Idx) const = 0;
 
+  virtual EytzingerTableSpan<support::ulittle64_t>
+  getEytzingerSpan(bool IsNested) const {
+    llvm_unreachable(
+        "getEytzingerSpan is exclusively supported for Eytzinger layout");
+  }
+  virtual bool contains(StringRef Key) const {
+    return contains(FunctionId(Key).getHashCode());
+  }
+  virtual bool contains(uint64_t GUID) const {
+    return getOrCreateSet(GUIDSet, *this, GetFunctionIdHash).contains(GUID);
+  }
+
   iterator begin() const { return iterator(this, 0); }
   iterator end() const { return iterator(this, size()); }
+
+protected:
+  mutable std::optional<DenseSet<uint64_t>> GUIDSet;
+
+  static constexpr auto GetFunctionIdHash = [](FunctionId F) {
+    return F.getHashCode();
+  };
+  static constexpr auto GetFunctionIdString = [](FunctionId F) {
+    return F.stringRef();
+  };
+
+  template <typename SetT, typename RangeT, typename ProjT = llvm::identity>
+  static const SetT &getOrCreateSet(std::optional<SetT> &Set,
+                                    const RangeT &Range, ProjT Proj = ProjT()) {
+    if (!Set) {
+      Set.emplace();
+      Set->reserve(Range.size());
+      for (const auto &Item : Range)
+        Set->insert(Proj(Item));
+    }
+    return *Set;
+  }
 };
 
 class LazySampleProfileNameTable final : public SampleProfileNameTable {
@@ -416,10 +482,17 @@ public:
     return FunctionId(endian::read<uint64_t, unaligned>(
         Start + Idx * sizeof(uint64_t), endianness::little));
   }
+
+  bool contains(uint64_t GUID) const override {
+    ArrayRef<support::ulittle64_t> Table(
+        reinterpret_cast<const support::ulittle64_t *>(Start), Size);
+    return getOrCreateSet(GUIDSet, Table).contains(GUID);
+  }
 };
 
 class StringSampleProfileNameTable final : public SampleProfileNameTable {
   std::vector<FunctionId> Vec;
+  mutable std::optional<DenseSet<StringRef>> NameSet;
 
 public:
   explicit StringSampleProfileNameTable(std::vector<FunctionId> &&Vec)
@@ -432,6 +505,10 @@ public:
   FunctionId operator[](size_t Idx) const override {
     assert(Idx < Vec.size() && "Index out of bounds");
     return Vec[Idx];
+  }
+
+  bool contains(StringRef Key) const override {
+    return getOrCreateSet(NameSet, Vec, GetFunctionIdString).contains(Key);
   }
 };
 
@@ -454,17 +531,34 @@ public:
 
 class EytzingerSampleProfileNameTable final : public SampleProfileNameTable {
   ArrayRef<support::ulittle64_t> Array;
+  std::array<EytzingerTableSpan<support::ulittle64_t>,
+             static_cast<size_t>(EytzingerSpan::NumSpans)>
+      Spans;
 
 public:
   EytzingerSampleProfileNameTable(const support::ulittle64_t *Data,
-                                  uint64_t NumCS, uint64_t NumFlat,
-                                  uint64_t NumInlinees)
-      : Array(Data, NumCS + NumFlat + NumInlinees) {}
+                                  size_t NumNested, size_t NumFlat,
+                                  size_t NumInlinees)
+      : Array(Data, NumNested + NumFlat + NumInlinees),
+        Spans{{{Data, NumNested},
+               {Data + NumNested, NumFlat},
+               {Data + NumNested + NumFlat, NumInlinees}}} {}
 
   size_t size() const override { return Array.size(); }
 
   FunctionId operator[](size_t Idx) const override {
     return FunctionId(Array[Idx]);
+  }
+
+  EytzingerTableSpan<support::ulittle64_t>
+  getEytzingerSpan(bool IsNested) const override {
+    return Spans[static_cast<size_t>(IsNested ? EytzingerSpan::Nested
+                                              : EytzingerSpan::Flat)];
+  }
+
+  bool contains(uint64_t GUID) const override {
+    return llvm::any_of(Spans,
+                        [&](const auto &Span) { return Span.contains(GUID); });
   }
 };
 
@@ -630,6 +724,22 @@ public:
             SampleProfileNameTable::iterator()};
   }
   virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) { return false; };
+  virtual bool contains(StringRef Key) const { return false; }
+  virtual bool contains(uint64_t GUID) const { return false; }
+
+  /// Read the profile and print the structure of composite profile blocks.
+  std::error_code dumpProfileTypeInfo(raw_ostream &OS) {
+    ProfileTypeInfoOS = &OS;
+    std::error_code EC = read();
+    ProfileTypeInfoOS = nullptr;
+    return EC;
+  }
+
+  /// Return whether the input contains a composite profile section.
+  virtual bool hasCompositeProfileSection() const { return false; }
+
+  /// Return whether any unknown composite profile blocks were skipped.
+  bool hasUnknownProfileTypes() const { return HasUnknownProfileTypes; }
 
   /// Return whether names in the profile are all MD5 numbers.
   bool useMD5() const { return ProfileIsMD5; }
@@ -700,7 +810,21 @@ protected:
   DenseMap<uint64_t, std::pair<const uint8_t *, const uint8_t *>>
       FuncMetadataIndex;
 
-  std::pair<const uint8_t *, const uint8_t *> ProfileSecRange;
+  /// A profile section retained for loading additional functions on demand.
+  struct ProfileSectionRange {
+    /// First byte of the retained section.
+    const uint8_t *Start = nullptr;
+    /// One-past-the-end byte of the retained section.
+    const uint8_t *End = nullptr;
+    /// Whether the retained section uses composite payload encoding.
+    bool IsComposite = false;
+  };
+  /// Profile section most recently selected for on-demand loading.
+  ProfileSectionRange ProfileSecRange;
+  /// Optional stream for composite block structure; null disables the output.
+  raw_ostream *ProfileTypeInfoOS = nullptr;
+  /// Whether reading skipped at least one unknown composite profile block.
+  bool HasUnknownProfileTypes = false;
 
   /// Whether the profile has attribute metadata.
   bool ProfileHasAttribute = false;
@@ -793,6 +917,16 @@ public:
     return {NameTable->begin(), NameTable->end()};
   }
 
+  bool contains(StringRef Key) const override {
+    assert(NameTable && "NameTable should be populated before querying");
+    return NameTable->contains(Key);
+  }
+
+  bool contains(uint64_t GUID) const override {
+    assert(NameTable && "NameTable should be populated before querying");
+    return NameTable->contains(GUID);
+  }
+
 protected:
   /// Read a numeric value of type T from the profile.
   ///
@@ -823,7 +957,12 @@ protected:
                                   SampleProfileMap &Profiles);
 
   /// Read the contents of the given profile instance.
-  std::error_code readProfile(FunctionSamples &FProfile);
+  std::error_code readProfile(FunctionSamples &FProfile, bool IsNested);
+
+  /// Read specific profile types.
+  std::error_code readLBRProfile(FunctionSamples &FProfile, bool IsNested);
+  std::error_code readCompositeProfile(FunctionSamples &FProfile,
+                                       bool IsNested);
 
   /// Read the contents of Magic number and Version number.
   std::error_code readMagicIdent();
@@ -895,53 +1034,12 @@ public:
   static bool hasFormat(const MemoryBuffer &Buffer);
 };
 
-/// Trait class for reading the on-disk function offset hash table mapping
-/// function name GUIDs to their offsets in the SecLBRProfile section.
-class FuncOffsetHashTableInfo {
-public:
-  using key_type = uint64_t;
-  using key_type_ref = uint64_t;
-  using data_type = uint32_t; // Offset
-  using data_type_ref = uint32_t;
-  using hash_value_type = uint32_t;
-  using offset_type = uint32_t;
-  using internal_key_type = uint64_t;
-  using external_key_type = uint64_t;
-
-  static hash_value_type ComputeHash(key_type_ref Key) {
-    return static_cast<hash_value_type>(Key);
-  }
-
-  static bool EqualKey(key_type_ref LHS, key_type_ref RHS) {
-    return LHS == RHS;
-  }
-
-  static key_type GetInternalKey(key_type_ref Key) { return Key; }
-  static external_key_type GetExternalKey(internal_key_type Key) { return Key; }
-
-  static std::pair<offset_type, offset_type>
-  ReadKeyDataLength(const unsigned char *&D) {
-    // Implicit lengths: do NOT read or advance pointer D.
-    return {sizeof(key_type), sizeof(data_type)};
-  }
-
-  static key_type ReadKey(const unsigned char *D, offset_type Len) {
-    assert(Len == sizeof(key_type) && "Key length mismatch");
-    return support::endian::read64le(D);
-  }
-
-  static data_type ReadData(key_type_ref K, const unsigned char *D,
-                            offset_type Len) {
-    assert(Len == sizeof(data_type) && "Data length mismatch");
-    return support::endian::read32le(D);
-  }
-};
-
 /// Tags to select the initialization mode of SampleProfileFuncOffsetTable.
 struct InMemoryModeT {};
-struct OnDiskModeT {};
+struct EytzingerModeT {};
+
 inline constexpr InMemoryModeT InMemoryMode{};
-inline constexpr OnDiskModeT OnDiskMode{};
+inline constexpr EytzingerModeT EytzingerMode{};
 
 /// A unified wrapper representing the function offset table.
 ///
@@ -952,17 +1050,14 @@ inline constexpr OnDiskModeT OnDiskMode{};
 ///   profile offsets, populated when reading the array of offsets in
 ///   context-sensitive (CS) profiles or version 103 profiles.
 ///
-/// - An OnDiskIterableChainedHashTable providing the same mapping directly from
-///   the file in (non-context-sensitive) version 104 profiles.
+/// - A raw slice of 32-bit relative offsets for Eytzinger parallel lookups.
 ///
 /// It exposes a single, type-agnostic lookup interface, shielding the reader
 /// from the underlying container types. To prevent hybrid-state corruption, the
-/// table's mode is locked at construction time, and assertions prevent
-/// modification in on-disk mode.
+/// table's mode is locked at construction time.
 class SampleProfileFuncOffsetTable {
 public:
-  using OnDiskTableType =
-      llvm::OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>;
+  enum class TableMode { InMemory, Eytzinger };
 
   SampleProfileFuncOffsetTable() = delete;
   SampleProfileFuncOffsetTable(const SampleProfileFuncOffsetTable &) = delete;
@@ -973,42 +1068,62 @@ public:
   operator=(SampleProfileFuncOffsetTable &&) = delete;
 
   explicit SampleProfileFuncOffsetTable(InMemoryModeT,
-                                        size_t InitialCapacity = 0) {
+                                        size_t InitialCapacity = 0)
+      : Mode(TableMode::InMemory) {
     InMemoryTable.reserve(InitialCapacity);
   }
 
-  /// Insert a function GUID and its profile offset into the in-memory map.
-  /// Enforces that the on-disk table must not have been set first.
-  void insert(uint64_t GUID, uint64_t Offset) {
-    assert(!OnDiskTable &&
-           "Cannot insert in-memory elements after on-disk table has been set");
-    InMemoryTable[GUID] = Offset;
-  }
+  SampleProfileFuncOffsetTable(
+      EytzingerModeT, EytzingerTableSpan<support::ulittle64_t> NameSpan,
+      ArrayRef<support::ulittle32_t> FuncOffsetSpan)
+      : Mode(TableMode::Eytzinger), NameSpan(NameSpan),
+        FuncOffsetSpan(FuncOffsetSpan) {}
 
-  /// Instantiate the on-disk chained hash table using raw stream pointers.
-  SampleProfileFuncOffsetTable(OnDiskModeT, const uint8_t *Buckets,
-                               const uint8_t *Payload, const uint8_t *Base) {
-    OnDiskTable.reset(OnDiskTableType::Create(Buckets, Payload, Base));
+  /// Insert a function GUID and its profile offset into the in-memory map.
+  void insert(uint64_t GUID, uint64_t Offset) {
+    assert(Mode == TableMode::InMemory &&
+           "Cannot insert into a non-in-memory offset table");
+    InMemoryTable[GUID] = Offset;
   }
 
   /// Query the offset table for the profile offset associated with the given
   /// GUID. Returns the offset if found, or std::nullopt if the key is missing.
   std::optional<uint64_t> lookup(uint64_t GUID) const {
-    if (OnDiskTable) {
-      auto Iter = OnDiskTable->find(GUID);
-      if (Iter != OnDiskTable->end())
-        return *Iter;
-    } else {
-      auto Iter = InMemoryTable.find(GUID);
-      if (Iter != InMemoryTable.end())
-        return Iter->second;
+    if (isEytzinger()) {
+      if (std::optional<size_t> Idx = NameSpan.findIndex(GUID)) {
+        uint32_t RelOffset = FuncOffsetSpan[*Idx];
+        if (RelOffset != UINT32_MAX)
+          return RelOffset;
+      }
+      return std::nullopt;
     }
+    auto Iter = InMemoryTable.find(GUID);
+    if (Iter != InMemoryTable.end())
+      return Iter->second;
     return std::nullopt;
   }
 
+  /// Direct read-only array (`ArrayRef`) of function offsets aligned parallel
+  /// to the corresponding Eytzinger name span.
+  ArrayRef<support::ulittle32_t> getFuncOffsets() const {
+    assert(isEytzinger() &&
+           "Cannot call getFuncOffsets() on non-Eytzinger table");
+    return FuncOffsetSpan;
+  }
+
+  size_t getExpectedSize() const {
+    assert(isEytzinger() &&
+           "Cannot call getExpectedSize() on non-Eytzinger table");
+    return NameSpan.size();
+  }
+
+  bool isEytzinger() const { return Mode == TableMode::Eytzinger; }
+
 private:
+  TableMode Mode;
   llvm::DenseMap<hash_code, uint64_t> InMemoryTable;
-  std::unique_ptr<OnDiskTableType> OnDiskTable;
+  EytzingerTableSpan<support::ulittle64_t> NameSpan;
+  ArrayRef<support::ulittle32_t> FuncOffsetSpan;
 };
 
 /// SampleProfileReaderExtBinaryBase/SampleProfileWriterExtBinaryBase defines
@@ -1048,7 +1163,9 @@ protected:
   std::error_code readFuncMetadata(DenseSet<FunctionSamples *> &Profiles);
   std::error_code readFuncMetadata();
   std::error_code readFuncMetadata(FunctionSamples *FProfile);
-  std::error_code readFuncOffsetTable();
+  std::error_code readFuncOffsetTable(bool IsEytzinger, bool IsNested);
+  std::error_code readEytzingerFuncOffsetTable(bool IsNested);
+  std::error_code readLegacyFuncOffsetTable();
   std::error_code readFuncProfiles();
   std::error_code readFuncProfiles(const DenseSet<StringRef> &FuncsToUse,
                                    SampleProfileMap &Profiles);
@@ -1101,6 +1218,13 @@ public:
   /// Get the total size of header and all sections.
   uint64_t getFileSize();
   bool dumpSectionInfo(raw_ostream &OS = dbgs()) override;
+  /// Return whether the section table contains a composite profile section.
+  bool hasCompositeProfileSection() const override {
+    for (const auto &Entry : SecHdrTable)
+      if (Entry.Type == SecCompositeProfile)
+        return true;
+    return false;
+  }
 
   /// Collect functions with definitions in Module M. Return true if
   /// the reader has been given a module.
@@ -1189,23 +1313,6 @@ protected:
   /// GCOV tags used to separate sections in the profile file.
   static const uint32_t GCOVTagAFDOFileNames = 0xaa000000;
   static const uint32_t GCOVTagAFDOFunction = 0xac000000;
-};
-
-/// A helper class that wraps a local set of string names from NameTable.
-class SampleProfileNameSet {
-  const SampleProfileReader &Reader;
-  StringSet<> NamesInProfile;
-
-public:
-  explicit SampleProfileNameSet(const SampleProfileReader &R) : Reader(R) {
-    for (FunctionId Name : Reader.getNameTable())
-      NamesInProfile.insert(Name.stringRef());
-  }
-
-  /// Check if a canonical function name exists in the profile name table.
-  bool contains(StringRef CanonName) const {
-    return NamesInProfile.contains(CanonName);
-  }
 };
 
 } // end namespace sampleprof
