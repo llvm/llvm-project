@@ -1556,6 +1556,42 @@ static unsigned getSVEMinEltCount(clang::SVETypeFlags::EltType sveType) {
   }
 }
 
+cir::VectorType CIRGenFunction::getSVEType(const SVETypeFlags &typeFlags) {
+  switch (typeFlags.getEltType()) {
+  default:
+    llvm_unreachable("Invalid SVETypeFlag!");
+
+  case SVETypeFlags::EltTyInt8:
+    return cir::VectorType::get(builder.getUInt8Ty(), 16, true);
+  case SVETypeFlags::EltTyInt16:
+    return cir::VectorType::get(builder.getUInt16Ty(), 8, true);
+  case SVETypeFlags::EltTyInt32:
+    return cir::VectorType::get(builder.getUInt32Ty(), 4, true);
+  case SVETypeFlags::EltTyInt64:
+    return cir::VectorType::get(builder.getUInt64Ty(), 2, true);
+
+  case SVETypeFlags::EltTyMFloat8:
+    return cir::VectorType::get(builder.getUInt8Ty(), 16, true);
+  case SVETypeFlags::EltTyFloat16:
+    return cir::VectorType::get(builder.getFp16Ty(), 8, true);
+  case SVETypeFlags::EltTyBFloat16:
+    return cir::VectorType::get(builder.getBF16Type(), 8, true);
+  case SVETypeFlags::EltTyFloat32:
+    return cir::VectorType::get(builder.getF32Type(), 4, true);
+  case SVETypeFlags::EltTyFloat64:
+    return cir::VectorType::get(builder.getDoubleTy(), 2, true);
+
+  case SVETypeFlags::EltTyBool8:
+    return cir::VectorType::get(builder.getUIntNTy(1), 16, true);
+  case SVETypeFlags::EltTyBool16:
+    return cir::VectorType::get(builder.getUIntNTy(1), 8, true);
+  case SVETypeFlags::EltTyBool32:
+    return cir::VectorType::get(builder.getUIntNTy(1), 4, true);
+  case SVETypeFlags::EltTyBool64:
+    return cir::VectorType::get(builder.getUIntNTy(1), 2, true);
+  }
+}
+
 // TODO(cir): Share with OGCG
 constexpr unsigned sveBitsPerBlock = 128;
 
@@ -1739,11 +1775,29 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
   case SVE::BI__builtin_sve_svpmullb_u64:
   case SVE::BI__builtin_sve_svpmullb_n_u16:
   case SVE::BI__builtin_sve_svpmullb_n_u64:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
 
   case SVE::BI__builtin_sve_svdup_n_b8:
   case SVE::BI__builtin_sve_svdup_n_b16:
   case SVE::BI__builtin_sve_svdup_n_b32:
-  case SVE::BI__builtin_sve_svdup_n_b64:
+  case SVE::BI__builtin_sve_svdup_n_b64: {
+    // Cast from cir.bool (input type) to cir.int<u, 1> (element type of the
+    // result vector).
+    auto dup = builder.createBitcast(ops[0], builder.getUIntNTy(1));
+
+    // Splat
+    dup = cir::VecSplatOp::create(builder, loc, getSVEType(typeFlags), dup);
+
+    // Cast to svbool_t, i.e. <vscale x 16 x i1>. The actual result could be
+    // e.g. <vscale x 8 x i1> (for b16), but only svbool_t (i.e. full
+    // predicate register) is "storable" (as per SVE ABI).
+    return builtinID == SVE::BI__builtin_sve_svdup_n_b8
+               ? dup
+               : emitSVEPredicateCast(dup, 16, loc);
+  }
 
   case SVE::BI__builtin_sve_svdupq_n_b8:
   case SVE::BI__builtin_sve_svdupq_n_b16:
