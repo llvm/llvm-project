@@ -20651,7 +20651,7 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
 
     // Vector conversion is unrolled to scalars, but truncate is not.
     if (!hasOperation(ISD::UINT_TO_FP, NarrowVT.getScalarType()) ||
-        !TLI.isTruncateFree(OpVT, NarrowVT))
+        !TLI.isTruncateFree(N0, NarrowVT))
       continue;
 
     // Avoid creating an illegal vector type before type legalization.
