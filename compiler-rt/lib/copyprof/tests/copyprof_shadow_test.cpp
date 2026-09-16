@@ -16,7 +16,7 @@ namespace __copyprof {
 namespace {
 
 TEST(CopyProfShadowTest, AlignedMemory) {
-  __copyprof_init();
+  __copyprof_init_once();
   u64 buf[4] = {0};
   MarkApplicationMemory(buf, sizeof(buf), /*is_copy=*/true);
   EXPECT_TRUE(IsMarkedAsCopy(buf, sizeof(buf)));
@@ -25,7 +25,7 @@ TEST(CopyProfShadowTest, AlignedMemory) {
 }
 
 TEST(CopyProfShadowTest, UnalignedMemory) {
-  __copyprof_init();
+  __copyprof_init_once();
   alignas(8) unsigned char buf[64] = {0};
   MarkApplicationMemory(buf, sizeof(buf), /*is_copy=*/false);
 
@@ -44,7 +44,7 @@ TEST(CopyProfShadowTest, UnalignedMemory) {
 // Bytes are queried one at a time on purpose: a range query would share any
 // masking bug with the update path and hide the defect.
 TEST(CopyProfShadowTest, UnalignedRangeSpanningShadowBytes) {
-  __copyprof_init();
+  __copyprof_init_once();
   alignas(8) unsigned char buf[32] = {0};
   MarkApplicationMemory(buf, sizeof(buf), /*is_copy=*/false);
 
@@ -64,7 +64,7 @@ TEST(CopyProfShadowTest, UnalignedRangeSpanningShadowBytes) {
 // `start_bit + num_bits` exceeds the bits in one shadow byte. The overflowing
 // bits belong to the next shadow byte and must not be truncated away.
 TEST(CopyProfShadowTest, UnalignedRangeCrossingByteBoundary) {
-  __copyprof_init();
+  __copyprof_init_once();
   alignas(8) unsigned char buf[32] = {0};
   MarkApplicationMemory(buf, sizeof(buf), /*is_copy=*/false);
 
@@ -83,7 +83,7 @@ TEST(CopyProfShadowTest, UnalignedRangeCrossingByteBoundary) {
 // The same geometry in the clearing direction: a store to an unaligned field
 // must not clear the copy bits of the bytes around it.
 TEST(CopyProfShadowTest, ClearingUnalignedRangeKeepsNeighbours) {
-  __copyprof_init();
+  __copyprof_init_once();
   alignas(8) unsigned char buf[32] = {0};
   MarkApplicationMemory(buf, sizeof(buf), /*is_copy=*/true);
 
@@ -100,7 +100,7 @@ TEST(CopyProfShadowTest, ClearingUnalignedRangeKeepsNeighbours) {
 // A range that starts and ends inside the same shadow byte, touching neither of
 // its boundaries. Only the bits of the range itself may change.
 TEST(CopyProfShadowTest, UnalignedRangeWithinShadowByte) {
-  __copyprof_init();
+  __copyprof_init_once();
   alignas(8) unsigned char buf[16] = {0};
   MarkApplicationMemory(buf, sizeof(buf), /*is_copy=*/false);
 
@@ -119,7 +119,7 @@ TEST(CopyProfShadowTest, UnalignedRangeWithinShadowByte) {
 // A range that exercises all three steps in a single call: a leading partial
 // shadow byte, whole shadow bytes, and a trailing partial shadow byte.
 TEST(CopyProfShadowTest, UnalignedRangeSpanningWholeShadowBytes) {
-  __copyprof_init();
+  __copyprof_init_once();
   alignas(8) unsigned char buf[40] = {0};
   MarkApplicationMemory(buf, sizeof(buf), /*is_copy=*/false);
 
@@ -146,7 +146,7 @@ TEST(CopyProfShadowTest, UnalignedRangeSpanningWholeShadowBytes) {
 }
 
 TEST(CopyProfShadowTest, PartialOverwrite) {
-  __copyprof_init();
+  __copyprof_init_once();
   u64 buf[4] = {0};
   MarkApplicationMemory(buf, sizeof(buf), /*is_copy=*/true);
   EXPECT_TRUE(IsMarkedAsCopy(buf, sizeof(buf)));

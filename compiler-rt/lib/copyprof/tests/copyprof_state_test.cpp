@@ -27,7 +27,7 @@ namespace {
 class CopyProfStateTest : public testing::Test {
  protected:
   void SetUp() override {
-    __copyprof_init();
+    __copyprof_init_once();
     __copyprof_state = PerThreadState();
   }
 };
