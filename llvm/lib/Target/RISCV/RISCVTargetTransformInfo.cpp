@@ -746,12 +746,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
   if (VIC == TTI::VectorInstrContext::SplatOpFolded &&
-      ST->sinkSplatOperands()) {
-    assert(Kind == TTI::SK_Broadcast &&
-           "Must be SK_Broadcast if a splat operation");
-    if (Kind == TTI::SK_Broadcast)
-      return TTI::TCC_Free;
-  }
+      ST->sinkSplatOperands() && Kind == TTI::SK_Broadcast)
+    return TTI::TCC_Free;
 
   // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
   // For now, skip all fixed vector cost analysis when P extension is available
@@ -2631,10 +2627,8 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
   // the scalar operand, so the explicit insertelement is free in this context.
   if (Opcode == Instruction::InsertElement &&
       VIC == TTI::VectorInstrContext::SplatOpFolded &&
-      ST->sinkSplatOperands()) {
-    assert(Index == 0 && "SplatOpFolded sequence must insert into lane 0");
+      ST->sinkSplatOperands() && Index == 0)
     return TTI::TCC_Free;
-  }
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);
@@ -3616,8 +3610,10 @@ TargetTransformInfo::VectorInstrContext RISCVTTIImpl::getBuildVectorContextHint(
       !ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()))
     return VectorInstrContext::None;
 
-  Value *SplatVal = Scalars.front();
-  if (isa<VectorType>(SplatVal->getType()) || isa<ExtractElementInst>(SplatVal))
+  const auto *SplatIt = find_if_not(Scalars, IsaPred<UndefValue>);
+  if (SplatIt == Scalars.end() || (*SplatIt)->getType()->isIntegerTy(1) ||
+      isa<VectorType>((*SplatIt)->getType()) ||
+      isa<ExtractElementInst>(*SplatIt))
     return VectorInstrContext::None;
 
   SmallVector<TargetTransformInfo::BuildVectorUseOp, 4> UserOps;

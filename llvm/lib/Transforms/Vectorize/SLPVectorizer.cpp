@@ -22610,27 +22610,34 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     // Gather unique scalars and all constants.
     SmallVector<int> ReuseMask(GatheredScalars.size(), PoisonMaskElem);
     TryPackScalars(GatheredScalars, ReuseMask, /*IsRootPoison=*/true);
-    auto GatherUserOps = [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
-      UserOps.clear();
-      if (NeedFreeze)
-        return false;
-      for (const auto &TE : VectorizableTree) {
-        if (DeletedNodes.contains(TE.get()))
-          continue;
-        if (!(TE->isGather() || TransformedToGatherNodes.contains(TE.get())) ||
-            !E->isSame(TE->Scalars))
-          continue;
-        auto *UserTE = TE->UserTreeIndex.UserTE;
-        if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
-            TransformedToGatherNodes.contains(UserTE))
-          return false;
-        UserOps.emplace_back(UserTE->getOpcode(), TE->UserTreeIndex.EdgeIdx);
-      }
-      assert(UserOps.size() && "Ought to at least match with current entry");
-      return true;
-    };
-    TargetTransformInfo::VectorInstrContext ContextHint =
-        TTI->getBuildVectorContextHint(ReuseMask, E->Scalars, GatherUserOps);
+    TTI::VectorInstrContext ContextHint = TTI::VectorInstrContext::None;
+    if constexpr (std::is_same_v<ResTy, InstructionCost>) {
+      auto GatherUserOps =
+          [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
+            UserOps.clear();
+            if (NeedFreeze)
+              return false;
+            for (const auto &TE : VectorizableTree) {
+              if (DeletedNodes.contains(TE.get()))
+                continue;
+              if (!(TE->isGather() ||
+                    TransformedToGatherNodes.contains(TE.get())) ||
+                  !E->isSame(TE->Scalars))
+                continue;
+              auto *UserTE = TE->UserTreeIndex.UserTE;
+              if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
+                  TransformedToGatherNodes.contains(UserTE))
+                return false;
+              UserOps.emplace_back(UserTE->getOpcode(),
+                                   TE->UserTreeIndex.EdgeIdx);
+            }
+            assert(UserOps.size() &&
+                   "Ought to at least match with current entry");
+            return true;
+          };
+      ContextHint =
+          TTI->getBuildVectorContextHint(ReuseMask, E->Scalars, GatherUserOps);
+    }
     Value *BV = ShuffleBuilder.gather(GatheredScalars, ReuseMask.size(),
                                       /*Root*/ nullptr, ContextHint);
     ShuffleBuilder.add(BV, ReuseMask, /*ForExtract*/ false, ContextHint);
