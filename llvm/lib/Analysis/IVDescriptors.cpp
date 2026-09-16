@@ -1697,21 +1697,21 @@ bool InductionDescriptor::isInductionPHI(
   return true;
 }
 
-// Recognize a monotonic PHI variable by matching the following pattern:
+// Recognize a conditional induction PHI by matching the following pattern:
 // loop_header:
-//   %monotonic_phi = phi [ %start, %preheader ], [ %latch_phi, %latch ]
+//   %conditional_iv = phi [ %start, %preheader ], [ %latch_phi, %latch ]
 //   br i1 %do_step, label %step_bb, label %latch
 //
 // step_bb:
-//   %step = add/gep %monotonic_phi, %step_val
+//   %step = add/gep %conditional_iv, %step_val
 //   br label %latch
 //
 // latch:
-//   %latch_phi = phi [ %monotonic_phi, %loop_header ], [ %step, %step_bb ]
+//   %latch_phi = phi [ %conditional_iv, %loop_header ], [ %step, %step_bb ]
 //   br label %loop_header
-bool MonotonicDescriptor::isMonotonicPHI(PHINode *PN, const Loop *L,
-                                         MonotonicDescriptor &Desc,
-                                         ScalarEvolution &SE) {
+bool ConditionalInductionDescriptor::isConditionalInductionPHI(
+    PHINode *PN, const Loop *L, ConditionalInductionDescriptor &Desc,
+    ScalarEvolution &SE) {
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader)
     return false;
@@ -1733,7 +1733,7 @@ bool MonotonicDescriptor::isMonotonicPHI(PHINode *PN, const Loop *L,
       return false;
   }
 
-  // Find the step operation used to increment the value of the monotonic PHI.
+  // Find the step operation used to increment the conditional induction PHI.
   // TODO: Support chains of PHIs.
   Value *StepOp =
       find_singleton<Value>(BackedgePHI->incoming_values(),
@@ -1779,10 +1779,10 @@ bool MonotonicDescriptor::isMonotonicPHI(PHINode *PN, const Loop *L,
       NoWrapFlags = ScalarEvolution::setFlags(NoWrapFlags, SCEV::FlagNSW);
   }
 
-  LLVM_DEBUG(dbgs() << "LV: Found a monotonic phi: HeaderPHI: " << *PN
-                    << ", StepInst: " << *StepInst << "\n");
+  LLVM_DEBUG(dbgs() << "LV: Found a conditional induction phi: HeaderPHI: "
+                    << *PN << ", StepInst: " << *StepInst << "\n");
 
-  Desc = MonotonicDescriptor(PN, BackedgePHI, StepInst, StartSCEV, StepSCEV,
-                             NoWrapFlags);
+  Desc = ConditionalInductionDescriptor(PN, BackedgePHI, StepInst, StartSCEV,
+                                        StepSCEV, NoWrapFlags);
   return true;
 }
