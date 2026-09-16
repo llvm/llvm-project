@@ -12,6 +12,7 @@
 
 #include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
 #include "llvm/ADT/STLExtras.h"
+#include <algorithm>
 #include <cassert>
 
 using namespace llvm;
@@ -66,12 +67,13 @@ Expected<unsigned> llvm::hlsl::packSignatureStacked(
   return NextRow;
 }
 
-Error llvm::hlsl::packSignatureIndexed(
+Expected<unsigned> llvm::hlsl::packSignatureIndexed(
     MutableArrayRef<SemanticSignatureElement> Elements,
     Triple::EnvironmentType ShaderStage, IOType IOTy) {
   assert(ShaderStage == Triple::Pixel && IOTy == IOType::Out &&
          "indexed packing is only valid for a pixel shader output signature");
 
+  unsigned NumRows = 0;
   for (auto &&[Index, Element] : enumerate(Elements)) {
     assert(Element.StartRow == UnallocatedRow &&
            Element.StartCol == UnallocatedCol && "already allocated?");
@@ -97,7 +99,8 @@ Error llvm::hlsl::packSignatureIndexed(
 
     Element.StartRow = Row;
     Element.StartCol = 0;
+    NumRows = std::max(NumRows, Row + 1);
   }
 
-  return Error::success();
+  return NumRows;
 }

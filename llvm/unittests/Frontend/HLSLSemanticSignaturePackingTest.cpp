@@ -11,7 +11,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
-#include <algorithm>
 #include <initializer_list>
 
 using namespace llvm;
@@ -79,17 +78,8 @@ protected:
     switch (Method) {
     case PackingMethod::Stacked:
       return packSignatureStacked(Elements, Config.ShaderStage, Config.IOTy);
-    case PackingMethod::Indexed: {
-      if (Error E =
-              packSignatureIndexed(Elements, Config.ShaderStage, Config.IOTy))
-        return std::move(E);
-
-      unsigned Rows = 0;
-      for (const SemanticSignatureElement &Element : Elements)
-        if (Element.isAllocated())
-          Rows = std::max(Rows, Element.StartRow + Element.Rows);
-      return Rows;
-    }
+    case PackingMethod::Indexed:
+      return packSignatureIndexed(Elements, Config.ShaderStage, Config.IOTy);
     }
     llvm_unreachable("invalid packing method");
   }
@@ -372,6 +362,25 @@ TEST_F(HLSLSemanticSignaturePackingTest, RejectsMultiRowSignatureOverflow) {
 //===----------------------------------------------------------------------===//
 // Indexed packing tests
 //===----------------------------------------------------------------------===//
+
+TEST_F(HLSLSemanticSignaturePackingTest, IndexedEmptySignature) {
+  TestConfig Config(Triple::EnvironmentType::Pixel, IOType::Out, {});
+
+  verifyPacking(PackingMethod::Indexed, Config, /*ExpectedRows=*/0, {});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, IndexedUsesLastSignatureRow) {
+  // The row extent includes the unused rows before the target's semantic index.
+  TestConfig Config(
+      Triple::EnvironmentType::Pixel, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Target, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined,
+        /*SemanticIndex=*/MaxSignatureRows - 1}});
+
+  verifyPacking(PackingMethod::Indexed, Config,
+                /*ExpectedRows=*/MaxSignatureRows,
+                {{/*Row=*/MaxSignatureRows - 1, /*Col=*/0}});
+}
 
 TEST_F(HLSLSemanticSignaturePackingTest, IndexedUsesSemanticIndices) {
   // Target elements are assigned the row denoted by their semantic index, not
