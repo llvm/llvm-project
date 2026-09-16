@@ -55,7 +55,17 @@ protected:
     llvm::InitializeNativeTargetAsmPrinter();
   }
 
-  static void TearDownTestSuite() { llvm::llvm_shutdown(); }
+  static void TearDownTestSuite() {
+    // llvm_shutdown() cleans up JIT (LLJIT/ORC) state between test suites.
+    // On Emscripten, WasmIncrementalExecutor is used instead of LLJIT, so
+    // there is no JIT state to tear down. Calling llvm_shutdown() here would
+    // destroy the ManagedStatic<CommandLineParser> global, permanently
+    // deregistering all cl::opt options (wasm-enable-eh, etc.) since their
+    // constructors already ran and will not fire again after the reset.
+#ifndef __EMSCRIPTEN__
+    llvm::llvm_shutdown();
+#endif
+  }
 };
 
 } // namespace clang
