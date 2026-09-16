@@ -3356,3 +3356,211 @@ struct BitfieldUnnamedOnly {
 void testBitfieldUnnamedOnly(struct BitfieldUnnamedOnly *s) {
   __builtin_clear_padding(s);
 }
+
+typedef _Bool bool6 __attribute__((ext_vector_type(6)));
+
+// CHECK64-LE-LABEL: define dso_local void @testPackedBooleanVectorLessThan8Elements(
+// CHECK64-LE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// CHECK64-LE-NEXT:  [[ENTRY:.*:]]
+// CHECK64-LE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// CHECK64-LE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// CHECK64-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// CHECK64-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// CHECK64-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// CHECK64-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 63
+// CHECK64-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// CHECK64-LE-NEXT:    ret void
+//
+// ARM-LE-LABEL: define dso_local void @testPackedBooleanVectorLessThan8Elements(
+// ARM-LE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// ARM-LE-NEXT:  [[ENTRY:.*:]]
+// ARM-LE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 4
+// ARM-LE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 4
+// ARM-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 4
+// ARM-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// ARM-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// ARM-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 63
+// ARM-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// ARM-LE-NEXT:    ret void
+//
+// ARM-BE-LABEL: define dso_local void @testPackedBooleanVectorLessThan8Elements(
+// ARM-BE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// ARM-BE-NEXT:  [[ENTRY:.*:]]
+// ARM-BE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 4
+// ARM-BE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 4
+// ARM-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 4
+// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// ARM-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// ARM-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -4
+// ARM-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// ARM-BE-NEXT:    ret void
+//
+// AARCH64-BE-LABEL: define dso_local void @testPackedBooleanVectorLessThan8Elements(
+// AARCH64-BE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// AARCH64-BE-NEXT:  [[ENTRY:.*:]]
+// AARCH64-BE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// AARCH64-BE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// AARCH64-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// AARCH64-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// AARCH64-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -4
+// AARCH64-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// AARCH64-BE-NEXT:    ret void
+//
+void testPackedBooleanVectorLessThan8Elements(bool6 *v) {
+  __builtin_clear_padding(v);
+}
+
+typedef _Bool bool8 __attribute__((ext_vector_type(8)));
+
+// CHECK64-LABEL: define dso_local void @testPackedBooleanVector8Elements(
+// CHECK64-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// CHECK64-NEXT:  [[ENTRY:.*:]]
+// CHECK64-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// CHECK64-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// CHECK64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// CHECK64-NEXT:    ret void
+//
+// ARM-LABEL: define dso_local void @testPackedBooleanVector8Elements(
+// ARM-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// ARM-NEXT:  [[ENTRY:.*:]]
+// ARM-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 4
+// ARM-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 4
+// ARM-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 4
+// ARM-NEXT:    ret void
+//
+void testPackedBooleanVector8Elements(bool8 *v) {
+  __builtin_clear_padding(v);
+}
+
+typedef _Bool bool12 __attribute__((ext_vector_type(12)));
+
+// CHECK64-LE-LABEL: define dso_local void @testPackedBooleanVectorMoreThan8Elements(
+// CHECK64-LE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// CHECK64-LE-NEXT:  [[ENTRY:.*:]]
+// CHECK64-LE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// CHECK64-LE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// CHECK64-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// CHECK64-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// CHECK64-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// CHECK64-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 15
+// CHECK64-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// CHECK64-LE-NEXT:    ret void
+//
+// ARM-LE-LABEL: define dso_local void @testPackedBooleanVectorMoreThan8Elements(
+// ARM-LE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// ARM-LE-NEXT:  [[ENTRY:.*:]]
+// ARM-LE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 4
+// ARM-LE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 4
+// ARM-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 4
+// ARM-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
+// ARM-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+// ARM-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 15
+// ARM-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
+// ARM-LE-NEXT:    ret void
+//
+// ARM-BE-LABEL: define dso_local void @testPackedBooleanVectorMoreThan8Elements(
+// ARM-BE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// ARM-BE-NEXT:  [[ENTRY:.*:]]
+// ARM-BE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 4
+// ARM-BE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 4
+// ARM-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 4
+// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// ARM-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 2
+// ARM-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 15
+// ARM-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 2
+// ARM-BE-NEXT:    ret void
+//
+// AARCH64-BE-LABEL: define dso_local void @testPackedBooleanVectorMoreThan8Elements(
+// AARCH64-BE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// AARCH64-BE-NEXT:  [[ENTRY:.*:]]
+// AARCH64-BE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// AARCH64-BE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// AARCH64-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// AARCH64-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 2
+// AARCH64-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 15
+// AARCH64-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 2
+// AARCH64-BE-NEXT:    ret void
+//
+void testPackedBooleanVectorMoreThan8Elements(bool12 *v) {
+  __builtin_clear_padding(v);
+}
+
+typedef _Bool bool33 __attribute__((ext_vector_type(33)));
+
+// CHECK64-LE-LABEL: define dso_local void @testPackedBooleanVectorWithFullyPaddingBytes(
+// CHECK64-LE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// CHECK64-LE-NEXT:  [[ENTRY:.*:]]
+// CHECK64-LE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// CHECK64-LE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// CHECK64-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// CHECK64-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4
+// CHECK64-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
+// CHECK64-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
+// CHECK64-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 4
+// CHECK64-LE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
+// CHECK64-LE-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// CHECK64-LE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
+// CHECK64-LE-NEXT:    store i8 0, ptr [[TMP5]], align 2
+// CHECK64-LE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
+// CHECK64-LE-NEXT:    store i8 0, ptr [[TMP6]], align 1
+// CHECK64-LE-NEXT:    ret void
+//
+// ARM-LE-LABEL: define dso_local void @testPackedBooleanVectorWithFullyPaddingBytes(
+// ARM-LE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// ARM-LE-NEXT:  [[ENTRY:.*:]]
+// ARM-LE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 4
+// ARM-LE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 4
+// ARM-LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 4
+// ARM-LE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4
+// ARM-LE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
+// ARM-LE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
+// ARM-LE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 4
+// ARM-LE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
+// ARM-LE-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// ARM-LE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
+// ARM-LE-NEXT:    store i8 0, ptr [[TMP5]], align 2
+// ARM-LE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
+// ARM-LE-NEXT:    store i8 0, ptr [[TMP6]], align 1
+// ARM-LE-NEXT:    ret void
+//
+// ARM-BE-LABEL: define dso_local void @testPackedBooleanVectorWithFullyPaddingBytes(
+// ARM-BE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// ARM-BE-NEXT:  [[ENTRY:.*:]]
+// ARM-BE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 4
+// ARM-BE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 4
+// ARM-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 4
+// ARM-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// ARM-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 8
+// ARM-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
+// ARM-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 8
+// ARM-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// ARM-BE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP5]], align 2
+// ARM-BE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
+// ARM-BE-NEXT:    store i8 0, ptr [[TMP6]], align 1
+// ARM-BE-NEXT:    ret void
+//
+// AARCH64-BE-LABEL: define dso_local void @testPackedBooleanVectorWithFullyPaddingBytes(
+// AARCH64-BE-SAME: ptr noundef [[V:%.*]]) #[[ATTR0]] {
+// AARCH64-BE-NEXT:  [[ENTRY:.*:]]
+// AARCH64-BE-NEXT:    [[V_ADDR:%.*]] = alloca ptr, align 8
+// AARCH64-BE-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
+// AARCH64-BE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
+// AARCH64-BE-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
+// AARCH64-BE-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 8
+// AARCH64-BE-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
+// AARCH64-BE-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 8
+// AARCH64-BE-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// AARCH64-BE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP5]], align 2
+// AARCH64-BE-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
+// AARCH64-BE-NEXT:    store i8 0, ptr [[TMP6]], align 1
+// AARCH64-BE-NEXT:    ret void
+//
+void testPackedBooleanVectorWithFullyPaddingBytes(bool33 *v) {
+  __builtin_clear_padding(v);
+}

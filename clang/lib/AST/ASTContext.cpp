@@ -15999,12 +15999,13 @@ private:
   }
 
   void VisitVector(const clang::VectorType *VT, uint64_t StartBitOffset) {
-    uint64_t SizeBit = [&]() -> uint64_t {
-      if (VT->isPackedVectorBoolType(Ctx))
-        return VT->getNumElements();
-      return getScalarOccupiedSizeInBits(VT->getElementType()) *
-             VT->getNumElements();
-    }();
+    if (VT->isPackedVectorBoolType(Ctx)) {
+      VisitPackedBooleanVector(VT, StartBitOffset);
+      return;
+    }
+
+    uint64_t SizeBit = getScalarOccupiedSizeInBits(VT->getElementType()) *
+                       VT->getNumElements();
     OccuppiedIntervals.push_back(
         ASTContext::BitInterval{StartBitOffset, StartBitOffset + SizeBit});
   }
@@ -16048,6 +16049,58 @@ private:
       OccuppiedIntervals.push_back({StartBitOffset + StorageSizeInBits -
                                         NumFullyOccupiedBytes * CharWidth,
                                     StartBitOffset + StorageSizeInBits});
+  }
+
+  void VisitPackedBooleanVector(const VectorType *VTy,
+                                uint64_t StartBitOffset) {
+    const uint64_t CharWidth = Ctx.getCharWidth();
+    assert(StartBitOffset % CharWidth == 0 &&
+           "Expected aligned packed boolean vector");
+    assert(VTy->isPackedVectorBoolType(Ctx));
+    const uint64_t OccupiedSizeInBits = VTy->getNumElements();
+
+    if (Ctx.getTargetInfo().isLittleEndian()) {
+      OccuppiedIntervals.push_back(
+          {StartBitOffset, StartBitOffset + OccupiedSizeInBits});
+      return;
+    }
+
+    // The memory layout of packed boolean vectors in big endian mode is
+    // complex.
+    //
+    // If the number of elements < 8, then the occupied bits are contained
+    // within a single byte, but they start from the most significant bit of
+    // that byte.
+    //
+    // Otherwise, the occupied bits span at least one byte. Compared to the
+    // layout in little endian, only the sequence of bytes containing occupied
+    // bits has its order reversed, but the bits within each byte are still
+    // counted from the least significant bit. So if there are fully padding
+    // bytes, they reside at the higher addresses in both endiannesses.
+
+    // Number of elements < 8. Single byte. Count from the MSB.
+    if (OccupiedSizeInBits < CharWidth) {
+      const uint64_t ByteEnd = StartBitOffset + CharWidth;
+      OccuppiedIntervals.push_back({ByteEnd - OccupiedSizeInBits, ByteEnd});
+      return;
+    }
+
+    const uint64_t NumFullyOccupiedBytes = OccupiedSizeInBits / CharWidth;
+    const uint64_t NumRemainingOccupiedBits = OccupiedSizeInBits % CharWidth;
+
+    uint64_t Start = StartBitOffset;
+    // Partially occupied byte at the beginning. Count from the LSB.
+    if (NumRemainingOccupiedBits > 0) {
+      const uint64_t ByteEnd = Start + CharWidth;
+      OccuppiedIntervals.push_back({Start, Start + NumRemainingOccupiedBits});
+      Start = ByteEnd;
+    }
+
+    // The remaining fully occupied bytes form a contiguous interval.
+    if (NumFullyOccupiedBytes > 0) {
+      OccuppiedIntervals.push_back(
+          {Start, Start + NumFullyOccupiedBytes * CharWidth});
+    }
   }
 
   void MergeOccuppiedIntervals() {
