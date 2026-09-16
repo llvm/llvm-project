@@ -22,9 +22,9 @@ define <16 x i8> @vtrni8_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vtrni8_Qres:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vtrn.8 d18, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vtrn.8 d17, d16
+; CHECK-NEXT:    vmov r0, r1, d17
 ; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
   %tmp1 = load <8 x i8>, ptr %A
@@ -54,9 +54,9 @@ define <8 x i16> @vtrni16_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vtrni16_Qres:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vtrn.16 d18, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vtrn.16 d17, d16
+; CHECK-NEXT:    vmov r0, r1, d17
 ; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
   %tmp1 = load <4 x i16>, ptr %A
@@ -86,9 +86,9 @@ define <4 x i32> @vtrni32_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vtrni32_Qres:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vtrn.32 d18, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vtrn.32 d17, d16
+; CHECK-NEXT:    vmov r0, r1, d17
 ; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
   %tmp1 = load <2 x i32>, ptr %A
@@ -118,9 +118,9 @@ define <4 x float> @vtrnf_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vtrnf_Qres:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vtrn.32 d18, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vtrn.32 d17, d16
+; CHECK-NEXT:    vmov r0, r1, d17
 ; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
   %tmp1 = load <2 x float>, ptr %A
@@ -283,9 +283,9 @@ define <16 x i8> @vtrni8_undef_Qres(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vtrni8_undef_Qres:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
-; CHECK-NEXT:    vldr d18, [r0]
-; CHECK-NEXT:    vtrn.8 d18, d16
-; CHECK-NEXT:    vmov r0, r1, d18
+; CHECK-NEXT:    vldr d17, [r0]
+; CHECK-NEXT:    vtrn.8 d17, d16
+; CHECK-NEXT:    vmov r0, r1, d17
 ; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    mov pc, lr
   %tmp1 = load <8 x i8>, ptr %A
@@ -356,15 +356,13 @@ define <8 x i8> @vtrn_mismatched_builvector0(<8 x i8> %tr0, <8 x i8> %tr1, <4 x 
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r12]
 ; CHECK-NEXT:    vcgt.u32 q8, q9, q8
 ; CHECK-NEXT:    vldr d20, [sp, #32]
+; CHECK-NEXT:    vmov d19, r0, r1
 ; CHECK-NEXT:    vldr d18, [sp, #40]
 ; CHECK-NEXT:    vcgt.u16 d18, d18, d20
 ; CHECK-NEXT:    vmovn.i32 d16, q8
 ; CHECK-NEXT:    vmov d17, r2, r3
 ; CHECK-NEXT:    vtrn.8 d16, d18
-; CHECK-NEXT:    vmov d18, r0, r1
-; CHECK-NEXT:    vshl.i8 d16, d16, #7
-; CHECK-NEXT:    vshr.s8 d16, d16, #7
-; CHECK-NEXT:    vbsl d16, d18, d17
+; CHECK-NEXT:    vbsl d16, d19, d17
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
   %c0 = icmp ult <4 x i32> %cmp0, %cmp1

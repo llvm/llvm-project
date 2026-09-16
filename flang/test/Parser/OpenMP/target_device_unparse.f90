@@ -1,7 +1,6 @@
 ! RUN: %flang_fc1 -fdebug-unparse-no-sema -fopenmp %s | FileCheck --ignore-case %s
 ! Verifies the unparsing of the Openmp Target Device constructs
 PROGRAM main
-    USE OMP_LIB
     IMPLICIT NONE
     INTEGER:: X, Y
     INTEGER:: M = 1

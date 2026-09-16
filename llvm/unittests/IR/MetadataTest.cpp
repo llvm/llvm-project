@@ -25,6 +25,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 #include <optional>
+#include <type_traits>
 using namespace llvm;
 
 namespace llvm {
@@ -43,7 +44,8 @@ TEST(ContextAndReplaceableUsesTest, FromContext) {
 
 TEST(ContextAndReplaceableUsesTest, FromReplaceableUses) {
   LLVMContext Context;
-  ContextAndReplaceableUses CRU(std::make_unique<ReplaceableMetadataImpl>(Context));
+  ContextAndReplaceableUses CRU(
+      std::make_unique<ReplaceableUsesWithContext>(Context));
   EXPECT_EQ(&Context, &CRU.getContext());
   EXPECT_TRUE(CRU.hasReplaceableUses());
   EXPECT_TRUE(CRU.getReplaceableUses());
@@ -52,7 +54,7 @@ TEST(ContextAndReplaceableUsesTest, FromReplaceableUses) {
 TEST(ContextAndReplaceableUsesTest, makeReplaceable) {
   LLVMContext Context;
   ContextAndReplaceableUses CRU(Context);
-  CRU.makeReplaceable(std::make_unique<ReplaceableMetadataImpl>(Context));
+  CRU.makeReplaceable(std::make_unique<ReplaceableUsesWithContext>(Context));
   EXPECT_EQ(&Context, &CRU.getContext());
   EXPECT_TRUE(CRU.hasReplaceableUses());
   EXPECT_TRUE(CRU.getReplaceableUses());
@@ -60,7 +62,7 @@ TEST(ContextAndReplaceableUsesTest, makeReplaceable) {
 
 TEST(ContextAndReplaceableUsesTest, takeReplaceableUses) {
   LLVMContext Context;
-  auto ReplaceableUses = std::make_unique<ReplaceableMetadataImpl>(Context);
+  auto ReplaceableUses = std::make_unique<ReplaceableUsesWithContext>(Context);
   auto *Ptr = ReplaceableUses.get();
   ContextAndReplaceableUses CRU(std::move(ReplaceableUses));
   ReplaceableUses = CRU.takeReplaceableUses();
@@ -119,6 +121,13 @@ protected:
   }
   ConstantAsMetadata *getConstantAsMetadata() {
     return ConstantAsMetadata::get(getConstant());
+  }
+  /// Uses of \a ConstantData are not tracked, so tests that replace or delete
+  /// a constant need one with a use list.
+  ConstantAsMetadata *getGlobalAsMetadata() {
+    return ConstantAsMetadata::get(new GlobalVariable(
+        M, Type::getInt8Ty(Context), false, GlobalValue::ExternalLinkage,
+        nullptr, "g" + Twine(Counter++)));
   }
   DIType *getCompositeType() {
     return DICompositeType::getDistinct(Context, dwarf::DW_TAG_structure_type,
@@ -281,15 +290,11 @@ TEST_F(MDNodeTest, Print) {
   std::string Expected;
   {
     raw_string_ostream OS(Expected);
-    OS << "<" << (void *)N << "> = !{";
+    OS << "!3 = !{";
     C->printAsOperand(OS);
     OS << ", ";
     S->printAsOperand(OS);
-    OS << ", null";
-    MDNode *Nodes[] = {N0, N1, N2};
-    for (auto *Node : Nodes)
-      OS << ", <" << (void *)Node << ">";
-    OS << "}";
+    OS << ", null, !0, !1, !2}";
   }
 
   std::string Actual;
@@ -318,9 +323,9 @@ TEST_F(MDNodeTest, PrintTemporary) {
   NamedMDNode *NMD = M.getOrInsertNamedMetadata("named");
   NMD->addOperand(N);
 
-  EXPECT_PRINTER_EQ("!0 = !{!1}", N->print(OS, &M));
-  EXPECT_PRINTER_EQ("!1 = <temporary!> !{!2}", Temp->print(OS, &M));
-  EXPECT_PRINTER_EQ("!2 = !{}", Arg->print(OS, &M));
+  EXPECT_PRINTER_EQ("!2 = !{!1}", N->print(OS, &M));
+  EXPECT_PRINTER_EQ("!1 = <temporary!> !{!0}", Temp->print(OS, &M));
+  EXPECT_PRINTER_EQ("!0 = !{}", Arg->print(OS, &M));
 
   // Cleanup.
   Temp->replaceAllUsesWith(Arg);
@@ -342,11 +347,11 @@ TEST_F(MDNodeTest, PrintFromModule) {
   std::string Expected;
   {
     raw_string_ostream OS(Expected);
-    OS << "!0 = !{";
+    OS << "!3 = !{";
     C->printAsOperand(OS);
     OS << ", ";
     S->printAsOperand(OS);
-    OS << ", null, !1, !2, !3}";
+    OS << ", null, !0, !1, !2}";
   }
 
   EXPECT_PRINTER_EQ(Expected, N->print(OS, &M));
@@ -3617,6 +3622,16 @@ TEST_F(DILocalVariableTest, getArg256) {
 
 typedef MetadataTest DIExpressionTest;
 
+template <typename ViewT>
+static ViewT checkOperandView(DIExpression::ExprOperand Operand,
+                              DIExpression::ExprOperand NonMatch) {
+  EXPECT_TRUE(isa<ViewT>(Operand));
+  EXPECT_FALSE(isa<ViewT>(NonMatch));
+  EXPECT_TRUE(dyn_cast<ViewT>(Operand));
+  EXPECT_FALSE(dyn_cast<ViewT>(NonMatch));
+  return cast<ViewT>(Operand);
+}
+
 TEST_F(DIExpressionTest, get) {
   uint64_t Elements[] = {2, 6, 9, 78, 0};
   auto *N = DIExpression::get(Context, Elements);
@@ -3654,6 +3669,161 @@ TEST_F(DIExpressionTest, get) {
                       dwarf::DW_OP_deref, dwarf::DW_OP_stack_value};
   auto *N2 = DIExpression::append(N0, Elts2);
   EXPECT_EQ(N0WithPrependedOps, N2);
+}
+
+TEST_F(DIExpressionTest, ExprOperandCasts) {
+  constexpr uint64_t RawEncoding = (uint64_t{1} << 32) | dwarf::DW_ATE_signed;
+  uint64_t Elements[] = {
+      dwarf::DW_OP_LLVM_arg,
+      7,
+      dwarf::DW_OP_LLVM_convert,
+      32,
+      RawEncoding,
+      dwarf::DW_OP_LLVM_extract_bits_sext,
+      1,
+      8,
+      dwarf::DW_OP_LLVM_extract_bits_zext,
+      2,
+      16,
+      dwarf::DW_OP_constu,
+      42,
+      dwarf::DW_OP_plus_uconst,
+      12,
+      dwarf::DW_OP_LLVM_tag_offset,
+      3,
+      dwarf::DW_OP_LLVM_fragment,
+      4,
+      24,
+  };
+  auto *Expr = DIExpression::get(Context, Elements);
+  ASSERT_TRUE(Expr->isValid());
+
+  auto I = Expr->expr_op_begin();
+  auto ArgOperand = *I++;
+  auto ConvertOperand = *I++;
+  auto SignedExtractOperand = *I++;
+  auto UnsignedExtractOperand = *I++;
+  auto ConstuOperand = *I++;
+  auto PlusUconstOperand = *I++;
+  auto TagOffsetOperand = *I++;
+  auto FragmentOperand = *I++;
+  ASSERT_EQ(I, Expr->expr_op_end());
+
+  using ArgOp = DIExpression::ArgOp;
+  using ConstuOp = DIExpression::ConstuOp;
+  using ConvertOp = DIExpression::ConvertOp;
+  using EntryValueOp = DIExpression::EntryValueOp;
+  using ExtractBitsOp = DIExpression::ExtractBitsOp;
+  using FragmentOp = DIExpression::FragmentOp;
+  using PlusUconstOp = DIExpression::PlusUconstOp;
+  using TagOffsetOp = DIExpression::TagOffsetOp;
+
+  const auto ConstArgOperand = ArgOperand;
+  static_assert(std::is_same_v<decltype(cast<ArgOp>(ArgOperand)), ArgOp>);
+  static_assert(std::is_same_v<decltype(cast<ArgOp>(ConstArgOperand)), ArgOp>);
+  static_assert(std::is_same_v<decltype(dyn_cast<ArgOp>(ArgOperand)), ArgOp>);
+  static_assert(
+      std::is_same_v<decltype(dyn_cast<ArgOp>(ConstArgOperand)), ArgOp>);
+  EXPECT_TRUE(ArgOperand.is(dwarf::DW_OP_LLVM_arg));
+  EXPECT_FALSE(ArgOperand.is(dwarf::DW_OP_LLVM_fragment));
+
+  auto Arg = checkOperandView<ArgOp>(ArgOperand, FragmentOperand);
+  EXPECT_EQ(7u, Arg.getIndex());
+
+  auto Fragment = checkOperandView<FragmentOp>(FragmentOperand, ConvertOperand);
+  EXPECT_EQ(4u, Fragment.getOffsetInBits());
+  EXPECT_EQ(24u, Fragment.getSizeInBits());
+
+  auto SignedExtract =
+      checkOperandView<ExtractBitsOp>(SignedExtractOperand, ArgOperand);
+  EXPECT_EQ(1u, SignedExtract.getOffsetInBits());
+  EXPECT_EQ(8u, SignedExtract.getSizeInBits());
+  EXPECT_TRUE(SignedExtract.isSigned());
+
+  auto UnsignedExtract =
+      checkOperandView<ExtractBitsOp>(UnsignedExtractOperand, ArgOperand);
+  EXPECT_EQ(2u, UnsignedExtract.getOffsetInBits());
+  EXPECT_EQ(16u, UnsignedExtract.getSizeInBits());
+  EXPECT_FALSE(UnsignedExtract.isSigned());
+
+  auto Convert =
+      checkOperandView<ConvertOp>(ConvertOperand, UnsignedExtractOperand);
+  EXPECT_EQ(32u, Convert.getBitSize());
+  EXPECT_EQ(RawEncoding, Convert.getEncoding());
+
+  auto Constant = checkOperandView<ConstuOp>(ConstuOperand, PlusUconstOperand);
+  EXPECT_EQ(42u, Constant.getValue());
+
+  auto PlusUconst =
+      checkOperandView<PlusUconstOp>(PlusUconstOperand, ConstuOperand);
+  EXPECT_EQ(12u, PlusUconst.getOffset());
+
+  auto Tag = checkOperandView<TagOffsetOp>(TagOffsetOperand, ConstuOperand);
+  EXPECT_EQ(3u, Tag.getTagOffset());
+
+  // An entry value has to be the first operation of the expression it belongs
+  // to, or the second behind DW_OP_LLVM_arg 0, so it needs one of its own. One
+  // is the only count LLVM accepts today.
+  uint64_t EntryValueElements[] = {dwarf::DW_OP_LLVM_entry_value, 1};
+  auto *EntryValueExpr = DIExpression::get(Context, EntryValueElements);
+  ASSERT_TRUE(EntryValueExpr->isValid());
+  auto EntryValue = checkOperandView<EntryValueOp>(
+      *EntryValueExpr->expr_op_begin(), ConstuOperand);
+  EXPECT_EQ(1u, EntryValue.getNumOperations());
+
+  auto MaybeConstArg = dyn_cast<ArgOp>(ConstArgOperand);
+  ASSERT_TRUE(MaybeConstArg);
+  EXPECT_EQ(7u, MaybeConstArg.getIndex());
+
+  DIExpression::ExprOperand EmptyOperand;
+  static_assert(
+      std::is_same_v<decltype(cast_if_present<ArgOp>(EmptyOperand)), ArgOp>);
+  static_assert(
+      std::is_same_v<decltype(dyn_cast_if_present<ArgOp>(EmptyOperand)),
+                     ArgOp>);
+  EXPECT_EQ(7u, cast_if_present<ArgOp>(ArgOperand).getIndex());
+  EXPECT_FALSE(cast_if_present<ArgOp>(EmptyOperand));
+  EXPECT_EQ(7u, dyn_cast_if_present<ArgOp>(ArgOperand).getIndex());
+  EXPECT_FALSE(dyn_cast_if_present<ArgOp>(EmptyOperand));
+}
+
+TEST_F(DIExpressionTest, GetActiveBits) {
+  auto MakeVariable = [&](StringRef Name, unsigned Encoding) {
+    auto *Type = DIBasicType::get(Context, dwarf::DW_TAG_base_type, Name, 64, 0,
+                                  Encoding, DINode::FlagZero);
+    return DILocalVariable::get(Context, getSubprogram(), Name, getFile(), 0,
+                                Type, 0, DINode::FlagZero, 0, nullptr);
+  };
+  auto *SignedVar = MakeVariable("signed", dwarf::DW_ATE_signed);
+  auto *UnsignedVar = MakeVariable("unsigned", dwarf::DW_ATE_unsigned);
+
+  auto *UnsignedExtract =
+      DIExpression::get(Context, {dwarf::DW_OP_LLVM_extract_bits_zext, 0, 8});
+  EXPECT_EQ(std::optional<uint64_t>(8),
+            UnsignedExtract->getActiveBits(UnsignedVar));
+
+  auto *SignedExtract =
+      DIExpression::get(Context, {dwarf::DW_OP_LLVM_extract_bits_sext, 0, 16});
+  EXPECT_EQ(std::optional<uint64_t>(16),
+            SignedExtract->getActiveBits(SignedVar));
+  EXPECT_EQ(std::optional<uint64_t>(64),
+            SignedExtract->getActiveBits(UnsignedVar));
+
+  // An extract and a fragment both narrow to the smaller of the two, so each
+  // one has to be the deciding width in one of these to show that both were
+  // read. Stop reading the deciding width in either expression and the answer
+  // becomes the other operation's 32.
+  auto *FragmentNarrower =
+      DIExpression::get(Context, {dwarf::DW_OP_LLVM_extract_bits_zext, 0, 32,
+                                  dwarf::DW_OP_LLVM_fragment, 0, 24});
+  EXPECT_EQ(std::optional<uint64_t>(24),
+            FragmentNarrower->getActiveBits(UnsignedVar));
+
+  auto *ExtractNarrower =
+      DIExpression::get(Context, {dwarf::DW_OP_LLVM_extract_bits_zext, 0, 24,
+                                  dwarf::DW_OP_LLVM_fragment, 0, 32});
+  EXPECT_EQ(std::optional<uint64_t>(24),
+            ExtractNarrower->getActiveBits(UnsignedVar));
 }
 
 TEST_F(DIExpressionTest, Fold) {
@@ -4274,10 +4444,13 @@ TEST_F(DIExpressionTest, isValid) {
   EXPECT_VALID(dwarf::DW_OP_LLVM_fragment, 3, 7);
   EXPECT_VALID(dwarf::DW_OP_plus_uconst, 6, dwarf::DW_OP_deref);
   EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_plus_uconst, 6);
+  EXPECT_VALID(dwarf::DW_OP_reg0, dwarf::DW_OP_deref);
+  EXPECT_VALID(dwarf::DW_OP_breg0, 0, dwarf::DW_OP_plus_uconst, 6);
   EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_LLVM_fragment, 3, 7);
   EXPECT_VALID(dwarf::DW_OP_deref, dwarf::DW_OP_plus_uconst, 6,
                dwarf::DW_OP_LLVM_fragment, 3, 7);
   EXPECT_VALID(dwarf::DW_OP_LLVM_entry_value, 1);
+  EXPECT_VALID(dwarf::DW_OP_LLVM_entry_value, 1, dwarf::DW_OP_plus_uconst, 6);
   EXPECT_VALID(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_entry_value, 1);
 
   // Invalid constructions.
@@ -4294,6 +4467,13 @@ TEST_F(DIExpressionTest, isValid) {
   EXPECT_INVALID(dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus_uconst, 5,
                  dwarf::DW_OP_LLVM_entry_value, 1);
   EXPECT_INVALID(dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_LLVM_entry_value, 1);
+
+  // A valid operation doesn't make a malformed suffix valid.
+  EXPECT_INVALID(dwarf::DW_OP_reg0, dwarf::DW_OP_stack_value,
+                 dwarf::DW_OP_deref);
+  EXPECT_INVALID(dwarf::DW_OP_breg0, 0, dwarf::DW_OP_LLVM_arg);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_entry_value, 1,
+                 dwarf::DW_OP_LLVM_entry_value, 1);
 
 #undef EXPECT_VALID
 #undef EXPECT_INVALID
@@ -4795,6 +4975,47 @@ TEST_F(DIExpressionTest, appendToStackAssert) {
   EXPECT_EQ(Expr->getElements(), ArrayRef<uint64_t>(Expected));
 }
 
+TEST_F(DIExpressionTest, appendToStackSkipsTagOffset) {
+  // DW_OP_LLVM_tag_offset doesn't emit anything, so it shouldn't make
+  // appendToStack add a DW_OP_deref.
+  DIExpression *Expr =
+      DIExpression::get(Context, {dwarf::DW_OP_LLVM_tag_offset, uint64_t{3}});
+  uint64_t Ops[] = {
+      dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed,
+      dwarf::DW_OP_LLVM_convert, 64, dwarf::DW_ATE_signed,
+  };
+  Expr = DIExpression::appendToStack(Expr, Ops);
+
+  uint64_t Expected[] = {dwarf::DW_OP_LLVM_tag_offset,
+                         3,
+                         dwarf::DW_OP_LLVM_convert,
+                         32,
+                         dwarf::DW_ATE_signed,
+                         dwarf::DW_OP_LLVM_convert,
+                         64,
+                         dwarf::DW_ATE_signed,
+                         dwarf::DW_OP_stack_value};
+  EXPECT_EQ(Expr->getElements(), ArrayRef<uint64_t>(Expected));
+}
+
+TEST_F(DIExpressionTest, TagOffsetsAreNotComplex) {
+  // Tag offsets don't emit anything, so they don't make an expression complex.
+  // Keep looking past them for an operation that does.
+  auto *TagOffset =
+      DIExpression::get(Context, {dwarf::DW_OP_LLVM_tag_offset, uint64_t{1}});
+  EXPECT_FALSE(TagOffset->isComplex());
+
+  auto *TagOffsetAndFragment = DIExpression::get(
+      Context, {dwarf::DW_OP_LLVM_tag_offset, uint64_t{1},
+                dwarf::DW_OP_LLVM_fragment, uint64_t{0}, uint64_t{32}});
+  EXPECT_FALSE(TagOffsetAndFragment->isComplex());
+
+  auto *TagOffsetAndOperation =
+      DIExpression::get(Context, {dwarf::DW_OP_LLVM_tag_offset, uint64_t{1},
+                                  dwarf::DW_OP_plus_uconst, uint64_t{1}});
+  EXPECT_TRUE(TagOffsetAndOperation->isComplex());
+}
+
 typedef MetadataTest DIObjCPropertyTest;
 
 TEST_F(DIObjCPropertyTest, get) {
@@ -4837,6 +5058,48 @@ TEST_F(DIObjCPropertyTest, get) {
                                    getBasicType("other")));
 
   TempDIObjCProperty Temp = N->clone();
+  EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
+}
+
+typedef MetadataTest DIPropertyTest;
+
+TEST_F(DIPropertyTest, get) {
+  // The data member holding a property's backing storage.
+  auto GetMember = [&](StringRef Name) {
+    return DIDerivedType::getDistinct(
+        Context, dwarf::DW_TAG_member, Name, nullptr, 0, nullptr,
+        getBasicType("basictype"), 8, 8, 0, std::nullopt, {}, DINode::FlagZero);
+  };
+
+  StringRef Name = "x";
+  DIFile *File = getFile();
+  unsigned Line = 5;
+  DIType *Type = getBasicType("basic");
+  DIDerivedType *BackingStorage = GetMember("_x");
+
+  auto *N = DIProperty::get(Context, Name, File, Line, Type, BackingStorage);
+
+  EXPECT_EQ(dwarf::DW_TAG_property, N->getTag());
+  EXPECT_EQ(Name, N->getName());
+  EXPECT_EQ(File, N->getFile());
+  EXPECT_EQ(Line, N->getLine());
+  EXPECT_EQ(Type, N->getType());
+  EXPECT_EQ(BackingStorage, N->getBackingStorage());
+  EXPECT_EQ(N,
+            DIProperty::get(Context, Name, File, Line, Type, BackingStorage));
+
+  EXPECT_NE(
+      N, DIProperty::get(Context, "other", File, Line, Type, BackingStorage));
+  EXPECT_NE(
+      N, DIProperty::get(Context, Name, getFile(), Line, Type, BackingStorage));
+  EXPECT_NE(
+      N, DIProperty::get(Context, Name, File, Line + 1, Type, BackingStorage));
+  EXPECT_NE(N, DIProperty::get(Context, Name, File, Line, getBasicType("other"),
+                               BackingStorage));
+  EXPECT_NE(
+      N, DIProperty::get(Context, Name, File, Line, Type, GetMember("_other")));
+
+  TempDIProperty Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
 }
 
@@ -4953,9 +5216,12 @@ TEST_F(ValueAsMetadataTest, UpdatesOnRAUW) {
   EXPECT_TRUE(MD->getValue() == GV0.get());
   ASSERT_TRUE(GV0->use_empty());
 
+  TrackingMDRef Ref(MD);
   std::unique_ptr<GlobalVariable> GV1(
       new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
+  // RAUW updates `Ref`.
   GV0->replaceAllUsesWith(GV1.get());
+  MD = cast<ValueAsMetadata>(Ref.get());
   EXPECT_TRUE(MD->getValue() == GV1.get());
 }
 
@@ -4963,18 +5229,18 @@ TEST_F(ValueAsMetadataTest, handleRAUWWithTypeChange) {
   // Test that handleRAUW supports type changes.
   // This is helpful in cases where poison values are used to encode
   // types in metadata, e.g. in type annotations.
-  // Changing the type stored in metadata requires to change the type of
-  // the stored poison value.
-  auto *I32Poison = PoisonValue::get(Type::getInt32Ty(Context));
   auto *I64Poison = PoisonValue::get(Type::getInt64Ty(Context));
-  auto *MD = ConstantAsMetadata::get(I32Poison);
+  auto *MD = getGlobalAsMetadata();
+  Value *GV = MD->getValue();
+  TrackingMDRef Ref(MD);
 
-  EXPECT_EQ(MD->getValue(), I32Poison);
+  EXPECT_EQ(MD->getValue(), GV);
   EXPECT_NE(MD->getValue(), I64Poison);
 
-  ValueAsMetadata::handleRAUW(I32Poison, I64Poison);
+  ValueAsMetadata::handleRAUW(GV, I64Poison);
+  MD = cast<ConstantAsMetadata>(Ref.get());
 
-  EXPECT_NE(MD->getValue(), I32Poison);
+  EXPECT_NE(MD->getValue(), GV);
   EXPECT_EQ(MD->getValue(), I64Poison);
 }
 
@@ -4997,8 +5263,7 @@ TEST_F(ValueAsMetadataTest, TempTempReplacement) {
 
 TEST_F(ValueAsMetadataTest, CollidingDoubleUpdates) {
   // Create a constant.
-  ConstantAsMetadata *CI =
-      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(8, 0)));
+  ConstantAsMetadata *CI = getGlobalAsMetadata();
 
   // Create a temporary to prevent nodes from resolving.
   auto Temp = MDTuple::getTemporary(Context, {});
@@ -5359,7 +5624,7 @@ typedef MetadataTest MDTupleAllocationTest;
 TEST_F(MDTupleAllocationTest, Tracking) {
   // Make sure that the move constructor and move assignment op
   // for MDOperand correctly adjust tracking information.
-  auto *Value1 = getConstantAsMetadata();
+  auto *Value1 = getGlobalAsMetadata();
   MDTuple *A = MDTuple::getDistinct(Context, {Value1, Value1});
   EXPECT_EQ(A->getOperand(0), Value1);
   EXPECT_EQ(A->getOperand(1), Value1);
@@ -5375,7 +5640,7 @@ TEST_F(MDTupleAllocationTest, Tracking) {
   EXPECT_EQ(NewOps1.get(), static_cast<Metadata *>(Value1));
   EXPECT_EQ(NewOps2.get(), static_cast<Metadata *>(Value1));
 
-  auto *Value2 = getConstantAsMetadata();
+  auto *Value2 = getGlobalAsMetadata();
   Value *V1 = Value1->getValue();
   Value *V2 = Value2->getValue();
   ValueAsMetadata::handleRAUW(V1, V2);
@@ -5468,7 +5733,7 @@ TEST_F(MDTupleAllocationTest, Resize) {
 
 TEST_F(MDTupleAllocationTest, Tracking2) {
   // Resize a tuple and check that we can still RAUW one of its operands.
-  auto *Value1 = getConstantAsMetadata();
+  auto *Value1 = getGlobalAsMetadata();
   MDTuple *A = getTuple();
   A->push_back(Value1);
   A->push_back(Value1);
@@ -5477,7 +5742,7 @@ TEST_F(MDTupleAllocationTest, Tracking2) {
   EXPECT_EQ(A->getOperand(1), Value1);
   EXPECT_EQ(A->getOperand(2), Value1);
 
-  auto *Value2 = getConstantAsMetadata();
+  auto *Value2 = getGlobalAsMetadata();
   Value *V1 = Value1->getValue();
   Value *V2 = Value2->getValue();
   ValueAsMetadata::handleRAUW(V1, V2);

@@ -22,6 +22,7 @@
 #include <OffloadAPI.h>
 
 #include <memory>
+#include <string_view>
 #include <unordered_map>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
@@ -35,11 +36,13 @@ public:
   /// Constructs ProgramWrapper by creating a liboffload program with the
   /// provided arguments.
   ///
+  /// \param Context is the context to use for program creation.
   /// \param Device is the device to use for program creation.
   /// \param DevImage is the device image to use for program creation.
   /// \throw sycl::exception with sycl::errc::runtime when failed to create the
   /// program.
-  ProgramWrapper(ol_device_handle_t Device, DeviceImageManager &DevImage);
+  ProgramWrapper(ol_context_handle_t Context, ol_device_handle_t Device,
+                 const DeviceImageManager &DevImage);
 
   /// Releases the corresponding liboffload program handle by calling
   /// olDestroyProgram.
@@ -53,12 +56,31 @@ public:
   /// \return the corresponding liboffload program handle.
   ol_program_handle_t getOLHandle() { return MProgram; }
 
+  /// Returns the liboffload kernel symbol for the specified kernel, looking it
+  /// up in this program on first use.
+  ///
+  /// Symbols belong to the program they were retrieved from: liboffload has no
+  /// olDestroySymbol, so they are released together with this program. Caching
+  /// them here rather than per device keeps a symbol from ever being handed out
+  /// for a program it does not belong to.
+  ///
+  /// \param KernelName the name of the kernel to look up.
+  /// \throw sycl::exception with sycl::errc::runtime when the symbol lookup
+  /// fails.
+  /// \return the liboffload symbol handle of the kernel.
+  ol_symbol_handle_t getOrCreateKernel(std::string_view KernelName);
+
 private:
   ol_program_handle_t MProgram{};
+
+  // Kernel names are backed by the "symbols" string of the device image this
+  // program was created from, so entries stay valid only while that image is
+  // registered. ContextImpl::releaseProgramsForImage() destroys this program
+  // before the image goes away.
+  std::unordered_map<std::string_view, ol_symbol_handle_t> MKernels;
 };
 
-/// This class manages all work with device images: from data parsing to program
-/// creation.
+/// This class manages data parsing of device images.
 class DeviceImageManager {
 public:
   DeviceImageManager(std::unique_ptr<llvm::object::OffloadBinary> Bin)
@@ -75,18 +97,7 @@ public:
   /// \return a reference to the corresponding parsed OffloadBinary object.
   const llvm::object::OffloadBinary &getOffloadBinary() const { return *MBin; }
 
-  /// Returns a liboffload program which is compatible with the specified
-  /// device. Searches among existing programs and creates a new one if no
-  /// compatible image is found.
-  /// \param DeviceHandle the liboffload handle of the device the program must
-  /// be compatible with.
-  /// \return the liboffload handle of the program compatible with the specified
-  /// device.
-  ol_program_handle_t getOrCreateProgram(ol_device_handle_t DeviceHandle);
-
 protected:
-  std::unordered_map<ol_device_handle_t, ProgramWrapper> MPrograms;
-
   std::unique_ptr<llvm::object::OffloadBinary> MBin;
 };
 

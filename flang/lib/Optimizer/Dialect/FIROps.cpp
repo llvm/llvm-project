@@ -28,11 +28,13 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -382,6 +384,8 @@ void fir::AllocaOp::print(mlir::OpAsmPrinter &p) {
 }
 
 llvm::LogicalResult fir::AllocaOp::verify() {
+  if (mlir::isa_and_nonnull<mlir::ModuleOp>((*this)->getParentOp()))
+    return emitOpError("must not be defined at module scope");
   llvm::SmallVector<llvm::StringRef> visited;
   if (verifyInType(getInType(), visited, numShapeOperands()))
     return emitOpError("invalid type for allocation");
@@ -1262,218 +1266,6 @@ std::optional<std::int64_t> fir::ArrayCoorOp::getViewOffset(mlir::OpResult) {
 }
 
 //===----------------------------------------------------------------------===//
-// ArrayLoadOp
-//===----------------------------------------------------------------------===//
-
-static mlir::Type adjustedElementType(mlir::Type t) {
-  if (auto ty = mlir::dyn_cast<fir::ReferenceType>(t)) {
-    auto eleTy = ty.getEleTy();
-    if (fir::isa_char(eleTy))
-      return eleTy;
-    if (fir::isa_derived(eleTy))
-      return eleTy;
-    if (mlir::isa<fir::SequenceType>(eleTy))
-      return eleTy;
-  }
-  return t;
-}
-
-std::vector<mlir::Value> fir::ArrayLoadOp::getExtents() {
-  if (auto sh = getShape())
-    if (auto *op = sh.getDefiningOp()) {
-      if (auto shOp = mlir::dyn_cast<fir::ShapeOp>(op)) {
-        auto extents = shOp.getExtents();
-        return {extents.begin(), extents.end()};
-      }
-      return mlir::cast<fir::ShapeShiftOp>(op).getExtents();
-    }
-  return {};
-}
-
-void fir::ArrayLoadOp::getEffects(
-    llvm::SmallVectorImpl<
-        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
-        &effects) {
-  effects.emplace_back(mlir::MemoryEffects::Read::get(), &getMemrefMutable(),
-                       mlir::SideEffects::DefaultResource::get());
-  addVolatileMemoryEffects({getMemref().getType()}, effects);
-}
-
-llvm::LogicalResult fir::ArrayLoadOp::verify() {
-  auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(getMemref().getType());
-  auto arrTy = mlir::dyn_cast<fir::SequenceType>(eleTy);
-  if (!arrTy)
-    return emitOpError("must be a reference to an array");
-  auto arrDim = arrTy.getDimension();
-
-  if (auto shapeOp = getShape()) {
-    auto shapeTy = shapeOp.getType();
-    unsigned shapeTyRank = 0u;
-    if (auto s = mlir::dyn_cast<fir::ShapeType>(shapeTy)) {
-      shapeTyRank = s.getRank();
-    } else if (auto ss = mlir::dyn_cast<fir::ShapeShiftType>(shapeTy)) {
-      shapeTyRank = ss.getRank();
-    } else {
-      auto s = mlir::cast<fir::ShiftType>(shapeTy);
-      shapeTyRank = s.getRank();
-      if (!mlir::isa<fir::BaseBoxType>(getMemref().getType()))
-        return emitOpError("shift can only be provided with fir.box memref");
-    }
-    if (arrDim && arrDim != shapeTyRank)
-      return emitOpError("rank of dimension mismatched");
-  }
-
-  if (auto sliceOp = getSlice()) {
-    if (auto sl = mlir::dyn_cast_or_null<fir::SliceOp>(sliceOp.getDefiningOp()))
-      if (!sl.getSubstr().empty())
-        return emitOpError("array_load cannot take a slice with substring");
-    if (auto sliceTy = mlir::dyn_cast<fir::SliceType>(sliceOp.getType()))
-      if (sliceTy.getRank() != arrDim)
-        return emitOpError("rank of dimension in slice mismatched");
-  }
-
-  if (!validTypeParams(getMemref().getType(), getTypeparams()))
-    return emitOpError("invalid type parameters");
-
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
-// ArrayMergeStoreOp
-//===----------------------------------------------------------------------===//
-
-llvm::LogicalResult fir::ArrayMergeStoreOp::verify() {
-  if (!mlir::isa<fir::ArrayLoadOp>(getOriginal().getDefiningOp()))
-    return emitOpError("operand #0 must be result of a fir.array_load op");
-  if (auto sl = getSlice()) {
-    if (auto sliceOp =
-            mlir::dyn_cast_or_null<fir::SliceOp>(sl.getDefiningOp())) {
-      if (!sliceOp.getSubstr().empty())
-        return emitOpError(
-            "array_merge_store cannot take a slice with substring");
-      if (!sliceOp.getFields().empty()) {
-        // This is an intra-object merge, where the slice is projecting the
-        // subfields that are to be overwritten by the merge operation.
-        auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(getMemref().getType());
-        if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy)) {
-          auto projTy =
-              fir::applyPathToType(seqTy.getEleTy(), sliceOp.getFields());
-          if (fir::unwrapSequenceType(getOriginal().getType()) != projTy)
-            return emitOpError(
-                "type of origin does not match sliced memref type");
-          if (fir::unwrapSequenceType(getSequence().getType()) != projTy)
-            return emitOpError(
-                "type of sequence does not match sliced memref type");
-          return mlir::success();
-        }
-        return emitOpError("referenced type is not an array");
-      }
-    }
-    return mlir::success();
-  }
-  auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(getMemref().getType());
-  if (getOriginal().getType() != eleTy)
-    return emitOpError("type of origin does not match memref element type");
-  if (getSequence().getType() != eleTy)
-    return emitOpError("type of sequence does not match memref element type");
-  if (!validTypeParams(getMemref().getType(), getTypeparams()))
-    return emitOpError("invalid type parameters");
-  return mlir::success();
-}
-
-void fir::ArrayMergeStoreOp::getEffects(
-    llvm::SmallVectorImpl<
-        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
-        &effects) {
-  effects.emplace_back(mlir::MemoryEffects::Write::get(), &getMemrefMutable(),
-                       mlir::SideEffects::DefaultResource::get());
-  addVolatileMemoryEffects({getMemref().getType()}, effects);
-}
-
-//===----------------------------------------------------------------------===//
-// ArrayFetchOp
-//===----------------------------------------------------------------------===//
-
-// Template function used for both array_fetch and array_update verification.
-template <typename A>
-mlir::Type validArraySubobject(A op) {
-  auto ty = op.getSequence().getType();
-  return fir::applyPathToType(ty, op.getIndices());
-}
-
-llvm::LogicalResult fir::ArrayFetchOp::verify() {
-  auto arrTy = mlir::cast<fir::SequenceType>(getSequence().getType());
-  auto indSize = getIndices().size();
-  if (indSize < arrTy.getDimension())
-    return emitOpError("number of indices != dimension of array");
-  if (indSize == arrTy.getDimension() &&
-      ::adjustedElementType(getElement().getType()) != arrTy.getEleTy())
-    return emitOpError("return type does not match array");
-  auto ty = validArraySubobject(*this);
-  if (!ty || ty != ::adjustedElementType(getType()))
-    return emitOpError("return type and/or indices do not type check");
-  if (!mlir::isa<fir::ArrayLoadOp>(getSequence().getDefiningOp()))
-    return emitOpError("argument #0 must be result of fir.array_load");
-  if (!validTypeParams(arrTy, getTypeparams()))
-    return emitOpError("invalid type parameters");
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
-// ArrayAccessOp
-//===----------------------------------------------------------------------===//
-
-llvm::LogicalResult fir::ArrayAccessOp::verify() {
-  auto arrTy = mlir::cast<fir::SequenceType>(getSequence().getType());
-  std::size_t indSize = getIndices().size();
-  if (indSize < arrTy.getDimension())
-    return emitOpError("number of indices != dimension of array");
-  if (indSize == arrTy.getDimension() &&
-      getElement().getType() != fir::ReferenceType::get(arrTy.getEleTy()))
-    return emitOpError("return type does not match array");
-  mlir::Type ty = validArraySubobject(*this);
-  if (!ty || fir::ReferenceType::get(ty) != getType())
-    return emitOpError("return type and/or indices do not type check");
-  if (!validTypeParams(arrTy, getTypeparams()))
-    return emitOpError("invalid type parameters");
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
-// ArrayUpdateOp
-//===----------------------------------------------------------------------===//
-
-llvm::LogicalResult fir::ArrayUpdateOp::verify() {
-  if (fir::isa_ref_type(getMerge().getType()))
-    return emitOpError("does not support reference type for merge");
-  auto arrTy = mlir::cast<fir::SequenceType>(getSequence().getType());
-  auto indSize = getIndices().size();
-  if (indSize < arrTy.getDimension())
-    return emitOpError("number of indices != dimension of array");
-  if (indSize == arrTy.getDimension() &&
-      ::adjustedElementType(getMerge().getType()) != arrTy.getEleTy())
-    return emitOpError("merged value does not have element type");
-  auto ty = validArraySubobject(*this);
-  if (!ty || ty != ::adjustedElementType(getMerge().getType()))
-    return emitOpError("merged value and/or indices do not type check");
-  if (!validTypeParams(arrTy, getTypeparams()))
-    return emitOpError("invalid type parameters");
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
-// ArrayModifyOp
-//===----------------------------------------------------------------------===//
-
-llvm::LogicalResult fir::ArrayModifyOp::verify() {
-  auto arrTy = mlir::cast<fir::SequenceType>(getSequence().getType());
-  auto indSize = getIndices().size();
-  if (indSize < arrTy.getDimension())
-    return emitOpError("number of indices must match array dimension");
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
 // BoxAddrOp
 //===----------------------------------------------------------------------===//
 
@@ -2099,6 +1891,22 @@ mlir::OpFoldResult fir::ConvertOp::fold(FoldAdaptor adaptor) {
     if (auto cst = fir::getIntIfConstant(bitcast.getValue()))
       return mlir::IntegerAttr::get(getType(), cst->isZero() ? 0 : 1);
   }
+  // (convert 'cst : iA -> iB) ==> the constant in iB, converted by the same
+  // rules as a non-constant operand: truncate when narrowing, zero-extend an
+  // i1 or unsigned source, sign-extend otherwise. The result must be signless
+  // to materialize as an arith.constant.
+  if (auto fromTy = mlir::dyn_cast<mlir::IntegerType>(getValue().getType()))
+    if (auto toTy = mlir::dyn_cast<mlir::IntegerType>(getType()))
+      if (toTy.isSignless())
+        if (auto cst = fir::getIntIfConstant(getValue())) {
+          unsigned toBits = toTy.getWidth();
+          bool signExtend = toBits > fromTy.getWidth() &&
+                            fromTy.getWidth() != 1 &&
+                            !fromTy.isUnsignedInteger();
+          return mlir::IntegerAttr::get(toTy, signExtend
+                                                  ? cst->sextOrTrunc(toBits)
+                                                  : cst->zextOrTrunc(toBits));
+        }
   return {};
 }
 
@@ -2343,6 +2151,155 @@ llvm::LogicalResult fir::ConvertOp::verify() {
     return mlir::success();
   return emitOpError("invalid type conversion")
          << getValue().getType() << " / " << getType();
+}
+
+/// Check whether a slot of this pointee may be exposed as an alias. Promoting a
+/// floating-point slot lets its value be folded or, when nothing reads it,
+/// deleted, either of which loses an IEEE exception that the running program
+/// can observe through ieee_get_flag. Hence, restrict to Integer and Logical
+/// types.
+static bool isAliasableSlotPointee(mlir::Type pointee) {
+  return mlir::isa<mlir::IntegerType, fir::LogicalType>(pointee);
+}
+
+/// Pointee of a reference to a simple scalar, or null. Both fir.ref and rank-0
+/// memref qualify, since the storage of a scalar is cast between those forms.
+static mlir::Type getScalarSlotPointeeType(mlir::Type type) {
+  mlir::Type eleTy;
+  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(type)) {
+    eleTy = refTy.getEleTy();
+  } else if (auto memrefTy = mlir::dyn_cast<mlir::MemRefType>(type)) {
+    // A rank, layout or memory space lets the cast reinterpret the storage.
+    if (memrefTy.getRank() != 0 || !memrefTy.getLayout().isIdentity() ||
+        memrefTy.getMemorySpace())
+      return {};
+    eleTy = memrefTy.getElementType();
+  } else {
+    return {};
+  }
+  if (!isAliasableSlotPointee(eleTy))
+    return {};
+  return eleTy;
+}
+
+/// Returns the source that 'value' is a view of at offset zero, or null. A
+/// displaced view, such as an array element, addresses a different location and
+/// so is a different slot.
+static mlir::Value getAliasedSlotPointer(mlir::Value value) {
+  auto result = mlir::dyn_cast<mlir::OpResult>(value);
+  if (!result)
+    return {};
+  auto view =
+      mlir::dyn_cast<fir::FortranObjectViewOpInterface>(result.getOwner());
+  if (!view)
+    return {};
+  std::optional<std::int64_t> offset = view.getViewOffset(result);
+  if (!offset || *offset != 0)
+    return {};
+  return view.getViewSource(result);
+}
+
+/// Checks whether a write to the slot reached through `pointer` dominates every
+/// read of it. Otherwise promotion replaces a read with the allocation's
+/// default value, which is fir.undefined for fir.alloca but poison for a memref
+/// allocation, so promoting through a view would change what reading an
+/// uninitialized variable does.
+///
+/// TODO: this is only needed because memref::AllocaOp::getDefaultValue returns
+/// ub.poison, whereas fir::AllocaOp and LLVM::AllocaOp both return undef, as
+/// LLVM's own mem2reg does. Once those align semantically, a read that no
+/// write dominates promotes the same way it already does for fir.alloca and
+/// this check, along with the dominance query it needs, can go away.
+static bool everyReadIsDominatedByAWrite(mlir::Value pointer,
+                                         mlir::Type pointee) {
+  // Start at the root of the chain, to see writes through a sibling alias.
+  while (mlir::Value aliased = getAliasedSlotPointer(pointer)) {
+    if (getScalarSlotPointeeType(aliased.getType()) != pointee)
+      break;
+    pointer = aliased;
+  }
+
+  llvm::SmallVector<mlir::Operation *> reads;
+  llvm::SmallVector<mlir::Operation *> writes;
+  llvm::SmallVector<mlir::Value> worklist{pointer};
+  llvm::SmallPtrSet<mlir::Value, 8> visited{pointer};
+  while (!worklist.empty()) {
+    mlir::Value slotPointer = worklist.pop_back_val();
+    for (mlir::OpOperand &use : slotPointer.getUses()) {
+      mlir::Operation *user = use.getOwner();
+      // A view of the pointer is another handle on the same storage, so its
+      // own uses have to be walked as well.
+      for (mlir::OpResult result : user->getOpResults()) {
+        if (getAliasedSlotPointer(result) != slotPointer)
+          continue;
+        // A different pointee is another slot, which blocks promotion itself.
+        if (getScalarSlotPointeeType(result.getType()) == pointee &&
+            visited.insert(result).second)
+          worklist.push_back(result);
+      }
+      // A user that is not a promotable access blocks promotion itself.
+      if (auto memOp = mlir::dyn_cast<mlir::PromotableMemOpInterface>(user)) {
+        mlir::MemorySlot slot{use.get(), pointee};
+        if (memOp.storesTo(slot))
+          writes.push_back(user);
+        else if (memOp.loadsFrom(slot))
+          reads.push_back(user);
+      }
+    }
+  }
+
+  mlir::DominanceInfo dominance;
+  return llvm::all_of(reads, [&](mlir::Operation *read) {
+    return llvm::any_of(writes, [&](mlir::Operation *write) {
+      return dominance.properlyDominates(write, read);
+    });
+  });
+}
+
+/// The pointee a cast carries through unchanged, or null if the cast is not a
+/// transparent alias of the slot.
+static mlir::Type getPointeePreservedByCast(fir::ConvertOp op) {
+  mlir::Type fromTy = op.getValue().getType();
+  mlir::Type toTy = op.getType();
+  // Volatility may be added or dropped, and such accesses must be kept.
+  if (fir::isa_volatile_type(fromTy) || fir::isa_volatile_type(toTy))
+    return {};
+  // A scalar slot on both sides also excludes fir.llvm_ptr and llvm.ptr, which
+  // carry an address space.
+  mlir::Type from = getScalarSlotPointeeType(fromTy);
+  mlir::Type to = getScalarSlotPointeeType(toTy);
+  if (!from || from != to)
+    return {};
+  // A read that no write dominates must keep its access.
+  if (!everyReadIsDominatedByAWrite(op.getValue(), to))
+    return {};
+  return to;
+}
+
+void fir::ConvertOp::getPromotableSlotAliases(
+    mlir::OpOperand &aliasedSlotPointerOperand,
+    const mlir::MemorySlot &parentSlot,
+    llvm::SmallVectorImpl<mlir::MemorySlot> &newMemorySlots) {
+  // The result aliases the slot exactly, so value projections are unchanged.
+  if (mlir::Type pointee = getPointeePreservedByCast(*this))
+    newMemorySlots.push_back({getResult(), pointee});
+}
+
+bool fir::ConvertOp::canUsesBeRemoved(
+    const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
+    mlir::SmallVectorImpl<mlir::OpOperand *> &newBlockingUses,
+    const mlir::DataLayout &dataLayout) {
+  if (!getPointeePreservedByCast(*this))
+    return false;
+  for (mlir::OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
+}
+
+mlir::DeletionKind fir::ConvertOp::removeBlockingUses(
+    const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
+    mlir::OpBuilder &builder) {
+  return mlir::DeletionKind::Delete;
 }
 
 mlir::Speculation::Speculatability fir::ConvertOp::getSpeculatability() {
@@ -2641,7 +2598,7 @@ void fir::TypeInfoOp::build(mlir::OpBuilder &builder,
                             llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   result.addRegion();
   result.addRegion();
-  result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
+  result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(type.getName()));
   result.addAttribute(getTypeAttrName(result.name), mlir::TypeAttr::get(type));
   if (parentType)
@@ -3013,15 +2970,18 @@ mlir::Type fir::GlobalOp::resultType() {
 
 mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
                                        mlir::OperationState &result) {
+  (void)mlir::impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   // Parse the optional linkage
   llvm::StringRef linkage;
   auto &builder = parser.getBuilder();
   if (mlir::succeeded(parser.parseOptionalKeyword(&linkage))) {
     if (fir::GlobalOp::verifyValidLinkage(linkage))
-      return mlir::failure();
-    mlir::StringAttr linkAttr = builder.getStringAttr(linkage);
-    result.addAttribute(fir::GlobalOp::getLinkNameAttrName(result.name),
-                        linkAttr);
+      return parser.emitError(parser.getCurrentLocation())
+             << "invalid linkage '" << linkage << "'";
+    auto linkEnum = fir::symbolizeLinkageEnum(linkage);
+    result.addAttribute(fir::GlobalOp::getLinkageAttrName(result.name),
+                        fir::LinkageAttr::get(builder.getContext(), *linkEnum));
   }
 
   // Parse the name as a symbol reference attribute.
@@ -3030,7 +2990,7 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
                             fir::GlobalOp::getSymrefAttrName(result.name),
                             result.attributes))
     return mlir::failure();
-  result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
+  result.addAttribute(getSymNameAttrName(result.name),
                       nameAttr.getRootReference());
 
   bool simpleInitializer = false;
@@ -3076,18 +3036,20 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
 }
 
 void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
-  if (getLinkName())
-    p << ' ' << *getLinkName();
+  if (mlir::StringAttr visibility = getSymVisibilityAttr())
+    p << ' ' << visibility.getValue();
+  if (std::optional<fir::LinkageEnum> link = getLinkage())
+    p << ' ' << fir::stringifyLinkageEnum(*link);
   p << ' ';
   p.printAttributeWithoutType(getSymrefAttr());
   if (auto val = getValueOrNull())
     p << '(' << val << ')';
   // Print all other attributes that are not pretty printed here.
-  p.printOptionalAttrDict((*this)->getAttrs(), /*elideAttrs=*/{
-                              getSymNameAttrName(), getSymrefAttrName(),
-                              getTypeAttrName(), getConstantAttrName(),
-                              getTargetAttrName(), getLinkNameAttrName(),
-                              getInitValAttrName()});
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(), /*elideAttrs=*/{
+          getSymNameAttrName(), getSymrefAttrName(), getTypeAttrName(),
+          getConstantAttrName(), getTargetAttrName(), getLinkageAttrName(),
+          getInitValAttrName(), getSymVisibilityAttrName()});
   if (getOperation()->getAttr(getConstantAttrName()))
     p << " " << getConstantAttrName().strref();
   if (getOperation()->getAttr(getTargetAttrName()))
@@ -3109,11 +3071,11 @@ void fir::GlobalOp::appendInitialValue(mlir::Operation *op) {
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
                           bool isConstant, bool isTarget, mlir::Type type,
-                          mlir::Attribute initialVal, mlir::StringAttr linkage,
+                          mlir::Attribute initialVal, fir::LinkageAttr linkage,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   result.addRegion();
   result.addAttribute(getTypeAttrName(result.name), mlir::TypeAttr::get(type));
-  result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
+  result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getSymrefAttrName(result.name),
                       mlir::SymbolRefAttr::get(builder.getContext(), name));
@@ -3125,14 +3087,14 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
   if (initialVal)
     result.addAttribute(getInitValAttrName(result.name), initialVal);
   if (linkage)
-    result.addAttribute(getLinkNameAttrName(result.name), linkage);
+    result.addAttribute(getLinkageAttrName(result.name), linkage);
   result.attributes.append(attrs.begin(), attrs.end());
 }
 
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
                           mlir::Type type, mlir::Attribute initialVal,
-                          mlir::StringAttr linkage,
+                          fir::LinkageAttr linkage,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   build(builder, result, name, /*isConstant=*/false, /*isTarget=*/false, type,
         {}, linkage, attrs);
@@ -3141,14 +3103,14 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
                           bool isConstant, bool isTarget, mlir::Type type,
-                          mlir::StringAttr linkage,
+                          fir::LinkageAttr linkage,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   build(builder, result, name, isConstant, isTarget, type, {}, linkage, attrs);
 }
 
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
-                          mlir::Type type, mlir::StringAttr linkage,
+                          mlir::Type type, fir::LinkageAttr linkage,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   build(builder, result, name, /*isConstant=*/false, /*isTarget=*/false, type,
         {}, linkage, attrs);
@@ -3158,7 +3120,7 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
                           bool isConstant, bool isTarget, mlir::Type type,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
-  build(builder, result, name, isConstant, isTarget, type, mlir::StringAttr{},
+  build(builder, result, name, isConstant, isTarget, type, fir::LinkageAttr{},
         attrs);
 }
 
@@ -3171,10 +3133,8 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
 }
 
 mlir::ParseResult fir::GlobalOp::verifyValidLinkage(llvm::StringRef linkage) {
-  // Supporting only a subset of the LLVM linkage types for now
-  static const char *validNames[] = {"common", "internal", "linkonce",
-                                     "linkonce_odr", "weak"};
-  return mlir::success(llvm::is_contained(validNames, linkage));
+  // Supporting only a subset of the LLVM linkage types for now.
+  return mlir::success(fir::symbolizeLinkageEnum(linkage).has_value());
 }
 
 //===----------------------------------------------------------------------===//
@@ -6244,20 +6204,46 @@ llvm::LogicalResult fir::DeclareOp::verify() {
   return fortranVar.verifyDeclareLikeOpImpl(getMemref());
 }
 
+/// Return the pointee of the storage a fir.declare denotes, or null if that
+/// storage must not be promoted.
+static mlir::Type getPromotablePointeeOfDeclare(fir::DeclareOp op) {
+  // Accesses through a volatile reference have to be preserved.
+  if (fir::isa_volatile_type(op.getType()))
+    return {};
+  mlir::Type pointee = fir::unwrapRefType(op.getType());
+  if (!isLegalTypeForValueDeclare(pointee))
+    return {};
+  // Values are not converted between the slot and its alias, so the pointee has
+  // to be the same on both sides.
+  if (fir::unwrapRefType(op.getMemref().getType()) != pointee)
+    return {};
+  return pointee;
+}
+
+void fir::DeclareOp::getPromotableSlotAliases(
+    mlir::OpOperand &aliasedSlotPointerOperand,
+    const mlir::MemorySlot &parentSlot,
+    llvm::SmallVectorImpl<mlir::MemorySlot> &newMemorySlots) {
+  // fir.declare only attaches source information; the storage is the same.
+  mlir::Type pointee = getPromotablePointeeOfDeclare(*this);
+  if (pointee && isAliasableSlotPointee(pointee))
+    newMemorySlots.push_back({getResult(), pointee});
+}
+
 bool fir::DeclareOp::canUsesBeRemoved(
     const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
     mlir::SmallVectorImpl<mlir::OpOperand *> &newBlockingUses,
     const mlir::DataLayout &dataLayout) {
-  if (!isLegalTypeForValueDeclare(fir::unwrapRefType(getType())))
+  mlir::Type pointee = getPromotablePointeeOfDeclare(*this);
+  if (!pointee)
     return false;
-  // MLIR's mem2reg computes defining blocks only from direct users of
-  // the slot pointer. Stores through fir.declare are not direct users,
-  // so they are not registered as defining blocks. This causes missing
-  // phi nodes at join points (e.g., loop headers). Restrict promotion
-  // to the single-block case where no phi nodes are needed.
+  // Without an alias, mem2reg does not see writes made through this declare as
+  // definitions, so uses have to stay in one block for no block argument to be
+  // needed.
+  bool aliased = isAliasableSlotPointee(pointee);
   mlir::Block *declBlock = getOperation()->getBlock();
   for (mlir::OpOperand &use : getResult().getUses()) {
-    if (use.getOwner()->getBlock() != declBlock)
+    if (!aliased && use.getOwner()->getBlock() != declBlock)
       return false;
     newBlockingUses.push_back(&use);
   }

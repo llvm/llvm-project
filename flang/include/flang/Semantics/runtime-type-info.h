@@ -40,6 +40,10 @@ constexpr char typeInfoBuiltinModule[]{"__fortran_type_info"};
 /// derived type descriptors.
 constexpr char typeDescriptorTypeName[]{"derivedtype"};
 
+/// Name of the size-in-bytes component in the DerivedType type of the
+/// __Fortran_type_info module
+constexpr char sizeInBytesCompName[]{"sizeinbytes"};
+
 /// Name of the bindings descriptor component in the DerivedType type of the
 /// __Fortran_type_info module
 constexpr char bindingDescCompName[]{"binding"};

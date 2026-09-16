@@ -17,8 +17,8 @@ void gnu_null_expr() {
 // CIR: %[[CONST_NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
 // CIR: cir.store {{.*}} %[[CONST_NULL]], %[[B_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[B_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[B_ADDR:.*]] = alloca ptr, align 8
 // LLVM: store i64 0, ptr %[[A_ADDR]], align 8
 // LLVM: store ptr null, ptr %[[B_ADDR]], align 8
 

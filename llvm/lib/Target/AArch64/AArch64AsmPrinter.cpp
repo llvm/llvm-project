@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64AsmPrinter.h"
 #include "AArch64.h"
 #include "AArch64MCInstLower.h"
 #include "AArch64MachineFunctionInfo.h"
@@ -24,7 +25,6 @@
 #include "MCTargetDesc/AArch64TargetStreamer.h"
 #include "TargetInfo/AArch64TargetInfo.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -35,6 +35,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/FaultMaps.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -44,10 +45,12 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -2067,7 +2070,7 @@ Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint64_t Disc,
   assert(isUInt<16>(Disc) && "Constant discriminator is too wide");
 
   // So far we've used NoRegister in pseudos.  Now we need real encodings.
-  if (AddrDisc == AArch64::NoRegister)
+  if (!AddrDisc.isValid())
     AddrDisc = AArch64::XZR;
 
   // If there is no constant discriminator, there's no blend involved:
@@ -2291,14 +2294,13 @@ AArch64AsmPrinter::PtrAuthSchema AArch64AsmPrinter::PtrAuthSchema::CreateImmReg(
   Schema.IntDisc = IntDisc;
   Schema.AddrDisc = AddrDiscOp.getReg();
   Schema.AddrDiscIsKilled = AddrDiscOp.isKill();
-  Schema.PCDisc = AArch64::NoRegister;
+  Schema.PCDisc = Register();
   return Schema;
 }
 
 AArch64AsmPrinter::PtrAuthSchema AArch64AsmPrinter::PtrAuthSchema::CreateRegReg(
     AArch64PACKey::ID Key, Register AddrDisc, Register PCDisc) {
-  assert(PCDisc != AArch64::NoRegister &&
-         "Use CreateImmReg for non-PC schemas");
+  assert(PCDisc.isValid() && "Use CreateImmReg for non-PC schemas");
   PtrAuthSchema Schema;
   Schema.Key = Key;
   Schema.IntDisc = 0;
@@ -2410,11 +2412,10 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     std::optional<PtrAuthSchema> SignSchema, std::optional<int64_t> Addend,
     Value *DS) {
   const PtrauthCheckMode CheckMode = getCheckMode(MF);
-  const bool IsAuthWithPC = AuthSchema.PCDisc != AArch64::NoRegister;
-  assert(!SignSchema || SignSchema->PCDisc == AArch64::NoRegister);
+  const bool IsAuthWithPC = AuthSchema.PCDisc.isValid();
+  assert(!SignSchema || !SignSchema->PCDisc.isValid());
 
-  Register SignAddrDiscOrNone =
-      SignSchema ? SignSchema->AddrDisc : AArch64::NoRegister;
+  Register SignAddrDiscOrNone = SignSchema ? SignSchema->AddrDisc : Register();
 
   // 1. Authenticate Pointer - this is the only common step.
   // It is more complex than signing because AUTI[AB]171615 may be used.
@@ -4187,4 +4188,34 @@ LLVMInitializeAArch64AsmPrinter() {
   RegisterAsmPrinter<AArch64AsmPrinter> Z(getTheARM64Target());
   RegisterAsmPrinter<AArch64AsmPrinter> W(getTheARM64_32Target());
   RegisterAsmPrinter<AArch64AsmPrinter> V(getTheAArch64_32Target());
+}
+
+PreservedAnalyses AArch64AsmPrinterBeginPass::run(Module &M,
+                                                  ModuleAnalysisManager &MAM) {
+  AArch64AsmPrinter &AsmPrinter = static_cast<AArch64AsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+AArch64AsmPrinterPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  AArch64AsmPrinter &AsmPrinter = static_cast<AArch64AsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses AArch64AsmPrinterEndPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  AArch64AsmPrinter &AsmPrinter = static_cast<AArch64AsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

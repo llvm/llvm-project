@@ -870,6 +870,50 @@ llvm.func @fn_cu_import_cycle() {
 
 // -----
 
+#file = #llvm.di_file<"dialect.mlir" in "/test/">
+#cu = #llvm.di_compile_unit<
+  id = distinct[0]<>, sourceLanguage = #llvm.di_source_language_name<
+    language = DW_LANG_C, dialect = DW_LLVM_LANG_DIALECT_simt>, file = #file,
+  isOptimized = false, emissionKind = Full
+>
+#sp_ty = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+#sp = #llvm.di_subprogram<
+  compileUnit = #cu, scope = #file, name = "fn_cu_dialect",
+  file = #file, line = 1, scopeLine = 1, subprogramFlags = Definition,
+  type = #sp_ty
+>
+
+// CHECK-LABEL: define void @fn_cu_dialect()
+llvm.func @fn_cu_dialect() {
+  llvm.return
+} loc(fused<#sp>["dialect.mlir":1:1])
+
+// CHECK-DAG: !DICompileUnit({{.*}}dialect: DW_LLVM_LANG_DIALECT_simt)
+
+// -----
+
+#file = #llvm.di_file<"language-name.cpp" in "/test/">
+#cu = #llvm.di_compile_unit<
+  id = distinct[0]<>, sourceLanguage = #llvm.di_source_language_name<
+    name = DW_LNAME_C_plus_plus, version = 202002,
+    dialect = DW_LLVM_LANG_DIALECT_simt>, file = #file,
+  isOptimized = false, emissionKind = Full
+>
+#sp_ty = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+#sp = #llvm.di_subprogram<
+  compileUnit = #cu, scope = #file, name = "fn_cu_source_language_name",
+  file = #file, line = 1, scopeLine = 1, subprogramFlags = Definition,
+  type = #sp_ty
+>
+
+// CHECK-LABEL: define void @fn_cu_source_language_name()
+// CHECK-DAG: ![[LNAME_CU:[0-9]+]] = distinct !DICompileUnit(sourceLanguageName: DW_LNAME_C_plus_plus, sourceLanguageVersion: 202002, file: !{{[0-9]+}}, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, dialect: DW_LLVM_LANG_DIALECT_simt)
+llvm.func @fn_cu_source_language_name() {
+  llvm.return
+} loc(fused<#sp>["language-name.cpp":1:1])
+
+// -----
+
 #di_file  = #llvm.di_file<"foo.mlir" in "/tmp">
 #di_cu    = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file, isOptimized = false, emissionKind = Full>
 #di_uint8 = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "uint8", sizeInBits = 8, encoding = DW_ATE_unsigned>

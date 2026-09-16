@@ -1777,12 +1777,12 @@ SystemZTargetLowering::getRegisterByName(const char *RegName, LLT VT,
 }
 
 Register SystemZTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return Subtarget.isTargetXPLINK64() ? SystemZ::R1D : SystemZ::R6D;
 }
 
 Register SystemZTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return Subtarget.isTargetXPLINK64() ? SystemZ::R2D : SystemZ::R7D;
 }
 
@@ -2152,6 +2152,16 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
           assert(PartOffset && "Offset should be non-zero.");
         }
       }
+    } else if (Subtarget.isTargetXPLINK64() &&
+               (VA.getLocInfo() == CCValAssign::SExt ||
+                VA.getLocInfo() == CCValAssign::ZExt) &&
+               Ins[I].ArgVT.isSimple()) {
+      // Some prior z/OS compilers do not always perform the extension of
+      // short integer arguments or pointers.  To accommodate those, do not
+      // rely on that extension by avoiding any AssertSext/AssertZext nodes by
+      // directly truncating ArgValue to the original argument type.
+      MVT OrigVT = Ins[I].ArgVT.getSimpleVT();
+      InVals.push_back(DAG.getNode(ISD::TRUNCATE, DL, OrigVT, ArgValue));
     } else
       InVals.push_back(convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue));
   }
@@ -7631,14 +7641,18 @@ SDValue SystemZTargetLowering::combineExtract(const SDLoc &DL, EVT ResVT,
         break;
       // We're extracting the low part of one operand of the BUILD_VECTOR.
       Op = Op.getOperand(End / OpBytesPerElement - 1);
+      EVT ResIntVT = MVT::getIntegerVT(ResVT.getSizeInBits());
+      if (!isTypeLegal(ResIntVT))
+        break;
       if (!Op.getValueType().isInteger()) {
-        EVT VT = MVT::getIntegerVT(Op.getValueSizeInBits());
-        Op = DAG.getNode(ISD::BITCAST, DL, VT, Op);
+        EVT OpIntVT = MVT::getIntegerVT(Op.getValueSizeInBits());
+        if (!isTypeLegal(OpIntVT))
+          break;
+        Op = DAG.getNode(ISD::BITCAST, DL, OpIntVT, Op);
         DCI.AddToWorklist(Op.getNode());
       }
-      EVT VT = MVT::getIntegerVT(ResVT.getSizeInBits());
-      Op = DAG.getNode(ISD::TRUNCATE, DL, VT, Op);
-      if (VT != ResVT) {
+      Op = DAG.getNode(ISD::TRUNCATE, DL, ResIntVT, Op);
+      if (ResIntVT != ResVT) {
         DCI.AddToWorklist(Op.getNode());
         Op = DAG.getNode(ISD::BITCAST, DL, ResVT, Op);
       }

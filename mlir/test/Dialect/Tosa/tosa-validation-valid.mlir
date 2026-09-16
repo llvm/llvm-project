@@ -33,9 +33,9 @@ func.func @test_rescale_output_unsigned(%arg0: tensor<1x1xi8>) -> (tensor<1x1xui
 // -----
 
 // CHECK-LABEL: test_validate_without_tosa
-func.func @test_validate_without_tosa(%arg0: f32) -> f32 {
-  %0 = math.asin %arg0 : f32
-  return %0 : f32
+func.func @test_validate_without_tosa(%arg0: tensor<f32>) -> tensor<f32> {
+  %0 = math.asin %arg0 : tensor<f32>
+  return %0 : tensor<f32>
 }
 
 // -----
@@ -46,4 +46,12 @@ func.func @test_pad_large_input_rank(%arg0: tensor<13x21x3x1x1x1xf32>) -> tensor
   %padding = tosa.const_shape {values = dense<0> : tensor<12xindex>} : () -> !tosa.shape<12>
   %1 = tosa.pad %arg0, %padding, %0 : (tensor<13x21x3x1x1x1xf32>, !tosa.shape<12>, tensor<1xf32>) -> tensor<13x21x3x1x1x1xf32>
   return %1 : tensor<13x21x3x1x1x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_cast_input_unsigned_false
+func.func @test_cast_input_unsigned_false(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xf32> {
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi32>) -> tensor<13x21x3xf32>
+  return %0 : tensor<13x21x3xf32>
 }

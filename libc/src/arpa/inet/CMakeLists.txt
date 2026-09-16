@@ -33,6 +33,7 @@ add_entrypoint_object(
     libc.hdr.types.struct_in_addr
     libc.src.__support.common
     libc.src.__support.CPP.optional
+    libc.src.__support.macros.null_check
     libc.src.__support.net.address
 )
 
@@ -48,6 +49,7 @@ add_entrypoint_object(
     libc.hdr.types.in_addr_t
     libc.src.__support.common
     libc.src.__support.CPP.optional
+    libc.src.__support.macros.null_check
     libc.src.__support.net.address
 )
 

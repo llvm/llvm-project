@@ -11,7 +11,6 @@
 
 include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.td"
-include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.td"
 include "mlir/Dialect/Bufferization/IR/BufferizationBase.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
@@ -27,7 +26,7 @@ class Bufferization_Op<string mnemonic, list<Trait> traits = []>
 //===----------------------------------------------------------------------===//
 
 def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
-    [AttrSizedOperandSegments, BufferizableOpInterface,
+    [AttrSizedOperandSegments,
      DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
        "reifyResultShapes"]>]> {
   let summary = "allocate buffer for a tensor";
@@ -93,29 +92,6 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
   let results = (outs AnyTensor:$result);
 
   let extraClassDeclaration = [{
-    LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationOptions &options,
-                            BufferizationState &state);
-
-    bool resultBufferizesToMemoryWrite(OpResult opResult,
-                                       const AnalysisState &state);
-
-    bool bufferizesToAllocation(Value value) { return true; }
-
-    bool bufferizesToMemoryRead(OpOperand &opOperand,
-                                const AnalysisState &state);
-
-    bool bufferizesToMemoryWrite(OpOperand &opOperand,
-                                 const AnalysisState &state);
-
-    AliasingValueList getAliasingValues(
-        OpOperand &opOperand, const AnalysisState &state);
-
-    FailureOr<BufferLikeType> getBufferType(
-        Value value, const BufferizationOptions &options,
-        const BufferizationState &state,
-        SmallVector<Value> &invocationStack);
-
     RankedTensorType getType() {
       return ::llvm::cast<RankedTensorType>(getResult().getType());
     }
@@ -219,7 +195,7 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
 def Bufferization_MaterializeInDestinationOp
     : Bufferization_Op<"materialize_in_destination",
         [AllElementTypesMatch<["source", "dest"]>,
-         BufferizableOpInterface, DestinationStyleOpInterface,
+         DestinationStyleOpInterface,
          DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
            "reifyResultShapes"]>,
          DeclareOpInterfaceMethods<SubsetOpInterface,
@@ -283,32 +259,11 @@ def Bufferization_MaterializeInDestinationOp
   let results = (outs Optional<AnyTensor>:$result);
 
   let extraClassDeclaration = [{
-    LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationOptions &options,
-                            BufferizationState &state);
-
-    bool bufferizesToMemoryRead(OpOperand &opOperand,
-                                const AnalysisState &state);
-
-    bool bufferizesToMemoryWrite(OpOperand &opOperand,
-                                 const AnalysisState &state);
-
-    bool bufferizesToElementwiseAccess(const AnalysisState &state,
-                                       ArrayRef<OpOperand *> opOperands);
-
-    bool mustBufferizeInPlace(OpOperand &opOperand,
-                              const AnalysisState &state);
-
-    AliasingValueList getAliasingValues(
-        OpOperand &opOperand, const AnalysisState &state);
-
     RankedTensorType getType() {
       return ::llvm::cast<RankedTensorType>(getResult().getType());
     }
 
     MutableOperandRange getDpsInitsMutable();
-
-    bool isWritable(Value value, const AnalysisState &state);
   }];
 
   let builders = [
@@ -329,8 +284,7 @@ def Bufferization_MaterializeInDestinationOp
 // DeallocTensorOp
 //===----------------------------------------------------------------------===//
 
-def Bufferization_DeallocTensorOp : Bufferization_Op<"dealloc_tensor",
-    [BufferizableOpInterface]> {
+def Bufferization_DeallocTensorOp : Bufferization_Op<"dealloc_tensor"> {
   string summary = "release underlying storage format of given tensor";
   string description = [{
     `bufferization.dealloc_tensor` is a buffer deallocation in tensor land. This
@@ -360,27 +314,6 @@ def Bufferization_DeallocTensorOp : Bufferization_Op<"dealloc_tensor",
   let arguments = (ins AnyTensor:$tensor);
   let results = (outs);
   let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
-
-  let extraClassDeclaration = [{
-    bool bufferizesToMemoryRead(OpOperand &opOperand,
-                                const AnalysisState &state) const {
-      return false;
-    }
-
-    bool bufferizesToMemoryWrite(OpOperand &opOperand,
-                                 const AnalysisState &state) const {
-      return false;
-    }
-
-    AliasingValueList getAliasingValues(
-        OpOperand &opOperand, const AnalysisState &state) const {
-      return {};
-    }
-
-    LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationOptions &options,
-                            BufferizationState &state);
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -396,7 +329,6 @@ class Bufferization_TensorAndBufferMatch<string tensor, string buffer> : PredOpT
 >;
 
 def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
-    BufferizableOpInterface,
     SameOperandsAndResultShape,
     SameOperandsAndResultElementType,
     Bufferization_TensorAndBufferMatch<"result", "buffer">
@@ -464,25 +396,6 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     ::mlir::bufferization::TensorLikeType getType() {
       return getResult().getType();
     }
-
-    //===------------------------------------------------------------------===//
-    // BufferizableOpInterface implementation
-    //===------------------------------------------------------------------===//
-
-    LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationOptions &options,
-                            BufferizationState &state) const {
-      // to_tensor/to_buffer pairs fold away after bufferization.
-      return success();
-    }
-
-    bool isWritable(Value value, const AnalysisState &state);
-
-    FailureOr<BufferLikeType> getBufferType(
-        Value value, const BufferizationOptions &options,
-        const BufferizationState &state, SmallVector<Value> &invocationStack) {
-      return getBuffer().getType();
-    }
   }];
 
   let assemblyFormat = [{
@@ -500,7 +413,6 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 //===----------------------------------------------------------------------===//
 
 def Bufferization_ToBufferOp : Bufferization_Op<"to_buffer", [
-    BufferizableOpInterface,
     SameOperandsAndResultShape,
     SameOperandsAndResultElementType,
     Pure,
@@ -526,38 +438,6 @@ def Bufferization_ToBufferOp : Bufferization_Op<"to_buffer", [
 
   let arguments = (ins Bufferization_TensorLikeTypeInterface:$tensor, UnitAttr:$read_only);
   let results = (outs Bufferization_BufferLikeTypeInterface:$buffer);
-
-  let extraClassDeclaration = [{
-    //===------------------------------------------------------------------===//
-    // BufferizableOpInterface implementation
-    //===------------------------------------------------------------------===//
-
-    // Note: ToBufferOp / ToTensorOp are temporary ops that are inserted at the
-    // bufferization boundary. When One-Shot bufferization is complete, there
-    // should be no such ops left over. If `allowUnknownOps` (or after running a
-    // partial bufferization pass), such ops may be part of the resulting IR,
-    // but such IR may no longer be analyzable by One-Shot analysis.
-
-    bool bufferizesToMemoryRead(OpOperand &opOperand,
-                                const AnalysisState &state) const {
-      // It is unknown whether the resulting memref will be read or not.
-      return true;
-    }
-
-    bool bufferizesToMemoryWrite(OpOperand &opOperand,
-                                 const AnalysisState &state) {
-      return !getReadOnly();
-    }
-
-    AliasingValueList getAliasingValues(
-        OpOperand &opOperand, const AnalysisState &state) const {
-      return {};
-    }
-
-    LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationOptions &options,
-                            BufferizationState &state);
-  }];
 
   let assemblyFormat = [{
     $tensor (`read_only` $read_only^)? attr-dict `:` type($tensor) `to` type($buffer)

@@ -27,20 +27,20 @@
   target triple = "armebv4t-unknown-unknown"
 
   ; Function Attrs: noinline nounwind optsize
-  define arm_aapcs_vfpcc void @caller() #0 !dbg !20 {
+  define void @caller() #0 !dbg !20 {
   entry:
     unreachable
   }
 
   ; Function Attrs: noinline nounwind optsize
-  define internal arm_aapcs_vfpcc void @callee(ptr %p1) unnamed_addr #0 !dbg !29 {
+  define internal void @callee(ptr %p1) unnamed_addr #0 !dbg !29 {
   entry:
     unreachable
   }
 
-  declare !dbg !4 arm_aapcs_vfpcc ptr @value()
-  declare !dbg !9 arm_aapcs_vfpcc i32 @interesting(ptr)
-  declare !dbg !12 arm_aapcs_vfpcc void @ext(ptr)
+  declare !dbg !4 ptr @value()
+  declare !dbg !9 i32 @interesting(ptr)
+  declare !dbg !12 void @ext(ptr)
 
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata) #1

@@ -1,0 +1,55 @@
+# Test that the disassembler surfaces .amdhsa_reserve_xnack_mask when an
+# object's ELF e_flags erroneously select xnack "on" for a target that does not
+# support xnack (gfx1200). The directive is normally suppressed for such
+# targets, but must be printed here so the invalid state remains visible.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-objdump --disassemble-symbols=kernel.kd %t.o | FileCheck %s
+
+# CHECK: .amdgcn_target "amdgpu-amd-amdhsa-unknown-gfx1200:xnack+"
+# CHECK: .amdhsa_kernel kernel
+# CHECK: .amdhsa_reserve_xnack_mask 1
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_AMDGPU_HSA
+  ABIVersion:      0x3
+  Type:            ET_REL
+  Machine:         EM_AMDGPU
+  Flags:           [ EF_AMDGPU_MACH_AMDGCN_GFX1200, EF_AMDGPU_FEATURE_XNACK_ON_V4, EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4 ]
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+    Content:         00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000CE0800000000004000000000000
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x10
+        Symbol:          kernel
+        Type:            R_AMDGPU_REL64
+        Addend:          16
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .rela.text
+      - Name:            .symtab
+Symbols:
+  - Name:            kernel.kd
+    Type:            STT_OBJECT
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0x40
+  - Name:            kernel
+    Binding:         STB_GLOBAL
+    Other:           [ STV_PROTECTED ]
+...

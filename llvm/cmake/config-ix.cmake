@@ -98,9 +98,6 @@ if(LLVM_USING_GLIBC AND CMAKE_SIZEOF_VOID_P EQUAL 4)
 endif()
 
 # include checks
-check_include_file(valgrind/valgrind.h HAVE_VALGRIND_VALGRIND_H)
-check_symbol_exists(FE_ALL_EXCEPT "fenv.h" HAVE_DECL_FE_ALL_EXCEPT)
-check_symbol_exists(FE_INEXACT "fenv.h" HAVE_DECL_FE_INEXACT)
 check_c_source_compiles("
         #if __has_attribute(used)
         #define LLVM_ATTRIBUTE_USED __attribute__((__used__))
@@ -113,7 +110,6 @@ check_c_source_compiles("
         int main(void) { return 0; }"
         HAVE_BUILTIN_THREAD_POINTER)
 
-check_include_file(CrashReporterClient.h HAVE_CRASHREPORTERCLIENT_H)
 if(APPLE)
   check_c_source_compiles("
      static const char *__crashreporter_info__ = 0;
@@ -122,27 +118,16 @@ if(APPLE)
     HAVE_CRASHREPORTER_INFO)
 endif()
 
-if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
-  check_include_file(linux/magic.h HAVE_LINUX_MAGIC_H)
-  if(NOT HAVE_LINUX_MAGIC_H)
-    # older kernels use split files
-    check_include_file(linux/nfs_fs.h HAVE_LINUX_NFS_FS_H)
-    check_include_file(linux/smb.h HAVE_LINUX_SMB_H)
-  endif()
-endif()
-
 # library checks
 if(NOT WIN32)
   check_library_exists(pthread pthread_create "" HAVE_LIBPTHREAD)
   if (HAVE_LIBPTHREAD)
     check_library_exists(pthread pthread_rwlock_init "" HAVE_PTHREAD_RWLOCK_INIT)
-    check_library_exists(pthread pthread_mutex_lock "" HAVE_PTHREAD_MUTEX_LOCK)
   else()
     # this could be Android
     check_library_exists(c pthread_create "" PTHREAD_IN_LIBC)
     if (PTHREAD_IN_LIBC)
       check_library_exists(c pthread_rwlock_init "" HAVE_PTHREAD_RWLOCK_INIT)
-      check_library_exists(c pthread_mutex_lock "" HAVE_PTHREAD_MUTEX_LOCK)
     endif()
   endif()
 endif()
@@ -228,7 +213,7 @@ if(LLVM_ENABLE_LIBXML2)
     # library on a 64-bit system which would result in a link-time failure.
     cmake_push_check_state()
     list(APPEND CMAKE_REQUIRED_LIBRARIES LibXml2::LibXml2)
-    check_symbol_exists(xmlReadMemory libxml/xmlreader.h HAVE_LIBXML2)
+    check_cxx_symbol_exists(xmlReadMemory libxml/xmlreader.h HAVE_LIBXML2)
     cmake_pop_check_state()
     if(LLVM_ENABLE_LIBXML2 STREQUAL FORCE_ON AND NOT HAVE_LIBXML2)
       message(FATAL_ERROR "Failed to configure libxml2")
@@ -242,7 +227,7 @@ if(LLVM_ENABLE_LIBXML2)
       list(APPEND CMAKE_REQUIRED_INCLUDES ${LIBXML2_INCLUDE_DIR})
       list(APPEND CMAKE_REQUIRED_LIBRARIES ${LIBXML2_STATIC_LIBRARY} ${LIBXML2_STATIC_DEPS})
       list(APPEND CMAKE_REQUIRED_DEFINITIONS ${LIBXML2_DEFINITIONS})
-      check_symbol_exists(xmlReadMemory libxml/xmlreader.h HAVE_LIBXML2_STATIC)
+      check_cxx_symbol_exists(xmlReadMemory libxml/xmlreader.h HAVE_LIBXML2_STATIC)
       cmake_pop_check_state()
       if(NOT HAVE_LIBXML2_STATIC)
         message(FATAL_ERROR "Failed to configure static libxml2, but LLVM_USE_STATIC_LIBXML2=ON")
@@ -654,7 +639,8 @@ else( LLVM_ENABLE_THREADS )
   message(STATUS "Threads disabled.")
 endif()
 
-find_program(GOLD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.gold ld.gold ${LLVM_DEFAULT_TARGET_TRIPLE}-ld ld DOC "The gold linker")
+find_program(GOLD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.gold ld.gold DOC "The gold linker")
+find_program(LD_BFD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.bfd ld.bfd ${LLVM_DEFAULT_TARGET_TRIPLE}-ld ld DOC "The bfd linker")
 set(LLVM_BINUTILS_INCDIR "" CACHE PATH
     "PATH to binutils/include containing plugin-api.h for gold plugin.")
 
@@ -678,13 +664,25 @@ if(CMAKE_HOST_APPLE AND APPLE)
       find_program(CMAKE_XCRUN NAMES xcrun)
     endif()
 
-    # Check for ld on apple platform. LD64 is the legacy name.
+    # First, check if there's ld-classic, which is ld64 in newer SDKs.
     if(CMAKE_XCRUN)
-      execute_process(COMMAND ${CMAKE_XCRUN} -find ld
+      execute_process(COMMAND ${CMAKE_XCRUN} -find ld-classic
         OUTPUT_VARIABLE LD64_EXECUTABLE
+        ERROR_QUIET
         OUTPUT_STRIP_TRAILING_WHITESPACE)
     else()
-      find_program(LD64_EXECUTABLE NAMES ld DOC "The apple static linker")
+      find_program(LD64_EXECUTABLE NAMES ld-classic DOC "The ld64 linker")
+    endif()
+
+    # Otherwise look for ld directly.
+    if(NOT LD64_EXECUTABLE)
+        if(CMAKE_XCRUN)
+          execute_process(COMMAND ${CMAKE_XCRUN} -find ld
+            OUTPUT_VARIABLE LD64_EXECUTABLE
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+        else()
+          find_program(LD64_EXECUTABLE NAMES ld DOC "The ld64 linker")
+        endif()
     endif()
   endif()
 

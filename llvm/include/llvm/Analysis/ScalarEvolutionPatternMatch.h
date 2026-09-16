@@ -17,8 +17,6 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Support/PatternMatchHelpers.h"
 
-using namespace llvm::PatternMatchHelpers;
-
 namespace llvm {
 namespace PatternMatchHelpers {
 template <typename SCEVPtrT> struct match_bind<SCEVUseT<SCEVPtrT>> {
@@ -34,6 +32,8 @@ template <typename SCEVPtrT> struct match_bind<SCEVUseT<SCEVPtrT>> {
 } // namespace PatternMatchHelpers
 
 namespace SCEVPatternMatch {
+
+using namespace llvm::PatternMatchHelpers;
 
 template <typename Pattern> bool match(const SCEV *S, const Pattern &P) {
   return P.match(S);
@@ -264,9 +264,17 @@ m_scev_UDiv(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline SCEVBinaryExpr_match<SCEVSMaxExpr, Op0_t, Op1_t>
+inline SCEVBinaryExpr_match<SCEVSMaxExpr, Op0_t, Op1_t, SCEV::FlagAnyWrap, true>
 m_scev_SMax(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_scev_Binary<SCEVSMaxExpr>(Op0, Op1);
+  return m_scev_Binary<SCEVSMaxExpr, Op0_t, Op1_t, SCEV::FlagAnyWrap, true>(
+      Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline SCEVBinaryExpr_match<SCEVUMaxExpr, Op0_t, Op1_t, SCEV::FlagAnyWrap, true>
+m_scev_UMax(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_scev_Binary<SCEVUMaxExpr, Op0_t, Op1_t, SCEV::FlagAnyWrap, true>(
+      Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>

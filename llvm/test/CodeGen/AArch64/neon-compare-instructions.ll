@@ -738,10 +738,16 @@ define <2 x i64> @cmls2xi64(<2 x i64> %A, <2 x i64> %B) {
 }
 
 define <8 x i8> @cmtst8xi8(<8 x i8> %A, <8 x i8> %B) {
-; CHECK-LABEL: cmtst8xi8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmtst8xi8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmtst v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmtst8xi8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    cmtst v0.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %tmp3 = and <8 x i8> %A, %B
   %tmp4 = icmp ne <8 x i8> %tmp3, zeroinitializer
   %tmp5 = sext <8 x i1> %tmp4 to <8 x i8>
@@ -749,10 +755,16 @@ define <8 x i8> @cmtst8xi8(<8 x i8> %A, <8 x i8> %B) {
 }
 
 define <16 x i8> @cmtst16xi8(<16 x i8> %A, <16 x i8> %B) {
-; CHECK-LABEL: cmtst16xi8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmtst16xi8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmtst v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmtst16xi8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    cmtst v0.16b, v0.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %tmp3 = and <16 x i8> %A, %B
   %tmp4 = icmp ne <16 x i8> %tmp3, zeroinitializer
   %tmp5 = sext <16 x i1> %tmp4 to <16 x i8>
@@ -760,10 +772,16 @@ define <16 x i8> @cmtst16xi8(<16 x i8> %A, <16 x i8> %B) {
 }
 
 define <4 x i16> @cmtst4xi16(<4 x i16> %A, <4 x i16> %B) {
-; CHECK-LABEL: cmtst4xi16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmtst4xi16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmtst v0.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmtst4xi16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    cmtst v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    ret
   %tmp3 = and <4 x i16> %A, %B
   %tmp4 = icmp ne <4 x i16> %tmp3, zeroinitializer
   %tmp5 = sext <4 x i1> %tmp4 to <4 x i16>
@@ -771,10 +789,16 @@ define <4 x i16> @cmtst4xi16(<4 x i16> %A, <4 x i16> %B) {
 }
 
 define <8 x i16> @cmtst8xi16(<8 x i16> %A, <8 x i16> %B) {
-; CHECK-LABEL: cmtst8xi16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmtst8xi16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmtst v0.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmtst8xi16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    cmtst v0.8h, v0.8h, v0.8h
+; CHECK-GI-NEXT:    ret
   %tmp3 = and <8 x i16> %A, %B
   %tmp4 = icmp ne <8 x i16> %tmp3, zeroinitializer
   %tmp5 = sext <8 x i1> %tmp4 to <8 x i16>
@@ -782,10 +806,16 @@ define <8 x i16> @cmtst8xi16(<8 x i16> %A, <8 x i16> %B) {
 }
 
 define <2 x i32> @cmtst2xi32(<2 x i32> %A, <2 x i32> %B) {
-; CHECK-LABEL: cmtst2xi32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmtst2xi32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmtst v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmtst2xi32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    cmtst v0.2s, v0.2s, v0.2s
+; CHECK-GI-NEXT:    ret
   %tmp3 = and <2 x i32> %A, %B
   %tmp4 = icmp ne <2 x i32> %tmp3, zeroinitializer
   %tmp5 = sext <2 x i1> %tmp4 to <2 x i32>
@@ -793,10 +823,16 @@ define <2 x i32> @cmtst2xi32(<2 x i32> %A, <2 x i32> %B) {
 }
 
 define <4 x i32> @cmtst4xi32(<4 x i32> %A, <4 x i32> %B) {
-; CHECK-LABEL: cmtst4xi32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmtst4xi32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmtst v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmtst4xi32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    cmtst v0.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    ret
   %tmp3 = and <4 x i32> %A, %B
   %tmp4 = icmp ne <4 x i32> %tmp3, zeroinitializer
   %tmp5 = sext <4 x i1> %tmp4 to <4 x i32>
@@ -804,10 +840,16 @@ define <4 x i32> @cmtst4xi32(<4 x i32> %A, <4 x i32> %B) {
 }
 
 define <2 x i64> @cmtst2xi64(<2 x i64> %A, <2 x i64> %B) {
-; CHECK-LABEL: cmtst2xi64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmtst2xi64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmtst v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmtst2xi64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    cmtst v0.2d, v0.2d, v0.2d
+; CHECK-GI-NEXT:    ret
   %tmp3 = and <2 x i64> %A, %B
   %tmp4 = icmp ne <2 x i64> %tmp3, zeroinitializer
   %tmp5 = sext <2 x i1> %tmp4 to <2 x i64>
@@ -2503,8 +2545,7 @@ define <4 x i32> @fcmal4xfloat(<4 x float> %A, <4 x float> %B) {
 ;
 ; CHECK-GI-LABEL: fcmal4xfloat:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v0.2s, #1
-; CHECK-GI-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-GI-NEXT:    movi v0.4s, #1
 ; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-GI-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-GI-NEXT:    ret
@@ -2541,19 +2582,10 @@ define <2 x i32> @fcmnv2xfloat(<2 x float> %A, <2 x float> %B) {
 }
 
 define <4 x i32> @fcmnv4xfloat(<4 x float> %A, <4 x float> %B) {
-; CHECK-SD-LABEL: fcmnv4xfloat:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fcmnv4xfloat:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d0, #0000000000000000
-; CHECK-GI-NEXT:    mov v0.s[1], wzr
-; CHECK-GI-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
-; CHECK-GI-NEXT:    cmlt v0.4s, v0.4s, #0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fcmnv4xfloat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    ret
   %tmp3 = fcmp false <4 x float> %A, %B
   %tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
   ret <4 x i32> %tmp4

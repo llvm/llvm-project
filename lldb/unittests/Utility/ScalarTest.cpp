@@ -131,6 +131,29 @@ TEST(ScalarTest, RightShiftOperator) {
   ASSERT_EQ(e >> c, e_scalar >> c_scalar);
 }
 
+TEST(ScalarTest, RightShiftOutOfRange) {
+  // A shift of exactly the width is a sign fill for a signed value. This is
+  // in range for the APSInt shift, which asserts only past the width.
+  Scalar a(static_cast<int32_t>(-1));
+  a >>= Scalar(static_cast<uint32_t>(32));
+  EXPECT_EQ(a, Scalar(static_cast<int32_t>(-1)));
+
+  // A shift past the width fills the same way.
+  Scalar b(static_cast<int32_t>(0x12345678));
+  b >>= Scalar(static_cast<uint32_t>(1000));
+  EXPECT_EQ(b, Scalar(static_cast<int32_t>(0)));
+
+  // An unsigned value is zero filled instead.
+  Scalar c(static_cast<uint32_t>(0xFFFFFFFF));
+  c >>= Scalar(static_cast<uint32_t>(33));
+  EXPECT_EQ(c, Scalar(static_cast<uint32_t>(0)));
+
+  // The shift amount itself can need more than 64 bits to represent.
+  Scalar d(static_cast<int32_t>(-1));
+  d >>= Scalar(APInt::getOneBitSet(128, 70));
+  EXPECT_EQ(d, Scalar(static_cast<int32_t>(-1)));
+}
+
 TEST(ScalarTest, GetBytes) {
   uint8_t Storage[256];
   int a = 0x01020304;
@@ -291,6 +314,26 @@ TEST(ScalarTest, ExtractBitfield) {
   EXPECT_EQ(u_scalar, a2);
   ASSERT_TRUE(u_scalar.ExtractBitfield(len - 4, 4));
   EXPECT_EQ(u_scalar, b2);
+}
+
+TEST(ScalarTest, ExtractBitfieldOutOfRange) {
+  uint32_t len = sizeof(int32_t) * 8;
+
+  // A bit offset of exactly the width is a sign fill for a signed value. This
+  // is in range for the APSInt shift, which asserts only past the width.
+  Scalar s_scalar(static_cast<int32_t>(-1));
+  ASSERT_TRUE(s_scalar.ExtractBitfield(len, len));
+  EXPECT_EQ(s_scalar, Scalar(static_cast<int32_t>(-1)));
+
+  // A bit offset past the width fills the same way.
+  Scalar s_far_scalar(static_cast<int32_t>(-1));
+  ASSERT_TRUE(s_far_scalar.ExtractBitfield(len, 1000));
+  EXPECT_EQ(s_far_scalar, Scalar(static_cast<int32_t>(-1)));
+
+  // An unsigned value is zero filled instead.
+  Scalar u_scalar(static_cast<uint32_t>(0xFFFFFFFF));
+  ASSERT_TRUE(u_scalar.ExtractBitfield(len, 1000));
+  EXPECT_EQ(u_scalar, Scalar(static_cast<uint32_t>(0)));
 }
 
 template <typename T> static std::string ScalarGetValue(T value) {

@@ -496,9 +496,6 @@ public:
   LLVM_ABI MemDepResult getInvariantGroupPointerDependency(LoadInst *LI,
                                                            BasicBlock *BB);
 
-  /// Release memory in caches.
-  LLVM_ABI void releaseMemory();
-
   /// Return the clobber offset to dependent instruction.
   std::optional<int32_t> getClobberOffset(LoadInst *DepInst) const {
     const auto Off = ClobberOffsets.find(DepInst);

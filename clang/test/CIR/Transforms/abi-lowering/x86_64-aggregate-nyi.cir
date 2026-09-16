@@ -1,15 +1,41 @@
 // RUN: not cir-opt %s -cir-call-conv-lowering=target=x86_64 2>&1 | FileCheck %s
 
 !s8i = !cir.int<s, 8>
+!s16i = !cir.int<s, 16>
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
-!u32i = !cir.int<u, 32>
-!rec_U = !cir.union<"U" {!s32i, !u32i}>
-!rec_P = !cir.struct<"P" packed {!s8i, !s32i}>
-!rec_Ov = !cir.struct<"Ov" padded {!s32i, !cir.array<!u8i x 12>}>
-!rec_E = !cir.struct<"E" padded {!u8i}>
-!rec_FF = !cir.struct<"FF" {!cir.float, !cir.float}>
-!rec_RetFF = !cir.struct<"RetFF" {!cir.float, !cir.float}>
+!rec_UEmptyLarge = !cir.union<"UEmptyLarge" {}, padding = {!cir.array<!u8i x 32>}>
+!rec_ZeroLenArr = !cir.struct<"ZeroLenArr" packed {data !s8i, empty !cir.array<!s32i x 0>}>
+!rec_E = !cir.struct<"E" {pad !u8i}>
+!rec_UBitIntUnit =
+    !cir.union<"UBitIntUnit" {bitfield !cir.bitfield<!cir.array<!u8i x 9>,
+                                                     [#cir.bitfield_decl<!cir.int<s, 72, bitint>, 70>]>},
+               padding = {!cir.array<!u8i x 7>}>
+!rec_SVec = !cir.struct<"SVec" {data !cir.vector<4 x !cir.float>}>
+!rec_UVec384 =
+    !cir.union<"UVec384" {data !cir.vector<4 x !cir.float>, data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 32>}>
+!rec_UVecInArr =
+    !cir.union<"UVecInArr" {data !cir.array<!cir.vector<4 x !cir.float> x 2>,
+                            data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 16>}>
+!rec_UVecInRec =
+    !cir.union<"UVecInRec" {data !rec_SVec, data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 32>}>
+!rec_UQuad384 =
+    !cir.union<"UQuad384" {data !cir.f128, data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 32>}>
+!rec_ULongDouble384 =
+    !cir.union<"ULongDouble384" {data !cir.long_double<!cir.f128>,
+                                 data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 32>}>
+!rec_UQuadPacked =
+    !cir.union<"UQuadPacked" packed {data !cir.f128, data !cir.array<!s8i x 17>},
+               padding = {!u8i}>
+!rec_S1 = !cir.struct<"S1" {data !s16i, data !s16i, data !s16i}>
+!rec_AtomicWrapper = !cir.struct<{data !rec_S1, pad !cir.array<!s8i x 2>}>
+!rec_HoldsAllPad = !cir.struct<"HoldsAllPad" {data !s32i, empty !rec_E}>
+!rec_Incomplete = !cir.struct<"Incomplete" incomplete>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
@@ -19,65 +45,143 @@ module attributes {
     #dlti.dl_entry<f64, dense<64>: vector<2xi64>>>
 } {
 
-  // A union is rejected: its register coercion needs a widen fixup.
-  cir.func @take_union(%arg0: !rec_U) {
+
+
+
+
+  // A member-less union past two eightbytes still classifies Indirect in
+  // classic CodeGen, but no source spells a union with no member at all, so
+  // this bridge refuses the shape rather than guessing at it.  Below the
+  // threshold the same shape is accepted and classifies Ignore, matching
+  // classic; see x86_64-union.cir take_empty.
+  cir.func @take_empty_large_union(%arg0: !rec_UEmptyLarge) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.union<"U"
+  // CHECK: not yet implemented for type '!cir.union<"UEmptyLarge"
 
-  // A packed struct is rejected: it needs pad-aware classification.
-  cir.func @take_packed(%arg0: !rec_P) {
+  // A zero-sized member is dropped before classification, so its offset never
+  // reaches the rule sending a record with a member off its own alignment to
+  // memory.  Only packing can put one at such an offset.
+  cir.func @take_zero_len_arr(%arg0: !rec_ZeroLenArr) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.struct<"P" packed
+  // CHECK: not yet implemented for type '!cir.struct<"ZeroLenArr" packed
 
-  // A padded (over-aligned) struct is rejected: it needs pad-aware
-  // classification.
-  cir.func @take_padded(%arg0: !rec_Ov) {
+
+
+  // Past one eightbyte the declared extent settles nothing: the coercion
+  // follows this 9-byte unit and would give i8 for the second eightbyte,
+  // where classic sizes it from the record and gives i64.
+  cir.func @take_bitint_unit_union(%arg0: !rec_UBitIntUnit) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.struct<"Ov" padded
+  // CHECK: not yet implemented for type '!cir.union<"UBitIntUnit"
 
-  // An empty C++ class is laid out as a single padded byte, so it is rejected
-  // by the padded check; its Ignore classification is deferred.
-  cir.func @take_empty(%arg0: !rec_E) {
+
+
+
+
+
+
+  // 48 bytes with a vector member, a size no SSEUP coerce can be named from.
+  cir.func @take_vec384_union(%arg0: !rec_UVec384) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.struct<"E" padded
+  // CHECK: not yet implemented for type '!cir.union<"UVec384"
 
-  // An all-float struct classifies to an SSE vector coerce this bridge does
-  // not represent, so it is reported NYI rather than passed unchanged.
-  cir.func @take_ff(%arg0: !rec_FF) {
+  // The same vector, an array away.
+  cir.func @take_vec_in_arr_union(%arg0: !rec_UVecInArr) {
     cir.return
   }
 
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"FF"
+  // CHECK: not yet implemented for type '!cir.union<"UVecInArr"
 
-  // The same holds for an all-float array.
-  cir.func @take_farr(%arg0: !cir.array<!cir.float x 2>) {
+  // The same vector, a record away.
+  cir.func @take_vec_in_rec_union(%arg0: !rec_UVecInRec) {
     cir.return
   }
 
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.array<!cir.float x 2>
+  // CHECK: not yet implemented for type '!cir.union<"UVecInRec"
 
-  // A three-float struct coerces to a record with a vector field; the
-  // unmappable field propagates out as NYI too.
-  cir.func @take_f3(%arg0: !cir.struct<"F3" {!cir.float, !cir.float, !cir.float}>) {
+  // An IEEE-quad float reaches SSEUP as well.
+  cir.func @take_quad384_union(%arg0: !rec_UQuad384) {
     cir.return
   }
 
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"F3"
+  // CHECK: not yet implemented for type '!cir.union<"UQuad384"
 
-  // The unmappable-coercion check also covers the return value.
-  cir.func @ret_ff() -> !rec_RetFF {
-    %0 = cir.alloca "r" align(4) : !cir.ptr<!rec_RetFF>
-    %1 = cir.load %0 : !cir.ptr<!rec_RetFF>, !rec_RetFF
-    cir.return %1 : !rec_RetFF
+  // A long double carrying quad semantics is the same float.
+  cir.func @take_long_double384_union(%arg0: !rec_ULongDouble384) {
+    cir.return
   }
 
-  // CHECK: not yet implemented for the ABI coercion of type '!cir.struct<"RetFF"
+  // CHECK: not yet implemented for type '!cir.union<"ULongDouble384"
+
+  // Packed, so 17 bytes, another size no coerce can be named from.  Its
+  // 17-byte member spans the union, so only refusing the size catches it.
+  cir.func @take_quad_packed_union(%arg0: !rec_UQuadPacked) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UQuadPacked"
+
+  // A bit-field carries the type its declaration named, so a record whose
+  // padding a coercion would have to read through is classified rather than
+  // refused; see x86_64-bitfield.cir.
+
+  // The all-pad reject also has to hold when the record is reached as a member,
+  // which is the shape a C++ empty class produces.
+  cir.func @take_holds_all_pad(%arg0: !rec_HoldsAllPad) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.struct<"HoldsAllPad" {data
+
+  // A scalable vector has no size the eightbyte rules can read.
+  cir.func @take_scalable(%arg0: !cir.vector<[4] x !cir.float>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.vector<[4] x !cir.float>
+
+  // Clang pads a vector's type width up to a power of two and the classifier
+  // branches on the exact width, so a three-byte vector would be classified at
+  // 24 bits where clang uses 32.  The ABI library's vector type cannot carry
+  // the padded width, so this is rejected rather than misclassified.
+  cir.func @take_odd_width(%arg0: !cir.vector<3 x !s8i>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.vector<3 x !cir.int<s, 8>>
+
+  // An element narrower than a byte is rounded up to its storage container by
+  // clang but not by the classifier, so the two would size the vector
+  // differently.  Classic passes this one in an xmm register from its 128-bit
+  // width, where the classifier would read 32 bits and coerce to an integer.
+  cir.func @take_sub_byte_element(%arg0: !cir.vector<16 x !cir.int<s, 2, bitint>>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.vector<16 x !cir.int<s, 2, bitint>>
+
+  // An x87 long double is 80 bits to the classifier and 128 to clang, so the
+  // two would size this vector differently for the same reason.
+  cir.func @take_x87_element(%arg0: !cir.vector<2 x !cir.long_double<!cir.f80>>) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.vector<2 x !cir.long_double<!cir.f80>>
+
+  // A definition (unlike a declaration) is refused: no incomplete-by-value
+  // definition can arise from valid C++, so this stays a hard reject rather
+  // than the declaration-only skip in x86_64-incomplete-record-declaration.cir.
+  cir.func @take_incomplete_defined(%arg0: !rec_Incomplete) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.struct<"Incomplete" incomplete>'
 }

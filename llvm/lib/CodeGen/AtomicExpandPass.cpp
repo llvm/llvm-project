@@ -65,6 +65,7 @@ class AtomicExpandImpl {
   const TargetLowering *TLI = nullptr;
   const LibcallLoweringInfo *LibcallLowering = nullptr;
   const DataLayout *DL = nullptr;
+  bool SingleThreaded = false;
 
 private:
   /// Callback type for emitting a cmpxchg instruction during RMW expansion.
@@ -148,6 +149,7 @@ private:
   bool expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
                                 CreateCmpXchgInstFun CreateCmpXchg);
 
+  bool lowerToNonAtomic(Instruction *I);
   bool processAtomicInstr(Instruction *I);
 
 public:
@@ -256,7 +258,7 @@ static void copyMetadataForAtomic(Instruction &Dest,
       else if (ID == Ctx.getMDKindID("amdgpu.no.fine.grained.memory"))
         Dest.setMetadata(ID, N);
 
-      // Losing amdgpu.ignore.denormal.mode, but it doesn't matter for current
+      // Losing atomic.ignore.denormal.mode, but it doesn't matter for current
       // uses.
       break;
     }
@@ -333,7 +335,48 @@ bool AtomicExpandImpl::tryInsertFencesForAtomic(AtomicInst *AtomicI,
   return false;
 }
 
+/// In a single-threaded environment, atomic operations can be lowered to their
+/// non-atomic equivalents: fences are removed, and atomic loads, stores, RMW,
+/// and cmpxchg become plain memory operations.
+bool AtomicExpandImpl::lowerToNonAtomic(Instruction *I) {
+  if (auto *FI = dyn_cast<FenceInst>(I)) {
+    FI->eraseFromParent();
+    return true;
+  }
+
+  if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(I))
+    return lowerAtomicCmpXchgInst(CXI);
+
+  if (auto *RMWI = dyn_cast<AtomicRMWInst>(I))
+    return lowerAtomicRMWInst(RMWI);
+
+  if (auto *LI = dyn_cast<LoadInst>(I)) {
+    if (LI->isAtomic()) {
+      LI->setAtomic(AtomicOrdering::NotAtomic);
+      LI->setElementwise(false);
+      return true;
+    }
+
+    return false;
+  }
+
+  if (auto *SI = dyn_cast<StoreInst>(I)) {
+    if (SI->isAtomic()) {
+      SI->setAtomic(AtomicOrdering::NotAtomic);
+      SI->setElementwise(false);
+      return true;
+    }
+
+    return false;
+  }
+
+  return false;
+}
+
 bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
+  if (SingleThreaded)
+    return lowerToNonAtomic(I);
+
   if (auto *LI = dyn_cast<LoadInst>(I)) {
     if (!LI->isAtomic())
       return false;
@@ -457,11 +500,14 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
 bool AtomicExpandImpl::run(Function &F,
                            const ModuleLibcallLoweringInfo &LibcallResult,
                            const TargetMachine *TM) {
+  SingleThreaded = F.getParent()->getThreadModel() == ThreadModel::Single;
+
   const auto *Subtarget = TM->getSubtargetImpl(F);
-  if (!Subtarget->enableAtomicExpand())
+  // In a single-threaded environment atomics are lowered to non-atomic form
+  if (!SingleThreaded && !Subtarget->enableAtomicExpand())
     return false;
   TLI = Subtarget->getTargetLowering();
-  LibcallLowering = &LibcallResult.getLibcallLowering(*Subtarget);
+  LibcallLowering = &getLibcallLowering(LibcallResult, *Subtarget);
   DL = &F.getDataLayout();
 
   bool MadeChange = false;
@@ -1009,58 +1055,58 @@ static Value *insertMaskedValue(IRBuilderBase &Builder, Value *WideWord,
 /// affected by the operation)
 static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
                                     IRBuilderBase &Builder, Value *Loaded,
-                                    Value *Shifted_Inc, Value *Inc,
+                                    Value *ValOperand_Shifted, Value *Inc,
                                     const PartwordMaskValues &PMV) {
   // TODO: update to use
   // https://graphics.stanford.edu/~seander/bithacks.html#MaskedMerge in order
   // to merge bits from two values without requiring PMV.Inv_Mask.
-  switch (Op) {
-  case AtomicRMWInst::Xchg: {
+
+  assert(Op != AtomicRMWInst::Or && Op != AtomicRMWInst::Xor &&
+         Op != AtomicRMWInst::And &&
+         "Or/Xor/And handled by widenPartwordAtomicRMW");
+
+  if (Op == AtomicRMWInst::Xchg) {
+    // Clear all the bits we are exchanging out. These are the bits under the
+    // mask. We can clear them with an `and` of the inverse mask.
     Value *Loaded_MaskOut = Builder.CreateAnd(Loaded, PMV.Inv_Mask);
-    Value *FinalVal = Builder.CreateOr(Loaded_MaskOut, Shifted_Inc);
+    // Now that the prevous bits are cleared, we can swap in the new value with
+    // an `or`.
+    Value *FinalVal = Builder.CreateOr(Loaded_MaskOut, ValOperand_Shifted);
     return FinalVal;
   }
-  case AtomicRMWInst::Or:
-  case AtomicRMWInst::Xor:
-  case AtomicRMWInst::And:
-    llvm_unreachable("Or/Xor/And handled by widenPartwordAtomicRMW");
-  case AtomicRMWInst::Add:
-  case AtomicRMWInst::Sub:
-  case AtomicRMWInst::Nand: {
-    // The other arithmetic ops need to be masked into place.
-    Value *NewVal = buildAtomicRMWValue(Op, Builder, Loaded, Shifted_Inc);
+
+  if (Op == AtomicRMWInst::Nand ||
+      (!PMV.ValueType->isVectorTy() &&
+       (Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub))) {
+    // For `Nand` and non-vector `Add` and `Sub`, we can perform the operation
+    // on the entire word because the extra bits in the unmasked region don't
+    // affect the computation in the masked region. The operation might still
+    // overwrite the unmasked region (e.g. from integer overflow or underflow),
+    // so we have to reapply the unmasked region afterwards.
+    //
+    // This trick doesn't work for vector `Add` and `Sub` because we use a
+    // scalar operation on the entire word. Scalarizing vector `Add` and `Sub`
+    // isn't legal because the vector versions may have element-wise overflows.
+    // TODO: For these, can we use a wider vector op with additional lanes?
+
+    // Atomic operation across the entire word.
+    Value *NewVal =
+        buildAtomicRMWValue(Op, Builder, Loaded, ValOperand_Shifted);
+    // Reapply the bits in the unmasked region.
     Value *NewVal_Masked = Builder.CreateAnd(NewVal, PMV.Mask);
     Value *Loaded_MaskOut = Builder.CreateAnd(Loaded, PMV.Inv_Mask);
     Value *FinalVal = Builder.CreateOr(Loaded_MaskOut, NewVal_Masked);
     return FinalVal;
   }
-  case AtomicRMWInst::Max:
-  case AtomicRMWInst::Min:
-  case AtomicRMWInst::UMax:
-  case AtomicRMWInst::UMin:
-  case AtomicRMWInst::FAdd:
-  case AtomicRMWInst::FSub:
-  case AtomicRMWInst::FMin:
-  case AtomicRMWInst::FMax:
-  case AtomicRMWInst::FMaximum:
-  case AtomicRMWInst::FMinimum:
-  case AtomicRMWInst::FMaximumNum:
-  case AtomicRMWInst::FMinimumNum:
-  case AtomicRMWInst::UIncWrap:
-  case AtomicRMWInst::UDecWrap:
-  case AtomicRMWInst::USubCond:
-  case AtomicRMWInst::USubSat: {
-    // Finally, other ops will operate on the full value, so truncate down to
-    // the original size, and expand out again after doing the
-    // operation. Bitcasts will be inserted for FP values.
-    Value *Loaded_Extract = extractMaskedValue(Builder, Loaded, PMV);
-    Value *NewVal = buildAtomicRMWValue(Op, Builder, Loaded_Extract, Inc);
-    Value *FinalVal = insertMaskedValue(Builder, Loaded, NewVal, PMV);
-    return FinalVal;
-  }
-  default:
-    llvm_unreachable("Unknown atomic op");
-  }
+
+  // All other ops operate on the sub-word size. Truncate down to the
+  // original size, and expand out again after doing the operation. Bitcasts
+  // will be inserted for FP values.
+  assert(!ValOperand_Shifted);
+  Value *Loaded_Extract = extractMaskedValue(Builder, Loaded, PMV);
+  Value *NewVal = buildAtomicRMWValue(Op, Builder, Loaded_Extract, Inc);
+  Value *FinalVal = insertMaskedValue(Builder, Loaded, NewVal, PMV);
+  return FinalVal;
 }
 
 /// Expand a sub-word atomicrmw operation into an appropriate
@@ -1089,8 +1135,12 @@ void AtomicExpandImpl::expandPartwordAtomicRMW(
                        AI->getAlign(), TLI->getMinCmpXchgSizeInBits() / 8);
 
   Value *ValOperand_Shifted = nullptr;
-  if (Op == AtomicRMWInst::Xchg || Op == AtomicRMWInst::Add ||
-      Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Nand) {
+  bool NeedsShiftedOperand =
+      Op == AtomicRMWInst::Xchg || Op == AtomicRMWInst::Nand ||
+      (!PMV.ValueType->isVectorTy() &&
+       (Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub));
+
+  if (NeedsShiftedOperand) {
     Value *ValOp = Builder.CreateBitCast(AI->getValOperand(), PMV.IntValueType);
     ValOperand_Shifted =
         Builder.CreateShl(Builder.CreateZExt(ValOp, PMV.WordType), PMV.ShiftAmt,
@@ -1133,9 +1183,15 @@ AtomicRMWInst *AtomicExpandImpl::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
       createMaskInstrs(Builder, AI, AI->getType(), AI->getPointerOperand(),
                        AI->getAlign(), TLI->getMinCmpXchgSizeInBits() / 8);
 
+  Value *ValOp = AI->getValOperand();
+  if (ValOp->getType()->isVectorTy())
+    // For vectors, bitcast to the integer type before extending. Note that
+    // or/xor/and on vectors are equivalent to the same operation on an integer
+    // that spans the vector, so we can use the integer type for the operation.
+    ValOp = Builder.CreateBitCast(ValOp, PMV.IntValueType);
   Value *ValOperand_Shifted =
-      Builder.CreateShl(Builder.CreateZExt(AI->getValOperand(), PMV.WordType),
-                        PMV.ShiftAmt, "ValOperand_Shifted");
+      Builder.CreateShl(Builder.CreateZExt(ValOp, PMV.WordType), PMV.ShiftAmt,
+                        "ValOperand_Shifted");
 
   Value *NewOperand;
 

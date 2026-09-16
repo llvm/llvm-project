@@ -379,8 +379,8 @@ define <16 x float> @test_llvm_x86_avx512_gather_dps_512(ptr %b, <16 x i32> %iv)
 ; CHECK-NEXT:    movq %rsp, %rax
 ; CHECK-NEXT:    movq $-1, %rcx
 ; CHECK-NEXT:    sarq $63, %rax
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    kxnorw %k0, %k0, %k1
 ; CHECK-NEXT:    orq %rax, %rdi
 ; CHECK-NEXT:    vpbroadcastq %rax, %zmm2
 ; CHECK-NEXT:    vporq %zmm0, %zmm2, %zmm0
@@ -472,8 +472,8 @@ define <16 x i32> @test_llvm_x86_avx512_gather_dpi_512(ptr %b, <16 x i32> %iv) #
 ; CHECK-NEXT:    movq %rsp, %rax
 ; CHECK-NEXT:    movq $-1, %rcx
 ; CHECK-NEXT:    sarq $63, %rax
-; CHECK-NEXT:    kxnorw %k0, %k0, %k1
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    kxnorw %k0, %k0, %k1
 ; CHECK-NEXT:    orq %rax, %rdi
 ; CHECK-NEXT:    vpbroadcastq %rax, %zmm2
 ; CHECK-NEXT:    vporq %zmm0, %zmm2, %zmm0

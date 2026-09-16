@@ -30,7 +30,7 @@
 .long func
 
 # CHECK:      Disassembly of section .text:
-# CHECK:      <.text>:
+# CHECK:      <func>:
 # CHECK-NEXT: 10188: blr
 # CHECK:      <_start>:
 # CHECK-NEXT:        bl 0x10190

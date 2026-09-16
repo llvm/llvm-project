@@ -10,7 +10,7 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
     @no_debug_info_test
-    @skipUnlessDarwin
+    @requireDarwin
     def test_abort(self):
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))

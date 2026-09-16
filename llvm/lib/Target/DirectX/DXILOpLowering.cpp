@@ -26,6 +26,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Use.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -35,6 +36,12 @@
 
 using namespace llvm;
 using namespace llvm::dxil;
+
+/// Write mask covering all four components of a UAV element. Typed UAV stores
+/// (textures and typed buffers) must always use this mask - the DXIL validator
+/// rejects anything narrower. Only raw and / structured buffer stores may use a
+/// partial mask.
+static constexpr uint8_t TypedUAVStoreWriteMask = 0xF;
 
 namespace {
 class OpLowerer {
@@ -268,7 +275,7 @@ public:
     CI->eraseFromParent();
 
     if (NameGlobal && NameGlobal->use_empty())
-      NameGlobal->removeFromParent();
+      NameGlobal->eraseFromParent();
   }
 
   bool hasNonUniformIndex(Value *IndexOp) {
@@ -351,7 +358,7 @@ public:
           (Binding.Size == 1) ? false : hasNonUniformIndex(IndexOp);
       std::array<Value *, 4> Args{
           ConstantInt::get(Int8Ty, llvm::to_underlying(RC)),
-          ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
+          ConstantInt::get(Int32Ty, Binding.BindingID), IndexOp,
           ConstantInt::get(Int1Ty, HasNonUniformIndex)};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::CreateHandle, Args, CI->getName());
@@ -425,6 +432,49 @@ public:
     if (MMDI.DXILVersion < VersionTuple(1, 6))
       return lowerToCreateHandle(F);
     return lowerToBindAndAnnotateHandle(F);
+  }
+
+  bool lowerHandleFromHeap(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      auto *It = DRM.find(CI);
+      assert(It != DRM.end() && "Resource not in map?");
+      dxil::ResourceInfo &RI = *It;
+      dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
+
+      Value *IndexOp = CI->getArgOperand(0);
+      Value *IsSamplerHeap =
+          ConstantInt::getBool(IRB.getContext(), RTI.isSampler());
+
+      std::pair<uint32_t, uint32_t> Props =
+          RI.getAnnotateProps(*F.getParent(), RTI);
+
+      bool NonUniformIndex = hasNonUniformIndex(IndexOp);
+      Value *NonUniformOp =
+          ConstantInt::getBool(IRB.getContext(), NonUniformIndex);
+
+      std::array<Value *, 3> Args{IndexOp, IsSamplerHeap, NonUniformOp};
+      Expected<CallInst *> OpCreateHandle = OpBuilder.tryCreateOp(
+          OpCode::CreateHandleFromHeap, Args, CI->getName());
+      if (Error E = OpCreateHandle.takeError())
+        return E;
+
+      std::array<Value *, 2> AnnotateArgs{
+          *OpCreateHandle, OpBuilder.getResProps(Props.first, Props.second)};
+      Expected<CallInst *> OpAnnotate = OpBuilder.tryCreateOp(
+          OpCode::AnnotateHandle, AnnotateArgs,
+          CI->hasName() ? CI->getName() + "_annot" : Twine());
+      if (Error E = OpAnnotate.takeError())
+        return E;
+
+      Value *Cast = createTmpHandleCast(*OpAnnotate, CI->getType());
+      CI->replaceAllUsesWith(Cast);
+      CI->eraseFromParent();
+      return Error::success();
+    });
   }
 
   /// Replace uses of \c Intrin with the values in the `dx.ResRet` of \c Op.
@@ -590,22 +640,56 @@ public:
     });
   }
 
+  /// Recover the scalar components of `Vec` from the `insertelement` chain that
+  /// built it. Since we run after the scalarizer, such a chain is usually just
+  /// a temporary gathered to pass the vector to a call.
+  static void collectInsertedElements(Value *Vec,
+                                      MutableArrayRef<Value *> Elements) {
+    unsigned NumElts = cast<FixedVectorType>(Vec->getType())->getNumElements();
+    assert(NumElts <= Elements.size() && "Not enough room for the components");
+
+    SmallVector<InsertElementInst *, 4> Chain;
+    for (auto *IEI = dyn_cast<InsertElementInst>(Vec); IEI;
+         IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0))) {
+      if (!isa<ConstantInt>(IEI->getOperand(2)))
+        break; // This break should never happen below SM6.9.
+      Chain.push_back(IEI);
+    }
+
+    // Replay element insertion from the innermost first, so that a repeated
+    // index ends up holding the live value.
+    while (!Chain.empty()) {
+      InsertElementInst *IEI = Chain.pop_back_val();
+      uint64_t IndexVal = cast<ConstantInt>(IEI->getOperand(2))->getZExtValue();
+      if (IndexVal < NumElts)
+        Elements[IndexVal] = IEI->getOperand(1);
+    }
+  }
+
   // Copies `Src` into `Args` starting at `ArgIdx`. If `Src` is a vector, its
-  // elements are extracted and stored in consecutive slots; otherwise `Src`
-  // is stored directly. At most `MaxElements` elements are expected.
+  // elements are placed in consecutive slots; otherwise `Src` is stored
+  // directly. At most `MaxElements` elements are expected.
   static void extractElementsIntoArgs(IRBuilder<> &IRB,
                                       MutableArrayRef<Value *> Args,
                                       unsigned ArgIdx, Value *Src,
                                       unsigned MaxElements) {
-    Type *Ty = Src->getType();
-    if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
-      unsigned Count = VecTy->getNumElements();
-      assert(Count <= MaxElements && "Expected at most 3 elements in vector");
-      for (unsigned I = 0; I < Count; ++I)
-        Args[ArgIdx + I] = IRB.CreateExtractElement(Src, uint64_t(I));
-    } else {
+    auto *VecTy = dyn_cast<FixedVectorType>(Src->getType());
+    if (!VecTy) {
       Args[ArgIdx] = Src;
+      return;
     }
+
+    unsigned Count = VecTy->getNumElements();
+    assert(Count <= MaxElements && "Too many elements for the arg list");
+
+    SmallVector<Value *, 4> Elements(Count, nullptr);
+    collectInsertedElements(Src, Elements);
+
+    for (unsigned I = 0; I < Count; ++I)
+      Args[ArgIdx + I] = Elements[I]
+                             ? Elements[I]
+                             : IRB.CreateExtractElement(
+                                   Src, ConstantInt::get(IRB.getInt32Ty(), I));
   }
 
   /// Copy offsets into the argument list at the given index, unless
@@ -627,11 +711,22 @@ public:
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
+      SmallVector<WeakTrackingVH, 4> VectorArgs = collectVectorArgs(CI);
       Value *Handle =
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
       Value *Coords = CI->getArgOperand(1);
       Value *MipLevel = CI->getArgOperand(2);
       Value *Offsets = CI->getArgOperand(3);
+
+      // A UAV descriptor binds a single mip slice, so there is no mip to select
+      // in the case of a UAV. Multisampled UAVs are the exception: the slot
+      // carries a sample index and stays live.
+      auto *HandleTy = cast<TargetExtType>(CI->getArgOperand(0)->getType());
+      dxil::ResourceTypeInfo &RTI = DRTM[HandleTy];
+      dxil::ResourceKind Kind = RTI.getResourceKind();
+      if (RTI.isUAV() && Kind != dxil::ResourceKind::Texture2DMS &&
+          Kind != dxil::ResourceKind::Texture2DMSArray)
+        MipLevel = UndefValue::get(Int32Ty);
 
       Type *OldTy = CI->getType();
       Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
@@ -651,6 +746,8 @@ public:
       if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/false))
         return E;
 
+      eraseDeadInsertElementChains(VectorArgs);
+
       return Error::success();
     });
   }
@@ -666,6 +763,7 @@ public:
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
+      SmallVector<WeakTrackingVH, 4> VectorArgs = collectVectorArgs(CI);
       Value *Handle =
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
       Value *Sampler =
@@ -695,6 +793,8 @@ public:
         return E;
       if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/false))
         return E;
+
+      eraseDeadInsertElementChains(VectorArgs);
 
       return Error::success();
     });
@@ -879,6 +979,40 @@ public:
     return false;
   }
 
+  /// Splits the value operand of a resource store into its (at most four)
+  /// scalar components. Slots beyond the length of `Data` are filled with
+  /// `undef` when `FillWithUndef` is set (raw and structured buffers), or with
+  /// the first component otherwise (typed UAVs, which must write all four
+  /// components - repeating the first one matches DXC).
+  static std::array<Value *, 4> splitStoreData(IRBuilder<> &IRB, Value *Data,
+                                               uint64_t NumElements,
+                                               bool FillWithUndef) {
+    std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
+    extractElementsIntoArgs(IRB, DataElements, 0, Data, 4);
+
+    // For any elements beyond the length of the vector, we should fill it up
+    // with undef - however, for typed UAVs we repeat the first element to
+    // match DXC.
+    for (uint64_t I = NumElements, E = 4; I < E; ++I)
+      if (DataElements[I] == nullptr)
+        DataElements[I] =
+            FillWithUndef ? UndefValue::get(Data->getType()->getScalarType())
+                          : DataElements[0];
+
+    return DataElements;
+  }
+
+  /// Erase the chain of `insertelement`s that only existed to build up a vector
+  /// operand of an intrinsic we've just replaced.
+  static void eraseDeadInsertElementChain(Value *Data) {
+    auto *IEI = dyn_cast<InsertElementInst>(Data);
+    while (IEI && IEI->use_empty()) {
+      InsertElementInst *Tmp = IEI;
+      IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+      Tmp->eraseFromParent();
+    }
+  }
+
   [[nodiscard]] bool lowerBufferStore(Function &F, bool IsRaw) {
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
@@ -906,8 +1040,8 @@ public:
 
       uint64_t NumElements =
           DL.getTypeSizeInBits(DataTy) / DL.getTypeSizeInBits(ScalarTy);
-      Value *Mask =
-          ConstantInt::get(Int8Ty, IsRaw ? ~(~0U << NumElements) : 15U);
+      Value *Mask = ConstantInt::get(Int8Ty, IsRaw ? ~(~0U << NumElements)
+                                                   : TypedUAVStoreWriteMask);
 
       // TODO: check that we only have vector or scalar...
       if (NumElements > 4)
@@ -915,39 +1049,8 @@ public:
             "Buffer store data must have at most 4 elements",
             inconvertibleErrorCode());
 
-      std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
-      if (DataTy == ScalarTy)
-        DataElements[0] = Data;
-      else {
-        // Since we're post-scalarizer, if we see a vector here it's likely
-        // constructed solely for the argument of the store. Just use the scalar
-        // values from before they're inserted into the temporary.
-        auto *IEI = dyn_cast<InsertElementInst>(Data);
-        while (IEI) {
-          auto *IndexOp = dyn_cast<ConstantInt>(IEI->getOperand(2));
-          if (!IndexOp)
-            break;
-          size_t IndexVal = IndexOp->getZExtValue();
-          assert(IndexVal < 4 && "Too many elements for buffer store");
-          DataElements[IndexVal] = IEI->getOperand(1);
-          IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
-        }
-      }
-
-      // If for some reason we weren't able to forward the arguments from the
-      // scalarizer artifact, then we may need to actually extract elements from
-      // the vector.
-      for (int I = 0, E = NumElements; I < E; ++I)
-        if (DataElements[I] == nullptr)
-          DataElements[I] =
-              IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, I));
-
-      // For any elements beyond the length of the vector, we should fill it up
-      // with undef - however, for typed buffers we repeat the first element to
-      // match DXC.
-      for (int I = NumElements, E = 4; I < E; ++I)
-        if (DataElements[I] == nullptr)
-          DataElements[I] = IsRaw ? UndefValue::get(ScalarTy) : DataElements[0];
+      std::array<Value *, 4> DataElements =
+          splitStoreData(IRB, Data, NumElements, /*FillWithUndef=*/IsRaw);
 
       dxil::OpCode Op = OpCode::BufferStore;
       SmallVector<Value *, 9> Args{
@@ -965,13 +1068,73 @@ public:
         return E;
 
       CI->eraseFromParent();
-      // Clean up any leftover `insertelement`s
-      auto *IEI = dyn_cast<InsertElementInst>(Data);
-      while (IEI && IEI->use_empty()) {
-        InsertElementInst *Tmp = IEI;
-        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
-        Tmp->eraseFromParent();
-      }
+      eraseDeadInsertElementChain(Data);
+
+      return Error::success();
+    });
+  }
+
+  /// Snapshot the vector-typed arguments of `CI` so their `insertelement`
+  /// chains can be cleaned up once `CI` has been replaced. The handles are weak
+  /// because two arguments can share an `insertelement` chain.
+  static SmallVector<WeakTrackingVH, 4> collectVectorArgs(CallInst *CI) {
+    SmallVector<WeakTrackingVH, 4> Vectors;
+    for (Value *Arg : CI->args())
+      if (isa<FixedVectorType>(Arg->getType()))
+        Vectors.emplace_back(Arg);
+    return Vectors;
+  }
+
+  static void eraseDeadInsertElementChains(ArrayRef<WeakTrackingVH> Vectors) {
+    for (const WeakTrackingVH &VH : Vectors)
+      if (Value *V = VH)
+        eraseDeadInsertElementChain(V);
+  }
+
+  [[nodiscard]] bool lowerTextureStore(Function &F) {
+    const DataLayout &DL = F.getDataLayout();
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int8Ty = IRB.getInt8Ty();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      SmallVector<WeakTrackingVH, 4> VectorArgs = collectVectorArgs(CI);
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Coords = CI->getArgOperand(1);
+      Value *Data = CI->getArgOperand(2);
+
+      Type *DataTy = Data->getType();
+      Type *ScalarTy = DataTy->getScalarType();
+      uint64_t NumElements =
+          DL.getTypeSizeInBits(DataTy) / DL.getTypeSizeInBits(ScalarTy);
+      if (NumElements > 4)
+        return make_error<StringError>(
+            "Texture store data must have at most 4 elements",
+            inconvertibleErrorCode());
+
+      Value *Mask = ConstantInt::get(Int8Ty, TypedUAVStoreWriteMask);
+      std::array<Value *, 4> DataElements =
+          splitStoreData(IRB, Data, NumElements, /*FillWithUndef=*/false);
+
+      Value *Undef = UndefValue::get(Int32Ty);
+      std::array<Value *, 9> Args{
+          Handle,          Undef,           Undef,
+          Undef,           DataElements[0], DataElements[1],
+          DataElements[2], DataElements[3], Mask};
+
+      // Copy the coordinates into Args.
+      extractElementsIntoArgs(IRB, Args, 1, Coords, 3);
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(OpCode::TextureStore, Args, CI->getName());
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->eraseFromParent();
+      eraseDeadInsertElementChains(VectorArgs);
 
       return Error::success();
     });
@@ -990,11 +1153,11 @@ public:
       Value *BinOp = CI->getArgOperand(1);
       Value *Coord0 = CI->getArgOperand(2);
       Value *Coord1 = CI->getArgOperand(3);
-      Value *NewValue = CI->getArgOperand(4);
+      Value *Coord2 = CI->getArgOperand(4);
+      Value *NewValue = CI->getArgOperand(5);
 
-      std::array<Value *, 6> Args{
-          Handle,  BinOp, Coord0, Coord1, ConstantInt::get(IRB.getInt32Ty(), 0),
-          NewValue};
+      std::array<Value *, 6> Args{Handle, BinOp,  Coord0,
+                                  Coord1, Coord2, NewValue};
       Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
           dxil::OpCode::AtomicBinOp, Args, CI->getName(), CI->getType());
       if (Error E = OpCall.takeError()) {
@@ -1194,6 +1357,9 @@ public:
       case Intrinsic::dx_resource_handlefrombinding:
         HasErrors |= lowerHandleFromBinding(F);
         break;
+      case Intrinsic::dx_resource_handlefromheap:
+        HasErrors |= lowerHandleFromHeap(F);
+        break;
       case Intrinsic::dx_resource_getbasepointer:
       case Intrinsic::dx_resource_getpointer:
         HasErrors |= lowerGetPointer(F);
@@ -1232,6 +1398,9 @@ public:
         break;
       case Intrinsic::dx_resource_store_typedbuffer:
         HasErrors |= lowerBufferStore(F, /*IsRaw=*/false);
+        break;
+      case Intrinsic::dx_resource_store_texture:
+        HasErrors |= lowerTextureStore(F);
         break;
       case Intrinsic::dx_resource_load_rawbuffer:
         HasErrors |= lowerRawBufferLoad(F);

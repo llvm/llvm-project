@@ -23,6 +23,44 @@ else()
 endif()
 pythonize_bool(COMPILER_RT_BUILT_WITH_LLVM)
 
+# Probe the host for AMDGPU + HIP / OpenMP offload so every sanitizer suite
+# can share the same lit features and substitutions.
+set(COMPILER_RT_CAN_RUN_HIP FALSE)
+set(COMPILER_RT_CAN_RUN_OPENMP_OFFLOAD FALSE)
+set(COMPILER_RT_GPU_ARCH "")
+set(COMPILER_RT_GPU_DEVICE_COUNT 0)
+set(COMPILER_RT_HIP_LIB_DIR "")
+if(LLVM_RUNTIMES_BUILD AND NOT COMPILER_RT_GPU_BUILD AND
+   COMPILER_RT_TEST_COMPILER_ID MATCHES "Clang")
+  find_program(COMPILER_RT_OFFLOAD_ARCH offload-arch
+               PATHS ${LLVM_TOOLS_BINARY_DIR})
+  if(COMPILER_RT_OFFLOAD_ARCH)
+    execute_process(COMMAND ${COMPILER_RT_OFFLOAD_ARCH} --only=amdgpu
+                    OUTPUT_VARIABLE _compiler_rt_amdgpu_archs
+                    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    string(REPLACE "\n" ";" _compiler_rt_amdgpu_archs
+           "${_compiler_rt_amdgpu_archs}")
+    if(_compiler_rt_amdgpu_archs)
+      list(GET _compiler_rt_amdgpu_archs 0 COMPILER_RT_GPU_ARCH)
+      list(LENGTH _compiler_rt_amdgpu_archs COMPILER_RT_GPU_DEVICE_COUNT)
+    endif()
+  endif()
+  if(COMPILER_RT_GPU_ARCH)
+    find_library(COMPILER_RT_TEST_HIP_LIBRARY NAMES amdhip64
+      HINTS "$ENV{ROCM_PATH}/lib" "$ENV{HIP_PATH}/lib" /opt/rocm/lib)
+    if(COMPILER_RT_TEST_HIP_LIBRARY)
+      set(COMPILER_RT_CAN_RUN_HIP TRUE)
+      get_filename_component(COMPILER_RT_HIP_LIB_DIR
+                             "${COMPILER_RT_TEST_HIP_LIBRARY}" DIRECTORY)
+    endif()
+    if(HAVE_OFFLOAD)
+      set(COMPILER_RT_CAN_RUN_OPENMP_OFFLOAD TRUE)
+    endif()
+  endif()
+endif()
+pythonize_bool(COMPILER_RT_CAN_RUN_HIP)
+pythonize_bool(COMPILER_RT_CAN_RUN_OPENMP_OFFLOAD)
+
 configure_compiler_rt_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.common.configured.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.common.configured)
@@ -80,6 +118,11 @@ endif()
 
 function(compiler_rt_test_runtime runtime)
   cmake_parse_arguments(ARG "NO_COMPILER_RT_HAS_GUARD" "" "" ${ARGN})
+
+  # GPU UBSan tests run as part of the host test suite.
+  if(COMPILER_RT_GPU_BUILD AND runtime STREQUAL "ubsan")
+    return()
+  endif()
 
   # Validate that the test suite name is known.
   if(NOT "${runtime}" IN_LIST COMPILER_RT_KNOWN_TEST_SUITES)
@@ -176,7 +219,7 @@ endif()
 # introduce a rule to run to run all of them.
 get_property(LLVM_COMPILER_RT_LIT_DEPENDS GLOBAL PROPERTY LLVM_COMPILER_RT_LIT_DEPENDS)
 add_custom_target(compiler-rt-test-depends)
-set_target_properties(compiler-rt-test-depends PROPERTIES FOLDER "Compiler-RT/Tests")
+set_target_properties(compiler-rt-test-depends PROPERTIES FOLDER "compiler-rt/Tests")
 if(LLVM_COMPILER_RT_LIT_DEPENDS)
   add_dependencies(compiler-rt-test-depends ${LLVM_COMPILER_RT_LIT_DEPENDS})
 endif()

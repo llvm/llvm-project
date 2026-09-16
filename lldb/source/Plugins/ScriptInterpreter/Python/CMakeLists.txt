@@ -34,6 +34,8 @@ set(python_plugin_sources
   Interfaces/ScriptedBreakpointPythonInterface.cpp
   Interfaces/ScriptedCommandPythonInterface.cpp
   Interfaces/ScriptedStackFrameRecognizerPythonInterface.cpp
+  Interfaces/ScriptedStringSummaryPythonInterface.cpp
+  Interfaces/ScriptedSyntheticChildrenPythonInterface.cpp
   Interfaces/ScriptedThreadPlanPythonInterface.cpp
   Interfaces/ScriptedThreadPythonInterface.cpp
 )

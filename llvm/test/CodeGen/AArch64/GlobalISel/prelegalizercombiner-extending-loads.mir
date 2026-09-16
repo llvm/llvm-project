@@ -9,11 +9,11 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $w0 = COPY [[LOAD]](s32)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: $w0 = COPY [[LOAD]](i32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
-    %2:_(s32) = G_ANYEXT %1
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
+    %2:_(i32) = G_ANYEXT %1
     $w0 = COPY %2
 ...
 
@@ -26,12 +26,12 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $w0 = COPY [[LOAD]](s32)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: $w0 = COPY [[LOAD]](i32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
-    %2:_(s8) = COPY %1
-    %3:_(s32) = G_ANYEXT %1
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
+    %2:_(i8) = COPY %1
+    %3:_(i32) = G_ANYEXT %1
     $w0 = COPY %3
 ...
 
@@ -44,11 +44,11 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $w0 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: $w0 = COPY [[SEXTLOAD]](i32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
-    %2:_(s32) = G_SEXT %1
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
+    %2:_(i32) = G_SEXT %1
     $w0 = COPY %2
 ...
 
@@ -61,11 +61,11 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $w0 = COPY [[ZEXTLOAD]](s32)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i32) = G_ZEXTLOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: $w0 = COPY [[ZEXTLOAD]](i32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
-    %2:_(s32) = G_ZEXT %1
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
+    %2:_(i32) = G_ZEXT %1
     $w0 = COPY %2
 ...
 
@@ -78,13 +78,13 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $w0 = COPY [[LOAD]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[LOAD]](s32)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: $w0 = COPY [[LOAD]](i32)
+    ; CHECK-NEXT: $w1 = COPY [[LOAD]](i32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
-    %2:_(s32) = G_ANYEXT %1
-    %3:_(s32) = G_ANYEXT %1
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
+    %2:_(i32) = G_ANYEXT %1
+    %3:_(i32) = G_ANYEXT %1
     $w0 = COPY %2
     $w1 = COPY %3
 ...
@@ -98,13 +98,13 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $w0 = COPY [[SEXTLOAD]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: $w0 = COPY [[SEXTLOAD]](i32)
+    ; CHECK-NEXT: $w1 = COPY [[SEXTLOAD]](i32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
-    %2:_(s32) = G_ANYEXT %1
-    %3:_(s32) = G_SEXT %1
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
+    %2:_(i32) = G_ANYEXT %1
+    %3:_(i32) = G_SEXT %1
     $w0 = COPY %2
     $w1 = COPY %3
 ...
@@ -118,19 +118,19 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXTLOAD]](s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 -1
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s8) = G_XOR [[TRUNC]], [[C]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[XOR]](s8)
-    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[SEXTLOAD]](i32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i8) = G_CONSTANT i8 -1
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i8) = G_XOR [[TRUNC]], [[C]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[XOR]](i8)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](i32)
+    ; CHECK-NEXT: $w1 = COPY [[SEXTLOAD]](i32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
-    %2:_(s8) = G_CONSTANT i8 -1
-    %3:_(s8) = G_XOR %1, %2
-    %5:_(s32) = G_ANYEXT %3
-    %6:_(s32) = G_SEXT %1
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
+    %2:_(i8) = G_CONSTANT i8 -1
+    %3:_(i8) = G_XOR %1, %2
+    %5:_(i32) = G_ANYEXT %3
+    %6:_(i32) = G_SEXT %1
     $w0 = COPY %5
     $w1 = COPY %6
 ...
@@ -144,13 +144,13 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $w0 = COPY [[ZEXTLOAD]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[ZEXTLOAD]](s32)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i32) = G_ZEXTLOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: $w0 = COPY [[ZEXTLOAD]](i32)
+    ; CHECK-NEXT: $w1 = COPY [[ZEXTLOAD]](i32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
-    %2:_(s32) = G_ANYEXT %1
-    %3:_(s32) = G_ZEXT %1
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
+    %2:_(i32) = G_ANYEXT %1
+    %3:_(i32) = G_ZEXT %1
     $w0 = COPY %2
     $w1 = COPY %3
 ...
@@ -164,15 +164,15 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXTLOAD]](s32)
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
-    ; CHECK-NEXT: $w0 = COPY [[ZEXT]](s32)
-    ; CHECK-NEXT: $w1 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[SEXTLOAD]](i32)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[TRUNC]](i8)
+    ; CHECK-NEXT: $w0 = COPY [[ZEXT]](i32)
+    ; CHECK-NEXT: $w1 = COPY [[SEXTLOAD]](i32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
-    %2:_(s32) = G_ZEXT %1
-    %3:_(s32) = G_SEXT %1
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
+    %2:_(i32) = G_ZEXT %1
+    %3:_(i32) = G_SEXT %1
     $w0 = COPY %2
     $w1 = COPY %3
 ...
@@ -186,14 +186,14 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[SEXTLOAD]](s32)
-    ; CHECK-NEXT: $x0 = COPY [[ANYEXT]](s64)
-    ; CHECK-NEXT: $w1 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[SEXTLOAD]](i32)
+    ; CHECK-NEXT: $x0 = COPY [[ANYEXT]](i64)
+    ; CHECK-NEXT: $w1 = COPY [[SEXTLOAD]](i32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
-    %2:_(s64) = G_ANYEXT %1
-    %3:_(s32) = G_SEXT %1
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
+    %2:_(i64) = G_ANYEXT %1
+    %3:_(i32) = G_SEXT %1
     $x0 = COPY %2
     $w1 = COPY %3
 ...
@@ -207,15 +207,15 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXTLOAD]](s64)
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
-    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
-    ; CHECK-NEXT: $x1 = COPY [[SEXTLOAD]](s64)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i64) = G_SEXTLOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[SEXTLOAD]](i64)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC]](i8)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](i32)
+    ; CHECK-NEXT: $x1 = COPY [[SEXTLOAD]](i64)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
-    %2:_(s32) = G_ANYEXT %1
-    %3:_(s64) = G_SEXT %1
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
+    %2:_(i32) = G_ANYEXT %1
+    %3:_(i64) = G_SEXT %1
     $w0 = COPY %2
     $x1 = COPY %3
 ...
@@ -229,18 +229,18 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXTLOAD]](s64)
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
-    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
-    ; CHECK-NEXT: $x1 = COPY [[SEXTLOAD]](s64)
-    ; CHECK-NEXT: $w2 = COPY [[ANYEXT1]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i64) = G_SEXTLOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[SEXTLOAD]](i64)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC]](i8)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC]](i8)
+    ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](i32)
+    ; CHECK-NEXT: $x1 = COPY [[SEXTLOAD]](i64)
+    ; CHECK-NEXT: $w2 = COPY [[ANYEXT1]](i32)
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
-    %2:_(s32) = G_ANYEXT %1
-    %3:_(s64) = G_SEXT %1
-    %4:_(s32) = G_ANYEXT %1
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
+    %2:_(i32) = G_ANYEXT %1
+    %3:_(i64) = G_SEXT %1
+    %4:_(i32) = G_ANYEXT %1
     $w0 = COPY %2
     $x1 = COPY %3
     $w2 = COPY %4
@@ -255,18 +255,18 @@ body: |
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s8))
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p0) :: (load (i8))
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   $w0 = COPY [[LOAD]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[LOAD]](i32)
   bb.0:
     liveins: $x0
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
     G_BR %bb.1
   bb.1:
-    %2:_(s32) = G_ANYEXT %1
+    %2:_(i32) = G_ANYEXT %1
     $w0 = COPY %2
 ...
 
@@ -279,18 +279,18 @@ body: |
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
+  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p0) :: (load (i8))
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   $w0 = COPY [[SEXTLOAD]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[SEXTLOAD]](i32)
   bb.0:
     liveins: $x0
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
     G_BR %bb.1
   bb.1:
-    %2:_(s32) = G_SEXT %1
+    %2:_(i32) = G_SEXT %1
     $w0 = COPY %2
 ...
 
@@ -303,18 +303,18 @@ body: |
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
+  ; CHECK-NEXT:   [[ZEXTLOAD:%[0-9]+]]:_(i32) = G_ZEXTLOAD [[COPY]](p0) :: (load (i8))
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   $w0 = COPY [[ZEXTLOAD]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXTLOAD]](i32)
   bb.0:
     liveins: $x0
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
     G_BR %bb.1
   bb.1:
-    %2:_(s32) = G_ZEXT %1
+    %2:_(i32) = G_ZEXT %1
     $w0 = COPY %2
 ...
 
@@ -327,20 +327,20 @@ body: |
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s8))
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p0) :: (load (i8))
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   $w0 = COPY [[LOAD]](s32)
-  ; CHECK-NEXT:   $w1 = COPY [[LOAD]](s32)
+  ; CHECK-NEXT:   $w0 = COPY [[LOAD]](i32)
+  ; CHECK-NEXT:   $w1 = COPY [[LOAD]](i32)
   bb.0:
     liveins: $x0
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
-    %2:_(s32) = G_ANYEXT %1
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
+    %2:_(i32) = G_ANYEXT %1
     G_BR %bb.1
   bb.1:
-    %3:_(s32) = G_ANYEXT %1
+    %3:_(i32) = G_ANYEXT %1
     $w0 = COPY %2
     $w1 = COPY %3
 ...
@@ -354,21 +354,21 @@ body: |
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
+  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p0) :: (load (i8))
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[SEXTLOAD]](s32)
-  ; CHECK-NEXT:   $x0 = COPY [[ANYEXT]](s64)
-  ; CHECK-NEXT:   $w1 = COPY [[SEXTLOAD]](s32)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[SEXTLOAD]](i32)
+  ; CHECK-NEXT:   $x0 = COPY [[ANYEXT]](i64)
+  ; CHECK-NEXT:   $w1 = COPY [[SEXTLOAD]](i32)
   bb.0:
     liveins: $x0
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
     G_BR %bb.1
   bb.1:
-    %2:_(s64) = G_ANYEXT %1
-    %3:_(s32) = G_SEXT %1
+    %2:_(i64) = G_ANYEXT %1
+    %3:_(i32) = G_SEXT %1
     $x0 = COPY %2
     $w1 = COPY %3
 ...
@@ -382,22 +382,22 @@ body: |
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
+  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(i64) = G_SEXTLOAD [[COPY]](p0) :: (load (i8))
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXTLOAD]](s64)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
-  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](s32)
-  ; CHECK-NEXT:   $x1 = COPY [[SEXTLOAD]](s64)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[SEXTLOAD]](i64)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC]](i8)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](i32)
+  ; CHECK-NEXT:   $x1 = COPY [[SEXTLOAD]](i64)
   bb.0:
     liveins: $x0
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
     G_BR %bb.1
   bb.1:
-    %2:_(s32) = G_ANYEXT %1
-    %3:_(s64) = G_SEXT %1
+    %2:_(i32) = G_ANYEXT %1
+    %3:_(i64) = G_SEXT %1
     $w0 = COPY %2
     $x1 = COPY %3
 ...
@@ -411,26 +411,26 @@ body: |
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[SEXTLOAD]](s64)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s8)
+  ; CHECK-NEXT:   [[SEXTLOAD:%[0-9]+]]:_(i64) = G_SEXTLOAD [[COPY]](p0) :: (load (i8))
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[SEXTLOAD]](i64)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC]](i8)
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[SEXTLOAD]](s64)
-  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC1]](s8)
-  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT1]](s32)
-  ; CHECK-NEXT:   $x1 = COPY [[SEXTLOAD]](s64)
-  ; CHECK-NEXT:   $w2 = COPY [[ANYEXT]](s32)
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i8) = G_TRUNC [[SEXTLOAD]](i64)
+  ; CHECK-NEXT:   [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[TRUNC1]](i8)
+  ; CHECK-NEXT:   $w0 = COPY [[ANYEXT1]](i32)
+  ; CHECK-NEXT:   $x1 = COPY [[SEXTLOAD]](i64)
+  ; CHECK-NEXT:   $w2 = COPY [[ANYEXT]](i32)
   bb.0:
     liveins: $x0
     %0:_(p0) = COPY $x0
-    %1:_(s8) = G_LOAD %0 :: (load (s8))
-    %4:_(s32) = G_ANYEXT %1
+    %1:_(i8) = G_LOAD %0 :: (load (i8))
+    %4:_(i32) = G_ANYEXT %1
     G_BR %bb.1
   bb.1:
-    %2:_(s32) = G_ANYEXT %1
-    %3:_(s64) = G_SEXT %1
+    %2:_(i32) = G_ANYEXT %1
+    %3:_(i64) = G_SEXT %1
     $w0 = COPY %2
     $x1 = COPY %3
     $w2 = COPY %4
@@ -449,14 +449,14 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p0) :: (load unordered (s16))
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD]](s16)
-    ; CHECK-NEXT: $w0 = COPY [[ZEXT]](s32)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i16) = G_LOAD [[COPY]](p0) :: (load unordered (i16))
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[LOAD]](i16)
+    ; CHECK-NEXT: $w0 = COPY [[ZEXT]](i32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(p0) = COPY $x0
-    %1:_(s16) = G_LOAD %0(p0) :: (load unordered (s16))
-    %2:_(s32) = G_ZEXT %1(s16)
-    $w0 = COPY %2(s32)
+    %1:_(i16) = G_LOAD %0(p0) :: (load unordered (i16))
+    %2:_(i32) = G_ZEXT %1(i16)
+    $w0 = COPY %2(i32)
     RET_ReallyLR implicit $w0
 ...
 ---
@@ -468,13 +468,13 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $x0 = COPY [[ZEXTLOAD]](s64)
-    ; CHECK-NEXT: $x1 = COPY [[ZEXTLOAD]](s64)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i64) = G_ZEXTLOAD [[COPY]](p0) :: (load (i8))
+    ; CHECK-NEXT: $x0 = COPY [[ZEXTLOAD]](i64)
+    ; CHECK-NEXT: $x1 = COPY [[ZEXTLOAD]](i64)
     %0:_(p0) = COPY $x0
-    %1:_(s32) = G_ZEXTLOAD %0 :: (load (s8))
-    %2:_(s64) = G_ZEXT %1
-    %3:_(s64) = G_SEXT %1
+    %1:_(i32) = G_ZEXTLOAD %0 :: (load (i8))
+    %2:_(i64) = G_ZEXT %1
+    %3:_(i64) = G_SEXT %1
     $x0 = COPY %2
     $x1 = COPY %3
 ...

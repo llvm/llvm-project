@@ -622,6 +622,15 @@ void test_offsetof_4(void) {
   *p = 0xDEADBEEF; // expected-warning{{Dereference of null pointer}}
 }
 
+// Test when __builtin_offsetof is not constant-foldable.
+struct test_offsetof_5_struct { int a; int arr[10]; };
+int test_offsetof_5(int i) {
+  int *p = 0;
+  unsigned long off = __builtin_offsetof(struct test_offsetof_5_struct, arr[i]);
+  (void)off;
+  return *p; // expected-warning{{Dereference of null pointer}}
+}
+
 // "nil receiver" false positive: make tracking  of the MemRegion for 'self'
 // path-sensitive
 @interface RDar6829164 : NSObject {

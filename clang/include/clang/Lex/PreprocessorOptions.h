@@ -84,6 +84,11 @@ public:
   /// Perform extra checks when loading PCM files for mutable file systems.
   bool ModulesCheckRelocated = true;
 
+  /// Perform redundant module lookups. This is typically for
+  /// compilations that rely on side effects of module lookup due to
+  /// poor modularization.
+  bool ModulesForceRedundantLookup = false;
+
   /// Initialize the preprocessor with the compiler and target specific
   /// predefines.
   bool UsePredefines = true;
@@ -171,6 +176,10 @@ public:
   /// be skipped so that the client can get a strict subset of the contents.
   bool SingleModuleParseMode = false;
 
+  /// When enabled, we don't try to load the corresponding module required by
+  /// the module map. This is used generally by the scanner.
+  bool DependencyScanningModuleMapImports = false;
+
   /// When enabled, the preprocessor will construct editor placeholder tokens.
   bool LexEditorPlaceholders = true;
 
@@ -257,6 +266,7 @@ public:
     DumpDeserializedPCHDecls = false;
     ImplicitPCHInclude.clear();
     SingleFileParseMode = false;
+    DependencyScanningModuleMapImports = false;
     LexEditorPlaceholders = true;
     RetainRemappedFileBuffers = true;
     PrecompiledPreambleBytes.first = 0;

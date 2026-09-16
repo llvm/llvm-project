@@ -9,7 +9,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestCase(TestBase):
-    @skipUnlessDarwin
+    @requireDarwin
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.m"))
@@ -18,7 +18,7 @@ class TestCase(TestBase):
             "dwim-print parent.child", patterns=[r'_name = 0x[0-9a-f]+ @"Seven"']
         )
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_with_summary(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.m"))

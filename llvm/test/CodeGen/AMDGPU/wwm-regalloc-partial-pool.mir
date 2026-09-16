@@ -1,0 +1,50 @@
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -O0 -amdgpu-stress-vgpr=1 -amdgpu-num-vgprs-for-wwm-alloc=2 -start-before=si-lower-sgpr-spills -stop-after=regallocfast,1 -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -O0 -amdgpu-num-vgprs-for-wwm-alloc=0 -start-before=si-lower-sgpr-spills -stop-after=regallocfast,1 -verify-machineinstrs -o - %s | FileCheck --check-prefix=ZERO %s
+
+# CHECK-LABEL: name: partial_pool
+# CHECK-COUNT-2: flags: [ WWM_REG ]
+# CHECK: renamable $vgpr0 = IMPLICIT_DEF
+# CHECK: SI_SPILL_WWM_V32_SAVE $vgpr0
+# CHECK: $vgpr0 = SI_SPILL_WWM_V32_RESTORE
+
+# With an explicitly empty pool, otherwise available VGPRs must remain for the
+# per-thread allocator and the SGPR spill pseudos must remain on the memory path.
+# ZERO-LABEL: name: partial_pool
+# ZERO-NOT: WWM_REG
+# ZERO: SI_SPILL_S1024_SAVE
+# ZERO: SI_SPILL_S32_SAVE
+
+--- |
+  define amdgpu_kernel void @partial_pool() #0 {
+    ret void
+  }
+
+  attributes #0 = { "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+...
+---
+name:            partial_pool
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+stack:
+  - { id: 0, type: spill-slot, size: 128, alignment: 4, stack-id: sgpr-spill }
+  - { id: 1, type: spill-slot, size: 128, alignment: 4, stack-id: sgpr-spill }
+  - { id: 2, type: spill-slot, size: 4, alignment: 4, stack-id: sgpr-spill }
+machineFunctionInfo:
+  isEntryFunction: true
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr33'
+  hasSpilledSGPRs: true
+body:             |
+  bb.0:
+    liveins: $sgpr34, $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99
+
+    SI_SPILL_S1024_SAVE killed $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67, %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
+    SI_SPILL_S1024_SAVE killed $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99, %stack.1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
+    SI_SPILL_S32_SAVE killed $sgpr34, %stack.2, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
+    renamable $sgpr34 = SI_SPILL_S32_RESTORE %stack.2, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
+    renamable $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95_sgpr96_sgpr97_sgpr98_sgpr99 = SI_SPILL_S1024_RESTORE %stack.1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
+    renamable $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55_sgpr56_sgpr57_sgpr58_sgpr59_sgpr60_sgpr61_sgpr62_sgpr63_sgpr64_sgpr65_sgpr66_sgpr67 = SI_SPILL_S1024_RESTORE %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
+    S_ENDPGM 0
+...

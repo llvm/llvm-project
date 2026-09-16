@@ -13,11 +13,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK-NEXT: STRXui [[COPY1]], [[COPY]], 0 :: (store (s64))
+    ; CHECK-NEXT: STRXui [[COPY1]], [[COPY]], 0 :: (store (i64))
     %0:gpr(p0) = COPY $x0
-    %1:gpr(s64) = COPY $x1
-    %2:fpr(s64) = COPY %1
-    G_STORE  %2:fpr(s64), %0 :: (store (s64))
+    %1:gpr(i64) = COPY $x1
+    %2:fpr(i64) = COPY %1
+    G_STORE  %2:fpr(i64), %0 :: (store (i64))
 ...
 ---
 name:            contract_s32_gpr
@@ -31,11 +31,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK-NEXT: STRWui [[COPY1]], [[COPY]], 0 :: (store (s32))
+    ; CHECK-NEXT: STRWui [[COPY1]], [[COPY]], 0 :: (store (i32))
     %0:gpr(p0) = COPY $x0
-    %1:gpr(s32) = COPY $w1
-    %2:fpr(s32) = COPY %1
-    G_STORE  %2:fpr(s32), %0 :: (store (s32))
+    %1:gpr(i32) = COPY $w1
+    %2:fpr(i32) = COPY %1
+    G_STORE  %2:fpr(i32), %0 :: (store (i32))
 ...
 ---
 name:            contract_s64_fpr
@@ -49,11 +49,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY $d1
-    ; CHECK-NEXT: STRDui [[COPY1]], [[COPY]], 0 :: (store (s64))
+    ; CHECK-NEXT: STRDui [[COPY1]], [[COPY]], 0 :: (store (i64))
     %0:gpr(p0) = COPY $x0
-    %1:fpr(s64) = COPY $d1
-    %2:gpr(s64) = COPY %1
-    G_STORE %2:gpr(s64), %0 :: (store (s64))
+    %1:fpr(i64) = COPY $d1
+    %2:gpr(i64) = COPY %1
+    G_STORE %2:gpr(i64), %0 :: (store (i64))
 ...
 ---
 name:            contract_s32_fpr
@@ -67,11 +67,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
-    ; CHECK-NEXT: STRSui [[COPY1]], [[COPY]], 0 :: (store (s32))
+    ; CHECK-NEXT: STRSui [[COPY1]], [[COPY]], 0 :: (store (i32))
     %0:gpr(p0) = COPY $x0
-    %1:fpr(s32) = COPY $s1
-    %2:gpr(s32) = COPY %1
-    G_STORE %2:gpr(s32), %0 :: (store (s32))
+    %1:fpr(i32) = COPY $s1
+    %2:gpr(i32) = COPY %1
+    G_STORE %2:gpr(i32), %0 :: (store (i32))
 ...
 ---
 name:            contract_s16_fpr
@@ -85,11 +85,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr16 = COPY $h1
-    ; CHECK-NEXT: STRHui [[COPY1]], [[COPY]], 0 :: (store (s16))
+    ; CHECK-NEXT: STRHui [[COPY1]], [[COPY]], 0 :: (store (i16))
     %0:gpr(p0) = COPY $x0
-    %1:fpr(s16) = COPY $h1
-    %2:gpr(s16) = COPY %1
-    G_STORE  %2:gpr(s16), %0 :: (store (s16))
+    %1:fpr(i16) = COPY $h1
+    %2:gpr(i16) = COPY %1
+    G_STORE  %2:gpr(i16), %0 :: (store (i16))
 ...
 ---
 name:            contract_g_unmerge_values_first
@@ -102,16 +102,16 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (dereferenceable load (<2 x s64>))
+    ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (dereferenceable load (<2 x i64>))
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[LDRQui]].dsub
     ; CHECK-NEXT: [[DUPi64_:%[0-9]+]]:fpr64 = DUPi64 [[LDRQui]], 1
-    ; CHECK-NEXT: STRDui [[COPY1]], [[COPY]], 0 :: (store (s64))
+    ; CHECK-NEXT: STRDui [[COPY1]], [[COPY]], 0 :: (store (i64))
     %0:gpr(p0) = COPY $x0
-    %1:fpr(<2 x s64>) = G_LOAD %0:gpr(p0) :: (dereferenceable load (<2 x s64>))
-    %2:fpr(s64), %3:fpr(s64) = G_UNMERGE_VALUES %1:fpr(<2 x s64>)
-    %4:gpr(s64) = COPY %2
-    %5:gpr(s64) = COPY %3
-    G_STORE  %4:gpr(s64), %0 :: (store (s64))
+    %1:fpr(<2 x i64>) = G_LOAD %0:gpr(p0) :: (dereferenceable load (<2 x i64>))
+    %2:fpr(i64), %3:fpr(i64) = G_UNMERGE_VALUES %1:fpr(<2 x i64>)
+    %4:gpr(i64) = COPY %2
+    %5:gpr(i64) = COPY %3
+    G_STORE  %4:gpr(i64), %0 :: (store (i64))
 ...
 ---
 name:            contract_g_unmerge_values_second
@@ -124,16 +124,16 @@ body:             |
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
-    ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (dereferenceable load (<2 x s64>))
+    ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (dereferenceable load (<2 x i64>))
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[LDRQui]].dsub
     ; CHECK-NEXT: [[DUPi64_:%[0-9]+]]:fpr64 = DUPi64 [[LDRQui]], 1
-    ; CHECK-NEXT: STRDui [[DUPi64_]], [[COPY]], 0 :: (store (s64))
+    ; CHECK-NEXT: STRDui [[DUPi64_]], [[COPY]], 0 :: (store (i64))
     %0:gpr(p0) = COPY $x0
-    %1:fpr(<2 x s64>) = G_LOAD %0:gpr(p0) :: (dereferenceable load (<2 x s64>))
-    %2:fpr(s64), %3:fpr(s64) = G_UNMERGE_VALUES %1:fpr(<2 x s64>)
-    %4:gpr(s64) = COPY %2
-    %5:gpr(s64) = COPY %3
-    G_STORE  %5:gpr(s64), %0 :: (store (s64))
+    %1:fpr(<2 x i64>) = G_LOAD %0:gpr(p0) :: (dereferenceable load (<2 x i64>))
+    %2:fpr(i64), %3:fpr(i64) = G_UNMERGE_VALUES %1:fpr(<2 x i64>)
+    %4:gpr(i64) = COPY %2
+    %5:gpr(i64) = COPY %3
+    G_STORE  %5:gpr(i64), %0 :: (store (i64))
 ...
 ---
 name:            contract_s16_truncstore
@@ -148,9 +148,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr16 = COPY [[COPY1]].hsub
-    ; CHECK-NEXT: STRHui [[COPY2]], [[COPY]], 0 :: (store (s16))
+    ; CHECK-NEXT: STRHui [[COPY2]], [[COPY]], 0 :: (store (i16))
     %0:gpr(p0) = COPY $x0
-    %1:fpr(s32) = COPY $s1
-    %2:gpr(s32) = COPY %1
-    G_STORE  %2:gpr(s32), %0 :: (store (s16))
+    %1:fpr(i32) = COPY $s1
+    %2:gpr(i32) = COPY %1
+    G_STORE  %2:gpr(i32), %0 :: (store (i16))
 ...

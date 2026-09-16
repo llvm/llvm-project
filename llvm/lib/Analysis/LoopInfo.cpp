@@ -530,6 +530,32 @@ bool Loop::isSafeToClone() const {
   return true;
 }
 
+bool Loop::isSafeToCloneConditionally(const DominatorTree &DT) const {
+  if (!isSafeToClone())
+    return false;
+
+  for (BasicBlock *BB : this->blocks()) {
+    for (Instruction &I : *BB) {
+      // Token-like values cannot be used in PHI nodes, so cloning is only
+      // possible if all their uses are contained in the loop. Uses within
+      // the loop (even across blocks) are fine: cloning only requires
+      // forming phis for values that are live-out of the loop.
+      if (I.getType()->isTokenLikeTy()) {
+        for (const Use &U : I.uses()) {
+          if (!loopContainsUser(*this, *BB, U, DT))
+            return false;
+        }
+      }
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        assert(!CB->cannotDuplicate() && "Checked by isSafeToClone().");
+        if (CB->isConvergent())
+          return false;
+      }
+    }
+  }
+  return true;
+}
+
 MDNode *Loop::getLoopID() const {
   MDNode *LoopID = nullptr;
 

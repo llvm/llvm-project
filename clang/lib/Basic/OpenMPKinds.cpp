@@ -995,7 +995,7 @@ void clang::getOpenMPCaptureRegions(
     case OMPD_dispatch:
     case OMPD_distribute:
     case OMPD_for:
-    case OMPD_ordered:
+    case OMPD_ordered_blockassoc:
     case OMPD_scope:
     case OMPD_sections:
     case OMPD_simd:

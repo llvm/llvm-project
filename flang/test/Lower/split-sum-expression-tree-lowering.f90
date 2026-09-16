@@ -1,9 +1,12 @@
-! RUN: %flang_fc1 -emit-hlfir -freal-sum-reassociation -o - %s | FileCheck %s --check-prefixes=SPLIT,NO-REWRITE
-! RUN: %flang_fc1 -emit-hlfir -fno-real-sum-reassociation -o - %s | FileCheck %s --check-prefixes=DEFAULT,NO-REWRITE
-! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s --check-prefixes=DEFAULT,NO-REWRITE
+! RUN: %flang_fc1 -emit-hlfir -O0 -o - %s | FileCheck %s --check-prefixes=SPLIT,NO-REWRITE --implicit-check-not=arith.negf
+! RUN: %flang_fc1 -emit-hlfir -O1 -o - %s | FileCheck %s --check-prefixes=SPLIT,NO-REWRITE --implicit-check-not=arith.negf
+! RUN: %flang_fc1 -emit-hlfir -O0 -fno-fp-sum-reassociation -o - %s | FileCheck %s --check-prefixes=DEFAULT,NO-REWRITE
+! RUN: %flang_fc1 -emit-hlfir -O1 -fno-fp-sum-reassociation -o - %s | FileCheck %s --check-prefixes=DEFAULT,NO-REWRITE
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s --check-prefixes=SPLIT,NO-REWRITE --implicit-check-not=arith.negf
+! RUN: bbc -emit-hlfir -ffp-sum-reassociation=false -o - %s | FileCheck %s --check-prefixes=DEFAULT,NO-REWRITE
 
 ! Default:   (((x + a*b) + c*d) + e*f)
-! Rewritten: ((c*d + e*f) + (x + a*b))
+! Rewritten: ((x + a*b) + (c*d + e*f))
 subroutine eligible_self_update3(x,a,b,c,d,e,f)
   real(8) :: x,a,b,c,d,e,f
   x = x + a*b + c*d + e*f
@@ -17,6 +20,11 @@ end
 ! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Ee"}
 ! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Ef"}
 ! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Ex"}
+! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
+! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
+! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
+! SPLIT: %[[AB:.*]] = arith.mulf %[[AV]], %[[BV]]
+! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AB]]
 ! SPLIT: %[[CV:.*]] = fir.load %[[C]]#0
 ! SPLIT: %[[DV:.*]] = fir.load %[[D]]#0
 ! SPLIT: %[[CD:.*]] = arith.mulf %[[CV]], %[[DV]]
@@ -24,13 +32,8 @@ end
 ! SPLIT: %[[FV:.*]] = fir.load %[[F]]#0
 ! SPLIT: %[[EF:.*]] = arith.mulf %[[EV]], %[[FV]]
 ! SPLIT: %[[TAIL:.*]] = arith.addf %[[CD]], %[[EF]]
-! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
-! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
-! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
-! SPLIT: %[[AB:.*]] = arith.mulf %[[AV]], %[[BV]]
-! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AB]]
 ! SPLIT-NOT: arith.addf %[[HEAD]], %[[CD]]
-! SPLIT: %[[RES:.*]] = arith.addf %[[TAIL]], %[[HEAD]]
+! SPLIT: %[[RES:.*]] = arith.addf %[[HEAD]], %[[TAIL]]
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_self_update3
@@ -57,7 +60,7 @@ end
 ! DEFAULT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! Default:   ((((x + a*b) + c*d) + e*f) + g*h)
-! Rewritten: ((c*d + (e*f + g*h)) + (x + a*b))
+! Rewritten: ((x + a*b) + (c*d + (e*f + g*h)))
 subroutine eligible_self_update4(x,a,b,c,d,e,f,g,h)
   real(8) :: x,a,b,c,d,e,f,g,h
   x = x + a*b + c*d + e*f + g*h
@@ -73,6 +76,11 @@ end
 ! SPLIT-DAG: %[[G:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Eg"}
 ! SPLIT-DAG: %[[H:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Eh"}
 ! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Ex"}
+! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
+! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
+! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
+! SPLIT: %[[AB:.*]] = arith.mulf %[[AV]], %[[BV]]
+! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AB]]
 ! SPLIT: %[[CV:.*]] = fir.load %[[C]]#0
 ! SPLIT: %[[DV:.*]] = fir.load %[[D]]#0
 ! SPLIT: %[[CD:.*]] = arith.mulf %[[CV]], %[[DV]]
@@ -84,13 +92,8 @@ end
 ! SPLIT: %[[GH:.*]] = arith.mulf %[[GV]], %[[HV]]
 ! SPLIT: %[[EFGH:.*]] = arith.addf %[[EF]], %[[GH]]
 ! SPLIT: %[[TAIL:.*]] = arith.addf %[[CD]], %[[EFGH]]
-! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
-! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
-! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
-! SPLIT: %[[AB:.*]] = arith.mulf %[[AV]], %[[BV]]
-! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AB]]
 ! SPLIT-NOT: arith.addf %[[HEAD]], %[[CD]]
-! SPLIT: %[[RES:.*]] = arith.addf %[[TAIL]], %[[HEAD]]
+! SPLIT: %[[RES:.*]] = arith.addf %[[HEAD]], %[[TAIL]]
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_self_update4
@@ -123,7 +126,7 @@ end
 ! DEFAULT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! Default:   (((a*b + c*d) + e*f) + g*h)
-! Rewritten: ((e*f + g*h) + (a*b + c*d))
+! Rewritten: ((a*b + c*d) + (e*f + g*h))
 subroutine eligible_out_of_place4(y,a,b,c,d,e,f,g,h)
   real(8) :: y,a,b,c,d,e,f,g,h
   y = a*b + c*d + e*f + g*h
@@ -139,13 +142,6 @@ end
 ! SPLIT-DAG: %[[G:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Eg"}
 ! SPLIT-DAG: %[[H:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Eh"}
 ! SPLIT-DAG: %[[Y:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Ey"}
-! SPLIT: %[[EV:.*]] = fir.load %[[E]]#0
-! SPLIT: %[[FV:.*]] = fir.load %[[F]]#0
-! SPLIT: %[[EF:.*]] = arith.mulf %[[EV]], %[[FV]]
-! SPLIT: %[[GV:.*]] = fir.load %[[G]]#0
-! SPLIT: %[[HV:.*]] = fir.load %[[H]]#0
-! SPLIT: %[[GH:.*]] = arith.mulf %[[GV]], %[[HV]]
-! SPLIT: %[[TAIL:.*]] = arith.addf %[[EF]], %[[GH]]
 ! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
 ! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
 ! SPLIT: %[[AB:.*]] = arith.mulf %[[AV]], %[[BV]]
@@ -153,8 +149,15 @@ end
 ! SPLIT: %[[DV:.*]] = fir.load %[[D]]#0
 ! SPLIT: %[[CD:.*]] = arith.mulf %[[CV]], %[[DV]]
 ! SPLIT: %[[HEAD:.*]] = arith.addf %[[AB]], %[[CD]]
+! SPLIT: %[[EV:.*]] = fir.load %[[E]]#0
+! SPLIT: %[[FV:.*]] = fir.load %[[F]]#0
+! SPLIT: %[[EF:.*]] = arith.mulf %[[EV]], %[[FV]]
+! SPLIT: %[[GV:.*]] = fir.load %[[G]]#0
+! SPLIT: %[[HV:.*]] = fir.load %[[H]]#0
+! SPLIT: %[[GH:.*]] = arith.mulf %[[GV]], %[[HV]]
+! SPLIT: %[[TAIL:.*]] = arith.addf %[[EF]], %[[GH]]
 ! SPLIT-NOT: arith.addf %[[HEAD]], %[[EF]]
-! SPLIT: %[[RES:.*]] = arith.addf %[[TAIL]], %[[HEAD]]
+! SPLIT: %[[RES:.*]] = arith.addf %[[HEAD]], %[[TAIL]]
 ! SPLIT: hlfir.assign %[[RES]] to %[[Y]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_out_of_place4
@@ -185,7 +188,7 @@ end
 ! DEFAULT: hlfir.assign %[[RES]] to %[[Y]]#0
 
 ! Default:   (((x + a) + b*c) + d*e)
-! Rewritten: ((b*c + d*e) + (x + a))
+! Rewritten: ((x + a) + (b*c + d*e))
 subroutine eligible_scalar_term(x,a,b,c,d,e)
   real(8) :: x,a,b,c,d,e
   x = x + a + b*c + d*e
@@ -198,6 +201,9 @@ end
 ! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_scalar_termEd"}
 ! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_scalar_termEe"}
 ! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_scalar_termEx"}
+! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
+! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
+! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AV]]
 ! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
 ! SPLIT: %[[CV:.*]] = fir.load %[[C]]#0
 ! SPLIT: %[[BC:.*]] = arith.mulf %[[BV]], %[[CV]]
@@ -205,11 +211,8 @@ end
 ! SPLIT: %[[EV:.*]] = fir.load %[[E]]#0
 ! SPLIT: %[[DE:.*]] = arith.mulf %[[DV]], %[[EV]]
 ! SPLIT: %[[TAIL:.*]] = arith.addf %[[BC]], %[[DE]]
-! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
-! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
-! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AV]]
 ! SPLIT-NOT: arith.addf %[[HEAD]], %[[BC]]
-! SPLIT: %[[RES:.*]] = arith.addf %[[TAIL]], %[[HEAD]]
+! SPLIT: %[[RES:.*]] = arith.addf %[[HEAD]], %[[TAIL]]
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_scalar_term
@@ -233,7 +236,7 @@ end
 ! DEFAULT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! Default:   (((x + (a-b)) + (c-d)) + (e-f))
-! Rewritten: ((c-d) + (e-f)) + (x + (a-b))
+! Rewritten: (x + (a-b)) + ((c-d) + (e-f))
 subroutine eligible_parenthesized_subtractions(x,a,b,c,d,e,f)
   real(8) :: x,a,b,c,d,e,f
   x = x + (a-b) + (c-d) + (e-f)
@@ -247,6 +250,12 @@ end
 ! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEe"}
 ! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEf"}
 ! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEx"}
+! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
+! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
+! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
+! SPLIT: %[[AB_SUB:.*]] = arith.subf %[[AV]], %[[BV]]
+! SPLIT: %[[AB:.*]] = hlfir.no_reassoc %[[AB_SUB]]
+! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AB]]
 ! SPLIT: %[[CV:.*]] = fir.load %[[C]]#0
 ! SPLIT: %[[DV:.*]] = fir.load %[[D]]#0
 ! SPLIT: %[[CD_SUB:.*]] = arith.subf %[[CV]], %[[DV]]
@@ -256,13 +265,7 @@ end
 ! SPLIT: %[[EF_SUB:.*]] = arith.subf %[[EV]], %[[FV]]
 ! SPLIT: %[[EF:.*]] = hlfir.no_reassoc %[[EF_SUB]]
 ! SPLIT: %[[TAIL:.*]] = arith.addf %[[CD]], %[[EF]]
-! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
-! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
-! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
-! SPLIT: %[[AB_SUB:.*]] = arith.subf %[[AV]], %[[BV]]
-! SPLIT: %[[AB:.*]] = hlfir.no_reassoc %[[AB_SUB]]
-! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AB]]
-! SPLIT: %[[RES:.*]] = arith.addf %[[TAIL]], %[[HEAD]]
+! SPLIT: %[[RES:.*]] = arith.addf %[[HEAD]], %[[TAIL]]
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_parenthesized_subtractions
@@ -294,7 +297,7 @@ end
 ! The parenthesized addition is moved as one opaque term; its inner Add is not
 ! part of the top-level additive spine.
 ! Default:   (((x + (a+b)) + c*d) + e*f)
-! Rewritten: ((c*d + e*f) + (x + (a+b)))
+! Rewritten: ((x + (a+b)) + (c*d + e*f))
 subroutine eligible_parenthesized_add(x,a,b,c,d,e,f)
   real(8) :: x,a,b,c,d,e,f
   x = x + (a+b) + c*d + e*f
@@ -308,6 +311,12 @@ end
 ! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEe"}
 ! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEf"}
 ! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEx"}
+! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
+! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
+! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
+! SPLIT: %[[AB_ADD:.*]] = arith.addf %[[AV]], %[[BV]]
+! SPLIT: %[[AB:.*]] = hlfir.no_reassoc %[[AB_ADD]]
+! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AB]]
 ! SPLIT: %[[CV:.*]] = fir.load %[[C]]#0
 ! SPLIT: %[[DV:.*]] = fir.load %[[D]]#0
 ! SPLIT: %[[CD:.*]] = arith.mulf %[[CV]], %[[DV]]
@@ -315,13 +324,7 @@ end
 ! SPLIT: %[[FV:.*]] = fir.load %[[F]]#0
 ! SPLIT: %[[EF:.*]] = arith.mulf %[[EV]], %[[FV]]
 ! SPLIT: %[[TAIL:.*]] = arith.addf %[[CD]], %[[EF]]
-! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
-! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
-! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
-! SPLIT: %[[AB_ADD:.*]] = arith.addf %[[AV]], %[[BV]]
-! SPLIT: %[[AB:.*]] = hlfir.no_reassoc %[[AB_ADD]]
-! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AB]]
-! SPLIT: %[[RES:.*]] = arith.addf %[[TAIL]], %[[HEAD]]
+! SPLIT: %[[RES:.*]] = arith.addf %[[HEAD]], %[[TAIL]]
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_parenthesized_add
@@ -380,46 +383,46 @@ end
 ! NO-REWRITE: %[[PAREN:.*]] = hlfir.no_reassoc %[[SUM]]
 ! NO-REWRITE: hlfir.assign %[[PAREN]] to %[[X]]#0
 
-! Subtract is one opaque term below the Add spine. This does not flatten the
-! expression into signed terms.
+! The unparenthesized Subtract is flattened into separate positive and negative
+! terms instead of remaining an opaque head term.
 ! Default:   (((x - a*b) + c*d) + e*f)
-! Rewritten: (e*f + ((x - a*b) + c*d))
-subroutine eligible_opaque_subtract(x,a,b,c,d,e,f)
+! Rewritten: (x - a*b) + (c*d + e*f)
+subroutine eligible_signed_subtract(x,a,b,c,d,e,f)
   real(8) :: x,a,b,c,d,e,f
   x = x - a*b + c*d + e*f
 end
 
-! SPLIT-LABEL: func.func @_QPeligible_opaque_subtract
-! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_opaque_subtractEa"}
-! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_opaque_subtractEb"}
-! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_opaque_subtractEc"}
-! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_opaque_subtractEd"}
-! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_opaque_subtractEe"}
-! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_opaque_subtractEf"}
-! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_opaque_subtractEx"}
-! SPLIT: %[[EV:.*]] = fir.load %[[E]]#0
-! SPLIT: %[[FV:.*]] = fir.load %[[F]]#0
-! SPLIT: %[[EF:.*]] = arith.mulf %[[EV]], %[[FV]]
+! SPLIT-LABEL: func.func @_QPeligible_signed_subtract
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEa"}
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEb"}
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEc"}
+! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEd"}
+! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEe"}
+! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEf"}
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEx"}
 ! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
 ! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
 ! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
 ! SPLIT: %[[AB:.*]] = arith.mulf %[[AV]], %[[BV]]
-! SPLIT: %[[XAB:.*]] = arith.subf %[[XV]], %[[AB]]
+! SPLIT: %[[HEAD:.*]] = arith.subf %[[XV]], %[[AB]]
 ! SPLIT: %[[CV:.*]] = fir.load %[[C]]#0
 ! SPLIT: %[[DV:.*]] = fir.load %[[D]]#0
 ! SPLIT: %[[CD:.*]] = arith.mulf %[[CV]], %[[DV]]
-! SPLIT: %[[HEAD:.*]] = arith.addf %[[XAB]], %[[CD]]
-! SPLIT: %[[RES:.*]] = arith.addf %[[EF]], %[[HEAD]]
+! SPLIT: %[[EV:.*]] = fir.load %[[E]]#0
+! SPLIT: %[[FV:.*]] = fir.load %[[F]]#0
+! SPLIT: %[[EF:.*]] = arith.mulf %[[EV]], %[[FV]]
+! SPLIT: %[[TAIL:.*]] = arith.addf %[[CD]], %[[EF]]
+! SPLIT: %[[RES:.*]] = arith.addf %[[HEAD]], %[[TAIL]]
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
-! DEFAULT-LABEL: func.func @_QPeligible_opaque_subtract
-! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_opaque_subtractEa"}
-! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_opaque_subtractEb"}
-! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_opaque_subtractEc"}
-! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_opaque_subtractEd"}
-! DEFAULT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_opaque_subtractEe"}
-! DEFAULT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_opaque_subtractEf"}
-! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_opaque_subtractEx"}
+! DEFAULT-LABEL: func.func @_QPeligible_signed_subtract
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEa"}
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEb"}
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEc"}
+! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEd"}
+! DEFAULT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEe"}
+! DEFAULT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEf"}
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEx"}
 ! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
 ! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
 ! DEFAULT: %[[BV:.*]] = fir.load %[[B]]#0
@@ -433,6 +436,291 @@ end
 ! DEFAULT: %[[FV:.*]] = fir.load %[[F]]#0
 ! DEFAULT: %[[EF:.*]] = arith.mulf %[[EV]], %[[FV]]
 ! DEFAULT: %[[RES:.*]] = arith.addf %[[XABCD]], %[[EF]]
+! DEFAULT: hlfir.assign %[[RES]] to %[[X]]#0
+
+! The tail starts negative. Rebuild -b+c as -(b-c), then subtract the
+! tail from the positive head without introducing a unary negation:
+! Default:   (((x + a) - b) + c)
+! Rewritten: (x + a) - (b - c)
+subroutine eligible_leading_negative_tail(x,a,b,c)
+  real(8) :: x,a,b,c
+  x = x + a - b + c
+end
+
+! SPLIT-LABEL: func.func @_QPeligible_leading_negative_tail
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_leading_negative_tailEa"}
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_leading_negative_tailEb"}
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_leading_negative_tailEc"}
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_leading_negative_tailEx"}
+! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
+! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
+! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AV]]
+! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
+! SPLIT: %[[CV:.*]] = fir.load %[[C]]#0
+! SPLIT: %[[TAIL:.*]] = arith.subf %[[BV]], %[[CV]]
+! SPLIT: %[[RES:.*]] = arith.subf %[[HEAD]], %[[TAIL]]
+! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
+
+! DEFAULT-LABEL: func.func @_QPeligible_leading_negative_tail
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_leading_negative_tailEa"}
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_leading_negative_tailEb"}
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_leading_negative_tailEc"}
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_leading_negative_tailEx"}
+! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
+! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
+! DEFAULT: %[[XA:.*]] = arith.addf %[[XV]], %[[AV]]
+! DEFAULT: %[[BV:.*]] = fir.load %[[B]]#0
+! DEFAULT: %[[XAB:.*]] = arith.subf %[[XA]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load %[[C]]#0
+! DEFAULT: %[[RES:.*]] = arith.addf %[[XAB]], %[[CV]]
+! DEFAULT: hlfir.assign %[[RES]] to %[[X]]#0
+
+! The tail ends negative and can be rebuilt directly with Subtract.
+! Default:   (((x + a) + b) - c)
+! Rewritten: (x + a) + (b - c)
+subroutine eligible_trailing_negative_tail(x,a,b,c)
+  real(8) :: x,a,b,c
+  x = x + a + b - c
+end
+
+! SPLIT-LABEL: func.func @_QPeligible_trailing_negative_tail
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_trailing_negative_tailEa"}
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_trailing_negative_tailEb"}
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_trailing_negative_tailEc"}
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_trailing_negative_tailEx"}
+! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
+! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
+! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AV]]
+! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
+! SPLIT: %[[CV:.*]] = fir.load %[[C]]#0
+! SPLIT: %[[TAIL:.*]] = arith.subf %[[BV]], %[[CV]]
+! SPLIT: %[[RES:.*]] = arith.addf %[[HEAD]], %[[TAIL]]
+! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
+
+! DEFAULT-LABEL: func.func @_QPeligible_trailing_negative_tail
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_trailing_negative_tailEa"}
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_trailing_negative_tailEb"}
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_trailing_negative_tailEc"}
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_trailing_negative_tailEx"}
+! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
+! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
+! DEFAULT: %[[XA:.*]] = arith.addf %[[XV]], %[[AV]]
+! DEFAULT: %[[BV:.*]] = fir.load %[[B]]#0
+! DEFAULT: %[[XAB:.*]] = arith.addf %[[XA]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load %[[C]]#0
+! DEFAULT: %[[RES:.*]] = arith.subf %[[XAB]], %[[CV]]
+! DEFAULT: hlfir.assign %[[RES]] to %[[X]]#0
+
+! A root Subtract and consecutive negative terms are eligible. The entirely
+! negative tail is represented by its positive magnitude, without unary minus.
+! Default:   (((x - a) - b) - c)
+! Rewritten: (x - a) - (b + c)
+subroutine eligible_consecutive_subtraction(x,a,b,c)
+  real(8) :: x,a,b,c
+  x = x - a - b - c
+end
+
+! SPLIT-LABEL: func.func @_QPeligible_consecutive_subtraction
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_consecutive_subtractionEa"}
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_consecutive_subtractionEb"}
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_consecutive_subtractionEc"}
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_consecutive_subtractionEx"}
+! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
+! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
+! SPLIT: %[[HEAD:.*]] = arith.subf %[[XV]], %[[AV]]
+! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
+! SPLIT: %[[CV:.*]] = fir.load %[[C]]#0
+! SPLIT: %[[TAIL:.*]] = arith.addf %[[BV]], %[[CV]]
+! SPLIT: %[[RES:.*]] = arith.subf %[[HEAD]], %[[TAIL]]
+! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
+
+! DEFAULT-LABEL: func.func @_QPeligible_consecutive_subtraction
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_consecutive_subtractionEa"}
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_consecutive_subtractionEb"}
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_consecutive_subtractionEc"}
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_consecutive_subtractionEx"}
+! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
+! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
+! DEFAULT: %[[XA:.*]] = arith.subf %[[XV]], %[[AV]]
+! DEFAULT: %[[BV:.*]] = fir.load %[[B]]#0
+! DEFAULT: %[[XAB:.*]] = arith.subf %[[XA]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load %[[C]]#0
+! DEFAULT: %[[RES:.*]] = arith.subf %[[XAB]], %[[CV]]
+! DEFAULT: hlfir.assign %[[RES]] to %[[X]]#0
+
+! Nested unparenthesized Add and Subtract nodes all contribute signed terms.
+! Default:   ((((x - a) + b) - c) + d)
+! Rewritten: (x - a) + (b - (c - d))
+subroutine eligible_nested_unparenthesized_subtraction(x,a,b,c,d)
+  real(8) :: x,a,b,c,d
+  x = x - a + b - c + d
+end
+
+! SPLIT-LABEL: func.func @_QPeligible_nested_unparenthesized_subtraction
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEa"}
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEb"}
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEc"}
+! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEd"}
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEx"}
+! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
+! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
+! SPLIT: %[[HEAD:.*]] = arith.subf %[[XV]], %[[AV]]
+! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
+! SPLIT: %[[CV:.*]] = fir.load %[[C]]#0
+! SPLIT: %[[DV:.*]] = fir.load %[[D]]#0
+! SPLIT: %[[CD:.*]] = arith.subf %[[CV]], %[[DV]]
+! SPLIT: %[[TAIL:.*]] = arith.subf %[[BV]], %[[CD]]
+! SPLIT: %[[RES:.*]] = arith.addf %[[HEAD]], %[[TAIL]]
+! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
+
+! DEFAULT-LABEL: func.func @_QPeligible_nested_unparenthesized_subtraction
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEa"}
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEb"}
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEc"}
+! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEd"}
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEx"}
+! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
+! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
+! DEFAULT: %[[XA:.*]] = arith.subf %[[XV]], %[[AV]]
+! DEFAULT: %[[BV:.*]] = fir.load %[[B]]#0
+! DEFAULT: %[[XAB:.*]] = arith.addf %[[XA]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load %[[C]]#0
+! DEFAULT: %[[XABC:.*]] = arith.subf %[[XAB]], %[[CV]]
+! DEFAULT: %[[DV:.*]] = fir.load %[[D]]#0
+! DEFAULT: %[[RES:.*]] = arith.addf %[[XABC]], %[[DV]]
+! DEFAULT: hlfir.assign %[[RES]] to %[[X]]#0
+
+! Complex addition and subtraction use the same signed-term split. The
+! parenthesized c-d remains one opaque no_reassoc value.
+! Default:   (((x - a) + b) - (c-d))
+! Rewritten: (x - a) + (b - (c-d))
+subroutine eligible_complex_signed_parenthesized(x,a,b,c,d)
+  complex(4) :: x,a,b,c,d
+  x = x - a + b - (c-d)
+end
+
+! SPLIT-LABEL: func.func @_QPeligible_complex_signed_parenthesized
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEa"}
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEb"}
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEc"}
+! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEd"}
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEx"}
+! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
+! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
+! SPLIT: %[[HEAD:.*]] = fir.subc %[[XV]], %[[AV]] {{.*}} : complex<f32>
+! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
+! SPLIT: %[[CV:.*]] = fir.load %[[C]]#0
+! SPLIT: %[[DV:.*]] = fir.load %[[D]]#0
+! SPLIT: %[[CD_SUB:.*]] = fir.subc %[[CV]], %[[DV]] {{.*}} : complex<f32>
+! SPLIT: %[[CD:.*]] = hlfir.no_reassoc %[[CD_SUB]] : complex<f32>
+! SPLIT: %[[TAIL:.*]] = fir.subc %[[BV]], %[[CD]] {{.*}} : complex<f32>
+! SPLIT: %[[RES:.*]] = fir.addc %[[HEAD]], %[[TAIL]] {{.*}} : complex<f32>
+! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
+
+! DEFAULT-LABEL: func.func @_QPeligible_complex_signed_parenthesized
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEa"}
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEb"}
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEc"}
+! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEd"}
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEx"}
+! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
+! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
+! DEFAULT: %[[XA:.*]] = fir.subc %[[XV]], %[[AV]] {{.*}} : complex<f32>
+! DEFAULT: %[[BV:.*]] = fir.load %[[B]]#0
+! DEFAULT: %[[XAB:.*]] = fir.addc %[[XA]], %[[BV]] {{.*}} : complex<f32>
+! DEFAULT: %[[CV:.*]] = fir.load %[[C]]#0
+! DEFAULT: %[[DV:.*]] = fir.load %[[D]]#0
+! DEFAULT: %[[CD_SUB:.*]] = fir.subc %[[CV]], %[[DV]] {{.*}} : complex<f32>
+! DEFAULT: %[[CD:.*]] = hlfir.no_reassoc %[[CD_SUB]] : complex<f32>
+! DEFAULT: %[[RES:.*]] = fir.subc %[[XAB]], %[[CD]] {{.*}} : complex<f32>
+! DEFAULT: hlfir.assign %[[RES]] to %[[X]]#0
+
+! A second complex kind exercises category dispatch independently of kind.
+! Default:   (((x + a) + b) + c)
+! Rewritten: (x + a) + (b + c)
+subroutine eligible_complex_kind8(x,a,b,c)
+  complex(8) :: x,a,b,c
+  x = x + a + b + c
+end
+
+! SPLIT-LABEL: func.func @_QPeligible_complex_kind8
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_kind8Ea"}
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_kind8Eb"}
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_kind8Ec"}
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_kind8Ex"}
+! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
+! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
+! SPLIT: %[[HEAD:.*]] = fir.addc %[[XV]], %[[AV]] {{.*}} : complex<f64>
+! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
+! SPLIT: %[[CV:.*]] = fir.load %[[C]]#0
+! SPLIT: %[[TAIL:.*]] = fir.addc %[[BV]], %[[CV]] {{.*}} : complex<f64>
+! SPLIT: %[[RES:.*]] = fir.addc %[[HEAD]], %[[TAIL]] {{.*}} : complex<f64>
+! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
+
+! It isn't as useful to re-write integer expressions because the middle-end can
+! already re-associate them somewhat (within the bounds of avoiding overflow).
+subroutine guard_integer(x,a,b,c)
+  integer :: x,a,b,c
+  x = x + a - b + c
+end
+
+! NO-REWRITE-LABEL: func.func @_QPguard_integer
+! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_integerEa"}
+! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_integerEb"}
+! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_integerEc"}
+! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_integerEx"}
+! NO-REWRITE: %[[XV:.*]] = fir.load %[[X]]#0
+! NO-REWRITE: %[[AV:.*]] = fir.load %[[A]]#0
+! NO-REWRITE: %[[XA:.*]] = arith.addi %[[XV]], %[[AV]]
+! NO-REWRITE: %[[BV:.*]] = fir.load %[[B]]#0
+! NO-REWRITE: %[[XAB:.*]] = arith.subi %[[XA]], %[[BV]]
+! NO-REWRITE: %[[CV:.*]] = fir.load %[[C]]#0
+! NO-REWRITE: %[[RES:.*]] = arith.addi %[[XAB]], %[[CV]]
+! NO-REWRITE: hlfir.assign %[[RES]] to %[[X]]#0
+
+! Subtraction immediately outside a parenthesized term changes the term's
+! outer sign, but the parenthesized b-c remains one opaque no_reassoc value.
+! Default:   (((x + a) - (b-c)) + d)
+! Rewritten: (x + a) - ((b-c) - d)
+subroutine eligible_subtract_parenthesized_term(x,a,b,c,d)
+  real(8) :: x,a,b,c,d
+  x = x + a - (b-c) + d
+end
+
+! SPLIT-LABEL: func.func @_QPeligible_subtract_parenthesized_term
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEa"}
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEb"}
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEc"}
+! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEd"}
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEx"}
+! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
+! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
+! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AV]]
+! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
+! SPLIT: %[[CV:.*]] = fir.load %[[C]]#0
+! SPLIT: %[[BC_SUB:.*]] = arith.subf %[[BV]], %[[CV]]
+! SPLIT: %[[BC:.*]] = hlfir.no_reassoc %[[BC_SUB]]
+! SPLIT: %[[DV:.*]] = fir.load %[[D]]#0
+! SPLIT: %[[TAIL:.*]] = arith.subf %[[BC]], %[[DV]]
+! SPLIT: %[[RES:.*]] = arith.subf %[[HEAD]], %[[TAIL]]
+! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
+
+! DEFAULT-LABEL: func.func @_QPeligible_subtract_parenthesized_term
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEa"}
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEb"}
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEc"}
+! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEd"}
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEx"}
+! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
+! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
+! DEFAULT: %[[XA:.*]] = arith.addf %[[XV]], %[[AV]]
+! DEFAULT: %[[BV:.*]] = fir.load %[[B]]#0
+! DEFAULT: %[[CV:.*]] = fir.load %[[C]]#0
+! DEFAULT: %[[BC_SUB:.*]] = arith.subf %[[BV]], %[[CV]]
+! DEFAULT: %[[BC:.*]] = hlfir.no_reassoc %[[BC_SUB]]
+! DEFAULT: %[[XABC:.*]] = arith.subf %[[XA]], %[[BC]]
+! DEFAULT: %[[DV:.*]] = fir.load %[[D]]#0
+! DEFAULT: %[[RES:.*]] = arith.addf %[[XABC]], %[[DV]]
 ! DEFAULT: hlfir.assign %[[RES]] to %[[X]]#0
 
 real(8) function foo(a)
@@ -464,6 +752,277 @@ end
 ! NO-REWRITE: %[[DE:.*]] = arith.mulf %[[DV]], %[[EV]]
 ! NO-REWRITE: %[[RES:.*]] = arith.addf %[[XFOOBC]], %[[DE]]
 ! NO-REWRITE: hlfir.assign %[[RES]] to %[[X]]#0
+
+! Default:   (((x + sqrt((a+b)+c)) + d*e) + f*g)
+! Rewritten: ((x + sqrt((a+b)+c)) + (d*e + f*g))
+! A qualifying outer sum is rewritten once. The pure call remains an opaque
+! term, so its additive argument retains source order.
+subroutine eligible_pure_call(x,a,b,c,d,e,f,g)
+  real(8) :: x,a,b,c,d,e,f,g
+  x = x + sqrt(a+b+c) + d*e + f*g
+end
+
+! SPLIT-LABEL: func.func @_QPeligible_pure_call
+! SPLIT: %[[XV:.*]] = fir.load
+! SPLIT: %[[AV:.*]] = fir.load
+! SPLIT: %[[BV:.*]] = fir.load
+! SPLIT: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! SPLIT: %[[CV:.*]] = fir.load
+! SPLIT: %[[ABC:.*]] = arith.addf %[[AB]], %[[CV]]
+! SPLIT: %[[CALL:.*]] = math.sqrt %[[ABC]]
+! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[CALL]]
+! SPLIT: %[[DV:.*]] = fir.load
+! SPLIT: %[[EV:.*]] = fir.load
+! SPLIT: %[[DE:.*]] = arith.mulf %[[DV]], %[[EV]]
+! SPLIT: %[[FV:.*]] = fir.load
+! SPLIT: %[[GV:.*]] = fir.load
+! SPLIT: %[[FG:.*]] = arith.mulf %[[FV]], %[[GV]]
+! SPLIT: %[[TAIL:.*]] = arith.addf %[[DE]], %[[FG]]
+! SPLIT: %[[RES:.*]] = arith.addf %[[HEAD]], %[[TAIL]]
+! SPLIT: hlfir.assign %[[RES]]
+
+! DEFAULT-LABEL: func.func @_QPeligible_pure_call
+! DEFAULT: %[[XV:.*]] = fir.load
+! DEFAULT: %[[AV:.*]] = fir.load
+! DEFAULT: %[[BV:.*]] = fir.load
+! DEFAULT: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load
+! DEFAULT: %[[ABC:.*]] = arith.addf %[[AB]], %[[CV]]
+! DEFAULT: %[[CALL:.*]] = math.sqrt %[[ABC]]
+! DEFAULT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[CALL]]
+! DEFAULT: %[[DV:.*]] = fir.load
+! DEFAULT: %[[EV:.*]] = fir.load
+! DEFAULT: %[[DE:.*]] = arith.mulf %[[DV]], %[[EV]]
+! DEFAULT: %[[HEAD_DE:.*]] = arith.addf %[[HEAD]], %[[DE]]
+! DEFAULT: %[[FV:.*]] = fir.load
+! DEFAULT: %[[GV:.*]] = fir.load
+! DEFAULT: %[[FG:.*]] = arith.mulf %[[FV]], %[[GV]]
+! DEFAULT: %[[RES:.*]] = arith.addf %[[HEAD_DE]], %[[FG]]
+! DEFAULT: hlfir.assign %[[RES]]
+
+subroutine guard_pure_call_volatile_arg(x,v,a,b,c,d)
+  real(8) :: x,a,b,c,d
+  real(8), volatile :: v
+  x = x + sqrt(v) + a*b + c*d
+end
+
+! NO-REWRITE-LABEL: func.func @_QPguard_pure_call_volatile_arg
+! NO-REWRITE: %[[XV:.*]] = fir.load
+! NO-REWRITE: %[[CALL:.*]] = math.sqrt
+! NO-REWRITE: %[[HEAD:.*]] = arith.addf %[[XV]], %[[CALL]]
+! NO-REWRITE: %[[AV:.*]] = fir.load
+! NO-REWRITE: %[[BV:.*]] = fir.load
+! NO-REWRITE: %[[AB:.*]] = arith.mulf %[[AV]], %[[BV]]
+! NO-REWRITE: %[[HEAD_AB:.*]] = arith.addf %[[HEAD]], %[[AB]]
+! NO-REWRITE: %[[CV:.*]] = fir.load
+! NO-REWRITE: %[[DV:.*]] = fir.load
+! NO-REWRITE: %[[CD:.*]] = arith.mulf %[[CV]], %[[DV]]
+! NO-REWRITE: %[[RES:.*]] = arith.addf %[[HEAD_AB]], %[[CD]]
+! NO-REWRITE: hlfir.assign %[[RES]]
+
+subroutine guard_nested_impure_call(x,a,b,c,d,e)
+  real(8) :: x,a,b,c,d,e,foo
+  x = x + sqrt(foo(a)) + b*c + d*e
+end
+
+! NO-REWRITE-LABEL: func.func @_QPguard_nested_impure_call
+! NO-REWRITE: %[[XV:.*]] = fir.load
+! NO-REWRITE: %[[IMPURE:.*]] = fir.call @_QPfoo
+! NO-REWRITE: %[[PURE:.*]] = math.sqrt %[[IMPURE]]
+! NO-REWRITE: %[[HEAD:.*]] = arith.addf %[[XV]], %[[PURE]]
+! NO-REWRITE: %[[BV:.*]] = fir.load
+! NO-REWRITE: %[[CV:.*]] = fir.load
+! NO-REWRITE: %[[BC:.*]] = arith.mulf %[[BV]], %[[CV]]
+! NO-REWRITE: %[[HEAD_BC:.*]] = arith.addf %[[HEAD]], %[[BC]]
+! NO-REWRITE: %[[DV:.*]] = fir.load
+! NO-REWRITE: %[[EV:.*]] = fir.load
+! NO-REWRITE: %[[DE:.*]] = arith.mulf %[[DV]], %[[EV]]
+! NO-REWRITE: %[[RES:.*]] = arith.addf %[[HEAD_BC]], %[[DE]]
+! NO-REWRITE: hlfir.assign %[[RES]]
+
+! Default:   e * real(((a+b)+c)+d,8)
+! Rewritten: e * real((a+b)+(c+d),8)
+subroutine nested_conversion_operand(x,a,b,c,d,e)
+  real(8) :: x,e
+  real(4) :: a,b,c,d
+  x = e * real(a+b+c+d,8)
+end
+
+! SPLIT-LABEL: func.func @_QPnested_conversion_operand
+! SPLIT: %[[EV:.*]] = fir.load
+! SPLIT: %[[AV:.*]] = fir.load
+! SPLIT: %[[BV:.*]] = fir.load
+! SPLIT: %[[S1:.*]] = arith.addf %[[AV]], %[[BV]]
+! SPLIT: %[[CV:.*]] = fir.load
+! SPLIT: %[[DV:.*]] = fir.load
+! SPLIT: %[[S2:.*]] = arith.addf %[[CV]], %[[DV]]
+! SPLIT: %[[S3:.*]] = arith.addf %[[S1]], %[[S2]]
+! SPLIT: %[[CONVERT:.*]] = fir.convert %[[S3]] : (f32) -> f64
+! SPLIT: %[[RES:.*]] = arith.mulf %[[EV]], %[[CONVERT]]
+! SPLIT: hlfir.assign %[[RES]]
+
+! DEFAULT-LABEL: func.func @_QPnested_conversion_operand
+! DEFAULT: %[[EV:.*]] = fir.load
+! DEFAULT: %[[AV:.*]] = fir.load
+! DEFAULT: %[[BV:.*]] = fir.load
+! DEFAULT: %[[S1:.*]] = arith.addf %[[AV]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load
+! DEFAULT: %[[S2:.*]] = arith.addf %[[S1]], %[[CV]]
+! DEFAULT: %[[DV:.*]] = fir.load
+! DEFAULT: %[[S3:.*]] = arith.addf %[[S2]], %[[DV]]
+! DEFAULT: %[[CONVERT:.*]] = fir.convert %[[S3]] : (f32) -> f64
+! DEFAULT: %[[RES:.*]] = arith.mulf %[[EV]], %[[CONVERT]]
+! DEFAULT: hlfir.assign %[[RES]]
+
+! Default:   sqrt(((a+b)+c)+d)
+! Rewritten: sqrt((a+b)+(c+d))
+subroutine nested_pure_call_argument(x,a,b,c,d)
+  real(8) :: x,a,b,c,d
+  x = sqrt(a+b+c+d)
+end
+
+! SPLIT-LABEL: func.func @_QPnested_pure_call_argument
+! SPLIT: %[[AV:.*]] = fir.load
+! SPLIT: %[[BV:.*]] = fir.load
+! SPLIT: %[[S1:.*]] = arith.addf %[[AV]], %[[BV]]
+! SPLIT: %[[CV:.*]] = fir.load
+! SPLIT: %[[DV:.*]] = fir.load
+! SPLIT: %[[S2:.*]] = arith.addf %[[CV]], %[[DV]]
+! SPLIT: %[[S3:.*]] = arith.addf %[[S1]], %[[S2]]
+! SPLIT: %[[SQRT:.*]] = math.sqrt %[[S3]]
+! SPLIT: hlfir.assign %[[SQRT]]
+
+! DEFAULT-LABEL: func.func @_QPnested_pure_call_argument
+! DEFAULT: %[[AV:.*]] = fir.load
+! DEFAULT: %[[BV:.*]] = fir.load
+! DEFAULT: %[[S1:.*]] = arith.addf %[[AV]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load
+! DEFAULT: %[[S2:.*]] = arith.addf %[[S1]], %[[CV]]
+! DEFAULT: %[[DV:.*]] = fir.load
+! DEFAULT: %[[S3:.*]] = arith.addf %[[S2]], %[[DV]]
+! DEFAULT: %[[SQRT:.*]] = math.sqrt %[[S3]]
+! DEFAULT: hlfir.assign %[[SQRT]]
+
+! Default:   atan2(((a+b)+c)+d,((e+f)+g)+h)
+! Rewritten: atan2((a+b)+(c+d),(e+f)+(g+h))
+subroutine nested_separate_call_arguments(x,a,b,c,d,e,f,g,h)
+  real(8) :: x,a,b,c,d,e,f,g,h
+  x = atan2(a+b+c+d,e+f+g+h)
+end
+
+! SPLIT-LABEL: func.func @_QPnested_separate_call_arguments
+! SPLIT: %[[AV:.*]] = fir.load
+! SPLIT: %[[BV:.*]] = fir.load
+! SPLIT: %[[S1:.*]] = arith.addf %[[AV]], %[[BV]]
+! SPLIT: %[[CV:.*]] = fir.load
+! SPLIT: %[[DV:.*]] = fir.load
+! SPLIT: %[[S2:.*]] = arith.addf %[[CV]], %[[DV]]
+! SPLIT: %[[S3:.*]] = arith.addf %[[S1]], %[[S2]]
+! SPLIT: %[[EV:.*]] = fir.load
+! SPLIT: %[[FV:.*]] = fir.load
+! SPLIT: %[[S4:.*]] = arith.addf %[[EV]], %[[FV]]
+! SPLIT: %[[GV:.*]] = fir.load
+! SPLIT: %[[HV:.*]] = fir.load
+! SPLIT: %[[S5:.*]] = arith.addf %[[GV]], %[[HV]]
+! SPLIT: %[[S6:.*]] = arith.addf %[[S4]], %[[S5]]
+! SPLIT: math.atan2 %[[S3]], %[[S6]]
+
+! Default:   (flag ? (((a+b)+c)+d) : e)
+! Rewritten: (flag ? ((a+b)+(c+d)) : e)
+subroutine nested_conditional_branch(x,flag,a,b,c,d,e)
+  real(8) :: x,a,b,c,d,e
+  logical :: flag
+  x = (flag ? a+b+c+d : e)
+end
+
+! SPLIT-LABEL: func.func @_QPnested_conditional_branch
+! SPLIT: fir.if
+! SPLIT: %[[AV:.*]] = fir.load
+! SPLIT: %[[BV:.*]] = fir.load
+! SPLIT: %[[S1:.*]] = arith.addf %[[AV]], %[[BV]]
+! SPLIT: %[[CV:.*]] = fir.load
+! SPLIT: %[[DV:.*]] = fir.load
+! SPLIT: %[[S2:.*]] = arith.addf %[[CV]], %[[DV]]
+! SPLIT: %[[S3:.*]] = arith.addf %[[S1]], %[[S2]]
+! SPLIT: fir.result %[[S3]]
+
+! DEFAULT-LABEL: func.func @_QPnested_conditional_branch
+! DEFAULT: fir.if
+! DEFAULT: %[[AV:.*]] = fir.load
+! DEFAULT: %[[BV:.*]] = fir.load
+! DEFAULT: %[[S1:.*]] = arith.addf %[[AV]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load
+! DEFAULT: %[[S2:.*]] = arith.addf %[[S1]], %[[CV]]
+! DEFAULT: %[[DV:.*]] = fir.load
+! DEFAULT: %[[S3:.*]] = arith.addf %[[S2]], %[[DV]]
+! DEFAULT: fir.result %[[S3]]
+
+! Default:   (((a+b)+c)+d > e ? f : g)
+! Rewritten: ((a+b)+(c+d) > e ? f : g)
+subroutine nested_relational_operand(x,a,b,c,d,e,f,g)
+  real(8) :: x,a,b,c,d,e,f,g
+  x = (a+b+c+d > e ? f : g)
+end
+
+! SPLIT-LABEL: func.func @_QPnested_relational_operand
+! SPLIT: %[[AV:.*]] = fir.load
+! SPLIT: %[[BV:.*]] = fir.load
+! SPLIT: %[[S1:.*]] = arith.addf %[[AV]], %[[BV]]
+! SPLIT: %[[CV:.*]] = fir.load
+! SPLIT: %[[DV:.*]] = fir.load
+! SPLIT: %[[S2:.*]] = arith.addf %[[CV]], %[[DV]]
+! SPLIT: %[[S3:.*]] = arith.addf %[[S1]], %[[S2]]
+! SPLIT: arith.cmpf ogt, %[[S3]]
+
+! DEFAULT-LABEL: func.func @_QPnested_relational_operand
+! DEFAULT: %[[AV:.*]] = fir.load
+! DEFAULT: %[[BV:.*]] = fir.load
+! DEFAULT: %[[S1:.*]] = arith.addf %[[AV]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load
+! DEFAULT: %[[S2:.*]] = arith.addf %[[S1]], %[[CV]]
+! DEFAULT: %[[DV:.*]] = fir.load
+! DEFAULT: %[[S3:.*]] = arith.addf %[[S2]], %[[DV]]
+! DEFAULT: arith.cmpf ogt, %[[S3]]
+
+subroutine guard_parenthesized_call_argument(x,a,b,c)
+  real(8) :: x,a,b,c
+  x = sqrt((a+b+c))
+end
+
+! NO-REWRITE-LABEL: func.func @_QPguard_parenthesized_call_argument
+! NO-REWRITE: %[[AV:.*]] = fir.load
+! NO-REWRITE: %[[BV:.*]] = fir.load
+! NO-REWRITE: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! NO-REWRITE: %[[CV:.*]] = fir.load
+! NO-REWRITE: %[[SUM:.*]] = arith.addf %[[AB]], %[[CV]]
+! NO-REWRITE: %[[PAREN:.*]] = hlfir.no_reassoc %[[SUM]]
+! NO-REWRITE: %[[SQRT:.*]] = math.sqrt %[[PAREN]]
+! NO-REWRITE: hlfir.assign %[[SQRT]]
+
+subroutine guard_short_call_argument(x,a,b)
+  real(8) :: x,a,b
+  x = sqrt(a+b)
+end
+
+! NO-REWRITE-LABEL: func.func @_QPguard_short_call_argument
+! NO-REWRITE: %[[AV:.*]] = fir.load
+! NO-REWRITE: %[[BV:.*]] = fir.load
+! NO-REWRITE: %[[SUM:.*]] = arith.addf %[[AV]], %[[BV]]
+! NO-REWRITE: %[[SQRT:.*]] = math.sqrt %[[SUM]]
+! NO-REWRITE: hlfir.assign %[[SQRT]]
+
+subroutine guard_non_assignment_context(a,b,c)
+  real(8) :: a,b,c
+  call consume(a+b+c)
+end
+
+! NO-REWRITE-LABEL: func.func @_QPguard_non_assignment_context
+! NO-REWRITE: %[[AV:.*]] = fir.load
+! NO-REWRITE: %[[BV:.*]] = fir.load
+! NO-REWRITE: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! NO-REWRITE: %[[CV:.*]] = fir.load
+! NO-REWRITE: %[[SUM:.*]] = arith.addf %[[AB]], %[[CV]]
+! NO-REWRITE: fir.call @_QPconsume
 
 subroutine guard_array(n,x,a,b,c,d,e,f)
   integer :: n
@@ -528,33 +1087,104 @@ end
 ! NO-REWRITE: %[[RES:.*]] = arith.addf %[[XV]], %[[AB]]
 ! NO-REWRITE: hlfir.assign %[[RES]] to %[[X]]#0
 
-subroutine guard_mixed_kind(x,a,b,c,d,e,f)
+! The kind conversion remains around the reassociated expression.
+! Default:   (((a*b + c*d) + e*f) + g*h)
+! Rewritten: ((a*b + c*d) + (e*f + g*h))
+subroutine eligible_whole_real_kind_conversion(x,a,b,c,d,e,f,g,h)
   real(8) :: x
-  real(4) :: a,b,c,d,e,f
-  x = a*b + c*d + e*f
+  real(4) :: a,b,c,d,e,f,g,h
+  x = a*b + c*d + e*f + g*h
 end
 
-! NO-REWRITE-LABEL: func.func @_QPguard_mixed_kind
-! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_mixed_kindEa"}
-! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_mixed_kindEb"}
-! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_mixed_kindEc"}
-! NO-REWRITE-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_mixed_kindEd"}
-! NO-REWRITE-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_mixed_kindEe"}
-! NO-REWRITE-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_mixed_kindEf"}
-! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_mixed_kindEx"}
-! NO-REWRITE: %[[AV:.*]] = fir.load %[[A]]#0
-! NO-REWRITE: %[[BV:.*]] = fir.load %[[B]]#0
+! SPLIT-LABEL: func.func @_QPeligible_whole_real_kind_conversion
+! SPLIT: %[[AV:.*]] = fir.load
+! SPLIT: %[[BV:.*]] = fir.load
+! SPLIT: %[[S1:.*]] = arith.mulf %[[AV]], %[[BV]]
+! SPLIT: %[[CV:.*]] = fir.load
+! SPLIT: %[[DV:.*]] = fir.load
+! SPLIT: %[[S2:.*]] = arith.mulf %[[CV]], %[[DV]]
+! SPLIT: %[[S3:.*]] = arith.addf %[[S1]], %[[S2]]
+! SPLIT: %[[EV:.*]] = fir.load
+! SPLIT: %[[FV:.*]] = fir.load
+! SPLIT: %[[S4:.*]] = arith.mulf %[[EV]], %[[FV]]
+! SPLIT: %[[GV:.*]] = fir.load
+! SPLIT: %[[HV:.*]] = fir.load
+! SPLIT: %[[S5:.*]] = arith.mulf %[[GV]], %[[HV]]
+! SPLIT: %[[S6:.*]] = arith.addf %[[S4]], %[[S5]]
+! SPLIT: %[[S7:.*]] = arith.addf %[[S3]], %[[S6]]
+! SPLIT: %[[CONVERT:.*]] = fir.convert %[[S7]] : (f32) -> f64
+! SPLIT: hlfir.assign %[[CONVERT]]
+
+! DEFAULT-LABEL: func.func @_QPeligible_whole_real_kind_conversion
+! DEFAULT: %[[AV:.*]] = fir.load
+! DEFAULT: %[[BV:.*]] = fir.load
+! DEFAULT: %[[S1:.*]] = arith.mulf %[[AV]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load
+! DEFAULT: %[[DV:.*]] = fir.load
+! DEFAULT: %[[S2:.*]] = arith.mulf %[[CV]], %[[DV]]
+! DEFAULT: %[[S3:.*]] = arith.addf %[[S1]], %[[S2]]
+! DEFAULT: %[[EV:.*]] = fir.load
+! DEFAULT: %[[FV:.*]] = fir.load
+! DEFAULT: %[[S4:.*]] = arith.mulf %[[EV]], %[[FV]]
+! DEFAULT: %[[S5:.*]] = arith.addf %[[S3]], %[[S4]]
+! DEFAULT: %[[GV:.*]] = fir.load
+! DEFAULT: %[[HV:.*]] = fir.load
+! DEFAULT: %[[S6:.*]] = arith.mulf %[[GV]], %[[HV]]
+! DEFAULT: %[[S7:.*]] = arith.addf %[[S5]], %[[S6]]
+! DEFAULT: %[[CONVERT:.*]] = fir.convert %[[S7]] : (f32) -> f64
+! DEFAULT: hlfir.assign %[[CONVERT]]
+
+! Default:   (((a + b) + c) + d)
+! Rewritten: ((a + b) + (c + d))
+subroutine eligible_whole_complex_kind_conversion(x,a,b,c,d)
+  complex(8) :: x
+  complex(4) :: a,b,c,d
+  x = a + b + c + d
+end
+
+! SPLIT-LABEL: func.func @_QPeligible_whole_complex_kind_conversion
+! SPLIT: %[[AV:.*]] = fir.load
+! SPLIT: %[[BV:.*]] = fir.load
+! SPLIT: %[[S1:.*]] = fir.addc %[[AV]], %[[BV]]
+! SPLIT: %[[CV:.*]] = fir.load
+! SPLIT: %[[DV:.*]] = fir.load
+! SPLIT: %[[S2:.*]] = fir.addc %[[CV]], %[[DV]]
+! SPLIT: %[[S3:.*]] = fir.addc %[[S1]], %[[S2]]
+! SPLIT: %[[CONVERT:.*]] = fir.convert %[[S3]] : (complex<f32>) -> complex<f64>
+! SPLIT: hlfir.assign %[[CONVERT]]
+
+! DEFAULT-LABEL: func.func @_QPeligible_whole_complex_kind_conversion
+! DEFAULT: %[[AV:.*]] = fir.load
+! DEFAULT: %[[BV:.*]] = fir.load
+! DEFAULT: %[[S1:.*]] = fir.addc %[[AV]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load
+! DEFAULT: %[[S2:.*]] = fir.addc %[[S1]], %[[CV]]
+! DEFAULT: %[[DV:.*]] = fir.load
+! DEFAULT: %[[S3:.*]] = fir.addc %[[S2]], %[[DV]]
+! DEFAULT: %[[CONVERT:.*]] = fir.convert %[[S3]] : (complex<f32>) -> complex<f64>
+! DEFAULT: hlfir.assign %[[CONVERT]]
+
+! A conversion embedded in the additive tree is not yet eligible.
+subroutine guard_embedded_kind_conversion(x,a,b,c,d,e,f)
+  real(8) :: x,a,b,c,d
+  real(4) :: e,f
+  x = a*b + c*d + real(e*f,8)
+end
+
+! NO-REWRITE-LABEL: func.func @_QPguard_embedded_kind_conversion
+! NO-REWRITE: %[[AV:.*]] = fir.load
+! NO-REWRITE: %[[BV:.*]] = fir.load
 ! NO-REWRITE: %[[AB:.*]] = arith.mulf %[[AV]], %[[BV]]
-! NO-REWRITE: %[[CV:.*]] = fir.load %[[C]]#0
-! NO-REWRITE: %[[DV:.*]] = fir.load %[[D]]#0
+! NO-REWRITE: %[[CV:.*]] = fir.load
+! NO-REWRITE: %[[DV:.*]] = fir.load
 ! NO-REWRITE: %[[CD:.*]] = arith.mulf %[[CV]], %[[DV]]
-! NO-REWRITE: %[[ABCD:.*]] = arith.addf %[[AB]], %[[CD]]
-! NO-REWRITE: %[[EV:.*]] = fir.load %[[E]]#0
-! NO-REWRITE: %[[FV:.*]] = fir.load %[[F]]#0
-! NO-REWRITE: %[[EF:.*]] = arith.mulf %[[EV]], %[[FV]]
-! NO-REWRITE: %[[SUM:.*]] = arith.addf %[[ABCD]], %[[EF]]
-! NO-REWRITE: %[[RES:.*]] = fir.convert %[[SUM]]
-! NO-REWRITE: hlfir.assign %[[RES]] to %[[X]]#0
+! NO-REWRITE: %[[HEAD:.*]] = arith.addf %[[AB]], %[[CD]]
+! NO-REWRITE: %[[EV:.*]] = fir.load
+! NO-REWRITE: %[[FV:.*]] = fir.load
+! NO-REWRITE: %[[EF:.*]] = arith.mulf %[[EV]], %[[FV]] {{.*}} : f32
+! NO-REWRITE: %[[CONVERT:.*]] = fir.convert %[[EF]] : (f32) -> f64
+! NO-REWRITE: %[[SUM:.*]] = arith.addf %[[HEAD]], %[[CONVERT]]
+! NO-REWRITE: hlfir.assign %[[SUM]]
 
 module split_sum_guard_mod
   real(8), volatile :: use_volatile_x

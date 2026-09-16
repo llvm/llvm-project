@@ -45,10 +45,10 @@ tablegen("AMDGPUTargetParserDef") {
 group("gen") {
   deps = [
     ":AArch64TargetParserDef",
+    ":AMDGPUTargetParserDef",
     ":ARMTargetParserDef",
     ":PPCGenTargetFeatures",
-    ":RISCVTargetParserDef",
     ":R600TargetParserDef",
-    ":AMDGPUTargetParserDef",
+    ":RISCVTargetParserDef",
   ]
 }

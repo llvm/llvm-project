@@ -13,12 +13,30 @@
 
 #include "AMDGPUCoExecSchedStrategy.h"
 #include "AMDGPUIGroupLP.h"
+#include "GCNHazardRecognizer.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
 
 #define DEBUG_TYPE "machine-scheduler"
+namespace {
+enum class CarriedLatency { Off, Fence, All };
+} // namespace
+
+static cl::opt<CarriedLatency> BlockCarriedLatency(
+    "amdgpu-block-carried-latency", cl::Hidden, cl::init(CarriedLatency::Off),
+    cl::desc("Estimate block-carried latency and include it in the effective "
+             "candidate stall cost."),
+    cl::values(
+        clEnumValN(CarriedLatency::Off, "off",
+                   "Disabled - do not pad latency."),
+        clEnumValN(CarriedLatency::Fence, "fence",
+                   "Only pad latency for memory fence (e.g. those surrounding "
+                   "barrier_signal/wait)."),
+        clEnumValN(
+            CarriedLatency::All, "all",
+            "Pad latency for any SU with an incoming ds_load dependency.")));
 
 namespace {
 
@@ -43,6 +61,329 @@ static SUnit *pickOnlyChoice(SchedBoundary &Zone) {
   return OnlyChoice;
 }
 
+/// Apply \p ExtraBits to every slot in \p Info starting with \p StartIndex
+/// Used by MFMA co-exec rules, because MFMA co-exec slots are incremental, i.e.
+/// for every slot N it supports all instructions which were supported by the
+/// previous slot N-1 and may support something extra.
+static void allowCoExec(llvm::AMDGPU::CoExecInfo &Info,
+                        llvm::AMDGPU::CoExecMaskT ExtraBits,
+                        unsigned StartIndex) {
+  for (unsigned Index = StartIndex; Index < Info.TotalWindow; ++Index)
+    Info.Slots[Index].Mask |= ExtraBits;
+}
+
+/// Get co-execution info for a gfx950 MFMA instruction.
+/// The occupancy (cycles until the next MFMA may issue) is expressed as the
+/// first stage carrying the WMMA bit.
+llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
+  using namespace llvm;
+  using namespace llvm::AMDGPU;
+  CoExecInfo Res;
+  for (unsigned I = 0; I < MaxCoExecStages; ++I)
+    Res.Slots[I].Mask = CoExecMask::None;
+
+  // TODO: Implement proper patterns support (for debugging purposes).
+  // Existing pattern letters are WMMA-specific and will probably be confusing
+  // if used as-is for MFMA. Inventing new MFMA-specific letters is an option,
+  // but perhaps the pattern should be instead dynamically reconstructed when
+  // needed by printing specific slots in full instead of a key for them.
+  Res.Pattern = "undefinedundefinedundefinedundefined";
+
+  switch (Opcode) {
+  // 4-cycle occupancy, 8-cycle window.
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f4_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f4_gfx940_acd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f4_gfx940_vcd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f6_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f6_vgprcd_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f6_gfx940_acd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f6_gfx940_vcd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f4_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f4_vgprcd_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f4_gfx940_acd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f4_gfx940_vcd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f6_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f6_vgprcd_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f6_gfx940_acd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f6_gfx940_vcd:
+  case V_MFMA_F32_16X16X32_BF16_e64:
+  case V_MFMA_F32_16X16X32_BF16_vgprcd_e64:
+  case V_MFMA_F32_16X16X32_BF16_gfx940_acd:
+  case V_MFMA_F32_16X16X32_BF16_gfx940_vcd:
+  case V_MFMA_I32_16X16X64_I8_e64:
+  case V_MFMA_I32_16X16X64_I8_vgprcd_e64:
+  case V_MFMA_I32_16X16X64_I8_gfx940_acd:
+  case V_MFMA_I32_16X16X64_I8_gfx940_vcd:
+  case V_MFMA_F32_16X16X32_F16_e64:
+  case V_MFMA_F32_16X16X32_F16_vgprcd_e64:
+  case V_MFMA_F32_16X16X32_F16_gfx940_acd:
+  case V_MFMA_F32_16X16X32_F16_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_gfx940_acd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f6_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f6_vgprcd_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f6_gfx940_acd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f6_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f4_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f4_vgprcd_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f4_gfx940_acd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f4_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_vgprcd_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_gfx940_acd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_gfx940_vcd:
+    // GFX9 Shader Programming Guide lists those SMFMAC separately, but for
+    // intended purposes here all those instructions are the same. This comment
+    // is to simplify reverse mapping to the SPG.
+  case V_SMFMAC_F32_16X16X64_BF16_e64:
+  case V_SMFMAC_F32_16X16X64_BF16_gfx940:
+  case V_SMFMAC_I32_16X16X128_I8_e64:
+  case V_SMFMAC_I32_16X16X128_I8_gfx940:
+  case V_SMFMAC_F32_16X16X128_BF8_BF8_e64:
+  case V_SMFMAC_F32_16X16X128_BF8_BF8_gfx940:
+  case V_SMFMAC_F32_16X16X128_BF8_FP8_e64:
+  case V_SMFMAC_F32_16X16X128_BF8_FP8_gfx940:
+  case V_SMFMAC_F32_16X16X128_FP8_BF8_e64:
+  case V_SMFMAC_F32_16X16X128_FP8_BF8_gfx940:
+  case V_SMFMAC_F32_16X16X128_FP8_FP8_e64:
+  case V_SMFMAC_F32_16X16X128_FP8_FP8_gfx940:
+  case V_SMFMAC_F32_16X16X64_F16_e64:
+  case V_SMFMAC_F32_16X16X64_F16_gfx940:
+    Res.TotalWindow = 8;
+    allowCoExec(Res, CoExecMask::SALU, 1);
+    allowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 2);
+    allowCoExec(Res, CoExecMask::WMMA, 4);
+    return Res;
+
+  // 8-cycle occupancy, 12-cycle window.
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f8_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f8_vgprcd_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f8_gfx940_acd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f8_gfx940_vcd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f8_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f8_vgprcd_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f8_gfx940_acd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f8_gfx940_vcd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f4_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f4_vgprcd_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f4_gfx940_acd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f4_gfx940_vcd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f6_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f6_vgprcd_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f6_gfx940_acd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f6_gfx940_vcd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f8_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f8_vgprcd_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f8_gfx940_acd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f8_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f8_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f8_vgprcd_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f8_gfx940_acd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f8_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f8_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f8_vgprcd_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f8_gfx940_acd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f8_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f4_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f4_vgprcd_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f4_gfx940_acd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f4_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f6_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f6_vgprcd_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f6_gfx940_acd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f6_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_vgprcd_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_gfx940_acd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_gfx940_vcd:
+    Res.TotalWindow = 12;
+    allowCoExec(Res, CoExecMask::SALU, 1);
+    allowCoExec(Res, CoExecMask::DS | CoExecMask::VMEM, 2);
+    allowCoExec(Res, CoExecMask::VALU, 3);
+    allowCoExec(Res, CoExecMask::WMMA, 8);
+    return Res;
+
+  // 4-cycle occupancy, 8-cycle window.
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_gfx940_acd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_gfx940_vcd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_gfx940_acd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_gfx940_vcd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_gfx940_acd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_gfx940_vcd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_gfx940_acd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_gfx940_vcd:
+  case V_MFMA_F32_32X32X16_BF16_e64:
+  case V_MFMA_F32_32X32X16_BF16_mac_e64:
+  case V_MFMA_F32_32X32X16_BF16_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X16_BF16_vgprcd_e64:
+  case V_MFMA_F32_32X32X16_BF16_gfx940_acd:
+  case V_MFMA_F32_32X32X16_BF16_gfx940_vcd:
+  case V_MFMA_I32_32X32X32_I8_e64:
+  case V_MFMA_I32_32X32X32_I8_mac_e64:
+  case V_MFMA_I32_32X32X32_I8_mac_vgprcd_e64:
+  case V_MFMA_I32_32X32X32_I8_vgprcd_e64:
+  case V_MFMA_I32_32X32X32_I8_gfx940_acd:
+  case V_MFMA_I32_32X32X32_I8_gfx940_vcd:
+  case V_MFMA_F32_32X32X16_F16_e64:
+  case V_MFMA_F32_32X32X16_F16_mac_e64:
+  case V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X16_F16_vgprcd_e64:
+  case V_MFMA_F32_32X32X16_F16_gfx940_acd:
+  case V_MFMA_F32_32X32X16_F16_gfx940_vcd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_gfx940_acd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_gfx940_vcd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_gfx940_acd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_gfx940_vcd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_gfx940_acd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_gfx940_vcd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_gfx940_acd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_gfx940_vcd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_mac_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_mac_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_mac_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_mac_vgprcd_e64:
+    Res.TotalWindow = 8;
+    allowCoExec(Res, CoExecMask::SALU, 1);
+    allowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 2);
+    allowCoExec(Res, CoExecMask::WMMA, 4);
+    return Res;
+
+  // 16-cycle occupancy, 20-cycle window.
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_gfx940_acd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_gfx940_vcd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_gfx940_acd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_gfx940_vcd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_gfx940_acd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_gfx940_vcd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_gfx940_acd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_gfx940_vcd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_gfx940_acd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_gfx940_vcd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_mac_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_mac_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4_mac_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6_mac_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_mac_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_gfx940_acd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_gfx940_vcd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_gfx940_acd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_gfx940_vcd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4_gfx940_acd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4_gfx940_vcd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6_gfx940_acd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6_gfx940_vcd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_gfx940_acd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_gfx940_vcd:
+    Res.TotalWindow = 20;
+    allowCoExec(Res, CoExecMask::SALU, 1);
+    allowCoExec(Res, CoExecMask::DS | CoExecMask::VMEM, 2);
+    allowCoExec(Res, CoExecMask::VALU, 3);
+    allowCoExec(Res, CoExecMask::WMMA, 16);
+    return Res;
+
+  // 9-cycle occupancy, 12-cycle window.
+  case V_SMFMAC_F32_32X32X32_BF16_e64:
+  case V_SMFMAC_F32_32X32X32_BF16_gfx940:
+  case V_SMFMAC_I32_32X32X64_I8_e64:
+  case V_SMFMAC_I32_32X32X64_I8_gfx940:
+  case V_SMFMAC_F32_32X32X64_BF8_BF8_e64:
+  case V_SMFMAC_F32_32X32X64_BF8_BF8_gfx940:
+  case V_SMFMAC_F32_32X32X64_BF8_FP8_e64:
+  case V_SMFMAC_F32_32X32X64_BF8_FP8_gfx940:
+  case V_SMFMAC_F32_32X32X64_FP8_BF8_e64:
+  case V_SMFMAC_F32_32X32X64_FP8_BF8_gfx940:
+  case V_SMFMAC_F32_32X32X64_FP8_FP8_e64:
+  case V_SMFMAC_F32_32X32X64_FP8_FP8_gfx940:
+  case V_SMFMAC_F32_32X32X32_F16_e64:
+  case V_SMFMAC_F32_32X32X32_F16_gfx940:
+    Res.TotalWindow = 12;
+    allowCoExec(Res, CoExecMask::SALU, 1);
+    allowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 4);
+    allowCoExec(Res, CoExecMask::WMMA, 9);
+    return Res;
+
+  // 18-cycle occupancy, 19-cycle window.
+  case V_MFMA_F64_16X16X4F64_e64:
+  case V_MFMA_F64_16X16X4F64_mac_e64:
+  case V_MFMA_F64_16X16X4F64_mac_vgprcd_e64:
+  case V_MFMA_F64_16X16X4F64_vgprcd_e64:
+    Res.TotalWindow = 19;
+    allowCoExec(Res, CoExecMask::DS | CoExecMask::SALU | CoExecMask::VMEM, 0);
+    allowCoExec(Res, CoExecMask::WMMA | CoExecMask::VALU, 18);
+    return Res;
+
+  default:
+    // Default fallback: permissive 8-cycle pattern
+    return CoExecInfo::build(0, 9, "AAAAAAAAA");
+  }
+}
+
 InstructionFlavor llvm::AMDGPU::classifyFlavor(const MachineInstr &MI,
                                                const SIInstrInfo &SII) {
   if (MI.isDebugInstr())
@@ -59,14 +400,26 @@ InstructionFlavor llvm::AMDGPU::classifyFlavor(const MachineInstr &MI,
   if (SII.isLDSDMA(MI))
     return InstructionFlavor::DMA;
 
-  if (SII.isMFMAorWMMA(MI))
+  if (SII.isMFMA(MI)) {
+    // TODO: Consider further sub-classifying this (XDL, XDL2x, S/DGEMM).
+    // GFX9 SPG sub-classifies MFMA into XDL, XDL2x and S/DGEMM, because only
+    // certain sub-classes can be co-executed in certain slots. For now, we
+    // simply treat them all as one to simplify the change and leave the rest
+    // to a follow-up fine-tuning.
+    return InstructionFlavor::WMMA;
+  }
+
+  if (SII.isWMMA(MI) || SII.isSWMMAC(MI))
     return InstructionFlavor::WMMA;
 
   if (SII.isTRANS(MI))
     return InstructionFlavor::TRANS;
 
-  if (SII.isVALU(MI, /*AllowLDSDMA=*/true))
+  if (SII.isVALU(MI, /*AllowLDSDMA=*/false))
     return InstructionFlavor::SingleCycleVALU;
+
+  if (SII.isSMRD(MI))
+    return InstructionFlavor::SMEM;
 
   if (SII.isDS(MI))
     return InstructionFlavor::DS;
@@ -138,10 +491,14 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
   if (TotalCycles == 0)
     return;
 
+  ScheduledSUs.push_back(SU);
   AllSUs.remove(SU);
   PrioritySUs.remove(SU);
 
-  TotalCycles -= BlockingCycles;
+  // BufferSize 0 is unlimited, while size 1 has no parallel buffering. In
+  // either case, each SU uses the HardwareUnit for BlockingCycles.
+  if (BufferSize <= 1 || (ScheduledSUs.size() % BufferSize == 0))
+    TotalCycles -= std::min(TotalCycles, BlockingCycles);
 
   if (AllSUs.empty())
     return;
@@ -168,6 +525,32 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
   }
 }
 
+void HardwareUnitInfo::finalizeCycles() {
+  if (BufferSize == 0 || AllSUs.empty())
+    return;
+
+  // We estimate the amount of cycles it takes to free up a slot in the buffer
+  // as the average cycles per SU.
+  BufferCycles = TotalCycles / AllSUs.size();
+  // A single-entry buffer does not reduce TotalCycles.
+  if (BufferSize == 1)
+    return;
+
+  // The TotalCycles is normalized against the BufferSize.
+  // This provides an estimate of the TotalCycles which is not always accurate
+  // -- particularly in cases where we have fewer instructions than the
+  // BufferSize. For example, if we have 2 instructions which each take 50
+  // cycles and a BufferSize of 16, then a TotalCycles of 51 cycles would be
+  // somewhat accurate. This normalization calculates TotalCycles as 6. However,
+  // if we have 64 of these instructions, our normalized estimate of 200 is more
+  // reasonable, given the more accurate measure is 264. Having a completely
+  // accurate measure is not very important, since this metric is mainly used to
+  // compare the relative demand per HardwareUnit across the region. The simpler
+  // estimate makes managing the metric incrementally during scheduling much
+  // simpler.
+  TotalCycles /= BufferSize;
+}
+
 HardwareUnitInfo *
 CandidateHeuristics::getHWUIFromFlavor(InstructionFlavor Flavor) {
   for (HardwareUnitInfo &HWUICand : HWUInfo) {
@@ -178,23 +561,40 @@ CandidateHeuristics::getHWUIFromFlavor(InstructionFlavor Flavor) {
   return nullptr;
 }
 
-unsigned CandidateHeuristics::getHWUICyclesForInst(SUnit *SU) {
-  assert(SchedModel && SchedModel->hasInstrSchedModel());
+unsigned CandidateHeuristics::getMaxBlockingCycles(const MCSchedClassDesc *SC,
+                                                   const MachineInstr *MI) {
+  // Loads and stores are not pipelined.
+  if (MI->mayLoadOrStore())
+    return SchedModel->computeInstrLatency(MI, false);
+
   unsigned ReleaseAtCycle = 0;
-  const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
   for (TargetSchedModel::ProcResIter PI = SchedModel->getWriteProcResBegin(SC),
                                      PE = SchedModel->getWriteProcResEnd(SC);
        PI != PE; ++PI) {
-    ReleaseAtCycle = std::max(ReleaseAtCycle, (unsigned)PI->ReleaseAtCycle);
+    ReleaseAtCycle =
+        std::max(ReleaseAtCycle, static_cast<unsigned>(PI->ReleaseAtCycle));
   }
   return ReleaseAtCycle;
+}
+
+unsigned CandidateHeuristics::getHWUICyclesForSU(SUnit *SU) {
+  assert(SchedModel && SchedModel->hasInstrSchedModel());
+  MachineInstr *MI = SU->getInstr();
+  if (SII->isDS(*MI))
+    return SchedModel->computeInstrLatency(MI);
+  return getMaxBlockingCycles(DAG->getSchedClass(SU), MI);
+}
+
+unsigned CandidateHeuristics::getHWUICyclesForMI(MachineInstr *MI) {
+  assert(SchedModel && SchedModel->hasInstrSchedModel());
+  return getMaxBlockingCycles(SchedModel->resolveSchedClass(MI), MI);
 }
 
 void CandidateHeuristics::updateForScheduling(SUnit *SU) {
   HardwareUnitInfo *HWUI =
       getHWUIFromFlavor(classifyFlavor(*SU->getInstr(), *SII));
   assert(HWUI);
-  HWUI->markScheduled(SU, getHWUICyclesForInst(SU));
+  HWUI->markScheduled(SU, getHWUICyclesForSU(SU));
 }
 
 void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
@@ -207,28 +607,120 @@ void CandidateHeuristics::initialize(ScheduleDAGMI *SchedDAG,
   SRI = static_cast<const SIRegisterInfo *>(TRI);
   SII = static_cast<const SIInstrInfo *>(DAG->TII);
 
-  HWUInfo.resize((int)InstructionFlavor::NUM_FLAVORS);
+  HWUInfo.resize(static_cast<int>(InstructionFlavor::NUM_FLAVORS));
 
   for (unsigned I = 0; I < HWUInfo.size(); I++) {
     HWUInfo[I].reset();
     HWUInfo[I].setType(I);
   }
 
-  HWUInfo[(int)InstructionFlavor::WMMA].setProducesCoexecWindow(true);
-  HWUInfo[(int)InstructionFlavor::MultiCycleVALU].setProducesCoexecWindow(true);
-  HWUInfo[(int)InstructionFlavor::TRANS].setProducesCoexecWindow(true);
+  HWUInfo[static_cast<int>(InstructionFlavor::WMMA)].setProducesCoexecWindow(
+      true);
+  HWUInfo[static_cast<int>(InstructionFlavor::MultiCycleVALU)]
+      .setProducesCoexecWindow(true);
+  HWUInfo[static_cast<int>(InstructionFlavor::TRANS)].setProducesCoexecWindow(
+      true);
+  HWUInfo[static_cast<int>(InstructionFlavor::DS)].setBufferSize(
+      DefaultBufferSizes::DS);
 
-  collectHWUIPressure();
+  collectRegionSummary();
 }
 
-void CandidateHeuristics::collectHWUIPressure() {
+unsigned CandidateHeuristics::getCarriedLatency(SUnit *SU) {
+  if (BlockCarriedLatency == CarriedLatency::Off)
+    return 0;
+
+  MachineInstr *MI = SU->getInstr();
+  unsigned CarriedLatency = 0;
+  const InstructionFlavor Flavor = classifyFlavor(*MI, *SII);
+  if (Flavor == InstructionFlavor::Fence) {
+    MachineBasicBlock *MBB = MI->getParent();
+    // Scan each direct predecessor back to its nearest Fence or block start for
+    // DS instructions.
+    for (auto PredMBB : MBB->predecessors()) {
+      auto I = PredMBB->rbegin();
+      auto E = PredMBB->rend();
+      for (; I != E; I++) {
+        const InstructionFlavor ItFlavor = classifyFlavor(*I, *SII);
+        if (ItFlavor == InstructionFlavor::Fence)
+          break;
+
+        // Found carried latency.
+        if (ItFlavor == InstructionFlavor::DS)
+          CarriedLatency = std::max(CarriedLatency, getHWUICyclesForMI(&*I));
+      }
+    }
+  }
+
+  if (BlockCarriedLatency == CarriedLatency::Fence)
+    return CarriedLatency;
+
+  for (MachineOperand &Op : MI->all_uses()) {
+    auto Reg = Op.getReg();
+    if (!Reg.isVirtual())
+      continue;
+
+    for (MachineInstr &Def : DAG->MRI.def_instructions(Reg)) {
+      // We don't have the proper modelling to accurately measure all carried
+      // latency. Just try to measure carried latency for long latency loads to
+      // avoid long stalls.
+      if (!Def.mayLoad())
+        continue;
+
+      unsigned Latency = getHWUICyclesForMI(&Def);
+
+      // Load is carried across block.
+      if (Def.getParent() != MI->getParent()) {
+        bool FoundUseInDefBlock = false;
+        for (MachineInstr &Use : DAG->MRI.use_nodbg_instructions(Reg)) {
+          if (Use.getParent() != Def.getParent())
+            continue;
+
+          SlotIndex DefIdx = DAG->getLIS()->getInstructionIndex(Def);
+          SlotIndex UseIdx = DAG->getLIS()->getInstructionIndex(Use);
+          // We have a use of this load in the def block that occurs after the
+          // load. In this case we must wait for the load in the def block, and
+          // we do not have any carried latency from this load.
+          if (SlotIndex::isEarlierInstr(DefIdx, UseIdx)) {
+            FoundUseInDefBlock = true;
+            break;
+          }
+        }
+        if (!FoundUseInDefBlock)
+          CarriedLatency = std::max(Latency, CarriedLatency);
+
+        continue;
+      }
+
+      assert(Def.getParent() == MI->getParent());
+      // Load is in the same block.
+      SlotIndex LoadIdx = DAG->getLIS()->getInstructionIndex(Def);
+      SlotIndex UseIdx = DAG->getLIS()->getInstructionIndex(*MI);
+      // The load occurs after this use -- the latency is carried across loop
+      // backedge.
+      if (SlotIndex::isEarlierInstr(UseIdx, LoadIdx))
+        CarriedLatency = std::max(Latency, CarriedLatency);
+    }
+  }
+  return CarriedLatency;
+}
+
+void CandidateHeuristics::collectRegionSummary() {
+  CarriedLatencies.clear();
   if (!SchedModel || !SchedModel->hasInstrSchedModel())
     return;
 
   for (auto &SU : DAG->SUnits) {
-    const InstructionFlavor Flavor = classifyFlavor(*SU.getInstr(), *SII);
-    HWUInfo[(int)(Flavor)].insert(&SU, getHWUICyclesForInst(&SU));
+    MachineInstr *MI = SU.getInstr();
+    const InstructionFlavor Flavor = classifyFlavor(*MI, *SII);
+    HWUInfo[static_cast<int>(Flavor)].insert(&SU, getHWUICyclesForSU(&SU));
+    unsigned CarriedLatency = getCarriedLatency(&SU);
+    if (CarriedLatency)
+      CarriedLatencies[MI] = CarriedLatency;
   }
+
+  for (auto &HWUI : HWUInfo)
+    HWUI.finalizeCycles();
 
   LLVM_DEBUG(dumpRegionSummary());
 }
@@ -269,6 +761,108 @@ void CandidateHeuristics::sortHWUIResources() {
     return static_cast<unsigned>(A.getType()) <
            static_cast<unsigned>(B.getType());
   });
+}
+
+unsigned CandidateHeuristics::getStructuralStallCycles(SchedBoundary &Zone,
+                                                       SUnit *SU) {
+  // Only implemented for top-down scheduling currently.
+  if (!Zone.isTop() || !SU)
+    return 0;
+
+  MachineInstr *MI = SU->getInstr();
+  unsigned CurrCycle = Zone.getCurrCycle();
+  unsigned Stall = 0;
+
+  // Query SchedModel for resource stalls (unbuffered resources).
+  if (SchedModel->hasInstrSchedModel() && SU->hasReservedResource) {
+    const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
+    for (const MCWriteProcResEntry &PE :
+         make_range(SchedModel->getWriteProcResBegin(SC),
+                    SchedModel->getWriteProcResEnd(SC))) {
+      unsigned NextAvail =
+          Zone.getNextResourceCycle(SC, PE.ProcResourceIdx, PE.ReleaseAtCycle,
+                                    PE.AcquireAtCycle)
+              .first;
+      if (NextAvail > CurrCycle)
+        Stall = std::max(Stall, NextAvail - CurrCycle);
+    }
+  }
+
+  // Query HazardRecognizer for sequence-dependent hazard penalties.
+  if (Zone.HazardRec && Zone.HazardRec->isEnabled()) {
+    auto *HR = static_cast<GCNHazardRecognizer *>(Zone.HazardRec.get());
+    Stall = std::max(Stall, HR->getHazardWaitStates(MI));
+  }
+
+  return Stall;
+}
+
+bool CandidateHeuristics::tryEffectiveStall(
+    GenericSchedulerBase::SchedCandidate &Cand,
+    GenericSchedulerBase::SchedCandidate &TryCand, SchedBoundary &Zone) {
+
+  // Treat structural and latency stalls as a single scheduling cost for the
+  // current cycle.
+  struct StallCosts {
+    unsigned Ready = 0;
+    unsigned Structural = 0;
+    unsigned Latency = 0;
+    unsigned Effective = 0;
+    unsigned Carried = 0;
+    unsigned Buffer = 0;
+  };
+
+  auto getBufferFullStalls = [this, &Zone](SUnit *SU) -> unsigned {
+    InstructionFlavor Flavor = classifyFlavor(
+        *SU->getInstr(), *static_cast<const SIInstrInfo *>(DAG->TII));
+    HardwareUnitInfo *HWUI = getHWUIFromFlavor(Flavor);
+
+    // A BufferSize of 0 means "unlimited" buffer, thus we will never fill it.
+    if (HWUI->getBufferSize() == 0)
+      return 0;
+
+    // getBufferAvailableCycle assumes top-down scheduling.
+    assert(Zone.isTop());
+    unsigned CurrCycle = Zone.getCurrCycle();
+    unsigned BufferReadyCycle = HWUI->getBufferAvailableCycle(CurrCycle);
+    if (BufferReadyCycle <= CurrCycle)
+      return 0;
+
+    return BufferReadyCycle - CurrCycle;
+  };
+
+  unsigned CurrCycle = Zone.getCurrCycle();
+  auto GetStallCosts = [&](SUnit *SU) {
+    unsigned ReadyCycle = Zone.isTop() ? SU->TopReadyCycle : SU->BotReadyCycle;
+    StallCosts Costs;
+    Costs.Ready = ReadyCycle > CurrCycle ? ReadyCycle - CurrCycle : 0;
+    Costs.Structural = getStructuralStallCycles(Zone, SU);
+    Costs.Latency = Zone.getLatencyStallCycles(SU);
+    unsigned CarriedLatency = CarriedLatencies.lookup_or(SU->getInstr(), 0);
+    Costs.Carried = CarriedLatency > CurrCycle ? CarriedLatency - CurrCycle : 0;
+    Costs.Buffer = getBufferFullStalls(SU);
+
+    Costs.Effective = std::max({Costs.Ready, Costs.Structural, Costs.Latency,
+                                Costs.Carried, Costs.Buffer});
+    return Costs;
+  };
+
+  StallCosts TryCosts = GetStallCosts(TryCand.SU);
+  StallCosts CandCosts = GetStallCosts(Cand.SU);
+
+  LLVM_DEBUG(if (TryCosts.Effective || CandCosts.Effective) {
+    dbgs() << "Effective stalls: try=" << TryCosts.Effective
+           << " (ready=" << TryCosts.Ready << ", struct=" << TryCosts.Structural
+           << ", lat=" << TryCosts.Latency << ", carried=" << TryCosts.Carried
+           << ", buffer=" << TryCosts.Buffer << ") cand=" << CandCosts.Effective
+           << " (ready=" << CandCosts.Ready
+           << ", struct=" << CandCosts.Structural
+           << ", lat=" << CandCosts.Latency << ", carried=" << CandCosts.Carried
+           << ", buffer=" << CandCosts.Buffer << ")\n";
+  });
+
+  return tryLess(TryCosts.Effective, CandCosts.Effective, TryCand, Cand,
+                 AMDGPUCoExecSchedStrategy::Stall);
 }
 
 bool CandidateHeuristics::tryCriticalResourceDependency(
@@ -434,6 +1028,14 @@ void AMDGPUCoExecSchedStrategy::initialize(ScheduleDAGMI *DAG) {
 
   GCNSchedStrategy::initialize(DAG);
   Heurs.initialize(DAG, SchedModel, TRI);
+
+  // Replace the default hazard recognizer with our PreRA one so that pre-RA
+  // scheduling accounts for WMMA co-execution slot constraints. This must
+  // happen after GCNSchedStrategy::initialize() because
+  // GenericScheduler::initialize() calls SchedBoundary::reset(), which deletes
+  // and recreates the hazard recognizer each region.
+  Top.HazardRec = std::make_unique<GCNHazardRecognizer>(
+      DAG->MF, GCNHazardRecognizer::OperatingMode::PreRA);
 }
 
 void AMDGPUCoExecSchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
@@ -511,14 +1113,17 @@ void AMDGPUCoExecSchedStrategy::pickNodeFromQueue(
   ArrayRef<unsigned> Pressure = RPTracker.getRegSetPressureAtPos();
   unsigned SGPRPressure = 0;
   unsigned VGPRPressure = 0;
+  unsigned AGPRPressure = 0;
   PickedPending = false;
   if (DAG->isTrackingPressure()) {
     if (!useGCNTrackers()) {
       SGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
       VGPRPressure = Pressure[AMDGPU::RegisterPressureSets::VGPR_32];
+      AGPRPressure = Pressure[AMDGPU::RegisterPressureSets::AGPR_32];
     } else {
       SGPRPressure = DownwardTracker.getPressure().getSGPRNum();
       VGPRPressure = DownwardTracker.getPressure().getArchVGPRNum();
+      AGPRPressure = DownwardTracker.getPressure().getAGPRNum();
     }
   }
 
@@ -526,7 +1131,7 @@ void AMDGPUCoExecSchedStrategy::pickNodeFromQueue(
     for (SUnit *SU : Q) {
       SchedCandidate TryCand(ZonePolicy);
       initCandidate(TryCand, SU, Zone.isTop(), RPTracker, SRI, SGPRPressure,
-                    VGPRPressure, IsBottomUp);
+                    VGPRPressure, AGPRPressure, IsBottomUp);
       SchedBoundary *ZoneArg = Cand.AtTop == TryCand.AtTop ? &Zone : nullptr;
       tryCandidateCoexec(Cand, TryCand, ZoneArg);
       if (TryCand.Reason != NoCand) {
@@ -604,7 +1209,7 @@ bool AMDGPUCoExecSchedStrategy::tryCandidateCoexec(SchedCandidate &Cand,
   if (SameBoundary) {
     // Compare candidates by the stall they would introduce if
     // scheduled in the current cycle.
-    if (tryEffectiveStall(Cand, TryCand, *Zone))
+    if (Heurs.tryEffectiveStall(Cand, TryCand, *Zone))
       return TryCand.Reason != NoCand;
 
     Heurs.sortHWUIResources();
@@ -665,44 +1270,6 @@ bool AMDGPUCoExecSchedStrategy::tryCandidateCoexec(SchedCandidate &Cand,
   }
 
   return false;
-}
-
-bool AMDGPUCoExecSchedStrategy::tryEffectiveStall(SchedCandidate &Cand,
-                                                  SchedCandidate &TryCand,
-                                                  SchedBoundary &Zone) const {
-  // Treat structural and latency stalls as a single scheduling cost for the
-  // current cycle.
-  struct StallCosts {
-    unsigned Ready = 0;
-    unsigned Structural = 0;
-    unsigned Latency = 0;
-    unsigned Effective = 0;
-  };
-
-  unsigned CurrCycle = Zone.getCurrCycle();
-  auto GetStallCosts = [&](SUnit *SU) {
-    unsigned ReadyCycle = Zone.isTop() ? SU->TopReadyCycle : SU->BotReadyCycle;
-    StallCosts Costs;
-    Costs.Ready = ReadyCycle > CurrCycle ? ReadyCycle - CurrCycle : 0;
-    Costs.Structural = getStructuralStallCycles(Zone, SU);
-    Costs.Latency = Zone.getLatencyStallCycles(SU);
-    Costs.Effective = std::max({Costs.Ready, Costs.Structural, Costs.Latency});
-    return Costs;
-  };
-
-  StallCosts TryCosts = GetStallCosts(TryCand.SU);
-  StallCosts CandCosts = GetStallCosts(Cand.SU);
-
-  LLVM_DEBUG(if (TryCosts.Effective || CandCosts.Effective) {
-    dbgs() << "Effective stalls: try=" << TryCosts.Effective
-           << " (ready=" << TryCosts.Ready << ", struct=" << TryCosts.Structural
-           << ", lat=" << TryCosts.Latency << ") cand=" << CandCosts.Effective
-           << " (ready=" << CandCosts.Ready
-           << ", struct=" << CandCosts.Structural
-           << ", lat=" << CandCosts.Latency << ")\n";
-  });
-
-  return tryLess(TryCosts.Effective, CandCosts.Effective, TryCand, Cand, Stall);
 }
 
 ScheduleDAGInstrs *

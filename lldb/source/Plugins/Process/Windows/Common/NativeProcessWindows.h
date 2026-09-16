@@ -14,6 +14,7 @@
 #include "lldb/lldb-forward.h"
 
 #include "IDebugDelegate.h"
+#include "LoadedModuleList.h"
 #include "ProcessDebugger.h"
 
 namespace lldb_private {
@@ -68,11 +69,11 @@ public:
   Status GetMemoryRegionInfo(lldb::addr_t load_addr,
                              MemoryRegionInfo &range_info) override;
 
-  Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+  Status ReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                     size_t &bytes_read) override;
 
-  Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
-                     size_t &bytes_written) override;
+  Status DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                       size_t &bytes_written) override;
 
   llvm::Expected<lldb::addr_t> AllocateMemory(size_t size,
                                               uint32_t permissions) override;
@@ -172,7 +173,8 @@ private:
                                          const ExceptionRecord &record);
 
   Status CacheLoadedModules();
-  std::map<lldb_private::FileSpec, lldb::addr_t> m_loaded_modules;
+
+  LoadedModuleList m_loaded_modules;
 
   /// Set whenever an OS DLL load/unload event has been seen since the last stop
   /// reply.

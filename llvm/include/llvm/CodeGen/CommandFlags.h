@@ -44,8 +44,6 @@ LLVM_ABI std::vector<std::string> getMAttrs();
 LLVM_ABI Reloc::Model getRelocModel();
 LLVM_ABI std::optional<Reloc::Model> getExplicitRelocModel();
 
-LLVM_ABI ThreadModel::Model getThreadModel();
-
 LLVM_ABI CodeModel::Model getCodeModel();
 LLVM_ABI std::optional<CodeModel::Model> getExplicitCodeModel();
 
@@ -60,24 +58,16 @@ LLVM_ABI CodeGenFileType getFileType();
 
 LLVM_ABI FramePointerKind getFramePointerUsage();
 
-LLVM_ABI bool getEnableNoTrappingFPMath();
-
 LLVM_ABI DenormalMode::DenormalModeKind getDenormalFPMath();
 LLVM_ABI DenormalMode::DenormalModeKind getDenormalFP32Math();
 
-LLVM_ABI bool getEnableHonorSignDependentRoundingFPMath();
-
 LLVM_ABI llvm::FloatABI::ABIType getFloatABIForCalls();
-
-LLVM_ABI llvm::FPOpFusion::FPOpFusionMode getFuseFPOps();
 
 LLVM_ABI SwiftAsyncFramePointerMode getSwiftAsyncFramePointer();
 
 LLVM_ABI bool getDontPlaceZerosInBSS();
 
 LLVM_ABI bool getEnableGuaranteedTailCallOpt();
-
-LLVM_ABI bool getEnableAIXExtendedAltivecABI();
 
 LLVM_ABI bool getDisableTailCalls();
 
@@ -88,8 +78,6 @@ LLVM_ABI bool getStackRealign();
 LLVM_ABI std::string getTrapFuncName();
 
 LLVM_ABI bool getUseCtors();
-
-LLVM_ABI bool getDisableIntegratedAS();
 
 LLVM_ABI bool getDataSections();
 LLVM_ABI std::optional<bool> getExplicitDataSections();
@@ -117,8 +105,6 @@ LLVM_ABI bool getUniqueBasicBlockSectionNames();
 
 LLVM_ABI bool getSeparateNamedSections();
 
-LLVM_ABI llvm::EABI getEABIVersion();
-
 LLVM_ABI llvm::DebuggerKind getDebuggerTuningOpt();
 
 LLVM_ABI llvm::VectorLibrary getVectorLibrary();
@@ -136,9 +122,6 @@ LLVM_ABI bool getEnableMachineFunctionSplitter();
 LLVM_ABI bool getEnableStaticDataPartitioning();
 
 LLVM_ABI bool getEnableDebugEntryValues();
-
-LLVM_ABI bool getValueTrackingVariableLocations();
-LLVM_ABI std::optional<bool> getExplicitValueTrackingVariableLocations();
 
 LLVM_ABI bool getForceDwarfFrameSection();
 
@@ -208,22 +191,11 @@ LLVM_ABI void setFunctionAttributes(Function &F, StringRef CPU,
 LLVM_ABI void setFunctionAttributes(Module &M, StringRef CPU,
                                     StringRef Features, StringRef TuneCPU = "");
 
-/// Should value-tracking variable locations / instruction referencing be
-/// enabled by default for this triple?
-LLVM_ABI bool getDefaultValueTrackingVariableLocations(const llvm::Triple &T);
-
 /// Creates a TargetMachine instance with the options defined on the command
 /// line. This can be used for tools that do not need further customization of
 /// the TargetOptions.
 LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
     const Triple &TargetTriple,
-    CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
-
-// TODO: Remove after llvm 23 branches
-LLVM_DEPRECATED("Use the Triple overload instead",
-                "createTargetMachineForTriple")
-LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
-    StringRef TargetTriple,
     CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
 
 /// Conditionally enables the collection of LLVM statistics during the tool run,

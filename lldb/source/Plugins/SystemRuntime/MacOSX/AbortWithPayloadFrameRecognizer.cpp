@@ -29,15 +29,15 @@ void RegisterAbortWithPayloadFrameRecognizer(Process *process) {
   // There are two user-level API's that this recognizer captures,
   // abort_with_reason and abort_with_payload.  But they both call the private
   // __abort_with_payload, the abort_with_reason call fills in a null payload.
-  static ConstString module_name("libsystem_kernel.dylib");
   static ConstString sym_name("__abort_with_payload");
 
   if (!process)
     return;
 
+  std::string module_name("libsystem_kernel.dylib");
   process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
       std::make_shared<AbortWithPayloadFrameRecognizer>(), module_name,
-      sym_name, Mangled::NamePreference::ePreferDemangled,
+      {sym_name}, Mangled::NamePreference::ePreferDemangled,
       /*first_instruction_only*/ false);
 }
 

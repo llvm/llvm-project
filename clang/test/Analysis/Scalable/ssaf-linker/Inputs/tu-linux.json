@@ -1,0 +1,11 @@
+{
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "linux.cpp"
+  },
+  "id_table": [],
+  "linkage_table": [],
+  "data": [],
+  "target_triple": "x86_64-unknown-linux-gnu",
+  "type": "TUSummary"
+}

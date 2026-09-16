@@ -131,10 +131,24 @@ static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
     QT = Context.BoolTy;
     break;
   case ScalarTypeKind::SignedInteger:
-    QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), true);
+    // getIntTypeForBitwidth() picks a type purely by matching bit width, so
+    // on LP64 targets a 64-bit element would resolve to "long" even if the
+    // target's actual int64_t is "long long" (e.g. OpenBSD). Go through the
+    // target's Int64Type so this matches int64_t/uint64_t.
+    if (Type->getElementBitwidth() == 64)
+      QT = Context.getTargetInfo().getInt64Type() == TargetInfo::SignedLong
+               ? Context.LongTy
+               : Context.LongLongTy;
+    else
+      QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), true);
     break;
   case ScalarTypeKind::UnsignedInteger:
-    QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), false);
+    if (Type->getElementBitwidth() == 64)
+      QT = Context.getTargetInfo().getInt64Type() == TargetInfo::SignedLong
+               ? Context.UnsignedLongTy
+               : Context.UnsignedLongLongTy;
+    else
+      QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), false);
     break;
   case ScalarTypeKind::FloatE4M3:
   case ScalarTypeKind::FloatE5M2: {
@@ -264,15 +278,16 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
     llvm::SmallVector<PrototypeDescriptor> ProtoSeq =
         RVVIntrinsic::computeBuiltinTypes(
             BasicProtoSeq, /*IsMasked=*/false,
-            /*HasMaskedOffOperand=*/false, Record.HasVL, Record.NF,
+            /*HasMaskedOffOperand=*/false,
+            /*MaskedPrototypeHasResultMask=*/false, Record.HasVL, Record.NF,
             UnMaskedPolicyScheme, DefaultPolicy, Record.IsTuple);
 
     llvm::SmallVector<PrototypeDescriptor> ProtoMaskSeq;
     if (Record.HasMasked)
       ProtoMaskSeq = RVVIntrinsic::computeBuiltinTypes(
           BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
-          Record.HasVL, Record.NF, MaskedPolicyScheme, DefaultPolicy,
-          Record.IsTuple);
+          Record.MaskedPrototypeHasResultMask, Record.HasVL, Record.NF,
+          MaskedPolicyScheme, DefaultPolicy, Record.IsTuple);
 
     bool UnMaskedHasPolicy = UnMaskedPolicyScheme != PolicyScheme::SchemeNone;
     bool MaskedHasPolicy = MaskedPolicyScheme != PolicyScheme::SchemeNone;
@@ -318,8 +333,9 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
             llvm::SmallVector<PrototypeDescriptor> PolicyPrototype =
                 RVVIntrinsic::computeBuiltinTypes(
                     BasicProtoSeq, /*IsMasked=*/false,
-                    /*HasMaskedOffOperand=*/false, Record.HasVL, Record.NF,
-                    UnMaskedPolicyScheme, P, Record.IsTuple);
+                    /*HasMaskedOffOperand=*/false,
+                    /*MaskedPrototypeHasResultMask=*/false, Record.HasVL,
+                    Record.NF, UnMaskedPolicyScheme, P, Record.IsTuple);
             std::optional<RVVTypes> PolicyTypes = TypeCache.computeTypes(
                 BaseType, Log2LMUL, Record.NF, PolicyPrototype);
             InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr,
@@ -341,8 +357,8 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
           llvm::SmallVector<PrototypeDescriptor> PolicyPrototype =
               RVVIntrinsic::computeBuiltinTypes(
                   BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
-                  Record.HasVL, Record.NF, MaskedPolicyScheme, P,
-                  Record.IsTuple);
+                  Record.MaskedPrototypeHasResultMask, Record.HasVL, Record.NF,
+                  MaskedPolicyScheme, P, Record.IsTuple);
           std::optional<RVVTypes> PolicyTypes = TypeCache.computeTypes(
               BaseType, Log2LMUL, Record.NF, PolicyPrototype);
           InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr,
@@ -1618,7 +1634,7 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
   // - Must be a function.
   // - Must have no parameters.
   // - Must have the 'void' return type.
-  // - The attribute itself must have at most 2 arguments
+  // - The attribute itself must have at most 3 arguments
   // - The attribute arguments must be string literals, and valid choices.
   // - The attribute arguments must be a valid combination
   // - The current target must support the right extensions for the combination.
@@ -1641,13 +1657,14 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  if (!AL.checkAtMostNumArgs(SemaRef, 2))
+  if (!AL.checkAtMostNumArgs(SemaRef, 3))
     return;
 
   bool HasSiFiveCLICType = false;
   bool HasUnaryType = false;
+  bool ReportedDuplicateType = false;
 
-  SmallSet<RISCVInterruptAttr::InterruptType, 2> Types;
+  SmallSet<RISCVInterruptAttr::InterruptType, 3> Types;
   for (unsigned ArgIndex = 0; ArgIndex < AL.getNumArgs(); ++ArgIndex) {
     RISCVInterruptAttr::InterruptType Type;
     StringRef TypeString;
@@ -1683,7 +1700,11 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
       break;
     }
 
-    Types.insert(Type);
+    if (!Types.insert(Type).second && !ReportedDuplicateType) {
+      Diag(Loc, diag::warn_riscv_attribute_interrupt_duplicate_type)
+          << TypeString;
+      ReportedDuplicateType = true;
+    }
   }
 
   if (HasUnaryType && Types.size() > 1) {
@@ -1745,7 +1766,7 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  SmallVector<RISCVInterruptAttr::InterruptType, 2> TypesVec(Types.begin(),
+  SmallVector<RISCVInterruptAttr::InterruptType, 3> TypesVec(Types.begin(),
                                                              Types.end());
 
   D->addAttr(::new (getASTContext()) RISCVInterruptAttr(

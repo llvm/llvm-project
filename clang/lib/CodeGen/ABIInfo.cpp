@@ -72,6 +72,16 @@ bool ABIInfo::isHomogeneousAggregate(QualType Ty, const Type *&Base,
     if (!isHomogeneousAggregate(AT->getElementType(), Base, Members))
       return false;
     Members *= NElements;
+  } else if (Ty->isConstantMatrixType() &&
+             getContext().getLangOpts().getClangABICompat() >
+                 LangOptions::ClangABI::Ver23) {
+    const ConstantMatrixType *MT = Ty->castAs<ConstantMatrixType>();
+    uint64_t NElements = MT->getNumElementsFlattened();
+    if (NElements == 0)
+      return false;
+    if (!isHomogeneousAggregate(MT->getElementType(), Base, Members))
+      return false;
+    Members *= NElements;
   } else if (const auto *RD = Ty->getAsRecordDecl()) {
     if (RD->hasFlexibleArrayMember())
       return false;
@@ -257,7 +267,8 @@ void ABIInfo::createCoercedStore(llvm::Value *Val, Address DstAddr,
                                  const ABIArgInfo &AI, bool DestIsVolatile,
                                  CodeGenFunction &CGF) const {}
 
-ABIArgInfo ABIInfo::classifyArgForArm64ECVarArg(QualType Ty) const {
+ABIArgInfo ABIInfo::classifyArgForArm64ECVarArg(QualType Ty,
+                                                bool IsNamedArg) const {
   llvm_unreachable("Only implemented for x86");
 }
 

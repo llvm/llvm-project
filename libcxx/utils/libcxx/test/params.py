@@ -15,7 +15,6 @@ from libcxx.test.features.compiler import _isClang, _isAppleClang, _isGCC, _isMS
 
 
 _warningFlags = [
-    "-Werror",
     "-Wall",
     "-Wctad-maybe-unsupported",
     "-Wextra",
@@ -80,12 +79,17 @@ _warningFlags = [
     "-flax-vector-conversions=none",
 ]
 
-_allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]
+_allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26", "c++29"]
 
 
 def getStdFlag(cfg, std):
     if hasCompileFlag(cfg, "-std=" + std):
         return "-std=" + std
+    fallbacks = {
+        "c++29": "c++2d",
+    }
+    if std in fallbacks and hasCompileFlag(cfg, "-std=" + fallbacks[std]):
+        return "-std=" + fallbacks[std]
     return None
 
 
@@ -289,14 +293,14 @@ DEFAULT_PARAMETERS = [
         actions=lambda is_system: [AddFeature("stdlib=system")] if is_system else [],
     ),
     Parameter(
-        name="enable_warnings",
+        name="enable_werror",
         choices=[True, False],
         type=bool,
         default=True,
-        help="Whether to enable warnings when compiling the test suite.",
-        actions=lambda warnings: [] if not warnings else
-            [AddOptionalWarningFlag(w) for w in _warningFlags] +
-            [AddCompileFlag("-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER")],
+        help="Whether to treat warnings as errors when compiling the test suite.",
+        actions=lambda werror: [AddOptionalWarningFlag(w) for w in _warningFlags] +
+                               [AddCompileFlag("-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER")] +
+                               ([AddCompileFlag("-Werror")] if werror else []),
     ),
     Parameter(
         name="use_sanitizer",
@@ -377,6 +381,17 @@ DEFAULT_PARAMETERS = [
         default="run",
         help="Whether to run the benchmarks in the test suite, to only dry-run them or to disable them entirely.",
         actions=lambda mode: [AddFeature(f"enable-benchmarks={mode}")],
+    ),
+    Parameter(
+        name="benchmark_min_time",
+        type=str,
+        default="0.2s",
+        help="The minimum amount of time each benchmark is run for, passed to GoogleBenchmark's "
+             "--benchmark_min_time flag. By default, we use a lower value than GoogleBenchmark's "
+             "default of 0.5s because that speeds up the test suite without severely impacting "
+             "noise. This can be increased to get more precise results, but running the benchmark "
+             "suite several times may reduce noise more than increasing this threshold.",
+        actions=lambda min_time: [AddSubstitution("%{benchmark_min_time}", min_time)],
     ),
     Parameter(
         name="spec_dir",
@@ -484,7 +499,6 @@ DEFAULT_PARAMETERS = [
                 AddCompileFlag("-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_OBSERVE")       if assertion_semantic == "observe" else None,
                 AddCompileFlag("-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE") if assertion_semantic == "quick_enforce" else None,
                 AddCompileFlag("-D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_ENFORCE")       if assertion_semantic == "enforce" else None,
-                AddFeature("libcpp-assertion-semantic={}".format(assertion_semantic))                   if assertion_semantic != "undefined" else None,
             ],
         ),
     ),

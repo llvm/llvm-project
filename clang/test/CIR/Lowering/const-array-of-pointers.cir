@@ -1,7 +1,7 @@
 // RUN: cir-opt %s --cir-to-llvm -o - | FileCheck %s
 
 !s32i = !cir.int<s, 32>
-!rec_mixed = !cir.struct<{!s32i, !cir.ptr<!s32i>}>
+!rec_mixed = !cir.struct<{data !s32i, data !cir.ptr<!s32i>}>
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.global "private" constant cir_private dso_local @g0 = #cir.int<0> : !s32i

@@ -10,6 +10,13 @@
 # CHECK-NEXT: [5]   - SMTX100_IQ0:2
 # CHECK-NEXT: [6]   - SMTX100_IQ1:2
 # CHECK-NEXT: [7]   - SMTX100_LSQ:4
+# CHECK-NEXT: [8]   - SMTX100_VEU0:1
+# CHECK-NEXT: [9]   - SMTX100_VEU1:1
+# CHECK-NEXT: [10]  - SMTX100_VEU2:1
+# CHECK-NEXT: [11]  - SMTX100_VEU3:1
+# CHECK-NEXT: [12]  - SMTX100_VFPU:2 SMTX100_VEU0, SMTX100_VEU1
+# CHECK-NEXT: [13]  - SMTX100_VIEU:2 SMTX100_VEU0, SMTX100_VEU1
+# CHECK-NEXT: [14]  - SMTX100_VLSU:2 SMTX100_VEU2, SMTX100_VEU3
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -43,14 +50,18 @@
 # CHECK-NEXT: [5.1] - SMTX100_LSQ
 # CHECK-NEXT: [5.2] - SMTX100_LSQ
 # CHECK-NEXT: [5.3] - SMTX100_LSQ
+# CHECK-NEXT: [6]   - SMTX100_VEU0
+# CHECK-NEXT: [7]   - SMTX100_VEU1
+# CHECK-NEXT: [8]   - SMTX100_VEU2
+# CHECK-NEXT: [9]   - SMTX100_VEU3
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [3.0]  [3.1]  [4.0]  [4.1]  [5.0]  [5.1]  [5.2]  [5.3]
-# CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00   1.00   1.00    -      -      -      -
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [3.0]  [3.1]  [4.0]  [4.1]  [5.0]  [5.1]  [5.2]  [5.3]  [6]    [7]    [8]    [9]
+# CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00   1.00   1.00    -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [3.0]  [3.1]  [4.0]  [4.1]  [5.0]  [5.1]  [5.2]  [5.3]  Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     czero.eqz	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     czero.nez	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     czero.eqz	a0, a1, a2
-# CHECK-NEXT:  -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     czero.nez	a0, a1, a2
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [3.0]  [3.1]  [4.0]  [4.1]  [5.0]  [5.1]  [5.2]  [5.3]  [6]    [7]    [8]    [9]    Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -     czero.eqz	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -     czero.nez	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -     czero.eqz	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -     czero.nez	a0, a1, a2
