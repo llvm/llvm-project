@@ -1648,5 +1648,10 @@ extern "C" void __ol_tgt_setInfoFlag(uint32_t NewInfoLevel) {
   InfoLevel.store(NewInfoLevel);
 }
 
+extern "C" GenericPluginTy *
+__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform) {
+  return Platform->Plugin.get();
+}
+
 } // namespace offload
 } // namespace llvm
