@@ -29,47 +29,42 @@ MachineFunctionInfo *SuperHMachineFunctionInfo::clone(
 }
 
 SuperHConstantPoolConstant *SuperHMachineFunctionInfo::tryGetConstant(
-        GlobalAddressSDNode *N, 
-        SelectionDAG &DAG, 
-        SHCP::SHCPModifier Modifier) {
+    GlobalAddressSDNode *N, SelectionDAG &DAG, SHCP::SHCPModifier Modifier) {
 
   // Early exit for null node.
   if (!N)
     return nullptr;
 
-  // Run though the constant pool that is tied to the DAG and search for 
+  // Run though the constant pool that is tied to the DAG and search for
   // the constant there.
   MachineConstantPool *MCP = DAG.getMachineFunction().getConstantPool();
   for (auto &MC : MCP->getConstants()) {
     if (MC.isMachineConstantPoolEntry()) {
-      if (auto *CPV = (SuperHConstantPoolConstant*)MC.Val.MachineCPVal) {
+      if (auto *CPV = (SuperHConstantPoolConstant *)MC.Val.MachineCPVal) {
         if (CPV->getGV() == N->getGlobal())
           return CPV;
       }
     }
   }
-  
+
   // If not found, create a new one and add it.
   MachineFunction &MF = DAG.getMachineFunction();
   SuperHMachineFunctionInfo *SFI = MF.getInfo<SuperHMachineFunctionInfo>();
   unsigned LabelIndex = SFI->createConstIndex();
-  return SuperHConstantPoolConstant::Create(
-    N->getGlobal(), 
-    LabelIndex,
-    SHCP::SHCPKind::CPValue,
-    Modifier
-  );
+  return SuperHConstantPoolConstant::Create(N->getGlobal(), LabelIndex,
+                                            SHCP::SHCPKind::CPValue, Modifier);
 }
 
 SuperHConstantPoolConstant *
-SuperHMachineFunctionInfo::tryGetConstant(const GlobalValue *G, const MachineFunction& MF) const {
+SuperHMachineFunctionInfo::tryGetConstant(const GlobalValue *G,
+                                          const MachineFunction &MF) const {
 
-  // Run though the constant pool that is tied to the DAG and search for 
+  // Run though the constant pool that is tied to the DAG and search for
   // the constant there.
   const MachineConstantPool *MCP = MF.getConstantPool();
   for (auto &MC : MCP->getConstants()) {
     if (MC.isMachineConstantPoolEntry()) {
-      if (auto *CPV = (SuperHConstantPoolConstant*)MC.Val.MachineCPVal) {
+      if (auto *CPV = (SuperHConstantPoolConstant *)MC.Val.MachineCPVal) {
         if (CPV->getGV() == G)
           return CPV;
       }
@@ -79,20 +74,18 @@ SuperHMachineFunctionInfo::tryGetConstant(const GlobalValue *G, const MachineFun
 }
 
 SuperHConstantPoolConstant *SuperHMachineFunctionInfo::tryGetConstant(
-        BlockAddressSDNode *N, 
-        SelectionDAG &DAG, 
-        SHCP::SHCPModifier Modifier) {
+    BlockAddressSDNode *N, SelectionDAG &DAG, SHCP::SHCPModifier Modifier) {
 
   // Early exit for null node.
   if (!N)
     return nullptr;
 
-  // Run though the constant pool that is tied to the DAG and search for 
+  // Run though the constant pool that is tied to the DAG and search for
   // the constant there.
   MachineConstantPool *MCP = DAG.getMachineFunction().getConstantPool();
   for (auto &MC : MCP->getConstants()) {
     if (MC.isMachineConstantPoolEntry()) {
-      if (auto *CPV = (SuperHConstantPoolConstant*)MC.Val.MachineCPVal) {
+      if (auto *CPV = (SuperHConstantPoolConstant *)MC.Val.MachineCPVal) {
         if (CPV->getBlockAddress() == N->getBlockAddress())
           return CPV;
       }
@@ -103,29 +96,25 @@ SuperHConstantPoolConstant *SuperHMachineFunctionInfo::tryGetConstant(
   MachineFunction &MF = DAG.getMachineFunction();
   SuperHMachineFunctionInfo *SFI = MF.getInfo<SuperHMachineFunctionInfo>();
   unsigned LabelIndex = SFI->createConstIndex();
-  return SuperHConstantPoolConstant::Create(
-    N->getBlockAddress(), 
-    LabelIndex,
-    SHCP::SHCPKind::CPBlockAddress,
-    Modifier
-  );
+  return SuperHConstantPoolConstant::Create(N->getBlockAddress(), LabelIndex,
+                                            SHCP::SHCPKind::CPBlockAddress,
+                                            Modifier);
 }
 
-SuperHConstantPoolConstant *SuperHMachineFunctionInfo::tryGetConstant(
-        ConstantSDNode *N, 
-        SelectionDAG &DAG, 
-        SHCP::SHCPModifier Modifier) {
+SuperHConstantPoolConstant *
+SuperHMachineFunctionInfo::tryGetConstant(ConstantSDNode *N, SelectionDAG &DAG,
+                                          SHCP::SHCPModifier Modifier) {
 
   // Early exit for null node.
   if (!N)
     return nullptr;
 
-  // Run though the constant pool that is tied to the DAG and search for 
+  // Run though the constant pool that is tied to the DAG and search for
   // the constant there.
   MachineConstantPool *MCP = DAG.getMachineFunction().getConstantPool();
   for (auto &MC : MCP->getConstants()) {
     if (MC.isMachineConstantPoolEntry()) {
-      if (auto *CPV = (SuperHConstantPoolConstant*)MC.Val.MachineCPVal) {
+      if (auto *CPV = (SuperHConstantPoolConstant *)MC.Val.MachineCPVal) {
         if (CPV->getPromotedGlobalInit() == N->getConstantIntValue())
           return CPV;
       }
@@ -137,41 +126,33 @@ SuperHConstantPoolConstant *SuperHMachineFunctionInfo::tryGetConstant(
   SuperHMachineFunctionInfo *SFI = MF.getInfo<SuperHMachineFunctionInfo>();
   unsigned LabelIndex = SFI->createConstIndex();
   return SuperHConstantPoolConstant::Create(
-    N->getConstantIntValue(), 
-    LabelIndex,
-    SHCP::SHCPKind::CPPromotedGlobal,
-    Modifier
-  );
+      N->getConstantIntValue(), LabelIndex, SHCP::SHCPKind::CPPromotedGlobal,
+      Modifier);
 }
 
 SuperHConstantPoolSymbol *SuperHMachineFunctionInfo::tryGetConstant(
-        ExternalSymbolSDNode *N, 
-        SelectionDAG &DAG, 
-        SHCP::SHCPModifier Modifier) {
+    ExternalSymbolSDNode *N, SelectionDAG &DAG, SHCP::SHCPModifier Modifier) {
 
   // Early exit for null node.
   if (!N)
     return nullptr;
 
-  // Run though the constant pool that is tied to the DAG and search for 
+  // Run though the constant pool that is tied to the DAG and search for
   // the constant there.
   MachineConstantPool *MCP = DAG.getMachineFunction().getConstantPool();
   for (auto &MC : MCP->getConstants()) {
     if (MC.isMachineConstantPoolEntry()) {
-      if (auto *CPV = (SuperHConstantPoolSymbol*)MC.Val.MachineCPVal) {
+      if (auto *CPV = (SuperHConstantPoolSymbol *)MC.Val.MachineCPVal) {
         if (CPV->getSymbol() == N->getSymbol())
           return CPV;
       }
     }
   }
-  
+
   // If not found, create a new one and add it.
   MachineFunction &MF = DAG.getMachineFunction();
   SuperHMachineFunctionInfo *SFI = MF.getInfo<SuperHMachineFunctionInfo>();
   unsigned LabelIndex = SFI->createConstIndex();
-  return SuperHConstantPoolSymbol::Create(
-    *DAG.getContext(), 
-    N->getSymbol(),
-    LabelIndex
-  );
+  return SuperHConstantPoolSymbol::Create(*DAG.getContext(), N->getSymbol(),
+                                          LabelIndex);
 }

@@ -29,28 +29,28 @@ class Type;
 
 namespace SHCP {
 
-  enum SHCPKind {
-    CPValue,
-    CPExtSymbol,
-    CPBlockAddress,
-    CPMachineBasicBlock,
-    CPPromotedGlobal
-  };
+enum SHCPKind {
+  CPValue,
+  CPExtSymbol,
+  CPBlockAddress,
+  CPMachineBasicBlock,
+  CPPromotedGlobal
+};
 
-  enum SHCPModifier {
-    no_modifier,  /// None
-    DIR,          /// Direct
-    GOT_PCREL,    /// Global Offset Table, PC Relative
-  };
+enum SHCPModifier {
+  no_modifier, /// None
+  DIR,         /// Direct
+  GOT_PCREL,   /// Global Offset Table, PC Relative
+};
 
 } // end namespace SHCP
 
 class SuperHConstantPoolValue : public MachineConstantPoolValue {
-  unsigned LabelId;           // Label id of the load.
-  SHCP::SHCPKind Kind;      // Kind of constant.
-  SHCP::SHCPModifier Modifier;  // GV modifier i.e. (&GV(modifier)-(LPIC+8))
+  unsigned LabelId;            // Label id of the load.
+  SHCP::SHCPKind Kind;         // Kind of constant.
+  SHCP::SHCPModifier Modifier; // GV modifier i.e. (&GV(modifier)-(LPIC+8))
 protected:
-  SuperHConstantPoolValue(Type *Ty, unsigned id, SHCP::SHCPKind Kind, 
+  SuperHConstantPoolValue(Type *Ty, unsigned id, SHCP::SHCPKind Kind,
                           SHCP::SHCPModifier Modifier);
 
   SuperHConstantPoolValue(LLVMContext &C, unsigned id, SHCP::SHCPKind Kind,
@@ -62,8 +62,8 @@ protected:
     for (unsigned i = 0, e = Constants.size(); i != e; ++i) {
       if (Constants[i].isMachineConstantPoolEntry() &&
           Constants[i].getAlign() >= Alignment) {
-        auto *CPV =
-          static_cast<SuperHConstantPoolValue*>(Constants[i].Val.MachineCPVal);
+        auto *CPV = static_cast<SuperHConstantPoolValue *>(
+            Constants[i].Val.MachineCPVal);
         if (Derived *APC = dyn_cast<Derived>(CPV))
           if (cast<Derived>(this)->equals(APC))
             return i;
@@ -86,8 +86,8 @@ public:
   bool isGlobalValue() const { return Kind == SHCP::CPValue; }
   bool isExtSymbol() const { return Kind == SHCP::CPExtSymbol; }
   bool isBlockAddress() const { return Kind == SHCP::CPBlockAddress; }
-  bool isMachineBasicBlock() const{ return Kind == SHCP::CPMachineBasicBlock; }
-  bool isPromotedGlobal() const{ return Kind == SHCP::CPPromotedGlobal; }
+  bool isMachineBasicBlock() const { return Kind == SHCP::CPMachineBasicBlock; }
+  bool isPromotedGlobal() const { return Kind == SHCP::CPPromotedGlobal; }
 
   int getExistingMachineCPValue(MachineConstantPool *CP,
                                 Align Alignment) override;
@@ -99,48 +99,46 @@ public:
   virtual bool hasSameValue(SuperHConstantPoolValue *ACPV);
 
   bool equals(const SuperHConstantPoolValue *A) const {
-    return this->LabelId == A->LabelId &&
-      this->Modifier == A->Modifier;
+    return this->LabelId == A->LabelId && this->Modifier == A->Modifier;
   }
 
   void print(raw_ostream &O) const override;
-  void print(raw_ostream *O) const { if (O) print(*O); }
+  void print(raw_ostream *O) const {
+    if (O)
+      print(*O);
+  }
   void dump() const;
 };
 
-inline raw_ostream &operator<<(raw_ostream &O, const SuperHConstantPoolValue &V) {
+inline raw_ostream &operator<<(raw_ostream &O,
+                               const SuperHConstantPoolValue &V) {
   V.print(O);
   return O;
 }
 
-
-/// SuperHConstantPoolConstant - SuperH-specific constant pool values for Constants,
-/// Functions, and BlockAddresses.
+/// SuperHConstantPoolConstant - SuperH-specific constant pool values for
+/// Constants, Functions, and BlockAddresses.
 class SuperHConstantPoolConstant : public SuperHConstantPoolValue {
-  const Constant *CVal;         // Constant being loaded.
-  SmallPtrSet<const GlobalVariable*, 1> GVars;
+  const Constant *CVal; // Constant being loaded.
+  SmallPtrSet<const GlobalVariable *, 1> GVars;
 
-  SuperHConstantPoolConstant(const Constant *C,
-                             unsigned ID,
-                             SHCP::SHCPKind Kind,
-                             SHCP::SHCPModifier Modifier);
-  SuperHConstantPoolConstant(Type *Ty, const Constant *C,
-                             unsigned ID,
-                             SHCP::SHCPKind Kind,
-                             SHCP::SHCPModifier Modifier);
+  SuperHConstantPoolConstant(const Constant *C, unsigned ID,
+                             SHCP::SHCPKind Kind, SHCP::SHCPModifier Modifier);
+  SuperHConstantPoolConstant(Type *Ty, const Constant *C, unsigned ID,
+                             SHCP::SHCPKind Kind, SHCP::SHCPModifier Modifier);
   SuperHConstantPoolConstant(const GlobalVariable *GV, const Constant *Init);
 
 public:
   static SuperHConstantPoolConstant *Create(const Constant *C, unsigned ID);
   static SuperHConstantPoolConstant *Create(const GlobalValue *GV,
-                                         SHCP::SHCPModifier Modifier);
+                                            SHCP::SHCPModifier Modifier);
   static SuperHConstantPoolConstant *Create(const GlobalVariable *GV,
-                                         const Constant *Initializer);
+                                            const Constant *Initializer);
   static SuperHConstantPoolConstant *Create(const Constant *C, unsigned ID,
-                                         SHCP::SHCPKind Kind);
+                                            SHCP::SHCPKind Kind);
   static SuperHConstantPoolConstant *Create(const Constant *C, unsigned ID,
-                                         SHCP::SHCPKind Kind,
-                                         SHCP::SHCPModifier Modifier);
+                                            SHCP::SHCPKind Kind,
+                                            SHCP::SHCPModifier Modifier);
 
   const GlobalValue *getGV() const;
   const BlockAddress *getBlockAddress() const;
@@ -149,9 +147,7 @@ public:
 
   iterator_range<promoted_iterator> promotedGlobals() { return GVars; }
 
-  const Constant *getPromotedGlobalInit() const {
-    return CVal;
-  }
+  const Constant *getPromotedGlobalInit() const { return CVal; }
 
   int getExistingMachineCPValue(MachineConstantPool *CP,
                                 Align Alignment) override;
@@ -174,15 +170,17 @@ public:
   }
 };
 
-/// SuperHConstantPoolSymbol - SH-specific constantpool 
+/// SuperHConstantPoolSymbol - SH-specific constantpool
 /// values for external symbols.
 class SuperHConstantPoolSymbol : public SuperHConstantPoolValue {
-  const std::string S;          // ExtSymbol being loaded.
+  const std::string S; // ExtSymbol being loaded.
 
-  SuperHConstantPoolSymbol(LLVMContext &C, StringRef s, unsigned id, SHCP::SHCPModifier Modifier);
+  SuperHConstantPoolSymbol(LLVMContext &C, StringRef s, unsigned id,
+                           SHCP::SHCPModifier Modifier);
 
 public:
-  static SuperHConstantPoolSymbol *Create(LLVMContext &C, StringRef s, unsigned ID);
+  static SuperHConstantPoolSymbol *Create(LLVMContext &C, StringRef s,
+                                          unsigned ID);
 
   StringRef getSymbol() const { return S; }
 

@@ -107,12 +107,13 @@ LLVMInitializeSuperHTargetMC() {
 
     // Register the AsmBackend
     TargetRegistry::RegisterMCAsmBackend(*T, createSuperHAsmBackend);
-    
+
     // Register the MC asm info.
     TargetRegistry::RegisterMCAsmInfo(*T, createSuperHMCAsmInfo);
 
     // Register the object target streamer.
-    TargetRegistry::RegisterObjectTargetStreamer(*T, createTargetObjectStreamer);
+    TargetRegistry::RegisterObjectTargetStreamer(*T,
+                                                 createTargetObjectStreamer);
 
     // Register the asm streamer.
     TargetRegistry::RegisterAsmTargetStreamer(*T, createTargetAsmStreamer);

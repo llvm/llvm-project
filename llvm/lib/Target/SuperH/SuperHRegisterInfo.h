@@ -30,20 +30,24 @@ public:
   SuperHRegisterInfo(const SuperHSubtarget &Subtarget);
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
-  const uint32_t *getCallPreservedMask(const MachineFunction &MF, CallingConv::ID CC) const override;
+  const uint32_t *getCallPreservedMask(const MachineFunction &MF,
+                                       CallingConv::ID CC) const override;
   const uint32_t *getNoPreservedMask() const override;
-  const TargetRegisterClass *getPointerRegClass(unsigned Kind = 0) const override;
+  const TargetRegisterClass *
+  getPointerRegClass(unsigned Kind = 0) const override;
   BitVector getReservedRegs(const MachineFunction &MF) const override;
-  const TargetRegisterClass *getLargestLegalSuperClass(const TargetRegisterClass *RC,
-                                           const MachineFunction &MF) const override;
+  const TargetRegisterClass *
+  getLargestLegalSuperClass(const TargetRegisterClass *RC,
+                            const MachineFunction &MF) const override;
   Register getFrameRegister(const MachineFunction &MF) const override;
 
   bool eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
 
-  bool requiresRegisterScavenging(const MachineFunction &MF) const override { return true; }
-
+  bool requiresRegisterScavenging(const MachineFunction &MF) const override {
+    return true;
+  }
 
   // Helpers
   Register getFrameRegister() const;

@@ -22,10 +22,10 @@ Target &llvm::getTheSuperHLETarget() {
   return TheSuperHLETarget;
 }
 
-extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY
-void LLVMInitializeSuperHTargetInfo() {
-  RegisterTarget<Triple::sh, /*HasJIT=*/false> X(getTheSuperHTarget(),
-                                                    "sh", "SuperH (big endian)", "SuperH");
-  RegisterTarget<Triple::shl, /*HasJIT=*/false> Y(getTheSuperHLETarget(),
-                                                    "shl", "SuperH (little endian)", "SuperH");
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSuperHTargetInfo() {
+  RegisterTarget<Triple::sh, /*HasJIT=*/false> X(
+      getTheSuperHTarget(), "sh", "SuperH (big endian)", "SuperH");
+  RegisterTarget<Triple::shl, /*HasJIT=*/false> Y(
+      getTheSuperHLETarget(), "shl", "SuperH (little endian)", "SuperH");
 }

@@ -13,10 +13,10 @@
 
 #include "SuperHRegisterInfo.h"
 #include "MCTargetDesc/SuperHMCTargetDesc.h"
-#include "SuperHTargetMachine.h"
+#include "SuperH.h"
 #include "SuperHFrameLowering.h"
 #include "SuperHSubtarget.h"
-#include "SuperH.h"
+#include "SuperHTargetMachine.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Register.h"
@@ -37,28 +37,33 @@ using namespace llvm;
 
 
 SuperHRegisterInfo::SuperHRegisterInfo(const SuperHSubtarget &ST)
-  : SuperHGenRegisterInfo(SH::R0, /*DwarfFlavour*/0, /*EHFlavor*/0,
-                         /*PC*/SH::PC), Subtarget(ST) {}
+    : SuperHGenRegisterInfo(SH::R0, /*DwarfFlavour*/ 0, /*EHFlavor*/ 0,
+                            /*PC*/ SH::PC),
+      Subtarget(ST) {}
 
-const TargetRegisterClass *SuperHRegisterInfo::getPointerRegClass(unsigned Kind) const {
+const TargetRegisterClass *
+SuperHRegisterInfo::getPointerRegClass(unsigned Kind) const {
   return &SH::GPRRegClass;
 }
 
-const MCPhysReg *SuperHRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
+const MCPhysReg *
+SuperHRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   return CSR_SH_SaveList;
 }
 
-const uint32_t *SuperHRegisterInfo::getCallPreservedMask(const MachineFunction &MF, CallingConv::ID CC) const {
-  return CSR_SH_RegMask; 
+const uint32_t *
+SuperHRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
+                                         CallingConv::ID CC) const {
+  return CSR_SH_RegMask;
 }
 
 const uint32_t *SuperHRegisterInfo::getNoPreservedMask() const {
-  return CSR_SH_RegMask; 
+  return CSR_SH_RegMask;
 }
 
 const TargetRegisterClass *
 SuperHRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
-                                           const MachineFunction &MF) const {
+                                              const MachineFunction &MF) const {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
   if (TRI->isTypeLegalForClass(*RC, MVT::i16)) {
@@ -82,10 +87,10 @@ BitVector SuperHRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // R0 is always reserved as some instructions can only write to it.
   Reserved.set(SH::R0);
-  
+
   // R1 is generally used as the temporary storage for addresses.
   Reserved.set(SH::R1);
-  
+
   // Also reserve the stack pointer.
   Reserved.set(SH::R15);
 
@@ -109,29 +114,31 @@ static void replaceFI(const MachineFunction &MF, MachineBasicBlock::iterator II,
 }
 
 bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
-                                           int SPAdj,
-                                           unsigned FIOperandNum,
-                                           RegScavenger *RS) const {
+                                             int SPAdj, unsigned FIOperandNum,
+                                             RegScavenger *RS) const {
   MachineInstr &MI = *II;
   DebugLoc DL = MI.getDebugLoc();
   MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const SuperHTargetMachine &TM = (const SuperHTargetMachine &)MF.getTarget();
-  const TargetFrameLowering *TFI = TM.getSubtargetImpl(MF.getFunction())->getFrameLowering();
-  const TargetInstrInfo &TII = *TM.getSubtargetImpl(MF.getFunction())->getInstrInfo();
+  const TargetFrameLowering *TFI =
+      TM.getSubtargetImpl(MF.getFunction())->getFrameLowering();
+  const TargetInstrInfo &TII =
+      *TM.getSubtargetImpl(MF.getFunction())->getInstrInfo();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
   // Get the register offset to fetch.
   Register FrameReg;
-  int64_t Offset = TFI->getFrameIndexReference(MF, FrameIndex, FrameReg).getFixed();
+  int64_t Offset =
+      TFI->getFrameIndexReference(MF, FrameIndex, FrameReg).getFixed();
 
   LLVM_DEBUG({
-    int64_t Fo = TFI->getFrameIndexReference(MF, FrameIndex, FrameReg).getFixed();
-    dbgs()  << "Eliminiate FI " << FrameIndex << " @ SP["
-            << -Fo << "]...\n";
+    int64_t Fo =
+        TFI->getFrameIndexReference(MF, FrameIndex, FrameReg).getFixed();
+    dbgs() << "Eliminiate FI " << FrameIndex << " @ SP[" << -Fo << "]...\n";
   });
-  
+
   replaceFI(MF, II, MI, DL, FIOperandNum, Offset, FrameReg);
   return false;
 }
@@ -141,14 +148,8 @@ Register SuperHRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return TFI->hasFP(MF) ? SH::R14 : SH::R15;
 }
 
-Register SuperHRegisterInfo::getFrameRegister() const {
-  return SH::R14;
-}
+Register SuperHRegisterInfo::getFrameRegister() const { return SH::R14; }
 
-Register SuperHRegisterInfo::getStackRegister() const {
-  return SH::R15;
-}
+Register SuperHRegisterInfo::getStackRegister() const { return SH::R15; }
 
-Register SuperHRegisterInfo::getGOTRegister() const {
-  return SH::R12;
-}
+Register SuperHRegisterInfo::getGOTRegister() const { return SH::R12; }

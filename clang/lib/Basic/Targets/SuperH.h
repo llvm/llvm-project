@@ -77,9 +77,8 @@ public:
 
   ArrayRef<const char *> getGCCRegNames() const override {
     static const char *const GCCRegNames[] = {
-        "r0",  "r1",  "r2",  "r3",  "r4",  "r5",  "r6",  "r7",  "r8",
-        "r9",  "r10", "r11", "r12", "r13", "r14", "r15"
-    };
+        "r0", "r1", "r2",  "r3",  "r4",  "r5",  "r6",  "r7",
+        "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"};
     return llvm::ArrayRef(GCCRegNames);
   }
 
@@ -107,7 +106,7 @@ protected:
   StringRef ABI;
 };
 
-}
-}
+} // namespace targets
+} // namespace clang
 
 #endif

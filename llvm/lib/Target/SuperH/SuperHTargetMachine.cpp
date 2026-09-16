@@ -12,8 +12,8 @@
 
 #include "SuperHTargetMachine.h"
 #include "SuperH.h"
-#include "SuperHSubtarget.h"
 #include "SuperHMachineFunctionInfo.h"
+#include "SuperHSubtarget.h"
 #include "TargetInfo/SuperHTargetInfo.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/Passes.h"
@@ -46,7 +46,7 @@ namespace {
 class SuperHPassConfig : public TargetPassConfig {
 public:
   SuperHPassConfig(SuperHTargetMachine &TM, PassManagerBase &PM)
-    : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM) {}
 
   bool addInstSelector() override;
   void addPostRegAlloc() override;
@@ -93,8 +93,8 @@ SuperHTargetMachine::SuperHTargetMachine(const Target &T, const Triple &TT,
                                          CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
                                RM.value_or(Reloc::Static),
-                               getEffectiveCodeModel(CM, CodeModel::Small),
-                               OL), TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
+      TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
   initAsmInfo();
 }
 
@@ -117,9 +117,9 @@ SuperHTargetMachine::getSubtargetImpl(const Function &F) const {
   return ST.get();
 }
 
-MachineFunctionInfo *
-SuperHTargetMachine::createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
-                          const TargetSubtargetInfo *STI) const {
-  return SuperHMachineFunctionInfo::create<SuperHMachineFunctionInfo>(Allocator, F,
-                                                                  STI);
+MachineFunctionInfo *SuperHTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return SuperHMachineFunctionInfo::create<SuperHMachineFunctionInfo>(Allocator,
+                                                                      F, STI);
 }

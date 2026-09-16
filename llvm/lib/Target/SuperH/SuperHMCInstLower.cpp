@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "SuperHMCInstLower.h"
-#include "MCTargetDesc/SuperHMCAsmInfo.h"
 #include "MCTargetDesc/SuperHBaseInfo.h"
+#include "MCTargetDesc/SuperHMCAsmInfo.h"
 #include "SuperHSubtarget.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-
 
 namespace llvm {
 
@@ -51,7 +50,8 @@ SuperHMCInstLower::lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
 
 void SuperHMCInstLower::lowerInstruction(const MachineInstr &MI,
                                          MCInst &OutMI) const {
-  auto &Subtarget = MI.getParent()->getParent()->getSubtarget<SuperHSubtarget>();
+  auto &Subtarget =
+      MI.getParent()->getParent()->getSubtarget<SuperHSubtarget>();
 
   OutMI.setOpcode(MI.getOpcode());
   for (MachineOperand const &MO : MI.operands()) {

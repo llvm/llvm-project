@@ -34,14 +34,16 @@ class raw_ostream;
 class raw_pwrite_stream;
 
 MCCodeEmitter *createSuperHMCCodeEmitter(const MCInstrInfo &MCII,
-                                              MCContext &Ctx);
+                                         MCContext &Ctx);
 
-MCAsmBackend *createSuperHAsmBackend(const Target &T, const MCSubtargetInfo &STI,
-                                    const MCRegisterInfo &MRI,
-                                    const MCTargetOptions &Options);
+MCAsmBackend *createSuperHAsmBackend(const Target &T,
+                                     const MCSubtargetInfo &STI,
+                                     const MCRegisterInfo &MRI,
+                                     const MCTargetOptions &Options);
 
-std::unique_ptr<MCObjectTargetWriter> createSuperHELFObjectWriter(uint8_t OSABI);
-}
+std::unique_ptr<MCObjectTargetWriter>
+createSuperHELFObjectWriter(uint8_t OSABI);
+} // namespace llvm
 
 #define GET_REGINFO_ENUM
 #include "SuperHGenRegisterInfo.inc"

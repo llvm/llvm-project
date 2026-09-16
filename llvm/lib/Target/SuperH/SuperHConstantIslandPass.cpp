@@ -16,199 +16,191 @@
 #include "SuperHBasicBlockInfo.h"
 #include "SuperHMachineFunctionInfo.h"
 #include "SuperHSubtarget.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include <memory>
 using namespace llvm;
 
 #define DEBUG_TYPE "sh-cp-islands"
 
-#define SH_CP_ISLANDS_OPT_NAME \
+#define SH_CP_ISLANDS_OPT_NAME                                                 \
   "SH constant island placement and branch shortening pass"
 
 static cl::opt<unsigned>
-CPMaxIteration("sh-constant-island-max-iteration", cl::Hidden, cl::init(30),
-          cl::desc("The max number of iteration for converge"));
+    CPMaxIteration("sh-constant-island-max-iteration", cl::Hidden, cl::init(30),
+                   cl::desc("The max number of iteration for converge"));
 
 namespace {
 
-  /// SuperHConstantIslands - Due to limited PC-relative displacements, SH
-  /// requires constant pool entries to be scattered among the instructions
-  /// inside a function.  To do this, it completely ignores the normal LLVM
-  /// constant pool; instead, it places constants wherever it feels like with
-  /// special instructions.
-  ///
-  /// The terminology used in this pass includes:
-  ///   Islands - Clumps of constants placed in the function.
-  ///   Water   - Potential places where an island could be formed.
-  ///   CPE     - A constant pool entry that has been placed somewhere, which
-  ///             tracks a list of users.
-  class SuperHConstantIslands : public MachineFunctionPass {
-  public:
-    static char ID;
+/// SuperHConstantIslands - Due to limited PC-relative displacements, SH
+/// requires constant pool entries to be scattered among the instructions
+/// inside a function.  To do this, it completely ignores the normal LLVM
+/// constant pool; instead, it places constants wherever it feels like with
+/// special instructions.
+///
+/// The terminology used in this pass includes:
+///   Islands - Clumps of constants placed in the function.
+///   Water   - Potential places where an island could be formed.
+///   CPE     - A constant pool entry that has been placed somewhere, which
+///             tracks a list of users.
+class SuperHConstantIslands : public MachineFunctionPass {
+public:
+  static char ID;
 
-  private:
-    std::unique_ptr<SuperHBasicBlockUtils> BBUtils = nullptr;
+private:
+  std::unique_ptr<SuperHBasicBlockUtils> BBUtils = nullptr;
 
-    /// WaterList - A sorted list of basic blocks where islands could be placed
-    /// (i.e. blocks that don't fall through to the following block, due
-    /// to a return, unreachable, or unconditional branch).
-    std::vector<MachineBasicBlock*> WaterList;
+  /// WaterList - A sorted list of basic blocks where islands could be placed
+  /// (i.e. blocks that don't fall through to the following block, due
+  /// to a return, unreachable, or unconditional branch).
+  std::vector<MachineBasicBlock *> WaterList;
 
-    /// NewWaterList - The subset of WaterList that was created since the
-    /// previous iteration by inserting unconditional branches.
-    SmallPtrSet<MachineBasicBlock *, 4> NewWaterList;
+  /// NewWaterList - The subset of WaterList that was created since the
+  /// previous iteration by inserting unconditional branches.
+  SmallPtrSet<MachineBasicBlock *, 4> NewWaterList;
 
-    using water_iterator = std::vector<MachineBasicBlock *>::iterator;
+  using water_iterator = std::vector<MachineBasicBlock *>::iterator;
 
-    /// CPUser - One user of a constant pool, keeping the machine instruction
-    /// pointer, the constant pool being referenced, and the max displacement
-    /// allowed from the instruction to the CP.  The HighWaterMark records the
-    /// highest basic block where a new CPEntry can be placed.  To ensure this
-    /// pass terminates, the CP entries are initially placed at the end of the
-    /// function and then move monotonically to lower addresses.  The
-    /// exception to this rule is when the current CP entry for a particular
-    /// CPUser is out of range, but there is another CP entry for the same
-    /// constant value in range.  We want to use the existing in-range CP
-    /// entry, but if it later moves out of range, the search for new water
-    /// should resume where it left off.  The HighWaterMark is used to record
-    /// that point.
-    struct CPUser {
-      MachineInstr *MI;
-      MachineInstr *CPEMI;
-      MachineBasicBlock *HighWaterMark;
-      unsigned MaxDisp;
-      bool NegOk;
-      bool IsSoImm;
-      bool KnownAlignment = false;
+  /// CPUser - One user of a constant pool, keeping the machine instruction
+  /// pointer, the constant pool being referenced, and the max displacement
+  /// allowed from the instruction to the CP.  The HighWaterMark records the
+  /// highest basic block where a new CPEntry can be placed.  To ensure this
+  /// pass terminates, the CP entries are initially placed at the end of the
+  /// function and then move monotonically to lower addresses.  The
+  /// exception to this rule is when the current CP entry for a particular
+  /// CPUser is out of range, but there is another CP entry for the same
+  /// constant value in range.  We want to use the existing in-range CP
+  /// entry, but if it later moves out of range, the search for new water
+  /// should resume where it left off.  The HighWaterMark is used to record
+  /// that point.
+  struct CPUser {
+    MachineInstr *MI;
+    MachineInstr *CPEMI;
+    MachineBasicBlock *HighWaterMark;
+    unsigned MaxDisp;
+    bool NegOk;
+    bool IsSoImm;
+    bool KnownAlignment = false;
 
-      CPUser(MachineInstr *mi, MachineInstr *cpemi, unsigned maxdisp,
-             bool neg, bool soimm)
+    CPUser(MachineInstr *mi, MachineInstr *cpemi, unsigned maxdisp, bool neg,
+           bool soimm)
         : MI(mi), CPEMI(cpemi), MaxDisp(maxdisp), NegOk(neg), IsSoImm(soimm) {
-        HighWaterMark = CPEMI->getParent();
-      }
-
-      /// getMaxDisp - Returns the maximum displacement supported by MI.
-      /// Correct for unknown alignment.
-      /// Conservatively subtract 2 bytes to handle weird alignment effects.
-      unsigned getMaxDisp() const {
-        return (KnownAlignment ? MaxDisp : MaxDisp - 2) - 2;
-      }
-    };
-
-    /// CPUsers - Keep track of all of the machine instructions that use various
-    /// constant pools and their max displacement.
-    std::vector<CPUser> CPUsers;
-
-    /// CPEntry - One per constant pool entry, keeping the machine instruction
-    /// pointer, the constpool index, and the number of CPUser's which
-    /// reference this entry.
-    struct CPEntry {
-      MachineInstr *CPEMI;
-      unsigned CPI;
-      unsigned RefCount;
-
-      CPEntry(MachineInstr *cpemi, unsigned cpi, unsigned rc = 0)
-        : CPEMI(cpemi), CPI(cpi), RefCount(rc) {}
-    };
-
-    /// CPEntries - Keep track of all of the constant pool entry machine
-    /// instructions. For each original constpool index (i.e. those that existed
-    /// upon entry to this pass), it keeps a vector of entries.  Original
-    /// elements are cloned as we go along; the clones are put in the vector of
-    /// the original element, but have distinct CPIs.
-    ///
-    /// The first half of CPEntries contains generic constants, the second half
-    /// contains jump tables. Use getCombinedIndex on a generic CPEMI to look up
-    /// which vector it will be in here.
-    std::vector<std::vector<CPEntry>> CPEntries;
-
-    /// ImmBranch - One per immediate branch, keeping the machine instruction
-    /// pointer, conditional or unconditional, the max displacement,
-    /// and (if isCond is true) the corresponding unconditional branch
-    /// opcode.
-    struct ImmBranch {
-      MachineInstr *MI;
-      unsigned MaxDisp : 12;
-
-      ImmBranch(MachineInstr *mi, unsigned maxdisp)
-        : MI(mi), MaxDisp(maxdisp) {}
-    };
-
-    /// ImmBranches - Keep track of all the immediate branch instructions.
-    std::vector<ImmBranch> ImmBranches;
-
-    MachineFunction *MF;
-    MachineConstantPool *MCP;
-    const SuperHInstrInfo *TII;
-    const SuperHSubtarget *STI;
-    SuperHMachineFunctionInfo *SFI;
-    MachineDominatorTree *DT = nullptr;
-    bool isPIC;
-
-  public:
-
-    SuperHConstantIslands() : MachineFunctionPass(ID) {}
-
-    bool runOnMachineFunction(MachineFunction &MF) override;
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTreeWrapperPass>();
-      MachineFunctionPass::getAnalysisUsage(AU);
+      HighWaterMark = CPEMI->getParent();
     }
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().setNoVRegs();
+    /// getMaxDisp - Returns the maximum displacement supported by MI.
+    /// Correct for unknown alignment.
+    /// Conservatively subtract 2 bytes to handle weird alignment effects.
+    unsigned getMaxDisp() const {
+      return (KnownAlignment ? MaxDisp : MaxDisp - 2) - 2;
     }
-
-    StringRef getPassName() const override {
-      return SH_CP_ISLANDS_OPT_NAME;
-    }
-
-  private:
-    bool BBHasFallthrough(MachineBasicBlock *MBB);
-    void doInitialConstPlacement(std::vector<MachineInstr *> &CPEMIs);
-    CPEntry *findConstPoolEntry(unsigned CPI, const MachineInstr *CPEMI);
-    Align getCPEAlign(const MachineInstr *CPEMI);
-    void initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs);
-    MachineBasicBlock *splitBlockBeforeInstr(MachineInstr *MI);
-    void updateForInsertedWaterBlock(MachineBasicBlock *NewBB);
-    bool decrementCPEReferenceCount(unsigned CPI, MachineInstr* CPEMI);
-    unsigned getCombinedIndex(const MachineInstr *CPEMI);
-    int findInRangeCPEntry(CPUser& U, unsigned UserOffset);
-    bool findAvailableWater(CPUser&U, unsigned UserOffset,
-                            water_iterator &WaterIter, bool CloserWater);
-    void createNewWater(unsigned CPUserIndex, unsigned UserOffset,
-                        MachineBasicBlock *&NewMBB);
-    bool handleConstantPoolUser(unsigned CPUserIndex, bool CloserWater);
-    void removeDeadCPEMI(MachineInstr *CPEMI);
-    bool removeUnusedCPEntries();
-    bool isCPEntryInRange(MachineInstr *MI, unsigned UserOffset,
-                          MachineInstr *CPEMI, unsigned Disp, bool NegOk,
-                          bool DoDump = false);
-    bool isWaterInRange(unsigned UserOffset, MachineBasicBlock *Water,
-                        CPUser &U, unsigned &Growth);
-    bool fixupImmediateBr(ImmBranch &Br);
-
-    unsigned getUserOffset(CPUser&) const;
-    void verify();
-
-    bool isOffsetInRange(unsigned UserOffset, unsigned TrialOffset,
-                         unsigned Disp, bool NegativeOK, bool IsSoImm = false);
-    bool isOffsetInRange(unsigned UserOffset, unsigned TrialOffset,
-                         const CPUser &U) {
-      return isOffsetInRange(UserOffset, TrialOffset,
-                             U.getMaxDisp(), U.NegOk, U.IsSoImm);
-    }
-
   };
+
+  /// CPUsers - Keep track of all of the machine instructions that use various
+  /// constant pools and their max displacement.
+  std::vector<CPUser> CPUsers;
+
+  /// CPEntry - One per constant pool entry, keeping the machine instruction
+  /// pointer, the constpool index, and the number of CPUser's which
+  /// reference this entry.
+  struct CPEntry {
+    MachineInstr *CPEMI;
+    unsigned CPI;
+    unsigned RefCount;
+
+    CPEntry(MachineInstr *cpemi, unsigned cpi, unsigned rc = 0)
+        : CPEMI(cpemi), CPI(cpi), RefCount(rc) {}
+  };
+
+  /// CPEntries - Keep track of all of the constant pool entry machine
+  /// instructions. For each original constpool index (i.e. those that existed
+  /// upon entry to this pass), it keeps a vector of entries.  Original
+  /// elements are cloned as we go along; the clones are put in the vector of
+  /// the original element, but have distinct CPIs.
+  ///
+  /// The first half of CPEntries contains generic constants, the second half
+  /// contains jump tables. Use getCombinedIndex on a generic CPEMI to look up
+  /// which vector it will be in here.
+  std::vector<std::vector<CPEntry>> CPEntries;
+
+  /// ImmBranch - One per immediate branch, keeping the machine instruction
+  /// pointer, conditional or unconditional, the max displacement,
+  /// and (if isCond is true) the corresponding unconditional branch
+  /// opcode.
+  struct ImmBranch {
+    MachineInstr *MI;
+    unsigned MaxDisp : 12;
+
+    ImmBranch(MachineInstr *mi, unsigned maxdisp) : MI(mi), MaxDisp(maxdisp) {}
+  };
+
+  /// ImmBranches - Keep track of all the immediate branch instructions.
+  std::vector<ImmBranch> ImmBranches;
+
+  MachineFunction *MF;
+  MachineConstantPool *MCP;
+  const SuperHInstrInfo *TII;
+  const SuperHSubtarget *STI;
+  SuperHMachineFunctionInfo *SFI;
+  MachineDominatorTree *DT = nullptr;
+  bool isPIC;
+
+public:
+  SuperHConstantIslands() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+
+  StringRef getPassName() const override { return SH_CP_ISLANDS_OPT_NAME; }
+
+private:
+  bool BBHasFallthrough(MachineBasicBlock *MBB);
+  void doInitialConstPlacement(std::vector<MachineInstr *> &CPEMIs);
+  CPEntry *findConstPoolEntry(unsigned CPI, const MachineInstr *CPEMI);
+  Align getCPEAlign(const MachineInstr *CPEMI);
+  void initializeFunctionInfo(const std::vector<MachineInstr *> &CPEMIs);
+  MachineBasicBlock *splitBlockBeforeInstr(MachineInstr *MI);
+  void updateForInsertedWaterBlock(MachineBasicBlock *NewBB);
+  bool decrementCPEReferenceCount(unsigned CPI, MachineInstr *CPEMI);
+  unsigned getCombinedIndex(const MachineInstr *CPEMI);
+  int findInRangeCPEntry(CPUser &U, unsigned UserOffset);
+  bool findAvailableWater(CPUser &U, unsigned UserOffset,
+                          water_iterator &WaterIter, bool CloserWater);
+  void createNewWater(unsigned CPUserIndex, unsigned UserOffset,
+                      MachineBasicBlock *&NewMBB);
+  bool handleConstantPoolUser(unsigned CPUserIndex, bool CloserWater);
+  void removeDeadCPEMI(MachineInstr *CPEMI);
+  bool removeUnusedCPEntries();
+  bool isCPEntryInRange(MachineInstr *MI, unsigned UserOffset,
+                        MachineInstr *CPEMI, unsigned Disp, bool NegOk,
+                        bool DoDump = false);
+  bool isWaterInRange(unsigned UserOffset, MachineBasicBlock *Water, CPUser &U,
+                      unsigned &Growth);
+  bool fixupImmediateBr(ImmBranch &Br);
+
+  unsigned getUserOffset(CPUser &) const;
+  void verify();
+
+  bool isOffsetInRange(unsigned UserOffset, unsigned TrialOffset, unsigned Disp,
+                       bool NegativeOK, bool IsSoImm = false);
+  bool isOffsetInRange(unsigned UserOffset, unsigned TrialOffset,
+                       const CPUser &U) {
+    return isOffsetInRange(UserOffset, TrialOffset, U.getMaxDisp(), U.NegOk,
+                           U.IsSoImm);
+  }
+};
 
 } // end anonymous namespace
 
 char SuperHConstantIslands::ID = 0;
-
-
-
 
 //===----------------------------------------------------------------------===//
 //                                  HELPERS
@@ -248,9 +240,7 @@ static bool CompareMBBNumbers(const MachineBasicBlock *LHS,
 
 /// getDispRange - Returns the maximum displacement that can fit in
 /// the specific unconditional branch instruction.
-static inline unsigned getDispRange(int Opc) {
-  return ((1<<8)-1)*4;
-}
+static inline unsigned getDispRange(int Opc) { return ((1 << 8) - 1) * 4; }
 
 /// isOffsetInRange - Checks whether UserOffset (the location of a constant pool
 /// reference) is within MaxDisp of TrialOffset (a proposed location of a
@@ -259,8 +249,9 @@ static inline unsigned getDispRange(int Opc) {
 /// the mod 4 alignment of UserOffset is not known, the uncertainty must be
 /// subtracted from MaxDisp instead. CPUser::getMaxDisp() does that.
 bool SuperHConstantIslands::isOffsetInRange(unsigned UserOffset,
-                                         unsigned TrialOffset, unsigned MaxDisp,
-                                         bool NegativeOK, bool IsSoImm) {
+                                            unsigned TrialOffset,
+                                            unsigned MaxDisp, bool NegativeOK,
+                                            bool IsSoImm) {
   if (UserOffset <= TrialOffset) {
     // User before the Trial.
     if (TrialOffset - UserOffset <= MaxDisp)
@@ -308,8 +299,8 @@ Align SuperHConstantIslands::getCPEAlign(const MachineInstr *CPEMI) {
 ///
 /// Compute how much the function will grow by inserting a CPE after Water.
 bool SuperHConstantIslands::isWaterInRange(unsigned UserOffset,
-                                        MachineBasicBlock* Water, CPUser &U,
-                                        unsigned &Growth) {
+                                           MachineBasicBlock *Water, CPUser &U,
+                                           unsigned &Growth) {
   BBInfoVector &BBInfo = BBUtils->getBBInfo();
   const Align CPEAlign = getCPEAlign(U.CPEMI);
   const unsigned CPEOffset = BBInfo[Water->getNumber()].postOffset(CPEAlign);
@@ -348,14 +339,16 @@ bool SuperHConstantIslands::isWaterInRange(unsigned UserOffset,
 
 /// isCPEntryInRange - Returns true if the distance between specific MI and
 /// specific ConstPool entry instruction can fit in MI's displacement field.
-bool SuperHConstantIslands::isCPEntryInRange(MachineInstr *MI, unsigned UserOffset,
-                                      MachineInstr *CPEMI, unsigned MaxDisp,
-                                      bool NegOk, bool DoDump) {
+bool SuperHConstantIslands::isCPEntryInRange(MachineInstr *MI,
+                                             unsigned UserOffset,
+                                             MachineInstr *CPEMI,
+                                             unsigned MaxDisp, bool NegOk,
+                                             bool DoDump) {
   unsigned CPEOffset = BBUtils->getOffsetOf(CPEMI);
 
   if (DoDump) {
     LLVM_DEBUG({
-        BBInfoVector &BBInfo = BBUtils->getBBInfo();
+      BBInfoVector &BBInfo = BBUtils->getBBInfo();
       unsigned Block = MI->getParent()->getNumber();
       const BasicBlockInfo &BBI = BBInfo[Block];
       dbgs() << "User of CPE#" << CPEMI->getOperand(0).getImm()
@@ -423,17 +416,16 @@ bool SuperHConstantIslands::runOnMachineFunction(MachineFunction &mf) {
 
   // Perform the initial placement of the constant pool entries.  To start with,
   // we put them all at the end of the function.
-  std::vector<MachineInstr*> CPEMIs;
+  std::vector<MachineInstr *> CPEMIs;
   if (!MCP->isEmpty())
     doInitialConstPlacement(CPEMIs);
-
 
   // Iteratively place constant pool entries and fix up branches until there
   // is no change.
   unsigned NoCPIters = 0, NoBRIters = 0;
   while (true) {
-    LLVM_DEBUG(dbgs() << "Beginning CP iteration #" << NoCPIters << " with " <<
-                         CPUsers.size() << " entries..." << '\n');
+    LLVM_DEBUG(dbgs() << "Beginning CP iteration #" << NoCPIters << " with "
+                      << CPUsers.size() << " entries..." << '\n');
     bool CPChange = false;
     for (unsigned i = 0, e = CPUsers.size(); i != e; ++i)
       // For most inputs, it converges in no more than 5 iterations.
@@ -447,8 +439,8 @@ bool SuperHConstantIslands::runOnMachineFunction(MachineFunction &mf) {
     // appear as "new water" for the next iteration of constant pool placement.
     NewWaterList.clear();
 
-    LLVM_DEBUG(dbgs() << "Beginning BR iteration #" << NoBRIters << " with " <<
-                         ImmBranches.size() << " entries..." << '\n');
+    LLVM_DEBUG(dbgs() << "Beginning BR iteration #" << NoBRIters << " with "
+                      << ImmBranches.size() << " entries..." << '\n');
     bool BRChange = false;
     for (unsigned i = 0, e = ImmBranches.size(); i != e; ++i) {
       // Note: fixupImmediateBr can append to ImmBranches.
@@ -473,8 +465,8 @@ bool SuperHConstantIslands::runOnMachineFunction(MachineFunction &mf) {
 /// initializeFunctionInfo - Do the initial scan of the function, building up
 /// information about the sizes of each block, the location of all the water,
 /// and finding all of the constant pool users.
-void SuperHConstantIslands::
-initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
+void SuperHConstantIslands::initializeFunctionInfo(
+    const std::vector<MachineInstr *> &CPEMIs) {
 
   BBUtils->computeAllBlockSizes();
   BBInfoVector &BBInfo = BBUtils->getBBInfo();
@@ -520,9 +512,8 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
           break;
         }
 
-
         // Record this immediate branch.
-        unsigned MaxOffs = ((1 << (Bits-1))-1) * Scale;
+        unsigned MaxOffs = ((1 << (Bits - 1)) - 1) * Scale;
         ImmBranches.push_back(ImmBranch(&I, MaxOffs));
       }
 
@@ -537,7 +528,7 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
 
           unsigned CPI = I.getOperand(op).getIndex();
           MachineInstr *CPEMI = CPEMIs[CPI];
-          unsigned MaxOffs = ((1 << 8)-1) * 4;
+          unsigned MaxOffs = ((1 << 8) - 1) * 4;
           CPUsers.push_back(CPUser(&I, CPEMI, MaxOffs, NegOk, IsSoImm));
 
           // Increment corresponding CPEntry reference count.
@@ -548,7 +539,6 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
           // Instructions can only use one CP entry, don't bother scanning the
           // rest of the operands.
           break;
-
         }
       }
     }
@@ -605,7 +595,7 @@ bool SuperHConstantIslands::removeUnusedCPEntries() {
 /// becomes 0 remove the entry and instruction.  Returns true if we removed
 /// the entry, false if we didn't.
 bool SuperHConstantIslands::decrementCPEReferenceCount(unsigned CPI,
-                                                    MachineInstr *CPEMI) {
+                                                       MachineInstr *CPEMI) {
   // Find the old entry. Eliminate it if it is no longer used.
   CPEntry *CPE = findConstPoolEntry(CPI, CPEMI);
   assert(CPE && "Unexpected!");
@@ -629,9 +619,9 @@ unsigned SuperHConstantIslands::getCombinedIndex(const MachineInstr *CPEMI) {
 /// 0 = no existing entry found
 /// 1 = entry found, and there were no code insertions or deletions
 /// 2 = entry found, and there were code insertions or deletions
-int SuperHConstantIslands::findInRangeCPEntry(CPUser& U, unsigned UserOffset) {
+int SuperHConstantIslands::findInRangeCPEntry(CPUser &U, unsigned UserOffset) {
   MachineInstr *UserMI = U.MI;
-  MachineInstr *CPEMI  = U.CPEMI;
+  MachineInstr *CPEMI = U.CPEMI;
 
   // Check to see if the CPE is already in-range.
   if (isCPEntryInRange(UserMI, UserOffset, CPEMI, U.getMaxDisp(), U.NegOk,
@@ -677,10 +667,10 @@ int SuperHConstantIslands::findInRangeCPEntry(CPUser& U, unsigned UserOffset) {
 /// place in-range.  Return true if we changed any addresses (thus must run
 /// another pass of branch lengthening), false otherwise.
 bool SuperHConstantIslands::handleConstantPoolUser(unsigned CPUserIndex,
-                                                bool CloserWater) {
+                                                   bool CloserWater) {
   CPUser &U = CPUsers[CPUserIndex];
   MachineInstr *UserMI = U.MI;
-  MachineInstr *CPEMI  = U.CPEMI;
+  MachineInstr *CPEMI = U.CPEMI;
   unsigned CPI = getCombinedIndex(CPEMI);
   unsigned Size = CPEMI->getOperand(2).getImm();
   // Compute this only once, it's expensive.
@@ -689,8 +679,10 @@ bool SuperHConstantIslands::handleConstantPoolUser(unsigned CPUserIndex,
   // See if the current entry is within range, or there is a clone of it
   // in range.
   int result = findInRangeCPEntry(U, UserOffset);
-  if (result==1) return false;
-  else if (result==2) return true;
+  if (result == 1)
+    return false;
+  else if (result == 2)
+    return true;
 
   // No existing clone of this CPE is within range.
   // We will be generating a new clone.  Get a UID for it.
@@ -789,7 +781,7 @@ bool SuperHConstantIslands::handleConstantPoolUser(unsigned CPUserIndex,
 /// look up the corresponding CPEntry.
 SuperHConstantIslands::CPEntry *
 SuperHConstantIslands::findConstPoolEntry(unsigned CPI,
-                                       const MachineInstr *CPEMI) {
+                                          const MachineInstr *CPEMI) {
   std::vector<CPEntry> &CPEs = CPEntries[CPI];
   // Number of entries per constpool index should be small, just do a
   // linear search.
@@ -808,8 +800,8 @@ SuperHConstantIslands::findConstPoolEntry(unsigned CPI,
 /// move to a lower address, so search backward from the end of the list and
 /// prefer the first water that is in range.
 bool SuperHConstantIslands::findAvailableWater(CPUser &U, unsigned UserOffset,
-                                            water_iterator &WaterIter,
-                                            bool CloserWater) {
+                                               water_iterator &WaterIter,
+                                               bool CloserWater) {
   if (WaterList.empty())
     return false;
 
@@ -832,7 +824,7 @@ bool SuperHConstantIslands::findAvailableWater(CPUser &U, unsigned UserOffset,
     return false;
   for (water_iterator IP = std::prev(WaterList.end()), B = WaterList.begin();;
        --IP) {
-    MachineBasicBlock* WaterBB = *IP;
+    MachineBasicBlock *WaterBB = *IP;
     // Check if water is in range and is either at a lower address than the
     // current "high water mark" or a new water block that was created since
     // the previous iteration by inserting an unconditional branch.  In the
@@ -875,11 +867,11 @@ bool SuperHConstantIslands::findAvailableWater(CPUser &U, unsigned UserOffset,
 /// block following which the new island can be inserted (the WaterList
 /// is not adjusted).
 void SuperHConstantIslands::createNewWater(unsigned CPUserIndex,
-                                        unsigned UserOffset,
-                                        MachineBasicBlock *&NewMBB) {
+                                           unsigned UserOffset,
+                                           MachineBasicBlock *&NewMBB) {
   CPUser &U = CPUsers[CPUserIndex];
   MachineInstr *UserMI = U.MI;
-  MachineInstr *CPEMI  = U.CPEMI;
+  MachineInstr *CPEMI = U.CPEMI;
   const Align CPEAlign = getCPEAlign(CPEMI);
   MachineBasicBlock *UserMBB = UserMI->getParent();
   BBInfoVector &BBInfo = BBUtils->getBBInfo();
@@ -905,8 +897,7 @@ void SuperHConstantIslands::createNewWater(unsigned CPUserIndex,
       // but if the preceding conditional branch is out of range, the targets
       // will be exchanged, and the altered branch may be out of range, so the
       // machinery has to know about it.
-      BuildMI(UserMBB, DebugLoc(), TII->get(SH::BRA))
-          .addMBB(NewMBB);
+      BuildMI(UserMBB, DebugLoc(), TII->get(SH::BRA)).addMBB(NewMBB);
 
       unsigned MaxDisp = getDispRange(SH::BRA);
       ImmBranches.push_back(ImmBranch(&UserMBB->back(), MaxDisp));
@@ -948,11 +939,11 @@ void SuperHConstantIslands::createNewWater(unsigned CPUserIndex,
                     << " la=" << Log2(Align) << " kb=" << KnownBits
                     << " up=" << UPad << '\n');
 
-  unsigned EndInsertOffset = BaseInsertOffset + 4 + UPad +
-    CPEMI->getOperand(2).getImm();
+  unsigned EndInsertOffset =
+      BaseInsertOffset + 4 + UPad + CPEMI->getOperand(2).getImm();
   MachineBasicBlock::iterator MI = UserMI;
   ++MI;
-  unsigned CPUIndex = CPUserIndex+1;
+  unsigned CPUIndex = CPUserIndex + 1;
   unsigned NumCPUsers = CPUsers.size();
   for (unsigned Offset = UserOffset + TII->getInstSizeInBytes(*UserMI);
        Offset < BaseInsertOffset;
@@ -983,7 +974,8 @@ void SuperHConstantIslands::createNewWater(unsigned CPUserIndex,
 /// updateForInsertedWaterBlock - When a block is newly inserted into the
 /// machine function, it upsets all of the block numbers.  Renumber the blocks
 /// and update the arrays that parallel this numbering.
-void SuperHConstantIslands::updateForInsertedWaterBlock(MachineBasicBlock *NewBB) {
+void SuperHConstantIslands::updateForInsertedWaterBlock(
+    MachineBasicBlock *NewBB) {
   // Renumber the MBB's to keep them consecutive.
   NewBB->getParent()->RenumberBlocks(NewBB);
 
@@ -1000,7 +992,8 @@ void SuperHConstantIslands::updateForInsertedWaterBlock(MachineBasicBlock *NewBB
 /// Split the basic block containing MI into two blocks, which are joined by
 /// an unconditional branch.  Update data structures and renumber blocks to
 /// account for this change and returns the newly created block.
-MachineBasicBlock *SuperHConstantIslands::splitBlockBeforeInstr(MachineInstr *MI) {
+MachineBasicBlock *
+SuperHConstantIslands::splitBlockBeforeInstr(MachineInstr *MI) {
   MachineBasicBlock *OrigBB = MI->getParent();
 
   // Collect liveness information at MI.
@@ -1012,7 +1005,7 @@ MachineBasicBlock *SuperHConstantIslands::splitBlockBeforeInstr(MachineInstr *MI
 
   // Create a new MBB for the code after the OrigBB.
   MachineBasicBlock *NewBB =
-    MF->CreateMachineBasicBlock(OrigBB->getBasicBlock());
+      MF->CreateMachineBasicBlock(OrigBB->getBasicBlock());
   MachineFunction::iterator MBBI = ++OrigBB->getIterator();
   MF->insert(MBBI, NewBB);
 
@@ -1051,7 +1044,7 @@ MachineBasicBlock *SuperHConstantIslands::splitBlockBeforeInstr(MachineInstr *MI
   // when splitting before a conditional branch that is followed by an
   // unconditional branch - in that case we want to insert NewBB).
   water_iterator IP = llvm::lower_bound(WaterList, OrigBB, CompareMBBNumbers);
-  MachineBasicBlock* WaterBB = *IP;
+  MachineBasicBlock *WaterBB = *IP;
   if (WaterBB == OrigBB)
     WaterList.insert(std::next(IP), NewBB);
   else
@@ -1084,9 +1077,9 @@ MachineBasicBlock *SuperHConstantIslands::splitBlockBeforeInstr(MachineInstr *MI
 
 /// Perform the initial placement of the regular constant pool entries.
 /// To start with, we put them all at the end of the function.
-void
-SuperHConstantIslands::doInitialConstPlacement(std::vector<MachineInstr *> &CPEMIs) {
-  
+void SuperHConstantIslands::doInitialConstPlacement(
+    std::vector<MachineInstr *> &CPEMIs) {
+
   // Create the basic block to hold the CPE's.
   MachineBasicBlock *BB = MF->CreateMachineBasicBlock();
   MF->push_back(BB);
@@ -1129,8 +1122,10 @@ SuperHConstantIslands::doInitialConstPlacement(std::vector<MachineInstr *> &CPEM
     unsigned LogAlign = Log2(Alignment);
     MachineBasicBlock::iterator InsAt = InsPoint[LogAlign];
     MachineInstr *CPEMI =
-      BuildMI(*BB, InsAt, DebugLoc(), TII->get(SH::CONSTPOOL_ENTRY))
-        .addImm(i).addConstantPoolIndex(i).addImm(Size);
+        BuildMI(*BB, InsAt, DebugLoc(), TII->get(SH::CONSTPOOL_ENTRY))
+            .addImm(i)
+            .addConstantPoolIndex(i)
+            .addImm(Size);
     CPEMIs.push_back(CPEMI);
 
     // Ensure that future entries with higher alignment get inserted before
@@ -1179,7 +1174,6 @@ bool SuperHConstantIslands::fixupImmediateBr(ImmBranch &Br) {
 FunctionPass *llvm::createSuperHConstantIslandPass() {
   return new SuperHConstantIslands();
 }
-
 
 INITIALIZE_PASS(SuperHConstantIslands, "sh-cp-islands", SH_CP_ISLANDS_OPT_NAME,
                 false, false)

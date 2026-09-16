@@ -21,15 +21,16 @@ using namespace llvm;
 //===----------------------------------------------------------------------===//
 
 SuperHConstantPoolValue::SuperHConstantPoolValue(Type *Ty, unsigned id,
-                                           SHCP::SHCPKind kind,
-                                           SHCP::SHCPModifier modifier)
-  : MachineConstantPoolValue(Ty), LabelId(id), Kind(kind), Modifier(modifier) {}
+                                                 SHCP::SHCPKind kind,
+                                                 SHCP::SHCPModifier modifier)
+    : MachineConstantPoolValue(Ty), LabelId(id), Kind(kind),
+      Modifier(modifier) {}
 
 SuperHConstantPoolValue::SuperHConstantPoolValue(LLVMContext &C, unsigned id,
-                                           SHCP::SHCPKind kind,
-                                           SHCP::SHCPModifier modifier)
-  : MachineConstantPoolValue((Type*)Type::getInt32Ty(C)),
-    LabelId(id), Kind(kind), Modifier(modifier) {}
+                                                 SHCP::SHCPKind kind,
+                                                 SHCP::SHCPModifier modifier)
+    : MachineConstantPoolValue((Type *)Type::getInt32Ty(C)), LabelId(id),
+      Kind(kind), Modifier(modifier) {}
 
 SuperHConstantPoolValue::~SuperHConstantPoolValue() = default;
 
@@ -48,19 +49,16 @@ StringRef SuperHConstantPoolValue::getModifierText() const {
 }
 
 int SuperHConstantPoolValue::getExistingMachineCPValue(MachineConstantPool *CP,
-                                                    Align Alignment) {
+                                                       Align Alignment) {
   llvm_unreachable("Shouldn't be calling this directly!");
 }
 
-void
-SuperHConstantPoolValue::addSelectionDAGCSEId(FoldingSetNodeID &ID) {
+void SuperHConstantPoolValue::addSelectionDAGCSEId(FoldingSetNodeID &ID) {
   ID.AddInteger(LabelId);
 }
 
-bool
-SuperHConstantPoolValue::hasSameValue(SuperHConstantPoolValue *ACPV) {
-  if (ACPV->Kind == Kind &&
-      ACPV->Modifier == Modifier &&
+bool SuperHConstantPoolValue::hasSameValue(SuperHConstantPoolValue *ACPV) {
+  if (ACPV->Kind == Kind && ACPV->Modifier == Modifier &&
       ACPV->LabelId == LabelId) {
 
     // Two PC relative constpool entries containing the same GV address or
@@ -78,7 +76,8 @@ LLVM_DUMP_METHOD void SuperHConstantPoolValue::dump() const {
 #endif
 
 void SuperHConstantPoolValue::print(raw_ostream &O) const {
-  if (Modifier) O << "(" << getModifierText() << ")";
+  if (Modifier)
+    O << "(" << getModifierText() << ")";
 }
 
 
@@ -88,59 +87,55 @@ void SuperHConstantPoolValue::print(raw_ostream &O) const {
 // SuperHConstantPoolConstant
 //===----------------------------------------------------------------------===//
 
-SuperHConstantPoolConstant::SuperHConstantPoolConstant(Type *Ty,
-                                                 const Constant *C,
-                                                 unsigned ID,
-                                                 SHCP::SHCPKind Kind,
-                                                 SHCP::SHCPModifier Modifier)
-  : SuperHConstantPoolValue(Ty, ID, Kind, Modifier),
-    CVal(C) {}
+SuperHConstantPoolConstant::SuperHConstantPoolConstant(
+    Type *Ty, const Constant *C, unsigned ID, SHCP::SHCPKind Kind,
+    SHCP::SHCPModifier Modifier)
+    : SuperHConstantPoolValue(Ty, ID, Kind, Modifier), CVal(C) {}
 
-SuperHConstantPoolConstant::SuperHConstantPoolConstant(const Constant *C,
-                                                 unsigned ID,
-                                                 SHCP::SHCPKind Kind,
-                                                 SHCP::SHCPModifier Modifier)
-  : SuperHConstantPoolValue((Type*)C->getType(), ID, Kind, Modifier),
-    CVal(C) {}
+SuperHConstantPoolConstant::SuperHConstantPoolConstant(
+    const Constant *C, unsigned ID, SHCP::SHCPKind Kind,
+    SHCP::SHCPModifier Modifier)
+    : SuperHConstantPoolValue((Type *)C->getType(), ID, Kind, Modifier),
+      CVal(C) {}
 
 SuperHConstantPoolConstant::SuperHConstantPoolConstant(const GlobalVariable *GV,
-                                                 const Constant *C)
+                                                       const Constant *C)
     : SuperHConstantPoolValue((Type *)C->getType(), 0, SHCP::CPPromotedGlobal,
-                           SHCP::no_modifier), CVal(C) {
+                              SHCP::no_modifier),
+      CVal(C) {
   GVars.insert(GV);
 }
 
 SuperHConstantPoolConstant *
 SuperHConstantPoolConstant::Create(const Constant *C, unsigned ID) {
   return new SuperHConstantPoolConstant(C, ID, SHCP::CPValue,
-                                     SHCP::no_modifier);
+                                        SHCP::no_modifier);
 }
 
 SuperHConstantPoolConstant *
 SuperHConstantPoolConstant::Create(const GlobalVariable *GVar,
-                                const Constant *Initializer) {
+                                   const Constant *Initializer) {
   return new SuperHConstantPoolConstant(GVar, Initializer);
 }
 
 SuperHConstantPoolConstant *
 SuperHConstantPoolConstant::Create(const GlobalValue *GV,
-                                SHCP::SHCPModifier Modifier) {
-  return new SuperHConstantPoolConstant((Type*)Type::getInt32Ty(GV->getContext()),
-                                     GV, 0, SHCP::CPValue,
-                                     Modifier);
+                                   SHCP::SHCPModifier Modifier) {
+  return new SuperHConstantPoolConstant(
+      (Type *)Type::getInt32Ty(GV->getContext()), GV, 0, SHCP::CPValue,
+      Modifier);
 }
 
 SuperHConstantPoolConstant *
 SuperHConstantPoolConstant::Create(const Constant *C, unsigned ID,
-                                SHCP::SHCPKind Kind) {
-  return new SuperHConstantPoolConstant(C, ID, Kind,
-                                     SHCP::no_modifier);
+                                   SHCP::SHCPKind Kind) {
+  return new SuperHConstantPoolConstant(C, ID, Kind, SHCP::no_modifier);
 }
 
 SuperHConstantPoolConstant *
 SuperHConstantPoolConstant::Create(const Constant *C, unsigned ID,
-                                SHCP::SHCPKind Kind,
-                                SHCP::SHCPModifier Modifier) {
+                                   SHCP::SHCPKind Kind,
+                                   SHCP::SHCPModifier Modifier) {
   return new SuperHConstantPoolConstant(C, ID, Kind, Modifier);
 }
 
@@ -152,12 +147,12 @@ const BlockAddress *SuperHConstantPoolConstant::getBlockAddress() const {
   return dyn_cast_or_null<BlockAddress>(CVal);
 }
 
-int SuperHConstantPoolConstant::getExistingMachineCPValue(MachineConstantPool *CP,
-                                                       Align Alignment) {
+int SuperHConstantPoolConstant::getExistingMachineCPValue(
+    MachineConstantPool *CP, Align Alignment) {
   int index =
-    getExistingMachineCPValueImpl<SuperHConstantPoolConstant>(CP, Alignment);
+      getExistingMachineCPValueImpl<SuperHConstantPoolConstant>(CP, Alignment);
   if (index != -1) {
-    auto *CPV = static_cast<SuperHConstantPoolValue*>(
+    auto *CPV = static_cast<SuperHConstantPoolValue *>(
         CP->getConstants()[index].Val.MachineCPVal);
     auto *Constant = cast<SuperHConstantPoolConstant>(CPV);
     Constant->GVars.insert_range(GVars);
@@ -166,8 +161,10 @@ int SuperHConstantPoolConstant::getExistingMachineCPValue(MachineConstantPool *C
 }
 
 bool SuperHConstantPoolConstant::hasSameValue(SuperHConstantPoolValue *ACPV) {
-  const SuperHConstantPoolConstant *ACPC = dyn_cast<SuperHConstantPoolConstant>(ACPV);
-  return ACPC && ACPC->CVal == CVal && SuperHConstantPoolValue::hasSameValue(ACPV);
+  const SuperHConstantPoolConstant *ACPC =
+      dyn_cast<SuperHConstantPoolConstant>(ACPV);
+  return ACPC && ACPC->CVal == CVal &&
+         SuperHConstantPoolValue::hasSameValue(ACPV);
 }
 
 void SuperHConstantPoolConstant::addSelectionDAGCSEId(FoldingSetNodeID &ID) {
@@ -190,23 +187,24 @@ void SuperHConstantPoolConstant::print(raw_ostream &O) const {
 //===----------------------------------------------------------------------===//
 
 SuperHConstantPoolSymbol::SuperHConstantPoolSymbol(LLVMContext &C, StringRef s,
-                                             unsigned id,
-                                             SHCP::SHCPModifier Modifier)
+                                                   unsigned id,
+                                                   SHCP::SHCPModifier Modifier)
     : SuperHConstantPoolValue(C, id, SHCP::CPExtSymbol, Modifier),
       S(std::string(s)) {}
 
-SuperHConstantPoolSymbol *SuperHConstantPoolSymbol::Create(LLVMContext &C,
-                                                     StringRef s, unsigned ID) {
+SuperHConstantPoolSymbol *
+SuperHConstantPoolSymbol::Create(LLVMContext &C, StringRef s, unsigned ID) {
   return new SuperHConstantPoolSymbol(C, s, ID, SHCP::DIR);
 }
 
 int SuperHConstantPoolSymbol::getExistingMachineCPValue(MachineConstantPool *CP,
-                                                     Align Alignment) {
+                                                        Align Alignment) {
   return getExistingMachineCPValueImpl<SuperHConstantPoolSymbol>(CP, Alignment);
 }
 
 bool SuperHConstantPoolSymbol::hasSameValue(SuperHConstantPoolValue *SCPV) {
-  const SuperHConstantPoolSymbol *ACPS = dyn_cast<SuperHConstantPoolSymbol>(SCPV);
+  const SuperHConstantPoolSymbol *ACPS =
+      dyn_cast<SuperHConstantPoolSymbol>(SCPV);
   return ACPS && ACPS->S == S && SuperHConstantPoolValue::hasSameValue(SCPV);
 }
 

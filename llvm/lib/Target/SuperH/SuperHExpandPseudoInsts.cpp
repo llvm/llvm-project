@@ -12,12 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/SuperHMCTargetDesc.h"
 #include "SuperH.h"
 #include "SuperHInstrInfo.h"
 #include "SuperHMachineFunctionInfo.h"
 #include "SuperHSubtarget.h"
 #include "SuperHTargetMachine.h"
-#include "MCTargetDesc/SuperHMCTargetDesc.h"
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -32,11 +32,11 @@ using namespace llvm;
 
 #ifndef NDEBUG
 static cl::opt<bool>
-CNoExpand("sh-no-expand", cl::Hidden, cl::init(false),
-          cl::desc("Force the backend to not expand instructions."));
+    CNoExpand("sh-no-expand", cl::Hidden, cl::init(false),
+              cl::desc("Force the backend to not expand instructions."));
 static cl::opt<bool>
-CKeepPseudo("sh-keep-pseudo", cl::Hidden, cl::init(false),
-          cl::desc("Force the backend to keep pseudos around."));
+    CKeepPseudo("sh-keep-pseudo", cl::Hidden, cl::init(false),
+                cl::desc("Force the backend to keep pseudos around."));
 #endif
 
 namespace {
@@ -76,15 +76,15 @@ private:
 
 // getOffsetForStackOffset - Calculates how much to offset the stack pointer for
 // the indirect load/store to be in range.
-static int64_t getOffsetForStackOffset(const MachineFunction &MF, 
-                                       uint8_t Bits, uint8_t Scale = 1) {
+static int64_t getOffsetForStackOffset(const MachineFunction &MF, uint8_t Bits,
+                                       uint8_t Scale = 1) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  
+
   // The base value range for the instruction.
-  int64_t BM = ((1<<Bits)-1)*Scale;
+  int64_t BM = ((1 << Bits) - 1) * Scale;
   int64_t StackSize = MFI.getStackSize();
-  int64_t Slot = StackSize/BM;
-  return alignTo((BM*Slot)+(StackSize%BM), Scale);
+  int64_t Slot = StackSize / BM;
+  return alignTo((BM * Slot) + (StackSize % BM), Scale);
 }
 
 // eraseMI - Helper that erases a machine instruction while respecting
@@ -95,7 +95,7 @@ static bool eraseMI(MachineInstr &MI) {
   if (CKeepPseudo)
     return false;
 #endif
-  
+
   MI.eraseFromParent();
   return true;
 }
@@ -121,23 +121,23 @@ bool SuperHExpandPseudo::storeToFrame(Block &MBB, BlockIt MBBI, int Scale) {
   // Expand sequence to
   // mov      <frame reg>,  r1
   // add      #-SpOffset,   r1
-  BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
-    .addReg(FrameReg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1).addReg(FrameReg);
   BuildMI(MBB, MBBI, DL, TII->get(SH::ADDI), SH::R1)
-    .addReg(SH::R1)
-    .addImm(-SpOffset);
+      .addReg(SH::R1)
+      .addImm(-SpOffset);
 
-  switch(MI.getOpcode()) {
-  default: llvm_unreachable("Expected valid MOV*SPtr opcode.");
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Expected valid MOV*SPtr opcode.");
   case SH::MOVBSPtr: {
 
     // mov      <src reg>,  r0
     // mov.b    r0, @(offset,r1)
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R0)
-      .addReg(SrcReg, getKillRegState(SrcIsKill));
+        .addReg(SrcReg, getKillRegState(SrcIsKill));
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBS4))
-      .addReg(SH::R1, RegState::Kill)
-      .addImm(Offset);
+        .addReg(SH::R1, RegState::Kill)
+        .addImm(Offset);
     break;
   }
   case SH::MOVWSPtr: {
@@ -145,19 +145,19 @@ bool SuperHExpandPseudo::storeToFrame(Block &MBB, BlockIt MBBI, int Scale) {
     // mov      <src reg>,  r0
     // mov.w    r0, @(offset,r1)
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R0)
-      .addReg(SrcReg, getKillRegState(SrcIsKill));
+        .addReg(SrcReg, getKillRegState(SrcIsKill));
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWS4))
-      .addReg(SH::R1, RegState::Kill)
-      .addImm(Offset);
+        .addReg(SH::R1, RegState::Kill)
+        .addImm(Offset);
     break;
   }
   case SH::MOVLSPtr: {
 
     // mov.b    <src reg>, @(offset,r1)
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLS4))
-      .addReg(SrcReg, getKillRegState(SrcIsKill))
-      .addReg(SH::R1, RegState::Kill)
-      .addImm(Offset);
+        .addReg(SrcReg, getKillRegState(SrcIsKill))
+        .addReg(SH::R1, RegState::Kill)
+        .addImm(Offset);
     break;
   }
   }
@@ -177,30 +177,25 @@ bool SuperHExpandPseudo::storeToGlobal(Block &MBB, BlockIt MBBI) {
     return false;
 
   BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLI), SH::R1)
-    .addConstantPoolIndex(G->getLabelId());
+      .addConstantPoolIndex(G->getLabelId());
 
-  switch(MI.getOpcode()) {
-  default: llvm_unreachable("Expected valid MOV*SPtr opcode.");
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Expected valid MOV*SPtr opcode.");
   case SH::MOVBSPtr: {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBS))
-      .addReg(SrcReg)
-      .addReg(SH::R1);
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBS)).addReg(SrcReg).addReg(SH::R1);
     break;
   }
   case SH::MOVWSPtr: {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWS))
-      .addReg(SrcReg)
-      .addReg(SH::R1);
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWS)).addReg(SrcReg).addReg(SH::R1);
     break;
   }
   case SH::MOVLSPtr: {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLS))
-      .addReg(SrcReg)
-      .addReg(SH::R1);
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLS)).addReg(SrcReg).addReg(SH::R1);
     break;
   }
   }
-  
+
   return eraseMI(MI);
 }
 
@@ -261,50 +256,48 @@ bool SuperHExpandPseudo::loadFromFrame(Block &MBB, BlockIt MBBI, int Scale) {
   // Expand sequence to
   // mov      <frame reg>,  r1
   // add      #-SpOffset,   r1
-  BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1)
-    .addReg(FrameReg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R1).addReg(FrameReg);
   BuildMI(MBB, MBBI, DL, TII->get(SH::ADDI), SH::R1)
-    .addReg(SH::R1)
-    .addImm(-SpOffset);
+      .addReg(SH::R1)
+      .addImm(-SpOffset);
 
-  switch(MI.getOpcode()) {
-  default: llvm_unreachable("Expected valid MOV*LPtr opcode.");
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Expected valid MOV*LPtr opcode.");
   case SH::MOVBLPtr: {
 
     // mov.w    @(offset,r1), r0
     // mov      r0,           <dst reg>
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBL4))
-      .addReg(SH::R1)
-      .addImm(Offset)
-      .addReg(SH::R0, RegState::Define);
+        .addReg(SH::R1)
+        .addImm(Offset)
+        .addReg(SH::R0, RegState::Define);
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOV))
-      .addReg(DstReg, getKillRegState(DstIsKill))
-      .addReg(SH::R0, RegState::Kill);
+        .addReg(DstReg, getKillRegState(DstIsKill))
+        .addReg(SH::R0, RegState::Kill);
     break;
   }
   case SH::MOVWLPtr: {
 
     // mov.b    @(offset,r1), r0
     // mov      r0,           <dst reg>
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWL4))
-      .addReg(SH::R1)
-      .addImm(Offset);
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWL4)).addReg(SH::R1).addImm(Offset);
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOV))
-      .addReg(DstReg, getKillRegState(DstIsKill))
-      .addReg(SH::R0, RegState::Define);
+        .addReg(DstReg, getKillRegState(DstIsKill))
+        .addReg(SH::R0, RegState::Define);
     break;
   }
   case SH::MOVLLPtr: {
 
     // mov.l    @(offset,r1), <dst reg>
     BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLL4))
-      .addReg(DstReg, getKillRegState(DstIsKill))
-      .addReg(SH::R1)
-      .addImm(Offset);
+        .addReg(DstReg, getKillRegState(DstIsKill))
+        .addReg(SH::R1)
+        .addImm(Offset);
     break;
   }
   }
-  
+
   return eraseMI(MI);
 }
 
@@ -321,27 +314,25 @@ bool SuperHExpandPseudo::loadFromGlobal(Block &MBB, BlockIt MBBI) {
     return false;
 
   BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLI), SH::R1)
-    .addConstantPoolIndex(G->getLabelId());
+      .addConstantPoolIndex(G->getLabelId());
 
-  switch(MI.getOpcode()) {
-  default: llvm_unreachable("Expected valid MOV*LPtr opcode.");
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Expected valid MOV*LPtr opcode.");
   case SH::MOVBLPtr: {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBL), DstReg)
-      .addReg(SH::R1);
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBL), DstReg).addReg(SH::R1);
     break;
   }
   case SH::MOVWLPtr: {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWL), DstReg)
-      .addReg(SH::R1);
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWL), DstReg).addReg(SH::R1);
     break;
   }
   case SH::MOVLLPtr: {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLL), DstReg)
-      .addReg(SH::R1);
+    BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLL), DstReg).addReg(SH::R1);
     break;
   }
   }
-  
+
   return eraseMI(MI);
 }
 
@@ -396,38 +387,34 @@ bool SuperHExpandPseudo::expand<SH::SHLri>(Block &MBB, BlockIt MBBI) {
   auto SrcReg = MI.getOperand(1).getReg();
   int64_t Offset = MI.getOperand(2).getImm();
 
-  while(Offset > 0) {
+  while (Offset > 0) {
 
     if (Offset > 16) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL16), DstReg)
-        .addReg(SrcReg);
+      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL16), DstReg).addReg(SrcReg);
 
       Offset -= 16;
       continue;
     }
 
     if (Offset > 8) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL8), DstReg)
-        .addReg(SrcReg);
+      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL8), DstReg).addReg(SrcReg);
 
       Offset -= 8;
       continue;
     }
 
     if (Offset > 2) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL2), DstReg)
-        .addReg(SrcReg);
+      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL2), DstReg).addReg(SrcReg);
 
       Offset -= 2;
       continue;
     }
 
-    BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL), DstReg)
-      .addReg(SrcReg);
+    BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL), DstReg).addReg(SrcReg);
     Offset -= 1;
     continue;
   }
-  
+
   return eraseMI(MI);
 }
 
@@ -442,38 +429,34 @@ bool SuperHExpandPseudo::expand<SH::SHRri>(Block &MBB, BlockIt MBBI) {
   auto SrcReg = MI.getOperand(1).getReg();
   int64_t Offset = MI.getOperand(2).getImm();
 
-  while(Offset > 0) {
-    
+  while (Offset > 0) {
+
     if (Offset > 16) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR16), DstReg)
-        .addReg(SrcReg);
+      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR16), DstReg).addReg(SrcReg);
 
       Offset -= 16;
       continue;
     }
 
     if (Offset > 8) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR8), DstReg)
-        .addReg(SrcReg);
+      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR8), DstReg).addReg(SrcReg);
 
       Offset -= 8;
       continue;
     }
 
     if (Offset > 2) {
-      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR2), DstReg)
-        .addReg(SrcReg);
+      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR2), DstReg).addReg(SrcReg);
 
       Offset -= 2;
       continue;
     }
 
-    BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR), DstReg)
-      .addReg(SrcReg);
+    BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR), DstReg).addReg(SrcReg);
     Offset -= 1;
     continue;
   }
-  
+
   return eraseMI(MI);
 }
 
@@ -488,12 +471,11 @@ bool SuperHExpandPseudo::expand<SH::SRAri>(Block &MBB, BlockIt MBBI) {
   auto SrcReg = MI.getOperand(1).getReg();
   int64_t Offset = MI.getOperand(2).getImm();
 
-  while(Offset > 0) {
-    BuildMI(MBB, MBBI, DL, TII->get(SH::SHAR), DstReg)
-      .addReg(SrcReg);
+  while (Offset > 0) {
+    BuildMI(MBB, MBBI, DL, TII->get(SH::SHAR), DstReg).addReg(SrcReg);
     Offset -= 1;
   }
-  
+
   return eraseMI(MI);
 }
 
@@ -505,12 +487,9 @@ bool SuperHExpandPseudo::expand<SH::SHLrr>(Block &MBB, BlockIt MBBI) {
   auto Src1Reg = MI.getOperand(1).getReg();
   auto Src2Reg = MI.getOperand(2).getReg();
 
-  BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL))
-    .addReg(Src1Reg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::DT))
-    .addReg(Src2Reg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::BF))
-    .addImm(-4);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL)).addReg(Src1Reg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::DT)).addReg(Src2Reg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::BF)).addImm(-4);
 
   return eraseMI(MI);
 }
@@ -523,12 +502,9 @@ bool SuperHExpandPseudo::expand<SH::SHRrr>(Block &MBB, BlockIt MBBI) {
   auto Src1Reg = MI.getOperand(1).getReg();
   auto Src2Reg = MI.getOperand(2).getReg();
 
-  BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR))
-    .addReg(Src1Reg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::DT))
-    .addReg(Src2Reg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::BF))
-    .addImm(-4);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR)).addReg(Src1Reg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::DT)).addReg(Src2Reg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::BF)).addImm(-4);
 
   return eraseMI(MI);
 }
@@ -541,12 +517,9 @@ bool SuperHExpandPseudo::expand<SH::SRArr>(Block &MBB, BlockIt MBBI) {
   auto Src1Reg = MI.getOperand(1).getReg();
   auto Src2Reg = MI.getOperand(2).getReg();
 
-  BuildMI(MBB, MBBI, DL, TII->get(SH::SHAR))
-    .addReg(Src1Reg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::DT))
-    .addReg(Src2Reg);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::BF))
-    .addImm(-4);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::SHAR)).addReg(Src1Reg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::DT)).addReg(Src2Reg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::BF)).addImm(-4);
 
   return eraseMI(MI);
 }
@@ -590,10 +563,10 @@ bool SuperHExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "\n********** SuperHExpandPseudo **********\n");
   bool Modified = false;
 
-  #ifndef NDEBUG
+#ifndef NDEBUG
   if (CNoExpand)
     return false;
-  #endif
+#endif
 
   const SuperHSubtarget &STI = MF.getSubtarget<SuperHSubtarget>();
   TRI = STI.getRegisterInfo();
@@ -627,20 +600,21 @@ bool SuperHExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
   case Op:                                                                     \
     return expand<Op>(MBB, MI)
 
-  switch(Opcode) {
-  default: break;
-  EXPAND(SH::MOVBSPtr);
-  EXPAND(SH::MOVWSPtr);
-  EXPAND(SH::MOVLSPtr);
-  EXPAND(SH::MOVBLPtr);
-  EXPAND(SH::MOVWLPtr);
-  EXPAND(SH::MOVLLPtr);
-  EXPAND(SH::SHLri);
-  EXPAND(SH::SHRri);
-  EXPAND(SH::SRAri);
-  EXPAND(SH::SHLrr);
-  EXPAND(SH::SHRrr);
-  EXPAND(SH::SRArr);
+  switch (Opcode) {
+  default:
+    break;
+    EXPAND(SH::MOVBSPtr);
+    EXPAND(SH::MOVWSPtr);
+    EXPAND(SH::MOVLSPtr);
+    EXPAND(SH::MOVBLPtr);
+    EXPAND(SH::MOVWLPtr);
+    EXPAND(SH::MOVLLPtr);
+    EXPAND(SH::SHLri);
+    EXPAND(SH::SHRri);
+    EXPAND(SH::SRAri);
+    EXPAND(SH::SHLrr);
+    EXPAND(SH::SHRrr);
+    EXPAND(SH::SRArr);
   }
 #undef EXPAND
   return false;
@@ -649,7 +623,6 @@ bool SuperHExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
 char SuperHExpandPseudo::ID = 0;
 
 } // namespace
-
 
 INITIALIZE_PASS(SuperHExpandPseudo, "sh-expand-pseudo", SH_EXPAND_PSEUDO_NAME,
                 false, false)
