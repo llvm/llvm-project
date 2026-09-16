@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -O1 -triple spirv64 -cl-std=CL3.0 -x cl %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -O1 -triple spirv32 -cl-std=CL3.0 -x cl %s -emit-llvm -o - | FileCheck %s
 
-#ifdef __SYCL_DEVICE_ONLY__
+#ifdef SYCL_LANGUAGE_VERSION
 #define SYCL_EXTERNAL [[clang::sycl_external]]
 #define GLOBALAS [[clang::sycl_global]]
 #define LOCALAS [[clang::sycl_local]]

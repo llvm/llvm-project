@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -fsycl-is-host -fsyntax-only -std=c++20 -verify %s
 // RUN: %clang_cc1 -fsycl-is-device -fsyntax-only -std=c++20 -verify %s
 
-// The SYCL address space attributes are type attributes that may only appear on
-// the object type of an object pointer or object reference type. This test
-// exercises that appropriate diagnostics are issued for other uses.
+// The SYCL address space attributes are type attributes that may be applied
+// to non-function non-reference types. This test exercises that appropriate
+// diagnostics are issued for other uses.
 
 using fn_t = void();
 

@@ -921,12 +921,20 @@ spaces described by
        kernel.
 
 The SYCL address space attributes are type attributes that may be applied to
-the object type of an object pointer or object reference type.
-A type specifier with a SYCL address space specifies a distinct type from the
-otherwise unattributed type.
-For example, ``int *`` and ``int [[clang::sycl_global]]*`` designate distinct
-pointer types which participate in overload resolution and template
-specialization.
+non-function non-reference types to specify an address space qualified type.
+
+A type with a SYCL address space qualifier is a distinct type from the
+otherwise unattributed type. For example, ``int *`` and ``int [[clang::sycl_global]]*``
+designate distinct pointer types which participate in overload resolution and
+template specialization.
+
+The top-level type of a variable declaration cannot have a SYCL address space
+qualifier. For example:
+
+.. code-block:: c++
+
+  int [[clang::sycl_global]] gv;   // error: the top-level type has an address space qualifier.
+  int [[clang::sycl_global]] *pgi; // ok; the address space qualifier is on the pointee type.
 
 Conversions between SYCL address space attributed types are permitted as
 follows.

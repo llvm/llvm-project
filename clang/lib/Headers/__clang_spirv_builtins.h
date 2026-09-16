@@ -26,7 +26,7 @@
 #define __SPIRV_convergent __attribute__((convergent))
 #define __SPIRV_inline __attribute__((always_inline))
 
-#ifdef __SYCL_DEVICE_ONLY__
+#ifdef SYCL_LANGUAGE_VERSION
 #define __SPIRV_GLOBALAS [[clang::sycl_global]]
 #define __SPIRV_LOCALAS [[clang::sycl_local]]
 #define __SPIRV_PRIVATEAS [[clang::sycl_private]]

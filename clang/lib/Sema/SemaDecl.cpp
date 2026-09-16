@@ -8982,8 +8982,8 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     NewVD->setType(T);
   }
 
-  // The SYCL address space attributes may only be applied to the object type
-  // of an object pointer or object reference type.
+  // The top-level type of a variable declaration cannot have a SYCL address
+  // space qualifier.
   if (getLangOpts().isSYCL()) {
     LangAS AS = Context.getBaseElementType(T).getAddressSpace();
     if (isSYCLAddressSpace(AS)) {
