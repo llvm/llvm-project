@@ -98,16 +98,17 @@ static void ExtractAttrAndFormValue(
     form_value.SetSigned(attr_spec.getImplicitConstValue());
 }
 
-// GetDIENamesAndRanges
-//
-// Gets the valid address ranges for a given DIE by looking for a
-// DW_AT_low_pc/DW_AT_high_pc pair, DW_AT_entry_pc, or DW_AT_ranges attributes.
-bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
-    DWARFUnit *cu, const char *&name, const char *&mangled,
+/// Helper for the public \ref DWARFDebugInfoEntry::GetDIENamesAndRanges API.
+/// Fills in the output parameters that aren't set yet from \c die and appends
+/// the DIEs it elaborates on to \c elaborating_dies.
+static void GetDIENamesAndRanges(
+    const DWARFDIE &die, const char *&name, const char *&mangled,
     llvm::DWARFAddressRangesVector &ranges, std::optional<int> &decl_file,
     std::optional<int> &decl_line, std::optional<int> &decl_column,
     std::optional<int> &call_file, std::optional<int> &call_line,
-    std::optional<int> &call_column, DWARFExpressionList *frame_base) const {
+    std::optional<int> &call_column, DWARFExpressionList *frame_base,
+    llvm::SmallVectorImpl<DWARFDIE> &elaborating_dies) {
+  DWARFUnit *cu = die.GetCU();
   dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
   dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
   std::vector<DWARFDIE> dies;
@@ -116,12 +117,13 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
   SymbolFileDWARF &dwarf = cu->GetSymbolFileDWARF();
   lldb::ModuleSP module = dwarf.GetObjectFile()->GetModule();
 
-  if (const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu)) {
+  if (const auto *abbrevDecl =
+          die.GetDIE()->GetAbbreviationDeclarationPtr(cu)) {
     const DWARFDataExtractor &data = cu->GetData();
-    lldb::offset_t offset = GetFirstAttributeOffset();
+    lldb::offset_t offset = die.GetDIE()->GetFirstAttributeOffset();
 
     if (!data.ValidOffset(offset))
-      return false;
+      return;
 
     bool do_offset = false;
 
@@ -168,7 +170,8 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
                 "[{0:x16}]: DIE has DW_AT_ranges({1} {2:x16}) attribute, but "
                 "range extraction failed ({3}), please file a bug "
                 "and attach the file at the start of this error message",
-                GetOffset(), llvm::dwarf::FormEncodingString(form_value.Form()),
+                die.GetOffset(),
+                llvm::dwarf::FormEncodingString(form_value.Form()),
                 form_value.Unsigned(), fmt_consume(r.takeError()));
           }
           break;
@@ -270,13 +273,49 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
 
   if (ranges.empty() || name == nullptr || mangled == nullptr) {
     for (const DWARFDIE &die : dies) {
-      if (die) {
-        die.GetDIE()->GetDIENamesAndRanges(die.GetCU(), name, mangled, ranges,
-                                           decl_file, decl_line, decl_column,
-                                           call_file, call_line, call_column);
-      }
+      if (die)
+        elaborating_dies.push_back(die);
     }
   }
+}
+
+// GetDIENamesAndRanges
+//
+// Gets the valid address ranges for a given DIE by looking for a
+// DW_AT_low_pc/DW_AT_high_pc pair, DW_AT_entry_pc, or DW_AT_ranges attributes.
+bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
+    DWARFUnit *cu, const char *&name, const char *&mangled,
+    llvm::DWARFAddressRangesVector &ranges, std::optional<int> &decl_file,
+    std::optional<int> &decl_line, std::optional<int> &decl_column,
+    std::optional<int> &call_file, std::optional<int> &call_line,
+    std::optional<int> &call_column, DWARFExpressionList *frame_base) const {
+  llvm::SmallVector<DWARFDIE, 3> worklist;
+  worklist.emplace_back(cu, this);
+
+  // Keep track of the DIEs already seen to catch cycles.
+  llvm::SmallPtrSet<DWARFDebugInfoEntry const *, 3> seen;
+  seen.insert(this);
+
+  // The frame base is only taken from the DIE itself, not from the DIEs it
+  // elaborates on.
+  DWARFExpressionList *die_frame_base = frame_base;
+
+  while (!worklist.empty()) {
+    DWARFDIE current = worklist.pop_back_val();
+
+    llvm::SmallVector<DWARFDIE, 3> elaborating_dies;
+    ::GetDIENamesAndRanges(current, name, mangled, ranges, decl_file, decl_line,
+                           decl_column, call_file, call_line, call_column,
+                           die_frame_base, elaborating_dies);
+    die_frame_base = nullptr;
+
+    // Push in reverse so that the worklist handles them in the order.
+    for (const DWARFDIE &die : llvm::reverse(elaborating_dies)) {
+      if (seen.insert(die.GetDIE()).second)
+        worklist.push_back(die);
+    }
+  }
+
   return !ranges.empty();
 }
 
