@@ -3421,11 +3421,32 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       // Scaling FrameReg in place is the last resort when there is nothing to
       // scavenge. It has to be undone after MI, which is only possible while MI
       // does not use FrameReg for anything besides the frame index.
-      bool CanUseFrameRegAsScratch = IsSALU && !LiveSCC && FrameReg &&
-                                     !MI->readsRegister(FrameReg, this) &&
-                                     !MI->modifiesRegister(FrameReg, this);
+      bool CanUseFrameRegAsSGPRScratch = IsSALU && FrameReg &&
+                                         !MI->readsRegister(FrameReg, this) &&
+                                         !MI->modifiesRegister(FrameReg, this);
+      // ResultReg is a VGPR while SCC is live, so FrameReg cannot stand in for
+      // it there.
+      bool CanUseFrameRegAsScratch = CanUseFrameRegAsSGPRScratch && !LiveSCC;
 
       bool RestoreFrameReg = false;
+
+      // Scavenge the scalar temporary the V_READFIRSTLANE_B32 result lands in.
+      // Spilling an SGPR here would flip EXEC with S_NOT, and that clobbers the
+      // SCC this path exists to preserve, so fall back to FrameReg instead.
+      auto ScavengeSGPRForReadfirstlane =
+          [&](MachineBasicBlock::iterator To) -> Register {
+        if (Register Reg = RS->scavengeRegisterBackwards(
+                AMDGPU::SReg_32_XM0RegClass, To, false, 0,
+                /*AllowSpill=*/false))
+          return Reg;
+        if (CanUseFrameRegAsSGPRScratch) {
+          RestoreFrameReg = true;
+          return FrameReg;
+        }
+        return RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass, To,
+                                             false, 0);
+      };
+
       Register ResultReg;
       if (IsCopy) {
         ResultReg = MI->getOperand(0).getReg();
@@ -3479,8 +3500,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             assert(ResultReg.isPhysical());
             NewDest = ResultReg;
           } else {
-            NewDest = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
-                                                    Shift, false, 0);
+            NewDest = ScavengeSGPRForReadfirstlane(Shift);
           }
           BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), NewDest)
               .addReg(TmpResultReg);
@@ -3600,9 +3620,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             if (IsCopy) {
               NewDest = ResultReg;
             } else {
-              NewDest = RS->scavengeRegisterBackwards(
-                  AMDGPU::SReg_32_XM0RegClass, *Add, false, 0,
-                  /*AllowSpill=*/true);
+              NewDest = ScavengeSGPRForReadfirstlane(*Add);
             }
 
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
@@ -3641,8 +3659,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
         if (Offset) {
           int64_t ScaledOffset = -Offset * ST.getWavefrontSize();
-          bool SCCLiveAfterMI = MI->definesRegister(AMDGPU::SCC, this) &&
-                                !MI->registerDefIsDead(AMDGPU::SCC, this);
+          bool SCCLiveAfterMI = MI->definesRegister(AMDGPU::SCC, this)
+                                    ? !MI->registerDefIsDead(AMDGPU::SCC, this)
+                                    : LiveSCC;
           if (!SCCLiveAfterMI) {
             BuildMI(*MBB, InsPt, DL, TII->get(AMDGPU::S_ADD_I32), FrameReg)
                 .addReg(FrameReg)
