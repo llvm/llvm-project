@@ -68,6 +68,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
@@ -1293,7 +1294,8 @@ addDynamicElfSymbols(const ELFObjectFile<ELFT> &Obj,
     if (SecI == Obj.section_end())
       continue;
 
-    AllSymbols[*SecI].emplace_back(Address, Name, SymbolType);
+    AllSymbols[*SecI].emplace_back(Address, Name, SymbolType).Size =
+        Symbol.getSize();
   }
 }
 
@@ -1646,7 +1648,10 @@ SymbolInfoTy objdump::createSymbolInfo(const ObjectFile &Obj,
   } else {
     uint8_t Type =
         Obj.isELF() ? getElfSymbolType(Obj, Symbol) : (uint8_t)ELF::STT_NOTYPE;
-    return SymbolInfoTy(Addr, Name, Type, IsMappingSymbol);
+    SymbolInfoTy Info(Addr, Name, Type, IsMappingSymbol);
+    if (Obj.isELF())
+      Info.Size = ELFSymbolRef(Symbol).getSize();
+    return Info;
   }
 }
 
@@ -2192,6 +2197,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
     std::vector<RelocationRef>::const_iterator RelEnd = Rels.end();
     std::string CurrentRISCVVendorSymbol;
     uint64_t CurrentRISCVVendorOffset = 0;
+    uint64_t DisasmSymbolEnd = 0;
+    const uint64_t SectionEnd =
+        std::min<uint64_t>(SectionAddr + SectSize, StopAddress);
 
     // Loop over each chunk of code between two points where at least
     // one symbol is defined.
@@ -2204,6 +2212,15 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       while (SI != SE && Symbols[SI].Addr == Start)
         ++SI;
       SymbolsHere = ArrayRef<SymbolInfoTy>(&Symbols[FirstSI], SI - FirstSI);
+
+      if (Start < SectionAddr || StopAddress <= Start)
+        continue;
+
+      // Keep symbol boundaries within selected ranges so that internal code
+      // and data symbols retain their usual disassembly behavior.
+      uint64_t End = SectionEnd;
+      if (SI < SE)
+        End = std::min(End, Symbols[SI].Addr);
 
       // Get the demangled names of all those symbols. We end up with a vector
       // of StringRef that holds the names we're going to use, and a vector of
@@ -2261,18 +2278,22 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       // If the user has given the --disassemble-symbols option, then we must
       // display every symbol in that set, and no others.
       if (!DisasmSymbolSet.empty()) {
-        bool FoundAny = false;
         for (size_t i = 0; i < SymbolsHere.size(); ++i) {
           if (DisasmSymbolSet.count(SymNamesHere[i])) {
             SymsToPrint[i] = true;
-            FoundAny = true;
+            uint64_t SymbolEnd = SymbolsHere[i].Size
+                                     ? SaturatingAdd(Start, SymbolsHere[i].Size)
+                                     : End;
+            DisasmSymbolEnd =
+                std::max(DisasmSymbolEnd, std::min(SymbolEnd, SectionEnd));
           }
         }
 
-        // And if none of the symbols here is one that the user asked for, skip
-        // disassembling this entire chunk of code.
-        if (!FoundAny)
+        // A nonzero ELF symbol size can extend past internal labels. Symbols
+        // without a size retain the next-symbol boundary.
+        if (Start >= DisasmSymbolEnd)
           continue;
+        End = std::min(End, DisasmSymbolEnd);
       } else if (!SymbolsHere[DisplaySymIndex].IsMappingSymbol) {
         // Otherwise, print whichever symbol at this location is last in the
         // Symbols array, because that array is pre-sorted in a way intended to
@@ -2284,26 +2305,18 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       // of which symbols to display by printing _all_ of them at this address
       // if the user asked for all symbols.
       //
-      // That way, '--show-all-symbols --disassemble-symbol=foo' will print
-      // only the chunk of code headed by 'foo', but also show any other
-      // symbols defined at that address, such as aliases for 'foo', or the ARM
-      // mapping symbol preceding its code.
+      // That way, '--show-all-symbols --disassemble-symbols=foo' will print
+      // only the range selected by 'foo', but also show other symbols within
+      // that range, such as aliases for 'foo' or ARM mapping symbols.
       if (ShowAllSymbols) {
         for (size_t i = 0; i < SymbolsHere.size(); ++i)
           SymsToPrint[i] = true;
       }
 
-      if (Start < SectionAddr || StopAddress <= Start)
-        continue;
-
       FoundDisasmSymbolSet.insert_range(SymNamesHere);
 
-      // The end is the section end, the beginning of the next symbol, or
-      // --stop-address.
-      uint64_t End = std::min<uint64_t>(SectionAddr + SectSize, StopAddress);
-      if (SI < SE)
-        End = std::min(End, Symbols[SI].Addr);
-      if (Start >= End || End <= StartAddress)
+      if (Start >= End ||
+          (End <= StartAddress && DisasmSymbolEnd <= StartAddress))
         continue;
       Start -= SectionAddr;
       End -= SectionAddr;
@@ -2336,6 +2349,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         } else
           OS << '<' << SymbolName << ">:\n";
       }
+
+      if (SectionAddr + End <= StartAddress)
+        continue;
 
       // Don't print raw contents of a virtual section. A virtual section
       // doesn't have any contents in the file.
