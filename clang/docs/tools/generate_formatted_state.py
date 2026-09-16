@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # A tool to parse creates a document outlining how clang formatted the
 # LLVM project is.
 
