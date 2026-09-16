@@ -162,7 +162,7 @@ vitalybuka@google.com (email), [vitalybuka](https://github.com/vitalybuka) (GitH
 #### CopyProf
 
 Snehasish Kumar \
-snehasishk@google.com (email), [snehasishk](https://github.com/snehasish) (GitHub)
+snehasishk@google.com (email), [snehasish](https://github.com/snehasish) (GitHub)
 
 #### NumericalStabilitySanitizer
 
