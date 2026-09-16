@@ -1221,33 +1221,31 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     invalidateAndEraseMI(GR, MI);
 }
 
-// Returns the value of the switch case operand defined by Def. For G_CONSTANTs,
-// this is in operand 1. For SPIR-V constants, this is in the literal operands
-// after the type.
-static const ConstantInt *getSwitchCaseValue(const MachineInstr *Def,
+// Returns the value of the switch case operand in Reg. It is a G_CONSTANT
+// unless the module has already emitted a SPIR-V constant for the same value,
+// in which case it is that constant.
+static const ConstantInt *getSwitchCaseValue(Register Reg,
                                              const MachineRegisterInfo &MRI,
                                              LLVMContext &Ctx) {
-  if (Def->getOpcode() == TargetOpcode::G_CONSTANT)
-    return Def->getOperand(1).getCImm();
+  APInt Val;
+  if (mi_match(Reg, MRI, m_ICst(Val)))
+    return ConstantInt::get(Ctx, Val);
 
-  LLT Ty = MRI.getType(Def->getOperand(0).getReg());
-  assert(Ty.isValid() && "Expected a typed switch case value");
-  unsigned BitWidth = Ty.getScalarSizeInBits();
-
-  switch (Def->getOpcode()) {
-  case SPIRV::OpConstantNull:
-  case SPIRV::OpConstantI:
-    break;
-  default:
+  const MachineInstr *Def = nullptr;
+  if (!mi_match(Reg, MRI, m_MInstr(Def)) ||
+      (Def->getOpcode() != SPIRV::OpConstantI &&
+       Def->getOpcode() != SPIRV::OpConstantNull))
     llvm_unreachable("Unexpected definition of a switch case value");
-  }
+
+  LLT Ty = MRI.getType(Reg);
+  assert(Ty.isValid() && "Expected a typed switch case value");
 
   // Operands after the type are 32-bit literal words, least significant
   // first, as written by addNumImm().
-  APInt Val(BitWidth, 0);
+  Val = APInt(Ty.getScalarSizeInBits(), 0);
   for (unsigned I = 2, E = Def->getNumExplicitOperands(); I != E; ++I) {
     uint32_t Word = static_cast<uint32_t>(Def->getOperand(I).getImm());
-    Val |= APInt(BitWidth, Word).shl((I - 2) * 32);
+    Val |= APInt(Val.getBitWidth(), Word).shl((I - 2) * 32);
   }
   return ConstantInt::get(Ctx, Val);
 }
@@ -1271,9 +1269,8 @@ static void processSwitchesConstants(MachineFunction &MF,
       NewOperands.push_back(MI.getOperand(2)); // Default
       for (unsigned i = 3; i < MI.getNumOperands(); i += 2) {
         Register Reg = MI.getOperand(i).getReg();
-        MachineInstr *ConstInstr = getDefInstrMaybeConstant(Reg, &MRI);
-        NewOperands.push_back(MachineOperand::CreateCImm(
-            getSwitchCaseValue(ConstInstr, MRI, Ctx)));
+        NewOperands.push_back(
+            MachineOperand::CreateCImm(getSwitchCaseValue(Reg, MRI, Ctx)));
 
         NewOperands.push_back(MI.getOperand(i + 1));
       }

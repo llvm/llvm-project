@@ -487,7 +487,6 @@ SPIRV::Scope::Scope getMemScope(const Triple &TT, LLVMContext &Ctx,
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
                                        const MachineRegisterInfo *MRI) {
   MachineInstr *MI = MRI->getVRegDef(ConstReg);
-  assert(MI && "Expected a defined register");
   MachineInstr *ConstInstr =
       MI->getOpcode() == SPIRV::G_TRUNC || MI->getOpcode() == SPIRV::G_ZEXT
           ? MRI->getVRegDef(MI->getOperand(1).getReg())
