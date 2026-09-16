@@ -1351,12 +1351,9 @@ X86FrameLowering::calculateMaxStackAlign(const MachineFunction &MF) const {
       MaxAlign = Align(SlotSize);
   }
 
-  if (!Is64Bit && MF.getFunction().getCallingConv() == CallingConv::X86_INTR) {
-    if (HasRealign)
-      MaxAlign = (MaxAlign > 16) ? MaxAlign : Align(16);
-    else
-      MaxAlign = Align(16);
-  }
+  if (!Is64Bit && MF.getFunction().getCallingConv() == CallingConv::X86_INTR)
+    MaxAlign = std::max(MaxAlign, Align(16));
+
   return MaxAlign.value();
 }
 

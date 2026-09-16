@@ -389,7 +389,7 @@ define x86_intrcc void @test_isr_over_aligned(ptr byval(%struct.interrupt_frame)
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
-; CHECK-NEXT:    andl $-16, %esp
+; CHECK-NEXT:    andl $-32, %esp
 ; CHECK-NEXT:    subl $96, %esp
 ; CHECK-NEXT:    vmovups %ymm0, -56(%ebp) # 32-byte Spill
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
@@ -403,7 +403,7 @@ define x86_intrcc void @test_isr_over_aligned(ptr byval(%struct.interrupt_frame)
 ; CHECK0:       # %bb.0:
 ; CHECK0-NEXT:    pushl %ebp
 ; CHECK0-NEXT:    movl %esp, %ebp
-; CHECK0-NEXT:    andl $-16, %esp
+; CHECK0-NEXT:    andl $-32, %esp
 ; CHECK0-NEXT:    subl $96, %esp
 ; CHECK0-NEXT:    vmovups %ymm0, -56(%ebp) # 32-byte Spill
 ; CHECK0-NEXT:    vxorps %xmm0, %xmm0, %xmm0
