@@ -89,12 +89,16 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
 ////////////////////////////////////////////////////////////////////////////////
 /// Report that the runtime is about to wait for the region's outstanding
 /// asynchronous operations (data transfers and kernels) to complete.
-static inline void printSyncInfo(const ident_t *Loc, const int64_t DeviceId) {
+static inline void printSyncInfo(const ident_t *Loc, const int64_t DeviceId,
+                                 const AsyncInfoTy &AsyncInfo) {
   if (!(getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER))
     return;
-  std::string LocStr = getSourceLocationSuffix(Loc, " at ");
+  if (AsyncInfo.SyncType != AsyncInfoTy::SyncTy::BLOCKING)
+    return;
+  SourceInfo Info(Loc);
   INFO(OMP_INFOTYPE_DATA_TRANSFER, DeviceId,
-       "Waiting for asynchronous operations to complete%s\n", LocStr.c_str());
+       "Waiting for asynchronous operations to complete at %s:%d:%d\n",
+       Info.getFilename(), Info.getLine(), Info.getColumn());
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -560,8 +560,12 @@ static void printCopyInfoImpl(int DeviceId, bool H2D, void *SrcPtrBegin,
                               void *DstPtrBegin, int64_t Size,
                               HostDataToTargetTy *HT, const ident_t *Loc,
                               const char *Name) {
-
-  std::string LocStr = getSourceLocationSuffix(Loc, ", at ");
+  SourceInfo Info(Loc);
+  std::string LocStr;
+  if (Info.isAvailible())
+    LocStr = ", at " + std::string(Info.getFilename()) + ":" +
+             std::to_string(Info.getLine()) + ":" +
+             std::to_string(Info.getColumn());
 
   INFO(OMP_INFOTYPE_DATA_TRANSFER, DeviceId,
        "Copying data from %s to %s, %sPtr=" DPxMOD ", %sPtr=" DPxMOD
