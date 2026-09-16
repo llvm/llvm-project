@@ -758,6 +758,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed missing sentinel attribute diagnostic discrepancy with explicit object
   parameters in variadic functions. (#GH200007)
 
+- Suggests the correct location for an attribute written before the `using`
+  keyword of an alias-declaration. (#GH155787)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
