@@ -39,28 +39,6 @@
 namespace clang {
 namespace dataflow {
 
-// I'm not sure if the behavioural predicates belong in here.  The class name implies that it's tied to optionals
-// but some of the functions declared here (insert example) seem to be non specific to optionals
-static bool hasAnyBehaviouralRole(const CXXRecordDecl* RD)
-{
-  if(RD == nullptr || !RD->hasDefinition())
-    return false;
-
-  for(const CXXMethodDecl* method : RD->methods())
-  {
-    if(method->hasAttr<EngagedTraitAttr>()
-    || method->hasAttr<DisengagedTraitAttr>()
-    || method->hasAttr<AssumeEngagedTraitAttr>()
-    || method->hasAttr<TestEngagedTraitAttr>()
-    || method->hasAttr<TestDisengagedTraitAttr>())
-    {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 // Note: the Names appear in reverse order. E.g., to check
 // if NS is foo::bar::, call isFullyQualifiedNamespaceEqualTo(NS, "bar", "foo")
 template <class... NameTypes>
@@ -1040,63 +1018,6 @@ auto buildTransferMatchSwitch() {
       // make_optional
       .CaseOfCFGStmt<CallExpr>(isMakeOptionalCall(), transferMakeOptionalCall)
 
-      .CaseOfCFGStmt<CXXConstructExpr>(
-          cxxConstructExpr(hasDeclaration(cxxConstructorDecl(hasAttr(attr::EngagedTrait)))),
-          [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
-             LatticeTransferState &State) {
-            constructOptionalValue(*E, State.Env,
-                                   State.Env.getBoolLiteralValue(true));
-          })
-      .CaseOfCFGStmt<CXXConstructExpr>(
-          cxxConstructExpr(hasDeclaration(cxxConstructorDecl(hasAttr(attr::DisengagedTrait)))),
-          [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
-             LatticeTransferState &State) {
-            constructOptionalValue(*E, State.Env,
-                                   State.Env.getBoolLiteralValue(false));
-          })
-
-      .CaseOfCFGStmt<CXXOperatorCallExpr>( // for e.g. opt<T> = T - always engaged
-          cxxOperatorCallExpr(callee(cxxMethodDecl(hasAttr(attr::EngagedTrait)))),
-          [](const CXXOperatorCallExpr *E, const MatchFinder::MatchResult &,
-             LatticeTransferState &State) {
-                          transferAssignment(E,
-                                   State.Env.getBoolLiteralValue(true), State);
-             })
-
-      .CaseOfCFGStmt<CXXOperatorCallExpr>( // for e.g. opt<T> = null
-          cxxOperatorCallExpr(callee(cxxMethodDecl(hasAttr(attr::DisengagedTrait)))),
-                          transferNulloptAssignment
-             )
-
-      // for std::vector and other non optional classes
-      .CaseOfCFGStmt<CXXMemberCallExpr>(
-      cxxMemberCallExpr(callee(cxxMethodDecl(hasAttr(attr::EngagedTrait)))),
-      [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
-         LatticeTransferState &State) {
-        if (RecordStorageLocation *Loc = getImplicitObjectLocation(*E, State.Env))
-          setHasValue(*Loc, State.Env.getBoolLiteralValue(true), State.Env);
-      })
-
-      // for std::vector and other non optional classes
-      .CaseOfCFGStmt<CXXMemberCallExpr>(
-      cxxMemberCallExpr(callee(cxxMethodDecl(hasAttr(attr::DisengagedTrait)))),
-      [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
-         LatticeTransferState &State) {
-        if (RecordStorageLocation *Loc = getImplicitObjectLocation(*E, State.Env))
-          setHasValue(*Loc, State.Env.getBoolLiteralValue(false), State.Env);
-      })
-
-      .CaseOfCFGStmt<CXXMemberCallExpr>(
-        cxxMemberCallExpr(
-          callee(cxxMethodDecl(hasAttr(attr::TestEngagedTrait)))), transferOptionalHasValueCall
-      )
-
-      .CaseOfCFGStmt<CXXMemberCallExpr>(
-        cxxMemberCallExpr
-        (
-        callee(cxxMethodDecl(hasAttr(attr::TestDisengagedTrait)))), transferOptionalIsNullCall
-        )
-
       // optional::optional (in place)
       .CaseOfCFGStmt<CXXConstructExpr>(
           isOptionalInPlaceConstructor(),
@@ -1369,10 +1290,6 @@ auto buildDiagnoseMatchSwitch(
                  const Environment &Env) {
                 return diagnoseUnwrapCall(E->getArg(0), Env);
               })
-          .CaseOfCFGStmt<CXXMemberCallExpr>(
-            (cxxMemberCallExpr(callee(cxxMethodDecl(hasAttr(attr::AssumeEngagedTrait))))),
-            [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &, const Environment &Env)
-            {return diagnoseUnwrapCall(E->getImplicitObjectArgument(), Env);});
 
   auto Builder = Options.IgnoreValueCalls
                      ? std::move(DiagBuilder)
@@ -1397,15 +1314,6 @@ UncheckedOptionalAccessModel::memberCallToOptionalClass() {
   return cxxMemberCallExpr(hasOptionalReceiverType());
 }
 
-StatementMatcher UncheckedOptionalAccessModel::callToBehaviouralRoleClass() {
-  return cxxMemberCallExpr(callee(cxxMethodDecl(anyOf(
-      hasAttr(attr::EngagedTrait),
-      hasAttr(attr::DisengagedTrait),
-      hasAttr(attr::AssumeEngagedTrait),
-      hasAttr(attr::TestEngagedTrait),
-      hasAttr(attr::TestDisengagedTrait)))));
-}
-
 ast_matchers::StatementMatcher
 UncheckedOptionalAccessModel::operatorCallToOptionalClass() {
   return cxxOperatorCallExpr(hasOptionalOperatorObjectType());
@@ -1425,9 +1333,6 @@ UncheckedOptionalAccessModel::UncheckedOptionalAccessModel(ASTContext &Ctx,
         if(Optional != nullptr)
           return {{"value", valueTypeFromOptionalDecl(*Optional)},
                   {"has_value", Ctx.BoolTy}};
-
-        if(hasAnyBehaviouralRole(Ty->getAsCXXRecordDecl()))
-          return{{"has_value", Ctx.BoolTy}};
 
           return {};
 
