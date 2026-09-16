@@ -1,4 +1,4 @@
-//===-- IntelGPUTargetParser - Parser for Intel GPU targets ----*- C++ -*-===//
+//===-- IntelGPUTargetParser - Parser for Intel GPU targets ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,10 +22,10 @@ static constexpr uint32_t GMDIDReleaseShift = 14;
 static constexpr uint32_t GMDIDReleaseMask = 0xff;
 static constexpr uint32_t GMDIDRevisionMask = 0x3f;
 
-GMDID llvm::IntelGPU::decodeGMDID(uint32_t IPVersion) {
-  return {IPVersion >> GMDIDArchitectureShift,
-          (IPVersion >> GMDIDReleaseShift) & GMDIDReleaseMask,
-          IPVersion & GMDIDRevisionMask};
+GMDID llvm::IntelGPU::decodeGMDID(uint32_t GPUIPVersion) {
+  return {GPUIPVersion >> GMDIDArchitectureShift,
+          (GPUIPVersion >> GMDIDReleaseShift) & GMDIDReleaseMask,
+          GPUIPVersion & GMDIDRevisionMask};
 }
 
 GPUKind llvm::IntelGPU::getKindForGMDID(GMDID ID) {

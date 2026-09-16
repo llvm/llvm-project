@@ -24,8 +24,8 @@
 namespace llvm {
 namespace IntelGPU {
 
-/// The Intel GPU architecture names this build knows, covering both physical
-/// devices and the compatibility names that stand for a whole product line.
+/// Intel GPU architecture names, covering both physical devices and the
+/// compatibility names that stand for a whole product line.
 enum GPUKind : uint16_t {
   GK_NONE = 0,
 #define INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_LEVEL, IGCA_SUFFIX)  \
@@ -42,23 +42,20 @@ struct GMDID {
   unsigned Revision = 0;
 };
 
-/// Split the GPU IP version \p IPVersion, as reported by the driver, into its
-/// components.
-LLVM_ABI GMDID decodeGMDID(uint32_t IPVersion);
+/// Split the \p GPUIPVersion, as reported by the driver, into its components.
+LLVM_ABI GMDID decodeGMDID(uint32_t GPUIPVersion);
 
-/// The device whose GMDID has the same architecture and release as \p ID, or
-/// GK_NONE if this build knows no such device. The revision is ignored: as far
-/// as the compiler is concerned, every stepping of a release is one device.
-/// When several devices share an architecture and a release, the first one
-/// listed in IntelGPUTargetParser.def names the group and is returned.
+/// Return the kind matching the architecture and release of \p ID, or GK_NONE
+/// if the table lists no such device. The revision is ignored: every stepping
+/// of a release is one device. If several rows match, the first one in
+/// IntelGPUTargetParser.def wins.
 LLVM_ABI GPUKind getKindForGMDID(GMDID ID);
 
-/// The human-friendly name of \p Kind, e.g. "xe-pvc", or "" for GK_NONE.
+/// Return the human-friendly name of \p Kind, e.g. "xe-pvc", or "" for GK_NONE.
 LLVM_ABI StringRef getArchName(GPUKind Kind);
 
-/// Spell \p ID the way an architecture name spells a GMDID, e.g. "xe_35.11.0".
-/// Every device has such a name, including one that is not in the table, which
-/// makes this the only way to name a device this build does not know.
+/// Return the numeric name of \p ID, e.g. "xe_35.11.0", which every device has,
+/// even one that the table does not list.
 LLVM_ABI std::string getNumericArchName(GMDID ID);
 
 } // namespace IntelGPU
