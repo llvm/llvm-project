@@ -292,9 +292,8 @@ SBSymbolContextList SBModule::FindCompileUnits(const SBFileSpec &sb_file_spec) {
 
 SBSymbolContextList
 SBModule::FindSymbolContexts(const SBLineEntry &line_entry,
-                             lldb::SymbolContextItem resolve_scope,
                              bool check_inlines) {
-  LLDB_INSTRUMENT_VA(this, line_entry, resolve_scope, check_inlines);
+  LLDB_INSTRUMENT_VA(this, line_entry, check_inlines);
 
   SBSymbolContextList sc_list;
   const ModuleSP module_sp(GetSP());
@@ -307,7 +306,8 @@ SBModule::FindSymbolContexts(const SBLineEntry &line_entry,
 
   // TODO: Pass the column when ResolveSymbolContextsForFileSpec supports it.
   module_sp->ResolveSymbolContextsForFileSpec(
-      *file_spec, line_entry.GetLine(), check_inlines, resolve_scope, *sc_list);
+      *file_spec, line_entry.GetLine(), check_inlines,
+      lldb::eSymbolContextEverything, *sc_list);
   return sc_list;
 }
 

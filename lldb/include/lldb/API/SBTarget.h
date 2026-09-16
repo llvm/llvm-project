@@ -354,17 +354,12 @@ public:
   FindCompileUnits(const lldb::SBFileSpec &sb_file_spec);
 
   /// Find every symbol context in this target's modules that maps to the
-  /// source location in \a line_entry. Each returned `SBSymbolContext`
-  /// carries the module, compile unit, function, block, and line entry for
-  /// one match.
+  /// source location in `line_entry`. Each returned `SBSymbolContext`
+  /// carries the module, compile unit, function, block, line entry, and
+  /// symbol for one match.
   ///
   /// \param[in] line_entry
   ///     The source location to resolve.
-  ///
-  /// \param[in] resolve_scope
-  ///     A bitmask of `lldb::SymbolContextItem` values selecting which
-  ///     fields of each returned `SBSymbolContext` are populated. Defaults
-  ///     to `eSymbolContextEverything`.
   ///
   /// \param[in] check_inlines
   ///     If true, also return inlined instances of the source file that live
@@ -373,10 +368,9 @@ public:
   /// \return
   ///     A list of matching symbol contexts, or an empty list if no module
   ///     in this target has debug info for the requested location.
-  lldb::SBSymbolContextList FindSymbolContexts(
-      const lldb::SBLineEntry &line_entry,
-      lldb::SymbolContextItem resolve_scope = lldb::eSymbolContextEverything,
-      bool check_inlines = true);
+  lldb::SBSymbolContextList
+  FindSymbolContexts(const lldb::SBLineEntry &line_entry,
+                     bool check_inlines = true);
 
   lldb::ByteOrder GetByteOrder();
 
