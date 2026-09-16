@@ -18,6 +18,7 @@
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
+#include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MathToNVVM/MathToNVVM.h"
 #include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
@@ -62,6 +63,10 @@ static NVVM::ShflKind convertShflKind(gpu::ShuffleMode mode) {
     return NVVM::ShflKind::idx;
   }
   llvm_unreachable("unknown shuffle mode");
+}
+
+static bool isNVVMShufflePayloadType(Type type) {
+  return type.isInteger(32) || type.isF32();
 }
 
 static std::optional<NVVM::ReductionKind>
@@ -198,6 +203,14 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   ///         !llvm<"{ float, i1 }">
   ///     %shfl_pred = llvm.extractvalue %shfl[1] :
   ///         !llvm<"{ float, i1 }">
+  ///
+  /// `nvvm.shfl.sync` only natively handles `i32` and `f32` payloads, so for
+  /// other types accepted by `gpu.shuffle` (other scalar ints/floats and 1-D
+  /// vectors thereof) the value is decomposed into a sequence of `i32` chunks
+  /// via `LLVM::decomposeValue`, each chunk is shuffled independently, and the
+  /// chunks are recomposed into the original type via `LLVM::composeValue`.
+  /// The per-chunk validity bits are conjoined with `llvm.and` to form the
+  /// final `valid` result; mirrors the corresponding ROCDL lowering.
   LogicalResult
   matchAndRewrite(gpu::ShuffleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -226,25 +239,71 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     }
 
     bool predIsUsed = !op->getResult(1).use_empty();
+    NVVM::ShflKind shflKind = convertShflKind(op.getMode());
+
+    // Fast path: payload is natively shuffleable by `nvvm.shfl.sync`.
+    if (isNVVMShufflePayloadType(valueTy)) {
+      Type resultTy = valueTy;
+      UnitAttr returnValueAndIsValidAttr = nullptr;
+      if (predIsUsed) {
+        returnValueAndIsValidAttr = rewriter.getUnitAttr();
+        resultTy = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
+                                                    {valueTy, predTy});
+      }
+      Value shfl = NVVM::ShflOp::create(rewriter, loc, resultTy, activeMask,
+                                        adaptor.getValue(), adaptor.getOffset(),
+                                        maskAndClamp, shflKind,
+                                        returnValueAndIsValidAttr);
+      if (predIsUsed) {
+        Value shflValue = LLVM::ExtractValueOp::create(rewriter, loc, shfl, 0);
+        Value isActiveSrcLane =
+            LLVM::ExtractValueOp::create(rewriter, loc, shfl, 1);
+        rewriter.replaceOp(op, {shflValue, isActiveSrcLane});
+      } else {
+        rewriter.replaceOp(op, {shfl, nullptr});
+      }
+      return success();
+    }
+
+    // Slow path: decompose into i32 chunks, shuffle each, recompose.
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, adaptor.getValue(),
+                                    int32Type, decomposed)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to decompose value to i32");
+
+    Type resultTy = int32Type;
     UnitAttr returnValueAndIsValidAttr = nullptr;
-    Type resultTy = valueTy;
     if (predIsUsed) {
       returnValueAndIsValidAttr = rewriter.getUnitAttr();
       resultTy = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
-                                                  {valueTy, predTy});
+                                                  {int32Type, predTy});
     }
-    Value shfl = NVVM::ShflOp::create(
-        rewriter, loc, resultTy, activeMask, adaptor.getValue(),
-        adaptor.getOffset(), maskAndClamp, convertShflKind(op.getMode()),
-        returnValueAndIsValidAttr);
-    if (predIsUsed) {
-      Value shflValue = LLVM::ExtractValueOp::create(rewriter, loc, shfl, 0);
-      Value isActiveSrcLane =
-          LLVM::ExtractValueOp::create(rewriter, loc, shfl, 1);
-      rewriter.replaceOp(op, {shflValue, isActiveSrcLane});
-    } else {
-      rewriter.replaceOp(op, {shfl, nullptr});
+    SmallVector<Value> shuffled;
+    shuffled.reserve(decomposed.size());
+    Value isActiveSrcLane;
+    for (Value value : decomposed) {
+      Value shfl = NVVM::ShflOp::create(
+          rewriter, loc, resultTy, activeMask, value, adaptor.getOffset(),
+          maskAndClamp, shflKind, returnValueAndIsValidAttr);
+      if (predIsUsed) {
+        shuffled.push_back(
+            LLVM::ExtractValueOp::create(rewriter, loc, shfl, 0));
+        Value chunkIsActive =
+            LLVM::ExtractValueOp::create(rewriter, loc, shfl, 1);
+        if (isActiveSrcLane)
+          isActiveSrcLane = LLVM::AndOp::create(rewriter, loc, predTy,
+                                                isActiveSrcLane, chunkIsActive);
+        else
+          isActiveSrcLane = chunkIsActive;
+      } else {
+        shuffled.push_back(shfl);
+      }
     }
+
+    Value shflValue = LLVM::composeValue(rewriter, loc, shuffled,
+                                         adaptor.getValue().getType());
+    rewriter.replaceOp(op, {shflValue, predIsUsed ? isActiveSrcLane : nullptr});
     return success();
   }
 };
