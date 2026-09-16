@@ -224,8 +224,17 @@ int main(int argc, const char **argv) {
           [Mangler = std::move(Mangler),
            ContextProvider = std::move(ContextProvider)](
               const std::vector<std::string> &Args, llvm::StringRef File) {
+            // Issue: If File is relative, it's relative to the compile command's
+            // "directory", not our CWD, but ToolExecutor doesn't expose
+            // "directory" here, so make_absolute can resolve it wrong and
+            // miss the .clangd file. See indexer-clangd-config-relative-path.test.
             llvm::SmallString<256> AbsFile(File);
             llvm::sys::fs::make_absolute(AbsFile);
+            // Issue: WithCfg only lives for this ArgumentsAdjuster call, so it's
+            // visible to Mangler below but not to the parse that follows.
+            // That's harmless today since clangd-indexer doesn't consult
+            // config during the parse, but a real fix would need libTooling
+            // changes to keep the context alive for the whole invocation.
             clang::clangd::WithContext WithCfg(ContextProvider(AbsFile));
 
             clang::tooling::CompileCommand Cmd;
