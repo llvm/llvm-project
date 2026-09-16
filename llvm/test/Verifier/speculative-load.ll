@@ -11,11 +11,16 @@ declare <3 x i32> @llvm.speculative.load.v3i32.p0(ptr, i1, ...)
 declare {i32, i32} @llvm.speculative.load.sl_i32i32s.p0(ptr, i1, ...)
 declare [4 x i32] @llvm.speculative.load.a4i32.p0(ptr, i1, ...)
 declare <4 x b3> @llvm.speculative.load.v4b3.p0(ptr, i1, ...)
+declare <3 x ptr> @llvm.speculative.load.v3p0.p0(ptr, i1, ...)
 
-declare i32 @bad_oracle_ret(ptr, i64) memory(argmem: read)
-declare i64 @good_oracle(ptr, i64) memory(argmem: read)
-declare i64 @oracle_i32_param(i32) memory(argmem: read)
+declare i32 @bad_oracle_ret(ptr, i64) memory(argmem: read) nounwind nosync willreturn
+declare i64 @good_oracle(ptr, i64) memory(argmem: read) nounwind nosync willreturn
+declare i64 @oracle_i32_param(i32) memory(argmem: read) nounwind nosync willreturn
 declare i64 @side_effecting_oracle(ptr, i64)
+declare i64 @throwing_oracle(ptr, i64) memory(argmem: read) nosync willreturn
+declare i64 @syncing_oracle(ptr, i64) memory(argmem: read) nounwind willreturn
+declare i64 @looping_oracle(ptr, i64) memory(argmem: read) nounwind nosync
+declare i64 @variadic_oracle(i64, ...) memory(argmem: read) nounwind nosync willreturn
 
 define i32 @test_non_byte_non_vector_int(ptr %ptr) {
 ; CHECK: llvm.speculative.load return type must be a byte type or a vector type
@@ -123,9 +128,38 @@ define b128 @test_non_function_oracle(ptr %ptr, ptr %not_fn) {
 }
 
 define b128 @test_oracle_side_effects(ptr %ptr, i64 %n) {
-; CHECK: llvm.speculative.load oracle function must not have side effects and may only read memory through its arguments
+; CHECK: llvm.speculative.load oracle function must be nounwind, nosync and willreturn, must not have side effects and may only read memory through its arguments
 ; CHECK-NEXT: call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @side_effecting_oracle, ptr %ptr, i64 %n)
   %res = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @side_effecting_oracle, ptr %ptr, i64 %n)
+  ret b128 %res
+}
+
+define b128 @test_throwing_oracle(ptr %ptr, i64 %n) {
+; CHECK: llvm.speculative.load oracle function must be nounwind, nosync and willreturn, must not have side effects and may only read memory through its arguments
+; CHECK-NEXT: call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @throwing_oracle, ptr %ptr, i64 %n)
+  %res = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @throwing_oracle, ptr %ptr, i64 %n)
+  ret b128 %res
+}
+
+define b128 @test_looping_oracle(ptr %ptr, i64 %n) {
+; CHECK: llvm.speculative.load oracle function must be nounwind, nosync and willreturn, must not have side effects and may only read memory through its arguments
+; CHECK-NEXT: call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @looping_oracle, ptr %ptr, i64 %n)
+  %res = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @looping_oracle, ptr %ptr, i64 %n)
+  ret b128 %res
+}
+
+; memory(argmem: read) does not imply nosync.
+define b128 @test_syncing_oracle(ptr %ptr, i64 %n) {
+; CHECK: llvm.speculative.load oracle function must be nounwind, nosync and willreturn, must not have side effects and may only read memory through its arguments
+; CHECK-NEXT: call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @syncing_oracle, ptr %ptr, i64 %n)
+  %res = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @syncing_oracle, ptr %ptr, i64 %n)
+  ret b128 %res
+}
+
+define b128 @test_variadic_oracle(ptr %ptr, i64 %n) {
+; CHECK: llvm.speculative.load oracle function must have a fixed argument list
+; CHECK-NEXT: call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @variadic_oracle, i64 %n)
+  %res = call b128 (ptr, i1, ...) @llvm.speculative.load.b128.p0(ptr %ptr, i1 false, ptr @variadic_oracle, i64 %n)
   ret b128 %res
 }
 
@@ -141,4 +175,11 @@ define <3 x i32> @test_vector_byte_size_not_pow2(ptr %ptr) {
 ; CHECK-NEXT: %res = call <3 x i32> (ptr, i1, ...) @llvm.speculative.load.v3i32.p0(ptr %ptr, i1 false, i64 0)
   %res = call <3 x i32> (ptr, i1, ...) @llvm.speculative.load.v3i32.p0(ptr %ptr, i1 false, i64 0)
   ret <3 x i32> %res
+}
+
+define <3 x ptr> @test_vector_of_pointers_size_not_pow2(ptr %ptr) {
+; CHECK: llvm.speculative.load return type size in bytes must be a positive power of 2
+; CHECK-NEXT: %res = call <3 x ptr> (ptr, i1, ...) @llvm.speculative.load.v3p0.p0(ptr %ptr, i1 false, i64 24)
+  %res = call <3 x ptr> (ptr, i1, ...) @llvm.speculative.load.v3p0.p0(ptr %ptr, i1 false, i64 24)
+  ret <3 x ptr> %res
 }

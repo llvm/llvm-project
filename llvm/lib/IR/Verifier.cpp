@@ -7005,21 +7005,21 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             &Call);
     }
 
-    TypeSize SizeInBits = LoadTy->getPrimitiveSizeInBits();
-    uint64_t MinBits = SizeInBits.getKnownMinValue();
-    Check(MinBits != 0 && (MinBits % 8) == 0 && isPowerOf2_64(MinBits / 8),
+    uint64_t MinSizeInBits = DL.getTypeSizeInBits(LoadTy).getKnownMinValue();
+    Check((MinSizeInBits % 8) == 0 && isPowerOf2_64(MinSizeInBits / 8),
           "llvm.speculative.load return type size in bytes must be a "
           "positive power of 2",
           &Call);
 
+    constexpr unsigned NumFixedArgs = 3;
     unsigned NumArgs = Call.arg_size();
-    Check(NumArgs >= 3, "llvm.speculative.load requires at least 3 arguments",
-          &Call);
+    Check(NumArgs >= NumFixedArgs,
+          "llvm.speculative.load requires at least 3 arguments", &Call);
 
-    Value *PayloadArg = Call.getArgOperand(2);
+    Value *PayloadArg = Call.getArgOperand(NumFixedArgs - 1);
     if (PayloadArg->getType()->isIntegerTy(64)) {
       // Direct form: (ptr, i1 from_end, i64 num_accessible_bytes)
-      Check(NumArgs == 3,
+      Check(NumArgs == NumFixedArgs,
             "llvm.speculative.load direct form has too many arguments", &Call);
     } else {
       // Oracle form: (ptr, i1 from_end, oracle_fn_ptr, args...)
@@ -7029,27 +7029,31 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             "reference to an oracle function",
             &Call);
 
-      Check(OracleFn->onlyReadsMemory() && OracleFn->onlyAccessesArgMemory(),
-            "llvm.speculative.load oracle function must not have side effects "
-            "and may only read memory through its arguments",
+      // Make sure the called oracle matches the attributes of the intrinsic.
+      Check(OracleFn->onlyReadsMemory() && OracleFn->onlyAccessesArgMemory() &&
+                OracleFn->doesNotThrow() && OracleFn->hasNoSync() &&
+                OracleFn->willReturn(),
+            "llvm.speculative.load oracle function must be nounwind, nosync "
+            "and willreturn, must not have side effects and may only read "
+            "memory through its arguments",
             &Call);
 
       FunctionType *FTy = OracleFn->getFunctionType();
       Check(FTy->getReturnType()->isIntegerTy(64),
             "llvm.speculative.load oracle function must return i64", &Call);
 
-      unsigned OracleArgsStart = 3;
-      unsigned NumOracleArgs = NumArgs - OracleArgsStart;
-      Check(FTy->isVarArg() ? NumOracleArgs >= FTy->getNumParams()
-                            : NumOracleArgs == FTy->getNumParams(),
+      Check(!FTy->isVarArg(),
+            "llvm.speculative.load oracle function must have a fixed argument "
+            "list",
+            &Call);
+      Check(NumArgs - NumFixedArgs == FTy->getNumParams(),
             "llvm.speculative.load oracle function argument count mismatch",
             &Call);
-      for (unsigned I = 0, E = FTy->getNumParams(); I < E; ++I) {
-        Check(FTy->getParamType(I) ==
-                  Call.getArgOperand(I + OracleArgsStart)->getType(),
+      for (auto [ParamTy, Arg] :
+           zip_equal(FTy->params(), drop_begin(Call.args(), NumFixedArgs)))
+        Check(ParamTy == Arg->getType(),
               "llvm.speculative.load oracle function argument type mismatch",
               &Call);
-      }
     }
     break;
   }

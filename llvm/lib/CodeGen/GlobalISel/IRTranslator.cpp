@@ -3479,6 +3479,24 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
     return true;
   }
 
+  case Intrinsic::speculative_load: {
+    // Only the pointer operand is needed at codegen; the remaining arguments
+    // carry IR-level semantics only.
+    const Value *Ptr = CI.getArgOperand(0);
+    Register Dst = getOrCreateVReg(CI);
+    MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad;
+    Flags |= TLI->getTargetMMOFlags(CI);
+    if (CI.hasMetadata(LLVMContext::MD_nontemporal))
+      Flags |= MachineMemOperand::MONonTemporal;
+    if (CI.hasMetadata(LLVMContext::MD_invariant_load))
+      Flags |= MachineMemOperand::MOInvariant;
+    auto *MMO = MF->getMachineMemOperand(
+        MachinePointerInfo(Ptr), Flags, MRI->getType(Dst),
+        CI.getParamAlign(0).valueOrOne(), MMOMetadata(CI.getAAMetadata()));
+    MIRBuilder.buildLoad(Dst, getOrCreateVReg(*Ptr), *MMO);
+    return true;
+  }
+
   case Intrinsic::vector_interleave2:
   case Intrinsic::vector_deinterleave2: {
     // Both intrinsics have at least one operand.

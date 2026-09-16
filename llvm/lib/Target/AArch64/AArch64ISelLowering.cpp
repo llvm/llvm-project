@@ -33472,11 +33472,10 @@ Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
   return CI;
 }
 
-Value *AArch64TargetLowering::emitCanLoadSpeculatively(IRBuilderBase &Builder,
-                                                       Value *Ptr,
-                                                       Value *Size) const {
+Value *AArch64TargetLowering::emitCanLoadSpeculatively(
+    IRBuilderBase &Builder, Value *Ptr, Value *SizeInBytes) const {
   // Conservatively only allow speculation for address space 0.
-  if (cast<PointerType>(Ptr->getType())->getAddressSpace() != 0)
+  if (Ptr->getType()->getPointerAddressSpace() != 0)
     return nullptr;
   // For power-of-2 sizes <= 16, emit alignment check: (ptr & (size - 1)) == 0.
   // If the pointer is aligned to at least 'size' bytes, loading 'size' bytes
@@ -33486,35 +33485,38 @@ Value *AArch64TargetLowering::emitCanLoadSpeculatively(IRBuilderBase &Builder,
   //
   // The alignment check only works for power-of-2 sizes. For non-power-of-2
   // sizes, we conservatively return false.
-  const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
-  Type *AddrTy = DL.getAddressType(Ptr->getType());
+  constexpr uint64_t MTETagGranuleInBytes = 16;
 
-  if (auto *CI = dyn_cast<ConstantInt>(Size)) {
-    uint64_t SizeVal = CI->getZExtValue();
-    assert(isPowerOf2_64(SizeVal) && "size must be power-of-two");
-    // For constant sizes > 16, return nullptr (default false).
-    if (SizeVal > 16)
+  if (auto *ConstSize = dyn_cast<ConstantInt>(SizeInBytes)) {
+    uint64_t Size = ConstSize->getZExtValue();
+    // For non-power-of-2 or constant sizes > 16, return nullptr (default
+    // false).
+    if (!isPowerOf2_64(Size) || Size > MTETagGranuleInBytes)
       return nullptr;
 
     // Power-of-2 constant size <= 16: use fast alignment check.
     Value *PtrAddr = Builder.CreatePtrToAddr(Ptr);
-
-    Value *Mask = ConstantInt::get(AddrTy, SizeVal - 1);
-    Value *Masked = Builder.CreateAnd(PtrAddr, Mask);
-    return Builder.CreateICmpEQ(Masked, ConstantInt::get(AddrTy, 0));
+    return Builder.CreateIsNull(Builder.CreateAnd(PtrAddr, Size - 1));
   }
 
-  // Check power-of-2 size <= 16 and alignment.
-  Value *PtrAddr = Builder.CreatePtrToAddr(Ptr);
-  Value *SizeExt = Builder.CreateZExtOrTrunc(Size, AddrTy);
+  // Check size <= 16 and alignment. A runtime power-of-2 test is omitted
+  // because the intrinsic's result is poison for non-power-of-2 sizes.
+  Value *SizeLE16 = Builder.CreateICmpULE(
+      SizeInBytes,
+      ConstantInt::get(SizeInBytes->getType(), MTETagGranuleInBytes));
 
-  Value *SizeLE16 =
-      Builder.CreateICmpULE(SizeExt, ConstantInt::get(AddrTy, 16));
+  // Narrow only after the comparison above, so that a size exceeding the
+  // address width is not truncated into the accepted range.
+  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  Type *AddrTy = DL.getAddressType(Ptr->getType());
+  Value *SizeAddr = Builder.CreateZExtOrTrunc(SizeInBytes, AddrTy);
 
   // alignment check: (ptr & (size - 1)) == 0
-  Value *SizeMinusOne = Builder.CreateSub(SizeExt, ConstantInt::get(AddrTy, 1));
-  Value *Masked = Builder.CreateAnd(PtrAddr, SizeMinusOne);
-  Value *AlignCheck = Builder.CreateICmpEQ(Masked, ConstantInt::get(AddrTy, 0));
+  Value *SizeMinusOne =
+      Builder.CreateSub(SizeAddr, ConstantInt::get(AddrTy, 1));
+  Value *PtrAddr = Builder.CreatePtrToAddr(Ptr);
+  Value *AlignCheck =
+      Builder.CreateIsNull(Builder.CreateAnd(PtrAddr, SizeMinusOne));
 
   return Builder.CreateAnd(SizeLE16, AlignCheck);
 }

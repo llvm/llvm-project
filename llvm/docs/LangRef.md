@@ -24062,14 +24062,22 @@ provided the access is guaranteed to be valid by target-specific checks.
 This is an overloaded intrinsic.
 
 ```
-; Direct form: number of accessible bytes given as i64
-declare b128       @llvm.speculative.load.b128.p0(ptr <ptr>, i1 <from_end>, i64 <num_accessible_bytes>)
-declare <4 x i32>  @llvm.speculative.load.v4i32.p0(ptr <ptr>, i1 <from_end>, i64 <num_accessible_bytes>)
-declare <vscale x 4 x i32>
-                   @llvm.speculative.load.nxv4i32.p0(ptr <ptr>, i1 <from_end>, i64 <num_accessible_bytes>)
+declare b128               @llvm.speculative.load.b128.p0(ptr <ptr>, i1 <from_end>, ...)
+declare <4 x i32>          @llvm.speculative.load.v4i32.p0(ptr <ptr>, i1 <from_end>, ...)
+declare <vscale x 4 x i32> @llvm.speculative.load.nxv4i32.p0(ptr <ptr>, i1 <from_end>, ...)
+```
 
-; Oracle form: accessible bytes computed by calling oracle_fn(args...)
-declare b128       @llvm.speculative.load.b128.p0(ptr <ptr>, i1 <from_end>, ptr <oracle_fn>, ...)
+The trailing arguments are variadic and select between two forms.
+
+```llvm
+; Direct form: the number of accessible bytes is given as an i64.
+%a = call <4 x i32> (ptr, i1, ...)
+       @llvm.speculative.load.v4i32.p0(ptr %ptr, i1 false, i64 16)
+
+; Oracle form: the number of accessible bytes is the value returned by
+; @oracle(%n).
+%b = call <4 x i32> (ptr, i1, ...)
+       @llvm.speculative.load.v4i32.p0(ptr %ptr, i1 false, ptr @oracle, i64 %n)
 ```
 
 ##### Overview:
@@ -24091,9 +24099,9 @@ of the loaded value (see Semantics). The remaining arguments determine the
 
 In the **direct form**, the third argument is an `i64` specifying `N`
 directly. In the **oracle form**, the third argument must be a direct
-reference to a function returning `i64` that may only read memory through its
-arguments (indirect function pointers are not permitted); the remaining
-arguments are forwarded to it, and its return value is `N`.
+reference to a non-variadic function returning `i64` that is `nounwind`,
+`nosync` and `willreturn` and may only read memory through its arguments;
+the remaining arguments are forwarded to it, and its return value is `N`.
 
 ##### Semantics:
 
@@ -24145,7 +24153,7 @@ result is `poison`.
 
 ##### Semantics:
 
-This intrinsic has **target-dependent** semantics. It returns `true` if
+This intrinsic has **target-dependent** semantics. It may return `true` only if
 `num_bytes` bytes starting at `ptr + I * num_bytes` can be loaded
 speculatively, for all non-negative integers `I` where the computed address
 does not wrap around the address space and its first or last byte is part of
@@ -24162,7 +24170,8 @@ br i1 %can_load, label %speculative_path, label %safe_path
 
 speculative_path:
   ; Safe to speculatively load from %ptr
-  %vec = call <4 x i32> @llvm.speculative.load.v4i32.p0(ptr %ptr, i1 false, i64 16)
+  %vec = call <4 x i32> (ptr, i1, ...)
+           @llvm.speculative.load.v4i32.p0(ptr %ptr, i1 false, i64 16)
   ...
 
 safe_path:

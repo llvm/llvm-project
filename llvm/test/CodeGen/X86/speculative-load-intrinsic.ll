@@ -67,7 +67,7 @@ define <2 x double> @speculative_load_v2f64(ptr %ptr) {
 }
 
 ; Oracle form tests
-declare i64 @oracle(ptr, i64) memory(argmem: read)
+declare i64 @oracle(ptr, i64) memory(argmem: read) nounwind nosync willreturn
 
 define b128 @speculative_load_b128_oracle(ptr %ptr, i64 %n) {
 ; CHECK-LABEL: speculative_load_b128_oracle:

@@ -138,36 +138,28 @@ static bool lowerLoadRelative(Function &F) {
 }
 
 /// Lower @llvm.can.load.speculatively using target-specific expansion.
-/// Each target provides its own expansion via
-/// TargetLowering::emitCanLoadSpeculatively.
-/// The default expansion returns false (conservative).
+/// Targets may provide their own expansion via
+/// TargetLowering::emitCanLoadSpeculatively; the default expansion
+/// conservatively returns false.
 static bool lowerCanLoadSpeculatively(Function &F, const TargetMachine *TM) {
-  bool Changed = false;
+  if (!TM)
+    return false;
 
-  for (Use &U : llvm::make_early_inc_range(F.uses())) {
-    auto *CI = dyn_cast<CallInst>(U.getUser());
-    if (!CI || CI->getCalledOperand() != &F)
-      continue;
-
-    Function *ParentFunc = CI->getFunction();
+  return forEachCall(F, [&](CallInst *CI) {
     const TargetLowering *TLI =
-        TM->getSubtargetImpl(*ParentFunc)->getTargetLowering();
+        TM->getSubtargetImpl(*CI->getFunction())->getTargetLowering();
 
     IRBuilder<> Builder(CI);
-    Value *Ptr = CI->getArgOperand(0);
-    Value *Size = CI->getArgOperand(1);
-
-    // Ask target for expansion; nullptr means use default (return false)
-    Value *Result = TLI->emitCanLoadSpeculatively(Builder, Ptr, Size);
+    // A null result means the target cannot answer; lower to false.
+    Value *Result = TLI->emitCanLoadSpeculatively(Builder, CI->getArgOperand(0),
+                                                  CI->getArgOperand(1));
     if (!Result)
       Result = Builder.getFalse();
 
     CI->replaceAllUsesWith(Result);
     CI->eraseFromParent();
-    Changed = true;
-  }
-
-  return Changed;
+    return true;
+  });
 }
 
 // ObjCARC has knowledge about whether an obj-c runtime function needs to be

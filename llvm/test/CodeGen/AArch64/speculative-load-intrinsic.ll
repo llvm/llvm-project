@@ -45,6 +45,16 @@ define <2 x double> @speculative_load_v2f64(ptr %ptr) {
   ret <2 x double> %load
 }
 
+; Pointer vectors are sized via the data layout.
+define <4 x ptr> @speculative_load_v4p0(ptr %ptr) {
+; CHECK-LABEL: speculative_load_v4p0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ret
+  %load = call <4 x ptr> (ptr, i1, ...) @llvm.speculative.load.v4p0.p0(ptr align 16 %ptr, i1 false, i64 16)
+  ret <4 x ptr> %load
+}
+
 ; Scalable vector tests
 
 define <vscale x 4 x i32> @speculative_load_nxv4i32(ptr %ptr) {
@@ -67,7 +77,7 @@ define <vscale x 2 x double> @speculative_load_nxv2f64(ptr %ptr) {
 
 ; Oracle form tests
 
-declare i64 @oracle(ptr, i64) memory(argmem: read)
+declare i64 @oracle(ptr, i64) memory(argmem: read) nounwind nosync willreturn
 
 define b128 @speculative_load_b128_oracle(ptr %ptr, i64 %n) {
 ; CHECK-LABEL: speculative_load_b128_oracle:

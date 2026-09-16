@@ -5216,10 +5216,16 @@ void SelectionDAGBuilder::visitSpeculativeLoad(const CallInst &I) {
 
   // Use MOLoad but NOT MODereferenceable - the memory may not be
   // fully dereferenceable.
-  MachineMemOperand::Flags MMOFlags = MachineMemOperand::MOLoad;
-  LocationSize LocSize = LocationSize::upperBound(VT.getStoreSize());
+  auto MMOFlags = MachineMemOperand::MOLoad;
+  MMOFlags |= TLI.getTargetMMOFlags(I);
+  if (I.hasMetadata(LLVMContext::MD_nontemporal))
+    MMOFlags |= MachineMemOperand::MONonTemporal;
+  if (I.hasMetadata(LLVMContext::MD_invariant_load))
+    MMOFlags |= MachineMemOperand::MOInvariant;
+
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(PtrOperand), MMOFlags, LocSize, Alignment, AAInfo);
+      MachinePointerInfo(PtrOperand), MMOFlags,
+      LocationSize::precise(VT.getStoreSize()), Alignment, AAInfo);
 
   SDValue Load = DAG.getLoad(VT, sdl, InChain, Ptr, MMO);
   PendingLoads.push_back(Load.getValue(1));
