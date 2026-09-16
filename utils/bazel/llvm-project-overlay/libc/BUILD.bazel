@@ -4376,6 +4376,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
+        ":__support_threads_tcb",
         ":__support_threads_thread_attributes",
         ":hdr_stdint_proxy",
         ":types_struct_sched_param",
