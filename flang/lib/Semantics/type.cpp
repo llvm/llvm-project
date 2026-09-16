@@ -1007,6 +1007,14 @@ std::string DeclTypeSpec::AsFortran() const {
       return "RECORD" + derivedTypeSpec().typeSymbol().name().ToString();
     } else if (derivedTypeSpec().IsVectorType()) {
       return derivedTypeSpec().VectorTypeAsFortran();
+    } else if (derivedTypeSpec()
+                   .typeSymbol()
+                   .get<DerivedTypeDetails>()
+                   .isEnumerationType()) {
+      // Preserve the in-scope (possibly USE-renamed) spelling so the name
+      // written to a module file resolves on readback.
+      return "TYPE(" +
+          derivedTypeSpec().originalTypeSymbol().name().ToString() + ')';
     } else {
       return "TYPE(" + derivedTypeSpec().AsFortran() + ')';
     }

@@ -295,7 +295,7 @@ static void print_ids(int level) {
 // appear (adding 4 more bytes) when the C.NOP is referenced elsewhere (ie.
 // another branch).
 #define print_possible_return_addresses(addr)                                  \
-  printf("%" PRIu64 ": current_address=%p or %p\n",                            \
+  printf("%" PRIu64 ": current_address=%p or %p or %p\n",                      \
          ompt_get_thread_data()->value, ((char *)addr) - 4,                    \
          ((char *)addr) - 6, ((char *)addr) - 10)
 #else

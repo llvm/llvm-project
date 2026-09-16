@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fclangir -emit-cir -mmlir --mlir-print-ir-after-all -clangir-enable-idiom-recognizer %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=CIR
+// RUN: %clang_cc1 -fclangir -emit-cir -triple x86_64-linux-gnu -mmlir --mlir-print-ir-after-all -clangir-enable-idiom-recognizer %s -o %t.cir 2>&1 | FileCheck %s -check-prefix=CIR
 // CIR: IR Dump After IdiomRecognizer: cir-idiom-recognizer
 
 // The implicit-check-not on the RAISED run makes any surviving std::find call
