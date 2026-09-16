@@ -2135,6 +2135,7 @@ module std {
     export std.iterator.reverse_iterator
     export std.memory.allocator
     export std.memory.allocator_traits
+    export std.memory_resource.memory_resource
     export std.memory_resource.polymorphic_allocator
     export std.new.allocate
     export std.ostream.basic_ostream

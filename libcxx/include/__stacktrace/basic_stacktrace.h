@@ -19,6 +19,7 @@
 #include <__iterator/iterator.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/allocator_traits.h>
+#include <__memory_resource/memory_resource.h>
 #include <__memory_resource/polymorphic_allocator.h>
 #include <__new/allocate.h>
 #include <__stacktrace/stacktrace_entry.h>

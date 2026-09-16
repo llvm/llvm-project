@@ -14,6 +14,7 @@
 #include <__config>
 #include <__functional/function.h>
 #include <__fwd/format.h>
+#include <__memory_resource/memory_resource.h>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
