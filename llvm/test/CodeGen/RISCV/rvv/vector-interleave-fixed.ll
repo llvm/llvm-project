@@ -339,20 +339,17 @@ define <8 x i32> @vector_interleave4_v8i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; ZVZIP-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v12, v9, v11
 ; ZVZIP-NEXT:    vzip.vv v11, v8, v10
-; ZVZIP-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; ZVZIP-NEXT:    vslidedown.vi v8, v12, 2
-; ZVZIP-NEXT:    vslidedown.vi v9, v11, 2
 ; ZVZIP-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    vslideup.vi v12, v8, 2
 ; ZVZIP-NEXT:    vslideup.vi v11, v9, 2
 ; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+=======
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    vzip.vv v8, v11, v12
-; ZVZIP-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
-; ZVZIP-NEXT:    vslidedown.vi v10, v8, 4
-; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; ZVZIP-NEXT:    vslideup.vi v8, v10, 4
 ; ZVZIP-NEXT:    ret
 ;
+<<<<<<< HEAD
 ; ZVZIP-ZVL2048-LABEL: vector_interleave4_v8i32_v2i32:
 ; ZVZIP-ZVL2048:       # %bb.0:
 ; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -379,6 +376,28 @@ define <8 x i32> @vector_interleave4_v8i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e32, mf2, ta, ma
 ; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 6
 ; ZVZIP-ZVL2048-NEXT:    ret
+=======
+; ZVZIP-WIDE-LABEL: vector_interleave4_v8i32_v2i32:
+; ZVZIP-WIDE:       # %bb.0:
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVZIP-WIDE-NEXT:    vzip.vv v12, v9, v11
+; ZVZIP-WIDE-NEXT:    vzip.vv v9, v8, v10
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
+; ZVZIP-WIDE-NEXT:    vzip.vv v8, v9, v12
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v8, 2
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
+; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v8, 4
+; ZVZIP-WIDE-NEXT:    vsetvli zero, zero, e32, mf2, tu, ma
+; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 2
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e32, mf2, tu, ma
+; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v10, 4
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v10, 2
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e32, mf2, ta, ma
+; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 6
+; ZVZIP-WIDE-NEXT:    ret
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 	   %res = call <8 x i32> @llvm.vector.interleave4.v8i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d)
 	   ret <8 x i32> %res
 }
@@ -9243,21 +9262,15 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP:       # %bb.0:
 ; ZVZIP-NEXT:    addi sp, sp, -16
 ; ZVZIP-NEXT:    csrr a2, vlenb
-; ZVZIP-NEXT:    slli a2, a2, 3
+; ZVZIP-NEXT:    slli a2, a2, 4
 ; ZVZIP-NEXT:    mv a4, a2
-; ZVZIP-NEXT:    slli a2, a2, 2
-; ZVZIP-NEXT:    add a4, a4, a2
-; ZVZIP-NEXT:    slli a2, a2, 3
+; ZVZIP-NEXT:    slli a2, a2, 4
 ; ZVZIP-NEXT:    add a2, a2, a4
 ; ZVZIP-NEXT:    sub sp, sp, a2
 ; ZVZIP-NEXT:    csrr a2, vlenb
-; ZVZIP-NEXT:    slli a2, a2, 3
+; ZVZIP-NEXT:    slli a2, a2, 6
 ; ZVZIP-NEXT:    mv a4, a2
 ; ZVZIP-NEXT:    slli a2, a2, 1
-; ZVZIP-NEXT:    add a4, a4, a2
-; ZVZIP-NEXT:    slli a2, a2, 1
-; ZVZIP-NEXT:    add a4, a4, a2
-; ZVZIP-NEXT:    slli a2, a2, 2
 ; ZVZIP-NEXT:    add a2, a2, a4
 ; ZVZIP-NEXT:    add a2, sp, a2
 ; ZVZIP-NEXT:    addi a2, a2, 16
@@ -9265,24 +9278,16 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    csrr a2, vlenb
 ; ZVZIP-NEXT:    slli a2, a2, 3
 ; ZVZIP-NEXT:    mv a4, a2
-; ZVZIP-NEXT:    slli a2, a2, 1
-; ZVZIP-NEXT:    add a4, a4, a2
-; ZVZIP-NEXT:    slli a2, a2, 1
-; ZVZIP-NEXT:    add a4, a4, a2
-; ZVZIP-NEXT:    slli a2, a2, 1
-; ZVZIP-NEXT:    add a4, a4, a2
-; ZVZIP-NEXT:    slli a2, a2, 1
+; ZVZIP-NEXT:    slli a2, a2, 5
 ; ZVZIP-NEXT:    add a2, a2, a4
 ; ZVZIP-NEXT:    add a2, sp, a2
 ; ZVZIP-NEXT:    addi a2, a2, 16
 ; ZVZIP-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
 ; ZVZIP-NEXT:    li a2, 128
 ; ZVZIP-NEXT:    csrr a4, vlenb
-; ZVZIP-NEXT:    slli a4, a4, 3
+; ZVZIP-NEXT:    slli a4, a4, 4
 ; ZVZIP-NEXT:    mv a5, a4
-; ZVZIP-NEXT:    slli a4, a4, 2
-; ZVZIP-NEXT:    add a5, a5, a4
-; ZVZIP-NEXT:    slli a4, a4, 3
+; ZVZIP-NEXT:    slli a4, a4, 4
 ; ZVZIP-NEXT:    add a4, a4, a5
 ; ZVZIP-NEXT:    add a4, sp, a4
 ; ZVZIP-NEXT:    addi a4, a4, 528
@@ -9305,27 +9310,29 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vle8.v v24, (a5)
 ; ZVZIP-NEXT:    csrr a5, vlenb
-; ZVZIP-NEXT:    slli a5, a5, 8
+; ZVZIP-NEXT:    slli a5, a5, 3
+; ZVZIP-NEXT:    mv a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 1
+; ZVZIP-NEXT:    add a6, a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 1
+; ZVZIP-NEXT:    add a6, a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 2
+; ZVZIP-NEXT:    add a5, a5, a6
 ; ZVZIP-NEXT:    add a5, sp, a5
 ; ZVZIP-NEXT:    addi a5, a5, 16
 ; ZVZIP-NEXT:    vs8r.v v24, (a5) # vscale x 64-byte Folded Spill
-; ZVZIP-NEXT:    csrr a5, vlenb
-; ZVZIP-NEXT:    slli a5, a5, 8
-; ZVZIP-NEXT:    add a5, sp, a5
-; ZVZIP-NEXT:    addi a5, a5, 16
-; ZVZIP-NEXT:    vl8r.v v24, (a5) # vscale x 64-byte Folded Reload
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v24, v24, a4
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v0, v24, v8
-; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslidedown.vx v8, v0, a4
-; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslideup.vx v0, v8, a4
 ; ZVZIP-NEXT:    csrr a5, vlenb
-; ZVZIP-NEXT:    slli a5, a5, 5
+; ZVZIP-NEXT:    slli a5, a5, 4
 ; ZVZIP-NEXT:    mv a6, a5
-; ZVZIP-NEXT:    slli a5, a5, 3
+; ZVZIP-NEXT:    slli a5, a5, 1
+; ZVZIP-NEXT:    add a6, a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 1
+; ZVZIP-NEXT:    add a6, a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 1
 ; ZVZIP-NEXT:    add a5, a5, a6
 ; ZVZIP-NEXT:    add a5, sp, a5
 ; ZVZIP-NEXT:    addi a5, a5, 16
@@ -9335,7 +9342,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    csrr a5, vlenb
 ; ZVZIP-NEXT:    slli a5, a5, 3
 ; ZVZIP-NEXT:    mv a6, a5
-; ZVZIP-NEXT:    slli a5, a5, 2
+; ZVZIP-NEXT:    slli a5, a5, 1
+; ZVZIP-NEXT:    add a6, a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 1
 ; ZVZIP-NEXT:    add a6, a6, a5
 ; ZVZIP-NEXT:    slli a5, a5, 1
 ; ZVZIP-NEXT:    add a6, a6, a5
@@ -9346,6 +9355,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    vs8r.v v8, (a5) # vscale x 64-byte Folded Spill
 ; ZVZIP-NEXT:    addi a5, a7, 128
 ; ZVZIP-NEXT:    vslidedown.vx v8, v16, a4
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vle8.v v16, (a5)
 ; ZVZIP-NEXT:    csrr a5, vlenb
@@ -9385,9 +9395,13 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    addi a5, a5, 656
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v8, v24, a4
+=======
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    csrr a6, vlenb
-; ZVZIP-NEXT:    slli a6, a6, 5
+; ZVZIP-NEXT:    slli a6, a6, 3
 ; ZVZIP-NEXT:    mv t0, a6
+; ZVZIP-NEXT:    slli a6, a6, 2
+; ZVZIP-NEXT:    add t0, t0, a6
 ; ZVZIP-NEXT:    slli a6, a6, 1
 ; ZVZIP-NEXT:    add t0, t0, a6
 ; ZVZIP-NEXT:    slli a6, a6, 1
@@ -9398,16 +9412,25 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vle8.v v8, (a5)
 ; ZVZIP-NEXT:    csrr a5, vlenb
-; ZVZIP-NEXT:    slli a5, a5, 3
+; ZVZIP-NEXT:    slli a5, a5, 4
 ; ZVZIP-NEXT:    mv a6, a5
-; ZVZIP-NEXT:    slli a5, a5, 5
+; ZVZIP-NEXT:    slli a5, a5, 1
+; ZVZIP-NEXT:    add a6, a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 2
 ; ZVZIP-NEXT:    add a5, a5, a6
 ; ZVZIP-NEXT:    add a5, sp, a5
 ; ZVZIP-NEXT:    addi a5, a5, 16
 ; ZVZIP-NEXT:    vs8r.v v8, (a5) # vscale x 64-byte Folded Spill
-; ZVZIP-NEXT:    addi a5, a3, 256
+; ZVZIP-NEXT:    csrr a5, vlenb
+; ZVZIP-NEXT:    slli a5, a5, 4
+; ZVZIP-NEXT:    mv a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 4
+; ZVZIP-NEXT:    add a5, a5, a6
+; ZVZIP-NEXT:    add a5, sp, a5
+; ZVZIP-NEXT:    addi a5, a5, 656
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v8, v8, a4
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vle8.v v16, (a5)
 ; ZVZIP-NEXT:    csrr a5, vlenb
@@ -9506,6 +9529,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    addi a5, a5, 784
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v8, v24, a4
+=======
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    csrr a6, vlenb
 ; ZVZIP-NEXT:    slli a6, a6, 3
 ; ZVZIP-NEXT:    mv t0, a6
@@ -9521,7 +9546,108 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vle8.v v8, (a5)
 ; ZVZIP-NEXT:    csrr a5, vlenb
+; ZVZIP-NEXT:    slli a5, a5, 3
+; ZVZIP-NEXT:    mv a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 2
+; ZVZIP-NEXT:    add a6, a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 1
+; ZVZIP-NEXT:    add a5, a5, a6
+; ZVZIP-NEXT:    add a5, sp, a5
+; ZVZIP-NEXT:    addi a5, a5, 16
+; ZVZIP-NEXT:    vs8r.v v8, (a5) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    addi a5, a3, 256
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v8, v8, a4
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vle8.v v16, (a5)
+; ZVZIP-NEXT:    csrr a5, vlenb
+; ZVZIP-NEXT:    slli a5, a5, 5
+; ZVZIP-NEXT:    mv a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 1
+; ZVZIP-NEXT:    add a5, a5, a6
+; ZVZIP-NEXT:    add a5, sp, a5
+; ZVZIP-NEXT:    addi a5, a5, 16
+; ZVZIP-NEXT:    vs8r.v v16, (a5) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v16, v16, a4
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v24, v16, v8
+; ZVZIP-NEXT:    csrr a5, vlenb
 ; ZVZIP-NEXT:    slli a5, a5, 4
+; ZVZIP-NEXT:    mv a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 2
+; ZVZIP-NEXT:    add a6, a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 1
+; ZVZIP-NEXT:    add a5, a5, a6
+; ZVZIP-NEXT:    add a5, sp, a5
+; ZVZIP-NEXT:    addi a5, a5, 16
+; ZVZIP-NEXT:    vs8r.v v24, (a5) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v8, v24, a4
+; ZVZIP-NEXT:    csrr a5, vlenb
+; ZVZIP-NEXT:    slli a5, a5, 5
+; ZVZIP-NEXT:    mv a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 1
+; ZVZIP-NEXT:    add a6, a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 1
+; ZVZIP-NEXT:    add a5, a5, a6
+; ZVZIP-NEXT:    add a5, sp, a5
+; ZVZIP-NEXT:    addi a5, a5, 16
+; ZVZIP-NEXT:    vs8r.v v8, (a5) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vle8.v v8, (a1)
+; ZVZIP-NEXT:    csrr a5, vlenb
+; ZVZIP-NEXT:    slli a5, a5, 4
+; ZVZIP-NEXT:    mv a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 2
+; ZVZIP-NEXT:    add a5, a5, a6
+; ZVZIP-NEXT:    add a5, sp, a5
+; ZVZIP-NEXT:    addi a5, a5, 16
+; ZVZIP-NEXT:    vs8r.v v8, (a5) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    addi a5, a7, 256
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v8, v8, a4
+; ZVZIP-NEXT:    csrr a6, vlenb
+; ZVZIP-NEXT:    slli a6, a6, 3
+; ZVZIP-NEXT:    mv t0, a6
+; ZVZIP-NEXT:    slli a6, a6, 2
+; ZVZIP-NEXT:    add t0, t0, a6
+; ZVZIP-NEXT:    slli a6, a6, 2
+; ZVZIP-NEXT:    add a6, a6, t0
+; ZVZIP-NEXT:    add a6, sp, a6
+; ZVZIP-NEXT:    addi a6, a6, 16
+; ZVZIP-NEXT:    vs8r.v v8, (a6) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vle8.v v8, (a5)
+; ZVZIP-NEXT:    csrr a5, vlenb
+; ZVZIP-NEXT:    slli a5, a5, 3
+; ZVZIP-NEXT:    mv a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 3
+; ZVZIP-NEXT:    add a5, a5, a6
+; ZVZIP-NEXT:    add a5, sp, a5
+; ZVZIP-NEXT:    addi a5, a5, 16
+; ZVZIP-NEXT:    vs8r.v v8, (a5) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    csrr a5, vlenb
+; ZVZIP-NEXT:    slli a5, a5, 4
+; ZVZIP-NEXT:    mv a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 4
+; ZVZIP-NEXT:    add a5, a5, a6
+; ZVZIP-NEXT:    add a5, sp, a5
+; ZVZIP-NEXT:    addi a5, a5, 784
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v8, v8, a4
+; ZVZIP-NEXT:    csrr a6, vlenb
+; ZVZIP-NEXT:    slli a6, a6, 5
+; ZVZIP-NEXT:    mv t0, a6
+; ZVZIP-NEXT:    slli a6, a6, 2
+; ZVZIP-NEXT:    add a6, a6, t0
+; ZVZIP-NEXT:    add a6, sp, a6
+; ZVZIP-NEXT:    addi a6, a6, 16
+; ZVZIP-NEXT:    vs8r.v v8, (a6) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vle8.v v8, (a5)
+; ZVZIP-NEXT:    csrr a5, vlenb
+; ZVZIP-NEXT:    slli a5, a5, 3
 ; ZVZIP-NEXT:    mv a6, a5
 ; ZVZIP-NEXT:    slli a5, a5, 2
 ; ZVZIP-NEXT:    add a5, a5, a6
@@ -9531,7 +9657,16 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    addi a5, a3, 384
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v8, v8, a4
+; ZVZIP-NEXT:    csrr a6, vlenb
+; ZVZIP-NEXT:    slli a6, a6, 4
+; ZVZIP-NEXT:    mv t0, a6
+; ZVZIP-NEXT:    slli a6, a6, 3
+; ZVZIP-NEXT:    add a6, a6, t0
+; ZVZIP-NEXT:    add a6, sp, a6
+; ZVZIP-NEXT:    addi a6, a6, 16
+; ZVZIP-NEXT:    vs8r.v v8, (a6) # vscale x 64-byte Folded Spill
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    vle8.v v16, (a5)
 ; ZVZIP-NEXT:    csrr a5, vlenb
 ; ZVZIP-NEXT:    slli a5, a5, 6
@@ -9546,31 +9681,42 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    vslidedown.vx v8, v24, a4
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vslideup.vx v24, v8, a4
+=======
+; ZVZIP-NEXT:    vle8.v v8, (a5)
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    csrr a5, vlenb
 ; ZVZIP-NEXT:    slli a5, a5, 3
 ; ZVZIP-NEXT:    mv a6, a5
-; ZVZIP-NEXT:    slli a5, a5, 2
-; ZVZIP-NEXT:    add a6, a6, a5
 ; ZVZIP-NEXT:    slli a5, a5, 1
 ; ZVZIP-NEXT:    add a5, a5, a6
 ; ZVZIP-NEXT:    add a5, sp, a5
 ; ZVZIP-NEXT:    addi a5, a5, 16
-; ZVZIP-NEXT:    vs8r.v v24, (a5) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    vs8r.v v8, (a5) # vscale x 64-byte Folded Spill
 ; ZVZIP-NEXT:    addi a5, a7, 384
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslidedown.vx v8, v24, a4
+; ZVZIP-NEXT:    vslidedown.vx v8, v8, a4
+; ZVZIP-NEXT:    csrr a6, vlenb
+; ZVZIP-NEXT:    slli a6, a6, 3
+; ZVZIP-NEXT:    mv t0, a6
+; ZVZIP-NEXT:    slli a6, a6, 1
+; ZVZIP-NEXT:    add t0, t0, a6
+; ZVZIP-NEXT:    slli a6, a6, 1
+; ZVZIP-NEXT:    add t0, t0, a6
+; ZVZIP-NEXT:    slli a6, a6, 1
+; ZVZIP-NEXT:    add a6, a6, t0
+; ZVZIP-NEXT:    add a6, sp, a6
+; ZVZIP-NEXT:    addi a6, a6, 16
+; ZVZIP-NEXT:    vs8r.v v8, (a6) # vscale x 64-byte Folded Spill
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; ZVZIP-NEXT:    vle8.v v16, (a5)
+; ZVZIP-NEXT:    vle8.v v8, (a5)
 ; ZVZIP-NEXT:    csrr a5, vlenb
-; ZVZIP-NEXT:    slli a5, a5, 4
-; ZVZIP-NEXT:    mv a6, a5
-; ZVZIP-NEXT:    slli a5, a5, 1
-; ZVZIP-NEXT:    add a5, a5, a6
+; ZVZIP-NEXT:    slli a5, a5, 3
 ; ZVZIP-NEXT:    add a5, sp, a5
 ; ZVZIP-NEXT:    addi a5, a5, 16
-; ZVZIP-NEXT:    vs8r.v v16, (a5) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    vs8r.v v8, (a5) # vscale x 64-byte Folded Spill
 ; ZVZIP-NEXT:    addi a1, a1, 128
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    vslidedown.vx v16, v16, a4
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vle8.v v24, (a1)
@@ -9625,10 +9771,13 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    addi a1, a1, 400
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v8, v24, a4
+=======
+; ZVZIP-NEXT:    vslidedown.vx v8, v8, a4
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    csrr a5, vlenb
-; ZVZIP-NEXT:    slli a5, a5, 6
+; ZVZIP-NEXT:    slli a5, a5, 3
 ; ZVZIP-NEXT:    mv a6, a5
-; ZVZIP-NEXT:    slli a5, a5, 1
+; ZVZIP-NEXT:    slli a5, a5, 4
 ; ZVZIP-NEXT:    add a5, a5, a6
 ; ZVZIP-NEXT:    add a5, sp, a5
 ; ZVZIP-NEXT:    addi a5, a5, 16
@@ -9636,49 +9785,80 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vle8.v v8, (a1)
 ; ZVZIP-NEXT:    csrr a1, vlenb
-; ZVZIP-NEXT:    slli a1, a1, 7
-; ZVZIP-NEXT:    add a1, sp, a1
-; ZVZIP-NEXT:    addi a1, a1, 16
-; ZVZIP-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslidedown.vx v8, v8, a4
-; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; ZVZIP-NEXT:    vle8.v v16, (a3)
-; ZVZIP-NEXT:    csrr a1, vlenb
 ; ZVZIP-NEXT:    slli a1, a1, 4
-; ZVZIP-NEXT:    mv a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 1
-; ZVZIP-NEXT:    add a3, a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 1
-; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    mv a5, a1
+; ZVZIP-NEXT:    slli a1, a1, 4
+; ZVZIP-NEXT:    add a1, a1, a5
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 400
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v16, v8, a4
+; ZVZIP-NEXT:    csrr a5, vlenb
+; ZVZIP-NEXT:    slli a5, a5, 4
+; ZVZIP-NEXT:    mv a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 1
+; ZVZIP-NEXT:    add a6, a6, a5
+; ZVZIP-NEXT:    slli a5, a5, 1
+; ZVZIP-NEXT:    add a5, a5, a6
+; ZVZIP-NEXT:    add a5, sp, a5
+; ZVZIP-NEXT:    addi a5, a5, 16
+; ZVZIP-NEXT:    vs8r.v v16, (a5) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vle8.v v16, (a1)
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 6
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
 ; ZVZIP-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v16, v16, a4
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v24, v16, v8
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v8, v24, a4
+=======
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslideup.vx v24, v8, a4
+; ZVZIP-NEXT:    vle8.v v24, (a3)
 ; ZVZIP-NEXT:    csrr a1, vlenb
-; ZVZIP-NEXT:    slli a1, a1, 5
+; ZVZIP-NEXT:    slli a1, a1, 4
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
 ; ZVZIP-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslidedown.vx v8, v24, a4
+; ZVZIP-NEXT:    vslidedown.vx v24, v24, a4
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v0, v24, v16
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 8
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vs8r.v v0, (a1) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 8
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v16, v16, a4
 ; ZVZIP-NEXT:    csrr a1, vlenb
 ; ZVZIP-NEXT:    slli a1, a1, 3
 ; ZVZIP-NEXT:    mv a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 1
 ; ZVZIP-NEXT:    add a3, a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 1
-; ZVZIP-NEXT:    add a3, a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 1
-; ZVZIP-NEXT:    add a3, a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 5
 ; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
@@ -9688,39 +9868,55 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    vle8.v v24, (a7)
 ; ZVZIP-NEXT:    csrr a1, vlenb
 ; ZVZIP-NEXT:    slli a1, a1, 4
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v24, v24, a4
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vzip.vv v0, v16, v24
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
 ; ZVZIP-NEXT:    mv a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 1
 ; ZVZIP-NEXT:    add a3, a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vs8r.v v0, (a1) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v16, v0, a4
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 7
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 2
 ; ZVZIP-NEXT:    add a3, a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 1
 ; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
-; ZVZIP-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
 ; ZVZIP-NEXT:    csrr a1, vlenb
-; ZVZIP-NEXT:    slli a1, a1, 4
+; ZVZIP-NEXT:    slli a1, a1, 5
 ; ZVZIP-NEXT:    mv a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 1
-; ZVZIP-NEXT:    add a3, a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 1
-; ZVZIP-NEXT:    add a3, a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 1
 ; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
 ; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
-; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslidedown.vx v24, v24, a4
-; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; ZVZIP-NEXT:    vzip.vv v0, v16, v24
-; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslidedown.vx v16, v0, a4
-; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslideup.vx v0, v16, a4
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v0, v24, v16
 ; ZVZIP-NEXT:    csrr a1, vlenb
 ; ZVZIP-NEXT:    slli a1, a1, 3
 ; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 1
 ; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
@@ -9728,6 +9924,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    vs8r.v v0, (a1) # vscale x 64-byte Folded Spill
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v16, v0, a4
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v24, v16, v8
 ; ZVZIP-NEXT:    csrr a1, vlenb
@@ -9740,11 +9937,14 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v8, v24, a4
+=======
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    csrr a1, vlenb
 ; ZVZIP-NEXT:    slli a1, a1, 3
 ; ZVZIP-NEXT:    mv a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 2
 ; ZVZIP-NEXT:    add a3, a3, a1
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    slli a1, a1, 2
 ; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
@@ -9781,25 +9981,16 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    csrr a1, vlenb
 ; ZVZIP-NEXT:    slli a1, a1, 3
 ; ZVZIP-NEXT:    mv a3, a1
+=======
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    slli a1, a1, 1
-; ZVZIP-NEXT:    add a3, a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 3
 ; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
 ; ZVZIP-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
 ; ZVZIP-NEXT:    csrr a1, vlenb
-; ZVZIP-NEXT:    slli a1, a1, 3
-; ZVZIP-NEXT:    mv a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 5
-; ZVZIP-NEXT:    add a1, a1, a3
-; ZVZIP-NEXT:    add a1, sp, a1
-; ZVZIP-NEXT:    addi a1, a1, 16
-; ZVZIP-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; ZVZIP-NEXT:    csrr a1, vlenb
-; ZVZIP-NEXT:    slli a1, a1, 3
-; ZVZIP-NEXT:    mv a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 4
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
@@ -9819,9 +10010,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    vslidedown.vx v8, v24, a4
 ; ZVZIP-NEXT:    csrr a1, vlenb
 ; ZVZIP-NEXT:    slli a1, a1, 3
+=======
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    mv a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 1
-; ZVZIP-NEXT:    add a3, a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 2
 ; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
@@ -9837,17 +10028,14 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v0, v16, v24
-; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslidedown.vx v16, v0, a4
-; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslideup.vx v0, v16, a4
 ; ZVZIP-NEXT:    csrr a1, vlenb
-; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    slli a1, a1, 5
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
 ; ZVZIP-NEXT:    vs8r.v v0, (a1) # vscale x 64-byte Folded Spill
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v16, v0, a4
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v0, v16, v8
 ; ZVZIP-NEXT:    csrr a1, vlenb
@@ -9880,6 +10068,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
 ; ZVZIP-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
+=======
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    csrr a1, vlenb
 ; ZVZIP-NEXT:    slli a1, a1, 5
 ; ZVZIP-NEXT:    mv a3, a1
@@ -9887,44 +10077,30 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v8, v24, v16
+=======
+; ZVZIP-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    csrr a1, vlenb
 ; ZVZIP-NEXT:    slli a1, a1, 3
-; ZVZIP-NEXT:    mv a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 5
-; ZVZIP-NEXT:    add a1, a1, a3
-; ZVZIP-NEXT:    add a1, sp, a1
-; ZVZIP-NEXT:    addi a1, a1, 16
-; ZVZIP-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslidedown.vx v8, v8, a4
-; ZVZIP-NEXT:    csrr a1, vlenb
-; ZVZIP-NEXT:    slli a1, a1, 3
-; ZVZIP-NEXT:    mv a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 1
-; ZVZIP-NEXT:    add a3, a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 1
-; ZVZIP-NEXT:    add a3, a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 1
-; ZVZIP-NEXT:    add a1, a1, a3
-; ZVZIP-NEXT:    add a1, sp, a1
-; ZVZIP-NEXT:    addi a1, a1, 16
-; ZVZIP-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; ZVZIP-NEXT:    csrr a1, vlenb
-; ZVZIP-NEXT:    slli a1, a1, 4
 ; ZVZIP-NEXT:    mv a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 2
 ; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
-; ZVZIP-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
 ; ZVZIP-NEXT:    csrr a1, vlenb
-; ZVZIP-NEXT:    slli a1, a1, 6
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
 ; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v16, v24, v8
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
@@ -10034,10 +10210,16 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
+=======
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v0, v24, v16
+; ZVZIP-NEXT:    addi a1, sp, 16
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    vs8r.v v0, (a1) # vscale x 64-byte Folded Spill
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v16, v0, a4
 ; ZVZIP-NEXT:    csrr a1, vlenb
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    slli a1, a1, 3
 ; ZVZIP-NEXT:    mv a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 2
@@ -10073,12 +10255,15 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v24, v16, a4
 ; ZVZIP-NEXT:    csrr a1, vlenb
+=======
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    slli a1, a1, 4
 ; ZVZIP-NEXT:    mv a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 2
 ; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
 ; ZVZIP-NEXT:    csrr a1, vlenb
 ; ZVZIP-NEXT:    slli a1, a1, 4
@@ -10188,20 +10373,19 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    add a3, a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 2
 ; ZVZIP-NEXT:    add a1, a1, a3
+=======
+; ZVZIP-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
 ; ZVZIP-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v24, v8, v16
-; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslidedown.vx v8, v24, a4
-; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslideup.vx v24, v8, a4
 ; ZVZIP-NEXT:    csrr a1, vlenb
-; ZVZIP-NEXT:    slli a1, a1, 4
+; ZVZIP-NEXT:    slli a1, a1, 3
 ; ZVZIP-NEXT:    mv a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 1
-; ZVZIP-NEXT:    add a3, a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 2
 ; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
@@ -10212,17 +10396,140 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    csrr a1, vlenb
 ; ZVZIP-NEXT:    slli a1, a1, 3
 ; ZVZIP-NEXT:    mv a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 1
-; ZVZIP-NEXT:    add a3, a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 1
-; ZVZIP-NEXT:    add a3, a3, a1
-; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    slli a1, a1, 3
 ; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
 ; ZVZIP-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; ZVZIP-NEXT:    csrr a1, vlenb
-; ZVZIP-NEXT:    slli a1, a1, 7
+; ZVZIP-NEXT:    slli a1, a1, 6
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 4
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
+<<<<<<< HEAD
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vzip.vv v24, v16, v8
+=======
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v0, v16, v8
+>>>>>>> c3762a810ef6 (fixup! Rebase)
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v8, v0, a4
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 6
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 5
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 4
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v8, v16, v24
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v16, v8, a4
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 4
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v16, v8, v0
+; ZVZIP-NEXT:    addi a1, sp, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vzip.vv v8, v0, v24
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vse8.v v16, (a0)
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v16, v0, v24
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v24, v16, a4
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 5
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    addi a1, a0, 1536
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vse8.v v8, (a1)
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 5
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v8, v0, v24
+; ZVZIP-NEXT:    addi a1, a0, 1024
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vse8.v v8, (a1)
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 6
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
 ; ZVZIP-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
@@ -10231,24 +10538,32 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    mv a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 1
 ; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v0, v8, v24
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    add a3, a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 1
 ; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
-; ZVZIP-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
-; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; ZVZIP-NEXT:    vzip.vv v24, v16, v8
-; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslidedown.vx v8, v24, a4
-; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslideup.vx v24, v8, a4
+; ZVZIP-NEXT:    vs8r.v v0, (a1) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    vzip.vv v24, v0, v16
 ; ZVZIP-NEXT:    csrr a1, vlenb
-; ZVZIP-NEXT:    slli a1, a1, 7
+; ZVZIP-NEXT:    slli a1, a1, 4
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    add a1, a1, a3
 ; ZVZIP-NEXT:    add a1, sp, a1
 ; ZVZIP-NEXT:    addi a1, a1, 16
-; ZVZIP-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
-; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
-; ZVZIP-NEXT:    vslidedown.vx v0, v24, a4
+; ZVZIP-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
 ; ZVZIP-NEXT:    csrr a1, vlenb
 ; ZVZIP-NEXT:    slli a1, a1, 3
 ; ZVZIP-NEXT:    mv a3, a1
@@ -10257,6 +10572,164 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    slli a1, a1, 1
 ; ZVZIP-NEXT:    add a3, a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vzip.vv v8, v0, v16
+; ZVZIP-NEXT:    addi a1, a0, 512
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vse8.v v24, (a1)
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 8
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v16, v0, v24
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v24, v8, a4
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 8
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    addi a1, a0, 256
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vse8.v v16, (a1)
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 6
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 4
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v16, v0, v24
+; ZVZIP-NEXT:    addi a1, a0, 128
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vse8.v v16, (a1)
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 4
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 4
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v0, v24, v16
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 6
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vs8r.v v0, (a1) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    vzip.vv v16, v0, v8
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 5
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vzip.vv v8, v24, v0
+; ZVZIP-NEXT:    addi a1, a0, 1792
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vse8.v v16, (a1)
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 4
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v16, v0, v24
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v24, v8, a4
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    addi a1, a0, 1664
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vse8.v v16, (a1)
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 4
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v16, v8, v24
+; ZVZIP-NEXT:    addi a1, a0, 1280
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vse8.v v16, (a1)
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 2
 ; ZVZIP-NEXT:    add a3, a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 1
 ; ZVZIP-NEXT:    add a1, a1, a3
@@ -10264,8 +10737,159 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    addi a1, a1, 16
 ; ZVZIP-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
 ; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 5
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v16, v24, v8
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vzip.vv v8, v0, v24
+; ZVZIP-NEXT:    addi a1, a0, 1152
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vse8.v v16, (a1)
+; ZVZIP-NEXT:    csrr a1, vlenb
 ; ZVZIP-NEXT:    slli a1, a1, 4
 ; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v16, v8, v0
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v0, v24, a4
+; ZVZIP-NEXT:    addi a1, a0, 768
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vse8.v v16, (a1)
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 5
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v16, v0, v24
+; ZVZIP-NEXT:    addi a1, a0, 640
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vse8.v v16, (a1)
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 7
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v16, v0, v24
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 6
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v24, v24, a4
+; ZVZIP-NEXT:    addi a1, a0, 384
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vse8.v v16, (a1)
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 8
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v16, v24, v0
+; ZVZIP-NEXT:    addi a1, a0, 1920
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vse8.v v16, (a1)
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 5
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 2
+; ZVZIP-NEXT:    add a1, a1, a3
+; ZVZIP-NEXT:    add a1, sp, a1
+; ZVZIP-NEXT:    addi a1, a1, 16
+; ZVZIP-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVZIP-NEXT:    vzip.vv v16, v0, v24
+; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vx v8, v8, a4
+; ZVZIP-NEXT:    addi a1, a0, 1408
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vse8.v v16, (a1)
+; ZVZIP-NEXT:    csrr a1, vlenb
+; ZVZIP-NEXT:    slli a1, a1, 3
+; ZVZIP-NEXT:    mv a3, a1
+; ZVZIP-NEXT:    slli a1, a1, 1
+; ZVZIP-NEXT:    add a3, a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 1
 ; ZVZIP-NEXT:    add a3, a3, a1
 ; ZVZIP-NEXT:    slli a1, a1, 1
@@ -10277,6 +10901,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v16, v8, v24
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v24, v16, a4
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
@@ -10749,19 +11374,21 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vse8.v v0, (a1)
 ; ZVZIP-NEXT:    vslideup.vx v8, v16, a4
+=======
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    addi a0, a0, 896
-; ZVZIP-NEXT:    vse8.v v8, (a0)
+; ZVZIP-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVZIP-NEXT:    vse8.v v16, (a0)
 ; ZVZIP-NEXT:    csrr a0, vlenb
-; ZVZIP-NEXT:    slli a0, a0, 3
+; ZVZIP-NEXT:    slli a0, a0, 4
 ; ZVZIP-NEXT:    mv a1, a0
-; ZVZIP-NEXT:    slli a0, a0, 2
-; ZVZIP-NEXT:    add a1, a1, a0
-; ZVZIP-NEXT:    slli a0, a0, 3
+; ZVZIP-NEXT:    slli a0, a0, 4
 ; ZVZIP-NEXT:    add a0, a0, a1
 ; ZVZIP-NEXT:    add sp, sp, a0
 ; ZVZIP-NEXT:    addi sp, sp, 16
 ; ZVZIP-NEXT:    ret
 ;
+<<<<<<< HEAD
 ; ZVZIP-ZVL2048-LABEL: vector_interleave4_v512i8_v2048i8:
 ; ZVZIP-ZVL2048:       # %bb.0:
 ; ZVZIP-ZVL2048-NEXT:    li a0, 1024
@@ -10782,6 +11409,23 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-ZVL2048-NEXT:    vslideup.vx v8, v24, a1
 ; ZVZIP-ZVL2048-NEXT:    vslideup.vx v12, v16, a1
 ; ZVZIP-ZVL2048-NEXT:    ret
+=======
+; ZVZIP-WIDE-LABEL: vector_interleave4_v512i8_v2048i8:
+; ZVZIP-WIDE:       # %bb.0:
+; ZVZIP-WIDE-NEXT:    li a0, 512
+; ZVZIP-WIDE-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; ZVZIP-WIDE-NEXT:    vzip.vv v16, v10, v14
+; ZVZIP-WIDE-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; ZVZIP-WIDE-NEXT:    vslidedown.vx v20, v16, a0
+; ZVZIP-WIDE-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; ZVZIP-WIDE-NEXT:    vzip.vv v24, v8, v12
+; ZVZIP-WIDE-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; ZVZIP-WIDE-NEXT:    vslidedown.vx v28, v24, a0
+; ZVZIP-WIDE-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; ZVZIP-WIDE-NEXT:    vzip.vv v8, v24, v16
+; ZVZIP-WIDE-NEXT:    vzip.vv v12, v28, v20
+; ZVZIP-WIDE-NEXT:    ret
+>>>>>>> c3762a810ef6 (fixup! Rebase)
   %v = call <2048 x i8> @llvm.vector.interleave4(<512 x i8> %v0, <512 x i8> %v1, <512 x i8> %v2, <512 x i8> %v3)
   ret <2048 x i8> %v
 }
@@ -11265,33 +11909,28 @@ define <16 x i8> @vector_interleave8_v16i8_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i
 ; ZVZIP-NEXT:    vzip.vv v11, v9, v13
 ; ZVZIP-NEXT:    vzip.vv v9, v10, v14
 ; ZVZIP-NEXT:    vzip.vv v10, v8, v12
-; ZVZIP-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; ZVZIP-NEXT:    vslidedown.vi v8, v16, 2
-; ZVZIP-NEXT:    vslidedown.vi v12, v11, 2
-; ZVZIP-NEXT:    vslidedown.vi v13, v9, 2
-; ZVZIP-NEXT:    vslidedown.vi v14, v10, 2
 ; ZVZIP-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    vslideup.vi v16, v8, 2
 ; ZVZIP-NEXT:    vslideup.vi v11, v12, 2
 ; ZVZIP-NEXT:    vslideup.vi v9, v13, 2
 ; ZVZIP-NEXT:    vslideup.vi v10, v14, 2
 ; ZVZIP-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+=======
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    vzip.vv v12, v11, v16
 ; ZVZIP-NEXT:    vzip.vv v11, v10, v9
-; ZVZIP-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
-; ZVZIP-NEXT:    vslidedown.vi v8, v12, 4
-; ZVZIP-NEXT:    vslidedown.vi v9, v11, 4
 ; ZVZIP-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+<<<<<<< HEAD
 ; ZVZIP-NEXT:    vslideup.vi v12, v8, 4
 ; ZVZIP-NEXT:    vslideup.vi v11, v9, 4
 ; ZVZIP-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+=======
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 ; ZVZIP-NEXT:    vzip.vv v8, v11, v12
-; ZVZIP-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; ZVZIP-NEXT:    vslidedown.vi v9, v8, 8
-; ZVZIP-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; ZVZIP-NEXT:    vslideup.vi v8, v9, 8
 ; ZVZIP-NEXT:    ret
 ;
+<<<<<<< HEAD
 ; ZVZIP-ZVL2048-LABEL: vector_interleave8_v16i8_v2i8:
 ; ZVZIP-ZVL2048:       # %bb.0:
 ; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
@@ -11349,6 +11988,49 @@ define <16 x i8> @vector_interleave8_v16i8_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i
 ; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 16, e8, mf8, ta, ma
 ; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 14
 ; ZVZIP-ZVL2048-NEXT:    ret
+=======
+; ZVZIP-WIDE-LABEL: vector_interleave8_v16i8_v2i8:
+; ZVZIP-WIDE:       # %bb.0:
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-WIDE-NEXT:    vzip.vv v16, v11, v15
+; ZVZIP-WIDE-NEXT:    vzip.vv v11, v9, v13
+; ZVZIP-WIDE-NEXT:    vzip.vv v9, v10, v14
+; ZVZIP-WIDE-NEXT:    vzip.vv v10, v8, v12
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
+; ZVZIP-WIDE-NEXT:    vzip.vv v8, v11, v16
+; ZVZIP-WIDE-NEXT:    vzip.vv v11, v10, v9
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e8, mf8, ta, ma
+; ZVZIP-WIDE-NEXT:    vzip.vv v9, v11, v8
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v9, 2
+; ZVZIP-WIDE-NEXT:    vmv1r.v v8, v9
+; ZVZIP-WIDE-NEXT:    vslidedown.vi v11, v9, 4
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e8, mf8, tu, ma
+; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v10, 2
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v9, 6
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e8, mf8, tu, ma
+; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v11, 4
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e8, mf8, ta, ma
+; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v9, 8
+; ZVZIP-WIDE-NEXT:    vsetvli zero, zero, e8, mf8, tu, ma
+; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v10, 6
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v9, 2
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 10, e8, mf8, tu, ma
+; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 8
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-WIDE-NEXT:    vslidedown.vi v11, v9, 4
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 12, e8, mf8, tu, ma
+; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v10, 10
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 14, e8, mf8, tu, ma
+; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v11, 12
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v9, 6
+; ZVZIP-WIDE-NEXT:    vsetivli zero, 16, e8, mf8, ta, ma
+; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 14
+; ZVZIP-WIDE-NEXT:    ret
+>>>>>>> c3762a810ef6 (fixup! Rebase)
 	   %res = call <16 x i8> @llvm.vector.interleave8.v16i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d, <2 x i8> %e, <2 x i8> %f, <2 x i8> %g, <2 x i8> %h)
 	   ret <16 x i8> %res
 }
