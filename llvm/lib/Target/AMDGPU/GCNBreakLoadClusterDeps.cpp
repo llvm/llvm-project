@@ -433,8 +433,11 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
               getVGPR32Components(ForwardIt->getOperand(0).getReg());
         } else
           for (MachineOperand &Operand : ForwardIt->defs())
-            if (TRI->isVGPR(*MRI, Operand.getReg()))
-              ClusterRAWHazards &= getVGPR32Components(Operand.getReg());
+            if (TRI->isVGPR(*MRI, Operand.getReg())) {
+              BitVector RAWHazardMask = getVGPR32Components(Operand.getReg());
+              RAWHazardMask.flip();
+              ClusterRAWHazards &= RAWHazardMask;
+            }
       }
     } else
       ClusterLoads.erase(&VecLoadIns);

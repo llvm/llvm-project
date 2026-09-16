@@ -2133,8 +2133,8 @@ define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range(ptr addrspace(1) i
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_load_dword v0, v[0:1], off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GCN-NEXT:    global_load_dword v0, v0, s[2:3]
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GCN-NEXT:    global_load_dword v0, v2, s[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 ;
@@ -2142,8 +2142,8 @@ define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range(ptr addrspace(1) i
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    global_load_b32 v0, v0, s[2:3]
+; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GFX11-NEXT:    global_load_b32 v0, v2, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
@@ -2151,8 +2151,8 @@ define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range(ptr addrspace(1) i
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX12-NEXT:    global_load_b32 v0, v0, s[2:3]
+; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GFX12-NEXT:    global_load_b32 v0, v2, s[2:3]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %voffset = load i32, ptr addrspace(1) %voffset.ptr, !range !0, !noundef !{}
@@ -2168,8 +2168,8 @@ define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range_imm_offset(ptr add
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_load_dword v0, v[0:1], off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GCN-NEXT:    global_load_dword v0, v0, s[2:3] offset:400
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GCN-NEXT:    global_load_dword v0, v2, s[2:3] offset:400
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 ;
@@ -2177,8 +2177,8 @@ define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range_imm_offset(ptr add
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    global_load_b32 v0, v0, s[2:3] offset:400
+; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GFX11-NEXT:    global_load_b32 v0, v2, s[2:3] offset:400
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
@@ -2186,8 +2186,8 @@ define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range_imm_offset(ptr add
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX12-NEXT:    global_load_b32 v0, v0, s[2:3] offset:400
+; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GFX12-NEXT:    global_load_b32 v0, v2, s[2:3] offset:400
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
   %voffset = load i32, ptr addrspace(1) %voffset.ptr, !range !0, !noundef !{}
