@@ -89,7 +89,6 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   llvm::TargetOptions TO = llvm::TargetOptions();
   llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
       PTU.TheModule->getTargetTriple(), "", "", TO, llvm::Reloc::Model::PIC_);
-  PTU.TheModule->setDataLayout(TargetMachine->createDataLayout());
 
   llvm::SmallString<256> ObjectFileName(TempDir);
   llvm::sys::path::append(ObjectFileName, PTU.TheModule->getName() + ".o");
