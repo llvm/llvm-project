@@ -126,6 +126,11 @@ ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(size_t idx) {
   return nullptr;
 }
 
+bool ValueObjectRegisterSet::IsSameRegister(const RegisterInfo *a,
+                                            const RegisterInfo *b) {
+  return a && b && a->kinds[eRegisterKindLLDB] == b->kinds[eRegisterKindLLDB];
+}
+
 std::optional<std::pair<size_t, const RegisterInfo *>>
 ValueObjectRegisterSet::LookupChildWithName(llvm::StringRef name) {
   if (!m_reg_ctx_sp || !m_reg_set)
@@ -140,7 +145,7 @@ ValueObjectRegisterSet::LookupChildWithName(llvm::StringRef name) {
   for (size_t i = 0; i < m_reg_set->num_registers; ++i) {
     const RegisterInfo *contained_reg_info =
         m_reg_ctx_sp->GetRegisterInfoAtIndex(m_reg_set->registers[i]);
-    if (contained_reg_info == reg_info)
+    if (IsSameRegister(contained_reg_info, reg_info))
       return std::make_pair(i, reg_info);
   }
 
