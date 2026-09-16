@@ -470,9 +470,188 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs, AsyncInfo);
 }
 
-// Run region on device
+static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                     ol_device_type_t Value) {
+  switch (Value) {
+  case OL_DEVICE_TYPE_DEFAULT:
+    return OS << "DEFAULT";
+  case OL_DEVICE_TYPE_ALL:
+    return OS << "ALL";
+  case OL_DEVICE_TYPE_GPU:
+    return OS << "GPU";
+  case OL_DEVICE_TYPE_CPU:
+    return OS << "CPU";
+  case OL_DEVICE_TYPE_HOST:
+    return OS << "HOST";
+  default:
+    return OS << "<< INVALID >>";
+  }
+}
+
+static llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                     const ol_dimensions_t &Value) {
+  return OS << "{x: " << Value.x << ", y: " << Value.y << ", z: " << Value.z
+            << "}";
+}
+
+static void printFPCapabilityFlags(llvm::raw_ostream &OS,
+                                   ol_device_fp_capability_flags_t Value) {
+  OS << Value << " {";
+  if (Value & OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT)
+    OS << " CORRECTLY_ROUNDED_DIVIDE_SQRT";
+  if (Value & OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST)
+    OS << " ROUND_TO_NEAREST";
+  if (Value & OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO)
+    OS << " ROUND_TO_ZERO";
+  if (Value & OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF)
+    OS << " ROUND_TO_INF";
+  if (Value & OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN)
+    OS << " INF_NAN";
+  if (Value & OL_DEVICE_FP_CAPABILITY_FLAG_DENORM)
+    OS << " DENORM";
+  if (Value & OL_DEVICE_FP_CAPABILITY_FLAG_FMA)
+    OS << " FMA";
+  if (Value & OL_DEVICE_FP_CAPABILITY_FLAG_SOFT_FLOAT)
+    OS << " SOFT_FLOAT";
+  OS << " }";
+}
+
+// Print a scalar liboffload device info property, if supported.
+template <typename T>
+static void printDeviceInfoScalar(ol_device_handle_t DeviceHandle,
+                                  ol_device_info_t PropName,
+                                  llvm::StringRef Label,
+                                  llvm::StringRef Units = "") {
+  T Value{};
+  if (olGetDeviceInfo(DeviceHandle, PropName, sizeof(Value), &Value))
+    return;
+  llvm::outs() << "    " << Label << ": " << Value;
+  if (!Units.empty())
+    llvm::outs() << " " << Units;
+  llvm::outs() << "\n";
+}
+
+// Print a boolean liboffload device info property, if supported.
+static void printDeviceInfoBool(ol_device_handle_t DeviceHandle,
+                                ol_device_info_t PropName,
+                                llvm::StringRef Label) {
+  bool Value = false;
+  if (olGetDeviceInfo(DeviceHandle, PropName, sizeof(Value), &Value))
+    return;
+  llvm::outs() << "    " << Label << ": " << (Value ? "Yes" : "No") << "\n";
+}
+
+// Print a floating point capability liboffload device info property, if
+// supported.
+static void printDeviceInfoFPCapability(ol_device_handle_t DeviceHandle,
+                                        ol_device_info_t PropName,
+                                        llvm::StringRef Label) {
+  ol_device_fp_capability_flags_t Value{};
+  if (olGetDeviceInfo(DeviceHandle, PropName, sizeof(Value), &Value))
+    return;
+  llvm::outs() << "    " << Label << ": ";
+  printFPCapabilityFlags(llvm::outs(), Value);
+  llvm::outs() << "\n";
+}
+
+// Print a string liboffload device info property, if supported.
+static void printDeviceInfoString(ol_device_handle_t DeviceHandle,
+                                  ol_device_info_t PropName,
+                                  llvm::StringRef Label) {
+  size_t Size = 0;
+  if (olGetDeviceInfoSize(DeviceHandle, PropName, &Size) || Size == 0)
+    return;
+
+  llvm::SmallVector<char> Value(Size);
+  if (olGetDeviceInfo(DeviceHandle, PropName, Size, Value.data()))
+    return;
+
+  llvm::outs() << "    " << Label << ": " << Value.data() << "\n";
+}
+
 bool DeviceTy::printDeviceInfo() {
-  RTL->print_device_info(RTLDeviceID);
+  llvm::outs() << "Device " << DeviceID << ":\n";
+  printDeviceInfoScalar<ol_device_type_t>(DeviceHandle, OL_DEVICE_INFO_TYPE,
+                                          "Type");
+  printDeviceInfoScalar<ol_platform_handle_t>(
+      DeviceHandle, OL_DEVICE_INFO_PLATFORM, "Platform");
+  printDeviceInfoString(DeviceHandle, OL_DEVICE_INFO_NAME, "Name");
+  printDeviceInfoString(DeviceHandle, OL_DEVICE_INFO_PRODUCT_NAME,
+                        "Product Name");
+  printDeviceInfoString(DeviceHandle, OL_DEVICE_INFO_UID, "UID");
+  printDeviceInfoString(DeviceHandle, OL_DEVICE_INFO_VENDOR, "Vendor");
+  printDeviceInfoString(DeviceHandle, OL_DEVICE_INFO_DRIVER_VERSION,
+                        "Driver Version");
+  printDeviceInfoScalar<uint32_t>(
+      DeviceHandle, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE, "Max Work Group Size");
+  printDeviceInfoScalar<ol_dimensions_t>(
+      DeviceHandle, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION,
+      "Max Work Group Size Per Dimension");
+  printDeviceInfoScalar<uint32_t>(DeviceHandle, OL_DEVICE_INFO_MAX_WORK_SIZE,
+                                  "Max Work Size");
+  printDeviceInfoScalar<ol_dimensions_t>(
+      DeviceHandle, OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION,
+      "Max Work Size Per Dimension");
+  printDeviceInfoScalar<uint32_t>(DeviceHandle, OL_DEVICE_INFO_VENDOR_ID,
+                                  "Vendor ID");
+  printDeviceInfoScalar<uint32_t>(DeviceHandle,
+                                  OL_DEVICE_INFO_NUM_COMPUTE_UNITS,
+                                  "Number of Compute Units");
+  printDeviceInfoScalar<uint32_t>(DeviceHandle,
+                                  OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY,
+                                  "Max Clock Frequency", "MHz");
+  printDeviceInfoScalar<uint32_t>(DeviceHandle,
+                                  OL_DEVICE_INFO_MEMORY_CLOCK_RATE,
+                                  "Memory Clock Rate", "MHz");
+  printDeviceInfoScalar<uint32_t>(DeviceHandle, OL_DEVICE_INFO_ADDRESS_BITS,
+                                  "Address Bits");
+  printDeviceInfoScalar<uint64_t>(DeviceHandle,
+                                  OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE,
+                                  "Max Memory Allocation Size", "B");
+  printDeviceInfoScalar<uint64_t>(DeviceHandle, OL_DEVICE_INFO_GLOBAL_MEM_SIZE,
+                                  "Global Memory Size", "B");
+  printDeviceInfoScalar<uint64_t>(DeviceHandle,
+                                  OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE,
+                                  "Work Group Local Memory Size", "B");
+  printDeviceInfoScalar<uint32_t>(DeviceHandle, OL_DEVICE_INFO_NUM_LANES,
+                                  "Number of Lanes");
+  printDeviceInfoBool(DeviceHandle, OL_DEVICE_INFO_SINGLE_FP_SUPPORT,
+                      "Single Precision Floating Point Support");
+  printDeviceInfoFPCapability(DeviceHandle, OL_DEVICE_INFO_SINGLE_FP_CONFIG,
+                              "Single Precision Floating Point Capability");
+  printDeviceInfoBool(DeviceHandle, OL_DEVICE_INFO_DOUBLE_FP_SUPPORT,
+                      "Double Precision Floating Point Support");
+  printDeviceInfoFPCapability(DeviceHandle, OL_DEVICE_INFO_DOUBLE_FP_CONFIG,
+                              "Double Precision Floating Point Capability");
+  printDeviceInfoBool(DeviceHandle, OL_DEVICE_INFO_HALF_FP_SUPPORT,
+                      "Half Precision Floating Point Support");
+  printDeviceInfoFPCapability(DeviceHandle, OL_DEVICE_INFO_HALF_FP_CONFIG,
+                              "Half Precision Floating Point Capability");
+  printDeviceInfoScalar<uint32_t>(DeviceHandle,
+                                  OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_CHAR,
+                                  "Native Vector Width For Char");
+  printDeviceInfoScalar<uint32_t>(DeviceHandle,
+                                  OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_SHORT,
+                                  "Native Vector Width For Short");
+  printDeviceInfoScalar<uint32_t>(DeviceHandle,
+                                  OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_INT,
+                                  "Native Vector Width For Int");
+  printDeviceInfoScalar<uint32_t>(DeviceHandle,
+                                  OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_LONG,
+                                  "Native Vector Width For Long");
+  printDeviceInfoScalar<uint32_t>(DeviceHandle,
+                                  OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT,
+                                  "Native Vector Width For Float");
+  printDeviceInfoScalar<uint32_t>(DeviceHandle,
+                                  OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE,
+                                  "Native Vector Width For Double");
+  printDeviceInfoScalar<uint32_t>(DeviceHandle,
+                                  OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF,
+                                  "Native Vector Width For Half");
+  printDeviceInfoBool(DeviceHandle, OL_DEVICE_INFO_COOPERATIVE_LAUNCH_SUPPORT,
+                      "Cooperative Kernel Launch Support");
+  printDeviceInfoScalar<uint32_t>(DeviceHandle, OL_DEVICE_INFO_DRIVER_ID,
+                                  "Driver ID");
   return true;
 }
 
