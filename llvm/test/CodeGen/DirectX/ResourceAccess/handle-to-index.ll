@@ -49,6 +49,43 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: updatecounter_handle_select(
+; CHECK-SAME:   i1 %[[COND:.*]])
+define i32 @updatecounter_handle_select(i1 %cond) {
+; CHECK-NOT: handlefromimplicitbinding
+; CHECK:     entry:
+; CHECK-NEXT:  %[[IDX:.*]] = select i1 %[[COND]], i32 0, i32 1
+; CHECK-NEXT:  %[[HANDLE:.*]] = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 %[[IDX]], ptr nonnull @OutArr.str)
+; CHECK-NEXT:  %[[COUNT:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %[[HANDLE]], i8 1)
+; CHECK-NEXT:  ret i32 %[[COUNT]]
+entry:
+  %handle0 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 0, ptr nonnull @OutArr.str)
+  %handle1 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 1, ptr nonnull @OutArr.str)
+  %handle = select i1 %cond, target("dx.RawBuffer", i32, 1, 0) %handle0, target("dx.RawBuffer", i32, 1, 0) %handle1
+  %count = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %handle, i8 1)
+  ret i32 %count
+}
+
+; CHECK-LABEL: multiple_use_handle_updatecounter(
+; CHECK-SAME:   i1 %[[COND:.*]])
+define void @multiple_use_handle_updatecounter(i1 %cond) {
+; CHECK-NOT: handlefromimplicitbinding
+; CHECK:     entry:
+; CHECK-NEXT: %[[HANDLE0:.*]] = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 0, ptr nonnull @OutArr.str)
+; CHECK-NEXT:  %[[IDX:.*]] = select i1 %[[COND]], i32 0, i32 1
+; CHECK-NEXT:  %[[HANDLE:.*]] = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 %[[IDX]], ptr nonnull @OutArr.str)
+; CHECK-NEXT:  %[[COUNT0:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %[[HANDLE]], i8 1)
+; CHECK-NEXT:  %[[COUNT1:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %[[HANDLE0]], i8 -1)
+; CHECK-NEXT:  ret void
+entry:
+  %handle0 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 0, ptr nonnull @OutArr.str)
+  %handle1 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 1, ptr nonnull @OutArr.str)
+  %handle = select i1 %cond, target("dx.RawBuffer", i32, 1, 0) %handle0, target("dx.RawBuffer", i32, 1, 0) %handle1
+  %count0 = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %handle, i8 1)
+  %count1 = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %handle0, i8 -1)
+  ret void
+}
+
 ; CHECK-LABEL: ptr_phi_store(
 ; CHECK-SAME:   i32 %[[X:.*]], i1 %[[COND:.*]], i32 %[[A:.*]], i32 %[[B:.*]])
 define void @ptr_phi_store(i32 %x, i1 %cond, i32 %a, i32 %b) {
