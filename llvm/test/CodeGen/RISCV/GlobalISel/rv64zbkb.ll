@@ -4,7 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -global-isel -mattr=+zbkb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64ZBKB
 
-; FIXME: Use packw
 define signext i32 @pack_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: pack_i32:
 ; RV64I:       # %bb.0:
@@ -24,7 +23,6 @@ define signext i32 @pack_i32(i32 signext %a, i32 signext %b) nounwind {
   ret i32 %or
 }
 
-; FIXME: Use packw
 define signext i32 @pack_i32_2(i16 zeroext %a, i16 zeroext %b) nounwind {
 ; RV64I-LABEL: pack_i32_2:
 ; RV64I:       # %bb.0:
@@ -45,7 +43,6 @@ define signext i32 @pack_i32_2(i16 zeroext %a, i16 zeroext %b) nounwind {
 }
 
 ; Test case where we don't have a sign_extend_inreg after the or.
-; FIXME: Use packw
 define signext i32 @pack_i32_3(i16 zeroext %0, i16 zeroext %1, i32 signext %2) {
 ; RV64I-LABEL: pack_i32_3:
 ; RV64I:       # %bb.0:
