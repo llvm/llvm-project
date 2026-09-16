@@ -58,7 +58,7 @@ void printErrorAndExit(Twine ErrMsg) {
   errs() << "error: " << ErrMsg.str() << "\n\n"
          << "Usage:\n"
          << "  llvm-jitlink-executor " << DebugOption
-         << "[test-jitloadergdb] filedescs=<infd>,<outfd> [args...]\n"
+         << "[test-jitloadergdb] fd=<sockfd> [args...]\n"
          << "  llvm-jitlink-executor " << DebugOption
          << "[test-jitloadergdb] listen=<host>:<port> [args...]\n";
   exit(1);
