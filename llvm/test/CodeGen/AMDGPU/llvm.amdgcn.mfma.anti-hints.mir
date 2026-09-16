@@ -13,7 +13,7 @@
   define amdgpu_kernel void @anti_hints_av_class_applied_to_agpr() #2 { ret void }
   attributes #0 = { nounwind "amdgpu-agpr-alloc"="0" "frame-pointer"="none"}
   attributes #1 = { nounwind "frame-pointer"="none"}
-  attributes #2 = { nounwind "frame-pointer"="none" "amdgpu-num-vgpr"="20" "amdgpu-agpr-alloc"="36"}
+  attributes #2 = { nounwind "frame-pointer"="none" "amdgpu-waves-per-eu"="8,8" "amdgpu-agpr-alloc"="60"}
 ...
 
 ---
