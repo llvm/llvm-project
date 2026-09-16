@@ -15,22 +15,30 @@ DEFINE_DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(OffsetSymbol)
 
 std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
     const Symbol &symbol, ConstantSubscript which) {
-  if (!getLastComponent_ && IsAllocatableOrPointer(symbol)) {
+  // A named constant is used through its ultimate symbol: the local alias
+  // of a use- or host-associated named constant has no object details of
+  // its own.  Variables are deliberately not resolved this way here, so
+  // that the default behavior is unchanged.
+  const Symbol *object{&symbol};
+  if (foldNamedConstants_ && IsNamedConstant(symbol.GetUltimate())) {
+    object = &symbol.GetUltimate();
+  }
+  if (!getLastComponent_ && IsAllocatableOrPointer(*object)) {
     // A pointer may appear as a DATA statement object if it is the
     // rightmost symbol in a designator and has no subscripts.
     // An allocatable may appear if its initializer is NULL().
     if (which > 0) {
       isEmpty_ = true;
     } else {
-      return OffsetSymbol{symbol, symbol.size()};
+      return OffsetSymbol{*object, object->size()};
     }
-  } else if (symbol.has<semantics::ObjectEntityDetails>() &&
-      !IsNamedConstant(symbol)) {
-    if (auto type{DynamicType::From(symbol)}) {
-      if (auto extents{GetConstantExtents(context_, symbol)}) {
+  } else if (object->has<semantics::ObjectEntityDetails>() &&
+      (foldNamedConstants_ || !IsNamedConstant(*object))) {
+    if (auto type{DynamicType::From(*object)}) {
+      if (auto extents{GetConstantExtents(context_, *object)}) {
         if (auto bytes{ToInt64(
                 type->MeasureSizeInBytes(context_, GetRank(*extents) > 0))}) {
-          OffsetSymbol result{symbol, static_cast<std::size_t>(*bytes)};
+          OffsetSymbol result{*object, static_cast<std::size_t>(*bytes)};
           if (which < GetSize(*extents)) {
             result.Augment(*bytes * which);
             return result;
