@@ -5,6 +5,7 @@ define void @main() {
   %cttz_some = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> <i1 false, i1 false, i1 true, i1 false>, i1 true)
   %cttz_all = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> zeroinitializer, i1 false)
   %cttz_poison = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> zeroinitializer, i1 true)
+  %cttz_poison_elt = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> <i1 false, i1 true, i1 poison, i1 false>, i1 false)
 
   %evl_zero = call i32 @llvm.experimental.get.vector.length.i32(i32 0, i32 4, i1 false)
   %evl_short = call i32 @llvm.experimental.get.vector.length.i32(i32 3, i32 4, i1 false)
@@ -79,6 +80,7 @@ define void @main() {
 ; CHECK-NEXT:   %cttz_some = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> <i1 false, i1 false, i1 true, i1 false>, i1 true) => i8 2
 ; CHECK-NEXT:   %cttz_all = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> zeroinitializer, i1 false) => i8 4
 ; CHECK-NEXT:   %cttz_poison = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> zeroinitializer, i1 true) => poison
+; CHECK-NEXT:   %cttz_poison_elt = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> <i1 false, i1 true, i1 poison, i1 false>, i1 false) => i8 1
 ; CHECK-NEXT:   %evl_zero = call i32 @llvm.experimental.get.vector.length.i32(i32 0, i32 4, i1 false) => i32 0
 ; CHECK-NEXT:   %evl_short = call i32 @llvm.experimental.get.vector.length.i32(i32 3, i32 4, i1 false) => i32 3
 ; CHECK-NEXT:   %evl_full = call i32 @llvm.experimental.get.vector.length.i32(i32 9, i32 4, i1 false) => i32 3
