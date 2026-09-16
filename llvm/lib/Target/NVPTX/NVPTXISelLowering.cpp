@@ -3320,8 +3320,7 @@ static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG) {
   }
 
   // Approximate (frem x, y) with x - trunc(x / y) * y. This requires afn:
-  // rounding or overflow in the quotient can produce an incorrect remainder,
-  // even when the division is correctly rounded and the subtraction is fused.
+  // rounding or overflow in the quotient can produce an incorrect remainder.
   SDValue Div = DAG.getNode(ISD::FDIV, DL, Ty, X, Y, Flags);
   SDValue Trunc = DAG.getNode(ISD::FTRUNC, DL, Ty, Div, Flags);
   SDValue Mul = DAG.getNode(ISD::FMUL, DL, Ty, Trunc, Y,
