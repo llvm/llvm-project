@@ -251,8 +251,6 @@ private:
   void emitFunctionParamList(const Function *, raw_ostream &O);
   void setAndEmitFunctionVirtualRegisters(const MachineFunction &MF);
   void encodeDebugInfoRegisterNumbers(const MachineFunction &MF);
-  void printReturnValStr(const Function *, raw_ostream &O);
-  void printReturnValStr(const MachineFunction &MF, raw_ostream &O);
   void emitCallPrototype(const CallBase &CB, unsigned UniqueCallSite,
                          raw_ostream &O) const;
   void emitJumpTable(const MachineJumpTableEntry &MJT, unsigned MJTI) const;
@@ -313,14 +311,16 @@ private:
   // List of variables demoted to a function scope.
   std::map<const Function *, std::vector<const GlobalVariable *>> localDecls;
 
-  void emitPTXGlobalVariable(const GlobalVariable *GVar, raw_ostream &O,
-                             const NVPTXSubtarget &STI);
+  /// Print the state space, alignment, type, name, and — when
+  /// \p EmitInitializer is set — the initializer of \p GVar. Passing false
+  /// prints a declaration whose type still matches the definition, as an
+  /// `.extern` forward declaration requires.
   void emitPTXGlobalVariableDefinition(const GlobalVariable *GVar,
                                        raw_ostream &O,
                                        const NVPTXSubtarget &STI,
                                        bool EmitInitializer);
   void emitPTXAddressSpace(unsigned int AddressSpace, raw_ostream &O) const;
-  std::string getPTXFundamentalTypeStr(Type *Ty, bool = true) const;
+  std::string getPTXFundamentalTypeStr(Type *Ty) const;
   void printScalarConstant(const Constant *CPV, raw_ostream &O);
   void printFPConstant(const ConstantFP *Fp, raw_ostream &O) const;
   void bufferLEByte(const Constant *CPV, int Bytes, AggBuffer *aggBuffer);
@@ -373,21 +373,6 @@ public:
 };
 
 } // end anonymous namespace
-
-static StringRef getTextureName(const Value &V) {
-  assert(V.hasName() && "Found texture variable with no name");
-  return V.getName();
-}
-
-static StringRef getSurfaceName(const Value &V) {
-  assert(V.hasName() && "Found surface variable with no name");
-  return V.getName();
-}
-
-static StringRef getSamplerName(const Value &V) {
-  assert(V.hasName() && "Found sampler variable with no name");
-  return V.getName();
-}
 
 /// Emits initial debug location directive.
 static void emitInitialRawDwarfLocDirective(const MachineFunction &MF,
@@ -690,42 +675,45 @@ MCOperand NVPTXAsmPrinter::GetSymbolRef(const MCSymbol *Symbol) {
   return MCOperand::createExpr(Expr);
 }
 
-void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
-  const DataLayout &DL = getDataLayout();
-  const NVPTXSubtarget &STI = TM.getSubtarget<NVPTXSubtarget>(*F);
-  const auto *TLI = cast<NVPTXTargetLowering>(STI.getTargetLowering());
+template <typename OwnerT>
+static void printParam(const OwnerT *Owner, Type *Ty, unsigned AttrIdx,
+                       bool IsByVal, bool IsKernel, StringRef Name,
+                       const DataLayout &DL, raw_ostream &O) {
+  O << ".param ";
 
-  Type *Ty = F->getReturnType();
-  // A void or zero-sized return type (e.g. an empty struct) produces no return
-  // parameter.
-  if (Ty->isVoidTy() || Ty->isEmptyTy())
+  if (IsByVal || shouldPassAsArray(Ty)) {
+    const Align ParamAlign =
+        IsByVal && !IsKernel ? getDeviceByValParamAlign(Owner, Ty, AttrIdx, DL)
+                             : getPTXParamAlign(Owner, Ty, AttrIdx, DL);
+    O << ".align " << ParamAlign.value() << " .b8 " << Name << "["
+      << DL.getTypeAllocSize(Ty) << "]";
     return;
-  O << " (";
+  }
 
-  auto PrintScalarRetVal = [&](unsigned Size) {
-    O << ".param .b" << promoteScalarArgumentSize(Size) << " func_retval0";
-  };
-  if (shouldPassAsArray(Ty)) {
-    const unsigned TotalSize = DL.getTypeAllocSize(Ty);
-    const Align RetAlignment =
-        getPTXParamAlign(F, Ty, AttributeList::ReturnIndex, DL);
-    O << ".param .align " << RetAlignment.value() << " .b8 func_retval0["
-      << TotalSize << "]";
-  } else if (Ty->isFloatingPointTy()) {
-    PrintScalarRetVal(Ty->getPrimitiveSizeInBits());
-  } else if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
-    PrintScalarRetVal(ITy->getBitWidth());
-  } else if (isa<PointerType>(Ty)) {
-    PrintScalarRetVal(TLI->getPointerTy(DL).getSizeInBits());
-  } else
-    llvm_unreachable("Unknown return type");
-  O << ") ";
+  assert((Ty->isFloatingPointTy() || Ty->isIntOrPtrTy()) &&
+         "Unknown parameter type");
+  const unsigned Size = DL.getTypeSizeInBits(Ty).getFixedValue();
+  O << ".b"
+    << (IsKernel ? promoteScalarKernelArgumentSize(Size)
+                 : promoteScalarArgumentSize(Size))
+    << " " << Name;
 }
 
-void NVPTXAsmPrinter::printReturnValStr(const MachineFunction &MF,
-                                        raw_ostream &O) {
-  const Function &F = MF.getFunction();
-  printReturnValStr(&F, O);
+template <typename OwnerT>
+static void printReturnValClause(const OwnerT *Owner, StringRef Name,
+                                 const DataLayout &DL, raw_ostream &O) {
+  Type *RetTy = Owner->getFunctionType()->getReturnType();
+
+  // A void or zero-sized return type (e.g. an empty struct) produces no return
+  // parameter.
+  if (RetTy->isVoidTy() || RetTy->isEmptyTy())
+    return;
+
+  // Only device functions return a value, so no kernel promotion applies.
+  O << "(";
+  printParam(Owner, RetTy, AttributeList::ReturnIndex, /*IsByVal=*/false,
+             /*IsKernel=*/false, Name, DL, O);
+  O << ") ";
 }
 
 void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
@@ -733,75 +721,18 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
                                         raw_ostream &O) const {
   const DataLayout &DL = getDataLayout();
   const NVPTXSubtarget &STI = MF->getSubtarget<NVPTXSubtarget>();
-  const auto *TLI = cast<NVPTXTargetLowering>(STI.getTargetLowering());
-  const auto PtrVT = TLI->getPointerTy(DL);
-  Type *RetTy = CB.getFunctionType()->getReturnType();
 
   O << "prototype_" << UniqueCallSite << " : .callprototype ";
-
-  if (RetTy->isVoidTy() || RetTy->isEmptyTy()) {
-    O << "()";
-  } else {
-    O << "(";
-    if (shouldPassAsArray(RetTy)) {
-      const Align RetAlign =
-          getPTXParamAlign(&CB, RetTy, AttributeList::ReturnIndex, DL);
-      O << ".param .align " << RetAlign.value() << " .b8 _["
-        << DL.getTypeAllocSize(RetTy) << "]";
-    } else if (RetTy->isFloatingPointTy() || RetTy->isIntegerTy()) {
-      unsigned size = 0;
-      if (auto *ITy = dyn_cast<IntegerType>(RetTy)) {
-        size = ITy->getBitWidth();
-      } else {
-        assert(RetTy->isFloatingPointTy() &&
-               "Floating point type expected here");
-        size = RetTy->getPrimitiveSizeInBits();
-      }
-      // PTX ABI requires all scalar return values to be at least 32
-      // bits in size.  fp16 normally uses .b16 as its storage type in
-      // PTX, so its size must be adjusted here, too.
-      size = promoteScalarArgumentSize(size);
-
-      O << ".param .b" << size << " _";
-    } else if (isa<PointerType>(RetTy)) {
-      O << ".param .b" << PtrVT.getSizeInBits() << " _";
-    } else {
-      llvm_unreachable("Unknown return type");
-    }
-    O << ") ";
-  }
+  printReturnValClause(&CB, "_", DL, O);
   O << "_ (";
 
   auto MakeArg = [&](const unsigned I) {
-    Type *Ty = CB.getArgOperand(I)->getType();
+    const bool IsByVal = CB.isByValArgument(I);
+    Type *Ty =
+        IsByVal ? CB.getParamByValType(I) : CB.getArgOperand(I)->getType();
 
-    if (CB.isByValArgument(I)) {
-      Type *ETy = CB.getParamByValType(I);
-      Align ParamByValAlign = getDeviceByValParamAlign(
-          &CB, ETy, I + AttributeList::FirstArgIndex, DL);
-
-      O << ".param .align " << ParamByValAlign.value() << " .b8 _["
-        << DL.getTypeAllocSize(ETy) << "]";
-      return;
-    }
-
-    if (shouldPassAsArray(Ty)) {
-      Align ParamAlign =
-          getPTXParamAlign(&CB, Ty, I + AttributeList::FirstArgIndex, DL);
-      O << ".param .align " << ParamAlign.value() << " .b8 _["
-        << DL.getTypeAllocSize(Ty) << "]";
-      return;
-    }
-    // scalar type
-    unsigned sz = 0;
-    if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
-      sz = promoteScalarArgumentSize(ITy->getBitWidth());
-    } else if (isa<PointerType>(Ty)) {
-      sz = PtrVT.getSizeInBits();
-    } else {
-      sz = Ty->getPrimitiveSizeInBits();
-    }
-    O << ".param .b" << sz << " _";
+    printParam(&CB, Ty, I + AttributeList::FirstArgIndex, IsByVal,
+               /*IsKernel=*/false, "_", DL, O);
   };
 
   const FunctionType *FTy = CB.getFunctionType();
@@ -897,7 +828,7 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
     O << ".entry ";
   else {
     O << ".func ";
-    printReturnValStr(*MF, O);
+    printReturnValClause(F, "func_retval0", getDataLayout(), O);
   }
 
   CurrentFnSym->print(O, MAI);
@@ -1066,11 +997,12 @@ void NVPTXAsmPrinter::emitDeclaration(const Function *F, raw_ostream &O) {
 void NVPTXAsmPrinter::emitDeclarationWithName(const Function *F, MCSymbol *S,
                                               raw_ostream &O) {
   emitLinkageDirective(F, O);
-  if (isKernelFunction(*F))
+  if (isKernelFunction(*F)) {
     O << ".entry ";
-  else
+  } else {
     O << ".func ";
-  printReturnValStr(F, O);
+    printReturnValClause(F, "func_retval0", getDataLayout(), O);
+  }
   S->print(O, MAI);
   O << "\n";
   emitFunctionParamList(F, O);
@@ -1434,12 +1366,16 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
   const PTXOpaqueType OpaqueType = getPTXOpaqueType(*GVar);
 
   if (OpaqueType == PTXOpaqueType::Texture) {
-    O << ".global .texref " << getTextureName(*GVar) << ";\n";
+    O << ".global .texref ";
+    getSymbol(GVar)->print(O, MAI);
+    O << ";\n";
     return;
   }
 
   if (OpaqueType == PTXOpaqueType::Surface) {
-    O << ".global .surfref " << getSurfaceName(*GVar) << ";\n";
+    O << ".global .surfref ";
+    getSymbol(GVar)->print(O, MAI);
+    O << ";\n";
     return;
   }
 
@@ -1447,13 +1383,14 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     // (extern) declarations, no definition or initializer
     // Currently the only known declaration is for an automatic __local
     // (.shared) promoted to global.
-    emitPTXGlobalVariable(GVar, O, STI);
+    emitPTXGlobalVariableDefinition(GVar, O, STI, /*EmitInitializer=*/false);
     O << ";\n";
     return;
   }
 
   if (OpaqueType == PTXOpaqueType::Sampler) {
-    O << ".global .samplerref " << getSamplerName(*GVar);
+    O << ".global .samplerref ";
+    getSymbol(GVar)->print(O, MAI);
 
     const Constant *Initializer = nullptr;
     if (GVar->hasInitializer())
@@ -1542,7 +1479,6 @@ void NVPTXAsmPrinter::emitPTXGlobalVariableDefinition(
 
   Type *ETy = GVar->getValueType();
 
-  O << ".";
   emitPTXAddressSpace(GVar->getAddressSpace(), O);
 
   if (isManaged(*GVar)) {
@@ -1555,115 +1491,87 @@ void NVPTXAsmPrinter::emitPTXGlobalVariableDefinition(
   O << " .align "
     << GVar->getAlign().value_or(DL.getPrefTypeAlign(ETy)).value();
 
+  const Constant *Initializer = nullptr;
+  if (GVar->hasInitializer()) {
+    const Constant *Init = GVar->getInitializer();
+    if (!Init->isNullValue() && !isa<UndefValue>(Init)) {
+      if (GVar->getAddressSpace() != ADDRESS_SPACE_GLOBAL &&
+          GVar->getAddressSpace() != ADDRESS_SPACE_CONST)
+        report_fatal_error("initial value of '" + GVar->getName() +
+                           "' is not allowed in addrspace(" +
+                           Twine(GVar->getAddressSpace()) + ")");
+      Initializer = Init;
+    }
+  }
+
   if (ETy->isPointerTy() || ((ETy->isIntegerTy() || ETy->isFloatingPointTy()) &&
                              ETy->getScalarSizeInBits() <= 64)) {
-    O << " .";
-    // Special case: ABI requires that we use .u8 for predicates
-    if (ETy->isIntegerTy(1))
-      O << "u8";
-    else
-      O << getPTXFundamentalTypeStr(ETy, false);
-    O << " ";
+    O << " ." << getPTXFundamentalTypeStr(ETy) << " ";
     getSymbol(GVar)->print(O, MAI);
 
-    // Ptx allows variable initilization only for constant and global state
-    // spaces.
-    if (EmitInitializer && GVar->hasInitializer()) {
-      if ((GVar->getAddressSpace() == ADDRESS_SPACE_GLOBAL) ||
-          (GVar->getAddressSpace() == ADDRESS_SPACE_CONST)) {
-        const Constant *Initializer = GVar->getInitializer();
-        // 'undef' is treated as there is no value specified.
-        if (!Initializer->isNullValue() && !isa<UndefValue>(Initializer)) {
-          O << " = ";
-          printScalarConstant(Initializer, O);
-        }
-      } else {
-        // The frontend adds zero-initializer to device and constant variables
-        // that don't have an initial value, and UndefValue to shared
-        // variables, so skip warning for this case.
-        if (!GVar->getInitializer()->isNullValue() &&
-            !isa<UndefValue>(GVar->getInitializer())) {
-          report_fatal_error("initial value of '" + GVar->getName() +
-                             "' is not allowed in addrspace(" +
-                             Twine(GVar->getAddressSpace()) + ")");
-        }
+    if (EmitInitializer && Initializer) {
+      O << " = ";
+      printScalarConstant(Initializer, O);
+    }
+    return;
+  }
+
+  // Although PTX has direct support for struct type and array type and LLVM IR
+  // is very similar to PTX, the LLVM CodeGen does not support for targets that
+  // support these high level field accesses. Structs, arrays and vectors are
+  // lowered into arrays of bytes.
+  assert((ETy->isIntegerTy() || ETy->isFP128Ty() || ETy->isAggregateType() ||
+          isa<FixedVectorType>(ETy)) &&
+         "type not supported yet");
+
+  const uint64_t ElementSize = DL.getTypeStoreSize(ETy);
+
+  if (!Initializer) {
+    O << " .b8 ";
+    getSymbol(GVar)->print(O, MAI);
+    if (ElementSize)
+      O << "[" << ElementSize << "]";
+    else if (!EmitInitializer)
+      O << "[]";
+    return;
+  }
+
+  AggBuffer aggBuffer(ElementSize, *this);
+  bufferAggregateConstant(Initializer, &aggBuffer);
+  if (aggBuffer.numSymbols()) {
+    const unsigned int ptrSize = MAI.getCodePointerSize();
+    if (ElementSize % ptrSize || !aggBuffer.allSymbolsAligned(ptrSize)) {
+      // Print in bytes and use the mask() operator for pointers.
+      if (!STI.hasMaskOperator())
+        report_fatal_error("initialized packed aggregate with pointers '" +
+                           GVar->getName() +
+                           "' requires at least PTX ISA version 7.1");
+      O << " .u8 ";
+      getSymbol(GVar)->print(O, MAI);
+      O << "[" << ElementSize << "]";
+      if (EmitInitializer) {
+        O << " = {";
+        aggBuffer.printBytes(O);
+        O << "}";
+      }
+    } else {
+      O << " .u" << ptrSize * 8 << " ";
+      getSymbol(GVar)->print(O, MAI);
+      O << "[" << ElementSize / ptrSize << "]";
+      if (EmitInitializer) {
+        O << " = {";
+        aggBuffer.printWords(O);
+        O << "}";
       }
     }
   } else {
-    // Although PTX has direct support for struct type and array type and
-    // LLVM IR is very similar to PTX, the LLVM CodeGen does not support for
-    // targets that support these high level field accesses. Structs, arrays
-    // and vectors are lowered into arrays of bytes.
-    switch (ETy->getTypeID()) {
-    case Type::IntegerTyID: // Integers larger than 64 bits
-    case Type::FP128TyID:
-    case Type::StructTyID:
-    case Type::ArrayTyID:
-    case Type::FixedVectorTyID: {
-      const uint64_t ElementSize = DL.getTypeStoreSize(ETy);
-      // Ptx allows variable initilization only for constant and
-      // global state spaces.
-      if (((GVar->getAddressSpace() == ADDRESS_SPACE_GLOBAL) ||
-           (GVar->getAddressSpace() == ADDRESS_SPACE_CONST)) &&
-          GVar->hasInitializer()) {
-        const Constant *Initializer = GVar->getInitializer();
-        if (!isa<UndefValue>(Initializer) && !Initializer->isNullValue()) {
-          AggBuffer aggBuffer(ElementSize, *this);
-          bufferAggregateConstant(Initializer, &aggBuffer);
-          if (aggBuffer.numSymbols()) {
-            const unsigned int ptrSize = MAI.getCodePointerSize();
-            if (ElementSize % ptrSize ||
-                !aggBuffer.allSymbolsAligned(ptrSize)) {
-              // Print in bytes and use the mask() operator for pointers.
-              if (!STI.hasMaskOperator())
-                report_fatal_error(
-                    "initialized packed aggregate with pointers '" +
-                    GVar->getName() +
-                    "' requires at least PTX ISA version 7.1");
-              O << " .u8 ";
-              getSymbol(GVar)->print(O, MAI);
-              O << "[" << ElementSize << "]";
-              if (EmitInitializer) {
-                O << " = {";
-                aggBuffer.printBytes(O);
-                O << "}";
-              }
-            } else {
-              O << " .u" << ptrSize * 8 << " ";
-              getSymbol(GVar)->print(O, MAI);
-              O << "[" << ElementSize / ptrSize << "]";
-              if (EmitInitializer) {
-                O << " = {";
-                aggBuffer.printWords(O);
-                O << "}";
-              }
-            }
-          } else {
-            O << " .b8 ";
-            getSymbol(GVar)->print(O, MAI);
-            O << "[" << ElementSize << "]";
-            if (EmitInitializer) {
-              O << " = {";
-              aggBuffer.printBytes(O);
-              O << "}";
-            }
-          }
-        } else {
-          O << " .b8 ";
-          getSymbol(GVar)->print(O, MAI);
-          if (ElementSize)
-            O << "[" << ElementSize << "]";
-        }
-      } else {
-        O << " .b8 ";
-        getSymbol(GVar)->print(O, MAI);
-        if (ElementSize)
-          O << "[" << ElementSize << "]";
-      }
-      break;
-    }
-    default:
-      llvm_unreachable("type not supported yet");
+    O << " .b8 ";
+    getSymbol(GVar)->print(O, MAI);
+    O << "[" << ElementSize << "]";
+    if (EmitInitializer) {
+      O << " = {";
+      aggBuffer.printBytes(O);
+      O << "}";
     }
   }
 }
@@ -1769,127 +1677,65 @@ void NVPTXAsmPrinter::emitDemotedVars(const Function *F, raw_ostream &O) {
   }
 }
 
-void NVPTXAsmPrinter::emitPTXAddressSpace(unsigned int AddressSpace,
-                                          raw_ostream &O) const {
+/// The PTX state space directive for \p AddressSpace, or an empty string if it
+/// does not name one, as is the case for the generic address space.
+static StringRef getPTXAddressSpaceName(unsigned AddressSpace) {
   switch (AddressSpace) {
   case ADDRESS_SPACE_LOCAL:
-    O << "local";
-    break;
+    return ".local";
   case ADDRESS_SPACE_GLOBAL:
-    O << "global";
-    break;
+    return ".global";
   case ADDRESS_SPACE_CONST:
-    O << "const";
-    break;
+    return ".const";
   case ADDRESS_SPACE_SHARED:
-    O << "shared";
-    break;
+    return ".shared";
   default:
-    report_fatal_error("Bad address space found while emitting PTX: " +
-                       llvm::Twine(AddressSpace));
-    break;
+    return {};
   }
 }
 
-std::string
-NVPTXAsmPrinter::getPTXFundamentalTypeStr(Type *Ty, bool useB4PTR) const {
+/// The PTX opaque type directive for an image or sampler handle, or an empty
+/// string for PTXOpaqueType::None.
+static StringRef getPTXOpaqueTypeName(PTXOpaqueType OpaqueType) {
+  switch (OpaqueType) {
+  case PTXOpaqueType::Sampler:
+    return ".samplerref";
+  case PTXOpaqueType::Texture:
+    return ".texref";
+  case PTXOpaqueType::Surface:
+    return ".surfref";
+  case PTXOpaqueType::None:
+    return {};
+  }
+  llvm_unreachable("unexpected PTXOpaqueType");
+}
+
+void NVPTXAsmPrinter::emitPTXAddressSpace(unsigned int AddressSpace,
+                                          raw_ostream &O) const {
+  const StringRef Name = getPTXAddressSpaceName(AddressSpace);
+  if (Name.empty())
+    report_fatal_error("Bad address space found while emitting PTX: " +
+                       llvm::Twine(AddressSpace));
+  O << Name;
+}
+
+std::string NVPTXAsmPrinter::getPTXFundamentalTypeStr(Type *Ty) const {
   switch (Ty->getTypeID()) {
-  case Type::IntegerTyID: {
-    unsigned NumBits = cast<IntegerType>(Ty)->getBitWidth();
-    if (NumBits == 1)
-      return "pred";
-    if (NumBits <= 64) {
-      std::string name = "u";
-      return name + utostr(NumBits);
-    }
-    llvm_unreachable("Integer too large");
-    break;
+  case Type::IntegerTyID:
+  case Type::PointerTyID: {
+    const uint64_t NumBits = getDataLayout().getTypeStoreSizeInBits(Ty);
+    assert(NumBits <= 64 && "type too large");
+    return "u" + utostr(promoteScalarKernelArgumentSize(NumBits));
   }
   case Type::BFloatTyID:
   case Type::HalfTyID:
-    // fp16 and bf16 are stored as .b16 for compatibility with pre-sm_53
-    // PTX assembly.
-    return "b16";
   case Type::FloatTyID:
-    return "f32";
   case Type::DoubleTyID:
-    return "f64";
-  case Type::PointerTyID: {
-    unsigned PtrSize = TM.getPointerSizeInBits(Ty->getPointerAddressSpace());
-    assert((PtrSize == 64 || PtrSize == 32) && "Unexpected pointer size");
-
-    if (PtrSize == 64)
-      if (useB4PTR)
-        return "b64";
-      else
-        return "u64";
-    else if (useB4PTR)
-      return "b32";
-    else
-      return "u32";
-  }
+    return "b" + utostr(Ty->getScalarSizeInBits());
   default:
     break;
   }
   llvm_unreachable("unexpected type");
-}
-
-void NVPTXAsmPrinter::emitPTXGlobalVariable(const GlobalVariable *GVar,
-                                            raw_ostream &O,
-                                            const NVPTXSubtarget &STI) {
-  const DataLayout &DL = getDataLayout();
-
-  // GlobalVariables are always constant pointers themselves.
-  Type *ETy = GVar->getValueType();
-
-  O << ".";
-  emitPTXAddressSpace(GVar->getType()->getAddressSpace(), O);
-  if (isManaged(*GVar)) {
-    if (!STI.hasFeature(NVPTX::PTX40) || !STI.hasFeature(NVPTX::SM30))
-      report_fatal_error(
-          ".attribute(.managed) requires PTX version >= 4.0 and sm_30");
-
-    O << " .attribute(.managed)";
-  }
-  O << " .align "
-    << GVar->getAlign().value_or(DL.getPrefTypeAlign(ETy)).value();
-
-  // Special case for i128/fp128
-  if (ETy->getScalarSizeInBits() == 128) {
-    O << " .b8 ";
-    getSymbol(GVar)->print(O, MAI);
-    O << "[16]";
-    return;
-  }
-
-  if (ETy->isFloatingPointTy() || ETy->isIntOrPtrTy()) {
-    O << " ." << getPTXFundamentalTypeStr(ETy) << " ";
-    getSymbol(GVar)->print(O, MAI);
-    return;
-  }
-
-  int64_t ElementSize = 0;
-
-  // Although PTX has direct support for struct type and array type and LLVM IR
-  // is very similar to PTX, the LLVM CodeGen does not support for targets that
-  // support these high level field accesses. Structs and arrays are lowered
-  // into arrays of bytes.
-  switch (ETy->getTypeID()) {
-  case Type::StructTyID:
-  case Type::ArrayTyID:
-  case Type::FixedVectorTyID:
-    ElementSize = DL.getTypeStoreSize(ETy);
-    O << " .b8 ";
-    getSymbol(GVar)->print(O, MAI);
-    O << "[";
-    if (ElementSize) {
-      O << ElementSize;
-    }
-    O << "]";
-    break;
-  default:
-    llvm_unreachable("type not supported yet");
-  }
 }
 
 void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
@@ -1899,7 +1745,6 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   const NVPTXMachineFunctionInfo *MFI =
       MF ? MF->getInfo<NVPTXMachineFunctionInfo>() : nullptr;
 
-  bool IsFirst = true;
   const bool IsKernelFunc = isKernelFunction(*F);
 
   // Zero-sized arguments (e.g. empty structs) do not produce a parameter.
@@ -1918,138 +1763,57 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
   O << "(\n";
 
-  for (const auto &[ParamIndex, Arg] : enumerate(NonEmptyArgs)) {
+  auto MakeParam = [&](const auto &IndexedArg) {
+    const auto &[ParamIndex, Arg] = IndexedArg;
     Type *Ty = Arg.getType();
     MCSymbol *const ParamSym = TLI->getParamSymbol(OutContext, F, ParamIndex);
 
-    if (!IsFirst)
-      O << ",\n";
+    O << "\t";
 
-    IsFirst = false;
+    // A byval param is passed as a copy of the pointee and an aggregate is
+    // passed as a blob of bytes; both are declared as a byte array.
+    const bool IsByVal = Arg.hasByValAttr();
+    const bool AsArray = IsByVal || shouldPassAsArray(Ty);
 
-    // Handle image/sampler parameters
-    if (IsKernelFunc) {
-      const PTXOpaqueType ArgOpaqueType = getPTXOpaqueType(Arg);
-      if (ArgOpaqueType != PTXOpaqueType::None) {
-        const bool EmitImgPtr = !MFI || !MFI->checkImageHandleSymbol(ParamSym);
-        O << "\t.param ";
-        if (EmitImgPtr)
+    // Kernels declare image/sampler handles and the address space of a
+    // pointee. Both of those are scalar handles, so a byte-array param is
+    // neither.
+    if (IsKernelFunc && !AsArray) {
+      const StringRef OpaqueType = getPTXOpaqueTypeName(getPTXOpaqueType(Arg));
+      if (!OpaqueType.empty()) {
+        O << ".param ";
+        if (!MFI || !MFI->checkImageHandleSymbol(ParamSym))
           O << ".u64 .ptr ";
 
-        switch (ArgOpaqueType) {
-        case PTXOpaqueType::Sampler:
-          O << ".samplerref ";
-          break;
-        case PTXOpaqueType::Texture:
-          O << ".texref ";
-          break;
-        case PTXOpaqueType::Surface:
-          O << ".surfref ";
-          break;
-        case PTXOpaqueType::None:
-          llvm_unreachable("handled above");
-        }
-        O << *ParamSym;
-        continue;
+        O << OpaqueType << " " << *ParamSym;
+        return;
       }
-    }
 
-    if (Arg.hasByValAttr()) {
-      // param has byVal attribute.
-      Type *ETy = Arg.getParamByValType();
-      assert(ETy && "Param should have byval type");
+      if (auto *PTy = dyn_cast<PointerType>(Ty)) {
+        const unsigned AS = PTy->getAddressSpace();
+        O << ".param .u" << DL.getPointerSizeInBits(AS) << " .ptr";
 
-      // Print .param .align <a> .b8 .param[size];
-      // <a>  = optimal alignment for the element type; always multiple of
-      //        PAL.getParamAlignment
-      // size = typeallocsize of element type
-      const unsigned ParamIdx = Arg.getArgNo() + AttributeList::FirstArgIndex;
-      const Align OptimalAlign =
-          IsKernelFunc ? getPTXParamAlign(F, ETy, ParamIdx, DL)
-                       : getDeviceByValParamAlign(F, ETy, ParamIdx, DL);
-
-      O << "\t.param .align " << OptimalAlign.value() << " .b8 " << *ParamSym
-        << "[" << DL.getTypeAllocSize(ETy) << "]";
-      continue;
-    }
-
-    if (shouldPassAsArray(Ty)) {
-      // Just print .param .align <a> .b8 .param[size];
-      // <a>  = optimal alignment for the element type; always multiple of
-      //        PAL.getParamAlignment
-      // size = typeallocsize of element type
-      Align OptimalAlign = getPTXParamAlign(
-          F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
-
-      O << "\t.param .align " << OptimalAlign.value() << " .b8 " << *ParamSym
-        << "[" << DL.getTypeAllocSize(Ty) << "]";
-
-      continue;
-    }
-    // Just a scalar
-    auto *PTy = dyn_cast<PointerType>(Ty);
-    unsigned PTySizeInBits = 0;
-    if (PTy) {
-      PTySizeInBits =
-          TLI->getPointerTy(DL, PTy->getAddressSpace()).getSizeInBits();
-      assert(PTySizeInBits && "Invalid pointer size");
-    }
-
-    if (IsKernelFunc) {
-      if (PTy) {
-        O << "\t.param .u" << PTySizeInBits << " .ptr";
-
-        switch (PTy->getAddressSpace()) {
-        default:
-          break;
-        case ADDRESS_SPACE_GLOBAL:
-          O << " .global";
-          break;
-        case ADDRESS_SPACE_SHARED:
-          O << " .shared";
-          break;
-        case ADDRESS_SPACE_CONST:
-          O << " .const";
-          break;
-        case ADDRESS_SPACE_LOCAL:
-          O << " .local";
-          break;
-        }
+        const StringRef Space = getPTXAddressSpaceName(AS);
+        if (!Space.empty())
+          O << " " << Space;
 
         O << " .align " << Arg.getParamAlign().valueOrOne().value() << " "
           << *ParamSym;
-        continue;
+        return;
       }
-
-      // non-pointer scalar to kernel func
-      O << "\t.param .";
-      // Special case: predicate operands become .u8 types
-      if (Ty->isIntegerTy(1))
-        O << "u8";
-      else
-        O << getPTXFundamentalTypeStr(Ty);
-      O << " " << *ParamSym;
-      continue;
     }
-    // Non-kernel function, just print .param .b<size> for ABI
-    // and .reg .b<size> for non-ABI
-    unsigned Size;
-    if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
-      Size = promoteScalarArgumentSize(ITy->getBitWidth());
-    } else if (PTy) {
-      assert(PTySizeInBits && "Invalid pointer size");
-      Size = PTySizeInBits;
-    } else
-      Size = Ty->getPrimitiveSizeInBits();
-    O << "\t.param .b" << Size << " " << *ParamSym;
-  }
 
-  if (F->isVarArg()) {
-    if (!IsFirst)
-      O << ",\n";
-    O << "\t.param .align " << STI.getMaxRequiredAlignment() << " .b8 "
+    printParam(F, IsByVal ? Arg.getParamByValType() : Ty,
+               Arg.getArgNo() + AttributeList::FirstArgIndex, IsByVal,
+               IsKernelFunc, ParamSym->getName(), DL, O);
+  };
+
+  interleave(enumerate(NonEmptyArgs), O, MakeParam, ",\n");
+
+  if (F->isVarArg())
+    O << (NonEmptyArgs.empty() ? "" : ",\n") << "\t.param .align "
+      << STI.getMaxRequiredAlignment() << " .b8 "
       << *TLI->getParamSymbol(OutContext, F, /* vararg */ -1) << "[]";
-  }
 
   O << "\n)";
 }
@@ -2121,24 +1885,16 @@ void NVPTXAsmPrinter::encodeDebugInfoRegisterNumbers(
 
 void NVPTXAsmPrinter::printFPConstant(const ConstantFP *Fp,
                                       raw_ostream &O) const {
-  APFloat APF = APFloat(Fp->getValueAPF()); // make a copy
-  bool ignored;
-  unsigned int numHex;
-  const char *lead;
-
-  if (Fp->getType()->getTypeID() == Type::FloatTyID) {
-    numHex = 8;
-    lead = "0f";
-    APF.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven, &ignored);
-  } else if (Fp->getType()->getTypeID() == Type::DoubleTyID) {
-    numHex = 16;
-    lead = "0d";
-    APF.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &ignored);
-  } else
+  if (Fp->getType()->isFloatTy())
+    O << "0f";
+  else if (Fp->getType()->isDoubleTy())
+    O << "0d";
+  else
     llvm_unreachable("unsupported fp type");
 
-  APInt API = APF.bitcastToAPInt();
-  O << lead << format_hex_no_prefix(API.getZExtValue(), numHex, /*Upper=*/true);
+  const APInt API = Fp->getValueAPF().bitcastToAPInt();
+  O << format_hex_no_prefix(API.getZExtValue(), API.getBitWidth() / 4,
+                            /*Upper=*/true);
 }
 
 void NVPTXAsmPrinter::printScalarConstant(const Constant *CPV, raw_ostream &O) {
@@ -2147,7 +1903,10 @@ void NVPTXAsmPrinter::printScalarConstant(const Constant *CPV, raw_ostream &O) {
     return;
   }
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CPV)) {
-    printFPConstant(CFP, O);
+    const APInt API = CFP->getValueAPF().bitcastToAPInt();
+    O << "0x"
+      << format_hex_no_prefix(API.getZExtValue(), API.getBitWidth() / 4,
+                              /*Upper=*/true);
     return;
   }
   if (isa<ConstantPointerNull>(CPV)) {

@@ -7,7 +7,7 @@ target triple = "nvptx-nvidia-cuda"
 ; Make sure predicate (i1) operands to kernels get expanded out to .u8
 
 ; CHECK: .entry foo
-; CHECK:   .param .u8 foo_param_0
+; CHECK:   .param .b8 foo_param_0
 ; CHECK:   .param .u64 .ptr .align 1 foo_param_1
 define ptx_kernel void @foo(i1 %p, ptr %out) {
   %val = zext i1 %p to i32
