@@ -333,10 +333,6 @@ define amdgpu_kernel void @ds_wmma_permute(ptr addrspace(3) %base, ptr addrspace
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[148:151], v156 offset:704
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[152:155], v156 offset:896
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[156:159], v156 offset:960
-; COEXEC-NEXT:    s_wait_dscnt 0x1c
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[32:39], v[40:47], v[24:31]
-; COEXEC-NEXT:    s_wait_dscnt 0x18
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[48:55], v[56:63], v[16:23]
 ; COEXEC-NEXT:    s_wait_dscnt 0x14
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[64:71], v[72:79], v[8:15]
 ; COEXEC-NEXT:    s_wait_dscnt 0x10

@@ -3,13 +3,13 @@
 
 
 # CHECK: Region: test_ds_latency_fast
-# CHECK: DS: 80 cycles, 4 instrs
+# CHECK: DS: 5 cycles, 4 instrs
 
 # CHECK: Region: test_ds_latency_loaded
-# CHECK: DS: 240 cycles, 4 instrs
+# CHECK: DS: 15 cycles, 4 instrs
 
 # CHECK: Region: test_ds_latency_overloaded
-# CHECK: DS: 400 cycles, 4 instrs
+# CHECK: DS: 25 cycles, 4 instrs
 
 --- |
   define void @test_ds_latency_fast() "amdgpu-waves-per-eu"="1,1" "amdgpu-ds-latency-mode"="fast" { ret void }

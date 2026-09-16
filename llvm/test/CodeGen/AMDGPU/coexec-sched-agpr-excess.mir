@@ -25,8 +25,8 @@ body: |
     ; LIMIT-NEXT: %res1:areg_128_align2 = DS_READ_B128_gfx9 undef %base3:vgpr_32, 54, 0, implicit $exec :: (load (s128), addrspace 3)
     ; LIMIT-NEXT: %res1:areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64 %s0a, %s0b, %res1, 0, 0, 0, implicit $mode, implicit $exec
     ; LIMIT-NEXT: %res1:areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64 %s0a, %s0b, %res1, 0, 0, 0, implicit $mode, implicit $exec
-    ; LIMIT-NEXT: %s1a:areg_128_align2 = DS_READ_B128_gfx9 undef %base2:vgpr_32, 32, 0, implicit $exec :: (load (s128), addrspace 3)
     ; LIMIT-NEXT: %res2:areg_128_align2 = DS_READ_B128_gfx9 undef %base3:vgpr_32, 58, 0, implicit $exec :: (load (s128), addrspace 3)
+    ; LIMIT-NEXT: %s1a:areg_128_align2 = DS_READ_B128_gfx9 undef %base2:vgpr_32, 32, 0, implicit $exec :: (load (s128), addrspace 3)
     ; LIMIT-NEXT: %s1b:areg_128_align2 = DS_READ_B128_gfx9 undef %base3:vgpr_32, 48, 0, implicit $exec :: (load (s128), addrspace 3)
     ; LIMIT-NEXT: DS_WRITE_B128_gfx9 undef %addr0:vgpr_32, %res1, 0, 0, implicit $exec :: (store (s128), addrspace 3)
     ; LIMIT-NEXT: %res2:areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64 %s1a, %s1b, %res2, 0, 0, 0, implicit $mode, implicit $exec
@@ -38,9 +38,9 @@ body: |
     ; NO_LIMIT: %s0a:areg_128_align2 = DS_READ_B128_gfx9 undef %base0:vgpr_32, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     ; NO_LIMIT-NEXT: %s0b:areg_128_align2 = DS_READ_B128_gfx9 undef %base1:vgpr_32, 16, 0, implicit $exec :: (load (s128), addrspace 3)
     ; NO_LIMIT-NEXT: %res1:areg_128_align2 = DS_READ_B128_gfx9 undef %base3:vgpr_32, 54, 0, implicit $exec :: (load (s128), addrspace 3)
-    ; NO_LIMIT-NEXT: %s1a:areg_128_align2 = DS_READ_B128_gfx9 undef %base2:vgpr_32, 32, 0, implicit $exec :: (load (s128), addrspace 3)
     ; NO_LIMIT-NEXT: %res2:areg_128_align2 = DS_READ_B128_gfx9 undef %base3:vgpr_32, 58, 0, implicit $exec :: (load (s128), addrspace 3)
     ; NO_LIMIT-NEXT: %s1b:areg_128_align2 = DS_READ_B128_gfx9 undef %base3:vgpr_32, 48, 0, implicit $exec :: (load (s128), addrspace 3)
+    ; NO_LIMIT-NEXT: %s1a:areg_128_align2 = DS_READ_B128_gfx9 undef %base2:vgpr_32, 32, 0, implicit $exec :: (load (s128), addrspace 3)
     ; NO_LIMIT-NEXT: %res1:areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64 %s0a, %s0b, %res1, 0, 0, 0, implicit $mode, implicit $exec
     ; NO_LIMIT-NEXT: %res2:areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64 %s1a, %s1b, %res2, 0, 0, 0, implicit $mode, implicit $exec
     ; NO_LIMIT-NEXT: %res1:areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64 %s0a, %s0b, %res1, 0, 0, 0, implicit $mode, implicit $exec

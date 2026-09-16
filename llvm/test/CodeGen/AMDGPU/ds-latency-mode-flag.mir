@@ -5,14 +5,22 @@
 
 # Test that the -amdgpu-ds-latency-mode command line flag affects DS cycle
 # accounting in the coexec scheduler.
+
 # DS instructions have base latency of 20 cycles each (4 instructions = 80 cycles).
 # - fast: 4 * 20 * 1 = 80 cycles
 # - loaded: 4 * 20 * 3 = 240 cycles
 # - overloaded: 4 * 20 * 5 = 400 cycles
 
-# FAST: DS: 80 cycles, 4 instrs
-# LOADED: DS: 240 cycles, 4 instrs
-# OVERLOADED: DS: 400 cycles, 4 instrs
+# However, the total latency is normalized against the FIFO size (by simple division). For gfx1250, this FIFO size is 16
+
+# - fast: 80 / 16 = 5 cycles
+# - loaded: 240 / 16 = 15 cycles
+# - overloaded: 400 / 16 = 25 cycles
+
+
+# FAST: DS: 5 cycles, 4 instrs
+# LOADED: DS: 15 cycles, 4 instrs
+# OVERLOADED: DS: 25 cycles, 4 instrs
 
 ---
 name: test_ds_latency_flag
