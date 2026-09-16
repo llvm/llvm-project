@@ -18,6 +18,7 @@
 #include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/threads/tcb.h"
 #include "src/__support/threads/thread.h"
 #include "src/errno/program_invocation_name.h"
 #include "src/errno/program_invocation_short_name.h"
@@ -183,20 +184,22 @@ static TLSDescriptor tls;
       reinterpret_cast<uintptr_t>(__rela_iplt_end))
     apply_irelative_relocs(base, hwcap, hwcap2);
 
-  app.tls.address = tls_phdr->p_vaddr + base;
-  app.tls.size = tls_phdr->p_memsz;
-  app.tls.init_size = tls_phdr->p_filesz;
-  app.tls.align = tls_phdr->p_align;
+  if (tls_phdr) {
+    app.tls.address = tls_phdr->p_vaddr + base;
+    app.tls.size = tls_phdr->p_memsz;
+    app.tls.init_size = tls_phdr->p_filesz;
+    app.tls.align = tls_phdr->p_align ? tls_phdr->p_align : 1;
+  } else {
+    app.tls.align = 1;
+  }
 
   // This descriptor has to be static since its cleanup function cannot
   // capture the context.
   init_tls(tls);
-  if (tls.size != 0 && !set_thread_ptr(tls.tp))
+  if (!set_thread_ptr(tls.tp))
     syscall_impl<long>(SYS_exit, 1);
 
-  internal::self.attrib = &main_thread_attrib;
-  main_thread_attrib.atexit_callback_mgr =
-      internal::get_thread_atexit_callback_mgr();
+  get_tcb(tls.tp)->attrib = &main_thread_attrib;
 
   // We want the fini array callbacks to be run after other atexit
   // callbacks are run. So, we register them before running the init

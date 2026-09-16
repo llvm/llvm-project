@@ -288,7 +288,11 @@ private:
             else if constexpr (std::is_same_v<T, std::monostate>) {
               // Do nothing
             } else
-              static_assert(false, "doPrint visit not exhaustive");
+              // Use a type-dependent condition so the assert only fires when
+              // this branch is actually instantiated. GCC < 13 does not
+              // implement CWG2518 and rejects a non-dependent
+              // static_assert(false) even in a discarded constexpr branch.
+              static_assert(!sizeof(T *), "doPrint visit not exhaustive");
           },
           Value);
       llvm::outs() << (Units.empty() ? "" : " ") << Units << "\n";
