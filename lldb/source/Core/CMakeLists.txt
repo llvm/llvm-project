@@ -6,6 +6,10 @@ lldb_tablegen(CorePropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE CoreProperties.td
   TARGET LLDBCorePropertiesEnumGen)
 
+lldb_tablegen(DebuggerEnums.inc -gen-lldb-option-enum-defs
+  SOURCE DebuggerEnums.td
+  TARGET LLDBDebuggerEnumsGen)
+
 lldb_tablegen(CoreProperties.json -dump-json
   SOURCE CoreProperties.td
   TARGET LLDBCorePropertiesJsonGen)
@@ -111,7 +115,8 @@ configure_file(
 
 add_dependencies(lldbCore
   LLDBCorePropertiesGen
-  LLDBCorePropertiesEnumGen)
+  LLDBCorePropertiesEnumGen
+  LLDBDebuggerEnumsGen)
 
 # Needed to properly resolve references in a debug build.
 # TODO: Remove once we have better layering

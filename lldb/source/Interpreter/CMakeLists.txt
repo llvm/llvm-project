@@ -6,6 +6,10 @@ lldb_tablegen(InterpreterPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE InterpreterProperties.td
   TARGET LLDBInterpreterPropertiesEnumGen)
 
+lldb_tablegen(OptionGroupWatchpointEnums.inc -gen-lldb-option-enum-defs
+  SOURCE OptionGroupWatchpointEnums.td
+  TARGET LLDBOptionGroupWatchpointEnumsGen)
+
 lldb_tablegen(InterpreterProperties.json -dump-json
   SOURCE InterpreterProperties.td
   TARGET LLDBInterpreterPropertiesJsonGen)
@@ -90,5 +94,7 @@ add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
 add_dependencies(lldbInterpreter
   lldbInterpreterInterfaces
   LLDBInterpreterPropertiesGen
-  LLDBInterpreterPropertiesEnumGen)
+  LLDBInterpreterPropertiesEnumGen
+  LLDBCommandOptionArgumentTableEnumsGen
+  LLDBOptionGroupWatchpointEnumsGen)
 

@@ -4854,202 +4854,27 @@ void Target::RunModuleHooks(bool is_load) {
   output_sp->Flush();
 }
 
-static constexpr OptionEnumValueElement g_dynamic_value_types[] = {
-    {
-        eNoDynamicValues,
-        "no-dynamic-values",
-        "Don't calculate the dynamic type of values",
-    },
-    {
-        eDynamicCanRunTarget,
-        "run-target",
-        "Calculate the dynamic type of values "
-        "even if you have to run the target.",
-    },
-    {
-        eDynamicDontRunTarget,
-        "no-run-target",
-        "Calculate the dynamic type of values, but don't run the target.",
-    },
-};
-
-OptionEnumValues lldb_private::GetDynamicValueTypes() {
-  return OptionEnumValues(g_dynamic_value_types);
-}
-
-static constexpr OptionEnumValueElement g_inline_breakpoint_enums[] = {
-    {
-        eInlineBreakpointsNever,
-        "never",
-        "Never look for inline breakpoint locations (fastest). This setting "
-        "should only be used if you know that no inlining occurs in your"
-        "programs.",
-    },
-    {
-        eInlineBreakpointsHeaders,
-        "headers",
-        "Only check for inline breakpoint locations when setting breakpoints "
-        "in header files, but not when setting breakpoint in implementation "
-        "source files (default).",
-    },
-    {
-        eInlineBreakpointsAlways,
-        "always",
-        "Always look for inline breakpoint locations when setting file and "
-        "line breakpoints (slower but most accurate).",
-    },
-};
-
 enum x86DisassemblyFlavor {
   eX86DisFlavorDefault,
   eX86DisFlavorIntel,
   eX86DisFlavorATT
 };
 
-static constexpr OptionEnumValueElement g_x86_dis_flavor_value_types[] = {
-    {
-        eX86DisFlavorDefault,
-        "default",
-        "Disassembler default (currently att).",
-    },
-    {
-        eX86DisFlavorIntel,
-        "intel",
-        "Intel disassembler flavor.",
-    },
-    {
-        eX86DisFlavorATT,
-        "att",
-        "AT&T disassembler flavor.",
-    },
-};
+#define LLDB_ENUMS_dynamic_class_info_helper_value_types
+#define LLDB_ENUMS_dynamic_value_types
+#define LLDB_ENUMS_hex_immediate_style_values
+#define LLDB_ENUMS_import_std_module_value_types
+#define LLDB_ENUMS_inline_breakpoint_enums
+#define LLDB_ENUMS_jit_engine_value_types
+#define LLDB_ENUMS_load_cwd_lldbinit_values
+#define LLDB_ENUMS_load_script_from_sym_file_values
+#define LLDB_ENUMS_memory_module_load_level_values
+#define LLDB_ENUMS_x86_dis_flavor_value_types
+#include "TargetEnums.inc"
 
-static constexpr OptionEnumValueElement g_jit_engine_value_types[] = {
-    {
-        eJITEngineMCJIT,
-        "mcjit",
-        "Use LLVM's MCJIT execution engine.",
-    },
-    {
-        eJITEngineORC,
-        "orc",
-        "Use LLVM's ORC execution engine.",
-    },
-};
-
-static constexpr OptionEnumValueElement g_import_std_module_value_types[] = {
-    {
-        eImportStdModuleFalse,
-        "false",
-        "Never import the 'std' C++ module in the expression parser.",
-    },
-    {
-        eImportStdModuleFallback,
-        "fallback",
-        "Retry evaluating expressions with an imported 'std' C++ module if they"
-        " failed to parse without the module. This allows evaluating more "
-        "complex expressions involving C++ standard library types."
-    },
-    {
-        eImportStdModuleTrue,
-        "true",
-        "Always import the 'std' C++ module. This allows evaluating more "
-        "complex expressions involving C++ standard library types. This feature"
-        " is experimental."
-    },
-};
-
-static constexpr OptionEnumValueElement
-    g_dynamic_class_info_helper_value_types[] = {
-        {
-            eDynamicClassInfoHelperAuto,
-            "auto",
-            "Automatically determine the most appropriate method for the "
-            "target OS.",
-        },
-        {eDynamicClassInfoHelperRealizedClassesStruct, "RealizedClassesStruct",
-         "Prefer using the realized classes struct."},
-        {eDynamicClassInfoHelperCopyRealizedClassList, "CopyRealizedClassList",
-         "Prefer using the CopyRealizedClassList API."},
-        {eDynamicClassInfoHelperGetRealizedClassList, "GetRealizedClassList",
-         "Prefer using the GetRealizedClassList API."},
-};
-
-static constexpr OptionEnumValueElement g_hex_immediate_style_values[] = {
-    {
-        Disassembler::eHexStyleC,
-        "c",
-        "C-style (0xffff).",
-    },
-    {
-        Disassembler::eHexStyleAsm,
-        "asm",
-        "Asm-style (0ffffh).",
-    },
-};
-
-static constexpr OptionEnumValueElement g_load_script_from_sym_file_values[] = {
-    {
-        eLoadScriptFromSymFileTrue,
-        "true",
-        "Load debug scripts inside symbol files",
-    },
-    {
-        eLoadScriptFromSymFileFalse,
-        "false",
-        "Do not load debug scripts inside symbol files.",
-    },
-    {
-        eLoadScriptFromSymFileWarn,
-        "warn",
-        "Warn about debug scripts inside symbol files but do not load them.",
-    },
-    {
-        eLoadScriptFromSymFileTrusted,
-        "trusted",
-        "Load debug scripts inside trusted symbol files, and warn about "
-        "scripts from untrusted symbol files.",
-    },
-};
-
-static constexpr OptionEnumValueElement g_load_cwd_lldbinit_values[] = {
-    {
-        eLoadCWDlldbinitTrue,
-        "true",
-        "Load .lldbinit files from current directory",
-    },
-    {
-        eLoadCWDlldbinitFalse,
-        "false",
-        "Do not load .lldbinit files from current directory",
-    },
-    {
-        eLoadCWDlldbinitWarn,
-        "warn",
-        "Warn about loading .lldbinit files from current directory",
-    },
-};
-
-static constexpr OptionEnumValueElement g_memory_module_load_level_values[] = {
-    {
-        eMemoryModuleLoadLevelMinimal,
-        "minimal",
-        "Load minimal information when loading modules from memory. Currently "
-        "this setting loads sections only.",
-    },
-    {
-        eMemoryModuleLoadLevelPartial,
-        "partial",
-        "Load partial information when loading modules from memory. Currently "
-        "this setting loads sections and function bounds.",
-    },
-    {
-        eMemoryModuleLoadLevelComplete,
-        "complete",
-        "Load complete information when loading modules from memory. Currently "
-        "this setting loads sections and all symbols.",
-    },
-};
+OptionEnumValues lldb_private::GetDynamicValueTypes() {
+  return OptionEnumValues(g_dynamic_value_types);
+}
 
 #define LLDB_PROPERTIES_target
 #include "TargetProperties.inc"
