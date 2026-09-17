@@ -3094,20 +3094,20 @@ LLVMValueRef LLVMIsATerminatorInst(LLVMValueRef Inst) {
 
 LLVMDbgRecordRef LLVMGetFirstDbgRecord(LLVMValueRef Inst) {
   Instruction *Instr = unwrap<Instruction>(Inst);
-  if (!Instr->DebugMarker)
+  if (!Instr->getDbgMarker())
     return nullptr;
-  auto I = Instr->DebugMarker->StoredDbgRecords.begin();
-  if (I == Instr->DebugMarker->StoredDbgRecords.end())
+  auto I = Instr->getDbgMarker()->StoredDbgRecords.begin();
+  if (I == Instr->getDbgMarker()->StoredDbgRecords.end())
     return nullptr;
   return wrap(&*I);
 }
 
 LLVMDbgRecordRef LLVMGetLastDbgRecord(LLVMValueRef Inst) {
   Instruction *Instr = unwrap<Instruction>(Inst);
-  if (!Instr->DebugMarker)
+  if (!Instr->getDbgMarker())
     return nullptr;
-  auto I = Instr->DebugMarker->StoredDbgRecords.rbegin();
-  if (I == Instr->DebugMarker->StoredDbgRecords.rend())
+  auto I = Instr->getDbgMarker()->StoredDbgRecords.rbegin();
+  if (I == Instr->getDbgMarker()->StoredDbgRecords.rend())
     return nullptr;
   return wrap(&*I);
 }
@@ -3115,7 +3115,7 @@ LLVMDbgRecordRef LLVMGetLastDbgRecord(LLVMValueRef Inst) {
 LLVMDbgRecordRef LLVMGetNextDbgRecord(LLVMDbgRecordRef Rec) {
   DbgRecord *Record = unwrap<DbgRecord>(Rec);
   simple_ilist<DbgRecord>::iterator I(Record);
-  if (++I == Record->getInstruction()->DebugMarker->StoredDbgRecords.end())
+  if (++I == Record->getInstruction()->getDbgMarker()->StoredDbgRecords.end())
     return nullptr;
   return wrap(&*I);
 }
@@ -3123,7 +3123,7 @@ LLVMDbgRecordRef LLVMGetNextDbgRecord(LLVMDbgRecordRef Rec) {
 LLVMDbgRecordRef LLVMGetPreviousDbgRecord(LLVMDbgRecordRef Rec) {
   DbgRecord *Record = unwrap<DbgRecord>(Rec);
   simple_ilist<DbgRecord>::iterator I(Record);
-  if (I == Record->getInstruction()->DebugMarker->StoredDbgRecords.begin())
+  if (I == Record->getInstruction()->getDbgMarker()->StoredDbgRecords.begin())
     return nullptr;
   return wrap(&*--I);
 }

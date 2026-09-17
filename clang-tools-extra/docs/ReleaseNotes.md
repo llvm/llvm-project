@@ -81,7 +81,16 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Hover
 
+- The type a `decltype` resolves to is now also shown for composite types,
+  e.g. `decltype(x)&` is displayed as `int&`. Qualifiers applied to a
+  `decltype` are no longer dropped, so `const decltype(x)` is displayed as
+  `const int` rather than `int`.
+
 #### Code completion
+
+- Parameters declared with a `decltype` are now displayed as the type the
+  `decltype` resolves to, e.g. `set_x(int val)` rather than
+  `set_x(decltype(x) val)`.
 
 #### Code actions
 
@@ -93,6 +102,9 @@ infrastructure are described first, followed by tool-specific sections.
   extract.
 
 #### Signature help
+
+- Parameters declared with a `decltype` are now displayed as the type the
+  `decltype` resolves to, as for code completion.
 
 #### Cross-references
 
