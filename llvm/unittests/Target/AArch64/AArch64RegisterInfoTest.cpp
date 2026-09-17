@@ -216,7 +216,7 @@ TEST(AArch64RegAllocationHints, NoDuplicates) {
   MRI.addRegAllocationHint(VirtReg, AArch64::X0);
 
   ArrayRef<MCPhysReg> Order = AArch64::GPR64RegClass.getRegisters();
-  SmallVector<MCPhysReg, 4> Hints;
+  SmallSetVector<MCPhysReg, 4> Hints;
 
   // Calling getRegAllocationHints once should not produce duplicate hints
   // from fallthrough to TargetRegisterInfo::getRegAllocationHints.

@@ -25,28 +25,35 @@ std::vector<MCPhysReg> loadOrder(const AllocationOrder &O, unsigned Limit = 0) {
 } // namespace
 
 TEST(AllocationOrderTest, Basic) {
-  SmallVector<MCPhysReg, 16> Hints = {1, 2, 3};
+  SmallSetVector<MCPhysReg, 16> Hints = {1, 2, 3};
   SmallVector<MCPhysReg, 16> Order = {4, 5, 6, 7};
   AllocationOrder O(std::move(Hints), Order, false);
   EXPECT_EQ((std::vector<MCPhysReg>{1, 2, 3, 4, 5, 6, 7}), loadOrder(O));
 }
 
 TEST(AllocationOrderTest, Duplicates) {
-  SmallVector<MCPhysReg, 16> Hints = {1, 2, 3};
+  SmallSetVector<MCPhysReg, 16> Hints = {1, 2, 3};
+  SmallVector<MCPhysReg, 16> Order = {4, 1, 5, 6};
+  AllocationOrder O(std::move(Hints), Order, false);
+  EXPECT_EQ((std::vector<MCPhysReg>{1, 2, 3, 4, 5, 6}), loadOrder(O));
+}
+
+TEST(AllocationOrderTest, DuplicateHints) {
+  SmallSetVector<MCPhysReg, 16> Hints = {1, 2, 1, 3, 2};
   SmallVector<MCPhysReg, 16> Order = {4, 1, 5, 6};
   AllocationOrder O(std::move(Hints), Order, false);
   EXPECT_EQ((std::vector<MCPhysReg>{1, 2, 3, 4, 5, 6}), loadOrder(O));
 }
 
 TEST(AllocationOrderTest, HardHints) {
-  SmallVector<MCPhysReg, 16> Hints = {1, 2, 3};
+  SmallSetVector<MCPhysReg, 16> Hints = {1, 2, 3};
   SmallVector<MCPhysReg, 16> Order = {4, 5, 6, 7};
   AllocationOrder O(std::move(Hints), Order, true);
   EXPECT_EQ((std::vector<MCPhysReg>{1, 2, 3}), loadOrder(O));
 }
 
 TEST(AllocationOrderTest, LimitsBasic) {
-  SmallVector<MCPhysReg, 16> Hints = {1, 2, 3};
+  SmallSetVector<MCPhysReg, 16> Hints = {1, 2, 3};
   SmallVector<MCPhysReg, 16> Order = {4, 5, 6, 7};
   AllocationOrder O(std::move(Hints), Order, false);
   EXPECT_EQ((std::vector<MCPhysReg>{1, 2, 3, 4, 5, 6, 7}), loadOrder(O, 0));
@@ -55,7 +62,7 @@ TEST(AllocationOrderTest, LimitsBasic) {
 }
 
 TEST(AllocationOrderTest, LimitsDuplicates) {
-  SmallVector<MCPhysReg, 16> Hints = {1, 2, 3};
+  SmallSetVector<MCPhysReg, 16> Hints = {1, 2, 3};
   SmallVector<MCPhysReg, 16> Order = {4, 1, 5, 6};
   AllocationOrder O(std::move(Hints), Order, false);
   EXPECT_EQ((std::vector<MCPhysReg>{1, 2, 3, 4}), loadOrder(O, 1));
@@ -65,21 +72,21 @@ TEST(AllocationOrderTest, LimitsDuplicates) {
 }
 
 TEST(AllocationOrderTest, LimitsHardHints) {
-  SmallVector<MCPhysReg, 16> Hints = {1, 2, 3};
+  SmallSetVector<MCPhysReg, 16> Hints = {1, 2, 3};
   SmallVector<MCPhysReg, 16> Order = {4, 1, 5, 6};
   AllocationOrder O(std::move(Hints), Order, true);
   EXPECT_EQ((std::vector<MCPhysReg>{1, 2, 3}), loadOrder(O, 1));
 }
 
 TEST(AllocationOrderTest, DuplicateIsFirst) {
-  SmallVector<MCPhysReg, 16> Hints = {1, 2, 3};
+  SmallSetVector<MCPhysReg, 16> Hints = {1, 2, 3};
   SmallVector<MCPhysReg, 16> Order = {1, 4, 5, 6};
   AllocationOrder O(std::move(Hints), Order, false);
   EXPECT_EQ((std::vector<MCPhysReg>{1, 2, 3, 4, 5, 6}), loadOrder(O));
 }
 
 TEST(AllocationOrderTest, DuplicateIsFirstWithLimits) {
-  SmallVector<MCPhysReg, 16> Hints = {1, 2, 3};
+  SmallSetVector<MCPhysReg, 16> Hints = {1, 2, 3};
   SmallVector<MCPhysReg, 16> Order = {1, 4, 5, 6};
   AllocationOrder O(std::move(Hints), Order, false);
   EXPECT_EQ((std::vector<MCPhysReg>{1, 2, 3}), loadOrder(O, 1));
@@ -88,7 +95,7 @@ TEST(AllocationOrderTest, DuplicateIsFirstWithLimits) {
 }
 
 TEST(AllocationOrderTest, NoHints) {
-  SmallVector<MCPhysReg, 16> Hints;
+  SmallSetVector<MCPhysReg, 16> Hints;
   SmallVector<MCPhysReg, 16> Order = {1, 2, 3, 4};
   AllocationOrder O(std::move(Hints), Order, false);
   EXPECT_EQ((std::vector<MCPhysReg>{1, 2, 3, 4}), loadOrder(O));
@@ -97,7 +104,7 @@ TEST(AllocationOrderTest, NoHints) {
 }
 
 TEST(AllocationOrderTest, IsHintTest) {
-  SmallVector<MCPhysReg, 16> Hints = {1, 2, 3};
+  SmallSetVector<MCPhysReg, 16> Hints = {1, 2, 3};
   SmallVector<MCPhysReg, 16> Order = {4, 1, 5, 6};
   AllocationOrder O(std::move(Hints), Order, false);
   auto I = O.begin();

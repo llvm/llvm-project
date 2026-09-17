@@ -16,6 +16,7 @@
 #define LLVM_CODEGEN_TARGETREGISTERINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -829,7 +830,7 @@ public:
   /// expect to see generic copy hints added.
   virtual bool
   getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                        SmallVectorImpl<MCPhysReg> &Hints,
+                        SmallSetVectorImpl<MCPhysReg> &Hints,
                         const MachineFunction &MF,
                         const VirtRegMap *VRM = nullptr,
                         const LiveRegMatrix *Matrix = nullptr) const;

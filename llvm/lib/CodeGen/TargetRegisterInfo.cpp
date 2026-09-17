@@ -398,7 +398,7 @@ float TargetRegisterInfo::getSpillWeightScaleFactor(
 // Compute target-independent register allocator hints to help eliminate copies.
 bool TargetRegisterInfo::getRegAllocationHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
-    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    SmallSetVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const std::pair<unsigned, SmallVector<Register, 4>> *Hints_MRI =
@@ -431,14 +431,8 @@ bool TargetRegisterInfo::getRegAllocationHints(
     if (!is_contained(Order, Phys))
       continue;
 
-    // Don't add the same reg twice (Hints_MRI may contain multiple virtual
-    // registers allocated to the same physreg, or Hints may already contain
-    // it).
-    if (is_contained(Hints, Phys))
-      continue;
-
     // All clear, tell the register allocator to prefer this register.
-    Hints.push_back(Phys.id());
+    Hints.insert(Phys.id());
   }
   return false;
 }
