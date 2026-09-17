@@ -54,11 +54,13 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <algorithm>
@@ -3399,6 +3401,46 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
       return std::move(Err);
 
   return D2;
+}
+
+static const MSInheritanceAttr *findMSInheritanceAttr(const CXXRecordDecl *RD) {
+  for (const Decl *R : RD->redecls()) {
+    if (const auto *IA = R->getAttr<MSInheritanceAttr>())
+      return IA;
+  }
+  return nullptr;
+}
+
+static Error syncMSInheritanceAttr(ASTImporter &Importer, CXXRecordDecl *FromRD,
+                                   CXXRecordDecl *ToRD) {
+  assert(ToRD && "ToRD shouldn't be null");
+  assert(FromRD && "FromRD shouldn't be null");
+  assert(Importer.getToContext().getTargetInfo().getCXXABI().isMicrosoft() &&
+         "Called with non-Microsoft ABIs");
+
+  CXXRecordDecl *ToLatest = ToRD->getMostRecentDecl();
+  if (ToLatest->hasAttr<MSInheritanceAttr>())
+    return Error::success();
+
+  // An attribute already in the "to" chain needs no translation.
+  if (const MSInheritanceAttr *IA = findMSInheritanceAttr(ToRD)) {
+    auto *Clone = cast<InheritableAttr>(IA->clone(Importer.getToContext()));
+    Clone->setInherited(true);
+    ToLatest->addAttr(Clone);
+    return Error::success();
+  }
+
+  if (const MSInheritanceAttr *IA = findMSInheritanceAttr(FromRD)) {
+    Expected<Attr *> ToAttrOrErr = Importer.Import(IA);
+    if (!ToAttrOrErr)
+      return ToAttrOrErr.takeError();
+    auto *ToAttr = cast<InheritableAttr>(*ToAttrOrErr);
+    ToAttr->setInherited(true);
+    ToLatest->addAttr(ToAttr);
+    return Error::success();
+  }
+
+  return Error::success();
 }
 
 ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
@@ -10035,6 +10077,21 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
       else
         return ToAttrOrErr.takeError();
     }
+
+  // Now that ToD's own attributes have been imported above, make sure to sync
+  // the MSInheritanceModel attribute to the most recent declaration in its
+  // redeclaration chain.
+  if (auto *RD = dyn_cast<CXXRecordDecl>(ToD);
+      RD && ToContext.getTargetInfo().getCXXABI().isMicrosoft()) {
+    // Assumption: import does not mix C with C++ (ToD=CXXRecordDecl could be
+    // imported from a C's FromD=RecordDecl, right?). This is coherent with the
+    // current implementation of CTU mode, that only allows imports within the
+    // same language.
+    assert(isa<CXXRecordDecl>(FromD) && "FromD expected to be a CXXRecordDecl");
+    if (Error Err =
+            syncMSInheritanceAttr(*this, cast<CXXRecordDecl>(FromD), RD))
+      return std::move(Err);
+  }
 
   // Notify subclasses.
   Imported(FromD, ToD);
