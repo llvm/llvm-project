@@ -700,6 +700,15 @@ enum NodeType {
   /// If passthru is undef, ?s remain undefined.
   VECTOR_COMPRESS,
 
+  /// VECTOR_SHUFFLE_VAR(VEC, MASK) - Like VECTOR_SHUFFLE, but with a single
+  /// source and with the mask a run-time integer vector operand rather than
+  /// an array of constants. The result has VEC's type, and MASK has the same
+  /// element count as VEC but an arbitrary integer element type. Each mask
+  /// element is an unsigned index into VEC:
+  ///   RESULT[i] = VEC[zext(MASK[i])]
+  /// if zext(MASK[i]) < VEC.ElementCount, otherwise RESULT[i] is poison.
+  VECTOR_SHUFFLE_VAR,
+
   /// MULHU/MULHS - Multiply high - Multiply two integers of type iN,
   /// producing an unsigned/signed value of type i[2*N], then return the top
   /// part.
