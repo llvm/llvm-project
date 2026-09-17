@@ -2670,7 +2670,7 @@ static mlir::acc::LoopOp createLoopOp(
     if (mlir::LLVM::LoopAnnotationAttr la =
             Fortran::lower::genLoopAnnotationAttr(builder.getContext(),
                                                   doStmtEval->dirs))
-      loopOp->setDiscardableAttr(mlir::LLVM::LoopAnnotationAttr::name, la);
+      loopOp->setDiscardableAttr(mlir::LLVM::getLoopAnnotationAttrName(), la);
   }
 
   return loopOp;
@@ -5685,7 +5685,7 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
     if (mlir::LLVM::LoopAnnotationAttr la =
             Fortran::lower::genLoopAnnotationAttr(builder.getContext(),
                                                   doStmtEval->dirs))
-      loopOp->setDiscardableAttr(mlir::LLVM::LoopAnnotationAttr::name, la);
+      loopOp->setDiscardableAttr(mlir::LLVM::getLoopAnnotationAttrName(), la);
   }
 
   return loopOp;
