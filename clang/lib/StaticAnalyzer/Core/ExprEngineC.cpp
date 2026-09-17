@@ -953,29 +953,15 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
           //
           //  Note: technically we do "E == 0", but this is the same in the
           //    transfer functions as "0 == E".
-          SVal Result;
-          if (std::optional<Loc> LV = V.getAs<Loc>()) {
-          Loc X = svalBuilder.makeNullWithType(Ex->getType());
-          Result = evalBinOp(state, BO_EQ, *LV, X, U->getType());
-          } else if (Ex->getType()->isRealFloatingType()) {
-            // Create a zero with matching semantics to the floating point.
-            DefinedOrUnknownSVal X = svalBuilder.makeZeroVal(Ex->getType());
-            if (std::optional<NonLoc> ZeroNL = X.getAs<NonLoc>()) {
-              Result = evalBinOp(state, BO_EQ, V.castAs<NonLoc>(), *ZeroNL,
-                                 U->getType());
-            } else {
-              Result = UnknownVal();
-            }
-          } else if (Ex->getType()->isFloatingType()) {
-            // FIXME: handle complex floating point types.
-            Result = UnknownVal();
-          } else {
-            nonloc::ConcreteInt X(getBasicVals().getValue(0, Ex->getType()));
-            Result =
-                evalBinOp(state, BO_EQ, V.castAs<NonLoc>(), X, U->getType());
-          }
-
-          state = state->BindExpr(U, SF, Result);
+          //
+          // Build the zero in the operand's own type. A null pointer for
+          // pointers, integral zero for integers, and a zero value with
+          // matching semantics for floating-point types. Complex floating-point
+          // types yield Unknown, as do comparisons to Unknown itself.
+          state = state->BindExpr(
+              U, SF,
+              evalBinOp(state, BO_EQ, V, svalBuilder.makeZeroVal(Ex->getType()),
+                        U->getType()));
           break;
       }
       EvalSet.insert(Engine.makePostStmtNode(U, state, N));
