@@ -9,6 +9,7 @@
 #include "DXILResourceAccess.h"
 #include "DirectX.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/DXILResource.h"
@@ -650,6 +651,7 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
         DL, Builder, LastGEP->getPointerOperand(), hlsl::CBufferRowSizeInBytes);
     CurrentRow = Builder.CreateAdd(GEPOffset, CurrentRow);
 
+    // todo look here
     APInt ConstantOffset(DL.getIndexTypeSizeInBits(LastGEP->getType()), 0);
     if (LastGEP->accumulateConstantOffset(DL, ConstantOffset)) {
       APInt Remainder(DL.getIndexTypeSizeInBits(LastGEP->getType()),
@@ -793,6 +795,8 @@ static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
     } else if (auto *Select = dyn_cast<SelectInst>(X))
       for (Value *V : {Select->getTrueValue(), Select->getFalseValue()})
         Worklist.push_back(V);
+    else if (auto *GEP = dyn_cast<GetElementPtrInst>(X))
+      Worklist.push_back(GEP->getPointerOperand());
     else if (auto *II = dyn_cast<IntrinsicInst>(X)) {
       Intrinsic::ID IID = II->getIntrinsicID();
 
@@ -828,24 +832,52 @@ namespace {
 struct AccessIndices {
   Value *GetPtrIdx;
   Value *HandleIdx;
+  Value *OffsetIdx;
 
   bool hasGetPtrIdx() { return GetPtrIdx != nullptr; }
   bool hasHandleIdx() { return HandleIdx != nullptr; }
+  bool hasOffsetIdx() { return OffsetIdx != nullptr; }
 };
 } // namespace
+
+// Compute the total byte offset described by a GEP as a single i32 value,
+// handling both constant and variable indices.
+static Value *accumulateGEPOffset(GetElementPtrInst *GEP,
+                                  IRBuilder<> &Builder) {
+  const DataLayout &DL = GEP->getDataLayout();
+  unsigned BitWidth = DL.getIndexTypeSizeInBits(GEP->getType());
+  SmallMapVector<Value *, APInt, 4> VariableOffsets;
+  APInt ConstantOffset(BitWidth, 0);
+  bool Success =
+      GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset);
+  assert(Success && "Unhandled GEP structure for resource access");
+  (void)Success;
+
+  Type *I32 = Builder.getInt32Ty();
+  Value *Offset = ConstantInt::get(I32, ConstantOffset.getSExtValue());
+  for (auto &[V, Scale] : VariableOffsets) {
+    Value *Index = Builder.CreateZExtOrTrunc(V, I32);
+    if (!Scale.isOne())
+      Index =
+          Builder.CreateMul(Index, ConstantInt::get(I32, Scale.getSExtValue()));
+    Offset = Builder.CreateAdd(Offset, Index);
+  }
+  return Offset;
+}
 
 // getAccessIndices traverses up the control flow that a ptr came from and
 // propagates back the indicies used to access the resource (AccessIndices):
 //
 //  - GetPtrIdx is the index of dx.resource.getpointer
 //  - HandleIdx is the index of dx.resource.handlefrom.*
+//  - OffsetIdx is the accumulated byte offset of any GEPs in the ptr chain
 static AccessIndices
 getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
                  SmallDenseMap<PHINode *, PHINode *> &VisitedPhis) {
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
     if (llvm::is_contained(HandleIntrins, II->getIntrinsicID())) {
       DeadInsts.insert(II);
-      return {nullptr, II->getArgOperand(/*Index=*/3)};
+      return {nullptr, II->getArgOperand(/*Index=*/3), nullptr};
     }
 
     if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
@@ -860,10 +892,25 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
     }
   }
 
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+    auto *V = dyn_cast<Instruction>(GEP->getPointerOperand());
+    auto AccessIdx = getAccessIndices(V, DeadInsts, VisitedPhis);
+
+    IRBuilder<> Builder(GEP);
+    Value *GEPOffset = accumulateGEPOffset(GEP, Builder);
+    AccessIdx.OffsetIdx =
+        AccessIdx.hasOffsetIdx()
+            ? Builder.CreateAdd(AccessIdx.OffsetIdx, GEPOffset)
+            : GEPOffset;
+
+    DeadInsts.insert(GEP);
+    return AccessIdx;
+  }
+
   if (auto *Phi = dyn_cast<PHINode>(I)) {
     // If we're already building indices for this phi, return a ref to the phi
     if (auto It = VisitedPhis.find(Phi); It != VisitedPhis.end())
-      return {nullptr, It->second};
+      return {nullptr, It->second, nullptr};
 
     unsigned NumEdges = Phi->getNumIncomingValues();
     assert(NumEdges != 0 && "Malformed Phi Node");
@@ -872,6 +919,8 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
     std::unique_ptr<PHINode> GetPtrPhi(
         PHINode::Create(Builder.getInt32Ty(), NumEdges));
     std::unique_ptr<PHINode> HandlePhi(
+        PHINode::Create(Builder.getInt32Ty(), NumEdges));
+    std::unique_ptr<PHINode> OffsetPhi(
         PHINode::Create(Builder.getInt32Ty(), NumEdges));
 
     // Register a ref to this phi for a recursive phi. This is safe to add to
@@ -887,6 +936,8 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
       if (AccessIdx.hasGetPtrIdx())
         GetPtrPhi->addIncoming(AccessIdx.GetPtrIdx, BB);
       HandlePhi->addIncoming(AccessIdx.HandleIdx, BB);
+      if (AccessIdx.hasOffsetIdx())
+        OffsetPhi->addIncoming(AccessIdx.OffsetIdx, BB);
     }
 
     Value *GetPtrIdx;
@@ -907,8 +958,16 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
       Builder.Insert(HandleIdx);
     }
 
+    Value *OffsetIdx;
+    if (Value *ConstantIdx = OffsetPhi->hasConstantValue())
+      OffsetIdx = ConstantIdx;
+    else {
+      OffsetIdx = OffsetPhi.release();
+      Builder.Insert(OffsetIdx);
+    }
+
     DeadInsts.insert(Phi);
-    return {GetPtrIdx, HandleIdx};
+    return {GetPtrIdx, HandleIdx, OffsetIdx};
   }
 
   if (auto *Select = dyn_cast<SelectInst>(I)) {
@@ -920,6 +979,7 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
 
     IRBuilder<> Builder(Select);
     Value *GetPtrSelect = nullptr;
+    Value *OffsetSelect = nullptr;
 
     if (TrueAccessIdx.hasGetPtrIdx() && FalseAccessIdx.hasGetPtrIdx())
       GetPtrSelect =
@@ -929,8 +989,19 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
     auto *HandleSelect =
         Builder.CreateSelect(Select->getCondition(), TrueAccessIdx.HandleIdx,
                              FalseAccessIdx.HandleIdx);
+
+    if (TrueAccessIdx.hasOffsetIdx() || FalseAccessIdx.hasOffsetIdx()) {
+      Value *Zero = ConstantInt::get(Builder.getInt32Ty(), 0);
+      Value *TrueOffset =
+          TrueAccessIdx.hasOffsetIdx() ? TrueAccessIdx.OffsetIdx : Zero;
+      Value *FalseOffset =
+          FalseAccessIdx.hasOffsetIdx() ? FalseAccessIdx.OffsetIdx : Zero;
+      OffsetSelect =
+          Builder.CreateSelect(Select->getCondition(), TrueOffset, FalseOffset);
+    }
+
     DeadInsts.insert(Select);
-    return {GetPtrSelect, HandleSelect};
+    return {GetPtrSelect, HandleSelect, OffsetSelect};
   }
 
   llvm_unreachable("collectUsedHandles should assure this does not occur");
@@ -959,7 +1030,15 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
     auto *GetPtr = Builder.CreateIntrinsic(Ptr->getType(),
                                            Intrinsic::dx_resource_getpointer,
                                            {Handle, AccessIdx.GetPtrIdx});
-    Ptr->replaceAllUsesWith(GetPtr);
+
+    // Reapply any byte offset that came from GEPs in the original ptr chain so
+    // that later access lowering still sees it.
+    Value *Result = GetPtr;
+    if (AccessIdx.hasOffsetIdx())
+      Result =
+          Builder.CreateGEP(Builder.getInt8Ty(), GetPtr, AccessIdx.OffsetIdx);
+    // todo is this gep right?
+    Ptr->replaceAllUsesWith(Result);
   } else {
     assert(Ptr->getType()->isTargetExtTy() && !AccessIdx.hasGetPtrIdx() &&
            "Unexpected resource access operand type");
