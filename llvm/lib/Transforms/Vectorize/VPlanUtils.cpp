@@ -756,9 +756,9 @@ vputils::getMemoryLocation(const VPRecipeBase &R) {
   return Loc;
 }
 
-VPInstruction
-*vputils::findCanonicalIVIncrement(VPlan &Plan,
-                                   bool RequireAfterMaterialization) {
+VPInstruction *
+vputils::findCanonicalIVIncrement(VPlan &Plan,
+                                  bool RequireAfterMaterialization) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPRegionValue *CanIV = LoopRegion->getCanonicalIV();
   assert(CanIV && "Expected loop region to have a canonical IV");
@@ -808,9 +808,9 @@ VPInstruction
     }
   }
 
-  assert((!RequireAfterMaterialization || !VFxUF.isMaterialized() ||
-          Increment) &&
-         "After materializing VFxUF, an increment must exist");
+  assert(
+      (!RequireAfterMaterialization || !VFxUF.isMaterialized() || Increment) &&
+      "After materializing VFxUF, an increment must exist");
   assert((!Increment ||
           LoopRegion->hasCanonicalIVNUW() == Increment->hasNoUnsignedWrap()) &&
          "NUW flag in region and increment must match");
@@ -1188,8 +1188,9 @@ bool vputils::isDeadRecipe(VPRecipeBase &R) {
   if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
     VPlan *Plan = R.getParent()->getPlan();
     VPRegionBlock *LoopRegion = Plan->getVectorLoopRegion();
-    if (LoopRegion && VPI == findCanonicalIVIncrement(
-            *Plan, /*RequireAfterMaterialization=*/false)) {
+    if (LoopRegion &&
+        VPI == findCanonicalIVIncrement(
+                   *Plan, /*RequireAfterMaterialization=*/false)) {
       VPRegionValue *CanIV = LoopRegion->getCanonicalIV();
       if (any_of(CanIV->users(), [VPI](const VPUser *U) { return U != VPI; }))
         return false;
