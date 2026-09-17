@@ -60,11 +60,20 @@ bool DeclContext::setLastSeenDIE(CompileUnit &U, const DWARFDie &Die) {
 PointerIntPair<DeclContext *, 1>
 DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
                                      CompileUnit &U, bool InClangModule) {
-  unsigned Tag = DIE.getTag();
+  dwarf::Tag Tag = DIE.getTag();
 
   // FIXME: dsymutil-classic compat: We should bail out here if we
   // have a specification or an abstract_origin. We will get the
   // parent context wrong here.
+
+  // A unit root is the root of the unit's context tree, whatever tag it
+  // carries: a null context here would propagate to every descendant and take
+  // the whole unit out of uniquing. The tag recognizes the root because this
+  // API is handed a DIE rather than its index, and it degrades safely - a
+  // nested DIE carrying a unit tag would merely be transparent to its
+  // enclosing context.
+  if (dwarf::isUnitType(Tag))
+    return PointerIntPair<DeclContext *, 1>(&Context);
 
   switch (Tag) {
   default:
@@ -72,10 +81,10 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
     return PointerIntPair<DeclContext *, 1>(nullptr);
   case dwarf::DW_TAG_module:
     break;
-  case dwarf::DW_TAG_compile_unit:
-    return PointerIntPair<DeclContext *, 1>(&Context);
   case dwarf::DW_TAG_subprogram:
-    // Do not unique anything inside CU local functions.
+    // Do not unique anything inside CU local functions. The root context is
+    // default constructed, and DeclContext's Tag defaults to
+    // DW_TAG_compile_unit, so this covers a partial unit root too.
     if ((Context.getTag() == dwarf::DW_TAG_namespace ||
          Context.getTag() == dwarf::DW_TAG_compile_unit) &&
         !dwarf::toUnsigned(DIE.find(dwarf::DW_AT_external), 0))
