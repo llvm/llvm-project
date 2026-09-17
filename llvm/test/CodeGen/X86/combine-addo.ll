@@ -148,9 +148,8 @@ define <4 x i32> @combine_vec_uadd_no_overflow(<4 x i32> %a0, <4 x i32> %a1, <4 
 define { i32, i1 } @combine_sadd_constant_overflow() {
 ; CHECK-LABEL: combine_sadd_constant_overflow:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; CHECK-NEXT:    incl %eax
-; CHECK-NEXT:    seto %dl
+; CHECK-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; CHECK-NEXT:    movb $1, %dl
 ; CHECK-NEXT:    retq
   %x = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 2147483647, i32 1)
   ret { i32, i1 } %x
@@ -159,9 +158,8 @@ define { i32, i1 } @combine_sadd_constant_overflow() {
 define { i32, i1 } @combine_sadd_constant_no_overflow() {
 ; CHECK-LABEL: combine_sadd_constant_no_overflow:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $2147483646, %eax # imm = 0x7FFFFFFE
-; CHECK-NEXT:    incl %eax
-; CHECK-NEXT:    seto %dl
+; CHECK-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    retq
   %x = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 2147483646, i32 1)
   ret { i32, i1 } %x
@@ -171,13 +169,13 @@ define { <4 x i32>, <4 x i1> } @combine_vec_sadd_constant_overflow() {
 ; SSE-LABEL: combine_vec_sadd_constant_overflow:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1,1,1,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sadd_constant_overflow:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
 ; AVX-NEXT:    retq
   %x = call { <4 x i32>, <4 x i1> } @llvm.sadd.with.overflow.v4i32(<4 x i32> splat (i32 2147483647), <4 x i32> splat (i32 1))
   ret { <4 x i32>, <4 x i1> } %x
@@ -187,9 +185,8 @@ define { <4 x i32>, <4 x i1> } @combine_vec_sadd_constant_overflow() {
 define { i32, i1 } @combine_uadd_constant_overflow() {
 ; CHECK-LABEL: combine_uadd_constant_overflow:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    addl $2, %eax
-; CHECK-NEXT:    setb %dl
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    movb $1, %dl
 ; CHECK-NEXT:    retq
   %x = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 -1, i32 2)
   ret { i32, i1 } %x
@@ -209,13 +206,13 @@ define { <4 x i32>, <4 x i1> } @combine_vec_uadd_constant_overflow() {
 ; SSE-LABEL: combine_vec_uadd_constant_overflow:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,1,1,1]
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_uadd_constant_overflow:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vmovaps %xmm0, %xmm1
 ; AVX-NEXT:    retq
   %x = call { <4 x i32>, <4 x i1> } @llvm.uadd.with.overflow.v4i32(<4 x i32> splat (i32 -1), <4 x i32> splat (i32 2))
   ret { <4 x i32>, <4 x i1> } %x
