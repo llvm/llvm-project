@@ -15,6 +15,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_EXTRAPASSMANAGER_H
 #define LLVM_TRANSFORMS_UTILS_EXTRAPASSMANAGER_H
 
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 
@@ -92,6 +93,11 @@ public:
     if (AM.getCachedResult<MarkerTy>(L))
       PA.intersect(InnerLPM.run(L, AM, AR, U));
     PA.abandon<MarkerTy>();
+    // Loop passes must preserve MemorySSA when it is available, so preserve it
+    // here to satisfy a surrounding loop-mssa adaptor. This must follow the
+    // abandon above: preserve<> is a no-op while the set is all-preserved.
+    if (AR.MSSA)
+      PA.preserve<MemorySSAAnalysis>();
     return PA;
   }
 };
