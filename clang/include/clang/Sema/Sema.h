@@ -3580,7 +3580,7 @@ public:
 
   /// A cache of the flags available in enumerations with the flag_enum
   /// attribute.
-  llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
+  mutable llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
 
   /// A cache of enumerator values for enums checked by -Wassign-enum.
   llvm::DenseMap<const EnumDecl *, llvm::SmallVector<llvm::APSInt>>
@@ -15170,6 +15170,23 @@ private:
 
   // The current stack of constraint satisfactions, so we can exit-early.
   llvm::SmallVector<SatisfactionStackEntryTy, 10> SatisfactionStack;
+
+  /// Used by SetupConstraintCheckingTemplateArgumentsAndScope to set up the
+  /// LocalInstantiationScope of the current non-lambda function. For lambdas,
+  /// use LambdaScopeForCallOperatorInstantiationRAII.
+  bool
+  SetupConstraintScope(FunctionDecl *FD,
+                       std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+                       const MultiLevelTemplateArgumentList &MLTAL,
+                       LocalInstantiationScope &Scope);
+
+  /// Used during constraint checking, sets up the constraint template argument
+  /// lists, and calls SetupConstraintScope to set up the
+  /// LocalInstantiationScope to have the proper set of ParVarDecls configured.
+  std::optional<MultiLevelTemplateArgumentList>
+  SetupConstraintCheckingTemplateArgumentsAndScope(
+      FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
+      LocalInstantiationScope &Scope);
 
   ///@}
 

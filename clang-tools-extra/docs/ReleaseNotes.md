@@ -81,13 +81,30 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Hover
 
+- The type a `decltype` resolves to is now also shown for composite types,
+  e.g. `decltype(x)&` is displayed as `int&`. Qualifiers applied to a
+  `decltype` are no longer dropped, so `const decltype(x)` is displayed as
+  `const int` rather than `int`.
+
 #### Code completion
+
+- Parameters declared with a `decltype` are now displayed as the type the
+  `decltype` resolves to, e.g. `set_x(int val)` rather than
+  `set_x(decltype(x) val)`.
 
 #### Code actions
 
 - clangd now applies clang-tidy fix-it post-processing before exposing fixes.
 
+- The `Extract to function` tweak is now offered for selections consisting of
+  a single expression-statement (e.g. a lone function call or an overloaded
+  operator call such as `stream << 42;`), which it previously refused to
+  extract.
+
 #### Signature help
+
+- Parameters declared with a `decltype` are now displayed as the type the
+  `decltype` resolves to, as for code completion.
 
 #### Cross-references
 
@@ -219,11 +236,20 @@ infrastructure are described first, followed by tool-specific sections.
   offered when an argument covers only part of a macro expansion, as it then
   has no source text of its own.
 
+- Improved {doc}`readability-convert-member-functions-to-static
+  <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
+  fixing a crash when checking a const-qualified method declared with the
+  `lifetimebound` attribute.
+
 - Improved {doc}`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check by adding
   the {option}`AllowReferencedInitialValues` to support the
   `INT09-C-EX1` exception, allowing enumerators initialized by referencing
   another enumerator in the same enum (e.g., `last = first`).
+
+- Improved {doc}`readability-function-cognitive-complexity
+  <clang-tidy/checks/readability/function-cognitive-complexity>` check by fixing
+  a crash when checking a function declared with the `alias` attribute.
 
 - Improved {doc}`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check:
