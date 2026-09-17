@@ -219,7 +219,7 @@ define i1 @fcmp_trunc_nan(double %0) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %trunc = fptrunc double %0 to float
-  %result = fcmp oge float %trunc, 0x7FF8000000000000
+  %result = fcmp oge float %trunc, +qnan
   ret i1 %result
 }
 
@@ -353,7 +353,7 @@ define i1 @fcmp_trunc_literal_nan(double %0) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %trunc = fptrunc double %0 to float
-  %result = fcmp oge float %trunc, 0x7FF8000000000000
+  %result = fcmp oge float %trunc, +qnan
   ret i1 %result
 }
 
@@ -388,7 +388,7 @@ define i1 @fcmp_trunc_nan_ugt(double %0) {
 ; CHECK-NEXT:    ret i1 true
 ;
   %trunc = fptrunc double %0 to float
-  %result = fcmp ugt float %trunc, 0x7FF8000000000000
+  %result = fcmp ugt float %trunc, +qnan
   ret i1 %result
 }
 

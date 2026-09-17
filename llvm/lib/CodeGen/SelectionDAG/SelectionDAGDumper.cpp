@@ -740,6 +740,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
   if (getFlags().hasNonNeg())
     OS << " nneg";
 
+  if (getFlags().hasNonNull())
+    OS << " nonnull";
+
   if (getFlags().hasNoNaNs())
     OS << " nnan";
 

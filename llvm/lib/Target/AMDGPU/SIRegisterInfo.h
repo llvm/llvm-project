@@ -107,9 +107,17 @@ public:
   // lanes (not even inactive ones).
   static bool isChainScratchRegister(Register VGPR);
 
-  // Stack access is very expensive. CSRs are also the high registers, and we
-  // want to minimize the number of used registers.
-  unsigned getCSRCost() const override { return 100; }
+  unsigned getCSRFirstUseCost(const MachineFunction &) const override {
+    // The cost of 27 balances multiple factors that influence CSR cost:
+    // - Saving a SGPR CSR to VGPR lanes is relatively cheap.
+    // - In cases where this is not possible, stack access is very expensive.
+    // - CSRs are also the high registers, and we want to minimize the number of
+    //   used registers as it impacts occupancy.
+    // Note: Register allocation only applies these cost to callee-save
+    // registers according to getCalleeSavedRegs, so handling of calling
+    // conventions with no CSR is handled there.
+    return 27;
+  }
 
   // When building a block VGPR load, we only really transfer a subset of the
   // registers in the block, based on a mask. Liveness analysis is not aware of
@@ -160,9 +168,6 @@ public:
 
   bool isFrameOffsetLegal(const MachineInstr *MI, Register BaseReg,
                           int64_t Offset) const override;
-
-  const TargetRegisterClass *
-  getPointerRegClass(unsigned Kind = 0) const override;
 
   /// Returns a legal register class to copy a register in the specified class
   /// to or from. If it is possible to copy the register directly without using

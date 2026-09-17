@@ -968,9 +968,8 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
       // Extern templates
       SourceLocation ExternLoc = ConsumeToken();
       SourceLocation TemplateLoc = ConsumeToken();
-      Diag(ExternLoc, getLangOpts().CPlusPlus11 ?
-             diag::warn_cxx98_compat_extern_template :
-             diag::ext_extern_template) << SourceRange(ExternLoc, TemplateLoc);
+      DiagCompat(ExternLoc, diag_compat::extern_template)
+          << SourceRange(ExternLoc, TemplateLoc);
       SourceLocation DeclEnd;
       return ParseExplicitInstantiation(DeclaratorContext::File, ExternLoc,
                                         TemplateLoc, DeclEnd, Attrs);
@@ -2371,12 +2370,15 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
     SourceLocation PrivateLoc = ConsumeToken();
     DiagnoseAndSkipCXX11Attributes();
     ExpectAndConsumeSemi(diag::err_private_module_fragment_expected_semi);
-    ImportState = ImportState == Sema::ModuleImportState::ImportAllowed
-                      ? Sema::ModuleImportState::PrivateFragmentImportAllowed
-                      : Sema::ModuleImportState::PrivateFragmentImportFinished;
-    return Actions.ActOnPrivateModuleFragmentDecl(ModuleLoc, PrivateLoc);
+    auto Result = Actions.ActOnPrivateModuleFragmentDecl(ModuleLoc, PrivateLoc);
+    if (Result) {
+      ImportState =
+          ImportState == Sema::ModuleImportState::ImportAllowed
+              ? Sema::ModuleImportState::PrivateFragmentImportAllowed
+              : Sema::ModuleImportState::PrivateFragmentImportFinished;
+    }
+    return nullptr;
   }
-
   SmallVector<IdentifierLoc, 2> Path;
   if (ParseModuleName(ModuleLoc, Path, /*IsImport*/ false))
     return nullptr;

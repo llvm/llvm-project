@@ -1,4 +1,5 @@
 // Texture2D
+// Texture2D
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D -o \
 // RUN:   - %s \
