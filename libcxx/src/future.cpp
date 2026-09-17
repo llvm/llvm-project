@@ -28,6 +28,7 @@ string __future_error_category::message(int ev) const {
   switch (static_cast<future_errc>(ev)) {
   case future_errc(0): // For backwards compatibility with C++11 (LWG 2056)
   case future_errc::broken_promise:
+    
     return string("The associated promise has been destructed prior "
                   "to the associated state becoming ready.");
   case future_errc::future_already_retrieved:
