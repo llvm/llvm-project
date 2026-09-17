@@ -1588,27 +1588,28 @@ void VPSlotTracker::assignNames(const VPBasicBlock *VPBB) {
       assignName(Def);
 }
 
+ModuleSlotTracker &VPSlotTracker::getOrCreateMST() {
+  // F is null for unit tests with incomplete IR.
+  if (!MST) {
+    MST = std::make_unique<ModuleSlotTracker>(getModule());
+    if (F)
+      MST->incorporateFunction(*F);
+  }
+  return *MST;
+}
+
 std::string VPSlotTracker::getName(const Value *V) {
   std::string Name;
   raw_string_ostream S(Name);
-  if (V->hasName() || !isa<Instruction>(V)) {
+  // If V isn't an instruction in a basic block or named, it can be printed
+  // directly without ModuleSlotTracker.
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || I->hasName() || !I->getParent()) {
     V->printAsOperand(S, false);
     return Name;
   }
 
-  if (!MST) {
-    // Lazily create the ModuleSlotTracker when we first hit an unnamed
-    // instruction.
-    auto *I = cast<Instruction>(V);
-    // This check is required to support unit tests with incomplete IR.
-    if (I->getParent()) {
-      MST = std::make_unique<ModuleSlotTracker>(I->getModule());
-      MST->incorporateFunction(*I->getFunction());
-    } else {
-      MST = std::make_unique<ModuleSlotTracker>(nullptr);
-    }
-  }
-  V->printAsOperand(S, false, *MST);
+  V->printAsOperand(S, false, getOrCreateMST());
   return Name;
 }
 
