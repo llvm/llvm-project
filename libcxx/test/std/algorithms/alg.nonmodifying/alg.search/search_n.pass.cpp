@@ -16,6 +16,8 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
+#include <limits>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -78,6 +80,16 @@ TEST_CONSTEXPR_CXX20 bool test() {
     int a[]  = {6, 7, 8};
     auto ret = std::search_n(Iter(a), Iter(a + 3), 0, 7);
     assert(base(ret) == a);
+  }
+  { // pattern has negative length. See https://wg21.link/LWG426.
+    int a[]  = {6, 7, 8};
+    auto ret = std::search_n(Iter(a), Iter(a + 3), -1, 7);
+    assert(base(ret) == a);
+  }
+  { // pattern is longer than the range and doesn't fit in the iterator's difference_type
+    int a[]  = {7, 7, 7};
+    auto ret = std::search_n(Iter(a), Iter(a + 3), std::numeric_limits<std::size_t>::max(), 7);
+    assert(base(ret) == a + 3);
   }
   { // range has zero length
     std::array<int, 0> a = {};
