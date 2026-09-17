@@ -1753,7 +1753,7 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
         const ELFSectionHeaderInfo &sheader = *I;
         const uint64_t section_size =
             sheader.sh_type == SHT_NOBITS ? 0 : sheader.sh_size;
-        llvm::StringRef name(shstr_data.PeekCStr(I->sh_name));
+        llvm::StringRef name = shstr_data.PeekCStr(I->sh_name).value_or("");
         I->section_name = name.str();
 
         if (arch_spec.IsMIPS()) {
@@ -2364,9 +2364,9 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     if (!symbol.Parse(symtab_data, &offset))
       break;
 
-    const char *symbol_name = strtab_data.PeekCStr(symbol.st_name);
-    if (!symbol_name)
-      symbol_name = "";
+    // A missing or unterminated name reads as empty.
+    const char *symbol_name =
+        strtab_data.PeekCStr(symbol.st_name).value_or("").data();
 
     // Skip local symbols starting with ".L" because these are compiler
     // generated local labels used for internal purposes (e.g. debugging,
@@ -2885,7 +2885,8 @@ static unsigned ParsePLTRelocations(
     if (!symbol.Parse(symtab_data, &symbol_offset))
       break;
 
-    const char *symbol_name = strtab_data.PeekCStr(symbol.st_name);
+    const char *symbol_name =
+        strtab_data.PeekCStr(symbol.st_name).value_or("").data();
     uint64_t plt_index = plt_offset + i * plt_entsize;
 
     Symbol jump_symbol(
