@@ -7346,9 +7346,11 @@ The `name:` field is mandatory. The `configMacros:`, `includePath:`,
 dynamic length and location encoded as an expression.
 The `tag:` field is optional and defaults to `DW_TAG_string_type`. The `name:`,
 `stringLength:`, `stringLengthExpression`, `stringLocationExpression:`,
-`size:`, `align:`, and `encoding:` fields are optional.
+`size:`, `align:`, `encoding:`, and `charType:` fields are optional.
 
 If not present, the `size:` and `align:` fields default to the value zero.
+
+`charType:` allows representation of non-default character types.
 
 The length in bits of the string is specified by the first of the following
 fields present:

@@ -575,7 +575,7 @@ template <> struct MDNodeKeyImpl<DIStringType> {
     // performance reason. The subset has to be significant enough to avoid
     // collision "most of the time". There is no correctness issue in case of
     // collision because of the full check above.
-    return hash_combine(Tag, Name, StringLength, Encoding);
+    return hash_combine(Tag, Name, StringLength, Encoding, CharType);
   }
 };
 
