@@ -62,7 +62,8 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr,
   StagePipeline->appendStage(std::move(Fetch));
   if (Opts.MicroOpQueueSize)
     StagePipeline->appendStage(std::make_unique<MicroOpQueueStage>(
-        Opts.MicroOpQueueSize, Opts.DecodersThroughput));
+        STI, Opts.MicroOpQueueSize, Opts.DecodersThroughput,
+        /*ZeroLatencyStage=*/true, CB.getFusionPredicates()));
   StagePipeline->appendStage(std::move(Dispatch));
   StagePipeline->appendStage(std::move(Execute));
   StagePipeline->appendStage(std::move(Retire));

@@ -17,6 +17,7 @@
 #define LLVM_MCA_STAGES_MICROOPQUEUESTAGE_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/MCA/CustomBehaviour.h"
 #include "llvm/MCA/Stages/Stage.h"
 
 namespace llvm {
@@ -25,6 +26,7 @@ namespace mca {
 /// A stage that simulates a queue of instruction opcodes.
 class LLVM_ABI MicroOpQueueStage : public Stage {
   SmallVector<InstRef, 8> Buffer;
+  const MCSubtargetInfo &STI;
   unsigned NextAvailableSlotIdx;
   unsigned CurrentInstructionSlotIdx;
 
@@ -41,6 +43,8 @@ class LLVM_ABI MicroOpQueueStage : public Stage {
   // next cycle before moving to the next stage.
   // False if this buffer acts as a one cycle delay in the execution pipeline.
   bool IsZeroLatencyStage;
+
+  std::vector<MacroFusionPredicate> FusionPredicates;
 
   MicroOpQueueStage(const MicroOpQueueStage &Other) = delete;
   MicroOpQueueStage &operator=(const MicroOpQueueStage &Other) = delete;
@@ -60,9 +64,12 @@ class LLVM_ABI MicroOpQueueStage : public Stage {
 
   Error moveInstructions();
 
+  bool tryFuseInstructions(Instruction &First, Instruction &Second);
+
 public:
-  MicroOpQueueStage(unsigned Size, unsigned IPC = 0,
-                    bool ZeroLatencyStage = true);
+  MicroOpQueueStage(const MCSubtargetInfo &Subtarget, unsigned Size,
+                    unsigned IPC = 0, bool ZeroLatencyStage = true,
+                    ArrayRef<MacroFusionPredicate> FusionPredicates = {});
 
   bool isAvailable(const InstRef &IR) const override {
     if (MaxIPC && CurrentIPC == MaxIPC)
