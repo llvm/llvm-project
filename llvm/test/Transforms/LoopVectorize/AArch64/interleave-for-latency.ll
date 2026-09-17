@@ -1532,7 +1532,227 @@ exit:
   ret void
 }
 
+; FIXME: Interleaving to reduces stalls is currently disabled when the VF is
+; scalar, meaning the load latency has no effect on interleaving.
+define void @i32_add4_scalar_vf(ptr noalias readonly %src, ptr noalias writeonly %dst, i32 %argval) {
+; CHECK-LATENCY1-LABEL: define void @i32_add4_scalar_vf(
+; CHECK-LATENCY1-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) {
+; CHECK-LATENCY1-NEXT:  [[ENTRY:.*:]]
+; CHECK-LATENCY1-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-LATENCY1:       [[VECTOR_PH]]:
+; CHECK-LATENCY1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-LATENCY1:       [[VECTOR_BODY]]:
+; CHECK-LATENCY1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-LATENCY1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
+; CHECK-LATENCY1-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
+; CHECK-LATENCY1-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 3
+; CHECK-LATENCY1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-LATENCY1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-LATENCY1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP1]]
+; CHECK-LATENCY1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP2]]
+; CHECK-LATENCY1-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP3]], align 4
+; CHECK-LATENCY1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP4]], align 4
+; CHECK-LATENCY1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP5]], align 4
+; CHECK-LATENCY1-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP6]], align 4
+; CHECK-LATENCY1-NEXT:    [[TMP11:%.*]] = add i32 [[TMP7]], [[ARGVAL]]
+; CHECK-LATENCY1-NEXT:    [[TMP12:%.*]] = add i32 [[TMP8]], [[ARGVAL]]
+; CHECK-LATENCY1-NEXT:    [[TMP13:%.*]] = add i32 [[TMP9]], [[ARGVAL]]
+; CHECK-LATENCY1-NEXT:    [[TMP14:%.*]] = add i32 [[TMP10]], [[ARGVAL]]
+; CHECK-LATENCY1-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[INDEX]]
+; CHECK-LATENCY1-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[TMP0]]
+; CHECK-LATENCY1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[TMP1]]
+; CHECK-LATENCY1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[TMP2]]
+; CHECK-LATENCY1-NEXT:    store i32 [[TMP11]], ptr [[TMP15]], align 4
+; CHECK-LATENCY1-NEXT:    store i32 [[TMP12]], ptr [[TMP16]], align 4
+; CHECK-LATENCY1-NEXT:    store i32 [[TMP13]], ptr [[TMP17]], align 4
+; CHECK-LATENCY1-NEXT:    store i32 [[TMP14]], ptr [[TMP18]], align 4
+; CHECK-LATENCY1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-LATENCY1-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-LATENCY1-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-LATENCY1:       [[MIDDLE_BLOCK]]:
+; CHECK-LATENCY1-NEXT:    br label %[[EXIT:.*]]
+; CHECK-LATENCY1:       [[EXIT]]:
+; CHECK-LATENCY1-NEXT:    ret void
+;
+; CHECK-LATENCY2-LABEL: define void @i32_add4_scalar_vf(
+; CHECK-LATENCY2-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) {
+; CHECK-LATENCY2-NEXT:  [[ENTRY:.*:]]
+; CHECK-LATENCY2-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-LATENCY2:       [[VECTOR_PH]]:
+; CHECK-LATENCY2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-LATENCY2:       [[VECTOR_BODY]]:
+; CHECK-LATENCY2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-LATENCY2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
+; CHECK-LATENCY2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
+; CHECK-LATENCY2-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 3
+; CHECK-LATENCY2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-LATENCY2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-LATENCY2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP1]]
+; CHECK-LATENCY2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP2]]
+; CHECK-LATENCY2-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP3]], align 4
+; CHECK-LATENCY2-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP4]], align 4
+; CHECK-LATENCY2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP5]], align 4
+; CHECK-LATENCY2-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP6]], align 4
+; CHECK-LATENCY2-NEXT:    [[TMP11:%.*]] = add i32 [[TMP7]], [[ARGVAL]]
+; CHECK-LATENCY2-NEXT:    [[TMP12:%.*]] = add i32 [[TMP8]], [[ARGVAL]]
+; CHECK-LATENCY2-NEXT:    [[TMP13:%.*]] = add i32 [[TMP9]], [[ARGVAL]]
+; CHECK-LATENCY2-NEXT:    [[TMP14:%.*]] = add i32 [[TMP10]], [[ARGVAL]]
+; CHECK-LATENCY2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[INDEX]]
+; CHECK-LATENCY2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[TMP0]]
+; CHECK-LATENCY2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[TMP1]]
+; CHECK-LATENCY2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[TMP2]]
+; CHECK-LATENCY2-NEXT:    store i32 [[TMP11]], ptr [[TMP15]], align 4
+; CHECK-LATENCY2-NEXT:    store i32 [[TMP12]], ptr [[TMP16]], align 4
+; CHECK-LATENCY2-NEXT:    store i32 [[TMP13]], ptr [[TMP17]], align 4
+; CHECK-LATENCY2-NEXT:    store i32 [[TMP14]], ptr [[TMP18]], align 4
+; CHECK-LATENCY2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-LATENCY2-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-LATENCY2-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-LATENCY2:       [[MIDDLE_BLOCK]]:
+; CHECK-LATENCY2-NEXT:    br label %[[EXIT:.*]]
+; CHECK-LATENCY2:       [[EXIT]]:
+; CHECK-LATENCY2-NEXT:    ret void
+;
+; CHECK-LATENCY8-LABEL: define void @i32_add4_scalar_vf(
+; CHECK-LATENCY8-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) {
+; CHECK-LATENCY8-NEXT:  [[ENTRY:.*:]]
+; CHECK-LATENCY8-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-LATENCY8:       [[VECTOR_PH]]:
+; CHECK-LATENCY8-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-LATENCY8:       [[VECTOR_BODY]]:
+; CHECK-LATENCY8-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-LATENCY8-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
+; CHECK-LATENCY8-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
+; CHECK-LATENCY8-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 3
+; CHECK-LATENCY8-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-LATENCY8-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-LATENCY8-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP1]]
+; CHECK-LATENCY8-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP2]]
+; CHECK-LATENCY8-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP3]], align 4
+; CHECK-LATENCY8-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP4]], align 4
+; CHECK-LATENCY8-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP5]], align 4
+; CHECK-LATENCY8-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP6]], align 4
+; CHECK-LATENCY8-NEXT:    [[TMP11:%.*]] = add i32 [[TMP7]], [[ARGVAL]]
+; CHECK-LATENCY8-NEXT:    [[TMP12:%.*]] = add i32 [[TMP8]], [[ARGVAL]]
+; CHECK-LATENCY8-NEXT:    [[TMP13:%.*]] = add i32 [[TMP9]], [[ARGVAL]]
+; CHECK-LATENCY8-NEXT:    [[TMP14:%.*]] = add i32 [[TMP10]], [[ARGVAL]]
+; CHECK-LATENCY8-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[INDEX]]
+; CHECK-LATENCY8-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[TMP0]]
+; CHECK-LATENCY8-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[TMP1]]
+; CHECK-LATENCY8-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[TMP2]]
+; CHECK-LATENCY8-NEXT:    store i32 [[TMP11]], ptr [[TMP15]], align 4
+; CHECK-LATENCY8-NEXT:    store i32 [[TMP12]], ptr [[TMP16]], align 4
+; CHECK-LATENCY8-NEXT:    store i32 [[TMP13]], ptr [[TMP17]], align 4
+; CHECK-LATENCY8-NEXT:    store i32 [[TMP14]], ptr [[TMP18]], align 4
+; CHECK-LATENCY8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-LATENCY8-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-LATENCY8-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-LATENCY8:       [[MIDDLE_BLOCK]]:
+; CHECK-LATENCY8-NEXT:    br label %[[EXIT:.*]]
+; CHECK-LATENCY8:       [[EXIT]]:
+; CHECK-LATENCY8-NEXT:    ret void
+;
+; CHECK-A510-LABEL: define void @i32_add4_scalar_vf(
+; CHECK-A510-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) #[[ATTR0]] {
+; CHECK-A510-NEXT:  [[ENTRY:.*:]]
+; CHECK-A510-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-A510:       [[VECTOR_PH]]:
+; CHECK-A510-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-A510:       [[VECTOR_BODY]]:
+; CHECK-A510-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-A510-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
+; CHECK-A510-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
+; CHECK-A510-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 3
+; CHECK-A510-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-A510-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-A510-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP1]]
+; CHECK-A510-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP2]]
+; CHECK-A510-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP3]], align 4
+; CHECK-A510-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP4]], align 4
+; CHECK-A510-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP5]], align 4
+; CHECK-A510-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP6]], align 4
+; CHECK-A510-NEXT:    [[TMP11:%.*]] = add i32 [[TMP7]], [[ARGVAL]]
+; CHECK-A510-NEXT:    [[TMP12:%.*]] = add i32 [[TMP8]], [[ARGVAL]]
+; CHECK-A510-NEXT:    [[TMP13:%.*]] = add i32 [[TMP9]], [[ARGVAL]]
+; CHECK-A510-NEXT:    [[TMP14:%.*]] = add i32 [[TMP10]], [[ARGVAL]]
+; CHECK-A510-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[INDEX]]
+; CHECK-A510-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[TMP0]]
+; CHECK-A510-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[TMP1]]
+; CHECK-A510-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[TMP2]]
+; CHECK-A510-NEXT:    store i32 [[TMP11]], ptr [[TMP15]], align 4
+; CHECK-A510-NEXT:    store i32 [[TMP12]], ptr [[TMP16]], align 4
+; CHECK-A510-NEXT:    store i32 [[TMP13]], ptr [[TMP17]], align 4
+; CHECK-A510-NEXT:    store i32 [[TMP14]], ptr [[TMP18]], align 4
+; CHECK-A510-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-A510-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-A510-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-A510:       [[MIDDLE_BLOCK]]:
+; CHECK-A510-NEXT:    br label %[[EXIT:.*]]
+; CHECK-A510:       [[EXIT]]:
+; CHECK-A510-NEXT:    ret void
+;
+; CHECK-A320-LABEL: define void @i32_add4_scalar_vf(
+; CHECK-A320-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias writeonly [[DST:%.*]], i32 [[ARGVAL:%.*]]) #[[ATTR0]] {
+; CHECK-A320-NEXT:  [[ENTRY:.*:]]
+; CHECK-A320-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-A320:       [[VECTOR_PH]]:
+; CHECK-A320-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-A320:       [[VECTOR_BODY]]:
+; CHECK-A320-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-A320-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
+; CHECK-A320-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
+; CHECK-A320-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 3
+; CHECK-A320-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-A320-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-A320-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP1]]
+; CHECK-A320-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP2]]
+; CHECK-A320-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP3]], align 4
+; CHECK-A320-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP4]], align 4
+; CHECK-A320-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP5]], align 4
+; CHECK-A320-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP6]], align 4
+; CHECK-A320-NEXT:    [[TMP11:%.*]] = add i32 [[TMP7]], [[ARGVAL]]
+; CHECK-A320-NEXT:    [[TMP12:%.*]] = add i32 [[TMP8]], [[ARGVAL]]
+; CHECK-A320-NEXT:    [[TMP13:%.*]] = add i32 [[TMP9]], [[ARGVAL]]
+; CHECK-A320-NEXT:    [[TMP14:%.*]] = add i32 [[TMP10]], [[ARGVAL]]
+; CHECK-A320-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[INDEX]]
+; CHECK-A320-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[TMP0]]
+; CHECK-A320-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[TMP1]]
+; CHECK-A320-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[TMP2]]
+; CHECK-A320-NEXT:    store i32 [[TMP11]], ptr [[TMP15]], align 4
+; CHECK-A320-NEXT:    store i32 [[TMP12]], ptr [[TMP16]], align 4
+; CHECK-A320-NEXT:    store i32 [[TMP13]], ptr [[TMP17]], align 4
+; CHECK-A320-NEXT:    store i32 [[TMP14]], ptr [[TMP18]], align 4
+; CHECK-A320-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-A320-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-A320-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-A320:       [[MIDDLE_BLOCK]]:
+; CHECK-A320-NEXT:    br label %[[EXIT:.*]]
+; CHECK-A320:       [[EXIT]]:
+; CHECK-A320-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %src0 = getelementptr inbounds nuw i32, ptr %src, i64 %iv
+  %val0 = load i32, ptr %src0, align 4
+  %add0 = add i32 %val0, %argval
+  %dst0 = getelementptr inbounds nuw i32, ptr %dst, i64 %iv
+  store i32 %add0, ptr %dst0, align 4
+  %iv.next = add nuw i64 %iv, 1
+  %cmp = icmp ult i64 %iv.next, 1024
+  br i1 %cmp, label %loop, label %exit, !llvm.loop !5
+
+exit:
+  ret void
+}
+
 !0 = !{!"llvm.loop.vectorize.enable"}
 !1 = distinct !{!1, !0}
+
+!3 = !{!"llvm.loop.vectorize.enable"}
+!4 = !{!"llvm.loop.vectorize.width", i32 1}
+!5 = distinct !{!5, !4, !3}
 
 attributes #0 = { "target-features"="-sve" }
