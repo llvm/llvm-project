@@ -2689,9 +2689,10 @@ private:
   /// are in the expected state and it is profitable to model as a bit pack.
   bool matchesBitPack(const TreeEntry &TE) const;
 
-  /// True if the node's lanes are a zext from i8, so compacting them to bytes
-  /// is free.
-  bool isByteZExtNode(const TreeEntry &TE) const;
+  /// If the node's lanes are a plain zext, returns the source bit width:
+  /// compacting the vectorized lanes back to it is free. Copyable lanes force
+  /// a blend after the extend, so the vectorized value is not a plain zext.
+  unsigned getZExtSrcWidth(const TreeEntry &TE) const;
 
   /// Checks if the \p SelectTE matches zext+selects, which can be inversed for
   /// better codegen in case like zext (icmp ne), select (icmp eq), ....
@@ -13787,12 +13788,11 @@ BoUpSLP::computeBitPackLayout(const TreeEntry &TE) const {
   return computeBitPackInfo(BitWidth, PossibleBits, ShlAmts, Masks);
 }
 
-bool BoUpSLP::isByteZExtNode(const TreeEntry &TE) const {
-  // Copyable lanes force a blend after the extend, so the vectorized value is
-  // not a plain zext and the byte compaction is not free.
-  return TE.hasState() && !TE.hasCopyableElements() &&
-         TE.getOpcode() == Instruction::ZExt &&
-         cast<ZExtInst>(TE.getMainOp())->getSrcTy()->isIntegerTy(8);
+unsigned BoUpSLP::getZExtSrcWidth(const TreeEntry &TE) const {
+  if (!TE.hasState() || TE.hasCopyableElements() ||
+      TE.getOpcode() != Instruction::ZExt)
+    return 0;
+  return cast<ZExtInst>(TE.getMainOp())->getSrcTy()->getScalarSizeInBits();
 }
 
 bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
@@ -13855,10 +13855,9 @@ bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
         Instruction::And, VecTy, CostKind, getOperandInfo(ShlTE->Scalars),
         getOperandInfo(MaskTE->Scalars), /*Args=*/{}, TE.getMainOp(), TLI);
   unsigned ShiftWidth;
-  bool FreeByteTrunc = isByteZExtNode(*LhsTE);
   InstructionCost PackCost = getBitPackCost(
-      *TTI, VecTy, ScalarTy, *Info, FreeByteTrunc, getCastContextHint(*LhsTE),
-      CostKind, TLI, TE.getMainOp(), ShiftWidth);
+      *TTI, VecTy, ScalarTy, *Info, getZExtSrcWidth(*LhsTE),
+      getCastContextHint(*LhsTE), CostKind, TLI, TE.getMainOp(), ShiftWidth);
   return PackCost.isValid() && PackCost <= VecCost;
 }
 
@@ -14547,7 +14546,7 @@ void BoUpSLP::transformNodes() {
           }
           TreeEntry *ConstEntry = getOperandEntry(&E, 1);
           assert(ConstEntry->UserTreeIndex && ConstEntry->isGather() &&
-                 "Expected ZExt node.");
+                 "Expected constants only.");
           // The ConstNode node is part of the combined node.
           ConstEntry->State = TreeEntry::CombinedVectorize;
           ConstEntry->CombinedOp = Code;
@@ -14662,7 +14661,22 @@ void BoUpSLP::transformNodes() {
 class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   bool IsFinalized = false;
   SmallVector<int> CommonMask;
-  SmallVector<PointerUnion<Value *, const TreeEntry *>, 2> InVectors;
+
+  // Each input vector can be tagged with extra context information
+  struct InVector {
+    PointerUnion<Value *, const TreeEntry *> Vec = nullptr;
+    TargetTransformInfo::VectorInstrContext Ctx =
+        TargetTransformInfo::VectorInstrContext::None;
+
+    InVector(Value *Vec, TargetTransformInfo::VectorInstrContext Ctx =
+                             TargetTransformInfo::VectorInstrContext::None)
+        : Vec(Vec), Ctx(Ctx) {}
+    InVector(const TreeEntry *Vec,
+             TargetTransformInfo::VectorInstrContext Ctx =
+                 TargetTransformInfo::VectorInstrContext::None)
+        : Vec(Vec), Ctx(Ctx) {}
+  };
+  SmallVector<InVector, 2> InVectors;
   /// Captures the original scalar VL of a single, "clean" gather() call so
   /// the values can be forwarded as the Args operand to getShuffleCost() for
   /// the final permutation in finalize(). This lets the target cost model
@@ -14702,7 +14716,8 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     return Constant::getAllOnesValue(Ty);
   }
 
-  InstructionCost getBuildVectorCost(ArrayRef<Value *> VL, Value *Root) {
+  InstructionCost getBuildVectorCost(ArrayRef<Value *> VL, Value *Root,
+                                     TTI::VectorInstrContext ContextHint) {
     if ((!Root && allConstant(VL)) || all_of(VL, IsaPred<UndefValue>))
       return TTI::TCC_Free;
     auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, VL.size()));
@@ -14726,7 +14741,8 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         }
         return TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
                                       CostKind, std::distance(VL.begin(), It),
-                                      PoisonValue::get(VecTy), *It);
+                                      PoisonValue::get(VecTy), *It,
+                                      ContextHint);
       }
 
       SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
@@ -14735,12 +14751,14 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       });
       InstructionCost InsertCost =
           TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0,
-                                 PoisonValue::get(VecTy), *It);
+                                 PoisonValue::get(VecTy), *It, ContextHint);
       return InsertCost + getShuffleCost(TTI, TargetTransformInfo::SK_Broadcast,
                                          VecTy, CostKind, ShuffleMask,
                                          /*Index=*/0, /*SubTp=*/nullptr,
-                                         /*Args=*/*It);
+                                         /*Args=*/*It, ContextHint);
     }
+    assert(ContextHint != TTI::VectorInstrContext::SplatOpFolded &&
+           "Expected SplatOpFolded to be a splat");
     return GatherCost + (all_of(VL, IsaPred<UndefValue>)
                              ? TTI::TCC_Free
                              : R.getGatherCost(VL, !Root, ScalarTy));
@@ -14891,9 +14909,9 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       // sub-Mask into the CommonMask to estimate it later and avoid double cost
       // estimation.
       if ((InVectors.size() == 2 &&
-           cast<const TreeEntry *>(InVectors.front()) == &E1 &&
-           cast<const TreeEntry *>(InVectors.back()) == E2) ||
-          (!E2 && cast<const TreeEntry *>(InVectors.front()) == &E1)) {
+           cast<const TreeEntry *>(InVectors.front().Vec) == &E1 &&
+           cast<const TreeEntry *>(InVectors.back().Vec) == E2) ||
+          (!E2 && cast<const TreeEntry *>(InVectors.front().Vec) == &E1)) {
         unsigned Limit = getNumElems(Mask.size(), SliceSize, Part);
         assert(all_of(ArrayRef(CommonMask).slice(Part * SliceSize, Limit),
                       [](int Idx) { return Idx == PoisonMaskElem; }) &&
@@ -14904,43 +14922,51 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       }
       // Found non-matching nodes - need to estimate the cost for the matched
       // and transform mask.
-      Cost += createShuffle(InVectors.front(),
-                            InVectors.size() == 1 ? nullptr : InVectors.back(),
-                            CommonMask);
+      if (InVectors.size() == 1)
+        Cost += createShuffle(InVectors.front().Vec, nullptr, CommonMask, {},
+                              InVectors.front().Ctx);
+      else
+        Cost += createShuffle(InVectors.front().Vec, InVectors.back().Vec,
+                              CommonMask, {}, InVectors.front().Ctx,
+                              InVectors.back().Ctx);
       transformMaskAfterShuffle(CommonMask, CommonMask);
     } else if (InVectors.size() == 2) {
-      Cost += createShuffle(InVectors.front(), InVectors.back(), CommonMask);
+      Cost +=
+          createShuffle(InVectors.front().Vec, InVectors.back().Vec, CommonMask,
+                        {}, InVectors.front().Ctx, InVectors.back().Ctx);
       transformMaskAfterShuffle(CommonMask, CommonMask);
     }
     SameNodesEstimated = false;
     if (!E2 && InVectors.size() == 1) {
       unsigned VF = E1.getVectorFactor();
-      if (Value *V1 = dyn_cast<Value *>(InVectors.front())) {
+      if (Value *V1 = InVectors.front().Vec.dyn_cast<Value *>()) {
         VF = std::max(VF, getVF(V1));
       } else {
-        const auto *E = cast<const TreeEntry *>(InVectors.front());
+        const auto *E = cast<const TreeEntry *>(InVectors.front().Vec);
         VF = std::max(VF, E->getVectorFactor());
       }
       for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
         if (Mask[Idx] != PoisonMaskElem && CommonMask[Idx] == PoisonMaskElem)
           CommonMask[Idx] = Mask[Idx] + VF;
-      Cost += createShuffle(InVectors.front(), &E1, CommonMask);
+      Cost += createShuffle(InVectors.front().Vec, &E1, CommonMask, {},
+                            InVectors.front().Ctx);
       transformMaskAfterShuffle(CommonMask, CommonMask);
     } else {
       auto P = InVectors.front();
-      Cost += createShuffle(&E1, E2, Mask);
+      Cost += createShuffle(&E1, E2, Mask, {}, TTI::VectorInstrContext::None);
       unsigned VF = Mask.size();
-      if (Value *V1 = dyn_cast<Value *>(P)) {
+      if (Value *V1 = dyn_cast<Value *>(P.Vec)) {
         VF = std::max(VF,
                       getNumElements(V1->getType()));
       } else {
-        const auto *E = cast<const TreeEntry *>(P);
+        const auto *E = cast<const TreeEntry *>(P.Vec);
         VF = std::max(VF, E->getVectorFactor());
       }
       for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
         if (Mask[Idx] != PoisonMaskElem)
           CommonMask[Idx] = Idx + (InVectors.empty() ? 0 : VF);
-      Cost += createShuffle(P, InVectors.front(), CommonMask);
+      Cost += createShuffle(P.Vec, InVectors.front().Vec, CommonMask, {}, P.Ctx,
+                            InVectors.front().Ctx);
       transformMaskAfterShuffle(CommonMask, CommonMask);
     }
   }
@@ -14973,8 +14999,10 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       return getShuffleCost(TTI, TTI::SK_PermuteTwoSrc,
                             cast<VectorType>(V1->getType()), CostKind, Mask);
     }
-    InstructionCost createShuffleVector(Value *V1, ArrayRef<int> Mask,
-                                        ArrayRef<Value *> VL) const {
+    InstructionCost
+    createShuffleVector(Value *V1, ArrayRef<int> Mask, ArrayRef<Value *> VL,
+                        TTI::VectorInstrContext ContextHint =
+                            TTI::VectorInstrContext::None) const {
       // Empty mask or identity mask are free.
       unsigned VF =
           cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
@@ -14982,7 +15010,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         return TTI::TCC_Free;
       return getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
                             cast<VectorType>(V1->getType()), CostKind, Mask,
-                            /*Index=*/0, /*SubTp=*/nullptr, VL);
+                            /*Index=*/0, /*SubTp=*/nullptr, VL, ContextHint);
     }
     InstructionCost createIdentity(Value *) const { return TTI::TCC_Free; }
     InstructionCost createPoison(Type *Ty, unsigned VF) const {
@@ -14997,7 +15025,9 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
   InstructionCost
   createShuffle(const PointerUnion<Value *, const TreeEntry *> &P1,
                 const PointerUnion<Value *, const TreeEntry *> &P2,
-                ArrayRef<int> Mask, ArrayRef<Value *> VL = {}) {
+                ArrayRef<int> Mask, ArrayRef<Value *> VL = {},
+                TTI::VectorInstrContext Ctx1 = TTI::VectorInstrContext::None,
+                TTI::VectorInstrContext Ctx2 = TTI::VectorInstrContext::None) {
     ShuffleCostBuilder Builder(TTI, CostKind);
     SmallVector<int> CommonMask(Mask);
     Value *V1 = P1.dyn_cast<Value *>(), *V2 = P2.dyn_cast<Value *>();
@@ -15204,8 +15234,11 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         Constant::getNullValue(getWidenedType(ScalarTy, CommonMask.size()));
     if (InVectors.size() == 2)
       InVectors.pop_back();
-    return ExtraCost + BaseShuffleAnalysis::createShuffle<InstructionCost>(
-                           V1, V2, CommonMask, Builder, ScalarTy, SLPReVec, VL);
+    TTI::VectorInstrContext Ctx =
+        P2.isNull() ? Ctx1 : TTI::combineVectorInstrContexts(Ctx1, Ctx2);
+    return ExtraCost +
+           BaseShuffleAnalysis::createShuffle<InstructionCost>(
+               V1, V2, CommonMask, Builder, ScalarTy, SLPReVec, VL, Ctx);
   }
 
 public:
@@ -15407,7 +15440,7 @@ public:
                     if (P.value() == PoisonMaskElem)
                       return Mask[P.index()] == PoisonMaskElem;
                     auto *EI = cast<ExtractElementInst>(
-                        cast<const TreeEntry *>(InVectors.front())
+                        cast<const TreeEntry *>(InVectors.front().Vec)
                             ->getOrdered(P.index()));
                     return EI->getVectorOperand() == V1 ||
                            EI->getVectorOperand() == V2;
@@ -15415,23 +15448,25 @@ public:
            "Expected extractelement vectors.");
   }
   /// Adds another one input vector and the mask for the shuffling.
-  void add(Value *V1, ArrayRef<int> Mask, bool ForExtracts = false) {
+  void
+  add(Value *V1, ArrayRef<int> Mask, bool ForExtracts = false,
+      TTI::VectorInstrContext ContextHint = TTI::VectorInstrContext::None) {
     if (BVValues && !isa<Constant>(V1))
       BVValues.reset();
     if (InVectors.empty()) {
       assert(CommonMask.empty() && !ForExtracts &&
              "Expected empty input mask/vectors.");
       CommonMask.assign(Mask.begin(), Mask.end());
-      InVectors.assign(1, V1);
+      InVectors.assign(1, InVector(V1, ContextHint));
       return;
     }
     if (ForExtracts) {
       // No need to add vectors here, already handled them in adjustExtracts.
-      assert(InVectors.size() == 1 && isa<const TreeEntry *>(InVectors[0]) &&
-             !CommonMask.empty() &&
+      assert(InVectors.size() == 1 &&
+             isa<const TreeEntry *>(InVectors[0].Vec) && !CommonMask.empty() &&
              all_of(enumerate(CommonMask),
                     [&](auto P) {
-                      Value *Scalar = cast<const TreeEntry *>(InVectors[0])
+                      Value *Scalar = cast<const TreeEntry *>(InVectors[0].Vec)
                                           ->getOrdered(P.index());
                       if (P.value() == PoisonMaskElem)
                         return P.value() == Mask[P.index()] ||
@@ -15448,25 +15483,28 @@ public:
            "Expected only tree entries from extracts/reused buildvectors.");
     unsigned VF = getVF(V1);
     if (InVectors.size() == 2) {
-      Cost += createShuffle(InVectors.front(), InVectors.back(), CommonMask);
+      Cost +=
+          createShuffle(InVectors.front().Vec, InVectors.back().Vec, CommonMask,
+                        {}, InVectors.front().Ctx, InVectors.back().Ctx);
       transformMaskAfterShuffle(CommonMask, CommonMask);
       VF = std::max<unsigned>(VF, CommonMask.size());
     } else if (const auto *InTE =
-                   InVectors.front().dyn_cast<const TreeEntry *>()) {
+                   InVectors.front().Vec.dyn_cast<const TreeEntry *>()) {
       VF = std::max(VF, InTE->getVectorFactor());
     } else {
-      VF = std::max(
-          VF, cast<FixedVectorType>(cast<Value *>(InVectors.front())->getType())
-                  ->getNumElements());
+      VF = std::max(VF, cast<FixedVectorType>(
+                            cast<Value *>(InVectors.front().Vec)->getType())
+                            ->getNumElements());
     }
-    InVectors.push_back(V1);
+    InVectors.emplace_back(V1, ContextHint);
     for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
       if (Mask[Idx] != PoisonMaskElem && CommonMask[Idx] == PoisonMaskElem)
         CommonMask[Idx] = Mask[Idx] + VF;
   }
-  Value *gather(ArrayRef<Value *> VL, unsigned MaskVF = 0,
-                Value *Root = nullptr) {
-    Cost += getBuildVectorCost(VL, Root);
+  Value *
+  gather(ArrayRef<Value *> VL, unsigned MaskVF = 0, Value *Root = nullptr,
+         TTI::VectorInstrContext ContextHint = TTI::VectorInstrContext::None) {
+    Cost += getBuildVectorCost(VL, Root, ContextHint);
     if (BVValues) {
       if (BVValues->empty() && InVectors.empty())
         BVValues->assign(VL.begin(), VL.end());
@@ -15516,11 +15554,14 @@ public:
           Action = {}) {
     IsFinalized = true;
     if (Action) {
-      const PointerUnion<Value *, const TreeEntry *> &Vec = InVectors.front();
+      const PointerUnion<Value *, const TreeEntry *> &Vec =
+          InVectors.front().Vec;
       if (InVectors.size() == 2)
-        Cost += createShuffle(Vec, InVectors.back(), CommonMask);
+        Cost += createShuffle(Vec, InVectors.back().Vec, CommonMask, {},
+                              InVectors.front().Ctx, InVectors.back().Ctx);
       else
-        Cost += createShuffle(Vec, nullptr, CommonMask);
+        Cost +=
+            createShuffle(Vec, nullptr, CommonMask, {}, InVectors.front().Ctx);
       transformMaskAfterShuffle(CommonMask, CommonMask);
       assert(VF > 0 &&
              "Expected vector length for the final value before action.");
@@ -15532,11 +15573,14 @@ public:
       InVectors.front() = V;
     }
     if (!SubVectors.empty()) {
-      const PointerUnion<Value *, const TreeEntry *> &Vec = InVectors.front();
+      const PointerUnion<Value *, const TreeEntry *> &Vec =
+          InVectors.front().Vec;
       if (InVectors.size() == 2)
-        Cost += createShuffle(Vec, InVectors.back(), CommonMask);
+        Cost += createShuffle(Vec, InVectors.back().Vec, CommonMask, {},
+                              InVectors.front().Ctx, InVectors.back().Ctx);
       else
-        Cost += createShuffle(Vec, nullptr, CommonMask);
+        Cost +=
+            createShuffle(Vec, nullptr, CommonMask, {}, InVectors.front().Ctx);
       transformMaskAfterShuffle(CommonMask, CommonMask);
       // Add subvectors permutation cost.
       if (!SubVectorsMask.empty()) {
@@ -15607,10 +15651,12 @@ public:
     ArrayRef<Value *> VL;
     if (BVValues)
       VL = *BVValues;
-    return Cost +
-           createShuffle(InVectors.front(),
-                         InVectors.size() == 2 ? InVectors.back() : nullptr,
-                         CommonMask, VL);
+    if (InVectors.size() == 2)
+      return Cost + createShuffle(InVectors.front().Vec, InVectors.back().Vec,
+                                  CommonMask, VL, InVectors.front().Ctx,
+                                  InVectors.back().Ctx);
+    return Cost + createShuffle(InVectors.front().Vec, nullptr, CommonMask, VL,
+                                InVectors.front().Ctx);
   }
 
   ~ShuffleCostEstimator() {
@@ -16840,18 +16886,18 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (!Info)
         return InstructionCost::getInvalid();
       unsigned ShiftWidth;
-      bool FreeByteTrunc = isByteZExtNode(*LhsTE);
       // The pack works on the vectorized operand in its own (possibly
       // demoted) type.
       Type *SrcScalarTy = LhsTE->Scalars.front()->getType();
       if (auto It = MinBWs.find(LhsTE); It != MinBWs.end())
         SrcScalarTy = IntegerType::get(F->getContext(), It->second.first);
-      InstructionCost PackCost = getBitPackCost(
-          TTI,
-          cast<FixedVectorType>(
-              getWidenedType(SrcScalarTy, LhsTE->getVectorFactor())),
-          SrcScalarTy, *Info, FreeByteTrunc, getCastContextHint(*LhsTE),
-          CostKind, TLI, E->getMainOp(), ShiftWidth);
+      InstructionCost PackCost =
+          getBitPackCost(TTI,
+                         cast<FixedVectorType>(getWidenedType(
+                             SrcScalarTy, LhsTE->getVectorFactor())),
+                         SrcScalarTy, *Info, getZExtSrcWidth(*LhsTE),
+                         getCastContextHint(*LhsTE), CostKind, TLI,
+                         E->getMainOp(), ShiftWidth);
       // A demoted result is re-extended to the reduction type.
       if (SrcScalarTy != OrigScalarTy) {
         auto It = MinBWs.find(E);
@@ -18944,6 +18990,13 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       (Worklist.top().first->Idx == 0 || Worklist.top().first->Idx == 1))
     return Cost;
 
+  // Original gather costs before any trimming; used to rebase the reference
+  // cost on the recosted gathers if the trimming is reverted.
+  SmallDenseMap<const TreeEntry *, InstructionCost> OrigGatherCosts;
+  if (!SplatGatheredScalarsRoots.empty())
+    for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree)
+      if (TE->isGather())
+        OrigGatherCosts.try_emplace(TE.get(), NodesCosts.lookup(TE.get()));
   bool Changed = false;
   bool PreferTrimmedTree = false;
   while (!Worklist.empty() && std::get<0>(Worklist.top().second) > 0) {
@@ -18979,11 +19032,11 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       Worklist.pop();
       continue;
     }
-    // A byte zext feeding a bit pack is priced as part of the pack: its
-    // vectorized form makes the byte compaction free, so keep it.
+    // A zext feeding a bit pack is priced as part of the pack: its vectorized
+    // form makes the compaction back to the source width free, so keep it.
     if (TE->UserTreeIndex && TE->UserTreeIndex.EdgeIdx == 0 &&
         TE->UserTreeIndex.UserTE->CombinedOp == TreeEntry::ReducedBitPack &&
-        isByteZExtNode(*TE)) {
+        getZExtSrcWidth(*TE) != 0) {
       Worklist.pop();
       continue;
     }
@@ -19231,7 +19284,16 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     DeletedNodes.erase(TE);
     for (TreeEntry *Child : TempDeleted)
       DeletedNodes.erase(Child);
-    return KeepCost <= DroppedGathersCost;
+    // On a cost tie prefer dropping the subtree: the reusing gathers
+    // materialize the scalars at the same price with fewer instructions.
+    return KeepCost < DroppedGathersCost;
+  };
+  // Re-price the gathers that reused a dropped splat subtree, so the
+  // remaining subtrees are checked against the costs with it deleted.
+  auto SyncGatherCosts = [&](const ValuesToInsertTy &ValuesToInsert) {
+    for (const auto &[BVE, _] : ValuesToInsert)
+      if (!DeletedNodes.contains(BVE))
+        NodesCosts[BVE] = RecostEntry(BVE);
   };
   if (!Changed) {
     // The splat subtrees are not linked to the tree root, so their cost is
@@ -19252,6 +19314,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
         DeletedNodes.insert(VectorizableTree[Idx].get());
       // The gather nodes that reused the subtree are re-emitted without it.
       TotalCost += DroppedGathersCost - CurrentGathersCost;
+      SyncGatherCosts(ValuesToInsert);
     }
     // Gathered loads subtrees left without surviving gather users are dead.
     for (TreeEntry *TE : GatheredLoadsNodes) {
@@ -19372,6 +19435,51 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     DeletedNodes.insert(DroppedSplatSubtrees.begin(),
                         DroppedSplatSubtrees.end());
     NewCost = Cost;
+    if (!SplatGatheredScalarsRoots.empty()) {
+      // The revert restores the pre-trimming tree, including the splat
+      // subtrees that were deleted as unused while their reusing gathers were
+      // trimmed. Recost the gather nodes for the restored set of vectorized
+      // nodes, then drop the splat subtrees that do not pay off in the
+      // restored tree. The reference cost still holds the gather costs of the
+      // full tree, where the already dropped splat subtrees served as reuse
+      // sources; rebase it on the recosted costs.
+      for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+        if (!TE->isGather() || DeletedNodes.contains(TE.get()))
+          continue;
+        InstructionCost C = RecostEntry(TE.get());
+        NewCost += C - OrigGatherCosts.lookup(TE.get());
+        NodesCosts[TE.get()] = C;
+      }
+      for (TreeEntry *TE : SplatGatheredScalarsRoots) {
+        if (DeletedNodes.contains(TE))
+          continue;
+        ValuesToInsertTy ValuesToInsert;
+        InstructionCost CurrentGathersCost = 0, DroppedGathersCost = 0;
+        if (!FindDemandedElts(TE, ValuesToInsert).isZero() &&
+            IsSplatSubtreeProfitable(TE, ValuesToInsert, CurrentGathersCost,
+                                     DroppedGathersCost))
+          continue;
+        DeletedNodes.insert(TE);
+        for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx]))
+          DeletedNodes.insert(VectorizableTree[Idx].get());
+        NewCost += DroppedGathersCost - CurrentGathersCost -
+                   std::get<1>(SubtreeCosts[TE->Idx]);
+        SyncGatherCosts(ValuesToInsert);
+      }
+      // Dropping the splat subtrees may leave the gathered loads subtrees
+      // built for them without surviving gather users; delete those too.
+      for (TreeEntry *TE : GatheredLoadsNodes) {
+        if (DeletedNodes.contains(TE))
+          continue;
+        ValuesToInsertTy ValuesToInsert;
+        if (!FindDemandedElts(TE, ValuesToInsert).isZero())
+          continue;
+        DeletedNodes.insert(TE);
+        for (unsigned Idx : std::get<2>(SubtreeCosts[TE->Idx]))
+          DeletedNodes.insert(VectorizableTree[Idx].get());
+        NewCost -= std::get<1>(SubtreeCosts[TE->Idx]);
+      }
+    }
   } else {
     // If the remaining tree is just a buildvector - exit, it will cause
     // endless attempts to vectorize.
@@ -22045,7 +22153,8 @@ public:
       InVectors.push_back(V1);
   }
   /// Adds another one input vector and the mask for the shuffling.
-  void add(Value *V1, ArrayRef<int> Mask, bool = false) {
+  void add(Value *V1, ArrayRef<int> Mask, bool = false,
+           TTI::VectorInstrContext = TTI::VectorInstrContext::None) {
     assert(isa<FixedVectorType>(V1->getType()) &&
            "castToScalarTyElem expects V1 to be FixedVectorType");
     V1 = castToScalarTyElem(V1);
@@ -22104,7 +22213,8 @@ public:
     add(V1, NewMask);
   }
   Value *gather(ArrayRef<Value *> VL, unsigned MaskVF = 0,
-                Value *Root = nullptr) {
+                Value *Root = nullptr,
+                TTI::VectorInstrContext = TTI::VectorInstrContext::None) {
     return R.gather(VL, Root, ScalarTy,
                     [&](Value *V1, Value *V2, ArrayRef<int> Mask) {
                       return createShuffle(V1, V2, Mask);
@@ -22790,10 +22900,39 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     // Gather unique scalars and all constants.
     SmallVector<int> ReuseMask(GatheredScalars.size(), PoisonMaskElem);
     TryPackScalars(GatheredScalars, ReuseMask, /*IsRootPoison=*/true);
-    Value *BV = ShuffleBuilder.gather(GatheredScalars, ReuseMask.size());
-    ShuffleBuilder.add(BV, ReuseMask);
+    TTI::VectorInstrContext ContextHint = TTI::VectorInstrContext::None;
+    if constexpr (std::is_same_v<ResTy, InstructionCost>) {
+      auto GatherUserOps =
+          [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
+            UserOps.clear();
+            if (NeedFreeze)
+              return false;
+            for (const auto &TE : VectorizableTree) {
+              if (DeletedNodes.contains(TE.get()))
+                continue;
+              if (!(TE->isGather() ||
+                    TransformedToGatherNodes.contains(TE.get())) ||
+                  !E->isSame(TE->Scalars))
+                continue;
+              auto *UserTE = TE->UserTreeIndex.UserTE;
+              if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
+                  TransformedToGatherNodes.contains(UserTE))
+                return false;
+              UserOps.emplace_back(UserTE->getOpcode(),
+                                   TE->UserTreeIndex.EdgeIdx);
+            }
+            assert(UserOps.size() &&
+                   "Ought to at least match with current entry");
+            return true;
+          };
+      ContextHint =
+          TTI->getBuildVectorContextHint(ReuseMask, E->Scalars, GatherUserOps);
+    }
+    Value *BV = ShuffleBuilder.gather(GatheredScalars, ReuseMask.size(),
+                                      /*Root*/ nullptr, ContextHint);
+    ShuffleBuilder.add(BV, ReuseMask, /*ForExtract*/ false, ContextHint);
     Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices, SubVectors,
-                                  SubVectorsMask);
+                                  SubVectorsMask, /*VF*/ 0, /*Action*/ {});
   } else {
     // Gather all constants.
     SmallVector<int> Mask(GatheredScalars.size(), PoisonMaskElem);
@@ -24579,12 +24718,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       assert(Info && "Expected bit pack info.");
       unsigned ShiftWidth;
       const TreeEntry *LhsTE = getOperandEntry(ShlTE, /*Idx=*/0);
-      bool FreeByteTrunc = isByteZExtNode(*LhsTE);
       InstructionCost PackCost =
           getBitPackCost(*TTI, cast<FixedVectorType>(X->getType()),
-                         X->getType()->getScalarType(), *Info, FreeByteTrunc,
-                         getCastContextHint(*LhsTE), CostKind, TLI,
-                         E->getMainOp(), ShiftWidth);
+                         X->getType()->getScalarType(), *Info,
+                         getZExtSrcWidth(*LhsTE), getCastContextHint(*LhsTE),
+                         CostKind, TLI, E->getMainOp(), ShiftWidth);
       assert(PackCost.isValid() && "Expected valid cost.");
       unsigned NumInsts;
       Value *V = buildBitPack(Builder, X, *Info, ShiftWidth, NumInsts);

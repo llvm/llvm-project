@@ -1159,8 +1159,6 @@ APInt getScalarMaxValue(const Value *V, unsigned Depth) {
         .uadd_sat(getScalarMaxValue(R, Depth + 1));
   if (match(V, m_NUWSub(m_Value(L), m_Value(R))))
     return getScalarMaxValue(L, Depth + 1);
-  if (match(V, m_Sub(m_Value(L), m_Value(R))))
-    return Unknown;
   if (match(V, m_Mul(m_Value(L), m_Value(R))))
     return getScalarMaxValue(L, Depth + 1)
         .umul_sat(getScalarMaxValue(R, Depth + 1));
@@ -1248,10 +1246,9 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
   unsigned NumElts = VecTy->getNumElements();
   Value *Y = X;
   if (ShiftWidth != BitWidth) {
-    // Compacting a byte zext is free, use its source directly.
+    // Compacting a zext back to its source is free, use it directly.
     if (auto *Z = dyn_cast<ZExtInst>(X);
-        Z && ShiftWidth == 8 &&
-        Z->getSrcTy() == FixedVectorType::get(Builder.getInt8Ty(), NumElts))
+        Z && Z->getSrcTy()->getScalarSizeInBits() == ShiftWidth)
       Y = Z->getOperand(0);
     else {
       Y = Builder.CreateTrunc(
