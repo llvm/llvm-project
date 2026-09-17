@@ -1587,66 +1587,55 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
   if (!Preheader)
     return false;
 
-  // Collect instructions that are safe to sink and have no in-loop users.
-  SmallPtrSet<Instruction *, 16> LegalToSink;
+  MemorySSA *MSSA = MSSAU.getMemorySSA();
+
+  SmallPtrSet<Instruction *, 16> SinkCandidates;
+  SmallVector<Instruction *, 16> RemovalWorklist;
+
+  // An instruction cannot be sunk if it has a user in the loop, which is the
+  // live range we are trying to shorten, or a user in the preheader that is
+  // not sunk as well, which would no longer be dominated by the definition.
+  auto HasBlockingUser = [&](Instruction *I) {
+    return llvm::any_of(I->uses(), [&](const Use &U) {
+      auto *UserI = cast<Instruction>(U.getUser());
+      auto *PN = dyn_cast<PHINode>(UserI);
+      BasicBlock *UseBB = PN ? PN->getIncomingBlock(U) : UserI->getParent();
+      if (L->contains(UseBB))
+        return true;
+      return UseBB == Preheader && !SinkCandidates.contains(UserI);
+    });
+  };
+
+  // Walk the preheader backwards, so that all preheader users of an
+  // instruction have already been classified when it is considered.
   for (Instruction &I : llvm::reverse(*Preheader)) {
     if (I.isTerminator())
       continue;
 
-    // New instructions were inserted at the end of the preheader.
+    // PHI nodes are at the start of the block, so nothing is left to sink.
     if (isa<PHINode>(I))
       break;
 
     // Don't move instructions which might have side effects, since the side
     // effects need to complete before instructions inside the loop. Note that
-    // it's okay if the instruction might have undefined behavior: LoopSimplify
-    // guarantees that the preheader dominates the exit block.
+    // it's okay if the instruction might have undefined behavior: the preheader
+    // dominates the exit block.
     if (I.mayHaveSideEffects())
       continue;
 
-    if (!canSinkOrHoistInst(I, AA, DT, L, MSSAU, true, SinkFlags, nullptr))
+    if (HasBlockingUser(&I))
       continue;
 
-    bool UsedInLoop = llvm::any_of(I.uses(), [L](Use &U) {
-      auto *UserI = cast<Instruction>(U.getUser());
-      BasicBlock *UseBB = UserI->getParent();
-      if (auto *PN = dyn_cast<PHINode>(UserI))
-        UseBB = PN->getIncomingBlock(U);
-      return L->contains(UseBB);
-    });
-    if (UsedInLoop)
+    if (!canSinkOrHoistInst(I, AA, DT, L, MSSAU,
+                            /*TargetExecutesOncePerLoop=*/true, SinkFlags,
+                            /*ORE=*/nullptr))
       continue;
 
-    LegalToSink.insert(&I);
-  }
+    assert((!MSSA->getMemoryAccess(&I) ||
+            isa<MemoryUse>(MSSA->getMemoryAccess(&I))) &&
+           "Expected a MemoryUse for a memory-accessing sink candidate");
 
-  if (LegalToSink.empty())
-    return false;
-
-  // Remove candidates that have a preheader user which is not itself a
-  // candidate, since that user keeps the definition live in the preheader.
-  // Iterate until stable to handle chains.
-  SmallPtrSet<Instruction *, 16> SinkCandidates(LegalToSink);
-  bool Shrunk = true;
-  while (Shrunk) {
-    Shrunk = false;
-    SmallVector<Instruction *, 8> ToRemove;
-    for (Instruction *I : SinkCandidates) {
-      bool HasUnsinkablePreheaderUser =
-          llvm::any_of(I->uses(), [Preheader, &SinkCandidates](Use &U) {
-            auto *UserI = cast<Instruction>(U.getUser());
-            BasicBlock *UseBB = UserI->getParent();
-            if (auto *PN = dyn_cast<PHINode>(UserI))
-              UseBB = PN->getIncomingBlock(U);
-            return UseBB == Preheader && !SinkCandidates.contains(UserI);
-          });
-      if (HasUnsinkablePreheaderUser)
-        ToRemove.push_back(I);
-    }
-    for (Instruction *I : ToRemove) {
-      SinkCandidates.erase(I);
-      Shrunk = true;
-    }
+    SinkCandidates.insert(&I);
   }
 
   if (SinkCandidates.empty())
@@ -1658,9 +1647,17 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
   // since it may still enable sinking dependents for a net win.
   SmallPtrSet<Instruction *, 4> Seen;
   SmallDenseMap<Instruction *, bool, 16> AlreadyLiveAcross;
-  auto CountNewLiveAcrossOps =
-      [Preheader, &SinkCandidates, &Seen,
-       &AlreadyLiveAcross](Instruction *I) -> unsigned {
+  auto IsAlreadyLiveAcross = [&](Instruction *I) {
+    auto [It, Inserted] = AlreadyLiveAcross.try_emplace(I);
+    if (Inserted)
+      It->second = llvm::any_of(I->users(), [&](User *U) {
+        return cast<Instruction>(U)->getParent() != Preheader;
+      });
+    return It->second;
+  };
+
+  SmallDenseMap<Instruction *, unsigned, 16> NewLiveAcrossCount;
+  for (Instruction *I : SinkCandidates) {
     Seen.clear();
     unsigned Count = 0;
     for (Value *Op : I->operands()) {
@@ -1671,42 +1668,52 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
         continue;
       if (SinkCandidates.contains(OpI))
         continue;
-      auto [It, Inserted] = AlreadyLiveAcross.try_emplace(OpI);
-      if (Inserted)
-        It->second = llvm::any_of(OpI->users(), [Preheader](User *U) {
-          auto *UI = dyn_cast<Instruction>(U);
-          // Check if the user is in a different block than the preheader.
-          // This is a heuristic to check if the user is live across the loop.
-          return UI && UI->getParent() != Preheader;
-        });
-      if (!It->second)
+      if (!IsAlreadyLiveAcross(OpI))
         ++Count;
     }
-    return Count;
-  };
+    NewLiveAcrossCount[I] = Count;
+    if (Count > 1)
+      RemovalWorklist.push_back(I);
+  }
 
-  bool Changed = true;
-  while (Changed) {
-    Changed = false;
-    SmallVector<Instruction *, 8> ToRemove;
-    for (Instruction *I : SinkCandidates)
-      if (CountNewLiveAcrossOps(I) > 1)
-        ToRemove.push_back(I);
-    for (Instruction *I : ToRemove) {
-      SinkCandidates.erase(I);
-      Changed = true;
+  // Drop candidates that make more than one operand newly live across the loop.
+  // Allow one because sinking the candidate's users can result in a net win.
+  // Dropping a candidate blocks its candidate operands and can increase the
+  // live-across cost of its candidate users. Propagate these changes once over
+  // each def-use edge.
+  SmallPtrSet<Instruction *, 4> SeenUsers;
+  while (!RemovalWorklist.empty()) {
+    Instruction *I = RemovalWorklist.pop_back_val();
+    if (!SinkCandidates.erase(I))
+      continue;
+
+    Seen.clear();
+    for (Value *Op : I->operands())
+      if (auto *OpI = dyn_cast<Instruction>(Op))
+        if (Seen.insert(OpI).second && SinkCandidates.contains(OpI))
+          RemovalWorklist.push_back(OpI);
+
+    if (IsAlreadyLiveAcross(I))
+      continue;
+
+    SeenUsers.clear();
+    for (User *U : I->users()) {
+      auto *UI = cast<Instruction>(U);
+      if (!SeenUsers.insert(UI).second || !SinkCandidates.contains(UI))
+        continue;
+      if (++NewLiveAcrossCount[UI] > 1)
+        RemovalWorklist.push_back(UI);
     }
   }
 
   if (SinkCandidates.empty())
     return false;
 
-  // Sink surviving candidates in reverse program order so that defs in the
-  // exit block end up in their original relative order.
-  bool MadeAnyChanges = false;
+  // Sink in reverse program order, inserting before the previously sunk
+  // instruction, so the exit block keeps the original relative order.
+  BasicBlock::iterator InsertPt = ExitBlock->getFirstInsertionPt();
   SmallVector<Value *, 16> SunkInsts;
   MemoryAccess *ExitDef = nullptr;
-  MemorySSA *MSSA = MSSAU.getMemorySSA();
 
   for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
     if (!SinkCandidates.contains(&I))
@@ -1714,37 +1721,31 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
 
     SafetyInfo->removeInstruction(&I);
     SafetyInfo->insertInstructionTo(&I, ExitBlock);
-    I.moveBefore(*ExitBlock, ExitBlock->getFirstInsertionPt());
+    I.moveBefore(*ExitBlock, InsertPt);
+    InsertPt = I.getIterator();
     SunkInsts.push_back(&I);
 
-    // Update MemorySSA. Avoid the expensive getPreviousDefRecursive call by
-    // caching a defining access from the preheader on the first sunk MemoryUse.
-    if (auto *OldMA = MSSA->getMemoryAccess(&I)) {
+    // Use the updater to compute the defining access for the first MemoryUse.
+    // All MemoryUses are inserted at the same point and do not define memory,
+    // so the same access reaches all of them. Reuse it rather than calling
+    // moveToPlace() repeatedly, which would be quadratic.
+    if (MemoryAccess *OldMA = MSSA->getMemoryAccess(&I)) {
+      auto *OldMU = cast<MemoryUse>(OldMA);
       if (!ExitDef) {
-        if (auto *Accesses = MSSA->getBlockAccesses(Preheader)) {
-          if (!Accesses->empty()) {
-            MemoryAccess *Back = const_cast<MemoryAccess *>(&Accesses->back());
-            ExitDef = isa<MemoryUse>(Back)
-                          ? MSSA->getWalker()->getClobberingMemoryAccess(Back)
-                          : Back;
-          }
-        }
-        if (!ExitDef)
-          ExitDef = MSSA->getLiveOnEntryDef();
+        MSSAU.moveToPlace(OldMU, ExitBlock, MemorySSA::Beginning);
+        ExitDef = OldMU->getDefiningAccess();
+      } else {
+        MSSAU.removeMemoryAccess(OldMU);
+        MSSAU.createMemoryAccessInBB(&I, ExitDef, ExitBlock,
+                                     MemorySSA::Beginning);
       }
-      MemoryAccess *NewMA = MSSAU.createMemoryAccessInBB(&I, ExitDef, ExitBlock,
-                                                         MemorySSA::Beginning);
-      OldMA->replaceAllUsesWith(NewMA);
-      MSSAU.removeMemoryAccess(OldMA);
     }
-
-    MadeAnyChanges = true;
   }
 
   if (SE)
     SE->forgetValues(SunkInsts);
 
-  return MadeAnyChanges;
+  return true;
 }
 
 static Instruction *sinkThroughTriviallyReplaceablePHI(

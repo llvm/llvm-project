@@ -2,7 +2,7 @@
 ; RUN: opt -passes='print<scalar-evolution>,loop-mssa(licm)' -verify-scev  < %s -S | FileCheck %s
 
 ; This is to verify scalar-evolution update after sinking from preheader
-define i32 @main(i1 %cond) {
+define i32 @main(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP0:%.*]]
@@ -12,12 +12,12 @@ define i32 @main(i1 %cond) {
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[MID:%.*]], label [[LOOP0]]
 ; CHECK:       mid:
 ; CHECK-NEXT:    [[IV0_LCSSA:%.*]] = phi i32 [ [[IV0]], [[LOOP0]] ]
-; CHECK-NEXT:    [[A:%.*]] = load i32, ptr addrspace(1) null, align 8
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], [[IV0_LCSSA]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
-  %a = load i32, ptr addrspace(1) null, align 8
+  %a = load i32, ptr %p, align 4
   br label %loop0
 
 loop0:

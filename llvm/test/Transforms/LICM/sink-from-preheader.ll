@@ -289,9 +289,9 @@ exit:
   ret i32 %add
 }
 
-; Check if caching the defining access produces valid MemorySSA.
-; LICM refuses to sink a MemoryUse if there is any MemoryDef following.
-; All sunk MemoryUses must share the same defining access.
+; LICM refuses to sink a MemoryUse if there is any MemoryDef following it in
+; the preheader, so only %load2 is sunk and keeps the store as its defining
+; access.
 define i32 @test_sink_diff_def(i32 %a, ptr %p, ptr %q, i32 %N) {
 ; CHECK-LABEL: @test_sink_diff_def(
 ; CHECK-NEXT:  entry:
@@ -325,4 +325,68 @@ loop:
 
 exit:
   ret i32 %add2
+}
+
+declare i1 @b()
+declare i32 @f()
+
+; Instructions that may trap can be sunk, as the preheader dominates the exit
+; block.
+define i32 @test_trapping(i32 %x) {
+; CHECK-LABEL: @test_trapping(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @b()
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[Y:%.*]] = sdiv i32 10, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[Y]]
+;
+entry:
+  %y = sdiv i32 10, %x
+  br label %loop
+
+loop:
+  %cmp = call i1 @b()
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 %y
+}
+
+; %cond is only used by %sel, which is not sunk because it would make both %x
+; and %y live across the loop. Sinking %cond on its own would leave %sel in the
+; preheader without a dominating definition.
+define i32 @test_unprofitable_user_blocks_sink(i32 %a, i32 %N) {
+; CHECK-LABEL: @test_unprofitable_user_blocks_sink(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = call i32 @f()
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @f()
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+entry:
+  %x = call i32 @f()
+  %y = call i32 @f()
+  %cond = icmp eq i32 %a, 0
+  %sel = select i1 %cond, i32 %x, i32 %y
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv.next, %N
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 %sel
 }
