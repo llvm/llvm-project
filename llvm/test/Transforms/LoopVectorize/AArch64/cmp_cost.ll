@@ -15,11 +15,11 @@ define float @fmaxnum_reduction_f32(float %base, i32 %n) {
 ; CHECK:  Cost of 0 for VF 2: WIDEN-REDUCTION-PHI ir<%max> = phi (fmaxnum) ir<-1.000000e+07>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 2: WIDEN-CAST ir<%iv.f> = sitofp ir<%iv> to float
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%v> = fadd ir<%base>, ir<%iv.f>
-; CHECK:  Cost of 1 for VF 2: WIDEN-INTRINSIC ir<%max.next> = call llvm.maxnum(ir<%max>, ir<%v>)
+; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP4:%[0-9]+]]> = freeze ir<%v>
+; CHECK:  Cost of 1 for VF 2: WIDEN-INTRINSIC ir<%max.next> = call llvm.maxnum(ir<%max>, vp<[[VP4]]>)
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP3:%[0-9]+]]>, vp<[[VP1:%[0-9]+]]>
-; CHECK:  Cost of 3 for VF 2: EMIT vp<[[VP4:%[0-9]+]]> = fcmp uno ir<%v>, ir<%v>
-; CHECK:  Cost of 2 for VF 2: EMIT vp<[[VP5:%[0-9]+]]> = any-of vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP6:%[0-9]+]]> = freeze vp<[[VP5]]>
+; CHECK:  Cost of 3 for VF 2: EMIT vp<[[VP5:%[0-9]+]]> = fcmp uno vp<[[VP4]]>, vp<[[VP4]]>
+; CHECK:  Cost of 2 for VF 2: EMIT vp<[[VP6:%[0-9]+]]> = any-of vp<[[VP5]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP7:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP8:%[0-9]+]]> = or vp<[[VP6]]>, vp<[[VP7]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<[[VP8]]>
@@ -46,11 +46,11 @@ define float @fmaxnum_reduction_f32(float %base, i32 %n) {
 ; CHECK:  Cost of 0 for VF 4: WIDEN-REDUCTION-PHI ir<%max> = phi (fmaxnum) ir<-1.000000e+07>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 4: WIDEN-CAST ir<%iv.f> = sitofp ir<%iv> to float
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%v> = fadd ir<%base>, ir<%iv.f>
-; CHECK:  Cost of 1 for VF 4: WIDEN-INTRINSIC ir<%max.next> = call llvm.maxnum(ir<%max>, ir<%v>)
+; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP4]]> = freeze ir<%v>
+; CHECK:  Cost of 1 for VF 4: WIDEN-INTRINSIC ir<%max.next> = call llvm.maxnum(ir<%max>, vp<[[VP4]]>)
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
-; CHECK:  Cost of 3 for VF 4: EMIT vp<[[VP4]]> = fcmp uno ir<%v>, ir<%v>
-; CHECK:  Cost of 2 for VF 4: EMIT vp<[[VP5]]> = any-of vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP6]]> = freeze vp<[[VP5]]>
+; CHECK:  Cost of 3 for VF 4: EMIT vp<[[VP5]]> = fcmp uno vp<[[VP4]]>, vp<[[VP4]]>
+; CHECK:  Cost of 2 for VF 4: EMIT vp<[[VP6]]> = any-of vp<[[VP5]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP7]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP8]]> = or vp<[[VP6]]>, vp<[[VP7]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<[[VP8]]>
@@ -98,11 +98,11 @@ define double @fmaxnum_reduction_f64(double %base, i64 %n) {
 ; CHECK:  Cost of 0 for VF 2: WIDEN-REDUCTION-PHI ir<%max> = phi (fmaxnum) ir<-1.000000e+07>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 2: WIDEN-CAST ir<%iv.f> = sitofp ir<%iv> to double
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%v> = fadd ir<%base>, ir<%iv.f>
-; CHECK:  Cost of 1 for VF 2: WIDEN-INTRINSIC ir<%max.next> = call llvm.maxnum(ir<%max>, ir<%v>)
+; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP4:%[0-9]+]]> = freeze ir<%v>
+; CHECK:  Cost of 1 for VF 2: WIDEN-INTRINSIC ir<%max.next> = call llvm.maxnum(ir<%max>, vp<[[VP4]]>)
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP3:%[0-9]+]]>, vp<[[VP1:%[0-9]+]]>
-; CHECK:  Cost of 3 for VF 2: EMIT vp<[[VP4:%[0-9]+]]> = fcmp uno ir<%v>, ir<%v>
-; CHECK:  Cost of 2 for VF 2: EMIT vp<[[VP5:%[0-9]+]]> = any-of vp<[[VP4]]>
-; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP6:%[0-9]+]]> = freeze vp<[[VP5]]>
+; CHECK:  Cost of 3 for VF 2: EMIT vp<[[VP5:%[0-9]+]]> = fcmp uno vp<[[VP4]]>, vp<[[VP4]]>
+; CHECK:  Cost of 2 for VF 2: EMIT vp<[[VP6:%[0-9]+]]> = any-of vp<[[VP5]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP7:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP8:%[0-9]+]]> = or vp<[[VP6]]>, vp<[[VP7]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<[[VP8]]>
