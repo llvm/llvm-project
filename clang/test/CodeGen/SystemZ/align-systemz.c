@@ -43,8 +43,8 @@ struct incomplete_ty *fun2 (void) { return &VarExplAl4; }
 
 struct S_int128 {  __int128_t B; } Obj_I128;
 __int128_t GlobI128;
-// CHECK: @Obj_I128 = global %struct.S_int128 zeroinitializer, align 8
-// CHECK: @GlobI128 = global i128 0, align 8
+// CHECK-DAG: @Obj_I128 = global %struct.S_int128 zeroinitializer, align 8
+// CHECK-DAG: @GlobI128 = global i128 0, align 8
 
 
 // Alignment should be respected for coerced argument loads
@@ -56,6 +56,8 @@ void f(struct arg);
 
 void test (void)
 {
+  // CHECK-DAG: @__const.test.str = private unnamed_addr constant [7 x i8] c"foobar\00", align 1
+  const char str[] = "foobar";
   f(x);
 }
 
