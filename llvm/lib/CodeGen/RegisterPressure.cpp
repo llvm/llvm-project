@@ -787,10 +787,10 @@ void RegPressureTracker::recede(const RegisterOperands &RegOpers,
     LaneBitmask LiveOut = Def.LaneMask & ~PreviousMask;
     if (LiveOut.any()) {
       discoverLiveOut(VRegMaskOrUnit(VRegOrUnit, LiveOut));
-      // Retroactively model effects on pressure of the live out lanes.
-      increaseSetPressure(CurrSetPressure, *MRI, VRegOrUnit,
-                          LaneBitmask::getNone(), LiveOut);
-      PreviousMask = LiveOut;
+      increaseSetPressure(CurrSetPressure, *MRI, VRegOrUnit, PreviousMask,
+                          PreviousMask | LiveOut);
+      // Preserve existing live lanes for the decrease below.
+      PreviousMask |= LiveOut;
     }
 
     if (NewMask.none()) {
