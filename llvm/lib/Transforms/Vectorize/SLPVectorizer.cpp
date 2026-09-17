@@ -24807,7 +24807,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       assert(Info && "Expected bit pack info.");
       unsigned ShiftWidth;
       const TreeEntry *LhsTE = getOperandEntry(ShlTE, /*Idx=*/0);
-      InstructionCost PackCost =
+      [[maybe_unused]] InstructionCost PackCost =
           getBitPackCost(*TTI, cast<FixedVectorType>(X->getType()),
                          X->getType()->getScalarType(), *Info,
                          getZExtSrcWidth(*LhsTE), getCastContextHint(*LhsTE),
