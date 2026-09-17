@@ -1853,6 +1853,46 @@ LogicalResult cir::ScopeOp::fold(FoldAdaptor /*adaptor*/,
 // CleanupScopeOp
 //===----------------------------------------------------------------------===//
 
+static bool isRedundantBeforeReturn(mlir::Region &cleanupRegion) {
+  for (mlir::Block &block : cleanupRegion) {
+    for (mlir::Operation &op : block) {
+      if (isa<cir::YieldOp, cir::LifetimeEndOp, cir::StackRestoreOp>(op))
+        continue;
+      // The stack restore reloads the pointer saved before the VLA.
+      auto loadOp = dyn_cast<cir::LoadOp>(op);
+      if (loadOp && loadOp.getResult().hasOneUse() &&
+          isa<cir::StackRestoreOp>(*loadOp.getResult().getUsers().begin()))
+        continue;
+      return false;
+    }
+  }
+  return true;
+}
+
+LogicalResult cir::CleanupScopeOp::verify() {
+  // If the cleanup contains a musttail call, it must be a cleanup that can be
+  // skipped on return (such as a lifetime end or a stack restore). Other
+  // cleanups must never contain musttail calls.
+  cir::CallOp mustTailCall;
+  getBodyRegion().walk([&](cir::CallOp callOp) {
+    if (!callOp.getMusttail())
+      return WalkResult::advance();
+    mustTailCall = callOp;
+    return WalkResult::interrupt();
+  });
+  if (!mustTailCall)
+    return success();
+
+  if (isRedundantBeforeReturn(getCleanupRegion()))
+    return success();
+
+  InFlightDiagnostic diag =
+      emitOpError("cleanup is not redundant before a return, so it cannot be "
+                  "skipped by a musttail call");
+  diag.attachNote(mustTailCall.getLoc()) << "musttail call is here";
+  return diag;
+}
+
 void cir::CleanupScopeOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
