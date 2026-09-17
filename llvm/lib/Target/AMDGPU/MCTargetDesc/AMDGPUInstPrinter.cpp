@@ -432,9 +432,9 @@ void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI, raw_ostream &O) {
   auto Opcode = MI->getOpcode();
   if (OpNo == 0) {
-    if (SIInstrFlags::isVOP3(MII, *MI) && SIInstrFlags::isDPP(MII, *MI))
+    if (SIInstrFlags::isVOP3Like(MII, *MI) && SIInstrFlags::isDPP(MII, *MI))
       O << "_e64_dpp";
-    else if (SIInstrFlags::isVOP3(MII, *MI)) {
+    else if (SIInstrFlags::isVOP3Like(MII, *MI)) {
       if (!getVOP3IsSingle(Opcode))
         O << "_e64";
     } else if (SIInstrFlags::isDPP(MII, *MI))
