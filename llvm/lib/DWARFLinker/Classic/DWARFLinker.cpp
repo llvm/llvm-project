@@ -1204,13 +1204,26 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
     return U.getRefAddrByteSize();
   }
 
-  if (!RefInfo.Clone) {
-    // We haven't cloned this DIE yet. Just create an empty one and
-    // store it. It'll get really cloned when we process it.
-    RefInfo.UnclonedReference = true;
-    RefInfo.Clone = DIE::get(DIEAlloc, dwarf::Tag(RefDie.getTag()));
+  if (RefUnit->getOrigUnit().getDIEIndex(RefDie) == 0) {
+    // A unit root is cloned into its unit's own output DIE rather than into a
+    // DIEInfo::Clone, so resolve the reference through that DIE. The
+    // placeholder below would instead manufacture a DIE that is never adopted
+    // into a unit tree and so never gets an offset assigned.
+    NewRefDie = RefUnit->getOutputUnitDIE();
+
+    // The referenced unit is not in the output, so there is nothing left for
+    // this attribute to name.
+    if (!NewRefDie)
+      return 0;
+  } else {
+    if (!RefInfo.Clone) {
+      // We haven't cloned this DIE yet. Just create an empty one and
+      // store it. It'll get really cloned when we process it.
+      RefInfo.UnclonedReference = true;
+      RefInfo.Clone = DIE::get(DIEAlloc, dwarf::Tag(RefDie.getTag()));
+    }
+    NewRefDie = RefInfo.Clone;
   }
-  NewRefDie = RefInfo.Clone;
 
   if (AttrSpec.Form == dwarf::DW_FORM_ref_addr ||
       (Unit.hasODR() && isODRAttribute(AttrSpec.Attr))) {
@@ -2013,9 +2026,15 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
     }
   }
 
-  if (Unit.getOrigUnit().getVersion() >= 5 && !AttrInfo.AttrStrOffsetBaseSeen &&
-      Die->getTag() == dwarf::DW_TAG_compile_unit) {
-    // No DW_AT_str_offsets_base seen, add it to the DIE.
+  // Comparing against the output unit DIE identifies the root of the unit,
+  // whatever its tag. cloneStringAttribute() rewrites strings into
+  // DW_FORM_strx for every DWARFv5 unit without consulting the root tag, and
+  // DWARFv5 section 7.26 resolves those indices only through
+  // DW_AT_str_offsets_base, so a DW_TAG_partial_unit or DW_TAG_skeleton_unit
+  // root needs the attribute on the same terms as a full compilation unit
+  // (DWARFv5 sections 3.1.1 and 3.1.2).
+  if (Die == Unit.getOutputUnitDIE() && Unit.getOrigUnit().getVersion() >= 5 &&
+      !AttrInfo.AttrStrOffsetBaseSeen) {
     Die->addValue(DIEAlloc, dwarf::DW_AT_str_offsets_base,
                   dwarf::DW_FORM_sec_offset, DIEInteger(8));
     OutOffset += 4;
@@ -2900,6 +2919,13 @@ Expected<uint64_t> DWARFLinker::DIECloner::cloneAllCompileUnits(
       (Emitter == nullptr) ? 0 : Emitter->getDebugInfoSectionSize();
   const uint64_t StartOutputDebugInfoSize = OutputDebugInfoSize;
 
+  // A reference to a unit root resolves through that unit's output DIE, and
+  // the referring unit may be cloned first, so every unit that will be emitted
+  // needs its output DIE before any cloning starts.
+  for (auto &CurrentUnit : CompileUnits)
+    if (CurrentUnit->getOrigUnit().getUnitDIE() && CurrentUnit->getInfo(0).Keep)
+      CurrentUnit->createOutputDIE();
+
   for (auto &CurrentUnit : CompileUnits) {
     const uint16_t DwarfVersion = CurrentUnit->getOrigUnit().getVersion();
     const uint32_t UnitHeaderSize = DwarfVersion >= 5 ? 12 : 11;
@@ -2909,13 +2935,15 @@ Expected<uint64_t> DWARFLinker::DIECloner::cloneAllCompileUnits(
       OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset(DwarfVersion);
       continue;
     }
-    if (CurrentUnit->getInfo(0).Keep) {
+    // The pre-pass gave an output DIE to exactly the units this loop clones,
+    // so having one is the same condition, spelled the way the emission loop
+    // below already spells it.
+    if (DIE *OutputDIE = CurrentUnit->getOutputUnitDIE()) {
       // Clone the InputDIE into your Unit DIE in our compile unit since it
       // already has a DIE inside of it.
-      CurrentUnit->createOutputDIE();
       rememberUnitForMacroOffset(*CurrentUnit);
       cloneDIE(InputDIE, File, *CurrentUnit, 0 /* PC offset */, UnitHeaderSize,
-               0, IsLittleEndian, CurrentUnit->getOutputUnitDIE());
+               0, IsLittleEndian, OutputDIE);
     }
 
     OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset(DwarfVersion);
