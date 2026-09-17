@@ -114,6 +114,6 @@ PreservedAnalyses
 ResetMachineFunctionPass::run(MachineFunction &MF,
                               MachineFunctionAnalysisManager &) {
   if (runImpl(MF, EmitFallbackDiag, AbortOnFailedISel))
-    return PreservedAnalyses::none();
+    return getMachineFunctionPassPreservedAnalyses();
   return PreservedAnalyses::all();
 }

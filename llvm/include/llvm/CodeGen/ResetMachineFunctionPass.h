@@ -1,9 +1,14 @@
-//===-- llvm/CodeGen/ResetMachineFunctionPass.h -----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the ResetMachineFunctionPass class.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CODEGEN_RESETMACHINEFUNCTIONPASS_H
@@ -17,9 +22,9 @@ class ResetMachineFunctionPass
     : public RequiredPassInfoMixin<ResetMachineFunctionPass> {
   /// Tells whether or not this pass should emit a fallback
   /// diagnostic when it resets a function.
-  bool EmitFallbackDiag;
+  bool EmitFallbackDiag = false;
   /// Whether we should abort immediately instead of resetting the function.
-  bool AbortOnFailedISel;
+  bool AbortOnFailedISel = false;
 
 public:
   ResetMachineFunctionPass(bool EmitFallbackDiag = false,
