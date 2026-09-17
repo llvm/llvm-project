@@ -216,6 +216,30 @@ add_header_library(
 )
 
 add_header_library(
+  listxattr
+  HDRS
+    listxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  llistxattr
+  HDRS
+    llistxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   read
   HDRS
     read.h
@@ -861,6 +885,18 @@ add_header_library(
     libc.hdr.types.struct_f_owner_ex
     libc.hdr.types.struct_flock
     libc.hdr.types.struct_flock64
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  flistxattr
+  HDRS
+    flistxattr.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
     libc.include.sys_syscall
 )
 

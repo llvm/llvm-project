@@ -1,0 +1,32 @@
+header: sys/xattr.h
+standards:
+  - linux
+macros: []
+types: []
+enums: []
+objects: []
+functions:
+  - name: listxattr
+    standards:
+      - linux
+    return_type: ssize_t
+    arguments:
+      - type: const char *
+      - type: char *
+      - type: size_t
+  - name: llistxattr
+    standards:
+      - linux
+    return_type: ssize_t
+    arguments:
+      - type: const char *
+      - type: char *
+      - type: size_t
+  - name: flistxattr
+    standards:
+      - linux
+    return_type: ssize_t
+    arguments:
+      - type: int
+      - type: char *
+      - type: size_t
