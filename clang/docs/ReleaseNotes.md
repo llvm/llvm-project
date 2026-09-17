@@ -516,6 +516,8 @@ features cannot lower the translation-unit ABI level;
 - Suggests the correct location for an attribute written before the `using`
   keyword of an alias-declaration. (#GH155787)
 
+- Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (GH222383)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
