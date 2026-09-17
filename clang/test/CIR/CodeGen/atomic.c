@@ -4022,3 +4022,218 @@ void store_atomic_different_size(S a) {
  // OGCG: %[[ATOMIC_TMP:.*]] = load i32, ptr %[[ATOMIC_TMP_ADDR]], align 4
  // OGCG: store atomic i32 %[[ATOMIC_TMP]], ptr %[[B_ADDR]] seq_cst, align 4
 }
+
+void atomic_pre_inc(_Atomic(int) *p) { ++(*p); }
+
+// CIR-LABEL: @atomic_pre_inc
+// CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR: %[[ONE:.+]] = cir.const #cir.int<1> : !s32i
+// CIR: cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[ONE]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+
+// LLVM-LABEL: @atomic_pre_inc
+// LLVM: atomicrmw add ptr %{{.+}}, i32 1 seq_cst, align 4
+
+// OGCG-LABEL: @atomic_pre_inc
+// OGCG: atomicrmw add ptr %{{.+}}, i32 1 seq_cst, align 4
+
+int atomic_post_inc(_Atomic(int) *p) { return (*p)++; }
+
+// CIR-LABEL: @atomic_post_inc
+// CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR: %[[ONE:.+]] = cir.const #cir.int<1> : !s32i
+// CIR: %[[OLD:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[ONE]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+// CIR: cir.store %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
+
+// LLVM-LABEL: @atomic_post_inc
+// LLVM: %[[OLD:.+]] = atomicrmw add ptr %{{.+}}, i32 1 seq_cst, align 4
+// LLVM: store i32 %[[OLD]], ptr %{{.+}}, align 4
+// LLVM: %[[RET:.+]] = load i32, ptr %{{.+}}, align 4
+// LLVM: ret i32 %[[RET]]
+
+// OGCG-LABEL: @atomic_post_inc
+// OGCG: %[[OLD:.+]] = atomicrmw add ptr %{{.+}}, i32 1 seq_cst, align 4
+// OGCG: ret i32 %[[OLD]]
+
+void atomic_pre_dec(_Atomic(int) *p) { --(*p); }
+
+// CIR-LABEL: @atomic_pre_dec
+// CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR: %[[ONE:.+]] = cir.const #cir.int<1> : !s32i
+// CIR: cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR]], %[[ONE]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+
+// LLVM-LABEL: @atomic_pre_dec
+// LLVM: atomicrmw sub ptr %{{.+}}, i32 1 seq_cst, align 4
+
+// OGCG-LABEL: @atomic_pre_dec
+// OGCG: atomicrmw sub ptr %{{.+}}, i32 1 seq_cst, align 4
+
+int atomic_post_dec(_Atomic(int) *p) { return (*p)--; }
+
+// CIR-LABEL: @atomic_post_dec
+// CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR: %[[ONE:.+]] = cir.const #cir.int<1> : !s32i
+// CIR: %[[OLD:.+]] = cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR]], %[[ONE]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+// CIR: cir.store %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
+
+// LLVM-LABEL: @atomic_post_dec
+// LLVM: %[[OLD:.+]] = atomicrmw sub ptr %{{.+}}, i32 1 seq_cst, align 4
+// LLVM: store i32 %[[OLD]], ptr %{{.+}}, align 4
+// LLVM: %[[RET:.+]] = load i32, ptr %{{.+}}, align 4
+// LLVM: ret i32 %[[RET]]
+
+// OGCG-LABEL: @atomic_post_dec
+// OGCG: %[[OLD:.+]] = atomicrmw sub ptr %{{.+}}, i32 1 seq_cst, align 4
+// OGCG: ret i32 %[[OLD]]
+
+int atomic_pre_inc_used(_Atomic(int) *p) { return ++(*p); }
+
+// CIR-LABEL: @atomic_pre_inc_used
+// CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR: %[[ONE:.+]] = cir.const #cir.int<1> : !s32i
+// CIR: %[[OLD:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[ONE]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+// CIR: %[[NEW:.+]] = cir.inc %[[OLD]] : !s32i
+// CIR: cir.store %[[NEW]], %{{.+}} : !s32i, !cir.ptr<!s32i>
+
+// LLVM-LABEL: @atomic_pre_inc_used
+// LLVM: %[[OLD:.+]] = atomicrmw add ptr %{{.+}}, i32 1 seq_cst, align 4
+// LLVM: %[[NEW:.+]] = add i32 %[[OLD]], 1
+// LLVM: store i32 %[[NEW]], ptr %{{.+}}, align 4
+// LLVM: %[[RET:.+]] = load i32, ptr %{{.+}}, align 4
+// LLVM: ret i32 %[[RET]]
+
+// OGCG-LABEL: @atomic_pre_inc_used
+// OGCG: %[[OLD:.+]] = atomicrmw add ptr %{{.+}}, i32 1 seq_cst, align 4
+// OGCG: %[[NEW:.+]] = add i32 %[[OLD]], 1
+// OGCG: ret i32 %[[NEW]]
+
+// Tests for atomic increment on _Bool.
+
+void atomic_bool_pre_inc_void(_Atomic _Bool *p) { ++(*p); }
+
+// CIR-LABEL: @atomic_bool_pre_inc_void
+// CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!cir.bool>>, !cir.ptr<!cir.bool>
+// CIR: %[[ONE:.+]] = cir.const #cir.int<1> : !u8i
+// CIR: %[[IPTR:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!cir.bool> -> !cir.ptr<!u8i>
+// CIR: cir.store {{.*}} atomic(seq_cst) %[[ONE]], %[[IPTR]] : !u8i, !cir.ptr<!u8i>
+
+// LLVM-LABEL: @atomic_bool_pre_inc_void
+// LLVM: store atomic i8 1, ptr %{{.+}} seq_cst, align 1
+
+// OGCG-LABEL: @atomic_bool_pre_inc_void
+// OGCG: store atomic i8 1, ptr %{{.+}} seq_cst, align 1
+
+_Bool atomic_bool_pre_inc(_Atomic _Bool *p) { return ++(*p); }
+
+// CIR-LABEL: @atomic_bool_pre_inc
+// CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!cir.bool>>, !cir.ptr<!cir.bool>
+// CIR: %[[ONE:.+]] = cir.const #cir.int<1> : !u8i
+// CIR: %[[IPTR:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!cir.bool> -> !cir.ptr<!u8i>
+// CIR: cir.store {{.*}} atomic(seq_cst) %[[ONE]], %[[IPTR]] : !u8i, !cir.ptr<!u8i>
+// CIR: cir.const #true
+
+// LLVM-LABEL: @atomic_bool_pre_inc
+// LLVM: store atomic i8 1, ptr %{{.+}} seq_cst, align 1
+
+// OGCG-LABEL: @atomic_bool_pre_inc
+// OGCG: store atomic i8 1, ptr %{{.+}} seq_cst, align 1
+// OGCG: ret i1 true
+
+_Bool atomic_bool_post_inc(_Atomic _Bool *p) { return (*p)++; }
+
+// CIR-LABEL: @atomic_bool_post_inc
+// CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!cir.bool>>, !cir.ptr<!cir.bool>
+// CIR: %[[ONE:.+]] = cir.const #cir.int<1> : !u8i
+// CIR: %[[IPTR:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!cir.bool> -> !cir.ptr<!u8i>
+// CIR: %[[OLD:.+]] = cir.atomic.xchg seq_cst syncscope(system) %[[IPTR]], %[[ONE]] : (!cir.ptr<!u8i>, !u8i) -> !u8i
+// CIR: cir.cast int_to_bool %[[OLD]] : !u8i -> !cir.bool
+
+// LLVM-LABEL: @atomic_bool_post_inc
+// LLVM: %[[OLD:.+]] = atomicrmw xchg ptr %{{.+}}, i8 1 seq_cst, align 1
+
+// OGCG-LABEL: @atomic_bool_post_inc
+// OGCG: %[[OLD:.+]] = atomicrmw xchg ptr %{{.+}}, i8 1 seq_cst, align 1
+
+// Tests for atomic increment/decrement on float.
+
+void atomic_float_pre_inc(_Atomic(float) *p) { ++(*p); }
+
+// CIR-LABEL: @atomic_float_pre_inc
+// CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.float>
+// CIR: %[[AMT:.+]] = cir.const #cir.fp<1.{{.*}}> : !cir.float
+// CIR: cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[AMT]] : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+
+// LLVM-LABEL: @atomic_float_pre_inc
+// LLVM: atomicrmw fadd ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
+
+// OGCG-LABEL: @atomic_float_pre_inc
+// OGCG: atomicrmw fadd ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
+
+float atomic_float_post_inc(_Atomic(float) *p) { return (*p)++; }
+
+// CIR-LABEL: @atomic_float_post_inc
+// CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.float>
+// CIR: %[[AMT:.+]] = cir.const #cir.fp<1.{{.*}}> : !cir.float
+// CIR: %[[OLD:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[AMT]] : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+// CIR: cir.store %[[OLD]], %{{.+}} : !cir.float, !cir.ptr<!cir.float>
+
+// LLVM-LABEL: @atomic_float_post_inc
+// LLVM: %[[OLD:.+]] = atomicrmw fadd ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
+// LLVM: store float %[[OLD]], ptr %{{.+}}, align 4
+// LLVM: %[[RET:.+]] = load float, ptr %{{.+}}, align 4
+// LLVM: ret float %[[RET]]
+
+// OGCG-LABEL: @atomic_float_post_inc
+// OGCG: %[[OLD:.+]] = atomicrmw fadd ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
+// OGCG: ret float %[[OLD]]
+
+float atomic_float_pre_inc_used(_Atomic(float) *p) { return ++(*p); }
+
+// CIR-LABEL: @atomic_float_pre_inc_used
+// CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.float>
+// CIR: %[[AMT:.+]] = cir.const #cir.fp<1.{{.*}}> : !cir.float
+// CIR: %[[OLD:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[AMT]] : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+// CIR: %[[NEW:.+]] = cir.fadd %[[OLD]], %[[AMT]] : !cir.float
+// CIR: cir.store %[[NEW]], %{{.+}} : !cir.float, !cir.ptr<!cir.float>
+
+// LLVM-LABEL: @atomic_float_pre_inc_used
+// LLVM: %[[OLD:.+]] = atomicrmw fadd ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
+// LLVM: %[[NEW:.+]] = fadd float %[[OLD]], 1.000000e+00
+// LLVM: store float %[[NEW]], ptr %{{.+}}, align 4
+// LLVM: %[[RET:.+]] = load float, ptr %{{.+}}, align 4
+// LLVM: ret float %[[RET]]
+
+// OGCG-LABEL: @atomic_float_pre_inc_used
+// OGCG: %[[OLD:.+]] = atomicrmw fadd ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
+// OGCG: %[[NEW:.+]] = fadd float %[[OLD]], 1.000000e+00
+// OGCG: ret float %[[NEW]]
+
+void atomic_float_pre_dec(_Atomic(float) *p) { --(*p); }
+
+// CIR-LABEL: @atomic_float_pre_dec
+// CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.float>
+// CIR: %[[AMT:.+]] = cir.const #cir.fp<1.{{.*}}> : !cir.float
+// CIR: cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR]], %[[AMT]] : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+
+// LLVM-LABEL: @atomic_float_pre_dec
+// LLVM: atomicrmw fsub ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
+
+// OGCG-LABEL: @atomic_float_pre_dec
+// OGCG: atomicrmw fsub ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
+
+float atomic_float_post_dec(_Atomic(float) *p) { return (*p)--; }
+
+// CIR-LABEL: @atomic_float_post_dec
+// CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.float>
+// CIR: %[[AMT:.+]] = cir.const #cir.fp<1.{{.*}}> : !cir.float
+// CIR: %[[OLD:.+]] = cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR]], %[[AMT]] : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+// CIR: cir.store %[[OLD]], %{{.+}} : !cir.float, !cir.ptr<!cir.float>
+
+// LLVM-LABEL: @atomic_float_post_dec
+// LLVM: %[[OLD:.+]] = atomicrmw fsub ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
+// LLVM: store float %[[OLD]], ptr %{{.+}}, align 4
+// LLVM: %[[RET:.+]] = load float, ptr %{{.+}}, align 4
+// LLVM: ret float %[[RET]]
+
+// OGCG-LABEL: @atomic_float_post_dec
+// OGCG: %[[OLD:.+]] = atomicrmw fsub ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
+// OGCG: ret float %[[OLD]]

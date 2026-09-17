@@ -161,7 +161,7 @@ CharacterValue &CharacterValue::operator+=(const CharacterValue &y) {
   return *this;
 }
 
-CharacterValue &CharacterValue::operator+=(char c) {
+CharacterValue &CharacterValue::operator+=(char32_t c) {
   impl() += c;
   return *this;
 }

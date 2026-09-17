@@ -138,13 +138,20 @@ TEST_P(CharacterValueKind, FillConstructor) {
 
 TEST(CharacterValue, SubscriptWidensToChar32) {
   CharacterValue u{1, std::string{"\x80"}};
-  EXPECT_EQ(char32_t('\x80'), u[0]);
+  EXPECT_EQ(U'\U00000080', u[0]);
 
   CharacterValue w{2, std::u16string{u"\u0100"}};
-  EXPECT_EQ(char32_t{u'\u0100'}, w[0]);
+  EXPECT_EQ(U'\U00000100', w[0]);
 
   CharacterValue v{4, std::u32string{U"\U0001F600"}};
   EXPECT_EQ(U'\U0001F600', v[0]);
+}
+
+TEST(CharacterValue, WidensHighBytesWithoutSignExtension) {
+  const std::string high{static_cast<char>(0x80)};
+  EXPECT_EQ(std::u16string{u"\u0080"}, *CharacterValue(2, high).AsU16String());
+  EXPECT_EQ(
+      std::u32string{U"\U00000080"}, *CharacterValue(4, high).AsU32String());
 }
 
 TEST_P(CharacterValueKind, CopyAndMove) {

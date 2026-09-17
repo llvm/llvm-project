@@ -173,8 +173,8 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
     QualType thisTy = d->getFunctionObjectParameterType();
     assert(cgf.currSrcLoc && "expected source location");
     Address addr = cgf.getAddressOfDirectBaseInCompleteClass(
-        *cgf.currSrcLoc, cgf.loadCXXThisAddress(), derivedClass, baseClass,
-        baseIsVirtual);
+        cgf.getLoc(*cgf.currSrcLoc), cgf.loadCXXThisAddress(), derivedClass,
+        baseClass, baseIsVirtual);
     cgf.emitCXXDestructorCall(d, Dtor_Base, baseIsVirtual,
                               /*delegating=*/false, addr, thisTy);
   }
@@ -774,7 +774,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   CharUnits eltAlignment = arrayBase.getAlignment().alignmentOfArrayElement(
       getContext().getTypeSizeInChars(type));
 
-  mlir::Location loc = *currSrcLoc;
+  mlir::Location loc = getLoc(*currSrcLoc);
 
   mlir::Value dynamicElPtr;
   if (useDynamicArrayCtor)
@@ -947,9 +947,9 @@ void CIRGenFunction::emitForwardingCallToLambda(
         resultType->isObjCRetainableType())
       cgm.errorNYI(callOperator->getSourceRange(),
                    "emitForwardingCallToLambda: ObjCAutoRefCount");
-    emitReturnOfRValue(*currSrcLoc, rv, resultType);
+    emitReturnOfRValue(getLoc(*currSrcLoc), rv, resultType);
   } else {
-    cir::ReturnOp::create(builder, *currSrcLoc);
+    cir::ReturnOp::create(builder, getLoc(*currSrcLoc));
   }
 }
 
@@ -1537,7 +1537,7 @@ void CIRGenFunction::emitCXXConstructorCall(
   CIRGenCallee callee = CIRGenCallee::forDirect(calleePtr, GlobalDecl(d, type));
   cir::CIRCallOpInterface c;
   emitCall(info, callee, ReturnValueSlot(), args, &c, /*isMustTail=*/false,
-           getLoc(loc));
+           loc);
 
   if (cgm.getCodeGenOpts().OptimizationLevel != 0 && !crd->isDynamicClass() &&
       type != Ctor_Base && cgm.getCodeGenOpts().StrictVTablePointers)

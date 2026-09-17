@@ -1066,6 +1066,13 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
       }
     }
 
+    // FIXME: The nested llvm.loop.* property tags (llvm.loop.align,
+    // llvm.loop.estimated_trip_count, the boolean enable/disable tags below)
+    // are only meaningful as operands of an llvm.loop node. Neither llvm.loop's
+    // structure nor the requirement that these tags appear only within it is
+    // validated here; the checks below fire on any matching tuple regardless of
+    // where it appears.
+
     // Check llvm.loop.estimated_trip_count.
     if (CurrentMD->getNumOperands() > 0 &&
         CurrentMD->getOperand(0).equalsStr(LLVMLoopEstimatedTripCount)) {
@@ -1078,6 +1085,26 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
             "Expected second operand to be an integer constant of type i32 or "
             "smaller",
             CurrentMD);
+    }
+
+    // Check llvm.loop.align.
+    if (CurrentMD->getNumOperands() > 0 &&
+        CurrentMD->getOperand(0).equalsStr("llvm.loop.align")) {
+      Check(CurrentMD->getNumOperands() == 2, "Expected two operands",
+            CurrentMD);
+      auto *AlignMD =
+          mdconst::dyn_extract_or_null<ConstantInt>(CurrentMD->getOperand(1));
+      Check(AlignMD && AlignMD->getType()->isIntegerTy(32),
+            "Expected the alignment to be an integer constant of type i32",
+            CurrentMD);
+      if (AlignMD) {
+        uint64_t Align = AlignMD->getValue().getZExtValue();
+        Check(isPowerOf2_64(Align),
+              "Expected the alignment to be a power of two", CurrentMD);
+        Check(Align <= Value::MaximumAlignment,
+              "Alignment is larger than the implementation defined limit",
+              CurrentMD);
+      }
     }
 
     // Enforce the single-operand form of the loop enable/disable pairs.
@@ -2112,10 +2139,32 @@ Verifier::visitModuleFlag(const MDNode *Op,
     return;
   }
 
+  if (Name == "thread-model") {
+    Check(MFB == Module::Error,
+          "thread-model module flag must use 'error' merge behavior", Op);
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value, "thread-model metadata requires a string argument");
+    if (Value)
+      Check(parseThreadModel(Value->getString()).has_value(),
+            "invalid thread-model metadata value", Op);
+    return;
+  }
+
   if (Name == "target-abi") {
     const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
     Check(Value && !Value->getString().empty(),
           "target-abi metadata requires a non-empty string argument", Op);
+    return;
+  }
+
+  if (ID->getString() == "exception-model") {
+    Check(MFB == Module::Error,
+          "exception-model module flag must use 'error' merge behavior", Op);
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value, "exception-model metadata requires a string argument");
+    if (Value)
+      Check(parseExceptionModel(Value->getString()).has_value(),
+            "invalid exception-model metadata value", Op);
     return;
   }
 
@@ -5524,13 +5573,9 @@ void Verifier::visitDIAssignIDMetadata(Instruction &I, MDNode *MD) {
                 "dbg.assign not in same function as inst", DAI, &I);
     }
   }
-  for (DbgVariableRecord *DVR :
-       cast<DIAssignID>(MD)->getAllDbgVariableRecordUsers()) {
-    CheckDI(DVR->isDbgAssign(),
-            "!DIAssignID should only be used by Assign DVRs.", MD, DVR);
+  for (DbgVariableRecord *DVR : at::getAssignmentMarkers(cast<DIAssignID>(MD)))
     CheckDI(DVR->getFunction() == I.getFunction(),
             "DVRAssign not in same function as inst", DVR, &I);
-  }
 }
 
 void Verifier::visitMMRAMetadata(Instruction &I, MDNode *MD) {
@@ -7169,6 +7214,20 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "reg_count argument to nvvm.setmaxnreg must be in multiples of 8");
     break;
   }
+  case Intrinsic::nvvm_cp_async_bulk_global_to_shared_cta:
+  case Intrinsic::nvvm_cp_async_bulk_global_to_shared_cta_relaxed: {
+    const unsigned ArgSize = Call.arg_size();
+    const unsigned FlagValidPatternIndex = ArgSize - 1;
+    const unsigned IgnoreOOBFlagIndex = 8;
+    bool IgnoreOOB =
+        cast<ConstantInt>(Call.getArgOperand(IgnoreOOBFlagIndex))->isOne();
+    const auto *FlagValidPattern =
+        cast<ConstantInt>(Call.getArgOperand(FlagValidPatternIndex));
+    Check(!IgnoreOOB || FlagValidPattern->isZero(),
+          "flag_valid_pattern must be 0 (disabled) when ignore_oob is enabled",
+          &Call);
+    break;
+  }
   case Intrinsic::experimental_convergence_entry:
   case Intrinsic::experimental_convergence_anchor:
     break;
@@ -7259,26 +7318,32 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       if (BlockEHFuncletColors.empty())
         BlockEHFuncletColors = colorEHFunclets(*F);
 
-      // Check for catch-/cleanup-pad in first funclet block
-      bool InEHFunclet = false;
+      // colorEHFunclets() leaves unreachable blocks colorless. Such a call
+      // is in no funclet and WinEHPrepare will not see it, so there is
+      // nothing to check.
       BasicBlock *CallBB = Call.getParent();
-      const ColorVector &CV = BlockEHFuncletColors.find(CallBB)->second;
-      assert(CV.size() > 0 && "Uncolored block");
-      for (BasicBlock *ColorFirstBB : CV)
-        if (auto It = ColorFirstBB->getFirstNonPHIIt();
-            It != ColorFirstBB->end())
-          if (isa_and_nonnull<FuncletPadInst>(&*It))
-            InEHFunclet = true;
+      auto ColorsIt = BlockEHFuncletColors.find(CallBB);
+      if (ColorsIt != BlockEHFuncletColors.end()) {
+        // Check for catch-/cleanup-pad in first funclet block
+        bool InEHFunclet = false;
+        const ColorVector &CV = ColorsIt->second;
+        assert(CV.size() > 0 && "Uncolored block");
+        for (BasicBlock *ColorFirstBB : CV)
+          if (auto It = ColorFirstBB->getFirstNonPHIIt();
+              It != ColorFirstBB->end())
+            if (isa_and_nonnull<FuncletPadInst>(&*It))
+              InEHFunclet = true;
 
-      // Check for funclet operand bundle
-      bool HasToken = false;
-      for (unsigned I = 0, E = Call.getNumOperandBundles(); I != E; ++I)
-        if (Call.getOperandBundleAt(I).getTagID() == LLVMContext::OB_funclet)
-          HasToken = true;
+        // Check for funclet operand bundle
+        bool HasToken = false;
+        for (unsigned I = 0, E = Call.getNumOperandBundles(); I != E; ++I)
+          if (Call.getOperandBundleAt(I).getTagID() == LLVMContext::OB_funclet)
+            HasToken = true;
 
-      // This would cause silent code truncation in WinEHPrepare
-      if (InEHFunclet)
-        Check(HasToken, "Missing funclet token on intrinsic call", &Call);
+        // This would cause silent code truncation in WinEHPrepare
+        if (InEHFunclet)
+          Check(HasToken, "Missing funclet token on intrinsic call", &Call);
+      }
     }
   }
 
@@ -7353,6 +7418,8 @@ void Verifier::visit(DbgVariableRecord &DVR) {
   CheckDI(MD && (isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
                  (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands())),
           "invalid #dbg record address/value", &DVR, MD, BB, F);
+  CheckDI(DVR.isDbgAssign() || !isa<DIAssignID>(MD),
+          "!DIAssignID should only be used by Assign DVRs.", MD, &DVR);
   if (auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
     visitValueAsMetadata(*VAM, F);
     if (DVR.isDbgDeclare()) {

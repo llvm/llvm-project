@@ -12,17 +12,6 @@ namespace llvm {
 namespace orc {
 namespace rt {
 
-const char *SimpleExecutorMemoryManagerInstanceName =
-    "__llvm_orc_SimpleExecutorMemoryManager_Instance";
-const char *SimpleExecutorMemoryManagerReserveWrapperName =
-    "__llvm_orc_SimpleExecutorMemoryManager_reserve_wrapper";
-const char *SimpleExecutorMemoryManagerInitializeWrapperName =
-    "__llvm_orc_SimpleExecutorMemoryManager_initialize_wrapper";
-const char *SimpleExecutorMemoryManagerDeinitializeWrapperName =
-    "__llvm_orc_SimpleExecutorMemoryManager_deinitialize_wrapper";
-const char *SimpleExecutorMemoryManagerReleaseWrapperName =
-    "__llvm_orc_SimpleExecutorMemoryManager_release_wrapper";
-
 const char *RegisterEHFrameSectionAllocActionName =
     "llvm_orc_registerEHFrameAllocAction";
 const char *DeregisterEHFrameSectionAllocActionName =

@@ -1489,10 +1489,10 @@ static std::optional<NumericExpr<CAT>> tryBuildSplitSumExpressionTree(
   llvm::MutableArrayRef<SignedNumericTerm<CAT>> head{terms.data(), 2};
   llvm::MutableArrayRef<SignedNumericTerm<CAT>> tail{
       terms.data() + 2, terms.size() - 2};
-  SignedNumericExpr<CAT> headExpr = buildRightAssociatedSignedFold(head);
-  SignedNumericExpr<CAT> tailExpr = buildRightAssociatedSignedFold(tail);
-  SignedNumericExpr<CAT> result =
-      buildSignedAdd(std::move(tailExpr), std::move(headExpr));
+  SignedNumericExpr<CAT, KIND> headExpr = buildRightAssociatedSignedFold(head);
+  SignedNumericExpr<CAT, KIND> tailExpr = buildRightAssociatedSignedFold(tail);
+  SignedNumericExpr<CAT, KIND> result =
+      buildSignedAdd(std::move(headExpr), std::move(tailExpr));
   assert(result.isPositive &&
       "the first flattened term and therefore the split sum are positive");
   return std::move(result.expr);
