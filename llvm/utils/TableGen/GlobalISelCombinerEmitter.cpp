@@ -2605,6 +2605,8 @@ void GICombinerEmitter::emitAdditionalImpl(raw_ostream &OS) {
   std::string CanMatchOpcodeFnName =
       (getClassName() + "::canMatchOpcode").str();
   emitCanMatchOpcodeFn(OS, CanMatchOpcodeFnName);
+  // Combines may build new instructions that do not preserve the
+  // poison-generating flags from the original root instruction.
   OS << "uint32_t " << getClassName() << "::getRootFlagsToDrop() const {\n"
      << "  return MachineInstr::getPoisonGeneratingFlags();\n"
      << "}\n\n";
