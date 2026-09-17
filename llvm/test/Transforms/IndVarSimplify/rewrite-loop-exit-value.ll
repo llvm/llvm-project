@@ -302,3 +302,197 @@ for.body:
 for.end:
   ret i32 %VF.capped
 }
+
+; Rewrite a comparison by expanding its operands at the loop exit.
+define i1 @rewrite_computable_icmp(i32 %start, i32 %limit) {
+; CHECK-LABEL: @rewrite_computable_icmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BODY:%.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[BODY]] ]
+; CHECK-NEXT:    [[CMP_EXIT:%.*]] = icmp ne i32 [[IV]], 42
+; CHECK-NEXT:    [[INRANGE:%.*]] = icmp ult i32 [[INDEX]], [[LIMIT:%.*]]
+; CHECK-NEXT:    [[CONTINUE:%.*]] = select i1 [[CMP_EXIT]], i1 [[INRANGE]], i1 false
+; CHECK-NEXT:    br i1 [[CONTINUE]], label [[BODY]], label [[EXIT:%.*]]
+; CHECK:       body:
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], -1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 1
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 [[CMP_EXIT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %body ]
+  %index = phi i32 [ 0, %entry ], [ %index.next, %body ]
+  %cmp = icmp ne i32 %iv, 42
+  %inrange = icmp ult i32 %index, %limit
+  %continue = select i1 %cmp, i1 %inrange, i1 false
+  br i1 %continue, label %body, label %exit
+
+body:
+  %iv.next = add nsw i32 %iv, -1
+  %index.next = add nuw i32 %index, 1
+  br label %loop
+
+exit:
+  ret i1 %cmp
+}
+
+; Rewrite multiple comparisons when doing so makes all live-outs invariant.
+define i1 @rewrite_multiple_icmps(i32 %start, i32 %rhs.start, i32 %limit) {
+; CHECK-LABEL: @rewrite_multiple_icmps(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BODY:%.*]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[RHS_START:%.*]], [[ENTRY]] ], [ [[RHS_NEXT:%.*]], [[BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[BODY]] ]
+; CHECK-NEXT:    [[CMP0_EXIT:%.*]] = icmp ne i32 [[TMP2]], 42
+; CHECK-NEXT:    [[INRANGE:%.*]] = icmp ult i32 [[INDEX]], [[LIMIT:%.*]]
+; CHECK-NEXT:    [[CONTINUE:%.*]] = select i1 [[CMP0_EXIT]], i1 [[INRANGE]], i1 false
+; CHECK-NEXT:    br i1 [[CONTINUE]], label [[BODY]], label [[EXIT:%.*]]
+; CHECK:       body:
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[TMP2]], -1
+; CHECK-NEXT:    [[RHS_NEXT]] = add i32 [[TMP4]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 1
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[CMP1_EXIT:%.*]] = icmp sgt i32 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[RESULT:%.*]] = and i1 [[CMP0_EXIT]], [[CMP1_EXIT]]
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %body ]
+  %rhs = phi i32 [ %rhs.start, %entry ], [ %rhs.next, %body ]
+  %index = phi i32 [ 0, %entry ], [ %index.next, %body ]
+  %cmp0 = icmp ne i32 %iv, 42
+  %cmp1 = icmp sgt i32 %iv, %rhs
+  %inrange = icmp ult i32 %index, %limit
+  %continue = select i1 %cmp0, i1 %inrange, i1 false
+  br i1 %continue, label %body, label %exit
+
+body:
+  %iv.next = add nsw i32 %iv, -1
+  %rhs.next = add i32 %rhs, 2
+  %index.next = add nuw i32 %index, 1
+  br label %loop
+
+exit:
+  %result = and i1 %cmp0, %cmp1
+  ret i1 %result
+}
+
+; Do not rewrite a comparison if SCEV cannot compute an operand's exit value.
+define i1 @do_not_rewrite_uncomputable_icmp(i1 %c, i32 %start) {
+; CHECK-LABEL: @do_not_rewrite_uncomputable_icmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[IV]], 0
+; CHECK-NEXT:    [[SELECTED:%.*]] = select i1 [[CMP]], i1 [[C:%.*]], i1 false
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[SELECTED]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %cmp = icmp ne i32 %iv, 0
+  %selected = select i1 %cmp, i1 %c, i1 false
+  %iv.next = add i32 %iv, 1
+  br i1 %selected, label %loop, label %exit
+
+exit:
+  ret i1 %cmp
+}
+
+; Do not rebuild a comparison unless doing so makes the loop deletable.
+define i1 @do_not_rewrite_icmp_in_live_loop(i32 %start, i32 %limit) {
+; CHECK-LABEL: @do_not_rewrite_icmp_in_live_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BODY:%.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[BODY]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[IV]], 42
+; CHECK-NEXT:    call void @use.i1(i1 [[CMP]])
+; CHECK-NEXT:    [[INRANGE:%.*]] = icmp ult i32 [[INDEX]], [[LIMIT:%.*]]
+; CHECK-NEXT:    br i1 [[INRANGE]], label [[BODY]], label [[EXIT:%.*]]
+; CHECK:       body:
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], -1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 1
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %body ]
+  %index = phi i32 [ 0, %entry ], [ %index.next, %body ]
+  %cmp = icmp ne i32 %iv, 42
+  call void @use.i1(i1 %cmp)
+  %inrange = icmp ult i32 %index, %limit
+  br i1 %inrange, label %body, label %exit
+
+body:
+  %iv.next = add nsw i32 %iv, -1
+  %index.next = add nuw i32 %index, 1
+  br label %loop
+
+exit:
+  ret i1 %cmp
+}
+
+; Rewrite a pointer comparison when its operand exit values are computable.
+define i1 @rewrite_pointer_icmp(ptr %start, ptr %end, i32 %limit) {
+; CHECK-LABEL: @rewrite_pointer_icmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[PTR_NEXT:%.*]], [[BODY:%.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[BODY]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[PTR]], [[END:%.*]]
+; CHECK-NEXT:    [[INRANGE:%.*]] = icmp ult i32 [[INDEX]], [[LIMIT:%.*]]
+; CHECK-NEXT:    [[CONTINUE:%.*]] = select i1 [[CMP]], i1 [[INRANGE]], i1 false
+; CHECK-NEXT:    br i1 [[CONTINUE]], label [[BODY]], label [[EXIT:%.*]]
+; CHECK:       body:
+; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr i8, ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 1
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %ptr = phi ptr [ %start, %entry ], [ %ptr.next, %body ]
+  %index = phi i32 [ 0, %entry ], [ %index.next, %body ]
+  %cmp = icmp ne ptr %ptr, %end
+  %inrange = icmp ult i32 %index, %limit
+  %continue = select i1 %cmp, i1 %inrange, i1 false
+  br i1 %continue, label %body, label %exit
+
+body:
+  %ptr.next = getelementptr i8, ptr %ptr, i64 1
+  %index.next = add nuw i32 %index, 1
+  br label %loop
+
+exit:
+  ret i1 %cmp
+}
+
+declare void @use.i1(i1)
