@@ -415,6 +415,11 @@ static cl::opt<bool> EnableEarlyExitVectorizationWithSideEffects(
     cl::desc("Enable vectorization of early exit loops with uncountable exits "
              "and side effects"));
 
+static cl::opt<unsigned> LowTripCountLoopBodySizeLimit(
+    "low-trip-count-loop-body-size-limit", cl::init(20), cl::Hidden,
+    cl::desc("Minimum loop size for loops trip counts "
+             "below tail folding threshold"));
+
 // Returns true if the epilogue VF has been set to a non-zero value other than
 // VF=1 (scalar).
 static bool hasForcedEpilogueVF() {
@@ -3074,11 +3079,20 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     //
     // If a function is marked as minsize/optsize or OptForSize is set, do not
     // allow this form of transformation as this will increase CodeSize.
+    //
+    // For loops with small bodies, the cost model is not reliable enough to
+    // accurately determine if vectorization is beneficial.
+    // LowTripCountLoopBodySizeLimit means only loops with larger bodies will
+    // be considered.
     unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
     unsigned MaxVFForTC = llvm::bit_floor(TC.getFixedValue());
+    unsigned NumOfInstructions = 0;
+    for (BasicBlock *BB : TheLoop->blocks())
+      NumOfInstructions += BB->size();
     if (TC.getFixedValue() - MaxVFForTC <= 1 && MaxVFForTC / EffectiveIC > 1 &&
         MaxVFForTC <= (MaxFactors.FixedVF.getFixedValue() * EffectiveIC) &&
-        !Config.OptForSize) {
+        !Config.OptForSize &&
+        NumOfInstructions > LowTripCountLoopBodySizeLimit) {
       unsigned VF = MaxVFForTC / EffectiveIC;
       LLVM_DEBUG(dbgs() << "LV: Picking MaxVF=" << VF
                         << " with at most 1 scalar iteration remaining.\n");
