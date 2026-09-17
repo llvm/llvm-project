@@ -841,6 +841,15 @@ static bool CanMergeValues(Value *First, Value *Second) {
   return First == Second || isa<UndefValue>(First) || isa<UndefValue>(Second);
 }
 
+/// Return the number of edges from \p Pred to \p Succ.
+static unsigned numEdgesBetween(const BasicBlock *Pred,
+                                const BasicBlock *Succ) {
+  const Instruction *TI = Pred->getTerminator();
+  if (Succ->hasNPredecessorsOrMore(TI->getNumSuccessors()))
+    return llvm::count(successors(TI), Succ);
+  return llvm::count(predecessors(Succ), Pred);
+}
+
 /// Return true if we can fold BB, an almost-empty BB ending in an unconditional
 /// branch to Succ, into Succ.
 ///
@@ -850,8 +859,6 @@ CanPropagatePredecessorsForPHIs(BasicBlock *BB, BasicBlock *Succ,
                                 const SmallPtrSetImpl<BasicBlock *> &BBPreds) {
   assert(*succ_begin(BB) == Succ && "Succ is not successor of BB!");
 
-  LLVM_DEBUG(dbgs() << "Looking to fold " << BB->getName() << " into "
-                    << Succ->getName() << "\n");
   // Shortcut, if there is only a single predecessor it must be BB and merging
   // is always safe
   if (Succ->getSinglePredecessor())
@@ -935,22 +942,13 @@ static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
   return OldVal;
 }
 
-/// Create a map from block to value for the operands of a
-/// given phi.
+/// Update a block-to-value map with the non-undef values found in a phi.
+/// Only blocks that are already in the map are updated.
 ///
-/// This function initializes the map with UndefValue for all predecessors
-/// in BBPreds, and then updates the map with concrete non-undef values
-/// found in the PHI node.
-///
-/// \param PN The phi we are collecting the map for.
-/// \param BBPreds The list of all predecessor blocks to initialize with Undef.
-/// \param IncomingValues [out] The map from block to value for this phi.
+/// \param PN The phi we are collecting the values of.
+/// \param IncomingValues [in,out] The map from block to value for this phi.
 static void gatherIncomingValuesToPhi(PHINode *PN,
-                                      const PredBlockVector &BBPreds,
                                       IncomingValueMap &IncomingValues) {
-  for (BasicBlock *Pred : BBPreds)
-    IncomingValues[Pred] = nullptr;
-
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
     Value *V = PN->getIncomingValue(i);
     if (isa<UndefValue>(V))
@@ -960,6 +958,25 @@ static void gatherIncomingValuesToPhi(PHINode *PN,
     auto It = IncomingValues.find(BB);
     if (It != IncomingValues.end())
       It->second = V;
+  }
+}
+
+/// If the incoming values of a phi at \p UndefOps are a mix of undef and
+/// poison, replace the poison values with undef.
+///
+/// \param PN The phi whose incoming values are replaced.
+/// \param UndefOps The indices of incoming values that are undef or poison.
+static void replacePoisonWithUndefIfMixed(PHINode *PN,
+                                          ArrayRef<unsigned> UndefOps) {
+  // If there are both undef and poison values incoming, then convert those
+  // values to undef. It is invalid to have different values for the same
+  // incoming block.
+  unsigned PoisonCount = count_if(UndefOps, [&](unsigned i) {
+    return isa<PoisonValue>(PN->getIncomingValue(i));
+  });
+  if (PoisonCount != 0 && PoisonCount != UndefOps.size()) {
+    for (unsigned i : UndefOps)
+      PN->setIncomingValue(i, UndefValue::get(PN->getType()));
   }
 }
 
@@ -995,25 +1012,19 @@ static void replaceUndefValuesInPhi(PHINode *PN,
     PN->setIncomingValue(i, It->second);
   }
 
-  // If there are both undef and poison values incoming, then convert those
-  // values to undef. It is invalid to have different values for the same
-  // incoming block.
-  unsigned PoisonCount = count_if(TrueUndefOps, [&](unsigned i) {
-    return isa<PoisonValue>(PN->getIncomingValue(i));
-  });
-  if (PoisonCount != 0 && PoisonCount != TrueUndefOps.size()) {
-    for (unsigned i : TrueUndefOps)
-      PN->setIncomingValue(i, UndefValue::get(PN->getType()));
-  }
+  replacePoisonWithUndefIfMixed(PN, TrueUndefOps);
 }
 
 // Only when they shares a single common predecessor, return true.
 // Only handles cases when BB can't be merged while its predecessors can be
-// redirected.
+// redirected. NumSharedEdges only distinguishes between 0, 1 and >1.
 static bool
 CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
                                 const SmallPtrSetImpl<BasicBlock *> &BBPreds,
-                                BasicBlock *&CommonPred) {
+                                unsigned NumSharedEdges) {
+  // BB with multiple shared predecessors can't be merged
+  if (NumSharedEdges > 1)
+    return false;
 
   // There must be phis in BB, otherwise BB will be merged into Succ directly
   if (BB->phis().empty() || Succ->phis().empty())
@@ -1027,16 +1038,6 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
         return isa<IndirectBrInst>(Pred->getTerminator());
       }))
     return false;
-
-  // Get the single common predecessor of both BB and Succ. Return false
-  // when there are more than one common predecessors.
-  for (BasicBlock *SuccPred : predecessors(Succ)) {
-    if (BBPreds.count(SuccPred)) {
-      if (CommonPred)
-        return false;
-      CommonPred = SuccPred;
-    }
-  }
 
   return true;
 }
@@ -1076,15 +1077,21 @@ static bool introduceTooManyPhiEntries(BasicBlock *BB, BasicBlock *Succ) {
 /// \param BBPreds The predecessors of BB.
 /// \param PN The phi that we are updating.
 /// \param CommonPred The common predecessor of BB and PN's BasicBlock
+/// \param HasSharedPreds Whether BB and PN's BasicBlock share a predecessor.
 static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
                                                 const PredBlockVector &BBPreds,
                                                 PHINode *PN,
-                                                BasicBlock *CommonPred) {
+                                                BasicBlock *CommonPred,
+                                                bool HasSharedPreds) {
+  assert((HasSharedPreds || !CommonPred) &&
+         "Unexpected CommonPred!");
   Value *OldVal = PN->removeIncomingValue(BB, false);
   assert(OldVal && "No entry in PHI for Pred BB!");
 
   // Map BBPreds to defined values or nullptr (representing undefined values).
   IncomingValueMap IncomingValues;
+  for (BasicBlock *Pred : BBPreds)
+    IncomingValues[Pred] = nullptr;
 
   // We are merging two blocks - BB, and the block containing PN - and
   // as a result we need to redirect edges from the predecessors of BB
@@ -1094,8 +1101,11 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   // and where some of those common predecessors might have undef
   // values flowing into PN, we want to rewrite those values to be
   // consistent with the non-undef values.
+  // Without shared predecessors, PN has no incoming values from BBPreds yet.
+  if (HasSharedPreds)
+    gatherIncomingValuesToPhi(PN, IncomingValues);
 
-  gatherIncomingValuesToPhi(PN, BBPreds, IncomingValues);
+  SmallVector<unsigned> NewUndefOps;
 
   // If this incoming value is one of the PHI nodes in BB, the new entries
   // in the PHI node are the entries from the old PHI.
@@ -1118,6 +1128,8 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
 
       // And add a new incoming value for this predecessor for the
       // newly retargeted branch.
+      if (!HasSharedPreds && isa<UndefValue>(Selected))
+        NewUndefOps.push_back(PN->getNumIncomingValues());
       PN->addIncoming(Selected, PredBB);
     }
     if (CommonPred)
@@ -1135,13 +1147,18 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
 
       // And add a new incoming value for this predecessor for the
       // newly retargeted branch.
+      if (!HasSharedPreds && isa<UndefValue>(Selected))
+        NewUndefOps.push_back(PN->getNumIncomingValues());
       PN->addIncoming(Selected, PredBB);
     }
     if (CommonPred)
       PN->addIncoming(OldVal, BB);
   }
 
-  replaceUndefValuesInPhi(PN, IncomingValues);
+  if (HasSharedPreds)
+    replaceUndefValuesInPhi(PN, IncomingValues);
+  else
+    replacePoisonWithUndefIfMixed(PN, NewUndefOps);
 }
 
 bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
@@ -1156,18 +1173,38 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 
   SmallPtrSet<BasicBlock *, 16> BBPreds(llvm::from_range, predecessors(BB));
 
-  // The single common predecessor of BB and Succ when BB cannot be killed
-  BasicBlock *CommonPred = nullptr;
+  BasicBlock *SharedPred = nullptr;
+  // NumSharedEdges only distinguishes between 0, 1, >1. The count
+  // may be an undercount if there is more than one shared edge.
+  unsigned NumSharedEdges = 0;
+  for (BasicBlock *Pred : BBPreds) {
+    if (unsigned N = numEdgesBetween(Pred, Succ)) {
+      SharedPred = Pred;
+      NumSharedEdges += N;
+      if (NumSharedEdges > 1) {
+        break;
+      }
+    }
+  }
 
-  bool BBKillable = CanPropagatePredecessorsForPHIs(BB, Succ, BBPreds);
+  bool HasSharedPreds = NumSharedEdges != 0;
+
+  LLVM_DEBUG(dbgs() << "Looking to fold " << BB->getName() << " into "
+                    << Succ->getName() << "\n");
+
+  bool BBKillable =
+      !HasSharedPreds || CanPropagatePredecessorsForPHIs(BB, Succ, BBPreds);
 
   // Even if we can not fold BB into Succ, we may be able to redirect the
   // predecessors of BB to Succ.
   bool BBPhisMergeable = BBKillable || CanRedirectPredsOfEmptyBBToSucc(
-                                           BB, Succ, BBPreds, CommonPred);
+                                           BB, Succ, BBPreds, NumSharedEdges);
 
   if ((!BBKillable && !BBPhisMergeable) || introduceTooManyPhiEntries(BB, Succ))
     return false;
+
+  // The single common predecessor of BB and Succ when BB cannot be killed
+  BasicBlock *CommonPred = BBKillable ? nullptr : SharedPred;
 
   // Check to see if merging these blocks/phis would cause conflicts for any of
   // the phi nodes in BB or Succ. If not, we can safely merge.
@@ -1289,8 +1326,9 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     // All predecessors of BB (except the common predecessor) will be moved to
     // Succ.
     Updates.reserve(Updates.size() + 2 * pred_size(BB) + 1);
-    SmallPtrSet<BasicBlock *, 16> SuccPreds(llvm::from_range,
-                                            predecessors(Succ));
+    SmallPtrSet<BasicBlock *, 16> SuccPreds;
+    if (HasSharedPreds)
+      SuccPreds.insert_range(predecessors(Succ));
     for (auto *PredOfBB : predecessors(BB)) {
       // Do not modify those common predecessors of BB and Succ
       if (!SuccPreds.contains(PredOfBB))
@@ -1319,7 +1357,8 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     // Loop over all of the PHI nodes in the successor of BB.
     for (BasicBlock::iterator I = Succ->begin(); isa<PHINode>(I); ++I) {
       PHINode *PN = cast<PHINode>(I);
-      redirectValuesFromPredecessorsToPhi(BB, BBPreds, PN, CommonPred);
+      redirectValuesFromPredecessorsToPhi(BB, BBPreds, PN, CommonPred,
+                                          HasSharedPreds);
     }
   }
 
@@ -1348,15 +1387,17 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     }
 
   if (BBKillable) {
+    // Clear the successor list of BB to match updates applying to DTU later.
+    // Run before replaceAllUsesWith() to not redundantly scan phi nodes in
+    // Succ for BB.
+    if (BB->hasTerminator())
+      BB->back().eraseFromParent();
+
     // Everything that jumped to BB now goes to Succ.
     BB->replaceAllUsesWith(Succ);
 
     if (!Succ->hasName())
       Succ->takeName(BB);
-
-    // Clear the successor list of BB to match updates applying to DTU later.
-    if (BB->hasTerminator())
-      BB->back().eraseFromParent();
 
     new UnreachableInst(BB->getContext(), BB);
     assert(succ_empty(BB) && "The successor list of BB isn't empty before "
