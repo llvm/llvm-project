@@ -387,6 +387,19 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));
 
+  // A long-lived host cannot rely on process exit to reclaim memory after a
+  // cc1 invocation. Run each cc1 job through Clang's existing callback and
+  // ensure that it destroys its CompilerInstance before returning.
+  if (ToolContext.hasSession() && !UseNewCC1Process &&
+      !TheDriver.CCPrintProcessStats) {
+    for (Command &Job : C->getJobs()) {
+      if (!Job.SupportsDisableFree)
+        continue;
+      Job.enableFree();
+      Job.InProcess = true;
+    }
+  }
+
   Driver::ReproLevel ReproLevel = Driver::ReproLevel::OnCrash;
   if (Arg *A = C->getArgs().getLastArg(options::OPT_gen_reproducer_eq)) {
     auto Level =
