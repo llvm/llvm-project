@@ -685,12 +685,12 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX1250-NEXT:  .LBB4_2: ; %for.body
 ; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    v_add_nc_u64_e32 v[8:9], s[0:1], v[2:3]
+; GFX1250-NEXT:    v_add_nc_u64_e32 v[4:5], s[0:1], v[2:3]
 ; GFX1250-NEXT:    flat_prefetch_b8 v[2:3] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], 16, v[2:3]
 ; GFX1250-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX1250-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX1250-NEXT:    flat_load_b128 v[4:7], v[8:9]
+; GFX1250-NEXT:    flat_load_b128 v[4:7], v[4:5]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    flat_store_b128 v[0:1], v[4:7]
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
