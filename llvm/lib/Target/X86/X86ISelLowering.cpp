@@ -48981,18 +48981,14 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   bool CondConstantVector = ISD::isBuildVectorOfConstantSDNodes(Cond.getNode());
   unsigned EltBitWidth = VT.getScalarSizeInBits();
 
-  // Soft bf16/f16 scalar selects: do a VSELECT in vector registers instead
+  // Soft bf16/f16 scalar selects do a VSELECT in vector registers instead
   // of a scalar CMOV, to avoid a GPR round-trip. Skip constant operands
   // (cheaper as immediates) and compare-driven conds (CMOV already reuses
-  // the flags). Use f16 since bf16 not a legal register type.
+  // the flags).
   if (N->getOpcode() == ISD::SELECT && !CondVT.isVector() &&
       Subtarget.hasSSE2() && !isIntOrFPConstant(LHS) &&
       !isIntOrFPConstant(RHS)) {
-    // Only worth it if both operands already live in a vector register: either
-    // the select is on the 16-bit float itself, or it is the equivalent i16
-    // select of bitcast 16-bit floats. Bitcasts from a GPR mean the values are
-    // there instead, and moving them in and the result back out costs more than
-    // the CMOV.
+    // Only worth it if both operands already live in a vector register
     auto IsBitcastFromGPR = [](SDValue Op) {
       return Op.getOpcode() == ISD::BITCAST &&
              Op.getOperand(0).getValueType().isScalarInteger();
@@ -49013,7 +49009,6 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       }
     }
 
-    // Peek past the boolean plumbing to see what produced the condition.
     SDValue CondRoot = Cond;
     while (CondRoot.getOpcode() == ISD::AND ||
            CondRoot.getOpcode() == ISD::ANY_EXTEND ||
@@ -49024,8 +49019,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     if (F16LHS && CondRoot.getOpcode() != ISD::SETCC &&
         CondRoot.getOpcode() != X86ISD::SETCC) {
       // Currently blend in v8i16 (not v8f16) since a v8f16 VSELECT can fail to
-      // select on subtargets that fall back to BLENDV (since there's no
-      // VBLENDVPH) instead of a mask-register select.
+      // select on some subtargets
       SDValue Mask =
           DAG.getNode(ISD::SUB, DL, MVT::i16, DAG.getConstant(0, DL, MVT::i16),
                       DAG.getZExtOrTrunc(Cond, DL, MVT::i16));
