@@ -882,6 +882,9 @@ features cannot lower the translation-unit ABI level;
   `set_x(decltype(x) val)`. This affects the completion strings produced by
   libclang as well as those used by clangd.
 
+- Members inherited from a dependent base class that is named through an alias
+  template are suggested by code completion when relevant.
+
 ### Static Analyzer
 
 #### Crash and bug fixes
