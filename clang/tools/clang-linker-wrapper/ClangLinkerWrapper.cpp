@@ -241,20 +241,34 @@ Expected<StringRef> createOutputFile(const Twine &Prefix, StringRef Extension) {
 }
 
 /// Execute the command \p ExecutablePath with the arguments \p Args.
-Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args) {
+/// If \p Proc is set, launch without waiting and store the process handle.
+Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args,
+                      sys::ProcessInfo *Proc = nullptr) {
   if (Verbose || DryRun)
     printCommands(Args);
 
   if (DryRun)
     return Error::success();
 
-  // If the command line fits within system limits, execute directly.
-  if (sys::commandLineFitsWithinSystemLimits(ExecutablePath, Args)) {
-    if (sys::ExecuteAndWait(ExecutablePath, Args))
+  auto Launch = [&](ArrayRef<StringRef> ExecArgs) -> Error {
+    if (Proc) {
+      bool ExecutionFailed = false;
+      *Proc = sys::ExecuteNoWait(ExecutablePath, ExecArgs, std::nullopt, {}, 0,
+                                 nullptr, &ExecutionFailed);
+      if (ExecutionFailed)
+        return createStringError(
+            "'%s' failed", sys::path::filename(ExecutablePath).str().c_str());
+      return Error::success();
+    }
+    if (sys::ExecuteAndWait(ExecutablePath, ExecArgs))
       return createStringError(
           "'%s' failed", sys::path::filename(ExecutablePath).str().c_str());
     return Error::success();
-  }
+  };
+
+  // If the command line fits within system limits, execute directly.
+  if (sys::commandLineFitsWithinSystemLimits(ExecutablePath, Args))
+    return Launch(Args);
 
   // Write the arguments to a response file and pass that instead.
   auto TempFileOrErr = createOutputFile("response", "rsp");
@@ -274,10 +288,7 @@ Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args) {
 
   std::string ResponseFile = ("@" + *TempFileOrErr).str();
   SmallVector<StringRef, 2> NewArgs = {Args.front(), ResponseFile};
-  if (sys::ExecuteAndWait(ExecutablePath, NewArgs))
-    return createStringError("'%s' failed",
-                             sys::path::filename(ExecutablePath).str().c_str());
-  return Error::success();
+  return Launch(NewArgs);
 }
 
 Expected<std::string> findProgram(StringRef Name, ArrayRef<StringRef> Paths) {
@@ -624,8 +635,24 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
     CmdArgs.push_back(Args.MakeArgString(Arg));
 
+  // We cannot generate temporary assembly files to satisfy `--save-temps`
+  // through the LTO pipeline. Launch a separate clang job to emit the file.
+  sys::ProcessInfo AsmProc;
+  if (SaveTemps && Triple.isAMDGPU()) {
+    SmallVector<StringRef, 16> AsmArgs(CmdArgs);
+    AsmArgs.append({"-Xlinker", "--lto-emit-asm"});
+    if (Error Err = executeCommands(*ClangPath, AsmArgs, &AsmProc))
+      return std::move(Err);
+  }
+
   if (Error Err = executeCommands(*ClangPath, CmdArgs))
     return std::move(Err);
+
+  if (SaveTemps && Triple.isAMDGPU() && !DryRun) {
+    if (sys::Wait(AsmProc, std::nullopt).ReturnCode)
+      return createStringError("'%s' failed",
+                               sys::path::filename(*ClangPath).str().c_str());
+  }
 
   return *TempFileOrErr;
 }
