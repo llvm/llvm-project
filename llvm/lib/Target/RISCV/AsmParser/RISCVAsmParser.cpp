@@ -343,10 +343,21 @@ public:
   // with the first token, so diagnostics can be reported with a real source
   // location instead of being printed with no location information.
   void onBeginOfFile() override {
+    // If the target streamer already has a resolved ABI (e.g. set by
+    // RISCVTargetELFStreamer for a valid -target-abi, or set by
+    // RISCVAsmPrinter during codegen), skip ABI validation.
+    if (getTargetStreamer().hasTargetABI())
+      return;
+
     Expected<RISCVABI::ABI> ABIOrErr =
         RISCVABI::computeTargetABI(getSTI(), getTargetOptions().ABIName);
-    if (!ABIOrErr)
+    if (!ABIOrErr) {
       getParser().printError(getLoc(), toString(ABIOrErr.takeError()));
+      getTargetStreamer().setTargetABI(
+          cantFail(RISCVABI::computeTargetABI(getSTI(), "")));
+      return;
+    }
+    getTargetStreamer().setTargetABI(*ABIOrErr);
   }
 };
 
