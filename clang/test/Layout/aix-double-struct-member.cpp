@@ -431,3 +431,43 @@ int g = sizeof(G);
 // CHECK-NEXT:            |  nvsize=20, nvalign=2, preferrednvalign=2]
 
 } // namespace test11
+namespace test12 {
+// Fields whose base element is `double`/`long double` test their natural
+// 8-byte alignment under __ms_struct__.
+// See: issue 219627.
+struct __attribute__((__ms_struct__)) S { double d; };
+int a = sizeof(S);
+
+struct __attribute__((__ms_struct__)) LD { long double d; };
+int b = sizeof(LD);
+
+struct __attribute__((__ms_struct__)) CD { _Complex double d; };
+int c = sizeof(CD);
+
+struct __attribute__((__ms_struct__)) Arr { double d[4]; };
+int e = sizeof(Arr);
+
+// CHECK:      *** Dumping AST Record Layout
+// CHECK-NEXT:         0 | struct test12::S
+// CHECK-NEXT:         0 |   double d
+// CHECK-NEXT:           | [sizeof=8, dsize=8, align=8, preferredalign=8,
+// CHECK-NEXT:           |  nvsize=8, nvalign=8, preferrednvalign=8]
+
+// CHECK:      *** Dumping AST Record Layout
+// CHECK-NEXT:         0 | struct test12::LD
+// CHECK-NEXT:         0 |   long double d
+// CHECK-NEXT:           | [sizeof=8, dsize=8, align=8, preferredalign=8,
+// CHECK-NEXT:           |  nvsize=8, nvalign=8, preferrednvalign=8]
+
+// CHECK:      *** Dumping AST Record Layout
+// CHECK-NEXT:         0 | struct test12::CD
+// CHECK-NEXT:         0 |   _Complex double d
+// CHECK-NEXT:           | [sizeof=16, dsize=16, align=4, preferredalign=8,
+// CHECK-NEXT:           |  nvsize=16, nvalign=4, preferrednvalign=8]
+
+// CHECK:      *** Dumping AST Record Layout
+// CHECK-NEXT:         0 | struct test12::Arr
+// CHECK-NEXT:         0 |   double[4] d
+// CHECK-NEXT:           | [sizeof=32, dsize=32, align=8, preferredalign=8,
+// CHECK-NEXT:           |  nvsize=32, nvalign=8, preferrednvalign=8]
+} // namespace test12
