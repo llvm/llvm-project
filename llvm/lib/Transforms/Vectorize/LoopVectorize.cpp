@@ -3349,12 +3349,11 @@ static bool hasReplicatorRegion(VPlan &Plan) {
 /// Returns true if the VPlan contains a VPReductionPHIRecipe with
 /// FindLast recurrence kind.
 static bool hasFindLastReductionPhi(VPlan &Plan) {
-  return any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
-                [](VPRecipeBase &R) {
-                  auto *RedPhi = dyn_cast<VPReductionPHIRecipe>(&R);
-                  return RedPhi &&
-                         RecurrenceDescriptor::isFindLastRecurrenceKind(
-                             RedPhi->getRecurrenceKind());
+  return any_of(make_isa_range<VPReductionPHIRecipe>(
+                    Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()),
+                [](VPReductionPHIRecipe &RedPhi) {
+                  return RecurrenceDescriptor::isFindLastRecurrenceKind(
+                      RedPhi.getRecurrenceKind());
                 });
 }
 
@@ -3745,11 +3744,9 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // Clamp the interleave ranges to reasonable counts.
   bool HasUnorderedReductions =
       HasReductions &&
-      !any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
-              [](VPRecipeBase &R) {
-                auto *RedR = dyn_cast<VPReductionPHIRecipe>(&R);
-                return RedR && RedR->isOrdered();
-              });
+      !any_of(make_isa_range<VPReductionPHIRecipe>(
+                  Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()),
+              [](VPReductionPHIRecipe &RedR) { return RedR.isOrdered(); });
   unsigned MaxInterleaveCount =
       TTI.getMaxInterleaveFactor(VF, HasUnorderedReductions);
   LLVM_DEBUG(dbgs() << "LV: MaxInterleaveFactor for the target is "
@@ -3913,13 +3910,13 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     // do the final reduction after the loop.
     bool HasSelectCmpReductions =
         HasReductions &&
-        any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
-               [](VPRecipeBase &R) {
-                 auto *RedR = dyn_cast<VPReductionPHIRecipe>(&R);
-                 return RedR && (RecurrenceDescriptor::isAnyOfRecurrenceKind(
-                                     RedR->getRecurrenceKind()) ||
-                                 RecurrenceDescriptor::isFindIVRecurrenceKind(
-                                     RedR->getRecurrenceKind()));
+        any_of(make_isa_range<VPReductionPHIRecipe>(
+                   Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()),
+               [](VPReductionPHIRecipe &RedR) {
+                 return RecurrenceDescriptor::isAnyOfRecurrenceKind(
+                            RedR.getRecurrenceKind()) ||
+                        RecurrenceDescriptor::isFindIVRecurrenceKind(
+                            RedR.getRecurrenceKind());
                });
     if (HasSelectCmpReductions) {
       LLVM_DEBUG(dbgs() << "LV: Not interleaving select-cmp reductions.\n");
@@ -3933,12 +3930,9 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     // interleaving entirely.
     if (HasReductions && OrigLoop->getLoopDepth() > 1) {
       bool HasOrderedReductions =
-          any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
-                 [](VPRecipeBase &R) {
-                   auto *RedR = dyn_cast<VPReductionPHIRecipe>(&R);
-
-                   return RedR && RedR->isOrdered();
-                 });
+          any_of(make_isa_range<VPReductionPHIRecipe>(
+                     Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()),
+                 [](VPReductionPHIRecipe &RedR) { return RedR.isOrdered(); });
       if (HasOrderedReductions) {
         LLVM_DEBUG(
             dbgs() << "LV: Not interleaving scalar ordered reductions.\n");
@@ -7249,17 +7243,15 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   auto AddFreezeForFindLastIVReductions = [](VPlan &Plan,
                                              bool UpdateResumePhis) {
     VPBuilder Builder(Plan.getEntry());
-    for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
-      auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (!VPI)
-        continue;
+    for (VPInstruction &VPI :
+         make_isa_range<VPInstruction>(*Plan.getMiddleBlock())) {
       VPValue *OrigStart;
-      if (!matchFindIVResult(VPI, m_VPValue(), m_VPValue(OrigStart)))
+      if (!matchFindIVResult(&VPI, m_VPValue(), m_VPValue(OrigStart)))
         continue;
       if (isGuaranteedNotToBeUndefOrPoison(OrigStart->getLiveInIRValue()))
         continue;
       VPInstruction *Freeze = Builder.createFreeze(OrigStart, {}, "fr");
-      VPI->setOperand(2, Freeze);
+      VPI.setOperand(2, Freeze);
       if (UpdateResumePhis)
         OrigStart->replaceUsesWithIf(Freeze, [Freeze](VPUser &U, unsigned) {
           return Freeze != &U && isa<VPPhi>(&U);
