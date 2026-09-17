@@ -53,17 +53,17 @@ bool parse_group_fields(cpp::span<char> line, struct group *grp,
 
   pwd::FieldTokenizer tokenizer(line, ':');
 
-  auto name = tokenizer.next_field();
+  const auto name = tokenizer.next_field();
   if (!name || name->empty() || name->front() == '\0')
     return false;
   grp->gr_name = name->data();
 
-  auto passwd = tokenizer.next_field();
+  const auto passwd = tokenizer.next_field();
   if (!passwd)
     return false;
   grp->gr_passwd = passwd->data();
 
-  auto gid_str = tokenizer.next_field();
+  const auto gid_str = tokenizer.next_field();
   if (!gid_str || gid_str->empty() || !internal::isdigit(gid_str->front()))
     return false;
   auto gid_res = internal::strtointeger<gid_t>(gid_str->data(), 10);
@@ -73,7 +73,7 @@ bool parse_group_fields(cpp::span<char> line, struct group *grp,
     return false;
   grp->gr_gid = gid_res.value;
 
-  auto members_field = tokenizer.next_field();
+  const auto members_field = tokenizer.next_field();
   if (!members_field)
     return false;
 
@@ -97,22 +97,25 @@ ErrorOr<void> parse_line<struct group>(cpp::span<char> line,
     return Error(EINVAL);
 
   // Line excluding terminating null byte.
-  cpp::span<char> text = line.first(line.size() - 1);
-  for (char c : text) {
+  const cpp::span<char> text = line.first(line.size() - 1);
+  for (const char c : text) {
     if (c == '\0')
       return Error(EINVAL);
   }
 
-  size_t max_members = count_group_members(text);
-  uintptr_t tail = reinterpret_cast<uintptr_t>(scratch.data());
-  size_t pad = (alignof(char *) - tail % alignof(char *)) % alignof(char *);
+  const size_t max_members = count_group_members(text);
+  const uintptr_t tail = reinterpret_cast<uintptr_t>(scratch.data());
+  // Calculate padding needed to align scratch to alignof(char *) so
+  // that gr_mem pointer array elements can be safely stored.
+  const size_t pad =
+      (alignof(char *) - tail % alignof(char *)) % alignof(char *);
   if (scratch.size() < pad)
     return Error(ERANGE);
-  size_t remaining_bytes = scratch.size() - pad;
+  const size_t remaining_bytes = scratch.size() - pad;
   if (remaining_bytes / sizeof(char *) < max_members + 1)
     return Error(ERANGE);
 
-  cpp::span<char *> mem_ptrs(
+  const cpp::span<char *> mem_ptrs(
       reinterpret_cast<char **>(scratch.subspan(pad).data()),
       remaining_bytes / sizeof(char *));
   if (!grp::parse_group_line(line, grp, mem_ptrs))
@@ -136,7 +139,7 @@ bool parse_group_line(cpp::span<char> line, struct group *grp,
   size_t member_count = 0;
   if (!members_field.empty() && members_field.front() != '\0') {
     pwd::FieldTokenizer member_tokenizer(members_field, ',');
-    while (auto member = member_tokenizer.next_field()) {
+    while (const auto member = member_tokenizer.next_field()) {
       if (member->empty() || member->front() == '\0')
         continue;
       if (member_count + 1 >= mem_ptrs.size())
@@ -187,7 +190,7 @@ ErrorOr<void> open() { return db.setdb(); }
 ErrorOr<void> close() { return db.enddb(); }
 
 ErrorOr<struct group *> read_next() {
-  auto res = db.getnext(&grp_entry, line_buffer);
+  const auto res = db.getnext(&grp_entry, line_buffer);
   if (!res.has_value())
     return Error(res.error());
   if (!res.value())

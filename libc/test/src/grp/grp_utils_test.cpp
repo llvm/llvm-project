@@ -24,7 +24,7 @@ TEST(LlvmLibcGrpUtilsTest, ParseGroupLine_Success) {
   char line[] = "wheel:x:10:root,admin,user1";
   char *mem_ptrs[8];
   struct group grp;
-  bool ok = LIBC_NAMESPACE::grp::parse_group_line(line, &grp, mem_ptrs);
+  const bool ok = LIBC_NAMESPACE::grp::parse_group_line(line, &grp, mem_ptrs);
   ASSERT_TRUE(ok);
   EXPECT_STREQ(grp.gr_name, "wheel");
   EXPECT_STREQ(grp.gr_passwd, "x");
@@ -40,7 +40,7 @@ TEST(LlvmLibcGrpUtilsTest, ParseGroupLine_EmptyMembers) {
   char line[] = "nogroup:x:65534:";
   char *mem_ptrs[4];
   struct group grp;
-  bool ok = LIBC_NAMESPACE::grp::parse_group_line(line, &grp, mem_ptrs);
+  const bool ok = LIBC_NAMESPACE::grp::parse_group_line(line, &grp, mem_ptrs);
   ASSERT_TRUE(ok);
   EXPECT_STREQ(grp.gr_name, "nogroup");
   EXPECT_STREQ(grp.gr_passwd, "x");
@@ -53,7 +53,7 @@ TEST(LlvmLibcGrpUtilsTest, ParseGroupLine_LeadingTrailingAndConsecutiveCommas) {
   char line[] = "test:x:100:,user1,,user2,";
   char *mem_ptrs[8];
   struct group grp;
-  bool ok = LIBC_NAMESPACE::grp::parse_group_line(line, &grp, mem_ptrs);
+  const bool ok = LIBC_NAMESPACE::grp::parse_group_line(line, &grp, mem_ptrs);
   ASSERT_TRUE(ok);
   EXPECT_STREQ(grp.gr_name, "test");
   EXPECT_STREQ(grp.gr_passwd, "x");
@@ -68,7 +68,7 @@ TEST(LlvmLibcGrpUtilsTest, ParseGroupLine_SingleMember) {
   char line[] = "bin:x:1:bin";
   char *mem_ptrs[4];
   struct group grp;
-  bool ok = LIBC_NAMESPACE::grp::parse_group_line(line, &grp, mem_ptrs);
+  const bool ok = LIBC_NAMESPACE::grp::parse_group_line(line, &grp, mem_ptrs);
   ASSERT_TRUE(ok);
   EXPECT_STREQ(grp.gr_name, "bin");
   EXPECT_STREQ(grp.gr_passwd, "x");
@@ -144,7 +144,7 @@ TEST(LlvmLibcGrpUtilsTest, ParseLine_FixedBufferErangeWhenNoScratchSpace) {
   // The line fits in buffer, but there is no space left for gr_mem pointers.
   char buffer[] = "wheel:x:10:root,admin";
   struct group grp;
-  auto res = LIBC_NAMESPACE::pwd::parse_line<struct group>(
+  const auto res = LIBC_NAMESPACE::pwd::parse_line<struct group>(
       LIBC_NAMESPACE::cpp::span<char>(buffer, sizeof(buffer)), {}, &grp);
   ASSERT_FALSE(res.has_value());
   EXPECT_EQ(res.error(), ERANGE);
@@ -156,7 +156,7 @@ TEST(LlvmLibcGrpUtilsTest, ParseLine_EmbeddedNullByteRejected) {
   for (size_t i = 0; i < sizeof(RAW); ++i)
     buffer[i] = RAW[i];
   struct group grp;
-  auto res = LIBC_NAMESPACE::pwd::parse_line<struct group>(
+  const auto res = LIBC_NAMESPACE::pwd::parse_line<struct group>(
       LIBC_NAMESPACE::cpp::span<char>(buffer, sizeof(RAW)),
       LIBC_NAMESPACE::cpp::span<char>(buffer + sizeof(RAW),
                                       sizeof(buffer) - sizeof(RAW)),
@@ -173,7 +173,7 @@ TEST(LlvmLibcGrpUtilsTest, ParseLine_SuccessWithTailForMemberPointers) {
     buffer[i] = LINE[i];
 
   struct group grp;
-  auto res = LIBC_NAMESPACE::pwd::parse_line<struct group>(
+  const auto res = LIBC_NAMESPACE::pwd::parse_line<struct group>(
       LIBC_NAMESPACE::cpp::span<char>(buffer, LEN + 1),
       LIBC_NAMESPACE::cpp::span<char>(buffer + LEN + 1,
                                       sizeof(buffer) - (LEN + 1)),
