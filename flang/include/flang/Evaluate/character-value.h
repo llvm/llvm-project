@@ -106,7 +106,8 @@ public:
     } else if constexpr (std::is_same_v<char32_t, CharT>) {
       return AsU32String();
     } else {
-      static_assert(false, "Must be one of the supported character types");
+      static_assert(
+          !sizeof(CharT), "Must be one of the supported character types");
     }
   }
 
@@ -159,7 +160,7 @@ public:
   CharacterValue &operator+=(const CharacterValue &y);
 
   /// Append a character, converting it to the string's element type.
-  CharacterValue &operator+=(char c);
+  CharacterValue &operator+=(char32_t c);
 
   /// Sentinel value for "not found" positions (same as std::string::npos).
   static constexpr std::size_t npos{std::string::npos};

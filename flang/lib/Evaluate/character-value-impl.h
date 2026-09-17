@@ -42,7 +42,9 @@ public:
         StringT buf;
         buf.resize(s.length());
         for (auto [i, c] : llvm::enumerate(s)) {
-          buf[i] = c;
+          // Platforms may defined char as either signed or unsigned.
+          // Cast to unsigned to avoid platform-dependent widening.
+          buf[i] = static_cast<unsigned char>(c);
         }
         storage_ = std::move(buf);
       }
@@ -172,7 +174,7 @@ public:
   CharacterValueImpl &operator+=(const CharacterValueImpl &y);
 
   /// Append a character, converting it to the string's element type.
-  CharacterValueImpl &operator+=(char c);
+  CharacterValueImpl &operator+=(char32_t c);
 
   /// Sentinel value for "not found" positions (same as std::string::npos).
   static constexpr std::size_t npos{std::string::npos};

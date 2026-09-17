@@ -368,7 +368,10 @@ char32_t CharacterValueImpl::operator[](std::size_t i) const {
         if constexpr (is_monostate<StringT>) {
           DIE("operation not supported on uninitialized value");
         } else {
-          return static_cast<char32_t>(s[i]);
+          // Use unsigned type to avoid platform-dependent widening
+          using CharT = typename StringT::value_type;
+          using UnsignedCharT = std::make_unsigned_t<CharT>;
+          return static_cast<UnsignedCharT>(s[i]);
         }
         return 0;
       },
@@ -411,7 +414,7 @@ CharacterValueImpl &CharacterValueImpl::operator+=(
   return *this;
 }
 
-CharacterValueImpl &CharacterValueImpl::operator+=(char c) {
+CharacterValueImpl &CharacterValueImpl::operator+=(char32_t c) {
   common::visit(
       [c](auto &s) {
         using StringT = std::decay_t<decltype(s)>;
@@ -419,7 +422,7 @@ CharacterValueImpl &CharacterValueImpl::operator+=(char c) {
           DIE("operation not supported on uninitialized value");
         } else {
           using CharT = typename StringT::value_type;
-          s.push_back(static_cast<CharT>(c));
+          s.push_back(c);
         }
       },
       storage_);
