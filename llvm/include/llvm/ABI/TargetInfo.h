@@ -131,7 +131,9 @@ protected:
 
 LLVM_ABI std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
 
-LLVM_ABI std::unique_ptr<TargetInfo> createAMDGPUTargetInfo(TypeBuilder &TB);
+LLVM_ABI std::unique_ptr<TargetInfo>
+createAMDGPUTargetInfo(TypeBuilder &TB,
+                       bool CoerceGenericPtrArgToGlobal = false);
 
 /// The AVX ABI level for X86 targets.
 enum class X86AVXABILevel {
