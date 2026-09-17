@@ -6344,8 +6344,6 @@ static bool verifyExecutionFrequenciesMatchBFI(VPlan &Plan, Loop *OrigLoop,
         cast<VPInstruction>(&VPBB->front())->getExecutionFrequency();
     if (!Freq)
       continue;
-    // Compare at BranchProbability's coarser resolution, which is as precise as
-    // BFI's frequencies get.
     BranchProbability Computed = vputils::getExecutionProbability(Freq->Freq);
 
     // Clamp to the header's frequency, which BFI's rounding may exceed.

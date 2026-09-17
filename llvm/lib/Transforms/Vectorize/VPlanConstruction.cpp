@@ -636,8 +636,8 @@ void VPlanTransforms::recordExecutionFrequencies(VPlan &Plan) {
   LLVMContext &Ctx = Plan.getContext();
   for (VPBasicBlock *VPBB : Blocks) {
     std::optional<VPExecutionFrequency> Freq = Frequencies.lookup(VPBB);
-    for (VPRecipeBase &R : *VPBB)
-      cast<VPInstruction>(&R)->setExecutionFrequency(Freq, Ctx);
+    for (VPInstruction &VPI : make_isa_range<VPInstruction>(*VPBB))
+      VPI.setExecutionFrequency(Freq, Ctx);
   }
 }
 
