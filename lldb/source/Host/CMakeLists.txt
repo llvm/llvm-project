@@ -111,9 +111,14 @@ else()
     posix/LockFilePosix.cpp
     posix/MainLoopPosix.cpp
     posix/PipePosix.cpp
-    posix/ProcessLauncherPosixFork.cpp
     posix/Support.cpp
     )
+
+  if (NOT EMSCRIPTEN)
+    add_host_subdirectory(posix
+      posix/ProcessLauncherPosixFork.cpp
+      )
+  endif()
 
   if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     add_subdirectory(macosx/objcxx)
@@ -137,6 +142,7 @@ else()
     endif()
   elseif (CMAKE_SYSTEM_NAME MATCHES "Emscripten")
     add_host_subdirectory(emscripten
+      emscripten/Host.cpp
       emscripten/HostInfoEmscripten.cpp
       )
   elseif (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")

@@ -96,8 +96,6 @@ namespace {
 } // end anonymous namespace
 
 char ResetMachineFunction::ID = 0;
-INITIALIZE_PASS(ResetMachineFunction, DEBUG_TYPE,
-                "Reset machine function if ISel failed", false, false)
 
 MachineFunctionPass *
 llvm::createResetMachineFunctionPass(bool EmitFallbackDiag = false,

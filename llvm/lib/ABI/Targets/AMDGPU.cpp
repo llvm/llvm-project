@@ -26,7 +26,6 @@ private:
   /// Registers available for arguments and return values, in 32-bit units.
   static constexpr unsigned MaxNumRegsForArgsRet = 16;
 
-  TypeBuilder &TB;
   AMDGPUABIOptions Opts;
   const IntegerType *Int16Ty;
   const IntegerType *Int32Ty;
@@ -247,7 +246,7 @@ private:
 
 public:
   AMDGPUTargetInfo(TypeBuilder &TB, const AMDGPUABIOptions &Opts)
-      : TB(TB), Opts(Opts),
+      : TargetInfo(TB), Opts(Opts),
         Int16Ty(TB.getIntegerType(16, Align(2), /*Signed=*/false)),
         Int32Ty(TB.getIntegerType(32, Align(4), /*Signed=*/false)),
         Int32PairTy(TB.getArrayType(Int32Ty, 2, 64)) {}
