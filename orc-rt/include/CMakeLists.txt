@@ -19,6 +19,7 @@ set(ORC_RT_HEADERS
     orc-rt/bedrock/Session.h
     orc-rt/bedrock/SimpleNativeMemoryMap.h
     orc-rt/bedrock/SimpleSymbolTable.h
+    orc-rt/bedrock/SocketHandle.h
     orc-rt/bedrock/StandaloneMachOUnwindInfoRegistrar.h
     orc-rt/bedrock/TaskGroup.h
     orc-rt/bedrock/ThreadPoolRunner.h
@@ -41,6 +42,7 @@ set(ORC_RT_HEADERS
     orc-rt/support/IntervalSet.h
     orc-rt/support/LockedAccess.h
     orc-rt/support/MacroUtils.h
+    orc-rt/support/Mangling.h
     orc-rt/support/MemoryFlags.h
     orc-rt/support/Proxy.h
     orc-rt/support/RTTI.h

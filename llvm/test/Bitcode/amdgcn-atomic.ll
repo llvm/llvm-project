@@ -341,7 +341,7 @@ define <2 x half> @upgrade_amdgcn_global_atomic_fadd_v2f16_p1_v2f16(ptr addrspac
 declare float @llvm.amdgcn.flat.atomic.fadd.f32.p0.f32(ptr nocapture, float) #0
 
 define float @upgrade_amdgcn_flat_atomic_fadd_f32_p0_f32(ptr %ptr, float %data) {
-  ; CHECK: %{{.+}} = atomicrmw fadd ptr %ptr, float %data syncscope("agent") seq_cst, align 4, !noalias.addrspace !{{[0-9]+}}, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
+  ; CHECK: %{{.+}} = atomicrmw fadd ptr %ptr, float %data syncscope("agent") seq_cst, align 4, !noalias.addrspace !{{[0-9]+}}, !atomic.ignore.denormal.mode !{{[0-9]+}}, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
   %result = call float @llvm.amdgcn.flat.atomic.fadd.f32.p0.f32(ptr %ptr, float %data)
   ret float %result
 }
@@ -349,7 +349,7 @@ define float @upgrade_amdgcn_flat_atomic_fadd_f32_p0_f32(ptr %ptr, float %data) 
 declare float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) nocapture, float) #0
 
 define float @upgrade_amdgcn_global_atomic_fadd_f32_p1_f32(ptr addrspace(1) %ptr, float %data) {
-  ; CHECK: %{{.+}} = atomicrmw fadd ptr addrspace(1) %ptr, float %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
+  ; CHECK: %{{.+}} = atomicrmw fadd ptr addrspace(1) %ptr, float %data syncscope("agent") seq_cst, align 4, !atomic.ignore.denormal.mode !{{[0-9]+}}, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
   %result = call float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) %ptr, float %data)
   ret float %result
 }

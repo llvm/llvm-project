@@ -32,6 +32,12 @@ template <typename T> struct enable_if<true, T> {
 template <bool B, class T = void>
 using enable_if_t = typename enable_if<B, T>::Type;
 
+template <typename T> struct type_identity {
+  using Type = T;
+};
+
+template <typename T> using type_identity_t = typename type_identity<T>::Type;
+
 template <typename U, typename T, int R, int C>
 constexpr enable_if_t<sizeof(U) == sizeof(T), matrix<U, R, C>>
 bit_cast(matrix<T, R, C> M) {

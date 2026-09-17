@@ -343,7 +343,11 @@ namespace {
         }
       }
 
-      llvm_unreachable("no Attr* for AttributedType*");
+      // The AttributedType can be inherited from another declarator, for
+      // example when __typeof__ reuses a type built for a different
+      // declaration, in which case there is no entry for it in this
+      // TypeProcessingState. Return null in that case.
+      return nullptr;
     }
 
     SourceLocation
@@ -1577,7 +1581,13 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   // Check for __ob_wrap and __ob_trap
   if (DS.isOverflowBehaviorSpecified() &&
       S.getLangOpts().OverflowBehaviorTypes) {
-    if (!Result->isIntegerType()) {
+    if (Result->isAtomicType()) {
+      SourceLocation Loc = DS.getOverflowBehaviorLoc();
+      StringRef SpecifierName =
+          DeclSpec::getSpecifierName(DS.getOverflowBehaviorState());
+      S.Diag(Loc, diag::err_overflow_behavior_atomic_type)
+          << SpecifierName << Result.getAsString() << 1;
+    } else if (!Result->isIntegerType()) {
       SourceLocation Loc = DS.getOverflowBehaviorLoc();
       StringRef SpecifierName =
           DeclSpec::getSpecifierName(DS.getOverflowBehaviorState());
@@ -5717,10 +5727,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if (T->containsUnexpandedParameterPack())
         T = Context.getPackExpansionType(T, std::nullopt);
       else
-        S.Diag(D.getEllipsisLoc(),
-               LangOpts.CPlusPlus11
-                 ? diag::warn_cxx98_compat_variadic_templates
-                 : diag::ext_variadic_templates);
+        S.DiagCompat(D.getEllipsisLoc(), diag_compat::variadic_templates);
       break;
 
     case DeclaratorContext::File:
@@ -6730,6 +6737,14 @@ static void HandleOverflowBehaviorAttr(QualType &Type, const ParsedAttr &Attr,
   if (Attr.getNumArgs() != 1) {
     S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
         << Attr << 1;
+    Attr.setInvalid();
+    return;
+  }
+
+  // Verify we aren't dealing with an atomic type
+  if (Type->isAtomicType()) {
+    S.Diag(Attr.getLoc(), diag::err_overflow_behavior_atomic_type)
+        << Attr << Type.getAsString() << 0; // 0 for attribute
     Attr.setInvalid();
     return;
   }
@@ -10103,8 +10118,7 @@ QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
   QualType Type = BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc);
 
   if (!Type.isNull())
-    Diag(Loc, getLangOpts().CPlusPlus26 ? diag::warn_cxx23_pack_indexing
-                                        : diag::ext_pack_indexing);
+    DiagCompat(Loc, diag_compat::pack_indexing);
   return Type;
 }
 
@@ -10419,6 +10433,9 @@ QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
     else if (getLangOpts().C23 && T->isUndeducedAutoType())
       // _Atomic auto is prohibited in C23
       DisallowedKind = 9;
+    else if (T->isOverflowBehaviorType())
+      // Overflow behavior types do not compose with _Atomic
+      DisallowedKind = 10;
 
     if (DisallowedKind != -1) {
       Diag(Loc, diag::err_atomic_specifier_bad_type) << DisallowedKind << T;

@@ -1992,7 +1992,7 @@ let TargetPrefix = "riscv" in {
       DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>, llvm_anyvector_ty,
                              LLVMMatchType<1>,
-                             LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
+                             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                              llvm_anyint_ty, LLVMMatchType<2>],
                             [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
       let VLOperand = 4;
@@ -2007,16 +2007,6 @@ let TargetPrefix = "riscv" in {
                              llvm_anyint_ty],
                             [IntrNoMem]>, RISCVVIntrinsic {
       let VLOperand = 2;
-    }
-
-    // Input: (maskedoff, vector_in, mask, vl, policy)
-    def "int_riscv_" # NAME # "_mask" :
-      DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                            [LLVMMatchType<0>, llvm_anyvector_ty,
-                             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                             llvm_anyint_ty, LLVMMatchType<2>],
-                            [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
-      let VLOperand = 3;
     }
   }
 
@@ -2136,6 +2126,25 @@ class RVPBinaryIntrinsic
   def int_riscv_pmhaccsu  : RVPTernaryIntrinsic;
   def int_riscv_pmhraccsu : RVPTernaryIntrinsic;
 
+  // Packed Multiplication with Horizontal Addition.
+  class RVPHorizontalMulIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [llvm_anyvector_ty, LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pm4add     : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2add     : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2add_x   : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm4addu    : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2addu    : RVPHorizontalMulIntrinsic;
+  def int_riscv_pmq2add    : RVPHorizontalMulIntrinsic;
+  def int_riscv_pmqr2add   : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2sadd    : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2sadd_x  : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2sub     : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2sub_x   : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm4addsu   : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2addsu   : RVPHorizontalMulIntrinsic;
+
   // Packed Multiply Parts. The packed forms multiply the selected element of
   // every pair, so the operands are the result with each element split in two.
   class RVPPackedMulPartsIntrinsic
@@ -2166,6 +2175,36 @@ class RVPBinaryIntrinsic
   def int_riscv_mulu_11  : RVPScalarMulPartsIntrinsic;
   def int_riscv_mulsu_00 : RVPScalarMulPartsIntrinsic;
   def int_riscv_mulsu_11 : RVPScalarMulPartsIntrinsic;
+
+  // Packed Multiply Parts Accumulate.
+  class RVPPackedMulPartsAccIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                              [LLVMMatchType<0>,
+                               LLVMSubdivide2VectorType<0>,
+                               LLVMSubdivide2VectorType<0>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmacc_00   : RVPPackedMulPartsAccIntrinsic;
+  def int_riscv_pmacc_01   : RVPPackedMulPartsAccIntrinsic;
+  def int_riscv_pmacc_11   : RVPPackedMulPartsAccIntrinsic;
+  def int_riscv_pmaccu_00  : RVPPackedMulPartsAccIntrinsic;
+  def int_riscv_pmaccu_01  : RVPPackedMulPartsAccIntrinsic;
+  def int_riscv_pmaccu_11  : RVPPackedMulPartsAccIntrinsic;
+  def int_riscv_pmaccsu_00 : RVPPackedMulPartsAccIntrinsic;
+  def int_riscv_pmaccsu_11 : RVPPackedMulPartsAccIntrinsic;
+
+  class RVPScalarMulPartsAccIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                              [LLVMMatchType<0>, llvm_anyvector_ty,
+                               LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_macc_00   : RVPScalarMulPartsAccIntrinsic;
+  def int_riscv_macc_01   : RVPScalarMulPartsAccIntrinsic;
+  def int_riscv_macc_11   : RVPScalarMulPartsAccIntrinsic;
+  def int_riscv_maccu_00  : RVPScalarMulPartsAccIntrinsic;
+  def int_riscv_maccu_01  : RVPScalarMulPartsAccIntrinsic;
+  def int_riscv_maccu_11  : RVPScalarMulPartsAccIntrinsic;
+  def int_riscv_maccsu_00 : RVPScalarMulPartsAccIntrinsic;
+  def int_riscv_maccsu_11 : RVPScalarMulPartsAccIntrinsic;
 
   // Packed Absolute Difference Sum.
   def int_riscv_pabdsumu

@@ -205,8 +205,6 @@ public:
 
   virtual unsigned getAssumedAddrSpace(const Value *V) const { return -1; }
 
-  virtual bool isSingleThreaded() const { return false; }
-
   virtual std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const {
     return std::make_pair(nullptr, -1);
@@ -651,7 +649,6 @@ public:
 
   virtual unsigned getMinVectorRegisterBitWidth() const { return 128; }
 
-  virtual std::optional<unsigned> getMaxVScale() const { return std::nullopt; }
   virtual std::optional<unsigned> getVScaleForTuning() const {
     return std::nullopt;
   }
@@ -776,11 +773,12 @@ public:
     return InstructionCost::getInvalid();
   }
 
-  virtual InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const {
+  virtual InstructionCost getShuffleCost(
+      TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+      TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+      VectorType *SubTp, ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const {
     return 1;
   }
 
@@ -1141,6 +1139,14 @@ public:
   virtual bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                            ElementCount VF) const {
     return true;
+  }
+
+  virtual TargetTransformInfo::VectorInstrContext getBuildVectorContextHint(
+      ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+      function_ref<
+          bool(SmallVectorImpl<TargetTransformInfo::BuildVectorUseOp> &)>
+          GatherUseOps) const {
+    return TargetTransformInfo::VectorInstrContext::None;
   }
 
   virtual bool isElementTypeLegalForScalableVector(Type *Ty) const {

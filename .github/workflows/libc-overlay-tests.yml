@@ -22,7 +22,7 @@ jobs:
         include:
           # TODO: add linux gcc when it is fixed
           - name: linux-x86_64
-            os: ubuntu-24.04
+            os: llvm-premerge-linux-32-runners
             container: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:c6e2ee2a9bf5cebd51fd27dd8e85381c2f73d90e091c764082f8ad528ee18918'
             compiler:
               c_compiler: clang-23

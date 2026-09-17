@@ -54,9 +54,6 @@ using namespace llvm::PatternMatch;
 
 static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
 static const char *LLVMLoopDisableLICM = "llvm.licm.disable";
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // namespace llvm
 
 bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU,
@@ -994,7 +991,7 @@ bool llvm::setLoopEstimatedTripCount(
     return true;
 
   // Calculate taken and exit weights.
-  unsigned LatchExitWeight = ProfcheckDisableMetadataFixes ? 0 : 1;
+  unsigned LatchExitWeight = 1;
   unsigned BackedgeTakenWeight = 0;
 
   if (EstimatedTripCount != 0) {
@@ -1798,11 +1795,11 @@ static bool hasHardUserWithinLoop(const Loop *L, const Instruction *I) {
 struct RewritePhi {
   PHINode *PN;               // For which PHI node is this replacement?
   unsigned Ith;              // For which incoming value?
-  const SCEV *ExpansionSCEV; // The SCEV of the incoming value we are rewriting.
+  SCEVUse ExpansionSCEV;     // The SCEV of the incoming value we are rewriting.
   Instruction *ExpansionPoint; // Where we'd like to expand that SCEV?
   bool HighCost;               // Is this expansion a high-cost?
 
-  RewritePhi(PHINode *P, unsigned I, const SCEV *Val, Instruction *ExpansionPt,
+  RewritePhi(PHINode *P, unsigned I, SCEVUse Val, Instruction *ExpansionPt,
              bool H)
       : PN(P), Ith(I), ExpansionSCEV(Val), ExpansionPoint(ExpansionPt),
         HighCost(H) {}
@@ -1973,7 +1970,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         // expressions which are true for all exits (so as to maximize
         // expression reuse by the SCEVExpander), but resort to per-exit
         // evaluation if that fails.
-        const SCEV *ExitValue = SE->getSCEVAtScope(Inst, L->getParentLoop());
+        SCEVUse ExitValue = SE->getSCEVAtScope(Inst, L->getParentLoop());
         if (isa<SCEVCouldNotCompute>(ExitValue) ||
             !SE->isLoopInvariant(ExitValue, L) ||
             !Rewriter.isSafeToExpand(ExitValue)) {
@@ -2004,7 +2001,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
 
         // Check if expansions of this SCEV would count as being high cost.
         bool HighCost = Rewriter.isHighCostExpansion(
-            ExitValue, L, SCEVCheapExpansionBudget, TTI, Inst);
+            ExitValue.getPointer(), L, SCEVCheapExpansionBudget, TTI, Inst);
 
         // Note that we must not perform expansions until after
         // we query *all* the costs, because if we perform temporary expansion

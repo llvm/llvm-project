@@ -103,6 +103,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Passes/TriggerCrashPasses.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -471,7 +472,11 @@ void CodeGenPassBuilder::addPassesToHandleExceptions(PassManagerWrapper &PMW) {
     addFunctionPass(WinEHPreparePass(/*DemoteCatchSwitchPHIOnly=*/false), PMW);
     addFunctionPass(WasmEHPreparePass(), PMW);
     break;
+  case ExceptionHandling::Default:
   case ExceptionHandling::None:
+  case ExceptionHandling::Emscripten:
+    // Emscripten EH is lowered earlier by WebAssemblyLowerEmscriptenEHSjLj, so
+    // by this point it needs no generic EH preparation, like the None case.
     addFunctionPass(LowerInvokePass(), PMW);
 
     // The lower invoke pass may create unreachable code. Remove it.

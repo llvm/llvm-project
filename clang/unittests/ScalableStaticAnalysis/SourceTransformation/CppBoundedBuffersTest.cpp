@@ -63,22 +63,38 @@ public:
   }
 };
 
+constexpr llvm::StringLiteral TestCompilationUnitId = "test-cu";
+constexpr llvm::StringLiteral TestLinkUnitId = "test-lu";
+
+NestedBuildNamespace testTUNamespace() {
+  return NestedBuildNamespace::makeCompilationUnit(TestCompilationUnitId);
+}
+
+NestedBuildNamespace testLUNamespace() {
+  return NestedBuildNamespace::makeLinkUnit(TestLinkUnitId);
+}
+
 std::optional<EntityName> varEntity(StringRef Name, ASTContext &Ctx) {
-  return getEntityName(findDeclByName<VarDecl>(Name, Ctx));
+  return getQualifiedEntityName(findDeclByName<VarDecl>(Name, Ctx),
+                                testTUNamespace(), testLUNamespace());
 }
 
 std::optional<EntityName> fieldEntity(StringRef Name, ASTContext &Ctx) {
-  return getEntityName(findDeclByName<FieldDecl>(Name, Ctx));
+  return getQualifiedEntityName(findDeclByName<FieldDecl>(Name, Ctx),
+                                testTUNamespace(), testLUNamespace());
 }
 
 std::optional<EntityName> paramEntity(StringRef Fn, unsigned Idx,
                                       ASTContext &Ctx) {
   const FunctionDecl *FD = findFnByName(Fn, Ctx);
-  return FD ? getEntityName(FD->getParamDecl(Idx)) : std::nullopt;
+  return FD ? getQualifiedEntityName(FD->getParamDecl(Idx), testTUNamespace(),
+                                     testLUNamespace())
+            : std::nullopt;
 }
 
 std::optional<EntityName> returnEntity(StringRef Fn, ASTContext &Ctx) {
-  return getEntityNameForReturn(findFnByName(Fn, Ctx));
+  return getQualifiedEntityNameForReturn(findFnByName(Fn, Ctx),
+                                         testTUNamespace(), testLUNamespace());
 }
 
 struct Captured {
@@ -120,6 +136,8 @@ protected:
     RecordingEditEmitter Edits;
     RecordingReportEmitter Report;
     SSAFOptions Opts;
+    Opts.CompilationUnitId = TestCompilationUnitId.str();
+    Opts.LinkUnitId = TestLinkUnitId.str();
     CppBoundedBuffers(Suite, Opts, Edits, Report).HandleTranslationUnit(Ctx);
 
     tooling::Replacements Replacements;
