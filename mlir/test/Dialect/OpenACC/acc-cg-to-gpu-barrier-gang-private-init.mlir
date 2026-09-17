@@ -48,7 +48,7 @@ func.func @test_gang_private_init_barrier(%arg0: memref<100x100xf32>) {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }
@@ -101,7 +101,7 @@ func.func @test_thread_private_init_no_barrier(%arg0: memref<100x100xf32>) {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }

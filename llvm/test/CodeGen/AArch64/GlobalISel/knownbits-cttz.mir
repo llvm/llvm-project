@@ -6,8 +6,8 @@ name:            CTTZNoKnown8
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZNoKnown8
-  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:000000000000???? SignBits:12
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:000000000000???? SignBits:12 IsKnownNeverZero:0
     %0:_(i8) = COPY $b0
     %1:_(i16) = G_CTTZ %0
 ...
@@ -17,8 +17,8 @@ name:            CTTZNoKnown16
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZNoKnown16
-  ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:00000000000????? SignBits:11
+  ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:00000000000????? SignBits:11 IsKnownNeverZero:0
     %0:_(i16) = COPY $h0
     %1:_(i16) = G_CTTZ %0
 ...
@@ -28,8 +28,8 @@ name:            CTTZNoKnown32
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZNoKnown32
-  ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:0000000000?????? SignBits:10
+  ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:0000000000?????? SignBits:10 IsKnownNeverZero:0
     %0:_(i32) = COPY $s0
     %1:_(i16) = G_CTTZ %0
 ...
@@ -40,10 +40,10 @@ name:            CTTZHalfKnown8
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZHalfKnown8
-  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:00000100 SignBits:5
-  ; CHECK-NEXT: %2:_ KnownBits:?????1?? SignBits:1
-  ; CHECK-NEXT: %3:_ KnownBits:000000?? SignBits:6
+  ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:00000100 SignBits:5 IsKnownNeverZero:1
+  ; CHECK-NEXT: %2:_ KnownBits:?????1?? SignBits:1 IsKnownNeverZero:1
+  ; CHECK-NEXT: %3:_ KnownBits:000000?? SignBits:6 IsKnownNeverZero:0
     %0:_(i8) = COPY $b0
     %1:_(i8) = G_CONSTANT i8 4
     %2:_(i8) = G_OR %0, %1
@@ -55,10 +55,10 @@ name:            CTTZHalfKnown16
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZHalfKnown16
-  ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %1:_ KnownBits:0000000001000000 SignBits:9
-  ; CHECK-NEXT: %2:_ KnownBits:?????????1?????? SignBits:1
-  ; CHECK-NEXT: %3:_ KnownBits:0000000000000??? SignBits:13
+  ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:0000000001000000 SignBits:9 IsKnownNeverZero:1
+  ; CHECK-NEXT: %2:_ KnownBits:?????????1?????? SignBits:1 IsKnownNeverZero:1
+  ; CHECK-NEXT: %3:_ KnownBits:0000000000000??? SignBits:13 IsKnownNeverZero:0
     %0:_(i16) = COPY $h0
     %1:_(i16) = G_CONSTANT i16 64
     %2:_(i16) = G_OR %0, %1
@@ -70,8 +70,8 @@ name:            CTTZHalfConst8Zero
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZHalfConst8Zero
-  ; CHECK-NEXT: %0:_ KnownBits:00000000 SignBits:8
-  ; CHECK-NEXT: %1:_ KnownBits:0000???? SignBits:4
+  ; CHECK-NEXT: %0:_ KnownBits:00000000 SignBits:8 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:0000???? SignBits:4 IsKnownNeverZero:0
     %0:_(i8) = G_CONSTANT i8 0
     %1:_(i8) = G_CTTZ %0
 ...
@@ -81,8 +81,8 @@ name:            CTTZHalfConst16Zero
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZHalfConst16Zero
-  ; CHECK-NEXT: %0:_ KnownBits:0000000000000000 SignBits:16
-  ; CHECK-NEXT: %1:_ KnownBits:00000000000????? SignBits:11
+  ; CHECK-NEXT: %0:_ KnownBits:0000000000000000 SignBits:16 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:_ KnownBits:00000000000????? SignBits:11 IsKnownNeverZero:0
     %0:_(i16) = G_CONSTANT i16 0
     %1:_(i16) = G_CTTZ %0
 ...
@@ -92,8 +92,8 @@ name:            CTTZHalfConst8
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZHalfConst8
-  ; CHECK-NEXT: %0:_ KnownBits:00000100 SignBits:5
-  ; CHECK-NEXT: %1:_ KnownBits:000000?? SignBits:6
+  ; CHECK-NEXT: %0:_ KnownBits:00000100 SignBits:5 IsKnownNeverZero:1
+  ; CHECK-NEXT: %1:_ KnownBits:000000?? SignBits:6 IsKnownNeverZero:0
     %0:_(i8) = G_CONSTANT i8 4
     %1:_(i8) = G_CTTZ %0
 ...
@@ -103,8 +103,8 @@ name:            CTTZHalfConst16
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZHalfConst16
-  ; CHECK-NEXT: %0:_ KnownBits:0000000000000100 SignBits:13
-  ; CHECK-NEXT: %1:_ KnownBits:00000000000000?? SignBits:14
+  ; CHECK-NEXT: %0:_ KnownBits:0000000000000100 SignBits:13 IsKnownNeverZero:1
+  ; CHECK-NEXT: %1:_ KnownBits:00000000000000?? SignBits:14 IsKnownNeverZero:0
     %0:_(i16) = G_CONSTANT i16 4
     %1:_(i16) = G_CTTZ %0
 ...

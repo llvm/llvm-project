@@ -16,10 +16,12 @@
 #include "Context.h"
 #include "DynamicAllocator.h"
 #include "Floating.h"
+#include "FrameAllocator.h"
 #include "Function.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
 #include "State.h"
+#include <limits>
 
 namespace clang {
 namespace interp {
@@ -27,6 +29,7 @@ class Context;
 class SourceMapper;
 
 struct StdAllocatorCaller {
+
   const Expr *Call = nullptr;
   QualType AllocType;
   explicit operator bool() { return Call; }
@@ -42,10 +45,11 @@ enum class EvaluationKind : uint8_t {
 /// Interpreter context.
 class InterpState final : public State {
 public:
-  InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
+  InterpState(const State &Parent, Program &P, InterpStack &Stk,
+              FrameAllocator &FrameAlloc, Context &Ctx,
               SourceMapper *M = nullptr);
-  InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
-              const Function *Func);
+  InterpState(const State &Parent, Program &P, InterpStack &Stk,
+              FrameAllocator &FrameAlloc, Context &Ctx, const Function *Func);
 
   ~InterpState();
 
@@ -69,11 +73,6 @@ public:
 
   /// Delegates source mapping to the mapper.
   SourceInfo getSource(CodePtr PC) const { return M->getSource(PC); }
-  const Expr *getExpr(CodePtr PC) const { return getSource(PC).asExpr(); }
-  SourceLocation getLocation(CodePtr PC) const {
-    return getSource(PC).getLoc();
-  }
-  SourceRange getRange(CodePtr PC) const { return getSource(PC).getRange(); }
 
   Context &getContext() const { return Ctx; }
 
@@ -126,10 +125,40 @@ public:
     return reinterpret_cast<const CXXRecordDecl **>(
         this->allocate(Length * sizeof(CXXRecordDecl *)));
   }
+  PointerPathEntry *allocPointerPath(unsigned Length,
+                                     const PointerPathEntry *OldPP) {
+    assert(Length != 0);
+    auto *PP = reinterpret_cast<PointerPathEntry *>(
+        this->allocate(Length * sizeof(PointerPathEntry)));
+    if (OldPP)
+      std::memcpy(PP, OldPP, sizeof(PointerPathEntry) * Length);
+    return PP;
+  }
+  /// Allocate a new pointer path of Length \c NewLength.
+  /// NewLength - 1 elements are copied form \c OldPP.
+  PointerPathEntry *extendPointerPath(unsigned NewLength,
+                                      const PointerPathEntry *OldPP,
+                                      PointerPathEntry NewEntry) {
+    auto *PP = reinterpret_cast<PointerPathEntry *>(
+        this->allocate(NewLength * sizeof(PointerPathEntry)));
+    if (OldPP)
+      std::memcpy(PP, OldPP, sizeof(PointerPathEntry) * (NewLength - 1));
+    PP[NewLength - 1] = NewEntry;
+    return PP;
+  }
 
   /// Note that a step has been executed. If there are no more steps remaining,
   /// diagnoses and returns \c false.
-  bool noteStep(CodePtr OpPC);
+  bool noteStep(CodePtr OpPC) {
+    if (InfiniteSteps)
+      return true;
+
+    --StepsLeft;
+    if (LLVM_LIKELY(StepsLeft != 0))
+      return true;
+
+    return diagnoseStepLimitExceeded(OpPC);
+  }
 
   bool initializingBlock(const Block *B) const {
     for (PtrView V : InitializingPtrs)
@@ -157,10 +186,34 @@ public:
   /// Return if we're checking if a global variable has a constant destructor
   /// and the given pointer is pointing to the variable we're checking that for.
   bool checkingConstantDestruction(const Pointer &Ptr) const {
-    return checkingConstantDestruction(Ptr.getDeclDesc()->asVarDecl());
+    return checkingConstantDestruction(Ptr.getRootVarDecl());
   }
   bool checkingConstantDestruction(const VarDecl *VD) const {
     return EvalKind == EvaluationKind::Dtor && VD == EvaluatingDecl;
+  }
+
+  unsigned newStringID() { return StringID++; }
+
+  /// Allocate memory and create a new InterpFrame for the given function.
+  template <typename... Ts>
+  InterpFrame *allocFrame(const Function *F, Ts &&...Args) {
+    size_t FrameSize = InterpFrame::allocSize(F);
+    assert(FrameSize < std::numeric_limits<unsigned>::max());
+    InterpFrame *NewFrame = new (FrameAlloc.reserve(FrameSize))
+        InterpFrame(*this, F, std::forward<Ts>(Args)...);
+    assert(NewFrame);
+    return NewFrame;
+  }
+
+  /// Free resources associated with the current frame and set the caller to be
+  /// the new current frame.
+  void resetCurrentFrame() {
+    assert(Current);
+    unsigned CurrentSize = InterpFrame::allocSize(Current->getFunction());
+    InterpFrame *Caller = Current->Caller;
+    Current->~InterpFrame();
+    FrameAlloc.pop(CurrentSize);
+    Current = Caller;
   }
 
 private:
@@ -174,6 +227,10 @@ private:
   std::unique_ptr<DynamicAllocator> Alloc;
   /// Allocator for everything else, e.g. floating-point values.
   mutable std::optional<llvm::BumpPtrAllocator> Allocator;
+  /// Diagnose that we've reached the constexpr step limit.
+  bool diagnoseStepLimitExceeded(CodePtr OpPC);
+
+  FrameAllocator &FrameAlloc;
 
 public:
   CodePtr PC;
@@ -198,6 +255,8 @@ public:
   const bool InfiniteSteps = false;
   /// ID identifying this evaluation.
   const unsigned EvalID;
+
+  unsigned StringID = 0;
 
   EvaluationKind EvalKind = EvaluationKind::None;
 

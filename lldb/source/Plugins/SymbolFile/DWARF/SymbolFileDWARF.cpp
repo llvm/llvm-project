@@ -9,6 +9,7 @@
 #include "SymbolFileDWARF.h"
 #include "clang/Basic/ABI.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
@@ -2342,6 +2343,13 @@ void SymbolFileDWARF::FindGlobalVariables(
   bool name_is_mangled = Mangled::GetManglingScheme(name.GetStringRef()) !=
                          Mangled::eManglingSchemeNone;
 
+  // Technically not a mangled name, but a support variable emitted by clang.
+  // Regardless, we need an exact lookup
+  //
+  // FIXME: Replace this with a constant shared between Clang and LLDB
+  if (name == "__clang_vtable")
+    name_is_mangled = true;
+
   if (!CPlusPlusLanguage::ExtractContextAndIdentifier(name.GetStringRef(),
                                                       context, basename))
     basename = name.GetStringRef();
@@ -3051,56 +3059,68 @@ TypeSP SymbolFileDWARF::GetTypeForDIE(const DWARFDIE &die,
   return type_sp;
 }
 
+/// Helper for the public \ref SymbolFileDWARF::GetDeclContextDIEContainingDIE
+/// API. Specifications and abstract origins the walk has already descended
+/// into are in \c seen and are not followed again.
+static DWARFDIE GetDeclContextDIEContainingDIE(
+    const DWARFDIE &orig_die,
+    llvm::SmallPtrSetImpl<const DWARFDebugInfoEntry *> &seen) {
+  DWARFDIE die = orig_die;
+
+  while (die) {
+    // If this is the original DIE that we are searching for a declaration
+    // for, then don't look in the cache as we don't want our own decl
+    // context to be our decl context...
+    if (orig_die != die) {
+      switch (die.Tag()) {
+      case DW_TAG_compile_unit:
+      case DW_TAG_partial_unit:
+      case DW_TAG_namespace:
+      case DW_TAG_structure_type:
+      case DW_TAG_union_type:
+      case DW_TAG_class_type:
+      case DW_TAG_lexical_block:
+      case DW_TAG_subprogram:
+        return die;
+      case DW_TAG_inlined_subroutine: {
+        DWARFDIE abs_die = die.GetReferencedDIE(DW_AT_abstract_origin);
+        if (abs_die) {
+          return abs_die;
+        }
+        break;
+      }
+      default:
+        break;
+      }
+    }
+
+    DWARFDIE spec_die = die.GetReferencedDIE(DW_AT_specification);
+    if (spec_die && seen.insert(spec_die.GetDIE()).second) {
+      DWARFDIE decl_ctx_die = ::GetDeclContextDIEContainingDIE(spec_die, seen);
+      if (decl_ctx_die)
+        return decl_ctx_die;
+    }
+
+    DWARFDIE abs_die = die.GetReferencedDIE(DW_AT_abstract_origin);
+    if (abs_die && seen.insert(abs_die.GetDIE()).second) {
+      DWARFDIE decl_ctx_die = ::GetDeclContextDIEContainingDIE(abs_die, seen);
+      if (decl_ctx_die)
+        return decl_ctx_die;
+    }
+
+    die = die.GetParent();
+  }
+
+  return DWARFDIE();
+}
+
 DWARFDIE
 SymbolFileDWARF::GetDeclContextDIEContainingDIE(const DWARFDIE &orig_die) {
-  if (orig_die) {
-    DWARFDIE die = orig_die;
+  if (!orig_die)
+    return DWARFDIE();
 
-    while (die) {
-      // If this is the original DIE that we are searching for a declaration
-      // for, then don't look in the cache as we don't want our own decl
-      // context to be our decl context...
-      if (orig_die != die) {
-        switch (die.Tag()) {
-        case DW_TAG_compile_unit:
-        case DW_TAG_partial_unit:
-        case DW_TAG_namespace:
-        case DW_TAG_structure_type:
-        case DW_TAG_union_type:
-        case DW_TAG_class_type:
-        case DW_TAG_lexical_block:
-        case DW_TAG_subprogram:
-          return die;
-        case DW_TAG_inlined_subroutine: {
-          DWARFDIE abs_die = die.GetReferencedDIE(DW_AT_abstract_origin);
-          if (abs_die) {
-            return abs_die;
-          }
-          break;
-        }
-        default:
-          break;
-        }
-      }
-
-      DWARFDIE spec_die = die.GetReferencedDIE(DW_AT_specification);
-      if (spec_die) {
-        DWARFDIE decl_ctx_die = GetDeclContextDIEContainingDIE(spec_die);
-        if (decl_ctx_die)
-          return decl_ctx_die;
-      }
-
-      DWARFDIE abs_die = die.GetReferencedDIE(DW_AT_abstract_origin);
-      if (abs_die) {
-        DWARFDIE decl_ctx_die = GetDeclContextDIEContainingDIE(abs_die);
-        if (decl_ctx_die)
-          return decl_ctx_die;
-      }
-
-      die = die.GetParent();
-    }
-  }
-  return DWARFDIE();
+  llvm::SmallPtrSet<const DWARFDebugInfoEntry *, 4> seen{orig_die.GetDIE()};
+  return ::GetDeclContextDIEContainingDIE(orig_die, seen);
 }
 
 Symbol *SymbolFileDWARF::GetObjCClassSymbol(ConstString objc_class_name) {
@@ -4739,4 +4759,13 @@ DWOStats SymbolFileDWARF::GetDwoStats() {
   }
 
   return stats;
+}
+
+lldb::TypeSP SymbolFileDWARF::GetTypeEnclosingVariableUID(lldb::user_id_t uid) {
+  DWARFDIE die = GetDIE(uid);
+
+  if (die.Tag() != DW_TAG_variable)
+    return nullptr;
+
+  return GetTypeForDIE(die.GetParentDeclContextDIE());
 }

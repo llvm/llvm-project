@@ -13,12 +13,15 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
-ProgramWrapper::ProgramWrapper(ol_device_handle_t Device,
-                               DeviceImageManager &DevImage) {
+ProgramWrapper::ProgramWrapper(ol_context_handle_t Context,
+                               ol_device_handle_t Device,
+                               const DeviceImageManager &DevImage) {
+  assert(Context);
   assert(Device);
 
   llvm::StringRef Image = DevImage.getOffloadBinary().getImage();
-  callAndThrow(olCreateProgram, Device, Image.data(), Image.size(), &MProgram);
+  callAndThrow(olCreateProgram, Context, Device, Image.data(), Image.size(),
+               &MProgram);
 }
 
 ProgramWrapper::~ProgramWrapper() {
@@ -27,12 +30,17 @@ ProgramWrapper::~ProgramWrapper() {
   // TODO: define a way to report errors from dtors.
 }
 
-ol_program_handle_t
-DeviceImageManager::getOrCreateProgram(ol_device_handle_t DeviceHandle) {
-  const auto &[Iterator, Flag] = MPrograms.emplace(
-      std::piecewise_construct, std::forward_as_tuple(DeviceHandle),
-      std::forward_as_tuple(DeviceHandle, *this));
-  return Iterator->second.getOLHandle();
+ol_symbol_handle_t
+ProgramWrapper::getOrCreateKernel(std::string_view KernelName) {
+  auto It = MKernels.find(KernelName);
+  if (It != MKernels.end())
+    return It->second;
+
+  ol_symbol_handle_t Kernel{};
+  callAndThrow(olGetSymbol, MProgram, KernelName.data(), OL_SYMBOL_KIND_KERNEL,
+               &Kernel);
+  MKernels.emplace(KernelName, Kernel);
+  return Kernel;
 }
 
 } // namespace detail

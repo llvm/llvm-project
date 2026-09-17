@@ -30,6 +30,7 @@ RUN apt-get update && \
     g++-12-arm-linux-gnueabihf \
     sudo \
     sccache \
+    zstd \
     wget \
     lsb-release \
     software-properties-common \
@@ -39,6 +40,55 @@ RUN apt-get update && \
     linux-libc-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# The downloaded Hexagon QEMU binaries are x86_64-only. Install their runtime
+# dependencies only on x86_64 hosts.
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+    apt-get update && \
+    apt-get install -y \
+    libpixman-1-0 \
+    libslirp0 \
+    libfdt1 \
+    libglib2.0-0 \
+    libfuse3-3 \
+    libiscsi7 \
+    libaio1t64 \
+    liburing2 \
+    libcurl4 \
+    libcurl3t64-gnutls \
+    libasound2t64 \
+    libpulse0 \
+    libjack-jackd2-0 \
+    libsndio7.0 \
+    libsndfile1 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
+    libsystemd0 \
+    libapparmor1 && \
+    ln -s "$(dpkg -L libaio1t64 | grep '/libaio.so.1t64$')" \
+    "$(dirname "$(dpkg -L libaio1t64 | grep '/libaio.so.1t64$')")/libaio.so.1" && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# TODO: Switch to distribution QEMU packages once the Qualcomm fork patches
+# are upstreamed to QEMU.
+# The current QEMU binaries are x86_64-only, so do not install them on ARM.
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+    wget --remote-encoding=utf-8 -O /tmp/clang+llvm-23.1.0-rc1-cross-hexagon-unknown-linux-musl.tar.zst \
+    https://artifacts.codelinaro.org/artifactory/codelinaro-toolchain-for-hexagon/23.1.0-rc1/clang+llvm-23.1.0-rc1-cross-hexagon-unknown-linux-musl.tar.zst && \
+    mkdir -p /tmp/hexagon-toolchain && \
+    tar -xf /tmp/clang+llvm-23.1.0-rc1-cross-hexagon-unknown-linux-musl.tar.zst -C /tmp/hexagon-toolchain/ && \
+    install "$(find /tmp/hexagon-toolchain -type f -name qemu-system-hexagon -print -quit)" \
+    /usr/local/bin/qemu-system-hexagon && \
+    install "$(find /tmp/hexagon-toolchain -type f -name qemu-hexagon -print -quit)" \
+    /usr/local/bin/qemu-hexagon && \
+    qemu-system-hexagon --version && \
+    qemu-hexagon --version && \
+    rm -rf /tmp/hexagon-toolchain && \
+    rm -f /tmp/clang+llvm-23.1.0-rc1-cross-hexagon-unknown-linux-musl.tar.zst; \
+    fi
 
 RUN wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
@@ -91,7 +141,7 @@ RUN wget https://ftp.gnu.org/gnu/mpc/mpc-1.4.1.tar.xz && \
     rm mpc-1.4.1.tar.xz
 
 # Install gcc-7 and g++-7.
-RUN wget https://ftp.gnu.org/gnu/gcc/gcc-7.5.0/gcc-7.5.0.tar.xz && \
+RUN wget --progress=dot:mega https://ftp.gnu.org/gnu/gcc/gcc-7.5.0/gcc-7.5.0.tar.xz && \
     tar -xf gcc-7.5.0.tar.xz && \
     cd gcc-7.5.0 && \
     ./contrib/download_prerequisites && \
@@ -108,7 +158,7 @@ RUN wget https://ftp.gnu.org/gnu/gcc/gcc-7.5.0/gcc-7.5.0.tar.xz && \
     rm gcc-7.5.0.tar.xz
 
 # Install gcc-8 and g++-8.
-RUN wget https://ftp.gnu.org/gnu/gcc/gcc-8.5.0/gcc-8.5.0.tar.xz && \
+RUN wget --progress=dot:mega https://ftp.gnu.org/gnu/gcc/gcc-8.5.0/gcc-8.5.0.tar.xz && \
     tar -xf gcc-8.5.0.tar.xz && \
     cd gcc-8.5.0 && \
     ./contrib/download_prerequisites && \
