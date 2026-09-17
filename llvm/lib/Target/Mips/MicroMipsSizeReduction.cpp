@@ -25,26 +25,18 @@ using namespace llvm;
 STATISTIC(NumReduced, "Number of instructions reduced (32-bit to 16-bit ones, "
                       "or two instructions into one");
 
+#define GEN_COMPRESS_MACHINE_INSTR
+#include "MipsGenCompressInstEmitter.inc"
+
 namespace {
 
 /// Order of operands to transfer
 // TODO: Will be extended when additional optimizations are added
 enum OperandTransfer {
   OT_NA,            ///< Not applicable
-  OT_OperandsAll,   ///< Transfer all operands
-  OT_Operands02,    ///< Transfer operands 0 and 2
-  OT_Operand2,      ///< Transfer just operand 2
-  OT_OperandsXOR,   ///< Transfer operands for XOR16
   OT_OperandsLwp,   ///< Transfer operands for LWP
   OT_OperandsSwp,   ///< Transfer operands for SWP
   OT_OperandsMovep, ///< Transfer operands for MOVEP
-};
-
-/// Reduction type
-// TODO: Will be extended when additional optimizations are added
-enum ReduceType {
-  RT_TwoInstr, ///< Reduce two instructions into one instruction
-  RT_OneInstr  ///< Reduce one instruction into a smaller instruction
 };
 
 // Information about immediate field restrictions
@@ -86,17 +78,15 @@ typedef struct ReduceEntryFunArgs ReduceEntryFunArgs;
 /// opcodes to narrow
 struct ReduceEntry {
 
-  enum ReduceType eRType; ///< Reduction type
   bool (*ReduceFunction)(
       ReduceEntryFunArgs *Arguments); ///< Pointer to reduce function
   struct OpCodes Ops;                 ///< All relevant OpCodes
   struct OpInfo OpInf;                ///< Characteristics of operands
   struct ImmField Imm;                ///< Characteristics of immediate field
 
-  ReduceEntry(enum ReduceType RType, struct OpCodes Op,
-              bool (*F)(ReduceEntryFunArgs *Arguments), struct OpInfo OpInf,
-              struct ImmField Imm)
-      : eRType(RType), ReduceFunction(F), Ops(Op), OpInf(OpInf), Imm(Imm) {}
+  ReduceEntry(struct OpCodes Op, bool (*F)(ReduceEntryFunArgs *Arguments),
+              struct OpInfo OpInf, struct ImmField Imm)
+      : ReduceFunction(F), Ops(Op), OpInf(OpInf), Imm(Imm) {}
 
   unsigned NarrowOpc() const { return Ops.NarrowOpc; }
   unsigned WideOpc() const { return Ops.WideOpc; }
@@ -107,7 +97,6 @@ struct ReduceEntry {
   enum OperandTransfer TransferOperands() const {
     return OpInf.TransferOperands;
   }
-  enum ReduceType RType() const { return eRType; }
 
   // operator used by std::equal_range
   bool operator<(const unsigned int r) const { return (WideOpc() < r); }
@@ -154,45 +143,15 @@ private:
   bool ReduceMI(const MachineBasicBlock::instr_iterator &MII,
                 MachineBasicBlock::instr_iterator &NextMII);
 
-  // Attempts to reduce LW/SW instruction into LWSP/SWSP,
-  // returns true on success.
-  static bool ReduceXWtoXWSP(ReduceEntryFunArgs *Arguments);
-
   // Attempts to reduce two LW/SW instructions into LWP/SWP instruction,
   // returns true on success.
   static bool ReduceXWtoXWP(ReduceEntryFunArgs *Arguments);
-
-  // Attempts to reduce LBU/LHU instruction into LBU16/LHU16,
-  // returns true on success.
-  static bool ReduceLXUtoLXU16(ReduceEntryFunArgs *Arguments);
-
-  // Attempts to reduce SB/SH instruction into SB16/SH16,
-  // returns true on success.
-  static bool ReduceSXtoSX16(ReduceEntryFunArgs *Arguments);
 
   // Attempts to reduce two MOVE instructions into MOVEP instruction,
   // returns true on success.
   static bool ReduceMoveToMovep(ReduceEntryFunArgs *Arguments);
 
-  // Attempts to reduce arithmetic instructions, returns true on success.
-  static bool ReduceArithmeticInstructions(ReduceEntryFunArgs *Arguments);
-
-  // Attempts to reduce ADDIU into ADDIUSP instruction,
-  // returns true on success.
-  static bool ReduceADDIUToADDIUSP(ReduceEntryFunArgs *Arguments);
-
-  // Attempts to reduce ADDIU into ADDIUR1SP instruction,
-  // returns true on success.
-  static bool ReduceADDIUToADDIUR1SP(ReduceEntryFunArgs *Arguments);
-
-  // Attempts to reduce XOR into XOR16 instruction,
-  // returns true on success.
-  static bool ReduceXORtoXOR16(ReduceEntryFunArgs *Arguments);
-
-  // Changes opcode of an instruction, replaces an instruction with a
-  // new one, or replaces two instructions with a new instruction
-  // depending on their order i.e. if these are consecutive forward
-  // or consecutive backward
+  // Replace two instructions with a pair in encoding order.
   static bool ReplaceInstruction(MachineInstr *MI, const ReduceEntry &Entry,
                                  MachineInstr *MI2 = nullptr,
                                  bool ConsecutiveForward = true);
@@ -204,104 +163,30 @@ private:
 char MicroMipsSizeReduce::ID = 0;
 const MipsInstrInfo *MicroMipsSizeReduce::MipsII;
 
-// This table must be sorted by WideOpc as a main criterion and
-// ReduceType as a sub-criterion (when wide opcodes are the same).
+// This table must be sorted by WideOpc.
 ReduceEntryVector MicroMipsSizeReduce::ReduceTable = {
-
-    // ReduceType, OpCodes, ReduceFunction,
+    // OpCodes, ReduceFunction,
     // OpInfo(TransferOperands),
     // ImmField(Shift, LBound, HBound, ImmFieldPosition)
-    {RT_OneInstr, OpCodes(Mips::ADDiu, Mips::ADDIUR1SP_MM),
-     ReduceADDIUToADDIUR1SP, OpInfo(OT_Operands02), ImmField(2, 0, 64, 2)},
-    {RT_OneInstr, OpCodes(Mips::ADDiu, Mips::ADDIUSP_MM), ReduceADDIUToADDIUSP,
-     OpInfo(OT_Operand2), ImmField(0, 0, 0, 2)},
-    {RT_OneInstr, OpCodes(Mips::ADDiu_MM, Mips::ADDIUR1SP_MM),
-     ReduceADDIUToADDIUR1SP, OpInfo(OT_Operands02), ImmField(2, 0, 64, 2)},
-    {RT_OneInstr, OpCodes(Mips::ADDiu_MM, Mips::ADDIUSP_MM),
-     ReduceADDIUToADDIUSP, OpInfo(OT_Operand2), ImmField(0, 0, 0, 2)},
-    {RT_OneInstr, OpCodes(Mips::ADDu, Mips::ADDU16_MM),
-     ReduceArithmeticInstructions, OpInfo(OT_OperandsAll),
-     ImmField(0, 0, 0, -1)},
-    {RT_OneInstr, OpCodes(Mips::ADDu_MM, Mips::ADDU16_MM),
-     ReduceArithmeticInstructions, OpInfo(OT_OperandsAll),
-     ImmField(0, 0, 0, -1)},
-    {RT_OneInstr, OpCodes(Mips::LBu, Mips::LBU16_MM), ReduceLXUtoLXU16,
-     OpInfo(OT_OperandsAll), ImmField(0, -1, 15, 2)},
-    {RT_OneInstr, OpCodes(Mips::LBu_MM, Mips::LBU16_MM), ReduceLXUtoLXU16,
-     OpInfo(OT_OperandsAll), ImmField(0, -1, 15, 2)},
-    {RT_OneInstr, OpCodes(Mips::LEA_ADDiu, Mips::ADDIUR1SP_MM),
-     ReduceADDIUToADDIUR1SP, OpInfo(OT_Operands02), ImmField(2, 0, 64, 2)},
-    {RT_OneInstr, OpCodes(Mips::LEA_ADDiu_MM, Mips::ADDIUR1SP_MM),
-     ReduceADDIUToADDIUR1SP, OpInfo(OT_Operands02), ImmField(2, 0, 64, 2)},
-    {RT_OneInstr, OpCodes(Mips::LHu, Mips::LHU16_MM), ReduceLXUtoLXU16,
-     OpInfo(OT_OperandsAll), ImmField(1, 0, 16, 2)},
-    {RT_OneInstr, OpCodes(Mips::LHu_MM, Mips::LHU16_MM), ReduceLXUtoLXU16,
-     OpInfo(OT_OperandsAll), ImmField(1, 0, 16, 2)},
-    {RT_TwoInstr, OpCodes(Mips::LW, Mips::LWP_MM), ReduceXWtoXWP,
+    {OpCodes(Mips::LW, Mips::LWP_MM), ReduceXWtoXWP, OpInfo(OT_OperandsLwp),
+     ImmField(0, -2048, 2048, 2)},
+    {OpCodes(Mips::LW16_MM, Mips::LWP_MM), ReduceXWtoXWP,
      OpInfo(OT_OperandsLwp), ImmField(0, -2048, 2048, 2)},
-    {RT_OneInstr, OpCodes(Mips::LW, Mips::LWSP_MM), ReduceXWtoXWSP,
-     OpInfo(OT_OperandsAll), ImmField(2, 0, 32, 2)},
-    {RT_TwoInstr, OpCodes(Mips::LW16_MM, Mips::LWP_MM), ReduceXWtoXWP,
-     OpInfo(OT_OperandsLwp), ImmField(0, -2048, 2048, 2)},
-    {RT_TwoInstr, OpCodes(Mips::LW_MM, Mips::LWP_MM), ReduceXWtoXWP,
-     OpInfo(OT_OperandsLwp), ImmField(0, -2048, 2048, 2)},
-    {RT_OneInstr, OpCodes(Mips::LW_MM, Mips::LWSP_MM), ReduceXWtoXWSP,
-     OpInfo(OT_OperandsAll), ImmField(2, 0, 32, 2)},
-    {RT_TwoInstr, OpCodes(Mips::MOVE16_MM, Mips::MOVEP_MM), ReduceMoveToMovep,
+    {OpCodes(Mips::LW_MM, Mips::LWP_MM), ReduceXWtoXWP, OpInfo(OT_OperandsLwp),
+     ImmField(0, -2048, 2048, 2)},
+    {OpCodes(Mips::MOVE16_MM, Mips::MOVEP_MM), ReduceMoveToMovep,
      OpInfo(OT_OperandsMovep), ImmField(0, 0, 0, -1)},
-    {RT_OneInstr, OpCodes(Mips::SB, Mips::SB16_MM), ReduceSXtoSX16,
-     OpInfo(OT_OperandsAll), ImmField(0, 0, 16, 2)},
-    {RT_OneInstr, OpCodes(Mips::SB_MM, Mips::SB16_MM), ReduceSXtoSX16,
-     OpInfo(OT_OperandsAll), ImmField(0, 0, 16, 2)},
-    {RT_OneInstr, OpCodes(Mips::SH, Mips::SH16_MM), ReduceSXtoSX16,
-     OpInfo(OT_OperandsAll), ImmField(1, 0, 16, 2)},
-    {RT_OneInstr, OpCodes(Mips::SH_MM, Mips::SH16_MM), ReduceSXtoSX16,
-     OpInfo(OT_OperandsAll), ImmField(1, 0, 16, 2)},
-    {RT_OneInstr, OpCodes(Mips::SUBu, Mips::SUBU16_MM),
-     ReduceArithmeticInstructions, OpInfo(OT_OperandsAll),
-     ImmField(0, 0, 0, -1)},
-    {RT_OneInstr, OpCodes(Mips::SUBu_MM, Mips::SUBU16_MM),
-     ReduceArithmeticInstructions, OpInfo(OT_OperandsAll),
-     ImmField(0, 0, 0, -1)},
-    {RT_TwoInstr, OpCodes(Mips::SW, Mips::SWP_MM), ReduceXWtoXWP,
+    {OpCodes(Mips::SW, Mips::SWP_MM), ReduceXWtoXWP, OpInfo(OT_OperandsSwp),
+     ImmField(0, -2048, 2048, 2)},
+    {OpCodes(Mips::SW16_MM, Mips::SWP_MM), ReduceXWtoXWP,
      OpInfo(OT_OperandsSwp), ImmField(0, -2048, 2048, 2)},
-    {RT_OneInstr, OpCodes(Mips::SW, Mips::SWSP_MM), ReduceXWtoXWSP,
-     OpInfo(OT_OperandsAll), ImmField(2, 0, 32, 2)},
-    {RT_TwoInstr, OpCodes(Mips::SW16_MM, Mips::SWP_MM), ReduceXWtoXWP,
-     OpInfo(OT_OperandsSwp), ImmField(0, -2048, 2048, 2)},
-    {RT_TwoInstr, OpCodes(Mips::SW_MM, Mips::SWP_MM), ReduceXWtoXWP,
-     OpInfo(OT_OperandsSwp), ImmField(0, -2048, 2048, 2)},
-    {RT_OneInstr, OpCodes(Mips::SW_MM, Mips::SWSP_MM), ReduceXWtoXWSP,
-     OpInfo(OT_OperandsAll), ImmField(2, 0, 32, 2)},
-    {RT_OneInstr, OpCodes(Mips::XOR, Mips::XOR16_MM), ReduceXORtoXOR16,
-     OpInfo(OT_OperandsXOR), ImmField(0, 0, 0, -1)},
-    {RT_OneInstr, OpCodes(Mips::XOR_MM, Mips::XOR16_MM), ReduceXORtoXOR16,
-     OpInfo(OT_OperandsXOR), ImmField(0, 0, 0, -1)}};
+    {OpCodes(Mips::SW_MM, Mips::SWP_MM), ReduceXWtoXWP, OpInfo(OT_OperandsSwp),
+     ImmField(0, -2048, 2048, 2)},
+};
 } // end anonymous namespace
 
 INITIALIZE_PASS(MicroMipsSizeReduce, DEBUG_TYPE, MICROMIPS_SIZE_REDUCE_NAME,
                 false, false)
-
-// Returns true if the machine operand MO is register SP.
-static bool IsSP(const MachineOperand &MO) {
-  if (MO.isReg() && ((MO.getReg() == Mips::SP)))
-    return true;
-  return false;
-}
-
-// Returns true if the machine operand MO is register $16, $17, or $2-$7.
-static bool isMMThreeBitGPRegister(const MachineOperand &MO) {
-  if (MO.isReg() && Mips::GPRMM16RegClass.contains(MO.getReg()))
-    return true;
-  return false;
-}
-
-// Returns true if the machine operand MO is register $0, $17, or $2-$7.
-static bool isMMSourceRegister(const MachineOperand &MO) {
-  if (MO.isReg() && Mips::GPRMM16ZeroRegClass.contains(MO.getReg()))
-    return true;
-  return false;
-}
 
 // Returns true if the operand Op is an immediate value
 // and writes the immediate value into variable Imm.
@@ -311,15 +196,6 @@ static bool GetImm(MachineInstr *MI, unsigned Op, int64_t &Imm) {
     return false;
   Imm = MI->getOperand(Op).getImm();
   return true;
-}
-
-// Returns true if the value is a valid immediate for ADDIUSP.
-static bool AddiuspImmValue(int64_t Value) {
-  int64_t Value2 = Value >> 2;
-  if (((Value & (int64_t)maskTrailingZeros<uint64_t>(2)) == Value) &&
-      ((Value2 >= 2 && Value2 <= 257) || (Value2 >= -258 && Value2 <= -3)))
-    return true;
-  return false;
 }
 
 // Returns true if the variable Value has the number of least-significant zero
@@ -425,30 +301,19 @@ bool MicroMipsSizeReduce::ReduceMI(const MachineBasicBlock::instr_iterator &MII,
             ReduceEntryVector::const_iterator>
       Range = std::equal_range(Start, End, Opcode);
 
-  if (Range.first == Range.second)
-    return false;
-
   for (ReduceEntryVector::const_iterator Entry = Range.first;
        Entry != Range.second; ++Entry) {
     ReduceEntryFunArgs Arguments(&(*MII), *Entry, NextMII);
     if (((*Entry).ReduceFunction)(&Arguments))
       return true;
   }
+  if (!MI->isBundled() && !MI->hasDelaySlot() &&
+      compressInst(*MI, *Subtarget)) {
+    ++NumReduced;
+    LLVM_DEBUG(dbgs() << "Reduced to: " << *MI);
+    return true;
+  }
   return false;
-}
-
-bool MicroMipsSizeReduce::ReduceXWtoXWSP(ReduceEntryFunArgs *Arguments) {
-
-  MachineInstr *MI = Arguments->MI;
-  const ReduceEntry &Entry = Arguments->Entry;
-
-  if (!ImmInRange(MI, Entry))
-    return false;
-
-  if (!IsSP(MI->getOperand(1)))
-    return false;
-
-  return ReplaceInstruction(MI, Entry);
 }
 
 bool MicroMipsSizeReduce::ReduceXWtoXWP(ReduceEntryFunArgs *Arguments) {
@@ -489,83 +354,6 @@ bool MicroMipsSizeReduce::ReduceXWtoXWP(ReduceEntryFunArgs *Arguments) {
 
   NextMII = std::next(NextMII);
   return ReplaceInstruction(MI1, Entry, MI2, ConsecutiveForward);
-}
-
-bool MicroMipsSizeReduce::ReduceArithmeticInstructions(
-    ReduceEntryFunArgs *Arguments) {
-
-  MachineInstr *MI = Arguments->MI;
-  const ReduceEntry &Entry = Arguments->Entry;
-
-  if (!isMMThreeBitGPRegister(MI->getOperand(0)) ||
-      !isMMThreeBitGPRegister(MI->getOperand(1)) ||
-      !isMMThreeBitGPRegister(MI->getOperand(2)))
-    return false;
-
-  return ReplaceInstruction(MI, Entry);
-}
-
-bool MicroMipsSizeReduce::ReduceADDIUToADDIUR1SP(
-    ReduceEntryFunArgs *Arguments) {
-
-  MachineInstr *MI = Arguments->MI;
-  const ReduceEntry &Entry = Arguments->Entry;
-
-  if (!ImmInRange(MI, Entry))
-    return false;
-
-  if (!isMMThreeBitGPRegister(MI->getOperand(0)) || !IsSP(MI->getOperand(1)))
-    return false;
-
-  return ReplaceInstruction(MI, Entry);
-}
-
-bool MicroMipsSizeReduce::ReduceADDIUToADDIUSP(ReduceEntryFunArgs *Arguments) {
-
-  MachineInstr *MI = Arguments->MI;
-  const ReduceEntry &Entry = Arguments->Entry;
-
-  int64_t ImmValue;
-  if (!GetImm(MI, Entry.ImmField(), ImmValue))
-    return false;
-
-  if (!AddiuspImmValue(ImmValue))
-    return false;
-
-  if (!IsSP(MI->getOperand(0)) || !IsSP(MI->getOperand(1)))
-    return false;
-
-  return ReplaceInstruction(MI, Entry);
-}
-
-bool MicroMipsSizeReduce::ReduceLXUtoLXU16(ReduceEntryFunArgs *Arguments) {
-
-  MachineInstr *MI = Arguments->MI;
-  const ReduceEntry &Entry = Arguments->Entry;
-
-  if (!ImmInRange(MI, Entry))
-    return false;
-
-  if (!isMMThreeBitGPRegister(MI->getOperand(0)) ||
-      !isMMThreeBitGPRegister(MI->getOperand(1)))
-    return false;
-
-  return ReplaceInstruction(MI, Entry);
-}
-
-bool MicroMipsSizeReduce::ReduceSXtoSX16(ReduceEntryFunArgs *Arguments) {
-
-  MachineInstr *MI = Arguments->MI;
-  const ReduceEntry &Entry = Arguments->Entry;
-
-  if (!ImmInRange(MI, Entry))
-    return false;
-
-  if (!isMMSourceRegister(MI->getOperand(0)) ||
-      !isMMThreeBitGPRegister(MI->getOperand(1)))
-    return false;
-
-  return ReplaceInstruction(MI, Entry);
 }
 
 // Returns true if Reg can be a source register
@@ -651,23 +439,6 @@ bool MicroMipsSizeReduce::ReduceMoveToMovep(ReduceEntryFunArgs *Arguments) {
   return ReplaceInstruction(MI1, Entry, MI2, ConsecutiveForward);
 }
 
-bool MicroMipsSizeReduce::ReduceXORtoXOR16(ReduceEntryFunArgs *Arguments) {
-
-  MachineInstr *MI = Arguments->MI;
-  const ReduceEntry &Entry = Arguments->Entry;
-
-  if (!isMMThreeBitGPRegister(MI->getOperand(0)) ||
-      !isMMThreeBitGPRegister(MI->getOperand(1)) ||
-      !isMMThreeBitGPRegister(MI->getOperand(2)))
-    return false;
-
-  if (!(MI->getOperand(0).getReg() == MI->getOperand(2).getReg()) &&
-      !(MI->getOperand(0).getReg() == MI->getOperand(1).getReg()))
-    return false;
-
-  return ReplaceInstruction(MI, Entry);
-}
-
 bool MicroMipsSizeReduce::ReduceMBB(MachineBasicBlock &MBB) {
   bool Modified = false;
   MachineBasicBlock::instr_iterator MII = MBB.instr_begin(),
@@ -700,76 +471,42 @@ bool MicroMipsSizeReduce::ReplaceInstruction(MachineInstr *MI,
   LLVM_DEBUG(dbgs() << "Converting 32-bit: " << *MI);
   ++NumReduced;
 
-  if (OpTransfer == OT_OperandsAll) {
-    MI->setDesc(MipsII->get(Entry.NarrowOpc()));
-    LLVM_DEBUG(dbgs() << "       to 16-bit: " << *MI);
-    return true;
-  } else {
-    MachineBasicBlock &MBB = *MI->getParent();
-    const MCInstrDesc &NewMCID = MipsII->get(Entry.NarrowOpc());
-    DebugLoc dl = MI->getDebugLoc();
-    MachineInstrBuilder MIB = BuildMI(MBB, MI, dl, NewMCID);
-    switch (OpTransfer) {
-    case OT_Operand2:
-      MIB.add(MI->getOperand(2));
-      break;
-    case OT_Operands02: {
+  MachineBasicBlock &MBB = *MI->getParent();
+  const MCInstrDesc &NewMCID = MipsII->get(Entry.NarrowOpc());
+  DebugLoc dl = MI->getDebugLoc();
+  MachineInstrBuilder MIB = BuildMI(MBB, MI, dl, NewMCID);
+  switch (OpTransfer) {
+  case OT_OperandsMovep:
+  case OT_OperandsLwp:
+  case OT_OperandsSwp: {
+    if (ConsecutiveForward) {
       MIB.add(MI->getOperand(0));
-      MIB.add(MI->getOperand(2));
-      break;
-    }
-    case OT_OperandsXOR: {
-      if (MI->getOperand(0).getReg() == MI->getOperand(2).getReg()) {
-        MIB.add(MI->getOperand(0));
-        MIB.add(MI->getOperand(1));
-        MIB.add(MI->getOperand(2));
-      } else {
-        MIB.add(MI->getOperand(0));
-        MIB.add(MI->getOperand(2));
-        MIB.add(MI->getOperand(1));
-      }
-      break;
-    }
-    case OT_OperandsMovep:
-    case OT_OperandsLwp:
-    case OT_OperandsSwp: {
-      if (ConsecutiveForward) {
-        MIB.add(MI->getOperand(0));
-        MIB.add(MI2->getOperand(0));
-        MIB.add(MI->getOperand(1));
-        if (OpTransfer == OT_OperandsMovep)
-          MIB.add(MI2->getOperand(1));
-        else
-          MIB.add(MI->getOperand(2));
-      } else { // consecutive backward
-        MIB.add(MI2->getOperand(0));
-        MIB.add(MI->getOperand(0));
+      MIB.add(MI2->getOperand(0));
+      MIB.add(MI->getOperand(1));
+      if (OpTransfer == OT_OperandsMovep)
         MIB.add(MI2->getOperand(1));
-        if (OpTransfer == OT_OperandsMovep)
-          MIB.add(MI->getOperand(1));
-        else
-          MIB.add(MI2->getOperand(2));
-      }
-
-      LLVM_DEBUG(dbgs() << "and converting 32-bit: " << *MI2
-                        << "       to: " << *MIB);
-
-      MBB.erase_instr(MI);
-      MBB.erase_instr(MI2);
-      return true;
-    }
-    default:
-      llvm_unreachable("Unknown operand transfer!");
+      else
+        MIB.add(MI->getOperand(2));
+    } else { // consecutive backward
+      MIB.add(MI2->getOperand(0));
+      MIB.add(MI->getOperand(0));
+      MIB.add(MI2->getOperand(1));
+      if (OpTransfer == OT_OperandsMovep)
+        MIB.add(MI->getOperand(1));
+      else
+        MIB.add(MI2->getOperand(2));
     }
 
-    // Transfer MI flags.
-    MIB.setMIFlags(MI->getFlags());
+    LLVM_DEBUG(dbgs() << "and converting 32-bit: " << *MI2
+                      << "       to: " << *MIB);
 
-    LLVM_DEBUG(dbgs() << "       to 16-bit: " << *MIB);
     MBB.erase_instr(MI);
+    MBB.erase_instr(MI2);
     return true;
   }
-  return false;
+  default:
+    llvm_unreachable("Unknown operand transfer!");
+  }
 }
 
 bool MicroMipsSizeReduce::runOnMachineFunction(MachineFunction &MF) {
