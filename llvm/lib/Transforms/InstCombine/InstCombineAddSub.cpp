@@ -2041,6 +2041,37 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
     return Res;
 
+  {
+    Value *X, *Y, *P0, *P1, *Base, *Default, *CmpP0EqC0, *SelYOrZero;
+    Instruction *SelXOrDefault;
+    ConstantInt *C0, *C1;
+    // Transform:
+    //   ((P == C0 ? X : Default) + Base) + (P == C1 ? Y : 0)
+    // into:
+    //   Base + (P == C0 ? X : (Default + (P == C1 ? Y : 0)))
+    // This provides more opportunities for CSE and predication in
+    // exclusive-sum reduction patterns, which can reduce register pressure.
+    if (match(&I, m_c_Add(m_c_Add(m_Value(Base),
+                                  m_Instruction(SelXOrDefault,
+                                                m_Select(m_Value(CmpP0EqC0),
+                                                         m_Value(X),
+                                                         m_Value(Default)))),
+                          m_Value(SelYOrZero))) &&
+        match(SelYOrZero, m_Select(m_SpecificICmp(CmpInst::ICMP_EQ, m_Value(P1),
+                                                  m_ConstantInt(C1)),
+                                   m_Value(Y), m_ZeroInt())) &&
+        match(CmpP0EqC0, m_SpecificICmp(CmpInst::ICMP_EQ, m_Value(P0),
+                                        m_ConstantInt(C0))) &&
+        P0 == P1 && C0 != C1) {
+
+      Value *DefaultPlusYOrZero = Builder.CreateAdd(Default, SelYOrZero);
+      Value *XorDorYPlusD = Builder.CreateSelect(
+          CmpP0EqC0, X, DefaultPlusYOrZero, "", SelXOrDefault);
+      Value *NewAdd = Builder.CreateAdd(Base, XorDorYPlusD);
+      return replaceInstUsesWith(I, NewAdd);
+    }
+  }
+
   if (Instruction *Res = foldDivCeil(I))
     return Res;
 
