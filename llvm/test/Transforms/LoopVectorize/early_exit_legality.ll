@@ -492,6 +492,39 @@ exit:
   ret void
 }
 
+; %prev is a fixed-order recurrence and, under a SCEV predicate, also the only
+; canonical {0,+,1} induction candidate.
+; the early-exit loop is still rejected here.
+define i64 @same_exit_block_with_recurrence_that_is_also_an_induction() {
+; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_with_recurrence_that_is_also_an_induction'
+; CHECK:       LV: Not vectorizing: Found reductions or recurrences in early-exit loop.
+entry:
+  %p1 = alloca [4096 x i8]
+  call void @init_mem(ptr %p1, i64 4096)
+  br label %loop
+
+loop:
+  %prev = phi i64 [ %ext, %loop.inc ], [ 0, %entry ]
+  %narrow = phi i8 [ %inc, %loop.inc ], [ 0, %entry ]
+  %index = phi i32 [ %index.next, %loop.inc ], [ 1, %entry ]
+  %inc = add i8 %narrow, 1
+  %ext = zext i8 %inc to i64
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i32 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %prev.trunc = trunc i64 %prev to i8
+  %cmp3 = icmp eq i8 %ld1, %prev.trunc
+  br i1 %cmp3, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i32 %index, 1
+  %exitcond = icmp ne i32 %index.next, 4000
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %ext, %loop ], [ 67, %loop.inc ]
+  ret i64 %retval
+}
+
 define i64 @same_exit_block_pre_inc_use1_with_reduction() {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_with_reduction'
 ; CHECK:       LV: Not vectorizing: Found reductions or recurrences in early-exit loop.

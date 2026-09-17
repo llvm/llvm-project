@@ -264,6 +264,12 @@ int main(int, char**) {
       {
         auto comp = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
 
+        // is_heap(first, last)
+        assert_non_throwing([=, &policy] { (void)std::is_heap(policy, std::move(first1), std::move(last1)); });
+
+        // is_heap(first, last, comp)
+        assert_non_throwing([=, &policy] { (void)std::is_heap(policy, std::move(first1), std::move(last1), comp); });
+
         // is_heap_until(first, last)
         assert_non_throwing([=, &policy] { (void)std::is_heap_until(policy, std::move(first1), std::move(last1)); });
 
@@ -299,6 +305,14 @@ int main(int, char**) {
         // min_element(first, last, comp)
         assert_non_throwing([=, &policy] {
           (void)std::min_element(policy, std::move(first1), std::move(last1), compare);
+        });
+
+        // minmax_element(first, last)
+        assert_non_throwing([=, &policy] { (void)std::minmax_element(policy, std::move(first1), std::move(last1)); });
+
+        // minmax_element(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::minmax_element(policy, std::move(first1), std::move(last1), compare);
         });
       }
 

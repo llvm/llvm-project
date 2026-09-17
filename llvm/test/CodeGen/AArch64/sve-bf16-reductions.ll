@@ -31,16 +31,27 @@ define bfloat @faddv_nxv4bf16(<vscale x 4 x bfloat> %a) {
 }
 
 define bfloat @faddv_nxv8bf16(<vscale x 8 x bfloat> %a) {
-; CHECK-LABEL: faddv_nxv8bf16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    zip2 z2.h, z1.h, z0.h
-; CHECK-NEXT:    zip1 z0.h, z1.h, z0.h
-; CHECK-NEXT:    fadd z0.s, z0.s, z2.s
-; CHECK-NEXT:    faddv s0, p0, z0.s
-; CHECK-NEXT:    bfcvt h0, s0
-; CHECK-NEXT:    ret
+; SVE-LABEL: faddv_nxv8bf16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    movi v1.2d, #0000000000000000
+; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-NEXT:    fadd z0.s, z0.s, z2.s
+; SVE-NEXT:    faddv s0, p0, z0.s
+; SVE-NEXT:    bfcvt h0, s0
+; SVE-NEXT:    ret
+;
+; SME-LABEL: faddv_nxv8bf16:
+; SME:       // %bb.0:
+; SME-NEXT:    mov z1.h, #0 // =0x0
+; SME-NEXT:    ptrue p0.s
+; SME-NEXT:    zip2 z2.h, z1.h, z0.h
+; SME-NEXT:    zip1 z0.h, z1.h, z0.h
+; SME-NEXT:    fadd z0.s, z0.s, z2.s
+; SME-NEXT:    faddv s0, p0, z0.s
+; SME-NEXT:    bfcvt h0, s0
+; SME-NEXT:    ret
   %res = call fast bfloat @llvm.vector.reduce.fadd.nxv8bf16(bfloat zeroinitializer, <vscale x 8 x bfloat> %a)
   ret bfloat %res
 }
@@ -72,16 +83,27 @@ define bfloat @fmaxv_nxv4bf16(<vscale x 4 x bfloat> %a) {
 }
 
 define bfloat @fmaxv_nxv8bf16(<vscale x 8 x bfloat> %a) {
-; CHECK-LABEL: fmaxv_nxv8bf16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    zip2 z2.h, z1.h, z0.h
-; CHECK-NEXT:    zip1 z0.h, z1.h, z0.h
-; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z2.s
-; CHECK-NEXT:    fmaxnmv s0, p0, z0.s
-; CHECK-NEXT:    bfcvt h0, s0
-; CHECK-NEXT:    ret
+; SVE-LABEL: fmaxv_nxv8bf16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    movi v1.2d, #0000000000000000
+; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-NEXT:    fmaxnm z0.s, p0/m, z0.s, z2.s
+; SVE-NEXT:    fmaxnmv s0, p0, z0.s
+; SVE-NEXT:    bfcvt h0, s0
+; SVE-NEXT:    ret
+;
+; SME-LABEL: fmaxv_nxv8bf16:
+; SME:       // %bb.0:
+; SME-NEXT:    mov z1.h, #0 // =0x0
+; SME-NEXT:    ptrue p0.s
+; SME-NEXT:    zip2 z2.h, z1.h, z0.h
+; SME-NEXT:    zip1 z0.h, z1.h, z0.h
+; SME-NEXT:    fmaxnm z0.s, p0/m, z0.s, z2.s
+; SME-NEXT:    fmaxnmv s0, p0, z0.s
+; SME-NEXT:    bfcvt h0, s0
+; SME-NEXT:    ret
   %res = call bfloat @llvm.vector.reduce.fmax.nxv8bf16(<vscale x 8 x bfloat> %a)
   ret bfloat %res
 }
@@ -113,16 +135,27 @@ define bfloat @fminv_nxv4bf16(<vscale x 4 x bfloat> %a) {
 }
 
 define bfloat @fminv_nxv8bf16(<vscale x 8 x bfloat> %a) {
-; CHECK-LABEL: fminv_nxv8bf16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    zip2 z2.h, z1.h, z0.h
-; CHECK-NEXT:    zip1 z0.h, z1.h, z0.h
-; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z2.s
-; CHECK-NEXT:    fminnmv s0, p0, z0.s
-; CHECK-NEXT:    bfcvt h0, s0
-; CHECK-NEXT:    ret
+; SVE-LABEL: fminv_nxv8bf16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    movi v1.2d, #0000000000000000
+; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-NEXT:    fminnm z0.s, p0/m, z0.s, z2.s
+; SVE-NEXT:    fminnmv s0, p0, z0.s
+; SVE-NEXT:    bfcvt h0, s0
+; SVE-NEXT:    ret
+;
+; SME-LABEL: fminv_nxv8bf16:
+; SME:       // %bb.0:
+; SME-NEXT:    mov z1.h, #0 // =0x0
+; SME-NEXT:    ptrue p0.s
+; SME-NEXT:    zip2 z2.h, z1.h, z0.h
+; SME-NEXT:    zip1 z0.h, z1.h, z0.h
+; SME-NEXT:    fminnm z0.s, p0/m, z0.s, z2.s
+; SME-NEXT:    fminnmv s0, p0, z0.s
+; SME-NEXT:    bfcvt h0, s0
+; SME-NEXT:    ret
   %res = call bfloat @llvm.vector.reduce.fmin.nxv8bf16(<vscale x 8 x bfloat> %a)
   ret bfloat %res
 }
@@ -154,16 +187,27 @@ define bfloat @fmaximumv_nxv4bf16(<vscale x 4 x bfloat> %a) {
 }
 
 define bfloat @fmaximumv_nxv8bf16(<vscale x 8 x bfloat> %a) {
-; CHECK-LABEL: fmaximumv_nxv8bf16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    zip2 z2.h, z1.h, z0.h
-; CHECK-NEXT:    zip1 z0.h, z1.h, z0.h
-; CHECK-NEXT:    fmax z0.s, p0/m, z0.s, z2.s
-; CHECK-NEXT:    fmaxv s0, p0, z0.s
-; CHECK-NEXT:    bfcvt h0, s0
-; CHECK-NEXT:    ret
+; SVE-LABEL: fmaximumv_nxv8bf16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    movi v1.2d, #0000000000000000
+; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-NEXT:    fmax z0.s, p0/m, z0.s, z2.s
+; SVE-NEXT:    fmaxv s0, p0, z0.s
+; SVE-NEXT:    bfcvt h0, s0
+; SVE-NEXT:    ret
+;
+; SME-LABEL: fmaximumv_nxv8bf16:
+; SME:       // %bb.0:
+; SME-NEXT:    mov z1.h, #0 // =0x0
+; SME-NEXT:    ptrue p0.s
+; SME-NEXT:    zip2 z2.h, z1.h, z0.h
+; SME-NEXT:    zip1 z0.h, z1.h, z0.h
+; SME-NEXT:    fmax z0.s, p0/m, z0.s, z2.s
+; SME-NEXT:    fmaxv s0, p0, z0.s
+; SME-NEXT:    bfcvt h0, s0
+; SME-NEXT:    ret
   %res = call bfloat @llvm.vector.reduce.fmaximum.nxv8bf16(<vscale x 8 x bfloat> %a)
   ret bfloat %res
 }
@@ -195,16 +239,27 @@ define bfloat @fminimumv_nxv4bf16(<vscale x 4 x bfloat> %a) {
 }
 
 define bfloat @fminimumv_nxv8bf16(<vscale x 8 x bfloat> %a) {
-; CHECK-LABEL: fminimumv_nxv8bf16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    zip2 z2.h, z1.h, z0.h
-; CHECK-NEXT:    zip1 z0.h, z1.h, z0.h
-; CHECK-NEXT:    fmin z0.s, p0/m, z0.s, z2.s
-; CHECK-NEXT:    fminv s0, p0, z0.s
-; CHECK-NEXT:    bfcvt h0, s0
-; CHECK-NEXT:    ret
+; SVE-LABEL: fminimumv_nxv8bf16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    movi v1.2d, #0000000000000000
+; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    zip2 z2.h, z1.h, z0.h
+; SVE-NEXT:    zip1 z0.h, z1.h, z0.h
+; SVE-NEXT:    fmin z0.s, p0/m, z0.s, z2.s
+; SVE-NEXT:    fminv s0, p0, z0.s
+; SVE-NEXT:    bfcvt h0, s0
+; SVE-NEXT:    ret
+;
+; SME-LABEL: fminimumv_nxv8bf16:
+; SME:       // %bb.0:
+; SME-NEXT:    mov z1.h, #0 // =0x0
+; SME-NEXT:    ptrue p0.s
+; SME-NEXT:    zip2 z2.h, z1.h, z0.h
+; SME-NEXT:    zip1 z0.h, z1.h, z0.h
+; SME-NEXT:    fmin z0.s, p0/m, z0.s, z2.s
+; SME-NEXT:    fminv s0, p0, z0.s
+; SME-NEXT:    bfcvt h0, s0
+; SME-NEXT:    ret
   %res = call bfloat @llvm.vector.reduce.fminimum.nxv8bf16(<vscale x 8 x bfloat> %a)
   ret bfloat %res
 }

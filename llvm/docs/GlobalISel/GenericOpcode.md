@@ -311,6 +311,16 @@ Perform integer carry-less multiplication.
 %dst:_(s32) = G_CLMUL %src_0:_(s32), %src1:_(32)
 ```
 
+### G_CLMULH
+
+Perform carry-less multiplication and return the high half of the result.
+For N-bit operands, compute the 2N-bit polynomial product over GF(2) and
+return bits [2N-1:N]. The destination and both sources have the same type.
+
+```none
+%dst:_(s32) = G_CLMULH %src0:_(s32), %src1:_(s32)
+```
+
 ### G_SDIVREM, G_UDIVREM
 
 Perform integer division and remainder thereby producing two results.

@@ -13,26 +13,25 @@
 
 #include "orc-rt/bedrock/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.h"
 #include "orc-rt/bedrock/StandaloneMachOUnwindInfoRegistrar.h"
-#include "orc-rt/support/sps/SPSAllocAction.h"
 
 namespace orc_rt::sps_ci {
 
-ORC_RT_SPS_ALLOC_ACTION(
+ORC_RT_SPS_ALLOC_ACTION_IMPL(
     orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections,
     (SPSSequence<SPSExecutorAddrRange>, SPSExecutorAddr, SPSExecutorAddrRange,
      SPSExecutorAddrRange),
     &StandaloneMachOUnwindInfoRegistrar::registerSections)
 
-ORC_RT_SPS_ALLOC_ACTION(
+ORC_RT_SPS_ALLOC_ACTION_IMPL(
     orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections,
     (SPSSequence<SPSExecutorAddrRange>),
     &StandaloneMachOUnwindInfoRegistrar::deregisterSections)
 
-static std::pair<const char *, const void *>
+static std::pair<SymbolNameSpec, const void *>
     orc_rt_ci_StandaloneMachOUnwindInfoRegistrar_sps_interface[] = {
-        ORC_RT_SYMTAB_PAIR(
+        ORC_RT_SYMTAB_C_PAIR(
             orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections),
-        ORC_RT_SYMTAB_PAIR(
+        ORC_RT_SYMTAB_C_PAIR(
             orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections)};
 
 Error addStandaloneMachOUnwindInfoRegistrar(SimpleSymbolTable &ST) {
