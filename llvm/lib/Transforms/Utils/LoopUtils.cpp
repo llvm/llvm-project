@@ -19,11 +19,13 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
@@ -1815,7 +1817,8 @@ struct RewritePhi {
 // Check whether it is possible to delete the loop after rewriting exit
 // value. If it is possible, ignore ReplaceExitValue and do rewriting
 // aggressively.
-static bool canLoopBeDeleted(Loop *L, SmallVector<RewritePhi, 8> &RewritePhiSet) {
+static bool canLoopBeDeleted(Loop *L, SmallVector<RewritePhi, 8> &RewritePhiSet,
+                             ScalarEvolution *SE, LoopInfo *LI) {
   BasicBlock *Preheader = L->getLoopPreheader();
   // If there is no preheader, the loop will not be deleted.
   if (!Preheader)
@@ -1863,6 +1866,24 @@ static bool canLoopBeDeleted(Loop *L, SmallVector<RewritePhi, 8> &RewritePhiSet)
         }))
       return false;
 
+  if (L->getHeader()->getParent()->mustProgress())
+    return true;
+
+  LoopBlocksRPO RPOT(L);
+  RPOT.perform(LI);
+  if (containsIrreducibleCFG<const BasicBlock *>(RPOT, *LI))
+    return false;
+
+  SmallVector<Loop *, 8> WorkList;
+  WorkList.push_back(L);
+  while (!WorkList.empty()) {
+    Loop *Current = WorkList.pop_back_val();
+    if (hasMustProgress(Current))
+      continue;
+    if (isa<SCEVCouldNotCompute>(SE->getConstantMaxBackedgeTakenCount(Current)))
+      return false;
+    WorkList.append(Current->begin(), Current->end());
+  }
   return true;
 }
 
@@ -2060,7 +2081,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
   // calculate the cost of other SCEV's after expanding SCEV 'A', thus
   // potentially giving cost bonus to those other SCEV's?
 
-  bool LoopCanBeDel = canLoopBeDeleted(L, RewritePhiSet);
+  bool LoopCanBeDel = canLoopBeDeleted(L, RewritePhiSet, SE, LI);
   int NumReplaced = 0;
 
   // Transformation.

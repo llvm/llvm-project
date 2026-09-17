@@ -4,6 +4,7 @@
 ;; Test that loop's exit value is rewritten to its initial
 ;; value from loop preheader
 define i32 @test1(ptr %var) {
+;
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[VAR:%.*]], null
@@ -34,6 +35,7 @@ exit:
 ;; Test that we can not rewrite loop exit value if it's not
 ;; a phi node (%indvar is an add instruction in this test).
 define i32 @test2(ptr %var) {
+;
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[VAR:%.*]], null
@@ -61,6 +63,7 @@ exit:
 ;; Test that we can not rewrite loop exit value if the condition
 ;; is not in loop header.
 define i32 @test3(ptr %var) {
+;
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp eq ptr [[VAR:%.*]], null
@@ -97,6 +100,7 @@ exit:
 
 ; Multiple exits dominating latch
 define i32 @test4(i1 %cond1, i1 %cond2) {
+;
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
@@ -124,6 +128,7 @@ exit:
 
 ; A conditionally executed exit.
 define i32 @test5(ptr %addr, i1 %cond2) {
+;
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
@@ -159,6 +164,7 @@ exit:
 }
 
 define i16 @pr57336(i16 %end, i16 %m) mustprogress {
+;
 ; CHECK-LABEL: @pr57336(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -198,6 +204,7 @@ crit_edge:
 }
 
 define i32 @vscale_slt_with_vp_umin(ptr nocapture %A, i32 %n) mustprogress vscale_range(2,1024) {
+;
 ; CHECK-LABEL: @vscale_slt_with_vp_umin(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
@@ -218,12 +225,12 @@ define i32 @vscale_slt_with_vp_umin(ptr nocapture %A, i32 %n) mustprogress vscal
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[N]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = call range(i32 2, 33) i32 @llvm.cttz.i32(i32 [[VF]], i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], [[TMP5]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], [[VSCALE]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[N]], [[TMP3]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[VF]], i32 [[TMP4]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 2, 33) i32 @llvm.cttz.i32(i32 [[VF]], i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], [[VSCALE]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[N]], [[TMP4]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[VF]], i32 [[TMP5]])
 ; CHECK-NEXT:    ret i32 [[UMIN]]
 ;
 entry:
@@ -251,6 +258,7 @@ for.end:
 }
 
 define i32 @vscale_slt_with_vp_umin2(ptr nocapture %A, i32 %n) mustprogress vscale_range(2,1024) {
+;
 ; CHECK-LABEL: @vscale_slt_with_vp_umin2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
@@ -271,12 +279,12 @@ define i32 @vscale_slt_with_vp_umin2(ptr nocapture %A, i32 %n) mustprogress vsca
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = call range(i32 2, 33) i32 @llvm.cttz.i32(i32 [[VF]], i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], [[TMP5]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], [[VSCALE]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[N]], [[TMP3]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[VF]], i32 [[TMP4]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 2, 33) i32 @llvm.cttz.i32(i32 [[VF]], i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], [[VSCALE]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[N]], [[TMP4]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[VF]], i32 [[TMP5]])
 ; CHECK-NEXT:    ret i32 [[UMIN]]
 ;
 entry:
@@ -305,6 +313,7 @@ for.end:
 
 ; Rewrite a comparison by expanding its operands at the loop exit.
 define i1 @rewrite_computable_icmp(i32 %start, i32 %limit) {
+;
 ; CHECK-LABEL: @rewrite_computable_icmp(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -342,6 +351,7 @@ exit:
 
 ; Rewrite multiple comparisons when doing so makes all live-outs invariant.
 define i1 @rewrite_multiple_icmps(i32 %start, i32 %rhs.start, i32 %limit) {
+;
 ; CHECK-LABEL: @rewrite_multiple_icmps(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -387,6 +397,7 @@ exit:
 
 ; Do not rewrite a comparison if SCEV cannot compute an operand's exit value.
 define i1 @do_not_rewrite_uncomputable_icmp(i1 %c, i32 %start) {
+;
 ; CHECK-LABEL: @do_not_rewrite_uncomputable_icmp(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -415,6 +426,7 @@ exit:
 
 ; Do not rebuild a comparison unless doing so makes the loop deletable.
 define i1 @do_not_rewrite_icmp_in_live_loop(i32 %start, i32 %limit) {
+;
 ; CHECK-LABEL: @do_not_rewrite_icmp_in_live_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -452,8 +464,103 @@ exit:
   ret i1 %cmp
 }
 
+; Do not rewrite a comparison if the loop contains a potentially infinite
+; subloop. Rewriting it would make the subloop unreachable and change whether
+; the function terminates.
+define i1 @do_not_rewrite_icmp_with_infinite_subloop(i32 %start, i32 %limit, i1 %c) {
+; CHECK-LABEL: @do_not_rewrite_icmp_with_infinite_subloop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
+; CHECK:       outer.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[OUTER_LATCH]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[IV]], 42
+; CHECK-NEXT:    [[INRANGE:%.*]] = icmp ult i32 [[INDEX]], [[LIMIT:%.*]]
+; CHECK-NEXT:    [[CONTINUE:%.*]] = select i1 [[CMP]], i1 [[INRANGE]], i1 false
+; CHECK-NEXT:    br i1 [[CONTINUE]], label [[INNER_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       inner.preheader:
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[INNER]], label [[OUTER_LATCH]]
+; CHECK:       outer.latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], -1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 1
+; CHECK-NEXT:    br label [[OUTER_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %outer.latch ]
+  %index = phi i32 [ 0, %entry ], [ %index.next, %outer.latch ]
+  %cmp = icmp ne i32 %iv, 42
+  %inrange = icmp ult i32 %index, %limit
+  %continue = select i1 %cmp, i1 %inrange, i1 false
+  br i1 %continue, label %inner, label %exit
+
+inner:
+  br i1 %c, label %inner, label %outer.latch
+
+outer.latch:
+  %iv.next = add nsw i32 %iv, -1
+  %index.next = add nuw i32 %index, 1
+  br label %outer.header
+
+exit:
+  ret i1 %cmp
+}
+
+; A mustprogress outer loop allows the same rewrite even if a subloop has an
+; unknown trip count.
+define i1 @rewrite_icmp_with_mustprogress_outer_loop(i32 %start, i32 %limit, i1 %c) {
+;
+; CHECK-LABEL: @rewrite_icmp_with_mustprogress_outer_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
+; CHECK:       outer.header:
+; CHECK-NEXT:    br i1 false, label [[INNER_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       inner.preheader:
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[INNER]], label [[OUTER_LATCH:%.*]]
+; CHECK:       outer.latch:
+; CHECK-NEXT:    br label [[OUTER_HEADER]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[LIMIT:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[START:%.*]], -42
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[START]], [[UMIN]]
+; CHECK-NEXT:    [[CMP_EXIT:%.*]] = icmp ne i32 [[TMP2]], 42
+; CHECK-NEXT:    ret i1 [[CMP_EXIT]]
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %outer.latch ]
+  %index = phi i32 [ 0, %entry ], [ %index.next, %outer.latch ]
+  %cmp = icmp ne i32 %iv, 42
+  %inrange = icmp ult i32 %index, %limit
+  %continue = select i1 %cmp, i1 %inrange, i1 false
+  br i1 %continue, label %inner, label %exit
+
+inner:
+  br i1 %c, label %inner, label %outer.latch
+
+outer.latch:
+  %iv.next = add nsw i32 %iv, -1
+  %index.next = add nuw i32 %index, 1
+  br label %outer.header, !llvm.loop !0
+
+exit:
+  ret i1 %cmp
+}
+
 ; Rewrite a pointer comparison when its operand exit values are computable.
 define i1 @rewrite_pointer_icmp(ptr %start, ptr %end, i32 %limit) {
+;
 ; CHECK-LABEL: @rewrite_pointer_icmp(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -469,8 +576,8 @@ define i1 @rewrite_pointer_icmp(ptr %start, ptr %end, i32 %limit) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[END1]], [[START2]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 [[TMP1]])
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[UMIN]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[SCEVGEP]], [[END]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[CMP_EXIT:%.*]] = icmp ne ptr [[SCEVGEP]], [[END]]
+; CHECK-NEXT:    ret i1 [[CMP_EXIT]]
 ;
 entry:
   br label %loop
@@ -493,3 +600,6 @@ exit:
 }
 
 declare void @use.i1(i1)
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.mustprogress"}
