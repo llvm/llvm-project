@@ -6,19 +6,9 @@ target triple = "x86_64-unknown-linux-gnu"
 define <2 x bfloat> @shuffle_chained_v32bf16_v2bf16(<32 x bfloat> %a) {
 ; CHECK-LABEL: shuffle_chained_v32bf16_v2bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq %rsp, %rbp
-; CHECK-NEXT:    .cfi_def_cfa_register %rbp
-; CHECK-NEXT:    andq $-64, %rsp
-; CHECK-NEXT:    addq $-128, %rsp
 ; CHECK-NEXT:    vmovd {{.*#+}} xmm1 = [0,16,0,0,0,0,0,0]
 ; CHECK-NEXT:    vpermw %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; CHECK-NEXT:    movq %rbp, %rsp
-; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %s = shufflevector <32 x bfloat> %a, <32 x bfloat> zeroinitializer, <32 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23, i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
@@ -29,18 +19,8 @@ define <2 x bfloat> @shuffle_chained_v32bf16_v2bf16(<32 x bfloat> %a) {
 define <2 x bfloat> @shuffle_chained_v16bf16(<16 x bfloat> %a) {
 ; CHECK-LABEL: shuffle_chained_v16bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq %rsp, %rbp
-; CHECK-NEXT:    .cfi_def_cfa_register %rbp
-; CHECK-NEXT:    andq $-32, %rsp
-; CHECK-NEXT:    subq $96, %rsp
-; CHECK-NEXT:    vmovdqa %ymm0, (%rsp)
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    movq %rbp, %rsp
-; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %s = shufflevector <16 x bfloat> %a, <16 x bfloat> zeroinitializer, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>

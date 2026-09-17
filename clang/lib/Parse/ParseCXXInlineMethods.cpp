@@ -617,22 +617,6 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
         Actions.ActOnFinishInlineFunctionDef(FD);
   });
 
-  if (Tok.is(tok::kw_try)) {
-    ParseFunctionTryBlock(LM.D, FnScope);
-    return;
-  }
-  if (Tok.is(tok::colon)) {
-    ParseConstructorInitializer(LM.D);
-
-    // Error recovery.
-    if (!Tok.is(tok::l_brace)) {
-      FnScope.Exit();
-      Actions.ActOnFinishFunctionBody(LM.D, nullptr);
-      return;
-    }
-  } else
-    Actions.ActOnDefaultCtorInitializers(LM.D);
-
   assert((Actions.getDiagnostics().hasErrorOccurred() ||
           !isa<FunctionTemplateDecl>(LM.D) ||
           cast<FunctionTemplateDecl>(LM.D)->getTemplateParameters()->getDepth()
@@ -640,7 +624,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
          "TemplateParameterDepth should be greater than the depth of "
          "current template being instantiated!");
 
-  ParseFunctionStatementBody(LM.D, FnScope);
+  ParseFunctionBody(LM.D, FnScope);
 }
 
 void Parser::ParseLexedMemberInitializers(ParsingClass &Class) {

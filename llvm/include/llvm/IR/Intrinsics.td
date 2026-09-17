@@ -136,9 +136,7 @@ class Returned<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
-// DefaultValue - A value carrier paired with ImmArg to declare a default for
-// a missing trailing argument. AutoUpgrade fills the default when an old
-// .bc / .ll file is loaded.
+// Default value for a trailing ImmArg, materialized by AutoUpgrade.
 class DefaultValue<int val> {
   int Value = val;
 }
@@ -1646,6 +1644,10 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]
   def int_pext : DefaultAttrsIntrinsic<[llvm_anyint_ty],
       [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_pdep : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+      [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_smulh : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+      [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_umulh : DefaultAttrsIntrinsic<[llvm_anyint_ty],
       [LLVMMatchType<0>, LLVMMatchType<0>]>;
 }
 

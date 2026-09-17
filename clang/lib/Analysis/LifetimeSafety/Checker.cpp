@@ -105,10 +105,14 @@ public:
           checkAnnotations(OEF);
     issuePendingWarnings();
     suggestAnnotations();
-    reportNoescapeViolations();
-    reportLifetimeboundViolations();
-    reportMisplacedLifetimebound();
-    reportInapplicableLifetimebound();
+    if (LSOpts.CheckNoescapeViolations)
+      reportNoescapeViolations();
+    if (LSOpts.CheckLifetimeboundViolations)
+      reportLifetimeboundViolations();
+    if (LSOpts.CheckMisplacedLifetimebound)
+      reportMisplacedLifetimebound();
+    if (LSOpts.CheckInapplicableLifetimebound)
+      reportInapplicableLifetimebound();
     //  Annotation inference is currently guarded by a frontend flag. In the
     //  future, this might be replaced by a design that differentiates between
     //  explicit and inferred findings with separate warning groups.
@@ -149,8 +153,12 @@ public:
         if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
           AnnotationWarningsMap.try_emplace(PVD, ReturnEsc->getReturnExpr());
         else if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF);
-                 FieldEsc && isa<CXXConstructorDecl>(FD))
-          AnnotationWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
+                 FieldEsc && isa<CXXConstructorDecl>(FD)) {
+          // Disable inference for pointers being captured by an owner type,
+          // as owners typically consume these pointers rather than borrow them.
+          if (!isOwnerPtrCtor(dyn_cast<CXXConstructorDecl>(FD), PVD))
+            AnnotationWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
+        }
       }
       // TODO: Suggest lifetime_capture_by(this) for parameter escaping to a
       // field!
@@ -254,6 +262,7 @@ public:
   }
 
   void issuePendingWarnings() {
+    llvm::TimeTraceScope TimeTrace("IssuePendingWarnings");
     if (!SemaHelper)
       return;
     for (const auto &[LID, Warning] : FinalWarningsMap) {
@@ -436,6 +445,7 @@ public:
   }
 
   void reportNoescapeViolations() {
+    llvm::TimeTraceScope TimeTrace("ReportNoescapeViolations");
     for (auto [PVD, EscapeTarget] : NoescapeWarningsMap) {
       if (const auto *E = EscapeTarget.dyn_cast<const Expr *>())
         SemaHelper->reportNoescapeViolation(PVD, E);
@@ -449,6 +459,7 @@ public:
   }
 
   void reportLifetimeboundViolations() {
+    llvm::TimeTraceScope TimeTrace("ReportLifetimeboundViolations");
     if (!isa<FunctionDecl>(FD))
       return;
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
@@ -471,6 +482,7 @@ public:
   // Reports lifetimebound attributes that are placed on a function definition
   // but not on the corresponding declaration.
   void reportMisplacedLifetimebound() {
+    llvm::TimeTraceScope TimeTrace("ReportMisplacedLifetimebound");
     const FunctionDecl *FDef = dyn_cast<FunctionDecl>(FD);
     if (!FDef)
       return;
@@ -501,6 +513,7 @@ public:
   }
 
   void reportInapplicableLifetimebound() {
+    llvm::TimeTraceScope TimeTrace("ReportInapplicableLifetimebound");
     const auto *FDef = dyn_cast<FunctionDecl>(FD);
     if (!FDef)
       return;

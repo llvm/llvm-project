@@ -1,5 +1,6 @@
 // RUN: cir-translate -cir-to-llvmir --disable-cc-lowering -o %t.ll %s
 // RUN: FileCheck --input-file=%t.ll -check-prefix=LLVM %s
+// REQUIRES: target={{x86_64-linux}}
 
 !u32i = !cir.int<u, 32>
 

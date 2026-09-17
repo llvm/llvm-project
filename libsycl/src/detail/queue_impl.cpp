@@ -40,15 +40,21 @@ private:
   bool &NestedCallsDetectorRef = NestedCallsDetector;
 };
 
-QueueImpl::QueueImpl(DeviceImpl &deviceImpl, const async_handler &asyncHandler,
+QueueImpl::QueueImpl(const std::shared_ptr<ContextImpl> &contextImpl,
+                     DeviceImpl &deviceImpl, const async_handler &asyncHandler,
                      const property_list &propList, PrivateTag)
     : MIsInorder(false), MAsyncHandler(asyncHandler), MPropList(propList),
-      MDevice(deviceImpl),
-      MContext(MDevice.getPlatformImpl().getDefaultContext()) {
-  assert(MContext.getOLHandleRef() &&
-         "Queue must be associated with a valid offload context");
-  callAndThrow(olCreateQueue, MContext.getOLHandleRef(), MDevice.getOLHandle(),
-               &MOffloadQueue);
+      MDevice(deviceImpl), MContext(contextImpl) {
+  assert(MContext && "Context impl ptr can't be nullptr");
+
+  ol_result_t Err = callNoCheck(olCreateQueue, MContext->getOLHandleRef(),
+                                MDevice.getOLHandle(), &MOffloadQueue);
+  // liboffload guarantees OL_ERRC_INVALID_DEVICE when the device does not
+  // belong to the context.
+  if (isFailed(Err) && Err->Code == OL_ERRC_INVALID_DEVICE)
+    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+                          "The device is not associated with the context.");
+  checkAndThrow(Err);
 }
 
 QueueImpl::~QueueImpl() {
@@ -60,8 +66,14 @@ QueueImpl::~QueueImpl() {
 backend QueueImpl::getBackend() const noexcept { return MDevice.getBackend(); }
 
 static ol_device_handle_t getHostOLDevice() {
+  const auto &HostPlatformGroups =
+      getOffloadTopologies()[OL_PLATFORM_BACKEND_HOST].getPlatformGroups();
+  assert(!HostPlatformGroups.empty() &&
+         "Host platform must contain at least one context group");
+  assert(!HostPlatformGroups.front().Devices.empty() &&
+         "Host platform context group must contain at least one device");
   static ol_device_handle_t HostDevice =
-      *(getOffloadTopologies()[OL_PLATFORM_BACKEND_HOST].getDevices(0).begin());
+      HostPlatformGroups.front().Devices.front();
   return HostDevice;
 }
 

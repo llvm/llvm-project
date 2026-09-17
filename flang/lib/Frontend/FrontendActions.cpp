@@ -17,6 +17,7 @@
 #include "flang/Frontend/ParserActions.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/Support/Verifier.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Passes/Pipelines.h"
@@ -56,6 +57,7 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/RunCodeGen.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
@@ -291,6 +293,14 @@ bool CodeGenAction::beginSourceFileAction() {
         mlir::BoolAttr::get(mod.getContext(), true));
   }
 
+  if (ci.getInvocation().getLangOpts().CheckIntegerModZeroDivisor) {
+    mlir::ModuleOp mod = lb.getModule();
+    mod.getOperation()->setAttr(
+        mlir::StringAttr::get(mod.getContext(),
+                              fir::getCheckIntegerModZeroDivisorAttrName()),
+        mlir::BoolAttr::get(mod.getContext(), true));
+  }
+
   // Create a parse tree and lower it to FIR
   parseAndLowerTree(ci, lb);
 
@@ -322,7 +332,7 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getInvocation().getCodeGenOpts().getDoConcurrentMapping();
 
   if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None &&
-      !isOpenMPEnabled) {
+      (!isOpenMPEnabled || opts.isSimdOnly)) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Warning,
         "OpenMP is required for lowering `do concurrent` loops to OpenMP."
@@ -342,7 +352,7 @@ bool CodeGenAction::beginSourceFileAction() {
   // WARNING: This pipeline must be run immediately after the lowering to
   // ensure that the FIR is correct with respect to OpenMP operations/
   // attributes.
-  if (isOpenMPEnabled || opts.isSimdOnly)
+  if (isOpenMPEnabled)
     fir::createOpenMPFIRPassPipeline(pm, opts);
 
   pm.enableVerifier(/*verifyPasses=*/true);
@@ -637,6 +647,11 @@ void CodeGenAction::lowerHLFIRToFIR() {
       ci.getInvocation().getLoweringOpts().getFPMaxminBehavior();
   if (ci.getInvocation().getLangOpts().OpenMPIsTargetDevice)
     config.EnableOpenMPIsTargetDevice = true;
+  // Parser options, not frontend options: they are seeded from the frontend
+  // ones and additionally get CUDA enabled for a .cuf/.CUF input.
+  if (ci.getInvocation().getFortranOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::CUDA))
+    config.EnableCUDA = true;
   // Create the pass pipeline
   fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
   (void)mlir::applyPassManagerCLOptions(pm);
@@ -829,6 +844,9 @@ void CodeGenAction::generateLLVMIR() {
           static_cast<llvm::PIELevel::Level>(opts.PICLevel));
   }
 
+  if (opts.getFramePointer() != llvm::FramePointerKind::None)
+    llvmModule->setFramePointer(opts.getFramePointer());
+
   const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
   const llvm::Triple triple(targetOpts.triple);
 
@@ -842,7 +860,7 @@ void CodeGenAction::generateLLVMIR() {
     }
   }
 
-  if (triple.isRISCV() && !targetOpts.abi.empty())
+  if (!targetOpts.abi.empty())
     llvmModule->addModuleFlag(
         llvm::Module::Error, "target-abi",
         llvm::MDString::get(llvmModule->getContext(), targetOpts.abi));
@@ -910,21 +928,6 @@ static void generateMachineCodeOrAssemblyImpl(
     if (plugin->invokePreCodeGenCallback(llvmModule, tm, cgft, os))
       return;
 
-  // Set-up the pass manager, i.e create an LLVM code-gen pass pipeline.
-  // Currently only the legacy pass manager is supported.
-  // TODO: Switch to the new PM once it's available in the backend.
-  llvm::legacy::PassManager codeGenPasses;
-  codeGenPasses.add(
-      createTargetTransformInfoWrapperPass(tm.getTargetIRAnalysis()));
-
-  llvm::Triple triple(llvmModule.getTargetTriple());
-  llvm::TargetLibraryInfoImpl *tlii =
-      llvm::driver::createTLII(triple, codeGenOpts.getVecLib());
-  codeGenPasses.add(new llvm::TargetLibraryInfoWrapperPass(*tlii));
-  codeGenPasses.add(new llvm::RuntimeLibraryInfoWrapper(
-      tm.Options.ExceptionModel, tm.Options.EABIVersion,
-      tm.Options.MCOptions.ABIName, tm.Options.VecLib));
-
   std::unique_ptr<llvm::ToolOutputFile> dwoOS;
   if (!codeGenOpts.SplitDwarfOutput.empty()) {
     std::error_code ec;
@@ -936,8 +939,9 @@ static void generateMachineCodeOrAssemblyImpl(
       return;
     }
   }
-  if (tm.addPassesToEmitFile(codeGenPasses, os, dwoOS ? &dwoOS->os() : nullptr,
-                             cgft)) {
+  llvm::Error codeGenError =
+      runCodeGenPipeline(tm, llvmModule, os, dwoOS, cgft);
+  if (codeGenError) {
     unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
                               "emission of this file type is not supported");
@@ -945,14 +949,8 @@ static void generateMachineCodeOrAssemblyImpl(
     return;
   }
 
-  // Run the passes
-  codeGenPasses.run(llvmModule);
-
   if (dwoOS)
     dwoOS->keep();
-
-  // Cleanup
-  delete tlii;
 }
 
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
@@ -1042,8 +1040,6 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   fam.registerPass([&] { return llvm::TargetLibraryAnalysis(*tlii); });
   mam.registerPass([&] {
     return llvm::RuntimeLibraryAnalysis(
-        targetMachine->Options.ExceptionModel,
-        targetMachine->Options.EABIVersion,
         targetMachine->Options.MCOptions.ABIName,
         targetMachine->Options.VecLib);
   });

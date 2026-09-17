@@ -21,6 +21,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/FPEnv.h"
 
@@ -150,12 +151,11 @@ mlir::Location CIRGenFunction::getLoc(SourceLocation srcLoc) {
     return mlir::FileLineColLoc::get(builder.getStringAttr(filename),
                                      pLoc.getLine(), pLoc.getColumn());
   }
-  // We expect to have a currSrcLoc set, so we assert here, but it isn't
-  // critical for the correctness of compilation, so in non-assert builds
-  // we fallback on using an unknown location.
-  assert(currSrcLoc && "expected to inherit some source location");
-  if (currSrcLoc)
-    return *currSrcLoc;
+  // We expect to have a currSrcLoc set, but it isn't critical for the
+  // correctness of compilation, so in non-assert builds we fallback on using an
+  // unknown location.
+  if (currSrcLoc && currSrcLoc->isValid())
+    return getLoc(*currSrcLoc);
   // We're brave, but time to give up.
   return builder.getUnknownLoc();
 }
@@ -163,19 +163,24 @@ mlir::Location CIRGenFunction::getLoc(SourceLocation srcLoc) {
 mlir::Location CIRGenFunction::getLoc(SourceRange srcLoc) {
   // Some AST nodes might contain invalid source locations (e.g.
   // CXXDefaultArgExpr), workaround that to still get something out.
-  if (srcLoc.isValid()) {
-    mlir::Location beg = getLoc(srcLoc.getBegin());
-    mlir::Location end = getLoc(srcLoc.getEnd());
-    SmallVector<mlir::Location, 2> locs = {beg, end};
-    mlir::Attribute metadata;
-    return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
-  }
-  // We expect to have a currSrcLoc set, so we assert here, but it isn't
-  // critical for the correctness of compilation, so in non-assert builds
-  // we fallback on using an unknown location.
-  assert(currSrcLoc && "expected to inherit some source location");
-  if (currSrcLoc)
-    return *currSrcLoc;
+
+  // SourceRange is only valid if BOTH are valid, so get the fused location from
+  // the 2-mlir::Location version of this.
+  if (srcLoc.isValid())
+    return getLoc(getLoc(srcLoc.getBegin()), getLoc(srcLoc.getEnd()));
+
+  // If only ONE of the two is valid, try our hardest to get this right.
+  if (srcLoc.getBegin().isValid())
+    return getLoc(srcLoc.getBegin());
+  if (srcLoc.getEnd().isValid())
+    return getLoc(srcLoc.getEnd());
+
+  // We expect to have a currSrcLoc set, but it isn't critical for the
+  // correctness of compilation, so in non-assert builds we fallback on using an
+  // unknown location.
+  if (currSrcLoc &&
+      (currSrcLoc->getBegin().isValid() || currSrcLoc->getEnd().isValid()))
+    return getLoc(*currSrcLoc);
   // We're brave, but time to give up.
   return builder.getUnknownLoc();
 }
@@ -487,10 +492,17 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
                    convertType(paramVar->getType()), paramLoc, alignment,
                    /*insertIntoFnEntryBlock=*/true);
 
-    declare(addrVal, paramVar, paramVar->getType(), paramLoc, alignment,
+    mlir::ptr::MemorySpaceAttrInterface destAddrSpace =
+        cir::toCIRAddressSpaceAttr(getMLIRContext(),
+                                   paramVar->getType().getAddressSpace());
+    Address addr = Address(addrVal, alignment);
+    addr = maybeCastStackAddressSpace(addr, destAddrSpace);
+
+    declare(addr.getPointer(), paramVar, paramVar->getType(), paramLoc,
+            alignment,
             /*isParam=*/true);
 
-    setAddrOfLocalVar(paramVar, Address(addrVal, alignment));
+    setAddrOfLocalVar(paramVar, addr);
 
     bool isPromoted = isa<ParmVarDecl>(paramVar) &&
                       cast<ParmVarDecl>(paramVar)->isKNRPromoted();
@@ -756,8 +768,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   SourceRange bodyRange =
       body ? body->getSourceRange() : funcDecl->getLocation();
 
-  SourceLocRAIIObject fnLoc{*this, loc.isValid() ? getLoc(loc)
-                                                 : builder.getUnknownLoc()};
+  SourceLocRAIIObject fnLoc{*this, funcDecl->getSourceRange()};
 
   auto validMLIRLoc = [&](clang::SourceLocation clangLoc) {
     return clangLoc.isValid() ? getLoc(clangLoc) : builder.getUnknownLoc();
@@ -900,14 +911,13 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // by Sema), but the Itanium ABI doesn't make them optional and Clang may
   // in fact emit references to them from other compilations, so emit them
   // as functions containing a trap instruction.
+  Stmt *body = dtor->getBody();
   if (dtorType != Dtor_Base && dtor->getParent()->isAbstract()) {
-    SourceLocation loc =
-        dtor->hasBody() ? dtor->getBody()->getBeginLoc() : dtor->getLocation();
+    SourceLocation loc = body ? body->getBeginLoc() : dtor->getLocation();
     emitTrap(getLoc(loc), true);
     return;
   }
 
-  Stmt *body = dtor->getBody();
   assert(body && !cir::MissingFeatures::incrementProfileCounter());
 
   // The call to operator delete in a deleting destructor happens
@@ -972,10 +982,21 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Base:
     assert(body);
 
+    bool needsVTableInit =
+        !CodeGenUtils::canSkipVTablePointerInitialization(getContext(), dtor);
+    // Launder 'this' if necessary.
+    if (needsVTableInit && cgm.getCodeGenOpts().StrictVTablePointers &&
+        cgm.getCodeGenOpts().OptimizationLevel > 0) {
+      cxxThisValue = cir::LaunderOp::create(
+          builder, getLoc(dtor->getBeginLoc()), loadCXXThis());
+    }
+
     // Enter the cleanup scopes for fields and non-virtual bases.
     enterDtorCleanups(dtor, Dtor_Base);
 
-    assert(!cir::MissingFeatures::vtableInitialization());
+    // Initialize the vtable pointers before entering the body.
+    if (needsVTableInit)
+      initializeVTablePointers(getLoc(dtor->getBeginLoc()), dtor->getParent());
 
     if (isTryBody) {
       cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
@@ -1364,11 +1385,11 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
       return;
 
   // Cast the dest ptr to the appropriate i8 pointer type.
-  if (builder.isInt8Ty(destPtr.getElementType())) {
-    cgm.errorNYI(loc, "Cast the dest ptr to the appropriate i8 pointer type");
-  }
+  if (!builder.isInt8Ty(destPtr.getElementType()))
+    destPtr = destPtr.withElementType(builder, uInt8Ty);
 
   // Get size and alignment info for this aggregate.
+  mlir::IntegerAttr sizeVal;
   const CharUnits size = getContext().getTypeSizeInChars(ty);
   if (size.isZero()) {
     // But note that getTypeInfo returns 0 for a VLA.
@@ -1378,6 +1399,8 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
     } else {
       return;
     }
+  } else {
+    sizeVal = cgm.getSize(size);
   }
 
   // If the type contains a pointer to data member we can't memset it to zero.
@@ -1396,12 +1419,15 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
     return;
   }
 
-  // In LLVM Codegen: otherwise, just memset the whole thing to zero using
-  // Builder.CreateMemSet. In CIR just emit a store of #cir.zero to the
-  // respective address.
-  // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
-  const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
-  builder.createStore(loc, zeroValue, destPtr);
+  // Otherwise, just memset the whole thing to zero.  This is legal
+  // because in LLVM, all default initializers (other than the ones we just
+  // handled above, and the case handled below) are guaranteed to have a bit
+  // pattern of all zeros.
+  mlir::Value zero = builder.getNullValue(builder.getUInt8Ty(), loc);
+  mlir::Value sizeValue =
+      builder.getConstAPInt(loc, cgm.uInt64Ty, sizeVal.getValue());
+  destPtr = destPtr.withElementType(builder, cgm.voidTy);
+  builder.createMemSet(loc, destPtr, zero, sizeValue);
 }
 
 CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &cgf,
@@ -1541,7 +1567,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   baseType = eltType;
 
   mlir::Value numElements =
-      builder.getConstInt(*currSrcLoc, sizeTy, countFromCLAs);
+      builder.getConstInt(getLoc(*currSrcLoc), sizeTy, countFromCLAs);
 
   // If we had any VLA dimensions, factor them in.
   if (numVLAElements)

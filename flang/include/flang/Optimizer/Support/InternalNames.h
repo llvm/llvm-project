@@ -195,6 +195,12 @@ struct NameUniquer {
   /// symbol generated for derived type description).
   static bool isSpecialSymbol(llvm::StringRef name);
 
+  /// Returns true if the passed name denotes a compiler generated name.
+  /// If \p excludeStringLiterals is true, string literals are excluded from the
+  /// check.
+  static bool isCompilerGenerated(llvm::StringRef name,
+                                  bool excludeStringLiterals = true);
+
 private:
   static std::string intAsString(std::int64_t i);
   static std::string doKind(std::int64_t kind);

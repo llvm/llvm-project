@@ -207,12 +207,17 @@ private:
   xegpu::LayoutKind layoutKind;
   unsigned indexBitWidth;
 
+  // The op this analysis runs on; program order is numbered within this scope
+  // only (not the enclosing module, which may be mutated concurrently by the
+  // parallel pass manager running this pass on sibling gpu.modules).
+  Operation *scopeRoot = nullptr;
+
   // Program-order index of every op, built lazily on first use via a pre-order
-  // walk of the top-level module/function (matching printed-IR order). Used to
-  // tell which consumer of a value is nearer to its producer.
+  // walk of `scopeRoot` (matching printed-IR order). Used to tell which
+  // consumer of a value is nearer to its producer.
   DenseMap<Operation *, int64_t> programOrder;
   // Returns the program-order index of `op`, populating `programOrder` from
-  // `op`'s top-level ancestor on first call.
+  // `scopeRoot` on first call.
   int64_t getProgramOrder(Operation *op);
 
   int64_t currentProgramOrder = std::numeric_limits<int64_t>::max();
@@ -323,9 +328,11 @@ public:
 
   LayoutInfoPropagation(DataFlowSolver &solver,
                         SymbolTableCollection &symbolTable,
-                        xegpu::LayoutKind layoutKind, unsigned indexBitWidth)
+                        xegpu::LayoutKind layoutKind, unsigned indexBitWidth,
+                        Operation *scopeRoot)
       : SparseBackwardDataFlowAnalysis(solver, symbolTable),
-        layoutKind(layoutKind), indexBitWidth(indexBitWidth) {}
+        layoutKind(layoutKind), indexBitWidth(indexBitWidth),
+        scopeRoot(scopeRoot) {}
   using SparseBackwardDataFlowAnalysis::SparseBackwardDataFlowAnalysis;
 
   LogicalResult
@@ -355,15 +362,14 @@ int64_t LayoutInfoPropagation::getProgramOrder(Operation *op) {
   auto it = programOrder.find(op);
   if (it != programOrder.end())
     return it->second;
-  // First time we see this op's tree: number every op under its top-level
-  // ancestor in pre-order (i.e. printed-IR order). Nested ops (e.g. inside an
-  // scf.for body) get an index between their parent and the parent's next
-  // sibling, so a use inside a loop is "nearer" than a use after it.
-  Operation *root = op;
-  while (root->getParentOp())
-    root = root->getParentOp();
+  // First time we number the tree: number every op under the analysis scope in
+  // pre-order (i.e. printed-IR order). Nested ops (e.g. inside an scf.for body)
+  // get an index between their parent and the parent's next sibling, so a use
+  // inside a loop is "nearer" than a use after it. Numbering is confined to
+  // `scopeRoot` (the op this pass runs on) rather than the enclosing module,
+  // which may be mutated concurrently by the parallel pass manager.
   int64_t counter = 0;
-  root->walk<WalkOrder::PreOrder>(
+  scopeRoot->walk<WalkOrder::PreOrder>(
       [&](Operation *o) { programOrder[o] = counter++; });
   return programOrder.lookup(op);
 }
@@ -1454,7 +1460,7 @@ public:
     SymbolTableCollection symbolTable;
     loadBaselineAnalyses(solver);
     analysis = solver.load<LayoutInfoPropagation>(symbolTable, layoutKind,
-                                                  indexBitWidth);
+                                                  indexBitWidth, op);
     (void)solver.initializeAndRun(op);
   }
 
@@ -1752,10 +1758,11 @@ ResolveLayoutConflicts::resolveTensorDescConsumer(OpOperand &operand) {
         conflictingCreateNdOp.getContext(), currTDescType.getShape(),
         currTDescType.getElementType(), currTDescType.getEncoding(),
         expectedLayout);
-    xegpu::CreateNdDescOp newOp = xegpu::CreateNdDescOp::create(
-        builder, consumerOp->getLoc(), newTensorDescType,
+    auto newOp = xegpu::CreateNdDescOp::create(
+        builder, consumerOp->getLoc(), TypeRange{newTensorDescType},
         conflictingCreateNdOp->getOperands(),
-        conflictingCreateNdOp->getAttrs());
+        conflictingCreateNdOp.getProperties(),
+        conflictingCreateNdOp->getDiscardableAttrDictionary().getValue());
     // Replace the tensor descriptor operand in the consumer op with the new
     // tensor descriptor.
     consumerOp->replaceUsesOfWith(tdescValue, newOp.getResult());

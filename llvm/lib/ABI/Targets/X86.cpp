@@ -53,9 +53,7 @@ static uint64_t getClangVectorWidthInBits(const VectorType *VT) {
     EltWidth = getClangIntegerWidthInBits(IT);
   uint64_t Width =
       std::max<uint64_t>(8, EltWidth * VT->getNumElements().getKnownMinValue());
-  if (Width & (Width - 1))
-    Width = llvm::alignTo(Width, llvm::bit_ceil(Width));
-  return Width;
+  return llvm::bit_ceil(Width);
 }
 
 // The storage-container width of a type, mirroring Clang's getTypeSize. Used on
@@ -74,7 +72,6 @@ public:
   enum Class { Integer, Sse, SseUp, X87, X87Up, ComplexX87, NoClass, Memory };
 
 private:
-  TypeBuilder &TB;
   X86AVXABILevel AVXLevel;
   bool Has64BitPointers;
 
@@ -115,7 +112,7 @@ private:
 public:
   X86_64TargetInfo(TypeBuilder &TypeBuilder, X86AVXABILevel AVXABILevel,
                    bool Has64BitPtrs, const ABICompatInfo &Compat)
-      : TargetInfo(Compat), TB(TypeBuilder), AVXLevel(AVXABILevel),
+      : TargetInfo(TypeBuilder, Compat), AVXLevel(AVXABILevel),
         Has64BitPointers(Has64BitPtrs) {}
 
   bool has64BitPointers() const { return Has64BitPointers; }
@@ -557,9 +554,12 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
       uint64_t Offset = OffsetBase + Field.OffsetInBits;
       bool BitField = Field.IsBitField;
 
-      // Ignore zero-length bit-fields. Other unnamed bit-fields are real
-      // storage and classify like named ones, matching GCC.
-      if (BitField && Field.BitFieldWidth == 0)
+      // Ignore padding bit-fields. Normally only zero-length bit-fields are
+      // padding, but under Clang 23 compatibility every unnamed bit-field is,
+      // faithfully reproducing Clang 23.
+      if (BitField && (getABICompatInfo().ClassifyUnnamedBitFields
+                           ? Field.BitFieldWidth == 0
+                           : Field.IsUnnamedBitfield))
         continue;
 
       if (Size > 128 &&
@@ -1047,9 +1047,22 @@ const Type *X86_64TargetInfo::getIntegerTypeAtOffset(const Type *ABIType,
   if (const auto *RTy = dyn_cast<RecordType>(ABIType)) {
     if (RTy->isUnion()) {
       const Type *ReducedType = reduceUnionForX8664(RTy, TB);
-      if (ReducedType)
-        return getIntegerTypeAtOffset(ReducedType, ABIOffset, SourceTy,
-                                      SourceOffset, true);
+      if (ReducedType) {
+        if (ABIOffset * 8 < ReducedType->getSizeInBits().getFixedValue())
+          return getIntegerTypeAtOffset(ReducedType, ABIOffset, SourceTy,
+                                        SourceOffset, true);
+        // The storage type stops before this offset, so size the coercion
+        // from the union itself: a byte when the rest of this eightbyte
+        // holds no data, and the union's remaining bytes otherwise.
+        if (bitsContainNoUserData(SourceTy, SourceOffset * 8 + 8,
+                                  SourceOffset * 8 + 64))
+          return TB.getIntegerType(8, Align(1), /*Signed=*/false);
+        unsigned RemainingBytes =
+            llvm::divideCeil(SourceTy->getSizeInBits().getFixedValue(), 8) -
+            SourceOffset;
+        return TB.getIntegerType(std::min(RemainingBytes, 8U) * 8, Align(1),
+                                 /*Signed=*/false);
+      }
     }
     if (const FieldInfo *Element =
             RTy->getElementContainingOffset(ABIOffset * 8)) {

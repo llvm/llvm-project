@@ -70,6 +70,7 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
                       << ".";
       continue;
     }
+
     // We have a driver that supports at least one device.
     ContextList.emplace_back(*this, Driver, DriverId);
     auto &DrvInfo = ContextList.back();
