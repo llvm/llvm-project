@@ -575,7 +575,7 @@ define amdgpu_kernel void @wg_ld_monotonic_single32(ptr addrspace(1) %p) #0 {
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_load_dword v0, v0, s[0:1] sc0
+; GFX942-NEXT:    global_load_dword v0, v0, s[0:1]
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: wg_ld_monotonic_single32:
@@ -585,7 +585,7 @@ define amdgpu_kernel void @wg_ld_monotonic_single32(ptr addrspace(1) %p) #0 {
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    global_load_dword v0, v0, s[0:1] glc
+; GFX10-NEXT:    global_load_dword v0, v0, s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: wg_ld_monotonic_single32:
@@ -595,7 +595,7 @@ define amdgpu_kernel void @wg_ld_monotonic_single32(ptr addrspace(1) %p) #0 {
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_load_b32 v0, v0, s[0:1] scope:SCOPE_SE
+; GFX12-NEXT:    global_load_b32 v0, v0, s[0:1]
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: wg_ld_monotonic_single32:
@@ -633,28 +633,48 @@ define amdgpu_kernel void @wg_ld_monotonic_single64(ptr addrspace(1) %p) #1 {
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_load_dword v0, v0, s[0:1] sc0
+; GFX942-NEXT:    global_load_dword v0, v0, s[0:1]
 ; GFX942-NEXT:    s_endpgm
 ;
-; GFX10-LABEL: wg_ld_monotonic_single64:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    global_load_dword v0, v0, s[0:1] glc
-; GFX10-NEXT:    s_endpgm
+; GFX10-W32-LABEL: wg_ld_monotonic_single64:
+; GFX10-W32:       ; %bb.0:
+; GFX10-W32-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-W32-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-W32-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-W32-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-W32-NEXT:    global_load_dword v0, v0, s[0:1] glc
+; GFX10-W32-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: wg_ld_monotonic_single64:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX12-NEXT:    v_mov_b32_e32 v0, 0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_load_b32 v0, v0, s[0:1] scope:SCOPE_SE
-; GFX12-NEXT:    s_endpgm
+; GFX10-W64-LABEL: wg_ld_monotonic_single64:
+; GFX10-W64:       ; %bb.0:
+; GFX10-W64-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-W64-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-W64-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-W64-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-W64-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-W64-NEXT:    global_load_dword v0, v0, s[0:1]
+; GFX10-W64-NEXT:    s_endpgm
+;
+; GFX12-W32-LABEL: wg_ld_monotonic_single64:
+; GFX12-W32:       ; %bb.0:
+; GFX12-W32-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX12-W32-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W32-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX12-W32-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-W32-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W32-NEXT:    global_load_b32 v0, v0, s[0:1] scope:SCOPE_SE
+; GFX12-W32-NEXT:    s_endpgm
+;
+; GFX12-W64-LABEL: wg_ld_monotonic_single64:
+; GFX12-W64:       ; %bb.0:
+; GFX12-W64-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX12-W64-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W64-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX12-W64-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-W64-NEXT:    s_wait_kmcnt 0x0
+; GFX12-W64-NEXT:    global_load_b32 v0, v0, s[0:1]
+; GFX12-W64-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: wg_ld_monotonic_single64:
 ; GFX1250:       ; %bb.0:
@@ -1155,7 +1175,7 @@ define amdgpu_kernel void @wg_st_monotonic_single32(ptr addrspace(1) %p, i32 %x)
 ; GFX942-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b32_e32 v1, s2
-; GFX942-NEXT:    global_store_dword v0, v1, s[0:1] sc0
+; GFX942-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: wg_st_monotonic_single32:
@@ -1183,7 +1203,7 @@ define amdgpu_kernel void @wg_st_monotonic_single32(ptr addrspace(1) %p, i32 %x)
 ; GFX12-NEXT:    s_load_b32 s2, s[4:5], 0x2c
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s2
-; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: wg_st_monotonic_single32:
@@ -1687,7 +1707,7 @@ define amdgpu_kernel void @wg_rmw_add_monotonic_single32(ptr addrspace(1) %p) #0
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 7
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_atomic_add_u32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX12-NEXT:    global_atomic_add_u32 v0, v1, s[0:1]
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: wg_rmw_add_monotonic_single32:
@@ -2291,7 +2311,7 @@ define amdgpu_kernel void @wg_cmpxchg_monotonic_monotonic_single32(ptr addrspace
 ; GFX12-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX12-NEXT:    v_mov_b32_e32 v2, v3
-; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1] scope:SCOPE_SE
+; GFX12-NEXT:    global_atomic_cmpswap_b32 v0, v[1:2], s[0:1]
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX1250-LABEL: wg_cmpxchg_monotonic_monotonic_single32:
