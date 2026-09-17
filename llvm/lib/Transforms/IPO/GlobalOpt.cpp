@@ -587,6 +587,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
         GV->getThreadLocalMode(), GV->getAddressSpace());
     // Start out by copying attributes from the original, including alignment.
     NGV->copyAttributesFrom(GV);
+    NGV->setComdat(GV->getComdat());
     NewGlobals.insert({OffsetForTy, NGV});
 
     // Calculate the known alignment of the field.  If the original aggregate
@@ -656,7 +657,25 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   ++NumSRA;
 
   assert(NewGlobals.size() > 0);
-  return NewGlobals.begin()->second;
+
+  auto *FirstNewGV = NewGlobals.begin()->second;
+
+  // For COFF, the comdat must contain a member which has the
+  // same name as the group.
+  if (auto *C = FirstNewGV->getComdat()) {
+    Type *GlobalType = ArrayType::get(Type::getInt8Ty(GV->getContext()),
+                                    0);
+    auto *DummyGV = new GlobalVariable(
+        *FirstNewGV->getParent(), GlobalType,
+        false, FirstNewGV->getLinkage(),
+        UndefValue::get(GlobalType), C->getName(),
+        FirstNewGV, FirstNewGV->getThreadLocalMode(),
+        FirstNewGV->getAddressSpace());
+    DummyGV->setComdat(C);
+    DummyGV->copyAttributesFrom(FirstNewGV);
+  }
+
+  return FirstNewGV;
 }
 
 /// Return true if all users of the specified value will trap if the value is
@@ -1514,6 +1533,17 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
       // Delete any stores we can find to the global.  We may not be able to
       // make it completely dead though.
       Changed = CleanupConstantGlobalUsers(GV, DL);
+    }
+
+    // For COFF, the Comdat leader must be preserved.
+    if (auto *C = GV->getComdat()) {
+      auto IsComdatLeaderWithUses =
+          C->getName() == GV->getName() && C->getUsers().size() > 1;
+      if (IsComdatLeaderWithUses) {
+        LLVM_DEBUG(dbgs() << "GLOBAL IS COMDAT LEADER WITH USES: " << *GV
+                          << "\n");
+        return Changed;
+      }
     }
 
     // If the global is dead now, delete it.
