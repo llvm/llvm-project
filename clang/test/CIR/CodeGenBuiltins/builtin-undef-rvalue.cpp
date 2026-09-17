@@ -3,11 +3,11 @@
 
 typedef int v4si __attribute__((vector_size(16)));
 
-int test_builtin_reduce_add_undef_rvalue(v4si x) {
-  // expected-error@+1 {{unimplemented builtin call: __builtin_reduce_add}}
-  return __builtin_reduce_add(x);
+int test_builtin_reduce_max_undef_rvalue(v4si x) {
+  // expected-error@+1 {{unimplemented builtin call: __builtin_reduce_max}}
+  return __builtin_reduce_max(x);
 }
 
-// CIR-LABEL: @_Z36test_builtin_reduce_add_undef_rvalueDv4_i
+// CIR-LABEL: @_Z36test_builtin_reduce_max_undef_rvalueDv4_i
 // CIR:         cir.const #cir.undef : !s32i
 // CIR:         cir.return

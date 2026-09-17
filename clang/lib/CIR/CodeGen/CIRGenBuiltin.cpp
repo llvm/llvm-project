@@ -2141,9 +2141,17 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_elementwise_minimumnum:
   case Builtin::BI__builtin_reduce_max:
   case Builtin::BI__builtin_reduce_min:
-  case Builtin::BI__builtin_reduce_add:
-  case Builtin::BI__builtin_reduce_mul:
     return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_reduce_add:
+    return emitBuiltinWithOneOverloadedType<1>(
+        e, "vector.reduce.add",
+        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
+            .getElementType());
+  case Builtin::BI__builtin_reduce_mul:
+    return emitBuiltinWithOneOverloadedType<1>(
+        e, "vector.reduce.mul",
+        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
+            .getElementType());
   case Builtin::BI__builtin_reduce_xor:
     return emitBuiltinWithOneOverloadedType<1>(
         e, "vector.reduce.xor",
