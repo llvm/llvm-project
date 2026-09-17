@@ -324,7 +324,7 @@ public:
     // We skip function template definitions, as their semantics is
     // only determined when they are instantiated.
     if (FD->isThisDeclarationADefinition() &&
-        !FD->isDependentContext()) {
+        !FD->isDependentContext() && FD->hasBody()) {
       assert(RecVisitorMode == AM_Syntax || Mgr->shouldInlineCall() == false);
       HandleCode(FD, RecVisitorMode);
     }
@@ -340,7 +340,7 @@ public:
   }
 
   bool VisitBlockDecl(BlockDecl *BD) override {
-    if (BD->hasBody()) {
+    if (BD->getBody()) {
       assert(RecVisitorMode == AM_Syntax || Mgr->shouldInlineCall() == false);
       // Since we skip function template definitions, we should skip blocks
       // declared in those functions as well.
@@ -525,8 +525,11 @@ void AnalysisConsumer::HandleDeclsCallGraph(const unsigned LocalTUDeclsSize) {
     // Analyze the function.
     SetOfConstDecls VisitedCallees;
 
-    HandleCode(D, AM_Path, getInliningModeForFunction(D, Visited),
-               (Mgr->options.InliningMode == All ? nullptr : &VisitedCallees));
+    if (D->getBody()) {
+      HandleCode(
+          D, AM_Path, getInliningModeForFunction(D, Visited),
+          (Mgr->options.InliningMode == All ? nullptr : &VisitedCallees));
+    }
 
     // Add the visited callees to the global visited set.
     for (const Decl *Callee : VisitedCallees)
@@ -719,8 +722,7 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
                                   SetOfConstDecls *VisitedCallees) {
   llvm::TimeTraceScope TCS(timeTraceScopeDeclName("HandleCode", D),
                            [D]() { return timeTraceScopeDeclMetadata(D); });
-  if (!D->hasBody())
-    return;
+  assert(D->getBody());
   Mode = getModeForDecl(D, Mode);
   if (Mode == AM_None)
     return;

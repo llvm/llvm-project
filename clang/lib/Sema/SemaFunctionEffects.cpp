@@ -1479,10 +1479,9 @@ void Sema::diagnoseFunctionEffectMergeConflicts(
 // Decl should be a FunctionDecl or BlockDecl.
 void Sema::maybeAddDeclWithEffects(const Decl *D,
                                    const FunctionEffectsRef &FX) {
-  if (!D->hasBody()) {
-    if (const auto *FD = D->getAsFunction(); FD && !FD->willHaveBody())
-      return;
-  }
+  if (const auto *FD = D->getAsFunction();
+      FD && !FD->hasBody() && !FD->willHaveBody())
+    return;
 
   if (Diags.getIgnoreAllWarnings() ||
       (Diags.getSuppressSystemWarnings() &&

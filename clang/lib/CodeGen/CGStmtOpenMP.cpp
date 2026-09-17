@@ -532,7 +532,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     llvm::Value *&CXXThisValue, const FunctionOptions &FO) {
   const CapturedDecl *CD = FO.S->getCapturedDecl();
   const RecordDecl *RD = FO.S->getCapturedRecordDecl();
-  assert(CD->hasBody() && "missing CapturedDecl body");
+  assert(CD->getBody() && "missing CapturedDecl body");
 
   CXXThisValue = nullptr;
   // Build the argument list.

@@ -518,7 +518,7 @@ static void removePopUpNotes(PathPieces &Path) {
 /// the analyzer or by the compiler proper.
 static bool hasImplicitBody(const Decl *D) {
   assert(D);
-  return D->isImplicit() || !D->hasBody();
+  return D->isImplicit() || !D->getBody();
 }
 
 /// Recursively scan through a path and make sure that all call pieces have
@@ -1167,7 +1167,7 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
       // Objective-C. No need for a similar extra check for CallExit points
       // because the exit edge comes from a statement (i.e. return),
       // not from declaration.
-      if (D->hasBody())
+      if (D->getBody())
         addEdgeToPath(C.getActivePath(), PrevLoc,
                       PathDiagnosticLocation::createBegin(D, SM));
     }
