@@ -21,6 +21,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetOptions.h"
@@ -1414,6 +1415,12 @@ public:
   /// tuning.
   virtual bool isValidTuneCPUName(StringRef Name) const {
     return isValidCPUName(Name);
+  }
+
+  /// Returns an OffloadArch if targeting an offload device, otherwise return
+  /// Unused.
+  virtual OffloadArch getOffloadArch() const {
+    return OffloadArch::getUnused();
   }
 
   virtual ParsedTargetAttr parseTargetAttr(StringRef Str) const;

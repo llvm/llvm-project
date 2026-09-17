@@ -1505,6 +1505,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   // SYCL device compiler which doesn't produce host binary.
   if (LangOpts.SYCLIsDevice) {
     Builder.defineMacro("__SYCL_DEVICE_ONLY__", "1");
+    if (OffloadArch Arch = TI.getOffloadArch(); !Arch.isUnknownOrUnused()) {
+      // TODO some sort of function to process -target-cpu
+    }
   }
 
   // OpenCL definitions.
