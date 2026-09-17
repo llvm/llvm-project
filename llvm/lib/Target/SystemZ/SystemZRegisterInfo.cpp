@@ -55,7 +55,7 @@ static const TargetRegisterClass *getRC32(MachineOperand &MO,
 // registers are copy hints (and therefore already in Hints), hint them
 // first.
 static void addHints(ArrayRef<MCPhysReg> Order,
-                     SmallVectorImpl<MCPhysReg> &Hints,
+                     SmallSetVectorImpl<MCPhysReg> &Hints,
                      const TargetRegisterClass *RC,
                      const MachineRegisterInfo *MRI) {
   SmallSet<unsigned, 4> CopyHints(llvm::from_range, Hints);
@@ -63,16 +63,16 @@ static void addHints(ArrayRef<MCPhysReg> Order,
   for (MCPhysReg Reg : Order)
     if (CopyHints.count(Reg) &&
         RC->contains(Reg) && !MRI->isReserved(Reg))
-      Hints.push_back(Reg);
+      Hints.insert(Reg);
   for (MCPhysReg Reg : Order)
     if (!CopyHints.count(Reg) &&
         RC->contains(Reg) && !MRI->isReserved(Reg))
-      Hints.push_back(Reg);
+      Hints.insert(Reg);
 }
 
 bool SystemZRegisterInfo::getRegAllocationHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
-    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    SmallSetVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
   const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();
@@ -114,7 +114,7 @@ bool SystemZRegisterInfo::getRegAllocationHints(
             if (VRRegMO->getSubReg())
               PhysReg = getMatchingSuperReg(PhysReg, VRRegMO->getSubReg(),
                                             MRI->getRegClass(VirtReg));
-            if (!MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
+            if (!MRI->isReserved(PhysReg) && !Hints.contains(PhysReg))
               TwoAddrHints.insert(PhysReg);
           }
         };
@@ -124,7 +124,7 @@ bool SystemZRegisterInfo::getRegAllocationHints(
       }
     for (MCPhysReg OrderReg : Order)
       if (TwoAddrHints.count(OrderReg))
-        Hints.push_back(OrderReg);
+        Hints.insert(OrderReg);
   }
 
   if (MRI->getRegClass(VirtReg) == &SystemZ::GRX32BitRegClass) {

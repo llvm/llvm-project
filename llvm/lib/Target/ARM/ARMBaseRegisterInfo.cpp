@@ -358,7 +358,7 @@ static MCRegister getPairedGPR(MCRegister Reg, bool Odd,
 // Resolve the RegPairEven / RegPairOdd register allocator hints.
 bool ARMBaseRegisterInfo::getRegAllocationHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
-    SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    SmallSetVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   std::pair<unsigned, Register> Hint = MRI.getRegAllocationHint(VirtReg);
@@ -374,7 +374,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
   case ARMRI::RegLR:
     TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
     if (MRI.getRegClass(VirtReg)->contains(ARM::LR))
-      Hints.push_back(ARM::LR);
+      Hints.insert(ARM::LR);
     return false;
   default:
     return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
@@ -396,7 +396,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
 
   // First prefer the paired physreg.
   if (PairedPhys && is_contained(Order, PairedPhys))
-    Hints.push_back(PairedPhys);
+    Hints.insert(PairedPhys);
 
   // Then prefer even or odd registers.
   for (MCPhysReg Reg : Order) {
@@ -406,7 +406,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
     MCRegister Paired = getPairedGPR(Reg, !Odd, this);
     if (!Paired || MRI.isReserved(Paired))
       continue;
-    Hints.push_back(Reg);
+    Hints.insert(Reg);
   }
   return false;
 }

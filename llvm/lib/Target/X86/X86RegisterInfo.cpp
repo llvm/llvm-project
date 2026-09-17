@@ -1163,12 +1163,10 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   }
 }
 
-bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
-                                            ArrayRef<MCPhysReg> Order,
-                                            SmallVectorImpl<MCPhysReg> &Hints,
-                                            const MachineFunction &MF,
-                                            const VirtRegMap *VRM,
-                                            const LiveRegMatrix *Matrix) const {
+bool X86RegisterInfo::getRegAllocationHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallSetVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
   bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
@@ -1192,7 +1190,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
     auto TryAddNDDHint = [&](const MachineOperand &MO) {
       Register Reg = MO.getReg();
       Register PhysReg = Reg.isPhysical() ? Reg : Register(VRM->getPhys(Reg));
-      if (PhysReg && !MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
+      if (PhysReg && !MRI->isReserved(PhysReg) && !Hints.contains(PhysReg))
         TwoAddrHints.insert(PhysReg);
     };
 
@@ -1219,7 +1217,7 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
 
     for (MCPhysReg OrderReg : Order)
       if (TwoAddrHints.count(OrderReg))
-        Hints.push_back(OrderReg);
+        Hints.insert(OrderReg);
 
     return BaseImplRetVal;
   }
@@ -1228,22 +1226,22 @@ bool X86RegisterInfo::getRegAllocationHints(Register VirtReg,
   auto AddHint = [&](MCPhysReg PhysReg) {
     Register VReg = Matrix->getOneVReg(PhysReg);
     if (VReg == MCRegister::NoRegister) { // Not allocated yet
-      Hints.push_back(PhysReg);
+      Hints.insert(PhysReg);
       return;
     }
     ShapeT PhysShape = getTileShape(VReg, const_cast<VirtRegMap *>(VRM), MRI);
     if (PhysShape == VirtShape)
-      Hints.push_back(PhysReg);
+      Hints.insert(PhysReg);
   };
 
-  SmallSet<MCPhysReg, 4> CopyHints(llvm::from_range, Hints);
+  SmallSetVector<MCPhysReg, 4> CopyHints(Hints);
   Hints.clear();
   for (auto Hint : CopyHints) {
     if (RC.contains(Hint) && !MRI->isReserved(Hint))
       AddHint(Hint);
   }
   for (MCPhysReg PhysReg : Order) {
-    if (!CopyHints.count(PhysReg) && RC.contains(PhysReg) &&
+    if (!CopyHints.contains(PhysReg) && RC.contains(PhysReg) &&
         !MRI->isReserved(PhysReg))
       AddHint(PhysReg);
   }

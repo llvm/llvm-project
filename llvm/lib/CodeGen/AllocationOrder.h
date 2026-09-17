@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Register.h"
 
@@ -28,7 +29,7 @@ class VirtRegMap;
 class LiveRegMatrix;
 
 class LLVM_LIBRARY_VISIBILITY AllocationOrder {
-  const SmallVector<MCPhysReg, 16> Hints;
+  const SmallSetVector<MCPhysReg, 32> Hints;
   ArrayRef<MCPhysReg> Order;
   // How far into the Order we can iterate. This is 0 if the AllocationOrder is
   // constructed with HardHints = true, Order.size() otherwise. While
@@ -87,8 +88,8 @@ public:
 
   /// Create an AllocationOrder given the Hints, Order, and HardHints values.
   /// Use the create method above - the ctor is for unittests.
-  AllocationOrder(SmallVector<MCPhysReg, 16> &&Hints, ArrayRef<MCPhysReg> Order,
-                  bool HardHints)
+  AllocationOrder(SmallSetVectorImpl<MCPhysReg> &&Hints,
+                  ArrayRef<MCPhysReg> Order, bool HardHints)
       : Hints(std::move(Hints)), Order(Order),
         IterationLimit(HardHints ? 0 : static_cast<int>(Order.size())) {}
 
@@ -115,7 +116,7 @@ public:
     assert(!Reg.isPhysical() ||
            Reg.id() <
                static_cast<uint32_t>(std::numeric_limits<MCPhysReg>::max()));
-    return Reg.isPhysical() && is_contained(Hints, Reg.id());
+    return Reg.isPhysical() && Hints.contains(Reg.id());
   }
 };
 

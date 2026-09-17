@@ -138,7 +138,7 @@ public:
                                MachineFunction &MF) const override;
 
   bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                             SmallVectorImpl<MCPhysReg> &Hints,
+                             SmallSetVectorImpl<MCPhysReg> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
