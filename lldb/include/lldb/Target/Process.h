@@ -3661,8 +3661,7 @@ protected:
   void RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
                                          uint8_t *buf) const;
 
-  /// Cache memory the process supplied on its own, not in reply to a read, so
-  /// it gets the breakpoint opcode substitution a read reply already gets.
+  /// Cache memory and substitute the breakpoint opcode in it.
   void AddCacheData(lldb::addr_t addr,
                     const lldb::WritableDataBufferSP &data_buffer_sp);
 
