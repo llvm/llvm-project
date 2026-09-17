@@ -5406,8 +5406,12 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection,
 
     // Create a new entry for this function.
     FunctionCallGraphInfo CGInfo;
-    CGInfo.Entry.AddrOrOffset = IsETREL ? FuncAddrOffset : FuncAddr;
-    CGInfo.Entry.InBandAddend = static_cast<SignedAddrT>(FuncAddr);
+    if (IsETREL) {
+      CGInfo.Entry.AddrOrOffset = FuncAddrOffset;
+      CGInfo.Entry.InBandAddend = static_cast<SignedAddrT>(FuncAddr);
+    } else {
+      CGInfo.Entry.AddrOrOffset = FuncAddr;
+    }
     CGInfo.FormatVersionNumber = FormatVersionNumber;
     bool IsIndirectTarget =
         (CGFlags & callgraph::IsIndirectTarget) != callgraph::None;
@@ -5445,8 +5449,12 @@ ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection,
           return {};
         }
         CallGraphFunc CalleeTarget;
-        CalleeTarget.AddrOrOffset = IsETREL ? CalleeOffset : Callee;
-        CalleeTarget.InBandAddend = static_cast<SignedAddrT>(Callee);
+        if (IsETREL) {
+          CalleeTarget.AddrOrOffset = CalleeOffset;
+          CalleeTarget.InBandAddend = static_cast<SignedAddrT>(Callee);
+        } else {
+          CalleeTarget.AddrOrOffset = Callee;
+        }
         if (!llvm::is_contained(CGInfo.DirectCallees, CalleeTarget))
           CGInfo.DirectCallees.push_back(CalleeTarget);
       }
