@@ -38,8 +38,7 @@ extern "C" long double do_pre_inc(long double d) {
   // CIR: cir.return %[[LOAD_RET]] : !cir.long_double<![[LDTY]]>
   //
   // LLVM: %[[ARG_LOAD:.*]] = load [[LDTY]], ptr %[[ARG_ALLOCA]]
-  // LLVMCIR: %[[ARG_INC:.*]] = fadd [[LDTY]] %[[ARG_LOAD]], 1.000000e+00
-  // OGCG: %[[ARG_INC:.*]] = fadd [[LDTY]] %[[ARG_LOAD]], 1.000000e+00
+  // LLVM: %[[ARG_INC:.*]] = fadd [[LDTY]] %[[ARG_LOAD]], 1.000000e+00
   // LLVM: store [[LDTY]] %[[ARG_INC]], ptr %[[ARG_ALLOCA]]
   // LLVMCIR: store [[LDTY]] %[[ARG_INC]], ptr %[[RET_ALLOCA]]
   // LLVMCIR: %[[LOAD_RET:.*]] = load [[LDTY]], ptr %[[RET_ALLOCA]]
@@ -65,8 +64,7 @@ extern "C" long double do_post_inc(long double d) {
   // CIR: cir.return %[[LOAD_RET]] : !cir.long_double<![[LDTY]]>
   //
   // LLVM: %[[ARG_LOAD:.*]] = load [[LDTY]], ptr %[[ARG_ALLOCA]]
-  // LLVMCIR: %[[ARG_INC:.*]] = fadd [[LDTY]] %[[ARG_LOAD]], 1.000000e+00
-  // OGCG: %[[ARG_INC:.*]] = fadd [[LDTY]] %[[ARG_LOAD]], 1.000000e+00
+  // LLVM: %[[ARG_INC:.*]] = fadd [[LDTY]] %[[ARG_LOAD]], 1.000000e+00
   // LLVM: store [[LDTY]] %[[ARG_INC]], ptr %[[ARG_ALLOCA]]
   // LLVMCIR: store [[LDTY]] %[[ARG_LOAD]], ptr %[[RET_ALLOCA]]
   // LLVMCIR: %[[LOAD_RET:.*]] = load [[LDTY]], ptr %[[RET_ALLOCA]]
