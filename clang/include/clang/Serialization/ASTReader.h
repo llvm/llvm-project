@@ -1454,6 +1454,9 @@ public:
   serialization::InputFileLoc getLoadedFileLoc(StringRef Path, off_t Size);
 
 private:
+  /// An input file recorded by a loaded module file. \c Size is the size
+  /// recorded by the module, and \c InputID is the file's ID within the
+  /// module's input file table.
   struct LoadedInputModuleFile {
     off_t Size;
     ModuleFile *F;
