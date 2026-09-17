@@ -217,6 +217,10 @@ int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
 
     int open_flags = map_c_mode_flags_to_linux_open_flags(file_mode);
 
+    // Prevent the temporary descriptor from being inherited across exec.
+    if (old_fd >= 0)
+      open_flags |= LinuxFileFlags::CLOSE_ON_EXEC;
+
     ErrorOr<int> new_fd =
         linux_syscalls::open(path, open_flags, LinuxFileFlags::OPEN_MODE);
 
