@@ -548,11 +548,17 @@ defm : Zn4WriteResInt<WriteVecMaskedGatherWriteback, [], !add(Znver4Model.LoadLa
 // total.
 //
 // Three entries widen their few FP1/FP2 uops to FP1-3 rather than name
-// Zn4FPU12. llvm-mca's resource manager livelocks on a write that holds both
-// Zn4FPU01 and Zn4FPU12 -- partially overlapping groups that each also overlap
-// Zn4FPU123 -- though the scheduler itself handles such a write correctly.
+// Zn4FPU12, which works around a tool limitation and is not a claim about the
+// part. llvm-mca does not terminate on a write that holds both Zn4FPU01 and
+// Zn4FPU12: they share FP1 with neither containing the other, and both also
+// overlap Zn4FPU123. Its resource manager settles such an assignment with one
+// greedy pass rather than a matching, so an earlier group takes the only unit
+// a later one still needed and the instruction never becomes issuable. The
+// machine scheduler is unaffected -- llc emits identical code either way.
 // Widening by the one pipe avoids that shape and leaves every modeled
-// throughput here unchanged.
+// throughput here unchanged. Restore the measured Zn4FPU12 eligibility on
+// these three entries once llvm-mca can allocate these groups; see
+// https://github.com/llvm/llvm-project/issues/224248.
 //
 // Those occupancies alone fall short of the measured throughput, so Zn4UcodeGS
 // (declared with the other resources above) carries the fitted residual. It is
