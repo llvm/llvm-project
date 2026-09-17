@@ -668,7 +668,7 @@ define i64 @pr82271_zext_nneg(i32 %a, i32 %b){
 ; CHECK:       then:
 ; CHECK-NEXT:    [[SA:%.*]] = zext nneg i32 [[A]] to i64
 ; CHECK-NEXT:    [[SB:%.*]] = zext nneg i32 [[B]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SA]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[SA]], 1
 ; CHECK-NEXT:    ret i64 [[SB]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i64 0
@@ -697,7 +697,7 @@ define i64 @pr82271_zext(i32 %a, i32 %b){
 ; CHECK:       then:
 ; CHECK-NEXT:    [[SA:%.*]] = zext i32 [[A]] to i64
 ; CHECK-NEXT:    [[SB:%.*]] = zext i32 [[B]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SA]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[SA]], 1
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[SB]], i64 [[ADD]])
 ; CHECK-NEXT:    ret i64 [[SMAX]]
 ; CHECK:       else:

@@ -3506,8 +3506,9 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain,
       // be signed.
       const SCEV *IncExpr = SE.getNoopOrSignExtend(Inc.IncExpr, IntTy);
       Accum = SE.getAddExpr(Accum, IncExpr);
-      LeftOverExpr = LeftOverExpr ?
-        SE.getAddExpr(LeftOverExpr, IncExpr) : IncExpr;
+      LeftOverExpr = LeftOverExpr
+                         ? SE.getAddExpr(LeftOverExpr, IncExpr).getPointer()
+                         : IncExpr;
     }
 
     // Look through each base to see if any can produce a nice addressing mode.
@@ -3915,7 +3916,7 @@ static const SCEV *CollectSubexprs(const SCEV *S, const SCEVConstant *C,
     for (const SCEV *S : Add->operands()) {
       const SCEV *Remainder = CollectSubexprs(S, C, Ops, L, SE, Depth+1);
       if (Remainder)
-        Ops.push_back(C ? SE.getMulExpr(C, Remainder) : Remainder);
+        Ops.push_back(C ? SE.getMulExpr(C, Remainder).getPointer() : Remainder);
     }
     return nullptr;
   }
@@ -3932,7 +3933,7 @@ static const SCEV *CollectSubexprs(const SCEV *S, const SCEVConstant *C,
     // does not pertain to this loop.
     if (Remainder && (cast<SCEVAddRecExpr>(S)->getLoop() == L ||
                       !isa<SCEVAddRecExpr>(Remainder))) {
-      Ops.push_back(C ? SE.getMulExpr(C, Remainder) : Remainder);
+      Ops.push_back(C ? SE.getMulExpr(C, Remainder).getPointer() : Remainder);
       Remainder = nullptr;
     }
     if (Remainder != Start) {
@@ -5971,9 +5972,8 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
   }
 
   // Emit instructions summing all the operands.
-  const SCEV *FullS = Ops.empty() ?
-                      SE.getConstant(IntTy, 0) :
-                      SE.getAddExpr(Ops);
+  const SCEV *FullS =
+      Ops.empty() ? SE.getConstant(IntTy, 0) : SE.getAddExpr(Ops).getPointer();
   Value *FullV = Rewriter.expandCodeFor(FullS, Ty);
 
   // We're done expanding now, so reset the rewriter.
