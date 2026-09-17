@@ -2668,13 +2668,17 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   OS << "i" << ValTy->getScalarSizeInBits();
 
   Type *Int32Ty = B.getInt32Ty();
-  SmallVector<Type *, 4> ArgTys = {PtrTy, Int32Ty, Int32Ty, ValTy};
+  Type *BoolTy = B.getInt1Ty();
+  SmallVector<Type *, 6> ArgTys = {PtrTy,  Int32Ty, Int32Ty,
+                                   ValTy,  BoolTy,  BoolTy};
   FunctionType *FT = FunctionType::get(ValTy, ArgTys, false);
   FunctionCallee FC = M->getOrInsertFunction(FuncName, FT);
   cast<Function>(FC.getCallee())->setCallingConv(CallingConv::SPIR_FUNC);
 
-  SmallVector<Value *, 4> Args = {I.getPointerOperand(), B.getInt32(Scope),
-                                  B.getInt32(MemSem), I.getValOperand()};
+  SmallVector<Value *, 6> Args = {
+      I.getPointerOperand(), B.getInt32(Scope),      B.getInt32(MemSem),
+      I.getValOperand(),     B.getInt1(I.isVolatile()),
+      B.getInt1(I.isElementwise())};
   CallInst *CI = B.CreateCall(FC, Args);
   CI->setCallingConv(CallingConv::SPIR_FUNC);
   // SPIRVCallLowering reads alias.scope/noalias off the call to build the
