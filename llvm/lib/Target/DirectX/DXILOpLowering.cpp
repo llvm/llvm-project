@@ -1156,12 +1156,12 @@ public:
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
       Value *Coord0 = CI->getArgOperand(1);
       Value *Coord1 = CI->getArgOperand(2);
-      Value *CompareValue = CI->getArgOperand(3);
-      Value *NewValue = CI->getArgOperand(4);
+      Value *Coord2 = CI->getArgOperand(3);
+      Value *CompareValue = CI->getArgOperand(4);
+      Value *NewValue = CI->getArgOperand(5);
 
-      std::array<Value *, 6> Args{
-          Handle,       Coord0,  Coord1, ConstantInt::get(IRB.getInt32Ty(), 0),
-          CompareValue, NewValue};
+      std::array<Value *, 6> Args{Handle, Coord0,       Coord1,
+                                  Coord2, CompareValue, NewValue};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(dxil::OpCode::AtomicCompareExchange, Args,
                                 CI->getName(), CI->getType());

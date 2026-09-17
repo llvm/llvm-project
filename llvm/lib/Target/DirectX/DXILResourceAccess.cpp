@@ -354,6 +354,23 @@ getAtomicResourceCoords(IntrinsicInst *II, Value *PointerOperand,
   return {Index, Offset};
 }
 
+// The coordinates of a texture access are a scalar or a vector with one element
+// per texture dimension, including the array slice if there is one. These map
+// directly onto the coordinate operands of the atomic ops.
+static SmallVector<Value *, 3> getTextureAtomicCoords(IntrinsicInst *II,
+                                                      IRBuilder<> &Builder) {
+  Value *Coords = II->getOperand(1);
+  SmallVector<Value *, 3> CoordArgs;
+  if (auto *VecTy = dyn_cast<FixedVectorType>(Coords->getType())) {
+    assert(VecTy->getNumElements() <= 3 && "Too many texture coordinates");
+    for (unsigned I = 0, E = VecTy->getNumElements(); I != E; ++I)
+      CoordArgs.push_back(Builder.CreateExtractElement(Coords, I));
+  } else {
+    CoordArgs.push_back(Coords);
+  }
+  return CoordArgs;
+}
+
 static void emitAtomicBinOp(IRBuilder<> &Builder, AtomicRMWInst *AI,
                             Value *Handle, ArrayRef<Value *> Coords) {
   assert(!Coords.empty() && Coords.size() <= 3 &&
@@ -402,36 +419,28 @@ static void createTextureAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
 
   IRBuilder<> Builder(AI);
 
-  // The coordinates of a texture access are a scalar or a vector with one
-  // element per texture dimension, including the array slice if there is one.
-  // These map directly onto the coordinate operands of the atomic op.
-  Value *Coords = II->getOperand(1);
-  SmallVector<Value *, 3> CoordArgs;
-  if (auto *VecTy = dyn_cast<FixedVectorType>(Coords->getType())) {
-    assert(VecTy->getNumElements() <= 3 && "Too many texture coordinates");
-    for (unsigned I = 0, E = VecTy->getNumElements(); I != E; ++I)
-      CoordArgs.push_back(Builder.CreateExtractElement(Coords, I));
-  } else {
-    CoordArgs.push_back(Coords);
-  }
-
-  emitAtomicBinOp(Builder, AI, II->getOperand(0), CoordArgs);
+  emitAtomicBinOp(Builder, AI, II->getOperand(0),
+                  getTextureAtomicCoords(II, Builder));
 }
 
-static void createBufferAtomicCompareExchange(IntrinsicInst *II,
-                                              AtomicCmpXchgInst *AI,
-                                              dxil::ResourceTypeInfo &RTI) {
-  const DataLayout &DL = AI->getDataLayout();
-  IRBuilder<> Builder(AI);
-  auto [Index, Offset] =
-      getAtomicResourceCoords(II, AI->getPointerOperand(), RTI, Builder, DL);
+static void emitAtomicCompareExchange(IRBuilder<> &Builder,
+                                      AtomicCmpXchgInst *AI, Value *Handle,
+                                      ArrayRef<Value *> Coords) {
+  assert(!Coords.empty() && Coords.size() <= 3 &&
+         "Atomic operations take between one and three coordinates");
 
   Value *Compare = AI->getCompareOperand();
   Value *NewValue = AI->getNewValOperand();
 
+  SmallVector<Value *, 6> Args{Handle};
+  append_range(Args, Coords);
+  Args.append(3 - Coords.size(), PoisonValue::get(Builder.getInt32Ty()));
+  Args.push_back(Compare);
+  Args.push_back(NewValue);
+
   Value *Original = Builder.CreateIntrinsic(
       NewValue->getType(), Intrinsic::dx_resource_atomic_compare_exchange,
-      {II->getOperand(0), Index, Offset, Compare, NewValue});
+      Args);
 
   // `cmpxchg` yields a { original, success } pair, but the DXIL op returns
   // only the original value. Recover the success flag by comparing the
@@ -442,6 +451,27 @@ static void createBufferAtomicCompareExchange(IntrinsicInst *II,
   Result = Builder.CreateInsertValue(Result, Success, 1);
 
   AI->replaceAllUsesWith(Result);
+}
+
+static void createBufferAtomicCompareExchange(IntrinsicInst *II,
+                                              AtomicCmpXchgInst *AI,
+                                              dxil::ResourceTypeInfo &RTI) {
+  const DataLayout &DL = AI->getDataLayout();
+  IRBuilder<> Builder(AI);
+  auto [Index, Offset] =
+      getAtomicResourceCoords(II, AI->getPointerOperand(), RTI, Builder, DL);
+
+  emitAtomicCompareExchange(Builder, AI, II->getOperand(0), {Index, Offset});
+}
+
+// `cmpxchg` operands are always integers, so unlike atomicrmw there is no
+// float element type to convert here.
+static void createTextureAtomicCompareExchange(IntrinsicInst *II,
+                                               AtomicCmpXchgInst *AI) {
+  IRBuilder<> Builder(AI);
+
+  emitAtomicCompareExchange(Builder, AI, II->getOperand(0),
+                            getTextureAtomicCoords(II, Builder));
 }
 
 static void createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
@@ -480,8 +510,6 @@ static void createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
   llvm_unreachable("Unhandled case in switch");
 }
 
-// DXIL has no atomic compare exchange op for textures, so only buffers reach
-// the lowering.
 static void createAtomicCompareExchangeIntrinsic(IntrinsicInst *II,
                                                  AtomicCmpXchgInst *AI,
                                                  dxil::ResourceTypeInfo &RTI) {
@@ -495,13 +523,15 @@ static void createAtomicCompareExchangeIntrinsic(IntrinsicInst *II,
   case dxil::ResourceKind::Texture3D:
   case dxil::ResourceKind::Texture1DArray:
   case dxil::ResourceKind::Texture2DArray:
+    return createTextureAtomicCompareExchange(II, AI);
   case dxil::ResourceKind::Texture2DMS:
   case dxil::ResourceKind::Texture2DMSArray:
   case dxil::ResourceKind::TextureCube:
   case dxil::ResourceKind::TextureCubeArray:
   case dxil::ResourceKind::FeedbackTexture2D:
   case dxil::ResourceKind::FeedbackTexture2DArray:
-    reportFatalUsageError("DXIL cmpxchg not implemented for texture resources");
+    reportFatalUsageError(
+        "DXIL cmpxchg not implemented for this texture resource kind");
     return;
   case dxil::ResourceKind::CBuffer:
   case dxil::ResourceKind::Sampler:
