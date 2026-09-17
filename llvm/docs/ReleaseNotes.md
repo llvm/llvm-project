@@ -259,11 +259,19 @@ Makes programs 10x faster by doing Special New Thing.
 
   A narrow index only survives into the instruction if the addressing mode can
   apply the GEP's stride as a scale, and the scale field encodes 1, 2, 4 and 8.
-  Any other stride is multiplied into the index first, and the product is
-  pointer-width, so such a gather is now costed with 64-bit indices. This
-  corrects a gather over an array of structures, the form a vectorized
-  `a[idx[i]].f` takes, which was previously costed at half the instructions
-  CodeGen emits.
+  Any other stride is multiplied into the index first, and it is that product
+  which has to fit a signed dword. A dword index scaled by twelve needs 36 bits
+  and so is costed at pointer width, which corrects a gather over an array of
+  structures — the form a vectorized `a[idx[i]].f` takes — that was previously
+  costed at half the instructions CodeGen emits. A narrower index under the
+  same stride still fits, and is not forced to pointer width on that account.
+
+  Whether it then narrows depends on the subtarget. A constant index narrows by
+  being folded to its truncated form; otherwise narrowing happens only where it
+  removes an illegal type. Sixteen qword indices are illegal everywhere, but the
+  dword form they would narrow to is itself legal only once a 512-bit register
+  is available, so the same 16-lane stride-12 gather keeps qword indices on AVX2
+  and narrows to dwords on AVX-512, and is costed accordingly on each.
 
 * That index width is also taken from the address space the pointers live in,
   instead of assuming the width of address space 0. On x86 this matters for the
