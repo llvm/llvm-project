@@ -4691,20 +4691,46 @@ multiclass ExtLoad8_16_32AllModes<ValueType OutTy, ValueType InnerTy,
             (SUBREG_TO_REG (LDRSroX GPR64sp:$Rn, GPR64:$Rm, ro32.Xext:$extend), ssub)>;
 }
 
+// Load fragments that additionally match a freeze of the load.
+//
+// DAGCombiner sinks freeze below SCALAR_TO_VECTOR (freeze(stv(x)) is folded to
+// stv(freeze(x)) when only element zero is demanded, and visitFREEZE pushes
+// freeze through single-use poison-propagating ops). A freeze of a load can
+// never be folded away, because the loaded value may be poison in memory, so
+// scalar_to_vector(freeze(extload)) is a common shape reaching ISel. Matching
+// it to the LDRB/LDRH/LDRS forms is safe: those instructions write a fully
+// defined value into the destination register, which is exactly what freeze
+// promises, and matching through the freeze keeps the load visible so the
+// memory operand is attached to the selected instruction.
+def zextloadi8_or_frz  : PatFrags<(ops node:$ptr),
+    [(zextloadi8 node:$ptr),  (freeze (zextloadi8 node:$ptr))]>;
+def zextloadi16_or_frz : PatFrags<(ops node:$ptr),
+    [(zextloadi16 node:$ptr), (freeze (zextloadi16 node:$ptr))]>;
+def zextloadi32_or_frz : PatFrags<(ops node:$ptr),
+    [(zextloadi32 node:$ptr), (freeze (zextloadi32 node:$ptr))]>;
+def extloadi8_or_frz   : PatFrags<(ops node:$ptr),
+    [(extloadi8 node:$ptr),   (freeze (extloadi8 node:$ptr))]>;
+def extloadi16_or_frz  : PatFrags<(ops node:$ptr),
+    [(extloadi16 node:$ptr),  (freeze (extloadi16 node:$ptr))]>;
+def extloadi32_or_frz  : PatFrags<(ops node:$ptr),
+    [(extloadi32 node:$ptr),  (freeze (extloadi32 node:$ptr))]>;
+
 // Instantiate bitconvert patterns for floating-point types.
 
 defm : ExtLoad8_16AllModes<f32, i32, bitconvert, zextloadi8, zextloadi16>;
 defm : ExtLoad8_16_32AllModes<f64, i64, bitconvert, zextloadi8, zextloadi16, zextloadi32>;
 
-// Instantiate scalar_to_vector patterns for all vector types.
-defm : ExtLoad8_16AllModes<v16i8, i32, scalar_to_vector, zextloadi8, zextloadi16>;
-defm : ExtLoad8_16AllModes<v16i8, i32, scalar_to_vector, extloadi8, extloadi16>;
-defm : ExtLoad8_16AllModes<v8i16, i32, scalar_to_vector, zextloadi8, zextloadi16>;
-defm : ExtLoad8_16AllModes<v8i16, i32, scalar_to_vector, extloadi8, extloadi16>;
-defm : ExtLoad8_16AllModes<v4i32, i32, scalar_to_vector_v4f32, zextloadi8, zextloadi16>;
-defm : ExtLoad8_16AllModes<v4i32, i32, scalar_to_vector_v4f32, extloadi8, extloadi16>;
-defm : ExtLoad8_16_32AllModes<v2i64, i64, scalar_to_vector_v2f64, zextloadi8, zextloadi16, zextloadi32>;
-defm : ExtLoad8_16_32AllModes<v2i64, i64, scalar_to_vector_v2f64, extloadi8, extloadi16, extloadi32>;
+// Instantiate scalar_to_vector patterns for all vector types. The frozen-load
+// variants keep the direct SIMD-register load forms selected when a freeze was
+// sunk onto the scalar operand (see *_or_frz above).
+defm : ExtLoad8_16AllModes<v16i8, i32, scalar_to_vector, zextloadi8_or_frz, zextloadi16_or_frz>;
+defm : ExtLoad8_16AllModes<v16i8, i32, scalar_to_vector, extloadi8_or_frz, extloadi16_or_frz>;
+defm : ExtLoad8_16AllModes<v8i16, i32, scalar_to_vector, zextloadi8_or_frz, zextloadi16_or_frz>;
+defm : ExtLoad8_16AllModes<v8i16, i32, scalar_to_vector, extloadi8_or_frz, extloadi16_or_frz>;
+defm : ExtLoad8_16AllModes<v4i32, i32, scalar_to_vector_v4f32, zextloadi8_or_frz, zextloadi16_or_frz>;
+defm : ExtLoad8_16AllModes<v4i32, i32, scalar_to_vector_v4f32, extloadi8_or_frz, extloadi16_or_frz>;
+defm : ExtLoad8_16_32AllModes<v2i64, i64, scalar_to_vector_v2f64, zextloadi8_or_frz, zextloadi16_or_frz, zextloadi32_or_frz>;
+defm : ExtLoad8_16_32AllModes<v2i64, i64, scalar_to_vector_v2f64, extloadi8_or_frz, extloadi16_or_frz, extloadi32_or_frz>;
 
 // Pre-fetch.
 defm PRFUM : PrefetchUnscaled<0b11, 0, 0b10, "prfum",
