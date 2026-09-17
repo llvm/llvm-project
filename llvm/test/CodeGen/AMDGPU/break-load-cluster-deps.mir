@@ -87,9 +87,9 @@ body: |
     ; GCN-LABEL: name: self_overlap_inplace_preserves_source
     ; GCN: liveins: $vgpr0_vgpr1, $sgpr0, $sgpr1, $vgpr23
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: $vgpr4 = V_ADD_CO_U32_e32 $sgpr0, $vgpr0, implicit-def $vcc, implicit $exec
-    ; GCN-NEXT: $vgpr5 = V_ADDC_U32_e32 $vgpr23, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
-    ; GCN-NEXT: renamable $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 $vgpr4_vgpr5, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = V_ADD_CO_U32_e32 $sgpr0, $vgpr0, implicit-def $vcc, implicit $exec
+    ; GCN-NEXT: renamable $vgpr1 = V_ADDC_U32_e32 $vgpr23, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0_vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX4 renamable $vgpr0_vgpr1, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     renamable $vgpr0 = V_ADD_CO_U32_e32 $sgpr0, renamable $vgpr0, implicit-def $vcc, implicit $exec
     renamable $vgpr1 = V_ADDC_U32_e32 $vgpr23, renamable $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec

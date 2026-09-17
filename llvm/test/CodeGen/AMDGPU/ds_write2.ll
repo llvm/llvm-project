@@ -321,10 +321,10 @@ define amdgpu_kernel void @simple_write2_two_val_subreg2_f32(ptr addrspace(1) %C
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, 0
-; CI-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
-; CI-NEXT:    v_mov_b32_e32 v4, 0
+; CI-NEXT:    v_lshlrev_b32_e32 v1, 3, v0
+; CI-NEXT:    v_mov_b32_e32 v2, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    buffer_load_dwordx2 v[1:2], v[3:4], s[0:3], 0 addr64
+; CI-NEXT:    buffer_load_dwordx2 v[1:2], v[1:2], s[0:3], 0 addr64
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    s_waitcnt vmcnt(0)
@@ -334,10 +334,10 @@ define amdgpu_kernel void @simple_write2_two_val_subreg2_f32(ptr addrspace(1) %C
 ; GFX9-LABEL: simple_write2_two_val_subreg2_f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
-; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 3, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 3, v0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx2 v[1:2], v3, s[0:1]
+; GFX9-NEXT:    global_load_dwordx2 v[1:2], v1, s[0:1]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_write2_b32 v0, v1, v2 offset1:8
 ; GFX9-NEXT:    s_endpgm
@@ -376,10 +376,10 @@ define amdgpu_kernel void @simple_write2_two_val_subreg4_f32(ptr addrspace(1) %C
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, 0
-; CI-NEXT:    v_lshlrev_b32_e32 v5, 4, v0
-; CI-NEXT:    v_mov_b32_e32 v6, 0
+; CI-NEXT:    v_lshlrev_b32_e32 v1, 4, v0
+; CI-NEXT:    v_mov_b32_e32 v2, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    buffer_load_dwordx4 v[1:4], v[5:6], s[0:3], 0 addr64
+; CI-NEXT:    buffer_load_dwordx4 v[1:4], v[1:2], s[0:3], 0 addr64
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    s_waitcnt vmcnt(0)
@@ -389,10 +389,10 @@ define amdgpu_kernel void @simple_write2_two_val_subreg4_f32(ptr addrspace(1) %C
 ; GFX9-LABEL: simple_write2_two_val_subreg4_f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x8
-; GFX9-NEXT:    v_lshlrev_b32_e32 v5, 4, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 4, v0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx4 v[1:4], v5, s[0:1]
+; GFX9-NEXT:    global_load_dwordx4 v[1:4], v1, s[0:1]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_write2_b32 v0, v1, v4 offset1:8
 ; GFX9-NEXT:    s_endpgm

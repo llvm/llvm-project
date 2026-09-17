@@ -198,24 +198,24 @@ main_body:
 define amdgpu_ps void @buffer_load_x2_offen_merged_or(ptr addrspace(8) inreg %rsrc, i32 %inp) {
 ; PREGFX10-LABEL: buffer_load_x2_offen_merged_or:
 ; PREGFX10:       ; %bb.0: ; %main_body
-; PREGFX10-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
-; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v4, s[0:3], 0 offen offset:4
+; PREGFX10-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
 ; PREGFX10-NEXT:    exp mrt0, v0, v1, v2, v3 done vm
 ; PREGFX10-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: buffer_load_x2_offen_merged_or:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
-; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v4, s[0:3], 0 offen offset:4
+; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    exp mrt0, v0, v1, v2, v3 done vm
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: buffer_load_x2_offen_merged_or:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
-; GFX11-NEXT:    buffer_load_b128 v[0:3], v4, s[0:3], 0 offen offset:4
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    exp mrt0, v0, v1, v2, v3 done
 ; GFX11-NEXT:    s_endpgm

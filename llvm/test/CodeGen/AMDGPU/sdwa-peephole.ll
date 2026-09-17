@@ -1644,11 +1644,11 @@ define amdgpu_kernel void @immediate_mul_v2i16(ptr addrspace(1) %out, ptr addrsp
 ; GFX9-LABEL: immediate_mul_v2i16:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v0, v1, s[2:3]
-; GFX9-NEXT:    s_mov_b32 s2, 0x141007b
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    global_load_dword v0, v0, s[2:3]
+; GFX9-NEXT:    s_mov_b32 s2, 0x141007b
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_pk_mul_lo_u16 v0, v0, s2
 ; GFX9-NEXT:    global_store_dword v1, v0, s[0:1]
@@ -1657,10 +1657,10 @@ define amdgpu_kernel void @immediate_mul_v2i16(ptr addrspace(1) %out, ptr addrsp
 ; GFX10-LABEL: immediate_mul_v2i16:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    global_load_dword v0, v1, s[2:3]
+; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    global_load_dword v0, v0, s[2:3]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_pk_mul_lo_u16 v0, 0x141007b, v0
 ; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]

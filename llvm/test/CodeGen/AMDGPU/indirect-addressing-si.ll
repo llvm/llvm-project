@@ -1754,9 +1754,9 @@ define amdgpu_kernel void @extract_undef_offset_sgpr(ptr addrspace(1) %out, ptr 
 ; GFX9-IDXMODE-LABEL: extract_undef_offset_sgpr:
 ; GFX9-IDXMODE:       ; %bb.0: ; %entry
 ; GFX9-IDXMODE-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-IDXMODE-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[0:3], v4, s[2:3] glc
+; GFX9-IDXMODE-NEXT:    global_load_dwordx4 v[0:3], v0, s[2:3] glc
 ; GFX9-IDXMODE-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-IDXMODE-NEXT:    s_endpgm
 entry:
@@ -5252,9 +5252,9 @@ define amdgpu_kernel void @extract_vgpr_offset_multiple_in_block(ptr addrspace(1
 ; VI-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s1
-; VI-NEXT:    v_add_u32_e32 v3, vcc, s0, v1
-; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v2, vcc
-; VI-NEXT:    flat_load_dword v2, v[3:4] glc
+; VI-NEXT:    v_add_u32_e32 v1, vcc, s0, v1
+; VI-NEXT:    v_addc_u32_e32 v2, vcc, 0, v2, vcc
+; VI-NEXT:    flat_load_dword v2, v[1:2] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0

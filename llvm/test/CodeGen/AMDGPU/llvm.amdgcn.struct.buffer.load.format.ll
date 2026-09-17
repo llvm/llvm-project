@@ -67,36 +67,36 @@ main_body:
 define amdgpu_ps <4 x float> @buffer_load_immoffs(<4 x i32> inreg) {
 ; GFX6-LABEL: buffer_load_immoffs:
 ; GFX6:       ; %bb.0: ; %main_body
-; GFX6-NEXT:    v_mov_b32_e32 v4, 0
-; GFX6-NEXT:    buffer_load_format_xyzw v[0:3], v4, s[0:3], 0 idxen offset:42
+; GFX6-NEXT:    v_mov_b32_e32 v0, 0
+; GFX6-NEXT:    buffer_load_format_xyzw v[0:3], v0, s[0:3], 0 idxen offset:42
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8PLUS-LABEL: buffer_load_immoffs:
 ; GFX8PLUS:       ; %bb.0: ; %main_body
-; GFX8PLUS-NEXT:    v_mov_b32_e32 v4, 0
-; GFX8PLUS-NEXT:    buffer_load_format_xyzw v[0:3], v4, s[0:3], 0 idxen offset:42
+; GFX8PLUS-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8PLUS-NEXT:    buffer_load_format_xyzw v[0:3], v0, s[0:3], 0 idxen offset:42
 ; GFX8PLUS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8PLUS-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: buffer_load_immoffs:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v4, 0
-; GFX11-NEXT:    buffer_load_format_xyzw v[0:3], v4, s[0:3], 0 idxen offset:42
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    buffer_load_format_xyzw v[0:3], v0, s[0:3], 0 idxen offset:42
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: buffer_load_immoffs:
 ; NOPRT:       ; %bb.0: ; %main_body
-; NOPRT-NEXT:    v_mov_b32_e32 v4, 0
-; NOPRT-NEXT:    buffer_load_format_xyzw v[0:3], v4, s[0:3], 0 idxen offset:42
+; NOPRT-NEXT:    v_mov_b32_e32 v0, 0
+; NOPRT-NEXT:    buffer_load_format_xyzw v[0:3], v0, s[0:3], 0 idxen offset:42
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: buffer_load_immoffs:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_mov_b32_e32 v4, 0
-; GFX12-NEXT:    buffer_load_format_xyzw v[0:3], v4, s[0:3], null idxen offset:42
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    buffer_load_format_xyzw v[0:3], v0, s[0:3], null idxen offset:42
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -248,36 +248,36 @@ main_body:
 define amdgpu_ps <4 x float> @buffer_load_voffset_large_12bit(<4 x i32> inreg) {
 ; GFX6-LABEL: buffer_load_voffset_large_12bit:
 ; GFX6:       ; %bb.0: ; %main_body
-; GFX6-NEXT:    v_mov_b32_e32 v4, 0
-; GFX6-NEXT:    buffer_load_format_xyzw v[0:3], v4, s[0:3], 0 idxen offset:4092
+; GFX6-NEXT:    v_mov_b32_e32 v0, 0
+; GFX6-NEXT:    buffer_load_format_xyzw v[0:3], v0, s[0:3], 0 idxen offset:4092
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8PLUS-LABEL: buffer_load_voffset_large_12bit:
 ; GFX8PLUS:       ; %bb.0: ; %main_body
-; GFX8PLUS-NEXT:    v_mov_b32_e32 v4, 0
-; GFX8PLUS-NEXT:    buffer_load_format_xyzw v[0:3], v4, s[0:3], 0 idxen offset:4092
+; GFX8PLUS-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8PLUS-NEXT:    buffer_load_format_xyzw v[0:3], v0, s[0:3], 0 idxen offset:4092
 ; GFX8PLUS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8PLUS-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: buffer_load_voffset_large_12bit:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v4, 0
-; GFX11-NEXT:    buffer_load_format_xyzw v[0:3], v4, s[0:3], 0 idxen offset:4092
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    buffer_load_format_xyzw v[0:3], v0, s[0:3], 0 idxen offset:4092
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: buffer_load_voffset_large_12bit:
 ; NOPRT:       ; %bb.0: ; %main_body
-; NOPRT-NEXT:    v_mov_b32_e32 v4, 0
-; NOPRT-NEXT:    buffer_load_format_xyzw v[0:3], v4, s[0:3], 0 idxen offset:4092
+; NOPRT-NEXT:    v_mov_b32_e32 v0, 0
+; NOPRT-NEXT:    buffer_load_format_xyzw v[0:3], v0, s[0:3], 0 idxen offset:4092
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: buffer_load_voffset_large_12bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_mov_b32_e32 v4, 0
-; GFX12-NEXT:    buffer_load_format_xyzw v[0:3], v4, s[0:3], null idxen offset:4092
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    buffer_load_format_xyzw v[0:3], v0, s[0:3], null idxen offset:4092
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -324,8 +324,8 @@ define amdgpu_ps <4 x float> @buffer_load_voffset_large_13bit(<4 x i32> inreg) {
 ;
 ; GFX12-LABEL: buffer_load_voffset_large_13bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_mov_b32_e32 v4, 0
-; GFX12-NEXT:    buffer_load_format_xyzw v[0:3], v4, s[0:3], null idxen offset:8188
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    buffer_load_format_xyzw v[0:3], v0, s[0:3], null idxen offset:8188
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -372,8 +372,8 @@ define amdgpu_ps <4 x float> @buffer_load_voffset_large_16bit(<4 x i32> inreg) {
 ;
 ; GFX12-LABEL: buffer_load_voffset_large_16bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_mov_b32_e32 v4, 0
-; GFX12-NEXT:    buffer_load_format_xyzw v[0:3], v4, s[0:3], null idxen offset:65532
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    buffer_load_format_xyzw v[0:3], v0, s[0:3], null idxen offset:65532
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -420,8 +420,8 @@ define amdgpu_ps <4 x float> @buffer_load_voffset_large_23bit(<4 x i32> inreg) {
 ;
 ; GFX12-LABEL: buffer_load_voffset_large_23bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_mov_b32_e32 v4, 0
-; GFX12-NEXT:    buffer_load_format_xyzw v[0:3], v4, s[0:3], null idxen offset:8388604
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    buffer_load_format_xyzw v[0:3], v0, s[0:3], null idxen offset:8388604
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -468,15 +468,15 @@ define amdgpu_ps <4 x float> @buffer_load_voffset_large_24bit(<4 x i32> inreg) {
 ;
 ; GFX12-SDAG-LABEL: buffer_load_voffset_large_24bit:
 ; GFX12-SDAG:       ; %bb.0: ; %main_body
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v5, 0x800000 :: v_dual_mov_b32 v4, 0
-; GFX12-SDAG-NEXT:    buffer_load_format_xyzw v[0:3], v[4:5], s[0:3], null idxen offen offset:8388604
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v1, 0x800000 :: v_dual_mov_b32 v0, 0
+; GFX12-SDAG-NEXT:    buffer_load_format_xyzw v[0:3], v[0:1], s[0:3], null idxen offen offset:8388604
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: buffer_load_voffset_large_24bit:
 ; GFX12-GISEL:       ; %bb.0: ; %main_body
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v5, 0x800000
-; GFX12-GISEL-NEXT:    buffer_load_format_xyzw v[0:3], v[4:5], s[0:3], null idxen offen offset:8388604
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x800000
+; GFX12-GISEL-NEXT:    buffer_load_format_xyzw v[0:3], v[0:1], s[0:3], null idxen offen offset:8388604
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
 main_body:
@@ -694,36 +694,36 @@ main_body:
 define amdgpu_ps float @buffer_load_x(<4 x i32> inreg %rsrc) {
 ; GFX6-LABEL: buffer_load_x:
 ; GFX6:       ; %bb.0: ; %main_body
-; GFX6-NEXT:    v_mov_b32_e32 v1, 0
-; GFX6-NEXT:    buffer_load_format_x v0, v1, s[0:3], 0 idxen
+; GFX6-NEXT:    v_mov_b32_e32 v0, 0
+; GFX6-NEXT:    buffer_load_format_x v0, v0, s[0:3], 0 idxen
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8PLUS-LABEL: buffer_load_x:
 ; GFX8PLUS:       ; %bb.0: ; %main_body
-; GFX8PLUS-NEXT:    v_mov_b32_e32 v1, 0
-; GFX8PLUS-NEXT:    buffer_load_format_x v0, v1, s[0:3], 0 idxen
+; GFX8PLUS-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8PLUS-NEXT:    buffer_load_format_x v0, v0, s[0:3], 0 idxen
 ; GFX8PLUS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8PLUS-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: buffer_load_x:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-NEXT:    buffer_load_format_x v0, v1, s[0:3], 0 idxen
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    buffer_load_format_x v0, v0, s[0:3], 0 idxen
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: buffer_load_x:
 ; NOPRT:       ; %bb.0: ; %main_body
-; NOPRT-NEXT:    v_mov_b32_e32 v1, 0
-; NOPRT-NEXT:    buffer_load_format_x v0, v1, s[0:3], 0 idxen
+; NOPRT-NEXT:    v_mov_b32_e32 v0, 0
+; NOPRT-NEXT:    buffer_load_format_x v0, v0, s[0:3], 0 idxen
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: buffer_load_x:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    buffer_load_format_x v0, v1, s[0:3], null idxen
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    buffer_load_format_x v0, v0, s[0:3], null idxen
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -734,36 +734,36 @@ main_body:
 define amdgpu_ps float @buffer_load_x_i32(<4 x i32> inreg %rsrc) {
 ; GFX6-LABEL: buffer_load_x_i32:
 ; GFX6:       ; %bb.0: ; %main_body
-; GFX6-NEXT:    v_mov_b32_e32 v1, 0
-; GFX6-NEXT:    buffer_load_format_x v0, v1, s[0:3], 0 idxen
+; GFX6-NEXT:    v_mov_b32_e32 v0, 0
+; GFX6-NEXT:    buffer_load_format_x v0, v0, s[0:3], 0 idxen
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8PLUS-LABEL: buffer_load_x_i32:
 ; GFX8PLUS:       ; %bb.0: ; %main_body
-; GFX8PLUS-NEXT:    v_mov_b32_e32 v1, 0
-; GFX8PLUS-NEXT:    buffer_load_format_x v0, v1, s[0:3], 0 idxen
+; GFX8PLUS-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8PLUS-NEXT:    buffer_load_format_x v0, v0, s[0:3], 0 idxen
 ; GFX8PLUS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8PLUS-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: buffer_load_x_i32:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-NEXT:    buffer_load_format_x v0, v1, s[0:3], 0 idxen
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    buffer_load_format_x v0, v0, s[0:3], 0 idxen
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: buffer_load_x_i32:
 ; NOPRT:       ; %bb.0: ; %main_body
-; NOPRT-NEXT:    v_mov_b32_e32 v1, 0
-; NOPRT-NEXT:    buffer_load_format_x v0, v1, s[0:3], 0 idxen
+; NOPRT-NEXT:    v_mov_b32_e32 v0, 0
+; NOPRT-NEXT:    buffer_load_format_x v0, v0, s[0:3], 0 idxen
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: buffer_load_x_i32:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    buffer_load_format_x v0, v1, s[0:3], null idxen
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    buffer_load_format_x v0, v0, s[0:3], null idxen
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -775,36 +775,36 @@ main_body:
 define amdgpu_ps <2 x float> @buffer_load_xy(<4 x i32> inreg %rsrc) {
 ; GFX6-LABEL: buffer_load_xy:
 ; GFX6:       ; %bb.0: ; %main_body
-; GFX6-NEXT:    v_mov_b32_e32 v2, 0
-; GFX6-NEXT:    buffer_load_format_xy v[0:1], v2, s[0:3], 0 idxen
+; GFX6-NEXT:    v_mov_b32_e32 v0, 0
+; GFX6-NEXT:    buffer_load_format_xy v[0:1], v0, s[0:3], 0 idxen
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8PLUS-LABEL: buffer_load_xy:
 ; GFX8PLUS:       ; %bb.0: ; %main_body
-; GFX8PLUS-NEXT:    v_mov_b32_e32 v2, 0
-; GFX8PLUS-NEXT:    buffer_load_format_xy v[0:1], v2, s[0:3], 0 idxen
+; GFX8PLUS-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8PLUS-NEXT:    buffer_load_format_xy v[0:1], v0, s[0:3], 0 idxen
 ; GFX8PLUS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8PLUS-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: buffer_load_xy:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11-NEXT:    buffer_load_format_xy v[0:1], v2, s[0:3], 0 idxen
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    buffer_load_format_xy v[0:1], v0, s[0:3], 0 idxen
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; NOPRT-LABEL: buffer_load_xy:
 ; NOPRT:       ; %bb.0: ; %main_body
-; NOPRT-NEXT:    v_mov_b32_e32 v2, 0
-; NOPRT-NEXT:    buffer_load_format_xy v[0:1], v2, s[0:3], 0 idxen
+; NOPRT-NEXT:    v_mov_b32_e32 v0, 0
+; NOPRT-NEXT:    buffer_load_format_xy v[0:1], v0, s[0:3], 0 idxen
 ; NOPRT-NEXT:    s_waitcnt vmcnt(0)
 ; NOPRT-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: buffer_load_xy:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_mov_b32_e32 v2, 0
-; GFX12-NEXT:    buffer_load_format_xy v[0:1], v2, s[0:3], null idxen
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    buffer_load_format_xy v[0:1], v0, s[0:3], null idxen
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:

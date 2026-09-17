@@ -91,11 +91,10 @@ define amdgpu_kernel void @rcp_bf16_global_load(ptr addrspace(1) %out, ptr addrs
 ; SDAG-TRUE16-NEXT:    v_nop
 ; SDAG-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
-; SDAG-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-TRUE16-NEXT:    global_load_u16 v0, v1, s[2:3] scale_offset
-; SDAG-TRUE16-NEXT:    s_wait_xcnt 0x0
+; SDAG-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; SDAG-TRUE16-NEXT:    global_load_u16 v0, v0, s[2:3] scale_offset
 ; SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; SDAG-TRUE16-NEXT:    v_rcp_bf16_e32 v0.l, v0.l
 ; SDAG-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
@@ -108,11 +107,10 @@ define amdgpu_kernel void @rcp_bf16_global_load(ptr addrspace(1) %out, ptr addrs
 ; SDAG-FAKE16-NEXT:    v_nop
 ; SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; SDAG-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
-; SDAG-FAKE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-FAKE16-NEXT:    global_load_u16 v0, v1, s[2:3] scale_offset
-; SDAG-FAKE16-NEXT:    s_wait_xcnt 0x0
+; SDAG-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; SDAG-FAKE16-NEXT:    global_load_u16 v0, v0, s[2:3] scale_offset
 ; SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; SDAG-FAKE16-NEXT:    v_rcp_bf16_e32 v0, v0
 ; SDAG-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1]
@@ -125,11 +123,10 @@ define amdgpu_kernel void @rcp_bf16_global_load(ptr addrspace(1) %out, ptr addrs
 ; GI-TRUE16-NEXT:    v_nop
 ; GI-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GI-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
-; GI-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GI-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GI-TRUE16-NEXT:    global_load_u16 v0, v1, s[2:3] scale_offset
-; GI-TRUE16-NEXT:    s_wait_xcnt 0x0
+; GI-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GI-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GI-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GI-TRUE16-NEXT:    global_load_u16 v0, v0, s[2:3] scale_offset
 ; GI-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GI-TRUE16-NEXT:    v_rcp_bf16_e32 v0.l, v0.l
 ; GI-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
@@ -142,11 +139,10 @@ define amdgpu_kernel void @rcp_bf16_global_load(ptr addrspace(1) %out, ptr addrs
 ; GI-FAKE16-NEXT:    v_nop
 ; GI-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GI-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
-; GI-FAKE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GI-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GI-FAKE16-NEXT:    global_load_u16 v0, v1, s[2:3] scale_offset
-; GI-FAKE16-NEXT:    s_wait_xcnt 0x0
+; GI-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GI-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GI-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GI-FAKE16-NEXT:    global_load_u16 v0, v0, s[2:3] scale_offset
 ; GI-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GI-FAKE16-NEXT:    v_rcp_bf16_e32 v0, v0
 ; GI-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1]
@@ -155,10 +151,10 @@ define amdgpu_kernel void @rcp_bf16_global_load(ptr addrspace(1) %out, ptr addrs
 ; GFX13-SDAG-TRUE16-LABEL: rcp_bf16_global_load:
 ; GFX13-SDAG-TRUE16:       ; %bb.0:
 ; GFX13-SDAG-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
-; GFX13-SDAG-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-TRUE16-NEXT:    global_load_d16_b16 v0, v1, s[2:3] scale_offset
+; GFX13-SDAG-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX13-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3] scale_offset
 ; GFX13-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-TRUE16-NEXT:    v_rcp_bf16_e32 v0.l, v0.l
 ; GFX13-SDAG-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
@@ -167,10 +163,10 @@ define amdgpu_kernel void @rcp_bf16_global_load(ptr addrspace(1) %out, ptr addrs
 ; GFX13-SDAG-FAKE16-LABEL: rcp_bf16_global_load:
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
 ; GFX13-SDAG-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
-; GFX13-SDAG-FAKE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
-; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-SDAG-FAKE16-NEXT:    global_load_u16 v0, v1, s[2:3] scale_offset
+; GFX13-SDAG-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX13-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    global_load_u16 v0, v0, s[2:3] scale_offset
 ; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-FAKE16-NEXT:    v_rcp_bf16_e32 v0, v0
 ; GFX13-SDAG-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1]
