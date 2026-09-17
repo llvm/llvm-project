@@ -568,12 +568,12 @@ void VPlanTransforms::convertToVariableLengthStep(VPlan &Plan) {
 
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksAs<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry())))
-    for (VPRecipeBase &R : VPBB->phis())
-      if (auto *PhiR = dyn_cast<VPCurrentIterationPHIRecipe>(&R)) {
-        assert(!CurrentIteration &&
-               "Found multiple CurrentIteration. Only one expected");
-        CurrentIteration = PhiR;
-      }
+    for (VPCurrentIterationPHIRecipe &PhiR :
+         make_isa_range<VPCurrentIterationPHIRecipe>(VPBB->phis())) {
+      assert(!CurrentIteration &&
+             "Found multiple CurrentIteration. Only one expected");
+      CurrentIteration = &PhiR;
+    }
 
   // Early return if it is not variable-length stepping.
   if (!CurrentIteration)
