@@ -1140,6 +1140,9 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeMember(
   if (!TyRegOpt)
     return std::nullopt;
 
+  if (!isUInt<32>(M->getOffsetInBits()) || !isUInt<32>(M->getSizeInBits()))
+    return std::nullopt;
+
   MCRegister NameReg = getCachedOpStringReg(M->getName());
   MCRegister FileStrReg = getCachedScopePathOpStringReg(
       M->getFile(), /*UseEmptyPathIfNullScope=*/true);
@@ -1178,6 +1181,9 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeComposite(
     SPIRV::ModuleAnalysisInfo &MAI) {
   auto ParentRegOpt = resolveScope(CT->getScope());
   if (!ParentRegOpt)
+    return std::nullopt;
+
+  if (!isUInt<32>(CT->getSizeInBits()))
     return std::nullopt;
 
   MCRegister NameReg = getCachedOpStringReg(CT->getName());
@@ -1784,6 +1790,9 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   MCRegister I32ZeroReg = emitOpConstantI32(0, I32TypeReg, MAI);
 
   for (const DIBasicType *BT : BasicTypes) {
+    if (!isUInt<32>(BT->getSizeInBits()))
+      continue;
+
     MCRegister NameReg = getCachedOpStringReg(BT->getName());
     MCRegister SizeReg = emitOpConstantI32(
         static_cast<uint32_t>(BT->getSizeInBits()), I32TypeReg, MAI);

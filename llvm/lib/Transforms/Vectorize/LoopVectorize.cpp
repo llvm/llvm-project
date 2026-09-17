@@ -7260,8 +7260,7 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
         continue;
       if (isGuaranteedNotToBeUndefOrPoison(OrigStart->getLiveInIRValue()))
         continue;
-      VPInstruction *Freeze =
-          Builder.createNaryOp(Instruction::Freeze, {OrigStart}, {}, "fr");
+      VPInstruction *Freeze = Builder.createFreeze(OrigStart, {}, "fr");
       VPI->setOperand(2, Freeze);
       if (UpdateResumePhis)
         OrigStart->replaceUsesWithIf(Freeze, [Freeze](VPUser &U, unsigned) {

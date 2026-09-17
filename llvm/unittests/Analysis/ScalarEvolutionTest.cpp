@@ -2557,4 +2557,106 @@ TEST_F(ScalarEvolutionsTest, MulExprUseFlags) {
 #endif
   });
 }
+
+TEST_F(ScalarEvolutionsTest, AddRecExprUseFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i32 %a, i32 %b, i32 %c) {
+      entry:
+        br label %loop.1
+
+      loop.1:
+        %iv.1 = phi i32 [ 0, %entry ], [ %iv.1.next, %loop.1 ]
+        %iv.1.next = add i32 %iv.1, 1
+        %cond.1 = icmp ult i32 %iv.1.next, 10
+        br i1 %cond.1, label %loop.1, label %loop.2
+
+      loop.2:
+        %iv.2 = phi i32 [ 0, %loop.1 ], [ %iv.2.next, %loop.2 ]
+        %iv.2.next = add i32 %iv.2, 1
+        %cond.2 = icmp ult i32 %iv.2.next, 10
+        br i1 %cond.2, label %loop.2, label %exit
+
+      exit:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *Cc = SE.getSCEV(getArgByName(F, "c"));
+    Type *I32 = A->getType();
+    const Loop *L1 =
+        LI.getLoopFor(getInstructionByName(F, "iv.1")->getParent());
+    const Loop *L2 =
+        LI.getLoopFor(getInstructionByName(F, "iv.2")->getParent());
+
+    // The recurrence is built as-is, so the use carries the requested flags.
+    SCEVUse AR = SE.getAddRecExpr(A, B, L1, {SCEV::FlagAnyWrap, SCEV::FlagNUW});
+    EXPECT_TRUE(AR.hasUseFlags());
+    EXPECT_EQ(AR.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
+
+    // Same as AR, but without NUW use flags.
+    const SCEV *BareAR = SE.getAddRecExpr(A, B, L1, SCEV::FlagAnyWrap);
+    EXPECT_EQ(AR.getPointer(), BareAR);
+    EXPECT_EQ(cast<SCEVAddRecExpr>(BareAR)->getNoWrapFlags(),
+              SCEV::FlagAnyWrap);
+    EXPECT_EQ(AR.getCanonical(), BareAR);
+
+    // Recurrence are not commutative, different operand orders must not re-use
+    // UseFlags.
+    SCEVUse Swapped =
+        SE.getAddRecExpr(B, A, L1, {SCEV::FlagAnyWrap, SCEV::FlagNSW});
+    EXPECT_NE(Swapped.getPointer(), AR.getPointer());
+    EXPECT_EQ(Swapped.getUseNoWrapFlags(), SCEV::FlagNSW | SCEV::FlagNW);
+
+    // The same holds for recurrences with more than two operands.
+    SmallVector<SCEVUse, 3> Ops = {A, B, Cc};
+    SCEVUse AR3 = SE.getAddRecExpr(Ops, L1, {SCEV::FlagAnyWrap, SCEV::FlagNSW});
+    EXPECT_EQ(AR3.getUseNoWrapFlags(), SCEV::FlagNSW | SCEV::FlagNW);
+    SmallVector<SCEVUse, 3> BareOps = {A, B, Cc};
+    EXPECT_EQ(AR3.getCanonical(),
+              SE.getAddRecExpr(BareOps, L1, SCEV::FlagAnyWrap));
+
+    // Flags the expression already carries add nothing to the use.
+    SCEVUse NUWAR = SE.getAddRecExpr(A, Cc, L1, {SCEV::FlagNUW, SCEV::FlagNUW});
+    ASSERT_TRUE(cast<SCEVAddRecExpr>(NUWAR.getPointer())->hasNoUnsignedWrap());
+    EXPECT_FALSE(NUWAR.hasUseFlags());
+
+    // A recurrence folded away to its start value, one shortened by a zero
+    // trailing operand and one with its step flattened in all describe
+    // different AddRec, so none of them may carry the provided use flags.
+    auto CheckNoUseFlags = [](SCEVUse U) {
+      EXPECT_FALSE(U.hasUseFlags());
+      EXPECT_EQ(U.getUseNoWrapFlags(), SCEV::FlagAnyWrap);
+    };
+    CheckNoUseFlags(SE.getAddRecExpr(A, SE.getZero(I32), L1,
+                                     {SCEV::FlagAnyWrap, SCEV::FlagNUW}));
+    SmallVector<SCEVUse, 3> OpsWithZeroStep = {A, B, SE.getZero(I32)};
+    CheckNoUseFlags(SE.getAddRecExpr(OpsWithZeroStep, L1,
+                                     {SCEV::FlagAnyWrap, SCEV::FlagNUW}));
+    const SCEV *StepAR = SE.getAddRecExpr(B, Cc, L1, SCEV::FlagAnyWrap);
+    CheckNoUseFlags(
+        SE.getAddRecExpr(A, StepAR, L1, {SCEV::FlagAnyWrap, SCEV::FlagNUW}));
+
+    // A zero step folds the recurrence away, use flags must not be applied to
+    // the result.
+    CheckNoUseFlags(SE.getAddRecExpr(BareAR, SE.getZero(I32), L2,
+                                     {SCEV::FlagAnyWrap, SCEV::FlagNUW}));
+
+#ifndef NDEBUG
+    EXPECT_DEATH(
+        (void)SE.getAddRecExpr(A, B, L1, {SCEV::FlagAnyWrap, SCEV::FlagNW}),
+        "only nuw or nsw allowed");
+#endif
+  });
+}
 }  // end namespace llvm

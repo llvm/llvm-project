@@ -8757,6 +8757,33 @@ to the SSA value of the pointer operand.
 Note that this is an experimental feature, which means that its semantics might
 change in the future.
 
+(md_atomic.ignore.denormal.mode)=
+
+#### '`atomic.ignore.denormal.mode`' Metadata
+
+The `atomic.ignore.denormal.mode` metadata may be attached to floating-point
+{ref}`atomicrmw <i_atomicrmw>` instructions. It indicates that the handling of
+denormal inputs and results is insignificant, and may be inconsistent with the
+denormal mode the function otherwise operates in, as described by
+{ref}`denormal_fpenv <denormal_fpenv>`.
+
+This is necessary to emit a native atomic instruction on targets and address
+spaces where the atomic unit has a fixed denormal behavior which need not match
+the denormal mode of the containing function. For example, AMDGPU global memory
+atomics unconditionally flush float denormals, as does the NVPTX `atom.add`
+instruction.
+
+The metadata must reference a single metadata node with no entries; the contents
+of the node are ignored.
+
+```llvm
+%res = atomicrmw fadd ptr %ptr, float %value seq_cst, align 4, !atomic.ignore.denormal.mode !0
+
+!0 = !{}
+```
+
+This metadata was previously spelled `amdgpu.ignore.denormal.mode`.
+
 #### '`type`' Metadata
 
 See {doc}`TypeMetadata`.
@@ -19900,6 +19927,84 @@ This never sets errno, just as '`llvm.fma.*`'.
 %r2 = call float @llvm.fmuladd.f32(float %a, float %b, float %c) ; yields float:r2 = (a * b) + c
 ```
 
+(int_smulh)=
+
+#### '`llvm.smulh.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic. You can use `llvm.smulh` on any integer
+or vector of integers.
+
+```
+declare i16 @llvm.smulh.i16(i16 %a, i16 %b)
+declare i32 @llvm.smulh.i32(i32 %a, i32 %b)
+declare i64 @llvm.smulh.i64(i64 %a, i64 %b)
+declare <4 x i32> @llvm.smulh.v4i32(<4 x i32> %a, <4 x i32> %b)
+```
+
+##### Overview:
+
+The '`llvm.smulh`' family of intrinsic functions performs a signed
+multiplication of the two arguments, and returns the high half of the result.
+
+##### Arguments:
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+##### Semantics:
+
+The '`llvm.smulh`' intrinsic computes signed multiply-high of its arguments,
+which is the upper N-bit half of the 2N-bit product for signed iN types.
+
+##### Example:
+
+```llvm
+%r = call i4 @llvm.smulh.i4(i4 1, i4 2)   ; %r = 0
+%r = call i4 @llvm.smulh.i4(i4 5, i4 6)   ; %r = 1
+%r = call i4 @llvm.smulh.i4(i4 -4, i4 6)  ; %r = -2
+```
+
+(int_umulh)=
+
+#### '`llvm.umulh.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic. You can use `llvm.umulh` on any integer
+or vector of integers.
+
+```
+declare i16 @llvm.umulh.i16(i16 %a, i16 %b)
+declare i32 @llvm.umulh.i32(i32 %a, i32 %b)
+declare i64 @llvm.umulh.i64(i64 %a, i64 %b)
+declare <4 x i32> @llvm.umulh.v4i32(<4 x i32> %a, <4 x i32> %b)
+```
+
+##### Overview:
+
+The '`llvm.umulh`' family of intrinsic functions performs an unsigned
+multiplication of the two arguments, and returns the high half of the result.
+
+##### Arguments:
+
+The arguments may be any integer type or vector of integer type. Both
+arguments and result must have the same type.
+
+##### Semantics:
+
+The '`llvm.umulh`' intrinsic computes unsigned multiply-high of its arguments,
+which is the upper N-bit half of the 2N-bit product for unsigned iN types.
+
+##### Example:
+
+```llvm
+%r = call i4 @llvm.umulh.i4(i4 1, i4 2)   ; %r = 0
+%r = call i4 @llvm.umulh.i4(i4 5, i4 6)   ; %r = 1
+%r = call i4 @llvm.umulh.i4(i4 4, i4 10)  ; %r = 2
+```
+
 ### Hardware-Loop Intrinsics
 
 LLVM support several intrinsics to mark a loop as a hardware-loop. They are
@@ -21170,6 +21275,7 @@ The '`llvm.experimental.cttz.elts`' intrinsic counts the trailing (least
 significant) zero elements in a vector. If `src == 0` the result is the
 number of elements in the input vector.
 
+If any element in the input vector is poison, the result is poison.
 
 #### '`llvm.experimental.get.vector.length`' Intrinsic
 
