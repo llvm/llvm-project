@@ -20751,7 +20751,7 @@ bool SITargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
 // On older subtargets, global FP atomic instructions have a hardcoded FP mode
 // and do not support FP32 denormals, and only support v2f16/f64 denormals.
 static bool atomicIgnoresDenormalModeOrFPModeIsFTZ(const AtomicRMWInst *RMW) {
-  if (RMW->hasMetadata("amdgpu.ignore.denormal.mode"))
+  if (RMW->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode))
     return true;
 
   const fltSemantics &Flt = RMW->getType()->getScalarType()->getFltSemantics();
@@ -21469,16 +21469,18 @@ void SITargetLowering::emitExpandAtomicAddrSpacePredicate(
   Value *LoadedPrivate;
   if (RMW) {
     LoadedPrivate = Builder.CreateAlignedLoad(
-        RMW->getType(), CastToPrivate, RMW->getAlign(), "loaded.private");
+        RMW->getType(), CastToPrivate, RMW->getAlign(), RMW->isVolatile(),
+        "loaded.private");
 
     Value *NewVal = buildAtomicRMWValue(RMW->getOperation(), Builder,
                                         LoadedPrivate, RMW->getValOperand());
 
-    Builder.CreateAlignedStore(NewVal, CastToPrivate, RMW->getAlign());
+    Builder.CreateAlignedStore(NewVal, CastToPrivate, RMW->getAlign(),
+                               RMW->isVolatile());
   } else {
-    auto [ResultLoad, Equal] =
-        buildCmpXchgValue(Builder, CastToPrivate, CX->getCompareOperand(),
-                          CX->getNewValOperand(), CX->getAlign());
+    auto [ResultLoad, Equal] = buildCmpXchgValue(
+        Builder, CastToPrivate, CX->getCompareOperand(), CX->getNewValOperand(),
+        CX->getAlign(), CX->isVolatile());
 
     Value *Insert = Builder.CreateInsertValue(PoisonValue::get(CX->getType()),
                                               ResultLoad, 0);
