@@ -2262,7 +2262,7 @@ bool ACCCGToGPULowering::needsInLoopReuseBarrier(Operation *loopOp) {
   // stores stay predicated and already reconverge between iterations, so the
   // reuse hole is the nested scf.for coming from `acc loop seq`.
   if (scf::ParallelOp par = dyn_cast<scf::ParallelOp>(loopOp))
-      return false;
+    return false;
 
   // The hazard needs a worker- or vector-level routine call in the body: every
   // workgroup thread reaches such a call and the callee synchronizes
