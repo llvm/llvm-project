@@ -5,34 +5,13 @@ define void @test(ptr %p, <8 x i32> %x) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[P:%.*]], <8 x i32> [[X:%.*]]) {
 ; CHECK-NEXT:    [[L:%.*]] = load <8 x i32>, ptr [[P]], align 4
-; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x i32> [[X]], <8 x i32> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <8 x i32> [[X]], <8 x i32> poison, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[SPLIT2:%.*]] = shufflevector <8 x i32> [[X]], <8 x i32> poison, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <8 x i32> [[X]], <8 x i32> poison, <1 x i32> <i32 3>
-; CHECK-NEXT:    [[SPLIT4:%.*]] = shufflevector <8 x i32> [[X]], <8 x i32> poison, <1 x i32> <i32 4>
-; CHECK-NEXT:    [[SPLIT5:%.*]] = shufflevector <8 x i32> [[X]], <8 x i32> poison, <1 x i32> <i32 5>
-; CHECK-NEXT:    [[SPLIT6:%.*]] = shufflevector <8 x i32> [[X]], <8 x i32> poison, <1 x i32> <i32 6>
-; CHECK-NEXT:    [[SPLIT7:%.*]] = shufflevector <8 x i32> [[X]], <8 x i32> poison, <1 x i32> <i32 7>
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i32> [[SPLIT]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <1 x i32> [[SPLIT1]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[TMP3]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i32> [[SPLIT2]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP4]], i32 [[TMP5]], i64 2
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i32> [[SPLIT3]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[TMP7]], i64 3
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <1 x i32> [[SPLIT4]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x i32> [[TMP8]], i32 [[TMP9]], i64 4
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <1 x i32> [[SPLIT5]], i64 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x i32> [[TMP10]], i32 [[TMP11]], i64 5
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i32> [[SPLIT6]], i64 0
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x i32> [[TMP12]], i32 [[TMP13]], i64 6
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <1 x i32> [[SPLIT7]], i64 0
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <8 x i32> [[TMP14]], i32 [[TMP15]], i64 7
-; CHECK-NEXT:    [[TMP17:%.*]] = mul <8 x i32> [[L]], [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = mul <8 x i32> [[X]], [[L]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP17]])
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <1 x i32> poison, i32 [[TMP18]], i64 0
-; CHECK-NEXT:    [[E:%.*]] = extractelement <1 x i32> [[TMP19]], i64 0
+; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <1 x i32> [[TMP19]], <1 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <1 x i32> [[SPLIT]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <1 x i32> poison, i32 [[TMP4]], i64 0
+; CHECK-NEXT:    [[E:%.*]] = extractelement <1 x i32> [[TMP5]], i64 0
 ; CHECK-NEXT:    store i32 [[E]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
