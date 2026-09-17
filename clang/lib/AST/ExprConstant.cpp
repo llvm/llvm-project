@@ -7178,6 +7178,7 @@ bool FunctionDefinitionCanBeLazilyInstantiated(const FunctionDecl *FD) {
 static void TryInstantiateFunctionBeforeCall(const FunctionDecl *FD,
                                              EvalInfo &Info,
                                              SourceLocation Loc) {
+  FD = FD->getMostRecentDecl();
 
   // [C++26] [temp.inst] p5
   // [...] the function template specialization is implicitly instantiated
