@@ -143,22 +143,18 @@ BitVector AMDGPUBreakLoadClusterDepsImpl::getVGPR32Components(Register Reg) cons
   if (!TRI->isVGPR(*MRI, Reg))
     return ToReturn;
 
-  const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Reg);
-  unsigned NumLanes = TRI->getRegSizeInBits(*RC).getFixedValue() / 32;
-  if (NumLanes == 1) { // already a VGPR_32
-    ToReturn.set(Reg - AMDGPU::VGPR0);
-    return ToReturn;
-  }
-  if (NumLanes == 0) // less than a VGPR_32
-    for (Register Super : TRI->superregs(Reg))
-      if (TRI->getPhysRegBaseClass(Super)->getSizeInBits() == 32) {
-        ToReturn.set(Super - AMDGPU::VGPR0);
-        return ToReturn;
+  for (Register Subreg : TRI->subregs_inclusive(Reg)) {
+    if (TRI->getPhysRegBaseClass(Subreg)->getSizeInBits() < 32)
+      for (Register Super : TRI->superregs(Subreg)) {
+        if (TRI->getPhysRegBaseClass(Super)->getSizeInBits() == 32) {
+          ToReturn.set(Super - AMDGPU::VGPR0);
+          break;
+        }
       }
+    else if (TRI->getPhysRegBaseClass(Subreg)->getSizeInBits() == 32)
+      ToReturn.set(Subreg - AMDGPU::VGPR0);
+  }
 
-  for (unsigned C = 0; C < NumLanes; ++C)
-    ToReturn.set(TRI->getSubReg(Reg, TRI->getSubRegFromChannel(C)) -
-                 AMDGPU::VGPR0);
   return ToReturn;
 }
 
@@ -312,7 +308,20 @@ bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
 
   // Now, perform the rename between (DefToRename, KillerIns)
 
-  // Find a free reg
+  // Find a free reg.
+  //
+  // We track liveness by hand with LiveRegUnits rather than using
+  // RegScavenger.  RegScavenger is the wrong tool here: its defining feature is
+  // spilling a register to a scavenging slot when nothing is free, but this
+  // pass must never spill -- a spill would cost more than the memory-level
+  // parallelism the rename buys, and the whole point is to stay within the
+  // occupancy VGPR budget.  When no register is free we simply bail.
+  // RegScavenger also only reasons about liveness at a single point, whereas we
+  // need a register that is free across the entire [DefToRename, KillerIns]
+  // window and additionally excluded from over-budget register numbers and from
+  // BannedRegs (registers used by sibling cluster loads, which the scheduler
+  // will pack next to this one).  LiveRegUnits accumulated over the window
+  // expresses exactly that and composes cleanly with those two extra filters.
   LiveRegUnits LRU(*TRI);
   LRU.addLiveOuts(MBB);
   for (MachineBasicBlock::reverse_iterator LiveRIt = MBB.rbegin();
