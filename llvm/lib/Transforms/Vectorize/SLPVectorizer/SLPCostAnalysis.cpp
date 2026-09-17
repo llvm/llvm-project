@@ -38,14 +38,15 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                                TTI::ShuffleKind Kind, VectorType *Tp,
                                const TTI::TargetCostKind CostKind,
                                ArrayRef<int> Mask, int Index, VectorType *SubTp,
-                               ArrayRef<const Value *> Args) {
+                               ArrayRef<const Value *> Args,
+                               TTI::VectorInstrContext VIC) {
   VectorType *DstTy = Tp;
   if (!Mask.empty())
     DstTy = FixedVectorType::get(Tp->getScalarType(), Mask.size());
 
   if (Kind != TTI::SK_PermuteTwoSrc)
     return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp,
-                              Args);
+                              Args, /*CxtI=*/nullptr, VIC);
   int NumSrcElts = Tp->getElementCount().getKnownMinValue();
   int NumSubElts;
   if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
@@ -55,8 +56,8 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
       return TTI.getShuffleCost(TTI::SK_InsertSubvector, DstTy, Tp, CostKind,
                                 Mask, Index, Tp);
   }
-  return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp,
-                            Args);
+  return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp, Args,
+                            /*CxtI=*/nullptr, VIC);
 }
 
 std::pair<InstructionCost, InstructionCost>
@@ -214,8 +215,8 @@ getScalarizationOverhead(const TargetTransformInfo &TTI, bool ReVec,
 InstructionCost getVectorInstrCost(
     const TargetTransformInfo &TTI, bool ReVec, Type *ScalarTy, unsigned Opcode,
     Type *Val, const TTI::TargetCostKind CostKind, unsigned Index,
-    Value *Scalar,
-    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
+    Value *Scalar, ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
+    TTI::VectorInstrContext VIC) {
   if (Opcode == Instruction::ExtractElement) {
     if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
       assert(ReVec && "Only supported by REVEC.");
@@ -226,7 +227,7 @@ InstructionCost getVectorInstrCost(
     }
   }
   return TTI.getVectorInstrCost(Opcode, Val, CostKind, Index, Scalar,
-                                ScalarUserAndIdx);
+                                ScalarUserAndIdx, VIC);
 }
 
 InstructionCost getExtractWithExtendCost(const TargetTransformInfo &TTI,

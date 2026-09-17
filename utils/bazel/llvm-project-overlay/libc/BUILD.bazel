@@ -1480,10 +1480,10 @@ libc_support_library(
 libc_support_library(
     name = "types_char8_t",
     hdrs = ["hdr/types/char8_t.h"],
-    deps = [
-        ":hdr_uchar_overlay",
-        ":llvm_libc_types_char8_t",
-    ],
+    deps = select({
+        ":full_build": [":llvm_libc_types_char8_t"],
+        "//conditions:default": [":hdr_uchar_overlay"],
+    }),
 )
 
 ############################### Support libraries ##############################
