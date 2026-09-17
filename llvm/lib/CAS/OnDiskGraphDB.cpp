@@ -1348,6 +1348,11 @@ OnDiskGraphDB::load(ObjectID ExternalRef) {
     break;
   }
 
+  // Search in StandaloneMap to see if data is already loaded.
+  auto *StandaloneMap = static_cast<StandaloneDataMapTy *>(StandaloneData);
+  if (const StandaloneDataInMemory *SDIM = StandaloneMap->lookup(I->Hash))
+    return ObjectHandle::fromMemory(reinterpret_cast<uintptr_t>(SDIM));
+
   // Load it from disk.
   //
   // Note: Creation logic guarantees that data that needs null-termination is
@@ -1376,8 +1381,7 @@ OnDiskGraphDB::load(ObjectID ExternalRef) {
     return createCorruptObjectError(getDigest(*I));
 
   return ObjectHandle::fromMemory(
-      static_cast<StandaloneDataMapTy *>(StandaloneData)
-          ->insert(I->Hash, Object.SK, std::move(Region), I->Offset));
+      StandaloneMap->insert(I->Hash, Object.SK, std::move(Region), I->Offset));
 }
 
 Expected<bool> OnDiskGraphDB::isMaterialized(ObjectID Ref) {
