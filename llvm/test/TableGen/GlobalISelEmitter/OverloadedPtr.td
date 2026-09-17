@@ -12,13 +12,13 @@ let TargetPrefix = "mytarget" in {
 
 // Check that iPTR in the destination DAG doesn't prevent the pattern from being imported.
 
-// CHECK: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
+// CHECK: GIM_RootCheckType0, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // CHECK-NEXT: GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
-// CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// CHECK-NEXT: GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT: // MIs[0] src1
 // CHECK-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/0,
-// CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
+// CHECK-NEXT: GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT: // (ld:{ *:[i32] } GPR:{ *:[iPTR] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (ANYLOAD:{ *:[i32] } GPR:{ *:[iPTR] }:$src1)
 // CHECK-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::ANYLOAD),
 // CHECK-NEXT: GIR_RootConstrainSelectedInstOperands,
@@ -34,11 +34,11 @@ let hasSideEffects = 1 in {
 // GIM_CheckPointerToAny rather than a GIM_CheckType.
 //
 // CHECK: GIM_CheckIntrinsicID, /*MI*/0, /*Op*/1, GIMT_Encode2(Intrinsic::mytarget_anyptr),
-// CHECK-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// CHECK-NEXT: GIM_RootCheckType0, /*Type*/GILLT_s32,
+// CHECK-NEXT: GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT: // MIs[0] src
 // CHECK-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/2, /*SizeInBits*/32,
-// CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// CHECK-NEXT: GIM_RootCheckRegBankForClass2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_frag_anyptr),
 // CHECK-NEXT: // (intrinsic_w_chain:{ *:[i32] } {{[0-9]+}}:{ *:[iPTR] }, GPR32:{ *:[i32] }:$src)<<P:Predicate_frag_anyptr>>  =>  (ANYLOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src)
 // CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::ANYLOAD),

@@ -29,8 +29,8 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_STORE),
 // GISEL-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // GISEL-NEXT: // MIs[0] src0
-// GISEL-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// GISEL-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// GISEL-NEXT: GIM_RootCheckType0, /*Type*/GILLT_s32,
+// GISEL-NEXT: GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // GISEL-NEXT: // MIs[0] Operand 1
 // GISEL-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
 // GISEL-NEXT: GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
@@ -50,7 +50,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 // GISEL-NEXT: GIR_AddRegister, /*InsnID*/1, GIMT_Encode2(MyTarget::SPECIAL), /*AddRegisterRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/1, /*OpIdx*/2, // SPECIAL
 // GISEL-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MULM_PHYS),
-// GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // src0
+// GISEL-NEXT: GIR_RootToRootCopy0, // src0
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src1
 // GISEL-NEXT: GIR_MergeMemOperands, /*InsnID*/0, /*NumInsns*/2, /*MergeInsnID's*/0, 1,
 // GISEL-NEXT: GIR_RootConstrainSelectedInstOperands,
@@ -68,8 +68,8 @@ def MULM_PHYS : I<(outs), (ins GPR32:$src0, GPR32:$src1),
 // GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_STORE),
 // GISEL-NEXT: GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // GISEL-NEXT: // MIs[0] src0
-// GISEL-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// GISEL-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// GISEL-NEXT: GIM_RootCheckType0, /*Type*/GILLT_s32,
+// GISEL-NEXT: GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // GISEL-NEXT: // MIs[0] Operand 1
 // GISEL-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
 // GISEL-NEXT: GIM_RecordInsn, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
@@ -92,7 +92,7 @@ def MULM_PHYS : I<(outs), (ins GPR32:$src0, GPR32:$src1),
 // GISEL-NEXT: GIR_AddRegister, /*InsnID*/1, GIMT_Encode2(MyTarget::R0), /*AddRegisterRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/1, /*OpIdx*/1, // R0
 // GISEL-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MULMR0_PHYS),
-// GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // src0
+// GISEL-NEXT: GIR_RootToRootCopy0, // src0
 // GISEL-NEXT: GIR_MergeMemOperands, /*InsnID*/0, /*NumInsns*/2, /*MergeInsnID's*/0, 1,
 // GISEL-NEXT: GIR_RootConstrainSelectedInstOperands,
 // GISEL-NEXT: // GIR_Coverage, 1,
@@ -108,21 +108,21 @@ def MULMR0_PHYS : I<(outs), (ins GPR32:$src0),
 // GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_ADD),
 // GISEL-NEXT: // MIs[0] DstI[dst]
-// GISEL-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// GISEL-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// GISEL-NEXT: GIM_RootCheckType0, /*Type*/GILLT_s32,
+// GISEL-NEXT: GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // GISEL-NEXT: // MIs[0] src0
-// GISEL-NEXT: GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// GISEL-NEXT: GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// GISEL-NEXT: GIM_RootCheckType1, /*Type*/GILLT_s32,
+// GISEL-NEXT: GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // GISEL-NEXT: // MIs[0] Operand 2
-// GISEL-NEXT: GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// GISEL-NEXT: GIM_RootCheckRegBankForClass, /*Op*/2, /*RC*/GIMT_Encode2(MyTarget::Special32RegClassID),
+// GISEL-NEXT: GIM_RootCheckType2, /*Type*/GILLT_s32,
+// GISEL-NEXT: GIM_RootCheckRegBankForClass2, /*RC*/GIMT_Encode2(MyTarget::Special32RegClassID),
 // GISEL-NEXT: // (add:{ *:[i32] } GPR32:{ *:[i32] }:$src0, SPECIAL:{ *:[i32] })  =>  (ADD_PHYS:{ *:[i32] } GPR32:{ *:[i32] }:$src0)
 // GISEL-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // GISEL-NEXT: GIR_AddRegister, /*InsnID*/1, GIMT_Encode2(MyTarget::SPECIAL), /*AddRegisterRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/2, // SPECIAL
 // GISEL-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::ADD_PHYS),
-// GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
-// GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/1, // src0
+// GISEL-NEXT: GIR_RootToRootCopy0, // DstI[dst]
+// GISEL-NEXT: GIR_RootToRootCopy1, // src0
 // GISEL-NEXT: GIR_RootConstrainSelectedInstOperands,
 // GISEL-NEXT: // GIR_Coverage, 2,
 // GISEL-NEXT: GIR_EraseRootFromParent_Done,
@@ -137,21 +137,21 @@ def ADD_PHYS : I<(outs GPR32:$dst), (ins GPR32:$src0),
 // GISEL-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // GISEL-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_MUL),
 // GISEL-NEXT: // MIs[0] DstI[dst]
-// GISEL-NEXT: GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// GISEL-NEXT: GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// GISEL-NEXT: GIM_RootCheckType0, /*Type*/GILLT_s32,
+// GISEL-NEXT: GIM_RootCheckRegBankForClass0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // GISEL-NEXT: // MIs[0] SPECIAL
-// GISEL-NEXT: GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// GISEL-NEXT: GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// GISEL-NEXT: GIM_RootCheckType1, /*Type*/GILLT_s32,
+// GISEL-NEXT: GIM_RootCheckRegBankForClass1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // GISEL-NEXT: // MIs[0] Operand 2
-// GISEL-NEXT: GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// GISEL-NEXT: GIM_RootCheckRegBankForClass, /*Op*/2, /*RC*/GIMT_Encode2(MyTarget::Special32RegClassID),
+// GISEL-NEXT: GIM_RootCheckType2, /*Type*/GILLT_s32,
+// GISEL-NEXT: GIM_RootCheckRegBankForClass2, /*RC*/GIMT_Encode2(MyTarget::Special32RegClassID),
 // GISEL-NEXT: // (mul:{ *:[i32] } GPR32:{ *:[i32] }:$SPECIAL, SPECIAL:{ *:[i32] })  =>  (MUL_PHYS:{ *:[i32] } GPR32:{ *:[i32] }:$SPECIAL)
 // GISEL-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
 // GISEL-NEXT: GIR_AddRegister, /*InsnID*/1, GIMT_Encode2(MyTarget::SPECIAL), /*AddRegisterRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // GISEL-NEXT: GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/2, // SPECIAL
 // GISEL-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::MUL_PHYS),
-// GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
-// GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/1, // SPECIAL
+// GISEL-NEXT: GIR_RootToRootCopy0, // DstI[dst]
+// GISEL-NEXT: GIR_RootToRootCopy1, // SPECIAL
 // GISEL-NEXT: GIR_RootConstrainSelectedInstOperands,
 // GISEL-NEXT: // GIR_Coverage, 3,
 // GISEL-NEXT: GIR_EraseRootFromParent_Done,
