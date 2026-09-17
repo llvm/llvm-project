@@ -25,6 +25,16 @@ _Complex float baz()
   __imag__
 } // expected-error {{expected expression}}
 
+void lvalue_with_imag_bitint() {
+  _BitInt(7) a;
+  __imag a = 0;      // expected-error {{'__imag' operator with non-complex operand type '_BitInt(7)' is not assignable}}
+}
+
+void lvalue_with_imag_enum() {
+  enum Number { One, Two };
+  Number n;
+  __imag n = Number::One;  // expected-error {{'__imag' operator with non-complex operand type 'Number' is not assignable}} 
+}
 
 typedef float C;
 C lvalue_with_imag_float_with_typedef()
