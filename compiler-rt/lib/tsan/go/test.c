@@ -35,9 +35,10 @@ void __tsan_release(void *thr, void *addr);
 void __tsan_release_acquire(void *thr, void *addr);
 void __tsan_release_merge(void *thr, void *addr);
 #if defined(__SIZEOF_INT128__)
-void __tsan_go_atomic128_load(void *thr, void *cpc, void *pc, char *a);
-void __tsan_go_atomic128_store(void *thr, void *cpc, void *pc, char *a);
-void __tsan_go_atomic128_compare_exchange(void *thr, void *cpc, void *pc, char *a);
+void __tsan_go_atomic128_load(void* thr, void* cpc, void* pc, char* a);
+void __tsan_go_atomic128_store(void* thr, void* cpc, void* pc, char* a);
+void __tsan_go_atomic128_compare_exchange(void* thr, void* cpc, void* pc,
+                                          char* a);
 #endif
 
 void *current_proc;
@@ -123,14 +124,15 @@ int main(void) {
     // Align `a` to 16 bytes, matching the alignment Go's runtime guarantees for
     // the buffer it passes to these functions.
     __attribute__((aligned(16))) char a[64];
-    __tsan_malloc(thr0, (char *)&barfoo + 1, buf, 16);
-    *(void **)(a + 0) = buf;
+    __tsan_malloc(thr0, (char*)&barfoo + 1, buf, 16);
+    *(void**)(a + 0) = buf;
     __builtin_memset(a + 8, 0x11, 16);
-    __tsan_go_atomic128_store(thr0, (char *)&barfoo + 1, (char *)&barfoo + 1, a);
+    __tsan_go_atomic128_store(thr0, (char*)&barfoo + 1, (char*)&barfoo + 1, a);
     __builtin_memset(a + 8, 0, 16);
-    __tsan_go_atomic128_load(thr0, (char *)&barfoo + 1, (char *)&barfoo + 1, a);
+    __tsan_go_atomic128_load(thr0, (char*)&barfoo + 1, (char*)&barfoo + 1, a);
     __builtin_memset(a + 24, 0x22, 16);
-    __tsan_go_atomic128_compare_exchange(thr0, (char *)&barfoo + 1, (char *)&barfoo + 1, a);
+    __tsan_go_atomic128_compare_exchange(thr0, (char*)&barfoo + 1,
+                                         (char*)&barfoo + 1, a);
     __tsan_free(buf, 16);
   }
 #endif
