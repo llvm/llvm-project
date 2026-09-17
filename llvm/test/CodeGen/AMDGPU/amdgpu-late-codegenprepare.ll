@@ -271,3 +271,232 @@ define amdgpu_kernel void @no_widen_insufficient_dereferenceable(ptr addrspace(4
 
 !0 = !{}
 !1 = !{i32 3}
+
+; Coercing a value-producing terminator's def used to insert past the block end.
+define amdgpu_kernel void @callbr_def_cross_block_use(ptr addrspace(1) %out) {
+;
+; GFX9-LABEL: @callbr_def_cross_block_use(
+; GFX9-NEXT:  entry:
+; GFX9-NEXT:    [[V:%.*]] = callbr <4 x i8> asm "", "=v"()
+; GFX9-NEXT:            to label [[USE:%.*]] []
+; GFX9:       use:
+; GFX9-NEXT:    store <4 x i8> [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX9-NEXT:    ret void
+;
+; GFX12-LABEL: @callbr_def_cross_block_use(
+; GFX12-NEXT:  entry:
+; GFX12-NEXT:    [[V:%.*]] = callbr <4 x i8> asm "", "=v"()
+; GFX12-NEXT:            to label [[USE:%.*]] []
+; GFX12:       use:
+; GFX12-NEXT:    store <4 x i8> [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX12-NEXT:    ret void
+;
+entry:
+  %v = callbr <4 x i8> asm "", "=v"() to label %use []
+use:
+  store <4 x i8> %v, ptr addrspace(1) %out
+  ret void
+}
+
+; Coercible incoming value shares a phi with the callbr def; the new phi must unwind.
+define amdgpu_kernel void @callbr_def_phi_incoming(ptr addrspace(1) %in, ptr addrspace(1) %out, i1 %c) {
+;
+; GFX9-LABEL: @callbr_def_phi_incoming(
+; GFX9-NEXT:  entry:
+; GFX9-NEXT:    br i1 [[C:%.*]], label [[A:%.*]], label [[B:%.*]]
+; GFX9:       a:
+; GFX9-NEXT:    [[V:%.*]] = callbr <4 x i8> asm "", "=v"()
+; GFX9-NEXT:            to label [[JOIN:%.*]] []
+; GFX9:       b:
+; GFX9-NEXT:    [[W:%.*]] = load <4 x i8>, ptr addrspace(1) [[IN:%.*]], align 4
+; GFX9-NEXT:    br label [[JOIN]]
+; GFX9:       join:
+; GFX9-NEXT:    [[P:%.*]] = phi <4 x i8> [ [[V]], [[A]] ], [ [[W]], [[B]] ]
+; GFX9-NEXT:    store <4 x i8> [[P]], ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX9-NEXT:    ret void
+;
+; GFX12-LABEL: @callbr_def_phi_incoming(
+; GFX12-NEXT:  entry:
+; GFX12-NEXT:    br i1 [[C:%.*]], label [[A:%.*]], label [[B:%.*]]
+; GFX12:       a:
+; GFX12-NEXT:    [[V:%.*]] = callbr <4 x i8> asm "", "=v"()
+; GFX12-NEXT:            to label [[JOIN:%.*]] []
+; GFX12:       b:
+; GFX12-NEXT:    [[W:%.*]] = load <4 x i8>, ptr addrspace(1) [[IN:%.*]], align 4
+; GFX12-NEXT:    br label [[JOIN]]
+; GFX12:       join:
+; GFX12-NEXT:    [[P:%.*]] = phi <4 x i8> [ [[V]], [[A]] ], [ [[W]], [[B]] ]
+; GFX12-NEXT:    store <4 x i8> [[P]], ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX12-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %a, label %b
+a:
+  %v = callbr <4 x i8> asm "", "=v"() to label %join []
+b:
+  %w = load <4 x i8>, ptr addrspace(1) %in
+  br label %join
+join:
+  %p = phi <4 x i8> [ %v, %a ], [ %w, %b ]
+  store <4 x i8> %p, ptr addrspace(1) %out
+  ret void
+}
+
+; Loop-carried phi feeding itself: unwound replacement phis form a use cycle.
+define amdgpu_kernel void @callbr_def_self_loop_phi(ptr addrspace(1) %out, i1 %c) {
+;
+; GFX9-LABEL: @callbr_def_self_loop_phi(
+; GFX9-NEXT:  entry:
+; GFX9-NEXT:    [[V:%.*]] = callbr <4 x i8> asm "", "=v"()
+; GFX9-NEXT:            to label [[LOOP:%.*]] []
+; GFX9:       loop:
+; GFX9-NEXT:    [[P:%.*]] = phi <4 x i8> [ [[V]], [[ENTRY:%.*]] ], [ [[P]], [[LOOP]] ]
+; GFX9-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; GFX9:       exit:
+; GFX9-NEXT:    store <4 x i8> [[P]], ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX9-NEXT:    ret void
+;
+; GFX12-LABEL: @callbr_def_self_loop_phi(
+; GFX12-NEXT:  entry:
+; GFX12-NEXT:    [[V:%.*]] = callbr <4 x i8> asm "", "=v"()
+; GFX12-NEXT:            to label [[LOOP:%.*]] []
+; GFX12:       loop:
+; GFX12-NEXT:    [[P:%.*]] = phi <4 x i8> [ [[V]], [[ENTRY:%.*]] ], [ [[P]], [[LOOP]] ]
+; GFX12-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; GFX12:       exit:
+; GFX12-NEXT:    store <4 x i8> [[P]], ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX12-NEXT:    ret void
+;
+entry:
+  %v = callbr <4 x i8> asm "", "=v"() to label %loop []
+loop:
+  %p = phi <4 x i8> [ %v, %entry ], [ %p, %loop ]
+  br i1 %c, label %loop, label %exit
+exit:
+  store <4 x i8> %p, ptr addrspace(1) %out
+  ret void
+}
+
+; Used on an indirect edge, so there is no single block to insert the coercion at.
+define amdgpu_kernel void @callbr_def_indirect_use(ptr addrspace(1) %out) {
+;
+; GFX9-LABEL: @callbr_def_indirect_use(
+; GFX9-NEXT:  entry:
+; GFX9-NEXT:    [[V:%.*]] = callbr <4 x i8> asm "", "=v,!i"()
+; GFX9-NEXT:            to label [[FALLTHROUGH:%.*]] [label [[INDIRECT:%.*]]]
+; GFX9:       fallthrough:
+; GFX9-NEXT:    store <4 x i8> zeroinitializer, ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX9-NEXT:    ret void
+; GFX9:       indirect:
+; GFX9-NEXT:    store <4 x i8> [[V]], ptr addrspace(1) [[OUT]], align 4
+; GFX9-NEXT:    ret void
+;
+; GFX12-LABEL: @callbr_def_indirect_use(
+; GFX12-NEXT:  entry:
+; GFX12-NEXT:    [[V:%.*]] = callbr <4 x i8> asm "", "=v,!i"()
+; GFX12-NEXT:            to label [[FALLTHROUGH:%.*]] [label [[INDIRECT:%.*]]]
+; GFX12:       fallthrough:
+; GFX12-NEXT:    store <4 x i8> zeroinitializer, ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX12-NEXT:    ret void
+; GFX12:       indirect:
+; GFX12-NEXT:    store <4 x i8> [[V]], ptr addrspace(1) [[OUT]], align 4
+; GFX12-NEXT:    ret void
+;
+entry:
+  %v = callbr <4 x i8> asm "", "=v,!i"() to label %fallthrough [label %indirect]
+fallthrough:
+  store <4 x i8> zeroinitializer, ptr addrspace(1) %out
+  ret void
+indirect:
+  store <4 x i8> %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @invoke_def_cross_block_use(ptr addrspace(1) %out) personality ptr @__gxx_personality_v0 {
+;
+; GFX9-LABEL: @invoke_def_cross_block_use(
+; GFX9-NEXT:  entry:
+; GFX9-NEXT:    [[V:%.*]] = invoke <4 x i8> @ret_v4i8()
+; GFX9-NEXT:            to label [[USE:%.*]] unwind label [[LPAD:%.*]]
+; GFX9:       use:
+; GFX9-NEXT:    store <4 x i8> [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX9-NEXT:    ret void
+; GFX9:       lpad:
+; GFX9-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; GFX9-NEXT:            cleanup
+; GFX9-NEXT:    ret void
+;
+; GFX12-LABEL: @invoke_def_cross_block_use(
+; GFX12-NEXT:  entry:
+; GFX12-NEXT:    [[V:%.*]] = invoke <4 x i8> @ret_v4i8()
+; GFX12-NEXT:            to label [[USE:%.*]] unwind label [[LPAD:%.*]]
+; GFX12:       use:
+; GFX12-NEXT:    store <4 x i8> [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX12-NEXT:    ret void
+; GFX12:       lpad:
+; GFX12-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; GFX12-NEXT:            cleanup
+; GFX12-NEXT:    ret void
+;
+entry:
+  %v = invoke <4 x i8> @ret_v4i8() to label %use unwind label %lpad
+use:
+  store <4 x i8> %v, ptr addrspace(1) %out
+  ret void
+lpad:
+  %lp = landingpad { ptr, i32 } cleanup
+  ret void
+}
+
+; Conversion must insert after the landingpad, not before it.
+define amdgpu_kernel void @use_in_landingpad_block(ptr addrspace(1) %in, ptr addrspace(1) %out) personality ptr @__gxx_personality_v0 {
+;
+; GFX9-LABEL: @use_in_landingpad_block(
+; GFX9-NEXT:  entry:
+; GFX9-NEXT:    [[V:%.*]] = load <4 x i8>, ptr addrspace(1) [[IN:%.*]], align 4
+; GFX9-NEXT:    [[V_BC:%.*]] = bitcast <4 x i8> [[V]] to i32
+; GFX9-NEXT:    invoke void @maybe_throw()
+; GFX9-NEXT:            to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
+; GFX9:       cont:
+; GFX9-NEXT:    [[V_BC_BC1:%.*]] = bitcast i32 [[V_BC]] to <4 x i8>
+; GFX9-NEXT:    store <4 x i8> [[V_BC_BC1]], ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX9-NEXT:    ret void
+; GFX9:       lpad:
+; GFX9-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; GFX9-NEXT:            cleanup
+; GFX9-NEXT:    [[V_BC_BC:%.*]] = bitcast i32 [[V_BC]] to <4 x i8>
+; GFX9-NEXT:    store <4 x i8> [[V_BC_BC]], ptr addrspace(1) [[OUT]], align 4
+; GFX9-NEXT:    ret void
+;
+; GFX12-LABEL: @use_in_landingpad_block(
+; GFX12-NEXT:  entry:
+; GFX12-NEXT:    [[V:%.*]] = load <4 x i8>, ptr addrspace(1) [[IN:%.*]], align 4
+; GFX12-NEXT:    [[V_BC:%.*]] = bitcast <4 x i8> [[V]] to i32
+; GFX12-NEXT:    invoke void @maybe_throw()
+; GFX12-NEXT:            to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
+; GFX12:       cont:
+; GFX12-NEXT:    [[V_BC_BC1:%.*]] = bitcast i32 [[V_BC]] to <4 x i8>
+; GFX12-NEXT:    store <4 x i8> [[V_BC_BC1]], ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX12-NEXT:    ret void
+; GFX12:       lpad:
+; GFX12-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; GFX12-NEXT:            cleanup
+; GFX12-NEXT:    [[V_BC_BC:%.*]] = bitcast i32 [[V_BC]] to <4 x i8>
+; GFX12-NEXT:    store <4 x i8> [[V_BC_BC]], ptr addrspace(1) [[OUT]], align 4
+; GFX12-NEXT:    ret void
+;
+entry:
+  %v = load <4 x i8>, ptr addrspace(1) %in
+  invoke void @maybe_throw() to label %cont unwind label %lpad
+cont:
+  store <4 x i8> %v, ptr addrspace(1) %out
+  ret void
+lpad:
+  %lp = landingpad { ptr, i32 } cleanup
+  store <4 x i8> %v, ptr addrspace(1) %out
+  ret void
+}
+
+declare <4 x i8> @ret_v4i8()
+declare void @maybe_throw()
+declare i32 @__gxx_personality_v0(...)

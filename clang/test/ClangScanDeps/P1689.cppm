@@ -46,11 +46,12 @@
 // Check that we can generate multiple make-style dependency information with compilation database.
 // RUN: cat %t/P1689.dep | FileCheck %t/Checks.cpp -DPREFIX=%/t --check-prefix=CHECK-MAKE
 //
-// Check that we can mix the use of -format=p1689 and -fmodules.
+// Check that we can mix the use of -format=p1689 and -fmodules and that an
+// include translated through a module map is reported as a requirement.
 // RUN: clang-scan-deps -format=p1689 \
 // RUN:   -- %clang++ -std=c++20 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -c %t/impl_part.cppm -o %t/impl_part.o \
 // RUN:   | sed 's:\\\\\?:/:g' \
-// RUN:   | FileCheck %t/impl_part.cppm -DPREFIX=%/t
+// RUN:   | FileCheck %t/impl_part.cppm -DPREFIX=%/t --check-prefix=CHECK-MODULES
 //
 // Check the path in the make style dependencies are generated in relative path form
 // RUN: cd %t
@@ -182,6 +183,31 @@ void World() {
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "version": 1
 // CHECK-NEXT: }
+
+// CHECK-MODULES:      {
+// CHECK-MODULES-NEXT:   "revision": 0,
+// CHECK-MODULES-NEXT:   "rules": [
+// CHECK-MODULES-NEXT:     {
+// CHECK-MODULES-NEXT:       "primary-output": "[[PREFIX]]/impl_part.o",
+// CHECK-MODULES-NEXT:       "provides": [
+// CHECK-MODULES-NEXT:         {
+// CHECK-MODULES-NEXT:           "is-interface": false,
+// CHECK-MODULES-NEXT:           "logical-name": "M:impl_part",
+// CHECK-MODULES-NEXT:           "source-path": "[[PREFIX]]/impl_part.cppm"
+// CHECK-MODULES-NEXT:         }
+// CHECK-MODULES-NEXT:       ],
+// CHECK-MODULES-NEXT:       "requires": [
+// CHECK-MODULES-NEXT:         {
+// CHECK-MODULES-NEXT:           "logical-name": "Mock"
+// CHECK-MODULES-NEXT:         },
+// CHECK-MODULES-NEXT:         {
+// CHECK-MODULES-NEXT:           "logical-name": "M:interface_part"
+// CHECK-MODULES-NEXT:         }
+// CHECK-MODULES-NEXT:       ]
+// CHECK-MODULES-NEXT:     }
+// CHECK-MODULES-NEXT:   ],
+// CHECK-MODULES-NEXT:   "version": 1
+// CHECK-MODULES-NEXT: }
 
 // CHECK-MAKE: [[PREFIX]]/impl_part.o.ddi:
 // CHECK-MAKE:   [[PREFIX]]/impl_part.cppm

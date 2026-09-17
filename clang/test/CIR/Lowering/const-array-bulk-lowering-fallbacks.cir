@@ -4,12 +4,12 @@
 !s8i = !cir.int<s, 8>
 !u16i = !cir.int<u, 16>
 !bi33 = !cir.int<s, 33, bitint>
-!rec_data = !cir.struct<{!cir.array<!s8i x 4>, !cir.array<!s8i x 2>}>
-!rec_mixed = !cir.struct<{!s32i, !cir.ptr<!s32i>}>
-!rec_entry = !cir.struct<{!u16i, !s32i}>
-!rec_iptr = !cir.struct<{!cir.ptr<!s8i>}>
-!rec_bitint = !cir.struct<{!bi33, !s32i}>
-!rec_poison = !cir.struct<{!s32i}>
+!rec_data = !cir.struct<{data !cir.array<!s8i x 4>, data !cir.array<!s8i x 2>}>
+!rec_mixed = !cir.struct<{data !s32i, data !cir.ptr<!s32i>}>
+!rec_entry = !cir.struct<{data !u16i, data !s32i}>
+!rec_iptr = !cir.struct<{data !cir.ptr<!s8i>}>
+!rec_bitint = !cir.struct<{data !bi33, data !s32i}>
+!rec_poison = !cir.struct<{data !s32i}>
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.global external @tz_arr =

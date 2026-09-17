@@ -124,8 +124,9 @@ void LoopAnnotationConversion::convertLoopOptions(LoopVectorizeAttr options) {
   convertBooleanUnitNode("llvm.loop.vectorize.predicate.enable",
                          "llvm.loop.vectorize.predicate.disable",
                          options.getPredicateEnable());
-  convertBoolNode("llvm.loop.vectorize.scalable.enable",
-                  options.getScalableEnable());
+  convertBooleanUnitNode("llvm.loop.vectorize.scalable.enable",
+                         "llvm.loop.vectorize.scalable.disable",
+                         options.getScalableEnable());
   convertI32Node("llvm.loop.vectorize.width", options.getWidth());
   convertFollowupNode("llvm.loop.vectorize.followup_vectorized",
                       options.getFollowupVectorized());

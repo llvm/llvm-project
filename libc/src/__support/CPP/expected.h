@@ -60,6 +60,29 @@ public:
   LIBC_INLINE constexpr const T *operator->() const { return &exp; }
 };
 
+template <class E> class expected<void, E> {
+  union {
+    char dummy;
+    E unexp;
+  };
+  bool is_expected;
+
+public:
+  LIBC_INLINE constexpr expected() : dummy(), is_expected(true) {}
+  LIBC_INLINE constexpr expected(unexpected<E> unexp)
+      : unexp(unexp.error()), is_expected(false) {}
+
+  LIBC_INLINE constexpr bool has_value() const { return is_expected; }
+
+  LIBC_INLINE constexpr void value() const {}
+  LIBC_INLINE constexpr E &error() { return unexp; }
+  LIBC_INLINE constexpr const E &error() const { return unexp; }
+
+  LIBC_INLINE constexpr explicit operator bool() const { return is_expected; }
+
+  LIBC_INLINE constexpr void operator*() const {}
+};
+
 } // namespace cpp
 } // namespace LIBC_NAMESPACE_DECL
 

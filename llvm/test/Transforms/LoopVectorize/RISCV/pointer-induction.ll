@@ -9,8 +9,8 @@ define void @ptr_induction(ptr %p, ptr noalias %q, ptr noalias %p.end) #0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[P_END1:%.*]] = ptrtoaddr ptr [[P_END]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[P_END1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP8]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[P_END1]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP8]], [[TMP1]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[Q]], i64 0
@@ -65,8 +65,8 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoaddr ptr [[START]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[END1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP5]], -12
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[END1]], -12
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv i64 [[TMP1]], 12
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]

@@ -1,6 +1,0 @@
-.. _omp101:
-
-Parallel region is used in unknown / unexpected ways. Will not attempt to rewrite the state machine. [OMP101]
-=============================================================================================================
-
-An analysis remark that indicates that a parallel region has unknown calls.

@@ -456,8 +456,6 @@ OpFoldResult math::IPowIOp::fold(FoldAdaptor adaptor) {
           curBase *= curBase;
         }
       });
-
-  return Attribute();
 }
 
 //===----------------------------------------------------------------------===//

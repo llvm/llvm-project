@@ -51,7 +51,6 @@ def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class", "ModuleOp"> {
     }
     ```
   }];
-  let dependentDialects = ["emitc::EmitCDialect"];
   let options = [
       Option<"funcName", "func-name", "std::string",
       /*default=*/[{"operator()"}],
@@ -96,7 +95,6 @@ def MLGOAddReflectionMapPass : Pass<"mlgo-add-reflection-map", "ModuleOp"> {
     }
     ```
   }];
-  let dependentDialects = ["emitc::EmitCDialect"];
   let options = [
     ListOption<"includedFieldAttrs", "included-field-attrs", "std::string",
       "Attribute keys used to extract field names from a field's "

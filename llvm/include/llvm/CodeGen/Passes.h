@@ -18,6 +18,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Discriminator.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 
 #include <functional>
 #include <string>
@@ -34,9 +35,6 @@ class raw_ostream;
 enum class RunOutliner;
 
 template <typename T> class IntrusiveRefCntPtr;
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 } // namespace llvm
 
@@ -292,10 +290,6 @@ LLVM_ABI extern char &BranchRelaxationPassID;
 
 /// MachineFunctionPrinterPass - This pass prints out MachineInstr's.
 LLVM_ABI extern char &MachineFunctionPrinterPassID;
-
-/// MIRPrintingPass - this pass prints out the LLVM IR using the MIR
-/// serialization format.
-LLVM_ABI extern char &MIRPrintingPassID;
 
 /// TailDuplicate - Duplicate blocks with unconditional branches
 /// into tails of their predecessors.
@@ -572,7 +566,7 @@ LLVM_ABI FunctionPass *createIndirectBrExpandPass();
 LLVM_ABI FunctionPass *createCFIFixupLegacy();
 
 /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
-LLVM_ABI FunctionPass *createCFIInstrInserter();
+LLVM_ABI FunctionPass *createCFIInstrInserterLegacy();
 
 /// Creates CFGuard longjmp target identification pass.
 /// \see CFGuardLongjmp.cpp
@@ -580,7 +574,7 @@ LLVM_ABI FunctionPass *createCFGuardLongjmpPass();
 
 /// Creates Windows EH Continuation Guard target identification pass.
 /// \see EHContGuardTargets.cpp
-LLVM_ABI FunctionPass *createEHContGuardTargetsPass();
+LLVM_ABI FunctionPass *createEHContGuardTargetsLegacy();
 
 /// Create Hardware Loop pass. \see HardwareLoops.cpp
 LLVM_ABI FunctionPass *createHardwareLoopsLegacyPass();
