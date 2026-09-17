@@ -229,3 +229,118 @@ define { <4 x i8>, <4 x i1> } @never_usub_const_vector() nounwind {
   %x = call { <4 x i8>, <4 x i1> } @llvm.usub.with.overflow.v4i8(<4 x i8> <i8 255, i8 255, i8 255, i8 255>, <4 x i8> <i8 128, i8 0, i8 255, i8 1>)
   ret { <4 x i8>, <4 x i1> } %x
 }
+
+; fold (ssub c1, c2) -> c3 + overflow
+define { i32, i1 } @combine_ssub_constant_overflow() {
+; CHECK-LABEL: combine_ssub_constant_overflow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    seto %dl
+; CHECK-NEXT:    retq
+  %x = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 -2147483648, i32 1)
+  ret { i32, i1 } %x
+}
+
+; INT_MIN on the RHS is not canonicalized to saddo.
+define { i32, i1 } @combine_ssub_constant_overflow_minsigned() {
+; CHECK-LABEL: combine_ssub_constant_overflow_minsigned:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    seto %dl
+; CHECK-NEXT:    retq
+  %x = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 0, i32 -2147483648)
+  ret { i32, i1 } %x
+}
+
+define { i32, i1 } @combine_ssub_constant_no_overflow() {
+; CHECK-LABEL: combine_ssub_constant_no_overflow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $-2147483647, %eax # imm = 0x80000001
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    seto %dl
+; CHECK-NEXT:    retq
+  %x = call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 -2147483647, i32 1)
+  ret { i32, i1 } %x
+}
+
+define { <4 x i32>, <4 x i1> } @combine_vec_ssub_constant_overflow() {
+; SSE-LABEL: combine_vec_ssub_constant_overflow:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [2147483647,2147483647,2147483647,2147483647]
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_ssub_constant_overflow:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [2147483647,2147483647,2147483647,2147483647]
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    retq
+  %x = call { <4 x i32>, <4 x i1> } @llvm.ssub.with.overflow.v4i32(<4 x i32> splat (i32 -2147483648), <4 x i32> splat (i32 1))
+  ret { <4 x i32>, <4 x i1> } %x
+}
+
+; fold (usub c1, c2) -> c3 + overflow
+define { i32, i1 } @combine_usub_constant_overflow() {
+; CHECK-LABEL: combine_usub_constant_overflow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    subl $3, %eax
+; CHECK-NEXT:    setb %dl
+; CHECK-NEXT:    retq
+  %x = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 1, i32 3)
+  ret { i32, i1 } %x
+}
+
+define { i32, i1 } @combine_usub_constant_no_overflow() {
+; CHECK-LABEL: combine_usub_constant_no_overflow:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $2, %eax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    retq
+  %x = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 3, i32 1)
+  ret { i32, i1 } %x
+}
+
+define { <4 x i32>, <4 x i1> } @combine_vec_usub_constant_overflow() {
+; SSE-LABEL: combine_vec_usub_constant_overflow:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [4294967294,4294967294,4294967294,4294967294]
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_usub_constant_overflow:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [4294967294,4294967294,4294967294,4294967294]
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    retq
+  %x = call { <4 x i32>, <4 x i1> } @llvm.usub.with.overflow.v4i32(<4 x i32> splat (i32 1), <4 x i32> splat (i32 3))
+  ret { <4 x i32>, <4 x i1> } %x
+}
+
+; Opaque constants (as created by constant hoisting) should not be folded.
+define { i64, i1 } @combine_ssub_constant_opaque() {
+; CHECK-LABEL: combine_ssub_constant_opaque:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movabsq $-9223372036854775792, %rax # imm = 0x8000000000000010
+; CHECK-NEXT:    addq $-100, %rax
+; CHECK-NEXT:    seto %dl
+; CHECK-NEXT:    retq
+  %c = bitcast i64 -9223372036854775792 to i64
+  %x = call { i64, i1 } @llvm.ssub.with.overflow.i64(i64 %c, i64 100)
+  ret { i64, i1 } %x
+}
+
+define { i64, i1 } @combine_usub_constant_opaque() {
+; CHECK-LABEL: combine_usub_constant_opaque:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movabsq $1311768467463790320, %rcx # imm = 0x123456789ABCDEF0
+; CHECK-NEXT:    movl $3, %eax
+; CHECK-NEXT:    subq %rcx, %rax
+; CHECK-NEXT:    setb %dl
+; CHECK-NEXT:    retq
+  %c = bitcast i64 1311768467463790320 to i64
+  %x = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 3, i64 %c)
+  ret { i64, i1 } %x
+}
