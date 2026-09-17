@@ -2032,9 +2032,7 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
                      m_Value(NarrowOp1))) &&
       match(Op2, m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
                      m_Value(NarrowOp2))) &&
-      NarrowOp1->getType() == NarrowOp2->getType() &&
-      NarrowOp1->getType()->isScalableTy() &&
-      NarrowOp1->getType()->isIntOrIntVectorTy(1)) {
+      NarrowOp1->getType() == NarrowOp2->getType()) {
     Value *SimpleNarrow = simplifyBinOp(Opc, NarrowOp1, NarrowOp2, DL);
     if (SimpleNarrow && !isa<UndefValue>(SimpleNarrow)) {
       if (match(SimpleNarrow, m_ZeroInt()))
@@ -2044,9 +2042,9 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
       else if (SimpleNarrow == NarrowOp2)
         SimpleII = Op2;
       else
-        SimpleII = IC.Builder.CreateIntrinsic(
-            Intrinsic::aarch64_sve_convert_to_svbool, {SimpleNarrow->getType()},
-            {SimpleNarrow});
+        SimpleII =
+            IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool,
+                                       SimpleNarrow->getType(), SimpleNarrow);
     }
   }
 
@@ -5728,7 +5726,14 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     const MCSchedModel &Sched = ST->getSchedModel();
     const TargetInstrInfo *TII = ST->getInstrInfo();
     unsigned SchedClass = TII->get(Inst).getSchedClass();
-    const MCSchedClassDesc *SCD = Sched.getSchedClassDesc(SchedClass);
+    const MCSchedClassDesc *SCD = Sched.hasInstrSchedModel()
+                                      ? Sched.getSchedClassDesc(SchedClass)
+                                      : nullptr;
+    // If the cpu has no scheduling model, or it doesn't describe the load, then
+    // fall back to the default load latency. Variant scheduling classes can't
+    // be resolved without a MachineInstr, so treat them the same way.
+    if (!SCD || !SCD->isValid() || SCD->isVariant())
+      return (LT.first - 1) + ST->getLoadLatency();
     // We need to convert the number of loads before the last to a float here,
     // as the reciprocal throughput may be fractional.
     float NumLoads = (LT.first - 1).getValue();
@@ -6943,12 +6948,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
                                         BinOp, CostKind, FMF);
 }
 
-InstructionCost
-AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                               VectorType *SrcTy, TTI::TargetCostKind CostKind,
-                               ArrayRef<int> Mask, int Index, VectorType *SubTp,
-                               ArrayRef<const Value *> Args,
-                               const Instruction *CxtI) const {
+InstructionCost AArch64TTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");

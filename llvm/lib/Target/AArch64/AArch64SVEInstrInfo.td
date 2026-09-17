@@ -335,7 +335,6 @@ def AArch64abs_mt    : SDNode<"AArch64ISD::ABS_MERGE_PASSTHRU", SDT_AArch64Arith
 def AArch64neg_mt    : SDNode<"AArch64ISD::NEG_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64sxt_mt    : SDNode<"AArch64ISD::SIGN_EXTEND_INREG_MERGE_PASSTHRU", SDT_AArch64IntExtend>;
 def AArch64uxt_mt    : SDNode<"AArch64ISD::ZERO_EXTEND_INREG_MERGE_PASSTHRU", SDT_AArch64IntExtend>;
-def AArch64frintx_mt : SDNode<"AArch64ISD::FRINT_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frint32x_mt : SDNode<"AArch64ISD::FRINT32_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frint64x_mt : SDNode<"AArch64ISD::FRINT64_MERGE_PASSTHRU", SDT_AArch64Arith>;
 def AArch64frint32z_mt : SDNode<"AArch64ISD::FTRUNC32_MERGE_PASSTHRU", SDT_AArch64Arith>;
@@ -352,6 +351,7 @@ defm AArch64frintm_mt : def_strict_fp_3op<"FFLOOR_MERGE_PASSTHRU",     SDT_AArch
 defm AArch64frinti_mt : def_strict_fp_3op<"FNEARBYINT_MERGE_PASSTHRU", SDT_AArch64Arith>;
 defm AArch64frinta_mt : def_strict_fp_3op<"FROUND_MERGE_PASSTHRU",     SDT_AArch64Arith>;
 defm AArch64frintn_mt : def_strict_fp_3op<"FROUNDEVEN_MERGE_PASSTHRU", SDT_AArch64Arith>;
+defm AArch64frintx_mt : def_strict_fp_3op<"FRINT_MERGE_PASSTHRU",      SDT_AArch64Arith>;
 defm AArch64frintz_mt : def_strict_fp_3op<"FTRUNC_MERGE_PASSTHRU",     SDT_AArch64Arith>;
 defm AArch64fsqrt_mt  : def_strict_fp_3op<"FSQRT_MERGE_PASSTHRU",      SDT_AArch64Arith>;
 
@@ -450,13 +450,13 @@ def SDT_AArch64FCVTR : SDTypeProfile<1, 4, [
   SDTCVecEltisVT<1,i1>
 ]>;
 
-def AArch64fcvtr_mt  : SDNode<"AArch64ISD::FP_ROUND_MERGE_PASSTHRU", SDT_AArch64FCVTR>;
-def AArch64fcvte_mt  : SDNode<"AArch64ISD::FP_EXTEND_MERGE_PASSTHRU", SDT_AArch64FCVT>;
-def AArch64ucvtf_mt  : SDNode<"AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU", SDT_AArch64FCVT>;
-def AArch64scvtf_mt  : SDNode<"AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU", SDT_AArch64FCVT>;
-def AArch64fcvtx_mt  : SDNode<"AArch64ISD::FCVTX_MERGE_PASSTHRU", SDT_AArch64FCVT>;
-def AArch64fcvtzu_mt : SDNode<"AArch64ISD::FCVTZU_MERGE_PASSTHRU", SDT_AArch64FCVT>;
-def AArch64fcvtzs_mt : SDNode<"AArch64ISD::FCVTZS_MERGE_PASSTHRU", SDT_AArch64FCVT>;
+defm AArch64fcvtr_mt  : def_strict_fp_4op<"FP_ROUND_MERGE_PASSTHRU",  SDT_AArch64FCVTR>;
+defm AArch64fcvte_mt  : def_strict_fp_3op<"FP_EXTEND_MERGE_PASSTHRU", SDT_AArch64FCVT>;
+defm AArch64ucvtf_mt  : def_strict_fp_3op<"UINT_TO_FP_MERGE_PASSTHRU", SDT_AArch64FCVT>;
+defm AArch64scvtf_mt  : def_strict_fp_3op<"SINT_TO_FP_MERGE_PASSTHRU", SDT_AArch64FCVT>;
+defm AArch64fcvtx_mt  : def_strict_fp_3op<"FCVTX_MERGE_PASSTHRU", SDT_AArch64FCVT>;
+defm AArch64fcvtzu_mt : def_strict_fp_3op<"FCVTZU_MERGE_PASSTHRU", SDT_AArch64FCVT>;
+defm AArch64fcvtzs_mt : def_strict_fp_3op<"FCVTZS_MERGE_PASSTHRU", SDT_AArch64FCVT>;
 
 def AArch64clasta_n     : SDNode<"AArch64ISD::CLASTA_N",   SDT_AArch64ReduceWithInit>;
 def AArch64clastb_n     : SDNode<"AArch64ISD::CLASTB_N",   SDT_AArch64ReduceWithInit>;

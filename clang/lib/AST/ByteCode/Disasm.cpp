@@ -345,7 +345,6 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     // All the maps.
     Bytes += GlobalIndices.getMemorySize();
     Bytes += Records.getMemorySize();
-    Bytes += DummyVariables.getMemorySize();
 
     // All Records.
     // They are allocated using the program allocator, so only get the size from
@@ -371,8 +370,6 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
                         : TerminalColor{llvm::raw_ostream::RED, false});
       OS << (GP.isInitialized() ? "initialized " : "uninitialized ");
     }
-    if (GP.block()->isDummy())
-      OS << "dummy ";
     Desc->dump(OS);
 
     if (GP.isInitialized() && Desc->IsTemporary) {
@@ -401,7 +398,7 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     }
 
     OS << "\n";
-    if (GP.isInitialized() && Desc->isPrimitive() && !G->block()->isDummy()) {
+    if (GP.isInitialized() && Desc->isPrimitive()) {
       OS << "   ";
       {
         ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_CYAN, false});
@@ -633,7 +630,6 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   OS << "  Extern: " << isExtern() << "\n";
   OS << "  Initialized: " << IsInitialized << "\n";
   OS << "  Weak: " << isWeak() << "\n";
-  OS << "  Dummy: " << isDummy() << '\n';
   OS << "  Dynamic: " << isDynamic() << "\n";
   OS << "  Metadata: " << MDSize << '\n';
 }
