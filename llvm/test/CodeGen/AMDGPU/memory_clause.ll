@@ -250,15 +250,15 @@ define amdgpu_kernel void @vector_clause_indirect(ptr addrspace(1) noalias nocap
 ; GCN-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x34
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx2 v[8:9], v0, s[0:1]
+; GCN-NEXT:    global_load_dwordx2 v[10:11], v0, s[0:1]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v[8:9], off
-; GCN-NEXT:    global_load_dwordx4 v[4:7], v[8:9], off offset:16
-; GCN-NEXT:    v_mov_b32_e32 v8, 0
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v[10:11], off
+; GCN-NEXT:    global_load_dwordx4 v[4:7], v[10:11], off offset:16
+; GCN-NEXT:    v_mov_b32_e32 v10, 0
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
-; GCN-NEXT:    global_store_dwordx4 v8, v[0:3], s[2:3]
+; GCN-NEXT:    global_store_dwordx4 v10, v[0:3], s[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
-; GCN-NEXT:    global_store_dwordx4 v8, v[4:7], s[2:3] offset:16
+; GCN-NEXT:    global_store_dwordx4 v10, v[4:7], s[2:3] offset:16
 ; GCN-NEXT:    s_endpgm
 ;
 ; GCN-SCRATCH-LABEL: vector_clause_indirect:
@@ -267,17 +267,17 @@ define amdgpu_kernel void @vector_clause_indirect(ptr addrspace(1) noalias nocap
 ; GCN-SCRATCH-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-SCRATCH-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x34
 ; GCN-SCRATCH-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; GCN-SCRATCH-NEXT:    v_mov_b32_e32 v8, 0
 ; GCN-SCRATCH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-SCRATCH-NEXT:    global_load_dwordx2 v[8:9], v0, s[0:1]
+; GCN-SCRATCH-NEXT:    global_load_dwordx2 v[6:7], v0, s[0:1]
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SCRATCH-NEXT:    s_clause 0x1
-; GCN-SCRATCH-NEXT:    global_load_dwordx4 v[0:3], v[8:9], off
-; GCN-SCRATCH-NEXT:    global_load_dwordx4 v[4:7], v[8:9], off offset:16
-; GCN-SCRATCH-NEXT:    v_mov_b32_e32 v8, 0
+; GCN-SCRATCH-NEXT:    global_load_dwordx4 v[0:3], v[6:7], off
+; GCN-SCRATCH-NEXT:    global_load_dwordx4 v[10:13], v[6:7], off offset:16
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-SCRATCH-NEXT:    global_store_dwordx4 v8, v[0:3], s[2:3]
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
-; GCN-SCRATCH-NEXT:    global_store_dwordx4 v8, v[4:7], s[2:3] offset:16
+; GCN-SCRATCH-NEXT:    global_store_dwordx4 v8, v[10:13], s[2:3] offset:16
 ; GCN-SCRATCH-NEXT:    s_endpgm
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()

@@ -407,12 +407,12 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
     MachineInstr &VecLoadIns = *AllVectorLoads.back();
     BitVector InsDefs, InsUses;
     std::tie(InsDefs, InsUses) = getUsesAndDefsFor(VecLoadIns);
+    bool SingleLoadCluster = false;
 
     if (ClusterLoads.size() && !ClusterLoads.count(&VecLoadIns)) {
       ClusterLoads.clear();
       UsedLoadSourcePhysregs.reset();
       UsedLoadDestPhysregs.reset();
-      AllVectorLoads.pop_back();
       continue;
     } else if (!ClusterLoads.count(&VecLoadIns)) {
       BitVector ClusterRAWHazards(NumVGPR32);
@@ -439,8 +439,16 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
               ClusterRAWHazards &= RAWHazardMask;
             }
       }
+      SingleLoadCluster = ClusterLoads.size() == 1;
     } else
       ClusterLoads.erase(&VecLoadIns);
+
+    // There's no reason to rename register for a load that can't cluster with
+    // any other loads.
+    if (SingleLoadCluster) {
+      AllVectorLoads.pop_back();
+      continue;
+    }
 
     // If it's used or defined by a load that could be in our cluster, it's
     // _NOT_ free.
@@ -452,7 +460,7 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
       BannedRegs |= UsesAndDefs.second;
     }
 
-    // Check if we have something to rename due to WAR
+    // Check if we have something to rename due to WAR across cluster.
     BitVector LoadPhysregs = UsedLoadSourcePhysregs;
     LoadPhysregs |= UsedLoadDestPhysregs;
     BitVector WarConflicts = InsUses;
@@ -477,7 +485,7 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
       WarConflicts &= LoadPhysregs;
     }
 
-    // Check if we have something to rename due to WAR
+    // Check if we have something to rename due to WAR within a single load.
     BitVector SelfConflicts = InsUses;
     SelfConflicts &= InsDefs;
     while (SelfConflicts.any()) {

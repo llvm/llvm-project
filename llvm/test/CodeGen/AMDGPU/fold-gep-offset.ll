@@ -34,9 +34,9 @@ define i32 @flat_offset_maybe_oob(ptr %p, i32 %i) {
 ; GFX90A-NEXT:    v_lshlrev_b64 v[2:3], 2, v[2:3]
 ; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
-; GFX90A-NEXT:    v_add_co_u32_e32 v2, vcc, 12, v0
-; GFX90A-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
-; GFX90A-NEXT:    flat_load_dword v0, v[2:3]
+; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 12, v0
+; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX90A-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -47,9 +47,9 @@ define i32 @flat_offset_maybe_oob(ptr %p, i32 %i) {
 ; GFX10-NEXT:    v_lshlrev_b64 v[2:3], 2, v[2:3]
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
-; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v0, 12
-; GFX10-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v1, vcc_lo
-; GFX10-NEXT:    flat_load_dword v0, v[2:3]
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 12
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX10-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -58,8 +58,8 @@ define i32 @flat_offset_maybe_oob(ptr %p, i32 %i) {
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-SDAG-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[2:3], 2, v[0:1]
-; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[2:3], v[0:1], 0, 12
-; GFX942-SDAG-NEXT:    flat_load_dword v0, v[2:3]
+; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, 12
+; GFX942-SDAG-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -72,10 +72,10 @@ define i32 @flat_offset_maybe_oob(ptr %p, i32 %i) {
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
-; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v0, 12
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 12
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v1, vcc_lo
-; GFX11-NEXT:    flat_load_b32 v0, v[2:3]
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX11-NEXT:    flat_load_b32 v0, v[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -93,11 +93,11 @@ define i32 @flat_offset_maybe_oob(ptr %p, i32 %i) {
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
-; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, 12
+; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 12
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v1, vcc_lo
-; GFX12-NEXT:    flat_load_b32 v0, v[2:3]
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX12-NEXT:    flat_load_b32 v0, v[0:1]
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -106,10 +106,10 @@ define i32 @flat_offset_maybe_oob(ptr %p, i32 %i) {
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX942-GISEL-NEXT:    v_lshl_add_u64 v[0:1], v[2:3], 2, v[0:1]
-; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 12, v0
+; GFX942-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 12, v0
 ; GFX942-GISEL-NEXT:    s_nop 1
-; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
-; GFX942-GISEL-NEXT:    flat_load_dword v0, v[2:3]
+; GFX942-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; GFX942-GISEL-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %idx = add nsw i32 %i, 3
@@ -123,8 +123,8 @@ define i32 @private_offset_maybe_oob(ptr addrspace(5) %p, i32 %i) {
 ; GFX90A-SDAG-MUBUF-LABEL: private_offset_maybe_oob:
 ; GFX90A-SDAG-MUBUF:       ; %bb.0:
 ; GFX90A-SDAG-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-SDAG-MUBUF-NEXT:    v_lshl_add_u32 v1, v1, 2, v0
-; GFX90A-SDAG-MUBUF-NEXT:    buffer_load_dword v0, v1, s[0:3], 0 offen offset:12
+; GFX90A-SDAG-MUBUF-NEXT:    v_lshl_add_u32 v0, v1, 2, v0
+; GFX90A-SDAG-MUBUF-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen offset:12
 ; GFX90A-SDAG-MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-SDAG-MUBUF-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -132,16 +132,16 @@ define i32 @private_offset_maybe_oob(ptr addrspace(5) %p, i32 %i) {
 ; GFX90A-FLATSCR:       ; %bb.0:
 ; GFX90A-FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-FLATSCR-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
-; GFX90A-FLATSCR-NEXT:    v_add3_u32 v1, v0, v1, 12
-; GFX90A-FLATSCR-NEXT:    scratch_load_dword v0, v1, off
+; GFX90A-FLATSCR-NEXT:    v_add3_u32 v0, v0, v1, 12
+; GFX90A-FLATSCR-NEXT:    scratch_load_dword v0, v0, off
 ; GFX90A-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-MUBUF-LABEL: private_offset_maybe_oob:
 ; GFX10-SDAG-MUBUF:       ; %bb.0:
 ; GFX10-SDAG-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SDAG-MUBUF-NEXT:    v_lshl_add_u32 v1, v1, 2, v0
-; GFX10-SDAG-MUBUF-NEXT:    buffer_load_dword v0, v1, s[0:3], 0 offen offset:12
+; GFX10-SDAG-MUBUF-NEXT:    v_lshl_add_u32 v0, v1, 2, v0
+; GFX10-SDAG-MUBUF-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen offset:12
 ; GFX10-SDAG-MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SDAG-MUBUF-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -149,8 +149,8 @@ define i32 @private_offset_maybe_oob(ptr addrspace(5) %p, i32 %i) {
 ; GFX10-FLATSCR:       ; %bb.0:
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
-; GFX10-FLATSCR-NEXT:    v_add3_u32 v1, v0, v1, 12
-; GFX10-FLATSCR-NEXT:    scratch_load_dword v0, v1, off
+; GFX10-FLATSCR-NEXT:    v_add3_u32 v0, v0, v1, 12
+; GFX10-FLATSCR-NEXT:    scratch_load_dword v0, v0, off
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -158,8 +158,8 @@ define i32 @private_offset_maybe_oob(ptr addrspace(5) %p, i32 %i) {
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
-; GFX942-NEXT:    v_add3_u32 v1, v0, v1, 12
-; GFX942-NEXT:    scratch_load_dword v0, v1, off
+; GFX942-NEXT:    v_add3_u32 v0, v0, v1, 12
+; GFX942-NEXT:    scratch_load_dword v0, v0, off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -168,8 +168,8 @@ define i32 @private_offset_maybe_oob(ptr addrspace(5) %p, i32 %i) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add3_u32 v1, v0, v1, 12
-; GFX11-NEXT:    scratch_load_b32 v0, v1, off
+; GFX11-NEXT:    v_add3_u32 v0, v0, v1, 12
+; GFX11-NEXT:    scratch_load_b32 v0, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -180,8 +180,8 @@ define i32 @private_offset_maybe_oob(ptr addrspace(5) %p, i32 %i) {
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    v_lshl_add_u32 v1, v1, 2, v0
-; GFX12-SDAG-NEXT:    scratch_load_b32 v0, v1, off offset:12
+; GFX12-SDAG-NEXT:    v_lshl_add_u32 v0, v1, 2, v0
+; GFX12-SDAG-NEXT:    scratch_load_b32 v0, v0, off offset:12
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -189,8 +189,8 @@ define i32 @private_offset_maybe_oob(ptr addrspace(5) %p, i32 %i) {
 ; GFX90A-GISEL-MUBUF:       ; %bb.0:
 ; GFX90A-GISEL-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-GISEL-MUBUF-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
-; GFX90A-GISEL-MUBUF-NEXT:    v_add_u32_e32 v1, v0, v1
-; GFX90A-GISEL-MUBUF-NEXT:    buffer_load_dword v0, v1, s[0:3], 0 offen offset:12
+; GFX90A-GISEL-MUBUF-NEXT:    v_add_u32_e32 v0, v0, v1
+; GFX90A-GISEL-MUBUF-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen offset:12
 ; GFX90A-GISEL-MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-GISEL-MUBUF-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -198,8 +198,8 @@ define i32 @private_offset_maybe_oob(ptr addrspace(5) %p, i32 %i) {
 ; GFX10-GISEL-MUBUF:       ; %bb.0:
 ; GFX10-GISEL-MUBUF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-MUBUF-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
-; GFX10-GISEL-MUBUF-NEXT:    v_add_nc_u32_e32 v1, v0, v1
-; GFX10-GISEL-MUBUF-NEXT:    buffer_load_dword v0, v1, s[0:3], 0 offen offset:12
+; GFX10-GISEL-MUBUF-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX10-GISEL-MUBUF-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen offset:12
 ; GFX10-GISEL-MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-GISEL-MUBUF-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -212,8 +212,8 @@ define i32 @private_offset_maybe_oob(ptr addrspace(5) %p, i32 %i) {
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_add_nc_u32_e32 v1, v0, v1
-; GFX12-GISEL-NEXT:    scratch_load_b32 v0, v1, off offset:12
+; GFX12-GISEL-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX12-GISEL-NEXT:    scratch_load_b32 v0, v0, off offset:12
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %idx = add nsw i32 %i, 3
@@ -229,9 +229,9 @@ define i32 @flat_offset_inbounds(ptr %p, i32 %i) {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX90A-NEXT:    v_lshlrev_b64 v[2:3], 2, v[2:3]
-; GFX90A-NEXT:    v_add_co_u32_e32 v4, vcc, v0, v2
-; GFX90A-NEXT:    v_addc_co_u32_e32 v5, vcc, v1, v3, vcc
-; GFX90A-NEXT:    flat_load_dword v0, v[4:5] offset:12
+; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
+; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
+; GFX90A-NEXT:    flat_load_dword v0, v[0:1] offset:12
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -240,9 +240,9 @@ define i32 @flat_offset_inbounds(ptr %p, i32 %i) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX10-NEXT:    v_lshlrev_b64 v[2:3], 2, v[2:3]
-; GFX10-NEXT:    v_add_co_u32 v4, vcc_lo, v0, v2
-; GFX10-NEXT:    v_add_co_ci_u32_e64 v5, null, v1, v3, vcc_lo
-; GFX10-NEXT:    flat_load_dword v0, v[4:5] offset:12
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
+; GFX10-NEXT:    flat_load_dword v0, v[0:1] offset:12
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -250,8 +250,8 @@ define i32 @flat_offset_inbounds(ptr %p, i32 %i) {
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; GFX942-NEXT:    v_lshl_add_u64 v[2:3], v[2:3], 2, v[0:1]
-; GFX942-NEXT:    flat_load_dword v0, v[2:3] offset:12
+; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[2:3], 2, v[0:1]
+; GFX942-NEXT:    flat_load_dword v0, v[0:1] offset:12
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -261,10 +261,10 @@ define i32 @flat_offset_inbounds(ptr %p, i32 %i) {
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b64 v[2:3], 2, v[2:3]
-; GFX11-NEXT:    v_add_co_u32 v4, vcc_lo, v0, v2
+; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_co_ci_u32_e64 v5, null, v1, v3, vcc_lo
-; GFX11-NEXT:    flat_load_b32 v0, v[4:5] offset:12
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
+; GFX11-NEXT:    flat_load_b32 v0, v[0:1] offset:12
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -278,11 +278,11 @@ define i32 @flat_offset_inbounds(ptr %p, i32 %i) {
 ; GFX12-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[2:3], 2, v[2:3]
-; GFX12-NEXT:    v_add_co_u32 v4, vcc_lo, v0, v2
+; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_add_co_ci_u32_e64 v5, null, v1, v3, vcc_lo
-; GFX12-NEXT:    flat_load_b32 v0, v[4:5] offset:12
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
+; GFX12-NEXT:    flat_load_b32 v0, v[0:1] offset:12
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %p.1 = getelementptr inbounds i32, ptr %p, i32 %i
