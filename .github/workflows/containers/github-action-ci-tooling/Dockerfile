@@ -81,7 +81,7 @@ COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/cla
 
 # Install dependencies for 'pr-code-format.yml' job
 COPY llvm/utils/git/requirements_formatting.txt requirements_formatting.txt
-RUN pip install --require-hashes -r requirements_formatting.txt --break-system-packages && \
+RUN pip install --ignore-installed --require-hashes -r requirements_formatting.txt --break-system-packages && \
     rm requirements_formatting.txt
 USER gha
 WORKDIR /home/gha
@@ -135,12 +135,12 @@ ARG LLVM_VERSION_MAJOR
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y wget gpg python3 python3-pip git cmake
 
 RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o /etc/apt/keyrings/llvm.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-${LLVM_VERSION_MAJOR} main" | tee /etc/apt/sources.list.d/llvm.list && \
+    echo "deb [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/resolute/ llvm-toolchain-resolute-${LLVM_VERSION_MAJOR} main" | tee /etc/apt/sources.list.d/llvm.list && \
     apt-get update && \
     apt-get install -y clang-${LLVM_VERSION_MAJOR} lld-${LLVM_VERSION_MAJOR} ninja-build libclang-${LLVM_VERSION_MAJOR}-dev
 
 COPY llvm/utils/git/requirements_formatting.txt requirements_formatting.txt
-RUN pip install --require-hashes -r requirements_formatting.txt --break-system-packages && \
+RUN pip install --ignore-installed --require-hashes -r requirements_formatting.txt --break-system-packages && \
     rm requirements_formatting.txt
 
 RUN git clone https://github.com/compnerd/ids && cd ids && \
