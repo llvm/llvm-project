@@ -1454,14 +1454,14 @@ public:
   serialization::InputFileLoc getLoadedFileLoc(StringRef Path, off_t Size);
 
 private:
-  struct LoadedInputFile {
+  struct LoadedInputModuleFile {
     off_t Size;
     ModuleFile *F;
     unsigned InputID;
   };
 
   /// Input files of loaded modules, keyed by resolved path. Built on first use.
-  llvm::StringMap<SmallVector<LoadedInputFile, 1>> LoadedInputFiles;
+  llvm::StringMap<SmallVector<LoadedInputModuleFile, 1>> LoadedInputFiles;
   bool LoadedInputFilesBuilt = false;
 
   void buildLoadedInputFiles();

@@ -1925,7 +1925,7 @@ InputFileLoc ASTReader::getLoadedFileLoc(StringRef Path, off_t Size) {
   if (Known == LoadedInputFiles.end())
     return InputFileLoc();
 
-  for (const LoadedInputFile &In : Known->second) {
+  for (const LoadedInputModuleFile &In : Known->second) {
     if (In.Size != Size)
       continue;
     // An input file may have no source location entries, leaving no copy to
