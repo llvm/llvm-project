@@ -26,10 +26,6 @@ using namespace llvm::detail;
 
 namespace {
 
-bool isFunctionSelected(const Function &F) {
-  return isFunctionInPrintList("*") || isFunctionInPrintList(F.getName());
-}
-
 struct ChangeCounts {
   unsigned AddedBlocks = 0;
   unsigned RemovedBlocks = 0;
@@ -72,12 +68,12 @@ const Module *collectFunctions(IRUnitRef IR,
   }
 
   llvm::erase_if(Functions, [](const Function *F) {
-    return F->isDeclaration() || !isFunctionSelected(*F);
+    return F->isDeclaration() || !shouldPrintFunction(*F);
   });
   if (!M && !Functions.empty())
     M = Functions.front()->getParent();
 
-  if (forcePrintModuleIR() && M) {
+  if (forcePrintModuleIR() && M && !Functions.empty()) {
     Functions.clear();
     for (const Function &F : *M)
       if (!F.isDeclaration())
