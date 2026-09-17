@@ -86,6 +86,15 @@ void genOpenACCRoutineConstruct(
     AbstractConverter &, mlir::ModuleOp, mlir::func::FuncOp,
     const std::vector<Fortran::semantics::OpenACCRoutineInfo> &);
 
+void declareExternalAccModuleDeclareActionRecipes(
+    AbstractConverter &, fir::FirOpBuilder &,
+    const Fortran::semantics::Symbol &);
+
+/// Declare a private func.func for each acc.routine bind(name) target in \p
+/// module (and its submodules) not already declared, cloning the decorated
+/// routine's type. Run after primary translation.
+void materializeOpenACCRoutineBindTargets(AbstractConverter &, mlir::ModuleOp);
+
 void attachDeclarePostAllocAction(AbstractConverter &, fir::FirOpBuilder &,
                                   const Fortran::semantics::Symbol &);
 void attachDeclarePreDeallocAction(AbstractConverter &, fir::FirOpBuilder &,

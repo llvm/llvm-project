@@ -358,6 +358,7 @@ public:
   virtual const fir::KindMapping &getKindMap() = 0;
 
   virtual Fortran::lower::StatementContext &getFctCtx() = 0;
+  virtual Fortran::lower::StatementContext &getCudaCleanupCtx() = 0;
 
   /// Generate STAT and ERRMSG from a list of StatOrErrmsg
   virtual std::pair<mlir::Value, mlir::Value>

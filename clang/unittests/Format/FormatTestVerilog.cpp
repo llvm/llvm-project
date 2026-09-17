@@ -686,6 +686,9 @@ TEST_F(FormatTestVerilog, Hierarchy) {
                "x = x;");
   verifyFormat("export \"DPI-C\" function exported_sv_func;\n"
                "x = x;");
+  verifyFormat("extern protected virtual function int send\n"
+               "    (int value);\n"
+               "x = x;");
   verifyFormat("import \"DPI-C\" function void f1\n"
                "    (input int i1,\n"
                "     pair i2,\n"
@@ -719,6 +722,9 @@ TEST_F(FormatTestVerilog, Hierarchy) {
                "  generate\n"
                "  endgenerate\n"
                "endfunction : x");
+  verifyFormat("protected virtual function int x\n"
+               "    (int value);\n"
+               "endfunction");
   // Type names with '::' should be recognized.
   verifyFormat("function automatic x::x x\n"
                "    (input x);\n"
@@ -1404,6 +1410,27 @@ TEST_F(FormatTestVerilog, StringLiteral) {
                  "00000000000000000000000000000000000000000+0=\n"
                  "`pragma protect end_protected",
                  getStyleWithColumns(getDefaultStyle(), 29));
+}
+
+TEST_F(FormatTestVerilog, Struct) {
+  verifyFormat("struct packed signed {\n"
+               "  int a;\n"
+               "} pack1;");
+  verifyFormat("struct packed {\n"
+               "  int a;\n"
+               "} pack1;");
+  verifyFormat("struct {\n"
+               "  int a;\n"
+               "} pack1;");
+  verifyFormat("typedef struct packed signed {\n"
+               "  bit [3 : 0] GFC;\n"
+               "} s_atmcell;");
+  verifyFormat("typedef struct {\n"
+               "  bit [3 : 0] GFC;\n"
+               "} s_atmcell;");
+  verifyFormat("typedef struct packed {\n"
+               "  bit [3 : 0] GFC;\n"
+               "} s_atmcell;");
 }
 
 TEST_F(FormatTestVerilog, StructLiteral) {

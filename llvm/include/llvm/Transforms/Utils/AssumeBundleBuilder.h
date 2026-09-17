@@ -58,15 +58,6 @@ struct AssumeSimplifyPass : public OptionalPassInfoMixin<AssumeSimplifyPass> {
 struct AssumeBuilderPass : public OptionalPassInfoMixin<AssumeBuilderPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
-
-/// canonicalize the RetainedKnowledge RK. it is assumed that RK is part of
-/// Assume. This will return an empty RetainedKnowledge if the knowledge is
-/// useless.
-LLVM_ABI RetainedKnowledge simplifyRetainedKnowledge(AssumeInst *Assume,
-                                                     RetainedKnowledge RK,
-                                                     AssumptionCache *AC,
-                                                     DominatorTree *DT);
-
 } // namespace llvm
 
 #endif

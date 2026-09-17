@@ -2031,3 +2031,37 @@ namespace StaticMemberRedecl {
   const int S::m = 10;
   static_assert(getM() == 10, "");
 }
+
+namespace VariadicCtorStartsLifetime {
+  struct S {
+    constexpr S(int, ...) {}
+  };
+  class C {
+  public:
+    S s;
+    constexpr C() : s(1,1) {}
+  };
+  /// Used to not start the lifetime of 's'.
+  constexpr C c;
+}
+
+namespace BaseInitViaDIE {
+  struct S {
+    int a = 42, b = a;
+  };
+
+  struct SS : S {};
+  constexpr SS ss {};
+  static_assert(ss.b == 42, "");
+}
+
+namespace OPEOpaque {
+  struct S {char c[14];};
+  extern S s;
+  static_assert((&s + 1) - &s == 1, "");
+
+  extern int a[12];
+  static_assert ((&a + 12 - &a) == 12, ""); // both-error {{not an integral constant expression}} \
+                                            // both-note {{cannot refer to element 12 of non-array object in a constant expression}}
+
+}

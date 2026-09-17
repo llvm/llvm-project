@@ -11,9 +11,9 @@
 // rewrites a cir.func signature, the function body, and call sites to match
 // the ABI-lowered shape.
 //
-// This file currently handles only Direct (pass-through) and Ignore.  Other
-// ArgKind handlers (Extend, Direct-with-coercion, Indirect, Expand) are
-// added by subsequent PRs in the calling-convention-lowering split series.
+// This file handles Direct (pass-through and coerce-in-registers), Extend,
+// Ignore, Indirect (sret return, byval and non-byval arguments), and Expand
+// (struct flattening into scalar fields).
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,7 +22,11 @@
 
 #include "mlir/ABI/ABIRewriteContext.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "llvm/ADT/SmallVector.h"
+#include <cassert>
+#include <utility>
 
 namespace cir {
 
@@ -31,9 +35,18 @@ namespace cir {
 /// The driver pass (CallConvLoweringPass) computes a FunctionClassification
 /// for each cir.func / cir.call and dispatches to this class to perform the
 /// actual IR rewriting using cir dialect operations.
+///
+/// Holds a reference to the module's DataLayout for coercion alignment
+/// queries.  The DataLayout must outlive the rewrite context.
 class CIRABIRewriteContext : public mlir::abi::ABIRewriteContext {
 public:
-  explicit CIRABIRewriteContext(mlir::ModuleOp module) : module(module) {}
+  CIRABIRewriteContext(mlir::ModuleOp module, const mlir::DataLayout &dl)
+      : module(module), dl(dl) {}
+
+  ~CIRABIRewriteContext() {
+    assert(pendingParamSlots.empty() &&
+           "finalizeParameterSlots must run before the rewrite context dies");
+  }
 
   mlir::LogicalResult
   rewriteFunctionDefinition(mlir::FunctionOpInterface funcOp,
@@ -45,10 +58,48 @@ public:
                   const mlir::abi::FunctionClassification &fc,
                   mlir::OpBuilder &builder) override;
 
+  /// Retype \p addrOp, which holds the address of \p funcOp, to the signature
+  /// funcOp was rewritten to, and cast it back so existing uses keep the type
+  /// they were built for.  A no-op when the ABI left funcOp's type alone.
+  /// Call after funcOp has been rewritten.  Not an override, since taking a
+  /// function's address has no counterpart in the generic contract.
+  void rewriteFunctionAddress(cir::GetGlobalOp addrOp, cir::FuncOp funcOp,
+                              mlir::OpBuilder &builder);
+
+  /// Restate each non-byval indirect parameter's CIRGen slot alignment as the
+  /// alignment the ABI promises for that parameter.  CIRGen picked the slot's
+  /// alignment for a local copy of the record, but the slot is about to stand
+  /// in for the parameter, and a call forwarding it may only promise what the
+  /// incoming pointer does.  Call for every function before any call site is
+  /// rewritten, since a call is rewritten with its callee rather than with its
+  /// enclosing function and so may be reached first.  Not an override, since
+  /// this has no counterpart in the generic contract.
+  void
+  normalizeParameterSlotAlignments(cir::FuncOp funcOp,
+                                   const mlir::abi::FunctionClassification &fc);
+
+  /// Replace each non-byval indirect parameter's CIRGen slot with the
+  /// incoming pointer, so the body operates on the caller's storage in place.
+  /// Call once, after every function and call site has been rewritten: a call
+  /// forwarding such a parameter reads the slot to recognise it.  Not an
+  /// override, since deferring this has no counterpart in the generic
+  /// contract.
+  void finalizeParameterSlots();
+
   mlir::StringRef getDialectNamespace() const override { return "cir"; }
 
 private:
   mlir::ModuleOp module;
+  const mlir::DataLayout &dl;
+
+  /// CIRGen param-slot allocas that non-byval indirect parameters will
+  /// replace, paired with the incoming pointer that replaces them.  The
+  /// rewrite retypes the block argument but leaves the slot standing, because
+  /// a call site recognises a forwardable parameter by the slot its operand
+  /// was loaded from.  finalizeParameterSlots does the replacement once every
+  /// call site has been rewritten.
+  llvm::SmallVector<std::pair<cir::AllocaOp, mlir::BlockArgument>>
+      pendingParamSlots;
 };
 
 } // namespace cir

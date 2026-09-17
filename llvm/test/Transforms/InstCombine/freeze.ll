@@ -1733,6 +1733,26 @@ define float @freeze_fabs_nofpclass(float %a) {
   ret float %x.fr
 }
 
+; freezeOtherUses rewrites %m's operand to the existing freeze %fb; the freeze
+; of the user %p must then be pushed through within the same iteration.
+define i1 @freeze_other_uses_requeues_user(i32 %a, i32 %b) {
+; CHECK-LABEL: define i1 @freeze_other_uses_requeues_user(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[FB:%.*]] = freeze i32 [[B]]
+; CHECK-NEXT:    [[A_FR:%.*]] = freeze i32 [[A]]
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[A_FR]], [[FB]]
+; CHECK-NEXT:    [[P:%.*]] = mul i32 [[M]], [[FB]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[P]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m  = mul i32 %a, %b
+  %fm = freeze i32 %m
+  %fb = freeze i32 %b
+  %p  = mul i32 %fm, %fb
+  %r  = icmp eq i32 %p, 0
+  ret i1 %r
+}
+
 !0 = !{}
 !1 = !{i64 4}
 !2 = !{i32 0, i32 100}

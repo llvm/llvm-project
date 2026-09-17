@@ -53,51 +53,66 @@ void ExecutorBase::reportErrorString(StringRef Msg) {
   Handler.onError(Msg);
 }
 
-std::optional<uint64_t> ExecutorBase::verifyMemAccess(const MemoryObject &MO,
-                                                      const APInt &Address,
-                                                      uint64_t AccessSize,
-                                                      Align Alignment,
-                                                      bool IsStore) {
+std::pair<MemoryObject *, uint64_t>
+ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
+                              Align Alignment, bool IsStore) {
+  auto *MO = Ctx.checkProvenance(Ptr, [](const Provenance &) {
+    // TODO: check provenance
+    // TODO: check inrange(S, E)
+    return true;
+  });
+  if (!MO) {
+    reportImmediateUB()
+        << "Invalid memory access via a pointer with nullary provenance.";
+    return {};
+  }
+  const APInt &Address = Ptr.address();
   // Loading from a stack object outside its lifetime is not undefined
   // behavior and returns a poison value instead. Storing to it is still
   // undefined behavior.
-  if (IsStore ? MO.getState() != MemoryObjectState::Alive
-              : MO.getState() == MemoryObjectState::Freed) {
+  if (IsStore ? MO->getState() != MemoryObjectState::Alive
+              : MO->getState() == MemoryObjectState::Freed) {
     reportImmediateUB() << "Try to access a dead memory object at address 0x"
                         << Twine::utohexstr(Address.getZExtValue()) << ".";
-    return std::nullopt;
+    return {};
+  }
+
+  if (IsStore && MO->isConstant()) {
+    reportImmediateUB() << "Try to write to a constant memory object: " << Ptr
+                        << ".";
+    return {};
   }
 
   if (Address.countr_zero() < Log2(Alignment)) {
     reportImmediateUB() << "Misaligned memory access. Address: 0x"
                         << Twine::utohexstr(Address.getZExtValue())
                         << ", Required alignment: " << Alignment.value() << ".";
-    return std::nullopt;
+    return {};
   }
 
-  if (AccessSize > MO.getSize() || Address.ult(MO.getAddress())) {
+  if (AccessSize > MO->getSize() || Address.ult(MO->getAddress())) {
     reportImmediateUB() << "Memory access is out of bounds. Accessed size: "
                         << AccessSize << ", Address: 0x"
                         << Twine::utohexstr(Address.getZExtValue())
                         << ", Object base: 0x"
-                        << Twine::utohexstr(MO.getAddress())
-                        << ", Object size: " << MO.getSize() << ".";
-    return std::nullopt;
+                        << Twine::utohexstr(MO->getAddress())
+                        << ", Object size: " << MO->getSize() << ".";
+    return {};
   }
 
-  APInt Offset = Address - MO.getAddress();
+  APInt Offset = Address - MO->getAddress();
 
-  if (Offset.ugt(MO.getSize() - AccessSize)) {
+  if (Offset.ugt(MO->getSize() - AccessSize)) {
     reportImmediateUB() << "Memory access is out of bounds. Accessed size: "
                         << AccessSize << ", Address: 0x"
                         << Twine::utohexstr(Address.getZExtValue())
                         << ", Object base: 0x"
-                        << Twine::utohexstr(MO.getAddress())
-                        << ", Object size: " << MO.getSize() << ".";
-    return std::nullopt;
+                        << Twine::utohexstr(MO->getAddress())
+                        << ", Object size: " << MO->getSize() << ".";
+    return {};
   }
 
-  return Offset.getZExtValue();
+  return {MO, Offset.getZExtValue()};
 }
 
 AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
@@ -107,23 +122,12 @@ AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
     return AnyValue::getPoisonValue(Ctx, ValTy);
   }
   auto &PtrVal = Ptr.asPointer();
-  auto *MO = PtrVal.getMemoryObject();
-  if (!MO) {
-    reportImmediateUB()
-        << "Invalid memory access via a pointer with nullary provenance.";
-    return AnyValue::getPoisonValue(Ctx, ValTy);
-  }
-  // TODO: pointer capability check
-  if (auto Offset =
-          verifyMemAccess(*MO, PtrVal.address(),
-                          Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
-                          /*IsStore=*/false)) {
-    // Load from a dead stack object yields poison value.
-    if (MO->getState() == MemoryObjectState::Dead)
-      return AnyValue::getPoisonValue(Ctx, ValTy);
-
+  if (auto [MO, Offset] = verifyMemAccess(
+          PtrVal, Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
+          /*IsStore=*/false);
+      MO) {
     bool ContainsUndefinedBits = false;
-    AnyValue Res = Ctx.load(*MO, *Offset, ValTy,
+    AnyValue Res = Ctx.load(*MO, Offset, ValTy,
                             NoUndef ? &ContainsUndefinedBits : nullptr);
     if (NoUndef && ContainsUndefinedBits)
       reportImmediateUB() << "The value loaded contains undefined bits.";
@@ -139,18 +143,11 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
     return;
   }
   auto &PtrVal = Ptr.asPointer();
-  auto *MO = PtrVal.getMemoryObject();
-  if (!MO) {
-    reportImmediateUB()
-        << "Invalid memory access via a pointer with nullary provenance.";
-    return;
-  }
-  // TODO: pointer capability check
-  if (auto Offset =
-          verifyMemAccess(*MO, PtrVal.address(),
-                          Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
-                          /*IsStore=*/true))
-    Ctx.store(*MO, *Offset, Val, ValTy);
+  if (auto [MO, Offset] = verifyMemAccess(
+          PtrVal, Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
+          /*IsStore=*/true);
+      MO)
+    Ctx.store(*MO, Offset, Val, ValTy);
 }
 
 void ExecutorBase::requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,

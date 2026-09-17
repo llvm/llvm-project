@@ -25,9 +25,10 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/FileSystem/UniqueID.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <ctime>
 #include <map>
 #include <memory>
@@ -36,13 +37,15 @@
 
 namespace llvm {
 
-class MemoryBuffer;
+namespace vfs {
+class File;
+class FileSystem;
+class Status;
+} // end namespace vfs
 
 } // end namespace llvm
 
 namespace clang {
-
-class FileSystemStatCache;
 
 /// Implements support for file system lookup, file system caching,
 /// and directory search management.
@@ -121,9 +124,6 @@ class FileManager : public RefCountedBase<FileManager> {
   unsigned NumDirCacheMisses = 0;
   unsigned NumFileCacheMisses = 0;
 
-  // Caching.
-  std::unique_ptr<FileSystemStatCache> StatCache;
-
   std::error_code getStatValue(StringRef Path, llvm::vfs::Status &Status,
                                bool isFile, std::unique_ptr<llvm::vfs::File> *F,
                                bool IsText = true);
@@ -156,20 +156,11 @@ public:
   /// \param FS if non-null, the VFS to use.  Otherwise uses
   /// llvm::vfs::getRealFileSystem().
   FileManager(const FileSystemOptions &FileSystemOpts,
-              IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr);
+              IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
+  /// Construct a file manager over the real file system. Separate from the
+  /// overload above so that callers do not need a complete FileSystem type.
+  explicit FileManager(const FileSystemOptions &FileSystemOpts);
   ~FileManager();
-
-  /// Installs the provided FileSystemStatCache object within
-  /// the FileManager.
-  ///
-  /// Ownership of this object is transferred to the FileManager.
-  ///
-  /// \param statCache the new stat cache to install. Ownership of this
-  /// object is transferred to the FileManager.
-  void setStatCache(std::unique_ptr<FileSystemStatCache> statCache);
-
-  /// Removes the FileSystemStatCache object from the manager.
-  void clearStatCache();
 
   /// Returns the number of unique real file entries cached by the file manager.
   size_t getNumUniqueRealFiles() const { return UniqueRealFiles.size(); }
@@ -248,17 +239,13 @@ public:
 
   llvm::vfs::FileSystem &getVirtualFileSystem() const { return *FS; }
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-  getVirtualFileSystemPtr() const {
-    return FS;
-  }
+  getVirtualFileSystemPtr() const;
 
   /// Enable or disable tracking of VFS usage. Used to not track full header
   /// search and implicit modulemap lookup.
   void trackVFSUsage(bool Active);
 
-  void setVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
-    this->FS = std::move(FS);
-  }
+  void setVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
   /// Retrieve a file entry for a "virtual" file that acts as
   /// if there were a file with the given name on disk.
@@ -305,15 +292,6 @@ private:
   DirectoryEntry *&getRealDirEntry(const llvm::vfs::Status &Status);
 
 public:
-  /// Get the 'stat' information for the given \p Path.
-  ///
-  /// If the path is relative, it will be resolved against the WorkingDir of the
-  /// FileManager's FileSystemOptions.
-  ///
-  /// \returns a \c std::error_code describing an error, if there was one
-  std::error_code getNoncachedStatValue(StringRef Path,
-                                        llvm::vfs::Status &Result);
-
   /// If path is not absolute and FileSystemOptions set the working
   /// directory, the path is modified to be relative to the given
   /// working directory.
@@ -331,11 +309,6 @@ public:
   /// \returns true if \c Path was changed.
   bool makeAbsolutePath(SmallVectorImpl<char> &Path,
                         bool Canonicalize = false) const;
-
-  /// Produce an array mapping from the unique IDs assigned to each
-  /// file to the corresponding FileEntryRef.
-  void
-  GetUniqueIDMapping(SmallVectorImpl<OptionalFileEntryRef> &UIDToFiles) const;
 
   /// Retrieve the canonical name for a given directory.
   ///

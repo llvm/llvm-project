@@ -126,7 +126,7 @@ void XCoreToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 }
 
 void XCoreToolChain::addClangTargetOptions(const ArgList &DriverArgs,
-                                           ArgStringList &CC1Args,
+                                           ArgStringList &CC1Args, BoundArch BA,
                                            Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
   // Set `-fno-use-cxa-atexit` to default.

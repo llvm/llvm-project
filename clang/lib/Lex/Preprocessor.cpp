@@ -52,6 +52,7 @@
 #include "clang/Lex/ScratchBuffer.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -79,7 +80,7 @@ using namespace clang;
 /// Minimum distance between two check points, in tokens.
 static constexpr unsigned CheckPointStepSize = 1024;
 
-LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
+LLVM_INSTANTIATE_REGISTRY_EX(CLANG_ABI_EXPORT, PragmaHandlerRegistry)
 
 ExternalPreprocessorSource::~ExternalPreprocessorSource() = default;
 
@@ -100,6 +101,9 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
       TUKind(TUKind), SkipMainFilePreamble(0, true),
       CurSubmoduleState(&NullSubmoduleState) {
   OwnsHeaderSearch = OwnsHeaders;
+
+  // Only record check points if we might highlight diagnostic snippets.
+  RecordCheckPoints = getDiagnostics().getShowColors();
 
   // Default to discarding comments.
   KeepComments = false;
@@ -154,6 +158,8 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
     Ident_GetExceptionInfo = Ident_GetExceptionCode = nullptr;
     Ident_AbnormalTermination = nullptr;
   }
+
+  Ident__GLIBCXX__ = getIdentifierInfo("__GLIBCXX__");
 
   // Default incremental processing to -fincremental-extensions, clients can
   // override with `enableIncrementalProcessing` if desired.
@@ -417,14 +423,16 @@ StringRef Preprocessor::getLastMacroWithSpelling(
 }
 
 void Preprocessor::recomputeCurLexerKind() {
-  if (CurLexer)
+  if (InCachingLexMode())
+    CurLexerCallback = CLK_CachingLexer;
+  else if (CurLexer)
     CurLexerCallback = CurLexer->isDependencyDirectivesLexer()
                            ? CLK_DependencyDirectivesLexer
                            : CLK_Lexer;
   else if (CurTokenLexer)
     CurLexerCallback = CLK_TokenLexer;
   else
-    CurLexerCallback = CLK_CachingLexer;
+    CurLexerCallback = CLK_Lexer;
 }
 
 bool Preprocessor::SetCodeCompletionPoint(FileEntryRef File,
@@ -583,6 +591,11 @@ void Preprocessor::EnterMainSourceFile() {
   assert(NumEnteredSourceFiles == 0 && "Cannot reenter the main file!");
   FileID MainFileID = SourceMgr.getMainFileID();
 
+  // Whether and how the main file starts a C++20 module unit. Implicit inputs
+  // are placed in its existing global module fragment, or in a synthesized one
+  // for a named module without a GMF.
+  ModuleUnitKind MainFileModuleUnitKind = ModuleUnitKind::NotModuleUnit;
+
   // If MainFileID is loaded it means we loaded an AST file, no need to enter
   // a main file.
   if (!SourceMgr.isLoadedFileID(MainFileID)) {
@@ -615,12 +628,42 @@ void Preprocessor::EnterMainSourceFile() {
       if (!isPreprocessedModuleFile() && Input)
         MainFileIsPreprocessedModuleFile =
             clang::isPreprocessedModuleFile(*Input);
+      if (Input && !MainFileIsPreprocessedModuleFile && hasDeferredGMFInputs())
+        MainFileModuleUnitKind = scanInputForCXX20ModuleUnit(*Input);
       auto Tracer = std::make_unique<NoTrivialPPDirectiveTracer>(*this);
       DirTracer = Tracer.get();
       addPPCallbacks(std::move(Tracer));
       std::optional<Token> FirstPPTok = CurLexer->peekNextPPToken();
       if (FirstPPTok)
         FirstPPTokenLoc = FirstPPTok->getLocation();
+    }
+  }
+
+  // Preserve the historical placement in the predefines buffer for ordinary
+  // translation units. A module unit opening with `module;` leaves the inputs
+  // deferred until the introducer has been lexed. For a named module without a
+  // GMF, synthesize the introducer before the main file and use the same
+  // deferred-input path.
+  if (hasDeferredGMFInputs()) {
+    if (PredefinesWereReplaced) {
+      // Loading an implicit PCH replaces Predefines with the directives
+      // suggested by ASTReader. For a module unit, those are the only implicit
+      // inputs that still need to be processed in the GMF.
+      if (MainFileModuleUnitKind != ModuleUnitKind::NotModuleUnit) {
+        DeferredGMFInputs = std::move(Predefines);
+        Predefines.clear();
+      }
+    } else if (MainFileModuleUnitKind == ModuleUnitKind::NotModuleUnit) {
+      // Preserve the historical predefines ordering for an ordinary
+      // translation unit.
+      Predefines += DeferredGMFInputs;
+    }
+    if (MainFileModuleUnitKind ==
+        ModuleUnitKind::NamedModuleWithoutGlobalModuleFragment) {
+      Predefines += "# 1 \"<implicit-global-module-fragment>\" 1\nmodule;\n";
+      HasSynthesizedGMF = true;
+    } else if (MainFileModuleUnitKind == ModuleUnitKind::NotModuleUnit) {
+      DeferredGMFInputs.clear();
     }
   }
 
@@ -657,6 +700,20 @@ void Preprocessor::EnterMainSourceFile() {
   if ((usingPCHWithThroughHeader() && SkippingUntilPCHThroughHeader) ||
       (usingPCHWithPragmaHdrStop() && SkippingUntilPragmaHdrStop))
     SkipTokensWhileUsingPCH();
+}
+
+void Preprocessor::EnterDeferredGMFInputs(SourceLocation IncludeLoc) {
+  if (!hasDeferredGMFInputs())
+    return;
+  // Synthesize the implicit input directives and enter them inside the global
+  // module fragment. Attribute the buffer to IncludeLoc so it is ordered within
+  // the translation unit.
+  std::unique_ptr<llvm::MemoryBuffer> MB = llvm::MemoryBuffer::getMemBufferCopy(
+      DeferredGMFInputs, "<gmf-command-line-inputs>");
+  DeferredGMFInputs.clear();
+  DeferredGMFInputsFileID =
+      SourceMgr.createFileID(std::move(MB), SrcMgr::C_User, 0, 0, IncludeLoc);
+  EnterSourceFile(DeferredGMFInputsFileID, nullptr, IncludeLoc);
 }
 
 void Preprocessor::setPCHThroughHeaderFileID(FileID FID) {
@@ -1011,7 +1068,8 @@ void Preprocessor::Lex(Token &Result) {
     }
   }
 
-  if (CurLexer && ++CheckPointCounter == CheckPointStepSize) {
+  if (RecordCheckPoints && CurLexer &&
+      ++CheckPointCounter == CheckPointStepSize) {
     CheckPoints[CurLexer->getFileID()].push_back(CurLexer->BufferPtr);
     CheckPointCounter = 0;
   }
@@ -1346,35 +1404,38 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
   } else if (!Result.isAtPhysicalStartOfLine())
     return false;
 
+  assert(CurPPLexer && "CurPPLexer must not be null");
+
   llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
       CurPPLexer->ParsingPreprocessorDirective, true);
 
-  // The next token may be an angled string literal after import keyword.
-  llvm::SaveAndRestore<bool> SavedParsingFilemame(
-      CurPPLexer->ParsingFilename,
-      Result.getIdentifierInfo()->isImportKeyword());
-
-  std::optional<Token> NextTok = peekNextPPToken();
-  if (!NextTok)
-    return false;
-
-  if (NextTok->is(tok::raw_identifier))
-    LookUpIdentifierInfo(*NextTok);
-
-  if (Result.getIdentifierInfo()->isImportKeyword()) {
-    if (NextTok->isOneOf(tok::identifier, tok::less, tok::colon,
-                         tok::header_name)) {
-      Result.setKind(tok::kw_import);
-      ModuleImportLoc = Result.getLocation();
-      return true;
+  if (II->isModuleKeyword()) {
+    if (auto NextTok = peekNextPPToken()) {
+      if (NextTok->is(tok::raw_identifier))
+        LookUpIdentifierInfo(*NextTok);
+      if (NextTok->isOneOf(tok::identifier, tok::colon, tok::semi)) {
+        Result.setKind(tok::kw_module);
+        ModuleDeclLoc = Result.getLocation();
+        return true;
+      }
     }
+    return false;
   }
 
-  if (Result.getIdentifierInfo()->isModuleKeyword() &&
-      NextTok->isOneOf(tok::identifier, tok::colon, tok::semi)) {
-    Result.setKind(tok::kw_module);
-    ModuleDeclLoc = Result.getLocation();
-    return true;
+  if (II->isImportKeyword()) {
+    llvm::SaveAndRestore<bool> SavedParsingFilename(CurPPLexer->ParsingFilename,
+                                                    true);
+    if (auto NextTok = peekNextPPToken()) {
+      if (NextTok->is(tok::raw_identifier))
+        LookUpIdentifierInfo(*NextTok);
+      if (NextTok->isOneOf(tok::header_name, tok::identifier, tok::colon,
+                           tok::less, tok::code_completion)) {
+        Result.setKind(tok::kw_import);
+        ModuleImportLoc = Result.getLocation();
+        return true;
+      }
+    }
+    return false;
   }
 
   // Ok, it's an identifier.
@@ -1744,16 +1805,11 @@ void Preprocessor::removePPCallbacks() {
 const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
   if (auto It = CheckPoints.find(FID); It != CheckPoints.end()) {
     const SmallVector<const char *> &FileCheckPoints = It->second;
-    const char *Last = nullptr;
-    // FIXME: Do better than a linear search.
-    for (const char *P : FileCheckPoints) {
-      if (P > Start)
-        break;
-      Last = P;
-    }
-    return Last;
+    auto P = llvm::upper_bound(FileCheckPoints, Start);
+    if (P == FileCheckPoints.begin())
+      return nullptr;
+    return *std::prev(P);
   }
-
   return nullptr;
 }
 

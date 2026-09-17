@@ -83,6 +83,16 @@ func.func @apply_scale_test_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>,
 
 // -----
 
+// CHECK-LABEL: @apply_scale_test_vector_rank_0
+// SCALE: tosa.apply_scale
+func.func @apply_scale_test_vector_rank_0(%arg0 : vector<i32>, %arg1 : vector<i32>, %arg2 : vector<i8>) -> (vector<i32>) {
+  // CHECK-NOT: "tosa.apply_scale"
+  %res = tosa.apply_scale %arg0, %arg1, %arg2 {rounding_mode = DOUBLE_ROUND} : (vector<i32>, vector<i32>, vector<i8>) -> vector<i32>
+  return %res : vector<i32>
+}
+
+// -----
+
 // CHECK-LABEL: @apply_scale_test_i48
 // SCALE: tosa.apply_scale
 func.func @apply_scale_test_i48(%arg0 : i48, %arg1 : i32, %arg2 : i8) -> (i32) {

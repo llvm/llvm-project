@@ -43,6 +43,45 @@ void Positives() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::reverse(I);
 
+  auto LogicalEnd = std::unique(I.begin(), I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto LogicalEnd = std::ranges::unique(I).begin();
+
+  bool AlreadyUnique = std::unique(I.begin(), I.end()) == I.end();
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: bool AlreadyUnique = std::ranges::unique(I).begin() == I.end();
+
+  auto LogicalEndWithPred =
+      std::unique(I.begin(), I.end(), [](int A, int B) { return A == B; });
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto LogicalEndWithPred =
+  // CHECK-FIXES-NEXT: std::ranges::unique(I, [](int A, int B) { return A == B; }).begin();
+
+  std::unique(I.begin(), I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::unique(I);
+
+  I.erase(std::remove(I.begin(), I.end(), 0), I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: I.erase(std::ranges::remove(I, 0).begin(), I.end());
+
+  I.erase(std::remove_if(I.begin(), I.end(), [](int N) { return N == 0; }),
+          I.end());
+  // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: I.erase(std::ranges::remove_if(I, [](int N) { return N == 0; }).begin(),
+
+  auto PartitionPoint =
+      std::partition(I.begin(), I.end(), [](int N) { return N == 0; });
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto PartitionPoint =
+  // CHECK-FIXES-NEXT: std::ranges::partition(I, [](int N) { return N == 0; }).begin();
+
+  auto StablePartitionPoint =
+      std::stable_partition(I.begin(), I.end(), [](int N) { return N == 0; });
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto StablePartitionPoint =
+  // CHECK-FIXES-NEXT: std::ranges::stable_partition(I, [](int N) { return N == 0; }).begin();
+
   std::includes(I.begin(), I.end(), I.begin(), I.end());
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::includes(I, I);
@@ -71,6 +110,10 @@ void Positives() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::rotate(I, I.begin() + 2);
 
+  auto RotatePoint = std::rotate(I.begin(), I.begin() + 2, I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto RotatePoint = std::ranges::rotate(I, I.begin() + 2).begin();
+
   using std::find;
   namespace my_std = std;
 
@@ -79,9 +122,18 @@ void Positives() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::find(I, 5);
 
+  using std::unique;
+  auto LogicalEndFromUsing = unique(I.begin(), I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto LogicalEndFromUsing = std::ranges::unique(I).begin();
+
   my_std::find(I.begin(), I.end(), 6);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::find(I, 6);
+
+  auto LogicalEndFromNamespaceAlias = my_std::unique(I.begin(), I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto LogicalEndFromNamespaceAlias = std::ranges::unique(I).begin();
 }
 
 void Reverse(){
@@ -98,6 +150,10 @@ void Reverse(){
   std::find(I.rbegin(), I.rend(), 0);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::find(std::views::reverse(I), 0);
+
+  auto ReverseLogicalEnd = std::unique(I.rbegin(), I.rend());
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto ReverseLogicalEnd = std::ranges::unique(std::views::reverse(I)).begin();
 
   std::equal(std::rbegin(I), std::rend(I), J.begin(), J.end());
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm

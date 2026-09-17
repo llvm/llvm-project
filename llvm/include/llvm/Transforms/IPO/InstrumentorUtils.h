@@ -116,7 +116,7 @@ struct InstrumentorIRBuilderTy {
 
   /// Map that holds the currently used allocas and the list where they belong.
   /// Once an alloca has to be returned, it is returned directly to its list.
-  DenseMap<AllocaInst *, AllocaListTy *> UsedAllocas;
+  MapVector<AllocaInst *, AllocaListTy *> UsedAllocas;
 
   /// Instructions that should be erased later.
   SmallPtrSet<Instruction *, 32> ErasableInstructions;

@@ -39,6 +39,7 @@ class UndefinedFunction;
 class DefinedGlobal;
 class UndefinedGlobal;
 class TableSymbol;
+class InputChunk;
 
 // For --unresolved-symbols.
 enum class UnresolvedPolicy { ReportError, Warn, Ignore, ImportDynamic };
@@ -65,6 +66,7 @@ struct Config {
   bool growableTable;
   bool gcSections;
   llvm::StringSet<> keepSections;
+  bool cooperativeThreading;
   bool libcallThreadContext;
   std::optional<std::pair<llvm::StringRef, llvm::StringRef>> memoryImport;
   std::optional<llvm::StringRef> memoryExport;
@@ -134,6 +136,8 @@ struct Config {
   std::optional<std::vector<std::string>> features;
   std::optional<std::vector<std::string>> extraFeatures;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
+
+  bool isMultithreaded() const { return sharedMemory || cooperativeThreading; }
 };
 
 // The Ctx object hold all other (non-configuration) global state.
@@ -148,6 +152,7 @@ struct Ctx {
   llvm::SmallVector<InputFunction *, 0> syntheticFunctions;
   llvm::SmallVector<InputGlobal *, 0> syntheticGlobals;
   llvm::SmallVector<InputTable *, 0> syntheticTables;
+  llvm::SmallVector<InputChunk *, 0> syntheticInputSegments;
 
   // linker-generated symbols
   struct WasmSym {
@@ -166,15 +171,15 @@ struct Ctx {
     // __tls_base
     // Global that holds the address of the base of the current thread's
     // TLS block.
-    GlobalSymbol *tlsBase;
+    DefinedGlobal *tlsBase;
 
     // __tls_size
     // Symbol whose value is the size of the TLS block.
-    GlobalSymbol *tlsSize;
+    DefinedGlobal *tlsSize;
 
-    // __tls_size
+    // __tls_align
     // Symbol whose value is the alignment of the TLS block.
-    GlobalSymbol *tlsAlign;
+    DefinedGlobal *tlsAlign;
 
     // __rodata_start/__rodata_end
     // Symbols marking the start/end of readonly data

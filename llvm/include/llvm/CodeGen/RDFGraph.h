@@ -226,6 +226,7 @@
 
 #include "RDFRegisters.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/Allocator.h"
@@ -236,7 +237,6 @@
 #include <map>
 #include <memory>
 #include <set>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -770,9 +770,8 @@ struct DataFlowGraph {
     StorageType Stack;
   };
 
-  // Make this std::unordered_map for speed of accessing elements.
   // Map: Register (physical or virtual) -> DefStack
-  using DefStackMap = std::unordered_map<RegisterId, DefStack>;
+  using DefStackMap = DenseMap<RegisterId, DefStack>;
 
   LLVM_ABI void build(const Config &config);
   void build() { build(Config()); }

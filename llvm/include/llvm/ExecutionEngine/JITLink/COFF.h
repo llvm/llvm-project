@@ -23,7 +23,7 @@ namespace jitlink {
 /// Note: The graph does not take ownership of the underlying buffer, nor copy
 /// its contents. The caller is responsible for ensuring that the object buffer
 /// outlives the graph.
-Expected<std::unique_ptr<LinkGraph>>
+LLVM_ABI Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromCOFFObject(MemoryBufferRef ObjectBuffer,
                               std::shared_ptr<orc::SymbolStringPool> SSP);
 
@@ -31,8 +31,8 @@ createLinkGraphFromCOFFObject(MemoryBufferRef ObjectBuffer,
 ///
 /// Uses conservative defaults for GOT and stub handling based on the target
 /// platform.
-void link_COFF(std::unique_ptr<LinkGraph> G,
-               std::unique_ptr<JITLinkContext> Ctx);
+LLVM_ABI void link_COFF(std::unique_ptr<LinkGraph> G,
+                        std::unique_ptr<JITLinkContext> Ctx);
 
 /// GetImageBaseSymbol is a function object that finds the __ImageBase symbol
 /// in the given graph if one is present.
@@ -43,7 +43,7 @@ class GetImageBaseSymbol {
 public:
   GetImageBaseSymbol(StringRef ImageBaseName = "__ImageBase")
       : ImageBaseName(ImageBaseName) {}
-  Symbol *operator()(LinkGraph &G);
+  LLVM_ABI Symbol *operator()(LinkGraph &G);
   void reset(std::optional<Symbol *> CacheValue = std::nullopt) {
     ImageBase = CacheValue;
   }

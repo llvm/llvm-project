@@ -150,6 +150,10 @@ private:
   CreateDeclInfoForType(const llvm::codeview::TagRecord &record, TypeIndex ti);
   std::pair<clang::DeclContext *, std::string>
   CreateDeclInfoForUndecoratedName(llvm::StringRef uname);
+
+  clang::DeclContext *
+  GetOrCreateDeclContextForCompilandSymbol(PdbCompilandSymId uid);
+
   clang::QualType CreateSimpleType(TypeIndex ti);
 
   TypeSystemClang &m_clang;

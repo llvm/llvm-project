@@ -82,7 +82,8 @@ public:
                                 bool HasCall) const override;
   bool enableWritePrefetching() const override { return true; }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override;
 
   bool hasDivRemOp(Type *DataType, bool IsSigned) const override;
   bool prefersVectorizedAddressing() const override { return false; }
@@ -115,9 +116,11 @@ public:
 
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override;
+                 const Instruction *CxtI = nullptr,
+                 TTI::VectorInstrContext VIC =
+                     TTI::VectorInstrContext::None) const override;
   unsigned getVectorTruncCost(Type *SrcTy, Type *DstTy) const;
   unsigned getVectorBitmaskConversionCost(Type *SrcTy, Type *DstTy) const;
   unsigned getBoolVecToIntConversionCost(unsigned Opcode, Type *Dst,

@@ -98,6 +98,10 @@ def SameOperandsAndResultElementType :
   NativeOpTrait<"SameOperandsAndResultElementType">;
 // Op is a terminator.
 def Terminator : NativeOpTrait<"IsTerminator">;
+// Op produces builtin token values.
+def TokenProducerTrait : NativeOpTrait<"TokenProducerTrait">;
+// Op consumes builtin token values.
+def TokenConsumerTrait : NativeOpTrait<"TokenConsumerTrait">;
 // Op can be safely normalized in the presence of MemRefs with
 // non-identity maps.
 def MemRefsNormalizable : NativeOpTrait<"MemRefsNormalizable">;
@@ -403,6 +407,11 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   ///   * ParseResult parse(OpAsmParser &parser, OperationState &result)
   ///   * void print(OpAsmPrinter &p)
   bit hasCustomAssemblyFormat = 0;
+
+  /// This field indicates that the operation provides a custom
+  /// `printProperties` hook. Setting it avoids generating the default
+  /// per-field `prop-dict` printer that the hook would shadow.
+  bit hasCustomPropertiesPrinter = 0;
 
   // A bit indicating if the operation has additional invariants that need to
   // verified (aside from those verified by other ODS constructs). If set to `1`,

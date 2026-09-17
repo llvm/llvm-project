@@ -176,7 +176,6 @@ int main(int argc, char **argv) {
   if (spec.binaries.size() > 0)
     for (const Binary &binary : spec.binaries) {
       std::vector<uint8_t> segment_command_bytes;
-      std::vector<uint8_t> payload_bytes;
       create_lc_note_binary_load_cmd(spec, segment_command_bytes, binary,
                                      lc_note_payload_bytes, payload_fileoff);
       payload_fileoff =
@@ -185,7 +184,6 @@ int main(int argc, char **argv) {
     }
   if (spec.addressable_bits) {
     std::vector<uint8_t> segment_command_bytes;
-    std::vector<uint8_t> payload_bytes;
     create_lc_note_addressable_bits(spec, segment_command_bytes,
                                     *spec.addressable_bits,
                                     lc_note_payload_bytes, payload_fileoff);

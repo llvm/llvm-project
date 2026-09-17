@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
 #include <cstdlib>
 
 #include <memory>
+#include <vector>
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -27,6 +29,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
+#include "Plugins/DynamicLoader/Static/DynamicLoaderStatic.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
@@ -131,15 +134,19 @@ lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
       m_core_aranges.Append(range_entry);
     }
   }
-  // Keep a separate map of permissions that isn't coalesced so all ranges
-  // are maintained.
+  // Keep mapped regions separate from m_core_aranges and uncoalesced so each
+  // PT_LOAD's permissions are preserved.
   const uint32_t permissions =
       ((header.p_flags & llvm::ELF::PF_R) ? lldb::ePermissionsReadable : 0u) |
       ((header.p_flags & llvm::ELF::PF_W) ? lldb::ePermissionsWritable : 0u) |
       ((header.p_flags & llvm::ELF::PF_X) ? lldb::ePermissionsExecutable : 0u);
 
-  m_core_range_infos.Append(
-      VMRangeToPermissions::Entry(addr, header.p_memsz, permissions));
+  MemoryRegionInfo region_info;
+  region_info.GetRange() = MemoryRegionInfo::RangeType(addr, header.p_memsz);
+  region_info.SetLLDBPermissions(permissions);
+  region_info.SetMapped(eLazyBoolYes);
+  region_info.SetMemoryTagged(eLazyBoolNo);
+  m_core_range_infos.insert(std::move(region_info));
 
   return addr;
 }
@@ -223,9 +230,10 @@ Status ProcessElfCore::DoLoadCore() {
 
   if (!ranges_are_sorted) {
     m_core_aranges.Sort();
-    m_core_range_infos.Sort();
     m_core_tag_ranges.Sort();
   }
+
+  FinalizeMemoryRegionInfos();
 
   // Ensure we found at least one thread that was stopped on a signal.
   bool siginfo_signal_found = false;
@@ -315,6 +323,70 @@ void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
   }
 }
 
+void ProcessElfCore::FinalizeMemoryRegionInfos() {
+  std::set<MemoryRegionInfo, std::less<>> finalized_regions;
+  // Add NT_FILE paths as names to PT_LOAD regions with matching start
+  // addresses, preserving the PT_LOAD ranges and permissions.
+  for (MemoryRegionInfo region_info : m_core_range_infos) {
+    const lldb::addr_t range_base = region_info.GetRange().GetRangeBase();
+    const lldb::addr_t range_end = region_info.GetRange().GetRangeEnd();
+
+    auto file_entry =
+        std::find_if(m_nt_file_entries.begin(), m_nt_file_entries.end(),
+                     [range_base](const NT_FILE_Entry &entry) {
+                       return entry.start == range_base;
+                     });
+    if (file_entry != m_nt_file_entries.end() && !file_entry->path.empty())
+      region_info.SetName(file_entry->path.c_str());
+
+    const VMRangeToFileOffset::Entry *tag_entry =
+        m_core_tag_ranges.FindEntryStartsAt(range_base);
+    if (tag_entry && tag_entry->GetRangeEnd() == range_end)
+      region_info.SetMemoryTagged(eLazyBoolYes);
+
+    finalized_regions.insert(std::move(region_info));
+  }
+
+  // Create mapped regions with unknown permissions for portions of NT_FILE
+  // entries not covered by any PT_LOAD region.
+  for (const NT_FILE_Entry &file_entry : m_nt_file_entries) {
+    if (file_entry.start >= file_entry.end)
+      continue;
+
+    lldb::addr_t cursor = file_entry.start;
+    std::vector<MemoryRegionInfo::RangeType> uncovered_ranges;
+    for (const MemoryRegionInfo &region_info : finalized_regions) {
+      const lldb::addr_t range_base = region_info.GetRange().GetRangeBase();
+      const lldb::addr_t range_end = region_info.GetRange().GetRangeEnd();
+
+      if (range_end <= cursor)
+        continue;
+      if (range_base >= file_entry.end)
+        break;
+
+      if (cursor < range_base)
+        uncovered_ranges.emplace_back(cursor, range_base - cursor);
+
+      cursor = std::max(cursor, range_end);
+      if (cursor >= file_entry.end)
+        break;
+    }
+
+    if (cursor < file_entry.end)
+      uncovered_ranges.emplace_back(cursor, file_entry.end - cursor);
+
+    for (const MemoryRegionInfo::RangeType &range : uncovered_ranges) {
+      MemoryRegionInfo region_info;
+      region_info.GetRange() = range;
+      region_info.SetMapped(eLazyBoolYes);
+      if (!file_entry.path.empty())
+        region_info.SetName(file_entry.path.c_str());
+      finalized_regions.insert(std::move(region_info));
+    }
+  }
+  m_core_range_infos = std::move(finalized_regions);
+}
+
 /// Correctly create a FileSpec from a path found in a core file.
 ///
 /// This method will guess the path style more intelligently that specifying
@@ -336,7 +408,7 @@ bool ProcessElfCore::GetMainExecutableModuleSpec(ModuleSpec &exe_spec) {
       GetNTFileEntryForExecutableELFHeader();
   if (exe_header) {
     exe_spec.GetFileSpec() = CreateFileSpecFromPath(exe_header->path);
-    exe_spec.GetUUID() = FindModuleUUID(exe_header->path);
+    exe_spec.SetLoadAddress(exe_header->start);
   }
 
   // If we failed to find the executable program in the NT_FILE list with the
@@ -363,7 +435,6 @@ bool ProcessElfCore::GetMainExecutableModuleSpec(ModuleSpec &exe_spec) {
       } else {
         // We don't have an executable file spec yet, lets set it.
         exe_spec.GetFileSpec() = execfn_spec;
-        exe_spec.GetUUID() = FindModuleUUID(execfn_str);
       }
     }
   }
@@ -376,24 +447,57 @@ bool ProcessElfCore::GetMainExecutableModuleSpec(ModuleSpec &exe_spec) {
   if (!exe_spec.GetFileSpec() && !m_executable_name.empty())
     exe_spec.GetFileSpec() = CreateFileSpecFromPath(m_executable_name);
 
+  // Try and find the UUID after the module spec was filled in.
+  FindModuleUUID(exe_spec);
+
   // We succeeded if we got a path.
   return (bool)exe_spec.GetFileSpec();
 }
 
-UUID ProcessElfCore::FindModuleUUID(const llvm::StringRef path) {
+bool ProcessElfCore::FindModuleUUID(ModuleSpec &spec) {
+  if (spec.GetUUID().IsValid())
+    return true;
   // Lookup the UUID for the given path in the map.
   // Note that this could be called by multiple threads so make sure
   // we access the map in a thread safe way (i.e. don't use operator[]).
-  auto it = m_uuids.find(std::string(path));
-  if (it != m_uuids.end())
-    return it->second;
-  return UUID();
+  std::string path;
+  // Sometimes the path to a file or shared library from the dynamic loader,
+  // one of the main clients of this function, is a symlink. The information
+  // in the NT_FILE note contains resolved paths and might not match. The
+  // best way for us to find a module is by load address, so use this trick
+  // if the load address is set in the module specification.
+  if (std::optional<lldb::addr_t> load_addr = spec.GetLoadAddress()) {
+    if (std::optional<NT_FILE_Entry> nt =
+            GetNTFileEntryContainingAddress(*load_addr))
+      path = nt->path;
+  }
+  // If we didn't find a file spec from the load address, fall back to using
+  // the file spec.
+  if (path.empty())
+    path = spec.GetFileSpec().GetPath();
+
+  auto it = m_uuids.find(path);
+  if (it != m_uuids.end()) {
+    Log *log = GetLog(LLDBLog::Process);
+    spec.GetUUID() = it->second;
+    LLDB_LOGF(log, "ProcessElfCore::FindModuleUUID() found UUID for %s: %s",
+              spec.GetFileSpec().GetPath().c_str(),
+              it->second.GetAsString().c_str());
+  }
+  return spec.GetUUID().IsValid();
 }
 
 lldb_private::DynamicLoader *ProcessElfCore::GetDynamicLoader() {
-  if (m_dyld_up.get() == nullptr)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(
-        this, DynamicLoaderPOSIXDYLD::GetPluginNameStatic()));
+  if (!m_dyld_up) {
+    llvm::StringRef dyld_name;
+    if (GetTarget().GetArchitecture().GetMachine() == llvm::Triple::riscv32 &&
+        GetTarget().GetArchitecture().GetTriple().getOS() ==
+            llvm::Triple::UnknownOS)
+      dyld_name = DynamicLoaderStatic::GetPluginNameStatic();
+    else
+      dyld_name = DynamicLoaderPOSIXDYLD::GetPluginNameStatic();
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, dyld_name));
+  }
   return m_dyld_up.get();
 }
 
@@ -420,8 +524,9 @@ Status ProcessElfCore::DoDestroy() { return Status(); }
 bool ProcessElfCore::IsAlive() { return true; }
 
 // Process Memory
-size_t ProcessElfCore::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                  Status &error) {
+size_t ProcessElfCore::ReadMemory(const ProcessAddress &process_addr, void *buf,
+                                  size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   if (lldb::ABISP abi_sp = GetABI())
     addr = abi_sp->FixAnyAddress(addr);
 
@@ -433,46 +538,23 @@ size_t ProcessElfCore::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
 Status ProcessElfCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
                                              MemoryRegionInfo &region_info) {
   region_info.Clear();
-  const VMRangeToPermissions::Entry *permission_entry =
-      m_core_range_infos.FindEntryThatContainsOrFollows(load_addr);
-  if (permission_entry) {
-    if (permission_entry->Contains(load_addr)) {
-      region_info.GetRange().SetRangeBase(permission_entry->GetRangeBase());
-      region_info.GetRange().SetRangeEnd(permission_entry->GetRangeEnd());
-      const Flags permissions(permission_entry->data);
-      region_info.SetReadable(permissions.Test(lldb::ePermissionsReadable)
-                                  ? eLazyBoolYes
-                                  : eLazyBoolNo);
-      region_info.SetWritable(permissions.Test(lldb::ePermissionsWritable)
-                                  ? eLazyBoolYes
-                                  : eLazyBoolNo);
-      region_info.SetExecutable(permissions.Test(lldb::ePermissionsExecutable)
-                                    ? eLazyBoolYes
-                                    : eLazyBoolNo);
-      region_info.SetMapped(eLazyBoolYes);
-
-      // A region is memory tagged if there is a memory tag segment that covers
-      // the exact same range.
-      region_info.SetMemoryTagged(eLazyBoolNo);
-      const VMRangeToFileOffset::Entry *tag_entry =
-          m_core_tag_ranges.FindEntryStartsAt(permission_entry->GetRangeBase());
-      if (tag_entry &&
-          tag_entry->GetRangeEnd() == permission_entry->GetRangeEnd())
-        region_info.SetMemoryTagged(eLazyBoolYes);
-    } else if (load_addr < permission_entry->GetRangeBase()) {
-      region_info.GetRange().SetRangeBase(load_addr);
-      region_info.GetRange().SetRangeEnd(permission_entry->GetRangeBase());
-      region_info.SetReadable(eLazyBoolNo);
-      region_info.SetWritable(eLazyBoolNo);
-      region_info.SetExecutable(eLazyBoolNo);
-      region_info.SetMapped(eLazyBoolNo);
-      region_info.SetMemoryTagged(eLazyBoolNo);
-    }
+  auto following = m_core_range_infos.upper_bound(load_addr);
+  // PT_LOAD ranges can overlap, so the immediate predecessor is not
+  // necessarily the range containing load_addr.
+  auto range_entry = std::find_if(m_core_range_infos.begin(), following,
+                                  [load_addr](const auto &entry) {
+                                    return entry.GetRange().Contains(load_addr);
+                                  });
+  if (range_entry != following) {
+    region_info = *range_entry;
     return Status();
   }
 
   region_info.GetRange().SetRangeBase(load_addr);
-  region_info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
+  region_info.GetRange().SetRangeEnd(
+      following == m_core_range_infos.end()
+          ? LLDB_INVALID_ADDRESS
+          : following->GetRange().GetRangeBase());
   region_info.SetReadable(eLazyBoolNo);
   region_info.SetWritable(eLazyBoolNo);
   region_info.SetExecutable(eLazyBoolNo);
@@ -481,8 +563,9 @@ Status ProcessElfCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
   return Status();
 }
 
-size_t ProcessElfCore::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                                    Status &error) {
+size_t ProcessElfCore::DoReadMemory(const ProcessAddress &process_addr,
+                                    void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
 
   if (core_objfile == nullptr)
@@ -1083,8 +1166,14 @@ llvm::Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
   case llvm::Triple::OpenBSD:
     return parseOpenBSDNotes(*notes_or_error);
   default:
-    return llvm::createStringError(
-        "Don't know how to parse core file. Unsupported OS.");
+    // Treat bare-metal 32-bit RISC-V like Linux.
+    if (GetTarget().GetArchitecture().GetMachine() == llvm::Triple::riscv32 &&
+        GetTarget().GetArchitecture().GetTriple().getOS() ==
+            llvm::Triple::UnknownOS)
+      return parseLinuxNotes(*notes_or_error);
+    else
+      return llvm::createStringError(
+          "don't know how to parse core file: unsupported OS");
   }
 }
 
@@ -1199,13 +1288,35 @@ bool ProcessElfCore::GetProcessInfo(ProcessInstanceInfo &info) {
   info.Clear();
   info.SetProcessID(GetID());
   info.SetArchitecture(GetArchitecture());
+  ModuleSpec exe_module_spec;
+  bool added_executable = false;
   lldb::ModuleSP module_sp = GetTarget().GetExecutableModule();
+  const bool add_exe_file_as_first_arg = true;
   if (module_sp) {
-    const bool add_exe_file_as_first_arg = false;
     info.SetExecutableFile(GetTarget().GetExecutableModule()->GetFileSpec(),
                            add_exe_file_as_first_arg);
+    added_executable = true;
+  } else {
+    ModuleSpec exe_module_spec;
+    if (GetMainExecutableModuleSpec(exe_module_spec)) {
+      if (exe_module_spec.GetFileSpec()) {
+        info.SetExecutableFile(exe_module_spec.GetFileSpec(),
+                               add_exe_file_as_first_arg);
+        added_executable = true;
+      }
+    }
   }
-  info.SetArguments(m_process_args.as_args(), /*first_arg_is_executable=*/true);
+  Args process_args = m_process_args.as_args();
+  bool first_arg_is_executable = true;
+  if (added_executable) {
+    // Strip the executable name from the process args as it can be a symlink
+    // that doesn't match the executable we would have created from a call to
+    // GetMainExecutableModuleSpec(...).
+    first_arg_is_executable = false;
+    info.SetArg0(process_args.GetArgumentAtIndex(0));
+    process_args.DeleteArgumentAtIndex(0);
+  }
+  info.SetArguments(process_args, first_arg_is_executable);
   return true;
 }
 

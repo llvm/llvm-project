@@ -1,4 +1,6 @@
 header: wctype.h
+standards:
+  - stdc
 types:
   - type_name: wint_t
   - type_name: wctype_t
@@ -88,3 +90,15 @@ functions:
     return_type: wctype_t
     arguments:
       - type: const char*
+  - name: towlower
+    standards:
+      - stdc
+    return_type: wint_t
+    arguments:
+      - type: wint_t
+  - name: towupper
+    standards:
+      - stdc
+    return_type: wint_t
+    arguments:
+      - type: wint_t

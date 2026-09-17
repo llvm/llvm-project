@@ -28,8 +28,8 @@ real a
 external ext_routine
 integer ext_function
 external ext_function
-!CHECK: bar (Subroutine, OmpDeclareTarget): HostAssoc
-!CHECK: baz (Function, OmpDeclareTarget): HostAssoc
+!CHECK: bar, EXTERNAL (Subroutine, OmpDeclareTarget): HostAssoc
+!CHECK: baz, EXTERNAL (Function, OmpDeclareTarget): HostAssoc
 !CHECK: ext_function, EXTERNAL (Function, OmpDeclareTarget): ProcEntity {{.*}}
 !CHECK: ext_routine, EXTERNAL (OmpDeclareTarget): ProcEntity
 !$omp declare target(bar)
@@ -46,8 +46,8 @@ end
 subroutine foo(a)
 real a
 integer i
-!CHECK: bar (Subroutine, OmpDeclareTarget): HostAssoc
-!CHECK: baz (Function, OmpDeclareTarget): HostAssoc
+!CHECK: bar, EXTERNAL (Subroutine, OmpDeclareTarget): HostAssoc
+!CHECK: baz, EXTERNAL (Function, OmpDeclareTarget): HostAssoc
 !$omp declare target(bar)
 !$omp declare target(baz)
 !$omp target

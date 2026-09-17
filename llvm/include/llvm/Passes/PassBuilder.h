@@ -266,7 +266,8 @@ public:
   /// generated in non-LTO compilation.
   LLVM_ABI ModulePassManager buildFatLTODefaultPipeline(OptimizationLevel Level,
                                                         bool ThinLTO,
-                                                        bool EmitSummary);
+                                                        bool EmitSummary,
+                                                        bool Verify = true);
 
   /// Build a pre-link, ThinLTO-targeting default optimization pipeline to
   /// a pass manager.
@@ -550,6 +551,24 @@ public:
     FullLinkTimeOptimizationLastEPCallbacks.push_back(C);
   }
 
+  /// Register a callback for ThinLTO default optimizer pipeline extension point
+  ///
+  /// This extension point allows adding optimizations at the start of the
+  /// thin LTO pipeline.
+  void registerThinLinkTimeOptimizationEarlyEPCallback(
+      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+    ThinLinkTimeOptimizationEarlyEPCallbacks.push_back(C);
+  }
+
+  /// Register a callback for ThinLTO default optimizer pipeline extension point
+  ///
+  /// This extension point allows adding optimizations at the end of the thin
+  /// LTO pipeline.
+  void registerThinLinkTimeOptimizationLastEPCallback(
+      const std::function<void(ModulePassManager &, OptimizationLevel)> &C) {
+    ThinLinkTimeOptimizationLastEPCallbacks.push_back(C);
+  }
+
   /// Register a callback for parsing an AliasAnalysis Name to populate
   /// the given AAManager \p AA
   void registerParseAACallback(
@@ -676,6 +695,12 @@ public:
                                                  OptimizationLevel Level);
   LLVM_ABI void
   invokeFullLinkTimeOptimizationLastEPCallbacks(ModulePassManager &MPM,
+                                                OptimizationLevel Level);
+  LLVM_ABI void
+  invokeThinLinkTimeOptimizationEarlyEPCallbacks(ModulePassManager &MPM,
+                                                 OptimizationLevel Level);
+  LLVM_ABI void
+  invokeThinLinkTimeOptimizationLastEPCallbacks(ModulePassManager &MPM,
                                                 OptimizationLevel Level);
   LLVM_ABI void invokePipelineStartEPCallbacks(ModulePassManager &MPM,
                                                OptimizationLevel Level);
@@ -812,6 +837,10 @@ private:
       FullLinkTimeOptimizationEarlyEPCallbacks;
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       FullLinkTimeOptimizationLastEPCallbacks;
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+      ThinLinkTimeOptimizationEarlyEPCallbacks;
+  SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
+      ThinLinkTimeOptimizationLastEPCallbacks;
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel)>, 2>
       PipelineStartEPCallbacks;
   SmallVector<std::function<void(ModulePassManager &, OptimizationLevel,
@@ -999,8 +1028,26 @@ public:
   }
 };
 
+enum class PrintPipelinePassesFormat {
+  Text,
+  Tree,
+};
+
+struct PrintPipelinePassesFormatParser
+    : public cl::parser<std::optional<PrintPipelinePassesFormat>> {
+  using cl::parser<std::optional<PrintPipelinePassesFormat>>::parser;
+  LLVM_ABI bool parse(cl::Option &O, StringRef ArgName, StringRef ArgValue,
+                      std::optional<PrintPipelinePassesFormat> &Val);
+};
+
 /// Common option used by multiple tools to print pipeline passes
-LLVM_ABI extern cl::opt<bool> PrintPipelinePasses;
+LLVM_ABI extern cl::opt<std::optional<PrintPipelinePassesFormat>, false,
+                        PrintPipelinePassesFormatParser>
+    PrintPipelinePasses;
+
+LLVM_ABI void printFormattedPipelinePasses(
+    raw_ostream &OS, StringRef Pipeline,
+    PrintPipelinePassesFormat Format = PrintPipelinePassesFormat::Text);
 }
 
 #endif

@@ -1,4 +1,4 @@
-//===----- ExecutorResolver.h - Resolve symbols in executor -----*- C++ -*-===//
+//===- ExecutorResolutionGenerator.h - Resolve syms in executor -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,7 @@
 
 namespace llvm::orc {
 
-class ExecutorResolutionGenerator : public DefinitionGenerator {
+class LLVM_ABI ExecutorResolutionGenerator : public DefinitionGenerator {
 public:
   using SymbolPredicate = unique_function<bool(const SymbolStringPtr &)>;
   using AbsoluteSymbolsFn =

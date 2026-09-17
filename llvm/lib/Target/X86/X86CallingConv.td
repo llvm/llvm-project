@@ -383,6 +383,7 @@ def RetCC_X86_Win64_C : CallingConv<[
   // GCC returns FP values in RAX on Win64.
   CCIfType<[f32], CCIfNotSubtarget<"hasSSE1()", CCBitConvertToType<i32>>>,
   CCIfType<[f64], CCIfNotSubtarget<"hasSSE1()", CCBitConvertToType<i64>>>,
+  // f128 has custom behavior in X86TargetLowering::CanLowerReturn.
 
   // Otherwise, everything is the same as 'normal' X86-64 C CC.
   CCDelegateTo<RetCC_X86_64_C>
@@ -391,7 +392,7 @@ def RetCC_X86_Win64_C : CallingConv<[
 // X86-64 vectorcall return-value convention.
 def RetCC_X86_64_Vectorcall : CallingConv<[
   // Vectorcall calling convention always returns FP values in XMMs.
-  CCIfType<[f32, f64, f128], 
+  CCIfType<[f32, f64, f128],
     CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
 
   // Otherwise, everything is the same as Windows X86-64 C CC.
@@ -1138,9 +1139,13 @@ def CSR_Win64_NoSSE : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12, R13, R14, R1
 
 def CSR_Win64 : CalleeSavedRegs<(add CSR_Win64_NoSSE,
                                      (sequence "XMM%u", 6, 15))>;
+def CSR_Win64_APX : CalleeSavedRegs<(add CSR_Win64_NoSSE, R30, R31,
+                                         (sequence "XMM%u", 6, 15))>;
 
 def CSR_Win64_SwiftError : CalleeSavedRegs<(sub CSR_Win64, R12)>;
+def CSR_Win64_APX_SwiftError : CalleeSavedRegs<(sub CSR_Win64_APX, R12)>;
 def CSR_Win64_SwiftTail : CalleeSavedRegs<(sub CSR_Win64, R13, R14)>;
+def CSR_Win64_APX_SwiftTail : CalleeSavedRegs<(sub CSR_Win64_APX, R13, R14)>;
 
 // The function used by Darwin to obtain the address of a thread-local variable
 // uses rdi to pass a single parameter and rax for the return value. All other
@@ -1160,6 +1165,8 @@ def CSR_64_RT_MostRegs : CalleeSavedRegs<(add CSR_64, RAX, RCX, RDX, RSI, RDI,
 
 def CSR_Win64_RT_MostRegs : CalleeSavedRegs<(add CSR_64_RT_MostRegs,
                                                  (sequence "XMM%u", 6, 15))>;
+def CSR_Win64_APX_RT_MostRegs : CalleeSavedRegs<(add CSR_64_RT_MostRegs, R30, R31,
+                                                     (sequence "XMM%u", 6, 15))>;
 
 // All registers - except r11 and return registers.
 def CSR_64_RT_AllRegs     : CalleeSavedRegs<(add CSR_64_RT_MostRegs,
@@ -1197,11 +1204,18 @@ def CSR_64_NoneRegs    : CalleeSavedRegs<(add RBP)>;
 def CSR_Win64_Intel_OCL_BI_AVX : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12,
                                                   R13, R14, R15,
                                                   (sequence "YMM%u", 6, 15))>;
+def CSR_Win64_APX_Intel_OCL_BI_AVX : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12,
+                                                      R13, R14, R15, R30, R31,
+                                                      (sequence "YMM%u", 6, 15))>;
 
 def CSR_Win64_Intel_OCL_BI_AVX512 : CalleeSavedRegs<(add RBX, RBP, RDI, RSI,
                                                      R12, R13, R14, R15,
                                                      (sequence "ZMM%u", 6, 21),
                                                      K4, K5, K6, K7)>;
+def CSR_Win64_APX_Intel_OCL_BI_AVX512 : CalleeSavedRegs<(add RBX, RBP, RDI, RSI,
+                                                         R12, R13, R14, R15, R30, R31,
+                                                         (sequence "ZMM%u", 6, 21),
+                                                         K4, K5, K6, K7)>;
 //Standard C + XMM 8-15
 def CSR_64_Intel_OCL_BI       : CalleeSavedRegs<(add CSR_64,
                                                  (sequence "XMM%u", 8, 15))>;
@@ -1224,8 +1238,14 @@ def CSR_Win64_RegCall_NoSSE : CalleeSavedRegs<(add RBX, RBP,
                                               (sequence "R%u", 10, 15))>;
 def CSR_Win64_RegCall       : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE,
                                               (sequence "XMM%u", 8, 15))>;
+def CSR_Win64_APX_RegCall   : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE, R30, R31,
+                                              (sequence "XMM%u", 8, 15))>;
 def CSR_Win64_CFGuard_Check_NoSSE : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE, RCX)>;
 def CSR_Win64_CFGuard_Check       : CalleeSavedRegs<(add CSR_Win64_RegCall, RCX)>;
+def CSR_Win64_APX_CFGuard_Check   : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE,
+                                                     (sequence "R%u", 16, 31),
+                                                     (sequence "XMM%u", 8, 15),
+                                                     RCX)>;
 def CSR_SysV64_RegCall_NoSSE : CalleeSavedRegs<(add RBX, RBP,
                                                (sequence "R%u", 12, 15))>;
 def CSR_SysV64_RegCall       : CalleeSavedRegs<(add CSR_SysV64_RegCall_NoSSE,               

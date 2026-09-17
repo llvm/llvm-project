@@ -21,7 +21,7 @@
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCFDialect.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -188,11 +188,12 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
 
   // We treat TokenType as state update marker to represent side-effects of
   // async computations
-  bool isStateful = isa<TokenType>(func.getResultTypes().front());
+  bool isStateful = isa<async::TokenType>(func.getResultTypes().front());
 
   std::optional<Value> retToken;
   if (isStateful)
-    retToken.emplace(RuntimeCreateOp::create(builder, TokenType::get(ctx)));
+    retToken.emplace(
+        RuntimeCreateOp::create(builder, async::TokenType::get(ctx)));
 
   llvm::SmallVector<Value, 4> retValues;
   ArrayRef<Type> resValueTypes =
@@ -243,8 +244,9 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
 
   // The switch-resumed API based coroutine should be marked with
   // presplitcoroutine attribute to mark the function as a coroutine.
-  func->setAttr("llvm.passthrough", builder.getArrayAttr(StringAttr::get(
-                                        ctx, "presplitcoroutine")));
+  func->setDiscardableAttr(
+      "llvm.passthrough",
+      builder.getArrayAttr(StringAttr::get(ctx, "presplitcoroutine")));
 
   CoroMachinery machinery;
   machinery.func = func;
@@ -473,11 +475,9 @@ public:
 
     SymbolTable::setSymbolVisibility(newFuncOp,
                                      SymbolTable::getSymbolVisibility(op));
-    // Copy over all attributes other than the name.
-    for (const auto &namedAttr : op->getAttrs()) {
-      if (namedAttr.getName() != SymbolTable::getSymbolAttrName())
-        newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
-    }
+    // Copy over the discardable attributes.
+    for (const auto &namedAttr : op->getDiscardableAttrDictionary().getValue())
+      newFuncOp->setDiscardableAttr(namedAttr.getName(), namedAttr.getValue());
 
     rewriter.inlineRegionBefore(op.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
@@ -673,8 +673,9 @@ private:
 };
 
 /// Lowering for `async.await` with a token operand.
-class AwaitTokenOpLowering : public AwaitOpLoweringBase<AwaitOp, TokenType> {
-  using Base = AwaitOpLoweringBase<AwaitOp, TokenType>;
+class AwaitTokenOpLowering
+    : public AwaitOpLoweringBase<AwaitOp, async::TokenType> {
+  using Base = AwaitOpLoweringBase<AwaitOp, async::TokenType>;
 
 public:
   using Base::Base;

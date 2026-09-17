@@ -32,23 +32,6 @@
   #define nullptr NULL;
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-  __attribute__((__visibility__("default")))
-  __attribute__((weak))
-  __attribute__((noreturn))
-  __device__ void __cxa_pure_virtual(void) {
-    __builtin_trap();
-  }
-  __attribute__((__visibility__("default")))
-  __attribute__((weak))
-  __attribute__((noreturn))
-  __device__ void __cxa_deleted_virtual(void) {
-    __builtin_trap();
-  }
-}
-#endif //__cplusplus
-
 #if !defined(__HIPCC_RTC__)
 #if __has_include("hip/hip_version.h")
 #include "hip/hip_version.h"
@@ -111,6 +94,12 @@ __attribute__((weak)) inline __device__ void free(void *__ptr) {
 #endif //__cplusplus
 
 #if !defined(__HIPCC_RTC__)
+// We must include the forward declarations before cmath is included.
+// Otherwise `constexpr` functions in <cmath> would be implicitely __host__
+// __device__. Declaring the __device__ verison before allows us to overload
+// them with __device__ versions (this behavour is only valid for system
+// headers).
+#include <__clang_cuda_math_forward_declares.h>
 #include <cmath>
 #include <cstdlib>
 #include <stdlib.h>
@@ -144,7 +133,6 @@ typedef __SIZE_TYPE__ size_t;
 #if defined(__HIPCC_RTC__)
 #include <__clang_hip_cmath.h>
 #else
-#include <__clang_cuda_math_forward_declares.h>
 #include <__clang_hip_cmath.h>
 #include <__clang_cuda_complex_builtins.h>
 #include <algorithm>

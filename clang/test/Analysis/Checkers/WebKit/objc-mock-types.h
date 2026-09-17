@@ -174,6 +174,8 @@ __attribute__((objc_root_class))
 - ( const char *)UTF8String;
 - (id)initWithUTF8String:(const char *)nullTerminatedCString;
 - (NSString *)copy;
+- (NSString *)mutableCopy;
+- (BOOL)isEqualToString:(NSString *)aString;
 + (id)stringWithUTF8String:(const char *)nullTerminatedCString;
 @end
 
@@ -209,8 +211,10 @@ extern NSApplication * NSApp;
 @end
 
 @interface SomeObj : NSObject
++ (SomeObj *)sharedInstance;
 - (instancetype)_init;
 - (SomeObj *)mutableCopy;
+- (BOOL)isEqual:(SomeObj *)other;
 - (SomeObj *)copyWithValue:(int)value;
 - (void)doWork;
 - (SomeObj *)other;
@@ -268,8 +272,6 @@ template<typename T> RetainPtr<T> adoptNS(T*);
 template<typename T> RetainPtr<T> adoptNSNullable(T*);
 template<typename T> RetainPtr<T> adoptCF(T);
 template<typename T> RetainPtr<T> adoptCFNullable(T);
-
-template <typename T, typename S> T *downcast(S *t) { return static_cast<T*>(t); }
 
 template <typename T> struct RemovePointer {
   typedef T Type;
@@ -709,7 +711,6 @@ using WTF::adoptCFNullable;
 using WTF::retainPtr;
 using WTF::OSObjectPtr;
 using WTF::adoptOSObject;
-using WTF::downcast;
 using WTF::bridge_cast;
 using WTF::bridge_id_cast;
 using WTF::is_objc;

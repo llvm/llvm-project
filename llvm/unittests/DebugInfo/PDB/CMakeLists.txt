@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   DebugInfoCodeView
   DebugInfoMSF
   DebugInfoPDB
+  Object
   )
 
 add_llvm_unittest_with_input_files(DebugInfoPDBTests

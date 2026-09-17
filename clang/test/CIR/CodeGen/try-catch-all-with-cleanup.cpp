@@ -24,7 +24,7 @@ void test_catch_all_with_cleanup() {
 
 // CIR-LABEL: cir.func {{.*}} @_Z27test_catch_all_with_cleanupv()
 // CIR:   cir.scope {
-// CIR:     %[[S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s", init]
+// CIR:     %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_S>
 // CIR:     cir.try {
 // CIR:       cir.call @_ZN1SC1Ev(%[[S]])
 // CIR:       cir.cleanup.scope {
@@ -49,7 +49,7 @@ void test_catch_all_with_cleanup() {
 
 // CIR-FLAT-LABEL: cir.func {{.*}} @_Z27test_catch_all_with_cleanupv()
 //
-// CIR-FLAT:         %[[S:.*]] = cir.alloca !rec_S
+// CIR-FLAT:         %[[S:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_S>
 //
 // Ctor may throw; unwinds directly to the dispatch (no cleanup needed yet).
 // CIR-FLAT:         cir.try_call @_ZN1SC1Ev(%[[S]]) ^[[AFTER_CTOR:bb[0-9]+]], ^[[CTOR_UNWIND:bb[0-9]+]]
@@ -148,8 +148,8 @@ void test_catch_all_and_specific_with_cleanup() {
 
 // CIR-LABEL: cir.func {{.*}} @_Z40test_catch_all_and_specific_with_cleanupv()
 // CIR:   cir.scope {
-// CIR:     %[[S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s", init]
-// CIR:     %[[E:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e"]
+// CIR:     %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_S>
+// CIR:     %[[E:.*]] = cir.alloca "e" {{.*}} : !cir.ptr<!s32i>
 // CIR:     cir.try {
 // CIR:       cir.call @_ZN1SC1Ev(%[[S]])
 // CIR:       cir.cleanup.scope {
@@ -184,7 +184,7 @@ void test_catch_all_and_specific_with_cleanup() {
 
 // CIR-FLAT-LABEL: cir.func {{.*}} @_Z40test_catch_all_and_specific_with_cleanupv()
 //
-// CIR-FLAT:         %[[S:.*]] = cir.alloca !rec_S
+// CIR-FLAT:         %[[S:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_S>
 //
 // Ctor may throw; unwinds directly to the dispatch (no cleanup needed yet).
 // CIR-FLAT:         cir.try_call @_ZN1SC1Ev(%[[S]]) ^[[AFTER_CTOR:bb[0-9]+]], ^[[CTOR_UNWIND:bb[0-9]+]]

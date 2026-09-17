@@ -21,15 +21,17 @@ namespace llvm {
 namespace ELF {
 
 /// Write an ELF file header (Elf32_Ehdr or Elf64_Ehdr) for an ET_REL object.
-void writeHeader(support::endian::Writer &W, bool Is64Bit, uint8_t OSABI,
-                 uint8_t ABIVersion, uint16_t EMachine, uint32_t EFlags,
-                 uint64_t SHOff, uint16_t SHNum, uint16_t SHStrNdx);
+LLVM_ABI void writeHeader(support::endian::Writer &W, bool Is64Bit,
+                          uint8_t OSABI, uint8_t ABIVersion, uint16_t EMachine,
+                          uint32_t EFlags, uint64_t SHOff, uint16_t SHNum,
+                          uint16_t SHStrNdx);
 
 /// Write a single ELF section header entry (Elf32_Shdr or Elf64_Shdr).
-void writeSectionHeader(support::endian::Writer &W, bool Is64Bit, uint32_t Name,
-                        uint32_t Type, uint64_t Flags, uint64_t Address,
-                        uint64_t Offset, uint64_t Size, uint32_t Link,
-                        uint32_t Info, uint64_t Alignment, uint64_t EntrySize);
+LLVM_ABI void writeSectionHeader(support::endian::Writer &W, bool Is64Bit,
+                                 uint32_t Name, uint32_t Type, uint64_t Flags,
+                                 uint64_t Address, uint64_t Offset,
+                                 uint64_t Size, uint32_t Link, uint32_t Info,
+                                 uint64_t Alignment, uint64_t EntrySize);
 
 } // namespace ELF
 } // namespace llvm

@@ -374,6 +374,35 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcscasecmp
+  SRCS
+    wcscasecmp.cpp
+  HDRS
+    wcscasecmp.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.wctype_utils
+)
+
+add_entrypoint_object(
+  wcsncasecmp
+  SRCS
+    wcsncasecmp.cpp
+  HDRS
+    wcsncasecmp.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.wctype_utils
+)
+
+add_entrypoint_object(
   wcsspn
   SRCS
     wcsspn.cpp
@@ -723,4 +752,19 @@ add_entrypoint_object(
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.src.stdio.stdout
+)
+
+add_entrypoint_object(
+  swprintf
+  SRCS
+    swprintf.cpp
+  HDRS
+    swprintf.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.hdr.errno_macros
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
 )

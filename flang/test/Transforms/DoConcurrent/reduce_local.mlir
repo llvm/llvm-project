@@ -77,7 +77,7 @@ fir.declare_reduction @add_reduction_i32 : i32 init {
 // CHECK:               }
 // CHECK:             }
 // CHECK:             omp.terminator
-// CHECK:           }
+// CHECK:           } {omp.combined}
 // CHECK:           return
 // CHECK:         }
 

@@ -15,9 +15,10 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-queue::queue(const device &syclDevice, const async_handler &asyncHandler,
-             const property_list &propList) {
-  impl = detail::QueueImpl::create(*detail::getSyclObjImpl(syclDevice),
+queue::queue(const context &syclContext, const device &syclDevice,
+             const async_handler &asyncHandler, const property_list &propList) {
+  impl = detail::QueueImpl::create(detail::getSyclObjImpl(syclContext),
+                                   *detail::getSyclObjImpl(syclDevice),
                                    asyncHandler, propList);
 }
 
@@ -34,5 +35,43 @@ device queue::get_device() const {
 bool queue::is_in_order() const { return impl->isInOrder(); }
 
 void queue::wait() { impl->wait(); }
+
+void queue::wait_and_throw() { impl->waitAndThrow(); }
+
+void queue::throw_asynchronous() { impl->throwAsynchronous(); }
+
+event queue::memcpy(void *dest, const void *src, std::size_t numBytes,
+                    const std::vector<event> &depEvents) {
+  std::shared_ptr<detail::EventImpl> EventImplPtr =
+      impl->memcpy(dest, src, numBytes, detail::getSyclObjImpls(depEvents));
+  assert(EventImplPtr);
+  return detail::createSyclObjFromImpl<event>(EventImplPtr);
+}
+
+event queue::prefetch(void *ptr, std::size_t numBytes,
+                      const std::vector<event> &depEvents) {
+  std::shared_ptr<detail::EventImpl> EventImplPtr =
+      impl->prefetch(ptr, numBytes, detail::getSyclObjImpls(depEvents));
+  assert(EventImplPtr);
+  return detail::createSyclObjFromImpl<event>(EventImplPtr);
+}
+
+event queue::getLastEvent() {
+  return detail::createSyclObjFromImpl<event>(impl->getLastEvent());
+}
+
+void queue::setKernelLaunchParams(const std::vector<event> &Events,
+                                  const detail::UnifiedRangeView &Range) {
+  return impl->setKernelLaunchParams(detail::getSyclObjImpls(Events), Range);
+}
+
+void queue::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,
+                             void *ArgData, size_t ArgSize) {
+  impl->submitKernelImpl(KernelInfo, ArgData, ArgSize);
+}
+
+event queue::submitWithHandler(const TypelessCGF &CGF) {
+  return detail::createSyclObjFromImpl<event>(impl->submitWithHandler(CGF));
+}
 
 _LIBSYCL_END_NAMESPACE_SYCL

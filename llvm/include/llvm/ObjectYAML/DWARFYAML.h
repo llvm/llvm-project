@@ -15,6 +15,7 @@
 #ifndef LLVM_OBJECTYAML_DWARFYAML_H
 #define LLVM_OBJECTYAML_DWARFYAML_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -288,7 +289,9 @@ struct Data {
   LLVM_ABI StringRef getAbbrevTableContentByIndex(uint64_t Index) const;
 
 private:
-  mutable std::unordered_map<uint64_t, AbbrevTableInfo> AbbrevTableInfoMap;
+  mutable DenseMap<uint64_t, AbbrevTableInfo> AbbrevTableInfoMap;
+  // getAbbrevTableContentByIndex returns StringRefs into the values. DenseMap
+  // cannot be used.
   mutable std::unordered_map<uint64_t, std::string> AbbrevTableContents;
 };
 

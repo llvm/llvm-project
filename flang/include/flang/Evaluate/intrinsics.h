@@ -11,7 +11,6 @@
 
 #include "call.h"
 #include "characteristics.h"
-#include "type.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
 #include "flang/Support/default-kinds.h"
@@ -63,7 +62,8 @@ struct SpecificIntrinsicFunctionInterface : public characteristics::Procedure {
 // Generic intrinsic classes from table 16.1
 ENUM_CLASS(IntrinsicClass, atomicSubroutine, collectiveSubroutine,
     elementalFunction, elementalSubroutine, inquiryFunction, pureSubroutine,
-    impureFunction, impureSubroutine, transformationalFunction, noClass)
+    simpleSubroutine, simpleElementalSubroutine, impureFunction,
+    impureSubroutine, transformationalFunction, noClass)
 
 class IntrinsicProcTable {
 private:

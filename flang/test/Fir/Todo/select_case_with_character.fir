@@ -1,4 +1,4 @@
-// RUN: %not_todo_cmd fir-opt --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" %s 2>&1 | FileCheck %s
+// RUN: %not_todo_cmd fir-opt --fir-select-ops-conversion %s 2>&1 | FileCheck %s
 
 // Test `fir.select_case` conversion to llvm with character type.
 // Not implemented yet.

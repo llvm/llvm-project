@@ -16,9 +16,10 @@ namespace {
 struct olGetEventElapsedTimeTest : OffloadQueueTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
+    SKIP_KNOWN_FAILURE(LevelZero{"unsupported feature"});
 
     ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
-    ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
+    ASSERT_SUCCESS(olCreateProgram(Context, Device, DeviceBin->getBufferStart(),
                                    DeviceBin->getBufferSize(), &Program));
     ASSERT_SUCCESS(olGetSymbol(Program, "foo", OL_SYMBOL_KIND_KERNEL, &Kernel));
 
@@ -40,12 +41,11 @@ struct olGetEventElapsedTimeTest : OffloadQueueTest {
   }
 
   void launchFoo() {
-    struct {
-      void *Mem;
-    } Args{Mem};
+    void *ArgPtrs[] = {&Mem};
+    size_t ArgSizes[] = {sizeof(Mem)};
 
-    ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                  &LaunchArgs, nullptr));
+    ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, nullptr,
+                                  1, ArgPtrs, ArgSizes));
   }
 
   std::unique_ptr<llvm::MemoryBuffer> DeviceBin;

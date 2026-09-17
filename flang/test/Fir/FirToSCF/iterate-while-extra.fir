@@ -21,7 +21,7 @@
 // CHECK:         scf.condition(%[[AND2]]) %[[IV]], %[[OK]] : index, i1
 // CHECK:       } do {
 // CHECK:       ^bb0(%[[IV2:.*]]: index, %[[OK2:.*]]: i1):
-// CHECK:         %[[NEXT:.*]] = arith.addi %[[IV2]], %c1
+// CHECK:         %[[NEXT:.*]] = arith.addi %[[IV2]], %c1 overflow<nsw> : index
 // CHECK:         scf.if %[[OK2]]
 // CHECK:         scf.yield
 
@@ -85,7 +85,7 @@ func.func @iterate_while() {
 // CHECK:         scf.condition([[AND2]]) %[[IVIN]], %[[OKIN]], %[[IV2IN]] : index, i1, index
 // CHECK:       } do {
 // CHECK:       ^bb0(%[[IV:.*]]: index, %[[OK:.*]]: i1, %[[IV2:.*]]: index):
-// CHECK:         [[NEXT:%[0-9]+]] = arith.addi %[[IV]], %c-1 : index
+// CHECK:         [[NEXT:%[0-9]+]] = arith.addi %[[IV]], %c-1 overflow<nsw> : index
 // CHECK:         [[ISSPACE:%[0-9]+]] = arith.cmpi eq, %{{.*}}, %c32_i8 : i8
 // CHECK:         scf.yield [[NEXT]], [[ISSPACE]], %[[IV]] : index, i1, index
 

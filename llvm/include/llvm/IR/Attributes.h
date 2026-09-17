@@ -18,6 +18,7 @@
 #include "llvm-c/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
@@ -29,6 +30,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -40,7 +42,6 @@ class AttributeListImpl;
 class AttributeSetNode;
 class ConstantRange;
 class ConstantRangeList;
-class FoldingSetNodeID;
 class Function;
 class LLVMContext;
 class Instruction;
@@ -131,6 +132,7 @@ public:
     TombstoneKey,          ///< Use as Tombstone key for DenseMap of AttrKind
   };
 
+  static const unsigned NumEnumAttrKinds = LastEnumAttr - FirstEnumAttr + 1;
   static const unsigned NumIntAttrKinds = LastIntAttr - FirstIntAttr + 1;
   static const unsigned NumTypeAttrKinds = LastTypeAttr - FirstTypeAttr + 1;
 
@@ -159,6 +161,9 @@ public:
   LLVM_ABI static bool intersectWithAnd(AttrKind Kind);
   LLVM_ABI static bool intersectWithMin(AttrKind Kind);
   LLVM_ABI static bool intersectWithCustom(AttrKind Kind);
+
+  /// Whether this is an ABI attribute (for returns or arguments).
+  LLVM_ABI static bool isABIAttr(AttrKind Kind);
 
 private:
   AttributeImpl *pImpl = nullptr;
@@ -375,8 +380,6 @@ public:
   /// Less-than operator. Useful for sorting the attributes list.
   LLVM_ABI bool operator<(Attribute A) const;
 
-  LLVM_ABI void Profile(FoldingSetNodeID &ID) const;
-
   /// Return a raw pointer that uniquely identifies this attribute.
   void *getRawPointer() const {
     return pImpl;
@@ -447,7 +450,8 @@ public:
 
   /// Add attributes to the attribute set. Returns a new set because attribute
   /// sets are immutable.
-  AttributeSet addAttributes(LLVMContext &C, const AttrBuilder &B) const;
+  LLVM_ABI AttributeSet addAttributes(LLVMContext &C,
+                                      const AttrBuilder &B) const;
 
   /// Remove the specified attribute from this set. Returns a new set because
   /// attribute sets are immutable.
@@ -526,25 +530,23 @@ public:
 /// \class
 /// Provide DenseMapInfo for AttributeSet.
 template <> struct DenseMapInfo<AttributeSet, void> {
-  static AttributeSet getEmptyKey() {
-    auto Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
-    return AttributeSet(reinterpret_cast<AttributeSetNode *>(Val));
-  }
-
-  static AttributeSet getTombstoneKey() {
-    auto Val = static_cast<uintptr_t>(-2);
-    Val <<= PointerLikeTypeTraits<void *>::NumLowBitsAvailable;
-    return AttributeSet(reinterpret_cast<AttributeSetNode *>(Val));
-  }
-
   static unsigned getHashValue(AttributeSet AS) {
-    return (unsigned((uintptr_t)AS.SetNode) >> 4) ^
-           (unsigned((uintptr_t)AS.SetNode) >> 9);
+    return DenseMapInfo<const void *>::getHashValue(AS.SetNode);
   }
 
   static bool isEqual(AttributeSet LHS, AttributeSet RHS) { return LHS == RHS; }
 };
+
+namespace hashing::detail {
+// Attribute and AttributeSet are trivial wrappers whose operator== is pointer
+// equality, so hashing the bytes is equivalent to hashing the values. Define
+// is_hashable_data to pick the contiguous hash_combine_range path.
+template <> struct is_hashable_data<Attribute> : std::true_type {};
+template <> struct is_hashable_data<AttributeSet> : std::true_type {};
+static_assert(std::has_unique_object_representations_v<Attribute> &&
+                  std::has_unique_object_representations_v<AttributeSet>,
+              "hashing the bytes requires unique object representations");
+} // namespace hashing::detail
 
 //===----------------------------------------------------------------------===//
 /// \class
@@ -591,9 +593,6 @@ private:
 
   static AttributeList getImpl(LLVMContext &C, ArrayRef<AttributeSet> AttrSets);
 
-  AttributeList setAttributesAtIndex(LLVMContext &C, unsigned Index,
-                                     AttributeSet Attrs) const;
-
 public:
   AttributeList() = default;
 
@@ -615,6 +614,11 @@ public:
                                     AttributeSet Attrs);
   LLVM_ABI static AttributeList get(LLVMContext &C, unsigned Index,
                                     const AttrBuilder &B);
+
+  /// Set the attribute set at the given index.
+  /// Returns a new list because attribute lists are immutable.
+  [[nodiscard]] LLVM_ABI AttributeList setAttributesAtIndex(
+      LLVMContext &C, unsigned Index, AttributeSet Attrs) const;
 
   // TODO: remove non-AtIndex versions of these methods.
   /// Add an attribute to the attribute set at the given index.
@@ -1101,21 +1105,8 @@ public:
 /// \class
 /// Provide DenseMapInfo for AttributeList.
 template <> struct DenseMapInfo<AttributeList, void> {
-  static AttributeList getEmptyKey() {
-    auto Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
-    return AttributeList(reinterpret_cast<AttributeListImpl *>(Val));
-  }
-
-  static AttributeList getTombstoneKey() {
-    auto Val = static_cast<uintptr_t>(-2);
-    Val <<= PointerLikeTypeTraits<void*>::NumLowBitsAvailable;
-    return AttributeList(reinterpret_cast<AttributeListImpl *>(Val));
-  }
-
   static unsigned getHashValue(AttributeList AS) {
-    return (unsigned((uintptr_t)AS.pImpl) >> 4) ^
-           (unsigned((uintptr_t)AS.pImpl) >> 9);
+    return DenseMapInfo<const void *>::getHashValue(AS.pImpl);
   }
 
   static bool isEqual(AttributeList LHS, AttributeList RHS) {
@@ -1415,6 +1406,11 @@ LLVM_ABI AttributeMask getUBImplyingAttributes();
 /// attributes for inlining purposes.
 LLVM_ABI bool areInlineCompatible(const Function &Caller,
                                   const Function &Callee);
+
+/// \returns Return false if callee is strictfp and caller is not. Return true
+/// otherwise.
+LLVM_ABI bool isStrictFPInlineCompatible(const Function &Caller,
+                                         const Function &Callee);
 
 /// Checks  if there are any incompatible function attributes between
 /// \p A and \p B.

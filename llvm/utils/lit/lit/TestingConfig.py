@@ -69,6 +69,10 @@ class TestingConfig:
             "HOME",
         ]
 
+        # Pass through any additional environment variables requested via the
+        # --pass-env command line option.
+        pass_vars += litConfig.pass_env
+
         if sys.platform.startswith("aix"):
             pass_vars += ["LIBPATH"]
         elif sys.platform == "win32":
@@ -138,12 +142,11 @@ class TestingConfig:
 
         # Load the config script data.
         data = None
-        f = open(path)
         try:
-            data = f.read()
-        except:
+            with open(path) as f:
+                data = f.read()
+        except OSError:
             litConfig.fatal("unable to load config file: %r" % (path,))
-        f.close()
 
         # Execute the config script to initialize the object.
         cfg_globals = dict(globals())

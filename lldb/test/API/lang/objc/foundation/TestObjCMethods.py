@@ -5,6 +5,7 @@ Also lookup objective-c data types and evaluate expressions.
 
 import os
 import os.path
+import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -331,11 +332,17 @@ class FoundationTestCase(TestBase):
         self.addTearDownHook(cleanup)
 
         if os.path.exists(logfile):
+            # The goal is to avoid looking up any symbol with `$__lldb` in the name.
+            lookup_pattern = re.compile(r'name\s*=\s*"(.+)"')
             f = open(logfile)
             lines = f.readlines()
             num_errors = 0
             for line in lines:
-                if "$__lldb" in line:
+                m = lookup_pattern.match(line)
+                if not m:
+                    continue
+
+                if "$__lldb" in m.group(1):
                     if num_errors == 0:
                         print(
                             "error: found spurious name lookups when evaluating an expression:"

@@ -11,7 +11,10 @@
 
 #include "CallContext.h"
 #include "ErrorHandling.h"
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -119,7 +122,7 @@ struct FuncRange {
 // we will switch to Dwarf CFI based tracker
 struct PrologEpilogTracker {
   // A set of prolog and epilog addresses. Used by virtual unwinding.
-  std::unordered_set<uint64_t> PrologEpilogSet;
+  DenseSet<uint64_t> PrologEpilogSet;
   ProfiledBinary *Binary;
   PrologEpilogTracker(ProfiledBinary *Bin) : Binary(Bin){};
 
@@ -136,7 +139,7 @@ struct PrologEpilogTracker {
   }
 
   // Take the last two addresses before the return address as epilog
-  void inferEpilogAddresses(std::unordered_set<uint64_t> &RetAddrs) {
+  void inferEpilogAddresses(DenseSet<uint64_t> &RetAddrs) {
     for (auto Addr : RetAddrs) {
       PrologEpilogSet.insert(Addr);
       InstructionPointer IP(Binary, Addr);
@@ -214,9 +217,9 @@ class ProfiledBinary {
   StringRef SymbolizerPath;
   // Options used to configure the symbolizer
   symbolize::LLVMSymbolizer::Options SymbolizerOpts;
-  // The runtime base address that the first executable segment is loaded at.
+  // The runtime base address used to canonicalize sampled addresses.
   uint64_t BaseAddress = 0;
-  // The runtime base address that the first loadabe segment is loaded at.
+  // The preferred base address derived from the first loadable segment.
   uint64_t FirstLoadableAddress = 0;
   // The preferred load address of each executable segment.
   std::vector<uint64_t> PreferredTextSegmentAddresses;
@@ -236,14 +239,14 @@ class ProfiledBinary {
   std::set<std::pair<uint64_t, uint64_t>> TextSections;
 
   // A map of mapping function name to BinaryFunction info.
-  std::unordered_map<std::string, BinaryFunction> BinaryFunctions;
+  StringMap<BinaryFunction> BinaryFunctions;
 
   // Lookup BinaryFunctions using the function name's MD5 hash. Needed if the
   // profile is using MD5.
-  std::unordered_map<uint64_t, BinaryFunction *> HashBinaryFunctions;
+  DenseMap<uint64_t, BinaryFunction *> HashBinaryFunctions;
 
   // A list of binary functions that have samples.
-  std::unordered_set<const BinaryFunction *> ProfiledFunctions;
+  SmallPtrSet<const BinaryFunction *, 0> ProfiledFunctions;
 
   // GUID to symbol start address map
   DenseMap<uint64_t, uint64_t> SymbolStartAddrs;
@@ -254,7 +257,7 @@ class ProfiledBinary {
       AlternativeFunctionGUIDs;
 
   // Mapping of profiled binary function to its pseudo probe name
-  std::unordered_map<const BinaryFunction *, StringRef> PseudoProbeNames;
+  DenseMap<const BinaryFunction *, StringRef> PseudoProbeNames;
 
   // These maps are for temporary use of warning diagnosis.
   DenseSet<int64_t> AddrsWithMultipleSymbols;
@@ -269,26 +272,29 @@ class ProfiledBinary {
   std::map<uint64_t, FuncRange> StartAddrToFuncRangeMap;
 
   // Address to context location map. Used to expand the context.
+  // getCachedFrameLocationStack returns references to the mapped values while
+  // later queries insert, so the values' addresses must be stable: keep
+  // std::unordered_map.
   std::unordered_map<uint64_t, SampleContextFrameVector> AddressToLocStackMap;
 
   // Address to instruction size map. Also used for quick Address lookup.
-  std::unordered_map<uint64_t, uint64_t> AddressToInstSizeMap;
+  DenseMap<uint64_t, uint64_t> AddressToInstSizeMap;
 
   // An array of Addresses of all instructions sorted in increasing order. The
   // sorting is needed to fast advance to the next forward/backward instruction.
   std::vector<uint64_t> CodeAddressVec;
   // A set of call instruction addresses. Used by virtual unwinding.
-  std::unordered_set<uint64_t> CallAddressSet;
+  DenseSet<uint64_t> CallAddressSet;
   // A set of return instruction addresses. Used by virtual unwinding.
-  std::unordered_set<uint64_t> RetAddressSet;
+  DenseSet<uint64_t> RetAddressSet;
   // An ordered set of unconditional branch instruction addresses.
   std::set<uint64_t> UncondBranchAddrSet;
   // A set of branch instruction addresses.
-  std::unordered_set<uint64_t> BranchAddressSet;
+  DenseSet<uint64_t> BranchAddressSet;
   // A set of indirect branch instruction addresses.
-  std::unordered_set<uint64_t> IndirectBranchAddressSet;
+  DenseSet<uint64_t> IndirectBranchAddressSet;
   // A set of branch target addresses (destinations of branches/calls).
-  std::unordered_set<uint64_t> BranchTargetAddressSet;
+  DenseSet<uint64_t> BranchTargetAddressSet;
 
   // Estimate and track function prolog and epilog ranges.
   PrologEpilogTracker ProEpilogTracker;
@@ -304,10 +310,13 @@ class ProfiledBinary {
   std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
 
   // String table owning function name strings created from the symbolizer.
-  std::unordered_set<std::string> NameStrings;
+  StringSet<> NameStrings;
 
   // MMap events for PT_LOAD segments without 'x' memory protection flag.
   std::map<uint64_t, MMapEvent, std::greater<uint64_t>> NonTextMMapEvents;
+
+  // Deduplicated address ranges mapped for the profiled binary.
+  llvm::AddressRanges MMapRanges;
 
   // Records the file offset, file size and virtual address of program headers.
   struct PhdrInfo {
@@ -448,15 +457,17 @@ public:
   // Return the build ID used for filtering perfscript addresses.
   StringRef getFilterBuildID() const { return FilterBuildID; }
 
-  // Canonicalize to use preferred load address as base address.
+  // Translate a runtime address to its preferred virtual address.
   uint64_t canonicalizeVirtualAddress(uint64_t Address) {
     return Address - BaseAddress + getPreferredBaseAddress();
   }
-  // Return the preferred load address for the first executable segment.
+  // Return the preferred base used to canonicalize sampled addresses.
   uint64_t getPreferredBaseAddress() const {
-    return PreferredTextSegmentAddresses[0];
+    if (IsCOFF)
+      return PreferredTextSegmentAddresses[0];
+    return PreferredTextSegmentAddresses[0] - TextSegmentOffsets[0];
   }
-  // Return the preferred load address for the first loadable segment.
+  // Return the preferred base address derived from the first loadable segment.
   uint64_t getFirstLoadableAddress() const { return FirstLoadableAddress; }
   // Return the file offset for the first executable segment.
   uint64_t getTextSegmentOffset() const { return TextSegmentOffsets[0]; }
@@ -571,22 +582,22 @@ public:
     return FRange->Func->Ranges;
   }
 
-  const std::unordered_map<std::string, BinaryFunction> &
-  getAllBinaryFunctions() {
+  const StringMap<BinaryFunction> &getAllBinaryFunctions() {
     return BinaryFunctions;
   }
 
-  std::unordered_set<const BinaryFunction *> &getProfiledFunctions() {
+  SmallPtrSetImpl<const BinaryFunction *> &getProfiledFunctions() {
     return ProfiledFunctions;
   }
 
-  void setProfiledFunctions(std::unordered_set<const BinaryFunction *> &Funcs) {
-    ProfiledFunctions = Funcs;
+  void setProfiledFunctions(SmallPtrSetImpl<const BinaryFunction *> &Funcs) {
+    ProfiledFunctions.clear();
+    ProfiledFunctions.insert_range(Funcs);
   }
 
   BinaryFunction *getBinaryFunction(FunctionId FName) {
     if (FName.isStringRef()) {
-      auto I = BinaryFunctions.find(FName.str());
+      auto I = BinaryFunctions.find(FName.stringRef());
       if (I == BinaryFunctions.end())
         return nullptr;
       return &I->second;
@@ -721,6 +732,22 @@ public:
     }
     NonTextMMapEvents[Event.Address] = Event;
     return Error::success();
+  }
+
+  // Record a half-open MMAP range while coalescing duplicate and overlapping
+  // events.
+  void addMMapRange(uint64_t Address, uint64_t Size) {
+    uint64_t End = Address + Size;
+    // Ignore malformed events whose range cannot be represented.
+    if (End < Address)
+      return;
+    MMapRanges.insert(llvm::AddressRange(Address, End));
+  }
+
+  // Check if a given virtual address is covered by any of the mmap ranges for
+  // the profiled binary.
+  bool isVaddrMMapped(uint64_t VAddr) const {
+    return MMapRanges.contains(VAddr);
   }
 
   // Given a non-text runtime address, canonicalize it to the virtual address in

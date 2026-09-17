@@ -7,17 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/spawn/posix_spawn.h"
-
-#include "src/__support/CPP/optional.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/dup2.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/spawn/file_actions.h"
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/signal_macros.h" // For SIGCHLD
 #include "hdr/types/mode_t.h"
 #include "src/signal/linux/signal_utils.h"
-#include <signal.h> // For SIGCHLD
 #include <spawn.h>
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -38,35 +39,6 @@ pid_t fork() {
 #else
 #error "fork or clone syscalls not available."
 #endif
-}
-
-cpp::optional<int> open(const char *path, int oflags, mode_t mode) {
-#ifdef SYS_open
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path, oflags, mode);
-#else
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD, path, oflags,
-                                             mode);
-#endif
-  if (fd >= 0)
-    return fd;
-  // The open function is called as part of the child process' preparatory
-  // steps. If an open fails, the child process just exits. So, unlike
-  // the public open function, we do not need to set errno here.
-  return cpp::nullopt;
-}
-
-void close(int fd) { LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd); }
-
-// We use dup3 if dup2 is not available, similar to our implementation of dup2
-bool dup2(int fd, int newfd) {
-#ifdef SYS_dup2
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_dup2, fd, newfd);
-#elif defined(SYS_dup3)
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_dup3, fd, newfd, 0);
-#else
-#error "dup2 and dup3 syscalls not available."
-#endif
-  return ret < 0 ? false : true;
 }
 
 // All exits from child_process are error exits. So, we use a simple
@@ -94,13 +66,15 @@ void child_process(const char *__restrict path,
       switch (act->type) {
       case BaseSpawnFileAction::OPEN: {
         auto *open_act = reinterpret_cast<SpawnFileOpenAction *>(act);
-        auto fd = open(open_act->path, open_act->oflag, open_act->mode);
+        ErrorOr<int> fd = linux_syscalls::open(open_act->path, open_act->oflag,
+                                               open_act->mode);
         if (!fd)
           exit();
         int actual_fd = *fd;
         if (actual_fd != open_act->fd) {
-          bool dup2_result = dup2(actual_fd, open_act->fd);
-          close(actual_fd); // The old fd is not needed anymore.
+          bool dup2_result =
+              linux_syscalls::dup2(actual_fd, open_act->fd).has_value();
+          linux_syscalls::close(actual_fd); // The old fd is not needed anymore.
           if (!dup2_result)
             exit();
         }
@@ -108,12 +82,12 @@ void child_process(const char *__restrict path,
       }
       case BaseSpawnFileAction::CLOSE: {
         auto *close_act = reinterpret_cast<SpawnFileCloseAction *>(act);
-        close(close_act->fd);
+        linux_syscalls::close(close_act->fd);
         break;
       }
       case BaseSpawnFileAction::DUP2: {
         auto *dup2_act = reinterpret_cast<SpawnFileDup2Action *>(act);
-        if (!dup2(dup2_act->fd, dup2_act->newfd))
+        if (!linux_syscalls::dup2(dup2_act->fd, dup2_act->newfd).has_value())
           exit();
         break;
       }

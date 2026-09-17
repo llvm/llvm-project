@@ -1,15 +1,21 @@
-//===-- Interface for freetrie --------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Interface for freetrie.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FREETRIE_H
 #define LLVM_LIBC_SRC___SUPPORT_FREETRIE_H
 
 #include "freelist.h"
+#include "src/__support/libc_assert.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -55,6 +61,20 @@ public:
     Node *parent;
 
     friend class FreeTrie;
+
+    LIBC_INLINE void integrity_check() const {
+      FreeList::Node::integrity_check();
+      if (lower)
+        LIBC_HEAP_INTEGRITY_CHECK(lower->parent == this,
+                                  "FreeTrie lower child corruption detected");
+      if (upper)
+        LIBC_HEAP_INTEGRITY_CHECK(upper->parent == this,
+                                  "FreeTrie upper child corruption detected");
+      if (parent)
+        LIBC_HEAP_INTEGRITY_CHECK(
+            parent->lower == this || parent->upper == this,
+            "FreeTrie parent pointer corruption detected");
+    }
   };
 
   /// Power-of-two range of sizes covered by a subtrie.
@@ -83,7 +103,8 @@ public:
   };
 
   LIBC_INLINE constexpr FreeTrie() : FreeTrie(SizeRange{0, 0}) {}
-  LIBC_INLINE constexpr FreeTrie(SizeRange range) : range(range) {}
+  LIBC_INLINE constexpr FreeTrie(SizeRange range, Node *root = nullptr)
+      : root_(root), range(range) {}
 
   /// Sets the range of possible block sizes. This can only be called when the
   /// trie is empty.
@@ -93,10 +114,13 @@ public:
   }
 
   /// @returns Whether the trie contains any blocks.
-  LIBC_INLINE bool empty() const { return !root; }
+  LIBC_INLINE bool empty() const { return !root_; }
+
+  /// @returns The root node of the trie.
+  LIBC_INLINE Node *root() const { return root_; }
 
   /// Push a block to the trie.
-  void push(Block *block);
+  void push(BlockRef block);
 
   /// Remove a node from this trie node's free list.
   void remove(Node *node);
@@ -105,31 +129,35 @@ public:
   /// nullptr.
   Node *find_best_fit(size_t size);
 
+  /// Verify integrity of all nodes in the trie.
+  void integrity_check() const;
+
 private:
   /// @returns Whether a node is the head of its containing freelist.
-  bool is_head(Node *node) const { return node->parent || node == root; }
+  bool is_head(Node *node) const { return node->parent || node == root_; }
 
   /// Replaces references to one node with another (or nullptr) in all adjacent
   /// parent and child nodes.
   void replace_node(Node *node, Node *new_node);
 
-  Node *root = nullptr;
+  Node *root_ = nullptr;
   SizeRange range;
 };
 
-LIBC_INLINE void FreeTrie::push(Block *block) {
-  LIBC_ASSERT(block->inner_size_free() >= sizeof(Node) &&
+LIBC_INLINE void FreeTrie::push(BlockRef block) {
+  LIBC_ASSERT(block.inner_size_free() >= sizeof(Node) &&
               "block too small to accomodate free trie node");
-  size_t size = block->inner_size();
+  size_t size = block.inner_size();
   LIBC_ASSERT(range.contains(size) && "requested size out of trie range");
 
   // Find the position in the tree to push to.
-  Node **cur = &root;
+  Node **cur = &root_;
   Node *parent = nullptr;
   SizeRange cur_range = range;
   while (*cur && (*cur)->size() != size) {
     LIBC_ASSERT(cur_range.contains(size) && "requested size out of trie range");
     parent = *cur;
+    (*cur)->integrity_check();
     if (size <= cur_range.lower().max()) {
       cur = &(*cur)->lower;
       cur_range = cur_range.lower();
@@ -139,7 +167,7 @@ LIBC_INLINE void FreeTrie::push(Block *block) {
     }
   }
 
-  Node *node = new (block->usable_space()) Node;
+  Node *node = new (block.usable_space()) Node;
   FreeList list = *cur;
   if (list.empty()) {
     node->parent = parent;
@@ -155,13 +183,14 @@ LIBC_INLINE FreeTrie::Node *FreeTrie::find_best_fit(size_t size) {
   if (empty() || range.max() < size)
     return nullptr;
 
-  Node *cur = root;
+  Node *cur = root_;
   SizeRange cur_range = range;
   Node *best_fit = nullptr;
   Node *deferred_upper_trie = nullptr;
   FreeTrie::SizeRange deferred_upper_range{0, 0};
 
   while (true) {
+    cur->integrity_check();
     LIBC_ASSERT(cur_range.contains(cur->size()) &&
                 "trie node size out of range");
     LIBC_ASSERT(cur_range.max() >= size &&

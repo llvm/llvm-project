@@ -208,6 +208,7 @@ public:
   LinkerDriver(LinkerDriver &) = delete;
   void linkerMain(ArrayRef<const char *> args);
   void addFile(StringRef path, bool withLOption);
+  void addFile(std::unique_ptr<ELFFileBase> ef);
   void addLibrary(StringRef name);
 
 private:
@@ -215,6 +216,7 @@ private:
   void createFiles(llvm::opt::InputArgList &args);
   void loadFiles();
   void inferMachineType();
+  void waitForLTOCleanup();
   template <class ELFT> void link(llvm::opt::InputArgList &args);
   template <class ELFT> void compileBitcodeFiles(bool skipLinkedOutput);
   // True if we are in --whole-archive and --no-whole-archive.
@@ -299,6 +301,7 @@ struct Config {
   llvm::StringRef thinLTOPrefixReplaceNativeObject;
   std::string rpath;
   llvm::SmallVector<VersionDefinition, 0> versionDefinitions;
+  std::optional<llvm::DenseSet<llvm::StringRef>> retainSymbols;
   llvm::SmallVector<llvm::StringRef, 0> auxiliaryList;
   llvm::SmallVector<llvm::StringRef, 0> filterList;
   llvm::SmallVector<llvm::StringRef, 0> passPlugins;
@@ -644,6 +647,8 @@ struct InStruct {
   std::unique_ptr<SymtabShndxSection> symTabShndx;
   std::unique_ptr<SyntheticSection> hexagonAttributes;
   std::unique_ptr<SyntheticSection> riscvAttributes;
+  std::unique_ptr<SyntheticSection> dynDbg;
+  std::unique_ptr<SyntheticSection> dynDbgNote;
 };
 
 struct Ctx : CommonLinkerContext {
@@ -768,6 +773,10 @@ struct Ctx : CommonLinkerContext {
   unsigned scriptSymOrderCounter = 1;
   llvm::DenseMap<const Symbol *, unsigned> scriptSymOrder;
 
+  // Used to assert removeUnusedSyntheticSections-removed sections cannot become
+  // needed again.
+  SmallVector<SyntheticSection *, 0> removedSyntheticSections;
+
   // The set of TOC entries (.toc + addend) for which we should not apply
   // toc-indirect to toc-relative relaxation. const Symbol * refers to the
   // STT_SECTION symbol associated to the .toc input section.
@@ -778,6 +787,18 @@ struct Ctx : CommonLinkerContext {
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
 
   std::optional<AArch64PauthAbiCoreInfo> aarch64PauthAbiCoreInfo;
+
+  // True if performing the embedded unoptimized dynamic debugging relocatable
+  // link.
+  bool inDynDbgLink = false;
+  // True if performing dynamic debugging style relocatable link rather than a
+  // regular relocatable link.
+  bool dynDbgRelocatable = false;
+  // True if the link contains dynamic debugging.
+  bool hasDynDbg = false;
+  // Pointer to the output of the embedded unoptimized dynamic debugging
+  // relocatable link.
+  std::unique_ptr<llvm::FileOutputBuffer> dynDbgOutput;
 };
 
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and

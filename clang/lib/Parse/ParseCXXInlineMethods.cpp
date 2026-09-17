@@ -32,9 +32,7 @@ StringLiteral *Parser::ParseCXXDeletedFunctionMessage() {
     ExprResult Res = ParseUnevaluatedStringLiteralExpression();
     if (Res.isUsable()) {
       Message = Res.getAs<StringLiteral>();
-      Diag(Message->getBeginLoc(), getLangOpts().CPlusPlus26
-                                       ? diag::warn_cxx23_delete_with_message
-                                       : diag::ext_delete_with_message)
+      DiagCompat(Message->getBeginLoc(), diag_compat::delete_with_message)
           << Message->getSourceRange();
     }
   } else {
@@ -101,26 +99,21 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
 
     bool Delete = false;
     SourceLocation KWLoc;
-    SourceLocation KWEndLoc = Tok.getEndLoc().getLocWithOffset(-1);
     if (TryConsumeToken(tok::kw_delete, KWLoc)) {
-      Diag(KWLoc, getLangOpts().CPlusPlus11
-                      ? diag::warn_cxx98_compat_defaulted_deleted_function
-                      : diag::ext_defaulted_deleted_function)
-        << 1 /* deleted */;
+      DiagCompat(KWLoc, diag_compat::defaulted_deleted_function)
+          << 1 /* deleted */;
       StringLiteral *Message = ParseCXXDeletedFunctionMessage();
       Actions.SetDeclDeleted(FnD, KWLoc, Message);
       Delete = true;
       if (auto *DeclAsFunction = dyn_cast<FunctionDecl>(FnD)) {
-        DeclAsFunction->setRangeEnd(KWEndLoc);
+        DeclAsFunction->setRangeEnd(PrevTokLocation);
       }
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
-      Diag(KWLoc, getLangOpts().CPlusPlus11
-                      ? diag::warn_cxx98_compat_defaulted_deleted_function
-                      : diag::ext_defaulted_deleted_function)
-        << 0 /* defaulted */;
+      DiagCompat(KWLoc, diag_compat::defaulted_deleted_function)
+          << 0 /* defaulted */;
       Actions.SetDeclDefaulted(FnD, KWLoc);
       if (auto *DeclAsFunction = dyn_cast<FunctionDecl>(FnD)) {
-        DeclAsFunction->setRangeEnd(KWEndLoc);
+        DeclAsFunction->setRangeEnd(PrevTokLocation);
       }
     } else {
       llvm_unreachable("function definition after = not 'delete' or 'default'");
@@ -421,7 +414,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       PP.EnterTokenStream(*Toks, true, /*IsReinject*/ true);
 
       // Consume the previously-pushed token.
-      ConsumeAnyToken();
+      ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 
       // Consume the '='.
       assert(Tok.is(tok::equal) && "Default argument not starting with '='");
@@ -435,7 +428,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
 
       ExprResult DefArgResult;
       if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-        Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+        Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
         DefArgResult = ParseBraceInitializer();
       } else
         DefArgResult = ParseAssignmentExpression();
@@ -501,7 +494,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     PP.EnterTokenStream(*Toks, true, /*IsReinject*/true);
 
     // Consume the previously-pushed token.
-    ConsumeAnyToken();
+    ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 
     // C++11 [expr.prim.general]p3:
     //   If a declaration declares a member function or member function
@@ -624,22 +617,6 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
         Actions.ActOnFinishInlineFunctionDef(FD);
   });
 
-  if (Tok.is(tok::kw_try)) {
-    ParseFunctionTryBlock(LM.D, FnScope);
-    return;
-  }
-  if (Tok.is(tok::colon)) {
-    ParseConstructorInitializer(LM.D);
-
-    // Error recovery.
-    if (!Tok.is(tok::l_brace)) {
-      FnScope.Exit();
-      Actions.ActOnFinishFunctionBody(LM.D, nullptr);
-      return;
-    }
-  } else
-    Actions.ActOnDefaultCtorInitializers(LM.D);
-
   assert((Actions.getDiagnostics().hasErrorOccurred() ||
           !isa<FunctionTemplateDecl>(LM.D) ||
           cast<FunctionTemplateDecl>(LM.D)->getTemplateParameters()->getDepth()
@@ -647,7 +624,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
          "TemplateParameterDepth should be greater than the depth of "
          "current template being instantiated!");
 
-  ParseFunctionStatementBody(LM.D, FnScope);
+  ParseFunctionBody(LM.D, FnScope);
 }
 
 void Parser::ParseLexedMemberInitializers(ParsingClass &Class) {
@@ -725,83 +702,86 @@ void Parser::ParseLexedAttributes(ParsingClass &Class) {
 }
 
 void Parser::ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
-                                     bool EnterScope, bool OnDefinition) {
+                                     bool EnterScope, bool OnDefinition,
+                                     ParsedAttributes *OutAttrs) {
   assert(LAs.parseSoon() &&
          "Attribute list should be marked for immediate parsing.");
   for (unsigned i = 0, ni = LAs.size(); i < ni; ++i) {
     if (D)
       LAs[i]->addDecl(D);
-    ParseLexedAttribute(*LAs[i], EnterScope, OnDefinition);
+    ParseLexedAttribute(*LAs[i], EnterScope, OnDefinition, OutAttrs);
     delete LAs[i];
   }
   LAs.clear();
 }
 
-void Parser::ParseLexedAttribute(LateParsedAttribute &LA,
-                                 bool EnterScope, bool OnDefinition) {
+void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
+                                 bool OnDefinition,
+                                 ParsedAttributes *OutAttrs) {
   // Create a fake EOF so that attribute parsing won't go off the end of the
   // attribute.
   Token AttrEnd;
   AttrEnd.startToken();
   AttrEnd.setKind(tok::eof);
   AttrEnd.setLocation(Tok.getLocation());
-  AttrEnd.setEofData(LA.Toks.data());
-  LA.Toks.push_back(AttrEnd);
+  AttrEnd.setEofData(LPA.Toks.data());
+  LPA.Toks.push_back(AttrEnd);
 
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.
-  LA.Toks.push_back(Tok);
-  PP.EnterTokenStream(LA.Toks, true, /*IsReinject=*/true);
+  LPA.Toks.push_back(Tok);
+  PP.EnterTokenStream(LPA.Toks, true, /*IsReinject=*/true);
   // Consume the previously pushed token.
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 
   ParsedAttributes Attrs(AttrFactory);
 
-  if (LA.Decls.size() > 0) {
-    Decl *D = LA.Decls[0];
-    NamedDecl *ND  = dyn_cast<NamedDecl>(D);
+  if (LPA.Decls.size() > 0) {
+    Decl *D = LPA.Decls[0];
+    bool HasFuncScope = EnterScope && LPA.Decls.size() == 1 &&
+                        D->isFunctionOrFunctionTemplate();
+    bool IsCPlusPlus = getLangOpts().CPlusPlus;
+
+    NamedDecl *ND = dyn_cast<NamedDecl>(D);
     RecordDecl *RD = dyn_cast_or_null<RecordDecl>(D->getDeclContext());
 
     // Allow 'this' within late-parsed attributes.
     Sema::CXXThisScopeRAII ThisScope(Actions, RD, Qualifiers(),
-                                     ND && ND->isCXXInstanceMember());
+                                     IsCPlusPlus && ND &&
+                                         ND->isCXXInstanceMember());
 
-    if (LA.Decls.size() == 1) {
-      // If the Decl is templatized, add template parameters to scope.
-      ReenterTemplateScopeRAII InDeclScope(*this, D, EnterScope);
+    // If the Decl is templatized, add template parameters to the scope.
+    ReenterTemplateScopeRAII InDeclScope(*this, D, IsCPlusPlus && EnterScope);
 
-      // If the Decl is on a function, add function parameters to the scope.
-      bool HasFunScope = EnterScope && D->isFunctionOrFunctionTemplate();
-      if (HasFunScope) {
-        InDeclScope.Scopes.Enter(Scope::FnScope | Scope::DeclScope |
-                                 Scope::CompoundStmtScope);
-        Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
-      }
-
-      ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, nullptr,
-                            nullptr, SourceLocation(), ParsedAttr::Form::GNU(),
-                            nullptr);
-
-      if (HasFunScope)
-        Actions.ActOnExitFunctionContext();
-    } else {
-      // If there are multiple decls, then the decl cannot be within the
-      // function scope.
-      ParseGNUAttributeArgs(&LA.AttrName, LA.AttrNameLoc, Attrs, nullptr,
-                            nullptr, SourceLocation(), ParsedAttr::Form::GNU(),
-                            nullptr);
+    // If the Decl is on a function, add function parameters to the scope.
+    if (HasFuncScope) {
+      InDeclScope.Scopes.Enter(Scope::FnScope | Scope::DeclScope |
+                               Scope::CompoundStmtScope);
+      Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
     }
+
+    ParseGNUAttributeArgs(&LPA.AttrName, LPA.AttrNameLoc, Attrs,
+                          /*EndLoc=*/nullptr, /*ScopeName=*/nullptr,
+                          SourceLocation(), ParsedAttr::Form::GNU(),
+                          /*D=*/nullptr);
+
+    if (HasFuncScope)
+      Actions.ActOnExitFunctionContext();
+  } else if (OutAttrs) {
+    ParseGNUAttributeArgs(&LPA.AttrName, LPA.AttrNameLoc, Attrs,
+                          /*EndLoc=*/nullptr, /*ScopeName=*/nullptr,
+                          SourceLocation(), ParsedAttr::Form::GNU(),
+                          /*D=*/nullptr);
   } else {
-    Diag(Tok, diag::warn_attribute_no_decl) << LA.AttrName.getName();
+    Diag(Tok, diag::warn_attribute_no_decl) << LPA.AttrName.getName();
   }
 
   if (OnDefinition && !Attrs.empty() && !Attrs.begin()->isCXX11Attribute() &&
       Attrs.begin()->isKnownToGCC())
-    Diag(Tok, diag::warn_attribute_on_function_definition)
-      << &LA.AttrName;
+    Diag(Tok, diag::warn_attribute_on_function_definition) << &LPA.AttrName;
 
-  for (unsigned i = 0, ni = LA.Decls.size(); i < ni; ++i)
-    Actions.ActOnFinishDelayedAttribute(getCurScope(), LA.Decls[i], Attrs);
+  for (auto *D : LPA.Decls)
+    Actions.ActOnFinishDelayedAttribute(getCurScope(), D, Attrs);
 
   // Due to a parsing error, we either went over the cached tokens or
   // there are still cached tokens left, so we skip the leftover tokens.
@@ -810,6 +790,9 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LA,
 
   if (Tok.is(tok::eof) && Tok.getEofData() == AttrEnd.getEofData())
     ConsumeAnyToken();
+
+  if (OutAttrs)
+    OutAttrs->takeAllAppendingFrom(Attrs);
 }
 
 void Parser::ParseLexedPragmas(ParsingClass &Class) {
@@ -864,6 +847,27 @@ bool Parser::ConsumeAndStoreUntil(tok::TokenKind T1, tok::TokenKind T2,
     case tok::annot_repl_input_end:
       // Ran out of tokens.
       return false;
+
+    case tok::annot_pragma_openacc:
+    case tok::annot_pragma_openmp:
+    case tok::annot_attr_openmp: {
+      // Ignore any tokens inside of a OMP/OpenACC pragma, as these should just
+      // be taken as 1.
+      tok::TokenKind EndKind = Tok.is(tok::annot_pragma_openacc)
+                                   ? tok::annot_pragma_openacc_end
+                                   : tok::annot_pragma_openmp_end;
+      Toks.push_back(Tok);
+      ConsumeAnnotationToken();
+      while (Tok.isNot(EndKind) && Tok.isNot(tok::eof)) {
+        Toks.push_back(Tok);
+        ConsumeAnyToken();
+      }
+      if (Tok.is(EndKind)) {
+        Toks.push_back(Tok);
+        ConsumeAnnotationToken();
+      }
+      break;
+    }
 
     case tok::l_paren:
       // Recursively consume properly-nested parens.

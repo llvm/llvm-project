@@ -254,8 +254,8 @@ public:
   static inline _LIBCPP_CONSTEXPR const result_type multiplier = __a;
   static inline _LIBCPP_CONSTEXPR const result_type increment  = __c;
   static inline _LIBCPP_CONSTEXPR const result_type modulus    = __m;
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
   static inline _LIBCPP_CONSTEXPR const result_type default_seed = 1u;
 
   // constructors and seeding functions
@@ -296,12 +296,12 @@ public:
   }
 
   // generating functions
-  _LIBCPP_HIDE_FROM_ABI result_type operator()() {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()() {
     return __x_ = static_cast<result_type>(__lce_ta<__a, __c, __m, _Mp>::next(__x_));
   }
   _LIBCPP_HIDE_FROM_ABI void discard(unsigned long long __z) {
     for (; __z; --__z)
-      operator()();
+      (void)operator()();
   }
 
   friend _LIBCPP_HIDE_FROM_ABI bool

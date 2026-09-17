@@ -1418,7 +1418,8 @@ void CodeGenFunction::setBlockContextParameter(const ImplicitParamDecl *D,
 
   // Allocate a stack slot like for any local variable to guarantee optimal
   // debug info at -O0. The mem2reg pass will eliminate it when optimizing.
-  RawAddress alloc = CreateMemTemp(D->getType(), D->getName() + ".addr");
+  RawAddress alloc =
+      CreateMemTempWithoutCast(D->getType(), D->getName() + ".addr");
   Builder.CreateStore(arg, alloc);
   if (CGDebugInfo *DI = getDebugInfo()) {
     if (CGM.getCodeGenOpts().hasReducedDebugInfo()) {
@@ -1557,8 +1558,8 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
     if (!capture.isConstant()) continue;
 
     CharUnits align = getContext().getDeclAlign(variable);
-    Address alloca =
-      CreateMemTemp(variable->getType(), align, "block.captured-const");
+    Address alloca = CreateMemTempWithoutCast(variable->getType(), align,
+                                              "block.captured-const");
 
     Builder.CreateStore(capture.getConstant(), alloca);
 
@@ -1575,6 +1576,7 @@ llvm::Function *CodeGenFunction::GenerateBlockFunction(
   else {
     PGO->assignRegionCounters(GlobalDecl(blockDecl), fn);
     incrementProfileCounter(blockDecl->getBody());
+    maybeCreateMCDCCondBitmap();
     EmitStmt(blockDecl->getBody());
   }
 
@@ -2507,16 +2509,15 @@ static T *buildByrefHelpers(CodeGenModule &CGM, const BlockByrefInfo &byrefInfo,
   llvm::FoldingSetNodeID id;
   generator.Profile(id);
 
-  void *insertPos;
-  BlockByrefHelpers *node
-    = CGM.ByrefHelpersCache.FindNodeOrInsertPos(id, insertPos);
+  llvm::FoldingSetInsertToken InsertToken;
+  BlockByrefHelpers *node = CGM.ByrefHelpersCache.lookup(id, InsertToken);
   if (node) return static_cast<T*>(node);
 
   generator.CopyHelper = buildByrefCopyHelper(CGM, byrefInfo, generator);
   generator.DisposeHelper = buildByrefDisposeHelper(CGM, byrefInfo, generator);
 
   T *copy = new (CGM.getContext()) T(std::forward<T>(generator));
-  CGM.ByrefHelpersCache.InsertNode(copy, insertPos);
+  CGM.ByrefHelpersCache.insert(copy, InsertToken);
   return copy;
 }
 

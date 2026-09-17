@@ -10,8 +10,8 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x float>, ptr getelementptr ([16000 x i8], ptr @GLOB, i64 0, i64 1208), align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr getelementptr ([16000 x i8], ptr @GLOB, i64 0, i64 1612), align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[GEPLOAD1612:%.*]] = extractelement <16 x float> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i32 0
+; CHECK-NEXT:    [[GEPLOAD1612:%.*]] = extractelement <16 x float> [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x float> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc ninf nsz arcp contract afn float [[GEPLOAD1612]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul reassoc ninf nsz arcp contract afn <16 x float> [[TMP4]], [[TMP0]]
 ; CHECK-NEXT:    store <16 x float> [[TMP6]], ptr getelementptr ([16000 x i8], ptr @GLOB, i64 0, i64 2928), align 16

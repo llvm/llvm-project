@@ -17,6 +17,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <map>
+#include <optional>
 
 namespace llvm {
 class SourceMgr;
@@ -329,6 +330,9 @@ private: // Parser methods.
   const Init *ParseOperationListComprehension(Record *CurRec,
                                               const RecTy *ItemType);
   const Init *ParseOperationCond(Record *CurRec, const RecTy *ItemType);
+  const Init *ParseOperationSwitch(Record *CurRec, const RecTy *ItemType);
+  std::optional<const RecTy *> resolveInitTypes(ArrayRef<const Init *> Inits,
+                                                const Twine &ErrCtx);
   const RecTy *ParseOperatorType();
   const Init *ParseObjectName(MultiClass *CurMultiClass);
   const Record *ParseClassID();

@@ -70,15 +70,10 @@ public:
   Expression &operator=(const Expression &) = delete;
   virtual ~Expression();
 
-  static unsigned getEmptyKey() { return ~0U; }
-  static unsigned getTombstoneKey() { return ~1U; }
-
   bool operator!=(const Expression &Other) const { return !(*this == Other); }
   bool operator==(const Expression &Other) const {
     if (getOpcode() != Other.getOpcode())
       return false;
-    if (getOpcode() == getEmptyKey() || getOpcode() == getTombstoneKey())
-      return true;
     // Compare the expression type for anything but load and store.
     // For load and store we set the opcode to zero to make them equal.
     if (getExpressionType() != ET_Load && getExpressionType() != ET_Store &&

@@ -13,6 +13,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   BitwiseShiftChecker.cpp
   BlockInCriticalSectionChecker.cpp
   BoolAssignmentChecker.cpp
+  BoundsChecking.cpp
   BuiltinFunctionChecker.cpp
   CStringChecker.cpp
   CStringSyntaxChecker.cpp
@@ -30,6 +31,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   ConversionChecker.cpp
   CXXDeleteChecker.cpp
   CXXSelfAssignmentChecker.cpp
+  DanglingPtrDeref.cpp
   DeadStoresChecker.cpp
   DebugCheckers.cpp
   DebugContainerModeling.cpp
@@ -55,6 +57,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   IteratorModeling.cpp
   IteratorRangeChecker.cpp
   IvarInvalidationChecker.cpp
+  LifetimeModeling.cpp
   LLVMConventionsChecker.cpp
   LocalizationChecker.cpp
   MacOSKeychainAPIChecker.cpp
@@ -126,6 +129,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   UninitializedObject/UninitializedPointee.cpp
   UnixAPIChecker.cpp
   UnreachableCodeChecker.cpp
+  UseAfterLifetimeEnd.cpp
   VforkChecker.cpp
   VLASizeChecker.cpp
   VAListChecker.cpp
@@ -141,11 +145,13 @@ add_clang_library(clangStaticAnalyzerCheckers
   WebKit/RawPtrRefLambdaCapturesChecker.cpp
   WebKit/RawPtrRefLocalVarsChecker.cpp
   WebKit/RawPtrRefMemberChecker.cpp
+  WebKit/RawPtrRefSafetyModel.cpp
 
   LINK_LIBS
   clangAST
   clangASTMatchers
   clangAnalysis
+  clangAnalysisLifetimeSafety
   clangBasic
   clangLex
   clangStaticAnalyzerCore

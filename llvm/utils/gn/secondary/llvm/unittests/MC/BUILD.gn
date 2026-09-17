@@ -9,6 +9,7 @@ unittest("MCTests") {
     "//llvm/lib/TargetParser",
   ]
   sources = [
+    "DXContainerWriterTest.cpp",
     "Disassembler.cpp",
     "DwarfDebugFrameCIE.cpp",
     "DwarfLineTableHeaders.cpp",
@@ -17,5 +18,6 @@ unittest("MCTests") {
     "MCInstPrinter.cpp",
     "StringTableBuilderTest.cpp",
     "TargetRegistry.cpp",
+    "WODRoundTripTest.cpp",
   ]
 }

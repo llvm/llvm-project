@@ -111,9 +111,9 @@ TEST_F(LlvmLibcSincosTest, TrickyInputs) {
 
 TEST_F(LlvmLibcSincosTest, InDoubleRange) {
   constexpr uint64_t COUNT = 1'231;
-  uint64_t START = LIBC_NAMESPACE::fputil::FPBits<double>(0x1.0p-50).uintval();
-  uint64_t STOP = LIBC_NAMESPACE::fputil::FPBits<double>(0x1.0p200).uintval();
-  uint64_t STEP = (STOP - START) / COUNT;
+  constexpr uint64_t START = FPBits(0x1.0p-50).uintval();
+  constexpr uint64_t STOP = FPBits(0x1.0p200).uintval();
+  constexpr uint64_t STEP = (STOP - START) / COUNT;
 
   for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {
     double x = FPBits(v).get_val();

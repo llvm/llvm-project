@@ -15,6 +15,7 @@
 #include "X86TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -25,6 +26,7 @@
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 using namespace TargetOpcode;
 using namespace LegalizeActions;
 using namespace LegalityPredicates;
@@ -314,6 +316,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(1, s16, sMaxScalar)
       .scalarSameSizeAs(0, 1);
 
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
 
   // pointer handling
@@ -424,6 +427,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1, /*Min=*/8)
       .clampScalar(1, s8, sMaxScalar)
       .scalarize(0);
+
+  getActionDefinitionsBuilder(G_TRUNC).legalForCartesianProduct(
+      {s1, s8, s16, s32, s64}, {s8, s16, s32, s64, s128});
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
@@ -547,7 +553,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
         return (HasSSE1 && typeInSet(0, {v4s32})(Query)) ||
                (HasSSE2 && typeInSet(0, {v2s64, v8s16, v16s8})(Query)) ||
                (HasAVX && typeInSet(0, {v4s64, v8s32, v16s16, v32s8})(Query)) ||
-               (HasAVX512 && typeInSet(0, {v8s64, v16s32, v32s16, v64s8}));
+               (HasAVX512 &&
+                typeInSet(0, {v8s64, v16s32, v32s16, v64s8})(Query));
       })
       .clampNumElements(0, v16s8, s8MaxVector)
       .clampNumElements(0, v8s16, s16MaxVector)
@@ -615,7 +622,11 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .minScalar(0, LLT::scalar(32))
       .libcall();
 
-  getLegacyLegalizerInfo().computeTables();
+  getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS})
+      .alwaysLegal();
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
+  getActionDefinitionsBuilder(G_INVOKE_REGION_START).alwaysLegal();
+
   verify(*STI.getInstrInfo());
 }
 
@@ -920,12 +931,12 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
       MIRBuilder.buildAnd(s16, CWD16, MIRBuilder.buildConstant(s16, 0xf3ff));
 
   // Check if Src is a constant
-  auto *SrcDef = MRI.getVRegDef(Src);
   Register RMBits;
   Register MXCSRRMBits;
 
-  if (SrcDef && SrcDef->getOpcode() == TargetOpcode::G_CONSTANT) {
-    uint64_t RM = getIConstantFromReg(Src, MRI).getZExtValue();
+  APInt SrcCst;
+  if (mi_match(Src, MRI, m_ICst(SrcCst))) {
+    uint64_t RM = SrcCst.getZExtValue();
     int FieldVal = X86::getRoundingModeX86(RM);
 
     if (FieldVal == X86::rmInvalid) {

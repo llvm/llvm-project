@@ -66,6 +66,7 @@ namespace llvm {
 
 class AssumptionCache;
 class BlockFrequencyInfo;
+class BranchProbabilityInfo;
 class DemandedBits;
 class DominatorTree;
 class Function;
@@ -146,6 +147,7 @@ public:
   TargetTransformInfo *TTI;
   DominatorTree *DT;
   std::function<BlockFrequencyInfo &()> GetBFI;
+  std::function<const BranchProbabilityInfo &()> GetBPI;
   TargetLibraryInfo *TLI;
   DemandedBits *DB;
   AssumptionCache *AC;
@@ -153,6 +155,8 @@ public:
   OptimizationRemarkEmitter *ORE;
   ProfileSummaryInfo *PSI;
   AAResults *AA;
+
+  bool CFGChanged = false;
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   LLVM_ABI void
@@ -164,26 +168,6 @@ public:
 
   LLVM_ABI bool processLoop(Loop *L);
 };
-
-/// Reports a vectorization failure: print \p DebugMsg for debugging
-/// purposes along with the corresponding optimization remark \p RemarkName.
-/// If \p I is passed, it is an instruction that prevents vectorization.
-/// Otherwise, the loop \p TheLoop is used for the location of the remark.
-LLVM_ABI void reportVectorizationFailure(const StringRef DebugMsg,
-                                         const StringRef OREMsg,
-                                         const StringRef ORETag,
-                                         OptimizationRemarkEmitter *ORE,
-                                         const Loop *TheLoop,
-                                         Instruction *I = nullptr);
-
-/// Same as above, but the debug message and optimization remark are identical
-inline void reportVectorizationFailure(const StringRef DebugMsg,
-                                       const StringRef ORETag,
-                                       OptimizationRemarkEmitter *ORE,
-                                       Loop *TheLoop,
-                                       Instruction *I = nullptr) {
-  reportVectorizationFailure(DebugMsg, DebugMsg, ORETag, ORE, TheLoop, I);
-}
 
 /// A marker analysis to determine if extra passes should be run after loop
 /// vectorization.

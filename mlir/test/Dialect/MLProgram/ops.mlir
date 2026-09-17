@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s --allow-unregistered-dialect | mlir-opt --allow-unregistered-dialect | FileCheck %s
-// RUN: mlir-opt %s --allow-unregistered-dialect --mlir-print-op-generic | mlir-opt --allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s --mlir-print-op-generic | mlir-opt | FileCheck %s
 
 // CHECK-LABEL: ml_program.func private @extern_func
 ml_program.func private @extern_func(i32) -> i32
@@ -15,8 +15,8 @@ ml_program.subgraph private @extern_subgraph(i32) -> i32
 // CHECK-LABEL: ml_program.subgraph @compute_subgraph
 ml_program.subgraph @compute_subgraph(%arg0 : i32) -> i32 {
   %token = ml_program.token
-  %1 = "unregistered.dummy"(%0, %token) : (i32, !ml_program.token) -> i32
-  %0 = "unregistered.dummy"(%arg0) : (i32) -> i32
+  %1 = "test.dummy"(%0, %token) : (i32, !ml_program.token) -> i32
+  %0 = "test.dummy"(%arg0) : (i32) -> i32
   ml_program.output %0 : i32
 }
 

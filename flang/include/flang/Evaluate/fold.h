@@ -17,7 +17,6 @@
 #include "expression.h"
 #include "tools.h"
 #include "type.h"
-#include <variant>
 
 namespace Fortran::evaluate::characteristics {
 class TypeAndShape;
@@ -130,6 +129,14 @@ template <typename A> std::optional<std::int64_t> ToInt64(A *p) {
     return std::nullopt;
   }
 }
+
+// Fold a conditional argument (F2023 R1526).  Folds all sub-expressions
+// and simplifies constant conditions: .TRUE. selects the consequent,
+// .FALSE. skips to the tail.  If fully resolved, replaces the
+// ActualArgument with a plain expression or sets it to std::nullopt
+// for .NIL.
+void FoldConditionalArg(
+    FoldingContext &context, std::optional<ActualArgument> &arg);
 
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_FOLD_H_

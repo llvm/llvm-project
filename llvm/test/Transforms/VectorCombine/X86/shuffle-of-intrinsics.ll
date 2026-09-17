@@ -52,19 +52,19 @@ define <8 x i1> @test4(<4 x float> %0, <4 x float> %1) {
 ; SSE-LABEL: @test4(
 ; SSE-NEXT:  entry:
 ; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP0:%.*]], <4 x float> [[TMP1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; SSE-NEXT:    [[TMP3:%.*]] = call <8 x i1> @llvm.is.fpclass.v8f32(<8 x float> [[TMP2]], i32 0)
+; SSE-NEXT:    [[TMP3:%.*]] = call <8 x i1> @llvm.is.fpclass.v8f32(<8 x float> [[TMP2]], /* (ninf) */ i32 4)
 ; SSE-NEXT:    ret <8 x i1> [[TMP3]]
 ;
 ; AVX-LABEL: @test4(
 ; AVX-NEXT:  entry:
-; AVX-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> [[TMP0:%.*]], i32 0)
-; AVX-NEXT:    [[TMP3:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> [[TMP1:%.*]], i32 0)
+; AVX-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> [[TMP0:%.*]], /* (ninf) */ i32 4)
+; AVX-NEXT:    [[TMP3:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> [[TMP1:%.*]], /* (ninf) */ i32 4)
 ; AVX-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; AVX-NEXT:    ret <8 x i1> [[TMP4]]
 ;
 entry:
-  %2 = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %0, i32 0)
-  %3 = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %1, i32 0)
+  %2 = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %0, i32 4)
+  %3 = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %1, i32 4)
   %4 = shufflevector <4 x i1> %2, <4 x i1> %3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i1> %4
 }
@@ -73,27 +73,27 @@ define <2 x i1> @test4b(<4 x float> %0, <4 x float> %1) {
 ; CHECK-LABEL: @test4b(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP0:%.*]], <4 x float> [[TMP1:%.*]], <2 x i32> <i32 0, i32 4>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[TMP2]], i32 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[TMP2]], /* (ninf) */ i32 4)
 ; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
 ;
 entry:
-  %2 = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %0, i32 0)
-  %3 = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %1, i32 0)
+  %2 = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %0, i32 4)
+  %3 = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %1, i32 4)
   %4 = shufflevector <4 x i1> %2, <4 x i1> %3, <2 x i32> <i32 0, i32 4>
   ret <2 x i1> %4
 }
 
-define <8 x float> @test5(<4 x float> %0, i32 %1, <4 x float> %2, <4 x i32> %3) {
+define <8 x float> @test5(<4 x float> %0, i32 %1, <4 x float> %2, i32 %3) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[TMP0:%.*]], i32 [[TMP1:%.*]])
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.powi.v4f32.v4i32(<4 x float> [[TMP2:%.*]], <4 x i32> [[TMP3:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[TMP2:%.*]], i32 [[TMP3:%.*]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    ret <8 x float> [[TMP6]]
 ;
 entry:
   %4 = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> %0, i32 %1)
-  %5 = call <4 x float> @llvm.powi.v4f32.v4i32(<4 x float> %2, <4 x i32> %3)
+  %5 = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> %2, i32 %3)
   %6 = shufflevector <4 x float> %4, <4 x float> %5, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x float> %6
 }
@@ -148,7 +148,6 @@ declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1)
 declare <4 x i32> @llvm.smax.v4i32(<4 x i32>, <4 x i32>)
 declare <4 x i1> @llvm.is.fpclass.v4f32(<4 x float>, i32)
 declare <4 x float> @llvm.powi.v4f32.i32(<4 x float>, i32)
-declare <4 x float> @llvm.powi.v4f32.v4i32(<4 x float>, <4 x i32>)
 declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
 declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>)
 
@@ -224,8 +223,7 @@ define <8 x i32> @test_shared_operands(<4 x i32> %0, <4 x i32> %1) {
 ; CHECK-LABEL: @test_shared_operands(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0:%.*]], <4 x i32> [[TMP1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[TMP2]], <8 x i32> [[TMP2]])
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> [[TMP2]]
 ;
 entry:
   %a = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %0, <4 x i32> %0)
@@ -233,3 +231,24 @@ entry:
   %r = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i32> %r
 }
+
+; Intrinsics overloaded on their operand type (e.g. llvm.fptosi.sat) can share
+; a result type while having different operand types. The corresponding
+; operands cannot be shuffled together, so the fold must not fire.
+define <4 x i32> @test_mismatched_operand_types(<2 x float> %0, <2 x double> %1) {
+; CHECK-LABEL: @test_mismatched_operand_types(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f32(<2 x float> [[TMP0:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double> [[TMP1:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+entry:
+  %a = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f32(<2 x float> %0)
+  %b = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double> %1)
+  %r = shufflevector <2 x i32> %a, <2 x i32> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %r
+}
+
+declare <2 x i32> @llvm.fptosi.sat.v2i32.v2f32(<2 x float>)
+declare <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double>)

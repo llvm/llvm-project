@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/ExpandVectorPredication.h"
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
@@ -59,7 +60,7 @@ namespace {
 
 struct PreISelIntrinsicLowering {
   const TargetMachine *TM;
-  const LibcallLoweringModuleAnalysisResult &ModuleLibcalls;
+  const ModuleLibcallLoweringInfo &ModuleLibcalls;
   const function_ref<TargetTransformInfo &(Function &)> LookupTTI;
   const function_ref<TargetLibraryInfo &(Function &)> LookupTLI;
 
@@ -70,7 +71,7 @@ struct PreISelIntrinsicLowering {
 
   explicit PreISelIntrinsicLowering(
       const TargetMachine *TM_,
-      const LibcallLoweringModuleAnalysisResult &ModuleLibcalls_,
+      const ModuleLibcallLoweringInfo &ModuleLibcalls_,
       function_ref<TargetTransformInfo &(Function &)> LookupTTI_,
       function_ref<TargetLibraryInfo &(Function &)> LookupTLI_,
       bool UseMemIntrinsicLibFunc_ = true)
@@ -241,25 +242,24 @@ bool PreISelIntrinsicLowering::shouldExpandMemIntrinsicWithSize(
   return SizeVal > Threshold || Threshold == 0;
 }
 
-static bool
-canEmitLibcall(const LibcallLoweringModuleAnalysisResult &ModuleLowering,
-               const TargetMachine *TM, Function *F, RTLIB::Libcall LC) {
+static bool canEmitLibcall(const ModuleLibcallLoweringInfo &ModuleLowering,
+                           const TargetMachine *TM, Function *F,
+                           RTLIB::Libcall LC) {
   // TODO: Should this consider the address space of the memcpy?
   if (!TM)
     return true;
   const LibcallLoweringInfo &Lowering =
-      ModuleLowering.getLibcallLowering(*TM->getSubtargetImpl(*F));
+      getLibcallLowering(ModuleLowering, *TM->getSubtargetImpl(*F));
   return Lowering.getLibcallImpl(LC) != RTLIB::Unsupported;
 }
 
-static bool
-canEmitMemcpy(const LibcallLoweringModuleAnalysisResult &ModuleLowering,
-              const TargetMachine *TM, Function *F) {
+static bool canEmitMemcpy(const ModuleLibcallLoweringInfo &ModuleLowering,
+                          const TargetMachine *TM, Function *F) {
   // TODO: Should this consider the address space of the memcpy?
   if (!TM)
     return true;
   const LibcallLoweringInfo &Lowering =
-      ModuleLowering.getLibcallLowering(*TM->getSubtargetImpl(*F));
+      getLibcallLowering(ModuleLowering, *TM->getSubtargetImpl(*F));
   return Lowering.getMemcpyImpl() != RTLIB::Unsupported;
 }
 
@@ -799,12 +799,45 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::tanh:
       Changed |= forEachCall(F, [&](CallInst *CI) {
         Type *Ty = CI->getArgOperand(0)->getType();
-        if (!TM || !isa<ScalableVectorType>(Ty))
+        if (!isa<ScalableVectorType>(Ty))
           return false;
         const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
         assert(Op != ISD::DELETED_NODE && "unsupported intrinsic");
         if (!TL->isOperationExpand(Op, EVT::getEVT(Ty)))
+          return false;
+        return lowerUnaryVectorIntrinsicAsLoop(M, CI);
+      });
+      break;
+    case Intrinsic::modf:
+    case Intrinsic::sincos:
+    case Intrinsic::sincospi:
+      Changed |= forEachCall(F, [&](CallInst *CI) {
+        Type *Ty = CI->getArgOperand(0)->getType();
+        if (!isa<ScalableVectorType>(Ty))
+          return false;
+        const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
+        unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
+        assert(Op != ISD::DELETED_NODE && "unsupported intrinsic");
+        EVT VT = EVT::getEVT(Ty);
+        if (!TL->isOperationExpand(Op, VT))
+          return false;
+        // The vector legalizer can expand these to a vector math library call.
+        RTLIB::Libcall LC;
+        switch (Op) {
+        case ISD::FMODF:
+          LC = RTLIB::getMODF(VT);
+          break;
+        case ISD::FSINCOS:
+          LC = RTLIB::getSINCOS(VT);
+          break;
+        case ISD::FSINCOSPI:
+          LC = RTLIB::getSINCOSPI(VT);
+          break;
+        default:
+          llvm_unreachable("unexpected intrinsic");
+        }
+        if (TL->getLibcallImpl(LC) != RTLIB::Unsupported)
           return false;
         return lowerUnaryVectorIntrinsicAsLoop(M, CI);
       });
@@ -847,7 +880,7 @@ public:
   }
 
   bool runOnModule(Module &M) override {
-    const LibcallLoweringModuleAnalysisResult &ModuleLibcalls =
+    const ModuleLibcallLoweringInfo &ModuleLibcalls =
         getAnalysis<LibcallLoweringInfoWrapper>().getResult(M);
 
     auto LookupTTI = [this](Function &F) -> TargetTransformInfo & {
@@ -885,7 +918,7 @@ ModulePass *llvm::createPreISelIntrinsicLoweringPass() {
 
 PreservedAnalyses
 PreISelIntrinsicLoweringPass::run(Module &M, ModuleAnalysisManager &MAM) {
-  const LibcallLoweringModuleAnalysisResult &LibcallLowering =
+  const ModuleLibcallLoweringInfo &LibcallLowering =
       MAM.getResult<LibcallLoweringModuleAnalysis>(M);
 
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();

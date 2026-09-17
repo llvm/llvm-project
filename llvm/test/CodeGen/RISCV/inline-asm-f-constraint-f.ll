@@ -14,10 +14,10 @@ define float @constraint_f_float(float %a) nounwind {
 ; RV32F-LABEL: constraint_f_float:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    lui a1, %hi(gf)
-; RV32F-NEXT:    flw fa5, %lo(gf)(a1)
-; RV32F-NEXT:    fmv.w.x fa4, a0
+; RV32F-NEXT:    fmv.w.x fa5, a0
+; RV32F-NEXT:    flw fa4, %lo(gf)(a1)
 ; RV32F-NEXT:    #APP
-; RV32F-NEXT:    fadd.s fa5, fa4, fa5
+; RV32F-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32F-NEXT:    #NO_APP
 ; RV32F-NEXT:    fmv.x.w a0, fa5
 ; RV32F-NEXT:    ret
@@ -25,10 +25,10 @@ define float @constraint_f_float(float %a) nounwind {
 ; RV64F-LABEL: constraint_f_float:
 ; RV64F:       # %bb.0:
 ; RV64F-NEXT:    lui a1, %hi(gf)
-; RV64F-NEXT:    flw fa5, %lo(gf)(a1)
-; RV64F-NEXT:    fmv.w.x fa4, a0
+; RV64F-NEXT:    fmv.w.x fa5, a0
+; RV64F-NEXT:    flw fa4, %lo(gf)(a1)
 ; RV64F-NEXT:    #APP
-; RV64F-NEXT:    fadd.s fa5, fa4, fa5
+; RV64F-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64F-NEXT:    #NO_APP
 ; RV64F-NEXT:    fmv.x.w a0, fa5
 ; RV64F-NEXT:    ret
@@ -41,10 +41,10 @@ define float @constraint_cf_float(float %a) nounwind {
 ; RV32F-LABEL: constraint_cf_float:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    lui a1, %hi(gf)
-; RV32F-NEXT:    flw fa5, %lo(gf)(a1)
-; RV32F-NEXT:    fmv.w.x fa4, a0
+; RV32F-NEXT:    fmv.w.x fa5, a0
+; RV32F-NEXT:    flw fa4, %lo(gf)(a1)
 ; RV32F-NEXT:    #APP
-; RV32F-NEXT:    fadd.s fa5, fa4, fa5
+; RV32F-NEXT:    fadd.s fa5, fa5, fa4
 ; RV32F-NEXT:    #NO_APP
 ; RV32F-NEXT:    fmv.x.w a0, fa5
 ; RV32F-NEXT:    ret
@@ -52,10 +52,10 @@ define float @constraint_cf_float(float %a) nounwind {
 ; RV64F-LABEL: constraint_cf_float:
 ; RV64F:       # %bb.0:
 ; RV64F-NEXT:    lui a1, %hi(gf)
-; RV64F-NEXT:    flw fa5, %lo(gf)(a1)
-; RV64F-NEXT:    fmv.w.x fa4, a0
+; RV64F-NEXT:    fmv.w.x fa5, a0
+; RV64F-NEXT:    flw fa4, %lo(gf)(a1)
 ; RV64F-NEXT:    #APP
-; RV64F-NEXT:    fadd.s fa5, fa4, fa5
+; RV64F-NEXT:    fadd.s fa5, fa5, fa4
 ; RV64F-NEXT:    #NO_APP
 ; RV64F-NEXT:    fmv.x.w a0, fa5
 ; RV64F-NEXT:    ret
@@ -68,8 +68,8 @@ define float @constraint_f_float_abi_name(float %a) nounwind {
 ; RV32F-LABEL: constraint_f_float_abi_name:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    lui a1, %hi(gf)
-; RV32F-NEXT:    flw fs0, %lo(gf)(a1)
 ; RV32F-NEXT:    fmv.w.x fa0, a0
+; RV32F-NEXT:    flw fs0, %lo(gf)(a1)
 ; RV32F-NEXT:    #APP
 ; RV32F-NEXT:    fadd.s ft0, fa0, fs0
 ; RV32F-NEXT:    #NO_APP
@@ -79,8 +79,8 @@ define float @constraint_f_float_abi_name(float %a) nounwind {
 ; RV64F-LABEL: constraint_f_float_abi_name:
 ; RV64F:       # %bb.0:
 ; RV64F-NEXT:    lui a1, %hi(gf)
-; RV64F-NEXT:    flw fs0, %lo(gf)(a1)
 ; RV64F-NEXT:    fmv.w.x fa0, a0
+; RV64F-NEXT:    flw fs0, %lo(gf)(a1)
 ; RV64F-NEXT:    #APP
 ; RV64F-NEXT:    fadd.s ft0, fa0, fs0
 ; RV64F-NEXT:    #NO_APP

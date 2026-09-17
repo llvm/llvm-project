@@ -9,11 +9,12 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
     @add_test_categories(["libc++"])
-    @skipIf(compiler=no_match("clang"))
+    @requireClang
     # FIXME: This regressed in 69d5a6662115499198ebfa07a081e98a6ce4b915
     # but needs further investigation for what underlying Clang/LLDB bug can't
     # handle that code change.
     @skip
+    @skipIf(macos_sdk_version=["<", "16.0"])
     def test(self):
         self.build()
 

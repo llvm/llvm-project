@@ -71,15 +71,15 @@ class LLVM_LIBRARY_VISIBILITY InstCombinerImpl final
     : public InstCombiner,
       public InstVisitor<InstCombinerImpl, Instruction *> {
 public:
-  InstCombinerImpl(InstructionWorklist &Worklist, BuilderTy &Builder,
-                   Function &F, AAResults *AA, AssumptionCache &AC,
-                   TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
-                   DominatorTree &DT, OptimizationRemarkEmitter &ORE,
-                   BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
-                   ProfileSummaryInfo *PSI, const DataLayout &DL,
+  InstCombinerImpl(InstructionWorklist &Worklist, Function &F, AAResults *AA,
+                   AssumptionCache &AC, TargetLibraryInfo &TLI,
+                   TargetTransformInfo &TTI, DominatorTree &DT,
+                   OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
+                   BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
+                   const DataLayout &DL,
                    ReversePostOrderTraversal<BasicBlock *> &RPOT)
-      : InstCombiner(Worklist, Builder, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI,
-                     PSI, DL, RPOT) {}
+      : InstCombiner(Worklist, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI, PSI, DL,
+                     RPOT) {}
 
   ~InstCombinerImpl() override = default;
 
@@ -119,7 +119,9 @@ public:
   Instruction *visitUDiv(BinaryOperator &I);
   Instruction *visitSDiv(BinaryOperator &I);
   Instruction *visitFDiv(BinaryOperator &I);
-  Value *simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1, bool Inverted);
+  Value *simplifyRangeCheck(CmpPredicate PredL, Value *LHS0, Value *LHS1,
+                            CmpPredicate PredR, Value *RHS0, Value *RHS1,
+                            Instruction *CxtI, bool Inverted);
   Instruction *FoldOrOfLogicalAnds(Value *Op0, Value *Op1);
   Instruction *visitAnd(BinaryOperator &I);
   Instruction *visitOr(BinaryOperator &I);
@@ -406,14 +408,16 @@ private:
                                             const CastInst *CI2);
   Value *simplifyIntToPtrRoundTripCast(Value *Val);
 
-  Value *foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS, Instruction &I,
-                          bool IsAnd, bool IsLogical = false);
+  Value *foldAndOrOfICmps(Value *LHS, Value *RHS, Instruction &I, bool IsAnd,
+                          bool IsLogical = false);
   Value *foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS, BinaryOperator &Xor);
 
   Value *foldEqOfParts(Value *Cmp0, Value *Cmp1, bool IsAnd);
 
-  Value *foldAndOrOfICmpsUsingRanges(ICmpInst *ICmp1, ICmpInst *ICmp2,
-                                     bool IsAnd);
+  Value *foldAndOrOfICmpsUsingRanges(CmpPredicate PredL, Value *LHS0,
+                                     Value *LHS1, bool LHSOneUse,
+                                     CmpPredicate PredR, Value *RHS0,
+                                     Value *RHS1, bool RHSOneUse, bool IsAnd);
 
   /// Optimize (fcmp)&(fcmp) or (fcmp)|(fcmp).
   /// NOTE: Unlike most of instcombine, this returns a Value which should
@@ -822,6 +826,9 @@ public:
   Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
                                       Value *FalseVal);
   Instruction *foldSelectValueEquivalence(SelectInst &SI, CmpInst &CI);
+
+  Instruction *foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt);
+
   bool replaceInInstruction(Value *V, Value *Old, Value *New,
                             unsigned Depth = 0);
 

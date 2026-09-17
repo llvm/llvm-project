@@ -117,34 +117,27 @@ static llvm::cl::opt<bool>
     Pretty("pretty-json", llvm::cl::desc("Serialize JSON with whitespace."),
            llvm::cl::cat(ClangDocCategory));
 
-static llvm::cl::opt<OutputFormatTy> FormatEnum(
-    "format", llvm::cl::desc("Format for outputted docs."),
-    llvm::cl::values(clEnumValN(OutputFormatTy::yaml, "yaml",
-                                "Documentation in YAML format."),
-                     clEnumValN(OutputFormatTy::md, "md",
-                                "Documentation in MD format."),
-                     clEnumValN(OutputFormatTy::html, "html",
-                                "Documentation in HTML format."),
-                     clEnumValN(OutputFormatTy::json, "json",
-                                "Documentation in JSON format"),
-                     clEnumValN(OutputFormatTy::md_mustache, "md_mustache",
-                                "Documentation in MD format.")),
-    llvm::cl::init(OutputFormatTy::yaml), llvm::cl::cat(ClangDocCategory));
+static llvm::cl::opt<OutputFormatTy>
+    FormatEnum("format", llvm::cl::desc("Format for outputted docs."),
+               llvm::cl::values(clEnumValN(OutputFormatTy::md, "md",
+                                           "Documentation in MD format."),
+                                clEnumValN(OutputFormatTy::html, "html",
+                                           "Documentation in HTML format."),
+                                clEnumValN(OutputFormatTy::json, "json",
+                                           "Documentation in JSON format")),
+               llvm::cl::init(OutputFormatTy::json),
+               llvm::cl::cat(ClangDocCategory));
 
 static llvm::ExitOnError ExitOnErr;
 
 static llvm::StringRef getFormatString() {
   switch (FormatEnum) {
-  case OutputFormatTy::yaml:
-    return "yaml";
   case OutputFormatTy::md:
     return "md";
   case OutputFormatTy::html:
     return "html";
   case OutputFormatTy::json:
     return "json";
-  case OutputFormatTy::md_mustache:
-    return "md_mustache";
   }
   llvm_unreachable("Unknown OutputFormatTy");
 }
@@ -231,14 +224,10 @@ static llvm::Error getMdFiles(const char *Argv0,
 static void sortUsrToInfo(llvm::StringMap<doc::Info *> &USRToInfo) {
   for (auto &I : USRToInfo) {
     auto &Info = I.second;
-    if (Info->IT == doc::InfoType::IT_namespace) {
-      auto *Namespace = static_cast<clang::doc::NamespaceInfo *>(Info);
+    if (auto *Namespace = dyn_cast<doc::NamespaceInfo>(Info))
       Namespace->Children.sort();
-    }
-    if (Info->IT == doc::InfoType::IT_record) {
-      auto *Record = static_cast<clang::doc::RecordInfo *>(Info);
+    else if (auto *Record = dyn_cast<doc::RecordInfo>(Info))
       Record->Children.sort();
-    }
   }
 }
 
@@ -317,7 +306,7 @@ Example usage for a project using a compile commands database:
 
     if (Format == "html")
       ExitOnErr(getHtmlFiles(argv[0], CDCtx));
-    else if (Format == "md_mustache")
+    else if (Format == "md")
       ExitOnErr(getMdFiles(argv[0], CDCtx));
 
     llvm::timeTraceProfilerBegin("Executor Launch", "total runtime");
@@ -377,7 +366,7 @@ Example usage for a project using a compile commands database:
             for (const auto &Bitcode : Bitcodes) {
 
               llvm::scope_exit ArenaGuard(
-                  [] { clang::doc::TransientArena.Reset(); });
+                  [] { clang::doc::getTransientArena().Reset(); });
               llvm::BitstreamCursor Stream(Bitcode);
               doc::ClangDocBitcodeReader Reader(Stream, Diags);
               auto ReadInfos = Reader.readBitcode();
@@ -391,7 +380,8 @@ Example usage for a project using a compile commands database:
               }
               for (auto &I : *ReadInfos) {
                 if (auto Err = doc::mergeSingleInfo(
-                        Reduced, std::move(I), clang::doc::PersistentArena)) {
+                        Reduced, std::move(I),
+                        clang::doc::getPersistentArena())) {
                   std::lock_guard<llvm::sys::Mutex> Guard(DiagMutex);
                   Diags.Report(DiagIDBitcodeMerging)
                       << toString(std::move(Err));
