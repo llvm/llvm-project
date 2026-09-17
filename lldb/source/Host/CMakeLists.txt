@@ -17,7 +17,6 @@ macro(add_host_subdirectory group)
 endmacro()
 
 add_host_subdirectory(common
-  common/ConPTYUtils.cpp
   common/DiagnosticsRendering.cpp
   common/DomainSocket.cpp
   common/FileAction.cpp
@@ -78,6 +77,7 @@ add_host_subdirectory(posix
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
   add_host_subdirectory(windows
+    windows/ConPTYUtils.cpp
     windows/ConnectionConPTYWindows.cpp
     windows/ConnectionGenericFileWindows.cpp
     windows/DomainSocketWindows.cpp
@@ -111,9 +111,14 @@ else()
     posix/LockFilePosix.cpp
     posix/MainLoopPosix.cpp
     posix/PipePosix.cpp
-    posix/ProcessLauncherPosixFork.cpp
     posix/Support.cpp
     )
+
+  if (NOT EMSCRIPTEN)
+    add_host_subdirectory(posix
+      posix/ProcessLauncherPosixFork.cpp
+      )
+  endif()
 
   if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     add_subdirectory(macosx/objcxx)
@@ -135,8 +140,11 @@ else()
       set_property(SOURCE macosx/Host.mm APPEND PROPERTY
                COMPILE_DEFINITIONS "NO_XPC_SERVICES=1")
     endif()
-
-
+  elseif (CMAKE_SYSTEM_NAME MATCHES "Emscripten")
+    add_host_subdirectory(emscripten
+      emscripten/Host.cpp
+      emscripten/HostInfoEmscripten.cpp
+      )
   elseif (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
     add_host_subdirectory(linux
       linux/AbstractSocket.cpp

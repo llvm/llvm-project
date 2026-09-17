@@ -154,7 +154,7 @@ body:             |
     %0:gpr(p0) = COPY $x0
     %1:gpr(i64) = COPY $x1
     %ptr:gpr(p0) = G_PTR_ADD %0, %1
-    %3:fpr(s16) = COPY $h0
+    %3:fpr(i16) = COPY $h0
     G_STORE %3, %ptr :: (store (s16) into %ir.addr)
 ...
 ---
@@ -269,7 +269,7 @@ body:             |
     %3:gpr(p0) = COPY $x1
     %ptr:gpr(p0) = G_PTR_ADD %3, %2
     %4:gpr(i64) = COPY $x2
-    %5:gpr(s16) = G_TRUNC %4
+    %5:gpr(i16) = G_TRUNC %4
     G_STORE %4, %ptr :: (store (s16) into %ir.addr)
     G_STORE %4, %ptr :: (store (s16) into %ir.addr)
 ...
@@ -295,7 +295,7 @@ body:             |
     %2:gpr(i64) = G_SHL %0, %1(i64)
     %3:gpr(p0) = COPY $x1
     %ptr:gpr(p0) = G_PTR_ADD %3, %2
-    %5:fpr(s128) = COPY $q0
+    %5:fpr(i128) = COPY $q0
     G_STORE %5, %ptr :: (store (s128) into %ir.addr)
 ...
 ---
@@ -331,7 +331,7 @@ body:             |
     %2:gpr(i64) = G_SHL %0, %1(i64)
     %3:gpr(p0) = COPY $x1
     %ptr:gpr(p0) = G_PTR_ADD %3, %2
-    %5:fpr(s128) = COPY $q0
+    %5:fpr(i128) = COPY $q0
     G_STORE %5, %ptr :: (store (s128) into %ir.addr)
     G_STORE %5, %ptr :: (store (s128) into %ir.addr)
 ...

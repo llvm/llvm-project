@@ -127,9 +127,13 @@ struct LegalityQuery {
   /// memory type for each MMO.
   ArrayRef<MemDesc> MMODescrs;
 
+  ArrayRef<int64_t> Immediates;
+
   constexpr LegalityQuery(unsigned Opcode, ArrayRef<LLT> Types,
-                          ArrayRef<MemDesc> MMODescrs = {})
-      : Opcode(Opcode), Types(Types), MMODescrs(MMODescrs) {}
+                          ArrayRef<MemDesc> MMODescrs = {},
+                          ArrayRef<int64_t> Immediates = {})
+      : Opcode(Opcode), Types(Types), MMODescrs(MMODescrs),
+        Immediates(Immediates) {}
 
   LLVM_ABI raw_ostream &print(raw_ostream &OS) const;
 };
@@ -326,6 +330,14 @@ LLVM_ABI LegalityPredicate numElementsNotPow2(unsigned TypeIdx);
 /// stronger.
 LLVM_ABI LegalityPredicate
 atomicOrderingAtLeastOrStrongerThan(unsigned MMOIdx, AtomicOrdering Ordering);
+
+/// True iff the immediate at the given index has the specified value.
+LLVM_ABI LegalityPredicate immIs(unsigned ImmIdx, int64_t Imm);
+/// True iff the immediate at the given index has one of the specified values.
+LLVM_ABI LegalityPredicate immInSet(unsigned ImmIdx,
+                                    std::initializer_list<int64_t> ImmsInit);
+/// True iff the immediate at the given index does not have the specified value.
+LLVM_ABI LegalityPredicate immIsNot(unsigned ImmIdx, int64_t Imm);
 } // end namespace LegalityPredicates
 
 namespace LegalizeMutations {

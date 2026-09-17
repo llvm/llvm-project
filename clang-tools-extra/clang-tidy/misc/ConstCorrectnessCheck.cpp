@@ -255,23 +255,22 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
 
   VariableCategory VC = VariableCategory::Value;
   const QualType VT = Variable->getType();
-  if (VT->isReferenceType()) {
+  if (VT->isReferenceType())
     VC = VariableCategory::Reference;
-  } else if (VT->isPointerType()) {
+  else if (VT->isPointerType())
     VC = VariableCategory::Pointer;
-  } else if (const auto *ArrayT = dyn_cast<ArrayType>(VT)) {
-    if (ArrayT->getElementType()->isPointerType())
-      VC = VariableCategory::Pointer;
-  }
+  else if (const auto *ArrayT = dyn_cast<ArrayType>(VT);
+           ArrayT && ArrayT->getElementType()->isPointerType())
+    VC = VariableCategory::Pointer;
 
-  auto CheckValue = [&]() {
+  const auto CheckValue = [&]() {
     // Offload const-analysis to utility function.
     if (isMutated(Variable, LocalScope, Function, Result.Context))
       return;
 
-    auto Diag = diag(Variable->getBeginLoc(),
-                     "variable %0 of type %1 can be declared 'const'")
-                << Variable << VT;
+    const auto Diag = diag(Variable->getBeginLoc(),
+                           "variable %0 of type %1 can be declared 'const'")
+                      << Variable << VT;
     if (IsNormalVariableInTemplate)
       TemplateDiagnosticsCache.insert(Variable->getBeginLoc());
     if (!CanBeFixIt)
@@ -302,12 +301,12 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     }
   };
 
-  auto CheckPointee = [&]() {
+  const auto CheckPointee = [&]() {
     assert(VC == VariableCategory::Pointer);
     registerScope(LocalScope, Result.Context);
     if (ScopesCache[LocalScope]->isPointeeMutated(Variable))
       return;
-    auto Diag =
+    const auto Diag =
         diag(Variable->getBeginLoc(),
              "pointee of variable %0 of type %1 can be declared 'const'")
         << Variable << VT;
@@ -339,11 +338,11 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     if (WarnPointersAsValues && !VT.isConstQualified())
       CheckValue();
     if (WarnPointersAsPointers) {
-      if (const auto *PT = dyn_cast<PointerType>(VT)) {
-        if (!PT->getPointeeType().isConstQualified() &&
-            !PT->getPointeeType()->isFunctionType())
-          CheckPointee();
-      }
+      if (const auto *PT = dyn_cast<PointerType>(VT);
+          PT && !PT->getPointeeType().isConstQualified() &&
+          !PT->getPointeeType()->isFunctionType())
+        CheckPointee();
+
       if (const auto *AT = dyn_cast<ArrayType>(VT)) {
         assert(AT->getElementType()->isPointerType());
         if (!AT->getElementType()->getPointeeType().isConstQualified())

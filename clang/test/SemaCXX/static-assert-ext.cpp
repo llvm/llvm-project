@@ -22,7 +22,7 @@ struct X {
 
 static_assert(false, X());
 // since-cxx11-warning@-1 {{'static_assert' declarations are incompatible with C++98}}
-// precxx26-warning@-2 {{'static_assert' with a user-generated message is a C++26 extension}}
-// since-cxx26-warning@-3 {{'static_assert' with a user-generated message is incompatible with C++ standards before C++26}}
+// precxx26-warning@-2 {{'static_assert' with a user-generated message is a C++2c extension}}
+// since-cxx26-warning@-3 {{'static_assert' with a user-generated message is incompatible with C++ standards before C++2c}}
 // since-cxx11-error@-4 {{static assertion failed: b}}
 #endif

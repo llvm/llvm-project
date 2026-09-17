@@ -52,7 +52,8 @@ def PDL_ApplyNativeConstraintOp
                        DefaultValuedAttr<BoolAttr, "false">:$isNegated);
   let results = (outs Variadic<PDL_AnyType>:$results);
   let assemblyFormat = [{
-    $name `(` $args `:` type($args) `)` (`:`  type($results)^ )? attr-dict
+    $name `(` $args `:` type($args) `)`
+    (`is_negated` `=` $isNegated^)? (`:`  type($results)^ )? attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -392,7 +393,7 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
 //===----------------------------------------------------------------------===//
 
 def PDL_PatternOp : PDL_Op<"pattern", [
-    IsolatedFromAbove, SingleBlock, Symbol,
+    IsolatedFromAbove, SingleBlock, SymbolName, SymbolVisibility, Symbol,
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getDefaultDialect"]>
   ]> {
   let summary = "Define a rewrite pattern";
@@ -420,10 +421,12 @@ def PDL_PatternOp : PDL_Op<"pattern", [
   }];
 
   let arguments = (ins ConfinedAttr<I16Attr, [IntNonNegative]>:$benefit,
-                       OptionalAttr<SymbolNameAttr>:$sym_name);
+                       OptionalAttr<SymbolNameAttr>:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
   let regions = (region SizedRegion<1>:$bodyRegion);
   let assemblyFormat = [{
-    ($sym_name^)? `:` `benefit` `(` $benefit `)` attr-dict-with-keyword $bodyRegion
+    ($sym_visibility^)? ($sym_name^)? `:` `benefit` `(` $benefit `)`
+    attr-dict-with-keyword $bodyRegion
   }];
 
   let builders = [

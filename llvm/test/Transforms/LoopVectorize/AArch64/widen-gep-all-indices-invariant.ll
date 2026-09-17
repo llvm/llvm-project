@@ -55,7 +55,7 @@ attributes #0 = { "target-cpu"="neoverse-v2" }
 
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.vectorize.enable"}
-!2 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.predicate.enable"}
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

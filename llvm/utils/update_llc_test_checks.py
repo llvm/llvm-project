@@ -39,13 +39,7 @@ def update_test(ti: common.TestInfo):
             common.warn("Skipping unparsable RUN line: " + l)
             continue
 
-        commands = [cmd.strip() for cmd in l.split("|")]
-        assert len(commands) >= 2
-        preprocess_cmd = None
-        if len(commands) > 2:
-            preprocess_cmd = " | ".join(commands[:-2])
-        llc_cmd = commands[-2]
-        filecheck_cmd = commands[-1]
+        llc_cmd, filecheck_cmd, preprocess_cmd = common.split_run_line(l)
         llc_tool = llc_cmd.split(" ")[0]
 
         triple_in_cmd = None

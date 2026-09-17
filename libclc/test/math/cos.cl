@@ -112,7 +112,7 @@
 // AMDGCN-NEXT:    [[TMP98:%.*]] = or i32 [[TMP97]], [[TMP78]]
 // AMDGCN-NEXT:    [[TMP99:%.*]] = bitcast i32 [[TMP98]] to float
 // AMDGCN-NEXT:    [[TMP100:%.*]] = fmul float [[TMP90]], f0x3FC90FDA
-// AMDGCN-NEXT:    [[TMP101:%.*]] = fneg contract float [[TMP100]]
+// AMDGCN-NEXT:    [[TMP101:%.*]] = fneg float [[TMP100]]
 // AMDGCN-NEXT:    [[TMP102:%.*]] = tail call contract noundef float @llvm.fma.f32(float [[TMP90]], float f0x3FC90FDA, float [[TMP101]])
 // AMDGCN-NEXT:    [[TMP103:%.*]] = tail call contract noundef float @llvm.fma.f32(float [[TMP90]], float f0x33A22168, float [[TMP102]])
 // AMDGCN-NEXT:    [[TMP104:%.*]] = tail call contract noundef float @llvm.fma.f32(float [[TMP99]], float f0x3FC90FDA, float [[TMP103]])

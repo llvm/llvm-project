@@ -1,5 +1,11 @@
 get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
 
+if(LLDB_BUILD_STATIC_LIBLLDB)
+  set(liblldb_library_type STATIC)
+else()
+  set(liblldb_library_type SHARED)
+endif()
+
 if(LLDB_BUILD_FRAMEWORK)
   set(option_install_prefix INSTALL_PREFIX ${LLDB_FRAMEWORK_INSTALL_DIR})
   set(option_framework FRAMEWORK)
@@ -33,7 +39,7 @@ add_custom_target(lldb-sbapi-dwarf-enums
   DEPENDS ${sb_languages_file})
 set_target_properties(lldb-sbapi-dwarf-enums PROPERTIES FOLDER "LLDB/Tablegenning")
 
-add_lldb_library(liblldb SHARED ${option_framework}
+add_lldb_library(liblldb ${liblldb_library_type} ${option_framework}
   SBAddress.cpp
   SBAddressRange.cpp
   SBAddressRangeList.cpp
@@ -116,6 +122,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBVariablesOptions.cpp
   SBWatchpoint.cpp
   SBWatchpointOptions.cpp
+  ScriptInterpreterBridge.cpp
   SystemInitializerFull.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -159,7 +166,9 @@ set_target_properties(liblldb
 )
 
 target_compile_definitions(liblldb PRIVATE LLDB_IN_LIBLLDB)
-if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
+
+if (NOT LLDB_BUILD_STATIC_LIBLLDB AND
+    NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
   if (LLDB_EXPORT_ALL_SYMBOLS)
     if (LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE)
       message(STATUS "Symbols (liblldb): exporting all symbols specified in the exports "
@@ -207,7 +216,8 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
     message(STATUS "Symbols (liblldb): exporting all symbols from the lldb namespace")
     add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb.exports)
   endif()
-elseif (LLDB_EXPORT_ALL_SYMBOLS OR LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+elseif (NOT LLDB_BUILD_STATIC_LIBLLDB AND
+        (LLDB_EXPORT_ALL_SYMBOLS OR LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS))
   # On Windows there is no per-plugin symbol extraction, so dynamically loaded
   # script interpreter plugins resolve their imports against the full set of
   # private symbols, same as LLDB_EXPORT_ALL_SYMBOLS.
@@ -284,8 +294,6 @@ set(generated_public_headers ${LLDB_OBJ_DIR}/include/lldb/API/SBLanguages.h)
 file(GLOB root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
 file(GLOB root_private_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h)
 list(REMOVE_ITEM root_public_headers ${root_private_headers})
-# Skip the initial copy of lldb-defines.h. The fixed version is generated at build time.
-list(REMOVE_ITEM root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h)
 
 add_custom_command(
   OUTPUT ${lldb_header_staging_dir}
@@ -293,13 +301,17 @@ add_custom_command(
   COMMENT "LLDB headers: create staging directory for LLDB headers")
 
 add_custom_target(liblldb-header-staging-dir DEPENDS ${lldb_header_staging_dir})
+set_target_properties(liblldb-header-staging-dir PROPERTIES FOLDER "LLDB/Resources/liblldb-header-staging")
 
 find_program(unifdef_EXECUTABLE unifdef)
 
 add_custom_target(liblldb-header-staging)
+set_target_properties(liblldb-header-staging PROPERTIES FOLDER "LLDB/Resources")
 
 if (LLDB_BUILD_FRAMEWORK)
   add_custom_target(lldb-framework-fixup-all-headers)
+  set_target_properties(lldb-framework-fixup-all-headers PROPERTIES FOLDER "LLDB/Resources")
+  
   add_dependencies(lldb-framework-fixup-all-headers liblldb-header-staging)
   add_dependencies(liblldb lldb-framework-fixup-all-headers)
 endif()
@@ -311,6 +323,12 @@ foreach(header
   get_filename_component(basename ${header} NAME)
   set(staged_header ${lldb_header_staging_dir}/${basename})
 
+  if(basename STREQUAL "lldb-defines.h")
+    set(copy_command "${Python3_EXECUTABLE}"
+        ${LLDB_SOURCE_DIR}/scripts/version-header-fix.py
+        -i ${header} -o ${staged_header}
+        -m ${LLDB_VERSION_MAJOR} -n ${LLDB_VERSION_MINOR} -p ${LLDB_VERSION_PATCH})
+  endif()
   if(unifdef_EXECUTABLE)
     # unifdef returns 0 when the file is unchanged and 1 if something was changed.
     # That means if we successfully remove SWIG code, the build system believes
@@ -321,6 +339,8 @@ foreach(header
   endif()
 
   add_custom_target(liblldb-stage-header-${basename} DEPENDS ${staged_header})
+  set_target_properties(liblldb-stage-header-${basename} PROPERTIES FOLDER "LLDB/Resources/liblldb-header-staging")
+
   add_dependencies(liblldb-stage-header-${basename} lldb-sbapi-dwarf-enums liblldb-header-staging-dir)
   add_dependencies(liblldb-header-staging liblldb-stage-header-${basename})
   add_custom_command(
@@ -335,19 +355,18 @@ foreach(header
     set(output_header $<TARGET_FILE_DIR:liblldb>/Headers/${basename})
 
     add_custom_target(lldb-framework-fixup-header-${basename} DEPENDS ${staged_header})
+    set_target_properties(lldb-framework-fixup-header-${basename} PROPERTIES FOLDER "LLDB/Resources/lldb-framework-fixup-all-headers")
+
     add_dependencies(lldb-framework-fixup-header-${basename} liblldb-stage-header-${basename})
     add_dependencies(lldb-framework-fixup-all-headers lldb-framework-fixup-header-${basename})
 
     add_custom_command(TARGET lldb-framework-fixup-header-${basename} POST_BUILD
-      COMMAND "${Python3_EXECUTABLE}" ${LLDB_SOURCE_DIR}/scripts/framework-header-fix.py -f lldb_main -i ${staged_header} -o ${output_header}
+      COMMAND "${Python3_EXECUTABLE}" ${LLDB_SOURCE_DIR}/scripts/framework-header-fix.py -i ${staged_header} -o ${output_header}
       COMMENT "LLDB.framework: Fix up and copy framework headers"
     )
   endif()
 endforeach()
 
-add_custom_command(TARGET liblldb-header-staging POST_BUILD
-  COMMAND "${Python3_EXECUTABLE}" ${LLDB_SOURCE_DIR}/scripts/version-header-fix.py -i ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h -o ${lldb_header_staging_dir}/lldb-defines.h -m ${LLDB_VERSION_MAJOR} -n ${LLDB_VERSION_MINOR} -p ${LLDB_VERSION_PATCH}
-)
 add_dependencies(liblldb liblldb-header-staging)
 
 if(LLDB_BUILD_FRAMEWORK)

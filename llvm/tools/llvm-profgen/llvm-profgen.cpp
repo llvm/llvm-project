@@ -31,8 +31,9 @@ cl::OptionCategory ProfGenCategory("ProfGen Options");
 
 static cl::opt<std::string> PerfScriptFilename(
     "perfscript", cl::value_desc("perfscript"),
-    cl::desc("Path of perf-script trace created by Linux perf tool with "
-             "`script` command(the raw perf.data should be profiled with -b). "
+    cl::desc("Path of a trace created by the Linux `perf script` command. For "
+             "LBR or BRBE input, the raw perf data must contain branch "
+             "stacks, for example from recording with -b. "
              "Cannot be used with --perfdata, --unsymbolized-profile, or "
              "--llvm-sample-profile."),
     cl::cat(ProfGenCategory));
@@ -41,8 +42,9 @@ static cl::alias PSA("ps", cl::desc("Alias for --perfscript"),
 
 static cl::opt<std::string> PerfDataFilename(
     "perfdata", cl::value_desc("perfdata"),
-    cl::desc("Path of raw perf data created by Linux perf tool (it should be "
-             "profiled with -b). Cannot be used with --perfscript, "
+    cl::desc("Path of raw perf data created by the Linux perf tool. For LBR or "
+             "BRBE input, it must contain branch stacks, for example from "
+             "recording with -b. Cannot be used with --perfscript, "
              "--unsymbolized-profile, or --llvm-sample-profile."),
     cl::cat(ProfGenCategory));
 static cl::alias PDA("pd", cl::desc("Alias for --perfdata"),
