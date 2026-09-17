@@ -2,7 +2,6 @@
 
 void clang_analyzer_dump(unsigned);
 void clang_analyzer_eval(bool);
-void clang_analyzer_warnIfReached();
 
 struct Msg {
   virtual unsigned cmd() const = 0;
@@ -84,16 +83,12 @@ struct Ctrl : Msg {
 
 struct Child : Ctrl {};
 
-void test(Ctrl* p) {
+void test(Child* childp) {
+  Ctrl *p = childp;
   clang_analyzer_dump(p->cmd());
-  // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Base{SymRegion{reg_${{[0-9]+}}<Child * p>},Ctrl}.c>}}
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+  // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Base{SymRegion{reg_${{[0-9]+}}<Child * childp>},Ctrl}.c>}}
   clang_analyzer_eval(p->cmd() == p->cmd());
-  // FIXME: For unclear reasons, this clang_analyzer_eval call is not reached.
-}
-
-void entrypoint(Child *p) {
-  test(p);
+  // expected-warning@-1 {{TRUE}}
 }
 } // namespace final_method_on_ptr_with_dyn_type_child
 
@@ -107,16 +102,12 @@ struct Ctrl : Base {
   unsigned cmd() const final { return c; }
 };
 
-void test(Base* p) {
+void test(Ctrl* ctrlp) {
+  Base *p = ctrlp;
   clang_analyzer_dump(p->cmd());
-  // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Element{SymRegion{reg_${{[0-9]+}}<Ctrl * p>},0 S64b,struct {{[0-9A-Za-z_]+}}::Ctrl}.c>}}
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+  // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Element{SymRegion{reg_${{[0-9]+}}<Ctrl * ctrlp>},0 S64b,struct {{[0-9A-Za-z_]+}}::Ctrl}.c>}}
   clang_analyzer_eval(p->cmd() == p->cmd());
-  // FIXME: For unclear reasons, this clang_analyzer_eval call is not reached.
-}
-
-void entrypoint(Ctrl *p) {
-  test(p);
+  // expected-warning@-1 {{TRUE}}
 }
 } // namespace final_method_on_base_ptr_with_known_dyn_type
 
@@ -130,16 +121,12 @@ struct Ctrl : Msg {
 
 struct Child final : Ctrl {};
 
-void test(Ctrl* p) {
+void test(Child* childp) {
+  Ctrl *p = childp;
   clang_analyzer_dump(p->cmd());
-  // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Base{SymRegion{reg_${{[0-9]+}}<Child * p>},Ctrl}.c>}}
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+  // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Base{SymRegion{reg_${{[0-9]+}}<Child * childp>},Ctrl}.c>}}
   clang_analyzer_eval(p->cmd() == p->cmd());
-  // FIXME: For unclear reasons, this clang_analyzer_eval call is not reached.
-}
-
-void entrypoint(Child *p) {
-  test(p);
+  // expected-warning@-1 {{TRUE}}
 }
 } // namespace nonfinal_method_on_ptr_with_dyn_type_final
 
