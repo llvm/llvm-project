@@ -3152,9 +3152,17 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
 static mlir::SymbolRefAttr getComdatAttrHelper(mlir::ModuleOp modOp,
                                                mlir::OpBuilder &builder,
                                                StringRef symName,
-                                               mlir::LLVM::ComdatOp &comdatOp,
-                                               StringRef comdatName) {
+                                               mlir::LLVM::ComdatOp &comdatOp) {
   mlir::OpBuilder::InsertionGuard guard(builder);
+  StringRef comdatName = "__llvm_comdat";
+  if (!comdatOp) {
+    // The GlobalOp and FuncOp lowering patterns each cache their own
+    // 'comdatOp', but both now share a single module-level comdat region, so
+    // whichever pattern gets here second has to find the existing one rather
+    // than create a duplicate symbol.
+    comdatOp = modOp.lookupSymbol<mlir::LLVM::ComdatOp>(comdatName);
+  }
+
   if (!comdatOp) {
     builder.setInsertionPointToStart(modOp.getBody());
     comdatOp =
@@ -3183,8 +3191,7 @@ CIRToLLVMGlobalOpLowering::getComdatAttr(cir::GlobalOp &op,
   if (!op.getComdat())
     return mlir::SymbolRefAttr{};
   return getComdatAttrHelper(op->getParentOfType<mlir::ModuleOp>(), builder,
-                             op.getSymName(), comdatOp,
-                             "__llvm_comdat_globals");
+                             op.getSymName(), comdatOp);
 }
 
 mlir::SymbolRefAttr
@@ -3193,7 +3200,7 @@ CIRToLLVMFuncOpLowering::getComdatAttr(cir::FuncOp &op,
   if (!op.getComdat())
     return mlir::SymbolRefAttr{};
   return getComdatAttrHelper(op->getParentOfType<mlir::ModuleOp>(), builder,
-                             op.getSymName(), comdatOp, "__llvm_comdat_funcs");
+                             op.getSymName(), comdatOp);
 }
 
 mlir::LogicalResult CIRToLLVMSwitchFlatOpLowering::matchAndRewrite(
