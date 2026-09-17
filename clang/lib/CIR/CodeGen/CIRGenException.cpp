@@ -223,10 +223,9 @@ void CIRGenFunction::emitStartEHSpec(const Decl *d) {
   // In C++17 and later, and in Wasm EH in any standard, 'throw()' aka
   // EST_DynamicNone is treated the same way as noexcept. In earlier standards
   // it is handled with 'throw(X...)'.
-  bool isDynamicSpec =
-      est == EST_Dynamic ||
-      (est == EST_DynamicNone && !getLangOpts().CPlusPlus17 &&
-       !cgm.getCodeGenOpts().hasWasmExceptions());
+  bool isDynamicSpec = est == EST_Dynamic ||
+                       (est == EST_DynamicNone && !getLangOpts().CPlusPlus17 &&
+                        !cgm.getCodeGenOpts().hasWasmExceptions());
 
   // A specification that permits nothing to escape is a terminate scope: any
   // exception that tries to leave the function calls std::terminate. Under
