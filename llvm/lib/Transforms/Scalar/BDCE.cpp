@@ -124,6 +124,8 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
           Demanded.countl_zero() >= (DestBitSize - SrcBitSize)) {
         clearAssumptionsOfUsers(SE, DB);
         IRBuilder<> Builder(SE);
+        // Leave debug-info users pointing at the old instruction so they can
+        // be salvaged below.
         I.replaceNonMetadataUsesWith(
             Builder.CreateZExt(SE->getOperand(0), DstTy, SE->getName()));
         Worklist.push_back(SE);
@@ -156,6 +158,8 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
           // Avoid incorrect replacement of self-referential values.
           if (CanBeSimplified && BO != BO->getOperand(0)) {
             clearAssumptionsOfUsers(BO, DB);
+            // Leave debug-info users pointing at the old instruction so they
+            // can be salvaged below.
             BO->replaceNonMetadataUsesWith(BO->getOperand(0));
             Worklist.push_back(BO);
             ++NumSimplified;
