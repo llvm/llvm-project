@@ -76,3 +76,61 @@ subroutine char_short_sequence()
   !ERROR: Actual argument has fewer characters remaining in storage sequence (4) than dummy argument 'c=' (6)
   call takes_c2x3(cp(2))
 end subroutine
+
+module mdc
+  type :: dt
+    integer :: i
+    character :: c
+  end type
+  type(dt), parameter :: dp(3) = [dt(1, 'a'), dt(2, 'b'), dt(3, 'c')]
+  integer, parameter :: nlb(-1:4) = [1, 2, 3, 4, 5, 6]
+contains
+  subroutine dt3(x)
+    type(dt), intent(in) :: x(3)
+  end subroutine
+  subroutine dt2(x)
+    type(dt), intent(in) :: x(2)
+  end subroutine
+  subroutine int5(x)
+    integer, intent(in) :: x(5)
+  end subroutine
+  subroutine int6(x)
+    integer, intent(in) :: x(6)
+  end subroutine
+end module
+
+subroutine derived_and_lower_bounds()
+  use mdc
+  ! Exact-fit boundary cases are accepted.
+  call dt3(dp(1))
+  call dt2(dp(2))
+  ! An element of a named constant with a nondefault lower bound: five
+  ! elements remain from nlb(0).
+  call int5(nlb(0))
+  !ERROR: Actual argument has fewer elements remaining in storage sequence (2) than dummy argument 'x=' array (3)
+  call dt3(dp(2))
+  !ERROR: Actual argument has fewer elements remaining in storage sequence (5) than dummy argument 'x=' array (6)
+  call int6(nlb(0))
+end subroutine
+
+subroutine generic_vs_intrinsic()
+  ! A user generic named like an intrinsic still resolves correctly with
+  ! retained named-constant arguments, and intrinsic uses see the values
+  ! of named-constant elements (DIM=, KIND=).
+  interface sum
+    procedure mysum
+  end interface
+  integer, parameter :: gp2(-1:2) = [1, 2, 3, 4]
+  integer, parameter :: kk(2) = [4, 8]
+  integer :: a(2, 2)
+  integer :: r(2)
+  a = reshape(gp2, [2, 2])
+  print *, sum(gp2, 7)          ! user generic: extra scalar argument
+  r = sum(array=a, dim=gp2(0))  ! intrinsic: DIM= from a named-constant element
+  print *, r, kind(int(1, kind=kk(2)))
+contains
+  integer function mysum(x, y)
+    integer, intent(in) :: x(4), y
+    mysum = x(1) + x(2) + x(3) + x(4) + y
+  end function
+end subroutine
