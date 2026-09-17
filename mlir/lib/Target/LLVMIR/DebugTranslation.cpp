@@ -295,7 +295,8 @@ llvm::DIStringType *DebugTranslation::translateImpl(DIStringTypeAttr attr) {
       translate(attr.getStringLength()),
       getExpressionAttrOrNull(attr.getStringLengthExp()),
       getExpressionAttrOrNull(attr.getStringLocationExp()),
-      attr.getSizeInBits(), attr.getAlignInBits(), attr.getEncoding());
+      attr.getSizeInBits(), attr.getAlignInBits(), attr.getEncoding(),
+      translate(attr.getCharType()));
 }
 
 llvm::DIFile *DebugTranslation::translateImpl(DIFileAttr attr) {
