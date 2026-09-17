@@ -19,6 +19,15 @@
 #include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
+#if LLVM_THREAD_SANITIZER_BUILD
+#define SKIP_IF_TSAN()                                                         \
+  GTEST_SKIP() << "Crash recovery intentionally uses signal-unsafe paths"
+#else
+#define SKIP_IF_TSAN()                                                         \
+  do {                                                                         \
+  } while (0)
+#endif
+
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOGDI
@@ -39,6 +48,7 @@ static void llvmTrap() { LLVM_BUILTIN_TRAP; }
 static void incrementGlobalWithParam(void *) { ++GlobalInt; }
 
 TEST(CrashRecoveryTest, Basic) {
+  SKIP_IF_TSAN();
   llvm::CrashRecoveryContext::Enable();
   GlobalInt = 0;
   EXPECT_TRUE(CrashRecoveryContext().RunSafely(incrementGlobal));
@@ -56,6 +66,7 @@ struct IncrementGlobalCleanup : CrashRecoveryContextCleanup {
 static void noop() {}
 
 TEST(CrashRecoveryTest, Cleanup) {
+  SKIP_IF_TSAN();
   llvm::CrashRecoveryContext::Enable();
   GlobalInt = 0;
   {
@@ -76,6 +87,7 @@ TEST(CrashRecoveryTest, Cleanup) {
 }
 
 TEST(CrashRecoveryTest, DumpStackCleanup) {
+  SKIP_IF_TSAN();
   SmallString<128> Filename;
   std::error_code EC = sys::fs::createTemporaryFile("crash", "test", Filename);
   EXPECT_FALSE(EC);
@@ -151,6 +163,7 @@ extern const char *TestMainArgv0;
 static cl::opt<std::string> CrashTestStringArg1("crash-test-string-arg1");
 
 TEST(CrashRecoveryTest, UnixCRCReturnCode) {
+  SKIP_IF_TSAN();
   using namespace llvm::sys;
   if (getenv("LLVM_CRC_UNIXCRCRETURNCODE")) {
     llvm::CrashRecoveryContext::Enable();
