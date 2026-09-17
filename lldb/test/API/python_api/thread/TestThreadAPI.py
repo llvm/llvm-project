@@ -136,16 +136,9 @@ class ThreadAPITestCase(TestBase):
 
     def step_out_of_malloc_into_function_b(self, exe_name):
         """Test Python SBThread.StepOut() API to step out of a malloc call where the call site is at function b()."""
-        exe = self.getBuildArtifact(exe_name)
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByName("malloc")
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        target, process, _, breakpoint = lldbutil.run_to_name_breakpoint(
+            self, "malloc", exe_name=exe_name
+        )
 
         while True:
             thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
