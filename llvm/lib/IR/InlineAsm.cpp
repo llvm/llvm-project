@@ -197,17 +197,24 @@ bool InlineAsm::ConstraintInfo::Parse(StringRef Str,
       ++I;
     } else if (*I == '^') {
       // Multi-letter constraint
-      // FIXME: For now assuming these are 2-character constraints.
+      if (static_cast<int>(E - I) < 3)
+        return true; // "^" + 2 letters.
       pCodes->push_back(std::string(StringRef(I + 1, 2)));
       I += 3;
     } else if (*I == '@') {
       // Multi-letter constraint
       ++I;
+      if (I == E)
+        return true; // "@"
       unsigned char C = static_cast<unsigned char>(*I);
-      assert(isdigit(C) && "Expected a digit!");
+      if (!isdigit(C))
+        return true; // Expected a digit after '@'.
       int N = C - '0';
-      assert(N > 0 && "Found a zero letter constraint!");
+      if (N == 0)
+        return true; // Zero-length constraint not allowed.
       ++I;
+      if (static_cast<int>(E - I) < N)
+        return true; // Not enough characters.
       pCodes->push_back(std::string(StringRef(I, N)));
       I += N;
     } else {
