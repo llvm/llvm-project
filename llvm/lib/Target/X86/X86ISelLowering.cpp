@@ -49016,13 +49016,15 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       // Current blend in v8i16 (not v8f16) sincea v8f16
       // VSELECT can fail to select on subtargets that fall back to
       // BLENDV(since there's no VBLENDVPH) instead of a mask-register select.
-      SDValue Mask = DAG.getNode(ISD::SUB, DL, MVT::i16,
-                                 DAG.getConstant(0, DL, MVT::i16),
-                                 DAG.getZExtOrTrunc(Cond, DL, MVT::i16));
-      SDValue VLHS = DAG.getBitcast(
-          MVT::v8i16, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f16, F16LHS));
-      SDValue VRHS = DAG.getBitcast(
-          MVT::v8i16, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f16, F16RHS));
+      SDValue Mask =
+          DAG.getNode(ISD::SUB, DL, MVT::i16, DAG.getConstant(0, DL, MVT::i16),
+                      DAG.getZExtOrTrunc(Cond, DL, MVT::i16));
+      SDValue VLHS =
+          DAG.getBitcast(MVT::v8i16, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL,
+                                                 MVT::v8f16, F16LHS));
+      SDValue VRHS =
+          DAG.getBitcast(MVT::v8i16, DAG.getNode(ISD::SCALAR_TO_VECTOR, DL,
+                                                 MVT::v8f16, F16RHS));
       SDValue VMask = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8i16, Mask);
       SDValue VSel = DAG.getSelect(DL, MVT::v8i16, VMask, VLHS, VRHS);
       SDValue Res = DAG.getExtractVectorElt(DL, MVT::i16, VSel, 0);
