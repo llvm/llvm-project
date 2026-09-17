@@ -6050,8 +6050,6 @@ ExprResult Sema::BuildCXXCtorDefaultInitExpr(SourceLocation Loc,
   if (Init.isInvalid())
     return ExprError();
 
-  if (isInLifetimeExtendingContext())
-    DiscardCleanupsInEvaluationContext();
   Init = ActOnFinishFullExpr(Init.get(), /*DiscardedValue=*/false);
   if (Init.isInvalid()) {
     Field->setInvalidDecl();
