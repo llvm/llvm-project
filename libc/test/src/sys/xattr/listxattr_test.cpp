@@ -22,6 +22,7 @@
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
+#include <sys/syscall.h>
 
 namespace {
 
