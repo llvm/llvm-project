@@ -1447,7 +1447,7 @@ int GCNHazardRecognizer::checkVALUHazardsHelper(
 /// none exists.
 static const MachineOperand *
 getDstSelForwardingOperand(const MachineInstr &MI, const GCNSubtarget &ST) {
-  if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false))
+  if (!SIInstrInfo::isComputeVALU(MI))
     return nullptr;
 
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -2519,11 +2519,6 @@ bool GCNHazardRecognizer::fixWMMAHazards(MachineInstr *MI) {
   return true;
 }
 
-static bool isCoexecutableVALUInst(const MachineInstr &MI) {
-  return SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false) &&
-         !SIInstrInfo::isWMMA(MI) && !SIInstrInfo::isSWMMAC(MI);
-}
-
 // Classify XDL WMMA instructions into co-execution hazard categories
 // (Refer to SPG 4.6.12.1), mainly based on instruction latency.
 //
@@ -2601,7 +2596,7 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
     return 0;
 
   const SIInstrInfo *TII = ST.getInstrInfo();
-  if (!TII->isXDLWMMA(*MI) && !isCoexecutableVALUInst(*MI))
+  if (!TII->isXDLWMMA(*MI) && !SIInstrInfo::isCoexecutableVALU(*MI))
     return 0;
 
   // WaitStates here is the number of V_NOPs or unrelated VALU instructions must
@@ -2711,7 +2706,7 @@ bool GCNHazardRecognizer::isCoexecutionHazardFor(const MachineInstr &I,
   // Dispatch based on MI type
   if (TII.isXDLWMMA(MI))
     return hasWMMAToWMMARegOverlap(I, MI);
-  if (isCoexecutableVALUInst(MI))
+  if (SIInstrInfo::isCoexecutableVALU(MI))
     return hasWMMAToVALURegOverlap(I, MI);
 
   return false;

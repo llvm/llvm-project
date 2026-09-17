@@ -47,7 +47,7 @@ void HazardLatency::apply(ScheduleDAGInstrs *DAG) {
 
   for (SUnit &SU : DAG->SUnits) {
     const MachineInstr *MI = SU.getInstr();
-    if (!SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/false))
+    if (!SIInstrInfo::isComputeVALU(*MI))
       continue;
     if (MI->getOpcode() == AMDGPU::V_READLANE_B32 ||
         MI->getOpcode() == AMDGPU::V_READFIRSTLANE_B32)
@@ -58,7 +58,7 @@ void HazardLatency::apply(ScheduleDAGInstrs *DAG) {
       // Boost latency on VALU writes to SGPRs used by VALUs.
       // Reduce risk of premature VALU pipeline stall on associated reads.
       MachineInstr *DestMI = SuccDep.getSUnit()->getInstr();
-      if (!SIInstrInfo::isVALU(*DestMI, /*AllowLDSDMA=*/false))
+      if (!SIInstrInfo::isComputeVALU(*DestMI))
         continue;
       Register Reg = SuccDep.getReg();
       if (!TRI.isSGPRReg(MRI, Reg))
