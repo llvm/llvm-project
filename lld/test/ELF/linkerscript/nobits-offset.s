@@ -5,6 +5,7 @@
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 b.s -o b.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 d.s -o d.o
 
 ## If a SHT_NOBITS section is the only section of a PT_LOAD segment,
 ## p_offset will be set to the sh_offset field of the section. Check we align
@@ -32,14 +33,23 @@
 # RUN: llvm-readelf -S -l c | FileCheck %s --check-prefix=NONEMPTY
 
 # EMPTY:         .bss    NOBITS   0000000000000002 001002 000100
-# EMPTY-NEXT:    .empty1 PROGBITS 0000000000000102 001102 000000
+# EMPTY-NEXT:    .empty1 PROGBITS 0000000000000102 001002 000000
 # EMPTY-NEXT:    .empty2 PROGBITS 0000000000000102 001102 000000
 # EMPTY:         LOAD 0x001001 0x0000000000000001 0x0000000000000001 0x000101 0x000101 RW 0x1000
 
 # NONEMPTY:      .bss    NOBITS   0000000000000002 001002 000100
-# NONEMPTY-NEXT: .empty1 PROGBITS 0000000000000102 001102 000000
+# NONEMPTY-NEXT: .empty1 PROGBITS 0000000000000102 001002 000000
 # NONEMPTY-NEXT: .data2  PROGBITS 0000000000000102 001102 000001
 # NONEMPTY:      LOAD 0x001001 0x0000000000000001 0x0000000000000001 0x000102 0x000102 RW 0x1000
+
+# RUN: ld.lld d.o -T d.lds -o d
+# RUN: llvm-readelf -S -l d | FileCheck %s --check-prefix=MULTI-NOBITS
+
+# MULTI-NOBITS:      .bss    NOBITS   0000000000000002 001002 000100
+# MULTI-NOBITS-NEXT: .bss2   NOBITS   0000000000000102 001002 000200
+# MULTI-NOBITS-NEXT: .empty1 PROGBITS 0000000000000302 001002 000000
+# MULTI-NOBITS-NEXT: .empty2 PROGBITS 0000000000000302 001302 000000
+# MULTI-NOBITS:      LOAD 0x001001 0x0000000000000001 0x0000000000000001 0x000301 0x000301 RW 0x1000
 
 #--- a.s
 .bss
@@ -74,4 +84,26 @@ SECTIONS {
   .bss : {}
   .empty1 : { empty1 = .; }
   .data2 : { BYTE(2) }
+}
+
+#--- d.s
+.globl _start
+_start: ret
+
+.data
+.byte 1
+
+.bss
+.space 0x100
+
+.section .bss2,"aw",@nobits
+.space 0x200
+
+#--- d.lds
+SECTIONS {
+  .data : {}
+  .bss : {}
+  .bss2 : {}
+  .empty1 : { empty1 = .; }
+  .empty2 : { empty2 = .; }
 }
