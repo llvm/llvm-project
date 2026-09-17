@@ -754,19 +754,19 @@ static mlir::Value allocateAndInitNewStorage(fir::FirOpBuilder &builder,
                                              cuf::DataAttributeAttr dataAttr) {
   auto lengths = getNewLengths(builder, loc, box, lenParams);
 
-  if (dataAttr) {
-    auto newStorage =
-        cuf::AllocOp::create(builder, loc, box.getBaseTy(), allocName,
-                             allocName, dataAttr, lengths, extents)
-            .getResult();
-    return fir::ConvertOp::create(
-        builder, loc, fir::HeapType::get(box.getBaseTy()), newStorage);
+  mlir::Value newStorage;
+  if (!dataAttr) {
+    auto alloc = fir::AllocMemOp::create(builder, loc, box.getBaseTy(),
+                                         allocName, lengths, extents);
+    if (mlir::isa<fir::SequenceType>(box.getBaseTy()))
+      alloc.setAlignment(fir::defaultArrayGlobalAlignment);
+    newStorage = alloc.getResult();
+  } else {
+    newStorage = cuf::AllocOp::create(builder, loc, box.getBaseTy(), allocName,
+                                      allocName, dataAttr, lengths, extents)
+                     .getResult();
   }
 
-  auto newStorage = fir::AllocMemOp::create(builder, loc, box.getBaseTy(),
-                                            allocName, lengths, extents);
-  if (mlir::isa<fir::SequenceType>(box.getBaseTy()))
-    newStorage.setAlignment(fir::defaultArrayGlobalAlignment);
   if (mlir::isa<fir::RecordType>(box.getEleTy())) {
     // TODO: skip runtime initialization if this is not required. Currently,
     // there is no way to know here if a derived type needs it or not. But the
@@ -776,6 +776,10 @@ static mlir::Value allocateAndInitNewStorage(fir::FirOpBuilder &builder,
         createNewFirBox(builder, loc, box, newStorage, {}, extents, lengths);
     fir::runtime::genDerivedTypeInitialize(builder, loc, irBox);
   }
+
+  if (dataAttr)
+    return fir::ConvertOp::create(
+        builder, loc, fir::HeapType::get(box.getBaseTy()), newStorage);
   return newStorage;
 }
 

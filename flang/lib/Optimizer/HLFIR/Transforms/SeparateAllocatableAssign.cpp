@@ -87,20 +87,17 @@ public:
     // The plain hlfir.assign left behind copies the elements on the host, so
     // only allocators that produce host-accessible storage can be handled here.
     cuf::DataAttributeAttr dataAttr;
-    if (mlir::Operation *lhsDef = assign.getLhs().getDefiningOp())
+    if (mlir::Operation *lhsDef = assign.getLhs().getDefiningOp()) {
       if ((dataAttr = cuf::getDataAttr(lhsDef))) {
         cuf::DataAttribute attr = dataAttr.getValue();
         if (attr != cuf::DataAttribute::Managed &&
             attr != cuf::DataAttribute::Pinned &&
-            attr != cuf::DataAttribute::Unified) {
+            attr != cuf::DataAttribute::Unified)
           return rewriter.notifyMatchFailure(
               assign, "LHS storage is not host-accessible; keep runtime "
                       "realloc");
-        }
-        if (mlir::isa<fir::RecordType>(mutableBox.getEleTy()))
-          return rewriter.notifyMatchFailure(
-              assign, "LHS storage is a record; keep runtime realloc");
       }
+    }
 
     mlir::Location loc = assign->getLoc();
     fir::FirOpBuilder builder(rewriter, assign.getOperation());
