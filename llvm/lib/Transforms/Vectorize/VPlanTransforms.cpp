@@ -44,6 +44,14 @@ using namespace llvm;
 using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
+/// Returns the metadata attached to \p R, or an empty set for a recipe that
+/// does not carry any.
+static VPIRMetadata getMetadataOf(VPRecipeBase *R) {
+  if (auto *MD = dyn_cast<VPIRMetadata>(R))
+    return *MD;
+  return {};
+}
+
 // TODO: Remove this once the partial reduction intrinsics are no worse than
 //       normal vector operations.
 static cl::opt<bool> UsePartialReductionsByDefault(
@@ -819,7 +827,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
 
       auto *Clone = VPBuilder::createSingleScalarOp(
           Def->getUnderlyingInstr()->getOpcode(), Def->operands(),
-          /*Mask=*/nullptr, *Def, {}, DebugLoc::getUnknown(),
+          /*Mask=*/nullptr, *Def, getMetadataOf(Def), DebugLoc::getUnknown(),
           Def->getUnderlyingInstr());
       Clone->insertAfter(Def);
       Def->replaceAllUsesWith(Clone);
@@ -1894,8 +1902,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
 
       auto *Clone = VPBuilder::createSingleScalarOp(
           vputils::getOpcode(RepOrWidenR), RepOrWidenR->operands(),
-          /*Mask=*/nullptr, *RepOrWidenR, {}, DebugLoc::getUnknown(),
-          RepOrWidenR->getUnderlyingInstr());
+          /*Mask=*/nullptr, *RepOrWidenR, getMetadataOf(RepOrWidenR),
+          DebugLoc::getUnknown(), RepOrWidenR->getUnderlyingInstr());
       Clone->insertBefore(RepOrWidenR);
       RepOrWidenR->replaceAllUsesWith(Clone);
       if (vputils::isDeadRecipe(*RepOrWidenR))
