@@ -104,8 +104,7 @@ define i1 @eq_after_unsigned_sub_becomes_decomposable(i16 %a, i16 %y, i16 %z) {
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp uge i16 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
-; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i16 [[A]], [[S]]
-; CHECK-NEXT:    ret i1 [[EQ]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
