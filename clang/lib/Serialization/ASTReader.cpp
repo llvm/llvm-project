@@ -1895,12 +1895,21 @@ int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
   return F->SLocEntryBaseID + *std::prev(It);
 }
 
-/// Read an SLocEntry record's first field, returning it together with a chain
-/// anchored at that entry.
-static std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
-readEntryOffset(ArrayRef<uint64_t> Record) {
-  SourceLocation::UIntTy EntryOffset = Record[0];
-  return {EntryOffset, SourceLocationEncoding::Chain(EntryOffset + 2)};
+std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+ASTReader::ReadSourceLocationOffset(const RecordDataImpl &Record, unsigned Idx,
+                                    SourceLocation::UIntTy InitialDelta) {
+  SourceLocation::UIntTy Offset = Record[Idx];
+  return {Offset, SourceLocationEncoding::Chain(Offset + InitialDelta)};
+}
+
+std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+ASTReader::ReadEntryOffset(const RecordDataImpl &Record) {
+  // Anchor the chain at the entry's own local offset, deriving it exactly as
+  // the writer does -- see ASTWriter::EmitEntryOffset. The field has the dummy
+  // entry subtracted out, so add it back. The anchor stays in the writing
+  // module's local space, which is the space the deltas are differences in;
+  // deltaDecode therefore runs before the locations are translated into ours.
+  return ReadSourceLocationOffset(Record, 0, 2);
 }
 
 bool ASTReader::ReadSLocEntry(int ID) {
@@ -2072,15 +2081,12 @@ bool ASTReader::ReadSLocEntry(int ID) {
   }
 
   case SM_SLOC_EXPANSION_ENTRY: {
-    auto [EntryOffset, Chain] = readEntryOffset(Record);
+    auto [EntryOffset, Chain] = ReadEntryOffset(Record);
     // The chain is stateful: decode in the same order the writer emitted, each
     // in its own statement. See CreateSLocExpansionAbbrev for the field order.
-    SourceLocation ExpansionEnd =
-        ReadSourceLocation(*F, Chain.deltaDecode(Record[1]));
-    SourceLocation ExpansionBegin =
-        ReadSourceLocation(*F, Chain.deltaDecode(Record[2]));
-    SourceLocation SpellingLoc =
-        ReadSourceLocation(*F, Chain.deltaDecode(Record[3]));
+    SourceLocation ExpansionEnd = ReadSourceLocation(*F, Record[1], Chain);
+    SourceLocation ExpansionBegin = ReadSourceLocation(*F, Record[2], Chain);
+    SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[3], Chain);
     SourceMgr.createExpansionLoc(SpellingLoc, ExpansionBegin, ExpansionEnd,
                                  Record[5], Record[4], ID,
                                  BaseOffset + EntryOffset);
