@@ -124,7 +124,7 @@ def _splitLibraries(flags):
             else:
                 libraries.append(library)
         elif flag.startswith("-l"):
-            libraries.append(flag[len("-l"):])
+            libraries.append(flag[len("-l") :])
         else:
             result.append(flag)
     return (result, libraries)
