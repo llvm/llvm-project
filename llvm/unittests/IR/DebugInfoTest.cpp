@@ -1042,62 +1042,63 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
   ExitBlock->createMarker(RetInst);
 
   // Insert DbgRecords into markers, order should come out DVR2, DVR1.
-  FirstInst->DebugMarker->insertDbgRecord(DVR1, false);
-  FirstInst->DebugMarker->insertDbgRecord(DVR2, true);
+  FirstInst->getDbgMarker()->insertDbgRecord(DVR1, false);
+  FirstInst->getDbgMarker()->insertDbgRecord(DVR2, true);
   unsigned int ItCount = 0;
-  for (DbgRecord &Item : FirstInst->DebugMarker->getDbgRecordRange()) {
+  for (DbgRecord &Item : FirstInst->getDbgMarker()->getDbgRecordRange()) {
     EXPECT_TRUE((&Item == DVR2 && ItCount == 0) ||
                 (&Item == DVR1 && ItCount == 1));
-    EXPECT_EQ(Item.getMarker(), FirstInst->DebugMarker);
+    EXPECT_EQ(Item.getMarker(), FirstInst->getDbgMarker());
     ++ItCount;
   }
 
   // Clone them onto the second marker -- should allocate new DVRs.
-  RetInst->DebugMarker->cloneDebugInfoFrom(FirstInst->DebugMarker, std::nullopt,
-                                           false);
-  EXPECT_EQ(RetInst->DebugMarker->StoredDbgRecords.size(), 2u);
+  RetInst->getDbgMarker()->cloneDebugInfoFrom(FirstInst->getDbgMarker(),
+                                              std::nullopt, false);
+  EXPECT_EQ(RetInst->getDbgMarker()->StoredDbgRecords.size(), 2u);
   ItCount = 0;
   // Check these things store the same information; but that they're not the same
   // objects.
   for (DbgVariableRecord &Item :
-       filterDbgVars(RetInst->DebugMarker->getDbgRecordRange())) {
+       filterDbgVars(RetInst->getDbgMarker()->getDbgRecordRange())) {
     EXPECT_TRUE(
         (Item.getRawLocation() == DVR2->getRawLocation() && ItCount == 0) ||
         (Item.getRawLocation() == DVR1->getRawLocation() && ItCount == 1));
 
-    EXPECT_EQ(Item.getMarker(), RetInst->DebugMarker);
+    EXPECT_EQ(Item.getMarker(), RetInst->getDbgMarker());
     EXPECT_NE(&Item, DVR1);
     EXPECT_NE(&Item, DVR2);
     ++ItCount;
   }
 
-  RetInst->DebugMarker->dropDbgRecords();
-  EXPECT_EQ(RetInst->DebugMarker->StoredDbgRecords.size(), 0u);
+  RetInst->getDbgMarker()->dropDbgRecords();
+  EXPECT_EQ(RetInst->getDbgMarker()->StoredDbgRecords.size(), 0u);
 
   // Try cloning one single DbgVariableRecord.
-  auto DIIt = std::next(FirstInst->DebugMarker->getDbgRecordRange().begin());
-  RetInst->DebugMarker->cloneDebugInfoFrom(FirstInst->DebugMarker, DIIt, false);
-  EXPECT_EQ(RetInst->DebugMarker->StoredDbgRecords.size(), 1u);
+  auto DIIt = std::next(FirstInst->getDbgMarker()->getDbgRecordRange().begin());
+  RetInst->getDbgMarker()->cloneDebugInfoFrom(FirstInst->getDbgMarker(), DIIt,
+                                              false);
+  EXPECT_EQ(RetInst->getDbgMarker()->StoredDbgRecords.size(), 1u);
   // The second DbgVariableRecord should have been cloned; it should have the
   // same values as DVR1.
   EXPECT_EQ(
-      cast<DbgVariableRecord>(RetInst->DebugMarker->StoredDbgRecords.begin())
+      cast<DbgVariableRecord>(RetInst->getDbgMarker()->StoredDbgRecords.begin())
           ->getRawLocation(),
       DVR1->getRawLocation());
   // We should be able to drop individual DbgRecords.
-  RetInst->DebugMarker->dropOneDbgRecord(
-      &*RetInst->DebugMarker->StoredDbgRecords.begin());
+  RetInst->getDbgMarker()->dropOneDbgRecord(
+      &*RetInst->getDbgMarker()->StoredDbgRecords.begin());
 
   // "Aborb" a DbgMarker: this means pretend that the instruction it's attached
   // to is disappearing so it needs to be transferred into "this" marker.
-  RetInst->DebugMarker->absorbDebugValues(*FirstInst->DebugMarker, true);
-  EXPECT_EQ(RetInst->DebugMarker->StoredDbgRecords.size(), 2u);
+  RetInst->getDbgMarker()->absorbDebugValues(*FirstInst->getDbgMarker(), true);
+  EXPECT_EQ(RetInst->getDbgMarker()->StoredDbgRecords.size(), 2u);
   // Should be the DVR1 and DVR2 objects.
   ItCount = 0;
-  for (DbgRecord &Item : RetInst->DebugMarker->getDbgRecordRange()) {
+  for (DbgRecord &Item : RetInst->getDbgMarker()->getDbgRecordRange()) {
     EXPECT_TRUE((&Item == DVR2 && ItCount == 0) ||
                 (&Item == DVR1 && ItCount == 1));
-    EXPECT_EQ(Item.getMarker(), RetInst->DebugMarker);
+    EXPECT_EQ(Item.getMarker(), RetInst->getDbgMarker());
     ++ItCount;
   }
 
@@ -1105,9 +1106,9 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
   // evrything in the basic block, then they should sink down into the
   // "TrailingDbgRecords" container for dangling debug-info. Future facilities
   // will restore them back when a terminator is inserted.
-  FirstInst->DebugMarker->removeMarker();
+  FirstInst->getDbgMarker()->removeMarker();
   FirstInst->eraseFromParent();
-  RetInst->DebugMarker->removeMarker();
+  RetInst->getDbgMarker()->removeMarker();
   RetInst->eraseFromParent();
 
   DbgMarker *EndMarker = ExitBlock->getTrailingDbgRecords();
@@ -1195,23 +1196,23 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   EXPECT_EQ(BB1->size(), 2u);
   Instruction *FirstInst = &BB1->front();
   Instruction *SecondInst = FirstInst->getNextNode();
-  ASSERT_TRUE(FirstInst->DebugMarker);
-  ASSERT_TRUE(SecondInst->DebugMarker);
-  EXPECT_NE(FirstInst->DebugMarker, SecondInst->DebugMarker);
-  EXPECT_EQ(FirstInst, FirstInst->DebugMarker->MarkedInstr);
-  EXPECT_EQ(SecondInst, SecondInst->DebugMarker->MarkedInstr);
+  ASSERT_TRUE(FirstInst->getDbgMarker());
+  ASSERT_TRUE(SecondInst->getDbgMarker());
+  EXPECT_NE(FirstInst->getDbgMarker(), SecondInst->getDbgMarker());
+  EXPECT_EQ(FirstInst, FirstInst->getDbgMarker()->MarkedInstr);
+  EXPECT_EQ(SecondInst, SecondInst->getDbgMarker()->MarkedInstr);
 
-  EXPECT_EQ(FirstInst->DebugMarker->StoredDbgRecords.size(), 1u);
+  EXPECT_EQ(FirstInst->getDbgMarker()->StoredDbgRecords.size(), 1u);
   DbgVariableRecord *DVR1 = cast<DbgVariableRecord>(
-      &*FirstInst->DebugMarker->getDbgRecordRange().begin());
-  EXPECT_EQ(DVR1->getMarker(), FirstInst->DebugMarker);
+      &*FirstInst->getDbgMarker()->getDbgRecordRange().begin());
+  EXPECT_EQ(DVR1->getMarker(), FirstInst->getDbgMarker());
   // Should point at %a, an argument.
   EXPECT_TRUE(isa<Argument>(DVR1->getVariableLocationOp(0)));
 
-  EXPECT_EQ(SecondInst->DebugMarker->StoredDbgRecords.size(), 1u);
+  EXPECT_EQ(SecondInst->getDbgMarker()->StoredDbgRecords.size(), 1u);
   DbgVariableRecord *DVR2 = cast<DbgVariableRecord>(
-      &*SecondInst->DebugMarker->getDbgRecordRange().begin());
-  EXPECT_EQ(DVR2->getMarker(), SecondInst->DebugMarker);
+      &*SecondInst->getDbgMarker()->getDbgRecordRange().begin());
+  EXPECT_EQ(DVR2->getMarker(), SecondInst->getDbgMarker());
   // Should point at FirstInst.
   EXPECT_EQ(DVR2->getVariableLocationOp(0), FirstInst);
 
@@ -1220,8 +1221,8 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   BasicBlock *BB2 = BB1->getNextNode();
   for (auto &Inst : *BB2)
     // Either there should be no marker, or it should be empty.
-    EXPECT_TRUE(!Inst.DebugMarker ||
-                Inst.DebugMarker->StoredDbgRecords.empty());
+    EXPECT_TRUE(!Inst.getDbgMarker() ||
+                Inst.getDbgMarker()->StoredDbgRecords.empty());
 
   // Validating the first block should continue to not be a problem,
   Error = verifyModule(*M, &errs(), &BrokenDebugInfo);
@@ -1235,7 +1236,7 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   Error = verifyModule(*M, &errs(), &BrokenDebugInfo);
   EXPECT_FALSE(Error);
   EXPECT_TRUE(BrokenDebugInfo);
-  DVR1->setMarker(FirstInst->DebugMarker);
+  DVR1->setMarker(FirstInst->getDbgMarker());
 
   DILocalVariable *DLV1 = DVR1->getVariable();
   DIExpression *Expr1 = DVR1->getExpression();
