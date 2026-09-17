@@ -503,7 +503,7 @@ define float @frem(float %a, float %b) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [frem_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [frem_param_1];
-; CHECK-NEXT:    div.approx.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    div.rn.f32 %r3, %r1, %r2;
 ; CHECK-NEXT:    cvt.rzi.f32.f32 %r4, %r3;
 ; CHECK-NEXT:    neg.f32 %r5, %r4;
 ; CHECK-NEXT:    fma.rn.f32 %r6, %r5, %r2, %r1;
@@ -521,7 +521,7 @@ define float @frem_ftz(float %a, float %b) #1 {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [frem_ftz_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [frem_ftz_param_1];
-; CHECK-NEXT:    div.approx.ftz.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    div.rn.ftz.f32 %r3, %r1, %r2;
 ; CHECK-NEXT:    cvt.rzi.ftz.f32.f32 %r4, %r3;
 ; CHECK-NEXT:    neg.ftz.f32 %r5, %r4;
 ; CHECK-NEXT:    fma.rn.ftz.f32 %r6, %r5, %r2, %r1;
