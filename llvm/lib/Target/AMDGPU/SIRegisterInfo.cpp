@@ -4239,7 +4239,7 @@ const int *SIRegisterInfo::getRegUnitPressureSets(MCRegUnit RegUnit) const {
 
 bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
                                            ArrayRef<MCPhysReg> Order,
-                                           SmallVectorImpl<MCPhysReg> &Hints,
+                                           SmallSetVector<MCPhysReg, 16> &Hints,
                                            const MachineFunction &MF,
                                            const VirtRegMap *VRM,
                                            const LiveRegMatrix *Matrix) const {
@@ -4266,7 +4266,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     if (PairedPhys)
       // isLo(Paired) is implicitly true here from the API of
       // getMatchingSuperReg.
-      Hints.push_back(PairedPhys);
+      Hints.insert(PairedPhys);
     return false;
   }
   case AMDGPURI::Size16: {
@@ -4281,7 +4281,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
 
     // First prefer the paired physreg.
     if (PairedPhys)
-      Hints.push_back(PairedPhys);
+      Hints.insert(PairedPhys);
     else {
       // Add all the lo16 physregs.
       // When the Paired operand has not yet been assigned a physreg it is
@@ -4293,7 +4293,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
           continue;
         if (AMDGPU::VGPR_16RegClass.contains(PhysReg) &&
             !MRI.isReserved(PhysReg))
-          Hints.push_back(PhysReg);
+          Hints.insert(PhysReg);
       }
     }
     return false;
