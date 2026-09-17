@@ -278,7 +278,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         buildOpDecorate(VRegs[i][0], MIRBuilder, SPIRV::Decoration::Alignment,
                         {Alignment});
       }
-      if (!ST->isShader()) {
+      if (ST->isKernel()) {
         if (Arg.hasAttribute(Attribute::ReadOnly)) {
           auto Attr =
               static_cast<unsigned>(SPIRV::FunctionParameterAttribute::NoWrite);
