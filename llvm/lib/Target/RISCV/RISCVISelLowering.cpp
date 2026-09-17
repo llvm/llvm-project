@@ -22285,17 +22285,6 @@ static SDValue performVSlideUpDownCombine(SDNode *N, SelectionDAG &DAG,
   // %up = RISCVISD::VSLIDEUP_VL %val, %down, %offset, %mask, %vl1
   // ```
   // We can simplify it with `%val`, as it's doing redundant shifting.
-  // Note that we actually don't need to check their VLs: First, VSLIDEUP_VL
-  // is literally just putting %down back to their original position in %val.
-  // The only situation we need to worry about is actually the zeros shifted
-  // into VSLIDEDOWN_VL. In this scenario, the worst case would be %vl0 = VLMAX,
-  // as %down is guaranteed to have those zeros. Our goal here is to ensure
-  // elements from %down that are actually inserted into %up are not those
-  // zeros. The number of %down that are actually inserted would be `%vl1 -
-  // %offset`, and the number of non-zero elements from %down would be `VLMAX -
-  // %offset`. Therefore, the invariant would be
-  // `%vl1 - %offset <= VLMAX - %offset` ---> `%vl1 <= VLMAX`
-  // Thus, we will never read those zeros that are shifted in by VSLIDEDOWN_VL.
   if (Opcode != RISCVISD::VSLIDEUP_VL ||
       SlideDown.getOpcode() != RISCVISD::VSLIDEDOWN_VL)
     return SDValue();
@@ -22309,16 +22298,44 @@ static SDValue performVSlideUpDownCombine(SDNode *N, SelectionDAG &DAG,
       SlideDownOffset != SlideUpOffset)
     return SDValue();
 
-  auto isAllSetMask = [&DAG](SDValue V, SDValue VL) -> bool {
+  auto isVLMax = [](SDValue VL) {
+    return (isa<RegisterSDNode>(VL) &&
+            cast<RegisterSDNode>(VL)->getReg() == RISCV::X0) ||
+           isAllOnesConstant(VL);
+  };
+
+  // Check VLs.
+  // First, we need to worry about the zeros shifted into VSLIDEDOWN_VL. In this
+  // scenario, the worst case would be %vl0 = VLMAX, as %down is guaranteed to
+  // have those zeros. Our goal here is to ensure elements from %down that are
+  // actually inserted into %up are not those zeros. The number of %down that
+  // are actually inserted would be `%vl1 - %offset`, and the number of non-zero
+  // elements from %down would be `VLMAX - %offset`. Therefore, the invariant
+  // would be
+  // `%vl1 - %offset <= VLMAX - %offset` ---> `%vl1 <= VLMAX`
+  // Thus, we will never read those zeros that are shifted in by VSLIDEDOWN_VL.
+  // Second, we don't want slideup to read pass the result produced by
+  // slidedown. So the condition for this case would be `%vl0 + %offset >=
+  // %vl1`.
+  if (!isVLMax(SlideDownVL)) {
+    KnownBits DownVLKB = DAG.computeKnownBits(SlideDownVL);
+    KnownBits UpVLKB = DAG.computeKnownBits(SlideUpVL);
+    KnownBits OffsetKB = DAG.computeKnownBits(SlideDownOffset);
+    if (!KnownBits::uge(KnownBits::add(DownVLKB, OffsetKB, /*NSW=*/false,
+                                       /*NUW=*/true),
+                        UpVLKB)
+             .value_or(false))
+      return SDValue();
+  }
+
+  // Check Masks.
+  auto isAllSetMask = [&](SDValue V, SDValue VL) -> bool {
     using namespace SDPatternMatch;
     SDValue VMSet;
     return sd_match(V, m_Node(RISCVISD::VMSET_VL, m_Value(VMSet))) &&
-           ((isa<RegisterSDNode>(VMSet) &&
-             cast<RegisterSDNode>(VMSet)->getReg() == RISCV::X0) ||
-            isAllOnesConstant(VMSet) ||
-            KnownBits::uge(DAG.computeKnownBits(VMSet),
-                           DAG.computeKnownBits(VL))
-                .value_or(false));
+           (isVLMax(VMSet) || KnownBits::uge(DAG.computeKnownBits(VMSet),
+                                             DAG.computeKnownBits(VL))
+                                  .value_or(false));
   };
   if (!isAllSetMask(SlideDownMask, SlideDownVL) ||
       !isAllSetMask(SlideUpMask, SlideUpVL))
