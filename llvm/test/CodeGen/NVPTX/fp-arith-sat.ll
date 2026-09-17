@@ -80,6 +80,39 @@ define float @sub_sat_f32(float %a, float %b) {
   ret float %r8
 }
 
+define float @mul_sat_f32(float %a, float %b) {
+; CHECK-LABEL: mul_sat_f32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<11>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [mul_sat_f32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [mul_sat_f32_param_1];
+; CHECK-NEXT:    mul.rn.sat.f32 %r3, %r1, %r2;
+; CHECK-NEXT:    mul.rn.ftz.sat.f32 %r4, %r1, %r3;
+; CHECK-NEXT:    mul.rz.sat.f32 %r5, %r1, %r4;
+; CHECK-NEXT:    mul.rz.ftz.sat.f32 %r6, %r1, %r5;
+; CHECK-NEXT:    mul.rm.sat.f32 %r7, %r1, %r6;
+; CHECK-NEXT:    mul.rm.ftz.sat.f32 %r8, %r1, %r7;
+; CHECK-NEXT:    mul.rp.sat.f32 %r9, %r1, %r8;
+; CHECK-NEXT:    mul.rp.ftz.sat.f32 %r10, %r1, %r9;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r10;
+; CHECK-NEXT:    ret;
+  %r1 = call float @llvm.nvvm.fmul.sat.f32(float %a, float %b, i32 1)
+  %r2 = call float @llvm.nvvm.fmul.ftz.sat.f32(float %a, float %r1, i32 1)
+
+  %r3 = call float @llvm.nvvm.fmul.sat.f32(float %a, float %r2, i32 0)
+  %r4 = call float @llvm.nvvm.fmul.ftz.sat.f32(float %a, float %r3, i32 0)
+
+  %r5 = call float @llvm.nvvm.fmul.sat.f32(float %a, float %r4, i32 3)
+  %r6 = call float @llvm.nvvm.fmul.ftz.sat.f32(float %a, float %r5, i32 3)
+
+  %r7 = call float @llvm.nvvm.fmul.sat.f32(float %a, float %r6, i32 2)
+  %r8 = call float @llvm.nvvm.fmul.ftz.sat.f32(float %a, float %r7, i32 2)
+
+  ret float %r8
+}
+
 define float @fma_sat_f32(float %a, float %b, float %c) {
 ; CHECK-LABEL: fma_sat_f32(
 ; CHECK:       {

@@ -2011,6 +2011,8 @@ class F_MATH_3<string OpcStr, NVPTXRegClass t_regclass,
           (IntOP s0_regclass:$src0, s1_regclass:$src1, s2_regclass:$src2))]>,
           Requires<Preds>;
 
+defvar FPRoundingModes = ["rn", "rz", "rm", "rp"];
+
 //
 // MISC
 //
@@ -2181,27 +2183,43 @@ def : Pat<(int_nvvm_mulhi_ui i32:$a, i32:$b), (MUL_HI_U32rr $a, $b)>;
 def : Pat<(int_nvvm_mulhi_ll i64:$a, i64:$b), (MUL_HI_S64rr $a, $b)>;
 def : Pat<(int_nvvm_mulhi_ull i64:$a, i64:$b), (MUL_HI_U64rr $a, $b)>;
 
-def INT_NVVM_MUL_RN_FTZ_F : F_MATH_2<"mul.rn.ftz.f32", B32, B32, B32, int_nvvm_mul_rn_ftz_f>;
-def INT_NVVM_MUL_RN_F : F_MATH_2<"mul.rn.f32", B32, B32, B32, int_nvvm_mul_rn_f>;
-def INT_NVVM_MUL_RZ_FTZ_F : F_MATH_2<"mul.rz.ftz.f32", B32, B32, B32, int_nvvm_mul_rz_ftz_f>;
-def INT_NVVM_MUL_RZ_F : F_MATH_2<"mul.rz.f32", B32, B32, B32, int_nvvm_mul_rz_f>;
-def INT_NVVM_MUL_RM_FTZ_F : F_MATH_2<"mul.rm.ftz.f32", B32, B32, B32, int_nvvm_mul_rm_ftz_f>;
-def INT_NVVM_MUL_RM_F : F_MATH_2<"mul.rm.f32", B32, B32, B32, int_nvvm_mul_rm_f>;
-def INT_NVVM_MUL_RP_FTZ_F : F_MATH_2<"mul.rp.ftz.f32", B32, B32, B32, int_nvvm_mul_rp_ftz_f>;
-def INT_NVVM_MUL_RP_F : F_MATH_2<"mul.rp.f32", B32, B32, B32, int_nvvm_mul_rp_f>;
-
-def INT_NVVM_MUL_RN_D : F_MATH_2<"mul.rn.f64", B64, B64, B64, int_nvvm_mul_rn_d>;
-def INT_NVVM_MUL_RZ_D : F_MATH_2<"mul.rz.f64", B64, B64, B64, int_nvvm_mul_rz_d>;
-def INT_NVVM_MUL_RM_D : F_MATH_2<"mul.rm.f64", B64, B64, B64, int_nvvm_mul_rm_d>;
-def INT_NVVM_MUL_RP_D : F_MATH_2<"mul.rp.f64", B64, B64, B64, int_nvvm_mul_rp_d>;
-
 def INT_NVVM_MUL24_I : F_MATH_2<"mul24.lo.s32", B32, B32, B32, int_nvvm_mul24_i>;
 def INT_NVVM_MUL24_UI : F_MATH_2<"mul24.lo.u32", B32, B32, B32, int_nvvm_mul24_ui>;
 
-def INT_NVVM_MUL_RN_SAT_F16 : F_MATH_2<"mul.rn.sat.f16", B16, B16, B16, int_nvvm_mul_rn_sat_f16>;
-def INT_NVVM_MUL_RN_FTZ_SAT_F16 : F_MATH_2<"mul.rn.ftz.sat.f16", B16, B16, B16, int_nvvm_mul_rn_ftz_sat_f16>;
-def INT_NVVM_MUL_RN_SAT_F16X2 : F_MATH_2<"mul.rn.sat.f16x2", B32, B32, B32, int_nvvm_mul_rn_sat_v2f16>;
-def INT_NVVM_MUL_RN_FTZ_SAT_F16X2 : F_MATH_2<"mul.rn.ftz.sat.f16x2", B32, B32, B32, int_nvvm_mul_rn_ftz_sat_v2f16>;
+// f16/f16x2
+foreach t = [F16RT, F16X2RT] in
+  foreach ftz = ["", "ftz"] in
+    foreach sat = ["", "sat"] in
+      def INT_NVVM_MUL_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
+        F_MATH_2_RND_TY<StrJoin<".", ["mul.rn", ftz, sat, t.PtxType]>.ret, t,
+                        !cast<Intrinsic>(
+                            StrJoin<"_", ["int_nvvm_fmul", ftz, sat]>.ret),
+                        fp_rnd_rn_imm>;
+
+// bf16/bf16x2
+foreach t = [BF16RT, BF16X2RT] in
+  def INT_NVVM_MUL_RN_ # !toupper(t.PtxType) :
+    F_MATH_2_RND_TY<"mul.rn." # t.PtxType, t, int_nvvm_fmul, fp_rnd_rn_imm,
+                    BF16ArithPreds>;
+
+// f32/f32x2/f64
+foreach ftz = ["", "ftz"] in {
+  foreach sat = ["", "sat"] in
+    def StrJoin<"_", ["INT_NVVM_MUL", !toupper(ftz), !toupper(sat), "F"]>.ret :
+      F_MATH_2_RNDOP_TY<StrJoin<".", ["mul.${rnd}", ftz, sat, "f32"]>.ret,
+                        F32RT,
+                        !cast<Intrinsic>(
+                            StrJoin<"_", ["int_nvvm_fmul", ftz, sat]>.ret)>;
+
+  def StrJoin<"_", ["INT_NVVM_MUL", !toupper(ftz), "F32X2"]>.ret :
+    F_MATH_2_RNDOP_TY<StrJoin<".", ["mul.${rnd}", ftz, "f32x2"]>.ret, F32X2RT,
+                      !cast<Intrinsic>(
+                          StrJoin<"_", ["int_nvvm_fmul", ftz]>.ret),
+                      [hasF32x2Instructions]>;
+}
+
+def INT_NVVM_MUL_D :
+  F_MATH_2_RNDOP_TY<"mul.${rnd}.f64", F64RT, int_nvvm_fmul>;
 
 //
 // Div
@@ -2359,8 +2377,6 @@ def : Pat<(int_nvvm_cos_approx_f f32:$a), (COS_APPROX_f32 $a, NoFTZ)>;
 //
 // Fma
 //
-
-defvar FPRoundingModes = ["rn", "rz", "rm", "rp"];
 
 class FMA_TUPLE<string V, Intrinsic I, NVPTXRegClass RC,
                 list<Predicate> Preds = []> {
@@ -2568,16 +2584,6 @@ let Predicates = [doRsqrtOpt] in {
 //
 // Add
 //
-
-defvar BF16ArithPreds = [hasBF16Math, PTX78, SM90];
-
-class FPRndModeImm<string mode> : TImmLeaf<i32,
-  "return Imm == static_cast<int>(RoundingMode::" # mode # ");">;
-
-def fp_rnd_rn_imm : FPRndModeImm<"NearestTiesToEven">;
-def fp_rnd_rz_imm : FPRndModeImm<"TowardZero">;
-def fp_rnd_rm_imm : FPRndModeImm<"TowardNegative">;
-def fp_rnd_rp_imm : FPRndModeImm<"TowardPositive">;
 
 // f16/f16x2
 foreach t = [F16RT, F16X2RT] in

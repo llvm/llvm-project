@@ -1678,24 +1678,20 @@ let TargetPrefix = "nvvm" in {
       def int_nvvm_mul24_ # sign # i : NVVMBuiltin,
         DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
     }
-
-    foreach rnd = ["rn", "rz", "rm", "rp"] in {
-      foreach ftz = ["", "_ftz"] in
-        def int_nvvm_mul_ # rnd # ftz # _f : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
-
-      def int_nvvm_mul_ # rnd # _d : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
-    }
-    
-    foreach ftz = ["", "_ftz"] in {
-      def int_nvvm_mul_rn # ftz # _sat_f16 : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
-
-      def int_nvvm_mul_rn # ftz # _sat_v2f16 : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
-    } // ftz
   }
+
+  let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative,
+                        IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<2>>,
+                        Range<ArgIndex<2>, 0, 4>,
+                        ArgInfo<ArgIndex<2>,
+                                [ArgName<"rnd">,
+                                 ImmArgPrinter<"printFPRoundingMode">]>] in
+    foreach ftz = ["", "_ftz"] in
+      foreach sat = ["", "_sat"] in
+        def int_nvvm_fmul # ftz # sat :
+          DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                                [LLVMMatchType<0>, LLVMMatchType<0>,
+                                 llvm_i32_ty]>;
 
   //
   // Div

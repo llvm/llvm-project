@@ -7178,10 +7178,8 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
 
 static unsigned getFAddWithNegOpcode(EVT VT, Intrinsic::ID IID,
                                      APFloat::roundingMode RoundingMode) {
-  const bool IsFTZ =
-      IID == Intrinsic::nvvm_fadd_ftz || IID == Intrinsic::nvvm_fadd_ftz_sat;
-  const bool IsSat =
-      IID == Intrinsic::nvvm_fadd_sat || IID == Intrinsic::nvvm_fadd_ftz_sat;
+  const bool IsFTZ = nvvm::FPArithShouldFTZ(IID);
+  const bool IsSat = nvvm::FPArithIsSat(IID);
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f16: {
     static constexpr unsigned SubRNOpcodes[2][2] = {
@@ -7236,22 +7234,20 @@ static SDValue combineFAddWithNeg(SDNode *N, SelectionDAG &DAG,
 // TODO: Remove the type-legality checks here once
 // https://github.com/llvm/llvm-project/pull/172442 lands, adding support for
 // explicit type constraints for overloaded intrinsics in tablegen.
-static bool isSupportedFAdd(EVT VT, const NVPTXSubtarget &STI,
-                            Intrinsic::ID IID,
-                            APFloat::roundingMode RoundingMode) {
+static bool isSupportedFPArith(EVT VT, const NVPTXSubtarget &STI,
+                               unsigned ISDOpcode, Intrinsic::ID IID,
+                               APFloat::roundingMode RoundingMode) {
   if (VT.isVector() && VT.getVectorElementCount() != ElementCount::getFixed(2))
     return false;
 
   const bool IsRN = RoundingMode == APFloat::rmNearestTiesToEven;
-  const bool IsFTZ =
-      IID == Intrinsic::nvvm_fadd_ftz || IID == Intrinsic::nvvm_fadd_ftz_sat;
-  const bool IsSat =
-      IID == Intrinsic::nvvm_fadd_sat || IID == Intrinsic::nvvm_fadd_ftz_sat;
+  const bool IsFTZ = nvvm::FPArithShouldFTZ(IID);
+  const bool IsSat = nvvm::FPArithIsSat(IID);
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f16:
     return IsRN;
   case MVT::bf16:
-    return IsRN && !IsSat && !IsFTZ && STI.hasNativeBF16Support(ISD::FADD);
+    return IsRN && !IsSat && !IsFTZ && STI.hasNativeBF16Support(ISDOpcode);
   case MVT::f32:
     return !VT.isVector() || (!IsSat && STI.hasF32x2Instructions());
   case MVT::f64:
@@ -7261,9 +7257,9 @@ static bool isSupportedFAdd(EVT VT, const NVPTXSubtarget &STI,
   }
 }
 
-static SDValue diagnoseUnsupportedFAdd(SDNode *N, SelectionDAG &DAG,
-                                       Intrinsic::ID IID,
-                                       APFloat::roundingMode RoundingMode) {
+static SDValue diagnoseUnsupportedFPArith(SDNode *N, SelectionDAG &DAG,
+                                          Intrinsic::ID IID,
+                                          APFloat::roundingMode RoundingMode) {
   const EVT VT = N->getValueType(0);
   DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
       DAG.getMachineFunction().getFunction(),
@@ -7289,9 +7285,21 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   case Intrinsic::nvvm_fadd_ftz_sat: {
     const auto RoundingMode = static_cast<APFloat::roundingMode>(
         N->getConstantOperandAPInt(3).getSExtValue());
-    if (!isSupportedFAdd(N->getValueType(0), STI, IID, RoundingMode))
-      return diagnoseUnsupportedFAdd(N, DCI.DAG, IID, RoundingMode);
+    if (!isSupportedFPArith(N->getValueType(0), STI, ISD::FADD, IID,
+                            RoundingMode))
+      return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
     return combineFAddWithNeg(N, DCI.DAG, IID, RoundingMode);
+  }
+  case Intrinsic::nvvm_fmul:
+  case Intrinsic::nvvm_fmul_ftz:
+  case Intrinsic::nvvm_fmul_sat:
+  case Intrinsic::nvvm_fmul_ftz_sat: {
+    const auto RoundingMode = static_cast<APFloat::roundingMode>(
+        N->getConstantOperandAPInt(3).getSExtValue());
+    if (!isSupportedFPArith(N->getValueType(0), STI, ISD::FMUL, IID,
+                            RoundingMode))
+      return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
+    break;
   }
   }
   return SDValue();

@@ -28,8 +28,8 @@ declare i32 @llvm.call.preallocated.setup(i32)
 declare double @llvm.fptrunc.round.f64.f64(double, i16)
 
 ; CHECK: intrinsic argument 0 type expected half, but got i16
-; CHECK-NEXT: declare half @llvm.nvvm.mul.rn.sat.f16(i16, half)
-declare half @llvm.nvvm.mul.rn.sat.f16(i16, half)
+; CHECK-NEXT: declare half @llvm.nvvm.fma.rn.f16(i16, half, half)
+declare half @llvm.nvvm.fma.rn.f16(i16, half, half)
 
 ; CHECK: intrinsic return type expected bfloat, but got half
 ; CHECK-NEXT: declare half @llvm.arm.neon.vcvtbfp2bf(float)
