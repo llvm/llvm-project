@@ -2026,6 +2026,20 @@ OpFoldResult RankOp::fold(FoldAdaptor adaptor) {
 // ReinterpretCastOp
 //===----------------------------------------------------------------------===//
 
+namespace {
+
+struct PrintDynamicOrValue {
+  int64_t value;
+};
+
+Diagnostic &operator<<(Diagnostic &diag, PrintDynamicOrValue printed) {
+  if (ShapedType::isDynamic(printed.value))
+    return diag << "dynamic";
+  return diag << printed.value;
+}
+
+} // namespace
+
 void ReinterpretCastOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getResult(), "reinterpret_cast");
@@ -2111,12 +2125,10 @@ LogicalResult ReinterpretCastOp::verify() {
   // Match sizes in result memref type and in static_sizes attribute.
   for (auto [idx, resultSize, expectedSize] :
        llvm::enumerate(resultType.getShape(), getStaticSizes())) {
-    if (ShapedType::isStatic(resultSize) && resultSize != expectedSize)
+    if (resultSize != expectedSize)
       return emitError("expected result type with size = ")
-             << (ShapedType::isDynamic(expectedSize)
-                     ? std::string("dynamic")
-                     : std::to_string(expectedSize))
-             << " instead of " << resultSize << " in dim = " << idx;
+             << PrintDynamicOrValue{expectedSize} << " instead of "
+             << PrintDynamicOrValue{resultSize} << " in dim = " << idx;
   }
 
   // Match offset and strides in static_offset and static_strides attributes. If
@@ -2130,22 +2142,18 @@ LogicalResult ReinterpretCastOp::verify() {
 
   // Match offset in result memref type and in static_offsets attribute.
   int64_t expectedOffset = getStaticOffsets().front();
-  if (ShapedType::isStatic(resultOffset) && resultOffset != expectedOffset)
+  if (resultOffset != expectedOffset)
     return emitError("expected result type with offset = ")
-           << (ShapedType::isDynamic(expectedOffset)
-                   ? std::string("dynamic")
-                   : std::to_string(expectedOffset))
-           << " instead of " << resultOffset;
+           << PrintDynamicOrValue{expectedOffset} << " instead of "
+           << PrintDynamicOrValue{resultOffset};
 
   // Match strides in result memref type and in static_strides attribute.
   for (auto [idx, resultStride, expectedStride] :
        llvm::enumerate(resultStrides, getStaticStrides())) {
-    if (ShapedType::isStatic(resultStride) && resultStride != expectedStride)
+    if (resultStride != expectedStride)
       return emitError("expected result type with stride = ")
-             << (ShapedType::isDynamic(expectedStride)
-                     ? std::string("dynamic")
-                     : std::to_string(expectedStride))
-             << " instead of " << resultStride << " in dim = " << idx;
+             << PrintDynamicOrValue{expectedStride} << " instead of "
+             << PrintDynamicOrValue{resultStride} << " in dim = " << idx;
   }
 
   return success();
