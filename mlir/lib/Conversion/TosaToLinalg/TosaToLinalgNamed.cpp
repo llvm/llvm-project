@@ -792,8 +792,8 @@ public:
                             ? rewriter.getAffineConstantExpr(0)
                             : rewriter.getAffineDimExpr(dim.index()));
       }
-      indexingMaps.push_back(
-          AffineMap::get(rank, /*symbolCount=*/0, exprs, rewriter.getContext()));
+      indexingMaps.push_back(AffineMap::get(rank, /*symbolCount=*/0, exprs,
+                                            rewriter.getContext()));
     }
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(rank));
 
