@@ -58,6 +58,18 @@ public:
   /// The transport-specific address. May be empty (e.g. "fd=").
   StringRef getDescriptor() const { return Descriptor; }
 
+  /// Rebuilds the original connection string, e.g. "tcp:connect=host:port".
+  std::string str() const {
+    std::string S = Transport;
+    if (!Action.empty()) {
+      S += ':';
+      S += Action;
+    }
+    S += '=';
+    S += Descriptor;
+    return S;
+  }
+
 private:
   ConnectionSpec(std::string Transport, std::string Action,
                  std::string Descriptor)
