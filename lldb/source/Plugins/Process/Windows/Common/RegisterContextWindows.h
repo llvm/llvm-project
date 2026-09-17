@@ -9,6 +9,7 @@
 #ifndef liblldb_RegisterContextWindows_H_
 #define liblldb_RegisterContextWindows_H_
 
+#include "lldb/Host/windows/windows.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/lldb-forward.h"
 
@@ -53,6 +54,8 @@ protected:
 
   CONTEXT m_context;
   bool m_context_stale;
+
+  lldb::thread_t GetThreadHandle() const;
 };
 } // namespace lldb_private
 
