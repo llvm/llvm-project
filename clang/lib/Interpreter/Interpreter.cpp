@@ -45,12 +45,14 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ModuleCache.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -303,19 +305,17 @@ IncrementalCompilerBuilder::CreateCpp() {
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::createCuda(bool device) {
+IncrementalCompilerBuilder::createOffload(OffloadType Type, bool device) {
+  const bool HipEnabled = Type == OffloadType::HIP;
   std::vector<const char *> Argv;
   Argv.reserve(5 + 4 + UserArgs.size());
+  Argv.push_back(HipEnabled ? "-xhip" : "-xcuda");
+  Argv.push_back(device ? "--cuda-device-only" : "--cuda-host-only");
 
-  Argv.push_back("-xcuda");
-  if (device)
-    Argv.push_back("--cuda-device-only");
-  else
-    Argv.push_back("--cuda-host-only");
-
-  std::string SDKPathArg = "--cuda-path=";
-  if (!CudaSDKPath.empty()) {
-    SDKPathArg += CudaSDKPath;
+  llvm::StringRef SDKPath = HipEnabled ? RocmSDKPath : CudaSDKPath;
+  std::string SDKPathArg = HipEnabled ? "--rocm-path=" : "--cuda-path=";
+  if (!SDKPath.empty()) {
+    SDKPathArg += SDKPath;
     Argv.push_back(SDKPathArg.c_str());
   }
 
@@ -325,6 +325,12 @@ IncrementalCompilerBuilder::createCuda(bool device) {
     Argv.push_back(ArchArg.c_str());
   }
 
+  if (OffloadCUID.empty())
+    OffloadCUID = llvm::utohexstr(llvm::sys::Process::GetRandomNumber(),
+                                  /*LowerCase=*/true);
+  std::string CUIDArg = "-cuid=" + OffloadCUID;
+  Argv.push_back(CUIDArg.c_str());
+
   llvm::append_range(Argv, UserArgs);
 
   std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
@@ -332,13 +338,13 @@ IncrementalCompilerBuilder::createCuda(bool device) {
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::CreateCudaDevice() {
-  return IncrementalCompilerBuilder::createCuda(true);
+IncrementalCompilerBuilder::CreateDevice(OffloadType Type) {
+  return IncrementalCompilerBuilder::createOffload(Type, /*device=*/true);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::CreateCudaHost() {
-  return IncrementalCompilerBuilder::createCuda(false);
+IncrementalCompilerBuilder::CreateHost(OffloadType Type) {
+  return IncrementalCompilerBuilder::createOffload(Type, /*device=*/false);
 }
 
 Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
@@ -473,8 +479,9 @@ llvm::Expected<std::unique_ptr<Interpreter>> Interpreter::create(
 }
 
 llvm::Expected<std::unique_ptr<Interpreter>>
-Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
-                            std::unique_ptr<CompilerInstance> DCI) {
+Interpreter::createWithDevice(OffloadType Type,
+                              std::unique_ptr<CompilerInstance> CI,
+                              std::unique_ptr<CompilerInstance> DCI) {
   // avoid writing fat binary to disk using an in-memory virtual file system
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> IMVFS =
       std::make_unique<llvm::vfs::InMemoryFileSystem>();
@@ -508,14 +515,20 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
 
   Interp->DeviceCI = std::move(DCI);
 
-  auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
-      *Interp->DeviceCI, *Interp->getCompilerInstance(),
-      Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
+  if (Type == OffloadType::HIP) {
+    // FIXME: HIP device parsing is not supported yet; it should use an
+    // IncrementalHIPDeviceParser once one exists.
+  } else {
+    auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
+        *Interp->DeviceCI, *Interp->getCompilerInstance(),
+        Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
 
-  if (Err)
-    return std::move(Err);
+    if (Err)
+      return std::move(Err);
 
-  Interp->DeviceParser = std::move(DeviceParser);
+    Interp->DeviceParser = std::move(DeviceParser);
+  }
+
   return std::move(Interp);
 }
 
