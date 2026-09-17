@@ -27591,9 +27591,9 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
   // the caller's sret pointer. If only the caller has an sret parameter, treat
   // that pointer like an ordinary pointer when passing call arguments.
   // TODO: Support other sret buffers that outlive the caller, such as globals.
-  auto IsCallerStructRet =
+  bool IsCallerStructRet =
       !Caller.arg_empty() && Caller.getArg(0)->hasStructRetAttr();
-  auto IsCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
+  bool IsCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
   if (IsCalleeStructRet) {
     // Do not allow the tail call if the caller has no sret parameter.
     if (!IsCallerStructRet)
