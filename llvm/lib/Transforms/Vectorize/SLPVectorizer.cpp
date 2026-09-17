@@ -2449,6 +2449,7 @@ private:
   /// getNumScalarInsts().
   uint64_t getNumVectorInsts(bool HasTreeLoop);
 
+public:
   /// Return information about the vector formed for the specified index
   /// of a vector of (the same) instruction.
   TargetTransformInfo::OperandValueInfo
@@ -2461,14 +2462,15 @@ private:
         getOperandEntry(const_cast<const TreeEntry *>(E), Idx));
   }
 
+  /// \returns Cast context for the given graph node.
+  TargetTransformInfo::CastContextHint
+  getCastContextHint(const TreeEntry &TE) const;
+
+private:
   /// Gets the root instruction for the given node. If the node is a strided
   /// load/store node with the reverse order, the root instruction is the last
   /// one.
   Instruction *getRootEntryInstruction(const TreeEntry &Entry) const;
-
-  /// \returns Cast context for the given graph node.
-  TargetTransformInfo::CastContextHint
-  getCastContextHint(const TreeEntry &TE) const;
 
   /// \returns the scale of the given tree entry to the loop iteration.
   /// \p Scalar is the scalar value from the entry, if using the parent for the
@@ -32355,34 +32357,45 @@ private:
                 }
                 return SrcElemTy == ThisSrcTy && IsZExt == ThisZExt;
               });
-              // Only fuse when the multiply factors are actually vectorized
-              // (a live non-gather tree entry); otherwise the dot-product does
-              // not form and the fused cost would not apply.
-              if (IsMulAcc && SrcElemTy &&
-                  any_of(R.getTreeEntries(ReducedVals.front()),
-                         [](const auto *TE) {
-                           return TE->Idx == 0 && !TE->isGather();
-                         })) {
+              // Only fuse when the multiply factors are vectorized as the
+              // root non-gather tree entry; otherwise the dot-product does not
+              // form and the fused cost would not apply.
+              ArrayRef MulTEs = R.getTreeEntries(ReducedVals.front());
+              auto MulTEIt = find_if(MulTEs, [](const auto *TE) {
+                return TE->Idx == 0 && !TE->isGather();
+              });
+              if (IsMulAcc && SrcElemTy && MulTEIt != MulTEs.end()) {
+                const auto *MulTE = *MulTEIt;
                 auto *SrcVecTy =
                     cast<VectorType>(getWidenedType(SrcElemTy, ReduxWidth));
                 InstructionCost RedCost = TTI->getMulAccReductionCost(
                     IsZExt, RdxOpcode, RedTy, SrcVecTy, CostKind);
                 if (RedCost.isValid()) {
-                  // Derive operand info and cast context from the actual
-                  // mul(ext, ext) so the subtracted costs match the tree.
                   auto *Mul = cast<Instruction>(ReducedVals.front());
                   auto *Ext0 = cast<Instruction>(Mul->getOperand(0));
                   auto *Ext1 = cast<Instruction>(Mul->getOperand(1));
+                  // Cast context of an extend comes from its operand node when
+                  // the extend is itself a single vectorized entry.
+                  auto GetExtCCH = [&](Instruction *Ext) {
+                    if (ArrayRef ExtTEs = R.getTreeEntries(Ext);
+                        ExtTEs.size() == 1)
+                      return R.getCastContextHint(
+                          *R.getOperandEntry(ExtTEs.front(), 0));
+                    return TTI::getCastContextHint(Ext);
+                  };
+                  // Operand info from the multiply's tree-entry operands so it
+                  // reflects all lanes, not a single scalar.
                   InstructionCost MulCost = TTI->getArithmeticInstrCost(
                       Instruction::Mul, VectorTy, CostKind,
-                      TTI::getOperandInfo(Ext0), TTI::getOperandInfo(Ext1));
+                      R.getOperandInfo(MulTE->getOperand(0)),
+                      R.getOperandInfo(MulTE->getOperand(1)));
                   InstructionCost TreeExtCost = TTI->getCastInstrCost(
-                      Ext0->getOpcode(), VectorTy, SrcVecTy,
-                      TTI::getCastContextHint(Ext0), CostKind);
+                      Ext0->getOpcode(), VectorTy, SrcVecTy, GetExtCCH(Ext0),
+                      CostKind);
                   if (!SameOperands)
                     TreeExtCost += TTI->getCastInstrCost(
-                        Ext1->getOpcode(), VectorTy, SrcVecTy,
-                        TTI::getCastContextHint(Ext1), CostKind);
+                        Ext1->getOpcode(), VectorTy, SrcVecTy, GetExtCCH(Ext1),
+                        CostKind);
                   InstructionCost MulAccCost = RedCost - MulCost - TreeExtCost;
                   if (MulAccCost < VectorCost)
                     VectorCost = MulAccCost;
