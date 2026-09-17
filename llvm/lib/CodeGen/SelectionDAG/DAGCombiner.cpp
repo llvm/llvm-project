@@ -6938,28 +6938,31 @@ static unsigned getMinMaxOpcodeForClamp(bool IsMin, SDValue Operand1,
 static unsigned getMinMaxOpcodeForCompareFold(
     SDValue Operand1, SDValue Operand2, bool SetCCNoNaNs, ISD::CondCode CC,
     unsigned OrAndOpcode, SelectionDAG &DAG, bool isFMAXNUMFMINNUM_IEEE,
-    bool isFMAXNUMFMINNUM, bool isFMAXIMUMNUMFMINIMUMNUM) {
+    bool isFMAXNUMFMINNUM, bool isFMAXIMUMNUMFMINIMUMNUM,
+    bool isPSEUDOFMAXFMIN) {
   // The optimization cannot be applied for all the predicates because
   // of the way the min/max opcodes handle NaNs.
 
-  // It is safe to use FMINIMUMNUM/FMAXIMUMNUM or FMINNUM_IEEE/FMAXNUM_IEEE if
-  // all the operands are non NaN values.
+  // It is safe to use PSEUDO_FMIN/PSEUDO_FMAX, FMINIMUMNUM/FMAXIMUMNUM or
+  // FMINNUM_IEEE/FMAXNUM_IEEE if all the operands are non NaN values.
   if (((CC == ISD::SETLT || CC == ISD::SETLE) && (OrAndOpcode == ISD::OR)) ||
       ((CC == ISD::SETGT || CC == ISD::SETGE) && (OrAndOpcode == ISD::AND))) {
     if (!SetCCNoNaNs && !arebothOperandsNotNan(Operand1, Operand2, DAG))
       return ISD::DELETED_NODE;
-    return isFMAXIMUMNUMFMINIMUMNUM ? ISD::FMINIMUMNUM
-           : isFMAXNUMFMINNUM_IEEE  ? ISD::FMINNUM_IEEE
-                                    : ISD::DELETED_NODE;
+    return isPSEUDOFMAXFMIN           ? ISD::PSEUDO_FMIN
+           : isFMAXIMUMNUMFMINIMUMNUM ? ISD::FMINIMUMNUM
+           : isFMAXNUMFMINNUM_IEEE    ? ISD::FMINNUM_IEEE
+                                      : ISD::DELETED_NODE;
   }
 
   if (((CC == ISD::SETGT || CC == ISD::SETGE) && (OrAndOpcode == ISD::OR)) ||
       ((CC == ISD::SETLT || CC == ISD::SETLE) && (OrAndOpcode == ISD::AND))) {
     if (!SetCCNoNaNs && !arebothOperandsNotNan(Operand1, Operand2, DAG))
       return ISD::DELETED_NODE;
-    return isFMAXIMUMNUMFMINIMUMNUM ? ISD::FMAXIMUMNUM
-           : isFMAXNUMFMINNUM_IEEE  ? ISD::FMAXNUM_IEEE
-                                    : ISD::DELETED_NODE;
+    return isPSEUDOFMAXFMIN           ? ISD::PSEUDO_FMAX
+           : isFMAXIMUMNUMFMINIMUMNUM ? ISD::FMAXIMUMNUM
+           : isFMAXNUMFMINNUM_IEEE    ? ISD::FMAXNUM_IEEE
+                                      : ISD::DELETED_NODE;
   }
 
   bool IsMin;
@@ -6975,9 +6978,12 @@ static unsigned getMinMaxOpcodeForCompareFold(
     return ISD::DELETED_NODE;
 
   // For the above predicates, the optimization is valid if a NaN operand is
-  // discarded. FMINIMUMNUM/FMAXIMUMNUM always do so. FMINNUM/FMAXNUM and
-  // FMINNUM_IEEE/FMAXNUM_IEEE only do so for quiet NaNs, as a signaling NaN
+  // discarded. PSEUDO_FMIN/PSEUDO_FMAX return the second operand if either
+  // operand is a NaN. FMINIMUMNUM/FMAXIMUMNUM always discard. FMINNUM/FMAXNUM
+  // and FMINNUM_IEEE/FMAXNUM_IEEE only do so for quiet NaNs, as a signaling NaN
   // operand may instead produce a NaN.
+  if (isPSEUDOFMAXFMIN && DAG.isKnownNeverNaN(Operand2))
+    return IsMin ? ISD::PSEUDO_FMIN : ISD::PSEUDO_FMAX;
   if (isFMAXIMUMNUMFMINIMUMNUM)
     return IsMin ? ISD::FMINIMUMNUM : ISD::FMAXIMUMNUM;
   if (!arebothOperandsNotSNan(Operand1, Operand2, DAG))
@@ -7036,20 +7042,21 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
                                TLI.isOperationLegal(ISD::FMINNUM_IEEE, OpVT);
   bool isFMAXNUMFMINNUM = TLI.isOperationLegalOrCustom(ISD::FMAXNUM, OpVT) &&
                           TLI.isOperationLegalOrCustom(ISD::FMINNUM, OpVT);
-  // A custom FMINIMUMNUM/FMAXIMUMNUM may be more expensive than the compares,
-  // so only use one if the target considers forming it profitable.
+  // A custom FMINIMUMNUM/FMAXIMUMNUM may be more expensive than the compares.
   bool isFMAXIMUMNUMFMINIMUMNUM =
-      (TLI.isOperationLegal(ISD::FMAXIMUMNUM, OpVT) &&
-       TLI.isOperationLegal(ISD::FMINIMUMNUM, OpVT)) ||
-      (TLI.isOperationLegalOrCustom(ISD::FMAXIMUMNUM, OpVT) &&
-       TLI.isOperationLegalOrCustom(ISD::FMINIMUMNUM, OpVT) &&
-       TLI.isProfitableToCombineMinNumMaxNum(OpVT));
+      TLI.isOperationLegalOrCustom(ISD::FMAXIMUMNUM, OpVT) &&
+      TLI.isOperationLegalOrCustom(ISD::FMINIMUMNUM, OpVT) &&
+      TLI.isProfitableToCombineMinNumMaxNum(OpVT);
+  bool isPSEUDOFMAXFMIN =
+      TLI.isOperationLegalOrCustom(ISD::PSEUDO_FMAX, OpVT) &&
+      TLI.isOperationLegalOrCustom(ISD::PSEUDO_FMIN, OpVT);
   if (((OpVT.isInteger() && TLI.isOperationLegal(ISD::UMAX, OpVT) &&
         TLI.isOperationLegal(ISD::SMAX, OpVT) &&
         TLI.isOperationLegal(ISD::UMIN, OpVT) &&
         TLI.isOperationLegal(ISD::SMIN, OpVT)) ||
-       (OpVT.isFloatingPoint() && (isFMAXNUMFMINNUM_IEEE || isFMAXNUMFMINNUM ||
-                                   isFMAXIMUMNUMFMINIMUMNUM))) &&
+       (OpVT.isFloatingPoint() &&
+        (isFMAXNUMFMINNUM_IEEE || isFMAXNUMFMINNUM ||
+         isFMAXIMUMNUMFMINIMUMNUM || isPSEUDOFMAXFMIN))) &&
       !ISD::isIntEqualitySetCC(CCL) && !ISD::isFPEqualitySetCC(CCL) &&
       CCL != ISD::SETFALSE && CCL != ISD::SETO && CCL != ISD::SETUO &&
       CCL != ISD::SETTRUE &&
@@ -7102,12 +7109,18 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
           NewOpcode = IsSigned ? ISD::SMIN : ISD::UMIN;
         else
           NewOpcode = IsSigned ? ISD::SMAX : ISD::UMAX;
-      } else if (OpVT.isFloatingPoint())
+      } else if (OpVT.isFloatingPoint()) {
+        // The min/max opcodes below are commutative, so move a known non-NaN
+        // operand second, where PSEUDO_FMIN/PSEUDO_FMAX can make use of it.
+        if (isPSEUDOFMAXFMIN && !DAG.isKnownNeverNaN(Operand2) &&
+            DAG.isKnownNeverNaN(Operand1))
+          std::swap(Operand1, Operand2);
         NewOpcode = getMinMaxOpcodeForCompareFold(
             Operand1, Operand2,
             LHSSetCCFlags.hasNoNaNs() && RHSSetCCFlags.hasNoNaNs(), CC,
             LogicOp->getOpcode(), DAG, isFMAXNUMFMINNUM_IEEE, isFMAXNUMFMINNUM,
-            isFMAXIMUMNUMFMINIMUMNUM);
+            isFMAXIMUMNUMFMINIMUMNUM, isPSEUDOFMAXFMIN);
+      }
 
       if (NewOpcode != ISD::DELETED_NODE) {
         // Propagate fast-math flags from setcc.
