@@ -119,7 +119,7 @@ define void @scatter_v3i32_qword_index(<3 x i32> %val, ptr %base, <3 x i64> %idx
 ;
 ; NOVL-LABEL: 'scatter_v3i32_qword_index'
 ; NOVL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <3 x i64> %idx
-; NOVL-NEXT:  Cost Model: Found an estimated cost of 23 for instruction: call void @llvm.masked.scatter.v3i32.v3p0(<3 x i32> %val, <3 x ptr> align 4 %ptrs, <3 x i1> %mask)
+; NOVL-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: call void @llvm.masked.scatter.v3i32.v3p0(<3 x i32> %val, <3 x ptr> align 4 %ptrs, <3 x i1> %mask)
 ; NOVL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %ptrs = getelementptr inbounds i32, ptr %base, <3 x i64> %idx

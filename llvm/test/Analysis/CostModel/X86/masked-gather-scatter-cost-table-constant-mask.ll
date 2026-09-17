@@ -47,7 +47,7 @@ define <8 x i32> @ref_gather_v8i32(ptr %base, <8 x i64> %idx) {
 define void @ref_scatter_v8i32(<8 x i32> %val, ptr %base, <8 x i64> %idx) {
 ; RTHRU-LABEL: 'ref_scatter_v8i32'
 ; RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <8 x i64> %idx
-; RTHRU-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> align 4 %ptrs, <8 x i1> splat (i1 true))
+; RTHRU-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %val, <8 x ptr> align 4 %ptrs, <8 x i1> splat (i1 true))
 ; RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CODESIZE-LABEL: 'ref_scatter_v8i32'
@@ -80,7 +80,7 @@ define <24 x i32> @gather_v24i32_first_part(ptr %base, <24 x i64> %idx) {
 define void @scatter_v24i32_first_part(<24 x i32> %val, ptr %base, <24 x i64> %idx) {
 ; RTHRU-LABEL: 'scatter_v24i32_first_part'
 ; RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
-; RTHRU-NEXT:  Cost Model: Found an estimated cost of 25 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>)
+; RTHRU-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>)
 ; RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CODESIZE-LABEL: 'scatter_v24i32_first_part'
@@ -165,7 +165,7 @@ define <24 x i32> @gather_v24i32_variable_mask(ptr %base, <24 x i64> %idx, <24 x
 define void @scatter_v24i32_all_lanes(<24 x i32> %val, ptr %base, <24 x i64> %idx) {
 ; RTHRU-LABEL: 'scatter_v24i32_all_lanes'
 ; RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
-; RTHRU-NEXT:  Cost Model: Found an estimated cost of 78 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> splat (i1 true))
+; RTHRU-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> splat (i1 true))
 ; RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CODESIZE-LABEL: 'scatter_v24i32_all_lanes'
@@ -183,7 +183,7 @@ define void @scatter_v24i32_all_lanes(<24 x i32> %val, ptr %base, <24 x i64> %id
 define void @scatter_v24i32_variable_mask(<24 x i32> %val, ptr %base, <24 x i64> %idx, <24 x i1> %mask) {
 ; RTHRU-LABEL: 'scatter_v24i32_variable_mask'
 ; RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <24 x i64> %idx
-; RTHRU-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> %mask)
+; RTHRU-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %val, <24 x ptr> align 4 %ptrs, <24 x i1> %mask)
 ; RTHRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CODESIZE-LABEL: 'scatter_v24i32_variable_mask'

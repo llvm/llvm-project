@@ -89,7 +89,7 @@ define <24 x i32> @gather_v24i32(<24 x ptr> %ptrs, <24 x i1> %mask) {
 
 define void @scatter_v24i32(<24 x i32> %src, <24 x ptr> %ptrs, <24 x i1> %mask) {
 ; THROUGHPUT-LABEL: 'scatter_v24i32'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %src, <24 x ptr> align 4 %ptrs, <24 x i1> %mask)
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %src, <24 x ptr> align 4 %ptrs, <24 x i1> %mask)
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'scatter_v24i32'
@@ -108,7 +108,7 @@ define void @scatter_v24i32(<24 x i32> %src, <24 x ptr> %ptrs, <24 x i1> %mask) 
 
 define void @scatter_v24i32_allones(<24 x i32> %src, <24 x ptr> %ptrs) {
 ; THROUGHPUT-LABEL: 'scatter_v24i32_allones'
-; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 78 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %src, <24 x ptr> align 4 %ptrs, <24 x i1> splat (i1 true))
+; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: call void @llvm.masked.scatter.v24i32.v24p0(<24 x i32> %src, <24 x ptr> align 4 %ptrs, <24 x i1> splat (i1 true))
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SIZE-LABEL: 'scatter_v24i32_allones'
