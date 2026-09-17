@@ -251,6 +251,15 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return __builtin_shufflevector(__rs1, __rs1, 1, 3, 5, 7);                  \
   }
 
+#define __packed_concat2(name, rty, ty)                                        \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __lo, ty __hi) {  \
+    return __builtin_shufflevector(__lo, __hi, 0, 1, 2, 3);                    \
+  }
+#define __packed_concat4(name, rty, ty)                                        \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __lo, ty __hi) {  \
+    return __builtin_shufflevector(__lo, __hi, 0, 1, 2, 3, 4, 5, 6, 7);        \
+  }
+
 #define __packed_pair_ee4(name, ty)                                            \
   static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
     return __builtin_shufflevector(__rs1, __rs2, 0, 4, 2, 6);                  \
@@ -1099,6 +1108,12 @@ __packed_binary_builtin_cast(pnclipup_u16x4, uint32x2_t, uint16x4_t, __builtin_r
 __packed_binary_builtin_cast(pnclipp_i32x2, int64_t, int32x2_t, __builtin_riscv_pnclipp_i32x2)
 __packed_binary_builtin_cast(pnclipup_u32x2, uint64_t, uint32x2_t, __builtin_riscv_pnclipup_u32x2)
 
+/* Packed Subvector Join */
+__packed_concat4(pjoin2_i8x8, int8x8_t, int8x4_t)
+__packed_concat4(pjoin2_u8x8, uint8x8_t, uint8x4_t)
+__packed_concat2(pjoin2_i16x4, int16x4_t, int16x2_t)
+__packed_concat2(pjoin2_u16x4, uint16x4_t, uint16x2_t)
+
 /* Packed Store (32-bit) */
 __packed_store(pst_i8x4, int8x4_t, int8_t)
 __packed_store(pst_u8x4, uint8x4_t, uint8_t)
@@ -1277,6 +1292,8 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_unzipe4
 #undef __packed_unzipo2
 #undef __packed_unzipo4
+#undef __packed_concat2
+#undef __packed_concat4
 #undef __packed_pair_ee4
 #undef __packed_pair_eo4
 #undef __packed_pair_oe4
