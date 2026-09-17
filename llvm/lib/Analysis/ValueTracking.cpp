@@ -2157,6 +2157,16 @@ static void computeKnownBitsFromOperator(const Operator *I,
         computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
         Known = KnownBits::pdep(Known, Known2);
         break;
+      case Intrinsic::smulh:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
+        Known = KnownBits::mulhs(Known, Known2);
+        break;
+      case Intrinsic::umulh:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
+        Known = KnownBits::mulhu(Known, Known2);
+        break;
       case Intrinsic::uadd_sat:
         computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
         computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
@@ -5514,6 +5524,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::atan2: {
       FPClassTest InterestedY = InterestedClasses;
       FPClassTest InterestedX = InterestedClasses;
+
+      // We can rule out negative values if y cannot have a negative value.
+      if ((InterestedClasses & fcNegFinite) != fcNone)
+        InterestedY |= fcNegative;
+
+      // We can rule out positive values if y cannot have a positive value.
+      if ((InterestedClasses & fcPosFinite) != fcNone)
+        InterestedY |= fcPositive | fcNegSubnormal;
 
       // We can rule out zero and subnormal if x cannot have a positive value.
       if ((InterestedClasses & (fcZero | fcSubnormal)) != fcNone)

@@ -8,6 +8,7 @@
 
 #include "src/sys/stat/fchmodat.h"
 
+#include "hdr/errno_macros.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/fchmodat.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
@@ -17,7 +18,11 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fchmodat,
                    (int dirfd, const char *path, mode_t mode, int flags)) {
-  auto result = linux_syscalls::fchmodat(dirfd, path, mode, flags);
+  if (flags != 0) {
+    libc_errno = ENOTSUP;
+    return -1;
+  }
+  auto result = linux_syscalls::fchmodat(dirfd, path, mode);
   if (!result) {
     libc_errno = result.error();
     return -1;

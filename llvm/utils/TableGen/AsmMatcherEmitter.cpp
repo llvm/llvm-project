@@ -2652,6 +2652,68 @@ static void emitGetRegClassFromMatchKindFunc(AsmMatcherInfo &Info,
   OS << "}\n\n";
 }
 
+/// emitRegClassByHwModeMatchTable - Emit the RegClassByHwMode match table and
+/// helper functions for remapping match classes by hardware mode.
+static void emitRegClassByHwModeMatchTable(const CodeGenTarget &Target,
+                                           AsmMatcherInfo &Info,
+                                           raw_ostream &OS) {
+  ArrayRef<const Record *> RegClassesByHwMode = Target.getAllRegClassByHwMode();
+  if (RegClassesByHwMode.empty())
+    return;
+
+  const CodeGenHwModes &CGH = Target.getHwModes();
+  const CodeGenRegBank &RegBank = Target.getRegBank();
+  unsigned NumModes = CGH.getNumModeIds();
+  unsigned NumClassesByHwMode = RegClassesByHwMode.size();
+
+  OS << "static constexpr MatchClassKind RegClassByHwModeMatchTable["
+     << NumModes << "][" << NumClassesByHwMode << "] = {\n";
+
+  // TODO: If the instruction predicates can statically resolve which hwmode,
+  // directly match the register class
+  for (unsigned M = 0; M < NumModes; ++M) {
+    OS << "  { // " << CGH.getModeName(M, /*IncludeDefault=*/true) << '\n';
+    for (unsigned I = 0; I != NumClassesByHwMode; ++I) {
+      const Record *Class = RegClassesByHwMode[I];
+      const HwModeSelect &ModeSelect = CGH.getHwModeSelect(Class);
+
+      auto FoundMode =
+          find_if(ModeSelect.Items,
+                  [=](const HwModeSelect::PairType P) { return P.first == M; });
+
+      if (FoundMode == ModeSelect.Items.end()) {
+        OS << "    InvalidMatchClass, // Missing mode entry for "
+           << Class->getName() << "\n";
+      } else {
+        const CodeGenRegisterClass *RegClass =
+            RegBank.getRegClass(FoundMode->second);
+        const ClassInfo *CI = Info.RegisterClassClasses.at(RegClass->getDef());
+        OS << "    " << CI->Name << ", // " << Class->getName() << "\n";
+      }
+    }
+
+    OS << "  },\n";
+  }
+
+  OS << "};\n\n";
+
+  OS << "static_assert(MCK_LAST_REGCLASS_BY_HWMODE - MCK_LAST_REGISTER == "
+     << NumClassesByHwMode << ");\n\n";
+
+  OS << "[[maybe_unused]] static inline MatchClassKind\n"
+     << "remapRegClassByHwMode(unsigned Kind, const MCSubtargetInfo &STI) {\n"
+     << "  if (Kind > MCK_LAST_REGISTER && Kind <= "
+        "MCK_LAST_REGCLASS_BY_HWMODE) {\n"
+     << "    unsigned HwMode = "
+        "STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);\n"
+     << "    assert(HwMode < " << NumModes << " && \"Invalid HwMode\");\n"
+     << "    return RegClassByHwModeMatchTable[HwMode][Kind - "
+        "(MCK_LAST_REGISTER + 1)];\n"
+     << "  }\n"
+     << "  return static_cast<MatchClassKind>(Kind);\n"
+     << "}\n\n";
+}
+
 /// emitValidateOperandClass - Emit the function to validate an operand class.
 static void emitValidateOperandClass(const CodeGenTarget &Target,
                                      AsmMatcherInfo &Info, raw_ostream &OS) {
@@ -2700,68 +2762,16 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
   }
   OS << "  } // end switch (Kind)\n\n";
 
-  const CodeGenRegBank &RegBank = Target.getRegBank();
   ArrayRef<const Record *> RegClassesByHwMode = Target.getAllRegClassByHwMode();
-  unsigned NumClassesByHwMode = RegClassesByHwMode.size();
-
   if (!RegClassesByHwMode.empty()) {
     // Resolve RegClassByHwMode kinds to their concrete class regardless of
     // whether Operand is actually a register, so that the diagnostic
     // fallback paths below (for both register and non-register operands)
     // see a concrete class rather than an unresolved by-hwmode one.
-    OS << "  if (Kind > MCK_LAST_REGISTER &&"
-          " Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {\n";
-
-    const CodeGenHwModes &CGH = Target.getHwModes();
-    unsigned NumModes = CGH.getNumModeIds();
-
-    OS << indent(4)
-       << "static constexpr MatchClassKind RegClassByHwModeMatchTable["
-       << NumModes << "][" << RegClassesByHwMode.size() << "] = {\n";
-
-    // TODO: If the instruction predicates can statically resolve which hwmode,
-    // directly match the register class
-    for (unsigned M = 0; M < NumModes; ++M) {
-      OS << indent(6) << "{ // " << CGH.getModeName(M, /*IncludeDefault=*/true)
-         << '\n';
-      for (unsigned I = 0; I != NumClassesByHwMode; ++I) {
-        const Record *Class = RegClassesByHwMode[I];
-        const HwModeSelect &ModeSelect = CGH.getHwModeSelect(Class);
-
-        auto FoundMode =
-            find_if(ModeSelect.Items, [=](const HwModeSelect::PairType P) {
-              return P.first == M;
-            });
-
-        if (FoundMode == ModeSelect.Items.end()) {
-          OS << indent(8) << "InvalidMatchClass, // Missing mode entry for "
-             << Class->getName() << "\n";
-        } else {
-          const CodeGenRegisterClass *RegClass =
-              RegBank.getRegClass(FoundMode->second);
-          const ClassInfo *CI =
-              Info.RegisterClassClasses.at(RegClass->getDef());
-          OS << indent(8) << CI->Name << ", // " << Class->getName() << "\n";
-        }
-      }
-
-      OS << indent(6) << "},\n";
-    }
-
-    OS << indent(4) << "};\n\n";
-
-    OS << indent(4)
-       << "static_assert(MCK_LAST_REGCLASS_BY_HWMODE - MCK_LAST_REGISTER == "
-       << NumClassesByHwMode << ");\n";
-
-    OS << indent(4)
-       << "const unsigned HwMode = "
-          "STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);\n"
-       << indent(4)
-       << "Kind = RegClassByHwModeMatchTable[HwMode][Kind - (MCK_LAST_REGISTER "
-          "+ 1)];\n"
-          "  }\n\n";
+    OS << "  Kind = remapRegClassByHwMode(Kind, STI);\n\n";
   }
+
+  const CodeGenRegBank &RegBank = Target.getRegBank();
 
   // Check for register operands, including sub-classes.
   const auto &Regs = RegBank.getRegisters();
@@ -3676,6 +3686,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   // Emit the function mapping token class kinds to diagnostic codes.
   if (AsmParser->getValueAsBit("EmitTokenDiagnosticTypes"))
     emitTokenDiagFunction(Info, OS);
+
+  // Emit the RegClassByHwMode match table and remap helper functions.
+  emitRegClassByHwModeMatchTable(Target, Info, OS);
 
   // Emit the routine to validate an operand against a match class.
   emitValidateOperandClass(Target, Info, OS);

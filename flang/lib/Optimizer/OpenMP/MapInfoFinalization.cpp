@@ -1175,6 +1175,43 @@ class MapInfoFinalizationPass
       deferrableDesc.push_back(std::make_pair(newMapInfoOp, attachMap));
   }
 
+  /// Use the materialized descriptor's address for target data block arguments.
+  /// Lowering initially binds assumed-shape arguments to box values, whereas
+  /// their maps return the type of the box's base address. The use_device_addr
+  /// and use_device_ptr clauses require the map result and block argument types
+  /// to agree. Load the box inside the region to preserve its existing uses.
+  void updateUseDeviceDescriptorArgs(mlir::omp::MapInfoOp map,
+                                     mlir::Value descriptor,
+                                     mlir::Operation *target,
+                                     fir::FirOpBuilder &builder) {
+    auto targetData = mlir::dyn_cast<mlir::omp::TargetDataOp>(target);
+    if (!targetData)
+      return;
+
+    auto argIface = mlir::cast<mlir::omp::BlockArgOpenMPOpInterface>(target);
+    auto updateArgs = [&](mlir::ValueRange maps,
+                          llvm::ArrayRef<mlir::BlockArgument> args) {
+      for (auto [mapValue, blockArg] : llvm::zip_equal(maps, args)) {
+        mlir::BlockArgument arg = blockArg;
+        if (mapValue != map.getResult() ||
+            !mlir::isa<fir::BaseBoxType>(arg.getType()))
+          continue;
+
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToStart(arg.getOwner());
+        arg.setType(descriptor.getType());
+        auto load = fir::LoadOp::create(builder, arg.getLoc(), arg);
+        arg.replaceAllUsesExcept(load.getResult(), load);
+        map.getResult().setType(
+            mlir::cast<mlir::omp::PointerLikeType>(descriptor.getType()));
+      }
+    };
+    updateArgs(targetData.getUseDeviceAddrVars(),
+               argIface.getUseDeviceAddrBlockArgs());
+    updateArgs(targetData.getUseDevicePtrVars(),
+               argIface.getUseDevicePtrBlockArgs());
+  }
+
   // This function handles the splitting of allocatable/pointer maps in
   // Fortran into descriptor, pointer and attach map components, as
   // well as the handling of ref_ptr, ref_ptee, ref_ptr_ptee and attach
@@ -1210,6 +1247,7 @@ class MapInfoFinalizationPass
 
     mlir::Value descriptor = getDescriptorFromBoxMap(
         op, builder, descCanBeDeferred, canOptimizeDescViaPrivatization);
+    updateUseDeviceDescriptorArgs(op, descriptor, target, builder);
     mlir::FlatSymbolRefAttr mapperId = op.getMapperIdAttr();
 
     // Exclude irregular maps from optimization via privatization; at least for
@@ -1469,41 +1507,6 @@ class MapInfoFinalizationPass
           mlir::Operation *targetUser = getFirstTargetUser(op);
           assert(targetUser && "expected user of map operation was not found");
           genDescriptorMaps(op, builder, targetUser);
-        }
-      });
-
-      func->walk([&](mlir::omp::MapInfoOp op) {
-        // If a record type is not mapped with the `close` modifier while some
-        // of its members are (e.g. descriptor maps), then in USM mode, the
-        // memory for the record will be allocated in unified memory while the
-        // the members might be allocated in device memory. This creates an
-        // inconsistent map for the record type where some of its members are
-        // allocated in different address spaces.
-        //
-        // This fixes this issue by taking a conservative approach and removing
-        // the `close` flag from members if it is not used for mapping the
-        // parent record.
-        if (op.getMembers().empty())
-          return;
-
-        mlir::Type varTy = fir::unwrapRefType(op.getVarPtr().getType());
-        if (!mlir::isa<fir::RecordType>(varTy))
-          return;
-
-        auto mapFlag = op.getMapType();
-        bool hasClose = (mapFlag & mlir::omp::ClauseMapFlags::close) ==
-                        mlir::omp::ClauseMapFlags::close;
-
-        if (hasClose)
-          return;
-
-        for (auto member : op.getMembers()) {
-          if (auto memberOp = llvm::dyn_cast_if_present<mlir::omp::MapInfoOp>(
-                  member.getDefiningOp())) {
-            auto memberMapFlag =
-                memberOp.getMapType() & ~mlir::omp::ClauseMapFlags::close;
-            memberOp.setMapType(memberMapFlag);
-          }
         }
       });
 
