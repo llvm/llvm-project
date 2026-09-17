@@ -75,7 +75,6 @@ define amdgpu_kernel void @ds_wmma(ptr addrspace(3) %base, ptr addrspace(1) %out
 ; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    v_mov_b32_e32 v16, 0
-; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
 ; COEXEC-NEXT:    s_clause 0x7
 ; COEXEC-NEXT:    global_store_b128 v16, v[62:65], s[0:1] offset:16
@@ -344,9 +343,8 @@ define amdgpu_kernel void @ds_wmma_permute(ptr addrspace(3) %base, ptr addrspace
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[0:7], v[122:129], v[154:161], v[0:7]
 ; COEXEC-NEXT:    s_cbranch_scc1 .LBB1_1
 ; COEXEC-NEXT:  ; %bb.2: ; %end
-; COEXEC-NEXT:    v_mov_b32_e32 v16, 0
 ; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
-; COEXEC-NEXT:    v_mov_b32_e32 v32, 0
+; COEXEC-NEXT:    v_mov_b32_e32 v16, 0
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
 ; COEXEC-NEXT:    s_clause 0x7
 ; COEXEC-NEXT:    global_store_b128 v16, v[94:97], s[0:1] offset:16
@@ -616,83 +614,83 @@ define amdgpu_kernel void @ds_wmma_block_carried(ptr addrspace(3) %base, ptr add
 ; COEXEC-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, v0
 ; COEXEC-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v4, v0
 ; COEXEC-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v7, v0 :: v_dual_mov_b32 v8, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v7, v0 :: v_dual_mov_b32 v34, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v35, v0 :: v_dual_mov_b32 v36, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v37, v0 :: v_dual_mov_b32 v38, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v39, v0 :: v_dual_mov_b32 v40, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v41, v0 :: v_dual_mov_b32 v8, v0
 ; COEXEC-NEXT:    v_dual_mov_b32 v9, v0 :: v_dual_mov_b32 v10, v0
 ; COEXEC-NEXT:    v_dual_mov_b32 v11, v0 :: v_dual_mov_b32 v12, v0
 ; COEXEC-NEXT:    v_dual_mov_b32 v13, v0 :: v_dual_mov_b32 v14, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v15, v0 :: v_dual_mov_b32 v16, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v17, v0 :: v_dual_mov_b32 v18, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v19, v0 :: v_dual_mov_b32 v20, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v21, v0 :: v_dual_mov_b32 v22, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v23, v0 :: v_dual_mov_b32 v24, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v25, v0 :: v_dual_mov_b32 v26, v0
-; COEXEC-NEXT:    v_dual_mov_b32 v27, v0 :: v_dual_mov_b32 v28, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v15, v0 :: v_dual_mov_b32 v42, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v43, v0 :: v_dual_mov_b32 v44, v0
+; COEXEC-NEXT:    v_dual_mov_b32 v45, v0 :: v_dual_mov_b32 v46, v0
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
 ; COEXEC-NEXT:    s_bitcmp1_b32 s0, 0
-; COEXEC-NEXT:    v_mov_b32_e32 v29, v0
+; COEXEC-NEXT:    v_mov_b32_e32 v47, v0
 ; COEXEC-NEXT:    s_cselect_b32 s2, -1, 0
-; COEXEC-NEXT:    v_mov_b32_e32 v30, v0
+; COEXEC-NEXT:    v_mov_b32_e32 v48, v0
 ; COEXEC-NEXT:    s_add_co_i32 s0, s3, s1
-; COEXEC-NEXT:    v_mov_b32_e32 v31, v0
+; COEXEC-NEXT:    v_mov_b32_e32 v49, v0
 ; COEXEC-NEXT:    s_xor_b32 s2, s2, -1
-; COEXEC-NEXT:    v_mov_b32_e32 v60, s3
-; COEXEC-NEXT:    ds_load_tr16_b128 v[32:35], v60
-; COEXEC-NEXT:    ds_load_tr16_b128 v[36:39], v60 offset:64
-; COEXEC-NEXT:    ds_load_tr16_b128 v[40:43], v60 offset:128
-; COEXEC-NEXT:    ds_load_tr16_b128 v[44:47], v60 offset:192
-; COEXEC-NEXT:    ds_load_tr16_b128 v[48:51], v60 offset:256
-; COEXEC-NEXT:    ds_load_tr16_b128 v[52:55], v60 offset:320
-; COEXEC-NEXT:    ds_load_tr16_b128 v[56:59], v60 offset:384
-; COEXEC-NEXT:    ds_load_tr16_b128 v[60:63], v60 offset:448
+; COEXEC-NEXT:    v_mov_b32_e32 v32, s3
+; COEXEC-NEXT:    ds_load_tr16_b128 v[16:19], v32
+; COEXEC-NEXT:    ds_load_tr16_b128 v[20:23], v32 offset:64
+; COEXEC-NEXT:    ds_load_tr16_b128 v[24:27], v32 offset:128
+; COEXEC-NEXT:    ds_load_tr16_b128 v[28:31], v32 offset:192
+; COEXEC-NEXT:    ds_load_tr16_b128 v[50:53], v32 offset:256
+; COEXEC-NEXT:    ds_load_tr16_b128 v[54:57], v32 offset:320
+; COEXEC-NEXT:    ds_load_tr16_b128 v[58:61], v32 offset:384
+; COEXEC-NEXT:    ds_load_tr16_b128 v[62:65], v32 offset:448
 ; COEXEC-NEXT:    s_wait_dscnt 0x0
 ; COEXEC-NEXT:  .LBB2_1: ; %loop
 ; COEXEC-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; COEXEC-NEXT:    s_wait_dscnt 0x4
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[32:39], v[40:47], v[24:31]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[42:49], v[16:23], v[24:31], v[42:49]
 ; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    v_nop
-; COEXEC-NEXT:    v_mov_b64_e32 v[70:71], s[14:15]
-; COEXEC-NEXT:    v_mov_b64_e32 v[68:69], s[12:13]
-; COEXEC-NEXT:    v_mov_b64_e32 v[66:67], s[10:11]
-; COEXEC-NEXT:    v_mov_b64_e32 v[64:65], s[8:9]
-; COEXEC-NEXT:    v_mov_b32_e32 v72, s0
+; COEXEC-NEXT:    v_mov_b64_e32 v[72:73], s[14:15]
+; COEXEC-NEXT:    v_mov_b64_e32 v[70:71], s[12:13]
+; COEXEC-NEXT:    v_mov_b64_e32 v[68:69], s[10:11]
+; COEXEC-NEXT:    v_mov_b64_e32 v[66:67], s[8:9]
+; COEXEC-NEXT:    v_mov_b32_e32 v32, s0
 ; COEXEC-NEXT:    s_add_co_i32 s0, s0, s1
 ; COEXEC-NEXT:    s_and_b32 s3, s2, exec_lo
 ; COEXEC-NEXT:    s_cselect_b32 s3, 1, 0
 ; COEXEC-NEXT:    s_cmp_lg_u32 s3, 1
 ; COEXEC-NEXT:    s_wait_dscnt 0x0
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[48:55], v[56:63], v[16:23]
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[64:71], v[64:71], v[8:15]
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[0:7], v[64:71], v[64:71], v[0:7]
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[32:39], v[40:47], v[24:31]
-; COEXEC-NEXT:    ds_load_tr16_b128 v[32:35], v72
-; COEXEC-NEXT:    ds_load_tr16_b128 v[36:39], v72 offset:64
-; COEXEC-NEXT:    ds_load_tr16_b128 v[40:43], v72 offset:128
-; COEXEC-NEXT:    ds_load_tr16_b128 v[44:47], v72 offset:192
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[48:55], v[56:63], v[16:23]
-; COEXEC-NEXT:    ds_load_tr16_b128 v[48:51], v72 offset:256
-; COEXEC-NEXT:    ds_load_tr16_b128 v[52:55], v72 offset:320
-; COEXEC-NEXT:    ds_load_tr16_b128 v[56:59], v72 offset:384
-; COEXEC-NEXT:    ds_load_tr16_b128 v[60:63], v72 offset:448
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[64:71], v[64:71], v[8:15]
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[0:7], v[64:71], v[64:71], v[0:7]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[50:57], v[58:65], v[8:15]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[34:41], v[66:73], v[66:73], v[34:41]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[0:7], v[66:73], v[66:73], v[0:7]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[42:49], v[16:23], v[24:31], v[42:49]
+; COEXEC-NEXT:    ds_load_tr16_b128 v[16:19], v32
+; COEXEC-NEXT:    ds_load_tr16_b128 v[20:23], v32 offset:64
+; COEXEC-NEXT:    ds_load_tr16_b128 v[24:27], v32 offset:128
+; COEXEC-NEXT:    ds_load_tr16_b128 v[28:31], v32 offset:192
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[50:57], v[58:65], v[8:15]
+; COEXEC-NEXT:    ds_load_tr16_b128 v[50:53], v32 offset:256
+; COEXEC-NEXT:    ds_load_tr16_b128 v[54:57], v32 offset:320
+; COEXEC-NEXT:    ds_load_tr16_b128 v[58:61], v32 offset:384
+; COEXEC-NEXT:    ds_load_tr16_b128 v[62:65], v32 offset:448
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[34:41], v[66:73], v[66:73], v[34:41]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[0:7], v[66:73], v[66:73], v[0:7]
 ; COEXEC-NEXT:    s_cbranch_scc1 .LBB2_1
 ; COEXEC-NEXT:  ; %bb.2: ; %end
 ; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; COEXEC-NEXT:    s_wait_dscnt 0x7
 ; COEXEC-NEXT:    v_nop
-; COEXEC-NEXT:    v_mov_b32_e32 v32, 0
+; COEXEC-NEXT:    v_mov_b32_e32 v16, 0
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
 ; COEXEC-NEXT:    s_clause 0x7
-; COEXEC-NEXT:    global_store_b128 v32, v[28:31], s[0:1] offset:16
-; COEXEC-NEXT:    global_store_b128 v32, v[24:27], s[0:1]
-; COEXEC-NEXT:    global_store_b128 v32, v[20:23], s[0:1] offset:144
-; COEXEC-NEXT:    global_store_b128 v32, v[16:19], s[0:1] offset:128
-; COEXEC-NEXT:    global_store_b128 v32, v[12:15], s[0:1] offset:272
-; COEXEC-NEXT:    global_store_b128 v32, v[8:11], s[0:1] offset:256
-; COEXEC-NEXT:    global_store_b128 v32, v[4:7], s[0:1] offset:400
-; COEXEC-NEXT:    global_store_b128 v32, v[0:3], s[0:1] offset:384
+; COEXEC-NEXT:    global_store_b128 v16, v[46:49], s[0:1] offset:16
+; COEXEC-NEXT:    global_store_b128 v16, v[42:45], s[0:1]
+; COEXEC-NEXT:    global_store_b128 v16, v[12:15], s[0:1] offset:144
+; COEXEC-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:128
+; COEXEC-NEXT:    global_store_b128 v16, v[38:41], s[0:1] offset:272
+; COEXEC-NEXT:    global_store_b128 v16, v[34:37], s[0:1] offset:256
+; COEXEC-NEXT:    global_store_b128 v16, v[4:7], s[0:1] offset:400
+; COEXEC-NEXT:    global_store_b128 v16, v[0:3], s[0:1] offset:384
 ; COEXEC-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; COEXEC-NEXT:    s_endpgm
 ;
@@ -719,82 +717,78 @@ define amdgpu_kernel void @ds_wmma_block_carried(ptr addrspace(3) %base, ptr add
 ; GCN-NEXT:    v_dual_mov_b32 v7, s2 :: v_dual_mov_b32 v1, v0
 ; GCN-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, v0
 ; GCN-NEXT:    v_mov_b32_e32 v4, v0
-; GCN-NEXT:    ds_load_tr16_b128 v[32:35], v7
-; GCN-NEXT:    ds_load_tr16_b128 v[36:39], v7 offset:64
-; GCN-NEXT:    ds_load_tr16_b128 v[40:43], v7 offset:128
-; GCN-NEXT:    ds_load_tr16_b128 v[44:47], v7 offset:192
-; GCN-NEXT:    ds_load_tr16_b128 v[48:51], v7 offset:256
-; GCN-NEXT:    ds_load_tr16_b128 v[52:55], v7 offset:320
-; GCN-NEXT:    ds_load_tr16_b128 v[56:59], v7 offset:384
-; GCN-NEXT:    ds_load_tr16_b128 v[60:63], v7 offset:448
+; GCN-NEXT:    ds_load_tr16_b128 v[16:19], v7
+; GCN-NEXT:    ds_load_tr16_b128 v[20:23], v7 offset:64
+; GCN-NEXT:    ds_load_tr16_b128 v[24:27], v7 offset:128
+; GCN-NEXT:    ds_load_tr16_b128 v[28:31], v7 offset:192
+; GCN-NEXT:    ds_load_tr16_b128 v[50:53], v7 offset:256
+; GCN-NEXT:    ds_load_tr16_b128 v[54:57], v7 offset:320
+; GCN-NEXT:    ds_load_tr16_b128 v[58:61], v7 offset:384
+; GCN-NEXT:    ds_load_tr16_b128 v[62:65], v7 offset:448
 ; GCN-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, v0
-; GCN-NEXT:    v_dual_mov_b32 v7, v0 :: v_dual_mov_b32 v8, v0
+; GCN-NEXT:    v_dual_mov_b32 v7, v0 :: v_dual_mov_b32 v34, v0
+; GCN-NEXT:    v_dual_mov_b32 v35, v0 :: v_dual_mov_b32 v36, v0
+; GCN-NEXT:    v_dual_mov_b32 v37, v0 :: v_dual_mov_b32 v38, v0
+; GCN-NEXT:    v_dual_mov_b32 v39, v0 :: v_dual_mov_b32 v40, v0
+; GCN-NEXT:    v_dual_mov_b32 v41, v0 :: v_dual_mov_b32 v8, v0
 ; GCN-NEXT:    v_dual_mov_b32 v9, v0 :: v_dual_mov_b32 v10, v0
 ; GCN-NEXT:    v_dual_mov_b32 v11, v0 :: v_dual_mov_b32 v12, v0
 ; GCN-NEXT:    v_dual_mov_b32 v13, v0 :: v_dual_mov_b32 v14, v0
-; GCN-NEXT:    v_dual_mov_b32 v15, v0 :: v_dual_mov_b32 v16, v0
-; GCN-NEXT:    v_dual_mov_b32 v17, v0 :: v_dual_mov_b32 v18, v0
-; GCN-NEXT:    v_dual_mov_b32 v19, v0 :: v_dual_mov_b32 v20, v0
-; GCN-NEXT:    v_dual_mov_b32 v21, v0 :: v_dual_mov_b32 v22, v0
-; GCN-NEXT:    v_dual_mov_b32 v23, v0 :: v_dual_mov_b32 v24, v0
-; GCN-NEXT:    v_dual_mov_b32 v25, v0 :: v_dual_mov_b32 v26, v0
-; GCN-NEXT:    v_dual_mov_b32 v27, v0 :: v_dual_mov_b32 v28, v0
-; GCN-NEXT:    v_dual_mov_b32 v29, v0 :: v_dual_mov_b32 v30, v0
-; GCN-NEXT:    v_mov_b32_e32 v31, v0
+; GCN-NEXT:    v_dual_mov_b32 v15, v0 :: v_dual_mov_b32 v42, v0
+; GCN-NEXT:    v_dual_mov_b32 v43, v0 :: v_dual_mov_b32 v44, v0
+; GCN-NEXT:    v_dual_mov_b32 v45, v0 :: v_dual_mov_b32 v46, v0
+; GCN-NEXT:    v_dual_mov_b32 v47, v0 :: v_dual_mov_b32 v48, v0
+; GCN-NEXT:    v_mov_b32_e32 v49, v0
 ; GCN-NEXT:    s_cselect_b32 s3, -1, 0
 ; GCN-NEXT:    s_add_co_i32 s0, s2, s1
 ; GCN-NEXT:    s_xor_b32 s2, s3, -1
 ; GCN-NEXT:    s_wait_dscnt 0x0
 ; GCN-NEXT:  .LBB2_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    s_wait_dscnt 0x0
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[48:55], v[56:63], v[16:23]
+; GCN-NEXT:    s_wait_dscnt 0x4
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[42:49], v[16:23], v[24:31], v[42:49]
+; GCN-NEXT:    v_mov_b32_e32 v32, s0
 ; GCN-NEXT:    v_nop
 ; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_mov_b64_e32 v[70:71], s[14:15]
-; GCN-NEXT:    v_mov_b64_e32 v[68:69], s[12:13]
-; GCN-NEXT:    v_mov_b64_e32 v[66:67], s[10:11]
-; GCN-NEXT:    v_mov_b64_e32 v[64:65], s[8:9]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[32:39], v[40:47], v[24:31]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[48:55], v[56:63], v[16:23]
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_mov_b32_e32 v60, s0
+; GCN-NEXT:    v_mov_b64_e32 v[72:73], s[14:15]
 ; GCN-NEXT:    s_add_co_i32 s0, s0, s1
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[32:39], v[40:47], v[24:31]
-; GCN-NEXT:    ds_load_tr16_b128 v[32:35], v60
-; GCN-NEXT:    ds_load_tr16_b128 v[36:39], v60 offset:64
-; GCN-NEXT:    ds_load_tr16_b128 v[40:43], v60 offset:128
-; GCN-NEXT:    ds_load_tr16_b128 v[44:47], v60 offset:192
-; GCN-NEXT:    ds_load_tr16_b128 v[48:51], v60 offset:256
-; GCN-NEXT:    ds_load_tr16_b128 v[52:55], v60 offset:320
-; GCN-NEXT:    ds_load_tr16_b128 v[56:59], v60 offset:384
-; GCN-NEXT:    ds_load_tr16_b128 v[60:63], v60 offset:448
 ; GCN-NEXT:    s_and_b32 s3, s2, exec_lo
+; GCN-NEXT:    v_mov_b64_e32 v[70:71], s[12:13]
+; GCN-NEXT:    v_mov_b64_e32 v[68:69], s[10:11]
+; GCN-NEXT:    s_wait_dscnt 0x0
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[50:57], v[58:65], v[8:15]
 ; GCN-NEXT:    s_cselect_b32 s3, 1, 0
+; GCN-NEXT:    v_mov_b64_e32 v[66:67], s[8:9]
 ; GCN-NEXT:    s_cmp_lg_u32 s3, 1
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[64:71], v[64:71], v[8:15]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[0:7], v[64:71], v[64:71], v[0:7]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[64:71], v[64:71], v[8:15]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[0:7], v[64:71], v[64:71], v[0:7]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[42:49], v[16:23], v[24:31], v[42:49]
+; GCN-NEXT:    ds_load_tr16_b128 v[16:19], v32
+; GCN-NEXT:    ds_load_tr16_b128 v[20:23], v32 offset:64
+; GCN-NEXT:    ds_load_tr16_b128 v[24:27], v32 offset:128
+; GCN-NEXT:    ds_load_tr16_b128 v[28:31], v32 offset:192
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[50:57], v[58:65], v[8:15]
+; GCN-NEXT:    ds_load_tr16_b128 v[50:53], v32 offset:256
+; GCN-NEXT:    ds_load_tr16_b128 v[54:57], v32 offset:320
+; GCN-NEXT:    ds_load_tr16_b128 v[58:61], v32 offset:384
+; GCN-NEXT:    ds_load_tr16_b128 v[62:65], v32 offset:448
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[34:41], v[66:73], v[66:73], v[34:41]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[0:7], v[66:73], v[66:73], v[0:7]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[34:41], v[66:73], v[66:73], v[34:41]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[0:7], v[66:73], v[66:73], v[0:7]
 ; GCN-NEXT:    s_cbranch_scc1 .LBB2_1
 ; GCN-NEXT:  ; %bb.2: ; %end
 ; GCN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; GCN-NEXT:    s_wait_dscnt 0x7
-; GCN-NEXT:    v_mov_b32_e32 v32, 0
+; GCN-NEXT:    v_mov_b32_e32 v16, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_clause 0x7
-; GCN-NEXT:    global_store_b128 v32, v[28:31], s[0:1] offset:16
-; GCN-NEXT:    global_store_b128 v32, v[24:27], s[0:1]
-; GCN-NEXT:    global_store_b128 v32, v[20:23], s[0:1] offset:144
-; GCN-NEXT:    global_store_b128 v32, v[16:19], s[0:1] offset:128
-; GCN-NEXT:    global_store_b128 v32, v[12:15], s[0:1] offset:272
-; GCN-NEXT:    global_store_b128 v32, v[8:11], s[0:1] offset:256
-; GCN-NEXT:    global_store_b128 v32, v[4:7], s[0:1] offset:400
-; GCN-NEXT:    global_store_b128 v32, v[0:3], s[0:1] offset:384
+; GCN-NEXT:    global_store_b128 v16, v[46:49], s[0:1] offset:16
+; GCN-NEXT:    global_store_b128 v16, v[42:45], s[0:1]
+; GCN-NEXT:    global_store_b128 v16, v[12:15], s[0:1] offset:144
+; GCN-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:128
+; GCN-NEXT:    global_store_b128 v16, v[38:41], s[0:1] offset:272
+; GCN-NEXT:    global_store_b128 v16, v[34:37], s[0:1] offset:256
+; GCN-NEXT:    global_store_b128 v16, v[4:7], s[0:1] offset:400
+; GCN-NEXT:    global_store_b128 v16, v[0:3], s[0:1] offset:384
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -914,80 +908,80 @@ define amdgpu_kernel void @ds_wmma_loop_carried(ptr addrspace(3) %base, ptr addr
 ; COEXEC-NEXT:    s_mov_b32 s13, s8
 ; COEXEC-NEXT:    s_mov_b32 s14, s8
 ; COEXEC-NEXT:    s_mov_b32 s15, s8
-; COEXEC-NEXT:    v_mov_b64_e32 v[70:71], s[14:15]
-; COEXEC-NEXT:    v_mov_b64_e32 v[68:69], s[12:13]
-; COEXEC-NEXT:    v_mov_b64_e32 v[66:67], s[10:11]
-; COEXEC-NEXT:    v_mov_b64_e32 v[64:65], s[8:9]
+; COEXEC-NEXT:    v_mov_b64_e32 v[72:73], s[14:15]
+; COEXEC-NEXT:    v_mov_b64_e32 v[70:71], s[12:13]
+; COEXEC-NEXT:    v_mov_b64_e32 v[68:69], s[10:11]
+; COEXEC-NEXT:    v_mov_b64_e32 v[66:67], s[8:9]
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
-; COEXEC-NEXT:    v_mov_b32_e32 v40, s2
+; COEXEC-NEXT:    v_mov_b32_e32 v24, s2
 ; COEXEC-NEXT:    s_bitcmp1_b32 s0, 0
 ; COEXEC-NEXT:    s_cselect_b32 s3, -1, 0
 ; COEXEC-NEXT:    s_add_co_i32 s0, s2, s1
-; COEXEC-NEXT:    ds_load_tr16_b128 v[0:3], v40
-; COEXEC-NEXT:    ds_load_tr16_b128 v[4:7], v40 offset:64
-; COEXEC-NEXT:    ds_load_tr16_b128 v[12:15], v40 offset:320
-; COEXEC-NEXT:    ds_load_tr16_b128 v[8:11], v40 offset:256
-; COEXEC-NEXT:    ds_load_tr16_b128 v[36:39], v40 offset:576
-; COEXEC-NEXT:    ds_load_tr16_b128 v[32:35], v40 offset:512
-; COEXEC-NEXT:    ds_load_tr16_b128 v[76:79], v40 offset:832
-; COEXEC-NEXT:    ds_load_tr16_b128 v[72:75], v40 offset:768
-; COEXEC-NEXT:    ds_load_tr16_b128 v[16:19], v40 offset:128
-; COEXEC-NEXT:    ds_load_tr16_b128 v[20:23], v40 offset:192
-; COEXEC-NEXT:    ds_load_tr16_b128 v[24:27], v40 offset:384
-; COEXEC-NEXT:    ds_load_tr16_b128 v[28:31], v40 offset:448
-; COEXEC-NEXT:    ds_load_tr16_b128 v[80:83], v40 offset:640
-; COEXEC-NEXT:    ds_load_tr16_b128 v[84:87], v40 offset:704
-; COEXEC-NEXT:    ds_load_tr16_b128 v[88:91], v40 offset:896
-; COEXEC-NEXT:    ds_load_tr16_b128 v[92:95], v40 offset:960
+; COEXEC-NEXT:    ds_load_tr16_b128 v[0:3], v24
+; COEXEC-NEXT:    ds_load_tr16_b128 v[4:7], v24 offset:64
+; COEXEC-NEXT:    ds_load_tr16_b128 v[38:41], v24 offset:320
+; COEXEC-NEXT:    ds_load_tr16_b128 v[34:37], v24 offset:256
+; COEXEC-NEXT:    ds_load_tr16_b128 v[20:23], v24 offset:576
+; COEXEC-NEXT:    ds_load_tr16_b128 v[16:19], v24 offset:512
+; COEXEC-NEXT:    ds_load_tr16_b128 v[78:81], v24 offset:832
+; COEXEC-NEXT:    ds_load_tr16_b128 v[74:77], v24 offset:768
+; COEXEC-NEXT:    ds_load_tr16_b128 v[42:45], v24 offset:128
+; COEXEC-NEXT:    ds_load_tr16_b128 v[46:49], v24 offset:192
+; COEXEC-NEXT:    ds_load_tr16_b128 v[8:11], v24 offset:384
+; COEXEC-NEXT:    ds_load_tr16_b128 v[12:15], v24 offset:448
+; COEXEC-NEXT:    ds_load_tr16_b128 v[82:85], v24 offset:640
+; COEXEC-NEXT:    ds_load_tr16_b128 v[86:89], v24 offset:704
+; COEXEC-NEXT:    ds_load_tr16_b128 v[90:93], v24 offset:896
+; COEXEC-NEXT:    ds_load_tr16_b128 v[94:97], v24 offset:960
 ; COEXEC-NEXT:    s_xor_b32 s2, s3, -1
 ; COEXEC-NEXT:    s_wait_dscnt 0xe
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[56:63], v[0:7], v[64:71], 0
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[58:65], v[0:7], v[66:73], 0
 ; COEXEC-NEXT:    s_wait_dscnt 0xc
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[48:55], v[8:15], v[64:71], 0
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[50:57], v[34:41], v[66:73], 0
 ; COEXEC-NEXT:    s_wait_dscnt 0xa
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[40:47], v[32:39], v[64:71], 0
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[16:23], v[66:73], 0
 ; COEXEC-NEXT:    s_wait_dscnt 0x8
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[32:39], v[72:79], v[64:71], 0
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[74:81], v[66:73], 0
 ; COEXEC-NEXT:    s_wait_dscnt 0x6
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[56:63], v[16:23], v[64:71], v[56:63]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[58:65], v[42:49], v[66:73], v[58:65]
 ; COEXEC-NEXT:    s_wait_dscnt 0x4
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[48:55], v[24:31], v[64:71], v[48:55]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[50:57], v[8:15], v[66:73], v[50:57]
 ; COEXEC-NEXT:    s_wait_dscnt 0x2
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[40:47], v[80:87], v[64:71], v[40:47]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[82:89], v[66:73], v[24:31]
 ; COEXEC-NEXT:    s_wait_dscnt 0x0
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[32:39], v[88:95], v[64:71], v[32:39]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[90:97], v[66:73], v[16:23]
 ; COEXEC-NEXT:  .LBB3_1: ; %loop
 ; COEXEC-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; COEXEC-NEXT:    s_wait_dscnt 0x4
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[56:63], v[0:7], v[16:23], v[56:63]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[58:65], v[0:7], v[42:49], v[58:65]
 ; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    v_nop
-; COEXEC-NEXT:    v_mov_b64_e32 v[70:71], s[14:15]
-; COEXEC-NEXT:    v_mov_b64_e32 v[68:69], s[12:13]
-; COEXEC-NEXT:    v_mov_b64_e32 v[66:67], s[10:11]
-; COEXEC-NEXT:    v_mov_b64_e32 v[64:65], s[8:9]
-; COEXEC-NEXT:    v_mov_b32_e32 v72, s0
+; COEXEC-NEXT:    v_mov_b64_e32 v[72:73], s[14:15]
+; COEXEC-NEXT:    v_mov_b64_e32 v[70:71], s[12:13]
+; COEXEC-NEXT:    v_mov_b64_e32 v[68:69], s[10:11]
+; COEXEC-NEXT:    v_mov_b64_e32 v[66:67], s[8:9]
+; COEXEC-NEXT:    v_mov_b32_e32 v32, s0
 ; COEXEC-NEXT:    s_add_co_i32 s0, s0, s1
 ; COEXEC-NEXT:    s_and_b32 s3, s2, exec_lo
 ; COEXEC-NEXT:    s_cselect_b32 s3, 1, 0
 ; COEXEC-NEXT:    s_cmp_lg_u32 s3, 1
 ; COEXEC-NEXT:    s_wait_dscnt 0x0
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[48:55], v[8:15], v[24:31], v[48:55]
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[40:47], v[64:71], v[64:71], v[40:47]
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[32:39], v[64:71], v[64:71], v[32:39]
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[56:63], v[0:7], v[16:23], v[56:63]
-; COEXEC-NEXT:    ds_load_tr16_b128 v[0:3], v72
-; COEXEC-NEXT:    ds_load_tr16_b128 v[4:7], v72 offset:64
-; COEXEC-NEXT:    ds_load_tr16_b128 v[16:19], v72 offset:128
-; COEXEC-NEXT:    ds_load_tr16_b128 v[20:23], v72 offset:192
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[48:55], v[8:15], v[24:31], v[48:55]
-; COEXEC-NEXT:    ds_load_tr16_b128 v[8:11], v72 offset:256
-; COEXEC-NEXT:    ds_load_tr16_b128 v[12:15], v72 offset:320
-; COEXEC-NEXT:    ds_load_tr16_b128 v[24:27], v72 offset:384
-; COEXEC-NEXT:    ds_load_tr16_b128 v[28:31], v72 offset:448
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[40:47], v[64:71], v[64:71], v[40:47]
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[32:39], v[64:71], v[64:71], v[32:39]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[50:57], v[34:41], v[8:15], v[50:57]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[66:73], v[66:73], v[24:31]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[66:73], v[66:73], v[16:23]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[58:65], v[0:7], v[42:49], v[58:65]
+; COEXEC-NEXT:    ds_load_tr16_b128 v[0:3], v32
+; COEXEC-NEXT:    ds_load_tr16_b128 v[4:7], v32 offset:64
+; COEXEC-NEXT:    ds_load_tr16_b128 v[42:45], v32 offset:128
+; COEXEC-NEXT:    ds_load_tr16_b128 v[46:49], v32 offset:192
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[50:57], v[34:41], v[8:15], v[50:57]
+; COEXEC-NEXT:    ds_load_tr16_b128 v[34:37], v32 offset:256
+; COEXEC-NEXT:    ds_load_tr16_b128 v[38:41], v32 offset:320
+; COEXEC-NEXT:    ds_load_tr16_b128 v[8:11], v32 offset:384
+; COEXEC-NEXT:    ds_load_tr16_b128 v[12:15], v32 offset:448
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[66:73], v[66:73], v[24:31]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[66:73], v[66:73], v[16:23]
 ; COEXEC-NEXT:    s_cbranch_scc1 .LBB3_1
 ; COEXEC-NEXT:  ; %bb.2: ; %end
 ; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
@@ -996,14 +990,14 @@ define amdgpu_kernel void @ds_wmma_loop_carried(ptr addrspace(3) %base, ptr addr
 ; COEXEC-NEXT:    v_mov_b32_e32 v0, 0
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
 ; COEXEC-NEXT:    s_clause 0x7
-; COEXEC-NEXT:    global_store_b128 v0, v[60:63], s[0:1] offset:16
-; COEXEC-NEXT:    global_store_b128 v0, v[56:59], s[0:1]
-; COEXEC-NEXT:    global_store_b128 v0, v[52:55], s[0:1] offset:144
-; COEXEC-NEXT:    global_store_b128 v0, v[48:51], s[0:1] offset:128
-; COEXEC-NEXT:    global_store_b128 v0, v[44:47], s[0:1] offset:272
-; COEXEC-NEXT:    global_store_b128 v0, v[40:43], s[0:1] offset:256
-; COEXEC-NEXT:    global_store_b128 v0, v[36:39], s[0:1] offset:400
-; COEXEC-NEXT:    global_store_b128 v0, v[32:35], s[0:1] offset:384
+; COEXEC-NEXT:    global_store_b128 v0, v[62:65], s[0:1] offset:16
+; COEXEC-NEXT:    global_store_b128 v0, v[58:61], s[0:1]
+; COEXEC-NEXT:    global_store_b128 v0, v[54:57], s[0:1] offset:144
+; COEXEC-NEXT:    global_store_b128 v0, v[50:53], s[0:1] offset:128
+; COEXEC-NEXT:    global_store_b128 v0, v[28:31], s[0:1] offset:272
+; COEXEC-NEXT:    global_store_b128 v0, v[24:27], s[0:1] offset:256
+; COEXEC-NEXT:    global_store_b128 v0, v[20:23], s[0:1] offset:400
+; COEXEC-NEXT:    global_store_b128 v0, v[16:19], s[0:1] offset:384
 ; COEXEC-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; COEXEC-NEXT:    s_endpgm
 ;
@@ -1024,82 +1018,78 @@ define amdgpu_kernel void @ds_wmma_loop_carried(ptr addrspace(3) %base, ptr addr
 ; GCN-NEXT:    s_mov_b32 s13, s8
 ; GCN-NEXT:    s_mov_b32 s14, s8
 ; GCN-NEXT:    s_mov_b32 s15, s8
-; GCN-NEXT:    v_mov_b64_e32 v[68:69], s[12:13]
-; GCN-NEXT:    v_mov_b64_e32 v[70:71], s[14:15]
-; GCN-NEXT:    v_mov_b64_e32 v[66:67], s[10:11]
-; GCN-NEXT:    v_mov_b64_e32 v[64:65], s[8:9]
+; GCN-NEXT:    v_mov_b64_e32 v[70:71], s[12:13]
+; GCN-NEXT:    v_mov_b64_e32 v[72:73], s[14:15]
+; GCN-NEXT:    v_mov_b64_e32 v[68:69], s[10:11]
+; GCN-NEXT:    v_mov_b64_e32 v[66:67], s[8:9]
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    v_mov_b32_e32 v80, s2
+; GCN-NEXT:    v_mov_b32_e32 v82, s2
 ; GCN-NEXT:    s_bitcmp1_b32 s0, 0
-; GCN-NEXT:    ds_load_tr16_b128 v[8:11], v80 offset:512
-; GCN-NEXT:    ds_load_tr16_b128 v[12:15], v80 offset:576
-; GCN-NEXT:    ds_load_tr16_b128 v[48:51], v80 offset:768
-; GCN-NEXT:    ds_load_tr16_b128 v[52:55], v80 offset:832
-; GCN-NEXT:    ds_load_tr16_b128 v[72:75], v80 offset:640
-; GCN-NEXT:    ds_load_tr16_b128 v[76:79], v80 offset:704
-; GCN-NEXT:    ds_load_tr16_b128 v[0:3], v80
-; GCN-NEXT:    ds_load_tr16_b128 v[4:7], v80 offset:64
-; GCN-NEXT:    ds_load_tr16_b128 v[40:43], v80 offset:256
-; GCN-NEXT:    ds_load_tr16_b128 v[44:47], v80 offset:320
-; GCN-NEXT:    ds_load_tr16_b128 v[56:59], v80 offset:384
-; GCN-NEXT:    ds_load_tr16_b128 v[60:63], v80 offset:448
+; GCN-NEXT:    ds_load_tr16_b128 v[32:35], v82 offset:512
+; GCN-NEXT:    ds_load_tr16_b128 v[36:39], v82 offset:576
+; GCN-NEXT:    ds_load_tr16_b128 v[50:53], v82 offset:768
+; GCN-NEXT:    ds_load_tr16_b128 v[54:57], v82 offset:832
+; GCN-NEXT:    ds_load_tr16_b128 v[74:77], v82 offset:640
+; GCN-NEXT:    ds_load_tr16_b128 v[78:81], v82 offset:704
+; GCN-NEXT:    ds_load_tr16_b128 v[0:3], v82
+; GCN-NEXT:    ds_load_tr16_b128 v[4:7], v82 offset:64
+; GCN-NEXT:    ds_load_tr16_b128 v[24:27], v82 offset:256
+; GCN-NEXT:    ds_load_tr16_b128 v[28:31], v82 offset:320
+; GCN-NEXT:    ds_load_tr16_b128 v[58:61], v82 offset:384
+; GCN-NEXT:    ds_load_tr16_b128 v[62:65], v82 offset:448
 ; GCN-NEXT:    s_cselect_b32 s3, -1, 0
 ; GCN-NEXT:    s_add_co_i32 s0, s2, s1
 ; GCN-NEXT:    s_xor_b32 s2, s3, -1
 ; GCN-NEXT:    s_wait_dscnt 0xa
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[8:15], v[64:71], 0
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[32:39], v[66:73], 0
 ; GCN-NEXT:    s_wait_dscnt 0x8
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[48:55], v[64:71], 0
-; GCN-NEXT:    ds_load_tr16_b128 v[48:51], v80 offset:128
-; GCN-NEXT:    ds_load_tr16_b128 v[52:55], v80 offset:192
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[34:41], v[50:57], v[66:73], 0
+; GCN-NEXT:    ds_load_tr16_b128 v[50:53], v82 offset:128
+; GCN-NEXT:    ds_load_tr16_b128 v[54:57], v82 offset:192
 ; GCN-NEXT:    s_wait_dscnt 0x8
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[72:79], v[64:71], v[16:23]
-; GCN-NEXT:    ds_load_tr16_b128 v[72:75], v80 offset:896
-; GCN-NEXT:    ds_load_tr16_b128 v[76:79], v80 offset:960
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[74:81], v[66:73], v[8:15]
+; GCN-NEXT:    ds_load_tr16_b128 v[74:77], v82 offset:896
+; GCN-NEXT:    ds_load_tr16_b128 v[78:81], v82 offset:960
 ; GCN-NEXT:    s_wait_dscnt 0x8
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[32:39], v[0:7], v[64:71], 0
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[66:73], 0
 ; GCN-NEXT:    s_wait_dscnt 0x6
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[40:47], v[64:71], 0
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[42:49], v[24:31], v[66:73], 0
 ; GCN-NEXT:    s_wait_dscnt 0x2
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[32:39], v[48:55], v[64:71], v[32:39]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[56:63], v[64:71], v[24:31]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[50:57], v[66:73], v[16:23]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[42:49], v[58:65], v[66:73], v[42:49]
 ; GCN-NEXT:    s_wait_dscnt 0x0
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[72:79], v[64:71], v[8:15]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[34:41], v[74:81], v[66:73], v[34:41]
 ; GCN-NEXT:  .LBB3_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    s_wait_dscnt 0x0
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[40:47], v[56:63], v[24:31]
+; GCN-NEXT:    s_wait_dscnt 0x4
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[50:57], v[16:23]
+; GCN-NEXT:    v_mov_b32_e32 v32, s0
 ; GCN-NEXT:    v_nop
 ; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_mov_b64_e32 v[70:71], s[14:15]
-; GCN-NEXT:    v_mov_b64_e32 v[68:69], s[12:13]
-; GCN-NEXT:    v_mov_b64_e32 v[66:67], s[10:11]
-; GCN-NEXT:    v_mov_b64_e32 v[64:65], s[8:9]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[32:39], v[0:7], v[48:55], v[32:39]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[40:47], v[56:63], v[24:31]
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_nop
-; GCN-NEXT:    v_mov_b32_e32 v60, s0
+; GCN-NEXT:    v_mov_b64_e32 v[72:73], s[14:15]
 ; GCN-NEXT:    s_add_co_i32 s0, s0, s1
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[32:39], v[0:7], v[48:55], v[32:39]
-; GCN-NEXT:    ds_load_tr16_b128 v[0:3], v60
-; GCN-NEXT:    ds_load_tr16_b128 v[4:7], v60 offset:64
-; GCN-NEXT:    ds_load_tr16_b128 v[48:51], v60 offset:128
-; GCN-NEXT:    ds_load_tr16_b128 v[52:55], v60 offset:192
-; GCN-NEXT:    ds_load_tr16_b128 v[40:43], v60 offset:256
-; GCN-NEXT:    ds_load_tr16_b128 v[44:47], v60 offset:320
-; GCN-NEXT:    ds_load_tr16_b128 v[56:59], v60 offset:384
-; GCN-NEXT:    ds_load_tr16_b128 v[60:63], v60 offset:448
 ; GCN-NEXT:    s_and_b32 s3, s2, exec_lo
+; GCN-NEXT:    v_mov_b64_e32 v[70:71], s[12:13]
+; GCN-NEXT:    v_mov_b64_e32 v[68:69], s[10:11]
+; GCN-NEXT:    s_wait_dscnt 0x0
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[42:49], v[24:31], v[58:65], v[42:49]
 ; GCN-NEXT:    s_cselect_b32 s3, 1, 0
+; GCN-NEXT:    v_mov_b64_e32 v[66:67], s[8:9]
 ; GCN-NEXT:    s_cmp_lg_u32 s3, 1
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[64:71], v[64:71], v[16:23]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[64:71], v[64:71], v[8:15]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[64:71], v[64:71], v[16:23]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[64:71], v[64:71], v[8:15]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[50:57], v[16:23]
+; GCN-NEXT:    ds_load_tr16_b128 v[0:3], v32
+; GCN-NEXT:    ds_load_tr16_b128 v[4:7], v32 offset:64
+; GCN-NEXT:    ds_load_tr16_b128 v[50:53], v32 offset:128
+; GCN-NEXT:    ds_load_tr16_b128 v[54:57], v32 offset:192
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[42:49], v[24:31], v[58:65], v[42:49]
+; GCN-NEXT:    ds_load_tr16_b128 v[24:27], v32 offset:256
+; GCN-NEXT:    ds_load_tr16_b128 v[28:31], v32 offset:320
+; GCN-NEXT:    ds_load_tr16_b128 v[58:61], v32 offset:384
+; GCN-NEXT:    ds_load_tr16_b128 v[62:65], v32 offset:448
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[66:73], v[66:73], v[8:15]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[34:41], v[66:73], v[66:73], v[34:41]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[66:73], v[66:73], v[8:15]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[34:41], v[66:73], v[66:73], v[34:41]
 ; GCN-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GCN-NEXT:  ; %bb.2: ; %end
 ; GCN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
@@ -1107,14 +1097,14 @@ define amdgpu_kernel void @ds_wmma_loop_carried(ptr addrspace(3) %base, ptr addr
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_clause 0x7
-; GCN-NEXT:    global_store_b128 v0, v[36:39], s[0:1] offset:16
-; GCN-NEXT:    global_store_b128 v0, v[32:35], s[0:1]
-; GCN-NEXT:    global_store_b128 v0, v[28:31], s[0:1] offset:144
-; GCN-NEXT:    global_store_b128 v0, v[24:27], s[0:1] offset:128
-; GCN-NEXT:    global_store_b128 v0, v[20:23], s[0:1] offset:272
-; GCN-NEXT:    global_store_b128 v0, v[16:19], s[0:1] offset:256
-; GCN-NEXT:    global_store_b128 v0, v[12:15], s[0:1] offset:400
-; GCN-NEXT:    global_store_b128 v0, v[8:11], s[0:1] offset:384
+; GCN-NEXT:    global_store_b128 v0, v[20:23], s[0:1] offset:16
+; GCN-NEXT:    global_store_b128 v0, v[16:19], s[0:1]
+; GCN-NEXT:    global_store_b128 v0, v[46:49], s[0:1] offset:144
+; GCN-NEXT:    global_store_b128 v0, v[42:45], s[0:1] offset:128
+; GCN-NEXT:    global_store_b128 v0, v[12:15], s[0:1] offset:272
+; GCN-NEXT:    global_store_b128 v0, v[8:11], s[0:1] offset:256
+; GCN-NEXT:    global_store_b128 v0, v[38:41], s[0:1] offset:400
+; GCN-NEXT:    global_store_b128 v0, v[34:37], s[0:1] offset:384
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -1244,60 +1234,60 @@ define amdgpu_kernel void @ds_wmma_no_block_carried(ptr addrspace(3) %base, ptr 
 ; COEXEC-NEXT:    s_mov_b32 s13, s8
 ; COEXEC-NEXT:    s_mov_b32 s14, s8
 ; COEXEC-NEXT:    s_mov_b32 s15, s8
-; COEXEC-NEXT:    v_mov_b64_e32 v[102:103], s[14:15]
-; COEXEC-NEXT:    v_mov_b64_e32 v[100:101], s[12:13]
-; COEXEC-NEXT:    v_mov_b64_e32 v[98:99], s[10:11]
-; COEXEC-NEXT:    v_mov_b64_e32 v[96:97], s[8:9]
+; COEXEC-NEXT:    v_mov_b64_e32 v[104:105], s[14:15]
+; COEXEC-NEXT:    v_mov_b64_e32 v[102:103], s[12:13]
+; COEXEC-NEXT:    v_mov_b64_e32 v[100:101], s[10:11]
+; COEXEC-NEXT:    v_mov_b64_e32 v[98:99], s[8:9]
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
-; COEXEC-NEXT:    v_mov_b32_e32 v60, s0
+; COEXEC-NEXT:    v_mov_b32_e32 v36, s0
 ; COEXEC-NEXT:    s_bitcmp1_b32 s1, 0
 ; COEXEC-NEXT:    s_cselect_b32 s0, -1, 0
-; COEXEC-NEXT:    ds_load_tr16_b128 v[0:3], v60
-; COEXEC-NEXT:    ds_load_tr16_b128 v[4:7], v60 offset:64
-; COEXEC-NEXT:    ds_load_tr16_b128 v[12:15], v60 offset:320
-; COEXEC-NEXT:    ds_load_tr16_b128 v[8:11], v60 offset:256
-; COEXEC-NEXT:    ds_load_tr16_b128 v[20:23], v60 offset:576
-; COEXEC-NEXT:    ds_load_tr16_b128 v[16:19], v60 offset:512
-; COEXEC-NEXT:    ds_load_tr16_b128 v[28:31], v60 offset:832
-; COEXEC-NEXT:    ds_load_tr16_b128 v[24:27], v60 offset:768
-; COEXEC-NEXT:    ds_load_tr16_b128 v[32:35], v60 offset:128
-; COEXEC-NEXT:    ds_load_tr16_b128 v[36:39], v60 offset:192
-; COEXEC-NEXT:    ds_load_tr16_b128 v[40:43], v60 offset:384
-; COEXEC-NEXT:    ds_load_tr16_b128 v[44:47], v60 offset:448
-; COEXEC-NEXT:    ds_load_tr16_b128 v[48:51], v60 offset:640
-; COEXEC-NEXT:    ds_load_tr16_b128 v[52:55], v60 offset:704
-; COEXEC-NEXT:    ds_load_tr16_b128 v[56:59], v60 offset:896
-; COEXEC-NEXT:    ds_load_tr16_b128 v[60:63], v60 offset:960
+; COEXEC-NEXT:    ds_load_tr16_b128 v[0:3], v36
+; COEXEC-NEXT:    ds_load_tr16_b128 v[4:7], v36 offset:64
+; COEXEC-NEXT:    ds_load_tr16_b128 v[54:57], v36 offset:320
+; COEXEC-NEXT:    ds_load_tr16_b128 v[50:53], v36 offset:256
+; COEXEC-NEXT:    ds_load_tr16_b128 v[12:15], v36 offset:576
+; COEXEC-NEXT:    ds_load_tr16_b128 v[8:11], v36 offset:512
+; COEXEC-NEXT:    ds_load_tr16_b128 v[62:65], v36 offset:832
+; COEXEC-NEXT:    ds_load_tr16_b128 v[58:61], v36 offset:768
+; COEXEC-NEXT:    ds_load_tr16_b128 v[66:69], v36 offset:128
+; COEXEC-NEXT:    ds_load_tr16_b128 v[70:73], v36 offset:192
+; COEXEC-NEXT:    ds_load_tr16_b128 v[16:19], v36 offset:384
+; COEXEC-NEXT:    ds_load_tr16_b128 v[20:23], v36 offset:448
+; COEXEC-NEXT:    ds_load_tr16_b128 v[24:27], v36 offset:640
+; COEXEC-NEXT:    ds_load_tr16_b128 v[28:31], v36 offset:704
+; COEXEC-NEXT:    ds_load_tr16_b128 v[32:35], v36 offset:896
+; COEXEC-NEXT:    ds_load_tr16_b128 v[36:39], v36 offset:960
 ; COEXEC-NEXT:    s_xor_b32 s0, s0, -1
 ; COEXEC-NEXT:    s_wait_dscnt 0xe
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[88:95], v[0:7], v[96:103], 0
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[90:97], v[0:7], v[98:105], 0
 ; COEXEC-NEXT:    s_wait_dscnt 0xc
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[80:87], v[8:15], v[96:103], 0
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[82:89], v[50:57], v[98:105], 0
 ; COEXEC-NEXT:    s_wait_dscnt 0xa
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[72:79], v[16:23], v[96:103], 0
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[74:81], v[8:15], v[98:105], 0
 ; COEXEC-NEXT:    s_wait_dscnt 0x8
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[64:71], v[24:31], v[96:103], 0
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[40:47], v[58:65], v[98:105], 0
 ; COEXEC-NEXT:    s_wait_dscnt 0x6
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[88:95], v[32:39], v[96:103], v[88:95]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[90:97], v[66:73], v[98:105], v[90:97]
 ; COEXEC-NEXT:    s_wait_dscnt 0x4
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[80:87], v[40:47], v[96:103], v[80:87]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[82:89], v[16:23], v[98:105], v[82:89]
 ; COEXEC-NEXT:    s_wait_dscnt 0x2
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[72:79], v[48:55], v[96:103], v[72:79]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[74:81], v[24:31], v[98:105], v[74:81]
 ; COEXEC-NEXT:    s_wait_dscnt 0x0
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[64:71], v[56:63], v[96:103], v[64:71]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[40:47], v[32:39], v[98:105], v[40:47]
 ; COEXEC-NEXT:  .LBB4_1: ; %loop
 ; COEXEC-NEXT:    ; =>This Inner Loop Header: Depth=1
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[88:95], v[0:7], v[32:39], v[88:95]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[90:97], v[0:7], v[66:73], v[90:97]
 ; COEXEC-NEXT:    s_and_b32 s1, s0, exec_lo
 ; COEXEC-NEXT:    s_cselect_b32 s1, 1, 0
 ; COEXEC-NEXT:    s_cmp_lg_u32 s1, 1
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[80:87], v[8:15], v[40:47], v[80:87]
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[72:79], v[16:23], v[48:55], v[72:79]
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[64:71], v[24:31], v[56:63], v[64:71]
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[88:95], v[0:7], v[32:39], v[88:95]
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[80:87], v[8:15], v[40:47], v[80:87]
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[72:79], v[16:23], v[48:55], v[72:79]
-; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[64:71], v[24:31], v[56:63], v[64:71]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[82:89], v[50:57], v[16:23], v[82:89]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[74:81], v[8:15], v[24:31], v[74:81]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[40:47], v[58:65], v[32:39], v[40:47]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[90:97], v[0:7], v[66:73], v[90:97]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[82:89], v[50:57], v[16:23], v[82:89]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[74:81], v[8:15], v[24:31], v[74:81]
+; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[40:47], v[58:65], v[32:39], v[40:47]
 ; COEXEC-NEXT:    s_cbranch_scc1 .LBB4_1
 ; COEXEC-NEXT:  ; %bb.2: ; %end
 ; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
@@ -1305,14 +1295,14 @@ define amdgpu_kernel void @ds_wmma_no_block_carried(ptr addrspace(3) %base, ptr 
 ; COEXEC-NEXT:    v_mov_b32_e32 v0, 0
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
 ; COEXEC-NEXT:    s_clause 0x7
-; COEXEC-NEXT:    global_store_b128 v0, v[92:95], s[0:1] offset:16
-; COEXEC-NEXT:    global_store_b128 v0, v[88:91], s[0:1]
-; COEXEC-NEXT:    global_store_b128 v0, v[84:87], s[0:1] offset:144
-; COEXEC-NEXT:    global_store_b128 v0, v[80:83], s[0:1] offset:128
-; COEXEC-NEXT:    global_store_b128 v0, v[76:79], s[0:1] offset:272
-; COEXEC-NEXT:    global_store_b128 v0, v[72:75], s[0:1] offset:256
-; COEXEC-NEXT:    global_store_b128 v0, v[68:71], s[0:1] offset:400
-; COEXEC-NEXT:    global_store_b128 v0, v[64:67], s[0:1] offset:384
+; COEXEC-NEXT:    global_store_b128 v0, v[94:97], s[0:1] offset:16
+; COEXEC-NEXT:    global_store_b128 v0, v[90:93], s[0:1]
+; COEXEC-NEXT:    global_store_b128 v0, v[86:89], s[0:1] offset:144
+; COEXEC-NEXT:    global_store_b128 v0, v[82:85], s[0:1] offset:128
+; COEXEC-NEXT:    global_store_b128 v0, v[78:81], s[0:1] offset:272
+; COEXEC-NEXT:    global_store_b128 v0, v[74:77], s[0:1] offset:256
+; COEXEC-NEXT:    global_store_b128 v0, v[44:47], s[0:1] offset:400
+; COEXEC-NEXT:    global_store_b128 v0, v[40:43], s[0:1] offset:384
 ; COEXEC-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; COEXEC-NEXT:    s_endpgm
 ;
@@ -1333,60 +1323,60 @@ define amdgpu_kernel void @ds_wmma_no_block_carried(ptr addrspace(3) %base, ptr 
 ; GCN-NEXT:    s_mov_b32 s13, s8
 ; GCN-NEXT:    s_mov_b32 s14, s8
 ; GCN-NEXT:    s_mov_b32 s15, s8
-; GCN-NEXT:    v_mov_b64_e32 v[100:101], s[12:13]
-; GCN-NEXT:    v_mov_b64_e32 v[102:103], s[14:15]
-; GCN-NEXT:    v_mov_b64_e32 v[98:99], s[10:11]
-; GCN-NEXT:    v_mov_b64_e32 v[96:97], s[8:9]
+; GCN-NEXT:    v_mov_b64_e32 v[102:103], s[12:13]
+; GCN-NEXT:    v_mov_b64_e32 v[104:105], s[14:15]
+; GCN-NEXT:    v_mov_b64_e32 v[100:101], s[10:11]
+; GCN-NEXT:    v_mov_b64_e32 v[98:99], s[8:9]
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    v_mov_b32_e32 v92, s0
+; GCN-NEXT:    v_mov_b32_e32 v48, s0
 ; GCN-NEXT:    s_bitcmp1_b32 s1, 0
-; GCN-NEXT:    ds_load_tr16_b128 v[0:3], v92
-; GCN-NEXT:    ds_load_tr16_b128 v[4:7], v92 offset:64
-; GCN-NEXT:    ds_load_tr16_b128 v[40:43], v92 offset:256
-; GCN-NEXT:    ds_load_tr16_b128 v[44:47], v92 offset:320
-; GCN-NEXT:    ds_load_tr16_b128 v[48:51], v92 offset:512
-; GCN-NEXT:    ds_load_tr16_b128 v[52:55], v92 offset:576
-; GCN-NEXT:    ds_load_tr16_b128 v[56:59], v92 offset:768
-; GCN-NEXT:    ds_load_tr16_b128 v[60:63], v92 offset:832
-; GCN-NEXT:    ds_load_tr16_b128 v[64:67], v92 offset:128
-; GCN-NEXT:    ds_load_tr16_b128 v[68:71], v92 offset:192
-; GCN-NEXT:    ds_load_tr16_b128 v[72:75], v92 offset:384
-; GCN-NEXT:    ds_load_tr16_b128 v[76:79], v92 offset:448
-; GCN-NEXT:    ds_load_tr16_b128 v[80:83], v92 offset:640
-; GCN-NEXT:    ds_load_tr16_b128 v[84:87], v92 offset:704
-; GCN-NEXT:    ds_load_tr16_b128 v[88:91], v92 offset:896
-; GCN-NEXT:    ds_load_tr16_b128 v[92:95], v92 offset:960
+; GCN-NEXT:    ds_load_tr16_b128 v[0:3], v48
+; GCN-NEXT:    ds_load_tr16_b128 v[4:7], v48 offset:64
+; GCN-NEXT:    ds_load_tr16_b128 v[16:19], v48 offset:256
+; GCN-NEXT:    ds_load_tr16_b128 v[20:23], v48 offset:320
+; GCN-NEXT:    ds_load_tr16_b128 v[24:27], v48 offset:512
+; GCN-NEXT:    ds_load_tr16_b128 v[28:31], v48 offset:576
+; GCN-NEXT:    ds_load_tr16_b128 v[32:35], v48 offset:768
+; GCN-NEXT:    ds_load_tr16_b128 v[36:39], v48 offset:832
+; GCN-NEXT:    ds_load_tr16_b128 v[40:43], v48 offset:128
+; GCN-NEXT:    ds_load_tr16_b128 v[44:47], v48 offset:192
+; GCN-NEXT:    ds_load_tr16_b128 v[74:77], v48 offset:384
+; GCN-NEXT:    ds_load_tr16_b128 v[78:81], v48 offset:448
+; GCN-NEXT:    ds_load_tr16_b128 v[82:85], v48 offset:640
+; GCN-NEXT:    ds_load_tr16_b128 v[86:89], v48 offset:704
+; GCN-NEXT:    ds_load_tr16_b128 v[90:93], v48 offset:896
+; GCN-NEXT:    ds_load_tr16_b128 v[94:97], v48 offset:960
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
 ; GCN-NEXT:    s_wait_dscnt 0xe
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[32:39], v[0:7], v[96:103], 0
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[66:73], v[0:7], v[98:105], 0
 ; GCN-NEXT:    s_xor_b32 s0, s0, -1
 ; GCN-NEXT:    s_wait_dscnt 0xc
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[40:47], v[96:103], 0
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[58:65], v[16:23], v[98:105], 0
 ; GCN-NEXT:    s_wait_dscnt 0xa
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[48:55], v[96:103], 0
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[24:31], v[98:105], 0
 ; GCN-NEXT:    s_wait_dscnt 0x8
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[56:63], v[96:103], 0
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[50:57], v[32:39], v[98:105], 0
 ; GCN-NEXT:    s_wait_dscnt 0x6
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[32:39], v[64:71], v[96:103], v[32:39]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[66:73], v[40:47], v[98:105], v[66:73]
 ; GCN-NEXT:    s_wait_dscnt 0x4
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[72:79], v[96:103], v[24:31]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[58:65], v[74:81], v[98:105], v[58:65]
 ; GCN-NEXT:    s_wait_dscnt 0x2
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[80:87], v[96:103], v[16:23]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[82:89], v[98:105], v[8:15]
 ; GCN-NEXT:    s_wait_dscnt 0x0
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[88:95], v[96:103], v[8:15]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[50:57], v[90:97], v[98:105], v[50:57]
 ; GCN-NEXT:  .LBB4_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[32:39], v[0:7], v[64:71], v[32:39]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[66:73], v[0:7], v[40:47], v[66:73]
 ; GCN-NEXT:    s_and_b32 s1, s0, exec_lo
 ; GCN-NEXT:    s_cselect_b32 s1, 1, 0
 ; GCN-NEXT:    s_cmp_lg_u32 s1, 1
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[40:47], v[72:79], v[24:31]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[48:55], v[80:87], v[16:23]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[56:63], v[88:95], v[8:15]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[32:39], v[0:7], v[64:71], v[32:39]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[40:47], v[72:79], v[24:31]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[48:55], v[80:87], v[16:23]
-; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[56:63], v[88:95], v[8:15]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[58:65], v[16:23], v[74:81], v[58:65]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[24:31], v[82:89], v[8:15]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[50:57], v[32:39], v[90:97], v[50:57]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[66:73], v[0:7], v[40:47], v[66:73]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[58:65], v[16:23], v[74:81], v[58:65]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[24:31], v[82:89], v[8:15]
+; GCN-NEXT:    v_wmma_f32_16x16x32_f16 v[50:57], v[32:39], v[90:97], v[50:57]
 ; GCN-NEXT:    s_cbranch_scc1 .LBB4_1
 ; GCN-NEXT:  ; %bb.2: ; %end
 ; GCN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
@@ -1394,14 +1384,14 @@ define amdgpu_kernel void @ds_wmma_no_block_carried(ptr addrspace(3) %base, ptr 
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_clause 0x7
-; GCN-NEXT:    global_store_b128 v0, v[36:39], s[0:1] offset:16
-; GCN-NEXT:    global_store_b128 v0, v[32:35], s[0:1]
-; GCN-NEXT:    global_store_b128 v0, v[28:31], s[0:1] offset:144
-; GCN-NEXT:    global_store_b128 v0, v[24:27], s[0:1] offset:128
-; GCN-NEXT:    global_store_b128 v0, v[20:23], s[0:1] offset:272
-; GCN-NEXT:    global_store_b128 v0, v[16:19], s[0:1] offset:256
-; GCN-NEXT:    global_store_b128 v0, v[12:15], s[0:1] offset:400
-; GCN-NEXT:    global_store_b128 v0, v[8:11], s[0:1] offset:384
+; GCN-NEXT:    global_store_b128 v0, v[70:73], s[0:1] offset:16
+; GCN-NEXT:    global_store_b128 v0, v[66:69], s[0:1]
+; GCN-NEXT:    global_store_b128 v0, v[62:65], s[0:1] offset:144
+; GCN-NEXT:    global_store_b128 v0, v[58:61], s[0:1] offset:128
+; GCN-NEXT:    global_store_b128 v0, v[12:15], s[0:1] offset:272
+; GCN-NEXT:    global_store_b128 v0, v[8:11], s[0:1] offset:256
+; GCN-NEXT:    global_store_b128 v0, v[54:57], s[0:1] offset:400
+; GCN-NEXT:    global_store_b128 v0, v[50:53], s[0:1] offset:384
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
 entry:
