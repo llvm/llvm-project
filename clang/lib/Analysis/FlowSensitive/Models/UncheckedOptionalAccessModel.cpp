@@ -31,6 +31,7 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -241,6 +242,46 @@ AST_MATCHER_P(NamedDecl, hasAnalyzeAsMethodName, std::string, MethodName) {
     if (const auto *Attr = MD->getAttr<AnalyzeAsMethodAttr>()) {
       StringRef AttrValue = Attr->getMethodName();
       return AttrValue == MethodName;
+    }
+  }
+  return false;
+}
+
+AST_MATCHER_P(NamedDecl, hasSetTypestateAttr, SetTypestateAttr::ConsumedState,
+              State) {
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(&Node)) {
+    if (const auto *Attr = MD->getAttr<SetTypestateAttr>()) {
+      return Attr->getNewState() == State;
+    }
+  }
+  return false;
+}
+
+AST_MATCHER_P(NamedDecl, hasTestTypestateAttr, TestTypestateAttr::ConsumedState,
+              State) {
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(&Node)) {
+    if (const auto *Attr = MD->getAttr<TestTypestateAttr>()) {
+      return Attr->getTestState() == State;
+    }
+  }
+  return false;
+}
+
+AST_MATCHER_P(NamedDecl, hasReturnTypestateAttr,
+              ReturnTypestateAttr::ConsumedState, State) {
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(&Node)) {
+    if (const auto *Attr = MD->getAttr<ReturnTypestateAttr>()) {
+      return Attr->getState() == State;
+    }
+  }
+  return false;
+}
+
+AST_MATCHER_P(NamedDecl, hasCallableWhenAttr, CallableWhenAttr::ConsumedState,
+              State) {
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(&Node)) {
+    if (const auto *Attr = MD->getAttr<CallableWhenAttr>()) {
+      return llvm::is_contained(Attr->callableStates(), State);
     }
   }
   return false;
@@ -1070,6 +1111,39 @@ auto buildTransferMatchSwitch() {
                                   LatticeTransferState &State) {
                                  transferArrowOpCall(E, E->getArg(0), State);
                                })
+
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(
+              hasSetTypestateAttr(SetTypestateAttr::Unconsumed)),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            if (RecordStorageLocation *Loc =
+                    getImplicitObjectLocation(*E, State.Env)) {
+              setHasValue(*Loc, State.Env.getBoolLiteralValue(true), State.Env);
+            }
+          })
+
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(
+              hasSetTypestateAttr(SetTypestateAttr::Consumed)),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            if (RecordStorageLocation *Loc =
+                    getImplicitObjectLocation(*E, State.Env)) {
+              setHasValue(*Loc, State.Env.getBoolLiteralValue(false),
+                          State.Env);
+            }
+          })
+
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(
+              hasTestTypestateAttr(TestTypestateAttr::Unconsumed)),
+          transferOptionalHasValueCall)
+
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(
+              hasTestTypestateAttr(TestTypestateAttr::Consumed)),
+          transferOptionalIsNullCall)
 
       // optional::has_value, optional::hasValue
       // Of the supported optionals only folly::Optional uses hasValue, but this
