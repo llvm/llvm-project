@@ -173,32 +173,17 @@ public:
     Block::iterator operation;
   };
 
-  /// This class provides iteration over the held operations of a region for a
-  /// specific operation type.
-  template <typename OpT>
-  using op_iterator = detail::op_iterator<OpT, OpIterator>;
-
   /// Return iterators that walk the operations nested directly within this
   /// region.
   OpIterator op_begin() { return OpIterator(this); }
   OpIterator op_end() { return OpIterator(this, /*end=*/true); }
   iterator_range<OpIterator> getOps() { return {op_begin(), op_end()}; }
 
-  /// Return iterators that walk operations of type 'T' nested directly within
-  /// this region.
+  /// Return an iterator range over the operations nested directly within this
+  /// region that are of type 'OpT'.
   template <typename OpT>
-  op_iterator<OpT> op_begin() {
-    return detail::op_filter_iterator<OpT, OpIterator>(op_begin(), op_end());
-  }
-  template <typename OpT>
-  op_iterator<OpT> op_end() {
-    return detail::op_filter_iterator<OpT, OpIterator>(op_end(), op_end());
-  }
-  template <typename OpT>
-  iterator_range<op_iterator<OpT>> getOps() {
-    auto endIt = op_end();
-    return {detail::op_filter_iterator<OpT, OpIterator>(op_begin(), endIt),
-            detail::op_filter_iterator<OpT, OpIterator>(endIt, endIt)};
+  auto getOps() {
+    return llvm::make_isa_range<OpT>(llvm::make_range(op_begin(), op_end()));
   }
 
   //===--------------------------------------------------------------------===//

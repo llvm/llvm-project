@@ -26,6 +26,8 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
@@ -99,11 +101,13 @@ LLVM_ABI Error lookupAndApply(JITDylib &JD,
 /// collected its symbols: it is interned up front, and only the interned name
 /// is retained.
 inline LookupPrepareFn
-recordAddr(StringRef Name, ExecutorAddr *A,
+recordAddr(SymbolNameSpec Name, ExecutorAddr *A,
            SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol) {
   return [Name, A, LF](SymbolLookupSet &LS,
                        ExecutionSession &ES) -> LookupApplyFn {
-    auto N = ES.intern(Name);
+    auto N =
+        Mangler(ES.getTargetTriple())
+            .withMangledNameDo([&](StringRef M) { return ES.intern(M); }, Name);
     LS.add(N, LF);
     return [A, N = std::move(N)](const SymbolMap &M) {
       *A = M.lookup(N).getAddress();
