@@ -446,6 +446,13 @@ ExprResult Sema::BuildBuiltinBitCastExpr(SourceLocation KWLoc,
     Operand = PR.get();
   }
 
+  if (Operand->isLValue()) {
+    Operand = CreateMaterializeTemporaryExpr(Operand->getType(), Operand,
+                                             /*BoundToLvalue=*/false);
+    if (!Operand)
+      return ExprError();
+  }
+
   CastOperation Op(*this, TSI->getType(), Operand);
   Op.OpRange = CastOperation::OpRangeType(KWLoc, KWLoc, RParenLoc);
   TypeLoc TL = TSI->getTypeLoc();
