@@ -5886,6 +5886,66 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
   }
 }
 
+void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
+                                               VPCostContext &CostCtx,
+                                               PHINode *PrimaryIV) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(LoopRegion->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      // Only truncates are handled, as sext/zext may wrap, FP conversions lose
+      // precision and other casts depend on the pointer size.
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (!VPI || VPI->getOpcode() != Instruction::Trunc)
+        continue;
+      auto *Trunc = dyn_cast_or_null<TruncInst>(VPI->getUnderlyingValue());
+      if (!Trunc)
+        continue;
+
+      // A truncate that is not widened is left to the scalarization decisions
+      // made earlier.
+      if (vputils::onlyFirstLaneUsed(VPI))
+        continue;
+
+      VPValue *Op = VPI->getOperand(0);
+      auto *WideIV = dyn_cast_or_null<VPWidenIntOrFpInductionRecipe>(
+          getOptimizableIVOf(Op, CostCtx.PSE));
+      if (!WideIV || WideIV->getTruncInst())
+        continue;
+
+      // getOptimizableIVOf also matches an add of the IV and its step, which
+      // is not handled here.
+      // TODO: Also narrow truncates of the incremented IV.
+      if (Op != WideIV)
+        continue;
+      VPValue *Start = WideIV->getStartValue();
+
+      // Replacing a free truncate would add an induction update instruction to
+      // each iteration of the loop. The primary induction is exempt, as it
+      // needs an update instruction regardless.
+      auto IsNarrowingProfitable = [&](ElementCount VF) {
+        return WideIV->getPHINode() == PrimaryIV ||
+               !CostCtx.TTI.isTruncateFree(toVectorTy(Trunc->getSrcTy(), VF),
+                                           toVectorTy(Trunc->getDestTy(), VF));
+      };
+      if (!LoopVectorizationPlanner::getDecisionAndClampRange(
+              IsNarrowingProfitable, Range))
+        continue;
+
+      // Wrap flags of the original induction do not hold in the truncated
+      // type, so do not propagate them.
+      auto *NarrowIV = new VPWidenIntOrFpInductionRecipe(
+          WideIV->getPHINode(), Start, WideIV->getStepValue(),
+          WideIV->getVFValue(), WideIV->getInductionDescriptor(), Trunc,
+          VPIRFlags::WrapFlagsTy(false, false), VPI->getDebugLoc());
+      NarrowIV->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
+      VPI->replaceAllUsesWith(NarrowIV);
+      VPI->eraseFromParent();
+    }
+  }
+}
+
 void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
                                                PredicatedScalarEvolution &PSE,
                                                Loop &L, VPCostContext &Ctx,
