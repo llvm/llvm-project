@@ -135,6 +135,7 @@ add_header_library(
   HDRS
     thread.h
   DEPENDS
+    .tcb
     .thread_attributes
     libc.hdr.stdint_proxy
     libc.hdr.types.struct_sched_param
