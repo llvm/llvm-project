@@ -183,8 +183,8 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan, bool IVUpdateMayOverflow) {
   VPRecipeBase *OriginalTerminator = EB->getTerminator();
   Builder.setInsertPoint(OriginalTerminator);
   auto *ALM = Builder.createNaryOp(VPInstruction::WideActiveLaneMask,
-                                   {IncrementValue, TC, ALMMultiplier},
-                                   DL, "active.lane.mask.next");
+                                   {IncrementValue, TC, ALMMultiplier}, DL,
+                                   "active.lane.mask.next");
   ALM = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
                              {ALM, Plan.getConstantInt(64, 0)}, DL,
                              "extract.next.alm.part");
@@ -207,7 +207,8 @@ void VPlanTransforms::materializeHeaderMask(
     return;
 
   if (UseActiveLaneMaskForControlFlow) {
-    HeaderMask->replaceAllUsesWith(addVPLaneMaskPhiAndUpdateExitBranch(Plan, IVUpdateMayOverflow));
+    HeaderMask->replaceAllUsesWith(
+        addVPLaneMaskPhiAndUpdateExitBranch(Plan, IVUpdateMayOverflow));
     return;
   }
 
