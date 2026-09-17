@@ -46,6 +46,7 @@ bool MipsTargetInfo::processorSupportsGPR64() const {
       .Case("mips64r6", true)
       .Case("octeon", true)
       .Case("octeon+", true)
+      .Case("vr4300", true)
       .Case("r5900", true)
       .Case("i6400", true)
       .Case("i6500", true)
@@ -56,8 +57,8 @@ static constexpr llvm::StringLiteral ValidCPUNames[] = {
     {"mips1"},  {"mips2"},    {"mips3"},    {"mips4"},    {"mips5"},
     {"mips32"}, {"mips32r2"}, {"mips32r3"}, {"mips32r5"}, {"mips32r6"},
     {"mips64"}, {"mips64r2"}, {"mips64r3"}, {"mips64r5"}, {"mips64r6"},
-    {"octeon"}, {"octeon+"},  {"p5600"},    {"r5900"},    {"i6400"},
-    {"i6500"}};
+    {"octeon"}, {"octeon+"},  {"p5600"},    {"vr4300"},   {"r5900"},
+    {"i6400"},  {"i6500"}};
 
 bool MipsTargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::is_contained(ValidCPUNames, Name);
@@ -245,7 +246,7 @@ MipsTargetInfo::getTargetBuiltins() const {
 unsigned MipsTargetInfo::getUnwindWordWidth() const {
   return llvm::StringSwitch<unsigned>(ABI)
       .Case("o32", 32)
-      .Case("o64", 64)
+      .Case("o64", 32)
       .Case("n32", 64)
       .Case("n64", 64)
       .Default(getPointerWidth(LangAS::Default));

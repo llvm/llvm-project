@@ -293,6 +293,7 @@ bool MipsSubtarget::isABI_N64() const { return getABI().IsN64(); }
 bool MipsSubtarget::isABI_N32() const { return getABI().IsN32(); }
 bool MipsSubtarget::isABI_O32() const { return getABI().IsO32(); }
 bool MipsSubtarget::isABI_O64() const { return getABI().IsO64(); }
+bool MipsSubtarget::isABI_64Bit() const { return isABI_O64() || isABI_N64(); }
 const MipsABIInfo &MipsSubtarget::getABI() const { return TM.getABI(); }
 
 const SelectionDAGTargetInfo *MipsSubtarget::getSelectionDAGInfo() const {

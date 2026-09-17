@@ -109,30 +109,39 @@ public:
     return false;
   }
 
+  void setOABITypes() {
+    // TODO:  OABI's long length can differ, find a way to do this and 
+    //        propagate to datalayout string.
+
+    unsigned LongLength = 32;
+    LongWidth = LongAlign = LongLength;
+    PointerWidth = PointerAlign = LongLength;
+  }
+
   void setO32ABITypes() {
+    setOABITypes();
+
     Int64Type = SignedLongLong;
     IntMaxType = Int64Type;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     LongDoubleWidth = LongDoubleAlign = 64;
-    LongWidth = LongAlign = 32;
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 32;
-    PointerWidth = PointerAlign = 32;
     PtrDiffType = IntPtrType = SignedInt;
     SizeType = UnsignedInt;
     SuitableAlign = 64;
   }
 
   void setO64ABITypes() {
+    setOABITypes();
+
     Int64Type = SignedLongLong;
     IntMaxType = Int64Type;
-    LongDoubleFormat = &llvm::APFloat::IEEEquad();
-    LongDoubleWidth = LongDoubleAlign = 128;
-    LongWidth = LongAlign = 64;
+    LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    LongDoubleWidth = LongDoubleAlign = 64;
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
-    PointerWidth = PointerAlign = 64;
     PtrDiffType = IntPtrType = SignedLong;
     SizeType = UnsignedLong;
-    SuitableAlign = 128;
+    SuitableAlign = 64;
   }
 
   void setN32N64ABITypes() {
@@ -440,7 +449,7 @@ public:
   }
 
   bool hasInt128Type() const override {
-    return (ABI == "o64" || ABI == "n32" || ABI == "n64") || getTargetOpts().ForceEnableInt128;
+    return (ABI == "n32" || ABI == "n64") || getTargetOpts().ForceEnableInt128;
   }
 
   unsigned getUnwindWordWidth() const override;

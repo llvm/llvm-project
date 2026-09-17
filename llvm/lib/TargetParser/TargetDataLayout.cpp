@@ -190,7 +190,7 @@ static std::string computeMipsDataLayout(const Triple &TT, StringRef ABIName) {
     Ret += "-m:e";
 
   // Pointers are 32 bit on some ABIs.
-  if (ABI != MipsABI::N64 && ABI != MipsABI::O64)
+  if (ABI != MipsABI::N64)
     Ret += "-p:32:32";
 
   // 8 and 16 bit integers only need to have natural alignment, but try to
@@ -200,7 +200,7 @@ static std::string computeMipsDataLayout(const Triple &TT, StringRef ABIName) {
   // 32 bit registers are always available and the stack is at least 64 bit
   // aligned. On N64 64 bit registers are also available and the stack is
   // 128 bit aligned.
-  if (ABI == MipsABI::O64 || ABI == MipsABI::N64 || ABI == MipsABI::N32)
+  if (ABI == MipsABI::N64 || ABI == MipsABI::N32)
     Ret += "-i128:128-n32:64-S128";
   else
     Ret += "-n32-S64";
