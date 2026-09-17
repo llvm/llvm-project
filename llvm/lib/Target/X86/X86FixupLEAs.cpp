@@ -14,16 +14,20 @@
 
 #include "X86.h"
 #include "X86InstrInfo.h"
+#include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -33,6 +37,7 @@ using namespace llvm;
 #define DEBUG_TYPE FIXUPLEA_NAME
 
 STATISTIC(NumLEAs, "Number of LEA instructions created");
+STATISTIC(NumFoldedIntoMemOp, "Number of LEAs folded into a memory operand");
 
 namespace {
 class FixupLEAsImpl {
@@ -87,6 +92,14 @@ class FixupLEAsImpl {
   ///     sub reg2, reg4
   /// It can also optimize the sequence lea/add similarly.
   bool optLEAALU(MachineBasicBlock::iterator &I, MachineBasicBlock &MBB) const;
+
+  /// If \p LEA's result is the base register of \p Use's memory operand and can
+  /// be folded into it, rewrite \p Use in place and return true (leaving \p LEA
+  /// dead for the caller to erase). \p LiveAfterUse is the set of registers
+  /// live after \p Use.
+  bool foldLEAIntoMemOp(MachineInstr &LEA, MachineInstr &Use,
+                        const LivePhysRegs &LiveAfterUse,
+                        const MachineRegisterInfo &MRI) const;
 
   /// Step forwards in MBB, looking for an ADD/SUB instruction which uses
   /// the dest register of LEA instruction I.
@@ -267,6 +280,40 @@ bool FixupLEAsImpl::runOnMachineFunction(MachineFunction &MF) {
         processInstruction(I, MBB);
     }
   }
+
+  // Fold each LEA whose only use is the base register of the immediately
+  // following memory instruction into that instruction's addressing mode,
+  // deleting the LEA:
+  //
+  //     leaq (%rdi,%rdx,4), %rax
+  //     movl (%rax), %eax        -->  movl (%rdi,%rdx,4), %eax
+  //
+  // SelectionDAG already performs this fold within a basic block. The residue
+  // handled here is the cross-block shape: an address computed in one block and
+  // dereferenced in another is never part of a single DAG, so the fold does not
+  // happen at isel; tail duplication and block placement later bring the LEA
+  // and its consumer adjacent, letting the fold fire here on the adjacent pair.
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  SmallVector<MachineInstr *, 8> DeadLEAs;
+  for (MachineBasicBlock &MBB : MF) {
+    // Walk the block backward tracking liveness. At the top of each iteration
+    // LiveRegs holds the registers live after the current instruction.
+    LivePhysRegs LiveRegs(*TRI);
+    LiveRegs.addLiveOuts(MBB);
+    for (MachineInstr &MI : reverse(MBB)) {
+      if (MI.getIterator() != MBB.begin()) {
+        MachineInstr &Prev = *std::prev(MI.getIterator());
+        if (Prev.getOpcode() == X86::LEA64r &&
+            foldLEAIntoMemOp(Prev, MI, LiveRegs, MRI)) {
+          DeadLEAs.push_back(&Prev);
+          ++NumFoldedIntoMemOp;
+        }
+      }
+      LiveRegs.stepBackward(MI);
+    }
+  }
+  for (MachineInstr *LEA : DeadLEAs)
+    LEA->eraseFromParent();
 
   LLVM_DEBUG(dbgs() << "End X86FixupLEAs\n";);
 
@@ -933,6 +980,102 @@ void FixupLEAsImpl::processInstrForSlow3OpLEA(MachineBasicBlock::iterator &I,
   MBB.getParent()->substituteDebugValuesForInst(*I, *NewMI, 1);
   MBB.erase(I);
   I = NewMI;
+}
+
+// A register operand that names no register (base or index absent).
+static bool isNoReg(const MachineOperand &MO) {
+  return MO.isReg() && MO.getReg() == X86::NoRegister;
+}
+
+bool FixupLEAsImpl::foldLEAIntoMemOp(MachineInstr &LEA, MachineInstr &Use,
+                                     const LivePhysRegs &LiveAfterUse,
+                                     const MachineRegisterInfo &MRI) const {
+  // The consumer must be a plain load/store with a single, addressable memory
+  // operand. Control-transfer consumers (call/jmp/ret through memory) are left
+  // alone.
+  if (!Use.mayLoadOrStore() || Use.isCall() || Use.isBranch() || Use.isReturn())
+    return false;
+  const MCInstrDesc &Desc = Use.getDesc();
+  int MemIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
+  if (MemIdx < 0)
+    return false;
+  MemIdx += X86II::getOperandBias(Desc);
+
+  Register DefReg = LEA.getOperand(0).getReg();
+
+  // LEA64r operands: dst, then base, scale, index, disp, segment.
+  const MachineOperand &LBase = LEA.getOperand(1 + X86::AddrBaseReg);
+  const MachineOperand &LScale = LEA.getOperand(1 + X86::AddrScaleAmt);
+  const MachineOperand &LIndex = LEA.getOperand(1 + X86::AddrIndexReg);
+  const MachineOperand &LDisp = LEA.getOperand(1 + X86::AddrDisp);
+  const MachineOperand &LSeg = LEA.getOperand(1 + X86::AddrSegmentReg);
+
+  // Restrictions: a real GPR base, no segment, an immediate displacement
+  // (excludes RIP-relative and global-address LEAs).
+  if (!LBase.isReg() || !LBase.getReg().isValid() || LBase.getReg() == X86::RIP)
+    return false;
+  if (!isNoReg(LSeg) || !LDisp.isImm())
+    return false;
+
+  MachineOperand &UBase = Use.getOperand(MemIdx + X86::AddrBaseReg);
+  MachineOperand &UScale = Use.getOperand(MemIdx + X86::AddrScaleAmt);
+  MachineOperand &UIndex = Use.getOperand(MemIdx + X86::AddrIndexReg);
+  MachineOperand &UDisp = Use.getOperand(MemIdx + X86::AddrDisp);
+  MachineOperand &USeg = Use.getOperand(MemIdx + X86::AddrSegmentReg);
+
+  // The LEA's result must be exactly the consumer's base, with an immediate
+  // displacement and no segment override.
+  if (!UBase.isReg() || UBase.getReg() != DefReg)
+    return false;
+  if (!isNoReg(USeg) || !UDisp.isImm())
+    return false;
+
+  // An addressing mode holds one index; a VSIB (vector) index is not a GPR and
+  // is left alone.
+  bool LHasIndex = LIndex.getReg().isValid();
+  bool UHasIndex = UIndex.getReg().isValid();
+  if (LHasIndex && UHasIndex)
+    return false;
+  if (UHasIndex && !X86::GR64RegClass.contains(UIndex.getReg()) &&
+      !X86::GR32RegClass.contains(UIndex.getReg()))
+    return false;
+
+  // The combined displacement must fit the 32-bit field.
+  int64_t Disp = LDisp.getImm() + UDisp.getImm();
+  if (!isInt<32>(Disp))
+    return false;
+
+  // DefReg may appear in the consumer only as the memory base. If it is read
+  // anywhere else (as the index or a data operand) the base cannot fold away.
+  // If the consumer fully rewrites DefReg, the folded base is dead regardless
+  // of downstream liveness.
+  bool WritesDefReg = false;
+  for (unsigned I = 0, E = Use.getNumOperands(); I != E; ++I) {
+    if (I == unsigned(MemIdx + X86::AddrBaseReg))
+      continue;
+    const MachineOperand &MO = Use.getOperand(I);
+    if (!MO.isReg() || !MO.getReg().isValid())
+      continue;
+    if (!TRI->regsOverlap(MO.getReg(), DefReg))
+      continue;
+    if (MO.isUse())
+      return false;
+    WritesDefReg = true;
+  }
+
+  // The base value must be dead after the consumer.
+  if (!WritesDefReg && !LiveAfterUse.available(MRI, DefReg))
+    return false;
+
+  // Rewrite the consumer's addressing mode to the LEA's address plus its own
+  // displacement, then report the LEA as removable.
+  UBase.setReg(LBase.getReg());
+  if (LHasIndex) {
+    UIndex.setReg(LIndex.getReg());
+    UScale.setImm(LScale.getImm());
+  }
+  UDisp.setImm(Disp);
+  return true;
 }
 
 bool FixupLEAsLegacy::runOnMachineFunction(MachineFunction &MF) {
