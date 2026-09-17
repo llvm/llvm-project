@@ -22,7 +22,7 @@
 ; CHECK:      index_to_evict: 9
 ; CHECK-NEXT: index_to_evict: 10
 
-;; Out-of-range or NaN priority advice is saturated, not converted.
+;; Out-of-range priority advice is saturated, not converted.
 
 ; DEFINE: %{prio} = %python %t.rundir/interactive_main.py --priority=
 ; DEFINE: %{llc} = llc -mtriple=x86_64-linux-unknown -regalloc=greedy \
@@ -34,14 +34,11 @@
 ; RUN:   -regalloc-priority-interactive-channel-base=%t.chan.high -o %t.high.s
 ; RUN: %{prio}negative %t.chan.neg %{llc} \
 ; RUN:   -regalloc-priority-interactive-channel-base=%t.chan.neg -o %t.neg.s
-; RUN: %{prio}nan %t.chan.nan %{llc} \
-; RUN:   -regalloc-priority-interactive-channel-base=%t.chan.nan -o %t.nan.s
 ; RUN: %{prio}huge %t.chan.huge %{llc} \
 ; RUN:   -regalloc-priority-interactive-channel-base=%t.chan.huge -o %t.huge.s
 
 ;; Without saturation, -1.0 wrapped to near UINT_MAX and 1e30 converted to 0.
 ; RUN: cmp %t.neg.s %t.low.s
-; RUN: cmp %t.nan.s %t.low.s
 ; RUN: cmp %t.huge.s %t.high.s
 
 ;; Guard against the above passing vacuously: the two references must differ.

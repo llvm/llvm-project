@@ -33,6 +33,7 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 
+#include <cmath>
 #include <limits>
 
 #if defined(LLVM_HAVE_TFLITE)
@@ -328,8 +329,9 @@ MLPriorityAdvisor::MLPriorityAdvisor(const MachineFunction &MF,
 }
 
 // Converting a NaN or an out-of-range float advice to unsigned is undefined.
-// Saturate instead.
+// Saturate instead. A NaN is a model error, so also assert on it.
 static unsigned convertAdviceToPriority(double Advice) {
+  assert(!std::isnan(Advice) && "model produced a NaN priority");
   if (!(Advice > 0.0)) // Also catches NaN.
     return 0;
   if (Advice >= static_cast<double>(std::numeric_limits<unsigned>::max()))

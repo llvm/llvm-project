@@ -39,7 +39,6 @@ PRIORITY_POLICIES = {
     "low": split_policy(0.0),
     "high": split_policy(4.0e9),
     "negative": split_policy(-1.0),
-    "nan": split_policy(float("nan")),
     "huge": split_policy(1.0e30),
 }
 
