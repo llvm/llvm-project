@@ -730,6 +730,26 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     OS << ", " << CFI.getOffset();
     OS << ", " << CFI.getAddressSpace();
     break;
+  case MCCFIInstruction::OpLLVMDefCfaConstantAddress: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::CfaConstantAddressFields>();
+    OS << "llvm_def_cfa_constant_address ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    OS << Fields.Value << ", " << Fields.AddressSpace;
+    break;
+  }
+  case MCCFIInstruction::OpLLVMDefCfaRegisterAddressTransform: {
+    const auto &Fields = CFI.getExtraFields<
+        MCCFIInstruction::CfaRegisterAddressTransformFields>();
+    OS << "llvm_def_cfa_register_address_transform ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(Fields.Register, OS, TRI);
+    OS << ", " << Fields.DerefSize << ", " << Fields.Scale << ", "
+       << Fields.AddressSpace;
+    break;
+  }
   case MCCFIInstruction::OpRelOffset:
     OS << "rel_offset ";
     if (MCSymbol *Label = CFI.getLabel())
