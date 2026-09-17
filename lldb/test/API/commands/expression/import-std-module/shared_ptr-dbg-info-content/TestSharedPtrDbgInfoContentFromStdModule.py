@@ -27,7 +27,9 @@ class TestSharedPtrDbgInfoContent(TestBase):
             result_children=[ValueCheck(name="pointer")],
         )
         self.expect_expr("s->a", result_type="int", result_value="3")
-        self.expect_expr("s->a = 5", result_type="int", result_value="5")
+        self.expect_expr(
+            "s->a = 5", result_type="int", result_value="5", stop_on_fail=True
+        )
         self.expect_expr("s->a", result_type="int", result_value="5")
         self.expect_expr("(bool)s", result_type="bool", result_value="true")
         self.expect("expr s.reset()")

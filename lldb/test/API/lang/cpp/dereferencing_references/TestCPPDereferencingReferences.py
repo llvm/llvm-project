@@ -15,13 +15,15 @@ class TestCase(TestBase):
         # Take an lvalue reference and call `Dereference` on the SBValue.
         # The result should be `TTT` (and *not* for example the underlying type
         # 'int').
-        lref_val = self.expect_var_path("l_ref", type="TTT &")
+        lref_val = self.expect_var_path("l_ref", type="TTT &", stop_on_fail=True)
         self.assertEqual(lref_val.Dereference().GetType().GetName(), "TTT")
 
         # Same as above for rvalue references.
-        rref_val = self.expect_var_path("r_ref", type="TTT &&")
+        rref_val = self.expect_var_path("r_ref", type="TTT &&", stop_on_fail=True)
         self.assertEqual(rref_val.Dereference().GetType().GetName(), "TTT")
 
         # Typedef to a reference should dereference to the underlying type.
-        td_val = self.expect_var_path("td_to_ref_type", type="td_int_ref")
+        td_val = self.expect_var_path(
+            "td_to_ref_type", type="td_int_ref", stop_on_fail=True
+        )
         self.assertEqual(td_val.Dereference().GetType().GetName(), "int")
