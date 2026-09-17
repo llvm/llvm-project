@@ -3758,7 +3758,13 @@ QualType ASTContext::getCountAttributedType(
     QualType WrappedTy, Expr *CountExpr, bool CountInBytes, bool OrNull,
     ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const {
   assert(WrappedTy->isPointerType() || WrappedTy->isArrayType());
+  assert(CountExpr && "use getIncompleteCountAttributedType for a null count");
 
+  // Complete (non-late-parsed) path: the count expression is known up front.
+  // This deliberately preserves the pre-existing uniquing behavior -- the
+  // FoldingSet lookup/insert below is unchanged by late-parse support. Only
+  // getIncompleteCountAttributedType (count filled in later) opts out of
+  // uniquing.
   llvm::FoldingSetNodeID ID;
   CountAttributedType::Profile(ID, WrappedTy, CountExpr, CountInBytes, OrNull);
 
@@ -3768,15 +3774,51 @@ QualType ASTContext::getCountAttributedType(
     return QualType(CATy, 0);
 
   QualType CanonTy = getCanonicalType(WrappedTy);
-  size_t Size = CountAttributedType::totalSizeToAlloc<TypeCoupledDeclRefInfo>(
-      DependentDecls.size());
-  CATy = (CountAttributedType *)Allocate(Size, TypeAlignment);
-  new (CATy) CountAttributedType(WrappedTy, CanonTy, CountExpr, CountInBytes,
-                                 OrNull, DependentDecls);
+  CATy = CountAttributedType::Create(*this, WrappedTy, CanonTy, CountExpr,
+                                     CountInBytes, OrNull, DependentDecls);
   Types.push_back(CATy);
   CountAttributedTypes.insert(CATy, Token);
 
   return QualType(CATy, 0);
+}
+
+CountAttributedType *ASTContext::getIncompleteCountAttributedType(
+    QualType WrappedTy, bool CountInBytes, bool OrNull) const {
+  assert(WrappedTy->isPointerType() || WrappedTy->isArrayType());
+
+  // Deliberately opts out of the uniquing that `getCountAttributedType` does:
+  // `CountAttributedType::Profile` keys on the `CountExpr` pointer, which is
+  // null here, so every incomplete node would profile identically as
+  // `(WrappedTy, flags, nullptr)` and two fields with different counts would
+  // collide. The node stays un-uniqued even after completion; see
+  // `completeCountAttributedType`.
+  //
+  // Also deliberately not in `Types` yet. An incomplete node can be abandoned
+  // without ever being completed (a nested counted_by, or an argument that
+  // fails to parse), and a null-count node must not be reachable by anything
+  // that scans `Types`. `completeCountAttributedType` registers it once the
+  // count is in place.
+  return CountAttributedType::Create(
+      *this, WrappedTy, getCanonicalType(WrappedTy),
+      /*CountExpr=*/nullptr, CountInBytes, OrNull,
+      /*CoupledDecls=*/{});
+}
+
+void ASTContext::completeCountAttributedType(
+    CountAttributedType *CATy, Expr *CountExpr,
+    ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const {
+  CATy->complete(*this, CountExpr, DependentDecls);
+  // Safe for `Types` scanners now that the count is in place; see
+  // `getIncompleteCountAttributedType` for why it was held back.
+  //
+  // It stays out of the `CountAttributedTypes` FoldingSet permanently, unlike
+  // an eagerly built node: this pointer is already embedded in the enclosing
+  // types and handed out, so an equal node that happens to exist cannot be
+  // merged into. The only cost is that a completed node is never
+  // pointer-shared with an equal eager one, which does not affect semantic
+  // type equality -- `hasSameType` compares canonical types, and this sugar's
+  // canonical type is the wrapped type's.
+  Types.push_back(CATy);
 }
 
 QualType ASTContext::getLateParsedAttrType(
