@@ -476,9 +476,6 @@ protected:
   /// inlined through this particular callsite.
   bool isKnownNonNullInCallee(Value *V);
 
-  /// Return true if size growth is allowed when inlining the callee at \p Call.
-  bool allowSizeGrowth(CallBase &Call);
-
   // Custom analysis routines.
   InlineResult analyzeBlock(BasicBlock *BB,
                             const SmallPtrSetImpl<const Value *> &EphValues);
@@ -1993,31 +1990,6 @@ bool CallAnalyzer::isKnownNonNullInCallee(Value *V) {
   return false;
 }
 
-bool CallAnalyzer::allowSizeGrowth(CallBase &Call) {
-  // If the normal destination of the invoke or the parent block of the call
-  // site is unreachable-terminated, there is little point in inlining this
-  // unless there is literally zero cost.
-  // FIXME: Note that it is possible that an unreachable-terminated block has a
-  // hot entry. For example, in below scenario inlining hot_call_X() may be
-  // beneficial :
-  // main() {
-  //   hot_call_1();
-  //   ...
-  //   hot_call_N()
-  //   exit(0);
-  // }
-  // For now, we are not handling this corner case here as it is rare in real
-  // code. In future, we should elaborate this based on BPI and BFI in more
-  // general threshold adjusting heuristics in updateThreshold().
-  if (InvokeInst *II = dyn_cast<InvokeInst>(&Call)) {
-    if (isa<UnreachableInst>(II->getNormalDest()->getTerminator()))
-      return false;
-  } else if (isa<UnreachableInst>(Call.getParent()->getTerminator()))
-    return false;
-
-  return true;
-}
-
 bool InlineCostCallAnalyzer::isColdCallSite(CallBase &Call,
                                             BlockFrequencyInfo *CallerBFI) {
   // If global profile summary is available, then callsite's coldness is
@@ -2072,7 +2044,7 @@ InlineCostCallAnalyzer::getHotCallSiteThreshold(CallBase &Call,
 
 void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
   // If no size growth is allowed for this inlining, set Threshold to 0.
-  if (!allowSizeGrowth(Call)) {
+  if (!TTI.allowSizeGrowth(Call)) {
     Threshold = 0;
     return;
   }
