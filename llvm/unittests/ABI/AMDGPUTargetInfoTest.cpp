@@ -60,6 +60,22 @@ protected:
     return createAMDGPUTargetInfo(const_cast<TypeBuilder &>(TB));
   }
 
+  /// A target configured like a HIP compilation: generic scalar-pointer kernel
+  /// arguments are coerced to the global address space.
+  std::unique_ptr<TargetInfo> hipTarget() const {
+    return createAMDGPUTargetInfo(const_cast<TypeBuilder &>(TB),
+                                  /*CoerceGenericPtrArgToGlobal=*/true);
+  }
+
+  /// The classification a kernel argument gets on target \p TI.
+  const ArgInfo &classifyKernelArg(const ABIType *ArgTy,
+                                   std::unique_ptr<FunctionInfo> &FI,
+                                   std::unique_ptr<TargetInfo> &TI) {
+    FI = FunctionInfo::create(CallingConv::AMDGPU_KERNEL, Void, {ArgTy});
+    TI->computeInfo(*FI);
+    return FI->getArgInfo(0).Info;
+  }
+
   /// A register-passable record with the given fields, size and alignment.
   const ABIType *recordOf(llvm::ArrayRef<FieldInfo> Fields, uint64_t SizeInBits,
                           llvm::Align Alignment) {
@@ -90,6 +106,15 @@ protected:
     return FI->getReturnInfo();
   }
 };
+
+// A direct arg coerced to a pointer in address space \p AS.
+static void expectDirectPointerAS(const ArgInfo &Info, unsigned AS) {
+  ASSERT_TRUE(Info.isDirect());
+  const auto *PT =
+      llvm::dyn_cast_or_null<llvm::abi::PointerType>(Info.getCoerceToType());
+  ASSERT_NE(PT, nullptr);
+  EXPECT_EQ(PT->getAddrSpace(), AS);
+}
 
 static void expectUncoercedDirect(const ArgInfo &Info) {
   ASSERT_TRUE(Info.isDirect());
@@ -139,7 +164,10 @@ static void expectIndirect(const ArgInfo &Info, llvm::Align ExpectedAlign,
 TEST_F(AMDGPUTargetInfoTest, ScalarPassesDirect) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI;
-  expectUncoercedDirect(classifyArg(I32, FI, TI));
+  const ArgInfo &Info = classifyArg(I32, FI, TI);
+  expectUncoercedDirect(Info);
+  // Ordinary direct args stay flattenable (the getDirect default).
+  EXPECT_TRUE(Info.getCanBeFlattened());
   expectUncoercedDirect(classifyArg(F32, FI, TI));
 }
 
@@ -150,6 +178,35 @@ TEST_F(AMDGPUTargetInfoTest, PromotableIntegerExtends) {
   const ArgInfo &Info = classifyArg(I8, FI, TI);
   ASSERT_TRUE(Info.isExtend());
   EXPECT_TRUE(Info.isSignExt());
+}
+
+// An oversized _BitInt (> 128 bits) is passed indirectly, byval, like classic
+// DefaultABIInfo. The 128-bit boundary width stays direct.
+TEST_F(AMDGPUTargetInfoTest, OversizedBitIntArgumentIsIndirect) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *BitInt256 = TB.getIntegerType(256, llvm::Align(16),
+                                               /*Signed=*/true,
+                                               /*IsBitInt=*/true);
+  expectIndirect(classifyArg(BitInt256, FI, TI), llvm::Align(16),
+                 /*ByVal=*/true, llvm::AMDGPUAS::PRIVATE_ADDRESS);
+
+  const ABIType *BitInt128 = TB.getIntegerType(128, llvm::Align(16),
+                                               /*Signed=*/true,
+                                               /*IsBitInt=*/true);
+  EXPECT_TRUE(classifyArg(BitInt128, FI, TI).isDirect());
+}
+
+// An oversized _BitInt return is indirect too. Classic DefaultABIInfo's
+// getNaturalAlignIndirect defaults ByVal to true, so returns carry it too.
+TEST_F(AMDGPUTargetInfoTest, OversizedBitIntReturnIsIndirect) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *BitInt256 = TB.getIntegerType(256, llvm::Align(16),
+                                               /*Signed=*/true,
+                                               /*IsBitInt=*/true);
+  expectIndirect(classifyRet(BitInt256, FI, TI), llvm::Align(16),
+                 /*ByVal=*/true, llvm::AMDGPUAS::PRIVATE_ADDRESS);
 }
 
 // Aggregates <= 16/32/64 bits pack into i16 / i32 / [2 x i32].
@@ -211,7 +268,8 @@ TEST_F(AMDGPUTargetInfoTest, NonTrivialRecordIsIndirectPrivate) {
                  /*ByVal=*/false, llvm::AMDGPUAS::PRIVATE_ADDRESS);
 }
 
-// A variadic argument bypasses register packing and passes through unchanged.
+// A variadic argument bypasses register packing and passes through unchanged,
+// kept intact rather than flattened into per-field wire arguments.
 TEST_F(AMDGPUTargetInfoTest, VariadicArgumentPassesDirect) {
   std::unique_ptr<TargetInfo> TI = target();
   const ABIType *S16 =
@@ -221,6 +279,7 @@ TEST_F(AMDGPUTargetInfoTest, VariadicArgumentPassesDirect) {
       FunctionInfo::create(CallingConv::C, Void, {S16}, RequiredArgs(0));
   TI->computeInfo(*FI);
   expectUncoercedDirect(FI->getArgInfo(0).Info);
+  EXPECT_FALSE(FI->getArgInfo(0).Info.getCanBeFlattened());
 }
 
 // Kernel aggregate arguments are passed by reference in the constant address
@@ -235,11 +294,46 @@ TEST_F(AMDGPUTargetInfoTest, KernelAggregateIsIndirectConstant) {
                  llvm::AMDGPUAS::CONSTANT_ADDRESS);
 }
 
-// Kernel scalar arguments are passed directly.
+// Kernel direct arguments are passed directly and kept intact.
 TEST_F(AMDGPUTargetInfoTest, KernelScalarIsDirect) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI;
-  expectDirectInteger(classifyArg(I32, FI, TI, CallingConv::AMDGPU_KERNEL), 32);
+  const ArgInfo &Info = classifyArg(I32, FI, TI, CallingConv::AMDGPU_KERNEL);
+  expectDirectInteger(Info, 32);
+  EXPECT_FALSE(Info.getCanBeFlattened());
+}
+
+// Under HIP a generic scalar-pointer kernel argument is coerced to a global
+// pointer and passed directly, kept intact.
+TEST_F(AMDGPUTargetInfoTest, KernelGenericPointerCoercesToGlobalUnderHIP) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI = hipTarget();
+  const ABIType *GenericPtr =
+      TB.getPointerType(64, llvm::Align(8), llvm::AMDGPUAS::FLAT_ADDRESS);
+  const ArgInfo &Info = classifyKernelArg(GenericPtr, FI, TI);
+  expectDirectPointerAS(Info, llvm::AMDGPUAS::GLOBAL_ADDRESS);
+  EXPECT_FALSE(Info.getCanBeFlattened());
+}
+
+// A pointer already in the global address space is left untouched under HIP.
+TEST_F(AMDGPUTargetInfoTest, KernelGlobalPointerUnchangedUnderHIP) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI = hipTarget();
+  const ABIType *GlobalPtr =
+      TB.getPointerType(64, llvm::Align(8), llvm::AMDGPUAS::GLOBAL_ADDRESS);
+  expectDirectPointerAS(classifyKernelArg(GlobalPtr, FI, TI),
+                        llvm::AMDGPUAS::GLOBAL_ADDRESS);
+}
+
+// Without the HIP rule a generic pointer kernel argument stays generic.
+TEST_F(AMDGPUTargetInfoTest, KernelGenericPointerUnchangedByDefault) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *GenericPtr =
+      TB.getPointerType(64, llvm::Align(8), llvm::AMDGPUAS::FLAT_ADDRESS);
+  expectDirectPointerAS(
+      classifyArg(GenericPtr, FI, TI, CallingConv::AMDGPU_KERNEL),
+      llvm::AMDGPUAS::FLAT_ADDRESS);
 }
 
 // A void return is ignored.

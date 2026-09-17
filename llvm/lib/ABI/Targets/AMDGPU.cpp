@@ -22,23 +22,29 @@ namespace abi {
 
 class AMDGPUTargetInfo : public TargetInfo {
 private:
-  TypeBuilder &TB;
   static const unsigned MaxNumRegsForArgsRet = 16;
+
+  /// HIP coerces a generic scalar-pointer kernel argument to the global
+  /// address space. Gated by the front end, which alone can see LangOpts.HIP.
+  bool CoerceGenericPtrArgToGlobal;
 
   ArgInfo classifyReturnType(const Type *RetTy) const;
   ArgInfo classifyKernelArgumentType(const Type *Ty) const;
   ArgInfo classifyArgumentType(const Type *Ty, bool Variadic,
                                unsigned &NumRegsLeft) const;
 
-  /// Target-independent fallback, mirroring classic CodeGen's DefaultABIInfo.
-  ArgInfo classifyDefaultType(const Type *Ty, bool IsReturn) const;
+  /// Target-independent fallback classification for arguments and returns.
+  ArgInfo classifyDefaultArgumentType(const Type *Ty) const;
+  ArgInfo classifyDefaultReturnType(const Type *Ty) const;
 
   /// Estimate number of registers the type will use when passed in registers.
   uint64_t numRegsForType(const Type *Ty) const;
 
 public:
-  AMDGPUTargetInfo(TypeBuilder &TypeBuilder, const ABICompatInfo &Compat)
-      : TargetInfo(Compat), TB(TypeBuilder) {}
+  AMDGPUTargetInfo(TypeBuilder &TypeBuilder, const ABICompatInfo &Compat,
+                   bool CoerceGenericPtrArgToGlobal)
+      : TargetInfo(TypeBuilder, Compat),
+        CoerceGenericPtrArgToGlobal(CoerceGenericPtrArgToGlobal) {}
 
   void computeInfo(FunctionInfo &FI) const override;
 };
@@ -70,22 +76,55 @@ uint64_t AMDGPUTargetInfo::numRegsForType(const Type *Ty) const {
   return (Ty->getSizeInBits().getFixedValue() + 31) / 32;
 }
 
-ArgInfo AMDGPUTargetInfo::classifyDefaultType(const Type *Ty,
-                                              bool IsReturn) const {
-  if (IsReturn && Ty->isVoid())
-    return ArgInfo::getIgnore();
+// Natural-alignment indirect in the alloca address space (PRIVATE on AMDGPU),
+// ByVal by default.
+static ArgInfo getNaturalAlignIndirectPrivate(const Type *Ty,
+                                              bool ByVal = true) {
+  return ArgInfo::getIndirect(Ty->getAlignment(), ByVal,
+                              /*AddrSpace=*/AMDGPUAS::PRIVATE_ADDRESS);
+}
+
+// A _BitInt wider than int128 is passed indirectly. AMDGPU has int128, so the
+// threshold is 128 bits.
+static bool isOversizedBitInt(const Type *Ty) {
+  const auto *IT = dyn_cast<IntegerType>(Ty);
+  return IT && IT->isBitInt() && IT->getSizeInBits().getFixedValue() > 128;
+}
+
+// Default argument classification for types not handled by the AMDGPU rules.
+ArgInfo AMDGPUTargetInfo::classifyDefaultArgumentType(const Type *Ty) const {
+  Ty = useFirstFieldIfTransparentUnion(Ty);
 
   if (isAggregateTypeForABI(Ty)) {
     if (RecordArgABI RAA = getRecordArgABI(Ty); RAA != RAA_Default)
-      return getNaturalAlignIndirect(Ty, /*ByVal=*/RAA == RAA_DirectInMemory);
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/!IsReturn);
+      return getNaturalAlignIndirectPrivate(Ty,
+                                            /*ByVal=*/RAA ==
+                                                RAA_DirectInMemory);
+    return getNaturalAlignIndirectPrivate(Ty);
   }
 
-  if (const auto *IT = dyn_cast<IntegerType>(Ty))
-    if (isPromotableInteger(IT))
-      return ArgInfo::getExtend(Ty);
+  if (isOversizedBitInt(Ty))
+    return getNaturalAlignIndirectPrivate(Ty);
 
-  return ArgInfo::getDirect();
+  const auto *IT = dyn_cast<IntegerType>(Ty);
+  return (IT && isPromotableInteger(IT)) ? ArgInfo::getExtend(Ty)
+                                         : ArgInfo::getDirect();
+}
+
+// Default return classification for types not handled by the AMDGPU rules.
+ArgInfo AMDGPUTargetInfo::classifyDefaultReturnType(const Type *Ty) const {
+  if (Ty->isVoid())
+    return ArgInfo::getIgnore();
+
+  if (isAggregateTypeForABI(Ty))
+    return getNaturalAlignIndirectPrivate(Ty);
+
+  if (isOversizedBitInt(Ty))
+    return getNaturalAlignIndirectPrivate(Ty);
+
+  const auto *IT = dyn_cast<IntegerType>(Ty);
+  return (IT && isPromotableInteger(IT)) ? ArgInfo::getExtend(Ty)
+                                         : ArgInfo::getDirect();
 }
 
 ArgInfo AMDGPUTargetInfo::classifyReturnType(const Type *RetTy) const {
@@ -107,7 +146,7 @@ ArgInfo AMDGPUTargetInfo::classifyReturnType(const Type *RetTy) const {
         return ArgInfo::getDirect(SeltTy);
 
       if (RT && RT->hasFlexibleArrayMember())
-        return classifyDefaultType(RetTy, /*IsReturn=*/true);
+        return classifyDefaultReturnType(RetTy);
 
       // Pack aggregates <= 4 bytes into single VGPR or pair.
       uint64_t Size = RetTy->getSizeInBits().getFixedValue();
@@ -128,7 +167,7 @@ ArgInfo AMDGPUTargetInfo::classifyReturnType(const Type *RetTy) const {
   }
 
   // Otherwise just do the default thing.
-  return classifyDefaultType(RetTy, /*IsReturn=*/true);
+  return classifyDefaultReturnType(RetTy);
 }
 
 /// For kernels all parameters are really passed in a special buffer. It doesn't
@@ -139,16 +178,26 @@ ArgInfo AMDGPUTargetInfo::classifyKernelArgumentType(const Type *Ty) const {
   if (const Type *SeltTy = isSingleElementStruct(Ty))
     Ty = SeltTy;
 
-  // TODO: Classic coerces HIP scalar pointers from generic to global here; that
-  // depends on LangOptions the ABI library cannot see, so it is skipped.
+  // HIP passes a generic scalar pointer as a global pointer; a pointer is not
+  // an aggregate, so this stays on the direct path.
+  if (CoerceGenericPtrArgToGlobal) {
+    if (const auto *PtrTy = dyn_cast<PointerType>(Ty);
+        PtrTy && PtrTy->getAddrSpace() == AMDGPUAS::FLAT_ADDRESS) {
+      const Type *Coerced =
+          TB.getPointerType(PtrTy->getSizeInBits().getFixedValue(),
+                            PtrTy->getAlignment(), AMDGPUAS::GLOBAL_ADDRESS);
+      return ArgInfo::getDirect(Coerced, /*Offset=*/0, /*Align=*/std::nullopt,
+                                /*CanBeFlattened=*/false);
+    }
+  }
+
   if (isAggregateTypeForABI(Ty))
     return ArgInfo::getIndirect(Ty->getAlignment(), /*ByVal=*/false,
                                 /*AddrSpace=*/AMDGPUAS::CONSTANT_ADDRESS);
 
-  // TODO: Classic passes CanBeFlattened=false here to keep a struct intact;
-  // ArgInfo cannot model that yet, so a multi-field record coerce may be
-  // flattened.
-  return ArgInfo::getDirect(Ty);
+  // CanBeFlattened=false keeps the struct intact.
+  return ArgInfo::getDirect(Ty, /*Offset=*/0, /*Align=*/std::nullopt,
+                            /*CanBeFlattened=*/false);
 }
 
 ArgInfo AMDGPUTargetInfo::classifyArgumentType(const Type *Ty, bool Variadic,
@@ -157,9 +206,10 @@ ArgInfo AMDGPUTargetInfo::classifyArgumentType(const Type *Ty, bool Variadic,
 
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
-  // TODO: Classic sets CanBeFlattened=false for variadics; not modeled here.
+  // Variadic aggregates are kept intact rather than flattened into fields.
   if (Variadic)
-    return ArgInfo::getDirect();
+    return ArgInfo::getDirect(/*T=*/nullptr, /*Offset=*/0,
+                              /*Align=*/std::nullopt, /*CanBeFlattened=*/false);
 
   if (isAggregateTypeForABI(Ty)) {
     // Records with non-trivial destructors/copy-constructors should not be
@@ -179,7 +229,7 @@ ArgInfo AMDGPUTargetInfo::classifyArgumentType(const Type *Ty, bool Variadic,
 
     if (const auto *RT = dyn_cast<RecordType>(Ty);
         RT && RT->hasFlexibleArrayMember())
-      return classifyDefaultType(Ty, /*IsReturn=*/false);
+      return classifyDefaultArgumentType(Ty);
 
     // Pack aggregates <= 8 bytes into single VGPR or pair.
     uint64_t Size = Ty->getSizeInBits().getFixedValue();
@@ -211,7 +261,7 @@ ArgInfo AMDGPUTargetInfo::classifyArgumentType(const Type *Ty, bool Variadic,
   }
 
   // Otherwise just do the default thing.
-  ArgInfo AI = classifyDefaultType(Ty, /*IsReturn=*/false);
+  ArgInfo AI = classifyDefaultArgumentType(Ty);
   if (!AI.isIndirect()) {
     uint64_t NumRegs = numRegsForType(Ty);
     NumRegsLeft -= std::min(NumRegs, uint64_t{NumRegsLeft});
@@ -240,8 +290,10 @@ void AMDGPUTargetInfo::computeInfo(FunctionInfo &FI) const {
   }
 }
 
-std::unique_ptr<TargetInfo> createAMDGPUTargetInfo(TypeBuilder &TB) {
-  return std::make_unique<AMDGPUTargetInfo>(TB, ABICompatInfo());
+std::unique_ptr<TargetInfo>
+createAMDGPUTargetInfo(TypeBuilder &TB, bool CoerceGenericPtrArgToGlobal) {
+  return std::make_unique<AMDGPUTargetInfo>(TB, ABICompatInfo(),
+                                            CoerceGenericPtrArgToGlobal);
 }
 
 } // namespace abi
