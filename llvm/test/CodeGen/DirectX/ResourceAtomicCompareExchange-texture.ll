@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-resource-access -dxil-op-lower %s | FileCheck %s
+; RUN: opt -S -dxil-resource-access -dxil-op-lower %s | FileCheck %s --implicit-check-not=insertvalue --implicit-check-not=icmp
 
 ; Verify cmpxchg through a dx.resource.getpointer of a texture is lowered to
 ; dx.op.atomicCompareExchange, with one coordinate operand per texture
@@ -14,9 +14,7 @@ define i32 @cmpxchg_texture1d(i32 %coord, i32 %cmp, i32 %value) {
       target("dx.Texture", i32, 1, 0, 0, 1) %texture, i32 %coord)
 
   ; CHECK: [[ORIG:%.*]] = call i32 @dx.op.atomicCompareExchange.i32(i32 79, %dx.types.Handle %{{.*}}, i32 %coord, i32 poison, i32 poison, i32 %cmp, i32 %value)
-  ; CHECK: [[OK:%.*]] = icmp eq i32 [[ORIG]], %cmp
-  ; CHECK: [[AGG:%.*]] = insertvalue { i32, i1 } poison, i32 [[ORIG]], 0
-  ; CHECK: insertvalue { i32, i1 } [[AGG]], i1 [[OK]], 1
+  ; CHECK: ret i32 [[ORIG]]
   %pair = cmpxchg ptr %ptr, i32 %cmp, i32 %value monotonic monotonic
   %old = extractvalue { i32, i1 } %pair, 0
   ret i32 %old

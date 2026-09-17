@@ -443,14 +443,21 @@ static void emitAtomicCompareExchange(IRBuilder<> &Builder,
       Args);
 
   // `cmpxchg` yields a { original, success } pair, but the DXIL op returns
-  // only the original value. Recover the success flag by comparing the
-  // returned value against the expected one.
-  Value *Success = Builder.CreateICmpEQ(Original, Compare);
-  Value *Result =
-      Builder.CreateInsertValue(PoisonValue::get(AI->getType()), Original, 0);
-  Result = Builder.CreateInsertValue(Result, Success, 1);
+  // only the original value. DXIL has no way to express the success flag, and
+  // no HLSL builtin reads it, so replace the users of the pair directly
+  // instead of building it again. No pass after this one removes dead code.
+  SmallVector<ExtractValueInst *> Extracts;
+  for (User *U : AI->users()) {
+    auto *EV = dyn_cast<ExtractValueInst>(U);
+    if (!EV || EV->getIndices()[0] != 0)
+      reportFatalUsageError("DXIL cmpxchg provides only the original value");
+    Extracts.push_back(EV);
+  }
 
-  AI->replaceAllUsesWith(Result);
+  for (ExtractValueInst *EV : Extracts) {
+    EV->replaceAllUsesWith(Original);
+    EV->eraseFromParent();
+  }
 }
 
 static void createBufferAtomicCompareExchange(IntrinsicInst *II,
