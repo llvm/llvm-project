@@ -2371,7 +2371,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
       // We don't actually diagnose this case immediately, because we
       // could be within a context where we might find out later that
       // the expression is potentially evaluated (e.g., for typeid).
-      ExprEvalContexts.back().Lambdas.push_back(Lambda);
+      ExprEvalContexts.back().getOrCreateRareData().Lambdas.push_back(Lambda);
       break;
 
     case ExpressionEvaluationContext::DiscardedStatement:

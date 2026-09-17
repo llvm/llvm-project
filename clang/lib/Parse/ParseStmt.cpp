@@ -1965,13 +1965,14 @@ void Parser::ParseForRangeInitializerAfterColon(ForRangeInit &FRI,
   }
 
   // Before c++23, ForRangeLifetimeExtendTemps should be empty.
-  assert(getLangOpts().CPlusPlus23 ||
-         Actions.ExprEvalContexts.back().ForRangeLifetimeExtendTemps.empty());
+  auto *Rare = Actions.ExprEvalContexts.back().getRareData();
+  assert(getLangOpts().CPlusPlus23 || !Rare ||
+         Rare->ForRangeLifetimeExtendTemps.empty());
 
   // Move the collected materialized temporaries into ForRangeInit before
   // ForRangeInitContext exit.
-  FRI.LifetimeExtendTemps =
-      std::move(Actions.ExprEvalContexts.back().ForRangeLifetimeExtendTemps);
+  if (Rare)
+    FRI.LifetimeExtendTemps = std::move(Rare->ForRangeLifetimeExtendTemps);
 }
 
 StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
