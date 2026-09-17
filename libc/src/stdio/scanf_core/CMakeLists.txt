@@ -24,6 +24,15 @@ elseif(LLVM_LIBC_FULL_BUILD)
   )
 endif()
 
+set(malloc_deps)
+if(NOT LIBC_CONF_SCANF_DISABLE_ALLOCATION)
+  list(APPEND malloc_deps
+    libc.hdr.func.malloc
+    libc.hdr.func.realloc
+    libc.hdr.func.free
+  )
+endif()
+
 add_header_library(
   scanf_config
   HDRS
@@ -108,10 +117,8 @@ add_header_library(
     libc.src.__support.CPP.limits
     libc.src.__support.char_vector
     libc.src.__support.str_to_float
-    libc.hdr.func.malloc
-    libc.hdr.func.realloc
-    libc.hdr.free
     ${use_system_file}
+    ${malloc_deps}
 )
 
 # TODO: condense the file-related code as possible.

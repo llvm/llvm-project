@@ -9,9 +9,11 @@
 #ifndef LLVM_LIBC_SRC_STDIO_SCANF_CORE_STRING_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_STRING_CONVERTER_H
 
+#ifndef LIBC_COPT_SCANF_DISABLE_ALLOCATION
 #include "hdr/func/free.h"
 #include "hdr/func/malloc.h"
 #include "hdr/func/realloc.h"
+#endif
 #include "src/__support/CPP/limits.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
@@ -46,7 +48,7 @@ int convert_string(Reader<T> *reader, const FormatSection &to_conv) {
     }
   }
 
-  char *output;
+  char *output = reinterpret_cast<char *>(to_conv.output_ptr);
 #ifndef LIBC_COPT_SCANF_DISABLE_ALLOCATION
   size_t alloc_size;
   if ((to_conv.flags & NO_WRITE) == 0 && (to_conv.flags & ALLOCATE) != 0) {
@@ -58,11 +60,7 @@ int convert_string(Reader<T> *reader, const FormatSection &to_conv) {
     output = reinterpret_cast<char *>(malloc(alloc_size));
     if (!output)
       return ALLOCATION_FAILURE;
-  } else {
-    output = reinterpret_cast<char *>(to_conv.output_ptr);
   }
-#else
-  output = reinterpret_cast<char *>(to_conv.output_ptr);
 #endif
   char cur_char = reader->getc();
   size_t i = 0;
@@ -77,8 +75,8 @@ int convert_string(Reader<T> *reader, const FormatSection &to_conv) {
     if ((to_conv.flags & NO_WRITE) == 0) {
       output[i] = cur_char;
 #ifndef LIBC_COPT_SCANF_DISABLE_ALLOCATION
-      if (((to_conv.flags & ALLOCATE) != 0) && (i + 1) == alloc_size &&
-          alloc_size < max_width) {
+      const bool IS_ALLOCATED = (to_conv.flags & ALLOCATE) != 0;
+      if (IS_ALLOCATED && (i + 1) == alloc_size && alloc_size < max_width) {
         alloc_size *= ALLOCATION_SCALE;
         if (alloc_size > max_width + 1)
           alloc_size = max_width + 1;

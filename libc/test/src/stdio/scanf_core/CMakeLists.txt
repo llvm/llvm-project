@@ -47,7 +47,6 @@ add_libc_test(
     libc.src.stdio.scanf_core.converter
     libc.src.stdio.scanf_core.string_reader
     libc.src.__support.CPP.string_view
-    libc.src.__support.CPP.new
   COMPILE_OPTIONS
     ${use_system_file}
 )
