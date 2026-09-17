@@ -3530,24 +3530,26 @@ class CountAttributedType final : public BoundsAttributedType {
   ///
   /// \p CountExpr may be null, and \p CoupledDecls empty, for a type created by
   /// a late-parsed attribute whose argument has not been parsed yet; such a
-  /// type is completed by \c setCountExpr once the enclosing scope is known.
-  /// See
+  /// type is completed by \c complete once the enclosing scope is known. See
   /// \c Parser::CompleteLateParsedTypeAttributes.
   CountAttributedType(QualType Wrapped, QualType Canon, Expr *CountExpr,
                       bool CountInBytes, bool OrNull,
                       ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls);
 
-  /// Supply the count expression and its coupled declarations for a type that
-  /// was created without them by a late-parsed attribute. \p CoupledDecls must
-  /// already be allocated in the \c ASTContext, since it is retained by
-  /// reference.
-  void setCountExpr(Expr *E, ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls) {
-    assert(!CountExpr && "count expression is already set");
-    assert(E && "completing with a null count expression");
-    CountExpr = E;
-    Decls = CoupledDecls;
-    CountAttributedTypeBits.NumCoupledDecls = CoupledDecls.size();
-  }
+  /// Allocate and construct a \c CountAttributedType in \p Ctx, including its
+  /// coupled-declaration array. \p CountExpr may be null (with \p CoupledDecls
+  /// empty) for a late-parsed attribute whose argument is not yet parsed;
+  /// complete such a node later with \c complete.
+  static CountAttributedType *
+  Create(const ASTContext &Ctx, QualType Wrapped, QualType Canon,
+         Expr *CountExpr, bool CountInBytes, bool OrNull,
+         ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls);
+
+  /// Supply the count expression and coupled declarations for a node created by
+  /// \c Create with a null count -- a late-parsed attribute whose argument has
+  /// now been parsed. Allocates the decl array in \p Ctx, so the node owns it.
+  void complete(const ASTContext &Ctx, Expr *E,
+                ArrayRef<TypeCoupledDeclRefInfo> CoupledDecls);
 
 public:
   Expr *getCountExpr() const { return CountExpr; }

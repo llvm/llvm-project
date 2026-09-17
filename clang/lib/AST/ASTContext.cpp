@@ -3754,18 +3754,6 @@ QualType ASTContext::removePtrSizeAddrSpace(QualType T) const {
   return T;
 }
 
-/// Allocate \p Decls in this context so a CountAttributedType can retain it by
-/// reference.
-static ArrayRef<TypeCoupledDeclRefInfo>
-allocateCoupledDecls(const ASTContext &Ctx,
-                     ArrayRef<TypeCoupledDeclRefInfo> Decls) {
-  if (Decls.empty())
-    return {};
-  auto *Slots = Ctx.Allocate<TypeCoupledDeclRefInfo>(Decls.size());
-  llvm::copy(Decls, Slots);
-  return ArrayRef(Slots, Decls.size());
-}
-
 QualType ASTContext::getCountAttributedType(
     QualType WrappedTy, Expr *CountExpr, bool CountInBytes, bool OrNull,
     ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const {
@@ -3786,10 +3774,8 @@ QualType ASTContext::getCountAttributedType(
     return QualType(CATy, 0);
 
   QualType CanonTy = getCanonicalType(WrappedTy);
-  ArrayRef<TypeCoupledDeclRefInfo> Decls =
-      allocateCoupledDecls(*this, DependentDecls);
-  CATy = new (*this, alignof(CountAttributedType)) CountAttributedType(
-      WrappedTy, CanonTy, CountExpr, CountInBytes, OrNull, Decls);
+  CATy = CountAttributedType::Create(*this, WrappedTy, CanonTy, CountExpr,
+                                     CountInBytes, OrNull, DependentDecls);
   Types.push_back(CATy);
   CountAttributedTypes.insert(CATy, Token);
 
@@ -3800,29 +3786,38 @@ CountAttributedType *ASTContext::getIncompleteCountAttributedType(
     QualType WrappedTy, bool CountInBytes, bool OrNull) const {
   assert(WrappedTy->isPointerType() || WrappedTy->isArrayType());
 
-  // Deliberately not uniqued. `CountAttributedType::Profile` keys on the
-  // `CountExpr` pointer, so every incomplete node would hash identically as
+  // Deliberately opts out of the uniquing that `getCountAttributedType` does:
+  // `CountAttributedType::Profile` keys on the `CountExpr` pointer, which is
+  // null here, so every incomplete node would profile identically as
   // `(WrappedTy, flags, nullptr)` and two fields with different counts would
-  // share a node. This is fine because expressions are not shared anyway.
-  // `getVariableArrayType` declines to unique for the same
-  // underlying reason: expressions themselves are not uniqued.
+  // collide. The node stays un-uniqued even after completion; see
+  // `completeCountAttributedType`.
   //
-  // Not added to `Types` yet: an incomplete node whose position turns out to be
-  // invalid (a nested counted_by, or a rejected argument) is abandoned without
-  // completion, and a node with a null count must never be reachable by
-  // anything that iterates `Types`. It is registered in
-  // `completeCountAttributedType` instead.
-  return new (*this, alignof(CountAttributedType)) CountAttributedType(
-      WrappedTy, getCanonicalType(WrappedTy), /*CountExpr=*/nullptr,
-      CountInBytes, OrNull, /*CoupledDecls=*/{});
+  // Also deliberately not in `Types` yet. An incomplete node can be abandoned
+  // without ever being completed (a nested counted_by, or an argument that
+  // fails to parse), and a null-count node must not be reachable by anything
+  // that scans `Types`. `completeCountAttributedType` registers it once the
+  // count is in place.
+  return CountAttributedType::Create(
+      *this, WrappedTy, getCanonicalType(WrappedTy),
+      /*CountExpr=*/nullptr, CountInBytes, OrNull,
+      /*CoupledDecls=*/{});
 }
 
 void ASTContext::completeCountAttributedType(
     CountAttributedType *CATy, Expr *CountExpr,
     ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const {
-  ArrayRef<TypeCoupledDeclRefInfo> Decls =
-      allocateCoupledDecls(*this, DependentDecls);
-  CATy->setCountExpr(CountExpr, Decls);
+  CATy->complete(*this, CountExpr, DependentDecls);
+  // Safe for `Types` scanners now that the count is in place; see
+  // `getIncompleteCountAttributedType` for why it was held back.
+  //
+  // It stays out of the `CountAttributedTypes` FoldingSet permanently, unlike
+  // an eagerly built node: this pointer is already embedded in the enclosing
+  // types and handed out, so an equal node that happens to exist cannot be
+  // merged into. The only cost is that a completed node is never
+  // pointer-shared with an equal eager one, which does not affect semantic
+  // type equality -- `hasSameType` compares canonical types, and this sugar's
+  // canonical type is the wrapped type's.
   Types.push_back(CATy);
 }
 
