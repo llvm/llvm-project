@@ -20,7 +20,7 @@ bool check(sycl::queue &Q, unsigned int G, unsigned int L) {
     SyclData[I] = {0, 0, 0, 0, 0};
   SgSize[0] = 0;
 
-  Q.parallel_for<class sycl_subgr_common>(
+  Q.parallel_for<class SyclSubgrCommon>(
       sycl::nd_range<1>(sycl::range<1>(G), sycl::range<1>(L)),
       [=](sycl::nd_item<1> NdItem) {
         sycl::sub_group SG = NdItem.get_sub_group();

@@ -20,7 +20,7 @@ static bool runBarrierCase(sycl::queue &Q, int Iteration) {
   int *Data = sycl::malloc_shared<int>(GlobalSize, Q);
   int *LocalData = sycl::malloc_shared<int>(GlobalSize, Q);
 
-  Q.parallel_for<class barrier_kernel>(
+  Q.parallel_for<class BarrierKernel>(
       sycl::nd_range<1>{GlobalSize, LocalSize}, [=](sycl::nd_item<1> It) {
         const int Lid = It.get_local_id(0);
         const int Gid = It.get_group().get_group_id(0);

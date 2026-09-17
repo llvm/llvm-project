@@ -25,7 +25,7 @@ int main() {
   initialize(GroupRangeData, DataLen * Dims, static_cast<size_t>(0));
   initialize(GroupLinearIdData, DataLen * Dims, static_cast<size_t>(0));
 
-  Q.parallel_for<class group_get_group_range_regression>(
+  Q.parallel_for<class GroupGetGroupRangeRegression>(
       sycl::nd_range<3>{GlobalRange, LocalRange}, [=](sycl::nd_item<3> It) {
         const size_t Off = It.get_global_linear_id() * Dims;
         const auto GR = It.get_group().get_group_range();
@@ -34,7 +34,7 @@ int main() {
         GroupRangeData[Off + 2] = GR[2];
       });
 
-  Q.parallel_for<class group_get_group_linear_id_regression>(
+  Q.parallel_for<class GroupGetGroupLinearIdRegression>(
       sycl::nd_range<3>{GlobalRange, LocalRange}, [=](sycl::nd_item<3> It) {
         const size_t Off = It.get_global_linear_id() * Dims;
         const size_t LI = It.get_group().get_group_linear_id();

@@ -53,7 +53,7 @@ public:
   /// work-group.
   id_type get_group_id() const noexcept { return __spirv_BuiltInSubgroupId(); }
 
-  /// \return a SYCL id representing the calling work-item’s position within the
+  /// \return a SYCL id representing the calling work-item's position within the
   /// sub-group.
   id_type get_local_id() const noexcept {
     return __spirv_BuiltInSubgroupLocalInvocationId();
@@ -104,7 +104,7 @@ public:
 protected:
   sub_group() = default;
 
-  template <int dimensions> friend class sycl::nd_item;
+  template <int> friend class sycl::nd_item;
 };
 
 _LIBSYCL_END_NAMESPACE_SYCL

@@ -53,7 +53,7 @@ public:
     return get_group_id()[dimension];
   }
 
-  /// \return a SYCL id representing the calling work-item’s position within the
+  /// \return a SYCL id representing the calling work-item's position within the
   /// work-group.
   id<Dimensions> get_local_id() const noexcept {
     return __spirv::initBuiltInLocalInvocationId<Dimensions, id<Dimensions>>();
@@ -98,24 +98,22 @@ public:
 
   /// \return the linearized work-group id within the nd-range.
   std::size_t get_group_linear_id() const noexcept {
-    return detail::linearize_id(get_group_id(), get_group_range());
+    return detail::linearizeId(get_group_id(), get_group_range());
   }
 
-  /// \return a linearized version of the calling work-item’s local id.
+  /// \return a linearized version of the calling work-item's local id.
   std::size_t get_local_linear_id() const noexcept {
-    return detail::linearize_id(get_local_id(), get_local_range());
+    return detail::linearizeId(get_local_id(), get_local_range());
   }
 
   /// \return the total number of work-groups in the nd-range.
   std::size_t get_group_linear_range() const noexcept {
-    auto groupRange = get_group_range();
-    return multiply_all_dims(groupRange);
+    return multiplyAllDims(get_group_range());
   }
 
   /// \return the total number of work-items in this work-group.
   std::size_t get_local_linear_range() const noexcept {
-    auto localRange = get_local_range();
-    return multiply_all_dims(localRange);
+    return multiplyAllDims(get_local_range());
   }
 
   /// \return true for exactly one work-item in the work-group, if the calling
@@ -128,8 +126,7 @@ public:
 protected:
   group() = default;
 
-  static std::size_t
-  multiply_all_dims(const range<Dimensions> &Range) noexcept {
+  static std::size_t multiplyAllDims(const range<Dimensions> &Range) noexcept {
     if constexpr (Dimensions == 1) {
       return Range[0];
     } else if constexpr (Dimensions == 2) {

@@ -396,25 +396,24 @@ void mock::MockLiboffload::initDefault() {
           });
 
   ON_CALL(*this, olMemAllocAligned)
-      .WillByDefault([this](ol_context_handle_t Context,
-                            ol_device_handle_t Device,
-                            ol_alloc_type_t AllocType, size_t Size,
-                            size_t Alignment,
-                            void **AllocationOut) -> ol_result_t {
-        EXPECT_NE(Context, nullptr);
-        EXPECT_NE(Device, nullptr);
-        EXPECT_TRUE(AllocType == OL_ALLOC_TYPE_DEVICE ||
-                    AllocType == OL_ALLOC_TYPE_MANAGED);
-        EXPECT_GT(Size, 0);
-        EXPECT_GT(Alignment, 0);
-        if ((Alignment & (Alignment - 1)) != 0) {
-          return makeEmptyStrError(OL_ERRC_INVALID_ARGUMENT);
-        }
-        EXPECT_NE(AllocationOut, nullptr);
+      .WillByDefault(
+          [this](ol_context_handle_t Context, ol_device_handle_t Device,
+                 ol_alloc_type_t AllocType, size_t Size, size_t Alignment,
+                 void **AllocationOut) -> ol_result_t {
+            EXPECT_NE(Context, nullptr);
+            EXPECT_NE(Device, nullptr);
+            EXPECT_TRUE(AllocType == OL_ALLOC_TYPE_DEVICE ||
+                        AllocType == OL_ALLOC_TYPE_MANAGED);
+            EXPECT_GT(Size, 0);
+            EXPECT_GT(Alignment, 0);
+            if ((Alignment & (Alignment - 1)) != 0) {
+              return makeEmptyStrError(OL_ERRC_INVALID_ARGUMENT);
+            }
+            EXPECT_NE(AllocationOut, nullptr);
 
-        *AllocationOut = mock::createDummyHandle<void *>();
-        return OL_SUCCESS;
-      });
+            *AllocationOut = mock::createDummyHandle<void *>();
+            return OL_SUCCESS;
+          });
 
   ON_CALL(*this, olMemAllocAlignedHost)
       .WillByDefault([this](ol_context_handle_t Context,

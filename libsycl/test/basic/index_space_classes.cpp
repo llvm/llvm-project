@@ -5,22 +5,24 @@
 // Unified test for sycl::range and sycl::id covering all operators defined in
 // theirs base class, plus class-specific behaviour for each type.
 
-#include <cassert>
 #include <sycl/sycl.hpp>
+
+#include <cassert>
 #include <type_traits>
+#include <utility>
 
 using sycl::detail::Builder;
 
 // Helper to create values for any dimension from three components.
 // Only uses the required number of values based on dimension.
 template <template <int> class T, int Dim>
-T<Dim> makeValue(std::size_t a, std::size_t b = 0, std::size_t c = 0) {
+T<Dim> makeValue(std::size_t A, std::size_t B = 0, std::size_t C = 0) {
   if constexpr (Dim == 1)
-    return T<1>(a);
+    return T<1>(A);
   else if constexpr (Dim == 2)
-    return T<2>(a, b);
+    return T<2>(A, B);
   else
-    return T<3>(a, b, c);
+    return T<3>(A, B, C);
 }
 
 // Tests binary and compound operators for a specific dimension.

@@ -20,7 +20,7 @@ struct NonTrivial {
   int Addition;
   int *Data;
 
-  NonTrivial(int *D, int A) : Data(D), Addition(A) {}
+  NonTrivial(int *D, int A) : Addition(A), Data(D) {}
 };
 
 struct NonTrivialDerived : NonTrivial {
@@ -64,9 +64,9 @@ int main() {
 
   // Test array of structs containing pointers.
   Simple SimpleArr[NumOfElements];
-  for (int i = 0; i < NumOfElements; ++i) {
-    SimpleArr[i].Data = sycl::malloc_shared<int>(NumOfElements, Q);
-    SimpleArr[i].Addition = 38 + i;
+  for (int I = 0; I < NumOfElements; ++I) {
+    SimpleArr[I].Data = sycl::malloc_shared<int>(NumOfElements, Q);
+    SimpleArr[I].Addition = 38 + I;
   }
 
   Q.parallel_for(range<2>(NumOfElements, NumOfElements), [=](item<2> Idx) {
@@ -77,10 +77,10 @@ int main() {
   Q.wait();
 
   auto Checker = [](auto Obj) {
-    for (int i = 0; i < NumOfElements; ++i) {
-      if (Obj.Data[i] != (i + Obj.Addition)) {
-        std::cout << "line: " << __LINE__ << " result[" << i << "] is "
-                  << Obj.Data[i] << " expected " << i + Obj.Addition
+    for (int I = 0; I < NumOfElements; ++I) {
+      if (Obj.Data[I] != (I + Obj.Addition)) {
+        std::cout << "line: " << __LINE__ << " result[" << I << "] is "
+                  << Obj.Data[I] << " expected " << I + Obj.Addition
                   << std::endl;
         return true; // true if fail
       }
@@ -95,8 +95,8 @@ int main() {
   Fail |= Checker(NonTrivialDerivedObj);
   Fail |= Checker(WrapperOfSimpleObj.Obj);
 
-  for (int i = 0; i < NumOfElements; ++i)
-    Fail |= Checker(SimpleArr[i]);
+  for (int I = 0; I < NumOfElements; ++I)
+    Fail |= Checker(SimpleArr[I]);
 
   // Free allocated memory.
   sycl::free(NonTrivialObj.Data, Q);
@@ -104,8 +104,8 @@ int main() {
   sycl::free(SimpleObj.Data, Q);
   sycl::free(WrapperOfSimpleObj.Obj.Data, Q);
 
-  for (int i = 0; i < NumOfElements; ++i)
-    sycl::free(SimpleArr[i].Data, Q);
+  for (int I = 0; I < NumOfElements; ++I)
+    sycl::free(SimpleArr[I].Data, Q);
 
   return Fail;
 }

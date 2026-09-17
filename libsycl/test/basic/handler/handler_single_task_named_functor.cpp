@@ -7,12 +7,12 @@ struct SingleTaskKernel {
 };
 
 int main() {
-  sycl::queue q;
+  sycl::queue Q;
 
-  q.single_task<class QueueSingleTaskNamed>(SingleTaskKernel{});
+  Q.single_task<class QueueSingleTaskNamed>(SingleTaskKernel{});
 
-  q.submit([&](sycl::handler &cgh) {
-    cgh.single_task<class HandlerSingleTaskNamed>(SingleTaskKernel{});
+  Q.submit([&](sycl::handler &CGH) {
+    CGH.single_task<class HandlerSingleTaskNamed>(SingleTaskKernel{});
   });
 
   return 0;
