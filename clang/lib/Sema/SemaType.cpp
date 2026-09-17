@@ -1631,7 +1631,13 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
   // object or incomplete types shall not be restrict-qualified."
   if (Qs.hasRestrict()) {
     unsigned DiagID = 0;
-    QualType EltTy = Context.getBaseElementType(T);
+
+    // Unwrap and inspect the atomic type for restrict validation
+    QualType RestrictTy = T;
+    if (const auto *AtomicTy = RestrictTy->getAs<AtomicType>())
+      RestrictTy = AtomicTy->getValueType();
+
+    QualType EltTy = Context.getBaseElementType(RestrictTy);
 
     if (EltTy->isAnyPointerType() || EltTy->isReferenceType() ||
         EltTy->isMemberPointerType()) {
