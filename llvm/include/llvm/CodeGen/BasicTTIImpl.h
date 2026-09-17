@@ -450,11 +450,6 @@ public:
     return getTLI()->getTargetMachine().getAssumedAddrSpace(V);
   }
 
-  bool isSingleThreaded() const override {
-    return getTLI()->getTargetMachine().Options.ThreadModel ==
-           ThreadModel::Single;
-  }
-
   std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const override {
     return getTLI()->getTargetMachine().getPredicatedAddrSpace(V);
@@ -1231,7 +1226,9 @@ public:
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override {
+                 const Instruction *CxtI = nullptr,
+                 TTI::VectorInstrContext VIC =
+                     TTI::VectorInstrContext::None) const override {
     switch (improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp)) {
     case TTI::SK_Broadcast:
       if (auto *FVT = dyn_cast<FixedVectorType>(SrcTy))

@@ -466,7 +466,6 @@ add_header_library(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.stdint_proxy
-    libc.hdr.types.off_t
     libc.include.sys_syscall
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
@@ -600,6 +599,20 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.macros.config
+    libc.hdr.types.mode_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  mknodat
+  HDRS
+    mknodat.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.dev_t
     libc.hdr.types.mode_t
     libc.include.sys_syscall
 )

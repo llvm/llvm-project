@@ -925,6 +925,12 @@ TEST(ParseArchString,
 TEST(ParseArchString,
      RejectsExperimentalProfilesIfEnableExperimentalExtensionsNotSet) {
   EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rva23p1s64", false).takeError()),
+      "requires '-menable-experimental-extensions' for profile 'rva23p1s64'");
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseArchString("rvb23p1s64", false).takeError()),
+      "requires '-menable-experimental-extensions' for profile 'rvb23p1s64'");
+  EXPECT_EQ(
       toString(RISCVISAInfo::parseArchString("rvm23u32", false).takeError()),
       "requires '-menable-experimental-extensions' for profile 'rvm23u32'");
 }
@@ -1258,6 +1264,19 @@ TEST(ComputeDefaultABI, SelectsExpectedABI) {
   EXPECT_EQ(GetABIFromFeatures(64, {"+f"}), "lp64f");
   EXPECT_EQ(GetABIFromFeatures(64, {"+f", "+d"}), "lp64d");
   EXPECT_EQ(GetABIFromFeatures(64, {"+e"}), "lp64e");
+
+  // RVY targets default to the capability ABI.
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y"}), "il32pc64");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+f"}), "il32pc64f");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+f", "+d"}),
+            "il32pc64d");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+e"}), "il32pc64e");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y"}), "l64pc128");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+f"}), "l64pc128f");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+f", "+d"}),
+            "l64pc128d");
+  // RV64E has no capability ABI (yet).
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+e"}), "lp64e");
 
   // CHERIoT always selects the cheriot ABI by default.
   EXPECT_EQ(GetABIFromFeatures(32, {"+xcheriot"}), "cheriot");
@@ -1660,7 +1679,7 @@ Experimental extensions
     zvvmm                0.1
     zvvmtls              0.1
     zvvmttls             0.1
-    zvzip                0.1
+    zvzip                0.3
     smcsps               0.20
     smehv                0.20
     smidctrl             0.20
@@ -1692,6 +1711,8 @@ Supported Profiles
     rvi20u64
 
 Experimental Profiles
+    rva23p1s64
+    rvb23p1s64
     rvm23u32
 
 Use -march to specify the target's extension.

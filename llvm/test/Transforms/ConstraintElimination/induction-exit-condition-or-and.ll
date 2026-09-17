@@ -18,7 +18,7 @@ define void @stride2_or_latch(i64 %n, i1 %x, i1 %header.ec) {
 ; CHECK-NEXT:    call void @use(i1 [[C_TIGHT]])
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[EC:%.*]] = icmp sge i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    [[COND:%.*]] = or i1 [[X]], [[EC]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT]], label %[[LOOP_HEADER]]
@@ -64,7 +64,7 @@ define void @stride2_or_latch_operands_swapped(i64 %n, i1 %x, i1 %header.ec) {
 ; CHECK-NEXT:    call void @use(i1 [[C_TIGHT]])
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[EC:%.*]] = icmp sge i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    [[COND:%.*]] = or i1 [[EC]], [[X]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT]], label %[[LOOP_HEADER]]
@@ -111,7 +111,7 @@ define void @neg_or_on_continue_edge(i64 %n, i1 %x, i1 %header.ec) {
 ; CHECK-NEXT:    call void @use(i1 [[C_TIGHT]])
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[EC:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    [[COND:%.*]] = or i1 [[X]], [[EC]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_HEADER]], label %[[EXIT]]
@@ -158,7 +158,7 @@ define void @neg_or_on_continue_edge_operands_swapped(i64 %n, i1 %x, i1 %header.
 ; CHECK-NEXT:    call void @use(i1 [[C_TIGHT]])
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[EC:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    [[COND:%.*]] = or i1 [[EC]], [[X]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_HEADER]], label %[[EXIT]]
@@ -204,7 +204,7 @@ define void @sel_or_peel(i64 %n, i1 %x, i1 %header.ec) {
 ; CHECK-NEXT:    call void @use(i1 [[C_TIGHT]])
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[EC:%.*]] = icmp sge i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[X]], i1 true, i1 [[EC]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT]], label %[[LOOP_HEADER]]
@@ -250,7 +250,7 @@ define void @stride2_and_latch(i64 %n, i1 %x, i1 %header.ec) {
 ; CHECK-NEXT:    call void @use(i1 [[C_TIGHT]])
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[EC:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    [[COND:%.*]] = and i1 [[X]], [[EC]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_HEADER]], label %[[EXIT]]
@@ -296,7 +296,7 @@ define void @stride2_and_latch_operands_swapped(i64 %n, i1 %x, i1 %header.ec) {
 ; CHECK-NEXT:    call void @use(i1 [[C_TIGHT]])
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[EC:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    [[COND:%.*]] = and i1 [[EC]], [[X]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_HEADER]], label %[[EXIT]]
@@ -343,7 +343,7 @@ define void @neg_and_on_exit_edge(i64 %n, i1 %x, i1 %header.ec) {
 ; CHECK-NEXT:    call void @use(i1 [[C_TIGHT]])
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[EC:%.*]] = icmp sge i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    [[COND:%.*]] = and i1 [[X]], [[EC]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT]], label %[[LOOP_HEADER]]
@@ -390,7 +390,7 @@ define void @neg_and_on_exit_edge_operands_swapped(i64 %n, i1 %x, i1 %header.ec)
 ; CHECK-NEXT:    call void @use(i1 [[C_TIGHT]])
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[EC:%.*]] = icmp sge i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    [[COND:%.*]] = and i1 [[EC]], [[X]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT]], label %[[LOOP_HEADER]]
@@ -436,7 +436,7 @@ define void @sel_and_peel(i64 %n, i1 %x, i1 %header.ec) {
 ; CHECK-NEXT:    call void @use(i1 [[C_TIGHT]])
 ; CHECK-NEXT:    br i1 [[HEADER_EC]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[EC:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[X]], i1 [[EC]], i1 false
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_HEADER]], label %[[EXIT]]

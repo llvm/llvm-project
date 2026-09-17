@@ -429,7 +429,7 @@ ErrorOr<FileSizeInfo> FileSizeInfo::get(sys::fs::file_t File) {
   int StatRet = sys::RetryAfterSignal(-1, ::fstat, File, &Status);
   if (StatRet)
     return errnoAsErrorCode();
-  uint64_t AllocatedSize = uint64_t(Status.st_blksize) * MAPPED_FILE_BSIZE;
+  uint64_t AllocatedSize = uint64_t(Status.st_blocks) * MAPPED_FILE_BSIZE;
   return FileSizeInfo{uint64_t(Status.st_size), AllocatedSize};
 #else
   // Fallback: assume the file is fully allocated. Note: this may result in
