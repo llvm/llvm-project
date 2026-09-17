@@ -265,6 +265,8 @@ def hasConvertWithPZOSupport : PredOr<[hasRubinFamilySupport]>;
 
 def hasMBarrierLayoutSupport : PredAnd<[PTX93, SM90]>;
 
+def hasFP16x2MixedPrecisionSupport : PredOr<[hasRubinFamilySupport]>;
+
 //===----------------------------------------------------------------------===//
 // Some Common Instruction Class Templates
 //===----------------------------------------------------------------------===//
