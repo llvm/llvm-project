@@ -124,10 +124,15 @@ void CommandReturnObject::SetError(Status error) {
 
 void CommandReturnObject::SetError(llvm::Error error) {
   // Retrieve any diagnostics.
-  error = llvm::handleErrors(std::move(error), [&](DiagnosticError &error) {
-    SetStatus(eReturnStatusFailed);
-    m_diagnostics = error.GetDetails();
-  });
+  error = llvm::handleErrors(
+      std::move(error), [&](DiagnosticError &error) -> llvm::Error {
+        SetStatus(eReturnStatusFailed);
+        m_diagnostics = error.GetDetails();
+        // Return one whenever there are no details to show.
+        if (m_diagnostics.empty())
+          return llvm::createStringError(error.message());
+        return llvm::Error::success();
+      });
   if (error) {
     AppendError(llvm::toString(std::move(error)));
   }
