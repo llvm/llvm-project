@@ -17,11 +17,11 @@ define void @gep_offset_different_scope(i1 %c) {
 ; CHECK-NEXT:    %base = load ptr, ptr @g, align 8
 ; CHECK-NEXT:    --> %base U: full-set S: full-set
 ; CHECK-NEXT:    %gep = getelementptr inbounds nuw i16, ptr %base, i64 %i
-; CHECK-NEXT:    --> ((2 * %i)<nuw><nsw> + %base)<nuw> U: full-set S: full-set
+; CHECK-NEXT:    --> ((2 * %i) + %base)<nuw> U: full-set S: full-set
 ; CHECK-NEXT:    %val = load i16, ptr %gep, align 2
 ; CHECK-NEXT:    --> %val U: full-set S: full-set
 ; CHECK-NEXT:    %res = add i64 %i, %i
-; CHECK-NEXT:    --> (2 * %i)<nuw><nsw> U: [0,-1) S: [-9223372036854775808,9223372036854775807)
+; CHECK-NEXT:    --> (2 * %i) U: [0,-1) S: [-9223372036854775808,9223372036854775807)
 ;
 entry:
   %i = call i64 @opaque()
@@ -46,11 +46,11 @@ define void @multi_index_gep_mixed_scope(ptr %p, i1 %c) {
 ; CHECK-NEXT:    %j = load i64, ptr @g, align 8
 ; CHECK-NEXT:    --> %j U: full-set S: full-set
 ; CHECK-NEXT:    %gep = getelementptr inbounds nuw [4 x i16], ptr %p, i64 %i, i64 %j
-; CHECK-NEXT:    --> ((2 * %j)<nuw><nsw> + (8 * %i)<nuw><nsw> + %p)<nuw> U: full-set S: full-set
+; CHECK-NEXT:    --> ((2 * %j) + (8 * %i) + %p) U: full-set S: full-set
 ; CHECK-NEXT:    %val = load i16, ptr %gep, align 2
 ; CHECK-NEXT:    --> %val U: full-set S: full-set
 ; CHECK-NEXT:    %res = mul i64 %i, 8
-; CHECK-NEXT:    --> (8 * %i)<nuw><nsw> U: [0,-7) S: [-9223372036854775808,9223372036854775801)
+; CHECK-NEXT:    --> (8 * %i) U: [0,-7) S: [-9223372036854775808,9223372036854775801)
 ;
 entry:
   %i = call i64 @opaque()
