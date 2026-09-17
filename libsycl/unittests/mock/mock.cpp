@@ -73,9 +73,10 @@ ol_result_t olSyncQueue(ol_queue_handle_t Queue) {
   return mock::getMockLiboffload().olSyncQueue(Queue);
 }
 
-ol_result_t olCreateProgram(ol_device_handle_t Device, const void *ProgData,
+ol_result_t olCreateProgram(ol_context_handle_t Context,
+                            ol_device_handle_t Device, const void *ProgData,
                             size_t ProgDataSize, ol_program_handle_t *Program) {
-  return mock::getMockLiboffload().olCreateProgram(Device, ProgData,
+  return mock::getMockLiboffload().olCreateProgram(Context, Device, ProgData,
                                                    ProgDataSize, Program);
 }
 
@@ -152,4 +153,17 @@ ol_result_t olCreateEvent(ol_queue_handle_t Queue, ol_event_flags_t Flags,
 
 ol_result_t olDestroyEvent(ol_event_handle_t Event) {
   return mock::getMockLiboffload().olDestroyEvent(Event);
+}
+
+ol_result_t olMemAllocAligned(ol_device_handle_t Device,
+                              ol_alloc_type_t AllocType, size_t Size,
+                              size_t Alignment, void **OutPtr) {
+  return mock::getMockLiboffload().olMemAllocAligned(Device, AllocType, Size,
+                                                     Alignment, OutPtr);
+}
+
+ol_result_t olMemAllocAlignedHost(ol_device_handle_t Device, size_t Size,
+                                  size_t Alignment, void **OutPtr) {
+  return mock::getMockLiboffload().olMemAllocAlignedHost(Device, Size,
+                                                         Alignment, OutPtr);
 }

@@ -273,6 +273,8 @@ void DebugInfoFinder::processType(DIType *DT) {
         processType(T);
       else if (auto *SP = dyn_cast<DISubprogram>(D))
         processSubprogram(SP);
+      else if (auto *P = dyn_cast<DIProperty>(D))
+        processType(P->getType());
       else if (auto *SR = dyn_cast_or_null<DISubrange>(D)) {
         auto VisitBound = [&](DISubrange::BoundType Bound) {
           if (auto *BV = dyn_cast_if_present<DIVariable *>(Bound))
@@ -2019,18 +2021,6 @@ LLVMMetadataKind LLVMGetMetadataKind(LLVMMetadataRef Metadata) {
   }
 }
 
-AssignmentInstRange at::getAssignmentInsts(DIAssignID *ID) {
-  assert(ID && "Expected non-null ID");
-  LLVMContext &Ctx = ID->getContext();
-  auto &Map = Ctx.pImpl->AssignmentIDToInstrs;
-
-  auto MapIt = Map.find(ID);
-  if (MapIt == Map.end())
-    return make_range(nullptr, nullptr);
-
-  return make_range(MapIt->second.begin(), MapIt->second.end());
-}
-
 void at::deleteAssignmentMarkers(const Instruction *Inst) {
   for (auto *DVR : getDVRAssignmentMarkers(Inst))
     DVR->eraseFromParent();
@@ -2046,7 +2036,9 @@ void at::RAUW(DIAssignID *Old, DIAssignID *New) {
   for (auto *I : InstVec)
     I->setMetadata(LLVMContext::MD_DIAssignID, New);
 
-  Old->replaceAllUsesWith(New);
+  for (DbgVariableRecord *DVR :
+       SmallVector<DbgVariableRecord *>(Old->getRecords()))
+    DVR->setAssignId(New);
 }
 
 void at::deleteAll(Function *F) {
@@ -2135,7 +2127,7 @@ getAssignmentInfoImpl(const DataLayout &DL, const Value *StoreDest,
   if (OffsetInBytes == UINT64_MAX)
     return std::nullopt;
   if (const auto *Alloca = dyn_cast<AllocaInst>(Base))
-    if (!DL.getTypeSizeInBits(Alloca->getAllocatedType()).isScalable())
+    if (!Alloca->isScalable())
       return AssignmentInfo(DL, Alloca, OffsetInBytes * 8, SizeInBits);
   return std::nullopt;
 }

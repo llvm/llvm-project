@@ -663,3 +663,9 @@ func.func @memref_transpose_map(%src : memref<?x?xf32>) -> memref<?x?xf32, affin
   %dst = memref.transpose %src (i, j) -> (j, i) : memref<?x?xf32> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
   return %dst : memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
 }
+
+// CHECK-LABEL: func @memref_transpose_map_with_memory_space
+func.func @memref_transpose_map_with_memory_space(%src : memref<?x?xf32, 1>) -> memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>, 1> {
+  %dst = memref.transpose %src (i, j) -> (j, i) : memref<?x?xf32, 1> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>, 1>
+  return %dst : memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>, 1>
+}

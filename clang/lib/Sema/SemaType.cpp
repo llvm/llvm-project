@@ -343,7 +343,11 @@ namespace {
         }
       }
 
-      llvm_unreachable("no Attr* for AttributedType*");
+      // The AttributedType can be inherited from another declarator, for
+      // example when __typeof__ reuses a type built for a different
+      // declaration, in which case there is no entry for it in this
+      // TypeProcessingState. Return null in that case.
+      return nullptr;
     }
 
     SourceLocation
@@ -1325,12 +1329,11 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
                       ? AutoTypeKeyword::DecltypeAuto
                       : AutoTypeKeyword::Auto;
 
-    TemplateDecl *TypeConstraintConcept = nullptr;
+    TemplateName TypeConstraintConcept;
     llvm::SmallVector<TemplateArgument, 8> TemplateArgs;
     if (DS.isConstrainedAuto()) {
       if (TemplateIdAnnotation *TemplateId = DS.getRepAsTemplateId()) {
-        TypeConstraintConcept =
-            cast<TemplateDecl>(TemplateId->Template.get().getAsTemplateDecl());
+        TypeConstraintConcept = TemplateId->Template.get();
         TemplateArgumentListInfo TemplateArgsInfo;
         TemplateArgsInfo.setLAngleLoc(TemplateId->LAngleLoc);
         TemplateArgsInfo.setRAngleLoc(TemplateId->RAngleLoc);
@@ -1578,7 +1581,13 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   // Check for __ob_wrap and __ob_trap
   if (DS.isOverflowBehaviorSpecified() &&
       S.getLangOpts().OverflowBehaviorTypes) {
-    if (!Result->isIntegerType()) {
+    if (Result->isAtomicType()) {
+      SourceLocation Loc = DS.getOverflowBehaviorLoc();
+      StringRef SpecifierName =
+          DeclSpec::getSpecifierName(DS.getOverflowBehaviorState());
+      S.Diag(Loc, diag::err_overflow_behavior_atomic_type)
+          << SpecifierName << Result.getAsString() << 1;
+    } else if (!Result->isIntegerType()) {
       SourceLocation Loc = DS.getOverflowBehaviorLoc();
       StringRef SpecifierName =
           DeclSpec::getSpecifierName(DS.getOverflowBehaviorState());
@@ -3084,15 +3093,15 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
   // Create the TemplateTypeParmDecl here to retrieve the corresponding
   // template parameter type. Template parameters are temporarily added
   // to the TU until the associated TemplateDecl is created.
-  TemplateTypeParmDecl *InventedTemplateParam =
-      TemplateTypeParmDecl::Create(
-          S.Context, S.Context.getTranslationUnitDecl(),
-          /*KeyLoc=*/D.getDeclSpec().getTypeSpecTypeLoc(),
-          /*NameLoc=*/D.getIdentifierLoc(),
-          TemplateParameterDepth, AutoParameterPosition,
-          S.InventAbbreviatedTemplateParameterTypeName(
-              D.getIdentifier(), AutoParameterPosition), false,
-          IsParameterPack, /*HasTypeConstraint=*/Auto->isConstrained());
+  TemplateTypeParmDecl *InventedTemplateParam = TemplateTypeParmDecl::Create(
+      S.Context, S.Context.getTranslationUnitDecl(),
+      /*KeyLoc=*/D.getDeclSpec().getTypeSpecTypeLoc(),
+      /*NameLoc=*/D.getIdentifierLoc(), TemplateParameterDepth,
+      AutoParameterPosition,
+      S.InventAbbreviatedTemplateParameterTypeName(D.getIdentifier(),
+                                                   AutoParameterPosition),
+      false, IsParameterPack,
+      /*HasTypeConstraint=*/Auto->isConstrained());
   InventedTemplateParam->setImplicit();
   Info.TemplateParams.push_back(InventedTemplateParam);
 
@@ -3115,7 +3124,8 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
       if (!Invalid) {
         S.AttachTypeConstraint(
             AutoLoc.getNestedNameSpecifierLoc(), AutoLoc.getConceptNameInfo(),
-            AutoLoc.getNamedConcept(), /*FoundDecl=*/AutoLoc.getFoundDecl(),
+            AutoLoc.getNamedConcept(),
+            /*FoundDecl=*/AutoLoc.getFoundDecl(),
             AutoLoc.hasExplicitTemplateArgs() ? &TAL : nullptr,
             InventedTemplateParam, D.getEllipsisLoc());
       }
@@ -3142,15 +3152,16 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
         }
       }
       if (!Invalid) {
-        UsingShadowDecl *USD =
-            TemplateId->Template.get().getAsUsingShadowDecl();
-        TemplateDecl *CD = TemplateId->Template.get().getAsTemplateDecl();
+        TemplateName TN = TemplateId->Template.get();
+        UsingShadowDecl *USD = TN.getAsUsingShadowDecl();
+        TemplateDecl *CD = TN.getAsTemplateDecl();
         S.AttachTypeConstraint(
             D.getDeclSpec().getTypeSpecScope().getWithLocInContext(S.Context),
             DeclarationNameInfo(DeclarationName(TemplateId->Name),
                                 TemplateId->TemplateNameLoc),
-            CD,
-            /*FoundDecl=*/USD ? cast<NamedDecl>(USD) : CD,
+            TN,
+            /*FoundDecl=*/
+            USD ? cast<NamedDecl>(USD) : cast_if_present<NamedDecl>(CD),
             TemplateId->LAngleLoc.isValid() ? &TemplateArgsInfo : nullptr,
             InventedTemplateParam, D.getEllipsisLoc());
       }
@@ -4356,7 +4367,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   // and at most one function declarator if this is a function declaration.
   // If T is a deduced class template specialization type, only parentheses
   // are allowed.
-  if (auto *DT = T->getAs<DeducedType>()) {
+  if (auto *DT = T->getAs<DeducedType>(); DT && !T->containsErrors()) {
     const AutoType *AT = T->getAs<AutoType>();
     bool IsClassTemplateDeduction = isa<DeducedTemplateSpecializationType>(DT);
     if ((AT && AT->isDecltypeAuto()) || IsClassTemplateDeduction) {
@@ -5716,10 +5727,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if (T->containsUnexpandedParameterPack())
         T = Context.getPackExpansionType(T, std::nullopt);
       else
-        S.Diag(D.getEllipsisLoc(),
-               LangOpts.CPlusPlus11
-                 ? diag::warn_cxx98_compat_variadic_templates
-                 : diag::ext_variadic_templates);
+        S.DiagCompat(D.getEllipsisLoc(), diag_compat::variadic_templates);
       break;
 
     case DeclaratorContext::File:
@@ -6138,8 +6146,8 @@ namespace {
                                            TemplateId->NumArgs);
         SemaRef.translateTemplateArguments(TemplateArgsPtr, TemplateArgsInfo);
       }
-      DeclarationNameInfo DNI = DeclarationNameInfo(
-          TL.getTypePtr()->getTypeConstraintConcept()->getDeclName(),
+      DeclarationNameInfo DNI = Context.getNameForTemplate(
+          TL.getTypePtr()->getTypeConstraintConcept(),
           TemplateId->TemplateNameLoc);
 
       NamedDecl *FoundDecl;
@@ -6729,6 +6737,14 @@ static void HandleOverflowBehaviorAttr(QualType &Type, const ParsedAttr &Attr,
   if (Attr.getNumArgs() != 1) {
     S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
         << Attr << 1;
+    Attr.setInvalid();
+    return;
+  }
+
+  // Verify we aren't dealing with an atomic type
+  if (Type->isAtomicType()) {
+    S.Diag(Attr.getLoc(), diag::err_overflow_behavior_atomic_type)
+        << Attr << Type.getAsString() << 0; // 0 for attribute
     Attr.setInvalid();
     return;
   }
@@ -10102,8 +10118,7 @@ QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,
   QualType Type = BuildPackIndexingType(Pattern, IndexExpr, Loc, EllipsisLoc);
 
   if (!Type.isNull())
-    Diag(Loc, getLangOpts().CPlusPlus26 ? diag::warn_cxx23_pack_indexing
-                                        : diag::ext_pack_indexing);
+    DiagCompat(Loc, diag_compat::pack_indexing);
   return Type;
 }
 
@@ -10418,6 +10433,9 @@ QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
     else if (getLangOpts().C23 && T->isUndeducedAutoType())
       // _Atomic auto is prohibited in C23
       DisallowedKind = 9;
+    else if (T->isOverflowBehaviorType())
+      // Overflow behavior types do not compose with _Atomic
+      DisallowedKind = 10;
 
     if (DisallowedKind != -1) {
       Diag(Loc, diag::err_atomic_specifier_bad_type) << DisallowedKind << T;

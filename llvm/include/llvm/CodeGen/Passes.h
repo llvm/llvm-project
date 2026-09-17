@@ -293,10 +293,6 @@ LLVM_ABI extern char &BranchRelaxationPassID;
 /// MachineFunctionPrinterPass - This pass prints out MachineInstr's.
 LLVM_ABI extern char &MachineFunctionPrinterPassID;
 
-/// MIRPrintingPass - this pass prints out the LLVM IR using the MIR
-/// serialization format.
-LLVM_ABI extern char &MIRPrintingPassID;
-
 /// TailDuplicate - Duplicate blocks with unconditional branches
 /// into tails of their predecessors.
 LLVM_ABI extern char &TailDuplicateLegacyID;
@@ -580,7 +576,7 @@ LLVM_ABI FunctionPass *createCFGuardLongjmpPass();
 
 /// Creates Windows EH Continuation Guard target identification pass.
 /// \see EHContGuardTargets.cpp
-LLVM_ABI FunctionPass *createEHContGuardTargetsPass();
+LLVM_ABI FunctionPass *createEHContGuardTargetsLegacy();
 
 /// Create Hardware Loop pass. \see HardwareLoops.cpp
 LLVM_ABI FunctionPass *createHardwareLoopsLegacyPass();

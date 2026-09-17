@@ -9,6 +9,8 @@
 @.str.10 = private unnamed_addr constant [2 x i8] c"g\00", align 1
 @.str.12 = private unnamed_addr constant [2 x i8] c"h\00", align 1
 @.str.14 = private unnamed_addr constant [2 x i8] c"i\00", align 1
+@.str.15 = private unnamed_addr constant [2 x i8] c"j\00", align 1
+@.str.16 = private unnamed_addr constant [2 x i8] c"k\00", align 1
 
 ; CHECK-DAG: OpName [[b:%[0-9]+]] "b"
 ; CHECK-DAG: OpName [[c:%[0-9]+]] "c"
@@ -18,6 +20,10 @@
 ; CHECK-DAG: OpName [[g:%[0-9]+]] "g"
 ; CHECK-DAG: OpName [[h:%[0-9]+]] "h"
 ; CHECK-DAG: OpName [[i:%[0-9]+]] "i"
+; CHECK-DAG: OpName [[j:%[0-9]+]] "j"
+; CHECK-DAG: OpName [[j_counter:%[0-9]+]] "j.counter"
+; CHECK-DAG: OpName [[k:%[0-9]+]] "k"
+; CHECK-DAG: OpName [[k_counter:%[0-9]+]] "k.counter"
 ; CHECK-DAG: OpDecorate [[b]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[b]] Binding 1
 ; CHECK-DAG: OpDecorate [[c]] DescriptorSet 0
@@ -35,7 +41,14 @@
 ; CHECK-NOT: OpDecorate [[h]] Binding 4
 ; CHECK-DAG: OpDecorate [[i]] DescriptorSet 10
 ; CHECK-DAG: OpDecorate [[i]] Binding 2
-
+; CHECK-DAG: OpDecorate [[j]] DescriptorSet 0
+; CHECK-DAG: OpDecorate [[j]] Binding 4
+; CHECK-DAG: OpDecorate [[j_counter]] DescriptorSet 0
+; CHECK-DAG: OpDecorate [[j_counter]] Binding 6
+; CHECK-DAG: OpDecorate [[k]] DescriptorSet 0
+; CHECK-DAG: OpDecorate [[k]] Binding 5
+; CHECK-DAG: OpDecorate [[k_counter]] DescriptorSet 0
+; CHECK-DAG: OpDecorate [[k_counter]] Binding 7
 
 define void @main() local_unnamed_addr #0 {
 entry:
@@ -72,9 +85,23 @@ entry:
   %24 = load i32, ptr addrspace(11) %23, align 4
   %add14.i = add nsw i32 %add12.i, %24
   %25 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %0, i32 0)
-  store i32 %add14.i, ptr addrspace(11) %25, align 4
+
+  %handle1 = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefromimplicitbinding.tspirv.VulkanBuffer_a0i32_12_1t(i32 4, i32 0, i32 1, i32 0, ptr nonnull @.str.15)
+  %counter_handle1 = call target("spirv.VulkanBuffer", i32, 12, 1) @llvm.spv.resource.counterhandlefrombinding.tspirv.VulkanBuffer_i32_12_1t.tspirv.VulkanBuffer_a0f32_12_1t(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %handle1, i32 0, i32 6)
+  %counter1 = tail call noundef i32 @llvm.spv.resource.updatecounter.tspirv.VulkanBuffer_i32_12_1t(target("spirv.VulkanBuffer", i32, 12, 1) %counter_handle1, i8 1)
+  %ptr1 = call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %handle1, i32 0)
+  %value1 = load i32, ptr addrspace(11) %ptr1, align 4
+  %add15.i = add nsw i32 %add14.i, %value1
+
+  %handle2 = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefromimplicitbinding.tspirv.VulkanBuffer_a0i32_12_1t(i32 5, i32 0, i32 1, i32 0, ptr nonnull @.str.16)
+  %counter_handle2 = call target("spirv.VulkanBuffer", i32, 12, 1) @llvm.spv.resource.counterhandlefromimplicitbinding.tspirv.VulkanBuffer_i32_12_1t.tspirv.VulkanBuffer_a0f32_12_1t(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %handle2, i32 6, i32 0)
+  %counter2 = tail call noundef i32 @llvm.spv.resource.updatecounter.tspirv.VulkanBuffer_i32_12_1t(target("spirv.VulkanBuffer", i32, 12, 1) %counter_handle2, i8 1)
+  %ptr2 = call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %handle2, i32 0)
+  %value2 = load i32, ptr addrspace(11) %ptr2, align 4
+  %add16.i = add nsw i32 %add15.i, %value2
+
+  store i32 %add16.i, ptr addrspace(11) %25, align 4
   ret void
 }
-
 
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }

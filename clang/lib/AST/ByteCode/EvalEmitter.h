@@ -24,6 +24,7 @@ namespace interp {
 class Context;
 class Function;
 class InterpStack;
+class FrameAllocator;
 class Program;
 enum Opcode : uint32_t;
 
@@ -61,9 +62,8 @@ public:
   SourceInfo getSource(CodePtr PC) const override { return CurrentSource; }
 
 protected:
-  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk);
-
-  virtual ~EvalEmitter();
+  EvalEmitter(Context &Ctx, Program &P, State &Parent, InterpStack &Stk,
+              FrameAllocator &FrameAlloc);
 
   /// Define a label.
   void emitLabel(LabelTy Label);
@@ -100,12 +100,12 @@ protected:
   }
 
   /// Callback for registering a local.
-  Local createLocal(Descriptor *D);
+  Local createLocal(const Descriptor *D);
 
   /// Parameter indices.
   llvm::DenseMap<const ParmVarDecl *, FuncParam> Params;
   /// Local descriptors.
-  llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
+  llvm::SmallVector<SmallVector<Local, 2>, 1> Descriptors;
   std::optional<SourceInfo> LocOverride = std::nullopt;
 
 private:
@@ -126,11 +126,11 @@ private:
   std::optional<PtrCallback> PtrCB;
 
   /// Temporaries which require storage.
-  llvm::SmallVector<std::unique_ptr<char[]>> Locals;
+  llvm::SmallVector<char *> Locals;
 
   Block *getLocal(unsigned Index) const {
     assert(Index < Locals.size());
-    return reinterpret_cast<Block *>(Locals[Index].get());
+    return reinterpret_cast<Block *>(Locals[Index]);
   }
 
   void updateGlobalTemporaries();

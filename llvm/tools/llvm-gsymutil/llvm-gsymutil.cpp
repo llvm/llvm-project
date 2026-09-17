@@ -17,10 +17,11 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Driver.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -758,6 +759,11 @@ static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
         if (i != Results->size() - 1)
           OS << "\n";
       }
+    } else {
+      if (Verbose)
+        OS << "\nLookupResult for " << HEX64(Addr) << ":\n";
+      OS << HEX64(Addr) << ": ";
+      logAllUnhandledErrors(Results.takeError(), OS, "error: ");
     }
   } else { /* UseMergedFunctions == false */
     if (auto Result = Gsym.lookup(Addr)) {

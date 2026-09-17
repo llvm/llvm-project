@@ -1219,6 +1219,7 @@
 # CHECK-NEXT:  1      1     0.33                        mov	wzr, w2
 # CHECK-NEXT:  1      1     0.33                        mov	w3, w5
 # CHECK-NEXT:  1      1     0.33                        movz	w2, #0, lsl #16
+# CHECK-NEXT:  1      1     0.33                        mov	w10, #-1235
 # CHECK-NEXT:  1      1     0.33                        mov	w2, #-1235
 # CHECK-NEXT:  1      1     0.33                        mov	x2, #5299989643264
 # CHECK-NEXT:  1      1     0.33                        mov	x2, #0
@@ -1264,7 +1265,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2.0]  [2.1]  [3]    [4.0]  [4.1]  [5]    [6]
-# CHECK-NEXT: 26.00  34.00  34.00  252.50 252.50 489.33 197.33 197.33 293.00 161.00
+# CHECK-NEXT: 26.00  34.00  34.00  252.50 252.50 489.67 197.67 197.67 293.00 161.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2.0]  [2.1]  [3]    [4.0]  [4.1]  [5]    [6]    Instructions:
@@ -2477,6 +2478,7 @@
 # CHECK-NEXT:  -      -      -      -      -     0.33   0.33   0.33    -      -     mov	wzr, w2
 # CHECK-NEXT:  -      -      -      -      -     0.33   0.33   0.33    -      -     mov	w3, w5
 # CHECK-NEXT:  -      -      -      -      -     0.33   0.33   0.33    -      -     movz	w2, #0, lsl #16
+# CHECK-NEXT:  -      -      -      -      -     0.33   0.33   0.33    -      -     mov	w10, #-1235
 # CHECK-NEXT:  -      -      -      -      -     0.33   0.33   0.33    -      -     mov	w2, #-1235
 # CHECK-NEXT:  -      -      -      -      -     0.33   0.33   0.33    -      -     mov	x2, #5299989643264
 # CHECK-NEXT:  -      -      -      -      -     0.33   0.33   0.33    -      -     mov	x2, #0

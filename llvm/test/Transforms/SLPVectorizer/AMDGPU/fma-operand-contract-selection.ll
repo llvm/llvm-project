@@ -126,12 +126,42 @@ define void @contract_mul(ptr noalias %d, ptr noalias %a, ptr noalias %b, ptr no
 ; THR15-NEXT:    [[BP0:%.*]] = getelementptr inbounds float, ptr [[B]], i64 0
 ; THR15-NEXT:    [[CP0:%.*]] = getelementptr inbounds float, ptr [[C]], i64 0
 ; THR15-NEXT:    [[DP0:%.*]] = getelementptr inbounds float, ptr [[D]], i64 0
-; THR15-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[AP0]], align 4
-; THR15-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[BP0]], align 4
-; THR15-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[CP0]], align 4
-; THR15-NEXT:    [[TMP3:%.*]] = fmul contract <4 x float> [[TMP0]], [[TMP1]]
-; THR15-NEXT:    [[TMP4:%.*]] = fadd contract <4 x float> [[TMP3]], [[TMP2]]
-; THR15-NEXT:    store <4 x float> [[TMP4]], ptr [[DP0]], align 4
+; THR15-NEXT:    [[A0:%.*]] = load float, ptr [[AP0]], align 4
+; THR15-NEXT:    [[B0:%.*]] = load float, ptr [[BP0]], align 4
+; THR15-NEXT:    [[C0:%.*]] = load float, ptr [[CP0]], align 4
+; THR15-NEXT:    [[M0:%.*]] = fmul contract float [[A0]], [[B0]]
+; THR15-NEXT:    [[R0:%.*]] = fadd contract float [[M0]], [[C0]]
+; THR15-NEXT:    store float [[R0]], ptr [[DP0]], align 4
+; THR15-NEXT:    [[AP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
+; THR15-NEXT:    [[BP1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 1
+; THR15-NEXT:    [[CP1:%.*]] = getelementptr inbounds float, ptr [[C]], i64 1
+; THR15-NEXT:    [[DP1:%.*]] = getelementptr inbounds float, ptr [[D]], i64 1
+; THR15-NEXT:    [[A1:%.*]] = load float, ptr [[AP1]], align 4
+; THR15-NEXT:    [[B1:%.*]] = load float, ptr [[BP1]], align 4
+; THR15-NEXT:    [[C1:%.*]] = load float, ptr [[CP1]], align 4
+; THR15-NEXT:    [[M1:%.*]] = fmul contract float [[A1]], [[B1]]
+; THR15-NEXT:    [[R1:%.*]] = fadd contract float [[M1]], [[C1]]
+; THR15-NEXT:    store float [[R1]], ptr [[DP1]], align 4
+; THR15-NEXT:    [[AP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 2
+; THR15-NEXT:    [[BP2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
+; THR15-NEXT:    [[CP2:%.*]] = getelementptr inbounds float, ptr [[C]], i64 2
+; THR15-NEXT:    [[DP2:%.*]] = getelementptr inbounds float, ptr [[D]], i64 2
+; THR15-NEXT:    [[A2:%.*]] = load float, ptr [[AP2]], align 4
+; THR15-NEXT:    [[B2:%.*]] = load float, ptr [[BP2]], align 4
+; THR15-NEXT:    [[C2:%.*]] = load float, ptr [[CP2]], align 4
+; THR15-NEXT:    [[M2:%.*]] = fmul contract float [[A2]], [[B2]]
+; THR15-NEXT:    [[R2:%.*]] = fadd contract float [[M2]], [[C2]]
+; THR15-NEXT:    store float [[R2]], ptr [[DP2]], align 4
+; THR15-NEXT:    [[AP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 3
+; THR15-NEXT:    [[BP3:%.*]] = getelementptr inbounds float, ptr [[B]], i64 3
+; THR15-NEXT:    [[CP3:%.*]] = getelementptr inbounds float, ptr [[C]], i64 3
+; THR15-NEXT:    [[DP3:%.*]] = getelementptr inbounds float, ptr [[D]], i64 3
+; THR15-NEXT:    [[A3:%.*]] = load float, ptr [[AP3]], align 4
+; THR15-NEXT:    [[B3:%.*]] = load float, ptr [[BP3]], align 4
+; THR15-NEXT:    [[C3:%.*]] = load float, ptr [[CP3]], align 4
+; THR15-NEXT:    [[M3:%.*]] = fmul contract float [[A3]], [[B3]]
+; THR15-NEXT:    [[R3:%.*]] = fadd contract float [[M3]], [[C3]]
+; THR15-NEXT:    store float [[R3]], ptr [[DP3]], align 4
 ; THR15-NEXT:    ret void
 ;
 entry:

@@ -446,43 +446,8 @@ subroutine acc_serial_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{.*}}
 
-  !$acc serial loop gang(num: 8)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.serial {{.*}} {
-! CHECK:        [[GANGNUM1:%.*]] = arith.constant 8 : i32
-! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM1]] : i32}) {{.*}} {
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
-
-  !$acc serial loop gang(num: gangNum)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.serial {{.*}} {
-! CHECK:        [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM2]] : i32}) {{.*}} {
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
-
- !$acc serial loop gang(num: gangNum, static: gangStatic)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.serial {{.*}} {
-! CHECK:        acc.loop {{.*}} gang({num=%{{.*}} : i32, static=%{{.*}} : i32}) {{.*}} {
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
+! A GANG clause with a num argument is only allowed on a loop associated with
+! a kernels construct, so it is covered by acc-kernels-loop.f90 instead.
 
   !$acc serial loop vector
   DO i = 1, n
@@ -496,31 +461,8 @@ subroutine acc_serial_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{.*}}
 
-  !$acc serial loop vector(128)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.serial {{.*}} {
-! CHECK:        [[CONSTANT128:%.*]] = arith.constant 128 : i32
-! CHECK:        acc.loop {{.*}} vector([[CONSTANT128]] : i32) {{.*}} {
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
-
-  !$acc serial loop vector(vectorLength)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.serial {{.*}} {
-! CHECK:        [[VECTORLENGTH:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:        acc.loop {{.*}} vector([[VECTORLENGTH]] : i32) {{.*}} {
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
+! A VECTOR clause with a value is only allowed on a loop associated with a
+! kernels construct, so it is covered by acc-kernels-loop.f90 instead.
 
   !$acc serial loop worker
   DO i = 1, n
@@ -534,18 +476,8 @@ subroutine acc_serial_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{.*}}
 
-  !$acc serial loop worker(128)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.serial {{.*}} {
-! CHECK:        [[WORKER128:%.*]] = arith.constant 128 : i32
-! CHECK:        acc.loop {{.*}} worker([[WORKER128]] : i32) {{.*}} {
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
+! A WORKER clause with a value is only allowed on a loop associated with a
+! kernels construct, so it is covered by acc-kernels-loop.f90 instead.
 
   !$acc serial loop collapse(2)
   DO i = 1, n
@@ -669,3 +601,76 @@ subroutine acc_serial_loop
 ! CHECK:      acc.copyout accPtr(%[[COPYINREDI]] : !fir.ref<i32>) to varPtr(%{{.*}} : !fir.ref<i32>) dataClause(acc_reduction) implicit(true) name("reduction_i")
 
 end subroutine acc_serial_loop
+
+! serial loop now gets loop firstprivate too (consistent with private/reduction).
+subroutine acc_serial_loop_firstprivate_scalar
+  integer :: i, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc serial loop firstprivate(v)
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_serial_loop_firstprivate_scalar
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: acc.serial combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: acc.loop combined(serial) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
+
+! serial loop with independent also gets loop firstprivate.
+subroutine acc_serial_loop_firstprivate_independent
+  integer :: i, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc serial loop independent firstprivate(v)
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_serial_loop_firstprivate_independent
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: acc.serial combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: acc.loop combined(serial) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
+! CHECK: } inclusiveUpperbound(array<i1: true>) independent
+
+! Not only scalars on serial loop: array gets loop firstprivate.
+subroutine acc_serial_loop_firstprivate_array
+  integer :: i, n
+  real :: b(10)
+  n = 10
+  !$acc serial loop firstprivate(b)
+  do i = 1, n
+    b(i) = 1.0
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_serial_loop_firstprivate_array
+! CHECK: %[[FP_B:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) recipe({{.*}}) name("b") -> !fir.ref<!fir.array<10xf32>>
+! CHECK: acc.serial combined(loop) {{.*}}firstprivate(%[[FP_B]] : !fir.ref<!fir.array<10xf32>>)
+! CHECK: %[[FP_B_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) recipe({{.*}}) implicit(true) name("b") -> !fir.ref<!fir.array<10xf32>>
+! CHECK: acc.loop combined(serial) {{.*}}firstprivate(%[[FP_B_LOOP]] : !fir.ref<!fir.array<10xf32>>)
+
+! Not only independent on serial loop: seq still gets loop firstprivate.
+subroutine acc_serial_loop_firstprivate_seq
+  integer :: i, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc serial loop seq firstprivate(v)
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_serial_loop_firstprivate_seq
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: acc.serial combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: acc.loop combined(serial) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
+! CHECK: } inclusiveUpperbound(array<i1: true>) seq

@@ -39,6 +39,8 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb;
@@ -448,12 +450,15 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   }
 
   /* Read result */
-  lldb::addr_t token = process->ReadPointerFromMemory(injected_result, status);
-  if (status.Fail()) {
-    error = Status::FromErrorStringWithFormat(
-        "LoadLibrary error: could not read the result: %s", status.AsCString());
+  llvm::Expected<lldb::addr_t> token_or_err =
+      process->ReadPointerFromMemory(injected_result);
+  if (!token_or_err) {
+    error = Status::FromErrorStringWithFormatv(
+        "LoadLibrary error: could not read the result: {0}",
+        llvm::fmt_consume(token_or_err.takeError()));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
+  lldb::addr_t token = *token_or_err;
 
   if (!token) {
     // ErrorCode is a 4-byte `unsigned` field in __lldb_LoadLibraryResult.

@@ -17,6 +17,7 @@
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/TypeUtilities.h"
 #include <type_traits>
 
@@ -113,9 +114,10 @@ using DivSIOpLowering =
     VectorConvertToLLVMPattern<arith::DivSIOp, LLVM::SDivOp>;
 using DivUIOpLowering =
     VectorConvertToLLVMPattern<arith::DivUIOp, LLVM::UDivOp>;
-using ExtFOpLowering = VectorConvertToLLVMPattern<arith::ExtFOp, LLVM::FPExtOp,
-                                                  AttrConvertPassThrough,
-                                                  /*FailOnUnsupportedFP=*/true>;
+using ExtFOpLowering =
+    VectorConvertToLLVMPattern<arith::ExtFOp, LLVM::FPExtOp,
+                               arith::AttrConvertFastMathToLLVM,
+                               /*FailOnUnsupportedFP=*/true>;
 using ExtSIOpLowering =
     VectorConvertToLLVMPattern<arith::ExtSIOp, LLVM::SExtOp>;
 using ExtUIOpLowering =
@@ -202,7 +204,7 @@ using SubIOpLowering =
 using TruncFOpLowering =
     ConstrainedVectorConvertToLLVMPattern<arith::TruncFOp, LLVM::FPTruncOp,
                                           /*HasRoundingMode=*/false,
-                                          AttrConvertPassThrough,
+                                          arith::AttrConvertFastMathToLLVM,
                                           /*FailOnUnsupportedFP=*/true>;
 using ConstrainedTruncFOpLowering = ConstrainedVectorConvertToLLVMPattern<
     arith::TruncFOp, LLVM::ConstrainedFPTruncIntr, /*HasRoundingMode=*/true,
@@ -371,13 +373,100 @@ struct SelectOpOneToNLowering : public ConvertOpToLLVMPattern<arith::SelectOp> {
 // ConstantOpLowering
 //===----------------------------------------------------------------------===//
 
+/// Retypes `attr` for a `llvm.mlir.constant` of `resultType`. `arith.constant`
+/// requires the value attribute and the result to have the same type, but the
+/// type converter may map the element type to a different one, e.g. `index` to
+/// `i32` or `i64` depending on the configured index bitwidth. Build the
+/// attribute from the converted type so that the two agree wherever that is
+/// representable. Returns a null attribute if `attr` cannot be used for
+/// `resultType`.
+static TypedAttr convertConstantValue(TypedAttr attr, Type resultType) {
+  // Compare the element types, but explicitly ignore the non-scalar portions of
+  // types. This relaxation is required to support multi-dimensional vector
+  // constant that result in nested LLVM array values.
+  Type sourceElementType = LLVM::getConstantElementType(attr.getType());
+  Type targetElementType = LLVM::getConstantElementType(resultType);
+  if (sourceElementType == targetElementType)
+    return attr;
+
+  auto targetIntType = dyn_cast<IntegerType>(targetElementType);
+  if (!targetIntType)
+    return {};
+
+  // The converter maps the low-precision float types that have no LLVM
+  // equivalent to an integer of the same width. The attribute stays a float
+  // attribute in that case.
+  if (auto sourceFloatType = dyn_cast<FloatType>(sourceElementType)) {
+    if (sourceFloatType.getWidth() != targetIntType.getWidth())
+      return {};
+    return attr;
+  }
+
+  // Apart from those floats, `index` is the only element type the converter
+  // rewrites, so anything else is a malformed `arith.constant`. Bail out rather
+  // than reinterpret its value, which would silently change the constant (e.g.
+  // sign-extending an `i1` `true` to -1).
+  if (!isa<IndexType>(sourceElementType))
+    return {};
+  // `index` is signless but holds signed values, so narrowing to a smaller
+  // index bitwidth truncates and widening sign-extends.
+  unsigned width = targetIntType.getWidth();
+
+  if (auto intAttr = dyn_cast<IntegerAttr>(attr))
+    return IntegerAttr::get(targetIntType,
+                            intAttr.getValue().sextOrTrunc(width));
+
+  auto retypeValues = [&](DenseIntElementsAttr values) {
+    return values.mapValues(targetIntType, [&](const APInt &value) {
+      return value.sextOrTrunc(width);
+    });
+  };
+
+  if (auto denseAttr = dyn_cast<DenseIntElementsAttr>(attr))
+    return retypeValues(denseAttr);
+
+  if (auto sparseAttr = dyn_cast<SparseElementsAttr>(attr))
+    return SparseElementsAttr::get(
+        cast<ShapedType>(attr.getType()).clone(targetIntType),
+        sparseAttr.getIndices(),
+        retypeValues(cast<DenseIntElementsAttr>(sparseAttr.getValues())));
+
+  // A resource-backed elements attribute refers to a blob laid out for its own
+  // element type. The blob cannot be rewritten here, only reinterpreted, which
+  // is correct exactly when the target type has the same width as the storage
+  // `index` uses in a blob.
+  if (auto resourceAttr = dyn_cast<DenseResourceElementsAttr>(attr)) {
+    if (width != IndexType::kInternalStorageBitWidth)
+      return {};
+    return DenseResourceElementsAttr::get(
+        cast<ShapedType>(attr.getType()).clone(targetIntType),
+        resourceAttr.getRawHandle());
+  }
+
+  return {};
+}
+
 LogicalResult
 ConstantOpLowering::matchAndRewrite(arith::ConstantOp op, OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
-  return LLVM::detail::oneToOneRewrite(op, LLVM::ConstantOp::getOperationName(),
-                                       adaptor.getOperands(), op->getAttrs(),
-                                       /*propAttr=*/Attribute{},
-                                       *getTypeConverter(), rewriter);
+  Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType)
+    return rewriter.notifyMatchFailure(op, "failed to convert result type");
+
+  TypedAttr value = convertConstantValue(op.getValue(), resultType);
+  if (!value)
+    return rewriter.notifyMatchFailure(
+        op, "failed to convert value attribute to the converted result type");
+
+  // `arith.constant` has no operands and a single result, so there is nothing
+  // for `oneToOneRewrite` to do here beyond converting `resultType` a second
+  // time.
+  DictionaryAttr discardableAttrs = op->getDiscardableAttrDictionary();
+  auto constantOp =
+      LLVM::ConstantOp::create(rewriter, op.getLoc(), resultType, value);
+  constantOp->setDiscardableAttrs(discardableAttrs);
+  rewriter.replaceOp(op, constantOp);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

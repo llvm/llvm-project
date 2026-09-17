@@ -26,6 +26,8 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
@@ -63,16 +65,21 @@ using LookupPrepareFn = unique_function<LookupApplyFn(
 /// Asynchronous version: OnApplied is called once every applicator has run, or
 /// with an error if the lookup failed (in which case none of them run).
 ///
+/// The ExecutionSession is taken from the first entry in SearchOrder (every
+/// entry must share the same session). If SearchOrder is empty then the lookup
+/// fails unconditionally. The only exception is an empty PrepareFns list, which
+/// trivially succeeds.
+///
 /// The prepare functions are only used during this call -- they are asked for
 /// their symbols up front, and only their applicators are retained -- so a
 /// braced list or other temporary is safe here.
 LLVM_ABI void lookupAndApply(unique_function<void(Error)> OnApplied,
-                             ExecutionSession &ES, LookupKind K,
+                             LookupKind K,
                              const JITDylibSearchOrder &SearchOrder,
                              ArrayRef<LookupPrepareFn> PrepareFns);
 
 /// Blocking version of lookupAndApply above.
-LLVM_ABI Error lookupAndApply(ExecutionSession &ES, LookupKind K,
+LLVM_ABI Error lookupAndApply(LookupKind K,
                               const JITDylibSearchOrder &SearchOrder,
                               ArrayRef<LookupPrepareFn> PrepareFns);
 
@@ -94,15 +101,30 @@ LLVM_ABI Error lookupAndApply(JITDylib &JD,
 /// collected its symbols: it is interned up front, and only the interned name
 /// is retained.
 inline LookupPrepareFn
-recordAddr(StringRef Name, ExecutorAddr *A,
+recordAddr(SymbolNameSpec Name, ExecutorAddr *A,
            SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol) {
   return [Name, A, LF](SymbolLookupSet &LS,
                        ExecutionSession &ES) -> LookupApplyFn {
-    auto N = ES.intern(Name);
+    auto N =
+        Mangler(ES.getTargetTriple())
+            .withMangledNameDo([&](StringRef M) { return ES.intern(M); }, Name);
     LS.add(N, LF);
     return [A, N = std::move(N)](const SymbolMap &M) {
       *A = M.lookup(N).getAddress();
     };
+  };
+}
+
+/// Records the address of the symbol with the given, already-interned name.
+///
+/// If the symbol is weakly referenced and not found then *A is set to null.
+inline LookupPrepareFn
+recordAddr(SymbolStringPtr Name, ExecutorAddr *A,
+           SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol) {
+  return [Name = std::move(Name), A,
+          LF](SymbolLookupSet &LS, ExecutionSession &ES) -> LookupApplyFn {
+    LS.add(Name, LF);
+    return [A, Name](const SymbolMap &M) { *A = M.lookup(Name).getAddress(); };
   };
 }
 

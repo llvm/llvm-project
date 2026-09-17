@@ -19,6 +19,8 @@
 
 #include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/Proxy.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 
 namespace llvm::orc {
 
@@ -28,14 +30,36 @@ namespace llvm::orc {
 template <typename FnT>
 LookupPrepareFn
 recordProxy(Proxy<FnT> *P, typename Proxy<FnT>::DispatchFn Dispatch,
-            StringRef Name,
+            SymbolNameSpec Name,
             SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol) {
   return [P, Dispatch, Name, LF](SymbolLookupSet &LS,
                                  ExecutionSession &ES) -> LookupApplyFn {
-    auto N = ES.intern(Name);
+    auto N =
+        Mangler(ES.getTargetTriple())
+            .withMangledNameDo([&](StringRef M) { return ES.intern(M); }, Name);
     LS.add(N, LF);
     return [P, Dispatch, N = std::move(N)](const SymbolMap &M) {
       auto Sym = M.lookup(N);
+      *P = Sym.getAddress() ? Proxy<FnT>(Dispatch, Sym.getAddress())
+                            : Proxy<FnT>();
+    };
+  };
+}
+
+/// Builds P over the symbol with the given, already-interned name,
+/// dispatching through Dispatch.
+///
+/// If the symbol is weakly referenced and not found then P is left null.
+template <typename FnT>
+LookupPrepareFn
+recordProxy(Proxy<FnT> *P, typename Proxy<FnT>::DispatchFn Dispatch,
+            SymbolStringPtr Name,
+            SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol) {
+  return [P, Dispatch, Name = std::move(Name),
+          LF](SymbolLookupSet &LS, ExecutionSession &ES) -> LookupApplyFn {
+    LS.add(Name, LF);
+    return [P, Dispatch, Name](const SymbolMap &M) {
+      auto Sym = M.lookup(Name);
       *P = Sym.getAddress() ? Proxy<FnT>(Dispatch, Sym.getAddress())
                             : Proxy<FnT>();
     };
@@ -55,9 +79,19 @@ recordProxy(Proxy<FnT> *P,
 /// spec's default controller-interface name.
 template <typename ProxySpecT, typename FnT>
 LookupPrepareFn
-recordProxy(Proxy<FnT> *P, StringRef Name,
+recordProxy(Proxy<FnT> *P, SymbolNameSpec Name,
             SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol) {
-  return recordProxy(P, ProxySpecT::dispatch, Name, LF);
+  return recordProxy(P, ProxySpecT::dispatch, std::move(Name), LF);
+}
+
+/// Builds P from the given spec, but resolves it under the given,
+/// already-interned name rather than the spec's default controller-interface
+/// name.
+template <typename ProxySpecT, typename FnT>
+LookupPrepareFn
+recordProxy(Proxy<FnT> *P, SymbolStringPtr Name,
+            SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol) {
+  return recordProxy(P, ProxySpecT::dispatch, std::move(Name), LF);
 }
 
 } // namespace llvm::orc
