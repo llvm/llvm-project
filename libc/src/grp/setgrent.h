@@ -18,7 +18,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-// Rewinds the group database stream to the beginning.
 void setgrent();
 
 } // namespace LIBC_NAMESPACE_DECL

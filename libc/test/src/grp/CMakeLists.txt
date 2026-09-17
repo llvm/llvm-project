@@ -35,6 +35,7 @@ add_libc_test(
     libc.hdr.types.struct_group
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
+    libc.src.__support.ctype_utils
     libc.src.__support.libc_errno
     libc.src.errno.errno
     libc.src.grp.endgrent
@@ -44,4 +45,5 @@ add_libc_test(
     libc.src.stdio.remove
     libc.src.string.string_utils
     libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )

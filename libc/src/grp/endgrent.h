@@ -18,7 +18,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-// Closes the group database stream.
 void endgrent();
 
 } // namespace LIBC_NAMESPACE_DECL

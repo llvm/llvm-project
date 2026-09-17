@@ -19,7 +19,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-// Reads the next entry from the group database.
 struct group *getgrent();
 
 } // namespace LIBC_NAMESPACE_DECL

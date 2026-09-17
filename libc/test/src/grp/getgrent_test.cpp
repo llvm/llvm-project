@@ -15,15 +15,18 @@
 #include "hdr/types/gid_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_group.h"
+#include "src/__support/ctype_utils.h"
 #include "src/__support/libc_errno.h"
 #include "src/grp/endgrent.h"
 #include "src/grp/getgrent.h"
 #include "src/grp/grp_utils.h"
 #include "src/grp/setgrent.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/grp/grp_test_utils.h"
 
 using LIBC_NAMESPACE::libc_errno;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 
 TEST_F(LlvmLibcGrpTest, GetGrentTestSuccess) {
   constexpr char CONTENT[] = "root:x:0:root\n"
@@ -76,9 +79,8 @@ TEST_F(LlvmLibcGrpTest, GetGrentTestFailure) {
   ScopedGroupFile test_file(libc_make_test_file_path("getgrent_failure.test"),
                             CONTENT);
 
-  struct group *grp = LIBC_NAMESPACE::getgrent();
-  EXPECT_EQ(grp, nullptr);
-  ASSERT_ERRNO_EQ(EINVAL);
+  ASSERT_THAT(reinterpret_cast<void *>(LIBC_NAMESPACE::getgrent()),
+              Fails(EINVAL, static_cast<void *>(nullptr)));
 
   LIBC_NAMESPACE::endgrent();
 }
@@ -182,9 +184,11 @@ TEST_F(LlvmLibcGrpTest, DynamicMemberAndLineGrowth) {
     if (i > 0)
       content[offset++] = ',';
     content[offset++] = 'u';
-    content[offset++] = '0' + (i / 100) % 10;
-    content[offset++] = '0' + (i / 10) % 10;
-    content[offset++] = '0' + (i % 10);
+    content[offset++] =
+        LIBC_NAMESPACE::internal::int_to_b36_char((i / 100) % 10);
+    content[offset++] =
+        LIBC_NAMESPACE::internal::int_to_b36_char((i / 10) % 10);
+    content[offset++] = LIBC_NAMESPACE::internal::int_to_b36_char(i % 10);
   }
   content[offset++] = '\n';
   content[offset] = '\0';
