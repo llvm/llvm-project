@@ -36,3 +36,21 @@ define float @sbuf_xchg_float(i32 %index, float %val) {
   ; CHECK: ret float [[RES]]
   ret float %old
 }
+
+; A texture of scalar float lowers the same way, with one coordinate operand
+; per texture dimension.
+; CHECK-LABEL: define float @texture2d_xchg_float
+define float @texture2d_xchg_float(<2 x i32> %coords, float %val) {
+  %texture = call target("dx.Texture", float, 1, 0, 0, 2)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, ptr null)
+  %ptr = call ptr @llvm.dx.resource.getpointer(
+      target("dx.Texture", float, 1, 0, 0, 2) %texture, <2 x i32> %coords)
+  ; CHECK: %[[X:.*]] = extractelement <2 x i32> %coords, i64 0
+  ; CHECK: %[[Y:.*]] = extractelement <2 x i32> %coords, i64 1
+  ; CHECK: [[CAST:%.*]] = bitcast float %val to i32
+  ; CHECK: [[OLD:%.*]] = call i32 @dx.op.atomicBinOp.i32(i32 78, %dx.types.Handle %{{.*}}, i32 8, i32 %[[X]], i32 %[[Y]], i32 poison, i32 [[CAST]])
+  ; CHECK: [[RES:%.*]] = bitcast i32 [[OLD]] to float
+  %old = atomicrmw xchg ptr %ptr, float %val monotonic
+  ; CHECK: ret float [[RES]]
+  ret float %old
+}
