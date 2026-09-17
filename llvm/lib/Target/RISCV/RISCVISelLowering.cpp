@@ -12369,6 +12369,31 @@ static unsigned getRVPMulHighAccumulateOpcode(unsigned IntNo) {
   }
 }
 
+/// Return the multiply high accumulate by-halves node for \p IntNo.
+static unsigned getRVPMulHighAccumulateByHalvesOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V packed multiply high accumulate by "
+                     "halves intrinsic");
+  case Intrinsic::riscv_pmhacc_b0:
+    return RISCVISD::MHACC_H_B0;
+  case Intrinsic::riscv_pmhacc_b1:
+    return RISCVISD::MHACC_H_B1;
+  case Intrinsic::riscv_pmhaccsu_b0:
+    return RISCVISD::MHACCSU_H_B0;
+  case Intrinsic::riscv_pmhaccsu_b1:
+    return RISCVISD::MHACCSU_H_B1;
+  case Intrinsic::riscv_pmhacc_h0:
+    return RISCVISD::MHACC_W_H0;
+  case Intrinsic::riscv_pmhacc_h1:
+    return RISCVISD::MHACC_W_H1;
+  case Intrinsic::riscv_pmhaccsu_h0:
+    return RISCVISD::MHACCSU_W_H0;
+  case Intrinsic::riscv_pmhaccsu_h1:
+    return RISCVISD::MHACCSU_W_H1;
+  }
+}
+
 static unsigned getRVPQFormatAccScalarOpcode(Intrinsic::ID IntNo) {
   switch (IntNo) {
   default:
@@ -13210,6 +13235,54 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     return DAG.getNode(MulOpc, DL, VT, Rd, Rs1, Rs2);
+  }
+  case Intrinsic::riscv_pmhacc_b0:
+  case Intrinsic::riscv_pmhacc_b1:
+  case Intrinsic::riscv_pmhaccsu_b0:
+  case Intrinsic::riscv_pmhaccsu_b1: {
+    EVT VT = Op.getValueType();
+    unsigned Opc = getRVPMulHighAccumulateByHalvesOpcode(IntNo);
+    SDValue Rd = Op.getOperand(1);
+    SDValue Rs1 = Op.getOperand(2);
+    SDValue Rs2 = Op.getOperand(3);
+
+    // RV32: split v4i16 into two v2i16 operations
+    if (!Subtarget.is64Bit() && VT == MVT::v4i16) {
+      auto [RdLo, RdHi] = DAG.SplitVector(Rd, DL);
+      auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL);
+      auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
+      SDValue Lo = DAG.getNode(Opc, DL, MVT::v2i16, RdLo, Rs1Lo, Rs2Lo);
+      SDValue Hi = DAG.getNode(Opc, DL, MVT::v2i16, RdHi, Rs1Hi, Rs2Hi);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+    }
+
+    return DAG.getNode(Opc, DL, VT, Rd, Rs1, Rs2);
+  }
+  case Intrinsic::riscv_pmhacc_h0:
+  case Intrinsic::riscv_pmhacc_h1:
+  case Intrinsic::riscv_pmhaccsu_h0:
+  case Intrinsic::riscv_pmhaccsu_h1: {
+    EVT VT = Op.getValueType();
+    unsigned Opc = getRVPMulHighAccumulateByHalvesOpcode(IntNo);
+    SDValue Rd = Op.getOperand(1);
+    SDValue Rs1 = Op.getOperand(2);
+    SDValue Rs2 = Op.getOperand(3);
+
+    // RV32 has no 64-bit packed form: split into two scalar operations, each
+    // accumulating one word of the result.
+    if (!Subtarget.is64Bit() && VT == MVT::v2i32) {
+      auto Extract = [&](SDValue V, unsigned Idx) {
+        return DAG.getExtractVectorElt(DL, MVT::i32, V, Idx);
+      };
+      auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
+      SDValue Lo = DAG.getNode(Opc, DL, MVT::i32, Extract(Rd, 0),
+                               Extract(Rs1, 0), Rs2Lo);
+      SDValue Hi = DAG.getNode(Opc, DL, MVT::i32, Extract(Rd, 1),
+                               Extract(Rs1, 1), Rs2Hi);
+      return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
+    }
+
+    return DAG.getNode(Opc, DL, VT, Rd, Rs1, Rs2);
   }
   case Intrinsic::riscv_pm4add:
   case Intrinsic::riscv_pm2add:
@@ -17354,6 +17427,30 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
           DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(3), Undef);
       SDValue Res = DAG.getNode(getRVPMulHighAccumulateOpcode(IntNo), DL,
                                 WideVT, Rd, Rs1, Rs2);
+      Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_pmhacc_b0:
+    case Intrinsic::riscv_pmhacc_b1:
+    case Intrinsic::riscv_pmhaccsu_b0:
+    case Intrinsic::riscv_pmhaccsu_b1: {
+      // pmhacc.h.bXX exists only on RV32; on RV64 the v2i16 result has to
+      // widen to the packed v4i16 form and extract the low half.
+      EVT VT = N->getValueType(0);
+      if (!Subtarget.is64Bit() || VT != MVT::v2i16)
+        return;
+
+      EVT WideVT = MVT::v4i16;
+      SDValue Undef = DAG.getUNDEF(VT);
+      SDValue Rd =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(1), Undef);
+      SDValue Rs1 =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(2), Undef);
+      // Third operand is v4i8 - expand to v8i8
+      SDValue Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i8,
+                                N->getOperand(3), DAG.getUNDEF(MVT::v4i8));
+      SDValue Res = DAG.getNode(getRVPMulHighAccumulateByHalvesOpcode(IntNo),
+                                DL, WideVT, Rd, Rs1, Rs2);
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }
