@@ -32,6 +32,10 @@ macros:
     macro_header: pthread-macros.h
   - macro_name: "PTHREAD_SCOPE_PROCESS"
     macro_header: pthread-macros.h
+  - macro_name: "PTHREAD_INHERIT_SCHED"
+    macro_header: pthread-macros.h
+  - macro_name: "PTHREAD_EXPLICIT_SCHED"
+    macro_header: pthread-macros.h
   - macro_name: "PTHREAD_MUTEX_INITIALIZER"
     macro_header: pthread-macros.h
   - macro_name: "PTHREAD_COND_INITIALIZER"
@@ -96,6 +100,13 @@ functions:
     arguments:
       - type: const pthread_attr_t *__restrict
       - type: size_t *__restrict
+  - name: pthread_attr_getinheritsched
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const pthread_attr_t *__restrict
+      - type: int *__restrict
   - name: pthread_attr_getschedparam
     return_type: int
     arguments:
@@ -138,6 +149,13 @@ functions:
     arguments:
       - type: pthread_attr_t *
       - type: size_t
+  - name: pthread_attr_setinheritsched
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: pthread_attr_t *
+      - type: int
   - name: pthread_attr_setschedparam
     return_type: int
     arguments:

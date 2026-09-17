@@ -341,3 +341,35 @@ func.func @update_wait(%arg0: !llvm.ptr) {
   acc.update dataOperands(%map : !llvm.ptr) wait({%q : i32})
   return
 }
+
+// -----
+
+// An acc.getdeviceptr naming the object of a data exit operation only states
+// the mapping that the exit call carries, so it is replaced by the address of
+// that object.
+// CHECK-LABEL: llvm.func @getdeviceptr_states_mapping
+// CHECK-NOT: llvm.call @__tgt_acc_get_deviceptr
+// CHECK: llvm.call @__tgt_acc_data_exit
+func.func @getdeviceptr_states_mapping(%arg0: !llvm.ptr) {
+  %devptr = acc.getdeviceptr varPtr(%arg0 : !llvm.ptr) varType(i32)
+      dataClause(acc_delete) structured(false) -> !llvm.ptr
+  acc.exit_data dataOperands(%devptr : !llvm.ptr)
+  acc.delete accPtr(%devptr : !llvm.ptr) dataClause(acc_delete)
+      structured(false)
+  return
+}
+
+// -----
+
+// An acc.getdeviceptr read as a value asks the runtime for the device address
+// of the object, as no construct states that mapping for it.
+// CHECK-LABEL: llvm.func @getdeviceptr_read_as_value
+// CHECK: %[[NONE:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK: %[[DEV:.*]] = llvm.call @__tgt_acc_get_deviceptr({{.*}}, %[[VAR:.*]], %[[NONE]], %[[VAR]])
+// CHECK: llvm.load %[[DEV]]
+func.func @getdeviceptr_read_as_value(%arg0: !llvm.ptr) -> i32 {
+  %devptr = acc.getdeviceptr varPtr(%arg0 : !llvm.ptr) varType(i32)
+      structured(false) -> !llvm.ptr
+  %value = llvm.load %devptr : !llvm.ptr -> i32
+  return %value : i32
+}

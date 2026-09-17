@@ -259,7 +259,7 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
 
   if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y) {
     if (checkVOPDRegConstraints(TII, FirstMI, SecondMI, IsVOPD3, AllowSameVGPR))
-      return VOPDMatchInfo{&FirstMI, &SecondMI, IsVOPD3};
+      return VOPDMatchInfo{{&FirstMI, &SecondMI}, 0, IsVOPD3};
   }
 
   if (FirstCanBeVOPD.Y && SecondCanBeVOPD.X) {
@@ -270,7 +270,7 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
     if (IsAntiDep && !TII.isVOPDAntidependencyAllowed(SecondMI))
       return std::nullopt;
     if (checkVOPDRegConstraints(TII, SecondMI, FirstMI, IsVOPD3, AllowSameVGPR))
-      return VOPDMatchInfo{&SecondMI, &FirstMI, IsVOPD3};
+      return VOPDMatchInfo{{&FirstMI, &SecondMI}, 1, IsVOPD3};
   }
 
   return std::nullopt;

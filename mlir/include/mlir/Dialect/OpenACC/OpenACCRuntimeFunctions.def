@@ -98,5 +98,9 @@ __ACC_RTL(tgt_acc_data_exit, false, Void, Ptr, Int64, Int64, Int32, Ptr, Ptr,
 __ACC_RTL(tgt_acc_data_update, false, Void, Ptr, Int64, Int64, Int32, Ptr, Ptr,
           Ptr, Ptr, Ptr, Ptr, Ptr, Int64)
 
+// void *__tgt_acc_get_deviceptr(ident_t *, void *base_ptr, int64_t flags,
+//                               void *host_ptr);
+__ACC_RTL(tgt_acc_get_deviceptr, false, Ptr, Ptr, Ptr, Int64, Ptr)
+
 #undef __ACC_RTL
 #undef ACC_RTL
