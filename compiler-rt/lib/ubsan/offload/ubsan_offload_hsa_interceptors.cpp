@@ -93,6 +93,15 @@ static bool FromHsa(void *P) {
 
 static void BindRealDlsym();
 
+// Guaranteed tail calls to external/indirect functions are not supported by
+// the PowerPC backend (both AIX and Linux), so 'musttail' cannot be used
+// there. Fall back to an ordinary call on that target.
+#if defined(__powerpc__)
+#define UBSAN_DLSYM_MUSTTAIL
+#else
+#define UBSAN_DLSYM_MUSTTAIL [[clang::musttail]]
+#endif
+
 // OpenMP and sometimes HIP access HSA through 'dlsym' so we need to intercept
 // it here if we want to reliably override its definitions.
 INTERCEPTOR(void *, dlsym, void *Handle, const char *Name) {
@@ -101,7 +110,7 @@ INTERCEPTOR(void *, dlsym, void *Handle, const char *Name) {
 
   // This interceptor interferes with the order of 'RTLD_NEXT'. Force a tail
   // call to bypass this process in the stack.
-  if (Handle == RTLD_NEXT) [[clang::musttail]]
+  if (Handle == RTLD_NEXT) UBSAN_DLSYM_MUSTTAIL
     return REAL(dlsym)(Handle, Name);
 
   void *Sym = REAL(dlsym)(Handle, Name);
@@ -113,6 +122,7 @@ INTERCEPTOR(void *, dlsym, void *Handle, const char *Name) {
     return Sym;
   return Wrapper;
 }
+#undef UBSAN_DLSYM_MUSTTAIL
 
 static void BindRealDlsym() {
   if (LIKELY(REAL(dlsym)))
