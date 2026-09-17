@@ -163,10 +163,9 @@ private:
       // cannot be applied, so the call target needs explicit routine
       // information.
       if (callee.isExternal()) {
-        callOp->emitError()
-            << "Procedures called in a compute region must have acc routine "
-               "information - "
-            << calleeSymbolRef.getLeafReference();
+        callOp->emitError() << "Calls in an acc compute region must be marked "
+                               "with acc routine: "
+                            << calleeSymbolRef.getLeafReference();
         result = failure();
         return;
       }
@@ -222,8 +221,7 @@ private:
         // information.
         if (callee.isExternal()) {
           callOp->emitError()
-              << "Procedures called in a compute region must have acc routine "
-                 "information - "
+              << "Calls in acc routine must also be marked with acc routine: "
               << calleeSymbolRef.getLeafReference();
           result = failure();
           return;

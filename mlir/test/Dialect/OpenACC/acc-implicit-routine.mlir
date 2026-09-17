@@ -264,7 +264,7 @@ module {
   func.func private @ext_callee()
   func.func @test_external_in_serial() {
     acc.serial {
-      // expected-error @below {{Procedures called in a compute region must have acc routine information - "ext_callee"}}
+      // expected-error @below {{Calls in an acc compute region must be marked with acc routine: "ext_callee"}}
       func.call @ext_callee() : () -> ()
       acc.yield
     }
@@ -279,7 +279,7 @@ module {
   acc.routine @r_caller func(@routine_caller_ext) seq
   func.func private @ext_from_routine()
   func.func @routine_caller_ext() attributes {acc.routine_info = #acc.routine_info<[@r_caller]>} {
-    // expected-error @below {{Procedures called in a compute region must have acc routine information - "ext_from_routine"}}
+    // expected-error @below {{Calls in acc routine must also be marked with acc routine: "ext_from_routine"}}
     func.call @ext_from_routine() : () -> ()
     return
   }
@@ -292,7 +292,7 @@ module {
   func.func private @ext_kernels()
   func.func @test_external_in_kernels() {
     acc.kernels {
-      // expected-error @below {{Procedures called in a compute region must have acc routine information - "ext_kernels"}}
+      // expected-error @below {{Calls in an acc compute region must be marked with acc routine: "ext_kernels"}}
       func.call @ext_kernels() : () -> ()
       acc.terminator
     }
