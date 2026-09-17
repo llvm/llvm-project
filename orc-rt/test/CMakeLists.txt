@@ -1,4 +1,7 @@
 include(OrcRTTesting)
+# The various addllvm functions turn these off.
+set(LLVM_REQUIRES_RTTI ON)
+set(LLVM_REQUIRES_EH ON)
 
 if (ORC_RT_LLVM_TOOLS_AVAILABLE)
   configure_lit_site_cfg(
