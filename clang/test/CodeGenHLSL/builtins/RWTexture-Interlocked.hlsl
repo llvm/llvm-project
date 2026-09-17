@@ -42,6 +42,8 @@ RWTexture2D<float> FOut : register(u2);
 // DXCHECK:  atomicrmw xchg ptr %[[PTR9]], float 1.000000e+00 syncscope("device") monotonic
 // DXCHECK:  %[[PTR10:.*]] = call {{.*}} @llvm.dx.resource.getpointer.{{.*}}(target("dx.Texture", i32, 1, 0, 1, 2) %{{.*}}, <2 x i32> %{{.*}})
 // DXCHECK:  cmpxchg ptr %[[PTR10]], i32 1, i32 2 syncscope("device") monotonic monotonic
+// DXCHECK:  %[[PTR11:.*]] = call {{.*}} @llvm.dx.resource.getpointer.{{.*}}(target("dx.Texture", i32, 1, 0, 1, 2) %{{.*}}, <2 x i32> %{{.*}})
+// DXCHECK:  cmpxchg ptr %[[PTR11]], i32 1, i32 2 syncscope("device") monotonic monotonic
 // SPVCHECK: %[[PTR1:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, <2 x i32> %{{.*}})
 // SPVCHECK: atomicrmw add ptr addrspace(11) %[[PTR1]], i32 1 syncscope("device") monotonic
 // SPVCHECK: %[[PTR2:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, <2 x i32> %{{.*}})
@@ -62,6 +64,8 @@ RWTexture2D<float> FOut : register(u2);
 // SPVCHECK: atomicrmw xchg ptr addrspace(11) %[[PTR9]], float 1.000000e+00 syncscope("device") monotonic
 // SPVCHECK: %[[PTR10:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, <2 x i32> %{{.*}})
 // SPVCHECK: cmpxchg ptr addrspace(11) %[[PTR10]], i32 1, i32 2 syncscope("device") monotonic monotonic
+// SPVCHECK: %[[PTR11:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, <2 x i32> %{{.*}})
+// SPVCHECK: cmpxchg ptr addrspace(11) %[[PTR11]], i32 1, i32 2 syncscope("device") monotonic monotonic
 [shader("compute")]
 [numthreads(1,1,1)]
 void main(uint3 id : SV_DispatchThreadID) {
@@ -77,4 +81,5 @@ void main(uint3 id : SV_DispatchThreadID) {
   float FOrig;
   InterlockedExchange(FOut[id.xy], 1.0f, FOrig);
   InterlockedCompareStore(Out[id.xy], 1, 2);
+  InterlockedCompareExchange(Out[id.xy], 1, 2, Orig);
 }
