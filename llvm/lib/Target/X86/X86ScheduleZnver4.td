@@ -668,10 +668,15 @@ def Zn4WriteVPGATHERDDY    : Zn4GSRes<[Zn4AGU012, Zn4Load, Zn4FPLd01,
                                       [8, 8, 9, 8, 7, 2, 33], 21, 42>;
 def : InstRW<[Zn4WriteVPGATHERDDY, WriteVecMaskedGatherWriteback],
              (instrs VPGATHERDDYrm, VGATHERDPSYrm)>;
+// The VEX form retires one micro-op more than the EVEX form of the same
+// gather: uops.info measures 18 for VPGATHERQQ (XMM, VSIB_XMM, XMM) on Zen 4
+// against 17 for VPGATHERQQ (XMM, K, VSIB_XMM), which Zn4WriteVPGATHERQQZ128
+// carries. The two encodings agree on latency and throughput, so only the
+// micro-op count distinguishes them.
 def Zn4WriteVPGATHERQQX    : Zn4GSRes<[Zn4AGU012, Zn4Load, Zn4FPLd01,
                                        Zn4FPU01, Zn4FPU0123, Zn4FPU123,
                                        Zn4UcodeGS],
-                                      [2, 2, 3, 2, 1, 1, 16], 12, 17>;
+                                      [2, 2, 3, 2, 1, 1, 16], 12, 18>;
 def : InstRW<[Zn4WriteVPGATHERQQX, WriteVecMaskedGatherWriteback],
              (instrs VPGATHERQQrm, VGATHERQPDrm,
                      VPGATHERDQrm, VGATHERDPDrm)>;
