@@ -402,24 +402,57 @@ join:
   ret i8 %i
 }
 
-define i8 @phi_gep_not_simplifiable_1(i1 %cnd1, i1 %cnd2) {
+define i64 @phi_gep_not_simplifiable_1(i1 %cnd1, i1 %cnd2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@phi_gep_not_simplifiable_1
 ; CHECK-SAME: (i1 noundef [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
-; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 23
+; CHECK-NEXT:    [[BYTES:%.*]] = alloca [1024 x i64], align 16
+; CHECK-NEXT:    [[GEP23:%.*]] = getelementptr inbounds i8, ptr [[BYTES]], i64 23
 ; CHECK-NEXT:    br i1 [[CND1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[GEP31:%.*]] = getelementptr inbounds [1024 x i8], ptr [[BYTES]], i64 0, i64 31
+; CHECK-NEXT:    [[GEP31:%.*]] = getelementptr inbounds i8, ptr [[BYTES]], i64 31
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[PHI_PTR:%.*]] = phi ptr [ [[GEP23]], [[THEN]] ], [ [[GEP31]], [[ELSE]] ]
-; CHECK-NEXT:    store i8 42, ptr [[GEP23]], align 4
-; CHECK-NEXT:    [[I:%.*]] = load i8, ptr [[PHI_PTR]], align 4
-; CHECK-NEXT:    ret i8 [[I]]
+; CHECK-NEXT:    store i64 42, ptr [[GEP23]], align 1
+; CHECK-NEXT:    [[I:%.*]] = load i64, ptr [[PHI_PTR]], align 1
+; CHECK-NEXT:    ret i64 [[I]]
+;
+entry:
+  %Bytes = alloca [1024 x i64], align 16
+  %gep23 = getelementptr inbounds i8, ptr %Bytes, i64 23
+  br i1 %cnd1, label %then, label %else
+
+then:
+  br label %join
+
+else:
+  %gep31 = getelementptr inbounds i8, ptr %Bytes, i64 31
+  br label %join
+
+join:
+  %phi.ptr = phi ptr [%gep23, %then], [%gep31, %else]
+  ;; This store cannot be eliminated
+  store i64 42, ptr %gep23, align 1
+  %i = load i64, ptr %phi.ptr, align 1
+  ret i64 %i
+}
+
+define i8 @phi_gep_simplifiable_3(i1 %cnd1, i1 %cnd2) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define {{[^@]+}}@phi_gep_simplifiable_3
+; CHECK-SAME: (i1 noundef [[CND1:%.*]], i1 [[CND2:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CND1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret i8 42
 ;
 entry:
   %Bytes = alloca [1024 x i8], align 16
@@ -435,7 +468,6 @@ else:
 
 join:
   %phi.ptr = phi ptr [%gep23, %then], [%gep31, %else]
-  ;; This store cannot be eliminated
   store i8 42, ptr %gep23, align 4
   %i = load i8, ptr %phi.ptr, align 4
   ret i8 %i
