@@ -762,10 +762,23 @@ OmpStructureChecker::GetConstructTraitsForPath(
     if (llvm::omp::allTargetSet.test(*directive)) {
       constructTraits.clear();
     }
-    llvm::omp::VariantMatchInfo directiveVMI;
-    AppendConstructTraitsForDirective(*directive, directiveVMI);
-    constructTraits.append(directiveVMI.ConstructTraits.begin(),
-        directiveVMI.ConstructTraits.end());
+    for (llvm::omp::Directive leaf :
+        llvm::omp::getLeafConstructsOrSelf(*directive)) {
+      if (leaf == llvm::omp::Directive::OMPD_nothing ||
+          leaf == llvm::omp::Directive::OMPD_unknown) {
+        continue;
+      }
+      llvm::omp::VariantMatchInfo leafVMI;
+      AppendConstructTraitsForDirective(leaf, leafVMI);
+      if (leafVMI.ConstructTraits.empty()) {
+        // Source constructs without selector traits still occupy positions
+        // in the scoring context, including leaves of combined directives.
+        constructTraits.push_back(llvm::omp::TraitProperty::invalid);
+      } else {
+        constructTraits.append(
+            leafVMI.ConstructTraits.begin(), leafVMI.ConstructTraits.end());
+      }
+    }
   }
   return constructTraits;
 }
