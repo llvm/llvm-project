@@ -720,10 +720,16 @@ def Zn4WriteVPSCATTERDDZ256 : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                        [8, 8, 8, 10, 1, 3, 3, 49], 14, 48>;
 def : InstRW<[Zn4WriteVPSCATTERDDZ256],
              (instrs VPSCATTERDDZ256mr, VSCATTERDPSZ256mr)>;
+// Sixteen dword lanes reach memory either as one VPSCATTERDDZ or as two of
+// these, and the two forms have to keep their measured order. Znver4 puts the
+// pair 3% above the single instruction (21.66 cycles against 21.05, one dword
+// lane per cache line); a residual of 46 would put it 11% below instead, which
+// is the wrong side, so the qword-indexed form is fitted against the
+// dword-indexed one rather than on its own.
 def Zn4WriteVPSCATTERQDZ    : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
                                         Zn4FPU12, Zn4FPU123, Zn4FPU23,
                                         Zn4UcodeGS],
-                                       [8, 8, 8, 10, 2, 3, 3, 46], 14, 48>;
+                                       [8, 8, 8, 10, 2, 3, 3, 53], 14, 48>;
 def : InstRW<[Zn4WriteVPSCATTERQDZ],
              (instrs VPSCATTERQDZmr, VSCATTERQPSZmr)>;
 def Zn4WriteVPSCATTERDDZ    : Zn4GSRes<[Zn4AGU012, Zn4Store, Zn4FPSt, Zn4FP45,
