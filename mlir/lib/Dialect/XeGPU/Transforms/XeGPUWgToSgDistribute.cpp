@@ -41,7 +41,7 @@ static xegpu::RangeAttr getRangeSpecAttr(Operation *op) {
   Operation *parent = op->getParentOfType<scf::IfOp>();
   while (parent) {
     if (auto attr = llvm::dyn_cast_if_present<xegpu::RangeAttr>(
-            parent->getAttr("sg_id_range")))
+            parent->getDiscardableAttr("sg_id_range")))
       return attr;
     parent = parent->getParentOfType<scf::IfOp>();
   }
@@ -203,10 +203,14 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
         xegpu::TensorDescType::get(ctx, sgShape, elemTy, tdescTy.getEncoding(),
                                    layout.dropSgLayoutAndData());
 
+    Value src = op.getSource();
     SmallVector<Value> newCreateNdOps(count);
-    std::generate(newCreateNdOps.begin(), newCreateNdOps.end(), [&]() {
-      return xegpu::CreateNdDescOp::create(rewriter, loc, newTdescTy,
-                                           op.getSource(), op.getMixedSizes(),
+    std::generate(newCreateNdOps.begin(), newCreateNdOps.end(), [&]() -> Value {
+      if (isa<MemRefType>(src.getType()))
+        return xegpu::CreateNdDescOp::create(rewriter, loc, newTdescTy,
+                                             cast<TypedValue<MemRefType>>(src));
+      return xegpu::CreateNdDescOp::create(rewriter, loc, newTdescTy, src,
+                                           op.getMixedSizes(),
                                            op.getMixedStrides());
     });
 
@@ -318,12 +322,9 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
     for (auto aVec : adaptor.getLhs()) {
       for (auto bVec : adaptor.getRhs()) {
 
-        llvm::SmallVector<Value> operands({aVec, bVec});
         Value tmpC;
-        if (op.getAcc()) {
+        if (op.getAcc())
           tmpC = adaptor.getAcc()[i++];
-          operands.push_back(tmpC);
-        }
 
         ArrayRef<int64_t> aVecShape =
             cast<VectorType>(aVec.getType()).getShape();
@@ -335,7 +336,9 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
         resShape.push_back(aVecShape[aVecShape.size() - 2]);
         resShape.push_back(bVecShape[bVecShape.size() - 1]);
         VectorType resTy = VectorType::get(resShape, resultTy.getElementType());
-        auto newDpasOp = xegpu::DpasOp::create(rewriter, loc, resTy, operands);
+        auto newDpasOp = xegpu::DpasOp::create(
+            rewriter, loc, resTy, aVec, bVec, tmpC,
+            /*layout_a=*/nullptr, /*layout_b=*/nullptr, /*layout_cd=*/nullptr);
         newDpasOp.setLayoutCdAttr(layoutCd.dropSgLayoutAndData());
         newDpasOp.setLayoutAAttr(layoutA.dropSgLayoutAndData());
         newDpasOp.setLayoutBAttr(layoutB.dropSgLayoutAndData());
@@ -485,7 +488,8 @@ struct WgToSgElementwiseOp : public ConversionPattern {
       OperationState state(op->getLoc(), op->getName());
       state.addOperands(opOperands);
       state.addTypes(newResultType);
-      state.addAttributes(op->getAttrs());
+      state.addAttributes(op->getDiscardableAttrDictionary().getValue());
+      state.propertiesAttr = op->getPropertiesAsAttribute();
       Operation *newOp = rewriter.create(state);
       xegpu::removeLayoutAttrs(newOp);
       newResults.push_back(newOp->getResult(0));

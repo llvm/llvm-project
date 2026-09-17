@@ -161,6 +161,7 @@ def ExprWithCleanups : StmtNode<FullExpr>;
 def CXXTemporaryObjectExpr : StmtNode<CXXConstructExpr>;
 def CXXUnresolvedConstructExpr : StmtNode<Expr>;
 def CXXDependentScopeMemberExpr : StmtNode<Expr>;
+def DependentTemplateIdExpr : StmtNode<Expr>;
 def OverloadExpr : StmtNode<Expr, 1>;
 def UnresolvedLookupExpr : StmtNode<OverloadExpr>;
 def UnresolvedMemberExpr : StmtNode<OverloadExpr>;

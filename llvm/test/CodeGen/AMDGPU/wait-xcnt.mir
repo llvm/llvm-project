@@ -12,6 +12,7 @@ body: |
     ; GCN-LABEL: name: vmem_scratch_load
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -37,6 +38,7 @@ body: |
     ; GCN-LABEL: name: vmem_buffer_load_dword_offset
     ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -62,6 +64,7 @@ body: |
     ; GCN-LABEL: name: vmem_buffer_load_addr
     ; GCN: liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -87,6 +90,7 @@ body: |
     ; GCN-LABEL: name: vmem_flat_load
     ; GCN: liveins: $vgpr0, $vgpr1
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -112,6 +116,7 @@ body: |
     ; GCN-LABEL: name: vmem_global_load
     ; GCN: liveins: $vgpr0, $vgpr1
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -137,6 +142,7 @@ body: |
     ; GCN-LABEL: name: vmem_global_store
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -199,6 +205,7 @@ body: |
     ; GCN-LABEL: name: smem_load
     ; GCN: liveins: $sgpr2_sgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -220,6 +227,7 @@ body: |
     ; GCN-LABEL: name: smem_store
     ; GCN: liveins: $sgpr0, $sgpr2, $sgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -243,6 +251,7 @@ body: |
     ; GCN-LABEL: name: vmem_load_group
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr10
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -277,6 +286,7 @@ body: |
     ; GCN-LABEL: name: vmem_store_group
     ; GCN: liveins: $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -316,6 +326,7 @@ body: |
     ; GCN-LABEL: name: smem_load_group
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -343,6 +354,7 @@ body: |
     ; GCN-LABEL: name: smem_store_group
     ; GCN: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -374,6 +386,7 @@ body: |
     ; GCN-LABEL: name: vmem_loads_with_an_intervening_nop
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr10
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -408,6 +421,7 @@ body: |
     ; GCN-LABEL: name: vmem_contiguous_loads_with_an_intervening_store
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr10
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -443,6 +457,7 @@ body: |
     ; GCN-LABEL: name: vmem_stores_with_intervening_nop
     ; GCN: liveins: $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -486,6 +501,7 @@ body: |
     ; GCN-LABEL: name: vmem_contiguous_stores_with_an_intervening_load
     ; GCN: liveins: $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -531,6 +547,7 @@ body: |
     ; GCN-LABEL: name: atomic_op
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -562,6 +579,7 @@ body: |
     ; GCN-LABEL: name: smem_xcnt_insertion_with_pending_vmem_event
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -601,6 +619,7 @@ body: |
     ; GCN-LABEL: name: vmem_group_reg_dependency_with_prior_instruction
     ; GCN: liveins: $vgpr4, $vgpr5
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -632,6 +651,7 @@ body: |
     ; GCN-LABEL: name: multiple_xcnt_insertion_in_group
     ; GCN: liveins: $vgpr3, $vgpr4, $vgpr5
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -667,6 +687,7 @@ body: |
     ; GCN-LABEL: name: xcnt_event_post_load_group
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr10
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -712,6 +733,7 @@ body: |
     ; GCN-LABEL: name: xcnt_event_post_store_group
     ; GCN: liveins: $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -769,6 +791,7 @@ body: |
     ; GCN-LABEL: name: load_store_switching
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -813,6 +836,7 @@ body: |
     ; GCN-LABEL: name: dual_mov
     ; GCN: liveins: $sgpr0, $sgpr1, $vgpr1
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -835,9 +859,10 @@ machineFunctionInfo:
 body: |
   bb.0:
     ; GCN-LABEL: name: ds_load_store
-    ; GCN: $sgpr64_sgpr65 = S_MOV_B64 0
+    ; GCN: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
+    ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
-    ; GCN: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
+    ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: $vgpr0 = DS_READ_B32_gfx9 killed $vgpr1, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`, addrspace 3)
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 2, implicit $exec
@@ -862,6 +887,7 @@ body: |
     ; GCN-LABEL: name: xcnt_max
     ; GCN: liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -1011,6 +1037,7 @@ body: |
     ; GCN-LABEL: name: wait_kmcnt_with_outstanding_vmem
     ; GCN: liveins: $vgpr0_vgpr1, $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -1037,6 +1064,7 @@ body: |
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr0_sgpr1, $scc
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
   ; GCN-NEXT:   $sgpr64_sgpr65 = S_MOV_B64 0
   ; GCN-NEXT:   V_NOP_e32 implicit $exec
   ; GCN-NEXT:   GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -1080,6 +1108,7 @@ body: |
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr0_sgpr1, $scc
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
   ; GCN-NEXT:   $sgpr64_sgpr65 = S_MOV_B64 0
   ; GCN-NEXT:   V_NOP_e32 implicit $exec
   ; GCN-NEXT:   GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -1123,6 +1152,7 @@ body: |
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr0_sgpr1, $scc
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
   ; GCN-NEXT:   $sgpr64_sgpr65 = S_MOV_B64 0
   ; GCN-NEXT:   V_NOP_e32 implicit $exec
   ; GCN-NEXT:   GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -1170,6 +1200,7 @@ body: |
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr0_sgpr1, $scc
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
   ; GCN-NEXT:   $sgpr64_sgpr65 = S_MOV_B64 0
   ; GCN-NEXT:   V_NOP_e32 implicit $exec
   ; GCN-NEXT:   GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -1218,6 +1249,7 @@ body: |
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr0_sgpr1, $scc
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
   ; GCN-NEXT:   $sgpr64_sgpr65 = S_MOV_B64 0
   ; GCN-NEXT:   V_NOP_e32 implicit $exec
   ; GCN-NEXT:   GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -1268,6 +1300,7 @@ body: |
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr0_sgpr1, $scc
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
   ; GCN-NEXT:   $sgpr64_sgpr65 = S_MOV_B64 0
   ; GCN-NEXT:   V_NOP_e32 implicit $exec
   ; GCN-NEXT:   GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -1315,6 +1348,7 @@ body: |
     ; GCN-LABEL: name: wait_loadcnt_with_outstanding_smem
     ; GCN: liveins: $vgpr0_vgpr1, $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -1341,6 +1375,7 @@ body: |
     ; GCN-LABEL: name: overwrite_vgpr_after_smem
     ; GCN: liveins: $vgpr0_vgpr1, $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec
@@ -1363,6 +1398,7 @@ body: |
     ; GCN-LABEL: name: overwrite_sgpr_after_vmem
     ; GCN: liveins: $vgpr0_vgpr1, $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_sgpr65 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_sgpr65, undef $vgpr0, 0, 8, implicit $exec

@@ -147,8 +147,6 @@ public:
 
   LLVM_ABI const MachineFunction &getMachineFunction() const;
 
-  LLVM_ABI const DataLayout &getDataLayout() const;
-
   LLVM_ABI LLVMContext &getContext() const;
 
   /// \returns true if the combiner is running pre-legalization.
@@ -200,9 +198,6 @@ public:
   /// This is the counterpart to getRegBank.
   LLVM_ABI void setRegBank(Register Reg, const RegisterBank *RegBank) const;
 
-  /// If \p MI is COPY, try to combine it.
-  /// Returns true if MI changed.
-  LLVM_ABI bool tryCombineCopy(MachineInstr &MI) const;
   LLVM_ABI bool matchCombineCopy(MachineInstr &MI) const;
   LLVM_ABI void applyCombineCopy(MachineInstr &MI) const;
 
@@ -245,7 +240,6 @@ public:
                                IndexedLoadStoreMatchInfo &MatchInfo) const;
 
   LLVM_ABI bool matchSextTruncSextLoad(MachineInstr &MI) const;
-  LLVM_ABI void applySextTruncSextLoad(MachineInstr &MI) const;
 
   /// Match sext_inreg(load p), imm -> sextload p
   LLVM_ABI bool
@@ -379,7 +373,9 @@ public:
   LLVM_ABI void applyShiftOfShiftedLogic(MachineInstr &MI,
                                          ShiftOfShiftedLogic &MatchInfo) const;
 
-  LLVM_ABI bool matchCommuteShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  /// \return true if the target's TargetLowering::isDesirableToCommuteWithShift
+  /// hook approves of commuting \p MI (a G_SHL) with the binop feeding it.
+  LLVM_ABI bool isDesirableToCommuteWithShift(const MachineInstr &MI) const;
 
   /// Fold (lshr (trunc (lshr x, C1)), C2) -> trunc (shift x, (C1 + C2))
   LLVM_ABI bool matchLshrOfTruncOfLshr(MachineInstr &MI,
@@ -404,10 +400,6 @@ public:
                                         RegisterImmPair &MatchData) const;
   LLVM_ABI void applyCombineShlOfExtend(MachineInstr &MI,
                                         const RegisterImmPair &MatchData) const;
-
-  /// Fold away a merge of an unmerge of the corresponding values.
-  LLVM_ABI bool matchCombineMergeUnmerge(MachineInstr &MI,
-                                         Register &MatchInfo) const;
 
   /// Reduce a shift by a constant to an unmerge and a shift on a half sized
   /// type. This will not produce a shift smaller than \p TargetShiftSize.
@@ -454,27 +446,8 @@ public:
   LLVM_ABI bool matchConstantFoldUnaryIntOp(MachineInstr &MI,
                                             BuildFnTy &MatchInfo) const;
 
-  /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
-  LLVM_ABI bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg) const;
-  LLVM_ABI void applyCombineI2PToP2I(MachineInstr &MI, Register &Reg) const;
-
   /// Transform PtrToInt(IntToPtr(x)) to x.
   LLVM_ABI void applyCombineP2IToI2P(MachineInstr &MI, Register &Reg) const;
-
-  /// Transform G_ADD (G_PTRTOINT x), y -> G_PTRTOINT (G_PTR_ADD x, y)
-  /// Transform G_ADD y, (G_PTRTOINT x) -> G_PTRTOINT (G_PTR_ADD x, y)
-  LLVM_ABI bool
-  matchCombineAddP2IToPtrAdd(MachineInstr &MI,
-                             std::pair<Register, bool> &PtrRegAndCommute) const;
-  LLVM_ABI void
-  applyCombineAddP2IToPtrAdd(MachineInstr &MI,
-                             std::pair<Register, bool> &PtrRegAndCommute) const;
-
-  // Transform G_PTR_ADD (G_PTRTOINT C1), C2 -> C1 + C2
-  LLVM_ABI bool matchCombineConstPtrAddToI2P(MachineInstr &MI,
-                                             APInt &NewCst) const;
-  LLVM_ABI void applyCombineConstPtrAddToI2P(MachineInstr &MI,
-                                             APInt &NewCst) const;
 
   /// Transform anyext(trunc(x)) to x.
   LLVM_ABI bool matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg) const;
@@ -496,10 +469,6 @@ public:
   applyCombineTruncOfShift(MachineInstr &MI,
                            std::pair<MachineInstr *, LLT> &MatchInfo) const;
 
-  /// Return true if any explicit use operand on \p MI is defined by a
-  /// G_IMPLICIT_DEF.
-  LLVM_ABI bool matchAnyExplicitUseIsUndef(MachineInstr &MI) const;
-
   /// Return true if all register explicit use operands on \p MI are defined by
   /// a G_IMPLICIT_DEF.
   LLVM_ABI bool matchAllExplicitUsesAreUndef(MachineInstr &MI) const;
@@ -509,9 +478,6 @@ public:
 
   /// Return true if a G_STORE instruction \p MI is storing an undef value.
   LLVM_ABI bool matchUndefStore(MachineInstr &MI) const;
-
-  /// Return true if a G_SELECT instruction \p MI has an undef comparison.
-  LLVM_ABI bool matchUndefSelectCmp(MachineInstr &MI) const;
 
   /// Return true if a G_{EXTRACT,INSERT}_VECTOR_ELT has an out of range index.
   LLVM_ABI bool matchInsertExtractVecEltOutOfBounds(MachineInstr &MI) const;
@@ -553,10 +519,6 @@ public:
   LLVM_ABI bool matchEqualDefs(const MachineOperand &MOP1,
                                const MachineOperand &MOP2) const;
 
-  /// Return true if \p MOP is defined by a G_CONSTANT or splat with a value equal to
-  /// \p C.
-  LLVM_ABI bool matchConstantOp(const MachineOperand &MOP, int64_t C) const;
-
   /// Return true if \p MOP is defined by a G_FCONSTANT or splat with a value exactly
   /// equal to \p C.
   LLVM_ABI bool matchConstantFPOp(const MachineOperand &MOP, double C) const;
@@ -569,12 +531,6 @@ public:
   /// Optimize (cond ? x : x) -> x
   LLVM_ABI bool matchSelectSameVal(MachineInstr &MI) const;
 
-  /// Optimize (x op x) -> x
-  LLVM_ABI bool matchBinOpSameVal(MachineInstr &MI) const;
-
-  /// Check if operand \p OpIdx is undef.
-  LLVM_ABI bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) const;
-
   /// Check if operand \p MO is known to be a power of 2. When \p OrNegative
   /// is true, also match operands whose negation is a power of 2 (i.e. whose
   /// absolute value is a power of 2).
@@ -584,14 +540,6 @@ public:
 
   /// Erase \p MI
   LLVM_ABI void eraseInst(MachineInstr &MI) const;
-
-  /// Return true if MI is a G_ADD which can be simplified to a G_SUB.
-  LLVM_ABI bool
-  matchSimplifyAddToSub(MachineInstr &MI,
-                        std::tuple<Register, Register> &MatchInfo) const;
-  LLVM_ABI void
-  applySimplifyAddToSub(MachineInstr &MI,
-                        std::tuple<Register, Register> &MatchInfo) const;
 
   /// Fold `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`
   LLVM_ABI bool matchBinopWithNeg(MachineInstr &MI, BuildFnTy &MatchInfo) const;
@@ -656,7 +604,6 @@ public:
 
   /// Combine G_PTR_ADD with nullptr to G_INTTOPTR
   LLVM_ABI bool matchPtrAddZero(MachineInstr &MI) const;
-  LLVM_ABI void applyPtrAddZero(MachineInstr &MI) const;
 
   /// Combine G_UREM x, (known power of 2) to an add and bitmasking.
   LLVM_ABI void applySimplifyURemByPow2(MachineInstr &MI) const;
@@ -857,10 +804,6 @@ public:
   LLVM_ABI bool matchTruncUSatUToFPTOUISat(MachineInstr &MI,
                                            MachineInstr &SrcMI) const;
 
-  /// Try to transform \p MI by using all of the above
-  /// combine functions. Returns true if changed.
-  LLVM_ABI bool tryCombine(MachineInstr &MI) const;
-
   /// Match:
   ///   (G_UMULO x, 2) -> (G_UADDO x, x)
   ///   (G_SMULO x, 2) -> (G_SADDO x, x)
@@ -949,10 +892,6 @@ public:
                          SmallVector<MachineInstr *> &MatchInfo) const;
   LLVM_ABI void
   applyRepeatedFPDivisor(SmallVector<MachineInstr *> &MatchInfo) const;
-
-  /// Transform G_ADD(x, G_SUB(y, x)) to y.
-  /// Transform G_ADD(G_SUB(y, x), x) to y.
-  LLVM_ABI bool matchAddSubSameReg(MachineInstr &MI, Register &Src) const;
 
   LLVM_ABI bool matchBuildVectorIdentityFold(MachineInstr &MI,
                                              Register &MatchInfo) const;

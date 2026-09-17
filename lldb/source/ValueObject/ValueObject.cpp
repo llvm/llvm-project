@@ -824,8 +824,8 @@ uint64_t ValueObject::GetData(DataExtractor &data, Status &error) {
 
 bool ValueObject::SetData(DataExtractor &data, Status &error) {
   error.Clear();
-  if (GetIsConstant()) {
-    error = Status::FromErrorString("Cannot change the value of a constant");
+  if (llvm::Error err = CanSetValue()) {
+    error = Status::FromError(std::move(err));
     return false;
   }
   // Make sure our value is up to date first so that our location and location
@@ -1730,8 +1730,8 @@ static const char *ConvertBoolean(lldb::LanguageType language_type,
 
 bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
   error.Clear();
-  if (GetIsConstant()) {
-    error = Status::FromErrorString("Cannot change the value of a constant");
+  if (llvm::Error err = CanSetValue()) {
+    error = Status::FromError(std::move(err));
     return false;
   }
   // Make sure our value is up to date first so that our location and location
@@ -3281,10 +3281,15 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
           return ValueObjectConstResult::Create(
               exe_ctx.GetBestExecutionContextScope(),
               Status::FromErrorStringWithFormat(
-                  "invalid type cast detected: %s",
-                  llvm::toString(float_value_or_err.takeError()).c_str()));
+                  "invalid cast from float to integer"));
         return ValueObject::CreateValueObjectFromAPInt(exe_ctx, integer, type,
                                                        "result");
+      } else {
+        return ValueObjectConstResult::Create(
+            exe_ctx.GetBestExecutionContextScope(),
+            Status::FromErrorStringWithFormat(
+                "cannot get value as APFloat: %s",
+                llvm::toString(float_value_or_err.takeError()).c_str()));
       }
     }
   }

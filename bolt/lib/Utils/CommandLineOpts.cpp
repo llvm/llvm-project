@@ -340,6 +340,10 @@ cl::opt<ProfileFormatKind> ProfileFormat(
                           "perfscript profile format")),
     cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
+cl::list<std::string> ReorderData(
+    "reorder-data", cl::CommaSeparated, cl::desc("list of sections to reorder"),
+    cl::value_desc("section1,section2,section3,..."), cl::cat(BoltOptCategory));
+
 cl::opt<std::string> SaveProfile("w",
                                  cl::desc("save recorded profile to a file"),
                                  cl::cat(BoltOutputCategory));

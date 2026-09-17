@@ -335,8 +335,10 @@ static void processFuncOp(FunctionOpInterface funcOp,
   size_t numReturns = funcOp.getNumResults();
   BitVector nonLiveRets(numReturns, true);
   for (Operation *callOp : users) {
-    assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
-    BitVector liveCallRets = markLives(callOp->getResults(), nonLiveSet, la);
+    // Only the forwarded results of a call receive the values returned by the
+    // callee; any other result is produced by the call operation itself.
+    BitVector liveCallRets = markLives(
+        cast<CallOpInterface>(callOp).getForwardedResults(), nonLiveSet, la);
     nonLiveRets &= liveCallRets.flip();
   }
 
@@ -358,9 +360,16 @@ static void processFuncOp(FunctionOpInterface funcOp,
   if (numReturns == 0)
     return;
   for (Operation *callOp : users) {
-    assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
-    cl.results.push_back({callOp, nonLiveRets});
-    collectNonLiveValues(nonLiveSet, callOp->getResults(), nonLiveRets);
+    // `nonLiveRets` is indexed by callee result. Translate it into the index
+    // space of all results of the call operation, which is what the cleanup
+    // works on.
+    ResultRange forwardedResults =
+        cast<CallOpInterface>(callOp).getForwardedResults();
+    BitVector nonLiveCallResults(callOp->getNumResults(), false);
+    for (int index : nonLiveRets.set_bits())
+      nonLiveCallResults.set(forwardedResults[index].getResultNumber());
+    cl.results.push_back({callOp, nonLiveCallResults});
+    collectNonLiveValues(nonLiveSet, callOp->getResults(), nonLiveCallResults);
   }
 }
 

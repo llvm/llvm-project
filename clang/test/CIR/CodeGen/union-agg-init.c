@@ -62,10 +62,10 @@ typedef union vec3 {
   double component[3];
 } vec3;
 
-// LLVMCIR-DAG: @__const.ret_outer.__retval = {{.*}}%struct.outer { %union.needs_padding zeroinitializer, i32 1 }
-// OGCG-DAG: @__const.ret_outer.o = {{.*}}{ { i32, [4 x i8] }, i32, [4 x i8] } { { i32, [4 x i8] } zeroinitializer, i32 1, [4 x i8] zeroinitializer }
+// LLVMCIR-DAG: @__const.ret_outer.__retval = {{.*}}%struct.outer { %union.needs_padding zeroinitializer, i32 1 }, align 8
+// OGCG-DAG: @__const.ret_outer.o = {{.*}}{ { i32, [4 x i8] }, i32, [4 x i8] } { { i32, [4 x i8] } zeroinitializer, i32 1, [4 x i8] zeroinitializer }, align 8
 
-// CIR-DAG: cir.global "private" constant cir_private @__const.ret_outer.__retval = #cir.const_record<{#cir.zero : !rec_needs_padding, #cir.int<1> : !s32i}> : !rec_outer
+// CIR-DAG: cir.global "private" constant cir_private @__const.ret_outer.__retval = #cir.const_record<{#cir.zero : !rec_needs_padding, #cir.int<1> : !s32i}> : !rec_outer {alignment = 8 : i64}
 
 // In C mode, this does do zero padding.
 vec3 ret_vec3() {

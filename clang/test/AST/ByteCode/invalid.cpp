@@ -247,3 +247,23 @@ namespace InvalidStaticInvoker {
   constexpr int (*baz)(int) = foo;
   int i = baz(42);
 }
+
+namespace UnknownSizeArrayInEvaluateString {
+  void foo() {
+    constexpr char K[] = {'\0'; // both-error {{expected '}'}} \
+                                // both-note {{to match this}}
+    __builtin_verbose_trap("bar", K); // both-error {{argument to __builtin_verbose_trap must be a pointer to a constant string}}
+  }
+  }
+} // both-error {{extraneous closing brace}}
+
+namespace SubPtrResultIs1 {
+  struct A {
+    char x;
+  };
+  struct B {
+    char y;
+  };
+  struct C : A, B {};
+  unsigned char x = ((char **)(B *)(C *)0x1000) - (char *)0x1000; // both-error {{not pointers to compatible types}}
+}

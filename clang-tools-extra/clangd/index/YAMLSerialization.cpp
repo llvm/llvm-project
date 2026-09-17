@@ -265,11 +265,11 @@ template <> struct ScalarEnumerationTraits<SymbolKind> {
 #define DEFINE_ENUM(name) IO.enumCase(Value, #name, SymbolKind::name)
 
     DEFINE_ENUM(Unknown);
-    DEFINE_ENUM(Function);
     DEFINE_ENUM(Module);
     DEFINE_ENUM(Namespace);
     DEFINE_ENUM(NamespaceAlias);
     DEFINE_ENUM(Macro);
+    DEFINE_ENUM(IncludeDirective);
     DEFINE_ENUM(Enum);
     DEFINE_ENUM(Struct);
     DEFINE_ENUM(Class);
@@ -292,6 +292,10 @@ template <> struct ScalarEnumerationTraits<SymbolKind> {
     DEFINE_ENUM(ConversionFunction);
     DEFINE_ENUM(Parameter);
     DEFINE_ENUM(Using);
+    DEFINE_ENUM(TemplateTypeParm);
+    DEFINE_ENUM(TemplateTemplateParm);
+    DEFINE_ENUM(NonTypeTemplateParm);
+    DEFINE_ENUM(Concept);
 
 #undef DEFINE_ENUM
   }

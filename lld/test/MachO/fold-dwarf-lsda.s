@@ -22,7 +22,7 @@
 # POST: [[#%x,EXCEPT_ADDR:]] l   O __TEXT,__gcc_except_tab GCC_except_table0
 # POST: [[#%x,EXCEPT_ADDR]]  l   O __TEXT,__gcc_except_tab GCC_except_table1
 # POST: [[#%.16x,F0_ADDR:]]  g   F __TEXT,__text _f0
-# POST: [[#%.16x,F1_ADDR:]]  g   F __TEXT,__text _f1
+# POST: [[#%.16x,F0_ADDR]]   g   F __TEXT,__text _f1
 # POST: [[#%.16x,G_ADDR:]]   g   F __TEXT,__text _g
 
 # POST-LABEL: .eh_frame contents:
@@ -31,10 +31,6 @@
 # POST: {{.*}} FDE cie={{.+}} pc=[[#%x,F0_ADDR]]...{{.+}}
 # POST: Format:       DWARF32 
 # POST: LSDA Address: [[#%.16x,EXCEPT_ADDR]]
-
-# POST: {{.*}} FDE cie={{.+}} pc=[[#%x,F1_ADDR]]...{{.+}}
-# POST Format:       DWARF32 
-# POST LSDA Address: [[#%.16x,EXCEPT_ADDR]]
 
 	.section        __TEXT,__text,regular,pure_instructions
 	.globl	_f0

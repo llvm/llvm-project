@@ -6,15 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Binds EPCGenericJITLinkMemoryManager to the ORC runtime's SPS controller
-// interface: a ProxySpec per operation, plus factories that resolve them and
-// construct an instance.
+// Factories that build an EPCGenericJITLinkMemoryManager over the ORC runtime's
+// SPS controller interface.
 //
-// Each spec pairs one of EPCGenericJITLinkMemoryManager's proxies with its
-// controller-interface descriptor in Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h,
-// which supplies the wrapper name and wire signature. The specs are public so
-// that clients can resolve the operations under non-default names, using
-// recordProxy<Spec>(&P, Name) with lookupAndApply.
+// The bindings and their ProxySpecs are shared with the other drivers of the
+// runtime's memory manager; see SimpleMemoryMapSPS.h.
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,26 +18,12 @@
 #define LLVM_EXECUTIONENGINE_ORC_EPCGENERICJITLINKMEMORYMANAGERSPS_H
 
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h"
+#include "llvm/ExecutionEngine/Orc/SimpleMemoryMapSPS.h"
 #include "llvm/Support/Compiler.h"
 
 #include <memory>
 
 namespace llvm::orc::sps {
-
-using MemMgrReserveProxySpec =
-    ProxySpec<EPCGenericJITLinkMemoryManager::ReserveProxy,
-              rt::sps_ci::MemMgrReserve>;
-using MemMgrInitializeProxySpec =
-    ProxySpec<EPCGenericJITLinkMemoryManager::InitializeProxy,
-              rt::sps_ci::MemMgrInitialize>;
-using MemMgrDeinitializeProxySpec =
-    ProxySpec<EPCGenericJITLinkMemoryManager::DeinitializeProxy,
-              rt::sps_ci::MemMgrDeinitialize>;
-using MemMgrReleaseProxySpec =
-    ProxySpec<EPCGenericJITLinkMemoryManager::ReleaseProxy,
-              rt::sps_ci::MemMgrRelease>;
 
 /// Create an EPCGenericJITLinkMemoryManager for the ORC runtime's
 /// SimpleNativeMemoryMap interface, resolving its symbols in the given

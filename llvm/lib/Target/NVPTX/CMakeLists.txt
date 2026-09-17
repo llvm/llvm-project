@@ -65,6 +65,7 @@ add_llvm_target(NVPTXCodeGen
   MC
   NVPTXDesc
   NVPTXInfo
+  Passes
   Scalar
   SelectionDAG
   Support

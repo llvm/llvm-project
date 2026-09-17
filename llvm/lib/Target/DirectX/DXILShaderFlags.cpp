@@ -34,7 +34,10 @@ using namespace llvm::dxil;
 
 static bool hasUAVsAtEveryStage(const DXILResourceMap &DRM,
                                 const ModuleMetadataInfo &MMDI) {
-  if (DRM.uavs().empty())
+  // Heap resources do not count towards hasUAVsAtEveryStage.
+  bool HasUAVWithBinding = any_of(
+      DRM.uavs(), [](const ResourceInfo &RI) { return RI.hasBinding(); });
+  if (!HasUAVWithBinding)
     return false;
 
   switch (MMDI.ShaderProfile) {
@@ -274,6 +277,18 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
       }
       break;
     }
+    case Intrinsic::dx_resource_handlefromheap: {
+      dxil::ResourceTypeInfo &RTI = DRTM[cast<TargetExtType>(II->getType())];
+      bool IsSamplerHeap = RTI.isSampler();
+      CSF.SamplerDescriptorHeapIndexing |= IsSamplerHeap;
+      CSF.ResourceDescriptorHeapIndexing |= !IsSamplerHeap;
+
+      if (!CSF.ResMayNotAlias && CanSetResMayNotAlias && RTI.isUAV() &&
+          MMDI.ValidatorVersion >= VersionTuple(1, 8)) {
+        CSF.ResMayNotAlias = true;
+      }
+      break;
+    }
     case Intrinsic::dx_resource_load_typedbuffer: {
       dxil::ResourceTypeInfo &RTI =
           DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
@@ -338,16 +353,20 @@ ModuleShaderFlags::gatherGlobalModuleFlags(const Module &M,
 
   // Set the Max64UAVs flag if the number of UAVs is > 8
   uint32_t NumUAVs = 0;
-  for (auto &UAV : DRM.uavs())
+  for (auto &UAV : DRM.uavs()) {
+    // Heap resources do not count towards Max64UAVs flag.
+    if (!UAV.hasBinding())
+      continue;
     if (MMDI.ValidatorVersion < VersionTuple(1, 6)) {
       NumUAVs++;
     } else { // MMDI.ValidatorVersion >= VersionTuple(1, 6)
-      uint32_t Size = UAV.getBinding().Size;
+      uint32_t Size = UAV.getSize();
       uint32_t NewNum = NumUAVs + (Size == 0 ? ~0U : Size);
       if (NewNum < NumUAVs)
         NewNum = ~0U;
       NumUAVs = NewNum;
     }
+  }
   if (NumUAVs > 8)
     CSF.Max64UAVs = true;
 

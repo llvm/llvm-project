@@ -15,7 +15,6 @@
 #include "MemberPointer.h"
 #include "Pointer.h"
 #include "PrimType.h"
-#include "Program.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
@@ -24,19 +23,18 @@ using namespace clang;
 using namespace clang::interp;
 
 InterpFrame::InterpFrame(InterpState &S)
-    : Caller(nullptr), S(S), Depth(0), Func(nullptr), RetPC(CodePtr()),
-      ArgSize(0), Args(nullptr) {}
+    : Caller(nullptr), S(S), Func(nullptr), RetPC(CodePtr()), Args(nullptr),
+      ArgSize(0), Depth(0) {}
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
-    : Caller(Caller), S(S), Depth(Caller ? Caller->Depth + 1 : 0), Func(Func),
-      RetPC(RetPC), ArgSize(ArgSize), Args(static_cast<char *>(S.Stk.top())) {
+    : Caller(Caller), S(S), Func(Func), RetPC(RetPC),
+      Args(static_cast<char *>(S.Stk.top())), ArgSize(ArgSize),
+      Depth(Caller ? Caller->Depth + 1 : 0) {
+  assert(Func);
 #ifndef NDEBUG
   FrameOffset = S.Stk.size();
 #endif
-
-  if (!Func)
-    return;
 
   FuncFlags |= Func->hasRVO() * HasRVOFlag;
   FuncFlags |= Func->hasThisPointer() * HasThisFlag;
@@ -50,7 +48,8 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func,
 
   for (auto &Scope : Func->scopes()) {
     for (auto &Local : Scope.locals()) {
-      new (localBlock(Local.Offset)) Block(S.EvalID, Local.Desc);
+      new (localBlock(Local.Offset))
+          Block(S.EvalID, Local.Desc, Block::InlineDescMD);
       // Note that we are NOT calling invokeCtor() here, since that is done
       // via the InitScope op.
       new (localInlineDesc(Local.Offset)) InlineDescriptor(Local.Desc);
@@ -161,7 +160,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
   const ASTContext &ASTCtx = S.getASTContext();
   const Expr *CallExpr = Caller->getExpr(getRetOpPC());
-  const FunctionDecl *F = getCallee();
+  const FunctionDecl *F = Func->getDecl();
   auto PrintingPolicy = ASTCtx.getPrintingPolicy();
   PrintingPolicy.SuppressLambdaBody = true;
 
@@ -217,8 +216,9 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
 SourceRange InterpFrame::getCallRange() const {
   if (!Caller->Func) {
-    if (SourceRange NullRange = S.getRange({}); NullRange.isValid())
+    if (SourceRange NullRange = S.getSource({}).getRange(); NullRange.isValid())
       return NullRange;
+
     return S.EvalLocation;
   }
 
@@ -227,8 +227,7 @@ SourceRange InterpFrame::getCallRange() const {
     if (!C->RetPC)
       continue;
     SourceRange CallRange =
-        C->Caller->Func->getSource(C->getRetOpPC() - sizeof(uintptr_t))
-            .getRange();
+        C->Caller->Func->getSource(C->getRetOpPC()).getRange();
     if (CallRange.isValid())
       return CallRange;
   }
@@ -293,35 +292,6 @@ SourceInfo InterpFrame::getSource(CodePtr PC) const {
     return Caller->getSource(getRetOpPC());
 
   return Result;
-}
-
-const Expr *InterpFrame::getExpr(CodePtr PC) const {
-  if (!Func)
-    return S.getExpr(PC);
-
-  if (!funcHasUsableBody(Func) && Caller)
-    return Caller->getExpr(getRetOpPC());
-
-  return Func->getSource(PC).asExpr();
-}
-
-SourceLocation InterpFrame::getLocation(CodePtr PC) const {
-  if (!Func)
-    return S.getLocation(PC);
-  if (!funcHasUsableBody(Func) && Caller)
-    return Caller->getLocation(getRetOpPC());
-
-  return Func->getSource(PC).getLoc();
-}
-
-SourceRange InterpFrame::getRange(CodePtr PC) const {
-  if (!Func)
-    return S.getRange(PC);
-
-  if (!funcHasUsableBody(Func) && Caller)
-    return Caller->getRange(getRetOpPC());
-
-  return Func->getSource(PC).getRange();
 }
 
 bool InterpFrame::isStdFunction() const {

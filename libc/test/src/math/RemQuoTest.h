@@ -10,6 +10,7 @@
 #define LLVM_LIBC_TEST_SRC_MATH_REMQUOTEST_H
 
 #include "hdr/math_macros.h"
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FEnvSafeTest.h"
@@ -105,7 +106,9 @@ public:
 
   void testSubnormalRange(RemQuoFunc func) {
     constexpr StorageType COUNT = 1'231;
-    constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
+        StorageType(1));
     for (StorageType v = MIN_SUBNORMAL, w = MAX_SUBNORMAL;
          v <= MAX_SUBNORMAL && w >= MIN_SUBNORMAL; v += STEP, w -= STEP) {
       T x = FPBits(v).get_val(), y = FPBits(w).get_val();

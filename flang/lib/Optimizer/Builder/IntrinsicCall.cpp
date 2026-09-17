@@ -1113,7 +1113,7 @@ mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
     LLVM_DEBUG(llvm::dbgs() << "Generating '" << mathLibFuncName
                             << "' operation with type ";
                mathLibFuncType.dump(); llvm::dbgs() << "\n");
-    result = T::create(builder, loc, args);
+    result = T::create(builder, loc, args, typename T::Properties{});
   }
   LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
   return result;
@@ -1151,12 +1151,13 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
   // the argument types for an operation
   if constexpr (T::template hasTrait<
                     mlir::OpTrait::SameOperandsAndResultType>()) {
-    result = T::create(builder, loc, args);
+    result = T::create(builder, loc, args, typename T::Properties{});
     result = builder.createConvert(loc, mathLibFuncType.getResult(0), result);
   } else {
     auto complexTy = mlir::cast<mlir::ComplexType>(mathLibFuncType.getInput(0));
     auto realTy = complexTy.getElementType();
-    result = T::create(builder, loc, realTy, args);
+    result = T::create(builder, loc, mlir::TypeRange{realTy}, args,
+                       typename T::Properties{});
     result = builder.createConvert(loc, mathLibFuncType.getResult(0), result);
   }
 
@@ -5233,6 +5234,74 @@ template <bool isGet, bool isModes>
 void IntrinsicLibrary::genIeeeGetOrSetModesOrStatus(
     llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 1);
+  if constexpr (!isModes) {
+    mlir::Type i32Ty = builder.getIntegerType(32);
+    mlir::Type i32PtrTy = builder.getRefType(i32Ty);
+    llvm::Triple triple = fir::getTargetTriple(builder.getModule());
+    if (triple.isOSAIX()) {
+      // On AIX, fegetenv/fesetenv does not round-trip the FPSCR trap-enable
+      // bits [7:3].
+      //
+      // ieee_status_type.__data layout:
+      //   bytes  [0, 20) - fenv_t saved by fegetenv / restored by fesetenv
+      //   bytes [20, 28) - raw FPSCR double from mffs (trap-enable bits [7:3])
+      static constexpr int kAIXFenvTSize = 20; // sizeof(fenv_t) on AIX
+      mlir::Type i8Ty = builder.getIntegerType(8);
+      mlir::Type idxTy = builder.getIndexType();
+      mlir::Type f64Ty = builder.getF64Type();
+      mlir::Type f64PtrTy = builder.getRefType(f64Ty);
+      mlir::Type i8SeqTy =
+          fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i8Ty);
+      mlir::Type i8SeqPtrTy = builder.getRefType(i8SeqTy);
+
+      // Cast __data base pointer to !fir.ref<!fir.array<?xi8>> for GEP
+      mlir::Value base = fir::ConvertOp::create(builder, loc, i8SeqPtrTy,
+                                                fir::getBase(args[0]));
+
+      // fenv_t pointer: byte offset 0, cast to !fir.ref<i32> for fe[gs]etenv
+      mlir::Value fenvIdx = builder.createIntegerConstant(loc, idxTy, 0);
+      mlir::Value fenvGep = fir::CoordinateOp::create(
+          builder, loc, builder.getRefType(i8Ty), base, fenvIdx);
+      mlir::Value fenvPtr =
+          fir::ConvertOp::create(builder, loc, i32PtrTy, fenvGep);
+
+      // Raw FPSCR double pointer: byte offset kAIXFenvTSize (20), cast to f64
+      mlir::Value fpIdx =
+          builder.createIntegerConstant(loc, idxTy, kAIXFenvTSize);
+      mlir::Value fpGep = fir::CoordinateOp::create(
+          builder, loc, builder.getRefType(i8Ty), base, fpIdx);
+      mlir::Value fpPtr = fir::ConvertOp::create(builder, loc, f64PtrTy, fpGep);
+
+      if constexpr (isGet) {
+        mlir::func::FuncOp readFlm = fir::factory::getLlvmPpcReadflm(builder);
+        // Save the floating-point environment
+        genRuntimeCall("fegetenv", i32Ty, fenvPtr);
+        // Save the raw FPSCR so that the exception-enable (trap-enable) bits
+        // [7:3] are preserved. On AIX, these bits are not restored by fesetenv.
+        mlir::Value fpscr =
+            fir::CallOp::create(builder, loc, readFlm).getResult(0);
+        // Store the raw FPSCR double at offset kAIXFenvTSize
+        fir::StoreOp::create(builder, loc, fpscr, fpPtr);
+      } else {
+        mlir::func::FuncOp setFlm = fir::factory::getLlvmPpcSetflm(builder);
+        // Restore the floating-point environment
+        genRuntimeCall("fesetenv", i32Ty, fenvPtr);
+        // Load the raw FPSCR double from offset kAIXFenvTSize
+        mlir::Value fpscr = fir::LoadOp::create(builder, loc, fpPtr);
+        // Restore the FPSCR exception-enable (trap-enable) bits [7:3], which
+        // are not restored by fesetenv on AIX.
+        fir::CallOp::create(builder, loc, setFlm, fpscr);
+      }
+      return;
+    } else if (triple.isPPC()) {
+      // Non-AIX PPC (e.g. powerpc64le)
+      mlir::Value addr =
+          fir::ConvertOp::create(builder, loc, i32PtrTy, fir::getBase(args[0]));
+      genRuntimeCall(isGet ? "fegetenv" : "fesetenv", i32Ty, addr);
+      return;
+    }
+  }
+
 #ifndef __GLIBC_USE_IEC_60559_BFP_EXT // only use of "#include <cfenv>"
   // No definitions of fegetmode, fesetmode
   llvm::StringRef func = isModes
@@ -6847,6 +6916,31 @@ static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
   return subResult;
 }
 
+/// A zero divisor makes the inlined integer remainder undefined. Guard it
+/// with a test that reports the same fatal error as the runtime IntMod.
+/// A divisor known to be nonzero needs no test.
+static void genIntegerZeroDivisorCheck(fir::FirOpBuilder &builder,
+                                       mlir::Location loc, mlir::Value p,
+                                       bool isModulo) {
+  mlir::ModuleOp mod = builder.getModule();
+  auto checkEnabled = mod->getAttrOfType<mlir::BoolAttr>(
+      fir::getCheckIntegerModZeroDivisorAttrName());
+  if (!checkEnabled || !checkEnabled.getValue())
+    return;
+  if (std::optional<llvm::APInt> constantP = fir::getIntIfConstant(p))
+    if (!constantP->isZero())
+      return;
+  mlir::Value zero = builder.createIntegerConstant(loc, p.getType(), 0);
+  mlir::Value isZero = mlir::arith::CmpIOp::create(
+      builder, loc, mlir::arith::CmpIPredicate::eq, p, zero);
+  builder.genIfThen(loc, isZero)
+      .genThen([&]() {
+        fir::runtime::genReportFatalUserError(
+            builder, loc, isModulo ? "MODULO with P==0" : "MOD with P==0");
+      })
+      .end();
+}
+
 mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
   auto mod = builder.getModule();
@@ -6862,8 +6956,10 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
     return builder.createUnsigned<mlir::arith::RemUIOp>(loc, signlessType,
                                                         args[0], args[1]);
   }
-  if (mlir::isa<mlir::IntegerType>(resultType))
+  if (mlir::isa<mlir::IntegerType>(resultType)) {
+    genIntegerZeroDivisorCheck(builder, loc, args[1], /*isModulo=*/false);
     return mlir::arith::RemSIOp::create(builder, loc, args[0], args[1]);
+  }
 
   if (resultType.isFloat() && useFastRealMod) {
     // Treat MOD as an approximate function and code-gen inline code
@@ -6880,8 +6976,6 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
 // MODULO
 mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
                                         llvm::ArrayRef<mlir::Value> args) {
-  // TODO: we'd better generate a runtime call here, when runtime error
-  // checking is needed (to detect 0 divisor) or when precise math is requested.
   assert(args.size() == 2);
   // No floored modulo op in LLVM/MLIR yet. TODO: add one to MLIR.
   // In the meantime, use a simple inlined implementation based on truncated
@@ -6899,6 +6993,7 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
                                                         args[0], args[1]);
   }
   if (mlir::isa<mlir::IntegerType>(resultType)) {
+    genIntegerZeroDivisorCheck(builder, loc, args[1], /*isModulo=*/true);
     auto remainder =
         mlir::arith::RemSIOp::create(builder, loc, args[0], args[1]);
     auto argXor = mlir::arith::XOrIOp::create(builder, loc, args[0], args[1]);

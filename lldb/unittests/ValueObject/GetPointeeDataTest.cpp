@@ -57,7 +57,8 @@ struct SentinelProcess : Process {
   Status DoDestroy() override { return {}; }
   void RefreshStateAfterStop() override {}
   bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
-  size_t DoReadMemory(addr_t, void *buf, size_t size, Status &error) override {
+  size_t DoReadMemory(const ProcessAddress &, void *buf, size_t size,
+                      Status &error) override {
     if (fail_reads) {
       error = Status::FromErrorString("no live memory at this address");
       return 0;

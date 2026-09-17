@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/Shard/IR/ShardOps.h"
 #include "mlir/Dialect/Shard/Transforms/Partition.h"
 #include "mlir/IR/BuiltinDialect.h"

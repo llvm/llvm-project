@@ -34,7 +34,7 @@ body: |
     ADJCALLSTACKDOWN64 32, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     $ecx = COPY %0
     CALL64pcrel32 @f, csr_win64, implicit $rsp, implicit $ssp, implicit $ecx, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax, heap-alloc-marker !2
-  ; CHECK: CALL64pcrel32 @f, {{.*}} heap-alloc-marker !2
+  ; CHECK: CALL64pcrel32 @f, {{.*}} heap-alloc-marker !{{[0-9]+}}
     ADJCALLSTACKUP64 32, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     $eax = MOV32r0 implicit-def dead $eflags
     RET 0, killed $eax

@@ -281,6 +281,10 @@ public:
 
   void SetUseDIL(ExecutionContext *exe_ctx, bool b);
 
+  bool GetUseDILForCreatingValues() const;
+
+  void SetUseDILForCreatingValues(bool b);
+
   void SetRequireHardwareBreakpoints(bool b);
 
   bool GetRequireHardwareBreakpoints() const;
@@ -530,6 +534,10 @@ public:
 
   bool GetCppIgnoreContextQualifiers() const;
 
+  void SetTryDILFirst(bool b) { m_try_DIL_first = b; }
+
+  bool GetTryDILFirst() const { return m_try_DIL_first; }
+
 private:
   const StructuredData::Dictionary &GetLanguageOptions() const;
 
@@ -556,6 +564,10 @@ private:
   /// True if the executed code should be treated as utility code that is only
   /// used by LLDB internally.
   bool m_running_utility_expression = false;
+  /// If enabled, Data Inspection Language (DIL) should attempt to evaluate the
+  /// expression first. If DIL is not called or fails, the evaluation falls
+  /// back to UserExpression.
+  bool m_try_DIL_first = false;
 
   lldb::DynamicValueType m_use_dynamic = lldb::eNoDynamicValues;
   Timeout<std::micro> m_timeout = default_timeout;
@@ -2050,6 +2062,10 @@ public:
   void PrintDummySignals(Stream &strm, Args &signals);
 
 protected:
+  /// The mutex the calling thread must serialize on for its current policy, or
+  /// nullptr when that policy bypasses the API mutex entirely.
+  std::recursive_mutex *GetAPIMutexForCurrentPolicy();
+
   /// Implementing of ModuleList::Notifier.
 
   void NotifyModuleAdded(const ModuleList &module_list,
