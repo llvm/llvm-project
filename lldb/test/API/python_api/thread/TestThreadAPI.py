@@ -136,8 +136,10 @@ class ThreadAPITestCase(TestBase):
 
     def step_out_of_malloc_into_function_b(self, exe_name):
         """Test Python SBThread.StepOut() API to step out of a malloc call where the call site is at function b()."""
+        # On ELF platforms malloc lives in the C library, which is only loaded
+        # once the process is running, so the breakpoint has no location yet.
         target, process, _, breakpoint = lldbutil.run_to_name_breakpoint(
-            self, "malloc", exe_name=exe_name
+            self, "malloc", exe_name=exe_name, has_locations_before_run=False
         )
 
         while True:
