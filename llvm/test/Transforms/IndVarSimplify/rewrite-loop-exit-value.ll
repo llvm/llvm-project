@@ -309,17 +309,15 @@ define i1 @rewrite_computable_icmp(i32 %start, i32 %limit) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BODY:%.*]] ]
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[BODY]] ]
-; CHECK-NEXT:    [[CMP_EXIT:%.*]] = icmp ne i32 [[IV]], 42
-; CHECK-NEXT:    [[INRANGE:%.*]] = icmp ult i32 [[INDEX]], [[LIMIT:%.*]]
-; CHECK-NEXT:    [[CONTINUE:%.*]] = select i1 [[CMP_EXIT]], i1 [[INRANGE]], i1 false
-; CHECK-NEXT:    br i1 [[CONTINUE]], label [[BODY]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 false, label [[BODY:%.*]], label [[EXIT:%.*]]
 ; CHECK:       body:
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], -1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[LIMIT:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[START:%.*]], -42
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[START]], [[UMIN]]
+; CHECK-NEXT:    [[CMP_EXIT:%.*]] = icmp ne i32 [[TMP2]], 42
 ; CHECK-NEXT:    ret i1 [[CMP_EXIT]]
 ;
 entry:
@@ -348,19 +346,17 @@ define i1 @rewrite_multiple_icmps(i32 %start, i32 %rhs.start, i32 %limit) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BODY:%.*]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[RHS_START:%.*]], [[ENTRY]] ], [ [[RHS_NEXT:%.*]], [[BODY]] ]
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[BODY]] ]
-; CHECK-NEXT:    [[CMP0_EXIT:%.*]] = icmp ne i32 [[TMP2]], 42
-; CHECK-NEXT:    [[INRANGE:%.*]] = icmp ult i32 [[INDEX]], [[LIMIT:%.*]]
-; CHECK-NEXT:    [[CONTINUE:%.*]] = select i1 [[CMP0_EXIT]], i1 [[INRANGE]], i1 false
-; CHECK-NEXT:    br i1 [[CONTINUE]], label [[BODY]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 false, label [[BODY:%.*]], label [[EXIT:%.*]]
 ; CHECK:       body:
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[TMP2]], -1
-; CHECK-NEXT:    [[RHS_NEXT]] = add i32 [[TMP4]], 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[LIMIT:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[START:%.*]], -42
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[START]], [[UMIN]]
+; CHECK-NEXT:    [[CMP0_EXIT:%.*]] = icmp ne i32 [[TMP2]], 42
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[UMIN]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[RHS_START:%.*]], [[TMP3]]
 ; CHECK-NEXT:    [[CMP1_EXIT:%.*]] = icmp sgt i32 [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = and i1 [[CMP0_EXIT]], [[CMP1_EXIT]]
 ; CHECK-NEXT:    ret i1 [[RESULT]]
@@ -462,17 +458,18 @@ define i1 @rewrite_pointer_icmp(ptr %start, ptr %end, i32 %limit) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[PTR_NEXT:%.*]], [[BODY:%.*]] ]
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[BODY]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[PTR]], [[END:%.*]]
-; CHECK-NEXT:    [[INRANGE:%.*]] = icmp ult i32 [[INDEX]], [[LIMIT:%.*]]
-; CHECK-NEXT:    [[CONTINUE:%.*]] = select i1 [[CMP]], i1 [[INRANGE]], i1 false
-; CHECK-NEXT:    br i1 [[CONTINUE]], label [[BODY]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 false, label [[BODY:%.*]], label [[EXIT:%.*]]
 ; CHECK:       body:
-; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr i8, ptr [[PTR]], i64 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START:%.*]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
+; CHECK-NEXT:    [[LIMIT_FR:%.*]] = freeze i32 [[LIMIT:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[LIMIT_FR]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[END1]], [[START2]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 [[TMP1]])
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[UMIN]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[SCEVGEP]], [[END]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
