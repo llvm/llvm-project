@@ -750,6 +750,13 @@ public:
   /// entry skipped. This is what an SLocEntry record stores as its first field.
   SourceLocation::UIntTy getEntryOffset(const SrcMgr::SLocEntry &SLoc) const;
 
+  /// Emit \p Offset as the next record field and return a chain anchored at
+  /// \p Offset + \p InitialDelta, for delta encoding the locations that follow.
+  static SourceLocationEncoding::Chain
+  EmitSourceLocationOffset(SourceLocation::UIntTy Offset,
+                           SourceLocation::UIntTy InitialDelta,
+                           RecordDataImpl &Record);
+
   /// Emit \p SLoc's entry offset as the record's first field and return a chain
   /// anchored at that entry, for delta encoding the locations that follow.
   SourceLocationEncoding::Chain EmitEntryOffset(const SrcMgr::SLocEntry &SLoc,
