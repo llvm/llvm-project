@@ -1768,21 +1768,21 @@ static void visitLoopControl(
       callback(std::get<Fortran::parser::LoopControl::Bounds>(loopControl->u),
                loc);
     } else {
-      // Safely locate the next inner DoConstruct within this eval.
-      const Fortran::parser::DoConstruct *innerDo = nullptr;
-      if (crtEval && crtEval->hasNestedEvaluations()) {
-        for (Fortran::lower::pft::Evaluation &child :
-             crtEval->getNestedEvaluations()) {
-          if (auto *stmt = child.getIf<Fortran::parser::DoConstruct>()) {
-            innerDo = stmt;
-            // Prepare to descend for the next iteration
-            crtEval = &child;
-            break;
-          }
-        }
-      }
+      // Safely locate the next inner DoConstruct within this eval, skipping
+      // over any intervening evaluations (e.g. a CompilerDirective such as
+      // !DIR$ IVDEP) that may sit between loop levels. The separate body
+      // descent in Bridge.cpp performs the same search over this same
+      // construct and is responsible for warning about skipped directives,
+      // so this bounds-only descent does not warn again here.
+      Fortran::lower::pft::Evaluation *nextEval =
+          crtEval ? Fortran::lower::findNestedDoConstructEvaluation(*crtEval)
+                  : nullptr;
+      const Fortran::parser::DoConstruct *innerDo =
+          nextEval ? nextEval->getIf<Fortran::parser::DoConstruct>() : nullptr;
       if (!innerDo)
         break; // No deeper loop; stop collecting collapsed bounds.
+      // Prepare to descend for the next iteration.
+      crtEval = nextEval;
 
       if (markInnerCollapsed)
         Fortran::lower::markDoConstructAsCollapsed(*innerDo);
@@ -5450,6 +5450,21 @@ bool Fortran::lower::isCollapsedDoConstruct(
 
 void Fortran::lower::clearCollapsedDoConstructs() {
   collapsedDoConstructs.clear();
+}
+
+Fortran::lower::pft::Evaluation *
+Fortran::lower::findNestedDoConstructEvaluation(
+    Fortran::lower::pft::Evaluation &eval,
+    llvm::SmallVectorImpl<Fortran::lower::pft::Evaluation *> *skipped) {
+  if (!eval.hasNestedEvaluations())
+    return nullptr;
+  for (Fortran::lower::pft::Evaluation &child : eval.getNestedEvaluations()) {
+    if (child.getIf<Fortran::parser::DoConstruct>())
+      return &child;
+    if (skipped)
+      skipped->push_back(&child);
+  }
+  return nullptr;
 }
 
 bool Fortran::lower::isInsideOpenACCComputeConstruct(
