@@ -248,7 +248,7 @@ static bool transformEqualityMaskMinMaxLoop(fir::DoLoopOp rootLoop,
       newThenResults.push_back(val);
     }
   }
-  builder.create<fir::ResultOp>(loc, newThenResults);
+  fir::ResultOp::create(builder, loc, newThenResults);
   thenYield.erase();
 
   builder.setInsertionPoint(elseYield);
@@ -258,7 +258,7 @@ static bool transformEqualityMaskMinMaxLoop(fir::DoLoopOp rootLoop,
       continue;
     newElseResults.push_back(elseYield->getOperand(i));
   }
-  builder.create<fir::ResultOp>(loc, newElseResults);
+  fir::ResultOp::create(builder, loc, newElseResults);
   elseYield.erase();
 
   // Replace fir.if condition with (mask AND isFirst).
@@ -268,22 +268,22 @@ static bool transformEqualityMaskMinMaxLoop(fir::DoLoopOp rootLoop,
       origMaskCond = conv.getOperand();
     if (origMaskCond.getType() != builder.getI1Type()) {
       builder.setInsertionPoint(ifOp);
-      origMaskCond = builder.create<fir::ConvertOp>(loc, builder.getI1Type(),
-                                                    origMaskCond);
+      origMaskCond = fir::ConvertOp::create(builder, loc, builder.getI1Type(),
+                                            origMaskCond);
     }
   }
   builder.setInsertionPoint(ifOp);
   mlir::Value isFirstIterArg = innerLoop.getRegionIterArgs()[isFirstIdx];
   mlir::Value newIfCond =
-      builder.create<mlir::arith::AndIOp>(loc, origMaskCond, isFirstIterArg);
+      mlir::arith::AndIOp::create(builder, loc, origMaskCond, isFirstIterArg);
   // Replace fir.if with one that returns reduced result types (no minMax).
   llvm::SmallVector<mlir::Type> newResultTypes;
   for (unsigned i = 0; i < numArgs; ++i) {
     if (i != minMaxIdx)
       newResultTypes.push_back(ifOp.getResultTypes()[i]);
   }
-  auto newIfOp = builder.create<fir::IfOp>(loc, newResultTypes, newIfCond,
-                                           /*withElseRegion=*/true);
+  auto newIfOp = fir::IfOp::create(builder, loc, newResultTypes, newIfCond,
+                                   /*withElseRegion=*/true);
   newIfOp.getThenRegion().takeBody(ifOp.getThenRegion());
   newIfOp.getElseRegion().takeBody(ifOp.getElseRegion());
 
@@ -310,7 +310,7 @@ static bool transformEqualityMaskMinMaxLoop(fir::DoLoopOp rootLoop,
   auto innerTerminator = nestTerminators.back();
   builder.setInsertionPoint(innerTerminator);
   mlir::Operation *newInnerTerminator =
-      builder.create<fir::ResultOp>(loc, newIfOp.getResults()).getOperation();
+      fir::ResultOp::create(builder, loc, newIfOp.getResults()).getOperation();
   innerTerminator->erase();
   ifOp.erase();
 
@@ -330,8 +330,8 @@ static bool transformEqualityMaskMinMaxLoop(fir::DoLoopOp rootLoop,
     }
 
     builder.setInsertionPoint(loop);
-    auto transformedLoop = builder.create<fir::DoLoopOp>(
-        loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(),
+    auto transformedLoop = fir::DoLoopOp::create(
+        builder, loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(),
         loop.getStep(), loop.getUnordered().value_or(false),
         /*finalValue=*/false, newLoopInitArgs);
 
@@ -353,7 +353,7 @@ static bool transformEqualityMaskMinMaxLoop(fir::DoLoopOp rootLoop,
     mlir::ValueRange termResults = prevTransformedLoop
                                        ? prevTransformedLoop.getResults()
                                        : newIfOp.getResults();
-    builder.create<fir::ResultOp>(loc, termResults);
+    fir::ResultOp::create(builder, loc, termResults);
     oldTerm->erase();
 
     unsigned trackingIdx = 0;
