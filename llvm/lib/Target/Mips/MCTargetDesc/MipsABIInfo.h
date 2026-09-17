@@ -41,7 +41,8 @@ public:
   bool IsO64() const { return ThisABI == ABI::O64; }
   bool IsN32() const { return ThisABI == ABI::N32; }
   bool IsN64() const { return ThisABI == ABI::N64; }
-  bool IsABI64() const { return ThisABI == ABI::N64 || ThisABI == ABI::O64; }
+  bool IsOABI() const { return ThisABI == ABI::O32 || ThisABI == ABI::O64; }
+  bool IsNABI() const { return ThisABI == ABI::N32 || ThisABI == ABI::N64; }
   ABI GetEnumValue() const { return ThisABI; }
 
   /// The registers to use for byval arguments.
@@ -73,7 +74,7 @@ public:
   unsigned GetPtrAndOp() const;
   unsigned GetGPRMoveOp() const;
   inline bool ArePtrs64bit() const { return IsO64() || IsN64(); }
-  inline bool AreGprs64bit() const { return IsN32() || IsN64(); }
+  inline bool AreGprs64bit() const { return IsO64() || IsN32() || IsN64(); }
 
   unsigned GetEhDataReg(unsigned I) const;
 };

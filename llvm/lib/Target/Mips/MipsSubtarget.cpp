@@ -272,7 +272,7 @@ MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
     stackAlignment = Align(8);
   }
 
-  if ((isABI_O64() || isABI_N32() || isABI_N64()) && !isGP64bit())
+  if (getABI().AreGprs64bit() && !isGP64bit())
     reportFatalUsageError("64-bit code requested on a subtarget that doesn't "
                           "support it!");
 

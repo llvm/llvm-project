@@ -63,9 +63,9 @@ ArrayRef<MCPhysReg> MipsABIInfo::getVarArgRegs(bool isGP64bit) const {
 }
 
 unsigned MipsABIInfo::GetCalleeAllocdArgSizeInBytes(CallingConv::ID CC) const {
-  if (IsO32() || IsO64())
+  if (IsOABI())
     return CC != CallingConv::Fast ? 16 : 0;
-  if (IsN32() || IsN64())
+  if (IsNABI())
     return 0;
   llvm_unreachable("Unhandled ABI");
 }
@@ -140,5 +140,5 @@ unsigned MipsABIInfo::GetEhDataReg(unsigned I) const {
     Mips::A0_64, Mips::A1_64, Mips::A2_64, Mips::A3_64
   };
 
-  return (IsABI64()) ? EhDataReg64[I] : EhDataReg[I];
+  return (ArePtrs64bit()) ? EhDataReg64[I] : EhDataReg[I];
 }
