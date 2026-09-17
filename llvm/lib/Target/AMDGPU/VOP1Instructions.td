@@ -238,7 +238,8 @@ def VOPProfile_MOV : VOPProfile <[i32, i32, untyped, untyped]> {
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
 
-let SubtargetPredicate = isGFX940orGFX1250, SchedRW = [Write64Bit] in
+let SubtargetPredicate = isGFX940orGFX1250, SchedRW = [Write64Bit],
+    GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in
 defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOP_I64_I64>;
 } // End isMoveImm = 1
 
@@ -268,7 +269,7 @@ let HasOMod = 0, HasClamp = 0 in {
 } // End HasOMod = 0, HasClamp = 0
 
 let isReMaterializable = 1 in {
-let SchedRW = [WriteDoubleCvt] in {
+let SchedRW = [WriteDoubleCvt], GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in {
 // OMod clears exceptions when set in this instruction
 let IsDPMACCInstruction = 1 in
 defm V_CVT_I32_F64 : VOP1Inst <"v_cvt_i32_f64", VOP_I32_F64_SPECIAL_OMOD,  fp_to_sint>;
@@ -288,7 +289,7 @@ let mayRaiseFPException = 0 in {
 defm V_CVT_F64_U32 : VOP1Inst <"v_cvt_f64_u32", VOP1_F64_I32, uint_to_fp>;
 }
 
-} // End SchedRW = [WriteDoubleCvt]
+} // End SchedRW = [WriteDoubleCvt], GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
 
 let SchedRW = [WriteFloatCvt] in {
 
@@ -350,28 +351,29 @@ defm V_CEIL_F32 : VOP1Inst <"v_ceil_f32", VOP_F32_F32, fceil>;
 defm V_RNDNE_F32 : VOP1Inst <"v_rndne_f32", VOP_F32_F32, froundeven>;
 defm V_FLOOR_F32 : VOP1Inst <"v_floor_f32", VOP_F32_F32, ffloor>;
 
-let TRANS = 1, SchedRW = [WriteTrans32] in {
+let TRANS = 1, SchedRW = [WriteTrans32], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
 defm V_EXP_F32 : VOP1Inst <"v_exp_f32", VOP_F32_F32, AMDGPUexp>;
 defm V_LOG_F32 : VOP1Inst <"v_log_f32", VOP_F32_F32, AMDGPUlog>;
 defm V_RCP_F32 : VOP1Inst <"v_rcp_f32", VOP_F32_F32, AMDGPUrcp>;
 defm V_RCP_IFLAG_F32 : VOP1Inst <"v_rcp_iflag_f32", VOP_F32_F32, AMDGPUrcp_iflag>;
 defm V_RSQ_F32 : VOP1Inst <"v_rsq_f32", VOP_F32_F32, AMDGPUrsq>;
 defm V_SQRT_F32 : VOP1Inst <"v_sqrt_f32", VOP_F32_F32, int_amdgcn_sqrt>;
-} // End TRANS = 1, SchedRW = [WriteTrans32]
+} // End TRANS = 1, SchedRW = [WriteTrans32], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
 
-let TRANS = 1, SchedRW = [WriteTrans64], IsDPMACCInstruction = 1 in {
+let TRANS = 1, SchedRW = [WriteTrans64], IsDPMACCInstruction = 1,
+    GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in {
 defm V_RCP_F64 : VOP1Inst <"v_rcp_f64", VOP_F64_F64_NO_DPP, AMDGPUrcp>;
 defm V_RSQ_F64 : VOP1Inst <"v_rsq_f64", VOP_F64_F64_NO_DPP, AMDGPUrsq>;
 defm V_SQRT_F64 : VOP1Inst <"v_sqrt_f64", VOP_F64_F64_NO_DPP, int_amdgcn_sqrt>;
-} // End TRANS = 1, SchedRW = [WriteTrans64], IsDPMACCInstruction = 1
+} // End TRANS = 1, SchedRW = [WriteTrans64], IsDPMACCInstruction = 1, GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
 
-let TRANS = 1, SchedRW = [WriteTrans32] in {
+let TRANS = 1, SchedRW = [WriteTrans32], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
 defm V_SIN_F32 : VOP1Inst <"v_sin_f32", VOP_F32_F32, AMDGPUsin>;
 defm V_COS_F32 : VOP1Inst <"v_cos_f32", VOP_F32_F32, AMDGPUcos>;
 
 let SubtargetPredicate = HasTanhInsts in
 defm V_TANH_F32 : VOP1Inst <"v_tanh_f32", VOP_F32_F32, int_amdgcn_tanh>;
-} // End TRANS = 1, SchedRW = [WriteTrans32]
+} // End TRANS = 1, SchedRW = [WriteTrans32], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
 
 defm V_NOT_B32 : VOP1Inst <"v_not_b32", VOP_I32_I32>;
 defm V_BFREV_B32 : VOP1Inst <"v_bfrev_b32", VOP_I32_I32, DivergentUnaryFrag<bitreverse>>;
@@ -379,13 +381,14 @@ defm V_FFBH_U32 : VOP1Inst <"v_ffbh_u32", VOP_I32_I32, AMDGPUffbh_u32>;
 defm V_FFBL_B32 : VOP1Inst <"v_ffbl_b32", VOP_I32_I32, AMDGPUffbl_b32>;
 defm V_FFBH_I32 : VOP1Inst <"v_ffbh_i32", VOP_I32_I32, int_amdgcn_sffbh>;
 
-let SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1 in {
+let SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1,
+    GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in {
 defm V_FREXP_EXP_I32_F64 : VOP1Inst <"v_frexp_exp_i32_f64", VOP_I32_F64_SPECIAL_OMOD, int_amdgcn_frexp_exp>;
 defm V_FREXP_MANT_F64 : VOP1Inst <"v_frexp_mant_f64", VOP_F64_F64, int_amdgcn_frexp_mant>;
 let FPDPRounding = 1 in {
 defm V_FRACT_F64 : VOP1Inst <"v_fract_f64", VOP_F64_F64, AMDGPUfract>;
 } // End FPDPRounding = 1
-} // End SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1
+} // End SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1, GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
 
 defm V_FREXP_EXP_I32_F32 : VOP1Inst <"v_frexp_exp_i32_f32", VOP_I32_F32, int_amdgcn_frexp_exp>;
 defm V_FREXP_MANT_F32 : VOP1Inst <"v_frexp_mant_f32", VOP_F32_F32, int_amdgcn_frexp_mant>;
@@ -513,12 +516,13 @@ let SubtargetPredicate = isGFX7GFX8GFX9 in {
 } // End SubtargetPredicate = isGFX7GFX8GFX9
 
 let SubtargetPredicate = isGFX7Plus in {
-  let SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1 in {
+  let SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1,
+      GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in {
     defm V_TRUNC_F64 : VOP1Inst<"v_trunc_f64", VOP_F64_F64, ftrunc>;
     defm V_CEIL_F64  : VOP1Inst<"v_ceil_f64", VOP_F64_F64, fceil>;
     defm V_RNDNE_F64 : VOP1Inst<"v_rndne_f64", VOP_F64_F64, froundeven>;
     defm V_FLOOR_F64 : VOP1Inst<"v_floor_f64", VOP_F64_F64, ffloor>;
-  } // End SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1
+  } // End SchedRW = [WriteDoubleAdd], IsDPMACCInstruction = 1, GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true
 } // End SubtargetPredicate = isGFX7Plus
 } // End isReMaterializable = 1
 
@@ -539,7 +543,7 @@ def V_TRANS_BF16_t16_Profile :  VOPProfile_True16 <VOP_BF16_BF16>;
 def V_TRANS_BF16_fake16_Profile :  VOPProfile_Fake16 <VOP_BF16_BF16>;
 }
 
-let TRANS = 1, SchedRW = [WriteTrans32] in {
+let TRANS = 1, SchedRW = [WriteTrans32], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
 defm V_RCP_F16 : VOP1Inst_t16 <"v_rcp_f16", VOP_F16_F16, AMDGPUrcp>;
 defm V_SQRT_F16 : VOP1Inst_t16 <"v_sqrt_f16", VOP_F16_F16, any_amdgcn_sqrt>;
 defm V_RSQ_F16 : VOP1Inst_t16 <"v_rsq_f16", VOP_F16_F16, AMDGPUrsq>;
@@ -578,7 +582,7 @@ defm V_COS_BF16  : VOP1Inst_t16_with_profiles<"v_cos_bf16", V_TRANS_BF16_Profile
                                                V_TRANS_BF16_t16_Profile, V_TRANS_BF16_fake16_Profile,
                                                AMDGPUcos>;
 }
-} // End TRANS = 1, SchedRW = [WriteTrans32]
+} // End TRANS = 1, SchedRW = [WriteTrans32], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
 defm V_FREXP_MANT_F16 : VOP1Inst_t16 <"v_frexp_mant_f16", VOP_F16_F16, int_amdgcn_frexp_mant>;
 defm V_FREXP_EXP_I16_F16 : VOP1Inst_t16_with_profiles <"v_frexp_exp_i16_f16",
   VOP_I16_F16_SPECIAL_OMOD, VOP_I16_F16_SPECIAL_OMOD_t16, VOP_I16_F16_SPECIAL_OMOD_fake16, int_amdgcn_frexp_exp>;
@@ -646,6 +650,7 @@ def VOP_SWAP_I32 : VOPProfile<[i32, i32, untyped, untyped]> {
 }
 
 let SubtargetPredicate = isGFX9Plus in {
+  let GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in
   def V_SWAP_B32 : VOP1_Pseudo<"v_swap_b32", VOP_SWAP_I32, [], 1> {
     let Constraints = "$vdst = $src1, $vdst1 = $src0";
     let SchedRW = [Write64Bit, Write64Bit];
@@ -891,6 +896,7 @@ let SubtargetPredicate = isGFX10Plus in {
     defm V_MOVRELSD_2_B32 :
       VOP1Inst<"v_movrelsd_2_b32", VOP_MOVRELSD>;
 
+    let GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in
     def V_SWAPREL_B32 : VOP1_Pseudo<"v_swaprel_b32", VOP_SWAP_I32, [], 1> {
       let Constraints = "$vdst = $src1, $vdst1 = $src0";
       let SchedRW = [Write64Bit, Write64Bit];
@@ -919,6 +925,7 @@ def VOP_SWAP_I16 : VOPProfile_True16<VOP_I16_I16> {
 }
 
 let SubtargetPredicate = isGFX11Plus in {
+  let GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in
   def V_SWAP_B16 : VOP1_Pseudo<"v_swap_b16", VOP_SWAP_I16, [], /* VOP1Only= */true> {
     let Constraints = "$vdst = $src1, $vdst1 = $src0";
     let SchedRW = [Write64Bit, Write64Bit];
@@ -940,7 +947,7 @@ defm V_PRNG_B32 : VOP1Inst <"v_prng_b32", VOP_I32_I32, int_amdgcn_prng_b32>;
 
 let Constraints = "$vdst = $vdst_in, $src0_out = $src0",
      SchedRW = [Write32Bit, WriteVALUDummy],
-     isConvergent = 1 in {
+     isConvergent = 1, GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in {
 let SubtargetPredicate = HasPermlane16Swap in {
 defm V_PERMLANE16_SWAP_B32 : VOP1Inst<"v_permlane16_swap_b32", VOP_PERMLANE_SWAP>;
 }
