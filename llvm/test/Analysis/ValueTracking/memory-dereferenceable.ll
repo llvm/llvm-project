@@ -416,6 +416,7 @@ declare void @mayfree()
 define void @dereferenceable_arg_multi_pred_nofree(ptr dereferenceable(16) %a, i1 %cond) {
 entry:
   br i1 %cond, label %if.then, label %if.else
+  
 if.then:
   call void @mayfree() nofree
   br label %merge
