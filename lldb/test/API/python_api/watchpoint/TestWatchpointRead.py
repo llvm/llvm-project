@@ -23,14 +23,10 @@ class SetReadOnlyWatchpointTestCase(TestBase):
     # Intel hardware does not support read-only watchpoints
     @expectedFailureAll(archs=["i386", "x86_64"])
     def test_read_watchpoint_watch_address(self):
-        target, process, _, _ = lldbutil.run_to_line_breakpoint(
+        target, process, thread, _ = lldbutil.run_to_line_breakpoint(
             self, lldb.SBFileSpec(self.source), self.line
         )
 
-        # We should be stopped due to the breakpoint.  Get frame #0.
-        process = target.GetProcess()
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         frame0 = thread.GetFrameAtIndex(0)
 
         value = frame0.FindValue("global", lldb.eValueTypeVariableGlobal)
@@ -65,14 +61,10 @@ class SetReadOnlyWatchpointTestCase(TestBase):
     # Intel hardware does not support read-only watchpoints
     @expectedFailureAll(archs=["i386", "x86_64"])
     def test_read_watchpoint_watch_create_by_address(self):
-        target, process, _, _ = lldbutil.run_to_line_breakpoint(
+        target, process, thread, _ = lldbutil.run_to_line_breakpoint(
             self, lldb.SBFileSpec(self.source), self.line
         )
 
-        # We should be stopped due to the breakpoint.  Get frame #0.
-        process = target.GetProcess()
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         frame0 = thread.GetFrameAtIndex(0)
 
         value = frame0.FindValue("global", lldb.eValueTypeVariableGlobal)

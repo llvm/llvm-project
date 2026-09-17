@@ -18,12 +18,10 @@ class FrameUtilsTestCase(TestBase):
     def test_frame_utils(self):
         """Test utility functions for the frame object."""
         self.build()
-        _, process, _, _ = lldbutil.run_to_line_breakpoint(
+        _, _, thread, _ = lldbutil.run_to_line_breakpoint(
             self, lldb.SBFileSpec("main.c"), self.line
         )
 
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread)
         frame0 = thread.GetFrameAtIndex(0)
         self.assertTrue(frame0)
         frame1 = thread.GetFrameAtIndex(1)

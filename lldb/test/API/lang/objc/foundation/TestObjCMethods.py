@@ -251,19 +251,9 @@ class FoundationTestCase(TestBase):
         self.build()
         # See: <rdar://problem/8717050> lldb needs to use the ObjC runtime symbols for ivar offsets
         # Only fails for the ObjC 2.0 runtime.
-        _, process, _, _ = lldbutil.run_to_line_breakpoint(
+        _, _, thread, _ = lldbutil.run_to_line_breakpoint(
             self, lldb.SBFileSpec(self.main_source), self.line
         )
-
-        # The stop reason of the thread should be breakpoint.
-        thread = process.GetThreadAtIndex(0)
-        if thread.GetStopReason() != lldb.eStopReasonBreakpoint:
-            from lldbsuite.test.lldbutil import stop_reason_to_str
-
-            self.fail(
-                STOPPED_DUE_TO_BREAKPOINT_WITH_STOP_REASON_AS
-                % stop_reason_to_str(thread.GetStopReason())
-            )
 
         # Make sure we stopped at the first breakpoint.
 

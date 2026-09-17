@@ -46,11 +46,11 @@ class ProcessSaveCoreMinidumpPartialReadTestCase(TestBase):
     @skipIf(archs=["arm$"])
     def test_save_core_range_with_unreadable_tail(self):
         self.build()
-        target, process, _, _ = lldbutil.run_to_source_breakpoint(
+        target, process, thread, _ = lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        frame = process.GetSelectedThread().GetFrameAtIndex(0)
+        frame = thread.GetFrameAtIndex(0)
         region = frame.FindVariable("region").GetValueAsUnsigned()
         page = frame.FindVariable("page").GetValueAsUnsigned()
         self.assertNotEqual(region, 0)

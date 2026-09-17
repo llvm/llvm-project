@@ -60,7 +60,6 @@ class ProcessSaveCoreTestCase(TestBase):
     @requirePlatform(["freebsd", "netbsd"])
     def test_save_core_via_process_plugin(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
         core = self.getBuildArtifact("a.out.core")
         try:
             target, process, _, _ = lldbutil.run_to_name_breakpoint(self, "bar")

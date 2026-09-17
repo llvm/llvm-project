@@ -25,16 +25,6 @@ class LocalVariablesTestCase(TestBase):
 
         lldbutil.run_to_line_breakpoint(self, lldb.SBFileSpec(self.source), self.line)
 
-        # The stop reason of the thread should be breakpoint.
-        self.expect(
-            "thread list",
-            STOPPED_DUE_TO_BREAKPOINT,
-            substrs=["stopped", "stop reason = breakpoint"],
-        )
-
-        # The breakpoint should have a hit count of 1.
-        lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
-
         self.expect(
             "frame variable i",
             VARIABLES_DISPLAYED_CORRECTLY,

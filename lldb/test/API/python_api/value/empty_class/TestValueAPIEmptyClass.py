@@ -7,7 +7,6 @@ from lldbsuite.test import lldbutil
 class ValueAPIEmptyClassTestCase(TestBase):
     def test(self):
         self.build()
-        exe = self.getBuildArtifact("a.out")
         line = line_number("main.cpp", "// Break at this line")
 
         _, _, thread, _ = lldbutil.run_to_line_breakpoint(

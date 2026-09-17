@@ -121,7 +121,6 @@ class MiniDumpTestCase(TestBase):
     def test_deeper_stack_in_mini_dump(self):
         """Test that we can examine a more interesting stack in a mini dump."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
         core = self.getBuildArtifact("core.dmp")
         try:
             target, process, _, _ = lldbutil.run_to_name_breakpoint(self, "bar")
@@ -152,7 +151,6 @@ class MiniDumpTestCase(TestBase):
     def test_local_variables_in_mini_dump(self):
         """Test that we can examine local variables in a mini dump."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
         core = self.getBuildArtifact("core.dmp")
         try:
             target, process, _, _ = lldbutil.run_to_name_breakpoint(self, "bar")

@@ -28,14 +28,10 @@ class WatchpointIteratorTestCase(TestBase):
     def test_watch_iter(self):
         """Exercise SBTarget.watchpoint_iter() API to iterate on the available watchpoints."""
         self.build()
-        target, process, _, _ = lldbutil.run_to_line_breakpoint(
+        target, process, thread, _ = lldbutil.run_to_line_breakpoint(
             self, lldb.SBFileSpec(self.source), self.line
         )
 
-        # We should be stopped due to the breakpoint.  Get frame #0.
-        process = target.GetProcess()
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         frame0 = thread.GetFrameAtIndex(0)
 
         # Watch 'global' for read and write.

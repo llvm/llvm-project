@@ -20,12 +20,9 @@ class FrameProviderCircularDependencyTestCase(TestBase):
         """Build, launch and stop at the breakpoint in bar(). Returns (target, thread)."""
         self.build()
 
-        target, process, _, _ = lldbutil.run_to_source_breakpoint(
+        target, _, thread, _ = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec(self.source)
         )
-
-        thread = process.GetSelectedThread()
-        self.assertTrue(thread.IsValid(), "Thread should be valid")
 
         frame0 = thread.GetFrameAtIndex(0)
         self.assertIn("bar", frame0.GetFunctionName(), "Should be stopped in bar()")

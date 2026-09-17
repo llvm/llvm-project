@@ -54,11 +54,11 @@ class ProcessSaveCoreMinidumpSizeMismatchTestCase(TestBase):
     @skipIf(archs=["arm$"])
     def test_memory64_datasize_matches_written_bytes(self):
         self.build()
-        _, process, _, _ = lldbutil.run_to_source_breakpoint(
+        _, process, thread, _ = lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        frame = process.GetSelectedThread().GetFrameAtIndex(0)
+        frame = thread.GetFrameAtIndex(0)
         readable_region = frame.FindVariable("readable_region").GetValueAsUnsigned()
         readable_region_size = frame.FindVariable(
             "readable_region_size"
