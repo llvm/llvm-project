@@ -1,6 +1,7 @@
 ! RUN: split-file %s %t
 ! RUN: bbc %t/test1.f90 -o - --emit-fir --mlir-print-debuginfo | FileCheck %s --check-prefix=TEST1
 ! RUN: bbc %t/test2.f90 -o - --emit-fir --mlir-print-debuginfo | FileCheck %s --check-prefix=TEST2
+! RUN: bbc %t/test3.f90 -I %t -o - --emit-fir --mlir-print-debuginfo | FileCheck %s --check-prefix=TEST3
 
 ! Check that the missing optional program-stmt (R1401)
 ! does not result in unknown source location of the corresponding
@@ -35,3 +36,20 @@ end program
 
 ! TEST2: func.func @main(%{{.*}}: i32 loc("{{.*}}test2.f90":2:1)
 ! TEST2: } loc("{{.*}}test2.f90":2:1)
+
+!--- inc3.h
+integer :: i3
+!--- test3.f90
+include 'inc3.h'
+i3 = 1
+end
+
+! When a main program without a program-stmt starts with an INCLUDE, both the
+! main program and the generated entry point should get a known location.
+
+! TEST3: func.func @_QQmain() {
+! TEST3: } loc(fused<{{.*}}>["{{.*}}inc3.h":1:1, "{{.*}}test3.f90":1:1])
+
+! TEST3: func.func @main(%{{.*}}: i32 loc(fused<{{.*}}>["{{.*}}inc3.h":1:1, "{{.*}}test3.f90":1:1])
+! TEST3: fir.call @_QQmain(){{.*}} loc(fused<{{.*}}>["{{.*}}inc3.h":1:1, "{{.*}}test3.f90":1:1])
+! TEST3: } loc(fused<{{.*}}>["{{.*}}inc3.h":1:1, "{{.*}}test3.f90":1:1])
