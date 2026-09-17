@@ -40,15 +40,11 @@ static llvm::FunctionCallee getFreeExceptionFn(CodeGenModule &CGM) {
 }
 
 static llvm::FunctionCallee getSehTryBeginFn(CodeGenModule &CGM) {
-  llvm::FunctionType *FTy =
-      llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
-  return CGM.CreateRuntimeFunction(FTy, "llvm.seh.try.begin");
+  return CGM.getIntrinsic(llvm::Intrinsic::seh_try_begin);
 }
 
 static llvm::FunctionCallee getSehTryEndFn(CodeGenModule &CGM) {
-  llvm::FunctionType *FTy =
-      llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
-  return CGM.CreateRuntimeFunction(FTy, "llvm.seh.try.end");
+  return CGM.getIntrinsic(llvm::Intrinsic::seh_try_end);
 }
 
 static llvm::FunctionCallee getUnexpectedFn(CodeGenModule &CGM) {
@@ -1683,7 +1679,7 @@ void CodeGenFunction::EmitSEHTryStmt(const SEHTryStmt &S) {
     llvm::BasicBlock *TryBB = nullptr;
     // IsEHa: emit an invoke to _seh_try_begin() runtime for -EHa
     if (getLangOpts().EHAsynch) {
-      EmitRuntimeCallOrInvoke(getSehTryBeginFn(CGM));
+      EmitCallOrInvoke(getSehTryBeginFn(CGM), {});
       if (SEHTryEpilogueStack.size() == 1) // outermost only
         TryBB = Builder.GetInsertBlock();
     }
@@ -2251,7 +2247,7 @@ void CodeGenFunction::ExitSEHTryStmt(const SEHTryStmt &S) {
   // IsEHa: emit an invoke _seh_try_end() to mark end of FT flow
   if (getLangOpts().EHAsynch && Builder.GetInsertBlock()) {
     llvm::FunctionCallee SehTryEnd = getSehTryEndFn(CGM);
-    EmitRuntimeCallOrInvoke(SehTryEnd);
+    EmitCallOrInvoke(SehTryEnd, {});
   }
 
   // Otherwise, we must have an __except block.
