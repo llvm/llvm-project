@@ -5878,14 +5878,18 @@ static bool canConvert2Copy(unsigned Opc) {
   switch (Opc) {
   default:
     return false;
-  CASE_ND(ADD64ri32)
-  CASE_ND(SUB64ri32)
-  CASE_ND(OR64ri32)
-  CASE_ND(XOR64ri32)
-  CASE_ND(ADD32ri)
-  CASE_ND(SUB32ri)
-  CASE_ND(OR32ri)
-  CASE_ND(XOR32ri)
+    CASE_ND(ADD64ri32)
+    CASE_ND(SUB64ri32)
+    CASE_ND(OR64ri32)
+    CASE_ND(XOR64ri32)
+    CASE_ND(ADD32ri)
+    CASE_ND(SUB32ri)
+    CASE_ND(OR32ri)
+    CASE_ND(XOR32ri)
+    CASE_ND(ADD32rr)
+    CASE_ND(SUB32rr)
+    CASE_ND(OR32rr)
+    CASE_ND(XOR32rr)
     return true;
   }
 }
@@ -6080,8 +6084,23 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
         UseMI.registerDefIsDead(X86::EFLAGS, /*TRI=*/nullptr)) {
       //          %100 = add %101, 0
       //    ==>
-      //          %100 = COPY %101
-      UseMI.setDesc(get(TargetOpcode::COPY));
+      //          %100 = COPY %101 (or MOV32rr on 64-bit targets)
+      unsigned CopyOpc = TargetOpcode::COPY;
+      if (Subtarget.is64Bit()) {
+        switch (NewOpc) {
+        case X86::ADD32ri:
+        case X86::SUB32ri:
+        case X86::OR32ri:
+        case X86::XOR32ri:
+        case X86::ADD32rr:
+        case X86::SUB32rr:
+        case X86::OR32rr:
+        case X86::XOR32rr:
+          CopyOpc = X86::MOV32rr;
+          break;
+        }
+      }
+      UseMI.setDesc(get(CopyOpc));
       UseMI.removeOperand(
           UseMI.findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr));
       UseMI.removeOperand(
