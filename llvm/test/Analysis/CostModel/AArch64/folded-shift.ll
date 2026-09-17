@@ -6,11 +6,11 @@
 
 define i64 @folded(i64 %x, i64 %y) {
 ; CHECK-LABEL: 'folded'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shl = shl i64 %x, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shl = shl i64 %x, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %and = and i64 %shl, %y
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lshr = lshr i64 %and, 9
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %lshr = lshr i64 %and, 9
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %or = or i64 %lshr, %x
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ashr = ashr i64 %or, 11
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ashr = ashr i64 %or, 11
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %xor = xor i64 %ashr, %y
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %xor
 ;
@@ -28,7 +28,7 @@ define i64 @folded(i64 %x, i64 %y) {
 define i64 @two_shifts(i64 %x, i64 %y) {
 ; CHECK-LABEL: 'two_shifts'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lhs = shl i64 %x, 7
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %rhs = lshr i64 %y, 9
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %rhs = lshr i64 %y, 9
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %or = or i64 %lhs, %rhs
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i64 %or
 ;
@@ -40,7 +40,7 @@ define i64 @two_shifts(i64 %x, i64 %y) {
 
 define i32 @folded_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: 'folded_i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shift = shl i32 %x, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shift = shl i32 %x, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %and = and i32 %shift, %y
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 %and
 ;
@@ -93,7 +93,7 @@ exit:
 
 define i16 @folded_i16(i16 %x, i16 %y) {
 ; CHECK-LABEL: 'folded_i16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shl = shl i16 %x, 7
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shl = shl i16 %x, 7
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %and = and i16 %shl, %y
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lshr = lshr i16 %and, 9
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %or = or i16 %lshr, %x
@@ -112,7 +112,7 @@ define i16 @folded_i16(i16 %x, i16 %y) {
 
 define i8 @folded_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: 'folded_i8'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shl = shl i8 %x, 3
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shl = shl i8 %x, 3
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %and = and i8 %shl, %y
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %lshr = lshr i8 %and, 5
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %or = or i8 %lshr, %x

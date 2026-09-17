@@ -252,17 +252,17 @@ define void @flag_setting() {
 ; CHECK-SD-NEXT:    ldr x10, [x10, :got_lo12:var2_64]
 ; CHECK-SD-NEXT:    ldr x9, [x8]
 ; CHECK-SD-NEXT:    ldr x10, [x10]
-; CHECK-SD-NEXT:    tst x9, x10
-; CHECK-SD-NEXT:    b.gt .LBB2_4
-; CHECK-SD-NEXT:  // %bb.1: // %test2
-; CHECK-SD-NEXT:    tst x9, x10, lsl #63
-; CHECK-SD-NEXT:    b.mi .LBB2_4
-; CHECK-SD-NEXT:  // %bb.2: // %test3
-; CHECK-SD-NEXT:    tst x9, x10, asr #12
-; CHECK-SD-NEXT:    b.gt .LBB2_4
-; CHECK-SD-NEXT:  // %bb.3: // %other_exit
+; CHECK-SD-NEXT:    and x11, x9, x10, lsl #63
+; CHECK-SD-NEXT:    and x12, x9, x10, asr #12
+; CHECK-SD-NEXT:    and x10, x9, x10
+; CHECK-SD-NEXT:    cmn x11, #1
+; CHECK-SD-NEXT:    ccmp x12, #1, #0, gt
+; CHECK-SD-NEXT:    ccmp x10, #1, #0, lt
+; CHECK-SD-NEXT:    b.lt .LBB2_2
+; CHECK-SD-NEXT:  // %bb.1: // %common.ret
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB2_2: // %other_exit
 ; CHECK-SD-NEXT:    str x9, [x8]
-; CHECK-SD-NEXT:  .LBB2_4: // %common.ret
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: flag_setting:
@@ -274,17 +274,18 @@ define void @flag_setting() {
 ; CHECK-GI-NEXT:    ldr x9, [x8]
 ; CHECK-GI-NEXT:    ldr x10, [x10]
 ; CHECK-GI-NEXT:    tst x9, x10
-; CHECK-GI-NEXT:    b.gt .LBB2_4
-; CHECK-GI-NEXT:  // %bb.1: // %test2
+; CHECK-GI-NEXT:    b.gt .LBB2_3
+; CHECK-GI-NEXT:  // %bb.1:
 ; CHECK-GI-NEXT:    tst x9, x10, lsl #63
-; CHECK-GI-NEXT:    b.mi .LBB2_4
-; CHECK-GI-NEXT:  // %bb.2: // %test3
+; CHECK-GI-NEXT:    b.mi .LBB2_3
+; CHECK-GI-NEXT:  // %bb.2:
 ; CHECK-GI-NEXT:    asr x10, x10, #12
 ; CHECK-GI-NEXT:    tst x10, x9
-; CHECK-GI-NEXT:    b.gt .LBB2_4
-; CHECK-GI-NEXT:  // %bb.3: // %other_exit
+; CHECK-GI-NEXT:    b.le .LBB2_4
+; CHECK-GI-NEXT:  .LBB2_3: // %common.ret
+; CHECK-GI-NEXT:    ret
+; CHECK-GI-NEXT:  .LBB2_4: // %other_exit
 ; CHECK-GI-NEXT:    str x9, [x8]
-; CHECK-GI-NEXT:  .LBB2_4: // %common.ret
 ; CHECK-GI-NEXT:    ret
   %val1 = load i64, ptr @var1_64
   %val2 = load i64, ptr @var2_64
