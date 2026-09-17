@@ -457,29 +457,12 @@ bool HexagonTTIImpl::shouldBuildLookupTables() const {
 
 bool HexagonTTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
-  // The hardware provides a fixed number of HVX contexts. Software that mixes
-  // the two engines dedicates some threads to HVX, and those threads hold the
-  // contexts for as long as they run. A thread dedicated to HMX needs no
-  // context at all, until HVX code reaches it. Then it has to wait for one
-  // that the HVX threads are still holding, and if the two groups later meet
-  // at a barrier, neither side can make progress.
-  //
-  // Inlining is one way HVX code reaches a thread that was never meant to run
-  // it, in either direction: an HVX body merged into an HMX function, or an
-  // HMX body merged into a function whose other callers are HVX threads. So
-  // the attribute has to match on both sides.
+  // HVX contexts are a fixed hardware resource, held by threads dedicated to
+  // HVX. HVX reaching a thread without one stalls, and deadlocks if the two
+  // then meet at a barrier.
   if (Caller->hasFnAttribute("hexagon_hmx") !=
       Callee->hasFnAttribute("hexagon_hmx"))
     return false;
-
-  // The same hazard, reached from the HVX side. `hexagon_hvx` marks a function
-  // whose body hand-writes HVX, so inlining it into a caller without the
-  // annotation can place that HVX on a thread holding no context. An
-  // unannotated caller says nothing about which threads run it, so treat it as
-  // unsafe.
-  //
-  // Both checks sit ahead of `BaseT`, and therefore ahead of the inliner's
-  // `alwaysinline` shortcut, so `always_inline` cannot defeat either one.
   if (Callee->hasFnAttribute("hexagon_hvx") &&
       !Caller->hasFnAttribute("hexagon_hvx"))
     return false;
