@@ -135,7 +135,7 @@
 ///    functionInvocationId = alloca(4)
 ///
 ///    Note: the alloca size is not important as this pointer is
-///    merely used for pointer comparisions.
+///    merely used for pointer comparisons.
 ///
 /// 3) Lower
 ///      setjmp(env)
@@ -166,7 +166,7 @@
 ///        label 1: goto post-setjmp BB 1
 ///        label 2: goto post-setjmp BB 2
 ///        ...
-///        default: goto splitted next BB
+///        default: goto split next BB
 ///      }
 ///
 ///    __wasm_setjmp_test examines the jmp buf to see if it was for a matching
@@ -238,7 +238,7 @@
 ///      label 1: goto post-setjmp BB 1
 ///      label 2: goto post-setjmp BB 2
 ///      ...
-///      default: goto splitted next BB
+///      default: goto split next BB
 ///    }
 /// ...
 ///
@@ -359,8 +359,9 @@ class WebAssemblyLowerEmscriptenEHSjLjImpl {
 
 public:
   WebAssemblyLowerEmscriptenEHSjLjImpl(
+      bool EnableEmEH,
       std::function<DominatorTree &(Function &F)> GetDominatorTree)
-      : EnableEmEH(WebAssembly::WasmEnableEmEH),
+      : EnableEmEH(EnableEmEH || WebAssembly::WasmEnableEmEH),
         EnableEmSjLj(WebAssembly::WasmEnableEmSjLj),
         EnableWasmSjLj(WebAssembly::WasmEnableSjLj),
         GetDominatorTree(GetDominatorTree) {
@@ -375,6 +376,8 @@ public:
 };
 
 class WebAssemblyLowerEmscriptenEHSjLjLegacy final : public ModulePass {
+  bool EnableEmEH;
+
   StringRef getPassName() const override {
     return "WebAssembly Lower Emscripten Exceptions";
   }
@@ -382,7 +385,8 @@ class WebAssemblyLowerEmscriptenEHSjLjLegacy final : public ModulePass {
 public:
   static char ID;
 
-  WebAssemblyLowerEmscriptenEHSjLjLegacy() : ModulePass(ID) {}
+  WebAssemblyLowerEmscriptenEHSjLjLegacy(bool EnableEmEH = false)
+      : ModulePass(ID), EnableEmEH(EnableEmEH) {}
   bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -396,15 +400,13 @@ INITIALIZE_PASS(WebAssemblyLowerEmscriptenEHSjLjLegacy, DEBUG_TYPE,
                 "WebAssembly Lower Emscripten Exceptions / Setjmp / Longjmp",
                 false, false)
 
-ModulePass *llvm::createWebAssemblyLowerEmscriptenEHSjLjLegacyPass() {
-  return new WebAssemblyLowerEmscriptenEHSjLjLegacy();
+ModulePass *
+llvm::createWebAssemblyLowerEmscriptenEHSjLjLegacyPass(bool EnableEmEH) {
+  return new WebAssemblyLowerEmscriptenEHSjLjLegacy(EnableEmEH);
 }
 
 static bool canThrow(const Value *V) {
   if (const auto *F = dyn_cast<const Function>(V)) {
-    // Intrinsics cannot throw
-    if (F->isIntrinsic())
-      return false;
     StringRef Name = F->getName();
     // leave setjmp and longjmp (mostly) alone, we process them properly later
     if (Name == "setjmp" || Name == "longjmp" || Name == "emscripten_longjmp")
@@ -420,16 +422,16 @@ static bool canThrow(const Value *V) {
 // link time.
 static GlobalVariable *getGlobalVariable(Module &M, Type *Ty,
                                          const char *Name) {
-  auto *GV = dyn_cast<GlobalVariable>(M.getOrInsertGlobal(Name, Ty));
-  if (!GV)
-    report_fatal_error(Twine("unable to create global: ") + Name);
-
   // Variables created by this function are thread local. If the target does not
   // support TLS, we depend on CoalesceFeaturesAndStripAtomics to downgrade it
   // to non-thread-local ones, in which case we don't allow this object to be
   // linked with other objects using shared memory.
-  GV->setThreadLocalMode(GlobalValue::GeneralDynamicTLSModel);
-  return GV;
+  return M.getOrInsertGlobal(Name, Ty, [&]() {
+    return new GlobalVariable(
+        M, Ty, /*isConstant=*/false, GlobalVariable::ExternalLinkage,
+        /*Initializer=*/nullptr, Name,
+        /*InsertBefore=*/nullptr, GlobalValue::GeneralDynamicTLSModel);
+  });
 }
 
 // Simple function name mangler.
@@ -461,7 +463,7 @@ static void markAsImported(Function *F) {
   // Tell the linker that this function is expected to be imported from the
   // 'env' module. This is necessary for functions that do not have fixed names
   // (e.g. __import_xyz).  These names cannot be provided by any kind of shared
-  // or static library as instead we mark them explictly as imported.
+  // or static library as instead we mark them explicitly as imported.
   if (!F->hasFnAttribute("wasm-import-module")) {
     llvm::AttrBuilder B(F->getParent()->getContext());
     B.addAttribute("wasm-import-module", "env");
@@ -524,7 +526,7 @@ Function *WebAssemblyLowerEmscriptenEHSjLjImpl::getFindMatchingCatch(
   return F;
 }
 
-// Generate invoke wrapper seqence with preamble and postamble
+// Generate invoke wrapper sequence with preamble and postamble
 // Preamble:
 // __THREW__ = 0;
 // Postamble:
@@ -566,7 +568,7 @@ Value *WebAssemblyLowerEmscriptenEHSjLjImpl::wrapInvoke(CallBase *CI) {
 
   AttrBuilder FnAttrs(CI->getContext(), InvokeAL.getFnAttrs());
   if (auto Args = FnAttrs.getAllocSizeArgs()) {
-    // The allocsize attribute (if any) referes to parameters by index and needs
+    // The allocsize attribute (if any) refers to parameters by index and needs
     // to be adjusted.
     auto [SizeArg, NEltArg] = *Args;
     SizeArg += 1;
@@ -705,7 +707,7 @@ static bool isEmAsmCall(const Value *Callee) {
          CalleeName == "emscripten_asm_const_async_on_main_thread";
 }
 
-// Generate __wasm_setjmp_test function call seqence with preamble and
+// Generate __wasm_setjmp_test function call sequence with preamble and
 // postamble. The code this generates is equivalent to the following
 // JavaScript code:
 // %__threwValue.val = __threwValue;
@@ -925,6 +927,11 @@ static void nullifySetjmp(Function *F) {
 
 bool WebAssemblyLowerEmscriptenEHSjLjImpl::runOnModule(Module &M) {
   LLVM_DEBUG(dbgs() << "********** Lower Emscripten EH & SjLj **********\n");
+
+  // The Emscripten EH model may come from the "exception-model" module flag
+  // (e.g. when this pass is run standalone via opt) in addition to being
+  // threaded in from the TargetMachine.
+  EnableEmEH |= M.getExceptionModel() == ExceptionHandling::Emscripten;
 
   LLVMContext &C = M.getContext();
   IRBuilder<> IRB(C);
@@ -1408,9 +1415,9 @@ bool WebAssemblyLowerEmscriptenEHSjLjImpl::runSjLjOnFunction(Function &F) {
   // For example, in this code,
   // if (x()) { .. setjmp() .. }
   // if (y()) { .. longjmp() .. }
-  // We must split the longjmp block, and it can jump into the block splitted
-  // from setjmp one. But that means that when we split the setjmp block, it's
-  // first part no longer dominates its second part - there is a theoretically
+  // We must split the longjmp block, and it can jump into the block split from
+  // setjmp one. But that means that when we split the setjmp block, it's first
+  // part no longer dominates its second part - there is a theoretically
   // possible control flow path where x() is false, then y() is true and we
   // reach the second part of the setjmp block, without ever reaching the first
   // part. So, we rebuild SSA form here.
@@ -1713,7 +1720,7 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::handleLongjmpableCallsForWasmSjLj(
   //     label 1: goto post-setjmp BB 1
   //     label 2: goto post-setjmp BB 2
   //     ...
-  //     default: goto splitted next BB
+  //     default: goto split next BB
   //   }
   IRB.SetInsertPoint(SetjmpDispatchBB);
   PHINode *LabelPHI = IRB.CreatePHI(IRB.getInt32Ty(), 2, "label.phi");
@@ -1871,7 +1878,7 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::handleLongjmpableCallsForWasmSjLj(
 
 bool WebAssemblyLowerEmscriptenEHSjLjLegacy::runOnModule(Module &M) {
   WebAssemblyLowerEmscriptenEHSjLjImpl Impl(
-      [&](Function &F) -> DominatorTree & {
+      EnableEmEH, [&](Function &F) -> DominatorTree & {
         return getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
       });
   return Impl.runOnModule(M);
@@ -1881,7 +1888,7 @@ PreservedAnalyses
 WebAssemblyLowerEmscriptenEHSjLjPass::run(Module &M,
                                           ModuleAnalysisManager &MAM) {
   WebAssemblyLowerEmscriptenEHSjLjImpl Impl(
-      [&](Function &F) -> DominatorTree & {
+      EnableEmEH, [&](Function &F) -> DominatorTree & {
         return MAM.getResult<FunctionAnalysisManagerModuleProxy>(M)
             .getManager()
             .getResult<DominatorTreeAnalysis>(F);

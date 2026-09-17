@@ -71,7 +71,6 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   AMDGPUTTIImpl CommonTTI;
   bool IsGraphics;
   bool HasFP32Denormals;
-  bool HasFP64FP16Denormals;
   static constexpr bool InlinerVectorBonusPercent = 0;
 
   static const FeatureBitset InlineFeatureIgnoreList;
@@ -250,7 +249,9 @@ public:
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
                  TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
                  VectorType *SubTp, ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const override;
+                 const Instruction *CxtI = nullptr,
+                 TTI::VectorInstrContext VIC =
+                     TTI::VectorInstrContext::None) const override;
 
   bool isProfitableToSinkOperands(Instruction *I,
                                   SmallVectorImpl<Use *> &Ops) const override;
@@ -267,6 +268,11 @@ public:
   int getInlinerVectorBonusPercent() const override {
     return InlinerVectorBonusPercent;
   }
+
+  InstructionCost
+  getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                   TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
+                   const Instruction *I = nullptr) const override;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,

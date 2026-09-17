@@ -12,7 +12,6 @@
 
 #include "SPIRVRegisterBankInfo.h"
 #include "SPIRVRegisterInfo.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/RegisterBank.h"
 
 #define GET_REGINFO_ENUM

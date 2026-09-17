@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 #include <atomic>
+#include <mutex>
 #include <optional>
 #include <string>
 
@@ -60,9 +61,18 @@ public:
 };
 
 class AtomicLineLogger {
-  int FD = -1;
+  std::atomic<int> FD{-1};
   std::string LogPath;
   std::atomic<uint64_t> DroppedLines{0};
+  std::mutex EnableMtx;
+  enum class LogPathSource {
+    None,
+    Constructor, // The path is from the constructor.
+    EnableMethod // The path is set through calling the enable() method.
+  };
+  LogPathSource PathSource = LogPathSource::None;
+
+  void initialize(StringRef LogFilePath);
 
 public:
   AtomicLineLogger() {}
@@ -74,6 +84,14 @@ public:
   AtomicLineLogger &operator=(AtomicLineLogger &&) = delete;
 
   ~AtomicLineLogger();
+
+  /// Enables the logger if it is not already enabled. Thread safe.
+  ///
+  /// \returns false if the logger is not enabled consistently during its
+  /// lifetime.
+  bool enable(StringRef RequestedLogPath);
+
+  StringRef getLogPath() const { return LogPath; }
 
   LogLine log();
 };

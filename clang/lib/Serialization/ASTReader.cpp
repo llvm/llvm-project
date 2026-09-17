@@ -3230,10 +3230,13 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   // session.
   auto [EnablesBSValidation, WasValidated] =
       wasValidatedInBuildSession(F, HSOpts);
-  if (WasValidated)
-    return {std::nullopt, IgnoreError};
-  if (EnablesBSValidation &&
-      static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp)
+  const bool SkipModuleLookup =
+      !PP.getPreprocessorOpts().ModulesForceRedundantLookup &&
+      (WasValidated ||
+       (EnablesBSValidation &&
+        static_cast<uint64_t>(F.ModTime) >= HSOpts.BuildSessionTimestamp));
+
+  if (SkipModuleLookup)
     return {std::nullopt, IgnoreError};
 
   Diag(diag::remark_module_check_relocation) << F.ModuleName << F.FileName;
@@ -3243,7 +3246,7 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   // check).
   Module *M = PP.getHeaderSearchInfo().lookupModule(
       F.ModuleName, DirectoryCheck ? SourceLocation() : F.ImportLoc,
-      /*AllowSearch=*/DirectoryCheck,
+      /*AllowSearch=*/true,
       /*AllowExtraModuleMapSearch=*/DirectoryCheck);
 
   return {M, IgnoreError};

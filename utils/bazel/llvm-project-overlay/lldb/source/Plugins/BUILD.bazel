@@ -95,6 +95,16 @@ cc_library(
 )
 
 cc_library(
+    name = "PluginTypeSystemFortranHeaders",
+    hdrs = glob(["TypeSystem/Fortran/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:SymbolHeaders",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "PluginCPPRuntime",
     srcs = glob(["LanguageRuntime/CPlusPlus/*.cpp"]),
     hdrs = glob(["LanguageRuntime/CPlusPlus/*.h"]),
@@ -198,6 +208,25 @@ cc_library(
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "PluginTypeSystemFortran",
+    srcs = glob(["TypeSystem/Fortran/*.cpp"]),
+    deps = [
+        ":PluginSymbolFileDWARF",
+        ":PluginSymbolFileDWARFHeaders",
+        ":PluginTypeSystemFortranHeaders",
+        "//lldb:Core",
+        "//lldb:CoreHeaders",
+        "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//lldb:UtilityHeaders",
         "//llvm:Support",
     ],
 )
@@ -357,6 +386,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginTypeSystemClangHeaders",
+        ":PluginTypeSystemFortranHeaders",
         "//lldb:Core",
     ],
 )
@@ -370,6 +400,7 @@ cc_library(
         ":PluginObjCLanguageHeaders",
         ":PluginSymbolFileDWARFHeaders",
         ":PluginTypeSystemClangHeaders",
+        ":PluginTypeSystemFortranHeaders",
         ":SymbolFileDWARFProperties",
         "//clang:ast",
         "//clang:basic",
@@ -1339,6 +1370,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -1704,19 +1736,23 @@ cc_library(
 )
 
 cc_library(
-    name = "PluginInstrumentationRuntimeASanLibsanitizers",
-    srcs = glob(["InstrumentationRuntime/ASanLibsanitizers/*.cpp"]),
-    hdrs = glob(["InstrumentationRuntime/ASanLibsanitizers/*.h"]),
+    name = "PluginInstrumentationRuntimeBoundsSafety",
+    srcs = glob(["InstrumentationRuntime/BoundsSafety/*.cpp"]),
+    hdrs = glob(["InstrumentationRuntime/BoundsSafety/*.h"]),
     includes = [".."],
     deps = [
         ":PluginInstrumentationRuntimeUtility",
+        ":PluginProcessUtility",
+        "//clang:codegen",
         "//lldb:Breakpoint",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -1750,11 +1786,13 @@ cc_library(
         ":PluginInstrumentationRuntimeUtility",
         "//lldb:Breakpoint",
         "//lldb:Core",
+        "//lldb:Expression",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -2051,6 +2089,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -2522,6 +2561,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 

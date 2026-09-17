@@ -33,8 +33,7 @@ namespace lldb_dap {
 SourceBreakpoint::SourceBreakpoint(DAP &dap,
                                    const protocol::SourceBreakpoint &breakpoint)
     : Breakpoint(dap, breakpoint.condition, breakpoint.hitCondition),
-      m_log_message(breakpoint.logMessage.value_or("")),
-      m_line(breakpoint.line),
+      m_log_message(breakpoint.logMessage), m_line(breakpoint.line),
       m_column(breakpoint.column.value_or(LLDB_INVALID_COLUMN_NUMBER)) {}
 
 llvm::Error SourceBreakpoint::SetBreakpoint(const protocol::Source &source) {
@@ -281,6 +280,11 @@ lldb::SBError SourceBreakpoint::FormatLogText(llvm::StringRef text,
 void SourceBreakpoint::SetLogMessage() {
   m_log_message_parts.clear();
 
+  if (m_log_message.empty()) {
+    m_bp.SetCallback(nullptr, nullptr);
+    return;
+  }
+
   // Contains unmatched open curly braces indices.
   std::vector<int> unmatched_curly_braces;
 
@@ -399,8 +403,8 @@ bool SourceBreakpoint::BreakpointHitCallback(
       // evaluation
       const std::string &expr_str = messagePart.text;
       const char *expr = expr_str.c_str();
-      lldb::SBValue value = frame.GetValueForVariablePath(
-          expr, lldb::eDynamicDontRunTarget, lldb::eDILModeLegacy);
+      lldb::SBValue value = frame.GetValueForVariablePathWithMode(
+          expr, lldb::eDILModeLegacy, lldb::eDynamicDontRunTarget);
       if (value.GetError().Fail())
         value = frame.EvaluateExpression(expr);
       output += VariableDescription(

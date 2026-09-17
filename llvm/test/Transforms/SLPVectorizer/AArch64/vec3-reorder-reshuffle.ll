@@ -79,9 +79,7 @@ define void @extract_mask(ptr %object, double %conv503, double %conv520) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <2 x i1> [[TMP5]], <2 x double> [[TMP3]], <2 x double> <double 0.000000e+00, double -2.000000e+10>
 ; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x double> zeroinitializer, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = fptrunc <2 x double> [[TMP7]] to <2 x float>
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP8]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x float> [[TMP8]], i64 1
-; CHECK-NEXT:    [[MUL646:%.*]] = fmul float [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[MUL646:%.*]] = call reassoc float @llvm.vector.reduce.fmul.v2f32(float 1.000000e+00, <2 x float> [[TMP8]])
 ; CHECK-NEXT:    [[CMP663:%.*]] = fcmp olt float [[MUL646]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP663]], label [[IF_THEN665:%.*]], label [[IF_END668:%.*]]
 ; CHECK:       if.then665:
