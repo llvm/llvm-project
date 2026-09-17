@@ -478,7 +478,7 @@ using IntBucket = detail::DenseMapPair<int, int>;
 using PairBucket =
     detail::DenseMapPair<std::pair<int, int>, std::pair<int, int>>;
 
-static_assert(std::is_trivially_copyable_v<IntBucket>);
+static_assert(!std::is_trivially_copyable_v<IntBucket>);
 static_assert(!std::is_trivially_default_constructible_v<IntBucket>);
 
 // std::pair has a user-provided copy assignment operator.
