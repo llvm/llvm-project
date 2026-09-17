@@ -21,7 +21,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @p  = external global ptr
 
 declare void @redo()
-declare void @checkpoint() #0
+declare void @checkpoint() returns_twice
 
 ; Control case: function has the same CFG structure but calls no
 ; returns_twice function. GVN/DSE can legally eliminate "store i32 13, ptr %i"
@@ -50,9 +50,6 @@ if.then:
   br label %if.end
 
 if.else:
-  ; Bug: without the fix, GVN sees "store i32 42, ptr %p_val" as
-  ; NoAlias with %i (the capture in if.then is not visible in the forward
-  ; CFG), so it forwards 13 through the load and DSE removes this store.
   store i32 13, ptr %i
   %p_val = load ptr, ptr @p
   store i32 42, ptr %p_val
@@ -76,7 +73,7 @@ if.end:
 define void @bar_with_returns_twice() {
 entry:
   %i = alloca i32, align 4
-  call void @checkpoint() #0
+  call void @checkpoint()
   %x_val = load i32, ptr @x
   %cond = icmp ne i32 %x_val, 0
   br i1 %cond, label %if.then, label %if.else
@@ -101,5 +98,3 @@ if.else:
 if.end:
   ret void
 }
-
-attributes #0 = { returns_twice }
