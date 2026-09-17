@@ -755,7 +755,7 @@
 # CHECK-NEXT:  1      3     0.50                        scvtf	h5, h14
 # CHECK-NEXT:  1      3     0.50                        scvtf	d21, d12
 # CHECK-NEXT:  1      3     0.50                        scvtf	d21, d12, #64
-# CHECK-NEXT:  1      4     1.00                        scvtf	s22, s13
+# CHECK-NEXT:  1      3     0.50                        scvtf	s22, s13
 # CHECK-NEXT:  1      3     0.50                        scvtf	s22, s13, #32
 # CHECK-NEXT:  1      3     0.50                        scvtf	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        scvtf	v0.2d, v0.2d, #3
@@ -1307,7 +1307,7 @@
 # CHECK-NEXT:  1      3     0.50                        ucvtf	d21, d14
 # CHECK-NEXT:  1      3     0.50                        ucvtf	d21, d14, #64
 # CHECK-NEXT:  1      3     1.00                        ucvtf	s8, x0
-# CHECK-NEXT:  1      4     1.00                        ucvtf	s22, s13
+# CHECK-NEXT:  1      3     0.50                        ucvtf	s22, s13
 # CHECK-NEXT:  1      3     0.50                        ucvtf	s22, s13, #32
 # CHECK-NEXT:  1      3     0.50                        ucvtf	v0.2d, v0.2d
 # CHECK-NEXT:  1      3     0.50                        ucvtf	v0.2d, v0.2d, #3
@@ -1594,7 +1594,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -      -      -      -      -      -     101.33 187.33 187.33 25.25  12.25  12.25  12.25  619.25 504.75 510.25 395.75
+# CHECK-NEXT:  -      -      -      -      -      -      -     101.33 187.33 187.33 25.25  12.25  12.25  12.25  618.25 504.75 509.25 395.75
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
@@ -2343,7 +2343,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     scvtf	h5, h14
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     scvtf	d21, d12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     scvtf	d21, d12, #64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     scvtf	s22, s13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     scvtf	s22, s13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     scvtf	s22, s13, #32
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     scvtf	v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     scvtf	v0.2d, v0.2d, #3
@@ -2895,7 +2895,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     ucvtf	d21, d14
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     ucvtf	d21, d14, #64
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     ucvtf	s8, x0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -     ucvtf	s22, s13
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     ucvtf	s22, s13
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     ucvtf	s22, s13, #32
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     ucvtf	v0.2d, v0.2d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -     0.50    -     ucvtf	v0.2d, v0.2d, #3

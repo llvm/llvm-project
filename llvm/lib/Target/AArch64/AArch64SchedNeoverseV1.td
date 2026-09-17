@@ -1039,6 +1039,7 @@ def : InstRW<[V1Write_3c_1V02], (instregex "^FCVT[AMNPZ][SU]v2f(32|64)$",
                                            "^[SU]CVTFv2f(32|64)$",
                                            "^[SU]CVTFv2i(32|64)_shift$",
                                            "^[SU]CVTFv1i16$",
+                                           "^[SU]CVTFv1i32$",
                                            "^[SU]CVTFv1i64$",
                                            "^[SU]CVTFh$",
                                            "^[SU]CVTFs$",
@@ -1048,8 +1049,7 @@ def : InstRW<[V1Write_3c_1V02], (instregex "^FCVT[AMNPZ][SU]v2f(32|64)$",
 def : InstRW<[V1Write_4c_2V02], (instregex "^FCVT[AMNPZ][SU]v4f(16|32)$",
                                            "^FCVT[AMNPZ][SU]v4i(16|32)_shift$",
                                            "^[SU]CVTFv4f(16|32)$",
-                                           "^[SU]CVTFv4i(16|32)_shift$",
-                                           "^[SU]CVTFv1i32$")>;
+                                           "^[SU]CVTFv4i(16|32)_shift$")>;
 
 // ASIMD FP convert, other, Q-form F16
 def : InstRW<[V1Write_6c_4V02], (instregex "^FCVT[AMNPZ][SU]v8f16$",
