@@ -1,11 +1,7 @@
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t %s
 ; RUN: llvm-modextract -b -n 1 -o - %t | llvm-dis | FileCheck %s
 
-; TODO: Check that cfi.functions metadata encodes hotness in the upper 6 bits
-; of the linkage operand:
-; - Hot functions (Attribute::Hot or PSI.isFunctionHotInCallGraph) -> weight 16
-; - Cold functions (Attribute::Cold or PSI.isFunctionColdInCallGraph) -> weight 0
-; - Normal / unprofiled functions or declarations -> weight 1
+; TODO: Check that cfi.functions metadata encodes hotness.
 
 ; CHECK: !"f_nocount", i8 0,
 ; CHECK: !"f_entry_count", i8 0,
