@@ -1571,6 +1571,21 @@ static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
     SE->forgetBlockAndLoopDispositions(&I);
 }
 
+// An in-loop user keeps I live in the loop. An unsunk preheader user would no
+// longer be dominated by I after it is sunk.
+static bool
+hasBlockingUser(Instruction &I, Loop &L, BasicBlock &Preheader,
+                const SmallPtrSetImpl<Instruction *> &SinkCandidates) {
+  return llvm::any_of(I.uses(), [&](const Use &U) {
+    auto *UserI = cast<Instruction>(U.getUser());
+    auto *PN = dyn_cast<PHINode>(UserI);
+    BasicBlock *UseBB = PN ? PN->getIncomingBlock(U) : UserI->getParent();
+    if (L.contains(UseBB))
+      return true;
+    return UseBB == &Preheader && !SinkCandidates.contains(UserI);
+  });
+}
+
 // If there's a single exit block, sink any loop-invariant values that were
 // defined in the preheader but not used inside the loop into the exit block
 // to reduce register pressure in the loop.
@@ -1591,20 +1606,6 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
   SmallPtrSet<Instruction *, 16> SinkCandidates;
   SmallVector<Instruction *, 16> RemovalWorklist;
 
-  // An instruction cannot be sunk if it has a user in the loop, which is the
-  // live range we are trying to shorten, or a user in the preheader that is
-  // not sunk as well, which would no longer be dominated by the definition.
-  auto HasBlockingUser = [&](Instruction *I) {
-    return llvm::any_of(I->uses(), [&](const Use &U) {
-      auto *UserI = cast<Instruction>(U.getUser());
-      auto *PN = dyn_cast<PHINode>(UserI);
-      BasicBlock *UseBB = PN ? PN->getIncomingBlock(U) : UserI->getParent();
-      if (L->contains(UseBB))
-        return true;
-      return UseBB == Preheader && !SinkCandidates.contains(UserI);
-    });
-  };
-
   // Walk the preheader backwards, so that all preheader users of an
   // instruction have already been classified when it is considered.
   for (Instruction &I : llvm::reverse(*Preheader)) {
@@ -1622,7 +1623,7 @@ static bool sinkUnusedInvariantsFromPreheaderToExit(
     if (I.mayHaveSideEffects())
       continue;
 
-    if (HasBlockingUser(&I))
+    if (hasBlockingUser(I, *L, *Preheader, SinkCandidates))
       continue;
 
     if (!canSinkOrHoistInst(I, AA, DT, L, MSSAU,
