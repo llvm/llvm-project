@@ -1765,6 +1765,9 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
   addByteAddressBufferInterlockedMethod(
       "InterlockedExchange", AST.UnsignedIntTy,
       "__builtin_hlsl_interlocked_exchange", /*RequiresOriginalValue=*/true);
+  addByteAddressBufferInterlockedMethod("InterlockedExchangeFloat", AST.FloatTy,
+                                        "__builtin_hlsl_interlocked_exchange",
+                                        /*RequiresOriginalValue=*/true);
   addByteAddressBufferInterlockedMethod("InterlockedMax", AST.IntTy,
                                         "__builtin_hlsl_interlocked_max");
   addByteAddressBufferInterlockedMethod("InterlockedMax", AST.UnsignedIntTy,
