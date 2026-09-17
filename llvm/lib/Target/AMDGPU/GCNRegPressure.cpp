@@ -69,11 +69,16 @@ void GCNRegPressure::inc(unsigned Reg,
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
   const SIRegisterInfo *STI = static_cast<const SIRegisterInfo *>(TRI);
   unsigned RegKind = getRegKind(RC, STI);
+  unsigned ReservedIdx = 2 * TOTAL_KINDS + RegKind;
   if (TRI->getRegSizeInBits(*RC) != 32) {
     // Reg is from a tuple register class.
     if (PrevMask.none()) {
       unsigned TupleIdx = TOTAL_KINDS + RegKind;
-      Value[TupleIdx] += Sign * TRI->getRegClassWeight(RC).RegWeight;
+      unsigned Weight = TRI->getRegClassWeight(RC).RegWeight;
+      Value[TupleIdx] += Sign * Weight;
+      // A tuple is reserved at its full width for its whole live range, so
+      // lanes that are dead here are still unavailable to any other value.
+      Value[ReservedIdx] += Sign * Weight;
     }
     // Pressure scales with number of new registers covered by the new mask.
     // Note when true16 is enabled, we can no longer safely use the following
@@ -94,6 +99,10 @@ void GCNRegPressure::inc(unsigned Reg,
     // calling `getNumCoveredRegs` returns 2 instead of 1. This incorrect
     // calculation can lead to integer overflow when Sign = -1.
     Sign *= NewNumCoveredRegs - PrevNumCoveredRegs;
+  } else {
+    // Getting here implies a transition between zero and one covered register,
+    // since equal covered counts return early above.
+    Value[ReservedIdx] += Sign;
   }
   Value[RegKind] += Sign;
 }

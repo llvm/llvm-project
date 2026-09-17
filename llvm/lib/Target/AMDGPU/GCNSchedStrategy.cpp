@@ -78,6 +78,12 @@ static cl::opt<bool> GCNTrackers(
     cl::desc("Use the AMDGPU specific RPTrackers during scheduling"),
     cl::init(false));
 
+static cl::opt<bool> GCNTrackersCompareRP(
+    "amdgpu-trackers-compare-rp", cl::Hidden,
+    cl::desc("Print the GCN tracker and the generic tracker pressure side by "
+             "side for every scheduling candidate"),
+    cl::init(false));
+
 static cl::opt<unsigned> PendingQueueLimit(
     "amdgpu-scheduler-pending-queue-limit", cl::Hidden,
     cl::desc(
@@ -252,6 +258,20 @@ static bool canUsePressureDiffs(const SUnit &SU) {
   return true;
 }
 
+/// Report how many registers of each kind the allocator has to reserve for the
+/// values live at the point described by \p RP.
+///
+/// The excess and critical limits are expressed in allocatable registers, so
+/// the live lane counts cannot be compared against them directly: a tuple is
+/// reserved at its full width for its whole live range, which makes lanes that
+/// are dead at this point unavailable to any other value.
+static void getAllocatableRegPressure(const GCNRegPressure &RP, unsigned &SGPR,
+                                      unsigned &VGPR, unsigned &AGPR) {
+  SGPR = RP.getSGPRNumReserved();
+  VGPR = RP.getArchVGPRNumReserved();
+  AGPR = RP.getAGPRNumReserved();
+}
+
 void GCNSchedStrategy::getRegisterPressures(
     bool AtTop, const RegPressureTracker &RPTracker, SUnit *SU,
     std::vector<unsigned> &Pressure, std::vector<unsigned> &MaxPressure,
@@ -280,10 +300,10 @@ void GCNSchedStrategy::getRegisterPressures(
     TempUpwardTracker.recede(*MI);
     NewPressure = TempUpwardTracker.getPressure();
   }
-  Pressure[AMDGPU::RegisterPressureSets::SReg_32] = NewPressure.getSGPRNum();
-  Pressure[AMDGPU::RegisterPressureSets::VGPR_32] =
-      NewPressure.getArchVGPRNum();
-  Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = NewPressure.getAGPRNum();
+  getAllocatableRegPressure(
+      NewPressure, Pressure[AMDGPU::RegisterPressureSets::SReg_32],
+      Pressure[AMDGPU::RegisterPressureSets::VGPR_32],
+      Pressure[AMDGPU::RegisterPressureSets::AGPR_32]);
 }
 
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
@@ -357,6 +377,11 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
     }
 #endif
   }
+
+  if (GCNTrackersCompareRP)
+    dbgs() << "RPCMP cand SU(" << SU->NodeNum
+           << ") used=" << Pressure[AMDGPU::RegisterPressureSets::VGPR_32]
+           << " op=" << DAG->TII->getName(SU->getInstr()->getOpcode()) << '\n';
 
   unsigned NewAGPRPressure = Pressure[AMDGPU::RegisterPressureSets::AGPR_32];
   unsigned NewSGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
@@ -487,11 +512,14 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
       GCNRPTracker *T = IsBottomUp
                             ? static_cast<GCNRPTracker *>(&UpwardTracker)
                             : static_cast<GCNRPTracker *>(&DownwardTracker);
-      SGPRPressure = T->getPressure().getSGPRNum();
-      VGPRPressure = T->getPressure().getArchVGPRNum();
-      AGPRPressure = T->getPressure().getAGPRNum();
+      getAllocatableRegPressure(T->getPressure(), SGPRPressure, VGPRPressure,
+                                AGPRPressure);
     }
   }
+  if (GCNTrackersCompareRP)
+    dbgs() << "RPCMP queue " << (Zone.isTop() ? "top" : "bot")
+           << " base=" << VGPRPressure << '\n';
+
   LLVM_DEBUG(dbgs() << "Available Q:\n");
   ReadyQueue &AQ = Zone.Available;
   for (SUnit *SU : AQ) {
@@ -512,6 +540,9 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
       printCandidateDecision(TryCand, Cand);
     }
   }
+
+  if (useGCNTrackers() && GCNTrackersCompareRP && Cand.SU)
+    dbgs() << "RPCMP picked SU(" << Cand.SU->NodeNum << ")\n";
 
   if (!shouldCheckPending(Zone, SchedModel))
     return;

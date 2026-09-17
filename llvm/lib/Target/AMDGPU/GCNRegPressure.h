@@ -89,11 +89,31 @@ struct GCNRegPressure {
   /// \returns the AVGPR32 pressure
   unsigned getAVGPRNum() const { return Value[AVGPR]; }
 
+  /// \returns the combined width of the live ArchVGPR and AVGPR tuples, i.e.
+  /// each tuple counted at its full class width rather than at its live lane
+  /// count. Values of a 32-bit register class do not contribute.
+  unsigned getArchVGPRTuplesWeight() const {
+    return Value[TOTAL_KINDS + VGPR] + Value[TOTAL_KINDS + AVGPR];
+  }
+  /// \returns the combined width of the live AGPR tuples.
+  unsigned getAGPRTuplesWeight() const { return Value[TOTAL_KINDS + AGPR]; }
+
   unsigned getVGPRTuplesWeight() const {
-    return std::max(Value[TOTAL_KINDS + VGPR] + Value[TOTAL_KINDS + AVGPR],
-                    Value[TOTAL_KINDS + AGPR]);
+    return std::max(getArchVGPRTuplesWeight(), getAGPRTuplesWeight());
   }
   unsigned getSGPRTuplesWeight() const { return Value[TOTAL_KINDS + SGPR]; }
+
+  /// \returns the number of SGPRs the register allocator has to reserve for
+  /// the live values, i.e. each live tuple counted at its full class width
+  /// rather than at its live lane count.
+  unsigned getSGPRNumReserved() const { return Value[2 * TOTAL_KINDS + SGPR]; }
+  /// \returns the number of ArchVGPRs the register allocator has to reserve,
+  /// including the AVGPRs we assume will be allocated as ArchVGPRs.
+  unsigned getArchVGPRNumReserved() const {
+    return Value[2 * TOTAL_KINDS + VGPR] + Value[2 * TOTAL_KINDS + AVGPR];
+  }
+  /// \returns the number of AGPRs the register allocator has to reserve.
+  unsigned getAGPRNumReserved() const { return Value[2 * TOTAL_KINDS + AGPR]; }
 
   unsigned getOccupancy(const GCNSubtarget &ST,
                         unsigned DynamicVGPRBlockSize) const {
@@ -178,10 +198,11 @@ struct GCNRegPressure {
   }
 
 private:
-  static constexpr unsigned ValueArraySize = TOTAL_KINDS * 2;
+  static constexpr unsigned ValueArraySize = TOTAL_KINDS * 3;
 
   /// Pressure for all register kinds (first all regular registers kinds, then
-  /// all tuple register kinds).
+  /// all tuple register kinds, then the number of registers of each kind that
+  /// the register allocator has to reserve).
   std::array<unsigned, ValueArraySize> Value;
 
   static unsigned getRegKind(const TargetRegisterClass *RC,
