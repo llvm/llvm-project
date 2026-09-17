@@ -56,7 +56,7 @@ jobs:
     name: Build test-suite and diff
     runs-on: ubuntu-24.04
     container:
-      image: ghcr.io/llvm/ci-ubuntu-24.04:35e958d7f0b7
+      image: ghcr.io/llvm/ci-ubuntu-26.04:latest@sha256:7ac659feb90ac48dd8676e4eb305b9aa5b31fc8b329b7e39379c38af06efc6e1
     needs:
       - permission-check
     env:
