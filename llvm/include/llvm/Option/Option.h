@@ -90,7 +90,8 @@ public:
 
   unsigned getID() const {
     assert(Info && "Must have a valid info!");
-    return Info->ID;
+    assert(Owner && "Must have a valid owner!");
+    return Owner->getOptionID(*Info);
   }
 
   OptionClass getKind() const {
@@ -102,7 +103,7 @@ public:
   StringRef getName() const {
     assert(Info && "Must have a valid info!");
     assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionName(Info->ID);
+    return Owner->getOptionName(getID());
   }
 
   const Option getGroup() const {
@@ -134,28 +135,28 @@ public:
   StringRef getPrefix() const {
     assert(Info && "Must have a valid info!");
     assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionPrefix(Info->ID);
+    return Owner->getOptionPrefix(getID());
   }
 
   /// Get the name of this option with the default prefix.
   StringRef getPrefixedName() const {
     assert(Info && "Must have a valid info!");
     assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionPrefixedName(Info->ID);
+    return Owner->getOptionPrefixedName(getID());
   }
 
   /// Get the help text for this option.
   StringRef getHelpText() const {
     assert(Info && "Must have a valid info!");
     assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionHelpText(Info->ID);
+    return Owner->getOptionHelpText(getID());
   }
 
   /// Get the meta-variable list for this option.
   StringRef getMetaVar() const {
     assert(Info && "Must have a valid info!");
     assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionMetaVar(Info->ID);
+    return Owner->getOptionMetaVar(getID());
   }
 
   unsigned getNumArgs() const { return Info->Param; }
