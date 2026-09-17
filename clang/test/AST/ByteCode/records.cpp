@@ -1315,12 +1315,10 @@ namespace {
     return x;
   }
 
-  /// Before the result object was allocated, this could not be evaluated at
-  /// all. The temporary 'B' is not destroyed until the end of the enclosing
-  /// full-expression, so 'x' still reads 1 here, matching legacy evaluator.
-  ///
-  /// FIXME: See https://github.com/llvm/llvm-project/issues/85601.
-  static_assert(discarded() == 1);
+  /// The temporary 'A' created by the default member initializer is destroyed
+  /// at the end of the full-expression containing the aggregate initialization
+  /// (see https://github.com/llvm/llvm-project/issues/85601).
+  static_assert(discarded() == 0);
 
   /// A const-qualified composite result is writable while under construction.
   constexpr int decrement(int &x) {
