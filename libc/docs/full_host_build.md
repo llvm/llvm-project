@@ -11,17 +11,12 @@ page, as well as additional information.
 ## Standard Building and Testing
 
 :::{note}
-If your build fails with an error saying the compiler can't find
-`<asm/unistd.h>` or similar then you're probably missing the symlink from
-`/usr/include/asm` to `/usr/include/<HOST TRIPLE>/asm`. Installing the
-`gcc-multilib` package creates this symlink, or you can do it manually with
-this command:
-
-```sh
-sudo ln -s /usr/include/<HOST TRIPLE>/asm /usr/include/asm
-```
-
-(your host triple will probably be similar to `x86_64-linux-gnu`)
+On Debian-based systems, architecture-specific kernel headers are installed in
+`/usr/include/<HOST TRIPLE>/asm` rather than `/usr/include/asm`. The build system
+automatically detects this path if `/usr/include/asm` does not exist. If needed,
+you can specify `-DLIBC_KERNEL_HEADERS="/usr/include/<HOST TRIPLE>;/usr/include"`
+when configuring CMake, or install the `gcc-multilib` package (which creates the
+`/usr/include/asm` symlink).
 :::
 
 For basic development, such as adding new functions or fixing bugs, you can build
