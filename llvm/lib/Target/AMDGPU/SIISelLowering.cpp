@@ -11871,12 +11871,20 @@ getConstantNamedBarrierNumber(SDValue BarOp, SelectionDAG &DAG) {
   std::optional<uint64_t> BarVal;
   if (auto *C = dyn_cast<ConstantSDNode>(BarOp)) {
     BarVal = C->getZExtValue();
+  } else if (BarOp->isUndef()) {
+    // Refine poison to the 0 barrier to turn things into noops, thus reducing
+    // the risk of hitting an unallocated barrier.
+    BarVal = 0;
   } else if (auto *GA = dyn_cast<GlobalAddressSDNode>(BarOp)) {
     const auto *GV = cast<GlobalVariable>(GA->getGlobal());
     if (AMDGPU::isNamedBarrier(*GV) &&
         AMDGPUMachineFunctionInfo::get32BitAbsoluteAddress(*GV,
                                                            AMDGPUAS::BARRIER)) {
       auto *MFI = DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>();
+      // Record the use of the manualy-specified barrier address to make sure
+      // this function has the right number of resources. This function is named
+      // weird, and we're calling it here since we're skipping teh GlobalAddress
+      // lowering with this pattern match.
       BarVal = MFI->allocateBarrierGlobal(DAG.getDataLayout(), *GV) +
                GA->getOffset();
     }
@@ -13083,9 +13091,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       SDValue BarOp = Op->getOperand(2);
 
       if (auto BarID = getConstantNamedBarrierNumber(BarOp, DAG)) {
-        SmallVector<SDValue, 2> Ops;
-        Ops.push_back(DAG.getTargetConstant(*BarID, DL, MVT::i32));
-        Ops.push_back(Chain);
+        std::array<SDValue, 2> Ops = {
+            DAG.getTargetConstant(*BarID, DL, MVT::i32), Chain};
         auto *NewMI = DAG.getMachineNode(AMDGPU::S_BARRIER_SIGNAL_IMM, DL,
                                          Op->getVTList(), Ops);
         return SDValue(NewMI, 0);
