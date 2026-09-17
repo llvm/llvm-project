@@ -2711,6 +2711,9 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       kernel argument that holds the completion action pointer. If this
                                                       attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 
+     "amdgpu-no-async"                                Indicates the function does not execute any asynchronous operations
+                                                      (LDS DMA, ASYNC, TENSOR).
+
      "amdgpu-tg-split"                                Enable threadgroup split execution mode for the function. This must be
                                                       consistently set (or unset) for all reachable functions. This is only
                                                       relevant on targets with the `tgsplit-support` feature.
@@ -7546,14 +7549,14 @@ A memory synchronization scope wider than work-group is not meaningful for the
 group (LDS) address space and is treated as work-group.
 
 When a work-group's maximum flat work-group size does not exceed the wavefront
-size, the work-group fits within a single wavefront. So long as no LDS DMA
+size, the work-group fits within a single wavefront. So long as no asynchronous
 operations occur, the LLVM ``workgroup`` synchronization scope is equivalent to
 its ``wavefront`` scope.
 
-If the compiler can determine these conditions (e.g., determining the
-work-group size via ``amdgpu-flat-work-group-size`` and detecting no LDS DMA
-operations), the AMDGPU backend optimizes ``workgroup`` scope operations by
-lowering them to ``wavefront``-scoped machine instructions.
+If the compiler can determine these conditions (e.g., through the function attributes
+``amdgpu-flat-work-group-size`` and ``amdgpu-no-async``), the AMDGPU backend
+optimizes ``workgroup`` scope operations by lowering them to
+``wavefront``-scoped machine instructions.
 
 This optimization applies to atomic ``load``, ``store``, ``atomicrmw``, and
 ``cmpxchg`` instructions, and to ``fence`` instructions, when they use

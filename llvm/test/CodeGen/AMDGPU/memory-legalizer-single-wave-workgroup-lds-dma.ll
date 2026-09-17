@@ -134,7 +134,7 @@ define amdgpu_kernel void @lds_wg_fence_release_single64(ptr addrspace(3) %lds) 
   ret void
 }
 
-define amdgpu_kernel void @lds_dma_wg_fence_release_single32(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds) #0 {
+define amdgpu_kernel void @lds_dma_wg_fence_release_single32(ptr addrspace(8) %rsrc, ptr addrspace(3) %lds) #2 {
 ; GFX9-LABEL: lds_dma_wg_fence_release_single32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b64 s[6:7], s[4:5]
@@ -246,5 +246,6 @@ define amdgpu_kernel void @lds_dma_wg_fence_release_single32(ptr addrspace(8) %r
   ret void
 }
 
-attributes #0 = { nounwind "amdgpu-flat-work-group-size"="32,32" }
-attributes #1 = { nounwind "amdgpu-flat-work-group-size"="64,64" }
+attributes #0 = { nounwind "amdgpu-flat-work-group-size"="32,32" "amdgpu-no-async" }
+attributes #1 = { nounwind "amdgpu-flat-work-group-size"="64,64" "amdgpu-no-async" }
+attributes #2 = { nounwind "amdgpu-flat-work-group-size"="32,32" }

@@ -1401,6 +1401,101 @@ struct AAAMDGPUMinAGPRAlloc
 
 const char AAAMDGPUMinAGPRAlloc::ID = 0;
 
+/// Deduce the function attribute "amdgpu-no-async"
+struct AAAMDGPUNoAsync : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  AAAMDGPUNoAsync(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAAMDGPUNoAsync &createForPosition(const IRPosition &IRP,
+                                            Attributor &A) {
+    if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
+      return *new (A.Allocator) AAAMDGPUNoAsync(IRP, A);
+    llvm_unreachable("AAAMDGPUNoAsync is only valid for function position");
+  }
+
+  void initialize(Attributor &A) override {
+    const Function *F = getAssociatedFunction();
+    if (F->hasFnAttribute("amdgpu-no-async")) {
+      indicateOptimisticFixpoint();
+      return;
+    }
+
+    if (F->isDeclaration())
+      indicatePessimisticFixpoint();
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    auto CheckNoAsync = [&](Instruction &I) {
+      const auto &CB = cast<CallBase>(I);
+
+      // Inline assembly may hold any instruction, including an asynchronous
+      // operation.
+      if (isa<InlineAsm>(CB.getCalledOperand()))
+        return false;
+
+      Intrinsic::ID IID = CB.getIntrinsicID();
+      if (IID != Intrinsic::not_intrinsic) {
+        // Assume !nocallback intrinsics may call a function which issues an
+        // asynchronous operation.
+        return !AMDGPU::isAsyncIntrinsic(IID) &&
+               CB.hasFnAttr(Attribute::NoCallback);
+      }
+
+      const auto *CBEdges = A.getAAFor<AACallEdges>(
+          *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
+      if (!CBEdges || CBEdges->hasUnknownCallee())
+        return false;
+
+      for (const Function *PossibleCallee : CBEdges->getOptimisticEdges()) {
+        const auto *CalleeInfo = A.getAAFor<AAAMDGPUNoAsync>(
+            *this, IRPosition::function(*PossibleCallee), DepClassTy::REQUIRED);
+        if (!CalleeInfo || !CalleeInfo->getAssumed())
+          return false;
+      }
+
+      return true;
+    };
+
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllCallLikeInstructions(CheckNoAsync, *this,
+                                           UsedAssumedInformation))
+      return indicatePessimisticFixpoint();
+
+    return ChangeStatus::UNCHANGED;
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    if (!getAssumed())
+      return ChangeStatus::UNCHANGED;
+
+    LLVMContext &Ctx = getAssociatedFunction()->getContext();
+    return A.manifestAttrs(getIRPosition(),
+                           {Attribute::get(Ctx, "amdgpu-no-async")});
+  }
+
+  bool isValidState() const override { return true; }
+
+  const std::string getAsStr(Attributor *A) const override {
+    return "AMDGPUNoAsync[" + std::to_string(getAssumed()) + "]";
+  }
+
+  void trackStatistics() const override {}
+
+  StringRef getName() const override { return "AAAMDGPUNoAsync"; }
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAAMDGPUNoAsync
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  static const char ID;
+};
+
+const char AAAMDGPUNoAsync::ID = 0;
+
 /// An abstract attribute to propagate the function attribute
 /// "amdgpu-cluster-dims" from kernel entry functions to device functions.
 struct AAAMDGPUClusterDims
@@ -1567,7 +1662,7 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
        &AAAMDGPUMinAGPRAlloc::ID, &AACallEdges::ID, &AAPointerInfo::ID,
        &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID,
        &AANoAliasAddrSpace::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAAMDGPUClusterDims::ID, &AAAlign::ID});
+       &AAAMDGPUClusterDims::ID, &AAAMDGPUNoAsync::ID, &AAAlign::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1599,6 +1694,7 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
     A.getOrCreateAAFor<AAAMDAttributes>(IRPosition::function(*F));
     A.getOrCreateAAFor<AAUniformWorkGroupSize>(IRPosition::function(*F));
     A.getOrCreateAAFor<AAAMDMaxNumWorkgroups>(IRPosition::function(*F));
+    A.getOrCreateAAFor<AAAMDGPUNoAsync>(IRPosition::function(*F));
     CallingConv::ID CC = F->getCallingConv();
     if (!AMDGPU::isEntryFunctionCC(CC)) {
       A.getOrCreateAAFor<AAAMDFlatWorkGroupSize>(IRPosition::function(*F));
