@@ -15,7 +15,7 @@ define i32 @cmpxchg_i32(i32 %index, i32 %cmp, i32 %value) {
   %ptr = call ptr @llvm.dx.resource.getpointer(
       target("dx.RawBuffer", i32, 1, 0, 0) %buffer, i32 %index)
 
-  ; I32: [[ORIG:%.*]] = call i32 @dx.op.atomicCompareExchange.i32(i32 79, %dx.types.Handle %{{.*}}, i32 %index, i32 0, i32 0, i32 %cmp, i32 %value)
+  ; I32: [[ORIG:%.*]] = call i32 @dx.op.atomicCompareExchange.i32(i32 79, %dx.types.Handle %{{.*}}, i32 %index, i32 0, i32 poison, i32 %cmp, i32 %value)
   ; I32: [[OK:%.*]] = icmp eq i32 [[ORIG]], %cmp
   ; I32: [[AGG:%.*]] = insertvalue { i32, i1 } poison, i32 [[ORIG]], 0
   ; I32: insertvalue { i32, i1 } [[AGG]], i1 [[OK]], 1
@@ -33,7 +33,7 @@ define i32 @cmpxchg_i32_byteaddress(i32 %offset, i32 %cmp, i32 %value) {
   %ptr = call ptr @llvm.dx.resource.getpointer(
       target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset)
 
-  ; I32: [[ORIG:%.*]] = call i32 @dx.op.atomicCompareExchange.i32(i32 79, %dx.types.Handle %{{.*}}, i32 %offset, i32 poison, i32 0, i32 %cmp, i32 %value)
+  ; I32: [[ORIG:%.*]] = call i32 @dx.op.atomicCompareExchange.i32(i32 79, %dx.types.Handle %{{.*}}, i32 %offset, i32 poison, i32 poison, i32 %cmp, i32 %value)
   ; I32: [[OK:%.*]] = icmp eq i32 [[ORIG]], %cmp
   %pair = cmpxchg ptr %ptr, i32 %cmp, i32 %value monotonic monotonic
   %old = extractvalue { i32, i1 } %pair, 0
@@ -49,7 +49,7 @@ define i64 @cmpxchg_i64(i32 %index, i64 %cmp, i64 %value) {
   %ptr = call ptr @llvm.dx.resource.getpointer(
       target("dx.RawBuffer", i64, 1, 0, 0) %buffer, i32 %index)
 
-  ; I64: [[ORIG:%.*]] = call i64 @dx.op.atomicCompareExchange.i64(i32 79, %dx.types.Handle %{{.*}}, i32 %index, i32 0, i32 0, i64 %cmp, i64 %value)
+  ; I64: [[ORIG:%.*]] = call i64 @dx.op.atomicCompareExchange.i64(i32 79, %dx.types.Handle %{{.*}}, i32 %index, i32 0, i32 poison, i64 %cmp, i64 %value)
   ; I64: icmp eq i64 [[ORIG]], %cmp
   %pair = cmpxchg ptr %ptr, i64 %cmp, i64 %value monotonic monotonic
   %old = extractvalue { i64, i1 } %pair, 0
