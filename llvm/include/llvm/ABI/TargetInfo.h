@@ -48,8 +48,6 @@ struct ABICompatInfo {
 };
 
 /// Flags controlling X86-specific ABI compatibility behaviour.
-/// Construct with the default constructor for the current ABI, or use
-/// fromVersion() to get the flags that match a specific Clang version.
 struct X86ABICompatInfo : ABICompatInfo {
   bool PassInt128VectorsInMem : 1;
   bool ReturnCXXRecordGreaterThan128InMem : 1;
@@ -62,12 +60,6 @@ struct X86ABICompatInfo : ABICompatInfo {
       : PassInt128VectorsInMem(true), ReturnCXXRecordGreaterThan128InMem(true),
         ClassifyIntegerMMXAsSSE(true), HonorsRevision98(true),
         Clang11Compat(true), ClassifyUnnamedBitFields(true) {}
-
-  /// Return flags matching the ABI emitted by the given Clang major version.
-  // TODO: fill in per-version flag overrides.
-  static X86ABICompatInfo fromVersion(unsigned /*ClangMajor*/) {
-    return X86ABICompatInfo();
-  }
 };
 
 class TargetInfo {
