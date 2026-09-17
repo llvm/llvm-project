@@ -375,10 +375,22 @@ void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
   computeSharedConstantUses();
 }
 
+/// Integer constant behind \p Op, looking through a splat BUILD_VECTOR.
+static const ConstantSDNode *getSplatConstant(SDValue Op) {
+  if (auto *C = dyn_cast<ConstantSDNode>(Op))
+    return C;
+  if (auto *BV = dyn_cast<BuildVectorSDNode>(Op))
+    return dyn_cast_or_null<ConstantSDNode>(BV->getSplatValue().getNode());
+  return nullptr;
+}
+
 /// ThreeOpFragSDAG also covers arithmetic pairs, excluded from this model.
+/// Bitwise operands are never floats, so only integer constants are counted.
 static bool isBitwiseThreeOpPair(const SDNode *Outer, const SDNode *Inner,
                                  const GCNSubtarget &ST) {
-  if (Outer->getValueType(0) != MVT::i32)
+  // v2i32 selects one instruction per half, from the same operand pair.
+  EVT VT = Outer->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::v2i32)
     return false;
 
   unsigned Op2 = Outer->getOpcode(), Op1 = Inner->getOpcode();
@@ -413,13 +425,16 @@ void AMDGPUDAGToDAGISel::computeSharedConstantUses() {
       if (fitsConstantBusLimit(Ops))
         continue;
 
+      // Every 32-bit half is an instruction that shares the materialized value.
+      unsigned Lanes = N.getValueSizeInBits(0) / 32;
+
       // A constant in two slots is still one sharer.
       SmallPtrSet<const ConstantInt *, 3> Counted;
       for (SDValue Op : Ops)
-        if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
+        if (const ConstantSDNode *C = getSplatConstant(Op)) {
           const ConstantInt *CI = C->getConstantIntValue();
           if (Counted.insert(CI).second)
-            SharedConstantUses[CI]++;
+            SharedConstantUses[CI] += Lanes;
         }
     }
   }
@@ -445,7 +460,7 @@ bool AMDGPUDAGToDAGISel::checkThreeOpFragConstantBus(
     if (!usesConstantBus(Op))
       return true;
     // Two users only break even, and cost a register on top.
-    auto *C = dyn_cast<ConstantSDNode>(Op);
+    const ConstantSDNode *C = getSplatConstant(Op);
     return C && SharedConstantUses.lookup(C->getConstantIntValue()) >= 3;
   });
 }
