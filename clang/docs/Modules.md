@@ -535,6 +535,7 @@ Modules can have a number of different kinds of members, each of which is descri
     *requires-declaration*
     *header-declaration*
     *umbrella-dir-declaration*
+    *exclude-umbrella-dir-declaration*
     *submodule-declaration*
     *export-declaration*
     *export-as-declaration*
@@ -774,6 +775,21 @@ An *umbrella-dir-declaration* shall not refer to the same directory as the locat
 :::{note}
 Umbrella directories are useful for libraries that have a large number of headers but do not have an umbrella header.
 :::
+
+#### Exclude umbrella directory declaration
+
+An exclude umbrella directory declaration drops a whole subdirectory from the enclosing umbrella directory, the same way `exclude header` drops a single header.
+
+```{eval-rst}
+.. parsed-literal::
+
+  *exclude-umbrella-dir-declaration*:
+    ``exclude`` ``umbrella`` *string-literal*
+```
+
+The *string-literal* refers to a directory. Headers in that directory (and its subdirectories) are not part of the module, while every other header under the umbrella directory still is.
+
+The exclusion applies only to the module that declares it. A separate module whose umbrella directory also covers those headers is unaffected.
 
 #### Submodule declaration
 
