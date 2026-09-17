@@ -1516,6 +1516,15 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
       size = integerCast(loc, rewriter, mallocTy, size);
 
     std::optional<uint64_t> alignment = heap.getAlignment();
+    auto getRuntimeCallBuilderAttributes = [&](int32_t numCallOperands) {
+      llvm::SmallVector<mlir::NamedAttribute> runtimeCallAttrs(
+          heap->getDiscardableAttrDictionary().getValue());
+      if (mlir::IntegerAttr alignmentAttr = heap.getAlignmentAttr())
+        runtimeCallAttrs.emplace_back(heap.getAlignmentAttrName(),
+                                      alignmentAttr);
+      return getLLVMCallBuilderAttributes(rewriter, runtimeCallAttrs,
+                                          numCallOperands);
+    };
     if (alignment && *alignment > 16) {
       auto mod = heap->getParentOfType<mlir::ModuleOp>();
       llvm::Triple triple = mod ? fir::getTargetTriple(mod) : llvm::Triple{};
@@ -1548,8 +1557,7 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
           mlir::LLVM::StoreOp::create(rewriter, loc, nullPtr, memptr);
           heap->setAttr("callee", getPosixMemalign(heap, rewriter, mallocTy,
                                                    this->options));
-          auto builderAttrs =
-              getLLVMCallBuilderAttributes(rewriter, heap->getAttrs(), 3);
+          auto builderAttrs = getRuntimeCallBuilderAttributes(3);
           mlir::LLVM::CallOp::create(rewriter, loc,
                                      mlir::TypeRange{mlir::IntegerType::get(
                                          rewriter.getContext(), 32)},
@@ -1573,8 +1581,7 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
             rewriter, loc, mallocTy, sizePlus, notAlignMinusOne);
         heap->setAttr("callee",
                       getAlignedAlloc(heap, rewriter, mallocTy, this->options));
-        auto builderAttrs =
-            getLLVMCallBuilderAttributes(rewriter, heap->getAttrs(), 2);
+        auto builderAttrs = getRuntimeCallBuilderAttributes(2);
         rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
             heap, mlir::TypeRange{::getLlvmPtrType(heap.getContext())},
             mlir::ValueRange{alignVal, roundedSize}, builderAttrs.properties,
@@ -1584,8 +1591,7 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
     }
 
     heap->setAttr("callee", getMalloc(heap, rewriter, mallocTy, this->options));
-    auto builderAttrs =
-        getLLVMCallBuilderAttributes(rewriter, heap->getAttrs(), 1);
+    auto builderAttrs = getRuntimeCallBuilderAttributes(1);
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
         heap, mlir::TypeRange{::getLlvmPtrType(heap.getContext())},
         mlir::ValueRange{size}, builderAttrs.properties,
@@ -1659,8 +1665,8 @@ struct FreeMemOpConversion : public fir::FIROpConversion<fir::FreeMemOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = freemem.getLoc();
     freemem->setAttr("callee", getFree(freemem, rewriter, this->options));
-    auto builderAttrs =
-        getLLVMCallBuilderAttributes(rewriter, freemem->getAttrs(), 1);
+    auto builderAttrs = getLLVMCallBuilderAttributes(
+        rewriter, freemem->getDiscardableAttrDictionary().getValue(), 1);
     mlir::LLVM::CallOp::create(rewriter, loc, mlir::TypeRange{},
                                mlir::ValueRange{adaptor.getHeapref()},
                                builderAttrs.properties,
@@ -3861,11 +3867,9 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     // Apply all non-Fir::GlobalOp attributes to the LLVM::GlobalOp, preserving
     // them; whilst taking care not to apply attributes that are lowered in
     // other ways.
-    llvm::SmallDenseSet<llvm::StringRef> elidedAttrsSet(
-        global.getAttributeNames().begin(), global.getAttributeNames().end());
-    for (auto &attr : global->getAttrs())
-      if (!elidedAttrsSet.contains(attr.getName().strref()))
-        g->setAttr(attr.getName(), attr.getValue());
+    for (mlir::NamedAttribute attr :
+         global->getDiscardableAttrDictionary().getValue())
+      g->setDiscardableAttr(attr.getName(), attr.getValue());
 
     auto &gr = g.getInitializerRegion();
     rewriter.inlineRegionBefore(global.getRegion(), gr, gr.end());
@@ -4062,13 +4066,11 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
 
       rewriter.replaceOp(load, newBoxStorage);
     } else {
-      auto builderAttrs = splitBuilderAttributes<mlir::LLVM::LoadOp>(
-          rewriter, load->getAttrs());
       mlir::LLVM::LoadOp loadOp = mlir::LLVM::LoadOp::create(
-          rewriter, load.getLoc(), mlir::TypeRange{llvmLoadTy},
-          adaptor.getOperands(), builderAttrs.properties,
-          builderAttrs.discardableAttributes);
+          rewriter, load.getLoc(), llvmLoadTy, adaptor.getOperands().front());
+      loadOp->setDiscardableAttrs(load->getDiscardableAttrDictionary());
       loadOp.setVolatile_(isVolatile);
+      loadOp.setNontemporal(load.getNontemporal());
       if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
         loadOp.setTBAATags(*optionalTag);
       else
