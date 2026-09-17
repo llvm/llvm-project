@@ -172,11 +172,12 @@ def main(argv):
                             '--git-repo', args.git_repo,
                             '--build-dir', artifacts / 'benchmarks',
                             '--test-suite-commit', args.test_suite_commit,
-                            '--libcxx-installation', artifacts / 'libcxx-install',
+                            '--test-config', args.git_repo / 'libcxx/test/configs/installed-libc++.cfg.in',
                             '--compiler', args.compiler,
                             '--',
                             '-j1', '--time-tests', '--test-output=failed',
                             '--param', f'compiler={args.compiler}',
+                            '--param', f'libcxx_installation={artifacts / "libcxx-install"}',
                             '--param', 'optimization=speed',
                             '--param', 'std=c++26',
                             '--param', 'enable_werror=False', # older versions of the library trigger new warnings, don't fail
