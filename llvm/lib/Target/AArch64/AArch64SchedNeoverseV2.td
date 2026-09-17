@@ -1630,7 +1630,7 @@ def : InstRW<[V2Write_4c_2V], (instregex "^(FMAX|FMIN)(NM)?Vv4(i16|i32)v$")>;
 def : InstRW<[V2Write_6c_3V], (instregex "^(FMAX|FMIN)(NM)?Vv8i16v$")>;
 
 // ASIMD FP multiply
-def : InstRW<[V2Wr_VFM], (instregex "^FMULv", "^FMULXv")>;
+def : InstRW<[V2Wr_VFM], (instregex "^FMULv", "^FMULXv", "^FMULX(16|32|64)$")>;
 
 // ASIMD FP multiply accumulate
 def : InstRW<[V2Wr_VFMA, V2Rd_VFMA], (instregex "^FMLAv", "^FMLSv")>;
