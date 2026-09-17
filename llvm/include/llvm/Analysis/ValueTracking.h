@@ -660,7 +660,8 @@ inline bool isValidAssumeForContext(const Instruction *I,
 /// Returns true, if no instruction between \p Assume and \p CtxI may free
 /// (including through synchronization).
 LLVM_ABI bool willNotFreeBetween(const Instruction *Assume,
-                                 const Instruction *CtxI);
+                                 const Instruction *CtxI,
+                                 const DominatorTree *DT = nullptr);
 
 enum class OverflowResult {
   /// Always overflows in the direction of signed/unsigned min value.

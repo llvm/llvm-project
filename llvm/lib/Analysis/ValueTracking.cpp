@@ -750,41 +750,62 @@ static bool hasNoFreeInRange(BasicBlock::const_iterator Begin,
 }
 
 bool llvm::willNotFreeBetween(const Instruction *Assume,
-                              const Instruction *CtxI) {
-  unsigned NumChecked = 0;
+                              const Instruction *CtxI,
+                              const DominatorTree *DT) {
+
   const BasicBlock *CtxBB = CtxI->getParent();
   const BasicBlock *AssumeBB = Assume->getParent();
+  unsigned NumChecked = 0;
   BasicBlock::const_iterator CtxIter = CtxI->getIterator();
+
   if (CtxBB == AssumeBB) {
     if (Assume != CtxI && !Assume->comesBefore(CtxI))
       return false;
     return hasNoFreeInRange(Assume->getIterator(), CtxIter, NumChecked);
   }
-  // Check instructions before CtxI in CtxBB.
+
+  if (DT && !DT->dominates(Assume, CtxI))
+    return false;
+
   if (!hasNoFreeInRange(CtxBB->begin(), CtxIter, NumChecked))
     return false;
   if (pred_empty(CtxBB))
     return false;
-  SmallVector<const BasicBlock *, 8> Worklist;
-  SmallPtrSet<const BasicBlock *, 8> Visited;
+
+  SmallVector<const BasicBlock *, 16> Worklist;
+  SmallPtrSet<const BasicBlock *, 16> Visited;
+  // Enqueue all predecessors of CtxBB.
+  // Note: CtxBB is NOT pre-inserted to ensure that loop
+  // backedges returning to CtxBB are enqueued and checked correclty.
   for (const BasicBlock *Pred : predecessors(CtxBB)) {
     if (Visited.insert(Pred).second)
       Worklist.push_back(Pred);
   }
   while (!Worklist.empty()) {
     const BasicBlock *CurBB = Worklist.pop_back_val();
+
     if (CurBB == AssumeBB) {
       if (!hasNoFreeInRange(Assume->getIterator(), AssumeBB->end(), NumChecked))
         return false;
       continue;
     }
-    if (!hasNoFreeInRange(CurBB == CtxBB ? CtxIter : CurBB->begin(),
-                          CurBB->end(), NumChecked))
+
+    if (DT && !DT->dominates(AssumeBB, CurBB))
       return false;
-    if (CurBB == CtxBB)
-      continue;
+
     if (pred_empty(CurBB))
       return false;
+    // If CurBB == CtxBB (due to a loop backedge targeting CtxBB), check
+    // instructions from CtxIter to the end of CtxBB (instructions before
+    // CtxIter were checked above). Otherwise, check the entire block.
+    BasicBlock::const_iterator Start =
+        (CurBB == CtxBB) ? CtxIter : CurBB->begin();
+    if (!hasNoFreeInRange(Start, CurBB->end(), NumChecked))
+      return false;
+    // If we reached CtxBB via a backedge, do not re-expand its predecessors
+    // as they were already enqueued at initialization.
+    if (CurBB == CtxBB)
+      continue;
     for (const BasicBlock *Pred : predecessors(CurBB)) {
       if (Visited.insert(Pred).second)
         Worklist.push_back(Pred);
