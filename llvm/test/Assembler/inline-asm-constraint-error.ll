@@ -8,6 +8,11 @@
 ; RUN: not llvm-as < %t/incorrect-arg-num.ll 2>&1 | FileCheck %s --check-prefix=CHECK-INCORRECT-ARG-NUM
 ; RUN: not llvm-as < %t/label-after-clobber.ll 2>&1 | FileCheck %s --check-prefix=CHECK-LABEL-AFTER-CLOBBER
 ; RUN: not llvm-as < %t/output-after-label.ll 2>&1 | FileCheck %s --check-prefix=CHECK-OUTPUT-AFTER-LABEL
+; RUN: not llvm-as < %t/at-bad.ll 2>&1 | FileCheck %s --check-prefix=CHECK-AT-BAD
+; RUN: not llvm-as < %t/at-eof.ll 2>&1 | FileCheck %s --check-prefix=CHECK-AT-EOF
+; RUN: not llvm-as < %t/at-zero.ll 2>&1 | FileCheck %s --check-prefix=CHECK-AT-ZERO
+; RUN: not llvm-as < %t/at-short.ll 2>&1 | FileCheck %s --check-prefix=CHECK-AT-SHORT
+; RUN: not llvm-as < %t/caret-short.ll 2>&1 | FileCheck %s --check-prefix=CHECK-CARET-SHORT
 
 ;--- parse-fail.ll
 ; CHECK-PARSE-FAIL: failed to parse constraints
@@ -78,5 +83,43 @@ define void @foo() {
 1:
   ret void
 2:
+  ret void
+}
+
+;--- at-bad.ll
+; CHECK-AT-BAD: failed to parse constraints
+define void @foo() {
+  ; '@' must be followed by a digit giving the number of constraint letters.
+  call void asm sideeffect "", "=@ccz"()
+  ret void
+}
+
+;--- at-eof.ll
+; CHECK-AT-EOF: failed to parse constraints
+define void @foo() {
+  call void asm sideeffect "", "=@"()
+  ret void
+}
+
+;--- at-zero.ll
+; CHECK-AT-ZERO: failed to parse constraints
+define void @foo() {
+  call void asm sideeffect "", "=@0abc"()
+  ret void
+}
+
+;--- at-short.ll
+; CHECK-AT-SHORT: failed to parse constraints
+define void @foo() {
+  ; Not enough letters for the declared count.
+  call void asm sideeffect "", "=@3ab"()
+  ret void
+}
+
+;--- caret-short.ll
+; CHECK-CARET-SHORT: failed to parse constraints
+define void @foo() {
+  ; '^' must be followed by exactly two constraint letters.
+  call void asm sideeffect "", "=^x"()
   ret void
 }
