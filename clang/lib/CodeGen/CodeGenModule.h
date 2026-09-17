@@ -349,7 +349,10 @@ public:
     int Priority;
     unsigned LexOrder;
     llvm::Constant *Initializer;
-    llvm::Constant *AssociatedData;
+    // GetOrCreateLLVMGlobal can replace and erase this global before
+    // EmitCtorList runs, so it should be a WeakTrackinhVH for RAUW to fix it up
+    // properly.
+    llvm::WeakTrackingVH AssociatedData;
   };
 
   typedef std::vector<Structor> CtorList;
