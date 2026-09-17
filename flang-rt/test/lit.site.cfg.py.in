@@ -15,6 +15,8 @@ config.cc = "@CMAKE_C_COMPILER@"
 config.flang = "@CMAKE_Fortran_COMPILER@"
 config.osx_sysroot = path(r"@CMAKE_OSX_SYSROOT@")
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
+config.flang_runtime_f128_math_lib = "@FLANG_RUNTIME_F128_MATH_LIB@"
+config.have_ldbl_mant_dig_113 = "@HAVE_LDBL_MANT_DIG_113@"
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
