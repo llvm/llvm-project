@@ -80,6 +80,7 @@
 #include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/Serialization/SerializationDiagnostic.h"
+#include "clang/Serialization/SourceLocationEncoding.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -6886,13 +6887,24 @@ ASTWriter::getEntryOffset(const SrcMgr::SLocEntry &SLoc) const {
 }
 
 SourceLocationEncoding::Chain
+ASTWriter::EmitSourceLocationOffset(SourceLocation::UIntTy Offset,
+                                    SourceLocation::UIntTy InitialDelta,
+                                    RecordDataImpl &Record) {
+  Record.push_back(Offset);
+  return SourceLocationEncoding::Chain(Offset + InitialDelta);
+}
+
+SourceLocationEncoding::Chain
 ASTWriter::EmitEntryOffset(const SrcMgr::SLocEntry &SLoc,
                            RecordDataImpl &Record) {
   SourceLocation::UIntTy EntryOffset = getEntryOffset(SLoc);
-  Record.push_back(EntryOffset);
-  // The field has the dummy skipped, so the entry itself sits two further
-  // along. Anchoring the chain there is what keeps the deltas small.
-  return SourceLocationEncoding::Chain(EntryOffset + 2);
+  // Anchor the chain at the entry's own local offset. The field has the dummy
+  // entry subtracted out (see getEntryOffset), so add it back. Decoding only
+  // requires the reader to derive the same anchor -- see
+  // ASTReader::ReadEntryOffset -- but anchoring at the entry keeps the deltas
+  // small, and makes the anchor trivially non-zero since local offsets are
+  // always >= 2.
+  return EmitSourceLocationOffset(EntryOffset, 2, Record);
 }
 
 void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record) {
