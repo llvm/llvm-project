@@ -20,8 +20,8 @@ define void @test_dependence_with_non_constant_offset_and_other_accesses_to_noal
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: (%off + %A) High: (404 + %off + %A))
-; CHECK-NEXT:            Member: {(%off + %A),+,4}<nw><%loop>
+; CHECK-NEXT:          (Low: (%off + %A)<nuw> High: (404 + %off + %A))
+; CHECK-NEXT:            Member: {(%off + %A)<nuw>,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %A High: (101 + %A))
 ; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
@@ -85,8 +85,8 @@ define void @test_dependence_with_non_constant_offset_and_other_accesses_to_maya
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: (%off + %A) High: (404 + %off + %A))
-; CHECK-NEXT:            Member: {(%off + %A),+,4}<nw><%loop>
+; CHECK-NEXT:          (Low: (%off + %A)<nuw> High: (404 + %off + %A))
+; CHECK-NEXT:            Member: {(%off + %A)<nuw>,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %B High: (102 + %B))
 ; CHECK-NEXT:            Member: {(1 + %B)<nuw>,+,1}<nuw><%loop>
