@@ -3472,6 +3472,7 @@ private:
 #endif
 
   /// Get list of vector entries, associated with the value \p V.
+public:
   ArrayRef<TreeEntry *> getTreeEntries(const Value *V) const {
     assert(V && "V cannot be nullptr.");
     auto It = ScalarToTreeEntries.find(V);
@@ -3480,6 +3481,7 @@ private:
     return It->getSecond();
   }
 
+private:
   /// Get list of split vector entries, associated with the value \p V.
   ArrayRef<TreeEntry *> getSplitTreeEntries(Value *V) const {
     assert(V && "V cannot be nullptr.");
@@ -34220,7 +34222,10 @@ private:
               // (a live non-gather tree entry); otherwise the dot-product does
               // not form and the fused cost would not apply.
               if (IsMulAcc && SrcElemTy &&
-                  R.isVectorized(ReducedVals.front())) {
+                  any_of(R.getTreeEntries(ReducedVals.front()),
+                         [](const auto *TE) {
+                           return TE->Idx == 0 && !TE->isGather();
+                         })) {
                 auto *SrcVecTy =
                     cast<VectorType>(getWidenedType(SrcElemTy, ReduxWidth));
                 InstructionCost RedCost = TTI->getMulAccReductionCost(
