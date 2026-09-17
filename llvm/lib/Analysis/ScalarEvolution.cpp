@@ -11269,6 +11269,13 @@ bool ScalarEvolution::isKnownNonZero(const SCEV *S) {
   return getUnsignedRangeMin(S) != 0;
 }
 
+bool ScalarEvolution::isKnownNonEqual(const SCEV *LHS, const SCEV *RHS) {
+  const SCEV *Minus = getMinusSCEV(LHS, LHS);
+  if (isa<SCEVCouldNotCompute>(Minus))
+    return false;
+  return isKnownNonZero(Minus);
+}
+
 bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero,
                                              bool OrNegative) {
   auto NonRecursive = [OrNegative](const SCEV *S) {
@@ -12367,14 +12374,17 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     }
   }
 
-  // Check whether the actual condition is beyond sufficient.
+  // x = y implies x <= y, x >= y, and x != y.
+  // x < y or x > y imply x != y.
   if (FoundPred == ICmpInst::ICMP_EQ)
     if (ICmpInst::isTrueWhenEqual(Pred))
-      if (isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
+      if (FoundLHS == FoundRHS ||
+          isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
         return true;
   if (Pred == ICmpInst::ICMP_NE)
-    if (!ICmpInst::isTrueWhenEqual(FoundPred))
-      if (isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
+    if (ICmpInst::isFalseWhenEqual(FoundPred))
+      if (isKnownNonEqual(LHS, RHS) ||
+          isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
         return true;
 
   if (isImpliedCondOperandsViaRanges(Pred, LHS, RHS, FoundPred, FoundLHS, FoundRHS))

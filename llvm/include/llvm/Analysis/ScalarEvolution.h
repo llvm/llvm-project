@@ -1258,6 +1258,9 @@ public:
   /// Test if the given expression is known to be non-zero.
   LLVM_ABI bool isKnownNonZero(const SCEV *S);
 
+  /// Test if the given expressions are known non to be equal.
+  LLVM_ABI bool isKnownNonEqual(const SCEV *LHS, const SCEV *RHS);
+
   /// Returns true if \p Op is guaranteed to not be poison.
   LLVM_ABI static bool isGuaranteedNotToBePoison(const SCEV *Op);
 
