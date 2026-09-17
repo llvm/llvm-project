@@ -6746,14 +6746,15 @@ X86TTIImpl::getModeledGSInstrCost(bool IsLoad, Type *SrcVTy, unsigned IndexSize,
 // sign-extended it, which is what the vectoriser sees in the idiom these rows
 // exist to arbitrate. A gather's qword form has a larger body of its own and
 // lands at or above the calibrated total -- the safe direction, since a wider
-// index is the more expensive lowering. Four scatter rows land below it
-// instead (v16i32 and v16f32 at 45 against 47, v4i32 and v4f32 at 18 against
-// 19), because Znver4Model prices the two half-width qword scatters CodeGen
-// emits below the single full-width dword one; that is a question for the
-// schedule model rather than a calibration error. The offset is fixed at two
-// points whatever the total, being the difference of two schedule-model
-// bodies, and is an order of magnitude smaller than the distance from either
-// value to the measured flip, so it cannot change a decision.
+// index is the more expensive lowering. Two scatter rows land below it
+// instead (v4i32 and v4f32 at 18 against 19), because Znver4Model prices the
+// two half-width qword scatters CodeGen emits below the single full-width
+// dword one. The v16i32 and v16f32 rows used to do the same, at 45 against 47,
+// until Znver4Model was refitted to hold the two lowerings in their measured
+// order; both index spellings now reach the calibrated total. What is left is
+// a single point, being the difference of two schedule-model bodies, and is an
+// order of magnitude smaller than the distance from either value to the
+// measured flip, so it cannot change a decision.
 //
 // The v16 scatter rows are set from the ratio between measured break-evens
 // rather than from an absolute measurement of their own. On an idle Zen5
@@ -6793,8 +6794,9 @@ X86TTIImpl::getZenGSCalibratedTotal(bool IsLoad, Type *SrcVTy) const {
       {ISD::STORE, MVT::v4f64, 10},  {ISD::STORE, MVT::v8f64, 20},
       {ISD::STORE, MVT::v4i64, 15},  {ISD::STORE, MVT::v8i64, 32},
   };
-  // Any shape not in the table (e.g. the VF<4 forms the auto-vectoriser
-  // force-scalarises) returns nullopt for the flat-overhead path, not an error.
+    // A shape with no row of its own returns nullopt rather than asserting. The
+    // caller rounds up to the next row where one exists, and takes the
+    // flat-overhead path where none does.
   EVT VT = TLI->getValueType(DL, SrcVTy);
   if (!VT.isSimple())
     return std::nullopt;
@@ -7016,9 +7018,11 @@ X86TTIImpl::getZenGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
       // The rows the live lanes may be measured against run from the narrowest
       // that holds them to the one the shape itself would use. The narrowest
       // calibrated row is four lanes wide, so a mask leaving fewer live still
-      // rounds up to it; an unmasked shape narrower than a row has no row
-      // either way and keeps falling through to the flat path below, which is
-      // where the VF<4 forms the vectoriser force-scalarises are meant to land.
+      // rounds up to it, and so does a shape whose own length rounds up to four
+      // -- a VF3 gather emits the instruction a VF4 one does and is charged the
+      // VF4 row. Only a shape whose rounded length stays below four, which for
+      // a 32-bit element is the VF2 form the vectoriser force-scalarises, has
+      // no row to reach and falls through to the flat path below.
       unsigned MaxNativeVF = std::max<unsigned>(1, MaxRegBits / EltBits);
       unsigned ShapeVF = std::min<unsigned>(PowerOf2Ceil(VF), MaxNativeVF);
       unsigned RowLanes = std::max(Lanes, std::min(VF, 4u));
