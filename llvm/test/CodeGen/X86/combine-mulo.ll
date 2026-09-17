@@ -132,7 +132,8 @@ define { <4 x i32>, <4 x i1> } @combine_vec_smul_nsw(<4 x i32> %a, <4 x i32> %b)
 define { i64, i1 } @combine_smul_constant_opaque() {
 ; CHECK-LABEL: combine_smul_constant_opaque:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $3935305402391370960, %rax # imm = 0x369D0369D0369CD0
+; CHECK-NEXT:    movabsq $1311768467463790320, %rax # imm = 0x123456789ABCDEF0
+; CHECK-NEXT:    leaq (%rax,%rax,2), %rax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    retq
   %c = bitcast i64 1311768467463790320 to i64
@@ -143,7 +144,9 @@ define { i64, i1 } @combine_smul_constant_opaque() {
 define { i64, i1 } @combine_umul_constant_opaque() {
 ; CHECK-LABEL: combine_umul_constant_opaque:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $3935305402391370960, %rax # imm = 0x369D0369D0369CD0
+; CHECK-NEXT:    movabsq $1311768467463790320, %rcx # imm = 0x123456789ABCDEF0
+; CHECK-NEXT:    movl $3, %eax
+; CHECK-NEXT:    imulq %rcx, %rax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    retq
   %c = bitcast i64 1311768467463790320 to i64
