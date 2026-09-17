@@ -1181,7 +1181,7 @@ define <2 x i8> @fshl_range_vec(<2 x i1> %x) {
 define i8 @fshl_rotate_range_attr_lhs(ptr %p) {
 ; CHECK-LABEL: @fshl_rotate_range_attr_lhs(
 ; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[P:%.*]], align 1, !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[R:%.*]] = call range(i8 50, 56) i8 @llvm.fshl.i8(i8 24, i8 [[X]], i8 1)
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshl.i8(i8 24, i8 [[X]], i8 1)
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[R]], 17
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
@@ -1195,7 +1195,7 @@ define i8 @fshl_rotate_range_attr_lhs(ptr %p) {
 ; is in [3, 64), while rewriting the RHS to its known bits (32) returns 2.
 define i8 @fshl_rotate_range_attr_rhs(i8 range(i8 32, 64) %x) {
 ; CHECK-LABEL: @fshl_rotate_range_attr_rhs(
-; CHECK-NEXT:    [[R:%.*]] = call range(i8 3, 64) i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 32, i8 4)
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 32, i8 4)
 ; CHECK-NEXT:    [[M:%.*]] = and i8 [[R]], 50
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
