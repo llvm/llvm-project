@@ -30,7 +30,6 @@
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OperationKinds.h"
-#include "clang/AST/SemaProxy.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -904,7 +903,6 @@ class Sema final : public SemaBase {
   // 34. FixIt Helpers (SemaFixItUtils.cpp)
   // 35. Function Effects (SemaFunctionEffects.cpp)
   // 36. C++ Expansion Statements (SemaExpand.cpp)
-  // 37. Proxy to Sema for Constant Evaluation (SemaProxy.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -15896,27 +15894,6 @@ public:
 
   std::optional<uint64_t>
   ComputeExpansionSize(CXXExpansionStmtPattern *Expansion);
-  ///@}
-
-  //
-  //
-  // -------------------------------------------------------------------------
-  //
-  //
-
-  /// \name Proxy to Sema for Constant Evaluation
-  /// Implementations are in SemaProxy.cpp
-  ///@{
-public:
-  SemaProxy &getProxyForEval() const {
-    assert(ProxyForEval);
-    return *ProxyForEval;
-  }
-
-private:
-  std::unique_ptr<SemaProxy> ProxyForEval;
-
-  static SemaProxy *makeProxyForEval(Sema &SemaRef);
   ///@}
 };
 

@@ -328,8 +328,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       GlobalNewDeleteDeclared(false), DisableTypoCorrection(false),
       TyposCorrected(0), IsBuildingRecoveryCallExpr(false),
       CurrentInstantiationScope(nullptr), NonInstantiationEntries(0),
-      ArgPackSubstIndex(std::nullopt), SatisfactionCache(Context),
-      ProxyForEval(makeProxyForEval(*this)) {
+      ArgPackSubstIndex(std::nullopt), SatisfactionCache(Context) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
 

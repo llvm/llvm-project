@@ -35,6 +35,7 @@
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaProxy.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
@@ -6752,8 +6753,8 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
   else
     Kind = ConstantExprKind::Normal;
 
-  if (!E->EvaluateAsMandatedConstantExpr(Eval, Context, getProxyForEval(),
-                                         Kind) ||
+  EvalProxy SProxy(*this);
+  if (!E->EvaluateAsMandatedConstantExpr(Eval, Context, SProxy, Kind) ||
       (RequireInt && !Eval.Val.isInt())) {
     // The expression can't be folded, so we can't keep it at this position in
     // the AST.

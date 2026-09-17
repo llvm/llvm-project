@@ -1,4 +1,4 @@
-//=== SemaProxy.cpp - Sema proxy for effectual constant evaluation --------===//
+//=== SemaProxy.h - Sema proxy for effectual constant evaluation ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,19 +12,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Sema/SemaProxy.h"
-#include "clang/AST/Decl.h"
-#include "clang/Sema/Sema.h"
+#ifndef LLVM_CLANG_SEMA_SEMAPROXY_H
+#define LLVM_CLANG_SEMA_SEMAPROXY_H
+
+#include "clang/AST/SemaProxy.h"
+#include "clang/Basic/SourceLocation.h"
 
 namespace clang {
+class FunctionDecl;
+class Sema;
+
 namespace sema {
 
-void EvalProxy::instantiateFunctionDefinition(
-    SourceLocation PointOfInstantiation, FunctionDecl *Function) {
-  SemaRef.InstantiateFunctionDefinition(
-      PointOfInstantiation, Function, /*Recursive=*/true,
-      /*DefinitionRequired=*/true, /*AtEndOfTU=*/false);
-}
+class EvalProxy : public clang::SemaProxy {
+public:
+  explicit EvalProxy(clang::Sema &SemaRef) : SemaRef(SemaRef) {}
+
+  void instantiateFunctionDefinition(SourceLocation PointOfInstantiation,
+                                     FunctionDecl *Function) override;
+
+private:
+  Sema &SemaRef;
+};
 
 } // end namespace sema
 } // end namespace clang
+
+#endif
