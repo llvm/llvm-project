@@ -2721,35 +2721,20 @@ define amdgpu_gfx void @test_inreg_arg_store(bfloat inreg %in, ptr addrspace(1) 
 ; GFX10-NEXT:    global_store_short v[0:1], v2, off
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11TRUE16-LABEL: test_inreg_arg_store:
-; GFX11TRUE16:       ; %bb.0:
-; GFX11TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11TRUE16-NEXT:    v_mov_b16_e32 v2.l, s4
-; GFX11TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX11TRUE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: test_inreg_arg_store:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, s4
+; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11FAKE16-LABEL: test_inreg_arg_store:
-; GFX11FAKE16:       ; %bb.0:
-; GFX11FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11FAKE16-NEXT:    v_mov_b32_e32 v2, s4
-; GFX11FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX11FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1250TRUE16-LABEL: test_inreg_arg_store:
-; GFX1250TRUE16:       ; %bb.0:
-; GFX1250TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250TRUE16-NEXT:    v_mov_b16_e32 v2.l, s4
-; GFX1250TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX1250TRUE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250FAKE16-LABEL: test_inreg_arg_store:
-; GFX1250FAKE16:       ; %bb.0:
-; GFX1250FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250FAKE16-NEXT:    v_mov_b32_e32 v2, s4
-; GFX1250FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX1250FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX1250-LABEL: test_inreg_arg_store:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v2, s4
+; GFX1250-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   store bfloat %in, ptr addrspace(1) %out
   ret void
 }

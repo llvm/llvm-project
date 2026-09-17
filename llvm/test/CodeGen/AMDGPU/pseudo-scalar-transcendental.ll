@@ -51,13 +51,21 @@ define amdgpu_cs float @v_s_exp_f32(float inreg %src) {
 }
 
 define amdgpu_cs half @v_s_exp_f16(half inreg %src) {
-; GFX12-SDAG-LABEL: v_s_exp_f16:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_s_exp_f16 s0, s0
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-TRUE16-LABEL: v_s_exp_f16:
+; GFX12-SDAG-TRUE16:       ; %bb.0:
+; GFX12-SDAG-TRUE16-NEXT:    v_s_exp_f16 s0, s0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-SDAG-FAKE16-LABEL: v_s_exp_f16:
+; GFX12-SDAG-FAKE16:       ; %bb.0:
+; GFX12-SDAG-FAKE16-NEXT:    v_s_exp_f16 s0, s0
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-TRUE16-LABEL: v_s_exp_f16:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
@@ -95,13 +103,29 @@ define amdgpu_cs float @v_s_amdgcn_exp_f32(float inreg %src) {
 }
 
 define amdgpu_cs half @v_s_amdgcn_exp_f16(half inreg %src) {
-; GFX12-LABEL: v_s_amdgcn_exp_f16:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_s_exp_f16 s0, s0
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-TRUE16-LABEL: v_s_amdgcn_exp_f16:
+; GFX12-SDAG-TRUE16:       ; %bb.0:
+; GFX12-SDAG-TRUE16-NEXT:    v_s_exp_f16 s0, s0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-SDAG-FAKE16-LABEL: v_s_amdgcn_exp_f16:
+; GFX12-SDAG-FAKE16:       ; %bb.0:
+; GFX12-SDAG-FAKE16-NEXT:    v_s_exp_f16 s0, s0
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: v_s_amdgcn_exp_f16:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_s_exp_f16 s0, s0
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GCN-GISEL-LABEL: v_s_amdgcn_exp_f16:
 ; GCN-GISEL:       ; %bb.0:
@@ -166,13 +190,21 @@ define amdgpu_cs float @v_s_log_f32(float inreg %src) {
 }
 
 define amdgpu_cs half @v_s_log_f16(half inreg %src) {
-; GFX12-SDAG-LABEL: v_s_log_f16:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_s_log_f16 s0, s0
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-TRUE16-LABEL: v_s_log_f16:
+; GFX12-SDAG-TRUE16:       ; %bb.0:
+; GFX12-SDAG-TRUE16-NEXT:    v_s_log_f16 s0, s0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-SDAG-FAKE16-LABEL: v_s_log_f16:
+; GFX12-SDAG-FAKE16:       ; %bb.0:
+; GFX12-SDAG-FAKE16-NEXT:    v_s_log_f16 s0, s0
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-TRUE16-LABEL: v_s_log_f16:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
@@ -210,13 +242,29 @@ define amdgpu_cs float @v_s_amdgcn_log_f32(float inreg %src) {
 }
 
 define amdgpu_cs half @v_s_amdgcn_log_f16(half inreg %src) {
-; GFX12-LABEL: v_s_amdgcn_log_f16:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_s_log_f16 s0, s0
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-TRUE16-LABEL: v_s_amdgcn_log_f16:
+; GFX12-SDAG-TRUE16:       ; %bb.0:
+; GFX12-SDAG-TRUE16-NEXT:    v_s_log_f16 s0, s0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-SDAG-FAKE16-LABEL: v_s_amdgcn_log_f16:
+; GFX12-SDAG-FAKE16:       ; %bb.0:
+; GFX12-SDAG-FAKE16-NEXT:    v_s_log_f16 s0, s0
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: v_s_amdgcn_log_f16:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_s_log_f16 s0, s0
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GCN-GISEL-LABEL: v_s_amdgcn_log_f16:
 ; GCN-GISEL:       ; %bb.0:
@@ -325,13 +373,29 @@ define amdgpu_cs float @v_s_rcp_f32(float inreg %src) {
 }
 
 define amdgpu_cs half @v_s_rcp_f16(half inreg %src) {
-; GFX12-LABEL: v_s_rcp_f16:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_s_rcp_f16 s0, s0
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-TRUE16-LABEL: v_s_rcp_f16:
+; GFX12-SDAG-TRUE16:       ; %bb.0:
+; GFX12-SDAG-TRUE16-NEXT:    v_s_rcp_f16 s0, s0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-SDAG-FAKE16-LABEL: v_s_rcp_f16:
+; GFX12-SDAG-FAKE16:       ; %bb.0:
+; GFX12-SDAG-FAKE16-NEXT:    v_s_rcp_f16 s0, s0
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: v_s_rcp_f16:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_s_rcp_f16 s0, s0
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GCN-GISEL-LABEL: v_s_rcp_f16:
 ; GCN-GISEL:       ; %bb.0:
@@ -485,13 +549,29 @@ define amdgpu_cs float @v_s_rsq_f32(float inreg %src) {
 }
 
 define amdgpu_cs half @v_s_rsq_f16(half inreg %src) {
-; GFX12-LABEL: v_s_rsq_f16:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_s_rsq_f16 s0, s0
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-TRUE16-LABEL: v_s_rsq_f16:
+; GFX12-SDAG-TRUE16:       ; %bb.0:
+; GFX12-SDAG-TRUE16-NEXT:    v_s_rsq_f16 s0, s0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-SDAG-FAKE16-LABEL: v_s_rsq_f16:
+; GFX12-SDAG-FAKE16:       ; %bb.0:
+; GFX12-SDAG-FAKE16-NEXT:    v_s_rsq_f16 s0, s0
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: v_s_rsq_f16:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_s_rsq_f16 s0, s0
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GCN-GISEL-LABEL: v_s_rsq_f16:
 ; GCN-GISEL:       ; %bb.0:
@@ -615,13 +695,29 @@ define amdgpu_cs float @v_s_sqrt_f32(float inreg %src) {
 }
 
 define amdgpu_cs half @v_s_sqrt_f16(half inreg %src) {
-; GFX12-LABEL: v_s_sqrt_f16:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_s_sqrt_f16 s0, s0
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-TRUE16-LABEL: v_s_sqrt_f16:
+; GFX12-SDAG-TRUE16:       ; %bb.0:
+; GFX12-SDAG-TRUE16-NEXT:    v_s_sqrt_f16 s0, s0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-SDAG-FAKE16-LABEL: v_s_sqrt_f16:
+; GFX12-SDAG-FAKE16:       ; %bb.0:
+; GFX12-SDAG-FAKE16-NEXT:    v_s_sqrt_f16 s0, s0
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: v_s_sqrt_f16:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_s_sqrt_f16 s0, s0
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GCN-GISEL-LABEL: v_s_sqrt_f16:
 ; GCN-GISEL:       ; %bb.0:
@@ -649,13 +745,29 @@ define amdgpu_cs float @v_amdgcn_sqrt_f32(float inreg %src)  {
 }
 
 define amdgpu_cs half @v_amdgcn_sqrt_f16(half inreg %src)  {
-; GFX12-LABEL: v_amdgcn_sqrt_f16:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_s_sqrt_f16 s0, s0
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-TRUE16-LABEL: v_amdgcn_sqrt_f16:
+; GFX12-SDAG-TRUE16:       ; %bb.0:
+; GFX12-SDAG-TRUE16-NEXT:    v_s_sqrt_f16 s0, s0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-SDAG-FAKE16-LABEL: v_amdgcn_sqrt_f16:
+; GFX12-SDAG-FAKE16:       ; %bb.0:
+; GFX12-SDAG-FAKE16-NEXT:    v_s_sqrt_f16 s0, s0
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: v_amdgcn_sqrt_f16:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_s_sqrt_f16 s0, s0
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GCN-GISEL-LABEL: v_amdgcn_sqrt_f16:
 ; GCN-GISEL:       ; %bb.0:
@@ -783,13 +895,21 @@ define amdgpu_cs float @srcmods_neg_f32(float inreg %src) {
 }
 
 define amdgpu_cs half @srcmods_abs_f16(half inreg %src) {
-; GFX12-SDAG-LABEL: srcmods_abs_f16:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_s_log_f16 s0, |s0|
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-TRUE16-LABEL: srcmods_abs_f16:
+; GFX12-SDAG-TRUE16:       ; %bb.0:
+; GFX12-SDAG-TRUE16-NEXT:    v_s_log_f16 s0, |s0|
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-SDAG-FAKE16-LABEL: srcmods_abs_f16:
+; GFX12-SDAG-FAKE16:       ; %bb.0:
+; GFX12-SDAG-FAKE16-NEXT:    v_s_log_f16 s0, |s0|
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-TRUE16-LABEL: srcmods_abs_f16:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
@@ -811,13 +931,21 @@ define amdgpu_cs half @srcmods_abs_f16(half inreg %src) {
 }
 
 define amdgpu_cs half @srcmods_neg_f16(half inreg %src) {
-; GFX12-SDAG-LABEL: srcmods_neg_f16:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_s_log_f16 s0, -s0
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-TRUE16-LABEL: srcmods_neg_f16:
+; GFX12-SDAG-TRUE16:       ; %bb.0:
+; GFX12-SDAG-TRUE16-NEXT:    v_s_log_f16 s0, -s0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-SDAG-TRUE16-NEXT:    ; return to shader part epilog
+;
+; GFX12-SDAG-FAKE16-LABEL: srcmods_neg_f16:
+; GFX12-SDAG-FAKE16:       ; %bb.0:
+; GFX12-SDAG-FAKE16-NEXT:    v_s_log_f16 s0, -s0
+; GFX12-SDAG-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-SDAG-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX12-SDAG-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-TRUE16-LABEL: srcmods_neg_f16:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:

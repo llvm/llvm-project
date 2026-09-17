@@ -1795,7 +1795,7 @@ define amdgpu_kernel void @test_fmin_f16_v_ieee_on(ptr addrspace(1) %out, half %
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX12-SDAG-NEXT:    s_min_num_f16 s2, s2, s3
 ; GFX12-SDAG-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX12-SDAG-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-SDAG-NEXT:    s_mov_b32 s2, -1
 ; GFX12-SDAG-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -1913,7 +1913,7 @@ define amdgpu_kernel void @test_fmin_f16_s_ieee_on(ptr addrspace(1) %out, half i
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX12-SDAG-NEXT:    s_min_num_f16 s2, s2, s3
 ; GFX12-SDAG-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX12-SDAG-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-SDAG-NEXT:    s_mov_b32 s2, -1
 ; GFX12-SDAG-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -1956,12 +1956,19 @@ define amdgpu_ps half @test_fmin_f16_s_ieee_off(half inreg %a, half inreg %b) #0
 ; GFX9-NEXT:    v_min_f16_e32 v0, s0, v0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: test_fmin_f16_s_ieee_off:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_min_num_f16 s0, s0, s1
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-LABEL: test_fmin_f16_s_ieee_off:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_min_num_f16 s0, s0, s1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-SDAG-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: test_fmin_f16_s_ieee_off:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_min_num_f16 s0, s0, s1
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %val = call half @llvm.minnum.f16(half %a, half %b)
   ret half %val
 }

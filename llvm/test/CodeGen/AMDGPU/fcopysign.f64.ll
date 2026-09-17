@@ -374,6 +374,7 @@ define amdgpu_kernel void @s_test_copysign_f64_f16(ptr addrspace(1) %out, [8 x i
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX11-NEXT:    v_mov_b16_e32 v0.h, s6
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, s1, v0

@@ -804,14 +804,15 @@ define amdgpu_kernel void @v_insertelement_v4bf16_0(ptr addrspace(1) %out, ptr a
 ; GFX1250-REAL16-NEXT:    v_nop
 ; GFX1250-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-REAL16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
-; GFX1250-REAL16-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
+; GFX1250-REAL16-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
 ; GFX1250-REAL16-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-REAL16-NEXT:    s_load_b32 s4, s[4:5], 0x30 nv
 ; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-REAL16-NEXT:    global_load_b64 v[0:1], v2, s[2:3] scale_offset
+; GFX1250-REAL16-NEXT:    global_load_b64 v[0:1], v4, s[2:3] scale_offset
 ; GFX1250-REAL16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v0.l, s4
-; GFX1250-REAL16-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v3, v1
+; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v2.h, v0.h
+; GFX1250-REAL16-NEXT:    global_store_b64 v4, v[2:3], s[0:1] scale_offset
 ; GFX1250-REAL16-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64
@@ -1041,8 +1042,11 @@ define amdgpu_kernel void @v_insertelement_v4bf16_2(ptr addrspace(1) %out, ptr a
 ; GFX1250-REAL16-NEXT:    s_load_b32 s4, s[4:5], 0x30 nv
 ; GFX1250-REAL16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-REAL16-NEXT:    global_load_b64 v[0:1], v2, s[2:3] scale_offset
+; GFX1250-REAL16-NEXT:    v_mov_b32_e32 v3, s4
 ; GFX1250-REAL16-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v1.l, s4
+; GFX1250-REAL16-NEXT:    v_mov_b16_e32 v3.h, v1.h
+; GFX1250-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-REAL16-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX1250-REAL16-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-REAL16-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
