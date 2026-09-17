@@ -313,6 +313,16 @@ class Test:
                     result.code = XFAIL
         self.result = result
 
+    def resetResult(self, result=None):
+        """Replace the result of this test and return the previous one.
+
+        Clearing the result is what allows a test to be run a second time,
+        and passing the previous result back in undoes that second run.
+        """
+        previous = self.result
+        self.result = result
+        return previous
+
     def isFailure(self):
         assert self.result
         return self.result.code.isFailure
