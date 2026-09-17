@@ -227,8 +227,7 @@ define i1 @constraint_offset_min_sub_negative_offset(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[A0:%.*]] = add nsw i64 [[X]], -4611686018427387904
 ; CHECK-NEXT:    [[A:%.*]] = add nsw i64 [[A0]], -4611686018427387904
 ; CHECK-NEXT:    [[B:%.*]] = add nsw i64 [[Y]], -9223372036854775807
-; CHECK-NEXT:    [[CHECK:%.*]] = icmp sle i64 [[A]], [[B]]
-; CHECK-NEXT:    ret i1 [[CHECK]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cond = icmp sle i64 %x, %y
