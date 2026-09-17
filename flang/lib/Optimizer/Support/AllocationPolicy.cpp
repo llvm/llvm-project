@@ -91,12 +91,17 @@ fir::AllocationPolicy fir::getCommandLineAllocationPolicy(bool stackArrays) {
   return policy;
 }
 
+void fir::setAllocationPolicy(mlir::Operation *op,
+                              const fir::AllocationPolicy &policy) {
+  op->setAttr(allocationPolicyName, fir::AllocationPolicyAttr::get(
+                                        op->getContext(), policy.stackArrays,
+                                        policy.smallArrayThresholdBytes,
+                                        policy.totalStackLimitBytes));
+}
+
 void fir::setAllocationPolicy(mlir::ModuleOp mod,
                               const fir::AllocationPolicy &policy) {
-  mod->setAttr(allocationPolicyName, fir::AllocationPolicyAttr::get(
-                                         mod.getContext(), policy.stackArrays,
-                                         policy.smallArrayThresholdBytes,
-                                         policy.totalStackLimitBytes));
+  setAllocationPolicy(mod.getOperation(), policy);
 }
 
 fir::AllocationPolicy fir::getAllocationPolicy(mlir::ModuleOp mod) {
@@ -109,11 +114,23 @@ fir::AllocationPolicy fir::getAllocationPolicy(mlir::ModuleOp mod) {
                                attr.getTotalStackLimit()};
 }
 
+std::optional<fir::AllocationPolicy>
+fir::getLocalAllocationPolicy(mlir::Operation *op) {
+  auto attr =
+      op->getAttrOfType<fir::AllocationPolicyAttr>(allocationPolicyName);
+  if (!attr)
+    return std::nullopt;
+  return fir::AllocationPolicy{attr.getStackArrays(),
+                               attr.getSmallArrayThreshold(),
+                               attr.getTotalStackLimit()};
+}
+
 fir::AllocationPolicy fir::getAllocationPolicy(mlir::Operation *op) {
-  auto mod = mlir::dyn_cast<mlir::ModuleOp>(op);
-  if (!mod)
-    mod = op->getParentOfType<mlir::ModuleOp>();
-  if (!mod)
-    return fir::AllocationPolicy{};
-  return getAllocationPolicy(mod);
+  // The innermost policy wins, so that a function can narrow the module one
+  // (e.g. device code, where the stack is a scarce resource).
+  for (mlir::Operation *cur = op; cur; cur = cur->getParentOp())
+    if (std::optional<fir::AllocationPolicy> policy =
+            fir::getLocalAllocationPolicy(cur))
+      return *policy;
+  return fir::AllocationPolicy{};
 }

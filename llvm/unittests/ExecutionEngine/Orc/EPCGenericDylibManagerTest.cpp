@@ -9,6 +9,9 @@
 #include "OrcTestCommon.h"
 
 #include "llvm/ExecutionEngine/Orc/EPCGenericDylibManagerSPS.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
@@ -35,9 +38,12 @@ TEST(EPCGenericDylibManagerTest, CreateFromExecutionSession) {
   ExecutorAddr InstanceAddr(1), OpenAddr(2), ResolveAddr(3);
 
   StringMap<ExecutorAddr> BootstrapSyms;
-  BootstrapSyms[rt::sps_ci::NativeDylibManagerInstanceName] = InstanceAddr;
-  BootstrapSyms[rt::sps_ci::DylibMgrOpen::Name] = OpenAddr;
-  BootstrapSyms[rt::sps_ci::DylibMgrResolve::Name] = ResolveAddr;
+  Mangler Mangle{Triple(sys::getProcessTriple())};
+  BootstrapSyms[Mangle.mangledCopy(
+      rt::sps_ci::NativeDylibManagerInstanceName)] = InstanceAddr;
+  BootstrapSyms[Mangle.mangledCopy(rt::sps_ci::DylibMgrOpen::Name)] = OpenAddr;
+  BootstrapSyms[Mangle.mangledCopy(rt::sps_ci::DylibMgrResolve::Name)] =
+      ResolveAddr;
 
   auto SSP = std::make_shared<SymbolStringPool>();
   auto EPC =
