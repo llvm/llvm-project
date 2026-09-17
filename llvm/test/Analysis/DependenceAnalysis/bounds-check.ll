@@ -8,7 +8,7 @@
 define void @bounds_check_test(ptr %a) {
 ; CHECK-LABEL: 'bounds_check_test'
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:    da analyze - output [*]!
+; CHECK-NEXT:    da analyze - none!
 ;
 entry:
   br label %loop
