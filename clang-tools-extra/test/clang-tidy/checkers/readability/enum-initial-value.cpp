@@ -37,3 +37,13 @@ enum class ERef {
   // CHECK-FIXES: ERef_b = 1,
   ERef_last = ERef_b,
 };
+
+enum class EConsecutiveExceptLast {
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'EConsecutiveExceptLast' are not consistent
+  EConsecutiveExceptLast_a = 10,
+  EConsecutiveExceptLast_b = 11,
+  EConsecutiveExceptLast_c = 12,
+  EConsecutiveExceptLast_size,
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'EConsecutiveExceptLast_size' defined here
+  // CHECK-FIXES: EConsecutiveExceptLast_size = 13,
+};
