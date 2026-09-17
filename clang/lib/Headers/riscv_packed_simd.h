@@ -187,6 +187,12 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return __rd op __builtin_convertvector(__rs1, rty)                         \
         op __builtin_convertvector(__rs2, rty);                                \
   }
+#define __packed_widen_sub_acc_op(name, rty, ty)                               \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(rty __rd, ty __rs1,  \
+                                                          ty __rs2) {          \
+    return __rd + __builtin_convertvector(__rs1, rty) -                        \
+           __builtin_convertvector(__rs2, rty);                                \
+  }
 #define __packed_widen_mul(name, rty, ty)                                      \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
                                                           ty __rs2) {          \
@@ -745,6 +751,12 @@ __packed_widen_binary_acc_op(pwadda_i16x4, int16x4_t, int8x4_t, +)
 __packed_widen_binary_acc_op(pwadda_i32x2, int32x2_t, int16x2_t, +)
 __packed_widen_binary_acc_op(pwaddau_u16x4, uint16x4_t, uint8x4_t, +)
 __packed_widen_binary_acc_op(pwaddau_u32x2, uint32x2_t, uint16x2_t, +)
+
+/* Packed Widening Subtraction Accumulate */
+__packed_widen_sub_acc_op(pwsuba_i16x4, int16x4_t, int8x4_t)
+__packed_widen_sub_acc_op(pwsuba_i32x2, int32x2_t, int16x2_t)
+__packed_widen_sub_acc_op(pwsubau_u16x4, uint16x4_t, uint8x4_t)
+__packed_widen_sub_acc_op(pwsubau_u32x2, uint32x2_t, uint16x2_t)
 
 /* Packed Widening Multiply (32-bit) */
 __packed_widen_mul(pwmul_i16x4, int16x4_t, int8x4_t)
@@ -1336,6 +1348,7 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_widen_convert
 #undef __packed_widen_binary_op
 #undef __packed_widen_binary_acc_op
+#undef __packed_widen_sub_acc_op
 #undef __packed_widen_mul
 #undef __packed_widen_mulsu
 #undef __packed_widen_high2

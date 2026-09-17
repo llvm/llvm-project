@@ -1952,6 +1952,7 @@ def SDT_RISCVPM2HalfwordAcc
                            SDTCisVT<2, v4i16>, SDTCisSameAs<2, 3>]>;
 def riscv_pm2adda_h : RVSDNode<"PM2ADDA_H", SDT_RISCVPM2HalfwordAcc>;
 def riscv_pm2addau_h : RVSDNode<"PM2ADDAU_H", SDT_RISCVPM2HalfwordAcc>;
+def riscv_pm2suba_h : RVSDNode<"PM2SUBA_H", SDT_RISCVPM2HalfwordAcc>;
 
 def SDT_RISCVWideningMulAccByHalves
     : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
@@ -2616,6 +2617,18 @@ let append Predicates = [IsRV32] in {
   def : Pat<(v2i32 (add (add GPRPair:$rd, (zext (v2i16 GPR:$rs1))),
                         (zext (v2i16 GPR:$rs2)))),
             (PWADDAU_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (sub (add GPRPair:$rd, (sext (v4i8 GPR:$rs1))),
+                        (sext (v4i8 GPR:$rs2)))),
+            (PWSUBA_B GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (sub (add GPRPair:$rd, (sext (v2i16 GPR:$rs1))),
+                        (sext (v2i16 GPR:$rs2)))),
+            (PWSUBA_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v4i16 (sub (add GPRPair:$rd, (zext (v4i8 GPR:$rs1))),
+                        (zext (v4i8 GPR:$rs2)))),
+            (PWSUBAU_B GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (sub (add GPRPair:$rd, (zext (v2i16 GPR:$rs1))),
+                        (zext (v2i16 GPR:$rs2)))),
+            (PWSUBAU_H GPRPair:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (sub (sext (v4i8 GPR:$rs1)), (sext (v4i8 GPR:$rs2)))),
             (PWSUB_B GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (sub (sext (v2i16 GPR:$rs1)), (sext (v2i16 GPR:$rs2)))),
@@ -3310,6 +3323,9 @@ let append Predicates = [IsRV64] in {
   def : Pat<(v2i32 (riscv_pm2addau_h (v2i32 GPR:$rd), (v4i16 GPR:$rs1),
                                      (v4i16 GPR:$rs2))),
             (PM2ADDAU_H GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pm2suba_h (v2i32 GPR:$rd), (v4i16 GPR:$rs1),
+                                    (v4i16 GPR:$rs2))),
+            (PM2SUBA_H GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // 32-bit logical shift left/right patterns
   def : PatGprImm<riscv_pshl, PSLLI_W, uimm5, v2i32>;
