@@ -1454,6 +1454,18 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
   bool disjoint = isTemporaryLHS || !recTy.isSequence() ||
                   (aa.alias(fir::getBase(lhs), fir::getBase(rhs)) ==
                    mlir::AliasResult::NoAlias);
+  // noOverlap is only safe when the operands are *known* to be
+  // non-overlapping: either the LHS is a compiler temporary (can't alias
+  // anything the user wrote), or alias analysis explicitly confirmed
+  // NoAlias.  The !recTy.isSequence() branch of disjoint is an assumption
+  // -- non-SEQUENCE types are expected to be disjoint, but a Cray pointee
+  // aliasing a TARGET variable is a documented counter-example (see
+  // flang/docs/Aliasing.md).  Using no_overlap on an assumed-disjoint pair
+  // emits memcpy, which has undefined behaviour for overlapping operands.
+  // Without no_overlap, fir.copy lowers to memmove, which is always safe.
+  bool noOverlap =
+      isTemporaryLHS || (aa.alias(fir::getBase(lhs), fir::getBase(rhs)) ==
+                         mlir::AliasResult::NoAlias);
   if ((needFinalization && mayHaveFinalizer(recTy, builder)) ||
       hasBoxOperands || !recordTypeCanBeMemCopied(recTy) || !disjoint) {
     auto to = fir::getBase(builder.createBox(loc, lhs));
@@ -1483,13 +1495,23 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
   mlir::Value fromAddr = fir::getBase(rhs);
   mlir::Value toAddr = fir::getBase(lhs);
   // Ensure we have raw ref<RecordType> pointers for fir.copy.
-  auto refTy = builder.getRefType(recTy);
-  if (fromAddr.getType() != refTy)
-    fromAddr = builder.createConvert(loc, refTy, fromAddr);
-  if (toAddr.getType() != refTy)
-    toAddr = builder.createConvert(loc, refTy, toAddr);
-  // disjoint == true at this point (guaranteed by the condition above).
-  fir::CopyOp::create(builder, loc, fromAddr, toAddr, /*noOverlap=*/true);
+  // Use a per-operand target type that preserves the operand's volatility.
+  // If either operand is !fir.ref<T, volatile>, the target type is also
+  // !fir.ref<T, volatile>, so any emitted fir.convert does not strip the
+  // volatile qualifier and passes ConvertOp::verify under
+  // --strict-fir-volatile-verifier.  A convert is only emitted when the
+  // element type differs (e.g. a module record type assigned to a
+  // structurally identical local SEQUENCE type); when the types already
+  // match no convert is emitted at all.
+  auto fromRefTy =
+      builder.getRefType(recTy, fir::isa_volatile_type(fromAddr.getType()));
+  if (fromAddr.getType() != fromRefTy)
+    fromAddr = builder.createConvert(loc, fromRefTy, fromAddr);
+  auto toRefTy =
+      builder.getRefType(recTy, fir::isa_volatile_type(toAddr.getType()));
+  if (toAddr.getType() != toRefTy)
+    toAddr = builder.createConvert(loc, toRefTy, toAddr);
+  fir::CopyOp::create(builder, loc, fromAddr, toAddr, noOverlap);
 }
 
 mlir::Value fir::factory::createZeroValue(fir::FirOpBuilder &builder,

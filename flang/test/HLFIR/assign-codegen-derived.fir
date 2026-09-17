@@ -39,3 +39,40 @@ func.func @test_tail_pad(%a: !fir.ref<!t_tail_pad>, %b: !fir.ref<!t_tail_pad>) {
 // CHECK-LABEL: func.func @test_tail_pad(
 // CHECK-NOT: fir.coordinate_of
 // CHECK:  fir.copy %{{.*}} to %{{.*}} no_overlap : !fir.ref<!fir.type<tail_pad,sequence{a:i32,b:i8}>>, !fir.ref<!fir.type<tail_pad,sequence{a:i32,b:i8}>>
+
+
+// Volatile derived-type assignment: the operand types must not have their
+// volatility stripped by a fir.convert.  Under --strict-fir-volatile-verifier
+// fir.convert rejects a conversion that drops the volatile qualifier.
+
+// RUN: fir-opt --strict-fir-volatile-verifier --convert-hlfir-to-fir %s | FileCheck %s --check-prefix=CHECK-VOL
+
+// Volatile LHS, non-volatile RHS.
+!t_vol = !fir.type<vol_t{i:i32}>
+fir.type_info @vol_t noinit nodestroy nofinal : !t_vol
+
+func.func @test_volatile_lhs(%a: !fir.ref<!t_vol, volatile>, %b: !fir.ref<!t_vol>) {
+  hlfir.assign %b to %a : !fir.ref<!t_vol>, !fir.ref<!t_vol, volatile>
+  return
+}
+// CHECK-VOL-LABEL: func.func @test_volatile_lhs(
+// CHECK-VOL-NOT:   fir.convert
+// CHECK-VOL:       fir.copy %{{.*}} to %{{.*}} no_overlap : !fir.ref<!fir.type<vol_t{i:i32}>>, !fir.ref<!fir.type<vol_t{i:i32}>, volatile>
+
+// Non-volatile LHS, volatile RHS.
+func.func @test_volatile_rhs(%a: !fir.ref<!t_vol>, %b: !fir.ref<!t_vol, volatile>) {
+  hlfir.assign %b to %a : !fir.ref<!t_vol, volatile>, !fir.ref<!t_vol>
+  return
+}
+// CHECK-VOL-LABEL: func.func @test_volatile_rhs(
+// CHECK-VOL-NOT:   fir.convert
+// CHECK-VOL:       fir.copy %{{.*}} to %{{.*}} no_overlap : !fir.ref<!fir.type<vol_t{i:i32}>, volatile>, !fir.ref<!fir.type<vol_t{i:i32}>>
+
+// Volatile LHS and RHS.
+func.func @test_volatile_both(%a: !fir.ref<!t_vol, volatile>, %b: !fir.ref<!t_vol, volatile>) {
+  hlfir.assign %b to %a : !fir.ref<!t_vol, volatile>, !fir.ref<!t_vol, volatile>
+  return
+}
+// CHECK-VOL-LABEL: func.func @test_volatile_both(
+// CHECK-VOL-NOT:   fir.convert
+// CHECK-VOL:       fir.copy %{{.*}} to %{{.*}} no_overlap : !fir.ref<!fir.type<vol_t{i:i32}>, volatile>, !fir.ref<!fir.type<vol_t{i:i32}>, volatile>
