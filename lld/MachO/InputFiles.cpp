@@ -909,22 +909,21 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
         return !(nList[lhs].n_desc & N_WEAK_DEF) && (nList[rhs].n_desc & N_WEAK_DEF);
       return nList[lhs].n_value < nList[rhs].n_value;
     });
-    size_t sameAddressGroupEnd = 0;
-    bool sameAddressHasRegularSymbol = false;
+    size_t sameAddrGroupIdx = 0;
+    bool sameAddrHasRegularSymbol = false;
     for (size_t j = 0; j < symbolIndices.size(); ++j) {
       const uint32_t symIndex = symbolIndices[j];
       const NList &sym = nList[symIndex];
       // An ordinary symbol establishes an atom boundary for every symbol at
       // its address, even when a local alt entry precedes it in the nlist.
-      if (j == sameAddressGroupEnd) {
-        sameAddressHasRegularSymbol = false;
-        while (sameAddressGroupEnd < symbolIndices.size()) {
-          const NList &sameAddressSym =
-              nList[symbolIndices[sameAddressGroupEnd]];
-          if (sameAddressSym.n_value != sym.n_value)
+      if (j == sameAddrGroupIdx) {
+        sameAddrHasRegularSymbol = false;
+        while (sameAddrGroupIdx < symbolIndices.size()) {
+          const NList &sameAddrSym = nList[symbolIndices[sameAddrGroupIdx]];
+          if (sameAddrSym.n_value != sym.n_value)
             break;
-          sameAddressHasRegularSymbol |= !(sameAddressSym.n_desc & N_ALT_ENTRY);
-          ++sameAddressGroupEnd;
+          sameAddrHasRegularSymbol |= !(sameAddrSym.n_desc & N_ALT_ENTRY);
+          ++sameAddrGroupIdx;
         }
       }
       StringRef name = getSymName(sym);
@@ -938,7 +937,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
               ? nList[symbolIndices[j + 1]].n_value - sym.n_value
               : isec->data.size() - symbolOffset;
       const bool isInteriorAltEntry =
-          (sym.n_desc & N_ALT_ENTRY) && !sameAddressHasRegularSymbol;
+          (sym.n_desc & N_ALT_ENTRY) && !sameAddrHasRegularSymbol;
       // There are 4 cases where we do not need to create a new subsection:
       //   1. If the input file does not use subsections-via-symbols.
       //   2. Multiple symbols at the same address only induce one subsection.
