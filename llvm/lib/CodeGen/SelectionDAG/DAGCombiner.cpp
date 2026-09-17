@@ -30930,6 +30930,11 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
                                       LLD->getBasePtr().getValueType()))
       return false;
 
+    unsigned AddrSpace = LLD->getAddressSpace();
+    assert(AddrSpace == RLD->getAddressSpace());
+    if (!TLI.shouldFoldSelectOfLoads(AddrSpace))
+      return false;
+
     // The loads must not depend on one another.
     if (LLD->isPredecessorOf(RLD) || RLD->isPredecessorOf(LLD))
       return false;
@@ -31005,9 +31010,6 @@ bool DAGCombiner::SimplifySelectOps(SDNode *TheSelect, SDValue LHS,
     // but the new load must be the minimum (most restrictive) alignment of the
     // inputs.
     Align Alignment = std::min(LLD->getAlign(), RLD->getAlign());
-    unsigned AddrSpace = LLD->getAddressSpace();
-    assert(AddrSpace == RLD->getAddressSpace());
-
     MachineMemOperand::Flags MMOFlags = LLD->getMemOperand()->getFlags();
     if (!RLD->isInvariant())
       MMOFlags &= ~MachineMemOperand::MOInvariant;
