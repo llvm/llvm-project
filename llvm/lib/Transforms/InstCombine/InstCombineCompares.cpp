@@ -5831,14 +5831,15 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   {
     Value *Y;
     const APInt *Mask;
-    if (!I.isSigned() && match(I.getOperand(1), m_ZExt(m_Value(X))) &&
+    if (match(I.getOperand(1), m_ZExt(m_Value(X))) &&
         match(I.getOperand(0),
               m_OneUse(m_And(m_Trunc(m_Value(Y)), m_APInt(Mask))))) {
       Type *SmallType = X->getType();
       unsigned SmallWidth = SmallType->getScalarSizeInBits();
-      if (Mask->isMask(SmallWidth)) {
+      if (Mask->isMask(SmallWidth) &&
+          shouldChangeType(Y->getType(), SmallType)) {
         Value *NewTrunc = Builder.CreateTrunc(Y, SmallType);
-        return new ICmpInst(Pred, NewTrunc, X);
+        return new ICmpInst(I.getUnsignedPredicate(), NewTrunc, X);
       }
     }
   }
