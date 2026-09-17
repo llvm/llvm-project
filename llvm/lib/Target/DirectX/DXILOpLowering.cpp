@@ -1319,6 +1319,30 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerPack(Function &F, uint32_t PackOpCode) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *RetTy = IRB.getInt32Ty();
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      SmallVector<Value *, 5> Args;
+      Args.push_back(IRB.getInt8(PackOpCode));
+
+      // Disassemble the vector to fill args 1-5 of the pack op.
+      Value *VecArg = CI->getArgOperand(0);
+      for (int i = 1; i < 5; i++)
+        Args.push_back(IRB.CreateExtractElement(VecArg, i - 1));
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(OpCode::Pack4x8, Args, CI->getName(), RetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   bool lowerIntrinsics() {
     bool Updated = false;
     bool HasErrors = false;
@@ -1438,6 +1462,16 @@ public:
         break;
       case Intrinsic::is_fpclass:
         HasErrors |= lowerIsFPClass(F);
+        break;
+      case Intrinsic::dx_pack_u8:
+      case Intrinsic::dx_pack_s8:
+        HasErrors |= lowerPack(F, 0);
+        break;
+      case Intrinsic::dx_pack_clamp_u8:
+        HasErrors |= lowerPack(F, 1);
+        break;
+      case Intrinsic::dx_pack_clamp_s8:
+        HasErrors |= lowerPack(F, 2);
         break;
       }
       Updated = true;

@@ -1539,3 +1539,12 @@ def CreateHandleFromHeap : DXILOp<218, createHandleFromHeap> {
   let stages = [Stages<DXIL1_6, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
+
+def Pack4x8 : DXILOp<220, pack4x8> {
+  let Doc = "pack 4 integer values into a single 32 bit value";
+  let arguments = [Int8Ty, OverloadTy, OverloadTy, OverloadTy, OverloadTy];
+  let overloads = [Overloads<DXIL1_6, [Int16Ty, Int32Ty]>];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_6, [all_stages]>];
+  let attributes = [Attributes<DXIL1_6, [ReadNone]>];
+}

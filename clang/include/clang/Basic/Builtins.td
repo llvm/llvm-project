@@ -5878,6 +5878,30 @@ def HLSLDdyFine : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLPackU8 : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_pack_u8"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLPackS8 : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_pack_s8"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLPackClampU8 : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_pack_clamp_u8"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLPackClampS8 : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_pack_clamp_s8"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 // Builtins for XRay.
 def XRayCustomEvent : Builtin {
   let Spellings = ["__xray_customevent"];

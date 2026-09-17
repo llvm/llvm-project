@@ -346,4 +346,10 @@ def int_dx_store_output
           [llvm_i32_ty /*SigElementId*/, llvm_i32_ty /*RowIndex*/,
            llvm_i8_ty /*ColIndex*/, llvm_any_ty /*Value*/],
           [IntrConvergent]>;
+
+def int_dx_pack_u8 : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_vector_int_ty], [IntrNoMem]>;
+def int_dx_pack_s8 : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_vector_int_ty], [IntrNoMem]>;
+def int_dx_pack_clamp_u8 : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_vector_int_ty], [IntrNoMem]>;
+def int_dx_pack_clamp_s8 : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_vector_int_ty], [IntrNoMem]>;
+
 }
