@@ -17586,7 +17586,7 @@ are perfectly preserved.
 LLVM supports three pairs of floating-point min/max intrinsics, which differ
 in their handling of {ref}`NaN values <floatnan>`:
 
- * `llvm.minimum` and `llvm.maximum`: Return NaN if one the arguments is
+ * `llvm.minimum` and `llvm.maximum`: Return NaN if one of the arguments is
    NaN.
  * `llvm.minimumnum` and `llvm.maximumnum`: Return the other argument if
    one of the arguments is NaN.
@@ -17597,10 +17597,13 @@ in their handling of {ref}`NaN values <floatnan>`:
 Additionally, each of these intrinsics supports two behaviors for signed zeros.
 By default, -0.0 is considered smaller than +0.0. If the `nsz` flag is
 specified, the order is non-deterministic: If the two inputs are zeros with
-opposite sign, either input may be returned.
+opposite sign, either input may be returned. Contrary to normal `nsz`
+semantics, if both operands have the same sign, the result must also have the
+same sign.
 
 The mapping between the LLVM intrinsics, C functions and IEEE 754 functions is
-as follows (up to divergences permitted by the usual `NaN rules <floatnan>`):
+as follows (up to divergences permitted by the usual
+{ref}`NaN rules <floatnan>`):
 
 ```{list-table}
 :header-rows: 1
@@ -17652,9 +17655,9 @@ type.
 ##### Semantics:
 
 If both operands are qNaNs, returns a {ref}`NaN <floatnan>`. If one operand is
-qNaN and another operand is a number, returns the number. If both operands are
-numbers, returns the lesser of the two arguments. -0.0 is considered to be less
-than +0.0 for this intrinsic.
+qNaN and the other operand is a number, returns the number. If both operands
+are numbers, returns the lesser of the two arguments. -0.0 is considered to be
+less than +0.0 for this intrinsic.
 
 If an operand is a signaling NaN, then the intrinsic will non-deterministically
 either:
@@ -17712,9 +17715,9 @@ type.
 ##### Semantics:
 
 If both operands are qNaNs, returns a {ref}`NaN <floatnan>`. If one operand is
-qNaN and another operand is a number, returns the number. If both operands are
-numbers, returns the greater of the two arguments. -0.0 is considered to be
-less than +0.0 for this intrinsic.
+qNaN and the other operand is a number, returns the number. If both operands
+are numbers, returns the greater of the two arguments. -0.0 is considered to
+be less than +0.0 for this intrinsic.
 
 If an operand is a signaling NaN, then the intrinsic will non-deterministically
 either:
@@ -17778,7 +17781,7 @@ This intrinsic follows the semantics of `fminimum` in C23 and `minimum` in
 IEEE 754-2019, except for signaling NaN inputs, which follow
 {ref}`LLVM's usual signaling NaN behavior <floatnan>` instead.
 
-If the `nsz` flag is specified, `llvm.maximum` with one +0.0 and one
+If the `nsz` flag is specified, `llvm.minimum` with one +0.0 and one
 -0.0 operand may non-deterministically return either operand. Contrary to normal
 `nsz` semantics, if both operands have the same sign, the result must also
 have the same sign.
@@ -17858,9 +17861,9 @@ type.
 ##### Semantics:
 
 If both operands are NaNs (including sNaN), returns a {ref}`NaN <floatnan>`. If
-one operand is NaN (including sNaN) and another operand is a number,
-return the number.  Otherwise returns the lesser of the two
-arguments. -0.0 is considered to be less than +0.0 for this intrinsic.
+one operand is NaN (including sNaN) and the other operand is a number, returns
+the number. Otherwise returns the lesser of the two arguments. -0.0 is
+considered to be less than +0.0 for this intrinsic.
 
 If the `nsz` flag is specified, `llvm.minimumnum` with one +0.0 and one
 -0.0 operand may non-deterministically return either operand. Contrary to normal
@@ -17907,7 +17910,7 @@ type.
 
 If both operands are NaNs (including sNaN), returns a
 {ref}`NaN <floatnan>`. If one operand is NaN (including sNaN) and
-another operand is a number, return the number.  Otherwise returns the
+the other operand is a number, returns the number. Otherwise returns the
 greater of the two arguments. -0.0 is considered to be less than +0.0
 for this intrinsic.
 
@@ -22952,7 +22955,7 @@ To ignore the start value, the neutral value can be used.
 ##### Examples:
 
 ```llvm
-%r = call float @llvm.vp.reduce.fmax.v4f32(float %float, <4 x float> %a, <4 x i1> %mask, i32 %evl)
+%r = call float @llvm.vp.reduce.fmax.v4f32(float %start, <4 x float> %a, <4 x i1> %mask, i32 %evl)
 ; %r is equivalent to %also.r, where lanes greater than or equal to %evl
 ; are treated as though %mask were false for those lanes.
 
@@ -23075,7 +23078,7 @@ To ignore the start value, the neutral value can be used.
 ##### Examples:
 
 ```llvm
-%r = call float @llvm.vp.reduce.fmaximum.v4f32(float %float, <4 x float> %a, <4 x i1> %mask, i32 %evl)
+%r = call float @llvm.vp.reduce.fmaximum.v4f32(float %start, <4 x float> %a, <4 x i1> %mask, i32 %evl)
 ; %r is equivalent to %also.r, where lanes greater than or equal to %evl
 ; are treated as though %mask were false for those lanes.
 
@@ -25717,7 +25720,7 @@ The third argument specifies the exception behavior as described above.
 
 ##### Semantics:
 
-This function follows semantics specified in the draft of IEEE 754-2019.
+This function follows semantics specified in IEEE 754-2019.
 
 
 #### '`llvm.experimental.constrained.minimum`' Intrinsic
@@ -25744,7 +25747,7 @@ The third argument specifies the exception behavior as described above.
 
 ##### Semantics:
 
-This function follows semantics specified in the draft of IEEE 754-2019.
+This function follows semantics specified in IEEE 754-2019.
 
 
 #### '`llvm.experimental.constrained.ceil`' Intrinsic
