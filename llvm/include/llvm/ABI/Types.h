@@ -96,7 +96,7 @@ public:
   bool isComplex() const { return Kind == TypeKind::Complex; }
   bool isZeroSize() const { return getSizeInBits().isZero(); }
 
-  bool isSVESizelessType() const;
+  LLVM_ABI bool isSVESizelessType() const;
 };
 
 class VoidType : public Type {
