@@ -1275,7 +1275,7 @@ class MapInfoFinalizationPass
     auto eleTy = baseBoxTy.unwrapInnerType();
     if (fir::hasDynamicSize(eleTy))
       return false;
-    if (fir::isPolymorphicType(eleTy))
+    if (fir::isPolymorphicType(baseBoxTy))
       return false;
     if (fir::isAssumedType(eleTy))
       return false;
