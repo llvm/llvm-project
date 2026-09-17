@@ -47,6 +47,43 @@ protected:
     MF = std::make_unique<MachineFunction>(*F, *TM, *ST, MMI->getContext(), 1);
   }
 };
+
+TEST_F(AMDGPUMCExprTest, SymbolLookupAfterConstant) {
+  MCContext &Ctx = MF->getContext();
+  MCSymbol *Sym = Ctx.getOrCreateSymbol("target");
+  const MCExpr *Zero = MCConstantExpr::create(0, Ctx);
+  const MCExpr *Expr =
+      AMDGPUMCExpr::createMax({Zero, MCSymbolRefExpr::create(Sym, Ctx)}, Ctx);
+
+  EXPECT_FALSE(AMDGPUMCExpr::isSymbolUsedInExpression(Sym, Zero));
+  EXPECT_TRUE(AMDGPUMCExpr::isSymbolUsedInExpression(Sym, Expr));
+}
+
+TEST_F(AMDGPUMCExprTest, SymbolLookupThroughSpecifier) {
+  MCContext &Ctx = MF->getContext();
+  MCSymbol *Sym = Ctx.getOrCreateSymbol("target");
+  MCSymbol *Alias = Ctx.getOrCreateSymbol("alias");
+  Alias->setVariableValue(MCSymbolRefExpr::create(Sym, Ctx));
+  const MCExpr *Expr = MCSpecifierExpr::create(Alias, 0, Ctx);
+
+  EXPECT_TRUE(AMDGPUMCExpr::isSymbolUsedInExpression(Sym, Expr));
+  EXPECT_TRUE(AMDGPUMCExpr::isSymbolUsedInExpression(Alias, Expr));
+  EXPECT_FALSE(AMDGPUMCExpr::isSymbolUsedInExpression(
+      Ctx.getOrCreateSymbol("absent"), Expr));
+}
+
+TEST_F(AMDGPUMCExprTest, SymbolLookupSharedDAG) {
+  MCContext &Ctx = MF->getContext();
+  const MCExpr *Expr = MCConstantExpr::create(0, Ctx);
+  // An absent symbol requires searching the whole graph. Expanding both paths
+  // through each shared node would take exponential time.
+  for (unsigned I = 0; I != 64; ++I)
+    Expr = AMDGPUMCExpr::createMax({Expr, Expr}, Ctx);
+
+  EXPECT_FALSE(AMDGPUMCExpr::isSymbolUsedInExpression(
+      Ctx.getOrCreateSymbol("absent"), Expr));
+}
+
 // Next two tests showcases the folding of foldAMDGPUMCExpr function that uses
 // KnownBits to simplify expressions as much as possible
 //  max(((external_unknown & 0) | 0x8000000000000000), 5)
