@@ -120,7 +120,8 @@ int main(void) {
   current_proc = proc0;
 #if defined(__SIZEOF_INT128__)
   {
-    // Align `a` to 16 bytes so `a + 8` and `a + 24` are 8-byte aligned (8 mod 16).
+    // Align `a` to 16 bytes, matching the alignment Go's runtime guarantees for
+    // the buffer it passes to these functions.
     __attribute__((aligned(16))) char a[64];
     *(void **)(a + 0) = buf;
     __builtin_memset(a + 8, 0x11, 16);
