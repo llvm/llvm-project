@@ -513,6 +513,9 @@ features cannot lower the translation-unit ABI level;
 - Improve the input size mismatch diagnostic when calling `__builtin_shufflevector` with valid
   vector element types but different sizes. (GH221791)
 
+- Suggests the correct location for an attribute written before the `using`
+  keyword of an alias-declaration. (#GH155787)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -632,6 +635,11 @@ features cannot lower the translation-unit ABI level;
   operator required an access check that ran while an enclosing declaration
   was still being parsed. (#GH210692)
 
+- Fixed an assertion when a call to a class object was resolved through a
+  conversion function to a function pointer that was introduced into the class
+  by a using-declaration (e.g. `using Base::operator auto;`). Such a conversion
+  function is now also diagnosed if it is deleted. (#GH189146)
+
 - A workaround that was introduced to fix an issue with the `<format>` header present in some versions of
   libstdc++15 has been extended to support preprocessed input. Previously, splitting the preprocessing and
   compilation step would result in the fix not being applied. (#GH160314)
@@ -704,6 +712,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when a defaulted comparison operator was synthesized for a
   class with an invalid non-static data member, such as one qualified with an
   address space. (#GH194605)
+
+- Fixed deduction of the template parameters appearing in the type of a
+  constant template parameter of reference type. (#GH40328)
 
 - Fixed an issue where an explicit specialization of a constexpr variable would
   result in a link error. (#GH219796)
@@ -878,6 +889,9 @@ features cannot lower the translation-unit ABI level;
   `decltype` resolves to, e.g. `set_x(int val)` rather than
   `set_x(decltype(x) val)`. This affects the completion strings produced by
   libclang as well as those used by clangd.
+
+- Members inherited from a dependent base class that is named through an alias
+  template are suggested by code completion when relevant.
 
 ### Static Analyzer
 
