@@ -330,8 +330,11 @@ getAtomicBinOpCode(AtomicRMWInst::BinOp BinOp) {
   llvm_unreachable("Unhandled atomicrmw operation");
 }
 
-static void createAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
-                              dxil::ResourceTypeInfo &RTI) {
+static void emitAtomicBinOp(IRBuilder<> &Builder, AtomicRMWInst *AI,
+                            Value *Handle, ArrayRef<Value *> Coords) {
+  assert(!Coords.empty() && Coords.size() <= 3 &&
+         "Atomic operations take between one and three coordinates");
+
   std::optional<dxil::AtomicBinOpCode> BinOpCode =
       getAtomicBinOpCode(AI->getOperation());
   if (!BinOpCode) {
@@ -339,6 +342,23 @@ static void createAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
     return;
   }
 
+  SmallVector<Value *, 6> Args{
+      Handle, Builder.getInt32(static_cast<uint32_t>(*BinOpCode))};
+  append_range(Args, Coords);
+  Args.append(3 - Coords.size(), PoisonValue::get(Builder.getInt32Ty()));
+  Args.push_back(AI->getValOperand());
+
+  // Emit the target-independent intrinsic; DXILOpLowering lowers it to the
+  // DXIL `AtomicBinOp` op and handles the target-ext-typed handle cast via
+  // its `createTmpHandleCast` bookkeeping.
+  Value *Result = Builder.CreateIntrinsic(
+      AI->getType(), Intrinsic::dx_resource_atomic_binop, Args);
+
+  AI->replaceAllUsesWith(Result);
+}
+
+static void createBufferAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
+                                    dxil::ResourceTypeInfo &RTI) {
   const DataLayout &DL = AI->getDataLayout();
   IRBuilder<> Builder(AI);
   Value *Index = II->getOperand(1);
@@ -349,25 +369,45 @@ static void createAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
       traverseGEPOffsets(DL, Builder, AI->getPointerOperand(), AccessSize);
 
   // For non-struct buffers (RawBuffer or TypedBuffer), fold the byte offset
-  // into the index and mark the coord1 arg as poison — only StructuredBuffer
+  // into the index and only pass a single coordinate — only StructuredBuffer
   // atomics use both a struct index and a byte offset.
   if (!RTI.isStruct()) {
     auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
     if (!ConstantOffset || !ConstantOffset->isZero())
       Index = Builder.CreateAdd(Index, Offset);
-    Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
+
+    emitAtomicBinOp(Builder, AI, II->getOperand(0), {Index});
+    return;
   }
 
-  Value *BinOp = Builder.getInt32(static_cast<uint32_t>(*BinOpCode));
+  emitAtomicBinOp(Builder, AI, II->getOperand(0), {Index, Offset});
+}
 
-  // Emit the target-independent intrinsic; DXILOpLowering lowers it to the
-  // DXIL `AtomicBinOp` op and handles the target-ext-typed handle cast via
-  // its `createTmpHandleCast` bookkeeping.
-  Value *Result = Builder.CreateIntrinsic(
-      AI->getType(), Intrinsic::dx_resource_atomic_binop,
-      {II->getOperand(0), BinOp, Index, Offset, AI->getValOperand()});
+static void createTextureAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
+                                     dxil::ResourceTypeInfo &RTI) {
+  Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
+  if (!ContainedType->isIntegerTy()) {
+    reportFatalUsageError("DXIL atomicrmw requires a texture resource with a "
+                          "scalar integer element type");
+    return;
+  }
 
-  AI->replaceAllUsesWith(Result);
+  IRBuilder<> Builder(AI);
+
+  // The coordinates of a texture access are a scalar or a vector with one
+  // element per texture dimension, including the array slice if there is one.
+  // These map directly onto the coordinate operands of the atomic op.
+  Value *Coords = II->getOperand(1);
+  SmallVector<Value *, 3> CoordArgs;
+  if (auto *VecTy = dyn_cast<FixedVectorType>(Coords->getType())) {
+    assert(VecTy->getNumElements() <= 3 && "Too many texture coordinates");
+    for (unsigned I = 0, E = VecTy->getNumElements(); I != E; ++I)
+      CoordArgs.push_back(Builder.CreateExtractElement(Coords, I));
+  } else {
+    CoordArgs.push_back(Coords);
+  }
+
+  emitAtomicBinOp(Builder, AI, II->getOperand(0), CoordArgs);
 }
 
 static void createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
@@ -376,20 +416,21 @@ static void createAtomicBinOpIntrinsic(IntrinsicInst *II, AtomicRMWInst *AI,
   case dxil::ResourceKind::TypedBuffer:
   case dxil::ResourceKind::RawBuffer:
   case dxil::ResourceKind::StructuredBuffer:
-    return createAtomicBinOp(II, AI, RTI);
+    return createBufferAtomicBinOp(II, AI, RTI);
   case dxil::ResourceKind::Texture1D:
   case dxil::ResourceKind::Texture2D:
-  case dxil::ResourceKind::Texture2DMS:
   case dxil::ResourceKind::Texture3D:
-  case dxil::ResourceKind::TextureCube:
   case dxil::ResourceKind::Texture1DArray:
   case dxil::ResourceKind::Texture2DArray:
+    return createTextureAtomicBinOp(II, AI, RTI);
+  case dxil::ResourceKind::Texture2DMS:
   case dxil::ResourceKind::Texture2DMSArray:
+  case dxil::ResourceKind::TextureCube:
   case dxil::ResourceKind::TextureCubeArray:
   case dxil::ResourceKind::FeedbackTexture2D:
   case dxil::ResourceKind::FeedbackTexture2DArray:
     reportFatalUsageError(
-        "DXIL atomicrmw not implemented for texture resources");
+        "DXIL atomicrmw not implemented for this texture resource kind");
     return;
   case dxil::ResourceKind::CBuffer:
   case dxil::ResourceKind::Sampler:

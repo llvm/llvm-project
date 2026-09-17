@@ -1,4 +1,4 @@
-; RUN: mlir-translate -import-llvm -split-input-file %s --verify-diagnostics | FileCheck %s
+; RUN: mlir-translate -import-llvm -emit-expensive-warnings -split-input-file %s --verify-diagnostics | FileCheck %s
 
 ; CHECK: llvm.func internal @func_internal
 define internal void @func_internal() {
