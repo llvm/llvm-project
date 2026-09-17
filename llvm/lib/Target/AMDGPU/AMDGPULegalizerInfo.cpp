@@ -2421,7 +2421,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_DEBUGTRAP:
     return legalizeDebugTrap(MI, MRI, B);
   case TargetOpcode::G_IS_DEBUGGING_ENABLED:
-    return legalizeIsDebuggingEnabled(MI, MRI, B);
+    return legalizeIsDebuggingEnabled(MI, B);
   default:
     return false;
   }
@@ -8215,41 +8215,15 @@ bool AMDGPULegalizerInfo::legalizeSetFPEnv(MachineInstr &MI,
 }
 
 bool AMDGPULegalizerInfo::legalizeIsDebuggingEnabled(
-    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
-  auto Match = matchCFIntrinsicBranchUse(MI, MRI);
-  bool CannotFuse =
-      !Match || any_of(make_range(std::next(MI.getIterator()),
-                                  Match->CondBr->getIterator()),
-                       [](const MachineInstr &Between) {
-                         return !Between.isMetaInstruction() &&
-                                (Between.mayLoadOrStore() ||
-                                 Between.hasUnmodeledSideEffects());
-                       });
-  if (CannotFuse) {
-    auto Bits = B.buildIntrinsic(Intrinsic::amdgcn_s_getreg, {LLT::scalar(32)})
-                    .addImm(AMDGPU::Hwreg::getDebuggingEnabledHwregImm(ST));
-    Bits->setFlag(MachineInstr::NoMerge);
-    B.buildICmp(CmpInst::ICMP_NE, MI.getOperand(0).getReg(), Bits.getReg(0),
-                B.buildConstant(LLT::scalar(32), 0));
-    MI.eraseFromParent();
-    return true;
-  }
-
-  B.setInsertPt(*Match->CondBr->getParent(), Match->CondBr->getIterator());
-  B.setDebugLoc(Match->CondBr->getDebugLoc());
-  MachineInstrBuilder CDBGBranch =
-      B.buildInstr(AMDGPU::S_CBRANCH_CDBGSYS_OR_USER)
-          .addMBB(Match->ConditionTrueTarget);
-  CDBGBranch->setFlag(MachineInstr::NoMerge);
-
-  if (Match->isNegated())
-    Match->redirectFallthroughEdge(B, *Match->ConditionFalseTarget);
-
-  Register Cond = MI.getOperand(0).getReg();
-  MRI.markUsesInDebugValueAsUndef(Cond);
-  Match->eraseDeadNegation(MRI);
+    MachineInstr &MI, MachineIRBuilder &B) const {
+  // The instruction selector folds single-use branch conditions back into
+  // S_CBRANCH_CDBGSYS_OR_USER when there are no intervening observations.
+  auto Bits = B.buildIntrinsic(Intrinsic::amdgcn_s_getreg, {LLT::scalar(32)})
+                  .addImm(AMDGPU::Hwreg::getDebuggingEnabledHwregImm(ST));
+  Bits->setFlag(MachineInstr::NoMerge);
+  B.buildICmp(CmpInst::ICMP_NE, MI.getOperand(0).getReg(), Bits.getReg(0),
+              B.buildConstant(LLT::scalar(32), 0));
   MI.eraseFromParent();
-  Match->CondBr->eraseFromParent();
   return true;
 }
 
