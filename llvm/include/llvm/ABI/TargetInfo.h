@@ -21,6 +21,9 @@
 #include <memory>
 
 namespace llvm {
+
+class DataLayout;
+
 namespace abi {
 
 enum RecordArgABI {
@@ -88,19 +91,15 @@ protected:
                                            unsigned AddrSpace = 0) const;
   LLVM_ABI bool isAggregateTypeForABI(const Type *Ty) const;
 
-  /// Returns the element type if \p Ty is a struct wrapping exactly one
-  /// non-empty element with no padding beyond it, else nullptr. Single-element
-  /// arrays are looked through.
-  LLVM_ABI const Type *isSingleElementStruct(const Type *Ty) const;
-
   /// If Ty is a transparent union, return its first field type; otherwise
   /// return Ty unchanged.
   LLVM_ABI const Type *useFirstFieldIfTransparentUnion(const Type *Ty) const;
 
+  /// Address space of the sret pointer for \p RT, a record returned in memory.
+  virtual unsigned getSRetAddrSpace(const RecordType *RT) const { return 0; }
+
   /// Apply rules for classifying return types that are common to all targets.
-  /// AddrSpace is the address space of the sret pointer.
-  LLVM_ABI bool maybeCommonClassifyReturnType(FunctionInfo &FI,
-                                              unsigned AddrSpace = 0) const;
+  LLVM_ABI bool maybeCommonClassifyReturnType(FunctionInfo &FI) const;
 
   /// Return true if \p Ty is a valid base type for a homogeneous aggregate.
   virtual bool isHomogeneousAggregateBaseType(const Type *Ty) const {
@@ -168,28 +167,18 @@ struct AArch64ABIOptions {
 LLVM_ABI std::unique_ptr<TargetInfo>
 createAArch64TargetInfo(TypeBuilder &TB, const AArch64ABIOptions &Opts);
 
-/// The parts of the AMDGPU ABI that differ between amdgcn and the
-/// AMDGCN-flavoured SPIR-V that lowers to it. Address spaces are target
-/// address space numbers, not language address spaces.
 struct AMDGPUABIOptions {
-  CallingConv::ID KernelCC = CallingConv::C;
-  unsigned AllocaAddrSpace = 0;
-  /// Aggregate arguments that do not fit in registers are passed here.
-  unsigned PrivateAddrSpace = 0;
   /// Indirect kernel arguments are passed here.
   unsigned ConstantAddrSpace = 0;
-  /// Kernel pointer arguments are coerced from this space to
-  /// KernelArgAddrSpace.
+  /// The language default address space.
   unsigned GenericAddrSpace = 0;
-  unsigned KernelArgAddrSpace = 0;
   /// False outside of device compilation, where no coercion applies.
   bool CoerceKernelPointerArgs = false;
-  /// Sets the width above which a _BitInt is passed indirectly.
-  bool HasInt128 = false;
 };
 
 LLVM_ABI std::unique_ptr<TargetInfo>
-createAMDGPUTargetInfo(TypeBuilder &TB, const AMDGPUABIOptions &Opts);
+createAMDGPUTargetInfo(TypeBuilder &TB, const DataLayout &DL,
+                       const AMDGPUABIOptions &Opts);
 
 } // namespace abi
 } // namespace llvm

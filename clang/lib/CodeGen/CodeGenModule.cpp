@@ -401,21 +401,13 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
 
   if (usesAMDGPUABI(T)) {
     ASTContext &Ctx = getContext();
-    const bool IsSPIRV = T.isSPIRV();
     llvm::abi::AMDGPUABIOptions Opts;
-    Opts.KernelCC = IsSPIRV ? llvm::CallingConv::SPIR_KERNEL
-                            : llvm::CallingConv::AMDGPU_KERNEL;
-    Opts.AllocaAddrSpace = getDataLayout().getAllocaAddrSpace();
-    Opts.PrivateAddrSpace = Ctx.getTargetAddressSpace(LangAS::opencl_private);
     Opts.ConstantAddrSpace = Ctx.getTargetAddressSpace(LangAS::opencl_constant);
     Opts.GenericAddrSpace = Ctx.getTargetAddressSpace(LangAS::Default);
-    // Pre-existing divergences between the two classifiers, kept deliberately.
-    Opts.KernelArgAddrSpace = Ctx.getTargetAddressSpace(
-        IsSPIRV ? LangAS::opencl_global : LangAS::cuda_device);
     Opts.CoerceKernelPointerArgs =
-        IsSPIRV ? getLangOpts().isTargetDevice() : getLangOpts().HIP;
-    Opts.HasInt128 = Ctx.getTargetInfo().hasInt128Type();
-    TheLLVMABITargetInfo = llvm::abi::createAMDGPUTargetInfo(TB, Opts);
+        T.isSPIRV() ? getLangOpts().isTargetDevice() : getLangOpts().HIP;
+    TheLLVMABITargetInfo =
+        llvm::abi::createAMDGPUTargetInfo(TB, getDataLayout(), Opts);
     return *TheLLVMABITargetInfo;
   }
 

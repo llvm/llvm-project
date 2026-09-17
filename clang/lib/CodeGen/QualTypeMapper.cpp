@@ -595,6 +595,8 @@ QualTypeMapper::convertUnionType(const clang::RecordDecl *RD) {
     RecFlags |= llvm::abi::RecordFlags::CanPassInRegisters;
   if (isa<CXXRecordDecl>(RD))
     RecFlags |= llvm::abi::RecordFlags::IsCXXRecord;
+  if (RD->hasFlexibleArrayMember())
+    RecFlags |= llvm::abi::RecordFlags::HasFlexibleArrayMember;
 
   return Builder.getUnionType(AllFields, Size, Alignment,
                               llvm::abi::StructPacking::Default, RecFlags);
@@ -606,25 +608,22 @@ llvm::Align QualTypeMapper::getTypeAlign(QualType QT) const {
 }
 
 const llvm::abi::Type *
-QualTypeMapper::createPointerType(LangAS AddrSpace,
-                                  std::optional<unsigned> TargetAddrSpace) {
-  const clang::TargetInfo &TI = ASTCtx.getTargetInfo();
-  return Builder.getPointerType(
-      TI.getPointerWidth(AddrSpace),
-      llvm::Align(TI.getPointerAlign(AddrSpace) / 8),
-      TargetAddrSpace.value_or(TI.getTargetAddressSpace(AddrSpace)));
-}
-
-const llvm::abi::Type *
 QualTypeMapper::createOpenCLOpaqueType(const clang::Type *T) {
   // Mirrors CGOpenCLRuntime::getPointerType: the address space comes from the
   // target hook, not from a qualifier on the type.
-  return createPointerType(ASTCtx.getOpenCLTypeAddrSpace(T));
+  LangAS AddrSpace = ASTCtx.getOpenCLTypeAddrSpace(T);
+  const clang::TargetInfo &TI = ASTCtx.getTargetInfo();
+  return Builder.getPointerType(TI.getPointerWidth(AddrSpace),
+                                llvm::Align(TI.getPointerAlign(AddrSpace) / 8),
+                                TI.getTargetAddressSpace(AddrSpace));
 }
 
 const llvm::abi::Type *
 QualTypeMapper::createPointerTypeForPointee(QualType PointeeType) {
-  LangAS AddrSpace = PointeeType.getAddressSpace();
+  auto AddrSpace = PointeeType.getAddressSpace();
+  auto PointerSize = ASTCtx.getTargetInfo().getPointerWidth(AddrSpace);
+  llvm::Align Alignment =
+      llvm::Align(ASTCtx.getTargetInfo().getPointerAlign(AddrSpace));
   // Function types without an explicit address space qualifier use the program
   // address space, which may differ from the default data address space on
   // targets like AMDGPU.
@@ -632,7 +631,8 @@ QualTypeMapper::createPointerTypeForPointee(QualType PointeeType) {
       PointeeType->isFunctionType() && !PointeeType.hasAddressSpace()
           ? DL.getProgramAddressSpace()
           : ASTCtx.getTargetInfo().getTargetAddressSpace(AddrSpace);
-  return createPointerType(AddrSpace, TargetAddrSpace);
+  return Builder.getPointerType(PointerSize, llvm::Align(Alignment.value() / 8),
+                                TargetAddrSpace);
 }
 
 /// Processes the fields of a record (struct/class/union) and populates

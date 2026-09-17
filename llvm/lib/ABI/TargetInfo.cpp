@@ -50,63 +50,6 @@ ArgInfo TargetInfo::getNaturalAlignIndirect(const Type *Ty, bool ByVal,
   return ArgInfo::getIndirect(Ty->getAlignment(), ByVal, AddrSpace);
 }
 
-const Type *TargetInfo::isSingleElementStruct(const Type *Ty) const {
-  const auto *RT = dyn_cast<RecordType>(Ty);
-  if (!RT)
-    return nullptr;
-
-  if (RT->hasFlexibleArrayMember())
-    return nullptr;
-
-  const Type *Found = nullptr;
-
-  for (const FieldInfo &Base : RT->getBaseClasses()) {
-    const auto *BaseRT = dyn_cast<RecordType>(Base.FieldType);
-    if (!BaseRT || BaseRT->isEmpty())
-      continue;
-
-    if (Found)
-      return nullptr;
-
-    Found = isSingleElementStruct(Base.FieldType);
-    if (!Found)
-      return nullptr;
-  }
-
-  for (const FieldInfo &Field : RT->getFields()) {
-    if (Field.isEmpty())
-      continue;
-
-    if (Found)
-      return nullptr;
-
-    const Type *FieldTy = Field.FieldType;
-
-    // Treat single element arrays as the element.
-    while (const auto *AT = dyn_cast<ArrayType>(FieldTy)) {
-      if (AT->getNumElements() != 1)
-        break;
-      FieldTy = AT->getElementType();
-    }
-
-    if (!isAggregateTypeForABI(FieldTy)) {
-      Found = FieldTy;
-    } else {
-      Found = isSingleElementStruct(FieldTy);
-      if (!Found)
-        return nullptr;
-    }
-  }
-
-  // Padding beyond the element disqualifies the struct. Compare in-memory
-  // sizes, not raw bit widths, so an element with trailing padding of its own
-  // still matches the record wrapping it.
-  if (Found && Found->getTypeAllocSize() != Ty->getTypeAllocSize())
-    return nullptr;
-
-  return Found;
-}
-
 RecordArgABI TargetInfo::getRecordArgABI(const RecordType *RT) const {
   if (RT && !RT->canPassInRegisters())
     return RAA_Indirect;
@@ -133,8 +76,7 @@ const Type *TargetInfo::useFirstFieldIfTransparentUnion(const Type *Ty) const {
   return Ty;
 }
 
-bool TargetInfo::maybeCommonClassifyReturnType(FunctionInfo &FI,
-                                               unsigned AddrSpace) const {
+bool TargetInfo::maybeCommonClassifyReturnType(FunctionInfo &FI) const {
   const abi::Type *Ty = FI.getReturnType();
 
   // TODO: When Microsoft ABI is supported, CXX records may need different
@@ -145,8 +87,8 @@ bool TargetInfo::maybeCommonClassifyReturnType(FunctionInfo &FI,
       // is returned indirectly with ByVal=false. This is the RAA path and is
       // distinct from getIndirectReturnResult (plain aggregates), which uses
       // ByVal=true.
-      FI.getReturnInfo() =
-          ArgInfo::getIndirect(RT->getAlignment(), /*ByVal=*/false, AddrSpace);
+      FI.getReturnInfo() = ArgInfo::getIndirect(
+          RT->getAlignment(), /*ByVal=*/false, getSRetAddrSpace(RT));
       return true;
     }
   }

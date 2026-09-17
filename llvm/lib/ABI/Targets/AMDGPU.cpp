@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Shared by amdgcn and the AMDGCN-flavoured SPIR-V that lowers to it. The two
-// differ only in the values carried by AMDGPUABIOptions.
+// Shared by amdgcn and the AMDGCN-flavoured SPIR-V that lowers to it.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,21 +14,33 @@
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ABI/Types.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 
 namespace llvm::abi {
 
+static const PointerType *getGlobalsPointerType(TypeBuilder &TB,
+                                                const DataLayout &DL) {
+  const unsigned AS = DL.getDefaultGlobalsAddressSpace();
+  return TB.getPointerType(DL.getPointerSizeInBits(AS),
+                           DL.getPointerABIAlignment(AS), AS);
+}
+
 class AMDGPUTargetInfo : public TargetInfo {
 private:
   /// Registers available for arguments and return values, in 32-bit units.
   static constexpr unsigned MaxNumRegsForArgsRet = 16;
 
+  static constexpr uint64_t MaxDirectBitIntWidth = 128;
+
+  const DataLayout &DL;
   AMDGPUABIOptions Opts;
   const IntegerType *Int16Ty;
   const IntegerType *Int32Ty;
   const ArrayType *Int32PairTy;
+  const PointerType *KernelArgPtrTy;
 
   uint64_t numRegsForType(const Type *Ty) const {
     if (const auto *VT = dyn_cast<VectorType>(Ty)) {
@@ -41,7 +52,7 @@ private:
 
       // 16-bit element vectors should be passed as packed.
       if (EltSize == 16)
-        return (NumElts + 1) / 2;
+        return divideCeil(NumElts, 2);
 
       return divideCeil(EltSize, 32) * NumElts;
     }
@@ -61,23 +72,100 @@ private:
     return divideCeil(Ty->getTypeAllocSizeInBits().getFixedValue(), 32);
   }
 
+  /// Returns the element type if \p Ty is a struct wrapping exactly one
+  /// non-empty element with no padding beyond it, else nullptr. Single-element
+  /// arrays are looked through.
+  // TODO: X86 has its own copy of this. Hoist both into TargetInfo.
+  const Type *isSingleElementStruct(const Type *Ty) const {
+    const auto *RT = dyn_cast<RecordType>(Ty);
+    if (!RT)
+      return nullptr;
+
+    if (RT->hasFlexibleArrayMember())
+      return nullptr;
+
+    const Type *Found = nullptr;
+
+    for (const FieldInfo &Base : RT->getBaseClasses()) {
+      const auto *BaseRT = dyn_cast<RecordType>(Base.FieldType);
+      if (!BaseRT || BaseRT->isEmpty())
+        continue;
+
+      if (Found)
+        return nullptr;
+
+      Found = isSingleElementStruct(Base.FieldType);
+      if (!Found)
+        return nullptr;
+    }
+
+    for (const FieldInfo &Field : RT->getFields()) {
+      if (Field.isEmpty())
+        continue;
+
+      if (Found)
+        return nullptr;
+
+      const Type *FieldTy = Field.FieldType;
+
+      // Treat single element arrays as the element.
+      while (const auto *AT = dyn_cast<ArrayType>(FieldTy)) {
+        if (AT->getNumElements() != 1)
+          break;
+        FieldTy = AT->getElementType();
+      }
+
+      if (!isAggregateTypeForABI(FieldTy)) {
+        Found = FieldTy;
+      } else {
+        Found = isSingleElementStruct(FieldTy);
+        if (!Found)
+          return nullptr;
+      }
+    }
+
+    // Padding beyond the element disqualifies the struct. Compare in-memory
+    // sizes, not raw bit widths, so an element with trailing padding of its own
+    // still matches the record wrapping it.
+    if (Found && Found->getTypeAllocSize() != Ty->getTypeAllocSize())
+      return nullptr;
+
+    return Found;
+  }
+
   /// Coerce a scalar pointer argument from the generic address space to the
   /// one kernel arguments must use.
   const Type *coerceKernelArgumentType(const Type *Ty) const {
-    const auto *PtrTy = dyn_cast<PointerType>(Ty);
+    if (!Opts.CoerceKernelPointerArgs)
+      return Ty;
+
+    // Classic CodeGen coerces the lowered type, which has no atomic wrapper.
+    const Type *Unwrapped = Ty;
+    if (const auto *AT = dyn_cast<AtomicType>(Ty))
+      Unwrapped = AT->getValueType();
+
+    const auto *PtrTy = dyn_cast<PointerType>(Unwrapped);
     if (PtrTy && PtrTy->getAddrSpace() == Opts.GenericAddrSpace)
-      return TB.getPointerType(PtrTy->getSizeInBits().getFixedValue(),
-                               PtrTy->getAlignment(), Opts.KernelArgAddrSpace);
+      return KernelArgPtrTy;
     return Ty;
+  }
+
+  /// Pack an aggregate of \p Size bits into a VGPR or a VGPR pair.
+  const Type *getRegisterCoerceType(uint64_t Size) const {
+    if (Size <= 16)
+      return Int16Ty;
+    if (Size <= 32)
+      return Int32Ty;
+    return Int32PairTy;
   }
 
   /// The non-aggregate tail shared by the two Clang DefaultABIInfo rules.
   ArgInfo defaultClassifyScalar(const Type *Ty) const {
     if (const auto *IntTy = dyn_cast<IntegerType>(Ty)) {
       if (IntTy->isBitInt() &&
-          IntTy->getSizeInBits().getFixedValue() > getMaxDirectBitIntWidth())
+          IntTy->getSizeInBits().getFixedValue() > MaxDirectBitIntWidth)
         return getNaturalAlignIndirect(Ty, /*ByVal=*/true,
-                                       Opts.AllocaAddrSpace);
+                                       DL.getAllocaAddrSpace());
 
       if (isPromotableInteger(IntTy))
         return ArgInfo::getExtend(Ty);
@@ -93,7 +181,7 @@ private:
 
     if (isAggregateTypeForABI(Ty))
       return getNaturalAlignIndirect(Ty, getRecordArgABI(Ty) != RAA_Indirect,
-                                     Opts.AllocaAddrSpace);
+                                     DL.getAllocaAddrSpace());
 
     return defaultClassifyScalar(Ty);
   }
@@ -104,7 +192,7 @@ private:
 
     if (isAggregateTypeForABI(RetTy))
       return getNaturalAlignIndirect(RetTy, /*ByVal=*/true,
-                                     Opts.AllocaAddrSpace);
+                                     DL.getAllocaAddrSpace());
 
     return defaultClassifyScalar(RetTy);
   }
@@ -128,14 +216,8 @@ private:
 
     // Pack aggregates <= 4 bytes into single VGPR or pair.
     uint64_t Size = RetTy->getTypeAllocSizeInBits().getFixedValue();
-    if (Size <= 16)
-      return ArgInfo::getDirect(Int16Ty);
-
-    if (Size <= 32)
-      return ArgInfo::getDirect(Int32Ty);
-
     if (Size <= 64)
-      return ArgInfo::getDirect(Int32PairTy);
+      return ArgInfo::getDirect(getRegisterCoerceType(Size));
 
     if (numRegsForType(RetTy) <= MaxNumRegsForArgsRet)
       return ArgInfo::getDirect();
@@ -169,7 +251,7 @@ private:
     // passed by value.
     if (RecordArgABI RAA = getRecordArgABI(RT))
       return getNaturalAlignIndirect(Ty, RAA == RAA_DirectInMemory,
-                                     Opts.AllocaAddrSpace);
+                                     DL.getAllocaAddrSpace());
 
     // Ignore empty structs/unions.
     if (RT && RT->isEmpty())
@@ -189,14 +271,9 @@ private:
     if (Size <= 64) {
       NumRegsLeft -= std::min<uint64_t>(NumRegsLeft, divideCeil(Size, 32));
 
-      if (Size <= 16)
-        return ArgInfo::getDirect(Int16Ty);
-
-      if (Size <= 32)
-        return ArgInfo::getDirect(Int32Ty);
-
-      // XXX: Should this be i64 instead, and should the limit increase?
-      return ArgInfo::getDirect(Int32PairTy);
+      // XXX: Should the 64-bit case be i64 instead, and should the limit
+      // increase?
+      return ArgInfo::getDirect(getRegisterCoerceType(Size));
     }
 
     if (NumRegsLeft > 0) {
@@ -210,7 +287,7 @@ private:
     // Use pass-by-reference instead of pass-by-value for struct arguments in
     // function ABI.
     return ArgInfo::getIndirectAliased(Ty->getAlignment(),
-                                       Opts.PrivateAddrSpace);
+                                       DL.getAllocaAddrSpace());
   }
 
   /// For kernels all parameters are really passed in a special buffer. It
@@ -231,33 +308,37 @@ private:
       return ArgInfo::getIndirectAliased(Ty->getAlignment(),
                                          Opts.ConstantAddrSpace);
 
-    const Type *CoercedTy = Ty;
-    if (Opts.CoerceKernelPointerArgs)
-      CoercedTy = coerceKernelArgumentType(Ty);
-
     // If we set CanBeFlattened to true, CodeGen will expand the struct to its
     // individual elements, which confuses the Clover OpenCL backend; therefore
     // we have to set it to false here.
-    return ArgInfo::getDirect(CoercedTy, /*Offset=*/0, /*Align=*/std::nullopt,
+    return ArgInfo::getDirect(coerceKernelArgumentType(Ty), /*Offset=*/0,
+                              /*Align=*/std::nullopt,
                               /*CanBeFlattened=*/false);
   }
 
-  uint64_t getMaxDirectBitIntWidth() const { return Opts.HasInt128 ? 128 : 64; }
+protected:
+  /// A record that cannot be copied is constructed in place, so the sret
+  /// pointer uses the generic address space rather than the alloca one.
+  unsigned getSRetAddrSpace(const RecordType *RT) const override {
+    return Opts.GenericAddrSpace;
+  }
 
 public:
-  AMDGPUTargetInfo(TypeBuilder &TB, const AMDGPUABIOptions &Opts)
-      : TargetInfo(TB), Opts(Opts),
+  AMDGPUTargetInfo(TypeBuilder &TB, const DataLayout &DL,
+                   const AMDGPUABIOptions &Opts)
+      : TargetInfo(TB), DL(DL), Opts(Opts),
         Int16Ty(TB.getIntegerType(16, Align(2), /*Signed=*/false)),
         Int32Ty(TB.getIntegerType(32, Align(4), /*Signed=*/false)),
-        Int32PairTy(TB.getArrayType(Int32Ty, 2, 64)) {}
+        Int32PairTy(TB.getArrayType(Int32Ty, 2, 64)),
+        KernelArgPtrTy(getGlobalsPointerType(TB, DL)) {}
 
   void computeInfo(FunctionInfo &FI) const override {
-    // A record that cannot be copied is constructed in place, so the sret
-    // pointer uses the generic address space rather than the alloca one.
-    if (!maybeCommonClassifyReturnType(FI, Opts.GenericAddrSpace))
+    if (!maybeCommonClassifyReturnType(FI))
       FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
-    const bool IsKernel = FI.getCallingConvention() == Opts.KernelCC;
+    const CallingConv::ID CC = FI.getCallingConvention();
+    const bool IsKernel =
+        CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL;
     const unsigned NumRequiredArgs = FI.getNumRequiredArgs();
     unsigned NumRegsLeft = MaxNumRegsForArgsRet;
 
@@ -271,8 +352,9 @@ public:
 };
 
 std::unique_ptr<TargetInfo>
-createAMDGPUTargetInfo(TypeBuilder &TB, const AMDGPUABIOptions &Opts) {
-  return std::make_unique<AMDGPUTargetInfo>(TB, Opts);
+createAMDGPUTargetInfo(TypeBuilder &TB, const DataLayout &DL,
+                       const AMDGPUABIOptions &Opts) {
+  return std::make_unique<AMDGPUTargetInfo>(TB, DL, Opts);
 }
 
 } // namespace llvm::abi
