@@ -897,7 +897,7 @@ void GOFFObjectFile::getRelocationTypeName(
     DataRefImpl Rel, SmallVectorImpl<char> &Result) const {
   uint64_t RelType = getRelocationType(Rel);
   char Buf[16];
-  sprintf(Buf, "R_%08lx", RelType);
+  snprintf(Buf, sizeof(Buf), "R_%08lx", RelType);
   Result.append(Buf, Buf + strlen(Buf));
 }
 
