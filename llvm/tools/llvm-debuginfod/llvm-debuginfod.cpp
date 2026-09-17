@@ -22,7 +22,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Driver.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/ThreadPool.h"
 
 using namespace llvm;
