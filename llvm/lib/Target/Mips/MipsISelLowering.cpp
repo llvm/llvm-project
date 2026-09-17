@@ -94,6 +94,12 @@ static const MCPhysReg Mips64DPRegs[8] = {
   Mips::D16_64, Mips::D17_64, Mips::D18_64, Mips::D19_64
 };
 
+enum class DivByZeroTrapKind {
+  Break, // MIPS I
+  Teq,   // MIPS II+
+  TeqMM, // microMIPS
+};
+
 // The MIPS MSA ABI passes vector arguments in the integer register set.
 // The number of integer registers used is dependant on the ABI used.
 MVT MipsTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
@@ -1279,19 +1285,62 @@ addLiveIn(MachineFunction &MF, unsigned PReg, const TargetRegisterClass *RC)
   return VReg;
 }
 
-static MachineBasicBlock *insertDivByZeroTrap(MachineInstr &MI,
-                                              MachineBasicBlock &MBB,
-                                              const TargetInstrInfo &TII,
-                                              bool Is64Bit, bool IsMicroMips) {
+static MachineBasicBlock *
+insertDivByZeroTrap(MachineInstr &MI, MachineBasicBlock &MBB,
+                    const TargetInstrInfo &TII, bool Is64Bit,
+                    const DivByZeroTrapKind TrapKind) {
   if (NoZeroDivCheck)
     return &MBB;
+
+  MachineOperand &Divisor = MI.getOperand(2);
+
+  if (TrapKind == DivByZeroTrapKind::Break) {
+    // Build instructions:
+    // MBB:
+    //   bnez     $divisor, $zero, SinkMBB
+    //   MI       $dst, $dividend, $divisor (delay slot)
+    //
+    // BreakMBB:
+    //   break    7
+    //
+    // SinkMBB:
+    //   fallthrough
+    const DebugLoc &DL = MI.getDebugLoc();
+    const BasicBlock *BB = MBB.getBasicBlock();
+
+    // Place all instructions after MI into SinkMBB.
+    MachineBasicBlock *SinkMBB = MBB.splitAt(MI, true);
+
+    // BreakMBB setup.
+    MachineFunction *MF = MBB.getParent();
+    MachineBasicBlock *BreakMBB = MF->CreateMachineBasicBlock(BB);
+    MF->insert(++MBB.getIterator(), BreakMBB);
+
+    // Place the branch at the end of the block. Since MI is defined as having
+    // no side effects in TableGen, the filler will place it in the branch delay
+    // slot.
+    BuildMI(&MBB, DL, TII.get(Mips::BNE))
+        .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
+        .addReg(Mips::ZERO)
+        .addMBB(SinkMBB);
+
+    // BreakMBB: break 7
+    BuildMI(BreakMBB, DL, TII.get(Mips::BREAK)).addImm(7).addImm(0);
+
+    MBB.addSuccessor(BreakMBB);
+    BreakMBB->addSuccessor(SinkMBB);
+
+    Divisor.setIsKill(false);
+
+    return SinkMBB;
+  }
 
   // Insert instruction "teq $divisor_reg, $zero, 7".
   MachineBasicBlock::iterator I(MI);
   MachineInstrBuilder MIB;
-  MachineOperand &Divisor = MI.getOperand(2);
   MIB = BuildMI(MBB, std::next(I), MI.getDebugLoc(),
-                TII.get(IsMicroMips ? Mips::TEQ_MM : Mips::TEQ))
+                TII.get(TrapKind == DivByZeroTrapKind::TeqMM ? Mips::TEQ_MM
+                                                             : Mips::TEQ))
             .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
             .addReg(Mips::ZERO)
             .addImm(7);
@@ -1428,9 +1477,13 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case Mips::DIV:
   case Mips::DIVU:
   case Mips::MOD:
-  case Mips::MODU:
+  case Mips::MODU: {
+    const DivByZeroTrapKind TrapKind = !Subtarget.hasMips2()
+                                           ? DivByZeroTrapKind::Break
+                                           : DivByZeroTrapKind::Teq;
     return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false,
-                               false);
+                               TrapKind);
+  }
   case Mips::SDIV_MM_Pseudo:
   case Mips::UDIV_MM_Pseudo:
   case Mips::SDIV_MM:
@@ -1439,14 +1492,16 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case Mips::DIVU_MMR6:
   case Mips::MOD_MMR6:
   case Mips::MODU_MMR6:
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false, true);
+    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false,
+                               DivByZeroTrapKind::TeqMM);
   case Mips::PseudoDSDIV:
   case Mips::PseudoDUDIV:
   case Mips::DDIV:
   case Mips::DDIVU:
   case Mips::DMOD:
   case Mips::DMODU:
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), true, false);
+    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), true,
+                               DivByZeroTrapKind::Teq);
 
   case Mips::PseudoSELECT_I:
   case Mips::PseudoSELECT_I64:
