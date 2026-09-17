@@ -62,10 +62,9 @@ protected:
                                    {}, RecordFlags::CanPassInRegisters)) {}
 
   std::unique_ptr<TargetInfo> target() const {
-    return createX86_64TargetInfo(const_cast<TypeBuilder &>(TB),
-                                  X86AVXABILevel::None,
-                                  /*Has64BitPointers=*/true,
-                                  X86ABICompatInfo());
+    return createX86_64TargetInfo(
+        const_cast<TypeBuilder &>(TB), X86AVXABILevel::None,
+        /*Has64BitPointers=*/true, X86ABICompatInfo());
   }
 
   const ABIType *unionOf(llvm::ArrayRef<FieldInfo> Fields, uint64_t SizeInBits,

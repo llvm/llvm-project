@@ -1469,8 +1469,7 @@ void X86_64TargetInfo::computeInfo(FunctionInfo &FI) const {
 
 std::unique_ptr<TargetInfo>
 createX86_64TargetInfo(TypeBuilder &TB, X86AVXABILevel AVXLevel,
-                       bool Has64BitPointers,
-                       const X86ABICompatInfo &Compat) {
+                       bool Has64BitPointers, const X86ABICompatInfo &Compat) {
   return std::make_unique<X86_64TargetInfo>(TB, AVXLevel, Has64BitPointers,
                                             Compat);
 }
