@@ -510,6 +510,9 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now diagnoses matrix logical operations are only supported for HLSL. (GH222381)
 
+- Improve the input size mismatch diagnostic when calling `__builtin_shufflevector` with valid
+  vector element types but different sizes. (GH221791)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -870,6 +873,11 @@ features cannot lower the translation-unit ABI level;
 - visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
 
 ### Code Completion
+
+- Parameters declared with a `decltype` are now presented as the type the
+  `decltype` resolves to, e.g. `set_x(int val)` rather than
+  `set_x(decltype(x) val)`. This affects the completion strings produced by
+  libclang as well as those used by clangd.
 
 ### Static Analyzer
 
