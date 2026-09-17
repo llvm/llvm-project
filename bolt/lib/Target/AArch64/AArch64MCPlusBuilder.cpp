@@ -783,7 +783,8 @@ public:
 
     // Make sure the jump table is located inside a read-only section.
 
-    uint64_t JumpTableSize = 4 * (CountBase.get() << CountExp.get());
+    uint64_t JumpTableSize =
+        4 * (CountBase.get() << AArch64_AM::getShiftValue(CountExp.get()));
     ErrorOr<uint64_t> JumpTableAddress = BC.getSymbolValue(*LJTI.get());
     // For now, conservatively reject symbols with non-zero offsets.
     if (!JumpTableAddress || LJTI.get()->getOffset() != 0)
