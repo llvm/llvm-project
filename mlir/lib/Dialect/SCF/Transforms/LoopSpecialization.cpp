@@ -136,6 +136,13 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
   // Fast path: lb, ub and step are constants.
   if (lbInt && ubInt && stepInt && (*ubInt - *lbInt) % *stepInt == 0)
     return failure();
+
+  // Only the dynamic path computes the peeling bound with affine.apply, which
+  // accepts only index operands.
+  if ((!lbInt || !ubInt || !stepInt) &&
+      !forOp.getInductionVar().getType().isIndex())
+    return failure();
+
   // Slow path: Examine the ops that define lb, ub and step.
   AffineExpr sym0, sym1, sym2;
   bindSymbols(b.getContext(), sym0, sym1, sym2);
@@ -229,6 +236,13 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
   if (lbInt && ubInt && stepInt && ceil(float(*ubInt - *lbInt) / *stepInt) <= 1)
     return failure();
 
+  // The peeling bound (%lb + %step) is computed with affine.apply, which
+  // accepts only index operands. %ub does not feed into this bound, so only
+  // %lb and %step need to be constant to guarantee the affine.apply (see below)
+  // folds away before its (non-index) operand types matter.
+  if ((!lbInt || !stepInt) && !forOp.getInductionVar().getType().isIndex())
+    return failure();
+
   AffineExpr lbSymbol, stepSymbol;
   bindSymbols(b.getContext(), lbSymbol, stepSymbol);
 
@@ -272,7 +286,7 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
                                          "unsigned loops are not supported");
 
     // Do not peel already peeled loops.
-    if (forOp->hasAttr(kPeeledLoopLabel))
+    if (forOp->hasDiscardableAttr(kPeeledLoopLabel))
       return failure();
 
     scf::ForOp partialIteration;
@@ -288,7 +302,7 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
         // loop.
         Operation *op = forOp.getOperation();
         while ((op = op->getParentOfType<scf::ForOp>())) {
-          if (op->hasAttr(kPartialIterationLabel))
+          if (op->hasDiscardableAttr(kPartialIterationLabel))
             return failure();
         }
       }
@@ -300,11 +314,13 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
 
     // Apply label, so that the same loop is not rewritten a second time.
     rewriter.modifyOpInPlace(partialIteration, [&]() {
-      partialIteration->setAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
-      partialIteration->setAttr(kPartialIterationLabel, rewriter.getUnitAttr());
+      partialIteration->setDiscardableAttr(kPeeledLoopLabel,
+                                           rewriter.getUnitAttr());
+      partialIteration->setDiscardableAttr(kPartialIterationLabel,
+                                           rewriter.getUnitAttr());
     });
     rewriter.modifyOpInPlace(forOp, [&]() {
-      forOp->setAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
+      forOp->setDiscardableAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
     });
     return success();
   }
@@ -351,8 +367,8 @@ struct ForLoopPeeling : public impl::SCFForLoopPeelingBase<ForLoopPeeling> {
 
     // Drop the markers.
     parentOp->walk([](Operation *op) {
-      op->removeAttr(kPeeledLoopLabel);
-      op->removeAttr(kPartialIterationLabel);
+      op->removeDiscardableAttr(kPeeledLoopLabel);
+      op->removeDiscardableAttr(kPartialIterationLabel);
     });
   }
 };

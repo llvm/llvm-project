@@ -13,8 +13,15 @@ using namespace llvm;
 using namespace llvm::abi;
 
 bool RecordType::isEmpty() const {
-  if (hasFlexibleArrayMember() || isPolymorphic() ||
-      getNumVirtualBaseClasses() != 0)
+  if (hasFlexibleArrayMember())
+    return false;
+
+  // We shouldn't need to check for emptiness if the record has virtual bases
+  // because it can't be passed in registers. This assertion is here to enforce
+  // that assumption.
+  assert(getNumVirtualBaseClasses() == 0 || !canPassInRegisters());
+
+  if (getNumVirtualBaseClasses() > 0)
     return false;
 
   for (const FieldInfo &Base : getBaseClasses()) {
@@ -23,10 +30,10 @@ bool RecordType::isEmpty() const {
       return false;
   }
 
-  for (const FieldInfo &FI : getFields()) {
+  for (const FieldInfo &FI : getFields())
     if (!FI.isEmpty())
       return false;
-  }
+
   return true;
 }
 
@@ -63,18 +70,25 @@ RecordType::getElementContainingOffset(unsigned OffsetInBits) const {
 bool FieldInfo::isEmpty() const {
   if (IsUnnamedBitfield)
     return true;
-  if (IsBitField && BitFieldWidth == 0)
-    return true;
 
   const Type *Ty = FieldType;
+  bool WasArray = false;
   while (const auto *AT = dyn_cast<ArrayType>(Ty)) {
-    if (AT->getNumElements() != 1)
-      break;
+    // Constant arrays of zero length always count as empty.
+    if (AT->getNumElements() == 0)
+      return true;
     Ty = AT->getElementType();
+    WasArray = true;
   }
 
-  if (const auto *RT = dyn_cast<RecordType>(Ty))
-    return RT->isEmpty();
+  const auto *RT = dyn_cast<RecordType>(Ty);
+  if (!RT)
+    return false;
 
-  return Ty->isZeroSize();
+  // C++ record fields are never empty unless [[no_unique_address]] applies.
+  // That exception does not apply to arrays of C++ empty records.
+  if (RT->isCXXRecord() && (WasArray || !HasNoUniqueAddress))
+    return false;
+
+  return RT->isEmpty();
 }

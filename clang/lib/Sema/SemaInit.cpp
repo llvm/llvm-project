@@ -32,7 +32,6 @@
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -563,7 +562,9 @@ class InitListChecker {
     // Reference just one if we're initializing a single scalar.
     uint64_t ElsCount = 1;
     // Otherwise try to fill whole array with embed data.
-    if (Entity.getKind() == InitializedEntity::EK_ArrayElement) {
+    if (Entity.getKind() == InitializedEntity::EK_ArrayElement &&
+        (Entity.getType()->isIntegerType() ||
+         Entity.getType()->isRealFloatingType())) {
       unsigned ArrIndex = Entity.getElementIndex();
       auto *AType =
           SemaRef.Context.getAsArrayType(Entity.getParent()->getType());
@@ -9448,7 +9449,7 @@ bool InitializationSequence::Diagnose(Sema &S,
         // implicit.
         if (S.isImplicitlyDeleted(Best->Function))
           S.Diag(Kind.getLocation(), diag::err_ovl_deleted_special_init)
-              << S.getSpecialMember(cast<CXXMethodDecl>(Best->Function))
+              << cast<CXXMethodDecl>(Best->Function)->getSpecialMemberKind()
               << DestType << ArgsRange;
         else {
           StringLiteral *Msg = Best->Function->getDeletedMessage();

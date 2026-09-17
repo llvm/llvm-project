@@ -544,7 +544,10 @@ public:
   bool TraverseDeclarationNameInfo(DeclarationNameInfo NameInfo) {
     return true;
   }
-  bool TraverseTemplateName(TemplateName Template) { return true; }
+  bool TraverseTemplateName(TemplateName Template,
+                            bool TraverseQualifier = true) {
+    return true;
+  }
   bool TraverseTemplateArgument(const TemplateArgument &Arg) { return true; }
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) {
     return true;
@@ -727,7 +730,10 @@ public:
   bool TraverseDeclarationNameInfo(DeclarationNameInfo NameInfo) {
     return true;
   }
-  bool TraverseTemplateName(TemplateName Template) { return true; }
+  bool TraverseTemplateName(TemplateName Template,
+                            bool TraverseQualifier = true) {
+    return true;
+  }
   bool TraverseTemplateArgument(const TemplateArgument &Arg) { return true; }
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) {
     return true;

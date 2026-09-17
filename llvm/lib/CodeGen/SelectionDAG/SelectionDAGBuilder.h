@@ -672,7 +672,6 @@ private:
                           const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStridedStore(const VPIntrinsic &VPIntrin,
                            const SmallVectorImpl<SDValue> &OpValues);
-  void visitVPCmp(const VPCmpIntrinsic &VPIntrin);
   void visitVectorPredicationIntrinsic(const VPIntrinsic &VPIntrin);
 
   void visitVAStart(const CallInst &I);
@@ -799,14 +798,6 @@ struct RegsForValue {
                std::optional<CallingConv::ID> CC);
 
   bool isABIMangled() const { return CallConv.has_value(); }
-
-  /// Add the specified values to this one.
-  void append(const RegsForValue &RHS) {
-    ValueVTs.append(RHS.ValueVTs.begin(), RHS.ValueVTs.end());
-    RegVTs.append(RHS.RegVTs.begin(), RHS.RegVTs.end());
-    Regs.append(RHS.Regs.begin(), RHS.Regs.end());
-    RegCount.push_back(RHS.Regs.size());
-  }
 
   /// Emit a series of CopyFromReg nodes that copies from this value and returns
   /// the result as a ValueVTs value. This uses Chain/Flag as the input and

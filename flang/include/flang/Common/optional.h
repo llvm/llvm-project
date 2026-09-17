@@ -237,6 +237,31 @@ using std::nullopt_t;
 using std::optional;
 #endif // !STD_OPTIONAL_UNSUPPORTED
 
+// Leaves an optional disengaged, but with its payload storage written rather
+// than left indeterminate.
+//
+// Predicates of the form `opt && x < *opt` test the engaged flag before
+// reading the payload, so they never use an indeterminate value.  Compilers
+// do, however, routinely if-convert the short-circuit `&&` into a branchless
+// compare and select, which speculates the payload load.  On targets where
+// that happens the select's condition is computed from indeterminate storage,
+// and memory checkers then report a conditional branch that depends on
+// uninitialized memory.  This matters for runtime objects that are
+// placement-new'd into malloc'd storage, where a checker can see that the
+// payload bytes were never written.
+//
+// Writing the payload once at construction makes those bytes defined without
+// changing any observable behavior: the optional is still disengaged, and the
+// speculated read is still meaningless.  The assignment below is therefore NOT
+// dead code -- it exists solely for its effect on the payload storage, and
+// reset() on a trivially destructible payload merely clears the engaged flag.
+template <typename A>
+FORTRAN_OPTIONAL_INLINE_WITH_ATTRS void ResetWithDefinedPayload(
+    optional<A> &opt) {
+  opt = A{};
+  opt.reset();
+}
+
 } // namespace Fortran::common
 
 #endif // FORTRAN_COMMON_OPTIONAL_H

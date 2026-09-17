@@ -25,9 +25,10 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/FileSystem/UniqueID.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <ctime>
 #include <map>
 #include <memory>
@@ -36,7 +37,11 @@
 
 namespace llvm {
 
-class MemoryBuffer;
+namespace vfs {
+class File;
+class FileSystem;
+class Status;
+} // end namespace vfs
 
 } // end namespace llvm
 
@@ -151,7 +156,10 @@ public:
   /// \param FS if non-null, the VFS to use.  Otherwise uses
   /// llvm::vfs::getRealFileSystem().
   FileManager(const FileSystemOptions &FileSystemOpts,
-              IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr);
+              IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
+  /// Construct a file manager over the real file system. Separate from the
+  /// overload above so that callers do not need a complete FileSystem type.
+  explicit FileManager(const FileSystemOptions &FileSystemOpts);
   ~FileManager();
 
   /// Returns the number of unique real file entries cached by the file manager.
@@ -231,17 +239,13 @@ public:
 
   llvm::vfs::FileSystem &getVirtualFileSystem() const { return *FS; }
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-  getVirtualFileSystemPtr() const {
-    return FS;
-  }
+  getVirtualFileSystemPtr() const;
 
   /// Enable or disable tracking of VFS usage. Used to not track full header
   /// search and implicit modulemap lookup.
   void trackVFSUsage(bool Active);
 
-  void setVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
-    this->FS = std::move(FS);
-  }
+  void setVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
   /// Retrieve a file entry for a "virtual" file that acts as
   /// if there were a file with the given name on disk.

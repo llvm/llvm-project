@@ -131,14 +131,6 @@ getArgAccessQual(const Function &F, unsigned ArgIdx) {
   return SPIRV::AccessQualifier::ReadWrite;
 }
 
-static std::vector<SPIRV::Decoration::Decoration>
-getKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
-  MDString *ArgAttribute = getOCLKernelArgTypeQual(F, ArgIdx);
-  if (ArgAttribute && ArgAttribute->getString() == "volatile")
-    return {SPIRV::Decoration::Volatile};
-  return {};
-}
-
 static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
                                      SPIRVGlobalRegistry *GR,
                                      MachineIRBuilder &MIRBuilder,
@@ -293,6 +285,12 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::FuncParamAttr, {Attr});
         }
+        if (Arg.hasAttribute(Attribute::ReadNone)) {
+          auto Attr = static_cast<unsigned>(
+              SPIRV::FunctionParameterAttribute::NoReadWrite);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
         if (Arg.hasAttribute(Attribute::ZExt)) {
           auto Attr =
               static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Zext);
@@ -331,13 +329,6 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::FuncParamAttr, {Attr});
         }
-      }
-
-      if (F.getCallingConv() == CallingConv::SPIR_KERNEL) {
-        std::vector<SPIRV::Decoration::Decoration> ArgTypeQualDecs =
-            getKernelArgTypeQual(F, i);
-        for (SPIRV::Decoration::Decoration Decoration : ArgTypeQualDecs)
-          buildOpDecorate(VRegs[i][0], MIRBuilder, Decoration, {});
       }
 
       MDNode *Node = F.getMetadata("spirv.ParameterDecorations");
@@ -409,6 +400,21 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     GR->addGlobalObject(&Arg, &MIRBuilder.getMF(), ArgReg);
     i++;
   }
+  if (!ST->isShader()) {
+    if (F.hasRetAttribute(Attribute::ZExt)) {
+      auto Attr =
+          static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Zext);
+      buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::FuncParamAttr,
+                      {Attr});
+    }
+    if (F.hasRetAttribute(Attribute::SExt)) {
+      auto Attr =
+          static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Sext);
+      buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::FuncParamAttr,
+                      {Attr});
+    }
+  }
+
   // Name the function.
   if (F.hasName())
     buildOpName(FuncVReg, F.getName(), MIRBuilder);

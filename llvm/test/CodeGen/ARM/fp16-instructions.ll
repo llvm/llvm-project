@@ -27,8 +27,8 @@
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mattr=+fullfp16,fp64  | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FULLFP16
 
 ; FP-CONTRACT=FAST
-; RUN: llc < %s -mtriple=arm-none-eabihf -mattr=+fullfp16,+fp64 -fp-contract=fast | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FULLFP16-FAST
-; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mattr=+fullfp16,+fp64 -fp-contract=fast | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FULLFP16-FAST
+; RUN: llc < %s -mtriple=arm-none-eabihf -mattr=+fullfp16,+fp64 | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FULLFP16-FAST
+; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mattr=+fullfp16,+fp64 | FileCheck %s --check-prefixes=CHECK,CHECK-HARDFP-FULLFP16-FAST
 
 ; TODO: we can't pass half-precision arguments as "half" types yet. We do
 ; that for the time being by passing "float %f.coerce" and the necessary
@@ -396,8 +396,8 @@ entry:
   %4 = bitcast float %c.coerce to i32
   %tmp2.0.extract.trunc = trunc i32 %4 to i16
   %5 = bitcast i16 %tmp2.0.extract.trunc to half
-  %mul = fmul half %1, %3
-  %add = fadd half %mul, %5
+  %mul = fmul contract half %1, %3
+  %add = fadd contract half %mul, %5
   %6 = bitcast half %add to i16
   %tmp4.0.insert.ext = zext i16 %6 to i32
   %7 = bitcast i32 %tmp4.0.insert.ext to float
@@ -420,8 +420,8 @@ entry:
   %4 = bitcast float %c.coerce to i32
   %tmp2.0.extract.trunc = trunc i32 %4 to i16
   %5 = bitcast i16 %tmp2.0.extract.trunc to half
-  %mul = fmul half %1, %3
-  %sub = fsub half %5, %mul
+  %mul = fmul contract half %1, %3
+  %sub = fsub contract half %5, %mul
   %6 = bitcast half %sub to i16
   %tmp4.0.insert.ext = zext i16 %6 to i32
   %7 = bitcast i32 %tmp4.0.insert.ext to float
@@ -444,9 +444,9 @@ entry:
   %4 = bitcast float %c.coerce to i32
   %tmp2.0.extract.trunc = trunc i32 %4 to i16
   %5 = bitcast i16 %tmp2.0.extract.trunc to half
-  %mul = fmul half %1, %3
+  %mul = fmul contract half %1, %3
   %sub = fsub half -0.0, %mul
-  %sub2 = fsub half %sub, %5
+  %sub2 = fsub contract half %sub, %5
   %6 = bitcast half %sub2 to i16
   %tmp4.0.insert.ext = zext i16 %6 to i32
   %7 = bitcast i32 %tmp4.0.insert.ext to float
@@ -469,8 +469,8 @@ entry:
   %4 = bitcast float %c.coerce to i32
   %tmp2.0.extract.trunc = trunc i32 %4 to i16
   %5 = bitcast i16 %tmp2.0.extract.trunc to half
-  %mul = fmul half %1, %3
-  %sub2 = fsub half %mul, %5
+  %mul = fmul contract half %1, %3
+  %sub2 = fsub contract half %mul, %5
   %6 = bitcast half %sub2 to i16
   %tmp4.0.insert.ext = zext i16 %6 to i32
   %7 = bitcast i32 %tmp4.0.insert.ext to float

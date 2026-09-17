@@ -78,3 +78,23 @@ func.func @for() {
   }
   return
 }
+
+// CHECK-LABEL: @if_yield_math
+// CHECK-SAME: %[[ARG0:.*]]: i1, %[[ARG1:.*]]: f32
+// CHECK:       spirv.mlir.selection {
+// CHECK:         %[[SQRT:.*]] = spirv.GL.Sqrt %[[ARG1]] : f32
+// CHECK:         spirv.Store "Function" %{{.*}}, %[[SQRT]] : f32
+// CHECK:       ^{{.*}}:
+// CHECK:         %[[EXP:.*]] = spirv.GL.Exp %[[ARG1]] : f32
+// CHECK:         spirv.Store "Function" %{{.*}}, %[[EXP]] : f32
+// CHECK:       }
+func.func @if_yield_math(%arg0: i1, %arg1: f32) -> f32 {
+  %0 = scf.if %arg0 -> f32 {
+    %res = math.sqrt %arg1 : f32
+    scf.yield %res : f32
+  } else {
+    %res = math.exp %arg1 : f32
+    scf.yield %res : f32
+  }
+  return %0 : f32
+}

@@ -11,7 +11,7 @@ typedef union {
   int z : 8;
 } demo;
 
-// CIR:  !rec_demo = !cir.union<"demo" {!s32i, !u8i, !u8i}>
+// CIR-DAG: !rec_demo = !cir.union<"demo" {data !s32i, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 4>]>, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 8>]>}>
 // LLVM: %union.demo = type { i32 }
 // OGCG: %union.demo = type { i32 }
 
@@ -22,7 +22,7 @@ typedef union {
   int z : 2;
 } zero_bit;
 
-// CIR:  !rec_zero_bit = !cir.union<"zero_bit" {!s32i, !u8i, !u8i}>
+// CIR-DAG: !rec_zero_bit = !cir.union<"zero_bit" {data !s32i, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 3>]>, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 2>]>}>
 // LLVM: %union.zero_bit = type { i32 }
 // OGCG: %union.zero_bit = type { i32 }
 
@@ -36,8 +36,8 @@ void f() {
     d.z = 0;
 }
 
-// CIR: #bfi_y = #cir.bitfield_info<name = "y", storage_type = !u8i, size = 4, offset = 0, is_signed = true>
-// CIR: #bfi_z = #cir.bitfield_info<name = "z", storage_type = !u8i, size = 8, offset = 0, is_signed = true>
+// CIR-DAG: #bfi_y = #cir.bitfield_info<name = "y", storage_type = !u8i, size = 4, offset = 0, is_signed = true>
+// CIR-DAG: #bfi_z = #cir.bitfield_info<name = "z", storage_type = !u8i, size = 8, offset = 0, is_signed = true>
 
 // CIR:   cir.func {{.*}} @f
 // CIR:    [[ALLOC:%.*]] = cir.alloca "d" align(4) : !cir.ptr<!rec_demo>
