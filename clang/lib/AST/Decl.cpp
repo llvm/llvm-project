@@ -2587,7 +2587,7 @@ VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
   EStatus.Diag = Notes;
   EStatus.ExtendedDiag = &MSWarning;
   bool Result =
-      isConstexpr()
+      (isConstexpr() || hasAttr<ConstInitAttr>())
           ? Init->EvaluateAsMandatedConstantInitializer(EStatus, Ctx, *SP, this)
           : Init->EvaluateAsInitializer(Ctx, this, EStatus,
                                         IsConstantInitialization);
