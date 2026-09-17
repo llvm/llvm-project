@@ -5573,13 +5573,9 @@ void Verifier::visitDIAssignIDMetadata(Instruction &I, MDNode *MD) {
                 "dbg.assign not in same function as inst", DAI, &I);
     }
   }
-  for (DbgVariableRecord *DVR :
-       cast<DIAssignID>(MD)->getAllDbgVariableRecordUsers()) {
-    CheckDI(DVR->isDbgAssign(),
-            "!DIAssignID should only be used by Assign DVRs.", MD, DVR);
+  for (DbgVariableRecord *DVR : at::getAssignmentMarkers(cast<DIAssignID>(MD)))
     CheckDI(DVR->getFunction() == I.getFunction(),
             "DVRAssign not in same function as inst", DVR, &I);
-  }
 }
 
 void Verifier::visitMMRAMetadata(Instruction &I, MDNode *MD) {
@@ -7422,6 +7418,8 @@ void Verifier::visit(DbgVariableRecord &DVR) {
   CheckDI(MD && (isa<ValueAsMetadata>(MD) || isa<DIArgList>(MD) ||
                  (isa<MDNode>(MD) && !cast<MDNode>(MD)->getNumOperands())),
           "invalid #dbg record address/value", &DVR, MD, BB, F);
+  CheckDI(DVR.isDbgAssign() || !isa<DIAssignID>(MD),
+          "!DIAssignID should only be used by Assign DVRs.", MD, &DVR);
   if (auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
     visitValueAsMetadata(*VAM, F);
     if (DVR.isDbgDeclare()) {

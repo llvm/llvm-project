@@ -66,7 +66,13 @@ void RTDECL(AssignTemporary)(Descriptor &to, const Descriptor &from,
 void RTDECL(CopyInAssign)(Descriptor &temp, const Descriptor &var,
     const char *sourceFile = nullptr, int sourceLine = 0);
 // When "var" is provided, copy "temp" to it assuming "var" is already
-// initialized. Destroy and deallocate "temp" in all cases.
+// initialized. The copy is performed only from the first element of "temp"
+// whose bit pattern differs from the corresponding element of "var" through
+// the last element; when "temp" is bitwise identical to "var", nothing is
+// stored, so a "var" backed by read-only storage is not written to unless
+// it was actually modified. Setting the system environment variable
+// FLANG_RT_COPYOUT_MODIFIED_ONLY=0 restores the unconditional whole-object
+// copy. Destroy and deallocate "temp" in all cases.
 void RTDECL(CopyOutAssign)(Descriptor *var, Descriptor &temp,
     const char *sourceFile = nullptr, int sourceLine = 0);
 // This variant is for assignments to explicit-length CHARACTER left-hand
