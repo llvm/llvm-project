@@ -13964,7 +13964,8 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
         EVT SubVT = EVT::getVectorVT(*DAG.getContext(),
                                      VT.getVectorElementType(), Lanes);
         unsigned IsFast = 0;
-        if (TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
+        if ((!LegalTypes || isTypeLegal(SubVT)) &&
+            TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
                                    SubVT, MST->getAddressSpace(),
                                    MST->getBaseAlign(),
                                    MST->getMemOperand()->getFlags(), &IsFast) &&
