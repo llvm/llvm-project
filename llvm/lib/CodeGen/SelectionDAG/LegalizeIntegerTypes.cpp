@@ -6322,6 +6322,16 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CONCAT_VECTORS(SDNode *N) {
   unsigned NumOutElem = NOutVT.getVectorMinNumElements();
   EVT OutElemTy = NOutVT.getVectorElementType();
   if (OutVT.isScalableVector()) {
+    // Try and concatenate from a widened type.
+    EVT InVT = N->getOperand(0).getValueType();
+    if (getTypeAction(InVT) == TargetLowering::TypeWidenVector) {
+      EVT ExtVT = InVT.changeVectorElementType(*DAG.getContext(), OutElemTy);
+      SmallVector<SDValue, 8> Ops;
+      for (SDValue Op : N->op_values())
+        Ops.push_back(DAG.getNode(ISD::ANY_EXTEND, dl, ExtVT, Op));
+      return DAG.getNode(ISD::CONCAT_VECTORS, dl, NOutVT, Ops);
+    }
+
     // Find the largest promoted element type for each of the operands.
     SDUse *MaxSizedValue = std::max_element(
         N->op_begin(), N->op_end(), [](const SDValue &A, const SDValue &B) {
