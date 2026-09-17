@@ -3848,8 +3848,9 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
 
   // FIXME: VF is required to be a vector only because there are several recipes
   // whose computeCost function asserts that the VF is a vector.
-  if ((TTI.shouldInterleaveToReduceStalls() || EnableInterleaveToReduceStalls)
-      && VF.isVector()) {
+  if ((TTI.shouldInterleaveToReduceStalls() ||
+       EnableInterleaveToReduceStalls) &&
+      VF.isVector()) {
     LLVM_DEBUG(dbgs() << "LV: Interleaving to reduce stall cycles due to "
                          "instruction latency.\n");
     VPCostContext LatencyCtx(*TLI, Plan, *CM, Config,
