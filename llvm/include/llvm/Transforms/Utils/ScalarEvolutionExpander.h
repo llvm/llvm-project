@@ -28,6 +28,8 @@
 #include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
+class MemorySSAUpdater;
+
 LLVM_ABI extern cl::opt<unsigned> SCEVCheapExpansionBudget;
 
 /// struct for holding enough information to help calculate the cost of the
@@ -73,6 +75,9 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
 
   /// Indicates whether LCSSA phis should be created for inserted values.
   bool PreserveLCSSA;
+
+  /// Updated when LCSSA repair removes lifetime markers.
+  MemorySSAUpdater *MSSAU;
 
   // InsertedExpressions caches Values for reuse, so must track RAUW.
   DenseMap<std::pair<SCEVUse, Instruction *>, TrackingVH<Value>>
@@ -189,10 +194,12 @@ class SCEVExpander : public SCEVUseVisitor<SCEVExpander, Value *> {
 
 public:
   /// Construct a SCEVExpander in "canonical" mode.
+  /// Pass \p MSSAU when preserving MemorySSA during LCSSA repair.
   explicit SCEVExpander(ScalarEvolution &SE, const char *Name,
-                        bool PreserveLCSSA = true)
+                        bool PreserveLCSSA = true,
+                        MemorySSAUpdater *MSSAU = nullptr)
       : SE(SE), DL(SE.getDataLayout()), IVName(Name),
-        PreserveLCSSA(PreserveLCSSA), IVIncInsertLoop(nullptr),
+        PreserveLCSSA(PreserveLCSSA), MSSAU(MSSAU), IVIncInsertLoop(nullptr),
         IVIncInsertPos(nullptr), CanonicalMode(true), LSRMode(false),
         Builder(SE.getContext(), InstSimplifyFolder(DL),
                 IRBuilderCallbackInserter(
@@ -206,6 +213,8 @@ public:
     // Make sure the insert point guard stack is consistent.
     assert(InsertPointGuards.empty());
   }
+
+  MemorySSAUpdater *getMemorySSAUpdater() const { return MSSAU; }
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   void setDebugType(const char *s) { DebugType = s; }

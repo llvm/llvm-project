@@ -2493,7 +2493,7 @@ Value *SCEVExpander::fixupLCSSAFormFor(Value *V) {
   SmallVector<PHINode *, 16> PHIsToRemove;
   SmallVector<PHINode *, 16> InsertedPHIs;
   formLCSSAForInstructions(ToUpdate, SE.DT, SE.LI, &SE, &PHIsToRemove,
-                           &InsertedPHIs);
+                           &InsertedPHIs, MSSAU);
   for (PHINode *PN : InsertedPHIs)
     rememberInstruction(PN);
   for (PHINode *PN : PHIsToRemove) {
