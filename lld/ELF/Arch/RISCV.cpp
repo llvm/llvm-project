@@ -702,6 +702,8 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write16le(loc, val);
     return;
   case R_RISCV_SET32:
+    write32le(loc, val);
+    return;
   case R_RISCV_32_PCREL:
   case R_RISCV_PLT32:
   case R_RISCV_GOT32_PCREL:

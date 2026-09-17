@@ -566,7 +566,8 @@ Sema::ActOnPrivateModuleFragmentDecl(SourceLocation ModuleLoc,
   TU->setLocalOwningModule(PrivateModuleFragment);
 
   // FIXME: Consider creating an explicit representation of this declaration.
-  return nullptr;
+  // Returning TU as marker for it is correctly parsed.
+  return ConvertDeclToDeclGroup(TU);
 }
 
 DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
@@ -1621,4 +1622,26 @@ void Sema::checkReferenceToTULocalFromOtherTU(
 
   PendingCheckReferenceForTULocal.push_back(
       std::make_pair(FD, PointOfInstantiation));
+}
+
+bool Sema::isFromSameSingleIncludeHeader(const Decl *PrevD,
+                                         SourceLocation NewLoc) {
+  if (!PrevD->isFromASTFile())
+    return false;
+  SourceLocation PrevLoc = PrevD->getLocation();
+  if (!PrevLoc.isValid() || !NewLoc.isValid())
+    return false;
+  SourceManager &SM = getSourceManager();
+  auto [PrevFileID, PrevOffset] = SM.getDecomposedExpansionLoc(PrevLoc);
+  auto [NewFileID, NewOffset] = SM.getDecomposedExpansionLoc(NewLoc);
+  if (PrevOffset != NewOffset)
+    return false;
+  OptionalFileEntryRef PrevFileRef = SM.getFileEntryRefForID(PrevFileID),
+                       NewFileRef = SM.getFileEntryRefForID(NewFileID);
+  if (*PrevFileRef != *NewFileRef)
+    return false;
+  const HeaderFileInfo *HFI =
+      getPreprocessor().getHeaderSearchInfo().getExistingFileInfo(*PrevFileRef);
+  return (HFI->isPragmaOnce || HFI->isImport ||
+          HFI->LazyControllingMacro.isValid());
 }

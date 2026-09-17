@@ -33,6 +33,7 @@
 #include "llvm/ExecutionEngine/Orc/JITLinkReentryTrampolines.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/MachO.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
@@ -40,6 +41,7 @@
 #include "llvm/ExecutionEngine/Orc/SectCreate.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SharedMemoryMapperSPSCI.h"
 #include "llvm/ExecutionEngine/Orc/SimpleMemoryMapSPS.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteMemoryMapper.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
@@ -778,16 +780,18 @@ createSimpleRemoteMemoryManager(ExecutorProcessControl &EPC) {
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(ExecutorProcessControl &EPC) {
   SharedMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = EPC.getBootstrapSymbols(
-          {{SAs.Instance, rt::ExecutorSharedMemoryMapperServiceInstanceName},
-           {SAs.Reserve,
-            rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
-           {SAs.Initialize,
-            rt::ExecutorSharedMemoryMapperServiceInitializeWrapperName},
-           {SAs.Deinitialize,
-            rt::ExecutorSharedMemoryMapperServiceDeinitializeWrapperName},
-           {SAs.Release,
-            rt::ExecutorSharedMemoryMapperServiceReleaseWrapperName}}))
+  if (auto Err = lookupAndApply(
+          EPC.getExecutionSession().getBootstrapJITDylib(),
+          {recordAddr(rt::sps_ci::SharedMemoryMapperInstanceName,
+                      &SAs.Instance),
+           recordAddr(rt::sps_ci::SharedMemoryMapperReserve::Name,
+                      &SAs.Reserve),
+           recordAddr(rt::sps_ci::SharedMemoryMapperInitialize::Name,
+                      &SAs.Initialize),
+           recordAddr(rt::sps_ci::SharedMemoryMapperDeinitialize::Name,
+                      &SAs.Deinitialize),
+           recordAddr(rt::sps_ci::SharedMemoryMapperRelease::Name,
+                      &SAs.Release)}))
     return std::move(Err);
 
 #ifdef _WIN32
@@ -928,60 +932,35 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
       inconvertibleErrorCode());
 #else
 
-  constexpr int ReadEnd = 0;
-  constexpr int WriteEnd = 1;
-
-  // Pipe FDs.
-  int ToExecutor[2];
-  int FromExecutor[2];
+  constexpr int ParentSocket = 0, ChildSocket = 1;
+  int Sockets[2];
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, Sockets) == -1)
+    return make_error<StringError>(
+        Twine("Unable to create socket for executor: ") + strerror(errno),
+        inconvertibleErrorCode());
 
   pid_t ChildPID;
-
-  // Create pipes to/from the executor..
-  if (pipe(ToExecutor) != 0 || pipe(FromExecutor) != 0)
-    return make_error<StringError>("Unable to create pipe for executor",
-                                   inconvertibleErrorCode());
-
   ChildPID = fork();
 
   if (ChildPID == 0) {
     // In the child...
-
-    // Close the parent ends of the pipes
-    close(ToExecutor[WriteEnd]);
-    close(FromExecutor[ReadEnd]);
-
-    // Execute the child process.
-    std::unique_ptr<char[]> ExecutorPath, FDSpecifier;
-    {
-      ExecutorPath = std::make_unique<char[]>(OutOfProcessExecutor.size() + 1);
-      strcpy(ExecutorPath.get(), OutOfProcessExecutor.data());
-
-      std::string FDSpecifierStr("filedescs=");
-      FDSpecifierStr += utostr(ToExecutor[ReadEnd]);
-      FDSpecifierStr += ',';
-      FDSpecifierStr += utostr(FromExecutor[WriteEnd]);
-      FDSpecifier = std::make_unique<char[]>(FDSpecifierStr.size() + 1);
-      strcpy(FDSpecifier.get(), FDSpecifierStr.c_str());
-    }
-
-    char *const Args[] = {ExecutorPath.get(), FDSpecifier.get(), nullptr};
-    int RC = execvp(ExecutorPath.get(), Args);
+    close(Sockets[ParentSocket]);
+    std::string ConnSpec = "fd=" + std::to_string(Sockets[ChildSocket]);
+    char *const Args[] = {OutOfProcessExecutor.data(), ConnSpec.data(),
+                          nullptr};
+    int RC = execvp(OutOfProcessExecutor.data(), Args);
     if (RC != 0) {
       errs() << "unable to launch out-of-process executor \""
-             << ExecutorPath.get() << "\"\n";
+             << OutOfProcessExecutor << "\"\n";
       exit(1);
     }
   }
   // else we're the parent...
-
-  // Close the child ends of the pipes
-  close(ToExecutor[ReadEnd]);
-  close(FromExecutor[WriteEnd]);
+  close(Sockets[ChildSocket]);
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(MaterializationThreads),
-      FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
+      Sockets[ParentSocket], Sockets[ParentSocket]);
 #endif
 }
 

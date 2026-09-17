@@ -35,6 +35,28 @@ static void defineAddr(JITDylib &JD, StringRef Name, ExecutorAddr Addr) {
 
 } // namespace
 
+// An empty PrepareFns list trivially succeeds, even with an empty
+// SearchOrder: there's nothing to look up, so no ExecutionSession is needed.
+TEST(LookupAndApplyTest, EmptyPrepareFnsTriviallySucceeds) {
+  EXPECT_THAT_ERROR(lookupAndApply(LookupKind::Static, {}, {}), Succeeded());
+}
+
+// An empty SearchOrder fails outright, even for a symbol that is only weakly
+// referenced (which would otherwise resolve to null rather than failing the
+// lookup, see RecordAddrWeaklyReferencedAbsent below): there is no
+// ExecutionSession to intern the symbol's name with, so the prepare function
+// is never run, and so the lookup never gets far enough to see that the
+// symbol was only weakly referenced.
+TEST(LookupAndApplyTest, EmptySearchOrderFailsEvenForWeakReference) {
+  ExecutorAddr A(AddrAValue);
+  EXPECT_THAT_ERROR(
+      lookupAndApply(LookupKind::Static, {},
+                     {recordAddr(SymbolNameSpec::verbatim("addr_a"), &A,
+                                 SymbolLookupFlags::WeaklyReferencedSymbol)}),
+      Failed());
+  EXPECT_EQ(A, ExecutorAddr(AddrAValue));
+}
+
 // recordAddr writes the resolved address of a required symbol.
 TEST(LookupAndApplyTest, RecordAddr) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
@@ -42,7 +64,8 @@ TEST(LookupAndApplyTest, RecordAddr) {
   defineAddr(JD, "addr_a", ExecutorAddr(AddrAValue));
 
   ExecutorAddr A;
-  cantFail(lookupAndApply(JD, {recordAddr("addr_a", &A)}));
+  cantFail(
+      lookupAndApply(JD, {recordAddr(SymbolNameSpec::verbatim("addr_a"), &A)}));
   EXPECT_EQ(A, ExecutorAddr(AddrAValue));
 
   cantFail(ES.endSession());
@@ -54,7 +77,8 @@ TEST(LookupAndApplyTest, RecordAddrRequiredAbsentFails) {
 
   ExecutorAddr A(AddrAValue);
   EXPECT_THAT_ERROR(
-      lookupAndApply(ES.getBootstrapJITDylib(), {recordAddr("absent", &A)}),
+      lookupAndApply(ES.getBootstrapJITDylib(),
+                     {recordAddr(SymbolNameSpec::verbatim("absent"), &A)}),
       Failed());
 
   cantFail(ES.endSession());
@@ -66,9 +90,39 @@ TEST(LookupAndApplyTest, RecordAddrWeaklyReferencedAbsent) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   ExecutorAddr A(AddrAValue);
-  cantFail(lookupAndApply(
-      ES.getBootstrapJITDylib(),
-      {recordAddr("absent", &A, SymbolLookupFlags::WeaklyReferencedSymbol)}));
+  cantFail(
+      lookupAndApply(ES.getBootstrapJITDylib(),
+                     {recordAddr(SymbolNameSpec::verbatim("absent"), &A,
+                                 SymbolLookupFlags::WeaklyReferencedSymbol)}));
+  EXPECT_EQ(A, ExecutorAddr());
+
+  cantFail(ES.endSession());
+}
+
+// The SymbolStringPtr overload behaves like the StringRef overload for a
+// present, required symbol -- the caller just does the interning itself.
+TEST(LookupAndApplyTest, RecordAddrSymbolStringPtr) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+  auto &JD = ES.getBootstrapJITDylib();
+  defineAddr(JD, "addr_a", ExecutorAddr(AddrAValue));
+
+  ExecutorAddr A;
+  cantFail(lookupAndApply(JD, {recordAddr(ES.intern("addr_a"), &A)}));
+  EXPECT_EQ(A, ExecutorAddr(AddrAValue));
+
+  cantFail(ES.endSession());
+}
+
+// As above, but for a weakly-referenced symbol that is missing: records a
+// null address rather than failing the lookup.
+TEST(LookupAndApplyTest, RecordAddrSymbolStringPtrWeaklyReferencedAbsent) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  ExecutorAddr A(AddrAValue);
+  cantFail(
+      lookupAndApply(ES.getBootstrapJITDylib(),
+                     {recordAddr(ES.intern("absent"), &A,
+                                 SymbolLookupFlags::WeaklyReferencedSymbol)}));
   EXPECT_EQ(A, ExecutorAddr());
 
   cantFail(ES.endSession());
@@ -99,7 +153,8 @@ TEST(LookupAndApplyTest, MultiplePrepareFns) {
   };
 
   cantFail(lookupAndApply(
-      JD, {recordAddr("addr_a", &A), recordAddr("addr_b", &B), RecordBoth}));
+      JD, {recordAddr(SymbolNameSpec::verbatim("addr_a"), &A),
+           recordAddr(SymbolNameSpec::verbatim("addr_b"), &B), RecordBoth}));
 
   EXPECT_EQ(A, ExecutorAddr(AddrAValue));
   EXPECT_EQ(B, ExecutorAddr(AddrBValue));
@@ -119,7 +174,8 @@ TEST(LookupAndApplyTest, NoApplyOnLookupFailure) {
   ExecutorAddr A, B;
   // "addr_a" resolves, "absent" does not, so the whole lookup fails.
   EXPECT_THAT_ERROR(
-      lookupAndApply(JD, {recordAddr("addr_a", &A), recordAddr("absent", &B)}),
+      lookupAndApply(JD, {recordAddr(SymbolNameSpec::verbatim("addr_a"), &A),
+                          recordAddr(SymbolNameSpec::verbatim("absent"), &B)}),
       Failed());
   EXPECT_EQ(A, ExecutorAddr());
   EXPECT_EQ(B, ExecutorAddr());
@@ -137,7 +193,7 @@ TEST(LookupAndApplyTest, Async) {
   std::promise<MSVCPError> P;
   auto F = P.get_future();
   lookupAndApply([&](Error Err) { P.set_value(std::move(Err)); }, JD,
-                 {recordAddr("addr_a", &A)});
+                 {recordAddr(SymbolNameSpec::verbatim("addr_a"), &A)});
   EXPECT_THAT_ERROR(F.get(), Succeeded());
   EXPECT_EQ(A, ExecutorAddr(AddrAValue));
 
@@ -153,7 +209,7 @@ TEST(LookupAndApplyTest, AsyncFailure) {
   std::promise<MSVCPError> P;
   auto F = P.get_future();
   lookupAndApply([&](Error Err) { P.set_value(std::move(Err)); }, JD,
-                 {recordAddr("absent", &A)});
+                 {recordAddr(SymbolNameSpec::verbatim("absent"), &A)});
   EXPECT_THAT_ERROR(F.get(), Failed());
   EXPECT_EQ(A, ExecutorAddr(AddrAValue));
 
@@ -169,9 +225,10 @@ TEST(LookupAndApplyTest, WeaklyReferencedMixed) {
 
   ExecutorAddr A, B(AddrBValue);
   cantFail(lookupAndApply(
-      JD,
-      {recordAddr("addr_a", &A, SymbolLookupFlags::WeaklyReferencedSymbol),
-       recordAddr("absent", &B, SymbolLookupFlags::WeaklyReferencedSymbol)}));
+      JD, {recordAddr(SymbolNameSpec::verbatim("addr_a"), &A,
+                      SymbolLookupFlags::WeaklyReferencedSymbol),
+           recordAddr(SymbolNameSpec::verbatim("absent"), &B,
+                      SymbolLookupFlags::WeaklyReferencedSymbol)}));
   EXPECT_EQ(A, ExecutorAddr(AddrAValue));
   EXPECT_EQ(B, ExecutorAddr());
 

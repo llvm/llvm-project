@@ -1,5 +1,5 @@
 ; XFAIL: target={{.*}}-aix{{.*}}
-; RUN: llc < %s
+; RUN: llc -float-abi=soft < %s
 ; PR3899
 
 @m = external global <2 x double>

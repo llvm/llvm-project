@@ -1,6 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UnretainedLocalVarsChecker -verify %s
 
 #import "objc-mock-types.h"
+#import "mock-types.h"
 #import "mock-system-header.h"
 
 void someFunction();
