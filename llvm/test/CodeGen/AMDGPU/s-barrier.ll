@@ -431,66 +431,38 @@ define void @get_named_barrier_state_null_bar() {
 }
 
 define amdgpu_kernel void @poison_barrier() {
-; GFX12-SDAG-LABEL: poison_barrier:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_barrier_join 0
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: poison_barrier:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_and_b32 m0, s0, 63
-; GFX12-GISEL-NEXT:    s_barrier_join m0
-; GFX12-GISEL-NEXT:    s_endpgm
+; GFX12-LABEL: poison_barrier:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_barrier_join 0
+; GFX12-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) poison)
   ret void
 }
 
 define void @signal_var_cnt0_poison_bar() {
-; GFX12-SDAG-LABEL: signal_var_cnt0_poison_bar:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    s_barrier_signal 0
-; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-GISEL-LABEL: signal_var_cnt0_poison_bar:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    s_and_b32 m0, s0, 63
-; GFX12-GISEL-NEXT:    s_barrier_signal m0
-; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-LABEL: signal_var_cnt0_poison_bar:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_barrier_signal 0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) poison, i32 0)
   ret void
 }
 
 define void @barrier_join_poison_bar() {
-; GFX12-SDAG-LABEL: barrier_join_poison_bar:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    s_barrier_join 0
-; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-GISEL-LABEL: barrier_join_poison_bar:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    s_and_b32 m0, s0, 63
-; GFX12-GISEL-NEXT:    s_barrier_join m0
-; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-LABEL: barrier_join_poison_bar:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_barrier_join 0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) poison)
   ret void
 }
@@ -523,30 +495,17 @@ define void @barrier_init_poison_bar() {
 }
 
 define void @get_named_barrier_state_poison_bar() {
-; GFX12-SDAG-LABEL: get_named_barrier_state_poison_bar:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    s_get_barrier_state s0, 0
-; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-GISEL-LABEL: get_named_barrier_state_poison_bar:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    s_and_b32 m0, s0, 63
-; GFX12-GISEL-NEXT:    s_get_barrier_state s0, m0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-LABEL: get_named_barrier_state_poison_bar:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_get_barrier_state s0, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %state = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(15) poison)
   ret void
 }
