@@ -5590,7 +5590,6 @@ def HLSLInterlockedCompareStore : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLInterlockedCompareStoreFloatBitwise : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_interlocked_compare_store_float_bitwise"];
-  // Prevent inadvertent float -> double arg promotion.
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void (...)";
 }
