@@ -1499,10 +1499,12 @@ Currently, only the following parameter attributes are defined:
     specified alignment. If applied to a vector of pointers, *all* pointers
     (elements) have the specified alignment. If the pointer value does not have
     the specified alignment, {ref}`poison value <poisonvalues>` is returned or
-    passed instead.  The `align` attribute should be combined with the
-    `noundef` attribute to ensure a pointer is aligned, or otherwise the
-    behavior is undefined. Note that `align 1` has no effect on non-byval,
-    non-preallocated arguments.
+    passed instead. If the `align` attribute is combined with the `noundef`
+    attribute, then calling the function with an unaligned value is immediate
+    undefined behavior at the call site, and in the function the value cannot
+    be poison.
+
+    Note that `align 1` has no effect on non-byval, non-preallocated arguments.
 
     Note that this attribute has additional semantics when combined with the
     `byval` or `preallocated` attribute, which are documented there.
