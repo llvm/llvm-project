@@ -7558,9 +7558,17 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
           ILE->setInit(i, ConstantExpr::Create(Context, Init));
           continue;
         }
-        // Only a reference member is initialized by a glvalue.
-        bool IsRef = Init->isGLValue();
-        if (!Init->isConstantInitializer(Context, IsRef)) {
+        // Only a reference member is initialized by a glvalue. Like other
+        // constant initializers, undefined behavior such as signed overflow
+        // is folded with a warning.
+        Expr::EvalResult Eval;
+        bool Evaluated =
+            Init->isGLValue()
+                ? Init->EvaluateAsLValue(Eval, Context,
+                                         /*InConstantContext=*/true)
+                : Init->EvaluateAsRValue(Eval, Context,
+                                         /*InConstantContext=*/true);
+        if (!Evaluated || Eval.HasSideEffects) {
           Diag(Init->getExprLoc(), diag::err_init_element_not_constant)
               << Init->getSourceBitField();
           return ExprError();
@@ -7574,17 +7582,7 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
           V.TraverseStmt(Init);
           DeferToUseSite = V.HasImmediateCalls;
         }
-        Expr::EvalResult Eval;
-        bool Evaluated = false;
-        if (!DeferToUseSite) {
-          if (IsRef)
-            Evaluated = Init->EvaluateAsLValue(Eval, Context,
-                                               /*InConstantContext=*/true);
-          else if (Init->isPRValue())
-            Evaluated = Init->EvaluateAsRValue(Eval, Context,
-                                               /*InConstantContext=*/true);
-        }
-        if (Evaluated && !Eval.HasSideEffects && Eval.Val.hasValue())
+        if (!DeferToUseSite && Eval.Val.hasValue())
           ILE->setInit(i, ConstantExpr::Create(Context, Init, Eval.Val));
         else
           ILE->setInit(i, ConstantExpr::Create(Context, Init));
