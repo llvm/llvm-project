@@ -5864,12 +5864,13 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
         return false;
       EntryType = VD->getType();
     } else if (Base.is<TypeInfoLValue>()) {
+      // The type_info object for the type the lvalue describes.
+      const Type *OperandType = Base.get<TypeInfoLValue>()
+                                    .getType()
+                                    ->getCanonicalTypeUnqualified()
+                                    .getTypePtr();
       EntryType = Base.getTypeInfoType();
-      if (!this->emitGetTypeid(Base.get<TypeInfoLValue>()
-                                   .getType()
-                                   ->getCanonicalTypeUnqualified()
-                                   .getTypePtr(),
-                               EntryType.getTypePtr(), Info))
+      if (!this->emitGetTypeid(OperandType, EntryType.getTypePtr(), Info))
         return false;
     } else if (!Base) {
       // An integer cast to a pointer.
@@ -5880,11 +5881,11 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
                              ? Ctx.getASTContext().getPointerType(E->getType())
                              : E->getType();
       uint64_t Offset = Val.getLValueOffset().getQuantity();
-      if (!this->emitConst(Offset, PT_Uint64, Info))
+      if (!this->emitConstUint64(Offset, Info))
         return false;
-      if (!this->emitGetIntPtr(PT_Uint64, PtrType.getTypePtr(), Info))
+      if (!this->emitGetIntPtrUint64(PtrType.getTypePtr(), Info))
         return false;
-      return true;
+      EntryType = PtrType->getPointeeType();
     } else {
       return false;
     }

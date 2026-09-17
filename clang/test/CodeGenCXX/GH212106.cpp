@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -ffp-exception-behavior=strict -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -ffp-exception-behavior=strict -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 
 // A file-scope compound literal is a constant-initialized global even when its
 // address is taken from a non-constant context.
