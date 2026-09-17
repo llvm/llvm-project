@@ -47,7 +47,6 @@ add_llvm_component_library(LLVMOrcJIT
   LLJIT.cpp
   MachO.cpp
   MachOPlatform.cpp
-  Mangler.cpp
   MapperJITLinkMemoryManager.cpp
   MemoryMapper.cpp
   ELFNixPlatform.cpp

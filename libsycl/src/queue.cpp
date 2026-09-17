@@ -15,9 +15,10 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-queue::queue(const device &syclDevice, const async_handler &asyncHandler,
-             const property_list &propList) {
-  impl = detail::QueueImpl::create(*detail::getSyclObjImpl(syclDevice),
+queue::queue(const context &syclContext, const device &syclDevice,
+             const async_handler &asyncHandler, const property_list &propList) {
+  impl = detail::QueueImpl::create(detail::getSyclObjImpl(syclContext),
+                                   *detail::getSyclObjImpl(syclDevice),
                                    asyncHandler, propList);
 }
 

@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgpu12.50 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -debug-only=machine-scheduler %s -filetype=null 2>&1 | FileCheck --check-prefix=DEBUG %s
 # RUN: llc -mtriple=amdgpu12.50 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec %s -o - | FileCheck --check-prefix=ORDER %s
 
-# DEBUG: Effective stalls: try=4 (ready=0, struct=0, lat=0, buffer=4) cand=0 (ready=0, struct=0, lat=0, buffer=0)
+# DEBUG: Effective stalls: try=4 (ready=0, struct=0, lat=0, carried=0, buffer=4) cand=0 (ready=0, struct=0, lat=0, carried=0, buffer=0)
 
 # ORDER-LABEL: name: ds_fifo_stall
 # ORDER: body: |

@@ -1203,3 +1203,32 @@ define void @tcgen05_mma_collector_b_block_scale_mxf4nvf4_block32_cta2(ptr addrs
   call void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 2, i32 0, i32 0)
   ret void
 }
+
+; collector_b operand omitted at the call site - auto-upgrade materializes the declared default value i.e. discard(0).
+define void @tcgen05_mma_no_explicit_collector_b(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d) {
+; FORMAT-LABEL: define void @tcgen05_mma_no_explicit_collector_b(
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=discard */ i32 0, /* collector_b=discard */ i32 0)
+; FORMAT-NEXT: call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, /* kind=f16 */ i32 0, /* cta_group= */ i32 1, /* collector_a=use */ i32 3, /* collector_b=discard */ i32 0)
+; CHECK-LABEL: tcgen05_mma_no_explicit_collector_b(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [tcgen05_mma_no_explicit_collector_b_param_5];
+; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
+; CHECK-NEXT:    ld.param::func.b32 %r1, [tcgen05_mma_no_explicit_collector_b_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [tcgen05_mma_no_explicit_collector_b_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [tcgen05_mma_no_explicit_collector_b_param_3];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [tcgen05_mma_no_explicit_collector_b_param_4];
+; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.collector::a::discard [%r1], %rd1, %rd2, %r2, %p1;
+; CHECK-NEXT:    ld.param::func.b32 %r3, [tcgen05_mma_no_explicit_collector_b_param_1];
+; CHECK-NEXT:    tcgen05.mma.cta_group::1.kind::f16.collector::a::use [%r1], [%r3], %rd2, %r2, %p1;
+; CHECK-NEXT:    ret;
+  call void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %dtmem, i64 %ashared, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 0, i32 1, i32 0)
+  call void @llvm.nvvm.tcgen05.mma.tensor(ptr addrspace(6) %dtmem, ptr addrspace(6) %atensor, i64 %b, i32 %idesc, i1 %enable_inp_d, i32 0, i32 1, i32 3)
+  ret void
+}
