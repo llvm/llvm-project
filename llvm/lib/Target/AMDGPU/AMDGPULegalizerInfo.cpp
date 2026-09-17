@@ -1107,7 +1107,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .lower();
 
     getActionDefinitionsBuilder(G_FFREXP)
-        .customFor({{F32, I32}, {F64, I32}, {F16, I16}, {F16, I32}})
+        .customFor({F32, F64, F16})
         .scalarize(0)
         .lower();
 
@@ -1143,10 +1143,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .lower();
 
     getActionDefinitionsBuilder(G_FFREXP)
-        .customFor({{F32, I32}, {F64, I32}})
+        .customFor({F32, F64})
         .scalarize(0)
         .minScalar(0, F32)
-        .clampScalar(1, I32, I32)
         .lower();
 
     getActionDefinitionsBuilder(G_FMODF)
