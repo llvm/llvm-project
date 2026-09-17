@@ -2449,7 +2449,6 @@ private:
   /// getNumScalarInsts().
   uint64_t getNumVectorInsts(bool HasTreeLoop);
 
-public:
   /// Return information about the vector formed for the specified index
   /// of a vector of (the same) instruction.
   TargetTransformInfo::OperandValueInfo
@@ -2462,15 +2461,14 @@ public:
         getOperandEntry(const_cast<const TreeEntry *>(E), Idx));
   }
 
-  /// \returns Cast context for the given graph node.
-  TargetTransformInfo::CastContextHint
-  getCastContextHint(const TreeEntry &TE) const;
-
-private:
   /// Gets the root instruction for the given node. If the node is a strided
   /// load/store node with the reverse order, the root instruction is the last
   /// one.
   Instruction *getRootEntryInstruction(const TreeEntry &Entry) const;
+
+  /// \returns Cast context for the given graph node.
+  TargetTransformInfo::CastContextHint
+  getCastContextHint(const TreeEntry &TE) const;
 
   /// \returns the scale of the given tree entry to the loop iteration.
   /// \p Scalar is the scalar value from the entry, if using the parent for the
@@ -3387,7 +3385,6 @@ private:
 #endif
 
   /// Get list of vector entries, associated with the value \p V.
-public:
   ArrayRef<TreeEntry *> getTreeEntries(const Value *V) const {
     assert(V && "V cannot be nullptr.");
     auto It = ScalarToTreeEntries.find(V);
@@ -3396,7 +3393,6 @@ public:
     return It->getSecond();
   }
 
-private:
   /// Get list of split vector entries, associated with the value \p V.
   ArrayRef<TreeEntry *> getSplitTreeEntries(Value *V) const {
     assert(V && "V cannot be nullptr.");
@@ -4242,6 +4238,8 @@ private:
 
   friend struct GraphTraits<BoUpSLP *>;
   friend struct DOTGraphTraits<BoUpSLP *>;
+  // Reduction costing inspects the tree entries of the reduced values.
+  friend class HorizontalReduction;
 
   /// Contains all scheduling data for a basic block.
   /// It does not schedules instructions, which are not memory read/write
@@ -29566,7 +29564,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   return Changed;
 }
 
-namespace {
+namespace llvm::slpvectorizer {
 
 /// Model horizontal reductions.
 ///
@@ -32952,7 +32950,7 @@ private:
     return nullptr;
   }
 };
-} // end anonymous namespace
+} // namespace llvm::slpvectorizer
 
 /// Gets recurrence kind from the specified value.
 static RecurKind getRdxKind(Value *V) {
