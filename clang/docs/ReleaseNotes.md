@@ -874,6 +874,11 @@ features cannot lower the translation-unit ABI level;
 
 ### Code Completion
 
+- Parameters declared with a `decltype` are now presented as the type the
+  `decltype` resolves to, e.g. `set_x(int val)` rather than
+  `set_x(decltype(x) val)`. This affects the completion strings produced by
+  libclang as well as those used by clangd.
+
 ### Static Analyzer
 
 #### Crash and bug fixes
