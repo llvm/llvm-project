@@ -211,19 +211,33 @@ void test_macros(int in_int) {
   _Static_assert(_Generic(result, int : 1));
 }
 
-// `auto <typedef-name> <var>;` should parse as a declaration of <var> with
-// type <typedef-name> (auto used as storage-class in C23 with an explicit
-// type-name), not as inferred type deduction on the typedef.
 void test_auto_typedef(void) {
   typedef int T;
   {
     auto T at_local;
-    at_local = 42;
+    at_local = 10;
     _Static_assert(_Generic(at_local, int : 1));
   }
   {
-    // Also works with qualifiers.
     const auto T at_const = 1;
     _Static_assert(_Generic(&at_const, const int * : 1));
+  }
+  {
+    auto T a;
+    auto T b;
+    auto T c;
+    a = 1; b = 2; c = 3;
+    _Static_assert(_Generic(a, int : 1));
+    _Static_assert(_Generic(b, int : 1));
+    _Static_assert(_Generic(c, int : 1));
+  }
+  {
+    int T = 7;
+    (void)T;
+  }
+  {
+    auto T at_after_shadow;
+    at_after_shadow = 5;
+    _Static_assert(_Generic(at_after_shadow, int : 1));
   }
 }

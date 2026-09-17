@@ -4119,24 +4119,26 @@ void Parser::ParseDeclarationSpecifiers(
       break;
     case tok::kw_auto:
       if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
-        // FIXME: In C++, `auto` as a storage-class specifier is a
-        // deprecated extension. This lookahead runs for C only.
         auto IsTypedefName = [&](const Token &T) {
           if (!T.is(tok::identifier))
             return false;
           IdentifierInfo *II = T.getIdentifierInfo();
           if (!II)
             return false;
-          // Use a raw suppressed lookup (rather than Sema::getTypeName) to
-          // avoid emitting deprecation/availability diagnostics on the
-          // typedef during this speculative peek — the real parse will look
-          // the name up again and emit them at the right time.
+          // Memoize per scope so we do at most one LookupName per
+          // identifier per scope.
+          auto It = IsTypedefNameCache.find(II);
+          if (It != IsTypedefNameCache.end())
+            return It->second;
+          // Suppress diagnostics; the real parse will emit them later.
           LookupResult R(Actions, II, T.getLocation(),
                          Sema::LookupOrdinaryName);
           Actions.LookupName(R, getCurScope(),
                              /*AllowBuiltinCreation=*/false);
           R.suppressDiagnostics();
-          return R.isSingleResult() && isa<TypeDecl>(R.getFoundDecl());
+          bool Result = R.isSingleResult() && isa<TypeDecl>(R.getFoundDecl());
+          IsTypedefNameCache[II] = Result;
+          return Result;
         };
         auto MayBeTypeSpecifier = [&]() {
           // In pre-C23 C, auto can be used as a storage-class specifier.
