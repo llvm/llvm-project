@@ -934,7 +934,7 @@ void __tsan_go_atomic64_load(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic128_load(ThreadState* thr, uptr cpc, uptr pc, u8* a) {
   a128 ret = AtomicGoRet<OpLoad>(thr, cpc, pc, mo_acquire, *(a128**)a);
-  __builtin_memcpy(a + 8, &ret, sizeof(ret));
+  internal_memcpy(a + 8, &ret, sizeof(ret));
 }
 #  endif
 
@@ -952,7 +952,7 @@ void __tsan_go_atomic64_store(ThreadState *thr, uptr cpc, uptr pc, u8 *a) {
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic128_store(ThreadState* thr, uptr cpc, uptr pc, u8* a) {
   a128 val;
-  __builtin_memcpy(&val, a + 8, sizeof(val));
+  internal_memcpy(&val, a + 8, sizeof(val));
   AtomicGo<OpStore>(thr, cpc, pc, mo_release, *(a128**)a, val);
 }
 #  endif
@@ -1028,8 +1028,8 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_go_atomic128_compare_exchange(ThreadState* thr, uptr cpc, uptr pc,
                                           u8* a) {
   a128 cmp, xch;
-  __builtin_memcpy(&cmp, a + 8, sizeof(cmp));
-  __builtin_memcpy(&xch, a + 24, sizeof(xch));
+  internal_memcpy(&cmp, a + 8, sizeof(cmp));
+  internal_memcpy(&xch, a + 24, sizeof(xch));
   a128 cur = AtomicGoRet<OpCAS>(thr, cpc, pc, mo_acq_rel, mo_acquire,
                                 *(a128**)a, cmp, xch);
   *(bool*)(a + 40) = (cur == cmp);
