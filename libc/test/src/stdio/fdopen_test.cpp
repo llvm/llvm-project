@@ -10,6 +10,8 @@
 
 #include "hdr/fcntl_macros.h"
 #include "hdr/sys_stat_macros.h" // For S_IRWXU
+#include "src/__support/CPP/scope.h"
+#include "src/fcntl/fcntl.h"
 #include "src/fcntl/open.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/fgets.h"
@@ -83,4 +85,34 @@ TEST_F(LlvmLibcStdioFdopenTest, InvalidMode) {
   ASSERT_TRUE(nullptr == fp2);
   LIBC_NAMESPACE::close(fd);
   ASSERT_ERRNO_SUCCESS();
+}
+
+TEST_F(LlvmLibcStdioFdopenTest, CloseOnExecPreservedWithoutModifier) {
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+  int fd = LIBC_NAMESPACE::open("/dev/null", O_WRONLY | O_CLOEXEC);
+  ASSERT_GE(fd, 0);
+  FILE *file = LIBC_NAMESPACE::fdopen(fd, "w");
+  LIBC_NAMESPACE::cpp::scope_exit close_file([&] {
+    if (file != nullptr)
+      EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+    else
+      EXPECT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+  });
+  ASSERT_NE(file, nullptr);
+  EXPECT_THAT(LIBC_NAMESPACE::fcntl(fd, F_GETFD), Succeeds(FD_CLOEXEC));
+}
+
+TEST_F(LlvmLibcStdioFdopenTest, CloseOnExecEnabledByModifier) {
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+  int fd = LIBC_NAMESPACE::open("/dev/null", O_WRONLY);
+  ASSERT_GE(fd, 0);
+  FILE *file = LIBC_NAMESPACE::fdopen(fd, "we");
+  LIBC_NAMESPACE::cpp::scope_exit close_file([&] {
+    if (file != nullptr)
+      EXPECT_THAT(LIBC_NAMESPACE::fclose(file), Succeeds(0));
+    else
+      EXPECT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+  });
+  ASSERT_NE(file, nullptr);
+  EXPECT_THAT(LIBC_NAMESPACE::fcntl(fd, F_GETFD), Succeeds(FD_CLOEXEC));
 }
