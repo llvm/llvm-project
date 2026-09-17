@@ -4258,6 +4258,12 @@ ExprResult Sema::ConvertMemberDefaultInitExpression(FieldDecl *FD,
                                                     SourceLocation InitLoc) {
   InitializedEntity Entity =
       InitializedEntity::InitializeMemberFromDefaultMemberInitializer(FD);
+  return ConvertMemberDefaultInitExpression(FD, Entity, InitExpr, InitLoc);
+}
+
+ExprResult Sema::ConvertMemberDefaultInitExpression(
+    FieldDecl *FD, const InitializedEntity &Entity, Expr *InitExpr,
+    SourceLocation InitLoc) {
   InitializationKind Kind =
       FD->getInClassInitStyle() == ICIS_ListInit
           ? InitializationKind::CreateDirectList(InitExpr->getBeginLoc(),
@@ -5358,7 +5364,7 @@ static bool CollectFieldInitializer(Sema &SemaRef, BaseAndFieldInfo &Info,
 
   if (Field->hasInClassInitializer() && !Info.isImplicitCopyOrMove()) {
     ExprResult DIE =
-        SemaRef.BuildCXXDefaultInitExpr(Info.Ctor->getLocation(), Field);
+        SemaRef.BuildCXXCtorDefaultInitExpr(Info.Ctor->getLocation(), Field);
     if (DIE.isInvalid())
       return true;
 
@@ -14142,7 +14148,7 @@ bool SpecialMemberExceptionSpecInfo::visitField(FieldDecl *FD) {
       // FIXME: We should have a single context note pointing at Loc, and
       // this location should be MD->getLocation() instead, since that's
       // the location where we actually use the default init expression.
-      E = S.BuildCXXDefaultInitExpr(Loc, FD).get();
+      E = S.BuildCXXCtorDefaultInitExpr(Loc, FD).get();
     if (E)
       ExceptSpec.CalledExpr(E);
   } else if (auto *RD = S.Context.getBaseElementType(FD->getType())

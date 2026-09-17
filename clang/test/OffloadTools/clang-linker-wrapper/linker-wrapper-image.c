@@ -104,11 +104,11 @@
 // CUDA-NEXT:   %5 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 5
 // CUDA-NEXT:   %name = load ptr, ptr %5, align 8
 // CUDA-NEXT:   %6 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 6
-// CUDA-NEXT:   %size = load i64, ptr %6, align 4
+// CUDA-NEXT:   %size = load i64, ptr %6, align 8
 // CUDA-NEXT:   %7 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 3
 // CUDA-NEXT:   %flags = load i32, ptr %7, align 4
 // CUDA-NEXT:   %8 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 7
-// CUDA-NEXT:   %data = load i64, ptr %8, align 4
+// CUDA-NEXT:   %data = load i64, ptr %8, align 8
 // CUDA-NEXT:   %9 = trunc i64 %data to i32
 // CUDA-NEXT:   %type = and i32 %flags, 7
 // CUDA-NEXT:   %10 = and i32 %flags, 8
@@ -246,11 +246,11 @@
 // HIP-NEXT:   %5 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 5
 // HIP-NEXT:   %name = load ptr, ptr %5, align 8
 // HIP-NEXT:   %6 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 6
-// HIP-NEXT:   %size = load i64, ptr %6, align 4
+// HIP-NEXT:   %size = load i64, ptr %6, align 8
 // HIP-NEXT:   %7 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 3
 // HIP-NEXT:   %flags = load i32, ptr %7, align 4
 // HIP-NEXT:   %8 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 7
-// HIP-NEXT:   %data = load i64, ptr %8, align 4
+// HIP-NEXT:   %data = load i64, ptr %8, align 8
 // HIP-NEXT:   %9 = trunc i64 %data to i32
 // HIP-NEXT:   %type = and i32 %flags, 7
 // HIP-NEXT:   %10 = and i32 %flags, 8

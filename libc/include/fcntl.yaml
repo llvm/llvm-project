@@ -25,6 +25,7 @@ macros:
 types:
   - type_name: mode_t
   - type_name: off_t
+  - type_name: off64_t
   - type_name: pid_t
   - type_name: struct_f_owner_ex
   - type_name: struct_flock
@@ -72,4 +73,13 @@ functions:
       - type: int
       - type: off_t
       - type: off_t
+      - type: int
+  - name: posix_fadvise64
+    standards:
+      - gnu
+    return_type: int
+    arguments:
+      - type: int
+      - type: off64_t
+      - type: off64_t
       - type: int
