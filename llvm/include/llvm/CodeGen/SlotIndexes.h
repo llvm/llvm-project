@@ -396,6 +396,20 @@ class raw_ostream;
       return index.listEntry()->getInstr();
     }
 
+    /// Returns true if \p Idx refers to an entry created to mark a basic block
+    /// boundary. Such entries never have an instruction attached.
+    LLVM_ABI bool isBlockBoundaryIndex(SlotIndex Idx) const;
+
+    /// Returns true if \p Idx refers to an instruction that has been erased.
+    bool isStaleIndex(SlotIndex Idx) const {
+      return !getInstructionFromIndex(Idx) && !isBlockBoundaryIndex(Idx);
+    }
+
+    /// Returns the register slot of the closest instruction preceding a stale
+    /// \p Idx, or the start index of its basic block if there is none. Returns
+    /// \p Idx unchanged if it is not stale.
+    LLVM_ABI SlotIndex canonicalizeIndex(SlotIndex Idx) const;
+
     /// Returns the next non-null index, if one exists.
     /// Otherwise returns getLastIndex().
     SlotIndex getNextNonNullIndex(SlotIndex Index) {
