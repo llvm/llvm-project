@@ -41,6 +41,36 @@ module attributes {omp.is_target_device = false, omp.is_gpu = false, omp.version
     // CHECK: omp.region.cont:
     llvm.return
   }
+  // Preserve the producer's runtime selection across a multi-block region.
+  // CHECK-LABEL: define void @test_dispatch_runtime_novariants(
+  // CHECK-SAME: i1 %[[COND:[^ )]+]])
+  // CHECK: br label %[[ENTRY:[a-zA-Z0-9._]+]]
+  // CHECK: [[MERGE:[a-zA-Z0-9._]+]]:
+  // CHECK-NEXT: br label %[[CONT:[a-zA-Z0-9._]+]]
+  // CHECK: [[VARIANT:[a-zA-Z0-9._]+]]:
+  // CHECK-NEXT: call void @_QMfuncsPfoo_variant()
+  // CHECK-NEXT: br label %[[MERGE]]
+  // CHECK: [[BASE:[a-zA-Z0-9._]+]]:
+  // CHECK-NEXT: call void @_QMfuncsPfoo_dispatch()
+  // CHECK-NEXT: br label %[[MERGE]]
+  // CHECK: [[ENTRY]]:
+  // CHECK-NEXT: br i1 %[[COND]], label %[[BASE]], label %[[VARIANT]]
+  // CHECK: [[CONT]]:
+  // CHECK-NEXT: ret void
+  llvm.func @test_dispatch_runtime_novariants(%cond : i1) {
+    omp.dispatch novariants(%cond) {
+      llvm.cond_br %cond, ^base, ^variant
+    ^base:
+      llvm.call @_QMfuncsPfoo_dispatch() : () -> ()
+      llvm.br ^merge
+    ^variant:
+      llvm.call @_QMfuncsPfoo_variant() : () -> ()
+      llvm.br ^merge
+    ^merge:
+      omp.terminator
+    }
+    llvm.return
+  }
   // The producer of the region materializes the base/variant selection; the
   // LLVM IR translation deliberately ignores the nocontext operand.
   // CHECK-LABEL: define void @test_dispatch_nocontext(i1
