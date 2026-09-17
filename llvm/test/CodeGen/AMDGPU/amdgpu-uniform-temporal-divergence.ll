@@ -280,7 +280,7 @@ define amdgpu_kernel void @ballot_chain_uniform(i32 %v, ptr addrspace(1) %out) {
 ; PASS-CHECK-NEXT:    [[NONE:%.*]] = icmp eq i32 [[BALLOT]], 0
 ; PASS-CHECK-NEXT:    [[BALLOT2:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[TMP0]])
 ; PASS-CHECK-NEXT:    [[ANY:%.*]] = icmp ne i32 [[BALLOT2]], 0
-; PASS-CHECK-NEXT:    [[Z:%.*]] = zext i1 [[TMP0]] to i32
+; PASS-CHECK-NEXT:    [[Z:%.*]] = zext i1 [[ANY]] to i32
 ; PASS-CHECK-NEXT:    store i32 [[Z]], ptr addrspace(1) [[OUT]], align 4
 ; PASS-CHECK-NEXT:    ret void
 ;
@@ -288,7 +288,9 @@ define amdgpu_kernel void @ballot_chain_uniform(i32 %v, ptr addrspace(1) %out) {
 ; COMB-CHECK-SAME: i32 [[V:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
 ; COMB-CHECK-NEXT:  [[ENTRY:.*:]]
 ; COMB-CHECK-NEXT:    [[X:%.*]] = icmp slt i32 [[V]], 1
-; COMB-CHECK-NEXT:    [[Z:%.*]] = zext i1 [[X]] to i32
+; COMB-CHECK-NEXT:    [[BALLOT2:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[X]])
+; COMB-CHECK-NEXT:    [[ANY:%.*]] = icmp ne i32 [[BALLOT2]], 0
+; COMB-CHECK-NEXT:    [[Z:%.*]] = zext i1 [[ANY]] to i32
 ; COMB-CHECK-NEXT:    store i32 [[Z]], ptr addrspace(1) [[OUT]], align 4
 ; COMB-CHECK-NEXT:    ret void
 ;
