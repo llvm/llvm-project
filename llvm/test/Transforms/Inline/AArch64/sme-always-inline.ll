@@ -8,7 +8,7 @@ target triple = "aarch64"
 ;
 
 ; llvm.vscale returns a different value in/out of streaming mode, and is not safe to inline.
-define i64 @llvm_vscale() alwaysinline {
+define i64 @llvm_vscale() #0 alwaysinline {
 ; CHECK-LABEL: define i64 @llvm_vscale(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
@@ -18,8 +18,9 @@ define i64 @llvm_vscale() alwaysinline {
   ret i64 %vscale
 }
 
-define i64 @compatible_llvm_vscale_caller() {
-; CHECK-LABEL: define i64 @compatible_llvm_vscale_caller() {
+define i64 @compatible_llvm_vscale_caller() #0 {
+; CHECK-LABEL: define i64 @compatible_llvm_vscale_caller(
+; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[VSCALE_I:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    ret i64 [[VSCALE_I]]
 ;
@@ -27,9 +28,9 @@ define i64 @compatible_llvm_vscale_caller() {
   ret i64 %vscale
 }
 
-define i64 @incompatible_llvm_vscale_caller() "aarch64_pstate_sm_enabled" {
+define i64 @incompatible_llvm_vscale_caller() #0 "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define i64 @incompatible_llvm_vscale_caller(
-; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm_vscale()
 ; CHECK-NEXT:    ret i64 [[VSCALE]]
 ;
@@ -37,8 +38,107 @@ define i64 @incompatible_llvm_vscale_caller() "aarch64_pstate_sm_enabled" {
   ret i64 %vscale
 }
 
+; It is not safe to inline functions that have vscale-dependent operations in their body
+; when the streaming modes don't match up, unless the interface of the callee takes a
+; vl-dependent argument.
+define ptr @vscale_dependent_op(ptr %p, i64 %k) #0 alwaysinline {
+; CHECK-LABEL: define ptr @vscale_dependent_op(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[K:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P]], i64 [[K]]
+; CHECK-NEXT:    ret ptr [[RES]]
+;
+  %res = getelementptr <vscale x 4 x i32>, ptr %p, i64 %k
+  ret ptr %res
+}
+
+define ptr @incompatible_vscale_dependent_operation_sm(ptr %p) #0 "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define ptr @incompatible_vscale_dependent_operation_sm(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RES_I:%.*]] = call ptr @vscale_dependent_op(ptr [[P]], i64 4)
+; CHECK-NEXT:    ret ptr [[RES_I]]
+;
+  %res = call ptr @vscale_dependent_op(ptr %p, i64 4)
+  ret ptr %res
+}
+
+define ptr @vscale_dependent_op_vl_dependent_args(ptr %p, i64 %k, <vscale x 4 x i32> %other) #0 alwaysinline {
+; CHECK-LABEL: define ptr @vscale_dependent_op_vl_dependent_args(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[K:%.*]], <vscale x 4 x i32> [[OTHER:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P]], i64 [[K]]
+; CHECK-NEXT:    store <vscale x 4 x i32> [[OTHER]], ptr [[RES]], align 16
+; CHECK-NEXT:    ret ptr [[RES]]
+;
+  %res = getelementptr <vscale x 4 x i32>, ptr %p, i64 %k
+  store <vscale x 4 x i32> %other, ptr %res
+  ret ptr %res
+}
+
+define ptr @compatible_vscale_dependent_operation_sm(ptr %p) #0 "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define ptr @compatible_vscale_dependent_operation_sm(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P]], i64 4
+; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr [[RES]], align 16
+; CHECK-NEXT:    ret ptr [[RES]]
+;
+  %res = call ptr @vscale_dependent_op_vl_dependent_args(ptr %p, i64 4, <vscale x 4 x i32> zeroinitializer)
+  ret ptr %res
+}
+
+; functions with fixed-length vectors shouldn't be inlined if the streaming properties don't match
+; as performance may be affected.
+define void @fixed_length_vector_operation(ptr %p) #0 {
+; CHECK-LABEL: define void @fixed_length_vector_operation(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[P]], align 16
+; CHECK-NEXT:    ret void
+;
+  store <4 x i32> zeroinitializer, ptr %p
+  ret void
+}
+
+define void @fixed_length_vector_operation_caller_dont_inline(ptr %p) #0 "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define void @fixed_length_vector_operation_caller_dont_inline(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    call void @fixed_length_vector_operation(ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @fixed_length_vector_operation(ptr %p)
+  ret void
+}
+
+define i32 @strict_fp(i32 %in) #0 strictfp alwaysinline {
+; CHECK-LABEL: define i32 @strict_fp(
+; CHECK-SAME: i32 [[IN:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[IN]], 42
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %res = add i32 %in, 42;
+  ret i32 %res
+}
+
+define i32 @compatible_fp_environment_sm(i32 %in) #0 strictfp {
+; CHECK-LABEL: define i32 @compatible_fp_environment_sm(
+; CHECK-SAME: i32 [[IN:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    [[RES_I:%.*]] = add i32 [[IN]], 42
+; CHECK-NEXT:    ret i32 [[RES_I]]
+;
+  %res = call i32 @strict_fp(i32 %in)
+  ret i32 %res
+}
+
+; floating point environment is different in streaming mode, so don't inline.
+define i32 @incompatible_fp_environment_sm(i32 %in) #0 "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define i32 @incompatible_fp_environment_sm(
+; CHECK-SAME: i32 [[IN:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @strict_fp(i32 [[IN]])
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %res = call i32 @strict_fp(i32 %in)
+  ret i32 %res
+}
+
 ; NEON intrinsics are not safe in streaming mode
-define i32 @neon_intrinsic(<4 x i32> %in) alwaysinline {
+define i32 @neon_intrinsic(<4 x i32> %in) #0 alwaysinline {
 ; CHECK-LABEL: define i32 @neon_intrinsic(
 ; CHECK-SAME: <4 x i32> [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.aarch64.neon.uaddv.i32.v4i32(<4 x i32> [[IN]])
@@ -48,30 +148,9 @@ define i32 @neon_intrinsic(<4 x i32> %in) alwaysinline {
   ret i32 %res
 }
 
-define i32 @compatible_neon_intrinsic_caller(<4 x i32> %in) {
-; CHECK-LABEL: define i32 @compatible_neon_intrinsic_caller(
-; CHECK-SAME: <4 x i32> [[IN:%.*]]) {
-; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.aarch64.neon.uaddv.i32.v4i32(<4 x i32> [[IN]])
-; CHECK-NEXT:    ret i32 [[RES_I]]
-;
-  %vscale = call i32 @neon_intrinsic(<4 x i32> %in)
-  ret i32 %vscale
-}
-
-; a bit of a niche case, but if the caller uses ZA but is not in streaming-mode, a NEON intrinsic is safe.
-define i32 @compatible_neon_intrinsic_caller_za(<4 x i32> %in) "aarch64_pstate_za_enabled" {
-; CHECK-LABEL: define i32 @compatible_neon_intrinsic_caller_za(
-; CHECK-SAME: <4 x i32> [[IN:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.aarch64.neon.uaddv.i32.v4i32(<4 x i32> [[IN]])
-; CHECK-NEXT:    ret i32 [[RES_I]]
-;
-  %vscale = call i32 @neon_intrinsic(<4 x i32> %in)
-  ret i32 %vscale
-}
-
-define i32 @incompatible_neon_intrinsic_caller(<4 x i32> %in) "aarch64_pstate_sm_enabled" {
+define i32 @incompatible_neon_intrinsic_caller(<4 x i32> %in) #0 "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define i32 @incompatible_neon_intrinsic_caller(
-; CHECK-SAME: <4 x i32> [[IN:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: <4 x i32> [[IN:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @neon_intrinsic(<4 x i32> [[IN]])
 ; CHECK-NEXT:    ret i32 [[VSCALE]]
 ;
@@ -79,7 +158,18 @@ define i32 @incompatible_neon_intrinsic_caller(<4 x i32> %in) "aarch64_pstate_sm
   ret i32 %vscale
 }
 
-define i64 @intrinsic_with_scalable_type(ptr %p) alwaysinline {
+; a bit of a niche case, but if the caller uses ZA but is not in streaming-mode, a NEON intrinsic is safe.
+define i32 @compatible_neon_intrinsic_caller_za(<4 x i32> %in) #0 "aarch64_pstate_za_enabled" {
+; CHECK-LABEL: define i32 @compatible_neon_intrinsic_caller_za(
+; CHECK-SAME: <4 x i32> [[IN:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-NEXT:    [[RES_I:%.*]] = call i32 @llvm.aarch64.neon.uaddv.i32.v4i32(<4 x i32> [[IN]])
+; CHECK-NEXT:    ret i32 [[RES_I]]
+;
+  %vscale = call i32 @neon_intrinsic(<4 x i32> %in)
+  ret i32 %vscale
+}
+
+define i64 @intrinsic_with_scalable_type(ptr %p) #0 alwaysinline {
 ; CHECK-LABEL: define i64 @intrinsic_with_scalable_type(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[LD:%.*]] = load <vscale x 2 x i64>, ptr [[P]], align 16
@@ -91,9 +181,9 @@ define i64 @intrinsic_with_scalable_type(ptr %p) alwaysinline {
   ret i64 %res
 }
 
-define i64 @compatible_sve_intrinsic_caller(ptr %p) {
+define i64 @compatible_sve_intrinsic_caller(ptr %p) #0 {
 ; CHECK-LABEL: define i64 @compatible_sve_intrinsic_caller(
-; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[LD_I:%.*]] = load <vscale x 2 x i64>, ptr [[P]], align 16
 ; CHECK-NEXT:    [[RES_I:%.*]] = call i64 @llvm.vector.reduce.add.nxv2i64(<vscale x 2 x i64> [[LD_I]])
 ; CHECK-NEXT:    ret i64 [[RES_I]]
@@ -102,9 +192,9 @@ define i64 @compatible_sve_intrinsic_caller(ptr %p) {
   ret i64 %res
 }
 
-define i64 @incompatible_sve_intrinsic_caller(ptr %p) "aarch64_pstate_sm_enabled" {
+define i64 @incompatible_sve_intrinsic_caller(ptr %p) #0 "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define i64 @incompatible_sve_intrinsic_caller(
-; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[RES:%.*]] = call i64 @intrinsic_with_scalable_type(ptr [[P]])
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
@@ -118,7 +208,7 @@ define i64 @incompatible_sve_intrinsic_caller(ptr %p) "aarch64_pstate_sm_enabled
 
 declare i64 @__arm_get_current_vg()
 
-define i64 @current_vg() alwaysinline {
+define i64 @current_vg() #0 alwaysinline {
 ; CHECK-LABEL: define i64 @current_vg(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @__arm_get_current_vg()
@@ -128,8 +218,9 @@ define i64 @current_vg() alwaysinline {
   ret i64 %vscale
 }
 
-define i64 @compatible_current_vg_caller() {
-; CHECK-LABEL: define i64 @compatible_current_vg_caller() {
+define i64 @compatible_current_vg_caller() #0 {
+; CHECK-LABEL: define i64 @compatible_current_vg_caller(
+; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    [[VSCALE_I:%.*]] = call i64 @__arm_get_current_vg()
 ; CHECK-NEXT:    ret i64 [[VSCALE_I]]
 ;
@@ -137,9 +228,9 @@ define i64 @compatible_current_vg_caller() {
   ret i64 %vscale
 }
 
-define i64 @incompatible_current_vg_caller() "aarch64_pstate_sm_enabled" {
+define i64 @incompatible_current_vg_caller() #0 "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define i64 @incompatible_current_vg_caller(
-; CHECK-SAME: ) #[[ATTR1]] {
+; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @current_vg()
 ; CHECK-NEXT:    ret i64 [[VSCALE]]
 ;
@@ -151,28 +242,19 @@ define i64 @incompatible_current_vg_caller() "aarch64_pstate_sm_enabled" {
 ; Be cautious about inlining anything with inline asm when streaming/ZA properties are incompatible,
 ;
 
-define void @inline_asm() alwaysinline {
+define void @inline_asm() #0 alwaysinline {
 ; CHECK-LABEL: define void @inline_asm(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    call void asm sideeffect "smstart za
+; CHECK-NEXT:    call void asm sideeffect "", ""()
 ; CHECK-NEXT:    ret void
 ;
-  call void asm sideeffect "smstart za; svzero za; smstop za", ""()
+  call void asm sideeffect "", ""()
   ret void
 }
 
-define void @compatible_inline_asm() {
-; CHECK-LABEL: define void @compatible_inline_asm() {
-; CHECK-NEXT:    call void asm sideeffect "smstart za
-; CHECK-NEXT:    ret void
-;
-  call void @inline_asm()
-  ret void
-}
-
-define void @incompatible_inline_asm() "aarch64_inout_za" {
-; CHECK-LABEL: define void @incompatible_inline_asm(
-; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
+define void @incompatible_inline_asm_sm() #0 "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define void @incompatible_inline_asm_sm(
+; CHECK-SAME: ) #[[ATTR2]] {
 ; CHECK-NEXT:    call void @inline_asm()
 ; CHECK-NEXT:    ret void
 ;
@@ -180,3 +262,35 @@ define void @incompatible_inline_asm() "aarch64_inout_za" {
   ret void
 }
 
+define void @incompatible_inline_asm_za() #0 "aarch64_inout_za" {
+; CHECK-LABEL: define void @incompatible_inline_asm_za(
+; CHECK-SAME: ) #[[ATTR6:[0-9]+]] {
+; CHECK-NEXT:    call void @inline_asm_clobbers_za()
+; CHECK-NEXT:    ret void
+;
+  call void @inline_asm_clobbers_za()
+  ret void
+}
+
+define void @inline_asm_clobbers_za() #0 alwaysinline {
+; CHECK-LABEL: define void @inline_asm_clobbers_za(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    call void asm sideeffect "", "~{za}"()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "", "~{za}"()
+  ret void
+}
+
+; If the inline asm doesn't clobber 'za', we know it doesn't use/touch it.
+define void @compatible_inline_asm_za() #0 "aarch64_inout_za" {
+; CHECK-LABEL: define void @compatible_inline_asm_za(
+; CHECK-SAME: ) #[[ATTR6]] {
+; CHECK-NEXT:    call void asm sideeffect "", ""()
+; CHECK-NEXT:    ret void
+;
+  call void @inline_asm()
+  ret void
+}
+
+attributes #0 = { "target-features"="+sve,+sme" }
