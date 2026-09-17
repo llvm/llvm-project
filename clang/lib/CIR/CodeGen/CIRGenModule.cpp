@@ -1705,6 +1705,20 @@ bool CIRGenModule::shouldEmitFunction(GlobalDecl gd) {
   if (fd->isInlineBuiltinDeclaration())
     return true;
 
+  if (codeGenOpts.OptimizationLevel == 0 && !fd->hasAttr<AlwaysInlineAttr>())
+    return false;
+
+  // We don't import function bodies from other named module units since that
+  // behavior may break ABI compatibility of the current unit.
+  if (const Module *m = fd->getOwningModule();
+      m && m->getTopLevelModule()->isNamedModule() &&
+      getASTContext().getCurrentNamedModule() != m->getTopLevelModule()) {
+    errorNYI(fd->getSourceRange(), "should emit function in a named module");
+  }
+
+  if (fd->hasAttr<NoInlineAttr>())
+    return false;
+
   // PR9614 / glibc btowc workaround: an available_externally function whose
   // body just calls itself (via asm label or __builtin_* lowering on the
   // same name) is not a valid stand-in for the real implementation.  Drop
