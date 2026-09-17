@@ -26,6 +26,7 @@ add_clang_library(MLIRCIRInterfaces
 
   LINK_LIBS
   MLIRIR
+  MLIRLLVMDialect
   MLIRPtrMemorySpaceInterfaces
   MLIRSupport
  )

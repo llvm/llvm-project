@@ -13,6 +13,7 @@
 #ifndef CLANG_CIR_INTERFACES_CIR_OP_H
 #define CLANG_CIR_INTERFACES_CIR_OP_H
 
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"

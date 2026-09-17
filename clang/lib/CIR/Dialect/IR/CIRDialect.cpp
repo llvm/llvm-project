@@ -302,7 +302,6 @@ template <typename Ty> struct EnumTraits {};
 
 REGISTER_ENUM_TYPE(GlobalLinkageKind);
 REGISTER_ENUM_TYPE(VisibilityKind);
-REGISTER_ENUM_TYPE(ModRefInfo);
 REGISTER_ENUM_TYPE(CallingConv);
 } // namespace
 
@@ -332,111 +331,6 @@ static ParseResult parseCIRKeyword(AsmParser &parser, RetTy &result) {
   if (index == -1)
     return failure();
   result = static_cast<RetTy>(index);
-  return success();
-}
-
-/// The memory classes that can be named individually, in the order they
-/// print.  Positional: parseMemoryEffects and printMemoryEffects both index
-/// by position, so a class added here needs an access added alongside it in
-/// both.  The spellings are LLVM's own, which underscores the target pair
-/// but not the rest.
-static constexpr llvm::StringLiteral memoryClassNames[] = {
-    "argmem", "inaccessiblemem", "errnomem", "target_mem0", "target_mem1"};
-
-/// Print memory effects in LLVM's compact form, except that the two target
-/// classes always print by name rather than collapsing to `target_mem`.  The
-/// access covering every class not named individually comes first, then only
-/// the classes differing from it.  That leading access is left out when it is
-/// `none` and some class does differ, since an unnamed class reads back as
-/// `none`.
-static void printMemoryEffects(mlir::AsmPrinter &printer,
-                               cir::MemoryEffectsAttr effects) {
-  cir::ModRefInfo other = effects.getOther();
-  printer << " memory(";
-  if (effects.isUniform()) {
-    printer << cir::stringifyModRefInfo(other) << ")";
-    return;
-  }
-
-  bool needComma = false;
-  if (other != cir::ModRefInfo::NoModRef) {
-    printer << cir::stringifyModRefInfo(other);
-    needComma = true;
-  }
-
-  cir::ModRefInfo classes[] = {
-      effects.getArgMem(), effects.getInaccessibleMem(), effects.getErrnoMem(),
-      effects.getTargetMem0(), effects.getTargetMem1()};
-  for (auto [name, info] : llvm::zip_equal(memoryClassNames, classes)) {
-    if (info == other)
-      continue;
-    if (needComma)
-      printer << ", ";
-    printer << name << ": " << cir::stringifyModRefInfo(info);
-    needComma = true;
-  }
-  printer << ")";
-}
-
-/// Parse the compact form printed by printMemoryEffects.  The opening
-/// `memory` keyword has already been consumed.
-static mlir::ParseResult parseMemoryEffects(mlir::AsmParser &parser,
-                                            cir::MemoryEffectsAttr &result) {
-  if (parser.parseLParen().failed())
-    return failure();
-
-  // A class left unnamed inherits `other`, which is `none` unless the spelling
-  // opens with a bare access.
-  cir::ModRefInfo other = cir::ModRefInfo::NoModRef;
-  std::array<std::optional<cir::ModRefInfo>, std::size(memoryClassNames)> named;
-
-  // Record one named class, with its name and colon already consumed.
-  auto parseClass = [&](llvm::SMLoc loc, llvm::StringRef name) -> ParseResult {
-    const auto *entry = llvm::find(memoryClassNames, name);
-    if (entry == std::end(memoryClassNames))
-      return parser.emitError(loc, "unknown memory class '") << name << "'";
-    llvm::SMLoc accessLoc = parser.getCurrentLocation();
-    cir::ModRefInfo info;
-    if (parseCIRKeyword<cir::ModRefInfo>(parser, info).failed())
-      return parser.emitError(accessLoc, "expected a memory access kind");
-    std::optional<cir::ModRefInfo> &slot =
-        named[entry - std::begin(memoryClassNames)];
-    if (slot)
-      return parser.emitError(loc, "duplicate memory class '") << name << "'";
-    slot = info;
-    return success();
-  };
-
-  llvm::SMLoc firstLoc = parser.getCurrentLocation();
-  llvm::StringRef first;
-  if (parser.parseKeyword(&first).failed())
-    return failure();
-
-  if (parser.parseOptionalColon().succeeded()) {
-    if (parseClass(firstLoc, first).failed())
-      return failure();
-  } else if (std::optional<cir::ModRefInfo> parsed =
-                 cir::symbolizeModRefInfo(first)) {
-    other = *parsed;
-  } else {
-    return parser.emitError(firstLoc, "expected a memory access kind or class");
-  }
-
-  while (parser.parseOptionalComma().succeeded()) {
-    llvm::SMLoc loc = parser.getCurrentLocation();
-    llvm::StringRef name;
-    if (parser.parseKeyword(&name).failed() || parser.parseColon().failed() ||
-        parseClass(loc, name).failed())
-      return failure();
-  }
-
-  if (parser.parseRParen().failed())
-    return failure();
-
-  result = cir::MemoryEffectsAttr::get(
-      parser.getContext(), other, named[0].value_or(other),
-      named[1].value_or(other), named[2].value_or(other),
-      named[3].value_or(other), named[4].value_or(other));
   return success();
 }
 
@@ -1463,13 +1357,6 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
     result.addAttribute(CIRDialect::getWillReturnAttrName(),
                         mlir::UnitAttr::get(parser.getContext()));
 
-  if (parser.parseOptionalKeyword("memory").succeeded()) {
-    cir::MemoryEffectsAttr effects;
-    if (parseMemoryEffects(parser, effects).failed())
-      return failure();
-    result.addAttribute(CIRDialect::getMemoryEffectsAttrName(), effects);
-  }
-
   if (parser.parseOptionalAttrDict(result.attributes))
     return ::mlir::failure();
 
@@ -1529,7 +1416,6 @@ static void printCallCommon(mlir::Operation *op,
                             mlir::FlatSymbolRefAttr calleeSym,
                             mlir::Value indirectCallee,
                             mlir::OpAsmPrinter &printer, bool isNothrow,
-                            cir::MemoryEffectsAttr memoryEffects,
                             ArrayAttr argAttrs, ArrayAttr resAttrs,
                             mlir::Block *normalDest = nullptr,
                             mlir::Block *unwindDest = nullptr) {
@@ -1570,16 +1456,12 @@ static void printCallCommon(mlir::Operation *op,
   if (op->hasAttr(CIRDialect::getWillReturnAttrName()))
     printer << " willreturn";
 
-  if (memoryEffects)
-    printMemoryEffects(printer, memoryEffects);
-
   llvm::SmallVector<::llvm::StringRef> elidedAttrs = {
       CIRDialect::getCalleeAttrName(),
       CIRDialect::getMustTailAttrName(),
       CIRDialect::getNoThrowAttrName(),
       CIRDialect::getNoUnwindAttrName(),
       CIRDialect::getWillReturnAttrName(),
-      CIRDialect::getMemoryEffectsAttrName(),
       CIRDialect::getOperandSegmentSizesAttrName(),
       llvm::StringRef("res_attrs"),
       llvm::StringRef("arg_attrs")};
@@ -1612,9 +1494,8 @@ mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
 
 void cir::CallOp::print(mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
-  cir::MemoryEffectsAttr memoryEffects = getMemoryEffectsAttr();
   printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
-                  memoryEffects, getArgAttrsAttr(), getResAttrsAttr());
+                  getArgAttrsAttr(), getResAttrsAttr());
 }
 
 static LogicalResult
@@ -1728,10 +1609,9 @@ mlir::ParseResult cir::TryCallOp::parse(mlir::OpAsmParser &parser,
 
 void cir::TryCallOp::print(::mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
-  cir::MemoryEffectsAttr memoryEffects = getMemoryEffectsAttr();
   printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
-                  memoryEffects, getArgAttrsAttr(), getResAttrsAttr(),
-                  getNormalDest(), getUnwindDest());
+                  getArgAttrsAttr(), getResAttrsAttr(), getNormalDest(),
+                  getUnwindDest());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2907,13 +2787,6 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       }).failed())
     return failure();
 
-  if (parser.parseOptionalKeyword("memory").succeeded()) {
-    cir::MemoryEffectsAttr effects;
-    if (parseMemoryEffects(parser, effects).failed())
-      return failure();
-    state.addAttribute(CIRDialect::getMemoryEffectsAttrName(), effects);
-  }
-
   // Parse optional annotations attribute (an ArrayAttr of AnnotationAttr).
   mlir::StringAttr annotationsNameAttr = getAnnotationsAttrName(state.name);
   mlir::ArrayAttr annotationsAttr;
@@ -2926,12 +2799,34 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   if (parser.parseOptionalAttrDictWithKeyword(parsedAttrs))
     return failure();
 
+  // memory_effects is the only declared attribute with no dedicated syntax, so
+  // it is the only one the explicit list may carry.
   for (StringRef disallowed : cir::FuncOp::getAttributeNames()) {
+    if (disallowed == CIRDialect::getMemoryEffectsAttrName())
+      continue;
     if (parsedAttrs.get(disallowed))
       return parser.emitError(loc, "attribute '")
              << disallowed
              << "' should not be specified in the explicit attribute list";
   }
+
+  // Being a declared attribute, memory_effects is stored as a property, so a
+  // value of the wrong kind would be dropped without a diagnostic.
+  if (mlir::Attribute effects =
+          parsedAttrs.get(CIRDialect::getMemoryEffectsAttrName()))
+    if (!mlir::isa<mlir::LLVM::MemoryEffectsAttr>(effects))
+      return parser.emitError(loc, "attribute '")
+             << CIRDialect::getMemoryEffectsAttrName()
+             << "' must be a #llvm.memory_effects attribute";
+
+  // These two are discardable on a function, so nothing else checks that they
+  // carry the unit value the passes testing for their presence assume.
+  for (llvm::StringRef name :
+       {CIRDialect::getNoUnwindAttrName(), CIRDialect::getWillReturnAttrName()})
+    if (mlir::Attribute flag = parsedAttrs.get(name))
+      if (!mlir::isa<mlir::UnitAttr>(flag))
+        return parser.emitError(loc, "attribute '")
+               << name << "' must be a unit attribute";
 
   state.attributes.append(parsedAttrs);
 
@@ -3098,16 +2993,18 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
       p << "(" << globalDtorPriority.value() << ")";
   }
 
-  if (cir::MemoryEffectsAttr memoryEffects = getMemoryEffectsAttr())
-    printMemoryEffects(p, memoryEffects);
-
   if (mlir::ArrayAttr annotations = getAnnotationsAttr()) {
     p << ' ';
     p.printAttribute(annotations);
   }
 
-  function_interface_impl::printFunctionAttributes(
-      p, *this, cir::FuncOp::getAttributeNames());
+  // Every declared attribute is printed by the syntax above, except
+  // memory_effects, which has none and so must reach the dictionary.
+  llvm::SmallVector<llvm::StringRef> elidedAttrs;
+  for (llvm::StringRef name : cir::FuncOp::getAttributeNames())
+    if (name != CIRDialect::getMemoryEffectsAttrName())
+      elidedAttrs.push_back(name);
+  function_interface_impl::printFunctionAttributes(p, *this, elidedAttrs);
 
   // Print the body if this is not an external function.
   Region &body = getOperation()->getRegion(0);

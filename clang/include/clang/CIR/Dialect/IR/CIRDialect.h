@@ -13,6 +13,7 @@
 #ifndef CLANG_CIR_DIALECT_IR_CIRDIALECT_H
 #define CLANG_CIR_DIALECT_IR_CIRDIALECT_H
 
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"

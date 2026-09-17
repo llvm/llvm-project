@@ -389,19 +389,24 @@ void CIRGenModule::constructAttributeList(
 
     assert(!cir::MissingFeatures::opCallAttrs());
 
-    // 'const' and 'pure' imply more than memory effects: the callee also
-    // cannot unwind and cannot loop forever.  Each gets its own attribute,
-    // since none of the three can be derived from another.
-    std::optional<cir::ModRefInfo> access;
+    std::optional<mlir::LLVM::ModRefInfo> access;
     if (targetDecl->hasAttr<ConstAttr>())
-      access = cir::ModRefInfo::NoModRef;
+      access = mlir::LLVM::ModRefInfo::NoModRef;
     else if (targetDecl->hasAttr<PureAttr>())
-      access = cir::ModRefInfo::Ref;
+      access = mlir::LLVM::ModRefInfo::Ref;
 
     if (access) {
+      // 'const' and 'pure' describe the callee as a whole, so every class of
+      // memory carries the same access.
       attrs.set(cir::CIRDialect::getMemoryEffectsAttrName(),
-                cir::MemoryEffectsAttr::get(&getMLIRContext(), *access));
+                mlir::LLVM::MemoryEffectsAttr::get(
+                    &getMLIRContext(), /*other=*/*access, /*argMem=*/*access,
+                    /*inaccessibleMem=*/*access, /*errnoMem=*/*access,
+                    /*targetMem0=*/*access, /*targetMem1=*/*access));
+      // 'const' and 'pure' attributed functions are also nounwind.
       addUnitAttr(cir::CIRDialect::getNoUnwindAttrName());
+      // gcc specifies that 'const' and 'pure' functions cannot have infinite
+      // loops.
       addUnitAttr(cir::CIRDialect::getWillReturnAttrName());
     }
 

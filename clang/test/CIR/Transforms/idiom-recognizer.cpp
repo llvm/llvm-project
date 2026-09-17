@@ -43,7 +43,7 @@ char *test_find(char *first, char *last, const char &value) {
 // FINAL: %[[LAST:.*]] = cir.load{{.*}} %[[LAST_ADDR]] :
 // FINAL: %[[VALUE:.*]] = cir.load{{.*}} %[[VALUE_ADDR]] :
 // FINAL: cir.call @_ZSt4findIPccET_S1_S1_RKT0_(%[[FIRST]], %[[LAST]], %[[VALUE]])
-// FINAL-SAME: nothrow nounwind willreturn memory(read)
+// FINAL-SAME: nothrow nounwind willreturn {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read, errnoMem = read, targetMem0 = read, targetMem1 = read>}
 // FINAL-SAME: {llvm.noundef}
 // FINAL-SAME: -> (!cir.ptr<!s8i> {llvm.noundef})
 // FINAL-NOT: cir.call @_ZSt4find

@@ -430,41 +430,12 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
   return value;
 }
 
-static mlir::LLVM::ModRefInfo convertModRefInfo(cir::ModRefInfo info) {
-  switch (info) {
-  case cir::ModRefInfo::NoModRef:
-    return mlir::LLVM::ModRefInfo::NoModRef;
-  case cir::ModRefInfo::Ref:
-    return mlir::LLVM::ModRefInfo::Ref;
-  case cir::ModRefInfo::Mod:
-    return mlir::LLVM::ModRefInfo::Mod;
-  case cir::ModRefInfo::ModRef:
-    return mlir::LLVM::ModRefInfo::ModRef;
-  }
-  llvm_unreachable("unhandled cir::ModRefInfo");
-}
-
-/// A null input stays null, which is how both dialects spell unknown effects.
-static mlir::LLVM::MemoryEffectsAttr
-convertMemoryEffects(mlir::MLIRContext *ctx, cir::MemoryEffectsAttr effects) {
-  if (!effects)
-    return {};
-
-  return mlir::LLVM::MemoryEffectsAttr::get(
-      ctx, convertModRefInfo(effects.getOther()),
-      convertModRefInfo(effects.getArgMem()),
-      convertModRefInfo(effects.getInaccessibleMem()),
-      convertModRefInfo(effects.getErrnoMem()),
-      convertModRefInfo(effects.getTargetMem0()),
-      convertModRefInfo(effects.getTargetMem1()));
-}
-
 static void convertCallEffects(mlir::Operation *callOp, bool isNothrow,
-                               cir::MemoryEffectsAttr effects,
+                               mlir::LLVM::MemoryEffectsAttr effects,
                                mlir::LLVM::MemoryEffectsAttr &memoryEffect,
                                bool &noUnwind, bool &willReturn,
                                bool &noReturn) {
-  memoryEffect = convertMemoryEffects(callOp->getContext(), effects);
+  memoryEffect = effects;
   // CIR keeps two separate cannot-unwind facts, nothrow for a callee declared
   // not to throw and nounwind for a const or pure callee.  LLVM has only
   // nounwind, so either one sets it.
@@ -2269,6 +2240,7 @@ static mlir::LogicalResult rewriteCallOrInvoke(
   assert(!cir::MissingFeatures::opCallCallConv());
 
   if (landingPadBlock) {
+    assert(!cir::MissingFeatures::opCallInvokeAttrs());
     auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::InvokeOp>(
         op, llvmFnTy, calleeAttr, callOperands, continueBlock,
         mlir::ValueRange{}, landingPadBlock, mlir::ValueRange{});
@@ -2814,8 +2786,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
 
-  if (cir::MemoryEffectsAttr effects = op.getMemoryEffectsAttr())
-    fn.setMemoryEffectsAttr(convertMemoryEffects(fn.getContext(), effects));
+  if (mlir::LLVM::MemoryEffectsAttr effects = op.getMemoryEffectsAttr())
+    fn.setMemoryEffectsAttr(effects);
 
   if (op->hasAttr(CIRDialect::getNoUnwindAttrName()))
     fn.setNoUnwind(true);
