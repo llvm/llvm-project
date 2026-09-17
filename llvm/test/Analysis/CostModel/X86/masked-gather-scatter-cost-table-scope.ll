@@ -6,12 +6,19 @@
 ; feature bit, so if enabling it ever moves one of these costs, the pair
 ; disagrees and the test fails.
 ;
-; The shapes here are indexed through vectors of pointers, whose index width is
+; Most shapes here are indexed through vectors of pointers, whose index width is
 ; not open to question. Where the index comes from a GEP the feature does move
 ; the part count, and with it the cost kinds derived from that count, because it
 ; takes the real index width at every VF instead of only at VF 16 and above.
-; That difference is deliberate and is pinned in
+; That difference is deliberate; its magnitudes are pinned in
 ; masked-gather-scatter-cost-table-index-width.ll.
+;
+; The last shape is GEP-indexed, and is here rather than there because the two
+; halves of "scope" pull apart only on that form. Moving the part count must not
+; reach a target the table cannot serve, and must not be confined to Zen either:
+; what admits it is AVX-512, not the vendor. So the same GEP shape is checked
+; inert on a target without AVX-512, and checked moving on one with AVX-512 that
+; is not Zen.
 
 ; RUN: opt < %s -S -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" \
 ; RUN:   -disable-output -cost-kind=latency -mcpu=znver4 2>&1 \
@@ -50,6 +57,24 @@
 ; RUN: opt < %s -S -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" \
 ; RUN:   -disable-output -cost-kind=code-size -mcpu=skylake \
 ; RUN:   -mattr=+prefer-gs-cost-table 2>&1 | FileCheck %s --check-prefix=NOAVX512-CODESIZE
+
+; The same inertness on a target without AVX-512, over every cost kind at once,
+; for the GEP-indexed shape. Both runs share a prefix, so any movement fails.
+; RUN: opt < %s -S -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" \
+; RUN:   -disable-output -cost-kind=all -mcpu=skylake 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=NOAVX512-ALL
+; RUN: opt < %s -S -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" \
+; RUN:   -disable-output -cost-kind=all -mcpu=skylake \
+; RUN:   -mattr=+prefer-gs-cost-table 2>&1 | FileCheck %s --check-prefix=NOAVX512-ALL
+
+; An AVX-512 target that is not Zen. Here the feature is not inert, and these
+; two runs take separate prefixes to record what it moves.
+; RUN: opt < %s -S -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" \
+; RUN:   -disable-output -cost-kind=all -mcpu=skylake-avx512 \
+; RUN:   -mattr=-prefer-gs-cost-table 2>&1 | FileCheck %s --check-prefix=SKX-OFF
+; RUN: opt < %s -S -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" \
+; RUN:   -disable-output -cost-kind=all -mcpu=skylake-avx512 \
+; RUN:   -mattr=+prefer-gs-cost-table 2>&1 | FileCheck %s --check-prefix=SKX-ON
 
 define <16 x i32> @gather_v16i32(<16 x ptr> %ptrs, <16 x i1> %mask) {
 ; ZEN-LAT-LABEL: 'gather_v16i32'
@@ -112,4 +137,23 @@ define void @scatter_v8i64(<8 x i64> %val, <8 x ptr> %ptrs, <8 x i1> %mask) {
 ; NOAVX512-CODESIZE: Cost Model: Found an estimated cost of 37 for instruction: call void
   call void @llvm.masked.scatter.v8i64.v8p0(<8 x i64> %val, <8 x ptr> %ptrs, i32 8, <8 x i1> %mask)
   ret void
+}
+
+; The remainder length again, but indexed by a GEP over dwords, which is the
+; only form that reaches the part count the feature corrects. Without AVX-512
+; nothing moves. With it, the twelve lanes are one instruction rather than two,
+; and the three cost kinds derived from that count follow the count down; the
+; code size of 1 is what llc emits for this shape on both AVX-512 targets, so
+; the feature is the accurate side of the pair here, not merely the different
+; one. znver4 moves identically and is checked in the index-width test.
+define <12 x i32> @gather_v12i32_dword_gep(ptr %base, <12 x i32> %idx, <12 x i1> %mask) {
+; NOAVX512-ALL-LABEL: 'gather_v12i32_dword_gep'
+; NOAVX512-ALL: Cost Model: Found costs of RThru:20 CodeSize:4 Lat:56 SizeLat:20 for: %v = call
+; SKX-OFF-LABEL: 'gather_v12i32_dword_gep'
+; SKX-OFF: Cost Model: Found costs of RThru:16 CodeSize:2 Lat:52 SizeLat:16 for: %v = call
+; SKX-ON-LABEL: 'gather_v12i32_dword_gep'
+; SKX-ON: Cost Model: Found costs of RThru:35 CodeSize:1 Lat:50 SizeLat:14 for: %v = call
+  %ptrs = getelementptr inbounds i32, ptr %base, <12 x i32> %idx
+  %v = call <12 x i32> @llvm.masked.gather.v12i32.v12p0(<12 x ptr> %ptrs, i32 4, <12 x i1> %mask, <12 x i32> poison)
+  ret <12 x i32> %v
 }
