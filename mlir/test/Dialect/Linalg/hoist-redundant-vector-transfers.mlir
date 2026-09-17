@@ -1463,9 +1463,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK-NEXT:        scf.yield %[[USE]]
 // CHECK-NEXT:      }
 // CHECK:           vector.mask %[[MASK]] {{.*}}transfer_write %[[FOR]], %[[MEM]]
-func.func @hoist_masked_transfer_pair(%mem: memref<?xf32>, %mask: vector<4xi1>, %lb: index, %ub: index, %step: index) {
-  %c0 = arith.constant 0 : index
-  %pad = arith.constant 0.0 : f32
+func.func @hoist_masked_transfer_pair(%mem: memref<?xf32>, %mask: vector<4xi1>, %lb: index, %ub: index, %step: index, %c0: index, %pad: f32) {
   scf.for %i = %lb to %ub step %step {
     %r = vector.mask %mask { vector.transfer_read %mem[%c0], %pad : memref<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
     %u = "test.val_use"(%r) : (vector<4xf32>) -> vector<4xf32>
@@ -1492,9 +1490,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK:           %[[READ:.*]] = vector.mask %{{.*}}transfer_read
 // CHECK:           scf.for
 // CHECK:             "test.some_use"(%[[READ]])
-func.func @hoist_masked_singleton_read(%mem: memref<?xf32>, %mask: vector<4xi1>, %lb: index, %ub: index, %step: index) {
-  %c0 = arith.constant 0 : index
-  %pad = arith.constant 0.0 : f32
+func.func @hoist_masked_singleton_read(%mem: memref<?xf32>, %mask: vector<4xi1>, %lb: index, %ub: index, %step: index, %c0: index, %pad: f32) {
   scf.for %i = %lb to %ub step %step {
     %r = vector.mask %mask { vector.transfer_read %mem[%c0], %pad : memref<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
     "test.some_use"(%r) : (vector<4xf32>) -> ()
@@ -1522,9 +1518,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK:             vector.mask {{.*}}transfer_read
 // CHECK:             vector.transfer_write
 // CHECK:           }
-func.func @negative_hoist_masked_read_unmasked_write(%mem: memref<?xf32>, %mask: vector<4xi1>, %lb: index, %ub: index, %step: index) {
-  %c0 = arith.constant 0 : index
-  %pad = arith.constant 0.0 : f32
+func.func @negative_hoist_masked_read_unmasked_write(%mem: memref<?xf32>, %mask: vector<4xi1>, %lb: index, %ub: index, %step: index, %c0: index, %pad: f32) {
   scf.for %i = %lb to %ub step %step {
     %r = vector.mask %mask { vector.transfer_read %mem[%c0], %pad : memref<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
     %u = "test.val_use"(%r) : (vector<4xf32>) -> vector<4xf32>
@@ -1552,13 +1546,11 @@ module attributes {transform.with_named_sequence} {
 // CHECK:             vector.mask {{.*}}transfer_read
 // CHECK:             vector.mask {{.*}}transfer_write
 // CHECK:           }
-func.func @negative_hoist_masked_pair_distinct_masks(%mem: memref<?xf32>, %mask0: vector<4xi1>, %mask1: vector<4xi1>, %lb: index, %ub: index, %step: index) {
-  %c0 = arith.constant 0 : index
-  %pad = arith.constant 0.0 : f32
+func.func @negative_hoist_masked_pair_distinct_masks(%mem: memref<?xf32>, %mask_read: vector<4xi1>, %mask_write: vector<4xi1>, %lb: index, %ub: index, %step: index, %c0: index, %pad: f32) {
   scf.for %i = %lb to %ub step %step {
-    %r = vector.mask %mask0 { vector.transfer_read %mem[%c0], %pad : memref<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
+    %r = vector.mask %mask_read { vector.transfer_read %mem[%c0], %pad : memref<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
     %u = "test.val_use"(%r) : (vector<4xf32>) -> vector<4xf32>
-    vector.mask %mask1 { vector.transfer_write %u, %mem[%c0] : vector<4xf32>, memref<?xf32> } : vector<4xi1>
+    vector.mask %mask_write { vector.transfer_write %u, %mem[%c0] : vector<4xf32>, memref<?xf32> } : vector<4xi1>
   }
   return
 }
@@ -1583,9 +1575,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK:             vector.transfer_read
 // CHECK:             vector.mask {{.*}}transfer_write
 // CHECK:           }
-func.func @negative_hoist_unmasked_read_masked_write(%mem: memref<?xf32>, %mask: vector<4xi1>, %lb: index, %ub: index, %step: index) {
-  %c0 = arith.constant 0 : index
-  %pad = arith.constant 0.0 : f32
+func.func @negative_hoist_unmasked_read_masked_write(%mem: memref<?xf32>, %mask: vector<4xi1>, %lb: index, %ub: index, %step: index, %c0: index, %pad: f32) {
   scf.for %i = %lb to %ub step %step {
     %r = vector.transfer_read %mem[%c0], %pad : memref<?xf32>, vector<4xf32>
     %u = "test.val_use"(%r) : (vector<4xf32>) -> vector<4xf32>
@@ -1614,9 +1604,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK:             vector.mask {{.*}}transfer_read
 // CHECK:             vector.mask {{.*}}transfer_write
 // CHECK:           }
-func.func @negative_hoist_masked_pair_loop_variant_mask(%mem: memref<?xf32>, %lb: index, %ub: index, %step: index) {
-  %c0 = arith.constant 0 : index
-  %pad = arith.constant 0.0 : f32
+func.func @negative_hoist_masked_pair_loop_variant_mask(%mem: memref<?xf32>, %lb: index, %ub: index, %step: index, %c0: index, %pad: f32) {
   scf.for %i = %lb to %ub step %step {
     %mask = vector.create_mask %i : vector<4xi1>
     %r = vector.mask %mask { vector.transfer_read %mem[%c0], %pad : memref<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
@@ -1646,9 +1634,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK:             vector.mask {{.*}}transfer_read
 // CHECK:             vector.mask {{.*}}transfer_write
 // CHECK:           }
-func.func @negative_hoist_masked_read_loop_variant_passthru(%mem: memref<?xf32>, %mask: vector<4xi1>, %lb: index, %ub: index, %step: index) {
-  %c0 = arith.constant 0 : index
-  %pad = arith.constant 0.0 : f32
+func.func @negative_hoist_masked_read_loop_variant_passthru(%mem: memref<?xf32>, %mask: vector<4xi1>, %lb: index, %ub: index, %step: index, %c0: index, %pad: f32) {
   scf.for %i = %lb to %ub step %step {
     %idx = arith.index_cast %i : index to i32
     %f = arith.sitofp %idx : i32 to f32
