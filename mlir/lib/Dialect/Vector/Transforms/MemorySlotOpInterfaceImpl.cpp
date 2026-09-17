@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements Mem2Reg-related interfaces that let a statically-shaped
-// memref be promoted into a single vector SSA value: `PromotableMemOpInterface`
-// models for the ops that access such a memref and `PromotableAliaserInterface`
-// models for the ops that view it. Mem2Reg calls the memory it promotes a
-// *slot*: a pointer paired with the type of the value it becomes, here a memref
-// and its vector type. Promoting a slot replaces it with that value, used as
-// the slot's reaching definition: the value the slot holds at a given program
-// point, merged with a block argument where control flow joins.
+// This file implements Mem2Reg-related interfaces that let a memref be promoted
+// into a single vector SSA value: `PromotableMemOpInterface` models for the ops
+// that access such a memref and `PromotableAliaserInterface` models for the ops
+// that view it. Mem2Reg calls the memory it promotes a *slot*: a pointer paired
+// with the type of the value it becomes, here a memref and its vector type.
+// Promoting a slot replaces it with that value, used as the slot's reaching
+// definition.
 //
 // A slot is promoted when each of its uses is an access these models can
 // rewrite: a `vector.transfer_read` or `vector.transfer_write` meeting the
@@ -58,11 +57,14 @@
 //     of a dynamic subview) promotes as well: its alias shape comes from the
 //     parent's extents and its mask is reshaped along with the value.
 //
-// The promoted memref must be statically shaped, so that its slot has a
-// fixed-shape vector type. Accesses that do not meet the criteria above --
-// dynamic offsets, rank-reducing or non-unit-stride subviews, non-contiguous
-// reshapes, non-zero transfer indices -- are left untouched, so the memref is
-// not promoted.
+// A memref accessed through the subviews, reshapes or copies above must be
+// statically shaped, so that its slot has a fixed-shape vector type. A scalable
+// slot may instead be dynamically shaped, but it is 1-D and promotes through
+// whole-buffer transfers alone: it cannot be subviewed, reshaped or copied.
+//
+// Accesses that do not meet the criteria above -- dynamic offsets,
+// rank-reducing or non-unit-stride subviews, non-contiguous reshapes, non-zero
+// transfer indices -- are left untouched, so the memref is not promoted.
 //
 //===----------------------------------------------------------------------===//
 
@@ -223,7 +225,7 @@ static bool isAliasableDynamicShapeSubView(memref::SubViewOp subView) {
 
 /// The vector type covering `subView`'s whole parent buffer, which is the type
 /// the alias slot of a dynamically-shaped subview takes.
-static VectorType getWholeParentBufferVectorType(memref::SubViewOp subView) {
+static VectorType getWholeParentVectorType(memref::SubViewOp subView) {
   auto parentType = cast<MemRefType>(subView.getSource().getType());
   assert(parentType.hasStaticShape() && "expected a statically-shaped parent");
   return VectorType::get(parentType.getShape(), parentType.getElementType());
@@ -398,11 +400,13 @@ getReassociatedShape(memref::ExpandShapeOp op, ArrayRef<int64_t> parentShape) {
 /// Builds the mask of `subView`'s valid region, expressed in `vecType`'s shape:
 /// a `vector.create_mask` of the subview's sizes in the parent's shape,
 /// reshaped with `vector.shape_cast` when the slot is a reassociated view of
-/// the parent (both describe the same elements in row-major order).
+/// the parent (both describe the same elements in row-major order). One cast
+/// suffices however many reshapes the slot is behind, since each preserves that
+/// order and so they compose.
 static Value buildDynamicViewMask(OpBuilder &builder, Location loc,
                                   memref::SubViewOp subView,
                                   VectorType vecType) {
-  VectorType parentVecType = getWholeParentBufferVectorType(subView);
+  VectorType parentVecType = getWholeParentVectorType(subView);
   SmallVector<Value> bounds =
       getValueOrCreateConstantIndexOp(builder, loc, subView.getMixedSizes());
   Value mask = vector::CreateMaskOp::create(
@@ -427,6 +431,7 @@ static Value buildDynamicViewMask(OpBuilder &builder, Location loc,
 /// aliaser's masked select.
 static Value readMemRefAsVector(OpBuilder &builder, Location loc, Value mem,
                                 VectorType vecType) {
+  assert(!vecType.isScalable() && "expected a fixed-size vector");
   auto memType = cast<MemRefType>(mem.getType());
   int64_t rank = vecType.getRank();
   Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
@@ -451,6 +456,7 @@ static void writeVectorToMemRef(OpBuilder &builder, Location loc, Value vec,
                                 Value mem, Value mask = {}) {
   auto memType = cast<MemRefType>(mem.getType());
   auto vecType = cast<VectorType>(vec.getType());
+  assert(!vecType.isScalable() && "expected a fixed-size vector");
   int64_t rank = vecType.getRank();
   Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
   SmallVector<Value> indices(rank, zero);
@@ -766,7 +772,7 @@ struct SubViewOpAliasModel
     // of the parent value untouched.
     if (isAliasableDynamicShapeSubView(subView)) {
       Location loc = op->getLoc();
-      VectorType parentVecType = getWholeParentBufferVectorType(subView);
+      VectorType parentVecType = getWholeParentVectorType(subView);
       Value mask = buildDynamicViewMask(builder, loc, subView, parentVecType);
       return arith::SelectOp::create(builder, loc, mask, aliasValue,
                                      reachingDef);

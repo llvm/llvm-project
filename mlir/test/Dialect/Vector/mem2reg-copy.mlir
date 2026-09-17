@@ -169,3 +169,24 @@ func.func @copy_global_to_dyn_subview_memspace(%v: vector<128x64xf16>, %n: index
   %r = vector.transfer_read %slm[%c0, %c0], %pad {in_bounds = [true, true]} : memref<128x64xf16, 3>, vector<128x64xf16>
   return %r : vector<128x64xf16>
 }
+
+// -----
+
+// NEGATIVE: the copy models keep to fixed-size slots, so a scalable slot is not
+// promoted. The dynamic buffer size is not what blocks it: being a vscale
+// multiple is exactly what gives the slot a scalable vector type, and such a
+// buffer promotes through transfers (see @scalable_whole_buffer_in_loop).
+// CHECK-LABEL: func.func @negative_scalable_copy(
+// CHECK:         memref.alloca
+// CHECK:         memref.copy
+// CHECK:         vector.transfer_read
+func.func @negative_scalable_copy(%src: memref<8xf32>, %pad: f32) -> vector<[4]xf32> {
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %vs = vector.vscale
+  %sz = arith.muli %vs, %c4 : index
+  %a = memref.alloca(%sz) : memref<?xf32>
+  memref.copy %src, %a : memref<8xf32> to memref<?xf32>
+  %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<?xf32>, vector<[4]xf32>
+  return %r : vector<[4]xf32>
+}
