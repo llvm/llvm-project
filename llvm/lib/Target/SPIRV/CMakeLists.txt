@@ -48,6 +48,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVRegisterInfo.cpp
   SPIRVRegularizer.cpp
   SPIRVFinalizeShaderLinkage.cpp
+  SPIRVRemoveUnusedResources.cpp
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
   SPIRVTargetTransformInfo.cpp
