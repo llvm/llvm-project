@@ -207,10 +207,9 @@ static StoreInst *findStoreForOutArgument(BasicBlock *BB, Argument *OutArg,
       }
     }
 
-    // Any other memory access that writes the location prevents the
+    // Any other memory access that may read or write the location prevents the
     // rewrite.
-    // FIXME: should handle aliasing reads too.
-    if (isModSet(BAA.getModRefInfo(I, ArgLoc)))
+    if (isModOrRefSet(BAA.getModRefInfo(I, ArgLoc)))
       return nullptr;
   }
 
@@ -379,7 +378,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   // this function with a stub.
   NewFunc->splice(NewFunc->begin(), &F);
 
-  for (std::pair<ReturnInst *, ReplacementVec> &Replacement : Replacements) {
+  for (auto &Replacement : Replacements) {
     ReturnInst *RI = Replacement.first;
     IRBuilder<> B(RI);
     B.SetCurrentDebugLocation(RI->getDebugLoc());

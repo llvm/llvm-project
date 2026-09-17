@@ -5,9 +5,9 @@
 //  - runtime-sized arrays go on the heap.
 // A user variable is identified by a non-empty uniq_name; a temporary has none.
 // i32 is 4 bytes, so <10xi32> = 40 bytes (small) and <100xi32> = 400 bytes (big)
-// with the default 64-byte small threshold.
+// with the 64-byte small threshold pinned below.
 
-// RUN: fir-opt --allocation-placement %s | FileCheck %s
+// RUN: fir-opt --allocation-placement="small-array-threshold=64" %s | FileCheck %s
 
 module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"} {
 
@@ -78,6 +78,27 @@ func.func @dyn_user(%n: index) {
 func.func @dyn_temp(%n: index) {
   %0 = fir.allocmem !fir.array<?xi32>, %n
   fir.freemem %0 : !fir.heap<!fir.array<?xi32>>
+  return
+}
+
+// Small temporary inside an OpenACC compute construct -> stack, but the
+// allocation must stay inside the construct.
+// CHECK-LABEL: func.func @small_temp_in_acc_parallel
+// CHECK-NOT: fir.alloca
+// CHECK: acc.parallel {
+// CHECK-NEXT: fir.alloca !fir.array<10xi32>
+// CHECK-NOT: fir.allocmem
+func.func @small_temp_in_acc_parallel() {
+  %c0 = arith.constant 0 : index
+  %v = arith.constant 0 : i32
+  acc.parallel {
+    %0 = fir.allocmem !fir.array<10xi32>
+    %r = fir.convert %0 : (!fir.heap<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>>
+    %e = fir.coordinate_of %r, %c0 : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
+    fir.store %v to %e : !fir.ref<i32>
+    fir.freemem %0 : !fir.heap<!fir.array<10xi32>>
+    acc.yield
+  }
   return
 }
 

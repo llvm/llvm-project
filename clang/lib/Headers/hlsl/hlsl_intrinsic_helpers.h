@@ -120,6 +120,10 @@ template <typename T> constexpr T step_impl(T Y, T X) {
   return select(X < Y, (T)0, (T)1);
 }
 
+template <typename T> constexpr T lerp_impl(T X, T Y, T S) {
+  return X + S * (Y - X);
+}
+
 template <typename T> constexpr vector<T, 4> lit_impl(T NDotL, T NDotH, T M) {
   bool DiffuseCond = NDotL < 0;
   T Diffuse = select<T>(DiffuseCond, 0, NDotL);

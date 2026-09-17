@@ -11,6 +11,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/MachOBuilder.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -283,12 +284,11 @@ public:
 
     Builder.write(MachOContainerBlock->getAlreadyMutableContent());
 
-    static constexpr bool AutoRegisterCode = true;
     SectionRange R(MachOContainerBlock->getSection());
     G.allocActions().push_back(
         {cantFail(shared::WrapperFunctionCall::Create<
-                  shared::SPSArgList<shared::SPSExecutorAddrRange, bool>>(
-             RegisterActionAddr, R.getRange(), AutoRegisterCode)),
+                  shared::SPSArgList<shared::SPSExecutorAddrRange>>(
+             RegisterActionAddr, R.getRange())),
          {}});
 
     return Error::success();
@@ -327,14 +327,10 @@ namespace orc {
 
 Expected<std::unique_ptr<GDBJITDebugInfoRegistrationPlugin>>
 GDBJITDebugInfoRegistrationPlugin::Create(ExecutionSession &ES,
-                                          JITDylib &ProcessJD,
-                                          const Triple &TT) {
-  auto RegisterActionAddr =
-      TT.isOSBinFormatMachO()
-          ? ES.intern("_llvm_orc_registerJITLoaderGDBAllocAction")
-          : ES.intern("llvm_orc_registerJITLoaderGDBAllocAction");
+                                          JITDylib &BootstrapJD) {
+  auto RegisterActionName = ES.intern(rt::RegisterJITLoaderGDBAllocActionName);
 
-  if (auto RegisterSym = ES.lookup({&ProcessJD}, RegisterActionAddr))
+  if (auto RegisterSym = ES.lookup({&BootstrapJD}, RegisterActionName))
     return std::make_unique<GDBJITDebugInfoRegistrationPlugin>(
         RegisterSym->getAddress());
   else

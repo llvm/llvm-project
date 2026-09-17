@@ -1332,3 +1332,42 @@ loop:
 exit:
   ret void
 }
+
+; Don't crash if reduction is simplifable to a constant and the constant is also
+; used by another reduction's start value.
+define i32 @multiple_simplifiable_reductions(ptr %p) {
+; CHECK-LABEL: define i32 @multiple_simplifiable_reductions(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[VEC_PHI]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1020
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP88:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[VEC_PHI]])
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop ]
+  %rdx.and = phi i32 [ 0, %entry ], [ %rdx.and.next, %loop ]
+  %rdx.or = phi i32 [ 0, %entry ], [ %rdx.or.next, %loop ]
+  %rdx.and.next = and i32 0, %rdx.and
+  store i32 %rdx.and.next, ptr %p
+  %rdx.or.next = or i32 0, %rdx.or
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %rdx.or.next
+}

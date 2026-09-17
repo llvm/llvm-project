@@ -71,6 +71,7 @@ jobs:
           client-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
           private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
+          repositories: ${{ github.repository }}
           permission-contents: read
           permission-pull-requests: write
       - uses: actions/labeler@b8dd2d9be0f68b860e7dae5dae7d772984eacd6d # v6.2.0

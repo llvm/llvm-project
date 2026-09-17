@@ -1,13 +1,11 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports vector types.
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +sse2 -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir -Wall -Werror
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +sse2 -fclangir -emit-cir -o %t.cir -Wall -Werror
 // RUN: FileCheck --check-prefixes=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +sse2 -fno-signed-char -fclangir -fno-clangir-call-conv-lowering -emit-cir -o %t.cir -Wall -Werror
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +sse2 -fno-signed-char -fclangir -emit-cir -o %t.cir -Wall -Werror
 // RUN: FileCheck --check-prefixes=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +sse2 -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll -Wall -Werror
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +sse2 -fclangir -emit-llvm -o %t.ll -Wall -Werror
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +sse2 -fno-signed-char -fclangir -fno-clangir-call-conv-lowering -emit-llvm -o %t.ll -Wall -Werror
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +sse2 -fno-signed-char -fclangir -emit-llvm -o %t.ll -Wall -Werror
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse2 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=OGCG
@@ -22,12 +20,12 @@
 #include <immintrin.h>
 
 __m128d test_mm_undefined_pd(void) {
-  // CIR-LABEL: _mm_undefined_pd
-  // CIR: %{{.*}} = cir.const #cir.zero : !cir.vector<2 x !cir.double>
-  // CIR: cir.return %{{.*}} : !cir.vector<2 x !cir.double>
-
   // CIR-LABEL: cir.func {{.*}}test_mm_undefined_pd
   // CIR: call @_mm_undefined_pd
+
+  // CIR-LABEL: cir.func{{.*}} @_mm_undefined_pd(
+  // CIR: %{{.*}} = cir.const #cir.zero : !cir.vector<2 x !cir.double>
+  // CIR: cir.return %{{.*}} : !cir.vector<2 x !cir.double>
 
   // LLVM-LABEL: test_mm_undefined_pd
   // LLVM: store <2 x double> zeroinitializer, ptr %[[A:.*]], align 16
@@ -40,13 +38,13 @@ __m128d test_mm_undefined_pd(void) {
 }
 
 __m128i test_mm_undefined_si128(void) {
-  // CIR-LABEL: _mm_undefined_si128
+  // CIR-LABEL: cir.func {{.*}}test_mm_undefined_si128
+  // CIR: call @_mm_undefined_si128
+
+  // CIR-LABEL: cir.func{{.*}} @_mm_undefined_si128(
   // CIR: %[[A:.*]] = cir.const #cir.zero : !cir.vector<2 x !cir.double>
   // CIR: %{{.*}} = cir.cast bitcast %[[A]] : !cir.vector<2 x !cir.double> ->
   // CIR: cir.return %{{.*}} :
-
-  // CIR-LABEL: cir.func {{.*}}test_mm_undefined_si128
-  // CIR: call @_mm_undefined_si128
 
   // LLVM-LABEL: test_mm_undefined_si128
   // LLVM: store <2 x i64> zeroinitializer, ptr %[[A:.*]], align 16

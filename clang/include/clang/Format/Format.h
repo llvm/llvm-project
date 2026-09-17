@@ -840,7 +840,7 @@ struct FormatStyle {
   ///
   /// * `InlineOnly`
   ///   Only merge functions defined inside a class. Same as `inline`,
-  ///   except it does not implies `empty`: i.e. top level empty functions
+  ///   except it does not imply `empty`: i.e. top level empty functions
   ///   are not merged either. See `Inline` of `ShortFunctionStyle`.
   ///   \code
   ///     class Foo {
@@ -1507,6 +1507,22 @@ struct FormatStyle {
     ///  according to `AfterControlStatement` flag.
     /// \endnote
     bool AfterObjCDeclaration;
+    /// Wrap requires expression body.
+    /// \code
+    ///   true:
+    ///   template <typename T>
+    ///   concept C = requires(T t)
+    ///   {
+    ///     foo(t);
+    ///   };
+    ///
+    ///   false:
+    ///   template <typename T>
+    ///   concept C = requires(T t) {
+    ///     foo(t);
+    ///   };
+    /// \endcode
+    bool AfterRequiresExpression;
     /// Wrap struct definitions.
     /// \code
     ///   true:
@@ -1535,6 +1551,15 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AfterUnion;
+    /// Wrap export blocks.
+    /// \code
+    ///   true:                            false:
+    ///   export             vs.           export {
+    ///   {                                  int foo();
+    ///     int foo();                     }
+    ///   }
+    /// \endcode
+    bool AfterExportBlock;
     /// Wrap extern blocks.
     /// \code
     ///   true:
@@ -4565,6 +4590,17 @@ struct FormatStyle {
   ///   * `constexpr`
   ///   * `volatile`
   ///   * `restrict`
+  ///   * `typedef`
+  ///   * `consteval`
+  ///   * `constinit`
+  ///   * `thread_local`
+  ///   * `extern`
+  ///   * `mutable`
+  ///   * `signed`
+  ///   * `unsigned`
+  ///   * `long`
+  ///   * `short`
+  ///   * `explicit`
   ///   * `type`
   ///
   /// \note
@@ -4574,6 +4610,9 @@ struct FormatStyle {
   /// Items to the left of `type` will be placed to the left of the type and
   /// aligned in the order supplied. Items to the right of `type` will be
   /// placed to the right of the type and aligned in the order supplied.
+  /// If only one of `signed` and `unsigned` is specified, both are placed at
+  /// that position. The same applies to `long` and `short`. Specifying both
+  /// members of a pair allows them to be placed independently.
   ///
   /// \code{.yaml}
   ///   QualifierOrder: [inline, static, type, const, volatile]
@@ -5083,9 +5122,32 @@ struct FormatStyle {
     ///    #include "A10.h"           #include "A2.h"
     /// \endcode
     bool Natural;
+    /// When `true`, sort includes so that files in a directory appear
+    /// before subdirectories at each level, recursively. Within a level,
+    /// files and folders are each sorted alphabetically.
+    /// When `false` (default), sorts includes purely alphabetically.
+    ///
+    /// This option is a secondary sort key within each `Priority` group
+    /// defined by `IncludeCategories`. Includes in different `Priority`
+    /// groups are still separated by that primary ordering.
+    /// \code
+    ///    true:                             false (default):
+    ///    #include "x.h"             vs.    #include "bar/alpha/e.h"
+    ///    #include "y.h"                    #include "bar/alpha/f.h"
+    ///    #include "z.h"                    #include "bar/beta/d.h"
+    ///    #include "bar/g.h"                #include "bar/g.h"
+    ///    #include "bar/h.h"                #include "bar/h.h"
+    ///    #include "bar/i.h"                #include "bar/i.h"
+    ///    #include "bar/alpha/e.h"          #include "foo/a.h"
+    ///    #include "bar/alpha/f.h"          #include "x.h"
+    ///    #include "bar/beta/d.h"           #include "y.h"
+    ///    #include "foo/a.h"                #include "z.h"
+    /// \endcode
+    bool FilesBeforeFolders;
     bool operator==(const SortIncludesOptions &R) const {
       return Enabled == R.Enabled && IgnoreCase == R.IgnoreCase &&
-             IgnoreExtension == R.IgnoreExtension && Natural == R.Natural;
+             IgnoreExtension == R.IgnoreExtension && Natural == R.Natural &&
+             FilesBeforeFolders == R.FilesBeforeFolders;
     }
     bool operator!=(const SortIncludesOptions &R) const {
       return !(*this == R);

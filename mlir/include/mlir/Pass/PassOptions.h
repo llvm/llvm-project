@@ -57,11 +57,11 @@ using has_stream_operator = llvm::is_detected<has_stream_operator_trait, T>;
 
 /// Utility methods for printing option values.
 template <typename ParserT>
-static void printOptionValue(raw_ostream &os, const bool &value) {
+void printOptionValue(raw_ostream &os, const bool &value) {
   os << (value ? StringRef("true") : StringRef("false"));
 }
 template <typename ParserT>
-static void printOptionValue(raw_ostream &os, const std::string &str) {
+void printOptionValue(raw_ostream &os, const std::string &str) {
   // Check if the string needs to be escaped before writing it to the ostream.
   const size_t spaceIndex = str.find_first_of(' ');
   const size_t escapeIndex =
@@ -75,7 +75,7 @@ static void printOptionValue(raw_ostream &os, const std::string &str) {
     os << "}";
 }
 template <typename ParserT, typename DataT>
-static void printOptionValue(raw_ostream &os, const DataT &value) {
+void printOptionValue(raw_ostream &os, const DataT &value) {
   if constexpr (has_stream_operator<DataT>::value)
     os << value;
   else

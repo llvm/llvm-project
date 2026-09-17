@@ -44,7 +44,7 @@ CHECK-HEATMAP: HEATMAP: working set @ bucket size 64 p99/total: 28/43
 CHECK-HEATMAP: HEATMAP: dumping heatmap with bucket size 128
 CHECK-HEATMAP: HEATMAP: working set @ bucket size 128 p99/total: 16/23
 CHECK-HEATMAP: HEATMAP: dumping heatmap with bucket size 1024
-CHECK-HEATMAP: HEATMAP: working set @ bucket size 1024 p99/total: 3/3
+CHECK-HEATMAP: HEATMAP: working set @ bucket size 1K p99/total: 3/3
 CHECK-HEATMAP-NOT: HEATMAP: dumping heatmap with bucket size
 CHECK-HEATMAP-NOT: HEATMAP: working set @ bucket size
 

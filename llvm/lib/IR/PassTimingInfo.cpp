@@ -301,9 +301,9 @@ void TimePassesHandler::registerCallbacks(PassInstrumentationCallbacks &PIC) {
     return;
 
   PIC.registerBeforeNonSkippedPassCallback(
-      [this](StringRef P, const Any &) { this->startPassTimer(P); });
+      [this](StringRef P, IRUnitRef) { this->startPassTimer(P); });
   PIC.registerAfterPassCallback(
-      [this](StringRef P, const Any &, const PreservedAnalyses &) {
+      [this](StringRef P, IRUnitRef, const PreservedAnalyses &) {
         this->stopPassTimer(P);
       });
   PIC.registerAfterPassInvalidatedCallback(
@@ -311,7 +311,7 @@ void TimePassesHandler::registerCallbacks(PassInstrumentationCallbacks &PIC) {
         this->stopPassTimer(P);
       });
   PIC.registerBeforeAnalysisCallback(
-      [this](StringRef P, const Any &) { this->startAnalysisTimer(P); });
+      [this](StringRef P, IRUnitRef) { this->startAnalysisTimer(P); });
   PIC.registerAfterAnalysisCallback(
-      [this](StringRef P, const Any &) { this->stopAnalysisTimer(P); });
+      [this](StringRef P, IRUnitRef) { this->stopAnalysisTimer(P); });
 }

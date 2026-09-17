@@ -16,7 +16,7 @@
 #include "test_macros.h"
 
 template <class CharT>
-static void BM_tolower_char(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_tolower_char(benchmark::State& state) {
   const auto& ct = std::use_facet<std::ctype<CharT>>(std::locale::classic());
 
   for (auto _ : state) {
@@ -32,7 +32,7 @@ BENCHMARK(BM_tolower_char<wchar_t>);
 #endif
 
 template <class CharT>
-static void BM_tolower_string(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_tolower_string(benchmark::State& state) {
   const auto& ct = std::use_facet<std::ctype<CharT>>(std::locale::classic());
   std::basic_string<CharT> str;
 
@@ -49,7 +49,7 @@ BENCHMARK(BM_tolower_string<wchar_t>);
 #endif
 
 template <class CharT>
-static void BM_toupper_char(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_toupper_char(benchmark::State& state) {
   const auto& ct = std::use_facet<std::ctype<CharT>>(std::locale::classic());
 
   for (auto _ : state) {
@@ -63,7 +63,7 @@ BENCHMARK(BM_toupper_char<wchar_t>);
 #endif
 
 template <class CharT>
-static void BM_toupper_string(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_toupper_string(benchmark::State& state) {
   const auto& ct = std::use_facet<std::ctype<CharT>>(std::locale::classic());
   std::basic_string<CharT> str;
 

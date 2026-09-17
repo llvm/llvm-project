@@ -527,7 +527,7 @@ public:
   Metadata *getRawAddress() const {
     return isDbgAssign() ? DebugValues[1] : DebugValues[0];
   }
-  Metadata *getRawAssignID() const { return DebugValues[2]; }
+  Metadata *getRawAssignID() const { return DebugValues[AssignIDIdx]; }
   LLVM_ABI DIAssignID *getAssignID() const;
   DIExpression *getAddressExpression() const { return AddressExpression.get(); }
   MDNode *getRawAddressExpression() const {
@@ -554,10 +554,6 @@ public:
   /// \returns A new dbg.value intrinsic representing this DbgVariableRecord.
   LLVM_ABI DbgVariableIntrinsic *
   createDebugIntrinsic(Module *M, Instruction *InsertBefore) const;
-
-  /// Handle changes to the location of the Value(s) that we refer to happening
-  /// "under our feet".
-  LLVM_ABI void handleChangedLocation(Metadata *NewLocation);
 
   LLVM_ABI void print(raw_ostream &O, bool IsForDebug = false) const;
   LLVM_ABI void print(raw_ostream &ROS, ModuleSlotTracker &MST,

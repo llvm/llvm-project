@@ -1341,12 +1341,12 @@ ThreadPlanSP Thread::QueueThreadPlanForStepOverRange(
 
 ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
     bool abort_other_plans, const AddressRange &range,
-    const SymbolContext &addr_context, const char *step_in_target,
+    const SymbolContext &addr_context, llvm::StringRef step_in_target,
     lldb::RunMode stop_other_threads, Status &status,
     LazyBool step_in_avoids_code_without_debug_info,
     LazyBool step_out_avoids_code_without_debug_info) {
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepInRange(
-      *this, range, addr_context, step_in_target, stop_other_threads,
+      *this, range, addr_context, step_in_target.str(), stop_other_threads,
       step_in_avoids_code_without_debug_info,
       step_out_avoids_code_without_debug_info));
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
@@ -1356,7 +1356,7 @@ ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
 // Call the QueueThreadPlanForStepInRange method which takes an address range.
 ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
     bool abort_other_plans, const LineEntry &line_entry,
-    const SymbolContext &addr_context, const char *step_in_target,
+    const SymbolContext &addr_context, llvm::StringRef step_in_target,
     lldb::RunMode stop_other_threads, Status &status,
     LazyBool step_in_avoids_code_without_debug_info,
     LazyBool step_out_avoids_code_without_debug_info) {
@@ -2302,8 +2302,8 @@ Status Thread::StepIn(bool source_step,
     if (source_step && frame_sp && frame_sp->HasDebugInformation()) {
       SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
       new_plan_sp = QueueThreadPlanForStepInRange(
-          abort_other_plans, sc.line_entry, sc, nullptr, run_mode, error,
-          step_in_avoids_code_without_debug_info,
+          abort_other_plans, sc.line_entry, sc, llvm::StringRef(), run_mode,
+          error, step_in_avoids_code_without_debug_info,
           step_out_avoids_code_without_debug_info);
     } else {
       new_plan_sp = QueueThreadPlanForStepSingleInstruction(

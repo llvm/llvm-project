@@ -157,3 +157,34 @@ define void @varargs_thunk(ptr noundef %0, ...) "thunk" {
   musttail call void (ptr, ...) %vtablefn(ptr noundef %0, ...)
   ret void
 }
+
+declare tailcc void @callee_9_variadic(i64, i64, i64, i64, i64, i64, i64, i64, i64, ...)
+
+define tailcc void @caller_8_args(i64, i64, i64, i64, i64, i64, i64, i64) {
+; CHECK-LABEL: caller_8_args:
+; CHECK:       .seh_proc caller_8_args
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    .seh_endprologue
+; CHECK-NEXT:    mov w8, #9 // =0x9
+; CHECK-NEXT:    mov x4, sp
+; CHECK-NEXT:    mov w0, #1 // =0x1
+; CHECK-NEXT:    mov w1, #2 // =0x2
+; CHECK-NEXT:    mov w2, #3 // =0x3
+; CHECK-NEXT:    mov w3, #4 // =0x4
+; CHECK-NEXT:    mov w6, #7 // =0x7
+; CHECK-NEXT:    mov w7, #8 // =0x8
+; CHECK-NEXT:    mov w5, #16 // =0x10
+; CHECK-NEXT:    str x8, [sp]
+; CHECK-NEXT:    .weak_anti_dep callee_9_variadic
+; CHECK-NEXT:  callee_9_variadic = "#callee_9_variadic"
+; CHECK-NEXT:    .weak_anti_dep "#callee_9_variadic"
+; CHECK-NEXT:  "#callee_9_variadic" = callee_9_variadic
+; CHECK-NEXT:    b "#callee_9_variadic"
+; CHECK-NEXT:    .seh_endfunclet
+; CHECK-NEXT:    .seh_endproc
+entry:
+  tail call tailcc void (i64, i64, i64, i64, i64, i64, i64, i64, i64, ...) @callee_9_variadic(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9)
+  ret void
+}

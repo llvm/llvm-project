@@ -291,7 +291,8 @@ mlir::Block *ItaniumEHLowering::buildTerminateBlock(cir::FuncOp funcOp,
   mlir::Block *terminateBlock = builder.createBlock(&body, body.end());
   auto inflight = cir::EhInflightOp::create(
       builder, loc, /*cleanup=*/false, /*catch_all=*/true,
-      /*catch_type_list=*/mlir::ArrayAttr{});
+      /*catch_type_list=*/mlir::ArrayAttr{},
+      /*filter_type_list=*/mlir::ArrayAttr{});
   auto terminateCall = cir::CallOp::create(
       builder, loc, mlir::FlatSymbolRefAttr::get(clangCallTerminateFunc),
       voidType, mlir::ValueRange{inflight.getExceptionPtr()});
@@ -510,9 +511,9 @@ mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
 
   builder.setInsertionPoint(initiateOp);
   auto inflightOp = cir::EhInflightOp::create(
-      builder, initiateOp.getLoc(),
-      /*cleanup=*/initiateOp.getCleanup() || reachesCleanup,
-      /*catch_all=*/catchAll, catchTypeList);
+      builder, initiateOp.getLoc(), initiateOp.getCleanup() || reachesCleanup,
+      catchAll, catchTypeList,
+      /*filter_type_list=*/mlir::ArrayAttr{});
 
   ehTokenMap[rootToken] = {inflightOp.getExceptionPtr(),
                            inflightOp.getTypeId()};
@@ -1033,6 +1034,28 @@ void CIREHABILoweringPass::runOnOperation() {
   } else {
     lowering = std::make_unique<ItaniumEHLowering>(mod);
   }
+
+  // Dynamic exception specifications are not lowered yet. Diagnose them before
+  // the lowering runs, which would otherwise treat a filter handler as a typed
+  // catch handler.
+  if (mod.walk([&](mlir::Operation *op) {
+           if (auto dispatch = mlir::dyn_cast<cir::EhDispatchOp>(op)) {
+             mlir::ArrayAttr handlerTypes = dispatch.getCatchTypesAttr();
+             if (!handlerTypes ||
+                 llvm::none_of(handlerTypes, [](mlir::Attribute typeAttr) {
+                   return mlir::isa<cir::EhFilterAttr>(typeAttr);
+                 }))
+               return mlir::WalkResult::advance();
+             dispatch.emitError("NYI: EH ABI lowering of a 'filter' handler");
+             return mlir::WalkResult::interrupt();
+           } else if (mlir::isa<cir::EhUnexpectedOp>(op)) {
+             op->emitError("NYI: EH ABI lowering of 'cir.eh.unexpected'");
+             return mlir::WalkResult::interrupt();
+           }
+           return mlir::WalkResult::advance();
+         })
+          .wasInterrupted())
+    return signalPassFailure();
 
   if (mlir::failed(lowering->run()))
     return signalPassFailure();
