@@ -16,6 +16,7 @@
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 #include "clang/AST/DeclBase.h"
@@ -24,6 +25,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
@@ -2195,7 +2197,32 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
             .getElementType());
   case Builtin::BI__builtin_reduce_assoc_fadd:
-  case Builtin::BI__builtin_reduce_in_order_fadd:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_reduce_in_order_fadd: {
+    mlir::Value vector = emitScalarExpr(e->getArg(0));
+    auto vectorTy = cast<cir::VectorType>(vector.getType());
+    mlir::Type scalarTy = vectorTy.getElementType();
+    mlir::Value startValue;
+    mlir::Location loc = getLoc(e->getExprLoc());
+    if (e->getNumArgs() == 2) {
+      startValue = emitScalarExpr(e->getArg(1));
+      if (startValue.getType() != scalarTy)
+        startValue =
+            builder.createCast(getLoc(e->getArg(1)->getExprLoc()),
+                               cir::CastKind::floating, startValue, scalarTy);
+    } else {
+      auto fpTy = cast<cir::FPTypeInterface>(scalarTy);
+      startValue = cir::ConstantOp::create(
+          builder, loc,
+          cir::FPAttr::get(scalarTy,
+                           llvm::APFloat::getZero(fpTy.getFloatSemantics(),
+                                                  /*Negative=*/true)));
+    }
+    SmallVector<mlir::Value, 2> args = {startValue, vector};
+    mlir::Value result =
+        builder.emitIntrinsicCallOp(loc, "vector.reduce.fadd", scalarTy, args);
+    return RValue::get(result);
+  }
   case Builtin::BI__builtin_reduce_maximum:
   case Builtin::BI__builtin_reduce_minimum:
   case Builtin::BI__builtin_matrix_transpose:

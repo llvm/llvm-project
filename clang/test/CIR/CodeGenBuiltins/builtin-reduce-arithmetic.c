@@ -8,6 +8,7 @@
 typedef int v4si __attribute__((vector_size(16)));
 typedef unsigned int v4su __attribute__((vector_size(16)));
 typedef float v4sf __attribute__((vector_size(16)));
+typedef double v2df __attribute__((vector_size(16)));
 
 int test_reduce_add(v4si x) {
   // CIR-LABEL: @test_reduce_add
@@ -107,4 +108,48 @@ float test_reduce_min_float(v4sf x) {
   // LLVM: call float @llvm.vector.reduce.fmin.v4f32(<4 x float>
   // LLVM: ret float
   return __builtin_reduce_min(x);
+}
+
+float test_reduce_in_order_fadd(v4sf x, float start) {
+  // CIR-LABEL: @test_reduce_in_order_fadd
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" {{.*}} : (!cir.float, !cir.vector<4 x !cir.float>) -> !cir.float
+  // CIR: cir.return
+  // LLVM-LABEL: @test_reduce_in_order_fadd
+  // LLVM: call float @llvm.vector.reduce.fadd.v4f32(float %{{.*}}, <4 x float>
+  // LLVM: ret float
+  return __builtin_reduce_in_order_fadd(x, start);
+}
+
+float test_reduce_in_order_fadd_cast_start(v4sf x, double start) {
+  // CIR-LABEL: @test_reduce_in_order_fadd_cast_start
+  // CIR: cir.cast floating {{.*}} : !cir.double -> !cir.float
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" {{.*}} : (!cir.float, !cir.vector<4 x !cir.float>) -> !cir.float
+  // CIR: cir.return
+  // LLVM-LABEL: @test_reduce_in_order_fadd_cast_start
+  // LLVM: fptrunc double %{{.*}} to float
+  // LLVM: call float @llvm.vector.reduce.fadd.v4f32(float %{{.*}}, <4 x float>
+  // LLVM: ret float
+  return __builtin_reduce_in_order_fadd(x, start);
+}
+
+double test_reduce_in_order_fadd_double(v2df x, double start) {
+  // CIR-LABEL: @test_reduce_in_order_fadd_double
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" {{.*}} : (!cir.double, !cir.vector<2 x !cir.double>) -> !cir.double
+  // CIR: cir.return
+  // LLVM-LABEL: @test_reduce_in_order_fadd_double
+  // LLVM: call double @llvm.vector.reduce.fadd.v2f64(double %{{.*}}, <2 x double>
+  // LLVM: ret double
+  return __builtin_reduce_in_order_fadd(x, start);
+}
+
+double test_reduce_in_order_fadd_ext_start(v2df x, float start) {
+  // CIR-LABEL: @test_reduce_in_order_fadd_ext_start
+  // CIR: cir.cast floating {{.*}} : !cir.float -> !cir.double
+  // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" {{.*}} : (!cir.double, !cir.vector<2 x !cir.double>) -> !cir.double
+  // CIR: cir.return
+  // LLVM-LABEL: @test_reduce_in_order_fadd_ext_start
+  // LLVM: fpext float %{{.*}} to double
+  // LLVM: call double @llvm.vector.reduce.fadd.v2f64(double %{{.*}}, <2 x double>
+  // LLVM: ret double
+  return __builtin_reduce_in_order_fadd(x, start);
 }
