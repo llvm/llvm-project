@@ -78,3 +78,80 @@ loop:
 exit:
   ret void
 }
+
+; The same loop with small coefficients {1, 2, 3}. The offsets decompose, but
+; the index type is 128 bits wide, so the merge must skip the DepSet.
+define void @stencil_wide_index_small_coeff(ptr %a, ptr %out, i64 %n, i128 %cdj) {
+; CHECK-LABEL: 'stencil_wide_index_small_coeff'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %op = getelementptr inbounds i8, ptr %out, i128 %ivx
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %p2 = getelementptr inbounds i8, ptr %a, i128 %t2
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %op = getelementptr inbounds i8, ptr %out, i128 %ivx
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %p1 = getelementptr inbounds i8, ptr %a, i128 %t1
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %op = getelementptr inbounds i8, ptr %out, i128 %ivx
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %p0 = getelementptr inbounds i8, ptr %a, i128 %t0
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %out High: ((zext i64 (1 smax %n) to i128) + %out))
+; CHECK-NEXT:            Member: {%out,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: ((3 * %cdj) + %a) High: ((zext i64 (1 smax %n) to i128) + (3 * %cdj) + %a))
+; CHECK-NEXT:            Member: {((3 * %cdj) + %a),+,1}<nw><%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: ((2 * %cdj) + %a) High: ((zext i64 (1 smax %n) to i128) + (2 * %cdj) + %a))
+; CHECK-NEXT:            Member: {((2 * %cdj) + %a),+,1}<nw><%loop>
+; CHECK-NEXT:        Group GRP3:
+; CHECK-NEXT:          (Low: (%cdj + %a) High: ((zext i64 (1 smax %n) to i128) + %cdj + %a))
+; CHECK-NEXT:            Member: {(%cdj + %a),+,1}<nw><%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %loop]
+  %ivx = zext i64 %iv to i128
+
+  %o0 = mul i128 %cdj, 1
+  %t0 = add i128 %o0, %ivx
+  %p0 = getelementptr inbounds i8, ptr %a, i128 %t0
+  %v0 = load i8, ptr %p0
+
+  %o1 = mul i128 %cdj, 2
+  %t1 = add i128 %o1, %ivx
+  %p1 = getelementptr inbounds i8, ptr %a, i128 %t1
+  %v1 = load i8, ptr %p1
+
+  %o2 = mul i128 %cdj, 3
+  %t2 = add i128 %o2, %ivx
+  %p2 = getelementptr inbounds i8, ptr %a, i128 %t2
+  %v2 = load i8, ptr %p2
+
+  %s01 = add i8 %v0, %v1
+  %s = add i8 %s01, %v2
+  %op = getelementptr inbounds i8, ptr %out, i128 %ivx
+  store i8 %s, ptr %op
+
+  %iv.next = add i64 %iv, 1
+  %c = icmp slt i64 %iv.next, %n
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
