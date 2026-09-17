@@ -916,9 +916,6 @@ gpu.func @vector_insert_strided_slice_inner_distributed() {
   gpu.return
 }
 
-// dim1 is distributed over 2 lanes rather than the full subgroup of 16, so it
-// distributes from size 2 down to 1. Dividing by the subgroup size instead
-// would leave 2 % 16 != 0 and reject the op as illegal.
 // CHECK-LABEL: gpu.func @vector_insert_strided_slice_inner_partial_lanes
 // CHECK: %[[ISS:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} offsets = [3, 0], strides = [1, 1] : vector<1x1xf32> into vector<16x1xf32>
 gpu.func @vector_insert_strided_slice_inner_partial_lanes() {
