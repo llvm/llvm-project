@@ -3176,8 +3176,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::matrix_transpose: {
     Value *Matrix;
-    ConstantInt *Rows = cast<ConstantInt>(II->getArgOperand(1));
-    ConstantInt *Columns = cast<ConstantInt>(II->getArgOperand(2));
+    Value *Rows = II->getArgOperand(1);
+    Value *Columns = II->getArgOperand(2);
     if (match(II->getArgOperand(0),
               m_Intrinsic<Intrinsic::matrix_transpose>(
                   m_Value(Matrix), m_Specific(Columns), m_Specific(Rows))))

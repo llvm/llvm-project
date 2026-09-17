@@ -45,6 +45,3 @@ define <6 x float> @non_inverse_transposes(<6 x float> %matrix) {
   %result = call <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> %transpose, i32 3, i32 2)
   ret <6 x float> %result
 }
-
-declare <6 x float> @llvm.matrix.transpose.v6f32(<6 x float>, i32 immarg, i32 immarg)
-declare <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32>, i32 immarg, i32 immarg)
