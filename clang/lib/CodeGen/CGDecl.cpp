@@ -1176,6 +1176,10 @@ Address CodeGenModule::createUnnamedGlobalFrom(const VarDecl &D,
     llvm::GlobalVariable *GV = new llvm::GlobalVariable(
         getModule(), Ty, isConstant, llvm::GlobalValue::PrivateLinkage,
         Constant, Name, InsertBefore, llvm::GlobalValue::NotThreadLocal, AS);
+    Align = std::max(
+        Align,
+        getContext().toCharUnitsFromBits(getTarget().getMinGlobalAlign(
+            getDataLayout().getTypeSizeInBits(Ty), /*HasNonWeakDef=*/true)));
     GV->setAlignment(Align.getAsAlign());
     GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CacheEntry = GV;

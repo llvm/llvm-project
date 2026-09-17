@@ -56,7 +56,7 @@ void f(struct arg);
 
 void test (void)
 {
-  // CHECK-DAG: @__const.test.str = private unnamed_addr constant [7 x i8] c"foobar\00", align 1
+  // CHECK-DAG: @__const.test.str = private unnamed_addr constant [7 x i8] c"foobar\00", align 2
   const char str[] = "foobar";
   f(x);
 }
