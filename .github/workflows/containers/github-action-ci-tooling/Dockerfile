@@ -8,7 +8,7 @@ ARG LLVM_VERSION_MAJOR
 
 RUN apt-get update && \
     apt-get install -y wget xz-utils && \
-    wget -O llvm.tar.xz https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz && \
+    wget --progress=dot:giga -O llvm.tar.xz https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/LLVM-${LLVM_VERSION}-Linux-X64.tar.xz && \
     mkdir -p /llvm-extract && \
     tar -xvJf llvm.tar.xz -C /llvm-extract \
         # Only unpack these tools to save space on Github runner.

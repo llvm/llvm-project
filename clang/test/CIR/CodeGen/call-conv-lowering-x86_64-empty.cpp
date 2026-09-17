@@ -50,6 +50,8 @@ union UNuaBigEmpty { [[no_unique_address]] Big32 e; int i; };
 union UNuaEmptyBaseMem { [[no_unique_address]] HasEmptyBase e; int i; };
 union UNuaEmptyUnnamedBits { [[no_unique_address]] Empty e; int : 24; };
 union UNuaEmptyBitInt { [[no_unique_address]] Empty e; int b : 20; int i; };
+union UNuaEmptyAlignedBits { [[no_unique_address]] Aligned e; int b : 8; };
+union UNuaEmptyNarrow { [[no_unique_address]] Empty e; short s; };
 struct SFloatPair { float a, b; };
 union UNuaEmptyFloats { [[no_unique_address]] Empty e; SFloatPair f; };
 union UNuaEmptyBytes16 { [[no_unique_address]] Empty e; char c[16]; };
@@ -454,11 +456,25 @@ int takeUNuaEmptyUnnamedBits(UNuaEmptyUnnamedBits v, int k) { return k; }
 // LLVM: define dso_local noundef i32 @_Z24takeUNuaEmptyUnnamedBits20UNuaEmptyUnnamedBitsi(i24 %{{[^,]+}}, i32 noundef %{{[^,]+}})
 
 // A named access unit narrower than the int it holds, alongside the empty
-// variant: the plain int member is what satisfies the spanning-data rule.
+// variant.
 int takeUNuaEmptyBitInt(UNuaEmptyBitInt v) { return v.i; }
 
 // CIR: cir.func {{.*}}@_Z19takeUNuaEmptyBitInt15UNuaEmptyBitInt(%arg0: !s32i {{.*}}) -> (!s32i
 // LLVM: define dso_local noundef i32 @_Z19takeUNuaEmptyBitInt15UNuaEmptyBitInt(i32 %{{[^,]+}})
+
+// The empty variant's alignment alone sets the union's 16 bytes, so the one
+// byte the access unit holds decides the eightbyte and the rest is padding.
+int takeUNuaEmptyAlignedBits(UNuaEmptyAlignedBits v) { return v.b; }
+
+// CIR: cir.func {{.*}}@_Z24takeUNuaEmptyAlignedBits20UNuaEmptyAlignedBits(%arg0: !u64i {{.*}}) -> (!s32i
+// LLVM: define dso_local noundef i32 @_Z24takeUNuaEmptyAlignedBits20UNuaEmptyAlignedBits(i64 %{{[^,]+}})
+
+// The empty variant supplies no bytes, so the short sizes the eightbyte even
+// though the union's declared size rounds past it.
+short takeUNuaEmptyNarrow(UNuaEmptyNarrow v) { return v.s; }
+
+// CIR: cir.func {{.*}}@_Z19takeUNuaEmptyNarrow15UNuaEmptyNarrow(%arg0: !s16i {{.*}}) -> (!s16i
+// LLVM: define dso_local noundef signext i16 @_Z19takeUNuaEmptyNarrow15UNuaEmptyNarrow(i16 %{{[^,]+}})
 
 // A pair of floats in one eightbyte still coerces to a vector, not an integer.
 float takeUNuaEmptyFloats(UNuaEmptyFloats v) { return v.f.a; }
