@@ -1964,13 +1964,17 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
 
   Value *Y;
   // -X / -Y --> X / Y, unless X == INT_MIN and Y == -1.
-  if (match(&I, m_SDiv(m_NSWNeg(m_Value(X)), m_NSWNeg(m_Value(Y)))) &&
-      (!computeKnownBits(X, &I).getSignedMinValue().isMinSignedValue() ||
-       !computeKnownBits(Y, &I).Zero.isZero())) {
-    auto *BO = BinaryOperator::CreateSDiv(X, Y);
-    BO->setIsExact(I.isExact());
-    return BO;
-  }
+  if (Value *NegOp0 = dyn_castNegVal(Op0))
+    if (Value *NegOp1 = dyn_castNegVal(Op1))
+      if (!computeKnownBits(NegOp0, &I)
+               .getSignedMinValue()
+               .isMinSignedValue() ||
+          (match(Op0, m_NSWNeg(m_Value())) &&
+           !computeKnownBits(NegOp1, &I).Zero.isZero())) {
+        auto *BO = BinaryOperator::CreateSDiv(NegOp0, NegOp1);
+        BO->setIsExact(I.isExact());
+        return BO;
+      }
 
   // -X / Y --> -(X / Y)
   if (match(&I, m_SDiv(m_OneUse(m_NSWNeg(m_Value(X))), m_Value(Y))))
