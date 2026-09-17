@@ -218,7 +218,6 @@ Type *TypeMapTy::get(Type *Ty) {
 
     if (StructType *OldT =
             DstStructTypesSet.findNonOpaque(ElementTypes, IsPacked)) {
-      STy->setName("");
       return *Entry = OldT;
     }
 

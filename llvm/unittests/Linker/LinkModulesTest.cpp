@@ -238,6 +238,7 @@ TEST_F(LinkModuleTest, TypeMergeSameType) {
             SharedTy);
   EXPECT_EQ(M->getFunction("func2")->getFunctionType()->getParamType(1),
             SharedTy);
+  EXPECT_EQ(SharedTy->getStructName(), "SharedTy");
 }
 
 TEST_F(LinkModuleTest, NewCAPISuccess) {
