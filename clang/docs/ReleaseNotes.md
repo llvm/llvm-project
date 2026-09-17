@@ -608,6 +608,11 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
+- Fixed a stack overflow when parsing deeply nested template arguments such
+  as ``S<S<S<...>>>``. Parsing now goes through the existing stack guard, which
+  continues on a fresh stack instead of crashing when the parser's stack is
+  nearly exhausted. (#GH224114)
+
 - Fixed a CTAD bug when combining with concepts. (#GH124715)
 
 - Fixed a regression where an internal-linkage function (e.g. a `static` or
