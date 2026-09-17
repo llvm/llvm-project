@@ -93,23 +93,48 @@ def _filterFlags(flags):
     return result
 
 
-def _getFlags(config):
+def _getFlags(config, substitutions):
     """
-    Return the flags to build GoogleBenchmark with, based on the flags used by the
+    Return the flags contained in the given substitutions, based on the flags used by the
     configuration under test.
     """
     flags = []
-    for substitution in ("%{flags}", "%{compile_flags}", "%{link_flags}"):
+    for substitution in substitutions:
         expanded = _expand(config, _getSubstitution(substitution, config))
         flags += shlex.split(expanded)
     return _filterFlags(flags)
+
+
+def _splitLibraries(flags):
+    """
+    Split the given link flags into (flags, libraries), where libraries contains the
+    name of the libraries that were being linked against.
+
+    We can't simply hand the libraries over to CMake as part of CMAKE_CXX_FLAGS, since
+    CMake puts those flags before the object files on the link line.
+    """
+    result = []
+    libraries = []
+    flags = iter(flags)
+    for flag in flags:
+        if flag == "-l":
+            library = next(flags, None)
+            if library is None:
+                result.append(flag)
+            else:
+                libraries.append(library)
+        elif flag.startswith("-l"):
+            libraries.append(flag[len("-l"):])
+        else:
+            result.append(flag)
+    return (result, libraries)
 
 
 def _getSubstitution(substitution, config):
     return libcxx.test.config._getSubstitution(substitution, config.substitutions)
 
 
-def _fingerprint(config, flags):
+def _fingerprint(config, flags, libraries):
     """
     Return an opaque value identifying this GoogleBenchmark build.
 
@@ -117,7 +142,7 @@ def _fingerprint(config, flags):
     GoogleBenchmark change.
     """
     compiler = libcxx.test.dsl._compilerFingerprint(config)
-    return hashlib.sha256(repr((compiler, flags)).encode()).hexdigest()[:16]
+    return hashlib.sha256(repr((compiler, flags, libraries)).encode()).hexdigest()[:16]
 
 
 def _run(litConfig, what, command, cwd):
@@ -146,9 +171,11 @@ def prepare(config, litConfig):
     result is cached inside the build directory. The cache is keyed on the flags being
     used, so different Lit configurations do not interfere with each other.
     """
-    flags = _getFlags(config)
+    flags, libraries = _splitLibraries(
+        _getFlags(config, ("%{flags}", "%{compile_flags}", "%{link_flags}"))
+    )
     root = os.path.join(config.test_exec_root, "__gbench__")
-    prefix = os.path.join(root, _fingerprint(config, flags))
+    prefix = os.path.join(root, _fingerprint(config, flags, libraries))
     buildDir = os.path.join(prefix, "build")
     installDir = os.path.join(prefix, "install")
     os.makedirs(root, exist_ok=True)
@@ -163,13 +190,16 @@ def prepare(config, litConfig):
             "configure",
             [
                 cmake,
-                "-S", SOURCE_DIR,
-                "-B", buildDir,
+                "-S",
+                SOURCE_DIR,
+                "-B",
+                buildDir,
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DCMAKE_CXX_COMPILER={}".format(compiler),
                 "-DCMAKE_CXX_FLAGS={}".format(" ".join(flags)),
                 "-DCMAKE_INSTALL_PREFIX={}".format(installDir),
                 "-DCMAKE_INSTALL_LIBDIR=lib",
+                "-DBENCHMARK_CXX_LIBRARIES={}".format(";".join(libraries)),
                 "-DBENCHMARK_ENABLE_TESTING=OFF",
                 "-DBENCHMARK_ENABLE_WERROR=OFF",
                 "-DBENCHMARK_INSTALL_DOCS=OFF",
