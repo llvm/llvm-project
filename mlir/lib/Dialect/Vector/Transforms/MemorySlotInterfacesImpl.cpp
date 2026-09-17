@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements memory slot interface models for
-// `vector.transfer_read` and `vector.transfer_write`. These models implement
+// `vector.load`, `vector.store`, `vector.transfer_read`, and
+// `vector.transfer_write`. These models implement
 // `PromotableMemOpInterface` so Mem2Reg can replace vector transfers with uses
 // and definitions of a vector SSA value. The models for `memref.subview`
 // live in the MemRef dialect.
@@ -43,6 +44,24 @@ using namespace mlir::vector;
 //===----------------------------------------------------------------------===//
 //  Utilities
 //===----------------------------------------------------------------------===//
+
+/// Load/store accesses must cover the slot from its origin with an exactly
+/// matching vector type. The allocation or alias model determines that type.
+template <typename LoadStoreOpTy>
+static bool
+isWholeBufferLoadStore(LoadStoreOpTy op, const MemorySlot &slot,
+                      const SmallPtrSetImpl<OpOperand *> &blockingUses) {
+  if (blockingUses.size() != 1 || (*blockingUses.begin())->get() != slot.ptr ||
+      op.getBase() != slot.ptr || op.getVectorType() != slot.valueType)
+    return false;
+
+  for (Value index : op.getIndices()) {
+    std::optional<int64_t> constIndex = getConstantIntValue(index);
+    if (!constIndex || *constIndex != 0)
+      return false;
+  }
+  return true;
+}
 
 /// Returns whether `xferOp` can be promoted to use or define `slot`'s vector
 /// value. The transfer's memref base must be the slot pointer, its vector type
@@ -93,6 +112,67 @@ isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
 //===----------------------------------------------------------------------===//
 
 namespace {
+struct LoadOpMemOpModel
+    : public PromotableMemOpInterface::ExternalModel<LoadOpMemOpModel,
+                                                     vector::LoadOp> {
+  bool loadsFrom(Operation *op, const MemorySlot &slot) const {
+    return cast<vector::LoadOp>(op).getBase() == slot.ptr;
+  }
+
+  bool storesTo(Operation *op, const MemorySlot &slot) const { return false; }
+
+  Value getStored(Operation *op, const MemorySlot &slot, OpBuilder &builder,
+                  Value reachingDef, const DataLayout &dataLayout) const {
+    llvm_unreachable("getStored should not be called on LoadOp");
+  }
+
+  bool canUsesBeRemoved(Operation *op, const MemorySlot &slot,
+                        const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                        SmallVectorImpl<OpOperand *> &newBlockingUses,
+                        const DataLayout &dataLayout) const {
+    return isWholeBufferLoadStore(cast<vector::LoadOp>(op), slot, blockingUses);
+  }
+
+  DeletionKind
+  removeBlockingUses(Operation *op, const MemorySlot &slot,
+                     const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                     OpBuilder &builder, Value reachingDefinition,
+                     const DataLayout &dataLayout) const {
+    cast<vector::LoadOp>(op).getResult().replaceAllUsesWith(reachingDefinition);
+    return DeletionKind::Delete;
+  }
+};
+
+struct StoreOpMemOpModel
+    : public PromotableMemOpInterface::ExternalModel<StoreOpMemOpModel,
+                                                     vector::StoreOp> {
+  bool loadsFrom(Operation *op, const MemorySlot &slot) const { return false; }
+
+  bool storesTo(Operation *op, const MemorySlot &slot) const {
+    return cast<vector::StoreOp>(op).getBase() == slot.ptr;
+  }
+
+  Value getStored(Operation *op, const MemorySlot &slot, OpBuilder &builder,
+                  Value reachingDef, const DataLayout &dataLayout) const {
+    return cast<vector::StoreOp>(op).getValueToStore();
+  }
+
+  bool canUsesBeRemoved(Operation *op, const MemorySlot &slot,
+                        const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                        SmallVectorImpl<OpOperand *> &newBlockingUses,
+                        const DataLayout &dataLayout) const {
+    return isWholeBufferLoadStore(cast<vector::StoreOp>(op), slot, blockingUses);
+  }
+
+  DeletionKind
+  removeBlockingUses(Operation *op, const MemorySlot &slot,
+                     const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                     OpBuilder &builder, Value reachingDefinition,
+                     const DataLayout &dataLayout) const {
+    return DeletionKind::Delete;
+  }
+};
+
 /// `PromotableMemOpInterface` model for `vector.transfer_read`.
 struct TransferReadOpMemOpModel
     : public PromotableMemOpInterface::ExternalModel<TransferReadOpMemOpModel,
@@ -197,6 +277,8 @@ struct TransferWriteOpMemOpModel
 
 void mlir::vector::registerMemorySlotExternalModels(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, vector::VectorDialect *dialect) {
+    LoadOp::attachInterface<LoadOpMemOpModel>(*ctx);
+    StoreOp::attachInterface<StoreOpMemOpModel>(*ctx);
     TransferReadOp::attachInterface<TransferReadOpMemOpModel>(*ctx);
     TransferWriteOp::attachInterface<TransferWriteOpMemOpModel>(*ctx);
   });
