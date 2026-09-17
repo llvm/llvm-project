@@ -2236,3 +2236,96 @@ define bfloat @select_ogt_bf16(bfloat %a, bfloat %b) nounwind {
   %sel = select i1 %cmp, bfloat %a, bfloat %b
   ret bfloat %sel
 }
+
+; Both operands come out of GPRs, so the CMOV is cheaper than moving them into
+; vector registers and the result back out.
+define i16 @select_bf16_from_gpr(i1 %cond, i16 %a, i16 %b) nounwind {
+; X86-LABEL: select_bf16_from_gpr:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vmovsh {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    vmovw %eax, %xmm2
+; X86-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; X86-NEXT:    vmovw %xmm0, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: select_bf16_from_gpr:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    testb $1, %dil
+; X64-NEXT:    cmovel %edx, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+  %fa = bitcast i16 %a to bfloat
+  %fb = bitcast i16 %b to bfloat
+  %sel = select i1 %cond, bfloat %fa, bfloat %fb
+  %res = bitcast bfloat %sel to i16
+  ret i16 %res
+}
+
+; The operands already live in vector registers, so blend there even though the
+; select itself is on i16.
+define i16 @select_i16_of_bf16(i1 %cond, bfloat %a, bfloat %b) nounwind {
+; X86-LABEL: select_i16_of_bf16:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    vmovsh {{.*#+}} xmm1 = mem[0],zero,zero,zero,zero,zero,zero,zero
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    vmovw %eax, %xmm2
+; X86-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmovw %xmm0, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+;
+; SSE2-LABEL: select_i16_of_bf16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    andl $1, %edi
+; SSE2-NEXT:    negl %edi
+; SSE2-NEXT:    movd %edi, %xmm2
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pandn %xmm1, %xmm2
+; SSE2-NEXT:    por %xmm0, %xmm2
+; SSE2-NEXT:    movd %xmm2, %eax
+; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSE2-NEXT:    retq
+;
+; AVX512BF16-LABEL: select_i16_of_bf16:
+; AVX512BF16:       # %bb.0:
+; AVX512BF16-NEXT:    andl $1, %edi
+; AVX512BF16-NEXT:    negl %edi
+; AVX512BF16-NEXT:    vmovd %edi, %xmm2
+; AVX512BF16-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; AVX512BF16-NEXT:    vmovd %xmm0, %eax
+; AVX512BF16-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512BF16-NEXT:    retq
+;
+; AVX512FP16-LABEL: select_i16_of_bf16:
+; AVX512FP16:       # %bb.0:
+; AVX512FP16-NEXT:    andl $1, %edi
+; AVX512FP16-NEXT:    negl %edi
+; AVX512FP16-NEXT:    vmovw %edi, %xmm2
+; AVX512FP16-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; AVX512FP16-NEXT:    vmovw %xmm0, %eax
+; AVX512FP16-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512FP16-NEXT:    retq
+;
+; AVXNC-LABEL: select_i16_of_bf16:
+; AVXNC:       # %bb.0:
+; AVXNC-NEXT:    andl $1, %edi
+; AVXNC-NEXT:    negl %edi
+; AVXNC-NEXT:    vmovd %edi, %xmm2
+; AVXNC-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; AVXNC-NEXT:    vmovd %xmm0, %eax
+; AVXNC-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVXNC-NEXT:    retq
+  %ai = bitcast bfloat %a to i16
+  %bi = bitcast bfloat %b to i16
+  %sel = select i1 %cond, i16 %ai, i16 %bi
+  ret i16 %sel
+}
