@@ -95,7 +95,7 @@ class SelectionDAGLegalize {
   SmallPtrSetImpl<SDNode *> &LegalizedNodes;
 
   /// A set of all the nodes updated during legalization.
-  SmallSetVector<SDNode *, 16> *UpdatedNodes;
+  SmallSetVector<SDNode *> *UpdatedNodes;
 
   EVT getSetCCResultType(EVT VT) const {
     return TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
@@ -106,7 +106,7 @@ class SelectionDAGLegalize {
 public:
   SelectionDAGLegalize(SelectionDAG &DAG,
                        SmallPtrSetImpl<SDNode *> &LegalizedNodes,
-                       SmallSetVector<SDNode *, 16> *UpdatedNodes = nullptr)
+                       SmallSetVector<SDNode *> *UpdatedNodes = nullptr)
       : TM(DAG.getTarget()), TLI(DAG.getTargetLoweringInfo()), DAG(DAG),
         LegalizedNodes(LegalizedNodes), UpdatedNodes(UpdatedNodes) {}
 
@@ -6348,7 +6348,7 @@ void SelectionDAG::Legalize() {
 }
 
 bool SelectionDAG::LegalizeOp(SDNode *N,
-                              SmallSetVector<SDNode *, 16> &UpdatedNodes) {
+                              SmallSetVector<SDNode *> &UpdatedNodes) {
   SmallPtrSet<SDNode *, 16> LegalizedNodes;
   SelectionDAGLegalize Legalizer(*this, LegalizedNodes, &UpdatedNodes);
 

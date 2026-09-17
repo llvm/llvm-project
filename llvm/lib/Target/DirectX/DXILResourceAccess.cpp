@@ -975,7 +975,7 @@ struct AccessIndices {
 //  - GetPtrIdx is the index of dx.resource.getpointer
 //  - HandleIdx is the index of dx.resource.handlefrom.*
 static AccessIndices
-getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
+getAccessIndices(Instruction *I, SmallSetVector<Instruction *> &DeadInsts,
                  SmallDenseMap<PHINode *, PHINode *> &VisitedPhis) {
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
     if (llvm::is_contained(HandleIntrins, II->getIntrinsicID())) {
@@ -1073,7 +1073,7 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
 
 static void
 replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
-                         SmallSetVector<Instruction *, 16> &DeadInsts,
+                         SmallSetVector<Instruction *> &DeadInsts,
                          SmallDenseMap<PHINode *, PHINode *> &VisitedPhis) {
   auto AccessIdx = getAccessIndices(Ptr, DeadInsts, VisitedPhis);
   assert(AccessIdx.hasHandleIdx() &&
@@ -1115,7 +1115,7 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
 //
 // Returns true if any changes are made.
 static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
-  SmallSetVector<Instruction *, 16> DeadInsts;
+  SmallSetVector<Instruction *> DeadInsts;
   SmallDenseMap<PHINode *, PHINode *> VisitedPhis;
 
   for (BasicBlock &BB : make_early_inc_range(F)) {

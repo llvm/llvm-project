@@ -65,7 +65,7 @@ class Record;
 class SetTheory {
 public:
   using RecVec = std::vector<const Record *>;
-  using RecSet = SmallSetVector<const Record *, 16>;
+  using RecSet = SmallSetVector<const Record *>;
 
   /// Operator - A callback representing a DAG operator.
   class LLVM_ABI Operator {

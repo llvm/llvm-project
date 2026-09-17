@@ -46,7 +46,7 @@ class ProcessImplicitDefs {
   const TargetRegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
 
-  SmallSetVector<MachineInstr *, 16> WorkList;
+  SmallSetVector<MachineInstr *> WorkList;
 
   void processImplicitDef(MachineInstr *MI);
   bool canTurnIntoImplicitDef(MachineInstr *MI);

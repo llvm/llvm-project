@@ -86,7 +86,7 @@ formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
                              SmallVectorImpl<PHINode *> *InsertedPHIs,
                              LoopExitBlocksTy &LoopExitBlocks) {
   SmallVector<Use *, 16> UsesToRewrite;
-  SmallSetVector<PHINode *, 16> LocalPHIsToRemove;
+  SmallSetVector<PHINode *> LocalPHIsToRemove;
   PredIteratorCache PredCache;
   bool Changed = false;
 

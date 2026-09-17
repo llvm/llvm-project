@@ -124,7 +124,7 @@ void llvm::transformGlobalDtors(Module &M, const GlobalCtorTransformFn &Fn) {
 }
 
 static void collectUsedGlobals(GlobalVariable *GV,
-                               SmallSetVector<Constant *, 16> &Init) {
+                               SmallSetVector<Constant *> &Init) {
   if (!GV || !GV->hasInitializer())
     return;
 
@@ -136,7 +136,7 @@ static void collectUsedGlobals(GlobalVariable *GV,
 static void appendToUsedList(Module &M, StringRef Name, ArrayRef<GlobalValue *> Values) {
   GlobalVariable *GV = M.getGlobalVariable(Name);
 
-  SmallSetVector<Constant *, 16> Init;
+  SmallSetVector<Constant *> Init;
   collectUsedGlobals(GV, Init);
   if (GV)
     GV->eraseFromParent();
@@ -169,7 +169,7 @@ static void removeFromUsedList(Module &M, StringRef Name,
   if (!GV)
     return;
 
-  SmallSetVector<Constant *, 16> Init;
+  SmallSetVector<Constant *> Init;
   collectUsedGlobals(GV, Init);
 
   Type *ArrayEltTy = cast<ArrayType>(GV->getValueType())->getElementType();

@@ -28,7 +28,7 @@ class InstructionWorklist {
   /// These instructions will be added in reverse order after the current
   /// combine has finished. This means that these instructions will be visited
   /// in the order they have been added.
-  SmallSetVector<Instruction *, 16> Deferred;
+  SmallSetVector<Instruction *> Deferred;
 
 public:
   InstructionWorklist() = default;

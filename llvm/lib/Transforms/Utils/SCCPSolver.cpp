@@ -613,7 +613,7 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
 
   /// Worklist of instructions to re-visit. This only includes instructions
   /// in blocks that have already been visited at least once.
-  SmallSetVector<Instruction *, 16> InstWorkList;
+  SmallSetVector<Instruction *> InstWorkList;
 
   /// Current instruction while visiting a block for the first time, used to
   /// avoid unnecessary instruction worklist insertions. Null if an instruction

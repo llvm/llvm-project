@@ -1582,7 +1582,7 @@ static void buildClonedLoops(Loop &OrigL, ArrayRef<BasicBlock *> ExitBlocks,
   // cloned blocks out of the original loop. While not all of these will
   // necessarily be in the cloned loop, it is enough to establish that they
   // aren't in unreachable cycles, etc.
-  SmallSetVector<BasicBlock *, 16> ClonedLoopBlocks;
+  SmallSetVector<BasicBlock *> ClonedLoopBlocks;
   for (auto *BB : OrigL.blocks())
     if (auto *ClonedBB = cast_or_null<BasicBlock>(VMap.lookup(BB)))
       ClonedLoopBlocks.insert(ClonedBB);

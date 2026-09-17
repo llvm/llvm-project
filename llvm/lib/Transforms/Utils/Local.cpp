@@ -653,11 +653,10 @@ bool llvm::RecursivelyDeleteDeadPHINode(
   return false;
 }
 
-static bool
-simplifyAndDCEInstruction(Instruction *I,
-                          SmallSetVector<Instruction *, 16> &WorkList,
-                          const DataLayout &DL,
-                          const TargetLibraryInfo *TLI) {
+static bool simplifyAndDCEInstruction(Instruction *I,
+                                      SmallSetVector<Instruction *> &WorkList,
+                                      const DataLayout &DL,
+                                      const TargetLibraryInfo *TLI) {
   if (isInstructionTriviallyDead(I, TLI)) {
     salvageDebugInfo(*I);
 
@@ -725,7 +724,7 @@ bool llvm::SimplifyInstructionsInBlock(BasicBlock *BB,
   AssertingVH<Instruction> TerminatorVH(&BB->back());
 #endif
 
-  SmallSetVector<Instruction *, 16> WorkList;
+  SmallSetVector<Instruction *> WorkList;
   // Iterate over the original function, only adding insts to the worklist
   // if they actually need to be revisited. This avoids having to pre-init
   // the worklist with the entire function's worth of instructions.

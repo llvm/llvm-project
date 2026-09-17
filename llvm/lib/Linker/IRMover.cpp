@@ -1187,7 +1187,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
 
   // First build a map of the existing module flags and requirements.
   DenseMap<MDString *, std::pair<MDNode *, unsigned>> Flags;
-  SmallSetVector<MDNode *, 16> Requirements;
+  SmallSetVector<MDNode *> Requirements;
   SmallVector<unsigned, 0> Mins;
   DenseSet<MDString *> SeenMin;
   for (unsigned I = 0, E = DstModFlags->getNumOperands(); I != E; ++I) {
@@ -1382,7 +1382,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
       break;
     }
     case Module::AppendUnique: {
-      SmallSetVector<Metadata *, 16> Elts;
+      SmallSetVector<Metadata *> Elts;
       MDTuple *DstValue = ensureDistinctOp(cast<MDNode>(DstOp->getOperand(2)));
       MDNode *SrcValue = cast<MDNode>(SrcOp->getOperand(2));
       Elts.insert(DstValue->op_begin(), DstValue->op_end());

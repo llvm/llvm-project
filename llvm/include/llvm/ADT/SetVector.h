@@ -28,6 +28,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
+#include <initializer_list>
 
 namespace llvm {
 
@@ -87,6 +88,8 @@ public:
   template <typename Range>
   SetVector(llvm::from_range_t, Range &&R)
       : SetVector(adl_begin(R), adl_end(R)) {}
+
+  SetVector(std::initializer_list<T> IL) { insert(IL.begin(), IL.end()); }
 
   [[nodiscard]] ArrayRef<value_type> getArrayRef() const { return vector_; }
 
@@ -341,7 +344,7 @@ private:
 
 /// A SetVector that performs no allocations if smaller than
 /// a certain size.
-template <typename T, unsigned N>
+template <typename T, unsigned N = 16>
 class SmallSetVector : public SetVector<T, SmallVector<T, N>, DenseSet<T>, N> {
 public:
   using SetVector<T, SmallVector<T, N>, DenseSet<T>, N>::SetVector;

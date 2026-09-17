@@ -2570,10 +2570,10 @@ private:
       ToBeChangedValues;
 
   /// Instructions we replace with `unreachable` insts after manifest is done.
-  SmallSetVector<WeakVH, 16> ToBeChangedToUnreachableInsts;
+  SmallSetVector<WeakVH> ToBeChangedToUnreachableInsts;
 
   /// Invoke instructions with at least a single dead successor block.
-  SmallSetVector<WeakVH, 16> InvokeWithDeadSuccessor;
+  SmallSetVector<WeakVH> InvokeWithDeadSuccessor;
 
   /// A flag that indicates which stage of the process we are in. Initially, the
   /// phase is SEEDING. Phase is changed in `Attributor::run()`
@@ -2598,7 +2598,7 @@ private:
 
   /// Container with all the query AAs that requested an update via
   /// registerForUpdate.
-  SmallSetVector<AbstractAttribute *, 16> QueryAAsAwaitingUpdate;
+  SmallSetVector<AbstractAttribute *> QueryAAsAwaitingUpdate;
 
   /// User provided configuration for this Attributor instance.
   const AttributorConfig Configuration;

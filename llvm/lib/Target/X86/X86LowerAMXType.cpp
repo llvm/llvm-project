@@ -745,11 +745,11 @@ public:
   bool transformAMXCast(IntrinsicInst *AMXCast);
   bool transformAllAMXCast();
   bool optimizeAMXCastFromPhi(IntrinsicInst *CI, PHINode *PN,
-                              SmallSetVector<Instruction *, 16> &DeadInst);
+                              SmallSetVector<Instruction *> &DeadInst);
 };
 
 static bool DCEInstruction(Instruction *I,
-                           SmallSetVector<Instruction *, 16> &WorkList,
+                           SmallSetVector<Instruction *> &WorkList,
                            const TargetLibraryInfo *TLI) {
   if (isInstructionTriviallyDead(I, TLI)) {
     salvageDebugInfo(*I);
@@ -788,8 +788,7 @@ static bool DCEInstruction(Instruction *I,
 /// All the related PHI nodes can be replaced by new PHI nodes with type A.
 /// The uses of \p CI can be changed to the new PHI node corresponding to \p PN.
 bool X86LowerAMXCast::optimizeAMXCastFromPhi(
-    IntrinsicInst *CI, PHINode *PN,
-    SmallSetVector<Instruction *, 16> &DeadInst) {
+    IntrinsicInst *CI, PHINode *PN, SmallSetVector<Instruction *> &DeadInst) {
   IRBuilder<> Builder(CI);
   Value *Src = CI->getOperand(0);
   Type *SrcTy = Src->getType(); // Type B
@@ -1099,7 +1098,7 @@ bool X86LowerAMXCast::combineAMXcast(TargetLibraryInfo *TLI) {
   SmallVector<Instruction *, 8> Vec2TileInsts;
   SmallVector<Instruction *, 8> Tile2VecInsts;
   SmallVector<Instruction *, 8> PhiCastWorkList;
-  SmallSetVector<Instruction *, 16> DeadInst;
+  SmallSetVector<Instruction *> DeadInst;
   for (BasicBlock &BB : Func) {
     for (Instruction &I : BB) {
       Value *Vec;

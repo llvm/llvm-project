@@ -153,7 +153,7 @@ class ShrinkWrapImpl {
   /// Entry block.
   const MachineBasicBlock *Entry = nullptr;
 
-  using SetOfRegs = SmallSetVector<unsigned, 16>;
+  using SetOfRegs = SmallSetVector<unsigned>;
 
   /// Registers that need to be saved for the current function.
   mutable SetOfRegs CurrentCSRs;

@@ -188,7 +188,7 @@ class SROA {
   /// directly promoted. Finally, each time we rewrite a use of an alloca other
   /// the one being actively rewritten, we add it back onto the list if not
   /// already present to ensure it is re-visited.
-  SmallSetVector<AllocaInst *, 16> Worklist;
+  SmallSetVector<AllocaInst *> Worklist;
 
   /// A collection of instructions to delete.
   /// We try to batch deletions to simplify code and make things a bit more
@@ -203,7 +203,7 @@ class SROA {
   ///
   /// Note that we have to be very careful to clear allocas out of this list in
   /// the event they are deleted.
-  SmallSetVector<AllocaInst *, 16> PostPromotionWorklist;
+  SmallSetVector<AllocaInst *> PostPromotionWorklist;
 
   /// A collection of alloca instructions we can directly promote.
   SetVector<AllocaInst *, SmallVector<AllocaInst *>,
@@ -1768,7 +1768,7 @@ static void speculatePHINodeLoads(IRBuilderTy &IRB, PHINode &PN) {
 /// Move a store through a pointer PHI onto each of the PHI's incoming edges.
 /// Returns whether this required modifying the CFG.
 static bool rewritePHINodeStore(PHINode &PN, StoreInst &SI, DomTreeUpdater &DTU,
-                                SmallSetVector<AllocaInst *, 16> &Worklist) {
+                                SmallSetVector<AllocaInst *> &Worklist) {
   LLVM_DEBUG(dbgs() << "    original: " << PN << "\n"
                     << "              " << SI << "\n");
 

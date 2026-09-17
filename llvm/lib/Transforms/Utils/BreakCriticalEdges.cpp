@@ -356,7 +356,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
   // Check whether the function has any indirectbrs, and collect which blocks
   // they may jump to. Since most functions don't have indirect branches,
   // this lowers the common case's overhead to O(Blocks) instead of O(Edges).
-  SmallSetVector<BasicBlock *, 16> Targets;
+  SmallSetVector<BasicBlock *> Targets;
   for (auto &BB : F) {
     if (isa<IndirectBrInst>(BB.getTerminator()))
       Targets.insert_range(successors(&BB));

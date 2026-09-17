@@ -1818,7 +1818,7 @@ bool DAGCombiner::recursivelyDeleteUnusedNodes(SDNode *N) {
   if (!N->use_empty())
     return false;
 
-  SmallSetVector<SDNode *, 16> Nodes;
+  SmallSetVector<SDNode *> Nodes;
   Nodes.insert(N);
   do {
     N = Nodes.pop_back_val();
@@ -1890,7 +1890,7 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
     // If this combine is running after legalizing the DAG, re-legalize any
     // nodes pulled off the worklist.
     if (LegalDAG) {
-      SmallSetVector<SDNode *, 16> UpdatedNodes;
+      SmallSetVector<SDNode *> UpdatedNodes;
       bool NIsValid = DAG.LegalizeOp(N, UpdatedNodes);
 
       for (SDNode *LN : UpdatedNodes)

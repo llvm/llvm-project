@@ -367,7 +367,7 @@ public:
 
 class MachineBlockPlacement {
   /// A type for a block filter set.
-  using BlockFilterSet = SmallSetVector<const MachineBasicBlock *, 16>;
+  using BlockFilterSet = SmallSetVector<const MachineBasicBlock *>;
 
   /// Pair struct containing basic block and taildup profitability
   struct BlockAndTailDupResult {

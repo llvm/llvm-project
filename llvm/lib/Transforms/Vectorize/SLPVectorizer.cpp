@@ -16494,7 +16494,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       E->isAltShuffle() ? (unsigned)Instruction::ShuffleVector : E->getOpcode();
   if (E->CombinedOp != TreeEntry::NotCombinedOp)
     ShuffleOrOp = E->CombinedOp;
-  SmallSetVector<Value *, 16> UniqueValues;
+  SmallSetVector<Value *> UniqueValues;
   SmallVector<unsigned, 16> UniqueIndexes;
   for (auto [Idx, V] : enumerate(VL))
     if (UniqueValues.insert(V))

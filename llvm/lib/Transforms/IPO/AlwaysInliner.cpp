@@ -40,7 +40,7 @@ bool AlwaysInlineImpl(
     function_ref<AAResults &(Function &)> GetAAR,
     function_ref<TargetTransformInfo &(Function &)> GetTTI,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
-  SmallSetVector<CallBase *, 16> Calls;
+  SmallSetVector<CallBase *> Calls;
   bool Changed = false;
   SmallVector<Function *, 16> InlinedComdatFunctions;
   SmallVector<Function *, 4> NeedFlattening;

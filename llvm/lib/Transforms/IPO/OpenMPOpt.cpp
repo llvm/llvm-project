@@ -1580,7 +1580,7 @@ private:
         OMPRTL_omp_get_partition_place_nums};
 
     // Global-tid is handled separately.
-    SmallSetVector<Value *, 16> GTIdArgs;
+    SmallSetVector<Value *> GTIdArgs;
     collectGlobalThreadIdArguments(GTIdArgs);
     LLVM_DEBUG(dbgs() << TAG << "Found " << GTIdArgs.size()
                       << " global thread ID arguments\n");
@@ -1989,7 +1989,7 @@ private:
   }
 
   /// Collect arguments that represent the global thread id in \p GTIdArgs.
-  void collectGlobalThreadIdArguments(SmallSetVector<Value *, 16> &GTIdArgs) {
+  void collectGlobalThreadIdArguments(SmallSetVector<Value *> &GTIdArgs) {
     // TODO: Below we basically perform a fixpoint iteration with a pessimistic
     //       initialization. We could define an AbstractAttribute instead and
     //       run the Attributor here once it can be run as an SCC pass.
@@ -2887,7 +2887,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
         Changed = ChangeStatus::CHANGED;
         SmallVector<CallBase *> Worklist(ED.AlignedBarriers.begin(),
                                          ED.AlignedBarriers.end());
-        SmallSetVector<CallBase *, 16> Visited;
+        SmallSetVector<CallBase *> Visited;
         while (!Worklist.empty()) {
           CallBase *LastCB = Worklist.pop_back_val();
           if (!Visited.insert(LastCB))
@@ -3097,7 +3097,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
   DenseMap<const BasicBlock *, ExecutionDomainTy> BEDMap;
   DenseMap<PointerIntPair<const CallBase *, 1, Direction>, ExecutionDomainTy>
       CEDMap;
-  SmallSetVector<CallBase *, 16> AlignedBarriers;
+  SmallSetVector<CallBase *> AlignedBarriers;
 
   ReversePostOrderTraversal<Function *> *RPOT = nullptr;
 
@@ -3458,7 +3458,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
 
   // Propagate (non-aligned) sync instruction effects backwards until the
   // entry is hit or an aligned barrier.
-  SmallSetVector<BasicBlock *, 16> Visited;
+  SmallSetVector<BasicBlock *> Visited;
   while (!SyncInstWorklist.empty()) {
     Instruction *SyncInst = SyncInstWorklist.pop_back_val();
     Instruction *CurInst = SyncInst;

@@ -4268,7 +4268,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   // Collect the chain, building Nodes in postorder. Bail if the chain is empty
   // or exceeds MaxChainNodes.
   constexpr unsigned MaxChainNodes = 32;
-  SmallSetVector<Value *, 16> Nodes;
+  SmallSetVector<Value *> Nodes;
   SmallSetVector<Value *, 4> Sources;
   unsigned NumVisited = 0;
   auto AddSource = [&](Value *V) {

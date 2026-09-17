@@ -589,12 +589,13 @@ namespace {
   /// recomputes their ready state.
   class NodeUpdateListener : public SelectionDAG::DAGUpdateListener {
     DAGTypeLegalizer &DTL;
-    SmallSetVector<SDNode*, 16> &NodesToAnalyze;
+    SmallSetVector<SDNode *> &NodesToAnalyze;
+
   public:
     explicit NodeUpdateListener(DAGTypeLegalizer &dtl,
-                                SmallSetVector<SDNode*, 16> &nta)
-      : SelectionDAG::DAGUpdateListener(dtl.getDAG()),
-        DTL(dtl), NodesToAnalyze(nta) {}
+                                SmallSetVector<SDNode *> &nta)
+        : SelectionDAG::DAGUpdateListener(dtl.getDAG()), DTL(dtl),
+          NodesToAnalyze(nta) {}
 
     void NodeDeleted(SDNode *N, SDNode *E) override {
       assert(N->getNodeId() != DAGTypeLegalizer::ReadyToProcess &&
@@ -641,7 +642,7 @@ void DAGTypeLegalizer::ReplaceValueWith(SDValue From, SDValue To) {
 
   // Anything that used the old node should now use the new one.  Note that this
   // can potentially cause recursive merging.
-  SmallSetVector<SDNode*, 16> NodesToAnalyze;
+  SmallSetVector<SDNode *> NodesToAnalyze;
   NodeUpdateListener NUL(*this, NodesToAnalyze);
   do {
 

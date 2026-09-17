@@ -382,7 +382,7 @@ void SjLjEHPrepareImpl::lowerAcrossUnwindEdges(Function &F,
 bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
   SmallVector<ReturnInst *, 16> Returns;
   SmallVector<InvokeInst *, 16> Invokes;
-  SmallSetVector<LandingPadInst *, 16> LPads;
+  SmallSetVector<LandingPadInst *> LPads;
 
   // Look through the terminators of the basic blocks to find invokes.
   for (BasicBlock &BB : F)

@@ -118,17 +118,17 @@ public:
 
   void collectElseRegionBlocks(MachineBasicBlock *Flow,
                                MachineBasicBlock *Endif,
-                               SmallSetVector<MachineBasicBlock *, 16> &) const;
+                               SmallSetVector<MachineBasicBlock *> &) const;
 
   void
   collectCandidateRegisters(MachineBasicBlock *If, MachineBasicBlock *Flow,
                             MachineBasicBlock *Endif,
-                            SmallSetVector<MachineBasicBlock *, 16> &ElseBlocks,
+                            SmallSetVector<MachineBasicBlock *> &ElseBlocks,
                             SmallVectorImpl<Register> &CandidateRegs) const;
 
   void collectWaterfallCandidateRegisters(
       MachineBasicBlock *LoopHeader, MachineBasicBlock *LoopEnd,
-      SmallSetVector<Register, 16> &CandidateRegs,
+      SmallSetVector<Register> &CandidateRegs,
       SmallSetVector<MachineBasicBlock *, 2> &Blocks,
       SmallVectorImpl<MachineInstr *> &Instructions) const;
 
@@ -141,12 +141,11 @@ public:
   void updateLiveRangeInElseRegion(
       Register Reg, Register NewReg, MachineBasicBlock *Flow,
       MachineBasicBlock *Endif,
-      SmallSetVector<MachineBasicBlock *, 16> &ElseBlocks) const;
+      SmallSetVector<MachineBasicBlock *> &ElseBlocks) const;
 
-  void
-  optimizeLiveRange(Register Reg, MachineBasicBlock *If,
-                    MachineBasicBlock *Flow, MachineBasicBlock *Endif,
-                    SmallSetVector<MachineBasicBlock *, 16> &ElseBlocks) const;
+  void optimizeLiveRange(Register Reg, MachineBasicBlock *If,
+                         MachineBasicBlock *Flow, MachineBasicBlock *Endif,
+                         SmallSetVector<MachineBasicBlock *> &ElseBlocks) const;
 
   void optimizeWaterfallLiveRange(
       Register Reg, MachineBasicBlock *LoopHeader,
@@ -219,7 +218,7 @@ bool SIOptimizeVGPRLiveRange::isLiveIntoMBB(
 
 void SIOptimizeVGPRLiveRange::collectElseRegionBlocks(
     MachineBasicBlock *Flow, MachineBasicBlock *Endif,
-    SmallSetVector<MachineBasicBlock *, 16> &Blocks) const {
+    SmallSetVector<MachineBasicBlock *> &Blocks) const {
   assert(Flow != Endif);
 
   MachineBasicBlock *MBB = Endif;
@@ -259,7 +258,7 @@ void SIOptimizeVGPRLiveRange::findNonPHIUsesInBlock(
 /// the whole THEN region.
 void SIOptimizeVGPRLiveRange::collectCandidateRegisters(
     MachineBasicBlock *If, MachineBasicBlock *Flow, MachineBasicBlock *Endif,
-    SmallSetVector<MachineBasicBlock *, 16> &ElseBlocks,
+    SmallSetVector<MachineBasicBlock *> &ElseBlocks,
     SmallVectorImpl<Register> &CandidateRegs) const {
 
   SmallSet<Register, 8> KillsInElse;
@@ -363,7 +362,7 @@ void SIOptimizeVGPRLiveRange::collectCandidateRegisters(
 /// before.
 void SIOptimizeVGPRLiveRange::collectWaterfallCandidateRegisters(
     MachineBasicBlock *LoopHeader, MachineBasicBlock *LoopEnd,
-    SmallSetVector<Register, 16> &CandidateRegs,
+    SmallSetVector<Register> &CandidateRegs,
     SmallSetVector<MachineBasicBlock *, 2> &Blocks,
     SmallVectorImpl<MachineInstr *> &Instructions) const {
 
@@ -498,7 +497,7 @@ void SIOptimizeVGPRLiveRange::updateLiveRangeInThenRegion(
 void SIOptimizeVGPRLiveRange::updateLiveRangeInElseRegion(
     Register Reg, Register NewReg, MachineBasicBlock *Flow,
     MachineBasicBlock *Endif,
-    SmallSetVector<MachineBasicBlock *, 16> &ElseBlocks) const {
+    SmallSetVector<MachineBasicBlock *> &ElseBlocks) const {
   LiveVariables::VarInfo &NewVarInfo = LV->getVarInfo(NewReg);
   LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(Reg);
 
@@ -525,7 +524,7 @@ void SIOptimizeVGPRLiveRange::updateLiveRangeInElseRegion(
 void SIOptimizeVGPRLiveRange::optimizeLiveRange(
     Register Reg, MachineBasicBlock *If, MachineBasicBlock *Flow,
     MachineBasicBlock *Endif,
-    SmallSetVector<MachineBasicBlock *, 16> &ElseBlocks) const {
+    SmallSetVector<MachineBasicBlock *> &ElseBlocks) const {
   // Insert a new PHI, marking the value from the THEN region being
   // undef.
   LLVM_DEBUG(dbgs() << "Optimizing " << printReg(Reg, TRI) << '\n');
@@ -740,7 +739,7 @@ bool SIOptimizeVGPRLiveRange::run(MachineFunction &MF) {
         if (!MDT->dominates(&MBB, IfTarget) || !MDT->dominates(IfTarget, Endif))
           continue;
 
-        SmallSetVector<MachineBasicBlock *, 16> ElseBlocks;
+        SmallSetVector<MachineBasicBlock *> ElseBlocks;
         SmallVector<Register> CandidateRegs;
 
         LLVM_DEBUG(dbgs() << "Checking IF-ELSE-ENDIF: "
@@ -765,7 +764,7 @@ bool SIOptimizeVGPRLiveRange::run(MachineFunction &MF) {
         LLVM_DEBUG(dbgs() << "Checking Waterfall loop: "
                           << printMBBReference(*LoopHeader) << '\n');
 
-        SmallSetVector<Register, 16> CandidateRegs;
+        SmallSetVector<Register> CandidateRegs;
         SmallVector<MachineInstr *, 16> Instructions;
         SmallSetVector<MachineBasicBlock *, 2> Blocks;
 

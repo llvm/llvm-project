@@ -183,7 +183,7 @@ private:
   void collectUsedGlobalVariables(Module &M, StringRef Name);
 
   /// Keep track of the GlobalVariable that must not be merged away
-  SmallSetVector<const GlobalVariable *, 16> MustKeepGlobalVariables;
+  SmallSetVector<const GlobalVariable *> MustKeepGlobalVariables;
 
 public:
   GlobalMergeImpl(const TargetMachine *TM, GlobalMergeOptions Opt)

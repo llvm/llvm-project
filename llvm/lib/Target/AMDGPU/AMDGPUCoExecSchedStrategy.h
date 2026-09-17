@@ -72,9 +72,9 @@ private:
   /// the critical resource. This agreement results in shorter live ranges and
   /// more regular HardwareUnit access patterns. SUs are prioritized based on
   /// depth for top-down scheduling.
-  SmallSetVector<SUnit *, 16> PrioritySUs;
+  SmallSetVector<SUnit *> PrioritySUs;
   /// All the SUs in the region that consume this resource.
-  SmallSetVector<SUnit *, 16> AllSUs;
+  SmallSetVector<SUnit *> AllSUs;
   /// All the SUs for this HardwareUnit that have already been scheduled.
   SmallVector<SUnit *, 16> ScheduledSUs;
   /// The total number of busy cycles for this HardwareUnit for a given region.

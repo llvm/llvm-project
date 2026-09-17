@@ -2832,7 +2832,7 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
   // Do all the fixups of the original live variables to their relocated selves.
   // A SmallSetVector is used to collect live variables while retaining the
   // order in which we add them, which is important for reproducible tests.
-  SmallSetVector<Value *, 16> Live;
+  SmallSetVector<Value *> Live;
   for (const PartiallyConstructedSafepointRecord &Info : Records) {
     // We can't simply save the live set from the original insertion.  One of
     // the live values might be the result of a call which needs a safepoint.

@@ -105,7 +105,7 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
   ++FunctionCount;
 
   SetVector<std::pair<const Value *, Type *>> Pointers;
-  SmallSetVector<Instruction *, 16> OtherMemOps;
+  SmallSetVector<Instruction *> OtherMemOps;
   SetVector<Value *> Loads;
   SetVector<Value *> Stores;
 

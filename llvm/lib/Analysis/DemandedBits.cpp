@@ -366,7 +366,7 @@ void DemandedBits::performAnalysis() {
   AliveBits.clear();
   DeadUses.clear();
 
-  SmallSetVector<Instruction*, 16> Worklist;
+  SmallSetVector<Instruction *> Worklist;
 
   // Collect the set of "root" instructions that are known live.
   for (Instruction &I : instructions(F)) {

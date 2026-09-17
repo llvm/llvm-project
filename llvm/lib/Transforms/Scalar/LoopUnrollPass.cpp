@@ -361,7 +361,7 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
     return std::nullopt;
   }
 
-  SmallSetVector<BasicBlock *, 16> BBWorklist;
+  SmallSetVector<BasicBlock *> BBWorklist;
   SmallSetVector<std::pair<BasicBlock *, BasicBlock *>, 4> ExitWorklist;
   DenseMap<Value *, Value *> SimplifiedValues;
   SmallVector<std::pair<Value *, Value *>, 4> SimplifiedInputValues;

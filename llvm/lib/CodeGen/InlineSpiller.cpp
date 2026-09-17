@@ -106,7 +106,7 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
   /// This is the map from original register to a set containing all its
   /// siblings. To hoist a spill to another BB, we need to find out a live
   /// sibling there and use it as the source of the new spill.
-  DenseMap<Register, SmallSetVector<Register, 16>> Virt2SiblingsMap;
+  DenseMap<Register, SmallSetVector<Register>> Virt2SiblingsMap;
 
   bool isSpillCandBB(LiveInterval &OrigLI, VNInfo &OrigVNI,
                      MachineBasicBlock &BB, Register &LiveReg);
@@ -1536,7 +1536,7 @@ bool HoistSpillHelper::isSpillCandBB(LiveInterval &OrigLI, VNInfo &OrigVNI,
     return false;
   }
   Register OrigReg = OrigLI.reg();
-  SmallSetVector<Register, 16> &Siblings = Virt2SiblingsMap[OrigReg];
+  SmallSetVector<Register> &Siblings = Virt2SiblingsMap[OrigReg];
   assert(OrigLI.getVNInfoAt(Idx) == &OrigVNI && "Unexpected VNI");
 
   for (const Register &SibReg : Siblings) {

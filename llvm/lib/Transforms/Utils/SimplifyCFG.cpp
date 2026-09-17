@@ -1480,7 +1480,7 @@ bool SimplifyCFGOpt::foldValueComparisonIntoPredecessors(Instruction *TI,
 
   bool Changed = false;
 
-  SmallSetVector<BasicBlock *, 16> Preds(pred_begin(BB), pred_end(BB));
+  SmallSetVector<BasicBlock *> Preds(pred_begin(BB), pred_end(BB));
   while (!Preds.empty()) {
     BasicBlock *Pred = Preds.pop_back_val();
     Instruction *PTI = Pred->getTerminator();
@@ -8572,7 +8572,7 @@ static bool mergeIdenticalBBs(ArrayRef<BasicBlock *> Candidates,
 bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
                                                  DomTreeUpdater *DTU) {
   // Collect candidate switch-arms top-down.
-  SmallSetVector<BasicBlock *, 16> FilteredArms(
+  SmallSetVector<BasicBlock *> FilteredArms(
       llvm::from_range,
       make_filter_range(successors(SI), EqualBBWrapper::canBeMerged));
   return mergeIdenticalBBs(FilteredArms.getArrayRef(), DTU);
@@ -8776,7 +8776,7 @@ static bool tryToMergeLandingPad(LandingPadInst *LPad, UncondBrInst *BI,
 
     // We've found an identical block.  Update our predecessors to take that
     // path instead and make ourselves dead.
-    SmallSetVector<BasicBlock *, 16> UniquePreds(pred_begin(BB), pred_end(BB));
+    SmallSetVector<BasicBlock *> UniquePreds(pred_begin(BB), pred_end(BB));
     for (BasicBlock *Pred : UniquePreds) {
       InvokeInst *II = cast<InvokeInst>(Pred->getTerminator());
       assert(II->getNormalDest() != BB && II->getUnwindDest() == BB &&
@@ -8788,7 +8788,7 @@ static bool tryToMergeLandingPad(LandingPadInst *LPad, UncondBrInst *BI,
       }
     }
 
-    SmallSetVector<BasicBlock *, 16> UniqueSuccs(succ_begin(BB), succ_end(BB));
+    SmallSetVector<BasicBlock *> UniqueSuccs(succ_begin(BB), succ_end(BB));
     for (BasicBlock *Succ : UniqueSuccs) {
       Succ->removePredecessor(BB);
       if (DTU)

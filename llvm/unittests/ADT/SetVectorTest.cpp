@@ -106,3 +106,13 @@ TEST(SmallSetVector, CtorRange) {
   SmallSetVector<unsigned, 4> Set(llvm::from_range, Args);
   EXPECT_THAT(Set, ::testing::ElementsAre(3, 1, 2));
 }
+
+TEST(SetVector, CtorInitList) {
+  SetVector<unsigned> Set = {3, 1, 2, 1};
+  EXPECT_THAT(Set, ::testing::ElementsAre(3, 1, 2));
+}
+
+TEST(SmallSetVector, CtorInitList) {
+  SmallSetVector<unsigned> Set = {3, 1, 2, 1};
+  EXPECT_THAT(Set, ::testing::ElementsAre(3, 1, 2));
+}

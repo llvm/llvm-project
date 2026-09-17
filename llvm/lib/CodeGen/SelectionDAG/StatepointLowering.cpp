@@ -589,7 +589,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   LLVM_DEBUG(dbgs() << "Deciding how to lower GC Pointers:\n");
 
   // List of unique lowered GC Pointer values.
-  SmallSetVector<SDValue, 16> LoweredGCPtrs;
+  SmallSetVector<SDValue> LoweredGCPtrs;
   // Map lowered GC Pointer value to the index in above vector
   DenseMap<SDValue, unsigned> GCPtrIndexMap;
 

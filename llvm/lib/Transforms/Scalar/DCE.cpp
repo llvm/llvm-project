@@ -53,7 +53,7 @@ RedundantDbgInstEliminationPass::run(Function &F, FunctionAnalysisManager &AM) {
 //
 
 static bool DCEInstruction(Instruction *I,
-                           SmallSetVector<Instruction *, 16> &WorkList,
+                           SmallSetVector<Instruction *> &WorkList,
                            const TargetLibraryInfo *TLI) {
   if (isInstructionTriviallyDead(I, TLI)) {
     if (!DebugCounter::shouldExecute(DCECounter))
@@ -88,7 +88,7 @@ static bool DCEInstruction(Instruction *I,
 
 static bool eliminateDeadCode(Function &F, TargetLibraryInfo *TLI) {
   bool MadeChange = false;
-  SmallSetVector<Instruction *, 16> WorkList;
+  SmallSetVector<Instruction *> WorkList;
   // Iterate over the original function, only adding insts to the worklist
   // if they actually need to be revisited. This avoids having to pre-init
   // the worklist with the entire function's worth of instructions.

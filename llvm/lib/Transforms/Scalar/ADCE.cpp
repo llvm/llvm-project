@@ -115,7 +115,7 @@ class AggressiveDeadCodeElimination {
   SmallPtrSet<const Metadata *, 32> AliveScopes;
 
   /// Set of blocks with not known to have live terminators.
-  SmallSetVector<BasicBlock *, 16> BlocksWithDeadTerminators;
+  SmallSetVector<BasicBlock *> BlocksWithDeadTerminators;
 
   /// The set of blocks which we have determined whose control
   /// dependence sources must be live and which have not had
