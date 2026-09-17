@@ -2581,7 +2581,7 @@ def BPFFastCall : InheritableAttr,
 def WebAssemblyExportName : InheritableAttr,
                             TargetSpecificAttr<TargetWebAssembly> {
   let Spellings = [Clang<"export_name">];
-  let Args = [StringArgument<"ExportName">];
+  let Args = [StringArgument<"ExportName", 1>];
   let Documentation = [WebAssemblyExportNameDocs];
   let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag>;
 }
