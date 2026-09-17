@@ -424,10 +424,13 @@ static void createBufferAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
 
 static void createTextureAtomicBinOp(IntrinsicInst *II, AtomicRMWInst *AI,
                                      dxil::ResourceTypeInfo &RTI) {
+  // A texture atomic operates on a whole texel, so a multi-component texel has
+  // no single addressable component. A scalar float texel is allowed, because
+  // emitAtomicBinOp exchanges its bit pattern as an integer.
   Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
-  if (!ContainedType->isIntegerTy()) {
+  if (!ContainedType->isIntegerTy() && !ContainedType->isFloatingPointTy()) {
     reportFatalUsageError("DXIL atomicrmw requires a texture resource with a "
-                          "scalar integer element type");
+                          "scalar element type");
     return;
   }
 
