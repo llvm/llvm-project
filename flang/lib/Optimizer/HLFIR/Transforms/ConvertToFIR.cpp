@@ -364,9 +364,12 @@ public:
     CopyInResult result = copyInOp.getVarIsPresent()
                               ? genOptionalCopyIn(loc, builder, copyInOp)
                               : genNonOptionalCopyIn(loc, builder, copyInOp);
-    rewriter.replaceOp(
-        copyInOp, {result.addr, result.wasCopied,
-                   builder.createBool(copyInOp.getLoc(), result.mustFree)});
+    // Heap temps are only created when a copy is made. Keep mustFree false
+    // on the stack path (constant) and equal to wasCopied on the heap path
+    // so copy-out can free on mustFree alone.
+    mlir::Value mustFree =
+        result.mustFree ? result.wasCopied : builder.createBool(loc, false);
+    rewriter.replaceOp(copyInOp, {result.addr, result.wasCopied, mustFree});
     return mlir::success();
   }
 
@@ -386,23 +389,22 @@ public:
     mlir::Location loc = copyOutOp.getLoc();
     fir::FirOpBuilder builder(rewriter, copyOutOp.getOperation());
 
-    builder.genIfThen(loc, copyOutOp.getWasCopied())
-        .genThen([&] {
-          if (mlir::Value var = copyOutOp.getVar())
+    if (mlir::Value var = copyOutOp.getVar())
+      builder.genIfThen(loc, copyOutOp.getWasCopied())
+          .genThen([&] {
             fir::runtime::genCopyOutAssignDirect(builder, loc, var,
                                                  copyOutOp.getTemp());
-          builder.genIfThen(loc, copyOutOp.getMustFree())
-              .genThen([&] {
-                mlir::Value temp =
-                    fir::LoadOp::create(builder, loc, copyOutOp.getTemp());
-                mlir::Value tempAddr =
-                    fir::BoxAddrOp::create(builder, loc, temp);
-                mlir::Value heapAddr = fir::ConvertOp::create(
-                    builder, loc, fir::HeapType::get(builder.getIntegerType(8)),
-                    tempAddr);
-                fir::FreeMemOp::create(builder, loc, heapAddr);
-              })
-              .end();
+          })
+          .end();
+    builder.genIfThen(loc, copyOutOp.getMustFree())
+        .genThen([&] {
+          mlir::Value temp =
+              fir::LoadOp::create(builder, loc, copyOutOp.getTemp());
+          mlir::Value tempAddr = fir::BoxAddrOp::create(builder, loc, temp);
+          mlir::Value heapAddr = fir::ConvertOp::create(
+              builder, loc, fir::HeapType::get(builder.getIntegerType(8)),
+              tempAddr);
+          fir::FreeMemOp::create(builder, loc, heapAddr);
         })
         .end();
     rewriter.eraseOp(copyOutOp);

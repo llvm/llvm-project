@@ -71,9 +71,8 @@ func.func @test_copy_out_no_copy_back(%temp: !fir.ref<!fir.box<!fir.array<?xf64>
 // CHECK-LABEL: func.func @test_copy_out_no_copy_back(
 // CHECK-NOT:     fir.call @_FortranACopyOutAssignDirect
 // CHECK:         fir.if %{{.*}} {
-// CHECK:           fir.if %{{.*}} {
-// CHECK:             fir.load %{{.*}} : !fir.ref<!fir.box<!fir.array<?xf64>>>
-// CHECK:             fir.freemem
+// CHECK:           fir.load %{{.*}} : !fir.ref<!fir.box<!fir.array<?xf64>>>
+// CHECK:           fir.freemem
 
 func.func @test_copy_out_copy_back(%box: !fir.box<!fir.array<?xf64>>, %temp: !fir.ref<!fir.box<!fir.array<?xf64>>>, %was_copied: i1, %must_free: i1) {
   hlfir.copy_out %temp, %was_copied, %must_free to %box : (!fir.ref<!fir.box<!fir.array<?xf64>>>, i1, i1, !fir.box<!fir.array<?xf64>>) -> ()
