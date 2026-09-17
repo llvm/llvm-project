@@ -2434,7 +2434,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_DEBUGTRAP:
     return legalizeDebugTrap(MI, MRI, B);
   case TargetOpcode::G_IS_DEBUGGING_ENABLED:
-    return legalizeIsDebuggingEnabled(MI, MRI, B);
+    return legalizeIsDebuggingEnabled(MI, B);
   default:
     return false;
   }
@@ -8339,7 +8339,9 @@ bool AMDGPULegalizerInfo::legalizeSetFPEnv(MachineInstr &MI,
 }
 
 bool AMDGPULegalizerInfo::legalizeIsDebuggingEnabled(
-    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
+    MachineInstr &MI, MachineIRBuilder &B) const {
+  // The instruction selector folds single-use branch conditions back into
+  // S_CBRANCH_CDBGSYS_OR_USER when there are no intervening observations.
   auto Bits = B.buildIntrinsic(Intrinsic::amdgcn_s_getreg, {LLT::scalar(32)})
                   .addImm(AMDGPU::Hwreg::getDebuggingEnabledHwregImm(ST));
   Bits->setFlag(MachineInstr::NoMerge);
