@@ -2956,6 +2956,13 @@ bool RAGreedy::run(MachineFunction &mf) {
   if (!hasVirtRegAlloc())
     return false;
 
+  // Passes that ran since the analysis was built may have erased instructions
+  // it holds indexes for. This only makes it clean here and in
+  // emitDebugValues(): splitting stales indexes again mid-run, so reclaiming
+  // erased entries needs its own entry point, not a hook in packIndexes(),
+  // which renumberIndexes() also reaches.
+  DebugVars->canonicalizeIndexes(*Indexes);
+
   // Renumber to get accurate and consistent results from
   // SlotIndexes::getApproxInstrDistance.
   Indexes->packIndexes();
