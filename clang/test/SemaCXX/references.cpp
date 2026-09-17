@@ -146,12 +146,21 @@ void test10() {
   typedef __attribute__(( ext_vector_type(4) )) int ext_vec4;
   
   vec4 v;
-  int &a = v[0]; // expected-error{{non-const reference cannot bind to vector element}}
-  const int &b = v[0];
+  int &a = v[0]; // ok
+  const int &b = v[0]; // ok
   
   ext_vec4 ev;
-  int &c = ev.x; // expected-error{{non-const reference cannot bind to vector element}}
-  const int &d = ev.x;
+  int &c = ev.x; // ok
+  const int &d = ev.x; // ok
+}
+
+void test11() {
+  __attribute((vector_size(16))) typedef bool bvec4; // expected-error {{invalid vector element type 'bool'}}
+  typedef __attribute__(( ext_vector_type(4) )) bool ext_bvec4;
+
+  ext_bvec4 ev;
+  bool &c = ev.x; // expected-error {{illegal vector component name 'x'}}
+  const bool &d = ev.x; // expected-error {{illegal vector component name 'x'}}
 }
 
 namespace PR7149 {
