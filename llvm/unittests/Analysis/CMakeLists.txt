@@ -35,6 +35,7 @@ set(ANALYSIS_TEST_SOURCES
   InlineCostTest.cpp
   IR2VecTest.cpp
   IVDescriptorsTest.cpp
+  KnownBitsAnalysisTest.cpp
   LastRunTrackingAnalysisTest.cpp
   LazyCallGraphTest.cpp
   LoadsTest.cpp
