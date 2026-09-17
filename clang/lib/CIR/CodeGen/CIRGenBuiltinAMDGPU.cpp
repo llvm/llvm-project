@@ -1039,6 +1039,12 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                expr, "amdgcn.raw.ptr.buffer.store.format",
                cir::VoidType::get(builder.getContext()))
         .getValue();
+  case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_format_v4f32:
+  case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_format_v4f16:
+    return emitBuiltinWithOneOverloadedType<4>(
+               expr, "amdgcn.raw.ptr.buffer.load.format",
+               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_b8:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_b16:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_b32:
