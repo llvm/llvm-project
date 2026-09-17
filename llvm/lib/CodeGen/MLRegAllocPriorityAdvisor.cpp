@@ -332,7 +332,7 @@ MLPriorityAdvisor::MLPriorityAdvisor(const MachineFunction &MF,
 // Saturate instead. A NaN is a model error, so also assert on it.
 static unsigned convertAdviceToPriority(double Advice) {
   assert(!std::isnan(Advice) && "model produced a NaN priority");
-  if (!(Advice > 0.0)) // Also catches NaN.
+  if (!(Advice > 0.0))
     return 0;
   if (Advice >= static_cast<double>(std::numeric_limits<unsigned>::max()))
     return std::numeric_limits<unsigned>::max();
