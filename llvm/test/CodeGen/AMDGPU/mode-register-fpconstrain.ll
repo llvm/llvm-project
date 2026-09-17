@@ -30,9 +30,7 @@ entry:
   ret double %val
 }
 
-; The entry fadd is load-bearing: it makes every loop predecessor exit stable
-; from the start, which is what hid the loop exit from phase-2 intersection.
-
+; The entry fadd is load-bearing: it gives every loop predecessor a stable exit.
 define amdgpu_kernel void @loop_carried_round_mode(ptr addrspace(1) %out, double %a, double %b, i32 %n) {
 ; GCN-LABEL: loop_carried_round_mode:
 ; GCN:       ; %bb.0: ; %entry
