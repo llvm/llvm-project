@@ -48988,22 +48988,22 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   if (N->getOpcode() == ISD::SELECT && !CondVT.isVector() &&
       Subtarget.hasSSE2() && !isIntOrFPConstant(LHS) &&
       !isIntOrFPConstant(RHS)) {
-    SDValue CondRoot = Cond;
-    while (CondRoot.getOpcode() == ISD::AND ||
-           CondRoot.getOpcode() == ISD::ANY_EXTEND ||
-           CondRoot.getOpcode() == ISD::ZERO_EXTEND ||
-           CondRoot.getOpcode() == ISD::TRUNCATE)
-      CondRoot = CondRoot.getOperand(0);
-    bool CondIsCompare = CondRoot.getOpcode() == ISD::SETCC ||
-                         CondRoot.getOpcode() == X86ISD::SETCC;
-
+    // Only worth it if both operands already live in a vector register: either
+    // the select is on the 16-bit float itself, or it is the equivalent i16
+    // select of bitcast 16-bit floats. Bitcasts from a GPR mean the values are
+    // there instead, and moving them in and the result back out costs more than
+    // the CMOV.
+    auto IsBitcastFromGPR = [](SDValue Op) {
+      return Op.getOpcode() == ISD::BITCAST &&
+             Op.getOperand(0).getValueType().isScalarInteger();
+    };
     SDValue F16LHS, F16RHS;
-    if (!CondIsCompare && (VT == MVT::f16 || VT == MVT::bf16) &&
-        isSoftF16(VT, Subtarget)) {
-      F16LHS = DAG.getBitcast(MVT::f16, LHS);
-      F16RHS = DAG.getBitcast(MVT::f16, RHS);
-    } else if (!CondIsCompare && VT == MVT::i16 &&
-               LHS.getOpcode() == ISD::BITCAST &&
+    if (!VT.isVector() && isSoftF16(VT, Subtarget)) {
+      if (!IsBitcastFromGPR(LHS) || !IsBitcastFromGPR(RHS)) {
+        F16LHS = DAG.getBitcast(MVT::f16, LHS);
+        F16RHS = DAG.getBitcast(MVT::f16, RHS);
+      }
+    } else if (VT == MVT::i16 && LHS.getOpcode() == ISD::BITCAST &&
                RHS.getOpcode() == ISD::BITCAST) {
       MVT SVT = LHS.getOperand(0).getSimpleValueType();
       if ((SVT == MVT::f16 || SVT == MVT::bf16) &&
@@ -49012,10 +49012,20 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         F16RHS = DAG.getBitcast(MVT::f16, RHS.getOperand(0));
       }
     }
-    if (F16LHS) {
-      // Current blend in v8i16 (not v8f16) sincea v8f16
-      // VSELECT can fail to select on subtargets that fall back to
-      // BLENDV(since there's no VBLENDVPH) instead of a mask-register select.
+
+    // Peek past the boolean plumbing to see what produced the condition.
+    SDValue CondRoot = Cond;
+    while (CondRoot.getOpcode() == ISD::AND ||
+           CondRoot.getOpcode() == ISD::ANY_EXTEND ||
+           CondRoot.getOpcode() == ISD::ZERO_EXTEND ||
+           CondRoot.getOpcode() == ISD::TRUNCATE)
+      CondRoot = CondRoot.getOperand(0);
+
+    if (F16LHS && CondRoot.getOpcode() != ISD::SETCC &&
+        CondRoot.getOpcode() != X86ISD::SETCC) {
+      // Currently blend in v8i16 (not v8f16) since a v8f16 VSELECT can fail to
+      // select on subtargets that fall back to BLENDV (since there's no
+      // VBLENDVPH) instead of a mask-register select.
       SDValue Mask =
           DAG.getNode(ISD::SUB, DL, MVT::i16, DAG.getConstant(0, DL, MVT::i16),
                       DAG.getZExtOrTrunc(Cond, DL, MVT::i16));
