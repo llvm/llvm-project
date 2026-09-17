@@ -1,0 +1,106 @@
+## A unit root's DW_AT_name is a source file path, not an identifier, so it must
+## never become an accelerator name record. The parallel backend decided that by
+## testing the root's tag against DW_TAG_compile_unit, which a DW_TAG_partial_unit
+## root - what dwz emits, and what Fedora, RHEL and Debian debuginfo packaging
+## therefore ships - does not match. The partial unit root fell through to the arm
+## that emits a name record for any DIE carrying a live address or a range, and a
+## unit root carries DW_AT_low_pc, so the file path was indexed as though it were
+## an identifier. A DW_TAG_compile_unit root is linked alongside as the control.
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -o %t.cu.o
+# RUN: llvm-dwarfutil --linker parallel --build-accelerator=DWARF %t.cu.o %t.cu.out
+# RUN: llvm-dwarfdump --debug-names %t.cu.out | FileCheck %s
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -o %t.pu.o
+# RUN: llvm-dwarfutil --linker parallel --build-accelerator=DWARF %t.pu.o %t.pu.out
+# RUN: llvm-dwarfdump --debug-names %t.pu.out | FileCheck %s
+
+## One CHECK block serves both runs, which is the claim being made: the name
+## table does not vary with the root tag. The count and the two identifications
+## together are what excludes the root's name: if "U01" were indexed the count
+## would be three, and pinning the count alone would not say which names
+## survived. The CHECK-NOT is belt and braces on top of that.
+
+# CHECK:      Name count: 2
+# CHECK-DAG:  String: {{.*}} "foo1"
+# CHECK-DAG:  String: {{.*}} "int"
+# CHECK-NOT:  "U01"
+
+## One DWARFv5 unit with a function in .text returning int. The root carries
+## DW_AT_low_pc, which is what sets the live-address flag that the emitting arm
+## keys on, and its own DW_AT_str_offsets_base, so the strings the linker
+## rewrites into DW_FORM_strx stay resolvable on output; the linker does not
+## synthesize that attribute for a partial unit root by itself.
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x10
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0400000005000000"
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      [[ROOT]]
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+  debug_info:
+    - Version:  5
+      UnitType: [[UNITTYPE]]
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U01
+            - Value: 0x04
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x49
+        - AbbrCode: 3
+          Values:
+            - CStr: int
+        - AbbrCode: 0
+...
