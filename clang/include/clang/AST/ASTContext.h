@@ -1422,6 +1422,8 @@ public:
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
+#include "clang/Basic/HLSLPackedTypes.def"
 #define SPIRV_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/SPIRVTypes.def"
 

@@ -5184,6 +5184,15 @@ bool SemaHLSL::CanPerformElementwiseCast(Expr *Src, QualType DestTy) {
   return true;
 }
 
+bool SemaHLSL::CanPerformPackedToUintCast(Expr *Src, QualType DestTy) {
+  QualType SrcTy = Src->getType();
+  if (SrcTy->isHLSLBuiltinPackedType()) {
+    if (DestTy->isScalarType() || DestTy->isHLSLBuiltinPackedType())
+      return true;
+  }
+  return false;
+}
+
 ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
   assert(Param->hasAttr<HLSLParamModifierAttr>() &&
          "We should not get here without a parameter modifier expression");

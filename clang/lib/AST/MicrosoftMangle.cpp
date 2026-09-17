@@ -2833,6 +2833,12 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case BuiltinType::Id:                                                        \
+    mangleArtificialTagType(TagTypeKind::Struct, #Name);                       \
+    break;
+#include "clang/Basic/HLSLPackedTypes.def"
+
   case BuiltinType::SveBool:
     Out << "$_CA";
     break;
