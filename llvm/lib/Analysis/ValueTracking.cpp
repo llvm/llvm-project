@@ -1983,27 +1983,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // %iv.next = <II>(%iv, <Step>)
         // or
         // %iv.next = <II>(<Step>, %iv)
-
-        switch (II->getIntrinsicID()) {
-        case Intrinsic::umin: {
-          // Limit number of leading zeros by Start's number of leading zeros.
-          SimplifyQuery RecQ = Q.getWithoutCondContext();
-
-          unsigned OpNum = P->getOperand(0) == Start ? 0 : 1;
-          Instruction *StartInst = P->getIncomingBlock(OpNum)->getTerminator();
-
-          KnownBits KnownStart(BitWidth);
-          RecQ.CxtI = StartInst;
-          computeKnownBits(Start, DemandedElts, KnownStart, RecQ, Depth + 1);
-
-          Known.Zero.setHighBits(KnownStart.countMinLeadingZeros());
-          break;
-        }
-
-        case Intrinsic::umax: {
-          // Limit number of leading zeros by the minimum of Start's and Step's
-          // number of leading zeros, and number of leading ones by Start's
-          // number of leading ones.
+        Intrinsic::ID IntrinsicID = II->getIntrinsicID();
+        if (IntrinsicID == Intrinsic::umin || IntrinsicID == Intrinsic::umax) {
           SimplifyQuery RecQ = Q.getWithoutCondContext();
 
           unsigned OpNum = P->getOperand(0) == Start ? 0 : 1;
@@ -2019,15 +2000,16 @@ static void computeKnownBitsFromOperator(const Operator *I,
           RecQ.CxtI = StepInst;
           computeKnownBits(Step, DemandedElts, KnownStep, RecQ, Depth + 1);
 
-          Known.Zero.setHighBits(std::min(KnownStart.countMinLeadingZeros(),
-                                          KnownStep.countMinLeadingZeros()));
-          Known.One.setHighBits(KnownStart.countMinLeadingOnes());
-
-          break;
-        }
-
-        default:
-          break;
+          if (IntrinsicID == Intrinsic::umin) {
+            Known.Zero.setHighBits(KnownStart.countMinLeadingZeros());
+            Known.One.setHighBits(std::min(KnownStart.countMinLeadingOnes(),
+                                           KnownStep.countMinLeadingOnes()));
+          } else {
+            // umax
+            Known.Zero.setHighBits(std::min(KnownStart.countMinLeadingZeros(),
+                                            KnownStep.countMinLeadingZeros()));
+            Known.One.setHighBits(KnownStart.countMinLeadingOnes());
+          }
         }
       }
     }
