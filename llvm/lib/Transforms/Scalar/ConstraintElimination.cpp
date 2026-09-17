@@ -656,107 +656,46 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
   if (!Ty->isIntegerTy() || Ty->getIntegerBitWidth() > 64)
     return V;
 
-  // Decompose \p V used with a signed predicate.
-  if (IsSigned) {
-    if (auto *CI = dyn_cast<ConstantInt>(V)) {
+  if (auto *CI = dyn_cast<ConstantInt>(V)) {
+    if (IsSigned) {
       if (canUseSExt(CI))
         return CI->getSExtValue();
+    } else if (!CI->uge(MaxConstraintValue)) {
+      return int64_t(CI->getZExtValue());
     }
-    Value *Op0;
-    Value *Op1;
-
-    if (match(V, m_SExt(m_Value(Op0))))
-      V = Op0;
-    else if (match(V, m_NNegZExt(m_Value(Op0)))) {
-      V = Op0;
-    } else if (auto *Trunc = dyn_cast<TruncInst>(V)) {
-      if (Trunc->getSrcTy()->getScalarSizeInBits() <= 64 &&
-          isKnownNoWrap(Trunc, Info, IsSigned))
-        V = Trunc->getOperand(0);
-    }
-
-    if (match(V, m_AddLike(m_Value(Op0), m_Value(Op1)))) {
-      if (isKnownNoWrap(V, Info, IsSigned))
-        if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
-          return *Decomp;
-      return V;
-    }
-
-    // `xor %x, -1` is equivalent to `sub nsw -1, %x`.
-    if (match(V, m_Not(m_Value(Op0)))) {
-      Decomposition Result(-1);
-      if (!Result.sub(decompose(Op0, Info, IsSigned, DL)))
-        return Result;
-      return V;
-    }
-
-    if (match(V, m_Sub(m_Value(Op0), m_Value(Op1)))) {
-      if (isKnownNoWrap(V, Info, IsSigned)) {
-        auto ResA = decompose(Op0, Info, IsSigned, DL);
-        auto ResB = decompose(Op1, Info, IsSigned, DL);
-        if (!ResA.sub(ResB))
-          return ResA;
-      }
-      return V;
-    }
-
-    ConstantInt *CI;
-    if (match(V, m_Mul(m_Value(Op0), m_ConstantInt(CI))) && canUseSExt(CI)) {
-      if (isKnownNoWrap(V, Info, IsSigned)) {
-        auto Result = decompose(Op0, Info, IsSigned, DL);
-        if (!Result.mul(CI->getSExtValue()))
-          return Result;
-      }
-      return V;
-    }
-
-    // (shl nsw x, shift) is (mul nsw x, (1<<shift)), with the exception of
-    // shift == bw-1.
-    if (match(V, m_Shl(m_Value(Op0), m_ConstantInt(CI)))) {
-      uint64_t Shift = CI->getValue().getLimitedValue();
-      if (Shift < Ty->getIntegerBitWidth() - 1 &&
-          isKnownNoWrap(V, Info, IsSigned)) {
-        assert(Shift < 64 && "Would overflow");
-        auto Result = decompose(Op0, Info, IsSigned, DL);
-        if (!Result.mul(int64_t(1) << Shift))
-          return Result;
-        return V;
-      }
-    }
-
     return V;
   }
 
-  if (auto *CI = dyn_cast<ConstantInt>(V)) {
-    if (CI->uge(MaxConstraintValue))
-      return V;
-    return int64_t(CI->getZExtValue());
-  }
-
   Value *Op0;
+  Value *Op1;
+  ConstantInt *CI;
+
   if (match(V, m_ZExt(m_Value(Op0)))) {
+    // In the signed system, the ZExt must be non-negative.
+    if (IsSigned && !cast<ZExtInst>(V)->hasNonNeg())
+      return V;
     V = Op0;
   } else if (match(V, m_SExt(m_Value(Op0)))) {
-    // Looking through the sext is only valid if the operand is non-negative.
-    if (!Info.isKnownNonNegative(Op0))
+    // In the unsigned system, the SExt operand must be non-negative.
+    if (!IsSigned && !Info.isKnownNonNegative(Op0))
       return V;
     V = Op0;
   } else if (auto *Trunc = dyn_cast<TruncInst>(V)) {
     if (Trunc->getSrcTy()->getScalarSizeInBits() <= 64 &&
-        isKnownNoWrap(Trunc, Info, /*Signed=*/false))
+        isKnownNoWrap(Trunc, Info, IsSigned))
       V = Trunc->getOperand(0);
   }
 
-  Value *Op1;
-  ConstantInt *CI;
   if (match(V, m_AddLike(m_Value(Op0), m_Value(Op1)))) {
-    if (isKnownNoWrap(V, Info, /*Signed=*/false)) {
+    if (isKnownNoWrap(V, Info, IsSigned)) {
       if (auto Decomp = MergeResults(Op0, Op1, IsSigned))
         return *Decomp;
       return V;
     }
-    // Adding a negative constant only wraps if Op0 is smaller than it.
-    if (match(Op1, m_ConstantInt(CI)) && CI->isNegative() && canUseSExt(CI) &&
+    // In the unsigned system, adding a negative constant only wraps if Op0 is
+    // smaller than it.
+    if (!IsSigned && match(Op1, m_ConstantInt(CI)) && CI->isNegative() &&
+        canUseSExt(CI) &&
         Info.doesHold(CmpInst::ICMP_UGE, Op0,
                       ConstantInt::get(Op0->getType(), -CI->getSExtValue())))
       if (auto Decomp = MergeResults(Op0, CI, /*IsSignedB=*/true))
@@ -764,37 +703,47 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
     return V;
   }
 
-  if (match(V, m_Shl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI)) {
-    // The scale 1 << shift must fit in the signed coefficient, so reject a
-    // shift of 63, for which int64_t{1} << 63 is INT64_MIN.
-    if (CI->getSExtValue() < 0 || CI->getSExtValue() >= 63)
-      return V;
-    if (isKnownNoWrap(V, Info, /*Signed=*/false)) {
-      auto Result = decompose(Op1, Info, IsSigned, DL);
-      if (!Result.mul(int64_t{1} << CI->getSExtValue()))
-        return Result;
+  // `xor %x, -1` is equivalent to `sub nsw -1, %x`.
+  if (IsSigned && match(V, m_Not(m_Value(Op0)))) {
+    Decomposition Result(-1);
+    if (!Result.sub(decompose(Op0, Info, IsSigned, DL)))
+      return Result;
+    return V;
+  }
+
+  if (match(V, m_Sub(m_Value(Op0), m_Value(Op1)))) {
+    if (isKnownNoWrap(V, Info, IsSigned)) {
+      auto ResA = decompose(Op0, Info, IsSigned, DL);
+      auto ResB = decompose(Op1, Info, IsSigned, DL);
+      if (!ResA.sub(ResB))
+        return ResA;
     }
     return V;
   }
 
-  if (match(V, m_Mul(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI) &&
-      !CI->isNegative()) {
-    if (isKnownNoWrap(V, Info, /*Signed=*/false)) {
-      auto Result = decompose(Op1, Info, IsSigned, DL);
+  if (match(V, m_Mul(m_Value(Op0), m_ConstantInt(CI)))) {
+    // A negative constant is only a valid coefficient in the signed system; in
+    // the unsigned system the multiplier is the constant's unsigned value.
+    if (canUseSExt(CI) && (IsSigned || !CI->isNegative()) &&
+        isKnownNoWrap(V, Info, IsSigned)) {
+      auto Result = decompose(Op0, Info, IsSigned, DL);
       if (!Result.mul(CI->getSExtValue()))
         return Result;
     }
     return V;
   }
 
-  if (match(V, m_Sub(m_Value(Op0), m_Value(Op1)))) {
-    // a - b can be decomposed when there is no unsigned wrap.
-    if (!isKnownNoWrap(V, Info, /*Signed=*/false))
-      return V;
-    auto ResA = decompose(Op0, Info, IsSigned, DL);
-    auto ResB = decompose(Op1, Info, IsSigned, DL);
-    if (!ResA.sub(ResB))
-      return ResA;
+  if (match(V, m_Shl(m_Value(Op0), m_ConstantInt(CI)))) {
+    // (shl x, shift) is (mul x, 1 << shift). The scale must fit in the signed
+    // coefficient, so reject shifts >= 63. Also reject a shift of bw-1, for
+    // which the product is not representable.
+    int64_t MaxShift = IsSigned ? Ty->getIntegerBitWidth() - 1 : 63;
+    if (!CI->isNegative() && CI->getSExtValue() < MaxShift &&
+        isKnownNoWrap(V, Info, IsSigned)) {
+      auto Result = decompose(Op0, Info, IsSigned, DL);
+      if (!Result.mul(int64_t{1} << CI->getSExtValue()))
+        return Result;
+    }
     return V;
   }
 

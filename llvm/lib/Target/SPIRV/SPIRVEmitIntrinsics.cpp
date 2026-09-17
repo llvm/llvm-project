@@ -24,6 +24,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/TypedPointerType.h"
 #include "llvm/IR/Value.h"
@@ -1132,7 +1133,7 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
   if (!Visited.insert(U).second)
     return OrigTy;
 
-  if (isa<StructType>(OrigTy)) {
+  if (auto *OrigStructTy = dyn_cast<StructType>(OrigTy)) {
     SmallVector<Type *> Tys;
     bool Change = false;
     for (unsigned i = 0; i < U->getNumOperands(); ++i) {
@@ -1152,7 +1153,7 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
       Change |= Ty != OpTy;
     }
     if (Change) {
-      Type *NewTy = StructType::create(Tys);
+      Type *NewTy = StructType::create(Tys, "", OrigStructTy->isPacked());
       GR->addDeducedCompositeType(U, NewTy);
       return NewTy;
     }
@@ -3055,9 +3056,9 @@ void SPIRVEmitIntrinsicsImpl::insertSpirvDecorations(Instruction *I,
     if (I->hasMetadata("amdgpu.no.remote.memory"))
       MDs.push_back(MDNode::get(
           Ctx, {US, MDString::get(Ctx, "amdgpu.no.remote.memory")}));
-    if (I->hasMetadata("amdgpu.ignore.denormal.mode"))
+    if (I->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode))
       MDs.push_back(MDNode::get(
-          Ctx, {US, MDString::get(Ctx, "amdgpu.ignore.denormal.mode")}));
+          Ctx, {US, MDString::get(Ctx, "atomic.ignore.denormal.mode")}));
     if (!MDs.empty())
       B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},
                         {I, MetadataAsValue::get(Ctx, MDNode::get(Ctx, MDs))});
