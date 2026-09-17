@@ -40,7 +40,7 @@ public:
       : MName(KernelName), MDeviceImage(DeviceImage) {}
 
   /// \return the name of this kernel.
-  std::string_view getName() { return MName; }
+  std::string_view getName() const { return MName; }
 
   /// \return the device image containing the device code of this kernel.
   DeviceImageManager &getDeviceImage() const { return MDeviceImage; }

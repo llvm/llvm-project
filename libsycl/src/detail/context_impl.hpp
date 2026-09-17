@@ -24,9 +24,11 @@
 #include <OffloadAPI.h>
 
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -40,8 +42,8 @@ class DeviceImpl;
 /// Context represents the runtime data structures and state required by a SYCL
 /// backend API to interact with a group of devices associated with a platform.
 class ContextImpl : public std::enable_shared_from_this<ContextImpl> {
-  struct Private {
-    explicit Private() = default;
+  struct PrivateTag {
+    explicit PrivateTag() = default;
   };
 
 public:
@@ -52,7 +54,7 @@ public:
   /// \param PropList is a list of context properties.
   ContextImpl(std::vector<DeviceImpl *> &&DeviceList,
               const async_handler &AsyncHandler, const property_list &PropList,
-              Private);
+              PrivateTag);
 
   /// Releases the underlying offload context handle.
   ~ContextImpl();
@@ -60,13 +62,14 @@ public:
   /// Gets asynchronous exception handler.
   ///
   /// \return an instance of SYCL async_handler.
-  const async_handler &get_async_handler() const { return MAsyncHandler; }
+  const async_handler &getAsyncHandler() const { return MAsyncHandler; }
 
-  /// Constructs a ContextImpl with a provided arguments. Variadic helper.
-  /// Restrics ways of ContextImpl creation.
+  /// Constructs a ContextImpl with the provided arguments. Variadic helper.
+  /// Restricts ContextImpl creation to std::shared_ptr allocations.
   template <typename... Ts>
   static std::shared_ptr<ContextImpl> create(Ts &&...args) {
-    return std::make_shared<ContextImpl>(std::forward<Ts>(args)..., Private{});
+    return std::make_shared<ContextImpl>(std::forward<Ts>(args)...,
+                                         PrivateTag{});
   }
 
   /// Returns the raw underlying offload context handle.
@@ -80,9 +83,8 @@ public:
   /// \return the platform this context is associated with.
   PlatformImpl &getPlatformImpl() const;
 
-  /// Calls "callback" with every device associated
-  /// with this context.
-  void iterateDevices(const std::function<void(DeviceImpl *)> &callback) const;
+  /// Calls Callback with every device associated with this context.
+  void iterateDevices(const std::function<void(DeviceImpl *)> &Callback) const;
 
   /// \return backend of the platform this context is associated with.
   backend getBackend() const;

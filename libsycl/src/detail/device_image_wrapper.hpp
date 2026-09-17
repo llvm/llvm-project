@@ -83,7 +83,7 @@ private:
 /// This class manages data parsing of device images.
 class DeviceImageManager {
 public:
-  DeviceImageManager(std::unique_ptr<llvm::object::OffloadBinary> Bin)
+  explicit DeviceImageManager(std::unique_ptr<llvm::object::OffloadBinary> Bin)
       : MBin(std::move(Bin)) {}
   // Explicitly delete copy constructor/operator= to avoid unintentional copies.
   DeviceImageManager(const DeviceImageManager &) = delete;
@@ -97,7 +97,7 @@ public:
   /// \return a reference to the corresponding parsed OffloadBinary object.
   const llvm::object::OffloadBinary &getOffloadBinary() const { return *MBin; }
 
-protected:
+private:
   std::unique_ptr<llvm::object::OffloadBinary> MBin;
 };
 

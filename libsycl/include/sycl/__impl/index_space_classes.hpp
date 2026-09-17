@@ -65,24 +65,24 @@ public:
   /// Returns the value for the specified dimension.
   /// Results in undefined behavior if dimension is not in the range [0,
   /// Dimensions).
-  /// \param Dimension the dimension to return the value for.
+  /// \param dimension the dimension to return the value for.
   /// \return the value matching the requested dimension.
-  std::size_t get(int Dimension) const noexcept { return MArray[Dimension]; }
+  std::size_t get(int dimension) const noexcept { return MArray[dimension]; }
 
   /// Returns the value for the specified dimension.
   /// Results in undefined behavior if dimension is not in the range [0,
   /// Dimensions).
-  /// \param Dimension the dimension to return the value for.
+  /// \param dimension the dimension to return the value for.
   /// \return the value matching the requested dimension.
-  std::size_t &operator[](int Dimension) noexcept { return MArray[Dimension]; }
+  std::size_t &operator[](int dimension) noexcept { return MArray[dimension]; }
 
   /// Returns the value for the specified dimension.
   /// Results in undefined behavior if dimension is not in the range [0,
   /// Dimensions).
-  /// \param Dimension the dimension to return the value for.
+  /// \param dimension the dimension to return the value for.
   /// \return the value matching the requested dimension.
-  std::size_t operator[](int Dimension) const noexcept {
-    return MArray[Dimension];
+  std::size_t operator[](int dimension) const noexcept {
+    return MArray[dimension];
   }
 
   IndexSpaceBase(const IndexSpaceBase<Derived, Dimensions> &rhs) = default;
@@ -121,9 +121,11 @@ public:
   template <typename T>                                                        \
   friend IntegralType<T, Derived> operator op(const Derived &lhs,              \
                                               const T &rhs) noexcept {         \
+    /* SYCL 2020 declares the scalar operand of these operators as size_t. */  \
+    const std::size_t Scalar = static_cast<std::size_t>(rhs);                  \
     Derived result;                                                            \
     for (int i = 0; i < Dimensions; ++i) {                                     \
-      result.MArray[i] = lhs.MArray[i] op rhs;                                 \
+      result.MArray[i] = lhs.MArray[i] op Scalar;                              \
     }                                                                          \
     return result;                                                             \
   }                                                                            \
@@ -131,9 +133,10 @@ public:
   template <typename T>                                                        \
   friend IntegralType<T, Derived> operator op(const T &lhs,                    \
                                               const Derived &rhs) noexcept {   \
+    const std::size_t Scalar = static_cast<std::size_t>(lhs);                  \
     Derived result;                                                            \
     for (int i = 0; i < Dimensions; ++i) {                                     \
-      result.MArray[i] = lhs op rhs.MArray[i];                                 \
+      result.MArray[i] = Scalar op rhs.MArray[i];                              \
     }                                                                          \
     return result;                                                             \
   }
@@ -267,7 +270,7 @@ public:
       std::size_t operator[](int dimension) const noexcept;
   */
 
-  /// \return the size of the range computed as dimension0*…​*dimensionN.
+  /// \return the size of the range computed as dimension0*...*dimensionN.
   std::size_t size() const noexcept {
     std::size_t size = 1;
     for (int i = 0; i < Dimensions; ++i) {
@@ -392,7 +395,7 @@ public:
   template <typename T, int N = Dimensions,                                    \
             std::enable_if_t<N == 1, bool> = true>                             \
   detail::IntegralType<T, bool> operator op(const T &rhs) const noexcept {     \
-    if (this->MArray[0] != rhs)                                                \
+    if (this->MArray[0] != static_cast<std::size_t>(rhs))                      \
       return false op true;                                                    \
     return true op true;                                                       \
   }                                                                            \
@@ -400,7 +403,7 @@ public:
             std::enable_if_t<N == 1, bool> = true>                             \
   friend detail::IntegralType<T, bool> operator op(                            \
       const T &lhs, const id<dimensions> &rhs) noexcept {                      \
-    if (lhs != rhs.MArray[0])                                                  \
+    if (static_cast<std::size_t>(lhs) != rhs.MArray[0])                        \
       return false op true;                                                    \
     return true op true;                                                       \
   }
@@ -457,7 +460,7 @@ public:
     return !(lhs == rhs);
   }
 
-  /// \return the constituent id representing the work-item’s position in the
+  /// \return the constituent id representing the work-item's position in the
   /// iteration space.
   id<Dimensions> get_id() const noexcept { return MId; }
 
@@ -489,6 +492,7 @@ public:
   /// work-item, if this item represents a global range.
   template <bool HasOffset = WithOffset,
             std::enable_if_t<HasOffset == true, bool> = true>
+  __SYCL2020_DEPRECATED("offsets are deprecated in SYCL2020")
   id<Dimensions> get_offset() const noexcept {
     return MOffset;
   }
@@ -499,9 +503,9 @@ public:
   /// WithOffset == false.
   /// \return an item representing the same information as the object holds but
   /// also includes the offset set to 0.
-  template <bool HasOffset = WithOffset,
-            std::enable_if_t<HasOffset == false, bool> = true>
-  operator item<Dimensions, true>() const noexcept {
+  template <bool HasOffset = WithOffset>
+  operator std::enable_if_t<HasOffset == false, item<Dimensions, true>>()
+      const noexcept {
     return item<Dimensions, true>(MRange, MId, id<Dimensions>{});
   }
 
@@ -514,22 +518,20 @@ public:
   /// \return Return the id as a linear index value.
   std::size_t get_linear_id() const noexcept {
     if constexpr (WithOffset) {
-      if constexpr (1 == Dimensions) {
+      if constexpr (1 == Dimensions)
         return MId[0] - MOffset[0];
-      }
-      if constexpr (2 == Dimensions) {
+      else if constexpr (2 == Dimensions)
         return (MId[0] - MOffset[0]) * MRange[1] + MId[1] - MOffset[1];
-      }
-      return (MId[0] - MOffset[0]) * MRange[1] * MRange[2] +
-             (MId[1] - MOffset[1]) * MRange[2] + MId[2] - MOffset[2];
+      else
+        return (MId[0] - MOffset[0]) * MRange[1] * MRange[2] +
+               (MId[1] - MOffset[1]) * MRange[2] + MId[2] - MOffset[2];
     } else {
-      if constexpr (1 == Dimensions) {
+      if constexpr (1 == Dimensions)
         return MId[0];
-      }
-      if constexpr (2 == Dimensions) {
+      else if constexpr (2 == Dimensions)
         return MId[0] * MRange[1] + MId[1];
-      }
-      return MId[0] * MRange[1] * MRange[2] + MId[1] * MRange[2] + MId[2];
+      else
+        return MId[0] * MRange[1] * MRange[2] + MId[1] * MRange[2] + MId[2];
     }
   }
 
@@ -551,6 +553,10 @@ private:
   std::conditional_t<WithOffset, id<Dimensions>, std::monostate> MOffset;
 
   friend class detail::Builder;
+
+  // The conversion to an item with an offset builds an item of another
+  // specialization from its protected constructor.
+  template <int, bool> friend class item;
 };
 
 _LIBSYCL_END_NAMESPACE_SYCL

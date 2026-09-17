@@ -24,6 +24,7 @@
 
 #include <OffloadAPI.h>
 
+#include <cassert>
 #include <functional>
 #include <memory>
 #include <string>
@@ -63,13 +64,13 @@ public:
 
   ~PlatformImpl() = default;
 
-  /// \returns sycl::backend associated with this platform.
+  /// \return sycl::backend associated with this platform.
   backend getBackend() const noexcept { return MBackend; }
 
   /// Returns all SYCL platforms from all backends that are
   /// available in the system.
   ///
-  /// \returns std::vector of all platforms that are available in the system.
+  /// \return std::vector of all platforms that are available in the system.
   static const std::vector<PlatformImplUPtr> &getPlatforms();
 
   /// Returns the raw underlying offload platform handle.
@@ -97,31 +98,36 @@ public:
   /// The return type depends on information being queried.
   template <typename Param> typename Param::return_type getInfo() const {
     // For now we have only std::string properties
-    static_assert(std::is_same_v<typename Param::return_type, std::string>);
+    static_assert(std::is_same_v<typename Param::return_type, std::string>,
+                  "Only string platform info descriptors are supported");
 
     using namespace info::platform;
-    using Map = info_ol_mapping<ol_platform_info_t>;
+    using Map = InfoOLMapping<ol_platform_info_t>;
 
-    constexpr ol_platform_info_t olInfo =
-        map_info_desc<Param, ol_platform_info_t>(
+    constexpr ol_platform_info_t OLInfo =
+        mapInfoDesc<Param, ol_platform_info_t>(
             Map::M<version>{OL_PLATFORM_INFO_VERSION},
             Map::M<name>{OL_PLATFORM_INFO_NAME},
             Map::M<vendor>{OL_PLATFORM_INFO_VENDOR_NAME});
 
     size_t ExpectedSize = 0;
-    callAndThrow(olGetPlatformInfoSize, MOffloadPlatform, olInfo,
+    callAndThrow(olGetPlatformInfoSize, MOffloadPlatform, OLInfo,
                  &ExpectedSize);
+    assert(ExpectedSize > 0 && "String info descriptor size must account for "
+                               "the null terminator");
+    // liboffload counts the null terminator in the size while std::string
+    // doesn't.
     std::string Result;
     Result.resize(ExpectedSize - 1);
-    callAndThrow(olGetPlatformInfo, MOffloadPlatform, olInfo, ExpectedSize,
+    callAndThrow(olGetPlatformInfo, MOffloadPlatform, OLInfo, ExpectedSize,
                  Result.data());
     return Result;
   }
 
-  /// Calls "callback" with every root device of type == DeviceType associated
-  /// with this platform
+  /// Calls Callback with every root device of type == DeviceType associated
+  /// with this platform.
   void iterateDevices(info::device_type DeviceType,
-                      std::function<void(DeviceImpl *)> callback) const;
+                      const std::function<void(DeviceImpl *)> &Callback) const;
 
   /// \return the default context containing all devices in this platform.
   ContextImpl &getDefaultContext();

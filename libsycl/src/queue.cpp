@@ -13,6 +13,8 @@
 #include <detail/device_impl.hpp>
 #include <detail/queue_impl.hpp>
 
+#include <cassert>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 queue::queue(const context &syclContext, const device &syclDevice,
@@ -42,18 +44,18 @@ void queue::throw_asynchronous() { impl->throwAsynchronous(); }
 
 event queue::memcpy(void *dest, const void *src, std::size_t numBytes,
                     const std::vector<event> &depEvents) {
-  std::shared_ptr<detail::EventImpl> EventImplPtr =
+  detail::EventImplPtr Event =
       impl->memcpy(dest, src, numBytes, detail::getSyclObjImpls(depEvents));
-  assert(EventImplPtr);
-  return detail::createSyclObjFromImpl<event>(EventImplPtr);
+  assert(Event && "Queue operation must produce an event");
+  return detail::createSyclObjFromImpl<event>(Event);
 }
 
 event queue::prefetch(void *ptr, std::size_t numBytes,
                       const std::vector<event> &depEvents) {
-  std::shared_ptr<detail::EventImpl> EventImplPtr =
+  detail::EventImplPtr Event =
       impl->prefetch(ptr, numBytes, detail::getSyclObjImpls(depEvents));
-  assert(EventImplPtr);
-  return detail::createSyclObjFromImpl<event>(EventImplPtr);
+  assert(Event && "Queue operation must produce an event");
+  return detail::createSyclObjFromImpl<event>(Event);
 }
 
 event queue::getLastEvent() {
@@ -70,7 +72,7 @@ void queue::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,
   impl->submitKernelImpl(KernelInfo, ArgData, ArgSize);
 }
 
-event queue::submitWithHandler(const TypelessCGF &CGF) {
+event queue::submitWithHandler(const detail::TypelessCGF &CGF) {
   return detail::createSyclObjFromImpl<event>(impl->submitWithHandler(CGF));
 }
 

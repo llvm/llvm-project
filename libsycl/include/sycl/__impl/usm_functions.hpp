@@ -21,6 +21,7 @@
 #include <sycl/__impl/detail/config.hpp>
 
 #include <algorithm>
+#include <cstddef>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -578,22 +579,24 @@ T *malloc(std::size_t count, const queue &syclQueue, usm::alloc kind,
 /// Deallocate USM of any kind.
 ///
 /// \param ptr a pointer that satisfies the following preconditions: points to
-/// memory allocated against ctxt using one of the USM allocation routines, or
-/// is a null pointer; ptr has not previously been deallocated; there are no
-/// in-progress or enqueued commands using the memory pointed to by ptr.
-/// \param ctxt the context that is associated with ptr.
-_LIBSYCL_EXPORT void free(void *ptr, const context &ctxt);
+/// memory allocated against syclContext using one of the USM allocation
+/// routines, or is a null pointer; ptr has not previously been deallocated;
+/// there are no in-progress or enqueued commands using the memory pointed to
+/// by ptr.
+/// \param syclContext the context that is associated with ptr.
+_LIBSYCL_EXPORT void free(void *ptr, const context &syclContext);
 
 /// Deallocate USM of any kind.
 ///
-/// Equivalent to free(ptr, q.get_context()).
+/// Equivalent to free(ptr, syclQueue.get_context()).
 ///
 /// \param ptr a pointer that satisfies the following preconditions: points to
-/// memory allocated against ctxt using one of the USM allocation routines, or
-/// is a null pointer; ptr has not previously been deallocated; there are no
-/// in-progress or enqueued commands using the memory pointed to by ptr.
-/// \param q a queue to determine the context associated with ptr.
-_LIBSYCL_EXPORT void free(void *ptr, const queue &q);
+/// memory allocated against a context using one of the USM allocation
+/// routines, or is a null pointer; ptr has not previously been deallocated;
+/// there are no in-progress or enqueued commands using the memory pointed to
+/// by ptr.
+/// \param syclQueue a queue to determine the context associated with ptr.
+_LIBSYCL_EXPORT void free(void *ptr, const queue &syclQueue);
 /// @}
 
 _LIBSYCL_END_NAMESPACE_SYCL

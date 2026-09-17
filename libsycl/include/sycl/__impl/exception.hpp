@@ -17,6 +17,7 @@
 
 #include <sycl/__impl/detail/config.hpp>
 
+#include <cstddef>
 #include <exception>
 #include <memory>
 #include <string>
@@ -56,7 +57,7 @@ enum class errc : int {
 ///
 /// \param e SYCL 2020 error code.
 ///
-/// \returns constructed error code.
+/// \return constructed error code.
 _LIBSYCL_EXPORT std::error_code make_error_code(sycl::errc e) noexcept;
 
 /// Obtains a reference to the static error category object for SYCL errors.
@@ -67,7 +68,7 @@ _LIBSYCL_EXPORT std::error_code make_error_code(sycl::errc e) noexcept;
 /// by the exception (Ex.code().value()) is one of the enumerated values in
 /// sycl::errc.
 ///
-/// \returns the error category object for SYCL errors.
+/// \return the error category object for SYCL errors.
 _LIBSYCL_EXPORT const std::error_category &sycl_category() noexcept;
 
 /// \brief SYCL 2020 exception class (4.13.2.) for sync and async error handling
@@ -136,29 +137,29 @@ public:
 
   /// Returns the error code stored inside the exception.
   ///
-  /// \returns the error code stored inside the exception.
+  /// \return the error code stored inside the exception.
   const std::error_code &code() const noexcept;
 
   /// Returns the error category of the error code stored inside the exception.
   ///
-  /// \returns the error category of the error code stored inside the exception.
+  /// \return the error category of the error code stored inside the exception.
   const std::error_category &category() const noexcept;
 
   /// Returns string that describes the error that triggered the exception.
   ///
-  /// \returns an implementation-defined non-null constant C-style string that
+  /// \return an implementation-defined non-null constant C-style string that
   /// describes the error that triggered the exception.
   const char *what() const noexcept final;
 
   /// Checks if the exception has an associated SYCL context.
   ///
-  /// \returns true if this SYCL exception has an associated SYCL context and
+  /// \return true if this SYCL exception has an associated SYCL context and
   /// false if it does not.
   bool has_context() const noexcept;
 
   /// \return the SYCL context associated with this exception.
   ///
-  /// \throws exception with sycl::errc::invalid if this exception does not
+  /// \throw sycl::exception with sycl::errc::invalid if this exception does not
   /// have an associated context (has_context() == false).
   context get_context() const;
 
@@ -169,7 +170,7 @@ private:
   // or context directly.
   std::shared_ptr<std::string> MMessage;
   std::shared_ptr<context> MContext;
-  std::error_code MErrC = make_error_code(sycl::errc::invalid);
+  std::error_code MErrC;
 };
 
 /// \brief Used as a container for a list of asynchronous exceptions.
@@ -184,19 +185,19 @@ public:
 
   /// Returns the size of the list.
   ///
-  /// \returns the size of the list.
+  /// \return the size of the list.
   size_type size() const;
 
   /// Returns an iterator to the beginning of the list of asynchronous
   /// exceptions.
   ///
-  /// \returns an iterator to the beginning of the list of asynchronous
+  /// \return an iterator to the beginning of the list of asynchronous
   /// exceptions.
   iterator begin() const;
 
   /// Returns an iterator to the end of the list of asynchronous exceptions.
   ///
-  /// \returns an iterator to the end of the list of asynchronous exceptions.
+  /// \return an iterator to the end of the list of asynchronous exceptions.
   iterator end() const;
 
 private:

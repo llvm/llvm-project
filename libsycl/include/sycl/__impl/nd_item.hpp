@@ -52,53 +52,45 @@ public:
     return !(lhs == rhs);
   }
 
-  /// \return the constituent global id representing the work-item’s position in
+  /// \return the constituent global id representing the work-item's position in
   /// the global iteration space.
   id<Dimensions> get_global_id() const noexcept {
     return __spirv::initBuiltInGlobalInvocationId<Dimensions, id<Dimensions>>();
   }
 
   /// \return the constituent element of the global id representing the
-  /// work-item’s position in the nd-range in the given Dimension.
+  /// work-item's position in the nd-range in the given Dimension.
   std::size_t get_global_id(int dimension) const noexcept {
     return get_global_id()[dimension];
   }
 
   /// \return the constituent global id as a linear index value, representing
-  /// the work-item’s position in the global iteration space.
+  /// the work-item's position in the global iteration space.
   std::size_t get_global_linear_id() const noexcept {
-    id<Dimensions> adjustedIndex = get_global_id();
-    const id<Dimensions> offset =
+    id<Dimensions> AdjustedIndex = get_global_id();
+    const id<Dimensions> Offset =
         __spirv::initBuiltInGlobalOffset<Dimensions, id<Dimensions>>();
-    if constexpr (Dimensions == 1) {
-      adjustedIndex[0] -= offset[0];
-    } else if constexpr (Dimensions == 2) {
-      adjustedIndex[0] -= offset[0];
-      adjustedIndex[1] -= offset[1];
-    } else {
-      adjustedIndex[0] -= offset[0];
-      adjustedIndex[1] -= offset[1];
-      adjustedIndex[2] -= offset[2];
-    }
-    return detail::linearize_id(adjustedIndex, get_global_range());
+    for (int I = 0; I < Dimensions; ++I)
+      AdjustedIndex[I] -= Offset[I];
+    return detail::linearizeId(AdjustedIndex, get_global_range());
   }
 
-  /// \return the constituent local id representing the work-item’s position
+  /// \return the constituent local id representing the work-item's position
   /// within the current work-group.
   id<Dimensions> get_local_id() const noexcept {
     return __spirv::initBuiltInLocalInvocationId<Dimensions, id<Dimensions>>();
   }
 
   /// \return the constituent element of the local id representing the
-  /// work-item’s position within the current work-group in the given Dimension.
+  /// work-item's position within the current work-group in the given Dimension.
   std::size_t get_local_id(int dimension) const noexcept {
     return get_local_id()[dimension];
   }
 
   /// \return the constituent local id as a linear index value, representing the
-  /// work-item’s position within the current work-group.
+  /// work-item's position within the current work-group.
   std::size_t get_local_linear_id() const noexcept {
-    return detail::linearize_id(get_local_id(), get_local_range());
+    return detail::linearizeId(get_local_id(), get_local_range());
   }
 
   /// \return the constituent work-group, group representing the work-group's
@@ -110,14 +102,14 @@ public:
   sub_group get_sub_group() const noexcept { return sub_group(); }
 
   /// \return the constituent element of the group id representing the
-  /// work-group’s position within the overall nd_range in the given Dimension.
+  /// work-group's position within the overall nd_range in the given Dimension.
   std::size_t get_group(int dimension) const noexcept {
     return get_group_id()[dimension];
   }
 
   /// \return the group id as a linear index value.
   std::size_t get_group_linear_id() const noexcept {
-    return detail::linearize_id(get_group_id(), get_group_range());
+    return detail::linearizeId(get_group_id(), get_group_range());
   }
 
   /// \return the number of work-groups in the iteration space.
@@ -161,7 +153,7 @@ public:
 
   /// \return the nd_range of the current execution.
   nd_range<Dimensions> get_nd_range() const noexcept {
-    return nd_range<Dimensions>(
+    return detail::makeNdRange(
         get_global_range(), get_local_range(),
         __spirv::initBuiltInGlobalOffset<Dimensions, id<Dimensions>>());
   }

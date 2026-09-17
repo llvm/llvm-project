@@ -17,6 +17,9 @@
 
 #include <llvm/Frontend/Offloading/Utility.h>
 
+#include <cassert>
+#include <string>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
@@ -27,8 +30,12 @@ getDeviceKernelInfo(std::string_view KernelName) {
 
 DeviceKernelInfo &
 ProgramAndKernelManager::getDeviceKernelInfo(std::string_view KernelName) {
+  std::lock_guard<std::mutex> Guard(MDataCollectionMutex);
   auto It = MDeviceKernelInfoMap.find(KernelName);
-  assert(It != MDeviceKernelInfoMap.end());
+  if (It == MDeviceKernelInfoMap.end())
+    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+                          "No registered device image provides kernel " +
+                              std::string(KernelName));
   return It->second;
 }
 
@@ -89,33 +96,34 @@ void ProgramAndKernelManager::registerFatBin(const void *BinaryStart,
   DeviceImageManagerVec Images;
   Images.reserve(BinOrErr->size());
 
-  std::lock_guard<std::mutex> Guard(MDataCollectionMutex);
   for (std::unique_ptr<llvm::object::OffloadBinary> &OB : *BinOrErr) {
     if (!checkDeviceImageValidity(*OB))
       throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
                             "Incompatible device image.");
 
-    llvm::StringRef Symbols = OB->getString("symbols");
-
     Images.push_back(std::make_unique<DeviceImageManager>(std::move(OB)));
-    DeviceImageManager &NewImageWrapper = *Images.back();
-
-    llvm::offloading::sycl::forEachSymbol(Symbols, [&](llvm::StringRef Name) {
-      auto It = MDeviceKernelInfoMap.find(std::string_view(Name));
-      if (It == MDeviceKernelInfoMap.end()) {
-        [[maybe_unused]] auto [Iterator, EmplaceSucceeded] =
-            MDeviceKernelInfoMap.emplace(
-                std::piecewise_construct,
-                std::forward_as_tuple(std::string_view(Name)),
-                std::forward_as_tuple(std::string_view(Name), NewImageWrapper));
-        assert(EmplaceSucceeded && "Kernel name found in multiple images");
-      }
-    });
   }
 
-  [[maybe_unused]] auto [It, Inserted] =
+  std::lock_guard<std::mutex> Guard(MDataCollectionMutex);
+  // The kernel info entries below hold references to the image managers, so the
+  // images have to be installed first: nothing may be recorded in
+  // MDeviceKernelInfoMap until their owner is in place and unregisterFatBin()
+  // can reach it.
+  auto [ImagesIt, Inserted] =
       MDeviceImageManagers.emplace(BinaryStart, std::move(Images));
   assert(Inserted && "Fat binary registered twice");
+  if (!Inserted)
+    return;
+
+  for (const std::unique_ptr<DeviceImageManager> &Image : ImagesIt->second) {
+    llvm::StringRef Symbols = Image->getOffloadBinary().getString("symbols");
+    llvm::offloading::sycl::forEachSymbol(Symbols, [&](llvm::StringRef Name) {
+      // A kernel name may be provided by several images of the same fat binary;
+      // the first one that provides it wins.
+      MDeviceKernelInfoMap.try_emplace(std::string_view(Name),
+                                       std::string_view(Name), *Image);
+    });
+  }
 }
 
 void ProgramAndKernelManager::unregisterFatBin(const void *BinaryStart,
@@ -175,8 +183,8 @@ ol_symbol_handle_t ProgramAndKernelManager::getOrCreateKernel(
 
   if (!isImageCompatible(DeviceImage, Device))
     throw exception(make_error_code(errc::runtime),
-                    std::string("No compatible image for ") +
-                        KernelInfo.getName().data() + " was found");
+                    "No compatible image for " +
+                        std::string(KernelInfo.getName()) + " was found");
 
   // Track the context before it caches anything, so that unregisterFatBin() can
   // reach the programs it is about to create.

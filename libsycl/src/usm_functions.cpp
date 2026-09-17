@@ -14,6 +14,7 @@
 #include <OffloadAPI.h>
 
 #include <algorithm>
+#include <tuple>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -55,8 +56,8 @@ static device getHostAllocDevice(const context &syclContext) {
       [](const device &Dev) { return Dev.has(aspect::usm_host_allocations); });
 
   if (It == ContextDevices.end()) {
-    throw sycl::exception(
-        sycl::errc::feature_not_supported,
+    throw exception(
+        make_error_code(errc::feature_not_supported),
         "None of the context's devices support host USM allocations.");
   }
   return *It;
@@ -65,8 +66,8 @@ static device getHostAllocDevice(const context &syclContext) {
 void *aligned_alloc_host(size_t alignment, size_t numBytes,
                          const context &syclContext,
                          const property_list &propList) {
-  auto device = getHostAllocDevice(syclContext);
-  return aligned_alloc(alignment, numBytes, device, syclContext,
+  device Device = getHostAllocDevice(syclContext);
+  return aligned_alloc(alignment, numBytes, Device, syclContext,
                        usm::alloc::host, propList);
 }
 
@@ -131,22 +132,25 @@ static aspect getAspectByAllocationKind(usm::alloc kind) {
     throw exception(sycl::make_error_code(sycl::errc::invalid),
                     "Invalid USM allocation kind requested");
   }
+  throw exception(sycl::make_error_code(sycl::errc::invalid),
+                  "Unknown USM allocation kind requested");
 }
 
 void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
                     const device &syclDevice, const context &syclContext,
                     usm::alloc kind, const property_list &propList) {
+  std::ignore = propList;
 
   auto ContextDevices = syclContext.get_devices();
-  if (std::none_of(ContextDevices.begin(), ContextDevices.end(),
-                   [&syclDevice](device Dev) { return Dev == syclDevice; }))
+  if (std::none_of(
+          ContextDevices.begin(), ContextDevices.end(),
+          [&syclDevice](const device &Dev) { return Dev == syclDevice; }))
     throw exception(make_error_code(errc::invalid),
                     "Specified device is not contained by specified context.");
 
   if (!syclDevice.has(getAspectByAllocationKind(kind)))
-    throw sycl::exception(
-        sycl::errc::feature_not_supported,
-        "Device doesn't support requested kind of USM allocation");
+    throw exception(make_error_code(errc::feature_not_supported),
+                    "Device doesn't support requested kind of USM allocation");
 
   if (!numBytes)
     return nullptr;
@@ -193,11 +197,13 @@ void *malloc(std::size_t numBytes, const queue &syclQueue, usm::alloc kind,
 
 // SYCL 2020 4.8.3.6. Memory deallocation functions.
 
-void free(void *ptr, const context &ctxt) {
-  std::ignore = ctxt;
+void free(void *ptr, const context &syclContext) {
+  std::ignore = syclContext;
   detail::callAndThrow(olMemFree, ptr);
 }
 
-void free(void *ptr, const queue &q) { return free(ptr, q.get_context()); }
+void free(void *ptr, const queue &syclQueue) {
+  return free(ptr, syclQueue.get_context());
+}
 
 _LIBSYCL_END_NAMESPACE_SYCL

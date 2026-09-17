@@ -14,6 +14,9 @@
 #ifndef _LIBSYCL_SYCL_HPP
 #define _LIBSYCL_SYCL_HPP
 
+#include <sycl/__impl/aspect.hpp>
+#include <sycl/__impl/async_handler.hpp>
+#include <sycl/__impl/backend.hpp>
 #include <sycl/__impl/context.hpp>
 #include <sycl/__impl/device.hpp>
 #include <sycl/__impl/device_selector.hpp>
@@ -21,13 +24,16 @@
 #include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/group.hpp>
 #include <sycl/__impl/group_barrier.hpp>
+#include <sycl/__impl/handler.hpp>
 #include <sycl/__impl/index_space_classes.hpp>
 #include <sycl/__impl/memory_enums.hpp>
 #include <sycl/__impl/nd_item.hpp>
 #include <sycl/__impl/nd_range.hpp>
 #include <sycl/__impl/platform.hpp>
+#include <sycl/__impl/property_list.hpp>
 #include <sycl/__impl/queue.hpp>
 #include <sycl/__impl/sub_group.hpp>
+#include <sycl/__impl/usm_alloc_type.hpp>
 #include <sycl/__impl/usm_functions.hpp>
 
 #endif // _LIBSYCL_SYCL_HPP

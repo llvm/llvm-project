@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL___IMPL_DETAIL_KERNEL_ARG_HELPERS
-#define _LIBSYCL___IMPL_DETAIL_KERNEL_ARG_HELPERS
+#ifndef _LIBSYCL___IMPL_DETAIL_KERNEL_ARG_HELPERS_HPP
+#define _LIBSYCL___IMPL_DETAIL_KERNEL_ARG_HELPERS_HPP
 
 #include <sycl/__impl/index_space_classes.hpp>
 #include <sycl/__impl/nd_item.hpp>
@@ -111,8 +111,7 @@ using nth_type_t = typename nth_type<N, Ts...>::type;
 
 template <typename T> T *declptr() { return static_cast<T *>(nullptr); }
 
-template <int N>
-static inline constexpr bool isValidDimensions = (N > 0) && (N < 4);
+template <int N> inline constexpr bool isValidDimensions = (N > 0) && (N < 4);
 
 /// Class provides helper functions for iteration space coordinates in kernel
 /// invocation on device.
@@ -136,7 +135,7 @@ public:
   /// Constructs item with the given data.
   /// \param Extent a range representing the dimensions of the range of possible
   /// values of the item.
-  /// \param Index a constituent id representing the work-item’s position in the
+  /// \param Index a constituent id representing the work-item's position in the
   /// iteration space.
   /// \param Offset an id representing the n-dimensional offset that should be
   /// added to the global-ID of each work-item, if this item represents a global
@@ -151,7 +150,7 @@ public:
   /// Constructs item with the given data.
   /// \param Extent a range representing the dimensions of the range of possible
   /// values of the item.
-  /// \param Index a constituent id representing the work-item’s position in the
+  /// \param Index a constituent id representing the work-item's position in the
   /// iteration space.
   template <int Dims, bool WithOffset>
   static std::enable_if_t<!WithOffset, item<Dims, WithOffset>>
@@ -192,4 +191,4 @@ public:
 
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL___IMPL_DETAIL_KERNEL_ARG_HELPERS
+#endif // _LIBSYCL___IMPL_DETAIL_KERNEL_ARG_HELPERS_HPP

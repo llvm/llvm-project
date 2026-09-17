@@ -29,14 +29,14 @@
 namespace mock {
 
 struct ol_dummy_handle_t {
-  ol_dummy_handle_t(size_t DataSize = 0) : MStorage(DataSize) {}
+  explicit ol_dummy_handle_t(size_t DataSize = 0) : MStorage(DataSize) {}
   ol_dummy_handle_t(unsigned char *Data, size_t Size) : MStorage(Size) {
     std::memcpy(MStorage.data(), Data, Size);
   }
 
   std::vector<unsigned char> MStorage;
 
-  template <typename T> const T getDataAs() const {
+  template <typename T> T getDataAs() const {
     assert(MStorage.size() >= sizeof(T));
     return *reinterpret_cast<const T *>(MStorage.data());
   }
