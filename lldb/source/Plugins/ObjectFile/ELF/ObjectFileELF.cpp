@@ -2147,7 +2147,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     uint32_t Log2Align = llvm::Log2_64(std::max<elf_xword>(PHdr.p_align, 1));
     SectionSP Segment = std::make_shared<Section>(
         GetModule(), this, SegmentID(EnumPHdr.index()),
-        ConstString(provider.GetNextSegmentName()), eSectionTypeContainer,
+        provider.GetNextSegmentName(), eSectionTypeContainer,
         InfoOr->GetRangeBase(), InfoOr->GetByteSize(), PHdr.p_offset,
         PHdr.p_filesz, Log2Align, /*flags*/ 0);
     Segment->SetPermissions(GetPermissions(PHdr));
@@ -2185,8 +2185,8 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         this,            // ObjectFile to which this section belongs and should
                          // read section data from.
         SectionIndex(I), // Section ID.
-        ConstString(name),            // Section name.
-        sect_type,                    // Section type.
+        name,            // Section name.
+        sect_type,       // Section type.
         InfoOr->Range.GetRangeBase(), // VM address.
         InfoOr->Range.GetByteSize(),  // VM size in bytes of this section.
         header.sh_offset,             // Offset of this section in the file.
@@ -2373,6 +2373,16 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     // linkage.
     if (llvm::StringRef(symbol_name).starts_with(".L"))
       continue;
+
+    // The mold linker emits an extra function symbol like "foo$plt" in
+    // .symtab/.dynsym that overlaps the PLT stub which ParsePLTRelocations
+    // will synthesize as an eSymbolTypeTrampoline named "foo". Drop the
+    // redundant sibling here so the finalized symbol table has a single
+    // clean entry per PLT function.
+    if (symbol.getType() == STT_FUNC &&
+        llvm::StringRef(symbol_name).ends_with("$plt"))
+      continue;
+
     // No need to add non-section symbols that have no names
     if (symbol.getType() != STT_SECTION &&
         (symbol_name == nullptr || symbol_name[0] == '\0'))

@@ -154,6 +154,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mkostemp
+  SRCS
+    mkostemp.cpp
+  HDRS
+    ../mkostemp.h
+  DEPENDS
+    .mktemp_util
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   mkstemp
   SRCS
     mkstemp.cpp
