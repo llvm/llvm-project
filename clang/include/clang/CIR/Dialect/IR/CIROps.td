@@ -576,6 +576,7 @@ def CIR_PtrMaskOp : CIR_Op<"ptr_mask", [
     $ptr`,` $mask `:` functional-type(operands, results) attr-dict
   }];
 
+  let llvmOp = "PtrMaskOp";
   let hasVerifier = 1;
 }
 

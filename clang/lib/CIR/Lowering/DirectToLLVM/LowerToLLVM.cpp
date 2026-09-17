@@ -1938,16 +1938,6 @@ mlir::LogicalResult CIRToLLVMPtrStrideOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMPtrMaskOpLowering::matchAndRewrite(
-    cir::PtrMaskOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  const mlir::Type resultTy = getTypeConverter()->convertType(op.getType());
-
-  rewriter.replaceOpWithNewOp<mlir::LLVM::PtrMaskOp>(
-      op, resultTy, adaptor.getPtr(), adaptor.getMask());
-  return mlir::success();
-}
-
 mlir::LogicalResult CIRToLLVMGetElementOpLowering::matchAndRewrite(
     cir::GetElementOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
