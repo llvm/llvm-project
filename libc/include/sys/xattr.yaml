@@ -2,7 +2,9 @@ header: sys/xattr.h
 standards:
   - linux
 macros: []
-types: []
+types:
+  - type_name: size_t
+  - type_name: ssize_t
 enums: []
 objects: []
 functions:

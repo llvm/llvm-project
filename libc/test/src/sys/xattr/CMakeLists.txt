@@ -30,6 +30,7 @@ add_libc_test(
   DEPENDS
     libc.hdr.sys_stat_macros
     libc.include.sys_xattr
+    libc.src.__support.CPP.scope
     libc.src.__support.OSUtil.osutil
     libc.src.__support.libc_errno
     libc.src.errno.errno
@@ -51,6 +52,7 @@ add_libc_test(
   DEPENDS
     libc.hdr.sys_stat_macros
     libc.include.sys_xattr
+    libc.src.__support.CPP.scope
     libc.src.__support.OSUtil.osutil
     libc.src.__support.libc_errno
     libc.src.errno.errno

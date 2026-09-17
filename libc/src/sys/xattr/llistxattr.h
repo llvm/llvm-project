@@ -14,8 +14,8 @@
 #ifndef LLVM_LIBC_SRC_SYS_XATTR_LINUX_LLISTXATTR_H
 #define LLVM_LIBC_SRC_SYS_XATTR_LINUX_LLISTXATTR_H
 
-#include "include/llvm-libc-types/size_t.h"
-#include "include/llvm-libc-types/ssize_t.h"
+#include "hdr/types/size_t.h"
+#include "hdr/types/ssize_t.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {

@@ -38,11 +38,14 @@ int recreate_test_file(const char *path) {
 }
 
 TEST_F(LlvmLibcListxattrTest, NoExtendedAttributes) {
-  int fd = recreate_test_file(
-      libc_make_test_file_path("testdata/flistxattr_no_xattrs.txt"));
+  const LIBC_NAMESPACE::CString TEST_FILE_NAME =
+      libc_make_test_file_path("testdata/flistxattr_no_xattrs.txt");
+  int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();
-  scope_exit close_file(
-      [&] { ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0)); });
+  scope_exit cleanup([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE_NAME), Succeeds(0));
+  });
 
   EXPECT_THAT(LIBC_NAMESPACE::flistxattr(fd, nullptr, 0), Succeeds<ssize_t>(0));
 
@@ -58,8 +61,10 @@ TEST_F(LlvmLibcListxattrTest, WithUserExtendedAttribute) {
 
   int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();
-  scope_exit close_file(
-      [&] { ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0)); });
+  scope_exit cleanup([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE_NAME), Succeeds(0));
+  });
 
   string_view XATTR_NAME = "user.test_attr";
   string_view XATTR_VALUE = "test_value";

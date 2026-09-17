@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/sys_stat_macros.h"
+#include "src/__support/CPP/scope.h"
 #include "src/__support/OSUtil/linux/syscall.h"
 #include "src/__support/libc_errno.h"
 #include "src/fcntl/creat.h"
@@ -28,6 +29,7 @@ namespace {
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcLlistxattrTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+using LIBC_NAMESPACE::cpp::scope_exit;
 using LIBC_NAMESPACE::cpp::string_view;
 
 int recreate_test_file(const char *path) {
@@ -49,6 +51,9 @@ TEST_F(LlvmLibcLlistxattrTest, NoExtendedAttributes) {
   int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+  scope_exit cleanup([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE_NAME), Succeeds(0));
+  });
 
   EXPECT_THAT(LIBC_NAMESPACE::llistxattr(TEST_FILE_NAME, nullptr, 0),
               Succeeds<ssize_t>(0));
@@ -72,6 +77,10 @@ TEST_F(LlvmLibcLlistxattrTest, WithUserExtendedAttribute) {
 
   ASSERT_THAT(recreate_test_symlink(TEST_SYMLINK_TARGET, TEST_SYMLINK_NAME),
               Succeeds(0));
+  scope_exit cleanup([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE_NAME), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_SYMLINK_NAME), Succeeds(0));
+  });
 
   string_view XATTR_NAME = "user.test_attr";
   string_view XATTR_VALUE = "test_value";
