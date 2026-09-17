@@ -518,6 +518,45 @@ static bool areNonConflictingSubsets(OpOperand *uRead,
   Operation *readingOp = uRead->getOwner();
   Operation *conflictingWritingOp = uConflictingWrite->getOwner();
 
+  auto subsetInsertion =
+      dyn_cast<SubsetInsertionOpInterface>(conflictingWritingOp);
+  if (subsetInsertion &&
+      uConflictingWrite == &subsetInsertion.getDestinationOperand()) {
+    auto writtenSubset = cast<SubsetOpInterface>(conflictingWritingOp);
+    auto isDisjointExtraction = [&](Value value) {
+      auto extraction = value.getDefiningOp<SubsetExtractionOpInterface>();
+      return extraction &&
+             cast<SubsetOpInterface>(extraction.getOperation())
+                 .operatesOnDisjointSubset(
+                     writtenSubset, [&](Value v1, Value v2) {
+                       return state.areEquivalentBufferizedValues(v1, v2);
+                     });
+    };
+
+    // A read from a subset does not conflict with a write to a disjoint subset
+    // of an equivalent tensor. Check the operand roles explicitly because a
+    // subset extraction does not itself bufferize to a memory read.
+    if (auto extraction = dyn_cast<SubsetExtractionOpInterface>(readingOp)) {
+      if (uRead == &extraction.getSourceOperand() &&
+          cast<SubsetOpInterface>(readingOp).operatesOnDisjointSubset(
+              writtenSubset, [&](Value v1, Value v2) {
+                return state.areEquivalentBufferizedValues(v1, v2);
+              }))
+        return true;
+    }
+
+    // The actual read may be further down the aliasing use-def chain. E.g.,
+    // tensor.extract_slice is an alias-only op and the read is attributed to a
+    // return or another consumer of its result. Trace such reads back to their
+    // subset extractions. Every origin must be a disjoint subset; a non-subset
+    // leaf or an extraction that may overlap keeps the analysis conservative.
+    SetVector<Value> readOrigins =
+        state.findValueInReverseUseDefChain(uRead, isDisjointExtraction);
+    if (!readOrigins.empty() &&
+        llvm::all_of(readOrigins, isDisjointExtraction))
+      return true;
+  }
+
   // Special rules for matching ExtractSliceOp/InsertSliceOp pairs. If
   // uRead is an InsertSliceOp...
   if (auto subsetOp = dyn_cast<SubsetInsertionOpInterface>(readingOp)) {
