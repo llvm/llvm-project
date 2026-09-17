@@ -52,11 +52,6 @@ cl::opt<bool> WebAssembly::WasmDisableExplicitLocals(
 
 // Exception handling & setjmp-longjmp handling related options.
 
-// Emscripten's asm.js-style exception handling
-cl::opt<bool> WebAssembly::WasmEnableEmEH(
-    "enable-emscripten-cxx-exceptions",
-    cl::desc("WebAssembly Emscripten-style exception handling"),
-    cl::init(false));
 // Emscripten's asm.js-style setjmp/longjmp handling
 cl::opt<bool> WebAssembly::WasmEnableEmSjLj(
     "enable-emscripten-sjlj",
@@ -135,17 +130,12 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
 
 using WebAssembly::WasmDisableExplicitLocals;
 using WebAssembly::WasmEnableEH;
-using WebAssembly::WasmEnableEmEH;
 using WebAssembly::WasmEnableEmSjLj;
 using WebAssembly::WasmEnableSjLj;
 
 static void basicCheckForEHAndSjLj(TargetMachine *TM) {
 
-  // Emscripten EH is selected by the exception model. WasmEnableEmEH is a
-  // deprecated cl::opt alias, OR-ed in here until it is removed.
-  bool EnableEmEH =
-      TM->Options.ExceptionModel == ExceptionHandling::Emscripten ||
-      WasmEnableEmEH;
+  bool EnableEmEH = TM->Options.ExceptionModel == ExceptionHandling::Emscripten;
 
   // You can't enable two modes of EH at the same time
   if (EnableEmEH && WasmEnableEH)
@@ -343,9 +333,7 @@ void WebAssemblyPassConfig::addIRPasses() {
   // TargetPassConfig::addPassesToHandleExceptions, but that runs after these IR
   // passes and Emscripten SjLj handling expects all invokes to be lowered
   // before.
-  bool EnableEmEH =
-      TM->Options.ExceptionModel == ExceptionHandling::Emscripten ||
-      WasmEnableEmEH;
+  bool EnableEmEH = TM->Options.ExceptionModel == ExceptionHandling::Emscripten;
   if (!EnableEmEH && !WasmEnableEH) {
     addPass(createLowerInvokePass());
     // The lower invoke pass may create unreachable code. Remove it in order not

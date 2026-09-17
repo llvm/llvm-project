@@ -510,6 +510,12 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now diagnoses matrix logical operations are only supported for HLSL. (GH222381)
 
+- Improve the input size mismatch diagnostic when calling `__builtin_shufflevector` with valid
+  vector element types but different sizes. (GH221791)
+
+- Suggests the correct location for an attribute written before the `using`
+  keyword of an alias-declaration. (#GH155787)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -702,6 +708,9 @@ features cannot lower the translation-unit ABI level;
   class with an invalid non-static data member, such as one qualified with an
   address space. (#GH194605)
 
+- Fixed deduction of the template parameters appearing in the type of a
+  constant template parameter of reference type. (#GH40328)
+
 - Fixed an issue where an explicit specialization of a constexpr variable would
   result in a link error. (#GH219796)
 
@@ -870,6 +879,14 @@ features cannot lower the translation-unit ABI level;
 - visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
 
 ### Code Completion
+
+- Parameters declared with a `decltype` are now presented as the type the
+  `decltype` resolves to, e.g. `set_x(int val)` rather than
+  `set_x(decltype(x) val)`. This affects the completion strings produced by
+  libclang as well as those used by clangd.
+
+- Members inherited from a dependent base class that is named through an alias
+  template are suggested by code completion when relevant.
 
 ### Static Analyzer
 

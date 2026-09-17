@@ -11,9 +11,12 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/MemoryMapper.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SharedMemoryMapperSPSCI.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Testing/Support/Error.h"
 
 using namespace llvm;
@@ -48,11 +51,17 @@ TEST(SharedMemoryMapperTest, MemReserveInitializeDeinitializeRelease) {
   {
     StringMap<ExecutorAddr> Map;
     MapperService.addBootstrapSymbols(Map);
-    SAs.Instance = Map[rt::sps_ci::SharedMemoryMapperInstanceName];
-    SAs.Reserve = Map[rt::sps_ci::SharedMemoryMapperReserve::Name];
-    SAs.Initialize = Map[rt::sps_ci::SharedMemoryMapperInitialize::Name];
-    SAs.Deinitialize = Map[rt::sps_ci::SharedMemoryMapperDeinitialize::Name];
-    SAs.Release = Map[rt::sps_ci::SharedMemoryMapperRelease::Name];
+    Mangler Mangle{Triple(sys::getProcessTriple())};
+    SAs.Instance =
+        Map[Mangle.mangledCopy(rt::sps_ci::SharedMemoryMapperInstanceName)];
+    SAs.Reserve =
+        Map[Mangle.mangledCopy(rt::sps_ci::SharedMemoryMapperReserve::Name)];
+    SAs.Initialize =
+        Map[Mangle.mangledCopy(rt::sps_ci::SharedMemoryMapperInitialize::Name)];
+    SAs.Deinitialize = Map[Mangle.mangledCopy(
+        rt::sps_ci::SharedMemoryMapperDeinitialize::Name)];
+    SAs.Release =
+        Map[Mangle.mangledCopy(rt::sps_ci::SharedMemoryMapperRelease::Name)];
   }
 
   std::string TestString = "Hello, World!";
