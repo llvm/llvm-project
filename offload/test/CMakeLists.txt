@@ -12,6 +12,10 @@ else()
   set(LIBOMPTARGET_DEBUG False)
 endif()
 
+# The tests of the host runtime's experimental taskgraph support only run where
+# it is built.  LIBOMP_* options reach this build along with openmp's.
+pythonize_bool(LIBOMP_TASKGRAPH_EXPERIMENTAL)
+
 # Replace the space from user's input with ";" in case that CMake add escape
 # char into the lit command.
 string(REPLACE " " ";" LIBOMPTARGET_LIT_ARG_LIST "${LIBOMPTARGET_LIT_ARGS}")
