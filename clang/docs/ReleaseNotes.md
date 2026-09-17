@@ -802,6 +802,11 @@ features cannot lower the translation-unit ABI level;
 
 #### Windows Support
 
+- Clang now accepts ``_except`` as an alias for ``__except`` in SEH handler
+  position when ``-fms-compatibility`` is enabled, matching the existing
+  ``_try``, ``_finally``, and ``_leave`` aliases. ``_except`` remains an ordinary
+  identifier outside that context.
+
 - Fixed ``setjmp`` on 32-bit Arm passing the frame pointer, rather than the
   stack pointer as it was on entry to the function, as the frame value the CRT
   stores in the ``jmp_buf``. Clang now uses ``llvm.sponentry`` there, as it
