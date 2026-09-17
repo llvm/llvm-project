@@ -809,15 +809,16 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
 
   // OldPH branches here without entering the loop, so a header PHI is still
   // its entry value. Read it from NewPH, the preheader created by the split.
-  if (TrivialFromHeader)
+  if (TrivialFromHeader) {
     for (PHINode &PN : UnswitchedBB->phis())
-      for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
-        if (PN.getIncomingBlock(I) != OldPH)
+      for (unsigned Idx = 0, E = PN.getNumIncomingValues(); Idx != E; ++Idx) {
+        if (PN.getIncomingBlock(Idx) != OldPH)
           continue;
-        auto *HeaderPN = dyn_cast<PHINode>(PN.getIncomingValue(I));
+        auto *HeaderPN = dyn_cast<PHINode>(PN.getIncomingValue(Idx));
         if (HeaderPN && HeaderPN->getParent() == L.getHeader())
-          PN.setIncomingValue(I, HeaderPN->getIncomingValueForBlock(NewPH));
+          PN.setIncomingValue(Idx, HeaderPN->getIncomingValueForBlock(NewPH));
       }
+  }
 
   // The constant we can replace all of our invariants with inside the loop
   // body. If any of the invariants have a value other than this the loop won't
