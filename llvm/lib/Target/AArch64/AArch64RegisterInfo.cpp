@@ -1260,7 +1260,8 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     return ConsiderOnlyHints;
 
   if (!ST.hasSME() || !ST.isStreaming())
-    return ConsiderOnlyHints;
+    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
+                                                     VRM);
 
   // The SVE calling convention preserves registers Z8-Z23. As a result, there
   // are no ZPR2Strided or ZPR4Strided registers that do not overlap with the
@@ -1402,7 +1403,8 @@ bool AArch64RegisterInfo::getRegAllocationHints(
       }
 
       if (!Hints.empty())
-        return ConsiderOnlyHints;
+        return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints,
+                                                         MF, VRM);
     }
   }
 
@@ -1433,7 +1435,8 @@ bool AArch64RegisterInfo::getRegAllocationHints(
     }
   }
 
-  return ConsiderOnlyHints;
+  return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
+                                                   VRM);
 }
 
 unsigned AArch64RegisterInfo::getLocalAddressRegister(
