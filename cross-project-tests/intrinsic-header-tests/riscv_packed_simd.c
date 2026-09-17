@@ -4743,3 +4743,31 @@ int8x8_t test_pld_i8x8_aligned(int8_t *p) {
 uint32x2_t test_pld_u32x2_aligned(uint32_t *p) {
   return __riscv_pld_u32x2(__builtin_assume_aligned(p, 8));
 }
+
+// CHECK-LABEL: test_pjoin2_i8x8:
+// RV32:         ret
+// RV64:         pack
+int8x8_t test_pjoin2_i8x8(int8x4_t lo, int8x4_t hi) {
+  return __riscv_pjoin2_i8x8(lo, hi);
+}
+
+// CHECK-LABEL: test_pjoin2_u8x8:
+// RV32:         ret
+// RV64:         pack
+uint8x8_t test_pjoin2_u8x8(uint8x4_t lo, uint8x4_t hi) {
+  return __riscv_pjoin2_u8x8(lo, hi);
+}
+
+// CHECK-LABEL: test_pjoin2_i16x4:
+// RV32:         ret
+// RV64:         pack
+int16x4_t test_pjoin2_i16x4(int16x2_t lo, int16x2_t hi) {
+  return __riscv_pjoin2_i16x4(lo, hi);
+}
+
+// CHECK-LABEL: test_pjoin2_u16x4:
+// RV32:         ret
+// RV64:         pack
+uint16x4_t test_pjoin2_u16x4(uint16x2_t lo, uint16x2_t hi) {
+  return __riscv_pjoin2_u16x4(lo, hi);
+}

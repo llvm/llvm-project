@@ -2147,7 +2147,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     uint32_t Log2Align = llvm::Log2_64(std::max<elf_xword>(PHdr.p_align, 1));
     SectionSP Segment = std::make_shared<Section>(
         GetModule(), this, SegmentID(EnumPHdr.index()),
-        ConstString(provider.GetNextSegmentName()), eSectionTypeContainer,
+        provider.GetNextSegmentName(), eSectionTypeContainer,
         InfoOr->GetRangeBase(), InfoOr->GetByteSize(), PHdr.p_offset,
         PHdr.p_filesz, Log2Align, /*flags*/ 0);
     Segment->SetPermissions(GetPermissions(PHdr));
@@ -2185,8 +2185,8 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         this,            // ObjectFile to which this section belongs and should
                          // read section data from.
         SectionIndex(I), // Section ID.
-        ConstString(name),            // Section name.
-        sect_type,                    // Section type.
+        name,            // Section name.
+        sect_type,       // Section type.
         InfoOr->Range.GetRangeBase(), // VM address.
         InfoOr->Range.GetByteSize(),  // VM size in bytes of this section.
         header.sh_offset,             // Offset of this section in the file.
