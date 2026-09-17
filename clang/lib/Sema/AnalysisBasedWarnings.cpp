@@ -2840,6 +2840,47 @@ sema::AnalysisBasedWarnings::getPolicyInEffectAt(SourceLocation Loc) {
 void sema::AnalysisBasedWarnings::clearPolicyCache() {
   for (auto &M : PolicyCache)
     M.clear();
+  for (auto &M : FunctionPolicyCaches)
+    M.clear();
+}
+
+sema::AnalysisBasedWarnings::FunctionPolicy
+sema::AnalysisBasedWarnings::getFunctionPolicy(const Decl *D) {
+  DiagnosticsEngine &Diags = S.getDiagnostics();
+  SourceLocation Loc = D->getBeginLoc();
+  const bool Cacheable = !Diags.hasDiagSuppressionMapping() && Loc.isValid();
+
+  const void *StateKey = nullptr;
+  FunctionPolicyCacheKind CacheKind = UserCode;
+  if (Cacheable) {
+    const SourceManager &SM = Diags.getSourceManager();
+    const bool InSystemMacro = SM.isInSystemMacro(Loc);
+    if (SM.isInSystemHeader(SM.getExpansionLoc(Loc)))
+      CacheKind = InSystemMacro ? SystemMacroInSystemHeader : SystemHeader;
+    else
+      CacheKind = InSystemMacro ? SystemMacroInUserCode : UserCode;
+    StateKey = Diags.getDiagStateKeyForLoc(Loc);
+    auto It = FunctionPolicyCaches[CacheKind].find(StateKey);
+    if (It != FunctionPolicyCaches[CacheKind].end())
+      return It->second;
+  }
+
+  FunctionPolicy P{
+      lifetimes::IsLifetimeSafetyEnabled(S, D),
+      areAnyEnabled(
+          Diags, Loc, diag::warn_uninit_var, diag::warn_sometimes_uninit_var,
+          diag::warn_maybe_uninit_var, diag::warn_uninit_const_reference,
+          diag::warn_uninit_const_pointer),
+      !Diags.isIgnored(diag::warn_unannotated_fallthrough, Loc),
+      !Diags.isIgnored(diag::warn_unannotated_fallthrough_per_function, Loc),
+      !Diags.isIgnored(diag::warn_infinite_recursive_function, Loc),
+      !Diags.isIgnored(diag::warn_throw_in_noexcept_func, Loc),
+      LogicalErrorHandler::hasActiveDiagnostics(Diags, Loc),
+  };
+
+  if (Cacheable)
+    FunctionPolicyCaches[CacheKind][StateKey] = P;
+  return P;
 }
 
 void sema::AnalysisBasedWarnings::clearOverrides() {
@@ -3098,7 +3139,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarningsForImplicitFunction(
     return;
   // In TU-end mode IsLifetimeSafetyEnabled returns false for non-TU decls, so
   // such definitions are reached only via the call-graph walk, not here.
-  if (!lifetimes::IsLifetimeSafetyEnabled(S, D))
+  if (!getFunctionPolicy(D).enableLifetimeSafetyAnalysis)
     return;
   if (shouldSkipAnalysisForDecl(S, D) || S.hasUncompilableErrorOccurred())
     return;
@@ -3165,7 +3206,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
-  bool EnableLifetimeSafetyAnalysis = lifetimes::IsLifetimeSafetyEnabled(S, D);
+  FunctionPolicy FP = getFunctionPolicy(D);
+  bool EnableLifetimeSafetyAnalysis = FP.enableLifetimeSafetyAnalysis;
 
   // Force that certain expressions appear as CFGElements in the CFG.  This
   // is used to speed up various analyses.
@@ -3192,7 +3234,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 
   // Install the logical handler.
   std::optional<LogicalErrorHandler> LEH;
-  if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {
+  if (FP.enableLogicalErrors) {
     LEH.emplace(S);
     AC.getCFGBuildOptions().Observer = &*LEH;
   }
@@ -3250,11 +3292,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     Analyzer.run(AC);
   }
 
-  if (!Diags.isIgnored(diag::warn_uninit_var, D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_sometimes_uninit_var, D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_maybe_uninit_var, D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_uninit_const_reference, D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_uninit_const_pointer, D->getBeginLoc())) {
+  if (FP.enableUninitializedAnalysis) {
     if (CFG *cfg = AC.getCFG()) {
       UninitValsDiagReporter reporter(S);
       UninitVariablesAnalysisStats stats;
@@ -3295,10 +3333,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     }
   }
 
-  bool FallThroughDiagFull =
-      !Diags.isIgnored(diag::warn_unannotated_fallthrough, D->getBeginLoc());
-  bool FallThroughDiagPerFunction = !Diags.isIgnored(
-      diag::warn_unannotated_fallthrough_per_function, D->getBeginLoc());
+  bool FallThroughDiagFull = FP.enableFallthroughFull;
+  bool FallThroughDiagPerFunction = FP.enableFallthroughPerFunction;
   if (FallThroughDiagFull || FallThroughDiagPerFunction ||
       fscope->HasFallthroughStmt) {
     DiagnoseSwitchLabelsFallthrough(S, AC, !FallThroughDiagFull);
@@ -3310,22 +3346,21 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 
 
   // Check for infinite self-recursion in functions
-  if (!Diags.isIgnored(diag::warn_infinite_recursive_function,
-                       D->getBeginLoc())) {
+  if (FP.enableInfiniteRecursion) {
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
       checkRecursiveFunction(S, FD, Body, AC);
     }
   }
 
   // Check for throw out of non-throwing function.
-  if (!Diags.isIgnored(diag::warn_throw_in_noexcept_func, D->getBeginLoc()))
+  if (FP.enableThrowInNoexcept)
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
       if (S.getLangOpts().CPlusPlus && !fscope->isCoroutine() && isNoexcept(FD))
         checkThrowInNonThrowingFunc(S, FD, AC);
 
   // If none of the previous checks caused a CFG build, trigger one here
   // for the logical error handler.
-  if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {
+  if (FP.enableLogicalErrors) {
     AC.getCFG();
   }
 
