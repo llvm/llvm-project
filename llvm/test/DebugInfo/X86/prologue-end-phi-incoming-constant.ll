@@ -16,13 +16,19 @@
 ;; Bind the branch into each loop, and the statement ahead of it, to their
 ;; metadata nodes. The MIR checks then require the materializations to carry
 ;; exactly the branch's location rather than a line number that merely happens
-;; to look plausible.
-; MIR: store i32 7, ptr %arr, align 4, !dbg ![[LOCAL_BEFORE:[0-9]+]]
-; MIR: br label %header, !dbg ![[LOCAL_INTO:[0-9]+]]
-; MIR: store i32 7, ptr %array, align 4, !dbg ![[ARG_BEFORE:[0-9]+]]
-; MIR: br label %loop, !dbg ![[ARG_INTO:[0-9]+]]
-; MIR: call void @sink(ptr %array), !dbg ![[CALL_BEFORE:[0-9]+]]
-; MIR: br label %loop, !dbg ![[CALL_INTO:[0-9]+]]
+;; to look plausible. One label per function keeps each binding inside the
+;; function it belongs to.
+; MIR-LABEL: define void @fill_local_(
+; MIR:         store i32 7, ptr %arr, align 4, !dbg ![[LOCAL_BEFORE:[0-9]+]]
+; MIR:         br label %header, !dbg ![[LOCAL_INTO:[0-9]+]]
+
+; MIR-LABEL: define void @fill_arg_(
+; MIR:         store i32 7, ptr %array, align 4, !dbg ![[ARG_BEFORE:[0-9]+]]
+; MIR:         br label %loop, !dbg ![[ARG_INTO:[0-9]+]]
+
+; MIR-LABEL: define void @fill_after_call_(
+; MIR:         call void @sink(ptr %array), !dbg ![[CALL_BEFORE:[0-9]+]]
+; MIR:         br label %loop, !dbg ![[CALL_INTO:[0-9]+]]
 
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -34,7 +40,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ;; through the line table.
 ; MIR-NEXT:     %[[LOCAL_I:[0-9]+]]:gr64 = MOV32ri64 1, debug-location ![[LOCAL_INTO]]
 ; MIR-NEXT:     %[[LOCAL_TRIP:[0-9]+]]:gr64 = MOV32ri64 4{{$}}
-; MIR:        bb.1.header:
+; MIR-LABEL:  bb.1.header:
 ; MIR:          %{{[0-9]+}}:gr64_nosp = PHI %[[LOCAL_I]], %bb.0,
 ; MIR-NEXT:     %{{[0-9]+}}:gr64 = PHI %[[LOCAL_TRIP]], %bb.0,
 
@@ -80,7 +86,7 @@ exit:
 ; MIR:        bb.0.entry:
 ; MIR:          MOV32mi %{{[0-9]+}}, 1, $noreg, 0, $noreg, 7, debug-location ![[ARG_BEFORE]]
 ; MIR-NEXT:     %[[ARG_I:[0-9]+]]:gr64 = MOV64ri32 -4, debug-location ![[ARG_INTO]]
-; MIR:        bb.1.loop:
+; MIR-LABEL:  bb.1.loop:
 ; MIR:          %{{[0-9]+}}:gr64_nosp = PHI %[[ARG_I]], %bb.0,
 
 ; ASM-LABEL: fill_arg_:
@@ -116,7 +122,7 @@ exit:
 ; MIR:        bb.0.entry:
 ; MIR:          CALL64pcrel32 target-flags(x86-plt) @sink, {{.*}} debug-location ![[CALL_BEFORE]]
 ; MIR:          %[[CALL_I:[0-9]+]]:gr64 = MOV64ri32 -4, debug-location ![[CALL_INTO]]
-; MIR:        bb.1.loop:
+; MIR-LABEL:  bb.1.loop:
 ; MIR:          %{{[0-9]+}}:gr64_nosp = PHI %[[CALL_I]], %bb.0,
 
 ; ASM-LABEL: fill_after_call_:
