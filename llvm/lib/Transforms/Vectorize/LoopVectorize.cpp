@@ -6278,8 +6278,7 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
     TailFoldingStyle Style = PlanCM.getTailFoldingStyle();
     RUN_VPLAN_PASS(VPlanTransforms::materializeHeaderMask, *Plan,
                    useActiveLaneMask(Style),
-                   useActiveLaneMaskForControlFlow(Style),
-                   IVUpdateMayOverflow);
+                   useActiveLaneMaskForControlFlow(Style), IVUpdateMayOverflow);
 
     RUN_VPLAN_PASS_NO_VERIFY(printOptimizedVPlan, *Plan);
     assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
