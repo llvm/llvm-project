@@ -7,6 +7,9 @@ let Definition = "target_experimental", Path = "target.experimental" in {
   def UseDIL : Property<"use-DIL", "Boolean">,
     Global, DefaultTrue,
     Desc<"If true, use the DIL implementation for frame variable evaluation.">;
+  def UseDILForCreatingValues: Property<"use-DIL-for-creating-values", "Boolean">,
+    Global, DefaultTrue,
+    Desc<"If true, use the DIL implementation in API SBValue::CreateValueFromExpression.">;
 }
 
 let Definition = "target", Path = "target" in {
@@ -248,6 +251,11 @@ let Definition = "process", Path = "target.process" in {
   def DisableMemCache: Property<"disable-memory-cache", "Boolean">,
     DefaultFalse,
     Desc<"Disable reading and caching of memory in fixed-size units.">;
+#ifndef NDEBUG
+  def VerifyMemoryReads: Property<"verify-memory-reads", "Boolean">,
+    DefaultFalse,
+    Desc<"Read memory that goes through the memory cache a second time directly from the process and report any difference.  Debug builds only.">;
+#endif
   def ExtraStartCommand: Property<"extra-startup-command", "Array">,
     ElementType<"String">,
     Desc<"A list containing extra commands understood by the particular process plugin used.  For instance, to turn on debugserver logging set this to 'QSetLogging:bitmask=LOG_DEFAULT;'">;

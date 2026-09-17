@@ -79,7 +79,7 @@ would find on the `declare target` directive i.e. device type (`nohost`,
 
 ```
 fir.global internal @_QFEi {omp.declare_target =
-#omp.declaretarget<device_type = (any), capture_clause = (to)>} : f32 {
+#omp.declaretarget<device_type = any, capture_clause = to>} : f32 {
     %0 = fir.undefined f32
     fir.has_value %0 : f32
 }
@@ -93,8 +93,11 @@ operations to access the appropriate interface functions, e.g.:
 
 ```C++
 auto declareTargetGlobal =
-llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(Op.getOperation());
-declareTargetGlobal.isDeclareTarget();
+    llvm::cast<mlir::omp::DeclareTargetInterface>(op.getOperation());
+auto declareTargetAttr = declareTargetGlobal.getDeclareTarget();
+if (declareTargetAttr) {
+    auto deviceType = declareTargetAttr.getDeviceType();
+}
 ```
 
 ## Declare Target Fortran OpenMP Lowering

@@ -1105,7 +1105,7 @@ std::string LLJIT::mangle(StringRef UnmangledName) const {
   std::string MangledName;
   {
     raw_string_ostream MangledNameStream(MangledName);
-    Mangler::getNameWithPrefix(MangledNameStream, UnmangledName, DL);
+    llvm::Mangler::getNameWithPrefix(MangledNameStream, UnmangledName, DL);
   }
   return MangledName;
 }

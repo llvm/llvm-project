@@ -35,6 +35,12 @@ add_header(
 )
 
 add_header(
+  sys_file_macros
+  HDR
+    sys-file-macros.h
+)
+
+add_header(
   sys_ioctl_macros
   HDR
     sys-ioctl-macros.h
@@ -44,6 +50,12 @@ add_header(
   sys_ipc_macros
   HDR
     sys-ipc-macros.h
+)
+
+add_header(
+  sys_mount_macros
+  HDR
+    sys-mount-macros.h
 )
 
 add_header(
@@ -74,6 +86,12 @@ add_header(
   net_if_macros
   HDR
     net-if-macros.h
+)
+
+add_header(
+  netdb_macros
+  HDR
+    netdb-macros.h
 )
 
 add_header(

@@ -628,6 +628,15 @@ SplitQualType QualType::getSplitUnqualifiedTypeImpl(QualType type) {
   }
 
 done:
+  // An overflow behavior type can have a qualified underlying type. It is not
+  // sugar, so the loop above cannot desugar through it to reach the
+  // qualifiers; rebuild it with an unqualified underlying type instead.
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(split.Ty)) {
+    SplitQualType SplitOBT = OBT->getSplitUnqualifiedType();
+    quals.addConsistentQualifiers(SplitOBT.Quals);
+    return SplitQualType(SplitOBT.Ty, quals);
+  }
+
   return SplitQualType(lastTypeWithQuals, quals);
 }
 
@@ -4047,7 +4056,7 @@ bool FunctionProtoType::isTemplateVariadic() const {
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
                                 const QualType *ArgTys, unsigned NumParams,
                                 const ExtProtoInfo &epi,
-                                const ASTContext &Context, bool Canonical) {
+                                const ASTContext &Context) {
   // We have to be careful not to get ambiguous profile encodings.
   // Note that valid type pointers are never ambiguous with anything else.
   //
@@ -4086,7 +4095,9 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
     for (QualType Ex : epi.ExceptionSpec.Exceptions)
       ID.AddPointer(Ex.getAsOpaquePtr());
   } else if (isComputedNoexcept(epi.ExceptionSpec.Type)) {
-    epi.ExceptionSpec.NoexceptExpr->Profile(ID, Context, Canonical);
+    // getFunctionTypeInternal compares noexcept expressions after the lookup,
+    // so the key only needs their canonical form.
+    epi.ExceptionSpec.NoexceptExpr->Profile(ID, Context, /*Canonical=*/true);
   } else if (epi.ExceptionSpec.Type == EST_Uninstantiated ||
              epi.ExceptionSpec.Type == EST_Unevaluated) {
     ID.AddPointer(epi.ExceptionSpec.SourceDecl->getCanonicalDecl());
@@ -4116,7 +4127,7 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
                                 const ASTContext &Ctx) {
   Profile(ID, getReturnType(), param_type_begin(), getNumParams(),
-          getExtProtoInfo(), Ctx, isCanonicalUnqualified());
+          getExtProtoInfo(), Ctx);
 }
 
 TypeCoupledDeclRefInfo::TypeCoupledDeclRefInfo(ValueDecl *D, bool Deref)
@@ -4139,10 +4150,21 @@ void TypeCoupledDeclRefInfo::setFromOpaqueValue(void *V) {
 }
 
 OverflowBehaviorType::OverflowBehaviorType(
-    QualType Canon, QualType Underlying,
+    const ASTContext &Context, QualType Canon, QualType Underlying,
     OverflowBehaviorType::OverflowBehaviorKind Kind)
     : Type(OverflowBehavior, Canon, Underlying->getDependence()),
-      UnderlyingType(Underlying), BehaviorKind(Kind) {}
+      UnderlyingType(Underlying), BehaviorKind(Kind), Context(Context) {}
+
+SplitQualType OverflowBehaviorType::getSplitUnqualifiedType() const {
+  SplitQualType SplitUnderlying = UnderlyingType.getSplitUnqualifiedType();
+  QualType UnqualUnderlyingTy(SplitUnderlying.Ty, 0);
+  if (UnqualUnderlyingTy == UnderlyingType)
+    return SplitQualType(this, Qualifiers());
+
+  QualType UnqualTy =
+      Context.getOverflowBehaviorType(BehaviorKind, UnqualUnderlyingTy);
+  return SplitQualType(UnqualTy.getTypePtr(), SplitUnderlying.Quals);
+}
 
 BoundsAttributedType::BoundsAttributedType(TypeClass TC, QualType Wrapped,
                                            QualType Canon)
@@ -4628,18 +4650,6 @@ SubstTemplateTypeParmType::getReplacedParameter() const {
       getReplacedTemplateParameter(getAssociatedDecl(), getIndex())));
 }
 
-void SubstTemplateTypeParmType::Profile(llvm::FoldingSetNodeID &ID,
-                                        QualType Replacement,
-                                        const Decl *AssociatedDecl,
-                                        unsigned Index,
-                                        UnsignedOrNone PackIndex, bool Final) {
-  Replacement.Profile(ID);
-  ID.AddPointer(AssociatedDecl);
-  ID.AddInteger(Index);
-  ID.AddInteger(PackIndex.toInternalRepresentation());
-  ID.AddBoolean(Final);
-}
-
 SubstPackType::SubstPackType(TypeClass Derived, QualType Canon,
                              const TemplateArgument &ArgPack)
     : Type(Derived, Canon,
@@ -4857,22 +4867,6 @@ void ObjCObjectTypeImpl::Profile(llvm::FoldingSetNodeID &ID) {
   Profile(ID, getBaseType(), getTypeArgsAsWritten(),
           llvm::ArrayRef(qual_begin(), getNumProtocols()),
           isKindOfTypeAsWritten());
-}
-
-void ObjCTypeParamType::Profile(llvm::FoldingSetNodeID &ID,
-                                const ObjCTypeParamDecl *OTPDecl,
-                                QualType CanonicalType,
-                                ArrayRef<ObjCProtocolDecl *> protocols) {
-  ID.AddPointer(OTPDecl);
-  ID.AddPointer(CanonicalType.getAsOpaquePtr());
-  ID.AddInteger(protocols.size());
-  for (auto *proto : protocols)
-    ID.AddPointer(proto);
-}
-
-void ObjCTypeParamType::Profile(llvm::FoldingSetNodeID &ID) {
-  Profile(ID, getDecl(), getCanonicalTypeInternal(),
-          llvm::ArrayRef(qual_begin(), getNumProtocols()));
 }
 
 namespace {
@@ -5150,9 +5144,8 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     return computeTypeLinkageInfo(
         cast<OverflowBehaviorType>(T)->getUnderlyingType());
   case Type::HLSLAttributedResource:
-    return computeTypeLinkageInfo(cast<HLSLAttributedResourceType>(T)
-                                      ->getContainedType()
-                                      ->getCanonicalTypeInternal());
+    return computeTypeLinkageInfo(
+        cast<HLSLAttributedResourceType>(T)->getWrappedType());
   case Type::HLSLInlineSpirv:
     return LinkageInfo::external();
   }
@@ -5750,8 +5743,8 @@ AutoType::AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
   this->TypeConstraintConcept = TypeConstraintConcept;
   assert(!TypeConstraintConcept.isNull() || AutoTypeBits.NumArgs == 0);
   if (!TypeConstraintConcept.isNull()) {
-
-    assert(TypeConstraintConcept.getKind() == TemplateName::Template);
+    assert(TypeConstraintConcept.isConceptName() &&
+           "type-constraint does not name a concept");
 
     auto Dep = toTypeDependence(TypeConstraintConcept.getDependence());
 

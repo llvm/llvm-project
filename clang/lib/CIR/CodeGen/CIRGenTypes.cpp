@@ -312,6 +312,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
               cgm.getTargetCIRGenInfo().getCUDADeviceBuiltinSurfaceDeviceType())
         return ty;
     } else if (type->isCUDADeviceBuiltinTextureType()) {
+      if (mlir::Type ty =
+              cgm.getTargetCIRGenInfo().getCUDADeviceBuiltinTextureDeviceType())
+        return ty;
+
       assert(!cir::MissingFeatures::cudaTextureType());
     }
   }
@@ -540,7 +544,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     const ReferenceType *refTy = cast<ReferenceType>(ty);
     QualType elemTy = refTy->getPointeeType();
     auto pointeeType = convertTypeForMem(elemTy);
-    resultType = builder.getPointerTo(pointeeType, elemTy.getAddressSpace());
+    resultType =
+        builder.getPointerTo(pointeeType, getPointerAddressSpace(elemTy));
     assert(resultType && "Cannot get pointer type?");
     break;
   }
@@ -552,7 +557,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
     mlir::Type pointeeType = convertType(elemTy);
 
-    resultType = builder.getPointerTo(pointeeType, elemTy.getAddressSpace());
+    resultType =
+        builder.getPointerTo(pointeeType, getPointerAddressSpace(elemTy));
     break;
   }
 
@@ -753,6 +759,22 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
   return getCIRGenRecordLayout(rd).isZeroInitializable();
 }
 
+cir::CallingConv
+CIRGenTypes::clangCallConvToCIRCallConv(clang::CallingConv cc) {
+  switch (cc) {
+  case CC_C:
+    // SPIR/SPIR-V lowers the default CC to spir_func, not plain C.
+    if (cgm.getTriple().isSPIROrSPIRV())
+      return cir::CallingConv::SpirFunction;
+    return cir::CallingConv::C;
+  case CC_DeviceKernel:
+    return cgm.getTargetCIRGenInfo().getDeviceKernelCallingConv();
+  default:
+    // TODO(cir): Support the remaining target-specific calling conventions.
+    return cir::CallingConv::C;
+  }
+}
+
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     CanQualType returnType, bool isInstanceMethod,
     llvm::ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
@@ -764,8 +786,8 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   CIRGenFunctionInfo::Profile(id, isInstanceMethod, info, required, returnType,
                               argTypes);
 
-  void *insertPos = nullptr;
-  CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
+  llvm::FoldingSetInsertToken insertToken;
+  CIRGenFunctionInfo *fi = functionInfos.lookup(id, insertToken);
   if (fi) {
     // We found a matching function info based on id. These asserts verify that
     // it really is a match.
@@ -776,12 +798,12 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     return *fi;
   }
 
-  assert(!cir::MissingFeatures::opCallCallConv());
+  cir::CallingConv cirCC = clangCallConvToCIRCallConv(info.getCC());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(info, isInstanceMethod, returnType, argTypes,
-                                  required);
-  functionInfos.InsertNode(fi, insertPos);
+  fi = CIRGenFunctionInfo::create(cirCC, info, isInstanceMethod, returnType,
+                                  argTypes, required);
+  functionInfos.insert(fi, insertToken);
 
   return *fi;
 }
@@ -849,6 +871,23 @@ void CIRGenTypes::updateCompletedType(const TagDecl *td) {
   // If necessary, provide the full definition of a type only used with a
   // declaration so far.
   assert(!cir::MissingFeatures::generateDebugInfo());
+}
+
+mlir::ptr::MemorySpaceAttrInterface
+CIRGenTypes::getPointerAddressSpace(clang::QualType pointeeTy) const {
+  // An explicit source address space is carried directly.
+  if (pointeeTy.getAddressSpace() != LangAS::Default)
+    return cir::toCIRAddressSpaceAttr(getMLIRContext(),
+                                      pointeeTy.getAddressSpace());
+
+  // Resolve a default-address-space pointee through getTargetAddressSpace, as
+  // classic CodeGen does. This is only non-zero for languages that default to
+  // a non-default address space (e.g. generic for SYCL device data), and uses
+  // the program address space for functions.
+  unsigned targetAS = getTargetAddressSpace(pointeeTy);
+  if (targetAS == 0)
+    return {};
+  return cir::TargetAddressSpaceAttr::get(&getMLIRContext(), targetAS);
 }
 
 unsigned CIRGenTypes::getTargetAddressSpace(QualType ty) const {
