@@ -755,6 +755,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when the `dim` argument to an OpenACC `gang` clause
   evaluated to a value not representable by a signed integer, such as an
   unsigned wrap around. (#GH221418)
+- Fixed an assertion failure when a method or function definition follows an
+  Objective-C `@implementation` that was ended by a nested `@interface`,
+  `@protocol` or `@implementation` before its `@end`. (#GH209503)
 
 ### OpenACC Specific Changes
 
@@ -798,6 +801,11 @@ features cannot lower the translation-unit ABI level;
 - Enabled PAC and BTI by default for AArch64 Android targets.
 
 #### Windows Support
+
+- Clang now accepts ``_except`` as an alias for ``__except`` in SEH handler
+  position when ``-fms-compatibility`` is enabled, matching the existing
+  ``_try``, ``_finally``, and ``_leave`` aliases. ``_except`` remains an ordinary
+  identifier outside that context.
 
 - Fixed ``setjmp`` on 32-bit Arm passing the frame pointer, rather than the
   stack pointer as it was on entry to the function, as the frame value the CRT
