@@ -2788,8 +2788,9 @@ LogicalResult ModuleImport::processInstruction(llvm::Instruction *inst) {
   // Process debug records attached to this instruction. Debug variable records
   // are stored for later processing after all SSA values are converted, while
   // debug label records can be converted immediately.
-  if (inst->DebugMarker) {
-    for (llvm::DbgRecord &dbgRecord : inst->DebugMarker->getDbgRecordRange()) {
+  if (inst->getDbgMarker()) {
+    for (llvm::DbgRecord &dbgRecord :
+         inst->getDbgMarker()->getDbgRecordRange()) {
       // Store debug variable records for later processing.
       if (auto *dbgVariableRecord =
               dyn_cast<llvm::DbgVariableRecord>(&dbgRecord)) {
