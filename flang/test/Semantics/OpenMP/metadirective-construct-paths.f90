@@ -71,6 +71,59 @@ subroutine device_weight_paths(flag, n)
   !$omp end parallel
 end subroutine
 
+! TASK has no selector trait, but still raises the CPU score from 3 to 5.
+subroutine task_weight(n)
+  integer :: n, i
+  !$omp parallel
+    !$omp task
+      !$omp metadirective &
+      !$omp& when(implementation={vendor(score(3): llvm)}: nothing) &
+! CHECK: :[[@LINE+3]]:{{[0-9]+}}: error: This construct requires
+! CHECK-SAME: a nest of depth 2, but the associated nest is a nest of depth 1
+! CHECK: because: COLLAPSE clause was specified with argument 2
+      !$omp& when(device={kind(cpu)}: simd collapse(2)) default(nothing)
+      do i = 1, n
+      end do
+    !$omp end task
+  !$omp end parallel
+end subroutine
+
+! A selected TASK also distinguishes paths through its context depth.
+subroutine selected_task_weight(flag, n)
+  logical :: flag
+  integer :: n, i
+  !$omp parallel
+    !$omp begin metadirective &
+    !$omp& when(user={condition(flag)}: nothing) default(task)
+      !$omp metadirective &
+      !$omp& when(implementation={vendor(score(3): llvm)}: nothing) &
+! CHECK: :[[@LINE+3]]:{{[0-9]+}}: error: This construct requires
+! CHECK-SAME: a nest of depth 2, but the associated nest is a nest of depth 1
+! CHECK: because: COLLAPSE clause was specified with argument 2
+      !$omp& when(device={kind(cpu)}: simd collapse(2)) default(nothing)
+      do i = 1, n
+      end do
+    !$omp end metadirective
+  !$omp end parallel
+end subroutine
+
+! DISTRIBUTE contributes a position within a combined construct's context.
+subroutine distribute_weight(n)
+  integer :: n, i, j
+  !$omp teams distribute parallel do
+  do i = 1, n
+    !$omp metadirective &
+    !$omp& when(implementation={vendor(score(9): llvm)}: nothing) &
+! CHECK: :[[@LINE+3]]:{{[0-9]+}}: error: This construct requires
+! CHECK-SAME: a nest of depth 2, but the associated nest is a nest of depth 1
+! CHECK: because: COLLAPSE clause was specified with argument 2
+    !$omp& when(device={kind(cpu)}: simd collapse(2)) default(nothing)
+    do j = 1, n
+    end do
+  end do
+  !$omp end teams distribute parallel do
+end subroutine
+
 ! Matching the inner PARALLEL gives the construct candidate a score of 3.
 subroutine repeated_parallel(n)
   integer :: n, i
