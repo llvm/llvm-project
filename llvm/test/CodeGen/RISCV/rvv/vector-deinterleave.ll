@@ -3836,8 +3836,9 @@ define { <8 x float>, <8 x float> } @interleave_deinterleave2(<8 x float> %a, <8
 ; ZVZIP-LABEL: interleave_deinterleave2:
 ; ZVZIP:       # %bb.0: # %entry
 ; ZVZIP-NEXT:    li a0, 32
-; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; ZVZIP-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v12, v8, v10
+; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; ZVZIP-NEXT:    vnsrl.wx v10, v12, a0
 ; ZVZIP-NEXT:    vnsrl.wi v8, v12, 0
 ; ZVZIP-NEXT:    ret
@@ -3865,6 +3866,7 @@ define <16 x float> @deinterleave_interleave2(<16 x float> %arg) {
 ; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; ZVZIP-NEXT:    vnsrl.wx v12, v8, a0
 ; ZVZIP-NEXT:    vnsrl.wi v14, v8, 0
+; ZVZIP-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v8, v14, v12
 ; ZVZIP-NEXT:    ret
 entry:
