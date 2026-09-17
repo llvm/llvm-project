@@ -1229,15 +1229,14 @@ void IRExecutionUnit::PopulateSectionList(
     lldb_private::SectionList &section_list) {
   for (AllocationRecord &record : m_records) {
     if (record.m_size > 0) {
-      lldb::SectionSP section_sp(new lldb_private::Section(
-          obj_file->GetModule(), obj_file, record.m_section_id,
-          ConstString(record.m_name), record.m_sect_type,
-          record.m_process_address, record.m_size,
+      lldb::SectionSP section_sp = std::make_shared<Section>(
+          obj_file->GetModule(), obj_file, record.m_section_id, record.m_name,
+          record.m_sect_type, record.m_process_address, record.m_size,
           record.m_host_address, // file_offset (which is the host address for
                                  // the data)
           record.m_size,         // file_size
           0,
-          record.m_permissions)); // flags
+          record.m_permissions); // flags
       section_list.AddSection(section_sp);
     }
   }

@@ -879,6 +879,30 @@ TEST_F(AArch64GISelMITest, TestFPClassFLogNeg) {
   EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
+TEST_F(AArch64GISelMITest, TestFPClassFLogDeduceSubnormalOrNegativeZero) {
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %flog:_(s32) = G_FLOG %val
+    %copy_flog:_(s32) = COPY %flog
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known =
+      Info.computeKnownFPClass(SrcReg, fcNegZero | fcSubnormal);
+
+  EXPECT_EQ(~(fcNegZero | fcSubnormal), Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
+}
+
 TEST_F(AArch64GISelMITest, TestFPClassFLogPosZero) {
   StringRef MIRString = R"(
     %val:_(s32) = G_FCONSTANT float 0.0
@@ -1804,7 +1828,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFAtan2) {
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFAtan2NNaN) {
-  // atan2 with two non-NaN inputs is non-NaN and non-Inf.
+  // atan2 with two non-negative finite inputs is non-negative and finite.
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
     %y:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
@@ -1822,8 +1846,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFAtan2NNaN) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcFinite, Known.getKnownFPClasses());
-  EXPECT_EQ(std::nullopt, Known.getSignBit());
+  EXPECT_EQ(fcPosFinite, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 // isAbsoluteValueULEOne: x - floor(x) is in [0, 1), so multiplying a known-

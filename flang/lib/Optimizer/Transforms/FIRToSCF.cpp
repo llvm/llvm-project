@@ -196,7 +196,8 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
 
     // Copy loop annotations from the fir.do_loop to scf loop op.
     if (auto ann = doLoopOp.getLoopAnnotation())
-      scfLoopOp->setAttr("loop_annotation", *ann);
+      scfLoopOp->setDiscardableAttr(mlir::LLVM::getLoopAnnotationAttrName(),
+                                    *ann);
 
     // Copy any OpenACC parallel dimensions from the fir.do_loop to the scf loop
     // op.

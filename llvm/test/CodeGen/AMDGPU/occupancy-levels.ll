@@ -656,7 +656,7 @@ define amdgpu_kernel void @used_lds_13112() {
 }
 
 ; GCN-LABEL: {{^}}used_lds_8252_max_group_size_64:
-; GFX6:       ; Occupancy: 1{{$}}
+; GFX6:       ; Occupancy: 2{{$}}
 ; GFX7:       ; Occupancy: 2{{$}}
 ; GFX8:       ; Occupancy: 2{{$}}
 ; GFX9:       ; Occupancy: 2{{$}}
@@ -680,7 +680,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_64() #3 {
 }
 
 ; GCN-LABEL: {{^}}used_lds_8252_max_group_size_96:
-; GFX6:       ; Occupancy: 2{{$}}
+; GFX6:       ; Occupancy: 4{{$}}
 ; GFX7:       ; Occupancy: 4{{$}}
 ; GFX8:       ; Occupancy: 4{{$}}
 ; GFX9:       ; Occupancy: 4{{$}}
@@ -704,7 +704,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_96() #4 {
 }
 
 ; GCN-LABEL: {{^}}used_lds_8252_max_group_size_128:
-; GFX6:       ; Occupancy: 2{{$}}
+; GFX6:       ; Occupancy: 4{{$}}
 ; GFX7:       ; Occupancy: 4{{$}}
 ; GFX8:       ; Occupancy: 4{{$}}
 ; GFX9:       ; Occupancy: 4{{$}}
@@ -727,7 +727,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_128() #5 {
 }
 
 ; GCN-LABEL: {{^}}used_lds_8252_max_group_size_192:
-; GFX6:       ; Occupancy: 3{{$}}
+; GFX6:       ; Occupancy: 6{{$}}
 ; GFX7:       ; Occupancy: 6{{$}}
 ; GFX8:       ; Occupancy: 6{{$}}
 ; GFX9:       ; Occupancy: 6{{$}}
@@ -750,7 +750,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_192() #6 {
 }
 
 ; GCN-LABEL: {{^}}used_lds_8252_max_group_size_256:
-; GFX6:       ; Occupancy: 3{{$}}
+; GFX6:       ; Occupancy: 7{{$}}
 ; GFX7:       ; Occupancy: 7{{$}}
 ; GFX8:       ; Occupancy: 7{{$}}
 ; GFX9:       ; Occupancy: 7{{$}}
@@ -771,7 +771,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_256() #7 {
 }
 
 ; GCN-LABEL: {{^}}used_lds_8252_max_group_size_512:
-; GFX6:       ; Occupancy: 6{{$}}
+; GFX6:       ; Occupancy: 10{{$}}
 ; GFX7:       ; Occupancy: 10{{$}}
 ; GFX8:       ; Occupancy: 10{{$}}
 ; GFX9:       ; Occupancy: 10{{$}}
@@ -806,7 +806,7 @@ define amdgpu_kernel void @used_lds_8252_max_group_size_1024() #9 {
 }
 
 ; GCN-LABEL: {{^}}used_lds_8252_max_group_size_32:
-; GFX6:       ; Occupancy: 1{{$}}
+; GFX6:       ; Occupancy: 2{{$}}
 ; GFX7:       ; Occupancy: 2{{$}}
 ; GFX8:       ; Occupancy: 2{{$}}
 ; GFX9:       ; Occupancy: 2{{$}}

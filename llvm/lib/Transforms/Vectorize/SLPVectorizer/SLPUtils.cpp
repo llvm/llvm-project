@@ -1139,4 +1139,156 @@ TargetTransformInfo::TargetCostKind getSLPCostKind(const Function *F) {
   return F->hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
 }
 
+/// Deeper than the standard analysis recursion depth to keep the numeric
+/// bound precise through arithmetic carry chains.
+constexpr unsigned MaxBitPackAnalysisDepth = MaxAnalysisRecursionDepth + 2;
+
+APInt getScalarMaxValue(const Value *V, unsigned Depth) {
+  unsigned BitWidth = V->getType()->getScalarSizeInBits();
+  const APInt Unknown = APInt::getAllOnes(BitWidth);
+  if (Depth > MaxBitPackAnalysisDepth || !V->getType()->isIntegerTy())
+    return Unknown;
+  const APInt *C, *Amt;
+  if (match(V, m_APInt(C)))
+    return *C;
+  Value *L, *R;
+  if (match(V, m_Add(m_Value(L), m_Value(R))) ||
+      match(V, m_Or(m_Value(L), m_Value(R))) ||
+      match(V, m_Xor(m_Value(L), m_Value(R))))
+    return getScalarMaxValue(L, Depth + 1)
+        .uadd_sat(getScalarMaxValue(R, Depth + 1));
+  if (match(V, m_NUWSub(m_Value(L), m_Value(R))))
+    return getScalarMaxValue(L, Depth + 1);
+  if (match(V, m_Mul(m_Value(L), m_Value(R))))
+    return getScalarMaxValue(L, Depth + 1)
+        .umul_sat(getScalarMaxValue(R, Depth + 1));
+  if (match(V, m_And(m_Value(L), m_Value(R))))
+    return APIntOps::umin(getScalarMaxValue(L, Depth + 1),
+                          getScalarMaxValue(R, Depth + 1));
+  if (match(V, m_LShr(m_Value(L), m_APInt(Amt))) && Amt->ult(BitWidth))
+    return getScalarMaxValue(L, Depth + 1).lshr(*Amt);
+  if (match(V, m_Shl(m_Value(L), m_APInt(Amt))) && Amt->ult(BitWidth)) {
+    APInt LMax = getScalarMaxValue(L, Depth + 1);
+    return LMax.getActiveBits() + Amt->getZExtValue() <= BitWidth
+               ? LMax.shl(*Amt)
+               : Unknown;
+  }
+  if (match(V, m_ZExt(m_Value(L))))
+    return getScalarMaxValue(L, Depth + 1).zext(BitWidth);
+  if (match(V, m_Trunc(m_Value(L)))) {
+    APInt Max = getScalarMaxValue(L, Depth + 1);
+    return Max.getActiveBits() <= BitWidth ? Max.trunc(BitWidth) : Unknown;
+  }
+  if (match(V, m_SExt(m_Value(L)))) {
+    APInt Max = getScalarMaxValue(L, Depth + 1);
+    return Max.isNonNegative() ? Max.zext(BitWidth) : Unknown;
+  }
+  Value *F;
+  if (match(V, m_Select(m_Value(), m_Value(L), m_Value(F))))
+    return APIntOps::umax(getScalarMaxValue(L, Depth + 1),
+                          getScalarMaxValue(F, Depth + 1));
+  return Unknown;
+}
+
+std::optional<BitPackInfo> computeBitPackInfo(unsigned BitWidth,
+                                              ArrayRef<APInt> PossibleBits,
+                                              ArrayRef<uint64_t> ShlAmts,
+                                              ArrayRef<APInt> Masks) {
+  unsigned NumElts = PossibleBits.size();
+  BitPackInfo Info;
+  Info.LShrAmts.assign(NumElts, 0);
+  for (unsigned Idx : seq(NumElts)) {
+    APInt Possible = PossibleBits[Idx].shl(ShlAmts[Idx]) & Masks[Idx];
+    if (Possible.isZero())
+      continue;
+    unsigned Lo, W;
+    if (!Possible.isShiftedMask(Lo, W))
+      return std::nullopt;
+    if (Info.FieldWidth == 0) {
+      if (W % 8 != 0 || BitWidth % W != 0)
+        return std::nullopt;
+      Info.FieldWidth = W;
+      Info.LaneOfField.assign(BitWidth / W, BitPackInfo::NoLane);
+    }
+    if (W != Info.FieldWidth || Lo % W != 0)
+      return std::nullopt;
+    unsigned Field = Lo / W;
+    if (Info.LaneOfField[Field] != BitPackInfo::NoLane)
+      return std::nullopt;
+    Info.LaneOfField[Field] = Idx;
+    Info.LShrAmts[Idx] = Lo - ShlAmts[Idx];
+  }
+  if (Info.FieldWidth == 0)
+    return std::nullopt;
+  return Info;
+}
+
+SmallVector<int> getBitPackMask(const BitPackInfo &Info, unsigned NumBytes,
+                                unsigned NumElts, unsigned BytesPerLane) {
+  unsigned BytesPerField = Info.FieldWidth / 8;
+  SmallVector<int> Mask;
+  for (unsigned J : seq(NumBytes)) {
+    unsigned Lane = Info.LaneOfField[J / BytesPerField];
+    Mask.push_back(Lane == BitPackInfo::NoLane
+                       ? (int)(NumElts * BytesPerLane)
+                       : (int)(Lane * BytesPerLane + J % BytesPerField));
+  }
+  return Mask;
+}
+
+Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
+                    unsigned ShiftWidth, unsigned &NumInsts) {
+  NumInsts = 0;
+  auto *VecTy = cast<FixedVectorType>(X->getType());
+  unsigned BitWidth = VecTy->getScalarSizeInBits();
+  assert(BitWidth % 8 == 0 &&
+         "The byte-multiple field width divides the result bit width.");
+  unsigned NumElts = VecTy->getNumElements();
+  Value *Y = X;
+  if (ShiftWidth != BitWidth) {
+    // Compacting a zext back to its source is free, use it directly.
+    if (auto *Z = dyn_cast<ZExtInst>(X);
+        Z && Z->getSrcTy()->getScalarSizeInBits() == ShiftWidth)
+      Y = Z->getOperand(0);
+    else {
+      Y = Builder.CreateTrunc(
+          Y, FixedVectorType::get(IntegerType::get(X->getContext(), ShiftWidth),
+                                  NumElts));
+      ++NumInsts;
+    }
+  }
+  if (Info.needsShift()) {
+    SmallVector<Constant *> Amts;
+    for (uint64_t A : Info.LShrAmts)
+      Amts.push_back(
+          ConstantInt::get(IntegerType::get(X->getContext(), ShiftWidth), A));
+    Y = Builder.CreateLShr(Y, ConstantVector::get(Amts));
+    ++NumInsts;
+  }
+  unsigned InBytes = NumElts * (ShiftWidth / 8);
+  auto *ByteTy = FixedVectorType::get(Builder.getInt8Ty(), InBytes);
+  SmallVector<int> Mask =
+      getBitPackMask(Info, BitWidth / 8, NumElts, ShiftWidth / 8);
+  auto *IntTy = IntegerType::get(X->getContext(), BitWidth);
+  // A plain byte reversal of the shifted lanes is a bswap.
+  if (ShuffleVectorInst::isReverseMask(Mask, InBytes)) {
+    NumInsts += 2;
+    return Builder.CreateUnaryIntrinsic(Intrinsic::bswap,
+                                        Builder.CreateBitCast(Y, IntTy));
+  }
+  // An identity byte order needs no shuffle.
+  if (ShuffleVectorInst::isIdentityMask(Mask, InBytes)) {
+    ++NumInsts;
+    return Builder.CreateBitCast(Y, IntTy);
+  }
+  Value *Packed = Builder.CreateShuffleVector(
+      Builder.CreateBitCast(Y, ByteTy),
+      is_contained(Info.LaneOfField, BitPackInfo::NoLane)
+          ? Constant::getNullValue(ByteTy)
+          : PoisonValue::get(ByteTy),
+      Mask);
+  NumInsts += 3;
+  return Builder.CreateBitCast(Packed, IntTy);
+}
+
 } // namespace llvm::slpvectorizer
