@@ -102,7 +102,7 @@ int SBFileSpec::ResolvePath(const char *src_path, char *dst_path,
 
   llvm::SmallString<64> result(src_path);
   FileSystem::Instance().Resolve(result);
-  return FileSpec::CopyToBuffer(result, dst_path, dst_len);
+  return static_cast<int>(FileSpec::CopyToBuffer(result, dst_path, dst_len));
 }
 
 const char *SBFileSpec::GetFilename() const {
