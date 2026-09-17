@@ -30,20 +30,9 @@ class TargetWatchpointCreateByAddressPITestCase(TestBase):
     def test_watch_create_by_address(self):
         """Exercise SBTarget.WatchpointCreateByAddress() API to set a watchpoint."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Now create a breakpoint on main.c.
-        breakpoint = target.BreakpointCreateByLocation(self.source, self.line)
-        self.assertTrue(
-            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        target, process, _, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.source), self.line, only_one_thread=False
         )
-
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         # We should be stopped due to the breakpoint.  Get frame #0.
         process = target.GetProcess()
@@ -104,20 +93,9 @@ class TargetWatchpointCreateByAddressPITestCase(TestBase):
         Same as test_watch_create_by_address, but uses the simpler API.
         """
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Now create a breakpoint on main.c.
-        breakpoint = target.BreakpointCreateByLocation(self.source, self.line)
-        self.assertTrue(
-            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        target, process, _, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.source), self.line, only_one_thread=False
         )
-
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         # We should be stopped due to the breakpoint.  Get frame #0.
         process = target.GetProcess()
@@ -179,20 +157,9 @@ class TargetWatchpointCreateByAddressPITestCase(TestBase):
     def test_watch_address_with_invalid_watch_size(self):
         """Exercise SBTarget.WatchpointCreateByAddress() API but pass an invalid watch_size."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Now create a breakpoint on main.c.
-        breakpoint = target.BreakpointCreateByLocation(self.source, self.line)
-        self.assertTrue(
-            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        target, process, _, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.source), self.line, only_one_thread=False
         )
-
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         # We should be stopped due to the breakpoint.  Get frame #0.
         process = target.GetProcess()
