@@ -29,8 +29,9 @@ using namespace mlir;
 namespace fir {
 namespace acc {
 
-std::string FIROpenACCSupportAnalysis::getVariableName(Value v) {
-  return fir::acc::getVariableName(v, /*preferDemangledName=*/true);
+std::string FIROpenACCSupportAnalysis::getVariableName(
+    Value v, mlir::acc::VariableNameConfig config) {
+  return fir::acc::getVariableName(v, config.preferDemangledName);
 }
 
 std::string FIROpenACCSupportAnalysis::getRecipeName(mlir::acc::RecipeKind kind,

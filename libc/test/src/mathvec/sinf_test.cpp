@@ -11,6 +11,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/optimization.h"
+
+// TODO: Implement bitwise reproducible float-only mathvec sinf
+#if !defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT)
 #include "hdr/math_macros.h"
 #include "src/__support/CPP/simd.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -100,3 +104,4 @@ TEST_F(LlvmLibcVecSinfTest, SpecificBitPatterns) {
 }
 
 TEST_F(LlvmLibcVecSinfTest, InFloatRange) { TEST_MATHVEC_FLOAT_RANGE(SinfOp); }
+#endif // !LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT

@@ -40,7 +40,11 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK);
 
 /// Checks if a pointer is a dummy pointer.
-bool CheckDummy(InterpState &S, CodePtr OpPC, const Block *B, AccessKinds AK);
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                AccessKinds AK);
+
+bool arrayElemPtrOpaque(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                        APSInt &&Index, bool AllowReplace = true);
 
 /// Checks if a pointer is in range.
 template <typename T>
@@ -80,11 +84,16 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
                          const Expr *NewExpr);
 
 /// Copy the contents of Src into Dest.
-bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest);
+bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest,
+              bool Activate = true, bool Diagnose = false);
 
 UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
                                          unsigned Kind, Pointer &Ptr,
                                          const Expr *E, bool IsDynamic = false);
+
+bool diagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
+                           const Block *B, Lifetime LT = Lifetime::Started,
+                           AccessKinds AK = AK_Read);
 
 template <typename T>
 bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {

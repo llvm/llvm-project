@@ -279,8 +279,9 @@ struct CallEndCatch final : EHScopeStack::Cleanup {
   mlir::Value catchToken;
 
   void emit(CIRGenFunction &cgf, Flags flags) override {
-    cir::EndCatchOp::create(cgf.getBuilder(), *cgf.currSrcLoc, catchToken);
-    cir::YieldOp::create(cgf.getBuilder(), *cgf.currSrcLoc);
+    cir::EndCatchOp::create(cgf.getBuilder(), cgf.getLoc(*cgf.currSrcLoc),
+                            catchToken);
+    cir::YieldOp::create(cgf.getBuilder(), cgf.getLoc(*cgf.currSrcLoc));
   }
 };
 } // namespace
@@ -309,7 +310,8 @@ static mlir::Value callBeginCatch(CIRGenFunction &cgf, mlir::Value ehToken,
 static cir::FuncOp getOrCreateCopyThunk(CIRGenFunction &cgf,
                                         const VarDecl &catchParam,
                                         cir::PointerType paramAddrType,
-                                        mlir::Location loc) {
+                                        SourceLocation clangLoc) {
+  mlir::Location loc = cgf.getLoc(clangLoc);
   CIRGenModule &cgm = cgf.cgm;
   CIRGenBuilderTy &builder = cgm.getBuilder();
   mlir::ModuleOp mod = cgm.getModule();
@@ -354,7 +356,7 @@ static cir::FuncOp getOrCreateCopyThunk(CIRGenFunction &cgf,
   // emitAnyExprToTemp) need both a current source location and a lexical
   // scope to anchor allocas. Since we bypass startFunction, install both
   // explicitly for the lifetime of the thunk's body emission.
-  CIRGenFunction::SourceLocRAIIObject thunkLoc(subCgf, loc);
+  CIRGenFunction::SourceLocRAIIObject thunkLoc(subCgf, clangLoc);
   CIRGenFunction::LexicalScope thunkScope(subCgf, loc, entry);
 
   // Bind the OpaqueValueExpr at the source position of the catch parameter's
@@ -441,7 +443,7 @@ static void initCatchParam(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
       auto paramAddrType =
           mlir::cast<cir::PointerType>(paramAddr.getPointer().getType());
       cir::FuncOp thunk =
-          getOrCreateCopyThunk(cgf, catchParam, paramAddrType, mloc);
+          getOrCreateCopyThunk(cgf, catchParam, paramAddrType, loc);
       copyFun = mlir::FlatSymbolRefAttr::get(thunk.getSymNameAttr());
     }
 
