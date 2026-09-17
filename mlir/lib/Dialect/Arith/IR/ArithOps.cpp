@@ -2361,8 +2361,7 @@ OpFoldResult arith::IndexCastOp::fold(FoldAdaptor adaptor) {
 
 void arith::IndexCastOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
-  struct WidenIndexCastOfTruncI final
-      : OpRewritePattern<arith::IndexCastOp> {
+  struct WidenIndexCastOfTruncI final : OpRewritePattern<arith::IndexCastOp> {
     using OpRewritePattern::OpRewritePattern;
 
     LogicalResult matchAndRewrite(arith::IndexCastOp indexCast,
@@ -2401,9 +2400,9 @@ void arith::IndexCastOp::getCanonicalizationPatterns(
         Type wideType = wideTrunc.getType();
         Value wideLhs = widenOperand(add.getLhs(), wideTruncLhs, wideType);
         Value wideRhs = widenOperand(add.getRhs(), wideTruncRhs, wideType);
-        Value wideAdd = arith::AddIOp::create(
-            rewriter, indexCast.getLoc(), wideLhs, wideRhs,
-            arith::IntegerOverflowFlags::nsw);
+        Value wideAdd =
+            arith::AddIOp::create(rewriter, indexCast.getLoc(), wideLhs,
+                                  wideRhs, arith::IntegerOverflowFlags::nsw);
         replaceWithWideIndexCast(wideAdd);
         return success();
       }
@@ -2414,12 +2413,11 @@ void arith::IndexCastOp::getCanonicalizationPatterns(
         Value wideLhs = getWideTrunc(sub.getLhs());
         if (!wideLhs)
           return failure();
-        Value wideRhs =
-            widenOperand(sub.getRhs(), getWideTrunc(sub.getRhs()),
-                         wideLhs.getType());
-        Value wideSub = arith::SubIOp::create(
-            rewriter, indexCast.getLoc(), wideLhs, wideRhs,
-            arith::IntegerOverflowFlags::nsw);
+        Value wideRhs = widenOperand(sub.getRhs(), getWideTrunc(sub.getRhs()),
+                                     wideLhs.getType());
+        Value wideSub =
+            arith::SubIOp::create(rewriter, indexCast.getLoc(), wideLhs,
+                                  wideRhs, arith::IntegerOverflowFlags::nsw);
         replaceWithWideIndexCast(wideSub);
         return success();
       }
