@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
 // RUN: rm -rf %t && split-file %s %t && cd %t
 // RUN: llvm-mc -mattr=+bti -filetype=obj -triple=aarch64 asm -o a.o
-// RUN: ld.lld --script lds -fix-cortex-a53-843419 -emit-relocs -verbose a.o -o exe \
+// RUN: ld.lld --script lds -fix-cortex-a53-843419 --emit-relocs -verbose a.o -o exe \
 // RUN:   2>&1 | FileCheck -check-prefix=CHECK-PRINT %s
 // RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --triple=aarch64-linux-gnu -d exe | FileCheck %s
 // RUN: llvm-readelf --relocs exe | FileCheck -check-prefix=CHECK-EMIT %s
