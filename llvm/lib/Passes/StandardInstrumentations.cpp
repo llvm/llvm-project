@@ -1069,8 +1069,7 @@ bool OptPassGateInstrumentation::shouldRun(StringRef PassName, Any IR) {
     return true;
 
   bool ShouldRun =
-      Context.getOptPassGate().shouldRunPass(PassName,
-                         getIRName(IR, IRContext));
+      Context.getOptPassGate().shouldRunPass(PassName, getIRName(IR, IRContext));
   if (!ShouldRun && !this->HasWrittenIR && !OptBisectPrintIRPath.empty()) {
     // FIXME: print IR if limit is higher than number of opt-bisect
     // invocations
@@ -1136,8 +1135,8 @@ void PrintPassInstrumentation::registerCallbacks(
       return;
 
     auto &OS = print();
-     OS << "Running pass: " << PassID << " on "
-      << getIRName(IR, this->IRContext);
+    OS << "Running pass: " << PassID << " on "
+       << getIRName(IR, this->IRContext);
     if (const auto *F = unwrapIR<Function>(IR)) {
       unsigned Count = F->getInstructionCount();
       OS << " (" << Count << " instruction";
