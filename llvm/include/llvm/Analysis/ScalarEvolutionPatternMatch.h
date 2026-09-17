@@ -198,6 +198,28 @@ m_scev_Trunc(const Op0_t &Op0) {
   return m_scev_Unary<SCEVTruncateExpr>(Op0);
 }
 
+/// Match Op0 with any number of integral casts peeled off, so that a value and
+/// any trunc/zext/sext of it match the same pattern.
+template <typename Op0_t> struct SCEVIgnoreCasts_match {
+  Op0_t Op0;
+
+  SCEVIgnoreCasts_match(Op0_t Op0) : Op0(Op0) {}
+
+  bool match(const SCEV *S) const {
+    while (const auto *C = dyn_cast<SCEVIntegralCastExpr>(S))
+      S = C->getOperand().getPointer();
+    return Op0.match(S);
+  }
+};
+
+/// Match \p Op0 after stripping off any integral casts. Note that this drops
+/// the wrapping behaviour the casts describe, so only use it where the value
+/// rather than its width is of interest.
+template <typename Op0_t>
+inline SCEVIgnoreCasts_match<Op0_t> m_scev_IgnoreCasts(const Op0_t &Op0) {
+  return SCEVIgnoreCasts_match<Op0_t>(Op0);
+}
+
 /// Match a binary SCEV.
 template <typename SCEVTy, typename Op0_t, typename Op1_t,
           SCEV::NoWrapFlags WrapFlags = SCEV::FlagAnyWrap,
