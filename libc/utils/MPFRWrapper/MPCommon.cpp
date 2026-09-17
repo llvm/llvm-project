@@ -317,6 +317,12 @@ MPFRNumber MPFRNumber::frexp(int &exp) {
   return result;
 }
 
+MPFRNumber MPFRNumber::gamma() const {
+  MPFRNumber result(*this);
+  mpfr_gamma(result.value, value, mpfr_rounding);
+  return result;
+}
+
 MPFRNumber MPFRNumber::hypot(const MPFRNumber &b) {
   MPFRNumber result(*this);
   mpfr_hypot(result.value, value, b.value, mpfr_rounding);
