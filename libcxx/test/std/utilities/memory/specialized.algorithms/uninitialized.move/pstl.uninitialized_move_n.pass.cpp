@@ -83,7 +83,7 @@ struct TestCustomTypes {
         source[i].set_value(static_cast<int>(i + 1));
       }
 
-      auto ret = std::uninitialized_move_n(policy, Iter1(source.begin()), size, Iter2(dest));
+      auto ret = std::uninitialized_move_n(policy, Iter1(source.data()), size, Iter2(dest));
       ASSERT_SAME_TYPE(decltype(ret), std::pair<Iter1, Iter2>);
       assert(ret.first == Iter1(source.data() + size));
       assert(ret.second == Iter2(dest + size));
