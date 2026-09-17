@@ -425,7 +425,8 @@ def get_ldmatrix_ops():
             ["m16n16"], ["x1", "x2"], ["b8", "b8x16.b6x16_p32", "b8x16.b4x16_p64"]
         )
         + make_ldmatrix_ops(
-            ["m8n16"], ["x1", "x2", "x4"],
+            ["m8n16"],
+            ["x1", "x2", "x4"],
             ["b8x16.b6x16_p32", "b8x16.b4x16_p64", "s8.s4"],
         )
     )
