@@ -5867,12 +5867,8 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
           moduleInterface->name());
     } else {
       context().Warn(common::UsageWarning::MissingModulePrefix, name.source,
-          "'%s' is a local procedure that hides the separate module procedure "
-          "interface '%s:%s'; "
-          "a call to that interface will fail to link with this local "
-          "procedure. "
-          "If this procedure is supposed to implement the interface, "
-          "add the MODULE keyword or enable -fimplicit-module-prefix."_warn_en_US,
+          "'%s' is a local procedure that hides the separate module procedure interface '%s:%s'; a call to that interface will fail to link with this local procedure. "
+          "If this procedure is supposed to implement the interface, add the MODULE keyword or enable -fimplicit-module-prefix."_warn_en_US,
           name.source, moduleInterface->owner().GetName().value(),
           moduleInterface->name());
       moduleInterface = nullptr;
