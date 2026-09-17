@@ -4218,18 +4218,6 @@ static bool canEmitConjunction(SelectionDAG &DAG, const SDValue Val,
     // of a SUB operation can be reused.
     PreferFirst = DAG.doesNodeExist(ISD::SUB, DAG.getVTList(VT),
                                     {Val->getOperand(0), Val->getOperand(1)});
-    // The first comparison supports the full 12-bit CMP/CMN immediate range,
-    // while subsequent CCMP/CCMN comparisons only support a 5-bit immediate [0,
-    // 31]. Prefer a wider-immediate comparison first to avoid materializing
-    // constants.
-    if (!PreferFirst && VT.isInteger()) {
-      if (auto *C = dyn_cast<ConstantSDNode>(Val->getOperand(1))) {
-        APInt CVal = C->getAPIntValue();
-        if (CVal.abs().ugt(31) &&
-            AArch64_AM::isLegalArithImmed(CVal.abs().getZExtValue()))
-          PreferFirst = true;
-      }
-    }
     return true;
   }
   // Protect against exponential runtime and stack overflow.
