@@ -197,18 +197,6 @@ X86RegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 }
 
 const TargetRegisterClass *
-X86RegisterInfo::getPointerRegClass(unsigned Kind) const {
-  assert(Kind == 0 && "this should only be used for default cases");
-  if (IsTarget64BitLP64)
-    return &X86::GR64RegClass;
-  // If the target is 64bit but we have been told to use 32bit addresses,
-  // we can still use 64-bit register as long as we know the high bits
-  // are zeros.
-  // Reflect that in the returned register class.
-  return Is64Bit ? &X86::LOW32_ADDR_ACCESSRegClass : &X86::GR32RegClass;
-}
-
-const TargetRegisterClass *
 X86RegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   if (RC == &X86::CCRRegClass) {
     if (Is64Bit)

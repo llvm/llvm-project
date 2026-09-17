@@ -401,7 +401,7 @@ public:
 
   bool isKill() const {
     assert(isReg() && "Wrong MachineOperand accessor");
-    return IsDeadOrKill & !IsDef;
+    return IsDeadOrKill && !IsDef;
   }
 
   bool isUndef() const {
