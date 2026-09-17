@@ -35,6 +35,7 @@
 #include "llvm/Frontend/OpenMP/OMPAssume.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include "llvm/Frontend/OpenMP/OMPVersion.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -10035,7 +10036,7 @@ class ConstOMPClauseVisitor :
 class OMPClausePrinter final : public OMPClauseVisitor<OMPClausePrinter> {
   raw_ostream &OS;
   const PrintingPolicy &Policy;
-  unsigned Version;
+  llvm::omp::Version Version;
 
   /// Process clauses with list of variables.
   template <typename T> void VisitOMPClauseList(T *Node, char StartSym);
@@ -10044,7 +10045,7 @@ class OMPClausePrinter final : public OMPClauseVisitor<OMPClausePrinter> {
 
 public:
   OMPClausePrinter(raw_ostream &OS, const PrintingPolicy &Policy,
-                   unsigned OpenMPVersion)
+                   llvm::omp::Version OpenMPVersion)
       : OS(OS), Policy(Policy), Version(OpenMPVersion) {}
 
 #define GEN_CLANG_CLAUSE_CLASS

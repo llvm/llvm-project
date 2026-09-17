@@ -133,9 +133,10 @@ struct ol_event_impl_t {
 };
 
 struct ol_program_impl_t {
-  ol_program_impl_t(plugin::DeviceImageTy *Image,
+  ol_program_impl_t(ol_context_handle_t Context, plugin::DeviceImageTy *Image,
                     llvm::MemoryBufferRef DeviceImage)
-      : Image(Image), DeviceImage(DeviceImage) {}
+      : Context(Context), Image(Image), DeviceImage(DeviceImage) {}
+  ol_context_handle_t Context;
   plugin::DeviceImageTy *Image;
   std::mutex SymbolListMutex;
   llvm::MemoryBufferRef DeviceImage;
@@ -413,8 +414,6 @@ Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getPlatformInfo enum '%i' is invalid", PropName);
   }
-
-  return Error::success();
 }
 
 Error olGetPlatformInfo_impl(ol_platform_handle_t Platform,
@@ -482,6 +481,9 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
       return Err;
     return Info.write<uint64_t>(Mem);
   } break;
+
+  case OL_DEVICE_INFO_DRIVER_ID:
+    return Info.write<uint32_t>(Device->Device->getDriverId());
 
   default:
     break;
@@ -626,6 +628,10 @@ Error olCreateContext_impl(size_t DevicesCount, ol_device_handle_t *Devices,
       return createOffloadError(
           ErrorCode::INVALID_DEVICE,
           "all devices in a context must belong to the same platform");
+    if (Devices[I]->Device->getDriverId() != Devices[0]->Device->getDriverId())
+      return createOffloadError(
+          ErrorCode::INVALID_DEVICE,
+          "all devices in a context must have the same driver ID");
     DeviceList.push_back(Devices[I]);
     PluginDevices.push_back(Devices[I]->Device);
   }
@@ -668,8 +674,6 @@ Error olGetContextInfoImplDetail(ol_context_handle_t Context,
                               "olGetContextInfo enum '%i' is invalid",
                               PropName);
   }
-
-  return Error::success();
 }
 
 Error olGetContextInfo_impl(ol_context_handle_t Context,
@@ -850,8 +854,6 @@ Error olGetMemInfoImplDetail(const void *Ptr, ol_mem_info_t PropName,
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetMemInfo enum '%i' is invalid", PropName);
   }
-
-  return Error::success();
 }
 
 Error olGetMemInfo_impl(const void *Ptr, ol_mem_info_t PropName,
@@ -970,8 +972,6 @@ Error olGetQueueInfoImplDetail(ol_queue_handle_t Queue,
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetQueueInfo enum '%i' is invalid", PropName);
   }
-
-  return Error::success();
 }
 
 Error olGetQueueInfo_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
@@ -1054,8 +1054,6 @@ Error olGetEventInfoImplDetail(ol_event_handle_t Event,
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetEventInfo enum '%i' is invalid", PropName);
   }
-
-  return Error::success();
 }
 
 Error olGetEventInfo_impl(ol_event_handle_t Event, ol_event_info_t PropName,
@@ -1166,16 +1164,21 @@ Error olMemPrefetch_impl(ol_queue_handle_t Queue, size_t Count,
                                              Queue->AsyncInfo);
 }
 
-Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
+Error olCreateProgram_impl(ol_context_handle_t Context,
+                           ol_device_handle_t Device, const void *ProgData,
                            size_t ProgDataSize, ol_program_handle_t *Program) {
+  if (!Context->contains(Device))
+    return createOffloadError(ErrorCode::INVALID_DEVICE,
+                              "device does not belong to the given context");
+
   StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
-  Expected<plugin::DeviceImageTy *> Res =
-      Device->Device->loadBinary(Device->Device->Plugin, Buffer);
+  Expected<plugin::DeviceImageTy *> Res = Device->Device->loadBinary(
+      Device->Device->Plugin, Buffer, Context->PluginCtx.get());
   if (!Res)
     return Res.takeError();
   assert(*Res && "loadBinary returned nullptr");
 
-  *Program = new ol_program_impl_t(*Res, (*Res)->getMemoryBuffer());
+  *Program = new ol_program_impl_t(Context, *Res, (*Res)->getMemoryBuffer());
   return Error::success();
 }
 

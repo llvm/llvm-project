@@ -6,7 +6,7 @@
 // for 128-bit support is implemented, we should update this test to expect an error for targets that do not support 128-bit float/complex types.
 
 // RUN: %clang_cc1 -triple nvptx64 -aux-triple x86_64-unknown-linux-gnu -fopenmp -fopenmp-is-target-device -x c -emit-llvm %s -o -  | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu -fopenmp -fopenmp-is-target-device -x c -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu7.00-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu -fopenmp -fopenmp-is-target-device -x c -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple spirv64 -aux-triple x86_64-unknown-linux-gnu -fopenmp -fopenmp-is-target-device -x c -emit-llvm %s -o - | FileCheck %s
 
 // host-no-diagnostics

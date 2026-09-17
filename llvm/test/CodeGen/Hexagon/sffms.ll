@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -fp-contract=fast < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Check that "Rx-=sfmpy(Rs,Rt)" is being generated for "fsub(fmul(..))"
 
@@ -16,8 +16,8 @@ entry:
   %arrayidx3 = getelementptr inbounds ptr, ptr %0, i32 %col1
   %3 = load ptr, ptr %arrayidx3, align 4
   %4 = load float, ptr %3, align 4
-  %mul = fmul float %2, %4
-  %sub = fsub float %2, %mul
+  %mul = fmul contract float %2, %4
+  %sub = fsub contract float %2, %mul
   %arrayidx10 = getelementptr inbounds float, ptr %3, i32 %col1
   store float %sub, ptr %arrayidx10, align 4
   ret void

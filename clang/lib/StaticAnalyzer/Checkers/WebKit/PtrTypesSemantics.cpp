@@ -138,9 +138,13 @@ bool isCheckedPtr(const std::string &Name) {
   return Name == "CheckedPtr" || Name == "CheckedRef";
 }
 
+bool isUniquePtr(const std::string &Name) {
+  return Name == "unique_ptr" || Name == "UniqueRef" || Name == "LazyUniqueRef";
+}
+
 bool isOwnerPtr(const std::string &Name) {
   return isRefType(Name) || isCheckedPtr(Name) || isRetainPtrOrOSPtr(Name) ||
-         Name == "unique_ptr" || Name == "UniqueRef" || Name == "LazyUniqueRef";
+         isUniquePtr(Name);
 }
 
 static bool isWeakPtrClass(const std::string &Name) {
@@ -218,6 +222,9 @@ static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
       return Decl && Pred(Decl->getNameAsString());
     } else if (auto *DTS = type->getAs<DeducedTemplateSpecializationType>()) {
       auto *Decl = DTS->getTemplateName().getAsTemplateDecl();
+      return Decl && Pred(Decl->getNameAsString());
+    } else if (auto *RD = type->getAs<RecordType>()) {
+      auto *Decl = RD->getDecl();
       return Decl && Pred(Decl->getNameAsString());
     } else
       break;
@@ -357,10 +364,13 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
   std::string className = safeGetName(calleeMethodsClass);
   std::string method = safeGetName(M);
 
-  if (isCheckedPtr(className) && (method == "get" || method == "ptr"))
+  auto OpType = M->getOverloadedOperator();
+  if (isCheckedPtr(className) &&
+      (method == "get" || method == "ptr" || OpType == OO_Star))
     return true;
 
-  if ((isRefType(className) && (method == "get" || method == "ptr")) ||
+  if ((isRefType(className) &&
+       (method == "get" || method == "ptr" || OpType == OO_Star)) ||
       ((className == "String" || className == "AtomString" ||
         className == "AtomStringImpl" || className == "UniqueString" ||
         className == "UniqueStringImpl" || className == "Identifier") &&
@@ -395,6 +405,20 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
       return T && (T->isPointerType() || T->isReferenceType() ||
                    T->isObjCObjectPointerType());
     }
+  }
+  return false;
+}
+
+bool isGetterOfUniquePtr(const CXXMethodDecl *M) {
+  assert(M);
+  if (!isUniquePtr(safeGetName(M->getParent())))
+    return false;
+  auto method = safeGetName(M);
+  if (method == "get" || method == "ptr")
+    return true;
+  if (auto *conversion = dyn_cast<CXXConversionDecl>(M)) {
+    const Type *T = conversion->getConversionType().getTypePtrOrNull();
+    return T && (T->isPointerType() || T->isReferenceType());
   }
   return false;
 }

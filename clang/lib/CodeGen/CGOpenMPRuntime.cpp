@@ -817,20 +817,20 @@ void ReductionCodeGen::emitAggregateType(CodeGenFunction &CGF, unsigned N) {
   llvm::Value *Size;
   llvm::Value *SizeInChars;
   auto *ElemType = OrigAddresses[N].first.getAddress().getElementType();
-  auto *ElemSizeOf = llvm::ConstantExpr::getSizeOf(ElemType);
+  auto *ElemSizeOf = llvm::ConstantInt::get(
+      CGF.SizeTy, CGF.CGM.getDataLayout().getTypeAllocSize(ElemType));
   if (AsArraySection) {
-    Size = CGF.Builder.CreatePtrDiff(ElemType,
-                                     OrigAddresses[N].second.getPointer(CGF),
-                                     OrigAddresses[N].first.getPointer(CGF));
-    Size = CGF.Builder.CreateZExtOrTrunc(Size, ElemSizeOf->getType());
-    Size = CGF.Builder.CreateNUWAdd(
-        Size, llvm::ConstantInt::get(Size->getType(), /*V=*/1));
-    SizeInChars = CGF.Builder.CreateNUWMul(Size, ElemSizeOf);
+    SizeInChars =
+        CGF.Builder.CreatePtrDiff(OrigAddresses[N].second.getPointer(CGF),
+                                  OrigAddresses[N].first.getPointer(CGF));
+    SizeInChars = CGF.Builder.CreateNUWAdd(SizeInChars, ElemSizeOf);
   } else {
     SizeInChars =
         CGF.getTypeSize(OrigAddresses[N].first.getType().getNonReferenceType());
-    Size = CGF.Builder.CreateExactUDiv(SizeInChars, ElemSizeOf);
   }
+  Size = ElemSizeOf->isOne()
+             ? SizeInChars
+             : CGF.Builder.CreateExactUDiv(SizeInChars, ElemSizeOf);
   Sizes.emplace_back(SizeInChars, Size);
   CodeGenFunction::OpaqueValueMapping OpaqueMap(
       CGF,
@@ -1287,9 +1287,14 @@ llvm::Function *CGOpenMPRuntime::emitTeamsOutlinedFunction(
     const VarDecl *ThreadIDVar, OpenMPDirectiveKind InnermostKind,
     const RegionCodeGenTy &CodeGen) {
   const CapturedStmt *CS = D.getCapturedStmt(OMPD_teams);
-  return emitParallelOrTeamsOutlinedFunction(
+  llvm::Function *OutlinedFn = emitParallelOrTeamsOutlinedFunction(
       CGM, D, CS, ThreadIDVar, InnermostKind, getOutlinedHelperName(CGF),
       CodeGen);
+  // A teams body is called once per team and is not handed back to the runtime
+  // as a callback, so unlike a parallel body it cannot be re-entered while a
+  // call to it is live.
+  OutlinedFn->setDoesNotRecurse();
+  return OutlinedFn;
 }
 
 llvm::Function *CGOpenMPRuntime::emitTaskOutlinedFunction(
@@ -1417,7 +1422,7 @@ llvm::Value *CGOpenMPRuntime::getThreadID(CodeGenFunction &CGF,
   // the clang invariants used below might be broken.
   if (CGM.getLangOpts().OpenMPIRBuilder) {
     SmallString<128> Buffer;
-    OMPBuilder.updateToLocation(CGF.Builder.saveIP());
+    OMPBuilder.updateToLocation(CGF.Builder);
     uint32_t SrcLocStrSize;
     auto *SrcLocStr = OMPBuilder.getOrCreateSrcLocStr(
         getIdentStringFromSourceLocation(CGF, Loc, Buffer), SrcLocStrSize);
@@ -6414,6 +6419,10 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
 
   if (!OutlinedFn)
     return;
+
+  // A target body is entered once, from the kernel, and never re-entered by
+  // the runtime, so it cannot occur in a cycle.
+  OutlinedFn->setDoesNotRecurse();
 
   CGM.getTargetCodeGenInfo().setTargetAttributes(nullptr, OutlinedFn, CGM);
 
@@ -11802,7 +11811,7 @@ void CGOpenMPRuntime::emitTargetDataCalls(
                          CGF.AllocaInsertPt->getIterator());
   InsertPointTy CodeGenIP(CGF.Builder.GetInsertBlock(),
                           CGF.Builder.GetInsertPoint());
-  llvm::OpenMPIRBuilder::LocationDescription OmpLoc(CodeGenIP);
+  llvm::OpenMPIRBuilder::LocationDescription OmpLoc(CGF.Builder);
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createTargetData(
           OmpLoc, AllocaIP, CodeGenIP, /*DeallocBlocks=*/{}, DeviceID,

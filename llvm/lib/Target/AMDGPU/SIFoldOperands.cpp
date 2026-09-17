@@ -11,7 +11,6 @@
 #include "SIFoldOperands.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
@@ -20,7 +19,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 
 #define DEBUG_TYPE "si-fold-operands"
@@ -2217,7 +2215,9 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
       OpToFold.getSubReg()) {
     if (DstRC == &AMDGPU::SReg_32RegClass &&
         DstRC == MRI->getRegClass(OpToFold.getReg())) {
-      assert(OpToFold.getSubReg() == AMDGPU::lo16);
+      if (!TRI->getMatchingSuperRegClass(DstRC, &AMDGPU::SGPR_LO16RegClass,
+                                         OpToFold.getSubReg()))
+        return false;
       OpToFold.setSubReg(0);
     }
   }

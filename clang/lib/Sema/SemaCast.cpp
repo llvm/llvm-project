@@ -1489,16 +1489,23 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
       SrcExpr = ExprError();
       return TC_Failed;
     }
+    // C++26 [expr.static.cast]p8
+    //   If the enumeration type has a fixed underlying type, the value is
+    //   first converted to that type by integral promotion ([conv.prom]) or
+    //   integral conversion ([conv.integral]), if necessary, and then to the
+    //   enumeration type.
+    const auto *ED = DestType->castAsEnumDecl();
+    bool DestIsFixedBoolean =
+        ED->isFixed() && ED->getIntegerType()->isBooleanType();
     if (SrcType->isIntegralOrEnumerationType()) {
-      // [expr.static.cast]p10 If the enumeration type has a fixed underlying
-      // type, the value is first converted to that type by integral conversion
-      const auto *ED = DestType->castAsEnumDecl();
-      Kind = ED->isFixed() && ED->getIntegerType()->isBooleanType()
-                 ? CK_IntegralToBoolean
-                 : CK_IntegralCast;
+      Kind = DestIsFixedBoolean ? CK_IntegralToBoolean : CK_IntegralCast;
       return TC_Success;
     } else if (SrcType->isRealFloatingType())   {
-      Kind = CK_FloatingToIntegral;
+      // C++26 [expr.static.cast]p8
+      //   A value of floating-point type can also be explicitly converted
+      //   to ... the underlying type of the enumeration ([conv.fpint]), and
+      //   subsequently to the enumeration type.
+      Kind = DestIsFixedBoolean ? CK_FloatingToBoolean : CK_FloatingToIntegral;
       return TC_Success;
     }
   }
@@ -2605,19 +2612,13 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     // casting the return value of dlsym() and GetProcAddress().
     // FIXME: Conditionally-supported behavior should be configurable in the
     // TargetInfo or similar.
-    Self.Diag(OpRange.getBegin(),
-              Self.getLangOpts().CPlusPlus11 ?
-                diag::warn_cxx98_compat_cast_fn_obj : diag::ext_cast_fn_obj)
-      << OpRange;
+    Self.DiagCompat(OpRange.getBegin(), diag_compat::cast_fn_obj) << OpRange;
     return SuccessResult;
   }
 
   if (DestType->isFunctionPointerType()) {
     // See above.
-    Self.Diag(OpRange.getBegin(),
-              Self.getLangOpts().CPlusPlus11 ?
-                diag::warn_cxx98_compat_cast_fn_obj : diag::ext_cast_fn_obj)
-      << OpRange;
+    Self.DiagCompat(OpRange.getBegin(), diag_compat::cast_fn_obj) << OpRange;
     return SuccessResult;
   }
 

@@ -945,6 +945,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "fork-events",
         "vfork-events",
         "memory-tagging",
+        "address-spaces",
         "qSaveCore",
         "native-signals",
         "QNonStop",
@@ -954,6 +955,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "jMultiBreakpoint",
         "accelerator-plugins",
         "ExpediteStack",
+        "ExpediteRecentReads",
     ]
 
     def parse_qSupported_response(self, context):

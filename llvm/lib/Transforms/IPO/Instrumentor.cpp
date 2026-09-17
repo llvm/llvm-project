@@ -61,7 +61,6 @@
 #include <iterator>
 #include <memory>
 #include <string>
-#include <system_error>
 #include <type_traits>
 
 using namespace llvm;

@@ -627,7 +627,7 @@ TEST(ScudoSecondaryTest, ReleaseOlderThanAllEntries) {
 TEST(ScudoSecondaryTest, ReleaseOlderThanGroups) {
   CacheInfoType<TestCacheConfig> Info;
 
-  // Disable the release interval so we can do tests the releaseOlderThan
+  // Disable the release interval so we can test the releaseOlderThan
   // function.
   Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
 
@@ -684,7 +684,8 @@ TEST(ScudoSecondaryTest, ReleaseOlderThanGroups) {
 TEST(ScudoSecondaryTest, AllocatorCacheMaxResidentBytes) {
   CacheInfoType<TestCacheConfig> Info;
 
-  Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
+  // Set the interval to a large value so no entries are released.
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, 60000);
   Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 10);
   Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1024 * 1024);
 
@@ -723,4 +724,138 @@ TEST(ScudoSecondaryTest, AllocatorCacheMaxResidentBytes) {
 
   EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size3);
   EXPECT_EQ(Info.Cache->getMaxResidentBytesTestOnly(), PeakBytes);
+}
+
+TEST(ScudoSecondaryTest, AllocatorCacheMaxCacheResidentBytes) {
+  CacheInfoType<TestCacheConfig> Info;
+
+  // Set the interval to a large value so no entries are released.
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, 60000);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 10);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1024 * 1024);
+
+  EXPECT_FALSE(Info.Cache->setOption(scudo::Option::MaxCacheResidentBytes, -1));
+
+  // Allocate 3 blocks
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size1 = Info.MemMaps[0].getCapacity();
+  EXPECT_NE(0U, Size1);
+  *reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()) = 0x1111;
+
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size2 = Info.MemMaps[1].getCapacity();
+  EXPECT_NE(0U, Size2);
+  *reinterpret_cast<scudo::u32 *>(Info.MemMaps[1].getBase()) = 0x2222;
+
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size3 = Info.MemMaps[2].getCapacity();
+  EXPECT_NE(0U, Size3);
+  *reinterpret_cast<scudo::u32 *>(Info.MemMaps[2].getBase()) = 0x3333;
+
+  // Set MaxCacheResidentBytes to Size1 + Size2
+  EXPECT_TRUE(Info.Cache->setOption(scudo::Option::MaxCacheResidentBytes,
+                                    static_cast<scudo::sptr>(Size1 + Size2)));
+
+  // Store first block: CurrentResidentBytes == Size1
+  Info.storeMemMap(Info.MemMaps[0]);
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size1);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()),
+            0x1111U);
+
+  // Store second block: CurrentResidentBytes == Size1 + Size2
+  Info.storeMemMap(Info.MemMaps[1]);
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size1 + Size2);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()),
+            0x1111U);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[1].getBase()),
+            0x2222U);
+
+  // Store third block: would exceed Size1 + Size2.
+  // The oldest block (MemMaps[0]) must have its physical pages released
+  // (zeroed). CurrentResidentBytes becomes Size2 + Size3 (which is <= Size1 +
+  // Size2).
+  Info.storeMemMap(Info.MemMaps[2]);
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size2 + Size3);
+  EXPECT_EQ(Info.Cache->getMaxResidentBytesTestOnly(), Size1 + Size2 + Size3);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()), 0U);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[1].getBase()),
+            0x2222U);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[2].getBase()),
+            0x3333U);
+}
+
+TEST(ScudoSecondaryTest, AllocatorCacheMaxCacheResidentBytesDynamicShrink) {
+  CacheInfoType<TestCacheConfig> Info;
+
+  // Set the interval to a large value so no entries are released.
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, 60000);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 10);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1024 * 1024);
+
+  // Allocate and store 3 blocks without resident limit (limit = 0)
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size1 = Info.MemMaps[0].getCapacity();
+  *reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()) = 0x1111;
+  Info.storeMemMap(Info.MemMaps[0]);
+
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size2 = Info.MemMaps[1].getCapacity();
+  *reinterpret_cast<scudo::u32 *>(Info.MemMaps[1].getBase()) = 0x2222;
+  Info.storeMemMap(Info.MemMaps[1]);
+
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size3 = Info.MemMaps[2].getCapacity();
+  *reinterpret_cast<scudo::u32 *>(Info.MemMaps[2].getBase()) = 0x3333;
+  Info.storeMemMap(Info.MemMaps[2]);
+
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(),
+            Size1 + Size2 + Size3);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()),
+            0x1111U);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[1].getBase()),
+            0x2222U);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[2].getBase()),
+            0x3333U);
+
+  // Dynamically set MaxCacheResidentBytes to Size3 (enough to hold only 1
+  // block)
+  EXPECT_TRUE(Info.Cache->setOption(scudo::Option::MaxCacheResidentBytes,
+                                    static_cast<scudo::sptr>(Size3)));
+
+  // setOption must immediately trim the 2 oldest blocks (MemMaps[0] and
+  // MemMaps[1])
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size3);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()), 0U);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[1].getBase()), 0U);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[2].getBase()),
+            0x3333U);
+}
+
+TEST(ScudoSecondaryTest, AllocatorCacheMaxResidentBytesDisabled) {
+  CacheInfoType<TestCacheConfig> Info;
+
+  // This should avoid doing any trimming.
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 10);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1024 * 1024);
+  Info.Cache->setOption(scudo::Option::MaxCacheResidentBytes, 4096);
+
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), 0U);
+
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size1 = Info.MemMaps[0].getCapacity();
+  EXPECT_NE(0U, Size1);
+  Info.storeMemMap(Info.MemMaps[0]);
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size1);
+
+  // Releasing is disabled so it should not trim.
+  Info.MemMaps.emplace_back(Info.allocate(4096));
+  const scudo::uptr Size2 = Info.MemMaps[1].getCapacity();
+  EXPECT_NE(0U, Size2);
+  Info.storeMemMap(Info.MemMaps[1]);
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size1 + Size2);
+
+  // Trimming should be triggered now and the first element should be trimmed.
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, 60000);
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size2);
 }
