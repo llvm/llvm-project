@@ -4189,10 +4189,9 @@ bool SIRegisterInfo::shouldApplyAntiHints(
   MaxVGPRsForCurrentOccupancy =
       ST.getMaxNumVGPRs(CurrentOccupancy, DynamicVGPRBlockSize);
 
-  LLVM_DEBUG(dbgs() << "anti-hints: " << NumAllocatedVGPRs
-                    << " VGPRs allocated, RecordedMaxOccupancy "
-                    << RecordedMaxOccupancy << ", current occupancy "
-                    << CurrentOccupancy << '\n');
+  LLVM_DEBUG(dbgs() << "anti-hints: VGPRs allocated = " << NumAllocatedVGPRs
+                    << ", RecordedMaxOccupancy = " << RecordedMaxOccupancy
+                    << ", current occupancy = " << CurrentOccupancy << '\n');
 
   // If we are already at lowest occupancy, then there is no need to protect
   // against occupancy regression.
@@ -4270,15 +4269,19 @@ void SIRegisterInfo::filterAndSortForAntiHintedRegs(
   unsigned NumVGPRs = 0;
   unsigned NumAGPRs = 0;
 
+  assert(Matrix && "LiveRegMatrix required to compute occupancy");
   assert(RegClassInfo && "RegClassInfo required to compute occupancy");
-  for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::VGPR_32RegClass))
-    if ((Matrix && Matrix->isPhysRegUsed(Reg)) ||
+  for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::VGPR_32RegClass)) {
+    if (Matrix->isPhysRegUsed(Reg) ||
         MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true))
       NumVGPRs = std::max(NumVGPRs, getHWRegIndex(Reg) + 1);
-  for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::AGPR_32RegClass))
-    if ((Matrix && Matrix->isPhysRegUsed(Reg)) ||
+  }
+
+  for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::AGPR_32RegClass)) {
+    if (Matrix->isPhysRegUsed(Reg) ||
         MRI.isPhysRegUsed(Reg, /*SkipRegMaskTest=*/true))
       NumAGPRs = std::max(NumAGPRs, getHWRegIndex(Reg) + 1);
+  }
 
   unsigned NumAllocatedVGPRs =
       AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), NumAGPRs, NumVGPRs);
