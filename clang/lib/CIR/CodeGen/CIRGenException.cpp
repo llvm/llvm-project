@@ -220,55 +220,64 @@ void CIRGenFunction::emitStartEHSpec(const Decl *d) {
     return;
 
   ExceptionSpecificationType est = proto->getExceptionSpecType();
-  // In C++17 and later, 'throw()' aka EST_DynamicNone is treated the same way
-  // as noexcept. In earlier standards, it is handled with 'throw(X...)'.
-  if (est != EST_Dynamic &&
-      !(est == EST_DynamicNone && !getLangOpts().CPlusPlus17)) {
-    // noexcept functions are terminate scopes in classic codegen.
-    if (proto->canThrow() == CT_Cannot && !getLangOpts().EHAsynch)
-      cgm.errorNYI(fd->getSourceRange(),
-                   "emitStartEHSpec noexcept terminate scope");
-    return;
-  }
+  // In C++17 and later, and in Wasm EH in any standard, 'throw()' aka
+  // EST_DynamicNone is treated the same way as noexcept. In earlier standards
+  // it is handled with 'throw(X...)'.
+  bool isDynamicSpec =
+      est == EST_Dynamic ||
+      (est == EST_DynamicNone && !getLangOpts().CPlusPlus17 &&
+       !cgm.getCodeGenOpts().hasWasmExceptions());
 
-  // TODO: Revisit exception specifications for the MS ABI. There is a way
-  // to encode these in an object file but MSVC doesn't do anything with it.
-  if (getTarget().getCXXABI().isMicrosoft())
-    return;
+  // A specification that permits nothing to escape is a terminate scope: any
+  // exception that tries to leave the function calls std::terminate. Under
+  // -EHa a hardware exception can still occur, so there is no scope.
+  bool needsTerminate = !isDynamicSpec && proto->canThrow() == CT_Cannot &&
+                        !getLangOpts().EHAsynch;
 
-  // In Wasm EH we currently treat 'throw()' in the same way as 'noexcept'.
-  // In case of throw with types, we ignore it and print a warning for now.
-  // TODO Correctly handle exception specification in Wasm EH
-  if (cgm.getCodeGenOpts().hasWasmExceptions()) {
-    if (est == EST_Dynamic)
+  if (isDynamicSpec) {
+    // TODO: Revisit exception specifications for the MS ABI. There is a way
+    // to encode these in an object file but MSVC doesn't do anything with it.
+    if (getTarget().getCXXABI().isMicrosoft())
+      return;
+
+    // In Wasm EH, a specification with types is ignored with a warning for
+    // now. 'throw()' is a terminate scope, which the classification above
+    // takes care of.
+    // TODO Correctly handle exception specification in Wasm EH
+    if (cgm.getCodeGenOpts().hasWasmExceptions()) {
       cgm.getDiags().Report(d->getLocation(),
                             diag::warn_wasm_dynamic_exception_spec_ignored)
           << fd->getExceptionSpecSourceRange();
+      return;
+    }
+
+    // Currently Emscripten EH only handles 'throw()' but not 'throw' with
+    // types. 'throw()' handling will be done in JS glue code so we don't need
+    // to do anything in that case. Just print a warning message in case of
+    // throw with types.
+    // TODO Correctly handle exception specification in Emscripten EH
+    if (getTarget().getCXXABI() == TargetCXXABI::WebAssembly &&
+        (cgm.getCodeGenOpts().getExceptionHandling() ==
+             clang::CodeGenOptions::ExceptionHandlingKind::None ||
+         cgm.getCodeGenOpts().getExceptionHandling() ==
+             clang::CodeGenOptions::ExceptionHandlingKind::Default) &&
+        est == EST_Dynamic)
+      cgm.getDiags().Report(d->getLocation(),
+                            diag::warn_wasm_dynamic_exception_spec_ignored)
+          << fd->getExceptionSpecSourceRange();
+  } else if (!needsTerminate) {
     return;
   }
-
-  // Currently Emscripten EH only handles 'throw()' but not 'throw' with
-  // types. 'throw()' handling will be done in JS glue code so we don't need
-  // to do anything in that case. Just print a warning message in case of
-  // throw with types.
-  // TODO Correctly handle exception specification in Emscripten EH
-  if (getTarget().getCXXABI() == TargetCXXABI::WebAssembly &&
-      (cgm.getCodeGenOpts().getExceptionHandling() ==
-           clang::CodeGenOptions::ExceptionHandlingKind::None ||
-       cgm.getCodeGenOpts().getExceptionHandling() ==
-           clang::CodeGenOptions::ExceptionHandlingKind::Default) &&
-      est == EST_Dynamic)
-    cgm.getDiags().Report(d->getLocation(),
-                          diag::warn_wasm_dynamic_exception_spec_ignored)
-        << fd->getExceptionSpecSourceRange();
 
   mlir::Location loc = getLoc(fd->getSourceRange());
 
   SmallVector<mlir::Attribute, 4> permittedTypes;
-  for (QualType ty : proto->exceptions()) {
-    QualType exceptType = ty.getNonReferenceType().getUnqualifiedType();
-    permittedTypes.push_back(
-        cgm.getAddrOfRTTIDescriptor(loc, exceptType, /*forEh=*/true));
+  if (isDynamicSpec) {
+    for (QualType ty : proto->exceptions()) {
+      QualType exceptType = ty.getNonReferenceType().getUnqualifiedType();
+      permittedTypes.push_back(
+          cgm.getAddrOfRTTIDescriptor(loc, exceptType, /*forEh=*/true));
+    }
   }
 
   cir::FuncOp funcOp = mlir::cast<cir::FuncOp>(curFn);
@@ -287,6 +296,13 @@ void CIRGenFunction::emitStartEHSpec(const Decl *d) {
         mlir::OpBuilder::InsertionGuard guard(b);
         mlir::Type ehTokenTy = cir::EhTokenType::get(&getMLIRContext());
 
+        if (needsTerminate) {
+          mlir::Block *terminateBlock = b.createBlock(
+              result.addRegion(), /*insertPt=*/{}, {ehTokenTy}, {loc});
+          cir::EhTerminateOp::create(b, loc, terminateBlock->getArgument(0));
+          return;
+        }
+
         mlir::Block *filterBlock = b.createBlock(
             result.addRegion(), /*insertPt=*/{}, {ehTokenTy}, {loc});
         if (emptyFilter)
@@ -300,9 +316,16 @@ void CIRGenFunction::emitStartEHSpec(const Decl *d) {
       });
 
   SmallVector<mlir::Attribute, 2> handlerAttrs;
-  handlerAttrs.push_back(cir::EhFilterAttr::get(
-      &getMLIRContext(), builder.getArrayAttr(permittedTypes)));
-  handlerAttrs.push_back(cir::EhUnexpectedAttr::get(&getMLIRContext()));
+  if (needsTerminate) {
+    // Any exception reaching the handler terminates the program, so it catches
+    // everything. The catch itself is performed by the runtime helper that
+    // cir.eh.terminate lowers to.
+    handlerAttrs.push_back(cir::CatchAllAttr::get(&getMLIRContext()));
+  } else {
+    handlerAttrs.push_back(cir::EhFilterAttr::get(
+        &getMLIRContext(), builder.getArrayAttr(permittedTypes)));
+    handlerAttrs.push_back(cir::EhUnexpectedAttr::get(&getMLIRContext()));
+  }
   ehSpecTryOp.setHandlerTypesAttr(
       mlir::ArrayAttr::get(&getMLIRContext(), handlerAttrs));
 

@@ -1106,11 +1106,13 @@ public:
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);
 
-  /// Wrap the function body in a filter `cir.try` when \p d has a dynamic
-  /// exception specification (`throw(T...)` or pre-C++17 `throw()`).
+  /// Wrap the function body in a `cir.try` that enforces the exception
+  /// specification of \p d: a filter handler for a dynamic specification
+  /// (`throw(T...)` or pre-C++17 `throw()`), or a terminate handler for a
+  /// specification that permits nothing to escape.
   void emitStartEHSpec(const clang::Decl *d);
 
-  /// Close the filter `cir.try` opened by emitStartEHSpec.
+  /// Close the `cir.try` opened by emitStartEHSpec.
   void emitEndEHSpec(const clang::Decl *d);
 
   /// returns true if aggregate type has a volatile member.
@@ -1127,8 +1129,8 @@ public:
   /// parameters.
   EHScopeStack::stable_iterator prologueCleanupDepth;
 
-  /// The `cir.try` wrapping a function with a dynamic exception specification.
-  /// Null when the current function has no such specification.
+  /// The `cir.try` wrapping a function whose exception specification has to be
+  /// enforced. Null when the current function needs no such wrapper.
   cir::TryOp ehSpecTryOp;
 
   bool isCatchOrCleanupRequired();
