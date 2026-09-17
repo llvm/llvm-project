@@ -60,12 +60,13 @@ bool Thumb1FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const{
   return !MFI.hasVarSizedObjects();
 }
 
-static void
-emitPrologueEpilogueSPUpdate(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator &MBBI,
-                             const TargetInstrInfo &TII, const DebugLoc &dl,
-                             const ThumbRegisterInfo &MRI, int NumBytes,
-                             Register ScratchReg, unsigned MIFlags) {
+static void emitPrologueEpilogueSPUpdate(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator &MBBI,
+                                         const TargetInstrInfo &TII,
+                                         const DebugLoc &dl,
+                                         const ThumbRegisterInfo &MRI,
+                                         int NumBytes, Register ScratchReg,
+                                         unsigned MIFlags) {
   // If it would take more than three instructions to adjust the stack pointer
   // using tADDspi/tSUBspi, load an immediate instead.
   if (std::abs(NumBytes) > 508 * 3) {
@@ -94,8 +95,8 @@ emitPrologueEpilogueSPUpdate(MachineBasicBlock &MBB,
   }
   // FIXME: This is assuming the heuristics in emitThumbRegPlusImmediate
   // won't change.
-  emitThumbRegPlusImmediate(MBB, MBBI, dl, ARM::SP, ARM::SP, NumBytes, TII,
-                            MRI, MIFlags);
+  emitThumbRegPlusImmediate(MBB, MBBI, dl, ARM::SP, ARM::SP, NumBytes, TII, MRI,
+                            MIFlags);
 }
 
 static void emitCallSPUpdate(MachineBasicBlock &MBB,
