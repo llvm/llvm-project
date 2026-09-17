@@ -295,43 +295,43 @@ define x86_intrcc void @test_stack_allocation(ptr byval(%struct.interrupt_frame)
 ; CHECK-NEXT:    pushq %rsi
 ; CHECK-NEXT:    pushq %rdx
 ; CHECK-NEXT:    pushq %rcx
-; CHECK-NEXT:    subq $280, %rsp # imm = 0x118
-; CHECK-NEXT:    movaps %xmm15, 264(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm14, 248(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm13, 232(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm12, 216(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm11, 200(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm10, 184(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm9, 168(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm8, 152(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm7, 136(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm6, 120(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm5, 104(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm4, 88(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm3, 72(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm2, 56(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm1, 40(%rsp) # 16-byte Spill
-; CHECK-NEXT:    movaps %xmm0, 24(%rsp) # 16-byte Spill
+; CHECK-NEXT:    subq $272, %rsp # imm = 0x110
+; CHECK-NEXT:    movaps %xmm15, 256(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm14, 240(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm13, 224(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm12, 208(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm11, 192(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm10, 176(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm9, 160(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm8, 144(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm7, 128(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm6, 112(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm5, 96(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm4, 80(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm3, 64(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm2, 48(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm1, 32(%rsp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm0, 16(%rsp) # 16-byte Spill
 ; CHECK-NEXT:    cld
-; CHECK-NEXT:    leaq 16(%rsp), %rdi
+; CHECK-NEXT:    leaq 8(%rsp), %rdi
 ; CHECK-NEXT:    callq external_function@PLT
-; CHECK-NEXT:    movaps 24(%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    movaps 40(%rsp), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    movaps 56(%rsp), %xmm2 # 16-byte Reload
-; CHECK-NEXT:    movaps 72(%rsp), %xmm3 # 16-byte Reload
-; CHECK-NEXT:    movaps 88(%rsp), %xmm4 # 16-byte Reload
-; CHECK-NEXT:    movaps 104(%rsp), %xmm5 # 16-byte Reload
-; CHECK-NEXT:    movaps 120(%rsp), %xmm6 # 16-byte Reload
-; CHECK-NEXT:    movaps 136(%rsp), %xmm7 # 16-byte Reload
-; CHECK-NEXT:    movaps 152(%rsp), %xmm8 # 16-byte Reload
-; CHECK-NEXT:    movaps 168(%rsp), %xmm9 # 16-byte Reload
-; CHECK-NEXT:    movaps 184(%rsp), %xmm10 # 16-byte Reload
-; CHECK-NEXT:    movaps 200(%rsp), %xmm11 # 16-byte Reload
-; CHECK-NEXT:    movaps 216(%rsp), %xmm12 # 16-byte Reload
-; CHECK-NEXT:    movaps 232(%rsp), %xmm13 # 16-byte Reload
-; CHECK-NEXT:    movaps 248(%rsp), %xmm14 # 16-byte Reload
-; CHECK-NEXT:    movaps 264(%rsp), %xmm15 # 16-byte Reload
-; CHECK-NEXT:    addq $280, %rsp # imm = 0x118
+; CHECK-NEXT:    movaps 16(%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps 32(%rsp), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    movaps 48(%rsp), %xmm2 # 16-byte Reload
+; CHECK-NEXT:    movaps 64(%rsp), %xmm3 # 16-byte Reload
+; CHECK-NEXT:    movaps 80(%rsp), %xmm4 # 16-byte Reload
+; CHECK-NEXT:    movaps 96(%rsp), %xmm5 # 16-byte Reload
+; CHECK-NEXT:    movaps 112(%rsp), %xmm6 # 16-byte Reload
+; CHECK-NEXT:    movaps 128(%rsp), %xmm7 # 16-byte Reload
+; CHECK-NEXT:    movaps 144(%rsp), %xmm8 # 16-byte Reload
+; CHECK-NEXT:    movaps 160(%rsp), %xmm9 # 16-byte Reload
+; CHECK-NEXT:    movaps 176(%rsp), %xmm10 # 16-byte Reload
+; CHECK-NEXT:    movaps 192(%rsp), %xmm11 # 16-byte Reload
+; CHECK-NEXT:    movaps 208(%rsp), %xmm12 # 16-byte Reload
+; CHECK-NEXT:    movaps 224(%rsp), %xmm13 # 16-byte Reload
+; CHECK-NEXT:    movaps 240(%rsp), %xmm14 # 16-byte Reload
+; CHECK-NEXT:    movaps 256(%rsp), %xmm15 # 16-byte Reload
+; CHECK-NEXT:    addq $272, %rsp # imm = 0x110
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    popq %rdx
 ; CHECK-NEXT:    popq %rsi
@@ -356,43 +356,43 @@ define x86_intrcc void @test_stack_allocation(ptr byval(%struct.interrupt_frame)
 ; CHECK0-NEXT:    pushq %rsi
 ; CHECK0-NEXT:    pushq %rdx
 ; CHECK0-NEXT:    pushq %rcx
-; CHECK0-NEXT:    subq $280, %rsp # imm = 0x118
-; CHECK0-NEXT:    movaps %xmm15, 264(%rsp) # 16-byte Spill
-; CHECK0-NEXT:    movaps %xmm14, 248(%rsp) # 16-byte Spill
-; CHECK0-NEXT:    movaps %xmm13, 232(%rsp) # 16-byte Spill
-; CHECK0-NEXT:    movaps %xmm12, 216(%rsp) # 16-byte Spill
-; CHECK0-NEXT:    movaps %xmm11, 200(%rsp) # 16-byte Spill
-; CHECK0-NEXT:    movaps %xmm10, 184(%rsp) # 16-byte Spill
-; CHECK0-NEXT:    movaps %xmm9, 168(%rsp) # 16-byte Spill
-; CHECK0-NEXT:    movaps %xmm8, 152(%rsp) # 16-byte Spill
-; CHECK0-NEXT:    movaps %xmm7, 136(%rsp) # 16-byte Spill
-; CHECK0-NEXT:    movaps %xmm6, 120(%rsp) # 16-byte Spill
-; CHECK0-NEXT:    movaps %xmm5, 104(%rsp) # 16-byte Spill
-; CHECK0-NEXT:    movaps %xmm4, 88(%rsp) # 16-byte Spill
-; CHECK0-NEXT:    movaps %xmm3, 72(%rsp) # 16-byte Spill
-; CHECK0-NEXT:    movaps %xmm2, 56(%rsp) # 16-byte Spill
-; CHECK0-NEXT:    movaps %xmm1, 40(%rsp) # 16-byte Spill
-; CHECK0-NEXT:    movaps %xmm0, 24(%rsp) # 16-byte Spill
+; CHECK0-NEXT:    subq $272, %rsp # imm = 0x110
+; CHECK0-NEXT:    movaps %xmm15, 256(%rsp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm14, 240(%rsp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm13, 224(%rsp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm12, 208(%rsp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm11, 192(%rsp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm10, 176(%rsp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm9, 160(%rsp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm8, 144(%rsp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm7, 128(%rsp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm6, 112(%rsp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm5, 96(%rsp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm4, 80(%rsp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm3, 64(%rsp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm2, 48(%rsp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm1, 32(%rsp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm0, 16(%rsp) # 16-byte Spill
 ; CHECK0-NEXT:    cld
-; CHECK0-NEXT:    leaq 16(%rsp), %rdi
+; CHECK0-NEXT:    leaq 8(%rsp), %rdi
 ; CHECK0-NEXT:    callq external_function@PLT
-; CHECK0-NEXT:    movaps 24(%rsp), %xmm0 # 16-byte Reload
-; CHECK0-NEXT:    movaps 40(%rsp), %xmm1 # 16-byte Reload
-; CHECK0-NEXT:    movaps 56(%rsp), %xmm2 # 16-byte Reload
-; CHECK0-NEXT:    movaps 72(%rsp), %xmm3 # 16-byte Reload
-; CHECK0-NEXT:    movaps 88(%rsp), %xmm4 # 16-byte Reload
-; CHECK0-NEXT:    movaps 104(%rsp), %xmm5 # 16-byte Reload
-; CHECK0-NEXT:    movaps 120(%rsp), %xmm6 # 16-byte Reload
-; CHECK0-NEXT:    movaps 136(%rsp), %xmm7 # 16-byte Reload
-; CHECK0-NEXT:    movaps 152(%rsp), %xmm8 # 16-byte Reload
-; CHECK0-NEXT:    movaps 168(%rsp), %xmm9 # 16-byte Reload
-; CHECK0-NEXT:    movaps 184(%rsp), %xmm10 # 16-byte Reload
-; CHECK0-NEXT:    movaps 200(%rsp), %xmm11 # 16-byte Reload
-; CHECK0-NEXT:    movaps 216(%rsp), %xmm12 # 16-byte Reload
-; CHECK0-NEXT:    movaps 232(%rsp), %xmm13 # 16-byte Reload
-; CHECK0-NEXT:    movaps 248(%rsp), %xmm14 # 16-byte Reload
-; CHECK0-NEXT:    movaps 264(%rsp), %xmm15 # 16-byte Reload
-; CHECK0-NEXT:    addq $280, %rsp # imm = 0x118
+; CHECK0-NEXT:    movaps 16(%rsp), %xmm0 # 16-byte Reload
+; CHECK0-NEXT:    movaps 32(%rsp), %xmm1 # 16-byte Reload
+; CHECK0-NEXT:    movaps 48(%rsp), %xmm2 # 16-byte Reload
+; CHECK0-NEXT:    movaps 64(%rsp), %xmm3 # 16-byte Reload
+; CHECK0-NEXT:    movaps 80(%rsp), %xmm4 # 16-byte Reload
+; CHECK0-NEXT:    movaps 96(%rsp), %xmm5 # 16-byte Reload
+; CHECK0-NEXT:    movaps 112(%rsp), %xmm6 # 16-byte Reload
+; CHECK0-NEXT:    movaps 128(%rsp), %xmm7 # 16-byte Reload
+; CHECK0-NEXT:    movaps 144(%rsp), %xmm8 # 16-byte Reload
+; CHECK0-NEXT:    movaps 160(%rsp), %xmm9 # 16-byte Reload
+; CHECK0-NEXT:    movaps 176(%rsp), %xmm10 # 16-byte Reload
+; CHECK0-NEXT:    movaps 192(%rsp), %xmm11 # 16-byte Reload
+; CHECK0-NEXT:    movaps 208(%rsp), %xmm12 # 16-byte Reload
+; CHECK0-NEXT:    movaps 224(%rsp), %xmm13 # 16-byte Reload
+; CHECK0-NEXT:    movaps 240(%rsp), %xmm14 # 16-byte Reload
+; CHECK0-NEXT:    movaps 256(%rsp), %xmm15 # 16-byte Reload
+; CHECK0-NEXT:    addq $272, %rsp # imm = 0x110
 ; CHECK0-NEXT:    popq %rcx
 ; CHECK0-NEXT:    popq %rdx
 ; CHECK0-NEXT:    popq %rsi
@@ -408,6 +408,144 @@ entry:
   %some_allocation = alloca i64
   ;; Call a un-inlineable function to ensure the allocation isn't put in the red zone.
   call void @external_function(ptr %some_allocation)
+  ret void
+}
+
+; An over-aligned local realigns the stack. If the frame size carries the extra
+; 8 bytes of the parity push, the object lands at 8 mod 64 and
+; getFrameIndexReference asserts. The subq must stay a multiple of 64.
+define x86_intrcc void @test_realigned_object(ptr byval(%struct.interrupt_frame) %frame, i64 %err) #0 {
+; CHECK-LABEL: test_realigned_object:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    movq %rsp, %rbp
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    pushq %r11
+; CHECK-NEXT:    pushq %r10
+; CHECK-NEXT:    pushq %r9
+; CHECK-NEXT:    pushq %r8
+; CHECK-NEXT:    pushq %rdi
+; CHECK-NEXT:    pushq %rsi
+; CHECK-NEXT:    pushq %rdx
+; CHECK-NEXT:    pushq %rcx
+; CHECK-NEXT:    andq $-64, %rsp
+; CHECK-NEXT:    subq $320, %rsp # imm = 0x140
+; CHECK-NEXT:    movaps %xmm15, -96(%rbp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm14, -112(%rbp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm13, -128(%rbp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm12, -144(%rbp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm11, -160(%rbp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm10, -176(%rbp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm9, -192(%rbp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm8, -208(%rbp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm7, -224(%rbp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm6, -240(%rbp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm5, -256(%rbp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm4, -272(%rbp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm3, -288(%rbp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm2, -304(%rbp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm1, -320(%rbp) # 16-byte Spill
+; CHECK-NEXT:    movaps %xmm0, -336(%rbp) # 16-byte Spill
+; CHECK-NEXT:    cld
+; CHECK-NEXT:    movq %rsp, %rdi
+; CHECK-NEXT:    callq external_function@PLT
+; CHECK-NEXT:    movaps -336(%rbp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movaps -320(%rbp), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    movaps -304(%rbp), %xmm2 # 16-byte Reload
+; CHECK-NEXT:    movaps -288(%rbp), %xmm3 # 16-byte Reload
+; CHECK-NEXT:    movaps -272(%rbp), %xmm4 # 16-byte Reload
+; CHECK-NEXT:    movaps -256(%rbp), %xmm5 # 16-byte Reload
+; CHECK-NEXT:    movaps -240(%rbp), %xmm6 # 16-byte Reload
+; CHECK-NEXT:    movaps -224(%rbp), %xmm7 # 16-byte Reload
+; CHECK-NEXT:    movaps -208(%rbp), %xmm8 # 16-byte Reload
+; CHECK-NEXT:    movaps -192(%rbp), %xmm9 # 16-byte Reload
+; CHECK-NEXT:    movaps -176(%rbp), %xmm10 # 16-byte Reload
+; CHECK-NEXT:    movaps -160(%rbp), %xmm11 # 16-byte Reload
+; CHECK-NEXT:    movaps -144(%rbp), %xmm12 # 16-byte Reload
+; CHECK-NEXT:    movaps -128(%rbp), %xmm13 # 16-byte Reload
+; CHECK-NEXT:    movaps -112(%rbp), %xmm14 # 16-byte Reload
+; CHECK-NEXT:    movaps -96(%rbp), %xmm15 # 16-byte Reload
+; CHECK-NEXT:    leaq -72(%rbp), %rsp
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    popq %rdx
+; CHECK-NEXT:    popq %rsi
+; CHECK-NEXT:    popq %rdi
+; CHECK-NEXT:    popq %r8
+; CHECK-NEXT:    popq %r9
+; CHECK-NEXT:    popq %r10
+; CHECK-NEXT:    popq %r11
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    addq $16, %rsp
+; CHECK-NEXT:    iretq
+;
+; CHECK0-LABEL: test_realigned_object:
+; CHECK0:       # %bb.0:
+; CHECK0-NEXT:    pushq %rax
+; CHECK0-NEXT:    pushq %rbp
+; CHECK0-NEXT:    movq %rsp, %rbp
+; CHECK0-NEXT:    pushq %rax
+; CHECK0-NEXT:    pushq %r11
+; CHECK0-NEXT:    pushq %r10
+; CHECK0-NEXT:    pushq %r9
+; CHECK0-NEXT:    pushq %r8
+; CHECK0-NEXT:    pushq %rdi
+; CHECK0-NEXT:    pushq %rsi
+; CHECK0-NEXT:    pushq %rdx
+; CHECK0-NEXT:    pushq %rcx
+; CHECK0-NEXT:    andq $-64, %rsp
+; CHECK0-NEXT:    subq $320, %rsp # imm = 0x140
+; CHECK0-NEXT:    movaps %xmm15, -96(%rbp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm14, -112(%rbp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm13, -128(%rbp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm12, -144(%rbp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm11, -160(%rbp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm10, -176(%rbp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm9, -192(%rbp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm8, -208(%rbp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm7, -224(%rbp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm6, -240(%rbp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm5, -256(%rbp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm4, -272(%rbp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm3, -288(%rbp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm2, -304(%rbp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm1, -320(%rbp) # 16-byte Spill
+; CHECK0-NEXT:    movaps %xmm0, -336(%rbp) # 16-byte Spill
+; CHECK0-NEXT:    cld
+; CHECK0-NEXT:    movq %rsp, %rdi
+; CHECK0-NEXT:    callq external_function@PLT
+; CHECK0-NEXT:    movaps -336(%rbp), %xmm0 # 16-byte Reload
+; CHECK0-NEXT:    movaps -320(%rbp), %xmm1 # 16-byte Reload
+; CHECK0-NEXT:    movaps -304(%rbp), %xmm2 # 16-byte Reload
+; CHECK0-NEXT:    movaps -288(%rbp), %xmm3 # 16-byte Reload
+; CHECK0-NEXT:    movaps -272(%rbp), %xmm4 # 16-byte Reload
+; CHECK0-NEXT:    movaps -256(%rbp), %xmm5 # 16-byte Reload
+; CHECK0-NEXT:    movaps -240(%rbp), %xmm6 # 16-byte Reload
+; CHECK0-NEXT:    movaps -224(%rbp), %xmm7 # 16-byte Reload
+; CHECK0-NEXT:    movaps -208(%rbp), %xmm8 # 16-byte Reload
+; CHECK0-NEXT:    movaps -192(%rbp), %xmm9 # 16-byte Reload
+; CHECK0-NEXT:    movaps -176(%rbp), %xmm10 # 16-byte Reload
+; CHECK0-NEXT:    movaps -160(%rbp), %xmm11 # 16-byte Reload
+; CHECK0-NEXT:    movaps -144(%rbp), %xmm12 # 16-byte Reload
+; CHECK0-NEXT:    movaps -128(%rbp), %xmm13 # 16-byte Reload
+; CHECK0-NEXT:    movaps -112(%rbp), %xmm14 # 16-byte Reload
+; CHECK0-NEXT:    movaps -96(%rbp), %xmm15 # 16-byte Reload
+; CHECK0-NEXT:    leaq -72(%rbp), %rsp
+; CHECK0-NEXT:    popq %rcx
+; CHECK0-NEXT:    popq %rdx
+; CHECK0-NEXT:    popq %rsi
+; CHECK0-NEXT:    popq %rdi
+; CHECK0-NEXT:    popq %r8
+; CHECK0-NEXT:    popq %r9
+; CHECK0-NEXT:    popq %r10
+; CHECK0-NEXT:    popq %r11
+; CHECK0-NEXT:    popq %rax
+; CHECK0-NEXT:    popq %rbp
+; CHECK0-NEXT:    addq $16, %rsp
+; CHECK0-NEXT:    iretq
+  %over_aligned = alloca i64, align 64
+  call void @external_function(ptr %over_aligned)
   ret void
 }
 
