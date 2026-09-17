@@ -1242,23 +1242,17 @@ int32x2_t test_psshar_s_i32x2_neg_imm(int32x2_t a) {
 /* Packed Saturation (32-bit) */
 // CHECK-LABEL: test_pusati_u16x2:
 // CHECK:       pusati.h{{[[:space:]]}}
-uint16x2_t test_pusati_u16x2(int16x2_t a) {
-  return __riscv_pusati_u16x2(a, 8);
-}
+uint16x2_t test_pusati_u16x2(int16x2_t a) { return __riscv_pusati_u16x2(a, 8); }
 
 // CHECK-LABEL: test_psati_i16x2:
 // CHECK:       psati.h{{[[:space:]]}}
-int16x2_t test_psati_i16x2(int16x2_t a) {
-  return __riscv_psati_i16x2(a, 8);
-}
+int16x2_t test_psati_i16x2(int16x2_t a) { return __riscv_psati_i16x2(a, 8); }
 
 /* Packed Saturation (64-bit) */
 // CHECK-LABEL: test_pusati_u16x4:
 // RV32:        pusati.dh{{[[:space:]]}}
 // RV64:        pusati.h{{[[:space:]]}}
-uint16x4_t test_pusati_u16x4(int16x4_t a) {
-  return __riscv_pusati_u16x4(a, 8);
-}
+uint16x4_t test_pusati_u16x4(int16x4_t a) { return __riscv_pusati_u16x4(a, 8); }
 
 // CHECK-LABEL: test_pusati_u32x2:
 // RV32:        pusati.dw{{[[:space:]]}}
@@ -1270,16 +1264,12 @@ uint32x2_t test_pusati_u32x2(int32x2_t a) {
 // CHECK-LABEL: test_psati_i16x4:
 // RV32:        psati.dh{{[[:space:]]}}
 // RV64:        psati.h{{[[:space:]]}}
-int16x4_t test_psati_i16x4(int16x4_t a) {
-  return __riscv_psati_i16x4(a, 8);
-}
+int16x4_t test_psati_i16x4(int16x4_t a) { return __riscv_psati_i16x4(a, 8); }
 
 // CHECK-LABEL: test_psati_i32x2:
 // RV32:        psati.dw{{[[:space:]]}}
 // RV64:        psati.w{{[[:space:]]}}
-int32x2_t test_psati_i32x2(int32x2_t a) {
-  return __riscv_psati_i32x2(a, 16);
-}
+int32x2_t test_psati_i32x2(int32x2_t a) { return __riscv_psati_i32x2(a, 16); }
 
 // CHECK-LABEL: test_pand_i8x4:
 // CHECK:       and{{[[:space:]]}}
