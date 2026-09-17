@@ -1166,10 +1166,12 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Enable custom lowering for the following:
   //   * MVT::i128 - clusterlaunchcontrol
   //   * MVT::i32 - prmt
+  //   * MVT::v1f32 - ex2
   //   * MVT::v4f32 - cvt_rs fp{4/6/8}x4 intrinsics
   //   * MVT::Other - internal.addrspace.wrap
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
-                     {MVT::i32, MVT::i128, MVT::v4f32, MVT::Other}, Custom);
+                     {MVT::i32, MVT::i128, MVT::v1f32, MVT::v4f32, MVT::Other},
+                     Custom);
 
   // Custom lowering for bswap
   setOperationAction(ISD::BSWAP, {MVT::i16, MVT::i32, MVT::i64, MVT::v2i16},
@@ -7608,6 +7610,29 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
   }
 }
 
+static void ReplaceINTRINSIC_WO_CHAIN(
+    SDNode *N, SelectionDAG &DAG, SmallVectorImpl<SDValue> &Results) {
+  assert(N->getValueType(0) == MVT::v1f32 &&
+         "Custom handling of non-v1f32 intrinsic?");
+
+  switch (N->getConstantOperandVal(0)) {
+  default:
+    return;
+  case Intrinsic::nvvm_ex2_approx:
+  case Intrinsic::nvvm_ex2_approx_ftz:
+    break;
+  }
+
+  SDLoc DL(N);
+  SDValue ScalarOperand =
+      DAG.getExtractVectorElt(DL, MVT::f32, N->getOperand(1), 0);
+  SDValue ScalarResult = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::f32,
+      {N->getOperand(0), ScalarOperand}, N->getFlags());
+  Results.push_back(DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v1f32,
+                                ScalarResult));
+}
+
 static void ReplaceCopyFromReg_128(SDNode *N, SelectionDAG &DAG,
                                    SmallVectorImpl<SDValue> &Results) {
   // Change the CopyFromReg to output 2 64-bit results instead of a 128-bit
@@ -7705,6 +7730,9 @@ void NVPTXTargetLowering::ReplaceNodeResults(
     return;
   case ISD::INTRINSIC_W_CHAIN:
     ReplaceINTRINSIC_W_CHAIN(N, DAG, Results);
+    return;
+  case ISD::INTRINSIC_WO_CHAIN:
+    ReplaceINTRINSIC_WO_CHAIN(N, DAG, Results);
     return;
   case ISD::CopyFromReg:
     ReplaceCopyFromReg_128(N, DAG, Results);
