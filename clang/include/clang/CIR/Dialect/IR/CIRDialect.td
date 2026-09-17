@@ -46,9 +46,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getCalleeAttrName() { return "callee"; }
     static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }
     static llvm::StringRef getNoReturnAttrName() { return "noreturn"; }
-    static llvm::StringRef getMemoryEffectsAttrName() {
-      return "memory_effects";
-    }
+    static llvm::StringRef getMemoryEffectsAttrName() { return "memory_effects"; }
     static llvm::StringRef getReturnsTwiceAttrName() { return "returns_twice"; }
     static llvm::StringRef getColdAttrName() { return "cold"; }
     static llvm::StringRef getHotAttrName() { return "hot"; }
