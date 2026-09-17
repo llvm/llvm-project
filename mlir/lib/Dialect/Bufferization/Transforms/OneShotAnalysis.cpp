@@ -552,8 +552,7 @@ static bool areNonConflictingSubsets(OpOperand *uRead,
     // leaf or an extraction that may overlap keeps the analysis conservative.
     SetVector<Value> readOrigins =
         state.findValueInReverseUseDefChain(uRead, isDisjointExtraction);
-    if (!readOrigins.empty() &&
-        llvm::all_of(readOrigins, isDisjointExtraction))
+    if (!readOrigins.empty() && llvm::all_of(readOrigins, isDisjointExtraction))
       return true;
   }
 
