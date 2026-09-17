@@ -252,18 +252,83 @@ void initializer_list_capture() {
 // Implicit object param 'this' is captured
 // ****************************************************************************
 namespace this_is_captured {
-struct X {} x;
+struct X {} x;    // cfg-note {{this global dangles}}
 struct S {
-  void capture(X &x) [[clang::lifetime_capture_by(x)]];
+  void gets_captured_by(X &x) [[clang::lifetime_capture_by(x)]];
 };
 
-// FIXME: Add support for capture of method declarations in -Wlifetime-safety
 void use() {
-  S{}.capture(x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}}
-  S s;
-  s.capture(x);
+  S{}.gets_captured_by(x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
+                  // cfg-warning {{temporary object does not live long enough}} \
+                  // cfg-note {{temporary object is destroyed here}}
+  (void)x;        // cfg-note {{later used here}}
+  S s;            
+  s.gets_captured_by(x);   // cfg-warning {{stack memory associated with local variable 's' escapes to the global variable 'x' which will dangle}}
 }
 } // namespace this_is_captured
+
+namespace method_decl_capture {
+struct Container {
+  const void* stored = nullptr;
+  void add(const void* s) { stored = s; }
+};
+struct Obj {
+  void register_into(Container& c) const [[clang::lifetime_capture_by(c)]] {
+    c.add(this);
+  }
+};
+void test() {
+  Container c;
+  {
+    Obj local_obj;
+    local_obj.register_into(c);   // cfg-warning {{local variable 'local_obj' does not live long enough}}
+  }                               // cfg-note {{local variable 'local_obj' is destroyed here}}
+  (void)c.stored;                 // cfg-note {{later used here}}
+}
+} // namespace method_decl_capture
+
+namespace method_redecl_capture {
+struct X {} x;
+struct S {
+  void gets_captured_by(X &x) [[clang::lifetime_capture_by(x)]];
+};
+
+void S::gets_captured_by(X &x) {
+  return;
+}
+
+void test() {
+  {
+    S s;
+    s.gets_captured_by(x);   // cfg-warning {{local variable 's' does not live long enough}}
+  }                          // cfg-note {{local variable 's' is destroyed here}}
+  
+  (void)x;                   // cfg-note {{later used here}}
+}
+} // namespace method_redecl_capture
+
+namespace template_method_redecl_capture {
+struct X {} x;
+
+template<typename T>
+struct S {
+  void gets_captured_by(X &x);
+};
+
+template<typename T>
+void S<T>::gets_captured_by(X &x)  [[clang::lifetime_capture_by(x)]] {
+}
+
+void test() {
+  {
+    S<int> s;
+    s.gets_captured_by(x);    // cfg-warning {{local variable 's' does not live long enough}}
+  }                           // cfg-note {{local variable 's' is destroyed here}}
+  
+  (void)x;                    // cfg-note {{later used here}}
+}
+
+} // template_method_redecl_capture
 
 namespace temporary_capturing_object {
 struct S {
