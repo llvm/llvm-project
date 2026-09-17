@@ -36,9 +36,9 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   // Ensure that end of Zone and Beginning of PostZone being adjacent doesn't
   // lead to break being included in the extraction zone.
   EXPECT_THAT(apply("for(;;) { [[int x;]]break; }"), HasSubstr("extracted"));
-  // FIXME: ExtractFunction should be unavailable inside loop construct
-  // initializer/condition.
-  EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("extracted"));
+  // ExtractFunction is unavailable inside a loop construct's
+  // initializer/condition/increment.
+  EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("unavailable"));
   // Extract certain return
   EXPECT_THAT(apply(" if(true) [[{ return; }]] "), HasSubstr("extracted"));
   // Don't extract uncertain return
@@ -676,6 +676,34 @@ TEST_F(ExtractFunctionTest, SingleStatement) {
       foo([[stream << 3]], 4);
     })cpp"),
             "unavailable");
+}
+
+TEST_F(ExtractFunctionTest, ControlFlowConditions) {
+  Context = File;
+  // The condition of an `if` is not a discardable statement -- its value is
+  // consumed by the `if` itself.
+  EXPECT_EQ(apply(R"cpp(
+    int example(int event1, bool event2, double event3) {
+      if ([[event1 == 2 && event2 && event3 == 10.3]])
+        return 1;
+      return 0;
+    })cpp"),
+            "unavailable");
+  // Same, but for other control-flow constructs' condition/init/increment
+  // clauses.
+  EXPECT_EQ(apply("void f(int x) { while ([[x > 0]]) --x; }"), "unavailable");
+  EXPECT_EQ(apply("void f(int x) { do {} while ([[x > 0]]); }"), "unavailable");
+  EXPECT_EQ(apply("void f(int x) { for (; [[x > 0]];) ; }"), "unavailable");
+  EXPECT_EQ(apply("void f(int x) { for (;; [[--x]]) ; }"), "unavailable");
+  EXPECT_EQ(apply("void f(int x) { switch ([[x + 1]]) {} }"), "unavailable");
+  // A condition-variable declaration (`if (T x = ...)`) is likewise not a
+  // discardable statement.
+  EXPECT_EQ(apply("bool cond(); void f() { if ([[bool b = cond()]]) ; }"),
+            "unavailable");
+  // Sanity check: extraction from the *body* of these constructs (as opposed
+  // to their condition/init/increment) is unaffected.
+  EXPECT_THAT(apply("void f(int x) { if (x > 0) [[x = x * 2;]] }"),
+              HasSubstr("extracted"));
 }
 
 } // namespace
