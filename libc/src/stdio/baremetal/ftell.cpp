@@ -7,20 +7,32 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the bare-metal implementation of fflush.
+/// This file contains the bare-metal implementation of ftell.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/fflush.h"
+#include "src/stdio/ftell.h"
 
+#include "hdr/errno_macros.h"
+#include "hdr/stdio_macros.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
-  return __llvm_libc_stdio_flush(stream);
+LLVM_LIBC_FUNCTION(long, ftell, (::FILE * stream)) {
+  if (stream == nullptr) {
+    libc_errno = EINVAL;
+    return -1;
+  }
+  off_t result = __llvm_libc_stdio_seek(stream, 0, SEEK_CUR);
+  if (result < 0) {
+    libc_errno = static_cast<int>(-result);
+    return -1;
+  }
+  return static_cast<long>(result);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
