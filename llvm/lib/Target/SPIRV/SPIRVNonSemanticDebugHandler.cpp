@@ -1183,7 +1183,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeComposite(
   if (!ParentRegOpt)
     return std::nullopt;
 
-  if (!CT->isForwardDecl() && !isUInt<32>(CT->getSizeInBits()))
+  if (!isUInt<32>(CT->getSizeInBits()))
     return std::nullopt;
 
   MCRegister NameReg = getCachedOpStringReg(CT->getName());
