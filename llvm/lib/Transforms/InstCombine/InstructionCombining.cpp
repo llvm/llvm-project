@@ -583,15 +583,56 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         continue;
       }
 
-      // Transform: "(A op B) op C" ==> "(C op A) op B" if "C op A" simplifies.
+      // Group selects when either condition implies the other. This can expose
+      // the select folds in SimplifySelectsFeedingBinaryOp.
+      auto haveImpliedSelectConditions = [&](Value *X, Value *Y) {
+        auto *XSel = dyn_cast<SelectInst>(X);
+        auto *YSel = dyn_cast<SelectInst>(Y);
+        if (!XSel || !YSel ||
+            XSel->getCondition()->getType() != YSel->getCondition()->getType())
+          return false;
+        Value *XCond = XSel->getCondition();
+        Value *YCond = YSel->getCondition();
+        // Either arm of either select may determine the other's condition.
+        return isImpliedCondition(XCond, YCond, DL).has_value() ||
+               isImpliedCondition(XCond, YCond, DL, false).has_value() ||
+               isImpliedCondition(YCond, XCond, DL).has_value() ||
+               isImpliedCondition(YCond, XCond, DL, false).has_value();
+      };
+
+      auto reassociateSelects = [&](BinaryOperator *Inner, Value *A,
+                                    Value *C) -> Value * {
+        // Keep an existing pair of related selects together to avoid
+        // repeatedly regrouping three selects.
+        if (!Inner->hasOneUse() || !haveImpliedSelectConditions(A, C) ||
+            haveImpliedSelectConditions(Inner->getOperand(0),
+                                        Inner->getOperand(1)) ||
+            (isa<FPMathOperator>(&I) && !Inner->isAssociative()))
+          return nullptr;
+
+        auto *NewOp = BinaryOperator::Create(Opcode, A, C);
+        if (isa<FPMathOperator>(&I)) {
+          FastMathFlags FMF = I.getFastMathFlags() & Inner->getFastMathFlags();
+          NewOp->setFastMathFlags(FMF);
+          I.setFastMathFlags(FMF);
+        }
+        InsertNewInstWith(NewOp, I.getIterator());
+        return NewOp;
+      };
+
+      // Transform: "(A op B) op C" ==> "(C op A) op B" if "C op A"
+      // simplifies, or group "A op C" if those are related selects.
       if (Op0 && Op0->getOpcode() == Opcode) {
         Value *A = Op0->getOperand(0);
         Value *B = Op0->getOperand(1);
         Value *C = I.getOperand(1);
 
         // Does "C op A" simplify?
-        if (Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I))) {
-          // It simplifies to V.  Form "V op B".
+        Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I));
+        if (!V)
+          V = reassociateSelects(Op0, A, C);
+        if (V) {
+          // Form "V op B".
           replaceOperand(I, 0, V);
           replaceOperand(I, 1, B);
           // Conservatively clear the optional flags, since they may not be
@@ -604,15 +645,19 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         }
       }
 
-      // Transform: "A op (B op C)" ==> "B op (C op A)" if "C op A" simplifies.
+      // Transform: "A op (B op C)" ==> "B op (C op A)" if "C op A"
+      // simplifies, or group "A op C" if those are related selects.
       if (Op1 && Op1->getOpcode() == Opcode) {
         Value *A = I.getOperand(0);
         Value *B = Op1->getOperand(0);
         Value *C = Op1->getOperand(1);
 
         // Does "C op A" simplify?
-        if (Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I))) {
-          // It simplifies to V.  Form "B op V".
+        Value *V = simplifyBinOp(Opcode, C, A, SQ.getWithInstruction(&I));
+        if (!V)
+          V = reassociateSelects(Op1, A, C);
+        if (V) {
+          // Form "B op V".
           replaceOperand(I, 0, B);
           replaceOperand(I, 1, V);
           // Conservatively clear the optional flags, since they may not be
@@ -1442,8 +1487,54 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
       return NewSel;
   }
 
-  if (!True || !False)
+  if (!True || !False) {
+    // When the conditions differ, one arm of a select may determine the other
+    // select's value and simplify the binop. Keep the other arm as a binop.
+    if (LHSIsSelect && RHSIsSelect && A != D && LHS->hasOneUse() &&
+        RHS->hasOneUse()) {
+      auto foldImpliedSelectArm = [&](SelectInst *Outer, Value *Other,
+                                      bool OuterIsLHS) -> Value * {
+        Value *OuterCond = Outer->getCondition();
+        auto simplifyArm = [&](Value *Arm, bool CondIsTrue) -> Value * {
+          Value *OtherArm =
+              simplifySelectWithImpliedCond(Other, OuterCond, CondIsTrue);
+          if (OtherArm == Other)
+            return nullptr;
+          return OuterIsLHS ? simplifyBinOp(Opcode, Arm, OtherArm, FMF, Q)
+                            : simplifyBinOp(Opcode, OtherArm, Arm, FMF, Q);
+        };
+
+        Value *NewTrue = simplifyArm(Outer->getTrueValue(), true);
+        Value *NewFalse = simplifyArm(Outer->getFalseValue(), false);
+        if (!NewTrue && !NewFalse)
+          return nullptr;
+
+        auto createArm = [&](Value *Arm) {
+          return (OuterIsLHS || I.isCommutative())
+                     ? Builder.CreateBinOp(Opcode, Arm, Other)
+                     : Builder.CreateBinOp(Opcode, Other, Arm);
+        };
+        if (!NewTrue)
+          NewTrue = createArm(Outer->getTrueValue());
+        if (!NewFalse)
+          NewFalse = createArm(Outer->getFalseValue());
+
+        Value *NewV =
+            Builder.CreateSelect(OuterCond, NewTrue, NewFalse, I.getName());
+        if (auto *NewSI = dyn_cast<SelectInst>(NewV))
+          NewSI->copyMetadata(*Outer, {LLVMContext::MD_prof,
+                                       LLVMContext::MD_unpredictable,
+                                       LLVMContext::MD_dbg});
+        return NewV;
+      };
+
+      if (Value *V = foldImpliedSelectArm(cast<SelectInst>(RHS), LHS, false))
+        return V;
+      if (Value *V = foldImpliedSelectArm(cast<SelectInst>(LHS), RHS, true))
+        return V;
+    }
     return nullptr;
+  }
 
   Value *NewSI = Builder.CreateSelect(Cond, True, False, I.getName(), SI);
   NewSI->takeName(&I);
