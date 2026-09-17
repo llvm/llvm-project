@@ -37,7 +37,8 @@ int recreate_test_file(const char *path) {
 }
 
 TEST_F(LlvmLibcListxattrTest, NoExtendedAttributes) {
-  int fd = recreate_test_file("testdata/flistxattr_no_xattrs.txt");
+  int fd = recreate_test_file(
+      libc_make_test_file_path("testdata/flistxattr_no_xattrs.txt"));
   ASSERT_ERRNO_SUCCESS();
   scope_exit close_file(
       [&] { ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0)); });
@@ -51,8 +52,8 @@ TEST_F(LlvmLibcListxattrTest, NoExtendedAttributes) {
 }
 
 TEST_F(LlvmLibcListxattrTest, WithUserExtendedAttribute) {
-  constexpr const char *TEST_FILE_NAME =
-      "testdata/flistxattr_with_user_xattr.txt";
+  const LIBC_NAMESPACE::CString TEST_FILE_NAME =
+      libc_make_test_file_path("testdata/flistxattr_with_user_xattr.txt");
 
   int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();

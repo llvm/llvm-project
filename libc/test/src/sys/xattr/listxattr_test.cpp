@@ -42,7 +42,8 @@ int recreate_test_symlink(const char *target, const char *linkpath) {
 }
 
 TEST_F(LlvmLibcListxattrTest, NoExtendedAttributes) {
-  constexpr const char *TEST_FILE_NAME = "testdata/listxattr_no_xattrs.txt";
+  const LIBC_NAMESPACE::CString TEST_FILE_NAME =
+      libc_make_test_file_path("testdata/listxattr_no_xattrs.txt");
 
   int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();
@@ -58,10 +59,11 @@ TEST_F(LlvmLibcListxattrTest, NoExtendedAttributes) {
 }
 
 TEST_F(LlvmLibcListxattrTest, WithUserExtendedAttribute) {
-  constexpr const char *TEST_FILE_NAME =
-      "testdata/listxattr_with_user_xattr.txt";
+  const LIBC_NAMESPACE::CString TEST_FILE_NAME =
+      libc_make_test_file_path("testdata/listxattr_with_user_xattr.txt");
   constexpr const char *TEST_SYMLINK_TARGET = "listxattr_with_user_xattr.txt";
-  constexpr const char *TEST_SYMLINK_NAME = "testdata/listxattr_symlink.txt";
+  const LIBC_NAMESPACE::CString TEST_SYMLINK_NAME =
+      libc_make_test_file_path("testdata/listxattr_symlink.txt");
 
   int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();
@@ -73,8 +75,8 @@ TEST_F(LlvmLibcListxattrTest, WithUserExtendedAttribute) {
   string_view XATTR_NAME = "user.test_attr";
   string_view XATTR_VALUE = "test_value";
   ASSERT_EQ(0, LIBC_NAMESPACE::syscall_impl<int>(
-                   SYS_setxattr, TEST_FILE_NAME, XATTR_NAME.data(),
-                   XATTR_VALUE.data(), XATTR_VALUE.size(),
+                   SYS_setxattr, static_cast<const char *>(TEST_FILE_NAME),
+                   XATTR_NAME.data(), XATTR_VALUE.data(), XATTR_VALUE.size(),
                    /* flags = */ 0));
   size_t xattr_name_null_terminated_len = XATTR_NAME.size() + 1;
 

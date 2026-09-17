@@ -25,10 +25,7 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<ssize_t> listxattr(const char *path, char *list,
                                        size_t size) {
-  ssize_t ret = syscall_impl<ssize_t>(SYS_listxattr, path, list, size);
-  if (ret < 0)
-    return Error(-static_cast<int>(ret));
-  return ret;
+  return syscall_checked<ssize_t>(SYS_listxattr, path, list, size);
 }
 
 } // namespace linux_syscalls
