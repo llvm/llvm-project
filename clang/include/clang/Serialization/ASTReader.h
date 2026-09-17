@@ -1052,6 +1052,9 @@ private:
   /// The IDs of all decls with function effects to be checked.
   SmallVector<GlobalDeclID> DeclsWithEffectsToVerify;
 
+  /// OpenMP 'requires' directives read from the AST file.
+  SmallVector<GlobalDeclID> OpenMPRequiresDecls;
+
   /// The RISC-V intrinsic pragma(including RVV, SiFive and Andes).
   SmallVector<bool, 3> RISCVVecIntrinsicPragma;
 
