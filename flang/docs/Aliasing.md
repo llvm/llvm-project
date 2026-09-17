@@ -288,6 +288,20 @@ above example, `ptr = loc(target)` causes accesses through `handle` and
 TARGET attribute in FIR so that this information is available to all FIR
 optimizations.
 
+If the association is not visible, Flang keeps the default assumption that the
+Cray pointee does not alias the target:
+
+```
+integer(kind=8) :: target(10)
+integer(kind=8) :: ptr
+integer(kind=8) :: handle(10)
+pointer(ptr, handle)
+call associate_target_to_cray_ptr(ptr, target) ! does ptr = loc(target)
+target = 1
+print *, target
+end
+```
+
 In order to disable optimizations that assume that there is no aliasing between
 Cray pointer targets and entities they alias with when the association is not
 visible, add the TARGET attribute to variables aliasing with a Cray pointer.

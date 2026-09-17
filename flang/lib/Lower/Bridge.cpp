@@ -1338,6 +1338,11 @@ public:
     return currentFunctionUnit;
   }
 
+  bool isVisibleCrayPointerTarget(
+      const Fortran::semantics::Symbol &sym) const override final {
+    return visibleCrayPointerTargets.contains(&sym.GetUltimate());
+  }
+
   void checkCoarrayEnabled() override final {
     if (!getFoldingContext().languageFeatures().IsEnabled(
             Fortran::common::LanguageFeature::Coarray))
@@ -6647,13 +6652,9 @@ private:
     }
   }
 
-  /// Add TARGET while lowering entities used in visible Cray pointer
-  /// associations. The attributes are restored before lowering another
-  /// procedure so that hidden associations retain the default no-alias
-  /// behavior.
-  void markVisibleCrayPointerTargets(
-      Fortran::lower::pft::EvaluationList &evaluationList,
-      llvm::SmallVectorImpl<Fortran::semantics::Symbol *> &modifiedSymbols) {
+  /// Collect entities used in visible Cray pointer associations.
+  void collectVisibleCrayPointerTargets(
+      Fortran::lower::pft::EvaluationList &evaluationList) {
     for (Fortran::lower::pft::Evaluation &eval : evaluationList) {
       eval.visit(Fortran::common::visitors{
           [&](const Fortran::parser::AssignmentStmt &stmt) {
@@ -6684,26 +6685,33 @@ private:
             if (!target)
               return;
 
-            auto &ultimate =
-                const_cast<Fortran::semantics::Symbol &>(target->GetUltimate());
-            if (!ultimate.attrs().test(Fortran::semantics::Attr::TARGET)) {
-              ultimate.attrs().set(Fortran::semantics::Attr::TARGET);
-              modifiedSymbols.push_back(&ultimate);
-            }
+            visibleCrayPointerTargets.insert(&target->GetUltimate());
           },
           [](const auto &) {}});
       if (eval.hasNestedEvaluations())
-        markVisibleCrayPointerTargets(eval.getNestedEvaluations(),
-                                      modifiedSymbols);
+        collectVisibleCrayPointerTargets(eval.getNestedEvaluations());
     }
+  }
+
+  /// Return whether \p scope declares or imports a Cray pointer.
+  bool hasCrayPointer(const Fortran::semantics::Scope &scope) {
+    if (!scope.crayPointers().empty())
+      return true;
+    for (Fortran::semantics::SymbolRef symbol : scope.GetSymbols())
+      if (symbol->GetUltimate().test(
+              Fortran::semantics::Symbol::Flag::CrayPointer))
+        return true;
+    return false;
   }
 
   /// Lower a procedure (nest).
   void lowerFunc(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(funit.getStartingSourceLoc());
     setCurrentFunctionUnit(&funit);
-    llvm::SmallVector<Fortran::semantics::Symbol *> crayPointerTargets;
-    markVisibleCrayPointerTargets(funit.evaluationList, crayPointerTargets);
+    assert(visibleCrayPointerTargets.empty() &&
+           "Cray pointer targets must not outlive a procedure");
+    if (hasCrayPointer(funit.getScope()))
+      collectVisibleCrayPointerTargets(funit.evaluationList);
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
@@ -6727,8 +6735,7 @@ private:
     }
     funit.setActiveEntry(0);
     setCurrentFunctionUnit(nullptr);
-    for (Fortran::semantics::Symbol *symbol : crayPointerTargets)
-      symbol->attrs().reset(Fortran::semantics::Attr::TARGET);
+    visibleCrayPointerTargets.clear();
     for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
       if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
         lowerFunc(*f); // internal procedure
@@ -6916,6 +6923,10 @@ private:
   Fortran::lower::SymMap localSymbols;
   Fortran::parser::CharBlock currentPosition;
   TypeInfoConverter typeInfoConverter;
+
+  /// Symbols associated with Cray pointers in the current procedure.
+  llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4>
+      visibleCrayPointerTargets;
 
   /// Counter of `scf.execute_region` ops created when
   /// `--wrap-unstructured-constructs-in-execute-region` is enabled for the

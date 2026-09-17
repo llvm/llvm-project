@@ -36,3 +36,14 @@ end
 
 ! CHECK-LABEL: func.func @_QPordinary_loc()
 ! CHECK: fir.alloca f32 {bindc_name = "object", uniq_name = "_QFordinary_locEobject"}
+
+subroutine hidden_association(ptr, associated)
+  real :: pointee, associated
+  integer(8) :: ptr
+  pointer(ptr, pointee)
+  call associate_target_to_cray_ptr(ptr, associated)
+end
+
+! CHECK-LABEL: func.func @_QPhidden_association(
+! CHECK: hlfir.declare %{{.*}} dummy_scope %{{.*}} {uniq_name = "_QFhidden_associationEassociated"}
+! CHECK-NOT: fortran_attrs = #fir.var_attrs<target>
