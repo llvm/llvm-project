@@ -74,9 +74,17 @@ processDeclareOp(mlir::OpBuilder &builder, fir::DeclareOp declareOp,
                  llvm::SmallVectorImpl<mlir::Operation *> &opsToDelete,
                  llvm::SmallPtrSetImpl<mlir::Operation *> &memrefDefiningOps) {
   if (declareOp.getUniqName().str().compare(builtinVar) == 0) {
+    bool allUsesAreCoords = true;
     for (mlir::OpOperand &use : declareOp.getResult().getUses()) {
       fir::CoordinateOp coordOp =
           mlir::dyn_cast<fir::CoordinateOp>(use.getOwner());
+      if (!coordOp) {
+        // Non-coordinate uses (e.g. fir.copy, fir.call) cannot be rewritten
+        // to GPU register reads here.  Leave them in place and keep the
+        // declare alive so those uses remain valid.
+        allUsesAreCoords = false;
+        continue;
+      }
       processCoordinateOp<OpTyX>(builder, coordOp, field_x, incrementByOne,
                                  opsToDelete);
       processCoordinateOp<OpTyY>(builder, coordOp, field_y, incrementByOne,
@@ -85,7 +93,8 @@ processDeclareOp(mlir::OpBuilder &builder, fir::DeclareOp declareOp,
                                  opsToDelete);
       opsToDelete.push_back(coordOp);
     }
-    opsToDelete.push_back(declareOp.getOperation());
+    if (allUsesAreCoords)
+      opsToDelete.push_back(declareOp.getOperation());
     // The backing fir.address_of may be shared by several declares (e.g. after
     // CSE coalesces them when a device routine is inlined into a kernel).
     // Collect it de-duplicated and erase it only once all declares are gone.

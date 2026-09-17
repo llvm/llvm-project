@@ -1,4 +1,5 @@
 ! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefix=FIR-CHECK
 
 subroutine trans_test(store, word)
     ! CHECK-LABEL: func @_QPtrans_test(
@@ -162,6 +163,12 @@ subroutine trans_test(store, word)
     ! CHECK-NOT:     hlfir.assign
     ! CHECK:         return
     ! CHECK:       }
+    ! FIR-CHECK-LABEL: func @_QPtrans_test_seq_tail_pad(
+    ! FIR-CHECK:         fir.call @_FortranATransfer(
+    ! FIR-CHECK:         fir.copy {{.*}} no_overlap : !fir.ref<!fir.type<_QFtrans_test_seq_tail_padTt,sequence{a:i32,b:i8}>>, !fir.ref<!fir.type<_QFtrans_test_seq_tail_padTt,sequence{a:i32,b:i8}>>
+    ! FIR-CHECK-NOT:     fir.coordinate_of
+    ! FIR-CHECK:         return
+    ! FIR-CHECK:       }
     use iso_c_binding, only: c_int, c_int8_t
     type :: t
       sequence
