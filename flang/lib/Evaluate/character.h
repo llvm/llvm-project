@@ -34,17 +34,9 @@ public:
   // contain ASCII
   static std::int64_t ICHAR(const Character &c) {
     CHECK(c.length() == 1);
-    // Mask to the character kind width to avoid sign extension
-    auto ch{static_cast<std::uint64_t>(c[0])};
-    switch (c.kind()) {
-    case 1:
-      return static_cast<std::int64_t>(ch & 0xffu);
-    case 2:
-      return static_cast<std::int64_t>(ch & 0xffffu);
-    case 4:
-      return static_cast<std::int64_t>(ch & 0xffffffffu);
-    }
-    DIE("unsupported character kind");
+    // CharacterValue::operator[] always zero-extends to char32_t. char32_t
+    // itself is defined as unsigned such that only zero-extend widening occurs.
+    return c[0];
   }
 
   static Character NEW_LINE(int kind) { return Character{kind, 1, NewLine()}; }
