@@ -697,47 +697,38 @@ inline StringRef GetRoundingModeName(APFloat::roundingMode RM) {
   }
 }
 
-inline bool FMulShouldFTZ(Intrinsic::ID IntrinsicID) {
+inline bool FPArithShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
-  case Intrinsic::nvvm_mul_rm_ftz_f:
-  case Intrinsic::nvvm_mul_rn_ftz_f:
-  case Intrinsic::nvvm_mul_rp_ftz_f:
-  case Intrinsic::nvvm_mul_rz_ftz_f:
+  case Intrinsic::nvvm_fadd_ftz:
+  case Intrinsic::nvvm_fadd_ftz_sat:
+  case Intrinsic::nvvm_fmul_ftz:
+  case Intrinsic::nvvm_fmul_ftz_sat:
     return true;
 
-  case Intrinsic::nvvm_mul_rm_f:
-  case Intrinsic::nvvm_mul_rn_f:
-  case Intrinsic::nvvm_mul_rp_f:
-  case Intrinsic::nvvm_mul_rz_f:
-  case Intrinsic::nvvm_mul_rm_d:
-  case Intrinsic::nvvm_mul_rn_d:
-  case Intrinsic::nvvm_mul_rp_d:
-  case Intrinsic::nvvm_mul_rz_d:
+  case Intrinsic::nvvm_fadd:
+  case Intrinsic::nvvm_fadd_sat:
+  case Intrinsic::nvvm_fmul:
+  case Intrinsic::nvvm_fmul_sat:
     return false;
   }
-  llvm_unreachable("Checking FTZ flag for invalid NVVM mul intrinsic");
+  llvm_unreachable("Checking FTZ flag for invalid NVVM fadd/fmul intrinsic");
 }
 
-inline APFloat::roundingMode GetFMulRoundingMode(Intrinsic::ID IntrinsicID) {
+inline bool FPArithIsSat(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
-  case Intrinsic::nvvm_mul_rm_f:
-  case Intrinsic::nvvm_mul_rm_d:
-  case Intrinsic::nvvm_mul_rm_ftz_f:
-    return APFloat::rmTowardNegative;
-  case Intrinsic::nvvm_mul_rn_f:
-  case Intrinsic::nvvm_mul_rn_d:
-  case Intrinsic::nvvm_mul_rn_ftz_f:
-    return APFloat::rmNearestTiesToEven;
-  case Intrinsic::nvvm_mul_rp_f:
-  case Intrinsic::nvvm_mul_rp_d:
-  case Intrinsic::nvvm_mul_rp_ftz_f:
-    return APFloat::rmTowardPositive;
-  case Intrinsic::nvvm_mul_rz_f:
-  case Intrinsic::nvvm_mul_rz_d:
-  case Intrinsic::nvvm_mul_rz_ftz_f:
-    return APFloat::rmTowardZero;
+  case Intrinsic::nvvm_fadd_sat:
+  case Intrinsic::nvvm_fadd_ftz_sat:
+  case Intrinsic::nvvm_fmul_sat:
+  case Intrinsic::nvvm_fmul_ftz_sat:
+    return true;
+
+  case Intrinsic::nvvm_fadd:
+  case Intrinsic::nvvm_fadd_ftz:
+  case Intrinsic::nvvm_fmul:
+  case Intrinsic::nvvm_fmul_ftz:
+    return false;
   }
-  llvm_unreachable("Invalid FP instrinsic rounding mode for NVVM mul");
+  llvm_unreachable("Checking sat flag for invalid NVVM fadd/fmul intrinsic");
 }
 
 inline bool FDivShouldFTZ(Intrinsic::ID IntrinsicID) {
