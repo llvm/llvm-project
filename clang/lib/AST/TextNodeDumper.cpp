@@ -1757,6 +1757,18 @@ void TextNodeDumper::VisitInitListExpr(const InitListExpr *ILE) {
     dumpBareDeclRef(Field);
   }
   OS << ' ' << (ILE->isExplicit() ? "explicit" : "implicit");
+  if (ILE->initializesObjectWithDefaultMemberInit())
+    OS << " uses default member init";
+}
+
+void TextNodeDumper::VisitCXXParenListInitExpr(
+    const CXXParenListInitExpr *PLIE) {
+  if (auto *Field = PLIE->getInitializedFieldInUnion()) {
+    OS << " field ";
+    dumpBareDeclRef(Field);
+  }
+  if (PLIE->initializesObjectWithDefaultMemberInit())
+    OS << " uses default member init";
 }
 
 void TextNodeDumper::VisitGenericSelectionExpr(const GenericSelectionExpr *E) {

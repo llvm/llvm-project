@@ -309,6 +309,7 @@ public:
   void VisitCXXTypeidExpr(const CXXTypeidExpr *CTE);
   void VisitConstantExpr(const ConstantExpr *CE);
   void VisitInitListExpr(const InitListExpr *ILE);
+  void VisitCXXParenListInitExpr(const CXXParenListInitExpr *PLIE);
   void VisitGenericSelectionExpr(const GenericSelectionExpr *GSE);
   void VisitCXXUnresolvedConstructExpr(const CXXUnresolvedConstructExpr *UCE);
   void VisitCXXConstructExpr(const CXXConstructExpr *CE);

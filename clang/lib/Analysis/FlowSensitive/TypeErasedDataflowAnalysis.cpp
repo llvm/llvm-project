@@ -398,6 +398,16 @@ static void builtinTransfer(unsigned CurBlockID, const CFGElement &Elt,
   case CFGElement::Initializer:
     builtinTransferInitializer(Elt.castAs<CFGInitializer>(), State);
     break;
+  case CFGElement::ListInitObjectBegin:
+    // Make the object this list-initialization establishes available while its
+    // elements -- including the default member initializers it uses -- are
+    // evaluated. See `Environment::getListInitObjectLocation()`.
+    State.Env.pushListInitObject(State.Env.getResultObjectLocation(
+        *Elt.castAs<CFGListInitObjectBegin>().getListInitExpr()));
+    break;
+  case CFGElement::ListInitObjectEnd:
+    State.Env.popListInitObject();
+    break;
   case CFGElement::LifetimeEnds:
     // Removing declarations when their lifetime ends serves two purposes:
     // - Eliminate unnecessary clutter from `Environment::DeclToLoc`

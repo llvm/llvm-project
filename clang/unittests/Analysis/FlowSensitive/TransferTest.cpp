@@ -2371,6 +2371,128 @@ TEST(TransferTest, DefaultInitializer) {
       });
 }
 
+TEST(TransferTest, DefaultInitializerInAggregateInit) {
+  // `this` inside the default member initializer for `Baz` denotes the object
+  // the list-initialization creates, not the enclosing function's object, so
+  // `Baz` binds to that object's `Bar`.
+  std::string Code = R"(
+    struct S {
+      int Bar;
+      int &Baz = this->Bar;
+    };
+    void target(int Foo) {
+      S Var = {Foo};
+      int &Qux = Var.Baz;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        // `target` is not a member function, so there is no enclosing object.
+        EXPECT_THAT(Env.getThisPointeeStorageLocation(), IsNull());
+
+        const ValueDecl *VarDecl = findValueDecl(ASTCtx, "Var");
+        ASSERT_THAT(VarDecl, NotNull());
+        const auto *VarLoc =
+            cast<RecordStorageLocation>(Env.getStorageLocation(*VarDecl));
+        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+
+        const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
+        ASSERT_THAT(QuxDecl, NotNull());
+        EXPECT_EQ(Env.getStorageLocation(*QuxDecl),
+                  VarLoc->getChild(*cast<FieldDecl>(BarDecl)));
+      });
+}
+
+TEST(TransferTest, DefaultInitializerInAggregateInitInMemberFunction) {
+  // Here there *is* an enclosing object, and `this` inside the default member
+  // initializer must denote the list-initialized one rather than it.
+  std::string Code = R"(
+    struct S {
+      int Bar;
+      int &Baz = this->Bar;
+    };
+    struct Enclosing {
+      int Other;
+      void target(int Foo) {
+        S Var = {Foo};
+        int &Qux = Var.Baz;
+        // [[p]]
+      }
+    };
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const auto *ThisLoc = Env.getThisPointeeStorageLocation();
+        ASSERT_THAT(ThisLoc, NotNull());
+
+        const ValueDecl *VarDecl = findValueDecl(ASTCtx, "Var");
+        ASSERT_THAT(VarDecl, NotNull());
+        const auto *VarLoc =
+            cast<RecordStorageLocation>(Env.getStorageLocation(*VarDecl));
+
+        const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
+        ASSERT_THAT(QuxDecl, NotNull());
+        const StorageLocation *QuxLoc = Env.getStorageLocation(*QuxDecl);
+
+        // `Qux` refers to `Var`'s `Bar`; the enclosing object is a different
+        // object entirely.
+        ASSERT_THAT(QuxLoc, NotNull());
+        EXPECT_NE(static_cast<const StorageLocation *>(ThisLoc),
+                  static_cast<const StorageLocation *>(VarLoc));
+        const auto *BarDecl = cast<FieldDecl>(findValueDecl(ASTCtx, "Bar"));
+        EXPECT_EQ(QuxLoc, VarLoc->getChild(*BarDecl));
+      });
+}
+
+TEST(TransferTest, DefaultInitializerInAggregateInitInCtorInitializer) {
+  // The list-initialization is itself a member initializer, so the enclosing
+  // object is the one under construction; `this` inside the default member
+  // initializer must still denote the list-initialized object.
+  std::string Code = R"(
+    struct NonTrivDtor { NonTrivDtor(int n); ~NonTrivDtor() {} };
+    struct S {
+      int Bar;
+      NonTrivDtor Tmp = NonTrivDtor(this->Bar);
+      int &Baz = this->Bar;
+    };
+    struct target {
+      S o_;
+      target(int f) : o_(S{f}) {
+        int &Qux = o_.Baz;
+        // [[p]]
+      }
+    };
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const auto *ThisLoc = Env.getThisPointeeStorageLocation();
+        ASSERT_THAT(ThisLoc, NotNull());
+        const auto *ODecl = cast<FieldDecl>(findValueDecl(ASTCtx, "o_"));
+        const auto *OLoc =
+            cast<RecordStorageLocation>(ThisLoc->getChild(*ODecl));
+        const auto *BarDecl = cast<FieldDecl>(findValueDecl(ASTCtx, "Bar"));
+        const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
+        ASSERT_THAT(QuxDecl, NotNull());
+        EXPECT_EQ(Env.getStorageLocation(*QuxDecl), OLoc->getChild(*BarDecl));
+      });
+}
+
 TEST(TransferTest, DefaultInitializerReference) {
   std::string Code = R"(
     struct target {

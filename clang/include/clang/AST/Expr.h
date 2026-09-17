@@ -479,6 +479,24 @@ public:
   /// an aspect of the value-kind type system.
   bool refersToBitField() const { return getObjectKind() == OK_BitField; }
 
+  /// Whether this is a list-initialization (an \c InitListExpr or a
+  /// \c CXXParenListInitExpr) that initializes an object using a default
+  /// member initializer, that is, one of whose initializers is a
+  /// \c CXXDefaultInitExpr.
+  ///
+  /// Within such an initializer, \c this denotes the object that this
+  /// list-initialization initializes, not the instance pointer of the
+  /// enclosing member function:
+  ///
+  /// \code
+  ///   struct S { int x; int y = this->x; };
+  ///   int foo() { return S{10}.y; }  // `this` denotes the `S{10}` object
+  /// \endcode
+  ///
+  /// Sema sets this when it fills the list in, so that consumers do not each
+  /// have to re-derive which list-initializations establish such an object.
+  bool initializesObjectWithDefaultMemberInit() const;
+
   /// If this expression refers to a bit-field, retrieve the
   /// declaration of that bit-field.
   ///
@@ -5380,6 +5398,7 @@ public:
   explicit InitListExpr(EmptyShell Empty)
       : Expr(InitListExprClass, Empty), AltForm(nullptr, true) {
     InitListExprBits.IsExplicit = false;
+    InitListExprBits.InitializesObjectWithDefaultMemberInit = false;
   }
 
   unsigned getNumInits() const { return InitExprs.size(); }
@@ -5493,6 +5512,11 @@ public:
   // Explicit InitListExpr's originate from source code (and have valid source
   // locations). Implicit InitListExpr's are created by the semantic analyzer.
   bool isExplicit() const { return InitListExprBits.IsExplicit; }
+
+  /// See Expr::initializesObjectWithDefaultMemberInit().
+  void setInitializesObjectWithDefaultMemberInit(bool V = true) {
+    InitListExprBits.InitializesObjectWithDefaultMemberInit = V;
+  }
 
   /// Is this an initializer for an array of characters, initialized by a string
   /// literal or an @encode?
