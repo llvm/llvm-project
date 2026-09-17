@@ -1017,12 +1017,12 @@ bool VPlanTransforms::finalizeSCEVPredicates(VPlan &Plan,
   // Collect which wide IVs have predicates and add them to PSE.
   auto [HeaderVPBB, _] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
   SmallPtrSet<VPWidenInductionRecipe *, 4> PredicatedIVs;
-  for (auto &R : HeaderVPBB->phis()) {
-    auto *WideIV = dyn_cast<VPWidenInductionRecipe>(&R);
-    if (!WideIV || WideIV->getNoWrapPredicates().empty())
+  for (VPWidenInductionRecipe &WideIV :
+       make_isa_range<VPWidenInductionRecipe>(HeaderVPBB->phis())) {
+    if (WideIV.getNoWrapPredicates().empty())
       continue;
-    PredicatedIVs.insert(WideIV);
-    for (const auto *P : WideIV->getNoWrapPredicates())
+    PredicatedIVs.insert(&WideIV);
+    for (const auto *P : WideIV.getNoWrapPredicates())
       PSE.addPredicate(*P);
   }
 
@@ -1200,9 +1200,9 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
       CurrentLink->replaceAllUsesWith(RedRecipe);
       // Move any store recipes using the RedRecipe that appear before it in the
       // same block to just after the RedRecipe.
-      for (VPUser *U : make_early_inc_range(RedRecipe->users())) {
-        auto *UserR = dyn_cast<VPRecipeBase>(U);
-        if (!UserR || UserR->getParent() != LinkVPBB)
+      for (VPRecipeBase *UserR : make_early_inc_range(
+               make_isa_range<VPRecipeBase>(RedRecipe->users()))) {
+        if (UserR->getParent() != LinkVPBB)
           continue;
         if (!match(UserR, m_VPInstruction<Instruction::Store>()))
           continue;
@@ -1793,12 +1793,11 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
   //   result = extract-last-active vp<new.data>, vp<new.mask>, ir<default.val>
 
   SmallVector<VPReductionPHIRecipe *, 4> Phis;
-  for (VPRecipeBase &Phi :
-       Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
-    if (PhiR && RecurrenceDescriptor::isFindLastRecurrenceKind(
-                    PhiR->getRecurrenceKind()))
-      Phis.push_back(PhiR);
+  for (VPReductionPHIRecipe &PhiR : make_isa_range<VPReductionPHIRecipe>(
+           Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
+    if (RecurrenceDescriptor::isFindLastRecurrenceKind(
+            PhiR.getRecurrenceKind()))
+      Phis.push_back(&PhiR);
   }
 
   if (Phis.empty())

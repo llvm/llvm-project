@@ -26,12 +26,11 @@ void llvm::collectEphemeralRecipesForVPlan(
   SmallVector<VPRecipeBase *> Worklist;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
-    for (VPRecipeBase &R : *VPBB) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR || !match(RepR, m_Intrinsic<Intrinsic::assume>()))
+    for (VPReplicateRecipe &RepR : make_isa_range<VPReplicateRecipe>(*VPBB)) {
+      if (!match(&RepR, m_Intrinsic<Intrinsic::assume>()))
         continue;
-      Worklist.push_back(RepR);
-      EphRecipes.insert(RepR);
+      Worklist.push_back(&RepR);
+      EphRecipes.insert(&RepR);
     }
   }
 

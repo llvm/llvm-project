@@ -309,17 +309,16 @@ collectGroupedReplicateMemOps(
       RecipesByAddressAndType;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
-    for (VPRecipeBase &R : *VPBB) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR || RepR->getOpcode() != Opcode || !FilterFn(RepR))
+    for (VPReplicateRecipe &RepR : make_isa_range<VPReplicateRecipe>(*VPBB)) {
+      if (RepR.getOpcode() != Opcode || !FilterFn(&RepR))
         continue;
 
       // For loads, operand 0 is address; for stores, operand 1 is address.
-      VPValue *Addr = RepR->getOperand(IsLoad ? 0 : 1);
-      const Type *LoadStoreTy = getLoadStoreValueType(RepR, IsLoad);
+      VPValue *Addr = RepR.getOperand(IsLoad ? 0 : 1);
+      const Type *LoadStoreTy = getLoadStoreValueType(&RepR, IsLoad);
       const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
       if (!isa<SCEVCouldNotCompute>(AddrSCEV))
-        RecipesByAddressAndType[{AddrSCEV, LoadStoreTy}].push_back(RepR);
+        RecipesByAddressAndType[{AddrSCEV, LoadStoreTy}].push_back(&RepR);
     }
   }
   auto Groups = to_vector(RecipesByAddressAndType.values());
@@ -608,11 +607,9 @@ static void addReplicateRegions(VPlan &Plan) {
   SmallVector<VPReplicateRecipe *> WorkList;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
-    for (VPRecipeBase &R : *VPBB)
-      if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
-        if (RepR->isPredicated())
-          WorkList.push_back(RepR);
-      }
+    for (VPReplicateRecipe &RepR : make_isa_range<VPReplicateRecipe>(*VPBB))
+      if (RepR.isPredicated())
+        WorkList.push_back(&RepR);
   }
 
   unsigned BBNum = 0;
@@ -684,9 +681,10 @@ void VPlanTransforms::createAndOptimizeReplicateRegions(VPlan &Plan) {
 /// in the vectorized loop. There is no need to vectorize the cast - the same
 /// value can be used for both the phi and casts in the vector loop.
 static void removeRedundantInductionCasts(VPlan &Plan) {
-  for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
-    auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-    if (!IV || IV->getTruncInst())
+  for (VPWidenIntOrFpInductionRecipe &IV :
+       make_isa_range<VPWidenIntOrFpInductionRecipe>(
+           Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
+    if (IV.getTruncInst())
       continue;
 
     // A sequence of IR Casts has potentially been recorded for IV, which
@@ -697,8 +695,8 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
     // replace it with the original IV. Note that only the final cast is
     // expected to have users outside the cast-chain and the dead casts left
     // over will be cleaned up later.
-    ArrayRef<Instruction *> Casts = IV->getInductionDescriptor().getCastInsts();
-    VPValue *FindMyCast = IV;
+    ArrayRef<Instruction *> Casts = IV.getInductionDescriptor().getCastInsts();
+    VPValue *FindMyCast = &IV;
     for (Instruction *IRCast : reverse(Casts)) {
       VPSingleDefRecipe *FoundUserCast = nullptr;
       for (auto *U : FindMyCast->users()) {
@@ -713,8 +711,8 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
         break;
       FindMyCast = FoundUserCast;
     }
-    if (FindMyCast != IV)
-      FindMyCast->replaceAllUsesWith(IV);
+    if (FindMyCast != &IV)
+      FindMyCast->replaceAllUsesWith(&IV);
   }
 }
 
@@ -790,9 +788,9 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
   bool HasOnlyVectorVFs = !Plan.hasScalarVFOnly();
 
   SmallVector<VPWidenInductionRecipe *> WideIVs;
-  for (VPRecipeBase &Phi : HeaderVPBB->phis())
-    if (auto *PhiR = dyn_cast<VPWidenInductionRecipe>(&Phi))
-      WideIVs.push_back(PhiR);
+  for (VPWidenInductionRecipe &PhiR :
+       make_isa_range<VPWidenInductionRecipe>(HeaderVPBB->phis()))
+    WideIVs.push_back(&PhiR);
 
   // Try to narrow wide and replicating recipes to uniform recipes, based on
   // VPlan analysis.
@@ -1115,13 +1113,11 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
   DenseMap<VPValue *, VPValue *> EndValues;
   VPValue *ResumeTC =
       Plan.hasTailFolded() ? Plan.getTripCount() : &Plan.getVectorTripCount();
-  for (auto &Phi : VectorRegion->getEntryBasicBlock()->phis()) {
-    auto *WideIV = dyn_cast<VPWidenInductionRecipe>(&Phi);
-    if (!WideIV)
-      continue;
-    if (VPValue *EndValue =
-            tryToComputeEndValueForInduction(WideIV, VectorPHBuilder, ResumeTC))
-      EndValues[WideIV] = EndValue;
+  for (VPWidenInductionRecipe &WideIV : make_isa_range<VPWidenInductionRecipe>(
+           VectorRegion->getEntryBasicBlock()->phis())) {
+    if (VPValue *EndValue = tryToComputeEndValueForInduction(
+            &WideIV, VectorPHBuilder, ResumeTC))
+      EndValues[&WideIV] = EndValue;
   }
 
   VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
@@ -1725,9 +1721,9 @@ void VPlanTransforms::combineRecipes(VPlan &Plan) {
   PostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> POT(
       Plan.getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT))
-    for (VPRecipeBase &R : reverse(*VPBB))
-      if (auto *Def = dyn_cast<VPSingleDefRecipe>(&R))
-        Worklist.push_back(Def);
+    for (VPSingleDefRecipe &Def :
+         make_isa_range<VPSingleDefRecipe>(reverse(*VPBB)))
+      Worklist.push_back(&Def);
 
   [[maybe_unused]] unsigned InitWorklistSize = Worklist.size();
 
@@ -3805,10 +3801,9 @@ void VPlanTransforms::convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
                                                VFRange &Range) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (auto *Red = dyn_cast<VPReductionRecipe>(&R))
-        tryToCreateAbstractReductionRecipe(Red, Ctx, Range);
-    }
+    for (VPReductionRecipe &Red :
+         make_early_inc_range(make_isa_range<VPReductionRecipe>(*VPBB)))
+      tryToCreateAbstractReductionRecipe(&Red, Ctx, Range);
   }
 }
 
@@ -4388,11 +4383,9 @@ void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
     return VF == ElementCount::getScalable(1);
   };
 
-  for (auto &HeaderPhi : VectorRegion->getEntryBasicBlock()->phis()) {
-    auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&HeaderPhi);
-    if (!FOR)
-      continue;
-
+  for (VPFirstOrderRecurrencePHIRecipe &FOR :
+       make_isa_range<VPFirstOrderRecurrencePHIRecipe>(
+           VectorRegion->getEntryBasicBlock()->phis())) {
     assert(VectorRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
            "Cannot handle loops with uncountable early exits");
 
@@ -4400,7 +4393,7 @@ void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
     // createHeaderPhiRecipes. All uses of FOR have already been replaced with
     // RecurSplice there; only RecurSplice itself still references FOR.
     auto *RecurSplice =
-        findUserOf<VPInstruction::FirstOrderRecurrenceSplice>(FOR);
+        findUserOf<VPInstruction::FirstOrderRecurrenceSplice>(&FOR);
     assert(RecurSplice && "expected FirstOrderRecurrenceSplice");
 
     // For VF vscale x 1, if vscale = 1, we are unable to extract the
