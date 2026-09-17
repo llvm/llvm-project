@@ -5565,6 +5565,12 @@ def HLSLInterlockedCompareExchange : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void (...)";
 }
 
+def HLSLInterlockedCompareExchangeFloatBitwise : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_compare_exchange_float_bitwise"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void (...)";
+}
+
 def HLSLInterlockedCompareStore : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_interlocked_compare_store"];
   let Attributes = [NoThrow, CustomTypeChecking];
