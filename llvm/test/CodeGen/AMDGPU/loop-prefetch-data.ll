@@ -418,8 +418,8 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GFX12-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX12-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX12-NEXT:    s_add_co_i32 s2, s2, -1
-; GFX12-NEXT:    s_add_co_i32 s0, s0, 16
 ; GFX12-NEXT:    s_add_co_i32 s1, s1, 16
+; GFX12-NEXT:    s_add_co_i32 s0, s0, 16
 ; GFX12-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset0:2 offset1:3
 ; GFX12-NEXT:    ds_load_2addr_b32 v[2:3], v2 offset1:1
 ; GFX12-NEXT:    s_cmp_lg_u32 s2, 0
@@ -443,8 +443,8 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GFX12-SPREFETCH-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX12-SPREFETCH-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX12-SPREFETCH-NEXT:    s_add_co_i32 s2, s2, -1
-; GFX12-SPREFETCH-NEXT:    s_add_co_i32 s0, s0, 16
 ; GFX12-SPREFETCH-NEXT:    s_add_co_i32 s1, s1, 16
+; GFX12-SPREFETCH-NEXT:    s_add_co_i32 s0, s0, 16
 ; GFX12-SPREFETCH-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset0:2 offset1:3
 ; GFX12-SPREFETCH-NEXT:    ds_load_2addr_b32 v[2:3], v2 offset1:1
 ; GFX12-SPREFETCH-NEXT:    s_cmp_lg_u32 s2, 0
@@ -469,8 +469,8 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GFX12ES2-SPREFETCH-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX12ES2-SPREFETCH-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX12ES2-SPREFETCH-NEXT:    s_add_co_i32 s2, s2, -1
-; GFX12ES2-SPREFETCH-NEXT:    s_add_co_i32 s0, s0, 16
 ; GFX12ES2-SPREFETCH-NEXT:    s_add_co_i32 s1, s1, 16
+; GFX12ES2-SPREFETCH-NEXT:    s_add_co_i32 s0, s0, 16
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu depctr_va_vdst(1)
 ; GFX12ES2-SPREFETCH-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset0:2 offset1:3
 ; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu depctr_vm_vsrc(0)
@@ -499,8 +499,8 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1250-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v4, s0
 ; GFX1250-NEXT:    s_add_co_i32 s2, s2, -1
-; GFX1250-NEXT:    s_add_co_i32 s0, s0, 16
 ; GFX1250-NEXT:    s_add_co_i32 s1, s1, 16
+; GFX1250-NEXT:    s_add_co_i32 s0, s0, 16
 ; GFX1250-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset0:2 offset1:3
 ; GFX1250-NEXT:    ds_load_2addr_b32 v[2:3], v2 offset1:1
 ; GFX1250-NEXT:    s_cmp_lg_u32 s2, 0
