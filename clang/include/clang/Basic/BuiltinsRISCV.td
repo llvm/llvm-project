@@ -496,6 +496,16 @@ def psshl_s_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned i
 def psshlr_s_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, unsigned short>, int)">;
 def psshlr_s_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, unsigned int>, int)">;
 
+// Packed Saturation (32-bit)
+def pusati_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, short>, _Constant unsigned int)">;
+def psati_i16x2  : RISCVBuiltin<"_Vector<2, short>(_Vector<2, short>, _Constant unsigned int)">;
+
+// Packed Saturation (64-bit)
+def pusati_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, short>, _Constant unsigned int)">;
+def pusati_u32x2 : RISCVBuiltin<"_Vector<2, unsigned int>(_Vector<2, int>, _Constant unsigned int)">;
+def psati_i16x4  : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, _Constant unsigned int)">;
+def psati_i32x2  : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, _Constant unsigned int)">;
+
 } // Features = "experimental-p"
 
 //===----------------------------------------------------------------------===//

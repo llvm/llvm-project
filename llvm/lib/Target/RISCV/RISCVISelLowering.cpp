@@ -13086,6 +13086,13 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(getRVPShiftOpcode(IntNo), DL, Op.getValueType(),
                        Op.getOperand(1), ShAmt);
   }
+  case Intrinsic::riscv_psati:
+  case Intrinsic::riscv_pusati: {
+    unsigned Opc =
+        IntNo == Intrinsic::riscv_psati ? RISCVISD::PSATI : RISCVISD::PUSATI;
+    SDValue Width = DAG.getAnyExtOrTrunc(Op.getOperand(2), DL, XLenVT);
+    return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1), Width);
+  }
   case Intrinsic::riscv_psext_b:
   case Intrinsic::riscv_psext_h: {
     EVT VT = Op.getValueType();
@@ -17625,6 +17632,23 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       ShAmt = DAG.getAnyExtOrTrunc(ShAmt, DL, Subtarget.getXLenVT());
       SDValue Res =
           DAG.getNode(getRVPShiftOpcode(IntNo), DL, WideVT, Op0, ShAmt);
+      Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_psati:
+    case Intrinsic::riscv_pusati: {
+      MVT VT = N->getSimpleValueType(0);
+      if (!Subtarget.is64Bit() || VT != MVT::v2i16)
+        return;
+
+      MVT WideVT = MVT::v4i16;
+      SDValue Rs1 =
+          widenPackedVectorWithZeros(DAG, DL, N->getOperand(1), WideVT);
+      SDValue Width =
+          DAG.getAnyExtOrTrunc(N->getOperand(2), DL, Subtarget.getXLenVT());
+      unsigned Opc =
+          IntNo == Intrinsic::riscv_psati ? RISCVISD::PSATI : RISCVISD::PUSATI;
+      SDValue Res = DAG.getNode(Opc, DL, WideVT, Rs1, Width);
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }

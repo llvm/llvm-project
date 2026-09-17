@@ -2044,6 +2044,13 @@ def riscv_psshar : RVSDNode<"PSSHAR", SDT_RISCVPackedShift>;
 def riscv_psshl : RVSDNode<"PSSHL", SDT_RISCVPackedShift>;
 def riscv_psshlr : RVSDNode<"PSSHLR", SDT_RISCVPackedShift>;
 
+// Packed saturation to an immediate width.
+def SDT_RISCVPackedSaturation
+    : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
+                           SDTCisVT<2, XLenVT>]>;
+def riscv_psati  : RVSDNode<"PSATI", SDT_RISCVPackedSaturation>;
+def riscv_pusati : RVSDNode<"PUSATI", SDT_RISCVPackedSaturation>;
+
 // RV32 packed narrowing shift.
 def SDT_RISCVPackedNarrowingShift
     : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
@@ -2337,6 +2344,10 @@ let Predicates = [HasStdExtP] in {
   def : PatGprShift<riscv_psshar, PSSHAR_HS, XLenVecI16VT>;
   def : PatGprShift<riscv_psshl, PSSHL_HS, XLenVecI16VT>;
   def : PatGprShift<riscv_psshlr, PSSHLR_HS, XLenVecI16VT>;
+
+  // 16-bit packed saturation patterns
+  def : PatGprImm<riscv_psati, PSATI_H, uimm4_plus1, XLenVecI16VT>;
+  def : PatGprImm<riscv_pusati, PUSATI_H, uimm4, XLenVecI16VT>;
 
   // 8-bit logical shift left/right
   def : PatGprShiftMask<riscv_pshl, PSLL_BS, shiftMask32, XLenVecI8VT>;
@@ -2815,6 +2826,10 @@ let append Predicates = [IsRV32] in {
   def : PatGprPairShift<riscv_psshl, PSSHL_DHS, v4i16>;
   def : PatGprPairShift<riscv_psshlr, PSSHLR_DHS, v4i16>;
 
+  // 16-bit packed saturation patterns
+  def : PatGprPairImm<riscv_psati, PSATI_DH, uimm4_plus1, v4i16>;
+  def : PatGprPairImm<riscv_pusati, PUSATI_DH, uimm4, v4i16>;
+
   // 32-bit saturating shift patterns
   def : PatGprPairImm<riscv_pssha, PSSLAI_DW, uimm5, v2i32>;
   def : PatGprPairImm<riscv_psshar, PSSLAI_DW, uimm5, v2i32>;
@@ -2824,6 +2839,10 @@ let append Predicates = [IsRV32] in {
   def : PatGprPairShift<riscv_psshar, PSSHAR_DWS, v2i32>;
   def : PatGprPairShift<riscv_psshl, PSSHL_DWS, v2i32>;
   def : PatGprPairShift<riscv_psshlr, PSSHLR_DWS, v2i32>;
+
+  // 32-bit packed saturation patterns
+  def : PatGprPairImm<riscv_psati, PSATI_DW, uimm5_plus1, v2i32>;
+  def : PatGprPairImm<riscv_pusati, PUSATI_DW, uimm5, v2i32>;
 
   // 8-bit logical shift left/right
   def : PatGprPairShiftMask<riscv_pshl, PSLL_DBS, shiftMask32, v8i8>;
@@ -3273,6 +3292,10 @@ let append Predicates = [IsRV64] in {
   def : PatGprShift<riscv_psshar, PSSHAR_WS, v2i32>;
   def : PatGprShift<riscv_psshl, PSSHL_WS, v2i32>;
   def : PatGprShift<riscv_psshlr, PSSHLR_WS, v2i32>;
+
+  // 32-bit packed saturation patterns
+  def : PatGprImm<riscv_psati, PSATI_W, uimm5_plus1, v2i32>;
+  def : PatGprImm<riscv_pusati, PUSATI_W, uimm5, v2i32>;
 
   // 32-bit logical shift left/right
   def : PatGprShiftMask<riscv_pshl, PSLL_WS, shiftMask32, v2i32>;
