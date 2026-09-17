@@ -183,6 +183,7 @@ std::optional<parser::Message> CheckStatementFunction(
 // matching, checking, and folding inspect constant values structurally, so
 // such arguments must be folded back to values once a call is known to
 // resolve to an intrinsic procedure.
+bool IsNamedConstantDesignator(const Expr<SomeType> &);
 bool AnyNamedConstantActualArguments(const ActualArguments &);
 void FoldNamedConstantActualArguments(FoldingContext &, ActualArguments &);
 

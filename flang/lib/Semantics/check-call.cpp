@@ -429,8 +429,17 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     }
   } else if (dummyRank == 0 && allowActualArgumentConversions) {
     // Extension: pass Hollerith literal to scalar as if it had been BOZ
-    if (auto converted{evaluate::HollerithToBOZ(
-            foldingContext, actual, dummy.type.type())}) {
+    auto converted{
+        evaluate::HollerithToBOZ(foldingContext, actual, dummy.type.type())};
+    if (!converted && evaluate::IsNamedConstantDesignator(actual)) {
+      // The actual may be a designator of a named constant retained for
+      // storage association; the extension inspects constant values, so
+      // retry with its folded value.
+      auto copy{actual};
+      converted = evaluate::HollerithToBOZ(foldingContext,
+          evaluate::Fold(foldingContext, std::move(copy)), dummy.type.type());
+    }
+    if (converted) {
       foldingContext.Warn(common::LanguageFeature::HollerithOrCharacterAsBOZ,
           "passing Hollerith or character literal as if it were BOZ"_port_en_US);
       actual = *converted;

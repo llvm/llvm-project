@@ -1643,7 +1643,7 @@ private:
 // perspective, meaning that for copy-in the caller need to do the copy
 // before calling the callee. Similarly, for copy-out the caller is expected
 // to do the copy after the callee returns.
-static bool IsNamedConstantDesignator(const Expr<SomeType> &expr) {
+bool IsNamedConstantDesignator(const Expr<SomeType> &expr) {
   if (auto dataRef{ExtractDataRef(
           expr, /*intoSubstring=*/true, /*intoComplexPart=*/true)}) {
     return semantics::IsNamedConstant(dataRef->GetFirstSymbol().GetUltimate());
