@@ -260,6 +260,79 @@ static memref::SubViewOp getUnderlyingDynamicSubView(Value slotPtr) {
   return {};
 }
 
+/// Builds the mask of `subView`'s valid region, expressed in `vecType`'s shape:
+/// a `vector.create_mask` of the subview's sizes in the parent's shape,
+/// reshaped with `vector.shape_cast` when the slot is a reassociated view of
+/// the parent (both describe the same elements in row-major order). One cast
+/// suffices however many reshapes the slot is behind, since each preserves that
+/// order and so they compose.
+static Value buildDynamicViewMask(OpBuilder &builder, Location loc,
+                                  memref::SubViewOp subView,
+                                  VectorType vecType) {
+  VectorType parentVecType = getWholeParentVectorType(subView);
+  SmallVector<Value> bounds =
+      getValueOrCreateConstantIndexOp(builder, loc, subView.getMixedSizes());
+  Value mask = vector::CreateMaskOp::create(
+      builder, loc,
+      VectorType::get(parentVecType.getShape(), builder.getI1Type()), bounds);
+  if (parentVecType.getShape() != vecType.getShape())
+    mask = vector::ShapeCastOp::create(
+        builder, loc, VectorType::get(vecType.getShape(), builder.getI1Type()),
+        mask);
+  return mask;
+}
+
+/// Produces the value that a `memref.copy` stores into a slot: reads `mem` at
+/// the origin into `vecType` with an identity map, marking a dimension
+/// in-bounds only when the memref extent is statically at least the vector
+/// extent.
+///
+/// The padding is a don't-care: `memref.copy` requires both sides to have the
+/// same shape, so the source covers the whole vector at runtime and a dynamic
+/// extent only forces a conservative out-of-bounds marking. For a
+/// dynamic-subview slot, lanes past its extent are in any case discarded by the
+/// aliaser's masked select.
+static Value readMemRefAsVector(OpBuilder &builder, Location loc, Value mem,
+                                VectorType vecType) {
+  assert(!vecType.isScalable() && "expected a fixed-size vector");
+  auto memType = cast<MemRefType>(mem.getType());
+  int64_t rank = vecType.getRank();
+  Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
+  SmallVector<Value> indices(rank, zero);
+  Value padding = arith::ConstantOp::create(
+      builder, loc, builder.getZeroAttr(vecType.getElementType()));
+  SmallVector<bool> inBounds(rank);
+  for (int64_t d = 0; d < rank; ++d)
+    inBounds[d] = !memType.isDynamicDim(d) &&
+                  memType.getDimSize(d) >= vecType.getDimSize(d);
+  return vector::TransferReadOp::create(
+      builder, loc, vecType, mem, indices,
+      AffineMapAttr::get(builder.getMultiDimIdentityMap(rank)), padding,
+      /*mask=*/Value(), builder.getBoolArrayAttr(inBounds));
+}
+
+/// Stores a slot's value to the target of a `memref.copy`: writes `vec` into
+/// `mem` at the origin, with the identity map and in-bounds rule of
+/// `readMemRefAsVector`. `mask`, when set, restricts the write to the lanes it
+/// selects.
+static void writeVectorToMemRef(OpBuilder &builder, Location loc, Value vec,
+                                Value mem, Value mask = {}) {
+  auto memType = cast<MemRefType>(mem.getType());
+  auto vecType = cast<VectorType>(vec.getType());
+  assert(!vecType.isScalable() && "expected a fixed-size vector");
+  int64_t rank = vecType.getRank();
+  Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
+  SmallVector<Value> indices(rank, zero);
+  SmallVector<bool> inBounds(rank);
+  for (int64_t d = 0; d < rank; ++d)
+    inBounds[d] = !memType.isDynamicDim(d) &&
+                  memType.getDimSize(d) >= vecType.getDimSize(d);
+  vector::TransferWriteOp::create(
+      builder, loc, vec, mem, indices,
+      AffineMapAttr::get(builder.getMultiDimIdentityMap(rank)), mask,
+      builder.getBoolArrayAttr(inBounds));
+}
+
 /// Returns whether the view lays its elements out in the same (row-major) order
 /// as `parentShape`, the parent slot's vector shape, which is what makes a
 /// `vector.shape_cast` model it. These are the conditions under which
@@ -397,85 +470,13 @@ getReassociatedShape(memref::ExpandShapeOp op, ArrayRef<int64_t> parentShape) {
   return shape;
 }
 
-/// Builds the mask of `subView`'s valid region, expressed in `vecType`'s shape:
-/// a `vector.create_mask` of the subview's sizes in the parent's shape,
-/// reshaped with `vector.shape_cast` when the slot is a reassociated view of
-/// the parent (both describe the same elements in row-major order). One cast
-/// suffices however many reshapes the slot is behind, since each preserves that
-/// order and so they compose.
-static Value buildDynamicViewMask(OpBuilder &builder, Location loc,
-                                  memref::SubViewOp subView,
-                                  VectorType vecType) {
-  VectorType parentVecType = getWholeParentVectorType(subView);
-  SmallVector<Value> bounds =
-      getValueOrCreateConstantIndexOp(builder, loc, subView.getMixedSizes());
-  Value mask = vector::CreateMaskOp::create(
-      builder, loc,
-      VectorType::get(parentVecType.getShape(), builder.getI1Type()), bounds);
-  if (parentVecType.getShape() != vecType.getShape())
-    mask = vector::ShapeCastOp::create(
-        builder, loc, VectorType::get(vecType.getShape(), builder.getI1Type()),
-        mask);
-  return mask;
-}
-
-/// Produces the value that a `memref.copy` stores into a slot: reads `mem` at
-/// the origin into `vecType` with an identity map, marking a dimension
-/// in-bounds only when the memref extent is statically at least the vector
-/// extent.
-///
-/// The padding is a don't-care: `memref.copy` requires both sides to have the
-/// same shape, so the source covers the whole vector at runtime and a dynamic
-/// extent only forces a conservative out-of-bounds marking. For a
-/// dynamic-subview slot, lanes past its extent are in any case discarded by the
-/// aliaser's masked select.
-static Value readMemRefAsVector(OpBuilder &builder, Location loc, Value mem,
-                                VectorType vecType) {
-  assert(!vecType.isScalable() && "expected a fixed-size vector");
-  auto memType = cast<MemRefType>(mem.getType());
-  int64_t rank = vecType.getRank();
-  Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
-  SmallVector<Value> indices(rank, zero);
-  Value padding = arith::ConstantOp::create(
-      builder, loc, builder.getZeroAttr(vecType.getElementType()));
-  SmallVector<bool> inBounds(rank);
-  for (int64_t d = 0; d < rank; ++d)
-    inBounds[d] = !memType.isDynamicDim(d) &&
-                  memType.getDimSize(d) >= vecType.getDimSize(d);
-  return vector::TransferReadOp::create(
-      builder, loc, vecType, mem, indices,
-      AffineMapAttr::get(builder.getMultiDimIdentityMap(rank)), padding,
-      /*mask=*/Value(), builder.getBoolArrayAttr(inBounds));
-}
-
-/// Stores a slot's value to the target of a `memref.copy`: writes `vec` into
-/// `mem` at the origin, with the identity map and in-bounds rule of
-/// `readMemRefAsVector`. `mask`, when set, restricts the write to the lanes it
-/// selects.
-static void writeVectorToMemRef(OpBuilder &builder, Location loc, Value vec,
-                                Value mem, Value mask = {}) {
-  auto memType = cast<MemRefType>(mem.getType());
-  auto vecType = cast<VectorType>(vec.getType());
-  assert(!vecType.isScalable() && "expected a fixed-size vector");
-  int64_t rank = vecType.getRank();
-  Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
-  SmallVector<Value> indices(rank, zero);
-  SmallVector<bool> inBounds(rank);
-  for (int64_t d = 0; d < rank; ++d)
-    inBounds[d] = !memType.isDynamicDim(d) &&
-                  memType.getDimSize(d) >= vecType.getDimSize(d);
-  vector::TransferWriteOp::create(
-      builder, loc, vec, mem, indices,
-      AffineMapAttr::get(builder.getMultiDimIdentityMap(rank)), mask,
-      builder.getBoolArrayAttr(inBounds));
-}
-
 //===----------------------------------------------------------------------===//
 //  Interface models
 //===----------------------------------------------------------------------===//
 
 namespace {
 
+/// Mem2Reg model for a `vector.transfer_read` of the slot.
 struct TransferReadOpMemOpModel
     : public PromotableMemOpInterface::ExternalModel<TransferReadOpMemOpModel,
                                                      vector::TransferReadOp> {
@@ -530,6 +531,8 @@ struct TransferReadOpMemOpModel
   }
 };
 
+/// Mem2Reg model for a `vector.transfer_write` to the slot, which qualifies
+/// under the same `isPromotableTransfer` criteria.
 struct TransferWriteOpMemOpModel
     : public PromotableMemOpInterface::ExternalModel<TransferWriteOpMemOpModel,
                                                      vector::TransferWriteOp> {
@@ -653,13 +656,9 @@ struct CopyOpMemOpModel
   }
 };
 
-} // namespace
-
 //===----------------------------------------------------------------------===//
 //  memref view aliasers
 //===----------------------------------------------------------------------===//
-
-namespace {
 
 /// Companion `PromotableOpInterface` model for the view ops aliased below
 /// (`memref.subview`, `memref.expand_shape`, `memref.collapse_shape`): once the
@@ -722,12 +721,6 @@ struct SubViewOpAliasModel
     if (!parentVecType)
       return;
 
-    // A dynamic slice aliases the whole parent value.
-    if (isAliasableDynamicShapeSubView(subView)) {
-      newSlots.push_back(MemorySlot{subView.getResult(), parentVecType});
-      return;
-    }
-
     // A static slice aliases the sub-vector matching the subview's shape.
     if (isAliasableStaticShapeSubView(subView)) {
       auto resType = cast<MemRefType>(subView.getResult().getType());
@@ -736,6 +729,11 @@ struct SubViewOpAliasModel
       VectorType aliasVecType =
           VectorType::get(resType.getShape(), resType.getElementType());
       newSlots.push_back(MemorySlot{subView.getResult(), aliasVecType});
+    }
+
+    // A dynamic slice aliases the whole parent value.
+    if (isAliasableDynamicShapeSubView(subView)) {
+      newSlots.push_back(MemorySlot{subView.getResult(), parentVecType});
     }
   }
 
