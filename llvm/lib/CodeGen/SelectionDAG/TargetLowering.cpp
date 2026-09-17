@@ -12634,6 +12634,141 @@ void TargetLowering::forceExpandMultiply(SelectionDAG &DAG, const SDLoc &dl,
   }
 }
 
+SDValue TargetLowering::expandWideSquare(SDNode *N, SelectionDAG &DAG) const {
+  assert(N->getOpcode() == ISD::MUL && N->getOperand(0) == N->getOperand(1) &&
+         "Expected a squaring MUL");
+  EVT VT = N->getValueType(0);
+  if (!VT.isScalarInteger())
+    return SDValue();
+  LLVMContext &Ctx = *DAG.getContext();
+  SDLoc dl(N);
+
+  // The limbs have the legal type that VT is ultimately expanded to.
+  EVT LimbVT = getTypeToExpandTo(Ctx, VT);
+  unsigned U = LimbVT.getSizeInBits();
+  unsigned Bits = VT.getSizeInBits();
+  if (Bits < 4 * U)
+    return SDValue();
+  unsigned R = Bits / U; // number of result limbs
+
+  bool HasUMUL_LOHI = isOperationLegalOrCustom(ISD::UMUL_LOHI, LimbVT);
+  bool HasMULHU = isOperationLegalOrCustom(ISD::MULHU, LimbVT);
+  if (!HasUMUL_LOHI && !HasMULHU)
+    return SDValue();
+
+  // X is usually zero-extended (the way to request the full product), so
+  // square it at its real width: only the limbs that may be nonzero take part.
+  SDValue X = N->getOperand(0);
+  unsigned NumLimbs =
+      divideCeil(Bits - DAG.computeKnownBits(X).countMinLeadingZeros(), U);
+  if (NumLimbs < 2)
+    return SDValue();
+  NumLimbs = std::min(NumLimbs, R);
+
+  // Split X into limbs in least-significant-first order.
+  SmallVector<SDValue, 16> Limb(NumLimbs);
+  for (unsigned I = 0; I != NumLimbs; ++I) {
+    SDValue V = DAG.getNode(ISD::SRL, dl, VT, X,
+                            DAG.getShiftAmountConstant(I * U, VT, dl));
+    Limb[I] = DAG.getNode(ISD::TRUNCATE, dl, LimbVT, V);
+  }
+
+  EVT Prod2VT = EVT::getIntegerVT(Ctx, 2 * U);
+  auto LimbsVT = [&](unsigned K) { return EVT::getIntegerVT(Ctx, K * U); };
+
+  // Return A * B as BUILD_PAIR(low, high), or just low.
+  auto MakeProd = [&](SDValue A, SDValue B, bool LowOnly) -> SDValue {
+    if (LowOnly)
+      return DAG.getNode(ISD::MUL, dl, LimbVT, A, B);
+    SDValue PLo, PHi;
+    if (HasUMUL_LOHI) {
+      PLo =
+          DAG.getNode(ISD::UMUL_LOHI, dl, DAG.getVTList(LimbVT, LimbVT), A, B);
+      PHi = PLo.getValue(1);
+    } else {
+      PLo = DAG.getNode(ISD::MUL, dl, LimbVT, A, B);
+      PHi = DAG.getNode(ISD::MULHU, dl, LimbVT, A, B);
+    }
+    return DAG.getNode(ISD::BUILD_PAIR, dl, Prod2VT, PLo, PHi);
+  };
+
+  // Zero-extend V and place it at limb offset Off.
+  auto Place = [&](SDValue V, unsigned Off, EVT WideVT) -> SDValue {
+    V = DAG.getNode(ISD::ZERO_EXTEND, dl, WideVT, V);
+    return DAG.getNode(ISD::SHL, dl, WideVT, V,
+                       DAG.getShiftAmountConstant(Off * U, WideVT, dl));
+  };
+
+  // Concatenate parts that do not overlap.
+  auto Pack = [&](ArrayRef<std::pair<SDValue, unsigned>> Parts, EVT WideVT) {
+    SDNodeFlags Flags;
+    Flags.setDisjoint(true);
+    SDValue Acc;
+    for (const auto &[V, Off] : Parts) {
+      SDValue P = Place(V, Off, WideVT);
+      Acc = Acc ? DAG.getNode(ISD::OR, dl, WideVT, Acc, P, Flags) : P;
+    }
+    return Acc;
+  };
+
+  // Write the 2U-bit product X[i] * X[j] as i.j and the concatenation of
+  // non-overlapping values (least significant on the right) as ||.
+  // For NumLimbs = 4:
+  //
+  //   X * X = S + ((2 * Acc) << U)
+  //   S := 3.3 || 2.2 || 1.1 || 0.0
+  //   Acc := 3.0                                  // D = NumLimbs - 1 = 3
+  //   Acc := (Acc << U) + (3.1 || 2.0)            // D = 2
+  //   Acc := (Acc << U) + (3.2 || 2.1 || 1.0)     // D = 1
+  //
+  // Each parenthesized row is the diagonal j - i = D below: its products
+  // sit at limbs 2i, so they tile without overlap. Acc is accumulated row by
+  // row as in the loop, shifting the sum so far by one limb before adding the
+  // next row. The sum never outgrows the row, because the shifted sum is
+  // one limb narrower than the row and the high limb of a product is at most
+  // 2^U - 2. Row widths are clamped to the R result limbs, which computes the
+  // square modulo 2^Bits.
+  SDValue Acc;
+  for (unsigned D = NumLimbs - 1; D > 0; --D) {
+    unsigned RowLimbs = std::min(2 * (NumLimbs - D), R - D);
+    SmallVector<std::pair<SDValue, unsigned>, 8> Parts;
+    for (unsigned I = 0; I + D < NumLimbs; ++I) {
+      unsigned Pos = 2 * I;
+      if (Pos >= RowLimbs)
+        break;
+      Parts.push_back(
+          {MakeProd(Limb[I], Limb[I + D], /*LowOnly=*/Pos + 1 >= RowLimbs),
+           Pos});
+    }
+    EVT RowVT = LimbsVT(RowLimbs);
+    SDValue Row = Pack(Parts, RowVT);
+    if (!Acc)
+      Acc = Row;
+    else
+      Acc = DAG.getNode(ISD::ADD, dl, RowVT, Place(Acc, 1, RowVT), Row);
+  }
+
+  // Compute (Acc * 2) << U using a shift.
+  unsigned W = std::min(2 * NumLimbs, R); // result limbs that can be nonzero
+  EVT DblVT = LimbsVT(W - 1);
+  SDValue Dbl = DAG.getNode(ISD::SHL, dl, DblVT, Place(Acc, 0, DblVT),
+                            DAG.getShiftAmountConstant(1, DblVT, dl));
+  EVT ZVT = LimbsVT(W);
+  SDValue Cross = Place(Dbl, 1, ZVT);
+
+  // Compute S in the formula above. The squares are created last so that
+  // they are scheduled close to their use.
+  SmallVector<std::pair<SDValue, unsigned>, 8> DiagParts;
+  for (unsigned I = 0; 2 * I < W; ++I)
+    DiagParts.push_back(
+        {MakeProd(Limb[I], Limb[I], /*LowOnly=*/2 * I + 1 >= W), 2 * I});
+  SDValue Z = DAG.getNode(ISD::ADD, dl, ZVT, Cross, Pack(DiagParts, ZVT));
+
+  if (ZVT != VT)
+    Z = DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Z);
+  return Z;
+}
+
 void TargetLowering::forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl,
                                         bool Signed, const SDValue LHS,
                                         const SDValue RHS, SDValue &Lo,

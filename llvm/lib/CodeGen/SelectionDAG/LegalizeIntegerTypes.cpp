@@ -4556,6 +4556,13 @@ void DAGTypeLegalizer::ExpandIntRes_MUL(SDNode *N,
   RTLIB::Libcall LC = RTLIB::getMUL(VT);
   RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LCImpl == RTLIB::Unsupported) {
+    // A square needs only half of the limb products.
+    if (N->getOperand(0) == N->getOperand(1)) {
+      if (SDValue Sq = TLI.expandWideSquare(N, DAG)) {
+        SplitInteger(Sq, Lo, Hi);
+        return;
+      }
+    }
     // Perform a wide multiplication where the wide type is the original VT and
     // the 4 parts are the split arguments.
     TLI.forceExpandMultiply(DAG, dl, /*Signed=*/false, Lo, Hi, LL, RL, LH, RH);

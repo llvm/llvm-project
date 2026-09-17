@@ -6026,6 +6026,12 @@ public:
                            SDValue HiLHS = SDValue(),
                            SDValue HiRHS = SDValue()) const;
 
+  /// Expand MUL X, X of an illegal scalar integer type. Only the low bits of
+  /// the result type are computed.
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandWideSquare(SDNode *N, SelectionDAG &DAG) const;
+
   /// Calculate full product of LHS and RHS either via a libcall or through
   /// brute force expansion of the multiplication. The expansion works by
   /// splitting the 2 inputs into 4 pieces that we can multiply and add together
