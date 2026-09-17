@@ -52,7 +52,7 @@ EPCGenericRTDyldMemoryManager::~EPCGenericRTDyldMemoryManager() {
 
   Error Err = Error::success();
   if (auto Err2 = EPC.callSPSWrapper<rt::sps_ci::MemMgrRelease::SPSSig>(
-          SAs.Reserve, Err, SAs.Instance, FinalizedAllocs)) {
+          SAs.Release, Err, SAs.Instance, FinalizedAllocs)) {
     // FIXME: Report errors through EPC once that functionality is available.
     logAllUnhandledErrors(std::move(Err2), errs(), "");
     return;
