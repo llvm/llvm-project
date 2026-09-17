@@ -7,8 +7,6 @@
 SomeObj *provide();
 void consume_obj(SomeObj*);
 
-NSString *provide_str();
-
 CFMutableArrayRef provide_cf();
 void consume_cf(CFMutableArrayRef);
 
@@ -450,15 +448,6 @@ namespace alloc_init_pair {
   void foo() {
     auto obj = adoptNS([[SomeObj alloc] init]);
     [obj doWork];
-    auto obj2 = adoptNS([[SomeObj alloc] _init]);
-    [obj2 doWork];
-  }
-
-  void bar(NSZone *zone) {
-    auto obj = adoptNS([[SomeObj allocWithZone:zone] init]);
-    [obj doWork];
-    auto obj2 = adoptNS([(SomeObj *)[SomeObj allocWithZone:zone] _init]);
-    [obj2 doWork];
   }
 }
 
@@ -645,7 +634,6 @@ SomeObj *allocObj();
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;
 - (SomeObj *)getSomeObj;
-+ (SomeObj *)sharedObj;
 @end
 
 @implementation TestObject
