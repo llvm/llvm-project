@@ -574,6 +574,11 @@ public:
   LLVM_ABI bool matchRedundantAnd(MachineInstr &MI,
                                   Register &Replacement) const;
 
+  /// \return true if all bits of \p MI's result are known, storing that
+  /// constant in \p MatchInfo so \p MI can be replaced by that constant.
+  LLVM_ABI bool matchKnownBitsToConstant(MachineInstr &MI,
+                                         APInt &MatchInfo) const;
+
   /// \return true if \p MI is a G_OR instruction whose operands are x and y
   /// where x | y == x or x | y == y. (E.g., one of operands is all-zeros
   /// value.)
