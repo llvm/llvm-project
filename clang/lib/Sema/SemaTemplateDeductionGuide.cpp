@@ -956,6 +956,19 @@ llvm::DenseSet<const NamedDecl *> getSourceDeductionGuides(DeclarationName Name,
   return Result;
 }
 
+bool IsNonDeducedArgument(const TemplateArgument &TA) {
+  // The following cases indicate the template argument is non-deducible:
+  //   1. The result is null. E.g. When it comes from a default template
+  //   argument that doesn't appear in the alias declaration.
+  //   2. The template parameter is a pack and that cannot be deduced from
+  //   the arguments within the alias declaration.
+  // Non-deducible template parameters will persist in the transformed
+  // deduction guide.
+  return TA.isNull() ||
+         (TA.getKind() == TemplateArgument::Pack &&
+          llvm::any_of(TA.pack_elements(), IsNonDeducedArgument));
+}
+
 // Build the associated constraints for the alias deduction guides.
 // C++ [over.match.class.deduct]p3.3:
 //   The associated constraints ([temp.constr.decl]) are the conjunction of the
@@ -968,7 +981,8 @@ Expr *
 buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
                            TypeAliasTemplateDecl *AliasTemplate,
                            ArrayRef<DeducedTemplateArgument> DeduceResults,
-                           unsigned FirstUndeducedParamIdx, Expr *IsDeducible) {
+                           ArrayRef<unsigned> DeducedAliasTemplateParams,
+                           Expr *IsDeducible) {
   Expr *RC = F->getTemplateParameters()->getRequiresClause();
   if (!RC)
     return IsDeducible;
@@ -1000,9 +1014,12 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
 
   // We rebuild all template parameters with the uninstantiated depth, and
   // build template arguments refer to them.
-  SmallVector<TemplateArgument> AdjustedAliasTemplateArgs;
+  SmallVector<TemplateArgument> AdjustedAliasTemplateArgs(
+      AliasTemplate->getTemplateParameters()->size());
 
-  for (auto *TP : *AliasTemplate->getTemplateParameters()) {
+  unsigned N = 0;
+  for (unsigned Index : DeducedAliasTemplateParams) {
+    auto *TP = AliasTemplate->getTemplateParameters()->getParam(Index);
     // Rebuild any internal references to earlier parameters and reindex
     // as we go.
     MultiLevelTemplateArgumentList Args;
@@ -1010,35 +1027,33 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
     Args.addOuterTemplateArguments(AdjustedAliasTemplateArgs);
     NamedDecl *NewParam = transformTemplateParameter(
         SemaRef, AliasTemplate->getDeclContext(), TP, Args,
-        /*NewIndex=*/AdjustedAliasTemplateArgs.size(),
-        getDepthAndIndex(TP).first + AdjustDepth);
+        /*NewIndex=*/N++, getDepthAndIndex(TP).first + AdjustDepth);
 
     TemplateArgument NewTemplateArgument =
         Context.getInjectedTemplateArg(NewParam);
-    AdjustedAliasTemplateArgs.push_back(NewTemplateArgument);
+    AdjustedAliasTemplateArgs[Index] = NewTemplateArgument;
   }
+
   // Template arguments used to transform the template arguments in
   // DeducedResults.
   SmallVector<TemplateArgument> TemplateArgsForBuildingRC(
       F->getTemplateParameters()->size());
   // Transform the transformed template args
-  MultiLevelTemplateArgumentList Args;
-  Args.setKind(TemplateSubstitutionKind::Rewrite);
-  Args.addOuterTemplateArguments(AdjustedAliasTemplateArgs);
+  MultiLevelTemplateArgumentList ArgsForDeducedParams;
+  ArgsForDeducedParams.setKind(TemplateSubstitutionKind::Rewrite);
+  ArgsForDeducedParams.addOuterTemplateArguments(AdjustedAliasTemplateArgs);
 
   for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
     const auto &D = DeduceResults[Index];
-    if (D.isNull()) { // non-deduced template parameters of f
+    if (IsNonDeducedArgument(D)) { // non-deduced template parameters of f
       NamedDecl *TP = F->getTemplateParameters()->getParam(Index);
       MultiLevelTemplateArgumentList Args;
       Args.setKind(TemplateSubstitutionKind::Rewrite);
       Args.addOuterTemplateArguments(TemplateArgsForBuildingRC);
       // Rebuild the template parameter with updated depth and index.
-      NamedDecl *NewParam =
-          transformTemplateParameter(SemaRef, F->getDeclContext(), TP, Args,
-                                     /*NewIndex=*/FirstUndeducedParamIdx,
-                                     getDepthAndIndex(TP).first + AdjustDepth);
-      FirstUndeducedParamIdx += 1;
+      NamedDecl *NewParam = transformTemplateParameter(
+          SemaRef, F->getDeclContext(), TP, Args,
+          /*NewIndex=*/N++, getDepthAndIndex(TP).first + AdjustDepth);
       assert(TemplateArgsForBuildingRC[Index].isNull());
       TemplateArgsForBuildingRC[Index] =
           Context.getInjectedTemplateArg(NewParam);
@@ -1047,7 +1062,7 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
     TemplateArgumentLoc Input =
         SemaRef.getTrivialTemplateArgumentLoc(D, QualType(), SourceLocation{});
     TemplateArgumentLoc Output;
-    if (!SemaRef.SubstTemplateArgument(Input, Args, Output)) {
+    if (!SemaRef.SubstTemplateArgument(Input, ArgsForDeducedParams, Output)) {
       assert(TemplateArgsForBuildingRC[Index].isNull() &&
              "InstantiatedArgs must be null before setting");
       TemplateArgsForBuildingRC[Index] = Output.getArgument();
@@ -1119,7 +1134,7 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
 Expr *buildIsDeducibleConstraint(Sema &SemaRef,
                                  TypeAliasTemplateDecl *AliasTemplate,
                                  QualType ReturnType,
-                                 SmallVector<NamedDecl *> TemplateParams) {
+                                 ArrayRef<NamedDecl *> TemplateParams) {
   ASTContext &Context = SemaRef.Context;
   // Constraint AST nodes must use uninstantiated depth.
   if (auto *PrimaryTemplate =
@@ -1195,19 +1210,6 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
     }
   }
   return {Template, AliasRhsTemplateArgs};
-}
-
-bool IsNonDeducedArgument(const TemplateArgument &TA) {
-  // The following cases indicate the template argument is non-deducible:
-  //   1. The result is null. E.g. When it comes from a default template
-  //   argument that doesn't appear in the alias declaration.
-  //   2. The template parameter is a pack and that cannot be deduced from
-  //   the arguments within the alias declaration.
-  // Non-deducible template parameters will persist in the transformed
-  // deduction guide.
-  return TA.isNull() ||
-         (TA.getKind() == TemplateArgument::Pack &&
-          llvm::any_of(TA.pack_elements(), IsNonDeducedArgument));
 }
 
 // Build deduction guides for a type alias template from the given underlying
@@ -1356,7 +1358,6 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
         Context.getInjectedTemplateArg(NewParam);
     TransformedDeducedAliasArgs[AliasTemplateParamIdx] = NewTemplateArgument;
   }
-  unsigned FirstUndeducedParamIdx = FPrimeTemplateParams.size();
 
   // To form a deduction guide f' from f, we leverage clang's instantiation
   // mechanism, we construct a template argument list where the template
@@ -1447,7 +1448,7 @@ CXXDeductionGuideDecl *BuildDeductionGuideForTypeAlias(
         SemaRef, AliasTemplate, FPrime->getReturnType(), FPrimeTemplateParams);
     Expr *RequiresClause =
         buildAssociatedConstraints(SemaRef, F, AliasTemplate, DeduceResults,
-                                   FirstUndeducedParamIdx, IsDeducible);
+                                   DeducedAliasTemplateParams, IsDeducible);
 
     TemplateParameterList *FPrimeTemplateParamList = nullptr;
     if (!FPrimeTemplateParams.empty())
@@ -1513,11 +1514,11 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
         NewParam->setScopeInfo(0, I);
         FPTL.setParam(I, NewParam);
       }
-      auto *Transformed = cast<CXXDeductionGuideDecl>(buildDeductionGuide(
+      auto *Transformed = buildDeductionGuide(
           SemaRef, AliasTemplate, /*TemplateParams=*/nullptr,
           /*Constructor=*/nullptr, DG->getExplicitSpecifier(), FunctionType,
           AliasTemplate->getBeginLoc(), AliasTemplate->getLocation(),
-          AliasTemplate->getEndLoc(), DG->isImplicit()));
+          AliasTemplate->getEndLoc(), DG->isImplicit());
       Transformed->setSourceDeductionGuide(DG);
       Transformed->setSourceDeductionGuideKind(
           CXXDeductionGuideDecl::SourceDeductionGuideKind::Alias);

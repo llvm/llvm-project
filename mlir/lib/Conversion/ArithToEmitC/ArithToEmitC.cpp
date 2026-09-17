@@ -708,8 +708,9 @@ public:
                                   /*isSigned=*/false);
     }
 
-    Value result = emitc::CastOp::create(
-        rewriter, castOp.getLoc(), actualResultType, adaptor.getOperands());
+    Value result =
+        emitc::CastOp::create(rewriter, castOp.getLoc(), actualResultType,
+                              adaptor.getOperands().front(), /*pure=*/false);
 
     if (isa<arith::FPToUIOp>(castOp)) {
       result =

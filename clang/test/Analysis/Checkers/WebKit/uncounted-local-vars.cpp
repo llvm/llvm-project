@@ -723,3 +723,79 @@ namespace binding_raw_ptr {
   }
 
 }
+
+namespace lambda_capture {
+
+  void foo(RefCountable* countable) {
+    [obj = countable->next()]() {
+      return obj->method();
+    }();
+  }
+
+  template <typename T>
+  class Vector {
+  public:
+    const T& at(unsigned i) const { return m_buffer[i]; }
+    template <typename MatchFunction> unsigned findIf(const MatchFunction& match) const
+    {
+      for (unsigned i = 0; i < m_size; ++i) {
+        if (match(at(i)))
+          return i;
+      }
+      return static_cast<unsigned>(-1);
+    }
+  private:
+    T* m_buffer { nullptr };
+    unsigned m_size { 0 };
+  };
+
+  void capture_for_find_if(const Vector<Ref<RefCountable>>& items, RefCountable* arg) {
+    auto callback = [&](RefCountable* countable) {
+      items.findIf([obj = countable](auto& item) {
+        return item.ptr() == obj;
+      });
+    };
+    callback(arg);
+  }
+
+} // namespace lambda_capture
+
+namespace using_reexported_ref_deref {
+  class ProtectedRefBase {
+  protected:
+    void ref() const;
+    void deref() const;
+  };
+
+  class PublicUsing : private ProtectedRefBase {
+  public:
+    using ProtectedRefBase::ref;
+    using ProtectedRefBase::deref;
+    void method();
+  };
+
+  PublicUsing* provide_public_using();
+
+  void public_using() {
+    PublicUsing* a = provide_public_using();
+    // expected-warning@-1{{Local variable 'a' is a raw pointer to RefPtr-capable type 'using_reexported_ref_deref::PublicUsing' [alpha.webkit.UncountedLocalVarsChecker]}}
+    someFunction();
+    a->method();
+  }
+
+  class PrivateUsing : private ProtectedRefBase {
+    using ProtectedRefBase::ref;
+    using ProtectedRefBase::deref;
+  public:
+    void method();
+  };
+
+  PrivateUsing* provide_private_using();
+
+  void private_using() {
+    PrivateUsing* a = provide_private_using(); // no-warning
+    someFunction();
+    a->method();
+  }
+
+}
