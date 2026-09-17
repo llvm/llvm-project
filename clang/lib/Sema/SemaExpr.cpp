@@ -7620,9 +7620,9 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
                             NTCUK_Destruct);
 
     // Diagnose jumps that enter or exit the lifetime of the compound literal.
+    Cleanup.setExprNeedsCleanups(true);
+    ExprCleanupObjects.push_back(E);
     if (literalType.isDestructedType()) {
-      Cleanup.setExprNeedsCleanups(true);
-      ExprCleanupObjects.push_back(E);
       getCurFunction()->setHasBranchProtectedScope();
     }
   }
@@ -13866,7 +13866,7 @@ QualType Sema::CheckMatrixLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                           BinaryOperatorKind Opc) {
 
   if (!getLangOpts().HLSL) {
-    assert(false && "Logical operands are not supported in C\\C++");
+    SemaRef.Diag(Loc, diag::err_matrix_logical_operations_supported_for_hlsl);
     return QualType();
   }
 

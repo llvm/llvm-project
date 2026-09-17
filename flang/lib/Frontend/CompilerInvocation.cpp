@@ -612,13 +612,10 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
     opts.disabledIntegerKinds.push_back(16);
 
   if (const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_mabi_EQ)) {
-    opts.abi = a->getValue();
     llvm::StringRef V = a->getValue();
-    if (V == "vec-extabi") {
-      opts.EnableAIXExtendedAltivecABI = true;
-    } else if (V == "vec-default") {
-      opts.EnableAIXExtendedAltivecABI = false;
-    }
+    // Normalize "vec-default" to an empty ABI name; the AIX extended Altivec
+    // ABI is carried to the backend as the "vec-extabi" target-abi module flag.
+    opts.abi = V == "vec-default" ? "" : V.str();
   }
 
   opts.SplitMachineFunctions =
@@ -1586,6 +1583,9 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
       opts.FastRealMod = false;
   }
 
+  if (args.getLastArg(clang::options::OPT_fcheck_integer_mod_zero_divisor))
+    opts.CheckIntegerModZeroDivisor = true;
+
   // Set the initial IEEE floating point modes
   setIEEEFPModesArgs(opts, args);
 
@@ -1822,6 +1822,12 @@ bool CompilerInvocation::createFromArgs(
           args.getLastArg(clang::options::OPT_frepack_arrays_contiguity_EQ))
     invoc.loweringOpts.setRepackArraysWhole(arg->getValue() ==
                                             llvm::StringRef{"whole"});
+
+  // -f[no-]openacc-combined-loop-firstprivate
+  invoc.loweringOpts.setOpenACCCombinedLoopFirstprivate(
+      args.hasFlag(clang::options::OPT_fopenacc_combined_loop_firstprivate,
+                   clang::options::OPT_fno_openacc_combined_loop_firstprivate,
+                   /*default=*/true));
 
   if (auto *arg = args.getLastArg(clang::options::OPT_ffp_maxmin_behavior_EQ)) {
     auto value = Fortran::common::parseFPMaxminBehavior(arg->getValue());

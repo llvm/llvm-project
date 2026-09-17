@@ -325,7 +325,8 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
               return SE.getTruncateExpr(AddRec, R->getScalarType());
             return AddRec;
           })
-          .Case([&SE, &PSE, L](const VPWidenPointerInductionRecipe *R) {
+          .Case([&SE, &PSE,
+                 L](const VPWidenPointerInductionRecipe *R) -> const SCEV * {
             const SCEV *Start =
                 getSCEVExprForVPValue(R->getStartValue(), PSE, L);
             if (!L || isa<SCEVCouldNotCompute>(Start))
@@ -335,7 +336,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
               return SE.getCouldNotCompute();
             return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
           })
-          .Case([&SE, &PSE, L](const VPDerivedIVRecipe *R) {
+          .Case([&SE, &PSE, L](const VPDerivedIVRecipe *R) -> const SCEV * {
             const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
             const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
             const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), PSE, L);
@@ -963,7 +964,7 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       bool GuaranteedNotPoison =
           ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr);
       if (!GuaranteedNotPoison)
-        RHS = Builder.createScalarFreeze(RHS, DL);
+        RHS = Builder.createFreeze(RHS, DL);
       if (!SE.isKnownNonZero(RHSExpr) || !GuaranteedNotPoison)
         RHS = Builder.createScalarIntrinsic(
             Intrinsic::umax, {RHS, Builder.getPlan().getConstantInt(Ty, 1)}, Ty,
@@ -1058,7 +1059,7 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       VPValue *OpV = expand(SCEVOp);
       SafeUDivMode = PrevSafeMode;
       if (MayShortCircuit)
-        OpV = Builder.createScalarFreeze(OpV, DL);
+        OpV = Builder.createFreeze(OpV, DL);
       Ops.push_back(OpV);
     }
     VPValue *Result = Ops.front();
@@ -1372,7 +1373,9 @@ void vputils::detail::pullOutPermutationsImpl(
 VPValue *vputils::reconstructSSA(VPBasicBlock *VPBB,
                                  DenseMap<VPBasicBlock *, VPValue *> &Defs) {
   assert(!Defs.empty() && "Defs shouldn't be empty");
-  assert(VPBB->getPlan() && "VPBB isn't reachable from entry");
+  assert(
+      is_contained(vp_depth_first_shallow(VPBB->getPlan()->getEntry()), VPBB) &&
+      "VPBB isn't reachable from entry");
   if (VPValue *Def = Defs.lookup(VPBB))
     return Def;
   // If the entry block is reached and there's still no def, then Defs is

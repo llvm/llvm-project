@@ -2070,7 +2070,7 @@ Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint64_t Disc,
   assert(isUInt<16>(Disc) && "Constant discriminator is too wide");
 
   // So far we've used NoRegister in pseudos.  Now we need real encodings.
-  if (AddrDisc == AArch64::NoRegister)
+  if (!AddrDisc.isValid())
     AddrDisc = AArch64::XZR;
 
   // If there is no constant discriminator, there's no blend involved:
@@ -2294,14 +2294,13 @@ AArch64AsmPrinter::PtrAuthSchema AArch64AsmPrinter::PtrAuthSchema::CreateImmReg(
   Schema.IntDisc = IntDisc;
   Schema.AddrDisc = AddrDiscOp.getReg();
   Schema.AddrDiscIsKilled = AddrDiscOp.isKill();
-  Schema.PCDisc = AArch64::NoRegister;
+  Schema.PCDisc = Register();
   return Schema;
 }
 
 AArch64AsmPrinter::PtrAuthSchema AArch64AsmPrinter::PtrAuthSchema::CreateRegReg(
     AArch64PACKey::ID Key, Register AddrDisc, Register PCDisc) {
-  assert(PCDisc != AArch64::NoRegister &&
-         "Use CreateImmReg for non-PC schemas");
+  assert(PCDisc.isValid() && "Use CreateImmReg for non-PC schemas");
   PtrAuthSchema Schema;
   Schema.Key = Key;
   Schema.IntDisc = 0;
@@ -2413,11 +2412,10 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     std::optional<PtrAuthSchema> SignSchema, std::optional<int64_t> Addend,
     Value *DS) {
   const PtrauthCheckMode CheckMode = getCheckMode(MF);
-  const bool IsAuthWithPC = AuthSchema.PCDisc != AArch64::NoRegister;
-  assert(!SignSchema || SignSchema->PCDisc == AArch64::NoRegister);
+  const bool IsAuthWithPC = AuthSchema.PCDisc.isValid();
+  assert(!SignSchema || !SignSchema->PCDisc.isValid());
 
-  Register SignAddrDiscOrNone =
-      SignSchema ? SignSchema->AddrDisc : AArch64::NoRegister;
+  Register SignAddrDiscOrNone = SignSchema ? SignSchema->AddrDisc : Register();
 
   // 1. Authenticate Pointer - this is the only common step.
   // It is more complex than signing because AUTI[AB]171615 may be used.

@@ -22,12 +22,6 @@ namespace llvm {
 namespace orc {
 namespace rt {
 
-LLVM_ABI extern const char *SimpleExecutorMemoryManagerInstanceName;
-LLVM_ABI extern const char *SimpleExecutorMemoryManagerReserveWrapperName;
-LLVM_ABI extern const char *SimpleExecutorMemoryManagerInitializeWrapperName;
-LLVM_ABI extern const char *SimpleExecutorMemoryManagerDeinitializeWrapperName;
-LLVM_ABI extern const char *SimpleExecutorMemoryManagerReleaseWrapperName;
-
 LLVM_ABI extern const char *RegisterEHFrameSectionAllocActionName;
 LLVM_ABI extern const char *DeregisterEHFrameSectionAllocActionName;
 
@@ -48,17 +42,6 @@ struct MachOUnwindInfoRegistrarSymbolNames {
 /// StandaloneMachOUnwindInfoRegistrar SPS interface.
 extern const LLVM_ABI MachOUnwindInfoRegistrarSymbolNames
     orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
-
-using SPSSimpleExecutorMemoryManagerReserveSignature =
-    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
-                                                 uint64_t);
-using SPSSimpleExecutorMemoryManagerInitializeSignature =
-    shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
-                                                 shared::SPSFinalizeRequest);
-using SPSSimpleExecutorMemoryManagerDeinitializeSignature = shared::SPSError(
-    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
-using SPSSimpleExecutorMemoryManagerReleaseSignature = shared::SPSError(
-    shared::SPSExecutorAddr, shared::SPSSequence<shared::SPSExecutorAddr>);
 
 } // end namespace rt
 
