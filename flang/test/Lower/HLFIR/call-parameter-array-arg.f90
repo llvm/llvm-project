@@ -259,3 +259,54 @@ subroutine char_elem_len3()
   use mq
   call asl3(trip(2))
 end subroutine
+
+! ---- Function references (folding must not replace retained designators) ----
+
+module mf
+  implicit none
+  integer, parameter :: fp(4) = [10, 20, 30, 40]
+contains
+  integer function fsum3(x)
+    integer, intent(in) :: x(3)
+    fsum3 = sum(x)
+  end function
+  integer function fsum4(x)
+    integer, intent(in) :: x(4)
+    fsum4 = sum(x)
+  end function
+end module
+
+! Element of a named constant as a FUNCTION actual argument: expression
+! folding of the function reference must not replace the retained designator
+! with its scalar value; the element's address within the declared global
+! reaches the callee (sequence association).  The full dataflow is checked:
+! a scalar-constant association cast to an array would also contain a
+! convert and a call, but not this chain.
+! CHECK-LABEL: func.func @_QPfunc_elem_seq
+! CHECK: %[[FADDR:.*]] = fir.address_of(@_QMmfECfp)
+! CHECK: %[[FDECL:.*]]:2 = hlfir.declare %[[FADDR]]
+! CHECK-NOT: hlfir.associate
+! CHECK: %[[FELT:.*]] = hlfir.designate %[[FDECL]]#0 (%{{.*}}) : (!fir.ref<!fir.array<4xi32>>, i64) -> !fir.ref<i32>
+! CHECK-NOT: hlfir.associate
+! CHECK: %[[FCAST:.*]] = fir.convert %[[FELT]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<3xi32>>
+! CHECK: fir.call @_QMmfPfsum3(%[[FCAST]])
+subroutine func_elem_seq()
+  use mf
+  integer :: r
+  r = fsum3(fp(2))
+  print *, r
+end subroutine
+
+! Whole named-constant array as a FUNCTION actual argument: the declared
+! global's address is passed directly.
+! CHECK-LABEL: func.func @_QPfunc_whole_array
+! CHECK: %[[WADDR:.*]] = fir.address_of(@_QMmfECfp)
+! CHECK: %[[WDECL:.*]]:2 = hlfir.declare %[[WADDR]]
+! CHECK-NOT: hlfir.as_expr
+! CHECK: fir.call @_QMmfPfsum4(%[[WDECL]]#0
+subroutine func_whole_array()
+  use mf
+  integer :: r
+  r = fsum4(fp)
+  print *, r
+end subroutine
