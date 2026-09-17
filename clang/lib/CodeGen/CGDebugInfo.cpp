@@ -3251,7 +3251,7 @@ static bool canUseCtorHoming(const CXXRecordDecl *RD) {
   // exception to strict aliasing enables producing a reference to a type
   // without ever having constructed that type.
   //
-  // See: https://timsong-cpp.github.io/cppwp/n3337/class.mem#19
+  // See: https://wg21.link/class.mem#general-30
   if (RD->isStandardLayoutUnionMember())
     return false;
 
