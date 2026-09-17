@@ -2427,6 +2427,12 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
 
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
               uint32_t VarArgSize) {
+  // This happens in error cases.
+  if (!Func->hasThisPointer()) {
+    assert(!Func->isValid());
+    return diagnoseCallableDecl(S, OpPC, Func->getDecl());
+  }
+
   assert(Func->hasThisPointer());
   assert(Func->isVirtual());
   size_t ArgSize = Func->getArgSize() + VarArgSize;
