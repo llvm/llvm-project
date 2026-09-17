@@ -3769,11 +3769,16 @@ static std::optional<bool> foldCondBranchOnValueKnownInPredecessorImpl(
         // Copy all debug-info attached to instructions from the last we
         // successfully clone, up to this instruction (they might have been
         // folded away).
-        for (; SrcDbgCursor != BBI; ++SrcDbgCursor)
-          N->cloneDebugInfoFrom(&*SrcDbgCursor);
+        for (; SrcDbgCursor != BBI; ++SrcDbgCursor) {
+          auto Range = N->cloneDebugInfoFrom(&*SrcDbgCursor);
+          RemapDbgRecordRange(N->getModule(), Range, TranslateMap,
+                              RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+        }
         SrcDbgCursor = std::next(BBI);
         // Clone debug-info on this instruction too.
-        N->cloneDebugInfoFrom(&*BBI);
+        auto Range = N->cloneDebugInfoFrom(&*BBI);
+        RemapDbgRecordRange(N->getModule(), Range, TranslateMap,
+                            RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 
         // Register the new instruction with the assumption cache if necessary.
         if (auto *Assume = dyn_cast<AssumeInst>(N))
@@ -3782,9 +3787,14 @@ static std::optional<bool> foldCondBranchOnValueKnownInPredecessorImpl(
       }
     }
 
-    for (; &*SrcDbgCursor != BI; ++SrcDbgCursor)
-      InsertPt->cloneDebugInfoFrom(&*SrcDbgCursor);
-    InsertPt->cloneDebugInfoFrom(BI);
+    for (; &*SrcDbgCursor != BI; ++SrcDbgCursor) {
+      auto Range = InsertPt->cloneDebugInfoFrom(&*SrcDbgCursor);
+      RemapDbgRecordRange(InsertPt->getModule(), Range, TranslateMap,
+                          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+    }
+    auto Range = InsertPt->cloneDebugInfoFrom(BI);
+    RemapDbgRecordRange(InsertPt->getModule(), Range, TranslateMap,
+                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 
     BB->removePredecessor(EdgeBB);
     UncondBrInst *EdgeBI = cast<UncondBrInst>(EdgeBB->getTerminator());
