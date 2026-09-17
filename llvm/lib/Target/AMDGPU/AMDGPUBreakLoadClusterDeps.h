@@ -1,4 +1,4 @@
-//===- GCNBreakLoadClusterDeps.h --------------------------------*- C++ -*-===//
+//===- AMDGPUBreakLoadClusterDeps.h -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,8 +13,8 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-class GCNBreakLoadClusterDepsPass
-    : public RequiredPassInfoMixin<GCNBreakLoadClusterDepsPass> {
+class AMDGPUBreakLoadClusterDepsPass
+    : public RequiredPassInfoMixin<AMDGPUBreakLoadClusterDepsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

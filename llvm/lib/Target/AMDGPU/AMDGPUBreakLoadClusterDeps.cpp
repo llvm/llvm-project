@@ -1,4 +1,4 @@
-//===- GCNBreakLoadClusterDeps.cpp ----------------------------------------===//
+//===- AMDGPUBreakLoadClusterDeps.cpp -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 /// \file
 /// Post-RA pass that breaks false (WAR/WAW) anti-dependencies on the address
 /// computation feeding clusterable memory loads, so that the downstream post-RA
-/// load-clustering scheduler can issue the loads as a burst and expose more
+/// load-clustering scheduler can issue the loads as a cluster and expose more
 /// memory-level parallelism.
 ///
 /// Register allocation may pack the per-lane index/address computation of
@@ -19,6 +19,25 @@
 /// are semantically independent. The post-RA MachineScheduler's load-cluster
 /// mutation cannot rename registers, so it cannot undo them.
 ///
+/// For example, register allocation might funnel two independent address chains
+/// through v0:
+///
+///     v0 = v_lshlrev_b32 2, v2      ; address for load A
+///     v3 = global_load_dword v[0:1]
+///     v0 = v_lshlrev_b32 2, v4      ; address for load B, reuses v0
+///     v5 = global_load_dword v[0:1]
+///
+/// The second `v0 =` cannot run until load A has read v0, so the two loads stay
+/// serialized. This pass renames load B's chain to a free register:
+///
+///     v0 = v_lshlrev_b32 2, v2      ; address for load A
+///     v6 = v_lshlrev_b32 2, v4      ; address for load B, renamed
+///     v3 = global_load_dword v[0:1]
+///     v5 = global_load_dword v[6:7]
+///
+/// leaving the two loads independent so the load-cluster scheduler can issue
+/// them as a burst.
+///
 /// This pass renames the reused registers on those address chains to free
 /// registers scavenged from the function, bounded by the VGPR budget of the
 /// current occupancy so it never spends registers that would drop the number of
@@ -26,7 +45,7 @@
 /// dependencies are gone the existing load-cluster scheduler does the reorder.
 //===----------------------------------------------------------------------===//
 
-#include "GCNBreakLoadClusterDeps.h"
+#include "AMDGPUBreakLoadClusterDeps.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -57,7 +76,7 @@ using namespace llvm;
 namespace {
 
 /// Target-independent-of-pass-manager implementation.
-class GCNBreakLoadClusterDepsImpl {
+class AMDGPUBreakLoadClusterDepsImpl {
   const GCNSubtarget *ST = nullptr;
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
@@ -97,11 +116,11 @@ public:
 };
 
 /// Legacy-PM wrapper.
-class GCNBreakLoadClusterDepsLegacy : public MachineFunctionPass {
+class AMDGPUBreakLoadClusterDepsLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  GCNBreakLoadClusterDepsLegacy() : MachineFunctionPass(ID) {}
+  AMDGPUBreakLoadClusterDepsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -119,7 +138,7 @@ public:
 
 // Return the set of 32-bit VGPR lanes covered by physical VGPR `Reg` (any
 // width), indexed by (lane - AMDGPU::VGPR0).
-BitVector GCNBreakLoadClusterDepsImpl::getVGPR32Components(Register Reg) const {
+BitVector AMDGPUBreakLoadClusterDepsImpl::getVGPR32Components(Register Reg) const {
   BitVector ToReturn(NumVGPR32);
   if (!TRI->isVGPR(*MRI, Reg))
     return ToReturn;
@@ -144,7 +163,7 @@ BitVector GCNBreakLoadClusterDepsImpl::getVGPR32Components(Register Reg) const {
 }
 
 std::pair<BitVector, BitVector>
-GCNBreakLoadClusterDepsImpl::getUsesAndDefsFor(MachineInstr &MI) const {
+AMDGPUBreakLoadClusterDepsImpl::getUsesAndDefsFor(MachineInstr &MI) const {
   std::pair<BitVector, BitVector> ToReturn{BitVector(NumVGPR32),
                                            BitVector(NumVGPR32)};
   for (unsigned I = 0; I < MI.getNumExplicitOperands(); I++)
@@ -154,7 +173,7 @@ GCNBreakLoadClusterDepsImpl::getUsesAndDefsFor(MachineInstr &MI) const {
   return ToReturn;
 }
 
-Register GCNBreakLoadClusterDepsImpl::promoteToSuperRegister(MachineInstr &MI,
+Register AMDGPUBreakLoadClusterDepsImpl::promoteToSuperRegister(MachineInstr &MI,
                                                              Register SubReg,
                                                              bool Defs,
                                                              bool Uses) {
@@ -167,7 +186,7 @@ Register GCNBreakLoadClusterDepsImpl::promoteToSuperRegister(MachineInstr &MI,
   return SubReg;
 }
 
-Register GCNBreakLoadClusterDepsImpl::renameRegister(Register FromReg,
+Register AMDGPUBreakLoadClusterDepsImpl::renameRegister(Register FromReg,
                                                      Register ToReg,
                                                      Register RenameReg) {
   if (RenameReg == FromReg)
@@ -178,7 +197,7 @@ Register GCNBreakLoadClusterDepsImpl::renameRegister(Register FromReg,
   return RenameReg;
 }
 
-bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
+bool AMDGPUBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
     MachineInstr &MI, unsigned OpNum, const BitVector &BannedRegs,
     bool MIMustBeKiller) {
   MachineBasicBlock &MBB = *MI.getParent();
@@ -388,7 +407,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
   return true;
 }
 
-bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
+bool AMDGPUBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
     MachineBasicBlock &MBB) {
   bool ToReturn = false;
 
@@ -518,12 +537,12 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
   // Scavenge free VGPRs and rename along each address def chain so the chains
   // become register-disjoint, staying within the budget.  The downstream
   // post-RA load-cluster scheduler then reorders the now independent loads into
-  // a burst.
+  // a cluster.
 
   return ToReturn;
 }
 
-bool GCNBreakLoadClusterDepsImpl::run(MachineFunction &MF) {
+bool AMDGPUBreakLoadClusterDepsImpl::run(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
   TRI = ST->getRegisterInfo();
   TII = ST->getInstrInfo();
@@ -552,16 +571,16 @@ bool GCNBreakLoadClusterDepsImpl::run(MachineFunction &MF) {
   return ToReturn;
 }
 
-bool GCNBreakLoadClusterDepsLegacy::runOnMachineFunction(MachineFunction &MF) {
+bool AMDGPUBreakLoadClusterDepsLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
-  return GCNBreakLoadClusterDepsImpl().run(MF);
+  return AMDGPUBreakLoadClusterDepsImpl().run(MF);
 }
 
 PreservedAnalyses
-GCNBreakLoadClusterDepsPass::run(MachineFunction &MF,
+AMDGPUBreakLoadClusterDepsPass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
-  if (!GCNBreakLoadClusterDepsImpl().run(MF))
+  if (!AMDGPUBreakLoadClusterDepsImpl().run(MF))
     return PreservedAnalyses::all();
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
@@ -569,9 +588,9 @@ GCNBreakLoadClusterDepsPass::run(MachineFunction &MF,
   return PA;
 }
 
-char GCNBreakLoadClusterDepsLegacy::ID = 0;
+char AMDGPUBreakLoadClusterDepsLegacy::ID = 0;
 
-char &llvm::GCNBreakLoadClusterDepsID = GCNBreakLoadClusterDepsLegacy::ID;
+char &llvm::AMDGPUBreakLoadClusterDepsID = AMDGPUBreakLoadClusterDepsLegacy::ID;
 
-INITIALIZE_PASS(GCNBreakLoadClusterDepsLegacy, DEBUG_TYPE,
+INITIALIZE_PASS(AMDGPUBreakLoadClusterDepsLegacy, DEBUG_TYPE,
                 "AMDGPU Break Load Cluster Dependencies", false, false)
