@@ -1646,8 +1646,9 @@ Currently, only the following parameter attributes are defined:
     The `nonnull` attribute only refers to the address bits of the pointers.
     If all the address bits are zero, the result will be a poison value, even
     if the pointer has non-zero non-address bits or non-zero external state.
-    The `nonnull` attribute should be combined with the `noundef` attribute
-    to ensure a pointer is not null or otherwise the behavior is undefined.
+    If the `nonnull` attribute is combined with the `noundef` attribute, then
+    calling the function with a null value is immediate undefined behavior at
+    the call site, and in the function the value cannot be poison.
 
 (attr_dereferenceable)=
 
