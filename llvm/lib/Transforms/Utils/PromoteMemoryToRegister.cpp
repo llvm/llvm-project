@@ -810,6 +810,10 @@ void PromoteMem2Reg::run() {
 
   NoSignedZeros = F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool();
 
+  // removeIntrinsicUsers inserts StoreInst(undef). A cache miss on
+  // LBI.getInstructionIndex lookup causes a full O(|BB|) basic block rescan.
+  // Doing all inserts in advance lets us capture all the new instructions in
+  // just a single rescan.
   for (AllocaInst *AI : Allocas) {
     assert(isAllocaPromotable(AI) && "Cannot promote non-promotable alloca!");
     assert(AI->getParent()->getParent() == &F &&
