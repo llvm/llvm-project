@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -3161,7 +3162,81 @@ static bool isVCmpResult(Register Reg, MachineRegisterInfo &MRI) {
   return Opcode == AMDGPU::G_ICMP || Opcode == AMDGPU::G_FCMP;
 }
 
+bool AMDGPUInstructionSelector::selectDebuggingEnabledBranch(
+    MachineInstr &I) const {
+  MachineBasicBlock *BB = I.getParent();
+  Register CondReg = I.getOperand(0).getReg();
+  if (!CondReg.isVirtual() || !MRI->hasOneNonDBGUse(CondReg) ||
+      !isSGPR(CondReg))
+    return false;
+
+  auto *Cmp = dyn_cast_or_null<GICmp>(MRI->getVRegDef(CondReg));
+  if (!Cmp || Cmp->getParent() != BB || !CmpInst::isEquality(Cmp->getCond()) ||
+      !mi_match(Cmp->getRHSReg(), *MRI, m_ZeroInt()))
+    return false;
+
+  Register BitsReg = Cmp->getLHSReg();
+  if (!BitsReg.isVirtual() || !MRI->hasOneNonDBGUse(BitsReg))
+    return false;
+
+  auto *GetReg = dyn_cast_or_null<GIntrinsic>(MRI->getVRegDef(BitsReg));
+  if (!GetReg || GetReg->getParent() != BB ||
+      !GetReg->is(Intrinsic::amdgcn_s_getreg) ||
+      !GetReg->getOperand(2).isImm() ||
+      GetReg->getOperand(2).getImm() !=
+          AMDGPU::Hwreg::getDebuggingEnabledHwregImm(STI))
+    return false;
+
+  bool HasInterveningOperation = any_of(
+      make_range(std::next(GetReg->getIterator()), I.getIterator()),
+      [](const MachineInstr &Between) {
+        return !Between.isMetaInstruction() &&
+               (Between.mayLoadOrStore() || Between.hasUnmodeledSideEffects());
+      });
+  if (HasInterveningOperation)
+    return false;
+
+  MachineInstr *UncondBr = nullptr;
+  MachineBasicBlock *FalseTarget;
+  auto Next =
+      skipDebugInstructionsForward(std::next(I.getIterator()), BB->instr_end());
+  if (Next == BB->instr_end()) {
+    FalseTarget = BB->getNextNode();
+    if (!FalseTarget)
+      return false;
+  } else {
+    if (Next->getOpcode() != AMDGPU::S_BRANCH)
+      return false;
+    UncondBr = &*Next;
+    FalseTarget = UncondBr->getOperand(0).getMBB();
+  }
+
+  MachineBasicBlock *TrueTarget = I.getOperand(1).getMBB();
+  bool Negated = Cmp->getCond() == CmpInst::ICMP_EQ;
+  const DebugLoc &DL = I.getDebugLoc();
+  auto Br = BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_CBRANCH_CDBGSYS_OR_USER))
+                .addMBB(Negated ? FalseTarget : TrueTarget);
+  Br->setFlag(MachineInstr::NoMerge);
+  if (Negated) {
+    if (UncondBr)
+      UncondBr->getOperand(0).setMBB(TrueTarget);
+    else
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_BRANCH)).addMBB(TrueTarget);
+  }
+
+  Register ZeroReg = Cmp->getRHSReg();
+  MRI->markUsesInDebugValueAsUndef(CondReg);
+  MRI->markUsesInDebugValueAsUndef(BitsReg);
+  if (MRI->hasOneNonDBGUse(ZeroReg))
+    MRI->markUsesInDebugValueAsUndef(ZeroReg);
+  eraseInstrs({&I, Cmp, GetReg}, *MRI);
+  return true;
+}
+
 bool AMDGPUInstructionSelector::selectG_BRCOND(MachineInstr &I) const {
+  if (STI.hasDebuggingEnabledQuery() && selectDebuggingEnabledBranch(I))
+    return true;
+
   MachineBasicBlock *BB = I.getParent();
   MachineOperand &CondOp = I.getOperand(0);
   Register CondReg = CondOp.getReg();
