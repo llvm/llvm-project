@@ -628,6 +628,15 @@ SplitQualType QualType::getSplitUnqualifiedTypeImpl(QualType type) {
   }
 
 done:
+  // An overflow behavior type can have a qualified underlying type. It is not
+  // sugar, so the loop above cannot desugar through it to reach the
+  // qualifiers; rebuild it with an unqualified underlying type instead.
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(split.Ty)) {
+    SplitQualType SplitOBT = OBT->getSplitUnqualifiedType();
+    quals.addConsistentQualifiers(SplitOBT.Quals);
+    return SplitQualType(SplitOBT.Ty, quals);
+  }
+
   return SplitQualType(lastTypeWithQuals, quals);
 }
 
@@ -4141,10 +4150,21 @@ void TypeCoupledDeclRefInfo::setFromOpaqueValue(void *V) {
 }
 
 OverflowBehaviorType::OverflowBehaviorType(
-    QualType Canon, QualType Underlying,
+    const ASTContext &Context, QualType Canon, QualType Underlying,
     OverflowBehaviorType::OverflowBehaviorKind Kind)
     : Type(OverflowBehavior, Canon, Underlying->getDependence()),
-      UnderlyingType(Underlying), BehaviorKind(Kind) {}
+      UnderlyingType(Underlying), BehaviorKind(Kind), Context(Context) {}
+
+SplitQualType OverflowBehaviorType::getSplitUnqualifiedType() const {
+  SplitQualType SplitUnderlying = UnderlyingType.getSplitUnqualifiedType();
+  QualType UnqualUnderlyingTy(SplitUnderlying.Ty, 0);
+  if (UnqualUnderlyingTy == UnderlyingType)
+    return SplitQualType(this, Qualifiers());
+
+  QualType UnqualTy =
+      Context.getOverflowBehaviorType(BehaviorKind, UnqualUnderlyingTy);
+  return SplitQualType(UnqualTy.getTypePtr(), SplitUnderlying.Quals);
+}
 
 BoundsAttributedType::BoundsAttributedType(TypeClass TC, QualType Wrapped,
                                            QualType Canon)
@@ -4630,18 +4650,6 @@ SubstTemplateTypeParmType::getReplacedParameter() const {
       getReplacedTemplateParameter(getAssociatedDecl(), getIndex())));
 }
 
-void SubstTemplateTypeParmType::Profile(llvm::FoldingSetNodeID &ID,
-                                        QualType Replacement,
-                                        const Decl *AssociatedDecl,
-                                        unsigned Index,
-                                        UnsignedOrNone PackIndex, bool Final) {
-  Replacement.Profile(ID);
-  ID.AddPointer(AssociatedDecl);
-  ID.AddInteger(Index);
-  ID.AddInteger(PackIndex.toInternalRepresentation());
-  ID.AddBoolean(Final);
-}
-
 SubstPackType::SubstPackType(TypeClass Derived, QualType Canon,
                              const TemplateArgument &ArgPack)
     : Type(Derived, Canon,
@@ -4859,22 +4867,6 @@ void ObjCObjectTypeImpl::Profile(llvm::FoldingSetNodeID &ID) {
   Profile(ID, getBaseType(), getTypeArgsAsWritten(),
           llvm::ArrayRef(qual_begin(), getNumProtocols()),
           isKindOfTypeAsWritten());
-}
-
-void ObjCTypeParamType::Profile(llvm::FoldingSetNodeID &ID,
-                                const ObjCTypeParamDecl *OTPDecl,
-                                QualType CanonicalType,
-                                ArrayRef<ObjCProtocolDecl *> protocols) {
-  ID.AddPointer(OTPDecl);
-  ID.AddPointer(CanonicalType.getAsOpaquePtr());
-  ID.AddInteger(protocols.size());
-  for (auto *proto : protocols)
-    ID.AddPointer(proto);
-}
-
-void ObjCTypeParamType::Profile(llvm::FoldingSetNodeID &ID) {
-  Profile(ID, getDecl(), getCanonicalTypeInternal(),
-          llvm::ArrayRef(qual_begin(), getNumProtocols()));
 }
 
 namespace {

@@ -14,9 +14,13 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorTypeUtils.h"
@@ -26,6 +30,7 @@
 #include <utility>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 namespace llvm::slpvectorizer {
 
@@ -33,14 +38,15 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                                TTI::ShuffleKind Kind, VectorType *Tp,
                                const TTI::TargetCostKind CostKind,
                                ArrayRef<int> Mask, int Index, VectorType *SubTp,
-                               ArrayRef<const Value *> Args) {
+                               ArrayRef<const Value *> Args,
+                               TTI::VectorInstrContext VIC) {
   VectorType *DstTy = Tp;
   if (!Mask.empty())
     DstTy = FixedVectorType::get(Tp->getScalarType(), Mask.size());
 
   if (Kind != TTI::SK_PermuteTwoSrc)
     return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp,
-                              Args);
+                              Args, /*CxtI=*/nullptr, VIC);
   int NumSrcElts = Tp->getElementCount().getKnownMinValue();
   int NumSubElts;
   if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
@@ -50,8 +56,8 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
       return TTI.getShuffleCost(TTI::SK_InsertSubvector, DstTy, Tp, CostKind,
                                 Mask, Index, Tp);
   }
-  return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp,
-                            Args);
+  return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp, Args,
+                            /*CxtI=*/nullptr, VIC);
 }
 
 std::pair<InstructionCost, InstructionCost>
@@ -209,8 +215,8 @@ getScalarizationOverhead(const TargetTransformInfo &TTI, bool ReVec,
 InstructionCost getVectorInstrCost(
     const TargetTransformInfo &TTI, bool ReVec, Type *ScalarTy, unsigned Opcode,
     Type *Val, const TTI::TargetCostKind CostKind, unsigned Index,
-    Value *Scalar,
-    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
+    Value *Scalar, ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
+    TTI::VectorInstrContext VIC) {
   if (Opcode == Instruction::ExtractElement) {
     if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
       assert(ReVec && "Only supported by REVEC.");
@@ -221,7 +227,7 @@ InstructionCost getVectorInstrCost(
     }
   }
   return TTI.getVectorInstrCost(Opcode, Val, CostKind, Index, Scalar,
-                                ScalarUserAndIdx);
+                                ScalarUserAndIdx, VIC);
 }
 
 InstructionCost getExtractWithExtendCost(const TargetTransformInfo &TTI,
@@ -238,6 +244,66 @@ InstructionCost getExtractWithExtendCost(const TargetTransformInfo &TTI,
                                 CostKind);
   }
   return TTI.getExtractWithExtendCost(Opcode, Dst, VecTy, Index, CostKind);
+}
+
+/// Returns the cast context hint for the trunc of the booleanized reduction
+/// result, which inherits the uses of the reduction root \p Root.
+static TTI::CastContextHint getBoolReduxResultCCH(const Value *Root) {
+  if (!Root->hasOneUse())
+    return TTI::CastContextHint::None;
+  const Value *U = *Root->user_begin();
+  if (isa<StoreInst>(U))
+    return TTI::CastContextHint::Normal;
+  if (match(U, m_Intrinsic<Intrinsic::masked_store>()))
+    return TTI::CastContextHint::Masked;
+  if (match(U, m_Intrinsic<Intrinsic::masked_scatter>()))
+    return TTI::CastContextHint::GatherScatter;
+  return TTI::CastContextHint::None;
+}
+
+InstructionCost getBoolReduxWideRdxCost(const TargetTransformInfo &TTI,
+                                        RecurKind RdxKind,
+                                        FixedVectorType *VecTy,
+                                        const Value *Root, FastMathFlags FMF,
+                                        const TTI::TargetCostKind CostKind) {
+  Type *I1Ty = Type::getInt1Ty(VecTy->getContext());
+  return TTI.getArithmeticReductionCost(
+             RecurrenceDescriptor::getOpcode(RdxKind), VecTy, FMF, CostKind) +
+         TTI.getCastInstrCost(Instruction::Trunc, I1Ty, VecTy->getScalarType(),
+                              getBoolReduxResultCCH(Root), CostKind);
+}
+
+InstructionCost getBoolReduxBitcastCmpCost(const TargetTransformInfo &TTI,
+                                           RecurKind RdxKind,
+                                           FixedVectorType *VecTy,
+                                           const Value *Root,
+                                           ArrayRef<Instruction *> ChainInsts,
+                                           const TTI::TargetCostKind CostKind) {
+  // The new instructions are costed in the context of the replaced cast chain
+  // instructions.
+  auto TruncIt =
+      find_if(ChainInsts, [](Instruction *I) { return isa<TruncInst>(I); });
+  const Instruction *TruncI = TruncIt == ChainInsts.end() ? nullptr : *TruncIt;
+  auto CmpIt =
+      find_if(ChainInsts, [](Instruction *I) { return isa<ICmpInst>(I); });
+  const Instruction *CmpI = CmpIt == ChainInsts.end() ? nullptr : *CmpIt;
+  unsigned VF = VecTy->getNumElements();
+  auto *I1VecTy =
+      FixedVectorType::get(Type::getInt1Ty(VecTy->getContext()), VF);
+  Type *IntTy = IntegerType::get(VecTy->getContext(), VF);
+  Constant *CmpRHS = RdxKind == RecurKind::And
+                         ? Constant::getAllOnesValue(IntTy)
+                         : Constant::getNullValue(IntTy);
+  return TTI.getCastInstrCost(Instruction::Trunc, I1VecTy, VecTy,
+                              TTI.getCastContextHint(TruncI), CostKind,
+                              TruncI) +
+         TTI.getCastInstrCost(Instruction::BitCast, IntTy, I1VecTy,
+                              TTI.getCastContextHint(TruncI), CostKind) +
+         TTI.getCmpSelInstrCost(Instruction::ICmp, IntTy, /*CondTy=*/nullptr,
+                                RdxKind == RecurKind::And ? CmpInst::ICMP_EQ
+                                                          : CmpInst::ICMP_NE,
+                                CostKind, TTI.getOperandInfo(Root),
+                                TTI.getOperandInfo(CmpRHS), CmpI);
 }
 
 } // namespace llvm::slpvectorizer

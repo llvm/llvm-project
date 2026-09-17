@@ -3639,10 +3639,10 @@ void SelectionDAGBuilder::visitLandingPad(const LandingPadInst &LP) {
   // exceptions), then don't bother to create these DAG nodes.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   const Constant *PersonalityFn = FuncInfo.Fn->getPersonalityFn();
-  if (TLI.getExceptionPointerRegister(
-          TLI.getTargetMachine().getExceptionModel(), PersonalityFn) == 0 &&
-      TLI.getExceptionSelectorRegister(
-          TLI.getTargetMachine().getExceptionModel(), PersonalityFn) == 0)
+  if (TLI.getExceptionPointerRegister(FuncInfo.ExceptionModel, PersonalityFn) ==
+          0 &&
+      TLI.getExceptionSelectorRegister(FuncInfo.ExceptionModel,
+                                       PersonalityFn) == 0)
     return;
 
   // If landingpad's return type is token type, we don't create DAG nodes
@@ -4176,8 +4176,12 @@ void SelectionDAGBuilder::visitAddrSpaceCast(const User &I) {
   unsigned SrcAS = SV->getType()->getPointerAddressSpace();
   unsigned DestAS = I.getType()->getPointerAddressSpace();
 
-  if (!TM.isNoopAddrSpaceCast(SrcAS, DestAS))
-    N = DAG.getAddrSpaceCast(getCurSDLoc(), DestVT, N, SrcAS, DestAS);
+  if (!TM.isNoopAddrSpaceCast(SrcAS, DestAS)) {
+    SDNodeFlags Flags;
+    if (const auto *ASC = dyn_cast<AddrSpaceCastInst>(&I))
+      Flags.setNonNull(ASC->hasNonNull());
+    N = DAG.getAddrSpaceCast(getCurSDLoc(), DestVT, N, SrcAS, DestAS, Flags);
+  }
 
   setValue(&I, N);
 }
@@ -7526,6 +7530,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue X = getValue(I.getArgOperand(0));
     SDValue Y = getValue(I.getArgOperand(1));
     setValue(&I, DAG.getNode(ISD::PDEP, sdl, X.getValueType(), X, Y));
+    return;
+  }
+  case Intrinsic::smulh:
+  case Intrinsic::umulh: {
+    auto Opc = Intrinsic == Intrinsic::smulh ? ISD::MULHS : ISD::MULHU;
+    SDValue X = getValue(I.getArgOperand(0));
+    SDValue Y = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(Opc, sdl, X.getValueType(), X, Y));
     return;
   }
   case Intrinsic::sadd_sat: {

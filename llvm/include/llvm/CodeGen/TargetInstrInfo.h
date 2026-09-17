@@ -164,6 +164,13 @@ public:
   virtual const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID,
                                                  unsigned OpNum) const;
 
+  /// Return the register class to use for the register operand of an inline asm
+  /// memory operand with constraint \p C.
+  virtual const TargetRegisterClass *
+  getInlineAsmMemoryOperandRegClass(InlineAsm::ConstraintCode C) const {
+    llvm_unreachable("target did not implement memory operand support");
+  }
+
   /// Returns true if MI is an instruction we are unable to reason about
   /// (like a call or something with unmodeled side effects).
   virtual bool isGlobalMemoryObject(const MachineInstr *MI) const;
@@ -450,7 +457,7 @@ public:
   /// getInstSizeInBytes() should be verified.
   virtual InstSizeVerifyMode
   getInstSizeVerifyMode(const MachineInstr &MI) const {
-    return InstSizeVerifyMode::NoVerify;
+    return InstSizeVerifyMode::AllowOverEstimate;
   }
 
   /// Return true if the instruction is as cheap as a move instruction.
@@ -741,6 +748,19 @@ public:
                              SmallVectorImpl<MachineOperand> &Cond,
                              bool AllowModify = false) const {
     return true;
+  }
+
+  bool analyzeBranch(const MachineBasicBlock &MBB,
+                     const MachineBasicBlock *&TBB,
+                     const MachineBasicBlock *&FBB,
+                     SmallVectorImpl<MachineOperand> &Cond) const {
+    MachineBasicBlock *TempTBB = nullptr, *TempFBB = nullptr;
+    bool NotUnderstandable = analyzeBranch(const_cast<MachineBasicBlock &>(MBB),
+                                           TempTBB, TempFBB, Cond,
+                                           /*AllowModify=*/false);
+    TBB = TempTBB;
+    FBB = TempFBB;
+    return NotUnderstandable;
   }
 
   /// Represents a predicate at the MachineFunction level.  The control flow a

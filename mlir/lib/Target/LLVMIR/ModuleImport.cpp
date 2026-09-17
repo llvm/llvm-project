@@ -2551,6 +2551,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                    builder.getStringAttr(asmI->getConstraintString()),
                    asmI->hasSideEffects(), asmI->isAlignStack(),
                    convertTailCallKindFromLLVM(callInst->getTailCallKind()),
+                   callInst->hasFnAttr(llvm::Attribute::Convergent),
                    AsmDialectAttr::get(
                        mlirModule.getContext(),
                        convertAsmDialectFromLLVM(asmI->getDialect())),
@@ -2787,8 +2788,9 @@ LogicalResult ModuleImport::processInstruction(llvm::Instruction *inst) {
   // Process debug records attached to this instruction. Debug variable records
   // are stored for later processing after all SSA values are converted, while
   // debug label records can be converted immediately.
-  if (inst->DebugMarker) {
-    for (llvm::DbgRecord &dbgRecord : inst->DebugMarker->getDbgRecordRange()) {
+  if (inst->getDbgMarker()) {
+    for (llvm::DbgRecord &dbgRecord :
+         inst->getDbgMarker()->getDbgRecordRange()) {
       // Store debug variable records for later processing.
       if (auto *dbgVariableRecord =
               dyn_cast<llvm::DbgVariableRecord>(&dbgRecord)) {
@@ -3381,6 +3383,8 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
 
     llvm::MDNode *metadataNode = node;
     auto emitUnhandledFunctionMetadataWarning = [&]() {
+      if (!emitExpensiveWarnings)
+        return;
       emitWarning(funcOp.getLoc())
           << "unhandled function metadata: "
           << diagMD(metadataNode, llvmModule.get()) << " on " << diag(*func);

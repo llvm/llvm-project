@@ -234,7 +234,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.chdir
     libc.src.unistd.chown
     libc.src.unistd.chroot
-    libc.src.unistd.confstr
     libc.src.unistd.close
     libc.src.unistd.dup
     libc.src.unistd.dup2
@@ -278,7 +277,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.setuid
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
-    libc.src.unistd.sysconf
     libc.src.unistd.tcgetpgrp
     libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate
@@ -320,6 +318,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.opendir
     libc.src.dirent.readdir
     libc.src.dirent.fdopendir
+
+    # unistd.h entrypoints
+    libc.src.unistd.confstr
+    libc.src.unistd.sysconf
   )
 endif()
 

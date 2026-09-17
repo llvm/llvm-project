@@ -3672,8 +3672,8 @@ protected:
 
   llvm::Error FlushDelayedBreakpoints();
 
-  size_t RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
-                                           uint8_t *buf) const;
+  void RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
+                                         uint8_t *buf) const;
 
   void SynchronouslyNotifyStateChanged(lldb::StateType state);
 

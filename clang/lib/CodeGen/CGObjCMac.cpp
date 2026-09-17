@@ -1972,16 +1972,6 @@ struct NullReturnState {
 
 /* *** Helper Functions *** */
 
-/// getConstantGEP() - Help routine to construct simple GEPs.
-static llvm::Constant *getConstantGEP(llvm::LLVMContext &VMContext,
-                                      llvm::GlobalVariable *C, unsigned idx0,
-                                      unsigned idx1) {
-  llvm::Value *Idxs[] = {
-      llvm::ConstantInt::get(llvm::Type::getInt32Ty(VMContext), idx0),
-      llvm::ConstantInt::get(llvm::Type::getInt32Ty(VMContext), idx1)};
-  return llvm::ConstantExpr::getGetElementPtr(C->getValueType(), C, Idxs);
-}
-
 /// hasObjCExceptionAttribute - Return true if this class or any super
 /// class has the __objc_exception__ attribute.
 static bool hasObjCExceptionAttribute(ASTContext &Context,
@@ -3494,10 +3484,9 @@ llvm::Constant *CGObjCCommonMac::getBitmapBlockLayout(bool ComputeByrefLayout) {
     }
   }
 
-  auto *Entry = CreateCStringLiteral(BitMap, ObjCLabelType::LayoutBitMap,
-                                     /*ForceNonFragileABI=*/true,
-                                     /*NullTerminate=*/false);
-  return getConstantGEP(VMContext, Entry, 0, 0);
+  return CreateCStringLiteral(BitMap, ObjCLabelType::LayoutBitMap,
+                              /*ForceNonFragileABI=*/true,
+                              /*NullTerminate=*/false);
 }
 
 static std::string getBlockLayoutInfoString(
@@ -6186,7 +6175,7 @@ llvm::Constant *CGObjCCommonMac::GetClassName(StringRef RuntimeName) {
   llvm::GlobalVariable *&Entry = ClassNames[RuntimeName];
   if (!Entry)
     Entry = CreateCStringLiteral(RuntimeName, ObjCLabelType::ClassName);
-  return getConstantGEP(VMContext, Entry, 0, 0);
+  return Entry;
 }
 
 llvm::Function *CGObjCCommonMac::GetMethodDefinition(const ObjCMethodDecl *MD) {
@@ -6438,9 +6427,8 @@ IvarLayoutBuilder::buildBitmap(CGObjCCommonMac &CGObjC,
   // Null terminate the string.
   buffer.push_back(0);
 
-  auto *Entry = CGObjC.CreateCStringLiteral(
-      reinterpret_cast<char *>(buffer.data()), ObjCLabelType::LayoutBitMap);
-  return getConstantGEP(CGM.getLLVMContext(), Entry, 0, 0);
+  return CGObjC.CreateCStringLiteral(reinterpret_cast<char *>(buffer.data()),
+                                     ObjCLabelType::LayoutBitMap);
 }
 
 /// BuildIvarLayout - Builds ivar layout bitmap for the class
@@ -6538,7 +6526,7 @@ llvm::Constant *CGObjCCommonMac::GetMethodVarName(Selector Sel) {
   if (!Entry)
     Entry =
         CreateCStringLiteral(Sel.getAsString(), ObjCLabelType::MethodVarName);
-  return getConstantGEP(VMContext, Entry, 0, 0);
+  return Entry;
 }
 
 // FIXME: Merge into a single cstring creation function.
@@ -6553,7 +6541,7 @@ llvm::Constant *CGObjCCommonMac::GetMethodVarType(const FieldDecl *Field) {
   llvm::GlobalVariable *&Entry = MethodVarTypes[TypeStr];
   if (!Entry)
     Entry = CreateCStringLiteral(TypeStr, ObjCLabelType::MethodVarType);
-  return getConstantGEP(VMContext, Entry, 0, 0);
+  return Entry;
 }
 
 llvm::Constant *CGObjCCommonMac::GetMethodVarType(const ObjCMethodDecl *D,
@@ -6564,7 +6552,7 @@ llvm::Constant *CGObjCCommonMac::GetMethodVarType(const ObjCMethodDecl *D,
   llvm::GlobalVariable *&Entry = MethodVarTypes[TypeStr];
   if (!Entry)
     Entry = CreateCStringLiteral(TypeStr, ObjCLabelType::MethodVarType);
-  return getConstantGEP(VMContext, Entry, 0, 0);
+  return Entry;
 }
 
 // FIXME: Merge into a single cstring creation function.
@@ -6572,7 +6560,7 @@ llvm::Constant *CGObjCCommonMac::GetPropertyName(IdentifierInfo *Ident) {
   llvm::GlobalVariable *&Entry = PropertyNames[Ident];
   if (!Entry)
     Entry = CreateCStringLiteral(Ident->getName(), ObjCLabelType::PropertyName);
-  return getConstantGEP(VMContext, Entry, 0, 0);
+  return Entry;
 }
 
 // FIXME: Merge into a single cstring creation function.

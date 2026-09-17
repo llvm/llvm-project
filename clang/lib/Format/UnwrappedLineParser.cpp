@@ -4155,7 +4155,9 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
                             tok::kw_alignas, tok::l_square) ||
          FormatTok->isAttribute() ||
          ((Style.isJava() || Style.isJavaScript()) &&
-          FormatTok->isOneOf(tok::period, tok::comma))) {
+          FormatTok->isOneOf(tok::period, tok::comma)) ||
+         (Style.isVerilog() &&
+          FormatTok->isOneOf(tok::kw_signed, tok::kw_unsigned))) {
     if (Style.isJavaScript() &&
         FormatTok->isOneOf(Keywords.kw_extends, Keywords.kw_implements)) {
       JSPastExtendsOrImplements = true;
@@ -5199,9 +5201,19 @@ std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>>
 UnwrappedLineParser::parseMacroCall() {
   std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>> Args;
   assert(Line->Tokens.empty());
-  nextToken();
-  if (FormatTok->isNot(tok::l_paren))
+  // Not nextToken(), which would already expand a directly following macro
+  // call before the expansion of this one is inserted.
+  auto ConsumeLastTokenOfCall = [this] {
+    flushComments(isOnNewLine(*FormatTok));
+    pushToken(FormatTok);
+    FormatTok = Tokens->getNextToken();
+  };
+  if (Tokens->peekNextToken(/*SkipComment=*/true)->isNot(tok::l_paren)) {
+    ConsumeLastTokenOfCall();
     return Args;
+  }
+  nextToken();
+  assert(FormatTok->is(tok::l_paren));
   unsigned Position = Tokens->getPosition();
   FormatToken *Tok = FormatTok;
   nextToken();
@@ -5223,7 +5235,7 @@ UnwrappedLineParser::parseMacroCall() {
       }
       Args->push_back({});
       pushTokens(std::next(ArgStart), Line->Tokens.end(), Args->back());
-      nextToken();
+      ConsumeLastTokenOfCall();
       return Args;
     }
     case tok::comma: {

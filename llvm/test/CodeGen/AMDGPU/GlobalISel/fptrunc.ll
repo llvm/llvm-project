@@ -403,12 +403,12 @@ define amdgpu_ps half @fptrunc_f64_to_f16_div(double %a) {
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_and_or_b32 v0, 0x1ff, v1, v0
 ; GFX1250-NEXT:    v_bfe_u32 v2, v1, 20, 11
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_dual_lshrrev_b32 v3, 8, v1 :: v_dual_lshrrev_b32 v1, 16, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GFX1250-NEXT:    v_add_nc_u32_e32 v2, 0xfffffc10, v2
-; GFX1250-NEXT:    v_dual_lshrrev_b32 v3, 8, v1 :: v_dual_lshrrev_b32 v1, 16, v1
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-NEXT:    v_sub_nc_u32_e32 v4, 1, v2
 ; GFX1250-NEXT:    v_and_or_b32 v0, 0xffe, v3, v0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)

@@ -1,8 +1,5 @@
 # AddressSanitizer
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 
