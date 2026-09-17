@@ -148,8 +148,7 @@ void test6(){
 }
 
 
-#define FOO1() 99 // expected-note {{'FOO1' defined here as a function-like macro}}
-// expected-note@-1 {{'FOO1' defined here as a function-like macro}}
+#define FOO1() 99 // expected-note 2 {{'FOO1' defined here as a function-like macro}}
 
 void test7() {
     int w = FOO1; // expected-error {{'FOO1' is defined as a function-like macro; did you mean 'FOO1(...)'?}}
@@ -170,8 +169,7 @@ void test10() {
     int arr[FOO1]; // expected-error {{'FOO1' is defined as a function-like macro; did you mean 'FOO1(...)'?}}
 }
 
-#define VARFOO(...) 1
-// expected-note@-1 {{'VARFOO' defined here as a function-like macro}}
+#define VARFOO(...) 1 // expected-note {{'VARFOO' defined here as a function-like macro}}
 
 void test11() {
     int v = VARFOO; // expected-error {{'VARFOO' is defined as a function-like macro; did you mean 'VARFOO(...)'?}}
