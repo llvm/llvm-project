@@ -1397,7 +1397,7 @@ void TargetInstrInfo::reassociateFMAChain(
   Register LowerRes = Chain[S - 1]->getOperand(0).getReg();
   Register DstReg = Root.getOperand(0).getReg();
   MachineInstr *Add =
-      BuildMI(*MF, Root.getDebugLoc(), get(RootInfo->AddOpc), DstReg)
+      BuildMI(*MF, MIMetadata(Root), get(RootInfo->AddOpc), DstReg)
           .addReg(LowerRes, getKillRegState(true))
           .addReg(UpperAcc, getKillRegState(true));
   Add->setFlags(Flags);
