@@ -33,6 +33,7 @@
 #include "lldb/Expression/REPL.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Expression/UtilityFunction.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Host/StreamFile.h"
@@ -75,6 +76,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ThreadPool.h"
 
@@ -3638,6 +3640,26 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   PlatformSP platform_sp(GetPlatform());
 
   FinalizeFileActions(launch_info);
+
+  // Preserve the path the user used to create this target when computing
+  // argv[0].
+  if (platform_sp && platform_sp->IsHost()) {
+    if (llvm::StringRef arg0 = GetArg0(); !arg0.empty()) {
+      FileSpec arg0_spec(arg0);
+      FileSpec exe_spec = launch_info.GetExecutableFile();
+      if (exe_spec && arg0_spec != exe_spec) {
+        FileSystem &fs = FileSystem::Instance();
+        llvm::SmallString<256> arg0_real, exe_real;
+        if (!fs.GetRealPath(arg0_spec.GetPath(), arg0_real) &&
+            !fs.GetRealPath(exe_spec.GetPath(), exe_real) &&
+            arg0_real == exe_real) {
+          launch_info.SetExecutableFile(arg0_spec, /*add_as_first_arg=*/false);
+          if (launch_info.GetArguments().GetArgumentCount() > 0)
+            launch_info.GetArguments().ReplaceArgumentAtIndex(0, arg0);
+        }
+      }
+    }
+  }
 
   if (state == eStateConnected) {
     if (launch_info.GetFlags().Test(eLaunchFlagLaunchInTTY))
