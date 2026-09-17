@@ -5732,28 +5732,9 @@ LogicalResult IteratorOp::verify() {
   if (!iteratedTy)
     return emitOpError() << "result must be omp.iterated<entry_ty>";
 
-  for (auto [lb, ub, step] : llvm::zip_equal(
-           getLoopLowerBounds(), getLoopUpperBounds(), getLoopSteps())) {
+  for (Value step : getLoopSteps()) {
     if (matchPattern(step, m_Zero()))
       return emitOpError() << "loop step must not be zero";
-
-    IntegerAttr lbAttr;
-    IntegerAttr ubAttr;
-    IntegerAttr stepAttr;
-    if (!matchPattern(lb, m_Constant(&lbAttr)) ||
-        !matchPattern(ub, m_Constant(&ubAttr)) ||
-        !matchPattern(step, m_Constant(&stepAttr)))
-      continue;
-
-    const APInt &lbVal = lbAttr.getValue();
-    const APInt &ubVal = ubAttr.getValue();
-    const APInt &stepVal = stepAttr.getValue();
-    if (stepVal.isStrictlyPositive() && lbVal.sgt(ubVal))
-      return emitOpError() << "positive loop step requires lower bound to be "
-                              "less than or equal to upper bound";
-    if (stepVal.isNegative() && lbVal.slt(ubVal))
-      return emitOpError() << "negative loop step requires lower bound to be "
-                              "greater than or equal to upper bound";
   }
 
   Block &b = getRegion().front();

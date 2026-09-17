@@ -21,7 +21,7 @@ llvm.func @task_affinity_iterator_1d(%arr: !llvm.ptr {llvm.nocapture}) {
         %entry = omp.affinity_entry %arr, %len
             : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
         omp.yield(%entry : !omp.affinity_entry_ty<!llvm.ptr, i64>)
-      } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+      } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
 
       omp.task affinity(%it : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
         omp.terminator
@@ -86,7 +86,7 @@ llvm.func @task_affinity_iterator_3d(%arr: !llvm.ptr {llvm.nocapture}) {
         %entry = omp.affinity_entry %arr, %len
             : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
         omp.yield(%entry : !omp.affinity_entry_ty<!llvm.ptr, i64>)
-      } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+      } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
 
       omp.task affinity(%it : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
         omp.terminator
@@ -151,14 +151,14 @@ llvm.func @task_affinity_iterator_multiple(%arr: !llvm.ptr {llvm.nocapture}) {
         %entry0 = omp.affinity_entry %arr, %len
             : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
         omp.yield(%entry0 : !omp.affinity_entry_ty<!llvm.ptr, i64>)
-      } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+      } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
 
       // second iterator: 1-D (3)
       %it1 = omp.iterator(%k: i64) = (%c1 to %c3 step %c1) {
         %entry1 = omp.affinity_entry %arr, %len
             : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
         omp.yield(%entry1 : !omp.affinity_entry_ty<!llvm.ptr, i64>)
-      } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+      } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
 
       // Multiple iterators in a single affinity clause.
       omp.task affinity(%it0: !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>,
@@ -247,7 +247,7 @@ llvm.func @task_affinity_iterator_dynamic_tripcount(
         %entry = omp.affinity_entry %arr, %len
             : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
         omp.yield(%entry : !omp.affinity_entry_ty<!llvm.ptr, i64>)
-      } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+      } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
 
       omp.task affinity(%it : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
         omp.terminator
@@ -260,9 +260,13 @@ llvm.func @task_affinity_iterator_dynamic_tripcount(
 }
 
 // CHECK-LABEL: define internal void @task_affinity_iterator_dynamic_tripcount
-// CHECK: [[DIFF:%.*]] = sub i64 {{.*}}, {{.*}}
-// CHECK: [[DIV:%.*]] = sdiv i64 [[DIFF]], {{.*}}
-// CHECK: [[TRIPS:%.*]] = add i64 [[DIV]], 1
+// CHECK: [[INCR:%.*]] = select i1 {{.*}}, i64 {{.*}}, i64 {{.*}}
+// CHECK-NEXT: [[BEGIN:%.*]] = select i1 {{.*}}, i64 {{.*}}, i64 {{.*}}
+// CHECK-NEXT: [[END:%.*]] = select i1 {{.*}}, i64 {{.*}}, i64 {{.*}}
+// CHECK-NEXT: {{.*}} = sub nsw i64 [[END]], [[BEGIN]]
+// CHECK-NEXT: [[EMPTY:%.*]] = icmp slt i64 [[END]], [[BEGIN]]
+// CHECK: [[COUNT:%.*]] = add i64 {{.*}}, 1
+// CHECK: [[TRIPS:%.*]] = select i1 [[EMPTY]], i64 0, i64 [[COUNT]]
 // CHECK: [[SCALED:%.*]] = mul i64 1, [[TRIPS]]
 // CHECK: [[AFFLIST:%.*]] = alloca { i64, i64, i32 }, i64 [[SCALED]]
 
@@ -277,7 +281,7 @@ llvm.func @task_affinity_iterator_negative_step(%arr: !llvm.ptr {llvm.nocapture}
         %entry = omp.affinity_entry %arr, %i
             : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
         omp.yield(%entry : !omp.affinity_entry_ty<!llvm.ptr, i64>)
-      } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+      } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
 
       omp.task affinity(%it : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
         omp.terminator
@@ -302,6 +306,38 @@ llvm.func @task_affinity_iterator_negative_step(%arr: !llvm.ptr {llvm.nocapture}
 // CHECK: [[LENPTR:%.*]] = getelementptr inbounds nuw { i64, i64, i32 }, ptr [[ENTRY]], i32 0, i32 1
 // CHECK: store i64 [[PHYSIV]], ptr [[LENPTR]]
 
+llvm.func @task_affinity_iterator_empty(%arr: !llvm.ptr {llvm.nocapture}) {
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %c5 = llvm.mlir.constant(5 : i64) : i64
+  %len = llvm.mlir.constant(4 : i64) : i64
+
+  omp.parallel {
+    omp.single {
+      %it = omp.iterator(%i: i64) = (%c5 to %c1 step %c1) {
+        %entry = omp.affinity_entry %arr, %len
+            : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+        omp.yield(%entry : !omp.affinity_entry_ty<!llvm.ptr, i64>)
+      } inclusive -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+
+      omp.task affinity(
+          %it : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
+        omp.terminator
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define internal void @task_affinity_iterator_empty
+// CHECK: %[[EMPTY_AFFINITY:.*]] = alloca { i64, i64, i32 }, i64 0
+// CHECK: omp_iterator.cond:
+// CHECK: icmp ult i64 %omp_iterator.iv, 0
+// CHECK: call i32 @__kmpc_omp_reg_task_with_affinity(
+// CHECK-SAME: ptr @{{[^,]+}}, i32 %{{[^,]+}}, ptr %{{[^,]+}},
+// CHECK-SAME: i32 0, ptr %[[EMPTY_AFFINITY]])
+
 // --------------------------------------------------------------------
 // Depend clause
 // --------------------------------------------------------------------
@@ -313,7 +349,7 @@ llvm.func @omp_task_depend_iterator_simple(%addr : !llvm.ptr) {
 
   %it = omp.iterator(%iv: i64) = (%c1 to %c10 step %step) {
     omp.yield(%addr : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
 
   omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
     omp.terminator
@@ -359,7 +395,7 @@ llvm.func @omp_task_depend_iterator_mixed(%addr : !llvm.ptr, %plain : !llvm.ptr)
 
   %it = omp.iterator(%iv: i64) = (%c1 to %c10 step %step) {
     omp.yield(%addr : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
 
   omp.task depend(taskdependout -> %plain : !llvm.ptr, taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
     omp.terminator
@@ -398,7 +434,7 @@ llvm.func @omp_task_depend_iterator_dynamic(%addr : !llvm.ptr,
     %lb : i64, %ub : i64, %step : i64) {
   %it = omp.iterator(%iv: i64) = (%lb to %ub step %step) {
     omp.yield(%addr : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
 
   omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
     omp.terminator
@@ -409,9 +445,13 @@ llvm.func @omp_task_depend_iterator_dynamic(%addr : !llvm.ptr,
 // CHECK-LABEL: define void @omp_task_depend_iterator_dynamic
 //
 // Tripcount computation from dynamic bounds
-// CHECK: %[[DIFF:.*]] = sub i64 %{{.*}}, %{{.*}}
-// CHECK: %[[DIV:.*]] = sdiv i64 %[[DIFF]], %{{.*}}
-// CHECK: %[[TRIPS:.*]] = add i64 %[[DIV]], 1
+// CHECK: %[[INCR:.*]] = select i1 %{{.*}}, i64 %{{.*}}, i64 %{{.*}}
+// CHECK-NEXT: %[[BEGIN:.*]] = select i1 %{{.*}}, i64 %{{.*}}, i64 %{{.*}}
+// CHECK-NEXT: %[[END:.*]] = select i1 %{{.*}}, i64 %{{.*}}, i64 %{{.*}}
+// CHECK-NEXT: %{{.*}} = sub nsw i64 %[[END]], %[[BEGIN]]
+// CHECK-NEXT: %[[EMPTY:.*]] = icmp slt i64 %[[END]], %[[BEGIN]]
+// CHECK: %[[COUNT:.*]] = add i64 %{{.*}}, 1
+// CHECK: %[[TRIPS:.*]] = select i1 %[[EMPTY]], i64 0, i64 %[[COUNT]]
 // CHECK: %[[SCALED:.*]] = mul i64 1, %[[TRIPS]]
 // Dynamic total = 0 + scaled trip count
 // CHECK: %[[TOTAL:.*]] = add i64 0, %[[SCALED]]
@@ -430,7 +470,7 @@ llvm.func @omp_task_depend_iterator_dynamic_mixed(%addr : !llvm.ptr,
     %plain : !llvm.ptr, %lb : i64, %ub : i64, %step : i64) {
   %it = omp.iterator(%iv: i64) = (%lb to %ub step %step) {
     omp.yield(%addr : !llvm.ptr)
-  } -> !omp.iterated<!llvm.ptr>
+  } inclusive -> !omp.iterated<!llvm.ptr>
 
   omp.task depend(taskdependout -> %plain : !llvm.ptr, taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
     omp.terminator
@@ -453,6 +493,73 @@ llvm.func @omp_task_depend_iterator_dynamic_mixed(%addr : !llvm.ptr,
 // CHECK: call i32 @__kmpc_omp_task_with_deps(ptr @{{.*}}, i32 %{{.*}}, ptr %{{.*}}, i32 %[[NDEPS2]], ptr %[[DEP_ARR2]], i32 0, ptr null)
 // CHECK: tail call void @free(ptr %[[DEP_ARR2]])
 
+llvm.func @omp_task_depend_iterator_empty(%addr : !llvm.ptr) {
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %c5 = llvm.mlir.constant(5 : i64) : i64
+
+  %it = omp.iterator(%iv: i64) = (%c5 to %c1 step %c1) {
+    omp.yield(%addr : !llvm.ptr)
+  } inclusive -> !omp.iterated<!llvm.ptr>
+
+  omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @omp_task_depend_iterator_empty
+// CHECK: %[[EMPTY_DEP_ARR:.*]] = tail call ptr @malloc(i64 0)
+// CHECK: omp_dep_iterator.cond:
+// CHECK: icmp ult i64 %omp_dep_iterator.iv, 0
+// CHECK: call i32 @__kmpc_omp_task_with_deps(
+// CHECK-SAME: ptr @{{[^,]+}}, i32 %{{[^,]+}}, ptr %{{[^,]+}},
+// CHECK-SAME: i32 0, ptr %[[EMPTY_DEP_ARR]], i32 0, ptr null)
+
+llvm.func @omp_task_depend_iterator_exclusive(%addr : !llvm.ptr) {
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %c5 = llvm.mlir.constant(5 : i64) : i64
+
+  %it = omp.iterator(%iv: i64) = (%c1 to %c5 step %c1) {
+    omp.yield(%addr : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+
+  omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @omp_task_depend_iterator_exclusive
+// CHECK: %[[EXCLUSIVE_DEP_ARR:.*]] = tail call ptr @malloc(i64 80)
+// CHECK: omp_dep_iterator.cond:
+// CHECK: icmp ult i64 %omp_dep_iterator.iv, 4
+// CHECK: call i32 @__kmpc_omp_task_with_deps(
+// CHECK-SAME: ptr @{{[^,]+}}, i32 %{{[^,]+}}, ptr %{{[^,]+}},
+// CHECK-SAME: i32 4, ptr %[[EXCLUSIVE_DEP_ARR]], i32 0, ptr null)
+
+llvm.func @omp_task_depend_iterator_wide(
+    %addr : !llvm.ptr, %lb : i128, %ub : i128, %step : i128) {
+  %it = omp.iterator(%iv: i128) = (%lb to %ub step %step) {
+    %element = llvm.getelementptr %addr[%iv]
+        : (!llvm.ptr, i128) -> !llvm.ptr, i8
+    omp.yield(%element : !llvm.ptr)
+  } inclusive -> !omp.iterated<!llvm.ptr>
+
+  omp.task depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @omp_task_depend_iterator_wide
+// CHECK: %[[WIDE_TRIPS:.*]] = select i1 {{.*}}, i128 0, i128 {{.*}}
+// CHECK: %[[WIDE_TRIPS_I64:.*]] = trunc i128 %[[WIDE_TRIPS]] to i64
+// CHECK: omp_dep_iterator.body:
+// CHECK: %[[WIDE_IDX:.*]] = zext i64 {{.*}} to i128
+// CHECK: %[[WIDE_STEP:.*]] = mul i128 %[[WIDE_IDX]], %{{.*}}
+// CHECK: %[[WIDE_IV:.*]] = add i128 %{{.*}}, %[[WIDE_STEP]]
+// CHECK: getelementptr i8, ptr %{{.*}}, i128 %[[WIDE_IV]]
+
 //--- target.mlir
 
 // --------------------------------------------------------------------
@@ -470,7 +577,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 
     %it = omp.iterator(%iv: i64) = (%c1 to %c10 step %step) {
       omp.yield(%addr : !llvm.ptr)
-    } -> !omp.iterated<!llvm.ptr>
+    } inclusive -> !omp.iterated<!llvm.ptr>
 
     %map = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("data") -> !llvm.ptr
     omp.target kernel_type(generic) depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {

@@ -1442,6 +1442,10 @@ class MapInfoFinalizationPass
     return false;
   }
 
+  static bool isNestedInIterator(mlir::omp::MapInfoOp op) {
+    return op->getParentOfType<mlir::omp::IteratorOp>() != nullptr;
+  }
+
   // This pass executes on omp::MapInfoOp's containing descriptor based types
   // (allocatables, pointers, assumed shape etc.) and expanding them into
   // multiple omp::MapInfoOp's for each pointer member contained within the
@@ -1472,19 +1476,26 @@ class MapInfoFinalizationPass
       deferrableDesc.clear();
       expandedBaseAddr.clear();
 
-      // Walk all of the existing maps for parents with child maps and then
-      // make sure to appropriately bind them to the target region that the
-      // parent is bound to. Necessary for the next implicit record member
-      // map step which depends on this canonicalization step. This step
-      // is executed again as the final step of this pass to maintain
-      // map to block argument consistency.
-      func->walk([&](mlir::omp::MapInfoOp op) {
+      // Iterator maps may depend on region-local values. Descriptor expansion
+      // and target operand updates must not expose those values outside the
+      // iterator region.
+      auto walkNonIteratedMapInfoOps = [&](auto &&callback) {
+        func->walk([&](mlir::omp::MapInfoOp op) {
+          if (!isNestedInIterator(op))
+            callback(op);
+        });
+      };
+
+      // Bind existing member maps to their parent's target region. Repeat after
+      // descriptor expansion to keep map operands and block arguments
+      // consistent.
+      walkNonIteratedMapInfoOps([&](mlir::omp::MapInfoOp op) {
         mlir::Operation *targetUser = getFirstTargetUser(op);
         assert(targetUser && "expected user of map operation was not found");
         addImplicitMembersToTarget(op, builder, targetUser);
       });
 
-      func->walk([&](mlir::omp::MapInfoOp op) {
+      walkNonIteratedMapInfoOps([&](mlir::omp::MapInfoOp op) {
         // NOTE: Currently only supports a single user for the MapInfoOp. This
         // is fine for the moment, as the Fortran frontend will generate a
         // new MapInfoOp with at most one user currently. In the case of
@@ -1544,7 +1555,7 @@ class MapInfoFinalizationPass
       // Wait until after we have generated all of our maps to add them onto
       // the target's block arguments, simplifying the process as there would be
       // no need to avoid accidental duplicate additions.
-      func->walk([&](mlir::omp::MapInfoOp op) {
+      walkNonIteratedMapInfoOps([&](mlir::omp::MapInfoOp op) {
         mlir::Operation *targetUser = getFirstTargetUser(op);
         assert(targetUser && "expected user of map operation was not found");
         addImplicitMembersToTarget(op, builder, targetUser);
