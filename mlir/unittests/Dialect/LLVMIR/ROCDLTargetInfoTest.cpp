@@ -14,7 +14,9 @@
 #include "mlir/IR/OwningOpRef.h"
 #include "gtest/gtest.h"
 
-namespace mlir::ROCDL {
+using namespace mlir;
+using namespace mlir::ROCDL;
+
 namespace {
 
 /// Resolves a target, collecting anything reported through emitError.
@@ -389,4 +391,3 @@ TEST(TargetInfoTest, DefaultIsUnknown) {
   EXPECT_EQ(target.getWavefrontSize(), std::nullopt);
 }
 } // namespace
-} // namespace mlir::ROCDL
