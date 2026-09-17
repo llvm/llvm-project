@@ -56,6 +56,10 @@ infrastructure are described first, followed by tool-specific sections.
 
 ### Potentially Breaking Changes
 
+- Improved {doc}`bugprone-unused-return-value
+  <clang-tidy/checks/bugprone/unused-return-value>` check by changing the
+  default of the `AllowCastToVoid` option from `false` to `true`.
+
 - The deprecated `zircon` clang-tidy module has been removed. Users of
   `zircon-temporary-objects` should migrate to {doc}`fuchsia-temporary-objects
   <clang-tidy/checks/fuchsia/temporary-objects>`.
@@ -187,10 +191,6 @@ infrastructure are described first, followed by tool-specific sections.
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
-
-- Improved {doc}`bugprone-unused-return-value
-  <clang-tidy/checks/bugprone/unused-return-value>` check by changing the
-  default of the `AllowCastToVoid` option from `false` to `true`.
 
 - Improved {doc}`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by diagnosing
