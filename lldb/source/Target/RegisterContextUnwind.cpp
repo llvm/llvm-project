@@ -142,24 +142,20 @@ bool RegisterContextUnwind::IsUnwindPlanValidForCurrentPC(
   return false;
 }
 
-std::shared_ptr<const UnwindPlan>
-RegisterContextUnwind::GetSignalFrameUnwindPlanForRawPC() {
+bool RegisterContextUnwind::IsSignalFrameAtRawPC() {
   ModuleSP module_sp = m_current_pc.GetModule();
   if (!m_current_pc.IsValid() || !module_sp || !module_sp->GetObjectFile())
-    return {};
+    return false;
 
   DWARFCallFrameInfo *eh_frame = module_sp->GetUnwindTable().GetEHFrameInfo();
   if (!eh_frame)
-    return {};
+    return false;
 
   AddressRange raw_pc_range(m_current_pc, 1);
   std::unique_ptr<UnwindPlan> plan_up =
       eh_frame->GetUnwindPlan({raw_pc_range}, m_start_pc);
-  if (!plan_up || plan_up->GetUnwindPlanForSignalTrap() != eLazyBoolYes ||
-      !plan_up->PlanValidAtAddress(m_current_pc))
-    return {};
-
-  return std::shared_ptr<const UnwindPlan>(std::move(plan_up));
+  return plan_up && plan_up->GetUnwindPlanForSignalTrap() == eLazyBoolYes &&
+         plan_up->PlanValidAtAddress(m_current_pc);
 }
 
 // Initialize a RegisterContextUnwind which is the first frame of a stack -- the
@@ -249,35 +245,28 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     m_current_offset_backed_up_one = std::nullopt;
   }
 
-  std::shared_ptr<const UnwindPlan> signal_frame_unwind_plan_sp =
-      GetSignalFrameUnwindPlanForRawPC();
-  if (signal_frame_unwind_plan_sp && !m_current_offset) {
+  bool is_signal_frame = IsSignalFrameAtRawPC();
+  if (is_signal_frame && !m_current_offset) {
     m_current_offset = 0;
     m_current_offset_backed_up_one = 0;
   }
+  if (is_signal_frame)
+    m_frame_type = eTrapHandlerFrame;
 
   // We've set m_frame_type and m_sym_ctx before these calls.
-  if (signal_frame_unwind_plan_sp) {
-    m_fast_unwind_plan_sp.reset();
-    m_full_unwind_plan_sp = signal_frame_unwind_plan_sp;
-  } else {
-    m_fast_unwind_plan_sp = GetFastUnwindPlanForFrame();
-    m_full_unwind_plan_sp = GetFullUnwindPlanForFrame();
-  }
+
+  m_fast_unwind_plan_sp = GetFastUnwindPlanForFrame();
+  m_full_unwind_plan_sp = GetFullUnwindPlanForFrame();
 
   const UnwindPlan::Row *active_row = nullptr;
   lldb::RegisterKind row_register_kind = eRegisterKindGeneric;
 
-  // A signal-frame plan describes the exact interrupted PC, rather than a
-  // return address, so use its row at the raw-PC offset and preserve its trap
-  // semantics instead of selecting an ordinary or fast unwind plan.  Otherwise,
-  // prefer a LanguageRuntime plan over the function's normal unwind plans.
-  if (signal_frame_unwind_plan_sp) {
-    active_row =
-        signal_frame_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
-    row_register_kind = signal_frame_unwind_plan_sp->GetRegisterKind();
-    PropagateTrapHandlerFlagFromUnwindPlan(signal_frame_unwind_plan_sp);
-  } else if (lang_runtime_plan_sp.get()) {
+  // If we have LanguageRuntime UnwindPlan for this unwind, use those
+  // rules to find the caller frame instead of the function's normal
+  // UnwindPlans.  The full unwind plan for this frame will be
+  // the LanguageRuntime-provided unwind plan, and there will not be a
+  // fast unwind plan.
+  if (lang_runtime_plan_sp.get()) {
     active_row =
         lang_runtime_plan_sp->GetRowForFunctionOffset(m_current_offset);
     row_register_kind = lang_runtime_plan_sp->GetRegisterKind();
@@ -589,16 +578,14 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     m_current_offset_backed_up_one = 0;
   }
 
-  std::shared_ptr<const UnwindPlan> signal_frame_unwind_plan_sp =
-      GetSignalFrameUnwindPlanForRawPC();
+  bool is_signal_frame = IsSignalFrameAtRawPC();
 
   bool decr_pc_and_recompute_addr_range;
 
-  if (signal_frame_unwind_plan_sp) {
-    decr_pc_and_recompute_addr_range = false;
-  } else if (!m_sym_ctx_valid) {
-    // Always decrement and recompute if the symbol lookup failed
-    decr_pc_and_recompute_addr_range = true;
+  if (!m_sym_ctx_valid) {
+    // Signal-frame CFI describes the raw PC even when symbol lookup failed.
+    // Otherwise, preserve the existing behavior of decrementing and retrying.
+    decr_pc_and_recompute_addr_range = !is_signal_frame;
   } else if (GetNextFrame()->m_frame_type == eTrapHandlerFrame ||
              GetNextFrame()->m_frame_type == eDebuggerFrame) {
     // Don't decrement if we're "above" an asynchronous event like
@@ -612,7 +599,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       decr_pc_and_recompute_addr_range = false;
     else
       decr_pc_and_recompute_addr_range = true;
-  } else if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
+  } else if (is_signal_frame || IsTrapHandlerSymbol(process, m_sym_ctx)) {
     // Signal dispatch may set the return address of the handler it calls to
     // point to the first byte of a return trampoline (like __kernel_rt_sigreturn),
     // so do not decrement and recompute if the symbol we already found is a trap
@@ -658,13 +645,13 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
         m_current_pc.SetLoadAddress(pc - 1, &process->GetTarget());
       }
     }
-  } else if (!signal_frame_unwind_plan_sp) {
+  } else if (!is_signal_frame) {
     m_start_pc = m_current_pc;
     m_current_offset = std::nullopt;
     m_current_offset_backed_up_one = std::nullopt;
   }
 
-  if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
+  if (is_signal_frame || IsTrapHandlerSymbol(process, m_sym_ctx)) {
     m_frame_type = eTrapHandlerFrame;
   } else {
     // FIXME:  Detect eDebuggerFrame here.
@@ -674,21 +661,15 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     }
   }
 
-  const UnwindPlan::Row *active_row = nullptr;
+  const UnwindPlan::Row *active_row;
   RegisterKind row_register_kind = eRegisterKindGeneric;
 
-  // A signal-frame plan describes the exact interrupted PC, rather than a
-  // return address, so use its row at the raw-PC offset and preserve its trap
-  // semantics instead of selecting an ordinary or fast unwind plan.  Otherwise,
-  // prefer a LanguageRuntime plan over the function's normal unwind plans.
-  if (signal_frame_unwind_plan_sp) {
-    m_fast_unwind_plan_sp.reset();
-    m_full_unwind_plan_sp = signal_frame_unwind_plan_sp;
-    active_row =
-        signal_frame_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
-    row_register_kind = signal_frame_unwind_plan_sp->GetRegisterKind();
-    PropagateTrapHandlerFlagFromUnwindPlan(signal_frame_unwind_plan_sp);
-  } else if (lang_runtime_plan_sp.get()) {
+  // If we have LanguageRuntime UnwindPlan for this unwind, use those
+  // rules to find the caller frame instead of the function's normal
+  // UnwindPlans.  The full unwind plan for this frame will be
+  // the LanguageRuntime-provided unwind plan, and there will not be a
+  // fast unwind plan.
+  if (lang_runtime_plan_sp.get()) {
     active_row =
         lang_runtime_plan_sp->GetRowForFunctionOffset(m_current_offset);
     row_register_kind = lang_runtime_plan_sp->GetRegisterKind();
@@ -714,44 +695,44 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     }
   }
 
-  if (!signal_frame_unwind_plan_sp) {
-    // We've set m_frame_type and m_sym_ctx before this call.
-    m_fast_unwind_plan_sp = GetFastUnwindPlanForFrame();
+  // We've set m_frame_type and m_sym_ctx before this call.  A trap handler
+  // recognized by either its symbol or signal-frame CFI will not use a fast
+  // plan.
+  m_fast_unwind_plan_sp = GetFastUnwindPlanForFrame();
 
-    // Try to get by with just the fast UnwindPlan if possible - the full
-    // UnwindPlan may be expensive to get (e.g. if we have to parse the entire
-    // eh_frame section of an ObjectFile for the first time.)
-    if (m_fast_unwind_plan_sp &&
-        m_fast_unwind_plan_sp->PlanValidAtAddress(m_current_pc)) {
-      active_row =
-          m_fast_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
-      row_register_kind = m_fast_unwind_plan_sp->GetRegisterKind();
-      PropagateTrapHandlerFlagFromUnwindPlan(m_fast_unwind_plan_sp);
+  // Try to get by with just the fast UnwindPlan if possible - the full
+  // UnwindPlan may be expensive to get (e.g. if we have to parse the entire
+  // eh_frame section of an ObjectFile for the first time.)
+
+  if (m_fast_unwind_plan_sp &&
+      m_fast_unwind_plan_sp->PlanValidAtAddress(m_current_pc)) {
+    active_row =
+        m_fast_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
+    row_register_kind = m_fast_unwind_plan_sp->GetRegisterKind();
+    PropagateTrapHandlerFlagFromUnwindPlan(m_fast_unwind_plan_sp);
+    if (active_row && log) {
+      StreamString active_row_strm;
+      active_row->Dump(active_row_strm, m_fast_unwind_plan_sp.get(), &m_thread,
+                       m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
+      UNWIND_LOG(log, "Using fast unwind plan '{0}'",
+                 m_fast_unwind_plan_sp->GetSourceName());
+      UNWIND_LOG(log, "active row: {0}", active_row_strm.GetString());
+    }
+  } else {
+    m_full_unwind_plan_sp = GetFullUnwindPlanForFrame();
+    if (IsUnwindPlanValidForCurrentPC(m_full_unwind_plan_sp)) {
+      active_row = m_full_unwind_plan_sp->GetRowForFunctionOffset(
+          m_current_offset_backed_up_one);
+      row_register_kind = m_full_unwind_plan_sp->GetRegisterKind();
+      PropagateTrapHandlerFlagFromUnwindPlan(m_full_unwind_plan_sp);
       if (active_row && log) {
         StreamString active_row_strm;
-        active_row->Dump(active_row_strm, m_fast_unwind_plan_sp.get(),
+        active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(),
                          &m_thread,
                          m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
-        UNWIND_LOG(log, "Using fast unwind plan '{0}'",
-                   m_fast_unwind_plan_sp->GetSourceName());
+        UNWIND_LOG(log, "Using full unwind plan '{0}'",
+                   m_full_unwind_plan_sp->GetSourceName());
         UNWIND_LOG(log, "active row: {0}", active_row_strm.GetString());
-      }
-    } else {
-      m_full_unwind_plan_sp = GetFullUnwindPlanForFrame();
-      if (IsUnwindPlanValidForCurrentPC(m_full_unwind_plan_sp)) {
-        active_row = m_full_unwind_plan_sp->GetRowForFunctionOffset(
-            m_current_offset_backed_up_one);
-        row_register_kind = m_full_unwind_plan_sp->GetRegisterKind();
-        PropagateTrapHandlerFlagFromUnwindPlan(m_full_unwind_plan_sp);
-        if (active_row && log) {
-          StreamString active_row_strm;
-          active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(),
-                           &m_thread,
-                           m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
-          UNWIND_LOG(log, "Using full unwind plan '{0}'",
-                     m_full_unwind_plan_sp->GetSourceName());
-          UNWIND_LOG(log, "active row: {0}", active_row_strm.GetString());
-        }
       }
     }
   }

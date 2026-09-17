@@ -208,10 +208,10 @@ private:
   bool IsUnwindPlanValidForCurrentPC(
       std::shared_ptr<const UnwindPlan> unwind_plan_sp);
 
-  /// Return an EH-frame plan for the current raw PC when its CIE marks it as
-  /// a signal frame. Signal-frame plans must be discovered before normal PC
-  /// adjustment and fast-plan selection.
-  std::shared_ptr<const UnwindPlan> GetSignalFrameUnwindPlanForRawPC();
+  /// Return true if EH-frame has a signal-frame FDE for the current raw PC.
+  /// Signal frames must be recognized before normal PC adjustment and
+  /// fast-plan selection.
+  bool IsSignalFrameAtRawPC();
 
   lldb::addr_t GetReturnAddressHint(int32_t plan_offset);
 
