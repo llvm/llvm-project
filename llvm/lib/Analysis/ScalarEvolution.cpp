@@ -12385,19 +12385,15 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
       ICmpInst::isStrictPredicate(FoundPred) &&
       CmpPredicate::getMatching(ICmpInst::getNonStrictCmpPredicate(FoundPred),
                                 Pred)) {
-    if (ICmpInst::isLT(FoundPred)
-            ? FoundLHS == getMinusSCEV(LHS, getOne(LHS->getType())) &&
-                  FoundRHS == RHS
-            : FoundRHS == getMinusSCEV(RHS, getOne(RHS->getType())) &&
-                  FoundLHS == LHS)
-      return true;
+    return ICmpInst::isLT(FoundPred)
+               ? FoundLHS == getMinusSCEV(LHS, getOne(LHS->getType())) &&
+                     FoundRHS == RHS
+               : FoundRHS == getMinusSCEV(RHS, getOne(RHS->getType())) &&
+                     FoundLHS == LHS;
   }
 
-  if (isImpliedCondOperandsViaRanges(Pred, LHS, RHS, FoundPred, FoundLHS, FoundRHS))
-    return true;
-
-  // Otherwise assume the worst.
-  return false;
+  return isImpliedCondOperandsViaRanges(Pred, LHS, RHS, FoundPred, FoundLHS,
+                                        FoundRHS);
 }
 
 bool ScalarEvolution::splitBinaryAdd(SCEVUse Expr, SCEVUse &L, SCEVUse &R,
