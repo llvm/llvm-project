@@ -663,13 +663,16 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   // For COFF, the comdat must contain a member which has the
   // same name as the group.
   if (auto *C = FirstNewGV->getComdat()) {
+    Type *GlobalType = ArrayType::get(Type::getInt8Ty(GV->getContext()),
+                                    0);
     auto *DummyGV = new GlobalVariable(
-        *FirstNewGV->getParent(), Type::getInt1Ty(FirstNewGV->getContext()),
+        *FirstNewGV->getParent(), GlobalType,
         false, FirstNewGV->getLinkage(),
-        ConstantInt::getFalse(FirstNewGV->getContext()), C->getName(),
+        UndefValue::get(GlobalType), C->getName(),
         FirstNewGV, FirstNewGV->getThreadLocalMode(),
         FirstNewGV->getAddressSpace());
     DummyGV->setComdat(C);
+    DummyGV->copyAttributesFrom(FirstNewGV);
   }
 
   return FirstNewGV;

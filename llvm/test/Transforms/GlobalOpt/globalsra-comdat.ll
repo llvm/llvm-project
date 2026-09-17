@@ -2,7 +2,7 @@
 
 $x = comdat any
 @x = internal global [2 x i32] zeroinitializer, comdat, align 4
-; CHECK: @x = internal unnamed_addr global i1 false, comdat
+; CHECK: @x = internal unnamed_addr global [0 x i8] undef, comdat
 ; CHECK: @x.0 = internal unnamed_addr global i32 0, comdat($x), align 4
 ; CHECK: @x.1 = internal unnamed_addr global i32 0, comdat($x), align 4
 
