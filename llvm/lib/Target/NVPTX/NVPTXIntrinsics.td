@@ -524,23 +524,46 @@ let Predicates = [PTX80, SM90] in {
 // TMA Async Bulk Copy Functions
 //------------------------------
 
-class CpAsyncBulkStr<bit mc, bit ch, bit mask = 0> {
+class CpAsyncBulkStr<bits<2> mc, bit ch, bit mask = 0, bit is_relaxed = 0,
+                     bit oob = 0> {
+  // Multicast kind: 0 = none, 1 = 16-bit mask, 2 = 32-bit mask.
+  string mc_str = !cond(!eq(mc, 1): ".multicast::cluster",
+                        !eq(mc, 2): ".multicast::cluster::32b",
+                        true: "");
+
+  defvar prefix     = "cp.async.bulk";
+  defvar dir_s2g    = "global.shared::cta";
+  defvar dir_g2s    = "shared::cluster.global";
+  defvar dir_g2s_cta= "shared::cta.global";
+  defvar dir_c2c    = "shared::cluster.shared::cta";
+  defvar completion = "mbarrier::complete_tx::bytes$flag_valid_pattern";
+
   // Shared to Global memory
-  string S2G = "cp.async.bulk.global.shared::cta.bulk_group"
+  string S2G = prefix # "." # dir_s2g # ".bulk_group"
                # !if(ch, ".L2::cache_hint", "")
                # !if(mask, ".cp_mask", "");
 
-  // Global to Shared cluster memory
-  string G2S = "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes"
-               # !if(mc, ".multicast::cluster", "")
-               # !if(ch, ".L2::cache_hint", "");
+  // Global to Shared cluster memory. The relaxed form carries the "${flag_scope}"
+  // qualifier and an explicit ".b128" suffix; the weak form has neither.
+  string G2S = prefix
+               # !if(is_relaxed, ".relaxed${flag_scope}", "")
+               # "." # dir_g2s
+               # "." # completion
+               # mc_str
+               # !if(ch, ".L2::cache_hint", "")
+               # !if(is_relaxed, ".b128", "");
 
-  // Global to Shared CTA memory
-  string G2S_CTA = "cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes"
-                   # !if(ch, ".L2::cache_hint", "");
+  // Global to Shared CTA memory.
+  string G2S_CTA = prefix
+                   # !if(is_relaxed, ".relaxed${flag_scope}", "")
+                   # "." # dir_g2s_cta
+                   # "." # completion
+                   # !if(ch, ".L2::cache_hint", "")
+                   # !if(oob, ".ignore_oob", "")
+                   # !if(is_relaxed, ".b128", "");
 
   // Shared CTA to Cluster memory
-  string C2C = "cp.async.bulk.shared::cluster.shared::cta.mbarrier::complete_tx::bytes";
+  string C2C = prefix # "." # dir_c2c # ".mbarrier::complete_tx::bytes";
 }
 
 multiclass CP_ASYNC_BULK_S2G_INTR<bit has_ch> {
@@ -561,44 +584,127 @@ multiclass CP_ASYNC_BULK_S2G_INTR<bit has_ch> {
 defm CP_ASYNC_BULK_S2G    : CP_ASYNC_BULK_S2G_INTR<has_ch = 0>;
 defm CP_ASYNC_BULK_S2G_CH : CP_ASYNC_BULK_S2G_INTR<has_ch = 1>;
 
-multiclass CP_ASYNC_BULK_G2S_INTR<bit has_ch> {
-  defvar Intr = int_nvvm_cp_async_bulk_global_to_shared_cluster;
-
-  def "" : NVPTXInst<(outs),
-      (ins ADDR:$dst, ADDR:$mbar, ADDR:$src,
-           B32:$size, B16:$mask, B64:$ch),
-      !if(has_ch,
-          CpAsyncBulkStr<0, 1>.G2S # " [$dst], [$src], $size, [$mbar], $ch;",
-          CpAsyncBulkStr<0, 0>.G2S # " [$dst], [$src], $size, [$mbar];"),
-      [(Intr addr:$dst, addr:$mbar, addr:$src, i32:$size, i16:$mask, i64:$ch, 0, !if(has_ch, -1, 0))]>,
-      Requires<[PTX80, SM90]>;
-
-  def _MC : NVPTXInst<(outs),
-      (ins ADDR:$dst, ADDR:$mbar, ADDR:$src,
-           B32:$size, B16:$mask, B64:$ch),
-      !if(has_ch,
-          CpAsyncBulkStr<1, 1>.G2S # " [$dst], [$src], $size, [$mbar], $mask, $ch;",
-          CpAsyncBulkStr<1, 0>.G2S # " [$dst], [$src], $size, [$mbar], $mask;"),
-      [(Intr addr:$dst, addr:$mbar, addr:$src, i32:$size, i16:$mask, i64:$ch, -1, !if(has_ch, -1, 0))]>,
-      Requires<[PTX80, SM90]>;
+def TMAValidateDataFlags : Operand<i32> {
+  let PrintMethod = "printTMAValidateDataFlags";
 }
-defm CP_ASYNC_BULK_G2S    : CP_ASYNC_BULK_G2S_INTR<has_ch = 0>;
-defm CP_ASYNC_BULK_G2S_CH : CP_ASYNC_BULK_G2S_INTR<has_ch = 1>;
 
-multiclass CP_ASYNC_BULK_G2S_CTA_INTR<bit has_ch> {
-  defvar Intr = int_nvvm_cp_async_bulk_global_to_shared_cta;
+// Matches flag_valid_pattern values 0-5. The 1-5 values are Rubin-only
+// validate patterns. 0 denotes disabled flag_valid_pattern (default).
+def tma_validate_data_imm : TImmLeaf<i32, [{
+  return Imm == 0 || (Imm >= 1 && Imm <= 5 &&
+                      Subtarget->hasFeature(NVPTX::SM107f));
+}]>;
 
-  def "" : NVPTXInst<(outs),
-      (ins ADDR:$dst, ADDR:$mbar, ADDR:$src,
-           B32:$size, B64:$ch),
-      !if(has_ch,
-          CpAsyncBulkStr<0, 1>.G2S_CTA # " [$dst], [$src], $size, [$mbar], $ch;",
-          CpAsyncBulkStr<0, 0>.G2S_CTA # " [$dst], [$src], $size, [$mbar];"),
-      [(Intr addr:$dst, addr:$mbar, addr:$src, i32:$size, i64:$ch, !if(has_ch, -1, 0))]>,
-      Requires<[PTX86, SM90]>;
+// Prints the flag_scope for relaxed memory ordering semantics.
+def MemScopeFlags : Operand<i32> {
+  let PrintMethod = "printMemScope";
 }
-defm CP_ASYNC_BULK_G2S_CTA    : CP_ASYNC_BULK_G2S_CTA_INTR<has_ch = 0>;
-defm CP_ASYNC_BULK_G2S_CTA_CH : CP_ASYNC_BULK_G2S_CTA_INTR<has_ch = 1>;
+
+// Matches flag_scope values 0-3 (cta/cluster/gpu/sys) for relaxed memory ordering semantics.
+def async_bulk_scope_imm : TImmLeaf<i32, [{ return Imm >= 0 && Imm <= 3; }]>;
+
+multiclass CP_ASYNC_BULK_G2S_INTR<bit has_ch, bit is_relaxed,
+                                  list<Predicate> preds = [hasCpAsyncBulkClusterSupport]> {
+  defvar Intr =
+    !cast<Intrinsic>("int_nvvm_cp_async_bulk_global_to_shared_cluster" #
+                     !if(is_relaxed, "_relaxed", ""));
+
+  defvar asm_nomc = CpAsyncBulkStr<0, has_ch, 0, is_relaxed>.G2S;
+  defvar asm_mc16 = CpAsyncBulkStr<1, has_ch, 0, is_relaxed>.G2S;
+  defvar asm_mc32 = CpAsyncBulkStr<2, has_ch, 0, is_relaxed>.G2S;
+
+  // Relaxed form carries the extra flag_scope operand.
+  defvar ins_tail = !if(is_relaxed,
+      (ins MemScopeFlags:$flag_scope, TMAValidateDataFlags:$flag_valid_pattern),
+      (ins TMAValidateDataFlags:$flag_valid_pattern));
+  defvar ins_i16 = !con((ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size,
+                         B16:$mask, B64:$ch), ins_tail);
+  defvar ins_i32 = !con((ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size,
+                         B32:$mask, B64:$ch), ins_tail);
+
+  // Relaxed form carries the extra flag_scope operand.
+  defvar p_tail = !if(is_relaxed,
+      (Intr async_bulk_scope_imm:$flag_scope, tma_validate_data_imm:$flag_valid_pattern),
+      (Intr tma_validate_data_imm:$flag_valid_pattern));
+  defvar p_no_mc16 = !con((Intr addr:$dst, addr:$mbar, addr:$src, i32:$size,
+      i16:$mask, i64:$ch, 0, !if(has_ch, -1, 0)), p_tail);
+  defvar p_mc16    = !con((Intr addr:$dst, addr:$mbar, addr:$src, i32:$size,
+      i16:$mask, i64:$ch, -1, !if(has_ch, -1, 0)), p_tail);
+  defvar p_no_mc32 = !con((Intr addr:$dst, addr:$mbar, addr:$src, i32:$size,
+      i32:$mask, i64:$ch, 0, !if(has_ch, -1, 0)), p_tail);
+  defvar p_mc32    = !con((Intr addr:$dst, addr:$mbar, addr:$src, i32:$size,
+      i32:$mask, i64:$ch, -1, !if(has_ch, -1, 0)), p_tail);
+
+  defvar args_ch = !if(has_ch, ", $ch", "");
+
+  // 16-bit multicast mask variants
+  def "" : NVPTXInst<(outs), ins_i16,
+      asm_nomc # " [$dst], [$src], $size, [$mbar]" # args_ch # ";",
+      [p_no_mc16]>, Requires<preds>;
+  def _MC : NVPTXInst<(outs), ins_i16,
+      asm_mc16 # " [$dst], [$src], $size, [$mbar], $mask" # args_ch # ";",
+      [p_mc16]>, Requires<preds>;
+
+  // 32-bit multicast mask variants
+  let Predicates = [hasRubinFamilySupport] in {
+    def _NO_MC32 : NVPTXInst<(outs), ins_i32,
+        asm_nomc # " [$dst], [$src], $size, [$mbar]" # args_ch # ";",
+        [p_no_mc32]>;
+    def _MC32 : NVPTXInst<(outs), ins_i32,
+        asm_mc32 # " [$dst], [$src], $size, [$mbar], $mask" # args_ch # ";",
+        [p_mc32]>;
+  }
+}
+
+defm CP_ASYNC_BULK_G2S            : CP_ASYNC_BULK_G2S_INTR</*has_ch=*/0, /*is_relaxed=*/0>;
+defm CP_ASYNC_BULK_G2S_CH         : CP_ASYNC_BULK_G2S_INTR</*has_ch=*/1, /*is_relaxed=*/0>;
+defm CP_ASYNC_BULK_G2S_RELAXED    : CP_ASYNC_BULK_G2S_INTR</*has_ch=*/0, /*is_relaxed=*/1, [hasCpAsyncBulkRelaxedSupport]>;
+defm CP_ASYNC_BULK_G2S_RELAXED_CH : CP_ASYNC_BULK_G2S_INTR</*has_ch=*/1, /*is_relaxed=*/1, [hasCpAsyncBulkRelaxedSupport]>;
+
+multiclass CP_ASYNC_BULK_G2S_CTA_INTR<bit has_ch, bit is_relaxed,
+                                      list<Predicate> preds = [hasCpAsyncBulkCTASupport]> {
+  defvar Intr =
+    !cast<Intrinsic>("int_nvvm_cp_async_bulk_global_to_shared_cta" #
+                     !if(is_relaxed, "_relaxed", ""));
+
+  defvar asm     = CpAsyncBulkStr<0, has_ch, 0, is_relaxed, 0>.G2S_CTA;
+  defvar asm_oob = CpAsyncBulkStr<0, has_ch, 0, is_relaxed, 1>.G2S_CTA;
+
+  // Relaxed form carries the extra flag_scope operand.
+  defvar ins_tail = !if(is_relaxed,
+      (ins MemScopeFlags:$flag_scope, TMAValidateDataFlags:$flag_valid_pattern),
+      (ins TMAValidateDataFlags:$flag_valid_pattern));
+
+  defvar ins_dag = !con((ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size,
+                          B64:$ch), ins_tail);
+  defvar ins_oob_dag   = !con((ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size,
+                           B32:$ibl, B32:$ibr, B64:$ch), ins_tail);
+
+  // flag_ch/flag_oob are matched with bare constants (0 = false, -1 = true);
+  // flag_valid_pattern must be forwarded, hence the bindable TImmLeaf.
+  defvar p_tail = !if(is_relaxed,
+      (Intr async_bulk_scope_imm:$flag_scope, tma_validate_data_imm:$flag_valid_pattern),
+      (Intr tma_validate_data_imm:$flag_valid_pattern));
+  defvar p     = !con((Intr addr:$dst, addr:$mbar, addr:$src, i32:$size,
+      (i32 srcvalue), (i32 srcvalue), i64:$ch, !if(has_ch, -1, 0), 0), p_tail);
+  defvar p_oob = !con((Intr addr:$dst, addr:$mbar, addr:$src, i32:$size,
+      i32:$ibl, i32:$ibr, i64:$ch, !if(has_ch, -1, 0), -1), p_tail);
+
+  defvar args_ch = !if(has_ch, ", $ch", "");
+
+  def "" : NVPTXInst<(outs), ins_dag,
+      asm # " [$dst], [$src], $size, [$mbar]" # args_ch # ";",
+      [p]>, Requires<preds>;
+
+  def _OOB : NVPTXInst<(outs), ins_oob_dag,
+      asm_oob # " [$dst], [$src], $size, $ibl, $ibr, [$mbar]" # args_ch # ";",
+      [p_oob]>, Requires<!listconcat([hasCpAsyncBulkOOBSupport], preds)>;
+}
+
+defm CP_ASYNC_BULK_G2S_CTA            : CP_ASYNC_BULK_G2S_CTA_INTR</*has_ch=*/0, /*is_relaxed=*/0>;
+defm CP_ASYNC_BULK_G2S_CTA_CH         : CP_ASYNC_BULK_G2S_CTA_INTR</*has_ch=*/1, /*is_relaxed=*/0>;
+defm CP_ASYNC_BULK_G2S_CTA_RELAXED    : CP_ASYNC_BULK_G2S_CTA_INTR</*has_ch=*/0, /*is_relaxed=*/1, [hasCpAsyncBulkRelaxedSupport]>;
+defm CP_ASYNC_BULK_G2S_CTA_RELAXED_CH : CP_ASYNC_BULK_G2S_CTA_INTR</*has_ch=*/1, /*is_relaxed=*/1, [hasCpAsyncBulkRelaxedSupport]>;
 
 def CP_ASYNC_BULK_CTA_TO_CLUSTER : NVPTXInst<(outs),
   (ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size),
@@ -677,17 +783,6 @@ def CTAGroupFlags : Operand<i32> {
 def tma_cta_group_imm0 : TImmLeaf<i32, [{return Imm == 0;}]>;
 def tma_cta_group_imm_any : TImmLeaf<i32, [{return Imm >= 0;}]>;
 
-def TMAValidateDataFlags : Operand<i32> {
-  let PrintMethod = "printTMAValidateDataFlags";
-}
-
-// Matches validate pattern values 0-5. The 1-5 values are Rubin-only
-// validate patterns. 0 denotes disabled validate pattern (default).
-def tma_validate_data_imm : TImmLeaf<i32, [{
-  return Imm == 0 || (Imm >= 1 && Imm <= 5 &&
-                      Subtarget->hasFeature(NVPTX::SM107f));
-}]>;
-
 multiclass TMA_TENSOR_G2S_INTR<int dim, string mode, list<Predicate> pred,
                                TImmLeaf cta_group_type = tma_cta_group_imm_any> {
   defvar dims_dag = TMA_DIMS_DAG_UTIL<dim>.ins_dag;
@@ -703,12 +798,12 @@ multiclass TMA_TENSOR_G2S_INTR<int dim, string mode, list<Predicate> pred,
                      # "." # "shared::cluster.global"
                      # "." # !subst("_", "::", mode)
                      # "." # "mbarrier::complete_tx::bytes"
-                     # "$validate" # "$cg";
+                     # "$flag_valid_pattern" # "$cg";
 
   defvar ins_dag_base = !con(
                           (ins ADDR:$dst, ADDR:$mbar, B64:$tmap),
                           dims_dag, im2col_dag);
-  defvar ins_tail = (ins CTAGroupFlags:$cg, TMAValidateDataFlags:$validate);
+  defvar ins_tail = (ins CTAGroupFlags:$cg, TMAValidateDataFlags:$flag_valid_pattern);
 
   defvar ins_dag         = !con(ins_dag_base, ins_tail);
   defvar ins_dag_ch      = !con(ins_dag_base, (ins B64:$ch), ins_tail);
@@ -724,7 +819,7 @@ multiclass TMA_TENSOR_G2S_INTR<int dim, string mode, list<Predicate> pred,
                          (intr addr:$dst, addr:$mbar, B64:$tmap),
                          !setdagop(dims_dag, intr),
                          !setdagop(im2col_dag, intr));
-  defvar intr_tail = (intr cta_group_type:$cg, tma_validate_data_imm:$validate);
+  defvar intr_tail = (intr cta_group_type:$cg, tma_validate_data_imm:$flag_valid_pattern);
 
   defvar intr_dag_no_hints   = !con(intr_dag_base, (intr (i16 srcvalue), (i64 srcvalue), 0,  0),  intr_tail);
   defvar intr_dag_with_mc    = !con(intr_dag_base, (intr B16:$mc, (i64 srcvalue), -1, 0),  intr_tail);
@@ -805,14 +900,14 @@ multiclass TMA_TENSOR_G2S_CTA_INTR<int dim, string mode, list<Predicate> pred = 
                      # "." # "shared::cta.global"
                      # "." # !subst("_", "::", mode)
                      # "." # "mbarrier::complete_tx::bytes"
-                     # "$validate";
+                     # "$flag_valid_pattern";
 
   defvar ins_dag_base = !con(
                           (ins ADDR:$dst, ADDR:$mbar, B64:$tmap),
                           dims_dag, im2col_dag);
-  defvar ins_dag = !con(ins_dag_base, (ins TMAValidateDataFlags:$validate));
+  defvar ins_dag = !con(ins_dag_base, (ins TMAValidateDataFlags:$flag_valid_pattern));
   defvar ins_dag_ch =
-      !con(ins_dag_base, (ins B64:$ch, TMAValidateDataFlags:$validate));
+      !con(ins_dag_base, (ins B64:$ch, TMAValidateDataFlags:$flag_valid_pattern));
 
   defvar intr = !cast<Intrinsic>(
                   "int_nvvm_cp_async_bulk_tensor_g2s_cta_" # mode # "_" # dim_val # "d");
@@ -822,9 +917,9 @@ multiclass TMA_TENSOR_G2S_CTA_INTR<int dim, string mode, list<Predicate> pred = 
                       !setdagop(dims_dag, intr),
                       !setdagop(im2col_dag, intr));
   defvar intr_dag = !con(intr_dag_base,
-                      (intr (i64 srcvalue), 0, tma_validate_data_imm:$validate));
+                      (intr (i64 srcvalue), 0, tma_validate_data_imm:$flag_valid_pattern));
   defvar intr_dag_with_ch = !con(intr_dag_base,
-                              (intr B64:$ch, -1, tma_validate_data_imm:$validate));
+                              (intr B64:$ch, -1, tma_validate_data_imm:$flag_valid_pattern));
 
   let Predicates = pred in {
     def "" : NVPTXInst<(outs), ins_dag,
@@ -1015,13 +1110,13 @@ multiclass NVPTX_CP_ASYNC_BULK_TENSOR_G2S_OVERRIDE_INTR<int dim, string mode, st
 
   defvar inst_name = "cp.async.bulk.tensor." # num_dims #
                      "d.shared::cluster.global." # !subst("_", "::", mode) #
-                     ".mbarrier::complete_tx::bytes" # "$validate" # "$cg";
+                     ".mbarrier::complete_tx::bytes" # "$flag_valid_pattern" # "$cg";
 
   defvar ins_dag_base = !con(
       (ins ADDR:$dst, ADDR:$mbar, B64:$tmap, B64:$override_addr),
       base.tensor_size_dag, base.lower_stride_dag, base.upper_stride_dag,
       base.dims_dag, base.im2col_dag);
-  defvar ins_tail = (ins CTAGroupFlags:$cg, TMAValidateDataFlags:$validate);
+  defvar ins_tail = (ins CTAGroupFlags:$cg, TMAValidateDataFlags:$flag_valid_pattern);
 
   defvar ins_dag         = !con(ins_dag_base, ins_tail);
   defvar ins_dag_ch      = !con(ins_dag_base, (ins B64:$ch), ins_tail);
@@ -1041,7 +1136,7 @@ multiclass NVPTX_CP_ASYNC_BULK_TENSOR_G2S_OVERRIDE_INTR<int dim, string mode, st
       !setdagop(base.upper_stride_dag, intr),
       !setdagop(base.dims_dag, intr),
       !setdagop(base.im2col_dag, intr));
-  defvar intr_tail = (intr tma_cta_group_imm_any:$cg, tma_validate_data_imm:$validate);
+  defvar intr_tail = (intr tma_cta_group_imm_any:$cg, tma_validate_data_imm:$flag_valid_pattern);
 
   defvar intr_dag_no_mc16_ch      = !con(intr_dag_base, (intr (i16 srcvalue), (i64 srcvalue), 0,  0),  intr_tail);
   defvar intr_dag_with_mc16       = !con(intr_dag_base, (intr B16:$mc, (i64 srcvalue), -1, 0),  intr_tail);
@@ -1093,14 +1188,14 @@ multiclass NVPTX_CP_ASYNC_BULK_TENSOR_G2S_CTA_OVERRIDE_INTR<int dim, string mode
 
   defvar inst_name = "cp.async.bulk.tensor." # num_dims #
                      "d.shared::cta.global." # !subst("_", "::", mode) #
-                     ".mbarrier::complete_tx::bytes" # "$validate";
+                     ".mbarrier::complete_tx::bytes" # "$flag_valid_pattern";
 
   defvar ins_dag_base = !con(
       (ins ADDR:$dst, ADDR:$mbar, B64:$tmap, B64:$override_addr),
       base.tensor_size_dag, base.lower_stride_dag, base.upper_stride_dag,
       base.dims_dag, base.im2col_dag);
-  defvar ins_dag = !con(ins_dag_base, (ins TMAValidateDataFlags:$validate));
-  defvar ins_dag_ch = !con(ins_dag_base, (ins B64:$ch, TMAValidateDataFlags:$validate));
+  defvar ins_dag = !con(ins_dag_base, (ins TMAValidateDataFlags:$flag_valid_pattern));
+  defvar ins_dag_ch = !con(ins_dag_base, (ins B64:$ch, TMAValidateDataFlags:$flag_valid_pattern));
 
   defvar intr = !cast<Intrinsic>(
       "int_nvvm_cp_async_bulk_tensor_g2s_cta_" # mode # "_" # override # "_" #
@@ -1114,8 +1209,8 @@ multiclass NVPTX_CP_ASYNC_BULK_TENSOR_G2S_CTA_OVERRIDE_INTR<int dim, string mode
       !setdagop(base.dims_dag, intr),
       !setdagop(base.im2col_dag, intr));
 
-  defvar intr_dag = !con(intr_dag_base, (intr (i64 srcvalue), 0, tma_validate_data_imm:$validate));
-  defvar intr_dag_with_ch = !con(intr_dag_base, (intr B64:$ch, -1, tma_validate_data_imm:$validate));
+  defvar intr_dag = !con(intr_dag_base, (intr (i64 srcvalue), 0, tma_validate_data_imm:$flag_valid_pattern));
+  defvar intr_dag_with_ch = !con(intr_dag_base, (intr B64:$ch, -1, tma_validate_data_imm:$flag_valid_pattern));
 
   let Predicates = [hasRubinFamilySupport] in {
     def "" : NVPTXInst<(outs), ins_dag,
@@ -2519,9 +2614,38 @@ foreach ftz = ["", "ftz"] in {
 def INT_NVVM_ADD_D :
   F_MATH_2_RNDOP_TY<"add.${rnd}.f64", F64RT, int_nvvm_fadd>;
 
-// mixed precision
+// Mixed Precision
+
+// Match only when the fold removes at least one explicit conversion, and the
+// extended vector is not shared.
+class FoldableFPExtendV2F32<dag ops, dag frag>
+  : PatFrag<ops, frag, [{
+      return N->hasOneUse() && (N->getOperand(0)->hasOneUse() ||
+                                N->getOperand(1)->hasOneUse());
+    }]>;
+
+// FP_EXTEND to v2f32 is scalarized before ISEL, leaving one of two patterns
+// behind depending on whether the source lanes share a register.
+def fpextend_v2f32_from_packed
+  : FoldableFPExtendV2F32<(ops node:$a),
+                          (v2f32 (build_vector
+                            (f32 (fpextend (extractelt node:$a, 0))),
+                            (f32 (fpextend (extractelt node:$a, 1)))))>;
+
+def fpextend_v2f32_from_lanes
+  : FoldableFPExtendV2F32<(ops node:$a0, node:$a1),
+                          (v2f32 (build_vector
+                            (f32 (fpextend node:$a0)),
+                            (f32 (fpextend node:$a1))))>;
+
+// Fuse downconverting add/sub only when the result of the add/sub is solely
+// used for downconverting.
+def extractelt_only_for_cvt
+  : PatFrag<(ops node:$vec, node:$lane), (extractelt node:$vec, node:$lane),
+            [{ return N->hasOneUse() && N->getOperand(0)->hasNUsesOfValue(2, 0); }]>;
+
 foreach rnd = FPRoundingModes in {
-  defvar rnd_imm = !cast<TImmLeaf>(StrJoin<"_", ["fp_rnd", rnd, "imm"]>.ret);
+  defvar rnd_imm = !cast<TImmLeaf>("fp_rnd_" # rnd # "_imm");
 
   foreach sat = ["", "sat"] in
     foreach type = [f16, bf16] in
@@ -2533,6 +2657,27 @@ foreach rnd = FPRoundingModes in {
              (f32 (fpextend type:$a)),
              f32:$b, rnd_imm))]>,
         Requires<[SM100]>;
+
+  let Predicates = [hasFP16x2MixedPrecisionSupport] in {
+    foreach t = [F16X2RT, BF16X2RT] in {
+      def INT_NVVM_MIXED_ADD_ # rnd # _f32x2_ # t.PtxType :
+        BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B64:$b),
+          "add." # rnd # ".f32x2." # t.PtxType # ".f32x2">;
+
+      defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_ADD_" # rnd #
+                                       "_f32x2_" # t.PtxType);
+
+      def : Pat<(v2f32 (int_nvvm_fadd (fpextend_v2f32_from_packed t.Ty:$a),
+                                      v2f32:$b, rnd_imm)),
+                (Inst $a, $b)>;
+
+      def : Pat<(v2f32 (int_nvvm_fadd
+                        (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                    t.Ty.ElementType:$a1),
+                        v2f32:$b, rnd_imm)),
+                (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b)>;
+    }
+  }
 }
 
 // Pattern for fadd when there is no FTZ flag
@@ -2542,6 +2687,45 @@ let Predicates = [SM100, doNoF32FTZ] in {
   def : Pat<(f32 (fadd (f32 (fpextend bf16:$a)), f32:$b)),
             (INT_NVVM_MIXED_ADD_rn_f32_bf16 B16:$a, B32:$b)>;
 }
+
+let Predicates = [hasFP16x2MixedPrecisionSupport, doNoF32FTZ] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_ADD_rn_f32x2_" # t.PtxType);
+
+    def : Pat<(v2f32 (fadd (fpextend_v2f32_from_packed t.Ty:$a), v2f32:$b)),
+              (Inst $a, $b)>;
+
+    def : Pat<(v2f32 (fadd (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                      t.Ty.ElementType:$a1),
+                           v2f32:$b)),
+              (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b)>;
+  }
+
+// Mixed precision - Downconverting
+
+// f16x2 - rz rounding mode, only with ftz
+// bf16x2 - rz rounding mode, without ftz
+let Predicates = [hasFP16x2MixedPrecisionSupport] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar ftz = !if(!eq(t, F16X2RT), ".ftz", "");
+    defvar AddOp = !cast<Intrinsic>("int_nvvm_fadd" # !if(!eq(ftz, ""), "", "_ftz"));
+    defvar CvtOp = !cast<Intrinsic>("int_nvvm_ff2" # t.PtxType # "_rz");
+
+    def INT_NVVM_MIXED_ADD_rz_ # t.PtxType # _f32x2 :
+      BasicNVPTXInst<(outs B32:$dst), (ins B64:$a, B64:$b),
+        "add.rz" # ftz # "." # t.PtxType # ".f32x2.f32x2">;
+
+    defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_ADD_rz_" # t.PtxType #
+                                     "_f32x2");
+
+    // The cvt packs its first argument into the upper half of the result.
+    def : Pat<(CvtOp (extractelt_only_for_cvt
+                       (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 1),
+                     (extractelt_only_for_cvt
+                       (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 0),
+                     /*pzo=*/0),
+              (Inst $a, $b)>;
+  }
 
 //
 // Sub
@@ -2603,9 +2787,10 @@ def INT_NVVM_SUB_D :
     (ins FPRoundingMode:$rnd), "sub.${rnd}.f64",
     [(set f64:$dst, (int_nvvm_fadd f64:$a, (f64 (fneg f64:$b)), timm:$rnd))]>;
 
-// mixed precision
+// Mixed Precision
+
 foreach rnd = FPRoundingModes in {
-  defvar rnd_imm = !cast<TImmLeaf>(StrJoin<"_", ["fp_rnd", rnd, "imm"]>.ret);
+  defvar rnd_imm = !cast<TImmLeaf>("fp_rnd_" # rnd # "_imm");
 
   foreach sat = ["", "sat"] in
     foreach type = [f16, bf16] in
@@ -2617,6 +2802,29 @@ foreach rnd = FPRoundingModes in {
              (f32 (fpextend type:$a)),
              (f32 (fneg f32:$b)), rnd_imm))]>,
         Requires<[SM100]>;
+
+  let Predicates = [hasFP16x2MixedPrecisionSupport] in {
+    foreach t = [F16X2RT, BF16X2RT] in {
+      // combineFAddWithNeg has already folded the fneg into a sub node.
+      defvar SubOp = !cast<SDNode>("sub_" # rnd);
+
+      def INT_NVVM_MIXED_SUB_ # rnd # _f32x2_ # t.PtxType :
+        BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B64:$b),
+          "sub." # rnd # ".f32x2." # t.PtxType # ".f32x2">;
+
+      defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_SUB_" # rnd #
+                                       "_f32x2_" # t.PtxType);
+
+      def : Pat<(v2f32 (SubOp (fpextend_v2f32_from_packed t.Ty:$a), v2f32:$b)),
+                (Inst $a, $b)>;
+
+      def : Pat<(v2f32 (SubOp
+                        (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                    t.Ty.ElementType:$a1),
+                        v2f32:$b)),
+                (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b)>;
+    }
+  }
 }
 
 // Pattern for fsub when there is no FTZ flag
@@ -2626,6 +2834,43 @@ let Predicates = [SM100, doNoF32FTZ] in {
   def : Pat<(f32 (fsub (f32 (fpextend bf16:$a)), f32:$b)),
             (INT_NVVM_MIXED_SUB_rn_f32_bf16 B16:$a, B32:$b)>;
 }
+
+let Predicates = [hasFP16x2MixedPrecisionSupport, doNoF32FTZ] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_SUB_rn_f32x2_" # t.PtxType);
+
+    def : Pat<(v2f32 (fsub (fpextend_v2f32_from_packed t.Ty:$a), v2f32:$b)),
+              (Inst $a, $b)>;
+
+    def : Pat<(v2f32 (fsub (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                      t.Ty.ElementType:$a1),
+                           v2f32:$b)),
+              (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b)>;
+  }
+
+// Mixed precision - Downconverting
+
+// f16x2 - rz rounding mode, only with ftz
+// bf16x2 - rz rounding mode, without ftz
+let Predicates = [hasFP16x2MixedPrecisionSupport] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar ftz = !if(!eq(t, F16X2RT), ".ftz", "");
+    defvar SubOp = !cast<SDNode>("sub_rz" # !if(!eq(ftz, ""), "", "_ftz"));
+    defvar CvtOp = !cast<Intrinsic>("int_nvvm_ff2" # t.PtxType # "_rz");
+
+    def INT_NVVM_MIXED_SUB_rz_ # t.PtxType # _f32x2 :
+      BasicNVPTXInst<(outs B32:$dst), (ins B64:$a, B64:$b),
+        "sub.rz" # ftz # "." # t.PtxType # ".f32x2.f32x2">;
+
+    defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_SUB_rz_" # t.PtxType #
+                                     "_f32x2");
+
+    // The cvt packs its first argument into the upper half of the result.
+    def : Pat<(CvtOp (extractelt_only_for_cvt (SubOp v2f32:$a, v2f32:$b), 1),
+                     (extractelt_only_for_cvt (SubOp v2f32:$a, v2f32:$b), 0),
+                     /*pzo=*/0),
+              (Inst $a, $b)>;
+  }
 
 //
 // BFIND
@@ -2734,10 +2979,13 @@ def : Pat<(int_nvvm_ui2f_rz i32:$a), (CVT_f32_u32 $a, CvtRZ)>;
 def : Pat<(int_nvvm_ui2f_rm i32:$a), (CVT_f32_u32 $a, CvtRM)>;
 def : Pat<(int_nvvm_ui2f_rp i32:$a), (CVT_f32_u32 $a, CvtRP)>;
 
-// Utility to look up base and satfinite variants of a conversion intrinsic
+// Utility to look up base and satfinite variants of a conversion intrinsic.
+// Missing variants are left unset so this can be used when only one exists.
 class ToCvtIntrinsics<string suffix> {
-  Intrinsic base = !cast<Intrinsic>("int_nvvm_" # suffix);
-  Intrinsic sf = !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite");
+  Intrinsic base = !if(!exists<Intrinsic>("int_nvvm_" # suffix),
+                       !cast<Intrinsic>("int_nvvm_" # suffix), ?);
+  Intrinsic sf = !if(!exists<Intrinsic>("int_nvvm_" # suffix # "_satfinite"),
+                     !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite"), ?);
 }
 
 foreach rnd = ["rn", "rz"] in {
@@ -2863,39 +3111,37 @@ def : Pat<(int_nvvm_ull2d_rp i64:$a), (CVT_f64_u64 $a, CvtRP)>;
 def : Pat<(int_nvvm_f2h_rn_ftz f32:$a), (CVT_f16_f32 $a, CvtRN_FTZ)>;
 def : Pat<(int_nvvm_f2h_rn f32:$a), (CVT_f16_f32 $a, CvtRN)>;
 
-let Predicates = [hasFP8ConversionSupport] in {
-  def : Pat<(int_nvvm_ff_to_e4m3x2_rn f32:$a, f32:$b),
-            (CVT_e4m3x2_f32 $a, $b, CvtRN)>;
-  def : Pat<(int_nvvm_ff_to_e4m3x2_rn_relu f32:$a, f32:$b),
-            (CVT_e4m3x2_f32 $a, $b, CvtRN_RELU)>;
-  def : Pat<(int_nvvm_ff_to_e5m2x2_rn f32:$a, f32:$b),
-            (CVT_e5m2x2_f32 $a, $b, CvtRN)>;
-  def : Pat<(int_nvvm_ff_to_e5m2x2_rn_relu f32:$a, f32:$b),
-            (CVT_e5m2x2_f32 $a, $b, CvtRN_RELU)>;
-}
+foreach dst = ["e4m3x2", "e5m2x2"] in {
+  foreach relu = ["", "relu"] in {
+    foreach rnd = ["rn", "rz"] in {
+      defvar Relu     = !if(!empty(relu), "", "_" # relu);
+      defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(rnd # Relu));
+      defvar Suffix   = dst # "_" # rnd # Relu;
+      defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
+      defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
+      defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
 
-let Predicates = [hasFP16X2ToNarrowFPConversionSupport] in {
-  foreach dst_type = ["e4m3x2", "e5m2x2"] in {
-    foreach relu = ["", "_relu"] in {
-      defvar intrin = !cast<Intrinsic>("int_nvvm_bf16x2_to_" # dst_type # "_rn" # relu # "_satfinite");
-      defvar cvt_inst = !cast<NVPTXInst>("CVT_"# dst_type #"_bf16x2");
-      defvar cvt_mode = !cast<PatLeaf>("CvtRN" # !toupper(relu));
-      def : Pat<(intrin v2bf16:$a),
-                (cvt_inst $a, cvt_mode)>;
+      foreach pzo = [0, 1] in {
+        defvar PZO = !if(pzo, -1, 0);
+        defvar Mode = CvtModeWithPZO<BaseMode, pzo>.Value;
+        defvar NeedsPZOSupport = !or(!eq(rnd, "rz"), !eq(pzo, 1));
+        defvar F32X2Preds = !if(NeedsPZOSupport, [hasConvertWithPZOSupport]<Predicate>,
+                                                 [hasFP8ConversionSupport]<Predicate>);
+        defvar BF16X2Preds = !if(NeedsPZOSupport, [hasConvertWithPZOSupport]<Predicate>,
+                                                  [hasFP16X2ToNarrowFPConversionSupport]<Predicate>);
+
+        def : Pat<(F32X2.base f32:$a, f32:$b, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_f32") $a, $b, Mode)>,
+              Requires<F32X2Preds>;
+        def : Pat<(F16X2.base v2f16:$a, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_f16x2") $a, Mode)>,
+              Requires<F32X2Preds>;
+        def : Pat<(BF16X2.sf v2bf16:$a, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2") $a, Mode)>,
+              Requires<BF16X2Preds>;
+      }
     }
   }
 }
 
 let Predicates = [hasFP8ConversionSupport] in {
-  def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn v2f16:$a),
-            (CVT_e4m3x2_f16x2 $a, CvtRN)>;
-  def : Pat<(int_nvvm_f16x2_to_e4m3x2_rn_relu v2f16:$a),
-            (CVT_e4m3x2_f16x2 $a, CvtRN_RELU)>;
-  def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn v2f16:$a),
-            (CVT_e5m2x2_f16x2 $a, CvtRN)>;
-  def : Pat<(int_nvvm_f16x2_to_e5m2x2_rn_relu v2f16:$a),
-            (CVT_e5m2x2_f16x2 $a, CvtRN_RELU)>;
-
   def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn i16:$a),
             (CVT_f16x2_e4m3x2 $a, CvtRN)>;
   def : Pat<(int_nvvm_e4m3x2_to_f16x2_rn_relu i16:$a),
@@ -2943,16 +3189,37 @@ let Predicates = [hasS2F6X2ConversionSupport] in {
             (CVT_bf16x2_s2f6x2_sf_scale $a, $scale, CvtRN_RELU)>;
 }
 
-let Predicates = [hasNarrowFPConversionSupport] in {
-  def : Pat<(int_nvvm_ff_to_e2m3x2_rn_satfinite f32:$a, f32:$b),
-            (CVT_e2m3x2_f32_sf $a, $b, CvtRN)>;
-  def : Pat<(int_nvvm_ff_to_e2m3x2_rn_relu_satfinite f32:$a, f32:$b),
-            (CVT_e2m3x2_f32_sf $a, $b, CvtRN_RELU)>;
-  def : Pat<(int_nvvm_ff_to_e3m2x2_rn_satfinite f32:$a, f32:$b),
-            (CVT_e3m2x2_f32_sf $a, $b, CvtRN)>;
-  def : Pat<(int_nvvm_ff_to_e3m2x2_rn_relu_satfinite f32:$a, f32:$b),
-            (CVT_e3m2x2_f32_sf $a, $b, CvtRN_RELU)>;
+foreach dst = ["e2m3x2", "e3m2x2"] in {
+  foreach relu = ["", "relu"] in {
+    foreach rnd = ["rn", "rz"] in {
+      defvar Relu     = !if(!empty(relu), "", "_" # relu);
+      defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(rnd # Relu));
+      defvar Suffix   = dst # "_" # rnd # Relu;
+      defvar F32X2    = ToCvtIntrinsics<"ff_to_" # Suffix>;
+      defvar F16X2    = ToCvtIntrinsics<"f16x2_to_" # Suffix>;
+      defvar BF16X2   = ToCvtIntrinsics<"bf16x2_to_" # Suffix>;
 
+      foreach pzo = [0, 1] in {
+        defvar PZO = !if(pzo, -1, 0);
+        defvar Mode = CvtModeWithPZO<BaseMode, pzo>.Value;
+        defvar NeedsPZOSupport = !or(!eq(rnd, "rz"), !eq(pzo, 1));
+        defvar F32X2Preds = !if(NeedsPZOSupport, [hasConvertWithPZOSupport]<Predicate>,
+                                                 [hasNarrowFPConversionSupport]<Predicate>);
+        defvar FPX2Preds = !if(NeedsPZOSupport, [hasConvertWithPZOSupport]<Predicate>,
+                                                [hasFP16X2ToNarrowFPConversionSupport]<Predicate>);
+
+        def : Pat<(F32X2.sf f32:$a, f32:$b, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_f32_sf") $a, $b, Mode)>,
+              Requires<F32X2Preds>;
+        def : Pat<(F16X2.sf v2f16:$a, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_f16x2_sf") $a, Mode)>,
+              Requires<FPX2Preds>;
+        def : Pat<(BF16X2.sf v2bf16:$a, PZO), (!cast<NVPTXInst>("CVT_" # dst # "_bf16x2_sf") $a, Mode)>,
+              Requires<FPX2Preds>;
+      }
+    }
+  }
+}
+
+let Predicates = [hasNarrowFPConversionSupport] in {
   def : Pat<(int_nvvm_e2m3x2_to_f16x2_rn i16:$a),
             (CVT_f16x2_e2m3x2 $a, CvtRN)>;
   def : Pat<(int_nvvm_e2m3x2_to_f16x2_rn_relu i16:$a),
@@ -2961,19 +3228,6 @@ let Predicates = [hasNarrowFPConversionSupport] in {
             (CVT_f16x2_e3m2x2 $a, CvtRN)>;
   def : Pat<(int_nvvm_e3m2x2_to_f16x2_rn_relu i16:$a),
             (CVT_f16x2_e3m2x2 $a, CvtRN_RELU)>;
-}
-
-let Predicates = [hasFP16X2ToNarrowFPConversionSupport] in {
-  foreach src_type = ["f16x2", "bf16x2"] in {
-    foreach dst_type = ["e2m3x2", "e3m2x2"] in {
-      foreach relu = ["", "_relu"] in {
-        defvar intrin = !cast<Intrinsic>("int_nvvm_" # src_type # "_to_" # dst_type # "_rn" # relu # "_satfinite");
-        defvar cvt_inst = !cast<NVPTXInst>("CVT_" # dst_type # "_" # src_type # "_sf");
-        defvar cvt_mode = !cast<PatLeaf>("CvtRN" # !toupper(relu));
-        def : Pat<(intrin B32:$a), (cvt_inst $a, cvt_mode)>;
-      }
-    }
-  }
 }
 
 let Predicates = [hasNarrowFPToBF16x2ConversionSupport] in {
