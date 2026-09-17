@@ -513,6 +513,9 @@ features cannot lower the translation-unit ABI level;
 - Improve the input size mismatch diagnostic when calling `__builtin_shufflevector` with valid
   vector element types but different sizes. (GH221791)
 
+- Suggests the correct location for an attribute written before the `using`
+  keyword of an alias-declaration. (#GH155787)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
