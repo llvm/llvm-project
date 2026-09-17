@@ -118,8 +118,14 @@ class AMDGPUBreakLoadClusterDepsImpl {
     // address-register layout (renaming forces the larger NSA encoding).
     if (!SIInstrInfo::isVMEM(MI) || SIInstrInfo::isImage(MI) || !MI.mayLoad())
       return false;
+
+    // The data operand must be a real definition, i.e. a loaded/returned value.
+    // This drops value-less atomics (e.g. a no-return cmpxchg/atomicrmw), whose
+    // `vdata` is an input use rather than a result -- there is no loaded value
+    // to cluster around, so renaming their address chain buys nothing.
     int DstIdx = getLoadDestIdx(MI);
     return DstIdx != -1 && MI.getOperand(DstIdx).isReg() &&
+           MI.getOperand(DstIdx).isDef() &&
            TRI->isVGPR(*MRI, MI.getOperand(DstIdx).getReg());
   }
 
