@@ -5567,7 +5567,6 @@ def HLSLInterlockedCompareExchange : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLInterlockedCompareExchangeFloatBitwise : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_interlocked_compare_exchange_float_bitwise"];
-  // Prevent inadvertent float -> double arg promotion.
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void (...)";
 }
