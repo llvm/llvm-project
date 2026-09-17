@@ -5805,6 +5805,9 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     }
   }
 
+  if (LTZCNTInst && !MI)
+    return false;
+
   // If we have to update users but EFLAGS is live-out abort, since we cannot
   // easily find all of the users.
   if ((MI != nullptr || ShouldUpdateCC) && FlagsMayLiveOut) {
