@@ -4912,6 +4912,7 @@ bool IRTranslatorImpl::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
       return false;
     }
     Register GuardPtr = getOrCreateVReg(*IRGuard);
+
     Guard = CurBuilder
                 ->buildLoad(PtrMemTy, GuardPtr,
                             MachinePointerInfo::getFixedStack(*MF, FI), Align,
