@@ -667,18 +667,12 @@ define i64 @parity_64_shift(i64 %0) {
 define i32 @parity_32_constant(i32 %x) {
 ; X86-LABEL: parity_32_constant:
 ; X86:       # %bb.0:
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    testb %cl, %cl
-; X86-NEXT:    setnp %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: parity_32_constant:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    testb %cl, %cl
-; X64-NEXT:    setnp %al
 ; X64-NEXT:    retq
   %1 = sub i32 %x, %x
   %2 = tail call i32 @llvm.ctpop.i32(i32 %1)
@@ -689,18 +683,12 @@ define i32 @parity_32_constant(i32 %x) {
 define i32 @parity_32_constant_odd(i32 %x) {
 ; X86-LABEL: parity_32_constant_odd:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb $7, %cl
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    testb %cl, %cl
-; X86-NEXT:    setnp %al
+; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: parity_32_constant_odd:
 ; X64:       # %bb.0:
-; X64-NEXT:    movb $7, %cl
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    testb %cl, %cl
-; X64-NEXT:    setnp %al
+; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
   %1 = sub i32 %x, %x
   %2 = or i32 %1, 7
@@ -722,14 +710,10 @@ define i128 @parity_128_constant(i128 %x) {
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    movb $7, %cl
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    testb %cl, %cl
-; X86-NEXT:    setnp %dl
-; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    movl $0, 12(%eax)
 ; X86-NEXT:    movl $0, 8(%eax)
 ; X86-NEXT:    movl $0, 4(%eax)
+; X86-NEXT:    movl $1, (%eax)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    .cfi_def_cfa %esp, 4
@@ -737,10 +721,7 @@ define i128 @parity_128_constant(i128 %x) {
 ;
 ; X64-LABEL: parity_128_constant:
 ; X64:       # %bb.0:
-; X64-NEXT:    movb $7, %cl
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    testb %cl, %cl
-; X64-NEXT:    setnp %al
+; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    retq
   %1 = sub i128 %x, %x

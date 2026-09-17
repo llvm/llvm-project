@@ -481,6 +481,7 @@ namespace {
     SDValue visitCTTZ(SDNode *N);
     SDValue visitCTTZ_ZERO_POISON(SDNode *N);
     SDValue visitCTPOP(SDNode *N);
+    SDValue visitPARITY(SDNode *N);
     SDValue visitSELECT(SDNode *N);
     SDValue visitVSELECT(SDNode *N);
     SDValue visitSELECT_CC(SDNode *N);
@@ -2036,6 +2037,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::CTTZ:               return visitCTTZ(N);
   case ISD::CTTZ_ZERO_POISON:   return visitCTTZ_ZERO_POISON(N);
   case ISD::CTPOP:              return visitCTPOP(N);
+  case ISD::PARITY:             return visitPARITY(N);
   case ISD::SELECT:             return visitSELECT(N);
   case ISD::VSELECT:            return visitVSELECT(N);
   case ISD::SELECT_CC:          return visitSELECT_CC(N);
@@ -12737,6 +12739,17 @@ SDValue DAGCombiner::visitCTTZ_ZERO_POISON(SDNode *N) {
   if (SDValue C =
           DAG.FoldConstantArithmetic(ISD::CTTZ_ZERO_POISON, DL, VT, {N0}))
     return C;
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitPARITY(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // fold (parity c1) -> c2
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::PARITY, SDLoc(N), VT, {N0}))
+    return C;
+
   return SDValue();
 }
 
