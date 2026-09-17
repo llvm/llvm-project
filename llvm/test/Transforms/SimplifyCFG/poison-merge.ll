@@ -198,3 +198,64 @@ g:
 exit:
   ret i32 undef
 }
+
+; Merge undef and poison when the folded block shares no predecessor with its
+; successor.
+
+define i32 @undef_poison_merge_no_shared_preds(i32 %x, i32 %a) {
+; CHECK-LABEL: @undef_poison_merge_no_shared_preds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[X:%.*]], label [[P0:%.*]] [
+; CHECK-NEXT:      i32 1, label [[P1:%.*]]
+; CHECK-NEXT:      i32 2, label [[P2:%.*]]
+; CHECK-NEXT:      i32 3, label [[P3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       p0:
+; CHECK-NEXT:    call void @se(i32 0)
+; CHECK-NEXT:    br label [[SUCC:%.*]]
+; CHECK:       p1:
+; CHECK-NEXT:    call void @se(i32 1)
+; CHECK-NEXT:    br label [[SUCC]]
+; CHECK:       p2:
+; CHECK-NEXT:    call void @se(i32 2)
+; CHECK-NEXT:    br label [[SUCC]]
+; CHECK:       p3:
+; CHECK-NEXT:    call void @se(i32 3)
+; CHECK-NEXT:    br label [[SUCC]]
+; CHECK:       succ:
+; CHECK-NEXT:    [[SP:%.*]] = phi i32 [ [[A:%.*]], [[P3]] ], [ undef, [[P0]] ], [ undef, [[P1]] ], [ 0, [[P2]] ]
+; CHECK-NEXT:    ret i32 [[SP]]
+;
+entry:
+  switch i32 %x, label %p0 [
+  i32 1, label %p1
+  i32 2, label %p2
+  i32 3, label %p3
+  ]
+
+p0:
+  call void @se(i32 0)
+  br label %bb
+
+p1:
+  call void @se(i32 1)
+  br label %bb
+
+p2:
+  call void @se(i32 2)
+  br label %bb
+
+p3:
+  call void @se(i32 3)
+  br label %succ
+
+bb:
+  %bp = phi i32 [ undef, %p0 ], [ poison, %p1 ], [ 0, %p2 ]
+  br label %succ
+
+succ:
+  %sp = phi i32 [ %bp, %bb ], [ %a, %p3 ]
+  ret i32 %sp
+}
+
+declare void @se(i32)
