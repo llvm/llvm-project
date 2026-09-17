@@ -123,6 +123,8 @@ MACHINE_FUNCTION_PASS("amdgpu-insert-delay-alu", AMDGPUInsertDelayAluPass())
 MACHINE_FUNCTION_PASS("amdgpu-isel", AMDGPUISelDAGToDAGPass(*this))
 MACHINE_FUNCTION_PASS("amdgpu-lower-vgpr-encoding", AMDGPULowerVGPREncodingPass())
 MACHINE_FUNCTION_PASS("amdgpu-mark-last-scratch-load", AMDGPUMarkLastScratchLoadPass())
+MACHINE_FUNCTION_PASS("amdgpu-postlegalizer-combiner",
+                      AMDGPUPostLegalizerCombinerPass())
 MACHINE_FUNCTION_PASS("amdgpu-pre-ra-long-branch-reg", GCNPreRALongBranchRegPass())
 MACHINE_FUNCTION_PASS("amdgpu-reserve-wwm-regs", AMDGPUReserveWWMRegsPass())
 MACHINE_FUNCTION_PASS("amdgpu-rewrite-agpr-copy-mfma", AMDGPURewriteAGPRCopyMFMAPass())
@@ -165,9 +167,3 @@ MACHINE_FUNCTION_PASS("si-pre-emit-peephole", SIPreEmitPeepholePass())
 MACHINE_FUNCTION_PASS("si-shrink-instructions", SIShrinkInstructionsPass())
 MACHINE_FUNCTION_PASS("si-wqm", SIWholeQuadModePass())
 #undef MACHINE_FUNCTION_PASS
-
-#define DUMMY_MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
-// Global ISel passes
-DUMMY_MACHINE_FUNCTION_PASS("amdgpu-postlegalizer-combiner",
-                            AMDGPUPostLegalizerCombinerPass())
-#undef DUMMY_MACHINE_FUNCTION_PASS

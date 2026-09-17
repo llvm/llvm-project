@@ -34,8 +34,17 @@ public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
-void initializeAMDGPUPostLegalizerCombinerPass(PassRegistry &);
-FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone);
+
+void initializeAMDGPUPostLegalizerCombinerLegacyPass(PassRegistry &);
+FunctionPass *createAMDGPUPostLegalizeCombinerLegacy(bool IsOptNone);
+
+class AMDGPUPostLegalizerCombinerPass
+    : public RequiredPassInfoMixin<AMDGPUPostLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 FunctionPass *createAMDGPURegBankCombinerLegacy(bool IsOptLevelNone);
 void initializeAMDGPURegBankCombinerLegacyPass(PassRegistry &);
 

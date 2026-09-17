@@ -32,15 +32,15 @@ def X86System : SystemRuntimeLibrary<isX86, (add Libc, Libm, extra)>;
 // The driver dispatches to each named library under its presence guard, then
 // emits the bare member (extra) inline.
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
 // CHECK:   if (TT.isX86()) {
 // CHECK-NEXT:     static constexpr LibcallImplBitset SystemAvailableImpls({
 // CHECK: AvailableLibcallImpls = SystemAvailableImpls;
 // CHECK-EMPTY:
 // CHECK-NEXT:     if (isLibraryAvailable("libc"))
-// CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, EABIVersion, ABIName, LongDoubleFormat);
+// CHECK-NEXT:       setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat);
 // CHECK-NEXT:     if (isLibraryAvailable("libm"))
-// CHECK-NEXT:       setAvailableLibFuncs_libm(TT, ExceptionModel, FloatABI, EABIVersion, ABIName, LongDoubleFormat);
+// CHECK-NEXT:       setAvailableLibFuncs_libm(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat);
 // CHECK-EMPTY:
 // CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
 // CHECK-NEXT:         RTLIB::impl_extra, // extra

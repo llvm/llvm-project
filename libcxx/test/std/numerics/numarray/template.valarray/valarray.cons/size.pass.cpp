@@ -12,9 +12,8 @@
 
 // explicit valarray(size_t);
 
-#include <cassert>
-#include <cstdint>
 #include <valarray>
+#include <cassert>
 
 #include "test_macros.h"
 
@@ -25,7 +24,7 @@ struct S {
     static std::size_t cnt_dtor;
 };
 
-std::size_t S::cnt_dtor = 0;
+size_t S::cnt_dtor = 0;
 
 int main(int, char**)
 {
