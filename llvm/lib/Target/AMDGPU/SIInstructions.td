@@ -138,7 +138,7 @@ def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
   let isMoveImm = 1;
   let SchedRW = [Write64Bit];
   let Size = 4;
-  let VOP1 = 1; // Not entirely correct, but close enough.
+  let Format = AMDGPUInstrFormat.VOP1; // Not entirely correct, but close enough.
   let UseNamedOperandTable = 1;
 }
 
@@ -154,7 +154,7 @@ def AV_MOV_B32_IMM_PSEUDO
 
   // Imprecise, technically if AGPR it's VOP3 and VOP1 for VGPR. But
   // this tricks the rematerialize logic into working for it.
-  let VOP3 = 1;
+  let Format = AMDGPUInstrFormat.VOP3;
   let isMoveImm = 1;
   let SchedRW = [Write32Bit];
   let Size = 8;
@@ -173,7 +173,7 @@ def AV_MOV_B64_IMM_PSEUDO
   // Imprecise, technically if AGPR it's 2 x VOP3 and 2 x VOP1 for
   // VGPR. But this tricks the rematerialize logic into working for
   // it.
-  let VOP3 = 1;
+  let Format = AMDGPUInstrFormat.VOP3;
   let isMoveImm = 1;
   let SchedRW = [Write32Bit, Write32Bit];
   let Size = 16; // 2 x v_accwrite_write_b32 in the worst case
@@ -517,7 +517,7 @@ class WrapTerminatorVOPC<VOPC_Pseudo base_inst> : VPseudoInstSI<
   let isTerminator = 1;
   let isConvergent = 1;
   let isCompare = 1;
-  let VOPC = 1;
+  let Format = AMDGPUInstrFormat.VOPC;
 }
 
 let SubtargetPredicate = HasNoSdstCMPX in {
@@ -1076,7 +1076,7 @@ class INDIRECT_REG_WRITE_MOVREL_pseudo<RegisterClass rc,
 class V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<RegisterClass rc> :
   INDIRECT_REG_WRITE_MOVREL_pseudo<rc, VSrc_b32> {
   let VALU = 1;
-  let VOP1 = 1;
+  let Format = AMDGPUInstrFormat.VOP1;
   let Uses = [M0, EXEC];
 }
 
@@ -1084,7 +1084,7 @@ class S_INDIRECT_REG_WRITE_MOVREL_pseudo<RegisterClass rc,
                                   RegisterOperand val_ty> :
   INDIRECT_REG_WRITE_MOVREL_pseudo<rc, val_ty> {
   let SALU = 1;
-  let SOP1 = 1;
+  let Format = AMDGPUInstrFormat.SOP1;
   let Uses = [M0];
 }
 
@@ -1180,7 +1180,7 @@ def V_INDIRECT_REG_READ_GPR_IDX_B32_V16 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VRe
 def V_INDIRECT_REG_READ_GPR_IDX_B32_V32 : V_INDIRECT_REG_READ_GPR_IDX_pseudo<VReg_1024>;
 
 multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
-  let UseNamedOperandTable = 1, Spill = 1, SALU = 1, Uses = [EXEC] in {
+  let UseNamedOperandTable = 1, Format = AMDGPUInstrFormat.Spill, SALU = 1, Uses = [EXEC] in {
     def _SAVE : PseudoInstSI <
       (outs),
       (ins sgpr_class:$data, i32imm:$addr)> {
@@ -1221,7 +1221,7 @@ defm SI_SPILL_S384 : SI_SPILL_SGPR <SReg_384>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
 defm SI_SPILL_S1024 : SI_SPILL_SGPR <SReg_1024>;
 
-let Spill = 1, VALU = 1, isConvergent = 1 in {
+let Format = AMDGPUInstrFormat.Spill, VALU = 1, isConvergent = 1 in {
 def SI_SPILL_S32_TO_VGPR : PseudoInstSI <(outs VGPR_32:$vdst),
   (ins SReg_32:$src0, i32imm:$src1, VGPR_32:$vdst_in)> {
   let Size = 4;
@@ -1243,14 +1243,14 @@ def SI_RESTORE_S32_FROM_VGPR : PseudoInstSI <(outs SReg_32:$sdst),
   let mayStore = 0;
   let hasExtraSrcRegAllocReq = 1;
 }
-} // End Spill = 1, VALU = 1, isConvergent = 1
+} // End Format = AMDGPUInstrFormat.Spill, VALU = 1, isConvergent = 1
 
 // VGPR or AGPR spill instructions. In case of AGPR spilling a temp register
 // needs to be used and an extra instruction to move between VGPR and AGPR.
 // UsesTmp adds to the total size of an expanded spill in this case.
 multiclass SI_SPILL_VGPR <SIRegisterClassLike vgpr_class,
                           bit UsesTmp = 0, bit HasMask = 0> {
-  let UseNamedOperandTable = 1, Spill = 1, VALU = 1,
+  let UseNamedOperandTable = 1, Format = AMDGPUInstrFormat.Spill, VALU = 1,
        SchedRW = [WriteVMEM] in {
     def _SAVE : VPseudoInstSI <
       (outs),
@@ -1293,7 +1293,7 @@ multiclass SI_SPILL_VGPR <SIRegisterClassLike vgpr_class,
       // Size field is unsigned char and cannot fit more.
       let Size = !if(!le(MaxSize, 256), MaxSize, 252);
     }
-  } // End UseNamedOperandTable = 1, Spill = 1, VALU = 1, SchedRW = [WriteVMEM]
+  } // End UseNamedOperandTable = 1, Format = AMDGPUInstrFormat.Spill, VALU = 1, SchedRW = [WriteVMEM]
 }
 
 // TODO: Technically the AlignTarget register class constraint is

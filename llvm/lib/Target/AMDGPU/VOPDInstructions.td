@@ -167,7 +167,7 @@ class VOPD3<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
             VOPD_Component XasVC, VOPD_Component YasVC, GFXGenD Gen>
     : VOPD_Base<outs, ins, asm, VDX, VDY, XasVC, YasVC, Gen>,
       VOPD3e<XasVC.VOPDOp, YasVC.VOPDOp, VDX, VDY> {
-  let VOPD3 = 1;
+  let Format = AMDGPUInstrFormat.VOPD3;
   let Size = 12;
   // VOPD3 uses promoted form of VOP2 instructions, so V_CNDMASK_B32 is not
   // limited to VCC src2 only, and a real SGPR will be used as an operand
