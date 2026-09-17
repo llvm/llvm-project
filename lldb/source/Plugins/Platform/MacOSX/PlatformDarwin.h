@@ -160,10 +160,43 @@ public:
                                              const Target &target,
                                              const FileSpec &symfile_spec);
 
+  /// Helper function for \c LocateExecutableScriptingResources
+  /// which gathers FileSpecs for executable scripts (currently
+  /// just Python) from a .framework bundle's Python directory.
+  ///
+  /// \param[out] feedback_stream Any warnings/errors are printed into this
+  /// stream.
+  ///
+  /// \param[in] module_spec FileSpec of the Module for which to locate
+  /// scripting resources.
+  ///
+  /// \param[in] target Target which owns the ScriptInterpreter which is
+  /// eventually used for loading the scripting resources.
+  ///
+  /// \param[in] framework_spec FileSpec for the root of the .framework bundle
+  /// containing the Module. The scripting resources are loaded from the
+  /// Resources/Python directory inside that bundle.
+  /// E.g., \c /path/to/Foo.framework
+  ///
+  static llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+  LocateExecutableScriptingResourcesFromFramework(
+      Stream &feedback_stream, FileSpec module_spec, const Target &target,
+      const FileSpec &framework_spec);
+
   llvm::Expected<FileSpecList>
   GetSafeAutoLoadPaths(const Target &target) const override;
 
 protected:
+  /// Shared implementation behind \c LocateExecutableScriptingResourcesFromDSYM
+  /// and \c LocateExecutableScriptingResourcesFromFramework. Extensions are
+  /// stripped off the module name one at a time until a matching script is
+  /// found, so \c libFoo.1.dylib can be served by \c libFoo.py.
+  static llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+  LocateScriptingResourcesInPythonDir(Stream &feedback_stream,
+                                      FileSpec module_spec,
+                                      const Target &target,
+                                      llvm::StringRef python_dir);
+
   static const char *GetCompatibleArch(ArchSpec::Core core, size_t idx);
 
   struct CrashInfoAnnotations {
