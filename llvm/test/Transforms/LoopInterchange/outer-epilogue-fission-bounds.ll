@@ -29,22 +29,51 @@
 ; DEFINE: %{policy} = -loop-interchange-profitabilities=instorder,vectorize
 ; DEFINE: %{prepare} = -loop-interchange-outer-epilogue-fission -loop-interchange-print-prepared-plan
 ; DEFINE: %{remarks} = -pass-remarks=loop-interchange -pass-remarks-analysis=loop-interchange -pass-remarks-missed=loop-interchange
+; DEFINE: %{applied} = \
+; DEFINE:   --func=bound_typed_canonical --func=bound_byte_canonical \
+; DEFINE:   --func=bound_offset_high32 --func=bound_storage_defined_global \
+; DEFINE:   --func=bound_storage_external_global \
+; DEFINE:   --func=bound_storage_replaceable_global \
+; DEFINE:   --func=bound_const_below --func=bound_const_eq \
+; DEFINE:   --func=bound_dominating_guard --func=bound_max_too_broad \
+; DEFINE:   --func=bound_assume --func=bound_scunknown_range \
+; DEFINE:   --func=bound_widen_i32 --func=bound_context_exact_trunc \
+; DEFINE:   --func=bound_context_exact_addrec
+; DEFINE: %{no_versioning} = \
+; DEFINE:   --implicit-check-not='.lver' \
+; DEFINE:   --implicit-check-not='!alias.scope' \
+; DEFINE:   --implicit-check-not='!noalias' \
+; DEFINE:   --implicit-check-not='llvm.loop.interchange.runtime_versioned' \
+; DEFINE:   --implicit-check-not='LoopVersioning'
 ;
-; Preparation is analysis-only: a complete plan is printed and then discarded,
-; so the IR is unchanged with the option on.
+; With the option on, every function in %{applied} is transformed and every
+; other function is unchanged.
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} %{prepare} %{remarks} -verify-each -verify-dom-info -verify-loop-info -verify-scev -verify-loop-lcssa %s -o %t.prep 2> %t.prep.stderr
 ; RUN: FileCheck %s --check-prefix=PREP --input-file=%t.prep.stderr --implicit-check-not='loop-interchange:'
-; RUN: diff -u %t.out %t.prep
+; RUN: llvm-extract -S --delete %{applied} %t.out -o %t.out.rest
+; RUN: llvm-extract -S --delete %{applied} %t.prep -o %t.prep.rest
+; RUN: diff -u -I '^; ModuleID' %t.out.rest %t.prep.rest
+; RUN: FileCheck %s --check-prefix=APPLIED --input-file=%t.prep %{no_versioning} --implicit-check-not='{{^define }}'
+;
+; The updated LoopInfo must match a fresh rebuild, sibling order included, and
+; a second run of the pass must change nothing.
+; RUN: opt -passes='loop(loop-interchange),print<loops>' -cache-line-size=64 %{policy} -loop-interchange-outer-epilogue-fission -disable-output %s 2>&1 | FileCheck %s --check-prefix=APPLY-LOOPS
+; RUN: opt -passes='print<loops>' -disable-output %t.prep 2>&1 | FileCheck %s --check-prefix=APPLY-LOOPS
+; RUN: opt -S -passes='loop(loop-interchange,loop-interchange)' -cache-line-size=64 %{policy} %{prepare} -verify-each -verify-dom-info -verify-loop-info -verify-scev -verify-loop-lcssa %s -o %t.twice
+; RUN: diff -u %t.prep %t.twice
 ;
 ; Each printed plan has passed both dependence matrices, legality,
-; profitability, and validation. W is recovered from the element-normalized
-; byte stride, not from the storage size, and each generalized N/E pair has
-; its own modular and containment requirements.
+; profitability, and validation. The two remarks after it come from the apply
+; step. W is recovered from the element-normalized byte stride, not from the
+; storage size, and each generalized N/E pair has its own modular and
+; containment requirements.
 ; PREP-LABEL: loop-interchange: prepared function=bound_typed_canonical{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=4 rematerialized=0
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=1335
 ; PREP-SAME:  requirement-ids=[[TYPED_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[TYPED_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=1335.
 ; PREP-LABEL: loop-interchange: prepared function=bound_same_trip_wmin{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=8 rematerialized=0
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=2 reductions=2
@@ -61,6 +90,8 @@
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=1335
 ; PREP-SAME:  requirement-ids=[[BYTE_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[BYTE_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=1335.
 ; PREP-LABEL: loop-interchange: rejected function=bound_byte_nondivisible{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header reason=cross-partition dependence is not statically proved N-to-E{{$}}
 ;
@@ -70,6 +101,8 @@
 ; PREP-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=5 rematerialized=0
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=0 reductions=2
 ; PREP-SAME:  byte-offset-proofs=0 requirements=0 bound=static-bound, no-bound-requirement requirement-ids={{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, no-bound-requirement.
 ;
 ; optsize and minsize functions skip preparation rather than reject a
 ; discovered candidate, so they print nothing. bound_const_eq is the same shape
@@ -79,16 +112,22 @@
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-SAME:  requirement-ids=[[DEFINED_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[DEFINED_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; PREP-LABEL: loop-interchange: prepared function=bound_storage_external_global{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=5 rematerialized=0
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-SAME:  requirement-ids=[[EXTERNAL_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[EXTERNAL_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; PREP-LABEL: loop-interchange: prepared function=bound_storage_replaceable_global{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=5 rematerialized=0
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-SAME:  requirement-ids=[[REPLACEABLE_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[REPLACEABLE_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; PREP-LABEL: loop-interchange: rejected function=bound_storage_missing{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header reason=cross-partition dependence is not statically proved N-to-E{{$}}
 ; PREP-LABEL: loop-interchange: rejected function=bound_storage_undersized{{ }}
@@ -111,11 +150,15 @@
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-SAME:  requirement-ids=[[BELOW_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[BELOW_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; PREP-LABEL: loop-interchange: prepared function=bound_const_eq{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=4 rematerialized=0
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-SAME:  requirement-ids=[[CONST_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[CONST_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; PREP-LABEL: loop-interchange: rejected function=bound_const_above1{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header reason=known-unsafe-trip-exceeds-bound{{$}}
 ; PREP-LABEL: loop-interchange: rejected function=bound_const_above2{{ }}
@@ -125,6 +168,8 @@
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-SAME:  requirement-ids=[[GUARD_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[GUARD_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ;
 ; This body discharges by constant maximum despite its name. The truncation
 ; twins below exercise the contextual exact-trip strategy.
@@ -133,16 +178,22 @@
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-SAME:  requirement-ids=[[MAX_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[MAX_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; PREP-LABEL: loop-interchange: prepared function=bound_assume{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=4 rematerialized=0
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-SAME:  requirement-ids=[[ASSUME_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[ASSUME_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; PREP-LABEL: loop-interchange: prepared function=bound_scunknown_range{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=4 rematerialized=0
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-SAME:  requirement-ids=[[RANGE_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[RANGE_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; PREP-LABEL: loop-interchange: prepared function=bound_ineffective_min_metadata{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=4 rematerialized=0
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
@@ -160,6 +211,8 @@
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-SAME:  requirement-ids=[[WIDEN_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[WIDEN_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; PREP-LABEL: loop-interchange: rejected function=bound_overflow{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header reason=known-unsafe-trip-exceeds-bound{{$}}
 ;
@@ -170,7 +223,8 @@
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-SAME:  requirement-ids=[[TRUNC_ID:[0-9]+]]:modular-outer-span/static/by-context-exact,[[TRUNC_ID]]:object-containment/static/by-constant-max{{$}}
-; PREP-NEXT:  remark: <unknown>:0:0: Cannot interchange loops due to dependences.
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; PREP-LABEL: loop-interchange: prepared function=bound_context_nofact_trunc{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=4 rematerialized=0
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
@@ -184,8 +238,8 @@
 ; PREP-SAME:  absolute-depth=3 routing-depth=3 fission-rows=0 routing-rows=1 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-SAME:  requirement-ids=[[ADDREC_ID:[0-9]+]]:modular-outer-span/static/by-context-exact,[[ADDREC_ID]]:object-containment/static/by-constant-max{{$}}
-; PREP-NEXT:  remark: <unknown>:0:0: Cannot interchange loops due to dependences.
-; PREP-NEXT:  remark: <unknown>:0:0: Cannot interchange loops due to dependences.
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ;
 ; EXACT-TRUNC-SCEV-LABEL: Printing analysis 'Scalar Evolution Analysis' for function 'bound_context_exact_trunc':
 ; EXACT-TRUNC-SCEV: {{^}}Determining loop execution counts for: @bound_context_exact_trunc{{$}}
@@ -199,7 +253,438 @@
 ; ADDREC-SCEV: {{^}}Determining loop execution counts for: @bound_context_exact_addrec{{$}}
 ; ADDREC-SCEV: {{^}}Loop %outer.header: backedge-taken count is {0,+,1}<nuw><nsw><%top.header>{{$}}
 ; ADDREC-SCEV-NEXT: {{^}}Loop %outer.header: constant max backedge-taken count is i64 999999{{$}}
+
+; The transformed module. Every definition is listed, so the RUN line's
+; '{{^define }}' exclusion makes the list exhaustive. Each applied function
+; gains one sibling epilogue loop whose latch branches to the original
+; continuation, and its nest is interchanged. The emptied original epilogue
+; block, the epilogue loop, and the continuation are checked instruction by
+; instruction. Block labels are plain directives because the printed IR
+; separates blocks with a blank line. The other functions were already shown
+; unchanged by the llvm-extract --delete pair above and carry only their label.
 ;
+; APPLIED-LABEL: define {{.*}}@bound_typed_canonical(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %ddiag.epil = getelementptr inbounds [1335 x double], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, 1335
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      ret void
+; APPLIED-LABEL: define {{.*}}@bound_same_trip_wmin(
+; APPLIED-LABEL: define {{.*}}@bound_distinct_runtime(
+; APPLIED-LABEL: define {{.*}}@bound_outer_static_inner_runtime(
+; APPLIED-LABEL: define {{.*}}@bound_byte_canonical(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %diagoff.epil = mul i64 %epilogue.iv, 10688
+; APPLIED-NEXT:      %ddiag.epil = getelementptr inbounds i8, ptr @byte_canonical_obj, i64 %diagoff.epil
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, 1335
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      ret void
+; APPLIED-LABEL: define {{.*}}@bound_byte_nondivisible(
+; APPLIED-LABEL: define {{.*}}@bound_offset_high32(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %lo.epil = getelementptr inbounds i8, ptr @offset_high32_obj, i64 16
+; APPLIED-NEXT:      %hi.epil = getelementptr inbounds i8, ptr @offset_high32_obj, i64 4294967312
+; APPLIED-NEXT:      %lv.epil = load double, ptr %lo.epil, align 8
+; APPLIED-NEXT:      %hn.epil = fmul double %lv.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %hn.epil, ptr %hi.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, 4
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      ret void
+; APPLIED-LABEL: define {{.*}}@bound_optsize_canonical(
+; APPLIED-LABEL: define {{.*}}@bound_minsize_canonical(
+; APPLIED-LABEL: define {{.*}}@bound_storage_defined_global(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %diagoff.epil = mul i64 %epilogue.iv, 40
+; APPLIED-NEXT:      %ddiag.epil = getelementptr i8, ptr @storage_defined_obj, i64 %diagoff.epil
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, 4
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      ret void
+; APPLIED-LABEL: define {{.*}}@bound_storage_external_global(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %diagoff.epil = mul i64 %epilogue.iv, 40
+; APPLIED-NEXT:      %ddiag.epil = getelementptr i8, ptr @storage_external_obj, i64 %diagoff.epil
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, 4
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      ret void
+; APPLIED-LABEL: define {{.*}}@bound_storage_replaceable_global(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %diagoff.epil = mul i64 %epilogue.iv, 40
+; APPLIED-NEXT:      %ddiag.epil = getelementptr i8, ptr @storage_replaceable_obj, i64 %diagoff.epil
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, 4
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      ret void
+; APPLIED-LABEL: define {{.*}}@bound_storage_missing(
+; APPLIED-LABEL: define {{.*}}@bound_storage_undersized(
+; APPLIED-LABEL: define {{.*}}@bound_storage_nullable(
+; APPLIED-LABEL: define {{.*}}@bound_storage_weak(
+; APPLIED-LABEL: define {{.*}}@bound_runtime_canonical(
+; APPLIED-LABEL: define {{.*}}@bound_const_below(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %ddiag.epil = getelementptr inbounds [4 x double], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, 3
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      ret void
+; APPLIED-LABEL: define {{.*}}@bound_const_eq(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %ddiag.epil = getelementptr inbounds [4 x double], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, 4
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      ret void
+; APPLIED-LABEL: define {{.*}}@bound_const_above1(
+; APPLIED-LABEL: define {{.*}}@bound_const_above2(
+; APPLIED-LABEL: define {{.*}}@bound_dominating_guard(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %ddiag.epil = getelementptr inbounds [4 x double], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, %n
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      br label %done
+; APPLIED-LABEL: define {{.*}}@bound_max_too_broad(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %ddiag.epil = getelementptr inbounds [4 x double], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, %nn
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      br label %done
+; APPLIED-LABEL: define {{.*}}@bound_assume(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %ddiag.epil = getelementptr inbounds [4 x double], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, %n
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      ret void
+; APPLIED-LABEL: define {{.*}}@bound_scunknown_range(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %ddiag.epil = getelementptr inbounds [4 x double], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, %n
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      ret void
+; APPLIED-LABEL: define {{.*}}@bound_ineffective_min_metadata(
+; APPLIED-LABEL: define {{.*}}@bound_nofact(
+; APPLIED-LABEL: define {{.*}}@bound_widen_i32(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i32 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %i64.epil = zext i32 %epilogue.iv to i64
+; APPLIED-NEXT:      %ddiag.epil = getelementptr inbounds [4 x double], ptr @widen_obj, i64 %i64.epil, i64 %i64.epil
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i32 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i32 %i.next.epil, %n
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      br label %done
+; APPLIED-LABEL: define {{.*}}@bound_overflow(
+; APPLIED-LABEL: define {{.*}}@bound_context_exact_trunc(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %ddiag.epil = getelementptr inbounds [4 x double], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, %nn
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      br label %done
+; APPLIED-LABEL: define {{.*}}@bound_context_nofact_trunc(
+; APPLIED-LABEL: define {{.*}}@bound_context_exact_addrec(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         outer.exit:
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %ddiag.epil = getelementptr inbounds [4 x double], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dval.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dnew.epil = fmul double %dval.epil, 1.500000e+00
+; APPLIED-NEXT:      store double %dnew.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, %t
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %outer.exit.cont, label %epilogue.header
+; APPLIED:         outer.exit.cont:
+; APPLIED-NEXT:      store double %chk.res, ptr %R, align 8
+; APPLIED-NEXT:      br label %top.latch
+;
+; The same loop-info lines are checked against the loop manager's live
+; LoopInfo and against a fresh rebuild of the transformed module. The block
+; lists inside the nest are wildcarded because LoopInfo stores them in
+; discovery order, which an incremental update and a fresh walk reach
+; differently; the loop order, the depths, and the epilogue loop's two blocks
+; are exact.
+;
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_typed_canonical':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_byte_canonical':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_offset_high32':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_storage_defined_global':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_storage_external_global':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_storage_replaceable_global':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_const_below':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_const_eq':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_dominating_guard':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_max_too_broad':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_assume':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_scunknown_range':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_widen_i32':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_context_exact_trunc':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'bound_context_exact_addrec':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %top.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

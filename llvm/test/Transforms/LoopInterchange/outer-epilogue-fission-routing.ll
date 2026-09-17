@@ -20,15 +20,75 @@
 ; DEFINE: %{prepare} = -loop-interchange-outer-epilogue-fission -loop-interchange-print-prepared-plan
 ; DEFINE: %{remarks} = -pass-remarks=loop-interchange -pass-remarks-analysis=loop-interchange -pass-remarks-missed=loop-interchange
 ; DEFINE: %{prep_checks} = --implicit-check-not='loop-interchange:'
+; DEFINE: %{applied} = \
+; DEFINE:   --func=r1_r2_length3_simple_ancestor \
+; DEFINE:   --func=r10_r11_budget_slot_sequence \
+; DEFINE:   --func=r12_two_static_collected_order \
+; DEFINE:   --func=r13_explicit_cache_nested_chain \
+; DEFINE:   --func=r15_nested_scalar_all \
+; DEFINE:   --func=r5_first_static_then_later_ordinary \
+; DEFINE:   --func=r6_runtime_then_static --func=r7_rejected_then_static \
+; DEFINE:   --func=r8_ineligible_then_static \
+; DEFINE:   --func=top_level_middle_epilogue_order \
+; DEFINE:   --func=r16_depth3_nonempty_fission_row
+; DEFINE: %{applied_budget1} = \
+; DEFINE:   --func=r1_r2_length3_simple_ancestor \
+; DEFINE:   --func=r12_two_static_collected_order \
+; DEFINE:   --func=r13_explicit_cache_nested_chain \
+; DEFINE:   --func=r15_nested_scalar_all \
+; DEFINE:   --func=r5_first_static_then_later_ordinary \
+; DEFINE:   --func=r8_ineligible_then_static \
+; DEFINE:   --func=top_level_middle_epilogue_order \
+; DEFINE:   --func=r16_depth3_nonempty_fission_row
+; DEFINE: %{applied_budget2} = \
+; DEFINE:   --func=r1_r2_length3_simple_ancestor \
+; DEFINE:   --func=r12_two_static_collected_order \
+; DEFINE:   --func=r13_explicit_cache_nested_chain \
+; DEFINE:   --func=r15_nested_scalar_all \
+; DEFINE:   --func=r5_first_static_then_later_ordinary \
+; DEFINE:   --func=r6_runtime_then_static --func=r7_rejected_then_static \
+; DEFINE:   --func=r8_ineligible_then_static \
+; DEFINE:   --func=top_level_middle_epilogue_order \
+; DEFINE:   --func=r16_depth3_nonempty_fission_row
+; DEFINE: %{applied_depth22} = \
+; DEFINE:   --func=r10_r11_budget_slot_sequence \
+; DEFINE:   --func=r12_two_static_collected_order \
+; DEFINE:   --func=r13_explicit_cache_nested_chain \
+; DEFINE:   --func=r15_nested_scalar_all \
+; DEFINE:   --func=r5_first_static_then_later_ordinary \
+; DEFINE:   --func=r6_runtime_then_static --func=r7_rejected_then_static \
+; DEFINE:   --func=r8_ineligible_then_static \
+; DEFINE:   --func=top_level_middle_epilogue_order
+; DEFINE: %{applied_cache} = \
+; DEFINE:   --func=r1_r2_length3_simple_ancestor \
+; DEFINE:   --func=top_level_middle_epilogue_order \
+; DEFINE:   --func=r16_depth3_nonempty_fission_row
+; DEFINE: %{no_versioning} = \
+; DEFINE:   --implicit-check-not='.lver' \
+; DEFINE:   --implicit-check-not='!alias.scope' \
+; DEFINE:   --implicit-check-not='!noalias' \
+; DEFINE:   --implicit-check-not='llvm.loop.interchange.runtime_versioned' \
+; DEFINE:   --implicit-check-not='LoopVersioning'
 ;
-; Preparation is analysis-only: a complete plan is printed and then discarded,
-; so every function keeps its ordinary result. PREP-COMMON holds the decisions
+; With the option on, every function in %{applied} is transformed and every
+; other function keeps its ordinary result. PREP-COMMON holds the decisions
 ; every configuration makes; PREP-LATER those reachable with at least two
 ; candidate slots; CHAIN3 those needing an eligible length-three chain; PREP
 ; and BUDGET2 distinguish reaching the third attempt from stopping at two.
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} %{prepare} %{remarks} -verify-each -verify-dom-info -verify-loop-info -verify-scev -verify-loop-lcssa %s -o %t.prep 2> %t.prep.stderr
 ; RUN: FileCheck %s --check-prefixes=PREP-COMMON,PREP-LATER,CHAIN3,PREP --input-file=%t.prep.stderr %{prep_checks}
-; RUN: diff -u %t.default %t.prep
+; RUN: llvm-extract -S --delete %{applied} %t.default -o %t.default.rest
+; RUN: llvm-extract -S --delete %{applied} %t.prep -o %t.prep.rest
+; RUN: diff -u -I '^; ModuleID' %t.default.rest %t.prep.rest
+; RUN: FileCheck %s --check-prefix=APPLIED --input-file=%t.prep %{no_versioning} --implicit-check-not='{{^define }}'
+;
+; The updated LoopInfo must match a fresh rebuild, sibling order included. A
+; second run of the pass reaches the next candidate of a two-candidate
+; function instead of distributing the first one again.
+; RUN: opt -passes='loop(loop-interchange),print<loops>' -cache-line-size=64 %{policy} -loop-interchange-outer-epilogue-fission -disable-output %s 2>&1 | FileCheck %s --check-prefix=APPLY-LOOPS
+; RUN: opt -passes='print<loops>' -disable-output %t.prep 2>&1 | FileCheck %s --check-prefix=APPLY-LOOPS
+; RUN: opt -S -passes='loop(loop-interchange,loop-interchange)' -cache-line-size=64 %{policy} %{prepare} -verify-each -verify-dom-info -verify-loop-info -verify-scev -verify-loop-lcssa %s -o %t.twice
+; RUN: FileCheck %s --check-prefix=TWICE --input-file=%t.twice --implicit-check-not='%epilogue.iv{{[0-9]*}} = phi'
 ;
 ; A zero candidate budget does no feature work. One slot stops after a
 ; rejection or a runtime plan but skips an ineligible chain for free. An
@@ -41,12 +101,16 @@
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} -loop-interchange-max-outer-epilogue-fission-candidates=1 -loop-interchange-outer-epilogue-fission=false %s -o %t.budget1.off
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} -loop-interchange-max-outer-epilogue-fission-candidates=1 %{prepare} %{remarks} %s -o %t.budget1.on 2> %t.budget1.stderr
 ; RUN: diff -u %t.default %t.budget1.off
-; RUN: diff -u %t.budget1.off %t.budget1.on
+; RUN: llvm-extract -S --delete %{applied_budget1} %t.budget1.off -o %t.budget1.off.rest
+; RUN: llvm-extract -S --delete %{applied_budget1} %t.budget1.on -o %t.budget1.on.rest
+; RUN: diff -u -I '^; ModuleID' %t.budget1.off.rest %t.budget1.on.rest
 ; RUN: FileCheck %s --check-prefixes=PREP-COMMON,CHAIN3,BUDGET1 --input-file=%t.budget1.stderr %{prep_checks}
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} -loop-interchange-max-outer-epilogue-fission-candidates=2 -loop-interchange-outer-epilogue-fission=false %s -o %t.budget2.off
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} -loop-interchange-max-outer-epilogue-fission-candidates=2 %{prepare} %{remarks} %s -o %t.budget2.on 2> %t.budget2.stderr
 ; RUN: diff -u %t.default %t.budget2.off
-; RUN: diff -u %t.budget2.off %t.budget2.on
+; RUN: llvm-extract -S --delete %{applied_budget2} %t.budget2.off -o %t.budget2.off.rest
+; RUN: llvm-extract -S --delete %{applied_budget2} %t.budget2.on -o %t.budget2.on.rest
+; RUN: diff -u -I '^; ModuleID' %t.budget2.off.rest %t.budget2.on.rest
 ; RUN: FileCheck %s --check-prefixes=PREP-COMMON,PREP-LATER,CHAIN3,BUDGET2 --input-file=%t.budget2.stderr %{prep_checks}
 ;
 ; Chain depth and logical pair depth are separate gates. At [2,2], r1 is
@@ -56,11 +120,13 @@
 ; Raising the maximum to eleven reaches r4's absolute-prefix rejection.
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} -loop-interchange-min-loop-nest-depth=2 -loop-interchange-max-loop-nest-depth=2 -loop-interchange-outer-epilogue-fission=false %s -o %t.depth22.off
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} -loop-interchange-min-loop-nest-depth=2 -loop-interchange-max-loop-nest-depth=2 %{prepare} %{remarks} %s -o %t.depth22.on 2> %t.depth22.stderr
-; RUN: diff -u %t.depth22.off %t.depth22.on
+; RUN: llvm-extract -S --delete %{applied_depth22} %t.depth22.off -o %t.depth22.off.rest
+; RUN: llvm-extract -S --delete %{applied_depth22} %t.depth22.on -o %t.depth22.on.rest
+; RUN: diff -u -I '^; ModuleID' %t.depth22.off.rest %t.depth22.on.rest
 ; RUN: FileCheck %s --check-prefixes=PREP-COMMON,PREP-LATER,PREP --input-file=%t.depth22.stderr %{prep_checks}
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} -loop-interchange-min-loop-nest-depth=2 -loop-interchange-max-loop-nest-depth=3 -loop-interchange-outer-epilogue-fission=false %s -o %t.depth23.off
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} -loop-interchange-min-loop-nest-depth=2 -loop-interchange-max-loop-nest-depth=3 %{prepare} %{remarks} %s -o %t.depth23.on 2> %t.depth23.stderr
-; RUN: diff -u %t.depth23.off %t.depth23.on
+; RUN: diff -u %t.prep %t.depth23.on
 ; RUN: FileCheck %s --check-prefixes=PREP-COMMON,PREP-LATER,CHAIN3,PREP --input-file=%t.depth23.stderr %{prep_checks}
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} -loop-interchange-min-loop-nest-depth=3 -loop-interchange-max-loop-nest-depth=3 -loop-interchange-outer-epilogue-fission=false %{remarks} %s -o %t.depth33.off 2> %t.depth33.off.stderr
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} -loop-interchange-min-loop-nest-depth=3 -loop-interchange-max-loop-nest-depth=3 %{prepare} %{remarks} %s -o %t.depth33.on 2> %t.depth33.on.stderr
@@ -68,7 +134,7 @@
 ; RUN: diff -u %t.depth33.off.stderr %t.depth33.on.stderr
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} -loop-interchange-min-loop-nest-depth=2 -loop-interchange-max-loop-nest-depth=11 -loop-interchange-outer-epilogue-fission=false %s -o %t.depth211.off
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} -loop-interchange-min-loop-nest-depth=2 -loop-interchange-max-loop-nest-depth=11 %{prepare} %{remarks} %s -o %t.depth211.on 2> %t.depth211.stderr
-; RUN: diff -u %t.depth211.off %t.depth211.on
+; RUN: diff -u %t.prep %t.depth211.on
 ; RUN: FileCheck %s --check-prefixes=PREP-COMMON,PREP-LATER,CHAIN3,PREP,DEPTH11 --input-file=%t.depth211.stderr %{prep_checks}
 ;
 ; Cache uses the collected-chain root. r1 and the top-level middle pair remain
@@ -78,12 +144,16 @@
 ; both ordinary r9 chains interchange; do not impose the default r9 shape.
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=cache -loop-interchange-outer-epilogue-fission=false %s -o %t.cache.off
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=cache %{prepare} %{remarks} %s -o %t.cache.on 2> %t.cache.stderr
-; RUN: diff -u %t.cache.off %t.cache.on
+; RUN: llvm-extract -S --delete %{applied_cache} %t.cache.off -o %t.cache.off.rest
+; RUN: llvm-extract -S --delete %{applied_cache} %t.cache.on -o %t.cache.on.rest
+; RUN: diff -u -I '^; ModuleID' %t.cache.off.rest %t.cache.on.rest
 ; RUN: FileCheck %s --check-prefixes=CHAIN3,CACHE --input-file=%t.cache.stderr %{prep_checks}
 ; RUN: FileCheck %s --check-prefix=CACHE-IR --input-file=%t.cache.on
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=ignore -loop-interchange-outer-epilogue-fission=false %s -o %t.ignore.off
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 -loop-interchange-profitabilities=ignore %{prepare} %{remarks} %s -o %t.ignore.on 2> %t.ignore.stderr
-; RUN: diff -u %t.ignore.off %t.ignore.on
+; RUN: llvm-extract -S --delete %{applied} %t.ignore.off -o %t.ignore.off.rest
+; RUN: llvm-extract -S --delete %{applied} %t.ignore.on -o %t.ignore.on.rest
+; RUN: diff -u -I '^; ModuleID' %t.ignore.off.rest %t.ignore.on.rest
 ; RUN: FileCheck %s --check-prefixes=PREP-COMMON,PREP-LATER,CHAIN3,PREP --input-file=%t.ignore.stderr %{prep_checks}
 ; RUN: FileCheck %s --check-prefix=IGNORE --input-file=%t.ignore.stderr
 ; RUN: FileCheck %s --check-prefix=IGNORE-IR --input-file=%t.ignore.on
@@ -110,6 +180,8 @@
 ; CHAIN3-SAME:  absolute-depth=3 routing-depth=3 fission-rows=0 routing-rows=1 cross-deps=1 reductions=2
 ; CHAIN3-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; CHAIN3-SAME:  requirement-ids=[[R1_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[R1_ID]]:object-containment/static/by-constant-max{{$}}
+; CHAIN3-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; CHAIN3-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; PREP-COMMON-LABEL: loop-interchange: rejected function=r9_no_static_two_ordinary{{ }}
 ; PREP-COMMON-SAME:  outer=for.j.header inner=for.r.header reason=post-inner region has no material epilogue memory slice{{$}}
 ; PREP-LATER-NEXT:   loop-interchange: rejected function=r9_no_static_two_ordinary outer=for.k.header inner=for.l.header reason=post-inner region has no material epilogue memory slice{{$}}
@@ -127,6 +199,8 @@
 ; PREP-SAME:  absolute-depth=3 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-SAME:  requirement-ids=[[R10_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[R10_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; BUDGET2-LABEL: loop-interchange: prepared function=r10_r11_budget_slot_sequence{{ }}
 ; BUDGET2-SAME:  outer=runtime.outer inner=runtime.inner path-blocks=1 epilogue-insts=4 rematerialized=0
 ; BUDGET2-SAME:  absolute-depth=3 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
@@ -144,6 +218,8 @@
 ; PREP-COMMON-SAME:  absolute-depth=3 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-COMMON-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-COMMON-SAME:  requirement-ids=[[R12_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[R12_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-COMMON-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-COMMON-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; CACHE-LABEL: loop-interchange: rejected function=r12_two_static_collected_order{{ }}
 ; CACHE-SAME:  outer=first.outer inner=first.inner reason=virtual extracted nest failed existing default profitability{{$}}
 ; CACHE:       loop-interchange: rejected function=r12_two_static_collected_order outer=second.outer inner=second.inner reason=virtual extracted nest failed existing default profitability{{$}}
@@ -152,6 +228,8 @@
 ; PREP-COMMON-SAME:  absolute-depth=3 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-COMMON-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-COMMON-SAME:  requirement-ids=[[R13_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[R13_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-COMMON-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-COMMON-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; CACHE-LABEL: loop-interchange: rejected function=r13_explicit_cache_nested_chain{{ }}
 ; CACHE-SAME:  outer=candidate.outer inner=candidate.inner reason=virtual extracted nest failed existing default profitability{{$}}
 ;
@@ -166,6 +244,8 @@
 ; PREP-COMMON-SAME:  absolute-depth=3 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-COMMON-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=1335
 ; PREP-COMMON-SAME:  requirement-ids=[[R15_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[R15_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-COMMON-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-COMMON-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=1335.
 ; CACHE-LABEL: loop-interchange: rejected function=r15_nested_scalar_all{{ }}
 ; CACHE-SAME:  outer=outer.header inner=inner.header reason=virtual extracted nest failed existing default profitability{{$}}
 ;
@@ -191,6 +271,8 @@
 ; PREP-COMMON-SAME:  absolute-depth=3 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-COMMON-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-COMMON-SAME:  requirement-ids=[[R5_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[R5_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-COMMON-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-COMMON-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; CACHE-LABEL: loop-interchange: rejected function=r5_first_static_then_later_ordinary{{ }}
 ; CACHE-SAME:  outer=first.outer inner=first.inner reason=virtual extracted nest failed existing default profitability{{$}}
 ; CACHE:       loop-interchange: rejected function=r5_first_static_then_later_ordinary outer=second.outer inner=second.inner reason=post-inner region has no material epilogue memory slice{{$}}
@@ -200,6 +282,8 @@
 ; PREP-LATER-SAME:  absolute-depth=3 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-LATER-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-LATER-SAME:  requirement-ids=[[R6_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[R6_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-LATER-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-LATER-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; BUDGET1-LABEL: loop-interchange: prepared function=r6_runtime_then_static{{ }}
 ; BUDGET1-SAME:  outer=runtime.outer inner=runtime.inner path-blocks=1 epilogue-insts=4 rematerialized=0
 ; BUDGET1-SAME:  absolute-depth=3 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
@@ -219,6 +303,8 @@
 ; PREP-LATER-SAME:  absolute-depth=3 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-LATER-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-LATER-SAME:  requirement-ids=[[R7_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[R7_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-LATER-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-LATER-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; CACHE-LABEL: loop-interchange: rejected function=r7_rejected_then_static{{ }}
 ; CACHE-SAME:  outer=reject.outer inner=reject.inner reason=cross-partition dependence is not statically proved N-to-E{{$}}
 ; CACHE:       loop-interchange: rejected function=r7_rejected_then_static outer=static.outer inner=static.inner reason=virtual extracted nest failed existing default profitability{{$}}
@@ -228,6 +314,8 @@
 ; PREP-COMMON-SAME:  absolute-depth=3 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=1 reductions=2
 ; PREP-COMMON-SAME:  byte-offset-proofs=1 requirements=2 bound=static-bound W=4
 ; PREP-COMMON-SAME:  requirement-ids=[[R8_ID:[0-9]+]]:modular-outer-span/static/by-constant-max,[[R8_ID]]:object-containment/static/by-constant-max{{$}}
+; PREP-COMMON-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-COMMON-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
 ; CACHE-LABEL: loop-interchange: rejected function=r8_ineligible_then_static{{ }}
 ; CACHE-SAME:  outer=static.outer inner=static.inner reason=virtual extracted nest failed existing default profitability{{$}}
 ;
@@ -235,14 +323,18 @@
 ; PREP-COMMON-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=2 rematerialized=4
 ; PREP-COMMON-SAME:  absolute-depth=2 routing-depth=2 fission-rows=1 routing-rows=1 cross-deps=0 reductions=0
 ; PREP-COMMON-SAME:  byte-offset-proofs=0 requirements=0 bound=static-bound, no-bound-requirement requirement-ids={{$}}
-; PREP-COMMON-NEXT:  remark: <unknown>:0:0: Cannot interchange loops because they are not tightly nested.
+; PREP-COMMON-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-COMMON-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, no-bound-requirement.
+; PREP-COMMON-NEXT:  remark: <unknown>:0:0: Computed dependence info, invoking the transform.
 ; PREP-COMMON-NEXT:  remark: <unknown>:0:0: Computed dependence info, invoking the transform.
 ; PREP-COMMON-NEXT:  remark: <unknown>:0:0: Computed dependence info, invoking the transform.
 ; CACHE-LABEL: loop-interchange: prepared function=top_level_middle_epilogue_order{{ }}
 ; CACHE-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=2 rematerialized=4
 ; CACHE-SAME:  absolute-depth=2 routing-depth=2 fission-rows=1 routing-rows=1 cross-deps=0 reductions=0
 ; CACHE-SAME:  byte-offset-proofs=0 requirements=0 bound=static-bound, no-bound-requirement requirement-ids={{$}}
-; CACHE-NEXT:  remark: <unknown>:0:0: Cannot interchange loops because they are not tightly nested.
+; CACHE-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; CACHE-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, no-bound-requirement.
+; CACHE-NEXT:  remark: <unknown>:0:0: Computed dependence info, invoking the transform.
 ; CACHE-NEXT:  remark: <unknown>:0:0: Computed dependence info, invoking the transform.
 ; CACHE-NEXT:  remark: <unknown>:0:0: Computed dependence info, invoking the transform.
 ; The depth-3 positive keeps both speculative matrices nonempty, so its
@@ -254,8 +346,8 @@
 ; CHAIN3-SAME:  outer=l2.header inner=l3.header path-blocks=1 epilogue-insts=2 rematerialized=0
 ; CHAIN3-SAME:  absolute-depth=3 routing-depth=3 fission-rows=1 routing-rows=1 cross-deps=0 reductions=0
 ; CHAIN3-SAME:  byte-offset-proofs=0 requirements=0 bound=static-bound, no-bound-requirement requirement-ids={{$}}
-; CHAIN3-NEXT:  remark: <unknown>:0:0: Cannot interchange loops because they are not tightly nested.
-; CHAIN3-NEXT:  remark: <unknown>:0:0: Cannot interchange loops due to dependences.
+; CHAIN3-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; CHAIN3-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, no-bound-requirement.
 ;
 ; IGNORE-LABEL: loop-interchange: rejected function=r9_no_static_two_ordinary{{ }}
 ; IGNORE-SAME:  outer=for.j.header inner=for.r.header reason=post-inner region has no material epilogue memory slice{{$}}
@@ -301,14 +393,16 @@
 ; MATRIX3:       loop-interchange: prepared a complete outer-epilogue fission plan in function 'r1_r2_length3_simple_ancestor': Outer 'outer.header', Inner 'inner.header', absolute columns 1/2, routing columns 1/2, 1 cross dependence(s).
 ; MATRIX3-NEXT:  loop-interchange: prepared function=r1_r2_length3_simple_ancestor{{ }}
 ; MATRIX3-SAME:  rematerialized=0{{ }}
-; MATRIX3:       Processing LoopList of size = 3 containing the following loops:
-; MATRIX3:       Found 6 Loads and Stores to analyze
-; MATRIX3:       Dependency matrix before interchange:
-; MATRIX3-NEXT:  {{^}}* I I{{ *$}}
-; MATRIX3-NEXT:  {{^}}* * I{{ *$}}
-; MATRIX3-NEXT:  {{^}}* = I{{ *$}}
-; MATRIX3-NEXT:  Processing InnerLoopId = 2 and OuterLoopId = 1
-; MATRIX3:       Cannot prove legality, not interchanging loops 'root.header' and 'outer.header'
+; MATRIX3-NEXT: Splitting the inner loop latch
+; MATRIX3-NEXT: splitting InnerLoopHeader done
+; MATRIX3-NEXT: adjustLoopBranches called
+; MATRIX3-NEXT: Outer loop reduction PHIs:
+; MATRIX3-NEXT:   %sum.i = phi i64 [ %sum.next, %outer.latch ], [ 0, %outer.header.preheader ]
+; MATRIX3-NEXT: Inner loop reduction PHIs:
+; MATRIX3-NEXT:   %sum.j = phi i64 [ %sum.next.j, %inner.header.split ], [ %sum.i, %inner.header.preheader ]
+; MATRIX3-NEXT: remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; MATRIX3-NEXT: remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
+; MATRIX3-NEXT: loop-interchange: materialized outer-epilogue fission + interchange, nested sibling, in function 'r1_r2_length3_simple_ancestor'.
 ;
 ; MATRIX-REJECT-LABEL: loop-interchange: discovered a closed outer-loop epilogue in function 'r3_length3_nonsimple_ancestor' with 1 path block(s), 4 instruction(s), and 0 rematerialized loop-local definition(s).
 ; MATRIX-REJECT:       width = 4, element bytes = 8, bounded modular equality implies equal outer iteration.
@@ -329,12 +423,16 @@
 ; MATRIX-NESTED:       loop-interchange: prepared a complete outer-epilogue fission plan in function 'r15_nested_scalar_all': Outer 'outer.header', Inner 'inner.header', absolute columns 1/2, routing columns 0/1, 1 cross dependence(s).
 ; MATRIX-NESTED-NEXT:  loop-interchange: prepared function=r15_nested_scalar_all{{ }}
 ; MATRIX-NESTED-SAME:  rematerialized=0{{ }}
-; MATRIX-NESTED:       Processing LoopList of size = 2 containing the following loops:
-; MATRIX-NESTED:       Dependency matrix before interchange:
-; MATRIX-NESTED-NEXT:  {{^}}* I{{ *$}}
-; MATRIX-NESTED-NEXT:  {{^}}= I{{ *$}}
-; MATRIX-NESTED-NEXT:  Processing InnerLoopId = 1 and OuterLoopId = 0
-; MATRIX-NESTED:       Cannot prove legality, not interchanging loops 'outer.header' and 'inner.header'
+; MATRIX-NESTED-NEXT: Splitting the inner loop latch
+; MATRIX-NESTED-NEXT: splitting InnerLoopHeader done
+; MATRIX-NESTED-NEXT: adjustLoopBranches called
+; MATRIX-NESTED-NEXT: Outer loop reduction PHIs:
+; MATRIX-NESTED-NEXT:   %chk.i = phi double [ %chk.next, %outer.latch ], [ 0.000000e+00, %outer.header.preheader ]
+; MATRIX-NESTED-NEXT: Inner loop reduction PHIs:
+; MATRIX-NESTED-NEXT:   %chk.j = phi double [ %chk.next.j, %inner.header.split ], [ %chk.i, %inner.header.preheader ]
+; MATRIX-NESTED-NEXT: remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; MATRIX-NESTED-NEXT: remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=1335.
+; MATRIX-NESTED-NEXT: loop-interchange: materialized outer-epilogue fission + interchange, nested sibling, in function 'r15_nested_scalar_all'.
 ; The two speculative matrices carry independent domains. The plan summary
 ; gives the column indices: absolute columns 1/2 puts the selected outer at
 ; index 1, so index 0 is the ancestor column that the prefix proof reads, and
@@ -360,12 +458,12 @@
 ; MATRIX-R16-NEXT:  loop-interchange: prepared function=r16_depth3_nonempty_fission_row{{ }}
 ; MATRIX-R16-SAME:  rematerialized=0{{ }}
 ; MATRIX-R16-SAME:  absolute-depth=3 routing-depth=3 fission-rows=1 routing-rows=1{{ }}
-; MATRIX-R16-NEXT:  Processing LoopList of size = 3 containing the following loops:
-; MATRIX-R16:       Dependency matrix before interchange:
-; MATRIX-R16-NEXT:  {{^}}= = ={{ *$}}
-; MATRIX-R16-NEXT:  {{^}}* = I{{ *$}}
-; MATRIX-R16-NEXT:  Processing InnerLoopId = 2 and OuterLoopId = 1
-; MATRIX-R16:       Cannot prove legality, not interchanging loops 'l1.header' and 'l2.header'
+; MATRIX-R16-NEXT: Splitting the inner loop latch
+; MATRIX-R16-NEXT: splitting InnerLoopHeader done
+; MATRIX-R16-NEXT: adjustLoopBranches called
+; MATRIX-R16-NEXT: remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; MATRIX-R16-NEXT: remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, no-bound-requirement.
+; MATRIX-R16-NEXT: loop-interchange: materialized outer-epilogue fission + interchange, nested sibling, in function 'r16_depth3_nonempty_fission_row'.
 ;
 ; SCAN-RUNTIME-LABEL: loop-interchange: discovered a closed outer-loop epilogue in function 'r6_runtime_then_static'
 ; SCAN-RUNTIME:       loop-interchange: prepared a complete outer-epilogue fission plan in function 'r6_runtime_then_static': Outer 'runtime.outer', Inner 'runtime.inner', absolute columns 1/2, routing columns 0/1, 1 cross dependence(s).
@@ -373,18 +471,31 @@
 ; SCAN-RUNTIME:       loop-interchange: prepared a complete outer-epilogue fission plan in function 'r6_runtime_then_static': Outer 'static.outer', Inner 'static.inner', absolute columns 1/2, routing columns 0/1, 1 cross dependence(s).
 ; SCAN-RUNTIME-NEXT:  loop-interchange: prepared function=r6_runtime_then_static outer=static.outer inner=static.inner{{ }}
 ; SCAN-RUNTIME-SAME:  rematerialized=0{{ }}
-; SCAN-RUNTIME-NEXT:  Processing LoopList of size = 2 containing the following loops:
-; SCAN-RUNTIME:       Cannot prove legality, not interchanging loops 'runtime.outer' and 'runtime.inner'
-; SCAN-RUNTIME:       Cannot prove legality, not interchanging loops 'static.outer' and 'static.inner'
+; SCAN-RUNTIME-NEXT: Splitting the inner loop latch
+; SCAN-RUNTIME-NEXT: splitting InnerLoopHeader done
+; SCAN-RUNTIME-NEXT: adjustLoopBranches called
+; SCAN-RUNTIME-NEXT: Outer loop reduction PHIs:
+; SCAN-RUNTIME-NEXT:   %ssum.i = phi i64 [ %ssum.next, %static.outer.latch ], [ %rsum.next.lcssa, %static.outer.preheader2 ]
+; SCAN-RUNTIME-NEXT: Inner loop reduction PHIs:
+; SCAN-RUNTIME-NEXT:   %ssum.j = phi i64 [ %ssum.next.j, %static.inner.split ], [ %ssum.i, %static.inner.preheader ]
+; SCAN-RUNTIME-NEXT: remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; SCAN-RUNTIME-NEXT: remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
+; SCAN-RUNTIME-NEXT: loop-interchange: materialized outer-epilogue fission + interchange, nested sibling, in function 'r6_runtime_then_static'.
 ;
 ; SCAN-ORDER-LABEL: loop-interchange: discovered a closed outer-loop epilogue in function 'r12_two_static_collected_order'
 ; SCAN-ORDER:       loop-interchange: prepared a complete outer-epilogue fission plan in function 'r12_two_static_collected_order': Outer 'first.outer', Inner 'first.inner', absolute columns 1/2, routing columns 0/1, 1 cross dependence(s).
 ; SCAN-ORDER-NEXT:  loop-interchange: prepared function=r12_two_static_collected_order outer=first.outer inner=first.inner{{ }}
 ; SCAN-ORDER-SAME:  rematerialized=0{{ }}
-; SCAN-ORDER-NEXT:  Processing LoopList of size = 2 containing the following loops:
-; SCAN-ORDER:       Cannot prove legality, not interchanging loops 'first.outer' and 'first.inner'
-; SCAN-ORDER-NEXT:  Processing LoopList of size = 2 containing the following loops:
-; SCAN-ORDER:       Cannot prove legality, not interchanging loops 'second.outer' and 'second.inner'
+; SCAN-ORDER-NEXT: Splitting the inner loop latch
+; SCAN-ORDER-NEXT: splitting InnerLoopHeader done
+; SCAN-ORDER-NEXT: adjustLoopBranches called
+; SCAN-ORDER-NEXT: Outer loop reduction PHIs:
+; SCAN-ORDER-NEXT:   %sum0.i = phi i64 [ %sum0.next, %first.outer.latch ], [ 0, %first.outer.preheader ]
+; SCAN-ORDER-NEXT: Inner loop reduction PHIs:
+; SCAN-ORDER-NEXT:   %sum0.j = phi i64 [ %sum0.next.j, %first.inner.split ], [ %sum0.i, %first.inner.preheader ]
+; SCAN-ORDER-NEXT: remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; SCAN-ORDER-NEXT: remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
+; SCAN-ORDER-NEXT: loop-interchange: materialized outer-epilogue fission + interchange, nested sibling, in function 'r12_two_static_collected_order'.
 ;
 ; STRICT-LABEL: loop-interchange: discovered a closed outer-loop epilogue in function 'r14_strict_fp' with 1 path block(s), 4 instruction(s), and 0 rematerialized loop-local definition(s).
 ; STRICT-NEXT:  loop-interchange: outer-epilogue preparation memory budget: 3 loads/stores over 20 instructions.
@@ -413,10 +524,16 @@
 ; SCAN-SKIP:       loop-interchange: prepared a complete outer-epilogue fission plan in function 'r8_ineligible_then_static': Outer 'static.outer', Inner 'static.inner', absolute columns 1/2, routing columns 0/1, 1 cross dependence(s).
 ; SCAN-SKIP-NEXT:  loop-interchange: prepared function=r8_ineligible_then_static outer=static.outer inner=static.inner{{ }}
 ; SCAN-SKIP-SAME:  rematerialized=0{{ }}
-; SCAN-SKIP-NEXT:  Couldn't compute backedge count
-; SCAN-SKIP-NEXT:  Not valid loop candidate for interchange
-; SCAN-SKIP-NEXT:  Processing LoopList of size = 2 containing the following loops:
-; SCAN-SKIP:       Cannot prove legality, not interchanging loops 'static.outer' and 'static.inner'
+; SCAN-SKIP-NEXT: Splitting the inner loop latch
+; SCAN-SKIP-NEXT: splitting InnerLoopHeader done
+; SCAN-SKIP-NEXT: adjustLoopBranches called
+; SCAN-SKIP-NEXT: Outer loop reduction PHIs:
+; SCAN-SKIP-NEXT:   %sum.i = phi i64 [ %sum.next, %static.outer.latch ], [ 0, %static.outer.preheader ]
+; SCAN-SKIP-NEXT: Inner loop reduction PHIs:
+; SCAN-SKIP-NEXT:   %sum.j = phi i64 [ %sum.next.j, %static.inner.split ], [ %sum.i, %static.inner.preheader ]
+; SCAN-SKIP-NEXT: remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; SCAN-SKIP-NEXT: remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, W=4.
+; SCAN-SKIP-NEXT: loop-interchange: materialized outer-epilogue fission + interchange, nested sibling, in function 'r8_ineligible_then_static'.
 ;
 ; CACHE-IR-LABEL: define void @r9_no_static_two_ordinary(
 ; CACHE-IR:       for.k.header:
@@ -424,6 +541,386 @@
 ; CACHE-IR:       for.l.header:
 ; CACHE-IR:         %l = phi i64 [ 0, %for.k.header ], [ %l.next, %for.l.header ]
 ; CACHE-IR:       {{^}}}{{$}}
+
+; The transformed module. Every definition is listed, so the RUN line's
+; '{{^define }}' exclusion makes the list exhaustive. Each applied function
+; gains one sibling epilogue loop whose latch branches to the original
+; continuation, and its nest is interchanged. The emptied original epilogue
+; block, the epilogue loop, and the continuation are checked instruction by
+; instruction. Block labels are plain directives because the printed IR
+; separates blocks with a blank line. The other functions were already shown
+; unchanged by the llvm-extract --delete pair above and carry only their label.
+;
+; APPLIED-LABEL: define {{.*}}@r1_r2_length3_simple_ancestor(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         root.latch:
+; APPLIED-NEXT:      %sum.result = phi i64 [ %sum.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %diag.epil = getelementptr inbounds [4 x i64], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %diag.value.epil = load i64, ptr %diag.epil, align 8
+; APPLIED-NEXT:      %diag.next.epil = add i64 %diag.value.epil, 1
+; APPLIED-NEXT:      store i64 %diag.next.epil, ptr %diag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.done.epil = icmp eq i64 %i.next.epil, 4
+; APPLIED-NEXT:      br i1 %i.done.epil, label %root.latch.cont, label %epilogue.header
+; APPLIED:         root.latch.cont:
+; APPLIED-NEXT:      %rk = getelementptr inbounds i64, ptr %R, i64 %k
+; APPLIED-NEXT:      store i64 %sum.result, ptr %rk, align 8
+; APPLIED-NEXT:      %k.next = add i64 %k, 1
+; APPLIED-NEXT:      %k.done = icmp eq i64 %k.next, 2
+; APPLIED-NEXT:      br i1 %k.done, label %exit, label %root.header
+; APPLIED-LABEL: define {{.*}}@r9_no_static_two_ordinary(
+; APPLIED-LABEL: define {{.*}}@r10_r11_budget_slot_sequence(
+; APPLIED:         static.epilogue:
+; APPLIED-NEXT:      br label %static.outer.latch
+; APPLIED:         root.latch:
+; APPLIED-NEXT:      %sum.result = phi i64 [ %sum.next, %static.inner.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %diag.epil = getelementptr inbounds [4 x i64], ptr %StaticA, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dv.epil = load i64, ptr %diag.epil, align 8
+; APPLIED-NEXT:      %dn.epil = add i64 %dv.epil, 1
+; APPLIED-NEXT:      store i64 %dn.epil, ptr %diag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.done.epil = icmp eq i64 %i.next.epil, 4
+; APPLIED-NEXT:      br i1 %i.done.epil, label %root.latch.cont, label %epilogue.header
+; APPLIED:         root.latch.cont:
+; APPLIED-NEXT:      %rk = getelementptr inbounds i64, ptr %R, i64 %k
+; APPLIED-NEXT:      store i64 %sum.result, ptr %rk, align 8
+; APPLIED-NEXT:      %k.next = add i64 %k, 1
+; APPLIED-NEXT:      %k.done = icmp eq i64 %k.next, 2
+; APPLIED-NEXT:      br i1 %k.done, label %exit, label %root.header
+; APPLIED-LABEL: define {{.*}}@r12_two_static_collected_order(
+; APPLIED:         first.epilogue:
+; APPLIED-NEXT:      br label %first.outer.latch
+; APPLIED:         second.outer.preheader:
+; APPLIED-NEXT:      %sum0.next.lcssa = phi i64 [ %sum0.next, %first.inner.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i0.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %diag0.epil = getelementptr inbounds [4 x i64], ptr %A0, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dv0.epil = load i64, ptr %diag0.epil, align 8
+; APPLIED-NEXT:      %dn0.epil = add i64 %dv0.epil, 11
+; APPLIED-NEXT:      store i64 %dn0.epil, ptr %diag0.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i0.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i0.done.epil = icmp eq i64 %i0.next.epil, 4
+; APPLIED-NEXT:      br i1 %i0.done.epil, label %second.outer.preheader.cont, label %epilogue.header
+; APPLIED:         second.outer.preheader.cont:
+; APPLIED-NEXT:      br label %second.outer
+; APPLIED-LABEL: define {{.*}}@r13_explicit_cache_nested_chain(
+; APPLIED:         candidate.epilogue:
+; APPLIED-NEXT:      br label %candidate.outer.latch
+; APPLIED:         sibling.header.preheader:
+; APPLIED-NEXT:      %sum.next.lcssa = phi i64 [ %sum.next, %candidate.inner.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %diag.epil = getelementptr inbounds [4 x i64], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dv.epil = load i64, ptr %diag.epil, align 8
+; APPLIED-NEXT:      %dn.epil = add i64 %dv.epil, 1
+; APPLIED-NEXT:      store i64 %dn.epil, ptr %diag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.done.epil = icmp eq i64 %i.next.epil, 4
+; APPLIED-NEXT:      br i1 %i.done.epil, label %sibling.header.preheader.cont, label %epilogue.header
+; APPLIED:         sibling.header.preheader.cont:
+; APPLIED-NEXT:      br label %sibling.header
+; APPLIED-LABEL: define {{.*}}@r14_strict_fp(
+; APPLIED-LABEL: define {{.*}}@r15_nested_scalar_all(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         outer.exit:
+; APPLIED-NEXT:      %chk.res = phi double [ %chk.next, %inner.header.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %ddiag.epil = getelementptr inbounds [1335 x double], ptr %D, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dv.epil = load double, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      %dn.epil = fadd double %dv.epil, 1.000000e+00
+; APPLIED-NEXT:      store double %dn.epil, ptr %ddiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.ec.epil = icmp eq i64 %i.next.epil, 1335
+; APPLIED-NEXT:      br i1 %i.ec.epil, label %outer.exit.cont, label %epilogue.header
+; APPLIED:         outer.exit.cont:
+; APPLIED-NEXT:      %rk = getelementptr inbounds double, ptr %R, i64 %k
+; APPLIED-NEXT:      store double %chk.res, ptr %rk, align 8
+; APPLIED-NEXT:      br label %sibling.header
+; APPLIED-LABEL: define {{.*}}@unsafe_prefix_then_ordinary(
+; APPLIED-LABEL: define {{.*}}@r3_length3_nonsimple_ancestor(
+; APPLIED-LABEL: define {{.*}}@r4_overdepth_tail_candidate(
+; APPLIED-LABEL: define {{.*}}@r4_uncomputable_ancestor(
+; APPLIED-LABEL: define {{.*}}@r5_first_static_then_later_ordinary(
+; APPLIED:         first.epilogue:
+; APPLIED-NEXT:      br label %first.outer.latch
+; APPLIED:         second.outer.preheader:
+; APPLIED-NEXT:      %sum.next.lcssa = phi i64 [ %sum.next, %first.inner.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %diag.epil = getelementptr inbounds [4 x i64], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dv.epil = load i64, ptr %diag.epil, align 8
+; APPLIED-NEXT:      %dn.epil = add i64 %dv.epil, 1
+; APPLIED-NEXT:      store i64 %dn.epil, ptr %diag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.done.epil = icmp eq i64 %i.next.epil, 4
+; APPLIED-NEXT:      br i1 %i.done.epil, label %second.outer.preheader.cont, label %epilogue.header
+; APPLIED:         second.outer.preheader.cont:
+; APPLIED-NEXT:      br label %second.outer
+; APPLIED-LABEL: define {{.*}}@r6_runtime_then_static(
+; APPLIED:         static.epilogue:
+; APPLIED-NEXT:      br label %static.outer.latch
+; APPLIED:         root.latch:
+; APPLIED-NEXT:      %final.sum = phi i64 [ %ssum.next, %static.inner.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %si.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %sdiag.epil = getelementptr inbounds [4 x i64], ptr %A1, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %sdv.epil = load i64, ptr %sdiag.epil, align 8
+; APPLIED-NEXT:      %sdn.epil = add i64 %sdv.epil, 2
+; APPLIED-NEXT:      store i64 %sdn.epil, ptr %sdiag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %si.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %si.done.epil = icmp eq i64 %si.next.epil, 4
+; APPLIED-NEXT:      br i1 %si.done.epil, label %root.latch.cont, label %epilogue.header
+; APPLIED:         root.latch.cont:
+; APPLIED-NEXT:      %rk = getelementptr inbounds i64, ptr %R, i64 %k
+; APPLIED-NEXT:      store i64 %final.sum, ptr %rk, align 8
+; APPLIED-NEXT:      %k.next = add i64 %k, 1
+; APPLIED-NEXT:      %k.done = icmp eq i64 %k.next, 2
+; APPLIED-NEXT:      br i1 %k.done, label %exit, label %root.header
+; APPLIED-LABEL: define {{.*}}@r7_rejected_then_static(
+; APPLIED:         static.epilogue:
+; APPLIED-NEXT:      br label %static.outer.latch
+; APPLIED:         root.latch:
+; APPLIED-NEXT:      %sum.result = phi i64 [ %sum.next, %static.inner.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %diag.epil = getelementptr inbounds [4 x i64], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dv.epil = load i64, ptr %diag.epil, align 8
+; APPLIED-NEXT:      %dn.epil = add i64 %dv.epil, 1
+; APPLIED-NEXT:      store i64 %dn.epil, ptr %diag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.done.epil = icmp eq i64 %i.next.epil, 4
+; APPLIED-NEXT:      br i1 %i.done.epil, label %root.latch.cont, label %epilogue.header
+; APPLIED:         root.latch.cont:
+; APPLIED-NEXT:      %rk = getelementptr inbounds i64, ptr %R, i64 %k
+; APPLIED-NEXT:      store i64 %sum.result, ptr %rk, align 8
+; APPLIED-NEXT:      %k.next = add i64 %k, 1
+; APPLIED-NEXT:      %k.done = icmp eq i64 %k.next, 2
+; APPLIED-NEXT:      br i1 %k.done, label %exit, label %root.header
+; APPLIED-LABEL: define {{.*}}@r8_ineligible_then_static(
+; APPLIED:         static.epilogue:
+; APPLIED-NEXT:      br label %static.outer.latch
+; APPLIED:         root.latch:
+; APPLIED-NEXT:      %sum.result = phi i64 [ %sum.next, %static.inner.split ]
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %diag.epil = getelementptr inbounds [4 x i64], ptr %A, i64 %epilogue.iv, i64 %epilogue.iv
+; APPLIED-NEXT:      %dv.epil = load i64, ptr %diag.epil, align 8
+; APPLIED-NEXT:      %dn.epil = add i64 %dv.epil, 1
+; APPLIED-NEXT:      store i64 %dn.epil, ptr %diag.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.done.epil = icmp eq i64 %i.next.epil, 4
+; APPLIED-NEXT:      br i1 %i.done.epil, label %root.latch.cont, label %epilogue.header
+; APPLIED:         root.latch.cont:
+; APPLIED-NEXT:      %rk = getelementptr inbounds i64, ptr %R, i64 %k
+; APPLIED-NEXT:      store i64 %sum.result, ptr %rk, align 8
+; APPLIED-NEXT:      %k.next = add i64 %k, 1
+; APPLIED-NEXT:      %k.done = icmp eq i64 %k.next, 2
+; APPLIED-NEXT:      br i1 %k.done, label %exit, label %root.header
+; APPLIED-LABEL: define {{.*}}@top_level_middle_epilogue_order(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %r.iv.1.epil = add i64 %epilogue.iv, %seed
+; APPLIED-NEXT:      %r.invariant.1.epil = add i64 %bias, 17
+; APPLIED-NEXT:      %r.invariant.2.epil = mul i64 %r.invariant.1.epil, 3
+; APPLIED-NEXT:      %r.iv.2.epil = add i64 %r.iv.1.epil, %r.invariant.2.epil
+; APPLIED-NEXT:      %dp.epil = getelementptr i64, ptr %D, i64 %epilogue.iv
+; APPLIED-NEXT:      store i64 %r.iv.2.epil, ptr %dp.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.done.epil = icmp eq i64 %i.next.epil, %limit
+; APPLIED-NEXT:      br i1 %i.done.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      br label %after.ph
+; APPLIED-LABEL: define {{.*}}@r16_depth3_nonempty_fission_row(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %l2.latch
+; APPLIED:         l1.latch:
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %dp.epil = getelementptr inbounds double, ptr %D, i64 %epilogue.iv
+; APPLIED-NEXT:      store double 1.000000e+00, ptr %dp.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add nuw nsw i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.done.epil = icmp eq i64 %i.next.epil, 4
+; APPLIED-NEXT:      br i1 %i.done.epil, label %l1.latch.cont, label %epilogue.header
+; APPLIED:         l1.latch.cont:
+; APPLIED-NEXT:      %a.next = add nuw nsw i64 %a, 1
+; APPLIED-NEXT:      %a.done = icmp eq i64 %a.next, 4
+; APPLIED-NEXT:      br i1 %a.done, label %exit, label %l1.header
+;
+; The same loop-info lines are checked against the loop manager's live
+; LoopInfo and against a fresh rebuild of the transformed module. The block
+; lists inside the nest are wildcarded because LoopInfo stores them in
+; discovery order, which an incremental update and a fresh walk reach
+; differently; the loop order, the depths, and the epilogue loop's two blocks
+; are exact.
+;
+; APPLY-LOOPS-LABEL: Loop info for function 'r1_r2_length3_simple_ancestor':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %root.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-LABEL: Loop info for function 'r10_r11_budget_slot_sequence':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %root.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %ineligible.outer<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %ineligible.inner<header><latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %reject.outer<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %reject.inner<header><latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %runtime.outer<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %runtime.inner<header><latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %static.inner<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %static.outer<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-LABEL: Loop info for function 'r12_two_static_collected_order':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %root.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %first.inner<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %first.outer<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %second.outer<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %second.inner<header><latch><exiting>
+; APPLY-LOOPS-LABEL: Loop info for function 'r13_explicit_cache_nested_chain':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %root.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %candidate.inner<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %candidate.outer<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %sibling.header<header><latch><exiting>
+; APPLY-LOOPS-LABEL: Loop info for function 'r15_nested_scalar_all':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %root.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %sibling.header<header><latch><exiting>
+; APPLY-LOOPS-LABEL: Loop info for function 'r5_first_static_then_later_ordinary':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %root.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %first.inner<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %first.outer<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %second.outer<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %second.inner<header><latch><exiting>
+; APPLY-LOOPS-LABEL: Loop info for function 'r6_runtime_then_static':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %root.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %runtime.outer<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %runtime.inner<header><latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %static.inner<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %static.outer<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-LABEL: Loop info for function 'r7_rejected_then_static':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %root.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %reject.outer<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %reject.inner<header><latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %static.inner<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %static.outer<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-LABEL: Loop info for function 'r8_ineligible_then_static':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %root.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %ineligible.outer<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %ineligible.inner<header><latch><exiting>
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %static.inner<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %static.outer<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-LABEL: Loop info for function 'top_level_middle_epilogue_order':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %after.header<header><latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %before.header<header><latch><exiting>
+; APPLY-LOOPS-LABEL: Loop info for function 'r16_depth3_nonempty_fission_row':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %l1.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %l3.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:         Loop at depth 3 containing: %l2.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+;
+; A second run offers the next candidate of a two-candidate function. Only
+; the second selection of r12_two_static_collected_order is a complete static
+; plan, so exactly one further epilogue appears and no distributed nest is
+; offered again. The RUN line excludes every other epilogue induction
+; variable.
+; TWICE-LABEL: define {{.*}}@r1_r2_length3_simple_ancestor(
+; TWICE:         %epilogue.iv = phi i64
+; TWICE-LABEL: define {{.*}}@r10_r11_budget_slot_sequence(
+; TWICE:         %epilogue.iv = phi i64
+; TWICE-LABEL: define {{.*}}@r12_two_static_collected_order(
+; TWICE:         %epilogue.iv = phi i64
+; TWICE:         %epilogue.iv5 = phi i64
+; TWICE-LABEL: define {{.*}}@r13_explicit_cache_nested_chain(
+; TWICE:         %epilogue.iv = phi i64
+; TWICE-LABEL: define {{.*}}@r15_nested_scalar_all(
+; TWICE:         %epilogue.iv = phi i64
+; TWICE-LABEL: define {{.*}}@r5_first_static_then_later_ordinary(
+; TWICE:         %epilogue.iv = phi i64
+; TWICE-LABEL: define {{.*}}@r6_runtime_then_static(
+; TWICE:         %epilogue.iv = phi i64
+; TWICE-LABEL: define {{.*}}@r7_rejected_then_static(
+; TWICE:         %epilogue.iv = phi i64
+; TWICE-LABEL: define {{.*}}@r8_ineligible_then_static(
+; TWICE:         %epilogue.iv = phi i64
+; TWICE-LABEL: define {{.*}}@top_level_middle_epilogue_order(
+; TWICE:         %epilogue.iv = phi i64
+; TWICE-LABEL: define {{.*}}@r16_depth3_nonempty_fission_row(
+; TWICE:         %epilogue.iv = phi i64
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

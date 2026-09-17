@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopNestAnalysis.h"
@@ -58,6 +59,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
@@ -75,6 +77,9 @@ using namespace llvm;
 #define DEBUG_TYPE "loop-interchange"
 
 STATISTIC(LoopsInterchanged, "Number of loops interchanged");
+STATISTIC(OuterEpiloguesDistributed,
+          "Number of outer-loop epilogues distributed into their own loop "
+          "before interchange");
 
 static cl::opt<int> LoopInterchangeCostThreshold(
     "loop-interchange-threshold", cl::init(0), cl::Hidden,
@@ -2585,19 +2590,491 @@ struct LoopInterchange {
     return FirstRuntime;
   }
 
-  bool run(LoopNest &LN) {
+  /// Materialize the prepared outer-loop epilogue as its own sibling loop and
+  /// perform the interchange decided during preparation. Below, E is that
+  /// epilogue slice and N the retained nest. Only StaticBound
+  /// plans reach here, so no runtime guard or fallback clone is created. The
+  /// selected outer loop may be top-level or nested; steps 5 and 10 register
+  /// the new loop accordingly. The mutation invalidates the IR pointers
+  /// recorded in \p Plan, so the caller must not read the plan afterwards.
+  void applyPreparedInterchange(PreparedInterchangePlan &Plan, LPMUpdater &U) {
+    assert(Plan.TripBound.Outcome == PreparedBoundOutcome::StaticBound &&
+           "apply materializes only statically bounded plans; a runtime-bound "
+           "plan must be declined before apply");
+    assert(!Plan.TripBound.RuntimeExactTrip &&
+           "a static plan must not carry a runtime trip SCEV");
+    DistributableOuterEpilogue &Epi = Plan.Epilogue;
+    Loop *Outer = Epi.Outer;
+    Loop *Inner = Epi.Inner;
+    assert(Outer && Inner && "prepared plan must carry its candidate pair");
+    assert(Plan.FissionLegal && Plan.InterchangeLegal && Plan.Profitable &&
+           Plan.Legality && "apply requires a complete prepared plan");
+
+    // The interchange below replaces the selected outer loop in place, so
+    // capture its parent first. A null parent makes the epilogue a new
+    // top-level loop.
+    Loop *OuterParent = Outer->getParentLoop();
+
+    Function &F = *Outer->getHeader()->getParent();
+    LLVMContext &Ctx = F.getContext();
+
+    PreparedOuterIVControl &Ctrl = Epi.OuterControl;
+    PHINode *OuterIV = Ctrl.Induction;
+    BasicBlock *OuterExit = Outer->getExitBlock();
+    assert(OuterExit && "prepared outer loop must have a unique exit block");
+
+    // The epilogue latch mirrors the outer latch's branch orientation so both
+    // loops run the same trip count.
+    CondBrInst *OuterLatchBranch = Ctrl.LatchBranch;
+    assert(OuterLatchBranch &&
+           "outer latch control was proved conditional during preparation");
+    bool ExitIsTrueEdge = OuterLatchBranch->getSuccessor(0) == OuterExit;
+    assert((ExitIsTrueEdge || OuterLatchBranch->getSuccessor(1) == OuterExit) &&
+           "outer latch must branch to the unique exit");
+
+    // Capture the interchange remark anchor before the transform repurposes the
+    // inner loop's blocks.
+    DebugLoc InnerLoc = Inner->getStartLoc();
+    BasicBlock *InnerHeader = Inner->getHeader();
+
+    DomTreeUpdater DTU(*DT, DomTreeUpdater::UpdateStrategy::Eager);
+
+    // (1) Split the outer exit after its LCSSA PHIs. The continuation stays
+    // after the epilogue loop, preserving the original N, E, continuation
+    // order even when memory aliases.
+    BasicBlock::iterator ContinuationStart = OuterExit->getFirstNonPHIIt();
+    assert(ContinuationStart != OuterExit->end() &&
+           "outer exit must contain a terminator");
+    BasicBlock *ExitCont =
+        SplitBlock(OuterExit, ContinuationStart, &DTU, LI, /*MSSAU=*/nullptr,
+                   OuterExit->getName() + ".cont");
+
+    // (2) Build the epilogue loop: a preheader, a header for the rematerialized
+    // outer-IV chain and the cloned E slice, and a latch for the cloned outer
+    // IV update and exit compare.
+    BasicBlock *EpiPreheader =
+        BasicBlock::Create(Ctx, "epilogue.preheader", &F, ExitCont);
+    BasicBlock *EpiHeader =
+        BasicBlock::Create(Ctx, "epilogue.header", &F, ExitCont);
+    BasicBlock *EpiLatch =
+        BasicBlock::Create(Ctx, "epilogue.latch", &F, ExitCont);
+
+    // A fresh outer induction variable for the epilogue loop.
+    PHINode *EpiIV =
+        PHINode::Create(OuterIV->getType(), 2, "epilogue.iv", EpiHeader);
+    EpiIV->setDebugLoc(OuterIV->getDebugLoc());
+
+    // Clone every instruction before remapping any of them, so debug records
+    // attached to earlier instructions can refer to later definitions.
+    ValueToValueMapTy VMap;
+    VMap[OuterIV] = EpiIV;
+    SmallPtrSet<Value *, 32> ExplicitlyMappedValues;
+    ExplicitlyMappedValues.insert(OuterIV);
+    if (const DebugLoc &DL = OuterIV->getDebugLoc())
+      mapAtomInstance(DL, VMap);
+
+    SmallVector<std::pair<Instruction *, Instruction *>, 32> ClonedInstructions;
+    auto CloneWithMap = [&](Instruction *Orig, BasicBlock *Into,
+                            bool OriginalSurvives) -> Instruction * {
+      Instruction *Clone = Orig->clone();
+      if (Orig->hasName())
+        Clone->setName(Orig->getName() + ".epil");
+      Clone->insertInto(Into, Into->end());
+      VMap[Orig] = Clone;
+      ExplicitlyMappedValues.insert(Orig);
+      ClonedInstructions.emplace_back(Orig, Clone);
+      if (OriginalSurvives)
+        if (const DebugLoc &DL = Orig->getDebugLoc())
+          mapAtomInstance(DL, VMap);
+      return Clone;
+    };
+
+    // (2a) Clone loop-local definitions before their users, then E in program
+    // order. Both lists exclude outer-header arithmetic used only by N.
+    for (Instruction *Def : Epi.OuterIVDerivedInstructions)
+      CloneWithMap(Def, EpiHeader, /*OriginalSurvives=*/true);
+    for (Instruction *I : Epi.Instructions)
+      CloneWithMap(I, EpiHeader, /*OriginalSurvives=*/false);
+    UncondBrInst *EpiHeaderBranch = UncondBrInst::Create(EpiLatch, EpiHeader);
+    if (const DebugLoc &DL = OuterLatchBranch->getDebugLoc())
+      EpiHeaderBranch->setDebugLoc(DebugLoc(DL.get()->getWithoutAtom()));
+
+    // (2b) Clone the outer-IV update and exit compare into the latch.
+    for (Instruction *I : Ctrl.LatchInstructions)
+      CloneWithMap(I, EpiLatch, /*OriginalSurvives=*/true);
+    Value *EpiNext = VMap[Ctrl.NextValue];
+    Value *EpiCond = VMap[Ctrl.LatchCompare];
+    assert(EpiNext && EpiCond &&
+           "outer IV update/compare must have been remapped");
+    CondBrInst *EpiLatchBranch;
+    if (ExitIsTrueEdge)
+      EpiLatchBranch =
+          CondBrInst::Create(EpiCond, ExitCont, EpiHeader, EpiLatch);
+    else
+      EpiLatchBranch =
+          CondBrInst::Create(EpiCond, EpiHeader, ExitCont, EpiLatch);
+    EpiLatchBranch->setDebugLoc(OuterLatchBranch->getDebugLoc());
+    EpiLatchBranch->copyMetadata(*OuterLatchBranch, {LLVMContext::MD_prof});
+    VMap[OuterLatchBranch] = EpiLatchBranch;
+    ExplicitlyMappedValues.insert(OuterLatchBranch);
+    ClonedInstructions.emplace_back(OuterLatchBranch, EpiLatchBranch);
+    if (const DebugLoc &DL = OuterLatchBranch->getDebugLoc())
+      mapAtomInstance(DL, VMap);
+
+    // (2c) Preheader branch and induction closure.
+    UncondBrInst *EpiPreheaderBranch =
+        UncondBrInst::Create(EpiHeader, EpiPreheader);
+    if (const DebugLoc &DL = OuterLatchBranch->getDebugLoc())
+      EpiPreheaderBranch->setDebugLoc(DebugLoc(DL.get()->getWithoutAtom()));
+    EpiIV->addIncoming(Ctrl.InitialValue, EpiPreheader);
+    EpiIV->addIncoming(EpiNext, EpiLatch);
+
+    // Remap every clone now that the atom map is complete, so a source atom
+    // shared by N and E is never live in both loops.
+    RemapSourceAtom(EpiIV, VMap);
+    for (auto [Orig, Clone] : ClonedInstructions)
+      RemapInstruction(Clone, VMap,
+                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+
+    // Preparation proved that no E instruction uses the latch control.
+    for (Instruction &I :
+         make_range(EpiHeader->getFirstNonPHIIt(), EpiHeader->end()))
+      for (Value *Operand : I.operands())
+        assert((!isa<Instruction>(Operand) ||
+                cast<Instruction>(Operand)->getParent() != EpiLatch) &&
+               "epilogue body depends on later latch control");
+
+    // (3) Route the nest exit through the epilogue loop. It runs only after
+    // the nest exits, so it inherits any zero-trip guard.
+    OuterExit->getTerminator()->replaceSuccessorWith(ExitCont, EpiPreheader);
+
+    // (4) Register the epilogue loop's control edges with the dominator tree.
+    DTU.applyUpdatesPermissive({
+        {DominatorTree::Delete, OuterExit, ExitCont},
+        {DominatorTree::Insert, OuterExit, EpiPreheader},
+        {DominatorTree::Insert, EpiPreheader, EpiHeader},
+        {DominatorTree::Insert, EpiHeader, EpiLatch},
+        {DominatorTree::Insert, EpiLatch, EpiHeader},
+        {DominatorTree::Insert, EpiLatch, ExitCont},
+    });
+
+    // Debug records attach to source positions, not to the values they
+    // describe. Map each cloned instruction to its clone and each omitted path
+    // terminator to the clone of the first E instruction from a later block,
+    // or to the new header branch when there is none.
+    DenseMap<Instruction *, Instruction *> DebugAnchorMap;
+    for (auto [Orig, Clone] : ClonedInstructions)
+      DebugAnchorMap[Orig] = Clone;
+
+    DenseMap<BasicBlock *, unsigned> PathOrder;
+    for (auto [Index, BB] : enumerate(Epi.Path))
+      PathOrder[BB] = static_cast<unsigned>(Index);
+
+    // A backward suffix scan over each block's first E position computes the
+    // terminator mapping in linear time. The outer latch sorts last.
+    const unsigned PathBlockCount = static_cast<unsigned>(Epi.Path.size());
+    BasicBlock *LatchBlock = Ctrl.NextValue->getParent();
+    constexpr size_t NoPosition = std::numeric_limits<size_t>::max();
+    SmallVector<Instruction *, 8> FirstOfOrder(PathBlockCount + 1, nullptr);
+    SmallVector<size_t, 8> FirstOfOrderPos(PathBlockCount + 1, NoPosition);
+    for (auto [Position, I] : enumerate(Epi.Instructions)) {
+      BasicBlock *SourceBB = I->getParent();
+      unsigned Order;
+      if (SourceBB == LatchBlock) {
+        Order = PathBlockCount;
+      } else {
+        auto It = PathOrder.find(SourceBB);
+        if (It == PathOrder.end())
+          continue;
+        Order = It->second;
+      }
+      if (Position < FirstOfOrderPos[Order]) {
+        FirstOfOrderPos[Order] = Position;
+        FirstOfOrder[Order] = I;
+      }
+    }
+    // EarliestFrom[Rank] is the earliest slice instruction whose order is at
+    // least Rank, so the terminator at path index I reads EarliestFrom[I + 1].
+    SmallVector<Instruction *, 8> EarliestFrom(PathBlockCount + 2, nullptr);
+    SmallVector<size_t, 8> EarliestFromPos(PathBlockCount + 2, NoPosition);
+    for (unsigned Rank = PathBlockCount + 1; Rank-- > 0;) {
+      EarliestFrom[Rank] = EarliestFrom[Rank + 1];
+      EarliestFromPos[Rank] = EarliestFromPos[Rank + 1];
+      if (FirstOfOrderPos[Rank] < EarliestFromPos[Rank]) {
+        EarliestFromPos[Rank] = FirstOfOrderPos[Rank];
+        EarliestFrom[Rank] = FirstOfOrder[Rank];
+      }
+    }
+
+    SmallPtrSet<Instruction *, 4> PathTerminators;
+    for (auto [Index, BB] : enumerate(Epi.Path)) {
+      Instruction *Source = EarliestFrom[Index + 1];
+      Instruction *Dest =
+          Source ? cast<Instruction>(VMap[Source]) : EpiHeaderBranch;
+      Instruction *Terminator = BB->getTerminator();
+      DebugAnchorMap[Terminator] = Dest;
+      PathTerminators.insert(Terminator);
+    }
+
+    // PHI records sit at the header's first insertion point. Give that anchor
+    // an E destination so the outer IV's record can follow the epilogue IV;
+    // reduction-PHI records fail the mapped-value filter below and stay in N.
+    Instruction *OuterHeaderDebugAnchor =
+        &*Outer->getHeader()->getFirstInsertionPt();
+    if (!DebugAnchorMap.contains(OuterHeaderDebugAnchor))
+      DebugAnchorMap[OuterHeaderDebugAnchor] =
+          &*EpiHeader->getFirstInsertionPt();
+
+    SmallVector<Instruction *, 32> SourceDebugAnchors;
+    SmallPtrSet<Instruction *, 32> SeenDebugAnchors;
+    auto AddDebugAnchor = [&](Instruction *I) {
+      if (SeenDebugAnchors.insert(I).second)
+        SourceDebugAnchors.push_back(I);
+    };
+    AddDebugAnchor(OuterHeaderDebugAnchor);
+    for (Instruction *I : Epi.OuterIVDerivedInstructions)
+      AddDebugAnchor(I);
+    for (BasicBlock *BB : Epi.Path) {
+      for (Instruction &I : *BB)
+        if (Epi.InstructionSet.contains(&I))
+          AddDebugAnchor(&I);
+      AddDebugAnchor(BB->getTerminator());
+    }
+    for (Instruction &I : *Ctrl.NextValue->getParent())
+      if (Epi.InstructionSet.contains(&I) ||
+          is_contained(Ctrl.LatchInstructions, &I) || &I == OuterLatchBranch)
+        AddDebugAnchor(&I);
+
+    auto IsAvailableInEpilogue = [&](Value *V) {
+      if (ExplicitlyMappedValues.contains(V))
+        return true;
+      if (!Outer->isLoopInvariant(V))
+        return false;
+      auto *I = dyn_cast<Instruction>(V);
+      return !I || DT->dominates(I->getParent(), EpiPreheader);
+    };
+    auto ClassifyLocation = [&](DbgVariableRecord &DVR, bool &HasMapped,
+                                bool &HasTransplanted) {
+      bool AllAvailable = true;
+      auto ClassifyValue = [&](Value *V) {
+        if (!V)
+          return;
+        HasMapped |= ExplicitlyMappedValues.contains(V);
+        if (auto *I = dyn_cast<Instruction>(V))
+          HasTransplanted |= Epi.InstructionSet.contains(I);
+        AllAvailable &= IsAvailableInEpilogue(V);
+      };
+      for (Value *V : DVR.location_ops())
+        ClassifyValue(V);
+      return AllAvailable;
+    };
+
+    // Transfer only records whose whole location is available in E: duplicate
+    // those describing surviving values, move those describing moved E values.
+    // Assignment-tracking records take the salvage path in step 6.
+    for (Instruction *Source : SourceDebugAnchors) {
+      Instruction *Dest = DebugAnchorMap.lookup(Source);
+      assert(Dest && "every debug source position must have an E destination");
+      DbgMarker *DestMarker =
+          Dest->getParent()->createMarker(Dest->getIterator());
+      bool SourcePositionMoves = Epi.InstructionSet.contains(Source) ||
+                                 PathTerminators.contains(Source);
+      for (DbgRecord &DR : make_early_inc_range(Source->getDbgRecordRange())) {
+        bool EraseOriginal = false;
+        if (auto *DVR = dyn_cast<DbgVariableRecord>(&DR)) {
+          if (DVR->isDbgAssign())
+            continue;
+          bool HasMapped = false;
+          bool HasTransplanted = false;
+          bool AllAvailable =
+              ClassifyLocation(*DVR, HasMapped, HasTransplanted);
+          if (!HasMapped)
+            continue;
+          if (!AllAvailable) {
+            // A location mixing an E value with an outer-variant N value has
+            // no meaning in E; drop it rather than leave an erased operand.
+            if (HasTransplanted)
+              DR.eraseFromParent();
+            continue;
+          }
+          EraseOriginal = HasTransplanted;
+        } else {
+          // Labels identify a program point rather than an SSA value.
+          if (!SourcePositionMoves && !ExplicitlyMappedValues.contains(Source))
+            continue;
+          EraseOriginal = SourcePositionMoves;
+        }
+
+        DbgRecord *Clone = DR.clone();
+        DestMarker->insertDbgRecord(Clone, /*InsertAtHead=*/false);
+        RemapDbgRecord(F.getParent(), Clone, VMap,
+                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+        if (EraseOriginal)
+          DR.eraseFromParent();
+      }
+    }
+
+    // (5) Register the epilogue loop as the sibling following the selected
+    // outer loop. The two LoopInfo containers store siblings in opposite
+    // orders.
+    Loop *EpiLoop = LI->AllocateLoop();
+    if (!OuterParent) {
+      // TopLevelLoops is in reverse program order, so E precedes Outer there.
+      SmallVector<Loop *, 4> ExistingTopLevelLoops =
+          LI->takeChildrenIf(/*Parent=*/nullptr, [](Loop *) { return true; });
+      bool InsertedEpilogue = false;
+      for (Loop *L : ExistingTopLevelLoops) {
+        if (L == Outer) {
+          LI->addTopLevelLoop(EpiLoop);
+          InsertedEpilogue = true;
+        }
+        LI->addTopLevelLoop(L);
+      }
+      assert(InsertedEpilogue &&
+             "prepared top-level outer must be present in LoopInfo");
+      (void)InsertedEpilogue;
+    } else {
+      // SubLoops is in program order, so E follows Outer there. The
+      // interchange later replaces Outer in place (LI->replaceLoop), which
+      // keeps this order.
+      SmallVector<Loop *, 4> ExistingChildren =
+          LI->takeChildrenIf(OuterParent, [](Loop *) { return true; });
+      bool InsertedEpilogue = false;
+      for (Loop *L : ExistingChildren) {
+        OuterParent->addChildLoop(L);
+        if (L == Outer) {
+          OuterParent->addChildLoop(EpiLoop);
+          InsertedEpilogue = true;
+        }
+      }
+      assert(InsertedEpilogue &&
+             "prepared nested outer must be present in its parent's subloops");
+      (void)InsertedEpilogue;
+      // The epilogue's dedicated preheader lives inside the parent loop but
+      // outside E, so it belongs to the parent and its ancestors.
+      OuterParent->addBasicBlockToLoop(EpiPreheader, *LI);
+    }
+    // addBasicBlockToLoop also registers ancestors, so E's parent is set first.
+    EpiLoop->addBasicBlockToLoop(EpiHeader, *LI);
+    EpiLoop->addBasicBlockToLoop(EpiLatch, *LI);
+
+    // (6) Erase the original E slice in reverse order. Droppable uses (assumes)
+    // go first; the slice is otherwise closed.
+    for (Instruction *I : Epi.Instructions)
+      I->dropDroppableUses();
+    for (Instruction *I : reverse(Epi.Instructions)) {
+      // Salvage debug uses not moved by the transfer above. Records attached
+      // here move to the next surviving instruction on erase.
+      salvageDebugInfo(*I);
+      assert(I->use_empty() &&
+             "epilogue value still used after cloning; slice was not closed");
+      I->eraseFromParent();
+    }
+
+    // (6a) Merge the now-empty intermediate path blocks, keeping the first
+    // (the inner exit with its forwarding PHIs) and the outer latch. A lazy
+    // updater batches the dominator-tree updates, which an eager one would
+    // apply once per merge.
+    DomTreeUpdater LazyDTU(*DT, DomTreeUpdater::UpdateStrategy::Lazy);
+    for (unsigned K = 1, PathSize = Epi.Path.size(); K < PathSize; ++K) {
+      bool Merged = MergeBlockIntoPredecessor(Epi.Path[K], &LazyDTU, LI);
+      (void)Merged;
+      assert(Merged && "straight-line epilogue path must collapse");
+    }
+    LazyDTU.flush();
+
+    // (7) Cached SCEV expressions and dispositions may still name the erased
+    // path blocks. Drop them before the LCSSA formation and the interchange,
+    // which both query SCEV.
+    SE->forgetLoop(Outer);
+    SE->forgetBlockAndLoopDispositions();
+
+    // The epilogue loop is closed (no live-outs); keep it in LCSSA defensively
+    // before the interchange updates analyses.
+    formLCSSARecursively(*EpiLoop, *DT, LI, SE);
+
+    // (8) Interchange with the stored legality and flag-drop decisions.
+    LoopInterchangeTransform LIT(Outer, Inner, SE, LI, DT, *Plan.Legality);
+    LIT.transform(Plan.DropNoWrap, Plan.DropNoInf);
+    llvm::formLCSSARecursively(*Outer, *DT, LI, SE);
+    // The parent gained a subloop and the interchange moved blocks between
+    // loops, so drop the parent's cached SCEV and the dispositions again.
+    if (OuterParent)
+      SE->forgetLoop(OuterParent);
+    SE->forgetBlockAndLoopDispositions();
+    LoopsInterchanged++;
+    OuterEpiloguesDistributed++;
+
+    // The remark names the largest accepted bound limit W, or says that the
+    // plan needed no bound requirement.
+    std::string BoundNote = "bound=static-bound, no-bound-requirement";
+    if (!Plan.TripBound.Requirements.empty()) {
+      APInt StaticW(64, 0);
+      for (const PreparedBoundRequirement &Req : Plan.TripBound.Requirements)
+        if (Req.Limit.ugt(StaticW))
+          StaticW = Req.Limit;
+      BoundNote =
+          ("bound=static-bound, W=" + Twine(StaticW.getZExtValue())).str();
+    }
+
+    // (9) Emit the interchange and distribution remarks.
+    ORE->emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "Interchanged", InnerLoc,
+                                InnerHeader)
+             << "Loop interchanged with enclosing loop.";
+    });
+    ORE->emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "OuterEpilogueDistributed",
+                                EpiLoop->getStartLoc(), EpiHeader)
+             << "Distributed a proven outer-loop epilogue into its own loop "
+                "before interchanging the reduction nest; "
+             << BoundNote << ".";
+    });
+
+    // (10) In loop-nest mode the updater accepts only new top-level siblings.
+    // A nested epilogue loop is found by the next loop-nest walk after run()
+    // reports the change.
+    if (!OuterParent)
+      U.addSiblingLoops({EpiLoop});
+
+    LLVM_DEBUG(
+        dbgs() << "loop-interchange: materialized outer-epilogue fission + "
+                  "interchange, "
+               << (OuterParent ? "nested sibling" : "top-level sibling")
+               << ", in function '" << F.getName() << "'.\n");
+  }
+
+  bool run(LoopNest &LN, LPMUpdater &U) {
     SmallVector<SmallVector<Loop *, 8>, 4> LoopLists = collectPerfectNests(LN);
     if (LoopLists.empty()) {
       LLVM_DEBUG(dbgs() << "No Valid candidates for loop interchange.\n");
       return false;
     }
 
+    // Try fission on the ordinary parent/leaf-child candidates. A StaticBound
+    // plan extracts a sibling epilogue loop and interchanges the retained nest
+    // without a runtime guard or clone. A RuntimeBound plan is declined with a
+    // missed remark, and ordinary routing continues. Size-optimized functions
+    // skip fission but still use ordinary routing.
     if (EnableOuterEpilogueFission && !LN.getParent()->hasOptSize()) {
-      std::optional<PreparedInterchangePlan> Prepared =
-          tryPrepareOuterEpilogueFission(LoopLists);
-      // Preparation is analysis-only. Destroy every plan before ordinary
-      // routing can mutate the collected chains.
-      (void)Prepared;
+      if (std::optional<PreparedInterchangePlan> Prepared =
+              tryPrepareOuterEpilogueFission(LoopLists)) {
+        if (Prepared->TripBound.Outcome == PreparedBoundOutcome::StaticBound) {
+          // No IR has changed since preparation. Assert on validation failure.
+          // A release build reports the rejection and uses ordinary routing.
+          bool StillValid = validatePreparedPlan(*Prepared);
+          assert(StillValid && "a prepared plan must stay valid until apply");
+          if (StillValid) {
+            applyPreparedInterchange(*Prepared, U);
+            return true;
+          }
+          rejectPreparedEpilogue(
+              ORE, Prepared->Epilogue.Outer, Prepared->Epilogue.Inner,
+              "prepared plan failed re-validation immediately before apply");
+        }
+        // An unapplied plan is destroyed here, before ordinary routing mutates
+        // the chains it points into.
+      }
     }
 
     bool Changed = false;
@@ -4639,7 +5116,7 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
   });
 
   DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
-  if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, &AR, &ORE).run(LN))
+  if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, &AR, &ORE).run(LN, U))
     return PreservedAnalyses::all();
   U.markLoopNestChanged(true);
   return getLoopPassPreservedAnalyses();

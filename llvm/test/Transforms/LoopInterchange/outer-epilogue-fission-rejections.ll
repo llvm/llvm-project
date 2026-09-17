@@ -17,6 +17,14 @@
 ; DEFINE: %{policy} = -loop-interchange-profitabilities=instorder,vectorize
 ; DEFINE: %{prepare} = -loop-interchange-outer-epilogue-fission -loop-interchange-print-prepared-plan
 ; DEFINE: %{remarks} = -pass-remarks=loop-interchange -pass-remarks-analysis=loop-interchange -pass-remarks-missed=loop-interchange
+; DEFINE: %{applied} = \
+; DEFINE:   --func=noalias_in_nest --func=matrix_memory_ratio
+; DEFINE: %{no_versioning} = \
+; DEFINE:   --implicit-check-not='.lver' \
+; DEFINE:   --implicit-check-not='!alias.scope' \
+; DEFINE:   --implicit-check-not='!noalias' \
+; DEFINE:   --implicit-check-not='llvm.loop.interchange.runtime_versioned' \
+; DEFINE:   --implicit-check-not='LoopVersioning'
 ;
 ; Preparation rejects the four convergence negatives right after discovery
 ; and the memory-budget check, so no later proof stage may report them.
@@ -32,11 +40,21 @@
 ; DEFINE:   --implicit-check-not='fission-context' \
 ; DEFINE:   --implicit-check-not='routing dependence'
 ;
-; Preparation is analysis-only: a complete plan is printed and then discarded,
-; so the IR is unchanged with the option on.
+; With the option on, the two positive controls are transformed and every
+; other function is unchanged.
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} %{prepare} %{remarks} -verify-each -verify-dom-info -verify-loop-info -verify-scev -verify-loop-lcssa %s -o %t.prep 2> %t.prep.stderr
 ; RUN: FileCheck %s --check-prefixes=PREP,DISCOVERY,MATRIX-READY --input-file=%t.prep.stderr --implicit-check-not='loop-interchange:'
-; RUN: diff -u %t.out %t.prep
+; RUN: llvm-extract -S --delete %{applied} %t.out -o %t.out.rest
+; RUN: llvm-extract -S --delete %{applied} %t.prep -o %t.prep.rest
+; RUN: diff -u -I '^; ModuleID' %t.out.rest %t.prep.rest
+; RUN: FileCheck %s --check-prefix=APPLIED --input-file=%t.prep %{no_versioning} --implicit-check-not='{{^define }}'
+;
+; The updated LoopInfo must match a fresh rebuild, sibling order included, and
+; a second run of the pass must change nothing.
+; RUN: opt -passes='loop(loop-interchange),print<loops>' -cache-line-size=64 %{policy} -loop-interchange-outer-epilogue-fission -disable-output %s 2>&1 | FileCheck %s --check-prefix=APPLY-LOOPS
+; RUN: opt -passes='print<loops>' -disable-output %t.prep 2>&1 | FileCheck %s --check-prefix=APPLY-LOOPS
+; RUN: opt -S -passes='loop(loop-interchange,loop-interchange)' -cache-line-size=64 %{policy} %{prepare} -verify-each -verify-dom-info -verify-loop-info -verify-scev -verify-loop-lcssa %s -o %t.twice
+; RUN: diff -u %t.prep %t.twice
 ;
 ; At ratio zero, discovery still reports its own failures; only candidates
 ; that finish discovery reach the shared budget rejection. At ratio one the
@@ -48,7 +66,10 @@
 ; RUN: FileCheck %s --check-prefixes=MEMZERO,DISCOVERY --input-file=%t.ratio0.stderr --implicit-check-not='loop-interchange:'
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} -loop-interchange-max-mem-instr-ratio=1 -loop-interchange-outer-epilogue-fission=false %s -o %t.ratio1.off
 ; RUN: opt -S -passes=loop-interchange -cache-line-size=64 %{policy} -loop-interchange-max-mem-instr-ratio=1 %{prepare} %{remarks} %s -o %t.ratio1.on 2> %t.ratio1.stderr
-; RUN: diff -u %t.ratio1.off %t.ratio1.on
+; RUN: llvm-extract -S --delete --func=noalias_in_nest %t.ratio1.off -o %t.ratio1.off.rest
+; RUN: llvm-extract -S --delete --func=noalias_in_nest %t.ratio1.on -o %t.ratio1.on.rest
+; RUN: diff -u -I '^; ModuleID' %t.ratio1.off.rest %t.ratio1.on.rest
+; RUN: FileCheck %s --check-prefix=RATIO-LIMITED --input-file=%t.ratio1.on %{no_versioning}
 ; RUN: FileCheck %s --check-prefixes=PREP,DISCOVERY,MATRIX-LIMIT --input-file=%t.ratio1.stderr --implicit-check-not='loop-interchange:'
 ;
 ; These whole-module traces reach the two matrix guards. The same N/N alias
@@ -208,8 +229,9 @@
 ; PREP-NEXT:  remark: <unknown>:0:0: did not distribute the discovered outer-loop epilogue: retained nest contains an unsupported convergent operation
 ; PREP-NEXT:  remark: <unknown>:0:0: Cannot interchange loops because they are not tightly nested.
 ;
-; The three selected-outer directions are the generalized raw classes at the
-; selected outer loop itself: raw vectors [<=|<], [=>|<], and [<>].
+; The three selected-outer directions own the generalized raw classes at the
+; selected outer itself. Their raw vectors [<=|<], [=>|<], and [<>] are bound
+; by the function-scoped DA rows above and stay unnormalized there.
 ; PREP-LABEL: loop-interchange: rejected function=direction_selected_le{{ }}
 ; PREP-SAME:  outer=outer.header inner=inner.header reason=cross-partition dependence is not statically proved N-to-E{{$}}
 ; PREP-NEXT:  remark: <unknown>:0:0: did not distribute the discovered outer-loop epilogue: cross-partition dependence is not statically proved N-to-E
@@ -254,7 +276,8 @@
 ; PREP-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=2 rematerialized=0
 ; PREP-SAME:  absolute-depth=2 routing-depth=2 fission-rows=0 routing-rows=0 cross-deps=0 reductions=0
 ; PREP-SAME:  byte-offset-proofs=0 requirements=0 bound=static-bound, no-bound-requirement requirement-ids={{$}}
-; PREP-NEXT:  remark: <unknown>:0:0: Cannot interchange loops because they are not tightly nested.
+; PREP-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; PREP-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, no-bound-requirement.
 ; MEMZERO-LABEL: loop-interchange: rejected function=noalias_in_nest{{ }}
 ; MEMZERO-SAME:  outer=outer.header inner=inner.header reason=union N/E memory budget or simple-access check failed{{$}}
 ; MEMZERO-NEXT:  remark: <unknown>:0:0: did not distribute the discovered outer-loop epilogue: union N/E memory budget or simple-access check failed
@@ -267,7 +290,8 @@
 ; MATRIX-READY-SAME:  outer=outer.header inner=inner.header path-blocks=1 epilogue-insts=66 rematerialized=0
 ; MATRIX-READY-SAME:  absolute-depth=2 routing-depth=2 fission-rows=1 routing-rows=1 cross-deps=0 reductions=0
 ; MATRIX-READY-SAME:  byte-offset-proofs=0 requirements=0 bound=static-bound, no-bound-requirement requirement-ids={{$}}
-; MATRIX-READY-NEXT:  remark: <unknown>:0:0: Cannot interchange loops because they are not tightly nested.
+; MATRIX-READY-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; MATRIX-READY-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, no-bound-requirement.
 ; MATRIX-LIMIT-LABEL: loop-interchange: rejected function=matrix_memory_ratio{{ }}
 ; MATRIX-LIMIT-SAME:  outer=outer.header inner=inner.header reason=fission-context dependence matrix is unavailable{{$}}
 ; MATRIX-LIMIT-NEXT:  remark: <unknown>:0:0: did not distribute the discovered outer-loop epilogue: fission-context dependence matrix is unavailable
@@ -308,8 +332,13 @@
 ; MATRIX-TRACE-NEXT:  loop-interchange: prepared a complete outer-epilogue fission plan in function 'noalias_in_nest': Outer 'outer.header', Inner 'inner.header', absolute columns 0/1, routing columns 0/1, 0 cross dependence(s).
 ; MATRIX-TRACE-NEXT:  loop-interchange: prepared function=noalias_in_nest{{ }}
 ; MATRIX-TRACE-SAME:  rematerialized=0{{ }}
-; MATRIX-TRACE-NEXT:  Processing LoopList of size = 2 containing the following loops:
-; MATRIX-TRACE:       Cannot prove legality, not interchanging loops 'outer.header' and 'inner.header'
+; MATRIX-TRACE-NEXT:  Splitting the inner loop latch
+; MATRIX-TRACE-NEXT:  splitting InnerLoopHeader done
+; MATRIX-TRACE-NEXT:  adjustLoopBranches called
+; MATRIX-TRACE-NEXT:  remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; MATRIX-TRACE-NEXT:  remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, no-bound-requirement.
+; MATRIX-TRACE-NEXT:  loop-interchange: materialized outer-epilogue fission + interchange, top-level sibling, in function 'noalias_in_nest'.
+; MATRIX-TRACE:       No Valid candidates for loop interchange.
 ; MATRIX-TRACE-LABEL: loop-interchange: discovered a closed outer-loop epilogue in function 'matrix_memory_ratio' with 1 path block(s), 66 instruction(s), and 0 rematerialized loop-local definition(s).
 ; MATRIX-TRACE-NEXT:  loop-interchange: outer-epilogue preparation memory budget: 9 loads/stores over 92 instructions.
 ; MATRIX-TRACE-NEXT:  Found 8 Loads and Stores to analyze
@@ -323,13 +352,23 @@
 ; MATRIX-TRACE-READY:      loop-interchange: prepared a complete outer-epilogue fission plan in function 'matrix_memory_ratio': Outer 'outer.header', Inner 'inner.header', absolute columns 0/1, routing columns 0/1, 0 cross dependence(s).
 ; MATRIX-TRACE-READY-NEXT: loop-interchange: prepared function=matrix_memory_ratio{{ }}
 ; MATRIX-TRACE-READY-SAME: rematerialized=0{{ }}
-; MATRIX-TRACE-NEXT:  Processing LoopList of size = 2 containing the following loops:
-; MATRIX-TRACE:       Found 9 Loads and Stores to analyze
-; MATRIX-TRACE:       Dependency matrix before interchange:
-; MATRIX-TRACE-NEXT:  {{^}}= ={{ *$}}
-; MATRIX-TRACE-NEXT:  Processing InnerLoopId = 1 and OuterLoopId = 0
-; MATRIX-TRACE:       remark: <unknown>:0:0: Cannot interchange loops because they are not tightly nested.
-; MATRIX-TRACE-NEXT:  Cannot prove legality, not interchanging loops 'outer.header' and 'inner.header'
+; MATRIX-TRACE-READY-NEXT: Splitting the inner loop latch
+; MATRIX-TRACE-READY-NEXT: splitting InnerLoopHeader done
+; MATRIX-TRACE-READY-NEXT: adjustLoopBranches called
+; MATRIX-TRACE-READY-NEXT: remark: <unknown>:0:0: Loop interchanged with enclosing loop.
+; MATRIX-TRACE-READY-NEXT: remark: <unknown>:0:0: Distributed a proven outer-loop epilogue into its own loop before interchanging the reduction nest; bound=static-bound, no-bound-requirement.
+; MATRIX-TRACE-READY-NEXT: loop-interchange: materialized outer-epilogue fission + interchange, top-level sibling, in function 'matrix_memory_ratio'.
+; MATRIX-TRACE-READY:      No Valid candidates for loop interchange.
+;
+; Only the ratio-limited run still routes this function through ordinary
+; interchange, so the trailing legality trace belongs to that run alone.
+; MATRIX-TRACE-LIMIT:      Processing LoopList of size = 2 containing the following loops:
+; MATRIX-TRACE-LIMIT:      Found 9 Loads and Stores to analyze
+; MATRIX-TRACE-LIMIT:      Dependency matrix before interchange:
+; MATRIX-TRACE-LIMIT-NEXT: {{^}}= ={{ *$}}
+; MATRIX-TRACE-LIMIT-NEXT: Processing InnerLoopId = 1 and OuterLoopId = 0
+; MATRIX-TRACE-LIMIT:      remark: <unknown>:0:0: Cannot interchange loops because they are not tightly nested.
+; MATRIX-TRACE-LIMIT-NEXT: Cannot prove legality, not interchanging loops 'outer.header' and 'inner.header'
 ;
 ; LE-PREP-LABEL: loop-interchange: discovered a closed outer-loop epilogue in function 'direction_le' with 1 path block(s), 8 instruction(s), and 0 rematerialized loop-local definition(s).
 ; LE-PREP-NEXT:  loop-interchange: outer-epilogue preparation memory budget: 4 loads/stores over 23 instructions.
@@ -440,6 +479,185 @@
 ; SEL-NE-NEXT:  {{^}}* I{{ *$}}
 ; SEL-NE-NEXT:  Processing InnerLoopId = 1 and OuterLoopId = 0
 ; SEL-NE:       Cannot prove legality, not interchanging loops 'outer.header' and 'inner.header'
+;
+; The transformed module. Every definition is listed, so the RUN line's
+; '{{^define }}' exclusion makes the list exhaustive. Each applied function
+; gains one sibling epilogue loop whose latch branches to the original
+; continuation, and its nest is interchanged. The emptied original epilogue
+; block, the epilogue loop, and the continuation are checked instruction by
+; instruction. Block labels are plain directives because the printed IR
+; separates blocks with a blank line. The other functions were already shown
+; unchanged by the llvm-extract --delete pair above and carry only their label.
+;
+; APPLIED-LABEL: define {{.*}}@e_to_n_flow(
+; APPLIED-LABEL: define {{.*}}@e_to_n_anti(
+; APPLIED-LABEL: define {{.*}}@e_to_n_output(
+; APPLIED-LABEL: define {{.*}}@e_consumes_reduction(
+; APPLIED-LABEL: define {{.*}}@e_consumes_inner_iv(
+; APPLIED-LABEL: define {{.*}}@e_escapes(
+; APPLIED-LABEL: define {{.*}}@exact_recurrence(
+; APPLIED-LABEL: define {{.*}}@partly_exact_recurrence(
+; APPLIED-LABEL: define {{.*}}@call_in_epilogue(
+; APPLIED-LABEL: define {{.*}}@convergent_call_epilogue(
+; APPLIED-LABEL: define {{.*}}@deopt_call_epilogue(
+; APPLIED-LABEL: define {{.*}}@constrained_fp_epilogue(
+; APPLIED-LABEL: define {{.*}}@unknown_alias(
+; APPLIED-LABEL: define {{.*}}@non_affine_address(
+; APPLIED-LABEL: define {{.*}}@volatile_epilogue(
+; APPLIED-LABEL: define {{.*}}@atomic_epilogue(
+; APPLIED-LABEL: define {{.*}}@fence_epilogue(
+; APPLIED-LABEL: define {{.*}}@conditional_epilogue(
+; APPLIED-LABEL: define {{.*}}@multiple_epilogues(
+; APPLIED-LABEL: define {{.*}}@address_taken_epilogue(
+; APPLIED-LABEL: define {{.*}}@triangular_bounds(
+; APPLIED-LABEL: define {{.*}}@data_dependent_bounds(
+; APPLIED-LABEL: define {{.*}}@loop_local_outer_bound(
+; APPLIED-LABEL: define {{.*}}@noncanonical_latch(
+; APPLIED-LABEL: define {{.*}}@unsupported_metadata(
+; APPLIED-LABEL: define {{.*}}@outer_header_freeze(
+; APPLIED-LABEL: define {{.*}}@invariant_address_n_to_e_flow(
+; APPLIED-LABEL: define {{.*}}@invariant_address_n_to_e_output(
+; APPLIED-LABEL: define {{.*}}@direction_le(
+; APPLIED-LABEL: define {{.*}}@direction_ge(
+; APPLIED-LABEL: define {{.*}}@direction_ne(
+; APPLIED-LABEL: define {{.*}}@e_data_from_shared_preheader_freeze(
+; APPLIED-LABEL: define {{.*}}@e_data_from_inner_preheader_load(
+; APPLIED-LABEL: define {{.*}}@e_control_from_shared_preheader(
+; APPLIED-LABEL: define {{.*}}@e_control_from_inner_preheader(
+; APPLIED-LABEL: define {{.*}}@e_operand_closure_invalid_leaf(
+; APPLIED-LABEL: define {{.*}}@n_convergent_controlled_in_nest(
+; APPLIED-LABEL: define {{.*}}@n_convergent_uncontrolled_in_outer_header(
+; APPLIED-LABEL: define {{.*}}@n_convergent_uncontrolled_in_inner_body(
+; APPLIED-LABEL: define {{.*}}@n_convergent_uncontrolled_in_inner_ph(
+; APPLIED-LABEL: define {{.*}}@direction_selected_le(
+; APPLIED-LABEL: define {{.*}}@direction_selected_ge(
+; APPLIED-LABEL: define {{.*}}@direction_selected_ne(
+; APPLIED-LABEL: define {{.*}}@unknown_alias_in_nest(
+; APPLIED-LABEL: define {{.*}}@noalias_in_nest(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %dp.epil = getelementptr i64, ptr %D, i64 %epilogue.iv
+; APPLIED-NEXT:      store i64 %epilogue.iv, ptr %dp.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.done.epil = icmp eq i64 %i.next.epil, 4
+; APPLIED-NEXT:      br i1 %i.done.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      ret void
+; APPLIED-LABEL: define {{.*}}@matrix_memory_ratio(
+; APPLIED:         epilogue:
+; APPLIED-NEXT:      br label %outer.latch
+; APPLIED:         exit:
+; APPLIED-NEXT:      br label %epilogue.preheader
+; APPLIED:         epilogue.preheader:
+; APPLIED-NEXT:      br label %epilogue.header
+; APPLIED:         epilogue.header:
+; APPLIED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; APPLIED-NEXT:      %v01.epil = add i64 %seed, %epilogue.iv
+; APPLIED-NEXT:      %v02.epil = add i64 %v01.epil, 1
+; APPLIED-NEXT:      %v03.epil = add i64 %v02.epil, 1
+; APPLIED-NEXT:      %v04.epil = add i64 %v03.epil, 1
+; APPLIED-NEXT:      %v05.epil = add i64 %v04.epil, 1
+; APPLIED-NEXT:      %v06.epil = add i64 %v05.epil, 1
+; APPLIED-NEXT:      %v07.epil = add i64 %v06.epil, 1
+; APPLIED-NEXT:      %v08.epil = add i64 %v07.epil, 1
+; APPLIED-NEXT:      %v09.epil = add i64 %v08.epil, 1
+; APPLIED-NEXT:      %v10.epil = add i64 %v09.epil, 1
+; APPLIED-NEXT:      %v11.epil = add i64 %v10.epil, 1
+; APPLIED-NEXT:      %v12.epil = add i64 %v11.epil, 1
+; APPLIED-NEXT:      %v13.epil = add i64 %v12.epil, 1
+; APPLIED-NEXT:      %v14.epil = add i64 %v13.epil, 1
+; APPLIED-NEXT:      %v15.epil = add i64 %v14.epil, 1
+; APPLIED-NEXT:      %v16.epil = add i64 %v15.epil, 1
+; APPLIED-NEXT:      %v17.epil = add i64 %v16.epil, 1
+; APPLIED-NEXT:      %v18.epil = add i64 %v17.epil, 1
+; APPLIED-NEXT:      %v19.epil = add i64 %v18.epil, 1
+; APPLIED-NEXT:      %v20.epil = add i64 %v19.epil, 1
+; APPLIED-NEXT:      %v21.epil = add i64 %v20.epil, 1
+; APPLIED-NEXT:      %v22.epil = add i64 %v21.epil, 1
+; APPLIED-NEXT:      %v23.epil = add i64 %v22.epil, 1
+; APPLIED-NEXT:      %v24.epil = add i64 %v23.epil, 1
+; APPLIED-NEXT:      %v25.epil = add i64 %v24.epil, 1
+; APPLIED-NEXT:      %v26.epil = add i64 %v25.epil, 1
+; APPLIED-NEXT:      %v27.epil = add i64 %v26.epil, 1
+; APPLIED-NEXT:      %v28.epil = add i64 %v27.epil, 1
+; APPLIED-NEXT:      %v29.epil = add i64 %v28.epil, 1
+; APPLIED-NEXT:      %v30.epil = add i64 %v29.epil, 1
+; APPLIED-NEXT:      %v31.epil = add i64 %v30.epil, 1
+; APPLIED-NEXT:      %v32.epil = add i64 %v31.epil, 1
+; APPLIED-NEXT:      %v33.epil = add i64 %v32.epil, 1
+; APPLIED-NEXT:      %v34.epil = add i64 %v33.epil, 1
+; APPLIED-NEXT:      %v35.epil = add i64 %v34.epil, 1
+; APPLIED-NEXT:      %v36.epil = add i64 %v35.epil, 1
+; APPLIED-NEXT:      %v37.epil = add i64 %v36.epil, 1
+; APPLIED-NEXT:      %v38.epil = add i64 %v37.epil, 1
+; APPLIED-NEXT:      %v39.epil = add i64 %v38.epil, 1
+; APPLIED-NEXT:      %v40.epil = add i64 %v39.epil, 1
+; APPLIED-NEXT:      %v41.epil = add i64 %v40.epil, 1
+; APPLIED-NEXT:      %v42.epil = add i64 %v41.epil, 1
+; APPLIED-NEXT:      %v43.epil = add i64 %v42.epil, 1
+; APPLIED-NEXT:      %v44.epil = add i64 %v43.epil, 1
+; APPLIED-NEXT:      %v45.epil = add i64 %v44.epil, 1
+; APPLIED-NEXT:      %v46.epil = add i64 %v45.epil, 1
+; APPLIED-NEXT:      %v47.epil = add i64 %v46.epil, 1
+; APPLIED-NEXT:      %v48.epil = add i64 %v47.epil, 1
+; APPLIED-NEXT:      %v49.epil = add i64 %v48.epil, 1
+; APPLIED-NEXT:      %v50.epil = add i64 %v49.epil, 1
+; APPLIED-NEXT:      %v51.epil = add i64 %v50.epil, 1
+; APPLIED-NEXT:      %v52.epil = add i64 %v51.epil, 1
+; APPLIED-NEXT:      %v53.epil = add i64 %v52.epil, 1
+; APPLIED-NEXT:      %v54.epil = add i64 %v53.epil, 1
+; APPLIED-NEXT:      %v55.epil = add i64 %v54.epil, 1
+; APPLIED-NEXT:      %v56.epil = add i64 %v55.epil, 1
+; APPLIED-NEXT:      %v57.epil = add i64 %v56.epil, 1
+; APPLIED-NEXT:      %v58.epil = add i64 %v57.epil, 1
+; APPLIED-NEXT:      %v59.epil = add i64 %v58.epil, 1
+; APPLIED-NEXT:      %v60.epil = add i64 %v59.epil, 1
+; APPLIED-NEXT:      %v61.epil = add i64 %v60.epil, 1
+; APPLIED-NEXT:      %v62.epil = add i64 %v61.epil, 1
+; APPLIED-NEXT:      %v63.epil = add i64 %v62.epil, 1
+; APPLIED-NEXT:      %v64.epil = add i64 %v63.epil, 1
+; APPLIED-NEXT:      %outp.epil = getelementptr i64, ptr %Out, i64 %epilogue.iv
+; APPLIED-NEXT:      store i64 %v64.epil, ptr %outp.epil, align 8
+; APPLIED-NEXT:      br label %epilogue.latch
+; APPLIED:         epilogue.latch:
+; APPLIED-NEXT:      %i.next.epil = add i64 %epilogue.iv, 1
+; APPLIED-NEXT:      %i.done.epil = icmp eq i64 %i.next.epil, 4
+; APPLIED-NEXT:      br i1 %i.done.epil, label %exit.cont, label %epilogue.header
+; APPLIED:         exit.cont:
+; APPLIED-NEXT:      ret void
+; APPLIED-LABEL: define {{.*}}@issue47457_guarded_epilogue(
+;
+; The same loop-info lines are checked against the loop manager's live
+; LoopInfo and against a fresh rebuild of the transformed module. The block
+; lists inside the nest are wildcarded because LoopInfo stores them in
+; discovery order, which an incremental update and a fresh walk reach
+; differently; the loop order, the depths, and the epilogue loop's two blocks
+; are exact.
+;
+; APPLY-LOOPS-LABEL: Loop info for function 'noalias_in_nest':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+; APPLY-LOOPS-LABEL: Loop info for function 'matrix_memory_ratio':
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %epilogue.header<header>,%epilogue.latch<latch><exiting>
+; APPLY-LOOPS-NEXT: Loop at depth 1 containing: %inner.header<header>,{{.*}}
+; APPLY-LOOPS-NEXT:     Loop at depth 2 containing: %outer.header<header>,{{.*}}
+;
+; At ratio one the ratio-limited function never reaches a matrix, so it keeps
+; its shape while the noalias control is still distributed.
+; RATIO-LIMITED-LABEL: define {{.*}}@noalias_in_nest(
+; RATIO-LIMITED:         epilogue.header:
+; RATIO-LIMITED-NEXT:      %epilogue.iv = phi i64 [ 0, %epilogue.preheader ], [ %i.next.epil, %epilogue.latch ]
+; RATIO-LIMITED-LABEL: define {{.*}}@matrix_memory_ratio(
+; RATIO-LIMITED-NOT:     %epilogue.iv = phi
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
