@@ -20,19 +20,8 @@ class FrameProviderCircularDependencyTestCase(TestBase):
         """Build, launch and stop at the breakpoint in bar(). Returns (target, thread)."""
         self.build()
 
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.assertTrue(target, "Target should be valid")
-
-        bkpt = target.BreakpointCreateBySourceRegex(
-            "break here", lldb.SBFileSpec(self.source)
-        )
-        self.assertTrue(bkpt.IsValid(), "Breakpoint should be valid")
-        self.assertEqual(bkpt.GetNumLocations(), 1, "Should have 1 breakpoint location")
-
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, "Process should be valid")
-        self.assertEqual(
-            process.GetState(), lldb.eStateStopped, "Process should be stopped"
+        target, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec(self.source)
         )
 
         thread = process.GetSelectedThread()
