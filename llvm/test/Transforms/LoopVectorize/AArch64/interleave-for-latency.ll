@@ -1748,6 +1748,388 @@ exit:
   ret void
 }
 
+; This loop is large enough that it wouldn't be interleaved using the default
+; interleaving heuristic. Floating-point operations currently all use the
+; default of 3, so load latency only has an effect above that.
+define void @large_loop(ptr %p, float %c0, float %c1, float %c2, float %c3, float %c4, float %c5) {
+; CHECK-LATENCY1-LABEL: define void @large_loop(
+; CHECK-LATENCY1-SAME: ptr [[P:%.*]], float [[C0:%.*]], float [[C1:%.*]], float [[C2:%.*]], float [[C3:%.*]], float [[C4:%.*]], float [[C5:%.*]]) {
+; CHECK-LATENCY1-NEXT:  [[ENTRY:.*:]]
+; CHECK-LATENCY1-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-LATENCY1:       [[VECTOR_PH]]:
+; CHECK-LATENCY1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[C0]], i64 0
+; CHECK-LATENCY1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY1-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x float> poison, float [[C1]], i64 0
+; CHECK-LATENCY1-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT1]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY1-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x float> poison, float [[C2]], i64 0
+; CHECK-LATENCY1-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT3]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY1-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <4 x float> poison, float [[C3]], i64 0
+; CHECK-LATENCY1-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT5]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY1-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x float> poison, float [[C4]], i64 0
+; CHECK-LATENCY1-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT7]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY1-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <4 x float> poison, float [[C5]], i64 0
+; CHECK-LATENCY1-NEXT:    [[BROADCAST_SPLAT10:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT9]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-LATENCY1:       [[VECTOR_BODY]]:
+; CHECK-LATENCY1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-LATENCY1-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-LATENCY1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 4
+; CHECK-LATENCY1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
+; CHECK-LATENCY1-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
+; CHECK-LATENCY1-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; CHECK-LATENCY1-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[WIDE_LOAD11]], [[BROADCAST_SPLAT]]
+; CHECK-LATENCY1-NEXT:    [[TMP4:%.*]] = fadd fast <4 x float> [[TMP2]], [[WIDE_LOAD]]
+; CHECK-LATENCY1-NEXT:    [[TMP5:%.*]] = fadd fast <4 x float> [[TMP3]], [[WIDE_LOAD11]]
+; CHECK-LATENCY1-NEXT:    [[TMP6:%.*]] = fmul fast <4 x float> [[TMP4]], [[BROADCAST_SPLAT2]]
+; CHECK-LATENCY1-NEXT:    [[TMP7:%.*]] = fmul fast <4 x float> [[TMP5]], [[BROADCAST_SPLAT2]]
+; CHECK-LATENCY1-NEXT:    [[TMP8:%.*]] = fadd fast <4 x float> [[TMP6]], [[TMP4]]
+; CHECK-LATENCY1-NEXT:    [[TMP9:%.*]] = fadd fast <4 x float> [[TMP7]], [[TMP5]]
+; CHECK-LATENCY1-NEXT:    [[TMP10:%.*]] = fmul fast <4 x float> [[TMP8]], [[BROADCAST_SPLAT4]]
+; CHECK-LATENCY1-NEXT:    [[TMP11:%.*]] = fmul fast <4 x float> [[TMP9]], [[BROADCAST_SPLAT4]]
+; CHECK-LATENCY1-NEXT:    [[TMP12:%.*]] = fadd fast <4 x float> [[TMP10]], [[TMP8]]
+; CHECK-LATENCY1-NEXT:    [[TMP13:%.*]] = fadd fast <4 x float> [[TMP11]], [[TMP9]]
+; CHECK-LATENCY1-NEXT:    [[TMP14:%.*]] = fmul fast <4 x float> [[TMP12]], [[BROADCAST_SPLAT6]]
+; CHECK-LATENCY1-NEXT:    [[TMP15:%.*]] = fmul fast <4 x float> [[TMP13]], [[BROADCAST_SPLAT6]]
+; CHECK-LATENCY1-NEXT:    [[TMP16:%.*]] = fadd fast <4 x float> [[TMP14]], [[TMP12]]
+; CHECK-LATENCY1-NEXT:    [[TMP17:%.*]] = fadd fast <4 x float> [[TMP15]], [[TMP13]]
+; CHECK-LATENCY1-NEXT:    [[TMP18:%.*]] = fmul fast <4 x float> [[TMP16]], [[BROADCAST_SPLAT8]]
+; CHECK-LATENCY1-NEXT:    [[TMP19:%.*]] = fmul fast <4 x float> [[TMP17]], [[BROADCAST_SPLAT8]]
+; CHECK-LATENCY1-NEXT:    [[TMP20:%.*]] = fadd fast <4 x float> [[TMP18]], [[TMP16]]
+; CHECK-LATENCY1-NEXT:    [[TMP21:%.*]] = fadd fast <4 x float> [[TMP19]], [[TMP17]]
+; CHECK-LATENCY1-NEXT:    [[TMP22:%.*]] = fmul fast <4 x float> [[TMP20]], [[BROADCAST_SPLAT10]]
+; CHECK-LATENCY1-NEXT:    [[TMP23:%.*]] = fmul fast <4 x float> [[TMP21]], [[BROADCAST_SPLAT10]]
+; CHECK-LATENCY1-NEXT:    [[TMP24:%.*]] = fadd fast <4 x float> [[TMP22]], [[TMP20]]
+; CHECK-LATENCY1-NEXT:    [[TMP25:%.*]] = fadd fast <4 x float> [[TMP23]], [[TMP21]]
+; CHECK-LATENCY1-NEXT:    store <4 x float> [[TMP24]], ptr [[TMP0]], align 4
+; CHECK-LATENCY1-NEXT:    store <4 x float> [[TMP25]], ptr [[TMP1]], align 4
+; CHECK-LATENCY1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-LATENCY1-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-LATENCY1-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-LATENCY1:       [[MIDDLE_BLOCK]]:
+; CHECK-LATENCY1-NEXT:    br label %[[EXIT:.*]]
+; CHECK-LATENCY1:       [[EXIT]]:
+; CHECK-LATENCY1-NEXT:    ret void
+;
+; CHECK-LATENCY2-LABEL: define void @large_loop(
+; CHECK-LATENCY2-SAME: ptr [[P:%.*]], float [[C0:%.*]], float [[C1:%.*]], float [[C2:%.*]], float [[C3:%.*]], float [[C4:%.*]], float [[C5:%.*]]) {
+; CHECK-LATENCY2-NEXT:  [[ENTRY:.*:]]
+; CHECK-LATENCY2-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-LATENCY2:       [[VECTOR_PH]]:
+; CHECK-LATENCY2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[C0]], i64 0
+; CHECK-LATENCY2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x float> poison, float [[C1]], i64 0
+; CHECK-LATENCY2-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT1]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY2-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x float> poison, float [[C2]], i64 0
+; CHECK-LATENCY2-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT3]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY2-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <4 x float> poison, float [[C3]], i64 0
+; CHECK-LATENCY2-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT5]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY2-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x float> poison, float [[C4]], i64 0
+; CHECK-LATENCY2-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT7]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY2-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <4 x float> poison, float [[C5]], i64 0
+; CHECK-LATENCY2-NEXT:    [[BROADCAST_SPLAT10:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT9]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-LATENCY2:       [[VECTOR_BODY]]:
+; CHECK-LATENCY2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-LATENCY2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-LATENCY2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 4
+; CHECK-LATENCY2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
+; CHECK-LATENCY2-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
+; CHECK-LATENCY2-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; CHECK-LATENCY2-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[WIDE_LOAD11]], [[BROADCAST_SPLAT]]
+; CHECK-LATENCY2-NEXT:    [[TMP4:%.*]] = fadd fast <4 x float> [[TMP2]], [[WIDE_LOAD]]
+; CHECK-LATENCY2-NEXT:    [[TMP5:%.*]] = fadd fast <4 x float> [[TMP3]], [[WIDE_LOAD11]]
+; CHECK-LATENCY2-NEXT:    [[TMP6:%.*]] = fmul fast <4 x float> [[TMP4]], [[BROADCAST_SPLAT2]]
+; CHECK-LATENCY2-NEXT:    [[TMP7:%.*]] = fmul fast <4 x float> [[TMP5]], [[BROADCAST_SPLAT2]]
+; CHECK-LATENCY2-NEXT:    [[TMP8:%.*]] = fadd fast <4 x float> [[TMP6]], [[TMP4]]
+; CHECK-LATENCY2-NEXT:    [[TMP9:%.*]] = fadd fast <4 x float> [[TMP7]], [[TMP5]]
+; CHECK-LATENCY2-NEXT:    [[TMP10:%.*]] = fmul fast <4 x float> [[TMP8]], [[BROADCAST_SPLAT4]]
+; CHECK-LATENCY2-NEXT:    [[TMP11:%.*]] = fmul fast <4 x float> [[TMP9]], [[BROADCAST_SPLAT4]]
+; CHECK-LATENCY2-NEXT:    [[TMP12:%.*]] = fadd fast <4 x float> [[TMP10]], [[TMP8]]
+; CHECK-LATENCY2-NEXT:    [[TMP13:%.*]] = fadd fast <4 x float> [[TMP11]], [[TMP9]]
+; CHECK-LATENCY2-NEXT:    [[TMP14:%.*]] = fmul fast <4 x float> [[TMP12]], [[BROADCAST_SPLAT6]]
+; CHECK-LATENCY2-NEXT:    [[TMP15:%.*]] = fmul fast <4 x float> [[TMP13]], [[BROADCAST_SPLAT6]]
+; CHECK-LATENCY2-NEXT:    [[TMP16:%.*]] = fadd fast <4 x float> [[TMP14]], [[TMP12]]
+; CHECK-LATENCY2-NEXT:    [[TMP17:%.*]] = fadd fast <4 x float> [[TMP15]], [[TMP13]]
+; CHECK-LATENCY2-NEXT:    [[TMP18:%.*]] = fmul fast <4 x float> [[TMP16]], [[BROADCAST_SPLAT8]]
+; CHECK-LATENCY2-NEXT:    [[TMP19:%.*]] = fmul fast <4 x float> [[TMP17]], [[BROADCAST_SPLAT8]]
+; CHECK-LATENCY2-NEXT:    [[TMP20:%.*]] = fadd fast <4 x float> [[TMP18]], [[TMP16]]
+; CHECK-LATENCY2-NEXT:    [[TMP21:%.*]] = fadd fast <4 x float> [[TMP19]], [[TMP17]]
+; CHECK-LATENCY2-NEXT:    [[TMP22:%.*]] = fmul fast <4 x float> [[TMP20]], [[BROADCAST_SPLAT10]]
+; CHECK-LATENCY2-NEXT:    [[TMP23:%.*]] = fmul fast <4 x float> [[TMP21]], [[BROADCAST_SPLAT10]]
+; CHECK-LATENCY2-NEXT:    [[TMP24:%.*]] = fadd fast <4 x float> [[TMP22]], [[TMP20]]
+; CHECK-LATENCY2-NEXT:    [[TMP25:%.*]] = fadd fast <4 x float> [[TMP23]], [[TMP21]]
+; CHECK-LATENCY2-NEXT:    store <4 x float> [[TMP24]], ptr [[TMP0]], align 4
+; CHECK-LATENCY2-NEXT:    store <4 x float> [[TMP25]], ptr [[TMP1]], align 4
+; CHECK-LATENCY2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-LATENCY2-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-LATENCY2-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-LATENCY2:       [[MIDDLE_BLOCK]]:
+; CHECK-LATENCY2-NEXT:    br label %[[EXIT:.*]]
+; CHECK-LATENCY2:       [[EXIT]]:
+; CHECK-LATENCY2-NEXT:    ret void
+;
+; CHECK-LATENCY8-LABEL: define void @large_loop(
+; CHECK-LATENCY8-SAME: ptr [[P:%.*]], float [[C0:%.*]], float [[C1:%.*]], float [[C2:%.*]], float [[C3:%.*]], float [[C4:%.*]], float [[C5:%.*]]) {
+; CHECK-LATENCY8-NEXT:  [[ENTRY:.*:]]
+; CHECK-LATENCY8-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-LATENCY8:       [[VECTOR_PH]]:
+; CHECK-LATENCY8-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[C0]], i64 0
+; CHECK-LATENCY8-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY8-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x float> poison, float [[C1]], i64 0
+; CHECK-LATENCY8-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT1]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY8-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x float> poison, float [[C2]], i64 0
+; CHECK-LATENCY8-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT3]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY8-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <4 x float> poison, float [[C3]], i64 0
+; CHECK-LATENCY8-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT5]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY8-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x float> poison, float [[C4]], i64 0
+; CHECK-LATENCY8-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT7]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY8-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <4 x float> poison, float [[C5]], i64 0
+; CHECK-LATENCY8-NEXT:    [[BROADCAST_SPLAT10:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT9]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-LATENCY8-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-LATENCY8:       [[VECTOR_BODY]]:
+; CHECK-LATENCY8-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-LATENCY8-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-LATENCY8-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 4
+; CHECK-LATENCY8-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 8
+; CHECK-LATENCY8-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 12
+; CHECK-LATENCY8-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
+; CHECK-LATENCY8-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
+; CHECK-LATENCY8-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
+; CHECK-LATENCY8-NEXT:    [[WIDE_LOAD13:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
+; CHECK-LATENCY8-NEXT:    [[TMP4:%.*]] = fmul fast <4 x float> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; CHECK-LATENCY8-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[WIDE_LOAD11]], [[BROADCAST_SPLAT]]
+; CHECK-LATENCY8-NEXT:    [[TMP6:%.*]] = fmul fast <4 x float> [[WIDE_LOAD12]], [[BROADCAST_SPLAT]]
+; CHECK-LATENCY8-NEXT:    [[TMP7:%.*]] = fmul fast <4 x float> [[WIDE_LOAD13]], [[BROADCAST_SPLAT]]
+; CHECK-LATENCY8-NEXT:    [[TMP8:%.*]] = fadd fast <4 x float> [[TMP4]], [[WIDE_LOAD]]
+; CHECK-LATENCY8-NEXT:    [[TMP9:%.*]] = fadd fast <4 x float> [[TMP5]], [[WIDE_LOAD11]]
+; CHECK-LATENCY8-NEXT:    [[TMP10:%.*]] = fadd fast <4 x float> [[TMP6]], [[WIDE_LOAD12]]
+; CHECK-LATENCY8-NEXT:    [[TMP11:%.*]] = fadd fast <4 x float> [[TMP7]], [[WIDE_LOAD13]]
+; CHECK-LATENCY8-NEXT:    [[TMP12:%.*]] = fmul fast <4 x float> [[TMP8]], [[BROADCAST_SPLAT2]]
+; CHECK-LATENCY8-NEXT:    [[TMP13:%.*]] = fmul fast <4 x float> [[TMP9]], [[BROADCAST_SPLAT2]]
+; CHECK-LATENCY8-NEXT:    [[TMP14:%.*]] = fmul fast <4 x float> [[TMP10]], [[BROADCAST_SPLAT2]]
+; CHECK-LATENCY8-NEXT:    [[TMP15:%.*]] = fmul fast <4 x float> [[TMP11]], [[BROADCAST_SPLAT2]]
+; CHECK-LATENCY8-NEXT:    [[TMP16:%.*]] = fadd fast <4 x float> [[TMP12]], [[TMP8]]
+; CHECK-LATENCY8-NEXT:    [[TMP17:%.*]] = fadd fast <4 x float> [[TMP13]], [[TMP9]]
+; CHECK-LATENCY8-NEXT:    [[TMP18:%.*]] = fadd fast <4 x float> [[TMP14]], [[TMP10]]
+; CHECK-LATENCY8-NEXT:    [[TMP19:%.*]] = fadd fast <4 x float> [[TMP15]], [[TMP11]]
+; CHECK-LATENCY8-NEXT:    [[TMP20:%.*]] = fmul fast <4 x float> [[TMP16]], [[BROADCAST_SPLAT4]]
+; CHECK-LATENCY8-NEXT:    [[TMP21:%.*]] = fmul fast <4 x float> [[TMP17]], [[BROADCAST_SPLAT4]]
+; CHECK-LATENCY8-NEXT:    [[TMP22:%.*]] = fmul fast <4 x float> [[TMP18]], [[BROADCAST_SPLAT4]]
+; CHECK-LATENCY8-NEXT:    [[TMP23:%.*]] = fmul fast <4 x float> [[TMP19]], [[BROADCAST_SPLAT4]]
+; CHECK-LATENCY8-NEXT:    [[TMP24:%.*]] = fadd fast <4 x float> [[TMP20]], [[TMP16]]
+; CHECK-LATENCY8-NEXT:    [[TMP25:%.*]] = fadd fast <4 x float> [[TMP21]], [[TMP17]]
+; CHECK-LATENCY8-NEXT:    [[TMP26:%.*]] = fadd fast <4 x float> [[TMP22]], [[TMP18]]
+; CHECK-LATENCY8-NEXT:    [[TMP27:%.*]] = fadd fast <4 x float> [[TMP23]], [[TMP19]]
+; CHECK-LATENCY8-NEXT:    [[TMP28:%.*]] = fmul fast <4 x float> [[TMP24]], [[BROADCAST_SPLAT6]]
+; CHECK-LATENCY8-NEXT:    [[TMP29:%.*]] = fmul fast <4 x float> [[TMP25]], [[BROADCAST_SPLAT6]]
+; CHECK-LATENCY8-NEXT:    [[TMP30:%.*]] = fmul fast <4 x float> [[TMP26]], [[BROADCAST_SPLAT6]]
+; CHECK-LATENCY8-NEXT:    [[TMP31:%.*]] = fmul fast <4 x float> [[TMP27]], [[BROADCAST_SPLAT6]]
+; CHECK-LATENCY8-NEXT:    [[TMP32:%.*]] = fadd fast <4 x float> [[TMP28]], [[TMP24]]
+; CHECK-LATENCY8-NEXT:    [[TMP33:%.*]] = fadd fast <4 x float> [[TMP29]], [[TMP25]]
+; CHECK-LATENCY8-NEXT:    [[TMP34:%.*]] = fadd fast <4 x float> [[TMP30]], [[TMP26]]
+; CHECK-LATENCY8-NEXT:    [[TMP35:%.*]] = fadd fast <4 x float> [[TMP31]], [[TMP27]]
+; CHECK-LATENCY8-NEXT:    [[TMP36:%.*]] = fmul fast <4 x float> [[TMP32]], [[BROADCAST_SPLAT8]]
+; CHECK-LATENCY8-NEXT:    [[TMP37:%.*]] = fmul fast <4 x float> [[TMP33]], [[BROADCAST_SPLAT8]]
+; CHECK-LATENCY8-NEXT:    [[TMP38:%.*]] = fmul fast <4 x float> [[TMP34]], [[BROADCAST_SPLAT8]]
+; CHECK-LATENCY8-NEXT:    [[TMP39:%.*]] = fmul fast <4 x float> [[TMP35]], [[BROADCAST_SPLAT8]]
+; CHECK-LATENCY8-NEXT:    [[TMP40:%.*]] = fadd fast <4 x float> [[TMP36]], [[TMP32]]
+; CHECK-LATENCY8-NEXT:    [[TMP41:%.*]] = fadd fast <4 x float> [[TMP37]], [[TMP33]]
+; CHECK-LATENCY8-NEXT:    [[TMP42:%.*]] = fadd fast <4 x float> [[TMP38]], [[TMP34]]
+; CHECK-LATENCY8-NEXT:    [[TMP43:%.*]] = fadd fast <4 x float> [[TMP39]], [[TMP35]]
+; CHECK-LATENCY8-NEXT:    [[TMP44:%.*]] = fmul fast <4 x float> [[TMP40]], [[BROADCAST_SPLAT10]]
+; CHECK-LATENCY8-NEXT:    [[TMP45:%.*]] = fmul fast <4 x float> [[TMP41]], [[BROADCAST_SPLAT10]]
+; CHECK-LATENCY8-NEXT:    [[TMP46:%.*]] = fmul fast <4 x float> [[TMP42]], [[BROADCAST_SPLAT10]]
+; CHECK-LATENCY8-NEXT:    [[TMP47:%.*]] = fmul fast <4 x float> [[TMP43]], [[BROADCAST_SPLAT10]]
+; CHECK-LATENCY8-NEXT:    [[TMP48:%.*]] = fadd fast <4 x float> [[TMP44]], [[TMP40]]
+; CHECK-LATENCY8-NEXT:    [[TMP49:%.*]] = fadd fast <4 x float> [[TMP45]], [[TMP41]]
+; CHECK-LATENCY8-NEXT:    [[TMP50:%.*]] = fadd fast <4 x float> [[TMP46]], [[TMP42]]
+; CHECK-LATENCY8-NEXT:    [[TMP51:%.*]] = fadd fast <4 x float> [[TMP47]], [[TMP43]]
+; CHECK-LATENCY8-NEXT:    store <4 x float> [[TMP48]], ptr [[TMP0]], align 4
+; CHECK-LATENCY8-NEXT:    store <4 x float> [[TMP49]], ptr [[TMP1]], align 4
+; CHECK-LATENCY8-NEXT:    store <4 x float> [[TMP50]], ptr [[TMP2]], align 4
+; CHECK-LATENCY8-NEXT:    store <4 x float> [[TMP51]], ptr [[TMP3]], align 4
+; CHECK-LATENCY8-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-LATENCY8-NEXT:    [[TMP52:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-LATENCY8-NEXT:    br i1 [[TMP52]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-LATENCY8:       [[MIDDLE_BLOCK]]:
+; CHECK-LATENCY8-NEXT:    br label %[[EXIT:.*]]
+; CHECK-LATENCY8:       [[EXIT]]:
+; CHECK-LATENCY8-NEXT:    ret void
+;
+; CHECK-A510-LABEL: define void @large_loop(
+; CHECK-A510-SAME: ptr [[P:%.*]], float [[C0:%.*]], float [[C1:%.*]], float [[C2:%.*]], float [[C3:%.*]], float [[C4:%.*]], float [[C5:%.*]]) #[[ATTR0]] {
+; CHECK-A510-NEXT:  [[ENTRY:.*:]]
+; CHECK-A510-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-A510:       [[VECTOR_PH]]:
+; CHECK-A510-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[C0]], i64 0
+; CHECK-A510-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-A510-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x float> poison, float [[C1]], i64 0
+; CHECK-A510-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT1]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-A510-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x float> poison, float [[C2]], i64 0
+; CHECK-A510-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT3]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-A510-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <4 x float> poison, float [[C3]], i64 0
+; CHECK-A510-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT5]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-A510-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x float> poison, float [[C4]], i64 0
+; CHECK-A510-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT7]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-A510-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <4 x float> poison, float [[C5]], i64 0
+; CHECK-A510-NEXT:    [[BROADCAST_SPLAT10:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT9]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-A510-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-A510:       [[VECTOR_BODY]]:
+; CHECK-A510-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-A510-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-A510-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 4
+; CHECK-A510-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
+; CHECK-A510-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
+; CHECK-A510-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; CHECK-A510-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[WIDE_LOAD11]], [[BROADCAST_SPLAT]]
+; CHECK-A510-NEXT:    [[TMP4:%.*]] = fadd fast <4 x float> [[TMP2]], [[WIDE_LOAD]]
+; CHECK-A510-NEXT:    [[TMP5:%.*]] = fadd fast <4 x float> [[TMP3]], [[WIDE_LOAD11]]
+; CHECK-A510-NEXT:    [[TMP6:%.*]] = fmul fast <4 x float> [[TMP4]], [[BROADCAST_SPLAT2]]
+; CHECK-A510-NEXT:    [[TMP7:%.*]] = fmul fast <4 x float> [[TMP5]], [[BROADCAST_SPLAT2]]
+; CHECK-A510-NEXT:    [[TMP8:%.*]] = fadd fast <4 x float> [[TMP6]], [[TMP4]]
+; CHECK-A510-NEXT:    [[TMP9:%.*]] = fadd fast <4 x float> [[TMP7]], [[TMP5]]
+; CHECK-A510-NEXT:    [[TMP10:%.*]] = fmul fast <4 x float> [[TMP8]], [[BROADCAST_SPLAT4]]
+; CHECK-A510-NEXT:    [[TMP11:%.*]] = fmul fast <4 x float> [[TMP9]], [[BROADCAST_SPLAT4]]
+; CHECK-A510-NEXT:    [[TMP12:%.*]] = fadd fast <4 x float> [[TMP10]], [[TMP8]]
+; CHECK-A510-NEXT:    [[TMP13:%.*]] = fadd fast <4 x float> [[TMP11]], [[TMP9]]
+; CHECK-A510-NEXT:    [[TMP14:%.*]] = fmul fast <4 x float> [[TMP12]], [[BROADCAST_SPLAT6]]
+; CHECK-A510-NEXT:    [[TMP15:%.*]] = fmul fast <4 x float> [[TMP13]], [[BROADCAST_SPLAT6]]
+; CHECK-A510-NEXT:    [[TMP16:%.*]] = fadd fast <4 x float> [[TMP14]], [[TMP12]]
+; CHECK-A510-NEXT:    [[TMP17:%.*]] = fadd fast <4 x float> [[TMP15]], [[TMP13]]
+; CHECK-A510-NEXT:    [[TMP18:%.*]] = fmul fast <4 x float> [[TMP16]], [[BROADCAST_SPLAT8]]
+; CHECK-A510-NEXT:    [[TMP19:%.*]] = fmul fast <4 x float> [[TMP17]], [[BROADCAST_SPLAT8]]
+; CHECK-A510-NEXT:    [[TMP20:%.*]] = fadd fast <4 x float> [[TMP18]], [[TMP16]]
+; CHECK-A510-NEXT:    [[TMP21:%.*]] = fadd fast <4 x float> [[TMP19]], [[TMP17]]
+; CHECK-A510-NEXT:    [[TMP22:%.*]] = fmul fast <4 x float> [[TMP20]], [[BROADCAST_SPLAT10]]
+; CHECK-A510-NEXT:    [[TMP23:%.*]] = fmul fast <4 x float> [[TMP21]], [[BROADCAST_SPLAT10]]
+; CHECK-A510-NEXT:    [[TMP24:%.*]] = fadd fast <4 x float> [[TMP22]], [[TMP20]]
+; CHECK-A510-NEXT:    [[TMP25:%.*]] = fadd fast <4 x float> [[TMP23]], [[TMP21]]
+; CHECK-A510-NEXT:    store <4 x float> [[TMP24]], ptr [[TMP0]], align 4
+; CHECK-A510-NEXT:    store <4 x float> [[TMP25]], ptr [[TMP1]], align 4
+; CHECK-A510-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-A510-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-A510-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-A510:       [[MIDDLE_BLOCK]]:
+; CHECK-A510-NEXT:    br label %[[EXIT:.*]]
+; CHECK-A510:       [[EXIT]]:
+; CHECK-A510-NEXT:    ret void
+;
+; CHECK-A320-LABEL: define void @large_loop(
+; CHECK-A320-SAME: ptr [[P:%.*]], float [[C0:%.*]], float [[C1:%.*]], float [[C2:%.*]], float [[C3:%.*]], float [[C4:%.*]], float [[C5:%.*]]) #[[ATTR0]] {
+; CHECK-A320-NEXT:  [[ENTRY:.*:]]
+; CHECK-A320-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-A320:       [[VECTOR_PH]]:
+; CHECK-A320-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[C0]], i64 0
+; CHECK-A320-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-A320-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x float> poison, float [[C1]], i64 0
+; CHECK-A320-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT1]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-A320-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x float> poison, float [[C2]], i64 0
+; CHECK-A320-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT3]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-A320-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <4 x float> poison, float [[C3]], i64 0
+; CHECK-A320-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT5]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-A320-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x float> poison, float [[C4]], i64 0
+; CHECK-A320-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT7]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-A320-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <4 x float> poison, float [[C5]], i64 0
+; CHECK-A320-NEXT:    [[BROADCAST_SPLAT10:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT9]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-A320-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-A320:       [[VECTOR_BODY]]:
+; CHECK-A320-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-A320-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[INDEX]]
+; CHECK-A320-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 4
+; CHECK-A320-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 8
+; CHECK-A320-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 12
+; CHECK-A320-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
+; CHECK-A320-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
+; CHECK-A320-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
+; CHECK-A320-NEXT:    [[WIDE_LOAD13:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
+; CHECK-A320-NEXT:    [[TMP4:%.*]] = fmul fast <4 x float> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
+; CHECK-A320-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[WIDE_LOAD11]], [[BROADCAST_SPLAT]]
+; CHECK-A320-NEXT:    [[TMP6:%.*]] = fmul fast <4 x float> [[WIDE_LOAD12]], [[BROADCAST_SPLAT]]
+; CHECK-A320-NEXT:    [[TMP7:%.*]] = fmul fast <4 x float> [[WIDE_LOAD13]], [[BROADCAST_SPLAT]]
+; CHECK-A320-NEXT:    [[TMP8:%.*]] = fadd fast <4 x float> [[TMP4]], [[WIDE_LOAD]]
+; CHECK-A320-NEXT:    [[TMP9:%.*]] = fadd fast <4 x float> [[TMP5]], [[WIDE_LOAD11]]
+; CHECK-A320-NEXT:    [[TMP10:%.*]] = fadd fast <4 x float> [[TMP6]], [[WIDE_LOAD12]]
+; CHECK-A320-NEXT:    [[TMP11:%.*]] = fadd fast <4 x float> [[TMP7]], [[WIDE_LOAD13]]
+; CHECK-A320-NEXT:    [[TMP12:%.*]] = fmul fast <4 x float> [[TMP8]], [[BROADCAST_SPLAT2]]
+; CHECK-A320-NEXT:    [[TMP13:%.*]] = fmul fast <4 x float> [[TMP9]], [[BROADCAST_SPLAT2]]
+; CHECK-A320-NEXT:    [[TMP14:%.*]] = fmul fast <4 x float> [[TMP10]], [[BROADCAST_SPLAT2]]
+; CHECK-A320-NEXT:    [[TMP15:%.*]] = fmul fast <4 x float> [[TMP11]], [[BROADCAST_SPLAT2]]
+; CHECK-A320-NEXT:    [[TMP16:%.*]] = fadd fast <4 x float> [[TMP12]], [[TMP8]]
+; CHECK-A320-NEXT:    [[TMP17:%.*]] = fadd fast <4 x float> [[TMP13]], [[TMP9]]
+; CHECK-A320-NEXT:    [[TMP18:%.*]] = fadd fast <4 x float> [[TMP14]], [[TMP10]]
+; CHECK-A320-NEXT:    [[TMP19:%.*]] = fadd fast <4 x float> [[TMP15]], [[TMP11]]
+; CHECK-A320-NEXT:    [[TMP20:%.*]] = fmul fast <4 x float> [[TMP16]], [[BROADCAST_SPLAT4]]
+; CHECK-A320-NEXT:    [[TMP21:%.*]] = fmul fast <4 x float> [[TMP17]], [[BROADCAST_SPLAT4]]
+; CHECK-A320-NEXT:    [[TMP22:%.*]] = fmul fast <4 x float> [[TMP18]], [[BROADCAST_SPLAT4]]
+; CHECK-A320-NEXT:    [[TMP23:%.*]] = fmul fast <4 x float> [[TMP19]], [[BROADCAST_SPLAT4]]
+; CHECK-A320-NEXT:    [[TMP24:%.*]] = fadd fast <4 x float> [[TMP20]], [[TMP16]]
+; CHECK-A320-NEXT:    [[TMP25:%.*]] = fadd fast <4 x float> [[TMP21]], [[TMP17]]
+; CHECK-A320-NEXT:    [[TMP26:%.*]] = fadd fast <4 x float> [[TMP22]], [[TMP18]]
+; CHECK-A320-NEXT:    [[TMP27:%.*]] = fadd fast <4 x float> [[TMP23]], [[TMP19]]
+; CHECK-A320-NEXT:    [[TMP28:%.*]] = fmul fast <4 x float> [[TMP24]], [[BROADCAST_SPLAT6]]
+; CHECK-A320-NEXT:    [[TMP29:%.*]] = fmul fast <4 x float> [[TMP25]], [[BROADCAST_SPLAT6]]
+; CHECK-A320-NEXT:    [[TMP30:%.*]] = fmul fast <4 x float> [[TMP26]], [[BROADCAST_SPLAT6]]
+; CHECK-A320-NEXT:    [[TMP31:%.*]] = fmul fast <4 x float> [[TMP27]], [[BROADCAST_SPLAT6]]
+; CHECK-A320-NEXT:    [[TMP32:%.*]] = fadd fast <4 x float> [[TMP28]], [[TMP24]]
+; CHECK-A320-NEXT:    [[TMP33:%.*]] = fadd fast <4 x float> [[TMP29]], [[TMP25]]
+; CHECK-A320-NEXT:    [[TMP34:%.*]] = fadd fast <4 x float> [[TMP30]], [[TMP26]]
+; CHECK-A320-NEXT:    [[TMP35:%.*]] = fadd fast <4 x float> [[TMP31]], [[TMP27]]
+; CHECK-A320-NEXT:    [[TMP36:%.*]] = fmul fast <4 x float> [[TMP32]], [[BROADCAST_SPLAT8]]
+; CHECK-A320-NEXT:    [[TMP37:%.*]] = fmul fast <4 x float> [[TMP33]], [[BROADCAST_SPLAT8]]
+; CHECK-A320-NEXT:    [[TMP38:%.*]] = fmul fast <4 x float> [[TMP34]], [[BROADCAST_SPLAT8]]
+; CHECK-A320-NEXT:    [[TMP39:%.*]] = fmul fast <4 x float> [[TMP35]], [[BROADCAST_SPLAT8]]
+; CHECK-A320-NEXT:    [[TMP40:%.*]] = fadd fast <4 x float> [[TMP36]], [[TMP32]]
+; CHECK-A320-NEXT:    [[TMP41:%.*]] = fadd fast <4 x float> [[TMP37]], [[TMP33]]
+; CHECK-A320-NEXT:    [[TMP42:%.*]] = fadd fast <4 x float> [[TMP38]], [[TMP34]]
+; CHECK-A320-NEXT:    [[TMP43:%.*]] = fadd fast <4 x float> [[TMP39]], [[TMP35]]
+; CHECK-A320-NEXT:    [[TMP44:%.*]] = fmul fast <4 x float> [[TMP40]], [[BROADCAST_SPLAT10]]
+; CHECK-A320-NEXT:    [[TMP45:%.*]] = fmul fast <4 x float> [[TMP41]], [[BROADCAST_SPLAT10]]
+; CHECK-A320-NEXT:    [[TMP46:%.*]] = fmul fast <4 x float> [[TMP42]], [[BROADCAST_SPLAT10]]
+; CHECK-A320-NEXT:    [[TMP47:%.*]] = fmul fast <4 x float> [[TMP43]], [[BROADCAST_SPLAT10]]
+; CHECK-A320-NEXT:    [[TMP48:%.*]] = fadd fast <4 x float> [[TMP44]], [[TMP40]]
+; CHECK-A320-NEXT:    [[TMP49:%.*]] = fadd fast <4 x float> [[TMP45]], [[TMP41]]
+; CHECK-A320-NEXT:    [[TMP50:%.*]] = fadd fast <4 x float> [[TMP46]], [[TMP42]]
+; CHECK-A320-NEXT:    [[TMP51:%.*]] = fadd fast <4 x float> [[TMP47]], [[TMP43]]
+; CHECK-A320-NEXT:    store <4 x float> [[TMP48]], ptr [[TMP0]], align 4
+; CHECK-A320-NEXT:    store <4 x float> [[TMP49]], ptr [[TMP1]], align 4
+; CHECK-A320-NEXT:    store <4 x float> [[TMP50]], ptr [[TMP2]], align 4
+; CHECK-A320-NEXT:    store <4 x float> [[TMP51]], ptr [[TMP3]], align 4
+; CHECK-A320-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-A320-NEXT:    [[TMP52:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-A320-NEXT:    br i1 [[TMP52]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-A320:       [[MIDDLE_BLOCK]]:
+; CHECK-A320-NEXT:    br label %[[EXIT:.*]]
+; CHECK-A320:       [[EXIT]]:
+; CHECK-A320-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx = getelementptr inbounds nuw [4 x i8], ptr %p, i64 %iv
+  %val = load float, ptr %arrayidx, align 4
+  %mul0 = fmul fast float %val, %c0
+  %add0 = fadd fast float %mul0, %val
+  %mul1 = fmul fast float %add0, %c1
+  %add1 = fadd fast float %mul1, %add0
+  %mul2 = fmul fast float %add1, %c2
+  %add2 = fadd fast float %mul2, %add1
+  %mul3 = fmul fast float %add2, %c3
+  %add3 = fadd fast float %mul3, %add2
+  %mul4 = fmul fast float %add3, %c4
+  %add4 = fadd fast float %mul4, %add3
+  %mul5 = fmul fast float %add4, %c5
+  %add5 = fadd fast float %mul5, %add4
+  store float %add5, ptr %arrayidx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 !0 = !{!"llvm.loop.vectorize.enable"}
 !1 = distinct !{!1, !0}
 
