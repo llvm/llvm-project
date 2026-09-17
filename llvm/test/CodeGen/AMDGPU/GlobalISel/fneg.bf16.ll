@@ -100,3 +100,105 @@ define amdgpu_ps <2 x bfloat> @fneg_v2bf16_ss(<2 x bfloat> inreg %a) {
   %result = fneg <2 x bfloat> %a
   ret <2 x bfloat> %result
 }
+
+define amdgpu_ps bfloat @fneg_fabs_bf16_vv(bfloat %a) {
+; GFX9-LABEL: fneg_fabs_bf16_vv:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_or_b32_e32 v0, 0x8000, v0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: fneg_fabs_bf16_vv:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_or_b16 v0.l, 0x8000, v0.l
+; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: fneg_fabs_bf16_vv:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_or_b16 v0.l, 0x8000, v0.l
+; GFX1250-NEXT:    ; return to shader part epilog
+  %fabs = call bfloat @llvm.fabs.bf16(bfloat %a)
+  %result = fneg bfloat %fabs
+  ret bfloat %result
+}
+
+define amdgpu_ps bfloat @fneg_fabs_bf16_ss(bfloat inreg %a) {
+; GFX9-LABEL: fneg_fabs_bf16_ss:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_or_b32_e32 v0, 0x8000, v0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: fneg_fabs_bf16_ss:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_bitset1_b32 s0, 15
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: fneg_fabs_bf16_ss:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    s_bitset1_b32 s0, 15
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1250-NEXT:    ; return to shader part epilog
+  %fabs = call bfloat @llvm.fabs.bf16(bfloat %a)
+  %result = fneg bfloat %fabs
+  ret bfloat %result
+}
+
+define amdgpu_ps <2 x bfloat> @fneg_fabs_v2bf16_vv(<2 x bfloat> %a) {
+; GFX9-LABEL: fneg_fabs_v2bf16_vv:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: fneg_fabs_v2bf16_vv:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
+; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: fneg_fabs_v2bf16_vv:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
+; GFX1250-NEXT:    ; return to shader part epilog
+  %fabs = call <2 x bfloat> @llvm.fabs.v2bf16(<2 x bfloat> %a)
+  %result = fneg <2 x bfloat> %fabs
+  ret <2 x bfloat> %result
+}
+
+define amdgpu_ps <2 x bfloat> @fneg_fabs_v2bf16_ss(<2 x bfloat> inreg %a) {
+; GFX9-LABEL: fneg_fabs_v2bf16_ss:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_or_b32 s0, s0, 0x80008000
+; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: fneg_fabs_v2bf16_ss:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_or_b32 s0, s0, 0x80008000
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: fneg_fabs_v2bf16_ss:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    s_or_b32 s0, s0, 0x80008000
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1250-NEXT:    ; return to shader part epilog
+  %fabs = call <2 x bfloat> @llvm.fabs.v2bf16(<2 x bfloat> %a)
+  %result = fneg <2 x bfloat> %fabs
+  ret <2 x bfloat> %result
+}
