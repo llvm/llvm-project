@@ -1146,8 +1146,8 @@ struct ArrayExpressionRecognizer {
     return common::visit([](auto &&s) { return isArrayExpression(s); }, x.u);
   }
 
-  template <TypeCategory C, int K>
-  static bool isArrayExpression(const evaluate::Expr<evaluate::Type<C, K>> &x) {
+  template <TypeCategory C>
+  static bool isArrayExpression(const evaluate::Expr<evaluate::Type<C>> &x) {
     return common::visit([](auto &&s) { return isArrayExpression(s); },
         evaluate::match::deparen(x).u);
   }
@@ -2729,11 +2729,9 @@ struct MetadirectiveConditionNormalizer : evaluate::rewrite::Identity {
     return common::Clone(parentheses.left());
   }
 
-  template <int KIND>
-  evaluate::Expr<evaluate::Type<common::TypeCategory::Logical, KIND>>
-  operator()(evaluate::Expr<evaluate::Type<common::TypeCategory::Logical, KIND>>
-                 &&expr,
-      const evaluate::LogicalOperation<KIND> &operation) {
+  evaluate::Expr<evaluate::Type<common::TypeCategory::Logical>> operator()(
+      evaluate::Expr<evaluate::Type<common::TypeCategory::Logical>> &&expr,
+      const evaluate::LogicalOperation &operation) {
     if ((operation.logicalOperator == evaluate::LogicalOperator::And ||
             operation.logicalOperator == evaluate::LogicalOperator::Or) &&
         operation.left() == operation.right())

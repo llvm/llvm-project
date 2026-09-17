@@ -96,15 +96,16 @@ public:
         extents_{extents}, padWithZero_{padWithZero}, offset_{offset} {
     CHECK(!type.IsPolymorphic());
   }
-  template <typename T> Result Test() {
+  template <typename T> Result Test(int kind) {
     if (T::category != type_.category()) {
       return std::nullopt;
     }
     if constexpr (T::category != TypeCategory::Derived) {
-      if (T::kind != type_.kind()) {
+      if (kind != type_.kind()) {
         return std::nullopt;
       }
     }
+    CHECK_KIND(kind, T);
     using Const = Constant<T>;
     using Scalar = typename Const::Element;
     std::optional<uint64_t> optElements{TotalElementCount(extents_)};
@@ -159,27 +160,28 @@ public:
       return AsGenericExpr(
           Const{derived, std::move(typedValue), std::move(extents_)});
     } else if constexpr (T::category == TypeCategory::Character) {
-      auto length{static_cast<ConstantSubscript>(stride) / T::kind};
+      auto length{static_cast<ConstantSubscript>(stride) / kind};
       llvm::SmallVector<char, 256> buffer;
       const char *data{GetTailPaddedData(offset_, elements * stride, buffer)};
       for (std::size_t j{0}; j < elements; ++j) {
-        typedValue[j] = value::Character<T::kind>::FromRawBytes(
-            data + j * stride, length * T::kind);
+        typedValue[j] = value::CharacterValue::FromRawBytes(
+            kind, data + j * stride, length * kind);
       }
       return AsGenericExpr(
-          Const{length, std::move(typedValue), std::move(extents_)});
+          Const{kind, length, std::move(typedValue), std::move(extents_)});
     } else {
       // Lengthless intrinsic type
       llvm::SmallVector<char, 256> buffer;
       const char *data{GetTailPaddedData(offset_,
-          elements == 0
-              ? 0
-              : (elements - 1) * stride + evaluate::Scalar<T>::bytesStored(),
+          elements == 0 ? 0
+                        : (elements - 1) * stride +
+                  evaluate::Scalar<T>::bytesStored(kind),
           buffer)};
       // TODO endianness
-      LoadSerialValues(
-          data, llvm::MutableArrayRef<evaluate::Scalar<T>>(typedValue), stride);
-      return AsGenericExpr(Const{std::move(typedValue), std::move(extents_)});
+      LoadSerialValues(kind, data,
+          llvm::MutableArrayRef<evaluate::Scalar<T>>(typedValue), stride);
+      return AsGenericExpr(
+          Const{kind, std::move(typedValue), std::move(extents_)});
     }
   }
 
@@ -219,7 +221,7 @@ std::optional<Expr<SomeType>> InitialImage::AsConstant(FoldingContext &context,
     const DynamicType &type, std::optional<std::int64_t> charLength,
     const ConstantSubscripts &extents, bool padWithZero,
     ConstantSubscript offset) const {
-  return common::SearchTypes(AsConstantHelper{
+  return SearchTypes(AsConstantHelper{
       context, type, charLength, extents, *this, padWithZero, offset});
 }
 
