@@ -17,7 +17,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctype.h>
-#include <langinfo.h>
+#if defined(_LIBCPP_BUILDING_LIBRARY)
+#  include <langinfo.h>
+#endif
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>

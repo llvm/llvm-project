@@ -858,15 +858,6 @@ static bool OptimizeAwayTrappingUsesOfLoads(
              "Must be storing *to* the global");
     } else {
       AllNonStoreUsesGone = false;
-
-      // If we get here we could have other crazy uses that are transitively
-      // loaded.
-      assert((isa<PHINode>(GlobalUser) || isa<SelectInst>(GlobalUser) ||
-              isa<ConstantExpr>(GlobalUser) || isa<CmpInst>(GlobalUser) ||
-              isa<BitCastInst>(GlobalUser) ||
-              isa<GetElementPtrInst>(GlobalUser) ||
-              isa<AddrSpaceCastInst>(GlobalUser)) &&
-             "Only expect load and stores!");
     }
   }
 

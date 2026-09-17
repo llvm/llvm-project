@@ -225,7 +225,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
 
   // Check VGPR bank constraints for operand registers across both instructions.
   if (InstInfo.hasInvalidOperand(GetVRegIdx, *TRI, SkipSrc, AllowSameVGPR,
-                                 IsVOPD3))
+                                 IsVOPD3, ST.hasGFX11VOPDInterlockHazard()))
     return false;
 
   LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << MIX

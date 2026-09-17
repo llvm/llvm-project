@@ -33,6 +33,7 @@
 #include "lldb/Utility/ValueType.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectList.h"
+#include "lldb/ValueObject/ValueObjectSynthesizedValue.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -305,8 +306,13 @@ lldb::ValueObjectSP ScriptedFrame::GetValueObjectForFrameVariable(
   if (!values)
     return {};
 
-  return values->FindValueObjectByValueName(
+  lldb::ValueObjectSP valobj_sp = values->FindValueObjectByValueName(
       variable_sp->GetName().AsCString(nullptr));
+  if (!valobj_sp)
+    return {};
+
+  return ValueObjectSynthesizedValue::Create(*valobj_sp,
+                                             variable_sp->GetScope());
 }
 
 lldb::ValueObjectSP ScriptedFrame::FindVariable(ConstString name) {
@@ -315,7 +321,20 @@ lldb::ValueObjectSP ScriptedFrame::FindVariable(ConstString name) {
   if (!values)
     return {};
 
-  return values->FindValueObjectByValueName(name.AsCString(nullptr));
+  lldb::ValueObjectSP valobj_sp =
+      values->FindValueObjectByValueName(name.AsCString(nullptr));
+  if (!valobj_sp)
+    return {};
+
+  // Present the ValueObject under the same ValueType the frame's variable list
+  // would, so reaching a variable by name and by enumeration agree.
+  if (m_variable_list_sp) {
+    if (VariableSP variable_sp = m_variable_list_sp->FindVariable(name))
+      return ValueObjectSynthesizedValue::Create(*valobj_sp,
+                                                 variable_sp->GetScope());
+  }
+
+  return valobj_sp;
 }
 
 lldb::ValueObjectSP ScriptedFrame::GetValueForVariableExpressionPath(
