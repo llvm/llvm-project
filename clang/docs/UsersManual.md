@@ -3199,7 +3199,7 @@ in unused profile data. Consider omitting this option in such cases.
    it provides better call information, which improves the accuracy of
    the profile data.
 
-   On AArch64, Arm SPE branch records can be collected instead:
+   Arm SPE can also be used to collect branch records on AArch64:
 
    ```console
    $ perf record -e arm_spe/branch_filter=1,event_filter=2/ ./code
