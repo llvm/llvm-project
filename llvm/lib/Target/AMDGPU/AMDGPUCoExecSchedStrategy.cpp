@@ -380,7 +380,7 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
 
   default:
     // Default fallback: permissive 8-cycle pattern
-    return CoExecInfo::build(9, "AAAAAAAAA");
+    return CoExecInfo::build(0, 9, "AAAAAAAAA");
   }
 }
 

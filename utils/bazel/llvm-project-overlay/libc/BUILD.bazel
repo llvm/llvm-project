@@ -1480,10 +1480,10 @@ libc_support_library(
 libc_support_library(
     name = "types_char8_t",
     hdrs = ["hdr/types/char8_t.h"],
-    deps = [
-        ":hdr_uchar_overlay",
-        ":llvm_libc_types_char8_t",
-    ],
+    deps = select({
+        ":full_build": [":llvm_libc_types_char8_t"],
+        "//conditions:default": [":hdr_uchar_overlay"],
+    }),
 )
 
 ############################### Support libraries ##############################
@@ -4376,6 +4376,7 @@ libc_support_library(
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
+        ":__support_threads_tcb",
         ":__support_threads_thread_attributes",
         ":hdr_stdint_proxy",
         ":types_struct_sched_param",

@@ -21275,6 +21275,7 @@ The '`llvm.experimental.cttz.elts`' intrinsic counts the trailing (least
 significant) zero elements in a vector. If `src == 0` the result is the
 number of elements in the input vector.
 
+If any element in the input vector is poison, the result is poison.
 
 #### '`llvm.experimental.get.vector.length`' Intrinsic
 
