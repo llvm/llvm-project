@@ -470,7 +470,7 @@ define ptr @test_strip_invariant(ptr %x) {
 ; CHECK-NEXT:    [[X_STRIP:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X]], [[X_STRIP]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret ptr [[X]]
+; CHECK-NEXT:    ret ptr [[X_STRIP]]
 ;
   %x.strip = call ptr @llvm.strip.invariant.group(ptr %x)
   %cmp = icmp eq ptr %x, %x.strip
@@ -484,7 +484,7 @@ define ptr @test_launder_invariant(ptr %x) {
 ; CHECK-NEXT:    [[X_LAUNDER:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[X]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X]], [[X_LAUNDER]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret ptr [[X]]
+; CHECK-NEXT:    ret ptr [[X_LAUNDER]]
 ;
   %x.launder = call ptr @llvm.launder.invariant.group(ptr %x)
   %cmp = icmp eq ptr %x, %x.launder
