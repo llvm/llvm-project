@@ -11175,7 +11175,7 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
 }
 
 unsigned SIInstrInfo::getBlockingCycles(const MachineInstr &MI) const {
-  if (!ST.hasGFX1250Insts())
+  if (!ST.hasGFX1250VALUBlockingCycles())
     return 0;
 
   // Use processor-specific lookup table
