@@ -2730,6 +2730,10 @@ public:
   /// Returns true if only scalar values will be generated.
   bool onlyScalarsGenerated(bool IsScalable);
 
+  /// Return the cost of this VPWidenPointerInductionRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.

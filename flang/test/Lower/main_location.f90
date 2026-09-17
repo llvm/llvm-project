@@ -5,6 +5,9 @@
 ! Check that the missing optional program-stmt (R1401)
 ! does not result in unknown source location of the corresponding
 ! function.
+!
+! Also check that the generated `main` entry point is attributed to the start
+! of the main program unit rather than to its end-stmt.
 
 !--- test1.f90
 if (.false.) then
@@ -16,6 +19,9 @@ end
 ! TEST1-NEXT: return loc("{{.*}}test1.f90":3:1)
 ! TEST1-NEXT: } loc("{{.*}}test1.f90":1:1)
 
+! TEST1: func.func @main(%{{.*}}: i32 loc("{{.*}}test1.f90":1:1)
+! TEST1: } loc("{{.*}}test1.f90":1:1)
+
 !--- test2.f90
 !!! keep me here
 if (.true.) then
@@ -26,3 +32,6 @@ end program
 ! TEST2-NEXT: fir.dummy_scope : !fir.dscope loc("{{.*}}test2.f90":2:1)
 ! TEST2-NEXT: return loc("{{.*}}test2.f90":4:1)
 ! TEST2-NEXT: } loc("{{.*}}test2.f90":2:1)
+
+! TEST2: func.func @main(%{{.*}}: i32 loc("{{.*}}test2.f90":2:1)
+! TEST2: } loc("{{.*}}test2.f90":2:1)

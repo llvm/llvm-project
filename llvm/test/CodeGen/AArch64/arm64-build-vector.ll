@@ -74,8 +74,8 @@ define void @widen_f16_build_vector(ptr %addr) {
 ; CHECK-SD-LABEL: widen_f16_build_vector:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov w8, #13294 // =0x33ee
-; CHECK-SD-NEXT:    movk w8, #13294, lsl #16
-; CHECK-SD-NEXT:    str w8, [x0]
+; CHECK-SD-NEXT:    dup v0.4h, w8
+; CHECK-SD-NEXT:    str s0, [x0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: widen_f16_build_vector:

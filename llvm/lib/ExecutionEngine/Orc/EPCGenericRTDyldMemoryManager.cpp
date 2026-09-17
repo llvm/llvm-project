@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/EPCGenericRTDyldMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h"
 #include "llvm/Support/Alignment.h"
@@ -23,14 +24,17 @@ Expected<std::unique_ptr<EPCGenericRTDyldMemoryManager>>
 EPCGenericRTDyldMemoryManager::CreateWithDefaultBootstrapSymbols(
     ExecutorProcessControl &EPC) {
   SymbolAddrs SAs;
-  if (auto Err = EPC.getBootstrapSymbols(
-          {{SAs.Instance, rt::sps_ci::SimpleNativeMemoryMapInstanceName},
-           {SAs.Reserve, rt::sps_ci::MemMgrReserve::Name},
-           {SAs.Initialize, rt::sps_ci::MemMgrInitialize::Name},
-           {SAs.Release, rt::sps_ci::MemMgrRelease::Name},
-           {SAs.RegisterEHFrame, rt::RegisterEHFrameSectionAllocActionName},
-           {SAs.DeregisterEHFrame,
-            rt::DeregisterEHFrameSectionAllocActionName}}))
+  if (auto Err = lookupAndApply(
+          EPC.getExecutionSession().getBootstrapJITDylib(),
+          {recordAddr(rt::sps_ci::SimpleNativeMemoryMapInstanceName,
+                      &SAs.Instance),
+           recordAddr(rt::sps_ci::MemMgrReserve::Name, &SAs.Reserve),
+           recordAddr(rt::sps_ci::MemMgrInitialize::Name, &SAs.Initialize),
+           recordAddr(rt::sps_ci::MemMgrRelease::Name, &SAs.Release),
+           recordAddr(rt::RegisterEHFrameSectionAllocActionName,
+                      &SAs.RegisterEHFrame),
+           recordAddr(rt::DeregisterEHFrameSectionAllocActionName,
+                      &SAs.DeregisterEHFrame)}))
     return std::move(Err);
   return std::make_unique<EPCGenericRTDyldMemoryManager>(EPC, std::move(SAs));
 }

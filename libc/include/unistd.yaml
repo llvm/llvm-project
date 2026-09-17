@@ -20,15 +20,31 @@ macros:
     macro_header: unistd-macros.h
   - macro_name: _SC_OPEN_MAX
     macro_header: unistd-macros.h
+  - macro_name: _SC_VERSION
+    macro_header: unistd-macros.h
   - macro_name: _SC_PAGESIZE
     macro_header: unistd-macros.h
   - macro_name: _SC_PAGE_SIZE
     macro_header: unistd-macros.h
   - macro_name: _SC_THREADS
     macro_header: unistd-macros.h
+  - macro_name: _SC_THREAD_SAFE_FUNCTIONS
+    macro_header: unistd-macros.h
   - macro_name: _SC_GETGR_R_SIZE_MAX
     macro_header: unistd-macros.h
   - macro_name: _SC_GETPW_R_SIZE_MAX
+    macro_header: unistd-macros.h
+  - macro_name: _SC_THREAD_ATTR_STACKADDR
+    macro_header: unistd-macros.h
+  - macro_name: _SC_THREAD_ATTR_STACKSIZE
+    macro_header: unistd-macros.h
+  - macro_name: _SC_THREAD_PRIORITY_SCHEDULING
+    macro_header: unistd-macros.h
+  - macro_name: _SC_THREAD_PRIO_INHERIT
+    macro_header: unistd-macros.h
+  - macro_name: _SC_THREAD_PRIO_PROTECT
+    macro_header: unistd-macros.h
+  - macro_name: _SC_THREAD_PROCESS_SHARED
     macro_header: unistd-macros.h
   - macro_name: _SC_NPROCESSORS_CONF
     macro_header: unistd-macros.h
@@ -36,7 +52,39 @@ macros:
     macro_header: unistd-macros.h
   - macro_name: _SC_PHYS_PAGES
     macro_header: unistd-macros.h
+  - macro_name: _SC_THREAD_CPUTIME
+    macro_header: unistd-macros.h
+  - macro_name: _SC_THREAD_SPORADIC_SERVER
+    macro_header: unistd-macros.h
+  - macro_name: _SC_THREAD_ROBUST_PRIO_INHERIT
+    macro_header: unistd-macros.h
+  - macro_name: _SC_THREAD_ROBUST_PRIO_PROTECT
+    macro_header: unistd-macros.h
+  - macro_name: _POSIX_VERSION
+    macro_header: unistd-macros.h
   - macro_name: _POSIX_THREADS
+    macro_header: unistd-macros.h
+  - macro_name: _POSIX_THREAD_SAFE_FUNCTIONS
+    macro_header: unistd-macros.h
+  - macro_name: _POSIX_THREAD_ATTR_STACKADDR
+    macro_header: unistd-macros.h
+  - macro_name: _POSIX_THREAD_ATTR_STACKSIZE
+    macro_header: unistd-macros.h
+  - macro_name: _POSIX_THREAD_PROCESS_SHARED
+    macro_header: unistd-macros.h
+  - macro_name: _POSIX_THREAD_PRIORITY_SCHEDULING
+    macro_header: unistd-macros.h
+  - macro_name: _POSIX_THREAD_CPUTIME
+    macro_header: unistd-macros.h
+  - macro_name: _POSIX_THREAD_PRIO_INHERIT
+    macro_header: unistd-macros.h
+  - macro_name: _POSIX_THREAD_PRIO_PROTECT
+    macro_header: unistd-macros.h
+  - macro_name: _POSIX_THREAD_ROBUST_PRIO_INHERIT
+    macro_header: unistd-macros.h
+  - macro_name: _POSIX_THREAD_ROBUST_PRIO_PROTECT
+    macro_header: unistd-macros.h
+  - macro_name: _POSIX_THREAD_SPORADIC_SERVER
     macro_header: unistd-macros.h
 types:
   - type_name: uid_t
