@@ -7610,8 +7610,8 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
   }
 }
 
-static void ReplaceINTRINSIC_WO_CHAIN(
-    SDNode *N, SelectionDAG &DAG, SmallVectorImpl<SDValue> &Results) {
+static void ReplaceINTRINSIC_WO_CHAIN(SDNode *N, SelectionDAG &DAG,
+                                      SmallVectorImpl<SDValue> &Results) {
   assert(N->getValueType(0) == MVT::v1f32 &&
          "Custom handling of non-v1f32 intrinsic?");
 
@@ -7626,11 +7626,11 @@ static void ReplaceINTRINSIC_WO_CHAIN(
   SDLoc DL(N);
   SDValue ScalarOperand =
       DAG.getExtractVectorElt(DL, MVT::f32, N->getOperand(1), 0);
-  SDValue ScalarResult = DAG.getNode(
-      ISD::INTRINSIC_WO_CHAIN, DL, MVT::f32,
-      {N->getOperand(0), ScalarOperand}, N->getFlags());
-  Results.push_back(DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v1f32,
-                                ScalarResult));
+  SDValue ScalarResult =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::f32,
+                  {N->getOperand(0), ScalarOperand}, N->getFlags());
+  Results.push_back(
+      DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v1f32, ScalarResult));
 }
 
 static void ReplaceCopyFromReg_128(SDNode *N, SelectionDAG &DAG,
