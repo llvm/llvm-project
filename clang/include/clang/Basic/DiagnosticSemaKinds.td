@@ -38,6 +38,12 @@ defm template_outside_of_template : CXX11Compat<
   "use of 'template' keyword outside of a template is">;
 defm explicit_conversion_functions : CXX11Compat<
   "explicit conversion functions are">;
+defm cast_fn_obj : CXX11Compat<
+  "cast between pointer-to-function and pointer-to-object is",
+  /*ext_warn*/false>;
+defm array_size_conversion : CXX11Compat<
+  "implicit conversion from array size expression of type %0 to "
+  "%select{integral|enumeration}1 type %2 is", /*ext_warn*/false>;
 
 // C++14 compatibility with C++11 and earlier.
 defm constexpr_type_definition : CXX14Compat<
@@ -3874,6 +3880,9 @@ def warn_dllimport_dropped_from_inline_function : Warning<
 def warn_nothrow_attribute_ignored : Warning<"'nothrow' attribute conflicts with"
   " exception specification; attribute ignored">,
   InGroup<IgnoredAttributes>;
+def warn_dllattr_ignored_already_instantiated : Warning<
+  "%0 attribute ignored; class template is already instantiated">,
+  InGroup<IgnoredAttributes>;
 def warn_dllattr_ignored_exclusion_takes_precedence : Warning<
   "%0 attribute ignored; %1 takes precedence">,
   InGroup<IgnoredAttributes>;
@@ -3997,6 +4006,9 @@ def err_attribute_dllimport_static_field_definition : Error<
 def warn_attribute_dllimport_static_field_definition : Warning<
   "definition of dllimport static field">,
   InGroup<DiagGroup<"dllimport-static-field-def">>;
+def warn_attribute_dllimport_explicit_instantiation_def : Warning<
+  "'dllimport' attribute ignored on explicit instantiation definition">,
+  InGroup<IgnoredAttributes>;
 def warn_attribute_dllexport_explicit_instantiation_decl : Warning<
   "explicit instantiation declaration should not be 'dllexport'">,
   InGroup<DllexportExplicitInstantiationDecl>;
@@ -4211,6 +4223,9 @@ def err_overflow_behavior_unknown_ident
 def err_overflow_behavior_non_integer_type
     : Error<"%0 %select{attribute|specifier}2 cannot be applied to "
             "non-integer type '%1'">;
+def err_overflow_behavior_atomic_type
+    : Error<"%0 %select{attribute|specifier}2 cannot be applied to atomic type "
+            "'%1'">;
 def err_conflicting_overflow_behaviors
     : Error<"conflicting %select{'overflow_behavior' attributes|overflow "
             "behavior specification; specifier specifies '%1' but attribute "
@@ -6345,6 +6360,8 @@ def err_fold_expression_limit_exceeded: Error<
   "instantiating fold expression with %0 arguments exceeded expression nesting "
   "limit of %1">, DefaultFatal, NoSFINAE;
 
+def note_function_like_macro_requires_parens
+    : Note<"'%0' defined here as a function-like macro">;
 def err_unexpected_typedef : Error<
   "unexpected type name %0: expected expression">;
 def err_unexpected_namespace : Error<
@@ -7520,8 +7537,8 @@ def err_func_def_incomplete_result : Error<
 def err_atomic_specifier_bad_type
     : Error<"_Atomic cannot be applied to "
             "%select{incomplete |array |function |reference |atomic |qualified "
-            "|sizeless ||integer |}0type "
-            "%1 %select{|||||||which is not trivially copyable||in C23}0">;
+            "|sizeless ||integer ||overflow behavior }0type "
+            "%1 %select{|||||||which is not trivially copyable||in C23|}0">;
 def warn_atomic_member_access : Warning<
   "accessing a member of an atomic structure or union is undefined behavior">,
   InGroup<DiagGroup<"atomic-access">>, DefaultError;
@@ -8544,14 +8561,9 @@ def ext_bad_cxx_cast_qualifiers_away_incoherent : ExtWarn<
 def err_bad_const_cast_dest : Error<
   "%select{const_cast||||C-style cast|functional-style cast|}0 to %2, "
   "which is not a reference, pointer-to-object, or pointer-to-data-member">;
-def ext_cast_fn_obj : Extension<
-  "cast between pointer-to-function and pointer-to-object is an extension">;
 def ext_ms_cast_fn_obj : ExtWarn<
   "static_cast between pointer-to-function and pointer-to-object is a "
   "Microsoft extension">, InGroup<MicrosoftCast>;
-def warn_cxx98_compat_cast_fn_obj : Warning<
-  "cast between pointer-to-function and pointer-to-object is incompatible with C++98">,
-  InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def err_bad_reinterpret_cast_small_int : Error<
   "cast from pointer to smaller type %2 loses information">;
 def err_bad_cxx_cast_vector_to_scalar_different_size : Error<
@@ -8651,14 +8663,6 @@ def note_array_size_conversion : Note<
 def err_array_size_ambiguous_conversion : Error<
   "ambiguous conversion of array size expression of type %0 to an integral or "
   "enumeration type">;
-def ext_array_size_conversion : Extension<
-  "implicit conversion from array size expression of type %0 to "
-  "%select{integral|enumeration}1 type %2 is a C++11 extension">,
-  InGroup<CXX11>;
-def warn_cxx98_compat_array_size_conversion : Warning<
-  "implicit conversion from array size expression of type %0 to "
-  "%select{integral|enumeration}1 type %2 is incompatible with C++98">,
-  InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def err_address_space_qualified_new : Error<
   "'new' cannot allocate objects of type %0 in address space '%1'">;
 def err_address_space_qualified_delete : Error<
@@ -11689,6 +11693,8 @@ def err_undeclared_use_suggest : Error<
   "use of undeclared %0; did you mean %1?">;
 def err_undeclared_var_use_suggest : Error<
   "use of undeclared identifier %0; did you mean %1?">;
+def err_undeclared_var_use_suggest_func_like_macro : Error<
+  "'%0' is defined as a function-like macro; did you mean '%0(...)'?">;
 def err_no_template : Error<"no template named %0">;
 def err_no_template_suggest : Error<"no template named %0; did you mean %1?">;
 def err_no_member_template : Error<"no template named %0 in %1">;
@@ -13674,16 +13680,13 @@ def err_hlsl_missing_semantic_annotation : Error<
   "function or patch constant function">;
 def note_hlsl_semantic_used_here : Note<"%0 used here">;
 def err_hlsl_unknown_semantic : Error<"unknown HLSL semantic %0">;
-def err_hlsl_semantic_output_not_supported
-    : Error<"semantic %0 does not support output">;
 def err_hlsl_semantic_indexing_not_supported
     : Error<"semantic %0 does not allow indexing">;
 def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 def err_hlsl_semantic_index_overlap : Error<"semantic index overlap %0">;
 def err_hlsl_semantic_unsupported_iotype_for_stage
-    : Error<"semantic %0 is unsupported in %2 shaders as %1, requires one of "
-            "the following: %3">;
+    : Error<"semantic %0 is not supported in %1 shader %2">;
 def err_hlsl_semantic_partial_explicit_indexing
     : Error<"partial explicit stage input location assignment via "
             "vk::location(X) unsupported">;
@@ -13836,6 +13839,9 @@ def err_hlsl_gathercmp_invalid_component
 
 def err_hlsl_resource_member_array_access_not_constant
     : Error<"index for struct array inside cbuffer that contains resources must be a constant integer expression">;
+
+def err_matrix_logical_operations_supported_for_hlsl : Error<
+  "matix logical operations are only supported for HLSL">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

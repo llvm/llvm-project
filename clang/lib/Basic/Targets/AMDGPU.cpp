@@ -197,11 +197,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                   ? (Opts.CPU.empty() ? llvm::AMDGPU::getGPUKindFromSubArch(
                                             Triple.getSubArch())
                                       : llvm::AMDGPU::parseArchAMDGCN(Opts.CPU))
-                  : llvm::AMDGPU::parseArchR600(Opts.CPU)),
-      GPUFeatures(
-          Triple.isAMDGCN()
-              ? llvm::AMDGPU::FEATURE_NONE
-              : static_cast<unsigned>(llvm::AMDGPU::getArchAttrR600(GPUKind))) {
+                  : llvm::AMDGPU::parseArchR600(Opts.CPU)) {
   resetDataLayout();
 
   AddrSpaceMap = &AMDGPUAddrSpaceMap;

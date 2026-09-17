@@ -51,6 +51,15 @@ enum AMDGPUFeature : unsigned {
 
 using AMDGPUFeatureBitset = Bitset<NUM_FEATURES>;
 
+/// One enumerator per frontend-visible R600 feature bit; R600_NUM_FEATURES is
+/// the count.
+enum R600Feature : unsigned {
+#define GET_R600_FEATURE_ENUM
+#include "llvm/TargetParser/R600TargetParserDef.inc"
+};
+
+using R600FeatureBitset = Bitset<R600_NUM_FEATURES>;
+
 /// Instruction set architecture version.
 struct IsaVersion {
   uint8_t Major;
@@ -62,43 +71,6 @@ struct IsaVersion {
            Stepping == Other.Stepping;
   }
   bool operator!=(const IsaVersion &Other) const { return !(*this == Other); }
-};
-
-// This isn't comprehensive for now, just things that are needed from the
-// frontend driver.
-enum R600FeatureKind : uint32_t {
-  R600_FEATURE_NONE = 0,
-
-  // Has fma instructions.
-  R600_FEATURE_FMA = 1 << 0,
-};
-
-// GFX6+ features. This isn't comprehensive for now, just things that are needed
-// from the frontend driver.
-enum ArchFeatureKind : uint32_t {
-  FEATURE_NONE = 0,
-
-  // Common features.
-  FEATURE_FAST_FMA_F32 = 1 << 0,
-  FEATURE_FAST_DENORMAL_F32 = 1 << 1,
-
-  // Wavefront 32 is available.
-  FEATURE_WAVE32 = 1 << 2,
-
-  // Xnack is available.
-  FEATURE_XNACK = 1 << 3,
-
-  // Sram-ecc is available.
-  FEATURE_SRAMECC = 1 << 4,
-
-  // WGP mode is supported.
-  FEATURE_WGP = 1 << 5,
-
-  // Xnack on/off modes are supported.
-  FEATURE_XNACK_ON_OFF_MODES = 1 << 6,
-
-  // VI SGPR initialization bug requiring a fixed SGPR allocation size.
-  FEATURE_SGPR_INIT_BUG = 1 << 7
 };
 
 enum FeatureError : uint32_t {
@@ -167,16 +139,12 @@ LLVM_ABI StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
 LLVM_ABI GPUKind parseArchAMDGCN(StringRef CPU);
 LLVM_ABI GPUKind parseArchR600(StringRef CPU);
 LLVM_ABI GPUKind getGPUKindFromSubArch(Triple::SubArchType SubArch);
-/// \deprecated Use getFeatureBitset and test the relevant FEAT_* bits instead.
-/// The legacy ArchFeatureKind bitfield is being removed.
-LLVM_DEPRECATED("use getFeatureBitset instead", "getFeatureBitset")
-LLVM_ABI unsigned getArchAttrAMDGCN(GPUKind AK);
-LLVM_DEPRECATED("use getFeatureBitset instead", "getFeatureBitset")
-LLVM_ABI unsigned getArchAttrAMDGCN(Triple::SubArchType SubArch);
-LLVM_ABI R600FeatureKind getArchAttrR600(GPUKind AK);
 
 /// Returns \p AK's feature bitset, or an empty bitset if unknown.
 LLVM_ABI const AMDGPUFeatureBitset &getFeatureBitset(GPUKind AK);
+
+/// Returns R600 GPU \p AK's feature bitset, or an empty bitset if unknown.
+LLVM_ABI const R600FeatureBitset &getFeatureBitsetR600(GPUKind AK);
 
 /// Appends the feature name of each bit set in \p Features to \p Names.
 LLVM_ABI void getFeatureNames(const AMDGPUFeatureBitset &Features,
@@ -224,12 +192,50 @@ LLVM_ABI unsigned getAddressableNumVGPRs(GPUKind AK, bool IsWave32);
 LLVM_ABI unsigned getAddressableNumVGPRs(Triple::SubArchType SubArch,
                                          bool IsWave32);
 
-/// \returns Maximum LDS in bytes a single work-group can address. This is a
-/// fixed hardware cap and does not depend on how many SIMDs a work-group runs
-/// on.
+/// LDS size queries.
+///
+/// \c getMaxHWAddressableLocalMemorySize returns the architectural limit that
+/// one work-group can address. It is independent of execution mode.
+///
+/// \c getLocalMemorySize returns the LDS available to all work-groups sharing a
+/// physical block, which is the LDS capacity used to compute occupancy. In
+/// full-SIMD mode, a work-group runs on four SIMDs and the query returns the
+/// full physical block. In half-SIMD mode, it runs on two SIMDs and the query
+/// returns half the block.
+///
+/// \c getAddressableLocalMemorySize returns the amount one work-group can
+/// allocate:
+///
+///   min(getMaxHWAddressableLocalMemorySize(), getLocalMemorySize())
+///
+/// The physical LDS block belongs to a WGP on gfx10/11/12 and to a CU
+/// otherwise. On gfx6 and gfx10/11/12, the block is twice the address limit, so
+/// a work-group cannot address the entire block in full-SIMD mode.
+///
+/// The mode columns below show local/addressable LDS, in KiB:
+///
+///   GPU      address limit   full-SIMD   half-SIMD
+///   gfx600              32        64/32   n/a (always full-SIMD)
+///   gfx900              64        64/64   n/a (always full-SIMD)
+///   gfx1030             64       128/64   64/64
+///   gfx1250            320      320/320   n/a (always full-SIMD)
+
+/// \returns Maximum LDS in bytes a single work-group can address.
 LLVM_ABI unsigned getMaxHWAddressableLocalMemorySize(GPUKind AK);
 LLVM_ABI unsigned
 getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch);
+
+/// \returns Total LDS in bytes available to work-groups sharing a physical
+/// block. \p FullSIMDMode selects full-SIMD mode (four SIMDs) when true and
+/// half-SIMD mode (two SIMDs) otherwise.
+LLVM_ABI unsigned getLocalMemorySize(GPUKind AK, bool FullSIMDMode);
+LLVM_ABI unsigned getLocalMemorySize(Triple::SubArchType SubArch,
+                                     bool FullSIMDMode);
+
+/// \returns LDS in bytes a single work-group can allocate.
+LLVM_ABI unsigned getAddressableLocalMemorySize(GPUKind AK, bool FullSIMDMode);
+LLVM_ABI unsigned getAddressableLocalMemorySize(Triple::SubArchType SubArch,
+                                                bool FullSIMDMode);
 
 /// \returns Number of LDS banks per compute unit.
 LLVM_ABI unsigned getLDSBankCount(GPUKind AK);
@@ -243,6 +249,12 @@ constexpr unsigned getNumWorkGroupSIMDs(bool FullSIMDMode) {
 
 /// \returns Minimum number of waves per execution unit.
 constexpr unsigned getMinWavesPerEU() { return 1; }
+
+/// \returns Number of bits in the num_records field in a buffer resource,
+/// or nullopt if it is not known concretely.
+LLVM_ABI std::optional<unsigned> getBufferResourceNumRecordsWidth(GPUKind AK);
+LLVM_ABI std::optional<unsigned>
+getBufferResourceNumRecordsWidth(Triple::SubArchType SubArch);
 
 /// \returns Maximum number of waves per execution unit without any kind of
 /// limitation.
