@@ -3527,9 +3527,15 @@ private:
       if (e->isA<Fortran::parser::NonLabelDoStmt>())
         continue;
       if (e->isDirective()) {
-        mlir::emitWarning(genLocation(e->position),
-                          "compiler directive ignored: it appears between "
-                          "loop levels of a collapsed or tiled loop nest");
+        // Directive evaluations carry no position (enterConstructOrDirective
+        // in PFTBuilder.cpp creates them without one), so e->position maps to
+        // an unknown location; point the warning at the directive's own
+        // source text instead.
+        mlir::Location loc = genLocation(e->position);
+        if (const auto *dir = e->getIf<Fortran::parser::CompilerDirective>())
+          loc = genLocation(dir->source);
+        mlir::emitWarning(loc, "compiler directive ignored: it appears between "
+                               "loop levels of a collapsed or tiled loop nest");
         continue;
       }
       TODO(genLocation(e->position),
