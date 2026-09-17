@@ -452,10 +452,12 @@ LLVM_ABI const Value *
 getArgumentAliasingToReturnedPointer(const CallBase *Call,
                                      bool MustPreserveOffset,
                                      bool MustPreserveProvenance = false);
-inline Value *getArgumentAliasingToReturnedPointer(CallBase *Call,
-                                                   bool MustPreserveOffset) {
+inline Value *
+getArgumentAliasingToReturnedPointer(CallBase *Call, bool MustPreserveOffset,
+                                     bool MustPreserveProvenance = false) {
   return const_cast<Value *>(getArgumentAliasingToReturnedPointer(
-      const_cast<const CallBase *>(Call), MustPreserveOffset));
+      const_cast<const CallBase *>(Call), MustPreserveOffset,
+      MustPreserveProvenance));
 }
 
 /// {launder,strip}.invariant.group returns pointer that aliases its argument,
