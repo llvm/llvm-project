@@ -26,6 +26,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator.h"
 #include <cassert>
 #include <cstddef>
@@ -143,6 +144,17 @@ public:
     auto tempVal = nodeVisitNumbers[Old];
     nodeVisitNumbers[New] = tempVal;
     nodeVisitNumbers.erase(Old);
+  }
+
+  /// Returns a filter iterator range containing only nodes from the input
+  /// that haven't been visited (yet) by this scc_iterator.
+  /// This function is only meant to be used after the full iterator has been
+  /// run from beginning to end.
+  // Otherwise the set will contain intermediate results.
+  template <typename RangeT> auto getUnvisitedNodes(RangeT &&Nodes) const {
+    return make_filter_range(std::forward<RangeT>(Nodes), [this](NodeRef N) {
+      return !nodeVisitNumbers.contains(N);
+    });
   }
 };
 
