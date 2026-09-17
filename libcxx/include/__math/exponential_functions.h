@@ -26,7 +26,9 @@ namespace __math {
 
 // exp
 
-inline _LIBCPP_HIDE_FROM_ABI float exp(float __x) _NOEXCEPT { return __builtin_expf(__x); }
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI float exp(float __x) _NOEXCEPT {
+  return __builtin_expf(__x);
+}
 
 template <class = int>
 _LIBCPP_HIDE_FROM_ABI double exp(double __x) _NOEXCEPT {
