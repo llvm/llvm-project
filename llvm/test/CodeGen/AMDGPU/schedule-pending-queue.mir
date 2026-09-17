@@ -3,12 +3,15 @@
 
 # Check that cycle counts are consistent with hazards.
 
-# CHECK: Cycle: 3 TopQ.A
-# CHECK: hazard:  SU(6) HWXDL[0]=9c, is later than CurrCycle = 3c
-# CHECK-NOT: Cycle: 9 TopQ.A
-# CHECK: Cycle: 83 TopQ.A
 # CHECK: Checking pending node SU(6)
-# CHECK: Move SU(6) into Available Q
+# CHECK: hazard:  SU(6) HWVALU[0]=3c, is later than CurrCycle = 2c
+# CHECK: Scheduling SU(7) %5.sub0:vreg_128_align2 = V_ADD_U32_e32 %4.sub0:vreg_128, %1:vgpr_32, implicit $exec
+# CHECK:  *** Stall until: 80
+# CHECK:  HWVALU +1x1u
+# CHECK: Resource conflict: HWVALU[0] reserved until @3
+# CHECK: Scheduling SU(6) %3:areg_512 = V_MFMA_F32_16X16X1F32_mac_e64 %2:vgpr_32, %1:vgpr_32, %3:areg_512(tied-def 0), 0, 0, 0, implicit $mode, implicit $exec
+# CHECK:  HWVALU +2x1u
+# CHECK:  HWXDL +8x1u
 
 ---
 name:            pending_queue_ready_cycle
