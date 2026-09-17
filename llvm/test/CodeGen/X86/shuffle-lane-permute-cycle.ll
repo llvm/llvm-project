@@ -3,7 +3,7 @@
 
 ; This shuffle used to bounce between two masks, causing an infinite loop
 ; during legalization.
-define <64 x i8> @shuffle_v64i8_lane_permute_cycle(<48 x i8> %a) {
+define <64 x i8> @PR224266(<48 x i8> %a) {
 ; CHECK-LABEL: shuffle_v64i8_lane_permute_cycle:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [0,1,1,2,3,4,4,5]
