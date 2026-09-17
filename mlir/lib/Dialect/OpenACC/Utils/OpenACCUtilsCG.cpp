@@ -666,10 +666,10 @@ MapFlags computeDataClauseMapFlags(Operation *entryOp, bool ptrAndObj) {
     flags = flags | MapFlags::no_create;
     break;
   case DataClause::acc_attach:
-  case DataClause::acc_detach:
-    // The consuming op gives the direction; this only states that the mapping
-    // is a pointer attachment rather than a mapping of the target.
     flags = flags | MapFlags::attach;
+    break;
+  case DataClause::acc_detach:
+    flags = flags | MapFlags::detach;
     break;
   default:
     break;
