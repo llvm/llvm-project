@@ -18,10 +18,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Types.h"
 #include "llvm/Support/Error.h"
-
-namespace llvm::vfs {
-class FileSystem;
-} // namespace llvm::vfs
+#include "llvm/Support/VirtualFileSystemFwd.h"
 
 namespace clang {
 class DiagnosticsEngine;
