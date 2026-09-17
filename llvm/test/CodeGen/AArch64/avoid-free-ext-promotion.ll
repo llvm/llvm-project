@@ -14,9 +14,9 @@ define void @avoid_promotion_1_and(ptr nocapture noundef %arg, ptr %p) {
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    ldr w8, [x0, #52]
 ; CHECK-NEXT:    mov w9, #10 ; =0xa
+; CHECK-NEXT:    cmp w8, #3
 ; CHECK-NEXT:  LBB0_1: ; %bb8
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmp w8, #3
 ; CHECK-NEXT:    b.lo LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb9
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1
