@@ -95,6 +95,7 @@ public:
   bool isGeneric() const { return V == TargetArch::Generic; }
   bool isUnused() const { return V == TargetArch::Unused; }
   bool isUnknown() const { return V == TargetArch::Unknown; }
+  bool isUnknownOrUnused() const { return isUnknown() || isUnused(); }
 
   // Only valid when isNVPTX() / isAMDGPU() / isIntelIGCA() respectively.
   llvm::NVPTX::GPUKind nvptxKind() const {
