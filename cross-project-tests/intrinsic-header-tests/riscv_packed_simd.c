@@ -4460,6 +4460,72 @@ int64_t test_maccsu_w11_i64(int64_t rd, int32x2_t a, uint32x2_t b) {
   return __riscv_maccsu_w11_i64(rd, a, b);
 }
 
+// CHECK-LABEL: test_pst_i8x4:
+// CHECK-COUNT-4: sb{{[[:space:]]}}
+void test_pst_i8x4(int8_t *p, int8x4_t v) { __riscv_pst_i8x4(p, v); }
+
+// CHECK-LABEL: test_pst_u8x4:
+// CHECK-COUNT-4: sb{{[[:space:]]}}
+void test_pst_u8x4(uint8_t *p, uint8x4_t v) { __riscv_pst_u8x4(p, v); }
+
+// CHECK-LABEL: test_pst_i16x2:
+// CHECK-COUNT-4: sb{{[[:space:]]}}
+void test_pst_i16x2(int16_t *p, int16x2_t v) { __riscv_pst_i16x2(p, v); }
+
+// CHECK-LABEL: test_pst_u16x2:
+// CHECK-COUNT-4: sb{{[[:space:]]}}
+void test_pst_u16x2(uint16_t *p, uint16x2_t v) { __riscv_pst_u16x2(p, v); }
+
+// CHECK-LABEL: test_pst_i8x8:
+// CHECK-COUNT-8: sb{{[[:space:]]}}
+void test_pst_i8x8(int8_t *p, int8x8_t v) { __riscv_pst_i8x8(p, v); }
+
+// CHECK-LABEL: test_pst_u8x8:
+// CHECK-COUNT-8: sb{{[[:space:]]}}
+void test_pst_u8x8(uint8_t *p, uint8x8_t v) { __riscv_pst_u8x8(p, v); }
+
+// CHECK-LABEL: test_pst_i16x4:
+// CHECK-COUNT-8: sb{{[[:space:]]}}
+void test_pst_i16x4(int16_t *p, int16x4_t v) { __riscv_pst_i16x4(p, v); }
+
+// CHECK-LABEL: test_pst_u16x4:
+// CHECK-COUNT-8: sb{{[[:space:]]}}
+void test_pst_u16x4(uint16_t *p, uint16x4_t v) { __riscv_pst_u16x4(p, v); }
+
+// CHECK-LABEL: test_pst_i32x2:
+// CHECK-COUNT-8: sb{{[[:space:]]}}
+void test_pst_i32x2(int32_t *p, int32x2_t v) { __riscv_pst_i32x2(p, v); }
+
+// CHECK-LABEL: test_pst_u32x2:
+// CHECK-COUNT-8: sb{{[[:space:]]}}
+void test_pst_u32x2(uint32_t *p, uint32x2_t v) { __riscv_pst_u32x2(p, v); }
+
+// CHECK-LABEL: test_pst_i8x4_aligned:
+// CHECK:         sw
+void test_pst_i8x4_aligned(int8_t *p, int8x4_t v) {
+  __riscv_pst_i8x4(__builtin_assume_aligned(p, 4), v);
+}
+
+// CHECK-LABEL: test_pst_u16x2_aligned:
+// CHECK:         sw
+void test_pst_u16x2_aligned(uint16_t *p, uint16x2_t v) {
+  __riscv_pst_u16x2(__builtin_assume_aligned(p, 4), v);
+}
+
+// CHECK-LABEL: test_pst_i8x8_aligned:
+// RV32-COUNT-2: sw
+// RV64:         sd
+void test_pst_i8x8_aligned(int8_t *p, int8x8_t v) {
+  __riscv_pst_i8x8(__builtin_assume_aligned(p, 8), v);
+}
+
+// CHECK-LABEL: test_pst_u32x2_aligned:
+// RV32-COUNT-2: sw
+// RV64:         sd
+void test_pst_u32x2_aligned(uint32_t *p, uint32x2_t v) {
+  __riscv_pst_u32x2(__builtin_assume_aligned(p, 8), v);
+}
+
 // CHECK-LABEL: test_pset_i8_i8x4:
 // CHECK:        mvm
 int8x4_t test_pset_i8_i8x4(int8x4_t v, int8_t e) {
@@ -4524,4 +4590,184 @@ int32x2_t test_pset_i32_i32x2(int32x2_t v, int32_t e) {
 // RV64:         pack
 uint32x2_t test_pset_u32_u32x2(uint32x2_t v, uint32_t e) {
   return __riscv_pset_u32_u32x2(v, e, 0);
+}
+
+// CHECK-LABEL: test_pjoin4_i8x4:
+// RV32:         ppaire.db
+// RV32:         pack
+// RV64:         ppaire.b
+// RV64:         ppaire.h
+int8x4_t test_pjoin4_i8x4(int8_t e0, int8_t e1, int8_t e2, int8_t e3) {
+  return __riscv_pjoin4_i8x4(e0, e1, e2, e3);
+}
+
+// CHECK-LABEL: test_pjoin4_u8x4:
+// RV32:         ppaire.db
+// RV32:         pack
+// RV64:         ppaire.b
+// RV64:         ppaire.h
+uint8x4_t test_pjoin4_u8x4(uint8_t e0, uint8_t e1, uint8_t e2, uint8_t e3) {
+  return __riscv_pjoin4_u8x4(e0, e1, e2, e3);
+}
+
+// CHECK-LABEL: test_pjoin2_i16x2:
+// RV32:         pack
+// RV64:         ppaire.h
+int16x2_t test_pjoin2_i16x2(int16_t e0, int16_t e1) {
+  return __riscv_pjoin2_i16x2(e0, e1);
+}
+
+// CHECK-LABEL: test_pjoin2_u16x2:
+// RV32:         pack
+// RV64:         ppaire.h
+uint16x2_t test_pjoin2_u16x2(uint16_t e0, uint16_t e1) {
+  return __riscv_pjoin2_u16x2(e0, e1);
+}
+
+// CHECK-LABEL: test_pjoin4_i16x4:
+// RV32-COUNT-2: pack
+// RV64-COUNT-2: ppaire.h
+// RV64:         pack
+int16x4_t test_pjoin4_i16x4(int16_t e0, int16_t e1, int16_t e2, int16_t e3) {
+  return __riscv_pjoin4_i16x4(e0, e1, e2, e3);
+}
+
+// CHECK-LABEL: test_pjoin4_u16x4:
+// RV32-COUNT-2: pack
+// RV64-COUNT-2: ppaire.h
+// RV64:         pack
+uint16x4_t test_pjoin4_u16x4(uint16_t e0, uint16_t e1, uint16_t e2,
+                             uint16_t e3) {
+  return __riscv_pjoin4_u16x4(e0, e1, e2, e3);
+}
+
+// CHECK-LABEL: test_pjoin2_i32x2:
+// RV32:         ret
+// RV64:         pack
+int32x2_t test_pjoin2_i32x2(int32_t e0, int32_t e1) {
+  return __riscv_pjoin2_i32x2(e0, e1);
+}
+
+// CHECK-LABEL: test_pjoin2_u32x2:
+// RV32:         ret
+// RV64:         pack
+uint32x2_t test_pjoin2_u32x2(uint32_t e0, uint32_t e1) {
+  return __riscv_pjoin2_u32x2(e0, e1);
+}
+
+/* Packed Load: the load is emitted with align 1, so the backend either emits
+ * a single lw/ld (targets with fast misaligned GPR loads) or splits it into
+ * per-byte loads. The generic target used here takes the split path. */
+
+// CHECK-LABEL: test_pld_i8x4:
+// RV32-COUNT-4: lbu{{[[:space:]]}}
+// RV64-COUNT-4: lbu{{[[:space:]]}}
+int8x4_t test_pld_i8x4(int8_t *p) { return __riscv_pld_i8x4(p); }
+
+// CHECK-LABEL: test_pld_u8x4:
+// RV32-COUNT-4: lbu{{[[:space:]]}}
+// RV64-COUNT-4: lbu{{[[:space:]]}}
+uint8x4_t test_pld_u8x4(uint8_t *p) { return __riscv_pld_u8x4(p); }
+
+// CHECK-LABEL: test_pld_i16x2:
+// RV32-COUNT-4: lbu{{[[:space:]]}}
+// RV64-COUNT-4: lbu{{[[:space:]]}}
+int16x2_t test_pld_i16x2(int16_t *p) { return __riscv_pld_i16x2(p); }
+
+// CHECK-LABEL: test_pld_u16x2:
+// RV32-COUNT-4: lbu{{[[:space:]]}}
+// RV64-COUNT-4: lbu{{[[:space:]]}}
+uint16x2_t test_pld_u16x2(uint16_t *p) { return __riscv_pld_u16x2(p); }
+
+// CHECK-LABEL: test_pld_i8x8:
+// RV32-COUNT-8: lbu{{[[:space:]]}}
+// RV64-COUNT-8: lbu{{[[:space:]]}}
+int8x8_t test_pld_i8x8(int8_t *p) { return __riscv_pld_i8x8(p); }
+
+// CHECK-LABEL: test_pld_u8x8:
+// RV32-COUNT-8: lbu{{[[:space:]]}}
+// RV64-COUNT-8: lbu{{[[:space:]]}}
+uint8x8_t test_pld_u8x8(uint8_t *p) { return __riscv_pld_u8x8(p); }
+
+// CHECK-LABEL: test_pld_i16x4:
+// RV32-COUNT-8: lbu{{[[:space:]]}}
+// RV64-COUNT-8: lbu{{[[:space:]]}}
+int16x4_t test_pld_i16x4(int16_t *p) { return __riscv_pld_i16x4(p); }
+
+// CHECK-LABEL: test_pld_u16x4:
+// RV32-COUNT-8: lbu{{[[:space:]]}}
+// RV64-COUNT-8: lbu{{[[:space:]]}}
+uint16x4_t test_pld_u16x4(uint16_t *p) { return __riscv_pld_u16x4(p); }
+
+// CHECK-LABEL: test_pld_i32x2:
+// RV32-COUNT-8: lbu{{[[:space:]]}}
+// RV64-COUNT-8: lbu{{[[:space:]]}}
+int32x2_t test_pld_i32x2(int32_t *p) { return __riscv_pld_i32x2(p); }
+
+// CHECK-LABEL: test_pld_u32x2:
+// RV32-COUNT-8: lbu{{[[:space:]]}}
+// RV64-COUNT-8: lbu{{[[:space:]]}}
+uint32x2_t test_pld_u32x2(uint32_t *p) { return __riscv_pld_u32x2(p); }
+
+/* Packed Load with provable alignment: __builtin_assume_aligned restores a
+ * known alignment, so the load is not split. */
+
+// CHECK-LABEL: test_pld_i8x4_aligned:
+// CHECK:         lw
+// CHECK-NOT:     lbu
+int8x4_t test_pld_i8x4_aligned(int8_t *p) {
+  return __riscv_pld_i8x4(__builtin_assume_aligned(p, 4));
+}
+
+// CHECK-LABEL: test_pld_u16x2_aligned:
+// CHECK:         lw
+// CHECK-NOT:     lbu
+uint16x2_t test_pld_u16x2_aligned(uint16_t *p) {
+  return __riscv_pld_u16x2(__builtin_assume_aligned(p, 4));
+}
+
+// CHECK-LABEL: test_pld_i8x8_aligned:
+// RV32-COUNT-2: lw
+// RV32-NOT:     lbu
+// RV64:         ld
+// RV64-NOT:     lbu
+int8x8_t test_pld_i8x8_aligned(int8_t *p) {
+  return __riscv_pld_i8x8(__builtin_assume_aligned(p, 8));
+}
+
+// CHECK-LABEL: test_pld_u32x2_aligned:
+// RV32-COUNT-2: lw
+// RV32-NOT:     lbu
+// RV64:         ld
+// RV64-NOT:     lbu
+uint32x2_t test_pld_u32x2_aligned(uint32_t *p) {
+  return __riscv_pld_u32x2(__builtin_assume_aligned(p, 8));
+}
+
+// CHECK-LABEL: test_pjoin2_i8x8:
+// RV32:         ret
+// RV64:         pack
+int8x8_t test_pjoin2_i8x8(int8x4_t lo, int8x4_t hi) {
+  return __riscv_pjoin2_i8x8(lo, hi);
+}
+
+// CHECK-LABEL: test_pjoin2_u8x8:
+// RV32:         ret
+// RV64:         pack
+uint8x8_t test_pjoin2_u8x8(uint8x4_t lo, uint8x4_t hi) {
+  return __riscv_pjoin2_u8x8(lo, hi);
+}
+
+// CHECK-LABEL: test_pjoin2_i16x4:
+// RV32:         ret
+// RV64:         pack
+int16x4_t test_pjoin2_i16x4(int16x2_t lo, int16x2_t hi) {
+  return __riscv_pjoin2_i16x4(lo, hi);
+}
+
+// CHECK-LABEL: test_pjoin2_u16x4:
+// RV32:         ret
+// RV64:         pack
+uint16x4_t test_pjoin2_u16x4(uint16x2_t lo, uint16x2_t hi) {
+  return __riscv_pjoin2_u16x4(lo, hi);
 }

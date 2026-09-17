@@ -1873,6 +1873,39 @@ def CIR_UnwindAttr : CIR_UnitAttr<"Unwind", "unwind"> {
 }
 
 //===----------------------------------------------------------------------===//
+// EhFilterAttr & EhUnexpectedAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_EhFilterAttr : CIR_Attr<"EhFilter", "eh_filter"> {
+  let summary = "Dynamic exception specification filter handler";
+  let description = [{
+    Identifies the handler of a `cir.try` operation that is reached when the
+    in-flight exception is permitted by the dynamic exception specification of
+    the enclosing function. The attribute carries the list of type info symbols
+    naming the permitted types. An empty list represents `throw()`, which
+    permits nothing.
+  }];
+
+  let parameters = (ins "mlir::ArrayAttr":$permitted_types);
+  let assemblyFormat = [{ `<` $permitted_types `>` }];
+  let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
+
+// Represents the region reached when an exception violates the dynamic
+// exception specification of the enclosing function.
+def CIR_EhUnexpectedAttr : CIR_UnitAttr<"EhUnexpected", "eh_unexpected"> {
+  let summary = "Dynamic exception specification unexpected exception handler";
+  let description = [{
+    Identifies the handler of a `cir.try` operation that is reached when the
+    in-flight exception is not permitted by the dynamic exception specification
+    of the enclosing function.
+  }];
+
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // CIR_BlockAddrInfoAttr
 //===----------------------------------------------------------------------===//
 
