@@ -1045,7 +1045,8 @@ public:
 
   /// Build a new matrix type given the element type and dimensions.
   QualType RebuildConstantMatrixType(QualType ElementType, unsigned NumRows,
-                                     unsigned NumColumns);
+                                     unsigned NumColumns,
+                                     SourceLocation AttributeLoc);
 
   /// Build a new matrix type given the type and dependently-defined
   /// dimensions.
@@ -6289,7 +6290,7 @@ TreeTransform<Derived>::TransformConstantMatrixType(TypeLocBuilder &TLB,
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || ElementType != T->getElementType()) {
     Result = getDerived().RebuildConstantMatrixType(
-        ElementType, T->getNumRows(), T->getNumColumns());
+        ElementType, T->getNumRows(), T->getNumColumns(), TL.getAttrNameLoc());
     if (Result.isNull())
       return QualType();
   }
@@ -18171,9 +18172,17 @@ TreeTransform<Derived>::RebuildDependentSizedExtVectorType(QualType ElementType,
 
 template <typename Derived>
 QualType TreeTransform<Derived>::RebuildConstantMatrixType(
-    QualType ElementType, unsigned NumRows, unsigned NumColumns) {
-  return SemaRef.Context.getConstantMatrixType(ElementType, NumRows,
-                                               NumColumns);
+    QualType ElementType, unsigned NumRows, unsigned NumColumns,
+    SourceLocation AttributeLoc) {
+  ASTContext &Ctx = SemaRef.Context;
+  QualType SizeTy = Ctx.getSizeType();
+  unsigned SizeWidth = Ctx.getIntWidth(SizeTy);
+  IntegerLiteral *RowExpr = IntegerLiteral::Create(
+      Ctx, llvm::APInt(SizeWidth, NumRows), SizeTy, AttributeLoc);
+  IntegerLiteral *ColumnExpr = IntegerLiteral::Create(
+      Ctx, llvm::APInt(SizeWidth, NumColumns), SizeTy, AttributeLoc);
+  return SemaRef.BuildMatrixType(ElementType, RowExpr, ColumnExpr,
+                                 AttributeLoc);
 }
 
 template <typename Derived>
