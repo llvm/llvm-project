@@ -383,6 +383,7 @@ void PrintAddressSpaceLayout() {
   Printf("SHADOW_SCALE: %d\n", (int)ASAN_SHADOW_SCALE);
   Printf("SHADOW_GRANULARITY: %d\n", (int)ASAN_SHADOW_GRANULARITY);
   Printf("SHADOW_OFFSET: %p\n", (void *)ASAN_SHADOW_OFFSET);
+  Printf("kGaplessShadow: %d\n", kGaplessShadow);
   CHECK(ASAN_SHADOW_SCALE >= 3 && ASAN_SHADOW_SCALE <= 7);
   if (kMidMemBeg)
     CHECK(kMidShadowBeg > kLowShadowEnd &&
