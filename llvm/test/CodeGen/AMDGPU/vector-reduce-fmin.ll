@@ -2154,9 +2154,9 @@ define float @test_vector_reduce_fmin_v8float(<8 x float> %v) {
 ; GFX1170-GISEL:       ; %bb.0: ; %entry
 ; GFX1170-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1170-GISEL-NEXT:    v_min_num_f32_e32 v2, v2, v3
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX1170-GISEL-NEXT:    v_min3_num_f32 v0, v0, v1, v2
 ; GFX1170-GISEL-NEXT:    v_min_num_f32_e32 v3, v6, v7
+; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1170-GISEL-NEXT:    v_min3_num_f32 v0, v0, v1, v2
 ; GFX1170-GISEL-NEXT:    v_min3_num_f32 v1, v4, v5, v3
 ; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1170-GISEL-NEXT:    v_min_num_f32_e32 v0, v0, v1
@@ -2460,7 +2460,6 @@ define float @test_vector_reduce_fmin_v16float(<16 x float> %v) {
 ; GFX1170-GISEL-NEXT:    v_min3_num_f32 v1, v4, v5, v3
 ; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1170-GISEL-NEXT:    v_min_num_f32_e32 v2, v6, v7
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1170-GISEL-NEXT:    v_min3_num_f32 v0, v0, v1, v2
 ; GFX1170-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
