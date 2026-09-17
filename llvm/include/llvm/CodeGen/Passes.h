@@ -293,10 +293,6 @@ LLVM_ABI extern char &BranchRelaxationPassID;
 /// MachineFunctionPrinterPass - This pass prints out MachineInstr's.
 LLVM_ABI extern char &MachineFunctionPrinterPassID;
 
-/// MIRPrintingPass - this pass prints out the LLVM IR using the MIR
-/// serialization format.
-LLVM_ABI extern char &MIRPrintingPassID;
-
 /// TailDuplicate - Duplicate blocks with unconditional branches
 /// into tails of their predecessors.
 LLVM_ABI extern char &TailDuplicateLegacyID;
