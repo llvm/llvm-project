@@ -844,6 +844,21 @@ def CIR_LoadOp : CIR_Op<"load", [
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
 
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$addr), [{
+      build($_builder, $_state, addr, /*isDeref=*/false,
+            /*is_volatile=*/false, /*is_nontemporal=*/false,
+            /*alignment=*/mlir::IntegerAttr{}, cir::SyncScopeKindAttr{},
+            cir::MemOrderAttr{}, /*invariant=*/false);
+    }]>,
+    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$addr), [{
+      build($_builder, $_state, result, addr, /*isDeref=*/false,
+            /*is_volatile=*/false, /*is_nontemporal=*/false,
+            /*alignment=*/mlir::IntegerAttr{}, cir::SyncScopeKindAttr{},
+            cir::MemOrderAttr{}, /*invariant=*/false);
+    }]>
+  ];
+
   // FIXME: add verifier.
 }
 
@@ -1440,6 +1455,7 @@ def CIR_CleanupScopeOp : CIR_RegionBranchOpBase<"cleanup.scope", [
   ];
 
   let hasCanonicalizeMethod = 1;
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -8406,7 +8422,7 @@ def CIR_EhInflightOp : CIR_Op<"eh.inflight_exception"> {
     %exception_ptr, %type_id = cir.eh.inflight_exception catch_all [@_ZTIi]
     %exception_ptr, %type_id = cir.eh.inflight_exception filter [@_ZTIi]
     %exception_ptr, %type_id = cir.eh.inflight_exception [@_ZTIi] filter []
-    ``
+    ```
   }];
 
   let arguments = (ins UnitAttr:$cleanup,

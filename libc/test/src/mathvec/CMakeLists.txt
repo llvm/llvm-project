@@ -434,6 +434,7 @@ add_fp_unittest(
     libc.src.mathvec.sinf
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.CPP.simd
+    libc.src.__support.macros.optimization
   FLAGS
     ROUND_OPT
     FMA_OPT

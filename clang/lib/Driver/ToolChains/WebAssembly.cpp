@@ -429,8 +429,7 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
 
     for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
       for (const auto *Option :
-           {"-enable-emscripten-cxx-exceptions", "-enable-emscripten-sjlj",
-            "-emscripten-cxx-exceptions-allowed"}) {
+           {"-enable-emscripten-sjlj", "-emscripten-cxx-exceptions-allowed"}) {
         if (StringRef(A->getValue(0)) == Option)
           getDriver().Diag(diag::err_drv_argument_not_allowed_with)
               << CurOption << Option;
@@ -466,17 +465,8 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
     StringRef Opt = A->getValue(0);
     if (Opt.starts_with("-emscripten-cxx-exceptions-allowed")) {
       // '-mllvm -emscripten-cxx-exceptions-allowed' should be used with
-      // '-femscripten-exceptions' (or the underlying
-      // '-mllvm -enable-emscripten-cxx-exceptions').
-      bool EmEHArgExists =
-          DriverArgs.hasArg(options::OPT_femscripten_exceptions);
-      for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
-        if (StringRef(A->getValue(0)) == "-enable-emscripten-cxx-exceptions") {
-          EmEHArgExists = true;
-          break;
-        }
-      }
-      if (!EmEHArgExists)
+      // '-femscripten-exceptions'.
+      if (!DriverArgs.hasArg(options::OPT_femscripten_exceptions))
         getDriver().Diag(diag::err_drv_argument_only_allowed_with)
             << "-mllvm -emscripten-cxx-exceptions-allowed"
             << "-femscripten-exceptions";
