@@ -1939,17 +1939,15 @@ bool VPCostContext::useEmulatedMaskMemRefHack(const VPReplicateRecipe *R,
       for (const VPBasicBlock *VPBB :
            VPBlockUtils::blocksOnly<const VPBasicBlock>(
                vp_depth_first_shallow(VPRB->getEntry()))) {
-        for (const VPRecipeBase &Recipe : *VPBB) {
-          auto *RepR = dyn_cast<VPReplicateRecipe>(&Recipe);
-          if (!RepR)
-            continue;
-          if (!isa<StoreInst>(RepR->getUnderlyingInstr()))
+        for (const VPReplicateRecipe &RepR :
+             make_isa_range<VPReplicateRecipe>(*VPBB)) {
+          if (!isa<StoreInst>(RepR.getUnderlyingInstr()))
             continue;
           // Check if scatter is legal for this store. If so, don't count it.
-          Type *Ty = RepR->getOperand(0)->getScalarType();
+          Type *Ty = RepR.getOperand(0)->getScalarType();
           auto *VTy = VectorType::get(Ty, VF);
           const Align Alignment =
-              getLoadStoreAlignment(RepR->getUnderlyingInstr());
+              getLoadStoreAlignment(RepR.getUnderlyingInstr());
           if (!TTI.isLegalMaskedScatter(VTy, Alignment))
             ++(*NumPredStores);
         }
