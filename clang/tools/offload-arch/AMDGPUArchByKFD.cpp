@@ -19,11 +19,13 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <tuple>
 
 using namespace llvm;
 
 constexpr static const char *KFD_SYSFS_NODE_PATH =
     "/sys/devices/virtual/kfd/kfd/topology/nodes";
+constexpr static long GFX1250_VERSION = 120500;
 
 // See the ROCm implementation for how this is handled.
 // https://github.com/ROCm/ROCT-Thunk-Interface/blob/master/src/libhsakmt.h#L126
@@ -33,7 +35,8 @@ constexpr static long getStep(long Ver) { return Ver % 100; }
 
 // Exposed for testing
 int printGPUsByKFD(StringRef NodePath) {
-  SmallVector<std::pair<long, long>> Devices;
+  // <Node, GFXVersion, ASIC revision>
+  SmallVector<std::tuple<long, long, long>> Devices;
   std::error_code EC;
   sys::fs::directory_iterator Begin(NodePath, EC), End;
 
@@ -58,28 +61,39 @@ int printGPUsByKFD(StringRef NodePath) {
       return 1;
 
     long GFXVersion = 0;
+    uint64_t Capability = 0;
     for (line_iterator Lines(**BufferOrErr, false); !Lines.is_at_end();
          ++Lines) {
-      StringRef Line(*Lines);
-      if (Line.consume_front("gfx_target_version")) {
-        if (Line.drop_while([](char C) { return std::isspace(C); })
-                .consumeInteger(10, GFXVersion))
+      // Split by ' ' to differentiate capability and capability2
+      auto [Key, Value] = StringRef(*Lines).split(' ');
+      if (Key == "gfx_target_version") {
+        if (Value.trim().consumeInteger(10, GFXVersion))
           return 1;
-        break;
+      } else if (Key == "capability") {
+        if (Value.trim().consumeInteger(10, Capability))
+          return 1;
       }
     }
 
     // If this is zero the node is a CPU.
     if (GFXVersion == 0)
       continue;
-    Devices.emplace_back(Node, GFXVersion);
+    // ASIC revision is bits 25:22 in capability
+    long ASICRevision = (Capability >> 22) & 0xf;
+    Devices.emplace_back(Node, GFXVersion, ASICRevision);
   }
 
   // Sort the devices by their node to make sure it prints in order.
-  llvm::sort(Devices, [](auto &L, auto &R) { return L.first < R.first; });
-  for (const auto &[Node, GFXVersion] : Devices)
+  llvm::sort(Devices,
+             [](auto &L, auto &R) { return std::get<0>(L) < std::get<0>(R); });
+  for (const auto &[Node, GFXVersion, ASICRevision] : Devices) {
     outs() << "gfx" << getMajor(GFXVersion) << getMinor(GFXVersion)
-           << format_hex_no_prefix(getStep(GFXVersion), 1) << '\n';
+           << format_hex_no_prefix(getStep(GFXVersion), 1);
+    // For A0, print gfx1250-strict to match rocminfo
+    if (GFXVersion == GFX1250_VERSION && ASICRevision == 0)
+      outs() << "-strict";
+    outs() << '\n';
+  }
 
   return 0;
 }
