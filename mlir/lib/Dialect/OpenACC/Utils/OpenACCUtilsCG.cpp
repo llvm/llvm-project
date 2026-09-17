@@ -666,6 +666,7 @@ MapFlags computeDataClauseMapFlags(Operation *entryOp, bool ptrAndObj) {
     flags = flags | MapFlags::no_create;
     break;
   case DataClause::acc_attach:
+    flags = flags | MapFlags::attach;
     break;
   default:
     break;
