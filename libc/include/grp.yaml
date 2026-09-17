@@ -1,6 +1,7 @@
 header: grp.h
 standards:
   - posix
+  - bsd
 types:
   - type_name: struct_group
   - type_name: gid_t
@@ -50,6 +51,15 @@ functions:
       - type: char *
       - type: size_t
       - type: struct group **
+  - name: getgrouplist
+    standards:
+      - bsd
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: gid_t
+      - type: gid_t *
+      - type: int *
   - name: setgrent
     standards:
       - posix
