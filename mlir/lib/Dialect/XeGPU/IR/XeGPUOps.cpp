@@ -17,13 +17,15 @@
 
 #include "llvm/Support/Debug.h"
 
+#include <utility>
+
 #define DEBUG_TYPE "xegpu"
 
 using namespace mlir;
 using namespace mlir::xegpu;
 
 template <typename T>
-static std::string makeString(T array, bool breakline = false) {
+static std::string makeString(const T &array, bool breakline = false) {
   std::string buf;
   buf.clear();
   llvm::raw_string_ostream os(buf);
@@ -549,7 +551,7 @@ LogicalResult StoreNdOp::verify() {
         "Mismatched ranks between offsets and tensor descriptor");
 
   if (auto layout = getAnchorLayout()) {
-    if (!layout.isDistributable(tdescShape))
+    if (!layout.isDistributable(std::move(tdescShape)))
       return emitOpError(
           "TensorDesc shape is not distributable with the layout");
   }
@@ -875,7 +877,7 @@ LogicalResult ConvertLayoutOp::verify() {
       return emitOpError(
           "invalid input layout, data cannot be evenly distributed.");
 
-    if (!resLayout.isDistributable(shape))
+    if (!resLayout.isDistributable(std::move(shape)))
       return emitOpError(
           "invalid target layout, data cannot be evenly distributed.");
   }

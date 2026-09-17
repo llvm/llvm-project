@@ -157,8 +157,7 @@ entry:
 define i32 @test8(i64 %res) nounwind {
 ; CHECK-LABEL: test8:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    move.l (4,%sp), %d0
-; CHECK-NEXT:    sub.l #3, %d0
+; CHECK-NEXT:    cmpi.l #3, (4,%sp)
 ; CHECK-NEXT:    scs %d0
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    and.l #1, %d0
@@ -174,7 +173,7 @@ define i32 @test11(i64 %l) nounwind {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l (4,%sp), %d0
 ; CHECK-NEXT:    and.l #-32768, %d0
-; CHECK-NEXT:    sub.l #32768, %d0
+; CHECK-NEXT:    cmpi.l #32768, %d0
 ; CHECK-NEXT:    seq %d0
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    and.l #1, %d0
@@ -237,8 +236,7 @@ define zeroext i1 @test15(i32 %bf.load, i32 %n) {
 ; CHECK-NEXT:    moveq #16, %d0
 ; CHECK-NEXT:    move.l (4,%sp), %d1
 ; CHECK-NEXT:    lsr.l %d0, %d1
-; CHECK-NEXT:    move.l %d1, %d0
-; CHECK-NEXT:    sub.l (8,%sp), %d0
+; CHECK-NEXT:    cmp.l (8,%sp), %d1
 ; CHECK-NEXT:    scc %d0
 ; CHECK-NEXT:    cmpi.l #0, %d1
 ; CHECK-NEXT:    seq %d1

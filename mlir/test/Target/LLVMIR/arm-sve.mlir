@@ -255,8 +255,8 @@ llvm.func @memcopy(%arg0: !llvm.ptr, %arg1: !llvm.ptr,
   %11 = llvm.insertvalue %arg9, %10[4, 0] : !llvm.struct<(ptr, ptr, i64,
                                                          array<1 x i64>,
                                                          array<1 x i64>)>
-  %12 = llvm.mlir.constant(0 : index) : i64
-  %13 = llvm.mlir.constant(4 : index) : i64
+  %12 = llvm.mlir.constant(0 : i64) : i64
+  %13 = llvm.mlir.constant(4 : i64) : i64
   // CHECK: [[VL:%[0-9]+]] = call i64 @llvm.vscale.i64()
   %14 = "llvm.intr.vscale"() : () -> i64
   // CHECK: mul i64 [[VL]], 4

@@ -8,7 +8,7 @@
 # CHECK-OBJ-NEXT:   Section {
 # CHECK-OBJ-NEXT:     Number: 1
 # CHECK-OBJ-NEXT:     Name: .data
-# CHECK-OBJ:          RawDataSize: 16
+# CHECK-OBJ:          RawDataSize: 0x10
 # CHECK-OBJ:          RelocationCount: 65535
 # CHECK-OBJ:          Characteristics [
 # CHECK-OBJ-NEXT:       IMAGE_SCN_ALIGN_16BYTES

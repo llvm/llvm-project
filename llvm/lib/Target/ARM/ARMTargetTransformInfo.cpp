@@ -1224,13 +1224,11 @@ InstructionCost ARMTTIImpl::getMemcpyCost(const Instruction *I) const {
   return NumOps;
 }
 
-InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                           VectorType *DstTy, VectorType *SrcTy,
-                                           TTI::TargetCostKind CostKind,
-                                           ArrayRef<int> Mask, int Index,
-                                           VectorType *SubTp,
-                                           ArrayRef<const Value *> Args,
-                                           const Instruction *CxtI) const {
+InstructionCost ARMTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
@@ -1307,6 +1305,17 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       if (const auto *Entry = CostTableLookup(NEONSelShuffleTbl,
                                               ISD::VECTOR_SHUFFLE, LT.second))
         return LT.first * Entry->Cost;
+    }
+
+    // Check for other shuffles that are not SK_ kinds but we have native
+    // instructions for, for example REV.
+    if (!Mask.empty()) {
+      std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
+      if (LT.second.isVector() &&
+          Mask.size() <= LT.second.getVectorNumElements() &&
+          (isVREVMask(Mask, LT.second, 16) || isVREVMask(Mask, LT.second, 32) ||
+           isVREVMask(Mask, LT.second, 64)))
+        return LT.first;
     }
   }
   if (ST->hasMVEIntegerOps()) {
