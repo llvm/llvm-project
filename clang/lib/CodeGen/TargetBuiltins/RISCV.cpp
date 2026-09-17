@@ -1531,6 +1531,32 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   }
 
+  // Packed Saturation
+  case RISCV::BI__builtin_riscv_psati_i16x2:
+  case RISCV::BI__builtin_riscv_psati_i16x4:
+  case RISCV::BI__builtin_riscv_psati_i32x2:
+  case RISCV::BI__builtin_riscv_pusati_u16x2:
+  case RISCV::BI__builtin_riscv_pusati_u16x4:
+  case RISCV::BI__builtin_riscv_pusati_u32x2: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_psati_i16x2:
+    case RISCV::BI__builtin_riscv_psati_i16x4:
+    case RISCV::BI__builtin_riscv_psati_i32x2:
+      ID = Intrinsic::riscv_psati;
+      break;
+    case RISCV::BI__builtin_riscv_pusati_u16x2:
+    case RISCV::BI__builtin_riscv_pusati_u16x4:
+    case RISCV::BI__builtin_riscv_pusati_u32x2:
+      ID = Intrinsic::riscv_pusati;
+      break;
+    }
+
+    IntrinsicTypes = {ResultType};
+    break;
+  }
+
   // Packed Multiplication with Horizontal Addition
   case RISCV::BI__builtin_riscv_pm4add_i8x4:
   case RISCV::BI__builtin_riscv_pm4add_i8x8:
