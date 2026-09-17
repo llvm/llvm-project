@@ -322,7 +322,7 @@ public:
   cir::IntType getUInt64Ty() { return typeCache.uInt64Ty; }
 
   cir::FP16Type getFp16Ty() { return typeCache.fP16Ty; }
-  cir::BF16Type getBfloat6Ty() { return typeCache.bFloat16Ty; }
+  cir::BF16Type getBfloat16Ty() { return typeCache.bFloat16Ty; }
   cir::SingleType getSingleTy() { return typeCache.floatTy; }
   cir::DoubleType getDoubleTy() { return typeCache.doubleTy; }
 

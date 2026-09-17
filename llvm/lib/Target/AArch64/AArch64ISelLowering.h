@@ -354,6 +354,8 @@ public:
                         AtomicOrdering Ord) const override;
   Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val, Value *Addr,
                               AtomicOrdering Ord) const override;
+  Value *emitCanLoadSpeculatively(IRBuilderBase &Builder, Value *Ptr,
+                                  Value *SizeInBytes) const override;
 
   void emitAtomicCmpXchgNoStoreLLBalance(IRBuilderBase &Builder) const override;
 

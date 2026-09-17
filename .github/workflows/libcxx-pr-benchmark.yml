@@ -124,17 +124,17 @@ jobs:
           fetch-tags: true # This job requires access to all the Git branches so it can diff against (usually) main
 
       - name: Install Python
-        if: ${{ matrix.running-on == 'linux' }} # installed via Homebrew on macOS
+        if: runner.os == 'Linux' # installed via Homebrew on macOS
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: '3.14'
 
       - name: Select Xcode
-        if: ${{ matrix.running-on == 'macos' }}
+        if: runner.os == 'macOS'
         run: echo "DEVELOPER_DIR=/Applications/Xcode_${{ matrix.xcode-version }}.app/Contents/Developer" >> $GITHUB_ENV
 
       - name: Install dependencies via Homebrew
-        if: ${{ matrix.running-on == 'macos' }}
+        if: runner.os == 'macOS'
         run: |
           brew update
           brew install ninja cmake python@3.14

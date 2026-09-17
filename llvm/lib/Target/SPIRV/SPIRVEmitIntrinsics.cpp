@@ -1133,7 +1133,7 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
   if (!Visited.insert(U).second)
     return OrigTy;
 
-  if (isa<StructType>(OrigTy)) {
+  if (auto *OrigStructTy = dyn_cast<StructType>(OrigTy)) {
     SmallVector<Type *> Tys;
     bool Change = false;
     for (unsigned i = 0; i < U->getNumOperands(); ++i) {
@@ -1153,7 +1153,7 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
       Change |= Ty != OpTy;
     }
     if (Change) {
-      Type *NewTy = StructType::create(Tys);
+      Type *NewTy = StructType::create(Tys, "", OrigStructTy->isPacked());
       GR->addDeducedCompositeType(U, NewTy);
       return NewTy;
     }
