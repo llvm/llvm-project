@@ -20,7 +20,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-ssize_t flistxattr(int fd, char *_Nullable list, size_t size);
+ssize_t flistxattr(int fd, char *list, size_t size);
 
 } // namespace LIBC_NAMESPACE_DECL
 

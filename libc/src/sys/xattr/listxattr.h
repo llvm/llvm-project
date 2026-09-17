@@ -20,8 +20,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-ssize_t listxattr(const char *_Nullable path, char *_Nullable list,
-                  size_t size);
+ssize_t listxattr(const char *path, char *list, size_t size);
 
 } // namespace LIBC_NAMESPACE_DECL
 

@@ -23,8 +23,6 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/xattr.h>
-
 namespace {
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;

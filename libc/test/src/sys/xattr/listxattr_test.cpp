@@ -11,20 +11,17 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/sys/xattr/listxattr.h"
-
 #include "hdr/sys_stat_macros.h"
 #include "src/__support/OSUtil/linux/syscall.h"
 #include "src/__support/libc_errno.h"
 #include "src/fcntl/creat.h"
+#include "src/sys/xattr/listxattr.h"
 #include "src/unistd/close.h"
 #include "src/unistd/symlink.h"
 #include "src/unistd/unlink.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <sys/xattr.h>
 
 namespace {
 
