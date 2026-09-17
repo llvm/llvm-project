@@ -1980,9 +1980,9 @@ bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr,
   // Retain the casted type for opaque pointers.
   if (Ptr.isOpaquePointer()) {
     Pointer P = S.Stk.pop<Pointer>();
-    auto OP = P.asOpaquePointer();
+    const OpaquePointer &OP = P.asOpaquePointer();
 
-    if (!validType(TargetType->getPointeeType()))
+    if (OP.hasDeclBase() && !validType(TargetType->getPointeeType()))
       return Invalid(S, OpPC);
 
     S.Stk.push<Pointer>(OP.withFieldType(TargetType), P.getByteOffset());
@@ -2427,6 +2427,12 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
 
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
               uint32_t VarArgSize) {
+  // This happens in error cases.
+  if (!Func->hasThisPointer()) {
+    assert(!Func->isValid());
+    return diagnoseCallableDecl(S, OpPC, Func->getDecl());
+  }
+
   assert(Func->hasThisPointer());
   assert(Func->isVirtual());
   size_t ArgSize = Func->getArgSize() + VarArgSize;
