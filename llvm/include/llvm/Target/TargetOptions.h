@@ -300,9 +300,6 @@ public:
   /// If greater than 0, override TargetLoweringBase::PrefLoopAlignment.
   unsigned LoopAlignment = 0;
 
-  /// EABIVersion - This flag specifies the EABI version
-  EABI EABIVersion = EABI::Default;
-
   /// Which debugger to tune for.
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
 

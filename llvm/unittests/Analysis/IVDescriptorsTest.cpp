@@ -440,7 +440,7 @@ static Instruction *getInstructionByName(Function &F, StringRef Name) {
   llvm_unreachable("Expected to find instruction!");
 }
 
-TEST(IVDescriptorsTest, MonotonicIntVar) {
+TEST(IVDescriptorsTest, ConditionalInductionIntVar) {
   // Parse the module.
   LLVMContext Context;
 
@@ -452,17 +452,17 @@ entry:
 
 for.body:
   %i = phi i32 [ 0, %entry ], [ %i.next, %for.inc ]
-  %monotonic = phi i32 [ 0, %entry ], [ %monotonic.next, %for.inc ]
+  %conditional = phi i32 [ 0, %entry ], [ %conditional.next, %for.inc ]
   br i1 %cond, label %if.then, label %for.inc
 
 if.then:
-  %inc = add nsw i32 %monotonic, 1
-  %arrayidx = getelementptr inbounds i32, ptr %dst, i32 %monotonic
+  %inc = add nsw i32 %conditional, 1
+  %arrayidx = getelementptr inbounds i32, ptr %dst, i32 %conditional
   store i32 10, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:
-  %monotonic.next = phi i32 [ %inc, %if.then ], [ %monotonic, %for.body ]
+  %conditional.next = phi i32 [ %inc, %if.then ], [ %conditional, %for.body ]
   %i.next = add i32 %i, 1
   %exitcond.not = icmp eq i32 %i.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
@@ -481,32 +481,34 @@ for.end:
         EXPECT_NE(L, nullptr);
 
         Instruction *Induction = getInstructionByName(F, "i");
-        Instruction *Phi = getInstructionByName(F, "monotonic");
-        Instruction *BackedgePhi = getInstructionByName(F, "monotonic.next");
+        Instruction *Phi = getInstructionByName(F, "conditional");
+        Instruction *BackedgePhi = getInstructionByName(F, "conditional.next");
         Instruction *StepInst = getInstructionByName(F, "inc");
 
-        // Check %monotonic descriptor.
-        MonotonicDescriptor Desc;
-        bool IsMonotonicPhi = MonotonicDescriptor::isMonotonicPHI(
-            cast<PHINode>(Phi), L, Desc, SE);
-        EXPECT_TRUE(IsMonotonicPhi);
+        // Check the conditional induction descriptor.
+        ConditionalInductionDescriptor Desc;
+        bool IsConditionalInductionPhi =
+            ConditionalInductionDescriptor::isConditionalInductionPHI(
+                cast<PHINode>(Phi), L, Desc, SE);
+        EXPECT_TRUE(IsConditionalInductionPhi);
         EXPECT_EQ(Desc.getHeaderPHI(), Phi);
         EXPECT_EQ(Desc.getBackedgePHI(), BackedgePhi);
         EXPECT_EQ(Desc.getStepInst(), StepInst);
 
         // Check the wrap flags for %i (the normal induction) don't include NSW.
-        // Note: `Induction` has the same start/step as the monotonic induction.
+        // Note: `Induction` has the same start/step as the conditional
+        // induction.
         const SCEV *OrigInSCEV = SE.getSCEV(Induction);
         auto *AR = cast<SCEVAddRecExpr>(OrigInSCEV);
         EXPECT_EQ(AR->getNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
-        // Check the expressions and wrap flags for the monotonic induction.
+        // Check the expressions and wrap flags for the conditional induction.
         EXPECT_EQ(Desc.getSCEVNoWrapFlags(), SCEV::FlagNSW);
         EXPECT_EQ(Desc.getStartSCEV(), AR->getStart());
         EXPECT_EQ(Desc.getStepSCEV(), AR->getStepRecurrence(SE));
       });
 }
 
-TEST(IVDescriptorsTest, MonotonicPtrVar) {
+TEST(IVDescriptorsTest, ConditionalInductionPtrVar) {
   // Parse the module.
   LLVMContext Context;
 
@@ -518,15 +520,15 @@ entry:
 
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
-  %monotonic = phi ptr [ %start, %entry ], [ %monotonic.next, %for.inc ]
+  %conditional = phi ptr [ %start, %entry ], [ %conditional.next, %for.inc ]
   br i1 %cond, label %if.then, label %for.inc
 
 if.then:
-  %inc = getelementptr inbounds i8, ptr %monotonic, i32 4
+  %inc = getelementptr inbounds i8, ptr %conditional, i32 4
   br label %for.inc
 
 for.inc:
-  %monotonic.next = phi ptr [ %inc, %if.then ], [ %monotonic, %for.body ]
+  %conditional.next = phi ptr [ %inc, %if.then ], [ %conditional, %for.body ]
   %i.next = add nuw nsw i64 %i, 1
   %exitcond.not = icmp eq i64 %i.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
@@ -544,14 +546,15 @@ for.end:
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Instruction *Phi = getInstructionByName(F, "monotonic");
-        Instruction *BackedgePhi = getInstructionByName(F, "monotonic.next");
+        Instruction *Phi = getInstructionByName(F, "conditional");
+        Instruction *BackedgePhi = getInstructionByName(F, "conditional.next");
         Instruction *StepInst = getInstructionByName(F, "inc");
 
-        MonotonicDescriptor Desc;
-        bool IsMonotonicPhi = MonotonicDescriptor::isMonotonicPHI(
-            cast<PHINode>(Phi), L, Desc, SE);
-        EXPECT_TRUE(IsMonotonicPhi);
+        ConditionalInductionDescriptor Desc;
+        bool IsConditionalInductionPhi =
+            ConditionalInductionDescriptor::isConditionalInductionPHI(
+                cast<PHINode>(Phi), L, Desc, SE);
+        EXPECT_TRUE(IsConditionalInductionPhi);
 
         EXPECT_EQ(Desc.getHeaderPHI(), Phi);
         EXPECT_EQ(Desc.getBackedgePHI(), BackedgePhi);
@@ -564,7 +567,7 @@ for.end:
       });
 }
 
-TEST(IVDescriptorsTest, InvalidMonotonicExtraStep) {
+TEST(IVDescriptorsTest, InvalidConditionalInductionExtraStep) {
   // Parse the module.
   LLVMContext Context;
 
@@ -576,20 +579,20 @@ entry:
 
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
-  %monotonic = phi i32 [ 0, %entry ], [ %monotonic.next, %for.inc ]
+  %conditional = phi i32 [ 0, %entry ], [ %conditional.next, %for.inc ]
   br i1 %cond, label %if.then, label %for.inc
 
 if.then:
-  %inc = add nsw i32 %monotonic, 1
-  %monotonic.prom = sext i32 %monotonic to i64
-  %arrayidx = getelementptr inbounds i32, ptr %dst, i64 %monotonic.prom
+  %inc = add nsw i32 %conditional, 1
+  %conditional.prom = sext i32 %conditional to i64
+  %arrayidx = getelementptr inbounds i32, ptr %dst, i64 %conditional.prom
   store i32 10, ptr %arrayidx, align 4
   br i1 %cond2, label %if.then1, label %for.inc
 if.then1:
-  %inc2 = add nsw i32 %monotonic, 2
+  %inc2 = add nsw i32 %conditional, 2
   br label %for.inc
 for.inc:
-  %monotonic.next = phi i32 [ %inc, %if.then ], [ %inc2, %if.then1 ], [ %monotonic, %for.body ]
+  %conditional.next = phi i32 [ %inc, %if.then ], [ %inc2, %if.then1 ], [ %conditional, %for.body ]
   %i.next = add nuw nsw i64 %i, 1
   %exitcond.not = icmp eq i64 %i.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
@@ -607,17 +610,18 @@ for.end:
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Instruction *Phi = getInstructionByName(F, "monotonic");
+        Instruction *Phi = getInstructionByName(F, "conditional");
 
-        // Check %monotonic descriptor.
-        MonotonicDescriptor Desc;
-        bool IsMonotonicPhi = MonotonicDescriptor::isMonotonicPHI(
-            cast<PHINode>(Phi), L, Desc, SE);
-        EXPECT_FALSE(IsMonotonicPhi);
+        // Check the conditional induction descriptor.
+        ConditionalInductionDescriptor Desc;
+        bool IsConditionalInductionPhi =
+            ConditionalInductionDescriptor::isConditionalInductionPHI(
+                cast<PHINode>(Phi), L, Desc, SE);
+        EXPECT_FALSE(IsConditionalInductionPhi);
       });
 }
 
-TEST(IVDescriptorsTest, MonotonicPhiNegativeStepPtrVar) {
+TEST(IVDescriptorsTest, ConditionalInductionPhiNegativeStepPtrVar) {
   // Parse the module.
   LLVMContext Context;
 
@@ -629,15 +633,15 @@ entry:
 
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.inc ]
-  %monotonic = phi ptr [ %start, %entry ], [ %monotonic.next, %for.inc ]
+  %conditional = phi ptr [ %start, %entry ], [ %conditional.next, %for.inc ]
   br i1 %cond, label %if.then, label %for.inc
 
 if.then:
-  %dec = getelementptr nusw i8, ptr %monotonic, i32 -4
+  %dec = getelementptr nusw i8, ptr %conditional, i32 -4
   br label %for.inc
 
 for.inc:
-  %monotonic.next = phi ptr [ %dec, %if.then ], [ %monotonic, %for.body ]
+  %conditional.next = phi ptr [ %dec, %if.then ], [ %conditional, %for.body ]
   %i.next = add nuw nsw i64 %i, 1
   %exitcond.not = icmp eq i64 %i.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
@@ -655,14 +659,15 @@ for.end:
         Loop *L = LI.getLoopFor(Header);
         EXPECT_NE(L, nullptr);
 
-        Instruction *Phi = getInstructionByName(F, "monotonic");
-        Instruction *BackedgePhi = getInstructionByName(F, "monotonic.next");
+        Instruction *Phi = getInstructionByName(F, "conditional");
+        Instruction *BackedgePhi = getInstructionByName(F, "conditional.next");
         Instruction *StepInst = getInstructionByName(F, "dec");
 
-        MonotonicDescriptor Desc;
-        bool IsMonotonicPhi = MonotonicDescriptor::isMonotonicPHI(
-            cast<PHINode>(Phi), L, Desc, SE);
-        EXPECT_TRUE(IsMonotonicPhi);
+        ConditionalInductionDescriptor Desc;
+        bool IsConditionalInductionPhi =
+            ConditionalInductionDescriptor::isConditionalInductionPHI(
+                cast<PHINode>(Phi), L, Desc, SE);
+        EXPECT_TRUE(IsConditionalInductionPhi);
 
         EXPECT_EQ(Desc.getHeaderPHI(), Phi);
         EXPECT_EQ(Desc.getBackedgePHI(), BackedgePhi);

@@ -12,7 +12,10 @@
 
 #include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
 #include "llvm/ADT/STLExtras.h"
+#include <algorithm>
 #include <cassert>
+#include <cstdint>
+#include <limits>
 
 using namespace llvm;
 using namespace llvm::hlsl;
@@ -23,6 +26,9 @@ void SignaturePackingError::log(raw_ostream &OS) const {
   switch (Kind) {
   case SignatureOverflow:
     OS << "signature elements do not fit in " << MaxSignatureRows << " rows";
+    break;
+  case SemanticIndexOutOfRange:
+    OS << "semantic index must be less than " << MaxSignatureRows;
     break;
   }
   OS << " (element " << ElementIndex << ")";
@@ -64,4 +70,51 @@ Expected<unsigned> llvm::hlsl::packSignatureStacked(
   }
 
   return NextRow;
+}
+
+Expected<unsigned> llvm::hlsl::packSignatureIndexed(
+    MutableArrayRef<SemanticSignatureElement> Elements,
+    Triple::EnvironmentType ShaderStage, IOType IOTy) {
+  assert(ShaderStage == Triple::Pixel && IOTy == IOType::Out &&
+         "indexed packing is only valid for a pixel shader output signature");
+
+  static_assert(MaxSignatureRows <= std::numeric_limits<uint32_t>::digits,
+                "row allocation mask is too small");
+  [[maybe_unused]] uint32_t AllocatedRows = 0;
+  unsigned NumRows = 0;
+  for (auto &&[Index, Element] : enumerate(Elements)) {
+    assert(Element.StartRow == UnallocatedRow &&
+           Element.StartCol == UnallocatedCol && "already allocated?");
+    assert(Element.Rows > 0 && "signature element must have at least one row");
+    assert(Element.Cols > 0 && Element.Cols <= MaxSignatureCols &&
+           "signature element must have between 1 and 4 columns");
+
+    SemanticInterpretation Interpretation =
+        getInterpretationKind(Element.SemanticKind, ShaderStage, IOTy);
+    if (Interpretation == SemanticInterpretation::NotAllocated)
+      continue;
+
+    assert(Interpretation == SemanticInterpretation::Target &&
+           "unexpected semantic interpretation for indexed packing, should "
+           "have been diagnosed by Sema");
+    assert(Element.Rows == 1 && Element.SemanticIndices.size() == 1 &&
+           "target elements must occupy one semantic row");
+
+    const uint32_t Row = Element.SemanticIndices.front();
+    if (Row >= MaxSignatureRows)
+      return make_error<SignaturePackingError>(
+          SignaturePackingError::SemanticIndexOutOfRange,
+          static_cast<unsigned>(Index));
+
+    const uint32_t RowMask = uint32_t{1} << Row;
+    assert(!(AllocatedRows & RowMask) &&
+           "target semantic indices must be unique, verified in SemaHLSL");
+    AllocatedRows |= RowMask;
+
+    Element.StartRow = Row;
+    Element.StartCol = 0;
+    NumRows = std::max(NumRows, Row + 1);
+  }
+
+  return NumRows;
 }

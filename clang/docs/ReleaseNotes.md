@@ -105,11 +105,22 @@ features cannot lower the translation-unit ABI level;
   This also fixes a crash when such a struct was passed or returned.
   `-fclang-abi-compat=23` restores the previous behavior. (#GH202205)
 
+- Clang now considers matrix types in its isHomogeneousAggregate() handling,
+  which can lead to differences in how structures containing matrix types are
+  classified for ABI purposes. The previous exclusion of matrix types appears
+  to have been accidental. Matrix types now follow the same rules as arrays
+  for homogeneous aggregate classification.
+  `-fclang-abi-compat=23` restores the previous behavior. (#GH218799)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
 
 - Templight support has been removed.
+
+- `-fstack-clash-protection` has been enabled implicitly by default for android
+  target triples (except 32b arm targets). Can be disabled via
+  `-fno-stack-clash-protection`.
 
 ### Clang Python Bindings Potentially Breaking Changes
 
@@ -497,6 +508,14 @@ features cannot lower the translation-unit ABI level;
   inline-defined friend function shares the name of a non-static class
   member variable. (#GH221190)
 
+- Clang now diagnoses matrix logical operations are only supported for HLSL. (GH222381)
+
+- Improve the input size mismatch diagnostic when calling `__builtin_shufflevector` with valid
+  vector element types but different sizes. (GH221791)
+
+- Suggests the correct location for an attribute written before the `using`
+  keyword of an alias-declaration. (#GH155787)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -525,6 +544,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
+- Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -654,6 +674,9 @@ features cannot lower the translation-unit ABI level;
   to a subobject and is used in a context that requires an implicit conversion.
   (#GH215900)
 
+- Fixed an assertion when mangling an abbreviated function template whose
+  return type has an ABI tag. (#GH204178)
+
 - Fixed an assertion during template argument deduction where a function parameter pack is referenced by other types in the function type. (#GH28877), (#GH213760)
 
 - Fixed a regression where deprecation warnings were omitted for synthesized
@@ -684,6 +707,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when a defaulted comparison operator was synthesized for a
   class with an invalid non-static data member, such as one qualified with an
   address space. (#GH194605)
+
+- Fixed an issue where an explicit specialization of a constexpr variable would
+  result in a link error. (#GH219796)
 
 #### Bug Fixes to AST Handling
 
@@ -850,6 +876,14 @@ features cannot lower the translation-unit ABI level;
 - visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
 
 ### Code Completion
+
+- Parameters declared with a `decltype` are now presented as the type the
+  `decltype` resolves to, e.g. `set_x(int val)` rather than
+  `set_x(decltype(x) val)`. This affects the completion strings produced by
+  libclang as well as those used by clangd.
+
+- Members inherited from a dependent base class that is named through an alias
+  template are suggested by code completion when relevant.
 
 ### Static Analyzer
 

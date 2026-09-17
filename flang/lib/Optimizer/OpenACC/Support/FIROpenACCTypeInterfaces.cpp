@@ -996,6 +996,11 @@ mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     } else {
       retVal = box;
     }
+  } else if (retVal.getType() != type) {
+    // createTemporary / createHeapTemporary produce !fir.ref storage. Bare
+    // !fir.ptr / !fir.heap recipe types need a convert so fir.result and
+    // acc.yield match the parent recipe type.
+    retVal = builder.createConvert(loc, type, retVal);
   }
 
   if (mayBeOptional) {

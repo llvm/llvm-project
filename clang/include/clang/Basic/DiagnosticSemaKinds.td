@@ -3880,6 +3880,9 @@ def warn_dllimport_dropped_from_inline_function : Warning<
 def warn_nothrow_attribute_ignored : Warning<"'nothrow' attribute conflicts with"
   " exception specification; attribute ignored">,
   InGroup<IgnoredAttributes>;
+def warn_dllattr_ignored_already_instantiated : Warning<
+  "%0 attribute ignored; class template is already instantiated">,
+  InGroup<IgnoredAttributes>;
 def warn_dllattr_ignored_exclusion_takes_precedence : Warning<
   "%0 attribute ignored; %1 takes precedence">,
   InGroup<IgnoredAttributes>;
@@ -4003,6 +4006,9 @@ def err_attribute_dllimport_static_field_definition : Error<
 def warn_attribute_dllimport_static_field_definition : Warning<
   "definition of dllimport static field">,
   InGroup<DiagGroup<"dllimport-static-field-def">>;
+def warn_attribute_dllimport_explicit_instantiation_def : Warning<
+  "'dllimport' attribute ignored on explicit instantiation definition">,
+  InGroup<IgnoredAttributes>;
 def warn_attribute_dllexport_explicit_instantiation_decl : Warning<
   "explicit instantiation declaration should not be 'dllexport'">,
   InGroup<DllexportExplicitInstantiationDecl>;
@@ -4217,6 +4223,9 @@ def err_overflow_behavior_unknown_ident
 def err_overflow_behavior_non_integer_type
     : Error<"%0 %select{attribute|specifier}2 cannot be applied to "
             "non-integer type '%1'">;
+def err_overflow_behavior_atomic_type
+    : Error<"%0 %select{attribute|specifier}2 cannot be applied to atomic type "
+            "'%1'">;
 def err_conflicting_overflow_behaviors
     : Error<"conflicting %select{'overflow_behavior' attributes|overflow "
             "behavior specification; specifier specifies '%1' but attribute "
@@ -7528,8 +7537,8 @@ def err_func_def_incomplete_result : Error<
 def err_atomic_specifier_bad_type
     : Error<"_Atomic cannot be applied to "
             "%select{incomplete |array |function |reference |atomic |qualified "
-            "|sizeless ||integer |}0type "
-            "%1 %select{|||||||which is not trivially copyable||in C23}0">;
+            "|sizeless ||integer ||overflow behavior }0type "
+            "%1 %select{|||||||which is not trivially copyable||in C23|}0">;
 def warn_atomic_member_access : Warning<
   "accessing a member of an atomic structure or union is undefined behavior">,
   InGroup<DiagGroup<"atomic-access">>, DefaultError;
@@ -13830,6 +13839,9 @@ def err_hlsl_gathercmp_invalid_component
 
 def err_hlsl_resource_member_array_access_not_constant
     : Error<"index for struct array inside cbuffer that contains resources must be a constant integer expression">;
+
+def err_matrix_logical_operations_supported_for_hlsl : Error<
+  "matix logical operations are only supported for HLSL">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
