@@ -235,7 +235,8 @@ getClobberConflictLocation(MultiExprArg Exprs, Expr **Constraints,
   return SourceLocation();
 }
 
-ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
+ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel,
+                                       bool IsConstExpr) {
   if (!Expr)
     return ExprError();
 
@@ -244,6 +245,17 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
     if (ForAsmLabel && SL->getString().empty()) {
       Diag(Expr->getBeginLoc(), diag::err_asm_operand_empty_string)
           << SL->getSourceRange();
+    }
+    if (!IsConstExpr &&
+        Context.getTargetInfo().FromSystemEncodingConverter != nullptr) {
+      SmallString<16> ConvertedAsm;
+      Context.getTargetInfo().FromSystemEncodingConverter->convert(
+          SL->getString(), ConvertedAsm);
+      QualType StrTy = Context.getStringLiteralArrayType(Context.CharTy,
+                                                         ConvertedAsm.size());
+      return StringLiteral::Create(Context, ConvertedAsm,
+                                   StringLiteralKind::Ordinary,
+                                   /*Pascal*/ false, StrTy, SL->getBeginLoc());
     }
     return SL;
   }
@@ -262,6 +274,7 @@ ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
 
   ConstantExpr *Res = ConstantExpr::Create(getASTContext(), Expr,
                                            ConstantResultStorageKind::APValue);
+
   Res->SetResult(V, getASTContext());
   return Res;
 }
