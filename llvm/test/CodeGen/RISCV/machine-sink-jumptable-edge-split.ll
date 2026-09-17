@@ -32,19 +32,15 @@ define void @sink_through_jt(ptr %p) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lbu a0, -1(s1)
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    bltu s0, a0, .LBB0_13
+; CHECK-NEXT:    bltu s0, a0, .LBB0_14
 ; CHECK-NEXT:  # %bb.4: # %disp
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    sh2add a0, a0, s2
-; CHECK-NEXT:    lw a1, 0(s1)
-; CHECK-NEXT:    lw a2, 0(a0)
-; CHECK-NEXT:    addiw a0, a1, 7
-; CHECK-NEXT:    jr a2
-; CHECK-NEXT:  .LBB0_5: # %other
-; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    li a0, 55
-; CHECK-NEXT:    call use
-; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    lw a0, 0(a0)
+; CHECK-NEXT:    jr a0
+; CHECK-NEXT:  .LBB0_5: # in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    lw a0, 0(s1)
+; CHECK-NEXT:    addiw a0, a0, 7
 ; CHECK-NEXT:    j .LBB0_2
 ; CHECK-NEXT:  .LBB0_6: # %c3
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
@@ -70,23 +66,29 @@ define void @sink_through_jt(ptr %p) {
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    li a0, 106
 ; CHECK-NEXT:    j .LBB0_2
-; CHECK-NEXT:  .LBB0_12: # %c4
+; CHECK-NEXT:  .LBB0_12: # %other
+; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    li a0, 55
+; CHECK-NEXT:    call use
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    j .LBB0_2
+; CHECK-NEXT:  .LBB0_13: # %c4
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    li a0, 104
 ; CHECK-NEXT:    j .LBB0_2
-; CHECK-NEXT:  .LBB0_13: # %c0
+; CHECK-NEXT:  .LBB0_14: # %c0
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    li a0, 100
 ; CHECK-NEXT:    j .LBB0_2
-; CHECK-NEXT:  .LBB0_14: # %c5
+; CHECK-NEXT:  .LBB0_15: # %c5
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    li a0, 105
 ; CHECK-NEXT:    j .LBB0_2
-; CHECK-NEXT:  .LBB0_15: # %c9
+; CHECK-NEXT:  .LBB0_16: # %c9
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    li a0, 109
 ; CHECK-NEXT:    j .LBB0_2
-; CHECK-NEXT:  .LBB0_16: # %c7
+; CHECK-NEXT:  .LBB0_17: # %c7
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    li a0, 107
 ; CHECK-NEXT:    j .LBB0_2
