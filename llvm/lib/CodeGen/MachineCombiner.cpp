@@ -584,7 +584,7 @@ bool MachineCombinerImpl::combineInstructions(MachineBasicBlock *MBB) {
       continue;
 
     // Only used when VerifyPatternOrder is enabled.
-    [[maybe_unused]] SmallDenseMap<CombinerObjective, long> PrevLatencyDiff;
+    SmallDenseMap<CombinerObjective, long> PrevLatencyDiff;
 
     for (const auto P : Patterns) {
       SmallVector<MachineInstr *, 16> InsInstrs;
