@@ -1595,8 +1595,8 @@ public:
     return getFeatureBits()[AMDGPU::FeaturePartialNSAEncoding];
   }
 
-  bool hasGloballyAddressableScratch() const {
-    return getFeatureBits()[AMDGPU::FeatureGloballyAddressableScratch];
+  bool hasGloballyAddressableScratchSupport() const {
+    return getFeatureBits()[AMDGPU::FeatureGloballyAddressableScratchSupport];
   }
 
   unsigned getNSAMaxSize(bool HasSampler = false) const {
@@ -7255,7 +7255,7 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
     return AMDGPU::hasPrivateApertureRegs(getSTI());
   case SRC_FLAT_SCRATCH_BASE_LO:
   case SRC_FLAT_SCRATCH_BASE_HI:
-    return hasGloballyAddressableScratch();
+    return hasGloballyAddressableScratchSupport();
   case SRC_POPS_EXITING_WAVE_ID:
     return hasPopsExitingWaveID(getSTI());
   case TBA:
