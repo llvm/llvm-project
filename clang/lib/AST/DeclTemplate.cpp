@@ -1123,14 +1123,14 @@ ImplicitConceptSpecializationDecl::ImplicitConceptSpecializationDecl(
     DeclContext *DC, SourceLocation SL,
     ArrayRef<TemplateArgument> ConvertedArgs)
     : Decl(ImplicitConceptSpecialization, DC, SL),
-      NumTemplateArgs(ConvertedArgs.size()) {
+      NumTemplateArgs(ConvertedArgs.size()), ArgsPopulated(0) {
   setTemplateArguments(ConvertedArgs);
 }
 
 ImplicitConceptSpecializationDecl::ImplicitConceptSpecializationDecl(
     EmptyShell Empty, unsigned NumTemplateArgs)
     : Decl(ImplicitConceptSpecialization, Empty),
-      NumTemplateArgs(NumTemplateArgs) {}
+      NumTemplateArgs(NumTemplateArgs), ArgsPopulated(0) {}
 
 ImplicitConceptSpecializationDecl *ImplicitConceptSpecializationDecl::Create(
     const ASTContext &C, DeclContext *DC, SourceLocation SL,
@@ -1151,6 +1151,7 @@ void ImplicitConceptSpecializationDecl::setTemplateArguments(
     ArrayRef<TemplateArgument> Converted) {
   assert(Converted.size() == NumTemplateArgs);
   llvm::uninitialized_copy(Converted, getTrailingObjects());
+  ArgsPopulated = 1;
 }
 
 //===----------------------------------------------------------------------===//

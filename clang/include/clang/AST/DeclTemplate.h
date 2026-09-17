@@ -3249,7 +3249,14 @@ class ImplicitConceptSpecializationDecl final
     : public Decl,
       private llvm::TrailingObjects<ImplicitConceptSpecializationDecl,
                                     TemplateArgument> {
-  unsigned NumTemplateArgs;
+  unsigned NumTemplateArgs : 31;
+
+  /// True once setTemplateArguments() has written the trailing array.  False
+  /// between CreateDeserialized(), which publishes NumTemplateArgs over raw
+  /// storage, and setTemplateArguments().  Packed into the spare bits of the
+  /// existing member so that sizeof, the allocation size, and the offset of
+  /// the trailing array are all unchanged.
+  unsigned ArgsPopulated : 1;
 
   ImplicitConceptSpecializationDecl(DeclContext *DC, SourceLocation SL,
                                     ArrayRef<TemplateArgument> ConvertedArgs);
@@ -3264,6 +3271,9 @@ public:
                      unsigned NumTemplateArgs);
 
   ArrayRef<TemplateArgument> getTemplateArguments() const {
+    assert(ArgsPopulated &&
+           "reading ImplicitConceptSpecializationDecl's template arguments "
+           "before setTemplateArguments() has written them");
     return getTrailingObjects(NumTemplateArgs);
   }
   void setTemplateArguments(ArrayRef<TemplateArgument> Converted);
