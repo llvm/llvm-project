@@ -101,8 +101,6 @@ public:
 
   /// Get the name of this option without any prefix.
   StringRef getName() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
     return Owner->getOptionName(getID());
   }
 
@@ -133,29 +131,21 @@ public:
 
   /// Get the default prefix for this option.
   StringRef getPrefix() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
     return Owner->getOptionPrefix(getID());
   }
 
   /// Get the name of this option with the default prefix.
   StringRef getPrefixedName() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
     return Owner->getOptionPrefixedName(getID());
   }
 
   /// Get the help text for this option.
   StringRef getHelpText() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
     return Owner->getOptionHelpText(getID());
   }
 
   /// Get the meta-variable list for this option.
   StringRef getMetaVar() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
     return Owner->getOptionMetaVar(getID());
   }
 

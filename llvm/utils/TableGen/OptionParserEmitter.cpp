@@ -297,25 +297,14 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     Table.GetOrAddStringOffset(R.getValueAsString("Name"));
     Table.GetOrAddStringOffset(getHelpText(R));
   }
-  // Info::HelpTextVariantsOffset is a 1-based index into this list.
-  std::vector<const Record *> HelpTextVariants;
-  DenseMap<const Record *, unsigned> HelpTextVariantIdx;
   for (const Record &R : llvm::make_pointee_range(Opts)) {
     Table.GetOrAddStringOffset(getOptionPrefixedName(R));
     Table.GetOrAddStringOffset(getHelpText(R));
     Table.GetOrAddStringOffset(getOptionalString(R, "MetaVarName"));
     Table.GetOrAddStringOffset(getOptionalString(R, "Values"));
     Table.GetOrAddStringOffset(getAliasArgsBlob(R));
-    std::vector<const Record *> Variants =
-        R.getValueAsListOfDefs("HelpTextsForVariants");
-    if (Variants.size() > 1)
-      PrintFatalError(R.getLoc(),
-                      "at most one HelpTextForVariants is supported");
-    for (const Record *V : Variants) {
+    for (const Record *V : R.getValueAsListOfDefs("HelpTextsForVariants"))
       Table.GetOrAddStringOffset(V->getValueAsString("Text"));
-      HelpTextVariants.push_back(V);
-      HelpTextVariantIdx[&R] = HelpTextVariants.size();
-    }
   }
 
   // Dump string table.
@@ -394,18 +383,31 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef OPTTABLE_HELP_TEXT_VARIANTS_TABLE_CODE\n";
   OS << "static constexpr llvm::opt::OptTable::HelpTextVariant "
         "OptionHelpTextVariantsTable[] = {\n";
+  // Each option's variants form a run ended by a zero row; offset 0 is the
+  // empty run.
+  DenseMap<const Record *, unsigned> HelpTextVariantsOffset;
+  unsigned NumVariantRows = 1;
   OS << "  {0, 0},\n";
-  for (const Record *V : HelpTextVariants) {
-    OS << "  {";
-    const ListInit *Vis = V->getValueAsListInit("Visibilities");
-    if (Vis->empty())
-      OS << '0';
-    ListSeparator Sep(" | ");
-    for (const Init *I : *Vis)
-      OS << Sep << I->getAsUnquotedString();
-    OS << ", ";
-    writeStrTableOffset(OS, Table, V->getValueAsString("Text"));
-    OS << "},\n";
+  for (const Record &R : llvm::make_pointee_range(Opts)) {
+    std::vector<const Record *> Variants =
+        R.getValueAsListOfDefs("HelpTextsForVariants");
+    if (Variants.empty())
+      continue;
+    HelpTextVariantsOffset[&R] = NumVariantRows;
+    NumVariantRows += Variants.size() + 1;
+    for (const Record *V : Variants) {
+      const ListInit *Vis = V->getValueAsListInit("Visibilities");
+      if (Vis->empty())
+        PrintFatalError(V->getLoc(), "HelpTextVariant needs a visibility");
+      OS << "  {";
+      ListSeparator Sep(" | ");
+      for (const Init *I : *Vis)
+        OS << Sep << I->getAsUnquotedString();
+      OS << ", ";
+      writeStrTableOffset(OS, Table, V->getValueAsString("Text"));
+      OS << "},\n";
+    }
+    OS << "  {0, 0},\n";
   }
   OS << "};\n";
   OS << "#endif // OPTTABLE_HELP_TEXT_VARIANTS_TABLE_CODE\n\n";
@@ -487,7 +489,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << ", ";
     writeStrTableOffset(OS, Table, getHelpText(R));
 
-    // Groups have no help text variant.
+    // Groups have no help text variants.
     OS << ", 0";
 
     // The option meta-variable name (unused).
@@ -580,8 +582,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << ", ";
     writeStrTableOffset(OS, Table, getHelpText(R));
 
-    // The option help text variant.
-    OS << ", " << HelpTextVariantIdx.lookup(&R);
+    // The option help text variants.
+    OS << ", " << HelpTextVariantsOffset.lookup(&R);
 
     // The option meta-variable name.
     OS << ", ";

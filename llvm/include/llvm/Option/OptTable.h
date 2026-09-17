@@ -66,7 +66,8 @@ public:
   using ValuesCodeFnTy = StringRef (*)(unsigned);
 
   /// Help text that replaces Info::HelpTextOffset when the visibility mask
-  /// being printed intersects Visibility.
+  /// being printed intersects Visibility. An option's variants form a run
+  /// ended by a zero Visibility.
   struct HelpTextVariant {
     unsigned Visibility;
     StringTable::Offset HelpTextOffset;
@@ -90,7 +91,7 @@ public:
     unsigned short PrefixesOffset;
     unsigned short GroupID;
     unsigned short AliasID;
-    // Index into OptTable's HelpTextVariantsTable; 0 for none.
+    // Offset into OptTable's HelpTextVariantsTable; 0 for none.
     unsigned short HelpTextVariantsOffset;
     // Offset into OptTable's SubCommandIDsTable.
     unsigned short SubCommandIDsOffset;
@@ -222,12 +223,12 @@ private:
 
   StringTable::Offset getHelpTextOffset(const Info &I,
                                         Visibility VisibilityMask) const {
-    if (I.HelpTextVariantsOffset) {
-      const HelpTextVariant &V =
-          HelpTextVariantsTable[I.HelpTextVariantsOffset];
-      if (VisibilityMask & V.Visibility)
-        return V.HelpTextOffset;
-    }
+    if (I.HelpTextVariantsOffset)
+      for (const HelpTextVariant *V =
+               &HelpTextVariantsTable[I.HelpTextVariantsOffset];
+           V->Visibility; ++V)
+        if (VisibilityMask & V->Visibility)
+          return V->HelpTextOffset;
     return I.HelpTextOffset;
   }
 

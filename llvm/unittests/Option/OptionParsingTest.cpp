@@ -588,6 +588,8 @@ TYPED_TEST(OptTableTest, HelpTextForVariants) {
   EXPECT_EQ(
       "The xyzzy3 option for the subtool",
       T.getOptionHelpText(OPT_Xyzzy3, Visibility(DefaultVis | SubtoolVis)));
+  EXPECT_EQ("The xyzzy3 option for multiline",
+            T.getOptionHelpText(OPT_Xyzzy3, Visibility(MultiLineVis)));
 }
 
 TYPED_TEST(OptTableTest, PrintMultilineHelpText) {
