@@ -1455,6 +1455,7 @@ def CIR_CleanupScopeOp : CIR_RegionBranchOpBase<"cleanup.scope", [
   ];
 
   let hasCanonicalizeMethod = 1;
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
