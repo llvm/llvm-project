@@ -1055,35 +1055,73 @@ static void createOptionalSymbols() {
 
 static void processStubLibrariesPreLTO() {
   log("-- processStubLibrariesPreLTO");
-  for (auto &stub_file : ctx.stubFiles) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "processing stub file: " << stub_file->getName() << "\n");
-    for (auto [name, deps] : stub_file->symbolDependencies) {
-      auto *sym = symtab->find(name);
-      // If the symbol is not present at all (yet), or if it is present but
-      // undefined, then mark the dependent symbols as used by a regular
-      // object so they will be preserved and exported by the LTO process.
-      if (!sym || sym->isUndefined()) {
-        for (const auto dep : deps) {
-          auto *needed = symtab->find(dep);
-          if (needed) {
-            needed->isUsedInRegularObj = true;
-            // Like with handleLibcall we have to extract any LTO archive
-            // members that might need to be exported due to stub library
-            // symbols being referenced.  Without this the LTO object could be
-            // extracted during processStubLibraries, which is too late since
-            // LTO has already being performed at that point.
-            if (needed->isLazy() && isa<BitcodeFile>(needed->getFile())) {
-              if (!ctx.arg.whyExtract.empty())
-                ctx.whyExtractRecords.emplace_back(toString(stub_file),
-                                                   needed->getFile(), *needed);
-              cast<LazySymbol>(needed)->extract();
-            }
-          }
+  DenseSet<StringRef> libcallSymbols;
+  if (!ctx.bitcodeFiles.empty()) {
+    llvm::Triple TT(ctx.bitcodeFiles.front()->obj->getTargetTriple());
+    for (auto *s : lto::LTO::getRuntimeLibcallSymbols(TT))
+      libcallSymbols.insert(s);
+  }
+
+  // A stub symbol's dependencies only need to be preserved before LTO if:
+  // 1. The symbol is already present and undefined (referenced by an object),
+  // or
+  // 2. The symbol is a runtime libcall that might be newly generated during
+  // LTO.
+  auto isNeeded = [&](StringRef name) {
+    auto *sym = symtab->find(name);
+    if (sym)
+      return sym->isUndefined();
+    return libcallSymbols.contains(name);
+  };
+
+  auto handleDeps = [&](const StubFile *stub_file, ArrayRef<StringRef> deps) {
+    bool depsAdded = false;
+    for (const auto dep : deps) {
+      auto *needed = symtab->find(dep);
+      if (needed) {
+        needed->isUsedInRegularObj = true;
+        // Like with handleLibcall we have to extract any LTO archive
+        // members that might need to be exported due to stub library
+        // symbols being referenced.  Without this the LTO object could be
+        // extracted during processStubLibraries, which is too late since
+        // LTO has already been performed at that point.
+        if (needed->isLazy() && isa<BitcodeFile>(needed->getFile())) {
+          if (!ctx.arg.whyExtract.empty())
+            ctx.whyExtractRecords.emplace_back(toString(stub_file),
+                                               needed->getFile(), *needed);
+          cast<LazySymbol>(needed)->extract();
+          depsAdded = true;
         }
       }
     }
-  }
+    return depsAdded;
+  };
+
+  bool depsAdded;
+  do {
+    depsAdded = false;
+    for (auto &stub_file : ctx.stubFiles) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "processing stub file: " << stub_file->getName() << "\n");
+      for (auto [name, deps] : stub_file->symbolDependencies) {
+        if (isNeeded(name))
+          depsAdded |= handleDeps(stub_file, deps);
+      }
+    }
+
+    // Iterate by index because handleDeps may extract archive members, adding
+    // new symbols to symVector and potentially invalidating iterators.
+    for (size_t i = 0; i < symtab->symbols().size(); ++i) {
+      Symbol *sym = symtab->symbols()[i];
+      if (sym->isUndefined() && sym->importName.has_value()) {
+        for (auto &stub_file : ctx.stubFiles) {
+          auto it = stub_file->symbolDependencies.find(sym->importName.value());
+          if (it != stub_file->symbolDependencies.end())
+            depsAdded |= handleDeps(stub_file, it->second);
+        }
+      }
+    }
+  } while (depsAdded);
 }
 
 static bool addStubSymbolDeps(const StubFile *stub_file, Symbol *sym,
