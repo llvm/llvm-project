@@ -490,13 +490,11 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       const RISCVMachineFunctionInfo *RVFI =
           MF->getInfo<RISCVMachineFunctionInfo>();
 
-      // If this is the entry block and the register is livein, see if we know
-      // it is sign extended.
-      if (MI->getParent() == &MF->front()) {
-        Register VReg = MI->getOperand(0).getReg();
-        if (MF->getRegInfo().isLiveIn(VReg) && RVFI->isSExt32Register(VReg))
-          continue;
-      }
+      // If this is the entry block, see if we know the copied argument register
+      // is sign extended.
+      if (MI->getParent() == &MF->front() &&
+          RVFI->isSExt32Register(MI->getOperand(0).getReg()))
+        continue;
 
       Register CopySrcReg = MI->getOperand(1).getReg();
       if (CopySrcReg == RISCV::X10) {
