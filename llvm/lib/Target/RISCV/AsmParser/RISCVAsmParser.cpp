@@ -345,7 +345,7 @@ public:
   void onBeginOfFile() override {
     // If the target streamer already has a resolved ABI (e.g. set by
     // RISCVTargetELFStreamer for a valid -target-abi, or set by
-    // RISCVAsmPrinter during codegen), skip validation.
+    // RISCVAsmPrinter during codegen), skip ABI validation.
     if (getTargetStreamer().hasTargetABI())
       return;
 
