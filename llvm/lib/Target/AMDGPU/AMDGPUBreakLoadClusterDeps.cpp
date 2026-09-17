@@ -51,6 +51,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -100,14 +101,26 @@ class AMDGPUBreakLoadClusterDepsImpl {
   bool findReplaceRegisterOperand(MachineInstr &MI, unsigned OpNum,
                                   const BitVector &BannedRegs,
                                   bool MIMustBeKiller = false);
+  
+  // The VGPR destination of a VMEM load is `vdst` (FLAT/global/scratch) or
+  // `vdata` (MUBUF/MTBUF).  Return its operand index, or -1 if there is none.
+  static int getLoadDestIdx(const MachineInstr &MI) {
+    int Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdst);
+    if (Idx == -1)
+      Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdata);
+    return Idx;
+  }
+
   bool isVGPRLoad(MachineInstr &MI) const {
     // Exclude image (MIMG/VIMAGE/VSAMPLE) loads.  Their address operands are
     // per-coordinate VGPRs, not the reused address chain this pass targets, and
     // renaming them fights GCNNSAReassign, which deliberately picks the NSA
     // address-register layout (renaming forces the larger NSA encoding).
-    return SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isImage(MI) &&
-           MI.mayLoad() && MI.getOperand(0).isReg() &&
-           TRI->isVGPR(*MRI, MI.getOperand(0).getReg());
+    if (!SIInstrInfo::isVMEM(MI) || SIInstrInfo::isImage(MI) || !MI.mayLoad())
+      return false;
+    int DstIdx = getLoadDestIdx(MI);
+    return DstIdx != -1 && MI.getOperand(DstIdx).isReg() &&
+           TRI->isVGPR(*MRI, MI.getOperand(DstIdx).getReg());
   }
 
 public:
@@ -457,8 +470,8 @@ bool AMDGPUBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
             break;
 
           ClusterLoads.insert(&*ForwardIt);
-          ClusterRAWHazards |=
-              getVGPR32Components(ForwardIt->getOperand(0).getReg());
+          ClusterRAWHazards |= getVGPR32Components(
+              ForwardIt->getOperand(getLoadDestIdx(*ForwardIt)).getReg());
         } else
           for (MachineOperand &Operand : ForwardIt->defs())
             if (TRI->isVGPR(*MRI, Operand.getReg())) {
