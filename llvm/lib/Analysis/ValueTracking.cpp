@@ -742,8 +742,9 @@ static bool hasNoFreeInRange(BasicBlock::const_iterator Begin,
     if (auto *CB = dyn_cast<CallBase>(&I)) {
       if (!CB->hasFnAttr(Attribute::NoFree))
         return false;
-    } else if (I.maySynchronize())
+    } else if (I.maySynchronize()) {
       return false;
+    }
   }
   return true;
 }
