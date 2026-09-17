@@ -22308,12 +22308,20 @@ static SDValue performVSlideUpDownCombine(SDNode *N, SelectionDAG &DAG,
   if (!SlideDownPassthru.isUndef() || SlideDownVal != N->getOperand(0) ||
       SlideDownOffset != SlideUpOffset)
     return SDValue();
-  // We can loosen the mask requirement in the future.
-  if (SlideDownMask != SlideUpMask &&
-      (SlideDownMask.getOpcode() != RISCVISD::VMSET_VL ||
-       SlideUpMask.getOpcode() != RISCVISD::VMSET_VL ||
-       SlideDownMask.getOperand(0) != SlideDownVL ||
-       SlideUpMask.getOperand(0) != SlideUpVL))
+
+  auto isAllSetMask = [&DAG](SDValue V, SDValue VL) -> bool {
+    using namespace SDPatternMatch;
+    SDValue VMSet;
+    return sd_match(V, m_Node(RISCVISD::VMSET_VL, m_Value(VMSet))) &&
+           ((isa<RegisterSDNode>(VMSet) &&
+             cast<RegisterSDNode>(VMSet)->getReg() == RISCV::X0) ||
+            isAllOnesConstant(VMSet) ||
+            KnownBits::uge(DAG.computeKnownBits(VMSet),
+                           DAG.computeKnownBits(VL))
+                .value_or(false));
+  };
+  if (!isAllSetMask(SlideDownMask, SlideDownVL) ||
+      !isAllSetMask(SlideUpMask, SlideUpVL))
     return SDValue();
 
   return SlideDownVal;

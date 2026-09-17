@@ -384,16 +384,9 @@ define <8 x i32> @vector_interleave4_v8i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; ZVZIP-WIDE-NEXT:    vzip.vv v9, v8, v10
 ; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
 ; ZVZIP-WIDE-NEXT:    vzip.vv v8, v9, v12
+; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v8, 4
 ; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v8, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v8, 4
-; ZVZIP-WIDE-NEXT:    vsetvli zero, zero, e32, mf2, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e32, mf2, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v10, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v10, 2
+; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v9, 2
 ; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e32, mf2, ta, ma
 ; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 6
 ; ZVZIP-WIDE-NEXT:    ret
@@ -11997,29 +11990,13 @@ define <16 x i8> @vector_interleave8_v16i8_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i
 ; ZVZIP-WIDE-NEXT:    vzip.vv v9, v10, v14
 ; ZVZIP-WIDE-NEXT:    vzip.vv v10, v8, v12
 ; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v8, v11, v16
+; ZVZIP-WIDE-NEXT:    vzip.vv v12, v11, v16
 ; ZVZIP-WIDE-NEXT:    vzip.vv v11, v10, v9
 ; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v9, v11, v8
+; ZVZIP-WIDE-NEXT:    vzip.vv v8, v11, v12
+; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v8, 8
 ; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v9, 2
-; ZVZIP-WIDE-NEXT:    vmv1r.v v8, v9
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v11, v9, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e8, mf8, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v10, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v9, 6
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e8, mf8, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v11, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v9, 8
-; ZVZIP-WIDE-NEXT:    vsetvli zero, zero, e8, mf8, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v10, 6
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 10, e8, mf8, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; ZVZIP-WIDE-NEXT:    vslidedown.vi v11, v9, 4
 ; ZVZIP-WIDE-NEXT:    vsetivli zero, 12, e8, mf8, tu, ma
 ; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v10, 10
