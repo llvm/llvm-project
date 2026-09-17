@@ -36,7 +36,7 @@ void test(Ctrl* p)
   // expected-warning-re@-1 {{reg_${{[0-9]+}}<unsigned int Element{SymRegion{reg_${{[0-9]+}}<Ctrl * p>},0 S64b,struct {{[0-9A-Za-z_]+}}::Ctrl}.c>}}
   clang_analyzer_eval(p->cmd() == p->cmd()); // expected-warning {{TRUE}}
 }
-} // namespace final_class
+} // namespace final_struct
 
 namespace final_method_on_child_ptr {
 // A final method should also be inlined when it is called through a pointer
