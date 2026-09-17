@@ -27842,6 +27842,31 @@ SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
     }
   }
 
+  // Fold interleave(splat(S[J]), ..., splat(S[J + Factor - 1])) to shuffles
+  // of S.
+  if (VT.isFixedLengthVector() && Op0.getOpcode() == ISD::VECTOR_SHUFFLE) {
+    unsigned Factor = N->getNumOperands();
+    unsigned NumElts = VT.getVectorNumElements();
+    int FirstIndex;
+    SDValue Source = DAG.getSplatSourceVector(Op0, FirstIndex);
+    if (Source && llvm::all_of(llvm::enumerate(N->op_values()), [&](auto Item) {
+          int SplatIndex;
+          return DAG.getSplatSourceVector(Item.value(), SplatIndex) == Source &&
+                 SplatIndex == FirstIndex + static_cast<int>(Item.index());
+        })) {
+      SmallVector<SDValue, 4> Results;
+      for (unsigned Result = 0; Result != Factor; ++Result) {
+        SmallVector<int, 16> Mask;
+        for (unsigned I = 0; I != NumElts; ++I)
+          Mask.push_back(FirstIndex + (Result * NumElts + I) % Factor);
+
+        Results.push_back(
+            DAG.getVectorShuffle(VT, SDLoc(N), Source, DAG.getUNDEF(VT), Mask));
+      }
+      return CombineTo(N, &Results);
+    }
+  }
+
   // Check to see if all operands are identical.
   if (!llvm::all_equal(N->op_values()))
     return SDValue();
