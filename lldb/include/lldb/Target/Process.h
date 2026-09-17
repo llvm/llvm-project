@@ -53,6 +53,7 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Listener.h"
+#include "lldb/Utility/Locked.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/Policy.h"
 #include "lldb/Utility/ProcessAddress.h"
@@ -1304,7 +1305,10 @@ public:
   /// Send an async interrupt request.
   ///
   /// If \a thread is specified the async interrupt stop will be attributed to
-  /// the specified thread.
+  /// the specified thread. Such a thread specific request is only honored for
+  /// the execution that is in flight when it is made: if the process stops on
+  /// its own before we get around to interrupting it, the request is dropped
+  /// instead of interrupting a later resume.
   ///
   /// \param[in] thread
   ///     The thread the async interrupt will be attributed to.
@@ -3592,6 +3596,19 @@ protected:
                                /// interrupt, used by thread plan timeout. It
                                /// can be LLDB_INVALID_THREAD_ID to indicate
                                /// user level async interrupt.
+
+  /// An async interrupt requested through SendAsyncInterrupt() that the
+  /// private state thread hasn't acted on yet: the tid of the requesting
+  /// thread (std::nullopt for a user level interrupt), together with the stop
+  /// ID the process had at the time of the request. The request only becomes
+  /// visible as m_interrupt_tid once we actually interrupt the inferior for
+  /// it, and a thread specific request is dropped if the process stopped on
+  /// its own in the meantime. See Process::RunPrivateStateThread().
+  struct PendingInterrupt {
+    std::optional<lldb::tid_t> tid;
+    uint32_t stop_id = 0;
+  };
+  Guarded<PendingInterrupt, std::mutex> m_pending_interrupt;
 
   /// This is set at the beginning of Process::Finalize() to stop functions
   /// from looking up or creating things during or after a finalize call.

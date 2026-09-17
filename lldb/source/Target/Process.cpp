@@ -10,6 +10,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <utility>
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -4286,10 +4287,14 @@ void Process::ControlPrivateStateThread(uint32_t signal) {
 }
 
 void Process::SendAsyncInterrupt(Thread *thread) {
+  // Don't make the request visible as m_interrupt_tid yet: until the private
+  // state thread actually interrupts the inferior for us, the request can
+  // still turn out to be obsolete, and a stop that we didn't cause must not be
+  // reported as our async interrupt.
+  std::optional<lldb::tid_t> tid;
   if (thread != nullptr)
-    m_interrupt_tid = thread->GetProtocolID();
-  else
-    m_interrupt_tid = LLDB_INVALID_THREAD_ID;
+    tid = thread->GetProtocolID();
+  *m_pending_interrupt.Lock() = {tid, GetStopID()};
   if (PrivateStateThreadIsRunning())
     m_private_state_broadcaster.BroadcastEvent(Process::eBroadcastBitInterrupt,
                                                nullptr);
@@ -4460,7 +4465,25 @@ Process::RunPrivateStateThread(PrivateStateThread::Purpose purpose) {
 
       continue;
     } else if (event_sp->GetType() == eBroadcastBitInterrupt) {
-      if (GetPublicState() == eStateAttaching) {
+      // Claim the request this event was sent for. A thread specific request
+      // (i.e. one coming from a thread plan rather than from the user) is only
+      // meaningful for the execution that was in flight when it was made: if
+      // the process has stopped since then, whatever the requestor wanted to
+      // interrupt is over. Interrupting the next resume instead would stop the
+      // process for a reason no thread plan can explain, which surfaces to the
+      // user as a spurious stop.
+      auto [interrupt_tid, stop_id] =
+          std::exchange(*m_pending_interrupt.Lock(), {});
+      const bool interrupt_is_stale = interrupt_tid && stop_id != GetStopID();
+
+      if (interrupt_is_stale) {
+        LLDB_LOG(log,
+                 "Process::RunPrivateStateThread ignoring stale interrupt "
+                 "requested for thread {0:x}, the process stopped on its own "
+                 "since.",
+                 *interrupt_tid);
+      } else if (GetPublicState() == eStateAttaching) {
+        m_interrupt_tid = interrupt_tid.value_or(LLDB_INVALID_THREAD_ID);
         LLDB_LOGF(log,
                   "Process::%s (arg = %p, pid = %" PRIu64
                   ") woke up with an interrupt while attaching - "
@@ -4475,6 +4498,9 @@ Process::RunPrivateStateThread(PrivateStateThread::Purpose purpose) {
         Status error = HaltPrivate();
         BroadcastEvent(eBroadcastBitInterrupt, nullptr);
       } else if (StateIsRunningState(m_last_broadcast_state)) {
+        // Only now that we are actually interrupting the inferior does the
+        // stop we are about to cause belong to the requesting thread.
+        m_interrupt_tid = interrupt_tid.value_or(LLDB_INVALID_THREAD_ID);
         LLDB_LOGF(log,
                   "Process::%s (arg = %p, pid = %" PRIu64
                   ") woke up with an interrupt - Halting.",
