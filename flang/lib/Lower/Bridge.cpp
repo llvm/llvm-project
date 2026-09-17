@@ -7052,7 +7052,10 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setAtomicRemoteMemory(*module, targetOpts.atomicRemoteMemory);
   fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
   fir::setTargetABI(*module, targetOpts.abi);
-  fir::support::setMLIRDataLayout(*module, targetMachine.createDataLayout());
+  fir::support::setMLIRDataLayout(
+      *module,
+      llvm::DataLayout(
+          targetMachine.getTargetTriple().computeDataLayout(targetOpts.abi)));
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
   fir::setRelocationModel(*module, cgOpts.getRelocationModel());
   fir::setIsPIE(*module, cgOpts.IsPIE);
