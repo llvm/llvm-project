@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -224,7 +226,7 @@ findInvokeNormalDestCycles(const Function &F,
                            DenseSet<const BasicBlock *> &CycleBlocks) {
   DenseSet<const BasicBlock *> Processed;
   DenseSet<const BasicBlock *> OnCurrentPath;
-  std::vector<const BasicBlock *> CurrentPath;
+  SmallVector<const BasicBlock *, 16> CurrentPath;
 
   for (const BasicBlock &Start : F) {
     if (Processed.contains(&Start))
@@ -236,9 +238,9 @@ findInvokeNormalDestCycles(const Function &F,
     while (Cur) {
       if (OnCurrentPath.contains(Cur)) {
         // Back-edge onto CurrentPath: the cycle is the suffix starting at Cur.
-        auto CycleStart = CurrentPath.begin();
-        while (*CycleStart != Cur)
-          ++CycleStart;
+        auto CycleStart = llvm::find(CurrentPath, Cur);
+        assert(CycleStart != CurrentPath.end() &&
+               "OnCurrentPath must hold exactly the blocks in CurrentPath");
         CycleBlocks.insert(CycleStart, CurrentPath.end());
         break;
       }
