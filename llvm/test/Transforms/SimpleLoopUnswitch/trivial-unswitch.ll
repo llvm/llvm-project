@@ -1656,3 +1656,78 @@ exit2:
 ; CHECK-NEXT:    %r = phi i32 [ 0, %entry.split ]
 ; CHECK-NEXT:    ret i32 %r
 }
+
+; Trivially unswitchable header branch whose exit LCSSA reads header phi %acc.
+; The exit is also reached from the latch, so it is split on unswitch.
+define i32 @test_unswitch_header_phi_split_exit(i1 %c, i32 %n) {
+; CHECK-LABEL: @test_unswitch_header_phi_split_exit(
+entry:
+  br label %header
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 %c, label %exit.split, label %entry.split
+
+header:
+  %acc = phi i32 [ 0, %entry ], [ %next, %latch ]
+  br i1 %c, label %exit, label %latch
+; CHECK:       header:
+; CHECK-NEXT:    %acc = phi i32 [ 0, %entry.split ], [ %next, %latch ]
+; CHECK-NEXT:    br label %latch
+
+latch:
+  %next = add i32 %acc, 1
+  %cmp = icmp slt i32 %next, %n
+  br i1 %cmp, label %header, label %exit
+; CHECK:       latch:
+; CHECK-NEXT:    %next = add i32 %acc, 1
+; CHECK-NEXT:    %cmp = icmp slt i32 %next, %n
+; CHECK-NEXT:    br i1 %cmp, label %header, label %exit
+
+exit:
+  %r = phi i32 [ %acc, %header ], [ %next, %latch ]
+  ret i32 %r
+; CHECK:       exit:
+; CHECK-NEXT:    %r = phi i32 [ %next, %latch ]
+; CHECK-NEXT:    br label %exit.split
+; CHECK:       exit.split:
+; CHECK-NEXT:    %r.split = phi i32 [ 0, %entry ], [ %r, %exit ]
+; CHECK-NEXT:    ret i32 %r.split
+}
+
+; Trivially unswitchable header branch whose exit LCSSA reads header phi %acc.
+; The condition is an OR of invariant %a and variant %b, so only %a is peeled
+define i32 @test_unswitch_header_phi_partial(i1 %a) {
+; CHECK-LABEL: @test_unswitch_header_phi_partial(
+entry:
+  br label %header
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    %a.fr = freeze i1 %a
+; CHECK-NEXT:    br i1 %a.fr, label %exit.split, label %entry.split
+
+header:
+  %acc = phi i32 [ 0, %entry ], [ %next, %latch ]
+  %b = icmp eq i32 %acc, 5
+  %or = or i1 %a, %b
+  br i1 %or, label %exit, label %latch
+; CHECK:       header:
+; CHECK-NEXT:    %acc = phi i32 [ 0, %entry.split ], [ %next, %latch ]
+; CHECK-NEXT:    %b = icmp eq i32 %acc, 5
+; CHECK-NEXT:    %or = or i1 false, %b
+; CHECK-NEXT:    br i1 %or, label %exit, label %latch
+
+latch:
+  %next = add i32 %acc, 1
+  br label %header
+; CHECK:       latch:
+; CHECK-NEXT:    %next = add i32 %acc, 1
+; CHECK-NEXT:    br label %header
+
+exit:
+  %r = phi i32 [ %acc, %header ]
+  ret i32 %r
+; CHECK:       exit:
+; CHECK-NEXT:    %r = phi i32 [ %acc, %header ]
+; CHECK-NEXT:    br label %exit.split
+; CHECK:       exit.split:
+; CHECK-NEXT:    %r.split = phi i32 [ 0, %entry ], [ %r, %exit ]
+; CHECK-NEXT:    ret i32 %r.split
+}
