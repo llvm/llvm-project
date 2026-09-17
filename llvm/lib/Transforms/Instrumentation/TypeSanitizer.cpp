@@ -152,19 +152,24 @@ void TypeSanitizer::initializeCallbacks(Module &M) {
   AttributeList Attr;
   Attr = Attr.addFnAttribute(M.getContext(), Attribute::NoUnwind);
   // Initialize the callbacks.
-  TysanCheck =
-      M.getOrInsertFunction(kTysanCheckName, Attr, IRB.getVoidTy(),
-                            IRB.getPtrTy(), // Pointer to data to be read.
-                            OrdTy,          // Size of the data in bytes.
-                            IRB.getPtrTy(), // Pointer to type descriptor.
-                            OrdTy           // Flags.
-      );
+  TysanCheck = M.getOrInsertFunction(
+      kTysanCheckName,
+      Attr.addParamAttribute(M.getContext(), 1, Attribute::ZExt)
+          .addParamAttribute(M.getContext(), 3, Attribute::NoExt),
+      IRB.getVoidTy(),
+      IRB.getPtrTy(), // Pointer to data to be read.
+      OrdTy,          // Size of the data in bytes.
+      IRB.getPtrTy(), // Pointer to type descriptor.
+      OrdTy           // Flags.
+  );
 
   TysanCtorFunction =
       M.getOrInsertFunction(kTysanModuleCtorName, Attr, IRB.getVoidTy());
 
   TysanIntrumentMemInst = M.getOrInsertFunction(
-      "__tysan_instrument_mem_inst", Attr, IRB.getVoidTy(),
+      "__tysan_instrument_mem_inst",
+      Attr.addParamAttribute(M.getContext(), 3, Attribute::ZExt),
+      IRB.getVoidTy(),
       IRB.getPtrTy(), // Pointer of data to be written to
       IRB.getPtrTy(), // Pointer of data to write
       U64Ty,          // Size of the data in bytes
@@ -172,7 +177,10 @@ void TypeSanitizer::initializeCallbacks(Module &M) {
   );
 
   TysanInstrumentWithShadowUpdate = M.getOrInsertFunction(
-      "__tysan_instrument_with_shadow_update", Attr, IRB.getVoidTy(),
+      "__tysan_instrument_with_shadow_update",
+      Attr.addParamAttribute(M.getContext(), 2, Attribute::ZExt)
+          .addParamAttribute(M.getContext(), 4, Attribute::NoExt),
+      IRB.getVoidTy(),
       IRB.getPtrTy(), // Pointer to data to be read
       IRB.getPtrTy(), // Pointer to type descriptor
       BoolType,       // Do we need to type check this
