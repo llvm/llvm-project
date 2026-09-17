@@ -664,7 +664,7 @@ define i64 @parity_64_shift(i64 %0) {
 
 ; The sub only folds to zero in DAGCombine, after the ctpop+and has already
 ; been turned into a PARITY node.
-define i32 @parity_32_constant(i32 %x) {
+define i32 @parity_32_constant(i32 %x) nounwind {
 ; X86-LABEL: parity_32_constant:
 ; X86:       # %bb.0:
 ; X86-NEXT:    xorl %eax, %eax
@@ -680,7 +680,7 @@ define i32 @parity_32_constant(i32 %x) {
   ret i32 %3
 }
 
-define i32 @parity_32_constant_odd(i32 %x) {
+define i32 @parity_32_constant_odd(i32 %x) nounwind {
 ; X86-LABEL: parity_32_constant_odd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl $1, %eax
@@ -699,14 +699,11 @@ define i32 @parity_32_constant_odd(i32 %x) {
 
 ; As above, but the i128 PARITY node is expanded by type legalization, which
 ; recreates a narrower PARITY node with an already constant operand.
-define i128 @parity_128_constant(i128 %x) {
+define i128 @parity_128_constant(i128 %x) nounwind {
 ; X86-LABEL: parity_128_constant:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
@@ -716,7 +713,6 @@ define i128 @parity_128_constant(i128 %x) {
 ; X86-NEXT:    movl $1, (%eax)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: parity_128_constant:
