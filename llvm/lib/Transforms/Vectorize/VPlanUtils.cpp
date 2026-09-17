@@ -1243,11 +1243,14 @@ vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
     auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
     bool TermIsEstimated = Term && Term->hasEstimatedBranchWeights();
     for (const auto &[Succ, EdgeProb] : getSuccessorProbabilities(VPBB)) {
-      // Ignore the backedge to the header (already treated as always executing)
-      // and edges leaving Blocks, i.e. a plain CFG's edges to the middle block
-      // or to an exit block.
+      // Ignore the backedge to the header (already treated as always
+      // executing).
+      if (Succ == Blocks.front())
+        continue;
+      // Ignore edges leaving Blocks, i.e. a plain CFG's edges to the middle
+      // block or to an exit block.
       auto It = Frequencies.find(Succ);
-      if (Succ == Blocks.front() || It == Frequencies.end())
+      if (It == Frequencies.end())
         continue;
       std::optional<VPExecutionFrequency> &SuccFreq = It->second;
       // An unknown edge or predecessor poisons the successor.
