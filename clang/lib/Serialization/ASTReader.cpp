@@ -1879,7 +1879,7 @@ void ASTReader::buildLoadedInputFiles() {
         continue;
       auto Filename =
           ResolveImportedPath(PathBuf, FI.UnresolvedImportedFilename, F);
-      // Make both paths absolute and remove dot segments before comparing them.
+      // Canonicalize both paths before comparing them.
       SmallString<128> Key(*Filename);
       FileMgr.makeAbsolutePath(Key, /*Canonicalize=*/true);
       LoadedInputFiles[Key].push_back({FI.StoredSize, &F, I + 1});
