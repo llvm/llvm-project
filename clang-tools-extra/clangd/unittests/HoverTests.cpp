@@ -5512,6 +5512,72 @@ TEST(Hover, HLSLRegisterAttributeRange) {
   }
 }
 
+TEST(Hover, HLSLParamModifiers) {
+  struct {
+    const char *const Code;
+    const char *const ExpectedType;
+  } Cases[] = {{
+                   R"hlsl(
+            void main(out float ^result) {}
+          )hlsl",
+                   "out float"},
+               {
+                   R"hlsl(
+            void main(out float result) {
+              ^result = 1.0;
+            }
+          )hlsl",
+                   "out float"},
+               {
+                   R"hlsl(
+            void main(inout float ^result) {}
+          )hlsl",
+                   "inout float"},
+               {
+                   R"hlsl(
+            void main(inout float result) {
+              ^result = 1.0;
+            }
+          )hlsl",
+                   "inout float"},
+               {
+                   R"hlsl(
+            void main(in float ^result) {}
+          )hlsl",
+                   "float"},
+               {
+                   R"hlsl(
+            void main(in float result) {
+              ^result = 1.0;
+            }
+          )hlsl",
+                   "float"},
+               {
+                   R"hlsl(
+            void main(float ^result) {}
+          )hlsl",
+                   "float"},
+               {
+                   R"hlsl(
+            void main(float result) {
+              ^result = 1.0;
+            }
+          )hlsl",
+                   "float"}};
+
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    Annotations T(Case.Code);
+    TestTU TU = TestTU::withCode(T.code());
+    configureHLSL(TU);
+    auto AST = TU.build();
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+    ASSERT_TRUE(H->Type) << "Hover should have returned a type!";
+    EXPECT_EQ(H->Type->Type, Case.ExpectedType);
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

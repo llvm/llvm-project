@@ -1972,6 +1972,8 @@ public:
 
   QualType getOriginalType() const;
 
+  std::string getHLSLParamTypeAsWritten(const PrintingPolicy &Policy) const;
+
   /// Sets the function declaration that owns this
   /// ParmVarDecl. Since ParmVarDecls are often created before the
   /// FunctionDecls that own them, this routine is required to update

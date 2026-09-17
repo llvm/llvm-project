@@ -2959,6 +2959,21 @@ QualType ParmVarDecl::getOriginalType() const {
   return T;
 }
 
+std::string
+ParmVarDecl::getHLSLParamTypeAsWritten(const PrintingPolicy &Policy) const {
+  if (const auto *Mod = getAttr<HLSLParamModifierAttr>()) {
+    QualType BaseType = getType().getNonReferenceType();
+    std::string BaseHLSLType = BaseType.getAsString(Policy);
+
+    if (Mod->isOut())
+      return "out " + BaseHLSLType;
+    if (Mod->isInOut())
+      return "inout " + BaseHLSLType;
+  }
+
+  return getType().getAsString(Policy);
+}
+
 ParmVarDecl *ParmVarDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID)
       ParmVarDecl(ParmVar, C, nullptr, SourceLocation(), SourceLocation(),
