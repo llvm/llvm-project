@@ -1119,7 +1119,7 @@ ResolveSDKPathFromDebugInfo(lldb_private::Target *target) {
         "could not resolve SDK for target: executable's symbol file has no "
         "compile units");
 
-  XcodeSDK merged_sdk;
+  XcodeSDKAndSysroot merged_sdk;
   for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i)
     if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i))
       merged_sdk.Merge(sym_file->ParseXcodeSDK(*cu_sp));
@@ -1450,7 +1450,7 @@ llvm::Triple::OSType PlatformDarwin::GetHostOSType() {
 #endif // __APPLE__
 }
 
-llvm::Expected<std::pair<XcodeSDK, bool>>
+llvm::Expected<std::pair<XcodeSDKAndSysroot, bool>>
 PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
   SymbolFile *sym_file = module.GetSymbolFile();
   if (!sym_file)
@@ -1467,7 +1467,7 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
 
   bool found_public_sdk = false;
   bool found_internal_sdk = false;
-  XcodeSDK merged_sdk;
+  XcodeSDKAndSysroot merged_sdk;
   for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
     if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i)) {
       auto cu_sdk = sym_file->ParseXcodeSDK(*cu_sp);
@@ -1484,11 +1484,7 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
   return std::pair{std::move(merged_sdk), found_mismatch};
 }
 
-llvm::Expected<FileSpec> PlatformDarwin::ResolveXcodeSDK(XcodeSDK sdk) {
-  if (FileSpec sysroot = sdk.GetSysroot();
-      FileSystem::Instance().Exists(sysroot))
-    return sysroot;
-
+llvm::Expected<FileSpec> PlatformDarwin::ResolveXcodeSDK(const XcodeSDK &sdk) {
   Progress progress("Looking for Xcode SDK", sdk.GetString().str());
   auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
   if (!path_or_err)
@@ -1496,6 +1492,17 @@ llvm::Expected<FileSpec> PlatformDarwin::ResolveXcodeSDK(XcodeSDK sdk) {
                                 "could not find SDK '{0}'", sdk.GetString())),
                             path_or_err.takeError());
   return FileSpec(*path_or_err);
+}
+
+llvm::Expected<FileSpec>
+PlatformDarwin::ResolveXcodeSDK(const XcodeSDKAndSysroot &sdk) {
+  // The sysroot recorded in debug info names the SDK the module was built
+  // against, so prefer it over anything Xcode has to offer.
+  if (const FileSpec &sysroot = sdk.GetSysroot();
+      FileSystem::Instance().Exists(sysroot))
+    return sysroot;
+
+  return ResolveXcodeSDK(sdk.GetSDK());
 }
 
 llvm::Expected<std::string>
@@ -1512,7 +1519,7 @@ PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
   return path_or_err->GetPath();
 }
 
-llvm::Expected<XcodeSDK>
+llvm::Expected<XcodeSDKAndSysroot>
 PlatformDarwin::GetSDKPathFromDebugInfo(CompileUnit &unit) {
   ModuleSP module_sp = unit.CalculateSymbolContextModule();
   if (!module_sp)
