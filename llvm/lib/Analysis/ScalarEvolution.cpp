@@ -11338,10 +11338,10 @@ bool ScalarEvolution::isKnownMultipleOf(
         }))
       return true;
 
-  // Similarly, look through UMinMax, with no wrapping arithmetic to consider.
-  if (isa<SCEVUMinExpr, SCEVUMaxExpr>(S) &&
-      all_of(S->operands(),
-             [&](SCEVUse Op) { return isKnownMultipleOf(Op, M, Predicates); }))
+  // Similarly, look through MinMax, with no wrapping arithmetic to consider.
+  if (isa<SCEVMinMaxExpr>(S) && all_of(S->operands(), [&](SCEVUse Op) {
+        return isKnownMultipleOf(Op, M, Predicates);
+      }))
     return true;
 
   const SCEVPredicate *P = getComparePredicate(ICmpInst::ICMP_EQ, SmodM, Zero);
