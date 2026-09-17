@@ -261,20 +261,6 @@ getDeducedNTTParameterFromExpr(TemplateDeductionInfo &Info, Expr *E) {
   return getDeducedNTTParameterFromExpr(E, Info.getDeducedDepth());
 }
 
-/// C++26 [temp.deduct.type]p13:
-///   When the value of the argument corresponding to a constant template
-///   parameter P that is declared with a dependent type is deduced from an
-///   expression, the template parameters in the type of P are deduced from the
-///   type of the value.
-static QualType getTypeOfTemplateArgumentValue(TemplateDeductionInfo &Info,
-                                               const TemplateArgument &A) {
-  const Expr *E = unwrapExpressionForDeduction(A.getAsExpr());
-  if (NonTypeOrVarTemplateParmDecl NTTP =
-          getDeducedNTTParameterFromExpr(E, Info.getDeducedDepth()))
-    return NTTP.getType();
-  return E->getType();
-}
-
 /// Determine whether two declaration pointers refer to the same
 /// declaration.
 static bool isSameDeclaration(Decl *X, Decl *Y) {
@@ -2565,6 +2551,20 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     }
 
   llvm_unreachable("Invalid Type Class!");
+}
+
+/// C++26 [temp.deduct.type]p13:
+///   When the value of the argument corresponding to a constant template
+///   parameter P that is declared with a dependent type is deduced from an
+///   expression, the template parameters in the type of P are deduced from the
+///   type of the value.
+static QualType getTypeOfTemplateArgumentValue(TemplateDeductionInfo &Info,
+                                               const TemplateArgument &A) {
+  const Expr *E = A.getAsExpr();
+  if (NonTypeOrVarTemplateParmDecl NTTP =
+          getDeducedNTTParameterFromExpr(E, Info.getDeducedDepth()))
+    return NTTP.getType();
+  return unwrapExpressionForDeduction(E)->getType();
 }
 
 static TemplateDeductionResult
