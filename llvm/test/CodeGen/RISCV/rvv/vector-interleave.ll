@@ -58,7 +58,9 @@ define <vscale x 32 x i1> @vector_interleave_nxv32i1_nxv16i1(<vscale x 16 x i1> 
 ; ZVZIP-NEXT:    vmerge.vim v12, v10, 1, v0
 ; ZVZIP-NEXT:    vmv1r.v v0, v9
 ; ZVZIP-NEXT:    vmerge.vim v14, v10, 1, v0
+; ZVZIP-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v8, v14, v12
+; ZVZIP-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; ZVZIP-NEXT:    vmsne.vi v12, v10, 0
 ; ZVZIP-NEXT:    vmsne.vi v0, v8, 0
 ; ZVZIP-NEXT:    csrr a0, vlenb
@@ -92,7 +94,7 @@ define <vscale x 32 x i8> @vector_interleave_nxv32i8_nxv16i8(<vscale x 16 x i8> 
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv32i8_nxv16i8:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; ZVZIP-NEXT:    vmv2r.v v12, v10
 ; ZVZIP-NEXT:    vmv2r.v v14, v8
 ; ZVZIP-NEXT:    vzip.vv v8, v14, v12
@@ -123,7 +125,7 @@ define <vscale x 16 x i16> @vector_interleave_nxv16i16_nxv8i16(<vscale x 8 x i16
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv16i16_nxv8i16:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVZIP-NEXT:    vmv2r.v v12, v10
 ; ZVZIP-NEXT:    vmv2r.v v14, v8
 ; ZVZIP-NEXT:    vzip.vv v8, v14, v12
@@ -155,7 +157,7 @@ define <vscale x 8 x i32> @vector_interleave_nxv8i32_nxv4i32(<vscale x 4 x i32> 
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv8i32_nxv4i32:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; ZVZIP-NEXT:    vmv2r.v v12, v10
 ; ZVZIP-NEXT:    vmv2r.v v14, v8
 ; ZVZIP-NEXT:    vzip.vv v8, v14, v12
@@ -197,7 +199,7 @@ define <vscale x 4 x i64> @vector_interleave_nxv4i64_nxv2i64(<vscale x 2 x i64> 
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv4i64_nxv2i64:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; ZVZIP-NEXT:    vmv2r.v v12, v10
 ; ZVZIP-NEXT:    vmv2r.v v14, v8
 ; ZVZIP-NEXT:    vzip.vv v8, v14, v12
@@ -258,13 +260,9 @@ define <vscale x 128 x i1> @vector_interleave_nxv128i1_nxv64i1(<vscale x 64 x i1
 ; ZVZIP-NEXT:    vmerge.vim v16, v24, 1, v0
 ; ZVZIP-NEXT:    vmv1r.v v0, v9
 ; ZVZIP-NEXT:    vmerge.vim v8, v24, 1, v0
-; ZVZIP-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v24, v8, v16
-; ZVZIP-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vmsne.vi v0, v24, 0
-; ZVZIP-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v24, v12, v20
-; ZVZIP-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vmsne.vi v8, v24, 0
 ; ZVZIP-NEXT:    ret
   %res = call <vscale x 128 x i1> @llvm.vector.interleave2.nxv128i1(<vscale x 64 x i1> %a, <vscale x 64 x i1> %b)
@@ -297,11 +295,11 @@ define <vscale x 128 x i8> @vector_interleave_nxv128i8_nxv64i8(<vscale x 64 x i8
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv128i8_nxv64i8:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v24, v8, v16
 ; ZVZIP-NEXT:    vzip.vv v0, v12, v20
-; ZVZIP-NEXT:    vmv8r.v v8, v24
-; ZVZIP-NEXT:    vmv8r.v v16, v0
+; ZVZIP-NEXT:    vmv.v.v v8, v24
+; ZVZIP-NEXT:    vmv.v.v v16, v0
 ; ZVZIP-NEXT:    ret
   %res = call <vscale x 128 x i8> @llvm.vector.interleave2.nxv128i8(<vscale x 64 x i8> %a, <vscale x 64 x i8> %b)
   ret <vscale x 128 x i8> %res
@@ -333,11 +331,11 @@ define <vscale x 64 x i16> @vector_interleave_nxv64i16_nxv32i16(<vscale x 32 x i
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv64i16_nxv32i16:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v24, v8, v16
 ; ZVZIP-NEXT:    vzip.vv v0, v12, v20
-; ZVZIP-NEXT:    vmv8r.v v8, v24
-; ZVZIP-NEXT:    vmv8r.v v16, v0
+; ZVZIP-NEXT:    vmv.v.v v8, v24
+; ZVZIP-NEXT:    vmv.v.v v16, v0
 ; ZVZIP-NEXT:    ret
   %res = call <vscale x 64 x i16> @llvm.vector.interleave2.nxv64i16(<vscale x 32 x i16> %a, <vscale x 32 x i16> %b)
   ret <vscale x 64 x i16> %res
@@ -370,11 +368,11 @@ define <vscale x 32 x i32> @vector_interleave_nxv32i32_nxv16i32(<vscale x 16 x i
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv32i32_nxv16i32:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v24, v8, v16
 ; ZVZIP-NEXT:    vzip.vv v0, v12, v20
-; ZVZIP-NEXT:    vmv8r.v v8, v24
-; ZVZIP-NEXT:    vmv8r.v v16, v0
+; ZVZIP-NEXT:    vmv.v.v v8, v24
+; ZVZIP-NEXT:    vmv.v.v v16, v0
 ; ZVZIP-NEXT:    ret
   %res = call <vscale x 32 x i32> @llvm.vector.interleave2.nxv32i32(<vscale x 16 x i32> %a, <vscale x 16 x i32> %b)
   ret <vscale x 32 x i32> %res
@@ -425,11 +423,11 @@ define <vscale x 16 x i64> @vector_interleave_nxv16i64_nxv8i64(<vscale x 8 x i64
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv16i64_nxv8i64:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v24, v8, v16
 ; ZVZIP-NEXT:    vzip.vv v0, v12, v20
-; ZVZIP-NEXT:    vmv8r.v v8, v24
-; ZVZIP-NEXT:    vmv8r.v v16, v0
+; ZVZIP-NEXT:    vmv.v.v v8, v24
+; ZVZIP-NEXT:    vmv.v.v v16, v0
 ; ZVZIP-NEXT:    ret
   %res = call <vscale x 16 x i64> @llvm.vector.interleave2.nxv16i64(<vscale x 8 x i64> %a, <vscale x 8 x i64> %b)
   ret <vscale x 16 x i64> %res
@@ -6235,11 +6233,10 @@ define <vscale x 4 x bfloat> @vector_interleave_nxv4bf16_nxv2bf16(<vscale x 2 x 
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv4bf16_nxv2bf16:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v10, v8, v9
 ; ZVZIP-NEXT:    csrr a0, vlenb
 ; ZVZIP-NEXT:    srli a0, a0, 2
-; ZVZIP-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v8, v10, a0
 ; ZVZIP-NEXT:    vslideup.vx v10, v8, a0
 ; ZVZIP-NEXT:    vmv.v.v v8, v10
@@ -6270,7 +6267,7 @@ define <vscale x 8 x bfloat> @vector_interleave_nxv8bf16_nxv4bf16(<vscale x 4 x 
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv8bf16_nxv4bf16:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVZIP-NEXT:    vmv1r.v v10, v9
 ; ZVZIP-NEXT:    vmv1r.v v11, v8
 ; ZVZIP-NEXT:    vzip.vv v8, v11, v10
@@ -6309,11 +6306,10 @@ define <vscale x 4 x half> @vector_interleave_nxv4f16_nxv2f16(<vscale x 2 x half
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv4f16_nxv2f16:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v10, v8, v9
 ; ZVZIP-NEXT:    csrr a0, vlenb
 ; ZVZIP-NEXT:    srli a0, a0, 2
-; ZVZIP-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v8, v10, a0
 ; ZVZIP-NEXT:    vslideup.vx v10, v8, a0
 ; ZVZIP-NEXT:    vmv.v.v v8, v10
@@ -6344,7 +6340,7 @@ define <vscale x 8 x half> @vector_interleave_nxv8f16_nxv4f16(<vscale x 4 x half
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv8f16_nxv4f16:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; ZVZIP-NEXT:    vmv1r.v v10, v9
 ; ZVZIP-NEXT:    vmv1r.v v11, v8
 ; ZVZIP-NEXT:    vzip.vv v8, v11, v10
@@ -6376,7 +6372,7 @@ define <vscale x 4 x float> @vector_interleave_nxv4f32_nxv2f32(<vscale x 2 x flo
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv4f32_nxv2f32:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; ZVZIP-NEXT:    vmv1r.v v10, v9
 ; ZVZIP-NEXT:    vmv1r.v v11, v8
 ; ZVZIP-NEXT:    vzip.vv v8, v11, v10
@@ -6407,7 +6403,7 @@ define <vscale x 16 x bfloat> @vector_interleave_nxv16bf16_nxv8bf16(<vscale x 8 
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv16bf16_nxv8bf16:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVZIP-NEXT:    vmv2r.v v12, v10
 ; ZVZIP-NEXT:    vmv2r.v v14, v8
 ; ZVZIP-NEXT:    vzip.vv v8, v14, v12
@@ -6438,7 +6434,7 @@ define <vscale x 16 x half> @vector_interleave_nxv16f16_nxv8f16(<vscale x 8 x ha
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv16f16_nxv8f16:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVZIP-NEXT:    vmv2r.v v12, v10
 ; ZVZIP-NEXT:    vmv2r.v v14, v8
 ; ZVZIP-NEXT:    vzip.vv v8, v14, v12
@@ -6470,7 +6466,7 @@ define <vscale x 8 x float> @vector_interleave_nxv8f32_nxv4f32(<vscale x 4 x flo
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv8f32_nxv4f32:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; ZVZIP-NEXT:    vmv2r.v v12, v10
 ; ZVZIP-NEXT:    vmv2r.v v14, v8
 ; ZVZIP-NEXT:    vzip.vv v8, v14, v12
@@ -6512,7 +6508,7 @@ define <vscale x 4 x double> @vector_interleave_nxv4f64_nxv2f64(<vscale x 2 x do
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv4f64_nxv2f64:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; ZVZIP-NEXT:    vmv2r.v v12, v10
 ; ZVZIP-NEXT:    vmv2r.v v14, v8
 ; ZVZIP-NEXT:    vzip.vv v8, v14, v12
@@ -6549,11 +6545,11 @@ define <vscale x 64 x bfloat> @vector_interleave_nxv64bf16_nxv32bf16(<vscale x 3
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv64bf16_nxv32bf16:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v24, v8, v16
 ; ZVZIP-NEXT:    vzip.vv v0, v12, v20
-; ZVZIP-NEXT:    vmv8r.v v8, v24
-; ZVZIP-NEXT:    vmv8r.v v16, v0
+; ZVZIP-NEXT:    vmv.v.v v8, v24
+; ZVZIP-NEXT:    vmv.v.v v16, v0
 ; ZVZIP-NEXT:    ret
   %res = call <vscale x 64 x bfloat> @llvm.vector.interleave2.nxv64bf16(<vscale x 32 x bfloat> %a, <vscale x 32 x bfloat> %b)
   ret <vscale x 64 x bfloat> %res
@@ -6585,11 +6581,11 @@ define <vscale x 64 x half> @vector_interleave_nxv64f16_nxv32f16(<vscale x 32 x 
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv64f16_nxv32f16:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v24, v8, v16
 ; ZVZIP-NEXT:    vzip.vv v0, v12, v20
-; ZVZIP-NEXT:    vmv8r.v v8, v24
-; ZVZIP-NEXT:    vmv8r.v v16, v0
+; ZVZIP-NEXT:    vmv.v.v v8, v24
+; ZVZIP-NEXT:    vmv.v.v v16, v0
 ; ZVZIP-NEXT:    ret
   %res = call <vscale x 64 x half> @llvm.vector.interleave2.nxv64f16(<vscale x 32 x half> %a, <vscale x 32 x half> %b)
   ret <vscale x 64 x half> %res
@@ -6622,11 +6618,11 @@ define <vscale x 32 x float> @vector_interleave_nxv32f32_nxv16f32(<vscale x 16 x
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv32f32_nxv16f32:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v24, v8, v16
 ; ZVZIP-NEXT:    vzip.vv v0, v12, v20
-; ZVZIP-NEXT:    vmv8r.v v8, v24
-; ZVZIP-NEXT:    vmv8r.v v16, v0
+; ZVZIP-NEXT:    vmv.v.v v8, v24
+; ZVZIP-NEXT:    vmv.v.v v16, v0
 ; ZVZIP-NEXT:    ret
   %res = call <vscale x 32 x float> @llvm.vector.interleave2.nxv32f32(<vscale x 16 x float> %a, <vscale x 16 x float> %b)
   ret <vscale x 32 x float> %res
@@ -6677,11 +6673,11 @@ define <vscale x 16 x double> @vector_interleave_nxv16f64_nxv8f64(<vscale x 8 x 
 ;
 ; ZVZIP-LABEL: vector_interleave_nxv16f64_nxv8f64:
 ; ZVZIP:       # %bb.0:
-; ZVZIP-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v24, v8, v16
 ; ZVZIP-NEXT:    vzip.vv v0, v12, v20
-; ZVZIP-NEXT:    vmv8r.v v8, v24
-; ZVZIP-NEXT:    vmv8r.v v16, v0
+; ZVZIP-NEXT:    vmv.v.v v8, v24
+; ZVZIP-NEXT:    vmv.v.v v16, v0
 ; ZVZIP-NEXT:    ret
   %res = call <vscale x 16 x double> @llvm.vector.interleave2.nxv16f64(<vscale x 8 x double> %a, <vscale x 8 x double> %b)
   ret <vscale x 16 x double> %res
@@ -14872,10 +14868,10 @@ define <vscale x 4 x i16> @interleave2_diff_const_splat_nxv4i16() {
 ; ZVZIP-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; ZVZIP-NEXT:    vmv.v.i v9, 4
 ; ZVZIP-NEXT:    vmv.v.i v10, 3
+; ZVZIP-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v8, v10, v9
 ; ZVZIP-NEXT:    csrr a0, vlenb
 ; ZVZIP-NEXT:    srli a0, a0, 2
-; ZVZIP-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v9, v8, a0
 ; ZVZIP-NEXT:    vslideup.vx v8, v9, a0
 ; ZVZIP-NEXT:    ret
@@ -14934,10 +14930,10 @@ define <vscale x 4 x i16> @interleave2_diff_nonconst_splat_nxv4i16(i16 %a, i16 %
 ; ZVZIP-NEXT:    vsetvli a2, zero, e16, mf2, ta, ma
 ; ZVZIP-NEXT:    vmv.v.x v9, a0
 ; ZVZIP-NEXT:    vmv.v.x v10, a1
+; ZVZIP-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; ZVZIP-NEXT:    vzip.vv v8, v9, v10
 ; ZVZIP-NEXT:    csrr a0, vlenb
 ; ZVZIP-NEXT:    srli a0, a0, 2
-; ZVZIP-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vx v9, v8, a0
 ; ZVZIP-NEXT:    vslideup.vx v8, v9, a0
 ; ZVZIP-NEXT:    ret

@@ -1437,6 +1437,7 @@ void ASTDeclWriter::VisitFileScopeAsmDecl(FileScopeAsmDecl *D) {
 
 void ASTDeclWriter::VisitTopLevelStmtDecl(TopLevelStmtDecl *D) {
   VisitDecl(D);
+  Record.push_back(D->getOrdinal());
   Record.AddStmt(D->getStmt());
   Code = serialization::DECL_TOP_LEVEL_STMT_DECL;
 }

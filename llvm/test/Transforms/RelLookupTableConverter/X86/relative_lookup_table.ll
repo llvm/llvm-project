@@ -98,6 +98,11 @@ target triple = "x86_64-unknown-linux-gnu"
   ptr @.str.9
 ], align 16
 
+@table.multiple.load.uses = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
 ;.
 ; CHECK: @.str = private unnamed_addr constant [5 x i8] c"zero\00", align 1
 ; CHECK: @.str.1 = private unnamed_addr constant [4 x i8] c"one\00", align 1
@@ -131,6 +136,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @table5 = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
 ; CHECK: @skip.table.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @skip.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @skip.table.rel to i64)) to i32)], align 4
 ; CHECK: @wrong.skip.table = internal constant [4 x ptr] [ptr null, ptr @.str.8, ptr null, ptr @.str.9], align 16
+; CHECK: @table.multiple.load.uses.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.multiple.load.uses.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.multiple.load.uses.rel to i64)) to i32)], align 4
 ;.
 define ptr @external_linkage(i32 %cond) {
 ; CHECK-LABEL: define ptr @external_linkage(
@@ -417,6 +423,22 @@ define ptr @table_with_skipped_elements_wrong(i64 %index) {
 ;
   %gep = getelementptr [2 x ptr], ptr @wrong.skip.table, i64 %index
   %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+declare void @use(ptr)
+
+define ptr @load_multiple_uses(i64 %index) {
+; CHECK-LABEL: define ptr @load_multiple_uses(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i64(ptr @table.multiple.load.uses.rel, i64 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    call void @use(ptr [[RELTABLE_INTRINSIC]])
+; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
+;
+  %gep = getelementptr inbounds [2 x ptr], ptr @table.multiple.load.uses, i64 0, i64 %index
+  %load = load ptr, ptr %gep, align 8
+  call void @use(ptr %load)
   ret ptr %load
 }
 
