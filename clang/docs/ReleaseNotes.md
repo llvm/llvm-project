@@ -510,6 +510,9 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now diagnoses matrix logical operations are only supported for HLSL. (GH222381)
 
+- Improve the input size mismatch diagnostic when calling `__builtin_shufflevector` with valid
+  vector element types but different sizes. (GH221791)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -538,6 +541,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
 - Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 - Fixed an ICE hat occurred when using `__imag int/float` as lvalue in assignment. (#GH119498)
+- Fixed an assertion failure in `-Wsign-compare` when a negated or complemented vector of unsigned integers was compared against a signed constant. (#GH203575)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -869,6 +873,11 @@ features cannot lower the translation-unit ABI level;
 - visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
 
 ### Code Completion
+
+- Parameters declared with a `decltype` are now presented as the type the
+  `decltype` resolves to, e.g. `set_x(int val)` rather than
+  `set_x(decltype(x) val)`. This affects the completion strings produced by
+  libclang as well as those used by clangd.
 
 ### Static Analyzer
 
