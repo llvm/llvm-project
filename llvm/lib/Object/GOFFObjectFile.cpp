@@ -16,6 +16,7 @@
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 #ifndef DEBUG_TYPE
