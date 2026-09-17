@@ -14782,8 +14782,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
       // In an unlikely case, a vector type might be legal to RISC-V but
       // exceeds the MVT limit, in which we also want to split it.
       (Subtarget.hasStdExtZvzip() && Factor == 2 &&
-       !VecVT.changeVectorElementCount(VecVT.getVectorElementCount() * Factor)
-            .isValid())) {
+       !isTypeLegal(VecVT.changeVectorElementCount(
+           VecVT.getVectorElementCount() * Factor)))) {
     SmallVector<SDValue, 8> Ops(Factor * 2);
     for (unsigned i = 0; i != Factor; ++i) {
       auto [OpLo, OpHi] = DAG.SplitVectorOperand(Op.getNode(), i);
