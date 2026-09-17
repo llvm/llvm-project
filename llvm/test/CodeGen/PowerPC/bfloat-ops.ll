@@ -36,7 +36,7 @@ define float @load_bfloat(ptr %p) {
   ret float %r
 }
 
-define void @store_bfloat(bfloat %b, ptr %p) {
+define void @store_bfloat(float %f, ptr %p) {
 ; PPC64LE-LABEL: store_bfloat:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    xsmaxdp 0, 1, 1
@@ -68,6 +68,7 @@ define void @store_bfloat(bfloat %b, ptr %p) {
 ; PPC32-NEXT:    sth 4, 0(3)
 ; PPC32-NEXT:    addi 1, 1, 16
 ; PPC32-NEXT:    blr
+  %b = fptrunc float %f to bfloat
   store bfloat %b, ptr %p
   ret void
 }
@@ -135,5 +136,93 @@ define void @fptrunc_from_f64(double %d, ptr %p) {
 ; PPC32-NEXT:    blr
   %b = fptrunc double %d to bfloat
   store bfloat %b, ptr %p
+  ret void
+}
+
+define void @copy_bfloat(ptr %src, ptr %dst) {
+; PPC64LE-LABEL: copy_bfloat:
+; PPC64LE:       # %bb.0:
+; PPC64LE-NEXT:    lhz 3, 0(3)
+; PPC64LE-NEXT:    sth 3, 0(4)
+; PPC64LE-NEXT:    blr
+;
+; PPC64BE-LABEL: copy_bfloat:
+; PPC64BE:       # %bb.0:
+; PPC64BE-NEXT:    lhz 3, 0(3)
+; PPC64BE-NEXT:    sth 3, 0(4)
+; PPC64BE-NEXT:    blr
+;
+; PPC32-LABEL: copy_bfloat:
+; PPC32:       # %bb.0:
+; PPC32-NEXT:    lhz 3, 0(3)
+; PPC32-NEXT:    sth 3, 0(4)
+; PPC32-NEXT:    blr
+  %v = load bfloat, ptr %src
+  store bfloat %v, ptr %dst
+  ret void
+}
+
+; Reproducer from issue #220797
+define void @div_test_bfloat(ptr %a, ptr %b, ptr %c) {
+; PPC64LE-LABEL: div_test_bfloat:
+; PPC64LE:       # %bb.0:
+; PPC64LE-NEXT:    lhz 4, 0(4)
+; PPC64LE-NEXT:    lhz 5, 0(5)
+; PPC64LE-NEXT:    slwi 4, 4, 16
+; PPC64LE-NEXT:    mtfprd 0, 4
+; PPC64LE-NEXT:    slwi 4, 5, 16
+; PPC64LE-NEXT:    mtfprd 1, 4
+; PPC64LE-NEXT:    xxsldwi 0, 0, 0, 1
+; PPC64LE-NEXT:    xscvspdpn 0, 0
+; PPC64LE-NEXT:    xxsldwi 1, 1, 1, 1
+; PPC64LE-NEXT:    xscvspdpn 1, 1
+; PPC64LE-NEXT:    xsdivsp 0, 0, 1
+; PPC64LE-NEXT:    xscvdpspn 0, 0
+; PPC64LE-NEXT:    mffprwz 4, 0
+; PPC64LE-NEXT:    srwi 4, 4, 16
+; PPC64LE-NEXT:    sth 4, 0(3)
+; PPC64LE-NEXT:    blr
+;
+; PPC64BE-LABEL: div_test_bfloat:
+; PPC64BE:       # %bb.0:
+; PPC64BE-NEXT:    lhz 4, 0(4)
+; PPC64BE-NEXT:    lhz 5, 0(5)
+; PPC64BE-NEXT:    slwi 4, 4, 16
+; PPC64BE-NEXT:    stw 4, -4(1)
+; PPC64BE-NEXT:    slwi 4, 5, 16
+; PPC64BE-NEXT:    stw 4, -8(1)
+; PPC64BE-NEXT:    lfs 0, -4(1)
+; PPC64BE-NEXT:    lfs 1, -8(1)
+; PPC64BE-NEXT:    fdivs 0, 0, 1
+; PPC64BE-NEXT:    stfs 0, -12(1)
+; PPC64BE-NEXT:    lhz 4, -12(1)
+; PPC64BE-NEXT:    sth 4, 0(3)
+; PPC64BE-NEXT:    blr
+;
+; PPC32-LABEL: div_test_bfloat:
+; PPC32:       # %bb.0:
+; PPC32-NEXT:    stwu 1, -32(1)
+; PPC32-NEXT:    .cfi_def_cfa_offset 32
+; PPC32-NEXT:    lhz 4, 0(4)
+; PPC32-NEXT:    lhz 5, 0(5)
+; PPC32-NEXT:    slwi 4, 4, 16
+; PPC32-NEXT:    stw 4, 28(1)
+; PPC32-NEXT:    slwi 4, 5, 16
+; PPC32-NEXT:    stw 4, 24(1)
+; PPC32-NEXT:    lfs 0, 28(1)
+; PPC32-NEXT:    lfs 1, 24(1)
+; PPC32-NEXT:    fdivs 0, 0, 1
+; PPC32-NEXT:    stfs 0, 20(1)
+; PPC32-NEXT:    lhz 4, 20(1)
+; PPC32-NEXT:    sth 4, 0(3)
+; PPC32-NEXT:    addi 1, 1, 32
+; PPC32-NEXT:    blr
+  %b.r = load bfloat, ptr %b
+  %c.r = load bfloat, ptr %c
+  %b.f = fpext bfloat %b.r to float
+  %c.f = fpext bfloat %c.r to float
+  %d = fdiv float %b.f, %c.f
+  %res = fptrunc float %d to bfloat
+  store bfloat %res, ptr %a
   ret void
 }
