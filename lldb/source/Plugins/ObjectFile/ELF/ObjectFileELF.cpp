@@ -1748,7 +1748,8 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
     if (shstr_data.SetData(object_data, offset, byte_size) == byte_size) {
       for (SectionHeaderCollIter I = section_headers.begin();
            I != section_headers.end(); ++I) {
-        static ConstString g_sect_name_gnu_debuglink(".gnu_debuglink");
+        static constexpr llvm::StringLiteral g_sect_name_gnu_debuglink(
+            ".gnu_debuglink");
         const ELFSectionHeaderInfo &sheader = *I;
         const uint64_t section_size =
             sheader.sh_type == SHT_NOBITS ? 0 : sheader.sh_size;
@@ -1855,7 +1856,8 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
 
         // The section header ".note.android.ident" is stored as a
         // PROGBITS type header but it is actually a note header.
-        static ConstString g_sect_name_android_ident(".note.android.ident");
+        static constexpr llvm::StringLiteral g_sect_name_android_ident(
+            ".note.android.ident");
         if (!is_note_header && name == g_sect_name_android_ident)
           is_note_header = true;
 
@@ -2319,18 +2321,17 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
   // caller may be another object file.
   FileAddressToAddressClassMap address_class_map;
 
-  static ConstString text_section_name(".text");
-  static ConstString init_section_name(".init");
-  static ConstString fini_section_name(".fini");
-  static ConstString ctors_section_name(".ctors");
-  static ConstString dtors_section_name(".dtors");
+  static constexpr llvm::StringLiteral text_section_name(".text");
+  static constexpr llvm::StringLiteral init_section_name(".init");
+  static constexpr llvm::StringLiteral fini_section_name(".fini");
+  static constexpr llvm::StringLiteral ctors_section_name(".ctors");
+  static constexpr llvm::StringLiteral dtors_section_name(".dtors");
 
-  static ConstString data_section_name(".data");
-  static ConstString rodata_section_name(".rodata");
-  static ConstString rodata1_section_name(".rodata1");
-  static ConstString data2_section_name(".data1");
-  static ConstString bss_section_name(".bss");
-  static ConstString opd_section_name(".opd"); // For ppc64
+  static constexpr llvm::StringLiteral data_section_name(".data");
+  static constexpr llvm::StringLiteral rodata_section_name(".rodata");
+  static constexpr llvm::StringLiteral rodata1_section_name(".rodata1");
+  static constexpr llvm::StringLiteral data2_section_name(".data1");
+  static constexpr llvm::StringLiteral bss_section_name(".bss");
 
   // On Android the oatdata and the oatexec symbols in the oat and odex files
   // covers the full .text section what causes issues with displaying unusable

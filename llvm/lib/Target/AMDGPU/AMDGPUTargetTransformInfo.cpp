@@ -1379,11 +1379,13 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   }
 }
 
-InstructionCost GCNTTIImpl::getShuffleCost(
-    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-    TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
-    TTI::VectorInstrContext VIC) const {
+InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
+                                           VectorType *DstTy, VectorType *SrcTy,
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<int> Mask, int Index,
+                                           VectorType *SubTp,
+                                           ArrayRef<const Value *> Args,
+                                           const Instruction *CxtI) const {
   if (!isa<FixedVectorType>(SrcTy))
     return BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind, Mask, Index,
                                  SubTp);
