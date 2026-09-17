@@ -41,7 +41,7 @@ def MY_LOAD : TestInstruction {
 }
 
 // CHECK: [[@LINE+2]]:1: error: {{.*}} Type cast only takes one operand!
-// CHECK: [[@LINE+1]]:1: error: {{.*}} cannot update node type from unknown operand!
+// CHECK: [[@LINE+1]]:1: error: {{.*}} was provided 2 operands but expected only 1!
 def : Pat<
   (i64 (load (iPTR:$src))),
   (MY_LOAD $val, $src)
