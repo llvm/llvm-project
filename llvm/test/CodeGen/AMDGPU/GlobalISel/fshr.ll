@@ -985,32 +985,32 @@ define i16 @v_fshr_v2i8(i16 %lhs.arg, i16 %rhs.arg, i16 %amt.arg) {
 ; GFX11-TRUE16-LABEL: v_fshr_v2i8:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 8, v2
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 8, v0
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
-; GFX11-TRUE16-NEXT:    v_xor_b16 v1.h, v2.l, -1
+; GFX11-TRUE16-NEXT:    v_lshrrev_b16 v0.h, 8, v2.l
+; GFX11-TRUE16-NEXT:    v_lshrrev_b16 v1.h, 8, v0.l
+; GFX11-TRUE16-NEXT:    v_lshrrev_b16 v3.l, 8, v1.l
+; GFX11-TRUE16-NEXT:    v_xor_b16 v3.h, v2.l, -1
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, 1, v0.l
-; GFX11-TRUE16-NEXT:    v_xor_b16 v0.h, v3.l, -1
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v2.h, 1, v4.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v3.l, v3.l, 7
-; GFX11-TRUE16-NEXT:    v_and_b16 v3.h, 0xff, v5.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v2.l, v2.l, 7
+; GFX11-TRUE16-NEXT:    v_xor_b16 v2.h, v0.h, -1
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v1.h, 1, v1.h
 ; GFX11-TRUE16-NEXT:    v_and_b16 v0.h, v0.h, 7
+; GFX11-TRUE16-NEXT:    v_and_b16 v2.l, v2.l, 7
 ; GFX11-TRUE16-NEXT:    v_and_b16 v1.l, 0xff, v1.l
-; GFX11-TRUE16-NEXT:    v_and_b16 v1.h, v1.h, 7
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, v0.h, v2.h
-; GFX11-TRUE16-NEXT:    v_lshrrev_b16 v2.h, v3.l, v3.h
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, v1.h, v0.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v2.h, v2.h, 7
+; GFX11-TRUE16-NEXT:    v_and_b16 v3.h, v3.h, 7
+; GFX11-TRUE16-NEXT:    v_lshrrev_b16 v0.h, v0.h, v3.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b16 v1.l, v2.l, v1.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v0.h, v2.h
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v1.h, v2.h, v1.h
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, v3.h, v0.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v1.h, v0.h
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v1.l
 ; GFX11-TRUE16-NEXT:    v_and_b16 v0.h, 0xff, v0.h
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v0.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v0.h
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3919,10 +3919,9 @@ define amdgpu_ps half @v_fshr_i16_vss(i16 %lhs, i16 inreg %rhs, i16 inreg %amt) 
 ; GFX11-TRUE16-NEXT:    s_and_not1_b32 s2, 15, s1
 ; GFX11-TRUE16-NEXT:    s_and_b32 s1, s1, 15
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, s2, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s0, s0, s1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX11-TRUE16-NEXT:    v_lshlrev_b16 v0.l, s2, v0.l
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, s0
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;

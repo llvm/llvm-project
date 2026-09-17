@@ -739,13 +739,12 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_half(half inre
   ; GISEL-GFX11-TRUE16-NEXT:   liveins: $sgpr0, $vgpr8
   ; GISEL-GFX11-TRUE16-NEXT: {{  $}}
   ; GISEL-GFX11-TRUE16-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr8
-  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY1]].lo16
+  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_16 = COPY $vgpr8
   ; GISEL-GFX11-TRUE16-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY3:%[0-9]+]]:vgpr_16 = COPY [[COPY]]
-  ; GISEL-GFX11-TRUE16-NEXT:   [[V_ADD_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_ADD_F16_t16_e64 0, [[COPY3]], 0, [[COPY2]], 0, 0, 0, implicit $mode, implicit $exec
-  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[DEF]]
-  ; GISEL-GFX11-TRUE16-NEXT:   FLAT_STORE_SHORT_t16 [[COPY4]], [[V_ADD_F16_t16_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (f16) into `ptr poison`)
+  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]]
+  ; GISEL-GFX11-TRUE16-NEXT:   [[V_ADD_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_ADD_F16_t16_e64 0, [[COPY2]], 0, [[COPY1]], 0, 0, 0, implicit $mode, implicit $exec
+  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
+  ; GISEL-GFX11-TRUE16-NEXT:   FLAT_STORE_SHORT_t16 [[COPY3]], [[V_ADD_F16_t16_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (f16) into `ptr poison`)
   ; GISEL-GFX11-TRUE16-NEXT:   S_ENDPGM 0
   ;
   ; GISEL-GFX11-FAKE16-LABEL: name: amdgpu_cs_chain_preserve_cc_half
@@ -947,13 +946,12 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_i16(i16 inreg 
   ; GISEL-GFX11-TRUE16-NEXT:   liveins: $sgpr0, $vgpr8
   ; GISEL-GFX11-TRUE16-NEXT: {{  $}}
   ; GISEL-GFX11-TRUE16-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr8
-  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY1]].lo16
+  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_16 = COPY $vgpr8
   ; GISEL-GFX11-TRUE16-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY3:%[0-9]+]]:vgpr_16 = COPY [[COPY]]
-  ; GISEL-GFX11-TRUE16-NEXT:   [[V_ADD_NC_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_ADD_NC_U16_t16_e64 0, [[COPY3]], 0, [[COPY2]], 0, 0, implicit $exec
-  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[DEF]]
-  ; GISEL-GFX11-TRUE16-NEXT:   FLAT_STORE_SHORT_t16 [[COPY4]], [[V_ADD_NC_U16_t16_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i16) into `ptr poison`)
+  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[COPY]]
+  ; GISEL-GFX11-TRUE16-NEXT:   [[V_ADD_NC_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_ADD_NC_U16_t16_e64 0, [[COPY2]], 0, [[COPY1]], 0, 0, implicit $exec
+  ; GISEL-GFX11-TRUE16-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
+  ; GISEL-GFX11-TRUE16-NEXT:   FLAT_STORE_SHORT_t16 [[COPY3]], [[V_ADD_NC_U16_t16_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i16) into `ptr poison`)
   ; GISEL-GFX11-TRUE16-NEXT:   S_ENDPGM 0
   ;
   ; GISEL-GFX11-FAKE16-LABEL: name: amdgpu_cs_chain_preserve_cc_i16
