@@ -1381,7 +1381,14 @@ cc_library(
     ]) + [
         "include/llvm-c/Object.h",
     ],
-    copts = llvm_copts,
+    copts = llvm_copts + select({
+        ":is_windows_msvc": ["/FIllvm/Support/FormatVariadic.h"],
+        ":is_windows_clang_cl": ["/FIllvm/Support/FormatVariadic.h"],
+        "//conditions:default": [
+            "-include",
+            "llvm/Support/FormatVariadic.h",
+        ],
+    }),
     textual_hdrs = glob([
         "include/llvm/Object/*.def",
     ]),
