@@ -1581,6 +1581,10 @@ private:
   ASTReadResult ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
                                        const ModuleFile *ImportedBy,
                                        unsigned ClientLoadCapabilities);
+
+  ASTReadResult ReadDirectoryDependencies(const RecordData &Record,
+                                          ModuleFile &F,
+                                          unsigned ClientLoadCapabilities);
   static bool ParseLanguageOptions(const RecordData &Record,
                                    StringRef ModuleFilename, bool Complain,
                                    ASTReaderListener &Listener,
