@@ -380,7 +380,7 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
 
   default:
     // Default fallback: permissive 8-cycle pattern
-    return CoExecInfo::build(9, "AAAAAAAAA");
+    return CoExecInfo::build(0, 9, "AAAAAAAAA");
   }
 }
 
@@ -415,8 +415,12 @@ InstructionFlavor llvm::AMDGPU::classifyFlavor(const MachineInstr &MI,
   if (SII.isTRANS(MI))
     return InstructionFlavor::TRANS;
 
-  if (SII.isVALU(MI, /*AllowLDSDMA=*/false))
+  if (SII.isVALU(MI, /*AllowLDSDMA=*/false)) {
+    if (SII.getBlockingCycles(MI) > 1)
+      return InstructionFlavor::MultiCycleVALU;
+
     return InstructionFlavor::SingleCycleVALU;
+  }
 
   if (SII.isSMRD(MI))
     return InstructionFlavor::SMEM;
@@ -574,6 +578,7 @@ unsigned CandidateHeuristics::getMaxBlockingCycles(const MCSchedClassDesc *SC,
     ReleaseAtCycle =
         std::max(ReleaseAtCycle, static_cast<unsigned>(PI->ReleaseAtCycle));
   }
+  ReleaseAtCycle = std::max(ReleaseAtCycle, SII->getBlockingCycles(*MI));
   return ReleaseAtCycle;
 }
 

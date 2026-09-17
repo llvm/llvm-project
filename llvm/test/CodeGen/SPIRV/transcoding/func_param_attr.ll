@@ -8,6 +8,8 @@
 ; CHECK-SPIRV-DAG: OpDecorate %[[#NOALIAS:]] FuncParamAttr NoAlias
 ; CHECK-SPIRV-DAG: OpDecorate %[[#BYVAL:]] FuncParamAttr ByVal
 ; CHECK-SPIRV-DAG: OpDecorate %[[#SRET:]] FuncParamAttr Sret
+; CHECK-SPIRV-DAG: OpDecorate %[[#RET_ZEXT:]] FuncParamAttr Zext
+; CHECK-SPIRV-DAG: OpDecorate %[[#RET_SEXT:]] FuncParamAttr Sext
 
 ; CHECK-SPIRV: %[[#ZEXT]] = OpFunctionParameter %[[#]]
 define spir_func void @test_zext(i8 zeroext %arg) {
@@ -49,4 +51,16 @@ entry:
 define spir_func void @test_sret(ptr sret(i32) %arg) {
 entry:
   ret void
+}
+
+; CHECK-SPIRV: %[[#RET_ZEXT]] = OpFunction %[[#]]
+define spir_func zeroext i8 @test_ret_zext() {
+entry:
+  ret i8 0
+}
+
+; CHECK-SPIRV: %[[#RET_SEXT]] = OpFunction %[[#]]
+define spir_func signext i8 @test_ret_sext() {
+entry:
+  ret i8 0
 }
