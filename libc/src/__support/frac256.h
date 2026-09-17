@@ -47,12 +47,12 @@ struct Frac256 : public UInt<256> {
   }
 
   LIBC_INLINE constexpr Frac256 operator+(const Frac256 &other) const {
-    UInt<256> r = UInt<256>(*this) + (UInt<256>(other));
+    UInt<256> r = UInt<256>(*this) + UInt<256>(other);
     return Frac256(r.val);
   }
 
   LIBC_INLINE constexpr Frac256 operator-(const Frac256 &other) const {
-    UInt<256> r = UInt<256>(*this) - (UInt<256>(other));
+    UInt<256> r = UInt<256>(*this) - UInt<256>(other);
     return Frac256(r.val);
   }
 

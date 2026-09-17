@@ -31,7 +31,6 @@
 #else
 
 #include "src/__support/math/pow_accurate_128.h"
-#include "src/__support/math/pow_accurate_256.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -432,11 +431,11 @@ LIBC_INLINE double pow(double x, double y) {
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
   double err_r =
       fputil::multiply_add(FPBits(y).abs().get_val(), 0x1.8p-73, 0x1.0p-64);
-#else
+#else  // !LIBC_TARGET_CPU_HAS_FMA_DOUBLE
   // Without FMA, intermediate roundings increase log2(x) and exp2 errors.
   double err_r =
       fputil::multiply_add(FPBits(y).abs().get_val(), 0x1.cp-72, 0x1.0p-63);
-#endif
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
   if (LIBC_UNLIKELY(is_denorm)) {
     if (auto r_denorm = ziv_test_denorm(hi, r.hi, r.lo, err_r, is_neg);

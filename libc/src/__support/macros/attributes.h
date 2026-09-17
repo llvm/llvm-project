@@ -35,7 +35,7 @@
 #define LIBC_ALWAYS_INLINE __forceinline
 #else
 #define LIBC_ALWAYS_INLINE LIBC_INLINE
-#endif
+#endif // __has_attribute(always_inline)
 
 #ifndef LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED
 #if (defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 900)) ||       \
