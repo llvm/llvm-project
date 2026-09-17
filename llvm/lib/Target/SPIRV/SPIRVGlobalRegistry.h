@@ -97,8 +97,11 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // Maps OpVariable and OpFunction-related v-regs to its LLVM IR definition.
   DenseMap<std::pair<const MachineFunction *, Register>, const Value *> Reg2GO;
 
-  // map of aliasing decorations to aliasing metadata
-  DenseMap<const MDNode *, MachineInstr *> AliasInstMDMap;
+  // map of aliasing decorations to aliasing metadata, keyed per
+  // MachineFunction: the cached instructions define virtual registers, which
+  // are only valid in the function that created them.
+  DenseMap<std::pair<const MachineFunction *, const MDNode *>, MachineInstr *>
+      AliasInstMDMap;
 
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVTypeInst createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,

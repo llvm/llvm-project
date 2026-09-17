@@ -2265,7 +2265,9 @@ MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
     MachineIRBuilder &MIRBuilder, const MDNode *AliasingListMD) {
   if (AliasingListMD->getNumOperands() == 0)
     return nullptr;
-  if (auto L = AliasInstMDMap.find(AliasingListMD); L != AliasInstMDMap.end())
+  const MachineFunction *MF = &MIRBuilder.getMF();
+  if (auto L = AliasInstMDMap.find({MF, AliasingListMD});
+      L != AliasInstMDMap.end())
     return L->second;
 
   SmallVector<MachineInstr *> ScopeList;
@@ -2278,7 +2280,7 @@ MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
       if (!DomainMD)
         return nullptr;
       auto *Domain = [&] {
-        auto D = AliasInstMDMap.find(DomainMD);
+        auto D = AliasInstMDMap.find({MF, DomainMD});
         if (D != AliasInstMDMap.end())
           return D->second;
         const Register Ret = MRI->createVirtualRegister(&SPIRV::IDRegClass);
@@ -2286,9 +2288,10 @@ MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
             MIRBuilder.buildInstr(SPIRV::OpAliasDomainDeclINTEL).addDef(Ret);
         return MIB.getInstr();
       }();
-      AliasInstMDMap.insert(std::make_pair(DomainMD, Domain));
+      AliasInstMDMap.insert(
+          std::make_pair(std::make_pair(MF, DomainMD), Domain));
       auto *Scope = [&] {
-        auto S = AliasInstMDMap.find(ScopeMD);
+        auto S = AliasInstMDMap.find({MF, ScopeMD});
         if (S != AliasInstMDMap.end())
           return S->second;
         const Register Ret = MRI->createVirtualRegister(&SPIRV::IDRegClass);
@@ -2297,7 +2300,7 @@ MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
                        .addUse(Domain->getOperand(0).getReg());
         return MIB.getInstr();
       }();
-      AliasInstMDMap.insert(std::make_pair(ScopeMD, Scope));
+      AliasInstMDMap.insert(std::make_pair(std::make_pair(MF, ScopeMD), Scope));
       ScopeList.push_back(Scope);
     }
   }
@@ -2308,7 +2311,8 @@ MachineInstr *SPIRVGlobalRegistry::getOrAddMemAliasingINTELInst(
   for (auto *Scope : ScopeList)
     MIB.addUse(Scope->getOperand(0).getReg());
   auto List = MIB.getInstr();
-  AliasInstMDMap.insert(std::make_pair(AliasingListMD, List));
+  AliasInstMDMap.insert(
+      std::make_pair(std::make_pair(MF, AliasingListMD), List));
   return List;
 }
 
