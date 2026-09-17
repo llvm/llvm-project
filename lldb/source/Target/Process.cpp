@@ -1863,6 +1863,16 @@ void Process::RemoveBreakpointOpcodesFromBuffer(addr_t bp_addr, size_t size,
   });
 }
 
+void Process::AddCacheData(addr_t addr,
+                           const WritableDataBufferSP &data_buffer_sp) {
+  if (!data_buffer_sp || data_buffer_sp->GetByteSize() == 0)
+    return;
+
+  RemoveBreakpointOpcodesFromBuffer(addr, data_buffer_sp->GetByteSize(),
+                                    data_buffer_sp->GetBytes());
+  m_memory_cache.AddCacheData(addr, data_buffer_sp);
+}
+
 size_t Process::GetSoftwareBreakpointTrapOpcode(BreakpointSite *bp_site) {
   PlatformSP platform_sp(GetTarget().GetPlatform());
   if (platform_sp)
