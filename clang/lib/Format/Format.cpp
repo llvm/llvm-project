@@ -517,6 +517,7 @@ template <> struct ScalarEnumerationTraits<FormatStyle::JavaScriptQuoteStyle> {
 
 template <> struct MappingTraits<FormatStyle::KeepEmptyLinesStyle> {
   static void mapping(IO &IO, FormatStyle::KeepEmptyLinesStyle &Value) {
+    IO.mapOptional("AtEndOfBlock", Value.AtEndOfBlock);
     IO.mapOptional("AtEndOfFile", Value.AtEndOfFile);
     IO.mapOptional("AtStartOfBlock", Value.AtStartOfBlock);
     IO.mapOptional("AtStartOfFile", Value.AtStartOfFile);
@@ -1993,6 +1994,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.JavaScriptQuotes = FormatStyle::JSQS_Leave;
   LLVMStyle.JavaScriptWrapImports = true;
   LLVMStyle.KeepEmptyLines = {
+      /*AtEndOfBlock=*/false,
       /*AtEndOfFile=*/false,
       /*AtStartOfBlock=*/true,
       /*AtStartOfFile=*/true,
