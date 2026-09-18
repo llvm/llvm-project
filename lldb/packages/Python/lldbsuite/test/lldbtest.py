@@ -2529,6 +2529,20 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
             if matched:
                 self.runCmd("thread select %s" % matched.group(1))
 
+    def _assert_command_failed(self, command, res):
+        fail_msg = "Command '" + command + "' is expected to fail!"
+        output = res.GetOutput()
+        error = res.GetError()
+        if output:
+            fail_msg += "\nOutput: " + output
+        if error:
+            # If output is very long, add a dividing marker before printing the
+            # error message.
+            if output and len(output.splitlines()) > 10:
+                fail_msg += "\n" + "-" * 80
+            fail_msg += "\nError: " + error
+        self.assertFalse(res.Succeeded(), fail_msg)
+
     def match(
         self, str, patterns, msg=None, trace=False, error=False, matching=True, exe=True
     ):
@@ -2550,9 +2564,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
 
             # If error is True, the API client expects the command to fail!
             if error:
-                self.assertFalse(
-                    self.res.Succeeded(), "Command '" + str + "' is expected to fail!"
-                )
+                self._assert_command_failed(str, self.res)
         else:
             # No execution required, just compare str against the golden input.
             output = str
@@ -2887,10 +2899,7 @@ FileCheck output:
 
             # If error is True, the API client expects the command to fail!
             if error:
-                self.assertFalse(
-                    self.res.Succeeded(),
-                    "Command '" + string + "' is expected to fail!",
-                )
+                self._assert_command_failed(string, self.res)
         else:
             # No execution required, just compare string against the golden input.
             if isinstance(string, lldb.SBCommandReturnObject):
