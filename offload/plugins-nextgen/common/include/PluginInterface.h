@@ -320,18 +320,6 @@ private:
   }
 };
 
-/// Configuration of dynamic block memory needed for launching a kernel.
-struct DynBlockMemConfTy {
-  /// The size of the dynamic block memory buffer.
-  uint32_t Size = 0;
-  /// The size of dynamic shared memory natively provided by the device.
-  uint32_t NativeSize = 0;
-  /// The fallback that was triggered (if any).
-  DynCGroupMemFallbackType Fallback = DynCGroupMemFallbackType::None;
-  /// The fallback pointer if global memory was used as alternative.
-  void *FallbackPtr = nullptr;
-};
-
 /// Tracker of virtual memory address reservations.
 template <typename HandleTy> class VMemTrackerTy {
   struct EntryTy {
@@ -446,11 +434,6 @@ struct KernelLaunchArgsTy {
   /// Size of the argument data in bytes, one entry per \p Args element,
   /// possibly null.
   int64_t *ArgSizes = nullptr;
-  /// Address of the element of \p Args reserved for the kernel launch
-  /// environment (dyn_ptr), or null if this launch has no such slot. The
-  /// caller owns the storage it points into; the plugin fills it in once it
-  /// has computed the actual (device-side) value.
-  void **DynPtrSlot = nullptr;
   /// Tripcount for the teams / distribute loop, 0 otherwise.
   uint64_t Tripcount = 0;
   /// Amount of dynamic cgroup memory requested.
@@ -459,18 +442,12 @@ struct KernelLaunchArgsTy {
   uint32_t UserNumBlocks[3] = {0, 0, 0};
   /// User-requested number of threads (for x,y,z dimension).
   uint32_t UserThreadLimit[3] = {0, 0, 0};
-  struct {
-    /// Size in bytes of a single cross-team reduction buffer element for
-    /// this kernel, or 0 if the kernel does not need a reduction buffer.
-    uint32_t ReductionDataSize = 0;
-    /// Maximum number of threads per block that this kernel may use.
-    uint32_t MaxNumThreads = 0;
-  } KernelEnvironment;
+  /// Maximum number of threads per block that this kernel may use.
+  uint32_t MaxNumThreads = 0;
   struct {
     uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
-    uint64_t DynCGroupMemFallback : 2; // The fallback for dynamic cgroup mem.
-    uint64_t Unused : 61;
-  } Flags = {0, 0, 0};
+    uint64_t Unused : 63;
+  } Flags = {0, 0};
   /// Set by the caller when replaying a previously recorded kernel launch, so
   /// the plugin can report the outcome back; null for a normal launch.
   KernelReplayOutcomeTy *ReplayOutcome = nullptr;
@@ -492,10 +469,7 @@ struct GenericKernelTy {
 
   /// Launch the kernel on the specific device. The device must be the same
   /// one used to initialize the kernel. \p LaunchArgs.Args is the flattened
-  /// argument-pointer array to pass to the kernel, with any offsets already
-  /// resolved. \p LaunchArgs.DynPtrSlot, if non-null, points at the element
-  /// of it reserved for the kernel launch environment (dyn_ptr); the caller
-  /// owns the storage it points into.
+  /// argument-pointer array to pass to the kernel, with any offsets.
   Error launch(GenericDeviceTy &GenericDevice, KernelLaunchArgsTy &LaunchArgs,
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice,
@@ -534,15 +508,6 @@ struct GenericKernelTy {
     return *ImagePtr;
   }
 
-  /// Return a device pointer to a new kernel launch environment.
-  ///
-  /// \p NumBlocks0 is the number of blocks for this launch and is used to size
-  /// the reduction buffer.
-  Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
-      GenericDeviceTy &GenericDevice, const KernelLaunchArgsTy &LaunchArgs,
-      const DynBlockMemConfTy &DynBlockMemConf,
-      AsyncInfoWrapperTy &AsyncInfoWrapper, uint32_t NumBlocks0) const;
-
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
     switch (ExecutionMode) {
@@ -570,13 +535,6 @@ protected:
                                        uint32_t NumBlocks[3]) const;
 
 private:
-  /// Prepare the block memory buffer requested for the kernel and execute the
-  /// specified fallback if necessary.
-  Expected<DynBlockMemConfTy>
-  prepareBlockMemory(GenericDeviceTy &GenericDevice,
-                     const KernelLaunchArgsTy &LaunchArgs,
-                     uint32_t NumBlocks) const;
-
   /// The kernel name.
   std::string Name;
 
@@ -586,9 +544,6 @@ private:
 protected:
   /// The static memory sized per block.
   uint32_t StaticBlockMemSize = 0;
-
-  /// The prototype kernel launch environment.
-  KernelLaunchEnvironmentTy KernelLaunchEnvironment;
 };
 
 /// Information about an allocation, when it has been allocated, and when/if it
