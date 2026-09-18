@@ -33001,8 +33001,11 @@ private:
       for (const ReductionVectorPart &P : VectorValuesAndScales)
         if (P.Negated == Negated)
           CreateVecOp(P.Vec, P.Scale, P.IsSigned, P.ReducedInTree, P.Negated);
-    CreateSingleOp(VecRes, /*Scale=*/1, /*IsSigned=*/false,
-                   /*ReducedInTree=*/false, VecResNegated);
+    // All parts may be reduced in the tree already, leaving no vector value
+    // to reduce.
+    if (VecRes)
+      CreateSingleOp(VecRes, /*Scale=*/1, /*IsSigned=*/false,
+                     /*ReducedInTree=*/false, VecResNegated);
 
     return {ReducedSubTree, ResNegated};
   }
