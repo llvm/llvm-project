@@ -3,7 +3,7 @@
 ! RUN:    FileCheck %s --check-prefix=CPP-ERROR
 
       program p
-      integer :: y, x
+      integer :: x, y
       y = 3
       x = y
 ! CPP-ERROR: fixed-c-comment03.f:11:6: portability: nonstandard usage: C-style comment

@@ -1,10 +1,11 @@
-! Check that -E also enables preprocessing.
-! RUN: %flang_fc1 -cpp -fsyntax-only %s
-! RUN: %flang -E %s 2>&1 | FileCheck %s
-! RUN: %flang -E -nocpp %s 2>&1 | FileCheck %s --check-prefix=NOCPP
+! RUN: not %flang_fc1 -cpp -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
-! CHECK: print *, "hello", "world"
-! NOCPP: /*c*/ print *, /* comment */ "hello"
-/*c*/ print *, /* comment */ "hello"
-/*d*/+, "world"
+      implicit none
+      integer :: x, y
+      y = 3
+! The lines below should be parsed as distinct lines, with no continuation.
+! ERROR: error: obsolete legacy extension is not supported
+      x = y
+	/**/+2
+      print *, x
       end

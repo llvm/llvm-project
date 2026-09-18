@@ -1480,7 +1480,8 @@ const char *Prescanner::FixedFormContinuationLine(
   char col1{*nextLine_};
   const char *afterWhiteSpace{SkipWhiteSpace(nextLine_)};
   const char *afterCComment{nullptr};
-  if (preprocessingEnabled_ && IsCComment(afterWhiteSpace)) {
+  if (preprocessingEnabled_ && IsCComment(afterWhiteSpace) &&
+      !HasTabInLabelField(nextLine_, limit_)) {
     afterCComment = SkipCComment(afterWhiteSpace);
     if (afterCComment == nullptr) {
       unterminatedCComment = afterWhiteSpace;

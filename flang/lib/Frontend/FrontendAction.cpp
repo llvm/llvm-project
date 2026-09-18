@@ -92,12 +92,7 @@ bool FrontendAction::beginSourceFile(CompilerInstance &ci,
     invoc.setDefaultPredefinitions();
     invoc.collectMacroDefinitions();
   }
-  // Preprocessing is enabled if macros are included or if `-E` is specified
-  // and `-nocpp` is not.
-  invoc.getFortranOpts().preprocessingEnabled =
-      includeMacros ||
-      (invoc.getPreprocessorOpts().macrosFlag == PPMacrosFlag::Unknown &&
-       invoc.getFrontendOpts().programAction == PrintPreprocessedInput);
+  invoc.getFortranOpts().preprocessingEnabled = includeMacros;
 
   if (!invoc.getFortranOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::CUDA)) {
