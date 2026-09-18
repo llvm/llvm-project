@@ -817,7 +817,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FCANONICALIZE, MVT::f32, Legal);
   }
 
-  if (Subtarget.hasFPU()) {
+  if (Subtarget.hasVSX()) {
     setOperationAction(ISD::IS_FPCLASS, MVT::f32, Custom);
     if (Subtarget.use64BitRegs() ||
         (Subtarget.hasP9Vector() && Subtarget.useCRBits()))
@@ -12002,20 +12002,13 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
 
   // fcNan / ~fcNan: emit a self-comparison using the best available
   // instruction both are exception-free on PPC hardware.
-  // VSX (P8+): xscmpudp (f64 operand; extend f32 first).
-  // Non-VSX FPU: fcmpu (FCMPUS for f32, FCMPUD for f64).
+  // VSX: xscmpudp (f64 operand; extend f32 first).
+  assert(Subtarget.hasVSX() && "Must have VSX target feature");
   SDValue Cmp;
-  if (Subtarget.hasVSX()) {
-    if (VT == MVT::f32)
-      LHS = DAG.getNode(ISD::FP_EXTEND, Dl, MVT::f64, LHS);
-    // xscmpudp Ra, Ra: FU (unordered) bit set when Ra is NaN.
-    Cmp = SDValue(DAG.getMachineNode(PPC::XSCMPUDP, Dl, MVT::i32, LHS, LHS),
-                  0);
-  } else {
-    // fcmpu Ra, Ra: FU bit set when Ra is NaN.
-    unsigned FcmpOp = (VT == MVT::f32) ? PPC::FCMPUS : PPC::FCMPUD;
-    Cmp = SDValue(DAG.getMachineNode(FcmpOp, Dl, MVT::i32, LHS, LHS), 0);
-  }
+  if (VT == MVT::f32)
+    LHS = DAG.getNode(ISD::FP_EXTEND, Dl, MVT::f64, LHS);
+  // xscmpudp Ra, Ra: FU (unordered) bit set when Ra is NaN.
+  Cmp = SDValue(DAG.getMachineNode(PPC::XSCMPUDP, Dl, MVT::i32, LHS, LHS), 0);
 
   if (Subtarget.useCRBits()) {
     // fcNan  -> sub_un (FU): 1 when NaN
