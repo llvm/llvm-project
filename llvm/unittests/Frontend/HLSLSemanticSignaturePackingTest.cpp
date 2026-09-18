@@ -900,12 +900,13 @@ TEST_F(HLSLSemanticSignaturePackingTest,
 TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableIndexedRanges) {
   // An element with multiple rows occupies the same columns of a contiguous
   // range of rows, and other elements may be co-packed into the columns those
-  // rows have left. A system value cannot be placed in a dynamically indexable
-  // row, so Position starts a new register.
+  // rows have left. B extends the indexed range of the rows it shares with A.
+  // A system value cannot be placed in a dynamically indexable row, so
+  // Position starts a new register after both arrays.
 
   // struct VSOut {
   //   float2 A[2]    : A;
-  //   float B[2]     : B;
+  //   float B[3]     : B;
   //   float C        : C;
   //   float Position : SV_Position;
   // };
@@ -914,7 +915,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableIndexedRanges) {
       /*UseNative16BitTypes=*/false,
       {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/2, /*Cols=*/2,
         dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
-       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/2, /*Cols=*/1,
+       {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/3, /*Cols=*/1,
         dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
        {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
         dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
@@ -924,12 +925,13 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableIndexedRanges) {
   // Expected layout:
   // reg0: A[0].xy | B[0].z | C.w
   // reg1: A[1].xy | B[1].z | unused.w
-  // reg2: Position.x | unused.yzw
-  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/3,
+  // reg2: unused.xy | B[2].z | unused.w
+  // reg3: Position.x | unused.yzw
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/4,
                 {{/*Row=*/0, /*Col=*/0},
                  {/*Row=*/0, /*Col=*/2},
                  {/*Row=*/0, /*Col=*/3},
-                 {/*Row=*/2, /*Col=*/0}});
+                 {/*Row=*/3, /*Col=*/0}});
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableIndexedAfterSystemValue) {
