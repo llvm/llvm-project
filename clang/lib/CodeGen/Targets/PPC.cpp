@@ -654,6 +654,7 @@ public:
 
   bool isPromotableTypeForABI(QualType Ty) const;
   CharUnits getParamTypeAlignment(QualType Ty) const;
+  const Type *getSingleElementFPOrVectorType(QualType Ty) const;
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType Ty) const;
@@ -675,15 +676,9 @@ public:
       // We rely on the default argument classification for the most part.
       // One exception:  An aggregate containing a single floating-point
       // or vector item must be passed in a register if one is available.
-      const Type *T = isSingleElementStruct(I.type, getContext());
-      if (T) {
-        const BuiltinType *BT = T->getAs<BuiltinType>();
-        if ((T->isVectorType() && getContext().getTypeSize(T) == 128) ||
-            (BT && BT->isFloatingPoint())) {
-          QualType QT(T, 0);
-          I.info = ABIArgInfo::getDirectInReg(CGT.ConvertType(QT));
-          continue;
-        }
+      if (const Type *T = getSingleElementFPOrVectorType(I.type)) {
+        I.info = ABIArgInfo::getDirectInReg(CGT.ConvertType(QualType(T, 0)));
+        continue;
       }
       I.info = classifyArgumentType(I.type);
     }
@@ -783,14 +778,7 @@ CharUnits PPC64_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
 
   // For single-element float/vector structs, we consider the whole type
   // to have the same alignment requirements as its single element.
-  const Type *AlignAsType = nullptr;
-  const Type *EltType = isSingleElementStruct(Ty, getContext());
-  if (EltType) {
-    const BuiltinType *BT = EltType->getAs<BuiltinType>();
-    if ((EltType->isVectorType() && getContext().getTypeSize(EltType) == 128) ||
-        (BT && BT->isFloatingPoint()))
-      AlignAsType = EltType;
-  }
+  const Type *AlignAsType = getSingleElementFPOrVectorType(Ty);
 
   // Likewise for ELFv2 homogeneous aggregates.
   const Type *Base = nullptr;
@@ -813,6 +801,24 @@ CharUnits PPC64_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   }
 
   return CharUnits::fromQuantity(8);
+}
+
+/// If Ty is a one-member aggregate wrapping a floating-point or 128-bit vector
+/// type, return that type. ELFv1 only unwraps structs and arrays; GCC passes
+/// unions in GPRs.
+const Type *
+PPC64_SVR4_ABIInfo::getSingleElementFPOrVectorType(QualType Ty) const {
+  bool AllowUnions =
+      Kind != PPC64_SVR4_ABIKind::ELFv1 ||
+      getContext().getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver23);
+  const Type *EltType = isSingleElementStruct(Ty, getContext(), AllowUnions);
+  if (!EltType)
+    return nullptr;
+  const BuiltinType *BT = EltType->getAs<BuiltinType>();
+  if ((EltType->isVectorType() && getContext().getTypeSize(EltType) == 128) ||
+      (BT && BT->isFloatingPoint()))
+    return EltType;
+  return nullptr;
 }
 
 bool PPC64_SVR4_ABIInfo::isHomogeneousAggregateBaseType(QualType Ty) const {
