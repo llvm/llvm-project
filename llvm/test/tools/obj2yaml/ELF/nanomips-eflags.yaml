@@ -1,0 +1,40 @@
+## Check obj2yaml is able to decode nanoMIPS e_flags field values.
+
+# RUN: yaml2obj %s -o %t-none -DFLAGS="[]"
+# RUN: obj2yaml %t-none | FileCheck --check-prefixes=CHECK-NONE %s
+
+# RUN: yaml2obj %s -o %t-p32 -DFLAGS="[ EF_NANOMIPS_ABI_P32 ]"
+# RUN: obj2yaml %t-p32 | FileCheck --check-prefixes=CHECK-P32 %s
+
+# RUN: yaml2obj %s -o %t-relax -DFLAGS="[ EF_NANOMIPS_LINKRELAX ]"
+# RUN: obj2yaml %t-relax | FileCheck --check-prefixes=CHECK-RELAX %s
+
+# RUN: yaml2obj %s -o %t-relax-pcrel -DFLAGS="[ EF_NANOMIPS_LINKRELAX, EF_NANOMIPS_PCREL, EF_NANOMIPS_ABI_P32 ]"
+# RUN: obj2yaml %t-relax-pcrel | FileCheck --check-prefixes=CHECK-RELAX-PCREL %s
+
+# RUN: yaml2obj %s -o %t-all \
+# RUN:     -DFLAGS="[ EF_NANOMIPS_LINKRELAX, EF_NANOMIPS_PIC, EF_NANOMIPS_32BITMODE, EF_NANOMIPS_PID, EF_NANOMIPS_PCREL, EF_NANOMIPS_ARCH_32R6, EF_NANOMIPS_ABI_P32 ]"
+# RUN: obj2yaml %t-all | FileCheck \
+# RUN:     --check-prefixes=CHECK-ALL %s
+
+# CHECK-NONE:        Class:  ELFCLASS32
+
+# CHECK-P32:         Class:  ELFCLASS32
+# CHECK-P32:         Flags:  [ EF_NANOMIPS_ARCH_32R6, EF_NANOMIPS_ABI_P32 ]
+
+# CHECK-RELAX:       Class:  ELFCLASS32
+# CHECK-RELAX:       Flags:  [ EF_NANOMIPS_LINKRELAX, EF_NANOMIPS_ARCH_32R6 ]
+
+# CHECK-RELAX-PCREL: Class:  ELFCLASS32
+# CHECK-RELAX-PCREL: Flags:  [ EF_NANOMIPS_LINKRELAX, EF_NANOMIPS_PCREL, EF_NANOMIPS_ARCH_32R6, EF_NANOMIPS_ABI_P32 ]
+
+# CHECK-ALL:         Class:  ELFCLASS32
+# CHECK-ALL:         Flags:  [ EF_NANOMIPS_LINKRELAX, EF_NANOMIPS_PIC, EF_NANOMIPS_32BITMODE, EF_NANOMIPS_PID, EF_NANOMIPS_PCREL, EF_NANOMIPS_ARCH_32R6, EF_NANOMIPS_ABI_P32 ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_NANOMIPS
+  Flags:   [[FLAGS]]

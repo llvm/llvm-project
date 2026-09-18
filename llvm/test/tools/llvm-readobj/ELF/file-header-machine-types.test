@@ -477,6 +477,9 @@
 # RUN: yaml2obj %s -o %t.bpf.o -D MACHINE=EM_BPF
 # RUN: llvm-readelf --file-headers %t.bpf.o | FileCheck %s -DMACHINE="EM_BPF"
 
+# RUN: yaml2obj %s -o %t.nanomips.o -D MACHINE=EM_NANOMIPS
+# RUN: llvm-readelf --file-headers %t.nanomips.o | FileCheck %s -DMACHINE="nanoMIPS"
+
 # RUN: yaml2obj %s -o %t.ve.o -D MACHINE=EM_VE
 # RUN: llvm-readelf --file-headers %t.ve.o | FileCheck %s -DMACHINE="NEC SX-Aurora Vector Engine"
 

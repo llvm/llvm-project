@@ -1635,6 +1635,17 @@ constexpr EnumStringDef<unsigned, 2> ElfHeaderMipsFlagsDefs[] = {
 };
 constexpr auto ElfHeaderMipsFlags = BUILD_ENUM_STRINGS(ElfHeaderMipsFlagsDefs);
 
+constexpr EnumStringDef<unsigned, 2> ElfHeaderNanoMipsFlagsDefs[] = {
+    ENUM_ENT(EF_NANOMIPS_LINKRELAX, "relaxable"),
+    ENUM_ENT(EF_NANOMIPS_PIC, "pic"),
+    ENUM_ENT(EF_NANOMIPS_32BITMODE, "32bitmode"),
+    ENUM_ENT(EF_NANOMIPS_PID, "pid"),
+    ENUM_ENT(EF_NANOMIPS_PCREL, "PC-relative"),
+    ENUM_ENT(EF_NANOMIPS_ABI_P32, "p32"),
+};
+constexpr auto ElfHeaderNanoMipsFlags =
+    BUILD_ENUM_STRINGS(ElfHeaderNanoMipsFlagsDefs);
+
 #define X(NUM, ENUM, NAME) ENUM_ENT(ENUM, NAME),
 #define AMDGPU_MACH_ENUM_ENTS                                                  \
   AMDGPU_MACH_LIST(X) ENUM_ENT(EF_AMDGPU_MACH_NONE, "none")
@@ -3816,6 +3827,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
       }
     } break;
     }
+  } else if (e.e_machine == EM_NANOMIPS) {
+    ElfFlags = printFlags(e.e_flags, EnumStrings(ElfHeaderNanoMipsFlags),
+                          unsigned(EF_NANOMIPS_ABI));
   }
   Str = "0x" + utohexstr(e.e_flags, /*LowerCase=*/true);
   if (!ElfFlags.empty())
@@ -7676,6 +7690,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
     else if (E.e_machine == EM_CUDA)
       W.printFlags("Flags", E.e_flags, EnumStrings(ElfHeaderNVPTXFlags),
                    unsigned(ELF::EF_CUDA_SM));
+    else if (E.e_machine == EM_NANOMIPS)
+      W.printFlags("Flags", E.e_flags, EnumStrings(ElfHeaderNanoMipsFlags),
+                   unsigned(EF_NANOMIPS_ABI));
     else
       W.printFlags("Flags", E.e_flags);
     W.printNumber("HeaderSize", E.e_ehsize);

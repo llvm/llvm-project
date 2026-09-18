@@ -1,0 +1,66 @@
+## Check llvm-readobj's ability to decode nanoMIPS e_flags field values.
+
+# RUN: yaml2obj %s -o %t-none -DFLAGS="[]"
+# RUN: llvm-readobj -h %t-none | FileCheck --check-prefixes=READOBJ-NONE %s
+# RUN: llvm-readelf -h %t-none | FileCheck --check-prefixes=READELF-NONE --match-full-lines %s
+
+# RUN: yaml2obj %s -o %t-p32 -DFLAGS="[ EF_NANOMIPS_ABI_P32 ]"
+# RUN: llvm-readobj -h %t-p32 | FileCheck --check-prefixes=READOBJ-P32 %s
+# RUN: llvm-readelf -h %t-p32 | FileCheck --check-prefixes=READELF-P32 --match-full-lines %s
+
+# RUN: yaml2obj %s -o %t-relax -DFLAGS="[ EF_NANOMIPS_LINKRELAX ]"
+# RUN: llvm-readobj -h %t-relax | FileCheck --check-prefixes=READOBJ-RELAX %s
+# RUN: llvm-readelf -h %t-relax | FileCheck --check-prefixes=READELF-RELAX --match-full-lines %s
+
+# RUN: yaml2obj %s -o %t-relax-pcrel -DFLAGS="[ EF_NANOMIPS_LINKRELAX, EF_NANOMIPS_PCREL, EF_NANOMIPS_ABI_P32 ]"
+# RUN: llvm-readobj -h %t-relax-pcrel | FileCheck --check-prefixes=READOBJ-RELAX-PCREL %s
+# RUN: llvm-readelf -h %t-relax-pcrel | FileCheck --check-prefixes=READELF-RELAX-PCREL --match-full-lines %s
+
+# RUN: yaml2obj %s -o %t-all \
+# RUN:   -DFLAGS="[ EF_NANOMIPS_LINKRELAX, EF_NANOMIPS_PIC, EF_NANOMIPS_32BITMODE, EF_NANOMIPS_PID, EF_NANOMIPS_PCREL, EF_NANOMIPS_ABI_P32 ]"
+# RUN: llvm-readobj -h %t-all | FileCheck --check-prefixes=READOBJ-ALL %s
+# RUN: llvm-readelf -h %t-all | FileCheck --check-prefixes=READELF-ALL --match-full-lines %s
+
+
+# READOBJ-NONE:               Class: 32-bit (0x1)
+# READOBJ-NONE:               Flags [ (0x0)
+# READOBJ-NONE-NEXT:           ]
+# READELF-NONE:               Class: ELF32
+# READELF-NONE:               Machine: nanoMIPS
+
+# READOBJ-P32:                Flags [ (0x1000)
+# READOBJ-P32-NEXT:            EF_NANOMIPS_ABI_P32 (0x1000)
+# READOBJ-P32-NEXT:           ]
+
+# READOBJ-RELAX:              Flags [ (0x1)
+# READOBJ-RELAX-NEXT:          EF_NANOMIPS_LINKRELAX (0x1)
+# READOBJ-RELAX-NEXT:         ]
+
+# READOBJ-RELAX-PCREL:        Flags [ (0x1011)
+# READOBJ-RELAX-PCREL-NEXT:    EF_NANOMIPS_ABI_P32 (0x1000)
+# READOBJ-RELAX-PCREL-NEXT:    EF_NANOMIPS_LINKRELAX (0x1)
+# READOBJ-RELAX-PCREL-NEXT:    EF_NANOMIPS_PCREL (0x10)
+# READOBJ-RELAX-PCREL-NEXT:   ]
+
+# READOBJ-ALL:                Flags [ (0x101F)
+# READOBJ-ALL-NEXT:            EF_NANOMIPS_32BITMODE (0x4)
+# READOBJ-ALL-NEXT:            EF_NANOMIPS_ABI_P32 (0x1000)
+# READOBJ-ALL-NEXT:            EF_NANOMIPS_LINKRELAX (0x1)
+# READOBJ-ALL-NEXT:            EF_NANOMIPS_PCREL (0x10)
+# READOBJ-ALL-NEXT:            EF_NANOMIPS_PIC (0x2)
+# READOBJ-ALL-NEXT:            EF_NANOMIPS_PID (0x8)
+# READOBJ-ALL-NEXT:           ]
+
+# READELF-NONE:         Flags: 0x0
+# READELF-P32:          Flags: 0x1000, p32
+# READELF-RELAX:        Flags: 0x1, relaxable
+# READELF-RELAX-PCREL:  Flags: 0x1011, relaxable, PC-relative, p32
+# READELF-ALL:          Flags: 0x101f, relaxable, pic, 32bitmode, pid, PC-relative, p32
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_NANOMIPS
+  Flags:   [[FLAGS]]
