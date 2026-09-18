@@ -241,6 +241,8 @@ void ScalarEnumerationTraits<CoroutineKind>::enumeration(IO &IO,
   for (const auto &E : Names) {
     IO.enumCase(Kind, E.name(), static_cast<CoroutineKind>(E.value()));
   }
+
+  IO.enumFallback<Hex16>(Kind);
 }
 
 namespace llvm {

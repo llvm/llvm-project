@@ -34,6 +34,11 @@
 # YAML2PDB-NEXT:           bytes of callee saved registers = 0, exception handler addr = 0000:0000
 # YAML2PDB-NEXT:           local fp reg = RSP, param fp reg = RSP
 # YAML2PDB-NEXT:           flags = has async eh | opt speed, coroutine kind = destroy
+# YAML2PDB-NEXT:     196 | S_FRAMEPROC [size = 32]
+# YAML2PDB-NEXT:           size = 7, padding size = 0, offset to padding = 0
+# YAML2PDB-NEXT:           bytes of callee saved registers = 0, exception handler addr = 0000:0000
+# YAML2PDB-NEXT:           local fp reg = RSP, param fp reg = RSP
+# YAML2PDB-NEXT:           flags = has async eh | opt speed, coroutine kind = unknown (5)
 
 # PDB2YAML:          - Kind:            S_FRAMEPROC
 # PDB2YAML:            FrameProcSym:
@@ -66,6 +71,11 @@
 # PDB2YAML:            FrameProcSym:
 # PDB2YAML:              TotalFrameBytes: 6
 # PDB2YAML:              CoroutineKind:   Destroy
+
+# PDB2YAML:          - Kind:            S_FRAMEPROC
+# PDB2YAML:            FrameProcSym:
+# PDB2YAML:              TotalFrameBytes: 7
+# PDB2YAML:              CoroutineKind:   0x5
 
 ---
 DbiStream:
@@ -153,4 +163,16 @@ DbiStream:
               LocalFramePtrReg: StackPtr
               ParamFramePtrReg: StackPtr
               CoroutineKind:   Destroy
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 7
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ AsynchronousExceptionHandling, OptimizedForSpeed ]
+              LocalFramePtrReg: StackPtr
+              ParamFramePtrReg: StackPtr
+              CoroutineKind:   0x5
 ...
