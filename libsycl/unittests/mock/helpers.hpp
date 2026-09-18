@@ -131,20 +131,23 @@ public:
               (ol_queue_handle_t Queue, size_t Count, const void **Mems,
                const size_t *Sizes, ol_mem_migration_flags_t Flags));
   MOCK_METHOD(ol_result_t, olGetMemInfo,
-              (const void *Ptr, ol_mem_info_t PropName, size_t PropSize,
-               void *PropValue));
+              (ol_context_handle_t Context, const void *Ptr,
+               ol_mem_info_t PropName, size_t PropSize, void *PropValue));
   MOCK_METHOD(ol_result_t, olMemAlloc,
-              (ol_device_handle_t Device, ol_alloc_type_t Type, size_t Size,
-               void **AllocationOut));
+              (ol_context_handle_t Context, ol_device_handle_t Device,
+               ol_alloc_type_t Type, size_t Size, void **AllocationOut));
   MOCK_METHOD(ol_result_t, olMemAllocHost,
-              (ol_device_handle_t Device, size_t Size, void **AllocationOut));
-  MOCK_METHOD(ol_result_t, olMemFree, (void *Address));
+              (ol_context_handle_t Context, ol_device_handle_t Device,
+               size_t Size, void **AllocationOut));
+  MOCK_METHOD(ol_result_t, olMemFree,
+              (ol_context_handle_t Context, void *Address));
   MOCK_METHOD(ol_result_t, olMemAllocAligned,
-              (ol_device_handle_t Device, ol_alloc_type_t AllocType,
-               size_t Size, size_t Alignment, void **AllocationOut));
-  MOCK_METHOD(ol_result_t, olMemAllocAlignedHost,
-              (ol_device_handle_t Device, size_t Size, size_t Alignment,
+              (ol_context_handle_t Context, ol_device_handle_t Device,
+               ol_alloc_type_t AllocType, size_t Size, size_t Alignment,
                void **AllocationOut));
+  MOCK_METHOD(ol_result_t, olMemAllocAlignedHost,
+              (ol_context_handle_t Context, ol_device_handle_t Device,
+               size_t Size, size_t Alignment, void **AllocationOut));
 
   ol_result_t makeEmptyStrError(ol_errc_t Code) {
     auto [Iterator, Flag] =
