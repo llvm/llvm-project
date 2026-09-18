@@ -787,7 +787,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableSystemValueOrdering) {
 
   // struct PSIn {
   //   uint A             : A;
-  //   float Position      : SV_Position;
+  //   float Position     : SV_Position;
   //   bool IsFrontFace   : SV_IsFrontFace;
   // };
   TestConfig Config(
