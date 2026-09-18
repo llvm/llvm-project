@@ -13,9 +13,16 @@ from lit.BooleanExpression import BooleanExpression
 # Those are used for backdeployment features below, do not use directly in tests.
 features = [
     Feature(
-        name="_target-has-llvm-23",
+        name="_target-has-llvm-24",
         when=lambda cfg: BooleanExpression.evaluate(
             "TBD",
+            cfg.available_features,
+        ),
+    ),
+    Feature(
+        name="_target-has-llvm-23",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "_target-has-llvm-24",
             cfg.available_features,
         ),
     ),
@@ -184,6 +191,14 @@ features += [
         name="availability-print-missing",
         when=lambda cfg: BooleanExpression.evaluate(
             "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-18)",
+            cfg.available_features,
+        ),
+    ),
+    # Tests that require the hazard pointer domain (<hazard_pointer>) in the built library.
+    Feature(
+        name="availability-hazard_pointer-missing",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-24)",
             cfg.available_features,
         ),
     ),

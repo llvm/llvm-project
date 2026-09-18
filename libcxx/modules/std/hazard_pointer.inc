@@ -8,16 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#if 0
-#  if _LIBCPP_STD_VER >= 23
-  // 4.1.3, class template hazard_pointer_obj_base
+#if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_THREADS
+  // [saferecl.hp.base], class template hazard_pointer_obj_base
   using std::hazard_pointer_obj_base;
-  // 4.1.4, class hazard_pointer
+
+  // [saferecl.hp.holder], class hazard_pointer
   using std::hazard_pointer;
-  // 4.1.5, Construct non-empty hazard_pointer
+
+  // [saferecl.hp.holder.nonmem], non-member functions
   using std::make_hazard_pointer;
-  // 4.1.6, Hazard pointer swap
   using std::swap;
-#  endif // _LIBCPP_STD_VER >= 23
-#endif
+#endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_THREADS
 } // namespace std
