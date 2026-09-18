@@ -20191,6 +20191,25 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
     }
   }
 
+  if (!getLangOpts().ExperimentalLateParseAttributes) {
+    // Perform FieldDecl-dependent validation for counted_by family attributes.
+    for (auto *D : Fields) {
+      FieldDecl *FD = cast<FieldDecl>(D);
+      if (auto *CAT = FD->getType()->getAs<CountAttributedType>()) {
+        if (CheckCountedByAttrOnField(FD, CAT->getCountExpr(),
+                                      CAT->isCountInBytes(), CAT->isOrNull())) {
+          // Rejected. Strip the CountAttributedType so the field keeps its
+          // plain wrapped type. The pre-refactor eager path built the type only
+          // after this check passed, so on failure no CAT ever existed.
+          QualType Wrapped = CAT->desugar();
+          FD->setType(Wrapped);
+          FD->setTypeSourceInfo(
+              Context.getTrivialTypeSourceInfo(Wrapped, FD->getLocation()));
+        }
+      }
+    }
+  }
+
   // Verify that all the fields are okay.
   SmallVector<FieldDecl*, 32> RecFields;
   const FieldDecl *PreviousField = nullptr;

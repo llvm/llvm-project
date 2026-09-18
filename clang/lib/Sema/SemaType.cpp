@@ -6444,6 +6444,7 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
         break;
       }
 
+      case TypeLoc::CountAttributed:
       case TypeLoc::Adjusted:
       case TypeLoc::BTFTagAttributed: {
         CurrTL = CurrTL.getNextTypeLoc().getUnqualifiedLoc();
@@ -9067,8 +9068,8 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
 /// Chunks are ordered from the identifier out. In
 /// `int *__counted_by(n) *pp`, the attributed pointer is chunk 1, enclosed by
 /// the pointer at chunk 0, so its nesting level is 1.
-[[maybe_unused]] static unsigned getPointerNestLevel(TypeProcessingState &state,
-                                                     unsigned chunkIndex) {
+static unsigned getPointerNestLevel(TypeProcessingState &state,
+                                    unsigned chunkIndex) {
   unsigned pointerNestLevel = 0;
   const auto &stateDeclarator = state.getDeclarator();
   assert(chunkIndex <= stateDeclarator.getNumTypeObjects());
@@ -9085,6 +9086,40 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
     }
   }
   return pointerNestLevel;
+}
+
+static void HandleCountedByAttrOnType(TypeProcessingState &State,
+                                      QualType &CurType, ParsedAttr &Attr) {
+  Sema &S = State.getSema();
+
+  // This attribute is only supported in C.
+  if (!Attr.diagnoseLangOpts(S)) {
+    Attr.setInvalid();
+    return;
+  }
+
+  auto *CountExpr = Attr.getArgAsExpr(0);
+  if (!CountExpr)
+    return;
+
+  unsigned chunkIndex = State.getCurrentChunkIndex();
+  unsigned pointerNestLevel = getPointerNestLevel(State, chunkIndex);
+
+  Sema::BoundsAttrFlags Flags;
+  if (!S.ValidateBoundsAttrTypeForTypePosition(CurType, Attr.getKind(),
+                                               Attr.getLoc(), Attr.getRange(),
+                                               pointerNestLevel, Flags)) {
+    Attr.setInvalid();
+    return;
+  }
+
+  QualType NewType = S.BuildCountAttributedArrayOrPointerType(
+      CurType, CountExpr, Flags.CountInBytes, Flags.OrNull);
+  if (NewType.isNull()) {
+    Attr.setInvalid();
+    return;
+  }
+  CurType = NewType;
 }
 
 bool Sema::ProcessLateParsedTypeAttr(LateParsedAttribute *LA, QualType &type) {
@@ -9355,6 +9390,19 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
 
     case ParsedAttr::AT_SwiftAttr: {
       HandleSwiftAttr(state, TAL, type, attr);
+      break;
+    }
+
+    case ParsedAttr::AT_CountedBy:
+    case ParsedAttr::AT_CountedByOrNull:
+    case ParsedAttr::AT_SizedBy:
+    case ParsedAttr::AT_SizedByOrNull: {
+      // XXX: The late-parsing path hasn't been switched to the new mechanism to
+      // properly support type-position attributes yet.
+      if (!state.getSema().getLangOpts().ExperimentalLateParseAttributes) {
+        HandleCountedByAttrOnType(state, type, attr);
+        attr.setUsedAsTypeAttr();
+      }
       break;
     }
 
@@ -10129,7 +10177,19 @@ QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
                                                       Expr *CountExpr,
                                                       bool CountInBytes,
                                                       bool OrNull) {
-  assert(WrappedTy->isIncompleteArrayType() || WrappedTy->isPointerType());
+  // Accept any array or pointer type here. For arrays, validation that it's
+  // a flexible array member is deferred until CheckCountedByAttrOnField.
+  assert(WrappedTy->isArrayType() || WrappedTy->isPointerType());
+
+  // Reject non-DeclRefExpr early to avoid cast failure in
+  // BuildTypeCoupledDecls.
+  if (!isa<DeclRefExpr>(CountExpr)) {
+    unsigned Kind = getBoundsAttrKind(BoundsAttrFlags{CountInBytes, OrNull});
+    Diag(CountExpr->getBeginLoc(),
+         diag::err_count_attr_only_support_simple_decl_reference)
+        << Kind << CountExpr->getSourceRange();
+    return QualType();
+  }
 
   llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
   BuildTypeCoupledDecls(CountExpr, Decls);

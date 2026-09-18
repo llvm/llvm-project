@@ -7069,41 +7069,35 @@ static void handleNoPFPAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(NoFieldProtectionAttr::Create(S.Context, AL));
 }
 
+// Only reached for a counted_by-family attribute that
+// -fexperimental-late-parse-attributes late-parses as a declaration attribute.
+// This will be removed once late-parsing for type attribute is fully switched
+// over to the new mechanism so it's properly supported.
+// Every other one is a type attribute, handled by HandleCountedByAttrOnType.
 static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
+  // Already applied, or diagnosed, as a type attribute.
+  if (AL.isUsedAsTypeAttr())
+    return;
+
   auto *CountExpr = AL.getArgAsExpr(0);
   if (!CountExpr)
     return;
 
-  bool CountInBytes;
-  bool OrNull;
-  switch (AL.getKind()) {
-  case ParsedAttr::AT_CountedBy:
-    CountInBytes = false;
-    OrNull = false;
-    break;
-  case ParsedAttr::AT_CountedByOrNull:
-    CountInBytes = false;
-    OrNull = true;
-    break;
-  case ParsedAttr::AT_SizedBy:
-    CountInBytes = true;
-    OrNull = false;
-    break;
-  case ParsedAttr::AT_SizedByOrNull:
-    CountInBytes = true;
-    OrNull = true;
-    break;
-  default:
-    llvm_unreachable("unexpected counted_by family attribute");
-  }
-
-  FieldDecl *FD = cast<FieldDecl>(D);
-  if (S.CheckCountedByAttrOnField(FD, CountExpr, CountInBytes, OrNull))
+  auto *FD = cast<FieldDecl>(D);
+  Sema::BoundsAttrFlags Flags = Sema::BoundsAttrFlags::get(AL.getKind());
+  if (!S.ValidateBoundsAttrTypeShape(FD->getType(), AL.getLoc(), AL.getRange(),
+                                     Flags, /*AttrSpelling=*/{},
+                                     /*AllowRedecl=*/false, /*AttrArg=*/nullptr,
+                                     /*UpdateFlags=*/false))
+    return;
+  if (S.CheckCountedByAttrOnField(FD, CountExpr, Flags.CountInBytes,
+                                  Flags.OrNull))
     return;
 
   QualType CAT = S.BuildCountAttributedArrayOrPointerType(
-      FD->getType(), CountExpr, CountInBytes, OrNull);
-  FD->setType(CAT);
+      FD->getType(), CountExpr, Flags.CountInBytes, Flags.OrNull);
+  if (!CAT.isNull())
+    FD->setType(CAT);
 }
 
 static void handleFunctionReturnThunksAttr(Sema &S, Decl *D,
