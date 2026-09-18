@@ -16,7 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
-#include "Utils/WasmAddressSpaces.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
@@ -36,6 +35,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/WasmAddressSpaces.h"
 
 using namespace llvm;
 
