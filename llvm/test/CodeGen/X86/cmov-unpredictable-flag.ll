@@ -35,8 +35,8 @@ define i32 @double_cmov(float %a, float %b, i32 %x, i32 %y) {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fr32 = COPY $xmm1
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:fr32 = COPY $xmm0
   ; CHECK-NEXT:   nofpexcept UCOMISSrr [[COPY3]], [[COPY2]], implicit-def $eflags, implicit $mxcsr
-  ; CHECK-NEXT:   [[CMOV32rr:%[0-9]+]]:gr32 = CMOV32rr [[COPY1]], [[COPY]], 5, implicit $eflags
-  ; CHECK-NEXT:   [[CMOV32rr1:%[0-9]+]]:gr32 = CMOV32rr [[CMOV32rr]], [[COPY]], 10, implicit $eflags
+  ; CHECK-NEXT:   [[CMOV32rr:%[0-9]+]]:gr32 = unpredictable CMOV32rr [[COPY1]], [[COPY]], 5, implicit $eflags
+  ; CHECK-NEXT:   [[CMOV32rr1:%[0-9]+]]:gr32 = unpredictable CMOV32rr [[CMOV32rr]], [[COPY]], 10, implicit $eflags
   ; CHECK-NEXT:   $eax = COPY [[CMOV32rr1]]
   ; CHECK-NEXT:   RET 0, $eax
   %c = fcmp oeq float %a, %b
