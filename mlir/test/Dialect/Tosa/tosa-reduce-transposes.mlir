@@ -597,3 +597,21 @@ func.func @test_unimplemented_static_diverges_to_one_nullifying_one_non_nullifyi
   %result = tosa.transpose %add {perms = array<i32: 0, 3, 1, 2>}: (tensor<1x3x4x2xi32>) -> tensor<1x2x3x4xi32>
   return %result : tensor<1x2x3x4xi32>
 }
+
+// CHECK-LABEL: @test_transpose_bool
+// CHECK: %{{.*}} = "tosa.const"()
+// CHECK-SAME{LITERAL}: dense<[[true, false], [false, false], [false, true]]>
+func.func @test_transpose_bool() -> tensor<3x2xi1> {
+  %0 = "tosa.const"() <{values = dense<[[true, false, false], [false, false, true]]> : tensor<2x3xi1>}> : () -> tensor<2x3xi1>
+  %1 = tosa.transpose %0 {perms = array<i32: 1, 0>} : (tensor<2x3xi1>) -> tensor<3x2xi1>
+  return %1 : tensor<3x2xi1>
+}
+
+// CHECK-LABEL: @test_transpose_i4
+// CHECK: %{{.*}} = "tosa.const"()
+// CHECK-SAME{LITERAL}: dense<[[1, 4], [2, 5], [3, 6]]>
+func.func @test_transpose_i4() -> tensor<3x2xi4> {
+  %0 = "tosa.const"() <{values = dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi4>}> : () -> tensor<2x3xi4>
+  %1 = tosa.transpose %0 {perms = array<i32: 1, 0>} : (tensor<2x3xi4>) -> tensor<3x2xi4>
+  return %1 : tensor<3x2xi4>
+}

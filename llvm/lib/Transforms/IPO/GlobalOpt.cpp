@@ -769,10 +769,11 @@ static void allUsesOfLoadAndStores(GlobalVariable *GV,
   }
 }
 
-static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
+static bool OptimizeAwayTrappingUsesOfValue(Instruction *V, Constant *NewV) {
   bool Changed = false;
-  for (auto UI = V->user_begin(), E = V->user_end(); UI != E; ) {
-    Instruction *I = cast<Instruction>(*UI++);
+  SmallVector<User *, 8> Users(V->user_begin(), V->user_end());
+  for (User *U : Users) {
+    Instruction *I = cast<Instruction>(U);
     // Uses are non-trapping if null pointer is considered valid.
     // Non address-space 0 globals are already pruned by the caller.
     if (NullPointerIsDefined(I->getFunction()))
@@ -792,17 +793,9 @@ static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
         // that the pointer is not also being passed as an argument.
         CB->setCalledOperand(NewV);
         Changed = true;
-        bool PassedAsArg = false;
         for (unsigned i = 0, e = CB->arg_size(); i != e; ++i)
-          if (CB->getArgOperand(i) == V) {
-            PassedAsArg = true;
+          if (CB->getArgOperand(i) == V)
             CB->setArgOperand(i, NewV);
-          }
-
-        if (PassedAsArg) {
-          // Being passed as an argument also.  Be careful to not invalidate UI!
-          UI = V->user_begin();
-        }
       }
     } else if (AddrSpaceCastInst *CI = dyn_cast<AddrSpaceCastInst>(I)) {
       Changed |= OptimizeAwayTrappingUsesOfValue(
@@ -865,15 +858,6 @@ static bool OptimizeAwayTrappingUsesOfLoads(
              "Must be storing *to* the global");
     } else {
       AllNonStoreUsesGone = false;
-
-      // If we get here we could have other crazy uses that are transitively
-      // loaded.
-      assert((isa<PHINode>(GlobalUser) || isa<SelectInst>(GlobalUser) ||
-              isa<ConstantExpr>(GlobalUser) || isa<CmpInst>(GlobalUser) ||
-              isa<BitCastInst>(GlobalUser) ||
-              isa<GetElementPtrInst>(GlobalUser) ||
-              isa<AddrSpaceCastInst>(GlobalUser)) &&
-             "Only expect load and stores!");
     }
   }
 
@@ -1355,7 +1339,7 @@ deleteIfDead(GlobalValue &GV,
     if (DeleteFnCallback)
       DeleteFnCallback(*F);
   }
-  ReplaceableMetadataImpl::SalvageDebugInfo(GV);
+  ReplaceableUses::SalvageDebugInfo(GV);
   GV.eraseFromParent();
   ++NumDeleted;
   return true;
@@ -1717,6 +1701,9 @@ static bool hasChangeableCCImpl(Function *F) {
 
   // FIXME: Is it worth transforming x86_stdcallcc and x86_fastcallcc?
   if (CC != CallingConv::C && CC != CallingConv::X86_ThisCall)
+    return false;
+
+  if (!F->canChangeSignature())
     return false;
 
   if (F->isVarArg())
@@ -2372,8 +2359,7 @@ FindAtExitLibFunc(Module &M,
   TLI = &GetTLI(*Fn);
 
   // Make sure that the function has the correct prototype.
-  LibFunc F;
-  if (!TLI->getLibFunc(*Fn, F) || F != Func)
+  if (TLI->getLibFunc(*Fn) != Func)
     return nullptr;
 
   return Fn;

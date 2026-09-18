@@ -82,36 +82,130 @@ static LogicalResult inlinePayload(OpBuilder &b, LinalgOp linalgOp,
   return success();
 }
 
+/// Verify that tiling can be applied in presence of semi-affine maps.
+static LogicalResult
+validateTilingSemiAffineMaps(LinalgOp linalgOp, ArrayRef<OpFoldResult> sizes) {
+  // Precompute each dimension's constant tile-size upper bound once.
+  // A failed entry marks a dynamic tile with no static bound.
+  SmallVector<FailureOr<int64_t>> tileSizeBounds =
+      llvm::map_to_vector(sizes, [](OpFoldResult size) {
+        return ValueBoundsConstraintSet::computeConstantBound(
+            presburger::BoundType::UB, size,
+            /*stopCondition=*/nullptr, ValueBoundsOptions{/*closedUB=*/true});
+      });
+  SmallVector<int64_t> loopRanges = linalgOp.getStaticLoopRanges();
+
+  // Dynamic tiles or dynamic loop ranges are conservatively treated as tiled.
+  SmallVector<bool> tiledDims(loopRanges.size(), false);
+  for (auto [pos, tileSize] : llvm::enumerate(tileSizeBounds)) {
+    if (failed(tileSize)) {
+      tiledDims[pos] = true;
+      continue;
+    }
+    if (*tileSize == 0)
+      continue;
+    tiledDims[pos] =
+        ShapedType::isDynamic(loopRanges[pos]) || *tileSize < loopRanges[pos];
+  }
+
+  for (AffineMap map : linalgOp.getIndexingMapsArray()) {
+    for (AffineExpr result : map.getResults()) {
+      WalkResult status = result.walk([&](AffineExpr expr) -> WalkResult {
+        auto binExpr = dyn_cast<AffineBinaryOpExpr>(expr);
+        if (!binExpr)
+          return WalkResult::advance();
+        AffineExprKind kind = binExpr.getKind();
+        if (kind != AffineExprKind::Mod && kind != AffineExprKind::FloorDiv &&
+            kind != AffineExprKind::CeilDiv)
+          return WalkResult::advance();
+
+        // Skip if the semi-affine expression does not involve any tiled
+        // dimension: an untiled dimension keeps its full extent in every tile,
+        // so re-applying the map on the slice is exact.
+        bool involvesTiledDim = expr.walk([&](AffineExpr e) -> WalkResult {
+                                      auto dim = dyn_cast<AffineDimExpr>(e);
+                                      if (dim && tiledDims[dim.getPosition()])
+                                        return WalkResult::interrupt();
+                                      return WalkResult::advance();
+                                    })
+                                    .wasInterrupted();
+        if (!involvesTiledDim)
+          return WalkResult::advance();
+
+        // Allow only `d OP C` map where `d` is a dimension and `C` is a
+        // constant. A compound LHS (e.g. `(d0 + d1)`, `(d0 * 2)`, a nested
+        // semi-affine expression) or a non-constant step is not provably safe,
+        // so reject it.
+        auto dimExpr = dyn_cast<AffineDimExpr>(binExpr.getLHS());
+        auto stepExpr = dyn_cast<AffineConstantExpr>(binExpr.getRHS());
+        if (!dimExpr || !stepExpr || stepExpr.getValue() <= 0) {
+          linalgOp.emitOpError()
+              << "tiling is not supported for the semi-affine indexing map: "
+                 "only a single iteration dimension divided by a positive "
+                 "constant step can be tiled over a tiled dimension";
+          return WalkResult::interrupt();
+        }
+
+        // Tiles are spaced by the full tile size, so tile origins are its
+        // multiples (0, tileSize, 2*tileSize, ...).
+        // A tile's indices are `origin + d'`, with `origin` the tile's start
+        // and `0 <= d' < tileSize`. A trailing partial tile is a full tile
+        // truncated at the same origin, spanning a subset of the same `d'`, so
+        // full-tile validity implies partial-tile validity and validating the
+        // upper-bound tile size suffices.
+        unsigned dimPos = dimExpr.getPosition();
+        FailureOr<int64_t> tileSize = tileSizeBounds[dimPos];
+
+        // Dynamic tile sizes are assumed to be valid.
+        // Unit tile is always valid.
+        if (failed(tileSize) || *tileSize == 1)
+          return WalkResult::advance();
+
+        // Tiled op reuses the same map on a slice whose base offset is
+        // `m(origin) - m(0)`, so it is correct only when
+        // `m(origin + d') == (m(origin) - m(0)) + m(d')` for every `d'`.
+        // Slice origins are tile-size multiples, so this reduces to a relation
+        // between the tile size and the step `C`:
+        //  - `floordiv`/`mod` are locally affine within a step window (floordiv
+        //    is constant, mod is linear), so they compose when the origin is
+        //    step-aligned (`C | tileSize`) or the whole tile fits in one window
+        //    (`tileSize | C`);
+        //  - `ceildiv` jumps at `k * C + 1` instead of `k * C`, so a
+        //    non-step-aligned origin already straddles the jump. It composes
+        //    only from a step-aligned origin, i.e. `C | tileSize`.
+        int64_t step = stepExpr.getValue();
+        bool isCeil = kind == AffineExprKind::CeilDiv;
+        bool safe = *tileSize % step == 0 || (!isCeil && step % *tileSize == 0);
+        if (!safe) {
+          linalgOp.emitOpError()
+              << "tiling is not supported for the semi-affine indexing map: "
+                 "tile size "
+              << *tileSize << " for dimension d" << dimPos
+              << (isCeil ? " must be a multiple of the step "
+                         : " must divide or be divisible by the step ")
+              << step;
+          return WalkResult::interrupt();
+        }
+        return WalkResult::advance();
+      });
+      if (status.wasInterrupted())
+        return failure();
+    }
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // External Model for implementing `TilingInterface` for `LinalgOp`s.
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// External model implementation of TilingInterface for LinalgOps. An external
-/// model implementation is used for now till the use of `TilingInterface` is
-/// on-par with the current Linalg tiling + fusion patterns. Once it is
-/// maybe possible to move this into the op-definition (though there are
-/// advantages to leaving it as an external model)
-template <typename LinalgOpTy>
-struct LinalgOpTilingInterface
-    : public TilingInterface::ExternalModel<LinalgOpTilingInterface<LinalgOpTy>,
-                                            LinalgOpTy> {
-  using Base =
-      TilingInterface::ExternalModel<LinalgOpTilingInterface<LinalgOpTy>,
-                                     LinalgOpTy>;
-  // Inherit the defaulted hint-bearing overloads; these ops do not require the
-  // hint (no inner tiles).
-  using Base::generateResultTileValue;
-  using Base::getIterationDomainTileFromOperandTiles;
-  using Base::getTiledImplementation;
-  using Base::getTiledImplementationFromOperandTiles;
-
-  /// Return the loop iterator type.
-  SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
-    LinalgOpTy concreteOp = cast<LinalgOpTy>(op);
-    return concreteOp.getIteratorTypesArray();
-  }
-
+/// Operation-independent implementation shared by the external models for
+/// LinalgOps. External models are used for now until `TilingInterface` is
+/// on-par with the current Linalg tiling and fusion patterns. It may then be
+/// possible to move this into the op definitions, though there are advantages
+/// to leaving it as an external model.
+struct LinalgOpTilingInterfaceImpl {
   /// Return the iteration domain range.
   SmallVector<Range> getIterationDomain(Operation *op, OpBuilder &b) const {
     OpBuilder::InsertionGuard g(b);
@@ -138,6 +232,14 @@ struct LinalgOpTilingInterface
     // specified could lead to out of bounds accesses.
     Location loc = op->getLoc();
     LinalgOp linalgOp = cast<LinalgOp>(op);
+    // In case of a semi-affine expression, generalized tracking of tiles would
+    // require a per-tile-position shift that cannot be expressed by the
+    // symbol-free indexing maps.
+    // Thus, tiling is allowed only when the semi-affine maps can be proven safe
+    // for the current tiling configuration. Otherwise, tiling can end up
+    // producing incorrect results.
+    if (failed(validateTilingSemiAffineMaps(linalgOp, sizes)))
+      return failure();
     SmallVector<Value> valuesToTile = linalgOp->getOperands();
     SmallVector<Value> tiledOperands = makeTiledShapes(
         b, loc, linalgOp, valuesToTile, offsets, sizes, {}, true);
@@ -396,6 +498,69 @@ struct LinalgOpTilingInterface
   }
 };
 
+template <typename LinalgOpTy>
+struct LinalgOpTilingInterfaceModel
+    : public TilingInterface::ExternalModel<
+          LinalgOpTilingInterfaceModel<LinalgOpTy>, LinalgOpTy>,
+      public LinalgOpTilingInterfaceImpl {
+  using ExternalModel =
+      TilingInterface::ExternalModel<LinalgOpTilingInterfaceModel<LinalgOpTy>,
+                                     LinalgOpTy>;
+
+  using LinalgOpTilingInterfaceImpl::generateScalarImplementation;
+  using LinalgOpTilingInterfaceImpl::getIterationDomain;
+  using LinalgOpTilingInterfaceImpl::getIterationDomainTileFromResultTile;
+  using LinalgOpTilingInterfaceImpl::getResultTilePosition;
+  using LinalgOpTilingInterfaceImpl::isOpFusableWithConsumerSlice;
+  using LinalgOpTilingInterfaceImpl::isOpFusableWithProducerSlices;
+
+  /// Return the loop iterator type without a dynamic LinalgOp interface lookup.
+  SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
+    return cast<LinalgOpTy>(op).getIteratorTypesArray();
+  }
+
+  // Preserve the hint-bearing ExternalModel defaults while routing the
+  // no-hint overloads through the shared implementation.
+  using ExternalModel::generateResultTileValue;
+  FailureOr<TilingResult>
+  generateResultTileValue(Operation *op, OpBuilder &b, unsigned resultNumber,
+                          ArrayRef<OpFoldResult> offsets,
+                          ArrayRef<OpFoldResult> sizes) const {
+    return LinalgOpTilingInterfaceImpl::generateResultTileValue(
+        op, b, resultNumber, offsets, sizes);
+  }
+
+  using ExternalModel::getIterationDomainTileFromOperandTiles;
+  LogicalResult getIterationDomainTileFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes,
+      SmallVectorImpl<OpFoldResult> &iterDomainOffsets,
+      SmallVectorImpl<OpFoldResult> &iterDomainSizes) const {
+    return LinalgOpTilingInterfaceImpl::getIterationDomainTileFromOperandTiles(
+        op, b, operandNumbers, allOffsets, allSizes, iterDomainOffsets,
+        iterDomainSizes);
+  }
+
+  using ExternalModel::getTiledImplementation;
+  FailureOr<TilingResult>
+  getTiledImplementation(Operation *op, OpBuilder &b,
+                         ArrayRef<OpFoldResult> offsets,
+                         ArrayRef<OpFoldResult> sizes) const {
+    return LinalgOpTilingInterfaceImpl::getTiledImplementation(op, b, offsets,
+                                                               sizes);
+  }
+
+  using ExternalModel::getTiledImplementationFromOperandTiles;
+  FailureOr<TilingResult> getTiledImplementationFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes) const {
+    return LinalgOpTilingInterfaceImpl::getTiledImplementationFromOperandTiles(
+        op, b, operandNumbers, allOffsets, allSizes);
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // External Model for implementing `PartialReductionInterface` for `LinalgOp`s.
 //===----------------------------------------------------------------------===//
@@ -534,12 +699,9 @@ static InitSliceInfo getInitSliceInfo(MLIRContext *context,
       partialReductionMap, initOperandShape);
 }
 
-/// External model implementation of PartialReductionInterface for
-/// LinalgOps.
-template <typename LinalgOpTy>
-struct LinalgOpPartialReductionInterface
-    : public PartialReductionOpInterface::ExternalModel<
-          LinalgOpPartialReductionInterface<LinalgOpTy>, LinalgOpTy> {
+/// Operation-independent implementation shared by the
+/// PartialReductionInterface external models for LinalgOps.
+struct LinalgOpPartialReductionInterfaceImpl {
   FailureOr<SmallVector<Value>> generateInitialTensorForPartialReduction(
       Operation *op, OpBuilder &b, Location loc, ArrayRef<OpFoldResult> sizes,
       const SetVector<unsigned> &reductionDims) const {
@@ -769,6 +931,18 @@ struct LinalgOpPartialReductionInterface
 
     return success();
   }
+};
+
+template <typename LinalgOpTy>
+struct LinalgOpPartialReductionInterfaceModel
+    : public PartialReductionOpInterface::ExternalModel<
+          LinalgOpPartialReductionInterfaceModel<LinalgOpTy>, LinalgOpTy>,
+      public LinalgOpPartialReductionInterfaceImpl {
+  using LinalgOpPartialReductionInterfaceImpl::
+      generateInitialTensorForPartialReduction;
+  using LinalgOpPartialReductionInterfaceImpl::getPartialResultTilePosition;
+  using LinalgOpPartialReductionInterfaceImpl::mergeReductions;
+  using LinalgOpPartialReductionInterfaceImpl::tileToPartialReduction;
 };
 
 template <typename OpTy>
@@ -1028,8 +1202,10 @@ struct PackOpTiling
     for (auto tile : packOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
-    Operation *tiledPackOp = PackOp::create(
-        b, loc, TypeRange{outSlice.getType()}, tiledOperands, op->getAttrs());
+    PackOp tiledPackOp =
+        PackOp::create(b, loc, TypeRange{outSlice.getType()}, tiledOperands,
+                       packOp.getProperties(),
+                       packOp->getDiscardableAttrDictionary().getValue());
 
     return TilingResult{
         {tiledPackOp},
@@ -1365,8 +1541,10 @@ struct PackOpTiling
     for (auto tile : packOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
-    Operation *tiledPackOp = PackOp::create(
-        b, loc, TypeRange{outSlice.getType()}, tiledOperands, op->getAttrs());
+    PackOp tiledPackOp =
+        PackOp::create(b, loc, TypeRange{outSlice.getType()}, tiledOperands,
+                       packOp.getProperties(),
+                       packOp->getDiscardableAttrDictionary().getValue());
 
     return TilingResult{
         {tiledPackOp},
@@ -1606,8 +1784,10 @@ struct UnPackOpTiling
     for (auto tile : unpackOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
-    Operation *tiledUnpackOp = UnPackOp::create(
-        b, loc, TypeRange{sliceDest.getType()}, tiledOperands, op->getAttrs());
+    UnPackOp tiledUnpackOp =
+        UnPackOp::create(b, loc, TypeRange{sliceDest.getType()}, tiledOperands,
+                         unpackOp.getProperties(),
+                         unpackOp->getDiscardableAttrDictionary().getValue());
 
     if (isPerfectTilingCase)
       return TilingResult{{tiledUnpackOp},
@@ -1865,9 +2045,10 @@ struct UnPackOpTiling
       tiledOperands.push_back(tile);
 
     // Create tiled unpack op.
-    Operation *tiledUnPackOp =
+    UnPackOp tiledUnPackOp =
         UnPackOp::create(b, loc, TypeRange{extractDestSlice.getType()},
-                         tiledOperands, op->getAttrs());
+                         tiledOperands, unPackOp.getProperties(),
+                         unPackOp->getDiscardableAttrDictionary().getValue());
 
     return TilingResult{{tiledUnPackOp},
                         SmallVector<Value>(tiledUnPackOp->getResults()),
@@ -1880,9 +2061,9 @@ struct UnPackOpTiling
 
 template <typename OpType>
 static void registerOne(MLIRContext *ctx) {
-  OpType::template attachInterface<LinalgOpTilingInterface<OpType>>(*ctx);
-  OpType::template attachInterface<LinalgOpPartialReductionInterface<OpType>>(
-      *ctx);
+  OpType::template attachInterface<LinalgOpTilingInterfaceModel<OpType>>(*ctx);
+  OpType::template attachInterface<
+      LinalgOpPartialReductionInterfaceModel<OpType>>(*ctx);
 }
 
 /// Variadic helper function.

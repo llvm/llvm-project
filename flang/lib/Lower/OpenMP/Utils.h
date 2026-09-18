@@ -29,7 +29,11 @@ class RecordType;
 namespace Fortran {
 
 namespace semantics {
+class SemanticsContext;
 class Symbol;
+namespace omp {
+class OmpVariantMatchContext;
+} // namespace omp
 } // namespace semantics
 
 namespace parser {
@@ -167,6 +171,8 @@ void genObjectList(const ObjectList &objects,
 void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
                                      mlir::Location loc);
 
+pft::Evaluation *tryGetNestedDoConstruct(pft::Evaluation &eval);
+
 pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval);
 
 int64_t collectLoopRelatedInfo(
@@ -264,18 +270,21 @@ void collectEnclosingConstructTraits(
     mlir::Operation *op,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
 
-/// `OMPContext` flavour used by Flang's OpenMP variant matching. Adds an
-/// ISA-trait override based on the module's target-features attribute.
-class FlangOMPContext final : public llvm::omp::OMPContext {
-public:
-  FlangOMPContext(mlir::ModuleOp module,
-                  llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits);
-  bool matchesISATrait(llvm::StringRef rawString) const override;
+/// Return true when \p module is being compiled for an AMDGPU device or all of
+/// its offload targets are AMDGPU devices.
+bool hasOnlyAMDGCNTargets(mlir::ModuleOp module);
 
-private:
-  static bool isDeviceCompilation(mlir::ModuleOp module);
-  mlir::LLVM::TargetFeaturesAttr targetFeatures;
-};
+/// Return true when unified shared memory is required by either the OpenMP
+/// module attributes or a source-level `requires` directive.
+bool requiresUnifiedSharedMemory(mlir::ModuleOp module,
+                                 semantics::SemanticsContext &semaCtx);
+
+/// Build the OpenMP variant-matching context for \p module. The device flag,
+/// host triple, offload triple, and target features are read from the module;
+/// \p constructTraits seeds the enclosing-construct traits.
+semantics::omp::OmpVariantMatchContext makeVariantMatchContext(
+    mlir::ModuleOp module,
+    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits);
 
 } // namespace omp
 } // namespace lower

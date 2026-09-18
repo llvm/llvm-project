@@ -57,6 +57,13 @@ public:
                           const mlir::DataLayout &layout,
                           const mlir::TypeConverter &typeConverter) const = 0;
 
+  /// Lower the given by-offset data member pointer constant (used for members
+  /// with no CIR field index, e.g. no_unique_address empty fields) to a
+  /// constant of the ABI type.
+  virtual mlir::TypedAttr lowerDataMemberOffsetConstant(
+      cir::DataMemberOffsetAttr attr, const mlir::DataLayout &layout,
+      const mlir::TypeConverter &typeConverter) const = 0;
+
   /// Lower the given member function pointer constant to a constant of the ABI
   /// type. The returned constant is represented as an attribute as well.
   virtual mlir::TypedAttr

@@ -16,15 +16,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUIGroupLP.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
-#include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-
-#include <type_traits>
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -62,27 +57,6 @@ static cl::opt<bool> UseCostHeur(
              "attempting to put the later nodes in the later sched groups. "
              "Experimentally, results are mixed, so this should be set on a "
              "case-by-case basis."));
-
-// Components of the mask that determines which instruction types may be may be
-// classified into a SchedGroup.
-enum class SchedGroupMask {
-  NONE = 0u,
-  ALU = 1u << 0,
-  VALU = 1u << 1,
-  SALU = 1u << 2,
-  MFMA = 1u << 3,
-  VMEM = 1u << 4,
-  VMEM_READ = 1u << 5,
-  VMEM_WRITE = 1u << 6,
-  DS = 1u << 7,
-  DS_READ = 1u << 8,
-  DS_WRITE = 1u << 9,
-  TRANS = 1u << 10,
-  LDSDMA = 1u << 11,
-  ALL = ALU | VALU | SALU | MFMA | VMEM | VMEM_READ | VMEM_WRITE | DS |
-        DS_READ | DS_WRITE | TRANS | LDSDMA,
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
-};
 
 class SchedGroup;
 
@@ -771,11 +745,10 @@ bool PipelineSolver::solveExact() {
     int AddedCost = 0;
     std::list<std::pair<SUnit *, SUnit *>> AddedEdges;
     auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
-    SchedGroup *Match;
-    for (auto &SG : SyncPipeline) {
-      if (SG.getSGID() == CandSGID)
-        Match = &SG;
-    }
+    SchedGroup *Match = llvm::find_if(SyncPipeline, [CandSGID](SchedGroup &SG) {
+      return SG.getSGID() == CandSGID;
+    });
+    assert(Match);
 
     if (Match->isFull())
       continue;
@@ -2594,8 +2567,8 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = !MI.mayLoadOrStore();
 
   else if (((SGMask & SchedGroupMask::VALU) != SchedGroupMask::NONE) &&
-           TII->isVALU(MI, /*AllowLDSDMA=*/true) && !TII->isMFMAorWMMA(MI) &&
-           !TII->isTRANS(MI) && !TII->isLDSDMA(MI)) {
+           TII->isVALU(MI, /*AllowLDSDMA=*/false) && !TII->isMFMAorWMMA(MI) &&
+           !TII->isTRANS(MI)) {
     // Some memory instructions may be marked as VALU (e.g. BUFFER_LOAD_*_LDS).
     // For our purposes, these shall not be classified as VALU as this results
     // in unexpected behavior.
@@ -2615,11 +2588,11 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_READ) != SchedGroupMask::NONE) &&
-           MI.mayLoad() && TII->isVMEM(MI))
+           MI.mayLoad() && TII->isVMEM(MI) && !TII->isLDSDMA(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::VMEM_WRITE) != SchedGroupMask::NONE) &&
-           MI.mayStore() && TII->isVMEM(MI))
+           MI.mayStore() && TII->isVMEM(MI) && !TII->isLDSDMA(MI))
     Result = true;
 
   else if (((SGMask & SchedGroupMask::DS) != SchedGroupMask::NONE) &&
@@ -2796,36 +2769,24 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
   // allowed past the SCHED_BARRIER.
   SchedGroupMask InvertedMask = ~Mask;
 
-  // ALU implies VALU, SALU, MFMA, TRANS.
-  if ((InvertedMask & SchedGroupMask::ALU) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::VALU & ~SchedGroupMask::SALU &
-                    ~SchedGroupMask::MFMA & ~SchedGroupMask::TRANS;
-  // VALU, SALU, MFMA, TRANS implies ALU.
-  else if ((InvertedMask & SchedGroupMask::VALU) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::SALU) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::MFMA) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::TRANS) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::ALU;
+  static constexpr std::pair<SchedGroupMask, SchedGroupMask> ImpliedGroups[] = {
+      {SchedGroupMask::ALU, SchedGroupMask::VALU | SchedGroupMask::SALU |
+                                SchedGroupMask::MFMA | SchedGroupMask::TRANS},
+      {SchedGroupMask::VMEM, SchedGroupMask::VMEM_READ |
+                                 SchedGroupMask::VMEM_WRITE |
+                                 SchedGroupMask::LDSDMA},
+      {SchedGroupMask::DS, SchedGroupMask::DS_READ | SchedGroupMask::DS_WRITE |
+                               SchedGroupMask::LDSDMA},
+  };
 
-  // VMEM implies VMEM_READ, VMEM_WRITE, LDSDMA.
-  if ((InvertedMask & SchedGroupMask::VMEM) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::VMEM_READ & ~SchedGroupMask::VMEM_WRITE &
-                    ~SchedGroupMask::LDSDMA;
-  // VMEM_READ, VMEM_WRITE, LDSDMA implies VMEM.
-  else if ((InvertedMask & SchedGroupMask::VMEM_READ) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::VMEM_WRITE) ==
-               SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::LDSDMA) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::VMEM;
-
-  // DS implies DS_READ, DS_WRITE, LDSDMA.
-  if ((InvertedMask & SchedGroupMask::DS) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::DS_READ & ~SchedGroupMask::DS_WRITE &
-                    ~SchedGroupMask::LDSDMA;
-  // DS_READ, DS_WRITE implies DS.
-  else if ((InvertedMask & SchedGroupMask::DS_READ) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::DS_WRITE) == SchedGroupMask::NONE)
-    InvertedMask &= ~SchedGroupMask::DS;
+  for (auto [Aggregate, Members] : ImpliedGroups) {
+    // Aggregate allowed past the barrier implies all its members are too.
+    if ((InvertedMask & Aggregate) == SchedGroupMask::NONE)
+      InvertedMask &= ~Members;
+    // Any member allowed past the barrier implies the aggregate is too.
+    else if ((InvertedMask & Members) != Members)
+      InvertedMask &= ~Aggregate;
+  }
 
   LLVM_DEBUG(dbgs() << "After Inverting, SchedGroup Mask: " << (int)InvertedMask
                     << "\n");

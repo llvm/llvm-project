@@ -226,14 +226,6 @@ public:
     SU->addPred(D);
   }
 
-  /// AddPred - adds a predecessor edge to SUnit SU.
-  /// This returns true if this is a new predecessor.
-  /// Updates the topological ordering if required.
-  void AddPred(SUnit *SU, const SDep &D) {
-    Topo.AddPred(SU, D.getSUnit());
-    SU->addPred(D);
-  }
-
   /// RemovePred - removes a predecessor edge from SUnit SU.
   /// This returns true if an edge was removed.
   /// Updates the topological ordering if required.

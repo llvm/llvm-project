@@ -247,6 +247,7 @@ llvm::raw_ostream &ActualArgument::AsFortran(llvm::raw_ostream &o) const {
           },
           [&](const AssumedType &assumedType) { assumedType.AsFortran(o); },
           [&](const common::Label &label) { o << '*' << label; },
+          [&](const ConditionalArg &condArg) { condArg.AsFortran(o); },
       },
       u_);
   if (isPercentVal() || isPercentRef()) {
@@ -260,6 +261,38 @@ std::string ActualArgument::AsFortran() const {
   llvm::raw_string_ostream sstream(result);
   AsFortran(sstream);
   return result;
+}
+
+// Helper: emit the inner part of a conditional arg without outer parens
+static void EmitConditionalArgInner(
+    llvm::raw_ostream &o, const ActualArgument::ConditionalArg &ca) {
+  auto emitConsequent{
+      [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+        if (cons) {
+          cons->value().AsFortran(o);
+        } else {
+          o << ".NIL.";
+        }
+      }};
+  ca.condition().AsFortran(o);
+  o << " ? ";
+  emitConsequent(ca.consequent());
+  o << " : ";
+  ca.VisitTail(
+      [&](const ActualArgument::ConditionalArg &inner) {
+        EmitConditionalArgInner(o, inner);
+      },
+      [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+        emitConsequent(cons);
+      });
+}
+
+llvm::raw_ostream &ActualArgument::ConditionalArg::AsFortran(
+    llvm::raw_ostream &o) const {
+  o << "( ";
+  EmitConditionalArgInner(o, *this);
+  o << " )";
+  return o;
 }
 
 llvm::raw_ostream &SpecificIntrinsic::AsFortran(llvm::raw_ostream &o) const {
@@ -859,6 +892,15 @@ llvm::raw_ostream &DescriptorInquiry::AsFortran(llvm::raw_ostream &o) const {
     }
   }
   return o << ",kind=" << DescriptorInquiry::Result::kind << ")";
+}
+
+llvm::raw_ostream &RankOneBoundElement::AsFortran(llvm::raw_ostream &o) const {
+  // A RankOneBoundElement extracts a single element from a rank-1 array that
+  // was used as an array bound in a declaration; it has no true Fortran
+  // surface syntax.  Render it in an internal, clearly-synthetic form.
+  base().AsFortran(o << "rank1BoundElement(")
+      << ",dim=" << (dimension_ + 1) << ')';
+  return o;
 }
 
 llvm::raw_ostream &Assignment::AsFortran(llvm::raw_ostream &o) const {

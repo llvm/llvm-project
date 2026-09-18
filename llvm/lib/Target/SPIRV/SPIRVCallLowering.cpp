@@ -86,15 +86,6 @@ static uint32_t getFunctionControl(const Function &F,
   return FuncControl;
 }
 
-static ConstantInt *getConstInt(MDNode *MD, unsigned NumOp) {
-  if (MD->getNumOperands() > NumOp) {
-    auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(NumOp));
-    if (CMeta)
-      return dyn_cast<ConstantInt>(CMeta->getValue());
-  }
-  return nullptr;
-}
-
 // If the function has pointer arguments, we are forced to re-create this
 // function type from the very beginning, changing PointerType by
 // TypedPointerType for each pointer argument. Otherwise, the same `Type*`
@@ -140,14 +131,6 @@ getArgAccessQual(const Function &F, unsigned ArgIdx) {
   return SPIRV::AccessQualifier::ReadWrite;
 }
 
-static std::vector<SPIRV::Decoration::Decoration>
-getKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
-  MDString *ArgAttribute = getOCLKernelArgTypeQual(F, ArgIdx);
-  if (ArgAttribute && ArgAttribute->getString() == "volatile")
-    return {SPIRV::Decoration::Volatile};
-  return {};
-}
-
 static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
                                      SPIRVGlobalRegistry *GR,
                                      MachineIRBuilder &MIRBuilder,
@@ -179,11 +162,6 @@ static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
                                     true);
 
   Type *ArgType = Arg->getType();
-  if (isTypedPointerTy(ArgType)) {
-    return GR->getOrCreateSPIRVPointerType(
-        cast<TypedPointerType>(ArgType)->getElementType(), MIRBuilder,
-        addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
-  }
 
   // In case OriginalArgType is of untyped pointer type, there are three
   // possibilities:
@@ -194,7 +172,10 @@ static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
   // spv_assign_ptr_type intrinsic or otherwise use default pointer element
   // type.
   if (hasPointeeTypeAttr(Arg)) {
-    return GR->getOrCreateSPIRVPointerType(
+    // byval/byref/sret carry the aggregate layout in the pointee type, so keep
+    // a typed pointer here. An untyped one drops the type and breaks the
+    // argument ABI on the way back from SPIR-V.
+    return GR->getOrCreateSPIRVTypedPointerType(
         getPointeeTypeByAttr(Arg), MIRBuilder,
         addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
   }
@@ -304,6 +285,12 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::FuncParamAttr, {Attr});
         }
+        if (Arg.hasAttribute(Attribute::ReadNone)) {
+          auto Attr = static_cast<unsigned>(
+              SPIRV::FunctionParameterAttribute::NoReadWrite);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
         if (Arg.hasAttribute(Attribute::ZExt)) {
           auto Attr =
               static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Zext);
@@ -344,13 +331,6 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         }
       }
 
-      if (F.getCallingConv() == CallingConv::SPIR_KERNEL) {
-        std::vector<SPIRV::Decoration::Decoration> ArgTypeQualDecs =
-            getKernelArgTypeQual(F, i);
-        for (SPIRV::Decoration::Decoration Decoration : ArgTypeQualDecs)
-          buildOpDecorate(VRegs[i][0], MIRBuilder, Decoration, {});
-      }
-
       MDNode *Node = F.getMetadata("spirv.ParameterDecorations");
       if (Node && i < Node->getNumOperands() &&
           isa<MDNode>(Node->getOperand(i))) {
@@ -358,13 +338,13 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         for (const MDOperand &MDOp : MD->operands()) {
           MDNode *MD2 = dyn_cast<MDNode>(MDOp);
           assert(MD2 && "Metadata operand is expected");
-          ConstantInt *Const = getConstInt(MD2, 0);
+          ConstantInt *Const = getMDOperandAsConstInt(MD2, 0);
           assert(Const && "MDOperand should be ConstantInt");
           auto Dec =
               static_cast<SPIRV::Decoration::Decoration>(Const->getZExtValue());
           std::vector<uint32_t> DecVec;
           for (unsigned j = 1; j < MD2->getNumOperands(); j++) {
-            ConstantInt *Const = getConstInt(MD2, j);
+            ConstantInt *Const = getMDOperandAsConstInt(MD2, j);
             assert(Const && "MDOperand should be ConstantInt");
             DecVec.push_back(static_cast<uint32_t>(Const->getZExtValue()));
           }
@@ -420,17 +400,35 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     GR->addGlobalObject(&Arg, &MIRBuilder.getMF(), ArgReg);
     i++;
   }
+  if (!ST->isShader()) {
+    if (F.hasRetAttribute(Attribute::ZExt)) {
+      auto Attr =
+          static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Zext);
+      buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::FuncParamAttr,
+                      {Attr});
+    }
+    if (F.hasRetAttribute(Attribute::SExt)) {
+      auto Attr =
+          static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Sext);
+      buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::FuncParamAttr,
+                      {Attr});
+    }
+  }
+
   // Name the function.
   if (F.hasName())
     buildOpName(FuncVReg, F.getName(), MIRBuilder);
 
   // Handle entry points and function linkage.
   if (isEntryPoint(F)) {
+    if (F.getName().empty())
+      report_fatal_error("SPIR-V entry point function must have a name");
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpEntryPoint)
                    .addImm(static_cast<uint32_t>(getExecutionModel(*ST, F)))
                    .addUse(FuncVReg);
     addStringImm(F.getName(), MIB);
-  } else if (const auto LnkTy = getSpirvLinkageTypeFor(*ST, F)) {
+  } else if (const auto LnkTy = getSpirvLinkageTypeFor(*ST, F);
+             LnkTy && !F.getName().empty()) {
     buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
                     {static_cast<uint32_t>(*LnkTy)}, F.getName());
   }
@@ -626,7 +624,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   unsigned CallOp;
-  if (Info.CB->isIndirectCall()) {
+  if (Info.CB && Info.CB->isIndirectCall()) {
     if (!ST->canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers))
       report_fatal_error("An indirect call is encountered but SPIR-V without "
                          "extensions does not support it",
@@ -673,6 +671,9 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
     MIB.addUse(Arg.Regs[0]);
   }
+
+  if (Info.CB)
+    MIB.getInstr()->copyIRFlags(*Info.CB);
 
   if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing)) {
     // Process aliasing metadata.

@@ -14,9 +14,7 @@
 #include <__configuration/abi.h>
 #include <__cstddef/size_t.h>
 #include <__memory/addressof.h>
-#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_trivially_destructible.h>
-#include <__type_traits/negation.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -37,10 +35,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // TODO: We should factor in the choice of the usual deallocation function in this determination:
 //       a cookie may be available in more cases but we ignore those for now.
 template <class _Tp>
-struct __has_array_cookie : _Not<is_trivially_destructible<_Tp> > {};
+inline const bool __has_array_cookie_v = !is_trivially_destructible<_Tp>::value;
 #else
 template <class _Tp>
-struct __has_array_cookie : false_type {};
+inline const bool __has_array_cookie_v = false;
 #endif
 
 struct __itanium_array_cookie {
@@ -97,7 +95,7 @@ template <class _Tp>
 // Avoid failures when -fsanitize-address-poison-custom-array-cookie is enabled
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie([[__maybe_unused__]] _Tp const* __ptr) {
   static_assert(
-      __has_array_cookie<_Tp>::value, "Trying to access the array cookie of a type that is not guaranteed to have one");
+      __has_array_cookie_v<_Tp>, "Trying to access the array cookie of a type that is not guaranteed to have one");
 
 #if defined(_LIBCPP_ABI_ITANIUM)
   using _ArrayCookie = __itanium_array_cookie;

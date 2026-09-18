@@ -403,12 +403,13 @@ if(LLVM_ENABLE_PIC)
 
       EXCLUDE_FROM_LIBMLIR
 
-      # TODO: this is merely a workaround. If this library depends on LLVMSupport,
-      # it should suppress symbols, or if it doesn't, it shouldn't link against
-      # it. This workaround prevents the library from defining the symbol
-      # llvm::EnableABIBreakingChecks, which would cause ODR-violations when
-      # dlopen-ed.
-      DISABLE_PCH_REUSE
+      # This library is dlopen-ed (e.g. by mlir-runner via --shared-libs),
+      # frequently into a process that already hosts another LLVM (ROCm's own
+      # libLLVM.so is reachable through the libamdhip64 -> libamd_comgr
+      # DT_NEEDED chain). Linking LLVMSupport here would duplicate LLVM's
+      # cl::opt / pass-registry / ManagedStatic singletons and abort during
+      # dynamic init. The wrappers don't need LLVMSupport, so build STANDALONE.
+      STANDALONE
     )
 
     # Supress compiler warnings from HIP headers

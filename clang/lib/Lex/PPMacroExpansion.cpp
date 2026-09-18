@@ -131,17 +131,14 @@ ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, IdentifierInfo *II,
                                           MacroInfo *Macro,
                                           ArrayRef<ModuleMacro *> Overrides,
                                           bool &New) {
-  llvm::FoldingSetNodeID ID;
-  ModuleMacro::Profile(ID, Mod, II);
-
-  void *InsertPos;
-  if (auto *MM = ModuleMacros.FindNodeOrInsertPos(ID, InsertPos)) {
+  llvm::FoldingSetInsertToken InsertToken;
+  if (auto *MM = ModuleMacros.lookup({Mod, II}, InsertToken)) {
     New = false;
     return MM;
   }
 
   auto *MM = ModuleMacro::create(*this, Mod, II, Macro, Overrides);
-  ModuleMacros.InsertNode(MM, InsertPos);
+  ModuleMacros.insert(MM, InsertToken);
 
   // Each overridden macro is now overridden by one more macro.
   bool HidAny = false;
@@ -168,11 +165,8 @@ ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, IdentifierInfo *II,
 
 ModuleMacro *Preprocessor::getModuleMacro(Module *Mod,
                                           const IdentifierInfo *II) {
-  llvm::FoldingSetNodeID ID;
-  ModuleMacro::Profile(ID, Mod, II);
-
-  void *InsertPos;
-  return ModuleMacros.FindNodeOrInsertPos(ID, InsertPos);
+  llvm::FoldingSetInsertToken InsertToken;
+  return ModuleMacros.lookup({Mod, II}, InsertToken);
 }
 
 void Preprocessor::updateModuleMacroInfo(const IdentifierInfo *II,
@@ -854,10 +848,12 @@ MacroArgs *Preprocessor::ReadMacroCallArgumentList(Token &MacroName,
 
     // Empty arguments are standard in C99 and C++0x, and are supported as an
     // extension in other modes.
-    if (ArgTokens.size() == ArgTokenStart && !getLangOpts().C99)
-      Diag(Tok, getLangOpts().CPlusPlus11
-                    ? diag::warn_cxx98_compat_empty_fnmacro_arg
-                    : diag::ext_empty_fnmacro_arg);
+    if (ArgTokens.size() == ArgTokenStart && !getLangOpts().C99) {
+      if (getLangOpts().CPlusPlus)
+        DiagCompat(Tok, diag_compat::empty_fnmacro_arg);
+      else
+        Diag(Tok, diag::ext_empty_fnmacro_arg);
+    }
 
     // Add a marker EOF token to the end of the token list for this argument.
     Token EOFTok;
@@ -1609,7 +1605,7 @@ static bool IsBuiltinTrait(Token &Tok) {
   switch (Tok.getKind()) {
   default:
     return false;
-#include "clang/Basic/TokenKinds.def"
+#include "clang/Basic/BuiltinTraits.inc"
   }
 }
 
@@ -1619,6 +1615,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
   // Figure out which token this is.
   IdentifierInfo *II = Tok.getIdentifierInfo();
   assert(II && "Can't be a macro without id info!");
+  SourceLocation MacroNameLoc = Tok.getLocation();
 
   // If this is an _Pragma or Microsoft __pragma directive, expand it,
   // invoke the pragma handler, then lex the token after it.
@@ -2096,7 +2093,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
   } else {
     llvm_unreachable("Unknown identifier!");
   }
-  CreateString(OS.str(), Tok, Tok.getLocation(), Tok.getLocation());
+  CreateString(OS.str(), Tok, MacroNameLoc, Tok.getLocation());
   Tok.setFlagValue(Token::StartOfLine, IsAtStartOfLine);
   Tok.setFlagValue(Token::LeadingSpace, HasLeadingSpace);
   Tok.clearFlag(Token::NeedsCleaning);

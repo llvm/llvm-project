@@ -1748,7 +1748,7 @@ def : InstRW<[V1Write_2c_1V01], (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HSD]",
                                            "^F(MAX|MIN)(NM)?_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply
-def : InstRW<[V1Write_3c_1V01], (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]",
+def : InstRW<[V1Write_3c_1V01], (instregex "^(FSCALE|FMULX)_(ZPmZ|ZPZZ)_[HSD]",
                                            "^FMULX_ZPZZ_[HSD]",
                                            "^FMUL_(ZPm[IZ]|ZZZI?)_[HSD]",
                                            "^FMUL_ZPZ[IZ]_[HSD]")>;

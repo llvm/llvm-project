@@ -7254,7 +7254,7 @@ public:
           else if (mnemonic != nullptr && operands != nullptr)
             strm.Printf("%-8s %s", mnemonic, operands);
           else if (mnemonic != nullptr)
-            strm.Printf("%s", mnemonic);
+            strm.PutCString(mnemonic);
 
           int right_pad = 1;
           window.PutCStringTruncated(

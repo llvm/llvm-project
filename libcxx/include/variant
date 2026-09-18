@@ -246,12 +246,12 @@ namespace std {
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_reference.h>
+#  include <__type_traits/is_relocatable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
 #  include <__type_traits/is_trivially_assignable.h>
 #  include <__type_traits/is_trivially_constructible.h>
 #  include <__type_traits/is_trivially_destructible.h>
-#  include <__type_traits/is_trivially_relocatable.h>
 #  include <__type_traits/is_void.h>
 #  include <__type_traits/remove_const.h>
 #  include <__type_traits/remove_cvref.h>
@@ -1180,7 +1180,7 @@ class _LIBCPP_DECLSPEC_EMPTY_BASES _LIBCPP_NO_SPECIALIZATIONS variant
 
 public:
   using __trivially_relocatable _LIBCPP_NODEBUG =
-      conditional_t<_And<__libcpp_is_trivially_relocatable<_Types>...>::value, variant, void>;
+      conditional_t<__all<__is_trivially_relocatable_v<_Types>...>::value, variant, void>;
 
   template <class _FirstType = __first_type, enable_if_t<is_default_constructible_v<_FirstType>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI constexpr variant() noexcept(is_nothrow_default_constructible_v<__first_type>)
@@ -1331,6 +1331,10 @@ private:
   friend struct __variant_detail::__access::__variant;
   friend struct __variant_detail::__visitation::__variant;
 };
+
+template <class... _Types>
+variant<_Types...> __upcast_to_variant(const volatile variant<_Types...>*);
+void __upcast_to_variant(...);
 
 template <size_t _Ip, class... _Types>
 _LIBCPP_HIDE_FROM_ABI constexpr bool __holds_alternative(const variant<_Types...>& __v) noexcept {
@@ -1589,22 +1593,105 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __throw_if_valueless(_Vs&&... __vs) {
   }
 }
 
+#    define _LIBCPP_VARIANT_DISPATCH_COUNT 11 // Speed up compilation for the common cases
+
 template < class _Visitor, class... _Vs, typename>
 _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) visit(_Visitor&& __visitor, _Vs&&... __vs) {
-  using __variant_detail::__visitation::__variant;
-  std::__throw_if_valueless(std::forward<_Vs>(__vs)...);
-  // NOLINTNEXTLINE(bugprone-use-after-move) __throw_if_valueless doesn't actually forward the variants
-  return __variant::__visit_value(std::forward<_Visitor>(__visitor), std::forward<_Vs>(__vs)...);
+  // Determine the std::variant base class on which we call index() below.
+  // This is important for avoiding calling index() on a derived class.
+  using __variant_type = decltype(std::__upcast_to_variant(std::declval<remove_reference_t<_Vs>*>()...));
+  constexpr size_t __variant_size =
+      conditional_t<is_void_v<__variant_type>,
+                    std::integral_constant<size_t, variant_npos>,
+                    variant_size<__variant_type>>::value;
+  if constexpr (__variant_size <= _LIBCPP_VARIANT_DISPATCH_COUNT) {
+    using __variant_detail::__access::__variant;
+#    define _LIBCPP_VARIANT_DISPATCH_INDEX(_I)                                                                         \
+    case _I:                                                                                                           \
+      if constexpr (_I < __variant_size) {                                                                             \
+        return std::__invoke(                                                                                          \
+            std::forward<_Visitor>(__visitor), __variant::__get_alt<_I>(std::forward<_Vs>(__vs)...).__value);          \
+      }                                                                                                                \
+      [[__fallthrough__]]
+    // Use __LINE__ to avoid hardcoding numbers that might become stale
+    constexpr size_t __i0 = __LINE__ + 2;              // New line required
+    switch ((..., __vs.__variant_type::index())) {     // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      static_assert(__LINE__ - __i0 == _LIBCPP_VARIANT_DISPATCH_COUNT, "index count mismatch");
+    default:
+      std::__throw_bad_variant_access("std::visit: variant is valueless");
+    }
+#    undef _LIBCPP_VARIANT_DISPATCH_INDEX
+  } else {
+    using __variant_detail::__visitation::__variant;
+    std::__throw_if_valueless(std::forward<_Vs>(__vs)...);
+    // NOLINTNEXTLINE(bugprone-use-after-move) __throw_if_valueless doesn't actually forward the variants
+    return __variant::__visit_value(std::forward<_Visitor>(__visitor), std::forward<_Vs>(__vs)...);
+  }
 }
 
 #    if _LIBCPP_STD_VER >= 20
 template < class _Rp, class _Visitor, class... _Vs, typename>
 _LIBCPP_HIDE_FROM_ABI constexpr _Rp visit(_Visitor&& __visitor, _Vs&&... __vs) {
-  using __variant_detail::__visitation::__variant;
-  std::__throw_if_valueless(std::forward<_Vs>(__vs)...);
-  return __variant::__visit_value<_Rp>(std::forward<_Visitor>(__visitor), std::forward<_Vs>(__vs)...);
+  // Determine the std::variant base class on which we call index() below.
+  // This is important for avoiding calling index() on a derived class.
+  using __variant_type = decltype(std::__upcast_to_variant(std::declval<remove_reference_t<_Vs>*>()...));
+  constexpr size_t __variant_size =
+      conditional_t<is_void_v<__variant_type>,
+                    std::integral_constant<size_t, variant_npos>,
+                    variant_size<__variant_type>>::value;
+  if constexpr (__variant_size <= _LIBCPP_VARIANT_DISPATCH_COUNT) {
+    using __variant_detail::__access::__variant;
+#      define _LIBCPP_VARIANT_DISPATCH_INDEX(_I)                                                                       \
+      case _I:                                                                                                         \
+        if constexpr (_I < __variant_size) {                                                                           \
+          if constexpr (std::is_void_v<_Rp>) {                                                                         \
+            return (void)std::__invoke(                                                                                \
+                std::forward<_Visitor>(__visitor), __variant::__get_alt<_I>(std::forward<_Vs>(__vs)...).__value);      \
+          } else {                                                                                                     \
+            return std::__invoke(                                                                                      \
+                std::forward<_Visitor>(__visitor), __variant::__get_alt<_I>(std::forward<_Vs>(__vs)...).__value);      \
+          }                                                                                                            \
+        }                                                                                                              \
+        [[__fallthrough__]]
+    // Use __LINE__ to avoid hardcoding numbers that might become stale
+    constexpr size_t __i0 = __LINE__ + 2;              // New line required
+    switch ((..., __vs.__variant_type::index())) {     // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      _LIBCPP_VARIANT_DISPATCH_INDEX(__LINE__ - __i0); // New line required
+      static_assert(__LINE__ - __i0 == _LIBCPP_VARIANT_DISPATCH_COUNT, "index count mismatch");
+    default:
+      std::__throw_bad_variant_access("std::visit: variant is valueless");
+    }
+#      undef _LIBCPP_VARIANT_DISPATCH_INDEX
+  } else {
+    using __variant_detail::__visitation::__variant;
+    std::__throw_if_valueless(std::forward<_Vs>(__vs)...);
+    return __variant::__visit_value<_Rp>(std::forward<_Visitor>(__visitor), std::forward<_Vs>(__vs)...);
+  }
 }
 #    endif
+
+#    undef _LIBCPP_VARIANT_DISPATCH_COUNT
 
 template <class... _Types>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 auto
@@ -1661,14 +1748,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <cstddef>
-#    include <exception>
-#    include <tuple>
-#    include <type_traits>
-#    include <typeinfo>
-#    include <utility>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_VARIANT

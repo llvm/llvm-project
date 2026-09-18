@@ -151,6 +151,29 @@ void test_memmove_chk_overread(void) {
 }
 
 #ifdef __cplusplus
+
+// Mimic how <cstring> brings C library memory functions into the std namespace
+// via using-declarations. -Wstringop-overread should fire on them too. Skipped
+// under USE_BUILTINS, where these names are function-like macros.
+#ifndef USE_BUILTINS
+namespace std {
+using ::memcpy;
+using ::memmove;
+}
+
+void test_std_memcpy_overread() {
+  char dst[100];
+  char src[4];
+  std::memcpy(dst, src, 8); // expected-warning {{'memcpy' reading 8 bytes from a region of size 4}}
+}
+
+void test_std_memmove_overread() {
+  char dst[100];
+  char src[4];
+  std::memmove(dst, src, 8);  // expected-warning {{'memmove' reading 8 bytes from a region of size 4}}
+}
+#endif
+
 template <int N>
 void test_memcpy_dependent_dest() {
   char dst[N];
@@ -170,6 +193,19 @@ void test_memcpy_dependent_dest_uninstantiated() {
   char dst[N];
   int src = 0;
   memcpy(dst, &src, sizeof(src) + 1); // missing-warning {{'memcpy' reading 5 bytes from a region of size 4}}
+}
+
+// Taking the address of a static constexpr local inside a template is
+// value-dependent. This regression test ensures stringop-overread doesn't crash
+// when trying to constant-evaluate such an operand.
+template <typename T>
+void test_addr_of_static_constexpr_local() {
+  static constexpr bool true_value = true;
+  memcmp(&true_value, &true_value, 1);
+}
+
+void call_test_addr_of_static_constexpr_local() {
+  test_addr_of_static_constexpr_local<int>();
 }
 
 #endif

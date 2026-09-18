@@ -22,10 +22,8 @@ subroutine teams()
 
   !$omp end target
 
-  ! HOST: omp.teams
-  ! HOST-SAME: num_teams({{.*}}) thread_limit({{.*}}) {
-
-  ! DEVICE-NOT: omp.teams
+  ! BOTH: omp.teams
+  ! BOTH-SAME: num_teams({{.*}}) thread_limit({{.*}}) {
   !$omp teams num_teams(1) thread_limit(2)
   call foo()
   !$omp end teams
@@ -78,18 +76,13 @@ subroutine distribute_parallel_do()
   !$omp end distribute parallel do
   !$omp end target teams
 
-  ! HOST: omp.teams
-  ! DEVICE-NOT: omp.teams
+  ! BOTH: omp.teams
   !$omp teams
 
-  ! HOST: omp.parallel
-  ! HOST-SAME: num_threads({{.*}})
-  ! HOST: omp.distribute
-  ! HOST-NEXT: omp.wsloop
-
-  ! DEVICE-NOT: omp.parallel
-  ! DEVICE-NOT: omp.distribute
-  ! DEVICE-NOT: omp.wsloop
+  ! BOTH: omp.parallel
+  ! BOTH-SAME: num_threads({{.*}})
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.wsloop
   !$omp distribute parallel do num_threads(1)
   do i=1,10
     call foo()
@@ -147,15 +140,14 @@ subroutine distribute_parallel_do_simd()
   !$omp end distribute parallel do simd
   !$omp end target teams
 
-  ! HOST: omp.teams
-  ! DEVICE-NOT: omp.teams
+  ! BOTH: omp.teams
   !$omp teams
 
-  ! HOST: omp.parallel
-  ! HOST-SAME: num_threads({{.*}})
-  ! HOST: omp.distribute
-  ! HOST-NEXT: omp.wsloop
-  ! HOST-NEXT: omp.simd
+  ! BOTH: omp.parallel
+  ! BOTH-SAME: num_threads({{.*}})
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.wsloop
+  ! BOTH-NEXT: omp.simd
 
   ! DEVICE-NOT: omp.parallel
   ! DEVICE-NOT: omp.distribute
@@ -207,18 +199,115 @@ subroutine distribute()
   !$omp end distribute
   !$omp end target teams
 
-  ! HOST: omp.teams
-  ! DEVICE-NOT: omp.teams
+  ! BOTH: omp.teams
   !$omp teams
 
-  ! HOST: omp.distribute
-  ! DEVICE-NOT: omp.distribute
+  ! BOTH: omp.distribute
   !$omp distribute
   do i=1,10
     call foo()
   end do
   !$omp end distribute
   !$omp end teams
+
+  ! BOTH: omp.target
+
+  ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]] : i32, i32, i32)
+
+  ! DEVICE-NOT: host_eval({{.*}})
+  ! DEVICE-SAME: {
+  !$omp target
+
+  ! BOTH: omp.teams
+  !$omp teams
+
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.loop_nest
+
+  ! HOST-SAME: (%{{.*}}) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]])
+  !$omp distribute
+  do i=1,10
+    call foo()
+  end do
+  !$omp end distribute
+  !$omp end teams
+  !$omp end target
+
+  ! BOTH: omp.target
+  ! BOTH-NOT: host_eval({{.*}})
+  ! BOTH-SAME: {
+  !$omp target
+
+  ! BOTH: omp.teams
+  !$omp teams
+
+  ! BOTH: omp.distribute
+  !$omp distribute
+  do i=1,10
+    call foo()
+  end do
+  !$omp end distribute
+  call foo() !< Prevents this from being Generic-SPMD.
+  !$omp end teams
+  !$omp end target
+
+  ! BOTH: omp.target
+  ! BOTH-NOT: host_eval({{.*}})
+  ! BOTH-SAME: {
+  !$omp target teams
+
+  ! BOTH: omp.distribute
+  !$omp distribute
+  do i=1,10
+    call foo()
+  end do
+  !$omp end distribute
+
+  ! BOTH: omp.distribute
+  !$omp distribute
+  do i=1,10
+    call foo()
+  end do
+  !$omp end distribute
+  !$omp end target teams
+
+  ! BOTH: omp.target
+
+  ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]] : i32, i32, i32)
+
+  ! DEVICE-NOT: host_eval({{.*}})
+  ! DEVICE-SAME: {
+  !$omp target
+
+  ! BOTH: omp.teams
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.loop_nest
+
+  ! HOST-SAME: (%{{.*}}) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]])
+  !$omp teams distribute
+  do i=1,10
+    call foo()
+  end do
+  !$omp end teams distribute
+  !$omp end target
+
+  ! BOTH: omp.target
+
+  ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]] : i32, i32, i32)
+
+  ! DEVICE-NOT: host_eval({{.*}})
+  ! DEVICE-SAME: {
+
+  ! BOTH: omp.teams
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.loop_nest
+
+  ! HOST-SAME: (%{{.*}}) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]])
+  !$omp target teams distribute
+  do i=1,10
+    call foo()
+  end do
+  !$omp end target teams distribute
 end subroutine distribute
 
 ! BOTH-LABEL: func.func @_QPdistribute_simd
@@ -261,21 +350,122 @@ subroutine distribute_simd()
   !$omp end distribute simd
   !$omp end target teams
 
-  ! HOST: omp.teams
-  ! DEVICE-NOT: omp.teams
+  ! BOTH: omp.teams
   !$omp teams
 
-  ! HOST: omp.distribute
-  ! HOST-NEXT: omp.simd
-
-  ! DEVICE-NOT: omp.distribute
-  ! DEVICE-NOT: omp.simd
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.simd
   !$omp distribute simd
   do i=1,10
     call foo()
   end do
   !$omp end distribute simd
   !$omp end teams
+
+  ! BOTH: omp.target
+
+  ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]] : i32, i32, i32)
+
+  ! DEVICE-NOT: host_eval({{.*}})
+  ! DEVICE-SAME: {
+  !$omp target
+
+  ! BOTH: omp.teams
+  !$omp teams
+
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.simd
+  ! BOTH-NEXT: omp.loop_nest
+
+  ! HOST-SAME: (%{{.*}}) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]])
+  !$omp distribute simd
+  do i=1,10
+    call foo()
+  end do
+  !$omp end distribute simd
+  !$omp end teams
+  !$omp end target
+
+  ! BOTH: omp.target
+  ! BOTH-NOT: host_eval({{.*}})
+  ! BOTH-SAME: {
+  !$omp target
+
+  ! BOTH: omp.teams
+  !$omp teams
+
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.simd
+  !$omp distribute simd
+  do i=1,10
+    call foo()
+  end do
+  !$omp end distribute simd
+  call foo() !< Prevents this from being Generic-SPMD.
+  !$omp end teams
+  !$omp end target
+
+  ! BOTH: omp.target
+  ! BOTH-NOT: host_eval({{.*}})
+  ! BOTH-SAME: {
+  !$omp target teams
+
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.simd
+  !$omp distribute simd
+  do i=1,10
+    call foo()
+  end do
+  !$omp end distribute simd
+
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.simd
+  !$omp distribute simd
+  do i=1,10
+    call foo()
+  end do
+  !$omp end distribute simd
+  !$omp end target teams
+
+  ! BOTH: omp.target
+
+  ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]] : i32, i32, i32)
+
+  ! DEVICE-NOT: host_eval({{.*}})
+  ! DEVICE-SAME: {
+  !$omp target
+
+  ! BOTH: omp.teams
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.simd
+  ! BOTH-NEXT: omp.loop_nest
+
+  ! HOST-SAME: (%{{.*}}) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]])
+  !$omp teams distribute simd
+  do i=1,10
+    call foo()
+  end do
+  !$omp end teams distribute simd
+  !$omp end target
+
+  ! BOTH: omp.target
+
+  ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]] : i32, i32, i32)
+
+  ! DEVICE-NOT: host_eval({{.*}})
+  ! DEVICE-SAME: {
+
+  ! BOTH: omp.teams
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.simd
+  ! BOTH-NEXT: omp.loop_nest
+
+  ! HOST-SAME: (%{{.*}}) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]])
+  !$omp target teams distribute simd
+  do i=1,10
+    call foo()
+  end do
+  !$omp end target teams distribute simd
 end subroutine distribute_simd
 
 ! BOTH-LABEL: func.func @_QPloop

@@ -6,7 +6,7 @@ define void @constant_stride_widen_rotated1(ptr %pl, i64 %stride, ptr %ps) {
   ;  %gep_l0 = getelementptr inbounds i8, ptr %pl, i64 0
 ; CHECK-LABEL: define void @constant_stride_widen_rotated1(
 ; CHECK-SAME: ptr [[PL:%.*]], i64 [[STRIDE:%.*]], ptr [[PS:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x ptr> poison, ptr [[PL]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x ptr> poison, ptr [[PL]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x ptr> [[TMP1]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, <8 x ptr> [[TMP2]], <8 x i64> <i64 1, i64 2, i64 3, i64 100, i64 101, i64 102, i64 103, i64 200>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, <8 x ptr> [[TMP2]], <8 x i64> <i64 201, i64 202, i64 203, i64 300, i64 301, i64 302, i64 303, i64 400>
@@ -99,7 +99,7 @@ define void @constant_stride_widen_rotatedn_1(ptr %pl, i64 %stride, ptr %ps) {
   ;  %gep_l2 = getelementptr inbounds i8, ptr %pl, i64 2
 ; CHECK-LABEL: define void @constant_stride_widen_rotatedn_1(
 ; CHECK-SAME: ptr [[PL:%.*]], i64 [[STRIDE:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x ptr> poison, ptr [[PL]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x ptr> poison, ptr [[PL]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x ptr> [[TMP1]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, <8 x ptr> [[TMP2]], <8 x i64> <i64 3, i64 100, i64 101, i64 102, i64 103, i64 200, i64 201, i64 202>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, <8 x ptr> [[TMP2]], <8 x i64> <i64 203, i64 300, i64 301, i64 302, i64 303, i64 400, i64 401, i64 402>

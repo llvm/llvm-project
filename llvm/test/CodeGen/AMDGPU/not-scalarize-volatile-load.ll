@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -amdgpu-scalarize-global-loads < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.03--amdhsa -amdgpu-scalarize-global-loads < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: @volatile_load
 ; GCN:  s_load_dwordx2 s[[[LO_SREG:[0-9]+]]:[[HI_SREG:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, 0x0

@@ -36,6 +36,42 @@ PROJECT_DEPENDENCIES = {
     "offload": {"clang", "lld", "flang"},
 }
 
+PROJECT_CHECK_TARGETS = {
+    "clang-tools-extra": "check-clang-tools",
+    "compiler-rt": "check-compiler-rt",
+    "cross-project-tests": "check-cross-project",
+    "libcxx": "check-cxx",
+    "libcxxabi": "check-cxxabi",
+    "libunwind": "check-unwind",
+    "lldb": "check-lldb",
+    "llvm": "check-llvm",
+    "clang": "check-clang check-clang-python",
+    "CIR": "check-clang-cir",
+    "bolt": "check-bolt",
+    "lld": "check-lld",
+    "flang": "check-flang",
+    "flang-rt": "check-flang-rt",
+    "libc": "check-libc",
+    "libclc": "check-libclc",
+    "mlir": "check-mlir",
+    "openmp": "openmp",  # Run only build in pre-merge
+    "polly": "check-polly",
+    "lit": "check-lit",
+    "offload": "offload",  # Run only build in pre-merge
+}
+
+RUNTIMES = {
+    "libcxx",
+    "libcxxabi",
+    "libunwind",
+    "compiler-rt",
+    "libc",
+    "flang-rt",
+    "libclc",
+    "openmp",
+    "offload",
+}
+
 # This mapping describes the additional projects that should be tested when a
 # specific project is touched. We enumerate them specifically rather than
 # just invert the dependencies list to give more control over what exactly is
@@ -58,16 +94,9 @@ DEPENDENTS_TO_TEST = {
     "mlir": {"flang"},
     # Test everything if ci scripts are changed.
     ".ci": {
-        "llvm",
-        "clang",
-        "CIR",
-        "lld",
-        "lldb",
-        "bolt",
-        "clang-tools-extra",
-        "mlir",
-        "polly",
-        "flang",
+        project_name
+        for project_name in PROJECT_CHECK_TARGETS
+        if project_name not in RUNTIMES
     },
 }
 
@@ -76,11 +105,16 @@ DEPENDENTS_TO_TEST = {
 # which needs some runtimes enabled for tests.
 DEPENDENT_RUNTIMES_TO_BUILD = {
     "flang": {"openmp"},
-    "lldb": {"libcxx", "libcxxabi", "libunwind", "compiler-rt"}
+    "lldb": {"libcxx", "libcxxabi", "libunwind", "compiler-rt"},
 }
 
 # This mapping describes runtimes that should be tested when the key project is
 # touched.
+DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
+    "llvm": {"libcxx", "libcxxabi", "libunwind"},
+    "clang": {"libcxx", "libcxxabi", "libunwind"},
+    ".ci": {"libcxx", "libcxxabi", "libunwind"},
+}
 DEPENDENT_RUNTIMES_TO_TEST = {
     "clang": {"compiler-rt", "libc"},
     "clang-tools-extra": {"libc"},
@@ -92,16 +126,15 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "flang-rt": {"flang-rt"},
     "openmp": {"openmp"},
     "offload": {"offload", "openmp"},
-    ".ci": {"compiler-rt", "libc", "flang-rt", "libclc", "openmp", "offload"},
-}
-DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
-    "llvm": {"libcxx", "libcxxabi", "libunwind"},
-    "clang": {"libcxx", "libcxxabi", "libunwind"},
-    ".ci": {"libcxx", "libcxxabi", "libunwind"},
+    ".ci": {
+        runtime_name
+        for runtime_name in PROJECT_CHECK_TARGETS
+        if runtime_name in RUNTIMES
+        and runtime_name not in DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG[".ci"]
+    },
 }
 
-EXCLUDE_LINUX = {
-}
+EXCLUDE_LINUX = {}
 
 # Runtimes configured for cross-compilation using LLVM_RUNTIME_TARGETS.
 # The same build may also use LLVM_ENABLE_RUNTIMES for other runtimes.
@@ -132,11 +165,12 @@ EXCLUDE_DEPENDENTS_WINDOWS = {
 
 EXCLUDE_MAC = {
     "bolt",
-    "compiler-rt",
+    "CIR",  # Depends on mlir, which is excluded below.
     "cross-project-tests",
     "flang",
+    "flang-rt",
     "libc",
-    "lldb",
+    "mlir",
     "openmp",
     "polly",
     "libcxx",
@@ -145,40 +179,11 @@ EXCLUDE_MAC = {
     "offload",
 }
 
-PROJECT_CHECK_TARGETS = {
-    "clang-tools-extra": "check-clang-tools",
-    "compiler-rt": "check-compiler-rt",
-    "cross-project-tests": "check-cross-project",
-    "libcxx": "check-cxx",
-    "libcxxabi": "check-cxxabi",
-    "libunwind": "check-unwind",
-    "lldb": "check-lldb",
-    "llvm": "check-llvm",
-    "clang": "check-clang",
-    "CIR": "check-clang-cir",
-    "bolt": "check-bolt",
-    "lld": "check-lld",
-    "flang": "check-flang",
-    "flang-rt": "check-flang-rt",
-    "libc": "check-libc",
-    "libclc": "check-libclc",
-    "mlir": "check-mlir",
-    "openmp": "openmp",  # Run only build in pre-merge
-    "polly": "check-polly",
-    "lit": "check-lit",
-    "offload": "offload",  # Run only build in pre-merge
-}
-
-RUNTIMES = {
-    "libcxx",
-    "libcxxabi",
-    "libunwind",
-    "compiler-rt",
-    "libc",
-    "flang-rt",
+# These projects are still built on the self-hosted macOS runners, but their
+# tests are temporarily skipped there.
+EXCLUDE_CHECK_TARGETS_MAC = {
+    "lldb",
     "libclc",
-    "openmp",
-    "offload",
 }
 
 # Meta projects are projects that need explicit handling but do not reside
@@ -203,6 +208,7 @@ SKIP_BUILD_PROJECTS = ["CIR", "lit", "libc-shared"]
 
 # Projects that should not run any tests. These need to be metaprojects.
 SKIP_PROJECTS = ["docs", "gn"]
+
 
 def _add_dependencies(projects: Set[str], runtimes: Set[str]) -> Set[str]:
     projects_with_dependents = set(projects)
@@ -262,6 +268,8 @@ def _compute_project_check_targets(
 ) -> Set[str]:
     check_targets = set()
     for project_to_test in projects_to_test:
+        if platform == "Darwin" and project_to_test in EXCLUDE_CHECK_TARGETS_MAC:
+            continue
         if project_to_test in PROJECT_CHECK_TARGETS:
             check_targets.add(PROJECT_CHECK_TARGETS[project_to_test])
     return check_targets

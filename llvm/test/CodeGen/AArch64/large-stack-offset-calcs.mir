@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=arm64-apple-ios -run-pass=prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=arm64-apple-ios -run-pass=prolog-epilog %s -o - | FileCheck %s
 ---
 name: large_stack_offset_calc
 tracksRegLiveness: true

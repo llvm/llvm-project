@@ -612,8 +612,6 @@ def simm7s16 : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-def am_sve_fi : ComplexPattern<iPTR, 2, "SelectAddrModeFrameIndexSVE", []>;
-
 def am_indexed7s8   : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed7S8", []>;
 def am_indexed7s16  : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed7S16", []>;
 def am_indexed7s32  : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed7S32", []>;
@@ -883,6 +881,7 @@ class fixedpoint_recip_i32<ValueType FloatVT>
     ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperand<32>", [fpimm, ld]> {
   let EncoderMethod = "getFixedPointScaleOpValue";
   let DecoderMethod = "DecodeFixedPointScaleImm32";
+  let ParserMatchClass = Imm1_32Operand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -891,6 +890,7 @@ class fixedpoint_recip_i64<ValueType FloatVT>
     ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperand<64>", [fpimm, ld]> {
   let EncoderMethod = "getFixedPointScaleOpValue";
   let DecoderMethod = "DecodeFixedPointScaleImm64";
+  let ParserMatchClass = Imm1_64Operand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -1533,6 +1533,8 @@ def fpimm16 : Operand<f16>,
     }], fpimm16XForm> {
   let ParserMatchClass = FPImmOperand;
   let PrintMethod = "printFPImmOperand";
+  let OperandType = "OPERAND_IMM_UINT8";
+  let OperandNamespace = "AArch64";
 }
 
 def fpimmbf16 : Operand<bf16>,
@@ -1546,6 +1548,8 @@ def fpimm32 : Operand<f32>,
     }], fpimm32XForm> {
   let ParserMatchClass = FPImmOperand;
   let PrintMethod = "printFPImmOperand";
+  let OperandType = "OPERAND_IMM_UINT8";
+  let OperandNamespace = "AArch64";
 }
 
 def fpimm32SIMDModImmType4 : FPImmLeaf<f32, [{
@@ -1560,12 +1564,15 @@ def fpimm64 : Operand<f64>,
     }], fpimm64XForm> {
   let ParserMatchClass = FPImmOperand;
   let PrintMethod = "printFPImmOperand";
+  let OperandType = "OPERAND_IMM_UINT8";
+  let OperandNamespace = "AArch64";
 }
 
 def fpimm8 : Operand<i32> {
   let ParserMatchClass = FPImmOperand;
   let PrintMethod = "printFPImmOperand";
-  let OperandType = "OPERAND_IMMEDIATE";
+  let OperandType = "OPERAND_IMM_UINT8";
+  let OperandNamespace = "AArch64";
 }
 
 def fpimm0 : FPImmLeaf<fAny, [{
@@ -7446,7 +7453,7 @@ class BaseSIMDDifferentThreeVectorTied<bit U, bits<3> size, bits<4> opcode,
 //        the high elements of the result register rather than the low
 //        elements). Until that's fixed, we can't code-gen those.
 multiclass SIMDNarrowThreeVectorBHS<bit U, bits<4> opc, string asm,
-                                    Intrinsic IntOp> {
+                                    SDPatternOperator IntOp> {
   def v8i16_v8i8   : BaseSIMDDifferentThreeVector<U, 0b000, opc,
                                                   V64, V128, V128,
                                                   asm, ".8b", ".8h", ".8h",
@@ -7679,8 +7686,8 @@ multiclass SIMDWideThreeVectorBHS<bit U, bits<4> opc, string asm,
 //----------------------------------------------------------------------------
 
 class BaseSIMDBitwiseExtract<bit size, RegisterOperand regtype, ValueType vty,
-                             string asm, string kind>
-  : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm, i32imm:$imm), asm,
+                             Operand immtype, string asm, string kind>
+  : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm, immtype:$imm), asm,
       "{\t$Rd" # kind # ", $Rn" # kind # ", $Rm" # kind # ", $imm" #
       "|" # kind # "\t$Rd, $Rn, $Rm, $imm}", "",
       [(set (vty regtype:$Rd),
@@ -7703,10 +7710,10 @@ class BaseSIMDBitwiseExtract<bit size, RegisterOperand regtype, ValueType vty,
 
 
 multiclass SIMDBitwiseExtract<string asm> {
-  def v8i8  : BaseSIMDBitwiseExtract<0, V64, v8i8, asm, ".8b"> {
+  def v8i8  : BaseSIMDBitwiseExtract<0, V64, v8i8, imm32_0_7, asm, ".8b"> {
     let imm{3} = 0;
   }
-  def v16i8 : BaseSIMDBitwiseExtract<1, V128, v16i8, asm, ".16b">;
+  def v16i8 : BaseSIMDBitwiseExtract<1, V128, v16i8, imm32_0_15, asm, ".16b">;
 }
 
 //----------------------------------------------------------------------------

@@ -17,10 +17,13 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
@@ -111,6 +114,8 @@ static std::string CallSiteYamlPath;
 static std::vector<std::string> MergedFunctionsFilters;
 // Default output version. Can be overridden by --output-version.
 static uint32_t OutputVersion = Header::getVersion();
+static bool ShowStatistics;
+static GsymReader::StatisticsFormat StatisticsFormat;
 
 static void parseArgs(int argc, char **argv) {
   GSYMUtilOptTable Tbl;
@@ -237,6 +242,22 @@ static void parseArgs(int argc, char **argv) {
   }
 
   LoadDwarfCallSites = Args.hasArg(OPT_dwarf_callsites);
+
+  ShowStatistics = Args.hasArg(OPT_statistics_EQ);
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_statistics_EQ)) {
+    StringRef Val = A->getValue();
+    if (Val == "" || Val == "text")
+      StatisticsFormat = GsymReader::StatisticsFormat::Text;
+    else if (Val == "json")
+      StatisticsFormat = GsymReader::StatisticsFormat::JSON;
+    else if (Val == "pretty-json")
+      StatisticsFormat = GsymReader::StatisticsFormat::PrettyJSON;
+    else {
+      errs() << "error: unknown statistics format '" << Val
+             << "'. Supported formats: text, json, pretty-json\n";
+      std::exit(1);
+    }
+  }
 
   for (const llvm::opt::Arg *A :
        Args.filtered(OPT_merged_functions_filter_EQ)) {
@@ -456,10 +477,10 @@ static llvm::Error handleObjectFile(ObjectFile &Obj, ObjectFile *SymtabObj,
   std::unique_ptr<GsymCreator> GsymPtr;
   switch (OutputVersion) {
   case Header::getVersion():
-    GsymPtr = std::make_unique<GsymCreatorV1>(Quiet);
+    GsymPtr = std::make_unique<GsymCreatorV1>();
     break;
   case HeaderV2::getVersion():
-    GsymPtr = std::make_unique<GsymCreatorV2>(Quiet);
+    GsymPtr = std::make_unique<GsymCreatorV2>();
     break;
   default:
     return createStringError(std::errc::invalid_argument,
@@ -738,6 +759,11 @@ static void doLookup(GsymReader &Gsym, uint64_t Addr, raw_ostream &OS) {
         if (i != Results->size() - 1)
           OS << "\n";
       }
+    } else {
+      if (Verbose)
+        OS << "\nLookupResult for " << HEX64(Addr) << ":\n";
+      OS << HEX64(Addr) << ": ";
+      logAllUnhandledErrors(Results.takeError(), OS, "error: ");
     }
   } else { /* UseMergedFunctions == false */
     if (auto Result = Gsym.lookup(Addr)) {
@@ -804,7 +830,7 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     return EXIT_SUCCESS;
   }
 
-  OutputAggregator Aggregation(&OS);
+  OutputAggregator Aggregation(&OS, Quiet);
   if (!ConvertFilename.empty()) {
     // Convert DWARF to GSYM
     if (!InputFilenames.empty()) {
@@ -897,6 +923,11 @@ int llvm_gsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     auto Gsym = GsymReader::openFile(GSYMPath);
     if (!Gsym)
       error(GSYMPath, Gsym.takeError());
+
+    if (ShowStatistics) {
+      (*Gsym)->dumpStatistics(OS, StatisticsFormat, GSYMPath);
+      continue;
+    }
 
     if (LookupAddresses.empty()) {
       (*Gsym)->dump(outs());

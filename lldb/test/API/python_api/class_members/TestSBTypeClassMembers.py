@@ -21,7 +21,7 @@ class SBTypeMemberFunctionsTest(TestBase):
         self.source = "main.mm"
         self.line = line_number(self.source, "// set breakpoint here")
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test(self):
         """Test SBType APIs to fetch member function types."""
         d = {"EXE": self.exe_name}

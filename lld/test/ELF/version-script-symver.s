@@ -4,7 +4,9 @@
 # RUN: echo 'call foo3; call foo4' > %tref.s
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %tref.s -o %tref.o
 
-# RUN: echo 'v1 { local: foo1; }; v2 { local: foo2; };' > %t1.script
+## v1's local: foo4 does not localize foo4@@v2: a default version is governed
+## only by its own version node.
+# RUN: echo 'v1 { local: foo1; foo4; }; v2 { local: foo2; };' > %t1.script
 # RUN: ld.lld --version-script %t1.script -shared %t.o -o %t1.so
 # RUN: llvm-readelf --dyn-syms %t1.so | FileCheck --check-prefix=EXACT %s
 # EXACT:      UND
@@ -21,12 +23,38 @@
 # WC-NEXT: [[#]] _start{{$}}
 # WC-NOT:  {{.}}
 
-# RUN: echo 'v1 { global: *; local: foo*; }; v2 {};' > %t3.script
+## Exact and wildcard local: patterns in foo4@@v2's own node localize it.
+# RUN: echo 'v1 {}; v2 { local: foo4; };' > %town.script
+# RUN: ld.lld --version-script %town.script -shared %t.o -o %town.so
+# RUN: llvm-readelf --dyn-syms %town.so | FileCheck --check-prefix=OWN %s
+# RUN: echo 'v1 {}; v2 { local: foo4*; };' > %twc2.script
+# RUN: ld.lld --version-script %twc2.script -shared %t.o -o %twc2.so
+# RUN: llvm-readelf --dyn-syms %twc2.so | FileCheck --check-prefix=OWN %s
+# OWN:      UND
+# OWN-NEXT: [[#]] foo1{{$}}
+# OWN-NEXT: [[#]] foo2{{$}}
+# OWN-NEXT: [[#]] _start{{$}}
+# OWN-NEXT: [[#]] foo3@v1
+# OWN-NOT:  {{.}}
+
+## Same for "local: *".
+# RUN: echo 'v1 {}; v2 { local: *; };' > %tstar.script
+# RUN: ld.lld --version-script %tstar.script -shared %t.o -o %tstar.so
+# RUN: llvm-readelf --dyn-syms %tstar.so | FileCheck --check-prefix=STAR %s
+# STAR:      UND
+# STAR-NEXT: [[#]] foo3@v1
+# STAR-NOT:  {{.}}
+
+## In a versioned symbol's own node, global: beats local: with no
+## exact-over-wildcard precedence: global: * keeps foo3@v1 exported and
+## global: foo4* keeps foo4@@v2 exported.
+# RUN: echo 'v1 { global: *; local: foo*; foo3; }; v2 { global: foo4*; local: foo4; };' > %t3.script
 # RUN: ld.lld --version-script %t3.script -shared %t.o -o %t3.so
 # RUN: llvm-readelf --dyn-syms %t3.so | FileCheck --check-prefix=MIX1 %s
 # MIX1:      UND
 # MIX1-NEXT: [[#]] foo4@@v2
 # MIX1-NEXT: [[#]] _start@@v1
+# MIX1-NEXT: [[#]] foo3@v1
 # MIX1-NOT:  {{.}}
 
 # RUN: echo 'v1 { global: foo*; local: *; }; v2 { global: foo4; local: *; };' > %t4.script

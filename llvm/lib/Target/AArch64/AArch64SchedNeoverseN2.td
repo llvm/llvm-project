@@ -20,7 +20,7 @@ def NeoverseN2Model : SchedMachineModel {
 
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
                                                     SVE2p1Unsupported.F,
-    [HasSVE2p1, HasSVEB16B16, HasPAuthLR, HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
+    [HasSVE2p1, HasSVEB16B16, HasSVEBFSCALE, HasPAuthLR, HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -466,6 +466,10 @@ def N2Write_6c_2I_2L : SchedWriteRes<[N2UnitI, N2UnitI, N2UnitL, N2UnitL]> {
 def N2Write_7c_4L : SchedWriteRes<[N2UnitL, N2UnitL, N2UnitL, N2UnitL]> {
   let Latency     = 7;
   let NumMicroOps = 4;
+}
+
+def N2Write_14cyc_1L_1S : SchedWriteRes<[N2UnitL, N2UnitD]> {
+  let Latency     = 14;
 }
 
 //===----------------------------------------------------------------------===//
@@ -964,6 +968,14 @@ def : SchedAlias<WriteST,    N2Write_1c_1L01_1D>;
 def : SchedAlias<WriteSTIdx, N2Write_1c_1L01_1D_1I>;
 def : SchedAlias<WriteSTP,   N2Write_1c_1L01_1D>;
 def : SchedAlias<WriteAdr,   N2Write_1c_1I>; // copied from A57.
+
+// Atomic instructions
+// -----------------------------------------------------------------------------
+
+def : InstRW<[N2Write_14cyc_1L_1S], (instrs CASB, CASH, CASW, CASX)>;
+def : InstRW<[N2Write_14cyc_1L_1S], (instrs CASAB, CASAH, CASAW, CASAX)>;
+def : InstRW<[N2Write_14cyc_1L_1S], (instrs CASLB, CASLH, CASLW, CASLX)>;
+def : InstRW<[N2Write_14cyc_1L_1S], (instrs CASALB, CASALH, CASALW, CASALX)>;
 
 // Tag load instructions
 // -----------------------------------------------------------------------------
@@ -2225,7 +2237,7 @@ def : InstRW<[N2Write_2c_1V], (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HSD]",
                                          "^F(MAX|MIN)(NM)?_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply
-def : InstRW<[N2Write_3c_1V], (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]",
+def : InstRW<[N2Write_3c_1V], (instregex "^(FSCALE|FMULX)_(ZPmZ|ZPZZ)_[HSD]",
                                          "^FMULX_ZPZZ_[HSD]",
                                          "^FMUL_(ZPm[IZ]|ZZZI?)_[HSD]",
                                          "^FMUL_ZPZ[IZ]_[HSD]")>;

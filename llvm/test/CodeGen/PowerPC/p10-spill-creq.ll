@@ -122,9 +122,7 @@ define dso_local double @P10_Spill_CR_EQ(ptr %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    mtocrf 128, r7
 ; CHECK-NEXT:    isel r5, 0, r6, 4*cr6+lt
 ; CHECK-NEXT:    isel r3, 0, r3, 4*cr1+eq
-; CHECK-NEXT:    mtocrf 32, r12
-; CHECK-NEXT:    mtocrf 16, r12
-; CHECK-NEXT:    mtocrf 8, r12
+; CHECK-NEXT:    mtcrf 56, r12
 ; CHECK-NEXT:    crandc 4*cr5+lt, 4*cr5+lt, eq
 ; CHECK-NEXT:    isel r5, 0, r5, 4*cr7+eq
 ; CHECK-NEXT:    crnor 4*cr5+lt, 4*cr5+un, 4*cr5+lt

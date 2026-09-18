@@ -27,25 +27,11 @@ namespace process_gdb_remote {
 
 class ThreadGDBRemote;
 class ProcessGDBRemote;
-class GDBRemoteDynamicRegisterInfo;
-
-typedef std::shared_ptr<GDBRemoteDynamicRegisterInfo>
-    GDBRemoteDynamicRegisterInfoSP;
-
-class GDBRemoteDynamicRegisterInfo final : public DynamicRegisterInfo {
-public:
-  GDBRemoteDynamicRegisterInfo() : DynamicRegisterInfo() {}
-
-  ~GDBRemoteDynamicRegisterInfo() override = default;
-
-  void UpdateARM64SVERegistersInfos(uint64_t vg);
-  void UpdateARM64SMERegistersInfos(uint64_t svg);
-};
 
 class GDBRemoteRegisterContext : public RegisterContext {
 public:
   GDBRemoteRegisterContext(ThreadGDBRemote &thread, uint32_t concrete_frame_idx,
-                           GDBRemoteDynamicRegisterInfoSP reg_info_sp,
+                           lldb::DynamicRegisterInfoSP reg_info_sp,
                            bool read_all_at_once, bool write_all_at_once);
 
   ~GDBRemoteRegisterContext() override;
@@ -128,7 +114,7 @@ protected:
     SetRegisterIsValidState(reg, eLazyBoolCalculate);
   }
 
-  GDBRemoteDynamicRegisterInfoSP m_reg_info_sp;
+  lldb::DynamicRegisterInfoSP m_reg_info_sp;
 
   /// eLazyBoolYes - we have the bytes for this register locally.
   /// eLazyBoolCalculate - we have not yet tried to get the bytes.

@@ -1,9 +1,9 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -emit-llvm -disable-llvm-optzns -mprintf-kind=hostcall -fno-builtin-printf -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -emit-llvm -disable-llvm-optzns -mprintf-kind=hostcall -fno-builtin-printf -fcuda-is-device \
 // RUN:   -o - %s | FileCheck --check-prefixes=CHECK,HOSTCALL %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm -disable-llvm-optzns -mprintf-kind=hostcall -fno-builtin-printf -fcuda-is-device \
 // RUN:   -o - %s | FileCheck --check-prefixes=CHECK-AMDGCNSPIRV,HOSTCALL-AMDGCNSPIRV %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -emit-llvm -disable-llvm-optzns -mprintf-kind=buffered -fno-builtin-printf -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -emit-llvm -disable-llvm-optzns -mprintf-kind=buffered -fno-builtin-printf -fcuda-is-device \
 // RUN:   -o - %s | FileCheck --check-prefixes=CHECK,BUFFERED %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm -disable-llvm-optzns -mprintf-kind=buffered -fno-builtin-printf -fcuda-is-device \
 // RUN:   -o - %s | FileCheck --check-prefixes=CHECK-AMDGCNSPIRV,BUFFERED-AMDGCNSPIRV %s

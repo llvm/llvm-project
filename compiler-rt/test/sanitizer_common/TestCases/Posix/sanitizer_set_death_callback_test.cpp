@@ -6,6 +6,8 @@
 // FIXME: On Darwin, LSAn detects the leak, but does not invoke the death_callback.
 // XFAIL: darwin && lsan
 
+// UNSUPPORTED: rtsan
+
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>
 

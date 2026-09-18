@@ -5,6 +5,7 @@
 #include <sycl/sycl.hpp>
 
 #include <cassert>
+#include <iostream>
 #include <memory>
 
 using namespace sycl;

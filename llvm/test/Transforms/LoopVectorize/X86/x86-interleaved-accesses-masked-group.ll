@@ -414,7 +414,7 @@ define void @masked_strided1_optsize_unknown_tc(ptr noalias nocapture readonly %
 ; DISABLED_MASKED_STRIDED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; DISABLED_MASKED_STRIDED:       [[VECTOR_PH]]:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
-; DISABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 8
+; DISABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[N]], 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -532,7 +532,7 @@ define void @masked_strided1_optsize_unknown_tc(ptr noalias nocapture readonly %
 ; ENABLED_MASKED_STRIDED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; ENABLED_MASKED_STRIDED:       [[VECTOR_PH]]:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
-; ENABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 8
+; ENABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 7
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[N]], 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -634,7 +634,7 @@ define void @masked_strided3_optsize_unknown_tc(ptr noalias nocapture readonly %
 ; DISABLED_MASKED_STRIDED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; DISABLED_MASKED_STRIDED:       [[VECTOR_PH]]:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
-; DISABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 8
+; DISABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[N]], 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -752,7 +752,7 @@ define void @masked_strided3_optsize_unknown_tc(ptr noalias nocapture readonly %
 ; ENABLED_MASKED_STRIDED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; ENABLED_MASKED_STRIDED:       [[VECTOR_PH]]:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
-; ENABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 8
+; ENABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 7
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[N]], 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -949,14 +949,14 @@ define void @unconditional_strided1_optsize(ptr noalias nocapture readonly %p, p
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP22:%.*]] = load i8, ptr [[TMP14]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP23:%.*]] = load i8, ptr [[TMP15]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP24:%.*]] = load i8, ptr [[TMP16]], align 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = insertelement <8 x i8> poison, i8 [[TMP17]], i32 0
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = insertelement <8 x i8> [[TMP25]], i8 [[TMP18]], i32 1
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = insertelement <8 x i8> [[TMP26]], i8 [[TMP19]], i32 2
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = insertelement <8 x i8> [[TMP27]], i8 [[TMP20]], i32 3
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = insertelement <8 x i8> [[TMP28]], i8 [[TMP21]], i32 4
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = insertelement <8 x i8> [[TMP29]], i8 [[TMP22]], i32 5
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = insertelement <8 x i8> [[TMP30]], i8 [[TMP23]], i32 6
-; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = insertelement <8 x i8> [[TMP31]], i8 [[TMP24]], i32 7
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP25:%.*]] = insertelement <8 x i8> poison, i8 [[TMP17]], i64 0
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP26:%.*]] = insertelement <8 x i8> [[TMP25]], i8 [[TMP18]], i64 1
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP27:%.*]] = insertelement <8 x i8> [[TMP26]], i8 [[TMP19]], i64 2
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP28:%.*]] = insertelement <8 x i8> [[TMP27]], i8 [[TMP20]], i64 3
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP29:%.*]] = insertelement <8 x i8> [[TMP28]], i8 [[TMP21]], i64 4
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP30:%.*]] = insertelement <8 x i8> [[TMP29]], i8 [[TMP22]], i64 5
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP31:%.*]] = insertelement <8 x i8> [[TMP30]], i8 [[TMP23]], i64 6
+; DISABLED_MASKED_STRIDED-NEXT:    [[TMP32:%.*]] = insertelement <8 x i8> [[TMP31]], i8 [[TMP24]], i64 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i8, ptr [[Q]], i32 [[INDEX]]
 ; DISABLED_MASKED_STRIDED-NEXT:    store <8 x i8> [[TMP32]], ptr [[TMP33]], align 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -1039,7 +1039,7 @@ define void @unconditional_strided1_optsize_unknown_tc(ptr noalias nocapture rea
 ; DISABLED_MASKED_STRIDED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; DISABLED_MASKED_STRIDED:       [[VECTOR_PH]]:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
-; DISABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 8
+; DISABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[N]], 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -1152,7 +1152,7 @@ define void @unconditional_strided1_optsize_unknown_tc(ptr noalias nocapture rea
 ; ENABLED_MASKED_STRIDED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; ENABLED_MASKED_STRIDED:       [[VECTOR_PH]]:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
-; ENABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 8
+; ENABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 7
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[N]], 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -2310,7 +2310,7 @@ define void @masked_strided2_unknown_tc(ptr noalias nocapture readonly %p, ptr n
 ; DISABLED_MASKED_STRIDED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; DISABLED_MASKED_STRIDED:       [[VECTOR_PH]]:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
-; DISABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 8
+; DISABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[N]], 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -2629,7 +2629,7 @@ define void @masked_strided2_unknown_tc(ptr noalias nocapture readonly %p, ptr n
 ; ENABLED_MASKED_STRIDED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; ENABLED_MASKED_STRIDED:       [[VECTOR_PH]]:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
-; ENABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 8
+; ENABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 7
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[N]], 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -2743,7 +2743,7 @@ define void @unconditional_masked_strided2_unknown_tc(ptr noalias nocapture read
 ; DISABLED_MASKED_STRIDED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; DISABLED_MASKED_STRIDED:       [[VECTOR_PH]]:
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
-; DISABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 8
+; DISABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 7
 ; DISABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; DISABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[N]], 1
 ; DISABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -3058,7 +3058,7 @@ define void @unconditional_masked_strided2_unknown_tc(ptr noalias nocapture read
 ; ENABLED_MASKED_STRIDED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; ENABLED_MASKED_STRIDED:       [[VECTOR_PH]]:
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 7
-; ENABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 8
+; ENABLED_MASKED_STRIDED-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 7
 ; ENABLED_MASKED_STRIDED-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; ENABLED_MASKED_STRIDED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i32 [[N]], 1
 ; ENABLED_MASKED_STRIDED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[TRIP_COUNT_MINUS_1]], i64 0

@@ -124,6 +124,7 @@ public:
 
 private:
   void processCompileUnit(DICompileUnit *CU);
+  void processGlobalVariableExpression(DIGlobalVariableExpression *GVE);
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
   void processVariable(DIVariable *DV);
@@ -184,13 +185,14 @@ namespace at {
 // Utilities for enumerating storing instructions from an assignment ID.
 //
 /// A range of instructions.
-using AssignmentInstRange =
-    iterator_range<SmallVectorImpl<Instruction *>::iterator>;
+using AssignmentInstRange = ArrayRef<Instruction *>;
 /// Return a range of instructions (typically just one) that have \p ID
 /// as an attachment.
 /// Iterators invalidated by adding or removing DIAssignID metadata to/from any
 /// instruction (including by deleting or cloning instructions).
-LLVM_ABI AssignmentInstRange getAssignmentInsts(DIAssignID *ID);
+inline AssignmentInstRange getAssignmentInsts(DIAssignID *ID) {
+  return ID->getInstructions();
+}
 
 inline AssignmentInstRange getAssignmentInsts(const DbgVariableRecord *DVR) {
   assert(DVR->isDbgAssign() &&
@@ -198,12 +200,18 @@ inline AssignmentInstRange getAssignmentInsts(const DbgVariableRecord *DVR) {
   return getAssignmentInsts(DVR->getAssignID());
 }
 
+// Return the dbg_assign records linked to ID, most recently linked first. A
+// copy, as callers unlink or relink records while iterating.
+inline SmallVector<DbgVariableRecord *> getAssignmentMarkers(DIAssignID *ID) {
+  return SmallVector<DbgVariableRecord *>(llvm::reverse(ID->getRecords()));
+}
+
 /// Return a range of dbg_assign records for which \p Inst performs the
 /// assignment they encode.
 inline SmallVector<DbgVariableRecord *>
 getDVRAssignmentMarkers(const Instruction *Inst) {
   if (auto *ID = Inst->getMetadata(LLVMContext::MD_DIAssignID))
-    return cast<DIAssignID>(ID)->getAllDbgVariableRecordUsers();
+    return getAssignmentMarkers(cast<DIAssignID>(ID));
   return {};
 }
 

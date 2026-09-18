@@ -1582,6 +1582,37 @@ let Command = "scripting extension list" in {
         Desc<"Specify the scripting "
              " language. If none is specified the default scripting language "
              "is used.">;
+  def scripting_extension_list_json
+      : Option<"json", "j">,
+        Desc<"Output the scripted extension list in json format.">;
+}
+
+let Command = "scripting extension generate" in {
+  def scripting_extension_generate_all_methods
+      : Option<"all", "a">,
+        Desc<"Generate all the extension methods, not only the abstract ones.">;
+  def scripting_extension_generate_language
+      : Option<"language", "l">,
+        EnumArg<"ScriptLang">,
+        Desc<"Specify the scripting language. If none is specified the "
+             "default scripting language is used.">;
+  def scripting_extension_generate_class_prefix
+      : Option<"name", "n">,
+        Arg<"ClassName">,
+        Required,
+        Desc<"Specify the class prefix name to include in the generated class "
+             "definitions.">;
+  def scripting_extension_generate_output_file
+      : Option<"output", "o">,
+        Arg<"Filename">,
+        Desc<"File location where the extension is generated.">;
+  def scripting_extension_generate_open_editor
+      : Option<"edit", "e">,
+        Arg<"Boolean">,
+        Desc<"Open the generated file in an external editor after writing "
+             "it to disk. Defaults to true; pass `-e false` to skip "
+             "opening the editor (e.g. under SSH without X forwarding, "
+             "or in scripted runs).">;
 }
 
 let Command = "source info" in {

@@ -153,12 +153,14 @@ lr_mask_between:
 ldr x0, [x12, #8]
 ldr x30, [x12, #16]
 ldr x1, [x12, #24]
+ret
 // CHECK-LABEL: lr_mask_between:
 // CHECK-NEXT: add x28, x27, w12, uxtw
 // CHECK-NEXT: ldr x0, [x28, #8]
 // CHECK-NEXT: ldr x30, [x28, #16]
-// CHECK-NEXT: add x30, x27, w30, uxtw
 // CHECK-NEXT: ldr x1, [x28, #24]
+// CHECK-NEXT: add x30, x27, w30, uxtw
+// CHECK-NEXT: ret
 
 // A .lfi_rewrite_disable region invalidates the guard, since the instructions
 // inside it bypass the rewriter and may modify the base register or x28.

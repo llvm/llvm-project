@@ -16,7 +16,9 @@
 
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/Types.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
+#include <memory>
 
 namespace llvm {
 namespace abi {
@@ -44,11 +46,12 @@ struct ABICompatInfo {
   bool ClassifyIntegerMMXAsSSE : 1;
   bool HonorsRevision98 : 1;
   bool Clang11Compat : 1;
+  bool ClassifyUnnamedBitFields : 1;
 
   ABICompatInfo()
       : PassInt128VectorsInMem(true), ReturnCXXRecordGreaterThan128InMem(true),
         ClassifyIntegerMMXAsSSE(true), HonorsRevision98(true),
-        Clang11Compat(true) {}
+        Clang11Compat(true), ClassifyUnnamedBitFields(true) {}
 
   /// Return flags matching the ABI emitted by the given Clang major version.
   // TODO: fill in per-version flag overrides.
@@ -61,9 +64,13 @@ class TargetInfo {
 private:
   ABICompatInfo CompatInfo;
 
+protected:
+  TypeBuilder &TB;
+
 public:
-  TargetInfo() : CompatInfo() {}
-  explicit TargetInfo(const ABICompatInfo &Info) : CompatInfo(Info) {}
+  explicit TargetInfo(TypeBuilder &Builder) : CompatInfo(), TB(Builder) {}
+  TargetInfo(TypeBuilder &Builder, const ABICompatInfo &Info)
+      : CompatInfo(Info), TB(Builder) {}
 
   virtual ~TargetInfo() = default;
 
@@ -80,9 +87,79 @@ protected:
   LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty,
                                            bool ByVal = true) const;
   LLVM_ABI bool isAggregateTypeForABI(const Type *Ty) const;
+
+  /// If Ty is a transparent union, return its first field type; otherwise
+  /// return Ty unchanged.
+  LLVM_ABI const Type *useFirstFieldIfTransparentUnion(const Type *Ty) const;
+
+  /// Apply rules for classifying return types that are common to all targets.
+  LLVM_ABI bool maybeCommonClassifyReturnType(FunctionInfo &FI) const;
+
+  /// Return true if \p Ty is a valid base type for a homogeneous aggregate.
+  virtual bool isHomogeneousAggregateBaseType(const Type *Ty) const {
+    return false;
+  }
+
+  /// Return true if a homogeneous aggregate with \p Members copies of \p Base
+  /// is small enough to be passed in registers for this ABI.
+  virtual bool isHomogeneousAggregateSmallEnough(const Type *Base,
+                                                 uint64_t Members) const {
+    return false;
+  }
+
+  /// Return true if zero-length bitfields should be ignored when deciding
+  /// whether an aggregate is homogeneous.
+  virtual bool isZeroLengthBitfieldPermittedInHomogeneousAggregate() const {
+    return false;
+  }
+
+  /// Return true if the C++ ABI permits \p RT to be a homogeneous aggregate.
+  virtual bool isPermittedToBeHomogeneousAggregate(const RecordType *RT) const {
+    return true;
+  }
+
+  /// Return true if \p Ty is an ELFv2-style homogeneous aggregate. \p Base is
+  /// set to the base element type and \p Members to the number of base
+  /// elements.
+  LLVM_ABI bool isHomogeneousAggregate(const Type *Ty, const Type *&Base,
+                                       uint64_t &Members) const;
 };
 
 LLVM_ABI std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
+
+/// The AVX ABI level for X86 targets.
+enum class X86AVXABILevel {
+  None,
+  AVX,
+  AVX512,
+  Last = AVX512 // must be last
+};
+
+LLVM_ABI std::unique_ptr<TargetInfo>
+createX86_64TargetInfo(TypeBuilder &TB, X86AVXABILevel AVXLevel,
+                       bool Has64BitPointers, const ABICompatInfo &Compat);
+
+enum class AArch64ABIKind {
+  AAPCS = 0,
+  DarwinPCS,
+  Win64,
+  AAPCSSoft,
+};
+
+/// Target / language flags that affect AArch64 ABI classification.
+/// Callers (e.g. Clang) resolve Triple and LangOptions into these flags
+/// rather than passing a Triple into the ABI library.
+struct AArch64ABIOptions {
+  AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
+  bool IsILP32 = false;
+  bool IsMicrosoftCXXABI = false;
+
+  AArch64ABIOptions() = default;
+  explicit AArch64ABIOptions(AArch64ABIKind Kind) : Kind(Kind) {}
+};
+
+LLVM_ABI std::unique_ptr<TargetInfo>
+createAArch64TargetInfo(TypeBuilder &TB, const AArch64ABIOptions &Opts);
 
 } // namespace abi
 } // namespace llvm
