@@ -879,11 +879,17 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
     Value *RHS;
     CmpPredicate Pred;
     auto m_V = m_CombineOr(m_Specific(V), m_PtrToInt(m_Specific(V)));
-    if (!match(I->getArgOperand(0), m_c_ICmp(Pred, m_V, m_Value(RHS))))
-      continue;
 
-    if (cmpExcludesZero(Pred, RHS) && isValidAssumeForContext(I, Q))
+    if (match(I->getArgOperand(0), m_c_ICmp(Pred, m_V, m_Value(RHS))) &&
+        cmpExcludesZero(Pred, RHS) && isValidAssumeForContext(I, Q))
       return true;
+    const APInt *AndC;
+    if (match(I->getArgOperand(0),
+              m_c_ICmp(Pred, m_And(m_Specific(V), m_APInt(AndC)), m_Zero())) &&
+        Pred == CmpInst::ICMP_NE && !AndC->isZero() &&
+        isValidAssumeForContext(I, Q))
+      return true;
+    // Check whether the assumption proves V is non-zero through an AND.
   }
 
   return false;
