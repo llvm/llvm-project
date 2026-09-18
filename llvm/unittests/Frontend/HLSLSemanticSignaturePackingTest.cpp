@@ -192,7 +192,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, EmptySignature) {
 
   for (PackingMethod Method :
        {PackingMethod::Stacked, PackingMethod::PrefixStable})
-    expectPacking(Method, Config, /*ExpectedRows=*/0, {});
+    verifyPacking(Method, Config, /*ExpectedRows=*/0, {});
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, SkipsNotAllocatedElements) {
@@ -282,7 +282,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, CoPackingDependsOnMethod) {
 
   // Prefix-stable layout:
   // reg0: A.x | B.y | C.z | D.w
-  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/1,
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/1,
                 {{/*Row=*/0, /*Col=*/0},
                  {/*Row=*/0, /*Col=*/1},
                  {/*Row=*/0, /*Col=*/2},
@@ -426,7 +426,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableWhenAppended) {
   // Expected layout:
   // reg0: A.xyz | unused.w
   // reg1: B.xy  | unused.zw
-  expectPacking(PackingMethod::PrefixStable, PrefixConfig, /*ExpectedRows=*/2,
+  verifyPacking(PackingMethod::PrefixStable, PrefixConfig, /*ExpectedRows=*/2,
                 {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
 
   // struct Extended {
@@ -445,7 +445,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableWhenAppended) {
   //
   // C is packed into the gap A left behind, and A and B keep the locations
   // they were given in Prefix.
-  expectPacking(
+  verifyPacking(
       PackingMethod::PrefixStable, ExtendedConfig, /*ExpectedRows=*/2,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/0, /*Col=*/3}});
 }
@@ -467,7 +467,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableFillsAllRows) {
                                dxbc::PSV::InterpolationMode::Linear});
 
   SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
-  ASSERT_THAT_ERROR(pack(PackingMethod::PrefixStable, Elements, Config),
+  ASSERT_THAT_EXPECTED(pack(PackingMethod::PrefixStable, Elements, Config),
                     Succeeded());
 
   for (unsigned I = 0; I != MaxSignatureRows; ++I) {
@@ -514,7 +514,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableGeneralPacking) {
   // reg1: B.xy | D.zw
   // reg2: C.xyz | G.w
   // reg3: E.x | unused.yzw
-  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/4,
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/4,
                 {{/*Row=*/0, /*Col=*/0},
                  {/*Row=*/1, /*Col=*/0},
                  {/*Row=*/2, /*Col=*/0},
@@ -543,7 +543,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableNative16BitWidth) {
   // Expected layout:
   // reg0: A.xy | C.zw
   // reg1: B.xy | unused.zw
-  expectPacking(
+  verifyPacking(
       PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/0, /*Col=*/2}});
 }
@@ -567,7 +567,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableInterpolationMode) {
   // Expected layout:
   // reg0: A.xy | C.zw
   // reg1: B.xy | unused.zw
-  expectPacking(
+  verifyPacking(
       PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/0, /*Col=*/2}});
 }
@@ -587,7 +587,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableCompatible16BitTypes) {
 
   // Expected layout:
   // reg0: A.x | B.yzw
-  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/1,
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/1,
                 {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/1}});
 }
 
@@ -613,7 +613,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableNormalized16BitTypes) {
   // Expected layout:
   // reg0: A.x | B.y | unused.zw
   // reg1: C.x | unused.yzw
-  expectPacking(
+  verifyPacking(
       PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/1}, {/*Row=*/1, /*Col=*/0}});
 }
@@ -642,7 +642,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableMinPrecisionWidth) {
   // Expected layout:
   // reg0: A.xy | B.zw
   // reg1: C.xy | unused.zw
-  expectPacking(
+  verifyPacking(
       PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/2}, {/*Row=*/1, /*Col=*/0}});
 }
@@ -669,7 +669,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableUndefinedInterpMode) {
   // Expected layout:
   // reg0: A.xy | B.z | unused.w
   // reg1: C.x  | unused.yzw
-  expectPacking(
+  verifyPacking(
       PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/2}, {/*Row=*/1, /*Col=*/0}});
 }
@@ -697,7 +697,7 @@ TEST_F(HLSLSemanticSignaturePackingTest,
   // Expected layout:
   // reg0: A.xy | C.zw
   // reg1: B.xy | unused.zw
-  expectPacking(
+  verifyPacking(
       PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/0, /*Col=*/2}});
 }
@@ -726,7 +726,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableDistinctInterpModes) {
   // reg0: A.xy | unused.zw
   // reg1: B.xy | unused.zw
   // reg2: C.xy | unused.zw
-  expectPacking(
+  verifyPacking(
       PackingMethod::PrefixStable, Config, /*ExpectedRows=*/3,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/2, /*Col=*/0}});
 }
@@ -757,7 +757,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableSystemValueOrdering) {
 
   // Expected layout:
   // reg0: A.x | Position.y | IsFrontFace.z | unused.w
-  expectPacking(
+  verifyPacking(
       PackingMethod::PrefixStable, Config, /*ExpectedRows=*/1,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/1}, {/*Row=*/0, /*Col=*/2}});
 }
@@ -782,7 +782,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableArbitraryNotRightOfSV) {
   // Expected layout:
   // reg0: Position.xy | unused.zw
   // reg1: A.xy        | unused.zw
-  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
                 {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
 }
 
@@ -809,7 +809,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableSGVIsRightmost) {
   // Expected layout:
   // reg0: IsFrontFace.x | unused.yzw
   // reg1: A.x | Position.y | unused.zw
-  expectPacking(
+  verifyPacking(
       PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/1, /*Col=*/1}});
 }
@@ -842,7 +842,7 @@ TEST_F(HLSLSemanticSignaturePackingTest,
                                /*Cols=*/3, dxil::ElementType::I32,
                                dxbc::PSV::InterpolationMode::Constant});
   // The last element is the one that no longer fits.
-  expectPackingError(PackingMethod::PrefixStable, Config,
+  verifyPackingError(PackingMethod::PrefixStable, Config,
                      SignaturePackingError::SignatureOverflow,
                      /*ExpectedElementIndex=*/MaxSignatureRows);
 }
@@ -879,7 +879,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableIndexedRanges) {
   // reg0: A[0].xy | B[0].z | C.w
   // reg1: A[1].xy | B[1].z | unused.w
   // reg2: Position.x | unused.yzw
-  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/3,
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/3,
                 {{/*Row=*/0, /*Col=*/0},
                  {/*Row=*/0, /*Col=*/2},
                  {/*Row=*/0, /*Col=*/3},
@@ -906,7 +906,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableIndexedAfterSystemValue) {
   // reg0: Position.x | unused.yzw
   // reg1: A[0].xyz   | unused.w
   // reg2: A[1].xyz   | unused.w
-  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/3,
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/3,
                 {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
 }
 
@@ -933,7 +933,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableTessFactors) {
   // Expected layout:
   // reg0: Data[0].xyz | TessFactor[0].w
   // reg1: Data[1].xyz | TessFactor[1].w
-  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
                 {{/*Row=*/0, /*Col=*/3}, {/*Row=*/0, /*Col=*/0}});
 }
 
@@ -956,7 +956,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableSingleRowTessFactor) {
   // Expected layout:
   // reg0: TessFactor.x | unused.yzw
   // reg1: Data.xyz     | unused.w
-  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
                 {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
 }
 
@@ -984,7 +984,7 @@ TEST_F(HLSLSemanticSignaturePackingTest,
   // reg2: Data[2].xyz | unused.w
   // reg3: unused.xyz  | TessFactor[0].w
   // reg4: unused.xyz  | TessFactor[1].w
-  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/5,
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/5,
                 {{/*Row=*/0, /*Col=*/0}, {/*Row=*/3, /*Col=*/3}});
 }
 
@@ -1025,7 +1025,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCull) {
   // reg1: Clip0.x         | Cull1.yzw
   // reg2: Cull0.x         | Clip1.yz | unused.w
   // reg3: AfterClipCull.x | unused.yzw
-  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/4,
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/4,
                 {{/*Row=*/0, /*Col=*/0},
                  {/*Row=*/1, /*Col=*/0},
                  {/*Row=*/1, /*Col=*/1},
@@ -1065,7 +1065,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableIndexedClipCull) {
   // reg1: Clip0.x         | Cull1[0].yz | Clip1.w
   // reg2: unused.x        | Cull1[1].yz | unused.w
   // reg3: AfterClipCull.x | unused.yzw
-  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/4,
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/4,
                 {{/*Row=*/0, /*Col=*/0},
                  {/*Row=*/1, /*Col=*/0},
                  {/*Row=*/1, /*Col=*/1},
@@ -1104,7 +1104,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableMultipleIndexedClipCull) {
   // reg1: Clip0.x         | Cull1[0].yz | Clip1[0].w
   // reg2: unused.x        | Cull1[1].yz | Clip1[1].w
   // reg3: AfterClipCull.x | unused.yzw
-  expectPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/4,
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/4,
                 {{/*Row=*/0, /*Col=*/0},
                  {/*Row=*/1, /*Col=*/0},
                  {/*Row=*/1, /*Col=*/1},
@@ -1132,7 +1132,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCullFillsTwoRows) {
   // Expected layout:
   // reg0: Clip0.xyzw
   // reg1: Cull0.xyzw
-  expectPacking(PackingMethod::PrefixStable, Config,
+  verifyPacking(PackingMethod::PrefixStable, Config,
                 /*ExpectedRows=*/MaxClipCullRows,
                 {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
 }
@@ -1162,7 +1162,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableSeparatesClipCullRows) {
   // reg0:     Clip0.xyz | unused.w
   // reg1-30:  A[0-29].xyzw
   // reg31:    Cull0.xyz | unused.w
-  expectPacking(PackingMethod::PrefixStable, Config,
+  verifyPacking(PackingMethod::PrefixStable, Config,
                 /*ExpectedRows=*/MaxSignatureRows,
                 {{/*Row=*/0, /*Col=*/0},
                  {/*Row=*/1, /*Col=*/0},
@@ -1192,7 +1192,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCullAsArbitrary) {
   // reg0: Clip0.xyz | unused.w
   // reg1: Clip1.xyz | unused.w
   // reg2: Cull0.xyz | unused.w
-  expectPacking(
+  verifyPacking(
       PackingMethod::PrefixStable, Config, /*ExpectedRows=*/3,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/2, /*Col=*/0}});
 }
@@ -1221,7 +1221,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCullWhenAppended) {
   // reg0: First.xyz | unused.w
   // reg1: Clip0.x   | Cull1[0].yz | unused.w
   // reg2: unused.x  | Cull1[1].yz | unused.w
-  expectPacking(
+  verifyPacking(
       PackingMethod::PrefixStable, PrefixConfig, /*ExpectedRows=*/3,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/1, /*Col=*/1}});
 
@@ -1241,7 +1241,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCullWhenAppended) {
   // reg1: Clip0.x         | Cull1[0].yz | Clip1.w
   // reg2: unused.x        | Cull1[1].yz | unused.w
   // reg3: AfterClipCull.x | unused.yzw
-  expectPacking(PackingMethod::PrefixStable, ExtendedConfig, /*ExpectedRows=*/4,
+  verifyPacking(PackingMethod::PrefixStable, ExtendedConfig, /*ExpectedRows=*/4,
                 {{/*Row=*/0, /*Col=*/0},
                  {/*Row=*/1, /*Col=*/0},
                  {/*Row=*/1, /*Col=*/1},
@@ -1263,7 +1263,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableRejectsClipCullOverflow) {
         dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
        {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/3,
         dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
-  expectPackingError(PackingMethod::PrefixStable, Config,
+  verifyPackingError(PackingMethod::PrefixStable, Config,
                      SignaturePackingError::ClipCullOverflow,
                      /*ExpectedElementIndex=*/2);
 }
@@ -1282,7 +1282,7 @@ TEST_F(HLSLSemanticSignaturePackingTest,
         dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear},
        {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/2,
         dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
-  expectPackingError(PackingMethod::PrefixStable, Config,
+  verifyPackingError(PackingMethod::PrefixStable, Config,
                      SignaturePackingError::ClipCullOverflow,
                      /*ExpectedElementIndex=*/2);
 }
@@ -1325,7 +1325,7 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableGeometryStreams) {
   // stream0 reg0: A.xyzw
   // stream0 reg1: C.xy | unused.zw
   // stream1 reg0: B.xyzw
-  expectPacking(
+  verifyPacking(
       PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
 }
