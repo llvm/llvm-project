@@ -1443,8 +1443,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   bool HasFP = false;
   bool HasBP = false;
-  uint32_t NumBytes = MFI.getStackSize();
-  uint32_t RoundedSize = NumBytes;
+  uint64_t NumBytes = MFI.getStackSize();
+  uint64_t RoundedSize = NumBytes;
 
   // Functions that never return don't need to save and restore the FP or BP.
   const Function &F = MF.getFunction();
@@ -1496,7 +1496,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (HasFP) {
-    const unsigned Alignment = MFI.getMaxAlign().value();
+    const uint64_t Alignment = MFI.getMaxAlign().value();
 
     RoundedSize += Alignment;
     if (LiveUnits.empty()) {

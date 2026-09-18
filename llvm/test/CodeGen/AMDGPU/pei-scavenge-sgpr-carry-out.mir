@@ -61,7 +61,7 @@ body:             |
     ; CHECK-NEXT: $sgpr40 = frame-setup COPY $sgpr33
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr40
     ; CHECK-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; CHECK-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; CHECK-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
     ; CHECK-NEXT: $sgpr41 = frame-setup COPY $sgpr34
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr41
     ; CHECK-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -141,7 +141,7 @@ body:             |
     ; CHECK-NEXT: $sgpr29 = frame-setup COPY $sgpr33
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr29
     ; CHECK-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; CHECK-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; CHECK-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
     ; CHECK-NEXT: $sgpr40 = frame-setup COPY $sgpr34
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr40
     ; CHECK-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -220,7 +220,7 @@ body:             |
     ; CHECK-NEXT: $sgpr28 = frame-setup COPY $sgpr33
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr28
     ; CHECK-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; CHECK-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; CHECK-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
     ; CHECK-NEXT: $sgpr29 = frame-setup COPY $sgpr34
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr29
     ; CHECK-NEXT: $sgpr34 = frame-setup COPY $sgpr32
@@ -298,7 +298,7 @@ body:             |
     ; CHECK-NEXT: $sgpr28 = frame-setup COPY $sgpr33
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION register $sgpr33, $sgpr28
     ; CHECK-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
-    ; CHECK-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
+    ; CHECK-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, -524288, implicit-def dead $scc
     ; CHECK-NEXT: $sgpr29 = frame-setup COPY $sgpr34
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION register $sgpr34, $sgpr29
     ; CHECK-NEXT: $sgpr34 = frame-setup COPY $sgpr32
