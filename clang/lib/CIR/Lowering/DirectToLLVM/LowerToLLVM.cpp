@@ -430,15 +430,44 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
   return value;
 }
 
+static mlir::LLVM::ModRefInfo convertModRefInfo(cir::ModRefInfo info) {
+  switch (info) {
+  case cir::ModRefInfo::NoModRef:
+    return mlir::LLVM::ModRefInfo::NoModRef;
+  case cir::ModRefInfo::Ref:
+    return mlir::LLVM::ModRefInfo::Ref;
+  case cir::ModRefInfo::Mod:
+    return mlir::LLVM::ModRefInfo::Mod;
+  case cir::ModRefInfo::ModRef:
+    return mlir::LLVM::ModRefInfo::ModRef;
+  }
+  llvm_unreachable("unhandled cir::ModRefInfo");
+}
+
+/// A null input stays null, which is how both dialects spell unknown effects.
+static mlir::LLVM::MemoryEffectsAttr
+convertMemoryEffects(mlir::MLIRContext *ctx, cir::MemoryEffectsAttr effects) {
+  if (!effects)
+    return {};
+
+  return mlir::LLVM::MemoryEffectsAttr::get(
+      ctx, convertModRefInfo(effects.getOther()),
+      convertModRefInfo(effects.getArgMem()),
+      convertModRefInfo(effects.getInaccessibleMem()),
+      convertModRefInfo(effects.getErrnoMem()),
+      convertModRefInfo(effects.getTargetMem0()),
+      convertModRefInfo(effects.getTargetMem1()));
+}
+
 static void convertCallEffects(mlir::Operation *callOp, bool isNothrow,
-                               mlir::LLVM::MemoryEffectsAttr effects,
+                               cir::MemoryEffectsAttr effects,
                                mlir::LLVM::MemoryEffectsAttr &memoryEffect,
                                bool &noUnwind, bool &willReturn,
                                bool &noReturn) {
-  memoryEffect = effects;
-  // CIR keeps two separate cannot-unwind facts, nothrow for a callee declared
-  // not to throw and nounwind for a const or pure callee.  LLVM has only
-  // nounwind, so either one sets it.
+  memoryEffect = convertMemoryEffects(callOp->getContext(), effects);
+  // CIR spells two separate cannot-unwind facts, nothrow for a callee
+  // declared not to throw and nounwind for one whose effects rule out
+  // unwinding.  LLVM has only nounwind, so either one sets it.
   noUnwind = isNothrow || callOp->hasAttr(CIRDialect::getNoUnwindAttrName());
   willReturn = callOp->hasAttr(CIRDialect::getWillReturnAttrName());
   noReturn = callOp->hasAttr(CIRDialect::getNoReturnAttrName());
@@ -2786,8 +2815,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
 
-  if (mlir::LLVM::MemoryEffectsAttr effects = op.getMemoryEffectsAttr())
-    fn.setMemoryEffectsAttr(effects);
+  if (cir::MemoryEffectsAttr effects = op.getMemoryEffectsAttr())
+    fn.setMemoryEffectsAttr(convertMemoryEffects(fn.getContext(), effects));
 
   if (op->hasAttr(CIRDialect::getNoUnwindAttrName()))
     fn.setNoUnwind(true);

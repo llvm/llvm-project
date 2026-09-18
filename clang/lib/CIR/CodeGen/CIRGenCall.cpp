@@ -390,20 +390,17 @@ void CIRGenModule::constructAttributeList(
 
     assert(!cir::MissingFeatures::opCallAttrs());
 
-    std::optional<mlir::LLVM::ModRefInfo> access;
+    std::optional<cir::ModRefInfo> access;
     if (targetDecl->hasAttr<ConstAttr>())
-      access = mlir::LLVM::ModRefInfo::NoModRef;
+      access = cir::ModRefInfo::NoModRef;
     else if (targetDecl->hasAttr<PureAttr>())
-      access = mlir::LLVM::ModRefInfo::Ref;
+      access = cir::ModRefInfo::Ref;
 
     if (access) {
       // 'const' and 'pure' describe the callee as a whole, so every class of
       // memory carries the same access.
       attrs.set(cir::CIRDialect::getMemoryEffectsAttrName(),
-                mlir::LLVM::MemoryEffectsAttr::get(
-                    &getMLIRContext(), /*other=*/*access, /*argMem=*/*access,
-                    /*inaccessibleMem=*/*access, /*errnoMem=*/*access,
-                    /*targetMem0=*/*access, /*targetMem1=*/*access));
+                cir::MemoryEffectsAttr::get(&getMLIRContext(), *access));
       // 'const' and 'pure' attributed functions are also nounwind.
       addUnitAttr(cir::CIRDialect::getNoUnwindAttrName());
       // gcc specifies that 'const' and 'pure' functions cannot have infinite

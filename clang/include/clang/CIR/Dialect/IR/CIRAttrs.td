@@ -1986,6 +1986,83 @@ def CIR_BlockAddrDiffAttr
 }
 
 //===----------------------------------------------------------------------===//
+// Memory Effects
+//===----------------------------------------------------------------------===//
+
+def CIR_ModRefInfo : CIR_I32Enum<
+    "ModRefInfo", "whether memory may be read and/or written", [
+      I32EnumCase<"NoModRef", 0, "none">,
+      I32EnumCase<"Ref", 1, "read">,
+      I32EnumCase<"Mod", 2, "write">,
+      I32EnumCase<"ModRef", 3, "readwrite">
+]> {
+  let description = [{
+    The access a function or callee may perform on a class of memory.  Which
+    class is given by the `#cir.memory_effects` parameter that holds the
+    value.  The possible values are:
+
+    - `none`: the memory is neither read nor written.
+    - `read`: the memory may be read, but it is not written.
+    - `write`: the memory may be written, but it is not read.
+    - `readwrite`: the memory may be both read and written.
+  }];
+}
+
+def CIR_MemoryEffectsAttr : CIR_Attr<"MemoryEffects", "memory_effects"> {
+  let summary = "Describes the possible memory effects of a function or callee";
+  let description = [{
+    Specifies the possible memory effects of a function or callee.  Memory
+    is divided into classes, each carrying its own access, so that a promise
+    about one class need not be a promise about all of them:
+
+    - `other`: the access for every location not named by one of the other
+      parameters, including locations with no class of their own such as
+      globals and captured pointers.
+    - `arg_mem`: accesses based on the function's pointer arguments.
+    - `inaccessible_mem`: accesses to memory the current module cannot reach,
+      often used to model the control dependencies of intrinsics.
+    - `errno_mem`: accesses to the `errno` variable.
+    - `target_mem0`, `target_mem1`: target-specific state.
+
+    The classes and their meanings match the LLVM dialect's
+    `#llvm.memory_effects`, which lowering converts this attribute to.
+
+    An absent attribute means the effects are unknown, which is the
+    conservative default and what a function with no memory annotation gets.
+    Lowering leaves such a function with no memory attribute at all.
+
+    Example:
+    ```
+    #cir.memory_effects<other = read, arg_mem = readwrite,
+                        inaccessible_mem = none, errno_mem = none,
+                        target_mem0 = none, target_mem1 = none>
+    ```
+
+    The attribute has no keyword syntax, so on an operation it is written in
+    the attribute dictionary:
+
+    ```
+    cir.func private @f() attributes {memory_effects = #cir.memory_effects<...>}
+    %0 = cir.call @f() {memory_effects = #cir.memory_effects<...>} : () -> !s32i
+    ```
+  }];
+
+  let parameters = (ins "ModRefInfo":$other, "ModRefInfo":$arg_mem,
+                        "ModRefInfo":$inaccessible_mem,
+                        "ModRefInfo":$errno_mem, "ModRefInfo":$target_mem0,
+                        "ModRefInfo":$target_mem1);
+
+  let builders = [
+    AttrBuilder<(ins "ModRefInfo":$all), [{
+      return $_get($_ctxt, all, all, all, all, all, all);
+    }]>
+  ];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // StaticLocalGuardAttr
 //===----------------------------------------------------------------------===//
 

@@ -66,12 +66,6 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
           >(attr))
     return true;
 
-  // Memory effects come from the LLVM dialect and hold nothing but ModRefInfo
-  // enums, so no CIR type can reach them.  Attributes declared in CIR get this
-  // through canHaveIllegalCXXABIType, which is not available here.
-  if (isa<mlir::LLVM::MemoryEffectsAttr>(attr))
-    return true;
-
   // Data Member and method are ALWAYS illegal.
   if (isa<cir::DataMemberAttr, cir::DataMemberOffsetAttr, cir::MethodAttr>(
           attr))

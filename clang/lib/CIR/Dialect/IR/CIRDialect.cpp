@@ -1308,6 +1308,29 @@ parseTryCallDestinations(mlir::OpAsmParser &parser,
   return mlir::success();
 }
 
+/// Reject an effect attribute of the wrong kind in an explicit attribute
+/// dictionary.  Where these are declared they are stored as properties, so a
+/// value of the wrong kind would be dropped without a diagnostic.
+static ParseResult checkEffectAttrKinds(mlir::OpAsmParser &parser,
+                                        llvm::SMLoc loc,
+                                        const mlir::NamedAttrList &attrs) {
+  if (mlir::Attribute effects =
+          attrs.get(CIRDialect::getMemoryEffectsAttrName()))
+    if (!mlir::isa<cir::MemoryEffectsAttr>(effects))
+      return parser.emitError(loc, "attribute '")
+             << CIRDialect::getMemoryEffectsAttrName()
+             << "' must be a #cir.memory_effects attribute";
+
+  for (llvm::StringRef name :
+       {CIRDialect::getNoUnwindAttrName(), CIRDialect::getWillReturnAttrName()})
+    if (mlir::Attribute flag = attrs.get(name))
+      if (!mlir::isa<mlir::UnitAttr>(flag))
+        return parser.emitError(loc, "attribute '")
+               << name << "' must be a unit attribute";
+
+  return mlir::success();
+}
+
 static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
                                          mlir::OperationState &result,
                                          bool hasDestinationBlocks = false) {
@@ -1357,7 +1380,11 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
     result.addAttribute(CIRDialect::getWillReturnAttrName(),
                         mlir::UnitAttr::get(parser.getContext()));
 
+  llvm::SMLoc attrsLoc = parser.getCurrentLocation();
   if (parser.parseOptionalAttrDict(result.attributes))
+    return ::mlir::failure();
+
+  if (checkEffectAttrKinds(parser, attrsLoc, result.attributes).failed())
     return ::mlir::failure();
 
   if (parser.parseColon())
@@ -2836,11 +2863,13 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   // Parse the rest of the attributes.
   NamedAttrList parsedAttrs;
+  llvm::SMLoc attrsLoc = parser.getCurrentLocation();
   if (parser.parseOptionalAttrDictWithKeyword(parsedAttrs))
     return failure();
 
-  // memory_effects is the only declared attribute with no dedicated syntax, so
-  // it is the only one the explicit list may carry.
+  // Every other declared attribute has dedicated syntax above, so
+  // memory_effects is the only one the explicit list may carry.  Without the
+  // exception cir.func could not parse back what it prints.
   for (StringRef disallowed : cir::FuncOp::getAttributeNames()) {
     if (disallowed == CIRDialect::getMemoryEffectsAttrName())
       continue;
@@ -2850,23 +2879,8 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
              << "' should not be specified in the explicit attribute list";
   }
 
-  // Being a declared attribute, memory_effects is stored as a property, so a
-  // value of the wrong kind would be dropped without a diagnostic.
-  if (mlir::Attribute effects =
-          parsedAttrs.get(CIRDialect::getMemoryEffectsAttrName()))
-    if (!mlir::isa<mlir::LLVM::MemoryEffectsAttr>(effects))
-      return parser.emitError(loc, "attribute '")
-             << CIRDialect::getMemoryEffectsAttrName()
-             << "' must be a #llvm.memory_effects attribute";
-
-  // These two are discardable on a function, so nothing else checks that they
-  // carry the unit value the passes testing for their presence assume.
-  for (llvm::StringRef name :
-       {CIRDialect::getNoUnwindAttrName(), CIRDialect::getWillReturnAttrName()})
-    if (mlir::Attribute flag = parsedAttrs.get(name))
-      if (!mlir::isa<mlir::UnitAttr>(flag))
-        return parser.emitError(loc, "attribute '")
-               << name << "' must be a unit attribute";
+  if (checkEffectAttrKinds(parser, attrsLoc, parsedAttrs).failed())
+    return failure();
 
   state.attributes.append(parsedAttrs);
 

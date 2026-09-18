@@ -79,8 +79,8 @@ mlir::Block *cir::replaceCallWithTryCall(cir::CallOp callOp,
 
   // Copy all attributes from the original call except those already set by
   // TryCallOp::create or that are operation-specific and should not be copied.
-  // nounwind is copied even though this site has an unwind edge, because it
-  // describes the const or pure callee rather than the edge.
+  // nounwind describes the callee, so it survives the conversion even though
+  // this site gains an unwind edge.
   llvm::StringRef excludedAttrs[] = {
       cir::CIRDialect::getCalleeAttrName(), // Set by create()
       cir::CIRDialect::getOperandSegmentSizesAttrName(),

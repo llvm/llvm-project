@@ -8,7 +8,7 @@ extern "C" {
 
 // FIXME: We should figure out how to better print this on functions in the
 // future.
-// CIR: cir.func{{.*}}@pure_func() -> !s32i attributes {{{.*}}nothrow, nounwind, willreturn, memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read, errnoMem = read, targetMem0 = read, targetMem1 = read>} {
+// CIR: cir.func{{.*}}@pure_func() -> !s32i attributes {{{.*}}nothrow, nounwind, willreturn, memory_effects = #cir.memory_effects<other = read, arg_mem = read, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>} {
 // LLVM: Function Attrs: {{.*}}nounwind{{.*}}willreturn{{.*}}memory(read)
 // LLVM: define{{.*}} @pure_func() #{{.*}} {
 // OGCG: Function Attrs: {{.*}}nounwind{{.*}}willreturn{{.*}}memory(read)
@@ -16,7 +16,7 @@ extern "C" {
 __attribute__((pure))
 int pure_func() { return 2;}
 
-// CIR: cir.func{{.*}}@const_func() -> !s32i attributes {{{.*}}nothrow, nounwind, willreturn, memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>} {
+// CIR: cir.func{{.*}}@const_func() -> !s32i attributes {{{.*}}nothrow, nounwind, willreturn, memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} {
 // LLVM: Function Attrs: {{.*}}nounwind{{.*}}willreturn{{.*}}memory(none)
 // LLVM: define{{.*}} @const_func() #{{.*}} {
 // OGCG: Function Attrs: {{.*}}nounwind{{.*}}willreturn{{.*}}memory(none)
@@ -25,11 +25,11 @@ __attribute__((const))
 int const_func() { return 1;}
 
 void use() {
-  // CIR: cir.call @pure_func() nounwind willreturn {memory_effects = #llvm.memory_effects<other = read, argMem = read, inaccessibleMem = read, errnoMem = read, targetMem0 = read, targetMem1 = read>} : () -> !s32i
+  // CIR: cir.call @pure_func() nounwind willreturn {memory_effects = #cir.memory_effects<other = read, arg_mem = read, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>} : () -> !s32i
   // LLVM: call i32 @pure_func() #[[PURE_ATTR:.*]]
   // OGCG: call i32 @pure_func() #[[PURE_ATTR:.*]]
   pure_func();
-  // CIR: cir.call @const_func() nounwind willreturn {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> !s32i
+  // CIR: cir.call @const_func() nounwind willreturn {memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : () -> !s32i
   // LLVM: call i32 @const_func() #[[CONST_ATTR:.*]]
   // OGCG: call i32 @const_func() #[[CONST_ATTR:.*]]
   const_func();
