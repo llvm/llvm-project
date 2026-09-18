@@ -240,9 +240,9 @@ static void placeAt(MutableArrayRef<SignatureRow> Rows, unsigned StartRow,
   Element.StartCol = getStartColumn(ColumnMask);
 }
 
-static bool packElement(SemanticSignatureElement &Element,
-                        MutableArrayRef<SignatureRow> Rows,
-                        const ElementPlacement &Placement) {
+static bool prefixPackElement(SemanticSignatureElement &Element,
+                              MutableArrayRef<SignatureRow> Rows,
+                              const ElementPlacement &Placement) {
   for (unsigned StartRow = 0; StartRow != Rows.size(); ++StartRow) {
     std::optional<uint8_t> ColumnMask = canPlaceAt(Rows, StartRow, Placement);
     if (!ColumnMask)
@@ -466,7 +466,7 @@ Expected<unsigned> llvm::hlsl::packSignaturePrefixStable(
                                   ClipCullStates[StreamIndex], Placement))
         return make_error<SignaturePackingError>(*Kind,
                                                  static_cast<unsigned>(Index));
-    } else if (!packElement(Element, StreamRows, Placement)) {
+    } else if (!prefixPackElement(Element, StreamRows, Placement)) {
       return make_error<SignaturePackingError>(
           SignaturePackingError::SignatureOverflow,
           static_cast<unsigned>(Index));
