@@ -32,10 +32,51 @@ if(TARGET omptarget)
   foreach(CURRENT_TARGET IN LISTS SYSTEM_TARGETS)
     string(STRIP "${CURRENT_TARGET}" CURRENT_TARGET)
 
+    string(REGEX REPLACE "-(JIT-)?LTO$" "" INPUTGEN_GPU_RT_TEST_TARGET
+                         ${CURRENT_TARGET})
+    if(INPUTGEN_GPU_RT_TEST_TARGET STREQUAL "amdgpu-amd-amdhsa" OR
+       INPUTGEN_GPU_RT_TEST_TARGET STREQUAL "amdgcn-amd-amdhsa")
+      set(INPUTGEN_GPU_RT_TEST_KEY amdgpu-amd-amdhsa)
+      set(INPUTGEN_GPU_RT_TEST_DEP inputgen-gpu-runtime-bc-amdgpu)
+    elseif(INPUTGEN_GPU_RT_TEST_TARGET STREQUAL "nvptx64-nvidia-cuda")
+      set(INPUTGEN_GPU_RT_TEST_KEY nvptx64-nvidia-cuda)
+      set(INPUTGEN_GPU_RT_TEST_DEP inputgen-gpu-runtime-bc-nvptx)
+    else()
+      unset(INPUTGEN_GPU_RT_TEST_KEY)
+      unset(INPUTGEN_GPU_RT_TEST_DEP)
+    endif()
+    set(INPUTGEN_GPU_RT_AVAILABLE FALSE)
+    set(INPUTGEN_GPU_RT_TEST_COMPILER_TRIPLE "")
+    set(INPUTGEN_GPU_RT_TEST_STATE_BC "")
+    set(INPUTGEN_GPU_RT_TEST_CALLBACKS_BC "")
+    set(INPUTGEN_GPU_RT_TEST_RUNTIME_BC "")
+    get_property(INPUTGEN_GPU_RT_SOURCE_DIR GLOBAL PROPERTY
+                 INPUTGEN_GPU_RT_SOURCE_DIR)
+    get_property(INPUTGEN_GPU_RT_INTERFACE_INCLUDE_DIR GLOBAL PROPERTY
+                 INPUTGEN_GPU_RT_INTERFACE_INCLUDE_DIR)
+    get_property(INPUTGEN_GPU_RT_LLVM_INCLUDE_DIR GLOBAL PROPERTY
+                 INPUTGEN_GPU_RT_LLVM_INCLUDE_DIR)
+    if(INPUTGEN_GPU_RT_TEST_KEY)
+      get_property(INPUTGEN_GPU_RT_TEST_DIR GLOBAL PROPERTY
+                   INPUTGEN_GPU_RT_${INPUTGEN_GPU_RT_TEST_KEY}_DIR)
+      if(INPUTGEN_GPU_RT_TEST_DIR)
+        set(INPUTGEN_GPU_RT_AVAILABLE TRUE)
+        get_property(INPUTGEN_GPU_RT_TEST_COMPILER_TRIPLE GLOBAL PROPERTY
+                     INPUTGEN_GPU_RT_${INPUTGEN_GPU_RT_TEST_KEY}_TRIPLE)
+        set(INPUTGEN_GPU_RT_TEST_STATE_BC
+            ${INPUTGEN_GPU_RT_TEST_DIR}/inputgen_gpu_entry_state.bc)
+        set(INPUTGEN_GPU_RT_TEST_CALLBACKS_BC
+            ${INPUTGEN_GPU_RT_TEST_DIR}/inputgen_gpu_entry_callbacks.bc)
+        set(INPUTGEN_GPU_RT_TEST_RUNTIME_BC
+            ${INPUTGEN_GPU_RT_TEST_DIR}/inputgen_gpu_entry_runtime.bc)
+      endif()
+    endif()
+
     add_offload_testsuite(check-libomptarget-${CURRENT_TARGET}
       "Running libomptarget tests"
       ${CMAKE_CURRENT_BINARY_DIR}/${CURRENT_TARGET}
       DEPENDS omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
+              ${INPUTGEN_GPU_RT_TEST_DEP}
       ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
     list(APPEND LIBOMPTARGET_LIT_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CURRENT_TARGET})
 
