@@ -702,3 +702,96 @@ define void @two_double(ptr %p, ptr %q) {
   store double %x1, ptr %q1
   ret void
 }
+
+define void @mixed_type_copy(ptr %dst, ptr %src) {
+; CHECK-LABEL: mixed_type_copy:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a2, a1, 16
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle64.v v8, (a2)
+; CHECK-NEXT:    addi a2, a0, 16
+; CHECK-NEXT:    vse64.v v8, (a2)
+; CHECK-NEXT:    ld a2, 32(a1)
+; CHECK-NEXT:    sd a2, 32(a0)
+; CHECK-NEXT:    addi a1, a1, 40
+; CHECK-NEXT:    vle64.v v8, (a1)
+; CHECK-NEXT:    addi a0, a0, 40
+; CHECK-NEXT:    vse64.v v8, (a0)
+; CHECK-NEXT:    ret
+  %src0 = getelementptr i8, ptr %src, i64 16
+  %dst0 = getelementptr i8, ptr %dst, i64 16
+  %v0 = load ptr, ptr %src0, align 8, !tbaa !5
+  store ptr %v0, ptr %dst0, align 8, !tbaa !5
+  %src1 = getelementptr i8, ptr %src, i64 24
+  %dst1 = getelementptr i8, ptr %dst, i64 24
+  %v1 = load ptr, ptr %src1, align 8, !tbaa !6
+  store ptr %v1, ptr %dst1, align 8, !tbaa !6
+  %src2 = getelementptr i8, ptr %src, i64 32
+  %dst2 = getelementptr i8, ptr %dst, i64 32
+  %v2 = load i64, ptr %src2, align 8, !tbaa !7
+  store i64 %v2, ptr %dst2, align 8, !tbaa !7
+  %src3 = getelementptr i8, ptr %src, i64 40
+  %dst3 = getelementptr i8, ptr %dst, i64 40
+  %v3 = load i64, ptr %src3, align 8, !tbaa !8
+  store i64 %v3, ptr %dst3, align 8, !tbaa !8
+  %src4 = getelementptr i8, ptr %src, i64 48
+  %dst4 = getelementptr i8, ptr %dst, i64 48
+  %v4 = load i64, ptr %src4, align 8, !tbaa !9
+  store i64 %v4, ptr %dst4, align 8, !tbaa !9
+  ret void
+}
+
+define void @scalar_store_merge(ptr %dst, ptr %src) #0 {
+; CHECK-LABEL: scalar_store_merge:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw a2, 0(a1)
+; CHECK-NEXT:    sw a2, 0(a0)
+; CHECK-NEXT:    lh a2, 4(a1)
+; CHECK-NEXT:    sh a2, 4(a0)
+; CHECK-NEXT:    lhu a2, 6(a1)
+; CHECK-NEXT:    lh a1, 8(a1)
+; CHECK-NEXT:    sh a2, 6(a0)
+; CHECK-NEXT:    sh a1, 8(a0)
+; CHECK-NEXT:    ret
+  %v0 = load i16, ptr %src, align 8, !tbaa !12
+  store i16 %v0, ptr %dst, align 8, !tbaa !12
+  %src1 = getelementptr i8, ptr %src, i64 2
+  %dst1 = getelementptr i8, ptr %dst, i64 2
+  %v1 = load i16, ptr %src1, align 2, !tbaa !13
+  store i16 %v1, ptr %dst1, align 2, !tbaa !13
+  %src2 = getelementptr i8, ptr %src, i64 4
+  %dst2 = getelementptr i8, ptr %dst, i64 4
+  %v2 = load i16, ptr %src2, align 4, !tbaa !14
+  store i16 %v2, ptr %dst2, align 4, !tbaa !14
+  %src3 = getelementptr i8, ptr %src, i64 6
+  %dst3 = getelementptr i8, ptr %dst, i64 6
+  %v3 = load i16, ptr %src3, align 2, !tbaa !15
+  store i16 %v3, ptr %dst3, align 2, !tbaa !15
+  %src4 = getelementptr i8, ptr %src, i64 8
+  %dst4 = getelementptr i8, ptr %dst, i64 8
+  %v4 = load i16, ptr %src4, align 8, !tbaa !16
+  store i16 %v4, ptr %dst4, align 8, !tbaa !16
+  ret void
+}
+
+!0 = !{!"Simple C/C++ TBAA"}
+!1 = !{!"omnipotent char", !0, i64 0}
+!2 = !{!"any pointer", !1, i64 0}
+!3 = !{!"long", !1, i64 0}
+!4 = !{!"copy object", !2, i64 0, !2, i64 8, !3, i64 16,
+       !3, i64 24, !3, i64 32}
+!5 = !{!4, !2, i64 0}
+!6 = !{!4, !2, i64 8}
+!7 = !{!4, !3, i64 16}
+!8 = !{!4, !3, i64 24}
+!9 = !{!4, !3, i64 32}
+!10 = !{!"short", !1, i64 0}
+!11 = !{!"short copy object", !10, i64 0, !10, i64 2, !10, i64 4,
+        !10, i64 6, !10, i64 8}
+!12 = !{!11, !10, i64 0}
+!13 = !{!11, !10, i64 2}
+!14 = !{!11, !10, i64 4}
+!15 = !{!11, !10, i64 6}
+!16 = !{!11, !10, i64 8}
+
+attributes #0 = { noimplicitfloat }
