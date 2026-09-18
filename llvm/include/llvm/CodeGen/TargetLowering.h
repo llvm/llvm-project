@@ -729,6 +729,14 @@ public:
     return true;
   }
 
+  /// Return true if merging \p NumStores stores of \p MemVT should be deferred
+  /// until other DAG combines have reached a fixed point. \p AllowVectors is
+  /// false when implicit use of vector registers is disabled.
+  virtual bool shouldDeferStoreMerging(EVT MemVT, unsigned NumStores,
+                                       bool AllowVectors) const {
+    return false;
+  }
+
   /// Returns if it's reasonable to merge stores to MemVT size.
   virtual bool canMergeStoresTo(unsigned AS, EVT MemVT,
                                 const MachineFunction &MF) const {

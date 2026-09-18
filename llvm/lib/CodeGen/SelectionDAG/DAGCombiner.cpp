@@ -185,6 +185,10 @@ namespace {
     /// node in SDNode::CombinerWorklistIndex.
     SmallVector<SDNode *, 64> Worklist;
 
+    /// Stores to revisit after chain combines expose more merge candidates.
+    SmallSetVector<SDNode *, 16> DeferredStoreMerges;
+    bool DeferStoreMerging = true;
+
     /// This records all nodes attempted to be added to the worklist since we
     /// considered a new worklist entry. As we keep do not add duplicate nodes
     /// in the worklist, this is different from the tail of the worklist.
@@ -296,6 +300,7 @@ namespace {
     void removeFromWorklist(SDNode *N) {
       PruningList.remove(N);
       StoreRootCountMap.erase(N);
+      DeferredStoreMerges.remove(N);
 
       int WorklistIndex = N->getCombinerWorklistIndex();
       // If not in the worklist, the index might be -1 or -2 (was combined
@@ -1877,7 +1882,20 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
   HandleSDNode Dummy(DAG.getRoot());
 
   // While we have a valid worklist entry node, try to combine it.
-  while (SDNode *N = getNextWorklistEntry()) {
+  while (true) {
+    SDNode *N = getNextWorklistEntry();
+    if (!N) {
+      if (DeferStoreMerging && !DeferredStoreMerges.empty()) {
+        // Revisit deferred stores once. Further deferral would not expose any
+        // new candidates and could make the worklist cycle forever.
+        DeferStoreMerging = false;
+        for (SDNode *Store : DeferredStoreMerges)
+          AddToWorklist(Store, /*IsCandidateForPruning=*/false);
+        DeferredStoreMerges.clear();
+        continue;
+      }
+      break;
+    }
     // If N has no uses, it is dead.  Make sure to revisit all N's operands once
     // N is deleted from the DAG, since they too may now be dead or may have a
     // reduced number of uses, allowing other xforms.
@@ -24247,6 +24265,12 @@ bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
     // There are no more stores in the list to examine.
     if (NumConsecutiveStores == 0)
       return MadeChange;
+    if (DeferStoreMerging && TLI.shouldDeferStoreMerging(
+                                 MemVT, NumConsecutiveStores, AllowVectors)) {
+      // Let chain combines expose the complete consecutive store sequence.
+      DeferredStoreMerges.insert(StoreNodes[0].MemNode);
+      return MadeChange;
+    }
 
     // We have at least 2 consecutive stores. Try to merge them.
     assert(NumConsecutiveStores >= 2 && "Expected at least 2 stores");

@@ -3279,6 +3279,26 @@ bool RISCVTargetLowering::mergeStoresAfterLegalization(EVT VT) const {
          VT.isFixedLengthVectorOf(MVT::i1);
 }
 
+bool RISCVTargetLowering::shouldDeferStoreMerging(EVT MemVT, unsigned NumStores,
+                                                  bool AllowVectors) const {
+  // A small integer merge can hide a later XLEN-wide scalar access. Once the
+  // sequence reaches XLEN, waiting can instead expose a wider RVV access.
+  if (!Subtarget.useRVVForFixedLengthVectors())
+    return false;
+
+  unsigned XLen = Subtarget.getXLen();
+  unsigned MemSizeInBits = MemVT.getSizeInBits().getFixedValue();
+  if (MemSizeInBits > XLen)
+    return false;
+
+  unsigned CurrentMergeSizeInBits = NumStores * MemSizeInBits;
+  if (MemVT.isScalarInteger() && MemSizeInBits >= 16 &&
+      CurrentMergeSizeInBits >= XLen / 2 && CurrentMergeSizeInBits < XLen)
+    return true;
+
+  return AllowVectors && CurrentMergeSizeInBits >= XLen;
+}
+
 bool RISCVTargetLowering::isLegalElementTypeForRVV(EVT ScalarTy) const {
   if (!ScalarTy.isSimple())
     return false;

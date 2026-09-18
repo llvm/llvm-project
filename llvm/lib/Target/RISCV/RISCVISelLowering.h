@@ -621,6 +621,9 @@ private:
   /// this override can be removed.
   bool mergeStoresAfterLegalization(EVT VT) const override;
 
+  bool shouldDeferStoreMerging(EVT MemVT, unsigned NumStores,
+                               bool AllowVectors) const override;
+
   /// Disable normalizing
   /// select(N0&N1, X, Y) => select(N0, select(N1, X, Y), Y) and
   /// select(N0|N1, X, Y) => select(N0, select(N1, X, Y, Y))
