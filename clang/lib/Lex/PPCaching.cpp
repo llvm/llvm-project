@@ -61,6 +61,24 @@ void Preprocessor::CommitBacktrackedTokens() {
     PopUnannotatedBacktrackTokens();
 }
 
+// Get the tokens cached since EnableBacktrackAtThisPos() and commit
+// the backtrack.
+ArrayRef<Token> Preprocessor::GetAndCommitBacktrackedTokens() {
+  assert(isBacktrackEnabled() &&
+         "Should only be called when backtracking is enabled");
+
+  auto [LastPos, Unannotated] = LastBacktrackPos();
+
+  // Get range of tokens cached since EnableBacktrackAtThisPos.
+  ArrayRef<Token> CachedRange(CachedTokens.begin() + LastPos,
+                              CachedTokens.begin() + CachedLexPos);
+
+  // Commit backtrack to keep stream advanced.
+  CommitBacktrackedTokens();
+
+  return CachedRange;
+}
+
 // Make Preprocessor re-lex the tokens that were lexed since
 // EnableBacktrackAtThisPos() was previously called.
 void Preprocessor::Backtrack() {
