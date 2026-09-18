@@ -1,0 +1,89 @@
+; REQUIRES: aarch64-registered-target
+
+; RUN: rm -rf %t && split-file %s %t
+; RUN: yaml2obj %S/Inputs/basic-events.yaml -o %t/binary
+; RUN: llvm-dwarfdump --verify %t/binary
+
+; Five samples at 0x5dc and seven at 0x5e0 map to bar's line offset 4.
+; Each instruction is four bytes long: the function total is 48 and the
+; line count is seven. Exercise the default output format and its consumer.
+; RUN: llvm-profgen --basic-events --perfscript=%t/basic.perfscript \
+; RUN:   --binary=%t/binary --output=%t/basic.prof
+; RUN: llvm-profdata merge --sample --text %t/basic.prof -o - \
+; RUN:   | FileCheck %s --match-full-lines --check-prefix=PROFILE
+; RUN: opt -passes=sample-profile -verify-each \
+; RUN:   -sample-profile-file=%t/basic.prof -S %t/input.ll \
+; RUN:   | FileCheck %s --check-prefix=LOADED
+
+; Keep the generated profile and rename the consumer function. Its summary
+; still loads, but only the matching function receives branch weights.
+; RUN: sed -e 's/@bar(/@unrelated(/' -e 's/name: "bar"/name: "unrelated"/' \
+; RUN:   %t/input.ll > %t/unrelated.ll
+; RUN: opt -passes=sample-profile -verify-each \
+; RUN:   -sample-profile-file=%t/basic.prof -S %t/unrelated.ll \
+; RUN:   | FileCheck %s --check-prefix=UNRELATED --implicit-check-not=branch_weights
+
+; PROFILE:      bar:48:0
+; PROFILE-NEXT:  0: 0
+; PROFILE-NEXT:  1: 0
+; PROFILE-NEXT:  2: 0
+; PROFILE-NEXT:  4: 7
+; PROFILE-NEXT:  5: 0
+; PROFILE-NOT:  {{.}}
+
+; LOADED-LABEL: define i32 @bar(
+; LOADED: br i1 %cond, label %hot, label %cold, {{.*}}!prof ![[WEIGHTS:[0-9]+]]
+; LOADED: !{!"function_entry_count", i64 1}
+; LOADED: ![[WEIGHTS]] = !{!"branch_weights", i32 8, i32 1}
+
+; UNRELATED-LABEL: define i32 @unrelated(
+; UNRELATED: !{i32 1, !"ProfileSummary",
+; UNRELATED: !{!"function_entry_count", i64 -1}
+
+;--- basic.perfscript
+PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/binary
+100 5005dc
+100 5005dc
+100 5005dc
+100 5005dc
+100 5005dc
+100 5005e0
+100 5005e0
+100 5005e0
+100 5005e0
+100 5005e0
+100 5005e0
+100 5005e0
+
+;--- input.ll
+source_filename = "basic-events-consumer.c"
+target triple = "aarch64-unknown-linux-gnu"
+
+define i32 @bar(i32 %x, i32 %y) #0 !dbg !5 {
+entry:
+  %cond = icmp sgt i32 %x, 0, !dbg !10
+  br i1 %cond, label %hot, label %cold, !dbg !10
+hot:
+  %add = add i32 %x, %y, !dbg !11
+  ret i32 %add, !dbg !12
+cold:
+  %sub = sub i32 %x, %y, !dbg !13
+  ret i32 %sub, !dbg !13
+}
+
+attributes #0 = { "use-sample-profile" }
+
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!7, !8}
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "test", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly)
+!1 = !DIFile(filename: "basic-events-consumer.c", directory: "/")
+!2 = !DISubroutineType(types: !3)
+!3 = !{!4, !4, !4}
+!4 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!5 = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !2, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!7 = !{i32 2, !"Dwarf Version", i32 4}
+!8 = !{i32 2, !"Debug Info Version", i32 3}
+!10 = !DILocation(line: 2, column: 1, scope: !5)
+!11 = !DILocation(line: 5, column: 1, scope: !5)
+!12 = !DILocation(line: 6, column: 1, scope: !5)
+!13 = !DILocation(line: 3, column: 1, scope: !5)
