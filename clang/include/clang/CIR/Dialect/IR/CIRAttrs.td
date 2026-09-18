@@ -2248,6 +2248,59 @@ def CIR_StaticLocalInfoAttr
 }
 
 //===----------------------------------------------------------------------===//
+// LoweringLangOptionsAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_LoweringLangOptionsAttr
+    : CIR_Attr<"LoweringLangOptions", "lowering_lang_options"> {
+  let summary = "LangOptions facts that post-CIRGen lowering consumes";
+  let description = [{
+    Serializes the subset of `clang::LangOptions` that post-CIRGen lowering
+    reads, as plain data, so a reloaded `.cir` module lowers the same way it
+    was compiled without a live `clang::LangOptions`. Only LangOpts flags with
+    no triple/module representation live here; target-derived facts (size_t
+    width, CXXABI, fp formats, etc.) are rebuilt from `cir.triple` instead.
+
+    Each bool field mirrors the like-named `LangOptions` member: `exceptions`,
+    `threadsafe_statics`, `cuda`, `cuda_is_device`, `hip`, `gpu_rdc`,
+    `openmp` (`LangOpts.OpenMP != 0`; only its on/off state matters), and
+    `openmp_is_target_device`. `clang_abi_compat` is an `i32` mirroring
+    `LangOptions::ClangABI`; it is an `i32` rather than a CIR enum because
+    `ClangABI` gains an enumerator every Clang release (see
+    `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine within a
+    single toolchain.
+
+    Example:
+    ```
+    module attributes {cir.lowering_lang_options = #cir.lowering_lang_options<
+      exceptions = false, threadsafe_statics = true, cuda = false,
+      cuda_is_device = false, hip = false, gpu_rdc = false, openmp = false,
+      openmp_is_target_device = false, clang_abi_compat = 17>} { }
+    ```
+  }];
+
+  let parameters = (ins
+    "bool":$exceptions,
+    "bool":$threadsafe_statics,
+    "bool":$cuda,
+    "bool":$cuda_is_device,
+    "bool":$hip,
+    "bool":$gpu_rdc,
+    "bool":$openmp,
+    "bool":$openmp_is_target_device,
+    "int32_t":$clang_abi_compat
+  );
+
+  let assemblyFormat = [{
+    `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
+               $gpu_rdc, $openmp, $openmp_is_target_device,
+               $clang_abi_compat) `>`
+  }];
+
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // AnnotationAttr
 //===----------------------------------------------------------------------===//
 
