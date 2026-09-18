@@ -3880,6 +3880,9 @@ def warn_dllimport_dropped_from_inline_function : Warning<
 def warn_nothrow_attribute_ignored : Warning<"'nothrow' attribute conflicts with"
   " exception specification; attribute ignored">,
   InGroup<IgnoredAttributes>;
+def warn_dllattr_ignored_already_instantiated : Warning<
+  "%0 attribute ignored; class template is already instantiated">,
+  InGroup<IgnoredAttributes>;
 def warn_dllattr_ignored_exclusion_takes_precedence : Warning<
   "%0 attribute ignored; %1 takes precedence">,
   InGroup<IgnoredAttributes>;
@@ -4003,6 +4006,9 @@ def err_attribute_dllimport_static_field_definition : Error<
 def warn_attribute_dllimport_static_field_definition : Warning<
   "definition of dllimport static field">,
   InGroup<DiagGroup<"dllimport-static-field-def">>;
+def warn_attribute_dllimport_explicit_instantiation_def : Warning<
+  "'dllimport' attribute ignored on explicit instantiation definition">,
+  InGroup<IgnoredAttributes>;
 def warn_attribute_dllexport_explicit_instantiation_decl : Warning<
   "explicit instantiation declaration should not be 'dllexport'">,
   InGroup<DllexportExplicitInstantiationDecl>;
@@ -9520,6 +9526,8 @@ def err_typecheck_incomplete_type_not_modifiable_lvalue : Error<
   "incomplete type %0 is not assignable">;
 def err_typecheck_lvalue_casts_not_supported : Error<
   "assignment to cast is illegal, lvalue casts are not supported">;
+def err_typecheck_lvalue_imag_not_modifiable_lvalue : Error<
+  "'__imag' operator with non-complex operand type %0 is not assignable">;
 
 def err_typecheck_duplicate_vector_components_not_mlvalue : Error<
   "vector is not assignable (contains duplicate components)">;

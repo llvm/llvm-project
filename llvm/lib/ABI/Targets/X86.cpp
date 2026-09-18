@@ -53,9 +53,7 @@ static uint64_t getClangVectorWidthInBits(const VectorType *VT) {
     EltWidth = getClangIntegerWidthInBits(IT);
   uint64_t Width =
       std::max<uint64_t>(8, EltWidth * VT->getNumElements().getKnownMinValue());
-  if (Width & (Width - 1))
-    Width = llvm::alignTo(Width, llvm::bit_ceil(Width));
-  return Width;
+  return llvm::bit_ceil(Width);
 }
 
 // The storage-container width of a type, mirroring Clang's getTypeSize. Used on
@@ -74,7 +72,6 @@ public:
   enum Class { Integer, Sse, SseUp, X87, X87Up, ComplexX87, NoClass, Memory };
 
 private:
-  TypeBuilder &TB;
   X86AVXABILevel AVXLevel;
   bool Has64BitPointers;
 
@@ -115,7 +112,7 @@ private:
 public:
   X86_64TargetInfo(TypeBuilder &TypeBuilder, X86AVXABILevel AVXABILevel,
                    bool Has64BitPtrs, const ABICompatInfo &Compat)
-      : TargetInfo(Compat), TB(TypeBuilder), AVXLevel(AVXABILevel),
+      : TargetInfo(TypeBuilder, Compat), AVXLevel(AVXABILevel),
         Has64BitPointers(Has64BitPtrs) {}
 
   bool has64BitPointers() const { return Has64BitPointers; }
@@ -808,7 +805,8 @@ ArgInfo X86_64TargetInfo::classifyReturnType(const Type *RetTy) const {
       const Type *X87Type =
           TB.getFloatType(APFloat::x87DoubleExtended(), Align(16));
       FieldInfo Fields[] = {FieldInfo(X87Type, 0), FieldInfo(X87Type, 80)};
-      ResType = TB.getRecordType(Fields, TypeSize::getFixed(160), Align(16));
+      ResType = TB.getRecordType(Fields, TypeSize::getFixed(160), Align(16),
+                                 /*UnadjustedAlign=*/Align(16));
     }
     break;
   }
@@ -926,7 +924,7 @@ const Type *X86_64TargetInfo::createPairType(const Type *Lo,
   uint64_t PairSizeInBits =
       Fields[1].OffsetInBits + Hi->getSizeInBits().getFixedValue();
   return TB.getRecordType(Fields, TypeSize::getFixed(PairSizeInBits), Align(8),
-                          StructPacking::Default);
+                          /*UnadjustedAlign=*/Align(8), StructPacking::Default);
 }
 
 static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,
@@ -1050,9 +1048,22 @@ const Type *X86_64TargetInfo::getIntegerTypeAtOffset(const Type *ABIType,
   if (const auto *RTy = dyn_cast<RecordType>(ABIType)) {
     if (RTy->isUnion()) {
       const Type *ReducedType = reduceUnionForX8664(RTy, TB);
-      if (ReducedType)
-        return getIntegerTypeAtOffset(ReducedType, ABIOffset, SourceTy,
-                                      SourceOffset, true);
+      if (ReducedType) {
+        if (ABIOffset * 8 < ReducedType->getSizeInBits().getFixedValue())
+          return getIntegerTypeAtOffset(ReducedType, ABIOffset, SourceTy,
+                                        SourceOffset, true);
+        // The storage type stops before this offset, so size the coercion
+        // from the union itself: a byte when the rest of this eightbyte
+        // holds no data, and the union's remaining bytes otherwise.
+        if (bitsContainNoUserData(SourceTy, SourceOffset * 8 + 8,
+                                  SourceOffset * 8 + 64))
+          return TB.getIntegerType(8, Align(1), /*Signed=*/false);
+        unsigned RemainingBytes =
+            llvm::divideCeil(SourceTy->getSizeInBits().getFixedValue(), 8) -
+            SourceOffset;
+        return TB.getIntegerType(std::min(RemainingBytes, 8U) * 8, Align(1),
+                                 /*Signed=*/false);
+      }
     }
     if (const FieldInfo *Element =
             RTy->getElementContainingOffset(ABIOffset * 8)) {

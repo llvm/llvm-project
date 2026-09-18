@@ -1466,9 +1466,10 @@ public:
   }
 
   /// Register dynamic relocation at \p Address.
-  void addDynamicRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t Type,
-                            uint64_t Addend, uint64_t Value = 0,
-                            bool IsRELR = false);
+  void addDynamicRelocation(
+      uint64_t Address, MCSymbol *Symbol, uint32_t Type, uint64_t Addend,
+      uint64_t Value = 0, bool IsRELR = false,
+      uint32_t JmpRelocationIndex = Relocation::NoJmpRelocationIndex);
 
   /// Return a dynamic relocation registered at a given \p Address, or nullptr
   /// if there is no dynamic relocation at such address.
