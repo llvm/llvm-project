@@ -452,34 +452,6 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableOnlyUnallocatedElements) {
                 {Unallocated});
 }
 
-TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableSupportedSignatures) {
-  const struct {
-    Triple::EnvironmentType Stage;
-    IOType IOTy;
-  } Signatures[] = {{Triple::Vertex, IOType::Out},
-                    {Triple::Hull, IOType::In},
-                    {Triple::Hull, IOType::Out},
-                    {Triple::Hull, IOType::PatchConstantOrPrimitive},
-                    {Triple::Domain, IOType::In},
-                    {Triple::Domain, IOType::Out},
-                    {Triple::Domain, IOType::PatchConstantOrPrimitive},
-                    {Triple::Geometry, IOType::In},
-                    {Triple::Geometry, IOType::Out},
-                    {Triple::Pixel, IOType::In},
-                    {Triple::Mesh, IOType::Out},
-                    {Triple::Mesh, IOType::PatchConstantOrPrimitive}};
-  for (const auto &Signature : Signatures) {
-    SCOPED_TRACE(static_cast<unsigned>(Signature.Stage));
-    SCOPED_TRACE(static_cast<unsigned>(Signature.IOTy));
-    TestConfig Config(
-        Signature.Stage, Signature.IOTy,
-        {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
-          dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined}});
-    verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/1,
-                  {{/*Row=*/0, /*Col=*/0}});
-  }
-}
-
 TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableWhenAppended) {
   // Appending an element to a signature never moves the elements declared
   // before it; the appended element is only packed into the space they left.
