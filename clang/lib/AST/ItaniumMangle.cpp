@@ -45,7 +45,8 @@ namespace UnsupportedItaniumManglingKind =
 namespace {
 
 static bool isLocalContainerContext(const DeclContext *DC) {
-  return isa<FunctionDecl, ObjCMethodDecl, BlockDecl, CXXExpansionStmtDecl>(DC);
+  return isa<FunctionDecl, ObjCMethodDecl, BlockDecl, CXXExpansionStmtDecl,
+             TopLevelStmtDecl>(DC);
 }
 
 static const FunctionDecl *getStructor(const FunctionDecl *fn) {
@@ -516,6 +517,7 @@ private:
                        ArrayRef<StringRef> AdditionalAbiTags = {});
   void mangleBlockForPrefix(const BlockDecl *Block);
   void mangleUnqualifiedBlock(const BlockDecl *Block);
+  void mangleTopLevelStmtEncoding(const TopLevelStmtDecl *D);
   void mangleTemplateParamDecl(const NamedDecl *Decl);
   void mangleTemplateParameterList(const TemplateParameterList *Params);
   void mangleTypeConstraint(TemplateName Concept,
@@ -726,18 +728,20 @@ bool ItaniumMangleContextImpl::isInternalLinkageDecl(const NamedDecl *ND) {
   return false;
 }
 
-// Check if this Decl needs a unique internal linkage name.
+// Check if this Function Decl needs a unique internal linkage name.
 bool ItaniumMangleContextImpl::isUniqueInternalLinkageDecl(
     const NamedDecl *ND) {
   if (!NeedsUniqueInternalLinkageNames || !ND)
     return false;
 
+  const auto *FD = dyn_cast<FunctionDecl>(ND);
+  if (!FD)
+    return false;
+
   // For C functions without prototypes, return false as their
   // names should not be mangled.
-  if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
-    if (!FD->getType()->getAs<FunctionProtoType>())
-      return false;
-  }
+  if (!FD->getType()->getAs<FunctionProtoType>())
+    return false;
 
   if (isInternalLinkageDecl(ND))
     return true;
@@ -871,9 +875,10 @@ void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
   // Output name of the function.
   FunctionEncodingMangler.disableDerivedAbiTags();
 
-  FunctionTypeDepthState Saved = FunctionTypeDepth.push();
+  FunctionTypeDepthState EncodingSaved =
+      FunctionEncodingMangler.FunctionTypeDepth.push();
   FunctionEncodingMangler.mangleNameWithAbiTags(FD);
-  FunctionTypeDepth.pop(Saved);
+  FunctionEncodingMangler.FunctionTypeDepth.pop(EncodingSaved);
 
   // Remember length of the function name in the buffer.
   size_t EncodingPositionStart = FunctionEncodingStream.str().size();
@@ -891,7 +896,7 @@ void CXXNameMangler::mangleFunctionEncoding(GlobalDecl GD) {
       AdditionalAbiTags.end());
 
   // Output name with implicit tags and function encoding from temporary buffer.
-  Saved = FunctionTypeDepth.push();
+  FunctionTypeDepthState Saved = FunctionTypeDepth.push();
   mangleNameWithAbiTags(FD, AdditionalAbiTags);
   FunctionTypeDepth.pop(Saved);
   Out << FunctionEncodingStream.str().substr(EncodingPositionStart);
@@ -1904,6 +1909,8 @@ void CXXNameMangler::mangleLocalName(GlobalDecl GD,
       mangleObjCMethodName(MD);
     } else if (const BlockDecl *BD = dyn_cast<BlockDecl>(DC)) {
       mangleBlockForPrefix(BD);
+    } else if (const auto *TLSD = dyn_cast<TopLevelStmtDecl>(DC)) {
+      mangleTopLevelStmtEncoding(TLSD);
     } else {
       mangleFunctionEncoding(getParentOfLocalEntity(DC));
     }
@@ -2039,6 +2046,13 @@ void CXXNameMangler::mangleUnqualifiedBlock(const BlockDecl *Block) {
   if (Number > 0)
     Out << Number - 1;
   Out << '_';
+}
+
+void CXXNameMangler::mangleTopLevelStmtEncoding(const TopLevelStmtDecl *D) {
+  // Numbered internal function, like Ub_ for blocks: locals get <local-name>s.
+  SmallString<16> Name("__stmt__");
+  Name += llvm::utostr(D->getOrdinal());
+  Out << 'L' << Name.size() << Name << 'v';
 }
 
 // <template-param-decl>

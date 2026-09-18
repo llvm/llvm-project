@@ -60,7 +60,7 @@ void MCGOFFStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   if (Section->isPR()) {
     if (Section->getBeginSymbol() == nullptr)
       Section->setBeginSymbol(Symbol);
-    else
+    else if (!Symbol->isTemporary())
       getContext().reportError(
           Loc, "only one symbol can be defined in a PR section.");
   }

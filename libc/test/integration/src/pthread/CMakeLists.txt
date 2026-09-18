@@ -151,6 +151,19 @@ add_integration_test(
 )
 
 add_integration_test(
+  pthread_tls_align_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_tls_align_test.cpp
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.pthread
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+)
+
+add_integration_test(
   pthread_equal_test
   SUITE
     libc-pthread-integration-tests
@@ -260,6 +273,21 @@ add_integration_test(
 )
 
 add_integration_test(
+  pthread_join_main_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_join_main_test.cpp
+  DEPENDS
+    libc.include.pthread
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_exit
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_self
+    libc.src.stdlib.exit
+)
+
+add_integration_test(
   pthread_create_test
   SUITE
     libc-pthread-integration-tests
@@ -364,4 +392,30 @@ add_integration_test(
     libc.src.pthread.pthread_mutex_unlock
     libc.src.pthread.pthread_self
     libc.src.pthread.pthread_setschedparam
+)
+
+add_integration_test(
+  pthread_kill_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_kill_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.pthread_t
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_sigaction
+    libc.src.__support.CPP.atomic
+    libc.src.__support.threads.futex_utils
+    libc.src.__support.threads.thread
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_self
+    libc.src.signal.pthread_kill
+    libc.src.signal.pthread_sigmask
+    libc.src.signal.sigaction
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
 )
