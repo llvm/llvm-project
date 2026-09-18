@@ -1800,12 +1800,6 @@ static void speculateSelectInstLoads(SelectInst &SI, LoadInst &LI,
 
   IRB.SetInsertPoint(&LI);
 
-  // AddrSpace casts may separate load from select in the initial code.
-  TV = IRB.CreateAddrSpaceCast(TV, LI.getPointerOperandType(),
-                               LI.getName() + ".sroa.speculate.cast.true");
-  FV = IRB.CreateAddrSpaceCast(FV, LI.getPointerOperandType(),
-                               LI.getName() + ".sroa.speculate.cast.false");
-
   LoadInst *TL =
       IRB.CreateAlignedLoad(LI.getType(), TV, LI.getAlign(),
                             LI.getName() + ".sroa.speculate.load.true");
@@ -1939,7 +1933,8 @@ static Value *getAdjustedPtr(IRBuilderTy &IRB, const DataLayout &DL, Value *Ptr,
   if (Offset != 0)
     Ptr = IRB.CreateInBoundsPtrAdd(Ptr, IRB.getInt(Offset),
                                    NamePrefix + "sroa_idx");
-  return IRB.CreateAddrSpaceCast(Ptr, PointerTy, NamePrefix + "sroa_cast");
+  return IRB.CreatePointerBitCastOrAddrSpaceCast(Ptr, PointerTy,
+                                                 NamePrefix + "sroa_cast");
 }
 
 /// Compute the adjusted alignment for a load or store from an offset.
@@ -4469,29 +4464,6 @@ private:
     return false;
   }
 
-  void removeIntermediateCasts(GetElementPtrInst &GEPI, Instruction *End) {
-    // Remove dead intermediate casts between two instructions.
-    Value *V = GEPI.getPointerOperand();
-    while (V != End && (V->use_empty() ||
-                        (V->hasOneUse() && V == GEPI.getPointerOperand()))) {
-      Value *OldV = V;
-      if (auto *GEP = dyn_cast<GEPOperator>(V)) {
-        if (!GEP->hasAllZeroIndices())
-          break;
-        V = GEP->getPointerOperand();
-      } else if (Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
-        V = cast<Operator>(V)->getOperand(0);
-      } else {
-        break;
-      }
-
-      Instruction *I = cast<Instruction>(OldV);
-      I->replaceAllUsesWith(PoisonValue::get(I->getType()));
-      Visited.erase(I);
-      I->eraseFromParent();
-    }
-  }
-
   // Unfold gep (select cond, ptr1, ptr2), idx
   //   => select cond, gep(ptr1, idx), gep(ptr2, idx)
   // and  gep ptr, (select cond, idx1, idx2)
@@ -4502,12 +4474,14 @@ private:
     // will become constant after the transform.
     Instruction *Sel =
         dyn_cast<SelectInst>(GEPI.getPointerOperand()->stripPointerCasts());
-    for (Value *Op : GEPI.indices()) {
+    unsigned SelOpNum = 0;
+    for (auto& Op : GEPI.indices()) {
       if (auto *SI = dyn_cast<SelectInst>(Op)) {
         if (Sel)
           return false;
 
         Sel = SI;
+        SelOpNum = Op.getOperandNo();
         if (!isa<ConstantInt>(SI->getTrueValue()) ||
             !isa<ConstantInt>(SI->getFalseValue()))
           return false;
@@ -4517,6 +4491,7 @@ private:
         if (Sel)
           return false;
         Sel = ZI;
+        SelOpNum = Op.getOperandNo();
         if (!ZI->getSrcTy()->isIntegerTy(1))
           return false;
         continue;
@@ -4534,13 +4509,8 @@ private:
                dbgs() << "              " << GEPI << "\n";);
 
     auto GetNewOps = [&](Value *SelOp) {
-      SmallVector<Value *> NewOps;
-      for (Value *Op : GEPI.operands())
-        if ((Op == Sel) ||
-            (Op == GEPI.getPointerOperand() && Op->stripPointerCasts() == Sel))
-          NewOps.push_back(SelOp);
-        else
-          NewOps.push_back(Op);
+      SmallVector<Value *> NewOps(GEPI.operands());
+      NewOps[SelOpNum] = SelOp;
       return NewOps;
     };
 
@@ -4583,11 +4553,13 @@ private:
                       : IRB.CreateSelectWithUnknownProfile(
                             Cond, NTrue, NFalse, DEBUG_TYPE,
                             Sel->getName() + ".sroa.sel");
-
-    removeIntermediateCasts(GEPI, Sel);
     Visited.erase(&GEPI);
     GEPI.replaceAllUsesWith(NSel);
-    GEPI.eraseFromParent();
+    RecursivelyDeleteTriviallyDeadInstructions(
+        &GEPI, nullptr, nullptr, [&](Value *V) {
+          if (auto *I = dyn_cast<Instruction>(V))
+            Visited.erase(I);
+        });
     Instruction *NSelI = cast<Instruction>(NSel);
     Visited.insert(NSelI);
     enqueueUsers(*NSelI);
