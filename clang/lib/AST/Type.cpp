@@ -4100,7 +4100,7 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
     // address of the expression as profiling results instead of profiling the
     // expression.
     //
-    // This is not only an optimization but avoids an access on uninitlaized
+    // This is not only an optimization but avoids an access on uninitialized
     // fields during the profiling.
     //
     // See clang/test/Modules/concept-specialization-deserialization.cppm for
