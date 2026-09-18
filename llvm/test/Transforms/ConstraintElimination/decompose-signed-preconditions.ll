@@ -143,3 +143,40 @@ entry:
   %c = icmp sle i8 %s, %a
   ret i1 %c
 }
+
+define i1 @sub_via_negative_constant_range(i8 %a) {
+; CHECK-LABEL: define i1 @sub_via_negative_constant_range(
+; CHECK-SAME: i8 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[A]], -5
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sle i8 [[A]], 100
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
+; CHECK-NEXT:    [[C:%.*]] = icmp sge i8 [[S]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %s = sub i8 %a, -5
+  call void @use(i8 %s)
+  %c.1 = icmp sle i8 %a, 100
+  call void @llvm.assume(i1 %c.1)
+  %c = icmp sge i8 %s, %a
+  ret i1 %c
+}
+
+; Without an upper bound on %a, the subtract may wrap.
+define i1 @sub_no_bound_for_negative_constant(i8 %a) {
+; CHECK-LABEL: define i1 @sub_no_bound_for_negative_constant(
+; CHECK-SAME: i8 [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[A]], -5
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[C:%.*]] = icmp sge i8 [[S]], [[A]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+entry:
+  %s = sub i8 %a, -5
+  call void @use(i8 %s)
+  %c = icmp sge i8 %s, %a
+  ret i1 %c
+}
