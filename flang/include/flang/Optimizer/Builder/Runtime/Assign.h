@@ -59,9 +59,6 @@ void genAssignTemporary(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Generate runtime call to "CopyInAssign" runtime API.
 void genCopyInAssign(fir::FirOpBuilder &builder, mlir::Location loc,
                      mlir::Value tempBoxAddr, mlir::Value varBoxAddr);
-/// Generate runtime call to allocation-free "CopyOutAssignDirect" runtime API.
-void genCopyOutAssignDirect(fir::FirOpBuilder &builder, mlir::Location loc,
-                            mlir::Value varBox, mlir::Value tempBoxAddr);
 /// Generate runtime call to "CopyOutAssign" runtime API.
 void genCopyOutAssign(fir::FirOpBuilder &builder, mlir::Location loc,
                       mlir::Value varBoxAddr, mlir::Value tempBoxAddr);

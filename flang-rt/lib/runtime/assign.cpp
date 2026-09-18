@@ -834,15 +834,15 @@ void RTDEF(CopyInAssign)(Descriptor &temp, const Descriptor &var,
   ShallowCopy(temp, var);
 }
 
-void RTDEF(CopyOutAssignDirect)(const Descriptor &var, Descriptor &temp,
-    const char *sourceFile, int sourceLine) {
+void RTDEF(CopyOutAssign)(
+    Descriptor *var, Descriptor &temp, const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
   // Copyout from the temporary must not cause any finalizations
   // for LHS. The variable must be properly initialized already.
   // Scan for the first bitwise difference and copy from there to the end
-  // (fused, one pass): the temporary was created as a bitwise copy of the
-  // variable (see CopyInAssign above and the copy-in emitted inline by the
-  // compiler), so it can only differ where the callee modified it, and an
-  // unmodifying copy-out must not store at all. This keeps a
+  // (fused, one pass): the temporary was created as a bitwise copy (see
+  // CopyInAssign above), so it can only differ where the callee modified it,
+  // and an unmodifying copy-out must not store at all. This keeps a
   // compiler-generated copy-out from writing into read-only storage when the
   // effective argument is not definable (e.g., a named constant) and the
   // callee, conformingly, never modified it. From the first difference
@@ -851,18 +851,12 @@ void RTDEF(CopyOutAssignDirect)(const Descriptor &var, Descriptor &temp,
   // writable anyway.
   // Setting the system environment variable FLANG_RT_COPYOUT_MODIFIED_ONLY=0
   // restores the unconditional copy-out.
-  if (executionEnvironment.copyOutModifiedOnly) {
-    ShallowCopyModifiedSuffix(var, temp);
-  } else {
-    ShallowCopy(var, temp);
-  }
-}
-
-void RTDEF(CopyOutAssign)(
-    Descriptor *var, Descriptor &temp, const char *sourceFile, int sourceLine) {
-  Terminator terminator{sourceFile, sourceLine};
   if (var) {
-    RTNAME(CopyOutAssignDirect)(*var, temp, sourceFile, sourceLine);
+    if (executionEnvironment.copyOutModifiedOnly) {
+      ShallowCopyModifiedSuffix(*var, temp);
+    } else {
+      ShallowCopy(*var, temp);
+    }
   }
   temp.Deallocate();
 }

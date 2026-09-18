@@ -349,18 +349,18 @@ end subroutine
 ! CHECK:           %[[VAL_2:.*]] = omp.threadprivate %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFpointerEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK:           omp.parallel {
-! CHECK:             %[[VAL_4:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> {pinned}
+! CHECK:             %[[VAL_4:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {pinned}
 ! CHECK:             %[[VAL_5:.*]] = omp.threadprivate %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:             %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFpointerEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK:             %[[VAL_7:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:             fir.store %[[VAL_7]] to %[[VAL_6]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:             omp.barrier
 ! CHECK:             %[[VAL_8:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK:             %[[VAL_9:.*]]:3 = hlfir.copy_in %[[VAL_8]] to %[[VAL_4]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.box<!fir.ptr<!fir.array<?xi32>>>, i1, i1)
+! CHECK:             %[[VAL_9:.*]]:2 = hlfir.copy_in %[[VAL_8]] to %[[VAL_4]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.box<!fir.ptr<!fir.array<?xi32>>>, i1)
 ! CHECK:             %[[VAL_10:.*]] = fir.box_addr %[[VAL_9]]#0 : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
 ! CHECK:             %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (!fir.ptr<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK:             fir.call @_QPsub7(%[[VAL_11]]) fastmath<contract> : (!fir.ref<!fir.array<?xi32>>) -> ()
-! CHECK:             hlfir.copy_out %[[VAL_4]], %[[VAL_9]]#1, %[[VAL_9]]#2 to %[[VAL_8]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, i1, i1, !fir.box<!fir.ptr<!fir.array<?xi32>>>) -> ()
+! CHECK:             hlfir.copy_out %[[VAL_4]], %[[VAL_9]]#1 to %[[VAL_8]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, i1, !fir.box<!fir.ptr<!fir.array<?xi32>>>) -> ()
 ! CHECK:             omp.terminator
 ! CHECK:           }
 ! CHECK:           return

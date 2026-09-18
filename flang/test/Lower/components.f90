@@ -221,10 +221,10 @@ subroutine extended_type_components
   type, extends(t3) :: t4
     integer :: t4i
   end type t4
-! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.array<5xi32>>
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.array<5xi32>>
-! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.array<5xi32>>
-! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.array<5xi32>>
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<5xi32>>>
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<5xi32>>>
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<5xi32>>>
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<5xi32>>>
 ! CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.type<_QFextended_type_componentsTu3
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFextended_type_componentsEu3v"} : (!fir.ref<!fir.type<_QFextended_type_componentsTu3
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 5 : index
@@ -284,7 +284,7 @@ subroutine extended_type_components
 ! CHECK:           %[[VAL_31:.*]] = hlfir.designate %[[VAL_30]]{"t2"}   shape %[[VAL_8]] : (!fir.box<!fir.array<5x!fir.type<_QFextended_type_componentsTt3
 ! CHECK:           %[[VAL_32:.*]] = hlfir.designate %[[VAL_31]]{"t1"}   shape %[[VAL_8]] : (!fir.box<!fir.array<5x!fir.type<_QFextended_type_componentsTt2
 ! CHECK:           %[[VAL_33:.*]] = hlfir.designate %[[VAL_32]]{"t1i"}   shape %[[VAL_8]] : (!fir.box<!fir.array<5x!fir.type<_QFextended_type_componentsTt1
-! CHECK:           %[[VAL_34:.*]]:3 = hlfir.copy_in %[[VAL_33]] to %[[VAL_3]] : (!fir.box<!fir.array<5xi32>>, !fir.ref<!fir.box<!fir.array<5xi32>>>) -> (!fir.box<!fir.array<5xi32>>, i1, i1)
+! CHECK:           %[[VAL_34:.*]]:2 = hlfir.copy_in %[[VAL_33]] to %[[VAL_3]] : (!fir.box<!fir.array<5xi32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<5xi32>>>>) -> (!fir.box<!fir.array<5xi32>>, i1)
 ! CHECK:           %[[VAL_35:.*]] = fir.box_addr %[[VAL_34]]#0 : (!fir.box<!fir.array<5xi32>>) -> !fir.ref<!fir.array<5xi32>>
 ! CHECK:           fir.call @_QPfoo5(%[[VAL_35]]) fastmath<contract> : (!fir.ref<!fir.array<5xi32>>) -> ()
 
@@ -294,7 +294,7 @@ subroutine extended_type_components
 ! CHECK:           %[[VAL_38:.*]] = hlfir.designate %[[VAL_37]]{"t2"}   shape %[[VAL_8]] : (!fir.box<!fir.array<5x!fir.type<_QFextended_type_componentsTt3
 ! CHECK:           %[[VAL_39:.*]] = hlfir.designate %[[VAL_38]]{"t1"}   shape %[[VAL_8]] : (!fir.box<!fir.array<5x!fir.type<_QFextended_type_componentsTt2
 ! CHECK:           %[[VAL_40:.*]] = hlfir.designate %[[VAL_39]]{"t1i"}   shape %[[VAL_8]] : (!fir.box<!fir.array<5x!fir.type<_QFextended_type_componentsTt1
-! CHECK:           %[[VAL_41:.*]]:3 = hlfir.copy_in %[[VAL_40]] to %[[VAL_2]] : (!fir.box<!fir.array<5xi32>>, !fir.ref<!fir.box<!fir.array<5xi32>>>) -> (!fir.box<!fir.array<5xi32>>, i1, i1)
+! CHECK:           %[[VAL_41:.*]]:2 = hlfir.copy_in %[[VAL_40]] to %[[VAL_2]] : (!fir.box<!fir.array<5xi32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<5xi32>>>>) -> (!fir.box<!fir.array<5xi32>>, i1)
 ! CHECK:           %[[VAL_42:.*]] = fir.box_addr %[[VAL_41]]#0 : (!fir.box<!fir.array<5xi32>>) -> !fir.ref<!fir.array<5xi32>>
 ! CHECK:           fir.call @_QPfoo6(%[[VAL_42]]) fastmath<contract> : (!fir.ref<!fir.array<5xi32>>) -> ()
 
@@ -304,7 +304,7 @@ subroutine extended_type_components
 ! CHECK:           %[[VAL_45:.*]] = hlfir.designate %[[VAL_44]]{"t2"}   shape %[[VAL_8]] : (!fir.box<!fir.array<5x!fir.type<_QFextended_type_componentsTt3
 ! CHECK:           %[[VAL_46:.*]] = hlfir.designate %[[VAL_45]]{"t1"}   shape %[[VAL_8]] : (!fir.box<!fir.array<5x!fir.type<_QFextended_type_componentsTt2
 ! CHECK:           %[[VAL_47:.*]] = hlfir.designate %[[VAL_46]]{"t1i"}   shape %[[VAL_8]] : (!fir.box<!fir.array<5x!fir.type<_QFextended_type_componentsTt1
-! CHECK:           %[[VAL_48:.*]]:3 = hlfir.copy_in %[[VAL_47]] to %[[VAL_1]] : (!fir.box<!fir.array<5xi32>>, !fir.ref<!fir.box<!fir.array<5xi32>>>) -> (!fir.box<!fir.array<5xi32>>, i1, i1)
+! CHECK:           %[[VAL_48:.*]]:2 = hlfir.copy_in %[[VAL_47]] to %[[VAL_1]] : (!fir.box<!fir.array<5xi32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<5xi32>>>>) -> (!fir.box<!fir.array<5xi32>>, i1)
 ! CHECK:           %[[VAL_49:.*]] = fir.box_addr %[[VAL_48]]#0 : (!fir.box<!fir.array<5xi32>>) -> !fir.ref<!fir.array<5xi32>>
 ! CHECK:           fir.call @_QPfoo7(%[[VAL_49]]) fastmath<contract> : (!fir.ref<!fir.array<5xi32>>) -> ()
 
@@ -313,7 +313,7 @@ subroutine extended_type_components
 ! CHECK:           %[[VAL_51:.*]] = hlfir.designate %[[VAL_50]]{"u2t4"}   shape %[[VAL_8]] : (!fir.box<!fir.array<5x!fir.type<_QFextended_type_componentsTu2
 ! CHECK:           %[[VAL_52:.*]] = hlfir.designate %[[VAL_51]]{"t2"}   shape %[[VAL_8]] : (!fir.box<!fir.array<5x!fir.type<_QFextended_type_componentsTt3
 ! CHECK:           %[[VAL_53:.*]] = hlfir.designate %[[VAL_52]]{"t2i"}   shape %[[VAL_8]] : (!fir.box<!fir.array<5x!fir.type<_QFextended_type_componentsTt2
-! CHECK:           %[[VAL_54:.*]]:3 = hlfir.copy_in %[[VAL_53]] to %[[VAL_0]] : (!fir.box<!fir.array<5xi32>>, !fir.ref<!fir.box<!fir.array<5xi32>>>) -> (!fir.box<!fir.array<5xi32>>, i1, i1)
+! CHECK:           %[[VAL_54:.*]]:2 = hlfir.copy_in %[[VAL_53]] to %[[VAL_0]] : (!fir.box<!fir.array<5xi32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<5xi32>>>>) -> (!fir.box<!fir.array<5xi32>>, i1)
 ! CHECK:           %[[VAL_55:.*]] = fir.box_addr %[[VAL_54]]#0 : (!fir.box<!fir.array<5xi32>>) -> !fir.ref<!fir.array<5xi32>>
 ! CHECK:           fir.call @_QPfoo8(%[[VAL_55]]) fastmath<contract> : (!fir.ref<!fir.array<5xi32>>) -> ()
 end subroutine extended_type_components

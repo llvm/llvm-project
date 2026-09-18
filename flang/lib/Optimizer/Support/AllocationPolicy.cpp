@@ -12,7 +12,6 @@
 
 #include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
-#include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -33,35 +32,6 @@ static llvm::cl::opt<std::uint64_t> allocationPlacementStackLimit(
         "by the allocation-placement pass"),
     llvm::cl::init(fir::AllocationPolicy::totalStackLimitBytesDefault),
     llvm::cl::Hidden);
-
-fir::AllocationSizeContext fir::getAllocationSizeContext(mlir::Operation *op) {
-  auto module = mlir::dyn_cast<mlir::ModuleOp>(op);
-  if (!module)
-    module = op->getParentOfType<mlir::ModuleOp>();
-  if (!module)
-    return {std::nullopt, std::nullopt};
-  return {fir::support::getOrSetMLIRDataLayout(module,
-                                               /*allowDefaultLayout=*/false),
-          fir::getKindMapping(module)};
-}
-
-bool fir::shouldUseStackForCopyin(mlir::Location loc, mlir::Type sequenceType,
-                                  const AllocationPolicy &allocationPolicy,
-                                  const AllocationSizeContext &sizeContext) {
-  if (fir::hasDynamicSize(sequenceType) || !sizeContext.dataLayout ||
-      !sizeContext.kindMap)
-    return false;
-  auto sizeAndAlignment = fir::getTypeSizeAndAlignment(
-      loc, sequenceType, *sizeContext.dataLayout, *sizeContext.kindMap);
-  if (!sizeAndAlignment)
-    return false;
-  PendingAllocationInfo info{
-      /*isTemporary=*/true, /*isDynamic=*/false,
-      static_cast<std::int64_t>(sizeAndAlignment->first)};
-  AllocationPolicy copyInPolicy = allocationPolicy;
-  copyInPolicy.stackArrays = false;
-  return shouldAllocateOnStack(info, copyInPolicy, /*stackBytesUsed=*/0);
-}
 
 bool fir::shouldAllocateOnStack(const PendingAllocationInfo &info,
                                 const AllocationPolicy &policy,

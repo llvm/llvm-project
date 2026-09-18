@@ -92,12 +92,12 @@ subroutine test_copy_in_out(x)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_copy_in_out(
 ! CHECK-SAME:                                   %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.array<*:f32>>
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<*:f32>>>
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFtest_copy_in_outEx"} : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
-! CHECK:           %[[VAL_4:.*]]:3 = hlfir.copy_in %[[VAL_3]]#0 to %[[VAL_1]] : (!fir.box<!fir.array<*:f32>>, !fir.ref<!fir.box<!fir.array<*:f32>>>) -> (!fir.box<!fir.array<*:f32>>, i1, i1)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.copy_in %[[VAL_3]]#0 to %[[VAL_1]] : (!fir.box<!fir.array<*:f32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>) -> (!fir.box<!fir.array<*:f32>>, i1)
 ! CHECK:           fir.call @_QPtakes_contiguous(%[[VAL_4]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
-! CHECK:           hlfir.copy_out %[[VAL_1]], %[[VAL_4]]#1, %[[VAL_4]]#2 to %[[VAL_3]]#0 : (!fir.ref<!fir.box<!fir.array<*:f32>>>, i1, i1, !fir.box<!fir.array<*:f32>>) -> ()
+! CHECK:           hlfir.copy_out %[[VAL_1]], %[[VAL_4]]#1 to %[[VAL_3]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, i1, !fir.box<!fir.array<*:f32>>) -> ()
 
 subroutine test_copy_in_out_2(x)
   real ::  x(..)
@@ -110,9 +110,9 @@ subroutine test_copy_in_out_2(x)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_copy_in_out_2(
 ! CHECK-SAME:                                     %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.array<*:f32>>
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<*:f32>>>
 ! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFtest_copy_in_out_2Ex"} : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
-! CHECK:           %[[VAL_4:.*]]:3 = hlfir.copy_in %[[VAL_3]]#0 to %[[VAL_1]] : (!fir.box<!fir.array<*:f32>>, !fir.ref<!fir.box<!fir.array<*:f32>>>) -> (!fir.box<!fir.array<*:f32>>, i1, i1)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.copy_in %[[VAL_3]]#0 to %[[VAL_1]] : (!fir.box<!fir.array<*:f32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>) -> (!fir.box<!fir.array<*:f32>>, i1)
 ! CHECK:           fir.call @_QPtakes_contiguous_intentin(%[[VAL_4]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
-! CHECK:           hlfir.copy_out %[[VAL_1]], %[[VAL_4]]#1, %[[VAL_4]]#2 : (!fir.ref<!fir.box<!fir.array<*:f32>>>, i1, i1) -> ()
+! CHECK:           hlfir.copy_out %[[VAL_1]], %[[VAL_4]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, i1) -> ()
