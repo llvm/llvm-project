@@ -159,6 +159,11 @@ mnadeem@quicinc.com (email), [UsmanNadeem](https://github.com/UsmanNadeem) (Gith
 Vitaly Buka \
 vitalybuka@google.com (email), [vitalybuka](https://github.com/vitalybuka) (GitHub)
 
+#### CopyProf
+
+Snehasish Kumar \
+snehasishk@google.com (email), [snehasish](https://github.com/snehasish) (GitHub)
+
 #### NumericalStabilitySanitizer
 
 Alexander Shaposhnikov \

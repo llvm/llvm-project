@@ -59,6 +59,7 @@ protected:
 
   enum class PackingMethod {
     Stacked,
+    Indexed,
     PrefixStable,
   };
 
@@ -89,6 +90,8 @@ protected:
     switch (Method) {
     case PackingMethod::Stacked:
       return packSignatureStacked(Elements, Config.ShaderStage, Config.IOTy);
+    case PackingMethod::Indexed:
+      return packSignatureIndexed(Elements, Config.ShaderStage, Config.IOTy);
     case PackingMethod::PrefixStable:
       return packSignaturePrefixStable(Elements, Config.ShaderStage,
                                        Config.IOTy, Config.UseNative16BitTypes);
@@ -1651,4 +1654,108 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableGeometryStreams) {
       PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}});
 }
+
+//===----------------------------------------------------------------------===//
+// Indexed packing tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(HLSLSemanticSignaturePackingTest, IndexedEmptySignature) {
+  TestConfig Config(Triple::EnvironmentType::Pixel, IOType::Out, {});
+
+  verifyPacking(PackingMethod::Indexed, Config, /*ExpectedRows=*/0, {});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, IndexedUsesLastSignatureRow) {
+  // The row extent includes the unused rows before the target's semantic index.
+  TestConfig Config(
+      Triple::EnvironmentType::Pixel, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Target, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined,
+        /*SemanticIndex=*/MaxSignatureRows - 1}});
+
+  verifyPacking(PackingMethod::Indexed, Config,
+                /*ExpectedRows=*/MaxSignatureRows,
+                {{/*Row=*/MaxSignatureRows - 1, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, IndexedUsesSemanticIndices) {
+  // Target elements are assigned the row denoted by their semantic index, not
+  // their declaration order. Every target starts at column zero.
+
+  // struct PSOut {
+  //   float4 Color3 : SV_Target3;
+  //   float Color0  : SV_Target0;
+  //   float2 Color2 : SV_Target2;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Pixel, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Target, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined,
+        /*SemanticIndex=*/3},
+       {dxbc::PSV::SemanticKind::Target, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined,
+        /*SemanticIndex=*/0},
+       {dxbc::PSV::SemanticKind::Target, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined,
+        /*SemanticIndex=*/2}});
+
+  // Expected layout:
+  // reg0: Color0.x    | unused.yzw
+  // reg1: unused.xyzw
+  // reg2: Color2.xy   | unused.zw
+  // reg3: Color3.xyzw
+  verifyPacking(
+      PackingMethod::Indexed, Config, /*ExpectedRows=*/4,
+      {{/*Row=*/3, /*Col=*/0}, {/*Row=*/0, /*Col=*/0}, {/*Row=*/2, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest, IndexedLeavesSemanticIndexGaps) {
+  // Rows without a corresponding target semantic remain unused.
+
+  // struct PSOut {
+  //   float4 Color1 : SV_Target1;
+  //   float4 Color7 : SV_Target7;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Pixel, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Target, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined,
+        /*SemanticIndex=*/1},
+       {dxbc::PSV::SemanticKind::Target, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined,
+        /*SemanticIndex=*/7}});
+
+  // Expected layout:
+  // reg0: unused.xyzw
+  // reg1: Color1.xyzw
+  // reg2-6: unused.xyzw
+  // reg7: Color7.xyzw
+  verifyPacking(PackingMethod::Indexed, Config, /*ExpectedRows=*/8,
+                {{/*Row=*/1, /*Col=*/0}, {/*Row=*/7, /*Col=*/0}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
+       IndexedRejectsOutOfRangeSemanticIndex) {
+  // A semantic index outside the 32-row signature cannot be allocated.
+
+  // struct PSOut {
+  //   float4 Color32 : SV_Target32;
+  // };
+  TestConfig Config(
+      Triple::EnvironmentType::Pixel, IOType::Out,
+      {{dxbc::PSV::SemanticKind::Target, /*Rows=*/1, /*Cols=*/4,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined,
+        /*SemanticIndex=*/MaxSignatureRows}});
+
+  verifyPackingError(PackingMethod::Indexed, Config,
+                     SignaturePackingError::SemanticIndexOutOfRange,
+                     /*ExpectedElementIndex=*/0);
+
+  SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
+  EXPECT_THAT_EXPECTED(pack(PackingMethod::Indexed, Elements, Config),
+                       FailedWithMessage("semantic index must be less than " +
+                                         std::to_string(MaxSignatureRows) +
+                                         " (element 0)"));
+}
+
 } // namespace

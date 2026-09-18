@@ -1097,6 +1097,16 @@ add_header_macro(
     .llvm-libc-types.siginfo_t
 )
 
+add_header_macro(
+  sys_xattr
+  ../libc/include/sys/xattr.yaml
+  sys/xattr.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.size_t
+    .llvm-libc-types.ssize_t
+)
+
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/net)
 
 add_header_macro(

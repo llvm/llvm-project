@@ -4660,7 +4660,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return DAG.getNode(ISD::ABDS, DL, VT, A, B);
 
   // smin(a,b) - smax(a,b) --> neg(abds(a,b))
-  if (hasOperation(ISD::ABDS, VT) &&
+  if ((!LegalOperations || hasOperation(ISD::ABDS, VT)) &&
       sd_match(N0, &DAG, m_SMinLike(m_Value(A), m_Value(B))) &&
       sd_match(N1, &DAG, m_SMaxLike(m_Specific(A), m_Specific(B))))
     return DAG.getNegative(DAG.getNode(ISD::ABDS, DL, VT, A, B), DL, VT);
@@ -4672,7 +4672,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return DAG.getNode(ISD::ABDU, DL, VT, A, B);
 
   // umin(a,b) - umax(a,b) --> neg(abdu(a,b))
-  if (hasOperation(ISD::ABDU, VT) &&
+  if ((!LegalOperations || hasOperation(ISD::ABDU, VT)) &&
       sd_match(N0, &DAG, m_UMinLike(m_Value(A), m_Value(B))) &&
       sd_match(N1, &DAG, m_UMaxLike(m_Specific(A), m_Specific(B))))
     return DAG.getNegative(DAG.getNode(ISD::ABDU, DL, VT, A, B), DL, VT);
@@ -6167,7 +6167,7 @@ SDValue DAGCombiner::visitMULO(SDNode *N) {
   // fold operation with constant operands.
   // TODO: Move this to FoldConstantArithmetic when it supports nodes with
   // multiple results.
-  if (N0C && N1C) {
+  if (N0C && N1C && !N0C->isOpaque() && !N1C->isOpaque()) {
     bool Overflow;
     APInt Result =
         IsSigned ? N0C->getAPIntValue().smul_ov(N1C->getAPIntValue(), Overflow)
