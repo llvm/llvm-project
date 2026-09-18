@@ -10695,6 +10695,24 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!getAlignmentArgument(E->getArg(1), E->getArg(0)->getType(), Info,
                               Alignment))
       return false;
+
+    // A base-less pointer has a known numeric address stored in Offset, but
+    // there is no underlying object relative to which the pointer can be
+    // adjusted. If the address is already sufficiently aligned, the builtin
+    // is a no-op and the original pointer value can be preserved.
+    if (!Result.Base) {
+      assert(Alignment.getBitWidth() <= 64 &&
+             "Cannot handle > 64-bit address-space");
+      uint64_t Alignment64 = Alignment.getZExtValue();
+      uint64_t PointerValue = Result.Offset.getQuantity();
+      if (llvm::isAligned(llvm::Align(Alignment64), PointerValue))
+        return true;
+
+      Info.FFDiag(E->getArg(0), diag::note_constexpr_alignment_adjust)
+          << Alignment;
+      return false;
+    }
+
     CharUnits BaseAlignment = getBaseAlignment(Info, Result);
     CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Result.Offset);
     // For align_up/align_down, we can return the same value if the alignment
@@ -17072,6 +17090,17 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       // If we evaluated a pointer, check the minimum known alignment.
       LValue Ptr;
       Ptr.setFrom(Info.Ctx, Src);
+      // Pointers without a base have a known numeric address, so check that
+      // address directly instead of trying to determine a base alignment.
+      if (!Ptr.Base) {
+        assert(Alignment.getBitWidth() <= 64 &&
+               "Cannot handle > 64-bit address-space");
+        uint64_t Alignment64 = Alignment.getZExtValue();
+        uint64_t PointerValue = Ptr.Offset.getQuantity();
+        return Success(
+            llvm::isAligned(llvm::Align(Alignment64), PointerValue) ? 1 : 0, E);
+      }
+
       CharUnits BaseAlignment = getBaseAlignment(Info, Ptr);
       CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Ptr.Offset);
       // We can return true if the known alignment at the computed offset is
