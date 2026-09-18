@@ -1387,7 +1387,7 @@ static bool isSignatureValid(FunctionType *FTy,
 
   // Default arguments are materialized as ConstantInt values, requiring one
   // concrete integer descriptor per omitted parameter.
-  if (NumMissingTrailingParams &&
+  if (NumMissingTrailingParams != 0 &&
       (Infos.size() != NumMissingTrailingParams ||
        llvm::any_of(Infos, [](Intrinsic::IITDescriptor D) {
          return D.Kind != Intrinsic::IITDescriptor::Integer;
