@@ -725,7 +725,7 @@ features cannot lower the translation-unit ABI level;
   result in a link error. (#GH219796)
 
 - Fixed ambiguous overload where two non-static member functions with
-  different signatures could be incorrectly considered equivalent. (#G224499)
+  different signatures could be incorrectly considered equivalent. (#GH224499)
 
 #### Bug Fixes to AST Handling
 
