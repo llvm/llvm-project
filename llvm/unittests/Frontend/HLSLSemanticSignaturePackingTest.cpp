@@ -1295,6 +1295,14 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableClipCullWhenAppended) {
       PackingMethod::PrefixStable, PrefixConfig, /*ExpectedRows=*/3,
       {{/*Row=*/0, /*Col=*/0}, {/*Row=*/1, /*Col=*/0}, {/*Row=*/1, /*Col=*/1}});
 
+  // struct Extended {
+  //   float3 First         : First;
+  //   float  Clip0         : SV_ClipDistance0;
+  //   float2 Cull1[2]      : SV_CullDistance1;
+  //   float  Clip1         : SV_ClipDistance1;
+  //   float  WithFirst     : WithFirst;
+  //   float  AfterClipCull : AfterClipCull;
+  // };
   TestConfig ExtendedConfig = PrefixConfig;
   ExtendedConfig.Elements.push_back(
       {dxbc::PSV::SemanticKind::ClipDistance, /*Rows=*/1, /*Cols=*/1,
