@@ -103,7 +103,7 @@ public:
 
   ArchSpec GetArchitecture() override { return m_arch; }
 
-  UUID GetUUID() override { return m_uuid; }
+  UUID GetUUID() override;
 
   uint32_t GetDependentModules(FileSpecList &files) override { return 0; }
 
@@ -152,7 +152,7 @@ private:
     lldb::offset_t offset;
     uint32_t size;
     uint32_t id;
-    ConstString name;
+    std::string name;
     lldb::offset_t GetFileOffset() const { return offset & 0xffffffff; }
   };
 

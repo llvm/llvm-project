@@ -334,6 +334,79 @@ cc_library(
     ],
 )
 
+expand_template(
+    name = "bolt_rt_config_h",
+    out = "runtime/config.h",
+    substitutions = {
+        "#cmakedefine HAVE_ELF_H": "#define HAVE_ELF_H",
+    },
+    template = "runtime/config.h.in",
+)
+
+cc_library(
+    name = "bolt_rt_config",
+    includes = ["runtime"],
+    textual_hdrs = [":bolt_rt_config_h"],
+)
+
+cc_library(
+    name = "bolt_rt_instr",
+    srcs = glob([
+        "runtime/instr.cpp",
+        "runtime/*.h",
+    ]),
+    copts = [
+        "-ffreestanding",
+        "-fno-exceptions",
+        "-fno-rtti",
+        "-fno-stack-protector",
+        "-fPIC",
+        "-fomit-frame-pointer",
+    ] + select({
+        "@platforms//cpu:x86_64": [
+            "-mno-sse",
+            "-mgeneral-regs-only",
+        ],
+        "@platforms//cpu:aarch64": [
+            "-mno-outline-atomics",
+            "-mgeneral-regs-only",
+        ],
+    }),
+    linkstatic = True,
+    deps = [
+        ":bolt_rt_config",
+    ],
+)
+
+cc_library(
+    name = "bolt_rt_hugify",
+    srcs = glob([
+        "runtime/hugify.cpp",
+        "runtime/*.h",
+    ]),
+    copts = [
+        "-ffreestanding",
+        "-fno-exceptions",
+        "-fno-rtti",
+        "-fno-stack-protector",
+        "-fPIC",
+        "-fomit-frame-pointer",
+    ] + select({
+        "@platforms//cpu:x86_64": [
+            "-mno-sse",
+            "-mgeneral-regs-only",
+        ],
+        "@platforms//cpu:aarch64": [
+            "-mno-outline-atomics",
+            "-mgeneral-regs-only",
+        ],
+    }),
+    linkstatic = True,
+    deps = [
+        ":bolt_rt_config",
+    ],
+)
+
 cc_library(
     name = "Utils",
     srcs = glob([

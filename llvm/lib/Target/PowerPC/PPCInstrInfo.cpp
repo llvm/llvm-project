@@ -94,6 +94,12 @@ PPCInstrInfo::PPCInstrInfo(const PPCSubtarget &STI)
                       STI.isPPC64() ? PPC::BLR8 : PPC::BLR),
       Subtarget(STI), RI(STI.getTargetMachine()) {}
 
+const TargetRegisterClass *PPCInstrInfo::getInlineAsmMemoryOperandRegClass(
+    InlineAsm::ConstraintCode C) const {
+  return Subtarget.isPPC64() ? &PPC::G8RC_NOX0RegClass
+                             : &PPC::GPRC_NOR0RegClass;
+}
+
 /// CreateTargetHazardRecognizer - Return the hazard recognizer to use for
 /// this target when scheduling the DAG.
 ScheduleHazardRecognizer *
@@ -461,7 +467,7 @@ bool PPCInstrInfo::getFMAPatterns(MachineInstr &Root,
 
       MULInstrL = MRI->getVRegDef(MULRegL);
       MULInstrR = MRI->getVRegDef(MULRegR);
-      return true;
+      return MULInstrL && MULInstrR;
     }
     return false;
   };
@@ -3501,6 +3507,8 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
       Register TrueReg = RI.lookThruCopyLike(Reg, MRI);
       if (TrueReg.isVirtual()) {
         MachineInstr *DefMIForTrueReg = MRI->getVRegDef(TrueReg);
+        if (!DefMIForTrueReg)
+          continue;
         if (DefMIForTrueReg->getOpcode() == PPC::LI ||
             DefMIForTrueReg->getOpcode() == PPC::LI8 ||
             DefMIForTrueReg->getOpcode() == PPC::ADDI ||
@@ -3890,6 +3898,8 @@ bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
   if (!FoldingReg.isVirtual())
     return false;
   MachineInstr *SrcMI = MRI->getVRegDef(FoldingReg);
+  if (!SrcMI)
+    return false;
   if (SrcMI->getOpcode() != PPC::RLWINM &&
       SrcMI->getOpcode() != PPC::RLWINM_rec &&
       SrcMI->getOpcode() != PPC::RLWINM8 &&
@@ -5790,8 +5800,7 @@ public:
 } // namespace
 
 std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
-PPCInstrInfo::analyzeLoopForPipelining(
-    MachineBasicBlock *LoopBB, MachineOptimizationRemarkEmitter *ORE) const {
+PPCInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
   // We really "analyze" only hardware loops right now.
   MachineBasicBlock::iterator I = LoopBB->getFirstTerminator();
   MachineBasicBlock *Preheader = *LoopBB->pred_begin();

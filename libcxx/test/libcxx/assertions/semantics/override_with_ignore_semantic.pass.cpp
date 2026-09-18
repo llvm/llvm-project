@@ -9,14 +9,13 @@
 // This test ensures that we can override the assertion semantic used by any hardening mode with `ignore` on a per-TU
 // basis (this is valid for the `none` mode as well, though a no-op).
 
-// `check_assertion.h` is only available starting from C++11 and requires Unix headers and regex support.
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: c++03, no-localization
 // UNSUPPORTED: libcpp-has-no-experimental-hardening-observe-semantic
+// assertion semantics require libc++ and C++11
+// UNSUPPORTED: c++03
+// REQUIRES: stdlib=libc++
 // ADDITIONAL_COMPILE_FLAGS: -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_IGNORE
 
-#include <cassert>
-#include "check_assertion.h"
+#include <__assert>
 
 int main(int, char**) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");

@@ -617,6 +617,108 @@ define i32 @trunc_shl_nsw_nuw_31_i32_i64(i64 %val) {
   ret i32 %trunc
 }
 
+define i32 @trunc_nuw_shl_nuw_3_i32_i64(i64 %val) {
+; CHECK-LABEL: @trunc_nuw_shl_nuw_3_i32_i64(
+; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc nuw i64 [[VAL:%.*]] to i32
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl nuw i32 [[VAL_TR]], 3
+; CHECK-NEXT:    ret i32 [[TRUNC]]
+;
+  %shl = shl nuw i64 %val, 3
+  %trunc = trunc nuw i64 %shl to i32
+  ret i32 %trunc
+}
+
+define i32 @trunc_nsw_shl_nsw_3_i32_i64(i64 %val) {
+; CHECK-LABEL: @trunc_nsw_shl_nsw_3_i32_i64(
+; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc nsw i64 [[VAL:%.*]] to i32
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl nsw i32 [[VAL_TR]], 3
+; CHECK-NEXT:    ret i32 [[TRUNC]]
+;
+  %shl = shl nsw i64 %val, 3
+  %trunc = trunc nsw i64 %shl to i32
+  ret i32 %trunc
+}
+
+define i32 @trunc_nuw_nsw_shl_nuw_nsw_3_i32_i64(i64 %val) {
+; CHECK-LABEL: @trunc_nuw_nsw_shl_nuw_nsw_3_i32_i64(
+; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc nuw nsw i64 [[VAL:%.*]] to i32
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl nuw nsw i32 [[VAL_TR]], 3
+; CHECK-NEXT:    ret i32 [[TRUNC]]
+;
+  %shl = shl nuw nsw i64 %val, 3
+  %trunc = trunc nuw nsw i64 %shl to i32
+  ret i32 %trunc
+}
+
+define i32 @trunc_nuw_shl_nuw_nsw_3_i32_i64(i64 %val) {
+; CHECK-LABEL: @trunc_nuw_shl_nuw_nsw_3_i32_i64(
+; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc nuw i64 [[VAL:%.*]] to i32
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl nuw i32 [[VAL_TR]], 3
+; CHECK-NEXT:    ret i32 [[TRUNC]]
+;
+  %shl = shl nuw nsw i64 %val, 3
+  %trunc = trunc nuw i64 %shl to i32
+  ret i32 %trunc
+}
+
+define i32 @trunc_nuw_nsw_shl_nsw_3_i32_i64(i64 %val) {
+; CHECK-LABEL: @trunc_nuw_nsw_shl_nsw_3_i32_i64(
+; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc nsw i64 [[VAL:%.*]] to i32
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl nsw i32 [[VAL_TR]], 3
+; CHECK-NEXT:    ret i32 [[TRUNC]]
+;
+  %shl = shl nsw i64 %val, 3
+  %trunc = trunc nuw nsw i64 %shl to i32
+  ret i32 %trunc
+}
+
+; Missing flags on shl.
+define i32 @trunc_nuw_shl_3_i32_i64(i64 %val) {
+; CHECK-LABEL: @trunc_nuw_shl_3_i32_i64(
+; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc i64 [[VAL:%.*]] to i32
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl i32 [[VAL_TR]], 3
+; CHECK-NEXT:    ret i32 [[TRUNC]]
+;
+  %shl = shl i64 %val, 3
+  %trunc = trunc nuw i64 %shl to i32
+  ret i32 %trunc
+}
+
+; Missing flags on shl.
+define i32 @trunc_shl_nuw_nsw_3_i32_i64(i64 %val) {
+; CHECK-LABEL: @trunc_shl_nuw_nsw_3_i32_i64(
+; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc i64 [[VAL:%.*]] to i32
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl i32 [[VAL_TR]], 3
+; CHECK-NEXT:    ret i32 [[TRUNC]]
+;
+  %shl = shl nuw nsw i64 %val, 3
+  %trunc = trunc i64 %shl to i32
+  ret i32 %trunc
+}
+
+; Mismatched flags on shl/trunc.
+define i32 @trunc_nuw_shl_nsw_3_i32_i64(i64 %val) {
+; CHECK-LABEL: @trunc_nuw_shl_nsw_3_i32_i64(
+; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc i64 [[VAL:%.*]] to i32
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl i32 [[VAL_TR]], 3
+; CHECK-NEXT:    ret i32 [[TRUNC]]
+;
+  %shl = shl nsw i64 %val, 3
+  %trunc = trunc nuw i64 %shl to i32
+  ret i32 %trunc
+}
+
+define i4 @trunc_nuw_shl_i6_to_i4(i6 %x, i6 %y) {
+; CHECK-LABEL: @trunc_nuw_shl_i6_to_i4(
+; CHECK-NEXT:    [[X_TR:%.*]] = trunc i6 [[X:%.*]] to i4
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl i4 [[X_TR]], 3
+; CHECK-NEXT:    ret i4 [[TRUNC]]
+;
+  %shl = shl i6 %x, 3
+  %trunc = trunc nuw i6 %shl to i4
+  ret i4 %trunc
+}
+
 define i16 @trunc_shl_15_i16_i64(i64 %val) {
 ; CHECK-LABEL: @trunc_shl_15_i16_i64(
 ; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc i64 [[VAL:%.*]] to i16
@@ -1461,4 +1563,140 @@ define i1 @neg_trunc_nuw_lshr(i8 %x, i8 %c) {
   %lshr = lshr i8 %x, %c
   %ret = trunc nuw i8 %lshr to i1
   ret i1 %ret
+}
+
+define i32 @separate_truncs_i32(i64 %x) {
+; CHECK-LABEL: @separate_truncs_i32(
+; CHECK-NEXT:    %[[SHIFT:.*]] = lshr i64 %x, 16
+; CHECK-NEXT:    %[[TRUNC:.*]] = trunc i64 %[[SHIFT]] to i32
+; CHECK-NEXT:    %[[MASK:.*]] = and i32 %[[TRUNC]], 130816
+; CHECK-NEXT:    ret i32 %[[MASK]]
+;
+  %wide.shift = lshr i64 %x, 16
+  %wide = trunc i64 %wide.shift to i32
+  %field.hi = and i32 %wide, 65536
+
+  %x.narrow = trunc i64 %x to i32
+  %narrow.shift = lshr i32 %x.narrow, 16
+  %field.lo = and i32 %narrow.shift, 65280
+
+  %result = or i32 %field.hi, %field.lo
+  ret i32 %result
+}
+
+define i32 @separate_truncs_i32_reverse(i64 %x) {
+; CHECK-LABEL: @separate_truncs_i32_reverse(
+; CHECK-NEXT:    %[[SHIFT:.*]] = lshr i64 %x, 16
+; CHECK-NEXT:    %[[TRUNC:.*]] = trunc i64 %[[SHIFT]] to i32
+; CHECK-NEXT:    %[[MASK:.*]] = and i32 %[[TRUNC]], 130816
+; CHECK-NEXT:    ret i32 %[[MASK]]
+;
+  %x.narrow = trunc i64 %x to i32
+  %narrow.shift = lshr i32 %x.narrow, 16
+  %field.lo = and i32 %narrow.shift, 65280
+
+  %wide.shift = lshr i64 %x, 16 
+  %wide = trunc i64 %wide.shift to i32
+  %field.hi = and i32 %wide, 65536
+
+  %result = or i32 %field.lo, %field.hi
+  ret i32 %result
+}
+
+define i32 @separate_truncs_i32_multiuse(i64 %x) {
+; CHECK-LABEL: @separate_truncs_i32_multiuse(
+; CHECK-NEXT:    %[[SHIFT:.*]] = lshr i64 %x, 16
+; CHECK-NEXT:    %[[TRUNC:.*]] = trunc i64 %[[SHIFT]] to i32
+; CHECK-NEXT:    call void @use(i32 %[[TRUNC]])
+; CHECK-NEXT:    %[[MASK:.*]] = and i32 %[[TRUNC]], 130816
+; CHECK-NEXT:    ret i32 %[[MASK]]
+; 
+  %wide.shift = lshr i64 %x, 16
+  %wide = trunc i64 %wide.shift to i32
+  call void @use(i32 %wide)
+  %field.hi = and i32 %wide, 65536
+
+  %x.narrow = trunc i64 %x to i32
+  %narrow.shift = lshr i32 %x.narrow, 16
+  %field.lo = and i32 %narrow.shift, 65280
+
+  %result = or i32 %field.hi, %field.lo
+  ret i32 %result
+}
+
+define i32 @separate_truncs_i32_reverse_multiuse(i64 %x) {
+; CHECK-LABEL: @separate_truncs_i32_reverse_multiuse(
+; CHECK-NEXT:    %[[NARROW:.*]] = trunc i64 %x to i32
+; CHECK-NEXT:    call void @use(i32 %[[NARROW]])
+; CHECK-NEXT:    %[[SHIFT:.*]] = lshr i64 %x, 16
+; CHECK-NEXT:    %[[TRUNC:.*]] = trunc i64 %[[SHIFT]] to i32
+; CHECK-NEXT:    %[[MASK:.*]] = and i32 %[[TRUNC]], 130816
+; CHECK-NEXT:    ret i32 %[[MASK]]
+;
+  %x.narrow = trunc i64 %x to i32
+  call void @use(i32 %x.narrow)
+  %narrow.shift = lshr i32 %x.narrow, 16
+  %field.lo = and i32 %narrow.shift, 65280
+
+  %wide.shift = lshr i64 %x, 16 
+  %wide = trunc i64 %wide.shift to i32
+  %field.hi = and i32 %wide, 65536
+
+  %result = or i32 %field.lo, %field.hi
+  ret i32 %result
+}
+
+define <2 x i32> @separate_truncs_i32_reverse_vec(<2 x i64> %x) {
+; CHECK-LABEL: @separate_truncs_i32_reverse_vec(
+; CHECK-NEXT:    %[[SHIFT:.*]] = lshr <2 x i64> %x, splat (i64 16)
+; CHECK-NEXT:    %[[TRUNC:.*]] = trunc <2 x i64> %[[SHIFT]] to <2 x i32>
+; CHECK-NEXT:    %[[MASK:.*]] = and <2 x i32> %[[TRUNC]], splat (i32 130816)
+; CHECK-NEXT:    ret <2 x i32> %[[MASK]]
+; 
+  %x.narrow = trunc <2 x i64> %x to <2 x i32>
+  %narrow.shift = lshr <2 x i32> %x.narrow, <i32 16, i32 16>
+  %field.lo = and <2 x i32> %narrow.shift, <i32 65280, i32 65280>
+
+  %wide.shift = lshr <2 x i64> %x, <i64 16, i64 16>
+  %wide = trunc <2 x i64> %wide.shift to <2 x i32>
+  %field.hi = and <2 x i32> %wide, <i32 65536, i32 65536>
+
+  %result = or <2 x i32> %field.lo, %field.hi
+  ret <2 x i32> %result
+}
+
+define i32 @neg_separate_truncs_i32_shift_geq_32(i64 %x) {
+; CHECK-LABEL: @neg_separate_truncs_i32_shift_geq_32(
+; CHECK-NEXT:    ret i32 poison
+;
+  %wide.shift = lshr i64 %x, 32
+  %wide = trunc i64 %wide.shift to i32
+  %field.hi = and i32 %wide, 65536
+
+  %x.narrow = trunc i64 %x to i32
+  %narrow.shift = lshr i32 %x.narrow, 32
+  %field.lo = and i32 %narrow.shift, 65280
+
+  %result = or i32 %field.hi, %field.lo
+  ret i32 %result
+}
+
+; negative test: narrow mask 131072
+define i32 @neg_separate_truncs_i32_upper_bits(i64 %x) {
+; CHECK-LABEL: @neg_separate_truncs_i32_upper_bits(
+; CHECK-NEXT:    %[[SHIFT:.*]] = lshr i64 %x, 16
+; CHECK-NEXT:    %[[TRUNC:.*]] = trunc i64 %[[SHIFT]] to i32
+; CHECK-NEXT:    %[[MASK:.*]] = and i32 %[[TRUNC]], 65536
+; CHECK-NEXT:    ret i32 %[[MASK]]
+;
+  %wide.shift = lshr i64 %x, 16
+  %wide = trunc i64 %wide.shift to i32
+  %field.hi = and i32 %wide, 65536
+
+  %x.narrow = trunc i64 %x to i32
+  %narrow.shift = lshr i32 %x.narrow, 16
+  %field.lo = and i32 %narrow.shift, 131072
+
+  %result = or i32 %field.hi, %field.lo
+  ret i32 %result
 }

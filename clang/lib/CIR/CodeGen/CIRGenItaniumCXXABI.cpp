@@ -738,6 +738,8 @@ static bool typeInfoIsInStandardLibrary(const BuiltinType *ty) {
 #include "clang/Basic/RISCVVTypes.def"
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
   case BuiltinType::ShortAccum:
   case BuiltinType::Accum:
   case BuiltinType::LongAccum:
@@ -1233,6 +1235,11 @@ void CIRGenItaniumRTTIBuilder::buildVTablePointer(mlir::Location loc,
   cir::GlobalOp vTable = cgm.createOrReplaceCXXRuntimeVariable(
       loc, vTableName, vtableGlobalTy, cir::GlobalLinkageKind::ExternalLinkage,
       CharUnits::fromQuantity(align));
+  // Note: createOrReplaceCXXRuntimeVariable isn't exactly what classic-codegen
+  // does here: it just does a getOrInsertGlobal at the module level. However,
+  // the above function does MOST of what we want, except it sets the global as
+  // constant, when we don't want that.  So set it here instead.
+  vTable.setConstant(false);
 
   // The vtable address point is 2.
   mlir::Attribute field{};
@@ -1805,7 +1812,7 @@ void CIRGenItaniumCXXABI::emitRethrow(CIRGenFunction &cgf, bool isNoReturn) {
   if (isNoReturn) {
     CIRGenBuilderTy &builder = cgf.getBuilder();
     assert(cgf.currSrcLoc && "expected source location");
-    mlir::Location loc = *cgf.currSrcLoc;
+    mlir::Location loc = cgf.getLoc(*cgf.currSrcLoc);
     insertThrowAndSplit(builder, loc);
   } else {
     cgm.errorNYI("emitRethrow with isNoReturn false");

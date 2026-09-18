@@ -16,7 +16,7 @@
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILEPROBE_H
 
 #include "llvm/Analysis/LazyCallGraph.h"
-#include "llvm/IR/PassInstrumentation.h"
+#include "llvm/IR/IRUnitRef.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Compiler.h"
@@ -49,7 +49,7 @@ public:
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
   // Implementation of pass instrumentation callbacks for new pass manager.
-  LLVM_ABI void runAfterPass(StringRef PassID, Any IR);
+  LLVM_ABI void runAfterPass(StringRef PassID, IRUnitRef IR);
 
 private:
   // Allow a little bias due the rounding to integral factors.

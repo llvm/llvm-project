@@ -32,6 +32,10 @@ enum ID {
 #undef OPTION
 };
 
+#define OPTTABLE_VALUES_CODE
+#include "Opts.inc"
+#undef OPTTABLE_VALUES_CODE
+
 #define OPTTABLE_PREFIXES_TABLE_CODE
 #include "Opts.inc"
 #undef OPTTABLE_PREFIXES_TABLE_CODE
@@ -51,6 +55,10 @@ enum OptionVisibility {
   MultiLineVis = (1 << 3),
 };
 
+#define OPTTABLE_HELP_TEXT_VARIANTS_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_HELP_TEXT_VARIANTS_TABLE_CODE
+
 static constexpr OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Opts.inc"
@@ -62,14 +70,20 @@ class TestOptTable : public GenericOptTable {
 public:
   TestOptTable(bool IgnoreCase = false)
       : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                        IgnoreCase) {}
+                        IgnoreCase) {
+    setValuesCodeFn(getOptionValuesCode);
+    setHelpTextVariantsTable(OptionHelpTextVariantsTable);
+  }
 };
 
 class TestPrecomputedOptTable : public PrecomputedOptTable {
 public:
   TestPrecomputedOptTable(bool IgnoreCase = false)
       : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                            OptionPrefixesUnion, IgnoreCase) {}
+                            OptionPrefixesUnion, IgnoreCase) {
+    setValuesCodeFn(getOptionValuesCode);
+    setHelpTextVariantsTable(OptionHelpTextVariantsTable);
+  }
 };
 }
 
@@ -227,6 +241,27 @@ TYPED_TEST(OptTableTest, AliasArgs) {
   EXPECT_TRUE(AL.hasArg(OPT_B));
   EXPECT_EQ("foo", AL.getAllArgValues(OPT_B)[0]);
   EXPECT_EQ("bar", AL.getAllArgValues(OPT_B)[1]);
+}
+
+TYPED_TEST(OptTableTest, AliasArgsMultiple) {
+  TypeParam T;
+  unsigned MAI, MAC;
+
+  const char *MyArgs[] = {"-Jmulti"};
+  InputArgList AL = T.ParseArgs(MyArgs, MAI, MAC);
+  EXPECT_TRUE(AL.hasArg(OPT_D));
+  EXPECT_EQ((std::vector<std::string>{"foo", "bar"}),
+            AL.getAllArgValues(OPT_D));
+}
+
+TYPED_TEST(OptTableTest, SuggestValueCompletions) {
+  TypeParam T;
+
+  EXPECT_EQ((std::vector<std::string>{"inline1", "inline2"}),
+            T.suggestValueCompletions("-values-inline=", ""));
+  // Values computed by ValuesCode live outside the string table.
+  EXPECT_EQ((std::vector<std::string>{"code1", "code2"}),
+            T.suggestValueCompletions("-values-from-code=", ""));
 }
 
 TYPED_TEST(OptTableTest, IgnoreCase) {
@@ -538,6 +573,23 @@ TYPED_TEST(OptTableTest, UnknownGroupedShortOptions) {
   EXPECT_EQ("-z", Unknown[1]);
   EXPECT_EQ("-u", Unknown[2]);
   EXPECT_EQ("-z", Unknown[3]);
+}
+
+TYPED_TEST(OptTableTest, HelpTextForVariants) {
+  TypeParam T;
+  EXPECT_EQ("The xyzzy2 option", T.getOptionHelpText(OPT_Xyzzy2));
+  EXPECT_EQ("The xyzzy2 option",
+            T.getOptionHelpText(OPT_Xyzzy2, Visibility(SubtoolVis)));
+  EXPECT_EQ("The xyzzy3 option", T.getOptionHelpText(OPT_Xyzzy3));
+  EXPECT_EQ("The xyzzy3 option",
+            T.getOptionHelpText(OPT_Xyzzy3, Visibility(DefaultVis)));
+  EXPECT_EQ("The xyzzy3 option for the subtool",
+            T.getOptionHelpText(OPT_Xyzzy3, Visibility(SubtoolVis)));
+  EXPECT_EQ(
+      "The xyzzy3 option for the subtool",
+      T.getOptionHelpText(OPT_Xyzzy3, Visibility(DefaultVis | SubtoolVis)));
+  EXPECT_EQ("The xyzzy3 option for multiline",
+            T.getOptionHelpText(OPT_Xyzzy3, Visibility(MultiLineVis)));
 }
 
 TYPED_TEST(OptTableTest, PrintMultilineHelpText) {

@@ -18,5 +18,6 @@
 #include "../types.h"
 
 using Sent = std::ranges::sentinel_t<std::ranges::iota_view<SomeInt, IntSentinelWith<SomeInt>>>;
+
 static_assert(!std::is_constructible_v<Sent, IntSentinelWith<SomeInt>>);
 static_assert(!std::is_convertible_v<IntSentinelWith<SomeInt>, Sent>);

@@ -30,6 +30,7 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/StatementContext.h"
+#include "flang/Lower/Support/LoopAnnotation.h"
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -38,6 +39,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
+#include "flang/Optimizer/Builder/Runtime/CUDA/Support.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
@@ -51,6 +53,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -288,14 +291,14 @@ static void emitUseStmtOp(Fortran::lower::AbstractConverter &converter,
                          renamesAttr, hasOnlyWithRenamesAttr);
 }
 
-/// Emit fir.module_debug_imports for USE statements in a module.
+/// Emit fir.module_debug_imports for USE statements in a module. The operation
+/// is emitted for every module, even one with no USE statement, because its
+/// location is also what tells AddDebugInfo the line of the MODULE statement.
 static void
 emitModuleDebugImports(Fortran::lower::AbstractConverter &converter,
                        mlir::OpBuilder &builder, mlir::Location loc,
                        const Fortran::lower::pft::ModuleLikeUnit &mod) {
   if (!converter.getLoweringOptions().getPreserveUseDebugInfo())
-    return;
-  if (mod.preservedUseStmts.empty())
     return;
 
   const Fortran::semantics::Scope &modScope = mod.getScope();
@@ -528,6 +531,7 @@ public:
     // - Module variables are lowered once all the function declarations are
     // available.
     bool hasMainProgram = false;
+    Fortran::parser::CharBlock mainProgramPosition{};
     llvm::SmallVector<const Fortran::semantics::Symbol *>
         globalOmpRequiresSymbols;
     createBuilderOutsideOfFuncOpAndDo([&]() {
@@ -535,8 +539,10 @@ public:
         Fortran::common::visit(
             Fortran::common::visitors{
                 [&](Fortran::lower::pft::FunctionLikeUnit &f) {
-                  if (f.isMainProgram())
+                  if (f.isMainProgram()) {
                     hasMainProgram = true;
+                    mainProgramPosition = f.getStartingSourceLoc();
+                  }
                   declareFunction(f);
                   globalOmpRequiresSymbols.push_back(f.getScope().symbol());
                 },
@@ -614,15 +620,28 @@ public:
     // Generate the `main` entry point if necessary
     if (hasMainProgram)
       createBuilderOutsideOfFuncOpAndDo([&]() {
-        fir::runtime::genMain(*builder, toLocation(),
-                              bridge.getEnvironmentDefaults(),
-                              (getFoldingContext().languageFeatures().IsEnabled(
-                                   Fortran::common::LanguageFeature::CUDA) &&
-                               getFoldingContext().languageFeatures().IsEnabled(
-                                   Fortran::common::LanguageFeature::CUDAInit)),
-                              getFoldingContext().languageFeatures().IsEnabled(
-                                  Fortran::common::LanguageFeature::Coarray));
+        // Lowering has walked every unit, so the current position is the END
+        // statement of the last one. Reset it to the main program's start.
+        setCurrentPosition(mainProgramPosition);
+        fir::runtime::genMain(
+            *builder, toLocation(), bridge.getEnvironmentDefaults(),
+            (getFoldingContext().languageFeatures().IsEnabled(
+                 Fortran::common::LanguageFeature::CUDA) &&
+             getFoldingContext().languageFeatures().IsEnabled(
+                 Fortran::common::LanguageFeature::CUDAInit)),
+            getFoldingContext().languageFeatures().IsEnabled(
+                Fortran::common::LanguageFeature::Coarray),
+            bridge.getLoweringOptions().getFPExceptionTraps());
       });
+
+    // Marking of OpenMP declare target functions and globals imported
+    // from a module file needs to happen after the primary
+    // translation pass has run, because that is where the ops that
+    // need marking are created.
+    createBuilderOutsideOfFuncOpAndDo([&]() {
+      Fortran::lower::markOpenMPImportedDeclareTargets(
+          *this, bridge.getSemanticsContext());
+    });
 
     finalizeOpenMPLowering(globalOmpRequiresSymbols);
   }
@@ -820,6 +839,9 @@ public:
               Fortran::lower::StatementContext &context,
               mlir::Location *locPtr = nullptr) override final {
     mlir::Location loc = locPtr ? *locPtr : toLocation();
+    auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
+    if (coarrayRef.has_value())
+      TODO(loc, "coarray: genExprAddr of coarray reference.");
     return Fortran::lower::convertExprToAddress(loc, *this, expr, localSymbols,
                                                 context);
   }
@@ -829,6 +851,9 @@ public:
                Fortran::lower::StatementContext &context,
                mlir::Location *locPtr = nullptr) override final {
     mlir::Location loc = locPtr ? *locPtr : toLocation();
+    auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
+    if (coarrayRef.has_value())
+      TODO(loc, "coarray: genExprValue of coarray reference.");
     return Fortran::lower::convertExprToValue(loc, *this, expr, localSymbols,
                                               context);
   }
@@ -836,6 +861,9 @@ public:
   fir::ExtendedValue
   genExprBox(mlir::Location loc, const Fortran::lower::SomeExpr &expr,
              Fortran::lower::StatementContext &stmtCtx) override final {
+    auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
+    if (coarrayRef.has_value())
+      TODO(loc, "coarray: genExprBox of coarray reference.");
     return Fortran::lower::convertExprToBox(loc, *this, expr, localSymbols,
                                             stmtCtx);
   }
@@ -1141,7 +1169,9 @@ public:
   static mlir::Location genLocation(Fortran::parser::SourcePosition pos,
                                     mlir::MLIRContext &ctx) {
     llvm::SmallString<256> path(*pos.path);
-    llvm::sys::fs::make_absolute(path);
+    // Preserve the file path as it was presented on the command line (matching
+    // Clang): relative paths stay relative and absolute paths stay absolute.
+    // Only normalize '.' components; do not force the path to be absolute.
     llvm::sys::path::remove_dots(path);
     return mlir::FileLineColLoc::get(&ctx, path.str(), pos.line, pos.column);
   }
@@ -1306,6 +1336,11 @@ public:
   const Fortran::lower::pft::FunctionLikeUnit *
   getCurrentFunctionUnit() const override final {
     return currentFunctionUnit;
+  }
+
+  bool isVisibleCrayPointerTarget(
+      const Fortran::semantics::Symbol &sym) const override final {
+    return visibleCrayPointerTargets.contains(&sym.GetUltimate());
   }
 
   void checkCoarrayEnabled() override final {
@@ -1982,7 +2017,10 @@ private:
         mlir::Value active =
             fir::runtime::cuda::genDeviceIsActive(*builder, loc);
         builder->genIfThen(loc, active)
-            .genThen([&]() { bridge.cudaCleanupCtx().finalizeAndKeep(); })
+            .genThen([&]() {
+              fir::runtime::cuda::genCUDADeviceSynchronize(*builder, loc);
+              bridge.cudaCleanupCtx().finalizeAndKeep();
+            })
             .end();
       }
       bridge.fctCtx().finalizeAndKeep();
@@ -2056,6 +2094,21 @@ private:
                 loc, resultRefType, resultRef);
           return fir::LoadOp::create(*builder, loc, resultRef);
         });
+    // CUDA function-result descriptors are allocated with cuf.alloc and freed
+    // on exit. Abstract-result rewrites `return %v` into a store to the hidden
+    // result argument at the return point, which would run after that free if
+    // %v is still a load or rebox of the CUDA descriptor. Spill %v to a stack
+    // temporary first so the rewrite stores to the hidden argument before the
+    // free.
+    if (bridge.cudaCleanupCtx().hasCode() &&
+        mlir::isa<fir::BaseBoxType>(resultVal.getType()))
+      if (std::optional<Fortran::common::CUDADataAttr> cudaAttr =
+              Fortran::semantics::GetCUDADataAttr(&resultSym.GetUltimate()))
+        if (*cudaAttr != Fortran::common::CUDADataAttr::Shared) {
+          mlir::Value tmp = builder->createTemporary(loc, resultVal.getType());
+          fir::StoreOp::create(*builder, loc, resultVal, tmp);
+          resultVal = fir::LoadOp::create(*builder, loc, tmp);
+        }
     genExitRoutine(false, resultVal);
   }
 
@@ -2228,6 +2281,8 @@ private:
     // Relax the requirement that the GOTO variable must have a value in the
     // label list when a list is present, and allow a branch to any non-format
     // target that has an ASSIGN statement for the variable.
+    //
+    // (Both PFT builder and MLIR lowering bridge apply the same relaxation)
     mlir::Location loc = toLocation();
     Fortran::lower::pft::Evaluation &eval = getEval();
     Fortran::lower::pft::FunctionLikeUnit &owningProc =
@@ -2432,8 +2487,7 @@ private:
     Fortran::lower::omp::ReductionProcessor rp;
     bool result = rp.processReductionArguments<fir::DeclareReductionOp>(
         toLocation(), *this, info.reduceOperatorList, reduceVars,
-        reduceVarByRef, reductionDeclSymbols, info.reduceSymList,
-        /*reductionObjects=*/{}, getSymbolMap());
+        reduceVarByRef, reductionDeclSymbols, info.reduceSymList);
     if (!result)
       TODO(toLocation(), "Lowering unrecognised reduction type");
 
@@ -2558,7 +2612,8 @@ private:
   mlir::scf::ExecuteRegionOp
   wrapUnstructuredConstruct(Fortran::lower::pft::Evaluation &eval,
                             mlir::Block *&savedExitBlock) {
-    if (!Fortran::lower::pft::isWrappableConstruct(eval))
+    if (!Fortran::lower::pft::isWrappableConstruct(
+            eval, bridge.getSemanticsContext()))
       return nullptr;
 
     mlir::Location loc = toLocation();
@@ -2847,167 +2902,19 @@ private:
     return builder->createIntegerConstant(loc, controlType, 1); // step
   }
 
-  // For unroll directives without a value, force full unrolling.
-  // For unroll directives with a value, if the value is greater than 1,
-  // force unrolling with the given factor. Otherwise, disable unrolling.
-  mlir::LLVM::LoopUnrollAttr
-  genLoopUnrollAttr(std::optional<std::uint64_t> directiveArg) {
-    mlir::BoolAttr falseAttr =
-        mlir::BoolAttr::get(builder->getContext(), false);
-    mlir::BoolAttr trueAttr = mlir::BoolAttr::get(builder->getContext(), true);
-    mlir::IntegerAttr countAttr;
-    mlir::BoolAttr fullUnrollAttr;
-    bool shouldUnroll = true;
-    if (directiveArg.has_value()) {
-      auto unrollingFactor = directiveArg.value();
-      if (unrollingFactor == 0 || unrollingFactor == 1) {
-        shouldUnroll = false;
-      } else {
-        countAttr =
-            builder->getIntegerAttr(builder->getI64Type(), unrollingFactor);
-      }
-    } else {
-      fullUnrollAttr = trueAttr;
-    }
-
-    mlir::BoolAttr disableAttr = shouldUnroll ? falseAttr : trueAttr;
-    return mlir::LLVM::LoopUnrollAttr::get(
-        builder->getContext(), /*disable=*/disableAttr, /*count=*/countAttr, {},
-        /*full=*/fullUnrollAttr, {}, {}, {});
-  }
-
-  // Enabling unroll and jamming directive without a value.
-  // For directives with a value, if the value is greater than 1,
-  // force unrolling with the given factor. Otherwise, disable unrolling and
-  // jamming.
-  mlir::LLVM::LoopUnrollAndJamAttr
-  genLoopUnrollAndJamAttr(std::optional<std::uint64_t> count) {
-    mlir::BoolAttr falseAttr =
-        mlir::BoolAttr::get(builder->getContext(), false);
-    mlir::BoolAttr trueAttr = mlir::BoolAttr::get(builder->getContext(), true);
-    mlir::IntegerAttr countAttr;
-    bool shouldUnroll = true;
-    if (count.has_value()) {
-      auto unrollingFactor = count.value();
-      if (unrollingFactor == 0 || unrollingFactor == 1) {
-        shouldUnroll = false;
-      } else {
-        countAttr =
-            builder->getIntegerAttr(builder->getI64Type(), unrollingFactor);
-      }
-    }
-
-    mlir::BoolAttr disableAttr = shouldUnroll ? falseAttr : trueAttr;
-    return mlir::LLVM::LoopUnrollAndJamAttr::get(
-        builder->getContext(), /*disable=*/disableAttr, /*count*/ countAttr, {},
-        {}, {}, {}, {});
-  }
-
-  // Enabling loop vectorization attribute.
-  mlir::LLVM::LoopVectorizeAttr
-  genLoopVectorizeAttr(mlir::BoolAttr disableAttr,
-                       mlir::BoolAttr scalableEnable,
-                       mlir::IntegerAttr vectorWidth) {
-    mlir::LLVM::LoopVectorizeAttr va;
-    if (disableAttr)
-      va = mlir::LLVM::LoopVectorizeAttr::get(
-          builder->getContext(),
-          /*disable=*/disableAttr, /*predicate=*/{},
-          /*scalableEnable=*/scalableEnable,
-          /*vectorWidth=*/vectorWidth, {}, {}, {});
-    return va;
-  }
-
   void addLoopAnnotationAttr(
       IncrementLoopInfo &info,
       llvm::SmallVectorImpl<const Fortran::parser::CompilerDirective *> &dirs) {
-    mlir::BoolAttr disableVecAttr;
-    mlir::BoolAttr scalableEnable;
-    mlir::IntegerAttr vectorWidth;
-    mlir::LLVM::LoopUnrollAttr ua;
-    mlir::LLVM::LoopUnrollAndJamAttr uja;
-    llvm::SmallVector<mlir::LLVM::AccessGroupAttr> aga;
-    bool has_attrs = false;
-    for (const auto *dir : dirs) {
-      Fortran::common::visit(
-          Fortran::common::visitors{
-              [&](const Fortran::parser::CompilerDirective::VectorAlways &) {
-                disableVecAttr =
-                    mlir::BoolAttr::get(builder->getContext(), false);
-                has_attrs = true;
-              },
-              [&](const Fortran::parser::CompilerDirective::VectorLength &vl) {
-                using Kind =
-                    Fortran::parser::CompilerDirective::VectorLength::Kind;
-                Kind kind = std::get<Kind>(vl.t);
-                uint64_t length = std::get<uint64_t>(vl.t);
-                disableVecAttr =
-                    mlir::BoolAttr::get(builder->getContext(), false);
-                if (length != 0)
-                  vectorWidth =
-                      builder->getIntegerAttr(builder->getI64Type(), length);
-                switch (kind) {
-                case Kind::Scalable:
-                  scalableEnable =
-                      mlir::BoolAttr::get(builder->getContext(), true);
-                  break;
-                case Kind::Fixed:
-                  scalableEnable =
-                      mlir::BoolAttr::get(builder->getContext(), false);
-                  break;
-                case Kind::Auto:
-                  break;
-                }
-                has_attrs = true;
-              },
-              [&](const Fortran::parser::CompilerDirective::Unroll &u) {
-                ua = genLoopUnrollAttr(u.v);
-                has_attrs = true;
-              },
-              [&](const Fortran::parser::CompilerDirective::UnrollAndJam &u) {
-                uja = genLoopUnrollAndJamAttr(u.v);
-                has_attrs = true;
-              },
-              [&](const Fortran::parser::CompilerDirective::NoVector &u) {
-                disableVecAttr =
-                    mlir::BoolAttr::get(builder->getContext(), true);
-                has_attrs = true;
-              },
-              [&](const Fortran::parser::CompilerDirective::NoUnroll &u) {
-                ua = genLoopUnrollAttr(/*unrollingFactor=*/0);
-                has_attrs = true;
-              },
-              [&](const Fortran::parser::CompilerDirective::NoUnrollAndJam &u) {
-                uja = genLoopUnrollAndJamAttr(/*unrollingFactor=*/0);
-                has_attrs = true;
-              },
-              [&](const Fortran::parser::CompilerDirective::IVDep &iv) {
-                aga.push_back(
-                    mlir::LLVM::AccessGroupAttr::get(builder->getContext()));
-                has_attrs = true;
-              },
-              [&](const Fortran::parser::CompilerDirective::Simd &simd) {
-                disableVecAttr =
-                    mlir::BoolAttr::get(builder->getContext(), false);
-                has_attrs = true;
-              },
-              [&](const auto &) {}},
-          dir->u);
-    }
-    mlir::LLVM::LoopVectorizeAttr va =
-        genLoopVectorizeAttr(disableVecAttr, scalableEnable, vectorWidth);
-    mlir::LLVM::LoopAnnotationAttr la = mlir::LLVM::LoopAnnotationAttr::get(
-        builder->getContext(), {}, /*vectorize=*/va, {}, /*unroll*/ ua,
-        /*unroll_and_jam*/ uja, {}, {}, {}, {}, {}, {}, {}, {}, {},
-        /*parallelAccesses*/ aga);
-    if (has_attrs) {
-      if (auto loopOp = mlir::dyn_cast<fir::DoLoopOp>(info.loopOp))
-        loopOp.setLoopAnnotationAttr(la);
+    mlir::LLVM::LoopAnnotationAttr la =
+        Fortran::lower::genLoopAnnotationAttr(builder->getContext(), dirs);
+    if (!la)
+      return;
+    if (auto loopOp = mlir::dyn_cast<fir::DoLoopOp>(info.loopOp))
+      loopOp.setLoopAnnotationAttr(la);
 
-      if (auto doConcurrentOp =
-              mlir::dyn_cast<fir::DoConcurrentLoopOp>(info.loopOp))
-        doConcurrentOp.setLoopAnnotationAttr(la);
-    }
+    if (auto doConcurrentOp =
+            mlir::dyn_cast<fir::DoConcurrentLoopOp>(info.loopOp))
+      doConcurrentOp.setLoopAnnotationAttr(la);
   }
 
   /// Generate FIR to begin a structured or unstructured increment loop nest.
@@ -3315,7 +3222,8 @@ private:
     // allocated for us — startNewFunction runs resetEvaluationBlocks before
     // each entry-point pass, so we can trust the pointer isn't stale from a
     // previous pass.
-    if (Fortran::lower::pft::isWrappableConstruct(eval) &&
+    if (Fortran::lower::pft::isWrappableConstruct(
+            eval, bridge.getSemanticsContext()) &&
         eval.hasNestedEvaluations()) {
       Fortran::lower::pft::Evaluation &firstStmt =
           eval.getFirstNestedEvaluation();
@@ -3539,11 +3447,106 @@ private:
 
   void attachDirectiveToLoop(const Fortran::parser::CompilerDirective &dir,
                              Fortran::lower::pft::Evaluation *e) {
-    while (e->isDirective())
-      e = e->lexicalSuccessor;
+    auto attachToDoStmt = [&](Fortran::lower::pft::Evaluation *doEval) {
+      if (doEval && doEval->isA<Fortran::parser::NonLabelDoStmt>())
+        doEval->dirs.push_back(&dir);
+    };
 
-    if (e->isA<Fortran::parser::NonLabelDoStmt>())
-      e->dirs.push_back(&dir);
+    // Dive into an OpenACC loop/combined construct to find its NonLabelDoStmt.
+    auto findDoStmtInOpenACC = [](Fortran::lower::pft::Evaluation *eval)
+        -> Fortran::lower::pft::Evaluation * {
+      const auto *acc = eval->getIf<Fortran::parser::OpenACCConstruct>();
+      if (!acc)
+        return nullptr;
+      if (!std::holds_alternative<Fortran::parser::OpenACCLoopConstruct>(
+              acc->u) &&
+          !std::holds_alternative<Fortran::parser::OpenACCCombinedConstruct>(
+              acc->u))
+        return nullptr;
+      if (!eval->hasNestedEvaluations())
+        return nullptr;
+      for (Fortran::lower::pft::Evaluation &nested :
+           eval->getNestedEvaluations()) {
+        if (nested.isA<Fortran::parser::DoConstruct>() &&
+            nested.hasNestedEvaluations())
+          return &nested.getFirstNestedEvaluation();
+      }
+      return nullptr;
+    };
+
+    while (e->isDirective()) {
+      if (Fortran::lower::pft::Evaluation *doStmt = findDoStmtInOpenACC(e)) {
+        attachToDoStmt(doStmt);
+        return;
+      }
+      e = e->lexicalSuccessor;
+      if (!e)
+        return;
+    }
+
+    attachToDoStmt(e);
+  }
+
+  /// Diagnose each evaluation in \p skipped: these are evaluations that
+  /// were skipped over while descending a collapsed or tiled loop nest to
+  /// find the next inner DO CONSTRUCT (see findNestedDoConstructEvaluation).
+  ///
+  /// The NonLabelDoStmt heading the level being searched is always present
+  /// and is silently expected. A compiler directive (e.g. !DIR$ IVDEP) is
+  /// the only other kind of skipped evaluation known to legitimately
+  /// appear here (OpenACC's collapse/tile clauses do not otherwise require
+  /// the loop nest to be tightly nested, unlike e.g. CUDA Fortran's
+  /// `!$cuf kernel do`; an ordinary statement between loop levels is
+  /// already rejected earlier, in semantic analysis). A directive is
+  /// neither part of the collapsed loop's body nor attached to a DO
+  /// statement that is separately lowered, so it has no effect: warn about
+  /// it rather than silently dropping it.
+  ///
+  /// A directive on the outer loop of a construct is moved ahead of the
+  /// OpenACC directive during parse-tree canonicalization (#106522) and
+  /// can be attached to the resulting acc.loop as a real annotation via
+  /// attachDirectiveToLoop (#216769). A directive between inner loop
+  /// levels, as handled here, cannot be moved that way -- it must stay
+  /// directly above the loop it modifies -- so it is only warned about for
+  /// now. Propagating it onto the acc.loop the same way outer-loop
+  /// directives are, instead of only warning, would be worth doing later.
+  ///
+  /// Anything else means the loop nest was not tightly nested in a way
+  /// this code does not know how to handle -- rather than silently
+  /// discarding unknown statements (the original failure mode this whole
+  /// descent fix addresses), fail loudly with TODO so an unsupported case
+  /// gets reported instead of miscompiled.
+  ///
+  /// This uses mlir::emitWarning rather than SemanticsContext::Warn:
+  /// SemanticsContext::EmitMessages runs once, immediately after semantic
+  /// analysis and before lowering ever starts (see FrontendAction.cpp and
+  /// bbc.cpp), so a Warn() call made here during lowering would be buffered
+  /// into the SemanticsContext's message list and never flushed to output.
+  void diagnoseSkippedEvaluations(
+      llvm::ArrayRef<Fortran::lower::pft::Evaluation *> skipped) {
+    for (Fortran::lower::pft::Evaluation *e : skipped) {
+      // The NonLabelDoStmt heading the level being searched is always a
+      // sibling of whatever comes next (a directive, or the inner
+      // DoConstruct) and is expected here on every call, not just when a
+      // directive is present.
+      if (e->isA<Fortran::parser::NonLabelDoStmt>())
+        continue;
+      if (e->isDirective()) {
+        // Directive evaluations carry no position (enterConstructOrDirective
+        // in PFTBuilder.cpp creates them without one), so e->position maps to
+        // an unknown location; point the warning at the directive's own
+        // source text instead.
+        mlir::Location loc = genLocation(e->position);
+        if (const auto *dir = e->getIf<Fortran::parser::CompilerDirective>())
+          loc = genLocation(dir->source);
+        mlir::emitWarning(loc, "compiler directive ignored: it appears between "
+                               "loop levels of a collapsed or tiled loop nest");
+        continue;
+      }
+      TODO(genLocation(e->position),
+           "unsupported statement between the levels of a collapsed or "
+           "tiled loop nest");
+    }
   }
 
   void markCurrentFuncAsAlwaysInline(
@@ -3719,13 +3722,22 @@ private:
       if (curEval->lowerAsStructured()) {
         curEval = &curEval->getFirstNestedEvaluation();
         // A DO CONCURRENT holds all controls in one construct; the per-level
-        // descent would overshoot into its body and drop it.
+        // descent would overshoot into its body and drop it. collapse(force:
+        // ...) explicitly allows prologue/epilogue statements between loop
+        // levels and has its own descent below to sink them, so this
+        // strict per-level descent -- which does not expect them -- must
+        // not run for it; curEval's value here is unused in that case.
         const auto *outerDo = curEval->getIf<Fortran::parser::DoConstruct>();
-        if (!(outerDo && outerDo->IsDoConcurrent()))
+        if (!collapseForce && !(outerDo && outerDo->IsDoConcurrent()))
           for (uint64_t i = 1; i < loopCount; i++) {
-            if (!curEval->hasNestedEvaluations())
+            llvm::SmallVector<Fortran::lower::pft::Evaluation *> skipped;
+            Fortran::lower::pft::Evaluation *nextDo =
+                Fortran::lower::findNestedDoConstructEvaluation(*curEval,
+                                                                &skipped);
+            diagnoseSkippedEvaluations(skipped);
+            if (!nextDo)
               break;
-            curEval = &*std::next(curEval->getNestedEvaluations().begin());
+            curEval = nextDo;
           }
       }
     }
@@ -4068,8 +4080,15 @@ private:
 
         ivTypes.push_back(idxTy);
         ivLocs.push_back(crtLoc);
-        if (i < nestedLoops - 1)
-          loopEval = &*std::next(loopEval->getNestedEvaluations().begin());
+        if (i < nestedLoops - 1) {
+          llvm::SmallVector<Fortran::lower::pft::Evaluation *> skipped;
+          Fortran::lower::pft::Evaluation *nextDo =
+              Fortran::lower::findNestedDoConstructEvaluation(*loopEval,
+                                                              &skipped);
+          diagnoseSkippedEvaluations(skipped);
+          assert(nextDo && "expected a nested DO CONSTRUCT");
+          loopEval = nextDo;
+        }
       }
     }
 
@@ -4097,8 +4116,16 @@ private:
     if (crtEval->lowerAsStructured()) {
       crtEval = &crtEval->getFirstNestedEvaluation();
       if (!outerDoConstruct->IsDoConcurrent())
-        for (int64_t i = 1; i < nestedLoops; i++)
-          crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
+        for (int64_t i = 1; i < nestedLoops; i++) {
+          llvm::SmallVector<Fortran::lower::pft::Evaluation *> skipped;
+          Fortran::lower::pft::Evaluation *nextDo =
+              Fortran::lower::findNestedDoConstructEvaluation(*crtEval,
+                                                              &skipped);
+          diagnoseSkippedEvaluations(skipped);
+          if (!nextDo)
+            break;
+          crtEval = nextDo;
+        }
     }
 
     // Generate loop body
@@ -5275,11 +5302,19 @@ private:
   // attribute. Such a result may be produced by an asynchronous kernel, so
   // consuming it in an assignment must be a synchronizing data transfer rather
   // than a plain host assignment. A whole-allocatable left-hand side is
-  // excluded: it has reallocation semantics and is performed on the host.
+  // excluded: it has reallocation semantics and is performed on the host, and
+  // so is a scalar character result: it carries its length outside of a
+  // descriptor, so a transfer would copy raw bytes instead of padding or
+  // truncating the destination.
   bool
   isCUDAFunctionResultTransfer(const Fortran::evaluate::Assignment &assign) {
     if (Fortran::evaluate::IsAllocatableDesignator(assign.lhs))
       return false;
+    if (assign.rhs.Rank() == 0)
+      if (std::optional<Fortran::evaluate::DynamicType> type{
+              assign.rhs.GetType()})
+        if (type->category() == Fortran::common::TypeCategory::Character)
+          return false;
     const Fortran::evaluate::ProcedureRef *procRef =
         Fortran::evaluate::UnwrapProcedureRef(assign.rhs);
     if (!procRef)
@@ -5501,6 +5536,10 @@ private:
     if (hasCUDAImplicitTransfer && !isInDeviceContext)
       implicitTemps = genCUDAImplicitDataTransfer(builder, loc, assign);
 
+    if (Fortran::evaluate::ExtractCoarrayRef(assign.lhs) ||
+        Fortran::evaluate::ExtractCoarrayRef(assign.rhs))
+      TODO(loc, "coarray: assignment");
+
     // Gather some information about the assignment that will impact how it is
     // lowered.
     const bool lhsIsWholeAllocatable =
@@ -5526,16 +5565,25 @@ private:
         !lhsType->HasDeferredTypeParameter();
     const bool lhsHasVectorSubscripts =
         Fortran::evaluate::HasVectorSubscript(assign.lhs);
+    const bool rhsIsCUDADeviceDesignator = [&]() {
+      if (!userDefinedAssignment || !Fortran::evaluate::IsVariable(assign.rhs))
+        return false;
+      for (const Fortran::semantics::Symbol &sym :
+           Fortran::evaluate::CollectCudaSymbols(assign.rhs))
+        if (Fortran::semantics::IsCUDADevice(sym))
+          return true;
+      return false;
+    }();
 
     // Helper to generate the code evaluating the right-hand side.
     auto evaluateRhs = [&](Fortran::lower::StatementContext &stmtCtx) {
       const Fortran::lower::SomeExpr *rhsExpr = &assign.rhs;
       std::optional<Fortran::lower::SomeExpr> rewritten;
       if (bridge.getLoweringOptions().getSplitSumExpressionTree() &&
-          Fortran::evaluate::CanBuildSplitSumExpressionTree(assign.lhs,
-                                                            assign.rhs)) {
+          Fortran::evaluate::CanBuildSplitSumExpressionTree(
+              getFoldingContext(), assign.lhs, assign.rhs)) {
         rewritten =
-            Fortran::evaluate::TryBuildSplitSumExpressionTree(assign.rhs);
+            Fortran::evaluate::TryBuildSplitSumExpressionTrees(assign.rhs);
         if (rewritten)
           rhsExpr = &*rewritten;
       }
@@ -5570,6 +5618,28 @@ private:
         lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
       return lhs;
     };
+
+    auto cleanupImplicitTemps = [&]() {
+      if (hasCUDAImplicitTransfer && !isInDeviceContext) {
+        localSymbols.popScope();
+        for (mlir::Value temp : implicitTemps)
+          fir::FreeMemOp::create(builder, loc, temp);
+      }
+    };
+
+    // Keep CUDA DEVICE designator RHS values as call actuals for user-defined
+    // assignment. A region_assign would later try to enforce RHS value
+    // semantics with a host-side copy, which cannot be formed for DEVICE data.
+    if (!isInsideHlfirForallOrWhere() && !lhsHasVectorSubscripts &&
+        rhsIsCUDADeviceDesignator) {
+      Fortran::lower::StatementContext localStmtCtx;
+      hlfir::Entity rhs = evaluateRhs(localStmtCtx);
+      hlfir::Entity lhs = evaluateLhs(localStmtCtx);
+      Fortran::lower::convertUserDefinedAssignmentToHLFIR(
+          loc, *this, *userDefinedAssignment, lhs, rhs, localSymbols);
+      cleanupImplicitTemps();
+      return;
+    }
 
     if (!isInsideHlfirForallOrWhere() && !lhsHasVectorSubscripts &&
         !userDefinedAssignment) {
@@ -5607,11 +5677,7 @@ private:
                                   keepLhsLengthInAllocatableAssignment);
         }
       }
-      if (hasCUDAImplicitTransfer && !isInDeviceContext) {
-        localSymbols.popScope();
-        for (mlir::Value temp : implicitTemps)
-          fir::FreeMemOp::create(builder, loc, temp);
-      }
+      cleanupImplicitTemps();
       return;
     }
     // Assignments inside Forall, Where, or assignments to a vector subscripted
@@ -6016,6 +6082,11 @@ private:
                           ? eval.getFirstNestedEvaluation().block
                           : eval.block);
 
+    if (eval.skipNextLowering) {
+      eval.skipNextLowering = false;
+      return;
+    }
+
     // Add scope for constructs inside acc.loop to properly contain symbol
     // bindings (e.g., from cache directive) within the construct.
     bool needsAccScope =
@@ -6403,7 +6474,8 @@ private:
       if (eval.isNewBlock)
         eval.block = builder->createBlock(region);
       if (eval.isConstruct() || eval.isDirective()) {
-        if (Fortran::lower::pft::isWrappableConstruct(eval)) {
+        if (Fortran::lower::pft::isWrappableConstruct(
+                eval, bridge.getSemanticsContext())) {
           // The wrap owns internal blocks; only create the entry block here
           // so the enclosing CFG can branch to it.
           if (eval.hasNestedEvaluations()) {
@@ -6586,10 +6658,66 @@ private:
     }
   }
 
+  /// Collect entities used in visible Cray pointer associations.
+  void collectVisibleCrayPointerTargets(
+      Fortran::lower::pft::EvaluationList &evaluationList) {
+    for (Fortran::lower::pft::Evaluation &eval : evaluationList) {
+      eval.visit(Fortran::common::visitors{
+          [&](const Fortran::parser::AssignmentStmt &stmt) {
+            if (!stmt.typedAssignment || !stmt.typedAssignment->v)
+              return;
+            const Fortran::evaluate::Assignment &assignment =
+                *stmt.typedAssignment->v;
+            const Fortran::semantics::Symbol *pointer =
+                Fortran::evaluate::GetLastSymbol(assignment.lhs);
+            if (!pointer || !pointer->GetUltimate().test(
+                                Fortran::semantics::Symbol::Flag::CrayPointer))
+              return;
+
+            const Fortran::evaluate::ProcedureRef *procedure =
+                Fortran::evaluate::UnwrapProcedureRef(assignment.rhs);
+            const Fortran::evaluate::SpecificIntrinsic *intrinsic =
+                procedure ? procedure->proc().GetSpecificIntrinsic() : nullptr;
+            if (!intrinsic || intrinsic->name != "loc" ||
+                procedure->arguments().size() != 1 ||
+                !procedure->arguments()[0])
+              return;
+
+            const Fortran::lower::SomeExpr *targetExpr =
+                procedure->arguments()[0]->UnwrapExpr();
+            const Fortran::semantics::Symbol *target =
+                targetExpr ? Fortran::evaluate::GetFirstSymbol(*targetExpr)
+                           : nullptr;
+            if (!target)
+              return;
+
+            visibleCrayPointerTargets.insert(&target->GetUltimate());
+          },
+          [](const auto &) {}});
+      if (eval.hasNestedEvaluations())
+        collectVisibleCrayPointerTargets(eval.getNestedEvaluations());
+    }
+  }
+
+  /// Return whether \p scope declares or imports a Cray pointer.
+  bool hasCrayPointer(const Fortran::semantics::Scope &scope) {
+    if (!scope.crayPointers().empty())
+      return true;
+    for (Fortran::semantics::SymbolRef symbol : scope.GetSymbols())
+      if (symbol->GetUltimate().test(
+              Fortran::semantics::Symbol::Flag::CrayPointer))
+        return true;
+    return false;
+  }
+
   /// Lower a procedure (nest).
   void lowerFunc(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(funit.getStartingSourceLoc());
     setCurrentFunctionUnit(&funit);
+    assert(visibleCrayPointerTargets.empty() &&
+           "Cray pointer targets must not outlive a procedure");
+    if (hasCrayPointer(funit.getScope()))
+      collectVisibleCrayPointerTargets(funit.evaluationList);
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
@@ -6613,6 +6741,7 @@ private:
     }
     funit.setActiveEntry(0);
     setCurrentFunctionUnit(nullptr);
+    visibleCrayPointerTargets.clear();
     for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
       if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
         lowerFunc(*f); // internal procedure
@@ -6801,6 +6930,10 @@ private:
   Fortran::parser::CharBlock currentPosition;
   TypeInfoConverter typeInfoConverter;
 
+  /// Symbols associated with Cray pointers in the current procedure.
+  llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4>
+      visibleCrayPointerTargets;
+
   /// Counter of `scf.execute_region` ops created when
   /// `--wrap-unstructured-constructs-in-execute-region` is enabled for the
   /// currently-lowered function.
@@ -6985,12 +7118,24 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setAtomicRemoteMemory(*module, targetOpts.atomicRemoteMemory);
   fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
   fir::setTargetABI(*module, targetOpts.abi);
-  fir::support::setMLIRDataLayout(*module, targetMachine.createDataLayout());
+  fir::support::setMLIRDataLayout(
+      *module,
+      llvm::DataLayout(
+          targetMachine.getTargetTriple().computeDataLayout(targetOpts.abi)));
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
   fir::setRelocationModel(*module, cgOpts.getRelocationModel());
   fir::setIsPIE(*module, cgOpts.IsPIE);
+  fir::setAllocationPolicy(
+      *module, fir::getCommandLineAllocationPolicy(cgOpts.StackArrays));
   if (cgOpts.RecordCommandLine)
     fir::setCommandline(*module, *cgOpts.RecordCommandLine);
+  // Under -gpu=mem:unified|managed, host heap allocations use the matching
+  // indirect runtime allocators (malloc_unified / malloc_managed).
+  if (languageFeatures.IsEnabled(Fortran::common::LanguageFeature::CudaUnified))
+    fir::setCudaHeapAllocMode(*module, fir::CudaHeapAllocMode::Unified);
+  else if (languageFeatures.IsEnabled(
+               Fortran::common::LanguageFeature::CudaManaged))
+    fir::setCudaHeapAllocMode(*module, fir::CudaHeapAllocMode::Managed);
 }
 
 Fortran::lower::LoweringBridge::~LoweringBridge() {

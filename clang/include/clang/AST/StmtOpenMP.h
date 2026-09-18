@@ -25,6 +25,8 @@
 
 namespace clang {
 
+class OMPInvariantPredicateBoundAttr;
+
 //===----------------------------------------------------------------------===//
 // AST classes for directives.
 //===----------------------------------------------------------------------===//
@@ -892,14 +894,45 @@ public:
                                   TryImperfectlyNestedLoops);
   }
 
+  /// Returns the intra-tile reinterpretation hint attached to \p S, or nullptr
+  /// if \p S does not carry one. See OMPInvariantPredicateBoundAttr.
+  static const OMPInvariantPredicateBoundAttr *getIntraTileHint(const Stmt *S);
+
+  /// If \p S is an intra-tile reinterpretation wrapper, returns the loop it
+  /// annotates; otherwise returns \p S unchanged.
+  static Stmt *ignoreIntraTileHint(Stmt *S);
+  static const Stmt *ignoreIntraTileHint(const Stmt *S) {
+    return ignoreIntraTileHint(const_cast<Stmt *>(S));
+  }
+
   /// Calls the specified callback function for all the loops in \p CurStmt,
   /// from the outermost to the innermost.
+  ///
+  /// \p Loop is always a ForStmt or CXXForRangeStmt. \p HintWrapper is the
+  /// intra-tile OMPInvariantPredicateBoundAttr wrapper around that loop, or
+  /// nullptr if the loop has no such hint. Callers that need the hint (see
+  /// checkOpenMPIterationSpace) can peel \p HintWrapper themselves; everyone
+  /// else can ignore it.
+  static bool
+  doForAllLoops(Stmt *CurStmt, bool TryImperfectlyNestedLoops,
+                unsigned NumLoops,
+                llvm::function_ref<bool(unsigned /*Cnt*/, Stmt * /*Loop*/,
+                                        Stmt * /*HintWrapper*/)>
+                    Callback,
+                llvm::function_ref<void(OMPLoopTransformationDirective *)>
+                    OnTransformationCallback);
   static bool
   doForAllLoops(Stmt *CurStmt, bool TryImperfectlyNestedLoops,
                 unsigned NumLoops,
                 llvm::function_ref<bool(unsigned, Stmt *)> Callback,
                 llvm::function_ref<void(OMPLoopTransformationDirective *)>
-                    OnTransformationCallback);
+                    OnTransformationCallback) {
+    auto &&NewCallback = [Callback](unsigned Cnt, Stmt *Loop, Stmt *) {
+      return Callback(Cnt, Loop);
+    };
+    return doForAllLoops(CurStmt, TryImperfectlyNestedLoops, NumLoops,
+                         NewCallback, OnTransformationCallback);
+  }
   static bool
   doForAllLoops(const Stmt *CurStmt, bool TryImperfectlyNestedLoops,
                 unsigned NumLoops,
@@ -2931,13 +2964,13 @@ public:
   }
 };
 
-/// This represents '#pragma omp ordered' directive.
+/// This represents standalone '#pragma omp ordered' directive.
 ///
 /// \code
 /// #pragma omp ordered
 /// \endcode
 ///
-class OMPOrderedDirective : public OMPExecutableDirective {
+class OMPOrderedStandaloneDirective : public OMPExecutableDirective {
   friend class ASTStmtReader;
   friend class OMPExecutableDirective;
   /// Build directive with the given start and end location.
@@ -2945,16 +2978,70 @@ class OMPOrderedDirective : public OMPExecutableDirective {
   /// \param StartLoc Starting location of the directive kind.
   /// \param EndLoc Ending location of the directive.
   ///
-  OMPOrderedDirective(SourceLocation StartLoc, SourceLocation EndLoc)
-      : OMPExecutableDirective(OMPOrderedDirectiveClass,
-                               llvm::omp::OMPD_ordered, StartLoc, EndLoc) {}
+  OMPOrderedStandaloneDirective(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPExecutableDirective(OMPOrderedStandaloneDirectiveClass,
+                               llvm::omp::OMPD_ordered_standalone, StartLoc,
+                               EndLoc) {}
 
   /// Build an empty directive.
   ///
-  explicit OMPOrderedDirective()
-      : OMPExecutableDirective(OMPOrderedDirectiveClass,
-                               llvm::omp::OMPD_ordered, SourceLocation(),
-                               SourceLocation()) {}
+  explicit OMPOrderedStandaloneDirective()
+      : OMPExecutableDirective(OMPOrderedStandaloneDirectiveClass,
+                               llvm::omp::OMPD_ordered_standalone,
+                               SourceLocation(), SourceLocation()) {}
+
+public:
+  /// Creates directive.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param Clauses List of clauses.
+  ///
+  static OMPOrderedStandaloneDirective *Create(const ASTContext &C,
+                                               SourceLocation StartLoc,
+                                               SourceLocation EndLoc,
+                                               ArrayRef<OMPClause *> Clauses);
+
+  /// Creates an empty directive.
+  ///
+  /// \param C AST context.
+  /// \param NumClauses Number of clauses.
+  ///
+  static OMPOrderedStandaloneDirective *
+  CreateEmpty(const ASTContext &C, unsigned NumClauses, EmptyShell);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPOrderedStandaloneDirectiveClass;
+  }
+};
+
+/// This represents block-associated '#pragma omp ordered' directive.
+///
+/// \code
+/// #pragma omp ordered
+/// { body }
+/// \endcode
+///
+class OMPOrderedBlockAssocDirective : public OMPExecutableDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+  /// Build directive with the given start and end location.
+  ///
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  ///
+  OMPOrderedBlockAssocDirective(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPExecutableDirective(OMPOrderedBlockAssocDirectiveClass,
+                               llvm::omp::OMPD_ordered_blockassoc, StartLoc,
+                               EndLoc) {}
+
+  /// Build an empty directive.
+  ///
+  explicit OMPOrderedBlockAssocDirective()
+      : OMPExecutableDirective(OMPOrderedBlockAssocDirectiveClass,
+                               llvm::omp::OMPD_ordered_blockassoc,
+                               SourceLocation(), SourceLocation()) {}
 
 public:
   /// Creates directive.
@@ -2965,7 +3052,7 @@ public:
   /// \param Clauses List of clauses.
   /// \param AssociatedStmt Statement, associated with the directive.
   ///
-  static OMPOrderedDirective *
+  static OMPOrderedBlockAssocDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
          ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt);
 
@@ -2973,14 +3060,12 @@ public:
   ///
   /// \param C AST context.
   /// \param NumClauses Number of clauses.
-  /// \param IsStandalone true, if the standalone directive is created.
   ///
-  static OMPOrderedDirective *CreateEmpty(const ASTContext &C,
-                                          unsigned NumClauses,
-                                          bool IsStandalone, EmptyShell);
+  static OMPOrderedBlockAssocDirective *
+  CreateEmpty(const ASTContext &C, unsigned NumClauses, EmptyShell);
 
   static bool classof(const Stmt *T) {
-    return T->getStmtClass() == OMPOrderedDirectiveClass;
+    return T->getStmtClass() == OMPOrderedBlockAssocDirectiveClass;
   }
 };
 

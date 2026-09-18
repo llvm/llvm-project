@@ -429,6 +429,7 @@ cc_test(
         "//llvm:TargetParser",
         "//llvm:TestingSupport",
         "//llvm:config",
+        "//llvm:orc_headers",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -742,6 +743,7 @@ cc_test(
         "//llvm:Support",
         "//llvm:Symbolize",
         "//llvm:TestingSupport",
+        "//llvm:config",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -926,6 +928,7 @@ cc_test(
     ) + [
         "tools/llvm-exegesis/Common/AssemblerUtils.h",
     ],
+    features = ["-layering_check"],
     includes = ["tools/llvm-exegesis"],
     deps = [
         "//llvm:AllTargetsCodeGens",

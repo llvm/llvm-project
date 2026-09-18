@@ -277,12 +277,6 @@ class Parser : public CodeCompletionHandler {
   /// Implementations are in Parser.cpp
   ///@{
 
-private:
-  /// Prepare the parser and its components.
-  ///
-  /// The lack of initialization can lead to missing functionality.
-  void Initialize();
-
 public:
   friend class ColonProtectionRAIIObject;
   friend class PoisonSEHIdentifiersRAIIObject;
@@ -309,6 +303,10 @@ public:
   // different actual classes based on the actions in place.
   typedef OpaquePtr<DeclGroupRef> DeclGroupPtrTy;
   typedef OpaquePtr<TemplateName> TemplateTy;
+
+  /// Initialize - Warm up the parser.
+  ///
+  void Initialize();
 
   /// Parse the first top-level declaration in a translation unit.
   ///
@@ -663,6 +661,7 @@ private:
 
   /// Contextual keywords for Microsoft extensions.
   IdentifierInfo *Ident__except;
+  IdentifierInfo *Ident_except;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -671,7 +670,7 @@ private:
   /// function call.
   bool CalledSignatureHelp = false;
 
-  IdentifierInfo *getSEHExceptKeyword();
+  bool isTokenSEHExcept();
 
   /// Whether to skip parsing of function bodies.
   ///
@@ -1526,9 +1525,9 @@ private:
                                ParsedAttributes &OutAttrs);
 
   /// Parse cached tokens for a late-parsed attribute and return the parsed
-  /// attributes. Shared implementation used by both ParseLexedCAttribute and
+  /// attributes. Shared implementation used by both ParseLexedAttribute and
   /// ParseLexedTypeAttribute.
-  ParsedAttributes ParseLexedCAttributeTokens(LateParsedAttribute &LA);
+  ParsedAttributes ParseLexedAttributeTokens(LateParsedAttribute &LPA);
 
   /// Helper function to move LateParsedTypeAttribute pointers from one list
   /// to another. Filters type attributes from \p From and appends them to \p
@@ -3005,6 +3004,13 @@ private:
   void AnnotateExistingIndexedTypeNamePack(ParsedType T,
                                            SourceLocation StartLoc,
                                            SourceLocation EndLoc);
+
+  TemplateNameKind isPackIndexingTemplateName(UnqualifiedId &Name,
+                                              TemplateTy &Template);
+
+  bool AnnotatePackIndexingTemplateName(CXXScopeSpec &SS, UnqualifiedId &Name,
+                                        TemplateTy Template,
+                                        TemplateNameKind TNK);
 
   /// Return true if the next token should be treated as a [[]] attribute,
   /// or as a keyword that behaves like one.  The former is only true if
@@ -5705,7 +5711,8 @@ private:
     LateParsedObjCMethodContainer LateParsedObjCMethods;
 
     ObjCImplParsingDataRAII(Parser &parser, Decl *D)
-        : P(parser), Dcl(D), HasCFunction(false) {
+        : P(parser), Dcl(D), HasCFunction(false),
+          PrevParsedObjCImpl(parser.CurParsedObjCImpl) {
       P.CurParsedObjCImpl = this;
       Finished = false;
     }
@@ -5715,6 +5722,12 @@ private:
     bool isFinished() const { return Finished; }
 
   private:
+    /// The \@implementation that was still open when this one started; made
+    /// current again once this one finishes. Only invalid code has one: an
+    /// \@implementation that starts while a previous \@implementation is
+    /// still open (e.g. through an intervening namespace). For valid code
+    /// this is always null.
+    ObjCImplParsingDataRAII *PrevParsedObjCImpl;
     bool Finished;
   };
   ObjCImplParsingDataRAII *CurParsedObjCImpl;
@@ -7732,6 +7745,17 @@ public:
   /// \endverbatim
   ///
   Decl *ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope);
+
+  /// ParseFunctionBody - Parse the body of a function definition. The
+  /// '= default' and '= delete' forms are handled by the caller.
+  ///
+  /// \verbatim
+  ///       function-body:
+  ///         ctor-initializer[opt] compound-statement
+  ///         function-try-block
+  /// \endverbatim
+  ///
+  Decl *ParseFunctionBody(Decl *D, ParseScope &BodyScope);
 
   /// When in code-completion, skip parsing of the function/method body
   /// unless the body contains the code-completion point.

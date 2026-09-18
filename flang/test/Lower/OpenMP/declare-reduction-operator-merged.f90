@@ -68,8 +68,8 @@ end program
 ! t_real loop. Because the CHECK-DAG names require op.remote., an op wrongly keyed
 ! on the use-site rename op.local. would fail these checks.
 ! loose captures (R1) keyed on the owning module name; the two qualifiers differ.
-! CHECK-DAG: omp.declare_reduction @[[REDINT:_QQ[A-Za-z0-9_.]*m_int[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*]] : !fir.ref
-! CHECK-DAG: omp.declare_reduction @[[REDREAL:_QQ[A-Za-z0-9_.]*m_real[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*]] : !fir.ref
+! CHECK-DAG: omp.declare_reduction @[[REDINT:_QQ[A-Za-z0-9_.]*m_int[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*]] byref_element_type({{.*}}) : !fir.ref
+! CHECK-DAG: omp.declare_reduction @[[REDREAL:_QQ[A-Za-z0-9_.]*m_real[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*]] byref_element_type({{.*}}) : !fir.ref
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[REDINT]]
 ! CHECK: omp.wsloop

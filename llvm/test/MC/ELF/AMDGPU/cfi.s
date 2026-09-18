@@ -1,5 +1,5 @@
-# RUN: llvm-mc -filetype=asm -mcpu=gfx900 -triple amdgcn-amd-amdhsa %s -o - | FileCheck --check-prefix=ASM %s
-# RUN: llvm-mc -filetype=obj -mcpu=gfx900 -triple amdgcn-amd-amdhsa %s -o %t
+# RUN: llvm-mc -filetype=asm -triple amdgpu9.00-amd-amdhsa %s -o - | FileCheck --check-prefix=ASM %s
+# RUN: llvm-mc -filetype=obj -triple amdgpu9.00-amd-amdhsa %s -o %t
 # RUN: llvm-readelf -S -r -x .debug_frame %t | FileCheck --check-prefix=READELF %s
 
 f:
@@ -11,7 +11,7 @@ f:
 # ASM: f:
 # ASM-NEXT: .cfi_sections .debug_frame
 # ASM-NEXT: .cfi_startproc
-# ASM-NEXT: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx900"
+# ASM-NEXT: .amdgcn_target "amdgpu9.00-amd-amdhsa-unknown-gfx900"
 # ASM-NEXT: s_nop 0
 # ASM-NEXT: .cfi_endproc
 

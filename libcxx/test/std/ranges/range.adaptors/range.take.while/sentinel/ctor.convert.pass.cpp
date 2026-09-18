@@ -131,8 +131,8 @@ constexpr bool test() {
 
     struct Rng : std::ranges::view_base {
       constexpr int* begin() const { return nullptr; }
-      constexpr Sent end() { return Sent{0}; }
-      constexpr MoveOnlyConvert end() const { return MoveOnlyConvert(Sent{0}); }
+      constexpr Sent end() { return Sent{5}; }
+      constexpr MoveOnlyConvert end() const { return MoveOnlyConvert(Sent{7}); }
     };
 
     using R             = std::ranges::take_while_view<Rng, TestPred>;
@@ -143,7 +143,7 @@ constexpr bool test() {
     R r{Rng{}, TestPred{}};
     Sentinel s1      = r.end();
     ConstSentinel s2 = s1;
-    assert(s2.base().i == 0);
+    assert(s2.base().i == 5);
   }
 
   return true;

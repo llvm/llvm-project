@@ -10,4 +10,4 @@
 
 #include "src/math/truncf16.h"
 
-LIST_TRUNC_TESTS(float16, LIBC_NAMESPACE::truncf16)
+LIST_TRUNC_TESTS(Truncf16, float16, LIBC_NAMESPACE::truncf16)

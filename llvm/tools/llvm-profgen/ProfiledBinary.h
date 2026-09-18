@@ -11,6 +11,7 @@
 
 #include "CallContext.h"
 #include "ErrorHandling.h"
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -216,9 +217,9 @@ class ProfiledBinary {
   StringRef SymbolizerPath;
   // Options used to configure the symbolizer
   symbolize::LLVMSymbolizer::Options SymbolizerOpts;
-  // The runtime base address that the first executable segment is loaded at.
+  // The runtime base address used to canonicalize sampled addresses.
   uint64_t BaseAddress = 0;
-  // The runtime base address that the first loadabe segment is loaded at.
+  // The preferred base address derived from the first loadable segment.
   uint64_t FirstLoadableAddress = 0;
   // The preferred load address of each executable segment.
   std::vector<uint64_t> PreferredTextSegmentAddresses;
@@ -313,6 +314,9 @@ class ProfiledBinary {
 
   // MMap events for PT_LOAD segments without 'x' memory protection flag.
   std::map<uint64_t, MMapEvent, std::greater<uint64_t>> NonTextMMapEvents;
+
+  // Deduplicated address ranges mapped for the profiled binary.
+  llvm::AddressRanges MMapRanges;
 
   // Records the file offset, file size and virtual address of program headers.
   struct PhdrInfo {
@@ -453,15 +457,17 @@ public:
   // Return the build ID used for filtering perfscript addresses.
   StringRef getFilterBuildID() const { return FilterBuildID; }
 
-  // Canonicalize to use preferred load address as base address.
+  // Translate a runtime address to its preferred virtual address.
   uint64_t canonicalizeVirtualAddress(uint64_t Address) {
     return Address - BaseAddress + getPreferredBaseAddress();
   }
-  // Return the preferred load address for the first executable segment.
+  // Return the preferred base used to canonicalize sampled addresses.
   uint64_t getPreferredBaseAddress() const {
-    return PreferredTextSegmentAddresses[0];
+    if (IsCOFF)
+      return PreferredTextSegmentAddresses[0];
+    return PreferredTextSegmentAddresses[0] - TextSegmentOffsets[0];
   }
-  // Return the preferred load address for the first loadable segment.
+  // Return the preferred base address derived from the first loadable segment.
   uint64_t getFirstLoadableAddress() const { return FirstLoadableAddress; }
   // Return the file offset for the first executable segment.
   uint64_t getTextSegmentOffset() const { return TextSegmentOffsets[0]; }
@@ -726,6 +732,22 @@ public:
     }
     NonTextMMapEvents[Event.Address] = Event;
     return Error::success();
+  }
+
+  // Record a half-open MMAP range while coalescing duplicate and overlapping
+  // events.
+  void addMMapRange(uint64_t Address, uint64_t Size) {
+    uint64_t End = Address + Size;
+    // Ignore malformed events whose range cannot be represented.
+    if (End < Address)
+      return;
+    MMapRanges.insert(llvm::AddressRange(Address, End));
+  }
+
+  // Check if a given virtual address is covered by any of the mmap ranges for
+  // the profiled binary.
+  bool isVaddrMMapped(uint64_t VAddr) const {
+    return MMapRanges.contains(VAddr);
   }
 
   // Given a non-text runtime address, canonicalize it to the virtual address in
