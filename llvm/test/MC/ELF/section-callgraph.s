@@ -47,6 +47,6 @@ g:
 
 .section .text.g,"axG",%progbits,g
 g:
-.pushsection .llvm.callgraph,"?",%llvm_call_graph
+.pushsection .llvm.callgraph,"?",@llvm_call_graph
   .byte 0
 .popsection
