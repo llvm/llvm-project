@@ -141,9 +141,9 @@ TEST(LlvmLibcFloat80Test, MPFRConversion) {
   using LIBC_NAMESPACE::testing::mpfr::MPFRNumber;
 
   Float80 values[] = {
-      Float80(0.0f),  Float80(-0.0f), Float80(1.0f),  Float80(-1.0f),
-      Float80(2.0f),  Float80(0.5f),  Float80(100.0), Float80(12345.6789),
-      Float80(1e10f),
+      Float80(0.0f),  Float80(-0.0f),      Float80(1.0f),
+      Float80(-1.0f), Float80(2.0f),       Float80(0.5f),
+      Float80(100.0), Float80(12345.6789), Float80(1e10f),
   };
 
   for (Float80 val : values) {
