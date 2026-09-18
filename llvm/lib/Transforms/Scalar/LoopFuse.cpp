@@ -676,9 +676,6 @@ private:
 
   /// Determine if it is beneficial to fuse two loops.
   bool isBeneficialFusion(unsigned ReusedValueCount) const {
-    if (!Opts.loop_fusion_cost_model)
-      return true;
-
     return ReusedValueCount >= Opts.loop_fusion_min_reused_values;
   }
 
@@ -920,9 +917,7 @@ private:
         // Check the dependencies across the loops and do not fuse if it would
         // violate them.
         ReusedValueSet ReusedValues;
-        if (!dependencesAllowFusion(
-                FC0, FC1,
-                Opts.loop_fusion_cost_model ? &ReusedValues : nullptr)) {
+        if (!dependencesAllowFusion(FC0, FC1, &ReusedValues)) {
           LLVM_DEBUG(dbgs() << "Memory dependencies do not allow fusion!\n");
           ++InvalidDependencies;
           reportLoopFusion<OptimizationRemarkMissed>(
@@ -1207,7 +1202,7 @@ private:
   void collectReadReadReuse(const FusionCandidate &FC0,
                             const FusionCandidate &FC1,
                             ReusedValueSet &ReusedValues) {
-    if (ReusedValues.size() >= FusionMinReusedValues)
+    if (ReusedValues.size() >= Opts.loop_fusion_min_reused_values)
       return;
 
     SmallDenseMap<AffineLoadKey, Instruction *, 8> LoadAccesses0;
@@ -1229,9 +1224,9 @@ private:
         continue;
 
       ReusedValues.insert(MatchingLoad);
-      LLVM_DEBUG(dbgs() << "Same-iteration read-read reuse via " << *MatchingLoad
-                        << "\n");
-      if (ReusedValues.size() >= FusionMinReusedValues)
+      LLVM_DEBUG(dbgs() << "Same-iteration read-read reuse via "
+                        << *MatchingLoad << "\n");
+      if (ReusedValues.size() >= Opts.loop_fusion_min_reused_values)
         return;
     }
   }
@@ -1811,8 +1806,7 @@ private:
              << "[" << FC0.Preheader->getParent()->getName()
              << "]: " << NV("Cand1", StringRef(FC0.Preheader->getName()))
              << " and " << NV("Cand2", StringRef(FC1.Preheader->getName()))
-             << ": found "
-             << NV("ReusedValueCount", ReusedValueCount)
+             << ": found " << NV("ReusedValueCount", ReusedValueCount)
              << " cross-loop reused values; configured minimum is "
              << NV("MinimumReusedValues",
                    unsigned(Opts.loop_fusion_min_reused_values)));

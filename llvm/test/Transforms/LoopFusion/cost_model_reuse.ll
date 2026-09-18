@@ -1,6 +1,6 @@
-; RUN: opt -passes=loop-simplify,loop-fusion -loop-fusion-cost-model -disable-output -pass-remarks=loop-fusion -pass-remarks-missed=loop-fusion < %s 2>&1 | FileCheck %s --check-prefix=DEFAULT
-; RUN: opt -passes=loop-simplify,loop-fusion -loop-fusion-cost-model -loop-fusion-min-reused-values=2 -disable-output -pass-remarks=loop-fusion -pass-remarks-missed=loop-fusion < %s 2>&1 | FileCheck %s --check-prefix=MIN2
-; RUN: opt -passes=loop-simplify,loop-fusion -loop-fusion-cost-model -loop-fusion-min-reused-values=3 -disable-output -pass-remarks-missed=loop-fusion < %s 2>&1 | FileCheck %s --check-prefix=MIN3
+; RUN: opt -passes=loop-simplify,loop-fusion -disable-output -pass-remarks=loop-fusion -pass-remarks-missed=loop-fusion < %s 2>&1 | FileCheck %s --check-prefix=DEFAULT
+; RUN: opt -passes=loop-simplify,loop-fusion -loop-fusion-min-reused-values=2 -disable-output -pass-remarks=loop-fusion -pass-remarks-missed=loop-fusion < %s 2>&1 | FileCheck %s --check-prefix=MIN2
+; RUN: opt -passes=loop-simplify,loop-fusion -loop-fusion-min-reused-values=3 -disable-output -pass-remarks-missed=loop-fusion < %s 2>&1 | FileCheck %s --check-prefix=MIN3
 
 ; DEFAULT: [no_cross_loop_reuse]{{.*}}found 0 cross-loop reused values; configured minimum is 1
 ; DEFAULT: [exact_rar_with_unmatched_read]{{.*}}Loops fused

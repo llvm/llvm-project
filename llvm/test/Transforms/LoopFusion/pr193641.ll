@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -passes=loop-fusion -loop-fusion-peel-max-count=2 -disable-output -stats < %s 2>&1 | FileCheck -check-prefix=STAT %s
+; RUN: opt -passes=loop-fusion -loop-fusion-min-reused-values=0 -loop-fusion-peel-max-count=2 -disable-output -stats < %s 2>&1 | FileCheck -check-prefix=STAT %s
 ; STAT: 1 loop-fusion - Loops fused
 
 ; Test reduced from the file diags_on_lat_aux_grid.F90 present in pop2,

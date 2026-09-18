@@ -1,4 +1,4 @@
-; RUN: opt -passes=loop-simplify,loop-fusion -loop-fusion-cost-model -disable-output -pass-remarks=loop-fusion -pass-remarks-missed=loop-fusion < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-simplify,loop-fusion -disable-output -pass-remarks=loop-fusion -pass-remarks-missed=loop-fusion < %s 2>&1 | FileCheck %s
 
 ; CHECK: [exact_affine_rar]{{.*}}Loops fused
 ; CHECK: [shifted_start]{{.*}}found 0 cross-loop reused values
