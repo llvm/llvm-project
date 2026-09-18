@@ -6118,7 +6118,7 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
     } else {
       auto PtrBaseDef = getDefSrcRegIgnoringCopies(PtrBase, *MRI);
       if (isSGPR(PtrBaseDef->Reg)) {
-        if (ConstOffset > 0) {
+        if (ConstOffset != 0) {
           // Offset is too large.
           //
           // saddr + large_offset -> saddr +
