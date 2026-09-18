@@ -69,10 +69,19 @@ add_optional_dependency(LLDB_ENABLE_TREESITTER "Enable Tree-sitter syntax highli
 if(LLDB_BUILT_STANDALONE AND DEFINED LLDB_ENABLE_LZMA)
   string(TOUPPER "${LLDB_ENABLE_LZMA}" lldb_enable_lzma)
   if(NOT lldb_enable_lzma STREQUAL "AUTO")
+    # Auto is exempt because it never asked for a particular answer.
+    if((lldb_enable_lzma AND NOT LLVM_ENABLE_LZMA) OR
+       (NOT lldb_enable_lzma AND LLVM_ENABLE_LZMA))
+      message(FATAL_ERROR
+        "LLDB_ENABLE_LZMA=${LLDB_ENABLE_LZMA} disagrees with the LLVM this "
+        "build links against, which has LLVM_ENABLE_LZMA=${LLVM_ENABLE_LZMA}. "
+        "A standalone build cannot change that; set LLVM_ENABLE_LZMA when "
+        "configuring LLVM instead.")
+    endif()
     message(DEPRECATION
-      "LLDB_ENABLE_LZMA is deprecated and has no effect in a standalone build. "
-      "liblzma comes from LLVM, which was built with "
-      "LLVM_ENABLE_LZMA=${LLVM_ENABLE_LZMA}.")
+      "LLDB_ENABLE_LZMA is deprecated and will be removed. It has no effect in "
+      "a standalone build: liblzma comes from LLVM. Set LLVM_ENABLE_LZMA when "
+      "configuring LLVM instead.")
   endif()
   unset(lldb_enable_lzma)
 endif()
