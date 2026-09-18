@@ -4094,7 +4094,19 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   if (epi.ExceptionSpec.Type == EST_Dynamic) {
     for (QualType Ex : epi.ExceptionSpec.Exceptions)
       ID.AddPointer(Ex.getAsOpaquePtr());
-  } else if (isComputedNoexcept(epi.ExceptionSpec.Type)) {
+  } else if (epi.ExceptionSpec.Type == EST_NoexceptTrue ||
+             epi.ExceptionSpec.Type == EST_NoexceptFalse) {
+    // If the exception type has already been determined, we can use the
+    // address of the expression as profiling results instead of profiling the
+    // expression.
+    //
+    // This is not only an optimization but avoids an access on uninitlaized
+    // fields during the profiling.
+    //
+    // See clang/test/Modules/concept-specialization-deserialization.cppm for
+    // an example.
+    ID.AddPointer(epi.ExceptionSpec.NoexceptExpr);
+  } else if (epi.ExceptionSpec.Type == EST_DependentNoexcept) {
     // getFunctionTypeInternal compares noexcept expressions after the lookup,
     // so the key only needs their canonical form.
     epi.ExceptionSpec.NoexceptExpr->Profile(ID, Context, /*Canonical=*/true);
