@@ -356,3 +356,91 @@ func.func @atomic_bf16_fadd(%ptr : !spirv.ptr<bf16, StorageBuffer>, %value : bf1
   %0 = spirv.EXT.AtomicFAdd <Device> <None> %ptr, %value : !spirv.ptr<bf16, StorageBuffer>
   return %0 : bf16
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.EXT.AtomicFMin
+//===----------------------------------------------------------------------===//
+
+func.func @atomic_fmin(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : f32) -> f32 {
+  // CHECK: spirv.EXT.AtomicFMin <Device> <None> %{{.*}}, %{{.*}} : !spirv.ptr<f32, StorageBuffer>
+  %0 = spirv.EXT.AtomicFMin <Device> <None> %ptr, %value : !spirv.ptr<f32, StorageBuffer>
+  return %0 : f32
+}
+
+// -----
+
+func.func @atomic_fmin(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : f32) -> f32 {
+  // expected-error @+1 {{'spirv.EXT.AtomicFMin' op failed to verify that `result` type matches pointee type of `pointer`}}
+  %0 = "spirv.EXT.AtomicFMin"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, StorageBuffer>, f32) -> (f32)
+  return %0 : f32
+}
+
+// -----
+
+func.func @atomic_fmin(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : f64) -> f64 {
+  // expected-error @+1 {{'spirv.EXT.AtomicFMin' op failed to verify that `result` type matches pointee type of `pointer`}}
+  %0 = "spirv.EXT.AtomicFMin"(%ptr, %value) {memory_scope = #spirv.scope<Device>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<f32, StorageBuffer>, f64) -> (f64)
+  return %0 : f64
+}
+
+// -----
+
+func.func @atomic_fmin(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : f32) -> f32 {
+  // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
+  %0 = spirv.EXT.AtomicFMin <Device> <Acquire|Release> %ptr, %value : !spirv.ptr<f32, StorageBuffer>
+  return %0 : f32
+}
+
+// -----
+
+func.func @atomic_bf16_fmin(%ptr : !spirv.ptr<bf16, StorageBuffer>, %value : bf16) -> bf16 {
+  // expected-error @+1 {{op operand #1 must be 16/32/64-bit float, but got 'bf16'}}
+  %0 = spirv.EXT.AtomicFMin <Device> <None> %ptr, %value : !spirv.ptr<bf16, StorageBuffer>
+  return %0 : bf16
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.EXT.AtomicFMax
+//===----------------------------------------------------------------------===//
+
+func.func @atomic_fmax(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : f32) -> f32 {
+  // CHECK: spirv.EXT.AtomicFMax <Device> <None> %{{.*}}, %{{.*}} : !spirv.ptr<f32, StorageBuffer>
+  %0 = spirv.EXT.AtomicFMax <Device> <None> %ptr, %value : !spirv.ptr<f32, StorageBuffer>
+  return %0 : f32
+}
+
+// -----
+
+func.func @atomic_fmax(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : f32) -> f32 {
+  // expected-error @+1 {{'spirv.EXT.AtomicFMax' op failed to verify that `result` type matches pointee type of `pointer`}}
+  %0 = "spirv.EXT.AtomicFMax"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, StorageBuffer>, f32) -> (f32)
+  return %0 : f32
+}
+
+// -----
+
+func.func @atomic_fmax(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : f64) -> f64 {
+  // expected-error @+1 {{'spirv.EXT.AtomicFMax' op failed to verify that `result` type matches pointee type of `pointer`}}
+  %0 = "spirv.EXT.AtomicFMax"(%ptr, %value) {memory_scope = #spirv.scope<Device>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<f32, StorageBuffer>, f64) -> (f64)
+  return %0 : f64
+}
+
+// -----
+
+func.func @atomic_fmax(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : f32) -> f32 {
+  // expected-error @+1 {{expected at most one of these four memory constraints to be set: `Acquire`, `Release`,`AcquireRelease` or `SequentiallyConsistent`}}
+  %0 = spirv.EXT.AtomicFMax <Device> <Acquire|Release> %ptr, %value : !spirv.ptr<f32, StorageBuffer>
+  return %0 : f32
+}
+
+// -----
+
+func.func @atomic_bf16_fmax(%ptr : !spirv.ptr<bf16, StorageBuffer>, %value : bf16) -> bf16 {
+  // expected-error @+1 {{op operand #1 must be 16/32/64-bit float, but got 'bf16'}}
+  %0 = spirv.EXT.AtomicFMax <Device> <None> %ptr, %value : !spirv.ptr<bf16, StorageBuffer>
+  return %0 : bf16
+}
