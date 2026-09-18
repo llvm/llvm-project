@@ -354,6 +354,10 @@ infrastructure are described first, followed by tool-specific sections.
     in reference non-type template parameter uses, `__builtin_dump_struct` calls,
     and OpenMP `linear` clauses.
 
+  - Fixed false positives on parentheses that determine the deduced type in
+    `decltype((x))` and in the initializers and return statements of
+    `decltype(auto)` declarations.
+
 - Fixed {doc}`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
   fixes when applying De Morgan's theorem to overloaded comparison operators.
