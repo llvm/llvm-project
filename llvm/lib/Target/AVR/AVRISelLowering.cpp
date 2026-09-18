@@ -987,6 +987,8 @@ SDValue AVRTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
     return SDValue();
 
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  // Mark frame address as taken, so that during frame lowering we're forced to
+  // emit frame pointer register (R29R28) we rely on here.
   MFI.setFrameAddressIsTaken(true);
 
   // Note that AVRRegisterInfo::getFrameRegister returns R28, which is only
@@ -1018,6 +1020,8 @@ SDValue AVRTargetLowering::LowerRETURNADDR(SDValue Op,
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
+  // Mark return address as taken, so that during frame lowering we're forced to
+  // emit frame pointer register (R29R28) we rely on here.
   MFI.setReturnAddressIsTaken(true);
 
   SDLoc DL(Op);
