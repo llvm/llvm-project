@@ -2225,8 +2225,8 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
     std::vector<CfiFunctionHotness> GTMHotness;
     GTMHotness.reserve(Globals.size());
     for (GlobalTypeMember *GTM : Globals) {
-      Function *F = cast<Function>(GTM->getGlobal());
-      GTMHotness.push_back(FunctionSummaryHotness.lookup(F));
+      GTMHotness.push_back(
+          FunctionSummaryHotness.lookup(cast<Function>(GTM->getGlobal())));
     }
 
     // Order jump table entries by hotness ascending so that the hottest
