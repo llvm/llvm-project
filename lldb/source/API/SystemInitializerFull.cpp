@@ -12,6 +12,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
+#include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
@@ -135,6 +136,14 @@ llvm::Error SystemInitializerFull::Initialize() {
 
   Debugger::Initialize(LoadPlugin);
 
+  // Warm up DataVisualization and common language categories ahead of time.
+  [[maybe_unused]] lldb::TypeCategoryImplSP entry;
+  DataVisualization::Categories::GetCategory(lldb::eLanguageTypeC_plus_plus,
+                                             entry);
+  DataVisualization::Categories::GetCategory(lldb::eLanguageTypeObjC_plus_plus,
+                                             entry);
+  DataVisualization::Categories::GetCategory(lldb::eLanguageTypeObjC, entry);
+  DataVisualization::Categories::GetCategory(lldb::eLanguageTypeSwift, entry);
   return llvm::Error::success();
 }
 

@@ -36,6 +36,7 @@ class GlobalObject;
 class GlobalValue;
 class Module;
 class ModuleSummaryIndex;
+class ProfileSummaryInfo;
 class raw_ostream;
 
 namespace lowertypetests {
@@ -228,6 +229,7 @@ LLVM_ABI SetVector<uint64_t> findCfiTypeIds(const Module &M);
 /// for CFI functions in \p CfiFunctions from source module \p SrcM.
 LLVM_ABI void createCfiMetadata(
     Module &DestM, const Module &SrcM, ArrayRef<GlobalValue *> CfiFunctions,
+    ProfileSummaryInfo &PSI,
     function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter);
 
 /// Specifies how to drop type tests.
