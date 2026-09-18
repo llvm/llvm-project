@@ -50295,7 +50295,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
         !Subtarget.canUseCMOV() || hasFPCMov(CC)) {
       SDValue Ops[] = {FalseOp, TrueOp, DAG.getTargetConstant(CC, DL, MVT::i8),
                        Flags};
-      return DAG.getNode(X86ISD::CMOV, DL, VT, Ops, N->getFlags());
+      return DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
     }
   }
 
@@ -50415,7 +50415,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
       if (CC == X86::COND_E && CmpAgainst == dyn_cast<ConstantSDNode>(TrueOp)) {
         SDValue Ops[] = {FalseOp, Cond.getOperand(0),
                          DAG.getTargetConstant(CC, DL, MVT::i8), Cond};
-        return DAG.getNode(X86ISD::CMOV, DL, VT, Ops, N->getFlags());
+        return DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
       }
     }
   }
@@ -50475,10 +50475,10 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
 
       SDValue LOps[] = {FalseOp, TrueOp,
                         DAG.getTargetConstant(CC0, DL, MVT::i8), Flags};
-      SDValue LCMOV = DAG.getNode(X86ISD::CMOV, DL, VT, LOps, N->getFlags());
+      SDValue LCMOV = DAG.getNode(X86ISD::CMOV, DL, VT, LOps);
       SDValue Ops[] = {LCMOV, TrueOp, DAG.getTargetConstant(CC1, DL, MVT::i8),
                        Flags};
-      SDValue CMOV = DAG.getNode(X86ISD::CMOV, DL, VT, Ops, N->getFlags());
+      SDValue CMOV = DAG.getNode(X86ISD::CMOV, DL, VT, Ops);
       return CMOV;
     }
   }
@@ -50519,10 +50519,8 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
       // This should constant fold.
       SDValue Diff = DAG.getNode(ISD::SUB, DL, VT, Const, Add.getOperand(1));
       SDValue CMov =
-          DAG.getNode(X86ISD::CMOV, DL, VT,
-                      {Diff, Add.getOperand(0),
-                       DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8), Cond},
-                      N->getFlags());
+          DAG.getNode(X86ISD::CMOV, DL, VT, Diff, Add.getOperand(0),
+                      DAG.getTargetConstant(X86::COND_NE, DL, MVT::i8), Cond);
       return DAG.getNode(ISD::ADD, DL, VT, CMov, Add.getOperand(1));
     }
   }
