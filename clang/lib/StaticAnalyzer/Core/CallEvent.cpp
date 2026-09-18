@@ -831,7 +831,7 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
   }
 
   // A final method cannot be overriden in a subclass.
-  if (Result->hasAttr<FinalAttr>() || Result->getParent()->hasAttr<FinalAttr>())
+  if (Result->hasAttr<FinalAttr>())
     CanBeSubClass = false;
 
   // Does the decl that we found have an implementation?
