@@ -382,7 +382,7 @@ Type *TruncInstCombine::getBestTruncatedType() {
         break;
       }
       default:
-        break;
+        llvm_unreachable("Unhandled intrinsic");
       }
     }
   }
