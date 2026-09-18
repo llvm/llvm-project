@@ -40,7 +40,7 @@ define i8 @clamp_straight(i8 %a) {
 
 ; Check narrowing the type to a larger type than the `trunc`s target.
 ; This requires the `datalayout` declaration as when selecting the smallest
-; type that we only consider legal types.
+; type we only consider legal types.
 ; (The "smallest legal type" check is not umin/umax specific)
 define i8 @clamp_straight_larger_than_trunc(i8 %a) {
 ; CHECK-LABEL: @clamp_straight_larger_than_trunc(
