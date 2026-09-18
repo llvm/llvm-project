@@ -23,8 +23,7 @@ int main(int argc, char **argv) {
   hipMalloc(&Ptr, sizeof(int));
   printf("Ptr %p\n", Ptr);
   // CHECK: Ptr [[Ptr:0x.*]]
-  int Zero = 0;
-  hipMemcpy(Ptr, &Zero, sizeof(int), hipMemcpyHostToDevice);
+  hipMemset(Ptr, 0, sizeof(int));
   incrementCounter<<<7, 6>>>(Ptr);
   hipDeviceSynchronize();
   hipMemcpy(&I, Ptr, sizeof(int), hipMemcpyDeviceToHost);
