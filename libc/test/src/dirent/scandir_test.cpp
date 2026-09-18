@@ -44,6 +44,7 @@ char *join_path(char *dir, const char *filename) {
   }
   return path;
 }
+
 bool create_empty_file(char *path) {
   FILE *file = LIBC_NAMESPACE::fopen(path, "w");
   if (file == nullptr) {

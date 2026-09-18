@@ -14,11 +14,18 @@
 #include "src/__support/File/dir.h"
 
 #include "hdr/errno_macros.h"
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
+#include "include/llvm-libc-types/__scandir_compare_t.h"
+#include "include/llvm-libc-types/__scandir_filter_t.h"
 #include "src/__support/CPP/mutex.h" // lock_guard
 #include "src/__support/CPP/new.h"
+#include "src/__support/CPP/vector.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
+#include "src/stdlib/qsort_util.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -76,6 +83,87 @@ int Dir::close() {
   }
   delete this;
   return 0;
+}
+
+ErrorOr<int> Dir::scan(const char *name, struct dirent ***namelist,
+                       __scandir_filter_t filter, __scandir_compare_t compare) {
+  auto res_open = Dir::open(name);
+  if (!res_open) {
+    return LIBC_NAMESPACE::Error(res_open.error());
+  }
+  Dir *dir = res_open.value();
+
+  cpp::vector<struct dirent *> entries;
+  int saved_errno = 0;
+
+  while (true) {
+    auto res_read = dir->read();
+    if (!res_read) {
+      saved_errno = res_read.error();
+      break;
+    }
+
+    struct dirent *entry = res_read.value();
+    if (entry == nullptr) {
+      break;
+    }
+
+    // Note, filter may modify errno
+    if (filter != nullptr && !filter(entry)) {
+      continue;
+    }
+
+    // struct dirent contains an equivalent of a flexible array memeber, so
+    // we can't use sizeof and d_reclen member is only available on Linux.
+    size_t reclen = platform_dir_reclen(entry);
+
+    struct dirent *new_entry = static_cast<struct dirent *>(::malloc(reclen));
+    if (new_entry == nullptr) {
+      saved_errno = ENOMEM;
+    }
+    inline_memcpy(new_entry, entry, reclen);
+
+    if (!entries.push_back(new_entry)) {
+      ::free(new_entry);
+      saved_errno = ENOMEM;
+      break;
+    }
+  }
+
+  // Closedir may modify errno and set it to, e.g. EBADF, which is not amongst
+  // POSIX-defined error codes for scandir.
+  dir->close();
+
+  struct dirent **result = static_cast<struct dirent **>(
+      ::malloc(entries.size() * sizeof(struct dirent *)));
+
+  if (result == nullptr) {
+    saved_errno = ENOMEM;
+  }
+
+  if (saved_errno != 0) {
+    for (struct dirent *entry : entries) {
+      ::free(entry);
+    }
+    return LIBC_NAMESPACE::Error(saved_errno);
+  }
+
+  if (compare != nullptr) {
+    auto cmp_fn = [compare](const void *a, const void *b) {
+      auto left = static_cast<const struct dirent **>(const_cast<void *>(a));
+      auto right = static_cast<const struct dirent **>(const_cast<void *>(b));
+      return compare(left, right);
+    };
+    internal::unstable_sort(entries.data(), entries.size(),
+                            sizeof(struct dirent *), cmp_fn);
+  }
+
+  for (size_t i = 0; i < entries.size(); ++i) {
+    result[i] = entries[i];
+  }
+
+  *namelist = result;
+  return static_cast<int>(entries.size());
 }
 
 } // namespace LIBC_NAMESPACE_DECL
