@@ -384,6 +384,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.wait.wait4
     libc.src.sys.wait.waitpid
 
+    # sys/xattr.h entrypoints
+    libc.src.sys.xattr.flistxattr
+    libc.src.sys.xattr.listxattr
+    libc.src.sys.xattr.llistxattr
+
     # sys/prctl.h entrypoints
     libc.src.sys.prctl.prctl
 
