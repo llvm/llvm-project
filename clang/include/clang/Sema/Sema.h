@@ -2923,9 +2923,12 @@ public:
   /// since all 1s are not contiguous.
   bool ValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum);
 
+  /// Check the implicit conversion of E to T. IsKnownUnreachable indicates that
+  /// E is within an unselected operand of a constant conditional expression.
   void CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
                                bool *ICContext = nullptr,
-                               bool IsListInit = false);
+                               bool IsListInit = false,
+                               bool IsKnownUnreachable = false);
 
   /// Check for overflow behavior type related implicit conversion diagnostics.
   /// Returns true if OBT-related diagnostic was issued, false otherwise.

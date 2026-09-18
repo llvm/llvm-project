@@ -12365,7 +12365,8 @@ static bool IsSameFloatAfterCast(const APValue &value,
 }
 
 static void AnalyzeImplicitConversions(Sema &S, Expr *E, SourceLocation CC,
-                                       bool IsListInit = false);
+                                       bool IsListInit = false,
+                                       bool IsKnownUnreachable = false);
 
 static bool IsEnumConstOrFromMacro(Sema &S, const Expr *E) {
   // Suppress cases where we are comparing against an enum constant.
@@ -12700,26 +12701,30 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
 
 /// Analyze the operands of the given comparison.  Implements the
 /// fallback case from AnalyzeComparison.
-static void AnalyzeImpConvsInComparison(Sema &S, BinaryOperator *E) {
-  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc());
-  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc());
+static void AnalyzeImpConvsInComparison(Sema &S, BinaryOperator *E,
+                                        bool IsKnownUnreachable) {
+  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc(),
+                             /*IsListInit=*/false, IsKnownUnreachable);
+  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc(),
+                             /*IsListInit=*/false, IsKnownUnreachable);
 }
 
 /// Implements -Wsign-compare.
 ///
 /// \param E the binary operator to check for warnings
-static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
+static void AnalyzeComparison(Sema &S, BinaryOperator *E,
+                              bool IsKnownUnreachable) {
   // The type the comparison is being performed in.
   QualType T = E->getLHS()->getType();
 
   // Only analyze comparison operators where both sides have been converted to
   // the same type.
   if (!S.Context.hasSameUnqualifiedType(T, E->getRHS()->getType()))
-    return AnalyzeImpConvsInComparison(S, E);
+    return AnalyzeImpConvsInComparison(S, E, IsKnownUnreachable);
 
   // Don't analyze value-dependent comparisons directly.
   if (E->isValueDependent())
-    return AnalyzeImpConvsInComparison(S, E);
+    return AnalyzeImpConvsInComparison(S, E, IsKnownUnreachable);
 
   Expr *LHS = E->getLHS();
   Expr *RHS = E->getRHS();
@@ -12732,7 +12737,7 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
 
     // We don't care about expressions whose result is a constant.
     if (RHSValue && LHSValue)
-      return AnalyzeImpConvsInComparison(S, E);
+      return AnalyzeImpConvsInComparison(S, E, IsKnownUnreachable);
 
     // We only care about expressions where just one side is literal
     if ((bool)RHSValue ^ (bool)LHSValue) {
@@ -12745,7 +12750,7 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
       // Check whether an integer constant comparison results in a value
       // of 'true' or 'false'.
       if (CheckTautologicalComparison(S, E, Const, Other, Value, RhsConstant))
-        return AnalyzeImpConvsInComparison(S, E);
+        return AnalyzeImpConvsInComparison(S, E, IsKnownUnreachable);
     }
   }
 
@@ -12753,7 +12758,7 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
     // We don't do anything special if this isn't an unsigned integral
     // comparison:  we're only interested in integral comparisons, and
     // signed comparisons only happen in cases we don't care to warn about.
-    return AnalyzeImpConvsInComparison(S, E);
+    return AnalyzeImpConvsInComparison(S, E, IsKnownUnreachable);
   }
 
   LHS = LHS->IgnoreParenImpCasts();
@@ -12781,7 +12786,7 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
     signedOperand = RHS;
     unsignedOperand = LHS;
   } else {
-    return AnalyzeImpConvsInComparison(S, E);
+    return AnalyzeImpConvsInComparison(S, E, IsKnownUnreachable);
   }
 
   // Otherwise, calculate the effective range of the signed operand.
@@ -12793,8 +12798,10 @@ static void AnalyzeComparison(Sema &S, BinaryOperator *E) {
 
   // Go ahead and analyze implicit conversions in the operands.  Note
   // that we skip the implicit conversions on both sides.
-  AnalyzeImplicitConversions(S, LHS, E->getOperatorLoc());
-  AnalyzeImplicitConversions(S, RHS, E->getOperatorLoc());
+  AnalyzeImplicitConversions(S, LHS, E->getOperatorLoc(), /*IsListInit=*/false,
+                             IsKnownUnreachable);
+  AnalyzeImplicitConversions(S, RHS, E->getOperatorLoc(), /*IsListInit=*/false,
+                             IsKnownUnreachable);
 
   // If the signed range is non-negative, -Wsign-compare won't fire.
   if (signedRange->NonNegative)
@@ -12988,9 +12995,11 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
 
 /// Analyze the given simple or compound assignment for warning-worthy
 /// operations.
-static void AnalyzeAssignment(Sema &S, BinaryOperator *E) {
+static void AnalyzeAssignment(Sema &S, BinaryOperator *E,
+                              bool IsKnownUnreachable) {
   // Just recurse on the LHS.
-  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc());
+  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc(),
+                             /*IsListInit=*/false, IsKnownUnreachable);
 
   // We want to recurse on the RHS as normal unless we're assigning to
   // a bitfield.
@@ -12998,8 +13007,9 @@ static void AnalyzeAssignment(Sema &S, BinaryOperator *E) {
     if (AnalyzeBitFieldAssignment(S, Bitfield, E->getRHS(),
                                   E->getOperatorLoc())) {
       // Recurse, ignoring any implicit conversions on the RHS.
-      return AnalyzeImplicitConversions(S, E->getRHS()->IgnoreParenImpCasts(),
-                                        E->getOperatorLoc());
+      return AnalyzeImplicitConversions(
+          S, E->getRHS()->IgnoreParenImpCasts(), E->getOperatorLoc(),
+          /*IsListInit=*/false, IsKnownUnreachable);
     }
   }
 
@@ -13008,7 +13018,8 @@ static void AnalyzeAssignment(Sema &S, BinaryOperator *E) {
   llvm::SaveAndRestore OBTAssignmentContext(
       S.InOverflowBehaviorAssignmentContext, true);
 
-  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc());
+  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc(),
+                             /*IsListInit=*/false, IsKnownUnreachable);
 
   // Diagnose implicitly sequentially-consistent atomic assignment.
   if (E->getLHS()->getType()->isAtomicType())
@@ -13160,12 +13171,15 @@ static void DiagnoseFloatingImpCast(Sema &S, const Expr *E, QualType T,
 
 /// Analyze the given compound assignment for the possible losing of
 /// floating-point precision.
-static void AnalyzeCompoundAssignment(Sema &S, BinaryOperator *E) {
+static void AnalyzeCompoundAssignment(Sema &S, BinaryOperator *E,
+                                      bool IsKnownUnreachable) {
   assert(isa<CompoundAssignOperator>(E) &&
          "Must be compound assignment operation");
   // Recurse on the LHS and RHS in here
-  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc());
-  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc());
+  AnalyzeImplicitConversions(S, E->getLHS(), E->getOperatorLoc(),
+                             /*IsListInit=*/false, IsKnownUnreachable);
+  AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc(),
+                             /*IsListInit=*/false, IsKnownUnreachable);
 
   if (E->getLHS()->getType()->isAtomicType())
     S.Diag(E->getOperatorLoc(), diag::warn_atomic_implicit_seq_cst);
@@ -13442,7 +13456,8 @@ bool Sema::DiscardingCFIUncheckedCallee(QualType From, QualType To) const {
 }
 
 void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
-                                   bool *ICContext, bool IsListInit) {
+                                   bool *ICContext, bool IsListInit,
+                                   bool IsKnownUnreachable) {
   if (E->isTypeDependent() || E->isValueDependent()) return;
 
   const Type *Source = Context.getCanonicalType(E->getType()).getTypePtr();
@@ -13879,11 +13894,12 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       std::string PrettySourceValue = toString(Value, 10);
       std::string PrettyTargetValue = PrettyPrintInRange(Value, TargetRange);
 
-      DiagRuntimeBehavior(E->getExprLoc(), E,
-                          PDiag(diag::warn_impcast_integer_precision_constant)
-                              << PrettySourceValue << PrettyTargetValue
-                              << E->getType() << T << E->getSourceRange()
-                              << SourceRange(CC));
+      if (!IsKnownUnreachable)
+        DiagRuntimeBehavior(E->getExprLoc(), E,
+                            PDiag(diag::warn_impcast_integer_precision_constant)
+                                << PrettySourceValue << PrettyTargetValue
+                                << E->getType() << T << E->getSourceRange()
+                                << SourceRange(CC));
       return;
     }
 
@@ -13932,10 +13948,12 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
         std::string PrettySourceValue = toString(Value, 10);
         std::string PrettyTargetValue = PrettyPrintInRange(Value, TargetRange);
 
-        Diag(E->getExprLoc(),
-             PDiag(diag::warn_impcast_integer_precision_constant)
-                 << PrettySourceValue << PrettyTargetValue << E->getType() << T
-                 << E->getSourceRange() << SourceRange(CC));
+        if (!IsKnownUnreachable && !isUnevaluatedContext() &&
+            !currentEvaluationContext().isDiscardedStatementContext())
+          Diag(E->getExprLoc(),
+               PDiag(diag::warn_impcast_integer_precision_constant)
+                   << PrettySourceValue << PrettyTargetValue << E->getType()
+                   << T << E->getSourceRange() << SourceRange(CC));
         return;
       }
     }
@@ -13997,34 +14015,65 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 }
 
 static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
-                                     SourceLocation CC, QualType T);
+                                     SourceLocation CC, QualType T,
+                                     bool IsKnownUnreachable);
 
 static void CheckConditionalOperand(Sema &S, Expr *E, QualType T,
-                                    SourceLocation CC, bool &ICContext) {
+                                    SourceLocation CC, bool &ICContext,
+                                    bool IsKnownUnreachable) {
   E = E->IgnoreParenImpCasts();
   // Diagnose incomplete type for second or third operand in C.
   if (!S.getLangOpts().CPlusPlus && E->getType()->isRecordType())
     S.RequireCompleteExprType(E, diag::err_incomplete_type);
 
   if (auto *CO = dyn_cast<AbstractConditionalOperator>(E))
-    return CheckConditionalOperator(S, CO, CC, T);
+    return CheckConditionalOperator(S, CO, CC, T, IsKnownUnreachable);
 
-  AnalyzeImplicitConversions(S, E, CC);
+  AnalyzeImplicitConversions(S, E, CC, /*IsListInit=*/false,
+                             IsKnownUnreachable);
   if (E->getType() != T)
-    return S.CheckImplicitConversion(E, T, CC, &ICContext);
+    return S.CheckImplicitConversion(E, T, CC, &ICContext,
+                                     /*IsListInit=*/false, IsKnownUnreachable);
 }
 
 static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
-                                     SourceLocation CC, QualType T) {
-  AnalyzeImplicitConversions(S, E->getCond(), E->getQuestionLoc());
+                                     SourceLocation CC, QualType T,
+                                     bool IsKnownUnreachable) {
+  AnalyzeImplicitConversions(S, E->getCond(), E->getQuestionLoc(),
+                             /*IsListInit=*/false, IsKnownUnreachable);
+
+  bool CondValue;
+  bool CondIsKnown = E->getCond()->EvaluateAsBooleanCondition(
+      CondValue, S.Context, S.isConstantEvaluatedContext());
+  if (CondIsKnown && !S.isConstantEvaluatedContext()) {
+    // The condition may also be evaluated at compile time, for example in a
+    // constexpr function. Only prune an operand if both evaluations agree;
+    // __builtin_is_constant_evaluated() can produce different results.
+    bool ConstantCondValue;
+    CondIsKnown =
+        E->getCond()->EvaluateAsBooleanCondition(ConstantCondValue, S.Context,
+                                                 /*InConstantContext=*/true) &&
+        ConstantCondValue == CondValue;
+  }
 
   Expr *TrueExpr = E->getTrueExpr();
-  if (auto *BCO = dyn_cast<BinaryConditionalOperator>(E))
+  bool TrueIsKnownUnreachable =
+      IsKnownUnreachable || (CondIsKnown && !CondValue);
+  bool FalseIsKnownUnreachable =
+      IsKnownUnreachable || (CondIsKnown && CondValue);
+
+  if (auto *BCO = dyn_cast<BinaryConditionalOperator>(E)) {
+    // The common expression supplies the condition as well as the true value,
+    // so its subexpressions are evaluated even when the condition is false.
     TrueExpr = BCO->getCommon();
+    TrueIsKnownUnreachable = IsKnownUnreachable;
+  }
 
   bool Suspicious = false;
-  CheckConditionalOperand(S, TrueExpr, T, CC, Suspicious);
-  CheckConditionalOperand(S, E->getFalseExpr(), T, CC, Suspicious);
+  CheckConditionalOperand(S, TrueExpr, T, CC, Suspicious,
+                          TrueIsKnownUnreachable);
+  CheckConditionalOperand(S, E->getFalseExpr(), T, CC, Suspicious,
+                          FalseIsKnownUnreachable);
 
   if (T->isBooleanType())
     DiagnoseIntInBoolContext(S, E);
@@ -14043,10 +14092,12 @@ static void CheckConditionalOperator(Sema &S, AbstractConditionalOperator *E,
 
   Suspicious = false;
   S.CheckImplicitConversion(TrueExpr->IgnoreParenImpCasts(), E->getType(), CC,
-                            &Suspicious);
+                            &Suspicious, /*IsListInit=*/false,
+                            TrueIsKnownUnreachable);
   if (!Suspicious)
     S.CheckImplicitConversion(E->getFalseExpr()->IgnoreParenImpCasts(),
-                              E->getType(), CC, &Suspicious);
+                              E->getType(), CC, &Suspicious,
+                              /*IsListInit=*/false, FalseIsKnownUnreachable);
 }
 
 /// Check conversion of given expression to boolean.
@@ -14067,18 +14118,22 @@ struct AnalyzeImplicitConversionsWorkItem {
   Expr *E;
   SourceLocation CC;
   bool IsListInit;
+  // Track unselected conditional operands without skipping other diagnostics
+  // that do not depend on whether the expression is evaluated.
+  bool IsKnownUnreachable;
 };
 }
 
 static void CheckCommaOperand(
     Sema &S, Expr *E, QualType T, SourceLocation CC,
-    bool ExtraCheckForImplicitConversion,
+    bool ExtraCheckForImplicitConversion, bool IsKnownUnreachable,
     llvm::SmallVectorImpl<AnalyzeImplicitConversionsWorkItem> &WorkList) {
   E = E->IgnoreParenImpCasts();
-  WorkList.push_back({E, CC, false});
+  WorkList.push_back({E, CC, false, IsKnownUnreachable});
 
   if (ExtraCheckForImplicitConversion && E->getType() != T)
-    S.CheckImplicitConversion(E, T, CC);
+    S.CheckImplicitConversion(E, T, CC, /*ICContext=*/nullptr,
+                              /*IsListInit=*/false, IsKnownUnreachable);
 }
 
 /// Data recursive variant of AnalyzeImplicitConversions. Subexpressions
@@ -14156,9 +14211,11 @@ static void AnalyzeImplicitConversions(
       /// how CheckConditionalOperand behaves; it's as-if the correct operand
       /// were directly used for the implicit conversion check.
       CheckCommaOperand(S, BO->getLHS(), T, BO->getOperatorLoc(),
-                        /*ExtraCheckForImplicitConversion=*/false, WorkList);
+                        /*ExtraCheckForImplicitConversion=*/false,
+                        Item.IsKnownUnreachable, WorkList);
       CheckCommaOperand(S, BO->getRHS(), T, BO->getOperatorLoc(),
-                        /*ExtraCheckForImplicitConversion=*/true, WorkList);
+                        /*ExtraCheckForImplicitConversion=*/true,
+                        Item.IsKnownUnreachable, WorkList);
       return;
     }
   }
@@ -14166,7 +14223,7 @@ static void AnalyzeImplicitConversions(
   // For conditional operators, we analyze the arguments as if they
   // were being fed directly into the output.
   if (auto *CO = dyn_cast<AbstractConditionalOperator>(SourceExpr)) {
-    CheckConditionalOperator(S, CO, CC, T);
+    CheckConditionalOperator(S, CO, CC, T, Item.IsKnownUnreachable);
     return;
   }
 
@@ -14178,7 +14235,8 @@ static void AnalyzeImplicitConversions(
   // The non-canonical typecheck is just an optimization;
   // CheckImplicitConversion will filter out dead implicit conversions.
   if (SourceExpr->getType() != T)
-    S.CheckImplicitConversion(SourceExpr, T, CC, nullptr, IsListInit);
+    S.CheckImplicitConversion(SourceExpr, T, CC, nullptr, IsListInit,
+                              Item.IsKnownUnreachable);
 
   // Now continue drilling into this expression.
 
@@ -14188,7 +14246,8 @@ static void AnalyzeImplicitConversions(
     // FIXME: Use a more uniform representation for this.
     for (auto *SE : POE->semantics())
       if (auto *OVE = dyn_cast<OpaqueValueExpr>(SE))
-        WorkList.push_back({OVE->getSourceExpr(), CC, IsListInit});
+        WorkList.push_back(
+            {OVE->getSourceExpr(), CC, IsListInit, Item.IsKnownUnreachable});
   }
 
   // Skip past explicit casts.
@@ -14208,33 +14267,35 @@ static void AnalyzeImplicitConversions(
     E = E->IgnoreParenImpCasts();
     if (!CE->getType()->isVoidType() && E->getType()->isAtomicType())
       S.Diag(E->getBeginLoc(), diag::warn_atomic_implicit_seq_cst);
-    WorkList.push_back({E, CC, IsListInit});
+    WorkList.push_back({E, CC, IsListInit, Item.IsKnownUnreachable});
     return;
   }
 
   if (auto *OutArgE = dyn_cast<HLSLOutArgExpr>(E)) {
-    WorkList.push_back({OutArgE->getArgLValue(), CC, IsListInit});
+    WorkList.push_back(
+        {OutArgE->getArgLValue(), CC, IsListInit, Item.IsKnownUnreachable});
     // The base expression is only used to initialize the parameter for
     // arguments to `inout` parameters, so we only traverse down the base
     // expression for `inout` cases.
     if (OutArgE->isInOut())
-      WorkList.push_back(
-          {OutArgE->getCastedTemporary()->getSourceExpr(), CC, IsListInit});
-    WorkList.push_back({OutArgE->getWritebackCast(), CC, IsListInit});
+      WorkList.push_back({OutArgE->getCastedTemporary()->getSourceExpr(), CC,
+                          IsListInit, Item.IsKnownUnreachable});
+    WorkList.push_back(
+        {OutArgE->getWritebackCast(), CC, IsListInit, Item.IsKnownUnreachable});
     return;
   }
 
   if (BinaryOperator *BO = dyn_cast<BinaryOperator>(E)) {
     // Do a somewhat different check with comparison operators.
     if (BO->isComparisonOp())
-      return AnalyzeComparison(S, BO);
+      return AnalyzeComparison(S, BO, Item.IsKnownUnreachable);
 
     // And with simple assignments.
     if (BO->getOpcode() == BO_Assign)
-      return AnalyzeAssignment(S, BO);
+      return AnalyzeAssignment(S, BO, Item.IsKnownUnreachable);
     // And with compound assignments.
     if (BO->isAssignmentOp())
-      return AnalyzeCompoundAssignment(S, BO);
+      return AnalyzeCompoundAssignment(S, BO, Item.IsKnownUnreachable);
   }
 
   // These break the otherwise-useful invariant below.  Fortunately,
@@ -14267,7 +14328,7 @@ static void AnalyzeImplicitConversions(
       // Ignore checking string literals that are in logical and operators.
       // This is a common pattern for asserts.
       continue;
-    WorkList.push_back({ChildExpr, CC, IsListInit});
+    WorkList.push_back({ChildExpr, CC, IsListInit, Item.IsKnownUnreachable});
   }
 
   if (BO && BO->isLogicalOp()) {
@@ -14295,9 +14356,10 @@ static void AnalyzeImplicitConversions(
 /// implicit conversions in the given expression.  There are a couple
 /// of competing diagnostics here, -Wconversion and -Wsign-compare.
 static void AnalyzeImplicitConversions(Sema &S, Expr *OrigE, SourceLocation CC,
-                                       bool IsListInit/*= false*/) {
+                                       bool IsListInit /*= false*/,
+                                       bool IsKnownUnreachable /*= false*/) {
   llvm::SmallVector<AnalyzeImplicitConversionsWorkItem, 16> WorkList;
-  WorkList.push_back({OrigE, CC, IsListInit});
+  WorkList.push_back({OrigE, CC, IsListInit, IsKnownUnreachable});
   while (!WorkList.empty())
     AnalyzeImplicitConversions(S, WorkList.pop_back_val(), WorkList);
 }
