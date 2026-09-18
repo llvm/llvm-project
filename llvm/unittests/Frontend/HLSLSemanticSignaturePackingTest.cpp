@@ -1009,6 +1009,28 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableSingleRowTessFactor) {
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest,
+       PrefixStableSingleRowTessFactorAfterArbitrary) {
+  // A single-row tess factor can follow arbitrary data in the same row.
+  // Unlike an indexed tess factor, it need not occupy the last column.
+
+  // struct PatchConstants {
+  //   float2 Data      : DATA;
+  //   float TessFactor : SV_TessFactor;
+  // };
+  TestConfig Config(
+      Triple::Hull, IOType::PatchConstantOrPrimitive,
+      {{dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/2,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined},
+       {dxbc::PSV::SemanticKind::TessFactor, /*Rows=*/1, /*Cols=*/1,
+        dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Undefined}});
+
+  // Expected layout:
+  // reg0: Data.xy | TessFactor.z | unused.w
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/1,
+                {{/*Row=*/0, /*Col=*/0}, {/*Row=*/0, /*Col=*/2}});
+}
+
+TEST_F(HLSLSemanticSignaturePackingTest,
        PrefixStableIndexedTessFactorAfterIndexedElement) {
   // An indexed tess factor may only be placed in rows whose indexed range is
   // contained by its own, so it cannot be packed into the rows of the wider
