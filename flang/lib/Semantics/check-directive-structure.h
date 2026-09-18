@@ -222,8 +222,8 @@ protected:
     DirectiveContext(parser::CharBlock source, D d)
         : directiveSource{source}, directive{d} {}
 
-    parser::CharBlock directiveSource{nullptr};
-    parser::CharBlock clauseSource{nullptr};
+    parser::CharBlock directiveSource;
+    parser::CharBlock clauseSource;
     D directive;
     ClauseSetTy allowedClauses{};
     ClauseSetTy allowedOnceClauses{};

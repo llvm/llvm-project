@@ -955,7 +955,7 @@ static LabeledStatementInfoTuplePOD GetLabel(
     const TargetStmtMap &labels, const parser::Label &label) {
   const auto iter{labels.find(label)};
   if (iter == labels.cend()) {
-    return {0u, nullptr, LabeledStmtClassificationSet{}, false};
+    return {0u, parser::CharBlock{}, LabeledStmtClassificationSet{}, false};
   } else {
     return iter->second;
   }
