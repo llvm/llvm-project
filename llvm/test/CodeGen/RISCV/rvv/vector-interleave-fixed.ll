@@ -5,8 +5,8 @@
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+v,+zvbb,+zvfh,+zvfbfmin | FileCheck %s --check-prefixes=ZVBB,ZVBB-RV64
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+v,+zvbb,+zvfh,+zvfbfmin,+experimental-zvzip | FileCheck %s --check-prefixes=ZVZIP,ZVZIP-RV32
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+v,+zvbb,+zvfh,+zvfbfmin,+experimental-zvzip | FileCheck %s --check-prefixes=ZVZIP,ZVZIP-RV64
-; RUN: llc < %s -mtriple=riscv32 -mattr=+v,+zvbb,+zvfh,+zvfbfmin,+experimental-zvzip,+zvl2048b | FileCheck -check-prefixes=ZVZIP-WIDE,ZVZIP-WIDE-RV32 %s
-; RUN: llc < %s -mtriple=riscv64 -mattr=+v,+zvbb,+zvfh,+zvfbfmin,+experimental-zvzip,+zvl2048b | FileCheck -check-prefixes=ZVZIP-WIDE,ZVZIP-WIDE-RV64 %s
+; RUN: llc < %s -mtriple=riscv32 -mattr=+v,+zvbb,+zvfh,+zvfbfmin,+experimental-zvzip,+zvl2048b | FileCheck -check-prefixes=ZVZIP-ZVL2048,ZVZIP-ZVL2048-RV32 %s
+; RUN: llc < %s -mtriple=riscv64 -mattr=+v,+zvbb,+zvfh,+zvfbfmin,+experimental-zvzip,+zvl2048b | FileCheck -check-prefixes=ZVZIP-ZVL2048,ZVZIP-ZVL2048-RV64 %s
 
 ; Integers
 
@@ -61,21 +61,21 @@ define <32 x i1> @vector_interleave_v32i1_v16i1(<16 x i1> %a, <16 x i1> %b) {
 ; ZVZIP-NEXT:    vmsne.vi v0, v12, 0
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave_v32i1_v16i1:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v0, v8, 2
-; ZVZIP-WIDE-NEXT:    li a0, 32
-; ZVZIP-WIDE-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vmv.v.i v8, 0
-; ZVZIP-WIDE-NEXT:    vmerge.vim v8, v8, 1, v0
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 16, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v8, 16
-; ZVZIP-WIDE-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v10, v8, v9
-; ZVZIP-WIDE-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vmsne.vi v0, v10, 0
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave_v32i1_v16i1:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v0, v8, 2
+; ZVZIP-ZVL2048-NEXT:    li a0, 32
+; ZVZIP-ZVL2048-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vmv.v.i v8, 0
+; ZVZIP-ZVL2048-NEXT:    vmerge.vim v8, v8, 1, v0
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 16, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v8, 16
+; ZVZIP-ZVL2048-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v10, v8, v9
+; ZVZIP-ZVL2048-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vmsne.vi v0, v10, 0
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <32 x i1> @llvm.vector.interleave2.v32i1(<16 x i1> %a, <16 x i1> %b)
 	   ret <32 x i1> %res
 }
@@ -108,12 +108,12 @@ define <16 x i16> @vector_interleave_v16i16_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; ZVZIP-NEXT:    vzip.vv v8, v11, v10
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave_v16i16_v8i16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 16, e16, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v10, v8, v9
-; ZVZIP-WIDE-NEXT:    vmv1r.v v8, v10
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave_v16i16_v8i16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 16, e16, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v10, v8, v9
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v8, v10
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <16 x i16> @llvm.vector.interleave2.v16i16(<8 x i16> %a, <8 x i16> %b)
 	   ret <16 x i16> %res
 }
@@ -147,12 +147,12 @@ define <8 x i32> @vector_interleave_v8i32_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; ZVZIP-NEXT:    vzip.vv v8, v11, v10
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave_v8i32_v4i32:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v10, v8, v9
-; ZVZIP-WIDE-NEXT:    vmv.v.v v8, v10
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave_v8i32_v4i32:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v10, v8, v9
+; ZVZIP-ZVL2048-NEXT:    vmv.v.v v8, v10
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> %a, <4 x i32> %b)
 	   ret <8 x i32> %res
 }
@@ -196,13 +196,13 @@ define <4 x i64> @vector_interleave_v4i64_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; ZVZIP-NEXT:    vzip.vv v8, v11, v10
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave_v4i64_v2i64:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; ZVZIP-WIDE-NEXT:    vmv1r.v v10, v9
-; ZVZIP-WIDE-NEXT:    vmv1r.v v11, v8
-; ZVZIP-WIDE-NEXT:    vzip.vv v8, v11, v10
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave_v4i64_v2i64:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v10, v9
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v11, v8
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v8, v11, v10
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> %a, <2 x i64> %b)
 	   ret <4 x i64> %res
 }
@@ -265,24 +265,24 @@ define <6 x i32> @vector_interleave3_v6i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; ZVZIP-NEXT:    addi sp, sp, 32
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave3_v6i32_v2i32:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    addi sp, sp, -32
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vsseg3e32.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a1, sp, 16
-; ZVZIP-WIDE-NEXT:    vle32.v v9, (a1)
-; ZVZIP-WIDE-NEXT:    vle32.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 24
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e32, mf2, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vle32.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e32, mf2, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 4
-; ZVZIP-WIDE-NEXT:    addi sp, sp, 32
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave3_v6i32_v2i32:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, -32
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vsseg3e32.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a1, sp, 16
+; ZVZIP-ZVL2048-NEXT:    vle32.v v9, (a1)
+; ZVZIP-ZVL2048-NEXT:    vle32.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 24
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e32, mf2, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle32.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 6, e32, mf2, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 4
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, 32
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <6 x i32> @llvm.vector.interleave3.v6i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c)
 	   ret <6 x i32> %res
 }
@@ -353,32 +353,32 @@ define <8 x i32> @vector_interleave4_v8i32_v2i32(<2 x i32> %a, <2 x i32> %b, <2 
 ; ZVZIP-NEXT:    vslideup.vi v8, v10, 4
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave4_v8i32_v2i32:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v12, v9, v11
-; ZVZIP-WIDE-NEXT:    vzip.vv v9, v8, v10
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v8, v12, 2
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v12, v8, 2
-; ZVZIP-WIDE-NEXT:    vslideup.vi v9, v10, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v8, v9, v12
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v8, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v8, 4
-; ZVZIP-WIDE-NEXT:    vsetvli zero, zero, e32, mf2, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e32, mf2, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v10, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v10, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 6
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave4_v8i32_v2i32:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v12, v9, v11
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v9, v8, v10
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v8, v12, 2
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v10, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v12, v8, 2
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v9, v10, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v8, v9, v12
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v8, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v10, v8, 4
+; ZVZIP-ZVL2048-NEXT:    vsetvli zero, zero, e32, mf2, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 6, e32, mf2, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v10, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v10, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e32, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 6
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <8 x i32> @llvm.vector.interleave4.v8i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i32> %d)
 	   ret <8 x i32> %res
 }
@@ -10762,26 +10762,26 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVZIP-NEXT:    addi sp, sp, 16
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave4_v512i8_v2048i8:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    li a0, 1024
-; ZVZIP-WIDE-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v16, v10, v14
-; ZVZIP-WIDE-NEXT:    vzip.vv v20, v8, v12
-; ZVZIP-WIDE-NEXT:    vzip.vv v8, v20, v16
-; ZVZIP-WIDE-NEXT:    li a1, 512
-; ZVZIP-WIDE-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vx v24, v8, a1
-; ZVZIP-WIDE-NEXT:    vslidedown.vx v16, v16, a1
-; ZVZIP-WIDE-NEXT:    vslidedown.vx v20, v20, a1
-; ZVZIP-WIDE-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v12, v20, v16
-; ZVZIP-WIDE-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vx v16, v12, a1
-; ZVZIP-WIDE-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vx v8, v24, a1
-; ZVZIP-WIDE-NEXT:    vslideup.vx v12, v16, a1
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave4_v512i8_v2048i8:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    li a0, 1024
+; ZVZIP-ZVL2048-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v16, v10, v14
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v20, v8, v12
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v8, v20, v16
+; ZVZIP-ZVL2048-NEXT:    li a1, 512
+; ZVZIP-ZVL2048-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vx v24, v8, a1
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vx v16, v16, a1
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vx v20, v20, a1
+; ZVZIP-ZVL2048-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v12, v20, v16
+; ZVZIP-ZVL2048-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vx v16, v12, a1
+; ZVZIP-ZVL2048-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vx v8, v24, a1
+; ZVZIP-ZVL2048-NEXT:    vslideup.vx v12, v16, a1
+; ZVZIP-ZVL2048-NEXT:    ret
   %v = call <2048 x i8> @llvm.vector.interleave4(<512 x i8> %v0, <512 x i8> %v1, <512 x i8> %v2, <512 x i8> %v3)
   ret <2048 x i8> %v
 }
@@ -10865,34 +10865,34 @@ define <10 x i16> @vector_interleave5_v10i16_v2i16(<2 x i16> %a, <2 x i16> %b, <
 ; ZVZIP-NEXT:    addi sp, sp, 32
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave5_v10i16_v2i16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    addi sp, sp, -32
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 12
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vsseg5e16.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a1, sp, 16
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a1)
-; ZVZIP-WIDE-NEXT:    vle16.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 20
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 24
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 28
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 6
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 10, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 8
-; ZVZIP-WIDE-NEXT:    addi sp, sp, 32
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave5_v10i16_v2i16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, -32
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 12
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vsseg5e16.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a1, sp, 16
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a1)
+; ZVZIP-ZVL2048-NEXT:    vle16.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 20
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 24
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 28
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 6
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 10, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 8
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, 32
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <10 x i16> @llvm.vector.interleave5.v10i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d, <2 x i16> %e)
 	   ret <10 x i16> %res
 }
@@ -10991,39 +10991,39 @@ define <12 x i16> @vector_interleave6_v12i16_v2i16(<2 x i16> %a, <2 x i16> %b, <
 ; ZVZIP-NEXT:    addi sp, sp, 32
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave6_v12i16_v2i16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    addi sp, sp, -32
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vsseg6e16.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a1, sp, 12
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a1)
-; ZVZIP-WIDE-NEXT:    vle16.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 16
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 20
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 24
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 6
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 28
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 10, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 12, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 10
-; ZVZIP-WIDE-NEXT:    addi sp, sp, 32
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave6_v12i16_v2i16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, -32
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vsseg6e16.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a1, sp, 12
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a1)
+; ZVZIP-ZVL2048-NEXT:    vle16.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 16
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 20
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 24
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 6
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 28
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 10, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 12, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 10
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, 32
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <12 x i16> @llvm.vector.interleave6.v12i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x i16> %d, <2 x i16> %e, <2 x i16> %f)
 	   ret <12 x i16> %res
 }
@@ -11137,44 +11137,44 @@ define <14 x i8> @vector_interleave7_v14i8_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i
 ; ZVZIP-NEXT:    addi sp, sp, 16
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave7_v14i8_v2i8:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    addi sp, sp, -16
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vsseg7e8.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a1, sp, 4
-; ZVZIP-WIDE-NEXT:    vle8.v v9, (a1)
-; ZVZIP-WIDE-NEXT:    vle8.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 6
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e8, mf8, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vle8.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e8, mf8, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vle8.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 10
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e8, mf8, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 6
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vle8.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 12
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 10, e8, mf8, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vle8.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 14
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 12, e8, mf8, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 10
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vle8.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 14, e8, mf8, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 12
-; ZVZIP-WIDE-NEXT:    addi sp, sp, 16
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave7_v14i8_v2i8:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, -16
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vsseg7e8.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a1, sp, 4
+; ZVZIP-ZVL2048-NEXT:    vle8.v v9, (a1)
+; ZVZIP-ZVL2048-NEXT:    vle8.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 6
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e8, mf8, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle8.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 6, e8, mf8, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle8.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 10
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e8, mf8, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 6
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle8.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 12
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 10, e8, mf8, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle8.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 14
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 12, e8, mf8, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 10
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle8.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 14, e8, mf8, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 12
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, 16
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <14 x i8> @llvm.vector.interleave7.v14i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d, <2 x i8> %e, <2 x i8> %f, <2 x i8> %g)
 	   ret <14 x i8> %res
 }
@@ -11292,63 +11292,63 @@ define <16 x i8> @vector_interleave8_v16i8_v2i8(<2 x i8> %a, <2 x i8> %b, <2 x i
 ; ZVZIP-NEXT:    vslideup.vi v8, v9, 8
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave8_v16i8_v2i8:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v16, v11, v15
-; ZVZIP-WIDE-NEXT:    vzip.vv v11, v9, v13
-; ZVZIP-WIDE-NEXT:    vzip.vv v9, v10, v14
-; ZVZIP-WIDE-NEXT:    vzip.vv v10, v8, v12
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v8, v16, 2
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v12, v11, 2
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v13, v9, 2
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v14, v10, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v16, v8, 2
-; ZVZIP-WIDE-NEXT:    vslideup.vi v11, v12, 2
-; ZVZIP-WIDE-NEXT:    vslideup.vi v9, v13, 2
-; ZVZIP-WIDE-NEXT:    vslideup.vi v10, v14, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v8, v11, v16
-; ZVZIP-WIDE-NEXT:    vzip.vv v11, v10, v9
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v8, 4
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v11, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 4
-; ZVZIP-WIDE-NEXT:    vslideup.vi v11, v10, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 16, e8, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v9, v11, v8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v9, 2
-; ZVZIP-WIDE-NEXT:    vmv1r.v v8, v9
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v11, v9, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e8, mf8, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v10, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v9, 6
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e8, mf8, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v11, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v9, 8
-; ZVZIP-WIDE-NEXT:    vsetvli zero, zero, e8, mf8, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v10, 6
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 10, e8, mf8, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v11, v9, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 12, e8, mf8, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v10, 10
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 14, e8, mf8, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v11, 12
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v9, 6
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 16, e8, mf8, ta, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 14
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave8_v16i8_v2i8:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v16, v11, v15
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v11, v9, v13
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v9, v10, v14
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v10, v8, v12
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v8, v16, 2
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v12, v11, 2
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v13, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v14, v10, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v16, v8, 2
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v11, v12, 2
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v9, v13, 2
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v10, v14, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v8, v11, v16
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v11, v10, v9
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v8, 4
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v10, v11, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 4
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v11, v10, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 16, e8, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v9, v11, v8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v10, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v8, v9
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v11, v9, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e8, mf8, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v10, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v10, v9, 6
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 6, e8, mf8, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v11, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v9, 8
+; ZVZIP-ZVL2048-NEXT:    vsetvli zero, zero, e8, mf8, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v10, 6
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v10, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 10, e8, mf8, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v11, v9, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 12, e8, mf8, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v10, 10
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 14, e8, mf8, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v11, 12
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v9, 6
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 16, e8, mf8, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 14
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <16 x i8> @llvm.vector.interleave8.v16i8(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c, <2 x i8> %d, <2 x i8> %e, <2 x i8> %f, <2 x i8> %g, <2 x i8> %h)
 	   ret <16 x i8> %res
 }
@@ -11380,12 +11380,12 @@ define <4 x half> @vector_interleave_v4f16_v2f16(<2 x half> %a, <2 x half> %b) {
 ; ZVZIP-NEXT:    vmv1r.v v8, v10
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave_v4f16_v2f16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v10, v8, v9
-; ZVZIP-WIDE-NEXT:    vmv1r.v v8, v10
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave_v4f16_v2f16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v10, v8, v9
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v8, v10
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <4 x half> @llvm.vector.interleave2.v4f16(<2 x half> %a, <2 x half> %b)
 	   ret <4 x half> %res
 }
@@ -11415,12 +11415,12 @@ define <4 x bfloat> @vector_interleave_v4bf16_v2bf16(<2 x bfloat> %a, <2 x bfloa
 ; ZVZIP-NEXT:    vmv1r.v v8, v10
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave_v4bf16_v2bf16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v10, v8, v9
-; ZVZIP-WIDE-NEXT:    vmv1r.v v8, v10
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave_v4bf16_v2bf16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v10, v8, v9
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v8, v10
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <4 x bfloat> @llvm.vector.interleave2.v4bf16(<2 x bfloat> %a, <2 x bfloat> %b)
 	   ret <4 x bfloat> %res
 }
@@ -11450,12 +11450,12 @@ define <8 x half> @vector_interleave_v8f16_v4f16(<4 x half> %a, <4 x half> %b) {
 ; ZVZIP-NEXT:    vmv.v.v v8, v10
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave_v8f16_v4f16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e16, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v10, v8, v9
-; ZVZIP-WIDE-NEXT:    vmv1r.v v8, v10
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave_v8f16_v4f16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e16, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v10, v8, v9
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v8, v10
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <8 x half> @llvm.vector.interleave2.v8f16(<4 x half> %a, <4 x half> %b)
 	   ret <8 x half> %res
 }
@@ -11485,12 +11485,12 @@ define <8 x bfloat> @vector_interleave_v8bf16_v4bf16(<4 x bfloat> %a, <4 x bfloa
 ; ZVZIP-NEXT:    vmv.v.v v8, v10
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave_v8bf16_v4bf16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e16, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v10, v8, v9
-; ZVZIP-WIDE-NEXT:    vmv1r.v v8, v10
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave_v8bf16_v4bf16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e16, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v10, v8, v9
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v8, v10
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <8 x bfloat> @llvm.vector.interleave2.v8bf16(<4 x bfloat> %a, <4 x bfloat> %b)
 	   ret <8 x bfloat> %res
 }
@@ -11521,12 +11521,12 @@ define <4 x float> @vector_interleave_v4f32_v2f32(<2 x float> %a, <2 x float> %b
 ; ZVZIP-NEXT:    vmv.v.v v8, v10
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave_v4f32_v2f32:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v10, v8, v9
-; ZVZIP-WIDE-NEXT:    vmv.v.v v8, v10
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave_v4f32_v2f32:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v10, v8, v9
+; ZVZIP-ZVL2048-NEXT:    vmv.v.v v8, v10
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <4 x float> @llvm.vector.interleave2.v4f32(<2 x float> %a, <2 x float> %b)
 	   ret <4 x float> %res
 }
@@ -11559,12 +11559,12 @@ define <16 x half> @vector_interleave_v16f16_v8f16(<8 x half> %a, <8 x half> %b)
 ; ZVZIP-NEXT:    vzip.vv v8, v11, v10
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave_v16f16_v8f16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 16, e16, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v10, v8, v9
-; ZVZIP-WIDE-NEXT:    vmv1r.v v8, v10
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave_v16f16_v8f16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 16, e16, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v10, v8, v9
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v8, v10
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <16 x half> @llvm.vector.interleave2.v16f16(<8 x half> %a, <8 x half> %b)
 	   ret <16 x half> %res
 }
@@ -11597,12 +11597,12 @@ define <16 x bfloat> @vector_interleave_v16bf16_v8bf16(<8 x bfloat> %a, <8 x bfl
 ; ZVZIP-NEXT:    vzip.vv v8, v11, v10
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave_v16bf16_v8bf16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 16, e16, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v10, v8, v9
-; ZVZIP-WIDE-NEXT:    vmv1r.v v8, v10
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave_v16bf16_v8bf16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 16, e16, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v10, v8, v9
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v8, v10
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <16 x bfloat> @llvm.vector.interleave2.v16bf16(<8 x bfloat> %a, <8 x bfloat> %b)
 	   ret <16 x bfloat> %res
 }
@@ -11636,12 +11636,12 @@ define <8 x float> @vector_interleave_v8f32_v4f32(<4 x float> %a, <4 x float> %b
 ; ZVZIP-NEXT:    vzip.vv v8, v11, v10
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave_v8f32_v4f32:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v10, v8, v9
-; ZVZIP-WIDE-NEXT:    vmv.v.v v8, v10
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave_v8f32_v4f32:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v10, v8, v9
+; ZVZIP-ZVL2048-NEXT:    vmv.v.v v8, v10
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> %a, <4 x float> %b)
 	   ret <8 x float> %res
 }
@@ -11685,13 +11685,13 @@ define <4 x double> @vector_interleave_v4f64_v2f64(<2 x double> %a, <2 x double>
 ; ZVZIP-NEXT:    vzip.vv v8, v11, v10
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave_v4f64_v2f64:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; ZVZIP-WIDE-NEXT:    vmv1r.v v10, v9
-; ZVZIP-WIDE-NEXT:    vmv1r.v v11, v8
-; ZVZIP-WIDE-NEXT:    vzip.vv v8, v11, v10
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave_v4f64_v2f64:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v10, v9
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v11, v8
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v8, v11, v10
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> %a, <2 x double> %b)
 	   ret <4 x double> %res
 }
@@ -11754,24 +11754,24 @@ define <6 x float> @vector_interleave3_v6f32_v2f32(<2 x float> %a, <2 x float> %
 ; ZVZIP-NEXT:    addi sp, sp, 32
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave3_v6f32_v2f32:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    addi sp, sp, -32
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vsseg3e32.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a1, sp, 16
-; ZVZIP-WIDE-NEXT:    vle32.v v9, (a1)
-; ZVZIP-WIDE-NEXT:    vle32.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 24
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e32, mf2, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vle32.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e32, mf2, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 4
-; ZVZIP-WIDE-NEXT:    addi sp, sp, 32
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave3_v6f32_v2f32:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, -32
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vsseg3e32.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a1, sp, 16
+; ZVZIP-ZVL2048-NEXT:    vle32.v v9, (a1)
+; ZVZIP-ZVL2048-NEXT:    vle32.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 24
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e32, mf2, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle32.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 6, e32, mf2, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 4
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, 32
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <6 x float> @llvm.vector.interleave3.v6f32(<2 x float> %a, <2 x float> %b, <2 x float> %c)
 	   ret <6 x float> %res
 }
@@ -11842,33 +11842,33 @@ define <8 x float> @vector_interleave4_v8f32_v2f32(<2 x float> %a, <2 x float> %
 ; ZVZIP-NEXT:    vslideup.vi v8, v10, 4
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave4_v8f32_v2f32:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v12, v9, v11
-; ZVZIP-WIDE-NEXT:    vzip.vv v9, v8, v10
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v8, v12, 2
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v12, v8, 2
-; ZVZIP-WIDE-NEXT:    vslideup.vi v9, v10, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v8, v9, v12
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v8, 2
-; ZVZIP-WIDE-NEXT:    vmv1r.v v10, v8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e32, mf2, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v10, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e32, mf2, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e32, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 6
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave4_v8f32_v2f32:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v12, v9, v11
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v9, v8, v10
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v8, v12, 2
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v10, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v12, v8, 2
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v9, v10, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v8, v9, v12
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v8, 2
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v10, v8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e32, mf2, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v10, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 6, e32, mf2, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e32, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 6
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <8 x float> @llvm.vector.interleave4.v8f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x float> %d)
 	   ret <8 x float> %res
 }
@@ -11952,34 +11952,34 @@ define <10 x half> @vector_interleave5_v10f16_v2f16(<2 x half> %a, <2 x half> %b
 ; ZVZIP-NEXT:    addi sp, sp, 32
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave5_v10f16_v2f16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    addi sp, sp, -32
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 12
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vsseg5e16.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a1, sp, 16
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a1)
-; ZVZIP-WIDE-NEXT:    vle16.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 20
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 24
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 28
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 6
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 10, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 8
-; ZVZIP-WIDE-NEXT:    addi sp, sp, 32
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave5_v10f16_v2f16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, -32
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 12
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vsseg5e16.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a1, sp, 16
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a1)
+; ZVZIP-ZVL2048-NEXT:    vle16.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 20
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 24
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 28
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 6
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 10, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 8
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, 32
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <10 x half> @llvm.vector.interleave5.v10f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d, <2 x half> %e)
 	   ret <10 x half> %res
 }
@@ -12063,34 +12063,34 @@ define <10 x bfloat> @vector_interleave5_v10bf16_v2bf16(<2 x bfloat> %a, <2 x bf
 ; ZVZIP-NEXT:    addi sp, sp, 32
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave5_v10bf16_v2bf16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    addi sp, sp, -32
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 12
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vsseg5e16.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a1, sp, 16
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a1)
-; ZVZIP-WIDE-NEXT:    vle16.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 20
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 24
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 28
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 6
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 10, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 8
-; ZVZIP-WIDE-NEXT:    addi sp, sp, 32
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave5_v10bf16_v2bf16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, -32
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 12
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vsseg5e16.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a1, sp, 16
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a1)
+; ZVZIP-ZVL2048-NEXT:    vle16.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 20
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 24
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 28
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 6
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 10, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 8
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, 32
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <10 x bfloat> @llvm.vector.interleave5.v10bf16(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c, <2 x bfloat> %d, <2 x bfloat> %e)
 	   ret <10 x bfloat> %res
 }
@@ -12189,39 +12189,39 @@ define <12 x half> @vector_interleave6_v12f16_v2f16(<2 x half> %a, <2 x half> %b
 ; ZVZIP-NEXT:    addi sp, sp, 32
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave6_v12f16_v2f16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    addi sp, sp, -32
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vsseg6e16.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a1, sp, 12
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a1)
-; ZVZIP-WIDE-NEXT:    vle16.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 16
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 20
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 24
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 6
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 28
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 10, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 12, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 10
-; ZVZIP-WIDE-NEXT:    addi sp, sp, 32
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave6_v12f16_v2f16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, -32
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vsseg6e16.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a1, sp, 12
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a1)
+; ZVZIP-ZVL2048-NEXT:    vle16.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 16
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 20
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 24
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 6
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 28
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 10, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 12, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 10
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, 32
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <12 x half> @llvm.vector.interleave6.v12f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d, <2 x half> %e, <2 x half> %f)
 	   ret <12 x half> %res
 }
@@ -12320,39 +12320,39 @@ define <12 x bfloat> @vector_interleave6_v12bf16_v2bf16(<2 x bfloat> %a, <2 x bf
 ; ZVZIP-NEXT:    addi sp, sp, 32
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave6_v12bf16_v2bf16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    addi sp, sp, -32
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vsseg6e16.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a1, sp, 12
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a1)
-; ZVZIP-WIDE-NEXT:    vle16.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 16
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 20
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 24
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 6
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 28
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 10, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 12, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 10
-; ZVZIP-WIDE-NEXT:    addi sp, sp, 32
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave6_v12bf16_v2bf16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, -32
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vsseg6e16.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a1, sp, 12
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a1)
+; ZVZIP-ZVL2048-NEXT:    vle16.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 16
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 20
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 24
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 6
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 28
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 10, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 12, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 10
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, 32
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <12 x bfloat> @llvm.vector.interleave6.v12bf16(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c, <2 x bfloat> %d, <2 x bfloat> %e, <2 x bfloat> %f)
 	   ret <12 x bfloat> %res
 }
@@ -12466,44 +12466,44 @@ define <7 x half> @vector_interleave7_v7f16_v1f16(<1 x half> %a, <1 x half> %b, 
 ; ZVZIP-NEXT:    addi sp, sp, 16
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave7_v7f16_v1f16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    addi sp, sp, -16
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vsseg7e16.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a1, sp, 4
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a1)
-; ZVZIP-WIDE-NEXT:    vle16.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 6
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 1
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 3, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 10
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 3
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 12
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 5, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 14
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 5
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 7, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 6
-; ZVZIP-WIDE-NEXT:    addi sp, sp, 16
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave7_v7f16_v1f16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, -16
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vsseg7e16.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a1, sp, 4
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a1)
+; ZVZIP-ZVL2048-NEXT:    vle16.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 6
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 1
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 3, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 10
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 3
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 12
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 5, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 14
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 5
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 7, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 6
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, 16
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <7 x half> @llvm.vector.interleave7.v7f16(<1 x half> %a, <1 x half> %b, <1 x half> %c, <1 x half> %d, <1 x half> %e, <1 x half> %f, <1 x half> %g)
 	   ret <7 x half> %res
 }
@@ -12617,44 +12617,44 @@ define <7 x bfloat> @vector_interleave7_v7bf16_v1bf16(<1 x bfloat> %a, <1 x bflo
 ; ZVZIP-NEXT:    addi sp, sp, 16
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave7_v7bf16_v1bf16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    addi sp, sp, -16
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vsseg7e16.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a1, sp, 4
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a1)
-; ZVZIP-WIDE-NEXT:    vle16.v v8, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 6
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 1
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 3, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 10
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 3
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 12
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 5, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 4
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    addi a0, sp, 14
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 5
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vle16.v v9, (a0)
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 7, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 6
-; ZVZIP-WIDE-NEXT:    addi sp, sp, 16
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave7_v7bf16_v1bf16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, -16
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vsseg7e16.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a1, sp, 4
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a1)
+; ZVZIP-ZVL2048-NEXT:    vle16.v v8, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 6
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 1
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 3, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 10
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 3
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 12
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 5, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 4
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    addi a0, sp, 14
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 5
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vle16.v v9, (a0)
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 7, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 6
+; ZVZIP-ZVL2048-NEXT:    addi sp, sp, 16
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <7 x bfloat> @llvm.vector.interleave7.v7bf16(<1 x bfloat> %a, <1 x bfloat> %b, <1 x bfloat> %c, <1 x bfloat> %d, <1 x bfloat> %e, <1 x bfloat> %f, <1 x bfloat> %g)
 	   ret <7 x bfloat> %res
 }
@@ -12771,58 +12771,58 @@ define <8 x half> @vector_interleave8_v8f16_v1f16(<1 x half> %a, <1 x half> %b, 
 ; ZVZIP-NEXT:    vslideup.vi v8, v9, 4
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave8_v8f16_v1f16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v16, v11, v15
-; ZVZIP-WIDE-NEXT:    vzip.vv v11, v9, v13
-; ZVZIP-WIDE-NEXT:    vzip.vv v9, v10, v14
-; ZVZIP-WIDE-NEXT:    vzip.vv v10, v8, v12
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v8, v16, 1
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v12, v11, 1
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v13, v9, 1
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v14, v10, 1
-; ZVZIP-WIDE-NEXT:    vslideup.vi v16, v8, 1
-; ZVZIP-WIDE-NEXT:    vslideup.vi v11, v12, 1
-; ZVZIP-WIDE-NEXT:    vslideup.vi v9, v13, 1
-; ZVZIP-WIDE-NEXT:    vslideup.vi v10, v14, 1
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v12, v11, v16
-; ZVZIP-WIDE-NEXT:    vzip.vv v11, v10, v9
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v8, v12, 2
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v11, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v12, v8, 2
-; ZVZIP-WIDE-NEXT:    vslideup.vi v11, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e16, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v8, v11, v12
-; ZVZIP-WIDE-NEXT:    vmv1r.v v9, v8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v8, 1
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v11, v8, 2
-; ZVZIP-WIDE-NEXT:    vmv1r.v v12, v8
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v10, 1
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v9, 3
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 3, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v11, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v12, 4
-; ZVZIP-WIDE-NEXT:    vsetvli zero, zero, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 3
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v10, 1
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 5, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v10, 4
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v11, v10, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 5
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 7, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v11, 6
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v10, 3
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 7
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave8_v8f16_v1f16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v16, v11, v15
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v11, v9, v13
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v9, v10, v14
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v10, v8, v12
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v8, v16, 1
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v12, v11, 1
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v13, v9, 1
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v14, v10, 1
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v16, v8, 1
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v11, v12, 1
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v9, v13, 1
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v10, v14, 1
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v12, v11, v16
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v11, v10, v9
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v8, v12, 2
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v11, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v12, v8, 2
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v11, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e16, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v8, v11, v12
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v9, v8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v10, v8, 1
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v11, v8, 2
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v12, v8
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v10, 1
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v9, 3
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 3, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v11, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v10, v12, 4
+; ZVZIP-ZVL2048-NEXT:    vsetvli zero, zero, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 3
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v10, 1
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 5, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v10, 4
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v11, v10, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 5
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 7, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v11, 6
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v10, 3
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 7
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <8 x half> @llvm.vector.interleave8.v8f16(<1 x half> %a, <1 x half> %b, <1 x half> %c, <1 x half> %d, <1 x half> %e, <1 x half> %f, <1 x half> %g, <1 x half> %h)
 	   ret <8 x half> %res
 }
@@ -12939,58 +12939,58 @@ define <8 x bfloat> @vector_interleave8_v8bf16_v1bf16(<1 x bfloat> %a, <1 x bflo
 ; ZVZIP-NEXT:    vslideup.vi v8, v9, 4
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: vector_interleave8_v8bf16_v1bf16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v16, v11, v15
-; ZVZIP-WIDE-NEXT:    vzip.vv v11, v9, v13
-; ZVZIP-WIDE-NEXT:    vzip.vv v9, v10, v14
-; ZVZIP-WIDE-NEXT:    vzip.vv v10, v8, v12
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v8, v16, 1
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v12, v11, 1
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v13, v9, 1
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v14, v10, 1
-; ZVZIP-WIDE-NEXT:    vslideup.vi v16, v8, 1
-; ZVZIP-WIDE-NEXT:    vslideup.vi v11, v12, 1
-; ZVZIP-WIDE-NEXT:    vslideup.vi v9, v13, 1
-; ZVZIP-WIDE-NEXT:    vslideup.vi v10, v14, 1
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v12, v11, v16
-; ZVZIP-WIDE-NEXT:    vzip.vv v11, v10, v9
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v8, v12, 2
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v11, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v12, v8, 2
-; ZVZIP-WIDE-NEXT:    vslideup.vi v11, v9, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e16, mf2, ta, ma
-; ZVZIP-WIDE-NEXT:    vzip.vv v8, v11, v12
-; ZVZIP-WIDE-NEXT:    vmv1r.v v9, v8
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v8, 1
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v11, v8, 2
-; ZVZIP-WIDE-NEXT:    vmv1r.v v12, v8
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v10, 1
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v9, 3
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 3, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v11, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v10, v12, 4
-; ZVZIP-WIDE-NEXT:    vsetvli zero, zero, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 3
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v10, 1
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 5, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v10, 4
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v11, v10, 2
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 5
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 7, e16, mf4, tu, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v11, 6
-; ZVZIP-WIDE-NEXT:    vslidedown.vi v9, v10, 3
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vslideup.vi v8, v9, 7
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: vector_interleave8_v8bf16_v1bf16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v16, v11, v15
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v11, v9, v13
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v9, v10, v14
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v10, v8, v12
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v8, v16, 1
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v12, v11, 1
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v13, v9, 1
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v14, v10, 1
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v16, v8, 1
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v11, v12, 1
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v9, v13, 1
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v10, v14, 1
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v12, v11, v16
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v11, v10, v9
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v8, v12, 2
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v11, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v12, v8, 2
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v11, v9, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e16, mf2, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vzip.vv v8, v11, v12
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v9, v8
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 2, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v10, v8, 1
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v11, v8, 2
+; ZVZIP-ZVL2048-NEXT:    vmv1r.v v12, v8
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v10, 1
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v9, 3
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 3, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v11, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v10, v12, 4
+; ZVZIP-ZVL2048-NEXT:    vsetvli zero, zero, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 3
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v10, 1
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 5, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v10, 4
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v11, v10, 2
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 6, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 5
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 7, e16, mf4, tu, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v11, 6
+; ZVZIP-ZVL2048-NEXT:    vslidedown.vi v9, v10, 3
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vslideup.vi v8, v9, 7
+; ZVZIP-ZVL2048-NEXT:    ret
 	   %res = call <8 x bfloat> @llvm.vector.interleave8.v8bf16(<1 x bfloat> %a, <1 x bfloat> %b, <1 x bfloat> %c, <1 x bfloat> %d, <1 x bfloat> %e, <1 x bfloat> %f, <1 x bfloat> %g, <1 x bfloat> %h)
 	   ret <8 x bfloat> %res
 }
@@ -13014,11 +13014,11 @@ define <8 x i16> @interleave4_const_splat_v8i16(<2 x i16> %a) {
 ; ZVZIP-NEXT:    vmv.v.i v8, 3
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: interleave4_const_splat_v8i16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vmv.v.i v8, 3
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: interleave4_const_splat_v8i16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vmv.v.i v8, 3
+; ZVZIP-ZVL2048-NEXT:    ret
   %retval = call <8 x i16> @llvm.vector.interleave4.v8i16(<2 x i16> splat(i16 3), <2 x i16> splat(i16 3), <2 x i16> splat(i16 3), <2 x i16> splat(i16 3))
   ret <8 x i16> %retval
 }
@@ -13042,11 +13042,11 @@ define <8 x i16> @interleave4_same_nonconst_splat_v8i16(i16 %a) {
 ; ZVZIP-NEXT:    vmv.v.x v8, a0
 ; ZVZIP-NEXT:    ret
 ;
-; ZVZIP-WIDE-LABEL: interleave4_same_nonconst_splat_v8i16:
-; ZVZIP-WIDE:       # %bb.0:
-; ZVZIP-WIDE-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
-; ZVZIP-WIDE-NEXT:    vmv.v.x v8, a0
-; ZVZIP-WIDE-NEXT:    ret
+; ZVZIP-ZVL2048-LABEL: interleave4_same_nonconst_splat_v8i16:
+; ZVZIP-ZVL2048:       # %bb.0:
+; ZVZIP-ZVL2048-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
+; ZVZIP-ZVL2048-NEXT:    vmv.v.x v8, a0
+; ZVZIP-ZVL2048-NEXT:    ret
   %ins = insertelement <2 x i16> poison, i16 %a, i32 0
   %splat = shufflevector <2 x i16> %ins, <2 x i16> poison, <2 x i32> zeroinitializer
   %retval = call <8 x i16> @llvm.vector.interleave4.v8i16(<2 x i16> %splat, <2 x i16> %splat, <2 x i16> %splat, <2 x i16> %splat)
@@ -13055,5 +13055,5 @@ define <8 x i16> @interleave4_same_nonconst_splat_v8i16(i16 %a) {
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; ZVZIP-RV32: {{.*}}
 ; ZVZIP-RV64: {{.*}}
-; ZVZIP-WIDE-RV32: {{.*}}
-; ZVZIP-WIDE-RV64: {{.*}}
+; ZVZIP-ZVL2048-RV32: {{.*}}
+; ZVZIP-ZVL2048-RV64: {{.*}}
