@@ -44,9 +44,8 @@ public:
 
   ~WebAssemblyTargetMachine() override;
 
-  const WebAssemblySubtarget *getSubtargetImpl() const;
-  const WebAssemblySubtarget *getSubtargetImpl(std::string CPU,
-                                               std::string FS) const;
+  const WebAssemblySubtarget *getSubtargetImpl(StringRef CPU,
+                                               StringRef FS) const;
   const WebAssemblySubtarget *
   getSubtargetImpl(const Function &F) const override;
 
