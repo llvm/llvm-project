@@ -52,9 +52,9 @@ end subroutine
 !CHECK:   %[[OMP_PRIV:.*]]:2 = hlfir.declare %[[INIT_ARG1]] {uniq_name = "omp_priv"}
 !CHECK:   %[[INIT_ADDR:.*]] = fir.address_of(@_QQro._QMm_defined_assignTt.0)
 !CHECK:   %[[INIT_DECL:.*]]:2 = hlfir.declare %[[INIT_ADDR]]
-!CHECK:   %[[AS_EXPR:.*]] = hlfir.as_expr %[[INIT_DECL]]#0
-!CHECK:   %[[ASSOC:.*]]:3 = hlfir.associate %[[AS_EXPR]] {adapt.valuebyref}
-!CHECK:   fir.call @_QMm_defined_assignPcustom_assign(%[[OMP_PRIV]]#0, %[[ASSOC]]#0)
-!CHECK:   hlfir.end_associate %[[ASSOC]]#1, %[[ASSOC]]#2
+!CHECK-NOT:  hlfir.as_expr
+!CHECK-NOT:  hlfir.associate
+!CHECK:   fir.call @_QMm_defined_assignPcustom_assign(%[[OMP_PRIV]]#0, %[[INIT_DECL]]#0)
+!CHECK-NOT:  hlfir.end_associate
 !CHECK:   omp.yield(%[[INIT_ARG1]] :
 !CHECK: } combiner {
