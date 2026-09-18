@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -Wconstant-conversion -verify %s
 // expected-no-diagnostics
 
+// debug increases stack usage to the point of overflow.
+// UNSUPPORTED: debug
+
 // Check that we don't get stack overflow trying to evaluate a huge number of
 // logical operators.
 

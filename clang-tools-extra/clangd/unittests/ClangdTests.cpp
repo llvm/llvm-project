@@ -1181,6 +1181,9 @@ TEST(ClangdServerTest, CustomAction) {
 // test as a workaround.
 #if !defined(__has_feature) || !__has_feature(address_sanitizer)
 TEST(ClangdServerTest, TestStackOverflow) {
+#ifndef NDEBUG
+  GTEST_SKIP() << "debug increases stack usage to the point of overflow";
+#endif
   MockFS FS;
   ErrorCheckingCallbacks DiagConsumer;
   MockCompilationDatabase CDB;
