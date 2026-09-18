@@ -47,6 +47,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TargetParser/Triple.h"
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <iterator>
@@ -54,6 +55,7 @@
 
 using namespace clang;
 using namespace clang::hlsl;
+using llvm::hlsl::InterpolationModifier;
 using llvm::hlsl::IOType;
 using llvm::hlsl::SemanticStageInfo;
 using SemanticKind = llvm::dxbc::PSV::SemanticKind;
@@ -61,6 +63,14 @@ using RegisterType = HLSLResourceBindingAttr::RegisterType;
 
 static CXXRecordDecl *createHostLayoutStruct(Sema &S,
                                              CXXRecordDecl *StructDecl);
+
+static QualType getScalarComponentType(QualType T) {
+  if (const auto *VT = T->getAs<VectorType>())
+    return VT->getElementType();
+  if (const auto *MT = T->getAs<MatrixType>())
+    return MT->getElementType();
+  return T;
+}
 
 static RegisterType getRegisterType(ResourceClass RC) {
   switch (RC) {
@@ -817,6 +827,126 @@ SemaHLSL::mergeParamModifierAttr(Decl *D, const AttributeCommonInfo &AL,
   return HLSLParamModifierAttr::Create(getASTContext(), AL);
 }
 
+static StringRef
+getInterpolationSamplingLocationName(InterpolationModifier Location) {
+  switch (Location) {
+  case InterpolationModifier::Sample:
+    return "sample";
+  case InterpolationModifier::Centroid:
+    return "centroid";
+  case InterpolationModifier::Center:
+    return "center";
+  default:
+    llvm_unreachable("expected an explicit interpolation sampling location");
+  }
+}
+
+void SemaHLSL::handleInterpolationModifierAttr(Decl *D, const ParsedAttr &AL) {
+  InterpolationModifier Modifier;
+  switch (static_cast<HLSLInterpolationModifierAttr::Spelling>(
+      AL.getSemanticSpelling())) {
+  case HLSLInterpolationModifierAttr::Keyword_nointerpolation:
+    Modifier = InterpolationModifier::NoInterpolation;
+    break;
+  case HLSLInterpolationModifierAttr::Keyword_linear:
+    Modifier = InterpolationModifier::Linear;
+    break;
+  case HLSLInterpolationModifierAttr::Keyword_centroid:
+    Modifier = InterpolationModifier::Centroid;
+    break;
+  case HLSLInterpolationModifierAttr::Keyword_noperspective:
+    Modifier = InterpolationModifier::NoPerspective;
+    break;
+  case HLSLInterpolationModifierAttr::Keyword_sample:
+    Modifier = InterpolationModifier::Sample;
+    break;
+  case HLSLInterpolationModifierAttr::Keyword_center:
+    Modifier = InterpolationModifier::Center;
+    break;
+  case HLSLInterpolationModifierAttr::SpellingNotCalculated:
+    llvm_unreachable("interpolation modifier spelling was not calculated");
+  }
+
+  InterpolationModifier Modifiers = Modifier;
+  if (auto *Previous = D->getAttr<HLSLInterpolationModifierAttr>()) {
+    auto Old = static_cast<InterpolationModifier>(Previous->getModifiers());
+    Modifiers |= Old;
+    if (any(Old & Modifier)) {
+      Diag(AL.getLoc(), diag::warn_hlsl_duplicate_interpolation) << AL;
+    } else if (llvm::hlsl::getInterpolationMode(Modifiers) ==
+                   llvm::dxbc::PSV::InterpolationMode::Invalid &&
+               llvm::hlsl::getInterpolationMode(Old) !=
+                   llvm::dxbc::PSV::InterpolationMode::Invalid) {
+      Diag(AL.getLoc(), diag::err_hlsl_interpolation_conflict);
+      Diag(Previous->getLocation(), diag::note_conflicting_attribute);
+      D->setInvalidDecl();
+    } else {
+      InterpolationModifier OldLocation =
+          llvm::hlsl::getInterpolationSamplingLocation(Old);
+      InterpolationModifier NewLocation =
+          llvm::hlsl::getInterpolationSamplingLocation(Modifier);
+      if (any(OldLocation) && any(NewLocation)) {
+        Diag(AL.getLoc(), diag::warn_hlsl_interpolation_override)
+            << getInterpolationSamplingLocationName(
+                   std::max(OldLocation, NewLocation))
+            << getInterpolationSamplingLocationName(
+                   std::min(OldLocation, NewLocation));
+      }
+    }
+    D->dropAttr<HLSLInterpolationModifierAttr>();
+  }
+  D->addAttr(HLSLInterpolationModifierAttr::Create(
+      getASTContext(), static_cast<unsigned>(Modifiers), AL));
+}
+
+bool SemaHLSL::checkInterpolationModifiers(
+    const DeclaratorDecl *D, const HLSLInterpolationModifierAttr *Inherited,
+    const HLSLParsedSemanticAttr *Semantic) {
+  if (D->isInvalidDecl())
+    return false;
+  const auto *A = D->getAttr<HLSLInterpolationModifierAttr>();
+  if (!A)
+    A = Inherited;
+  if (!Semantic)
+    Semantic = D->getAttr<HLSLParsedSemanticAttr>();
+
+  QualType T =
+      getASTContext().getBaseElementType(D->getType().getNonReferenceType());
+  if (T->isDependentType())
+    return true;
+  if (const auto *RT = T->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl()->getDefinition();
+    if (!RD)
+      return true;
+    bool Valid = true;
+    for (const FieldDecl *Field : RD->fields())
+      Valid &= checkInterpolationModifiers(Field, A, Semantic);
+    return Valid;
+  }
+  if (!A)
+    return true;
+
+  auto Modifiers = static_cast<InterpolationModifier>(A->getModifiers());
+  if (Modifiers == InterpolationModifier::NoInterpolation) {
+    bool IsPosition =
+        Semantic && llvm::hlsl::getSemanticKind(Semantic->getSemanticName()) ==
+                        SemanticKind::Position;
+    if (!IsPosition)
+      return true;
+    Diag(A->getLocation(), diag::err_hlsl_interpolation_position);
+    Diag(Semantic->getLocation(), diag::note_conflicting_attribute);
+    return false;
+  }
+
+  T = getScalarComponentType(T);
+  if (T->isIntegerType() ||
+      (T->isRealFloatingType() && getASTContext().getTypeSize(T) > 32)) {
+    Diag(A->getLocation(), diag::err_hlsl_interpolation_type) << T;
+    return false;
+  }
+  return true;
+}
+
 void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
   auto &TargetInfo = getASTContext().getTargetInfo();
 
@@ -1066,6 +1196,12 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
     // verified against the output one here.
     const auto *MA = Param->getAttr<HLSLParamModifierAttr>();
     SemanticContext &SC = MA && MA->isAnyOut() ? OutputSC : InputSC;
+
+    // Interpolation only applies to pixel shader inputs, including the input
+    // side of inout parameters. Other stages and output signatures ignore it.
+    if (ST == llvm::Triple::Pixel && (!MA || MA->isAnyIn()) &&
+        !checkInterpolationModifiers(Param, nullptr, nullptr))
+      FD->setInvalidDecl();
 
     if (!determineActiveSemantic(FD, Param, Param, ActiveSemantic, SC)) {
       Diag(Param->getLocation(), diag::note_previous_decl) << Param;
@@ -3346,11 +3482,7 @@ static bool CheckFloatRepresentation(Sema *S, SourceLocation Loc,
 static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
                                            int ArgOrdinal,
                                            clang::QualType PassedType) {
-  clang::QualType BaseType = PassedType;
-  if (const auto *VT = PassedType->getAs<clang::VectorType>())
-    BaseType = VT->getElementType();
-  else if (const auto *MT = PassedType->getAs<clang::MatrixType>())
-    BaseType = MT->getElementType();
+  QualType BaseType = getScalarComponentType(PassedType);
 
   if (!BaseType->isHalfType() && !BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
@@ -3362,12 +3494,7 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
 static bool CheckAnyDoubleRepresentation(Sema *S, SourceLocation Loc,
                                          int ArgOrdinal,
                                          clang::QualType PassedType) {
-  clang::QualType BaseType =
-      PassedType->isVectorType()
-          ? PassedType->castAs<clang::VectorType>()->getElementType()
-      : PassedType->isMatrixType()
-          ? PassedType->castAs<clang::MatrixType>()->getElementType()
-          : PassedType;
+  QualType BaseType = getScalarComponentType(PassedType);
   if (!BaseType->isDoubleType()) {
     // FIXME: adopt standard `err_builtin_invalid_arg_type` instead of using
     // this custom error.

@@ -19,10 +19,12 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
 #include <cassert>
 
 using namespace llvm;
 using namespace llvm::hlsl;
+using llvm::dxbc::PSV::InterpolationMode;
 
 namespace {
 
@@ -45,6 +47,39 @@ Expected<uint64_t> extractInt(const MDNode *Node, unsigned OpId) {
   return CI->getZExtValue();
 }
 } // namespace
+
+InterpolationModifier
+hlsl::getInterpolationSamplingLocation(InterpolationModifier Modifiers) {
+  return std::max({Modifiers & InterpolationModifier::Center,
+                   Modifiers & InterpolationModifier::Centroid,
+                   Modifiers & InterpolationModifier::Sample});
+}
+
+dxbc::PSV::InterpolationMode
+hlsl::getInterpolationMode(InterpolationModifier Modifiers) {
+  if (Modifiers == InterpolationModifier::None)
+    return InterpolationMode::Undefined;
+  if (any(Modifiers & InterpolationModifier::NoInterpolation))
+    return Modifiers == InterpolationModifier::NoInterpolation
+               ? InterpolationMode::Constant
+               : InterpolationMode::Invalid;
+
+  bool NoPerspective = any(Modifiers & InterpolationModifier::NoPerspective);
+  switch (getInterpolationSamplingLocation(Modifiers)) {
+  case InterpolationModifier::Sample:
+    return NoPerspective ? InterpolationMode::LinearNoperspectiveSample
+                         : InterpolationMode::LinearSample;
+  case InterpolationModifier::Centroid:
+    return NoPerspective ? InterpolationMode::LinearNoperspectiveCentroid
+                         : InterpolationMode::LinearCentroid;
+  case InterpolationModifier::Center:
+  case InterpolationModifier::None:
+    return NoPerspective ? InterpolationMode::LinearNoperspective
+                         : InterpolationMode::Linear;
+  default:
+    llvm_unreachable("invalid interpolation sampling location");
+  }
+}
 
 dxbc::PSV::SemanticKind hlsl::getSemanticKind(StringRef SemanticName) {
   if (!SemanticName.consume_front_insensitive("SV_"))

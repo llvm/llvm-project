@@ -5321,12 +5321,18 @@ def HLSLGroupSharedAddressSpace : TypeAttr {
   let Documentation = [HLSLGroupSharedAddressSpaceDocs];
 }
 
-// Parse interpolation modifiers without attaching them to declarations yet.
-def HLSLInterpolationModifier : IgnoredAttr {
+def HLSLInterpolationModifiersArgument : UnsignedArgument<"Modifiers"> {
+  let Fake = 1;
+}
+
+def HLSLInterpolationModifier : InheritableAttr {
   let Spellings = [CustomKeyword<"nointerpolation">, CustomKeyword<"linear">,
                    CustomKeyword<"centroid">, CustomKeyword<"noperspective">,
                    CustomKeyword<"sample">, CustomKeyword<"center">];
+  let Args = [HLSLInterpolationModifiersArgument];
+  let Subjects = SubjectList<[ParmVar, Field, Function], ErrorDiag>;
   let LangOpts = [HLSL];
+  let Documentation = [HLSLInterpolationModifierDocs];
 }
 
 def HLSLParamModifier : ParameterABIAttr {
