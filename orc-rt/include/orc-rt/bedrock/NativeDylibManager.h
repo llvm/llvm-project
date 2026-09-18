@@ -31,6 +31,16 @@ class Session;
 class NativeDylibManager : public Service {
 public:
   enum LookupFlags { RequiredSymbol, WeaklyReferencedSymbol };
+
+  struct DylibHandle {
+    enum class Kind {
+      Global,
+      Library,
+    };
+
+    Kind K;
+    void *LibraryHandle = nullptr;
+  };
   using SymbolLookupSet = std::vector<std::pair<std::string, LookupFlags>>;
 
   /// Create a NativeDylibManager, adding associated symbols to the given
