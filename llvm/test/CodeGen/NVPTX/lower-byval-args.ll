@@ -492,7 +492,7 @@ define dso_local ptx_kernel void @memcpy_to_param(ptr nocapture noundef readonly
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .b32 %r<23>;
-; PTX-NEXT:    .reg .b64 %rd<3>;
+; PTX-NEXT:    .reg .b64 %rd<5>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot9;
@@ -521,7 +521,9 @@ define dso_local ptx_kernel void @memcpy_to_param(ptr nocapture noundef readonly
 ; PTX-NEXT:    shl.b32 %r20, %r19, 24;
 ; PTX-NEXT:    or.b32 %r21, %r20, %r18;
 ; PTX-NEXT:    or.b32 %r22, %r21, %r16;
-; PTX-NEXT:    st.local.v2.b32 [%SPL], {%r22, %r12};
+; PTX-NEXT:    add.u64 %rd3, %SPL, 0;
+; PTX-NEXT:    cvta.local.u64 %rd4, %rd3;
+; PTX-NEXT:    st.volatile.v2.b32 [%rd4], {%r22, %r12};
 ; PTX-NEXT:    ret;
 entry:
   tail call void @llvm.memcpy.p0.p0.i64(ptr %s, ptr %in, i64 16, i1 true)
