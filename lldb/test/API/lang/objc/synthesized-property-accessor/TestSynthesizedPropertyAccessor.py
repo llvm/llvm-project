@@ -8,6 +8,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestSynthesizedPropertyAccessor(TestBase):
+    @skipIf(compiler="clang", compiler_version=["<", "22.0"])
     def test(self):
         self.build()
 
