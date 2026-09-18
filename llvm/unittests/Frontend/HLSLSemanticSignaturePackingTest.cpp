@@ -1345,6 +1345,40 @@ TEST_F(HLSLSemanticSignaturePackingTest,
 }
 
 //===----------------------------------------------------------------------===//
+// Prefix-stable failure state tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(HLSLSemanticSignaturePackingTest, PrefixStablePreservesPartialAllocation) {
+  for (bool IsClipCull : {false, true}) {
+    const auto Kind = IsClipCull ? dxbc::PSV::SemanticKind::ClipDistance
+                                : dxbc::PSV::SemanticKind::Arbitrary;
+    const unsigned RowCount = IsClipCull ? MaxClipCullRows : MaxSignatureRows;
+    TestConfig Config(
+        Triple::Vertex, IOType::Out,
+        {{Kind, RowCount, /*Cols=*/MaxSignatureCols, dxil::ElementType::F32,
+          dxbc::PSV::InterpolationMode::Linear},
+         {Kind, /*Rows=*/1, /*Cols=*/1, dxil::ElementType::F32,
+          dxbc::PSV::InterpolationMode::Linear},
+         {dxbc::PSV::SemanticKind::Arbitrary, /*Rows=*/1, /*Cols=*/1,
+          dxil::ElementType::F32, dxbc::PSV::InterpolationMode::Linear}});
+    verifyPackingError(PackingMethod::PrefixStable, Config,
+                       IsClipCull ? SignaturePackingError::ClipCullOverflow
+                                  : SignaturePackingError::SignatureOverflow,
+                       /*ExpectedElementIndex=*/1);
+
+    SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
+    EXPECT_THAT_EXPECTED(pack(PackingMethod::PrefixStable, Elements, Config),
+                         Failed<SignaturePackingError>());
+    EXPECT_EQ(Elements[0].StartRow, 0u);
+    EXPECT_EQ(Elements[0].StartCol, 0u);
+    for (unsigned I = 1; I != Elements.size(); ++I) {
+      EXPECT_EQ(Elements[I].StartRow, UnallocatedRow) << "element " << I;
+      EXPECT_EQ(Elements[I].StartCol, UnallocatedCol) << "element " << I;
+    }
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // Prefix-stable geometry stream tests
 //===----------------------------------------------------------------------===//
 

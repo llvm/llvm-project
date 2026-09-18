@@ -74,6 +74,11 @@ packSignatureStacked(MutableArrayRef<SemanticSignatureElement> Elements,
 /// Returns one past the highest allocated row, or zero if no elements were
 /// allocated. For geometry outputs this is the maximum extent of any stream,
 /// not the sum of their extents.
+///
+/// On failure, Elements is left partially packed: the elements preceding the
+/// one reported by the returned SignaturePackingError keep the locations
+/// they were assigned, while that element and the ones following it retain the
+/// unallocated row and column sentinels.
 LLVM_ABI Expected<unsigned> packSignaturePrefixStable(
     MutableArrayRef<SemanticSignatureElement> Elements,
     Triple::EnvironmentType ShaderStage, IOType IOTy, bool UseNative16BitTypes);
