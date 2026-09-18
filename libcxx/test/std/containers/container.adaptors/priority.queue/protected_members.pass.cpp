@@ -11,12 +11,23 @@
 // template <class T, class Container = vector<T>,
 //           class Compare = less<typename Container::value_type>>
 // class priority_queue
+// {
+// protected:
+//     container_type c;
+//     Compare comp;
 
 #include <queue>
 #include <cassert>
-#include <type_traits>
 
-void test() {
-  //  LWG#2566 says that the first template param must match the second one's value type
-  std::priority_queue<double, std::deque<int>> t;
+struct test_derived : private std::priority_queue<int> {
+  test_derived() {
+    c.push_back(1);
+    assert(comp(1, 2));
+  }
+};
+
+int main(int, char**) {
+  test_derived t;
+
+  return 0;
 }

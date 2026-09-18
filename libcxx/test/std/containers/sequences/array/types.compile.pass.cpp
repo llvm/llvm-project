@@ -34,6 +34,7 @@ template <class C>
 void test_iterators() {
   typedef std::iterator_traits<typename C::iterator> ItT;
   typedef std::iterator_traits<typename C::const_iterator> CItT;
+
   static_assert((std::is_same<typename ItT::iterator_category, std::random_access_iterator_tag>::value), "");
   static_assert((std::is_same<typename ItT::value_type, typename C::value_type>::value), "");
   static_assert((std::is_same<typename ItT::reference, typename C::reference>::value), "");
@@ -47,10 +48,11 @@ void test_iterators() {
   static_assert((std::is_same<typename CItT::difference_type, typename C::difference_type>::value), "");
 }
 
-int main(int, char**) {
+void test() {
   {
     typedef double T;
     typedef std::array<T, 10> C;
+
     static_assert((std::is_same<C::reference, T&>::value), "");
     static_assert((std::is_same<C::const_reference, const T&>::value), "");
     test_iterators<C>();
@@ -73,6 +75,7 @@ int main(int, char**) {
   {
     typedef int* T;
     typedef std::array<T, 0> C;
+
     static_assert((std::is_same<C::reference, T&>::value), "");
     static_assert((std::is_same<C::const_reference, const T&>::value), "");
     test_iterators<C>();
@@ -92,6 +95,4 @@ int main(int, char**) {
                                 typename std::iterator_traits<typename C::const_iterator>::difference_type>::value),
                   "");
   }
-
-  return 0;
 }

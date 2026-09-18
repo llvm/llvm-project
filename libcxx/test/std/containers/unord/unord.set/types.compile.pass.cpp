@@ -32,9 +32,10 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+void test() {
   {
     typedef std::unordered_set<short> C;
+
     static_assert((std::is_same<C::value_type, short>::value), "");
     static_assert((std::is_same<C::key_type, short>::value), "");
     static_assert((std::is_same<C::hasher, std::hash<C::key_type> >::value), "");
@@ -50,6 +51,7 @@ int main(int, char**) {
 #if TEST_STD_VER >= 11
   {
     typedef std::unordered_set<short, std::hash<short>, std::equal_to<short>, min_allocator<short>> C;
+
     static_assert((std::is_same<C::value_type, short>::value), "");
     static_assert((std::is_same<C::key_type, short>::value), "");
     static_assert((std::is_same<C::hasher, std::hash<C::key_type> >::value), "");
@@ -64,6 +66,4 @@ int main(int, char**) {
     static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
   }
 #endif
-
-  return 0;
 }
