@@ -25,6 +25,7 @@
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
+#include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -446,6 +447,17 @@ private:
   /// Only for intrinsic types. No coarrays, no polymorphism. No error recovery.
   void genInlinedAllocation(const Allocation &alloc,
                             const fir::MutableBoxValue &box) {
+    mlir::Value isAllocated =
+        fir::factory::genIsAllocatedOrAssociatedTest(builder, loc, box);
+    builder.genIfThen(loc, isAllocated)
+        .genThen([&]() {
+          fir::runtime::genReportFatalUserError(
+              builder, loc,
+              "The object '" + alloc.getSymbol().name().ToString() +
+                  "' is already allocated");
+        })
+        .end();
+
     llvm::SmallVector<mlir::Value> lbounds;
     llvm::SmallVector<mlir::Value> extents;
     Fortran::lower::StatementContext stmtCtx;

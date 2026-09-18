@@ -165,6 +165,8 @@ end program
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEmins"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK:           %[[VAL_8:.*]] = fir.address_of(@_QFECsize) : !fir.ref<i32>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {fortran_attrs = {{.*}}<parameter>, uniq_name = "_QFECsize"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! Each ALLOCATE first reports an error if the object is already allocated.
+! CHECK:           fir.call @_FortranAReportFatalUserError
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 10 : i32
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i32) -> index
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 0 : index
@@ -174,6 +176,7 @@ end program
 ! CHECK:           %[[VAL_16:.*]] = fir.shape %[[VAL_14]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_17:.*]] = fir.embox %[[VAL_15]](%[[VAL_16]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           fir.store %[[VAL_17]] to %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:           fir.call @_FortranAReportFatalUserError
 ! CHECK:           %[[VAL_18:.*]] = arith.constant 10 : i32
 ! CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (i32) -> index
 ! CHECK:           %[[VAL_20:.*]] = arith.constant 0 : index
@@ -183,6 +186,7 @@ end program
 ! CHECK:           %[[VAL_24:.*]] = fir.shape %[[VAL_22]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_25:.*]] = fir.embox %[[VAL_23]](%[[VAL_24]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           fir.store %[[VAL_25]] to %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:           fir.call @_FortranAReportFatalUserError
 ! CHECK:           %[[VAL_26:.*]] = arith.constant 10 : i32
 ! CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_26]] : (i32) -> index
 ! CHECK:           %[[VAL_28:.*]] = arith.constant 0 : index

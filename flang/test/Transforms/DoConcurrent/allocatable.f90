@@ -20,6 +20,7 @@ program main
 end program main
 
 ! CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEy"}
+! CHECK: fir.allocmem !fir.array<?xf32>
 ! CHECK: %[[Y_VAL:.*]] = fir.load %[[Y_DECL]]#0
 ! CHECK: %[[Y_DIM0:.*]]:3 = fir.box_dims %[[Y_VAL]], %{{c0_.*}}
 ! CHECK: %[[Y_LB:.*]] = arith.constant 0 : index
