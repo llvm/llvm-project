@@ -4,7 +4,6 @@
 ;; Test that loop's exit value is rewritten to its initial
 ;; value from loop preheader
 define i32 @test1(ptr %var) {
-;
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[VAR:%.*]], null
@@ -35,7 +34,6 @@ exit:
 ;; Test that we can not rewrite loop exit value if it's not
 ;; a phi node (%indvar is an add instruction in this test).
 define i32 @test2(ptr %var) {
-;
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[VAR:%.*]], null
@@ -63,7 +61,6 @@ exit:
 ;; Test that we can not rewrite loop exit value if the condition
 ;; is not in loop header.
 define i32 @test3(ptr %var) {
-;
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp eq ptr [[VAR:%.*]], null
@@ -100,7 +97,6 @@ exit:
 
 ; Multiple exits dominating latch
 define i32 @test4(i1 %cond1, i1 %cond2) {
-;
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
@@ -128,7 +124,6 @@ exit:
 
 ; A conditionally executed exit.
 define i32 @test5(ptr %addr, i1 %cond2) {
-;
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
@@ -164,7 +159,6 @@ exit:
 }
 
 define i16 @pr57336(i16 %end, i16 %m) mustprogress {
-;
 ; CHECK-LABEL: @pr57336(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -204,7 +198,6 @@ crit_edge:
 }
 
 define i32 @vscale_slt_with_vp_umin(ptr nocapture %A, i32 %n) mustprogress vscale_range(2,1024) {
-;
 ; CHECK-LABEL: @vscale_slt_with_vp_umin(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
@@ -258,7 +251,6 @@ for.end:
 }
 
 define i32 @vscale_slt_with_vp_umin2(ptr nocapture %A, i32 %n) mustprogress vscale_range(2,1024) {
-;
 ; CHECK-LABEL: @vscale_slt_with_vp_umin2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
@@ -313,7 +305,6 @@ for.end:
 
 ; Rewrite a comparison by expanding its operands at the loop exit.
 define i1 @rewrite_computable_icmp(i32 %start, i32 %limit) {
-;
 ; CHECK-LABEL: @rewrite_computable_icmp(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -351,7 +342,6 @@ exit:
 
 ; Rewrite multiple comparisons when doing so makes all live-outs invariant.
 define i1 @rewrite_multiple_icmps(i32 %start, i32 %rhs.start, i32 %limit) {
-;
 ; CHECK-LABEL: @rewrite_multiple_icmps(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -397,7 +387,6 @@ exit:
 
 ; Do not rewrite a comparison if SCEV cannot compute an operand's exit value.
 define i1 @do_not_rewrite_uncomputable_icmp(i1 %c, i32 %start) {
-;
 ; CHECK-LABEL: @do_not_rewrite_uncomputable_icmp(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -426,7 +415,6 @@ exit:
 
 ; Do not rebuild a comparison unless doing so makes the loop deletable.
 define i1 @do_not_rewrite_icmp_in_live_loop(i32 %start, i32 %limit) {
-;
 ; CHECK-LABEL: @do_not_rewrite_icmp_in_live_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -515,7 +503,6 @@ exit:
 ; A mustprogress outer loop allows the same rewrite even if a subloop has an
 ; unknown trip count.
 define i1 @rewrite_icmp_with_mustprogress_outer_loop(i32 %start, i32 %limit, i1 %c) {
-;
 ; CHECK-LABEL: @rewrite_icmp_with_mustprogress_outer_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
@@ -560,7 +547,6 @@ exit:
 
 ; Rewrite a pointer comparison when its operand exit values are computable.
 define i1 @rewrite_pointer_icmp(ptr %start, ptr %end, i32 %limit) {
-;
 ; CHECK-LABEL: @rewrite_pointer_icmp(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
