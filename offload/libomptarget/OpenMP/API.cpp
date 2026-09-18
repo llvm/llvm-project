@@ -246,6 +246,8 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
                                                    /*UpdateRefCount=*/false,
                                                    /*UseHoldRefCount=*/false);
   int Rc = TPR.isPresent();
+  if (!Rc)
+    DeviceOrErr->getMappingInfo().warnIfClaimedByTaskGraph(Ptr, 1, __func__);
   ODBG(ODT_Interface) << "Call to " << __func__ << " returns " << Rc;
   return Rc;
 }
@@ -280,6 +282,17 @@ EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
   auto DeviceOrErr = PM->getDevice(DeviceNum);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
+
+  // Memory a taskgraph replay keeps on the device for itself is not accessible
+  // to the program, unless the program has mapped it as well.
+  MappingInfoTy &MappingInfo = DeviceOrErr->getMappingInfo();
+  if (MappingInfo.hasTaskGraphClaims() &&
+      !MappingInfo
+           .getTgtPtrBegin(const_cast<void *>(Ptr), Size,
+                           /*UpdateRefCount=*/false, /*UseHoldRefCount=*/false)
+           .isPresent() &&
+      MappingInfo.warnIfClaimedByTaskGraph(Ptr, Size, __func__))
+    return false;
 
   return DeviceOrErr->isAccessiblePtr(Ptr, Size);
 }
@@ -750,6 +763,8 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
   if (!TPR.isPresent()) {
     ODBG(ODT_Interface) << "Ptr " << Ptr
                         << "is not present on device %d, returning nullptr.";
+    TPR.reset();
+    DeviceOrErr->getMappingInfo().warnIfClaimedByTaskGraph(Ptr, 1, __func__);
     return nullptr;
   }
 

@@ -1231,6 +1231,10 @@ int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
   return OFFLOAD_SUCCESS;
 }
 
+int32_t GenericPluginTy::supports_taskgraphs(int32_t DeviceId) {
+  return getDevice(DeviceId).supportsTaskGraphs();
+}
+
 int32_t
 GenericPluginTy::finalize_taskgraph(int32_t DeviceId,
                                     const llvm::omp::target::TaskGraphTy *Graph,
@@ -1258,6 +1262,42 @@ GenericPluginTy::replay_taskgraph(int32_t DeviceId,
   if (Err) {
     REPORT() << "Failure to replay taskgraph on device " << DeviceId << ": "
              << toString(std::move(Err));
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t GenericPluginTy::reparametrize_taskgraph(
+    int32_t DeviceId, const llvm::omp::target::TaskGraphTy *Graph,
+    ArrayRef<llvm::omp::target::TaskGraphArgUpdateTy> Updates, bool Resync) {
+  auto Err = getDevice(DeviceId).reparametrizeTaskGraph(Graph, Updates, Resync);
+  if (Err) {
+    REPORT() << "Failure to reparametrize taskgraph on device " << DeviceId
+             << ": " << toString(std::move(Err));
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t
+GenericPluginTy::pin_taskgraph(int32_t DeviceId,
+                               const llvm::omp::target::TaskGraphTy *Graph) {
+  auto Err = getDevice(DeviceId).pinTaskGraph(Graph);
+  if (Err) {
+    REPORT() << "Failure to pin taskgraph host ranges on device " << DeviceId
+             << ": " << toString(std::move(Err));
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t
+GenericPluginTy::unpin_taskgraph(int32_t DeviceId,
+                                 const llvm::omp::target::TaskGraphTy *Graph) {
+  auto Err = getDevice(DeviceId).unpinTaskGraph(Graph);
+  if (Err) {
+    REPORT() << "Failure to unpin taskgraph host ranges on device " << DeviceId
+             << ": " << toString(std::move(Err));
     return OFFLOAD_FAIL;
   }
   return OFFLOAD_SUCCESS;

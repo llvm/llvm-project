@@ -11,6 +11,7 @@ add_library(omptarget SHARED
   LegacyAPI.cpp
 
   OpenMP/API.cpp
+  OpenMP/TaskGraphPlan.cpp
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
 

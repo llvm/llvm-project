@@ -16,6 +16,7 @@
 #include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OffloadRTL.h"
+#include "OpenMP/TaskGraphPlan.h"
 #include "OpenMP/omp.h"
 #include "PluginManager.h"
 #include "device.h"
@@ -697,11 +698,17 @@ EXTERN void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr) {
 // block of that size.
 //===----------------------------------------------------------------------===//
 
+using llvm::omp::target::acquireTaskGraphMappings;
+using llvm::omp::target::buildTaskGraphPlan;
+using llvm::omp::target::commitTaskGraphUpdates;
+using llvm::omp::target::releaseTaskGraphPlan;
+using llvm::omp::target::TaskGraphArgUpdateTy;
 using llvm::omp::target::TaskGraphBuilder;
 using llvm::omp::target::TaskGraphEdge;
 using llvm::omp::target::TaskGraphElement;
 using llvm::omp::target::TaskGraphExclRegion;
 using llvm::omp::target::TaskGraphIrreducibleRegion;
+using llvm::omp::target::TaskGraphMappingsGuard;
 using llvm::omp::target::TaskGraphNode;
 using llvm::omp::target::TaskGraphParRegion;
 using llvm::omp::target::TaskGraphRegion;
@@ -914,6 +921,11 @@ EXTERN int __tgt_taskgraph_finalize(void *Graph) {
   }
   DeviceTy &Device = *DeviceOrErr;
 
+  // Building the plan allocates device memory, which is wasted on a device
+  // with no graph backend.
+  if (!Device.RTL->supports_taskgraphs(Device.RTLDeviceID))
+    return OFFLOAD_FAIL;
+
   if (const char *Why = whyNotOffloadable(*G, ResolvedDevice)) {
     INFO(OMP_INFOTYPE_ALL, Device.DeviceID,
          "taskgraph %" PRIu64 " replays on the host: %s\n",
@@ -923,23 +935,32 @@ EXTERN int __tgt_taskgraph_finalize(void *Graph) {
 
   G->Services.resolveKernel = taskGraphResolveKernel;
 
+  // Work out where the graph's mapped data lives before offering it to the
+  // plugin.  A graph the plan cannot express is replayed on the host.
+  if (!buildTaskGraphPlan(Device, *G)) {
+    releaseTaskGraphPlan(Device, *G);
+    return OFFLOAD_FAIL;
+  }
+
   // Offer the tree to the plugin, which lowers it however suits its backend.
   // The base plugin implementation declines, as does a backend that meets
   // something in the graph it cannot express; either way libomp keeps the graph
   // and replays it on the host.
   void *PluginGraph = nullptr;
   if (Device.RTL->finalize_taskgraph(Device.RTLDeviceID, G, &PluginGraph) !=
-      OFFLOAD_SUCCESS)
+      OFFLOAD_SUCCESS) {
+    releaseTaskGraphPlan(Device, *G);
     return OFFLOAD_FAIL;
+  }
   assert(PluginGraph && "plugin claimed a taskgraph without a handle");
   G->PluginGraph = PluginGraph;
   return OFFLOAD_SUCCESS;
 }
 
 EXTERN void __tgt_taskgraph_begin_replay(void *Graph) {
-  // Nothing a graph holds yet depends on when the replay started.
-  assert(static_cast<TaskGraphTy *>(Graph)->PluginGraph &&
-         "replaying a graph no plugin claimed");
+  auto *G = static_cast<TaskGraphTy *>(Graph);
+  assert(G->PluginGraph && "replaying a graph no plugin claimed");
+  beginTaskGraphReplay(*G);
 }
 
 EXTERN int __tgt_taskgraph_replay(void *Graph) {
@@ -951,10 +972,57 @@ EXTERN int __tgt_taskgraph_replay(void *Graph) {
     FATAL_MESSAGE(G->DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
   DeviceTy &Device = *DeviceOrErr;
 
-  // The backend issues the graph and waits for it.  Part of the graph may have
-  // run by the time it fails, so a failure cannot fall back to the host.
-  if (Device.RTL->replay_taskgraph(Device.RTLDeviceID, G) != OFFLOAD_SUCCESS)
+  // Resolve every range against the mapping table as it stands now, mapping
+  // the ones the graph is responsible for and holding all of them until the
+  // graph has run, then hand the plugin whatever changed.
+  //
+  // Until the handover nothing has been issued, so a graph that cannot be run
+  // is declined: libomp runs its target constructs itself instead.  The guard
+  // gives back whatever was acquired.
+  auto decline = [&](const char *Why) {
+    if (Why)
+      MESSAGE("taskgraph %" PRIu64 " replays on the host this time: %s",
+              static_cast<uint64_t>(G->GraphId), Why);
+    return OFFLOAD_FAIL;
+  };
+  llvm::SmallVector<TaskGraphArgUpdateTy, 8> Updates;
+  bool Resync = false;
+  TaskGraphMappingsGuard Mappings(Device, *G);
+  if (!acquireTaskGraphMappings(Device, *G, Updates, Resync))
+    return decline(G->Plan.declineReported()
+                       ? nullptr
+                       : "it cannot be replayed against the current mapping "
+                         "state");
+  // Pinned every replay, since the ranges' host memory is only known to be the
+  // program's while the graph runs.  A failed pin holds nothing.
+  if (Device.RTL->pin_taskgraph(Device.RTLDeviceID, G) != OFFLOAD_SUCCESS)
+    return decline("the device could not pin the graph's host memory");
+  if (llvm::any_of(Updates, [&](const TaskGraphArgUpdateTy &U) {
+        return U.has(TaskGraphArgUpdateTy::DataChanged) &&
+               llvm::isa<llvm::omp::target::TaskGraphLiteralArgTy>(
+                   G->Plan.getArg(U.Arg).get());
+      }))
+    ODBG(ODT_Interface) << "taskgraph " << G->GraphId
+                        << " reparametrizes for a changed literal argument";
+  if ((!Updates.empty() || Resync) &&
+      Device.RTL->reparametrize_taskgraph(Device.RTLDeviceID, G, Updates,
+                                          Resync) != OFFLOAD_SUCCESS) {
+    Device.RTL->unpin_taskgraph(Device.RTLDeviceID, G);
+    return decline("the device could not adopt the current mapping state");
+  }
+  commitTaskGraphUpdates(*G);
+  Mappings.release();
+
+  // Past this point the backend may have issued part of the graph, so a
+  // failure cannot fall back to the host.
+  int32_t Rc = Device.RTL->replay_taskgraph(Device.RTLDeviceID, G);
+  if (Device.RTL->unpin_taskgraph(Device.RTLDeviceID, G) != OFFLOAD_SUCCESS)
+    Rc = OFFLOAD_FAIL;
+  if (Rc != OFFLOAD_SUCCESS)
     FATAL_MESSAGE(G->DeviceId, "%s", "taskgraph replay failed");
+
+  // The graph has run, so its hold on the mappings can go.
+  releaseTaskGraphMappings(Device, *G);
   return OFFLOAD_SUCCESS;
 }
 
@@ -964,10 +1032,12 @@ EXTERN void __tgt_taskgraph_destroy(void *Graph) {
     // DeviceId was resolved to a concrete device by finalize, which is also the
     // only thing that can set PluginGraph.
     auto DeviceOrErr = PM->getDevice(G->DeviceId);
-    if (DeviceOrErr)
+    if (DeviceOrErr) {
       DeviceOrErr->RTL->destroy_taskgraph(DeviceOrErr->RTLDeviceID, G);
-    else
+      releaseTaskGraphPlan(*DeviceOrErr, *G);
+    } else {
       consumeError(DeviceOrErr.takeError());
+    }
   }
   delete G;
 }

@@ -611,6 +611,7 @@ int PluginManager::loadImagesOntoDevice(DeviceTy &Device) {
             (uintptr_t)CurrDeviceEntryAddr /*TgtPtrBegin*/,
             false /*UseHoldRefCount*/, CurrHostEntry->SymbolName,
             true /*IsRefCountINF*/));
+        Device.getMappingInfo().notifyMappingsChanged();
 
         // Notify about the new mapping.
         if (Device.notifyDataMapped(CurrHostEntry->Address,

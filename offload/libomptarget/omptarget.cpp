@@ -665,6 +665,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
             reinterpret_cast<uintptr_t>(TgtPtrBegin) - Delta);
         ODBG(ODT_Mapping) << "Returning device pointer " << TgtPtrBase;
       } else {
+        Device.getMappingInfo().warnIfClaimedByTaskGraph(
+            HstPtrBegin, 0, "use_device_ptr/use_device_addr");
         // Lookup failed. So we have to decide what to do based on the
         // requested fallback behavior.
         //

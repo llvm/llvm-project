@@ -1267,6 +1267,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   RecordReplayTy *getRecordReplay() { return RecordReplay; }
 
+  /// Whether this device can lower taskgraphs at all.  libomptarget only builds
+  /// a graph's data plan, which allocates device memory, for a device that can.
+  virtual bool supportsTaskGraphs() const { return false; }
+
   /// Taskgraph handoff hooks.  \p Graph is a shared taskgraph tree
   /// (Shared/TaskGraph.h) of target constructs only, which the plugin only
   /// reads.  libomptarget only offers a well-formed graph: every region has the
@@ -1292,6 +1296,44 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   }
   virtual Error destroyTaskGraph(const llvm::omp::target::TaskGraphTy *Graph) {
     return Plugin::success();
+  }
+
+  /// Take whatever hold the backend's copies need on the host memory of
+  /// \p Graph's plan ranges for one replay, such as locking the pages.  Called
+  /// before every replay handed to the backend, after the plan is resolved and
+  /// before reparametrizeTaskGraph.  Balanced by exactly one unpinTaskGraph,
+  /// after the replay or before a later decline.  A range's host memory is
+  /// only known to be the program's between the two calls.
+  ///
+  /// A failure declines the replay to the host and must leave nothing held; no
+  /// unpinTaskGraph follows it.
+  virtual Error pinTaskGraph(const llvm::omp::target::TaskGraphTy *Graph) {
+    return Plugin::success();
+  }
+  /// Release what pinTaskGraph took, once nothing the replay issued can touch
+  /// the host ranges.
+  virtual Error unpinTaskGraph(const llvm::omp::target::TaskGraphTy *Graph) {
+    return Plugin::success();
+  }
+
+  /// Adopt the changes libomptarget has made to \p Graph's data plan: the
+  /// argument entries listed in \p Updates, or, with \p Resync, anything at
+  /// all, because a replay the backend never saw may have changed the plan.
+  /// Called before a replay handed to the backend, after pinTaskGraph,
+  /// whenever something changed.  This is the last point at which the replay
+  /// can still decline to the host.
+  ///
+  /// A failure declines the replay, and the next replay to reach the backend
+  /// is a resync.  An update only repoints addresses, refreshes bytes the plan
+  /// supplies and switches operations on or off; see TaskGraphArgUpdateTy.
+  /// The base implementation fails, since a backend that claimed a graph must
+  /// follow its plan.
+  virtual Error reparametrizeTaskGraph(
+      const llvm::omp::target::TaskGraphTy *Graph,
+      ArrayRef<llvm::omp::target::TaskGraphArgUpdateTy> Updates, bool Resync) {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "taskgraph reparametrization unsupported by this "
+                         "plugin, which should not have claimed a graph");
   }
 
   /// Map to record kernel have been launchedl, for error reporting purposes.
@@ -1600,6 +1642,7 @@ public:
   /// handled the request; libomp replays the graph on the host otherwise.  A
   /// successful finalize returns the plugin's form of the graph in
   /// \p PluginGraph.
+  int32_t supports_taskgraphs(int32_t DeviceId);
   int32_t finalize_taskgraph(int32_t DeviceId,
                              const llvm::omp::target::TaskGraphTy *Graph,
                              void **PluginGraph);
@@ -1607,6 +1650,13 @@ public:
                            const llvm::omp::target::TaskGraphTy *Graph);
   int32_t destroy_taskgraph(int32_t DeviceId,
                             const llvm::omp::target::TaskGraphTy *Graph);
+  int32_t reparametrize_taskgraph(
+      int32_t DeviceId, const llvm::omp::target::TaskGraphTy *Graph,
+      ArrayRef<llvm::omp::target::TaskGraphArgUpdateTy> Updates, bool Resync);
+  int32_t pin_taskgraph(int32_t DeviceId,
+                        const llvm::omp::target::TaskGraphTy *Graph);
+  int32_t unpin_taskgraph(int32_t DeviceId,
+                          const llvm::omp::target::TaskGraphTy *Graph);
 
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);

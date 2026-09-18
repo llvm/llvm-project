@@ -72,6 +72,8 @@ int MappingInfoTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin,
   }
 
   // Mapping does not exist, allocate it with refCount=INF
+  warnMappingOverTaskGraphClaim(HstPtrBegin, Size,
+                                "omp_target_associate_ptr of");
   const HostDataToTargetTy &NewEntry =
       *HDTTMap
            ->emplace(new HostDataToTargetTy(
@@ -83,6 +85,7 @@ int MappingInfoTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin,
                /*UseHoldRefCount=*/false, /*Name=*/nullptr,
                /*IsRefCountINF=*/true))
            .first->HDTT;
+  notifyMappingsChanged();
   ODBG(ODT_Mapping) << "Creating new map entry: HstBase="
                     << reinterpret_cast<void *>(NewEntry.HstPtrBase)
                     << ", HstBegin="
@@ -127,6 +130,7 @@ int MappingInfoTy::disassociatePtr(void *HstPtrBegin) {
     if (Event)
       Device.destroyEvent(Event);
     HDTTMap->erase(It);
+    notifyMappingsChanged();
     return Device.notifyDataUnmapped(HstPtrBegin);
   }
 
@@ -296,29 +300,15 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
     uintptr_t TgtAllocBegin =
         (uintptr_t)Device.allocData(TgtPadding + Size, HstPtrBegin);
     uintptr_t TgtPtrBegin = TgtAllocBegin + TgtPadding;
+    HostDataToTargetTy *Entry =
+        insertMapping(HDTTMap, HstPtrBase, HstPtrBegin, Size, TgtAllocBegin,
+                      TgtPtrBegin, HasHoldModifier, HstPtrName);
+    if (!Entry)
+      return TargetPointerResultTy{};
     // Release the mapping table lock only after the entry is locked by
     // attaching it to TPR.
-    LR.TPR.setEntry(HDTTMap
-                        ->emplace(new HostDataToTargetTy(
-                            (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
-                            (uintptr_t)HstPtrBegin + Size, TgtAllocBegin,
-                            TgtPtrBegin, HasHoldModifier, HstPtrName))
-                        .first->HDTT);
-    INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
-         "Creating new map entry with HstPtrBase=" DPxMOD
-         ", HstPtrBegin=" DPxMOD ", TgtAllocBegin=" DPxMOD
-         ", TgtPtrBegin=" DPxMOD
-         ", Size=%ld, DynRefCount=%s, HoldRefCount=%s, Name=%s\n",
-         DPxPTR(HstPtrBase), DPxPTR(HstPtrBegin), DPxPTR(TgtAllocBegin),
-         DPxPTR(TgtPtrBegin), Size,
-         LR.TPR.getEntry()->dynRefCountToStr().c_str(),
-         LR.TPR.getEntry()->holdRefCountToStr().c_str(),
-         (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "unknown");
+    LR.TPR.setEntry(Entry);
     LR.TPR.TargetPointer = (void *)TgtPtrBegin;
-
-    // Notify the plugin about the new mapping.
-    if (Device.notifyDataMapped(HstPtrBegin, Size))
-      return TargetPointerResultTy{};
   } else {
     // This entry is not present and we did not create a new entry for it.
     LR.TPR.Flags.IsPresent = false;
@@ -416,6 +406,35 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
   }
 
   return std::move(LR.TPR);
+}
+
+HostDataToTargetTy *
+MappingInfoTy::insertMapping(HDTTMapAccessorTy &HDTTMap, void *HstPtrBase,
+                             void *HstPtrBegin, int64_t Size,
+                             uintptr_t TgtAllocBegin, uintptr_t TgtPtrBegin,
+                             bool UseHoldRefCount, map_var_info_t HstPtrName) {
+  warnMappingOverTaskGraphClaim(HstPtrBegin, Size, "mapping");
+  HostDataToTargetTy *Entry =
+      HDTTMap
+          ->emplace(new HostDataToTargetTy(
+              (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
+              (uintptr_t)HstPtrBegin + Size, TgtAllocBegin, TgtPtrBegin,
+              UseHoldRefCount, HstPtrName))
+          .first->HDTT;
+  notifyMappingsChanged();
+  INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
+       "Creating new map entry with HstPtrBase=" DPxMOD ", HstPtrBegin=" DPxMOD
+       ", TgtAllocBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD
+       ", Size=%ld, DynRefCount=%s, HoldRefCount=%s, Name=%s\n",
+       DPxPTR(HstPtrBase), DPxPTR(HstPtrBegin), DPxPTR(TgtAllocBegin),
+       DPxPTR(TgtPtrBegin), Size, Entry->dynRefCountToStr().c_str(),
+       Entry->holdRefCountToStr().c_str(),
+       (HstPtrName) ? getNameFromMapping(HstPtrName).c_str() : "unknown");
+
+  // Notify the plugin about the new mapping.
+  if (Device.notifyDataMapped(HstPtrBegin, Size))
+    return nullptr;
+  return Entry;
 }
 
 TargetPointerResultTy MappingInfoTy::getTgtPtrBegin(
@@ -526,6 +545,7 @@ int MappingInfoTy::eraseMapEntry(HDTTMapAccessorTy &HDTTMap,
     REPORT() << "Trying to remove a non-existent map entry";
     return OFFLOAD_FAIL;
   }
+  notifyMappingsChanged();
 
   return OFFLOAD_SUCCESS;
 }
@@ -592,4 +612,112 @@ void MappingInfoTy::printCopyInfo(void *TgtPtrBegin, void *HstPtrBegin,
   }
   printCopyInfoImpl(Device.DeviceID, H2D, HstPtrBegin, TgtPtrBegin, Size, Entry,
                     Loc, Name);
+}
+
+void MappingInfoTy::splitTaskGraphClaim(uintptr_t Addr) {
+  auto It = TaskGraphClaims.upper_bound(Addr);
+  if (It == TaskGraphClaims.begin())
+    return;
+  --It;
+  if (It->first == Addr || It->second.Hi <= Addr)
+    return;
+  TaskGraphClaimTy Tail = It->second;
+  It->second.Hi = Addr;
+  TaskGraphClaims.emplace(Addr, Tail);
+}
+
+std::map<uintptr_t, MappingInfoTy::TaskGraphClaimTy>::iterator
+MappingInfoTy::firstTaskGraphClaimAfter(uintptr_t Lo) {
+  auto It = TaskGraphClaims.upper_bound(Lo);
+  if (It != TaskGraphClaims.begin() && std::prev(It)->second.Hi > Lo)
+    --It;
+  return It;
+}
+
+void MappingInfoTy::addTaskGraphClaim(const void *Begin, int64_t Size) {
+  const uintptr_t Lo = reinterpret_cast<uintptr_t>(Begin);
+  const uintptr_t Hi = Lo + Size;
+  if (Lo == Hi)
+    return;
+  std::lock_guard<std::mutex> LG(TaskGraphClaimsMtx);
+  splitTaskGraphClaim(Lo);
+  splitTaskGraphClaim(Hi);
+  // Every piece in [Lo, Hi) now lies wholly inside it, so walking the claim
+  // either lands on a piece to count or on a gap to fill.
+  for (uintptr_t At = Lo; At < Hi;) {
+    auto It = TaskGraphClaims.lower_bound(At);
+    if (It != TaskGraphClaims.end() && It->first == At) {
+      ++It->second.Claims;
+      At = It->second.Hi;
+      continue;
+    }
+    const uintptr_t Next =
+        It != TaskGraphClaims.end() && It->first < Hi ? It->first : Hi;
+    TaskGraphClaimTy Piece;
+    Piece.Hi = Next;
+    Piece.Claims = 1;
+    TaskGraphClaims.emplace(At, Piece);
+    At = Next;
+  }
+  NumTaskGraphClaims.store(TaskGraphClaims.size(), std::memory_order_release);
+}
+
+void MappingInfoTy::removeTaskGraphClaim(const void *Begin, int64_t Size) {
+  const uintptr_t Lo = reinterpret_cast<uintptr_t>(Begin);
+  const uintptr_t Hi = Lo + Size;
+  if (Lo == Hi)
+    return;
+  std::lock_guard<std::mutex> LG(TaskGraphClaimsMtx);
+  splitTaskGraphClaim(Lo);
+  splitTaskGraphClaim(Hi);
+  for (auto It = TaskGraphClaims.lower_bound(Lo);
+       It != TaskGraphClaims.end() && It->first < Hi;) {
+    assert(It->second.Claims && "removing a claim that was never added");
+    if (--It->second.Claims == 0)
+      It = TaskGraphClaims.erase(It);
+    else
+      ++It;
+  }
+  NumTaskGraphClaims.store(TaskGraphClaims.size(), std::memory_order_release);
+}
+
+bool MappingInfoTy::warnIfClaimedByTaskGraph(const void *Begin, int64_t Size,
+                                             const char *What) {
+  if (!NumTaskGraphClaims.load(std::memory_order_acquire))
+    return false;
+  const uintptr_t Lo = reinterpret_cast<uintptr_t>(Begin);
+  const uintptr_t Hi = Lo + std::max<int64_t>(Size, 1);
+  std::lock_guard<std::mutex> LG(TaskGraphClaimsMtx);
+  bool Claimed = false, Warn = false;
+  for (auto It = firstTaskGraphClaimAfter(Lo);
+       It != TaskGraphClaims.end() && It->first < Hi; ++It) {
+    Claimed = true;
+    Warn |= TaskGraphLookupsWarned.insert(It->first).second;
+  }
+  if (Warn)
+    MESSAGE("%s asked about " DPxMOD ", which a taskgraph keeps on the device "
+            "only while it replays, with no mapping outside it; answering as "
+            "if it were not mapped",
+            What, DPxPTR(Begin));
+  return Claimed;
+}
+
+void MappingInfoTy::warnMappingOverTaskGraphClaim(const void *Begin,
+                                                  int64_t Size,
+                                                  const char *What) {
+  if (!NumTaskGraphClaims.load(std::memory_order_acquire))
+    return;
+  const uintptr_t Lo = reinterpret_cast<uintptr_t>(Begin);
+  const uintptr_t Hi = Lo + std::max<int64_t>(Size, 1);
+  std::lock_guard<std::mutex> LG(TaskGraphClaimsMtx);
+  bool Warn = false;
+  for (auto It = firstTaskGraphClaimAfter(Lo);
+       It != TaskGraphClaims.end() && It->first < Hi; ++It) {
+    Warn |= TaskGraphMapsWarned.insert(It->first).second;
+  }
+  if (Warn)
+    MESSAGE("%s " DPxMOD " (%" PRId64 " bytes) overlaps memory a taskgraph "
+            "replay running now keeps on the device for itself; the two "
+            "device copies race",
+            What, DPxPTR(Begin), Size);
 }

@@ -17,8 +17,11 @@
 #include "Shared/EnvironmentVar.h"
 #include "omptarget.h"
 
+#include <atomic>
 #include <cstdint>
+#include <map>
 #include <mutex>
+#include <set>
 #include <string>
 
 #include "llvm/ADT/SmallSet.h"
@@ -674,6 +677,19 @@ struct MappingInfoTy {
       bool ReleaseHDTTMap = true, StateInfoTy *StateInfo = nullptr,
       const ident_t *Loc = nullptr);
 
+  /// Publish device storage the caller has already obtained as the mapping of
+  /// \p Size bytes at \p HstPtrBegin, with a reference count of one on the
+  /// hold count if \p UseHoldRefCount and on the dynamic count otherwise, and
+  /// tell the plugin about it.  The caller must have established, under the
+  /// same accessor, that nothing is mapped there.  Returns the new entry,
+  /// unlocked, or null if the plugin refused it -- in which case the entry
+  /// stays in the map, as getTargetPointer has always left it.
+  HostDataToTargetTy *insertMapping(HDTTMapAccessorTy &HDTTMap,
+                                    void *HstPtrBase, void *HstPtrBegin,
+                                    int64_t Size, uintptr_t TgtAllocBegin,
+                                    uintptr_t TgtPtrBegin, bool UseHoldRefCount,
+                                    map_var_info_t HstPtrName);
+
   /// Return the target pointer for \p HstPtrBegin in \p HDTTMap. The accessor
   /// ensures exclusive access to the HDTT map.
   void *getTgtPtrBegin(HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin,
@@ -713,6 +729,16 @@ struct MappingInfoTy {
   int associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
   int disassociatePtr(void *HstPtrBegin);
 
+  /// A counter of changes to the set of mappings for this device, bumped
+  /// whenever an entry is added or removed.
+  uint64_t getEpoch() const { return Epoch.load(std::memory_order_acquire); }
+
+  /// Bump the counter \p getEpoch reports.  To be called with the map accessor
+  /// held, so the bump corresponds to the change it describes.
+  void notifyMappingsChanged() {
+    Epoch.fetch_add(1, std::memory_order_release);
+  }
+
   /// Print information about the transfer from \p HstPtr to \p TgtPtr (or vice
   /// versa if \p H2D is false). If there is an existing mapping, or if \p Entry
   /// is set, the associated metadata will be printed as well.
@@ -721,8 +747,58 @@ struct MappingInfoTy {
                      MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr,
                      const ident_t *Loc = nullptr, const char *Name = nullptr);
 
+  /// \name Taskgraph claims
+  ///
+  /// A taskgraph replay that gives a self-contained range device storage of its
+  /// own makes no mapping-table entry for it.  A claim records that host
+  /// memory for the duration of the replay, so that a lookup or a new mapping
+  /// over it can be warned about.  Claims are diagnostics only: every answer
+  /// they affect is the one an unmapped region gets.
+  ///
+  /// Claims from different replays may overlap, so they are kept as pieces cut
+  /// at every claim boundary, each counting the claims covering it.
+  /// @{
+  bool hasTaskGraphClaims() const {
+    return NumTaskGraphClaims.load(std::memory_order_acquire) != 0;
+  }
+  void addTaskGraphClaim(const void *Begin, int64_t Size);
+  void removeTaskGraphClaim(const void *Begin, int64_t Size);
+
+  /// Whether \p Size bytes at \p Begin, or the one address for a size of zero,
+  /// overlap a claim.  If so, warn once per piece that \p What is answered as
+  /// for unmapped memory.
+  bool warnIfClaimedByTaskGraph(const void *Begin, int64_t Size,
+                                const char *What);
+
+  /// Warn, once per piece, that \p What is creating a mapping over a claim,
+  /// which makes a second device copy of the same bytes.
+  void warnMappingOverTaskGraphClaim(const void *Begin, int64_t Size,
+                                     const char *What);
+  /// @}
+
 private:
   DeviceTy &Device;
+  std::atomic<uint64_t> Epoch{0};
+
+  struct TaskGraphClaimTy {
+    uintptr_t Hi = 0;
+    uint32_t Claims = 0;
+  };
+  /// Pieces keyed by their begin.  NumTaskGraphClaims mirrors the size so that
+  /// callers can skip the lock when nothing is claimed.
+  std::map<uintptr_t, TaskGraphClaimTy> TaskGraphClaims;
+  std::atomic<size_t> NumTaskGraphClaims{0};
+  std::mutex TaskGraphClaimsMtx;
+  /// The piece begins each warning has been given for, kept apart from the
+  /// pieces so that a range claimed on every replay is warned about once.
+  std::set<uintptr_t> TaskGraphLookupsWarned;
+  std::set<uintptr_t> TaskGraphMapsWarned;
+
+  /// Make a piece begin at \p Addr, if one spans it.  Lock held.
+  void splitTaskGraphClaim(uintptr_t Addr);
+  /// The first piece reaching past \p Lo.  Lock held.
+  std::map<uintptr_t, TaskGraphClaimTy>::iterator
+  firstTaskGraphClaimAfter(uintptr_t Lo);
 };
 
 #endif // OMPTARGET_OPENMP_MAPPING_H
