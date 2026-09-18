@@ -790,8 +790,8 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
       continue;
     }
 
-    if (DT && !DT->dominates(AssumeBB, CurBB))
-      return false;
+    assert((!DT || DT->dominates(AssumeBB, CurBB)) &&
+           "Blocks between Assume and CtxI must be dominated by AssumeBB");
 
     if (pred_empty(CurBB))
       return false;
