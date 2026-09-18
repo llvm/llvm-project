@@ -7551,10 +7551,6 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
            isImmediateFunctionContext());
       for (unsigned i = 0, j = ILE->getNumInits(); i != j; i++) {
         Expr *Init = ILE->getInit(i);
-        // An immediate invocation is already a ConstantExpr and receives its
-        // value at the end of the full-expression.
-        if (isa<ConstantExpr>(Init))
-          continue;
         if (Init->isTypeDependent() || Init->isValueDependent()) {
           ILE->setInit(i, ConstantExpr::Create(Context, Init));
           continue;
@@ -7585,7 +7581,10 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
           return ExprError();
         }
         // Store the value so CodeGen does not re-evaluate the element outside
-        // a constant context.
+        // a constant context; an immediate invocation already is a
+        // ConstantExpr.
+        if (isa<ConstantExpr>(Init))
+          continue;
         if (Evaluated)
           ILE->setInit(i, ConstantExpr::Create(Context, Init, Eval.Val));
         else
