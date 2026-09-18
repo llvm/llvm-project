@@ -45,13 +45,13 @@ namespace LIBC_NAMESPACE_DECL {
   __asm__ volatile("csrw mtvec, %0" :: "r"(&trap_handler));
 
 #ifdef __riscv_flen
-  // Enable FPU by setting FS bits to Initial (1) in mstatus.
+  // Enable FPU by setting FS bits (14:13) to Initial (01) in mstatus.
   __asm__ volatile("csrs mstatus, %0" :: "r"(1UL << 13) : "memory");
   // Clear fcsr.
   __asm__ volatile("fscsr zero");
 #endif
 #ifdef __riscv_vector
-  // Enable Vector unit by setting VS bits to Initial (1) in mstatus.
+  // Enable Vector unit by setting VS bits (10:9) to Initial (01) in mstatus.
   __asm__ volatile("csrs mstatus, %0" :: "r"(1UL << 9) : "memory");
 #endif
 
