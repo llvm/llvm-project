@@ -165,6 +165,35 @@ constexpr void basic_string<_CharT>::_M_construct(){}
 constexpr basic_string<char*> z{};
 }  // namespace from_constexpr_initializer
 
+namespace from_usable_in_constant_expr_initializer {
+template <typename T>
+constexpr int f();
+
+consteval int g() { return f<int>(); }
+
+template <typename T>
+constexpr int f() {
+  return 11;
+}  // namespace from_usable_in_constant_expr_initializer
+
+const int a = g();
+static_assert(a == 11);
+}
+
+namespace from_constinit_initializer {
+template <typename T>
+constexpr int f();
+
+consteval int g() { return f<int>(); }
+
+template <typename T>
+constexpr int f() {
+  return 11;
+}
+
+constinit int a = g();
+}  // namespace from_constinit_initializer
+
 namespace from_imm_invocation_in_immediate_escalating_fn {
 template <int V> constexpr int f();
 consteval int g() { return f<0>(); }
@@ -249,7 +278,52 @@ constexpr int vector<T>::f(const T &t) const { return T().v; }
 
 constexpr vector<A> v;
 static_assert(g(v) == 2, "");
-}  // namespace
+}  // namespace with_friend
+
+namespace non_constexpr_var {
+template <typename T>
+constexpr int f();
+
+constexpr int g() { return f<int>(); }
+
+template <typename T>
+constexpr int f() {
+  if consteval { return 11; }
+  else { return 22; }
+}
+
+const int k = g();
+static_assert(k == 11);
+}  // namespace non_constexpr_var
+
+namespace imm_escalation_can_instantiate {
+// Function template initially without definition.
+template <typename T>
+constexpr int *f();
+
+// Consteval function that uses 'f<int>', but calls aren't constant.
+consteval int *g() { return f<int>(); }
+
+// Late definition of 'f': Instantiate must happen during evaluation.
+template <typename T>
+constexpr int *f() {
+  return new int;  // expected-note {{heap allocation performed here}}
+}
+
+// Immediate-escalating function; escalates due to non-constant call to 'g'.
+template <typename>
+constexpr int *h() {
+  return g();  // expected-note {{not a constant expression}}
+}
+
+// Demonstrate that 'h<int>' is an immediate function. The diagnostics imply
+// that 'f<int>' is instantiated during evaluation.
+void t2() {
+  (void) h<int>();
+  // expected-error@-1 {{call to immediate function}}
+  // expected-note@-2 {{heap-allocated object is not a constant expression}}
+}
+}  // namespace imm_escalation_can_instantiate
 
 namespace GH115118 {
 
