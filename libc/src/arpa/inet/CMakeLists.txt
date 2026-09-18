@@ -91,6 +91,26 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  inet_pton
+  SRCS
+    inet_pton.cpp
+  HDRS
+    inet_pton.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.struct_in6_addr
+    libc.hdr.types.struct_in_addr
+    libc.src.__support.CPP.string_view
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.str_to_integer
+    libc.hdr.sys_socket_macros
+)
+
+add_entrypoint_object(
   ntohl
   SRCS
     ntohl.cpp
