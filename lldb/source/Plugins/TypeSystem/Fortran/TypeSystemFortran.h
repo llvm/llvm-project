@@ -214,8 +214,8 @@ public:
   CompilerType GetOrCreateFortranBaseType(int kind, uint64_t bitsize,
                                           ConstString name);
 
-  CompilerType CreateBaseType(uint32_t dwarf_encoding, uint64_t bitsize,
-                              ConstString name);
+  CompilerType CreateBaseType(llvm::dwarf::TypeKind dwarf_encoding,
+                              uint64_t bitsize, ConstString name);
 
   // Creating related types
 
