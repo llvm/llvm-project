@@ -216,8 +216,18 @@ struct ol_context_impl_t {
                                   TargetAllocTy Kind, size_t Alignment) {
     if (auto Err = requireDevice(Device))
       return std::move(Err);
-    return PluginCtx->allocate(*Device->Device, Size, /*HostPtr=*/nullptr, Kind,
-                               Alignment);
+    auto AllocOrErr = PluginCtx->allocate(*Device->Device, Size,
+                                          /*HostPtr=*/nullptr, Kind, Alignment);
+    if (!AllocOrErr)
+      return AllocOrErr.takeError();
+
+    // Check max alignment only when no explicit alignment was requested.
+    if (Alignment == 0)
+      assert(reinterpret_cast<uintptr_t>(*AllocOrErr) %
+                     alignof(std::max_align_t) ==
+                 0 &&
+             "allocation does not meet max_align_t alignment");
+    return *AllocOrErr;
   }
 
   llvm::Error deallocate(void *Ptr) { return PluginCtx->deallocate(Ptr); }
