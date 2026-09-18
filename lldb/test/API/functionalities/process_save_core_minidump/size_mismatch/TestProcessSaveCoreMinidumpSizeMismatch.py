@@ -3,10 +3,9 @@ Regression test for the Memory64List size accounting in minidump save-core.
 
 When a saved range contains an unreadable page the read fails part-way. The
 range's DataSize must equal the number of bytes actually written to the shared
-Memory64 blob; if it instead records the number of bytes ReadMemoryInChunks read
-(which includes the partially-read bytes that were dropped on the error), the
-blob's cumulative offsets desync and the descriptors claim more data than the
-file holds. See MinidumpFileBuilder::ReadWriteMemoryInChunks.
+Memory64 blob, otherwise blob's cumulative offsets desync and the descriptors
+claim more data than the file holds. See
+MinidumpFileBuilder::ReadWriteMemoryInChunks.
 """
 
 import os
