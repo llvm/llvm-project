@@ -2032,26 +2032,26 @@ public:
 };
 
 /// Adds a specific immediate to the instruction being built.
-/// If a LLT is passed, a ConstantInt immediate is created instead, unless
-/// IsFP is set, in which case Imm is treated as an IEEE bit pattern and a
-/// ConstantFP immediate is created.
+/// Without a type this is a raw integer immediate. With ConstantLLT it is a
+/// typed constant: ConstantInt, or ConstantFP when IsFP is set (Imm is then
+/// the IEEE bit pattern of that type).
 class ImmRenderer : public OperandRenderer {
 protected:
   unsigned InsnID;
   int64_t Imm;
-  std::optional<LLTCodeGenOrTempType> CImmLLT;
+  std::optional<LLTCodeGenOrTempType> ConstantLLT;
   bool IsFP = false;
 
 public:
   ImmRenderer(unsigned InsnID, int64_t Imm)
       : OperandRenderer(OR_Imm), InsnID(InsnID), Imm(Imm) {}
 
-  ImmRenderer(unsigned InsnID, int64_t Imm, const LLTCodeGenOrTempType &CImmLLT,
-              bool IsFP = false)
-      : OperandRenderer(OR_Imm), InsnID(InsnID), Imm(Imm), CImmLLT(CImmLLT),
-        IsFP(IsFP) {
-    if (CImmLLT.isLLTCodeGen())
-      KnownTypes.insert(CImmLLT.getLLTCodeGen());
+  ImmRenderer(unsigned InsnID, int64_t Imm,
+              const LLTCodeGenOrTempType &ConstantLLT, bool IsFP = false)
+      : OperandRenderer(OR_Imm), InsnID(InsnID), Imm(Imm),
+        ConstantLLT(ConstantLLT), IsFP(IsFP) {
+    if (ConstantLLT.isLLTCodeGen())
+      KnownTypes.insert(ConstantLLT.getLLTCodeGen());
   }
 
   static bool classof(const OperandRenderer *R) {

@@ -1324,7 +1324,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       uint64_t Imm = readU64();
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
 
-      unsigned Width = ExecInfo.TypeObjects[TypeID].getScalarSizeInBits();
+      unsigned Width = getTypeFromIdx(TypeID).getScalarSizeInBits();
       LLVMContext &Ctx = MF->getFunction().getContext();
       OutMIs[InsnID].addCImm(
           ConstantInt::get(IntegerType::get(Ctx, Width), Imm, /*signed*/ true));
@@ -1341,7 +1341,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       uint64_t Imm = readU64();
       assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
 
-      LLT Ty = ExecInfo.TypeObjects[TypeID];
+      LLT Ty = getTypeFromIdx(TypeID);
       unsigned Width = Ty.getScalarSizeInBits();
       LLVMContext &Ctx = MF->getFunction().getContext();
       APFloat APF(getFltSemanticForLLT(Ty.getScalarType()), APInt(Width, Imm));
