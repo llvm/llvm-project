@@ -1,6 +1,8 @@
+#include <common/unittests_helper.hpp>
 #include <mock/helpers.hpp>
 
 #include <sycl/__impl/device.hpp>
+#include <sycl/__impl/platform.hpp>
 #include <sycl/__impl/queue.hpp>
 
 #include <detail/device_impl.hpp>
@@ -8,6 +10,9 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include <array>
+#include <cstdint>
 
 using namespace sycl;
 using namespace ::testing;
@@ -79,4 +84,91 @@ TEST(Queue, MemcpyZeroBytes) {
   EXPECT_CALL(Mock.get(), olMemcpy(_, _, _, _, _, _)).Times(0);
   event Event = Q.memcpy(nullptr, nullptr, 0);
   Q.memcpy(nullptr, nullptr, 0, Event);
+}
+
+TEST(Queue, MemcpyNullptrThrows) {
+  constexpr int NumBytes = 32;
+
+  mock::MockWrapper Mock;
+  queue Q;
+  int Src = 0;
+
+  EXPECT_CALL(Mock.get(), olGetMemInfo(_, _, _, _, _)).Times(0);
+  EXPECT_CALL(Mock.get(), olMemcpy(_, _, _, _, _, _)).Times(0);
+
+  try {
+    Q.memcpy(nullptr, &Src, NumBytes);
+    FAIL() << "Expected sycl::exception";
+  } catch (const sycl::exception &E) {
+    EXPECT_EQ(E.code(), make_error_code(errc::invalid));
+    EXPECT_TRUE(E.has_context());
+    EXPECT_EQ(E.get_context(), Q.get_context());
+  }
+}
+
+namespace {
+
+// The default mock exposes a single platform, so device enumeration has to be
+// mocked to get events that belong to different platforms. Platforms are formed
+// per liboffload driver id.
+class QueueTwoPlatformsTest : public Test {
+protected:
+  void SetUp() override {
+    Platform = mock::createDummyHandle<ol_platform_handle_t>();
+    for (ol_device_handle_t &Device : Devices)
+      Device = mock::createDummyHandleWithData<ol_device_handle_t>(
+          reinterpret_cast<unsigned char *>(&Platform), sizeof(Platform));
+
+    EXPECT_CALL(Helper.Mock.get(), olIterateDevices(_, _))
+        .WillRepeatedly([this](ol_device_iterate_cb_t Callback,
+                               void *UserData) -> ol_result_t {
+          for (ol_device_handle_t Device : Devices)
+            std::ignore = Callback(Device, UserData);
+          return OL_SUCCESS;
+        });
+
+    ON_CALL(Helper.Mock.get(),
+            olGetDeviceInfo(_, OL_DEVICE_INFO_DRIVER_ID, _, _))
+        .WillByDefault([this](ol_device_handle_t Device,
+                              ol_device_info_t /*PropName*/, size_t PropSize,
+                              void *PropValue) -> ol_result_t {
+          EXPECT_EQ(PropSize, sizeof(uint32_t));
+          *static_cast<uint32_t *>(PropValue) = Device == Devices[0] ? 0u : 1u;
+          return OL_SUCCESS;
+        });
+  }
+
+  void TearDown() override {
+    mock::releaseDummyHandles(Devices[0], Devices[1], Platform);
+  }
+
+  unittests::UnittestsHelper Helper;
+  ol_platform_handle_t Platform{};
+  std::array<ol_device_handle_t, 2> Devices{};
+};
+
+} // namespace
+
+TEST_F(QueueTwoPlatformsTest, CrossPlatformDependencyThrows) {
+  std::vector<platform> Platforms = platform::get_platforms();
+  ASSERT_EQ(Platforms.size(), 2u);
+
+  std::vector<device> Devices0 = Platforms[0].get_devices();
+  std::vector<device> Devices1 = Platforms[1].get_devices();
+  ASSERT_EQ(Devices0.size(), 1u);
+  ASSERT_EQ(Devices1.size(), 1u);
+
+  queue Q0(Devices0.front());
+  queue Q1(Devices1.front());
+
+  event OtherPlatformEvent = Q1.memcpy(nullptr, nullptr, 0);
+
+  try {
+    Q0.memcpy(nullptr, nullptr, 0, OtherPlatformEvent);
+    FAIL() << "Expected sycl::exception";
+  } catch (const sycl::exception &E) {
+    EXPECT_EQ(E.code(), make_error_code(errc::feature_not_supported));
+    EXPECT_TRUE(E.has_context());
+    EXPECT_EQ(E.get_context(), Q0.get_context());
+  }
 }

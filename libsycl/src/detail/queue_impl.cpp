@@ -24,9 +24,10 @@ namespace detail {
 thread_local bool NestedCallsDetector = false;
 class NestedCallsTracker {
 public:
-  NestedCallsTracker() {
+  NestedCallsTracker(ContextImpl &QueueContext) {
     if (NestedCallsDetectorRef)
       throw sycl::exception(
+          createSyclObjFromImpl<context>(QueueContext),
           make_error_code(errc::invalid),
           "Calls to sycl::queue::submit cannot be nested. Command group "
           "function objects should use the sycl::handler API instead.");
@@ -52,7 +53,8 @@ QueueImpl::QueueImpl(const std::shared_ptr<ContextImpl> &contextImpl,
   // liboffload guarantees OL_ERRC_INVALID_DEVICE when the device does not
   // belong to the context.
   if (isFailed(Err) && Err->Code == OL_ERRC_INVALID_DEVICE)
-    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+    throw sycl::exception(createSyclObjFromImpl<context>(*MContext),
+                          sycl::make_error_code(sycl::errc::invalid),
                           "The device is not associated with the context.");
   checkAndThrow(Err);
 }
@@ -87,7 +89,8 @@ void QueueImpl::waitAndThrow() {
 void QueueImpl::throwAsynchronous() { flushAsyncExceptions(); }
 
 static void checkEventsPlatformMatch(const std::vector<EventImplPtr> &Events,
-                                     const PlatformImpl &QueuePlatform) {
+                                     const PlatformImpl &QueuePlatform,
+                                     ContextImpl &QueueContext) {
   // liboffload limitation to olWaitEvents. We can't do any extra handling for
   // cross context/platform events without host task support now.
   //   "The input events can be from any queue on any device provided by the
@@ -97,6 +100,7 @@ static void checkEventsPlatformMatch(const std::vector<EventImplPtr> &Events,
                      return &Event->getPlatformImpl() == &QueuePlatform;
                    })) {
     throw sycl::exception(
+        createSyclObjFromImpl<context>(QueueContext),
         sycl::make_error_code(sycl::errc::feature_not_supported),
         "libsycl doesn't support cross-context/platform event dependencies "
         "yet.");
@@ -111,7 +115,7 @@ void QueueImpl::setKernelLaunchParams(std::vector<EventImplPtr> &&Events,
 void QueueImpl::setKernelLaunchParams(
     std::vector<EventImplPtr> &&Events,
     const ol_kernel_launch_size_args_t &Range) {
-  checkEventsPlatformMatch(Events, MDevice.getPlatformImpl());
+  checkEventsPlatformMatch(Events, MDevice.getPlatformImpl(), *MContext);
   MCurrentSubmitInfo.DepEvents = std::move(Events);
   MCurrentSubmitInfo.Range = Range;
 }
@@ -135,7 +139,8 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
                      &MCurrentSubmitInfo.Range, NULL, 1, ArgPtrs, ArgSizes);
 
   if (isFailed(Result))
-    throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
+    throw sycl::exception(createSyclObjFromImpl<context>(*MContext),
+                          sycl::make_error_code(sycl::errc::runtime),
                           std::string("Kernel submission (") +
                               KernelInfo.getName().data() + ") failed with " +
                               formatCodeString(Result));
@@ -169,13 +174,14 @@ static ol_device_handle_t getAllocDevice(ol_context_handle_t Context,
 std::shared_ptr<EventImpl>
 QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                   const std::vector<EventImplPtr> &DepEvents) {
-  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
+  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl(), *MContext);
   if (NumBytes == 0) {
     return submitWait(DepEvents);
   }
 
   if (!Dest || !Src) {
-    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+    throw sycl::exception(createSyclObjFromImpl<context>(*MContext),
+                          sycl::make_error_code(sycl::errc::invalid),
                           "Nullptr argument in memcpy operation");
   }
 
@@ -192,14 +198,15 @@ QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
 
 EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
                                  const std::vector<EventImplPtr> &DepEvents) {
-  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
+  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl(), *MContext);
 
   if (NumBytes == 0) {
     handleEventDependencies(DepEvents);
     return createEvent();
   }
   if (!Ptr) {
-    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+    throw sycl::exception(createSyclObjFromImpl<context>(*MContext),
+                          sycl::make_error_code(sycl::errc::invalid),
                           "Nullptr argument in prefetch operation");
   }
 
@@ -242,7 +249,7 @@ EventImplPtr QueueImpl::submitWithHandler(const TypelessCGF &CGF) {
   detail::HandlerImpl HandlerImplVal(*this);
   handler Handler(HandlerImplVal);
   {
-    NestedCallsTracker tracker;
+    NestedCallsTracker tracker(*MContext);
     CGF(Handler);
   }
 

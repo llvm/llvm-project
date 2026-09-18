@@ -174,7 +174,8 @@ ol_symbol_handle_t ProgramAndKernelManager::getOrCreateKernel(
   DeviceImageManager &DeviceImage = KernelInfo.getDeviceImage();
 
   if (!isImageCompatible(DeviceImage, Device))
-    throw exception(make_error_code(errc::runtime),
+    throw exception(createSyclObjFromImpl<sycl::context>(*Context),
+                    make_error_code(errc::runtime),
                     std::string("No compatible image for ") +
                         KernelInfo.getName().data() + " was found");
 

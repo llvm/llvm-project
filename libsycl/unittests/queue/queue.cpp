@@ -52,3 +52,24 @@ TEST(Queue, ContextAndDeviceConstructor) {
   EXPECT_EQ(AsyncSelectorQueue.get_context(), Context);
   EXPECT_EQ(AsyncSelectorQueue.get_device(), Device);
 }
+
+TEST(Queue, DeviceNotAssociatedWithContextThrows) {
+  mock::MockWrapper Mock;
+
+  const device Device;
+  const context Context = Device.get_platform().khr_get_default_context();
+
+  EXPECT_CALL(Mock.get(), olCreateQueue(_, _, _))
+      .Times(1)
+      .WillOnce(Return(
+          mock::getMockLiboffload().makeEmptyStrError(OL_ERRC_INVALID_DEVICE)));
+
+  try {
+    queue Queue(Context, Device);
+    FAIL() << "Expected sycl::exception";
+  } catch (const sycl::exception &E) {
+    EXPECT_EQ(E.code(), make_error_code(errc::invalid));
+    EXPECT_TRUE(E.has_context());
+    EXPECT_EQ(E.get_context(), Context);
+  }
+}

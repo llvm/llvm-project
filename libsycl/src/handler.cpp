@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <detail/context_impl.hpp>
 #include <detail/handler_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
 #include <detail/queue_impl.hpp>
@@ -14,9 +15,11 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 static void checkCommandGroupFunction(
-    const std::function<std::shared_ptr<detail::EventImpl>()> &CGF) {
+    const std::function<std::shared_ptr<detail::EventImpl>()> &CGF,
+    detail::ContextImpl &QueueContext) {
   if (CGF) {
     throw sycl::exception(
+        detail::createSyclObjFromImpl<context>(QueueContext),
         sycl::make_error_code(sycl::errc::invalid),
         "Attempt to set multiple actions for the command group");
   }
@@ -24,7 +27,7 @@ static void checkCommandGroupFunction(
 
 void handler::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,
                                void *ArgData, size_t ArgSize) {
-  checkCommandGroupFunction(MImpl.MCGF);
+  checkCommandGroupFunction(MImpl.MCGF, MImpl.MQueue.getContext());
   MImpl.MArgData.resize(ArgSize);
   std::memcpy(MImpl.MArgData.data(), ArgData, ArgSize);
   MImpl.MCGF = [this, &KernelInfo]() {
@@ -41,7 +44,7 @@ void handler::setKernelRange(const detail::UnifiedRangeView &Range) {
 }
 
 void handler::memcpy(void *dest, const void *src, std::size_t numBytes) {
-  checkCommandGroupFunction(MImpl.MCGF);
+  checkCommandGroupFunction(MImpl.MCGF, MImpl.MQueue.getContext());
   MImpl.MCGF = [this, dest, src, numBytes]() {
     return MImpl.MQueue.memcpy(dest, src, numBytes,
                                detail::getSyclObjImpls(MDepEvents));
