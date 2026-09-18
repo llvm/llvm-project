@@ -4,6 +4,7 @@ Test debug-info parsing of synthesized Objective-C properties.
 
 import lldb
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import *
 from lldbsuite.test import lldbutil
 
 
