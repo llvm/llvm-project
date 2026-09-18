@@ -855,9 +855,9 @@ public:
   uint16_t SectionIdOfExceptionHandler = 0;
   FrameProcedureOptions Flags = FrameProcedureOptions::None;
 
-  static constexpr FrameProcedureOptions NonFlagsMask{
-      static_cast<uint32_t>(FrameProcedureOptions::EncodedPointersMask) |
-      static_cast<uint32_t>(FrameProcedureOptions::CoroutineKindMask)};
+  static constexpr FrameProcedureOptions NonFlagsMask =
+      FrameProcedureOptions::EncodedPointersMask |
+      FrameProcedureOptions::CoroutineKindMask;
 
   FrameProcedureOptions getFlags() const { return Flags & ~NonFlagsMask; }
 

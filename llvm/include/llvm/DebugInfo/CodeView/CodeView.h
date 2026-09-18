@@ -51,22 +51,22 @@ enum SymbolKind : uint16_t {
 };
 
 #define CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(Class)                            \
-  inline Class operator|(Class a, Class b) {                                   \
+  constexpr inline Class operator|(Class a, Class b) {                         \
     return static_cast<Class>(llvm::to_underlying(a) |                         \
                               llvm::to_underlying(b));                         \
   }                                                                            \
-  inline Class operator&(Class a, Class b) {                                   \
+  constexpr inline Class operator&(Class a, Class b) {                         \
     return static_cast<Class>(llvm::to_underlying(a) &                         \
                               llvm::to_underlying(b));                         \
   }                                                                            \
-  inline Class operator~(Class a) {                                            \
+  constexpr inline Class operator~(Class a) {                                  \
     return static_cast<Class>(~llvm::to_underlying(a));                        \
   }                                                                            \
-  inline Class &operator|=(Class &a, Class b) {                                \
+  constexpr inline Class &operator|=(Class &a, Class b) {                      \
     a = a | b;                                                                 \
     return a;                                                                  \
   }                                                                            \
-  inline Class &operator&=(Class &a, Class b) {                                \
+  constexpr inline Class &operator&=(Class &a, Class b) {                      \
     a = a & b;                                                                 \
     return a;                                                                  \
   }
