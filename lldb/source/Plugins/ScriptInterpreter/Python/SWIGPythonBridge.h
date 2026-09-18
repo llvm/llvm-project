@@ -106,6 +106,7 @@ public:
   static PythonObject ToSWIGWrapper(lldb::ProcessLaunchInfoSP launch_info_sp);
   static PythonObject ToSWIGWrapper(lldb::DataExtractorSP data_extractor_sp);
   static PythonObject ToSWIGWrapper(lldb::DescriptionLevel level);
+  static PythonObject ToSWIGWrapper(lldb::StepType step_type);
 
   static PythonObject
   ToSWIGWrapper(std::unique_ptr<lldb::SBStructuredData> data_sb);
@@ -207,6 +208,7 @@ void *LLDBSWIGPython_CastPyObjectToSBDebugger(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBEvent(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBStream(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBThread(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBThreadPlan(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBFrame(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBSymbolContext(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBValue(PyObject *data);

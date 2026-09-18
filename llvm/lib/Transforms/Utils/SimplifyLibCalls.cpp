@@ -30,6 +30,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
@@ -45,6 +46,8 @@
 using namespace llvm;
 using namespace PatternMatch;
 
+#define DEBUG_TYPE "simplify-lib-calls"
+
 static cl::opt<bool>
     EnableUnsafeFPShrink("enable-double-float-shrink", cl::Hidden,
                          cl::init(false),
@@ -57,13 +60,40 @@ static cl::opt<bool>
 static cl::opt<bool>
     OptimizeHotColdNew("optimize-hot-cold-new", cl::Hidden, cl::init(false),
                        cl::desc("Enable hot/cold operator new library calls"));
-static cl::opt<bool> OptimizeExistingHotColdNew(
-    "optimize-existing-hot-cold-new", cl::Hidden, cl::init(false),
+enum class OptimizeExistingHotColdNewKind {
+  None,
+  Cold,
+  Always,
+};
+static cl::opt<OptimizeExistingHotColdNewKind> OptimizeExistingHotColdNew(
+    "optimize-existing-hot-cold-new", cl::Hidden,
     cl::desc(
-        "Enable optimization of existing hot/cold operator new library calls"));
+        "Enable optimization of existing hot/cold operator new library calls"),
+    cl::values(
+        clEnumValN(
+            OptimizeExistingHotColdNewKind::None, "none",
+            "Do not optimize existing hot/cold operator new library calls"),
+        clEnumValN(OptimizeExistingHotColdNewKind::Cold, "cold",
+                   "Only optimize existing hot/cold operator new library calls "
+                   "if determined to be cold"),
+        clEnumValN(
+            OptimizeExistingHotColdNewKind::Always, "always",
+            "Always optimize existing hot/cold operator new library calls"),
+        clEnumValN(
+            OptimizeExistingHotColdNewKind::Always, "",
+            "Always optimize existing hot/cold operator new library calls")),
+    cl::init(OptimizeExistingHotColdNewKind::None), cl::ValueOptional);
 static cl::opt<bool> OptimizeNoBuiltinHotColdNew(
     "optimize-nobuiltin-hot-cold-new-new", cl::Hidden, cl::init(false),
     cl::desc("Enable transformation of nobuiltin operator new library calls"));
+static cl::opt<bool> MinExistingHotColdNewHint(
+    "min-existing-hot-cold-new-hint", cl::Hidden, cl::init(false),
+    cl::desc("Take the minimum of compiler hint and existing hint when "
+             "optimizing existing hot/cold operator new library calls"));
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
 
 namespace {
 
@@ -478,6 +508,10 @@ static Value* memChrToCharCompare(CallInst *CI, Value *NBytes,
     Value *Zero = ConstantInt::get(NBytes->getType(), 0);
     Value *And = B.CreateICmpNE(NBytes, Zero);
     Cmp = B.CreateLogicalAnd(And, Cmp);
+    // The and above is based on the byte count and the query, neither of which
+    // we know without value profiling, so mark the profile as unknown.
+    if (auto *SI = dyn_cast<SelectInst>(Cmp))
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
   }
 
   Value *NullPtr = Constant::getNullValue(CI->getType());
@@ -1047,7 +1081,8 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
       });
       return B.CreateSelect(SI->getCondition(),
                             ConstantInt::get(CI->getType(), LenTrue - 1),
-                            ConstantInt::get(CI->getType(), LenFalse - 1));
+                            ConstantInt::get(CI->getType(), LenFalse - 1), "",
+                            ProfcheckDisableMetadataFixes ? nullptr : SI);
     }
   }
 
@@ -1334,7 +1369,11 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
       // Slice off the character's high end bits.
       CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
       Value *Cmp = B.CreateICmpEQ(Val, CharVal, "memchr.char0cmp");
-      return B.CreateSelect(Cmp, SrcStr, NullPtr, "memchr.sel");
+      // The condition depends on the value of the string being equal to the
+      // query, neither of which we know without value profiling, so mark the
+      // profile unknown.
+      return B.CreateSelectWithUnknownProfile(Cmp, SrcStr, NullPtr, DEBUG_TYPE,
+                                              "memchr.sel");
     }
   }
 
@@ -1356,7 +1395,9 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
                                  "memchr.cmp");
     Value *SrcPlus = B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr, B.getInt64(Pos),
                                          "memchr.ptr");
-    return B.CreateSelect(Cmp, NullPtr, SrcPlus);
+    // The condition is dependent upon the value of n, which we cannot infer
+    // without value profiling, so mark the profile unknown.
+    return B.CreateSelectWithUnknownProfile(Cmp, NullPtr, SrcPlus, DEBUG_TYPE);
   }
 
   if (Str.size() == 0)
@@ -1395,14 +1436,20 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
       Value *NGtPos = B.CreateICmp(ICmpInst::ICMP_UGT, Size, PosVal);
       Value *And = B.CreateAnd(CEqSPos, NGtPos);
       Value *SrcPlus = B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr, PosVal);
-      Sel1 = B.CreateSelect(And, SrcPlus, NullPtr, "memchr.sel1");
+      // The condition depends on the value of the query and size, neither of
+      // which we know without value profiling, so mark the profile unknown.
+      Sel1 = B.CreateSelectWithUnknownProfile(And, SrcPlus, NullPtr, DEBUG_TYPE,
+                                              "memchr.sel1");
     }
 
     Value *Str0 = ConstantInt::get(Int8Ty, Str[0]);
     Value *CEqS0 = B.CreateICmpEQ(Str0, CharVal);
     Value *NNeZ = B.CreateICmpNE(Size, ConstantInt::get(SizeTy, 0));
     Value *And = B.CreateAnd(NNeZ, CEqS0);
-    return B.CreateSelect(And, SrcStr, Sel1, "memchr.sel2");
+    // The condition depends on the value of the query and size, neither of
+    // which we know without value profiling, so mark the profile unknown.
+    return B.CreateSelectWithUnknownProfile(And, SrcStr, Sel1, DEBUG_TYPE,
+                                            "memchr.sel2");
   }
 
   if (!LenC) {
@@ -1496,8 +1543,13 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
 
   // Finally merge both checks and cast to pointer type. The inttoptr
   // implicitly zexts the i1 to intptr type.
-  return B.CreateIntToPtr(B.CreateLogicalAnd(Bounds, Bits, "memchr"),
-                          CI->getType());
+  Value *Memchr = B.CreateLogicalAnd(Bounds, Bits, "memchr");
+  // We construct an and between the value of the memory and the bytes to search
+  // for. We cannot infer how often this would be true without value profiling
+  // for the query, so mark the profile unknown.
+  if (auto *SI = dyn_cast<SelectInst>(Memchr))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
+  return B.CreateIntToPtr(Memchr, CI->getType());
 }
 
 // Optimize a memcmp or, when StrNCmp is true, strncmp call CI with constant
@@ -1777,7 +1829,7 @@ Value *LibCallSimplifier::maybeOptimizeNoBuiltinOperatorNew(CallInst *CI,
   case LibFunc_size_returning_new_aligned_hot_cold:
     // If the nobuiltin call already passes a hot_cold_t parameter, allow update
     // of that parameter when enabled.
-    if (!OptimizeExistingHotColdNew)
+    if (OptimizeExistingHotColdNew == OptimizeExistingHotColdNewKind::None)
       return nullptr;
     break;
   default:
@@ -1796,10 +1848,12 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
     return nullptr;
 
   uint8_t HotCold;
-  if (CI->getAttributes().getFnAttr("memprof").getValueAsString() == "cold")
+  bool IsCold = false;
+  if (CI->getAttributes().getFnAttr("memprof").getValueAsString() == "cold") {
     HotCold = ColdNewHintValue;
-  else if (CI->getAttributes().getFnAttr("memprof").getValueAsString() ==
-           "notcold")
+    IsCold = true;
+  } else if (CI->getAttributes().getFnAttr("memprof").getValueAsString() ==
+             "notcold")
     HotCold = NotColdNewHintValue;
   else if (CI->getAttributes().getFnAttr("memprof").getValueAsString() == "hot")
     HotCold = HotNewHintValue;
@@ -1808,6 +1862,25 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
     HotCold = AmbiguousNewHintValue;
   else
     return nullptr;
+
+  bool ShouldOptimizeExistingHotColdNew =
+      OptimizeExistingHotColdNew == OptimizeExistingHotColdNewKind::Always ||
+      (OptimizeExistingHotColdNew == OptimizeExistingHotColdNewKind::Cold &&
+       IsCold);
+
+  Value *HotColdVal = B.getInt8(HotCold);
+  auto getHotColdHintForExisting = [&](uint8_t HotCold) -> Value * {
+    // If not taking the minimum, simply use the compiler hint value.
+    if (!MinExistingHotColdNewHint)
+      return HotColdVal;
+    Value *ExistingHint = CI->getArgOperand(CI->arg_size() - 1);
+    if (ExistingHint->getType() != B.getInt8Ty())
+      ExistingHint = B.CreateTruncOrBitCast(ExistingHint, B.getInt8Ty());
+    // Emit a umin intrinsic to take the minimum of the existing hint and the
+    // compiler hint. When the existing hint is a compile-time constant, the
+    // IRBuilder folder will automatically constant-fold this into a constant.
+    return B.CreateBinaryIntrinsic(Intrinsic::umin, ExistingHint, HotColdVal);
+  };
 
   // For calls that already pass a hot/cold hint, only update the hint if
   // directed by OptimizeExistingHotColdNew. For other calls to new, add a hint
@@ -1819,112 +1892,121 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   Value *NewCall = nullptr;
   switch (Func) {
   case LibFunc_Znwm12__hot_cold_t:
-    if (OptimizeExistingHotColdNew)
+    if (ShouldOptimizeExistingHotColdNew)
       NewCall = emitHotColdNew(CI->getArgOperand(0), B, TLI,
-                               LibFunc_Znwm12__hot_cold_t, HotCold);
+                               LibFunc_Znwm12__hot_cold_t,
+                               getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_Znwm:
     NewCall = emitHotColdNew(CI->getArgOperand(0), B, TLI,
-                             LibFunc_Znwm12__hot_cold_t, HotCold);
+                             LibFunc_Znwm12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_Znam12__hot_cold_t:
-    if (OptimizeExistingHotColdNew)
+    if (ShouldOptimizeExistingHotColdNew)
       NewCall = emitHotColdNew(CI->getArgOperand(0), B, TLI,
-                               LibFunc_Znam12__hot_cold_t, HotCold);
+                               LibFunc_Znam12__hot_cold_t,
+                               getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_Znam:
     NewCall = emitHotColdNew(CI->getArgOperand(0), B, TLI,
-                             LibFunc_Znam12__hot_cold_t, HotCold);
+                             LibFunc_Znam12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
-    if (OptimizeExistingHotColdNew)
-      NewCall = emitHotColdNewNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotCold);
+    if (ShouldOptimizeExistingHotColdNew)
+      NewCall =
+          emitHotColdNewNoThrow(CI->getArgOperand(0), CI->getArgOperand(1), B,
+                                TLI, LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t,
+                                getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_ZnwmRKSt9nothrow_t:
     NewCall = emitHotColdNewNoThrow(
         CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-        LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotCold);
+        LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
-    if (OptimizeExistingHotColdNew)
-      NewCall = emitHotColdNewNoThrow(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotCold);
+    if (ShouldOptimizeExistingHotColdNew)
+      NewCall =
+          emitHotColdNewNoThrow(CI->getArgOperand(0), CI->getArgOperand(1), B,
+                                TLI, LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t,
+                                getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_ZnamRKSt9nothrow_t:
     NewCall = emitHotColdNewNoThrow(
         CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-        LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotCold);
+        LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_ZnwmSt11align_val_t12__hot_cold_t:
-    if (OptimizeExistingHotColdNew)
-      NewCall = emitHotColdNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotCold);
+    if (ShouldOptimizeExistingHotColdNew)
+      NewCall =
+          emitHotColdNewAligned(CI->getArgOperand(0), CI->getArgOperand(1), B,
+                                TLI, LibFunc_ZnwmSt11align_val_t12__hot_cold_t,
+                                getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_ZnwmSt11align_val_t:
     NewCall = emitHotColdNewAligned(
         CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-        LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotCold);
+        LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
-    if (OptimizeExistingHotColdNew)
-      NewCall = emitHotColdNewAligned(
-          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotCold);
+    if (ShouldOptimizeExistingHotColdNew)
+      NewCall =
+          emitHotColdNewAligned(CI->getArgOperand(0), CI->getArgOperand(1), B,
+                                TLI, LibFunc_ZnamSt11align_val_t12__hot_cold_t,
+                                getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_ZnamSt11align_val_t:
     NewCall = emitHotColdNewAligned(
         CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-        LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotCold);
+        LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotColdVal);
     break;
   case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
-    if (OptimizeExistingHotColdNew)
+    if (ShouldOptimizeExistingHotColdNew)
       NewCall = emitHotColdNewAlignedNoThrow(
           CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
           TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
-          HotCold);
+          getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
     NewCall = emitHotColdNewAlignedNoThrow(
         CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
-        TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
+        TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
+        HotColdVal);
     break;
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
-    if (OptimizeExistingHotColdNew)
+    if (ShouldOptimizeExistingHotColdNew)
       NewCall = emitHotColdNewAlignedNoThrow(
           CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
           TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
-          HotCold);
+          getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
     NewCall = emitHotColdNewAlignedNoThrow(
         CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
-        TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
+        TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
+        HotColdVal);
     break;
   case LibFunc_size_returning_new:
     NewCall = emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
                                           LibFunc_size_returning_new_hot_cold,
-                                          HotCold);
+                                          HotColdVal);
     break;
   case LibFunc_size_returning_new_hot_cold:
-    if (OptimizeExistingHotColdNew)
+    if (ShouldOptimizeExistingHotColdNew)
       NewCall = emitHotColdSizeReturningNew(CI->getArgOperand(0), B, TLI,
                                             LibFunc_size_returning_new_hot_cold,
-                                            HotCold);
+                                            getHotColdHintForExisting(HotCold));
     break;
   case LibFunc_size_returning_new_aligned:
     NewCall = emitHotColdSizeReturningNewAligned(
         CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-        LibFunc_size_returning_new_aligned_hot_cold, HotCold);
+        LibFunc_size_returning_new_aligned_hot_cold, HotColdVal);
     break;
   case LibFunc_size_returning_new_aligned_hot_cold:
-    if (OptimizeExistingHotColdNew)
+    if (ShouldOptimizeExistingHotColdNew)
       NewCall = emitHotColdSizeReturningNewAligned(
           CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
-          LibFunc_size_returning_new_aligned_hot_cold, HotCold);
+          LibFunc_size_returning_new_aligned_hot_cold,
+          getHotColdHintForExisting(HotCold));
     break;
   default:
     return nullptr;
@@ -4098,6 +4180,18 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_exp2:
   case LibFunc_exp2f:
     return optimizeExp2(CI, Builder);
+  case LibFunc_scalbn:
+  case LibFunc_scalbnf:
+  case LibFunc_scalbnl:
+    // LLVM floating-point types have radix 2, so scalbn is equivalent to
+    // ldexp. Do not replace a libcall that may set errno.
+    if (CI->doesNotAccessMemory()) {
+      Value *NewCall =
+          Builder.CreateLdexp(CI->getArgOperand(0), CI->getArgOperand(1), CI);
+      NewCall->takeName(CI);
+      return copyFlags(*CI, NewCall);
+    }
+    return nullptr;
   case LibFunc_fabsf:
   case LibFunc_fabs:
   case LibFunc_fabsl:

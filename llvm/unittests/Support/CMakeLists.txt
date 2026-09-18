@@ -57,6 +57,7 @@ add_llvm_unittest(SupportTests
   JobserverTest.cpp
   JSONTest.cpp
   KnownBitsTest.cpp
+  KnownFPClassTest.cpp
   LEB128Test.cpp
   LineIteratorTest.cpp
   LockFileManagerTest.cpp
@@ -161,3 +162,4 @@ if(NOT LLVM_INTEGRATED_CRT_ALLOC)
 endif()
 
 add_subdirectory(CommandLineInit)
+add_subdirectory(LLVMToolSession)

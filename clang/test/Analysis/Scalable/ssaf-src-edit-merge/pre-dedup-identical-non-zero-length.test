@@ -1,0 +1,28 @@
+# Identical non-zero-length replacements at the same (file, offset, length, text)
+# from two inputs collapse to ONE entry. The pre-existing identical-overlap.test
+# also covers this through library-side overlap detection; this test pins the
+# pre-dedup pass's contract that the dedup applies regardless of length.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+
+# Two inputs with byte-identical Length: 7 replacements at offset 10.
+# RUN: cp %S/Inputs/single-non-zero-length-replacement.tpl.yaml %t.dir/a.yaml
+# RUN: cp %S/Inputs/single-non-zero-length-replacement.tpl.yaml %t.dir/b.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml %t.dir/b.yaml
+
+# RUN: clang-ssaf-src-edit-merge -o %t.dir/merged.yaml %t.dir/a.yaml %t.dir/b.yaml \
+# RUN:   2> %t.dir/stderr.txt
+
+# Exactly ONE Replacement entry survived.
+# RUN: FileCheck --input-file=%t.dir/merged.yaml %s
+# CHECK: Replacements:
+# CHECK: Length:          7
+# CHECK-NEXT: ReplacementText: foo
+# CHECK-NOT: ReplacementText:
+# CHECK: ...
+
+# No tool-level conflict line.
+# RUN: FileCheck --input-file=%t.dir/stderr.txt --allow-empty --check-prefix=NOSTDERR %s
+# NOSTDERR-NOT: conflict:

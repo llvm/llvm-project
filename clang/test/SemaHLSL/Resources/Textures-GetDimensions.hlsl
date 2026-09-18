@@ -1,7 +1,20 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -finclude-default-header -fsyntax-only -DTEXTURE=Texture2D -verify %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -finclude-default-header -fsyntax-only -DTEXTURE=Texture2DArray -verify %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -finclude-default-header -fsyntax-only -DTEXTURE=RWTexture2D -verify %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -finclude-default-header -fsyntax-only -DTEXTURE=RWTexture2DArray -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
+// RUN:   -finclude-default-header -fsyntax-only -DTEXTURE=Texture2D -verify \
+// RUN:   %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
+// RUN:   -finclude-default-header -fsyntax-only -DTEXTURE=Texture2DArray \
+// RUN:   -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
+// RUN:   -finclude-default-header -fsyntax-only -DTEXTURE=RWTexture2D -verify \
+// RUN:   %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
+// RUN:   -finclude-default-header -fsyntax-only -DTEXTURE=RWTexture2DArray \
+// RUN:   -verify %s
+
+// Parameterized over the texture types in the RUN lines above; adding a texture
+// of another dimension only requires new RUN lines.
+//
+//   TEXTURE            resource type name
 
 TEXTURE<float4> tex;
 

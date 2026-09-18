@@ -66,9 +66,10 @@ class TestDAP_sendEvent(DAPTestCaseBase):
         process_event = session.launch(LaunchArgs(program, stopOnEntry=True))
 
         session.verify_stopped_on_entry(after=process_event)
-        expr_resp = session.do_evaluate("`lldb-dap send-event stopped").result()
+        error_resp = session.do_evaluate("`lldb-dap send-event stopped").error()
 
+        error = self.expect_not_none(error_resp.body and error_resp.body.error)
         self.assertRegex(
-            expr_resp.body.result,
+            error.format,
             r"Invalid use of lldb-dap send-event, event \"stopped\" should be handled by lldb-dap internally.",
         )

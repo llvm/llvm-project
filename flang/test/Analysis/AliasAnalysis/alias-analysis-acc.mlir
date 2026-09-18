@@ -79,7 +79,7 @@ func.func @testComputeRegionCopyinDistinctHostsInsideConvert() {
     %va = fir.convert %arg0 {test.ptr = "cr_dist_a"} : (!fir.ref<f32>) -> !fir.ref<f32>
     %vb = fir.convert %arg1 {test.ptr = "cr_dist_b"} : (!fir.ref<f32>) -> !fir.ref<f32>
     acc.yield
-  } {origin = "acc.kernels"}
+  } <{origin = "acc.kernels"}>
   return
 }
 
@@ -99,7 +99,7 @@ func.func @testComputeRegionCreateDistinctHostsInsideConvert() {
     %va = fir.convert %arg0 {test.ptr = "cr_crt_a"} : (!fir.ref<f32>) -> !fir.ref<f32>
     %vb = fir.convert %arg1 {test.ptr = "cr_crt_b"} : (!fir.ref<f32>) -> !fir.ref<f32>
     acc.yield
-  } {origin = "acc.kernels"}
+  } <{origin = "acc.kernels"}>
   return
 }
 
@@ -120,7 +120,7 @@ func.func @testComputeRegionCopyinTargetDummiesMayAliasInsideConvert(%arg0: !fir
     %va = fir.convert %cr0 {test.ptr = "cr_tgt_a"} : (!fir.ref<f32>) -> !fir.ref<f32>
     %vb = fir.convert %cr1 {test.ptr = "cr_tgt_b"} : (!fir.ref<f32>) -> !fir.ref<f32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -139,7 +139,7 @@ func.func @testComputeRegionCopyinSameHostMustAliasInsideConvert() {
     %va = fir.convert %arg0 {test.ptr = "cr_must_a"} : (!fir.ref<f32>) -> !fir.ref<f32>
     %vb = fir.convert %arg1 {test.ptr = "cr_must_b"} : (!fir.ref<f32>) -> !fir.ref<f32>
     acc.yield
-  } {origin = "acc.kernels"}
+  } <{origin = "acc.kernels"}>
   return
 }
 
@@ -241,7 +241,7 @@ func.func @testComputeRegionPrivateInsideConvert() {
     %va = fir.convert %arg0 {test.ptr = "cr_priv_a"} : (!fir.ref<f32>) -> !fir.ref<f32>
     %vb = fir.convert %arg1 {test.ptr = "cr_priv_b"} : (!fir.ref<f32>) -> !fir.ref<f32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -261,7 +261,7 @@ func.func @testComputeRegionCopyinVsPrivateSameHostNoAlias() {
     %va = fir.convert %arg0 {test.ptr = "cr_mix_cp"} : (!fir.ref<f32>) -> !fir.ref<f32>
     %vb = fir.convert %arg1 {test.ptr = "cr_mix_pr"} : (!fir.ref<f32>) -> !fir.ref<f32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -279,7 +279,7 @@ func.func @testComputeRegionCreateVsPrivateSameHostNoAlias() {
     %va = fir.convert %arg0 {test.ptr = "cr_mix_cr"} : (!fir.ref<f32>) -> !fir.ref<f32>
     %vb = fir.convert %arg1 {test.ptr = "cr_mix_pr2"} : (!fir.ref<f32>) -> !fir.ref<f32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -298,7 +298,7 @@ func.func @testComputeRegionCopyinVsFirstprivateSameHostNoAlias() {
     %va = fir.convert %arg0 {test.ptr = "cr_fp_cp"} : (!fir.ref<f32>) -> !fir.ref<f32>
     %vb = fir.convert %arg1 {test.ptr = "cr_fp_pr"} : (!fir.ref<f32>) -> !fir.ref<f32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -317,7 +317,7 @@ func.func @testComputeRegionCopyinVsFirstprivateMapSameHostNoAlias() {
     %va = fir.convert %arg0 {test.ptr = "cr_fpm_cp"} : (!fir.ref<f32>) -> !fir.ref<f32>
     %vb = fir.convert %arg1 {test.ptr = "cr_fpm_fm"} : (!fir.ref<f32>) -> !fir.ref<f32>
     acc.yield
-  } {origin = "acc.kernels"}
+  } <{origin = "acc.kernels"}>
   return
 }
 
@@ -411,7 +411,7 @@ func.func @testComputeRegionPrivateOpInsideVsInsCreateNoAlias() {
     %vb = fir.convert %pv {test.ptr = "cr_body_pr"} : (!fir.ref<f32>) -> !fir.ref<f32>
     %vc = fir.convert %arg0 {test.ptr = "cr_body_cr"} : (!fir.ref<f32>) -> !fir.ref<f32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -477,7 +477,7 @@ func.func @testComputeRegionReductionDistinctHostsInsideConvert() {
     %va = fir.convert %arg0 {test.ptr = "cr_red_a"} : (!fir.ref<f32>) -> !fir.ref<f32>
     %vb = fir.convert %arg1 {test.ptr = "cr_red_b"} : (!fir.ref<f32>) -> !fir.ref<f32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -511,7 +511,7 @@ func.func @testComputeRegionReductionVsPrivateSameHostNoAlias() {
     %va = fir.convert %arg0 {test.ptr = "cr_mix_rd"} : (!fir.ref<f32>) -> !fir.ref<f32>
     %vb = fir.convert %arg1 {test.ptr = "cr_mix_pr3"} : (!fir.ref<f32>) -> !fir.ref<f32>
     acc.yield
-  } {origin = "acc.kernels"}
+  } <{origin = "acc.kernels"}>
   return
 }
 
@@ -560,7 +560,7 @@ func.func @test_acc_routine__0(%arg0: !fir.ref<f32> {fir.bindc_name = "a"}, %arg
     %4 = fir.load %3 : !fir.ref<f32>
     fir.store %4 to %2 : !fir.ref<f32>
     acc.yield
-  } {origin = "acc.routine"}
+  } <{origin = "acc.routine"}>
   return
 }
 
@@ -585,7 +585,7 @@ func.func @test_acc_compute_region_box_load(%arg0: !fir.ref<!fir.box<!fir.heap<!
       %lx = fir.load %arg2 {test.ptr = "load_x"} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
       %ly = fir.load %arg3 {test.ptr = "load_y"} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
       acc.yield
-    } {origin = "acc.kernels"}
+    } <{origin = "acc.kernels"}>
   }
   return
 }
