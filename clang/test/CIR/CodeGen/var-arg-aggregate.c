@@ -384,9 +384,8 @@ struct OverAligned varargs_aggregate_overaligned(int count, ...) {
 // CIR:     cir.store %[[VAL]], %[[TEMP]] : !rec_OverAligned, !cir.ptr<!rec_OverAligned>
 // CIR:     %[[TEMP_B:.+]] = cir.cast bitcast %[[TEMP]] : !cir.ptr<!rec_OverAligned> -> !cir.ptr<!u8i>
 // CIR:     cir.yield %[[TEMP_B]] : !cir.ptr<!u8i>
-// CIR:     %[[MASK:.+]] = cir.const #cir.int<18446744073709551600> : !u64i
-// CIR:     %[[ROUNDED:.+]] = cir.and %{{.+}}, %[[MASK]] : !u64i
-// CIR:     %[[ALIGNED:.+]] = cir.cast int_to_ptr %[[ROUNDED]] : !u64i -> !cir.ptr<!u8i>
+// CIR:     %[[MASK:.+]] = cir.const #cir.int<-16> : !s64i
+// CIR:     %[[ALIGNED:.+]] = cir.ptr_mask %{{.+}}, %[[MASK]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR:     cir.yield %[[ALIGNED]] : !cir.ptr<!u8i>
 
 // LLVM-LABEL: define dso_local { i64, i64 } @varargs_aggregate_overaligned(i32 noundef %{{.*}}, ...)
@@ -399,8 +398,7 @@ struct OverAligned varargs_aggregate_overaligned(int count, ...) {
 // LLVMCIR: %[[VAL:.+]] = load %struct.OverAligned, ptr %{{.+}}, align 8
 // LLVMCIR: store %struct.OverAligned %[[VAL]], ptr %[[TEMP]], align 8
 // OGCG:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[TEMP:.+]], ptr align 8 %{{.+}}, i64 16, i1 false)
-// LLVMCIR: %[[ALIGNED:.+]] = inttoptr i64 %{{.+}} to ptr
-// OGCG:    %[[ALIGNED:.+]] = call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -16)
+// LLVM:   %[[ALIGNED:.+]] = call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -16)
 // LLVM:   %[[MEM_NEXT:.+]] = getelementptr i8, ptr %[[ALIGNED]], i{{32|64}} 16
 // LLVMCIR: %[[ADDR:.+]] = phi ptr [ %[[ALIGNED]], %{{.+}} ], [ %[[TEMP]], %{{.+}} ]
 // OGCG:    %[[ADDR:.+]] = phi ptr [ %[[TEMP]], %{{.+}} ], [ %[[ALIGNED]], %{{.+}} ]
@@ -425,8 +423,7 @@ long varargs_overaligned_union(int count, ...) {
 }
 
 // LLVM-LABEL: define dso_local {{.*}} @varargs_overaligned_union(
-// LLVMCIR:   and i64 %{{.+}}, -32
-// OGCG:      call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)
+// LLVM:      call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)
 
 struct FieldOverAligned {
   __attribute__((aligned(32))) char c;
@@ -442,8 +439,7 @@ long varargs_field_overaligned(int count, ...) {
 }
 
 // LLVM-LABEL: define dso_local {{.*}} @varargs_field_overaligned(
-// LLVMCIR:   and i64 %{{.+}}, -32
-// OGCG:      call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)
+// LLVM:      call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)
 
 struct HoldsOverAlignedUnion {
   union OverAlignedUnion u;
@@ -459,8 +455,7 @@ long varargs_holds_overaligned_union(int count, ...) {
 }
 
 // LLVM-LABEL: define dso_local {{.*}} @varargs_holds_overaligned_union(
-// LLVMCIR:   and i64 %{{.+}}, -32
-// OGCG:      call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)
+// LLVM:      call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)
 
 // Packing lowers the alignment the members imply, and an attribute can still
 // raise the record above it.
@@ -479,5 +474,4 @@ long varargs_packed_overaligned(int count, ...) {
 }
 
 // LLVM-LABEL: define dso_local {{.*}} @varargs_packed_overaligned(
-// LLVMCIR:   and i64 %{{.+}}, -32
-// OGCG:      call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)
+// LLVM:      call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)

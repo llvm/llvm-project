@@ -16,6 +16,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <array>
 #include <utility>
@@ -1590,19 +1591,19 @@ uint64_t argumentAreaAlign(mlir::Type ty, mlir::ModuleOp modOp,
   return align;
 }
 
-/// Rounds \p bytePtr up to \p align.  CIR has no pointer-mask op, so this
-/// leaves the pointer domain and comes back.
 mlir::Value roundPointerUpToAlignment(CIRBaseBuilderTy &b, mlir::Location loc,
-                                      mlir::Value bytePtr, uint64_t align) {
-  mlir::Type wordTy = b.getUIntNTy(64);
-  mlir::Value asInt =
-      cir::CastOp::create(b, loc, wordTy, cir::CastKind::ptr_to_int, bytePtr);
+                                      mlir::Value bytePtr, uint64_t align,
+                                      const mlir::DataLayout &dl) {
+  assert(llvm::isPowerOf2_64(align) &&
+         "mask rounding needs a power-of-two alignment");
   mlir::Value bumped =
-      b.createNUWAdd(loc, asInt, b.getConstantInt(loc, wordTy, align - 1));
-  mlir::Value rounded =
-      b.createAnd(loc, bumped, b.getConstantInt(loc, wordTy, ~(align - 1)));
-  return cir::CastOp::create(b, loc, bytePtr.getType(),
-                             cir::CastKind::int_to_ptr, rounded);
+      b.createPtrStride(loc, bytePtr, b.getSignedInt(loc, align - 1, 32));
+  std::optional<uint64_t> indexWidth =
+      dl.getTypeIndexBitwidth(bytePtr.getType());
+  assert(indexWidth && "a pointer in the argument area has an index width");
+  mlir::Value mask = b.getSignedInt(loc, -static_cast<int64_t>(align),
+                                    static_cast<unsigned>(*indexWidth));
+  return cir::PtrMaskOp::create(b, loc, bytePtr.getType(), bumped, mask);
 }
 
 /// Reads the argument's address out of the overflow area, which also advances
@@ -1616,7 +1617,7 @@ mlir::Value buildOverflowAddr(CIRBaseBuilderTy &b, const VAArgFetch &f) {
 
   uint64_t tyAlign = argumentAreaAlign(f.resultTy, f.module, f.dl);
   if (tyAlign > 8)
-    bytePtr = roundPointerUpToAlignment(b, f.loc, bytePtr, tyAlign);
+    bytePtr = roundPointerUpToAlignment(b, f.loc, bytePtr, tyAlign, f.dl);
 
   uint64_t tySize = f.dl.getTypeSize(f.resultTy).getFixedValue();
   uint64_t stride = (tySize + 7) & ~UINT64_C(7);
