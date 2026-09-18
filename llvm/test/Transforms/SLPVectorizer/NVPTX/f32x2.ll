@@ -6,17 +6,10 @@ target triple = "nvptx64-nvidia-cuda"
 define void @pair_f32_add(ptr %out, ptr %a, ptr %b) {
 ; CHECK-LABEL: @pair_f32_add(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A0:%.*]] = load float, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[A1P:%.*]] = getelementptr float, ptr [[A]], i64 1
-; CHECK-NEXT:    [[A1:%.*]] = load float, ptr [[A1P]], align 4
-; CHECK-NEXT:    [[B0:%.*]] = load float, ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[B1P:%.*]] = getelementptr float, ptr [[B]], i64 1
-; CHECK-NEXT:    [[B1:%.*]] = load float, ptr [[B1P]], align 4
-; CHECK-NEXT:    [[R0:%.*]] = fadd float [[A0]], [[B0]]
-; CHECK-NEXT:    [[R1:%.*]] = fadd float [[A1]], [[B1]]
-; CHECK-NEXT:    store float [[R0]], ptr [[OUT:%.*]], align 8
-; CHECK-NEXT:    [[OUT1:%.*]] = getelementptr float, ptr [[OUT]], i64 1
-; CHECK-NEXT:    store float [[R1]], ptr [[OUT1]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -37,17 +30,10 @@ entry:
 define void @pair_f32_sub(ptr %out, ptr %a, ptr %b) {
 ; CHECK-LABEL: @pair_f32_sub(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A0:%.*]] = load float, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[A1P:%.*]] = getelementptr float, ptr [[A]], i64 1
-; CHECK-NEXT:    [[A1:%.*]] = load float, ptr [[A1P]], align 4
-; CHECK-NEXT:    [[B0:%.*]] = load float, ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[B1P:%.*]] = getelementptr float, ptr [[B]], i64 1
-; CHECK-NEXT:    [[B1:%.*]] = load float, ptr [[B1P]], align 4
-; CHECK-NEXT:    [[R0:%.*]] = fsub float [[A0]], [[B0]]
-; CHECK-NEXT:    [[R1:%.*]] = fsub float [[A1]], [[B1]]
-; CHECK-NEXT:    store float [[R0]], ptr [[OUT:%.*]], align 8
-; CHECK-NEXT:    [[OUT1:%.*]] = getelementptr float, ptr [[OUT]], i64 1
-; CHECK-NEXT:    store float [[R1]], ptr [[OUT1]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x float> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -68,17 +54,10 @@ entry:
 define void @pair_f32_mul(ptr %out, ptr %a, ptr %b) {
 ; CHECK-LABEL: @pair_f32_mul(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A0:%.*]] = load float, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[A1P:%.*]] = getelementptr float, ptr [[A]], i64 1
-; CHECK-NEXT:    [[A1:%.*]] = load float, ptr [[A1P]], align 4
-; CHECK-NEXT:    [[B0:%.*]] = load float, ptr [[B:%.*]], align 8
-; CHECK-NEXT:    [[B1P:%.*]] = getelementptr float, ptr [[B]], i64 1
-; CHECK-NEXT:    [[B1:%.*]] = load float, ptr [[B1P]], align 4
-; CHECK-NEXT:    [[R0:%.*]] = fmul float [[A0]], [[B0]]
-; CHECK-NEXT:    [[R1:%.*]] = fmul float [[A1]], [[B1]]
-; CHECK-NEXT:    store float [[R0]], ptr [[OUT:%.*]], align 8
-; CHECK-NEXT:    [[OUT1:%.*]] = getelementptr float, ptr [[OUT]], i64 1
-; CHECK-NEXT:    store float [[R1]], ptr [[OUT1]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -99,14 +78,11 @@ entry:
 define void @pair_f32_splat(ptr %out, ptr %a, float %x) {
 ; CHECK-LABEL: @pair_f32_splat(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A0:%.*]] = load float, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[A1P:%.*]] = getelementptr float, ptr [[A]], i64 1
-; CHECK-NEXT:    [[A1:%.*]] = load float, ptr [[A1P]], align 4
-; CHECK-NEXT:    [[R0:%.*]] = fmul float [[A0]], [[X:%.*]]
-; CHECK-NEXT:    [[R1:%.*]] = fmul float [[A1]], [[X]]
-; CHECK-NEXT:    store float [[R0]], ptr [[OUT:%.*]], align 8
-; CHECK-NEXT:    [[OUT1:%.*]] = getelementptr float, ptr [[OUT]], i64 1
-; CHECK-NEXT:    store float [[R1]], ptr [[OUT1]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -124,14 +100,9 @@ entry:
 define void @pair_f32_constant_splat(ptr %out, ptr %a) {
 ; CHECK-LABEL: @pair_f32_constant_splat(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A0:%.*]] = load float, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[A1P:%.*]] = getelementptr float, ptr [[A]], i64 1
-; CHECK-NEXT:    [[A1:%.*]] = load float, ptr [[A1P]], align 4
-; CHECK-NEXT:    [[R0:%.*]] = fadd float [[A0]], 4.000000e+00
-; CHECK-NEXT:    [[R1:%.*]] = fadd float [[A1]], 4.000000e+00
-; CHECK-NEXT:    store float [[R0]], ptr [[OUT:%.*]], align 8
-; CHECK-NEXT:    [[OUT1:%.*]] = getelementptr float, ptr [[OUT]], i64 1
-; CHECK-NEXT:    store float [[R1]], ptr [[OUT1]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[TMP0]], splat (float 4.000000e+00)
+; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -149,17 +120,14 @@ entry:
 define void @pair_f32_loaded_splat_used(ptr %out, ptr %a, ptr %xp) {
 ; CHECK-LABEL: @pair_f32_loaded_splat_used(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = load float, ptr [[XP:%.*]], align 4
-; CHECK-NEXT:    [[A0:%.*]] = load float, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[A1P:%.*]] = getelementptr float, ptr [[A]], i64 1
-; CHECK-NEXT:    [[A1:%.*]] = load float, ptr [[A1P]], align 4
-; CHECK-NEXT:    [[R0:%.*]] = fmul float [[A0]], [[X]]
-; CHECK-NEXT:    [[R1:%.*]] = fmul float [[A1]], [[X]]
-; CHECK-NEXT:    store float [[R0]], ptr [[OUT:%.*]], align 8
-; CHECK-NEXT:    [[OUT1:%.*]] = getelementptr float, ptr [[OUT]], i64 1
-; CHECK-NEXT:    store float [[R1]], ptr [[OUT1]], align 4
+; CHECK-NEXT:    [[A1:%.*]] = load float, ptr [[A1P:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[A1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    [[OUT2:%.*]] = getelementptr float, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store float [[X]], ptr [[OUT2]], align 4
+; CHECK-NEXT:    store float [[A1]], ptr [[OUT2]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
