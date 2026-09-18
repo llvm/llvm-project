@@ -113,6 +113,11 @@ static cl::opt<unsigned> FusionMinReusedValues(
     "loop-fusion-min-reused-values", cl::Hidden, cl::init(1),
     cl::desc("Minimum number of distinct values reused across fused loops"));
 
+static cl::opt<bool> FusionDisableCostModel(
+    "loop-fusion-disable-cost-model", cl::Hidden, cl::init(false),
+    cl::desc("Do not apply cost model when deciding whether "
+             "to fuse loops"));
+
 #ifndef NDEBUG
 static cl::opt<bool>
     VerboseFusionDebugging("loop-fusion-verbose-debug",
@@ -690,6 +695,8 @@ private:
 
   /// Determine if it is beneficial to fuse two loops.
   bool isBeneficialFusion(unsigned ReusedValueCount) const {
+    if (FusionDisableCostModel)
+      return true;
     return ReusedValueCount >= FusionMinReusedValues;
   }
 
@@ -1396,7 +1403,7 @@ private:
           return false;
         }
 
-    if (ReusedValues)
+    if (ReusedValues && !FusionDisableCostModel)
       collectReadReadReuse(FC0, FC1, *ReusedValues);
 
     return true;

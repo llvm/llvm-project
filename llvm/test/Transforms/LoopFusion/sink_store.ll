@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=loop-simplify,loop-fusion -loop-fusion-min-reused-values=0 -debug-only=loop-fusion < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=loop-simplify,loop-fusion -loop-fusion-disable-cost-model -debug-only=loop-fusion < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 @A = common global [100 x i32] zeroinitializer, align 16
