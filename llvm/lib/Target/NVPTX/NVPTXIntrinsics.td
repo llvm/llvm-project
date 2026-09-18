@@ -3027,28 +3027,21 @@ foreach rnd = ["rn", "rz"] in {
   }
 }
 
-foreach relu = ["", "_relu"] in {
-  defvar BaseMode = !cast<PatLeaf>("CvtRS" # !toupper(relu));
-
-  foreach pzo = [0, 1] in {
-    defvar PZO = !if(pzo, -1, 0);
-    defvar Mode = CvtModeWithPZO<BaseMode, pzo>.Value;
-    defvar Preds =
-      !listconcat(
-        [hasConvertWithStochasticRounding]<Predicate>, 
-        !if(pzo, [hasConvertWithPZOSupport]<Predicate>, []<Predicate>));
+let Predicates = [hasConvertWithStochasticRounding] in {
+  foreach relu = ["", "_relu"] in {
+    defvar Mode = !cast<PatLeaf>("CvtRS" # !toupper(relu));
 
     defvar BF16X2 = ToCvtIntrinsics<"ff2bf16x2_rs" # relu>;
     defvar F16X2 = ToCvtIntrinsics<"ff2f16x2_rs" # relu>;
 
-    def : Pat<(BF16X2.base f32:$a, f32:$b, i32:$c, PZO),
-              (CVT_bf16x2_f32_rs $a, $b, $c, Mode)>, Requires<Preds>;
-    def : Pat<(BF16X2.sf f32:$a, f32:$b, i32:$c, PZO),
-              (CVT_bf16x2_f32_rs_sf $a, $b, $c, Mode)>, Requires<Preds>;
-    def : Pat<(F16X2.base f32:$a, f32:$b, i32:$c, PZO),
-              (CVT_f16x2_f32_rs $a, $b, $c, Mode)>, Requires<Preds>;
-    def : Pat<(F16X2.sf f32:$a, f32:$b, i32:$c, PZO),
-              (CVT_f16x2_f32_rs_sf $a, $b, $c, Mode)>, Requires<Preds>;
+    def : Pat<(BF16X2.base f32:$a, f32:$b, i32:$c),
+              (CVT_bf16x2_f32_rs $a, $b, $c, Mode)>;
+    def : Pat<(BF16X2.sf f32:$a, f32:$b, i32:$c),
+              (CVT_bf16x2_f32_rs_sf $a, $b, $c, Mode)>;
+    def : Pat<(F16X2.base f32:$a, f32:$b, i32:$c),
+              (CVT_f16x2_f32_rs $a, $b, $c, Mode)>;
+    def : Pat<(F16X2.sf f32:$a, f32:$b, i32:$c),
+              (CVT_f16x2_f32_rs_sf $a, $b, $c, Mode)>;
   }
 }
 
