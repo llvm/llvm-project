@@ -106,8 +106,8 @@ body:             |
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
     ; GFX1250-NEXT: early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 32 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
-    ; GFX1250-NEXT: renamable $vgpr1 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX1250-NEXT: renamable $vgpr0 = V_AND_B32_e32 1023, killed $vgpr0, implicit $exec
+    ; GFX1250-NEXT: $sgpr2 = S_MOV_B32 1023
+    ; GFX1250-NEXT: renamable $vgpr1, renamable $vgpr0 = V_DUAL_MOV_B32_e32_X_BITOP2_B32_e64_e96_gfx1250 0, $sgpr2, killed $vgpr0, 64, implicit $exec, implicit $exec, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr4 = V_ADD_U32_e64 -256, 0, 0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr2_vgpr3 = V_ADD_U64_e32 $sgpr0_sgpr1, $vgpr0_vgpr1, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr2_vgpr3 = V_ADD_U64_e32 256, killed $vgpr2_vgpr3, implicit $exec

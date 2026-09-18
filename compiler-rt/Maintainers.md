@@ -25,6 +25,11 @@ peter@pcc.me.uk (email), [pcc](https://github.com/pcc) (GitHub)
 Petr Hosek \
 phosek@google.com (email), [petrhosek](https://github.com/petrhosek) (GitHub)
 
+### CopyProf
+
+Snehasish Kumar \
+snehasishk@google.com (email), [snehasish](https://github.com/snehasish) (GitHub)
+
 ### CRT
 
 Petr Hosek \
