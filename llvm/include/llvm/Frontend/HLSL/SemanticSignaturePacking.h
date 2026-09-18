@@ -79,9 +79,10 @@ packSignatureStacked(MutableArrayRef<SemanticSignatureElement> Elements,
 /// one reported by the returned SignaturePackingError keep the locations
 /// they were assigned, while that element and the ones following it retain the
 /// unallocated row and column sentinels.
-LLVM_ABI Expected<unsigned> packSignaturePrefixStable(
-    MutableArrayRef<SemanticSignatureElement> Elements,
-    Triple::EnvironmentType ShaderStage, IOType IOTy, bool UseNative16BitTypes);
+LLVM_ABI Expected<unsigned>
+packSignaturePrefixStable(MutableArrayRef<SemanticSignatureElement> Elements,
+                          Triple::EnvironmentType ShaderStage, IOType IOTy,
+                          bool UseNative16BitTypes);
 
 } // namespace llvm::hlsl
 

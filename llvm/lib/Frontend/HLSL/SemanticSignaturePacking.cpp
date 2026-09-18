@@ -408,6 +408,11 @@ Expected<unsigned> llvm::hlsl::packSignaturePrefixStable(
     MutableArrayRef<SemanticSignatureElement> Elements,
     Triple::EnvironmentType ShaderStage, IOType IOTy,
     bool UseNative16BitTypes) {
+  assert(!(ShaderStage == Triple::Vertex && IOTy == IOType::In) &&
+         !(ShaderStage == Triple::Pixel && IOTy == IOType::Out) &&
+         "prefix-stable packing is not valid for vertex inputs or pixel "
+         "outputs");
+
   // Only a geometry shader output signature packs its streams independently.
   const unsigned StreamCount =
       ShaderStage == Triple::EnvironmentType::Geometry && IOTy == IOType::Out

@@ -83,10 +83,9 @@ protected:
     return Elements;
   }
 
-  Expected<unsigned>
-  pack(PackingMethod Method,
-       SmallVectorImpl<SemanticSignatureElement> &Elements,
-       const TestConfig &Config) {
+  Expected<unsigned> pack(PackingMethod Method,
+                          SmallVectorImpl<SemanticSignatureElement> &Elements,
+                          const TestConfig &Config) {
     switch (Method) {
     case PackingMethod::Stacked:
       return packSignatureStacked(Elements, Config.ShaderStage, Config.IOTy);
@@ -182,8 +181,10 @@ TEST_F(HLSLSemanticSignaturePackingTest, EmptySignature) {
   TestConfig Config(Triple::EnvironmentType::Vertex, IOType::Out, {});
 
   for (PackingMethod Method :
-       {PackingMethod::Stacked, PackingMethod::PrefixStable})
+       {PackingMethod::Stacked, PackingMethod::PrefixStable}) {
+    Config.IOTy = Method == PackingMethod::Stacked ? IOType::In : IOType::Out;
     verifyPacking(Method, Config, /*ExpectedRows=*/0, {});
+  }
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, SkipsNotAllocatedElements) {
@@ -209,6 +210,12 @@ TEST_F(HLSLSemanticSignaturePackingTest, SkipsNotAllocatedElements) {
   // reg0: A.xy  | unused.zw
   // reg1: B.xyz | unused.w
   verifyPacking(PackingMethod::Stacked, Config, /*ExpectedRows=*/2,
+                {{/*Row=*/0, /*Col=*/0}, Unallocated, {/*Row=*/1, /*Col=*/0}});
+
+  // ViewID is also not allocated in pixel inputs. The surrounding elements
+  // still use the same rows when packed prefix-stably.
+  Config.ShaderStage = Triple::Pixel;
+  verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/2,
                 {{/*Row=*/0, /*Col=*/0}, Unallocated, {/*Row=*/1, /*Col=*/0}});
 }
 
@@ -271,8 +278,9 @@ TEST_F(HLSLSemanticSignaturePackingTest, CoPackingDependsOnMethod) {
                  {/*Row=*/2, /*Col=*/0},
                  {/*Row=*/3, /*Col=*/0}});
 
-  // Prefix-stable layout:
+  // Prefix-stable layout for the corresponding vertex output signature:
   // reg0: A.x | B.y | C.z | D.w
+  Config.IOTy = IOType::Out;
   verifyPacking(PackingMethod::PrefixStable, Config, /*ExpectedRows=*/1,
                 {{/*Row=*/0, /*Col=*/0},
                  {/*Row=*/0, /*Col=*/1},
@@ -324,9 +332,11 @@ TEST_F(HLSLSemanticSignaturePackingTest, ExactlyFillsSignature) {
   // Expected layout:
   // reg0-31: A[0-31].xyzw
   for (PackingMethod Method :
-       {PackingMethod::Stacked, PackingMethod::PrefixStable})
+       {PackingMethod::Stacked, PackingMethod::PrefixStable}) {
+    Config.IOTy = Method == PackingMethod::Stacked ? IOType::In : IOType::Out;
     verifyPacking(Method, Config, /*ExpectedRows=*/MaxSignatureRows,
                   {{/*Row=*/0, /*Col=*/0}});
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -350,9 +360,11 @@ TEST_F(HLSLSemanticSignaturePackingTest, RejectsSignatureOverflow) {
 
   // The last element is the one that no longer fits.
   for (PackingMethod Method :
-       {PackingMethod::Stacked, PackingMethod::PrefixStable})
+       {PackingMethod::Stacked, PackingMethod::PrefixStable}) {
+    Config.IOTy = Method == PackingMethod::Stacked ? IOType::In : IOType::Out;
     verifyPackingError(Method, Config, SignaturePackingError::SignatureOverflow,
                        /*ExpectedElementIndex=*/MaxSignatureRows);
+  }
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, RejectsSingleElementOverflow) {
@@ -368,9 +380,11 @@ TEST_F(HLSLSemanticSignaturePackingTest, RejectsSingleElementOverflow) {
                       dxbc::PSV::InterpolationMode::Linear}});
 
   for (PackingMethod Method :
-       {PackingMethod::Stacked, PackingMethod::PrefixStable})
+       {PackingMethod::Stacked, PackingMethod::PrefixStable}) {
+    Config.IOTy = Method == PackingMethod::Stacked ? IOType::In : IOType::Out;
     verifyPackingError(Method, Config, SignaturePackingError::SignatureOverflow,
                        /*ExpectedElementIndex=*/0);
+  }
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest, RejectsMultiRowSignatureOverflow) {
@@ -389,9 +403,11 @@ TEST_F(HLSLSemanticSignaturePackingTest, RejectsMultiRowSignatureOverflow) {
                       dxbc::PSV::InterpolationMode::Linear}});
 
   for (PackingMethod Method :
-       {PackingMethod::Stacked, PackingMethod::PrefixStable})
+       {PackingMethod::Stacked, PackingMethod::PrefixStable}) {
+    Config.IOTy = Method == PackingMethod::Stacked ? IOType::In : IOType::Out;
     verifyPackingError(Method, Config, SignaturePackingError::SignatureOverflow,
                        /*ExpectedElementIndex=*/1);
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -1326,10 +1342,10 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableRejectsClipCullOverflow) {
                      /*ExpectedElementIndex=*/2);
 
   SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
-  EXPECT_THAT_EXPECTED(
-      pack(PackingMethod::PrefixStable, Elements, Config),
-      FailedWithMessage("clip/cull elements do not fit in " +
-                        std::to_string(MaxClipCullRows) + " rows (element 2)"));
+  EXPECT_THAT_EXPECTED(pack(PackingMethod::PrefixStable, Elements, Config),
+                       FailedWithMessage("clip/cull elements do not fit in " +
+                                         std::to_string(MaxClipCullRows) +
+                                         " rows (element 2)"));
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest,
@@ -1355,10 +1371,11 @@ TEST_F(HLSLSemanticSignaturePackingTest,
 // Prefix-stable failure state tests
 //===----------------------------------------------------------------------===//
 
-TEST_F(HLSLSemanticSignaturePackingTest, PrefixStablePreservesPartialAllocation) {
+TEST_F(HLSLSemanticSignaturePackingTest,
+       PrefixStablePreservesPartialAllocation) {
   for (bool IsClipCull : {false, true}) {
     const auto Kind = IsClipCull ? dxbc::PSV::SemanticKind::ClipDistance
-                                : dxbc::PSV::SemanticKind::Arbitrary;
+                                 : dxbc::PSV::SemanticKind::Arbitrary;
     const unsigned RowCount = IsClipCull ? MaxClipCullRows : MaxSignatureRows;
     TestConfig Config(
         Triple::Vertex, IOType::Out,
