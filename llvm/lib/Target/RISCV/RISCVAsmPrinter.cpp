@@ -649,6 +649,9 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const MDString *ModuleTargetABI =
           dyn_cast_or_null<MDString>(M.getModuleFlag("target-abi")))
     RTS.setTargetABI(RISCVABI::getTargetABI(ModuleTargetABI->getString()));
+  else if (!RTS.hasTargetABI())
+    RTS.setTargetABI(
+        cantFail(RISCVABI::computeTargetABI(TM.getMCSubtargetInfo(), "")));
 
   MCSubtargetInfo SubtargetInfo = TM.getMCSubtargetInfo();
 
@@ -1342,6 +1345,13 @@ MaybeAlign
 RISCVAsmPrinter::getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) {
   const MCSubtargetInfo &MCSTI = TM.getMCSubtargetInfo();
   if (!GV.getValueType()->isSized())
+    return std::nullopt;
+
+  // When the alignment granule is determined by a CHERI requirement,
+  // don't increase alignment if a custom section has been specified,
+  // as doing so can break existing code that relies on the lack of
+  // padding (e.g. linker sets).
+  if (GV.hasSection())
     return std::nullopt;
 
   uint64_t Size = GV.getGlobalSize(getDataLayout());
