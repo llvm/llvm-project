@@ -80,9 +80,8 @@ static bool isRelevantOperand(const Instruction *I, unsigned OpNo) {
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
       case Intrinsic::umin:
-      case Intrinsic::umax: {
-        return OpNo < 2;
-      }
+      case Intrinsic::umax:
+        return true;
       default:
         break;
       }
