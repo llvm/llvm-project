@@ -136,9 +136,7 @@ class Returned<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
-// DefaultValue - A value carrier paired with ImmArg to declare a default for
-// a missing trailing argument. AutoUpgrade fills the default when an old
-// .bc / .ll file is loaded.
+// Default value for a trailing ImmArg, materialized by AutoUpgrade.
 class DefaultValue<int val> {
   int Value = val;
 }
@@ -1647,6 +1645,10 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]
       [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_pdep : DefaultAttrsIntrinsic<[llvm_anyint_ty],
       [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_smulh : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+      [LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_umulh : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+      [LLVMMatchType<0>, LLVMMatchType<0>]>;
 }
 
 let IntrProperties = [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>] in {
@@ -1986,7 +1988,7 @@ def int_coro_id_retcon_once : Intrinsic<[llvm_token_ty],
     [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty,
      llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
     []>;
-def int_coro_alloc : Intrinsic<[llvm_i1_ty], [llvm_token_ty], []>;
+def int_coro_alloc : Intrinsic<[llvm_i1_ty], [llvm_token_ty], [IntrNoMem]>;
 def int_coro_id_async : Intrinsic<[llvm_token_ty],
   [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty],
   []>;
@@ -2007,10 +2009,10 @@ def int_coro_suspend_async
 def int_coro_prepare_async : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
                                        [IntrNoMem]>;
 def int_coro_begin : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
-                               [WriteOnly<ArgIndex<1>>]>;
+                               [IntrArgMemOnly, WriteOnly<ArgIndex<1>>]>;
 def int_coro_begin_custom_abi : Intrinsic<[llvm_ptr_ty],
                                   [llvm_token_ty, llvm_ptr_ty, llvm_i32_ty],
-                                  [WriteOnly<ArgIndex<1>>]>;
+                                  [IntrArgMemOnly, WriteOnly<ArgIndex<1>>]>;
 def int_coro_free : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
                               [IntrReadMem, IntrArgMemOnly,
                                ReadOnly<ArgIndex<1>>,
@@ -2499,6 +2501,19 @@ def int_masked_srem:
              LLVMMatchType<0>,
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
             [IntrNoMem]>;
+
+// Speculatively load a value from memory.
+def int_speculative_load:
+  DefaultAttrsIntrinsic<[llvm_any_ty],
+            [llvm_anyptr_ty, llvm_i1_ty, llvm_vararg_ty],
+            [IntrReadMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>,
+             ImmArg<ArgIndex<1>>]>;
+
+// Returns true if it's safe to speculatively load 'num_bytes' from 'ptr'.
+def int_can_load_speculatively:
+  DefaultAttrsIntrinsic<[llvm_i1_ty],
+            [llvm_anyptr_ty, llvm_i64_ty],
+            [IntrNoMem, IntrSpeculatable]>;
 
 // Test whether a pointer is associated with a type metadata identifier.
 def int_type_test : DefaultAttrsIntrinsic<[llvm_i1_ty],

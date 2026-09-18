@@ -93,6 +93,10 @@ dropSgLayoutAndDataOnAttrs(ArrayRef<NamedAttribute> attrs);
 /// any DistributeLayoutAttr found.
 SmallVector<NamedAttribute> dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs);
 
+/// Drops inst-data information from DistributeLayoutAttrs stored as inherent
+/// attributes on the operation.
+void dropInstDataOnInherentAttrs(Operation *op);
+
 //===----------------------------------------------------------------------===//
 // Backward layout inference (result layout -> source layout)
 //===----------------------------------------------------------------------===//
@@ -165,12 +169,6 @@ DistributeLayoutAttr inferInsertSourceLayout(DistributeLayoutAttr resLayout,
 DistributeLayoutAttr inferExtractSourceLayout(DistributeLayoutAttr resLayout,
                                               ArrayRef<int64_t> resShape,
                                               ArrayRef<int64_t> srcShape);
-
-/// Infers the layout attribute for mask and offset operand for Chunked load
-/// and store, given the anchor layout attribute for the value being load/store.
-DistributeLayoutAttr
-inferMaskOffsetLayoutForScatterIO(DistributeLayoutAttr payloadLayout,
-                                  int chunkSize);
 
 /// Infers the source layout attribute for an operand using result layout
 /// attribute
@@ -277,6 +275,8 @@ DistributeLayoutAttr setupInsertStridedSliceResultLayout(
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a load gather operation.
+/// `contigChunkSize` is the per-lane contiguous run the offsets allow, from
+/// the op's `contiguity` attribute (1 when it is absent).
 DistributeLayoutAttr setupLoadGatherAnchorLayout(
     LayoutKind layoutKind, VectorType vectorTy, int contigChunkSize,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
@@ -287,6 +287,8 @@ DistributeLayoutAttr setupLoadMatrixAnchorLayout(
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a store scatter operation.
+/// `contigChunkSize` is the per-lane contiguous run the offsets allow, from
+/// the op's `contiguity` attribute (1 when it is absent).
 /// `numSg` is only used for Subgroup-kind layouts.
 DistributeLayoutAttr setupStoreScatterAnchorLayout(LayoutKind layoutKind,
                                                    VectorType vectorTy,

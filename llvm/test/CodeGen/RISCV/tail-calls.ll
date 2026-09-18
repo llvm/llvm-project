@@ -24,12 +24,12 @@ define i32 @caller_tail(i32 %i) nounwind {
 ; CHECK-CF-RV32-LABEL: caller_tail:
 ; CHECK-CF-RV32:       # %bb.0: # %entry
 ; CHECK-CF-RV32-NEXT:    lpad 0
-; CHECK-CF-RV32-NEXT:    tail callee_tail
+; CHECK-CF-RV32-NEXT:    tail callee_tail, t2
 ;
 ; CHECK-CF-RV64-LABEL: caller_tail:
 ; CHECK-CF-RV64:       # %bb.0: # %entry
 ; CHECK-CF-RV64-NEXT:    lpad 0
-; CHECK-CF-RV64-NEXT:    tail callee_tail
+; CHECK-CF-RV64-NEXT:    tail callee_tail, t2
 ;
 ; CHECK-CF-RV32-LARGE-LABEL: caller_tail:
 ; CHECK-CF-RV32-LARGE:       # %bb.0: # %entry
@@ -640,7 +640,7 @@ define void @caller_indirect_args() nounwind {
 ; CHECK-CF-RV64-NEXT:    lui a1, 16383
 ; CHECK-CF-RV64-NEXT:    slli a1, a1, 36
 ; CHECK-CF-RV64-NEXT:    li a0, 0
-; CHECK-CF-RV64-NEXT:    tail callee_indirect_args
+; CHECK-CF-RV64-NEXT:    tail callee_indirect_args, t2
 ;
 ; CHECK-CF-RV32-LARGE-LABEL: caller_indirect_args:
 ; CHECK-CF-RV32-LARGE:       # %bb.0: # %entry
@@ -701,12 +701,12 @@ define void @caller_weak() nounwind {
 ; CHECK-CF-RV32-LABEL: caller_weak:
 ; CHECK-CF-RV32:       # %bb.0: # %entry
 ; CHECK-CF-RV32-NEXT:    lpad 0
-; CHECK-CF-RV32-NEXT:    tail callee_weak
+; CHECK-CF-RV32-NEXT:    tail callee_weak, t2
 ;
 ; CHECK-CF-RV64-LABEL: caller_weak:
 ; CHECK-CF-RV64:       # %bb.0: # %entry
 ; CHECK-CF-RV64-NEXT:    lpad 0
-; CHECK-CF-RV64-NEXT:    tail callee_weak
+; CHECK-CF-RV64-NEXT:    tail callee_weak, t2
 ;
 ; CHECK-CF-RV32-LARGE-LABEL: caller_weak:
 ; CHECK-CF-RV32-LARGE:       # %bb.0: # %entry
@@ -1264,13 +1264,13 @@ define i32 @duplicate_returns(i32 %a, i32 %b) nounwind {
 ; CHECK-CF-RV32-NEXT:  # %bb.2: # %if.else4
 ; CHECK-CF-RV32-NEXT:    bge a1, a0, .LBB14_6
 ; CHECK-CF-RV32-NEXT:  # %bb.3: # %if.then6
-; CHECK-CF-RV32-NEXT:    tail test2
+; CHECK-CF-RV32-NEXT:    tail test2, t2
 ; CHECK-CF-RV32-NEXT:  .LBB14_4: # %if.then
-; CHECK-CF-RV32-NEXT:    tail test
+; CHECK-CF-RV32-NEXT:    tail test, t2
 ; CHECK-CF-RV32-NEXT:  .LBB14_5: # %if.then2
-; CHECK-CF-RV32-NEXT:    tail test1
+; CHECK-CF-RV32-NEXT:    tail test1, t2
 ; CHECK-CF-RV32-NEXT:  .LBB14_6: # %if.else8
-; CHECK-CF-RV32-NEXT:    tail test3
+; CHECK-CF-RV32-NEXT:    tail test3, t2
 ;
 ; CHECK-CF-RV64-LABEL: duplicate_returns:
 ; CHECK-CF-RV64:       # %bb.0: # %entry
@@ -1283,13 +1283,13 @@ define i32 @duplicate_returns(i32 %a, i32 %b) nounwind {
 ; CHECK-CF-RV64-NEXT:  # %bb.2: # %if.else4
 ; CHECK-CF-RV64-NEXT:    bge a1, a0, .LBB14_6
 ; CHECK-CF-RV64-NEXT:  # %bb.3: # %if.then6
-; CHECK-CF-RV64-NEXT:    tail test2
+; CHECK-CF-RV64-NEXT:    tail test2, t2
 ; CHECK-CF-RV64-NEXT:  .LBB14_4: # %if.then
-; CHECK-CF-RV64-NEXT:    tail test
+; CHECK-CF-RV64-NEXT:    tail test, t2
 ; CHECK-CF-RV64-NEXT:  .LBB14_5: # %if.then2
-; CHECK-CF-RV64-NEXT:    tail test1
+; CHECK-CF-RV64-NEXT:    tail test1, t2
 ; CHECK-CF-RV64-NEXT:  .LBB14_6: # %if.else8
-; CHECK-CF-RV64-NEXT:    tail test3
+; CHECK-CF-RV64-NEXT:    tail test3, t2
 ;
 ; CHECK-CF-RV32-LARGE-LABEL: duplicate_returns:
 ; CHECK-CF-RV32-LARGE:       # %bb.0: # %entry

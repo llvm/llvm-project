@@ -264,7 +264,6 @@ LANGOPT(GPUAllowDeviceInit, 1, 0, NotCompatible, "allowing device side global in
 LANGOPT(GPUMaxThreadsPerBlock, 32, 1024, NotCompatible, "default max threads per block for kernel launch bounds for HIP")
 LANGOPT(GPUDeferDiag, 1, 0, NotCompatible, "defer host/device related diagnostic messages for CUDA/HIP")
 LANGOPT(GPUExcludeWrongSideOverloads, 1, 0, NotCompatible, "always exclude wrong side overloads in overloading resolution for CUDA/HIP")
-LANGOPT(OffloadingNewDriver, 1, 0, NotCompatible, "use the new driver for generating offloading code.")
 LANGOPT(OffloadViaLLVM, 1, 0, NotCompatible, "target LLVM/Offload as portable offloading runtime.")
 LANGOPT(CUDANVCCABI, 1, 0, NotCompatible, "emit the NVCC-compatible host registration ABI for CUDA")
 
@@ -404,6 +403,8 @@ ENUM_LANGOPT(VtorDispMode, MSVtorDispMode, 2, MSVtorDispMode::ForVBaseOverride, 
 LANGOPT(ApplePragmaPack, 1, 0, NotCompatible, "Apple gcc-compatible #pragma pack handling")
 
 LANGOPT(XLPragmaPack, 1, 0, NotCompatible, "IBM XL #pragma pack handling")
+
+LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, Compatible, "retain documentation comments from system headers in the AST")
 
 LANGOPT(APINotes, 1, 0, NotCompatible, "use external API notes")
 LANGOPT(APINotesModules, 1, 0, NotCompatible, "use module-based external API notes")

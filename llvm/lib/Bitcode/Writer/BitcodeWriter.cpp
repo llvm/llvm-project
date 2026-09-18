@@ -579,12 +579,12 @@ public:
   void forEachSummary(Functor Callback) {
     if (ModuleToSummariesForIndex) {
       for (auto &M : *ModuleToSummariesForIndex)
-        for (auto &Summary : M.second) {
-          Callback(Summary, false);
+        for (auto &[GUID, GVS] : M.second) {
+          Callback({GUID, GVS}, false);
           // Ensure aliasee is handled, e.g. for assigning a valueId,
           // even if we are not importing the aliasee directly (the
           // imported alias will contain a copy of aliasee).
-          if (auto *AS = dyn_cast<AliasSummary>(Summary.getSecond()))
+          if (auto *AS = dyn_cast<AliasSummary>(GVS))
             Callback({AS->getAliaseeGUID(), &AS->getAliasee()}, true);
         }
     } else {
@@ -1859,6 +1859,9 @@ static uint64_t getOptimizationFlags(const Value *V) {
   } else if (const auto *ICmp = dyn_cast<ICmpInst>(V)) {
     if (ICmp->hasSameSign())
       Flags |= 1 << bitc::ICMP_SAME_SIGN;
+  } else if (const auto *ASC = dyn_cast<AddrSpaceCastInst>(V)) {
+    if (ASC->hasNonNull())
+      Flags |= 1 << bitc::ASCI_NON_NULL;
   }
 
   return Flags;
@@ -3933,7 +3936,7 @@ void ModuleBitcodeWriter::writeFunction(
         // Write out non-instruction debug information attached to this
         // instruction. Write it after the instruction so that it's easy to
         // re-attach to the instruction reading the records in.
-        for (DbgRecord &DR : I.DebugMarker->getDbgRecordRange()) {
+        for (DbgRecord &DR : I.getDbgMarker()->getDbgRecordRange()) {
           if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
             Vals.push_back(VE.getMetadataID(&*DLR->getDebugLoc()));
             Vals.push_back(VE.getMetadataID(DLR->getLabel()));

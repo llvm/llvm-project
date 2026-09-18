@@ -485,7 +485,6 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     TargetLibraryInfoImpl TLII(Mod.getTargetTriple(), TM->Options.VecLib);
     CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
     CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
-        TM->Options.ExceptionModel, TM->Options.EABIVersion,
         TM->Options.MCOptions.ABIName, TM->Options.VecLib));
 
     // No need to make index available if the module is empty.

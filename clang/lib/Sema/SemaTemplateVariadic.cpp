@@ -1360,9 +1360,7 @@ ExprResult Sema::ActOnPackIndexingExpr(Scope *S, Expr *PackExpression,
   ExprResult Res =
       BuildPackIndexingExpr(PackExpression, EllipsisLoc, IndexExpr, RSquareLoc);
   if (!Res.isInvalid())
-    Diag(Res.get()->getBeginLoc(), getLangOpts().CPlusPlus26
-                                       ? diag::warn_cxx23_pack_indexing
-                                       : diag::ext_pack_indexing);
+    DiagCompat(Res.get()->getBeginLoc(), diag_compat::pack_indexing);
   return Res;
 }
 
@@ -1406,6 +1404,11 @@ TemplateName Sema::ActOnPackIndexingTemplateName(TemplateName Pattern,
   // C++29 [temp.names]p3:
   //   The simple-template-name P in a pack-index-template-name shall denote a
   //   pack.
+  if (!Pattern.getAsTemplateTemplateParmDecl()) {
+    Diag(NameLoc, diag::err_expected_name_of_pack) << Pattern;
+    return TemplateName();
+  }
+
   bool DenotesPack = Pattern.containsUnexpandedParameterPack();
   if (!DenotesPack)
     Diag(NameLoc, diag::err_expected_name_of_pack) << Pattern;

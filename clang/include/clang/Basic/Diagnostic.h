@@ -29,6 +29,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -46,9 +47,6 @@ namespace llvm {
 class Error;
 class raw_ostream;
 class MemoryBuffer;
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 } // namespace llvm
 
 namespace clang {
@@ -971,16 +969,6 @@ public:
   /// diagnostic state. Can be null in order to query the latest state.
   bool isIgnored(unsigned DiagID, SourceLocation Loc) const {
     return Diags->getDiagnosticSeverity(DiagID, Loc, *this) ==
-           diag::Severity::Ignored;
-  }
-
-  bool areAllIgnored(StringRef Group, SourceLocation Loc) const {
-    llvm::SmallVector<diag::kind> diagsInGroup;
-    bool Failed = Diags->getDiagnosticsInGroup(diag::Flavor::WarningOrError,
-                                               Group, diagsInGroup);
-    assert(!Failed && "Incorrect group name?");
-    (void)Failed;
-    return Diags->getDiagnosticListHighestSeverity(diagsInGroup, Loc, *this) ==
            diag::Severity::Ignored;
   }
 

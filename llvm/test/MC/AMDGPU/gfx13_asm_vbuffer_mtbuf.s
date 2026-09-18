@@ -661,3 +661,12 @@ tbuffer_store_format_xyzw v[4:7], off, ttmp[4:7], s3 format:[BUF_FMT_32_32_SINT]
 
 tbuffer_store_format_xyzw v[4:7], off, ttmp[4:7], s3 format:[BUF_FMT_32_32_FLOAT] offset:8388607 scope:SCOPE_SE
 // GFX13: tbuffer_store_format_xyzw v[4:7], off, ttmp[4:7], s3 format:[BUF_FMT_32_32_FLOAT] offset:8388607 scope:SCOPE_SE ; encoding: [0x03,0xc0,0x39,0xc4,0x04,0xe0,0x04,0x19,0x00,0xff,0xff,0x7f]
+
+tbuffer_load_format_x v5, off, rsrcidx(s8), s3 format:1
+// GFX13: tbuffer_load_format_x v5, off, rsrcidx(s8), s3 ; encoding: [0x03,0x00,0x38,0xc4,0x05,0x10,0x81,0x00,0x00,0x00,0x00,0x00]
+
+tbuffer_load_format_xy v[6:7], off, rsrcidx(v8), s3 format:1
+// GFX13: tbuffer_load_format_xy v[6:7], off, rsrcidx(v8), s3 ; encoding: [0x03,0x40,0x38,0xc4,0x06,0x10,0x82,0x00,0x00,0x00,0x00,0x00]
+
+tbuffer_store_format_x v5, off, rsrcidx(vcc_lo), s3 format:1
+// GFX13: tbuffer_store_format_x v5, off, rsrcidx(vcc_lo), s3 ; encoding: [0x03,0x00,0x39,0xc4,0x05,0xd4,0x81,0x00,0x00,0x00,0x00,0x00]

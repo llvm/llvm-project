@@ -543,8 +543,8 @@ private:
   std::optional<uint64_t> PLTRelocationsAddress;
   uint64_t PLTRelocationsSize{0};
 
-  /// True if relocation of specified type came from .rela.plt
-  DenseMap<uint64_t, bool> IsJmpRelocation;
+  /// Number of relocations read from DT_JMPREL.
+  uint32_t NumJmpRelocations{0};
 
   /// Index of specified symbol in the dynamic symbol table. NOTE Currently it
   /// is filled and used only with the relocations-related symbols.
@@ -585,7 +585,8 @@ private:
       {".plt"}, {".plt.got"}, {".iplt"}, {nullptr}};
 
   /// RISCV PLT sections.
-  const PLTSectionInfo RISCV_PLTSections[2] = {{".plt"}, {nullptr}};
+  const PLTSectionInfo RISCV_PLTSections[3] = {
+      {".plt", 16}, {".iplt", 16}, {nullptr}};
 
   /// Return PLT information for a section with \p SectionName or nullptr
   /// if the section is not PLT.

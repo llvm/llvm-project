@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_LINALG_IR_LINALG_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/Linalg/IR/LinalgDialect.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
@@ -18,7 +19,6 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -93,12 +93,6 @@ OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value val,
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
-// Linalg Dialect
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/Linalg/IR/LinalgOpsDialect.h.inc"
-
-//===----------------------------------------------------------------------===//
 // Linalg Enums
 //===----------------------------------------------------------------------===//
 
@@ -152,6 +146,20 @@ template <typename OpTy,
           typename = std::enable_if_t<std::is_same_v<OpTy, linalg::PackOp> ||
                                       std::is_same_v<OpTy, linalg::UnPackOp>>>
 SmallVector<int64_t> getPackedOuterShapeWithoutTransposition(OpTy packOrUnPack);
+
+/// Elementwise Arity and Kind groups.
+struct ArityGroupAndKind {
+  // The enum class {Unary, Binary, Ternary, ..}
+  ElementwiseArityGroup arityGroup;
+
+  // The kind (e.g. `exp` or `add`) belonging to the arity group.
+  union Kind {
+    UnaryFn unaryFn;
+    BinaryFn binaryFn;
+    TernaryFn ternaryFn;
+  } kind;
+};
+ArityGroupAndKind getArityGroupAndKind(ElementwiseKind kind);
 
 /// Specialization of `linalg.matmul` op that has a transpose map on A
 class MatmulTransposeAOp : public MatmulOp {

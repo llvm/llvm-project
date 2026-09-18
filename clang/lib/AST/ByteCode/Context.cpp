@@ -62,7 +62,7 @@ void Context::isPotentialConstantExprUnevaluated(State &Parent, const Expr *E,
   assert(Stk.empty());
   ++EvalID;
   size_t StackSizeBefore = Stk.size();
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
 
   if (!C.interpretCall(FD, E)) {
     C.cleanup();
@@ -74,7 +74,7 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
   ++EvalID;
   bool Recursing = !Stk.empty();
   size_t StackSizeBefore = Stk.size();
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
 
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue());
 
@@ -105,7 +105,7 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result,
   ++EvalID;
   bool Recursing = !Stk.empty();
   size_t StackSizeBefore = Stk.size();
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
 
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/false,
                              /*DestroyToplevelScope=*/true);
@@ -134,7 +134,7 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   ++EvalID;
   bool Recursing = !Stk.empty();
   size_t StackSizeBefore = Stk.size();
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
 
   bool CheckGlobalInitialized =
       shouldBeGloballyIndexed(VD) &&
@@ -164,7 +164,7 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
 bool Context::evaluateDestruction(State &Parent, const VarDecl *VD,
                                   APValue Value) {
   assert(Stk.empty());
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
 
   auto Res = C.interpretDestructor(VD, Value);
 
@@ -183,7 +183,7 @@ template <typename ResultT>
 bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
                                  const Expr *PtrExpr, ResultT &Result) {
   assert(Stk.empty());
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
 
   // Evaluate size value.
   APValue SizeValue;
@@ -282,7 +282,7 @@ bool Context::evaluateCharRange(State &Parent, const Expr *SizeExpr,
 bool Context::evaluateString(State &Parent, const Expr *E,
                              std::string &Result) {
   assert(Stk.empty());
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
 
   auto PtrRes = C.interpretAsPointer(E, [&](InterpState &S, CodePtr OpPC,
                                             const Pointer &Ptr) {
@@ -346,7 +346,7 @@ bool Context::evaluateString(State &Parent, const Expr *E,
 
 std::optional<uint64_t> Context::evaluateStrlen(State &Parent, const Expr *E) {
   assert(Stk.empty());
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
 
   std::optional<uint64_t> Result;
   auto PtrRes = C.interpretAsPointer(E, [&](InterpState &S, CodePtr OpPC,
@@ -410,26 +410,24 @@ std::optional<uint64_t> Context::evaluateStrlen(State &Parent, const Expr *E) {
   return Result;
 }
 
-std::optional<uint64_t>
-Context::tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind) {
+std::optional<uint64_t> Context::tryEvaluateObjectSize(State &Parent,
+                                                       const Expr *E,
+                                                       unsigned Kind,
+                                                       bool IsDynamic) {
   assert(Stk.empty());
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
 
   std::optional<uint64_t> Result;
-
   auto PtrRes = C.interpretAsLValuePointer(E, [&](InterpState &S, CodePtr OpPC,
                                                   const Pointer &Ptr) {
-    const Descriptor *DeclDesc = Ptr.getDeclDesc();
-    if (!DeclDesc)
-      return false;
-
-    QualType T = DeclDesc->getType().getNonReferenceType();
+    QualType T = Ptr.getType().getNonReferenceType();
     if (T->isIncompleteType() || T->isFunctionType() ||
         !T->isConstantSizeType())
       return false;
 
     Pointer P = Ptr;
-    if (auto ObjectSize = evaluateBuiltinObjectSize(getASTContext(), Kind, P)) {
+    if (auto ObjectSize =
+            evaluateBuiltinObjectSize(getASTContext(), Kind, P, E, IsDynamic)) {
       Result = *ObjectSize;
       return true;
     }
@@ -454,7 +452,7 @@ Context::evaluateWithSubstitution(State &Parent, const FunctionDecl *Callee,
   }
 
   assert(Stk.empty());
-  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk, FrameAlloc);
   std::optional<bool> Result =
       C.interpretWithSubstitutions(Callee, Args, This, Condition);
 
@@ -597,7 +595,7 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
 
 bool Context::Run(State &Parent, const Function *Func) {
   auto Memory = std::make_unique<char[]>(InterpFrame::allocSize(Func));
-  InterpState State(Parent, *P, Stk, *this, Func);
+  InterpState State(Parent, *P, Stk, FrameAlloc, *this, Func);
   InterpFrame *Frame = new (Memory.get()) InterpFrame(
       State, Func, /*Caller=*/nullptr, CodePtr(), Func->getArgSize());
   State.Current = Frame;
@@ -672,7 +670,6 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   }
   // Set up argument indices.
   unsigned ParamOffset = 0;
-  llvm::SmallVector<Function::ParamDescriptor> ParamDescriptors;
 
   // If the return is not a primitive, a pointer to the storage where the
   // value is initialized in is passed as the first argument. See 'RVO'
@@ -715,6 +712,9 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
 
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
+  llvm::SmallVector<Function::ParamDescriptor> ParamDescriptors;
+  ParamDescriptors.reserve(FuncDecl->getNumParams());
+
   const auto *FuncProto = FuncDecl->getType()->getAs<FunctionProtoType>();
   unsigned BlockOffset = 0;
   for (auto [ParamIndex, PD] : llvm::enumerate(FuncDecl->parameters())) {
