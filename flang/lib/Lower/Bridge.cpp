@@ -884,7 +884,6 @@ public:
                                  bool allowCoarray = false) override final {
     mlir::Location loc = locPtr ? *locPtr : toLocation();
     auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
-    expr.dump();
     if (coarrayRef.has_value() && !allowCoarray)
       TODO(loc, "coarray: genExprAddr of coarray reference.");
     return Fortran::lower::convertExprToAddress(loc, *this, expr, localSymbols,
@@ -908,7 +907,6 @@ public:
                                 Fortran::lower::StatementContext &stmtCtx,
                                 bool allowCoarray = false) override final {
     auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
-    expr.dump();
     if (coarrayRef.has_value() && !allowCoarray)
       TODO(loc, "coarray: genExprBox of coarray reference.");
     return Fortran::lower::convertExprToBox(loc, *this, expr, localSymbols,

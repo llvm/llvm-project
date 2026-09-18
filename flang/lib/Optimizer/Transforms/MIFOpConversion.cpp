@@ -77,12 +77,13 @@ static mlir::Type getBuiltinTeamType(fir::FirOpBuilder &builder,
 }
 
 static mlir::Type getBuiltinCptrType(fir::FirOpBuilder &builder,
-                                       mlir::Location loc) {
+                                     mlir::Location loc) {
   std::string cPtrTypeName = fir::NameUniquer::doType(
       {"__fortran_builtins"}, {}, 0, "__builtin_c_ptr", {});
   fir::RecordType cPtrType =
       fir::RecordType::get(builder.getContext(), cPtrTypeName);
-  cPtrType.finalize({}, {{Fortran::lower::builtin::cptrFieldName, builder.getI64Type()}});
+  cPtrType.finalize(
+      {}, {{Fortran::lower::builtin::cptrFieldName, builder.getI64Type()}});
   return cPtrType;
 }
 
@@ -1273,8 +1274,9 @@ struct MIFAllocCoarrayOpConversion
     mlir::FunctionType ftype = mlir::FunctionType::get(
         builder.getContext(),
         /*inputs*/
-        {coboundsTy, coboundsTy, builder.getRefType(i64Ty), refTy, refTy, builder.getRefType(ptrTy),
-         getPRIFStatType(builder), errmsgTy, errmsgTy},
+        {coboundsTy, coboundsTy, builder.getRefType(i64Ty), refTy, refTy,
+         builder.getRefType(ptrTy), getPRIFStatType(builder), errmsgTy,
+         errmsgTy},
         /*results*/ {});
     mlir::func::FuncOp funcOp =
         builder.createFunction(loc, getPRIFProcName("allocate_coarray"), ftype);
