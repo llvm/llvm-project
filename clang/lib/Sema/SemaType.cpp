@@ -6455,6 +6455,7 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
         break;
       }
 
+      case TypeLoc::CountAttributed:
       case TypeLoc::Adjusted:
       case TypeLoc::BTFTagAttributed: {
         CurrTL = CurrTL.getNextTypeLoc().getUnqualifiedLoc();
@@ -9072,6 +9073,85 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
   }
 }
 
+/// Return true if the type built at \p chunkIndex is part of a function's
+/// return type, i.e. a function chunk wraps it at any level. In both
+/// `int *__counted_by(n) (*fp)(void)` and `int *__counted_by(n) *(*fp)(void)`,
+/// the attributed pointer is in the return type of the function `fp` points to.
+///
+/// Chunk 0 is the one closest to the identifier, which is the outermost part of
+/// the type, so the type built by chunk i is wrapped by chunk i - 1. A
+/// parameter has its own declarator, so it is never part of \p D's chunks.
+static bool isOnFunctionReturnType(const Declarator &D, unsigned chunkIndex) {
+  assert(chunkIndex <= D.getNumTypeObjects());
+  for (unsigned i = chunkIndex; i != 0; --i)
+    if (D.getTypeObject(i - 1).Kind == DeclaratorChunk::Function)
+      return true;
+  return false;
+}
+
+/// Return the number of pointer and array chunks that wrap the type built at
+/// \p chunkIndex, up to the nearest function chunk. The level is relative to
+/// the type the attribute belongs to: the declared type, or the return type of
+/// the nearest enclosing function.
+///
+/// In `int *__counted_by(n) *pp`, the attributed pointer is chunk 1, wrapped by
+/// the pointer at chunk 0, so its level is 1. In
+/// `int *__counted_by(n) *(*fp)(void)`, the attributed pointer is chunk 4,
+/// wrapped by the pointer at chunk 3 and then the function at chunk 2, so its
+/// level is 1, relative to the return type.
+static unsigned getPointerNestLevel(const Declarator &D, unsigned chunkIndex) {
+  assert(chunkIndex <= D.getNumTypeObjects());
+  unsigned Level = 0;
+  for (unsigned i = chunkIndex; i != 0; --i) {
+    switch (D.getTypeObject(i - 1).Kind) {
+    case DeclaratorChunk::Function:
+      return Level;
+    case DeclaratorChunk::Pointer:
+    case DeclaratorChunk::Array:
+      ++Level;
+      break;
+    default:
+      break;
+    }
+  }
+  return Level;
+}
+
+static void HandleCountedByAttrOnType(TypeProcessingState &State,
+                                      QualType &CurType, ParsedAttr &Attr) {
+  Sema &S = State.getSema();
+
+  // This attribute is only supported in C.
+  if (!Attr.diagnoseLangOpts(S)) {
+    Attr.setInvalid();
+    return;
+  }
+
+  auto *CountExpr = Attr.getArgAsExpr(0);
+  if (!CountExpr)
+    return;
+
+  const Declarator &D = State.getDeclarator();
+  unsigned chunkIndex = State.getCurrentChunkIndex();
+
+  Sema::BoundsAttrFlags Flags;
+  if (!S.ValidateBoundsAttrTypeForTypePosition(
+          CurType, Attr.getKind(), Attr.getLoc(), Attr.getRange(),
+          getPointerNestLevel(D, chunkIndex),
+          isOnFunctionReturnType(D, chunkIndex), Flags)) {
+    Attr.setInvalid();
+    return;
+  }
+
+  QualType NewType = S.BuildCountAttributedArrayOrPointerType(
+      CurType, CountExpr, Flags.CountInBytes, Flags.OrNull);
+  if (NewType.isNull()) {
+    Attr.setInvalid();
+    return;
+  }
+  CurType = NewType;
+}
+
 bool Sema::ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT) {
   // A DeclSpec attribute runs this once per declarator, as in
   // `IP __counted_by(n) a, b;`. Reuse one node, as the eager path does, so no
@@ -9085,7 +9165,8 @@ bool Sema::ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT) {
   BoundsAttrFlags Flags;
   if (!ValidateBoundsAttrTypeForTypePosition(QT, LA.Kind, LA.NameLoc,
                                              SourceRange(LA.NameLoc),
-                                             /*PointerNestLevel=*/0, Flags))
+                                             /*PointerNestLevel=*/0,
+                                             /*OnReturnType=*/false, Flags))
     return false;
 
   // The argument isn't parsed yet, so build the type without a count.
@@ -9332,6 +9413,19 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
 
     case ParsedAttr::AT_SwiftAttr: {
       HandleSwiftAttr(state, TAL, type, attr);
+      break;
+    }
+
+    case ParsedAttr::AT_CountedBy:
+    case ParsedAttr::AT_CountedByOrNull:
+    case ParsedAttr::AT_SizedBy:
+    case ParsedAttr::AT_SizedByOrNull: {
+      // XXX: The late-parsing path hasn't been switched to the new mechanism to
+      // properly support type-position attributes yet.
+      if (!state.getSema().getLangOpts().ExperimentalLateParseAttributes) {
+        HandleCountedByAttrOnType(state, type, attr);
+        attr.setUsedAsTypeAttr();
+      }
       break;
     }
 
@@ -10106,7 +10200,19 @@ QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
                                                       Expr *CountExpr,
                                                       bool CountInBytes,
                                                       bool OrNull) {
-  assert(WrappedTy->isIncompleteArrayType() || WrappedTy->isPointerType());
+  // Accept any array or pointer type here. For arrays, validation that it's
+  // a flexible array member is deferred until CheckCountedByAttrOnField.
+  assert(WrappedTy->isArrayType() || WrappedTy->isPointerType());
+
+  // Reject non-DeclRefExpr early to avoid cast failure in
+  // BuildTypeCoupledDecls.
+  if (!isa<DeclRefExpr>(CountExpr)) {
+    unsigned Kind = getBoundsAttrKind(BoundsAttrFlags{CountInBytes, OrNull});
+    Diag(CountExpr->getBeginLoc(),
+         diag::err_count_attr_only_support_simple_decl_reference)
+        << Kind << CountExpr->getSourceRange();
+    return QualType();
+  }
 
   llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
   BuildTypeCoupledDecls(CountExpr, Decls);
