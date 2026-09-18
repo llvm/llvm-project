@@ -2767,6 +2767,44 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         ;
   });
 
+  // Complete COMDAT selection before resolving references and providers from
+  // replaceable groups. Extracted archive members can contribute more such
+  // groups, so continue until neither phase schedules another input file.
+  auto hasDeferredCOMDATWork = [&] {
+    bool result = false;
+    ctx.forEachSymtab(
+        [&](SymbolTable &symtab) { result |= symtab.hasDeferredCOMDATWork(); });
+    return result;
+  };
+
+  auto resolveDeferredCOMDATs = [&](bool parsePendingInputs, bool final) {
+    // Pending inputs can themselves introduce replaceable COMDATs, so the
+    // caller decides whether the input queue must be drained before checking
+    // the cheap no-work fast path.
+    if (parsePendingInputs)
+      run();
+    if (!hasDeferredCOMDATWork())
+      return;
+
+    // References from a replaceable group are provisional too. Publishing
+    // them can irreversibly extract an archive member, so wait until the
+    // current input-producing phase has completed.
+    if (!final)
+      return;
+
+    for (;;) {
+      ctx.forEachSymtab(
+          [](SymbolTable &symtab) { symtab.resolveDeferredReferences(); });
+      if (run())
+        continue;
+      ctx.forEachSymtab(
+          [](SymbolTable &symtab) { symtab.finalizeDeferredSymbols(); });
+      if (!run())
+        return;
+    }
+  };
+  resolveDeferredCOMDATs(/*parsePendingInputs=*/true, /*final=*/false);
+
   if (config->autoImport || config->stdcallFixup) {
     // MinGW specific.
     // Load any further object files that might be needed for doing automatic
@@ -2788,9 +2826,27 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     // If it ends up pulling in more object files from static libraries,
     // (and maybe doing more stdcall fixups along the way), this would need
     // to loop these two calls.
-    ctx.forEachSymtab([](SymbolTable &symtab) { symtab.loadMinGWSymbols(); });
-    run();
+    if (config->stdcallFixup) {
+      ctx.forEachSymtab([](SymbolTable &symtab) {
+        symtab.loadMinGWSymbols(/*loadStdcallFixups=*/true,
+                                /*loadAutoImports=*/false);
+      });
+      run();
+      // A stdcall archive member can change the prevailing COMDAT before
+      // automatic-import references are published.
+      resolveDeferredCOMDATs(/*parsePendingInputs=*/false, /*final=*/false);
+    }
+    if (config->autoImport) {
+      ctx.forEachSymtab([](SymbolTable &symtab) {
+        symtab.loadMinGWSymbols(/*loadStdcallFixups=*/false,
+                                /*loadAutoImports=*/true);
+      });
+      run();
+    }
   }
+
+  // MinGW automatic import and stdcall fixups can load additional inputs.
+  resolveDeferredCOMDATs(/*parsePendingInputs=*/false, /*final=*/true);
 
   // At this point, we should not have any symbols that cannot be resolved.
   // If we are going to do codegen for link-time optimization, check for
@@ -2832,9 +2888,26 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (config->emit != EmitKind::Obj || config->thinLTOIndexOnly)
     return;
 
-  // If we generated native object files from bitcode files, this resolves
-  // references to the symbols we use from them.
-  run();
+  // Native LTO output can contain the same provisional COMDAT reference
+  // patterns as ordinary objects.
+  resolveDeferredCOMDATs(/*parsePendingInputs=*/true, /*final=*/true);
+
+  // Parsing records side-table entries before replaceable COMDAT selection is
+  // globally final. Commit those effects now, after the last input-producing
+  // fixed point and before GC, ICF, PDB, resources, or EC thunk processing can
+  // observe them. Debug dependency discovery can enqueue PDB inputs; drain
+  // those inputs and repeat in case a malformed dependency is another object.
+  for (size_t finalizedObjFiles = 0;;) {
+    while (finalizedObjFiles != ctx.objFileInstances.size())
+      ctx.objFileInstances[finalizedObjFiles++]->finalizeCOMDATSideEffects();
+    if (run()) {
+      resolveDeferredCOMDATs(/*parsePendingInputs=*/false, /*final=*/false);
+      continue;
+    }
+    resolveDeferredCOMDATs(/*parsePendingInputs=*/false, /*final=*/true);
+    if (finalizedObjFiles == ctx.objFileInstances.size())
+      break;
+  }
 
   // Apply symbol renames for -wrap.
   ctx.forEachSymtab([](SymbolTable &symtab) {
