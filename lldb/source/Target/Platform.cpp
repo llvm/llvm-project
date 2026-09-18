@@ -29,7 +29,9 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ModuleCache.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -2263,6 +2265,67 @@ void Platform::WarnIfInvalidUnsanitizedScriptExists(
               "'{3}' and retry.\n",
               original_fspec.GetPath(), original_fspec.GetFilename(),
               std::move(reason_for_complaint), fspec.GetFilename());
+}
+
+llvm::Expected<std::pair<XcodeSDKAndSysroot, bool>>
+Platform::GetSDKPathFromDebugInfo(Module &module) {
+  SymbolFile *sym_file = module.GetSymbolFile();
+  if (!sym_file)
+    return llvm::createStringError(
+        llvm::formatv("No symbol file available for module '{0}'",
+                      module.GetFileSpec().GetFilename()));
+
+  if (sym_file->GetNumCompileUnits() == 0)
+    return llvm::createStringError(
+        llvm::formatv("Could not resolve SDK for module '{0}'. Symbol file has "
+                      "no compile units.",
+                      module.GetFileSpec()));
+
+  XcodeSDKAndSysroot merged_sdk;
+  for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i)
+    if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i))
+      merged_sdk.Merge(sym_file->ParseXcodeSDK(*cu_sp));
+
+  // Only Darwin SDKs come in public and internal flavors, so a generic
+  // platform can never see the two conflict.
+  return std::pair{std::move(merged_sdk), /*found_mismatch=*/false};
+}
+
+llvm::Expected<std::string>
+Platform::ResolveSDKPathFromDebugInfo(Module &module) {
+  auto sdk_or_err = GetSDKPathFromDebugInfo(module);
+  if (!sdk_or_err)
+    return llvm::joinErrors(
+        llvm::createStringError("could not parse SDK path from debug-info"),
+        sdk_or_err.takeError());
+
+  return sdk_or_err->first.GetSysroot().GetPath();
+}
+
+llvm::Expected<XcodeSDKAndSysroot>
+Platform::GetSDKPathFromDebugInfo(CompileUnit &unit) {
+  ModuleSP module_sp = unit.CalculateSymbolContextModule();
+  if (!module_sp)
+    return llvm::createStringError("compile unit has no module");
+
+  SymbolFile *sym_file = module_sp->GetSymbolFile();
+  if (!sym_file)
+    return llvm::createStringError(
+        llvm::formatv("No symbol file available for module '{0}'",
+                      module_sp->GetFileSpec().GetFilename()));
+
+  return sym_file->ParseXcodeSDK(unit);
+}
+
+llvm::Expected<std::string>
+Platform::ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
+  auto sdk_or_err = GetSDKPathFromDebugInfo(unit);
+  if (!sdk_or_err)
+    return llvm::joinErrors(
+        llvm::createStringError("could not parse SDK path from debug-info"),
+        sdk_or_err.takeError());
+
+  return sdk_or_err->GetSysroot().GetPath();
 }
 
 PlatformSP PlatformList::GetOrCreate(llvm::StringRef name) {

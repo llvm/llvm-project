@@ -122,19 +122,26 @@ public:
   llvm::Expected<StructuredData::DictionarySP>
   FetchExtendedCrashInformation(Process &process) override;
 
-  llvm::Expected<std::pair<XcodeSDK, bool>>
+  /// The generic implementation parses the SDKs out of debug info, but only
+  /// Darwin SDKs come in public and internal flavors, so detecting a conflict
+  /// between the two is done here.
+  llvm::Expected<std::pair<XcodeSDKAndSysroot, bool>>
   GetSDKPathFromDebugInfo(Module &module) override;
+  using Platform::GetSDKPathFromDebugInfo;
 
   llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(Module &module) override;
-
-  llvm::Expected<XcodeSDK> GetSDKPathFromDebugInfo(CompileUnit &unit) override;
 
   llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(CompileUnit &unit) override;
 
   /// Resolve an XcodeSDK to an on-disk path under a Progress event.
-  static llvm::Expected<FileSpec> ResolveXcodeSDK(XcodeSDK sdk);
+  static llvm::Expected<FileSpec> ResolveXcodeSDK(const XcodeSDK &sdk);
+
+  /// Same, but prefer the sysroot the SDK was used from when it exists on
+  /// this machine.
+  static llvm::Expected<FileSpec>
+  ResolveXcodeSDK(const XcodeSDKAndSysroot &sdk);
 
   /// Helper function for \c LocateExecutableScriptingResources
   /// which gathers FileSpecs for executable scripts (currently
