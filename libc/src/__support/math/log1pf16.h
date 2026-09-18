@@ -1,4 +1,5 @@
-//===-- Implementation header for log1pf16 -----------------------*- C++ -*-===//
+//===-- Implementation header for log1pf16 -----------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,8 +41,8 @@ LIBC_INLINE float16 log1pf16(float16 x) {
   uint16_t x_abs = x_u & 0x7fffU;
 
   constexpr size_t N_LOG1PF16_EXCEPTS = 6;
-  constexpr fputil::ExceptValues<float16, N_LOG1PF16_EXCEPTS>
-      LOG1PF16_EXCEPTS = {{
+  constexpr fputil::ExceptValues<float16, N_LOG1PF16_EXCEPTS> LOG1PF16_EXCEPTS =
+      {{
           // (input, RZ output, RU offset, RD offset, RN offset)
           // x = 0x1.f24p-7, log1pf16(x) = 0x1.ee4p-7 (RZ)
           {0x23C9U, 0x23B9U, 1U, 0U, 1U},
