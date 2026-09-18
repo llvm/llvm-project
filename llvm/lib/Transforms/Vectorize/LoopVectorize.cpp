@@ -3365,7 +3365,7 @@ static EpilogueLowering
 getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
                         OptimizationRemarkEmitter *ORE,
                         LoopVectorizationLegality &LVL,
-                        LoopVectorizeHints &Hints) {
+                        const LoopVectorizeHints &Hints) {
   // Epilogue TF is only enabled when explicitly requested via command line.
   if (!EpilogueTailFoldingPolicy.getNumOccurrences() ||
       EpilogueTailFoldingPolicy != TailFoldingPolicyTy::PreferFoldTail)
@@ -3425,6 +3425,25 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
     return CM_EpilogueAllowed;
   }
 
+  if (ForcePartialAliasingVectorization) {
+    reportVectorizationInfo(
+        "Epilogue tail-folding is not supported with alias masking",
+        "InvalidTailFoldedEpilogue", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  if (!LVL.getReductionVars().empty()) {
+    reportVectorizationInfo(
+        "Epilogue tail-folding is not supported with reductions",
+        "InvalidTailFoldedEpilogue", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+  if (!LVL.getFixedOrderRecurrences().empty()) {
+    reportVectorizationInfo(
+        "Epilogue tail-folding is not supported with fixed-order recurrence",
+        "InvalidTailFoldedEpilogue", ORE, L);
+    return CM_EpilogueAllowed;
+  }
   // We can apply tail-folding on the vectorized epilogue loop.
   return CM_EpilogueNotNeededFoldTail;
 }

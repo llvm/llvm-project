@@ -20,6 +20,8 @@
 ; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 -enable-vplan-native-path \
 ; RUN: < %s 2>&1 | FileCheck %s --check-prefix=CHECK-OUTER-LOOP
 
+; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 -force-partial-aliasing-vectorization \
+; RUN: -force-target-supports-masked-memory-ops < %s 2>&1 | FileCheck %s --check-prefix=CHECK-ALIAS-MASK
 
 define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
 ; CHECK-LABEL: LV: Checking a loop in 'test_epilogue_tf'
@@ -38,7 +40,9 @@ define void @test_epilogue_tf(ptr %A, i64 %n, i8 %val) {
 ; CHECK-INVALID-VFs-LABEL: Checking a loop in 'test_epilogue_tf'
 ; CHECK-INVALID-VFs: remark: <unknown>:0:0: For now, epilogue tail-folding can't be applied when VF of the main loop <= VF of the epilogue
 ;
-
+; CHECK-ALIAS-MASK-LABEL: Checking a loop in 'test_epilogue_tf'
+; CHECK-ALIAS-MASK: remark: <unknown>:0:0: Epilogue tail-folding is not supported with alias masking
+;
 entry:
   br label %for.body
 
@@ -118,6 +122,49 @@ for.body:
 
 for.end:
   ret i32 0
+}
+
+define i64 @find_last_offset_wide_canonical_iv(ptr %A, i64 %n) {
+; CHECK-LABEL: Checking a loop in 'find_last_offset_wide_canonical_iv'
+; CHECK: remark: <unknown>:0:0: Epilogue tail-folding is not supported with reductions
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red = phi i64 [ -1, %entry ], [ %sel, %loop ]
+  %gep = getelementptr inbounds i32, ptr %A, i64 %iv
+  %l = load i32, ptr %gep, align 4
+  %c = icmp eq i32 %l, 11
+  %sel = select i1 %c, i64 %iv, i64 %red
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i64 %sel
+}
+
+define i32 @fixed-order-recurrence(ptr %src) {
+; CHECK-LABEL: Checking a loop in 'fixed-order-recurrence'
+; CHECK: remark: <unknown>:0:0: Epilogue tail-folding is not supported with fixed-order recurrence
+;
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 0, %entry ], [ %inc, %for.body ]
+  %previous = phi i32 [ 0, %entry ], [ %ld, %for.body ]
+  %gep = getelementptr inbounds i32, ptr %src, i64 %i
+  %ld = load i32, ptr %gep, align 4
+  %inc = add nuw nsw i64 %i, 1
+  %exitcond = icmp eq i64 %inc, 23
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  %result = phi i32 [ %previous, %for.body ]
+  ret i32 %result
 }
 
 define i1 @early_exit(ptr %A, i64 %n, i8 %find) {
