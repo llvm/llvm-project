@@ -74,6 +74,31 @@ multiclass AMDGPUSubtargetFeature<string FeatureString,
       def Has#NAME : Predicate<"Subtarget->has"#NAME#"()">;
 }
 
+// Like AMDGPUSubtargetFeature, but a generic target only needs one covered GPU
+// to support the feature.
+multiclass AMDGPUGenericAnySubtargetFeature<string FeatureString,
+                                          string Description,
+                                          bit GenPredicate = 1,
+                                          bit GenAssemblerPredicate = 1,
+                                          list<SubtargetFeature> Deps = [],
+                                          InlineBehavior IB = InlineDefault> {
+  def Feature#NAME : AMDGPUGenericAnyFeature<FeatureString,
+    "Has"#NAME,
+    "true",
+    Description,
+    Deps,
+    IB
+  >;
+
+  if GenPredicate then
+    if GenAssemblerPredicate then
+      def Has#NAME
+        : Predicate<"Subtarget->has"#NAME#"()">,
+          AssemblerPredicate<(any_of !cast<SubtargetFeature>("Feature"#NAME))>;
+    else
+      def Has#NAME : Predicate<"Subtarget->has"#NAME#"()">;
+}
+
 defm FastFMAF32 : AMDGPUSubtargetFeature<"fast-fmaf",
   "Assuming f32 fma is at least as fast as mul + add",
   /*GenPredicate=*/0, /*GenAssemblerPredicate=*/1, [], InlineIgnore
@@ -260,10 +285,9 @@ defm SGPRInitBug : AMDGPUSubtargetFeature<"sgpr-init-bug",
   /*GenPredicate=*/1, /*GenAssemblerPredicate=*/1, [], InlineIgnore
 >;
 
-def FeatureUserSGPRInit16Bug : AMDGPUGenericAnyFeature<"user-sgpr-init16-bug",
-  "HasUserSGPRInit16Bug",
-  "true",
-  "Bug requiring at least 16 user+system SGPRs to be enabled"
+defm UserSGPRInit16Bug : AMDGPUGenericAnySubtargetFeature<"user-sgpr-init16-bug",
+  "Bug requiring at least 16 user+system SGPRs to be enabled",
+  /*GenPredicate=*/0
 >;
 
 defm LDSMisalignedBug : AMDGPUSubtargetFeature<"lds-misaligned-bug",
@@ -387,24 +411,20 @@ defm ImageGather4D16Bug : AMDGPUSubtargetFeature<"image-gather4-d16-bug",
   /*GenPredicate=*/0
 >;
 
-def FeatureMADIntraFwdBug : AMDGPUGenericAnyFeature<"mad-intra-fwd-bug",
-  "HasMADIntraFwdBug",
-  "true",
-  "MAD_U64/I64 intra instruction forwarding bug"
+defm MADIntraFwdBug : AMDGPUGenericAnySubtargetFeature<"mad-intra-fwd-bug",
+  "MAD_U64/I64 intra instruction forwarding bug",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/0
 >;
 
-def HasMADIntraFwdBug : Predicate<"Subtarget->hasMADIntraFwdBug()">;
-
-def FeatureMSAALoadDstSelBug : AMDGPUGenericAnyFeature<"msaa-load-dst-sel-bug",
-  "HasMSAALoadDstSelBug",
-  "true",
-  "MSAA loads not honoring dst_sel bug"
+defm MSAALoadDstSelBug : AMDGPUGenericAnySubtargetFeature<"msaa-load-dst-sel-bug",
+  "MSAA loads not honoring dst_sel bug",
+  /*GenPredicate=*/0
 >;
 
-def FeaturePrivEnabledTrap2NopBug : AMDGPUGenericAnyFeature<"priv-enabled-trap2-nop-bug",
-  "HasPrivEnabledTrap2NopBug",
-  "true",
-  "Hardware that runs with PRIV=1 interpreting 's_trap 2' as a nop bug"
+defm PrivEnabledTrap2NopBug : AMDGPUGenericAnySubtargetFeature<"priv-enabled-trap2-nop-bug",
+  "Hardware that runs with PRIV=1 interpreting 's_trap 2' as a nop bug",
+  /*GenPredicate=*/0
 >;
 
 // A generic target may use an LDS bank count from one of its covered GPUs.
@@ -1132,14 +1152,9 @@ defm GFX1251GEMMInsts : AMDGPUSubtargetFeature<"gfx1251-gemm-insts",
   "Has additional gfx1251 DGEMM instructions"
 >;
 
-def FeatureGFX125xLowestRateWMMA : AMDGPUGenericAnyFeature<"gfx125x-lowest-rate-wmma",
-  "HasGFX125xLowestRateWMMA",
-  "true",
+defm GFX125xLowestRateWMMA : AMDGPUGenericAnySubtargetFeature<"gfx125x-lowest-rate-wmma",
   "Has the lowest rate wmma in the gfx125x family, mainly for the gfx12-5-generic"
 >;
-
-def HasGFX125xLowestRateWMMA : Predicate<"Subtarget->hasGFX125xLowestRateWMMA()">,
-  AssemblerPredicate<(any_of FeatureGFX125xLowestRateWMMA)>;
 
 defm FlatBufferGlobalAtomicFaddF64Inst : AMDGPUSubtargetFeature<"flat-buffer-global-fadd-f64-inst",
   "Has flat, buffer, and global instructions for f64 atomic fadd"
@@ -1251,10 +1266,9 @@ defm VOPDInsts : AMDGPUSubtargetFeature<"vopd",
   /*GenPredicate=*/0
 >;
 
-def FeatureVALUTransUseHazard : AMDGPUGenericAnyFeature<"valu-trans-use-hazard",
-  "HasVALUTransUseHazard",
-  "true",
-  "Hazard when TRANS instructions are closely followed by a use of the result"
+defm VALUTransUseHazard : AMDGPUGenericAnySubtargetFeature<"valu-trans-use-hazard",
+  "Hazard when TRANS instructions are closely followed by a use of the result",
+  /*GenPredicate=*/0
 >;
 
 defm TransCoexecutionHazard : AMDGPUSubtargetFeature<"trans-coexecution-hazard",
@@ -1283,10 +1297,9 @@ defm RestrictedSOffset : AMDGPUSubtargetFeature<"restricted-soffset",
   "Has restricted SOffset (immediate not supported)."
 >;
 
-def FeatureRequiredExportPriority : AMDGPUGenericAnyFeature<"required-export-priority",
-  "HasRequiredExportPriority",
-  "true",
-  "Export priority must be explicitly manipulated on GFX11.5"
+defm RequiredExportPriority : AMDGPUGenericAnySubtargetFeature<"required-export-priority",
+  "Export priority must be explicitly manipulated on GFX11.5",
+  /*GenPredicate=*/0
 >;
 
 defm VmemWriteVgprInOrder : AMDGPUSubtargetFeature<"vmem-write-vgpr-in-order",
@@ -1331,10 +1344,9 @@ defm 1024AddressableVGPRs : AMDGPUSubtargetFeature<"1024-addressable-vgprs",
   "Has 1024 addressable VGPRs"
 >;
 
-def FeatureSetregVGPRMSBFixup : AMDGPUGenericAnyFeature<"setreg-vgpr-msb-fixup",
-  "HasSetregVGPRMSBFixup",
-  "true",
-  "S_SETREG to MODE clobbers VGPR MSB bits, requires fixup"
+defm SetregVGPRMSBFixup : AMDGPUGenericAnySubtargetFeature<"setreg-vgpr-msb-fixup",
+  "S_SETREG to MODE clobbers VGPR MSB bits, requires fixup",
+  /*GenPredicate=*/0
 >;
 
 defm WaitXcnt : AMDGPUSubtargetFeature<"wait-xcnt",
