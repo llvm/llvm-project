@@ -7884,10 +7884,6 @@ declare i64 @llvm.riscv.maccu.01.i64.v2i32(i64, <2 x i32>, <2 x i32>)
 declare i64 @llvm.riscv.maccu.11.i64.v2i32(i64, <2 x i32>, <2 x i32>)
 declare i64 @llvm.riscv.maccsu.00.i64.v2i32(i64, <2 x i32>, <2 x i32>)
 declare i64 @llvm.riscv.maccsu.11.i64.v2i32(i64, <2 x i32>, <2 x i32>)
-declare <2 x i16> @llvm.riscv.pmhacc.b0.v2i16(<2 x i16>, <2 x i16>, <4 x i8>)
-declare <2 x i16> @llvm.riscv.pmhacc.b1.v2i16(<2 x i16>, <2 x i16>, <4 x i8>)
-declare <2 x i16> @llvm.riscv.pmhaccsu.b0.v2i16(<2 x i16>, <2 x i16>, <4 x i8>)
-declare <2 x i16> @llvm.riscv.pmhaccsu.b1.v2i16(<2 x i16>, <2 x i16>, <4 x i8>)
 declare <4 x i16> @llvm.riscv.pmhacc.b0.v4i16(<4 x i16>, <4 x i16>, <8 x i8>)
 declare <4 x i16> @llvm.riscv.pmhacc.b1.v4i16(<4 x i16>, <4 x i16>, <8 x i8>)
 declare <4 x i16> @llvm.riscv.pmhaccsu.b0.v4i16(<4 x i16>, <4 x i16>, <8 x i8>)
@@ -8127,43 +8123,6 @@ define i64 @test_maccsu_w11_i64(i64 %rd, <2 x i32> %a, <2 x i32> %b) {
 ; RV64-NEXT:    ret
   %r = call i64 @llvm.riscv.maccsu.11.i64.v2i32(i64 %rd, <2 x i32> %a, <2 x i32> %b)
   ret i64 %r
-}
-
-; Packed multiply high accumulate (v2i16 form)
-define <2 x i16> @test_pmhacc_b0_v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2) {
-; CHECK-LABEL: test_pmhacc_b0_v2i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    pmhacc.h.b0 a0, a1, a2
-; CHECK-NEXT:    ret
-  %res = call <2 x i16> @llvm.riscv.pmhacc.b0.v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2)
-  ret <2 x i16> %res
-}
-
-define <2 x i16> @test_pmhacc_b1_v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2) {
-; CHECK-LABEL: test_pmhacc_b1_v2i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    pmhacc.h.b1 a0, a1, a2
-; CHECK-NEXT:    ret
-  %res = call <2 x i16> @llvm.riscv.pmhacc.b1.v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2)
-  ret <2 x i16> %res
-}
-
-define <2 x i16> @test_pmhaccsu_b0_v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2) {
-; CHECK-LABEL: test_pmhaccsu_b0_v2i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    pmhaccsu.h.b0 a0, a1, a2
-; CHECK-NEXT:    ret
-  %res = call <2 x i16> @llvm.riscv.pmhaccsu.b0.v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2)
-  ret <2 x i16> %res
-}
-
-define <2 x i16> @test_pmhaccsu_b1_v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2) {
-; CHECK-LABEL: test_pmhaccsu_b1_v2i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    pmhaccsu.h.b1 a0, a1, a2
-; CHECK-NEXT:    ret
-  %res = call <2 x i16> @llvm.riscv.pmhaccsu.b1.v2i16(<2 x i16> %rd, <2 x i16> %rs1, <4 x i8> %rs2)
-  ret <2 x i16> %res
 }
 
 ; Packed multiply high accumulate (v4i16 form)

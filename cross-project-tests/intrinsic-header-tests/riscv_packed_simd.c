@@ -4431,25 +4431,29 @@ int16x2_t test_pmhaccsu_b1_i16x2(int16x2_t rd, int16x2_t a, uint8x4_t b) {
 
 // Packed Multiply High Accumulate (64-bit)
 // CHECK-LABEL: test_pmhacc_b0_i16x4:
-// CHECK:       pmhacc.h.b0
+// RV32-COUNT-2: pmhacc.h.b0
+// RV64:         pmhacc.h.b0
 int16x4_t test_pmhacc_b0_i16x4(int16x4_t rd, int16x4_t a, int8x8_t b) {
   return __riscv_pmhacc_b0_i16x4(rd, a, b);
 }
 
 // CHECK-LABEL: test_pmhacc_b1_i16x4:
-// CHECK:       pmhacc.h.b1
+// RV32-COUNT-2: pmhacc.h.b1
+// RV64:         pmhacc.h.b1
 int16x4_t test_pmhacc_b1_i16x4(int16x4_t rd, int16x4_t a, int8x8_t b) {
   return __riscv_pmhacc_b1_i16x4(rd, a, b);
 }
 
 // CHECK-LABEL: test_pmhaccsu_b0_i16x4:
-// CHECK:       pmhaccsu.h.b0
+// RV32-COUNT-2: pmhaccsu.h.b0
+// RV64:         pmhaccsu.h.b0
 int16x4_t test_pmhaccsu_b0_i16x4(int16x4_t rd, int16x4_t a, uint8x8_t b) {
   return __riscv_pmhaccsu_b0_i16x4(rd, a, b);
 }
 
 // CHECK-LABEL: test_pmhaccsu_b1_i16x4:
-// CHECK:       pmhaccsu.h.b1
+// RV32-COUNT-2: pmhaccsu.h.b1
+// RV64:         pmhaccsu.h.b1
 int16x4_t test_pmhaccsu_b1_i16x4(int16x4_t rd, int16x4_t a, uint8x8_t b) {
   return __riscv_pmhaccsu_b1_i16x4(rd, a, b);
 }

@@ -2997,35 +2997,35 @@ let append Predicates = [IsRV32] in {
 
   // 16-bit multiply high accumulate patterns
   def : Pat<(XLenVecI16VT (riscv_mhacc_h_b0 (XLenVecI16VT GPR:$rd),
-                          (XLenVecI16VT GPR:$rs1),
-                          (XLenVecI8VT GPR:$rs2))),
+                                            (XLenVecI16VT GPR:$rs1),
+                                            (XLenVecI8VT GPR:$rs2))),
             (PMHACC_H_B0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVecI16VT (riscv_mhacc_h_b1 (XLenVecI16VT GPR:$rd),
-                          (XLenVecI16VT GPR:$rs1),
-                          (XLenVecI8VT GPR:$rs2))),
+                                            (XLenVecI16VT GPR:$rs1),
+                                            (XLenVecI8VT GPR:$rs2))),
             (PMHACC_H_B1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVecI16VT (riscv_mhaccsu_h_b0 (XLenVecI16VT GPR:$rd),
-                           (XLenVecI16VT GPR:$rs1),
-                           (XLenVecI8VT GPR:$rs2))),
+                                              (XLenVecI16VT GPR:$rs1),
+                                              (XLenVecI8VT GPR:$rs2))),
             (PMHACCSU_H_B0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVecI16VT (riscv_mhaccsu_h_b1 (XLenVecI16VT GPR:$rd),
-                           (XLenVecI16VT GPR:$rs1),
-                           (XLenVecI8VT GPR:$rs2))),
+                                              (XLenVecI16VT GPR:$rs1),
+                                              (XLenVecI8VT GPR:$rs2))),
             (PMHACCSU_H_B1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Packed multiply high accumulate, scalar halfword (RV32). The packed
   // intrinsic expands to a pair of these, one per result word.
   def : Pat<(XLenVT (riscv_mhacc_w_h0 (XLenVT GPR:$rd), (XLenVT GPR:$rs1),
-                        (v2i16 GPR:$rs2))),
+                                      (v2i16 GPR:$rs2))),
             (MHACC_H0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVT (riscv_mhacc_w_h1 (XLenVT GPR:$rd), (XLenVT GPR:$rs1),
-                        (v2i16 GPR:$rs2))),
+                                      (v2i16 GPR:$rs2))),
             (MHACC_H1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVT (riscv_mhaccsu_w_h0 (XLenVT GPR:$rd), (XLenVT GPR:$rs1),
-                           (v2i16 GPR:$rs2))),
+                                        (v2i16 GPR:$rs2))),
             (MHACCSU_H0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(XLenVT (riscv_mhaccsu_w_h1 (XLenVT GPR:$rd), (XLenVT GPR:$rs1),
-                           (v2i16 GPR:$rs2))),
+                                        (v2i16 GPR:$rs2))),
             (MHACCSU_H1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Packed "Q-format" multiply parts accumulate, scalar halfword (RV32).
@@ -3196,30 +3196,30 @@ let append Predicates = [IsRV64] in {
 
   // Packed multiply high accumulate patterns (v4i16 form)
   def : Pat<(v4i16 (riscv_mhacc_h_b0 (v4i16 GPR:$rd),
-                                    (v4i16 GPR:$rs1),
-                                    (v8i8 GPR:$rs2))),
+                                     (v4i16 GPR:$rs1),
+                                     (v8i8 GPR:$rs2))),
             (PMHACC_H_B0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_mhacc_h_b1 (v4i16 GPR:$rd),
-                                    (v4i16 GPR:$rs1),
-                                    (v8i8 GPR:$rs2))),
+                                     (v4i16 GPR:$rs1),
+                                     (v8i8 GPR:$rs2))),
             (PMHACC_H_B1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_mhaccsu_h_b0 (v4i16 GPR:$rd),
-                                      (v4i16 GPR:$rs1),
-                                      (v8i8 GPR:$rs2))),
+                                       (v4i16 GPR:$rs1),
+                                       (v8i8 GPR:$rs2))),
             (PMHACCSU_H_B0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_mhaccsu_h_b1 (v4i16 GPR:$rd),
-                                      (v4i16 GPR:$rs1),
-                                      (v8i8 GPR:$rs2))),
+                                       (v4i16 GPR:$rs1),
+                                       (v8i8 GPR:$rs2))),
             (PMHACCSU_H_B1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Packed multiply high accumulate patterns (v2i32 form)
   def : Pat<(v2i32 (riscv_mhacc_w_h0 (v2i32 GPR:$rd),
-                                    (v2i32 GPR:$rs1),
-                                    (v4i16 GPR:$rs2))),
+                                     (v2i32 GPR:$rs1),
+                                     (v4i16 GPR:$rs2))),
             (PMHACC_W_H0 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_mhacc_w_h1 (v2i32 GPR:$rd),
-                                    (v2i32 GPR:$rs1),
-                                    (v4i16 GPR:$rs2))),
+                                     (v2i32 GPR:$rs1),
+                                     (v4i16 GPR:$rs2))),
             (PMHACC_W_H1 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_mhaccsu_w_h0 (v2i32 GPR:$rd),
                                        (v2i32 GPR:$rs1),
