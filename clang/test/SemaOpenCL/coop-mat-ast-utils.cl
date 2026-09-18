@@ -33,6 +33,8 @@
 #define USE_B CLK_COOPERATIVE_MATRIX_B
 #define USE_C CLK_COOPERATIVE_MATRIX_ACCUMULATOR
 
+#pragma OPENCL EXTENSION cl_khr_cooperative_matrix : enable
+
 typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_A))) MatA_t;
 typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_B))) MatB_t;
 typedef float __attribute__((coop_mat(SCOPE, 16, 16, USE_C))) MatC_t;
