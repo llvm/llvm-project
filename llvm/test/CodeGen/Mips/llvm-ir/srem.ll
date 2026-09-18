@@ -426,29 +426,37 @@ define signext i128 @srem_i128(i128 signext %a, i128 signext %b) {
 ; MIPS1:       # %bb.0: # %entry
 ; MIPS1-NEXT:    lui $2, %hi(_gp_disp)
 ; MIPS1-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; MIPS1-NEXT:    addiu $sp, $sp, -40
-; MIPS1-NEXT:    .cfi_def_cfa_offset 40
-; MIPS1-NEXT:    sw $ra, 36($sp) # 4-byte Folded Spill
+; MIPS1-NEXT:    addiu $sp, $sp, -48
+; MIPS1-NEXT:    .cfi_def_cfa_offset 48
+; MIPS1-NEXT:    sw $ra, 44($sp) # 4-byte Folded Spill
+; MIPS1-NEXT:    sw $fp, 40($sp) # 4-byte Folded Spill
 ; MIPS1-NEXT:    .cfi_offset 31, -4
+; MIPS1-NEXT:    .cfi_offset 30, -8
+; MIPS1-NEXT:    move $fp, $sp
+; MIPS1-NEXT:    .cfi_def_cfa_register 30
+; MIPS1-NEXT:    addiu $1, $zero, -16
+; MIPS1-NEXT:    and $sp, $sp, $1
 ; MIPS1-NEXT:    addu $gp, $2, $25
-; MIPS1-NEXT:    lw $1, 60($sp)
-; MIPS1-NEXT:    lw $2, 64($sp)
-; MIPS1-NEXT:    lw $3, 68($sp)
+; MIPS1-NEXT:    lw $1, 68($fp)
+; MIPS1-NEXT:    lw $2, 72($fp)
+; MIPS1-NEXT:    lw $3, 76($fp)
 ; MIPS1-NEXT:    nop
 ; MIPS1-NEXT:    sw $3, 28($sp)
 ; MIPS1-NEXT:    sw $2, 24($sp)
 ; MIPS1-NEXT:    sw $1, 20($sp)
-; MIPS1-NEXT:    lw $1, 56($sp)
+; MIPS1-NEXT:    lw $1, 64($fp)
 ; MIPS1-NEXT:    nop
 ; MIPS1-NEXT:    sw $1, 16($sp)
 ; MIPS1-NEXT:    lw $25, %call16(__modti3)($gp)
 ; MIPS1-NEXT:    nop
 ; MIPS1-NEXT:    jalr $25
 ; MIPS1-NEXT:    nop
-; MIPS1-NEXT:    lw $ra, 36($sp) # 4-byte Folded Reload
+; MIPS1-NEXT:    move $sp, $fp
+; MIPS1-NEXT:    lw $fp, 40($sp) # 4-byte Folded Reload
+; MIPS1-NEXT:    lw $ra, 44($sp) # 4-byte Folded Reload
 ; MIPS1-NEXT:    nop
 ; MIPS1-NEXT:    jr $ra
-; MIPS1-NEXT:    addiu $sp, $sp, 40
+; MIPS1-NEXT:    addiu $sp, $sp, 48
 ;
 ; MIPS2-LABEL: srem_i128:
 ; MIPS2:       # %bb.0: # %entry
