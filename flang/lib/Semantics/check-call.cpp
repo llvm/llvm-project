@@ -691,7 +691,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           // be miscompiled. Keep rejecting it until that is fixed.
           basicError = true;
           messages.Say(
-              "Named constant array element actual argument may not yet be associated with a VALUE %s array"_err_en_US,
+              "sequence association of a named constant array element with a VALUE %s array"_todo_en_US,
               dummyName);
         }
         bool isOkBecauseContiguous{
