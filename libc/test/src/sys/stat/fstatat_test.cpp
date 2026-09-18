@@ -55,7 +55,7 @@ TEST_F(LlvmLibcFstatatTest, StatWithDirFd) {
   ASSERT_THAT(LIBC_NAMESPACE::fstatat(dirfd, TEST_FILE_BASENAME, &statbuf, 0),
               Succeeds(0));
 
-  ASSERT_EQ(int(statbuf.st_mode), int(S_IRWXU | S_IFREG));
+  ASSERT_EQ(statbuf.st_mode, static_cast<mode_t>(S_IRWXU | S_IFREG));
 
   ASSERT_THAT(LIBC_NAMESPACE::close(dirfd), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE), Succeeds(0));
