@@ -8,20 +8,20 @@ target triple = "riscv64-unknown-linux-gnu"
 define void @test_invariant_cond_for_select(ptr %dst, i8 %x) #0 {
 ; CHECK-LABEL: define void @test_invariant_cond_for_select(
 ; CHECK-SAME: ptr [[DST:%.*]], i8 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP1:.*]]
-; CHECK:       [[LOOP1]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
-; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8 [[X]], 0
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i64 [[IV]], 0
 ; CHECK-NEXT:    [[C_2_EXT:%.*]] = zext i1 [[C_2]] to i64
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C_3]], i64 [[C_2_EXT]], i64 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C_1]], i64 [[C_2_EXT]], i64 0
 ; CHECK-NEXT:    [[SEL_TRUNC:%.*]] = trunc i64 [[SEL]] to i8
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i8 [[SEL_TRUNC]], ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 4
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ult i64 [[IV]], 14
-; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP1]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
