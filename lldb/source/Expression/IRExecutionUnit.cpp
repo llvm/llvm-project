@@ -56,7 +56,8 @@ IRExecutionUnit::IRExecutionUnit(std::unique_ptr<llvm::LLVMContext> &context_up,
       m_did_jit(false), m_function_load_addr(LLDB_INVALID_ADDRESS),
       m_function_end_load_addr(LLDB_INVALID_ADDRESS),
       m_strip_underscore(
-          m_module_up ? m_module_up->getDataLayout().getGlobalPrefix() == '_' : false),
+          m_module_up ? m_module_up->getDataLayout().getGlobalPrefix() == '_'
+                      : false),
       m_reported_allocations(false), m_preferred_modules() {}
 
 lldb::addr_t IRExecutionUnit::WriteNow(const uint8_t *bytes, size_t size,
