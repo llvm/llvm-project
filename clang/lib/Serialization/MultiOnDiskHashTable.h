@@ -315,7 +315,7 @@ public:
       // Reserve four bytes for the bucket offset.
       Writer.write<uint32_t>(0);
 
-      if (auto *Merged = Base ? Base->getMergedTable() : nullptr) {
+      if (auto *Merged = Base ? Base->getMergedTable() : nullptr; false) {
         // Write list of overridden files.
         Writer.write<uint32_t>(Merged->Files.size());
         for (const auto &F : Merged->Files)
