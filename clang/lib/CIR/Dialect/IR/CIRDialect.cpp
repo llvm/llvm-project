@@ -1853,6 +1853,46 @@ LogicalResult cir::ScopeOp::fold(FoldAdaptor /*adaptor*/,
 // CleanupScopeOp
 //===----------------------------------------------------------------------===//
 
+static bool isRedundantBeforeReturn(mlir::Region &cleanupRegion) {
+  for (mlir::Block &block : cleanupRegion) {
+    for (mlir::Operation &op : block) {
+      if (isa<cir::YieldOp, cir::LifetimeEndOp, cir::StackRestoreOp>(op))
+        continue;
+      // The stack restore reloads the pointer saved before the VLA.
+      auto loadOp = dyn_cast<cir::LoadOp>(op);
+      if (loadOp && loadOp.getResult().hasOneUse() &&
+          isa<cir::StackRestoreOp>(*loadOp.getResult().getUsers().begin()))
+        continue;
+      return false;
+    }
+  }
+  return true;
+}
+
+LogicalResult cir::CleanupScopeOp::verify() {
+  // If the cleanup contains a musttail call, it must be a cleanup that can be
+  // skipped on return (such as a lifetime end or a stack restore). Other
+  // cleanups must never contain musttail calls.
+  cir::CallOp mustTailCall;
+  getBodyRegion().walk([&](cir::CallOp callOp) {
+    if (!callOp.getMusttail())
+      return WalkResult::advance();
+    mustTailCall = callOp;
+    return WalkResult::interrupt();
+  });
+  if (!mustTailCall)
+    return success();
+
+  if (isRedundantBeforeReturn(getCleanupRegion()))
+    return success();
+
+  InFlightDiagnostic diag =
+      emitOpError("cleanup is not redundant before a return, so it cannot be "
+                  "skipped by a musttail call");
+  diag.attachNote(mustTailCall.getLoc()) << "musttail call is here";
+  return diag;
+}
+
 void cir::CleanupScopeOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
@@ -2597,6 +2637,9 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
   mlir::StringAttr comdatNameAttr = getComdatAttrName(state.name);
+  mlir::StringAttr alignmentNameAttr = getAlignmentAttrName(state.name);
+  mlir::StringAttr preferredAlignmentNameAttr =
+      getPreferredAlignmentAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
   mlir::StringAttr funcInfoNameAttr = getFuncInfoAttrName(state.name);
@@ -2621,6 +2664,33 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   if (parser.parseOptionalKeyword(comdatNameAttr).succeeded())
     state.addAttribute(comdatNameAttr, parser.getBuilder().getUnitAttr());
+
+  auto parseAlignmentBody = [&](int64_t &value) {
+    if (parser.parseLParen().failed() || parser.parseInteger(value).failed() ||
+        parser.parseRParen().failed())
+      return failure();
+
+    if (value <= 0)
+      return static_cast<LogicalResult>(parser.emitError(
+          loc, "function alignment must be a positive integer"));
+
+    return success();
+  };
+
+  if (parser.parseOptionalKeyword(alignmentNameAttr).succeeded()) {
+    int64_t value;
+    if (parseAlignmentBody(value).failed())
+      return failure();
+    state.addAttribute(alignmentNameAttr, builder.getI64IntegerAttr(value));
+  }
+
+  if (parser.parseOptionalKeyword(preferredAlignmentNameAttr).succeeded()) {
+    int64_t value;
+    if (parseAlignmentBody(value).failed())
+      return failure();
+    state.addAttribute(preferredAlignmentNameAttr,
+                       builder.getI64IntegerAttr(value));
+  }
 
   // Default to external linkage if no keyword is provided.
   state.addAttribute(getLinkageAttrNameString(),
@@ -2932,6 +3002,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
   if (getComdat())
     p << " comdat";
+
+  if (getAlignment())
+    p << " alignment(" << *getAlignment() << ')';
+
+  if (getPreferredAlignment())
+    p << " preferred_alignment(" << *getPreferredAlignment() << ')';
 
   if (getLinkage() != GlobalLinkageKind::ExternalLinkage)
     p << ' ' << stringifyGlobalLinkageKind(getLinkage());
@@ -3507,6 +3583,26 @@ LogicalResult cir::CopyOp::verify() {
       !mlir::isa<cir::RecordType>(getType().getPointee()))
     return emitError()
            << "skip_tail_padding is only valid for record pointee types";
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// PtrMaskOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::PtrMaskOp::verify() {
+  mlir::DataLayout layout = mlir::DataLayout::closest(*this);
+  std::optional<uint64_t> indexWidth =
+      layout.getTypeIndexBitwidth(getPtr().getType());
+  if (!indexWidth)
+    return emitOpError() << "pointer has no index width";
+
+  uint64_t maskWidth = getMask().getType().getWidth();
+  if (maskWidth != *indexWidth)
+    return emitOpError() << "mask width " << maskWidth
+                         << " must equal the pointer index width "
+                         << *indexWidth;
 
   return mlir::success();
 }
@@ -4614,6 +4710,20 @@ LogicalResult cir::TryOp::verify() {
             typeAttr))
       continue;
 
+    if (entryBlock.empty())
+      return emitOpError("catch handler region must not be empty");
+
+    // A terminate scope, which wraps the body of a function that cannot throw,
+    // is a catch-all handler that only terminates the program. The exception is
+    // caught by the runtime helper that cir.eh.terminate lowers to, so the
+    // handler region has no cir.begin_catch of its own.
+    if (mlir::isa<cir::EhTerminateOp>(entryBlock.front())) {
+      if (!mlir::isa<cir::CatchAllAttr>(typeAttr))
+        return emitOpError("'cir.eh.terminate' is only allowed in a catch-all "
+                           "handler region");
+      continue;
+    }
+
     // Nothing may run in a catch handler before cir.begin_catch, so it has to
     // be the handler region's first operation, with two exceptions.
     //
@@ -4628,9 +4738,6 @@ LogicalResult cir::TryOp::verify() {
     //
     // A cir.construct_catch_param may also precede cir.begin_catch, to
     // perform any pre-begin_catch initialization of the catch parameter.
-    if (entryBlock.empty())
-      return emitOpError("catch handler region must not be empty");
-
     mlir::Operation *firstOp = &entryBlock.front();
     if (mlir::isa<cir::LifetimeStartOp>(firstOp)) {
       mlir::Operation *next = firstOp->getNextNode();

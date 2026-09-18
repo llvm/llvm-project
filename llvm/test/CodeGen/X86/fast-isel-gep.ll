@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-linux -O0 | FileCheck %s --check-prefix=X64
-; RUN: llc < %s -mtriple=x86_64-windows-itanium -O0 | FileCheck %s --check-prefix=X64
+; RUN: llc < %s -mtriple=x86_64-linux -O0 | FileCheck %s --check-prefixes=X64,LINUX
+; RUN: llc < %s -mtriple=x86_64-windows-itanium -O0 | FileCheck %s --check-prefixes=X64,WIN64
 ; RUN: llc < %s -mtriple=i686-- -O0 | FileCheck %s --check-prefix=X32
 
 ; GEP indices are interpreted as signed integers, so they
@@ -132,6 +132,31 @@ T:
 
 F:
   ret i32 4
+}
+
+; PR220954 - A constant index wider than 64 bits is truncated to the pointer
+; width when folded into the address mode; it used to assert in
+; APInt::getSExtValue.
+define void @test8() nounwind {
+; X32-LABEL: test8:
+; X32:         pushl %eax
+; X32-NEXT:    movl (%esp), %eax
+; X32-NEXT:    popl %eax
+; X32-NEXT:    retl
+
+; LINUX-LABEL: test8:
+; LINUX:         movl -4(%rsp), %eax
+; LINUX-NEXT:    retq
+
+; WIN64-LABEL: test8:
+; WIN64:         pushq %rax
+; WIN64-NEXT:    movl 4(%rsp), %eax
+; WIN64-NEXT:    popq %rax
+; WIN64-NEXT:    retq
+  %alloc = alloca i32, align 4
+  %gep = getelementptr i32, ptr %alloc, i128 18446744073709551616 ; 2^64
+  %v = load volatile i32, ptr %gep, align 1
+  ret void
 }
 
 declare i32 @__gxx_personality_v0(...)

@@ -91,14 +91,14 @@ public:
       FloatABI::ABIType FloatABI = FloatABI::Default, StringRef ABIName = "",
       VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
-  // FIXME: The floating-point ABI is read from the "float-abi" module flag, but
-  // the ExceptionModel/ABIName/VecLib parameters are still TargetOptions values
-  // that are not yet represented in the IR. Delete these parameters (and build
-  // everything from the Module) once those fields are migrated to module flags.
+  // FIXME: The exception model and floating-point ABI are read from the
+  // "exception-model" and "float-abi" module flags, but the ABIName/VecLib
+  // parameters are still TargetOptions values that are not yet represented in
+  // the IR. Delete these parameters (and build everything from the Module) once
+  // those fields are migrated to module flags.
   LLVM_ABI explicit RuntimeLibcallsInfo(
-      const Module &M,
-      ExceptionHandling ExceptionModel = ExceptionHandling::None,
-      StringRef ABIName = "", VectorLibrary VecLib = VectorLibrary::NoLibrary);
+      const Module &M, StringRef ABIName = "",
+      VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
   LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
                            ModuleAnalysisManager::Invalidator &);

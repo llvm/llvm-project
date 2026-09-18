@@ -1027,9 +1027,14 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
       CoercedType = AbiReverseMapper->convertType(AbiInfo.getCoerceToType());
     if (!CoercedType)
       CoercedType = getTypes().ConvertType(Type);
+    unsigned DirectAlign = 0;
+    if (llvm::MaybeAlign Align = AbiInfo.getDirectAlign())
+      DirectAlign = Align->value();
+    // TODO: Move Padding into the ABIArgInfo struct when we add support for
+    //       targets that need a different setting than we have here.
     return ABIArgInfo::getDirect(CoercedType, AbiInfo.getDirectOffset(),
                                  /*Padding=*/nullptr,
-                                 AbiInfo.getCanBeFlattened());
+                                 AbiInfo.getCanBeFlattened(), DirectAlign);
   }
   case llvm::abi::ArgInfo::Extend: {
     llvm::Type *CoercedType = nullptr;

@@ -43,8 +43,8 @@ public:
   }
 };
 
-#define LIST_TRUNC_TESTS(T, func)                                              \
-  using LlvmLibcTruncTest = TruncTest<T>;                                      \
-  TEST_F(LlvmLibcTruncTest, Range) { testRange(&func); }
+#define LIST_TRUNC_TESTS(Name, T, func)                                        \
+  using LlvmLibc##Name##Test = TruncTest<T>;                                   \
+  TEST_F(LlvmLibc##Name##Test, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_TRUNCTEST_H
