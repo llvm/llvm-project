@@ -109,9 +109,188 @@ define float @powf_libcall_negthird_fast(float %x) {
   ret float %pow
 }
 
+define fp128 @pow_intrinsic_third_f128(fp128 %x) {
+; CHECK-LABEL: @pow_intrinsic_third_f128(
+; CHECK-NEXT:    [[POW:%.*]] = call fast fp128 @llvm.pow.f128(fp128 [[X:%.*]], fp128 f0x3FFD5555555555555555555555555555)
+; CHECK-NEXT:    ret fp128 [[POW]]
+;
+  %pow = call fast fp128 @llvm.pow.f128(fp128 %x, fp128 0xL55555555555555553FFD555555555555)
+  ret fp128 %pow
+}
+
+define fp128 @powl_libcall_third_f128(fp128 %x) {
+; CHECK-LABEL: @powl_libcall_third_f128(
+; CHECK-NEXT:    [[POW:%.*]] = call fast fp128 @powl(fp128 [[X:%.*]], fp128 f0x3FFD5555555555555555555555555555)
+; CHECK-NEXT:    ret fp128 [[POW]]
+;
+  %pow = call fast fp128 @powl(fp128 %x, fp128 0xL55555555555555553FFD555555555555)
+  ret fp128 %pow
+}
+
+; pow(X, 2/3) --> cbrt(X) * cbrt(X) when { nnan ninf nsz afn } is present.
+
+; Minimum flags required for the transform.
+define double @pow_intrinsic_twothirds_minflags(double %x) {
+; CHECK-LABEL: @pow_intrinsic_twothirds_minflags(
+; CHECK-NEXT:    [[CBRT:%.*]] = call nnan ninf nsz afn double @cbrt(double [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = fmul nnan ninf nsz afn double [[CBRT]], [[CBRT]]
+; CHECK-NEXT:    ret double [[POW]]
+;
+  %pow = call nnan ninf nsz afn double @llvm.pow.f64(double %x, double 0x3fe5555555555555)
+  ret double %pow
+}
+
+define float @powf_intrinsic_twothirds_minflags(float %x) {
+; CHECK-LABEL: @powf_intrinsic_twothirds_minflags(
+; CHECK-NEXT:    [[CBRTF:%.*]] = call nnan ninf nsz afn float @cbrtf(float [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = fmul nnan ninf nsz afn float [[CBRTF]], [[CBRTF]]
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %pow = call nnan ninf nsz afn float @llvm.pow.f32(float %x, float 0x3fe5555560000000)
+  ret float %pow
+}
+
+; Extra fast-math flags beyond the minimum must be preserved on both the cbrt
+; call and the multiply.
+define double @pow_intrinsic_twothirds_reassoc(double %x) {
+; CHECK-LABEL: @pow_intrinsic_twothirds_reassoc(
+; CHECK-NEXT:    [[CBRT:%.*]] = call reassoc nnan ninf nsz afn double @cbrt(double [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = fmul reassoc nnan ninf nsz afn double [[CBRT]], [[CBRT]]
+; CHECK-NEXT:    ret double [[POW]]
+;
+  %pow = call nnan ninf nsz reassoc afn double @llvm.pow.f64(double %x, double 0x3fe5555555555555)
+  ret double %pow
+}
+
+define double @pow_intrinsic_twothirds_fast(double %x) {
+; CHECK-LABEL: @pow_intrinsic_twothirds_fast(
+; CHECK-NEXT:    [[CBRT:%.*]] = call fast double @cbrt(double [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = fmul fast double [[CBRT]], [[CBRT]]
+; CHECK-NEXT:    ret double [[POW]]
+;
+  %pow = call fast double @llvm.pow.f64(double %x, double 0x3fe5555555555555)
+  ret double %pow
+}
+
+define float @powf_intrinsic_twothirds_fast(float %x) {
+; CHECK-LABEL: @powf_intrinsic_twothirds_fast(
+; CHECK-NEXT:    [[CBRTF:%.*]] = call fast float @cbrtf(float [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = fmul fast float [[CBRTF]], [[CBRTF]]
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %pow = call fast float @llvm.pow.f32(float %x, float 0x3fe5555560000000)
+  ret float %pow
+}
+
+define double @pow_libcall_twothirds_minflags(double %x) {
+; CHECK-LABEL: @pow_libcall_twothirds_minflags(
+; CHECK-NEXT:    [[CBRT:%.*]] = call nnan ninf nsz afn double @cbrt(double [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = fmul nnan ninf nsz afn double [[CBRT]], [[CBRT]]
+; CHECK-NEXT:    ret double [[POW]]
+;
+  %pow = call nnan ninf nsz afn double @pow(double %x, double 0x3fe5555555555555)
+  ret double %pow
+}
+
+define double @pow_libcall_twothirds_fast(double %x) {
+; CHECK-LABEL: @pow_libcall_twothirds_fast(
+; CHECK-NEXT:    [[CBRT:%.*]] = call fast double @cbrt(double [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = fmul fast double [[CBRT]], [[CBRT]]
+; CHECK-NEXT:    ret double [[POW]]
+;
+  %pow = call fast double @pow(double %x, double 0x3fe5555555555555)
+  ret double %pow
+}
+
+define float @powf_libcall_twothirds_fast(float %x) {
+; CHECK-LABEL: @powf_libcall_twothirds_fast(
+; CHECK-NEXT:    [[CBRTF:%.*]] = call fast float @cbrtf(float [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = fmul fast float [[CBRTF]], [[CBRTF]]
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %pow = call fast float @powf(float %x, float 0x3fe5555560000000)
+  ret float %pow
+}
+
+; !fpmath metadata should be preserved on the cbrt call and the multiply.
+define double @pow_intrinsic_twothirds_fpmath(double %x) {
+; CHECK-LABEL: @pow_intrinsic_twothirds_fpmath(
+; CHECK-NEXT:    [[CBRT:%.*]] = call nnan ninf nsz afn double @cbrt(double [[X:%.*]]), !fpmath [[META0:![0-9]+]]
+; CHECK-NEXT:    [[POW:%.*]] = fmul nnan ninf nsz afn double [[CBRT]], [[CBRT]], !fpmath [[META0]]
+; CHECK-NEXT:    ret double [[POW]]
+;
+  %pow = call nnan ninf nsz afn double @llvm.pow.f64(double %x, double 0x3fe5555555555555), !fpmath !0
+  ret double %pow
+}
+
+; Long double is fp128 in InstCombine tests (see pow-exp.ll), not x86_fp80.
+; Exponent is 2/3 in fp128 precision (2.0L/3.0L), not an extended double 2/3.
+define fp128 @pow_intrinsic_twothirds_f128(fp128 %x) {
+; CHECK-LABEL: @pow_intrinsic_twothirds_f128(
+; CHECK-NEXT:    [[CBRTL:%.*]] = call nnan ninf nsz afn fp128 @cbrtl(fp128 [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = fmul nnan ninf nsz afn fp128 [[CBRTL]], [[CBRTL]]
+; CHECK-NEXT:    ret fp128 [[POW]]
+;
+  %pow = call nnan ninf nsz afn fp128 @llvm.pow.f128(fp128 %x, fp128 0xL55555555555555553FFE555555555555)
+  ret fp128 %pow
+}
+
+define fp128 @powl_libcall_twothirds_f128(fp128 %x) {
+; CHECK-LABEL: @powl_libcall_twothirds_f128(
+; CHECK-NEXT:    [[CBRTL:%.*]] = call nnan ninf nsz afn fp128 @cbrtl(fp128 [[X:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = fmul nnan ninf nsz afn fp128 [[CBRTL]], [[CBRTL]]
+; CHECK-NEXT:    ret fp128 [[POW]]
+;
+  %pow = call nnan ninf nsz afn fp128 @powl(fp128 %x, fp128 0xL55555555555555553FFE555555555555)
+  ret fp128 %pow
+}
+
+; Negative test: 'afn' alone is not enough; the fold requires nnan/ninf/nsz too.
+define double @pow_intrinsic_twothirds_approx(double %x) {
+; CHECK-LABEL: @pow_intrinsic_twothirds_approx(
+; CHECK-NEXT:    [[POW:%.*]] = call afn double @llvm.pow.f64(double [[X:%.*]], double f0x3FE5555555555555)
+; CHECK-NEXT:    ret double [[POW]]
+;
+  %pow = call afn double @llvm.pow.f64(double %x, double 0x3fe5555555555555)
+  ret double %pow
+}
+
+define double @pow_intrinsic_twothirds_no_nnan(double %x) {
+; CHECK-LABEL: @pow_intrinsic_twothirds_no_nnan(
+; CHECK-NEXT:    [[POW:%.*]] = call ninf nsz afn double @llvm.pow.f64(double [[X:%.*]], double f0x3FE5555555555555)
+; CHECK-NEXT:    ret double [[POW]]
+;
+  %pow = call ninf nsz afn double @llvm.pow.f64(double %x, double 0x3fe5555555555555)
+  ret double %pow
+}
+
+; Negative test: pow(X, -2/3) is not rewritten to cbrt.
+define double @pow_intrinsic_negtwothirds_fast(double %x) {
+; CHECK-LABEL: @pow_intrinsic_negtwothirds_fast(
+; CHECK-NEXT:    [[POW:%.*]] = call fast double @llvm.pow.f64(double [[X:%.*]], double f0xBFE5555555555555)
+; CHECK-NEXT:    ret double [[POW]]
+;
+  %pow = call fast double @llvm.pow.f64(double %x, double 0xbfe5555555555555)
+  ret double %pow
+}
+
+; Negative test: a non-exact 2/3 exponent must not fold.
+define double @pow_intrinsic_twothirds_nonexact(double %x) {
+; CHECK-LABEL: @pow_intrinsic_twothirds_nonexact(
+; CHECK-NEXT:    [[POW:%.*]] = call fast double @llvm.pow.f64(double [[X:%.*]], double f0x3FE5555555555556)
+; CHECK-NEXT:    ret double [[POW]]
+;
+  %pow = call fast double @llvm.pow.f64(double %x, double 0x3fe5555555555556)
+  ret double %pow
+}
+
 declare double @llvm.pow.f64(double, double) #0
 declare float @llvm.pow.f32(float, float) #0
+declare fp128 @llvm.pow.f128(fp128, fp128) #0
 declare double @pow(double, double)
 declare float @powf(float, float)
+declare fp128 @powl(fp128, fp128)
 
 attributes #0 = { nounwind readnone speculatable }
+
+!0 = !{float 2.500000e+00}
