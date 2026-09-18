@@ -1255,6 +1255,12 @@ defm WMMACoexecutionHazards : AMDGPUSubtargetFeature<"wmma-coexecution-hazards",
   /*GenPredicate=*/0
 >;
 
+defm VOPD3F64OPYSrcHazard : AMDGPUSubtargetFeature<"vopd3-f64-opy-src-hazard",
+  "Hazard when an OPY VGPR source of a VOPD3 with a 64-bit OPX names the last "
+  "VGPR allocated to the wave",
+  /*GenPredicate=*/0
+>;
+
 defm SALUFloatInsts : AMDGPUSubtargetFeature<"salu-float",
   "Has SALU floating point instructions"
 >;
@@ -2458,6 +2464,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureRealTrue16Insts,
    FeatureVMovB64Inst,
    FeatureVMulU64Inst,
+   FeatureVOPD3F64OPYSrcHazard,
 ]>;
 
 def FeatureISAVersion12_50_STRICT : FeatureSet<
