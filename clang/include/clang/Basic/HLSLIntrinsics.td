@@ -1946,6 +1946,7 @@ def hlsl_wave_read_lane_first :
 \param Val The value to read.
 }];
   let VaryingTypes = AllTypesWithBool;
-  let IsConvergent = 1;
-  let Availability = SM6_0;
+let VaryingLongVector = 1;
+let IsConvergent = 1;
+let Availability = SM6_0;
 }

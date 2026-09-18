@@ -84,6 +84,36 @@ entry:
   ret <4 x float> %ret
 }
 
+define noundef <5 x float> @wave_readlane_first_v5float(
+    <5 x float> noundef %expr) {
+entry:
+; CHECK-LABEL: define noundef <5 x float> @wave_readlane_first_v5float(
+; CHECK-COUNT-5: call float @dx.op.waveReadLaneFirst.f32(i32 118,
+  %ret = call <5 x float> @llvm.dx.wave.readlane.first.v5f32(
+      <5 x float> %expr)
+  ret <5 x float> %ret
+}
+
+define noundef <6 x float> @wave_readlane_first_float2x3(
+    <6 x float> noundef %expr) {
+entry:
+; CHECK-LABEL: define noundef <6 x float> @wave_readlane_first_float2x3(
+; CHECK-COUNT-6: call float @dx.op.waveReadLaneFirst.f32(i32 118,
+  %ret = call <6 x float> @llvm.dx.wave.readlane.first.v6f32(
+      <6 x float> %expr)
+  ret <6 x float> %ret
+}
+
+define noundef <12 x float> @wave_readlane_first_float3x4(
+    <12 x float> noundef %expr) {
+entry:
+; CHECK-LABEL: define noundef <12 x float> @wave_readlane_first_float3x4(
+; CHECK-COUNT-12: call float @dx.op.waveReadLaneFirst.f32(i32 118,
+  %ret = call <12 x float> @llvm.dx.wave.readlane.first.v12f32(
+      <12 x float> %expr)
+  ret <12 x float> %ret
+}
+
 declare half @llvm.dx.wave.readlane.first.f16(half)
 declare float @llvm.dx.wave.readlane.first.f32(float)
 declare double @llvm.dx.wave.readlane.first.f64(double)
@@ -94,3 +124,6 @@ declare i64 @llvm.dx.wave.readlane.first.i64(i64)
 declare <2 x half> @llvm.dx.wave.readlane.first.v2f16(<2 x half>)
 declare <3 x i32> @llvm.dx.wave.readlane.first.v3i32(<3 x i32>)
 declare <4 x float> @llvm.dx.wave.readlane.first.v4f32(<4 x float>)
+declare <5 x float> @llvm.dx.wave.readlane.first.v5f32(<5 x float>)
+declare <6 x float> @llvm.dx.wave.readlane.first.v6f32(<6 x float>)
+declare <12 x float> @llvm.dx.wave.readlane.first.v12f32(<12 x float>)
