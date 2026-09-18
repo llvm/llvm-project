@@ -2666,6 +2666,13 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
         return BinaryOperator::CreateXor(Op1, Op0);
     }
 
+    // C - (X | C) --> X & ~C when ((~C) << 1) == 0.
+    if (match(Op1, m_c_Or(m_Value(X), m_Specific(Op0)))) {
+      if (Op0C->isAllOnes() || Op0C->isMaxSignedValue())
+        return BinaryOperator::CreateAnd(
+            X, ConstantInt::get(I.getType(), ~(*Op0C)));
+    }
+
     // C - ((C3 -nuw X) & C2) --> (C - (C2 & C3)) + (X & C2) when:
     // (C3 - ((C2 & C3) - 1)) is pow2
     // ((C2 + C3) & ((C2 & C3) - 1)) == ((C2 & C3) - 1)
