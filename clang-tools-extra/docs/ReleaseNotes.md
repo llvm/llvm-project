@@ -278,6 +278,10 @@ infrastructure are described first, followed by tool-specific sections.
   exclusively for overload resolution. Added the {option}`IgnoredTypes`
   option to allow customizing the set of ignored types.
 
+- Improved {doc}`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a false
+  positive on the required parentheses of `typeof` and `typeof_unqual` operands.
+
 - Improved {doc}`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check:
 
