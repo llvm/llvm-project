@@ -477,7 +477,7 @@ TYPE_PARSER(construct<ComponentAttrSpec>(accessSpec) ||
     construct<ComponentAttrSpec>("DIMENSION" >> componentArraySpec) ||
     construct<ComponentAttrSpec>(pointer) ||
     extension<LanguageFeature::CUDA>(
-        construct<ComponentAttrSpec>(Parser<common::CUDADataAttr>{})) ||
+        construct<ComponentAttrSpec>(Parser<CUDADataAttrSpec>{})) ||
     construct<ComponentAttrSpec>(recovery(
         fail<ErrorRecovery>(
             "type parameter definitions must appear before component declarations"_err_en_US),
@@ -764,7 +764,15 @@ TYPE_PARSER(construct<AttrSpec>(accessSpec) ||
     construct<AttrSpec>(construct<Value>("VALUE"_tok)) ||
     construct<AttrSpec>(construct<Volatile>("VOLATILE"_tok)) ||
     extension<LanguageFeature::CUDA>(
-        construct<AttrSpec>(Parser<common::CUDADataAttr>{})))
+        construct<AttrSpec>(Parser<CUDADataAttrSpec>{})))
+
+// CUDA-data-attr-spec -> CUDA-data-attr [( IMPLICIT )]
+// The parenthesized qualifier marks a compiler-applied attribute; it is
+// emitted into module files so the distinction survives, and is not meant to
+// be written in user code.
+TYPE_PARSER(construct<CUDADataAttrSpec>(Parser<common::CUDADataAttr>{},
+    maybe(parenthesized(
+        construct<CUDADataAttrSpec::Implicit>("IMPLICIT" >> ok)))))
 
 // CUDA-data-attr ->
 //     CONSTANT | DEVICE | MANAGED | PINNED | SHARED | TEXTURE | UNIFIED
