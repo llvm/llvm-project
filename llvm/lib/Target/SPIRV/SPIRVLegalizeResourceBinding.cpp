@@ -1,4 +1,4 @@
-//===- SPIRVLegalizeImplicitBinding.cpp - Legalize implicit bindings ----*- C++
+//===- SPIRVLegalizeResourceBinding.cpp - Legalize resource bindings ----*- C++
 //-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -28,7 +28,7 @@
 using namespace llvm;
 
 namespace {
-class SPIRVLegalizeImplicitBindingImpl {
+class SPIRVLegalizeResourceBindingImpl {
 public:
   bool runOnModule(Module &M);
 
@@ -45,15 +45,15 @@ private:
   bool MayHaveImplicitBindings = false;
 };
 
-class SPIRVLegalizeImplicitBindingLegacy : public ModulePass {
+class SPIRVLegalizeResourceBindingLegacy : public ModulePass {
 public:
   static char ID;
-  SPIRVLegalizeImplicitBindingLegacy() : ModulePass(ID) {}
+  SPIRVLegalizeResourceBindingLegacy() : ModulePass(ID) {}
   StringRef getPassName() const override {
-    return "SPIRV Legalize Implicit Binding";
+    return "SPIRV Legalize Resource Binding";
   }
   bool runOnModule(Module &M) override {
-    return SPIRVLegalizeImplicitBindingImpl().runOnModule(M);
+    return SPIRVLegalizeResourceBindingImpl().runOnModule(M);
   }
 };
 
@@ -75,7 +75,7 @@ static uint32_t getDescSet(const CallInst *CI) {
 // Collect all of the bindings used by llvm.spv.resource.handlefrombinding
 // and llvm.spv.resource.counterhandlefrombinding calls. Also check if there
 // are any implicit binding calls.
-void SPIRVLegalizeImplicitBindingImpl::collectBindingInfo(Module &M) {
+void SPIRVLegalizeResourceBindingImpl::collectBindingInfo(Module &M) {
 
   auto addBinding = [&](uint32_t DescSet, uint32_t Binding) {
     if (UsedBindings.size() <= DescSet) {
@@ -122,7 +122,7 @@ void SPIRVLegalizeImplicitBindingImpl::collectBindingInfo(Module &M) {
   }
 }
 
-uint32_t SPIRVLegalizeImplicitBindingImpl::getAndReserveFirstUnusedBinding(
+uint32_t SPIRVLegalizeResourceBindingImpl::getAndReserveFirstUnusedBinding(
     uint32_t DescSet) {
   if (UsedBindings.size() <= DescSet) {
     UsedBindings.resize(DescSet + 1);
@@ -181,7 +181,7 @@ static void replaceWithCounterHandleFromBinding(Module &M, CallInst *CI,
   CI->eraseFromParent();
 }
 
-bool SPIRVLegalizeImplicitBindingImpl::replaceImplicitBindingCalls(Module &M) {
+bool SPIRVLegalizeResourceBindingImpl::replaceImplicitBindingCalls(Module &M) {
   // Collect all implicit binding calls.
   SmallVector<std::pair<uint32_t, CallInst *>> IBCalls;
   bool Changed = false;
@@ -247,7 +247,7 @@ bool SPIRVLegalizeImplicitBindingImpl::replaceImplicitBindingCalls(Module &M) {
   return Changed;
 }
 
-bool SPIRVLegalizeImplicitBindingImpl::runOnModule(Module &M) {
+bool SPIRVLegalizeResourceBindingImpl::runOnModule(Module &M) {
   collectBindingInfo(M);
 
   bool Changed = false;
@@ -259,18 +259,18 @@ bool SPIRVLegalizeImplicitBindingImpl::runOnModule(Module &M) {
 } // namespace
 
 PreservedAnalyses
-SPIRVLegalizeImplicitBindingPass::run(Module &M, ModuleAnalysisManager &AM) {
-  return SPIRVLegalizeImplicitBindingImpl().runOnModule(M)
+SPIRVLegalizeResourceBindingPass::run(Module &M, ModuleAnalysisManager &AM) {
+  return SPIRVLegalizeResourceBindingImpl().runOnModule(M)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();
 }
 
-char SPIRVLegalizeImplicitBindingLegacy::ID = 0;
+char SPIRVLegalizeResourceBindingLegacy::ID = 0;
 
-INITIALIZE_PASS(SPIRVLegalizeImplicitBindingLegacy,
-                "legalize-spirv-implicit-binding",
-                "Legalize SPIR-V implicit bindings", false, false)
+INITIALIZE_PASS(SPIRVLegalizeResourceBindingLegacy,
+                "legalize-spirv-resource-binding",
+                "Legalize SPIR-V resource bindings", false, false)
 
-ModulePass *llvm::createSPIRVLegalizeImplicitBindingPass() {
-  return new SPIRVLegalizeImplicitBindingLegacy();
+ModulePass *llvm::createSPIRVLegalizeResourceBindingPass() {
+  return new SPIRVLegalizeResourceBindingLegacy();
 }
