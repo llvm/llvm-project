@@ -49,14 +49,14 @@ class CIR_EnumAttr<EnumInfo info, string name = "", list<Trait> traits = []>
 
 def CIR_LangAddressSpace : CIR_I32Enum<
   "LangAddressSpace", "language address space kind", [
-  I32EnumAttrCase<"Default", 0, "default">,
-  I32EnumAttrCase<"OffloadPrivate", 1, "offload_private">,
-  I32EnumAttrCase<"OffloadLocal", 2, "offload_local">,
-  I32EnumAttrCase<"OffloadGlobal", 3, "offload_global">,
-  I32EnumAttrCase<"OffloadConstant", 4, "offload_constant">,
-  I32EnumAttrCase<"OffloadGeneric", 5, "offload_generic">,
-  I32EnumAttrCase<"OffloadGlobalDevice", 6, "offload_global_device">,
-  I32EnumAttrCase<"OffloadGlobalHost", 7, "offload_global_host">
+  I32EnumCase<"Default", 0, "default">,
+  I32EnumCase<"OffloadPrivate", 1, "offload_private">,
+  I32EnumCase<"OffloadLocal", 2, "offload_local">,
+  I32EnumCase<"OffloadGlobal", 3, "offload_global">,
+  I32EnumCase<"OffloadConstant", 4, "offload_constant">,
+  I32EnumCase<"OffloadGeneric", 5, "offload_generic">,
+  I32EnumCase<"OffloadGlobalDevice", 6, "offload_global_device">,
+  I32EnumCase<"OffloadGlobalHost", 7, "offload_global_host">
 ]> {
   let description = [{
     Enumerates language-specific address spaces used by CIR. These represent

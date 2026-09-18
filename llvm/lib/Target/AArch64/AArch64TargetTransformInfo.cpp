@@ -1154,23 +1154,30 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   case Intrinsic::experimental_vector_match: {
-    auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
-    EVT SearchVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
-    unsigned SearchSize = NeedleTy->getNumElements();
-    auto IsSupportedTypeAndSearchSize = [&]() {
-      if (SearchVT == MVT::nxv8i16 || SearchVT == MVT::v8i16)
-        return SearchSize == 8;
-
-      if (SearchVT == MVT::nxv16i8 || SearchVT == MVT::v16i8 ||
-          SearchVT == MVT::v8i8)
-        return SearchSize == 8 || SearchSize == 16;
-
-      return false;
-    };
-
-    if (!ST->hasSVE2() || !ST->isSVEAvailable() ||
-        !IsSupportedTypeAndSearchSize())
+    if (!ST->hasSVE2() || !ST->isSVEAvailable())
       break;
+
+    auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
+
+    // We expand vector.matches with <= 2 elements to a chain of compares.
+    unsigned SearchSize = NeedleTy->getNumElements();
+    if (SearchSize <= 2)
+      break;
+
+    auto [LegalParts, SearchVT] = getTypeLegalizationCost(ICA.getArgTypes()[0]);
+    if (!is_contained(
+            {MVT::nxv8i16, MVT::nxv16i8, MVT::v8i16, MVT::v16i8, MVT::v8i8},
+            SearchVT.SimpleTy))
+      break;
+
+    unsigned ElementSizeInBits = SearchVT.getScalarSizeInBits();
+
+    // Number of needle elements we can compare per `match` instruction.
+    unsigned NeedleEltsPerMatch = AArch64::SVEBitsPerBlock / ElementSizeInBits;
+
+    // How many `match` instructions we need to match `SearchSize` elements.
+    unsigned MatchesRequiredForNeedle =
+        llvm::divideCeil(SearchSize, NeedleEltsPerMatch);
 
     // Base cost for MATCH instructions. At least on the Neoverse V2 and
     // Neoverse V3, these are cheap operations with the same latency as a
@@ -1180,7 +1187,8 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     InstructionCost Cost = 4;
     if (isa<FixedVectorType>(RetTy))
       Cost += 10;
-    return Cost;
+
+    return Cost * LegalParts * MatchesRequiredForNeedle;
   }
   case Intrinsic::cttz: {
     auto LT = getTypeLegalizationCost(ICA.getArgTypes()[0]);
@@ -2013,6 +2021,32 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
     SimpleII = simplifyBinOp(Opc, Op1, Op2, FII->getFastMathFlags(), DL);
   else
     SimpleII = simplifyBinOp(Opc, Op1, Op2, DL);
+
+  // If both operands are convert.to.svbool from the same narrower predicate
+  // type, try to simplify the operation at that narrower type. This is valid
+  // because the conversions zero the lanes not represented by the narrower
+  // type, so those lanes of the result are zero either way.
+  Value *NarrowOp1, *NarrowOp2;
+  if (!SimpleII &&
+      match(Op1, m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
+                     m_Value(NarrowOp1))) &&
+      match(Op2, m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
+                     m_Value(NarrowOp2))) &&
+      NarrowOp1->getType() == NarrowOp2->getType()) {
+    Value *SimpleNarrow = simplifyBinOp(Opc, NarrowOp1, NarrowOp2, DL);
+    if (SimpleNarrow && !isa<UndefValue>(SimpleNarrow)) {
+      if (match(SimpleNarrow, m_ZeroInt()))
+        SimpleII = Constant::getNullValue(II.getType());
+      else if (SimpleNarrow == NarrowOp1)
+        SimpleII = Op1;
+      else if (SimpleNarrow == NarrowOp2)
+        SimpleII = Op2;
+      else
+        SimpleII =
+            IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool,
+                                       SimpleNarrow->getType(), SimpleNarrow);
+    }
+  }
 
   // An SVE intrinsic's result is always defined. However, this is not the case
   // for its equivalent IR instruction (e.g. when shifting by an amount more
@@ -4611,6 +4645,28 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     if (Index == 0 && !Ty->getScalarType()->isIntegerTy())
       return 0;
 
+    // SVE has no scalar move to an arbitrary lane above the low 128-bit portion
+    // of a Z register, e.g. there is no equivalent of "mov z0.d[9], d0".
+    // Fixed-length vectors wider than 128 bits therefore need
+    // [splice]/index/pred/splat/cmp/pred-mov when scalarizing inserts for those
+    // lanes, so model them as more expensive than ordinary NEON lane accesses.
+    if (ST->useSVEForFixedLengthVectors()) {
+      InstructionCost Cost = CostKind == TTI::TCK_CodeSize
+                                 ? 1
+                                 : ST->getVectorInsertExtractBaseCost();
+      if (Index * Ty->getScalarSizeInBits() < 128)
+        return Cost;
+      if (Index * Ty->getScalarSizeInBits() < 512 &&
+          Opcode == Instruction::ExtractElement)
+        // Integer extracts (>128b, <512b) require extra mov from FPR -> GPR.
+        return Ty->getScalarType()->isIntegerTy() ? Cost + 1 : Cost;
+      if (Opcode == Instruction::ExtractElement)
+        return Cost + 2; // cost of mov imm + whilels + lastb
+      if (Opcode == Instruction::InsertElement)
+        return Cost + 3; // cost of insert with cmp/splice
+      llvm_unreachable("unexpected opcode");
+    }
+
     // This is recognising a LD1 single-element structure to one lane of one
     // register instruction. I.e., if this is an `insertelement` instruction,
     // and its second operand is a load, then we will generate a LD1, which
@@ -5670,7 +5726,14 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     const MCSchedModel &Sched = ST->getSchedModel();
     const TargetInstrInfo *TII = ST->getInstrInfo();
     unsigned SchedClass = TII->get(Inst).getSchedClass();
-    const MCSchedClassDesc *SCD = Sched.getSchedClassDesc(SchedClass);
+    const MCSchedClassDesc *SCD = Sched.hasInstrSchedModel()
+                                      ? Sched.getSchedClassDesc(SchedClass)
+                                      : nullptr;
+    // If the cpu has no scheduling model, or it doesn't describe the load, then
+    // fall back to the default load latency. Variant scheduling classes can't
+    // be resolved without a MachineInstr, so treat them the same way.
+    if (!SCD || !SCD->isValid() || SCD->isVariant())
+      return (LT.first - 1) + ST->getLoadLatency();
     // We need to convert the number of loads before the last to a float here,
     // as the reciprocal throughput may be fractional.
     float NumLoads = (LT.first - 1).getValue();
@@ -5761,12 +5824,18 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
       return InstructionCost::getInvalid();
   }
 
+  auto LT = getTypeLegalizationCost(VecTy);
+  unsigned MaxNativeInterleaveFactor = TLI->getMaxSupportedInterleaveFactor();
   // Vectorization for masked interleaved accesses is only enabled for scalable
-  // VF.
-  if (!VecTy->isScalableTy() && (UseMaskForCond || UseMaskForGaps))
+  // VF. For fixed-length SVE, avoid non-native interleave factor because
+  // the generic fallback costs wide fixed-vector shuffles too optimistically.
+  if (!VecTy->isScalableTy() &&
+      (UseMaskForCond || UseMaskForGaps ||
+       (Factor > MaxNativeInterleaveFactor &&
+        TLI->useSVEForFixedLengthVectorVT(LT.second))))
     return InstructionCost::getInvalid();
 
-  if (!UseMaskForGaps && Factor <= TLI->getMaxSupportedInterleaveFactor()) {
+  if (!UseMaskForGaps && Factor <= MaxNativeInterleaveFactor) {
     ElementCount EC = VecVTy->getElementCount();
     auto *SubVecTy = VectorType::get(VecVTy->getElementType(),
                                      EC.divideCoefficientBy(Factor));
