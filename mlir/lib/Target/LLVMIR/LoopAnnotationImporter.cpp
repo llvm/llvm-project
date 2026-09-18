@@ -18,18 +18,23 @@ using namespace mlir::LLVM::detail;
 namespace {
 /// Helper class that keeps the state of one metadata to attribute conversion.
 struct LoopMetadataConversion {
-  enum class InputKind { LoopID, Followup };
+  /// Converts a loop ID, owning the recursion state for its follow-ups.
+  static LoopAnnotationAttr convert(const llvm::MDNode *node, Location loc,
+                                    LoopAnnotationImporter &importer);
 
+private:
   LoopMetadataConversion(
       const llvm::MDNode *node, Location loc,
       LoopAnnotationImporter &loopAnnotationImporter,
-      llvm::SmallPtrSetImpl<const llvm::MDNode *> &activeNodes,
-      InputKind inputKind)
+      llvm::SmallPtrSetImpl<const llvm::MDNode *> &activeNodes)
       : node(node), loc(loc), loopAnnotationImporter(loopAnnotationImporter),
-        ctx(loc->getContext()), activeNodes(activeNodes), inputKind(inputKind) {
-  }
-  /// Converts this structs loop metadata node into a LoopAnnotationAttr.
-  LoopAnnotationAttr convert();
+        ctx(loc->getContext()), activeNodes(activeNodes) {}
+
+  /// Converts a follow-up using the current recursion state.
+  LoopAnnotationAttr convertFollowup(const llvm::MDNode *followup);
+
+  /// Converts the properties after the validated loop ID or follow-up header.
+  LoopAnnotationAttr convertImpl();
 
   /// Initializes the shared state for the conversion member functions.
   LogicalResult initConversionState();
@@ -71,21 +76,10 @@ struct LoopMetadataConversion {
   LoopAnnotationImporter &loopAnnotationImporter;
   MLIRContext *ctx;
   llvm::SmallPtrSetImpl<const llvm::MDNode *> &activeNodes;
-  InputKind inputKind;
 };
 } // namespace
 
 LogicalResult LoopMetadataConversion::initConversionState() {
-  // LoopIDs begin with a self-reference; follow-ups begin with their name.
-  if (inputKind == InputKind::LoopID) {
-    if (node->getNumOperands() == 0 ||
-        dyn_cast<llvm::MDNode>(node->getOperand(0)) != node)
-      return emitWarning(loc) << "invalid loop node";
-  } else if (node->getNumOperands() == 0 ||
-             !isa<llvm::MDString>(node->getOperand(0))) {
-    return emitWarning(loc) << "invalid loop followup node";
-  }
-
   for (const llvm::MDOperand &operand : llvm::drop_begin(node->operands())) {
     if (auto *diLoc = dyn_cast<llvm::DILocation>(operand)) {
       locations.push_back(diLoc);
@@ -251,10 +245,7 @@ LoopMetadataConversion::lookupFollowupNode(StringRef name) {
   if (!followup)
     return LoopAnnotationAttr(nullptr);
 
-  LoopAnnotationAttr attr =
-      LoopMetadataConversion(followup, loc, loopAnnotationImporter, activeNodes,
-                             InputKind::Followup)
-          .convert();
+  LoopAnnotationAttr attr = convertFollowup(followup);
   if (!attr)
     return failure();
   return attr;
@@ -429,7 +420,38 @@ FailureOr<FusedLoc> LoopMetadataConversion::convertEndLoc() {
       loopAnnotationImporter.moduleImport.translateLoc(locations[1]));
 }
 
-LoopAnnotationAttr LoopMetadataConversion::convert() {
+LoopAnnotationAttr
+LoopMetadataConversion::convert(const llvm::MDNode *node, Location loc,
+                                LoopAnnotationImporter &importer) {
+  if (node->getNumOperands() == 0 ||
+      dyn_cast<llvm::MDNode>(node->getOperand(0)) != node) {
+    emitWarning(loc) << "invalid loop node";
+    return {};
+  }
+
+  llvm::SmallPtrSet<const llvm::MDNode *, 4> activeNodes;
+  return LoopMetadataConversion(node, loc, importer, activeNodes).convertImpl();
+}
+
+LoopAnnotationAttr
+LoopMetadataConversion::convertFollowup(const llvm::MDNode *followup) {
+  if (followup->getNumOperands() == 0 ||
+      !isa<llvm::MDString>(followup->getOperand(0))) {
+    emitWarning(loc) << "invalid loop followup node";
+    return {};
+  }
+
+  // An explicit empty follow-up is different from an absent follow-up.
+  if (followup->getNumOperands() == 1)
+    return LoopAnnotationAttr::get(ctx, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+                                   {}, {}, {}, {}, {});
+
+  return LoopMetadataConversion(followup, loc, loopAnnotationImporter,
+                                activeNodes)
+      .convertImpl();
+}
+
+LoopAnnotationAttr LoopMetadataConversion::convertImpl() {
   if (!activeNodes.insert(node).second) {
     emitWarning(loc) << "cannot import cyclic loop annotation";
     return {};
@@ -438,11 +460,6 @@ LoopAnnotationAttr LoopMetadataConversion::convert() {
 
   if (failed(initConversionState()))
     return {};
-
-  // An explicit empty follow-up is different from an absent follow-up.
-  if (inputKind == InputKind::Followup && node->getNumOperands() == 1)
-    return LoopAnnotationAttr::get(ctx, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
-                                   {}, {}, {}, {}, {});
 
   FailureOr<BoolAttr> disableNonForced =
       lookupUnitNode("llvm.loop.disable_nonforced");
@@ -490,11 +507,7 @@ LoopAnnotationImporter::translateLoopAnnotation(const llvm::MDNode *node,
   if (it != loopMetadataMapping.end())
     return it->getSecond();
 
-  llvm::SmallPtrSet<const llvm::MDNode *, 4> activeNodes;
-  LoopAnnotationAttr attr =
-      LoopMetadataConversion(node, loc, *this, activeNodes,
-                             LoopMetadataConversion::InputKind::LoopID)
-          .convert();
+  LoopAnnotationAttr attr = LoopMetadataConversion::convert(node, loc, *this);
 
   mapLoopMetadata(node, attr);
   return attr;
