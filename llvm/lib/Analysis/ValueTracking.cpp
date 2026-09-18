@@ -1451,6 +1451,20 @@ static void unionWithMinMaxIntrinsicClamp(const IntrinsicInst *II,
         ConstantRange::getNonEmpty(*CLow, *CHigh + 1).toKnownBits());
 }
 
+static void computeKnownBitsForRecurrenceOperands(
+    const PHINode *P, Value *Start, Value *Step, const APInt &DemandedElts,
+    KnownBits &KnownStart, KnownBits &KnownStep, const SimplifyQuery &Q,
+    unsigned Depth) {
+  SimplifyQuery RecQ = Q.getWithoutCondContext();
+  unsigned OpNum = P->getOperand(0) == Start ? 0 : 1;
+
+  RecQ.CxtI = P->getIncomingBlock(OpNum)->getTerminator();
+  computeKnownBits(Start, DemandedElts, KnownStart, RecQ, Depth + 1);
+
+  RecQ.CxtI = P->getIncomingBlock(1 - OpNum)->getTerminator();
+  computeKnownBits(Step, DemandedElts, KnownStep, RecQ, Depth + 1);
+}
+
 static void computeKnownBitsFromOperator(const Operator *I,
                                          const APInt &DemandedElts,
                                          KnownBits &Known,
@@ -1900,28 +1914,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
       case Instruction::And:
       case Instruction::Or:
       case Instruction::Mul: {
-        // Change the context instruction to the "edge" that flows into the
-        // phi. This is important because that is where the value is actually
-        // "evaluated" even though it is used later somewhere else. (see also
-        // D69571).
-        SimplifyQuery RecQ = Q.getWithoutCondContext();
-
-        unsigned OpNum = P->getOperand(0) == Start ? 0 : 1;
-        Instruction *StartTerm = P->getIncomingBlock(OpNum)->getTerminator();
-        Instruction *LatchTerm =
-            P->getIncomingBlock(1 - OpNum)->getTerminator();
-
         // Ok, we have a recurrence of the form {Start,op,Step}. Check for low
         // zero bits.
-        RecQ.CxtI = StartTerm;
-        computeKnownBits(Start, DemandedElts, KnownStart, RecQ, Depth + 1);
-
-        // We need to take the minimum number of known bits.
-        // The step may be loop-variant, so make sure we don't make use of
-        // any conditions that only hold on the last iteration.
         KnownBits KnownStep(BitWidth);
-        RecQ.CxtI = LatchTerm;
-        computeKnownBits(Step, DemandedElts, KnownStep, RecQ, Depth + 1);
+        computeKnownBitsForRecurrenceOperands(P, Start, Step, DemandedElts,
+                                              KnownStart, KnownStep, Q, Depth);
 
         Known.Zero.setLowBits(std::min(KnownStart.countMinTrailingZeros(),
                                        KnownStep.countMinTrailingZeros()));
@@ -1985,20 +1982,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
         // %iv.next = <II>(<Step>, %iv)
         Intrinsic::ID IntrinsicID = II->getIntrinsicID();
         if (IntrinsicID == Intrinsic::umin || IntrinsicID == Intrinsic::umax) {
-          SimplifyQuery RecQ = Q.getWithoutCondContext();
-
-          unsigned OpNum = P->getOperand(0) == Start ? 0 : 1;
-          Instruction *StartInst = P->getIncomingBlock(OpNum)->getTerminator();
-          Instruction *StepInst =
-              P->getIncomingBlock(1 - OpNum)->getTerminator();
-
-          KnownBits KnownStart(BitWidth);
-          RecQ.CxtI = StartInst;
-          computeKnownBits(Start, DemandedElts, KnownStart, RecQ, Depth + 1);
-
           KnownBits KnownStep(BitWidth);
-          RecQ.CxtI = StepInst;
-          computeKnownBits(Step, DemandedElts, KnownStep, RecQ, Depth + 1);
+          computeKnownBitsForRecurrenceOperands(
+              P, Start, Step, DemandedElts, KnownStart, KnownStep, Q, Depth);
 
           if (IntrinsicID == Intrinsic::umin) {
             Known.Zero.setHighBits(KnownStart.countMinLeadingZeros());
