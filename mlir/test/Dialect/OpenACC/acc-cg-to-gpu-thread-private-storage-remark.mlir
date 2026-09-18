@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --pass-pipeline="builtin.module(func.func(acc-cg-to-gpu))" \
 // RUN:   --remarks-filter="(open)?acc.*" 2>&1 | FileCheck %s
 
-// CHECK: Function=one_array | Remark="Local memory used for buf"
+// CHECK: Function=one_array | Remark="Thread-private storage used for buf"
 func.func @one_array() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : i32
@@ -19,7 +19,7 @@ func.func @one_array() {
   return
 }
 
-// CHECK: Function=two_arrays | Remark="Local memory used for a,b"
+// CHECK: Function=two_arrays | Remark="Thread-private storage used for a,b"
 func.func @two_arrays() {
   %priv_a = acc.privatize par_dims(#acc<par_dims[thread_x]>)
       : () -> !acc.private_type<memref<4xi32>>
@@ -41,8 +41,7 @@ func.func @two_arrays() {
   return
 }
 
-// CHECK: Function=scalar
-// CHECK-NOT: Local memory used for
+// CHECK: Function=scalar | Remark="Thread-private storage used for s"
 func.func @scalar() {
   %priv = acc.privatize par_dims(#acc<par_dims[thread_x]>)
       : () -> !acc.private_type<memref<i32>>
