@@ -88,7 +88,8 @@ struct PassInfoMixin : detail::InfoMixin<DerivedT> {
   }
 };
 
-bool shouldSkipOptimizationForOptBisect(IRUnitRef IR, StringRef PassName);
+LLVM_ABI bool shouldSkipOptimizationForOptBisect(IRUnitRef IR,
+                                                 StringRef PassName);
 } // namespace detail
 
 class Function;
