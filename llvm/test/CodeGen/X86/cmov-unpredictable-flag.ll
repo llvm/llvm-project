@@ -53,7 +53,7 @@ define i32 @constant_to_register(i32 %a, i32 %y) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $esi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edi
   ; CHECK-NEXT:   TEST32rr [[COPY1]], [[COPY1]], implicit-def $eflags
-  ; CHECK-NEXT:   [[CMOV32rr:%[0-9]+]]:gr32 = CMOV32rr [[COPY]], [[COPY1]], 4, implicit $eflags
+  ; CHECK-NEXT:   [[CMOV32rr:%[0-9]+]]:gr32 = unpredictable CMOV32rr [[COPY]], [[COPY1]], 4, implicit $eflags
   ; CHECK-NEXT:   $eax = COPY [[CMOV32rr]]
   ; CHECK-NEXT:   RET 0, $eax
   %c = icmp eq i32 %a, 0

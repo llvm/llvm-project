@@ -9,10 +9,7 @@ define i32 @load_or_zero(i32 %a, ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    je .LBB0_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    movl (%rsi), %eax
-; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    cmovnel (%rsi), %eax
 ; CHECK-NEXT:    retq
   %v = load i32, ptr %p, align 4
   %c = icmp eq i32 %a, 0
