@@ -165,7 +165,17 @@ struct MMAInstructionInterface {
 // (width, height, count) tuples and share a packed-format bit size. The
 // transform / transpose / upConv flags are only meaningful for loads; store
 // and prefetch implementations ignore them.
-struct BlockIOInstructionInterface {
+struct BlockIOInstructionInterface : public Instruction {
+  BlockIOInstructionInterface(InstructionKind kind)
+      : Instruction(kind, InstructionScope::Subgroup) {}
+
+  static bool classof(const Instruction *B) {
+    InstructionKind kind = B->getInstructionKind();
+    return kind == InstructionKind::Subgroup2DBlockLoad ||
+           kind == InstructionKind::Subgroup2DBlockStore ||
+           kind == InstructionKind::Subgroup2DBlockPrefetch;
+  }
+
   using BlockShapes =
       std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>;
 
@@ -229,11 +239,9 @@ struct StoreScatterInstruction
 // subclass when it diverges from the extension defaults.
 //===----------------------------------------------------------------------===//
 
-struct Subgroup2DBlockStoreInstruction : public Instruction,
-                                         public BlockIOInstructionInterface {
+struct Subgroup2DBlockStoreInstruction : public BlockIOInstructionInterface {
   Subgroup2DBlockStoreInstruction()
-      : Instruction(InstructionKind::Subgroup2DBlockStore,
-                    InstructionScope::Subgroup) {}
+      : BlockIOInstructionInterface(InstructionKind::Subgroup2DBlockStore) {}
   static bool classof(const Instruction *B) {
     return B->getInstructionKind() == InstructionKind::Subgroup2DBlockStore;
   }
@@ -259,11 +267,9 @@ protected:
   }
 };
 
-struct Subgroup2DBlockLoadInstruction : public Instruction,
-                                        public BlockIOInstructionInterface {
+struct Subgroup2DBlockLoadInstruction : public BlockIOInstructionInterface {
   Subgroup2DBlockLoadInstruction()
-      : Instruction(InstructionKind::Subgroup2DBlockLoad,
-                    InstructionScope::Subgroup) {}
+      : BlockIOInstructionInterface(InstructionKind::Subgroup2DBlockLoad) {}
   static bool classof(const Instruction *B) {
     return B->getInstructionKind() == InstructionKind::Subgroup2DBlockLoad;
   }
@@ -326,11 +332,9 @@ protected:
   }
 };
 
-struct Subgroup2DBlockPrefetchInstruction : public Instruction,
-                                            public BlockIOInstructionInterface {
+struct Subgroup2DBlockPrefetchInstruction : public BlockIOInstructionInterface {
   Subgroup2DBlockPrefetchInstruction()
-      : Instruction(InstructionKind::Subgroup2DBlockPrefetch,
-                    InstructionScope::Subgroup) {}
+      : BlockIOInstructionInterface(InstructionKind::Subgroup2DBlockPrefetch) {}
   static bool classof(const Instruction *B) {
     return B->getInstructionKind() == InstructionKind::Subgroup2DBlockPrefetch;
   }
