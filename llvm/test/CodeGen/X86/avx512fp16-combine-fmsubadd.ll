@@ -4,13 +4,8 @@
 define <8 x half> @test_128(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: test_128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm1[0,0,2,2,4,5,6,7]
-; CHECK-NEXT:    vpshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,4,6,6]
-; CHECK-NEXT:    vprold $16, %xmm0, %xmm3
-; CHECK-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[1,1,3,3,4,5,6,7]
-; CHECK-NEXT:    vpshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,7,7]
-; CHECK-NEXT:    vmulph %xmm1, %xmm3, %xmm1
-; CHECK-NEXT:    vfmsubadd213ph %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vfcmulcph %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vmovaps %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %dup_even_b = shufflevector <8 x half> %b, <8 x half> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
   %mul_re = fmul contract <8 x half> %a, %dup_even_b
@@ -26,13 +21,8 @@ define <8 x half> @test_128(<8 x half> %a, <8 x half> %b) {
 define <16 x half> @test_256(<16 x half> %a, <16 x half> %b) {
 ; CHECK-LABEL: test_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshuflw {{.*#+}} ymm2 = ymm1[0,0,2,2,4,5,6,7,8,8,10,10,12,13,14,15]
-; CHECK-NEXT:    vpshufhw {{.*#+}} ymm2 = ymm2[0,1,2,3,4,4,6,6,8,9,10,11,12,12,14,14]
-; CHECK-NEXT:    vprold $16, %ymm0, %ymm3
-; CHECK-NEXT:    vpshuflw {{.*#+}} ymm1 = ymm1[1,1,3,3,4,5,6,7,9,9,11,11,12,13,14,15]
-; CHECK-NEXT:    vpshufhw {{.*#+}} ymm1 = ymm1[0,1,2,3,5,5,7,7,8,9,10,11,13,13,15,15]
-; CHECK-NEXT:    vmulph %ymm3, %ymm1, %ymm1
-; CHECK-NEXT:    vfmsubadd213ph %ymm1, %ymm2, %ymm0
+; CHECK-NEXT:    vfcmulcph %ymm1, %ymm0, %ymm2
+; CHECK-NEXT:    vmovaps %ymm2, %ymm0
 ; CHECK-NEXT:    retq
   %dup_even_b = shufflevector <16 x half> %b, <16 x half> poison, <16 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6, i32 8, i32 8, i32 10, i32 10, i32 12, i32 12, i32 14, i32 14>
   %mul_re = fmul contract <16 x half> %dup_even_b, %a
@@ -48,13 +38,8 @@ define <16 x half> @test_256(<16 x half> %a, <16 x half> %b) {
 define <32 x half> @test_512(<32 x half> %a, <32 x half> %b) {
 ; CHECK-LABEL: test_512:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshuflw {{.*#+}} zmm2 = zmm1[0,0,2,2,4,5,6,7,8,8,10,10,12,13,14,15,16,16,18,18,20,21,22,23,24,24,26,26,28,29,30,31]
-; CHECK-NEXT:    vpshufhw {{.*#+}} zmm2 = zmm2[0,1,2,3,4,4,6,6,8,9,10,11,12,12,14,14,16,17,18,19,20,20,22,22,24,25,26,27,28,28,30,30]
-; CHECK-NEXT:    vprold $16, %zmm0, %zmm3
-; CHECK-NEXT:    vpshuflw {{.*#+}} zmm1 = zmm1[1,1,3,3,4,5,6,7,9,9,11,11,12,13,14,15,17,17,19,19,20,21,22,23,25,25,27,27,28,29,30,31]
-; CHECK-NEXT:    vpshufhw {{.*#+}} zmm1 = zmm1[0,1,2,3,5,5,7,7,8,9,10,11,13,13,15,15,16,17,18,19,21,21,23,23,24,25,26,27,29,29,31,31]
-; CHECK-NEXT:    vmulph %zmm1, %zmm3, %zmm1
-; CHECK-NEXT:    vfmsubadd213ph %zmm1, %zmm2, %zmm0
+; CHECK-NEXT:    vfcmulcph %zmm1, %zmm0, %zmm2
+; CHECK-NEXT:    vmovaps %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %dup_even_b = shufflevector <32 x half> %b, <32 x half> poison, <32 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6, i32 8, i32 8, i32 10, i32 10, i32 12, i32 12, i32 14, i32 14, i32 16, i32 16, i32 18, i32 18, i32 20, i32 20, i32 22, i32 22, i32 24, i32 24, i32 26, i32 26, i32 28, i32 28, i32 30, i32 30>
   %mul_re = fmul contract <32 x half> %dup_even_b, %a
