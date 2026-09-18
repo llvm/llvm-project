@@ -12,6 +12,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Value.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -370,14 +371,13 @@ void RemarkEmittingPolicyFinal::finalize() {
 
   // Take the pending remarks so that a second finalize(), e.g. from the engine
   // destructor after an explicit call, does not emit them again.
-  llvm::DenseSet<detail::Remark> remarks;
-  remarks.swap(postponedRemarks);
+  auto remarks = postponedRemarks.takeVector();
 
   // Build ID -> Remark* lookup for resolving related remark references.
   llvm::DenseMap<uint64_t, const detail::Remark *> idMap;
   llvm::DenseSet<uint64_t> childIds; // IDs referenced as children
 
-  for (const auto &remark : remarks) {
+  for (const detail::Remark &remark : llvm::make_second_range(remarks)) {
     if (remark.getId())
       idMap[remark.getId().getValue()] = &remark;
     for (auto relId : remark.getRelatedRemarkIds())
@@ -388,7 +388,7 @@ void RemarkEmittingPolicyFinal::finalize() {
   // Parent remarks are emitted first, followed by their related (child)
   // remarks. Child-only remarks are skipped at the top level to avoid
   // duplication.
-  for (const auto &remark : remarks) {
+  for (const detail::Remark &remark : llvm::make_second_range(remarks)) {
     if (remark.getId() && childIds.count(remark.getId().getValue()))
       continue; // will be printed grouped under its parent
 
