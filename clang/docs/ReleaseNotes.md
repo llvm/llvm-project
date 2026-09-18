@@ -632,6 +632,12 @@ features cannot lower the translation-unit ABI level;
   parsed where a nested-name-specifier could appear (e.g. ``int decltype = 0;``).
   Clang now diagnoses the error instead of asserting. (#GH211207)
 
+- Fixed an assertion when instantiating a class template whose member template
+  has a default template argument that calls a generic lambda, e.g.
+  ``template <auto = []<typename... U>(U...) {}()> struct X;``. Template
+  argument deduction for the lambda's call operator now accounts for the depth
+  of its template parameters. (#GH176405)
+
 - Fixed an assertion failure when a parenthesized structured binding declarator
   was followed by a function declarator and body (e.g. ``([a, b])() {}``).
   (#GH218144, #GH193687)
@@ -723,12 +729,6 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed an issue where an explicit specialization of a constexpr variable would
   result in a link error. (#GH219796)
-
-- Fixed an assertion when instantiating a class template whose member template
-  has a default template argument that calls a generic lambda, e.g.
-  ``template <auto = []<typename... U>(U...) {}()> struct X;``. Template
-  argument deduction for the lambda's call operator now accounts for the depth
-  of its template parameters. (#GH176405)
 
 #### Bug Fixes to AST Handling
 
