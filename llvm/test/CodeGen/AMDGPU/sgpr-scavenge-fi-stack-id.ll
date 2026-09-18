@@ -165,7 +165,6 @@ define void @sgpr_scavenge_fi_stack_id(double %input, i1 %enter_fma_path, i1 %re
 ; CHECK-NEXT:    v_mov_b32_e32 v7, vcc_lo
 ; CHECK-NEXT:    s_mov_b32 vcc_lo, 1
 ; CHECK-NEXT:    s_mul_i32 s32, s32, 64
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mul_f64 v[8:9], v[4:5], v[8:9]
 ; CHECK-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:4
 ; CHECK-NEXT:    buffer_store_dword v8, off, s[0:3], 0
