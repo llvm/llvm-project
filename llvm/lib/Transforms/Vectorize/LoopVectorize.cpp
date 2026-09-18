@@ -417,8 +417,8 @@ static cl::opt<bool> EnableEarlyExitVectorizationWithSideEffects(
 
 static cl::opt<unsigned> LowTripCountLoopBodySizeLimit(
     "low-trip-count-loop-body-size-limit", cl::init(20), cl::Hidden,
-    cl::desc("Minimum loop size for loops trip counts "
-             "below tail folding threshold"));
+    cl::desc("Minimum number of instructions to vectorize loops with trip "
+             "counts below tail folding threshold"));
 
 // Returns true if the epilogue VF has been set to a non-zero value other than
 // VF=1 (scalar).
@@ -3080,10 +3080,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     // If a function is marked as minsize/optsize or OptForSize is set, do not
     // allow this form of transformation as this will increase CodeSize.
     //
-    // For loops with small bodies, the cost model is not reliable enough to
-    // accurately determine if vectorization is beneficial.
-    // LowTripCountLoopBodySizeLimit means only loops with larger bodies will
-    // be considered.
+    // For loops with small bodies, the cost model is not currently reliable
+    // enough to accurately determine if vectorization is beneficial.
     unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
     unsigned MaxVFForTC = llvm::bit_floor(TC.getFixedValue());
     unsigned NumOfInstructions = 0;

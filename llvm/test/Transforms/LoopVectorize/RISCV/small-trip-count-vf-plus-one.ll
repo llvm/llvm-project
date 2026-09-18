@@ -3,8 +3,10 @@
 ; Test that a loop with trip count == VF + 1 is allowed to vectorize
 ; on RISCV where under getMinTripCountTailFoldingThreshold(). This
 ; produces the required number of vector iteration and one scalar iteration.
+; To test the vectorization, the loop body size limit has been dropped to allow
+; for smaller test cases to be tested.
 ;
-; RUN: opt -S -p loop-vectorize %s -mtriple=riscv64 -mattr=+v -tail-folding-policy=dont-fold-tail | FileCheck %s
+; RUN: opt -S -p loop-vectorize %s -mtriple=riscv64 -mattr=+v -low-trip-count-loop-body-size-limit=5 -tail-folding-policy=dont-fold-tail | FileCheck %s
 
 ; TC=5, VF=4: TC == MaxFixedVF + 1 (5 == 4 + 1).
 ; The new code path should trigger: 1 vectorized iteration + 1 scalar iteration.
