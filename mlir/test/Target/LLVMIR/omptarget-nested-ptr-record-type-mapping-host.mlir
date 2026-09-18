@@ -36,7 +36,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK: %[[NESTED_STRUCT_PTR_MEMBER_GEP:.*]] = getelementptr { float, [10 x i32], { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i32 }, ptr %[[NESTED_DTYPE_MEMBER_GEP]], i32 0, i32 2
 // CHECK: %[[NESTED_STRUCT_PTR_MEMBER_BADDR_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[NESTED_STRUCT_PTR_MEMBER_GEP]], i32 0, i32 0
 // CHECK: %[[NESTED_STRUCT_PTR_MEMBER_BADDR_LOAD:.*]] = load ptr, ptr %[[NESTED_STRUCT_PTR_MEMBER_BADDR_GEP]], align 8
-// CHECK: %[[ARR_OFFSET:.*]] = getelementptr inbounds i32, ptr %[[NESTED_STRUCT_PTR_MEMBER_BADDR_LOAD]], i64 0
+// CHECK: %[[ARR_OFFSET:.*]] = getelementptr inbounds i8, ptr %[[NESTED_STRUCT_PTR_MEMBER_BADDR_LOAD]], i64 0
 // CHECK: %[[DTYPE_SIZE_SEGMENT_CALC_1:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[NESTED_STRUCT_PTR_MEMBER_GEP]], i64 1
 // CHECK: %[[DTYPE_SIZE_SEGMENT_CALC_2:.*]] = ptrtoaddr ptr %[[DTYPE_SIZE_SEGMENT_CALC_1]] to i64
 // CHECK: %[[DTYPE_SIZE_SEGMENT_CALC_3:.*]] = ptrtoaddr ptr %[[NESTED_STRUCT_PTR_MEMBER_GEP]] to i64
