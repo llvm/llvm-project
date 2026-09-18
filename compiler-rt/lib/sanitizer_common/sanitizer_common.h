@@ -21,6 +21,8 @@
 #include "sanitizer_list.h"
 #include "sanitizer_mutex.h"
 
+#include <stdarg.h>
+
 #if defined(_MSC_VER) && !defined(__clang__)
 extern "C" void _ReadWriteBarrier();
 #pragma intrinsic(_ReadWriteBarrier)
@@ -30,6 +32,7 @@ namespace __sanitizer {
 
 struct AddressInfo;
 struct BufferedStackTrace;
+class ScopedSanitizerReport;
 struct SignalContext;
 struct StackTrace;
 struct SymbolizedStack;
@@ -234,6 +237,9 @@ bool ColorizeReports();
 void RemoveANSIEscapeSequencesFromString(char *buffer);
 void Printf(const char *format, ...) FORMAT(1, 2);
 void Report(const char *format, ...) FORMAT(1, 2);
+// Formats into `buff` (at most `buff_length` bytes including the NUL). Returns
+// the length the output would have had without truncation.
+int VSNPrintf(char *buff, int buff_length, const char *format, va_list args);
 void SetPrintfAndReportCallback(void (*callback)(const char *));
 #define VReport(level, ...)                     \
   do {                                          \
@@ -377,9 +383,10 @@ void HandleDeadlySignal(void *siginfo, void *context, u32 tid,
 
 // Part of HandleDeadlySignal, exposed for asan.
 void StartReportDeadlySignal();
-// Part of HandleDeadlySignal, exposed for asan.
-void ReportDeadlySignal(const SignalContext &sig, u32 tid,
-                        UnwindSignalStackCallbackType unwind,
+// Part of HandleDeadlySignal, exposed for asan. Prints the report and mirrors
+// the header, fault address and stack to `srep`.
+void ReportDeadlySignal(ScopedSanitizerReport &srep, const SignalContext &sig,
+                        u32 tid, UnwindSignalStackCallbackType unwind,
                         const void *unwind_context);
 
 // Alternative signal stack (POSIX-only).

@@ -20,8 +20,8 @@
 namespace __sanitizer {
 void StartReportDeadlySignal() {}
 
-void ReportDeadlySignal(const SignalContext &sig, u32 tid,
-                        UnwindSignalStackCallbackType unwind,
+void ReportDeadlySignal(ScopedSanitizerReport &srep, const SignalContext &sig,
+                        u32 tid, UnwindSignalStackCallbackType unwind,
                         const void *unwind_context) {}
 
 void HandleDeadlySignal(void *siginfo, void *context, u32 tid,
