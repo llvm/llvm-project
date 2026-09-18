@@ -95,6 +95,5 @@ add_dependencies(lldbInterpreter
   lldbInterpreterInterfaces
   LLDBInterpreterPropertiesGen
   LLDBInterpreterPropertiesEnumGen
-  LLDBCommandOptionArgumentTableEnumsGen
   LLDBOptionGroupWatchpointEnumsGen)
 
