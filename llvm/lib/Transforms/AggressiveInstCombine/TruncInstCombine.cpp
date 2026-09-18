@@ -76,18 +76,12 @@ static bool isRelevantOperand(const Instruction *I, unsigned OpNo) {
     return true;
   case Instruction::ShuffleVector:
     return true;
-  default: {
-    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-      switch (II->getIntrinsicID()) {
-      case Intrinsic::umin:
-      case Intrinsic::umax:
-        return true;
-      default:
-        break;
-      }
-    }
-    llvm_unreachable("Unreachable!");
+  case Instruction::Call: {
+    Intrinsic::ID IID = cast<CallInst>(I)->getIntrinsicID();
+    return IID == Intrinsic::umin || IID == Intrinsic::umax;
   }
+  default:
+    llvm_unreachable("Unreachable!");
   }
 }
 
@@ -177,22 +171,14 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
       break;
     }
     case Instruction::Call: {
-      if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-        switch (II->getIntrinsicID()) {
-        case Intrinsic::umin:
-        case Intrinsic::umax: {
-          SmallVector<Value *, 2> Operands;
-          getRelevantOperands(I, Operands);
-          append_range(Worklist, Operands);
-          break;
-        }
-        default:
-          return false;
-        }
-      } else {
-        return false;
+      Intrinsic::ID IID = cast<CallInst>(I)->getIntrinsicID();
+      if (IID == Intrinsic::umin || IID == Intrinsic::umax) {
+        SmallVector<Value *, 2> Operands;
+        getRelevantOperands(I, Operands);
+        append_range(Worklist, Operands);
+        break;
       }
-      break;
+      return false;
     }
     default:
       // TODO: Can handle more cases here:
@@ -525,23 +511,18 @@ void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
           std::make_pair(cast<PHINode>(I), cast<PHINode>(Res)));
       break;
     }
-    default: {
-      if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-        switch (II->getIntrinsicID()) {
-        case Intrinsic::umin:
-        case Intrinsic::umax: {
-          Value *LHS = getReducedOperand(I->getOperand(0), SclTy);
-          Value *RHS = getReducedOperand(I->getOperand(1), SclTy);
-          Res = Builder.CreateBinaryIntrinsic(II->getIntrinsicID(), LHS, RHS);
-          break;
-        }
-        default:
-          llvm_unreachable("Unhandled intrinsic");
-        }
-      } else {
-        llvm_unreachable("Unhandled instruction");
+    case Instruction::Call: {
+      Intrinsic::ID IID = cast<CallInst>(I)->getIntrinsicID();
+      if (IID == Intrinsic::umin || IID == Intrinsic::umax) {
+        Value *LHS = getReducedOperand(I->getOperand(0), SclTy);
+        Value *RHS = getReducedOperand(I->getOperand(1), SclTy);
+        Res = Builder.CreateBinaryIntrinsic(IID, LHS, RHS);
+        break;
       }
+      llvm_unreachable("Unhandled call instruction");
     }
+    default:
+      llvm_unreachable("Unhandled instruction");
     }
 
     NodeInfo.NewValue = Res;
