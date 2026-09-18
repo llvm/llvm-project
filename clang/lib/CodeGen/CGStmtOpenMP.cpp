@@ -3257,6 +3257,7 @@ void CodeGenFunction::EmitOMPFlattenDirective(const OMPFlattenDirective &S) {
   // Emit the de-sugared statement.
   OMPTransformDirectiveScopeRAII FlattenScope(*this, &S);
   EmitStmt(S.getTransformedStmt());
+  EmitStmt(S.getFinals());
 }
 
 void CodeGenFunction::EmitOMPFuseDirective(const OMPFuseDirective &S) {

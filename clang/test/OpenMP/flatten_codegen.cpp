@@ -15,7 +15,8 @@ extern "C" void body(int, int);
 // CHECK:   store i64 0, ptr %.flatten.iv,
 // CHECK:   %[[COND_IV:.+]] = load i64, ptr %.flatten.iv,
 // CHECK:   %[[MUL:.+]] = mul nsw i64 %{{.+}}, %{{.+}}
-// CHECK:   icmp slt i64 %[[COND_IV]], %[[MUL]]
+// CHECK:   %[[BOUND:.+]] = phi i64 [ %[[MUL]], %{{.+}} ], [ 0, %{{.+}} ]
+// CHECK:   icmp slt i64 %[[COND_IV]], %[[BOUND]]
 // CHECK:   %[[DIV_IV:.+]] = load i64, ptr %.flatten.iv,
 // CHECK:   %[[DIV:.+]] = sdiv i64 %[[DIV_IV]], %{{.+}}
 // CHECK:   store i32 %{{.+}}, ptr %.flatten.iv.0
@@ -88,8 +89,8 @@ extern "C" void tile_on_flatten() {
       body(i, j);
 }
 
-// Two empty loops: clamped trip counts are 0, so the flattened bound is 0
-// (not (-1)*(-1) = 1).
+// Two empty loops: the original loop preconditions select a flattened bound of
+// 0 (not (-1)*(-1) = 1).
 // CHECK-LABEL: define {{.*}}void @both_neg(
 // CHECK:   icmp slt i32 %{{.+}}, 0
 extern "C" void both_neg() {

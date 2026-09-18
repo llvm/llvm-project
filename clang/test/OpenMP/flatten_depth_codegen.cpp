@@ -16,7 +16,8 @@ extern "C" void body(int, int, int);
 // CHECK:   %[[CIV:.+]] = load i64, ptr %.flatten.iv,
 // CHECK:   %[[T01:.+]] = mul nsw i64 %{{.+}}, %{{.+}}
 // CHECK:   %[[TALL:.+]] = mul nsw i64 %[[T01]], %{{.+}}
-// CHECK:   icmp slt i64 %[[CIV]], %[[TALL]]
+// CHECK:   %[[BOUND:.+]] = phi i64 [ %[[TALL]], %{{.+}} ], [ 0, %{{.+}} ]
+// CHECK:   icmp slt i64 %[[CIV]], %[[BOUND]]
 // CHECK:   %[[D0IV:.+]] = load i64, ptr %.flatten.iv,
 // CHECK:   %[[D0M:.+]] = mul nsw i64 %{{.+}}, %{{.+}}
 // CHECK:   %[[D0:.+]] = sdiv i64 %[[D0IV]], %[[D0M]]
@@ -43,7 +44,8 @@ extern "C" void foo3(int n, int m, int p) {
 // CHECK:   %.flatten.iv.1 = alloca i32
 // CHECK:   %[[CIV2:.+]] = load i64, ptr %.flatten.iv,
 // CHECK:   %[[M:.+]] = mul nsw i64 %{{.+}}, %{{.+}}
-// CHECK:   icmp slt i64 %[[CIV2]], %[[M]]
+// CHECK:   %[[BOUND2:.+]] = phi i64 [ %[[M]], %{{.+}} ], [ 0, %{{.+}} ]
+// CHECK:   icmp slt i64 %[[CIV2]], %[[BOUND2]]
 // CHECK:   sdiv i64 %{{.+}}, %{{.+}}
 // CHECK:   store i32 %{{.+}}, ptr %.flatten.iv.0
 // CHECK:   srem i64 %{{.+}}, %{{.+}}
@@ -77,7 +79,8 @@ extern "C" void foo1(int n) {
 // CHECK-NOT: %.flatten.iv.2 = alloca
 // CHECK:   %[[CIV:.+]] = load i64, ptr %.flatten.iv,
 // CHECK:   %[[M:.+]] = mul nsw i64 %{{.+}}, %{{.+}}
-// CHECK:   icmp slt i64 %[[CIV]], %[[M]]
+// CHECK:   %[[BOUND:.+]] = phi i64 [ %[[M]], %{{.+}} ], [ 0, %{{.+}} ]
+// CHECK:   icmp slt i64 %[[CIV]], %[[BOUND]]
 // CHECK:   sdiv i64 %{{.+}}, %{{.+}}
 // CHECK:   store i32 %{{.+}}, ptr %.flatten.iv.0
 // CHECK:   srem i64 %{{.+}}, %{{.+}}
@@ -104,7 +107,8 @@ extern "C" void foo2partial(int n, int m) {
 // CHECK:   %[[CIV:.+]] = load i64, ptr %.flatten.iv,
 // CHECK:   %[[T01:.+]] = mul nsw i64 %{{.+}}, %{{.+}}
 // CHECK:   %[[TALL:.+]] = mul nsw i64 %[[T01]], %{{.+}}
-// CHECK:   icmp slt i64 %[[CIV]], %[[TALL]]
+// CHECK:   %[[BOUND:.+]] = phi i64 [ %[[TALL]], %{{.+}} ], [ 0, %{{.+}} ]
+// CHECK:   icmp slt i64 %[[CIV]], %[[BOUND]]
 // CHECK:   %[[D0IV:.+]] = load i64, ptr %.flatten.iv,
 // CHECK:   %[[D0M:.+]] = mul nsw i64 %{{.+}}, %{{.+}}
 // CHECK:   %[[D0:.+]] = sdiv i64 %[[D0IV]], %[[D0M]]

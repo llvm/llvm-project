@@ -6061,6 +6061,7 @@ class OMPFlattenDirective final
   enum {
     PreInitsOffset = 0,
     TransformedStmtOffset,
+    FinalsOffset,
   };
 
   explicit OMPFlattenDirective(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -6077,6 +6078,8 @@ class OMPFlattenDirective final
     Data->getChildren()[TransformedStmtOffset] = S;
   }
 
+  void setFinals(Stmt *S) { Data->getChildren()[FinalsOffset] = S; }
+
 public:
   /// Create a new AST node representation for '#pragma omp flatten'.
   ///
@@ -6090,10 +6093,11 @@ public:
   /// \param TransformedStmt The flattened loop, or nullptr in dependent
   ///                        contexts.
   /// \param PreInits  Helper preinits statements for the loop nest.
+  /// \param Finals    Updates to the original loop variables after the loop.
   static OMPFlattenDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
          ArrayRef<OMPClause *> Clauses, unsigned NumLoops, Stmt *AssociatedStmt,
-         Stmt *TransformedStmt, Stmt *PreInits);
+         Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals);
 
   /// Build an empty '#pragma omp flatten' AST node for deserialization.
   ///
@@ -6111,6 +6115,9 @@ public:
 
   /// Return preinits statement.
   Stmt *getPreInits() const { return Data->getChildren()[PreInitsOffset]; }
+
+  /// Return updates to the original loop variables after the flattened loop.
+  Stmt *getFinals() const { return Data->getChildren()[FinalsOffset]; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPFlattenDirectiveClass;

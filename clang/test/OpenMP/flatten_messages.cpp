@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c++20 -fopenmp -fopenmp-version=61 -fsyntax-only -Wall -Wuninitialized -verify=expected,omp61 %s
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c++20 -fopenmp -fopenmp-version=60 -fsyntax-only -Wall -Wuninitialized -verify=expected %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c++20 -fopenmp -fopenmp-version=61 -fsyntax-only -Wall -Wuninitialized -verify %s
 
 extern "C" void body(...);
 
@@ -83,7 +82,7 @@ void func(int n) {
   // Without a depth clause, only the outermost two loops are flattened. Warn
   // when a deeper perfect nest is left partially unflattened.
   // expected-warning@+2 {{'flatten' without a 'depth' clause only combines 2 loops, but 3 or more loops are perfectly nested}}
-  // omp61-note@+1 {{add 'depth(2)' to make it explicit that only the two outermost loops are flattened and to silence this warning}}
+  // expected-note@+1 {{add 'depth(2)' to make it explicit that only the two outermost loops are flattened and to silence this warning}}
   #pragma omp flatten
   for (int i = 0; i < n; ++i)
     for (int j = 0; j < n; ++j)
@@ -104,7 +103,7 @@ void func(int n) {
   // flatten does not see a perfect nest of remaining loops.
   #pragma omp flatten
   // expected-warning@+2 {{'flatten' without a 'depth' clause only combines 2 loops, but 3 or more loops are perfectly nested}}
-  // omp61-note@+1 {{add 'depth(2)' to make it explicit that only the two outermost loops are flattened and to silence this warning}}
+  // expected-note@+1 {{add 'depth(2)' to make it explicit that only the two outermost loops are flattened and to silence this warning}}
   #pragma omp flatten
   for (int i = 0; i < n; ++i)
     for (int j = 0; j < n; ++j)

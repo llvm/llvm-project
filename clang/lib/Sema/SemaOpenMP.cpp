@@ -16777,7 +16777,8 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
   // instantiation).
   if (DepthIsDependent)
     return OMPFlattenDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                       NumLoops, AStmt, nullptr, nullptr);
+                                       NumLoops, AStmt, nullptr, nullptr,
+                                       nullptr);
 
   // Verify and diagnose loop nest.
   SmallVector<OMPLoopBasedDirective::HelperExprs, 4> LoopHelpers(NumLoops);
@@ -16790,7 +16791,8 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
   // Delay flattening to when template is completely instantiated.
   if (CurContext->isDependentContext())
     return OMPFlattenDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                       NumLoops, AStmt, nullptr, nullptr);
+                                       NumLoops, AStmt, nullptr, nullptr,
+                                       nullptr);
 
   assert(LoopHelpers.size() == NumLoops &&
          "Expecting loop iteration space dimensionality to match number of "
@@ -16827,41 +16829,12 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
   SourceLocation OrigVarLocEnd = OutermostCntVar->getEndLoc();
   SourceLocation CondLoc = OutermostHelper.Cond->getExprLoc();
 
-  // Canonical empty loops have a negative computed trip count (e.g. i < -1
-  // yields -1). Clamp each count to max(0, N) before multiplying; otherwise two
-  // empty loops give a positive product and the flattened body runs.
-  auto ClampNonNegative = [&](Expr *Cmp, Expr *Val) -> ExprResult {
-    if (Val->getType()->isUnsignedIntegerType())
-      return Val;
-    QualType Ty = Val->getType();
-    ExprResult ZeroLT = SemaRef.PerformImplicitConversion(
-        SemaRef.ActOnIntegerConstant(CondLoc, 0).get(), Ty,
-        AssignmentAction::Converting, /*AllowExplicit=*/true);
-    ExprResult ZeroVal = SemaRef.PerformImplicitConversion(
-        SemaRef.ActOnIntegerConstant(CondLoc, 0).get(), Ty,
-        AssignmentAction::Converting, /*AllowExplicit=*/true);
-    if (!ZeroLT.isUsable() || !ZeroVal.isUsable())
-      return ExprError();
-    ExprResult IsNeg =
-        SemaRef.BuildBinOp(CurScope, CondLoc, BO_LT, Cmp, ZeroLT.get());
-    if (!IsNeg.isUsable())
-      return ExprError();
-    return SemaRef.ActOnConditionalOp(CondLoc, CondLoc, IsNeg.get(),
-                                      ZeroVal.get(), Val);
-  };
-
   // Product of trip counts; mirror 'collapse' IV-width selection to avoid
   // overflow when several counts are multiplied.
   auto BuildTripCount = [&](unsigned Bits) -> ExprResult {
     ExprResult Product;
     for (unsigned I = 0; I < NumLoops; ++I) {
-      ExprResult NCmp =
-          widenIterationCount(Bits, MakeNumIterations(I), SemaRef);
-      ExprResult NVal =
-          widenIterationCount(Bits, MakeNumIterations(I), SemaRef);
-      if (!NCmp.isUsable() || !NVal.isUsable())
-        return ExprError();
-      ExprResult N = ClampNonNegative(NCmp.get(), NVal.get());
+      ExprResult N = widenIterationCount(Bits, MakeNumIterations(I), SemaRef);
       if (!N.isUsable())
         return ExprError();
       if (I == 0)
@@ -16905,6 +16878,39 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
 
   QualType IVTy = TripCount.get()->getType();
   uint64_t IVWidth = Context.getTypeSize(IVTy);
+
+  // Build a condition that is true if the outermost \p Count loops all have at
+  // least one iteration.
+  auto BuildHasIterations = [&](unsigned Count) -> ExprResult {
+    ExprResult Result;
+    for (unsigned I = 0; I < Count; ++I) {
+      ExprResult LoopPreCond =
+          CopyTransformer.TransformExpr(LoopHelpers[I].PreCond);
+      if (!LoopPreCond.isUsable())
+        return ExprError();
+      if (I == 0)
+        Result = LoopPreCond;
+      else
+        Result = SemaRef.BuildBinOp(CurScope, CondLoc, BO_LAnd, Result.get(),
+                                    LoopPreCond.get());
+      if (!Result.isUsable())
+        return ExprError();
+    }
+    return Result;
+  };
+
+  // NumIterations may wrap or overflow when an empty loop has extreme runtime
+  // bounds. Test whether every original loop has at least one iteration before
+  // evaluating their product.
+  ExprResult HasIterations = BuildHasIterations(NumLoops);
+  if (!HasIterations.isUsable())
+    return StmtError();
+  Expr *ZeroTripCount = IntegerLiteral::Create(
+      Context, llvm::APInt::getZero(IVWidth), IVTy, CondLoc);
+  TripCount = SemaRef.ActOnConditionalOp(CondLoc, CondLoc, HasIterations.get(),
+                                         TripCount.get(), ZeroTripCount);
+  if (!TripCount.isUsable())
+    return StmtError();
 
   auto MakeNumIterationsInIVTy = [&](unsigned I) -> Expr * {
     return AssertSuccess(SemaRef.PerformImplicitConversion(
@@ -17035,9 +17041,33 @@ SemaOpenMP::ActOnOpenMPFlattenDirective(ArrayRef<OMPClause *> Clauses,
       OutermostHelper.Init->getBeginLoc(), OutermostHelper.Init->getBeginLoc(),
       OutermostHelper.Inc->getEndLoc());
 
-  return OMPFlattenDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                     NumLoops, AStmt, FlattenedFor,
-                                     buildPreInits(Context, PreInits));
+  // A counter only reaches its final value if its own loop and all enclosing
+  // loops execute at least one iteration; otherwise it keeps the value assigned
+  // by the pre-inits. Guarding also avoids evaluating 'start + n * step' for an
+  // empty loop, whose trip count may have wrapped.
+  SmallVector<Stmt *, 4> Finals;
+  for (unsigned I = 0; I < NumLoops; ++I) {
+    assert(LoopHelpers[I].Finals.size() == 1 &&
+           "Single-dimensional loop iteration space expected");
+    ExprResult Final =
+        CopyTransformer.TransformExpr(LoopHelpers[I].Finals.front());
+    if (!Final.isUsable())
+      return StmtError();
+    ExprResult FinalCond = BuildHasIterations(/*Count=*/I + 1);
+    if (!FinalCond.isUsable())
+      return StmtError();
+    Finals.push_back(IfStmt::Create(Context, CondLoc, IfStatementKind::Ordinary,
+                                    nullptr, nullptr, FinalCond.get(), CondLoc,
+                                    CondLoc, Final.get(), SourceLocation(),
+                                    nullptr));
+  }
+  Stmt *FinalsStmt = CompoundStmt::Create(Context, Finals, FPOptionsOverride(),
+                                          FlattenedFor->getBeginLoc(),
+                                          FlattenedFor->getEndLoc());
+
+  return OMPFlattenDirective::Create(
+      Context, StartLoc, EndLoc, Clauses, NumLoops, AStmt, FlattenedFor,
+      buildPreInits(Context, PreInits), FinalsStmt);
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
