@@ -26,14 +26,10 @@ class SetWatchlocationAPITestCase(TestBase):
     def test_watch_location(self):
         """Exercise SBValue.WatchPointee() API to set a watchpoint."""
         self.build()
-        target, process, _, _ = lldbutil.run_to_line_breakpoint(
+        _, process, thread, _ = lldbutil.run_to_line_breakpoint(
             self, lldb.SBFileSpec(self.source), self.line, only_one_thread=False
         )
 
-        # We should be stopped due to the breakpoint.  Get frame #0.
-        process = target.GetProcess()
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
         frame0 = thread.GetFrameAtIndex(0)
 
         value = frame0.FindValue("g_char_ptr", lldb.eValueTypeVariableGlobal)
