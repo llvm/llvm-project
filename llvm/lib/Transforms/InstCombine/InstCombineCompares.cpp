@@ -3728,6 +3728,85 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstant(ICmpInst &Cmp) {
   if (match(Cmp.getOperand(1), m_APIntAllowPoison(C)))
     return foldICmpInstWithConstantAllowPoison(Cmp, *C);
 
+  // Fold uadd.sat/usub.sat + icmp for fixed-vector non-splat constants
+  // using per-lane ConstantRange analysis.
+  if (auto *II = dyn_cast<IntrinsicInst>(Cmp.getOperand(0))) {
+    if ((II->getIntrinsicID() == Intrinsic::uadd_sat ||
+         II->getIntrinsicID() == Intrinsic::usub_sat) &&
+        II->hasOneUse()) {
+
+      if (auto *VecTy = dyn_cast<FixedVectorType>(II->getType())) {
+        auto *SatConst = dyn_cast<Constant>(II->getOperand(1));
+        auto *CmpConst = dyn_cast<Constant>(Cmp.getOperand(1));
+
+        if (SatConst && CmpConst) {
+
+          unsigned NumElems = VecTy->getNumElements();
+          SmallVector<Constant *> Offsets, Constants;
+          std::optional<CmpInst::Predicate> UnifiedPred;
+
+          for (unsigned i = 0; i < NumElems; ++i) {
+            auto *C1 = dyn_cast<ConstantInt>(SatConst->getAggregateElement(i));
+            auto *C2 = dyn_cast<ConstantInt>(CmpConst->getAggregateElement(i));
+            if (!C1 || !C2)
+              goto vector_bailout;
+
+            const APInt &SatVal = C1->getValue(), &CmpVal = C2->getValue();
+            unsigned BitWidth = SatVal.getBitWidth();
+            bool IsAdd = II->getIntrinsicID() == Intrinsic::uadd_sat;
+
+            APInt MaxVal =
+                IsAdd ? APInt::getAllOnes(BitWidth) : APInt::getZero(BitWidth);
+            bool SatCheck =
+                ICmpInst::compare(MaxVal, CmpVal, Cmp.getPredicate());
+
+            ConstantRange C1_Range = ConstantRange::makeExactNoWrapRegion(
+                IsAdd ? Instruction::Add : Instruction::Sub, SatVal,
+                OverflowingBinaryOperator::NoUnsignedWrap);
+            if (SatCheck)
+              C1_Range = C1_Range.inverse();
+
+            ConstantRange C2_Range =
+                ConstantRange::makeExactICmpRegion(Cmp.getPredicate(), CmpVal);
+            if (IsAdd)
+              C2_Range = C2_Range.sub(SatVal);
+            else
+              C2_Range = C2_Range.add(SatVal);
+
+            auto Combination = SatCheck ? C1_Range.exactUnionWith(C2_Range)
+                                        : C1_Range.exactIntersectWith(C2_Range);
+            if (!Combination)
+              goto vector_bailout;
+
+            CmpInst::Predicate EquivPred;
+            APInt EquivInt, EquivOffset;
+            Combination->getEquivalentICmp(EquivPred, EquivInt, EquivOffset);
+
+            if (!UnifiedPred)
+              UnifiedPred = EquivPred;
+            else if (*UnifiedPred != EquivPred)
+              goto vector_bailout;
+
+            auto ElemTy = VecTy->getElementType();
+            Offsets.push_back(ConstantInt::get(ElemTy, EquivOffset));
+            Constants.push_back(ConstantInt::get(ElemTy, EquivInt));
+          }
+
+          if (UnifiedPred) {
+            Value *Input = II->getOperand(0);
+            Value *VecOffset = ConstantVector::get(Offsets);
+            if (!match(VecOffset, m_Zero()))
+              Input = Builder.CreateAdd(Input, VecOffset);
+            return new ICmpInst(*UnifiedPred, Input,
+                                ConstantVector::get(Constants));
+          }
+
+        vector_bailout:;
+        }
+      }
+    }
+  }
+
   return nullptr;
 }
 

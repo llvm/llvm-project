@@ -153,8 +153,7 @@ define <2 x i1> @icmp_eq_vector_equal(<2 x i8> %arg) {
 define <2 x i1> @icmp_eq_vector_unequal(<2 x i8> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_eq_vector_unequal(
 ; CHECK-SAME: <2 x i8> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[ARG]], <2 x i8> <i8 1, i8 2>)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ADD]], <i8 5, i8 6>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ARG]], splat (i8 4)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %arg, <2 x i8> <i8 1, i8 2>)
@@ -199,8 +198,7 @@ define <2 x i1> @icmp_ule_vector_equal(<2 x i32> %arg) {
 define <2 x i1> @icmp_ule_vector_unequal(<2 x i32> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_ule_vector_unequal(
 ; CHECK-SAME: <2 x i32> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = call <2 x i32> @llvm.uadd.sat.v2i32(<2 x i32> [[ARG]], <2 x i32> <i32 3, i32 35>)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[ADD]], <i32 5, i32 7>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[ARG]], <i32 2, i32 0>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = call <2 x i32> @llvm.uadd.sat.v2i32(<2 x i32> %arg, <2 x i32> <i32 3, i32 35>)
@@ -222,8 +220,7 @@ define <2 x i1> @icmp_sgt_vector_equal(<2 x i64> %arg) {
 define <2 x i1> @icmp_sgt_vector_unequal(<2 x i64> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_sgt_vector_unequal(
 ; CHECK-SAME: <2 x i64> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = call <2 x i64> @llvm.uadd.sat.v2i64(<2 x i64> [[ARG]], <2 x i64> <i64 320498, i64 409623>)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i64> [[ADD]], <i64 1234, i64 3456>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i64> [[ARG]], <i64 9223372036854455310, i64 9223372036854366185>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %add = call <2 x i64> @llvm.uadd.sat.v2i64(<2 x i64> %arg, <2 x i64> <i64 320498, i64 409623>)
