@@ -30,7 +30,7 @@ private:
   const StringRef NullMacrosStr;
   SmallVector<StringRef, 1> NullMacros;
   std::vector<StringRef> IgnoredTypes;
-  const bool useNullptrt;
+  const bool useNullptrT;
   utils::IncludeInserter IncludeInserter;
 };
 

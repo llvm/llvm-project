@@ -8,6 +8,9 @@ void foo(decltype(nullptr));
 void foo(const decltype(nullptr));
 // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: use std::nullptr_t instead
 // CHECK-FIXES: void foo(const std::nullptr_t);
+void foo(decltype((nullptr))*);
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use std::nullptr_t instead
+// CHECK-FIXES: void foo(std::nullptr_t*);
 decltype(nullptr) a;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use std::nullptr_t instead
 // CHECK-FIXES: std::nullptr_t a;
