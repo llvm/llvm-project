@@ -4138,7 +4138,7 @@ FUNCTION_LIST: list[LibFunc] = [
     (
         "clang_codeCompleteGetDiagnostic",
         [POINTER(CodeCompletionResults), c_int],
-        Diagnostic
+        Diagnostic,
     ),
     ("clang_codeCompleteGetNumDiagnostics", [POINTER(CodeCompletionResults)], c_int),
     ("clang_createIndex", [c_int, c_int], c_object_p),
