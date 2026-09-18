@@ -19189,7 +19189,7 @@ CreateNewDecl:
   if (!Invalid && SearchDC->isRecord())
     SetMemberAccessSpecifier(New, PrevDecl, AS);
 
-  if (PrevDecl)
+  if (PrevDecl && TUK != TagUseKind::Reference)
     CheckRedeclarationInModule(New, PrevDecl);
 
   if (TUK == TagUseKind::Definition) {
