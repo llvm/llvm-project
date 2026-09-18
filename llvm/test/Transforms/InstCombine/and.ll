@@ -2459,9 +2459,8 @@ define <3 x i16> @lshr_shl_pow2_const_case1_poison3_vec(<3 x i16> %x) {
 
 define i8 @negate_lowbitmask(i8 %x, i8 %y) !prof !0 {
 ; CHECK-LABEL: @negate_lowbitmask(
-; CHECK-NEXT:    [[A:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i8 0, i8 [[Y:%.*]], !prof [[PROF1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i8 [[Y:%.*]], i8 0, !prof [[PROF1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = and i8 %x, 1
