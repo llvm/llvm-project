@@ -205,7 +205,7 @@ void ObjectFileJSON::CreateSections(SectionList &unified_section_list) {
       auto sect_id = section.user_id.value_or(id + 1);
       if (!section.user_id.has_value())
         ++id;
-      const auto name = ConstString(section.name);
+      const auto name = section.name;
       const auto sect_type = section.type.value_or(eSectionTypeCode);
       const auto vm_addr = section.address.value_or(0);
       const auto vm_size = section.size.value_or(0);

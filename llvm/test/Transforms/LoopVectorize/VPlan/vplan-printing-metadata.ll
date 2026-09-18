@@ -249,7 +249,7 @@ define void @test_narrowed_to_single_scalar_metadata(ptr noalias %A, float %a, f
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    CLONE ir<%div> = fdiv ir<%a>, ir<%b>{{$}}
+; CHECK-NEXT:    CLONE ir<%div> = fdiv ir<%a>, ir<%b> (!fpmath {{![0-9]+}})
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {

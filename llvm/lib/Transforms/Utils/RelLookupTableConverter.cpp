@@ -51,7 +51,7 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
     return false;
 
   auto *Load = dyn_cast<LoadInst>(GEP->use_begin()->getUser());
-  if (!Load)
+  if (!Load || Load->isVolatile())
     return false;
 
   // If values are not 64-bit pointers, do not generate a relative lookup table.
