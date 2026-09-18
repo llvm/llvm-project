@@ -623,3 +623,15 @@ void test(int c) {
 }
 
 // CHECK98: attributes [[NI_NR_NUW]] = { noinline noreturn nounwind {{.*}} }
+
+// Test for issue - (https://github.com/llvm/llvm-project/issues/222931)
+// RUN: %clang_cc1 -no-enable-noundef-analysis %s -triple=x86_64-linux-gnu -emit-llvm -std=c++11 -o - -fcxx-exceptions -fexceptions | FileCheck -check-prefix=CHECK-AS1 %s
+
+typedef int __attribute__((address_space(1))) *as1_int_ptr;
+void sink_as1(int);
+
+void test_as1() {
+  try { throw (as1_int_ptr)0; } catch (as1_int_ptr p) { sink_as1(*p); }
+}
+
+// CHECK-AS1: %exn.casted = addrspacecast ptr %{{.*}} to ptr addrspace(1)
