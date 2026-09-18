@@ -776,7 +776,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
   SmallPtrSet<const BasicBlock *, 16> Visited;
   // Enqueue all predecessors of CtxBB.
   // Note: CtxBB is NOT pre-inserted to ensure that loop
-  // backedges returning to CtxBB are enqueued and checked correclty.
+  // backedges returning to CtxBB are enqueued and checked correctly.
   for (const BasicBlock *Pred : predecessors(CtxBB)) {
     if (Visited.insert(Pred).second)
       Worklist.push_back(Pred);
