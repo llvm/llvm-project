@@ -88,7 +88,7 @@ TEST_F(LlvmLibcFgetxattrTest, WithUserExtendedAttribute) {
 
 #if defined(LIBC_ADD_NULL_CHECKS)
 
-TEST(LlvmLibcFgetxattrTest, CrashOnNullAttributeName) {
+TEST_F(LlvmLibcFgetxattrTest, CrashOnNullAttributeName) {
   int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();
   scope_exit cleanup([&] {
@@ -105,7 +105,7 @@ TEST(LlvmLibcFgetxattrTest, CrashOnNullAttributeName) {
       WITH_SIGNAL(-1));
 }
 
-TEST(LlvmLibcFgetxattrTest, CrashOnNullBufferNonZeroSize) {
+TEST_F(LlvmLibcFgetxattrTest, CrashOnNullBufferNonZeroSize) {
   int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();
   scope_exit cleanup([&] {

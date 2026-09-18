@@ -29,7 +29,7 @@
 namespace {
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
-using LlvmLibcLSetxattrTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+using LlvmLibcFsetxattrTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using LIBC_NAMESPACE::cpp::scope_exit;
 using LIBC_NAMESPACE::cpp::string_view;
 
@@ -39,7 +39,7 @@ int recreate_test_file(const char *path) {
   return LIBC_NAMESPACE::creat(path, S_IRWXU);
 }
 
-TEST_F(LlvmLibcLSetxattrTest, SetAttributeDefaultFlags) {
+TEST_F(LlvmLibcFsetxattrTest, SetAttributeDefaultFlags) {
   const LIBC_NAMESPACE::CString TEST_FILE_NAME =
       libc_make_test_file_path("testdata/fsetxattr_default_flags.txt");
 
@@ -68,7 +68,7 @@ TEST_F(LlvmLibcLSetxattrTest, SetAttributeDefaultFlags) {
   EXPECT_EQ(string_view(buffer, XATTR_VALUE.size()), XATTR_VALUE);
 }
 
-TEST_F(LlvmLibcLSetxattrTest, SetAttributeWithNonzeroFlags) {
+TEST_F(LlvmLibcFsetxattrTest, SetAttributeWithNonzeroFlags) {
   const LIBC_NAMESPACE::CString TEST_FILE_NAME =
       libc_make_test_file_path("testdata/fsetxattr_nonzero_flags.txt");
   int fd = recreate_test_file(TEST_FILE_NAME);
@@ -123,7 +123,7 @@ TEST_F(LlvmLibcLSetxattrTest, SetAttributeWithNonzeroFlags) {
 
 #if defined(LIBC_ADD_NULL_CHECKS)
 
-TEST(LlvmLibcLSetxattrTest, CrashOnNullAttributeName) {
+TEST_F(LlvmLibcFsetxattrTest, CrashOnNullAttributeName) {
   int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();
   scope_exit cleanup([&] {
@@ -140,7 +140,7 @@ TEST(LlvmLibcLSetxattrTest, CrashOnNullAttributeName) {
       WITH_SIGNAL(-1));
 }
 
-TEST(LlvmLibcLSetxattrTest, CrashOnNullBufferNonZeroSize) {
+TEST_F(LlvmLibcFsetxattrTest, CrashOnNullBufferNonZeroSize) {
   int fd = recreate_test_file(TEST_FILE_NAME);
   ASSERT_ERRNO_SUCCESS();
   scope_exit cleanup([&] {

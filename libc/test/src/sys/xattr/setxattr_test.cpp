@@ -30,7 +30,7 @@
 namespace {
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
-using LlvmLibcLSetxattrTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+using LlvmLibcSetxattrTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using LIBC_NAMESPACE::cpp::scope_exit;
 using LIBC_NAMESPACE::cpp::string_view;
 
@@ -46,7 +46,7 @@ int recreate_test_symlink(const char *target, const char *linkpath) {
   return LIBC_NAMESPACE::symlink(target, linkpath);
 }
 
-TEST_F(LlvmLibcLSetxattrTest, SetAttributeDefaultFlags) {
+TEST_F(LlvmLibcSetxattrTest, SetAttributeDefaultFlags) {
   const LIBC_NAMESPACE::CString TEST_FILE_NAME =
       libc_make_test_file_path("testdata/setxattr_default_flags.txt");
   constexpr const char *TEST_SYMLINK_TARGET = "setxattr_default_flags.txt";
@@ -106,7 +106,7 @@ TEST_F(LlvmLibcLSetxattrTest, SetAttributeDefaultFlags) {
   }
 }
 
-TEST_F(LlvmLibcLSetxattrTest, SetAttributeWithNonzeroFlags) {
+TEST_F(LlvmLibcSetxattrTest, SetAttributeWithNonzeroFlags) {
   const LIBC_NAMESPACE::CString TEST_FILE_NAME =
       libc_make_test_file_path("testdata/setxattr_nonzero_flags.txt");
   int fd = recreate_test_file(TEST_FILE_NAME);
@@ -158,7 +158,7 @@ TEST_F(LlvmLibcLSetxattrTest, SetAttributeWithNonzeroFlags) {
 
 #if defined(LIBC_ADD_NULL_CHECKS)
 
-TEST(LlvmLibcLSetxattrTest, CrashOnNullPath) {
+TEST_F(LlvmLibcSetxattrTest, CrashOnNullPath) {
   EXPECT_DEATH(
       [] {
         constexpr size_t BUFFER_SIZE = 32;
@@ -168,7 +168,7 @@ TEST(LlvmLibcLSetxattrTest, CrashOnNullPath) {
       WITH_SIGNAL(-1));
 }
 
-TEST(LlvmLibcLSetxattrTest, CrashOnNullAttributeName) {
+TEST_F(LlvmLibcSetxattrTest, CrashOnNullAttributeName) {
   EXPECT_DEATH(
       [] {
         constexpr size_t BUFFER_SIZE = 32;
@@ -179,7 +179,7 @@ TEST(LlvmLibcLSetxattrTest, CrashOnNullAttributeName) {
       WITH_SIGNAL(-1));
 }
 
-TEST(LlvmLibcLSetxattrTest, CrashOnNullBufferNonZeroSize) {
+TEST_F(LlvmLibcSetxattrTest, CrashOnNullBufferNonZeroSize) {
   EXPECT_DEATH(
       [] {
         LIBC_NAMESPACE::setxattr("testdata/file.txt", "user.attr", nullptr, 32);

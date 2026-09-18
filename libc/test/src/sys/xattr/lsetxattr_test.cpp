@@ -29,7 +29,7 @@
 namespace {
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
-using LlvmLibcLSetxattrTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+using LlvmLibcLsetxattrTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using LIBC_NAMESPACE::cpp::scope_exit;
 using LIBC_NAMESPACE::cpp::string_view;
 
@@ -39,7 +39,7 @@ int recreate_test_file(const char *path) {
   return LIBC_NAMESPACE::creat(path, S_IRWXU);
 }
 
-TEST_F(LlvmLibcLSetxattrTest, SetAttributeDefaultFlags) {
+TEST_F(LlvmLibcLsetxattrTest, SetAttributeDefaultFlags) {
   const LIBC_NAMESPACE::CString TEST_FILE_NAME =
       libc_make_test_file_path("testdata/lsetxattr_default_flags.txt");
 
@@ -77,7 +77,7 @@ TEST_F(LlvmLibcLSetxattrTest, SetAttributeDefaultFlags) {
   // results in EPERM.
 }
 
-TEST_F(LlvmLibcLSetxattrTest, SetAttributeWithNonzeroFlags) {
+TEST_F(LlvmLibcLsetxattrTest, SetAttributeWithNonzeroFlags) {
   const LIBC_NAMESPACE::CString TEST_FILE_NAME =
       libc_make_test_file_path("testdata/lsetxattr_nonzero_flags.txt");
   int fd = recreate_test_file(TEST_FILE_NAME);
@@ -129,7 +129,7 @@ TEST_F(LlvmLibcLSetxattrTest, SetAttributeWithNonzeroFlags) {
 
 #if defined(LIBC_ADD_NULL_CHECKS)
 
-TEST(LlvmLibcLSetxattrTest, CrashOnNullPath) {
+TEST_F(LlvmLibcLsetxattrTest, CrashOnNullPath) {
   EXPECT_DEATH(
       [] {
         constexpr size_t BUFFER_SIZE = 32;
@@ -139,7 +139,7 @@ TEST(LlvmLibcLSetxattrTest, CrashOnNullPath) {
       WITH_SIGNAL(-1));
 }
 
-TEST(LlvmLibcLSetxattrTest, CrashOnNullAttributeName) {
+TEST_F(LlvmLibcLsetxattrTest, CrashOnNullAttributeName) {
   EXPECT_DEATH(
       [] {
         constexpr size_t BUFFER_SIZE = 32;
@@ -150,7 +150,7 @@ TEST(LlvmLibcLSetxattrTest, CrashOnNullAttributeName) {
       WITH_SIGNAL(-1));
 }
 
-TEST(LlvmLibcLSetxattrTest, CrashOnNullBufferNonZeroSize) {
+TEST_F(LlvmLibcLsetxattrTest, CrashOnNullBufferNonZeroSize) {
   EXPECT_DEATH(
       [] {
         LIBC_NAMESPACE::lsetxattr("testdata/file.txt", "user.attr", nullptr,

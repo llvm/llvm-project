@@ -28,7 +28,7 @@
 namespace {
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
-using LlvmLibcLGetxattrTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+using LlvmLibcLgetxattrTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using LIBC_NAMESPACE::cpp::scope_exit;
 using LIBC_NAMESPACE::cpp::string_view;
 
@@ -44,7 +44,7 @@ int recreate_test_symlink(const char *target, const char *linkpath) {
   return LIBC_NAMESPACE::symlink(target, linkpath);
 }
 
-TEST_F(LlvmLibcLGetxattrTest, WithUserExtendedAttribute) {
+TEST_F(LlvmLibcLgetxattrTest, WithUserExtendedAttribute) {
   const LIBC_NAMESPACE::CString TEST_FILE_NAME =
       libc_make_test_file_path("testdata/lgetxattr.txt");
   constexpr const char *TEST_SYMLINK_TARGET = "lgetxattr.txt";
@@ -113,7 +113,7 @@ TEST_F(LlvmLibcLGetxattrTest, WithUserExtendedAttribute) {
 
 #if defined(LIBC_ADD_NULL_CHECKS)
 
-TEST(LlvmLibcLGetxattrTest, CrashOnNullPath) {
+TEST_F(LlvmLibcLgetxattrTest, CrashOnNullPath) {
   EXPECT_DEATH(
       [] {
         constexpr size_t BUFFER_SIZE = 32;
@@ -123,7 +123,7 @@ TEST(LlvmLibcLGetxattrTest, CrashOnNullPath) {
       WITH_SIGNAL(-1));
 }
 
-TEST(LlvmLibcLGetxattrTest, CrashOnNullAttributeName) {
+TEST_F(LlvmLibcLgetxattrTest, CrashOnNullAttributeName) {
   EXPECT_DEATH(
       [] {
         constexpr size_t BUFFER_SIZE = 32;
@@ -134,7 +134,7 @@ TEST(LlvmLibcLGetxattrTest, CrashOnNullAttributeName) {
       WITH_SIGNAL(-1));
 }
 
-TEST(LlvmLibcLGetxattrTest, CrashOnNullBufferNonZeroSize) {
+TEST_F(LlvmLibcLgetxattrTest, CrashOnNullBufferNonZeroSize) {
   EXPECT_DEATH(
       [] {
         LIBC_NAMESPACE::lgetxattr("testdata/file.txt", "user.attr", nullptr,

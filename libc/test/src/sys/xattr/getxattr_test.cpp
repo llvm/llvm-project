@@ -124,7 +124,7 @@ TEST_F(LlvmLibcGetxattrTest, WithUserExtendedAttribute) {
 
 #if defined(LIBC_ADD_NULL_CHECKS)
 
-TEST(LlvmLibcGetxattrTest, CrashOnNullPath) {
+TEST_F(LlvmLibcGetxattrTest, CrashOnNullPath) {
   EXPECT_DEATH(
       [] {
         constexpr size_t BUFFER_SIZE = 32;
@@ -134,7 +134,7 @@ TEST(LlvmLibcGetxattrTest, CrashOnNullPath) {
       WITH_SIGNAL(-1));
 }
 
-TEST(LlvmLibcGetxattrTest, CrashOnNullAttributeName) {
+TEST_F(LlvmLibcGetxattrTest, CrashOnNullAttributeName) {
   EXPECT_DEATH(
       [] {
         constexpr size_t BUFFER_SIZE = 32;
@@ -145,7 +145,7 @@ TEST(LlvmLibcGetxattrTest, CrashOnNullAttributeName) {
       WITH_SIGNAL(-1));
 }
 
-TEST(LlvmLibcGetxattrTest, CrashOnNullBufferNonZeroSize) {
+TEST_F(LlvmLibcGetxattrTest, CrashOnNullBufferNonZeroSize) {
   EXPECT_DEATH(
       [] {
         LIBC_NAMESPACE::getxattr("testdata/file.txt", "user.attr", nullptr, 32);
