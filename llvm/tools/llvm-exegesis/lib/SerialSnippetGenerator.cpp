@@ -141,13 +141,16 @@ static void appendCodeTemplates(const LLVMState &State,
       if (!RegClass.contains(ScratchMemoryRegister))
         return;
 
-      ET.fillMemoryOperands(Variant, ScratchMemoryRegister, 0);
+      const MCRegister BaseRegister =
+          SnippetGenerator::assignMemoryOperandRegister(
+              State, Variant, ScratchMemoryRegister, 0);
 
-      // Only force the def register to ScratchMemoryRegister if the target
-      // hasn't assigned a value yet.
+      // Alias the def with the register the instruction actually addresses
+      // memory through, so the dependency chain latency mode measures is
+      // preserved even when the encoding pinned the base to another register.
       MCOperand &DefVal = Variant.getValueFor(DefOp);
       if (!DefVal.isValid())
-        DefVal = MCOperand::createReg(ScratchMemoryRegister);
+        DefVal = MCOperand::createReg(BaseRegister);
 
       CodeTemplate CT;
       CT.Execution = ExecutionModeBit;

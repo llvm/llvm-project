@@ -98,13 +98,15 @@ void ParallelSnippetGenerator::instantiateMemoryOperands(
   const size_t OriginalInstructionsSize = Instructions.size();
   size_t I = 0;
   for (InstructionTemplate &IT : Instructions) {
-    ET.fillMemoryOperands(IT, ScratchSpacePointerInReg, I * MemStep);
+    assignMemoryOperandRegister(State, IT, ScratchSpacePointerInReg,
+                                I * MemStep);
     ++I;
   }
 
   while (Instructions.size() < kMinNumDifferentAddresses) {
     InstructionTemplate IT = Instructions[I % OriginalInstructionsSize];
-    ET.fillMemoryOperands(IT, ScratchSpacePointerInReg, I * MemStep);
+    assignMemoryOperandRegister(State, IT, ScratchSpacePointerInReg,
+                                I * MemStep);
     ++I;
     Instructions.push_back(std::move(IT));
   }
