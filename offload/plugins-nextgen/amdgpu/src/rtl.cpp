@@ -2149,7 +2149,44 @@ struct AMDGPUStreamManagerTy final
     });
   }
 
+  /// Get up to \p Num streams bound to pairwise-distinct HSA queues, appended
+  /// to \p Streams.
+  ///
+  /// This works differently from getResource:  its least-used-queue heuristic
+  /// looks at the user counts as they stand at the moment of the request, so a
+  /// batch of streams requested back to back can all be handed the same queue.
+  /// Taskgraph replay needs distinct queues for two reasons: to achieve
+  /// concurrency and to avoid deadlocks which can happen if two streams share
+  /// the same queue.
+  ///
+  /// Fewer than \p Num streams are produced when the device has fewer queues.
+  /// The caller must use the number it actually gets, since that is the lane
+  /// count the schedule has to be built for.
+  Error getDistinctQueueResources(uint32_t Num,
+                                  SmallVectorImpl<AMDGPUStreamTy *> &Streams) {
+    Num = std::min(Num, MaxNumQueues);
+    for (uint32_t I = 0; I < Num; ++I) {
+      AMDGPUStreamTy *Handle = nullptr;
+      if (auto Err = getResourcesImpl(1, &Handle, [&](AMDGPUStreamTy *&Stream) {
+            return assignQueue(Stream, I);
+          }))
+        return Err;
+      Streams.push_back(Handle);
+    }
+    return Plugin::success();
+  }
+
 private:
+  /// Bind \p Stream to queue \p Index, initializing that queue if it is the
+  /// first use.
+  Error assignQueue(AMDGPUStreamTy *Stream, uint32_t Index) {
+    if (auto Err = Queues[Index].init(Device, Agent, QueueSize))
+      return Err;
+    Queues[Index].addUser();
+    Stream->Queue = &Queues[Index];
+    return Plugin::success();
+  }
+
   /// Search for and assign an preferably idle queue to the given Stream. If
   /// there is no queue without current users, choose the queue with the lowest
   /// user count. If utilization is ignored: use round robin selection.
