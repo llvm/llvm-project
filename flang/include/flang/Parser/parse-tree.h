@@ -1516,7 +1516,7 @@ struct DataStmtConstant {
   std::variant<common::Indirection<CharLiteralConstantSubstring>,
       LiteralConstant, SignedIntLiteralConstant, SignedRealLiteralConstant,
       SignedComplexLiteralConstant, NullInit, common::Indirection<Designator>,
-      StructureConstructor, UnsignedLiteralConstant>
+      StructureConstructor, UnsignedLiteralConstant, common::Indirection<Expr>>
       u;
 };
 
