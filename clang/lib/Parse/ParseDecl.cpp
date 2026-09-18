@@ -4896,6 +4896,38 @@ void Parser::ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
   OutAttrs.takeAllAppendingFrom(Attrs);
 }
 
+bool Parser::ProcessLateParsedTypeAttrCallback(LateParsedAttribute *LA,
+                                               QualType &type,
+                                               unsigned pointerNestLevel) {
+  auto *LTA = dyn_cast_if_present<LateParsedTypeAttribute>(LA);
+  if (!LTA)
+    return true;
+
+  // One attribute yields one type node, even when several declarators share it.
+  // A declaration-specifier-position attribute lives on the DeclSpec, whose
+  // late-attribute list ConvertDeclSpecToType walks once per declarator, so
+  // this callback runs N times for `IP __counted_by(n) a, b;`. Building a fresh
+  // (deliberately un-uniqued) node each time would leave every node but the
+  // last orphaned with a null count, so reuse the node instead. This matches
+  // the eager path, where getCountAttributedType uniques on the count
+  // expression and all declarators likewise share one node.
+  if (LTA->TypeToComplete) {
+    type = QualType(LTA->TypeToComplete, 0);
+    return true;
+  }
+
+  ParsedAttr::Kind AttrKind = ParsedAttr::getParsedKind(
+      &LTA->AttrName, nullptr, ParsedAttr::Form::GNU().getSyntax());
+  // Sema cannot see LateParsedTypeAttribute's definition, so it hands the node
+  // back and we record it here for the completion pass to fill in.
+  BoundsAttributedType *BATy = nullptr;
+  if (!LTA->Self->Actions.ActOnLateParsedTypeAttr(
+          AttrKind, LTA->AttrNameLoc, type, pointerNestLevel, &BATy))
+    return false;
+  LTA->TypeToComplete = BATy;
+  return true;
+}
+
 void Parser::CompleteLateParsedTypeAttributes(
     SmallVectorImpl<LateParsedTypeAttribute *> &LateTypeAttrs) {
   for (LateParsedTypeAttribute *RawLTA : LateTypeAttrs) {
