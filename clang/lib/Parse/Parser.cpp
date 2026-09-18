@@ -438,6 +438,11 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
 //===----------------------------------------------------------------------===//
 
 void Parser::EnterScope(unsigned ScopeFlags) {
+  // Invalidate the typedef-name cache: an identifier may resolve differently
+  // in the new scope.
+  if (!IsTypedefNameCache.empty())
+    IsTypedefNameCache.clear();
+
   if (NumCachedScopes) {
     Scope *N = ScopeCache[--NumCachedScopes];
     N->Init(getCurScope(), ScopeFlags);
@@ -449,6 +454,11 @@ void Parser::EnterScope(unsigned ScopeFlags) {
 
 void Parser::ExitScope() {
   assert(getCurScope() && "Scope imbalance!");
+
+  // Invalidate the typedef-name cache: an identifier may resolve differently
+  // in the enclosing scope.
+  if (!IsTypedefNameCache.empty())
+    IsTypedefNameCache.clear();
 
   // Inform the actions module that this scope is going away if there are any
   // decls in it.

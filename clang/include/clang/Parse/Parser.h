@@ -647,6 +647,10 @@ private:
   unsigned NumCachedScopes;
   Scope *ScopeCache[ScopeCacheSize];
 
+  /// Cache mapping an identifier to whether it resolves to a typedef in the
+  /// current scope.
+  llvm::DenseMap<IdentifierInfo *, bool> IsTypedefNameCache;
+
   /// Identifiers used for SEH handling in Borland. These are only
   /// allowed in particular circumstances
   // __except block
