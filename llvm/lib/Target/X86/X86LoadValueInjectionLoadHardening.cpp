@@ -493,9 +493,9 @@ X86LoadValueInjectionLoadHardeningImpl::getGadgetGraph(
   std::function<void(MachineBasicBlock *, GraphIter, unsigned)> TraverseCFG =
       [&](MachineBasicBlock *MBB, GraphIter GI, unsigned ParentDepth) {
         unsigned LoopDepth = MLI.getLoopDepth(MBB);
-        if (!MBB->empty()) {
-          // Always add the first instruction in each block
-          auto NI = MBB->begin();
+        auto NI = MBB->getFirstNonDebugInstr(/*SkipPseudoOp=*/false);
+        if (NI != MBB->end()) {
+          // Always add the first non-debug instruction in each block.
           auto BeginBB = MaybeAddNode(&*NI);
           Builder.addEdge(ParentDepth, GI, BeginBB.first);
           if (!BlocksVisited.insert(MBB).second)
