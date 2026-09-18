@@ -12,6 +12,7 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <initializer_list>
+#include <string>
 
 using namespace llvm;
 using namespace llvm::hlsl;
@@ -1323,6 +1324,12 @@ TEST_F(HLSLSemanticSignaturePackingTest, PrefixStableRejectsClipCullOverflow) {
   verifyPackingError(PackingMethod::PrefixStable, Config,
                      SignaturePackingError::ClipCullOverflow,
                      /*ExpectedElementIndex=*/2);
+
+  SmallVector<SemanticSignatureElement> Elements = makeSignature(Config);
+  EXPECT_THAT_EXPECTED(
+      pack(PackingMethod::PrefixStable, Elements, Config),
+      FailedWithMessage("clip/cull elements do not fit in " +
+                        std::to_string(MaxClipCullRows) + " rows (element 2)"));
 }
 
 TEST_F(HLSLSemanticSignaturePackingTest,

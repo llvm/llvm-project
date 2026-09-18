@@ -360,7 +360,7 @@ void SignaturePackingError::log(raw_ostream &OS) const {
     OS << "signature elements do not fit in " << MaxSignatureRows << " rows";
     break;
   case ClipCullOverflow:
-    OS << "clip/cull elements do not fit in two rows";
+    OS << "clip/cull elements do not fit in " << MaxClipCullRows << " rows";
     break;
   }
   OS << " (element " << ElementIndex << ")";
