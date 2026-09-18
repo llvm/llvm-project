@@ -267,4 +267,40 @@ def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
   ];
 }
 
+def LoopOpt : Pass<"cir-loop-opt"> {
+  let summary = "Loop optimizations on structured CIR";
+  let description = [{
+    Driver for loop optimizations that run while `cir.for` still carries the
+    nest structure. Currently detects
+    counted two-loop nests and classifies the shape of the inner iteration
+    space. Detection is syntactic and reports the domain implied by the loop
+    control. Early exits may reduce the executed iteration set.
+    Transformation legality is outside this analysis.
+
+    Under the `test-annotate` option each detected nest's outer loop
+    receives a `cir.loopopt.test` attribute naming the recognized pattern,
+    and no transform is performed. For a nest counted by an `!s32i`
+    variable this reads
+
+    ```mlir
+    } {cir.loopopt.test = {kind = "inner_affine_upper", offset = 0 : i32,
+                           scale = 2 : i32}}
+    ```
+
+    The recognized kinds are `inner_affine_upper`, whose `scale` and
+    `offset` give the inner limit as `scale * outerIV + offset`,
+    `outer_iv_inner_start`, `inner_product_upper` and
+    `invariant_inner_start`. The `scale` and `offset` widths follow the
+    width of the loop counter, so a nest counted by an `!s64i` variable
+    records them as `i64`.
+  }];
+  let constructor = "mlir::createLoopOptPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+  let options = [
+    Option<"testAnnotate", "test-annotate", "bool", /*default=*/"false",
+           "Attach a cir.loopopt.test attribute naming the recognized pattern "
+           "to the outer loop of each detected nest. For lit tests only.">
+  ];
+}
+
 #endif // CLANG_CIR_DIALECT_PASSES_TD

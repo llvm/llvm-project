@@ -14,6 +14,9 @@ add_clang_library(MLIRCIRTransforms
   GotoSolver.cpp
   IdiomRecognizer.cpp
   LibOpt.cpp
+  LoopOpt/LoopAnalysis.cpp
+  LoopOpt/LoopNestPattern.cpp
+  LoopOpt/LoopOptPass.cpp
 
   DEPENDS
   MLIRCIRPassIncGen
