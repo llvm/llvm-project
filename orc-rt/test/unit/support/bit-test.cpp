@@ -22,6 +22,11 @@
 #define IS_LITTLE_ENDIAN
 #endif
 
+#if !defined(BYTE_ORDER) && defined(_MSC_VER)
+#define IS_LITTLE_ENDIAN
+#endif
+
+
 using namespace orc_rt;
 
 TEST(BitTest, endian) {

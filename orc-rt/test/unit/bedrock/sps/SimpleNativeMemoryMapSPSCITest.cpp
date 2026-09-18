@@ -9,7 +9,6 @@
 // Tests for SimpleNativeMemoryMap's SPS Controller Interface.
 //
 //===----------------------------------------------------------------------===//
-
 #include "orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h"
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
