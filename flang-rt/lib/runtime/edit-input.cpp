@@ -12,6 +12,7 @@
 #include "flang/Common/optional.h"
 #include "flang/Common/real.h"
 #include "flang/Common/uint128.h"
+#include "flang/Common/fp-control.h"
 #include "flang/Runtime/freestanding-tools.h"
 #include <algorithm>
 #include <cfenv>
@@ -559,6 +560,7 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
 
 static RT_API_ATTRS void RaiseFPExceptions(
     decimal::ConversionResultFlags flags) {
+  FLANG_FENV_ACCESS_ON
 #undef RAISE
 #if defined(RT_DEVICE_COMPILATION)
   Terminator terminator(__FILE__, __LINE__);

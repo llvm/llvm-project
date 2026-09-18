@@ -1560,6 +1560,31 @@ function(get_compile_definitions)
 endfunction()
 get_compile_definitions()
 
+# Check whether the compiler honors '#pragma STDC FENV_ACCESS ON'
+include(CMakePushCheckState)
+set(LLVM_SAVED_TRY_COMPILE_TARGET_TYPE "${CMAKE_TRY_COMPILE_TARGET_TYPE}")
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+cmake_push_check_state()
+if(MSVC)
+  string(APPEND CMAKE_REQUIRED_FLAGS " /WX")
+else()
+  string(APPEND CMAKE_REQUIRED_FLAGS " -Wall -Werror")
+endif()
+check_cxx_source_compiles(
+  "int probe() {
+   #pragma STDC FENV_ACCESS ON
+     return 0;
+   }
+  "
+  COMPILER_SUPPORTS_STDC_FENV_ACCESS_PRAGMA)
+cmake_pop_check_state()
+set(CMAKE_TRY_COMPILE_TARGET_TYPE "${LLVM_SAVED_TRY_COMPILE_TARGET_TYPE}")
+unset(LLVM_SAVED_TRY_COMPILE_TARGET_TYPE)
+
+if(COMPILER_SUPPORTS_STDC_FENV_ACCESS_PRAGMA)
+  add_compile_definitions(HAVE_STDC_FENV_ACCESS)
+endif()
+
 option(LLVM_FORCE_ENABLE_STATS "Enable statistics collection for builds that wouldn't normally enable it" OFF)
 
 check_symbol_exists(os_signpost_interval_begin "os/signpost.h" macos_signposts_available)

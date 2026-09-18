@@ -8,6 +8,7 @@
 
 #include "host.h"
 
+#include "flang/Common/fp-control.h"
 #include "flang/Common/idioms.h"
 #include "llvm/Support/Errno.h"
 #include <cfenv>
@@ -20,6 +21,7 @@ using namespace Fortran::parser::literals;
 
 void HostFloatingPointEnvironment::SetUpHostFloatingPointEnvironment(
     FoldingContext &context) {
+  FLANG_FENV_ACCESS_ON
   errno = 0;
   std::fenv_t currentFenv;
   if (feholdexcept(&originalFenv_) != 0) {
@@ -109,6 +111,7 @@ void HostFloatingPointEnvironment::SetUpHostFloatingPointEnvironment(
 }
 void HostFloatingPointEnvironment::CheckAndRestoreFloatingPointEnvironment(
     FoldingContext &context) {
+  FLANG_FENV_ACCESS_ON
   int errnoCapture{errno};
   if (hardwareFlagsAreReliable()) {
     int exceptions{fetestexcept(FE_ALL_EXCEPT)};

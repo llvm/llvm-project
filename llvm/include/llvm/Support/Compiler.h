@@ -811,4 +811,10 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_CPU_SUPPORTS_SSE42 LLVM_CPU_SUPPORTS("sse4.2")
 #endif
 
+#ifdef HAVE_STDC_FENV_ACCESS 
+#define LLVM_FENV_ACCESS_ON _Pragma("STDC FENV_ACCESS ON")
+#else
+#define LLVM_FENV_ACCESS_ON
+#endif
+
 #endif
