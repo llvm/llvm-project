@@ -244,9 +244,16 @@ public:
           // workaround that.
           if (Name == "WTF" && PreviousName == "switchOn")
             return true;
-          // Treat every argument of functions in std::ranges as noescape.
-          if (Name == "std" && PreviousName == "ranges")
-            return true;
+          if (Name == "std") {
+            // Treat every argument of functions in std::ranges as noescape.
+            if (PreviousName == "ranges")
+              return true;
+            // Treat every argument of call_once as noescape even though only
+            // the second argument is lambda since we can't add annotation to
+            // a std function.
+            if (PreviousName == "call_once")
+              return true;
+          }
           PreviousName = Name;
         }
         return false;
