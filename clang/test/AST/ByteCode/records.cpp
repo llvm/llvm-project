@@ -1302,11 +1302,34 @@ namespace {
   };
   constexpr int a() {
     int x = 1;
-    int f = B{x}.x;
-    B{x}; // both-warning {{expression result unused}}
-
-    return 1;
+    {
+      B b{x};
+    }
+    return x;
   }
+  static_assert(a() == 0);
+
+  constexpr int discarded() {
+    int x = 1;
+    B{x}; // both-warning {{expression result unused}}
+    return x;
+  }
+
+  /// The temporary 'A' created by the default member initializer is destroyed
+  /// at the end of the full-expression containing the aggregate initialization
+  /// (see https://github.com/llvm/llvm-project/issues/85601).
+  static_assert(discarded() == 0);
+
+  /// A const-qualified composite result is writable while under construction.
+  constexpr int decrement(int &x) {
+    return --x;
+  }
+  struct DMIConstComposite {
+    int a;
+    int b = decrement(a);
+  };
+  constexpr DMIConstComposite c{1};
+  static_assert(c.a == 0);
 }
 #endif
 
@@ -2053,4 +2076,15 @@ namespace BaseInitViaDIE {
   struct SS : S {};
   constexpr SS ss {};
   static_assert(ss.b == 42, "");
+}
+
+namespace OPEOpaque {
+  struct S {char c[14];};
+  extern S s;
+  static_assert((&s + 1) - &s == 1, "");
+
+  extern int a[12];
+  static_assert ((&a + 12 - &a) == 12, ""); // both-error {{not an integral constant expression}} \
+                                            // both-note {{cannot refer to element 12 of non-array object in a constant expression}}
+
 }

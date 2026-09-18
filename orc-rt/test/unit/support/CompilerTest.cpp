@@ -52,3 +52,33 @@ TEST(CompilerTest, HasBuiltinAgreesBetweenCAndCxx) {
   EXPECT_EQ(orc_rt_test_hasBuiltinExpect(),
             ORC_RT_HAS_BUILTIN(__builtin_expect) ? 1 : 0);
 }
+
+// Also defined in CAPICompileTest.c: these check that the macros moved into
+// orc-rt-c/support/Compiler.h behave correctly when used from C, not merely
+// that they parse there.
+extern "C" {
+int orc_rt_test_likely(int X);
+int orc_rt_test_unlikely(int X);
+int orc_rt_test_unreachable(int X);
+}
+
+TEST(CompilerTest, LikelyMacrosPreserveTruthinessInC) {
+  EXPECT_EQ(orc_rt_test_likely(0), 0);
+  EXPECT_EQ(orc_rt_test_likely(1), 1);
+  // A value whose low bits are zero must still be truthy: !! normalizes, a
+  // truncating conversion would not.
+  EXPECT_EQ(orc_rt_test_likely(256), 1);
+  EXPECT_EQ(orc_rt_test_unlikely(0), 0);
+  EXPECT_EQ(orc_rt_test_unlikely(1), 1);
+  EXPECT_EQ(orc_rt_test_unlikely(256), 1);
+}
+
+TEST(CompilerTest, UnreachableCompilesInReturningCFunction) {
+  EXPECT_EQ(orc_rt_test_unreachable(0), 0);
+}
+
+#ifndef NDEBUG
+TEST(CompilerDeathTest, UnreachableAbortsFromC) {
+  EXPECT_DEATH(orc_rt_test_unreachable(1), "only 0 is expected");
+}
+#endif

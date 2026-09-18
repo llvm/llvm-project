@@ -83,8 +83,8 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(
 
   if (!TypeBasedOnly)
     Arguments.insert(Arguments.begin(), CI.arg_begin(), CI.arg_end());
-  FunctionType *FTy = CI.getCalledFunction()->getFunctionType();
-  ParamTys.insert(ParamTys.begin(), FTy->param_begin(), FTy->param_end());
+  for (const Value *Arg : CI.args())
+    ParamTys.push_back(Arg->getType());
 }
 
 IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
@@ -349,10 +349,6 @@ bool TargetTransformInfo::canHaveNonUndefGlobalInitializerInAddressSpace(
 
 unsigned TargetTransformInfo::getAssumedAddrSpace(const Value *V) const {
   return TTIImpl->getAssumedAddrSpace(V);
-}
-
-bool TargetTransformInfo::isSingleThreaded() const {
-  return TTIImpl->isSingleThreaded();
 }
 
 std::pair<const Value *, unsigned>
@@ -837,10 +833,6 @@ TypeSize TargetTransformInfo::getRegisterBitWidth(
 
 unsigned TargetTransformInfo::getMinVectorRegisterBitWidth() const {
   return TTIImpl->getMinVectorRegisterBitWidth();
-}
-
-std::optional<unsigned> TargetTransformInfo::getMaxVScale() const {
-  return TTIImpl->getMaxVScale();
 }
 
 std::optional<unsigned> TargetTransformInfo::getVScaleForTuning() const {

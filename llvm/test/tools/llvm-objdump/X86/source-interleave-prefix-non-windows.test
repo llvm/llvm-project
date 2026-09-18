@@ -9,3 +9,9 @@
 ; RUN: llvm-objdump --prefix 'myprefix/\' --source %t.o 2>&1 | FileCheck %s -DFILE=%t.o -DPREFIX='myprefix/\'
 ; CHECK: warning: '[[FILE]]': failed to find source [[PREFIX]]/Inputs/source-interleave-x86_64.c
 
+;; Only the path taken from the debug info is normalized. Separators inside the
+;; prefix are kept as spelled, so the '\' in 'my/pre\fix', which is an ordinary
+;; character here rather than a separator, is not rewritten to '/'.
+
+; RUN: llvm-objdump --prefix 'my/pre\fix' --source %t.o 2>&1 | \
+; RUN:   FileCheck %s -DFILE=%t.o -DPREFIX='my/pre\fix'

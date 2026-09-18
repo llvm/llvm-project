@@ -1835,34 +1835,42 @@ void Process::RemoveConstituentFromBreakpointSite(
   }
 }
 
-size_t Process::RemoveBreakpointOpcodesFromBuffer(addr_t bp_addr, size_t size,
-                                                  uint8_t *buf) const {
-  size_t bytes_removed = 0;
+void Process::RemoveBreakpointOpcodesFromBuffer(addr_t bp_addr, size_t size,
+                                                uint8_t *buf) const {
   StopPointSiteList<BreakpointSite> bp_sites_in_range;
+  if (!m_breakpoint_site_list.FindInRange(bp_addr, bp_addr + size,
+                                          bp_sites_in_range))
+    return;
 
-  if (m_breakpoint_site_list.FindInRange(bp_addr, bp_addr + size,
-                                         bp_sites_in_range)) {
-    bp_sites_in_range.ForEach([bp_addr, size,
-                               buf](BreakpointSite *bp_site) -> void {
-      if (bp_site->GetType() == BreakpointSite::eSoftware) {
-        addr_t intersect_addr;
-        size_t intersect_size;
-        size_t opcode_offset;
-        if (bp_site->IntersectsRange(bp_addr, size, &intersect_addr,
-                                     &intersect_size, &opcode_offset)) {
-          assert(bp_addr <= intersect_addr && intersect_addr < bp_addr + size);
-          assert(bp_addr < intersect_addr + intersect_size &&
-                 intersect_addr + intersect_size <= bp_addr + size);
-          assert(opcode_offset + intersect_size <= bp_site->GetByteSize());
-          size_t buf_offset = intersect_addr - bp_addr;
-          ::memcpy(buf + buf_offset,
-                   bp_site->GetSavedOpcodeBytes() + opcode_offset,
-                   intersect_size);
-        }
+  bp_sites_in_range.ForEach([bp_addr, size,
+                             buf](BreakpointSite *bp_site) -> void {
+    if (bp_site->GetType() == BreakpointSite::eSoftware) {
+      addr_t intersect_addr;
+      size_t intersect_size;
+      size_t opcode_offset;
+      if (bp_site->IntersectsRange(bp_addr, size, &intersect_addr,
+                                   &intersect_size, &opcode_offset)) {
+        assert(bp_addr <= intersect_addr && intersect_addr < bp_addr + size);
+        assert(bp_addr < intersect_addr + intersect_size &&
+               intersect_addr + intersect_size <= bp_addr + size);
+        assert(opcode_offset + intersect_size <= bp_site->GetByteSize());
+        size_t buf_offset = intersect_addr - bp_addr;
+        ::memcpy(buf + buf_offset,
+                 bp_site->GetSavedOpcodeBytes() + opcode_offset,
+                 intersect_size);
       }
-    });
-  }
-  return bytes_removed;
+    }
+  });
+}
+
+void Process::AddCacheData(addr_t addr,
+                           const WritableDataBufferSP &data_buffer_sp) {
+  if (!data_buffer_sp || data_buffer_sp->GetByteSize() == 0)
+    return;
+
+  RemoveBreakpointOpcodesFromBuffer(addr, data_buffer_sp->GetByteSize(),
+                                    data_buffer_sp->GetBytes());
+  m_memory_cache.AddCacheData(addr, data_buffer_sp);
 }
 
 size_t Process::GetSoftwareBreakpointTrapOpcode(BreakpointSite *bp_site) {
@@ -2628,10 +2636,6 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
 
   StopPointSiteList<BreakpointSite> bp_sites_in_range;
   if (!m_breakpoint_site_list.FindInRange(addr, addr + size, bp_sites_in_range))
-    return WriteMemoryPrivate(addr, buf, size, error);
-
-  // No breakpoint sites overlap
-  if (bp_sites_in_range.IsEmpty())
     return WriteMemoryPrivate(addr, buf, size, error);
 
   const uint8_t *ubuf = (const uint8_t *)buf;
