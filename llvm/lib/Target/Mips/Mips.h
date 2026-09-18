@@ -50,7 +50,6 @@ FunctionPass *createMipsExpandPseudoPass();
 FunctionPass *createMipsPreLegalizeCombiner();
 FunctionPass *createMipsPostLegalizeCombiner(bool IsOptNone);
 FunctionPass *createMipsMulMulBugPass();
-FunctionPass *createMipsSetMachineRegisterFlagsPass();
 
 InstructionSelector *
 createMipsInstructionSelector(const MipsTargetMachine &, const MipsSubtarget &,
@@ -64,7 +63,6 @@ void initializeMipsDelaySlotFillerPass(PassRegistry &);
 void initializeMipsMulMulBugFixPass(PassRegistry &);
 void initializeMipsPostLegalizerCombinerPass(PassRegistry &);
 void initializeMipsPreLegalizerCombinerPass(PassRegistry &);
-void initializeMipsSetMachineRegisterFlagsPass(PassRegistry &);
 } // namespace llvm
 
 #endif
