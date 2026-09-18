@@ -41,6 +41,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
 #include <random>
+#include <tuple>
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -56,6 +57,7 @@
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -278,19 +280,21 @@ public:
                    const SmallPtrSetImpl<Block *> *barriers = nullptr) {
     assert(from->getParent() == to->getParent() && "expected same region");
 
-    SmallPtrSet<Block *, 16> barrierSet;
-    if (barriers)
-      barrierSet.insert(barriers->begin(), barriers->end());
+    SmallPtrSet<Block *, 16> except;
+    BarrierKey sortedBarriers;
+    if (barriers && !barriers->empty()) {
+      except.insert(barriers->begin(), barriers->end());
+      sortedBarriers.append(barriers->begin(), barriers->end());
+      llvm::sort(sortedBarriers);
+    }
 
-    SmallVector<Entry, 2> &entries = cached[from];
-    for (Entry &e : entries)
-      if (e.barriers == barrierSet)
-        return e.reachable.contains(to);
+    ReachableByBarriers &inner = cached[from];
+    if (auto it = inner.find(sortedBarriers); it != inner.end())
+      return it->second.contains(to);
 
     // Same traversal as `Block::isReachable`: `except` is both the barrier set
     // and the visited set.
-    SmallPtrSet<Block *, 16> except = barrierSet;
-    SmallPtrSet<Block *, 16> reachable;
+    ReachableSet reachable;
     SmallVector<Block *> worklist(from->succ_begin(), from->succ_end());
     while (!worklist.empty()) {
       Block *next = worklist.pop_back_val();
@@ -300,18 +304,63 @@ public:
       worklist.append(next->succ_begin(), next->succ_end());
     }
     bool result = reachable.contains(to);
-    entries.push_back({std::move(barrierSet), std::move(reachable)});
+    inner.try_emplace(std::move(sortedBarriers), std::move(reachable));
     return result;
   }
 
   void clear() { cached.clear(); }
 
 private:
-  struct Entry {
-    SmallPtrSet<Block *, 16> barriers;
-    SmallPtrSet<Block *, 16> reachable;
-  };
-  DenseMap<Block *, SmallVector<Entry, 2>> cached;
+  using ReachableSet = SmallPtrSet<Block *, 16>;
+  /// Sorted extra-barrier blocks for one query. Empty means no extra barriers.
+  using BarrierKey = SmallVector<Block *, 8>;
+  /// Sorted barrier list -> blocks reachable from `from` without crossing those
+  /// barriers.
+  using ReachableByBarriers = DenseMap<BarrierKey, ReachableSet>;
+  /// `from` block -> reachable-set keyed by sorted extra-barrier blocks.
+  DenseMap<Block *, ReachableByBarriers> cached;
+};
+
+/// `canUseOpDominanceDueToBlocks` walks enclosing regions and queries CFG
+/// reachability, but the answer is a property of blocks: every op in a block
+/// has the same parent chain, and a definition contributes only its block as
+/// a reachability barrier. One entry per (read block, write block, def blocks)
+/// therefore covers every operand pair in those blocks.
+class OneShotAnalysisState::OpDominanceBlockCache {
+public:
+  bool getOrCompute(Block *readBlock, Block *writeBlock,
+                    ArrayRef<Block *> sortedDefBlocks,
+                    function_ref<bool()> compute) {
+    if (sortedDefBlocks.size() == 1) {
+      auto key =
+          std::make_tuple(readBlock, writeBlock, sortedDefBlocks.front());
+      if (auto it = singleDef.find(key); it != singleDef.end())
+        return it->second;
+      bool result = compute();
+      singleDef.try_emplace(key, result);
+      return result;
+    }
+
+    DefKey key(sortedDefBlocks.begin(), sortedDefBlocks.end());
+    auto &byDefs = manyDefs[std::make_pair(readBlock, writeBlock)];
+    if (auto it = byDefs.find(key); it != byDefs.end())
+      return it->second;
+    bool result = compute();
+    byDefs.try_emplace(std::move(key), result);
+    return result;
+  }
+
+  void clear() {
+    singleDef.clear();
+    manyDefs.clear();
+  }
+
+private:
+  using DefKey = SmallVector<Block *, 4>;
+  /// Common case: a single definition block.
+  DenseMap<std::tuple<Block *, Block *, Block *>, bool> singleDef;
+  /// Sorted unique definition blocks, for reads with several definitions.
+  DenseMap<std::pair<Block *, Block *>, DenseMap<DefKey, bool>> manyDefs;
 };
 
 OneShotAnalysisState::~OneShotAnalysisState() = default;
@@ -334,20 +383,7 @@ OneShotAnalysisState::~OneShotAnalysisState() = default;
 /// `op_a` does not dominate `op_b`, but there is no CFG path from `op_b` to
 /// `op_a`, so `op_a` cannot happen after `op_b`.
 ///
-/// `extraBarriers` are extra blocks a path must not cross (bbArg defs:
-/// re-entering the block is a new definition). E.g.:
-///
-/// ^h(%t: tensor<?xf32>):            // DEF
-///   cf.cond_br %c, ^exit, ^body
-/// ^body:
-///   %w = "writing_op"(%t)           // WRITE
-///   cf.br ^h(%w)
-/// ^exit:
-///   "reading_op"(%t)                // READ
-///
-/// The only CFG path from WRITE to READ is ^body -> ^h -> ^exit. Re-entering
-/// ^h is a new SSA definition of %t, not read-after-write of the previous
-/// one, so ^h is skipped as a barrier.
+/// `extraBarriers` are extra blocks a CFG path from `b` to `a` must not cross.
 static bool cannotHappenAfter(Operation *a, Operation *b,
                               const DominanceInfo &domInfo,
                               OneShotAnalysisState &state,
@@ -491,27 +527,67 @@ static bool canUseOpDominanceDueToRegions(OpOperand *uRead, OpOperand *uWrite,
 ///
 /// Op dominance cannot be used if there is a path from block(READ) to
 /// block(WRITE) and a path from block(WRITE) to block(READ). block(DEF) should
-/// not appear on that path.
+/// not appear on that path. Walk from the uses up through enclosing regions
+/// and stop at the definition region(s): SSA dominance means a cycle that
+/// skips DEF cannot live above DEF.
+static bool
+computeCanUseOpDominanceDueToBlocks(OpOperand *uRead, OpOperand *uWrite,
+                                    const SetVector<Value> &definitions,
+                                    OneShotAnalysisState &state) {
+  // Outermost region that contains a definition. SSA dominance means a cycle
+  // that skips DEF cannot live above this.
+  assert(!definitions.empty() && "expected at least one definition");
+  Region *outermostDefRegion = nullptr;
+  for (Value def : definitions) {
+    Region *defRegion = def.getParentRegion();
+    if (!outermostDefRegion || defRegion->isAncestor(outermostDefRegion))
+      outermostDefRegion = defRegion;
+  }
+  assert(outermostDefRegion && "expected a definition region");
+
+  for (Operation *readOp = uRead->getOwner(); readOp != nullptr;
+       readOp = readOp->getParentOp()) {
+    Region *region = readOp->getParentRegion();
+    if (!region)
+      continue;
+
+    Operation *writeOp = region->findAncestorOpInRegion(*uWrite->getOwner());
+    if (!writeOp)
+      continue;
+
+    Block *readBlock = readOp->getBlock();
+    Block *writeBlock = writeOp->getBlock();
+    for (Value def : definitions) {
+      SmallPtrSet<Block *, 16> except = {def.getParentBlock()};
+      if (state.isReachableCached(readBlock, writeBlock, &except) &&
+          state.isReachableCached(writeBlock, readBlock, &except))
+        return false;
+    }
+    if (region == outermostDefRegion)
+      break;
+  }
+  return true;
+}
+
 static bool canUseOpDominanceDueToBlocks(OpOperand *uRead, OpOperand *uWrite,
                                          const SetVector<Value> &definitions,
                                          OneShotAnalysisState &state) {
-  // Fast path: If READ and WRITE are in different regions, their block cannot
-  // be reachable just via unstructured control flow. (Loops due to regions are
-  // covered by `canUseOpDominanceDueToRegions`.)
-  if (uRead->getOwner()->getParentRegion() !=
-      uWrite->getOwner()->getParentRegion())
-    return true;
-
+  assert(!definitions.empty() && "expected at least one definition");
   Block *readBlock = uRead->getOwner()->getBlock();
   Block *writeBlock = uWrite->getOwner()->getBlock();
-  for (Value def : definitions) {
-    SmallPtrSet<Block *, 16> except = {def.getParentBlock()};
-    if (state.isReachableCached(readBlock, writeBlock, &except) &&
-        state.isReachableCached(writeBlock, readBlock, &except))
-      return false;
-  }
 
-  return true;
+  SmallVector<Block *> defBlocks;
+  defBlocks.reserve(definitions.size());
+  for (Value def : definitions)
+    defBlocks.push_back(def.getParentBlock());
+  llvm::sort(defBlocks);
+  defBlocks.erase(llvm::unique(defBlocks), defBlocks.end());
+
+  return state.canUseOpDominanceDueToBlocksCached(
+      readBlock, writeBlock, defBlocks, [&] {
+        return computeCanUseOpDominanceDueToBlocks(uRead, uWrite, definitions,
+                                                   state);
+      });
 }
 
 static bool canUseOpDominance(OpOperand *uRead, OpOperand *uWrite,
@@ -750,7 +826,19 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
     // If `useDominance` is true below, then for CFG regions we know that we can
     // rule out blocks containing DEFs of block args for the reachability check
     // in `cannotHappenAfter`. See the conditions in
-    // `canUseOpDominanceDueToBlocks`.
+    // `canUseOpDominanceDueToBlocks`. E.g.:
+    //
+    // ^h(%t: tensor<?xf32>):            // DEF
+    //   cf.cond_br %c, ^exit, ^body
+    // ^body:
+    //   %w = "writing_op"(%t)           // WRITE
+    //   cf.br ^h(%w)
+    // ^exit:
+    //   "reading_op"(%t)                // READ
+    //
+    // The only CFG path from WRITE to READ is ^body -> ^h -> ^exit, so READ
+    // cannot happen after WRITE without going through the DEF in ^h, and
+    // therefore there is no conflict.
     SmallPtrSet<Block *, 16> bbArgDefBlocks;
     for (Value def : definitions)
       if (isa<BlockArgument>(def))
@@ -878,9 +966,8 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
           // only if it is in the same block or in a reachable block (e.g. a
           // successor).
           Block *defBlock = cast<BlockArgument>(definition).getOwner();
-          Operation *writeOp = conflictingWritingOp;
-          while (writeOp && writeOp->getParentRegion() != defBlock->getParent())
-            writeOp = writeOp->getParentOp();
+          Operation *writeOp = defBlock->getParent()->findAncestorOpInRegion(
+              *conflictingWritingOp);
           if (!writeOp ||
               (writeOp->getBlock() != defBlock &&
                !state.isReachableCached(defBlock, writeOp->getBlock()))) {
@@ -1084,6 +1171,15 @@ bool OneShotAnalysisState::isReachableCached(
   return cfgReachabilityCache->isReachable(from, to, barriers);
 }
 
+bool OneShotAnalysisState::canUseOpDominanceDueToBlocksCached(
+    Block *readBlock, Block *writeBlock, ArrayRef<Block *> defBlocks,
+    function_ref<bool()> compute) {
+  if (!opDominanceBlockCache)
+    opDominanceBlockCache = std::make_unique<OpDominanceBlockCache>();
+  return opDominanceBlockCache->getOrCompute(readBlock, writeBlock, defBlocks,
+                                             compute);
+}
+
 bool OneShotAnalysisState::areNonConflictingSubsetsCached(
     OpOperand *uRead, OpOperand *uConflictingWrite) {
   auto key = std::make_pair(uRead, uConflictingWrite);
@@ -1099,6 +1195,8 @@ void OneShotAnalysisState::resetCache() {
   nonConflictingSubsetCache.clear();
   if (cfgReachabilityCache)
     cfgReachabilityCache->clear();
+  if (opDominanceBlockCache)
+    opDominanceBlockCache->clear();
 }
 
 /// Determine if `operand` can be bufferized in-place.

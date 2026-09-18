@@ -139,6 +139,14 @@ public:
   isReachableCached(Block *from, Block *to,
                     const llvm::SmallPtrSetImpl<Block *> *barriers = nullptr);
 
+  /// Cached `canUseOpDominanceDueToBlocks`. The result depends only on the
+  /// blocks that contain the read, the write, and the definitions, not on the
+  /// ops themselves. `defBlocks` must be sorted and unique. `compute` runs
+  /// only on a cache miss. Cleared by `resetCache`.
+  bool canUseOpDominanceDueToBlocksCached(Block *readBlock, Block *writeBlock,
+                                          llvm::ArrayRef<Block *> defBlocks,
+                                          function_ref<bool()> compute);
+
   /// Return whether `uRead` and `uConflictingWrite` are non-conflicting
   /// subsets, with caching.
   bool areNonConflictingSubsetsCached(OpOperand *uRead,
@@ -249,6 +257,10 @@ private:
   /// this header.
   class CFGReachabilityCache;
   std::unique_ptr<CFGReachabilityCache> cfgReachabilityCache;
+
+  /// Cached block-granularity op-dominance decisions. Defined out-of-line.
+  class OpDominanceBlockCache;
+  std::unique_ptr<OpDominanceBlockCache> opDominanceBlockCache;
 
   /// Cache results of areNonConflictingSubsets checks. The bool value is `true`
   /// if the operands are non-conflicting subsets, `false` if they are
