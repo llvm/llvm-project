@@ -176,9 +176,11 @@ bool CombinerHelper::isLegalOrHasFewerElements(
 bool CombinerHelper::isConstantLegalOrBeforeLegalizer(const LLT Ty) const {
   if (!Ty.isVector())
     return isLegalOrBeforeLegalizer({TargetOpcode::G_CONSTANT, {Ty}});
-  // Vector constants are represented as a G_BUILD_VECTOR of scalar G_CONSTANTs.
   if (isPreLegalize())
     return true;
+  // Scalable vectors cannot be constant folded here.
+  if (!Ty.isFixedVector())
+    return false;
   LLT EltTy = Ty.getElementType();
   return isLegal({TargetOpcode::G_BUILD_VECTOR, {Ty, EltTy}}) &&
          isLegal({TargetOpcode::G_CONSTANT, {EltTy}});
@@ -4502,7 +4504,7 @@ void CombinerHelper::applyRotateOutOfRange(MachineInstr &MI) const {
 }
 
 bool CombinerHelper::matchICmpToTrueFalseKnownBits(MachineInstr &MI,
-                                                   BuildFnTy &MatchInfo) const {
+                                                   int64_t &MatchInfo) const {
   assert(MI.getOpcode() == TargetOpcode::G_ICMP);
   auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
 
@@ -4535,25 +4537,13 @@ bool CombinerHelper::matchICmpToTrueFalseKnownBits(MachineInstr &MI,
 
   if (!KnownVal)
     return false;
-
-  Register Dst = MI.getOperand(0).getReg();
-  LLT DstTy = MRI.getType(Dst);
-  int64_t Val = *KnownVal ? getICmpTrueVal(getTargetLowering(),
-                                           /*IsVector = */ DstTy.isVector(),
-                                           /* IsFP = */ false)
-                          : 0;
-
-  if (DstTy.isVector()) {
-    SmallVector<APInt> Csts(DstTy.getNumElements(),
-                            APInt(DstTy.getScalarSizeInBits(), Val,
-                                  /*isSigned=*/true));
-    MatchInfo = [Dst, Csts = std::move(Csts)](MachineIRBuilder &B) {
-      B.buildBuildVectorConstant(Dst, Csts);
-    };
-    return true;
-  }
-
-  MatchInfo = [Dst, Val](MachineIRBuilder &B) { B.buildConstant(Dst, Val); };
+  MatchInfo =
+      *KnownVal
+          ? getICmpTrueVal(getTargetLowering(),
+                           /*IsVector = */
+                           MRI.getType(MI.getOperand(0).getReg()).isVector(),
+                           /* IsFP = */ false)
+          : 0;
   return true;
 }
 
@@ -5125,7 +5115,10 @@ bool CombinerHelper::matchConstantFoldCastOp(MachineInstr &MI,
   LLT DstTy = MRI.getType(Dst);
   unsigned Opc = MI.getOpcode();
 
-  if (DstTy.isVector()) {
+  if (!isConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  if (DstTy.isFixedVector()) {
     auto *BV = getOpcodeDef<GBuildVector>(SrcOp, MRI);
     if (!BV)
       return false;
@@ -5155,7 +5148,9 @@ bool CombinerHelper::matchConstantFoldCastOp(MachineInstr &MI,
 bool CombinerHelper::matchConstantFoldUnaryIntOp(MachineInstr &MI,
                                                  BuildFnTy &MatchInfo) const {
   Register Dst = MI.getOperand(0).getReg();
-  auto Csts = ConstantFoldUnaryIntOp(MI.getOpcode(), MRI.getType(Dst),
+  LLT DstTy = MRI.getType(Dst);
+
+  auto Csts = ConstantFoldUnaryIntOp(MI.getOpcode(), DstTy,
                                      MI.getOperand(1).getReg(), MRI);
   if (Csts.empty())
     return false;
@@ -5176,11 +5171,12 @@ bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI,
   Register Op2 = MI.getOperand(2).getReg();
   LLT DstTy = MRI.getType(Dst);
 
-  if (DstTy.isVector()) {
-    // Pointer-element vectors (e.g. <n x ptr> from a vector G_PTR_ADD) have no
-    // G_BUILD_VECTOR of G_CONSTANT representation.
-    if (DstTy.getElementType().isPointer())
-      return false;
+  // Pointer-element vectors have no G_BUILD_VECTOR of G_CONSTANT
+  // representation.
+  if (DstTy.isVector() && DstTy.getElementType().isPointer())
+    return false;
+
+  if (DstTy.isFixedVector()) {
     SmallVector<APInt> Csts =
         ConstantFoldVectorBinop(MI.getOpcode(), Op1, Op2, MRI);
     if (Csts.empty())
@@ -5207,7 +5203,7 @@ bool CombinerHelper::matchConstantFoldFPBinOp(MachineInstr &MI,
   Register Op2 = MI.getOperand(2).getReg();
   LLT DstTy = MRI.getType(Dst);
 
-  if (DstTy.isVector()) {
+  if (DstTy.isFixedVector()) {
     SmallVector<APFloat> Csts =
         ConstantFoldVectorFPBinop(MI.getOpcode(), Op1, Op2, MRI);
     if (Csts.empty())
@@ -5230,8 +5226,9 @@ bool CombinerHelper::matchConstantFoldFPBinOp(MachineInstr &MI,
 bool CombinerHelper::matchConstantFoldFPUnary(MachineInstr &MI,
                                               BuildFnTy &MatchInfo) const {
   Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
   SmallVector<APFloat> Csts = ConstantFoldUnaryFPOp(
-      MI.getOpcode(), MRI.getType(Dst), MI.getOperand(1).getReg(), MRI);
+      MI.getOpcode(), DstTy, MI.getOperand(1).getReg(), MRI);
   if (Csts.empty())
     return false;
   MatchInfo = [Dst, Csts = std::move(Csts)](MachineIRBuilder &B) {
@@ -5258,7 +5255,7 @@ bool CombinerHelper::matchConstantFoldFMA(MachineInstr &MI,
     return Res;
   };
 
-  if (DstTy.isVector()) {
+  if (DstTy.isFixedVector()) {
     auto *BV1 = getOpcodeDef<GBuildVector>(Op1, MRI);
     auto *BV2 = getOpcodeDef<GBuildVector>(Op2, MRI);
     auto *BV3 = getOpcodeDef<GBuildVector>(Op3, MRI);
@@ -7156,16 +7153,6 @@ bool CombinerHelper::matchShiftsTooBig(MachineInstr &MI,
   }
 
   int64_t Val = *Result;
-  if (ResTy.isVector()) {
-    SmallVector<APInt> Csts(ResTy.getNumElements(),
-                            APInt(ResTy.getScalarSizeInBits(), Val,
-                                  /*isSigned=*/true));
-    MatchInfo = [Dst, Csts = std::move(Csts)](MachineIRBuilder &B) {
-      B.buildBuildVectorConstant(Dst, Csts);
-    };
-    return true;
-  }
-
   MatchInfo = [Dst, Val](MachineIRBuilder &B) { B.buildConstant(Dst, Val); };
   return true;
 }
