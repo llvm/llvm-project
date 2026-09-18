@@ -2420,6 +2420,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "log1pf16",
+    additional_deps = [
+        "//libc/src/__support/math:log1pf16",
+    ],
+)
+
+libc_math_function(
     name = "log2p1f16",
     additional_deps = [
         "//libc/src/__support/math:log2p1f16",
