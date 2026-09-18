@@ -3756,6 +3756,8 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
     return "fastcall";
   case CC_X86ThisCall:
     return "thiscall";
+  case CC_WinCall:
+    return "wincall";
   case CC_X86Pascal:
     return "pascal";
   case CC_X86VectorCall:
@@ -4651,6 +4653,7 @@ bool AttributedType::isCallingConv() const {
   case attr::PreserveNone:
   case attr::RISCVVectorCC:
   case attr::RISCVVLSCC:
+  case attr::WinCall:
     return true;
   }
   llvm_unreachable("invalid attr kind");
